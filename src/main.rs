@@ -1,17 +1,33 @@
 
 
+struct Context {
+}
+
+impl Context {
+    pub fn new<T>() -> Value<T> {
+        todo!();
+    }
+
+    pub fn calculate<K>(fun: Box<dyn Fn() -> K>) -> Computed<K> {
+        todo!();
+    }
+}
+
 struct Value<T> {
     value: T,   
 }
 
 impl<T> Value<T> {
-    pub fn new() -> (Value<T>, Computed<T>) {
+    pub fn toComputed(&self) -> Computed<T> {
         todo!();
     }
 }
 
 struct Computed<T> {
-    get: fn() -> T,
+    get: Box<dyn Fn() -> T>,
+}
+
+impl<T> Computed<T> {
 }
 
 
@@ -34,19 +50,16 @@ Value =====>    impl ValueTrait
 
 
 
+let context: Context = Context::new();
 
-let a: Value<u64> = Value::new(3);
-let b: Value<u32> = Value::new(5);
-
-let c: Value<u64> = Value.combine2(a, b, fn(u64, u32) -> u64 {
-    todo!();
-});
+let a: Value<u64> = context.value(3);
+let b: Value<u32> = context.value(5);
 
 
 lub bardziej mobxowo
 Przewaga nad jsem nawet w tej wersji jest taka, że nie da się zrobić cykliczności pomiędzy zmiennymi
 
-let c: Value<u64> = Value.combine2(Box::new(move fn() -> u64 {
+let c: Computed<u64> = context.combine2(Box::new(move fn() -> u64 {
 
     let aValue = a.get();
     let bValue = b.get();
@@ -55,12 +68,23 @@ let c: Value<u64> = Value.combine2(Box::new(move fn() -> u64 {
 }));
 
 
-c.subscribe(fn(value: u64) -> {
+context.subscribe(c, fn(value: u64) -> {
     println!("wynik: {}", value);
 });
 
-a.set(4);
-b.set(55);
+context.set(a, 4);
+context.set(b, 55);
+
+
+Component
+    render() {
+
+    }
+
+    Component
+        render() {
+
+        }
 
 */
 
