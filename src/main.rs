@@ -1,5 +1,8 @@
 
 
+//https://crates.io/crates/simple-mutex
+
+
 struct Context {
 }
 
@@ -59,10 +62,10 @@ let b: Value<u32> = context.value(5);
 lub bardziej mobxowo
 Przewaga nad jsem nawet w tej wersji jest taka, że nie da się zrobić cykliczności pomiędzy zmiennymi
 
-let c: Computed<u64> = context.combine2(Box::new(move fn() -> u64 {
+let c: Computed<u64> = context.combine2(Box::new(move fn(&mut context) -> u64 {
 
-    let aValue = a.get();
-    let bValue = b.get();
+    let aValue = context.get(a);    //,.get();
+    let bValue = context.get(b);    //.get();
 
     todo!();
 }));
