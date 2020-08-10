@@ -18,6 +18,15 @@ struct Unsubscribe {
     client: Rc<dyn Observer>,
 }
 
+impl Unsubscribe {
+    fn new(parent: Rc<Subscription>, client: Rc<dyn Observer>) -> Unsubscribe {
+        Unsubscribe {
+            parent,
+            client
+        }
+    }
+}
+
 impl Drop for Unsubscribe {
     fn drop(&mut self) {
         let Unsubscribe { parent, client } = self;
@@ -39,13 +48,13 @@ impl Subscription {
     pub fn add(self: &Rc<Subscription>, observer: Rc<dyn Observer>) -> Unsubscribe {
         let id = observer.getId();
         let mut list = self.list.borrow_mut();
-        let result = list.insert(id, observer);
+        let result = list.insert(id, observer.clone());
 
         if result.is_some() {
             panic!("Coś poszło nie tak");
         }
 
-        todo!();
+        Unsubscribe::new(self.clone(), observer.clone())
     }
 
     pub fn trigger(&self) -> Vec<Box<dyn Subscriber>> {
@@ -249,14 +258,6 @@ impl<T> Observer for Computed<T> {
     }
 }
 
-impl<T> Drop for Computed<T> {
-    fn drop(&mut self) {
-
-        //TODO - odsybskrybować
-        todo!();
-    }
-}
-
 struct Client {
     refresh: Box<dyn Fn()>,
     _unsubscribe: RefCell<Option<Unsubscribe>>,
@@ -269,6 +270,8 @@ impl Client {
             call(value);
         });
         
+        refresh();
+
         Rc::new(
             Client {
                 refresh,
@@ -303,13 +306,6 @@ impl Subscriber for Client {
     fn recalculate(&self) {
         let Client { refresh, .. } = self;
         refresh();
-    }
-}
-
-impl Drop for Client {
-    fn drop(&mut self) {
-        //TODO - odsybskrybować
-        todo!();
     }
 }
 
