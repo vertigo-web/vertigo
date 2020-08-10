@@ -13,6 +13,18 @@ trait Observer {
     fn getId(&self) -> u64;
 }
 
+struct Unsubscribe {
+    parent: Subscription,
+    client: Rc<dyn Observer>,
+}
+
+impl Drop for Unsubscribe {
+    fn drop(&mut self) {
+        let Unsubscribe { parent, client } = self;
+        parent.remove(client);
+    }
+}
+
 struct Subscription {
     list: HashMap<u64, Rc<dyn Observer>>,
 }
@@ -24,7 +36,7 @@ impl Subscription {
         }
     }
 
-    pub fn add(&mut self, observer: Rc<dyn Observer>) {
+    pub fn add(&mut self, observer: Rc<dyn Observer>) -> Unsubscribe {
         let id = observer.getId();
         let result = self.list.insert(id, observer);
 
@@ -44,7 +56,7 @@ impl Subscription {
         out
     }
 
-    pub fn remove(&mut self, observer: Rc<dyn Observer>) {
+    pub fn remove(&mut self, observer: &Rc<dyn Observer>) {
         let id = observer.getId();
         let result = self.list.remove(&id);
 
@@ -212,7 +224,6 @@ struct Client {
 
 impl Client {
     fn new<T: 'static>(getValue: Box<dyn Fn() -> Rc<T> + 'static>, call: Box<dyn Fn(Rc<T>) + 'static>) -> Client {
-
         let refresh = Box::new(move || {
             let value = getValue();
             call(value);
