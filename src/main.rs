@@ -70,26 +70,40 @@ impl Subscription {
     }
 }
 
+struct ValueInner<T: 'static> {
+    value: Rc<T>
+}
+
+impl<T: 'static> ValueInner<T> {
+    fn new(value: T) -> ValueInner<T> {
+        ValueInner {
+            value: Rc::new(value)
+        }
+    }
+}
+
 struct Value<T: 'static> {
-    value: Rc<T>,
+    refCell: RefCell<ValueInner<T>>,
     subscription: Rc<Subscription>,
 }
 
 impl<T: 'static> Value<T> {
     pub fn new(value: T) -> Rc<Value<T>> {
         Rc::new(Value {
-            value: Rc::new(value),
+            refCell: RefCell::new(ValueInner::new(value)),
             subscription: Subscription::new(),
         })
     }
 
-    pub fn setValue(&mut self, value: T) -> Vec<Box<dyn Subscriber>> {                          //TODO - trzeba odebrać i wywołać
-        self.value = Rc::new(value);
+    pub fn setValue(self: &Rc<Value<T>>, value: T) -> Vec<Box<dyn Subscriber>> {                          //TODO - trzeba odebrać i wywołać
+        let mut inner = self.refCell.borrow_mut();
+        inner.value = Rc::new(value);
         self.subscription.trigger()
     }
 
     pub fn getValue(&self) -> Rc<T> {
-        self.value.clone()
+        let inner = self.refCell.borrow();
+        (*inner).value.clone()
     }
 
     pub fn toComputed(self: &Rc<Value<T>>) -> Rc<Computed<T>> {
