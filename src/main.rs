@@ -4,22 +4,28 @@ use std::collections::HashMap;
 use std::rc::Rc;
 use std::cell::RefCell;
 
-trait Subscriber {
-    fn recalculate(&self);
+trait ComputedTrait {
+    fn setAsUnfresh(&self) -> Vec<Rc<Client>>;
 }
 
-trait Observer {
-    fn call(&self) -> Vec<Box<dyn Subscriber>>;
-    fn getId(&self) -> u64;
+enum Observer {
+    Computed {
+        id: u64,
+        refVal: Box<dyn ComputedTrait>,         //Tutaj zwracamy listę z clientami do odświzenia
+    },
+    Client {
+        id: u64,
+        refVal: Rc<Client>,                     //Tutaj trigger nie wywołuje nic wgłąb, po prostu zwraca referencję
+    }
 }
 
 struct Unsubscribe {
     parent: Rc<Subscription>,
-    client: Rc<dyn Observer>,
+    client: Rc<Observer>,
 }
 
 impl Unsubscribe {
-    fn new(parent: Rc<Subscription>, client: Rc<dyn Observer>) -> Unsubscribe {
+    fn new(parent: Rc<Subscription>, client: Rc<Observer>) -> Unsubscribe {
         Unsubscribe {
             parent,
             client
@@ -35,7 +41,7 @@ impl Drop for Unsubscribe {
 }
 
 struct Subscription {
-    list: RefCell<HashMap<u64, Rc<dyn Observer>>>,
+    list: RefCell<HashMap<u64, Observer>>,
 }
 
 impl Subscription {
@@ -45,7 +51,7 @@ impl Subscription {
         })
     }
 
-    pub fn add(self: &Rc<Subscription>, observer: Rc<dyn Observer>) -> Unsubscribe {
+    pub fn add(self: &Rc<Subscription>, observer: Observer) -> Unsubscribe {
         let id = observer.getId();
         let mut list = self.list.borrow_mut();
         let result = list.insert(id, observer.clone());
@@ -57,8 +63,8 @@ impl Subscription {
         Unsubscribe::new(self.clone(), observer.clone())
     }
 
-    pub fn trigger(&self) -> Vec<Box<dyn Subscriber>> {
-        let mut out: Vec<Box<dyn Subscriber>> = Vec::new();
+    pub fn trigger(&self) -> Vec<Rc<Client>> {
+        let mut out: Vec<Rc<Client>> = Vec::new();
         let mut list = self.list.borrow();
         for (_, item) in list.iter() {
             let mut subList = item.call();
@@ -68,7 +74,7 @@ impl Subscription {
         out
     }
 
-    pub fn remove(self: &Rc<Subscription>, observer: &Rc<dyn Observer>) {
+    pub fn remove(self: &Rc<Subscription>, observer: &Observer) {
         let id = observer.getId();
         let mut list = self.list.borrow_mut();
         let result = list.remove(&id);
@@ -104,9 +110,12 @@ impl<T: 'static> Value<T> {
         })
     }
 
-    pub fn setValue(self: &Rc<Value<T>>, value: T) -> Vec<Box<dyn Subscriber>> {                          //TODO - trzeba odebrać i wywołać
+    pub fn setValue(self: &Rc<Value<T>>, value: T) -> Vec<Rc<Client>> {                          //TODO - trzeba odebrać i wywołać
         let mut inner = self.refCell.borrow_mut();
         inner.value = Rc::new(value);
+
+        todo!("Trzeba odebrac klientow do uruchomienia");
+
         self.subscription.trigger()
     }
 
@@ -225,13 +234,13 @@ impl<T: 'static> Computed<T> {
         inner.value.clone()
     }
 
-    pub fn setAsUnfresh(&self) -> Vec<Box<dyn Subscriber>> {
+    pub fn setAsUnfresh(&self) -> Vec<Rc<Client>> {
         let mut inner = self.refCell.borrow_mut();
         inner.isFresh = false;
         inner.subscription.trigger()
     }
 
-    pub fn addSubscription(&self, observer: Rc<dyn Observer>) -> Unsubscribe {
+    pub fn addSubscription(&self, observer: Observer) -> Unsubscribe {
         let inner = self.refCell.borrow_mut();
         let unsubscribe = inner.subscription.add(observer);
         unsubscribe
@@ -245,16 +254,6 @@ impl<T: 'static> Computed<T> {
         client.setUnsubscribe(unsubscribe);
 
         client
-    }
-}
-
-impl<T> Observer for Computed<T> {
-    fn call(&self) -> Vec<Box<dyn Subscriber>> {
-        self.setAsUnfresh()
-    }
-
-    fn getId(&self) -> u64 {
-        todo!();
     }
 }
 
@@ -290,19 +289,7 @@ impl Client {
     }
 
     fn off(self: Rc<Client>) {}
-}
 
-impl Observer for Client {
-    fn call(&self) -> Vec<Box<dyn Subscriber>> {
-        todo!();
-    }
-
-    fn getId(&self) -> u64 {
-        todo!();
-    }
-}
-
-impl Subscriber for Client {
     fn recalculate(&self) {
         let Client { refresh, .. } = self;
         refresh();
