@@ -14,7 +14,7 @@ trait Observer {
 }
 
 struct Unsubscribe {
-    parent: Subscription,
+    parent: Rc<Subscription>,
     client: Rc<dyn Observer>,
 }
 
@@ -26,29 +26,32 @@ impl Drop for Unsubscribe {
 }
 
 struct Subscription {
-    list: HashMap<u64, Rc<dyn Observer>>,
+    list: RefCell<HashMap<u64, Rc<dyn Observer>>>,
 }
 
 impl Subscription {
-    pub fn new() -> Subscription {
-        Subscription {
-            list: HashMap::new()
-        }
+    pub fn new() -> Rc<Subscription> {
+        Rc::new(Subscription {
+            list: RefCell::new(HashMap::new())
+        })
     }
 
-    pub fn add(&mut self, observer: Rc<dyn Observer>) -> Unsubscribe {
+    pub fn add(self: &Rc<Subscription>, observer: Rc<dyn Observer>) -> Unsubscribe {
         let id = observer.getId();
-        let result = self.list.insert(id, observer);
+        let mut list = self.list.borrow_mut();
+        let result = list.insert(id, observer);
 
         if result.is_some() {
             panic!("Coś poszło nie tak");
         }
+
+        todo!();
     }
 
     pub fn trigger(&self) -> Vec<Box<dyn Subscriber>> {
         let mut out: Vec<Box<dyn Subscriber>> = Vec::new();
-
-        for (_, item) in self.list.iter() {
+        let mut list = self.list.borrow();
+        for (_, item) in list.iter() {
             let mut subList = item.call();
             out.append(&mut subList);
         }
@@ -56,9 +59,10 @@ impl Subscription {
         out
     }
 
-    pub fn remove(&mut self, observer: &Rc<dyn Observer>) {
+    pub fn remove(self: &Rc<Subscription>, observer: &Rc<dyn Observer>) {
         let id = observer.getId();
-        let result = self.list.remove(&id);
+        let mut list = self.list.borrow_mut();
+        let result = list.remove(&id);
 
         if result.is_none() {
             panic!("Błąd usuwania");
@@ -68,7 +72,7 @@ impl Subscription {
 
 struct Value<T: 'static> {
     value: Rc<T>,
-    subscription: Subscription,
+    subscription: Rc<Subscription>,
 }
 
 impl<T: 'static> Value<T> {
@@ -95,14 +99,20 @@ impl<T: 'static> Value<T> {
             selfClone.getValue()
         });
 
-        Computed::newRc(getValue)
+        let computed = Computed::newRc(getValue);
+
+        let unsubscribe = self.subscription.add(computed.clone());
+        computed.addToUnsubscribeList(unsubscribe);
+
+        computed
     }
 }
 
 struct ComputedValue<T: 'static> {
     isFresh: bool,
     value: Rc<T>,
-    subscription: Subscription
+    unsubscribeList: Vec<Unsubscribe>,
+    subscription: Rc<Subscription>
 }
 
 impl<T: 'static> ComputedValue<T> {
@@ -110,6 +120,7 @@ impl<T: 'static> ComputedValue<T> {
         RefCell::new(ComputedValue {
             isFresh: true,
             value,
+            unsubscribeList: Vec::new(),
             subscription: Subscription::new(),
         })
     }
@@ -127,6 +138,7 @@ impl<T: 'static> Computed<T> {
         });
 
         let value = newGetValue();
+
         Rc::new(
             Computed {
                 getValue: newGetValue,
@@ -145,13 +157,16 @@ impl<T: 'static> Computed<T> {
         )
     }
 
-    pub fn from2<A, B, R>(
+    fn addToUnsubscribeList(self: &Rc<Computed<T>>, unsubscribe: Unsubscribe) {
+        let mut inner = self.refCell.borrow_mut();
+        inner.unsubscribeList.push(unsubscribe);
+    }
+
+    pub fn from2<A, B>(
         a: Rc<Computed<A>>,
         b: Rc<Computed<B>>,
-        calculate: fn(Rc<A>, Rc<B>) -> R
-    ) -> Rc<Computed<R>> {
-
-        //TODO - dodać subskrybcje ...
+        calculate: fn(Rc<A>, Rc<B>) -> T
+    ) -> Rc<Computed<T>> {
 
         let getValue = {
             let a = a.clone();
@@ -167,8 +182,11 @@ impl<T: 'static> Computed<T> {
 
         let result = Computed::new(getValue);
 
-        a.addSubscription(result.clone());
-        b.addSubscription(result.clone());
+        let aUnsubscribe = a.addSubscription(result.clone());
+        let bUnsubscribe = b.addSubscription(result.clone());
+
+        result.addToUnsubscribeList(aUnsubscribe);
+        result.addToUnsubscribeList(bUnsubscribe);
 
         result
     }
@@ -190,13 +208,20 @@ impl<T: 'static> Computed<T> {
         inner.subscription.trigger()
     }
 
-    pub fn addSubscription(&self, observer: Rc<dyn Observer>) {
-        let mut inner = self.refCell.borrow_mut();
-        inner.subscription.add(observer);
+    pub fn addSubscription(&self, observer: Rc<dyn Observer>) -> Unsubscribe {
+        let inner = self.refCell.borrow_mut();
+        let unsubscribe = inner.subscription.add(observer);
+        unsubscribe
     }
 
-    pub fn subscribe(self) -> Client {
-        todo!();
+    pub fn subscribe(self: Rc<Computed<T>>, call: Box<dyn Fn(Rc<T>) + 'static>) -> Rc<Client> {
+        let client = Client::new(self.clone(), call);
+
+        let unsubscribe = self.addSubscription(client.clone());
+
+        client.setUnsubscribe(unsubscribe);
+
+        client
     }
 }
 
@@ -220,19 +245,34 @@ impl<T> Drop for Computed<T> {
 
 struct Client {
     refresh: Box<dyn Fn()>,
+    _unsubscribe: RefCell<Option<Unsubscribe>>,
 }
 
 impl Client {
-    fn new<T: 'static>(getValue: Box<dyn Fn() -> Rc<T> + 'static>, call: Box<dyn Fn(Rc<T>) + 'static>) -> Client {
+    fn new<T: 'static>(computed: Rc<Computed<T>>, call: Box<dyn Fn(Rc<T>) + 'static>) -> Rc<Client> {
         let refresh = Box::new(move || {
-            let value = getValue();
+            let value = computed.getValue();
             call(value);
         });
         
-        Client {
-            refresh,
-        }
+        Rc::new(
+            Client {
+                refresh,
+                _unsubscribe: RefCell::new(None),
+            }
+        )
     }
+
+    fn setUnsubscribe(&self, unsubscribe: Unsubscribe) {
+        let mut inner = self._unsubscribe.borrow_mut();
+        if inner.is_some() {
+            panic!("Nic tu nie powinno być");
+        }
+
+        *inner = Some(unsubscribe);
+    }
+
+    fn off(self: Rc<Client>) {}
 }
 
 impl Observer for Client {
@@ -247,7 +287,7 @@ impl Observer for Client {
 
 impl Subscriber for Client {
     fn recalculate(&self) {
-        let Client { refresh } = self;
+        let Client { refresh, .. } = self;
         refresh();
     }
 }
@@ -262,5 +302,30 @@ impl Drop for Client {
 fn main() {
     println!("Hello, world!");
 
-    let a = 3;
+    let val1 = Value::new(4);
+    let val2 = Value::new(5);
+
+    // let com1: Rc<Computed<i32>> = val1.toComputed();
+    // let com2: Rc<Computed<i32>> = val2.toComputed();
+
+    let sum = Computed::from2(val1.toComputed(), val2.toComputed(), |a: Rc<i32>, b: Rc<i32>| -> i32 {
+        //let aa = a.as_ref();
+        a.as_ref() + b.as_ref()
+    });
+
+
+    let subscription = sum.subscribe(Box::new(|sum: Rc<i32>| {
+        println!("Suma: {}", sum);
+    }));
+
+    println!("aaa");
+    val1.setValue(333);
+
+    println!("bbb");
+    val1.setValue(888);
+
+    println!("ccc");
+
+
+    subscription.off();
 }
