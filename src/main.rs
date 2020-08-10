@@ -1,5 +1,6 @@
 #![allow(non_snake_case)]
 
+use std::collections::HashMap;
 use std::rc::Rc;
 use std::cell::RefCell;
 
@@ -9,32 +10,47 @@ trait Subscriber {
 
 trait Observer {
     fn call(&self) -> Vec<Box<dyn Subscriber>>;
+    fn getId(&self) -> u64;
 }
 
 struct Subscription {
-    list: Vec<Box<dyn Observer>>,
+    list: HashMap<u64, Rc<dyn Observer>>,
 }
 
 impl Subscription {
     pub fn new() -> Subscription {
         Subscription {
-            list: Vec::new()
+            list: HashMap::new()
         }
     }
 
-    pub fn add(&mut self, observer: Box<dyn Observer>) {
-        self.list.push(observer);
+    pub fn add(&mut self, observer: Rc<dyn Observer>) {
+        let id = observer.getId();
+        let result = self.list.insert(id, observer);
+
+        if result.is_some() {
+            panic!("Coś poszło nie tak");
+        }
     }
 
     pub fn trigger(&self) -> Vec<Box<dyn Subscriber>> {
         let mut out: Vec<Box<dyn Subscriber>> = Vec::new();
 
-        for item in self.list.iter() {
+        for (_, item) in self.list.iter() {
             let mut subList = item.call();
             out.append(&mut subList);
         }
 
         out
+    }
+
+    pub fn remove(&mut self, observer: Rc<dyn Observer>) {
+        let id = observer.getId();
+        let result = self.list.remove(&id);
+
+        if result.is_none() {
+            panic!("Błąd usuwania");
+        }
     }
 }
 
@@ -125,14 +141,24 @@ impl<T: 'static> Computed<T> {
 
         //TODO - dodać subskrybcje ...
 
-        let getValue = Box::new(move || {
-            let aValue = a.getValue();
-            let bValue = b.getValue();
+        let getValue = {
+            let a = a.clone();
+            let b = b.clone();
 
-            calculate(aValue, bValue)
-        });
+            Box::new(move || {
+                let aValue = a.getValue();
+                let bValue = b.getValue();
 
-        Computed::new(getValue)
+                calculate(aValue, bValue)
+            })
+        };
+
+        let result = Computed::new(getValue);
+
+        a.subscribe(result.clone());
+        b.subscribe(result.clone());
+
+        result
     }
 
     pub fn getValue(&self) -> Rc<T> {
@@ -152,15 +178,19 @@ impl<T: 'static> Computed<T> {
         inner.subscription.trigger()
     }
 
-    pub fn subscribe<F: Fn(T)>(self: Rc<Self>, fun: F) {
-
-        todo!();
+    pub fn subscribe(&self, observer: Rc<dyn Observer>) {
+        let mut inner = self.refCell.borrow_mut();
+        inner.subscription.add(observer);
     }
 }
 
-impl<T> Observer for Rc<Computed<T>> {
+impl<T> Observer for Computed<T> {
     fn call(&self) -> Vec<Box<dyn Subscriber>> {
         self.setAsUnfresh()
+    }
+
+    fn getId(&self) -> u64 {
+        todo!();
     }
 }
 
@@ -183,6 +213,18 @@ impl<T> Client<T> {
         }
     }
 }
+
+impl<T> Observer for Client<T> {
+    fn call(&self) -> Vec<Box<dyn Subscriber>> {
+        todo!();
+    }
+
+
+    fn getId(&self) -> u64 {
+        todo!();
+    }
+}
+
 impl<T> Drop for Client<T> {
     fn drop(&mut self) {
 
