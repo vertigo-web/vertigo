@@ -155,8 +155,8 @@ impl<T: 'static> Computed<T> {
 
         let result = Computed::new(getValue);
 
-        a.subscribe(result.clone());
-        b.subscribe(result.clone());
+        a.addSubscription(result.clone());
+        b.addSubscription(result.clone());
 
         result
     }
@@ -178,9 +178,13 @@ impl<T: 'static> Computed<T> {
         inner.subscription.trigger()
     }
 
-    pub fn subscribe(&self, observer: Rc<dyn Observer>) {
+    pub fn addSubscription(&self, observer: Rc<dyn Observer>) {
         let mut inner = self.refCell.borrow_mut();
         inner.subscription.add(observer);
+    }
+
+    pub fn subscribe(self) -> Client {
+        todo!();
     }
 }
 
@@ -202,32 +206,43 @@ impl<T> Drop for Computed<T> {
     }
 }
 
-struct Client<T: 'static> {
-    call: Box<dyn Fn(Rc<T>) + 'static>,
+struct Client {
+    refresh: Box<dyn Fn()>,
 }
 
-impl<T> Client<T> {
-    fn new(call: Box<dyn Fn(Rc<T>) + 'static>) -> Client<T> {
+impl Client {
+    fn new<T: 'static>(getValue: Box<dyn Fn() -> Rc<T> + 'static>, call: Box<dyn Fn(Rc<T>) + 'static>) -> Client {
+
+        let refresh = Box::new(move || {
+            let value = getValue();
+            call(value);
+        });
+        
         Client {
-            call
+            refresh,
         }
     }
 }
 
-impl<T> Observer for Client<T> {
+impl Observer for Client {
     fn call(&self) -> Vec<Box<dyn Subscriber>> {
         todo!();
     }
-
 
     fn getId(&self) -> u64 {
         todo!();
     }
 }
 
-impl<T> Drop for Client<T> {
-    fn drop(&mut self) {
+impl Subscriber for Client {
+    fn recalculate(&self) {
+        let Client { refresh } = self;
+        refresh();
+    }
+}
 
+impl Drop for Client {
+    fn drop(&mut self) {
         //TODO - odsybskrybować
         todo!();
     }
