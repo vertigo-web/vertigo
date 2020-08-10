@@ -4,6 +4,10 @@ use std::collections::HashMap;
 use std::rc::Rc;
 use std::cell::RefCell;
 
+fn getId() -> u64 {
+    todo!();
+}
+
 trait ComputedTrait {
     fn setAsUnfresh(&self) -> Vec<Rc<Client>>;
 }
@@ -19,24 +23,58 @@ enum Observer {
     }
 }
 
+impl Observer {
+    fn getId(&self) -> u64 {
+        match self {
+            Observer::Computed { id, .. } => id.clone(),
+            Observer::Client { id, .. } => id.clone()
+        }
+    }
+
+    fn call(&self) -> Vec<Rc<Client>> {
+        match self {
+            Observer::Computed { refVal, .. } => {
+                refVal.setAsUnfresh()
+            },
+            Observer::Client { refVal, .. } => {
+                vec!(refVal.clone())
+            }
+        }
+    }
+
+    fn fromComputed<T>(computed: Rc<Computed<T>>) -> Observer {
+        Observer::Computed {
+            id: getId(),
+            refVal: Box::new(computed)
+        }
+    }
+
+    fn fromClient(client: Rc<Client>) -> Observer {
+        Observer::Client {
+            id: getId(),
+            refVal: client,
+        }
+    }
+}
+
 struct Unsubscribe {
     parent: Rc<Subscription>,
-    client: Rc<Observer>,
+    id: u64,
 }
 
 impl Unsubscribe {
-    fn new(parent: Rc<Subscription>, client: Rc<Observer>) -> Unsubscribe {
+    fn new(parent: Rc<Subscription>, id: u64) -> Unsubscribe {
         Unsubscribe {
             parent,
-            client
+            id
         }
     }
 }
 
 impl Drop for Unsubscribe {
     fn drop(&mut self) {
-        let Unsubscribe { parent, client } = self;
-        parent.remove(client);
+        let Unsubscribe { parent, id } = self;
+        parent.remove(id);
     }
 }
 
@@ -54,13 +92,13 @@ impl Subscription {
     pub fn add(self: &Rc<Subscription>, observer: Observer) -> Unsubscribe {
         let id = observer.getId();
         let mut list = self.list.borrow_mut();
-        let result = list.insert(id, observer.clone());
+        let result = list.insert(id, observer);
 
         if result.is_some() {
             panic!("Coś poszło nie tak");
         }
 
-        Unsubscribe::new(self.clone(), observer.clone())
+        Unsubscribe::new(self.clone(), id)
     }
 
     pub fn trigger(&self) -> Vec<Rc<Client>> {
@@ -74,8 +112,7 @@ impl Subscription {
         out
     }
 
-    pub fn remove(self: &Rc<Subscription>, observer: &Observer) {
-        let id = observer.getId();
+    pub fn remove(self: &Rc<Subscription>, id: &u64) {
         let mut list = self.list.borrow_mut();
         let result = list.remove(&id);
 
@@ -133,7 +170,7 @@ impl<T: 'static> Value<T> {
 
         let computed = Computed::newRc(getValue);
 
-        let unsubscribe = self.subscription.add(computed.clone());
+        let unsubscribe = self.subscription.add(Observer::fromComputed(computed.clone()));
         computed.addToUnsubscribeList(unsubscribe);
 
         computed
@@ -214,8 +251,8 @@ impl<T: 'static> Computed<T> {
 
         let result = Computed::new(getValue);
 
-        let aUnsubscribe = a.addSubscription(result.clone());
-        let bUnsubscribe = b.addSubscription(result.clone());
+        let aUnsubscribe = a.addSubscription(Observer::fromComputed(result.clone()));
+        let bUnsubscribe = b.addSubscription(Observer::fromComputed(result.clone()));
 
         result.addToUnsubscribeList(aUnsubscribe);
         result.addToUnsubscribeList(bUnsubscribe);
@@ -234,7 +271,7 @@ impl<T: 'static> Computed<T> {
         inner.value.clone()
     }
 
-    pub fn setAsUnfresh(&self) -> Vec<Rc<Client>> {
+    pub fn setAsUnfreshInner(&self) -> Vec<Rc<Client>> {
         let mut inner = self.refCell.borrow_mut();
         inner.isFresh = false;
         inner.subscription.trigger()
@@ -249,11 +286,16 @@ impl<T: 'static> Computed<T> {
     pub fn subscribe(self: Rc<Computed<T>>, call: Box<dyn Fn(Rc<T>) + 'static>) -> Rc<Client> {
         let client = Client::new(self.clone(), call);
 
-        let unsubscribe = self.addSubscription(client.clone());
+        let unsubscribe = self.addSubscription(Observer::fromClient(client.clone()));
 
         client.setUnsubscribe(unsubscribe);
 
         client
+    }
+}
+impl<T: 'static> ComputedTrait for Rc<Computed<T>> {
+    fn setAsUnfresh(&self) -> Vec<Rc<Client>> {
+        self.setAsUnfreshInner()
     }
 }
 
