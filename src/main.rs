@@ -27,13 +27,13 @@ impl<T> BoxRefCell<T> {
 
     fn get<R>(&self, getter: fn(&T) -> R) -> R {
         let value = self.value.borrow();
-        let state = *value;
+        let state = &*value;
         getter(&state)
     }
 
     fn change<D, R>(&self, data: D, changeFn: fn(&mut T, D) -> R) -> R {
         let value = self.value.borrow_mut();
-        let mut state = *value;
+        let mut state = value;
         changeFn(&mut state, data)
     }
 }
@@ -109,7 +109,7 @@ impl Drop for Unsubscribe {
 }
 
 struct Subscription {
-    list: BoxRefCell<HashMap<u64, Observer>>,
+    list: BoxRefCell<HashMap<u64, Rc<Observer>>>,
 }
 
 impl Subscription {
@@ -120,21 +120,39 @@ impl Subscription {
     }
 
     pub fn add(self: &Rc<Subscription>, observer: Observer) -> Unsubscribe {
-        let id = observer.getId();
-        let mut list = self.list.borrow_mut();
-        let result = list.insert(id, observer);
+        let observer = Rc::new(observer);
+        
+        self.list.change(observer, |state, observer|{
+            let id = observer.getId();
+            let result = state.insert(id, observer);
 
-        if result.is_some() {
-            panic!("Coś poszło nie tak");
-        }
+            if result.is_some() {
+                panic!("Coś poszło nie tak");
+            }
+        });
+
+        let id = 3;
+        //let id = observer.getId();
+
+        // let mut list = self.list.borrow_mut();
+        // let result = list.insert(id, observer);
+
+        // if result.is_some() {
+        //     panic!("Coś poszło nie tak");
+        // }
 
         Unsubscribe::new(self.clone(), id)
     }
 
     pub fn trigger(&self) -> Vec<Rc<Client>> {
         let mut out: Vec<Rc<Client>> = Vec::new();
-        let list = self.list.borrow();
-        for (_, item) in list.iter() {
+
+        let listToCall = self.list.get(|state|{
+            let result: Vec<Rc<Observer>> = state.iter().map(|(_, value)| { value }).cloned().collect();
+            result
+        });
+
+        for item in listToCall.iter() {
             let mut subList = item.call();
             out.append(&mut subList);
         }
@@ -146,12 +164,20 @@ impl Subscription {
     //
 
     pub fn remove(self: &Rc<Subscription>, id: &u64) {
-        let mut list = self.list.borrow_mut();
-        let result = list.remove(&id);
+        self.list.change(id, |state, id|{
+            let result = state.remove(&id);
 
-        if result.is_none() {
-            panic!("Błąd usuwania");
-        }
+            if result.is_none() {
+                panic!("Błąd usuwania");
+            }
+        });
+
+        // let mut list = self.list.borrow_mut();
+        // let result = list.remove(&id);
+
+        // if result.is_none() {
+        //     panic!("Błąd usuwania");
+        // }
     }
 }
 
@@ -181,8 +207,10 @@ impl<T: 'static> Value<T> {
     }
 
     pub fn setValue(self: &Rc<Value<T>>, value: T) /* -> Vec<Rc<Client>> */ {                          //TODO - trzeba odebrać i wywołać
-        let mut inner = self.refCell.borrow_mut();
-        inner.value = Rc::new(value);
+
+        self.refCell.change(value, |state, value| {
+            state.value = Rc::new(value);
+        });
 
         //todo!("Trzeba odebrac klientow do uruchomienia");
 
@@ -196,8 +224,11 @@ impl<T: 'static> Value<T> {
     }
 
     pub fn getValue(&self) -> Rc<T> {
-        let inner = self.refCell.borrow();
-        (*inner).value.clone()
+        let value = self.refCell.get(|state| {
+            state.value.clone()
+        });
+
+        value
     }
 
     pub fn toComputed(self: &Rc<Value<T>>) -> Rc<Computed<T>> {
@@ -266,8 +297,9 @@ impl<T: 'static> Computed<T> {
     }
 
     fn addToUnsubscribeList(self: &Rc<Computed<T>>, unsubscribe: Unsubscribe) {
-        let mut inner = self.refCell.borrow_mut();
-        inner.unsubscribeList.push(unsubscribe);
+        self.refCell.change(unsubscribe, |state, unsubscribe| {
+            state.unsubscribeList.push(unsubscribe);
+        });
     }
 
     pub fn from2<A, B>(
@@ -302,7 +334,7 @@ impl<T: 'static> Computed<T> {
     pub fn getValue(&self) -> Rc<T> {
         let Computed { getValueFromParent, refCell } = self;
 
-        let isFresh = refCell.get(|&state|{
+        let isFresh = refCell.get(|state|{
             state.isFresh
         });
 
@@ -312,7 +344,7 @@ impl<T: 'static> Computed<T> {
             None
         };
 
-        let result = refCell.change(newValue, |&mut state, newValue| {
+        let result = refCell.change(newValue, |state, newValue| {
             if let Some(value) = newValue {
                 state.value = value;
             }
@@ -321,23 +353,14 @@ impl<T: 'static> Computed<T> {
         });
 
         result
-
-        // let mut inner = refCell.borrow_mut();
-
-        // if inner.isFresh == false {
-        //     inner.value = getValueFromParent();
-        //     inner.isFresh = true;
-        // }
-
-        // inner.value.clone()
     }
 
     pub fn setAsUnfreshInner(&self) -> Vec<Rc<Client>> {
         let subscription = self.refCell.change(
             (),
-            |&mut state, _data| {
+            |state, _data| {
                 state.isFresh = false;
-                state.subscription
+                state.subscription.clone()
             }
         );
 
@@ -347,7 +370,7 @@ impl<T: 'static> Computed<T> {
     pub fn addSubscription(&self, observer: Observer) -> Unsubscribe {
         let unsubscribe = self.refCell.change(
             observer,
-            |&mut state, observer: Observer| {
+            |state, observer: Observer| {
                 let unsubscribe = state.subscription.add(observer);
                 unsubscribe
             }
