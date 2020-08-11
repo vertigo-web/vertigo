@@ -14,6 +14,29 @@ fn getId() -> u64 {
     get_unique_id()
 }
 
+struct BoxRefCell<T> {
+    value: RefCell<T>,
+}
+
+impl<T> BoxRefCell<T> {
+    fn new(value: T) -> BoxRefCell<T> {
+        BoxRefCell {
+            value: RefCell::new(value),
+        }
+    }
+
+    fn get<R>(&self, getter: fn(T) -> R) -> R {
+        let value = self.value.borrow();
+        let state = *value;
+        getter(state)
+    }
+
+    fn change<D>(&self, data: D, changeFn: fn(&mut T, D)) {
+        let value = self.value.borrow_mut();
+        let mut state = *value;
+        changeFn(state, data)
+    }
+}
 
 trait ComputedTrait {
     fn setAsUnfresh(&self) -> Vec<Rc<Client>>;
@@ -86,13 +109,13 @@ impl Drop for Unsubscribe {
 }
 
 struct Subscription {
-    list: RefCell<HashMap<u64, Observer>>,
+    list: BoxRefCell<HashMap<u64, Observer>>,
 }
 
 impl Subscription {
     pub fn new() -> Rc<Subscription> {
         Rc::new(Subscription {
-            list: RefCell::new(HashMap::new())
+            list: BoxRefCell::new(HashMap::new())
         })
     }
 
@@ -142,14 +165,14 @@ impl<T: 'static> ValueInner<T> {
 }
 
 struct Value<T: 'static> {
-    refCell: RefCell<ValueInner<T>>,
+    refCell: BoxRefCell<ValueInner<T>>,
     subscription: Rc<Subscription>,
 }
 
 impl<T: 'static> Value<T> {
     pub fn new(value: T) -> Rc<Value<T>> {
         Rc::new(Value {
-            refCell: RefCell::new(ValueInner::new(value)),
+            refCell: BoxRefCell::new(ValueInner::new(value)),
             subscription: Subscription::new(),
         })
     }
@@ -198,8 +221,8 @@ struct ComputedValue<T: 'static> {
 }
 
 impl<T: 'static> ComputedValue<T> {
-    pub fn new(value: Rc<T>) -> RefCell<ComputedValue<T>> {
-        RefCell::new(ComputedValue {
+    pub fn new(value: Rc<T>) -> BoxRefCell<ComputedValue<T>> {
+        BoxRefCell::new(ComputedValue {
             isFresh: true,
             value,
             unsubscribeList: Vec::new(),
@@ -209,7 +232,7 @@ impl<T: 'static> ComputedValue<T> {
 }
 
 struct Computed<T: 'static> {
-    refCell: RefCell<ComputedValue<T>>,
+    refCell: BoxRefCell<ComputedValue<T>>,
     getValueFromParent: Box<dyn Fn() -> Rc<T> + 'static>,
 }
 
@@ -316,8 +339,16 @@ impl<T: 'static> ComputedTrait for Rc<Computed<T>> {
 
 struct Client {
     refresh: Box<dyn Fn()>,
-    _unsubscribe: RefCell<Option<Unsubscribe>>,
+    _unsubscribe: BoxRefCell<Option<Unsubscribe>>,
 }
+
+// fn setUnsubscribeStatic(state: &mut Option<Unsubscribe>, unsubscribe: Unsubscribe) {
+//     if state.is_some() {
+//         panic!("Nic tu nie powinno być");
+//     }
+
+//     *state = Some(unsubscribe);
+// }
 
 impl Client {
     fn new<T: 'static>(computed: Rc<Computed<T>>, call: Box<dyn Fn(Rc<T>) + 'static>) -> Rc<Client> {
@@ -331,18 +362,19 @@ impl Client {
         Rc::new(
             Client {
                 refresh,
-                _unsubscribe: RefCell::new(None),
+                _unsubscribe: BoxRefCell::new(None),
             }
         )
     }
 
     fn setUnsubscribe(&self, unsubscribe: Unsubscribe) {
-        let mut inner = self._unsubscribe.borrow_mut();
-        if inner.is_some() {
-            panic!("Nic tu nie powinno być");
-        }
-
-        *inner = Some(unsubscribe);
+        self._unsubscribe.change(unsubscribe, |state: &mut Option<Unsubscribe>, unsubscribe: Unsubscribe| {
+            if state.is_some() {
+                panic!("Nic tu nie powinno być");
+            }
+        
+            *state = Some(unsubscribe);
+        });
     }
 
     fn off(self: Rc<Client>) {}
@@ -382,4 +414,11 @@ fn main() {
 
 
     subscription.off();
+
+    // let aa: UnsafeCell<i32> = UnsafeCell::new(1);
+    
+    // {
+    //     let aa1 = aa.get();
+    //     aa1 = 3;
+    // }
 }
