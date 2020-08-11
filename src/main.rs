@@ -106,6 +106,7 @@ struct Unsubscribe {
 
 impl Unsubscribe {
     fn new(parent: Rc<Subscription>, id: u64) -> Unsubscribe {
+        println!("+++++++++ ++++++++++ subscribe +++++++++ ++++++++++");
         Unsubscribe {
             parent,
             id
@@ -115,19 +116,33 @@ impl Unsubscribe {
 
 impl Drop for Unsubscribe {
     fn drop(&mut self) {
+        println!("+++++++++ ++++++++++ unsubscribe +++++++++ ++++++++++");
         let Unsubscribe { parent, id } = self;
         parent.remove(id);
     }
 }
 
+struct SubscriptionValue {
+    list: HashMap<u64, Rc<Observer>>,
+    unsubscribeList: Vec<Unsubscribe>,
+}
+impl SubscriptionValue {
+    fn new() -> SubscriptionValue {
+        SubscriptionValue {
+            list: HashMap::new(),
+            unsubscribeList: Vec::new(),
+        }
+    }
+}
+
 struct Subscription {
-    list: BoxRefCell<HashMap<u64, Rc<Observer>>>,
+    inner: BoxRefCell<SubscriptionValue>,
 }
 
 impl Subscription {
     pub fn new() -> Rc<Subscription> {
         Rc::new(Subscription {
-            list: BoxRefCell::new(HashMap::new())
+            inner: BoxRefCell::new(SubscriptionValue::new())
         })
     }
 
@@ -136,9 +151,9 @@ impl Subscription {
 
         println!("############ subskrybcja ############ {}", observer.dump());
 
-        self.list.change(observer.clone(), |state, observer|{
+        self.inner.change(observer.clone(), |state, observer|{
             let id = observer.getId();
-            let result = state.insert(id, observer);
+            let result = state.list.insert(id, observer);
 
             if result.is_some() {
                 panic!("Coś poszło nie tak");
@@ -153,8 +168,8 @@ impl Subscription {
     pub fn trigger(&self) -> Vec<Rc<Client>> {
         let mut out: Vec<Rc<Client>> = Vec::new();
 
-        let listToCall = self.list.get(|state|{
-            let result: Vec<Rc<Observer>> = state.iter().map(|(_, value)| { value }).cloned().collect();
+        let listToCall = self.inner.get(|state|{
+            let result: Vec<Rc<Observer>> = state.list.iter().map(|(_, value)| { value }).cloned().collect();
             result
         });
 
@@ -167,20 +182,24 @@ impl Subscription {
     }
 
     pub fn remove(self: &Rc<Subscription>, id: &u64) {
-        self.list.change(id, |state, id|{
-            let result = state.remove(&id);
+        self.inner.change(id, |state, id|{
+            let result = state.list.remove(&id);
 
             if result.is_none() {
                 panic!("Błąd usuwania");
             }
+
+                                            //jeśli spada do 0 ilość subskrybcji, to odsubskrybować się z rodzica
+            if state.list.len() == 0 {
+                state.unsubscribeList = Vec::new();
+            }
         });
+    }
 
-        // let mut list = self.list.borrow_mut();
-        // let result = list.remove(&id);
-
-        // if result.is_none() {
-        //     panic!("Błąd usuwania");
-        // }
+    pub fn addToUnsubscribeList(self: &Rc<Subscription>, unsubscribe: Unsubscribe) {
+        self.inner.change(unsubscribe, |state, unsubscribe| {
+            state.unsubscribeList.push(unsubscribe);
+        });
     }
 }
 
@@ -252,7 +271,6 @@ impl<T: Debug + 'static> Value<T> {
 struct ComputedValue<T: 'static> {
     isFresh: bool,
     value: Rc<T>,
-    unsubscribeList: Vec<Unsubscribe>,
     subscription: Rc<Subscription>
 }
 
@@ -261,7 +279,6 @@ impl<T: 'static> ComputedValue<T> {
         BoxRefCell::new(ComputedValue {
             isFresh: true,
             value,
-            unsubscribeList: Vec::new(),
             subscription: Subscription::new(),
         })
     }
@@ -300,14 +317,14 @@ impl<T: Debug + 'static> Computed<T> {
 
     fn addToUnsubscribeList(self: &Rc<Computed<T>>, unsubscribe: Unsubscribe) {
         self.refCell.change(unsubscribe, |state, unsubscribe| {
-            state.unsubscribeList.push(unsubscribe);
+            state.subscription.addToUnsubscribeList(unsubscribe);
         });
     }
 
     pub fn from2<A: Debug, B: Debug>(
         a: Rc<Computed<A>>,
         b: Rc<Computed<B>>,
-        calculate: fn(Rc<A>, Rc<B>) -> T
+        calculate: fn(&A, &B) -> T
     ) -> Rc<Computed<T>> {
 
         let getValue = {
@@ -320,7 +337,8 @@ impl<T: Debug + 'static> Computed<T> {
 
                 println!("params {:?} {:?}", &aValue, &bValue);
 
-                let result = calculate(aValue, bValue);
+
+                let result = calculate(aValue.as_ref(), bValue.as_ref());
 
                 println!("result {:?}", result);
                 result
@@ -445,7 +463,11 @@ impl Client {
         });
     }
 
-    fn off(self: Rc<Client>) {}
+    fn off(self: Rc<Client>) {
+        self._unsubscribe.change((), |state, _data| {
+            *state = None;
+        });
+    }
 
     fn recalculate(&self) {
         println!(" ..... recalculate start ..... ");
@@ -473,9 +495,9 @@ fn main() {
     println!("ETAP 004");
 
 
-    let sum = Computed::from2(com1, com2, |a: Rc<i32>, b: Rc<i32>| -> i32 {
+    let sum = Computed::from2(com1, com2, |a: &i32, b: &i32| -> i32 {
         println!("JESZCZE RAZ LICZE");
-        a.as_ref() + b.as_ref()
+        a + b
     });
 
     println!("ETAP 005");
@@ -494,4 +516,18 @@ fn main() {
 
 
     subscription.off();
+
+    val2.setValue(889);
 }
+
+
+
+/*
+
+            zarzadzanie subskrybcjami
+
+
+
+            jesli liczba subskrybcji spadnie do zera, to wtedy trzeba wyczyscic subskrybcje
+
+*/
