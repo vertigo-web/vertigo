@@ -110,7 +110,7 @@ impl Subscription {
 
     pub fn trigger(&self) -> Vec<Rc<Client>> {
         let mut out: Vec<Rc<Client>> = Vec::new();
-        let mut list = self.list.borrow();
+        let list = self.list.borrow();
         for (_, item) in list.iter() {
             let mut subList = item.call();
             out.append(&mut subList);
@@ -154,17 +154,19 @@ impl<T: 'static> Value<T> {
         })
     }
 
-    pub fn setValue(self: &Rc<Value<T>>, value: T) -> Vec<Rc<Client>> {                          //TODO - trzeba odebrać i wywołać
+    pub fn setValue(self: &Rc<Value<T>>, value: T) /* -> Vec<Rc<Client>> */ {                          //TODO - trzeba odebrać i wywołać
         let mut inner = self.refCell.borrow_mut();
         inner.value = Rc::new(value);
 
-        todo!("Trzeba odebrac klientow do uruchomienia");
+        //todo!("Trzeba odebrac klientow do uruchomienia");
 
         let list = self.subscription.trigger();
 
         for item in list {
             item.recalculate();
         }
+
+
     }
 
     pub fn getValue(&self) -> Rc<T> {
@@ -274,7 +276,7 @@ impl<T: 'static> Computed<T> {
     pub fn getValue(&self) -> Rc<T> {
         let Computed { getValueFromParent, refCell } = self;
 
-        let mut inner = refCell.borrow();
+        let mut inner = refCell.borrow_mut();
 
         if inner.isFresh == false {
             inner.value = getValueFromParent();
