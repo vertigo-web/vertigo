@@ -4,9 +4,16 @@ use std::collections::HashMap;
 use std::rc::Rc;
 use std::cell::RefCell;
 
-fn getId() -> u64 {
-    todo!();
+pub fn get_unique_id() -> u64 {
+    use std::sync::atomic::{AtomicU64, Ordering};
+    static COUNTER:AtomicU64 = AtomicU64::new(1);
+    COUNTER.fetch_add(1, Ordering::Relaxed)
 }
+
+fn getId() -> u64 {
+    get_unique_id()
+}
+
 
 trait ComputedTrait {
     fn setAsUnfresh(&self) -> Vec<Rc<Client>>;
@@ -153,7 +160,11 @@ impl<T: 'static> Value<T> {
 
         todo!("Trzeba odebrac klientow do uruchomienia");
 
-        self.subscription.trigger()
+        let list = self.subscription.trigger();
+
+        for item in list {
+            item.recalculate();
+        }
     }
 
     pub fn getValue(&self) -> Rc<T> {
@@ -196,8 +207,8 @@ impl<T: 'static> ComputedValue<T> {
 }
 
 struct Computed<T: 'static> {
-    getValue: Box<dyn Fn() -> Rc<T> + 'static>,
     refCell: RefCell<ComputedValue<T>>,
+    getValueFromParent: Box<dyn Fn() -> Rc<T> + 'static>,
 }
 
 impl<T: 'static> Computed<T> {
@@ -210,7 +221,7 @@ impl<T: 'static> Computed<T> {
 
         Rc::new(
             Computed {
-                getValue: newGetValue,
+                getValueFromParent: newGetValue,
                 refCell: ComputedValue::new(value),
             }
         )
@@ -220,7 +231,7 @@ impl<T: 'static> Computed<T> {
         let value = getValue();
         Rc::new(
             Computed {
-                getValue: getValue,
+                getValueFromParent: getValue,
                 refCell: ComputedValue::new(value),
             }
         )
@@ -261,10 +272,12 @@ impl<T: 'static> Computed<T> {
     }
 
     pub fn getValue(&self) -> Rc<T> {
-        let mut inner = self.refCell.borrow_mut();
+        let Computed { getValueFromParent, refCell } = self;
+
+        let mut inner = refCell.borrow();
 
         if inner.isFresh == false {
-            inner.value = self.getValue();
+            inner.value = getValueFromParent();
             inner.isFresh = true;
         }
 
