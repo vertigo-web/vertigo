@@ -3,6 +3,7 @@
 use std::collections::HashMap;
 use std::rc::Rc;
 use std::cell::RefCell;
+use std::fmt::Debug;
 
 pub fn get_unique_id() -> u64 {
     use std::sync::atomic::{AtomicU64, Ordering};
@@ -72,7 +73,7 @@ impl Observer {
         }
     }
 
-    fn fromComputed<T>(computed: Rc<Computed<T>>) -> Observer {
+    fn fromComputed<T: Debug>(computed: Rc<Computed<T>>) -> Observer {
         Observer::Computed {
             id: getId(),
             refVal: Box::new(computed)
@@ -83,6 +84,17 @@ impl Observer {
         Observer::Client {
             id: getId(),
             refVal: client,
+        }
+    }
+
+    fn dump(&self) -> String {
+        match self {
+            Observer::Computed { .. } => {
+                "Observer::Computed".into()
+            },
+            Observer::Client { .. } => {
+                "Observer::Client".into()
+            }
         }
     }
 }
@@ -121,8 +133,10 @@ impl Subscription {
 
     pub fn add(self: &Rc<Subscription>, observer: Observer) -> Unsubscribe {
         let observer = Rc::new(observer);
-        
-        self.list.change(observer, |state, observer|{
+
+        println!("############ subskrybcja ############ {}", observer.dump());
+
+        self.list.change(observer.clone(), |state, observer|{
             let id = observer.getId();
             let result = state.insert(id, observer);
 
@@ -131,15 +145,7 @@ impl Subscription {
             }
         });
 
-        let id = 3;
-        //let id = observer.getId();
-
-        // let mut list = self.list.borrow_mut();
-        // let result = list.insert(id, observer);
-
-        // if result.is_some() {
-        //     panic!("Coś poszło nie tak");
-        // }
+        let id = observer.getId();
 
         Unsubscribe::new(self.clone(), id)
     }
@@ -159,9 +165,6 @@ impl Subscription {
 
         out
     }
-
-    //TODO - przenieść triggerowanie na najwyszy poziom,
-    //
 
     pub fn remove(self: &Rc<Subscription>, id: &u64) {
         self.list.change(id, |state, id|{
@@ -193,12 +196,12 @@ impl<T: 'static> ValueInner<T> {
     }
 }
 
-struct Value<T: 'static> {
+struct Value<T: Debug + 'static> {
     refCell: BoxRefCell<ValueInner<T>>,
     subscription: Rc<Subscription>,
 }
 
-impl<T: 'static> Value<T> {
+impl<T: Debug + 'static> Value<T> {
     pub fn new(value: T) -> Rc<Value<T>> {
         Rc::new(Value {
             refCell: BoxRefCell::new(ValueInner::new(value)),
@@ -209,6 +212,7 @@ impl<T: 'static> Value<T> {
     pub fn setValue(self: &Rc<Value<T>>, value: T) /* -> Vec<Rc<Client>> */ {                          //TODO - trzeba odebrać i wywołać
 
         self.refCell.change(value, |state, value| {
+            println!("nowa wartosc {:?}", value);
             state.value = Rc::new(value);
         });
 
@@ -219,8 +223,6 @@ impl<T: 'static> Value<T> {
         for item in list {
             item.recalculate();
         }
-
-
     }
 
     pub fn getValue(&self) -> Rc<T> {
@@ -265,12 +267,12 @@ impl<T: 'static> ComputedValue<T> {
     }
 }
 
-struct Computed<T: 'static> {
+struct Computed<T: Debug + 'static> {
     refCell: BoxRefCell<ComputedValue<T>>,
     getValueFromParent: Box<dyn Fn() -> Rc<T> + 'static>,
 }
 
-impl<T: 'static> Computed<T> {
+impl<T: Debug + 'static> Computed<T> {
     pub fn new<F: Fn() -> T + 'static>(getValue: Box<F>) -> Rc<Computed<T>> {
         let newGetValue = Box::new(move || {
             Rc::new(getValue())
@@ -302,7 +304,7 @@ impl<T: 'static> Computed<T> {
         });
     }
 
-    pub fn from2<A, B>(
+    pub fn from2<A: Debug, B: Debug>(
         a: Rc<Computed<A>>,
         b: Rc<Computed<B>>,
         calculate: fn(Rc<A>, Rc<B>) -> T
@@ -316,7 +318,12 @@ impl<T: 'static> Computed<T> {
                 let aValue = a.getValue();
                 let bValue = b.getValue();
 
-                calculate(aValue, bValue)
+                println!("params {:?} {:?}", &aValue, &bValue);
+
+                let result = calculate(aValue, bValue);
+
+                println!("result {:?}", result);
+                result
             })
         };
 
@@ -338,8 +345,12 @@ impl<T: 'static> Computed<T> {
             state.isFresh
         });
 
-        let newValue = if isFresh {
-            Some(getValueFromParent())
+        println!("**** computed getValue **** {}", isFresh);
+
+        let newValue = if isFresh == false {
+            let result = getValueFromParent();
+            println!("wyliczam nowa wartosc ====> {:?}", result);
+            Some(result)
         } else {
             None
         };
@@ -359,6 +370,7 @@ impl<T: 'static> Computed<T> {
         let subscription = self.refCell.change(
             (),
             |state, _data| {
+                println!("oznaczam jako nieswieze");
                 state.isFresh = false;
                 state.subscription.clone()
             }
@@ -383,13 +395,19 @@ impl<T: 'static> Computed<T> {
         let client = Client::new(self.clone(), call);
 
         let unsubscribe = self.addSubscription(Observer::fromClient(client.clone()));
-
         client.setUnsubscribe(unsubscribe);
 
         client
     }
 }
-impl<T: 'static> ComputedTrait for Rc<Computed<T>> {
+
+// impl<T> Drop for Computed<T> {
+//     fn drop(&mut self) {
+//         println!("Rc<Computed<T>> ----> DROP");
+//     }
+// }
+
+impl<T: Debug + 'static> ComputedTrait for Rc<Computed<T>> {
     fn setAsUnfresh(&self) -> Vec<Rc<Client>> {
         self.setAsUnfreshInner()
     }
@@ -401,7 +419,7 @@ struct Client {
 }
 
 impl Client {
-    fn new<T: 'static>(computed: Rc<Computed<T>>, call: Box<dyn Fn(Rc<T>) + 'static>) -> Rc<Client> {
+    fn new<T: Debug + 'static>(computed: Rc<Computed<T>>, call: Box<dyn Fn(Rc<T>) + 'static>) -> Rc<Client> {
         let refresh = Box::new(move || {
             let value = computed.getValue();
             call(value);
@@ -430,8 +448,10 @@ impl Client {
     fn off(self: Rc<Client>) {}
 
     fn recalculate(&self) {
+        println!(" ..... recalculate start ..... ");
         let Client { refresh, .. } = self;
         refresh();
+        println!(" ..... recalculate stop ..... ");
     }
 }
 
@@ -439,28 +459,38 @@ fn main() {
     println!("Hello, world!");
 
     let val1 = Value::new(4);
+
+    println!("ETAP 001");
     let val2 = Value::new(5);
 
-    // let com1: Rc<Computed<i32>> = val1.toComputed();
-    // let com2: Rc<Computed<i32>> = val2.toComputed();
+    println!("ETAP 002");
 
-    let sum = Computed::from2(val1.toComputed(), val2.toComputed(), |a: Rc<i32>, b: Rc<i32>| -> i32 {
-        //let aa = a.as_ref();
+    let com1: Rc<Computed<i32>> = val1.toComputed();
+    println!("ETAP 003");
+
+    let com2: Rc<Computed<i32>> = val2.toComputed();
+
+    println!("ETAP 004");
+
+
+    let sum = Computed::from2(com1, com2, |a: Rc<i32>, b: Rc<i32>| -> i32 {
+        println!("JESZCZE RAZ LICZE");
         a.as_ref() + b.as_ref()
     });
 
+    println!("ETAP 005");
 
     let subscription = sum.subscribe(Box::new(|sum: Rc<i32>| {
-        println!("Suma: {}", sum);
+        println!("___Suma: {}___", sum);
     }));
 
-    println!("aaa");
+    println!("ETAP aaa");
     val1.setValue(333);
 
-    println!("bbb");
-    val1.setValue(888);
+    println!("ETAP bbb");
+    val2.setValue(888);
 
-    println!("ccc");
+    println!("ETAP ccc");
 
 
     subscription.off();
