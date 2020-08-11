@@ -25,16 +25,16 @@ impl<T> BoxRefCell<T> {
         }
     }
 
-    fn get<R>(&self, getter: fn(T) -> R) -> R {
+    fn get<R>(&self, getter: fn(&T) -> R) -> R {
         let value = self.value.borrow();
         let state = *value;
-        getter(state)
+        getter(&state)
     }
 
-    fn change<D>(&self, data: D, changeFn: fn(&mut T, D)) {
+    fn change<D, R>(&self, data: D, changeFn: fn(&mut T, D) -> R) -> R {
         let value = self.value.borrow_mut();
         let mut state = *value;
-        changeFn(state, data)
+        changeFn(&mut state, data)
     }
 }
 
@@ -141,6 +141,9 @@ impl Subscription {
 
         out
     }
+
+    //TODO - przenieść triggerowanie na najwyszy poziom,
+    //
 
     pub fn remove(self: &Rc<Subscription>, id: &u64) {
         let mut list = self.list.borrow_mut();
@@ -299,25 +302,66 @@ impl<T: 'static> Computed<T> {
     pub fn getValue(&self) -> Rc<T> {
         let Computed { getValueFromParent, refCell } = self;
 
-        let mut inner = refCell.borrow_mut();
+        let isFresh = refCell.get(|&state|{
+            state.isFresh
+        });
 
-        if inner.isFresh == false {
-            inner.value = getValueFromParent();
-            inner.isFresh = true;
-        }
+        let newValue = if isFresh {
+            Some(getValueFromParent())
+        } else {
+            None
+        };
 
-        inner.value.clone()
+        let result = refCell.change(newValue, |&mut state, newValue| {
+            if let Some(value) = newValue {
+                state.value = value;
+            }
+            
+            state.value.clone()
+        });
+
+        // let result = refCell.change(getValueFromParent, |&mut state, getValueFromParent| {
+        //     if state.isFresh == false {
+        //         state.value = getValueFromParent();                     //????????????
+        //         state.isFresh = true;
+        //     }
+    
+        //     state.value.clone()
+        // });
+
+        result
+
+        // let mut inner = refCell.borrow_mut();
+
+        // if inner.isFresh == false {
+        //     inner.value = getValueFromParent();
+        //     inner.isFresh = true;
+        // }
+
+        // inner.value.clone()
     }
 
     pub fn setAsUnfreshInner(&self) -> Vec<Rc<Client>> {
-        let mut inner = self.refCell.borrow_mut();
-        inner.isFresh = false;
-        inner.subscription.trigger()
+        let subscription = self.refCell.change(
+            (),
+            |&mut state, _data| {
+                state.isFresh = false;
+                state.subscription
+            }
+        );
+
+        subscription.trigger()
     }
 
     pub fn addSubscription(&self, observer: Observer) -> Unsubscribe {
-        let inner = self.refCell.borrow_mut();
-        let unsubscribe = inner.subscription.add(observer);
+        let unsubscribe = self.refCell.change(
+            observer,
+            |&mut state, observer: Observer| {
+                let unsubscribe = state.subscription.add(observer);
+                unsubscribe
+            }
+        );
+
         unsubscribe
     }
 
@@ -341,14 +385,6 @@ struct Client {
     refresh: Box<dyn Fn()>,
     _unsubscribe: BoxRefCell<Option<Unsubscribe>>,
 }
-
-// fn setUnsubscribeStatic(state: &mut Option<Unsubscribe>, unsubscribe: Unsubscribe) {
-//     if state.is_some() {
-//         panic!("Nic tu nie powinno być");
-//     }
-
-//     *state = Some(unsubscribe);
-// }
 
 impl Client {
     fn new<T: 'static>(computed: Rc<Computed<T>>, call: Box<dyn Fn(Rc<T>) + 'static>) -> Rc<Client> {
@@ -414,11 +450,4 @@ fn main() {
 
 
     subscription.off();
-
-    // let aa: UnsafeCell<i32> = UnsafeCell::new(1);
-    
-    // {
-    //     let aa1 = aa.get();
-    //     aa1 = 3;
-    // }
 }
