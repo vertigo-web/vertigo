@@ -320,15 +320,6 @@ impl<T: 'static> Computed<T> {
             state.value.clone()
         });
 
-        // let result = refCell.change(getValueFromParent, |&mut state, getValueFromParent| {
-        //     if state.isFresh == false {
-        //         state.value = getValueFromParent();                     //????????????
-        //         state.isFresh = true;
-        //     }
-    
-        //     state.value.clone()
-        // });
-
         result
 
         // let mut inner = refCell.borrow_mut();
