@@ -11,10 +11,6 @@ pub fn get_unique_id() -> u64 {
     COUNTER.fetch_add(1, Ordering::Relaxed)
 }
 
-fn getId() -> u64 {
-    get_unique_id()
-}
-
 struct BoxRefCell<T> {
     value: RefCell<T>,
 }
@@ -39,167 +35,61 @@ impl<T> BoxRefCell<T> {
     }
 }
 
-trait ComputedTrait {
-    fn setAsUnfresh(&self) -> Vec<Rc<Client>>;
+struct DependenciesInner {
+    computed: HashMap<u64, ComputedRefresh>,          //To wykorzystujemy do wytrigerowania odpowiednich akcji
+    client: HashMap<u64, ClientRefresh>,                //
+    relations: HashMap<u64, u64>,           //relacje zaleności
+    revertRelations: HashMap<u64, u64>,          //wykorzystywane do powiadamiania o konieczności przeliczenia
 }
 
-enum Observer {
-    Computed {
-        id: u64,
-        refVal: Box<dyn ComputedTrait>,         //Tutaj zwracamy listę z clientami do odświzenia
-    },
-    Client {
-        id: u64,
-        refVal: Rc<Client>,                     //Tutaj trigger nie wywołuje nic wgłąb, po prostu zwraca referencję
-    }
-}
-
-impl Observer {
-    fn getId(&self) -> u64 {
-        match self {
-            Observer::Computed { id, .. } => id.clone(),
-            Observer::Client { id, .. } => id.clone()
+impl DependenciesInner {
+    fn new() -> DependenciesInner {
+        DependenciesInner {
+            computed: HashMap::new(),
+            client: HashMap::new(),
+            relations: HashMap::new(),
+            revertRelations: HashMap::new(),
         }
     }
+}
+struct Dependencies {
+    inner: BoxRefCell<DependenciesInner>,
+}
 
-    fn call(&self) -> Vec<Rc<Client>> {
-        match self {
-            Observer::Computed { refVal, .. } => {
-                refVal.setAsUnfresh()
-            },
-            Observer::Client { refVal, .. } => {
-                vec!(refVal.clone())
+impl Dependencies {
+    fn new() -> Rc<Dependencies> {
+        Rc::new(
+            Dependencies {
+                inner: BoxRefCell::new(DependenciesInner::new())
             }
-        }
+        )
     }
 
-    fn fromComputed<T: Debug>(computed: Rc<Computed<T>>) -> Observer {
-        Observer::Computed {
-            id: getId(),
-            refVal: Box::new(computed)
-        }
+    fn newValue<T: Debug>(self: &Rc<Dependencies>, value: T) -> Rc<Value<T>> {
+        Value::new(self.clone(), value)
     }
 
-    fn fromClient(client: Rc<Client>) -> Observer {
-        Observer::Client {
-            id: getId(),
-            refVal: client,
-        }
+    fn triggerChange(self: &Rc<Dependencies>, id: u64) {
+
+        //rozglaszamy po grafie nieswieze wartosci
+        //wywolujemy ponowne przeliczenia
+
+        todo!();
     }
 
-    fn dump(&self) -> String {
-        match self {
-            Observer::Computed { .. } => {
-                "Observer::Computed".into()
-            },
-            Observer::Client { .. } => {
-                "Observer::Client".into()
-            }
-        }
-    }
-}
+    fn addRelation(self: &Rc<Dependencies>, parent: u64, target: ComputedRefresh) {
 
-struct Unsubscribe {
-    parent: Rc<Subscription>,
-    id: u64,
-}
-
-impl Unsubscribe {
-    fn new(parent: Rc<Subscription>, id: u64) -> Unsubscribe {
-        println!("+++++++++ ++++++++++ subscribe +++++++++ ++++++++++");
-        Unsubscribe {
-            parent,
-            id
-        }
-    }
-}
-
-impl Drop for Unsubscribe {
-    fn drop(&mut self) {
-        println!("+++++++++ ++++++++++ unsubscribe +++++++++ ++++++++++");
-        let Unsubscribe { parent, id } = self;
-        parent.remove(id);
-    }
-}
-
-struct SubscriptionValue {
-    list: HashMap<u64, Rc<Observer>>,
-    unsubscribeList: Vec<Unsubscribe>,
-}
-impl SubscriptionValue {
-    fn new() -> SubscriptionValue {
-        SubscriptionValue {
-            list: HashMap::new(),
-            unsubscribeList: Vec::new(),
-        }
-    }
-}
-
-struct Subscription {
-    inner: BoxRefCell<SubscriptionValue>,
-}
-
-impl Subscription {
-    pub fn new() -> Rc<Subscription> {
-        Rc::new(Subscription {
-            inner: BoxRefCell::new(SubscriptionValue::new())
-        })
-    }
-
-    pub fn add(self: &Rc<Subscription>, observer: Observer) -> Unsubscribe {
-        let observer = Rc::new(observer);
-
-        println!("############ subskrybcja ############ {}", observer.dump());
-
-        self.inner.change(observer.clone(), |state, observer|{
-            let id = observer.getId();
-            let result = state.list.insert(id, observer);
-
-            if result.is_some() {
-                panic!("Coś poszło nie tak");
-            }
+        self.inner.change((parent, target), |state, (parent, target)| {
+            let targetId = target.getId();
+            state.computed.insert(targetId, target);
         });
 
-        let id = observer.getId();
-
-        Unsubscribe::new(self.clone(), id)
+        todo!();
     }
 
-    pub fn trigger(&self) -> Vec<Rc<Client>> {
-        let mut out: Vec<Rc<Client>> = Vec::new();
+    fn addRelationToClient(self: &Rc<Dependencies>, parent: u64, client: ClientRefresh) {
 
-        let listToCall = self.inner.get(|state|{
-            let result: Vec<Rc<Observer>> = state.list.iter().map(|(_, value)| { value }).cloned().collect();
-            result
-        });
-
-        for item in listToCall.iter() {
-            let mut subList = item.call();
-            out.append(&mut subList);
-        }
-
-        out
-    }
-
-    pub fn remove(self: &Rc<Subscription>, id: &u64) {
-        self.inner.change(id, |state, id|{
-            let result = state.list.remove(&id);
-
-            if result.is_none() {
-                panic!("Błąd usuwania");
-            }
-
-                                            //jeśli spada do 0 ilość subskrybcji, to odsubskrybować się z rodzica
-            if state.list.len() == 0 {
-                state.unsubscribeList = Vec::new();
-            }
-        });
-    }
-
-    pub fn addToUnsubscribeList(self: &Rc<Subscription>, unsubscribe: Unsubscribe) {
-        self.inner.change(unsubscribe, |state, unsubscribe| {
-            state.unsubscribeList.push(unsubscribe);
-        });
+        todo!();
     }
 }
 
@@ -216,32 +106,27 @@ impl<T: 'static> ValueInner<T> {
 }
 
 struct Value<T: Debug + 'static> {
+    id: u64,
     refCell: BoxRefCell<ValueInner<T>>,
-    subscription: Rc<Subscription>,
+    deps: Rc<Dependencies>,
 }
 
 impl<T: Debug + 'static> Value<T> {
-    pub fn new(value: T) -> Rc<Value<T>> {
+    pub fn new(deps: Rc<Dependencies>, value: T) -> Rc<Value<T>> {
         Rc::new(Value {
+            id: get_unique_id(),
             refCell: BoxRefCell::new(ValueInner::new(value)),
-            subscription: Subscription::new(),
+            deps
         })
     }
 
     pub fn setValue(self: &Rc<Value<T>>, value: T) /* -> Vec<Rc<Client>> */ {                          //TODO - trzeba odebrać i wywołać
-
         self.refCell.change(value, |state, value| {
             println!("nowa wartosc {:?}", value);
             state.value = Rc::new(value);
         });
 
-        //todo!("Trzeba odebrac klientow do uruchomienia");
-
-        let list = self.subscription.trigger();
-
-        for item in list {
-            item.recalculate();
-        }
+        self.deps.triggerChange(self.id);
     }
 
     pub fn getValue(&self) -> Rc<T> {
@@ -259,38 +144,60 @@ impl<T: Debug + 'static> Value<T> {
             selfClone.getValue()
         });
 
-        let computed = Computed::newRc(getValue);
+        let computed = Computed::newRc(self.deps.clone(), getValue);
 
-        let unsubscribe = self.subscription.add(Observer::fromComputed(computed.clone()));
-        computed.addToUnsubscribeList(unsubscribe);
+        self.deps.addRelation(self.id, computed.getComputedRefresh());
 
         computed
     }
 }
 
-struct ComputedValue<T: 'static> {
-    isFresh: bool,
-    value: Rc<T>,
-    subscription: Rc<Subscription>
+// struct ComputedValue<T: 'static> {
+//     value: Rc<T>,
+// }
+
+// impl<T: 'static> ComputedValue<T> {
+//     pub fn new(value: Rc<T>) -> BoxRefCell<ComputedValue<T>> {
+//         BoxRefCell::new(ComputedValue {
+//             value,
+//         })
+//     }
+// }
+
+struct ComputedRefresh {
+    id: u64,
+    isFreshCell: Rc<BoxRefCell<bool>>,
 }
 
-impl<T: 'static> ComputedValue<T> {
-    pub fn new(value: Rc<T>) -> BoxRefCell<ComputedValue<T>> {
-        BoxRefCell::new(ComputedValue {
-            isFresh: true,
-            value,
-            subscription: Subscription::new(),
-        })
+impl ComputedRefresh {
+    fn new(id: u64, isFreshCell: Rc<BoxRefCell<bool>>) -> ComputedRefresh {
+        ComputedRefresh {
+            id,
+            isFreshCell,
+        }
+    }
+
+    fn setAsUnfreshInner(&self) {
+        self.isFreshCell.change((), |state, _data| {
+            *state = false;
+        });
+    }
+
+    fn getId(&self) -> u64 {
+        self.id
     }
 }
 
 struct Computed<T: Debug + 'static> {
-    refCell: BoxRefCell<ComputedValue<T>>,
+    deps: Rc<Dependencies>,
     getValueFromParent: Box<dyn Fn() -> Rc<T> + 'static>,
+    id: u64,
+    isFreshCell: Rc<BoxRefCell<bool>>,
+    valueCell: BoxRefCell<Rc<T>>,
 }
 
 impl<T: Debug + 'static> Computed<T> {
-    pub fn new<F: Fn() -> T + 'static>(getValue: Box<F>) -> Rc<Computed<T>> {
+    pub fn new<F: Fn() -> T + 'static>(deps: Rc<Dependencies>, getValue: Box<F>) -> Rc<Computed<T>> {
         let newGetValue = Box::new(move || {
             Rc::new(getValue())
         });
@@ -299,26 +206,30 @@ impl<T: Debug + 'static> Computed<T> {
 
         Rc::new(
             Computed {
+                deps,
                 getValueFromParent: newGetValue,
-                refCell: ComputedValue::new(value),
+                id: get_unique_id(),
+                isFreshCell: Rc::new(BoxRefCell::new(true)),
+                valueCell: BoxRefCell::new(value),
             }
         )
     }
 
-    pub fn newRc<F: Fn() -> Rc<T> + 'static>(getValue: Box<F>) -> Rc<Computed<T>> {
+    pub fn newRc<F: Fn() -> Rc<T> + 'static>(deps: Rc<Dependencies>, getValue: Box<F>) -> Rc<Computed<T>> {
         let value = getValue();
         Rc::new(
             Computed {
+                deps,
                 getValueFromParent: getValue,
-                refCell: ComputedValue::new(value),
+                id: get_unique_id(),
+                isFreshCell: Rc::new(BoxRefCell::new(true)),
+                valueCell: BoxRefCell::new(value),
             }
         )
     }
 
-    fn addToUnsubscribeList(self: &Rc<Computed<T>>, unsubscribe: Unsubscribe) {
-        self.refCell.change(unsubscribe, |state, unsubscribe| {
-            state.subscription.addToUnsubscribeList(unsubscribe);
-        });
+    fn getComputedRefresh(&self) -> ComputedRefresh {
+        ComputedRefresh::new(self.id, self.isFreshCell.clone())
     }
 
     pub fn from2<A: Debug, B: Debug>(
@@ -345,22 +256,19 @@ impl<T: Debug + 'static> Computed<T> {
             })
         };
 
-        let result = Computed::new(getValue);
+        let result = Computed::new(a.deps.clone(), getValue);
 
-        let aUnsubscribe = a.addSubscription(Observer::fromComputed(result.clone()));
-        let bUnsubscribe = b.addSubscription(Observer::fromComputed(result.clone()));
-
-        result.addToUnsubscribeList(aUnsubscribe);
-        result.addToUnsubscribeList(bUnsubscribe);
+        result.deps.addRelation(a.id, result.getComputedRefresh());
+        result.deps.addRelation(b.id, result.getComputedRefresh());
 
         result
     }
-
+    
     pub fn getValue(&self) -> Rc<T> {
-        let Computed { getValueFromParent, refCell } = self;
+        let Computed { getValueFromParent, isFreshCell, valueCell, .. } = self;
 
-        let isFresh = refCell.get(|state|{
-            state.isFresh
+        let isFresh = isFreshCell.get(|state|{
+            *state
         });
 
         println!("**** computed getValue **** {}", isFresh);
@@ -373,71 +281,73 @@ impl<T: Debug + 'static> Computed<T> {
             None
         };
 
-        let result = refCell.change(newValue, |state, newValue| {
+        let result = valueCell.change(newValue, |state, newValue| {
             if let Some(value) = newValue {
-                state.value = value;
+                *state = value;
             }
-            
-            state.value.clone()
+
+            (*state).clone()
         });
 
         result
     }
 
-    pub fn setAsUnfreshInner(&self) -> Vec<Rc<Client>> {
-        let subscription = self.refCell.change(
-            (),
-            |state, _data| {
-                println!("oznaczam jako nieswieze");
-                state.isFresh = false;
-                state.subscription.clone()
-            }
-        );
-
-        subscription.trigger()
-    }
-
-    pub fn addSubscription(&self, observer: Observer) -> Unsubscribe {
-        let unsubscribe = self.refCell.change(
-            observer,
-            |state, observer: Observer| {
-                let unsubscribe = state.subscription.add(observer);
-                unsubscribe
-            }
-        );
-
-        unsubscribe
-    }
-
-    pub fn subscribe(self: Rc<Computed<T>>, call: Box<dyn Fn(Rc<T>) + 'static>) -> Rc<Client> {
+    pub fn subscribe(self: Rc<Computed<T>>, call: Box<dyn Fn(Rc<T>) + 'static>) -> Client {
         let client = Client::new(self.clone(), call);
 
-        let unsubscribe = self.addSubscription(Observer::fromClient(client.clone()));
-        client.setUnsubscribe(unsubscribe);
+        self.deps.addRelationToClient(self.id, client.getClientRefresh());
+
+        // let unsubscribe = self.addSubscription(Observer::fromClient(client.clone()));
+        // client.setUnsubscribe(unsubscribe);
 
         client
     }
 }
 
+                                                        //TODO
 // impl<T> Drop for Computed<T> {
 //     fn drop(&mut self) {
 //         println!("Rc<Computed<T>> ----> DROP");
+
+//         todo!();
+
+//         //Trzeba odsubskrybowac zrodla danych
 //     }
 // }
 
-impl<T: Debug + 'static> ComputedTrait for Rc<Computed<T>> {
-    fn setAsUnfresh(&self) -> Vec<Rc<Client>> {
-        self.setAsUnfreshInner()
+
+ 
+struct ClientRefresh {
+    id: u64,
+    refresh: Rc<BoxRefCell<Box<dyn Fn()>>>,
+}
+
+impl ClientRefresh {
+    fn new(id: u64, refresh: Rc<BoxRefCell<Box<dyn Fn()>>>) -> ClientRefresh {
+        ClientRefresh {
+            id,
+            refresh,
+        }
+    }
+
+    fn recalculate(&self) {
+        self.refresh.get(|state| {
+            state();
+        });
+    }
+
+    fn getId(&self) -> u64 {
+        self.id
     }
 }
 
 struct Client {
-    refresh: Box<dyn Fn()>,
-    _unsubscribe: BoxRefCell<Option<Unsubscribe>>,
+    id: u64,
+    refresh: Rc<BoxRefCell<Box<dyn Fn()>>>,
 }
 
 impl Client {
-    fn new<T: Debug + 'static>(computed: Rc<Computed<T>>, call: Box<dyn Fn(Rc<T>) + 'static>) -> Rc<Client> {
+    fn new<T: Debug + 'static>(computed: Rc<Computed<T>>, call: Box<dyn Fn(Rc<T>) + 'static>) -> Client {
         let refresh = Box::new(move || {
             let value = computed.getValue();
             call(value);
@@ -445,45 +355,39 @@ impl Client {
         
         refresh();
 
-        Rc::new(
-            Client {
-                refresh,
-                _unsubscribe: BoxRefCell::new(None),
-            }
-        )
+        Client {
+            id: get_unique_id(),
+            refresh: Rc::new(BoxRefCell::new(refresh))
+        }
     }
 
-    fn setUnsubscribe(&self, unsubscribe: Unsubscribe) {
-        self._unsubscribe.change(unsubscribe, |state: &mut Option<Unsubscribe>, unsubscribe: Unsubscribe| {
-            if state.is_some() {
-                panic!("Nic tu nie powinno być");
-            }
-        
-            *state = Some(unsubscribe);
-        });
+    fn getClientRefresh(&self) -> ClientRefresh {
+        ClientRefresh::new(self.id, self.refresh.clone())
     }
 
-    fn off(self: Rc<Client>) {
-        self._unsubscribe.change((), |state, _data| {
-            *state = None;
-        });
+    fn off(self: Client) {
     }
+}
 
-    fn recalculate(&self) {
-        println!(" ..... recalculate start ..... ");
-        let Client { refresh, .. } = self;
-        refresh();
-        println!(" ..... recalculate stop ..... ");
+impl Drop for Client {
+    fn drop(&mut self) {
+        println!("Client ----> DROP");
+
+        todo!();
+
+        //Trzeba odsubskrybowac zrodla danych
     }
 }
 
 fn main() {
     println!("Hello, world!");
 
-    let val1 = Value::new(4);
+    let root = Dependencies::new();
+
+    let val1 = root.newValue(4);
 
     println!("ETAP 001");
-    let val2 = Value::new(5);
+    let val2 = root.newValue(5);
 
     println!("ETAP 002");
 
