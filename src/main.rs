@@ -1,6 +1,7 @@
 #![allow(non_snake_case)]
 
 use std::collections::HashMap;
+use std::collections::HashSet;
 use std::rc::Rc;
 use std::cell::RefCell;
 use std::fmt::Debug;
@@ -28,18 +29,89 @@ impl<T> BoxRefCell<T> {
         getter(&state)
     }
 
+    fn getWithContext<D, R>(&self, data: D, getter: fn(&T, D) -> R) -> R {
+        let value = self.value.borrow();
+        let state = &*value;
+        getter(&state, data)
+    }
+
     fn change<D, R>(&self, data: D, changeFn: fn(&mut T, D) -> R) -> R {
         let value = self.value.borrow_mut();
         let mut state = value;
         changeFn(&mut state, data)
     }
 }
+struct Graph {
+    relations: HashMap<u64, u64>,                   //relacje zaleności, target -> parent
+    revertRelations: HashMap<u64, Vec<u64>>,        //wykorzystywane do powiadamiania o konieczności przeliczenia
+                                                    //parent -> Vec<target>
+}
+
+impl Graph {
+    fn new() -> Graph {
+        Graph {
+            relations: HashMap::new(),
+            revertRelations: HashMap::new(),
+        }
+    }
+    fn addRelation(&mut self, parentId: u64, clientId: u64) {
+        self.relations.insert(clientId, parentId);
+
+        let list = self.revertRelations.entry(parentId).or_insert_with(Vec::new);
+        list.push(clientId);
+    }
+
+    fn removeRelation(&mut self, clientId: u64) {
+        self.relations.remove(&clientId);
+        self.revertRelations.retain(|_k, listIds| {
+            listIds.retain(|item| {
+                let matchId = clientId == *item;
+                let shouldStay = !matchId;
+                shouldStay
+            });
+
+            listIds.len() > 0
+        });
+    }
+
+    fn getAllDeps(&self, parentId: u64) -> HashSet<u64> {
+        let mut result = HashSet::new();
+        let mut toTraverse: Vec<u64> = vec!(parentId);
+
+        loop {
+            let nextToTraverse = toTraverse.pop();
+
+            match nextToTraverse {
+                Some(next) => {
+                    result.insert(next);
+
+                    let list = self.revertRelations.get(&next);
+
+                    if let Some(list) = list {
+
+                        for item in list {
+                            let isContain = result.contains(item);
+                            if isContain {
+                                //ignore
+                            } else {
+
+                                toTraverse.push(*item);
+                            }
+                        }
+                    }
+                },
+                None => {
+                    return result;
+                }
+            }
+        }
+    }
+}
 
 struct DependenciesInner {
-    computed: HashMap<u64, ComputedRefresh>,          //To wykorzystujemy do wytrigerowania odpowiednich akcji
-    client: HashMap<u64, ClientRefresh>,                //
-    relations: HashMap<u64, u64>,           //relacje zaleności
-    revertRelations: HashMap<u64, u64>,          //wykorzystywane do powiadamiania o konieczności przeliczenia
+    computed: HashMap<u64, ComputedRefresh>,        //To wykorzystujemy do wytrigerowania odpowiednich akcji
+    client: HashMap<u64, ClientRefresh>,            //To wykorzystujemy do wytrigerowania odpowiedniej reakcji
+    graph: Graph,
 }
 
 impl DependenciesInner {
@@ -47,11 +119,11 @@ impl DependenciesInner {
         DependenciesInner {
             computed: HashMap::new(),
             client: HashMap::new(),
-            relations: HashMap::new(),
-            revertRelations: HashMap::new(),
+            graph: Graph::new(),
         }
     }
 }
+
 struct Dependencies {
     inner: BoxRefCell<DependenciesInner>,
 }
@@ -69,27 +141,54 @@ impl Dependencies {
         Value::new(self.clone(), value)
     }
 
-    fn triggerChange(self: &Rc<Dependencies>, id: u64) {
+    fn triggerChange(self: &Rc<Dependencies>, parentId: u64) {
 
-        //rozglaszamy po grafie nieswieze wartosci
-        //wywolujemy ponowne przeliczenia
+        self.inner.getWithContext(parentId, |state, parentId| {
+            let allDeps = state.graph.getAllDeps(parentId);
 
-        todo!();
-    }
+            for itemId in allDeps.iter() {
+                let item = state.computed.get(itemId);
 
-    fn addRelation(self: &Rc<Dependencies>, parent: u64, target: ComputedRefresh) {
+                if let Some(item) = item {
+                    item.setAsUnfreshInner();
+                }
+            }
 
-        self.inner.change((parent, target), |state, (parent, target)| {
-            let targetId = target.getId();
-            state.computed.insert(targetId, target);
+            for itemId in allDeps.iter() {
+                let item = state.client.get(itemId);
+
+                if let Some(item) = item {
+                    item.recalculate();
+                }
+            }
         });
-
-        todo!();
     }
 
-    fn addRelationToClient(self: &Rc<Dependencies>, parent: u64, client: ClientRefresh) {
+    fn addRelation(self: &Rc<Dependencies>, parentId: u64, client: ComputedRefresh) {
+        self.inner.change((parentId, client), |state, (parentId, client)| {
+            let clientId = client.getId();
+            state.computed.insert(clientId, client);
 
-        todo!();
+            state.graph.addRelation(parentId, clientId);
+        });
+    }
+
+    fn addRelationToClient(self: &Rc<Dependencies>, parentId: u64, client: ClientRefresh) {
+        self.inner.change((parentId, client), |state, (parentId, client)| {
+            let clientId = client.getId();
+            state.client.insert(clientId, client);
+
+            state.graph.addRelation(parentId, clientId);
+        });
+    }
+
+    fn removeRelation(self: &Rc<Dependencies>, clientId: u64) {
+        self.inner.change(clientId, |state, clientId| {
+            state.computed.remove(&clientId);
+            state.client.remove(&clientId);
+
+            state.graph.removeRelation(clientId);
+        });
     }
 }
 
@@ -144,7 +243,7 @@ impl<T: Debug + 'static> Value<T> {
             selfClone.getValue()
         });
 
-        let computed = Computed::newRc(self.deps.clone(), getValue);
+        let computed = Computed::new(self.deps.clone(), getValue);
 
         self.deps.addRelation(self.id, computed.getComputedRefresh());
 
@@ -152,17 +251,6 @@ impl<T: Debug + 'static> Value<T> {
     }
 }
 
-// struct ComputedValue<T: 'static> {
-//     value: Rc<T>,
-// }
-
-// impl<T: 'static> ComputedValue<T> {
-//     pub fn new(value: Rc<T>) -> BoxRefCell<ComputedValue<T>> {
-//         BoxRefCell::new(ComputedValue {
-//             value,
-//         })
-//     }
-// }
 
 struct ComputedRefresh {
     id: u64,
@@ -197,25 +285,7 @@ struct Computed<T: Debug + 'static> {
 }
 
 impl<T: Debug + 'static> Computed<T> {
-    pub fn new<F: Fn() -> T + 'static>(deps: Rc<Dependencies>, getValue: Box<F>) -> Rc<Computed<T>> {
-        let newGetValue = Box::new(move || {
-            Rc::new(getValue())
-        });
-
-        let value = newGetValue();
-
-        Rc::new(
-            Computed {
-                deps,
-                getValueFromParent: newGetValue,
-                id: get_unique_id(),
-                isFreshCell: Rc::new(BoxRefCell::new(true)),
-                valueCell: BoxRefCell::new(value),
-            }
-        )
-    }
-
-    pub fn newRc<F: Fn() -> Rc<T> + 'static>(deps: Rc<Dependencies>, getValue: Box<F>) -> Rc<Computed<T>> {
+    pub fn new<F: Fn() -> Rc<T> + 'static>(deps: Rc<Dependencies>, getValue: Box<F>) -> Rc<Computed<T>> {
         let value = getValue();
         Rc::new(
             Computed {
@@ -252,7 +322,7 @@ impl<T: Debug + 'static> Computed<T> {
                 let result = calculate(aValue.as_ref(), bValue.as_ref());
 
                 println!("result {:?}", result);
-                result
+                Rc::new(result)
             })
         };
 
@@ -293,27 +363,20 @@ impl<T: Debug + 'static> Computed<T> {
     }
 
     pub fn subscribe(self: Rc<Computed<T>>, call: Box<dyn Fn(Rc<T>) + 'static>) -> Client {
-        let client = Client::new(self.clone(), call);
+        let client = Client::new(self.deps.clone(), self.clone(), call);
 
         self.deps.addRelationToClient(self.id, client.getClientRefresh());
-
-        // let unsubscribe = self.addSubscription(Observer::fromClient(client.clone()));
-        // client.setUnsubscribe(unsubscribe);
 
         client
     }
 }
 
-                                                        //TODO
-// impl<T> Drop for Computed<T> {
-//     fn drop(&mut self) {
-//         println!("Rc<Computed<T>> ----> DROP");
-
-//         todo!();
-
-//         //Trzeba odsubskrybowac zrodla danych
-//     }
-// }
+impl<T: Debug> Drop for Computed<T> {
+    fn drop(&mut self) {
+        println!("Rc<Computed<T>> ----> DROP");
+        self.deps.removeRelation(self.id);
+    }
+}
 
 
  
@@ -342,12 +405,13 @@ impl ClientRefresh {
 }
 
 struct Client {
+    deps: Rc<Dependencies>,
     id: u64,
     refresh: Rc<BoxRefCell<Box<dyn Fn()>>>,
 }
 
 impl Client {
-    fn new<T: Debug + 'static>(computed: Rc<Computed<T>>, call: Box<dyn Fn(Rc<T>) + 'static>) -> Client {
+    fn new<T: Debug + 'static>(deps: Rc<Dependencies>, computed: Rc<Computed<T>>, call: Box<dyn Fn(Rc<T>) + 'static>) -> Client {
         let refresh = Box::new(move || {
             let value = computed.getValue();
             call(value);
@@ -356,6 +420,7 @@ impl Client {
         refresh();
 
         Client {
+            deps,
             id: get_unique_id(),
             refresh: Rc::new(BoxRefCell::new(refresh))
         }
@@ -372,10 +437,7 @@ impl Client {
 impl Drop for Client {
     fn drop(&mut self) {
         println!("Client ----> DROP");
-
-        todo!();
-
-        //Trzeba odsubskrybowac zrodla danych
+        self.deps.removeRelation(self.id);
     }
 }
 
