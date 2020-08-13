@@ -73,12 +73,8 @@ impl<T: Debug + 'static> Computed<T> {
                 let aValue = a.getValue();
                 let bValue = b.getValue();
 
-                println!("params {:?} {:?}", &aValue, &bValue);
-
-
                 let result = calculate(aValue.as_ref(), bValue.as_ref());
 
-                println!("result {:?}", result);
                 Rc::new(result)
             })
         };
@@ -102,7 +98,6 @@ impl<T: Debug + 'static> Computed<T> {
 
         let newValue = if isFresh == false {
             let result = getValueFromParent();
-            println!("wyliczam nowa wartosc ====> {:?}", result);
             Some(result)
         } else {
             None

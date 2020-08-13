@@ -36,7 +36,7 @@ impl<T: Debug + 'static> Value<T> {
 
     pub fn setValue(self: &Rc<Value<T>>, value: T) /* -> Vec<Rc<Client>> */ {                          //TODO - trzeba odebrać i wywołać
         self.refCell.change(value, |state, value| {
-            println!("nowa wartosc {:?}", value);
+            println!("Value::setValue {:?}", value);
             state.value = Rc::new(value);
         });
 
