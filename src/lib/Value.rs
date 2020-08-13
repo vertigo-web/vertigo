@@ -7,21 +7,10 @@ use crate::lib::{
     Dependencies::Dependencies,
     Computed::Computed,
 };
-struct ValueInner<T: 'static> {
-    value: Rc<T>
-}
-
-impl<T: 'static> ValueInner<T> {
-    fn new(value: T) -> ValueInner<T> {
-        ValueInner {
-            value: Rc::new(value)
-        }
-    }
-}
 
 pub struct Value<T: Debug + 'static> {
     id: u64,
-    refCell: BoxRefCell<ValueInner<T>>,
+    value: BoxRefCell<Rc<T>>,
     deps: Rc<Dependencies>,
 }
 
@@ -29,23 +18,23 @@ impl<T: Debug + 'static> Value<T> {
     pub fn new(deps: Rc<Dependencies>, value: T) -> Rc<Value<T>> {
         Rc::new(Value {
             id: get_unique_id(),
-            refCell: BoxRefCell::new(ValueInner::new(value)),
+            value: BoxRefCell::new(Rc::new(value)),
             deps
         })
     }
 
     pub fn setValue(self: &Rc<Value<T>>, value: T) /* -> Vec<Rc<Client>> */ {                          //TODO - trzeba odebrać i wywołać
-        self.refCell.change(value, |state, value| {
+        self.value.change(value, |state, value| {
             println!("Value::setValue {:?}", value);
-            state.value = Rc::new(value);
+            *state = Rc::new(value);
         });
 
         self.deps.triggerChange(self.id);
     }
 
     pub fn getValue(&self) -> Rc<T> {
-        let value = self.refCell.get(|state| {
-            state.value.clone()
+        let value = self.value.get(|state| {
+            state.clone()
         });
 
         value
