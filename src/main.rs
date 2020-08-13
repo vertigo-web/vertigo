@@ -28,13 +28,13 @@ fn main() {
         2 * value
     });
 
-    let subscription = sum.subscribe(Box::new(|sum: Rc<i32>| {
+    let subscription = sum.subscribe(|sum: Rc<i32>| {
         println!("___Suma: {}___", sum);
-    }));
+    });
 
-    let sub2 = suma2    .subscribe(Box::new(|sum2: Rc<i32>| {
+    let sub2 = suma2    .subscribe(|sum2: Rc<i32>| {
         println!("___Suma2: {}___", sum2);
-    }));
+    });
 
     val1.setValue(333);
     val2.setValue(888);
