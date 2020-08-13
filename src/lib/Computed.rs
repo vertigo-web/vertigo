@@ -114,7 +114,7 @@ impl<T: Debug + 'static> Computed<T> {
         result
     }
 
-    pub fn subscribe<F: Fn(Rc<T>) + 'static>(self: Rc<Computed<T>>, call: F) -> Client {
+    pub fn subscribe<F: Fn(&T) + 'static>(self: Rc<Computed<T>>, call: F) -> Client {
         let client = Client::new(self.deps.clone(), self.clone(), Box::new(call));
 
         self.deps.addRelationToClient(self.id, client.getClientRefresh());
