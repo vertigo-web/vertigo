@@ -1,7 +1,5 @@
 #![allow(non_snake_case)]
 
-use std::rc::Rc;                        //TODO - ukryć ten typ
-
 mod lib;
 
 use crate::lib::{
@@ -17,8 +15,8 @@ fn main() {
     let val1 = root.newValue(4);
     let val2 = root.newValue(5);
 
-    let com1: Rc<Computed<i32>> = val1.toComputed();
-    let com2: Rc<Computed<i32>> = val2.toComputed();
+    let com1: Computed<i32> = val1.toComputed();
+    let com2: Computed<i32> = val2.toComputed();
 
     let sum = Computed::from2(com1, com2, |a: &i32, b: &i32| -> i32 {
         a + b

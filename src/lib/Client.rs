@@ -39,7 +39,7 @@ pub struct Client {
 }
 
 impl Client {
-    pub fn new<T: Debug + 'static>(deps: Rc<Dependencies>, computed: Rc<Computed<T>>, call: Box<dyn Fn(&T) + 'static>) -> Client {
+    pub fn new<T: Debug + 'static>(deps: Rc<Dependencies>, computed: Computed<T>, call: Box<dyn Fn(&T) + 'static>) -> Client {
         let refresh = Box::new(move || {
             let value = computed.getValue();
             call(value.as_ref());

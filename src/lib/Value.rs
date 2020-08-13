@@ -40,7 +40,7 @@ impl<T: Debug + 'static> Value<T> {
         value
     }
 
-    pub fn toComputed(self: &Rc<Value<T>>) -> Rc<Computed<T>> {
+    pub fn toComputed(self: &Rc<Value<T>>) -> Computed<T> {
         let selfClone = self.clone();
 
         let getValue = Box::new(move || {

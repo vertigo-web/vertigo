@@ -33,7 +33,7 @@ impl ComputedRefresh {
     }
 }
 
-pub struct Computed<T: Debug + 'static> {
+pub struct ComputedInner<T: Debug + 'static> {
     deps: Rc<Dependencies>,
     getValueFromParent: Box<dyn Fn() -> Rc<T> + 'static>,
     id: u64,
@@ -41,29 +41,49 @@ pub struct Computed<T: Debug + 'static> {
     valueCell: BoxRefCell<Rc<T>>,
 }
 
+impl<T: Debug> Drop for ComputedInner<T> {
+    fn drop(&mut self) {
+        println!("Computed<T> ----> DROP");
+        self.deps.removeRelation(self.id);
+    }
+}
+
+
+pub struct Computed<T: Debug + 'static> {
+    inner: Rc<ComputedInner<T>>,
+}
+
+impl<T: Debug> Clone for Computed<T> {
+    fn clone(&self) -> Self {
+        Computed {
+            inner: self.inner.clone()
+        }
+    }
+}
+
 impl<T: Debug + 'static> Computed<T> {
-    pub fn new<F: Fn() -> Rc<T> + 'static>(deps: Rc<Dependencies>, getValue: Box<F>) -> Rc<Computed<T>> {
+    pub fn new<F: Fn() -> Rc<T> + 'static>(deps: Rc<Dependencies>, getValue: Box<F>) -> Computed<T> {
         let value = getValue();
-        Rc::new(
-            Computed {
+        Computed {
+            inner: Rc::new(ComputedInner {
                 deps,
                 getValueFromParent: getValue,
                 id: get_unique_id(),
                 isFreshCell: Rc::new(BoxRefCell::new(true)),
                 valueCell: BoxRefCell::new(value),
-            }
-        )
+            })
+        }
     }
 
     pub fn getComputedRefresh(&self) -> ComputedRefresh {
-        ComputedRefresh::new(self.id, self.isFreshCell.clone())
+        ComputedRefresh::new(self.inner.id, self.inner.isFreshCell.clone())
     }
 
     pub fn from2<A: Debug, B: Debug>(
-        a: Rc<Computed<A>>,
-        b: Rc<Computed<B>>,
+        a: Computed<A>,
+        b: Computed<B>,
         calculate: fn(&A, &B) -> T
-    ) -> Rc<Computed<T>> {
+    ) -> Computed<T> {
 
         let getValue = {
             let a = a.clone();
@@ -79,16 +99,17 @@ impl<T: Debug + 'static> Computed<T> {
             })
         };
 
-        let result = Computed::new(a.deps.clone(), getValue);
+        let result = Computed::new(a.inner.deps.clone(), getValue);
 
-        result.deps.addRelation(a.id, result.getComputedRefresh());
-        result.deps.addRelation(b.id, result.getComputedRefresh());
+        result.inner.deps.addRelation(a.inner.id, result.getComputedRefresh());
+        result.inner.deps.addRelation(b.inner.id, result.getComputedRefresh());
 
         result
     }
     
     pub fn getValue(&self) -> Rc<T> {
-        let Computed { getValueFromParent, isFreshCell, valueCell, .. } = self;
+        let inner = self.inner.as_ref();
+        let ComputedInner { getValueFromParent, isFreshCell, valueCell, .. } = inner;
 
         let isFresh = isFreshCell.get(|state|{
             *state
@@ -114,15 +135,15 @@ impl<T: Debug + 'static> Computed<T> {
         result
     }
 
-    pub fn subscribe<F: Fn(&T) + 'static>(self: Rc<Computed<T>>, call: F) -> Client {
-        let client = Client::new(self.deps.clone(), self.clone(), Box::new(call));
+    pub fn subscribe<F: Fn(&T) + 'static>(self, call: F) -> Client {
+        let client = Client::new(self.inner.deps.clone(), self.clone(), Box::new(call));
 
-        self.deps.addRelationToClient(self.id, client.getClientRefresh());
+        self.inner.deps.addRelationToClient(self.inner.id, client.getClientRefresh());
 
         client
     }
 
-    pub fn map<K: Debug>(self: Rc<Computed<T>>, fun: fn(&T) -> K) -> Rc<Computed<K>> {
+    pub fn map<K: Debug>(self, fun: fn(&T) -> K) -> Computed<K> {
 
         let getValue = {
             let selfClone = self.clone();
@@ -137,18 +158,11 @@ impl<T: Debug + 'static> Computed<T> {
             })
         };
 
-        let result = Computed::new(self.deps.clone(), getValue);
+        let result = Computed::new(self.inner.deps.clone(), getValue);
 
-        result.deps.addRelation(self.id, result.getComputedRefresh());
+        result.inner.deps.addRelation(self.inner.id, result.getComputedRefresh());
 
         result
-    }
-}
-
-impl<T: Debug> Drop for Computed<T> {
-    fn drop(&mut self) {
-        println!("Rc<Computed<T>> ----> DROP");
-        self.deps.removeRelation(self.id);
     }
 }
 
