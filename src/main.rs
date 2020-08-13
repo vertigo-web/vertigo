@@ -1,6 +1,6 @@
 #![allow(non_snake_case)]
 
-use std::rc::Rc;
+use std::rc::Rc;                        //TODO - ukryć ten typ
 
 mod lib;
 
