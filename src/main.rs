@@ -24,10 +24,16 @@ fn main() {
         a + b
     });
 
-    //let suma2 =           //dodać Computed.map
+    let suma2 = sum.clone().map(|value: &i32| -> i32 {
+        2 * value
+    });
 
     let subscription = sum.subscribe(Box::new(|sum: Rc<i32>| {
         println!("___Suma: {}___", sum);
+    }));
+
+    let sub2 = suma2    .subscribe(Box::new(|sum2: Rc<i32>| {
+        println!("___Suma2: {}___", sum2);
     }));
 
     val1.setValue(333);
@@ -36,6 +42,7 @@ fn main() {
     println!("subscription off");
 
     subscription.off();
+    sub2.off();
 
     val2.setValue(999);
 }

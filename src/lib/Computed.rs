@@ -121,6 +121,28 @@ impl<T: Debug + 'static> Computed<T> {
 
         client
     }
+
+    pub fn map<K: Debug>(self: Rc<Computed<T>>, fun: fn(&T) -> K) -> Rc<Computed<K>> {
+
+        let getValue = {
+            let selfClone = self.clone();
+        
+
+            Box::new(move || {
+                let value = selfClone.getValue();
+
+                let result = fun(value.as_ref());
+
+                Rc::new(result)
+            })
+        };
+
+        let result = Computed::new(self.deps.clone(), getValue);
+
+        result.deps.addRelation(self.id, result.getComputedRefresh());
+
+        result
+    }
 }
 
 impl<T: Debug> Drop for Computed<T> {
