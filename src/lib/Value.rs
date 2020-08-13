@@ -11,11 +11,11 @@ use crate::lib::{
 pub struct Value<T: Debug + 'static> {
     id: u64,
     value: Rc<BoxRefCell<Rc<T>>>,
-    deps: Rc<Dependencies>,
+    deps: Dependencies,
 }
 
 impl<T: Debug + 'static> Value<T> {
-    pub fn new(deps: Rc<Dependencies>, value: T) -> Value<T> {
+    pub fn new(deps: Dependencies, value: T) -> Value<T> {
         Value {
             id: get_unique_id(),
             value: Rc::new(BoxRefCell::new(Rc::new(value))),

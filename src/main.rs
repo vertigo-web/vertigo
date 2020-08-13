@@ -6,7 +6,11 @@ use crate::lib::{
     Dependencies::Dependencies,
     Computed::Computed,
 };
- 
+
+/*
+Dodać tranzakcyjną aktualizację
+*/
+
 fn main() {
     println!("Hello, world!");
 

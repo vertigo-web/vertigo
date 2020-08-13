@@ -27,23 +27,29 @@ impl DependenciesInner {
 }
 
 pub struct Dependencies {
-    inner: BoxRefCell<DependenciesInner>,
+    inner: Rc<BoxRefCell<DependenciesInner>>,
+}
+
+impl Clone for Dependencies {
+    fn clone(&self) -> Self {
+        Dependencies {
+            inner: self.inner.clone()
+        }
+    }
 }
 
 impl Dependencies {
-    pub fn new() -> Rc<Dependencies> {
-        Rc::new(
-            Dependencies {
-                inner: BoxRefCell::new(DependenciesInner::new())
-            }
-        )
+    pub fn new() -> Dependencies {        
+        Dependencies {
+            inner: Rc::new(BoxRefCell::new(DependenciesInner::new()))
+        }
     }
 
-    pub fn newValue<T: Debug>(self: &Rc<Dependencies>, value: T) -> Value<T> {
+    pub fn newValue<T: Debug>(&self, value: T) -> Value<T> {
         Value::new(self.clone(), value)
     }
 
-    pub fn triggerChange(self: &Rc<Dependencies>, parentId: u64) {
+    pub fn triggerChange(&self, parentId: u64) {
 
         self.inner.getWithContext(parentId, |state, parentId| {
             let allDeps = state.graph.getAllDeps(parentId);
@@ -66,7 +72,7 @@ impl Dependencies {
         });
     }
 
-    pub fn addRelation(self: &Rc<Dependencies>, parentId: u64, client: ComputedRefresh) {
+    pub fn addRelation(&self, parentId: u64, client: ComputedRefresh) {
         self.inner.change((parentId, client), |state, (parentId, client)| {
             let clientId = client.getId();
             state.computed.insert(clientId, client);
@@ -75,7 +81,7 @@ impl Dependencies {
         });
     }
 
-    pub fn addRelationToClient(self: &Rc<Dependencies>, parentId: u64, client: ClientRefresh) {
+    pub fn addRelationToClient(&self, parentId: u64, client: ClientRefresh) {
         self.inner.change((parentId, client), |state, (parentId, client)| {
             let clientId = client.getId();
             state.client.insert(clientId, client);
@@ -84,7 +90,7 @@ impl Dependencies {
         });
     }
 
-    pub fn removeRelation(self: &Rc<Dependencies>, clientId: u64) {
+    pub fn removeRelation(&self, clientId: u64) {
         self.inner.change(clientId, |state, clientId| {
             state.computed.remove(&clientId);
             state.client.remove(&clientId);

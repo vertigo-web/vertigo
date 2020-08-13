@@ -34,7 +34,7 @@ impl ComputedRefresh {
 }
 
 pub struct ComputedInner<T: Debug + 'static> {
-    deps: Rc<Dependencies>,
+    deps: Dependencies,
     getValueFromParent: Box<dyn Fn() -> Rc<T> + 'static>,
     id: u64,
     isFreshCell: Rc<BoxRefCell<bool>>,
@@ -62,7 +62,7 @@ impl<T: Debug> Clone for Computed<T> {
 }
 
 impl<T: Debug + 'static> Computed<T> {
-    pub fn new<F: Fn() -> Rc<T> + 'static>(deps: Rc<Dependencies>, getValue: Box<F>) -> Computed<T> {
+    pub fn new<F: Fn() -> Rc<T> + 'static>(deps: Dependencies, getValue: Box<F>) -> Computed<T> {
         let value = getValue();
         Computed {
             inner: Rc::new(ComputedInner {

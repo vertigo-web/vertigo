@@ -33,13 +33,13 @@ impl ClientRefresh {
 }
 
 pub struct Client {
-    deps: Rc<Dependencies>,
+    deps: Dependencies,
     id: u64,
     refresh: Rc<BoxRefCell<Box<dyn Fn()>>>,
 }
 
 impl Client {
-    pub fn new<T: Debug + 'static>(deps: Rc<Dependencies>, computed: Computed<T>, call: Box<dyn Fn(&T) + 'static>) -> Client {
+    pub fn new<T: Debug + 'static>(deps: Dependencies, computed: Computed<T>, call: Box<dyn Fn(&T) + 'static>) -> Client {
         let refresh = Box::new(move || {
             let value = computed.getValue();
             call(value.as_ref());
