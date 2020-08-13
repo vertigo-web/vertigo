@@ -39,7 +39,7 @@ impl Dependencies {
         )
     }
 
-    pub fn newValue<T: Debug>(self: &Rc<Dependencies>, value: T) -> Rc<Value<T>> {
+    pub fn newValue<T: Debug>(self: &Rc<Dependencies>, value: T) -> Value<T> {
         Value::new(self.clone(), value)
     }
 

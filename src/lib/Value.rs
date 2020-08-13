@@ -10,20 +10,20 @@ use crate::lib::{
 
 pub struct Value<T: Debug + 'static> {
     id: u64,
-    value: BoxRefCell<Rc<T>>,
+    value: Rc<BoxRefCell<Rc<T>>>,
     deps: Rc<Dependencies>,
 }
 
 impl<T: Debug + 'static> Value<T> {
-    pub fn new(deps: Rc<Dependencies>, value: T) -> Rc<Value<T>> {
-        Rc::new(Value {
+    pub fn new(deps: Rc<Dependencies>, value: T) -> Value<T> {
+        Value {
             id: get_unique_id(),
-            value: BoxRefCell::new(Rc::new(value)),
+            value: Rc::new(BoxRefCell::new(Rc::new(value))),
             deps
-        })
+        }
     }
 
-    pub fn setValue(self: &Rc<Value<T>>, value: T) /* -> Vec<Rc<Client>> */ {                          //TODO - trzeba odebrać i wywołać
+    pub fn setValue(&self, value: T) /* -> Vec<Rc<Client>> */ {                          //TODO - trzeba odebrać i wywołać
         self.value.change(value, |state, value| {
             println!("Value::setValue {:?}", value);
             *state = Rc::new(value);
@@ -32,19 +32,22 @@ impl<T: Debug + 'static> Value<T> {
         self.deps.triggerChange(self.id);
     }
 
-    pub fn getValue(&self) -> Rc<T> {
-        let value = self.value.get(|state| {
-            state.clone()
-        });
+    // pub fn getValue(&self) -> Rc<T> {
+    //     let value = self.value.get(|state| {
+    //         state.clone()
+    //     });
 
-        value
-    }
+    //     value
+    // }
 
-    pub fn toComputed(self: &Rc<Value<T>>) -> Computed<T> {
-        let selfClone = self.clone();
+    pub fn toComputed(&self) -> Computed<T> {
+
+        let value = self.value.clone();
 
         let getValue = Box::new(move || {
-            selfClone.getValue()
+            value.get(|state| {
+                state.clone()
+            })
         });
 
         let computed = Computed::new(self.deps.clone(), getValue);
