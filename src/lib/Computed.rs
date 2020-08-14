@@ -100,29 +100,15 @@ impl<T: Debug> Clone for Computed<T> {
     }
 }
 
-pub struct Getter<T: Debug + 'static> {
-    isGet: bool,
-    computed: Computed<T>,
-}
-
-impl<T: Debug + 'static> Getter<T> {
-    fn new(computed: Computed<T>) -> Getter<T> {
-        Getter {
-            isGet: false,
-            computed
-        }
-    }
-
-    fn getValue(&mut self) -> Rc<T> {
-        let value = self.computed.getValue();
-        self.isGet = true;
-        value
-    }
-}
-
 impl<T: Debug + 'static> Computed<T> {
     pub fn new<F: Fn() -> Rc<T> + 'static>(deps: Dependencies, id: u64,  isFreshCell: Rc<BoxRefCell<bool>>, getValue: Box<F>) -> Computed<T> {
+
+        deps.startGetValueBlock();
         let value = getValue();
+        deps.endGetValueBlock(
+            ComputedRefresh::new(id, isFreshCell.clone())
+        );
+
         Computed {
             inner: Rc::new(ComputedInner {
                 deps,
@@ -134,95 +120,63 @@ impl<T: Debug + 'static> Computed<T> {
         }
     }
 
+    fn getComputedRefresh(&self) -> ComputedRefresh {
+        ComputedRefresh::new(self.inner.id, self.inner.isFreshCell.clone())
+    }
+
     pub fn from2<A: Debug, B: Debug>(
         a: Computed<A>,
         b: Computed<B>,
         calculate: fn(&A, &B) -> T
     ) -> Computed<T> {
-
         let deps = a.inner.deps.clone();
-        let aId = a.inner.id;
-        let bId = b.inner.id;
-        let builder = ComputedBuilder::new(deps);
-        let refresh = builder.getComputedRefresh();
 
-        let getValue = {
+        let getValue = Box::new(move || {
+            let aValue = a.getValue();
+            let bValue = b.getValue();
 
-            Box::new(move || {
-                let aValue = a.getValue();
-                let bValue = b.getValue();
+            let result = calculate(aValue.as_ref(), bValue.as_ref());
 
-                let result = calculate(aValue.as_ref(), bValue.as_ref());
+            Rc::new(result)
+        });
 
-                Rc::new(result)
-            })
-        };
-
-        let result = builder.build(getValue);
-
-        result.inner.deps.addRelation(aId, refresh.clone());
-        result.inner.deps.addRelation(bId, refresh);
+        let result = ComputedBuilder::new(deps).build(getValue);
 
         result
     }
 
-    pub fn from2Dyn<A: Debug, B: Debug>(
-        a: Computed<A>,
-        b: Computed<B>,
-        calculate: fn(&mut Getter<A>, &mut Getter<B>) -> T
-    ) -> Computed<T> {
+    pub fn getValue(&self) -> Rc<T> {
+        let inner = self.inner.as_ref();
+        let selfId = inner.id;
+        let deps = inner.deps.clone();
 
-        let deps = a.inner.deps.clone();
-        let aId = a.inner.id;
-        let bId = b.inner.id;
-        let builder = ComputedBuilder::new(deps.clone());
-        let refresh = builder.getComputedRefresh();
+        deps.reportDependenceInStack(selfId);
 
-        let clientId = builder.id;
-
-        let getValue = {
-
-            Box::new(move || {
-                let mut getterA = Getter::new(a.clone());
-                let mut getterB = Getter::new(b.clone());
-                
-                deps.removeRelation(clientId);
-
-                let result = calculate(&mut getterA, &mut getterB);
-
-                if getterA.isGet {
-                    deps.addRelation(aId, refresh.clone());
-                }
-
-                if getterB.isGet {
-                    deps.addRelation(bId, refresh.clone());
-                }
-                
-                Rc::new(result)
+        let shouldRecalculate = {
+            self.inner.isFreshCell.changeNoParams(|state|{
+                let shouldRecalculate = *state == false;
+                *state = true;
+                shouldRecalculate
             })
         };
 
-        builder.build(getValue)
-    }
+        println!("**** computed getValue **** shouldRecalculate={}", shouldRecalculate);
 
-    pub fn getValue(&self) -> Rc<T> {
-        let inner = self.inner.as_ref();
-        let ComputedInner { getValueFromParent, isFreshCell, valueCell, .. } = inner;
+        let newValue = if shouldRecalculate {
+            deps.startGetValueBlock();
 
-        let isFresh = isFreshCell.get(|state|{
-            *state
-        });
+            let result = {
+                let ComputedInner { getValueFromParent, .. } = self.inner.as_ref();
+                getValueFromParent()
+            };
 
-        println!("**** computed getValue **** {}", isFresh);
-
-        let newValue = if isFresh == false {
-            let result = getValueFromParent();
+            deps.endGetValueBlock(self.getComputedRefresh());
             Some(result)
         } else {
             None
         };
 
-        let result = valueCell.change(newValue, |state, newValue| {
+        let result = inner.valueCell.change(newValue, |state, newValue| {
             if let Some(value) = newValue {
                 *state = value;
             }
@@ -242,29 +196,15 @@ impl<T: Debug + 'static> Computed<T> {
     }
 
     pub fn map<K: Debug>(self, fun: fn(&T) -> K) -> Computed<K> {
-
         let deps = self.inner.deps.clone();
-        let builder = ComputedBuilder::new(deps);
-        let parentId = self.inner.id;
-        let refresh = builder.getComputedRefresh();
 
-        let getValue = {
-            let selfClone = self.clone();
-        
+        let getValue = Box::new(move || {
+            let value = self.getValue();
+            let result = fun(value.as_ref());
+            Rc::new(result)
+        });
 
-            Box::new(move || {
-                let value = selfClone.getValue();
-
-                let result = fun(value.as_ref());
-
-                Rc::new(result)
-            })
-        };
-
-        let result = builder.build(getValue);
-
-        result.inner.deps.addRelation(parentId, refresh);
-
+        let result = ComputedBuilder::new(deps).build(getValue);
         result
     }
 }

@@ -1,9 +1,11 @@
-use std::collections::{HashSet, HashMap};
+use std::collections::{HashSet, HashMap, VecDeque};
 
 pub struct Graph {
     relations: HashMap<u64, u64>,                   //relacje zaleności, target -> parent
     revertRelations: HashMap<u64, HashSet<u64>>,        //wykorzystywane do powiadamiania o konieczności przeliczenia
                                                     //parent -> Vec<target>
+
+    stackRelations: VecDeque<HashSet<u64>>,
 }
 
 impl Graph {
@@ -11,6 +13,7 @@ impl Graph {
         Graph {
             relations: HashMap::new(),
             revertRelations: HashMap::new(),
+            stackRelations: VecDeque::new(),
         }
     }
 
@@ -81,4 +84,54 @@ impl Graph {
             }
         }
     }
+
+    pub fn startGetValueBlock(&mut self) {
+        let stackFrame = HashSet::new();
+        self.stackRelations.push_back(stackFrame);
+    }
+
+    pub fn reportDependenceInStack(&mut self, parentId: u64) {
+        let len = self.stackRelations.len();
+
+        if len < 1 {
+            log::warn!("frame with stack - not found len=0");
+            return;
+        }
+
+        let lastIndex = len - 1;
+        let lastItem = self.stackRelations.get_mut(lastIndex);
+
+        match lastItem {
+            Some(lastItem) => {
+                lastItem.insert(parentId);
+            },
+            None => {
+                log::warn!("frame with stack - not found get_mut=None");
+            }
+        }
+    }
+
+    pub fn endGetValueBlock(&mut self, clientId: u64) {
+
+        let lastItem = self.stackRelations.pop_back();
+
+        match lastItem {
+            Some(lastItem) => {
+                
+
+                //TODO - usunac nieuzywane krawedzie (subskrybcje)
+
+
+                for parentId in lastItem {
+                    self.addRelation(parentId, clientId);
+                }
+                //todo!("tutaj trzeba obsluzyc te zaleznosci")
+            },
+            None => {
+                panic!("TODO - Spodziewano się elementu");
+            }
+        }
+    }
+
+    // pub fn computed<F>() -> R {}
 }

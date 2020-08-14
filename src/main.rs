@@ -11,6 +11,7 @@ use crate::lib::{
 TODO - Dodać tranzakcyjną aktualizację
 */
 
+
 fn main() {
     println!("Hello, world!");
 
@@ -38,7 +39,7 @@ fn main() {
         println!("___Suma2: {}___", sum2);
     });
 
-    val1.setValue(333);
+    val1.setValue(111);
     val2.setValue(888);
 
     println!("subscription off");

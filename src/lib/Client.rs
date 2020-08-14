@@ -2,7 +2,6 @@ use std::rc::Rc;
 use std::fmt::Debug;
 
 use crate::lib::{
-    BoxRefCell::BoxRefCell,
     get_unique_id::get_unique_id,
     Dependencies::Dependencies,
     Computed::Computed,
@@ -10,11 +9,20 @@ use crate::lib::{
 
 pub struct ClientRefresh {
     id: u64,
-    refresh: Rc<BoxRefCell<Box<dyn Fn()>>>,
+    refresh: Rc<Box<dyn Fn()>>,
+}
+
+impl Clone for ClientRefresh {
+    fn clone(&self) -> Self {
+        ClientRefresh {
+            id: self.id,
+            refresh: self.refresh.clone(),
+        }
+    }
 }
 
 impl ClientRefresh {
-    fn new(id: u64, refresh: Rc<BoxRefCell<Box<dyn Fn()>>>) -> ClientRefresh {
+    fn new(id: u64, refresh: Rc<Box<dyn Fn()>>) -> ClientRefresh {
         ClientRefresh {
             id,
             refresh,
@@ -22,9 +30,8 @@ impl ClientRefresh {
     }
 
     pub fn recalculate(&self) {
-        self.refresh.get(|state| {
-            state();
-        });
+        let ClientRefresh { refresh, .. } = self;
+        refresh();
     }
 
     pub fn getId(&self) -> u64 {
@@ -35,7 +42,7 @@ impl ClientRefresh {
 pub struct Client {
     deps: Dependencies,
     id: u64,
-    refresh: Rc<BoxRefCell<Box<dyn Fn()>>>,
+    refresh: Rc<Box<dyn Fn()>>,
 }
 
 impl Client {
@@ -50,7 +57,7 @@ impl Client {
         Client {
             deps,
             id: get_unique_id(),
-            refresh: Rc::new(BoxRefCell::new(refresh))
+            refresh: Rc::new(refresh)
         }
     }
 

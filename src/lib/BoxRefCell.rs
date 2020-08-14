@@ -23,6 +23,12 @@ impl<T> BoxRefCell<T> {
         getter(&state, data)
     }
 
+    pub fn changeNoParams<R>(&self, changeFn: fn(&mut T) -> R) -> R {
+        let value = self.value.borrow_mut();
+        let mut state = value;
+        changeFn(&mut state)
+    }
+
     pub fn change<D, R>(&self, data: D, changeFn: fn(&mut T, D) -> R) -> R {
         let value = self.value.borrow_mut();
         let mut state = value;
