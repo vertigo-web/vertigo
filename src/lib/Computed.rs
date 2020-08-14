@@ -33,6 +33,44 @@ impl ComputedRefresh {
     }
 }
 
+impl Clone for ComputedRefresh {
+    fn clone(&self) -> Self {
+        ComputedRefresh {
+            id: self.id,
+            isFreshCell: self.isFreshCell.clone(),
+        }
+    }
+}
+
+
+
+pub struct ComputedBuilder {
+    deps: Dependencies,
+    id: u64,
+    isFreshCell: Rc<BoxRefCell<bool>>,
+}
+
+impl ComputedBuilder {
+    pub fn new(deps: Dependencies) -> ComputedBuilder {
+        ComputedBuilder {
+            deps,
+            id: get_unique_id(),
+            isFreshCell: Rc::new(BoxRefCell::new(true)),
+        }
+    }
+
+    pub fn getComputedRefresh(&self) -> ComputedRefresh {
+        ComputedRefresh::new(self.id, self.isFreshCell.clone())
+    }
+
+    pub fn build<T: Debug, F: Fn() -> Rc<T> + 'static>(self, getValue: Box<F>) -> Computed<T> {
+        let ComputedBuilder { deps, id, isFreshCell} = self;
+        Computed::new(deps, id, isFreshCell, getValue)
+    }
+}
+
+
+
 pub struct ComputedInner<T: Debug + 'static> {
     deps: Dependencies,
     getValueFromParent: Box<dyn Fn() -> Rc<T> + 'static>,
@@ -47,6 +85,7 @@ impl<T: Debug> Drop for ComputedInner<T> {
         self.deps.removeRelation(self.id);
     }
 }
+
 
 
 pub struct Computed<T: Debug + 'static> {
@@ -64,21 +103,17 @@ impl<T: Debug> Clone for Computed<T> {
 //struct 
 
 impl<T: Debug + 'static> Computed<T> {
-    pub fn new<F: Fn() -> Rc<T> + 'static>(deps: Dependencies, getValue: Box<F>) -> Computed<T> {
+    pub fn new<F: Fn() -> Rc<T> + 'static>(deps: Dependencies, id: u64,  isFreshCell: Rc<BoxRefCell<bool>>, getValue: Box<F>) -> Computed<T> {
         let value = getValue();
         Computed {
             inner: Rc::new(ComputedInner {
                 deps,
                 getValueFromParent: getValue,
-                id: get_unique_id(),
-                isFreshCell: Rc::new(BoxRefCell::new(true)),
+                id,
+                isFreshCell: isFreshCell,
                 valueCell: BoxRefCell::new(value),
             })
         }
-    }
-
-    pub fn getComputedRefresh(&self) -> ComputedRefresh {
-        ComputedRefresh::new(self.inner.id, self.inner.isFreshCell.clone())
     }
 
     pub fn from2<A: Debug, B: Debug>(
@@ -90,6 +125,8 @@ impl<T: Debug + 'static> Computed<T> {
         let deps = a.inner.deps.clone();
         let aId = a.inner.id;
         let bId = b.inner.id;
+        let builder = ComputedBuilder::new(deps);
+        let refresh = builder.getComputedRefresh();
 
         let getValue = {
 
@@ -103,10 +140,10 @@ impl<T: Debug + 'static> Computed<T> {
             })
         };
 
-        let result = Computed::new(deps, getValue);
+        let result = builder.build(getValue);
 
-        result.inner.deps.addRelation(aId, result.getComputedRefresh());
-        result.inner.deps.addRelation(bId, result.getComputedRefresh());
+        result.inner.deps.addRelation(aId, refresh.clone());
+        result.inner.deps.addRelation(bId, refresh);
 
         result
     }
@@ -149,6 +186,11 @@ impl<T: Debug + 'static> Computed<T> {
 
     pub fn map<K: Debug>(self, fun: fn(&T) -> K) -> Computed<K> {
 
+        let deps = self.inner.deps.clone();
+        let builder = ComputedBuilder::new(deps);
+        let parentId = self.inner.id;
+        let refresh = builder.getComputedRefresh();
+
         let getValue = {
             let selfClone = self.clone();
         
@@ -162,9 +204,9 @@ impl<T: Debug + 'static> Computed<T> {
             })
         };
 
-        let result = Computed::new(self.inner.deps.clone(), getValue);
+        let result = builder.build(getValue);
 
-        result.inner.deps.addRelation(self.inner.id, result.getComputedRefresh());
+        result.inner.deps.addRelation(parentId, refresh);
 
         result
     }
