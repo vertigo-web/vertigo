@@ -61,6 +61,8 @@ impl<T: Debug> Clone for Computed<T> {
     }
 }
 
+//struct 
+
 impl<T: Debug + 'static> Computed<T> {
     pub fn new<F: Fn() -> Rc<T> + 'static>(deps: Dependencies, getValue: Box<F>) -> Computed<T> {
         let value = getValue();
@@ -85,9 +87,11 @@ impl<T: Debug + 'static> Computed<T> {
         calculate: fn(&A, &B) -> T
     ) -> Computed<T> {
 
+        let deps = a.inner.deps.clone();
+        let aId = a.inner.id;
+        let bId = b.inner.id;
+
         let getValue = {
-            let a = a.clone();
-            let b = b.clone();
 
             Box::new(move || {
                 let aValue = a.getValue();
@@ -99,10 +103,10 @@ impl<T: Debug + 'static> Computed<T> {
             })
         };
 
-        let result = Computed::new(a.inner.deps.clone(), getValue);
+        let result = Computed::new(deps, getValue);
 
-        result.inner.deps.addRelation(a.inner.id, result.getComputedRefresh());
-        result.inner.deps.addRelation(b.inner.id, result.getComputedRefresh());
+        result.inner.deps.addRelation(aId, result.getComputedRefresh());
+        result.inner.deps.addRelation(bId, result.getComputedRefresh());
 
         result
     }
