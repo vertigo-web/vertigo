@@ -100,7 +100,25 @@ impl<T: Debug> Clone for Computed<T> {
     }
 }
 
-//struct 
+pub struct Getter<T: Debug + 'static> {
+    isGet: bool,
+    computed: Computed<T>,
+}
+
+impl<T: Debug + 'static> Getter<T> {
+    fn new(computed: Computed<T>) -> Getter<T> {
+        Getter {
+            isGet: false,
+            computed
+        }
+    }
+
+    fn getValue(&mut self) -> Rc<T> {
+        let value = self.computed.getValue();
+        self.isGet = true;
+        value
+    }
+}
 
 impl<T: Debug + 'static> Computed<T> {
     pub fn new<F: Fn() -> Rc<T> + 'static>(deps: Dependencies, id: u64,  isFreshCell: Rc<BoxRefCell<bool>>, getValue: Box<F>) -> Computed<T> {
@@ -147,7 +165,46 @@ impl<T: Debug + 'static> Computed<T> {
 
         result
     }
-    
+
+    pub fn from2Dyn<A: Debug, B: Debug>(
+        a: Computed<A>,
+        b: Computed<B>,
+        calculate: fn(&mut Getter<A>, &mut Getter<B>) -> T
+    ) -> Computed<T> {
+
+        let deps = a.inner.deps.clone();
+        let aId = a.inner.id;
+        let bId = b.inner.id;
+        let builder = ComputedBuilder::new(deps.clone());
+        let refresh = builder.getComputedRefresh();
+
+        let clientId = builder.id;
+
+        let getValue = {
+
+            Box::new(move || {
+                let mut getterA = Getter::new(a.clone());
+                let mut getterB = Getter::new(b.clone());
+                
+                deps.removeRelation(clientId);
+
+                let result = calculate(&mut getterA, &mut getterB);
+
+                if getterA.isGet {
+                    deps.addRelation(aId, refresh.clone());
+                }
+
+                if getterB.isGet {
+                    deps.addRelation(bId, refresh.clone());
+                }
+                
+                Rc::new(result)
+            })
+        };
+
+        builder.build(getValue)
+    }
+
     pub fn getValue(&self) -> Rc<T> {
         let inner = self.inner.as_ref();
         let ComputedInner { getValueFromParent, isFreshCell, valueCell, .. } = inner;
