@@ -6,41 +6,8 @@ use crate::lib::{
     get_unique_id::get_unique_id,
     Dependencies::Dependencies,
     Client::Client,
+    RefreshToken::RefreshToken,
 };
-
-
-pub struct ComputedRefresh {
-    id: u64,
-    isFreshCell: Rc<BoxRefCell<bool>>,
-}
-
-impl ComputedRefresh {
-    fn new(id: u64, isFreshCell: Rc<BoxRefCell<bool>>) -> ComputedRefresh {
-        ComputedRefresh {
-            id,
-            isFreshCell,
-        }
-    }
-
-    pub fn setAsUnfreshInner(&self) {
-        self.isFreshCell.change((), |state, _data| {
-            *state = false;
-        });
-    }
-
-    pub fn getId(&self) -> u64 {
-        self.id
-    }
-}
-
-impl Clone for ComputedRefresh {
-    fn clone(&self) -> Self {
-        ComputedRefresh {
-            id: self.id,
-            isFreshCell: self.isFreshCell.clone(),
-        }
-    }
-}
 
 
 
@@ -59,8 +26,8 @@ impl ComputedBuilder {
         }
     }
 
-    pub fn getComputedRefresh(&self) -> ComputedRefresh {
-        ComputedRefresh::new(self.id, self.isFreshCell.clone())
+    pub fn getComputedRefresh(&self) -> RefreshToken {
+        RefreshToken::newComputed(self.id, self.isFreshCell.clone())
     }
 
     pub fn build<T: Debug, F: Fn() -> Rc<T> + 'static>(self, getValue: Box<F>) -> Computed<T> {
@@ -106,7 +73,7 @@ impl<T: Debug + 'static> Computed<T> {
         deps.startGetValueBlock();
         let value = getValue();
         deps.endGetValueBlock(
-            ComputedRefresh::new(id, isFreshCell.clone())
+            RefreshToken::newComputed(id, isFreshCell.clone())
         );
 
         Computed {
@@ -120,8 +87,8 @@ impl<T: Debug + 'static> Computed<T> {
         }
     }
 
-    fn getComputedRefresh(&self) -> ComputedRefresh {
-        ComputedRefresh::new(self.inner.id, self.inner.isFreshCell.clone())
+    fn getComputedRefresh(&self) -> RefreshToken {
+        RefreshToken::newComputed(self.inner.id, self.inner.isFreshCell.clone())
     }
 
     pub fn from2<A: Debug, B: Debug>(
@@ -190,7 +157,7 @@ impl<T: Debug + 'static> Computed<T> {
     pub fn subscribe<F: Fn(&T) + 'static>(self, call: F) -> Client {
         let client = Client::new(self.inner.deps.clone(), self.clone(), Box::new(call));
 
-        self.inner.deps.addRelationToClient(self.inner.id, client.getClientRefresh());
+        self.inner.deps.addRelation(self.inner.id, client.getClientRefresh());
 
         client
     }

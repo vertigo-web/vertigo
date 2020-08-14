@@ -1,4 +1,4 @@
-use std::cell::RefCell;
+use std::cell::{RefCell/*, Ref*/};
 
 pub struct BoxRefCell<T> {
     value: RefCell<T>,
@@ -16,6 +16,10 @@ impl<T> BoxRefCell<T> {
         let state = &*value;
         getter(&state)
     }
+
+    // pub fn getRef(&self) -> Ref<T> {
+    //     self.value.borrow()
+    // }
 
     pub fn getWithContext<D, R>(&self, data: D, getter: fn(&T, D) -> R) -> R {
         let value = self.value.borrow();

@@ -6,25 +6,22 @@ use crate::lib::{
     BoxRefCell::BoxRefCell,
     Graph::Graph,
     Value::Value,
-    Client::ClientRefresh,
+    RefreshToken::RefreshToken,
     Computed::{
         Computed,
         ComputedBuilder,
-        ComputedRefresh,
     },
 };
 
 struct DependenciesInner {
-    computed: HashMap<u64, ComputedRefresh>,        //To wykorzystujemy do wytrigerowania odpowiednich akcji
-    client: HashMap<u64, ClientRefresh>,            //To wykorzystujemy do wytrigerowania odpowiedniej reakcji
+    refreshToken: HashMap<u64, RefreshToken>,
     graph: Graph,
 }
 
 impl DependenciesInner {
     fn new() -> DependenciesInner {
         DependenciesInner {
-            computed: HashMap::new(),
-            client: HashMap::new(),
+            refreshToken: HashMap::new(),
             graph: Graph::new(),
         }
     }
@@ -55,66 +52,56 @@ impl Dependencies {
 
     pub fn triggerChange(&self, parentId: u64) {
 
-        let (outComputed, outClient) = self.inner.getWithContext(
+        let refreshToken: Vec<RefreshToken> = self.inner.getWithContext(
             parentId,
             |state, parentId| {
                 let allDeps = state.graph.getAllDeps(parentId);
 
-                let mut outComputed: Vec<ComputedRefresh> = Vec::new();
-                let mut outClient: Vec<ClientRefresh> = Vec::new();
+                let mut out: Vec<RefreshToken> = Vec::new();
 
                 for itemId in allDeps.iter() {
-                    let item = state.computed.get(itemId);
+                    let item = state.refreshToken.get(itemId);
 
                     if let Some(item) = item {
-                        outComputed.push(item.clone());
+                        out.push(item.clone());
+                    } else {
+                        log::error!("Coś poszło nie tak z pobieraniem refresh tokenów");
                     }
                 }
 
-                for itemId in allDeps.iter() {
-                    let item = state.client.get(itemId);
-
-                    if let Some(item) = item {
-                        outClient.push((*item).clone());
-                        
-                    }
-                }
-                (outComputed, outClient)
+                out
             }
         );
 
-        for item in outComputed {
-            item.setAsUnfreshInner();
+        let mut clientRefreshToken = Vec::new();
+
+        for item in refreshToken.iter() {
+            if item.isComputed() {
+                item.update();
+            } else {
+                clientRefreshToken.push(item);
+            }
         }
 
-        for item in outClient {
-            item.recalculate();
+        for item in clientRefreshToken {
+            item.update();
         }
     }
 
-    pub fn addRelation(&self, parentId: u64, client: ComputedRefresh) {
-        self.inner.change((parentId, client), |state, (parentId, client)| {
-            let clientId = client.getId();
-            state.computed.insert(clientId, client);
+    //TODO - uprywatnić
+    pub fn addRelation(&self, parentId: u64, refreshToken: RefreshToken) {
+        self.inner.change((parentId, refreshToken), |state, (parentId, refreshToken)| {
+            let clientId = refreshToken.getId();
+            state.refreshToken.insert(clientId, refreshToken);
 
             state.graph.addRelation(parentId, clientId);
         });
     }
 
-    pub fn addRelationToClient(&self, parentId: u64, client: ClientRefresh) {
-        self.inner.change((parentId, client), |state, (parentId, client)| {
-            let clientId = client.getId();
-            state.client.insert(clientId, client);
-
-            state.graph.addRelation(parentId, clientId);
-        });
-    }
-
+    //TODO - uprywatnić
     pub fn removeRelation(&self, clientId: u64) {
         self.inner.change(clientId, |state, clientId| {
-            state.computed.remove(&clientId);
-            state.client.remove(&clientId);
-
+            state.refreshToken.remove(&clientId);
             state.graph.removeRelation(clientId);
         });
     }
@@ -131,10 +118,10 @@ impl Dependencies {
         });
     }
 
-    pub fn endGetValueBlock(&self, computedRefresh: ComputedRefresh) {
+    pub fn endGetValueBlock(&self, computedRefresh: RefreshToken) {
         self.inner.change(computedRefresh, |state, computedRefresh| {
             let clientId = computedRefresh.getId();
-            state.computed.insert(clientId, computedRefresh);
+            state.refreshToken.insert(clientId, computedRefresh);
             state.graph.endGetValueBlock(clientId);
         })
     }

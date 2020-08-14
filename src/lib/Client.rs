@@ -5,40 +5,8 @@ use crate::lib::{
     get_unique_id::get_unique_id,
     Dependencies::Dependencies,
     Computed::Computed,
+    RefreshToken::RefreshToken,
 };
-
-pub struct ClientRefresh {
-    id: u64,
-    refresh: Rc<Box<dyn Fn()>>,
-}
-
-impl Clone for ClientRefresh {
-    fn clone(&self) -> Self {
-        ClientRefresh {
-            id: self.id,
-            refresh: self.refresh.clone(),
-        }
-    }
-}
-
-impl ClientRefresh {
-    fn new(id: u64, refresh: Rc<Box<dyn Fn()>>) -> ClientRefresh {
-        ClientRefresh {
-            id,
-            refresh,
-        }
-    }
-
-    pub fn recalculate(&self) {
-        let ClientRefresh { refresh, .. } = self;
-        refresh();
-    }
-
-    pub fn getId(&self) -> u64 {
-        self.id
-    }
-}
-
 pub struct Client {
     deps: Dependencies,
     id: u64,
@@ -61,8 +29,8 @@ impl Client {
         }
     }
 
-    pub fn getClientRefresh(&self) -> ClientRefresh {
-        ClientRefresh::new(self.id, self.refresh.clone())
+    pub fn getClientRefresh(&self) -> RefreshToken {
+        RefreshToken::newClient(self.id, self.refresh.clone())
     }
 
     pub fn off(self: Client) {
