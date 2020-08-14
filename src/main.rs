@@ -8,7 +8,7 @@ use crate::lib::{
 };
 
 /*
-Dodać tranzakcyjną aktualizację
+TODO - Dodać tranzakcyjną aktualizację
 */
 
 fn main() {
@@ -34,7 +34,7 @@ fn main() {
         println!("___Suma: {}___", sum);
     });
 
-    let sub2 = suma2    .subscribe(|sum2: &i32| {
+    let sub2 = suma2.subscribe(|sum2: &i32| {
         println!("___Suma2: {}___", sum2);
     });
 
