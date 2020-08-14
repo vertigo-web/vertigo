@@ -2,7 +2,7 @@ use std::collections::{HashSet, HashMap};
 
 pub struct Graph {
     relations: HashMap<u64, u64>,                   //relacje zaleności, target -> parent
-    revertRelations: HashMap<u64, Vec<u64>>,        //wykorzystywane do powiadamiania o konieczności przeliczenia
+    revertRelations: HashMap<u64, HashSet<u64>>,        //wykorzystywane do powiadamiania o konieczności przeliczenia
                                                     //parent -> Vec<target>
 }
 
@@ -17,21 +17,36 @@ impl Graph {
     pub fn addRelation(&mut self, parentId: u64, clientId: u64) {
         self.relations.insert(clientId, parentId);
 
-        let list = self.revertRelations.entry(parentId).or_insert_with(Vec::new);
-        list.push(clientId);
+        let list = self.revertRelations.entry(parentId).or_insert_with(HashSet::new);
+        list.insert(clientId);
     }
 
     pub fn removeRelation(&mut self, clientId: u64) {
-        self.relations.remove(&clientId);
-        self.revertRelations.retain(|_k, listIds| {
-            listIds.retain(|item| {
-                let matchId = clientId == *item;
-                let shouldStay = !matchId;
-                shouldStay
-            });
+        let parentId = self.relations.remove(&clientId);
 
-            listIds.len() > 0
-        });
+        let parentId = match parentId {
+            Some(parentId) => parentId,
+            None => {
+                log::error!("relationship delete error - first level");
+                return;
+            }
+        };
+
+        let listIds = self.revertRelations.get_mut(&parentId);
+
+        let listIds = match listIds {
+            Some(listIds) => listIds,
+            None => {
+                log::error!("relationship delete error - second level");
+                return;
+            }
+        };
+
+        let removed = listIds.remove(&clientId);
+
+        if removed == false {
+            log::error!("relationship delete error - missing item");
+        }
     }
 
     pub fn getAllDeps(&self, parentId: u64) -> HashSet<u64> {
