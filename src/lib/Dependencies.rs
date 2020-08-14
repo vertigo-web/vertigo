@@ -7,7 +7,11 @@ use crate::lib::{
     Graph::Graph,
     Value::Value,
     Client::ClientRefresh,
-    Computed::ComputedRefresh,
+    Computed::{
+        Computed,
+        ComputedBuilder,
+        ComputedRefresh,
+    },
 };
 
 struct DependenciesInner {
@@ -133,5 +137,20 @@ impl Dependencies {
             state.computed.insert(clientId, computedRefresh);
             state.graph.endGetValueBlock(clientId);
         })
+    }
+
+
+    pub fn from<T: Debug, F: Fn() -> T + 'static>(&self, calculate: F) -> Computed<T> {
+        let deps = self.clone();
+
+        let getValue = Box::new(move || {
+            let result = calculate();
+
+            Rc::new(result)
+        });
+
+        let result = ComputedBuilder::new(deps).build(getValue);
+
+        result
     }
 }
