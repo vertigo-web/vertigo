@@ -10,6 +10,10 @@ use crate::lib::{
 
 /*
 TODO - Dodać tranzakcyjną aktualizację
+
+TODO - Uprościć wyciąganie wartośći:
+            let val1RR = appState.com1.getValue();
+            let val1 = val1RR.as_ref();
 */
 
 struct AppState {
@@ -19,6 +23,7 @@ struct AppState {
     com1: Computed<i32>,
     com2: Computed<i32>,
     com3: Computed<i32>,
+    suma: Computed<i32>,
 }
 
 impl AppState {
@@ -30,7 +35,24 @@ impl AppState {
         let com2 = value2.toComputed();
         let com3 = value3.toComputed();
 
-        //let suma = 
+        let suma = {
+            let com1 = com1.clone();
+            let com2 = com2.clone();
+            let com3 = com3.clone();
+
+            root.from(move || {
+                let val1RR = com1.getValue();
+                let val1 = val1RR.as_ref();
+    
+                let val2RR = com2.getValue();
+                let val2 = val2RR.as_ref();
+
+                let val3RR = com3.getValue();
+                let val3 = val3RR.as_ref();
+    
+                val1 + val2 + val3
+            })
+        };
 
         std::rc::Rc::new(AppState {
             value1,
@@ -38,7 +60,8 @@ impl AppState {
             value3,
             com1,
             com2,
-            com3
+            com3,
+            suma
         })
     }
 }
@@ -108,4 +131,16 @@ fn main() {
     appState.value3.setValue(7);
     suma3sub.off();
     appState.value3.setValue(8);
+
+    println!("=============");
+
+    let sumaTotal = appState.suma.clone().subscribe(|value| {
+        println!("|||| {}", value);
+    });
+
+    appState.value1.setValue(2);
+    appState.value2.setValue(3);
+    appState.value3.setValue(4);
+
+    sumaTotal.off();
 }
