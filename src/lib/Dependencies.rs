@@ -9,7 +9,6 @@ use crate::lib::{
     RefreshToken::RefreshToken,
     Computed::{
         Computed,
-        ComputedBuilder,
     },
 };
 
@@ -136,7 +135,7 @@ impl Dependencies {
             Rc::new(result)
         });
 
-        let result = ComputedBuilder::new(deps).build(getValue);
+        let result = Computed::new(deps, getValue);
 
         result
     }

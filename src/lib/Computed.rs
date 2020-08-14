@@ -3,38 +3,12 @@ use std::fmt::Debug;
 
 use crate::lib::{
     BoxRefCell::BoxRefCell,
-    get_unique_id::get_unique_id,
     Dependencies::Dependencies,
     Client::Client,
     RefreshToken::RefreshToken,
+    get_unique_id::get_unique_id,
 };
 
-
-
-pub struct ComputedBuilder {
-    deps: Dependencies,
-    id: u64,
-    isFreshCell: Rc<BoxRefCell<bool>>,
-}
-
-impl ComputedBuilder {
-    pub fn new(deps: Dependencies) -> ComputedBuilder {
-        ComputedBuilder {
-            deps,
-            id: get_unique_id(),
-            isFreshCell: Rc::new(BoxRefCell::new(true)),
-        }
-    }
-
-    pub fn getComputedRefresh(&self) -> RefreshToken {
-        RefreshToken::newComputed(self.id, self.isFreshCell.clone())
-    }
-
-    pub fn build<T: Debug, F: Fn() -> Rc<T> + 'static>(self, getValue: Box<F>) -> Computed<T> {
-        let ComputedBuilder { deps, id, isFreshCell} = self;
-        Computed::new(deps, id, isFreshCell, getValue)
-    }
-}
 
 
 
@@ -68,7 +42,10 @@ impl<T: Debug> Clone for Computed<T> {
 }
 
 impl<T: Debug + 'static> Computed<T> {
-    pub fn new<F: Fn() -> Rc<T> + 'static>(deps: Dependencies, id: u64,  isFreshCell: Rc<BoxRefCell<bool>>, getValue: Box<F>) -> Computed<T> {
+    pub fn new<F: Fn() -> Rc<T> + 'static>(deps: Dependencies, getValue: Box<F>) -> Computed<T> {
+
+        let id = get_unique_id();
+        let isFreshCell = Rc::new(BoxRefCell::new(true));
 
         deps.startGetValueBlock();
         let value = getValue();
@@ -87,7 +64,7 @@ impl<T: Debug + 'static> Computed<T> {
         }
     }
 
-    fn getComputedRefresh(&self) -> RefreshToken {
+    pub fn getComputedRefresh(&self) -> RefreshToken {
         RefreshToken::newComputed(self.inner.id, self.inner.isFreshCell.clone())
     }
 
@@ -107,7 +84,7 @@ impl<T: Debug + 'static> Computed<T> {
             Rc::new(result)
         });
 
-        let result = ComputedBuilder::new(deps).build(getValue);
+        let result = Computed::new(deps, getValue);
 
         result
     }
@@ -171,7 +148,7 @@ impl<T: Debug + 'static> Computed<T> {
             Rc::new(result)
         });
 
-        let result = ComputedBuilder::new(deps).build(getValue);
+        let result = Computed::new(deps, getValue);
         result
     }
 }

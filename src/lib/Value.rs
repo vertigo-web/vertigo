@@ -5,10 +5,7 @@ use crate::lib::{
     BoxRefCell::BoxRefCell,
     get_unique_id::get_unique_id,
     Dependencies::Dependencies,
-    Computed::{
-        Computed,
-        ComputedBuilder,
-    },
+    Computed::Computed,
 };
 
 pub struct Value<T: Debug + 'static> {
@@ -46,10 +43,7 @@ impl<T: Debug + 'static> Value<T> {
     pub fn toComputed(&self) -> Computed<T> {
 
         let value = self.value.clone();
-
         let deps = self.deps.clone();
-        let builder = ComputedBuilder::new(deps);
-        let refresh = builder.getComputedRefresh();
 
         let getValue = Box::new(move || {
             value.get(|state| {
@@ -57,7 +51,9 @@ impl<T: Debug + 'static> Value<T> {
             })
         });
 
-        let computed = builder.build(getValue);
+        let computed = Computed::new(deps, getValue);
+
+        let refresh = computed.getComputedRefresh();
 
         self.deps.addRelation(self.id, refresh);
 

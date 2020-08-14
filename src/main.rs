@@ -21,6 +21,7 @@ struct AppState {
     value2: Value<i32>,
     value3: Value<i32>,
     com1: Computed<i32>,
+    #[allow(dead_code)]
     com2: Computed<i32>,
     com3: Computed<i32>,
     suma: Computed<i32>,
