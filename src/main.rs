@@ -166,6 +166,11 @@ fn main() {
     let gg3: u64 = pointer3 as u64;
     let gg4: u64 = pointer4 as u64;
 
+    let tt1: u64 = foo1 as u64;
+    let tt2: u64 = foo2 as u64;
+    let tt3: u64 = foo1 as u64;
+    let tt4: u64 = foo3 as u64;
+
     println!("sadas {}", pointer1 == pointer2);
     println!("sadas {}", pointer1 == pointer3);
 
@@ -173,4 +178,9 @@ fn main() {
     println!("gg2 {}", gg2);
     println!("gg3 {}", gg3);
     println!("gg4 {}", gg4);
+
+    println!("tt1 {}", tt1);
+    println!("tt2 {}", tt2);
+    println!("tt3 {}", tt3);
+    println!("tt4 {}", tt4);
 }
