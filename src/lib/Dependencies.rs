@@ -104,21 +104,21 @@ impl Dependencies {
         })
     }
 
-    fn startGetValueBlock(&self) {
+    fn startTrack(&self) {
         self.inner.changeNoParams(|state| {
-            state.graph.startGetValueBlock();
+            state.graph.startTrack();
         });
     }
 
-    fn endGetValueBlock(&self, clientId: u64) {
+    fn stopTrack(&self, clientId: u64) {
         self.inner.change(clientId, |state, clientId| {
-            state.graph.endGetValueBlock(clientId);
+            state.graph.stopTrack(clientId);
         })
     }
 
     pub fn reportDependenceInStack(&self, parentId: u64) {
         self.inner.change(parentId, |state, parentId| {
-            state.graph.reportDependenceInStack(parentId);
+            state.graph.reportDependence(parentId);
         });
     }
 
@@ -127,11 +127,11 @@ impl Dependencies {
 
         Box::new(move || {
 
-            selfClone.startGetValueBlock();
+            selfClone.startTrack();
 
             let result = getValue();
 
-            selfClone.endGetValueBlock(clientId);
+            selfClone.stopTrack(clientId);
 
             result
         })

@@ -75,6 +75,11 @@ impl Stack {
         }
     }
 
+    fn startTrack(&mut self) {
+        let stackFrame = HashSet::new();
+        self.stackRelations.push_back(stackFrame);
+    }
+
     fn reportDependence(&mut self, parentId: u64) {
         let len = self.stackRelations.len();
 
@@ -96,12 +101,7 @@ impl Stack {
         }
     }
 
-    fn startGetValueBlock(&mut self) {
-        let stackFrame = HashSet::new();
-        self.stackRelations.push_back(stackFrame);
-    }
-
-    fn pop(&mut self) -> Option<HashSet<u64>> {
+    fn stopTrack(&mut self) -> Option<HashSet<u64>> {
         self.stackRelations.pop_back()
     }
 }
@@ -136,17 +136,17 @@ impl Graph {
         self.rel.getAllDeps(parentId)
     }
 
-    pub fn reportDependenceInStack(&mut self, parentId: u64) {
+    pub fn reportDependence(&mut self, parentId: u64) {
         self.stack.reportDependence(parentId);
     }
 
-    pub fn startGetValueBlock(&mut self) {
-        self.stack.startGetValueBlock();
+    pub fn startTrack(&mut self) {
+        self.stack.startTrack();
     }
 
-    pub fn endGetValueBlock(&mut self, clientId: u64) {
+    pub fn stopTrack(&mut self, clientId: u64) {
 
-        let lastItem = self.stack.pop();
+        let lastItem = self.stack.stopTrack();
 
         match lastItem {
             Some(lastItem) => {
