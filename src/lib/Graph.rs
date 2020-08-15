@@ -64,36 +64,18 @@ impl GraphOne {
     }
 }
 
-pub struct Graph {
-    rel: GraphOne,                   //relacje parent <-> clientId
-    //revert: GraphOne,                //relacje clientId <-> parent, wykorzystywane do powiadamiania o konieczności przeliczenia
+struct Stack {
     stackRelations: VecDeque<HashSet<u64>>,
 }
 
-impl Graph {
-    pub fn new() -> Graph {
-        Graph {
-            rel: GraphOne::new(),
-            //revert: GraphOne::new(),
+impl Stack {
+    fn new() -> Stack {
+        Stack {
             stackRelations: VecDeque::new(),
         }
     }
 
-    fn addRelation(&mut self, parentId: u64, clientId: u64) {
-        self.rel.add(parentId, clientId);
-        //self.revert.add(clientId, parentId);
-    }
-
-    pub fn removeRelation(&mut self, clientId: u64) {
-        self.rel.removeB(clientId);
-        //self.revert.removeA(clientId);
-    }
-
-    pub fn getAllDeps(&self, parentId: u64) -> HashSet<u64> {
-        self.rel.getAllDeps(parentId)
-    }
-
-    pub fn reportDependenceInStack(&mut self, parentId: u64) {
+    fn reportDependence(&mut self, parentId: u64) {
         let len = self.stackRelations.len();
 
         if len < 1 {
@@ -114,14 +96,57 @@ impl Graph {
         }
     }
 
-    pub fn startGetValueBlock(&mut self) {
+    fn startGetValueBlock(&mut self) {
         let stackFrame = HashSet::new();
         self.stackRelations.push_back(stackFrame);
     }
 
+    fn pop(&mut self) -> Option<HashSet<u64>> {
+        self.stackRelations.pop_back()
+    }
+}
+
+
+pub struct Graph {
+    rel: GraphOne,                   //relacje parent <-> clientId
+    //revert: GraphOne,                //relacje clientId <-> parent, wykorzystywane do powiadamiania o konieczności przeliczenia
+    stack: Stack,
+}
+
+impl Graph {
+    pub fn new() -> Graph {
+        Graph {
+            rel: GraphOne::new(),
+            //revert: GraphOne::new(),
+            stack: Stack::new(),
+        }
+    }
+
+    fn addRelation(&mut self, parentId: u64, clientId: u64) {
+        self.rel.add(parentId, clientId);
+        //self.revert.add(clientId, parentId);
+    }
+
+    pub fn removeRelation(&mut self, clientId: u64) {
+        self.rel.removeB(clientId);
+        //self.revert.removeA(clientId);
+    }
+
+    pub fn getAllDeps(&self, parentId: u64) -> HashSet<u64> {
+        self.rel.getAllDeps(parentId)
+    }
+
+    pub fn reportDependenceInStack(&mut self, parentId: u64) {
+        self.stack.reportDependence(parentId);
+    }
+
+    pub fn startGetValueBlock(&mut self) {
+        self.stack.startGetValueBlock();
+    }
+
     pub fn endGetValueBlock(&mut self, clientId: u64) {
 
-        let lastItem = self.stackRelations.pop_back();
+        let lastItem = self.stack.pop();
 
         match lastItem {
             Some(lastItem) => {
