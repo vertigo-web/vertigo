@@ -12,10 +12,6 @@ use crate::lib::{
 TODO - Dodać tranzakcyjną aktualizację
     self.deps.triggerChange([id1, id2, id3]);               //to powinno wystarczyc
 
-TODO - Uprościć wyciąganie wartośći:
-            let val1RR = appState.com1.getValue();
-            let val1 = val1RR.as_ref();
-
 TODO - Graph - usunac nieuzywane krawedzie (subskrybcje)
 */
 
@@ -45,16 +41,11 @@ impl AppState {
             let com3 = com3.clone();
 
             root.from(move || {
-                let val1RR = com1.getValue();
-                let val1 = val1RR.as_ref();
+                let val1 = com1.getValue();
+                let val2 = com2.getValue();
+                let val3 = com3.getValue();
     
-                let val2RR = com2.getValue();
-                let val2 = val2RR.as_ref();
-
-                let val3RR = com3.getValue();
-                let val3 = val3RR.as_ref();
-    
-                val1 + val2 + val3
+                *val1 + *val2 + *val3
             })
         };
 
@@ -117,13 +108,11 @@ fn main() {
         let appState = appState.clone();
         
         root.from(move || -> i32 {
-            let val1RR = appState.com1.getValue();
-            let val1 = val1RR.as_ref();
+            //let com1: &Computed<i32> = &appState.com1;
+            let val1 = appState.com1.getValue();
+            let val3 = appState.com3.getValue();
 
-            let val3RR = appState.com3.getValue();
-            let val3 = val3RR.as_ref();
-
-            val1 + val3
+            *val1 + *val3
         })
     };
 
