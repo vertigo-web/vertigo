@@ -140,4 +140,37 @@ fn main() {
     appState.value3.setValue(4);
 
     sumaTotal.off();
+
+
+    //konwertowanie do wskaźnika
+
+    fn foo1() -> i32 {
+        0
+    }
+    
+    fn foo2() -> i32 {
+        0
+    }
+
+    fn foo3(yy: i32) -> i32 {
+        0
+    }
+
+    let pointer1 = foo1 as *const ();
+    let pointer2 = foo2 as *const ();
+    let pointer3 = foo1 as *const ();
+    let pointer4 = foo3 as *const ();
+
+    let gg1: u64 = pointer1 as u64;
+    let gg2: u64 = pointer2 as u64;
+    let gg3: u64 = pointer3 as u64;
+    let gg4: u64 = pointer4 as u64;
+
+    println!("sadas {}", pointer1 == pointer2);
+    println!("sadas {}", pointer1 == pointer3);
+
+    println!("gg1 {}", gg1);
+    println!("gg2 {}", gg2);
+    println!("gg3 {}", gg3);
+    println!("gg4 {}", gg4);
 }
