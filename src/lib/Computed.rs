@@ -64,23 +64,6 @@ impl<T: Debug + 'static> Computed<T> {
         }
     }
 
-    pub fn from2<A: Debug, B: Debug>(
-        a: Computed<A>,
-        b: Computed<B>,
-        calculate: fn(&A, &B) -> T
-    ) -> Computed<T> {
-        let deps = a.inner.deps.clone();
-
-        Computed::new(deps, move || {
-            let aValue = a.getValue();
-            let bValue = b.getValue();
-
-            let result = calculate(aValue.as_ref(), bValue.as_ref());
-
-            Rc::new(result)
-        })
-    }
-
     pub fn getValue(&self) -> Rc<T> {
         let inner = self.inner.as_ref();
         let selfId = inner.id;
@@ -118,6 +101,23 @@ impl<T: Debug + 'static> Computed<T> {
     pub fn subscribe<F: Fn(&T) + 'static>(self, call: F) -> Client {
         let client = Client::new(self.inner.deps.clone(), self.clone(), call);
         client
+    }
+
+    pub fn from2<A: Debug, B: Debug>(
+        a: Computed<A>,
+        b: Computed<B>,
+        calculate: fn(&A, &B) -> T
+    ) -> Computed<T> {
+        let deps = a.inner.deps.clone();
+
+        Computed::new(deps, move || {
+            let aValue = a.getValue();
+            let bValue = b.getValue();
+
+            let result = calculate(aValue.as_ref(), bValue.as_ref());
+
+            Rc::new(result)
+        })
     }
 
     pub fn map<K: Debug>(self, fun: fn(&T) -> K) -> Computed<K> {
