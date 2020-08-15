@@ -42,7 +42,6 @@ impl Client {
 
 impl Drop for Client {
     fn drop(&mut self) {
-        println!("Client ----> DROP");
         self.deps.removeRelation(self.id);
     }
 }

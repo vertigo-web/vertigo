@@ -22,7 +22,6 @@ pub struct ComputedInner<T: Debug + 'static> {
 
 impl<T: Debug> Drop for ComputedInner<T> {
     fn drop(&mut self) {
-        println!("Computed<T> ----> DROP");
         self.deps.removeRelation(self.id);
     }
 }

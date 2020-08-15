@@ -25,7 +25,6 @@ impl<T: Debug + 'static> Value<T> {
 
     pub fn setValue(&self, value: T) {
         self.value.change(value, |state, value| {
-            println!("Value::setValue {:?}", value);
             *state = Rc::new(value);
         });
 
