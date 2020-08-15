@@ -156,6 +156,8 @@ fn main() {
         0
     }
 
+    //println!("aaa {}", std::mem::size_of<* ()>);
+
     let pointer1 = foo1 as *const ();
     let pointer2 = foo2 as *const ();
     let pointer3 = foo1 as *const ();
@@ -174,13 +176,33 @@ fn main() {
     println!("sadas {}", pointer1 == pointer2);
     println!("sadas {}", pointer1 == pointer3);
 
-    println!("gg1 {}", gg1);
-    println!("gg2 {}", gg2);
-    println!("gg3 {}", gg3);
-    println!("gg4 {}", gg4);
+    println!("gg1 {:x}", gg1);
+    println!("gg2 {:x}", gg2);
+    println!("gg3 {:x}", gg3);
+    println!("gg4 {:x}", gg4);
 
-    println!("tt1 {}", tt1);
-    println!("tt2 {}", tt2);
-    println!("tt3 {}", tt3);
-    println!("tt4 {}", tt4);
+    println!("tt1 {:x}", tt1);
+    println!("tt2 {:x}", tt2);
+    println!("tt3 {:x}", tt3);
+    println!("tt4 {:x}", tt4);
+
+    let bb1: u32 = foo1 as u32;
+    let bb2: u32 = foo2 as u32;
+    let bb3: u32 = foo1 as u32;
+    let bb4: u32 = foo3 as u32;
+
+    println!("bb1 {:x}", bb1);
+    println!("bb2 {:x}", bb2);
+    println!("bb3 {:x}", bb3);
+    println!("bb4 {:x}", bb4);
+
+    let cc1: u128 = foo1 as u128;
+    let cc2: u128 = foo2 as u128;
+    let cc3: u128 = foo1 as u128;
+    let cc4: u128 = foo3 as u128;
+
+    println!("cc1 {:x}", cc1);
+    println!("cc2 {:x}", cc2);
+    println!("cc3 {:x}", cc3);
+    println!("cc4 {:x}", cc4);
 }
