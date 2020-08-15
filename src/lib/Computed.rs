@@ -116,7 +116,7 @@ impl<T: Debug + 'static> Computed<T> {
     }
 
     pub fn subscribe<F: Fn(&T) + 'static>(self, call: F) -> Client {
-        let client = Client::new(self.inner.deps.clone(), self.clone(), Box::new(call));
+        let client = Client::new(self.inner.deps.clone(), self.clone(), call);
         client
     }
 
