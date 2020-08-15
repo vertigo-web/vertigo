@@ -42,16 +42,16 @@ impl<T: Debug> Clone for Computed<T> {
 }
 
 impl<T: Debug + 'static> Computed<T> {
-    pub fn new<F: Fn() -> Rc<T> + 'static>(deps: Dependencies, getValue: Box<F>) -> Computed<T> {
+    pub fn new<F: Fn() -> Rc<T> + 'static>(deps: Dependencies, getValue: F) -> Computed<T> {
 
         let id = get_unique_id();
         let isFreshCell = Rc::new(BoxRefCell::new(true));
 
-        deps.startGetValueBlock();
+        let getValue = deps.wrapGetValue(getValue, id);
+
+        deps.registerRefreshToken(id,RefreshToken::newComputed(isFreshCell.clone()));
+
         let value = getValue();
-        deps.endGetValueBlock(
-            RefreshToken::newComputed(id, isFreshCell.clone())
-        );
 
         Computed {
             inner: Rc::new(ComputedInner {
@@ -64,10 +64,6 @@ impl<T: Debug + 'static> Computed<T> {
         }
     }
 
-    pub fn getComputedRefresh(&self) -> RefreshToken {
-        RefreshToken::newComputed(self.inner.id, self.inner.isFreshCell.clone())
-    }
-
     pub fn from2<A: Debug, B: Debug>(
         a: Computed<A>,
         b: Computed<B>,
@@ -75,18 +71,14 @@ impl<T: Debug + 'static> Computed<T> {
     ) -> Computed<T> {
         let deps = a.inner.deps.clone();
 
-        let getValue = Box::new(move || {
+        Computed::new(deps, move || {
             let aValue = a.getValue();
             let bValue = b.getValue();
 
             let result = calculate(aValue.as_ref(), bValue.as_ref());
 
             Rc::new(result)
-        });
-
-        let result = Computed::new(deps, getValue);
-
-        result
+        })
     }
 
     pub fn getValue(&self) -> Rc<T> {
@@ -104,17 +96,9 @@ impl<T: Debug + 'static> Computed<T> {
             })
         };
 
-        println!("**** computed getValue **** shouldRecalculate={}", shouldRecalculate);
-
         let newValue = if shouldRecalculate {
-            deps.startGetValueBlock();
-
-            let result = {
-                let ComputedInner { getValueFromParent, .. } = self.inner.as_ref();
-                getValueFromParent()
-            };
-
-            deps.endGetValueBlock(self.getComputedRefresh());
+            let ComputedInner { getValueFromParent, .. } = self.inner.as_ref();
+            let result = getValueFromParent();
             Some(result)
         } else {
             None
@@ -133,23 +117,17 @@ impl<T: Debug + 'static> Computed<T> {
 
     pub fn subscribe<F: Fn(&T) + 'static>(self, call: F) -> Client {
         let client = Client::new(self.inner.deps.clone(), self.clone(), Box::new(call));
-
-        self.inner.deps.addRelation(self.inner.id, client.getClientRefresh());
-
         client
     }
 
     pub fn map<K: Debug>(self, fun: fn(&T) -> K) -> Computed<K> {
         let deps = self.inner.deps.clone();
 
-        let getValue = Box::new(move || {
+        Computed::new(deps, move || {
             let value = self.getValue();
             let result = fun(value.as_ref());
             Rc::new(result)
-        });
-
-        let result = Computed::new(deps, getValue);
-        result
+        })
     }
 }
 

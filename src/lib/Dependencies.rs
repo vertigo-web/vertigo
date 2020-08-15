@@ -13,7 +13,7 @@ use crate::lib::{
 };
 
 struct DependenciesInner {
-    refreshToken: HashMap<u64, RefreshToken>,
+    refreshToken: HashMap<u64, RefreshToken>,               //Tablica z zarejestrowanymi tokenami
     graph: Graph,
 }
 
@@ -87,28 +87,33 @@ impl Dependencies {
         }
     }
 
-    //TODO - uprywatnić
-    pub fn addRelation(&self, parentId: u64, refreshToken: RefreshToken) {
-        self.inner.change((parentId, refreshToken), |state, (parentId, refreshToken)| {
-            let clientId = refreshToken.getId();
-            state.refreshToken.insert(clientId, refreshToken);
-
-            state.graph.addRelation(parentId, clientId);
-        });
+    pub fn registerRefreshToken(&self, clientId: u64, refreshToken: RefreshToken) {
+        self.inner.change(
+            (clientId, refreshToken),
+            |state, (clientId, refreshToken)| {
+                state.refreshToken.insert(clientId, refreshToken);
+            }
+        );
     }
 
-    //TODO - uprywatnić
-    pub fn removeRelation(&self, clientId: u64) {
+    pub fn removeRelation(&self, clientId: u64) -> Option<RefreshToken> {
         self.inner.change(clientId, |state, clientId| {
-            state.refreshToken.remove(&clientId);
+            let refreshToken = state.refreshToken.remove(&clientId);
             state.graph.removeRelation(clientId);
-        });
+            refreshToken
+        })
     }
 
-    pub fn startGetValueBlock(&self) {
+    fn startGetValueBlock(&self) {
         self.inner.changeNoParams(|state| {
             state.graph.startGetValueBlock();
         });
+    }
+
+    fn endGetValueBlock(&self, clientId: u64) {
+        self.inner.change(clientId, |state, clientId| {
+            state.graph.endGetValueBlock(clientId);
+        })
     }
 
     pub fn reportDependenceInStack(&self, parentId: u64) {
@@ -117,14 +122,20 @@ impl Dependencies {
         });
     }
 
-    pub fn endGetValueBlock(&self, computedRefresh: RefreshToken) {
-        self.inner.change(computedRefresh, |state, computedRefresh| {
-            let clientId = computedRefresh.getId();
-            state.refreshToken.insert(clientId, computedRefresh);
-            state.graph.endGetValueBlock(clientId);
+    pub fn wrapGetValue<T, F: Fn() -> T + 'static>(&self, getValue: F, clientId: u64) -> Box<dyn Fn() -> T> {
+        let selfClone = self.clone();
+
+        Box::new(move || {
+
+            selfClone.startGetValueBlock();
+
+            let result = getValue();
+
+            selfClone.endGetValueBlock(clientId);
+
+            result
         })
     }
-
 
     pub fn from<T: Debug, F: Fn() -> T + 'static>(&self, calculate: F) -> Computed<T> {
         let deps = self.clone();

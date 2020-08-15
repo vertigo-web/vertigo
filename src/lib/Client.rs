@@ -1,4 +1,3 @@
-use std::rc::Rc;
 use std::fmt::Debug;
 
 use crate::lib::{
@@ -7,30 +6,34 @@ use crate::lib::{
     Computed::Computed,
     RefreshToken::RefreshToken,
 };
+
 pub struct Client {
     deps: Dependencies,
     id: u64,
-    refresh: Rc<Box<dyn Fn()>>,
 }
 
 impl Client {
-    pub fn new<T: Debug + 'static>(deps: Dependencies, computed: Computed<T>, call: Box<dyn Fn(&T) + 'static>) -> Client {
-        let refresh = Box::new(move || {
-            let value = computed.getValue();
+    pub fn new<T: Debug + 'static, F: Fn(&T) + 'static>(deps: Dependencies, computed: Computed<T>, call: F) -> Client {
+
+        let id = get_unique_id();
+        
+        let getValue = deps.wrapGetValue(move || {
+            computed.getValue()
+        }, id);
+
+        let refresh = move || {
+            let value = getValue();
             call(value.as_ref());
-        });
+        };
         
         refresh();
 
+        deps.registerRefreshToken(id, RefreshToken::newClient(refresh));
+
         Client {
             deps,
-            id: get_unique_id(),
-            refresh: Rc::new(refresh)
+            id,
         }
-    }
-
-    pub fn getClientRefresh(&self) -> RefreshToken {
-        RefreshToken::newClient(self.id, self.refresh.clone())
     }
 
     pub fn off(self: Client) {

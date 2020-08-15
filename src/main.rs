@@ -72,6 +72,8 @@ fn main() {
 
     let root = Dependencies::new();
 
+    println!("=============1=============");
+
     let val1 = root.newValue(4);
     let val2 = root.newValue(5);
 
@@ -104,6 +106,8 @@ fn main() {
 
     val2.setValue(999);
 
+    println!("=============2=============");
+
     let appState = AppState::new(&root);
 
     let suma3 = {
@@ -133,7 +137,7 @@ fn main() {
     suma3sub.off();
     appState.value3.setValue(8);
 
-    println!("=============");
+    println!("=============3=============");
 
     let sumaTotal = appState.suma.clone().subscribe(|value| {
         println!("|||| {}", value);

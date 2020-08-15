@@ -1,60 +1,37 @@
 use std::collections::{HashSet, HashMap, VecDeque};
 
-pub struct Graph {
-    relations: HashMap<u64, u64>,                   //relacje zaleności, target -> parent
-    revertRelations: HashMap<u64, HashSet<u64>>,        //wykorzystywane do powiadamiania o konieczności przeliczenia
-                                                    //parent -> Vec<target>
-
-    stackRelations: VecDeque<HashSet<u64>>,
+struct GraphOne {
+    rel: HashMap<u64, HashSet<u64>>,                //A <-> B
 }
 
-impl Graph {
-    pub fn new() -> Graph {
-        Graph {
-            relations: HashMap::new(),
-            revertRelations: HashMap::new(),
-            stackRelations: VecDeque::new(),
+impl GraphOne {
+    fn new() -> GraphOne {
+        GraphOne {
+            rel: HashMap::new()
         }
     }
 
-    pub fn addRelation(&mut self, parentId: u64, clientId: u64) {
-        self.relations.insert(clientId, parentId);
-
-        let list = self.revertRelations.entry(parentId).or_insert_with(HashSet::new);
-        list.insert(clientId);
+    fn add(&mut self, edgeA: u64, edgeB: u64) {
+        let list = self.rel.entry(edgeA).or_insert_with(HashSet::new);
+        list.insert(edgeB);
     }
 
-    pub fn removeRelation(&mut self, clientId: u64) {
-        let parentId = self.relations.remove(&clientId);
-
-        let parentId = match parentId {
-            Some(parentId) => parentId,
-            None => {
-                log::error!("relationship delete error - first level");
-                return;
-            }
-        };
-
-        let listIds = self.revertRelations.get_mut(&parentId);
-
-        let listIds = match listIds {
-            Some(listIds) => listIds,
-            None => {
-                log::error!("relationship delete error - second level");
-                return;
-            }
-        };
-
-        let removed = listIds.remove(&clientId);
-
-        if removed == false {
-            log::error!("relationship delete error - missing item");
-        }
+    pub fn removeA(&mut self, edgeA: u64) {
+        self.rel.remove(&edgeA);
     }
 
-    pub fn getAllDeps(&self, parentId: u64) -> HashSet<u64> {
+    pub fn removeB(&mut self, edgeB: u64) {
+        self.rel.retain(|_k, listIds| -> bool {
+
+            listIds.remove(&edgeB);
+
+            listIds.len() > 0
+        });
+    }
+
+    pub fn getAllDeps(&self, edgeA: u64) -> HashSet<u64> {
         let mut result = HashSet::new();
-        let mut toTraverse: Vec<u64> = vec!(parentId);
+        let mut toTraverse: Vec<u64> = vec!(edgeA);
 
         loop {
             let nextToTraverse = toTraverse.pop();
@@ -63,7 +40,7 @@ impl Graph {
                 Some(next) => {
                     result.insert(next);
 
-                    let list = self.revertRelations.get(&next);
+                    let list = self.rel.get(&next);
 
                     if let Some(list) = list {
 
@@ -84,10 +61,37 @@ impl Graph {
             }
         }
     }
+}
 
-    pub fn startGetValueBlock(&mut self) {
-        let stackFrame = HashSet::new();
-        self.stackRelations.push_back(stackFrame);
+pub struct Graph {
+    rel: GraphOne,                   //relacje parent <-> clientId
+    revert: GraphOne,                //relacje clientId <-> parent, wykorzystywane do powiadamiania o konieczności przeliczenia
+    stackRelations: VecDeque<HashSet<u64>>,
+}
+
+impl Graph {
+    pub fn new() -> Graph {
+        Graph {
+            rel: GraphOne::new(),
+            revert: GraphOne::new(),
+            // relations: HashMap::new(),
+            // revertRelations: HashMap::new(),
+            stackRelations: VecDeque::new(),
+        }
+    }
+
+    fn addRelation(&mut self, parentId: u64, clientId: u64) {
+        self.rel.add(parentId, clientId);
+        self.revert.add(clientId, parentId);
+    }
+
+    pub fn removeRelation(&mut self, clientId: u64) {
+        self.rel.removeB(clientId);
+        self.revert.removeA(clientId);
+    }
+
+    pub fn getAllDeps(&self, parentId: u64) -> HashSet<u64> {
+        self.rel.getAllDeps(parentId)
     }
 
     pub fn reportDependenceInStack(&mut self, parentId: u64) {
@@ -109,6 +113,11 @@ impl Graph {
                 log::warn!("frame with stack - not found get_mut=None");
             }
         }
+    }
+
+    pub fn startGetValueBlock(&mut self) {
+        let stackFrame = HashSet::new();
+        self.stackRelations.push_back(stackFrame);
     }
 
     pub fn endGetValueBlock(&mut self, clientId: u64) {
@@ -133,5 +142,5 @@ impl Graph {
         }
     }
 
-    // pub fn computed<F>() -> R {}
+    //pub fn computed<F>() -> R {}
 }

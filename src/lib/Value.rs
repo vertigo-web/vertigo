@@ -45,18 +45,13 @@ impl<T: Debug + 'static> Value<T> {
         let value = self.value.clone();
         let deps = self.deps.clone();
 
-        let getValue = Box::new(move || {
+        let selfId = self.id;
+
+        Computed::new(deps.clone(), move || {
+            deps.reportDependenceInStack(selfId);
             value.get(|state| {
                 state.clone()
             })
-        });
-
-        let computed = Computed::new(deps, getValue);
-
-        let refresh = computed.getComputedRefresh();
-
-        self.deps.addRelation(self.id, refresh);
-
-        computed
+        })
     }
 }

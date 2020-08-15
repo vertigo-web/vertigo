@@ -4,27 +4,23 @@ use crate::lib::BoxRefCell::BoxRefCell;
 
 pub enum RefreshToken {
     Computed {
-        id: u64,
         isFreshCell: Rc<BoxRefCell<bool>>,
     },
     Client {
-        id: u64,
         refresh: Rc<Box<dyn Fn()>>,
     }
 }
 
 impl RefreshToken {
-    pub fn newComputed(id: u64, isFreshCell: Rc<BoxRefCell<bool>>) -> RefreshToken {
+    pub fn newComputed(isFreshCell: Rc<BoxRefCell<bool>>) -> RefreshToken {
         RefreshToken::Computed {
-            id,
             isFreshCell,
         }
     }
 
-    pub fn newClient(id: u64, refresh: Rc<Box<dyn Fn()>>) -> RefreshToken {
+    pub fn newClient<F: Fn() + 'static>(refresh: F) -> RefreshToken {
         RefreshToken::Client {
-            id,
-            refresh,
+            refresh: Rc::new(Box::new(refresh)),
         }
     }
 
@@ -41,17 +37,6 @@ impl RefreshToken {
         }
     }
 
-    pub fn getId(&self) -> u64 {
-        match self {
-            RefreshToken::Computed { id, .. } => {
-                *id
-            },
-            RefreshToken::Client { id, .. } => {
-                *id
-            }
-        }
-    }
-
     pub fn isComputed(&self) -> bool {
         match self {
             RefreshToken::Computed { .. } => true,
@@ -63,15 +48,13 @@ impl RefreshToken {
 impl Clone for RefreshToken {
     fn clone(&self) -> Self {
         match self {
-            RefreshToken::Computed { isFreshCell, id } => {
+            RefreshToken::Computed { isFreshCell, .. } => {
                 RefreshToken::Computed {
                     isFreshCell: isFreshCell.clone(),
-                    id: *id
                 }
             },
-            RefreshToken::Client { id, refresh } => {
+            RefreshToken::Client { refresh } => {
                 RefreshToken::Client {
-                    id: *id,
                     refresh: refresh.clone(),
                 }
             }
