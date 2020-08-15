@@ -23,7 +23,7 @@ impl<T: Debug + 'static> Value<T> {
         }
     }
 
-    pub fn setValue(&self, value: T) /* -> Vec<Rc<Client>> */ {                          //TODO - trzeba odebrać i wywołać
+    pub fn setValue(&self, value: T) {
         self.value.change(value, |state, value| {
             println!("Value::setValue {:?}", value);
             *state = Rc::new(value);

@@ -16,6 +16,7 @@ impl GraphOne {
         list.insert(edgeB);
     }
 
+    #[allow(dead_code)]
     pub fn removeA(&mut self, edgeA: u64) {
         self.rel.remove(&edgeA);
     }
@@ -65,7 +66,7 @@ impl GraphOne {
 
 pub struct Graph {
     rel: GraphOne,                   //relacje parent <-> clientId
-    revert: GraphOne,                //relacje clientId <-> parent, wykorzystywane do powiadamiania o konieczności przeliczenia
+    //revert: GraphOne,                //relacje clientId <-> parent, wykorzystywane do powiadamiania o konieczności przeliczenia
     stackRelations: VecDeque<HashSet<u64>>,
 }
 
@@ -73,21 +74,19 @@ impl Graph {
     pub fn new() -> Graph {
         Graph {
             rel: GraphOne::new(),
-            revert: GraphOne::new(),
-            // relations: HashMap::new(),
-            // revertRelations: HashMap::new(),
+            //revert: GraphOne::new(),
             stackRelations: VecDeque::new(),
         }
     }
 
     fn addRelation(&mut self, parentId: u64, clientId: u64) {
         self.rel.add(parentId, clientId);
-        self.revert.add(clientId, parentId);
+        //self.revert.add(clientId, parentId);
     }
 
     pub fn removeRelation(&mut self, clientId: u64) {
         self.rel.removeB(clientId);
-        self.revert.removeA(clientId);
+        //self.revert.removeA(clientId);
     }
 
     pub fn getAllDeps(&self, parentId: u64) -> HashSet<u64> {
@@ -126,21 +125,14 @@ impl Graph {
 
         match lastItem {
             Some(lastItem) => {
-                
-
-                //TODO - usunac nieuzywane krawedzie (subskrybcje)
-
 
                 for parentId in lastItem {
                     self.addRelation(parentId, clientId);
                 }
-                //todo!("tutaj trzeba obsluzyc te zaleznosci")
             },
             None => {
                 panic!("TODO - Spodziewano się elementu");
             }
         }
     }
-
-    //pub fn computed<F>() -> R {}
 }

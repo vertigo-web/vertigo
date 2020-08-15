@@ -10,10 +10,13 @@ use crate::lib::{
 
 /*
 TODO - Dodać tranzakcyjną aktualizację
+    self.deps.triggerChange([id1, id2, id3]);               //to powinno wystarczyc
 
 TODO - Uprościć wyciąganie wartośći:
             let val1RR = appState.com1.getValue();
             let val1 = val1RR.as_ref();
+
+TODO - Graph - usunac nieuzywane krawedzie (subskrybcje)
 */
 
 struct AppState {
