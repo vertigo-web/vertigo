@@ -106,6 +106,8 @@ fn test_app_state() {
         })
     };
 
+    assert_eq!((suma3Box.get(), sumaTotalBox.get()), (10, 16));
+
     appState.value1.setValue(2);
     assert_eq!((suma3Box.get(), sumaTotalBox.get()), (10, 15));
 
