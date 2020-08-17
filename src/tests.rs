@@ -182,3 +182,78 @@ fn pointers() {
     // println!("cc3 {:x}", cc3);
     // println!("cc4 {:x}", cc4);
 }
+
+#[test]
+fn test_subscription() {
+    use crate::lib::{
+        Dependencies::Dependencies,
+        Computed::Computed,
+        BoxValue::BoxValue,
+    };
+
+    let root = Dependencies::new();
+
+    let val1 = root.newValue(1);
+    let val2 = root.newValue(2);
+    let val3 = root.newValue(3);
+
+    let com1: Computed<i32> = val1.toComputed();
+    let com2: Computed<i32> = val2.toComputed();
+    #[allow(unused_variables)]
+    let com3: Computed<i32> = val3.toComputed();
+
+    #[derive(Copy, Clone, Debug, PartialEq)]
+    struct Sum {
+        version: u32,
+        value: Option<i32>
+    }
+    impl Sum {
+        fn new(version: u32, value: Option<i32>) -> Sum {
+            Sum {
+                version,
+                value,
+            }
+        }
+    }
+
+    let sumValue: BoxValue<Sum> = BoxValue::new(Sum::new(1, None));
+
+    assert_eq!(sumValue.get(), Sum::new(1, None));
+
+    let sum = root.from(move || -> i32 {
+        let value1 = com1.getValue();
+        let value2 = com2.getValue();
+
+        *value1 + *value2
+    });
+
+    let sub = {
+        let sumValue = sumValue.clone();
+        sum.subscribe(move |value| {
+            sumValue.change(move |state| {
+                state.version += 1;
+                state.value = Some(*value);
+            });
+        })
+    };
+
+    assert_eq!(sumValue.get(), Sum::new(2, Some(3)));
+    val1.setValue(2);
+    assert_eq!(sumValue.get(), Sum::new(3, Some(4)));
+    val2.setValue(10);
+    assert_eq!(sumValue.get(), Sum::new(4, Some(12)));
+    val3.setValue(10);
+    assert_eq!(sumValue.get(), Sum::new(4, Some(12)));
+    val2.setValue(20);
+    assert_eq!(sumValue.get(), Sum::new(5, Some(22)));
+
+    sub.off();
+
+    val1.setValue(2);
+    assert_eq!(sumValue.get(), Sum::new(5, Some(22)));
+    val2.setValue(2);
+    assert_eq!(sumValue.get(), Sum::new(5, Some(22)));
+    val3.setValue(2);
+    assert_eq!(sumValue.get(), Sum::new(5, Some(22)));
+}
+

@@ -1,6 +1,7 @@
 #![allow(non_snake_case)]
 
 mod lib;
+mod vdom;
 mod tests;
 
 use crate::lib::{

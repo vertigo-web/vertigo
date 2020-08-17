@@ -26,6 +26,12 @@ impl<T: Copy> BoxValue<T> {
             *state = value;
         })
     }
+
+    pub fn change<F: Fn(&mut T)>(&self, change: F) {
+        self.value.change(change, |state, change| {
+            change(state);
+        })
+    }
 }
 
 impl<T: Copy> Clone for BoxValue<T> {
