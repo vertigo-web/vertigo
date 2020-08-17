@@ -31,16 +31,17 @@ impl<T: Debug + 'static> Value<T> {
         self.deps.triggerChange(self.id);
     }
 
-    // pub fn getValue(&self) -> Rc<T> {
-    //     let value = self.value.get(|state| {
-    //         state.clone()
-    //     });
+    pub fn getValue(&self) -> Rc<T> {
+        self.deps.reportDependenceInStack(self.id);
 
-    //     value
-    // }
+        let value = self.value.get(|state| {
+            state.clone()
+        });
+
+        value
+    }
 
     pub fn toComputed(&self) -> Computed<T> {
-
         let value = self.value.clone();
         let deps = self.deps.clone();
 
