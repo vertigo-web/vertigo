@@ -58,6 +58,8 @@ enum RealDom {
     Component {
         id: ComponentId,
         subscription: Client,                   //Subskrybcją, kryje się funkcja, która odpalana (na zmianę), wstawia coś do pojemnika child
+
+        //??????????
         child: Rc<{                             //Ten element będzie przekazany do funkcji renderującej ---> a potem subskrybcja będzie zapisana do zmiennej subscription
             child: BoxRefCell<Vec<RealDom>>,
             idParent: RealNodeId,               //prawdopodobnie będzie konieczne. Ale ten id moze byc utworzony przy stworzeniu noda. Nie będzie zmieniany.
@@ -94,7 +96,7 @@ fn newComponent<T: Debug>(root: Dependencies, params: Computed<T>, render: fn(T)
     Od niego zaczynamy zawsze (numer 1)
 */
 
-fn applyNewViewChild(anchor: DomAnchor, a: Vec<RealDom>, b: Vec<VDom>) {
+fn applyNewViewChild(anchor: DomAnchor, a: Vec<RealDom>, b: Vec<VDom>) -> Vec<RealDom> {
     /*
         teraz kwestia jak zsynchronizować te dzieci
 
@@ -133,21 +135,30 @@ AppState {
 */
 
 
+//let ahchor = getAnchor(parentId, currentAppDom);
+
+
+fn renderToNode(anchor: DomAnchor, computed: Computed<Vec<VDom>>) -> Client {
+    let mut currentAppDom: Vec<RealDom> = Vec::new();
+
+    let subscription: Client = computed.subscribe(move |appVDom| {
+        currentAppDom = applyNewViewChild(
+            anchor,
+            currentAppDom,
+            appVDom
+        );
+    });
+}
+
 fn startApp<T>(deps: Dependencies, param: T, render: fn(&T) -> Vec<VDom>) -> Client {
-    let mut prevAppVDom: Vec<VDom> = Vec::new();
+    let anchor = DomAnchor::root();
 
-    let subscription: Client = deps
-        .from(move || render(&param))
-        .subscribe(move |appVDom| {
-            renderApp(
-                DomAnchor::root(),
-                prevAppVDom,
-                appVDom
-            );
-        
-            prevAppVDom = appVDom;    
-        });
+    let render: /*(Fn() -> Vec<VDom>*/ = move || render(&param);
+    let vDomComputed: Computed<Vec<VDom>> = deps.from(render);
 
+    //let vDomComputed: Computed<Vec<VDom>> = deps.from(move || render(&param));\
+
+    let subscription = renderToNode(anchor, vDomComputed);
     subscription
 }
 
