@@ -159,10 +159,17 @@ let appState = AppState::new(&root);
 
 let subskrybcjaApp = startApp(root, appState, glownaFunkcjaRenderujaca);
 
+//po wystartowaniu subskrybcjaApp tą zmienną trzeba wpakować w zmienną globalną zeby nie stracić subskrybcji
+
 fn glownaFunkcjaRenderujaca(appState: AppState) -> Vec<VDom> {
     todo!();
 }
 
+
+//Statyczna zmienna, która będzie miała wartość null lub ta zmienna
+
+//Funkcja wyeksportowana, która wywołana ustai tą zmienną globalną
+//Funkcja wyeksportowana, która wyłączy tą zmienną. Sprawdzić czy się destruktor poprawnie wywoła
 
 
 //Trzeba jakoś zapisać referencję do tej subskrybcji
