@@ -9,7 +9,7 @@ use crate::lib::{
 };
 
 struct RealNodeId {
-    //TODO
+    id: u64,
 }
 
 struct ComponentId {
@@ -20,18 +20,6 @@ struct ComponentId {
 struct Component {
     id: ComponentId,
     render: Box<dyn Fn() -> Vec<VDom>>
-}
-
-fn newComponent<T: Debug>(
-    root: Dependencies,
-    params: Computed<T>,
-    render: fn(T) -> Vec<VDom>
-) -> Component {
-    let clientId = 4;   //TODO
-    //let getValue = root.wrapGetValue(render, clientId);
-    // to trzeba zamienic na subksrybcje
-    // trzeba wystawic jakas funkcje subskryubujaca na funkcje (autorun)
-    todo!();
 }
 
 struct VDomNode {
@@ -48,16 +36,8 @@ enum VDom {
         value: String,
     },
     Component {
-        id: ComponentId,
-        render: fn() -> Vec<VDom>
+        node: Component,
     },
-    TestA {
-        name: String
-    }
-}
-
-fn aa(a: VDomNode) {
-
 }
 
 struct RealDomNode {
@@ -65,7 +45,6 @@ struct RealDomNode {
     attr: HashMap<String, String>,
     child: Vec<RealDom>,
     idDom: u64,                             //id realnego doma
-                                            // --> getAllChild --> zwraca tablice ktora zawiera tylko ten elem vec!(idDom)
 }
 
 enum RealDom {
@@ -75,75 +54,118 @@ enum RealDom {
     Text {
         value: String,
         idDom: u64,                             //id realnego doma
-                                                // --> getAllChild --> zwraca tablice ktora zawiera tylko ten elem vec!(idDom)
     },
     Component {
         id: ComponentId,
         subscription: Client,                   //Subskrybcją, kryje się funkcja, która odpalana (na zmianę), wstawia coś do pojemnika child
-        child: BoxRefCell<Vec<RealDom>>,
-        idParent: RealNodeId,                   //parent
-        idPrev: Option<RealNodeId>              // --> getAllChild --> Vec<u64>     przenosząc element przenosimy całą kolekcję elementów
+        child: Rc<{                             //Ten element będzie przekazany do funkcji renderującej ---> a potem subskrybcja będzie zapisana do zmiennej subscription
+            child: BoxRefCell<Vec<RealDom>>,
+            idParent: RealNodeId,               //prawdopodobnie będzie konieczne. Ale ten id moze byc utworzony przy stworzeniu noda. Nie będzie zmieniany.
+        }>
+    }
+}
+
+enum DomAnchor {
+    Parent(RealNodeId),             //oznacza ze zaczynamy wstawiac elementy jako pierwsze dziecko
+    RefPrev(RealNodeId),            //pokazuje poprzedni element przed zakresem
+}
+
+impl DomAnchor {
+    fn root() -> DomAnchor {
+        DomAnchor::Parent(1)
     }
 }
 
 /*
-    Główny root aplikacji, powinien być niezmiennym i niemodyfikowalnym węzłem
-    Od niego zaczynamy zawsze 
+RealDom::Node - DomAnchor::Parent(), będzie odnosnikiem
+RealDom::Component - DomAnchor::RefPrev()
 */
 
-fn applyNewViewChild(idParent: RealNodeId, a: Vec<RealDom>, b: Vec<VDom>) {
-    
-    /*
-        synchronizujemy atrybuty
 
-        potem trzeba będzie zsynchronizować eventy podpięte pod ten węzeł
-
-        potem przechodzimy do synchronizowania dzieci
-        przenosząc prawdziwy element, od razu trzeba wysłać mu informację o tym jaki jest teraz obecnie jego poprzedzający element
-    */
+fn newComponent<T: Debug>(root: Dependencies, params: Computed<T>, render: fn(T) -> Vec<VDom>) -> Component {
+    let clientId = 4;   //TODO
+    //let getValue = root.wrapGetValue(render, clientId);
+    // to trzeba zamienic na subksrybcje, trzeba wystawic jakas funkcje subskryubujaca na funkcje (autorun)
+    todo!();
 }
 
 /*
-    dzieci z A
-    dzieci z B
-
-    teraz kwestia jak zsynchronizować te dzieci
-
-    dzieci z A, które 
+    Główny root aplikacji, powinien być niezmiennym i niemodyfikowalnym węzłem
+    Od niego zaczynamy zawsze (numer 1)
 */
 
-
-fn applyNewViewNode(om_a: &RealDom, dom_b: &VDom) {
-    //...
+fn applyNewViewChild(anchor: DomAnchor, a: Vec<RealDom>, b: Vec<VDom>) {
     /*
-        zeby przystąpić do synchronizaczji dwóch elementów, typ węzła musi się zgadzać
-            RealDom::name musi mieć takie samo jak VDom:name
-            typ RealDom:Text i typ VDom:Text
+        teraz kwestia jak zsynchronizować te dzieci
 
-            Component, moemy albo reuzyc, albo nie.
-            Ten element bedzie swietny ze wzgledu na keszowanie jego zawartosci
-        
+        Component-y reuzywamy
 
         najpierw porządkujemy koleność
             przenoszenie
             tworzenie nowych
             kasowanie nieaktualnych
+    */
+}
 
-        potem następuej rekurencyjne wywołanie funkcji applyNewViewNode
+fn applyNewViewNode(om_a: &RealDomNode, dom_b: &VDomNode) {
+    /*
+        zeby przystąpić do synchronizaczji dwóch elementów, typ węzła musi się zgadzać
+            RealDom::name musi mieć takie samo jak VDom:name
+        
+        synchronizujemy atrybuty
+
+        potem trzeba będzie zsynchronizować eventy podpięte pod ten węzeł
+
+        potem przechodzimy do synchronizowania dzieci
     */
 }
 
 
-
 /*
-    Vec<RealDom> --- lista, która powinna pozwalać na wstawienie elementu w jakimś określonym miejscu
+AppDataState --- stan dotyczący danhych
 
-    mona się pokusić o minigrf ...
-    po to zeby dało się wstawiać elementy w odpowiedniej kolejności
+AppViewState (wstrzyknięcie AppDataState) - stan dotyczący widoku
 
-
-    Przenosząc elemenent w kolekcji, trzeba 
+AppState {
+    data: AppDataState,
+    view: AppViewState,
+}
 */
+
+
+fn startApp<T>(deps: Dependencies,, param: T, render: fn(&T) -> Vec<VDom>) -> Client {
+    let mut prevAppVDom: Vec<VDom> = Vec::new();
+
+    let appVdomCom: Computed<Vec<VDom>> = Computed::new(deps, (move || {
+        render(&param)
+    });
+
+    let subscription: Client = appVdomCom.subscribe(move |appVDom| {
+        renderApp(
+            DomAnchor::root(),
+            prevAppVDom,
+            appVDom
+        );
+    
+        prevAppVDom = appVDom;    
+    })
+
+    subscription
+}
+
+let root: Dependencies = Dependencies::new();
+
+let appState = AppState::new(&root);
+
+let subskrybcjaApp = startApp(root, appState, glownaFunkcjaRenderujaca);
+
+fn glownaFunkcjaRenderujaca(appState: AppState) -> Vec<VDom> {
+    todo!();
+}
+
+
+
+//Trzeba jakoś zapisać referencję do tej subskrybcji
 
 
 
@@ -155,14 +177,11 @@ fn applyNewViewNode(om_a: &RealDom, dom_b: &VDom) {
     }
 
     renderStalyElement = () : Vec<VDom> {
-
         <div>
             jaksis staly naglowek, który nie będzie ulegał przegenerowaniu
         </div>
     }
 */
-
-
 
 /*
     wyrenderowanie głównego komponentu
@@ -173,13 +192,9 @@ fn applyNewViewNode(om_a: &RealDom, dom_b: &VDom) {
         render: fn(T) -> Vec<VDom>
     ) -> Component
 
-
-
     Trzeba będzie go teraz jakoś zaaplikować do węzłą o numerze 1.
 
     Trzeba stworzyc reprezentację węzła 1.
-
-
 
     applyNewViewNode
         pasuje zeby ta funkcja modyfikowala tylko RealDome
