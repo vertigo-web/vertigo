@@ -1,10 +1,12 @@
 
-createNode(id, name)
-createAttr(id, key, value)
-removeAttr(id, key)
+createNode(id: RealNodeId, name: String)
+createText(id: RealNodeId, value: String)
 
-addChild(idParent, idRel (Node | null), idChild: Node)
-removeChild(idChild)
+createAttr(id: RealNodeId, key: String, value: String)
+removeAttr(id: RealNodeId, key: String)
+
+addChild(idParent: RealNodeId, idPrev Option<RealNodeId>, idChild: RealNodeId)
+removeChild(idChild: RealNodeId)
 
 
 węzeł o numerze 1, to jest root względem którego będziemy rysować

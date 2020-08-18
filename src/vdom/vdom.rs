@@ -86,27 +86,6 @@ enum RealDom {
     }
 }
 
-// fn applyNewView(dom_a: &RealDom, dom_b: &VDom) {
-//     //...
-//     /*
-//         zeby przystąpić do synchronizaczji dwóch elementów, typ węzła musi się zgadzać
-//             RealDom::name musi mieć takie samo jak VDom:name
-//             typ RealDom:Text i typ VDom:Text
-
-//             Component, moemy albo reuzyc, albo nie.
-//             Ten element bedzie swietny ze wzgledu na keszowanie jego zawartosci
-        
-
-//         najpierw porządkujemy koleność
-//             przenoszenie
-//             tworzenie nowych
-//             kasowanie nieaktualnych
-
-//         potem następuej rekurencyjne wywołanie funkcji applyNewViewNode
-//     */
-// }
-
-
 /*
     Główny root aplikacji, powinien być niezmiennym i niemodyfikowalnym węzłem
     Od niego zaczynamy zawsze 
@@ -132,6 +111,28 @@ fn applyNewViewNode(idParent: RealNodeId, a: Vec<RealDom>, b: Vec<VDom>) {
 
     dzieci z A, które 
 */
+
+
+// fn applyNewView(dom_a: &RealDom, dom_b: &VDom) {
+//     //...
+//     /*
+//         zeby przystąpić do synchronizaczji dwóch elementów, typ węzła musi się zgadzać
+//             RealDom::name musi mieć takie samo jak VDom:name
+//             typ RealDom:Text i typ VDom:Text
+
+//             Component, moemy albo reuzyc, albo nie.
+//             Ten element bedzie swietny ze wzgledu na keszowanie jego zawartosci
+        
+
+//         najpierw porządkujemy koleność
+//             przenoszenie
+//             tworzenie nowych
+//             kasowanie nieaktualnych
+
+//         potem następuej rekurencyjne wywołanie funkcji applyNewViewNode
+//     */
+// }
+
 
 
 /*
