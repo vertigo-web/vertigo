@@ -91,7 +91,7 @@ enum RealDom {
     Od niego zaczynamy zawsze 
 */
 
-fn applyNewViewNode(idParent: RealNodeId, a: Vec<RealDom>, b: Vec<VDom>) {
+fn applyNewViewChild(idParent: RealNodeId, a: Vec<RealDom>, b: Vec<VDom>) {
     
     /*
         synchronizujemy atrybuty
@@ -113,25 +113,25 @@ fn applyNewViewNode(idParent: RealNodeId, a: Vec<RealDom>, b: Vec<VDom>) {
 */
 
 
-// fn applyNewView(dom_a: &RealDom, dom_b: &VDom) {
-//     //...
-//     /*
-//         zeby przystąpić do synchronizaczji dwóch elementów, typ węzła musi się zgadzać
-//             RealDom::name musi mieć takie samo jak VDom:name
-//             typ RealDom:Text i typ VDom:Text
+fn applyNewViewNode(om_a: &RealDom, dom_b: &VDom) {
+    //...
+    /*
+        zeby przystąpić do synchronizaczji dwóch elementów, typ węzła musi się zgadzać
+            RealDom::name musi mieć takie samo jak VDom:name
+            typ RealDom:Text i typ VDom:Text
 
-//             Component, moemy albo reuzyc, albo nie.
-//             Ten element bedzie swietny ze wzgledu na keszowanie jego zawartosci
+            Component, moemy albo reuzyc, albo nie.
+            Ten element bedzie swietny ze wzgledu na keszowanie jego zawartosci
         
 
-//         najpierw porządkujemy koleność
-//             przenoszenie
-//             tworzenie nowych
-//             kasowanie nieaktualnych
+        najpierw porządkujemy koleność
+            przenoszenie
+            tworzenie nowych
+            kasowanie nieaktualnych
 
-//         potem następuej rekurencyjne wywołanie funkcji applyNewViewNode
-//     */
-// }
+        potem następuej rekurencyjne wywołanie funkcji applyNewViewNode
+    */
+}
 
 
 
@@ -160,4 +160,27 @@ fn applyNewViewNode(idParent: RealNodeId, a: Vec<RealDom>, b: Vec<VDom>) {
             jaksis staly naglowek, który nie będzie ulegał przegenerowaniu
         </div>
     }
+*/
+
+
+
+/*
+    wyrenderowanie głównego komponentu
+
+    fn newComponent<T: Debug>(
+        root: Dependencies,
+        params: Computed<T>,
+        render: fn(T) -> Vec<VDom>
+    ) -> Component
+
+
+
+    Trzeba będzie go teraz jakoś zaaplikować do węzłą o numerze 1.
+
+    Trzeba stworzyc reprezentację węzła 1.
+
+
+
+    applyNewViewNode
+        pasuje zeby ta funkcja modyfikowala tylko RealDome
 */

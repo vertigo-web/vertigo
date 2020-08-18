@@ -5,7 +5,7 @@ createText(id: RealNodeId, value: String)
 createAttr(id: RealNodeId, key: String, value: String)
 removeAttr(id: RealNodeId, key: String)
 
-addChild(idParent: RealNodeId, idPrev Option<RealNodeId>, idChild: RealNodeId)
+addChild(idParent: RealNodeId, idPrev Option<RealNodeId>, idChild: RealNodeId)              gdyby nie ten Option, to mozna by sie pozbyc parenta
 removeChild(idChild: RealNodeId)
 
 
