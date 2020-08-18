@@ -133,22 +133,20 @@ AppState {
 */
 
 
-fn startApp<T>(deps: Dependencies,, param: T, render: fn(&T) -> Vec<VDom>) -> Client {
+fn startApp<T>(deps: Dependencies, param: T, render: fn(&T) -> Vec<VDom>) -> Client {
     let mut prevAppVDom: Vec<VDom> = Vec::new();
 
-    let appVdomCom: Computed<Vec<VDom>> = Computed::new(deps, (move || {
-        render(&param)
-    });
-
-    let subscription: Client = appVdomCom.subscribe(move |appVDom| {
-        renderApp(
-            DomAnchor::root(),
-            prevAppVDom,
-            appVDom
-        );
-    
-        prevAppVDom = appVDom;    
-    })
+    let subscription: Client = deps
+        .from(move || render(&param))
+        .subscribe(move |appVDom| {
+            renderApp(
+                DomAnchor::root(),
+                prevAppVDom,
+                appVDom
+            );
+        
+            prevAppVDom = appVDom;    
+        });
 
     subscription
 }
