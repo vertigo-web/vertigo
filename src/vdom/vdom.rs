@@ -135,8 +135,6 @@ AppState {
 */
 
 
-//let ahchor = getAnchor(parentId, currentAppDom);
-
 
 fn renderToNode(anchor: DomAnchor, computed: Computed<Vec<VDom>>) -> Client {
     let mut currentAppDom: Vec<RealDom> = Vec::new();
