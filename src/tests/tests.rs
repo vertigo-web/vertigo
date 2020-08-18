@@ -4,8 +4,8 @@
 fn basic() {
     use crate::lib::{
         Dependencies::Dependencies,
-        BoxValue::BoxValue,
     };
+    use crate::tests::BoxValue::BoxValue;
 
     let root = Dependencies::new();
 
@@ -54,8 +54,8 @@ fn basic2() {
     use crate::lib::{
         Dependencies::Dependencies,
         Computed::Computed,
-        BoxValue::BoxValue,
     };
+    use crate::tests::BoxValue::BoxValue;
 
     let root = Dependencies::new();
 
@@ -188,8 +188,8 @@ fn test_subscription() {
     use crate::lib::{
         Dependencies::Dependencies,
         Computed::Computed,
-        BoxValue::BoxValue,
     };
+    use crate::tests::BoxValue::BoxValue;
 
     let root = Dependencies::new();
 

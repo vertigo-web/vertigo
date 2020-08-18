@@ -3,9 +3,10 @@ use crate::lib::{
     Value::Value,
     Dependencies::Dependencies,
     Computed::Computed,
+};
+use crate::tests::{
     BoxValue::BoxValue,
 };
-
 
 struct AppState {
     value1: Value<i32>,

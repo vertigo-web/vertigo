@@ -1,0 +1,12 @@
+
+createNode(id, name)
+createAttr(id, key, value)
+removeAttr(id, key)
+
+addChild(idParent, idRel (Node | null), idChild: Node)
+removeChild(idChild)
+
+
+węzeł o numerze 1, to jest root względem którego będziemy rysować
+
+
