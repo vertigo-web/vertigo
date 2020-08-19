@@ -3,13 +3,13 @@ use std::fmt::Debug;
 
 use crate::lib::{
     BoxRefCell::BoxRefCell,
-    get_unique_id::get_unique_id,
     Dependencies::Dependencies,
     Computed::Computed,
+    GraphId::GraphId,
 };
 
 pub struct Value<T: Debug + 'static> {
-    id: u64,
+    id: GraphId,
     value: Rc<BoxRefCell<Rc<T>>>,
     deps: Dependencies,
 }
@@ -17,7 +17,7 @@ pub struct Value<T: Debug + 'static> {
 impl<T: Debug + 'static> Value<T> {
     pub fn new(deps: Dependencies, value: T) -> Value<T> {
         Value {
-            id: get_unique_id(),
+            id: GraphId::new(),
             value: Rc::new(BoxRefCell::new(Rc::new(value))),
             deps
         }
@@ -28,11 +28,11 @@ impl<T: Debug + 'static> Value<T> {
             *state = Rc::new(value);
         });
 
-        self.deps.triggerChange(self.id);
+        self.deps.triggerChange(self.id.clone());
     }
 
     pub fn getValue(&self) -> Rc<T> {
-        self.deps.reportDependenceInStack(self.id);
+        self.deps.reportDependenceInStack(self.id.clone());
 
         let value = self.value.get(|state| {
             state.clone()
@@ -45,10 +45,10 @@ impl<T: Debug + 'static> Value<T> {
         let value = self.value.clone();
         let deps = self.deps.clone();
 
-        let selfId = self.id;
+        let selfId = self.id.clone();
 
         Computed::new(deps.clone(), move || {
-            deps.reportDependenceInStack(selfId);
+            deps.reportDependenceInStack(selfId.clone());
             value.get(|state| {
                 state.clone()
             })

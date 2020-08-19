@@ -6,7 +6,7 @@ use crate::lib::{
     Dependencies::Dependencies,
     Client::Client,
     RefreshToken::RefreshToken,
-    get_unique_id::get_unique_id,
+    GraphId::GraphId,
 };
 
 
@@ -15,14 +15,14 @@ use crate::lib::{
 pub struct ComputedInner<T: 'static> {
     deps: Dependencies,
     getValueFromParent: Box<dyn Fn() -> Rc<T> + 'static>,
-    id: u64,
+    id: GraphId,
     isFreshCell: Rc<BoxRefCell<bool>>,
     valueCell: BoxRefCell<Rc<T>>,
 }
 
 impl<T> Drop for ComputedInner<T> {
     fn drop(&mut self) {
-        self.deps.removeRelation(self.id);
+        self.deps.removeRelation(&self.id);
     }
 }
 
@@ -43,12 +43,12 @@ impl<T> Clone for Computed<T> {
 impl<T: 'static> Computed<T> {
     pub fn new<F: Fn() -> Rc<T> + 'static>(deps: Dependencies, getValue: F) -> Computed<T> {
 
-        let id = get_unique_id();
+        let id = GraphId::new();
         let isFreshCell = Rc::new(BoxRefCell::new(true));
 
-        let getValue = deps.wrapGetValue(getValue, id);
+        let getValue = deps.wrapGetValue(getValue, id.clone());
 
-        deps.registerRefreshToken(id,RefreshToken::newComputed(isFreshCell.clone()));
+        deps.registerRefreshToken(id.clone(), RefreshToken::newComputed(isFreshCell.clone()));
 
         let value = getValue();
 
@@ -65,7 +65,7 @@ impl<T: 'static> Computed<T> {
 
     pub fn getValue(&self) -> Rc<T> {
         let inner = self.inner.as_ref();
-        let selfId = inner.id;
+        let selfId = inner.id.clone();
         let deps = inner.deps.clone();
 
         deps.reportDependenceInStack(selfId);

@@ -1,7 +1,8 @@
 use std::collections::{HashSet, HashMap, VecDeque};
+use crate::lib::GraphId::GraphId;
 
 struct GraphOne {
-    rel: HashMap<u64, HashSet<u64>>,                //A <-> B
+    rel: HashMap<GraphId, HashSet<GraphId>>,                //A <-> B
 }
 
 impl GraphOne {
@@ -11,35 +12,35 @@ impl GraphOne {
         }
     }
 
-    fn add(&mut self, edgeA: u64, edgeB: u64) {
+    fn add(&mut self, edgeA: GraphId, edgeB: GraphId) {
         let list = self.rel.entry(edgeA).or_insert_with(HashSet::new);
         list.insert(edgeB);
     }
 
     #[allow(dead_code)]
-    pub fn removeA(&mut self, edgeA: u64) {
+    pub fn removeA(&mut self, edgeA: GraphId) {
         self.rel.remove(&edgeA);
     }
 
-    pub fn removeB(&mut self, edgeB: u64) {
+    pub fn removeB(&mut self, edgeB: &GraphId) {
         self.rel.retain(|_k, listIds| -> bool {
 
-            listIds.remove(&edgeB);
+            listIds.remove(edgeB);
 
             listIds.len() > 0
         });
     }
 
-    pub fn getAllDeps(&self, edgeA: u64) -> HashSet<u64> {
+    pub fn getAllDeps(&self, edgeA: GraphId) -> HashSet<GraphId> {
         let mut result = HashSet::new();
-        let mut toTraverse: Vec<u64> = vec!(edgeA);
+        let mut toTraverse: Vec<GraphId> = vec!(edgeA);
 
         loop {
             let nextToTraverse = toTraverse.pop();
 
             match nextToTraverse {
                 Some(next) => {
-                    result.insert(next);
+                    result.insert(next.clone());
 
                     let list = self.rel.get(&next);
 
@@ -51,7 +52,7 @@ impl GraphOne {
                                 //ignore
                             } else {
 
-                                toTraverse.push(*item);
+                                toTraverse.push(item.clone());
                             }
                         }
                     }
@@ -65,7 +66,7 @@ impl GraphOne {
 }
 
 struct Stack {
-    stackRelations: VecDeque<HashSet<u64>>,
+    stackRelations: VecDeque<HashSet<GraphId>>,
 }
 
 impl Stack {
@@ -80,7 +81,7 @@ impl Stack {
         self.stackRelations.push_back(stackFrame);
     }
 
-    fn reportDependence(&mut self, parentId: u64) {
+    fn reportDependence(&mut self, parentId: GraphId) {
         let len = self.stackRelations.len();
 
         if len < 1 {
@@ -101,7 +102,7 @@ impl Stack {
         }
     }
 
-    fn stopTrack(&mut self) -> Option<HashSet<u64>> {
+    fn stopTrack(&mut self) -> Option<HashSet<GraphId>> {
         self.stackRelations.pop_back()
     }
 }
@@ -122,21 +123,21 @@ impl Graph {
         }
     }
 
-    fn addRelation(&mut self, parentId: u64, clientId: u64) {
+    fn addRelation(&mut self, parentId: GraphId, clientId: GraphId) {
         self.rel.add(parentId, clientId);
         //self.revert.add(clientId, parentId);
     }
 
-    pub fn removeRelation(&mut self, clientId: u64) {
-        self.rel.removeB(clientId);
+    pub fn removeRelation(&mut self, clientId: &GraphId) {
+        self.rel.removeB(&clientId);
         //self.revert.removeA(clientId);
     }
 
-    pub fn getAllDeps(&self, parentId: u64) -> HashSet<u64> {
+    pub fn getAllDeps(&self, parentId: GraphId) -> HashSet<GraphId> {
         self.rel.getAllDeps(parentId)
     }
 
-    pub fn reportDependence(&mut self, parentId: u64) {
+    pub fn reportDependence(&mut self, parentId: GraphId) {
         self.stack.reportDependence(parentId);
     }
 
@@ -144,7 +145,7 @@ impl Graph {
         self.stack.startTrack();
     }
 
-    pub fn stopTrack(&mut self, clientId: u64) {
+    pub fn stopTrack(&mut self, clientId: GraphId) {
 
         let lastItem = self.stack.stopTrack();
 
@@ -152,7 +153,7 @@ impl Graph {
             Some(lastItem) => {
 
                 for parentId in lastItem {
-                    self.addRelation(parentId, clientId);
+                    self.addRelation(parentId, clientId.clone());
                 }
             },
             None => {

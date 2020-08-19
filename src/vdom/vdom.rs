@@ -155,13 +155,11 @@ AppState {
 
 
 
-fn renderToNode(anchor: DomAnchor, computed: Computed<Rc<Vec<VDom>>>) -> Client {
-    let currentAppDom: BoxRefCell<Vec<RealDom>> = BoxRefCell::new(Vec::new());
-
+fn renderToNode(anchor: DomAnchor, realDom: BoxRefCell<Vec<RealDom>>, computed: Computed<Rc<Vec<VDom>>>) -> Client {
     let subscription: Client = computed.subscribe(move |appVDom| {
         let anchor = anchor.clone();
 
-        currentAppDom.change(
+        realDom.change(
             (anchor, appVDom),
             |currentAppDom, (anchor, appVDom)| {
                 applyNewViewChild(
@@ -183,9 +181,11 @@ fn startApp<T: 'static>(deps: Dependencies, param: T, render: fn(&T) -> Vec<VDom
     let render /* (Fn() -> Rc<Vec<VDom>> */ = move || Rc::new(render(&param));
     let vDomComputed: Computed<Rc<Vec<VDom>>> = deps.from(render);
 
+    let realDom: BoxRefCell<Vec<RealDom>> = BoxRefCell::new(Vec::new());
+
     //let vDomComputed: Computed<Vec<VDom>> = deps.from(move || render(&param));\
 
-    let subscription = renderToNode(anchor, vDomComputed);
+    let subscription = renderToNode(anchor, realDom, vDomComputed);
     subscription
 }
 
@@ -214,6 +214,8 @@ fn app() -> Client {
 }
 
 
+
+
 //Statyczna zmienna, która będzie miała wartość null lub ta zmienna
 
 //Funkcja wyeksportowana, która wywołana ustai tą zmienną globalną
@@ -221,6 +223,8 @@ fn app() -> Client {
 
 
 //Trzeba jakoś zapisać referencję do tej subskrybcji
+
+
 
 
 

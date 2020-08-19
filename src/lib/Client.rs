@@ -1,25 +1,23 @@
-use std::fmt::Debug;
-
 use crate::lib::{
-    get_unique_id::get_unique_id,
     Dependencies::Dependencies,
     Computed::Computed,
     RefreshToken::RefreshToken,
+    GraphId::GraphId,
 };
 
 pub struct Client {
     deps: Dependencies,
-    id: u64,
+    id: GraphId,
 }
 
 impl Client {
     pub fn new<T: 'static, F: Fn(&T) + 'static>(deps: Dependencies, computed: Computed<T>, call: F) -> Client {
 
-        let id = get_unique_id();
+        let id = GraphId::new();
         
         let getValue = deps.wrapGetValue(move || {
             computed.getValue()
-        }, id);
+        }, id.clone());
 
         let refresh = move || {
             let value = getValue();
@@ -28,7 +26,7 @@ impl Client {
         
         refresh();
 
-        deps.registerRefreshToken(id, RefreshToken::newClient(refresh));
+        deps.registerRefreshToken(id.clone(), RefreshToken::newClient(refresh));
 
         Client {
             deps,
@@ -42,6 +40,6 @@ impl Client {
 
 impl Drop for Client {
     fn drop(&mut self) {
-        self.deps.removeRelation(self.id);
+        self.deps.removeRelation(&self.id);
     }
 }

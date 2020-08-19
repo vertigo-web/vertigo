@@ -10,10 +10,11 @@ use crate::lib::{
     Computed::{
         Computed,
     },
+    GraphId::GraphId,
 };
 
 struct DependenciesInner {
-    refreshToken: HashMap<u64, RefreshToken>,               //Tablica z zarejestrowanymi tokenami
+    refreshToken: HashMap<GraphId, RefreshToken>,               //Tablica z zarejestrowanymi tokenami
     graph: Graph,
 }
 
@@ -49,7 +50,7 @@ impl Dependencies {
         Value::new(self.clone(), value)
     }
 
-    pub fn triggerChange(&self, parentId: u64) {
+    pub fn triggerChange(&self, parentId: GraphId) {
 
         let refreshToken: Vec<RefreshToken> = self.inner.getWithContext(
             parentId,
@@ -87,19 +88,19 @@ impl Dependencies {
         }
     }
 
-    pub fn registerRefreshToken(&self, clientId: u64, refreshToken: RefreshToken) {
+    pub fn registerRefreshToken(&self, clientId: GraphId, refreshToken: RefreshToken) {
         self.inner.change(
             (clientId, refreshToken),
             |state, (clientId, refreshToken)| {
-                state.refreshToken.insert(clientId, refreshToken);
+                state.refreshToken.insert(clientId.clone(), refreshToken);
             }
         );
     }
 
-    pub fn removeRelation(&self, clientId: u64) -> Option<RefreshToken> {
+    pub fn removeRelation(&self, clientId: &GraphId) -> Option<RefreshToken> {
         self.inner.change(clientId, |state, clientId| {
             let refreshToken = state.refreshToken.remove(&clientId);
-            state.graph.removeRelation(clientId);
+            state.graph.removeRelation(&clientId);
             refreshToken
         })
     }
@@ -110,19 +111,19 @@ impl Dependencies {
         });
     }
 
-    fn stopTrack(&self, clientId: u64) {
+    fn stopTrack(&self, clientId: GraphId) {
         self.inner.change(clientId, |state, clientId| {
             state.graph.stopTrack(clientId);
         })
     }
 
-    pub fn reportDependenceInStack(&self, parentId: u64) {
+    pub fn reportDependenceInStack(&self, parentId: GraphId) {
         self.inner.change(parentId, |state, parentId| {
             state.graph.reportDependence(parentId);
         });
     }
 
-    pub fn wrapGetValue<T, F: Fn() -> T + 'static>(&self, getValue: F, clientId: u64) -> Box<dyn Fn() -> T> {
+    pub fn wrapGetValue<T, F: Fn() -> T + 'static>(&self, getValue: F, clientId: GraphId) -> Box<dyn Fn() -> T> {
         let selfClone = self.clone();
 
         Box::new(move || {
@@ -131,7 +132,7 @@ impl Dependencies {
 
             let result = getValue();
 
-            selfClone.stopTrack(clientId);
+            selfClone.stopTrack(clientId.clone());
 
             result
         })
