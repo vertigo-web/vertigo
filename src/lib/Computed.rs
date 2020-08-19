@@ -12,7 +12,7 @@ use crate::lib::{
 
 
 
-pub struct ComputedInner<T: Debug + 'static> {
+pub struct ComputedInner<T: 'static> {
     deps: Dependencies,
     getValueFromParent: Box<dyn Fn() -> Rc<T> + 'static>,
     id: u64,
@@ -20,7 +20,7 @@ pub struct ComputedInner<T: Debug + 'static> {
     valueCell: BoxRefCell<Rc<T>>,
 }
 
-impl<T: Debug> Drop for ComputedInner<T> {
+impl<T> Drop for ComputedInner<T> {
     fn drop(&mut self) {
         self.deps.removeRelation(self.id);
     }
@@ -28,11 +28,11 @@ impl<T: Debug> Drop for ComputedInner<T> {
 
 
 
-pub struct Computed<T: Debug + 'static> {
+pub struct Computed<T: 'static> {
     inner: Rc<ComputedInner<T>>,
 }
 
-impl<T: Debug> Clone for Computed<T> {
+impl<T> Clone for Computed<T> {
     fn clone(&self) -> Self {
         Computed {
             inner: self.inner.clone()
@@ -40,7 +40,7 @@ impl<T: Debug> Clone for Computed<T> {
     }
 }
 
-impl<T: Debug + 'static> Computed<T> {
+impl<T: 'static> Computed<T> {
     pub fn new<F: Fn() -> Rc<T> + 'static>(deps: Dependencies, getValue: F) -> Computed<T> {
 
         let id = get_unique_id();

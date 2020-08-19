@@ -137,7 +137,7 @@ impl Dependencies {
         })
     }
 
-    pub fn from<T: Debug, F: Fn() -> T + 'static>(&self, calculate: F) -> Computed<T> {
+    pub fn from<T: 'static, F: Fn() -> T + 'static>(&self, calculate: F) -> Computed<T> {
         let deps = self.clone();
 
         let getValue = Box::new(move || {

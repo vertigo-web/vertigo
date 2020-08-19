@@ -1,5 +1,7 @@
-use std::fmt::Debug;
+
 use std::collections::HashMap;
+use std::rc::Rc;
+
 use crate::lib::{
     Client::Client,
     GraphId::GraphId,
@@ -8,8 +10,17 @@ use crate::lib::{
     BoxRefCell::BoxRefCell,
 };
 
+#[derive(Clone)]
 struct RealNodeId {
     id: u64,
+}
+
+impl RealNodeId {
+    fn root() -> RealNodeId {
+        RealNodeId {
+            id: 1
+        }
+    }
 }
 
 struct ComponentId {
@@ -19,7 +30,7 @@ struct ComponentId {
 
 struct Component {
     id: ComponentId,
-    render: Box<dyn Fn() -> Vec<VDom>>
+    render: Box<dyn Fn() -> Rc<Vec<VDom>>>
 }
 
 struct VDomNode {
@@ -27,6 +38,7 @@ struct VDomNode {
     attr: HashMap<String, String>,
     child: Vec<VDom>,
 }
+
 
 enum VDom {
     Node {
@@ -58,15 +70,19 @@ enum RealDom {
     Component {
         id: ComponentId,
         subscription: Client,                   //Subskrybcją, kryje się funkcja, która odpalana (na zmianę), wstawia coś do pojemnika child
+                                                //idParenta mozemy przekazywac w momencie gdy będziemy tworzyć Client-a
 
-        //??????????
-        child: Rc<{                             //Ten element będzie przekazany do funkcji renderującej ---> a potem subskrybcja będzie zapisana do zmiennej subscription
-            child: BoxRefCell<Vec<RealDom>>,
-            idParent: RealNodeId,               //prawdopodobnie będzie konieczne. Ale ten id moze byc utworzony przy stworzeniu noda. Nie będzie zmieniany.
-        }>
+        child: BoxRefCell<Vec<RealDom>>,
+
+
+        // child: Rc<{                             //Ten element będzie przekazany do funkcji renderującej ---> a potem subskrybcja będzie zapisana do zmiennej subscription
+        //     child: BoxRefCell<Rc<Vec<RealDom>>>,
+        //     idParent: RealNodeId,               //prawdopodobnie będzie konieczne. Ale ten id moze byc utworzony przy stworzeniu noda. Nie będzie zmieniany.
+        // }>
     }
 }
 
+#[derive(Clone)]
 enum DomAnchor {
     Parent(RealNodeId),             //oznacza ze zaczynamy wstawiac elementy jako pierwsze dziecko
     RefPrev(RealNodeId),            //pokazuje poprzedni element przed zakresem
@@ -74,7 +90,7 @@ enum DomAnchor {
 
 impl DomAnchor {
     fn root() -> DomAnchor {
-        DomAnchor::Parent(1)
+        DomAnchor::Parent(RealNodeId::root())
     }
 }
 
@@ -84,7 +100,7 @@ RealDom::Component - DomAnchor::RefPrev()
 */
 
 
-fn newComponent<T: Debug>(root: Dependencies, params: Computed<T>, render: fn(T) -> Vec<VDom>) -> Component {
+fn newComponent<T: 'static>(root: Dependencies, params: Computed<T>, render: fn(T) -> Vec<VDom>) -> Component {
     let clientId = 4;   //TODO
     //let getValue = root.wrapGetValue(render, clientId);
     // to trzeba zamienic na subksrybcje, trzeba wystawic jakas funkcje subskryubujaca na funkcje (autorun)
@@ -96,7 +112,7 @@ fn newComponent<T: Debug>(root: Dependencies, params: Computed<T>, render: fn(T)
     Od niego zaczynamy zawsze (numer 1)
 */
 
-fn applyNewViewChild(anchor: DomAnchor, a: Vec<RealDom>, b: Vec<VDom>) -> Vec<RealDom> {
+fn applyNewViewChild(anchor: DomAnchor, a: &mut Vec<RealDom>, b: Rc<Vec<VDom>>) -> Vec<RealDom> {
     /*
         teraz kwestia jak zsynchronizować te dzieci
 
@@ -107,7 +123,9 @@ fn applyNewViewChild(anchor: DomAnchor, a: Vec<RealDom>, b: Vec<VDom>) -> Vec<Re
             tworzenie nowych
             kasowanie nieaktualnych
     */
+    todo!();
 }
+
 
 fn applyNewViewNode(om_a: &RealDomNode, dom_b: &VDomNode) {
     /*
@@ -123,6 +141,7 @@ fn applyNewViewNode(om_a: &RealDomNode, dom_b: &VDomNode) {
 }
 
 
+
 /*
 AppDataState --- stan dotyczący danhych
 
@@ -136,23 +155,33 @@ AppState {
 
 
 
-fn renderToNode(anchor: DomAnchor, computed: Computed<Vec<VDom>>) -> Client {
-    let mut currentAppDom: Vec<RealDom> = Vec::new();
+fn renderToNode(anchor: DomAnchor, computed: Computed<Rc<Vec<VDom>>>) -> Client {
+    let currentAppDom: BoxRefCell<Vec<RealDom>> = BoxRefCell::new(Vec::new());
 
     let subscription: Client = computed.subscribe(move |appVDom| {
-        currentAppDom = applyNewViewChild(
-            anchor,
-            currentAppDom,
-            appVDom
+        let anchor = anchor.clone();
+
+        currentAppDom.change(
+            (anchor, appVDom),
+            |currentAppDom, (anchor, appVDom)| {
+                applyNewViewChild(
+                    anchor,
+                    currentAppDom,
+                    appVDom.clone()
+                );
+            }
         );
     });
+
+    subscription
 }
 
-fn startApp<T>(deps: Dependencies, param: T, render: fn(&T) -> Vec<VDom>) -> Client {
+//lib
+fn startApp<T: 'static>(deps: Dependencies, param: T, render: fn(&T) -> Vec<VDom>) -> Client {
     let anchor = DomAnchor::root();
 
-    let render: /*(Fn() -> Vec<VDom>*/ = move || render(&param);
-    let vDomComputed: Computed<Vec<VDom>> = deps.from(render);
+    let render /* (Fn() -> Rc<Vec<VDom>> */ = move || Rc::new(render(&param));
+    let vDomComputed: Computed<Rc<Vec<VDom>>> = deps.from(render);
 
     //let vDomComputed: Computed<Vec<VDom>> = deps.from(move || render(&param));\
 
@@ -160,16 +189,28 @@ fn startApp<T>(deps: Dependencies, param: T, render: fn(&T) -> Vec<VDom>) -> Cli
     subscription
 }
 
-let root: Dependencies = Dependencies::new();
+struct AppState {}
 
-let appState = AppState::new(&root);
-
-let subskrybcjaApp = startApp(root, appState, glownaFunkcjaRenderujaca);
+impl AppState {
+    fn new(root: &Dependencies) -> AppState {
+        AppState {
+        }
+    }
+}
 
 //po wystartowaniu subskrybcjaApp tą zmienną trzeba wpakować w zmienną globalną zeby nie stracić subskrybcji
 
-fn glownaFunkcjaRenderujaca(appState: AppState) -> Vec<VDom> {
+fn glownaFunkcjaRenderujaca(appState: &AppState) -> Vec<VDom> {
     todo!();
+}
+
+
+fn app() -> Client {
+    let root: Dependencies = Dependencies::new();
+    let appState = AppState::new(&root);
+
+    let subskrybcjaApp = startApp(root, appState, glownaFunkcjaRenderujaca);
+    subskrybcjaApp
 }
 
 

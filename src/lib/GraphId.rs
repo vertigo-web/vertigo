@@ -1,5 +1,6 @@
+use std::fmt::Debug;
 
-#[derive(Hash, PartialEq, Eq, Clone)]
+#[derive(Hash, PartialEq, Eq, Clone, Debug)]
 pub struct GraphId {
     pub id: u64,
 }

@@ -13,7 +13,7 @@ pub struct Client {
 }
 
 impl Client {
-    pub fn new<T: Debug + 'static, F: Fn(&T) + 'static>(deps: Dependencies, computed: Computed<T>, call: F) -> Client {
+    pub fn new<T: 'static, F: Fn(&T) + 'static>(deps: Dependencies, computed: Computed<T>, call: F) -> Client {
 
         let id = get_unique_id();
         
