@@ -52,7 +52,7 @@ struct ComponentId {
 
 struct Component {
     id: ComponentId,
-    render: Box<dyn Fn() -> Rc<Vec<VDom>>>
+    render: Box<dyn Fn() -> Vec<VDom>>
 }
 
 struct VDomNode {
