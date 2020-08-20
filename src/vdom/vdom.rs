@@ -36,6 +36,14 @@ struct RenderedHandler {
     targetToRender: BoxRefCell<DomTargetToRender>,
     child: BoxRefCell<Vec<RealDom>>,
 }
+impl RenderedHandler {
+    fn new(target: DomTargetToRender) -> RenderedHandler {
+        RenderedHandler {
+            targetToRender: BoxRefCell::new(target),
+            child: BoxRefCell::new(Vec::new())
+        }
+    }
+}
 
 struct ComponentId {
     idComputed: GraphId,        //id tego computed
@@ -164,12 +172,13 @@ AppState {
 //     child: BoxRefCell<Vec<RealDom>>,
 // }
 
-//fn renderToNode(target: DomTargetToRender, realDom: BoxRefCell<Vec<RealDom>>, computed: Computed<Rc<Vec<VDom>>>) -> Client {
 fn renderToNode(target: RenderedHandler, computed: Computed<Rc<Vec<VDom>>>) -> Client { 
     let subscription: Client = computed.subscribe(move |appVDom| {
-        let anchor = target.clone();
+        let anchor = target.targetToRender.get(|state| {
+            state.clone()
+        });
 
-        realDom.change(
+        target.child.change(
             (anchor, appVDom),
             |currentAppDom, (anchor, appVDom)| {
                 applyNewViewChild(
@@ -186,14 +195,13 @@ fn renderToNode(target: RenderedHandler, computed: Computed<Rc<Vec<VDom>>>) -> C
 
 //lib
 fn startApp<T: 'static>(deps: Dependencies, param: T, render: fn(&T) -> Vec<VDom>) -> Client {
-    let anchor = DomTargetToRender::root();
+
+    let renderedHandler = RenderedHandler::new(DomTargetToRender::root());
 
     let render /* (Fn() -> Rc<Vec<VDom>> */ = move || Rc::new(render(&param));
     let vDomComputed: Computed<Rc<Vec<VDom>>> = deps.from(render);
 
-    let realDom: BoxRefCell<Vec<RealDom>> = BoxRefCell::new(Vec::new());
-
-    let subscription = renderToNode(anchor, realDom, vDomComputed);
+    let subscription = renderToNode(renderedHandler, vDomComputed);
     subscription
 }
 
