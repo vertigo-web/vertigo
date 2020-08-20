@@ -2,25 +2,39 @@
 use std::collections::HashMap;
 use std::rc::Rc;
 
-use crate::lib::{
-    Client::Client,
-    GraphId::GraphId,
-    Computed::Computed,
-    Dependencies::Dependencies,
-    BoxRefCell::BoxRefCell,
+use crate::{
+    lib::{
+        Client::Client,
+        GraphId::GraphId,                                       //TODO - zamienić Clone na Copy
+        Computed::Computed,
+        Dependencies::Dependencies,
+        BoxRefCell::BoxRefCell,
+    },
+    vdom::{
+        models::{
+            RealNodeId::RealNodeId,                             //TODO - dodać Copy
+        }
+    }
 };
 
 #[derive(Clone)]
-struct RealNodeId {
-    id: u64,
+enum DomTargetToRender {
+    Parent(RealNodeId),          //oznacza ze zaczynamy wstawiac elementy jako pierwsze dziecko
+    Prev(RealNodeId),            //pokazuje poprzedni element przed zakresem
 }
 
-impl RealNodeId {
-    fn root() -> RealNodeId {
-        RealNodeId {
-            id: 1
-        }
+impl DomTargetToRender {
+    fn root() -> DomTargetToRender {
+        DomTargetToRender::Parent(RealNodeId::root())
     }
+}
+
+enum BrowserDomDriver {
+
+}
+struct RenderedHandler {
+    targetToRender: BoxRefCell<DomTargetToRender>,
+    child: BoxRefCell<Vec<RealDom>>,
 }
 
 struct ComponentId {
@@ -68,29 +82,14 @@ enum RealDom {
         idDom: u64,                             //id realnego doma
     },
     Component {
-        id: ComponentId,
+        id: ComponentId,                        //do porównywania
         subscription: Client,                   //Subskrybcją, kryje się funkcja, która odpalana (na zmianę), wstawia coś do pojemnika child
                                                 //idParenta mozemy przekazywac w momencie gdy będziemy tworzyć Client-a
 
-        child: BoxRefCell<Vec<RealDom>>,
+        handler: RenderedHandler,
 
 
-        // child: Rc<{                             //Ten element będzie przekazany do funkcji renderującej ---> a potem subskrybcja będzie zapisana do zmiennej subscription
-        //     child: BoxRefCell<Rc<Vec<RealDom>>>,
-        //     idParent: RealNodeId,               //prawdopodobnie będzie konieczne. Ale ten id moze byc utworzony przy stworzeniu noda. Nie będzie zmieniany.
-        // }>
-    }
-}
-
-#[derive(Clone)]
-enum DomAnchor {
-    Parent(RealNodeId),             //oznacza ze zaczynamy wstawiac elementy jako pierwsze dziecko
-    RefPrev(RealNodeId),            //pokazuje poprzedni element przed zakresem
-}
-
-impl DomAnchor {
-    fn root() -> DomAnchor {
-        DomAnchor::Parent(RealNodeId::root())
+//     idParent: RealNodeId,               //prawdopodobnie będzie konieczne. Ale ten id moze byc utworzony przy stworzeniu noda. Nie będzie zmieniany.
     }
 }
 
@@ -112,7 +111,7 @@ fn newComponent<T: 'static>(root: Dependencies, params: Computed<T>, render: fn(
     Od niego zaczynamy zawsze (numer 1)
 */
 
-fn applyNewViewChild(anchor: DomAnchor, a: &mut Vec<RealDom>, b: Rc<Vec<VDom>>) -> Vec<RealDom> {
+fn applyNewViewChild(anchor: DomTargetToRender, a: &mut Vec<RealDom>, b: Rc<Vec<VDom>>) -> Vec<RealDom> {
     /*
         teraz kwestia jak zsynchronizować te dzieci
 
@@ -122,6 +121,12 @@ fn applyNewViewChild(anchor: DomAnchor, a: &mut Vec<RealDom>, b: Rc<Vec<VDom>>) 
             przenoszenie
             tworzenie nowych
             kasowanie nieaktualnych
+
+
+        synchronizujac kompoment, trzeba na nowo nadac mu jego
+        handler: RenderedHandler
+
+        To będzie potrzebne dla tego komponentu gdy będzie musiał się przerenderować
     */
     todo!();
 }
@@ -154,10 +159,15 @@ AppState {
 */
 
 
+// struct RenderedHandler {
+//     targetToRender: BoxRefCell<DomTargetToRender>,
+//     child: BoxRefCell<Vec<RealDom>>,
+// }
 
-fn renderToNode(anchor: DomAnchor, realDom: BoxRefCell<Vec<RealDom>>, computed: Computed<Rc<Vec<VDom>>>) -> Client {
+//fn renderToNode(target: DomTargetToRender, realDom: BoxRefCell<Vec<RealDom>>, computed: Computed<Rc<Vec<VDom>>>) -> Client {
+fn renderToNode(target: RenderedHandler, computed: Computed<Rc<Vec<VDom>>>) -> Client { 
     let subscription: Client = computed.subscribe(move |appVDom| {
-        let anchor = anchor.clone();
+        let anchor = target.clone();
 
         realDom.change(
             (anchor, appVDom),
@@ -176,14 +186,12 @@ fn renderToNode(anchor: DomAnchor, realDom: BoxRefCell<Vec<RealDom>>, computed: 
 
 //lib
 fn startApp<T: 'static>(deps: Dependencies, param: T, render: fn(&T) -> Vec<VDom>) -> Client {
-    let anchor = DomAnchor::root();
+    let anchor = DomTargetToRender::root();
 
     let render /* (Fn() -> Rc<Vec<VDom>> */ = move || Rc::new(render(&param));
     let vDomComputed: Computed<Rc<Vec<VDom>>> = deps.from(render);
 
     let realDom: BoxRefCell<Vec<RealDom>> = BoxRefCell::new(Vec::new());
-
-    //let vDomComputed: Computed<Vec<VDom>> = deps.from(move || render(&param));\
 
     let subscription = renderToNode(anchor, realDom, vDomComputed);
     subscription
