@@ -20,19 +20,6 @@ use crate::{
 };
 
 /*
-RealDom::Node - DomAnchor::Parent(), będzie odnosnikiem
-RealDom::Component - DomAnchor::RefPrev()
-*/
-
-
-fn newComponent<T: 'static>(root: Dependencies, params: Computed<T>, render: fn(T) -> Vec<VDom>) -> Component {
-    let clientId = 4;   //TODO
-    //let getValue = root.wrapGetValue(render, clientId);
-    // to trzeba zamienic na subksrybcje, trzeba wystawic jakas funkcje subskryubujaca na funkcje (autorun)
-    todo!();
-}
-
-/*
     Główny root aplikacji, powinien być niezmiennym i niemodyfikowalnym węzłem
     Od niego zaczynamy zawsze (numer 1)
 */

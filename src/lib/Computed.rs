@@ -119,7 +119,7 @@ impl<T: 'static> Computed<T> {
         })
     }
 
-    pub fn map<K: Debug>(self, fun: fn(&T) -> K) -> Computed<K> {
+    pub fn map<K>(self, fun: fn(&T) -> K) -> Computed<K> {
         let deps = self.inner.deps.clone();
 
         Computed::new(deps, move || {
