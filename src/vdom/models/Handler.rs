@@ -1,18 +1,17 @@
 use crate::lib::BoxRefCell::BoxRefCell;
 use crate::vdom::models::{
-    RealNodeId::RealNodeId,
-    RealDom::RealDom,
+    RealDom::{RealDom, RealDomNodeId},
 };
 
 #[derive(Clone)]
 pub enum HandlerTarget {
-    Parent(RealNodeId),          //oznacza ze zaczynamy wstawiac elementy jako pierwsze dziecko
-    Prev(RealNodeId),            //pokazuje poprzedni element przed zakresem
+    Parent(RealDomNodeId),          //oznacza ze zaczynamy wstawiac elementy jako pierwsze dziecko
+    Prev(RealDomNodeId),            //pokazuje poprzedni element przed zakresem
 }
 
 impl HandlerTarget {
     pub fn root() -> HandlerTarget {
-        HandlerTarget::Parent(RealNodeId::root())
+        HandlerTarget::Parent(RealDomNodeId::root())
     }
 }
 

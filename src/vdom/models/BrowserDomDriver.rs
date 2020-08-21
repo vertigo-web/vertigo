@@ -1,4 +1,19 @@
+use crate::vdom::models::RealDom::{
+    RealDomNodeId,
+};
 
+pub enum BrowserDomDriver {
+    Print,
+}
+
+
+impl BrowserDomDriver {
+    pub fn createNode(&self, id: RealDomNodeId, name: String) {
+        println!("create node {} - {}", id, name);
+    }
+}
+
+/*
 createNode(id: RealNodeId, name: String)
 createText(id: RealNodeId, value: String)
 
@@ -10,5 +25,4 @@ removeChild(idChild: RealNodeId)
 
 
 węzeł o numerze 1, to jest root względem którego będziemy rysować
-
-
+*/
