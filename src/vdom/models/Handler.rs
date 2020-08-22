@@ -1,7 +1,8 @@
 use crate::lib::BoxRefCell::BoxRefCell;
 use crate::vdom::{
     models::{
-        RealDom::{RealDom, RealDomNodeId},
+        RealDom::RealDom,
+        RealDomNodeId::RealDomNodeId,
     },
     DomDriver::DomDriver::DomDriver,
 };

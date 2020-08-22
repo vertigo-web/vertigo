@@ -1,7 +1,8 @@
 use std::rc::Rc;
-use crate::vdom::models::RealDom::{
-    RealDomNodeId,
+use crate::vdom::models::{
+    RealDomNodeId::RealDomNodeId,
 };
+
 pub trait DomDriverTrait {
     fn createNode(&self, id: RealDomNodeId, name: &String);
     fn createText(&self, id: RealDomNodeId, value: &String);

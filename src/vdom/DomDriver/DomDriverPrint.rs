@@ -1,6 +1,6 @@
 use crate::vdom::{
     models::{
-        RealDom::{
+        RealDomNodeId::{
             RealDomNodeId,
         },
     },
