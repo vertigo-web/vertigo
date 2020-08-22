@@ -12,13 +12,13 @@ pub trait DomDriverTrait {
 
 
 pub struct DomDriver {
-    driver: Rc<Box<dyn DomDriverTrait>>,
+    driver: Rc<dyn DomDriverTrait>,
 }
 
 impl DomDriver {
     pub fn new<T: DomDriverTrait + 'static>(driver: T) -> DomDriver {
         DomDriver {
-            driver: Rc::new(Box::new(driver))
+            driver: Rc::new(driver)
         }
     }
 }
