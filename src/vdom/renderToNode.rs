@@ -12,8 +12,8 @@ use crate::{
             Component::{
                 Component,
             },
-            Handler::{Handler, HandlerTarget},
             VDom::{VDom, VDomNode},
+            RealDomChild::RealDomChild,
             RealDomNode::RealDomNode,
             RealDom::RealDom,
         }
@@ -25,7 +25,7 @@ use crate::{
     Od niego zaczynamy zawsze (numer 1)
 */
 
-fn applyNewViewChild(anchor: HandlerTarget, a: &mut Vec<RealDom>, b: Rc<Vec<VDom>>) -> Vec<RealDom> {
+fn applyNewViewChild(target: &RealDomChild, newVersion: Rc<Vec<VDom>>) -> Vec<RealDom> {
 
     /*
         teraz kwestia jak zsynchronizować te dzieci
@@ -75,21 +75,11 @@ AppState {
 
 
 
-pub fn renderToNode(target: Handler, computed: Computed<Rc<Vec<VDom>>>) -> Client { 
-    let subscription: Client = computed.subscribe(move |appVDom| {
-        let anchor = target.targetToRender.get(|state| {
-            state.clone()
-        });
-
-        target.child.change(
-            (anchor, appVDom),
-            |currentAppDom, (anchor, appVDom)| {
-                applyNewViewChild(
-                    anchor,
-                    currentAppDom,
-                    appVDom.clone()
-                );
-            }
+pub fn renderToNode(target: RealDomChild, computed: Computed<Rc<Vec<VDom>>>) -> Client { 
+    let subscription: Client = computed.subscribe(move |newVersion| {
+        applyNewViewChild(
+            &target,
+            newVersion.clone()
         );
     });
 

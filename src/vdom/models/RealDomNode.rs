@@ -3,7 +3,7 @@ use std::collections::HashMap;
 use crate::vdom::{
     models::{
         RealDomNodeId::RealDomNodeId,
-        RealDom::RealDom,
+        RealDomChild::RealDomChild,
     },
     DomDriver::{
         DomDriver::DomDriver,
@@ -15,23 +15,24 @@ pub struct RealDomNode {
     idDom: RealDomNodeId,
     name: String,
     attr: HashMap<String, String>,
-    child: Vec<RealDom>,
+    child: Box<RealDomChild>,
 }
 
 impl RealDomNode {
-    pub fn new(domDriver: DomDriver, name: String) -> RealDomNode {
-        let id = RealDomNodeId::new();
+    pub fn new(driver: DomDriver, name: String) -> RealDomNode {
+        let nodeId = RealDomNodeId::new();
 
-        domDriver.createNode(id.clone(), &name);
+        driver.createNode(nodeId.clone(), &name);
+
+        let domChild = RealDomChild::newWithParent(driver.clone(), nodeId.clone());
 
         let node = RealDomNode {
-            domDriver,
-            idDom: id,
+            domDriver: driver,
+            idDom: nodeId,
             name,
             attr: HashMap::new(),
-            child: Vec::new(),
+            child: Box::new(domChild),
         };
-
 
         node
     }

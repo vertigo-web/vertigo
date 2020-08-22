@@ -24,6 +24,10 @@ impl DomDriverTrait for DomDriverPrint {
         log::info!("createText {} {}", id, value);
     }
 
+    fn createComment(&self, id: RealDomNodeId, value: &String) {
+        log::info!("createComment {} {}", id, value);
+    }
+
     fn setAttr(&self, id: RealDomNodeId, key: &String, value: &String) {
         log::info!("setAttr {} {} {}", id, key, value);
     }
@@ -32,11 +36,24 @@ impl DomDriverTrait for DomDriverPrint {
         log::info!("removeAttr {} {}", id, name);
     }
 
-    fn addChild(&self, idParent: RealDomNodeId, idPrev: Option<RealDomNodeId>, idChild: RealDomNodeId) {
-        log::info!("addChild {} {:?} {}", idParent, idPrev, idChild);
-    }
-
     fn remove(&self, id: RealDomNodeId) {
         log::info!("remove {}", id);
     }
+
+    fn removeAllChild(&self, id: RealDomNodeId) {
+        log::info!("removeAllChild {}", id);
+    }
+
+    fn insertAsFirstChild(&self, parent: RealDomNodeId, child: RealDomNodeId) {
+        log::info!("insertAsFirstChild {} {}", parent, child);
+    }
+
+    fn insertBefore(&self, refId: RealDomNodeId, child: RealDomNodeId) {
+        log::info!("insertBefore {} {}", refId, child);
+    }
+
+    fn insertAfter(&self, refId: RealDomNodeId, child: RealDomNodeId) {
+        log::info!("insertAfter {} {}", refId, child);
+    }
 }
+
