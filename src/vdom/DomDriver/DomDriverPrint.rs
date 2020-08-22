@@ -16,16 +16,20 @@ impl DomDriverPrint {
 }
 
 impl DomDriverTrait for DomDriverPrint {
-    fn createNode(&self, id: RealDomNodeId, name: String) {
+    fn createNode(&self, id: RealDomNodeId, name: &String) {
         log::info!("createNode {} - {}", id, name);
     }
 
-    fn createText(&self, id: RealDomNodeId, value: String) {
+    fn createText(&self, id: RealDomNodeId, value: &String) {
         log::info!("createText {} {}", id, value);
     }
 
-    fn setAttr(&self, id: RealDomNodeId, key: String, value: String) {
+    fn setAttr(&self, id: RealDomNodeId, key: &String, value: &String) {
         log::info!("setAttr {} {} {}", id, key, value);
+    }
+    
+    fn removeAttr(&self, id: RealDomNodeId, name: &String) {
+        log::info!("removeAttr {} {}", id, name);
     }
 
     fn addChild(&self, idParent: RealDomNodeId, idPrev: Option<RealDomNodeId>, idChild: RealDomNodeId) {

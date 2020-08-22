@@ -3,9 +3,10 @@ use crate::vdom::models::RealDom::{
     RealDomNodeId,
 };
 pub trait DomDriverTrait {
-    fn createNode(&self, id: RealDomNodeId, name: String);
-    fn createText(&self, id: RealDomNodeId, value: String);
-    fn setAttr(&self, id: RealDomNodeId, key: String, value: String);
+    fn createNode(&self, id: RealDomNodeId, name: &String);
+    fn createText(&self, id: RealDomNodeId, value: &String);
+    fn setAttr(&self, id: RealDomNodeId, key: &String, value: &String);
+    fn removeAttr(&self, id: RealDomNodeId, name: &String);
     fn addChild(&self, idParent: RealDomNodeId, idPrev: Option<RealDomNodeId>, idChild: RealDomNodeId);
     fn remove(&self, id: RealDomNodeId);
 }
@@ -32,23 +33,27 @@ impl Clone for DomDriver {
 }
 
 impl DomDriver {
-    fn createNode(&self, id: RealDomNodeId, name: String) {
+    pub fn createNode(&self, id: RealDomNodeId, name: &String) {
         self.driver.createNode(id, name);
     }
 
-    fn createText(&self, id: RealDomNodeId, value: String) {
+    pub fn createText(&self, id: RealDomNodeId, value: &String) {
         self.driver.createText(id, value);
     }
 
-    fn setAttr(&self, id: RealDomNodeId, key: String, value: String) {
+    pub fn setAttr(&self, id: RealDomNodeId, key: &String, value: &String) {
         self.driver.setAttr(id, key, value);
     }
 
-    fn addChild(&self, idParent: RealDomNodeId, idPrev: Option<RealDomNodeId>, idChild: RealDomNodeId) {
+    pub fn removeAttr(&self, id: RealDomNodeId, name: &String) {
+        self.driver.removeAttr(id, name);
+    }
+
+    pub fn addChild(&self, idParent: RealDomNodeId, idPrev: Option<RealDomNodeId>, idChild: RealDomNodeId) {
         self.driver.addChild(idParent, idPrev, idChild);
     }
 
-    fn remove(&self, id: RealDomNodeId) {
+    pub fn remove(&self, id: RealDomNodeId) {
         self.driver.remove(id);
     }
 }

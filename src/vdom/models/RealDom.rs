@@ -10,7 +10,10 @@ use crate::vdom::{
         Component::{
             ComponentId,
         }
-    }
+    },
+    DomDriver::{
+        DomDriver::DomDriver,
+    },
 };
 
 const ROOT_ID: u64 = 1;
@@ -49,10 +52,95 @@ impl std::fmt::Display for RealDomNodeId {
 
 
 pub struct RealDomNode {
+    domDriver: DomDriver,
+    idDom: RealDomNodeId,
     name: String,
     attr: HashMap<String, String>,
     child: Vec<RealDom>,
-    idDom: u64,                             //id realnego doma
+}
+
+impl RealDomNode {
+    pub fn new(domDriver: DomDriver, name: String) -> RealDomNode {
+        let id = RealDomNodeId::new();
+
+        domDriver.createNode(id.clone(), &name);
+
+        let node = RealDomNode {
+            domDriver,
+            idDom: id,
+            name,
+            attr: HashMap::new(),
+            child: Vec::new(),
+        };
+
+
+        node
+    }
+
+    pub fn setAttr(&mut self, name: String, value: String) {
+        let needUpdate = {
+            let item = self.attr.get(&name);
+            if let Some(item) = item {
+                if *item == value {
+                    false
+                } else {
+                    true
+                }
+            } else {
+                true
+            }
+        };
+
+        if needUpdate {
+            self.domDriver.setAttr(self.idDom.clone(), &name, &value);
+             self.attr.insert(name, value);
+       }
+    }
+
+    pub fn removeAttr(&mut self, name: String) {
+        let needDelete = {
+            self.attr.contains_key(&name)
+        };
+
+        if needDelete {
+            self.attr.remove(&name);
+            self.domDriver.removeAttr(self.idDom.clone(), &name);
+        }
+    }
+}
+
+impl Drop for RealDomNode {
+    fn drop(&mut self) {
+        self.domDriver.remove(self.idDom.clone());
+    }
+}
+
+pub struct RealDomText {
+    domDriver: DomDriver,
+    idDom: RealDomNodeId,
+    value: String,
+}
+
+impl RealDomText {
+    pub fn new(domDriver: DomDriver, value: String) -> RealDomText {
+        let id = RealDomNodeId::new();
+
+        domDriver.createText(id.clone(), &value);
+
+        let node = RealDomText {
+            domDriver,
+            idDom: id,
+            value,
+        };
+
+        node
+    }
+}
+
+impl Drop for RealDomText {
+    fn drop(&mut self) {
+        self.domDriver.remove(self.idDom.clone());
+    }
 }
 
 pub enum RealDom {
@@ -60,17 +148,26 @@ pub enum RealDom {
         node: RealDomNode,
     },
     Text {
-        value: String,
-        idDom: u64,                             //id realnego doma
+        node: RealDomText,
     },
     Component {
+        domDriver: DomDriver,
         id: ComponentId,                        //do porównywania
-        subscription: Client,                   //Subskrybcją, kryje się funkcja, która odpalana (na zmianę), wstawia coś do pojemnika child
-                                                //idParenta mozemy przekazywac w momencie gdy będziemy tworzyć Client-a
-
+        subscription: Client,                   //Subskrybcją, , wstawia do handler
         handler: Handler,
+    }
+}
 
+impl RealDom {
+    pub fn newNode(domDriver: DomDriver, name: String) -> RealDom {
+        RealDom::Node {
+            node: RealDomNode::new(domDriver, name)
+        }
+    }
 
-//     idParent: RealNodeId,               //prawdopodobnie będzie konieczne. Ale ten id moze byc utworzony przy stworzeniu noda. Nie będzie zmieniany.
+    pub fn newText(domDriver: DomDriver, value: String) -> RealDom {
+        RealDom::Text {
+            node: RealDomText::new(domDriver, value)
+        }
     }
 }
