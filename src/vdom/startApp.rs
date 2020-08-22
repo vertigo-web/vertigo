@@ -14,12 +14,19 @@ use crate::vdom::{
         VDom::VDom,
     },
     renderToNode::renderToNode,
+    DomDriver::{
+        DomDriver::DomDriver,
+        DomDriverPrint::DomDriverPrint,
+    }
 };
 
 //lib
 pub fn startApp<T: 'static>(deps: Dependencies, param: T, render: fn(&T) -> Vec<VDom>) -> Client {
 
-    let renderedHandler = Handler::new(HandlerTarget::root());
+    let driverPrint = DomDriverPrint::new();
+    let driver = DomDriver::new(driverPrint);
+    
+    let renderedHandler = Handler::new(driver, HandlerTarget::root());
 
     let render /* (Fn() -> Rc<Vec<VDom>> */ = move || Rc::new(render(&param));
     let vDomComputed: Computed<Rc<Vec<VDom>>> = deps.from(render);

@@ -22,7 +22,7 @@ fn get_unique_id() -> u64 {
     COUNTER.fetch_add(1, Ordering::Relaxed)
 }
 
-#[derive(Clone)]
+#[derive(Clone, Debug)]
 pub struct RealDomNodeId {
     id: u64,
 }

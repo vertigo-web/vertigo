@@ -25,6 +25,7 @@ use crate::{
 */
 
 fn applyNewViewChild(anchor: HandlerTarget, a: &mut Vec<RealDom>, b: Rc<Vec<VDom>>) -> Vec<RealDom> {
+    
     /*
         teraz kwestia jak zsynchronizować te dzieci
 
