@@ -15,7 +15,7 @@ pub struct RealDomNode {
     idDom: RealDomNodeId,
     name: String,
     attr: HashMap<String, String>,
-    child: Box<RealDomChild>,
+    child: RealDomChild,
 }
 
 impl RealDomNode {
@@ -31,7 +31,7 @@ impl RealDomNode {
             idDom: nodeId,
             name,
             attr: HashMap::new(),
-            child: Box::new(domChild),
+            child: domChild,
         };
 
         node

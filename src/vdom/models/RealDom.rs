@@ -32,7 +32,7 @@ pub enum RealDom {
         domDriver: DomDriver,
         id: ComponentId,                        //do porównywania
         subscription: Client,                   //Subskrybcją, , wstawia do handler
-        child: Box<RealDomChild>,
+        child: RealDomChild,
     }
 }
 
