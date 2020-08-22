@@ -3,7 +3,6 @@ use crate::{
     lib::{
         Computed::Computed,
         GraphId::GraphId,
-        Dependencies::Dependencies,
     },
     vdom::{
         models::VDom::VDom,
@@ -16,8 +15,13 @@ pub struct ComponentId {
 }
 
 impl ComponentId {
-    fn new<T>(params: &Computed<T>, render: &(fn(&T) -> Vec<VDom>)) -> ComponentId {
-        todo!();
+    fn new<T>(params: &Computed<T>, render: fn(&T) -> Vec<VDom>) -> ComponentId {
+
+        let idFunction = render as *const () as u64;
+        ComponentId {
+            idComputed: params.getId(),
+            idFunction
+        }
     }
 }
 
@@ -27,10 +31,9 @@ pub struct Component {
 }
 
 impl Component {
-    pub fn newComponent<T: Debug + 'static>(root: Dependencies, params: Computed<T>, render: fn(&T) -> Vec<VDom>) -> Component {
+    pub fn new<T: Debug + 'static>(params: Computed<T>, render: fn(&T) -> Vec<VDom>) -> Component {
 
-        let componentId = ComponentId::new(&params, &render);
-
+        let componentId = ComponentId::new(&params, render);
         let render = params.map(render);
 
         Component {

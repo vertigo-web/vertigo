@@ -63,6 +63,10 @@ impl<T: 'static> Computed<T> {
         }
     }
 
+    pub fn getId(&self) -> GraphId {
+        self.inner.id.clone()
+    }
+
     pub fn getValue(&self) -> Rc<T> {
         let inner = self.inner.as_ref();
         let selfId = inner.id.clone();
