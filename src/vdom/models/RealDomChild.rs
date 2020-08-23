@@ -85,14 +85,36 @@ impl RealDomChildInner {
 
     pub fn append(&self, child: RealDom) {
         todo!();
+
+        //TODO - trzeba uwzględnić to ze dziecko powinno zostac dodane
     }
 
     pub fn firstChildId(&self) -> RealDomId {
-        todo!();
+        match &self.state {
+            RealDomChildState::Empty { comment } => {
+                comment.idDom.clone()
+            },
+            RealDomChildState::List { first, .. } => {
+                first.firstChildId()
+            }
+        }
     }
 
     pub fn lastChildId(&self) -> RealDomId {
-        todo!();
+        match &self.state {
+            RealDomChildState::Empty { comment } => {
+                comment.idDom.clone()
+            },
+            RealDomChildState::List { first, child, .. } => {
+                let last = child.last();
+
+                if let Some(last) = last {
+                    last.lastChildId()
+                } else {
+                    first.lastChildId()
+                }
+            }
+        }
     }
 
     pub fn childIds(&self) -> Vec<RealDomId> {
