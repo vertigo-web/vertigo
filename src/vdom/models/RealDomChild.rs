@@ -118,7 +118,22 @@ impl RealDomChildInner {
     }
 
     pub fn childIds(&self) -> Vec<RealDomId> {
-        todo!();
+        let mut out = Vec::new();
+
+        match &self.state {
+            RealDomChildState::Empty { comment } => {
+                out.push(comment.idDom.clone())
+            },
+            RealDomChildState::List { first, child } => {
+                out.extend(first.childIds());
+
+                for childItem in child {
+                    out.extend(childItem.childIds());
+                }
+            }
+        }
+
+        out
     }
 }
 
