@@ -72,7 +72,7 @@ impl RealDomChildInner {
 
         match prevState {
             RealDomChildState::Empty { .. } => {
-                Vec::new()
+                unreachable!();
             },
             RealDomChildState::List { first, child } => {
                 let mut out = Vec::new();
@@ -83,10 +83,32 @@ impl RealDomChildInner {
         }
     }
 
-    pub fn append(&self, child: RealDom) {
-        todo!();
+    pub fn append(&mut self, newChild: RealDom) {
+        let childIds = newChild.childIds();
+        let mut refId = self.lastChildId();
 
-        //TODO - trzeba uwzględnić to ze dziecko powinno zostac dodane
+        for item in childIds {
+            self.domDriver.insertAfter(refId, item.clone());
+            refId = item;
+        }
+
+        let isEmpty = self.state.isEmpty();
+
+        if isEmpty {
+            self.state = RealDomChildState::List {
+                first: newChild,
+                child: Vec::new(),
+            };
+        } else {
+            match &mut self.state {
+                RealDomChildState::Empty { .. } => {
+                    unreachable!();
+                },
+                RealDomChildState::List { child, .. } => {
+                    (*child).push(newChild);
+                }
+            };
+        }
     }
 
     pub fn firstChildId(&self) -> RealDomId {
