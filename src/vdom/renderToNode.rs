@@ -59,6 +59,7 @@ fn applyNewViewNode(om_a: &RealDomNode, dom_b: &VDomNode) {
 
 
 
+
 pub fn renderToNode(target: RealDomChild, computed: Computed<Rc<Vec<VDom>>>) -> Client { 
     let subscription: Client = computed.subscribe(move |newVersion| {
         applyNewViewChild(
