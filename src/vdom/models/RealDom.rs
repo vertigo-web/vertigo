@@ -6,15 +6,13 @@ use crate::vdom::{
     models::{
         RealDomNode::RealDomNode,
         RealDomText::RealDomText,
-        RealDomChild::RealDomChild,
-        VDomComponentId::VDomComponentId,
         RealDomId::RealDomId,
+        RealDomComponent::RealDomComponent,
     },
     DomDriver::{
         DomDriver::DomDriver,
     },
 };
-
 
 pub enum RealDom {
     Node {
@@ -24,9 +22,7 @@ pub enum RealDom {
         node: RealDomText,
     },
     Component {
-        id: VDomComponentId,                    //do porównywania
-        subscription: Client,                   //Subskrybcją, , wstawia do handler
-        child: RealDomChild,
+        node: RealDomComponent,
     }
 }
 
@@ -51,8 +47,8 @@ impl RealDom {
             RealDom::Text { node } => {
                 node.idDom.clone()
             },
-            RealDom::Component { child, .. } => {
-                child.firstChildId()
+            RealDom::Component { node } => {
+                node.firstChildId()
             }
         }
     }
@@ -65,8 +61,8 @@ impl RealDom {
             RealDom::Text { node } => {
                 node.idDom.clone()
             },
-            RealDom::Component { child, .. } => {
-                child.lastChildId()
+            RealDom::Component { node } => {
+                node.lastChildId()
             }
         }
     }
@@ -79,8 +75,8 @@ impl RealDom {
             RealDom::Text { node } => {
                 vec!(node.idDom.clone())
             },
-            RealDom::Component { child, .. } => {
-                child.childIds()
+            RealDom::Component { node } => {
+                node.childIds()
             }
         }
     }
