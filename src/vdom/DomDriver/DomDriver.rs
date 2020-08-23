@@ -1,19 +1,20 @@
 use std::rc::Rc;
 use crate::vdom::models::{
-    RealDomNodeId::RealDomNodeId,
+    RealDomId::RealDomId,
 };
 
 pub trait DomDriverTrait {
-    fn createNode(&self, id: RealDomNodeId, name: &String);
-    fn createText(&self, id: RealDomNodeId, value: &String);
-    fn createComment(&self, id: RealDomNodeId, value: &String);
-    fn setAttr(&self, id: RealDomNodeId, key: &String, value: &String);
-    fn removeAttr(&self, id: RealDomNodeId, name: &String);
-    fn remove(&self, id: RealDomNodeId);
-    fn removeAllChild(&self, id: RealDomNodeId);
-    fn insertAsFirstChild(&self, parent: RealDomNodeId, child: RealDomNodeId);
-    fn insertBefore(&self, refId: RealDomNodeId, child: RealDomNodeId);
-    fn insertAfter(&self, refId: RealDomNodeId, child: RealDomNodeId);
+    fn createNode(&self, id: RealDomId, name: &String);
+    fn createText(&self, id: RealDomId, value: &String);
+    fn createComment(&self, id: RealDomId, value: &String);
+    fn setAttr(&self, id: RealDomId, key: &String, value: &String);
+    fn removeAttr(&self, id: RealDomId, name: &String);
+    fn remove(&self, id: RealDomId);
+    fn removeAllChild(&self, id: RealDomId);
+    fn insertAsFirstChild(&self, parent: RealDomId, child: RealDomId);
+    fn insertBefore(&self, refId: RealDomId, child: RealDomId);
+    fn insertAfter(&self, refId: RealDomId, child: RealDomId);
+    fn addChild(&self, parent: RealDomId, child: RealDomId);
 }
 
 
@@ -38,43 +39,47 @@ impl Clone for DomDriver {
 }
 
 impl DomDriver {
-    pub fn createNode(&self, id: RealDomNodeId, name: &String) {
+    pub fn createNode(&self, id: RealDomId, name: &String) {
         self.driver.createNode(id, name);
     }
 
-    pub fn createText(&self, id: RealDomNodeId, value: &String) {
+    pub fn createText(&self, id: RealDomId, value: &String) {
         self.driver.createText(id, value);
     }
 
-    pub fn createComment(&self, id: RealDomNodeId, value: &String) {
+    pub fn createComment(&self, id: RealDomId, value: &String) {
         self.driver.createComment(id, value);
     }
 
-    pub fn setAttr(&self, id: RealDomNodeId, key: &String, value: &String) {
+    pub fn setAttr(&self, id: RealDomId, key: &String, value: &String) {
         self.driver.setAttr(id, key, value);
     }
 
-    pub fn removeAttr(&self, id: RealDomNodeId, name: &String) {
+    pub fn removeAttr(&self, id: RealDomId, name: &String) {
         self.driver.removeAttr(id, name);
     }
 
-    pub fn remove(&self, id: RealDomNodeId) {
+    pub fn remove(&self, id: RealDomId) {
         self.driver.remove(id);
     }
 
-    pub fn removeAllChild(&self, id: RealDomNodeId) {
+    pub fn removeAllChild(&self, id: RealDomId) {
         self.driver.removeAllChild(id);
     }
 
-    pub fn insertAsFirstChild(&self, parent: RealDomNodeId, child: RealDomNodeId) {
+    pub fn insertAsFirstChild(&self, parent: RealDomId, child: RealDomId) {
         self.driver.insertAsFirstChild(parent, child);
     }
 
-    pub fn insertBefore(&self, refId: RealDomNodeId, child: RealDomNodeId) {
+    pub fn insertBefore(&self, refId: RealDomId, child: RealDomId) {
         self.driver.insertBefore(refId, child);
     }
 
-    pub fn insertAfter(&self, refId: RealDomNodeId, child: RealDomNodeId) {
+    pub fn insertAfter(&self, refId: RealDomId, child: RealDomId) {
         self.driver.insertAfter(refId, child);
+    }
+
+    pub fn addChild(&self, parent: RealDomId, child: RealDomId) {
+        self.driver.addChild(parent, child);
     }
 }

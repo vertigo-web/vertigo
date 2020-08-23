@@ -6,31 +6,32 @@ use crate::vdom::{
     },
     models::{
         RealDom::RealDom,
-        RealDomNodeId::RealDomNodeId,
+        RealDomId::RealDomId,
         RealDomComment::RealDomComment,
     },
 };
 
-struct RealDomChildInner {
-    pub first: RealDom,
-    pub child: Vec<RealDom>, 
+enum RealDomChildInner {
+    Empty {
+        comment: RealDomComment,
+    },
+    List {
+        first: RealDom,
+        child: Vec<RealDom>,
+    }
 }
 
 impl RealDomChildInner {
-    pub fn new(first: RealDom) -> RealDomChildInner {
-        RealDomChildInner {
-            first: first,
-            child: Vec::new(),
+    pub fn new(comment: RealDomComment) -> RealDomChildInner {
+        RealDomChildInner::Empty {
+            comment
         }
     }
 
-    pub fn newWithParent(driver: DomDriver, parent: RealDomNodeId) -> RealDomChildInner {
+    pub fn newWithParent(driver: DomDriver, parent: RealDomId) -> RealDomChildInner {
         let nodeComment = RealDomComment::new(driver.clone(), "".into());
-        //driver.removeAllChild(RealDomNodeId::root());
-        driver.insertAsFirstChild(parent, nodeComment.idDom.clone());
-        let nodeList = RealDomChildInner::new(RealDom::Comment {
-            node: nodeComment
-        });
+        driver.addChild(parent, nodeComment.idDom.clone());
+        let nodeList = RealDomChildInner::new(nodeComment);
 
         nodeList
     }
@@ -41,21 +42,28 @@ pub struct RealDomChild {
 }
 
 impl RealDomChild {
-    // pub fn new(first: RealDom) -> RealDomChild {
-
-    //     RealDomChild {
-    //         inner: Rc::new(BoxRefCell::new(
-    //             RealDomChildInner::new(first)
-    //         ))
-    //     }
-    // }
-
-    pub fn newWithParent(driver: DomDriver, parent: RealDomNodeId) -> RealDomChild {
+    pub fn newWithParent(driver: DomDriver, parent: RealDomId) -> RealDomChild {
         RealDomChild {
             inner: Rc::new(BoxRefCell::new(
                 RealDomChildInner::newWithParent(driver, parent)
             ))
         }
+    }
+
+    pub fn extract(&self) -> Vec<RealDom> {
+        todo!();
+    }
+
+    pub fn append(&self, child: RealDom) {
+        todo!();
+    }
+
+    pub fn firstChildId(&self) -> RealDomId {
+        todo!();
+    }
+
+    pub fn lastChildId(&self) -> RealDomId {
+        todo!();
     }
 }
 

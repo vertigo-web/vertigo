@@ -6,7 +6,6 @@ use crate::vdom::{
     models::{
         RealDomNode::RealDomNode,
         RealDomText::RealDomText,
-        RealDomComment::RealDomComment,
         RealDomChild::RealDomChild,
         VDomComponentId::VDomComponentId,
     },
@@ -22,9 +21,6 @@ pub enum RealDom {
     },
     Text {
         node: RealDomText,
-    },
-    Comment {
-        node: RealDomComment,
     },
     Component {
         id: VDomComponentId,                        //do porównywania
@@ -43,13 +39,6 @@ impl RealDom {
     pub fn newText(domDriver: DomDriver, value: String) -> RealDom {
         RealDom::Text {
             node: RealDomText::new(domDriver, value)
-        }
-    }
-
-    pub fn newComment(domDriver: DomDriver, value: String) -> RealDom {
-        let node = RealDomComment::new(domDriver, value);
-        RealDom::Comment {
-            node
         }
     }
 }

@@ -9,25 +9,25 @@ fn get_unique_id() -> u64 {
 }
 
 #[derive(Clone, Debug)]
-pub struct RealDomNodeId {
+pub struct RealDomId {
     id: u64,
 }
 
-impl RealDomNodeId {
-    pub fn root() -> RealDomNodeId {
-        RealDomNodeId {
+impl RealDomId {
+    pub fn root() -> RealDomId {
+        RealDomId {
             id: ROOT_ID
         }
     }
 
-    pub fn new() -> RealDomNodeId {
-        RealDomNodeId {
+    pub fn new() -> RealDomId {
+        RealDomId {
             id: get_unique_id()
         }
     }
 }
 
-impl std::fmt::Display for RealDomNodeId {
+impl std::fmt::Display for RealDomId {
     fn fmt(&self, f: &mut std::fmt::Formatter) -> std::fmt::Result {
         write!(f, "RealDomNodeId={}", self.id)
     }

@@ -1,6 +1,6 @@
 use crate::vdom::{
     models::{
-        RealDomNodeId::RealDomNodeId,
+        RealDomId::RealDomId,
     },
     DomDriver::{
         DomDriver::DomDriver,
@@ -9,13 +9,13 @@ use crate::vdom::{
 
 pub struct RealDomText {
     domDriver: DomDriver,
-    idDom: RealDomNodeId,
+    idDom: RealDomId,
     value: String,
 }
 
 impl RealDomText {
     pub fn new(domDriver: DomDriver, value: String) -> RealDomText {
-        let id = RealDomNodeId::new();
+        let id = RealDomId::new();
 
         domDriver.createText(id.clone(), &value);
 

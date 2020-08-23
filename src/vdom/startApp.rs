@@ -10,7 +10,7 @@ use crate::vdom::{
     models::{
         VDom::VDom,
         RealDomChild::RealDomChild,
-        RealDomNodeId::RealDomNodeId,
+        RealDomId::RealDomId,
     },
     renderToNode::renderToNode,
     DomDriver::{
@@ -25,7 +25,7 @@ pub fn startApp<T: 'static>(deps: Dependencies, param: T, render: fn(&T) -> Vec<
     let driverPrint = DomDriverPrint::new();
     let driver = DomDriver::new(driverPrint);
     
-    let nodeList = RealDomChild::newWithParent(driver, RealDomNodeId::root());
+    let nodeList = RealDomChild::newWithParent(driver, RealDomId::root());
 
     let render /* (Fn() -> Rc<Vec<VDom>> */ = move || Rc::new(render(&param));
     let vDomComputed: Computed<Rc<Vec<VDom>>> = deps.from(render);
