@@ -12,7 +12,7 @@ use crate::vdom::{
 
 pub struct RealDomNode {
     domDriver: DomDriver,
-    idDom: RealDomId,
+    pub idDom: RealDomId,
     name: String,
     attr: HashMap<String, String>,
     child: RealDomChild,

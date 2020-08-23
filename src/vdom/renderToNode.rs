@@ -54,6 +54,7 @@ fn applyNewViewNode(om_a: &RealDomNode, dom_b: &VDomNode) {
 
         potem przechodzimy do synchronizowania dzieci
     */
+    todo!();
 }
 
 

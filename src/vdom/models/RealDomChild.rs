@@ -11,7 +11,7 @@ use crate::vdom::{
     },
 };
 
-enum RealDomChildInner {
+enum RealDomChildState {
     Empty {
         comment: RealDomComment,
     },
@@ -21,19 +21,82 @@ enum RealDomChildInner {
     }
 }
 
+impl RealDomChildState {
+    fn isEmpty(&self) -> bool {
+        match self {
+            RealDomChildState::Empty { .. } => true,
+            RealDomChildState::List { .. } => false,
+        }
+    }
+}
+
+struct RealDomChildInner {
+    domDriver: DomDriver,
+    state: RealDomChildState,
+}
+
 impl RealDomChildInner {
-    pub fn new(comment: RealDomComment) -> RealDomChildInner {
-        RealDomChildInner::Empty {
-            comment
+    pub fn new(domDriver: DomDriver, comment: RealDomComment) -> RealDomChildInner {
+        RealDomChildInner {
+            domDriver,
+            state: RealDomChildState::Empty {
+                comment
+            }
         }
     }
 
     pub fn newWithParent(driver: DomDriver, parent: RealDomId) -> RealDomChildInner {
         let nodeComment = RealDomComment::new(driver.clone(), "".into());
         driver.addChild(parent, nodeComment.idDom.clone());
-        let nodeList = RealDomChildInner::new(nodeComment);
+        let nodeList = RealDomChildInner::new(driver,  nodeComment);
 
         nodeList
+    }
+
+
+
+    pub fn extract(&mut self) -> Vec<RealDom> {
+        let isEmpty = self.state.isEmpty();
+
+        if isEmpty {
+            return Vec::new();
+        }
+    
+        let firstChildId = self.firstChildId();
+        let nodeComment = RealDomComment::new(self.domDriver.clone(), "".into());
+        self.domDriver.insertBefore(firstChildId, nodeComment.idDom.clone());
+
+        let prevState = std::mem::replace(&mut self.state, RealDomChildState::Empty {
+            comment: nodeComment
+        });
+
+        match prevState {
+            RealDomChildState::Empty { .. } => {
+                Vec::new()
+            },
+            RealDomChildState::List { first, child } => {
+                let mut out = Vec::new();
+                out.push(first);
+                out.extend(child);
+                out
+            }
+        }
+    }
+
+    pub fn append(&self, child: RealDom) {
+        todo!();
+    }
+
+    pub fn firstChildId(&self) -> RealDomId {
+        todo!();
+    }
+
+    pub fn lastChildId(&self) -> RealDomId {
+        todo!();
+    }
+
+    pub fn childIds(&self) -> Vec<RealDomId> {
+        todo!();
     }
 }
 
@@ -51,19 +114,33 @@ impl RealDomChild {
     }
 
     pub fn extract(&self) -> Vec<RealDom> {
-        todo!();
+        self.inner.changeNoParams(|state| {
+            state.extract()
+        })
     }
 
     pub fn append(&self, child: RealDom) {
-        todo!();
+        self.inner.change(child, |state, child| {
+            state.append(child)
+        })
     }
 
     pub fn firstChildId(&self) -> RealDomId {
-        todo!();
+        self.inner.get(|state| {
+            state.firstChildId()
+        })
     }
 
     pub fn lastChildId(&self) -> RealDomId {
-        todo!();
+        self.inner.get(|state| {
+            state.lastChildId()
+        })
+    }
+
+    pub fn childIds(&self) -> Vec<RealDomId> {
+        self.inner.get(|state| {
+            state.childIds()
+        })
     }
 }
 
