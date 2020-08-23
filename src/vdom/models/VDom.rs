@@ -2,13 +2,15 @@ use std::collections::HashMap;
 
 use crate::vdom::models::VDomComponent::VDomComponent;
 
+#[derive(Clone)]
 pub struct VDomNode {
-    name: String,
-    attr: HashMap<String, String>,
-    child: Vec<VDom>,
+    pub name: String,
+    pub attr: HashMap<String, String>,
+    pub child: Vec<VDom>,
 }
 
 
+#[derive(Clone)]
 pub enum VDom {
     Node {
         node: VDomNode,

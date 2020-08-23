@@ -1,5 +1,9 @@
 
 use std::rc::Rc;
+use std::collections::{
+    HashMap,
+    VecDeque,
+};
 
 use crate::{
     lib::{
@@ -11,7 +15,9 @@ use crate::{
             VDom::{VDom, VDomNode},
             RealDomChild::RealDomChild,
             RealDomNode::RealDomNode,
-            RealDom::RealDom,
+            RealDomText::RealDomText,
+            RealDomComponent::RealDomComponent,
+            VDomComponentId::VDomComponentId,
         }
     }
 };
@@ -21,7 +27,40 @@ use crate::{
     Od niego zaczynamy zawsze (numer 1)
 */
 
-fn applyNewViewChild(target: &RealDomChild, newVersion: Rc<Vec<VDom>>) -> Vec<RealDom> {
+fn applyNewViewChild(target: RealDomChild, newVersion: Vec<VDom>) -> VecDeque<(RealDomChild, Vec<VDom>)> {
+
+    let realNode: HashMap<String, Vec<RealDomNode>> = HashMap::new();
+    let realText: HashMap<String, Vec<RealDomText>> = HashMap::new();
+    let realComponent: HashMap<VDomComponentId, Vec<RealDomComponent>> = HashMap::new();
+
+    let realChil = target.extract();
+
+    for item in realChil {
+        //trzeba przerzucić realny dom item do któregoś z powyszych kubełków
+    }
+
+
+    let mut out = VecDeque::new();
+
+    for item in newVersion.iter() {
+
+        match item {
+            VDom::Node { node } => {
+                let child = node.child.clone();
+
+            },
+            VDom::Text { value } => {
+
+            },
+            VDom::Component { node } => {
+
+            }
+        }
+    }
+
+    todo!();
+
+    out
 
     /*
         teraz kwestia jak zsynchronizować te dzieci
@@ -39,7 +78,7 @@ fn applyNewViewChild(target: &RealDomChild, newVersion: Rc<Vec<VDom>>) -> Vec<Re
 
         To będzie potrzebne dla tego komponentu gdy będzie musiał się przerenderować
     */
-    todo!();
+    //todo!();
 }
 
 
@@ -63,41 +102,28 @@ fn applyNewViewNode(om_a: &RealDomNode, dom_b: &VDomNode) {
 
 pub fn renderToNode(target: RealDomChild, computed: Computed<Rc<Vec<VDom>>>) -> Client { 
     let subscription: Client = computed.subscribe(move |newVersion| {
-        applyNewViewChild(
-            &target,
-            newVersion.clone()
+        let mut syncTodo: VecDeque<(RealDomChild, Vec<VDom>)> = applyNewViewChild(
+            target.clone(), 
+            (*(*newVersion)).clone()
         );
+
+        loop {
+            let first = syncTodo.pop_front();
+
+            match first {
+                Some((realList, virtualList)) => {
+                    let newListTodo = applyNewViewChild(realList, virtualList);
+                    syncTodo.extend(newListTodo);
+                },
+                None => {
+                    return;
+                }
+            }
+        }
     });
 
     subscription
 }
-
-
-
-//Statyczna zmienna, która będzie miała wartość null lub ta zmienna
-
-//Funkcja wyeksportowana, która wywołana ustai tą zmienną globalną
-//Funkcja wyeksportowana, która wyłączy tą zmienną. Sprawdzić czy się destruktor poprawnie wywoła
-
-//Trzeba jakoś zapisać referencję do tej subskrybcji
-
-
-
-
-
-/*
-    renderDom => {
-        <div>....</div>
-        { memo(renderStalyElement) }
-        <div>....</div>
-    }
-
-    renderStalyElement = () : Vec<VDom> {
-        <div>
-            jaksis staly naglowek, który nie będzie ulegał przegenerowaniu
-        </div>
-    }
-*/
 
 /*
     wyrenderowanie głównego komponentu
