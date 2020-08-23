@@ -4,13 +4,11 @@ use crate::lib::{
 
 use crate::vdom::{
     models::{
-        Component::{
-            ComponentId,
-        },
         RealDomNode::RealDomNode,
         RealDomText::RealDomText,
         RealDomComment::RealDomComment,
         RealDomChild::RealDomChild,
+        VDomComponentId::VDomComponentId,
     },
     DomDriver::{
         DomDriver::DomDriver,
@@ -29,8 +27,7 @@ pub enum RealDom {
         node: RealDomComment,
     },
     Component {
-        domDriver: DomDriver,
-        id: ComponentId,                        //do porównywania
+        id: VDomComponentId,                        //do porównywania
         subscription: Client,                   //Subskrybcją, , wstawia do handler
         child: RealDomChild,
     }

@@ -1,6 +1,6 @@
 use std::collections::HashMap;
 
-use crate::vdom::models::Component::Component;
+use crate::vdom::models::VDomComponent::VDomComponent;
 
 pub struct VDomNode {
     name: String,
@@ -17,6 +17,6 @@ pub enum VDom {
         value: String,
     },
     Component {
-        node: Component,
+        node: VDomComponent,
     },
 }
