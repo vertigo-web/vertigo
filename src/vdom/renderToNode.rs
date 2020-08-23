@@ -58,18 +58,6 @@ fn applyNewViewNode(om_a: &RealDomNode, dom_b: &VDomNode) {
 
 
 
-/*
-AppDataState --- stan dotyczący danhych
-
-AppViewState (wstrzyknięcie AppDataState) - stan dotyczący widoku
-
-AppState {
-    data: AppDataState,
-    view: AppViewState,
-}
-*/
-
-
 
 pub fn renderToNode(target: RealDomChild, computed: Computed<Rc<Vec<VDom>>>) -> Client { 
     let subscription: Client = computed.subscribe(move |newVersion| {
@@ -88,7 +76,6 @@ pub fn renderToNode(target: RealDomChild, computed: Computed<Rc<Vec<VDom>>>) -> 
 
 //Funkcja wyeksportowana, która wywołana ustai tą zmienną globalną
 //Funkcja wyeksportowana, która wyłączy tą zmienną. Sprawdzić czy się destruktor poprawnie wywoła
-
 
 //Trzeba jakoś zapisać referencję do tej subskrybcji
 

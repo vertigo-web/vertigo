@@ -19,7 +19,7 @@ use crate::vdom::{
     }
 };
 
-//lib
+
 pub fn startApp<T: 'static>(deps: Dependencies, param: T, render: fn(&T) -> Vec<VDom>) -> Client {
 
     let driverPrint = DomDriverPrint::new();
