@@ -72,20 +72,13 @@ impl<K: Eq + Hash, RNode, VNode> CacheNode<K, RNode, VNode> {
 }
 
 fn nodeCreateNew(driver: &DomDriver, node: &VDomNode) -> RealDomNode {
-    let realNode = RealDomNode::new(driver.clone(), node.name.clone());
-
-    //iterujemy po istniejących juz atrybutach. Jesli atrybut nie jstnieje w nowym zestawie, to go kasujemy
-    //iterujemy po nowych atrybutach, wywolujemy metodę updateAttr(&key, &value)
-    //jesli bedzie trzeba zaktualizowac, to sobie sklonujemy taka wartosc
-    todo!();
+    let mut realNode = RealDomNode::new(driver.clone(), node.name.clone());
+    realNode.updateAttr(&node.attr);
+    realNode
 }
 
-fn nodeSynchronize(real: &mut RealDomNode, node: &VDomNode) {
-
-    //iterujemy po istniejących juz atrybutach. Jesli atrybut nie jstnieje w nowym zestawie, to go kasujemy
-    //iterujemy po nowych atrybutach, wywolujemy metodę updateAttr(&key, &value)
-    //jesli bedzie trzeba zaktualizowac, to sobie sklonujemy taka wartosc
-    todo!();
+fn nodeSynchronize(realNode: &mut RealDomNode, node: &VDomNode) {
+    realNode.updateAttr(&node.attr);
 }
 
 fn textCreateNew(driver: &DomDriver, node: &VDomText) -> RealDomText {
