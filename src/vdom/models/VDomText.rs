@@ -1,4 +1,4 @@
 #[derive(Clone)]
 pub struct VDomText {
-    value: String,
+    pub value: String,
 }

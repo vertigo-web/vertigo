@@ -13,7 +13,7 @@ use crate::{
 
 #[derive(Clone)]
 pub struct VDomComponent {
-    id: VDomComponentId,
+    pub id: VDomComponentId,
     render: Computed<Vec<VDom>>,
 }
 

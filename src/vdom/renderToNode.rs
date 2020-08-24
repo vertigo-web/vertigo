@@ -89,6 +89,21 @@ fn componentSynchronize(real: &mut RealDomComponent, node: &VDomComponent) {
     todo!();
 }
 
+// fn applyNewViewNode(om_a: &RealDomNode, dom_b: &VDomNode) {
+//     /*
+//         zeby przystąpić do synchronizaczji dwóch elementów, typ węzła musi się zgadzać
+//             RealDom::name musi mieć takie samo jak VDom:name
+        
+//         synchronizujemy atrybuty
+
+//         potem trzeba będzie zsynchronizować eventy podpięte pod ten węzeł
+
+//         potem przechodzimy do synchronizowania dzieci
+//     */
+//     todo!();
+// }
+
+
 fn applyNewViewChild(target: RealDomChild, newVersion: Vec<VDom>) -> VecDeque<(RealDomChild, Vec<VDom>)> {
 
     let mut realNode: CacheNode<String, RealDomNode, VDomNode> = CacheNode::new(
@@ -118,7 +133,7 @@ fn applyNewViewChild(target: RealDomChild, newVersion: Vec<VDom>) -> VecDeque<(R
             },
             RealDom::Component { node } => {
                 let id = node.id.clone();
-                let item = realComponent.insert(id, node);
+                realComponent.insert(id, node);
             }
         }
     }
@@ -130,7 +145,8 @@ fn applyNewViewChild(target: RealDomChild, newVersion: Vec<VDom>) -> VecDeque<(R
 
         match item {
             VDom::Node { node } => {
-                let domChild = realNode.getOrCreate(node.name.clone(), &node);
+                let id = node.name.clone();
+                let domChild = realNode.getOrCreate(id, &node);
 
                 out.push_back((
                     domChild.child.clone(),
@@ -140,36 +156,22 @@ fn applyNewViewChild(target: RealDomChild, newVersion: Vec<VDom>) -> VecDeque<(R
                 target.append(RealDom::Node { node: domChild });
             },
             VDom::Text { node } => {
-                //realText.getOrCreate(key, vnode)
-
-                todo!();
+                let id = node.value.clone();
+                let domChild = realText.getOrCreate(id, &node);
+                
+                target.append(RealDom::Text { node: domChild });
             },
             VDom::Component { node } => {
-                todo!();
+                let id = node.id.clone();
+                let domChild = realComponent.getOrCreate(id, &node);
+
+                target.append(RealDom::Component { node: domChild });
             }
         }
     }
 
     out
 }
-
-
-// fn applyNewViewNode(om_a: &RealDomNode, dom_b: &VDomNode) {
-//     /*
-//         zeby przystąpić do synchronizaczji dwóch elementów, typ węzła musi się zgadzać
-//             RealDom::name musi mieć takie samo jak VDom:name
-        
-//         synchronizujemy atrybuty
-
-//         potem trzeba będzie zsynchronizować eventy podpięte pod ten węzeł
-
-//         potem przechodzimy do synchronizowania dzieci
-//     */
-//     todo!();
-// }
-
-
-
 
 
 pub fn renderToNode(target: RealDomChild, computed: Computed<Rc<Vec<VDom>>>) -> Client { 
