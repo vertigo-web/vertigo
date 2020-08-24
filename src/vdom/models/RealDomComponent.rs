@@ -11,7 +11,7 @@ use crate::vdom::{
 };
 
 pub struct RealDomComponent {
-    id: VDomComponentId,                    //do porównywania
+    pub id: VDomComponentId,                    //do porównywania
     subscription: Client,                   //Subskrybcją, , wstawia do handler
     child: RealDomChild,
 }

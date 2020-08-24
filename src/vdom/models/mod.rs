@@ -6,6 +6,7 @@ pub mod RealDomText;
 pub mod RealDomComment;
 pub mod RealDomComponent;
 pub mod VDom;
+pub mod VDomText;
 pub mod VDomComponent;
 pub mod VDomComponentId;
 

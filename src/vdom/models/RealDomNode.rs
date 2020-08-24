@@ -13,9 +13,9 @@ use crate::vdom::{
 pub struct RealDomNode {
     domDriver: DomDriver,
     pub idDom: RealDomId,
-    name: String,
+    pub name: String,
     attr: HashMap<String, String>,
-    child: RealDomChild,
+    pub child: RealDomChild,
 }
 
 impl RealDomNode {

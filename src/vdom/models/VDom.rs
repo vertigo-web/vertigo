@@ -1,6 +1,9 @@
 use std::collections::HashMap;
 
-use crate::vdom::models::VDomComponent::VDomComponent;
+use crate::vdom::models::{
+    VDomComponent::VDomComponent,
+    VDomText::VDomText,
+};
 
 #[derive(Clone)]
 pub struct VDomNode {
@@ -9,14 +12,13 @@ pub struct VDomNode {
     pub child: Vec<VDom>,
 }
 
-
 #[derive(Clone)]
 pub enum VDom {
     Node {
         node: VDomNode,
     },
     Text {
-        value: String,
+        node: VDomText,
     },
     Component {
         node: VDomComponent,

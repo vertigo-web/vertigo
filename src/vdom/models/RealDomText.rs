@@ -10,7 +10,7 @@ use crate::vdom::{
 pub struct RealDomText {
     domDriver: DomDriver,
     pub idDom: RealDomId,
-    value: String,
+    pub value: String,
 }
 
 impl RealDomText {
