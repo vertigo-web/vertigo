@@ -134,7 +134,7 @@ fn componentSynchronize(real: &mut RealDomComponent, node: &VDomComponent) {
 // }
 
 
-fn applyNewViewChild(target: RealDomChild, newVersion: &Vec<VDom>) {
+fn applyNewViewChild(target: &RealDomChild, newVersion: &Vec<VDom>) {
 
     let mut realNode: CacheNode<String, RealDomNode, VDomNode> = CacheNode::new(
         target.getDomDriver(),
@@ -179,7 +179,7 @@ fn applyNewViewChild(target: RealDomChild, newVersion: &Vec<VDom>) {
                 let id = node.name.clone();
                 let domChild = realNode.getOrCreate(id, &node);
 
-                applyNewViewChild(domChild.child.clone(), &node.child);
+                applyNewViewChild(&domChild.child, &node.child);
 
                 target.append(RealDom::Node { node: domChild });
             },
@@ -203,7 +203,7 @@ fn applyNewViewChild(target: RealDomChild, newVersion: &Vec<VDom>) {
 pub fn renderToNode(target: RealDomChild, computed: Computed<Vec<VDom>>) -> Client { 
     let subscription: Client = computed.subscribe(move |newVersion| {
         applyNewViewChild(
-            target.clone(), 
+            &target, 
             newVersion
         );
     });

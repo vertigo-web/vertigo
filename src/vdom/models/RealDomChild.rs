@@ -221,11 +221,3 @@ impl RealDomChild {
         })
     }
 }
-
-impl Clone for RealDomChild {
-    fn clone(&self) -> Self {
-        RealDomChild {
-            inner: self.inner.clone()
-        }
-    }
-}
