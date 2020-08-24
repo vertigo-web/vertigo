@@ -12,8 +12,8 @@ use crate::vdom::{
 
 pub struct RealDomComponent {
     pub id: VDomComponentId,                    //do porównywania
-    subscription: Client,                   //Subskrybcją, , wstawia do handler
-    child: RealDomChild,
+    pub subscription: Client,                   //Subskrybcją, , wstawia do handler
+    pub child: RealDomChild,
 }
 
 impl RealDomComponent {

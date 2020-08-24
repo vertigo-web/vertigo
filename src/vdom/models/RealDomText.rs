@@ -27,6 +27,12 @@ impl RealDomText {
 
         node
     }
+
+    pub fn update(&mut self, newValue: &String) {
+        if self.value != *newValue {
+            self.value = newValue.clone();
+        }
+    }
 }
 
 impl Drop for RealDomText {

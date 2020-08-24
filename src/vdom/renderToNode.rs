@@ -1,5 +1,3 @@
-
-use std::rc::Rc;
 use std::collections::{
     HashMap,
     VecDeque,
@@ -75,10 +73,18 @@ impl<K: Eq + Hash, RNode, VNode> CacheNode<K, RNode, VNode> {
 
 fn nodeCreateNew(driver: &DomDriver, node: &VDomNode) -> RealDomNode {
     let realNode = RealDomNode::new(driver.clone(), node.name.clone());
+
+    //iterujemy po istniejących juz atrybutach. Jesli atrybut nie jstnieje w nowym zestawie, to go kasujemy
+    //iterujemy po nowych atrybutach, wywolujemy metodę updateAttr(&key, &value)
+    //jesli bedzie trzeba zaktualizowac, to sobie sklonujemy taka wartosc
     todo!();
 }
 
 fn nodeSynchronize(real: &mut RealDomNode, node: &VDomNode) {
+
+    //iterujemy po istniejących juz atrybutach. Jesli atrybut nie jstnieje w nowym zestawie, to go kasujemy
+    //iterujemy po nowych atrybutach, wywolujemy metodę updateAttr(&key, &value)
+    //jesli bedzie trzeba zaktualizowac, to sobie sklonujemy taka wartosc
     todo!();
 }
 
@@ -87,51 +93,23 @@ fn textCreateNew(driver: &DomDriver, node: &VDomText) -> RealDomText {
 }
 
 fn textSynchronize(real: &mut RealDomText, node: &VDomText) {
-    real.value = node.value.clone();                                //niepotrzebne klonowanie prawdopodobnie
+    real.update(&node.value);
 }
 
 fn componentCreateNew(driver: &DomDriver, node: &VDomComponent) -> RealDomComponent {
+    let child = RealDomChild::newDetached(driver.clone());
+    let subscription = renderToNode(child.clone(), node.render.clone());
 
-    todo!();
-    // let child = RealDomChild::newDetached(*driver);
-    // let subscription = renderToNode(child.clone(), node.render.clone());
-    
-    
-    
-    //renderToNode(target: RealDomChild, computed: Computed<Rc<Vec<VDom>>>) -> Client { 
-
-    // struct RealDomComponent {
-    //     pub id: VDomComponentId,                    //do porównywania
-    //     subscription: Client,                   //Subskrybcją, , wstawia do handler
-    //     child: RealDomChild,
-    // }
-
-    // struct VDomComponent {
-    //     pub id: VDomComponentId,
-    //     render: Computed<Vec<VDom>>,
-    // }
+    RealDomComponent {
+        id: node.id.clone(),
+        subscription,
+        child
+    }
 }
 
 fn componentSynchronize(real: &mut RealDomComponent, node: &VDomComponent) {
-
-    todo!();
-
     //nic nie trzeba synchronizować. Komponent sam się synchronizuje.
 }
-
-// fn applyNewViewNode(om_a: &RealDomNode, dom_b: &VDomNode) {
-//     /*
-//         zeby przystąpić do synchronizaczji dwóch elementów, typ węzła musi się zgadzać
-//             RealDom::name musi mieć takie samo jak VDom:name
-        
-//         synchronizujemy atrybuty
-
-//         potem trzeba będzie zsynchronizować eventy podpięte pod ten węzeł
-
-//         potem przechodzimy do synchronizowania dzieci
-//     */
-//     todo!();
-// }
 
 
 fn applyNewViewChild(target: &RealDomChild, newVersion: &Vec<VDom>) {
