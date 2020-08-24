@@ -12,13 +12,15 @@ use crate::{
         Computed::Computed,
     },
     vdom::{
+        DomDriver::DomDriver::DomDriver,
         models::{
-            VDom::{VDom, VDomNode},
             RealDom::RealDom,
             RealDomChild::RealDomChild,
             RealDomNode::RealDomNode,
             RealDomText::RealDomText,
             RealDomComponent::RealDomComponent,
+            VDom::VDom,
+            VDomNode::VDomNode,
             VDomComponent::VDomComponent,
             VDomComponentId::VDomComponentId,
             VDomText::VDomText,
@@ -27,14 +29,20 @@ use crate::{
 };
 
 struct CacheNode<K: Eq + Hash, RNode, VNode> {
-    createNew: fn(item: &VNode) -> RNode,
-    synchronize: fn (&mut RNode, &VNode),
+    domDriver: DomDriver,
+    createNew: fn(&DomDriver, &VNode) -> RNode,
+    synchronize: fn (&DomDriver, &mut RNode, &VNode),
     data: HashMap<K, VecDeque<RNode>>,
 }
 
 impl<K: Eq + Hash, RNode, VNode> CacheNode<K, RNode, VNode> {
-    fn new(createNew: fn(item: &VNode) -> RNode, synchronize: fn (&mut RNode, &VNode)) -> CacheNode<K, RNode, VNode> {
+    fn new(
+        domDriver: DomDriver,
+        createNew: fn(&DomDriver, &VNode) -> RNode,
+        synchronize: fn (&DomDriver, &mut RNode, &VNode)
+    ) -> CacheNode<K, RNode, VNode> {
         CacheNode {
+            domDriver,
             createNew,
             synchronize,
             data: HashMap::new()
@@ -55,37 +63,38 @@ impl<K: Eq + Hash, RNode, VNode> CacheNode<K, RNode, VNode> {
 
         match node {
             Some(mut node) => {
-                synchronize(&mut node, &vnode);
+                synchronize(&self.domDriver, &mut node, &vnode);
                 node
             },
             None => {
-                createNew(&vnode)
+                createNew(&self.domDriver, &vnode)
             }
         }
     }
 }
 
-fn nodeCreateNew(node: &VDomNode) -> RealDomNode {
+fn nodeCreateNew(driver: &DomDriver, node: &VDomNode) -> RealDomNode {
     todo!();
 }
 
-fn nodeSynchronize(real: &mut RealDomNode, node: &VDomNode) {
+fn nodeSynchronize(driver: &DomDriver, real: &mut RealDomNode, node: &VDomNode) {
+    //let realNode = RealDomNode::new(driver.clone(), node.name.clone());
     todo!();
 }
 
-fn textCreateNew(node: &VDomText) -> RealDomText {
+fn textCreateNew(driver: &DomDriver, node: &VDomText) -> RealDomText {
     todo!();
 }
 
-fn textSynchronize(real: &mut RealDomText, node: &VDomText) {
+fn textSynchronize(driver: &DomDriver, real: &mut RealDomText, node: &VDomText) {
     todo!();
 }
 
-fn componentCreateNew(node: &VDomComponent) -> RealDomComponent {
+fn componentCreateNew(driver: &DomDriver, node: &VDomComponent) -> RealDomComponent {
     todo!();
 }
 
-fn componentSynchronize(real: &mut RealDomComponent, node: &VDomComponent) {
+fn componentSynchronize(driver: &DomDriver, real: &mut RealDomComponent, node: &VDomComponent) {
     todo!();
 }
 
@@ -107,14 +116,17 @@ fn componentSynchronize(real: &mut RealDomComponent, node: &VDomComponent) {
 fn applyNewViewChild(target: RealDomChild, newVersion: Vec<VDom>) -> VecDeque<(RealDomChild, Vec<VDom>)> {
 
     let mut realNode: CacheNode<String, RealDomNode, VDomNode> = CacheNode::new(
+        target.getDomDriver(),
         nodeCreateNew, 
         nodeSynchronize
     );
     let mut realText: CacheNode<String, RealDomText, VDomText> = CacheNode::new(
+        target.getDomDriver(),
         textCreateNew, 
         textSynchronize
     );
     let mut realComponent: CacheNode<VDomComponentId, RealDomComponent, VDomComponent> = CacheNode::new(
+        target.getDomDriver(),
         componentCreateNew,
         componentSynchronize
     );

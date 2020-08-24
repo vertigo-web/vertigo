@@ -201,6 +201,12 @@ impl RealDomChild {
             state.childIds()
         })
     }
+
+    pub fn getDomDriver(&self) -> DomDriver {
+        self.inner.get(|state| {
+            state.domDriver.clone()
+        })
+    }
 }
 
 impl Clone for RealDomChild {
