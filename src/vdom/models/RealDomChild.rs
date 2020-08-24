@@ -53,7 +53,12 @@ impl RealDomChildInner {
         nodeList
     }
 
+    pub fn newDetached(driver: DomDriver) -> RealDomChildInner {
+        let nodeComment = RealDomComment::new(driver.clone(), "".into());
+        let nodeList = RealDomChildInner::new(driver,  nodeComment);
 
+        nodeList
+    }
 
     pub fn extract(&mut self) -> Vec<RealDom> {
         let isEmpty = self.state.isEmpty();
@@ -168,6 +173,14 @@ impl RealDomChild {
         RealDomChild {
             inner: Rc::new(BoxRefCell::new(
                 RealDomChildInner::newWithParent(driver, parent)
+            ))
+        }
+    }
+
+    pub fn newDetached(driver: DomDriver) -> RealDomChild {
+        RealDomChild {
+            inner: Rc::new(BoxRefCell::new(
+                RealDomChildInner::newDetached(driver)
             ))
         }
     }

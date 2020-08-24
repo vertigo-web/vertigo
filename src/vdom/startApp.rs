@@ -27,8 +27,8 @@ pub fn startApp<T: 'static>(deps: Dependencies, param: T, render: fn(&T) -> Vec<
     
     let nodeList = RealDomChild::newWithParent(driver, RealDomId::root());
 
-    let render /* (Fn() -> Rc<Vec<VDom>> */ = move || Rc::new(render(&param));
-    let vDomComputed: Computed<Rc<Vec<VDom>>> = deps.from(render);
+    let render /* (Fn() -> Rc<Vec<VDom>> */ = move || render(&param);
+    let vDomComputed: Computed<Vec<VDom>> = deps.from(render);
 
     let subscription = renderToNode(nodeList, vDomComputed);
     subscription

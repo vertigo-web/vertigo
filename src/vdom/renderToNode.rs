@@ -31,7 +31,7 @@ use crate::{
 struct CacheNode<K: Eq + Hash, RNode, VNode> {
     domDriver: DomDriver,
     createNew: fn(&DomDriver, &VNode) -> RNode,
-    synchronize: fn (&DomDriver, &mut RNode, &VNode),
+    synchronize: fn (&mut RNode, &VNode),
     data: HashMap<K, VecDeque<RNode>>,
 }
 
@@ -39,7 +39,7 @@ impl<K: Eq + Hash, RNode, VNode> CacheNode<K, RNode, VNode> {
     fn new(
         domDriver: DomDriver,
         createNew: fn(&DomDriver, &VNode) -> RNode,
-        synchronize: fn (&DomDriver, &mut RNode, &VNode)
+        synchronize: fn (&mut RNode, &VNode)
     ) -> CacheNode<K, RNode, VNode> {
         CacheNode {
             domDriver,
@@ -63,7 +63,7 @@ impl<K: Eq + Hash, RNode, VNode> CacheNode<K, RNode, VNode> {
 
         match node {
             Some(mut node) => {
-                synchronize(&self.domDriver, &mut node, &vnode);
+                synchronize(&mut node, &vnode);
                 node
             },
             None => {
@@ -74,28 +74,49 @@ impl<K: Eq + Hash, RNode, VNode> CacheNode<K, RNode, VNode> {
 }
 
 fn nodeCreateNew(driver: &DomDriver, node: &VDomNode) -> RealDomNode {
+    let realNode = RealDomNode::new(driver.clone(), node.name.clone());
     todo!();
 }
 
-fn nodeSynchronize(driver: &DomDriver, real: &mut RealDomNode, node: &VDomNode) {
-    //let realNode = RealDomNode::new(driver.clone(), node.name.clone());
+fn nodeSynchronize(real: &mut RealDomNode, node: &VDomNode) {
     todo!();
 }
 
 fn textCreateNew(driver: &DomDriver, node: &VDomText) -> RealDomText {
-    todo!();
+    RealDomText::new(driver.clone(), node.value.clone())
 }
 
-fn textSynchronize(driver: &DomDriver, real: &mut RealDomText, node: &VDomText) {
-    todo!();
+fn textSynchronize(real: &mut RealDomText, node: &VDomText) {
+    real.value = node.value.clone();                                //niepotrzebne klonowanie prawdopodobnie
 }
 
 fn componentCreateNew(driver: &DomDriver, node: &VDomComponent) -> RealDomComponent {
+
     todo!();
+    // let child = RealDomChild::newDetached(*driver);
+    // let subscription = renderToNode(child.clone(), node.render.clone());
+    
+    
+    
+    //renderToNode(target: RealDomChild, computed: Computed<Rc<Vec<VDom>>>) -> Client { 
+
+    // struct RealDomComponent {
+    //     pub id: VDomComponentId,                    //do porównywania
+    //     subscription: Client,                   //Subskrybcją, , wstawia do handler
+    //     child: RealDomChild,
+    // }
+
+    // struct VDomComponent {
+    //     pub id: VDomComponentId,
+    //     render: Computed<Vec<VDom>>,
+    // }
 }
 
-fn componentSynchronize(driver: &DomDriver, real: &mut RealDomComponent, node: &VDomComponent) {
+fn componentSynchronize(real: &mut RealDomComponent, node: &VDomComponent) {
+
     todo!();
+
+    //nic nie trzeba synchronizować. Komponent sam się synchronizuje.
 }
 
 // fn applyNewViewNode(om_a: &RealDomNode, dom_b: &VDomNode) {
@@ -113,14 +134,14 @@ fn componentSynchronize(driver: &DomDriver, real: &mut RealDomComponent, node: &
 // }
 
 
-fn applyNewViewChild(target: RealDomChild, newVersion: Vec<VDom>) -> VecDeque<(RealDomChild, Vec<VDom>)> {
+fn applyNewViewChild(target: RealDomChild, newVersion: &Vec<VDom>) {
 
     let mut realNode: CacheNode<String, RealDomNode, VDomNode> = CacheNode::new(
         target.getDomDriver(),
         nodeCreateNew, 
         nodeSynchronize
     );
-    let mut realText: CacheNode<String, RealDomText, VDomText> = CacheNode::new(
+    let mut realText: CacheNode<String, RealDomText, VDomText> = CacheNode::new(                    //TODO - trzeci parametr HashMap<String, String>
         target.getDomDriver(),
         textCreateNew, 
         textSynchronize
@@ -151,19 +172,14 @@ fn applyNewViewChild(target: RealDomChild, newVersion: Vec<VDom>) -> VecDeque<(R
     }
 
 
-    let mut out = VecDeque::new();
-
-    for item in newVersion.into_iter() {
+    for item in newVersion.iter() {
 
         match item {
             VDom::Node { node } => {
                 let id = node.name.clone();
                 let domChild = realNode.getOrCreate(id, &node);
 
-                out.push_back((
-                    domChild.child.clone(),
-                    node.child.clone()
-                ));
+                applyNewViewChild(domChild.child.clone(), &node.child);
 
                 target.append(RealDom::Node { node: domChild });
             },
@@ -181,31 +197,15 @@ fn applyNewViewChild(target: RealDomChild, newVersion: Vec<VDom>) -> VecDeque<(R
             }
         }
     }
-
-    out
 }
 
 
-pub fn renderToNode(target: RealDomChild, computed: Computed<Rc<Vec<VDom>>>) -> Client { 
+pub fn renderToNode(target: RealDomChild, computed: Computed<Vec<VDom>>) -> Client { 
     let subscription: Client = computed.subscribe(move |newVersion| {
-        let mut syncTodo: VecDeque<(RealDomChild, Vec<VDom>)> = applyNewViewChild(
+        applyNewViewChild(
             target.clone(), 
-            (*(*newVersion)).clone()
+            newVersion
         );
-
-        loop {
-            let first = syncTodo.pop_front();
-
-            match first {
-                Some((realList, virtualList)) => {
-                    let newListTodo = applyNewViewChild(realList, virtualList);
-                    syncTodo.extend(newListTodo);
-                },
-                None => {
-                    return;
-                }
-            }
-        }
     });
 
     subscription

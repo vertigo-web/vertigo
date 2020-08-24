@@ -14,7 +14,7 @@ use crate::{
 #[derive(Clone)]
 pub struct VDomComponent {
     pub id: VDomComponentId,
-    render: Computed<Vec<VDom>>,
+    pub render: Computed<Vec<VDom>>,
 }
 
 impl VDomComponent {
