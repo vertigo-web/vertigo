@@ -37,11 +37,11 @@ impl RealDomNode {
         node
     }
 
-    fn setAttr(&mut self, name: String, value: String) {
+    fn updateAttrOne(&mut self, name: &String, value: &String) {
         let needUpdate = {
-            let item = self.attr.get(&name);
+            let item = self.attr.get(name);
             if let Some(item) = item {
-                if *item == value {
+                if *item == *value {
                     false
                 } else {
                     true
@@ -53,26 +53,18 @@ impl RealDomNode {
 
         if needUpdate {
             self.domDriver.setAttr(self.idDom.clone(), &name, &value);
-             self.attr.insert(name, value);
+             self.attr.insert(name.clone(), value.clone());
        }
     }
 
-    fn removeAttr(&mut self, name: String) {
-        let needDelete = {
-            self.attr.contains_key(&name)
-        };
-
-        if needDelete {
-            self.attr.remove(&name);
-            self.domDriver.removeAttr(self.idDom.clone(), &name);
-        }
-    }
-
     pub fn updateAttr(&mut self, attr: &HashMap<String, String>) {
-        //iterujemy po istniejących juz atrybutach. Jesli atrybut nie jstnieje w nowym zestawie, to go kasujemy
-        //iterujemy po nowych atrybutach, wywolujemy metodę updateAttr(&key, &value)
-        //jesli bedzie trzeba zaktualizowac, to sobie sklonujemy taka wartosc
-        todo!();
+        self.attr.retain(|key, _value| {
+            attr.contains_key(key)
+        });
+
+        for (key, value) in attr.iter() {
+            self.updateAttrOne(key, value);
+        }
     }
 }
 
