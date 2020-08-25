@@ -14,6 +14,10 @@ TODO - Graph - usunac nieuzywane krawedzie (subskrybcje)
 TODO - Graph - zamienić Clone na Copy
 
 TODO - dodać jakieś makra które pozwolą na łatwe generowanie html-a (https://docs.rs/maplit/1.0.2/maplit/)
+
+
+TODO - Będąc w bloku computed, albo subskrybcji, całkowicie ignorować wszelkie akcje które będą chciały zmienić wartość
+       rzucać standardowy strumień błędów informację o incydencie. Dzięki temu nowa wadliwa funkcjonalność nie zepsuje tej juz dobrze ulezanej funkcjonalności
 */
 
 macro_rules! map(
