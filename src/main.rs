@@ -15,6 +15,8 @@ TODO - Graph - zamienić Clone na Copy
 */
 
 fn main() {
+    env_logger::init();
+
     println!("test");
 
 
@@ -44,7 +46,25 @@ fn main() {
     //po wystartowaniu subskrybcjaApp tą zmienną trzeba wpakować w zmienną globalną zeby nie stracić subskrybcji
 
     fn glownaFunkcjaRenderujaca(appState: &AppState) -> Vec<VDom> {
-        todo!();
+
+        use std::collections::HashMap;
+        use crate::{
+            vdom::{
+                models::{
+                    VDomNode::VDomNode,
+                },
+            }
+        };
+
+        vec!(
+            VDom::Node {
+                node: VDomNode {
+                    name: "div".into(),
+                    attr: HashMap::new(),
+                    child: vec!()
+                }
+            }
+        )
     }
 
 
@@ -54,7 +74,7 @@ fn main() {
 
     let subskrybcjaApp = startApp(root, appState, glownaFunkcjaRenderujaca);
 
-    println!("Wygaslo");
+    println!("--- Wygaslo ---");
 
     subskrybcjaApp.off();
 }
