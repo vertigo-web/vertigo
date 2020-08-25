@@ -12,6 +12,8 @@ TODO - Dodać tranzakcyjną aktualizację
 TODO - Graph - usunac nieuzywane krawedzie (subskrybcje)
 
 TODO - Graph - zamienić Clone na Copy
+
+TODO - dodać jakieś makra które pozwolą na łatwe generowanie html-a (https://docs.rs/maplit/1.0.2/maplit/)
 */
 
 macro_rules! map(
@@ -72,6 +74,8 @@ fn main() {
         /*
             zaimplementować FromStr, albo coś takiego
             po to zeby dalo sie umiescic String lub str
+
+            https://docs.rs/maplit/1.0.2/maplit/
         */
 
         vec!(
