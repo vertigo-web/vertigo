@@ -52,6 +52,7 @@ fn main() {
             vdom::{
                 models::{
                     VDomNode::VDomNode,
+                    VDomText::VDomText,
                 },
             }
         };
@@ -61,7 +62,13 @@ fn main() {
                 node: VDomNode {
                     name: "div".into(),
                     attr: HashMap::new(),
-                    child: vec!()
+                    child: vec!(
+                        VDom::Text {
+                            node: VDomText{
+                                value: "Abudabi".into(),
+                            }
+                        }
+                    )
                 }
             }
         )
