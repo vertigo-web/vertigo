@@ -14,6 +14,18 @@ TODO - Graph - usunac nieuzywane krawedzie (subskrybcje)
 TODO - Graph - zamienić Clone na Copy
 */
 
+macro_rules! map(
+    { $($key:expr => $value:expr),+ } => {
+        {
+            let mut m = ::std::collections::HashMap::new();
+            $(
+                m.insert($key, $value);
+            )+
+            m
+        }
+     };
+);
+
 fn main() {
     env_logger::init();
 
@@ -57,11 +69,16 @@ fn main() {
             }
         };
 
+        /*
+            zaimplementować FromStr, albo coś takiego
+            po to zeby dalo sie umiescic String lub str
+        */
+
         vec!(
             VDom::Node {
                 node: VDomNode {
                     name: "div".into(),
-                    attr: HashMap::new(),
+                    attr: map!{ "aaa".into() => "one".into(), "bbb".into() => "two".into() },
                     child: vec!(
                         VDom::Text {
                             node: VDomText{
@@ -72,6 +89,12 @@ fn main() {
                 }
             }
         )
+
+        /*
+        <div>
+            "Abudabi"
+        </div>
+        */
     }
 
 
