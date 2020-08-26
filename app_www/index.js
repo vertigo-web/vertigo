@@ -1,27 +1,13 @@
 //@ts-check
 
-import * as wasm from "wasm-module-app";
+import * as wasm from "../build_wasm/app_rust";
 
 
 window.consoleLog = (message) => {
     console.info(`consoleLog => ${message}`);
 };
 
-window.alertConsole = (message) => {
-    console.info(`alert console - ${message}`);
-};
+console.info('startuje główny moduł js');
 
-window.callFromWasm = (message) => {
-    console.info(`Wiadomosc z wasm -> ${message}`);
-}
+wasm.startApp();
 
-console.info('aaa');
-
-const aa = wasm.startApp("dupa bladaaaaaa333", "66");
-console.info(`AA = ${aa}`);
-
-
-setInterval(() => {
-    const nextId = wasm.getNextId();
-    console.info(`next id === ${nextId}`);
-}, 1000);

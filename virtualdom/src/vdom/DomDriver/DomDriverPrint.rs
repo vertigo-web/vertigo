@@ -15,47 +15,47 @@ impl DomDriverPrint {
 
 impl DomDriverTrait for DomDriverPrint {
     fn createNode(&self, id: RealDomId, name: &String) {
-        println!("createNode {} - {}", id, name);
+        log::info!("createNode {} - {}", id, name);
     }
 
     fn createText(&self, id: RealDomId, value: &String) {
-        println!("createText {} {}", id, value);
+        log::info!("createText {} {}", id, value);
     }
 
     fn createComment(&self, id: RealDomId, value: &String) {
-        println!("createComment {} {}", id, value);
+        log::info!("createComment {} {}", id, value);
     }
 
     fn setAttr(&self, id: RealDomId, key: &String, value: &String) {
-        println!("setAttr {} {} {}", id, key, value);
+        log::info!("setAttr {} {} {}", id, key, value);
     }
     
     fn removeAttr(&self, id: RealDomId, name: &String) {
-        println!("removeAttr {} {}", id, name);
+        log::info!("removeAttr {} {}", id, name);
     }
 
     fn remove(&self, id: RealDomId) {
-        println!("remove {}", id);
+        log::info!("remove {}", id);
     }
 
     fn removeAllChild(&self, id: RealDomId) {
-        println!("removeAllChild {}", id);
+        log::info!("removeAllChild {}", id);
     }
 
     fn insertAsFirstChild(&self, parent: RealDomId, child: RealDomId) {
-        println!("insertAsFirstChild {} {}", parent, child);
+        log::info!("insertAsFirstChild {} {}", parent, child);
     }
 
     fn insertBefore(&self, refId: RealDomId, child: RealDomId) {
-        println!("insertBefore {} {}", refId, child);
+        log::info!("insertBefore {} {}", refId, child);
     }
 
     fn insertAfter(&self, refId: RealDomId, child: RealDomId) {
-        println!("insertAfter {} {}", refId, child);
+        log::info!("insertAfter {} {}", refId, child);
     }
 
     fn addChild(&self, parent: RealDomId, child: RealDomId) {
-        println!("addChild {} {}", parent, child);
+        log::info!("addChild {} {}", parent, child);
     }
 }
 

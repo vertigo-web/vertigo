@@ -30,7 +30,7 @@ macro_rules! map(
 pub fn startApp() {
     wasm_logger::init(wasm_logger::Config::default());
 
-    println!("test");
+    log::info!("Start rustowego modułu");
 
     use std::rc::Rc;
     use virtualdom::computed::{
@@ -113,10 +113,10 @@ pub fn startApp() {
     let subskrybcjaApp = startApp(root, appState.clone(), glownaFunkcjaRenderujaca);
 
     appState.value.setValue(55);
-    println!("Przestawiam atrybut");
+    log::info!("Przestawiam wartość");
     appState.at.setValue(1000);
 
-    println!("--- Wygaslo ---");
+    log::info!("--- koniec aplikacji, przechodzę do wyłączania subskrybcji ---");
 
     subskrybcjaApp.off();
 }
