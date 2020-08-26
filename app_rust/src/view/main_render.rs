@@ -41,7 +41,7 @@ pub fn main_render(app_state: &Rc<AppState>) -> Vec<VDom> {
         VDom::Node {
             node: VDomNode {
                 name: "div".into(),
-                attr: map!{ "aaa".into() => "one".into(), "bbb".into() => format!("wallll {}", app_state.at.getValue()) },
+                attr: map!{ "aaa".into() => "one".into(), "bbb".into() => format!("'wallll {}'", app_state.at.getValue()) },
                 child: vec!(
                     VDom::Text {
                         node: VDomText {
