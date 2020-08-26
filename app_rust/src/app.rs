@@ -119,4 +119,6 @@ pub fn startApp() {
     log::info!("--- koniec aplikacji, przechodzę do wyłączania subskrybcji ---");
 
     subskrybcjaApp.off();
+
+    crate::consoleLog("kończę funkcję");
 }
