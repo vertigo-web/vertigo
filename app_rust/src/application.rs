@@ -12,6 +12,12 @@ TODO - dodać jakieś makra które pozwolą na łatwe generowanie html-a (http
 
 TODO - Będąc w bloku computed, albo subskrybcji, całkowicie ignorować wszelkie akcje które będą chciały zmienić wartość
        rzucać standardowy strumień błędów informację o incydencie. Dzięki temu nowa wadliwa funkcjonalność nie zepsuje tej juz dobrze ulezanej funkcjonalności
+    
+TODO - poprawić mechanizm synchronizowania listy dzieci
+    1. brać listę istniejących juz nodów (bez odczepiania od parenta)
+    2. wygenerowac nowa liste
+    3. wyszukac pierwszy usuniety node, za nim podczapiac te nowe we własciwej kolejnośli
+        lub wyszukac pierwszy który istnieje i za nim podczepiać te kolejne
 */
 
 use std::rc::Rc;
