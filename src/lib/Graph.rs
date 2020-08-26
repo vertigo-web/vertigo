@@ -33,14 +33,16 @@ impl GraphOne {
 
     pub fn getAllDeps(&self, edgeA: GraphId) -> HashSet<GraphId> {
         let mut result = HashSet::new();
-        let mut toTraverse: Vec<GraphId> = vec!(edgeA);
+        let mut toTraverse: Vec<GraphId> = vec!(edgeA.clone());
 
         loop {
             let nextToTraverse = toTraverse.pop();
 
             match nextToTraverse {
                 Some(next) => {
-                    result.insert(next.clone());
+                    if next != edgeA {
+                        result.insert(next.clone());
+                    }
 
                     let list = self.rel.get(&next);
 

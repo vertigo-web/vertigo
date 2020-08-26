@@ -37,10 +37,11 @@ fn main() {
 
     println!("test");
 
-
+    use std::rc::Rc;
     use crate::{
         lib::{
             Dependencies::Dependencies,
+            Value::Value,
         },
         vdom::{
             models::{
@@ -51,20 +52,26 @@ fn main() {
     };
 
 
-    struct AppState {}
+    struct AppState {
+        value: Value<u32>,
+        at: Value<u32>
+    }
 
     impl AppState {
-        fn new(root: &Dependencies) -> AppState {
-            AppState {
-            }
+        fn new(root: &Dependencies) -> Rc<AppState> {
+            Rc::new(AppState {
+                value: root.newValue(33),
+                at: root.newValue(999),
+            })
         }
     }
 
 
     //po wystartowaniu subskrybcjaApp tą zmienną trzeba wpakować w zmienną globalną zeby nie stracić subskrybcji
 
-    fn glownaFunkcjaRenderujaca(appState: &AppState) -> Vec<VDom> {
+    fn glownaFunkcjaRenderujaca(appState: &Rc<AppState>) -> Vec<VDom> {
 
+        let appState = appState.clone();
         use std::collections::HashMap;
         use crate::{
             vdom::{
@@ -86,11 +93,11 @@ fn main() {
             VDom::Node {
                 node: VDomNode {
                     name: "div".into(),
-                    attr: map!{ "aaa".into() => "one".into(), "bbb".into() => "two".into() },
+                    attr: map!{ "aaa".into() => "one".into(), "bbb".into() => format!("wallll {}", appState.at.getValue()) },
                     child: vec!(
                         VDom::Text {
                             node: VDomText{
-                                value: "Abudabi".into(),
+                                value: format!("aktualna wartosc = {}", appState.value.getValue()),
                             }
                         }
                     )
@@ -99,7 +106,7 @@ fn main() {
         )
 
         /*
-        <div>
+        <div aaa="one" bbb="two">
             "Abudabi"
         </div>
         */
@@ -110,7 +117,11 @@ fn main() {
     let root: Dependencies = Dependencies::new();
     let appState = AppState::new(&root);
 
-    let subskrybcjaApp = startApp(root, appState, glownaFunkcjaRenderujaca);
+    let subskrybcjaApp = startApp(root, appState.clone(), glownaFunkcjaRenderujaca);
+
+    appState.value.setValue(55);
+    println!("Przestawiam atrybut");
+    appState.at.setValue(1000);
 
     println!("--- Wygaslo ---");
 

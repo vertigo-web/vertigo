@@ -65,7 +65,7 @@ impl Dependencies {
                     if let Some(item) = item {
                         out.push(item.clone());
                     } else {
-                        log::error!("Coś poszło nie tak z pobieraniem refresh tokenów");
+                        log::error!("Coś poszło nie tak z pobieraniem refresh tokenów {:?}", itemId);
                     }
                 }
 
