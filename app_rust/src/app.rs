@@ -27,8 +27,8 @@ macro_rules! map(
      };
 );
 
-fn main() {
-    env_logger::init();
+pub fn startApp() {
+    wasm_logger::init(wasm_logger::Config::default());
 
     println!("test");
 
