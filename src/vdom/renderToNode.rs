@@ -4,11 +4,12 @@ use std::collections::{
 };
 use std::hash::Hash;
 
+use virtualdom::computed::{
+    Client::Client,
+    Computed::Computed,
+};
+
 use crate::{
-    lib::{
-        Client::Client,
-        Computed::Computed,
-    },
     vdom::{
         DomDriver::DomDriver::DomDriver,
         models::{

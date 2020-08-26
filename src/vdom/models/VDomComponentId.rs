@@ -1,8 +1,9 @@
+use virtualdom::computed::{
+    Computed::Computed,
+    GraphId::GraphId,
+};
+
 use crate::{
-    lib::{
-        Computed::Computed,
-        GraphId::GraphId,
-    },
     vdom::{
         models::VDom::VDom,
     }

@@ -1,5 +1,5 @@
 use std::rc::Rc;
-use crate::lib::BoxRefCell::BoxRefCell;
+use virtualdom::computed::BoxRefCell::BoxRefCell;
 use crate::vdom::{
     DomDriver::{
         DomDriver::DomDriver,

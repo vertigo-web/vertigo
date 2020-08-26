@@ -2,10 +2,10 @@
 
 #[test]
 fn basic() {
-    use crate::lib::{
+    use crate::computed::{
         Dependencies::Dependencies,
     };
-    use crate::tests::BoxValue::BoxValue;
+    use crate::computed::tests::BoxValue::BoxValue;
 
     let root = Dependencies::new();
 
@@ -51,11 +51,11 @@ fn basic() {
 
 #[test]
 fn basic2() {
-    use crate::lib::{
+    use crate::computed::{
         Dependencies::Dependencies,
         Computed::Computed,
     };
-    use crate::tests::BoxValue::BoxValue;
+    use crate::computed::tests::BoxValue::BoxValue;
 
     let root = Dependencies::new();
 
@@ -185,11 +185,11 @@ fn pointers() {
 
 #[test]
 fn test_subscription() {
-    use crate::lib::{
+    use crate::computed::{
         Dependencies::Dependencies,
         Computed::Computed,
     };
-    use crate::tests::BoxValue::BoxValue;
+    use crate::computed::tests::BoxValue::BoxValue;
 
     let root = Dependencies::new();
 

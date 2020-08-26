@@ -1,9 +1,6 @@
 #![allow(non_snake_case)]
 
-mod lib;
 mod vdom;
-#[cfg(test)]
-mod tests;
 
 /*
 TODO - Dodać tranzakcyjną aktualizację
@@ -38,11 +35,12 @@ fn main() {
     println!("test");
 
     use std::rc::Rc;
+    use virtualdom::computed::{
+        Dependencies::Dependencies,
+        Value::Value,
+    };
+
     use crate::{
-        lib::{
-            Dependencies::Dependencies,
-            Value::Value,
-        },
         vdom::{
             models::{
                 VDom::VDom,
@@ -124,6 +122,8 @@ fn main() {
     appState.at.setValue(1000);
 
     println!("--- Wygaslo ---");
+
+    virtualdom::test(3, 3);
 
     subskrybcjaApp.off();
 }

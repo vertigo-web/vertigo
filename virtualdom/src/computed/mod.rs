@@ -7,3 +7,5 @@ pub mod Computed;
 pub mod Client;
 pub mod RefreshToken;
 
+#[cfg(test)]
+mod tests;

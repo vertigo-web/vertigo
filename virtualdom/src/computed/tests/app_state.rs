@@ -1,10 +1,10 @@
 
-use crate::lib::{
+use crate::computed::{
     Value::Value,
     Dependencies::Dependencies,
     Computed::Computed,
 };
-use crate::tests::{
+use crate::computed::tests::{
     BoxValue::BoxValue,
 };
 

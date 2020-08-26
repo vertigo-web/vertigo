@@ -1,13 +1,12 @@
 use std::fmt::Debug;
-use crate::{
-    lib::{
-        Computed::Computed,
-    },
-    vdom::{
-        models::{
-            VDom::VDom,
-            VDomComponentId::VDomComponentId,
-        }
+use virtualdom::computed::{
+    Computed::Computed,
+};
+
+use crate::vdom::{
+    models::{
+        VDom::VDom,
+        VDomComponentId::VDomComponentId,
     }
 };
 

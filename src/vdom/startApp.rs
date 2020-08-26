@@ -1,6 +1,6 @@
 use std::rc::Rc;
 
-use crate::lib::{
+use virtualdom::computed::{
     Dependencies::Dependencies,
     Computed::Computed,
     Client::Client,

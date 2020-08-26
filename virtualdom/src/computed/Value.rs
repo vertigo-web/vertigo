@@ -1,7 +1,7 @@
 use std::rc::Rc;
 use std::fmt::Debug;
 
-use crate::lib::{
+use crate::computed::{
     BoxRefCell::BoxRefCell,
     Dependencies::Dependencies,
     Computed::Computed,
