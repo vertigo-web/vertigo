@@ -9,5 +9,5 @@ window.consoleLog = (message) => {
 
 console.info('startuje główny moduł js');
 
-wasm.startApp();
+wasm.start_app();
 

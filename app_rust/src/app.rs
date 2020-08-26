@@ -10,107 +10,33 @@ TODO - Graph - zamienić Clone na Copy
 
 TODO - dodać jakieś makra które pozwolą na łatwe generowanie html-a (https://docs.rs/maplit/1.0.2/maplit/)
 
-
 TODO - Będąc w bloku computed, albo subskrybcji, całkowicie ignorować wszelkie akcje które będą chciały zmienić wartość
        rzucać standardowy strumień błędów informację o incydencie. Dzięki temu nowa wadliwa funkcjonalność nie zepsuje tej juz dobrze ulezanej funkcjonalności
 */
 
-macro_rules! map(
-    { $($key:expr => $value:expr),+ } => {
-        {
-            let mut m = ::std::collections::HashMap::new();
-            $(
-                m.insert($key, $value);
-            )+
-            m
-        }
-     };
-);
+use virtualdom::{
+    vdom::{
+        startApp::startApp,
+    },
+    computed::{
+        Dependencies::Dependencies,
+    }
+};
 
-pub fn startApp() {
+use crate::app_state::AppState;
+use crate::view::main_render::main_render;
+
+pub fn mainApp() {
     wasm_logger::init(wasm_logger::Config::default());
 
-    log::info!("Start rustowego modułu");
-
-    use std::rc::Rc;
-    use virtualdom::computed::{
-        Dependencies::Dependencies,
-        Value::Value,
-    };
-
-    use virtualdom::{
-        vdom::{
-            models::{
-                VDom::VDom,
-            },
-            startApp::startApp,
-        }
-    };
-
-
-    struct AppState {
-        value: Value<u32>,
-        at: Value<u32>
-    }
-
-    impl AppState {
-        fn new(root: &Dependencies) -> Rc<AppState> {
-            Rc::new(AppState {
-                value: root.newValue(33),
-                at: root.newValue(999),
-            })
-        }
-    }
-
+    log::info!("Start rustowego modułu ...");
 
     //po wystartowaniu subskrybcjaApp tą zmienną trzeba wpakować w zmienną globalną zeby nie stracić subskrybcji
-
-    fn glownaFunkcjaRenderujaca(appState: &Rc<AppState>) -> Vec<VDom> {
-
-        let appState = appState.clone();
-        use virtualdom::vdom::{
-            models::{
-                VDomNode::VDomNode,
-                VDomText::VDomText,
-            },
-        };
-
-        /*
-            zaimplementować FromStr, albo coś takiego
-            po to zeby dalo sie umiescic String lub str
-
-            https://docs.rs/maplit/1.0.2/maplit/
-        */
-
-        vec!(
-            VDom::Node {
-                node: VDomNode {
-                    name: "div".into(),
-                    attr: map!{ "aaa".into() => "one".into(), "bbb".into() => format!("wallll {}", appState.at.getValue()) },
-                    child: vec!(
-                        VDom::Text {
-                            node: VDomText{
-                                value: format!("aktualna wartosc = {}", appState.value.getValue()),
-                            }
-                        }
-                    )
-                }
-            }
-        )
-
-        /*
-        <div aaa="one" bbb="two">
-            "Abudabi"
-        </div>
-        */
-    }
-
-
 
     let root: Dependencies = Dependencies::new();
     let appState = AppState::new(&root);
 
-    let subskrybcjaApp = startApp(root, appState.clone(), glownaFunkcjaRenderujaca);
+    let subskrybcjaApp = startApp(root, appState.clone(), main_render);
 
     appState.value.setValue(55);
     log::info!("Przestawiam wartość");
