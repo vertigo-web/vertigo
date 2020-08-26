@@ -40,20 +40,13 @@ impl GraphOne {
 
             match nextToTraverse {
                 Some(next) => {
-                    if next != edgeA {
-                        result.insert(next.clone());
-                    }
-
                     let list = self.rel.get(&next);
 
                     if let Some(list) = list {
-
                         for item in list {
                             let isContain = result.contains(item);
-                            if isContain {
-                                //ignore
-                            } else {
-
+                            if isContain == false {
+                                result.insert(item.clone());
                                 toTraverse.push(item.clone());
                             }
                         }
