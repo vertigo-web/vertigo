@@ -1,5 +1,5 @@
 use std::fmt::Debug;
-use virtualdom::computed::{
+use crate::computed::{
     Computed::Computed,
 };
 

@@ -1,6 +1,4 @@
-use std::rc::Rc;
-
-use virtualdom::computed::{
+use crate::computed::{
     Dependencies::Dependencies,
     Computed::Computed,
     Client::Client,

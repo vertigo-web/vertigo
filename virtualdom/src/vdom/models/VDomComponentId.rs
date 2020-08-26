@@ -1,4 +1,4 @@
-use virtualdom::computed::{
+use crate::computed::{
     Computed::Computed,
     GraphId::GraphId,
 };

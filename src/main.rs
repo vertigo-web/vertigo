@@ -1,7 +1,5 @@
 #![allow(non_snake_case)]
 
-mod vdom;
-
 /*
 TODO - Dodać tranzakcyjną aktualizację
     self.deps.triggerChange([id1, id2, id3]);               //to powinno wystarczyc
@@ -40,7 +38,7 @@ fn main() {
         Value::Value,
     };
 
-    use crate::{
+    use virtualdom::{
         vdom::{
             models::{
                 VDom::VDom,
@@ -70,14 +68,11 @@ fn main() {
     fn glownaFunkcjaRenderujaca(appState: &Rc<AppState>) -> Vec<VDom> {
 
         let appState = appState.clone();
-        use std::collections::HashMap;
-        use crate::{
-            vdom::{
-                models::{
-                    VDomNode::VDomNode,
-                    VDomText::VDomText,
-                },
-            }
+        use virtualdom::vdom::{
+            models::{
+                VDomNode::VDomNode,
+                VDomText::VDomText,
+            },
         };
 
         /*
@@ -122,8 +117,6 @@ fn main() {
     appState.at.setValue(1000);
 
     println!("--- Wygaslo ---");
-
-    virtualdom::test(3, 3);
 
     subskrybcjaApp.off();
 }

@@ -10,7 +10,7 @@ use crate::vdom::{
 pub struct RealDomComment {
     domDriver: DomDriver,
     pub idDom: RealDomId,
-    value: String,
+    _value: String,
 }
 
 impl RealDomComment {
@@ -22,7 +22,7 @@ impl RealDomComment {
         let node = RealDomComment {
             domDriver,
             idDom: id,
-            value,
+            _value: value,
         };
 
         node

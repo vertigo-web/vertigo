@@ -4,7 +4,7 @@ use std::collections::{
 };
 use std::hash::Hash;
 
-use virtualdom::computed::{
+use crate::computed::{
     Client::Client,
     Computed::Computed,
 };
@@ -101,7 +101,7 @@ fn componentCreateNew(driver: &DomDriver, node: &VDomComponent) -> RealDomCompon
     }
 }
 
-fn componentSynchronize(real: &mut RealDomComponent, node: &VDomComponent) {
+fn componentSynchronize(_real: &mut RealDomComponent, _node: &VDomComponent) {
     //nic nie trzeba synchronizować. Komponent sam się synchronizuje.
 }
 
