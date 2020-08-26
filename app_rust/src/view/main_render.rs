@@ -5,8 +5,6 @@ use virtualdom::{
     vdom::{
         models::{
             VDom::VDom,
-            VDomNode::VDomNode,
-            VDomText::VDomText,
         },
     },
 };
@@ -38,20 +36,40 @@ pub fn main_render(app_state: &Rc<AppState>) -> Vec<VDom> {
     */
 
     vec!(
-        VDom::Node {
-            node: VDomNode {
-                name: "div".into(),
-                attr: map!{ "aaa".into() => "one".into(), "bbb".into() => format!("'wallll {}'", app_state.at.getValue()) },
-                child: vec!(
-                    VDom::Text {
-                        node: VDomText {
-                            value: format!("aktualna wartosc = {}", app_state.value.getValue()),
-                        }
-                    }
-                )
-            }
-        }
+        VDom::node("div", map!{
+            "aaa".into() => "one".into(),
+            "bbb".into() => format!("'wallll {}'", app_state.at.getValue())
+        }, vec!(
+            VDom::text(format!("aktualna wartosc = {}", app_state.value.getValue())),
+        ))
     )
+
+    // vec!(
+    //     VDom::node("div", map!{
+    //         "aaa".into() => "one".into(),
+    //         "bbb".into() => format!("'wallll {}'", app_state.at.getValue())
+    //     }, vec!(
+    //         VDom::Text {
+    //             node: VDomText {
+    //                 value: format!("aktualna wartosc = {}", app_state.value.getValue()),
+    //             }
+    //         }
+    //     ))
+    // )
+
+    // VDom::Node {
+    //     node: VDomNode {
+    //         name: "div".into(),
+    //         attr: map!{ "aaa".into() => "one".into(), "bbb".into() => format!("'wallll {}'", app_state.at.getValue()) },
+    //         child: vec!(
+    //             VDom::Text {
+    //                 node: VDomText {
+    //                     value: format!("aktualna wartosc = {}", app_state.value.getValue()),
+    //                 }
+    //             }
+    //         )
+    //     }
+    // }
 
     /*
     <div aaa="one" bbb="two">
