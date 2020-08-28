@@ -13,16 +13,11 @@ use crate::vdom::{
     renderToNode::renderToNode,
     DomDriver::{
         DomDriver::DomDriver,
-        DomDriverPrint::DomDriverPrint,
     }
 };
 
 
-pub fn startApp<T: 'static>(deps: Dependencies, param: T, render: fn(&T) -> Vec<VDom>) -> Client {
-
-    let driverPrint = DomDriverPrint::new();
-    let driver = DomDriver::new(driverPrint);
-    
+pub fn startApp<T: 'static>(driver: DomDriver, deps: Dependencies, param: T, render: fn(&T) -> Vec<VDom>) -> Client {
     let nodeList = RealDomChild::newWithParent(driver, RealDomId::root());
 
     let render /* (Fn() -> Rc<Vec<VDom>> */ = move || render(&param);

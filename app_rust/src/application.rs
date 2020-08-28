@@ -33,6 +33,10 @@ use std::rc::Rc;
 use virtualdom::{
     vdom::{
         startApp::startApp,
+        DomDriver::{
+            DomDriver::DomDriver,
+            DomDriverPrint::DomDriverPrint,
+        },
     },
     computed::{
         Dependencies::Dependencies,
@@ -60,7 +64,13 @@ impl Application {
 
         let root: Dependencies = Dependencies::new();
         let appState = AppState::new(&root);
-        let subskrybcjaApp = startApp(root, appState.clone(), main_render);
+
+
+        let driverPrint = DomDriverPrint::new();
+        let domDriver = DomDriver::new(driverPrint);
+        
+        
+        let subskrybcjaApp = startApp(domDriver, root, appState.clone(), main_render);
 
         appState.value.setValue(55);
         log::info!("Przestawiam wartość");
@@ -69,8 +79,6 @@ impl Application {
         log::info!("--- koniec aplikacji, przechodzę do wyłączania subskrybcji ---");
 
         //subskrybcjaApp.off();
-
-        driver.consoleLog("Zainicjowałem stan aplikacji");
 
         Application {
             driver,

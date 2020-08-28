@@ -15,7 +15,7 @@ use driver::DomDriverBrowser;
 static ALLOC: wee_alloc::WeeAlloc = wee_alloc::WeeAlloc::INIT;
 
 thread_local! {
-    static appState: RefCell<Application> = {
+    static APP_STATE: RefCell<Application> = {
         println!("Tutaj trzeba będzie powołać do zycia obiekt drivera przegladarkowego który będzie odwoływał się do tych funkcji powyzej");
         let driver = DomDriverBrowser::new();
         RefCell::new(Application::new(driver))
@@ -24,10 +24,8 @@ thread_local! {
 
 #[wasm_bindgen]
 pub fn start_app() {
-    appState.with(|state| {
+    APP_STATE.with(|state| {
         let state = state.borrow_mut();
         state.start_app();
-
-        state.driver.consoleLog("wystartowano aplikację webassemblerową");
     });
 }
