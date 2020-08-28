@@ -34,8 +34,22 @@ export function startDriverLoop(callback) {
 
     console.info("Rozpoczynam synchronizowanie");
 
-    window.button33.addEventListener('click', () => {
-        console.info("klik w przycisk");
+    const root = document.createElement('div');
+
+    const wrapper = document.createElement('div');
+    wrapper.setAttribute('style', 'padding: 5px; background-color: #e0e0e0;');
+
+    const button = document.createElement('button');
+
+    const text = document.createTextNode('click');
+
+    button.append(text);
+    wrapper.appendChild(button);
+    root.appendChild(wrapper);
+    document.body.appendChild(root);
+
+    root.addEventListener('click', (event) => {
+        console.info('trigger....', event);
         emmiter.trigger();
-    }, false);
+    });
 }

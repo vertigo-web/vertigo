@@ -24,7 +24,7 @@ pub struct DomDriverBrowser {
 impl DomDriverBrowser {
     pub fn new() -> DomDriverBrowser {
 
-        let mut driver = Rc::new(DomDriverBrowserInner {
+        let driver = Rc::new(DomDriverBrowserInner {
         });
 
         let callFromJS: Closure<dyn FnMut()> = {
