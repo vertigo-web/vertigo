@@ -7,12 +7,19 @@ export function consoleLog(message) {
 }
 
 let app = 4;
+let callbackList = [];
 
-export function startDriverLoop() {
+export function startDriverLoop(callback) {
+    callbackList.push(callback);
+
     console.info("Rozpoczynam synchronizowanie");
 
     setInterval(() => {
         app++;
-        console.info("synchronize", app);
+        console.info("synchronize");
+
+        for (const item of callbackList) {
+            item(app);
+        }
     }, 1000);
 }
