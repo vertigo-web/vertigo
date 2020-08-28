@@ -1,25 +1,41 @@
-export function add(a, b) {
-    return a + b;
-}
+//@ts-check
 
 export function consoleLog(message) {
     console.info("Heja ho, tu konsola", message);
 }
 
-let app = 4;
-let callbackList = [];
+class EventEmmiter {
+    /**
+     * @property {Array<() => void>} callbackList
+     */
+
+    constructor() {
+        this.callbackList = [];
+    }
+
+    /**
+     * @param {() => void} callback 
+     */
+    add(callback) {
+        this.callbackList.push(callback);
+    }
+
+    trigger() {
+        for (const item of this.callbackList) {
+            item();
+        }
+    }
+}
+
+let emmiter = new EventEmmiter();
 
 export function startDriverLoop(callback) {
-    callbackList.push(callback);
+    emmiter.add(callback);
 
     console.info("Rozpoczynam synchronizowanie");
 
-    setInterval(() => {
-        app++;
-        console.info("synchronize");
-
-        for (const item of callbackList) {
-            item(app);
-        }
-    }, 1000);
+    window.button33.addEventListener('click', () => {
+        console.info("klik w przycisk");
+        emmiter.trigger();
+    }, false);
 }

@@ -42,14 +42,16 @@ use virtualdom::{
 
 use crate::app_state::AppState;
 use crate::view::main_render::main_render;
+use crate::driver::DomDriverBrowser;
 
 pub struct Application {
-    appState: Rc<AppState>,
+    pub driver: DomDriverBrowser,
+    pub appState: Rc<AppState>,
     _subskrybcjaApp: Client,
 }
 
 impl Application {
-    pub fn new() -> Application {
+    pub fn new(driver: DomDriverBrowser) -> Application {
         wasm_logger::init(wasm_logger::Config::default());
 
         log::info!("Start rustowego modułu ...");
@@ -68,9 +70,10 @@ impl Application {
 
         //subskrybcjaApp.off();
 
-        crate::consoleLog("Zainicjowałem stan aplikacji");
+        driver.consoleLog("Zainicjowałem stan aplikacji");
 
         Application {
+            driver,
             appState,
             _subskrybcjaApp: subskrybcjaApp
         }
