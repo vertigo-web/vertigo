@@ -18,6 +18,15 @@ TODO - poprawić mechanizm synchronizowania listy dzieci
     2. wygenerowac nowa liste
     3. wyszukac pierwszy usuniety node, za nim podczapiac te nowe we własciwej kolejnośli
         lub wyszukac pierwszy który istnieje i za nim podczepiać te kolejne
+
+TODO - sprawdzić czy da się coś ciekawego uzyskać z rollupem:
+    https://github.com/wasm-tool/rollup-plugin-rust
+
+TODO - niezmienne struktury danych, https://docs.rs/im/15.0.0/im/
+
+
+https://github.com/rustwasm/console_error_panic_hook#readme
+https://rustwasm.github.io/wasm-bindgen/reference/passing-rust-closures-to-js.html
 */
 
 use std::rc::Rc;
