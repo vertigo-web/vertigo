@@ -16,13 +16,22 @@ thread_local! {
     static appState: RefCell<Application> = RefCell::new(Application::new());
 }
 
-#[wasm_bindgen]
-extern {
-    fn consoleLog(s: &str);
+
+#[wasm_bindgen(module = "/src/driver.js")]
+extern "C" {
+    fn add(a: u32, b: u32) -> u32;
+    fn consoleLog(message: &str);
+    fn startDriverLoop();
 }
 
 #[wasm_bindgen]
 pub fn start_app() {
+    startDriverLoop();
+
+    let aa = add(3, 4);
+    log::info!("z funkcji add ... {}", aa);
+    consoleLog("aaaarrr333");
+
     appState.with(|state| {
         let state = state.borrow_mut();
         state.start_app();

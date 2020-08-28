@@ -2,11 +2,6 @@
 
 import * as wasm from "../build_wasm/app_rust";
 
-//@ts-ignore
-window.consoleLog = (message) => {
-    console.info(`consoleLog => ${message}`);
-};
-
 window.click_button = () => {
     wasm.click_button();
 };
