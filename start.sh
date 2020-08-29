@@ -13,6 +13,6 @@ echo ""
 echo ""
 echo ""
 
-cd app_www
+cd app/app_www
 
 npm run start

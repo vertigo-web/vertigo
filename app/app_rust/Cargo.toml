@@ -12,7 +12,7 @@ crate-type = ["cdylib", "rlib"]
 [dependencies]
 log = "0.4.11"
 wasm-logger = "0.2.0"
-virtualdom = { path = "../crates/virtualdom" }
+virtualdom = { path = "../../crates/virtualdom" }
 wasm-bindgen = {version = "0.2.63", features = ["nightly"]}
 wee_alloc = { version = "0.4.5", optional = true }
 

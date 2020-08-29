@@ -1,7 +1,7 @@
 const CopyWebpackPlugin = require("copy-webpack-plugin");
 const path = require('path');
 
-const outPath = path.resolve(__dirname, "../build_www");
+const outPath = path.resolve(__dirname, "../../build/www");
 
 console.info('outPath', outPath);
 

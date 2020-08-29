@@ -1,5 +1,7 @@
+cd crates/virtualdom
+
 cargo test
 
-cd virtualdom
+cd ../../app/app_rust
 
 cargo test

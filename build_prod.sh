@@ -1,4 +1,4 @@
 cd app_rust
 
-wasm-pack build --release --out-dir ../build_wasm
+wasm-pack build --release --out-dir ../build/wasm
 

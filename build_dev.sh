@@ -1,4 +1,4 @@
-cd app_rust
+cd app/app_rust
 
-wasm-pack build --out-dir ../build_wasm
+wasm-pack build --out-dir ../../build/wasm
 
