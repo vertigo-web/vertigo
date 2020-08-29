@@ -6,6 +6,6 @@ console.info('startuje główny moduł js');
 
 wasm.start_app();
 
-setInterval(() => {
-    wasm.increment();
-}, 1000);
+// setInterval(() => {
+//     wasm.increment();
+// }, 1000);

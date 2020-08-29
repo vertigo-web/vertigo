@@ -92,8 +92,4 @@ impl Application {
         log::info!("START APP");
     }
 
-    pub fn increment(&self) {
-        let rr = self.appState.value.getValue();
-        self.appState.value.setValue(*rr + 1);
-    }
 }

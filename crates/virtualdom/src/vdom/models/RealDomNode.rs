@@ -1,5 +1,5 @@
 use std::collections::HashMap;
-
+use std::rc::Rc;
 use crate::vdom::{
     models::{
         RealDomId::RealDomId,
@@ -16,7 +16,7 @@ pub struct RealDomNode {
     pub name: String,
     attr: HashMap<String, String>,
     pub child: RealDomChild,
-    pub onClick: Option<Box<dyn Fn()>>,
+    pub onClick: Option<Rc<dyn Fn()>>,
 }
 
 impl RealDomNode {
@@ -69,7 +69,7 @@ impl RealDomNode {
         }
     }
 
-    pub fn updateOnClick(&mut self, onClick: Option<Box<dyn Fn()>>) {
+    pub fn updateOnClick(&mut self, onClick: Option<Rc<dyn Fn()>>) {
         self.onClick = onClick;
     }
 }

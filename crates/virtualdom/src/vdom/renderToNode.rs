@@ -75,7 +75,7 @@ impl<K: Eq + Hash, RNode, VNode> CacheNode<K, RNode, VNode> {
 fn nodeCreateNew(driver: &DomDriver, node: &VDomNode) -> RealDomNode {
     let mut realNode = RealDomNode::new(driver.clone(), node.name.clone());
     realNode.updateAttr(&node.attr);
-    //realNode.updateOnClick(&node.onClick);
+    realNode.updateOnClick(node.onClick.clone());
     realNode
 }
 
