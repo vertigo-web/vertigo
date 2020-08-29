@@ -28,3 +28,13 @@ pub fn start_app() {
         state.start_app();
     });
 }
+
+
+                                //TODO - Logika wypływa z aplikacji do wrappera startującego, tego tu nie powinno być
+#[wasm_bindgen]
+pub fn increment() {
+    APP_STATE.with(|state| {
+        let state = state.borrow_mut();
+        state.increment();
+    });
+}
