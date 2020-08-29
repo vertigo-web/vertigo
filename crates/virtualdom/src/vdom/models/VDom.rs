@@ -5,7 +5,6 @@ use crate::vdom::models::{
 };
 use std::collections::HashMap;
 
-#[derive(Clone)]
 pub enum VDom {
     Node {
         node: VDomNode,
@@ -24,7 +23,8 @@ impl VDom {
             node: VDomNode {
                 name: name.into(),
                 attr: HashMap::new(),
-                child: Vec::new()
+                child: Vec::new(),
+                onClick: None,
             }
         }
     }
@@ -60,6 +60,19 @@ impl VDom {
             }
         };
 
+        self
+    }
+
+    pub fn onClick<F: Fn() + 'static>(mut self, callback: F) -> Self {
+        match &mut self {
+            VDom::Node { node } => {
+                node.onClick = Some(Box::new(callback));
+            },
+            _ => {
+                panic!("Nowy onClick mozna dodac tylko do Node");
+            }
+        };
+    
         self
     }
 }

@@ -4,9 +4,9 @@ use crate::vdom::models::{
     VDom::VDom,
 };
 
-#[derive(Clone)]
 pub struct VDomNode {
     pub name: String,
     pub attr: HashMap<String, String>,
     pub child: Vec<VDom>,
+    pub onClick: Option<Box<dyn Fn()>>,
 }

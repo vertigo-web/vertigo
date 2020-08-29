@@ -19,4 +19,9 @@ impl AppState {
             at: root.newValue(999),
         })
     }
+
+    pub fn increment(&self) {
+        let rr = self.value.getValue();
+        self.value.setValue(*rr + 1);
+    }
 }

@@ -16,6 +16,7 @@ pub struct RealDomNode {
     pub name: String,
     attr: HashMap<String, String>,
     pub child: RealDomChild,
+    pub onClick: Option<Box<dyn Fn()>>,
 }
 
 impl RealDomNode {
@@ -32,6 +33,7 @@ impl RealDomNode {
             name,
             attr: HashMap::new(),
             child: domChild,
+            onClick: None,
         };
 
         node
@@ -65,6 +67,10 @@ impl RealDomNode {
         for (key, value) in attr.iter() {
             self.updateAttrOne(key, value);
         }
+    }
+
+    pub fn updateOnClick(&mut self, onClick: Option<Box<dyn Fn()>>) {
+        self.onClick = onClick;
     }
 }
 

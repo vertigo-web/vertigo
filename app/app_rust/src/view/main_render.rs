@@ -35,11 +35,17 @@ pub fn main_render(app_state: &Rc<AppState>) -> Vec<VDom> {
 
     use virtualdom::vdom::models::{node, text};
 
+    let app_state_click = app_state.clone();
+
     //node(format!("node aaa='{}' bbb='{}'", "one", format!("'wallll {}'", app_state.at.getValue())))
     vec!(
         node("div")
             .attr("aaa", "one")
             .attr("bbb", format!("'wallll {}'", app_state.at.getValue()))
+            .onClick(move || {
+                log::info!("on click");
+                app_state_click.increment();
+            })
             .child(
                 text(format!("aktualna wartosc = {}", app_state.value.getValue()))
             )
