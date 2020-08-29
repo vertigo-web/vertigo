@@ -25,6 +25,10 @@ impl RealDomId {
             id: get_unique_id()
         }
     }
+
+    pub fn to_u64(&self) -> u64 {
+        self.id
+    }
 }
 
 impl std::fmt::Display for RealDomId {

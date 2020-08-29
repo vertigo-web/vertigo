@@ -66,8 +66,9 @@ impl Application {
         let appState = AppState::new(&root);
 
 
-        let driverPrint = DomDriverPrint::new();
-        let domDriver = DomDriver::new(driverPrint);
+        //let driverPrint = DomDriverPrint::new();
+        let driverBrowser = driver.driver.clone();
+        let domDriver = DomDriver::new(driverBrowser);
         
         
         let subskrybcjaApp = startApp(domDriver, root, appState.clone(), main_render);
@@ -81,7 +82,7 @@ impl Application {
         //subskrybcjaApp.off();
 
         Application {
-            driver,
+            driver: driver,
             appState,
             _subskrybcjaApp: subskrybcjaApp
         }

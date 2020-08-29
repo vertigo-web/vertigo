@@ -53,3 +53,90 @@ export function startDriverLoop(callback) {
         emmiter.trigger();
     });
 }
+
+/**
+ * @param {number} id 
+ * @param {string} name 
+ */
+export function createNode(id, name) {
+    console.info('createNode', id, name);
+}
+
+/**
+ * @param {number} id 
+ * @param {string} value 
+ */
+export function createText(id, value) {
+    console.info('createNode', id, value);
+}
+
+/**
+ * @param {number} id 
+ * @param {string} value 
+ */
+export function createComment(id, value) {
+    console.info('createComment', id, value);
+}
+
+/**
+ * @param {number} id 
+ * @param {string} key
+ * @param {string} value 
+ */
+export function setAttr(id, key, value) {
+    console.info('setAttr', id, key, value);
+}
+
+/**
+ * @param {number} id 
+ * @param {string} name 
+ */
+export function removeAttr(id, name) {
+    console.info('removeAttr', id, name);
+}
+
+/**
+ * @param {number} id 
+ */
+export function remove(id) {
+    console.info('remove', id);
+}
+
+/**
+ * @param {number} id 
+ */
+export function removeAllChild(id) {
+    console.info('removeAllChild', id);
+}
+
+/**
+ * @param {number} parent
+ * @param {number} child
+ */
+export function insertAsFirstChild(parent, child) {
+    console.info('insertAsFirstChild', parent, child);
+}
+
+/**
+ * @param {number} refId
+ * @param {number} child
+ */
+export function insertBefore(refId, child) {
+    console.info('insertAsFirstChild', refId, child);
+}
+
+/**
+ * @param {number} refId
+ * @param {number} child
+ */
+export function insertAfter(refId, child) {
+    console.info('insertAsFirstChild', refId, child);
+}
+
+/**
+ * @param {number} parent
+ * @param {number} child
+ */
+export function addChild(parent, child) {
+    console.info('insertAsFirstChild', parent, child);
+}
