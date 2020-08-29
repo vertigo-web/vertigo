@@ -19,12 +19,12 @@ pub enum VDom {
 }
 
 impl VDom {
-    pub fn node<T: Into<String>>(name: T, attr: HashMap<String, String>, child: Vec<VDom>) -> VDom {
+    pub fn node<T: Into<String>>(name: T) -> VDom {
         VDom::Node {
             node: VDomNode {
                 name: name.into(),
-                attr,
-                child
+                attr: HashMap::new(),
+                child: Vec::new()
             }
         }
     }
@@ -35,5 +35,31 @@ impl VDom {
                 value: value.into()
             }
         }
+    }
+
+    pub fn attr<T: Into<String>, K: Into<String>>(mut self, name: T, value: K) -> Self {
+        match &mut self {
+            VDom::Node { node } => {
+                node.attr.insert(name.into(), value.into());
+            },
+            _ => {
+                panic!("Atrybut mozna dodac tylko do Node");
+            }
+        };
+
+        self
+    }
+
+    pub fn child(mut self, child: VDom) -> Self {
+        match &mut self {
+            VDom::Node { node } => {
+                node.child.push(child)
+            },
+            _ => {
+                panic!("Nowy child mozna dodac tylko do Node");
+            }
+        };
+
+        self
     }
 }

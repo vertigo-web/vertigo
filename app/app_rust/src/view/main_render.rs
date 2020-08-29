@@ -11,19 +11,6 @@ use virtualdom::{
 
 use crate::app_state::AppState;
 
-macro_rules! map(
-    { $($key:expr => $value:expr),+ } => {
-        {
-            let mut m = ::std::collections::HashMap::new();
-            $(
-                m.insert($key, $value);
-            )+
-            m
-        }
-     };
-);
-
-
 pub fn main_render(app_state: &Rc<AppState>) -> Vec<VDom> {
 
     let app_state = app_state.clone();
@@ -35,14 +22,70 @@ pub fn main_render(app_state: &Rc<AppState>) -> Vec<VDom> {
         https://docs.rs/maplit/1.0.2/maplit/
     */
 
+
+
+    // vec!(
+    //     VDom::node("div", map!{
+    //         "aaa".into() => "one".into(),
+    //         "bbb".into() => format!("'wallll {}'", app_state.at.getValue())
+    //     }, vec!(
+    //         VDom::text(format!("aktualna wartosc = {}", app_state.value.getValue())),
+    //     ))
+    // )
+
+    use virtualdom::vdom::models::{node, text};
+
+    //node(format!("node aaa='{}' bbb='{}'", "one", format!("'wallll {}'", app_state.at.getValue())))
     vec!(
-        VDom::node("div", map!{
-            "aaa".into() => "one".into(),
-            "bbb".into() => format!("'wallll {}'", app_state.at.getValue())
-        }, vec!(
-            VDom::text(format!("aktualna wartosc = {}", app_state.value.getValue())),
-        ))
+        node("div")
+            .attr("aaa", "one")
+            .attr("bbb", format!("'wallll {}'", app_state.at.getValue()))
+            .child(
+                text(format!("aktualna wartosc = {}", app_state.value.getValue()))
+            )
     )
+    
+
+    // node("node")
+    //     .attr("aaa", "one")
+    //     .attr("bbb", format!("'wallll {}'", app_state.at.getValue()))
+    //     .onClick(||{
+    //         log::info!("on click")
+    //     })
+    //     .child(node("a")
+    //         .attr("href", "dsadsa")
+    //         .attr("blob", "dsadsa")
+    //         .onClick(|| {
+
+    //         })
+    //         .child(text("link do czegos"))
+    //     )
+    //     .child(node("div"))
+    //     .child(text("bla bla bla"))
+
+
+
+
+
+    // VDom::node("node")
+    //     .attr("aaa", "one")
+    //     .attr("bbb", format!("'wallll {}'", app_state.at.getValue())
+    //     .onClick(||{
+
+    //     })
+    //     .child(vec!(
+    //         VDom::node("a")
+    //             .attr("href", "dsadsa")
+    //             .attr("blob", "dsadsa")
+    //             .onClick(|| {
+
+    //             })
+    //             .child(vec!(
+    //                 VDom::text("link do czegos")
+    //             )),
+    //         VDom::node("div"),
+    //         VDom::text("bla bla bla")
+    //     ))
 
     // vec!(
     //     VDom::node("div", map!{
