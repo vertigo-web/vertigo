@@ -4,11 +4,21 @@
 name = "app_rust"
 version = "0.1.0"
 dependencies = [
+ "browserdriver",
  "log",
  "virtualdom",
  "wasm-bindgen",
  "wasm-logger",
  "wee_alloc",
+]
+
+[[package]]
+name = "browserdriver"
+version = "0.1.0"
+dependencies = [
+ "log",
+ "virtualdom",
+ "wasm-bindgen",
 ]
 
 [[package]]

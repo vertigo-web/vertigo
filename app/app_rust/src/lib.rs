@@ -1,14 +1,13 @@
 mod application;
 mod app_state;
 mod view;
-mod driver;
 
 use wasm_bindgen::prelude::*;
 
 use std::cell::RefCell;
 use crate::application::Application;
 
-use driver::DomDriverBrowser;
+use browserdriver::DomDriverBrowser;
 
 #[cfg(feature = "wee_alloc")]
 #[global_allocator]

@@ -46,7 +46,7 @@ use virtualdom::{
 
 use crate::app_state::AppState;
 use crate::view::main_render::main_render;
-use crate::driver::DomDriverBrowser;
+use browserdriver::DomDriverBrowser;
 
 pub struct Application {
     pub driver: DomDriverBrowser,
