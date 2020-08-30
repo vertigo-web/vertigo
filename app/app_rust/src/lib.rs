@@ -10,24 +10,20 @@ use wasm_bindgen::prelude::*;
 use std::cell::RefCell;
 use crate::application::Application;
 
-use browserdriver::DomDriverBrowser;
-
 #[cfg(feature = "wee_alloc")]
 #[global_allocator]
 static ALLOC: wee_alloc::WeeAlloc = wee_alloc::WeeAlloc::INIT;
 
 thread_local! {
     static APP_STATE: RefCell<Application> = {
-        println!("Tutaj trzeba będzie powołać do zycia obiekt drivera przegladarkowego który będzie odwoływał się do tych funkcji powyzej");
-        let driver = DomDriverBrowser::new();
-        RefCell::new(Application::new(driver))
+        RefCell::new(Application::new())
     };
 }
 
 #[wasm_bindgen]
 pub fn start_app() {
     APP_STATE.with(|state| {
-        let state = state.borrow_mut();
+        let state = state.borrow();
         state.start_app();
     });
 }

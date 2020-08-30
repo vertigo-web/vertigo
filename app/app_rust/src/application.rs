@@ -54,32 +54,21 @@ pub struct Application {
 }
 
 impl Application {
-    pub fn new(driver: DomDriverBrowser) -> Application {
+    pub fn new() -> Application {
         console_error_panic_hook::set_once();
         wasm_logger::init(wasm_logger::Config::default());
 
         log::info!("Start rustowego modułu ...");
 
-        //po wystartowaniu subskrybcjaApp tą zmienną trzeba wpakować w zmienną globalną zeby nie stracić subskrybcji
-
         let root: Dependencies = Dependencies::new();
         let appState = AppState::new(&root);
 
 
-        //let driverPrint = DomDriverPrint::new();
+        let driver = DomDriverBrowser::new();
         let driverBrowser = driver.driver.clone();
         let domDriver = DomDriver::new(driverBrowser);
         
-        
         let subskrybcjaApp = startApp(domDriver, root, appState.clone(), main_render);
-
-        appState.value.setValue(55);
-        log::info!("Przestawiam wartość");
-        appState.at.setValue(1000);
-
-        log::info!("--- koniec aplikacji, przechodzę do wyłączania subskrybcji ---");
-
-        //subskrybcjaApp.off();
 
         Application {
             driver: driver,
