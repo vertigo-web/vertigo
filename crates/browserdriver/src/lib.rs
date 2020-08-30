@@ -192,18 +192,12 @@ impl DomDriverBrowserInner {
 
     fn fromCallback(&self) {
         let data = DriverJS::getEventData();
-
-        log::info!("callback z drivera {:?}", &data);
-
-        use crate::event::Event;
-
-        let result: Result<Event, serde_json::error::Error> = data.into_serde::<Event>();
+        use crate::event::EventModel;
+        let result: Result<Vec<EventModel>, serde_json::error::Error> = data.into_serde::<Vec<EventModel>>();
 
         match result {
             Ok(event) => {
                 log::info!("Przyszedł event {:?}", event);
-
-                //TODO - trzeba go obsłuyć
             },
             Err(err) => {
                 log::error!("Przyszedł zepsuty event {:?}", err);
@@ -314,12 +308,3 @@ impl DomDriverBrowser {
         DriverJS::consoleLog(message);
     }
 }
-
-//Moze te bindowania i ten DomDriverBrowser da sie zamknac w jednym module w bibliotece
-
-/*
-    jak przyjdzie jakis zdarzenie od uzytkownika
-    zapisujemy je w jakiejs tablicy po stronie jsowego drivera
-    wysyłamy sygnał zwrotny do modulu rustowego ze czekaja nowe zdarzenia
-    modul rustowy pobiera sobie te nowe informaje na temat eventu z jsa i zmienia odpowiedni stan
-*/

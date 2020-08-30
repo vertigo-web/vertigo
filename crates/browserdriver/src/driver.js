@@ -4,19 +4,10 @@ export function consoleLog(message) {
     console.info("Heja ho, tu konsola", message);
 }
 
-// const showLog = false;
-
-// const showMessage = (...args) => {
-//     if (showLog) {
-//         console.log.call(console, args);
-//     }
-// }
-
 class EventEmmiter {
     /**
      * @property {Array<() => void>} callbackList
      */
-
     constructor() {
         this.callbackList = [];
     }
@@ -35,31 +26,20 @@ class EventEmmiter {
     }
 }
 
-/**
- * @param {HTMLElement} root 
- */
-function createMock(root) {
-    const wrapper = document.createElement('div');
-    wrapper.setAttribute('style', 'padding: 5px; background-color: #e0e0e0;');
-    const button = document.createElement('button');
-    const text = document.createTextNode('click');
-    button.append(text);
-    wrapper.appendChild(button);
-    root.appendChild(wrapper);
-}
-
 class State {
 
     /**
      * @property {EventEmmiter} _emmiter
      * @property {Map<BigInt, HTMLElement | Text | Comment} _nodes
      * @property {Map<HTMLElement | Text | Comment, BigInt} _nodesRevert
+     * @property {Array<Object>} _events
      */
 
     constructor() {
         this._emmiter = new EventEmmiter();
         this._nodes = new Map();
         this._nodesRevert = new Map();
+        this._events = [];
     }
 
     /**
@@ -91,6 +71,14 @@ class State {
         this._nodesRevert.delete(node);
     }
 
+    getId(node) {
+        const id = this._nodesRevert.get(node);
+        if (typeof id !== 'bigint') {
+            throw Error('Expect number', id);
+        }
+        return id;
+    }
+
     /**
      * @param {BigInt} id
      * @returns {HTMLElement | Text | Comment}
@@ -117,6 +105,15 @@ class State {
         throw Error(`Not found HTMLElement: ${id}`);
     }
     
+    getEvents() {
+        const events = this._events;
+        this._events = [];
+        return events;
+    }
+
+    pushEvent(item) {
+        this._events.push(item);
+    }
 }
 
 const state = new State();
@@ -127,14 +124,20 @@ export function startDriverLoop(callback) {
     console.info("startDriverLoop - js");
 
     const root = document.createElement('div');
-    //createMock(root);
     document.body.appendChild(root);
 
     state.setChild(BigInt(1), root);
 
     root.addEventListener('click', (event) => {
+        const id = state.getId(event.target);
+        state.pushEvent({
+            type: "OnClick",
+            nodeId: Number(id),                     //BigInt -> number
+        });
+
         console.info('trigger....', event);
         state.trigger();
+
     });
 }
 
@@ -242,9 +245,5 @@ export function addChild(parent, child) {
 }
 
 export function getEventData() {
-    console.info("getEventData");
-    return {
-        type: "OnClick",
-        nodeId: 3,
-    };
+    return state.getEvents();
 }

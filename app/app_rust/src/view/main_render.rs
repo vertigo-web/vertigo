@@ -40,14 +40,20 @@ pub fn main_render(app_state: &Rc<AppState>) -> Vec<VDom> {
     //node(format!("node aaa='{}' bbb='{}'", "one", format!("'wallll {}'", app_state.at.getValue())))
     vec!(
         node("div")
-            .attr("aaa", "one")
-            .attr("bbb", format!("'wallll {}'", app_state.at.getValue()))
-            .onClick(move || {
-                log::info!("on click");
-                app_state_click.increment();
-            })
-            .child(
-                text(format!("aktualna wartosc = {}", app_state.value.getValue()))
+            .child(node("div")
+                .attr("xxx", "xxx")
+                .child(text("bla bla bla"))
+            )
+            .child(node("div")
+                .attr("aaa", "one")
+                .attr("bbb", format!("'wallll {}'", app_state.at.getValue()))
+                .onClick(move || {
+                    log::info!("on click");
+                    app_state_click.increment();
+                })
+                .child(
+                    text(format!("aktualna wartosc = {}", app_state.value.getValue()))
+                )
             )
     )
     
