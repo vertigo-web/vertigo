@@ -10,6 +10,7 @@ use virtualdom::vdom::models::RealDomId::RealDomId;
 use virtualdom::computed::BoxRefCell::BoxRefCell;
 
 use wasm_bindgen::JsValue;
+use crate::event::EventModel;
 
 mod event;
 
@@ -190,14 +191,72 @@ impl DomDriverBrowserInner {
         });
     }
 
+    fn getEvent(&self, nodeId: &u64) -> Option<Rc<dyn Fn()>> {
+        self.dataOnClick.getWithContext(nodeId, |state, nodeId| {
+            state.get(nodeId).map(|item| item.clone())
+        })
+    }
+
+    fn getParentNode(&self, childId: &u64) -> Option<u64> {
+        self.parent.getWithContext(childId, |state, childId| {
+            let parent = state.get(&childId);
+            parent.map(|item| *item)
+        })
+    }
+    //dataOnClick: BoxRefCell<HashMap<u64, Rc<dyn Fn()>>>,
+
+    fn sendEvent(&self, event: &EventModel) {
+        log::info!("Przyszedł event {:?}", event);
+
+        match event {
+            EventModel::OnClick { nodeId} => {
+                let mut nodeId = *nodeId;
+
+                while nodeId != 1 {
+                    let event = self.getEvent(&nodeId);
+
+                    if let Some(event) = event {
+                        event();
+                        return;
+                    }
+
+                    let parent = self.getParentNode(&nodeId);
+
+                    if let Some(parent) = parent {
+                        if parent == 1 {
+                            log::info!("sendEvent - trafiono na root");
+                            return;
+                        }
+
+                        nodeId = parent;
+
+                    } else {
+                        log::info!("sendEvent - nie znaleziono roota");
+                    }
+                }
+            }
+        }
+    }
+
     fn fromCallback(&self) {
         let data = DriverJS::getEventData();
-        use crate::event::EventModel;
+        
         let result: Result<Vec<EventModel>, serde_json::error::Error> = data.into_serde::<Vec<EventModel>>();
 
         match result {
             Ok(event) => {
-                log::info!("Przyszedł event {:?}", event);
+
+                //TODO - tranzakcja start
+
+                for item in event.iter() {
+                    let item: &EventModel = item;
+                    self.sendEvent(item);                    
+                }
+
+                //złapać tranzakcją
+                    //w tej tranzakcji, w petli aktualizowac 
+
+                //TODO - tranzakcja stop
             },
             Err(err) => {
                 log::error!("Przyszedł zepsuty event {:?}", err);
