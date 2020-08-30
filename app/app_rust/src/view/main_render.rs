@@ -37,94 +37,52 @@ pub fn main_render(app_state: &Rc<AppState>) -> Vec<VDom> {
 
     let app_state_click = app_state.clone();
 
-    //node(format!("node aaa='{}' bbb='{}'", "one", format!("'wallll {}'", app_state.at.getValue())))
+    let onDown = {
+        let app_state = app_state.clone();
+        move || {
+            app_state.decrement();
+        }
+    };
+
+    let onUp = {
+        let app_state = app_state.clone();
+        move || {
+            app_state.increment();
+        }
+    };
+
+    let at = app_state.at.getValue();
+    let value = app_state.value.getValue();
+
     vec!(
         node("div")
             .child(node("div")
-                .attr("xxx", "xxx")
+                .attr("style", "border: 1px solid black; padding: 10px; background-color: #e0e0e0;")
                 .child(text("bla bla bla"))
             )
             .child(node("div")
-                .attr("aaa", "one")
-                .attr("bbb", format!("'wallll {}'", app_state.at.getValue()))
                 .onClick(move || {
                     log::info!("on click");
                     app_state_click.increment();
                 })
                 .child(
-                    text(format!("aktualna wartosc = {}", app_state.value.getValue()))
+                    text(format!("aktualna wartosc = {}", value))
                 )
             )
+            .child(node("div")
+                .attr("style", "border: 1px solid black; padding: 10px; background-color: #e0e0e0;")
+                .child(text("up"))
+                .onClick(onUp)
+            )
+            .child(node("div")
+                .attr("style", "border: 1px solid black; padding: 10px; background-color: #e0e0e0;")
+                .child(text("down"))
+                .onClick(onDown)
+            )
+            .child(node("div")
+                .child(text(format!("jakis footer {} {}", *value % 2, *value % 3)))
+            )
     )
-    
-
-    // node("node")
-    //     .attr("aaa", "one")
-    //     .attr("bbb", format!("'wallll {}'", app_state.at.getValue()))
-    //     .onClick(||{
-    //         log::info!("on click")
-    //     })
-    //     .child(node("a")
-    //         .attr("href", "dsadsa")
-    //         .attr("blob", "dsadsa")
-    //         .onClick(|| {
-
-    //         })
-    //         .child(text("link do czegos"))
-    //     )
-    //     .child(node("div"))
-    //     .child(text("bla bla bla"))
-
-
-
-
-
-    // VDom::node("node")
-    //     .attr("aaa", "one")
-    //     .attr("bbb", format!("'wallll {}'", app_state.at.getValue())
-    //     .onClick(||{
-
-    //     })
-    //     .child(vec!(
-    //         VDom::node("a")
-    //             .attr("href", "dsadsa")
-    //             .attr("blob", "dsadsa")
-    //             .onClick(|| {
-
-    //             })
-    //             .child(vec!(
-    //                 VDom::text("link do czegos")
-    //             )),
-    //         VDom::node("div"),
-    //         VDom::text("bla bla bla")
-    //     ))
-
-    // vec!(
-    //     VDom::node("div", map!{
-    //         "aaa".into() => "one".into(),
-    //         "bbb".into() => format!("'wallll {}'", app_state.at.getValue())
-    //     }, vec!(
-    //         VDom::Text {
-    //             node: VDomText {
-    //                 value: format!("aktualna wartosc = {}", app_state.value.getValue()),
-    //             }
-    //         }
-    //     ))
-    // )
-
-    // VDom::Node {
-    //     node: VDomNode {
-    //         name: "div".into(),
-    //         attr: map!{ "aaa".into() => "one".into(), "bbb".into() => format!("'wallll {}'", app_state.at.getValue()) },
-    //         child: vec!(
-    //             VDom::Text {
-    //                 node: VDomText {
-    //                     value: format!("aktualna wartosc = {}", app_state.value.getValue()),
-    //                 }
-    //             }
-    //         )
-    //     }
-    // }
 
     /*
     <div aaa="one" bbb="two">

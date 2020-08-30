@@ -24,4 +24,9 @@ impl AppState {
         let rr = self.value.getValue();
         self.value.setValue(*rr + 1);
     }
+
+    pub fn decrement(&self) {
+        let rr = self.value.getValue();
+        self.value.setValue(*rr - 1);
+    }
 }
