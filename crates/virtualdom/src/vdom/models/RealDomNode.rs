@@ -16,7 +16,6 @@ pub struct RealDomNode {
     pub name: String,
     attr: HashMap<String, String>,
     pub child: RealDomChild,
-    pub onClick: Option<Rc<dyn Fn()>>,
 }
 
 impl RealDomNode {
@@ -33,7 +32,6 @@ impl RealDomNode {
             name,
             attr: HashMap::new(),
             child: domChild,
-            onClick: None,
         };
 
         node
@@ -55,7 +53,7 @@ impl RealDomNode {
 
         if needUpdate {
             self.domDriver.setAttr(self.idDom.clone(), &name, &value);
-             self.attr.insert(name.clone(), value.clone());
+            self.attr.insert(name.clone(), value.clone());
        }
     }
 
@@ -70,7 +68,7 @@ impl RealDomNode {
     }
 
     pub fn updateOnClick(&mut self, onClick: Option<Rc<dyn Fn()>>) {
-        self.onClick = onClick;
+        self.domDriver.setOnClick(self.idDom.clone(), onClick);
     }
 }
 

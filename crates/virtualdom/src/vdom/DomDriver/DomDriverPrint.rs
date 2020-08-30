@@ -1,3 +1,5 @@
+use std::rc::Rc;
+
 use crate::vdom::{
     models::{
         RealDomId::RealDomId,
@@ -38,10 +40,6 @@ impl DomDriverTrait for DomDriverPrint {
         log::info!("remove {}", id);
     }
 
-    fn removeAllChild(&self, id: RealDomId) {
-        log::info!("removeAllChild {}", id);
-    }
-
     fn insertAsFirstChild(&self, parent: RealDomId, child: RealDomId) {
         log::info!("insertAsFirstChild {} {}", parent, child);
     }
@@ -56,6 +54,10 @@ impl DomDriverTrait for DomDriverPrint {
 
     fn addChild(&self, parent: RealDomId, child: RealDomId) {
         log::info!("addChild {} {}", parent, child);
+    }
+
+    fn setOnClick(&self, node: RealDomId, onClick: Option<Rc<dyn Fn()>>) {
+        log::info!("setOnClick {} --callback--", node);
     }
 }
 

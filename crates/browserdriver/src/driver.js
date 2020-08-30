@@ -53,11 +53,13 @@ class State {
     /**
      * @property {EventEmmiter} _emmiter
      * @property {Map<BigInt, HTMLElement | Text | Comment} _nodes
+     * @property {Map<HTMLElement | Text | Comment, BigInt} _nodesRevert
      */
 
     constructor() {
         this._emmiter = new EventEmmiter();
         this._nodes = new Map();
+        this._nodesRevert = new Map();
     }
 
     /**
@@ -77,6 +79,16 @@ class State {
      */
     setChild(id, node) {
         this._nodes.set(id, node);
+        this._nodesRevert.set(node, id);
+    }
+
+    /**
+     * @param {BigInt} id 
+     */
+    remove(id) {
+        const node = this._nodes.get(id);
+        this._nodes.delete(id);
+        this._nodesRevert.delete(node);
     }
 
     /**
@@ -179,14 +191,7 @@ export function removeAttr(id, name) {
 export function remove(id) {
     const node = state.getChild(id);
     node.parentElement.removeChild(node);
-}
-
-/**
- * @param {BigInt} id 
- */
-export function removeAllChild(id) {
-    console.info('removeAllChild', id);
-    throw Error('TODO removeAllChild');                         //TODO
+    state.remove(id);
 }
 
 /**

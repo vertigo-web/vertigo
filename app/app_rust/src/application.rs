@@ -35,7 +35,6 @@ use virtualdom::{
         startApp::startApp,
         DomDriver::{
             DomDriver::DomDriver,
-            DomDriverPrint::DomDriverPrint,
         },
     },
     computed::{
@@ -56,6 +55,7 @@ pub struct Application {
 
 impl Application {
     pub fn new(driver: DomDriverBrowser) -> Application {
+        console_error_panic_hook::set_once();
         wasm_logger::init(wasm_logger::Config::default());
 
         log::info!("Start rustowego modułu ...");

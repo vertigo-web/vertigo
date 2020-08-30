@@ -3,7 +3,7 @@ use crate::vdom::models::{
     RealDomId::RealDomId,
 };
 
-const SHOW_LOG: bool = false;
+const SHOW_LOG: bool = true;
 
 pub trait DomDriverTrait {
     fn createNode(&self, id: RealDomId, name: &String);
@@ -12,11 +12,12 @@ pub trait DomDriverTrait {
     fn setAttr(&self, id: RealDomId, key: &String, value: &String);
     fn removeAttr(&self, id: RealDomId, name: &String);
     fn remove(&self, id: RealDomId);
-    fn removeAllChild(&self, id: RealDomId);
     fn insertAsFirstChild(&self, parent: RealDomId, child: RealDomId);
     fn insertBefore(&self, refId: RealDomId, child: RealDomId);
     fn insertAfter(&self, refId: RealDomId, child: RealDomId);
     fn addChild(&self, parent: RealDomId, child: RealDomId);
+
+    fn setOnClick(&self, node: RealDomId, onClick: Option<Rc<dyn Fn()>>);
 }
 
 
@@ -76,11 +77,6 @@ impl DomDriver {
         self.driver.remove(id);
     }
 
-    pub fn removeAllChild(&self, id: RealDomId) {
-        show_log(format!("removeAllChild {}", id));
-        self.driver.removeAllChild(id);
-    }
-
     pub fn insertAsFirstChild(&self, parent: RealDomId, child: RealDomId) {
         show_log(format!("insertAsFirstChild {} {}", parent, child));
         self.driver.insertAsFirstChild(parent, child);
@@ -99,5 +95,10 @@ impl DomDriver {
     pub fn addChild(&self, parent: RealDomId, child: RealDomId) {
         show_log(format!("addChild {} {}", parent, child));
         self.driver.addChild(parent, child);
+    }
+
+    pub fn setOnClick(&self, node: RealDomId, onClick: Option<Rc<dyn Fn()>>) {
+        show_log(format!("setOnClick {} --onClick--", node));
+        self.driver.setOnClick(node, onClick);
     }
 }

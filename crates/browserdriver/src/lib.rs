@@ -1,8 +1,13 @@
+#![allow(non_snake_case)]
+#![allow(non_camel_case_types)]
+
 use wasm_bindgen::prelude::*;
 use std::rc::Rc;
+use std::collections::HashMap;
 
 use virtualdom::vdom::DomDriver::DomDriver::DomDriverTrait;
 use virtualdom::vdom::models::RealDomId::RealDomId;
+use virtualdom::computed::BoxRefCell::BoxRefCell;
 
 #[wasm_bindgen(module = "/src/driver.js")]
 extern "C" {
@@ -15,62 +20,165 @@ extern "C" {
     fn setAttr(id: u64, key: &str, value: &str);
     fn removeAttr(id: u64, name: &str);
     fn remove(id: u64);
-    fn removeAllChild(id: u64);
     fn insertAsFirstChild(parent: u64, child: u64);
 
     fn insertBefore(refId: u64, child: u64);
     fn insertAfter(refId: u64, child: u64);
     fn addChild(parent: u64, child: u64);
-    
+}
+
+struct DriverJS {}
+
+impl DriverJS {
+    fn consoleLog(message: &str) {
+        consoleLog(message);
+    }
+
+    fn startDriverLoop(closure: &Closure<dyn FnMut()>) {
+        startDriverLoop(closure);
+    }
+
+    fn createNode(id: u64, name: &str) {
+        createNode(id, name);
+    }
+
+    fn createText(id: u64, value: &str) {
+        createText(id, value);
+    }
+
+    fn createComment(id: u64, value: &str) {
+        createComment(id, value);
+    }
+
+    fn setAttr(id: u64, key: &str, value: &str) {
+        setAttr(id, key, value);
+    }
+
+    fn removeAttr(id: u64, name: &str) {
+        removeAttr(id, name)
+    }
+
+    fn remove(id: u64) {
+        remove(id);
+    }
+
+    fn insertAsFirstChild(parent: u64, child: u64) {
+        insertAsFirstChild(parent, child);
+    }
+
+    fn insertBefore(refId: u64, child: u64) {
+        insertBefore(refId, child);
+    }
+
+    fn insertAfter(refId: u64, child: u64) {
+        insertAfter(refId, child);
+    }
+
+    fn addChild(parent: u64, child: u64) {
+        addChild(parent, child);
+    }
 }
 
 pub struct DomDriverBrowserInner {
+    parent: BoxRefCell<HashMap<u64, u64>>,                                  //child -> parent
+    dataOnClick: BoxRefCell<HashMap<u64, Rc<dyn Fn()>>>,
+}
 
+impl DomDriverBrowserInner {
+    pub fn new() -> DomDriverBrowserInner {
+        DomDriverBrowserInner {
+            parent: BoxRefCell::new(HashMap::new()),
+            dataOnClick: BoxRefCell::new(HashMap::new()),
+        }
+    }
 }
 
 impl DomDriverBrowserInner {
     fn createNode(&self, id: RealDomId, name: &String) {
-        createNode(id.to_u64(), name.as_str());
+        DriverJS::createNode(id.to_u64(), name.as_str());
     }
 
     fn createText(&self, id: RealDomId, value: &String) {
-        createText(id.to_u64(), value.as_str());
+        DriverJS::createText(id.to_u64(), value.as_str());
     }
 
     fn createComment(&self, id: RealDomId, value: &String) {
-        createComment(id.to_u64(), value.as_str());
+        DriverJS::createComment(id.to_u64(), value.as_str());
     }
 
     fn setAttr(&self, id: RealDomId, key: &String, value: &String) {
-        setAttr(id.to_u64(), key.as_str(), value.as_str());
+        DriverJS::setAttr(id.to_u64(), key.as_str(), value.as_str());
     }
 
     fn removeAttr(&self, id: RealDomId, name: &String) {
-        removeAttr(id.to_u64(), name.as_str());
+        DriverJS::removeAttr(id.to_u64(), name.as_str());
     }
 
     fn remove(&self, id: RealDomId) {
-        remove(id.to_u64());
+        let id = id.to_u64();
+        DriverJS::remove(id);
+
+        self.dataOnClick.change(&id, |state, id| {
+            state.remove(id);
+        });
+
+        self.parent.change(&id, |state, id| {
+            state.remove(&id);
+        })
     }
 
-    fn removeAllChild(&self, id: RealDomId) {
-        removeAllChild(id.to_u64());
+    fn setParent(&self, parent: RealDomId, child: RealDomId) {
+        self.parent.change((parent, child), |state, (parent, child)| {
+            state.insert(child.to_u64(), parent.to_u64());
+        })
+    }
+
+    fn setRel(&self, relId: RealDomId, child: RealDomId) {
+        self.parent.change((relId, child), |state, (relId, child)| {
+            let relId = relId.to_u64();
+            let child = child.to_u64();
+
+            let parent = state.get(&relId);
+
+            let parent = *(parent.unwrap());                       //TODO - koniecznie musi być ten idk
+            state.insert(child, parent);
+        });
     }
 
     fn insertAsFirstChild(&self, parent: RealDomId, child: RealDomId) {
-        insertAsFirstChild(parent.to_u64(), child.to_u64());
+        DriverJS::insertAsFirstChild(parent.to_u64(), child.to_u64());
+        self.setParent(parent, child);
     }
 
     fn insertBefore(&self, refId: RealDomId, child: RealDomId) {
-        insertBefore(refId.to_u64(), child.to_u64());
+        DriverJS::insertBefore(refId.to_u64(), child.to_u64());
+        self.setRel(refId, child);
     }
 
     fn insertAfter(&self, refId: RealDomId, child: RealDomId) {
-        insertAfter(refId.to_u64(), child.to_u64());
+        DriverJS::insertAfter(refId.to_u64(), child.to_u64());
+        self.setRel(refId, child);
     }
 
     fn addChild(&self, parent: RealDomId, child: RealDomId) {
-        addChild(parent.to_u64(), child.to_u64());
+        DriverJS::addChild(parent.to_u64(), child.to_u64());
+        self.setParent(parent, child);
+    }
+
+    fn setOnClick(&self, node: RealDomId, onClick: Option<Rc<dyn Fn()>>) {
+        self.dataOnClick.change((node, onClick), |state, (node, onClick)| {
+            let id = node.to_u64();
+
+            match onClick {
+                Some(onClick) => {
+                    state.insert(id, onClick);
+                },
+                None => {
+                    state.remove(&id);
+                }
+            };
+    
+        });        
     }
 }
 
@@ -85,9 +193,7 @@ impl DomDriverBrowserRc {
 
     fn new() -> DomDriverBrowserRc {
         DomDriverBrowserRc {
-            inner: Rc::new(DomDriverBrowserInner {
-
-            })
+            inner: Rc::new(DomDriverBrowserInner::new())
         }
     }
 }
@@ -125,10 +231,6 @@ impl DomDriverTrait for DomDriverBrowserRc {
         self.inner.remove(id);
     }
 
-    fn removeAllChild(&self, id: RealDomId) {
-        self.inner.removeAllChild(id);
-    }
-
     fn insertAsFirstChild(&self, parent: RealDomId, child: RealDomId) {
         self.inner.insertAsFirstChild(parent, child);
     }
@@ -143,6 +245,10 @@ impl DomDriverTrait for DomDriverBrowserRc {
 
     fn addChild(&self, parent: RealDomId, child: RealDomId) {
         self.inner.addChild(parent, child);
+    }
+
+    fn setOnClick(&self, node: RealDomId, onClick: Option<Rc<dyn Fn()>>) {
+        self.inner.setOnClick(node, onClick);
     }
 }
 
@@ -163,7 +269,7 @@ impl DomDriverBrowser {
                 driver.fromCallback();
             });
     
-            startDriverLoop(&back);
+            DriverJS::startDriverLoop(&back);
     
             back
         };
@@ -175,7 +281,7 @@ impl DomDriverBrowser {
     }
 
     pub fn consoleLog(&self, message: &str) {
-        consoleLog(message);
+        DriverJS::consoleLog(message);
     }
 }
 

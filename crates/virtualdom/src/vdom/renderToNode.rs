@@ -81,6 +81,7 @@ fn nodeCreateNew(driver: &DomDriver, node: &VDomNode) -> RealDomNode {
 
 fn nodeSynchronize(realNode: &mut RealDomNode, node: &VDomNode) {
     realNode.updateAttr(&node.attr);
+    realNode.updateOnClick(node.onClick.clone());
 }
 
 fn textCreateNew(driver: &DomDriver, node: &VDomText) -> RealDomText {
