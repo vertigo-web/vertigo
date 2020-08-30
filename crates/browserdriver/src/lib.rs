@@ -9,6 +9,10 @@ use virtualdom::vdom::DomDriver::DomDriver::DomDriverTrait;
 use virtualdom::vdom::models::RealDomId::RealDomId;
 use virtualdom::computed::BoxRefCell::BoxRefCell;
 
+use wasm_bindgen::JsValue;
+
+mod event;
+
 #[wasm_bindgen(module = "/src/driver.js")]
 extern "C" {
     fn consoleLog(message: &str);
@@ -25,6 +29,8 @@ extern "C" {
     fn insertBefore(refId: u64, child: u64);
     fn insertAfter(refId: u64, child: u64);
     fn addChild(parent: u64, child: u64);
+
+    fn getEventData() -> JsValue;
 }
 
 struct DriverJS {}
@@ -76,6 +82,10 @@ impl DriverJS {
 
     fn addChild(parent: u64, child: u64) {
         addChild(parent, child);
+    }
+
+    fn getEventData() -> JsValue {
+        getEventData()
     }
 }
 
@@ -177,8 +187,28 @@ impl DomDriverBrowserInner {
                     state.remove(&id);
                 }
             };
-    
-        });        
+        });
+    }
+
+    fn fromCallback(&self) {
+        let data = DriverJS::getEventData();
+
+        log::info!("callback z drivera {:?}", &data);
+
+        use crate::event::Event;
+
+        let result: Result<Event, serde_json::error::Error> = data.into_serde::<Event>();
+
+        match result {
+            Ok(event) => {
+                log::info!("Przyszedł event {:?}", event);
+
+                //TODO - trzeba go obsłuyć
+            },
+            Err(err) => {
+                log::error!("Przyszedł zepsuty event {:?}", err);
+            }
+        };
     }
 }
 
@@ -188,7 +218,7 @@ pub struct DomDriverBrowserRc {
 
 impl DomDriverBrowserRc {
     fn fromCallback(&self) {
-        log::info!("callback z drivera");
+        self.inner.fromCallback();
     }
 
     fn new() -> DomDriverBrowserRc {

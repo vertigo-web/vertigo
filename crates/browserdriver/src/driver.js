@@ -240,3 +240,11 @@ export function addChild(parent, child) {
     const childNode = state.getChild(child);
     parentNode.appendChild(childNode);
 }
+
+export function getEventData() {
+    console.info("getEventData");
+    return {
+        type: "OnClick",
+        nodeId: 3,
+    };
+}
