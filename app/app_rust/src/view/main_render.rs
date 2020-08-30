@@ -12,30 +12,9 @@ use virtualdom::{
 use crate::app_state::AppState;
 
 pub fn main_render(app_state: &Rc<AppState>) -> Vec<VDom> {
-
-    let app_state = app_state.clone();
-
-    /*
-        zaimplementować FromStr, albo coś takiego
-        po to zeby dalo sie umiescic String lub str
-
-        https://docs.rs/maplit/1.0.2/maplit/
-    */
-
-
-
-    // vec!(
-    //     VDom::node("div", map!{
-    //         "aaa".into() => "one".into(),
-    //         "bbb".into() => format!("'wallll {}'", app_state.at.getValue())
-    //     }, vec!(
-    //         VDom::text(format!("aktualna wartosc = {}", app_state.value.getValue())),
-    //     ))
-    // )
-
     use virtualdom::vdom::models::{node, text};
 
-    let app_state_click = app_state.clone();
+    let app_state = app_state.clone();
 
     let onDown = {
         let app_state = app_state.clone();
@@ -47,6 +26,7 @@ pub fn main_render(app_state: &Rc<AppState>) -> Vec<VDom> {
     let onUp = {
         let app_state = app_state.clone();
         move || {
+            log::info!("on click");
             app_state.increment();
         }
     };
@@ -61,10 +41,7 @@ pub fn main_render(app_state: &Rc<AppState>) -> Vec<VDom> {
                 .child(text("bla bla bla"))
             )
             .child(node("div")
-                .onClick(move || {
-                    log::info!("on click");
-                    app_state_click.increment();
-                })
+                .onClick(onUp.clone())
                 .child(
                     text(format!("aktualna wartosc = {}", value))
                 )
