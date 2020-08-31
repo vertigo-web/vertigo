@@ -10,6 +10,7 @@ pub mod VDomNode;
 pub mod VDomText;
 pub mod VDomComponent;
 pub mod VDomComponentId;
+pub mod Css;
 
 pub fn node(name: &'static str) -> VDom::VDom {
     VDom::VDom::node(name)
