@@ -69,22 +69,66 @@ use crate::app_state::AppState;
 
     //"aaaa".into()
 
-
-fn wrapper1() -> Vec<&'static str> {
-    vec!("windth: 30px; height: 20px;")
+enum CssGroup {
+    CssStatic {
+        value: &'static str,
+    },
+    CssDynamic {
+        value: String,
+    }
 }
 
-fn wrapper2(active: bool) -> Vec<&'static str>{
-    let mut out = Vec::new();
+struct Css {
+    groups: Vec<CssGroup>,
+}
 
-    out.push("windth: 30px; height: 20px;");
+impl Css {
+    pub fn new() -> Css {
+        Css {
+            groups: Vec::new()
+        }
+    }
+
+    pub fn add(mut self, value: &'static str) -> Self {
+        self.groups.push(CssGroup::CssStatic {
+            value
+        });
+        self
+    }
+
+    pub fn str(&mut self, value: &'static str) {
+        self.groups.push(CssGroup::CssStatic {
+            value
+        })
+    }
+
+    pub fn dynamic(&mut self, value: String) {
+        self.groups.push(CssGroup::CssDynamic {
+            value
+        })
+    }
+}
+
+fn wrapper1() -> Css {
+    Css::new().add("windth: 30px; height: 20px;")
+}
+
+fn wrapper2(active: bool) -> Css {
+    let mut out = Css::new().add("windth: 30px; height: 20px;");
 
     if active {
-        out.push("color: red;");
+        out.str("color: red;");
+    }
+
+    let url: Option<String> = None;
+    if let Some(url) = url {
+        
     }
 
     out
 }
+
+//"border: 1px solid black; padding: 10px; background-color: #e0e0e0;")
 
 /*
     kady statyczny string jest zapisany tylko raz.
@@ -125,7 +169,9 @@ pub fn main_render(app_state: &Rc<AppState>) -> Vec<VDom> {
                 .child(text("bla bla bla"))
             )
             .child(node("div")
+                                                        //TODO - zaimplementować
                 //.style(wrapper2(true))
+                //.style(wrapper1())
                 .onClick(onUp.clone())
                 .child(
                     text(format!("aktualna wartosc = {} ({})", value, at))
