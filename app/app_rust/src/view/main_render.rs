@@ -71,10 +71,10 @@ use crate::app_state::AppState;
 
 enum CssGroup {
     CssStatic {
-        value: &'static str,
+        value: &'static str,                    //&str -- moze zachowywac sie jako id po ktorym odnajdujemy interesujaca regule
     },
     CssDynamic {
-        value: String,
+        value: String,                          //w tym wypadku String, jest kluczem do hashmapy z wynikowa nazwa klasy       
     }
 }
 
@@ -135,12 +135,12 @@ fn wrapper2(active: bool) -> Css {
     więc kademu statycznemu stringowi będzie odpowiadał jakiś identyfikator
 */
 
+    // wrapper1();
+    // wrapper2(true);
+    // wrapper2(false);
+
 pub fn main_render(app_state: &Rc<AppState>) -> Vec<VDom> {
     use virtualdom::vdom::models::{node, text};
-
-    wrapper1();
-    wrapper2(true);
-    wrapper2(false);
 
     let app_state = app_state.clone();
 
@@ -169,9 +169,8 @@ pub fn main_render(app_state: &Rc<AppState>) -> Vec<VDom> {
                 .child(text("bla bla bla"))
             )
             .child(node("div")
-                                                        //TODO - zaimplementować
-                //.style(wrapper2(true))
-                //.style(wrapper1())
+                //.style(wrapper2(true))                //TODO - zaimplementować
+                //.style(wrapper1())                    //TODO - zaimplementować
                 .onClick(onUp.clone())
                 .child(
                     text(format!("aktualna wartosc = {} ({})", value, at))
