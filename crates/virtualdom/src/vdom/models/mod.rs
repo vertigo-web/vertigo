@@ -11,7 +11,7 @@ pub mod VDomText;
 pub mod VDomComponent;
 pub mod VDomComponentId;
 
-pub fn node<T: Into<String>>(name: T) -> VDom::VDom {
+pub fn node(name: &'static str) -> VDom::VDom {
     VDom::VDom::node(name)
 }
 

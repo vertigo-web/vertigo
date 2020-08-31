@@ -13,16 +13,16 @@ use crate::vdom::{
 pub struct RealDomNode {
     domDriver: DomDriver,
     pub idDom: RealDomId,
-    pub name: String,
-    attr: HashMap<String, String>,
+    pub name: &'static str,
+    attr: HashMap<&'static str, String>,
     pub child: RealDomChild,
 }
 
 impl RealDomNode {
-    pub fn new(driver: DomDriver, name: String) -> RealDomNode {
+    pub fn new(driver: DomDriver, name: &'static str) -> RealDomNode {
         let nodeId = RealDomId::new();
 
-        driver.createNode(nodeId.clone(), &name);
+        driver.createNode(nodeId.clone(), name);
 
         let domChild = RealDomChild::newWithParent(driver.clone(), nodeId.clone());
 
@@ -37,7 +37,7 @@ impl RealDomNode {
         node
     }
 
-    fn updateAttrOne(&mut self, name: &String, value: &String) {
+    fn updateAttrOne(&mut self, name: &'static str, value: &String) {
         let needUpdate = {
             let item = self.attr.get(name);
             if let Some(item) = item {
@@ -57,7 +57,7 @@ impl RealDomNode {
        }
     }
 
-    pub fn updateAttr(&mut self, attr: &HashMap<String, String>) {
+    pub fn updateAttr(&mut self, attr: &HashMap<&'static str, String>) {
         self.attr.retain(|key, _value| {
             attr.contains_key(key)
         });

@@ -1,6 +1,6 @@
 
 use std::rc::Rc;
-
+use std::collections::HashMap;
 use virtualdom::{
     vdom::{
         models::{
@@ -11,8 +11,92 @@ use virtualdom::{
 
 use crate::app_state::AppState;
 
+// use std::cell::RefCell;
+// thread_local! {
+//     static cssMap: RefCell<CssState> = RefCell::new(CssState::new());
+// }
+
+// struct CssState {
+//     data: HashMap<&'static str, u32>,
+//     counter: u32,
+// }
+
+// impl CssState {
+//     fn new() -> CssState {
+//         CssState {
+//             data: HashMap::new(),
+//             counter: 1,
+//         }
+//     }
+
+//     fn getNextCounter(&mut self) -> u32 {
+//         let current = self.counter;
+//         self.counter += 1;
+//         current
+//     }
+
+//     fn get(&mut self, id: &'static str) -> u32 {
+//         let result = self.data.get(id);
+
+//         if let Some(result) = result {
+//             return *result;
+//         }
+
+//         let idNum = self.getNextCounter();
+//         self.data.insert(id, idNum);
+//         idNum
+//     }
+// }
+
+// fn css(rr: &'static str) -> u32 {
+//     let id = cssMap.with(|state| {
+//         let mut cssState = state.borrow_mut();
+//         let counter = cssState.get(rr);
+
+//         counter
+//     });
+
+//     log::info!("css funkcja {} -> {}", rr, &id);    //rr.as_ptr() as u64);
+    
+//     id
+//}
+
+    // let story = "Once upon a time...";
+
+    // let ptr = story.as_ptr();
+    // let ptr = ptr as u64;
+    // println!("aaa {} aaa", ptr);
+
+    //"aaaa".into()
+
+
+fn wrapper1() -> Vec<&'static str> {
+    vec!("windth: 30px; height: 20px;")
+}
+
+fn wrapper2(active: bool) -> Vec<&'static str>{
+    let mut out = Vec::new();
+
+    out.push("windth: 30px; height: 20px;");
+
+    if active {
+        out.push("color: red;");
+    }
+
+    out
+}
+
+/*
+    kady statyczny string jest zapisany tylko raz.
+    więc kademu statycznemu stringowi będzie odpowiadał jakiś identyfikator
+*/
+
 pub fn main_render(app_state: &Rc<AppState>) -> Vec<VDom> {
     use virtualdom::vdom::models::{node, text};
+
+    wrapper1();
+    wrapper2(true);
+    wrapper2(false);
 
     let app_state = app_state.clone();
 
@@ -41,9 +125,10 @@ pub fn main_render(app_state: &Rc<AppState>) -> Vec<VDom> {
                 .child(text("bla bla bla"))
             )
             .child(node("div")
+                //.style(wrapper2(true))
                 .onClick(onUp.clone())
                 .child(
-                    text(format!("aktualna wartosc = {}", value))
+                    text(format!("aktualna wartosc = {} ({})", value, at))
                 )
             )
             .child(node("div")

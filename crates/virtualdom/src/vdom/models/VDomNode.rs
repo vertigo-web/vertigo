@@ -6,8 +6,8 @@ use crate::vdom::models::{
 };
 
 pub struct VDomNode {
-    pub name: String,
-    pub attr: HashMap<String, String>,
+    pub name: &'static str,
+    pub attr: HashMap<&'static str, String>,
     pub child: Vec<VDom>,
     pub onClick: Option<Rc<dyn Fn()>>,
 }

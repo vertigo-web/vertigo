@@ -110,7 +110,7 @@ fn componentSynchronize(_real: &mut RealDomComponent, _node: &VDomComponent) {
 
 fn applyNewViewChild(target: &RealDomChild, newVersion: &Vec<VDom>) {
 
-    let mut realNode: CacheNode<String, RealDomNode, VDomNode> = CacheNode::new(
+    let mut realNode: CacheNode<&'static str, RealDomNode, VDomNode> = CacheNode::new(
         target.getDomDriver(),
         nodeCreateNew, 
         nodeSynchronize
@@ -131,8 +131,7 @@ fn applyNewViewChild(target: &RealDomChild, newVersion: &Vec<VDom>) {
     for item in realChild {
         match item {
             RealDom::Node { node }=> {
-                let id = node.name.clone();
-                realNode.insert(id, node);
+                realNode.insert(node.name, node);
             },
             RealDom::Text { node } => {
                 let id = node.value.clone();

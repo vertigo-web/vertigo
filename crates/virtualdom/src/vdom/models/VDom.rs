@@ -19,7 +19,7 @@ pub enum VDom {
 }
 
 impl VDom {
-    pub fn node<T: Into<String>>(name: T) -> VDom {
+    pub fn node(name: &'static str) -> VDom {
         VDom::Node {
             node: VDomNode {
                 name: name.into(),
@@ -38,7 +38,7 @@ impl VDom {
         }
     }
 
-    pub fn attr<T: Into<String>, K: Into<String>>(mut self, name: T, value: K) -> Self {
+    pub fn attr<K: Into<String>>(mut self, name: &'static str, value: K) -> Self {
         match &mut self {
             VDom::Node { node } => {
                 node.attr.insert(name.into(), value.into());

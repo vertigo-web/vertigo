@@ -16,7 +16,7 @@ impl DomDriverPrint {
 }
 
 impl DomDriverTrait for DomDriverPrint {
-    fn createNode(&self, id: RealDomId, name: &String) {
+    fn createNode(&self, id: RealDomId, name: &'static str) {
         log::info!("createNode {} - {}", id, name);
     }
 
@@ -28,11 +28,11 @@ impl DomDriverTrait for DomDriverPrint {
         log::info!("createComment {} {}", id, value);
     }
 
-    fn setAttr(&self, id: RealDomId, key: &String, value: &String) {
+    fn setAttr(&self, id: RealDomId, key: &'static str, value: &String) {
         log::info!("setAttr {} {} {}", id, key, value);
     }
     
-    fn removeAttr(&self, id: RealDomId, name: &String) {
+    fn removeAttr(&self, id: RealDomId, name: &'static str) {
         log::info!("removeAttr {} {}", id, name);
     }
 

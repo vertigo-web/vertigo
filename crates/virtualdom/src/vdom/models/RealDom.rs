@@ -23,7 +23,7 @@ pub enum RealDom {
 }
 
 impl RealDom {
-    pub fn newNode(domDriver: DomDriver, name: String) -> RealDom {
+    pub fn newNode(domDriver: DomDriver, name: &'static str) -> RealDom {
         RealDom::Node {
             node: RealDomNode::new(domDriver, name)
         }

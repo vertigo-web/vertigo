@@ -105,8 +105,8 @@ impl DomDriverBrowserInner {
 }
 
 impl DomDriverBrowserInner {
-    fn createNode(&self, id: RealDomId, name: &String) {
-        DriverJS::createNode(id.to_u64(), name.as_str());
+    fn createNode(&self, id: RealDomId, name: &'static str) {
+        DriverJS::createNode(id.to_u64(), name);
     }
 
     fn createText(&self, id: RealDomId, value: &String) {
@@ -117,12 +117,12 @@ impl DomDriverBrowserInner {
         DriverJS::createComment(id.to_u64(), value.as_str());
     }
 
-    fn setAttr(&self, id: RealDomId, key: &String, value: &String) {
-        DriverJS::setAttr(id.to_u64(), key.as_str(), value.as_str());
+    fn setAttr(&self, id: RealDomId, key: &'static str, value: &String) {
+        DriverJS::setAttr(id.to_u64(), key, value.as_str());
     }
 
-    fn removeAttr(&self, id: RealDomId, name: &String) {
-        DriverJS::removeAttr(id.to_u64(), name.as_str());
+    fn removeAttr(&self, id: RealDomId, name: &'static str) {
+        DriverJS::removeAttr(id.to_u64(), name);
     }
 
     fn remove(&self, id: RealDomId) {
@@ -290,7 +290,7 @@ impl Clone for DomDriverBrowserRc {
 }
 
 impl DomDriverTrait for DomDriverBrowserRc {
-    fn createNode(&self, id: RealDomId, name: &String) {
+    fn createNode(&self, id: RealDomId, name: &'static str) {
         self.inner.createNode(id, name);
     }
 
@@ -302,11 +302,11 @@ impl DomDriverTrait for DomDriverBrowserRc {
         self.inner.createComment(id, value);
     }
 
-    fn setAttr(&self, id: RealDomId, key: &String, value: &String) {
+    fn setAttr(&self, id: RealDomId, key: &'static str, value: &String) {
         self.inner.setAttr(id, key, value);
     }
 
-    fn removeAttr(&self, id: RealDomId, name: &String) {
+    fn removeAttr(&self, id: RealDomId, name: &'static str) {
         self.inner.removeAttr(id, name);
     }
 

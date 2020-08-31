@@ -6,11 +6,11 @@ use crate::vdom::models::{
 const SHOW_LOG: bool = false;
 
 pub trait DomDriverTrait {
-    fn createNode(&self, id: RealDomId, name: &String);
+    fn createNode(&self, id: RealDomId, name: &'static str);
     fn createText(&self, id: RealDomId, value: &String);
     fn createComment(&self, id: RealDomId, value: &String);
-    fn setAttr(&self, id: RealDomId, key: &String, value: &String);
-    fn removeAttr(&self, id: RealDomId, name: &String);
+    fn setAttr(&self, id: RealDomId, key: &'static str, value: &String);
+    fn removeAttr(&self, id: RealDomId, name: &'static str);
     fn remove(&self, id: RealDomId);
     fn insertAsFirstChild(&self, parent: RealDomId, child: RealDomId);
     fn insertBefore(&self, refId: RealDomId, child: RealDomId);
@@ -47,7 +47,7 @@ fn show_log(message: String) {
     }
 }
 impl DomDriver {
-    pub fn createNode(&self, id: RealDomId, name: &String) {
+    pub fn createNode(&self, id: RealDomId, name: &'static str) {
         show_log(format!("createNode {} {}", id, name));
         self.driver.createNode(id, name);
     }
@@ -62,12 +62,12 @@ impl DomDriver {
         self.driver.createComment(id, value);
     }
 
-    pub fn setAttr(&self, id: RealDomId, key: &String, value: &String) {
+    pub fn setAttr(&self, id: RealDomId, key: &'static str, value: &String) {
         show_log(format!("setAttr {} {}", key, value));
         self.driver.setAttr(id, key, value);
     }
 
-    pub fn removeAttr(&self, id: RealDomId, name: &String) {
+    pub fn removeAttr(&self, id: RealDomId, name: &'static str) {
         show_log(format!("removeAttr {} {}", id, name));
         self.driver.removeAttr(id, name);
     }
