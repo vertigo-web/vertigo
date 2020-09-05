@@ -22,44 +22,43 @@ pub enum NodeAttr {
 }
 
 
-impl NodeAttr {
-    pub fn css(css: Css) -> NodeAttr {
-        NodeAttr::Css {
-            css,
-        }
-    }
 
-    pub fn onClick<F: Fn() + 'static>(callback: F) -> NodeAttr {
-        NodeAttr::OnClick {
-            event: Rc::new(callback),
-        }
+pub fn css(css: Css) -> NodeAttr {
+    NodeAttr::Css {
+        css,
     }
+}
 
-    pub fn attr<K: Into<String>>(name: &'static str, value: K) -> NodeAttr {
-        NodeAttr::Attr {
-            name,
-            value: value.into()
-        }
+pub fn onClick<F: Fn() + 'static>(callback: F) -> NodeAttr {
+    NodeAttr::OnClick {
+        event: Rc::new(callback),
     }
+}
 
-    pub fn node(name: &'static str, childList: Vec<NodeAttr>) -> NodeAttr {
-        NodeAttr::Node {
-            node: VDom::node(name, childList)
-        }
+pub fn attr<K: Into<String>>(name: &'static str, value: K) -> NodeAttr {
+    NodeAttr::Attr {
+        name,
+        value: value.into()
     }
+}
 
-    pub fn text<T: Into<String>>(name: T) -> NodeAttr {
-        NodeAttr::Node {
-            node: VDom::text(name)
-        }
+pub fn node(name: &'static str, childList: Vec<NodeAttr>) -> NodeAttr {
+    NodeAttr::Node {
+        node: VDom::node(name, childList)
     }
+}
 
-
-    pub fn buildNode(name: &'static str, childList: Vec<NodeAttr>) -> VDom {
-        VDom::node(name, childList)
+pub fn text<T: Into<String>>(name: T) -> NodeAttr {
+    NodeAttr::Node {
+        node: VDom::text(name)
     }
+}
 
-    pub fn buildText<T: Into<String>>(name: T) -> VDom {
-        VDom::text(name)
-    }
+
+pub fn buildNode(name: &'static str, childList: Vec<NodeAttr>) -> VDom {
+    VDom::node(name, childList)
+}
+
+pub fn buildText<T: Into<String>>(name: T) -> VDom {
+    VDom::text(name)
 }

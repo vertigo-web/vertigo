@@ -13,7 +13,7 @@ use crate::app_state::AppState;
 
 use virtualdom::vdom::models::{
     Css::Css,
-    NodeAttr::NodeAttr,
+    NodeAttr,
 };
 
 fn wrapper1() -> Css {
@@ -69,35 +69,37 @@ pub fn main_render(app_state: &Rc<AppState>) -> Vec<VDom> {
     let at = app_state.at.getValue();
     let value = app_state.value.getValue();
 
+    use NodeAttr::{buildNode, node, css, text, onClick, attr};
+
     vec!(
-        NodeAttr::buildNode("div", vec!(
-            NodeAttr::node("div", vec!(
-                NodeAttr::css(cssBg()),
-                NodeAttr::text("bla bla bla"),
+        buildNode("div", vec!(
+            node("div", vec!(
+                css(cssBg()),
+                text("bla bla bla"),
             )),
-            NodeAttr::node("div", vec!(
-                NodeAttr::onClick(onUp.clone()),
-                NodeAttr::text(format!("aktualna wartosc = {} ({})", value, at)),
+            node("div", vec!(
+                onClick(onUp.clone()),
+                text(format!("aktualna wartosc = {} ({})", value, at)),
             )),
-            NodeAttr::node("div", vec!(
-                NodeAttr::css(cssBg()),
-                NodeAttr::onClick(onUp),
-                NodeAttr::text("up"),
+            node("div", vec!(
+                css(cssBg()),
+                onClick(onUp),
+                text("up"),
             )),
-            NodeAttr::node("div", vec!(
-                NodeAttr::css(cssBg()),
-                NodeAttr::onClick(onDown),
-                NodeAttr::text("down"),
+            node("div", vec!(
+                css(cssBg()),
+                onClick(onDown),
+                text("down"),
             )),
-            NodeAttr::node("div", vec!(
-                NodeAttr::text(format!("jakis footer {} {}", *value % 2, *value % 3)),
+            node("div", vec!(
+                text(format!("jakis footer {} {}", *value % 2, *value % 3)),
             )),
         )),
 
-        NodeAttr::buildNode("div", vec!(
-            NodeAttr::attr("aaa", "one"),
-            NodeAttr::attr("bbb", "two"),
-            NodeAttr::text("Abudabi")
+        buildNode("div", vec!(
+            attr("aaa", "one"),
+            attr("bbb", "two"),
+            text("Abudabi")
         ))
     )
 }
