@@ -15,15 +15,10 @@ use crate::application::Application;
 static ALLOC: wee_alloc::WeeAlloc = wee_alloc::WeeAlloc::INIT;
 
 thread_local! {
-    static APP_STATE: RefCell<Application> = {
-        RefCell::new(Application::new())
-    };
+    static APP_STATE: RefCell<Application> = RefCell::new(Application::new());
 }
 
 #[wasm_bindgen]
 pub fn start_app() {
-    APP_STATE.with(|state| {
-        let state = state.borrow();
-        state.start_app();
-    });
+    APP_STATE.with(|state| state.borrow().start_app());
 }
