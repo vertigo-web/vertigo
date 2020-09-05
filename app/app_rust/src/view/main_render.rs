@@ -12,9 +12,8 @@ use virtualdom::{
 use crate::app_state::AppState;
 
 use virtualdom::vdom::models::{
-    node,
-    text,
-    Css::Css
+    Css::Css,
+    NodeAttr::NodeAttr,
 };
 
 fn wrapper1() -> Css {
@@ -34,6 +33,10 @@ fn wrapper2(active: bool) -> Css {
     }
 
     out
+}
+
+fn cssBg() -> Css {
+    Css::new().add("border: 1px solid black; padding: 10px; background-color: #e0e0e0;")
 }
 
 //"border: 1px solid black; padding: 10px; background-color: #e0e0e0;")
@@ -67,37 +70,67 @@ pub fn main_render(app_state: &Rc<AppState>) -> Vec<VDom> {
     let value = app_state.value.getValue();
 
     vec!(
-        node("div")
-            .child(node("div")
-                .attr("style", "border: 1px solid black; padding: 10px; background-color: #e0e0e0;")
-                .child(text("bla bla bla"))
-            )
-            .child(node("div")
-                //.style(wrapper2(true))                //TODO - zaimplementować
-                //.style(wrapper1())                    //TODO - zaimplementować
-                .onClick(onUp.clone())
-                .child(
-                    text(format!("aktualna wartosc = {} ({})", value, at))
-                )
-            )
-            .child(node("div")
-                .attr("style", "border: 1px solid black; padding: 10px; background-color: #e0e0e0;")
-                .child(text("up"))
-                .onClick(onUp)
-            )
-            .child(node("div")
-                .attr("style", "border: 1px solid black; padding: 10px; background-color: #e0e0e0;")
-                .child(text("down"))
-                .onClick(onDown)
-            )
-            .child(node("div")
-                .child(text(format!("jakis footer {} {}", *value % 2, *value % 3)))
-            )
+        NodeAttr::buildNode("div", vec!(
+            NodeAttr::node("div", vec!(
+                NodeAttr::css(cssBg()),
+                NodeAttr::text("bla bla bla"),
+            )),
+            NodeAttr::node("div", vec!(
+                NodeAttr::onClick(onUp.clone()),
+                NodeAttr::text(format!("aktualna wartosc = {} ({})", value, at)),
+            )),
+            NodeAttr::node("div", vec!(
+                NodeAttr::css(cssBg()),
+                NodeAttr::onClick(onUp),
+                NodeAttr::text("up"),
+            )),
+            NodeAttr::node("div", vec!(
+                NodeAttr::css(cssBg()),
+                NodeAttr::onClick(onDown),
+                NodeAttr::text("down"),
+            )),
+            NodeAttr::node("div", vec!(
+                NodeAttr::text(format!("jakis footer {} {}", *value % 2, *value % 3)),
+            )),
+        )),
+
+        NodeAttr::buildNode("div", vec!(
+            NodeAttr::attr("aaa", "one"),
+            NodeAttr::attr("bbb", "two"),
+            NodeAttr::text("Abudabi")
+        ))
     )
+}
 
     /*
     <div aaa="one" bbb="two">
         "Abudabi"
     </div>
     */
-}
+                //.style(wrapper2(true))                //TODO - zaimplementować
+                //.style(wrapper1())                    //TODO - zaimplementować
+
+                        // node("div")
+        //     .child(node("div")
+        //         .css(cssBg())
+        //         .child(text("bla bla bla"))
+        //     )
+        //     .child(node("div")
+        //         .onClick(onUp.clone())
+        //         .child(text(format!("aktualna wartosc = {} ({})", value, at)))
+        //     )
+        //     .child(node("div")
+        //         .css(cssBg())
+        //         .onClick(onUp)
+        //         .child(text("up"))
+        //     )
+        //     .child(node("div")
+        //         .css(cssBg())
+        //         .onClick(onDown)
+        //         .child(text("down"))
+        //     )
+        //     .child(node("div")
+        //         .child(text(format!("jakis footer {} {}", *value % 2, *value % 3)))
+        //     ),
+        
+

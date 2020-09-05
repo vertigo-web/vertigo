@@ -11,12 +11,4 @@ pub mod VDomText;
 pub mod VDomComponent;
 pub mod VDomComponentId;
 pub mod Css;
-
-pub fn node(name: &'static str) -> VDom::VDom {
-    VDom::VDom::node(name)
-}
-
-pub fn text<T: Into<String>>(name: T) -> VDom::VDom {
-    VDom::VDom::text(name)
-}
-
+pub mod NodeAttr;

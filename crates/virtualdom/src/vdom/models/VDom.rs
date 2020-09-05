@@ -2,9 +2,8 @@ use crate::vdom::models::{
     VDomComponent::VDomComponent,
     VDomNode::VDomNode,
     VDomText::VDomText,
+    NodeAttr::NodeAttr,
 };
-use std::rc::Rc;
-use std::collections::HashMap;
 
 pub enum VDom {
     Node {
@@ -19,61 +18,15 @@ pub enum VDom {
 }
 
 impl VDom {
-    pub fn node(name: &'static str) -> VDom {
+    pub fn node(name: &'static str, childList: Vec<NodeAttr>) -> VDom {
         VDom::Node {
-            node: VDomNode {
-                name: name.into(),
-                attr: HashMap::new(),
-                child: Vec::new(),
-                onClick: None,
-            }
+            node: VDomNode::new(name, childList)
         }
     }
 
     pub fn text<T: Into<String>>(value: T) -> VDom {
         VDom::Text {
-            node: VDomText {
-                value: value.into()
-            }
+            node: VDomText::new(value)
         }
-    }
-
-    pub fn attr<K: Into<String>>(mut self, name: &'static str, value: K) -> Self {
-        match &mut self {
-            VDom::Node { node } => {
-                node.attr.insert(name.into(), value.into());
-            },
-            _ => {
-                panic!("Atrybut mozna dodac tylko do Node");
-            }
-        };
-
-        self
-    }
-
-    pub fn child(mut self, child: VDom) -> Self {
-        match &mut self {
-            VDom::Node { node } => {
-                node.child.push(child)
-            },
-            _ => {
-                panic!("Nowy child mozna dodac tylko do Node");
-            }
-        };
-
-        self
-    }
-
-    pub fn onClick<F: Fn() + 'static>(mut self, callback: F) -> Self {
-        match &mut self {
-            VDom::Node { node } => {
-                node.onClick = Some(Rc::new(callback));
-            },
-            _ => {
-                panic!("Nowy onClick mozna dodac tylko do Node");
-            }
-        };
-    
-        self
     }
 }
