@@ -12,6 +12,7 @@ export default {
     plugins: [
         rust({
             serverPath: "js/",
+            verbose: true,
         }),
     ],
 };
