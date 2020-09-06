@@ -1,0 +1,2 @@
+basic-http-server ./dist/
+

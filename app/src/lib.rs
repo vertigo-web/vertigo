@@ -18,7 +18,7 @@ thread_local! {
     static APP_STATE: RefCell<Application> = RefCell::new(Application::new());
 }
 
-#[wasm_bindgen]
+#[wasm_bindgen(start)]
 pub fn start_app() {
     APP_STATE.with(|state| state.borrow().start_app());
 }
