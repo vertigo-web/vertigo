@@ -45,7 +45,7 @@ fn cssFooter(showColor: bool) -> Css {
 }
 
 fn cssBg() -> Css {
-    Css::new().add("border: 1px solid black; padding: 10px; background-color: #e0e0e0;")
+    Css::new().add("border: 1px solid black; padding: 10px; background-color: #e0e0e0;margin-bottom: 10px;")
 }
 
 //"border: 1px solid black; padding: 10px; background-color: #e0e0e0;")
