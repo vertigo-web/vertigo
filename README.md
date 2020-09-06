@@ -11,8 +11,10 @@ Basic commands
 
 Links
 --------------
-- https://rustwasm.github.io/docs/book/reference/crates.html
-- https://webassembly.org/
+- `https://rustwasm.github.io/docs/book/reference/crates.html`
+- `https://webassembly.org/`
+- `https://github.com/brson/basic-http-server` - cargo install basic-http-server
+
 
 Struktura aplikacji, szkic
 --------------
