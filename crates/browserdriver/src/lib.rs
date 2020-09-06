@@ -32,6 +32,8 @@ extern "C" {
     fn addChild(parent: u64, child: u64);
 
     fn getEventData() -> JsValue;
+
+    fn insertCss(class: String, value: String);
 }
 
 struct DriverJS {}
@@ -87,6 +89,10 @@ impl DriverJS {
 
     fn getEventData() -> JsValue {
         getEventData()
+    }
+
+    fn insertCss(class: String, value: String) {
+        insertCss(class, value)
     }
 }
 
@@ -203,6 +209,11 @@ impl DomDriverBrowserInner {
             parent.map(|item| *item)
         })
     }
+
+    fn insertCss(&self, class: String, value: String) {
+        DriverJS::insertCss(class, value)
+    }
+
     //dataOnClick: BoxRefCell<HashMap<u64, Rc<dyn Fn()>>>,
 
     fn sendEvent(&self, event: &EventModel) {
@@ -328,6 +339,10 @@ impl DomDriverTrait for DomDriverBrowserRc {
 
     fn addChild(&self, parent: RealDomId, child: RealDomId) {
         self.inner.addChild(parent, child);
+    }
+
+    fn insertCss(&self, class: String, value: String) {
+        self.inner.insertCss(class, value);
     }
 
     fn setOnClick(&self, node: RealDomId, onClick: Option<Rc<dyn Fn()>>) {

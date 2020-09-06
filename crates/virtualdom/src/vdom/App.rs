@@ -24,11 +24,11 @@ pub struct App {
 
 impl App {
     pub fn new<T: 'static>(driver: DomDriver, deps: Dependencies, param: T, render: fn(&T) -> Vec<VDom>) -> App {
+        let cssManager = CssManager::new(&driver);
         let nodeList = RealDomChild::newWithParent(driver, RealDomId::root());
 
         let render /* (Fn() -> Rc<Vec<VDom>> */ = move || render(&param);
         let vDomComputed: Computed<Vec<VDom>> = deps.from(render);
-        let cssManager = CssManager::new();
 
         let subscription = renderToNode(cssManager.clone(), nodeList, vDomComputed);
 

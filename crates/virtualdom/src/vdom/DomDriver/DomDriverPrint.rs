@@ -56,8 +56,17 @@ impl DomDriverTrait for DomDriverPrint {
         log::info!("addChild {} {}", parent, child);
     }
 
+    fn insertCss(&self, selector: String, value: String) {
+        log::info!("insertCss {} {}", selector, value);
+    }
+
     fn setOnClick(&self, node: RealDomId, onClick: Option<Rc<dyn Fn()>>) {
-        log::info!("setOnClick {} --callback--", node);
+        let callback = match onClick {
+            Some(_) => "Some(--callback--)",
+            None => "None"
+        };
+
+        log::info!("setOnClick {} {}", node, callback);
     }
 }
 

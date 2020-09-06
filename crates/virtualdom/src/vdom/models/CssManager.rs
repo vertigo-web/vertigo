@@ -3,27 +3,30 @@ use std::rc::Rc;
 
 use crate::computed::BoxRefCell::BoxRefCell;
 
+use crate::vdom::DomDriver::DomDriver::DomDriver;
 use crate::vdom::models::Css::{
     Css,
     CssGroup
 };
 
 struct CssManagerInner {
+    driver: DomDriver,
     counter: u64,
     idsStatic: HashMap<u64, u64>,
     idsDynamic: HashMap<String, u64>,
 }
 
 impl CssManagerInner {
-    pub fn new() -> CssManagerInner {
+    pub fn new(driver: DomDriver) -> CssManagerInner {
         CssManagerInner {
+            driver,
             counter: 0,
             idsStatic: HashMap::new(),
             idsDynamic: HashMap::new(),
         }
     }
 
-    pub fn getNextId(&mut self) -> u64 {
+    pub fn getNextClassId(&mut self) -> u64 {
         self.counter += 1;
         self.counter
     }
@@ -41,33 +44,32 @@ impl Clone for CssManager {
     }
 }
 
+fn getSelector(id: u64) -> String {
+    format!("autocss_{}", id)
+}
+
 impl CssManager {
-    pub fn new() -> CssManager {
+    pub fn new(driver: &DomDriver) -> CssManager {
         CssManager {
-            inner: Rc::new(BoxRefCell::new(CssManagerInner::new()))
+            inner: Rc::new(BoxRefCell::new(CssManagerInner::new(driver.clone())))
         }
     }
 
-    fn getCssId(&self, id: u64) -> String {
-        format!("autocss_{}", id)
-    }
-
     fn getStatic(&self, css: &'static str) -> String {
-        let id: u64 = css.as_ptr() as u64;
+        let cssStaticId: u64 = css.as_ptr() as u64;
 
-        let idCss = self.inner.change(id, |state, id| {
-            if let Some(idCss) = state.idsStatic.get(&id) {
-                return *idCss;
+         self.inner.change((cssStaticId,css), |state, (cssStaticId, css)| {
+            if let Some(classId) = state.idsStatic.get(&cssStaticId) {
+                return getSelector(*classId);
             }
 
-            let nextId = state.getNextId();
-
-            state.idsStatic.insert(id, nextId);
+            let classId = state.getNextClassId();
+            let selector = getSelector(classId);
+            state.driver.insertCss(format!(".{}", selector.clone()), css.to_string());
+            state.idsStatic.insert(cssStaticId, classId);
             
-            nextId
-        });
-
-        self.getCssId(idCss)
+            selector
+        })
     }
 
     fn getDynamic(&self, css: &String) -> String {

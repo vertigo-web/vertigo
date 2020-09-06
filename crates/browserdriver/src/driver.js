@@ -247,3 +247,16 @@ export function addChild(parent, child) {
 export function getEventData() {
     return state.getEvents();
 }
+
+/**
+ * @param {string} selector
+ * @param {string} value
+ */
+export function insertCss(selector, value) {
+    const style = document.createElement('style');
+
+    const nodeText = document.createTextNode(`${selector} { ${value} }`);
+    style.appendChild(nodeText);
+
+    document.getElementsByTagName('head')[0].appendChild(style);
+}

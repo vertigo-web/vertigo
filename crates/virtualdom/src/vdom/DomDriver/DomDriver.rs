@@ -17,6 +17,8 @@ pub trait DomDriverTrait {
     fn insertAfter(&self, refId: RealDomId, child: RealDomId);
     fn addChild(&self, parent: RealDomId, child: RealDomId);
 
+    fn insertCss(&self, selector: String, value: String);
+
     fn setOnClick(&self, node: RealDomId, onClick: Option<Rc<dyn Fn()>>);
 }
 
@@ -95,6 +97,11 @@ impl DomDriver {
     pub fn addChild(&self, parent: RealDomId, child: RealDomId) {
         show_log(format!("addChild {} {}", parent, child));
         self.driver.addChild(parent, child);
+    }
+
+    pub fn insertCss(&self, selector: String, value: String) {
+        show_log(format!("insertCss {} {}", selector, value));
+        self.driver.insertCss(selector, value);
     }
 
     pub fn setOnClick(&self, node: RealDomId, onClick: Option<Rc<dyn Fn()>>) {
