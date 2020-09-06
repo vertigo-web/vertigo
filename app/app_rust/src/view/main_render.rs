@@ -34,6 +34,16 @@ use virtualdom::vdom::models::{
 //     out
 // }
 
+fn cssFooter(showColor: bool) -> Css {
+    let base = Css::new().add("background-color: yellow;");
+
+    if showColor {
+        base.add("color: green;")
+    } else {
+        base.add("color: blue;")
+    }
+}
+
 fn cssBg() -> Css {
     Css::new().add("border: 1px solid black; padding: 10px; background-color: #e0e0e0;")
 }
@@ -70,6 +80,8 @@ pub fn main_render(app_state: &Rc<AppState>) -> Vec<VDom> {
 
     use NodeAttr::{buildNode, node, css, text, onClick, attr};
 
+    let showColor = *value % 2 == 0;
+
     vec!(
         buildNode("div", vec!(
             node("div", vec!(
@@ -91,6 +103,7 @@ pub fn main_render(app_state: &Rc<AppState>) -> Vec<VDom> {
                 text("down"),
             )),
             node("div", vec!(
+                css(cssFooter(showColor)),
                 text(format!("jakis footer {} {}", *value % 2, *value % 3)),
             )),
         )),
