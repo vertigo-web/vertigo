@@ -57,9 +57,31 @@ impl RealDomNode {
        }
     }
 
-    pub fn updateAttr(&mut self, attr: &HashMap<&'static str, String>) {
+    fn mergeAttr(&mut self, attr: &HashMap<&'static str, String>, className: Option<String>) -> HashMap<&'static str, String> {
+        let mut attr = attr.clone();
+
+        if let Some(className) = className {
+            let attrClass = attr.get("class");
+            
+            let valueToSet: String = match attrClass {
+                Some(attrClass) => format!("{} {}", className, attrClass),
+                None => className
+            };
+
+            attr.insert("class", valueToSet);
+        }
+    
+        attr
+    }
+
+    pub fn updateAttr(&mut self, attr: &HashMap<&'static str, String>, className: Option<String>) {
+        let attr = self.mergeAttr(attr, className);
+
         self.attr.retain(|key, _value| {
-            attr.contains_key(key)
+            let key: &str = *key;
+
+            let keyExist = attr.contains_key(key);
+            keyExist
         });
 
         for (key, value) in attr.iter() {

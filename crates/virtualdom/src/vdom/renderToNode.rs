@@ -23,24 +23,28 @@ use crate::{
             VDomComponent::VDomComponent,
             VDomComponentId::VDomComponentId,
             VDomText::VDomText,
+            CssManager::CssManager,
         }
     }
 };
 
 struct CacheNode<K: Eq + Hash, RNode, VNode> {
+    cssManager: CssManager,
     domDriver: DomDriver,
-    createNew: fn(&DomDriver, &VNode) -> RNode,
-    synchronize: fn (&mut RNode, &VNode),
+    createNew: fn(&CssManager, &DomDriver, &VNode) -> RNode,
+    synchronize: fn (&CssManager, &mut RNode, &VNode),
     data: HashMap<K, VecDeque<RNode>>,
 }
 
 impl<K: Eq + Hash, RNode, VNode> CacheNode<K, RNode, VNode> {
     fn new(
+        cssManager: CssManager,
         domDriver: DomDriver,
-        createNew: fn(&DomDriver, &VNode) -> RNode,
-        synchronize: fn (&mut RNode, &VNode)
+        createNew: fn(&CssManager, &DomDriver, &VNode) -> RNode,
+        synchronize: fn (&CssManager, &mut RNode, &VNode)
     ) -> CacheNode<K, RNode, VNode> {
         CacheNode {
+            cssManager,
             domDriver,
             createNew,
             synchronize,
@@ -62,39 +66,53 @@ impl<K: Eq + Hash, RNode, VNode> CacheNode<K, RNode, VNode> {
 
         match node {
             Some(mut node) => {
-                synchronize(&mut node, &vnode);
+                synchronize(&self.cssManager, &mut node, &vnode);
                 node
             },
             None => {
-                createNew(&self.domDriver, &vnode)
+                createNew(&self.cssManager, &self.domDriver, &vnode)
             }
         }
     }
 }
 
-fn nodeCreateNew(driver: &DomDriver, node: &VDomNode) -> RealDomNode {
+fn nodeCreateNew(cssManager: &CssManager, driver: &DomDriver, node: &VDomNode) -> RealDomNode {
     let mut realNode = RealDomNode::new(driver.clone(), node.name.clone());
-    realNode.updateAttr(&node.attr);
+
+    let css = &node.css;
+    let className = match css {
+        Some (css) => Some(cssManager.getClassName(css)),
+        None => None,
+    };
+
+    realNode.updateAttr(&node.attr, className);
     realNode.updateOnClick(node.onClick.clone());
     realNode
 }
 
-fn nodeSynchronize(realNode: &mut RealDomNode, node: &VDomNode) {
-    realNode.updateAttr(&node.attr);
+fn nodeSynchronize(cssManager: &CssManager, realNode: &mut RealDomNode, node: &VDomNode) {
+
+    let css = &node.css;
+    let className = match css {
+        Some (css) => Some(cssManager.getClassName(css)),
+        None => None,
+    };
+
+    realNode.updateAttr(&node.attr, className);
     realNode.updateOnClick(node.onClick.clone());
 }
 
-fn textCreateNew(driver: &DomDriver, node: &VDomText) -> RealDomText {
+fn textCreateNew(cssManager: &CssManager, driver: &DomDriver, node: &VDomText) -> RealDomText {
     RealDomText::new(driver.clone(), node.value.clone())
 }
 
-fn textSynchronize(real: &mut RealDomText, node: &VDomText) {
+fn textSynchronize(cssManager: &CssManager, real: &mut RealDomText, node: &VDomText) {
     real.update(&node.value);
 }
 
-fn componentCreateNew(driver: &DomDriver, node: &VDomComponent) -> RealDomComponent {
+fn componentCreateNew(cssManager: &CssManager, driver: &DomDriver, node: &VDomComponent) -> RealDomComponent {
     let child = RealDomChild::newDetached(driver.clone());
-    let subscription = renderToNode(child.clone(), node.render.clone());
+    let subscription = renderToNode(cssManager.clone(), child.clone(), node.render.clone());
 
     RealDomComponent {
         id: node.id.clone(),
@@ -103,24 +121,27 @@ fn componentCreateNew(driver: &DomDriver, node: &VDomComponent) -> RealDomCompon
     }
 }
 
-fn componentSynchronize(_real: &mut RealDomComponent, _node: &VDomComponent) {
+fn componentSynchronize(_cssManager: &CssManager, _real: &mut RealDomComponent, _node: &VDomComponent) {
     //nic nie trzeba synchronizować. Komponent sam się synchronizuje.
 }
 
 
-fn applyNewViewChild(target: &RealDomChild, newVersion: &Vec<VDom>) {
+fn applyNewViewChild(cssManager: CssManager, target: &RealDomChild, newVersion: &Vec<VDom>) {
 
     let mut realNode: CacheNode<&'static str, RealDomNode, VDomNode> = CacheNode::new(
+        cssManager.clone(),
         target.getDomDriver(),
         nodeCreateNew, 
         nodeSynchronize
     );
     let mut realText: CacheNode<String, RealDomText, VDomText> = CacheNode::new(                    //TODO - trzeci parametr HashMap<String, String>
+        cssManager.clone(),
         target.getDomDriver(),
         textCreateNew, 
         textSynchronize
     );
     let mut realComponent: CacheNode<VDomComponentId, RealDomComponent, VDomComponent> = CacheNode::new(
+        cssManager.clone(),
         target.getDomDriver(),
         componentCreateNew,
         componentSynchronize
@@ -152,7 +173,7 @@ fn applyNewViewChild(target: &RealDomChild, newVersion: &Vec<VDom>) {
                 let id = node.name.clone();
                 let domChild = realNode.getOrCreate(id, &node);
 
-                applyNewViewChild(&domChild.child, &node.child);
+                applyNewViewChild(cssManager.clone(), &domChild.child, &node.child);
 
                 target.append(RealDom::Node { node: domChild });
             },
@@ -173,9 +194,10 @@ fn applyNewViewChild(target: &RealDomChild, newVersion: &Vec<VDom>) {
 }
 
 
-pub fn renderToNode(target: RealDomChild, computed: Computed<Vec<VDom>>) -> Client { 
+pub fn renderToNode(cssManager: CssManager, target: RealDomChild, computed: Computed<Vec<VDom>>) -> Client { 
     let subscription: Client = computed.subscribe(move |newVersion| {
         applyNewViewChild(
+            cssManager.clone(),
             &target, 
             newVersion
         );

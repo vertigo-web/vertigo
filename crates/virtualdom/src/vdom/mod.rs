@@ -2,6 +2,6 @@
 #![allow(non_camel_case_types)]
 
 pub mod models;
-pub mod renderToNode;
-pub mod startApp;
+mod renderToNode;
+pub mod App;
 pub mod DomDriver;

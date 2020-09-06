@@ -32,7 +32,7 @@ https://rustwasm.github.io/wasm-bindgen/reference/passing-rust-closures-to-js.ht
 use std::rc::Rc;
 use virtualdom::{
     vdom::{
-        startApp::startApp,
+        App::App,
         DomDriver::{
             DomDriver::DomDriver,
         },
@@ -50,7 +50,7 @@ use browserdriver::DomDriverBrowser;
 pub struct Application {
     pub driver: DomDriverBrowser,
     pub appState: Rc<AppState>,
-    _subskrybcjaApp: Client,
+    _app: App,
 }
 
 impl Application {
@@ -67,13 +67,13 @@ impl Application {
         let driver = DomDriverBrowser::new();
         let driverBrowser = driver.driver.clone();
         let domDriver = DomDriver::new(driverBrowser);
-        
-        let subskrybcjaApp = startApp(domDriver, root, appState.clone(), main_render);
+
+        let app = App::new(domDriver, root, appState.clone(), main_render);
 
         Application {
             driver: driver,
             appState,
-            _subskrybcjaApp: subskrybcjaApp
+            _app: app
         }
     }
 

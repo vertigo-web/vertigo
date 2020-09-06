@@ -1,5 +1,5 @@
 
-enum CssGroup {
+pub enum CssGroup {
     CssStatic {
         value: &'static str,                    //&str -- moze zachowywac sie jako id po ktorym odnajdujemy interesujaca regule
     },
@@ -9,7 +9,7 @@ enum CssGroup {
 }
 
 pub struct Css {
-    groups: Vec<CssGroup>,
+    pub groups: Vec<CssGroup>,
 }
 
 impl Css {

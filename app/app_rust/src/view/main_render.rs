@@ -1,6 +1,5 @@
 
 use std::rc::Rc;
-use std::collections::HashMap;
 use virtualdom::{
     vdom::{
         models::{
@@ -16,24 +15,24 @@ use virtualdom::vdom::models::{
     NodeAttr,
 };
 
-fn wrapper1() -> Css {
-    Css::new().add("windth: 30px; height: 20px;")
-}
+// fn wrapper1() -> Css {
+//     Css::new().add("windth: 30px; height: 20px;")
+// }
 
-fn wrapper2(active: bool) -> Css {
-    let mut out = Css::new().add("windth: 30px; height: 20px;");
+// fn wrapper2(active: bool) -> Css {
+//     let mut out = Css::new().add("windth: 30px; height: 20px;");
 
-    if active {
-        out.str("color: red;");
-    }
+//     if active {
+//         out.str("color: red;");
+//     }
 
-    let url: Option<String> = None;
-    if let Some(url) = url {
+//     let url: Option<String> = None;
+//     if let Some(url) = url {
         
-    }
+//     }
 
-    out
-}
+//     out
+// }
 
 fn cssBg() -> Css {
     Css::new().add("border: 1px solid black; padding: 10px; background-color: #e0e0e0;")
