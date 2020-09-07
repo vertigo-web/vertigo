@@ -73,7 +73,20 @@ impl CssManager {
     }
 
     fn getDynamic(&self, css: &String) -> String {
-        todo!();
+        let css = css.clone();
+
+        self.inner.change(css, |state, css| {
+            if let Some(classId) = state.idsDynamic.get(&css) {
+                return getSelector(*classId);
+            }
+
+            let classId = state.getNextClassId();
+            let selector = getSelector(classId);
+            state.driver.insertCss(format!(".{}", selector.clone()), css.to_string());
+            state.idsDynamic.insert(css, classId);
+            
+            selector
+        })
     }
 
     pub fn getClassName(&self, css: &Css) -> String {

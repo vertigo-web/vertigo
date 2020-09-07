@@ -39,7 +39,6 @@ use virtualdom::{
     },
     computed::{
         Dependencies::Dependencies,
-        Client::Client,
     }
 };
 

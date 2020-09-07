@@ -102,11 +102,11 @@ fn nodeSynchronize(cssManager: &CssManager, realNode: &mut RealDomNode, node: &V
     realNode.updateOnClick(node.onClick.clone());
 }
 
-fn textCreateNew(cssManager: &CssManager, driver: &DomDriver, node: &VDomText) -> RealDomText {
+fn textCreateNew(_cssManager: &CssManager, driver: &DomDriver, node: &VDomText) -> RealDomText {
     RealDomText::new(driver.clone(), node.value.clone())
 }
 
-fn textSynchronize(cssManager: &CssManager, real: &mut RealDomText, node: &VDomText) {
+fn textSynchronize(_cssManager: &CssManager, real: &mut RealDomText, node: &VDomText) {
     real.update(&node.value);
 }
 
