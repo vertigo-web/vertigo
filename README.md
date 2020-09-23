@@ -27,3 +27,13 @@ AppState {
     data: AppDataState,
     view: AppViewState,
 }
+
+Jak odpalić
+
+--------------
+- cargo install basic-http-server
+- cd app
+- yarn
+- cd ..
+- ./build.sh
+- ./start.sh
