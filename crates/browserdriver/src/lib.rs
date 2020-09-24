@@ -5,9 +5,9 @@ use wasm_bindgen::prelude::*;
 use std::rc::Rc;
 use std::collections::HashMap;
 
+use virtualdom::computed::BoxRefCell::BoxRefCell;
 use virtualdom::vdom::DomDriver::DomDriver::DomDriverTrait;
 use virtualdom::vdom::models::RealDomId::RealDomId;
-use virtualdom::computed::BoxRefCell::BoxRefCell;
 
 use wasm_bindgen::JsValue;
 use crate::event::EventModel;
@@ -39,59 +39,59 @@ extern "C" {
 struct DriverJS {}
 
 impl DriverJS {
-    fn consoleLog(message: &str) {
+    unsafe fn consoleLog(message: &str) {
         consoleLog(message);
     }
 
-    fn startDriverLoop(closure: &Closure<dyn FnMut()>) {
+    unsafe fn startDriverLoop(closure: &Closure<dyn FnMut()>) {
         startDriverLoop(closure);
     }
 
-    fn createNode(id: u64, name: &str) {
+    unsafe fn createNode(id: u64, name: &str) {
         createNode(id, name);
     }
 
-    fn createText(id: u64, value: &str) {
+    unsafe fn createText(id: u64, value: &str) {
         createText(id, value);
     }
 
-    fn createComment(id: u64, value: &str) {
+    unsafe fn createComment(id: u64, value: &str) {
         createComment(id, value);
     }
 
-    fn setAttr(id: u64, key: &str, value: &str) {
+    unsafe fn setAttr(id: u64, key: &str, value: &str) {
         setAttr(id, key, value);
     }
 
-    fn removeAttr(id: u64, name: &str) {
+    unsafe fn removeAttr(id: u64, name: &str) {
         removeAttr(id, name)
     }
 
-    fn remove(id: u64) {
+    unsafe fn remove(id: u64) {
         remove(id);
     }
 
-    fn insertAsFirstChild(parent: u64, child: u64) {
+    unsafe fn insertAsFirstChild(parent: u64, child: u64) {
         insertAsFirstChild(parent, child);
     }
 
-    fn insertBefore(refId: u64, child: u64) {
+    unsafe fn insertBefore(refId: u64, child: u64) {
         insertBefore(refId, child);
     }
 
-    fn insertAfter(refId: u64, child: u64) {
+    unsafe fn insertAfter(refId: u64, child: u64) {
         insertAfter(refId, child);
     }
 
-    fn addChild(parent: u64, child: u64) {
+    unsafe fn addChild(parent: u64, child: u64) {
         addChild(parent, child);
     }
 
-    fn getEventData() -> JsValue {
+    unsafe fn getEventData() -> JsValue {
         getEventData()
     }
 
-    fn insertCss(class: String, value: String) {
+    unsafe fn insertCss(class: String, value: String) {
         insertCss(class, value)
     }
 }
@@ -112,28 +112,40 @@ impl DomDriverBrowserInner {
 
 impl DomDriverBrowserInner {
     fn createNode(&self, id: RealDomId, name: &'static str) {
-        DriverJS::createNode(id.to_u64(), name);
+        unsafe {
+            DriverJS::createNode(id.to_u64(), name);
+        }
     }
 
     fn createText(&self, id: RealDomId, value: &String) {
-        DriverJS::createText(id.to_u64(), value.as_str());
+        unsafe {
+            DriverJS::createText(id.to_u64(), value.as_str());
+        }
     }
 
     fn createComment(&self, id: RealDomId, value: &String) {
-        DriverJS::createComment(id.to_u64(), value.as_str());
+        unsafe {
+            DriverJS::createComment(id.to_u64(), value.as_str());
+        }
     }
 
     fn setAttr(&self, id: RealDomId, key: &'static str, value: &String) {
-        DriverJS::setAttr(id.to_u64(), key, value.as_str());
+        unsafe {
+            DriverJS::setAttr(id.to_u64(), key, value.as_str());
+        }
     }
 
     fn removeAttr(&self, id: RealDomId, name: &'static str) {
-        DriverJS::removeAttr(id.to_u64(), name);
+        unsafe {
+            DriverJS::removeAttr(id.to_u64(), name);
+        }
     }
 
     fn remove(&self, id: RealDomId) {
         let id = id.to_u64();
-        DriverJS::remove(id);
+        unsafe {
+            DriverJS::remove(id);
+        }
 
         self.dataOnClick.change(&id, |state, id| {
             state.remove(id);
@@ -163,22 +175,30 @@ impl DomDriverBrowserInner {
     }
 
     fn insertAsFirstChild(&self, parent: RealDomId, child: RealDomId) {
-        DriverJS::insertAsFirstChild(parent.to_u64(), child.to_u64());
+        unsafe {
+            DriverJS::insertAsFirstChild(parent.to_u64(), child.to_u64());
+        }
         self.setParent(parent, child);
     }
 
     fn insertBefore(&self, refId: RealDomId, child: RealDomId) {
-        DriverJS::insertBefore(refId.to_u64(), child.to_u64());
+        unsafe {
+            DriverJS::insertBefore(refId.to_u64(), child.to_u64());
+        }
         self.setRel(refId, child);
     }
 
     fn insertAfter(&self, refId: RealDomId, child: RealDomId) {
-        DriverJS::insertAfter(refId.to_u64(), child.to_u64());
+        unsafe {
+            DriverJS::insertAfter(refId.to_u64(), child.to_u64());
+        }
         self.setRel(refId, child);
     }
 
     fn addChild(&self, parent: RealDomId, child: RealDomId) {
-        DriverJS::addChild(parent.to_u64(), child.to_u64());
+        unsafe {
+            DriverJS::addChild(parent.to_u64(), child.to_u64());
+        }
         self.setParent(parent, child);
     }
 
@@ -211,7 +231,9 @@ impl DomDriverBrowserInner {
     }
 
     fn insertCss(&self, class: String, value: String) {
-        DriverJS::insertCss(class, value)
+        unsafe {
+            DriverJS::insertCss(class, value)
+        }
     }
 
     //dataOnClick: BoxRefCell<HashMap<u64, Rc<dyn Fn()>>>,
@@ -250,8 +272,10 @@ impl DomDriverBrowserInner {
     }
 
     fn fromCallback(&self) {
-        let data = DriverJS::getEventData();
-        
+        let data = unsafe {
+            DriverJS::getEventData()
+        };
+
         let result: Result<Vec<EventModel>, serde_json::error::Error> = data.into_serde::<Vec<EventModel>>();
 
         match result {
@@ -261,11 +285,11 @@ impl DomDriverBrowserInner {
 
                 for item in event.iter() {
                     let item: &EventModel = item;
-                    self.sendEvent(item);                    
+                    self.sendEvent(item);
                 }
 
                 //złapać tranzakcją
-                    //w tej tranzakcji, w petli aktualizowac 
+                    //w tej tranzakcji, w petli aktualizowac
 
                 //TODO - tranzakcja stop
             },
@@ -366,9 +390,11 @@ impl DomDriverBrowser {
             let back = Closure::new(move || {
                 driver.fromCallback();
             });
-    
-            DriverJS::startDriverLoop(&back);
-    
+
+            unsafe {
+                DriverJS::startDriverLoop(&back);
+            }
+
             back
         };
 
@@ -379,6 +405,8 @@ impl DomDriverBrowser {
     }
 
     pub fn consoleLog(&self, message: &str) {
-        DriverJS::consoleLog(message);
+        unsafe {
+            DriverJS::consoleLog(message);
+        }
     }
 }
