@@ -30,12 +30,7 @@ https://rustwasm.github.io/wasm-bindgen/reference/passing-rust-closures-to-js.ht
 */
 
 use virtualdom::{
-    vdom::{
-        App::App,
-        DomDriver::{
-            DomDriver::DomDriver,
-        },
-    },
+    vdom::App::App,
     computed::{
         Dependencies::Dependencies,
     }
@@ -46,19 +41,11 @@ use crate::view::main_render::main_render;
 use browserdriver::DomDriverBrowser;
 
 pub fn applicationStart() -> App {
-    console_error_panic_hook::set_once();
-    wasm_logger::init(wasm_logger::Config::default());
-
-    log::info!("Start rustowego modułu ...");
-
     let root: Dependencies = Dependencies::new();
     let appState = AppState::new(&root);
     let vDomComputed = App::createRenderComputed(root, appState, main_render);
 
-
     let driver = DomDriverBrowser::new();
-    let domDriver = DomDriver::new(driver);
 
-
-    App::new(domDriver, vDomComputed)
+    App::new(driver, vDomComputed)
 }

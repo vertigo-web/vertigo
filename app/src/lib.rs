@@ -22,5 +22,10 @@ thread_local! {
 
 #[wasm_bindgen(start)]
 pub fn start_app() {
+    console_error_panic_hook::set_once();
+    wasm_logger::init(wasm_logger::Config::default());
+
+    log::info!("Start rustowego modułu ...");
+
     APP_STATE.with(|state| state.borrow().start_app());
 }
