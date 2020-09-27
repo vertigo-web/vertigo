@@ -53,9 +53,12 @@ pub fn applicationStart() -> App {
 
     let root: Dependencies = Dependencies::new();
     let appState = AppState::new(&root);
+    let vDomComputed = App::createRenderComputed(root, appState, main_render);
+
 
     let driver = DomDriverBrowser::new();
     let domDriver = DomDriver::new(driver);
 
-    App::new(domDriver, root, appState.clone(), main_render)
+
+    App::new(domDriver, vDomComputed)
 }
