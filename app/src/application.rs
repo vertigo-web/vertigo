@@ -45,32 +45,17 @@ use crate::app_state::AppState;
 use crate::view::main_render::main_render;
 use browserdriver::DomDriverBrowser;
 
-pub struct Application {
-    _app: App,
-}
+pub fn applicationStart() -> App {
+    console_error_panic_hook::set_once();
+    wasm_logger::init(wasm_logger::Config::default());
 
-impl Application {
-    pub fn new() -> Application {
-        console_error_panic_hook::set_once();
-        wasm_logger::init(wasm_logger::Config::default());
+    log::info!("Start rustowego modułu ...");
 
-        log::info!("Start rustowego modułu ...");
+    let root: Dependencies = Dependencies::new();
+    let appState = AppState::new(&root);
 
-        let root: Dependencies = Dependencies::new();
-        let appState = AppState::new(&root);
+    let driver = DomDriverBrowser::new();
+    let domDriver = DomDriver::new(driver);
 
-        let driver = DomDriverBrowser::new();
-        let domDriver = DomDriver::new(driver);
-
-        let app = App::new(domDriver, root, appState.clone(), main_render);
-
-        Application {
-            _app: app
-        }
-    }
-
-    pub fn start_app(&self) {
-        log::info!("START APP");
-    }
-
+    App::new(domDriver, root, appState.clone(), main_render)
 }

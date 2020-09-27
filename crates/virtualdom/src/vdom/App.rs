@@ -37,4 +37,8 @@ impl App {
             _cssManager: cssManager,
         }
     }
+
+    pub fn start_app(&self) {
+        log::info!("START APP");
+    }
 }

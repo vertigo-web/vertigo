@@ -8,14 +8,16 @@ mod view;
 use wasm_bindgen::prelude::*;
 
 use std::cell::RefCell;
-use crate::application::Application;
+use crate::application::applicationStart;
+
+use virtualdom::vdom::App::App;
 
 #[cfg(feature = "wee_alloc")]
 #[global_allocator]
 static ALLOC: wee_alloc::WeeAlloc = wee_alloc::WeeAlloc::INIT;
 
 thread_local! {
-    static APP_STATE: RefCell<Application> = RefCell::new(Application::new());
+    static APP_STATE: RefCell<App> = RefCell::new(applicationStart());
 }
 
 #[wasm_bindgen(start)]
