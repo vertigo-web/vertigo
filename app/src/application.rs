@@ -29,7 +29,6 @@ https://github.com/rustwasm/console_error_panic_hook#readme
 https://rustwasm.github.io/wasm-bindgen/reference/passing-rust-closures-to-js.html
 */
 
-use std::rc::Rc;
 use virtualdom::{
     vdom::{
         App::App,
@@ -47,8 +46,6 @@ use crate::view::main_render::main_render;
 use browserdriver::DomDriverBrowser;
 
 pub struct Application {
-    pub driver: DomDriverBrowser,
-    pub appState: Rc<AppState>,
     _app: App,
 }
 
@@ -62,16 +59,12 @@ impl Application {
         let root: Dependencies = Dependencies::new();
         let appState = AppState::new(&root);
 
-
         let driver = DomDriverBrowser::new();
-        let driverBrowser = driver.driver.clone();
-        let domDriver = DomDriver::new(driverBrowser);
+        let domDriver = DomDriver::new(driver);
 
         let app = App::new(domDriver, root, appState.clone(), main_render);
 
         Application {
-            driver: driver,
-            appState,
             _app: app
         }
     }

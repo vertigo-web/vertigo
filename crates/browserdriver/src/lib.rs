@@ -236,8 +236,6 @@ impl DomDriverBrowserInner {
         }
     }
 
-    //dataOnClick: BoxRefCell<HashMap<u64, Rc<dyn Fn()>>>,
-
     fn sendEvent(&self, event: &EventModel) {
         log::info!("Przyszedł event {:?}", event);
 
@@ -324,60 +322,10 @@ impl Clone for DomDriverBrowserRc {
     }
 }
 
-impl DomDriverTrait for DomDriverBrowserRc {
-    fn createNode(&self, id: RealDomId, name: &'static str) {
-        self.inner.createNode(id, name);
-    }
-
-    fn createText(&self, id: RealDomId, value: &String) {
-        self.inner.createText(id, value);
-    }
-
-    fn createComment(&self, id: RealDomId, value: &String) {
-        self.inner.createComment(id, value);
-    }
-
-    fn setAttr(&self, id: RealDomId, key: &'static str, value: &String) {
-        self.inner.setAttr(id, key, value);
-    }
-
-    fn removeAttr(&self, id: RealDomId, name: &'static str) {
-        self.inner.removeAttr(id, name);
-    }
-
-    fn remove(&self, id: RealDomId) {
-        self.inner.remove(id);
-    }
-
-    fn insertAsFirstChild(&self, parent: RealDomId, child: RealDomId) {
-        self.inner.insertAsFirstChild(parent, child);
-    }
-
-    fn insertBefore(&self, refId: RealDomId, child: RealDomId) {
-        self.inner.insertBefore(refId, child);
-    }
-
-    fn insertAfter(&self, refId: RealDomId, child: RealDomId) {
-        self.inner.insertAfter(refId, child);
-    }
-
-    fn addChild(&self, parent: RealDomId, child: RealDomId) {
-        self.inner.addChild(parent, child);
-    }
-
-    fn insertCss(&self, class: String, value: String) {
-        self.inner.insertCss(class, value);
-    }
-
-    fn setOnClick(&self, node: RealDomId, onClick: Option<Rc<dyn Fn()>>) {
-        self.inner.setOnClick(node, onClick);
-    }
-}
-
 
 pub struct DomDriverBrowser {
-    pub driver: DomDriverBrowserRc,
-    _callFromJS: Closure<dyn FnMut()>,
+    driver: DomDriverBrowserRc,
+    _callFromJS: Rc<Closure<dyn FnMut()>>,
 }
 
 impl DomDriverBrowser {
@@ -400,7 +348,7 @@ impl DomDriverBrowser {
 
         DomDriverBrowser {
             driver,
-            _callFromJS: callFromJS,
+            _callFromJS: Rc::new(callFromJS),
         }
     }
 
@@ -408,5 +356,55 @@ impl DomDriverBrowser {
         unsafe {
             DriverJS::consoleLog(message);
         }
+    }
+}
+
+impl DomDriverTrait for DomDriverBrowser {
+    fn createNode(&self, id: RealDomId, name: &'static str) {
+        self.driver.inner.createNode(id, name);
+    }
+
+    fn createText(&self, id: RealDomId, value: &String) {
+        self.driver.inner.createText(id, value);
+    }
+
+    fn createComment(&self, id: RealDomId, value: &String) {
+        self.driver.inner.createComment(id, value);
+    }
+
+    fn setAttr(&self, id: RealDomId, key: &'static str, value: &String) {
+        self.driver.inner.setAttr(id, key, value);
+    }
+
+    fn removeAttr(&self, id: RealDomId, name: &'static str) {
+        self.driver.inner.removeAttr(id, name);
+    }
+
+    fn remove(&self, id: RealDomId) {
+        self.driver.inner.remove(id);
+    }
+
+    fn insertAsFirstChild(&self, parent: RealDomId, child: RealDomId) {
+        self.driver.inner.insertAsFirstChild(parent, child);
+    }
+
+    fn insertBefore(&self, refId: RealDomId, child: RealDomId) {
+        self.driver.inner.insertBefore(refId, child);
+    }
+
+    fn insertAfter(&self, refId: RealDomId, child: RealDomId) {
+        self.driver.inner.insertAfter(refId, child);
+    }
+
+    fn addChild(&self, parent: RealDomId, child: RealDomId) {
+        self.driver.inner.addChild(parent, child);
+    }
+
+    fn insertCss(&self, class: String, value: String) {
+        self.driver.inner.insertCss(class, value);
+    }
+
+    fn setOnClick(&self, node: RealDomId, onClick: Option<Rc<dyn Fn()>>) {
+        self.driver.inner.setOnClick(node, onClick);
     }
 }
