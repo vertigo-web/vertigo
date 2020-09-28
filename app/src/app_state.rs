@@ -2,8 +2,7 @@ use std::rc::Rc;
 
 use virtualdom::{
     computed::{
-        Dependencies::Dependencies,
-        Value::Value,
+        Dependencies::Dependencies, Value::Value
     }
 };
 

@@ -1,6 +1,5 @@
 use std::collections::{HashMap};
 use std::rc::Rc;
-use std::fmt::Debug;
 
 use crate::computed::{
     BoxRefCell::BoxRefCell,
@@ -46,7 +45,7 @@ impl Dependencies {
         }
     }
 
-    pub fn newValue<T: Debug>(&self, value: T) -> Value<T> {
+    pub fn newValue<T>(&self, value: T) -> Value<T> {
         Value::new(self.clone(), value)
     }
 

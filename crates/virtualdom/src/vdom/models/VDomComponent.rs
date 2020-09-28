@@ -1,30 +1,38 @@
-use std::fmt::Debug;
 use crate::computed::{
     Computed::Computed,
 };
 
-use crate::vdom::{
-    models::{
-        VDom::VDom,
-        VDomComponentId::VDomComponentId,
+use crate::{
+    computed::{
+        Client::Client
+    },
+    vdom::{
+        models::{
+            VDom::VDom,
+            VDomComponentId::VDomComponentId,
+        }
     }
 };
 
 #[derive(Clone)]
 pub struct VDomComponent {
     pub id: VDomComponentId,
-    pub render: Computed<Vec<VDom>>,
+    render: Computed<Vec<VDom>>,
 }
 
 impl VDomComponent {
-    pub fn new<T: Debug + 'static>(params: Computed<T>, render: fn(&T) -> Vec<VDom>) -> VDomComponent {
+    pub fn new<T: 'static>(params: &Computed<T>, render: fn(&T) -> Vec<VDom>) -> VDomComponent {
 
         let componentId = VDomComponentId::new(&params, render);
-        let render = params.map(render);
+        let render = params.clone().map(render);
 
         VDomComponent {
             id: componentId,
             render,
         }
+    }
+
+    pub fn subscribe<F: Fn(&Vec<VDom>) + 'static>(self, render: F) -> Client {
+        self.render.subscribe(render)
     }
 }

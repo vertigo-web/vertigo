@@ -1,5 +1,4 @@
 use std::rc::Rc;
-use std::fmt::Debug;
 
 use crate::computed::{
     BoxRefCell::BoxRefCell,
@@ -8,13 +7,13 @@ use crate::computed::{
     GraphId::GraphId,
 };
 
-pub struct Value<T: Debug + 'static> {
+pub struct Value<T: 'static> {
     id: GraphId,
     value: Rc<BoxRefCell<Rc<T>>>,
     deps: Dependencies,
 }
 
-impl<T: Debug + 'static> Value<T> {
+impl<T: 'static> Value<T> {
     pub fn new(deps: Dependencies, value: T) -> Value<T> {
         Value {
             id: GraphId::new(),

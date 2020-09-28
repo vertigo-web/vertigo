@@ -30,10 +30,13 @@ https://rustwasm.github.io/wasm-bindgen/reference/passing-rust-closures-to-js.ht
 */
 
 use virtualdom::{
-    vdom::App::App,
+    vdom::{
+        App::App,
+        StateBox::StateBox,
+    },
     computed::{
         Dependencies::Dependencies,
-    }
+    },
 };
 
 use crate::app_state::AppState;
@@ -42,10 +45,9 @@ use browserdriver::DomDriverBrowser;
 
 pub fn applicationStart() -> App {
     let root: Dependencies = Dependencies::new();
-    let appState = AppState::new(&root);
-    let vDomComputed = App::createRenderComputed(root, appState, main_render);
+    let appStateBox = StateBox::new(&root, AppState::new(&root));
 
     let driver = DomDriverBrowser::new();
 
-    App::new(driver, vDomComputed)
+    App::new(driver, appStateBox.render(main_render))
 }

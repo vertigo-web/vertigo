@@ -1,15 +1,13 @@
 use crate::computed::{
-    Dependencies::Dependencies,
-    Computed::Computed,
     Client::Client,
 };
 
 use crate::vdom::{
     models::{
-        VDom::VDom,
         RealDomChild::RealDomChild,
         RealDomId::RealDomId,
         CssManager::CssManager,
+        VDomComponent::VDomComponent,
     },
     renderToNode::renderToNode,
     DomDriver::{
@@ -25,20 +23,13 @@ pub struct App {
 }
 
 impl App {
-    pub fn createRenderComputed<T: 'static>(deps: Dependencies, param: T, render: fn(&T) -> Vec<VDom>) -> Computed<Vec<VDom>> {
-        let render /* (Fn() -> Rc<Vec<VDom>> */ = move || render(&param);
-        let vDomComputed: Computed<Vec<VDom>> = deps.from(render);
-
-        vDomComputed
-    }
-
-    pub fn new<D: DomDriverTrait + 'static>(driverIn: D, vDomComputed: Computed<Vec<VDom>>) -> App {
+    pub fn new<D: DomDriverTrait + 'static>(driverIn: D, computed: VDomComponent) -> App {
         let driver = DomDriver::new(driverIn);
 
         let cssManager = CssManager::new(&driver);
         let nodeList = RealDomChild::newWithParent(driver, RealDomId::root());
 
-        let subscription = renderToNode(cssManager.clone(), nodeList, vDomComputed);
+        let subscription = renderToNode(cssManager.clone(), nodeList, computed);
 
         App {
             _subscription: subscription,

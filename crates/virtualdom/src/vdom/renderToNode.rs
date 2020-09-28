@@ -6,7 +6,6 @@ use std::hash::Hash;
 
 use crate::computed::{
     Client::Client,
-    Computed::Computed,
 };
 
 use crate::{
@@ -112,7 +111,7 @@ fn textSynchronize(_cssManager: &CssManager, real: &mut RealDomText, node: &VDom
 
 fn componentCreateNew(cssManager: &CssManager, driver: &DomDriver, node: &VDomComponent) -> RealDomComponent {
     let child = RealDomChild::newDetached(driver.clone());
-    let subscription = renderToNode(cssManager.clone(), child.clone(), node.render.clone());
+    let subscription = renderToNode(cssManager.clone(), child.clone(), node.clone());
 
     RealDomComponent {
         id: node.id.clone(),
@@ -194,8 +193,8 @@ fn applyNewViewChild(cssManager: CssManager, target: &RealDomChild, newVersion: 
 }
 
 
-pub fn renderToNode(cssManager: CssManager, target: RealDomChild, computed: Computed<Vec<VDom>>) -> Client { 
-    let subscription: Client = computed.subscribe(move |newVersion| {
+pub fn renderToNode(cssManager: CssManager, target: RealDomChild, component: VDomComponent) -> Client { 
+    let subscription: Client = component.subscribe(move |newVersion| {
         applyNewViewChild(
             cssManager.clone(),
             &target, 
