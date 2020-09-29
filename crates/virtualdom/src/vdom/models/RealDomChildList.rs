@@ -6,6 +6,8 @@ use crate::vdom::{
     },
     models::{
         RealDom::RealDom,
+        RealDomNode::RealDomNode,
+        RealDomText::RealDomText,
         RealDomId::RealDomId,
         RealDomComment::RealDomComment,
     },
@@ -30,14 +32,14 @@ impl RealDomChildState {
     }
 }
 
-struct RealDomChildInner {
+struct RealDomChildListInner {
     domDriver: DomDriver,
     state: RealDomChildState,
 }
 
-impl RealDomChildInner {
-    pub fn new(domDriver: DomDriver, comment: RealDomComment) -> RealDomChildInner {
-        RealDomChildInner {
+impl RealDomChildListInner {
+    pub fn new(domDriver: DomDriver, comment: RealDomComment) -> RealDomChildListInner {
+        RealDomChildListInner {
             domDriver,
             state: RealDomChildState::Empty {
                 comment
@@ -45,17 +47,18 @@ impl RealDomChildInner {
         }
     }
 
-    pub fn newWithParent(driver: DomDriver, parent: RealDomId) -> RealDomChildInner {
+    pub fn newWithParent(driver: DomDriver, parent: RealDomId) -> RealDomChildListInner {
         let nodeComment = RealDomComment::new(driver.clone(), "".into());
         driver.addChild(parent, nodeComment.idDom.clone());
-        let nodeList = RealDomChildInner::new(driver,  nodeComment);
+        let nodeList = RealDomChildListInner::new(driver,  nodeComment);
 
         nodeList
     }
 
-    pub fn newDetached(driver: DomDriver) -> RealDomChildInner {
+    pub fn newAfter(driver: DomDriver, afterRef: RealDomId) -> RealDomChildListInner {
         let nodeComment = RealDomComment::new(driver.clone(), "".into());
-        let nodeList = RealDomChildInner::new(driver,  nodeComment);
+        driver.insertAfter(afterRef, nodeComment.idDom.clone());
+        let nodeList = RealDomChildListInner::new(driver,  nodeComment);
 
         nodeList
     }
@@ -162,25 +165,31 @@ impl RealDomChildInner {
 
         out
     }
-}
 
-pub struct RealDomChild {
-    inner: Rc<BoxRefCell<RealDomChildInner>>,
-}
-
-impl RealDomChild {
-    pub fn newWithParent(driver: DomDriver, parent: RealDomId) -> RealDomChild {
-        RealDomChild {
-            inner: Rc::new(BoxRefCell::new(
-                RealDomChildInner::newWithParent(driver, parent)
-            ))
-        }
+    fn createNode(&self, name: &'static str) -> RealDomNode {
+        RealDomNode::new(self.domDriver.clone(), name, self.lastChildId())
     }
 
-    pub fn newDetached(driver: DomDriver) -> RealDomChild {
-        RealDomChild {
+    fn createText(&self, name: String) -> RealDomText {
+        let node = RealDomText::new(self.domDriver.clone(), name);
+        self.domDriver.insertAfter(self.lastChildId(), node.idDom.clone());
+        node
+    }
+
+    fn createChildList(&self) -> RealDomChildListInner {
+        RealDomChildListInner::newAfter(self.domDriver.clone(), self.lastChildId())
+    }
+}
+
+pub struct RealDomChildList {
+    inner: Rc<BoxRefCell<RealDomChildListInner>>,
+}
+
+impl RealDomChildList {
+    pub fn newWithParent(driver: DomDriver, parent: RealDomId) -> RealDomChildList {
+        RealDomChildList {
             inner: Rc::new(BoxRefCell::new(
-                RealDomChildInner::newDetached(driver)
+                RealDomChildListInner::newWithParent(driver, parent)
             ))
         }
     }
@@ -220,11 +229,33 @@ impl RealDomChild {
             state.domDriver.clone()
         })
     }
+
+    pub fn createNode(&self, name: &'static str) -> RealDomNode {
+        self.inner.getWithContext(name, |state, name| {
+            state.createNode(name)
+        })
+    }
+
+    pub fn createText(&self, name: String) -> RealDomText {
+        self.inner.getWithContext(name, |state, name| {
+            state.createText(name)
+        })
+    }
+
+    pub fn createChildList(&self) -> RealDomChildList {
+        let newChildList = self.inner.get(|state| {
+            state.createChildList()
+        });
+
+        RealDomChildList {
+            inner: Rc::new(BoxRefCell::new(newChildList))
+        }
+    }
 }
 
-impl Clone for RealDomChild {
+impl Clone for RealDomChildList {
     fn clone(&self) -> Self {
-        RealDomChild {
+        RealDomChildList {
             inner: self.inner.clone()
         }
     }

@@ -3,7 +3,7 @@ use crate::vdom::models::{
     RealDomId::RealDomId,
 };
 
-const SHOW_LOG: bool = false;
+const SHOW_LOG: bool = true;
 
 pub trait DomDriverTrait {
     fn createNode(&self, id: RealDomId, name: &'static str);
@@ -80,27 +80,27 @@ impl DomDriver {
     }
 
     pub fn insertAsFirstChild(&self, parent: RealDomId, child: RealDomId) {
-        show_log(format!("insertAsFirstChild {} {}", parent, child));
+        show_log(format!("insertAsFirstChild parent={} child={}", parent, child));
         self.driver.insertAsFirstChild(parent, child);
     }
 
     pub fn insertBefore(&self, refId: RealDomId, child: RealDomId) {
-        show_log(format!("insertBefore {} {}", refId, child));
+        show_log(format!("insertBefore refId={} child={}", refId, child));
         self.driver.insertBefore(refId, child);
     }
 
     pub fn insertAfter(&self, refId: RealDomId, child: RealDomId) {
-        show_log(format!("insertAfter {} {}", refId, child));
+        show_log(format!("insertAfter refId={} child={}", refId, child));
         self.driver.insertAfter(refId, child);
     }
 
     pub fn addChild(&self, parent: RealDomId, child: RealDomId) {
-        show_log(format!("addChild {} {}", parent, child));
+        show_log(format!("addChild parent={} child={}", parent, child));
         self.driver.addChild(parent, child);
     }
 
     pub fn insertCss(&self, selector: String, value: String) {
-        show_log(format!("insertCss {} {}", selector, value));
+        show_log(format!("insertCss selector={} value={}", selector, value));
         self.driver.insertCss(selector, value);
     }
 
