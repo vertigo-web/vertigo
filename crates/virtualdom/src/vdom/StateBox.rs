@@ -18,8 +18,8 @@ pub struct StateBox<T: 'static> {
 }
 
 impl<T: 'static> StateBox<T> {
-    pub fn new(root: &Dependencies, state: Rc<T>) -> StateBox<T> {
-        let state = root.newValue(state);
+    pub fn new(root: &Dependencies, state: T) -> StateBox<T> {
+        let state = root.newValue(Rc::new(state));
         let computed = state.toComputed();
 
         StateBox {

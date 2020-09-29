@@ -3,7 +3,7 @@ use std::rc::Rc;
 use crate::vdom::{
     models::{
         RealDomId::RealDomId,
-        RealDomChild::RealDomChild,
+        RealDomChildList::RealDomChildList,
     },
     DomDriver::{
         DomDriver::DomDriver,
@@ -15,16 +15,17 @@ pub struct RealDomNode {
     pub idDom: RealDomId,
     pub name: &'static str,
     attr: HashMap<&'static str, String>,
-    pub child: RealDomChild,
+    pub child: RealDomChildList,
 }
 
 impl RealDomNode {
-    pub fn new(driver: DomDriver, name: &'static str) -> RealDomNode {
+    pub fn new(driver: DomDriver, name: &'static str, refAfter: RealDomId) -> RealDomNode {
         let nodeId = RealDomId::new();
 
         driver.createNode(nodeId.clone(), name);
+        driver.insertAfter(refAfter, nodeId.clone());
 
-        let domChild = RealDomChild::newWithParent(driver.clone(), nodeId.clone());
+        let domChild = RealDomChildList::newWithParent(driver.clone(), nodeId.clone());
 
         let node = RealDomNode {
             domDriver: driver,

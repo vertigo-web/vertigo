@@ -5,9 +5,6 @@ use crate::vdom::{
         RealDomId::RealDomId,
         RealDomComponent::RealDomComponent,
     },
-    DomDriver::{
-        DomDriver::DomDriver,
-    },
 };
 
 pub enum RealDom {
@@ -23,18 +20,6 @@ pub enum RealDom {
 }
 
 impl RealDom {
-    pub fn newNode(domDriver: DomDriver, name: &'static str) -> RealDom {
-        RealDom::Node {
-            node: RealDomNode::new(domDriver, name)
-        }
-    }
-
-    pub fn newText(domDriver: DomDriver, value: String) -> RealDom {
-        RealDom::Text {
-            node: RealDomText::new(domDriver, value)
-        }
-    }
-
     pub fn firstChildId(&self) -> RealDomId {
         match self {
             RealDom::Node { node } => {

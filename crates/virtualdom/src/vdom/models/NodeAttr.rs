@@ -2,6 +2,7 @@ use std::rc::Rc;
 
 use crate::vdom::models::{
     VDom::VDom,
+    VDomComponent::VDomComponent,
 };
 use crate::vdom::models::Css::Css;
 
@@ -53,6 +54,13 @@ pub fn text<T: Into<String>>(name: T) -> NodeAttr {
         node: VDom::text(name)
     }
 }
+
+pub fn component(component: VDomComponent) -> NodeAttr {
+    NodeAttr::Node {
+        node:VDom::component(component)
+    }
+}
+
 
 
 pub fn buildNode(name: &'static str, childList: Vec<NodeAttr>) -> VDom {

@@ -29,4 +29,10 @@ impl VDom {
             node: VDomText::new(value)
         }
     }
+
+    pub fn component(value: VDomComponent) -> VDom {
+        VDom::Component {
+            node: value
+        }
+    }
 }

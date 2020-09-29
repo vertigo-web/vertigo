@@ -2,7 +2,7 @@
 #![allow(non_camel_case_types)]
 
 mod app_state;
-mod view;
+mod simple_counter;
 
 use wasm_bindgen::prelude::*;
 
@@ -22,9 +22,8 @@ use browserdriver::{
     DomDriverBrowser,
 };
 
-use app_state::AppState;
-use view::main_render::main_render;
-
+use crate::app_state::app_state::AppState;
+use crate::app_state::app_state_render::main_render;
 
 
 #[cfg(feature = "wee_alloc")]
