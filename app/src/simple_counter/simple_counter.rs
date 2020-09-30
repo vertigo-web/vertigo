@@ -18,5 +18,9 @@ impl SimpleCounter {
     pub fn increment(&self) {
         self.counter.setValue(*self.counter.getValue() + 1);
     }
+
+    pub fn decrement(&self) {
+        self.counter.setValue(*self.counter.getValue() - 1);
+    }
 }
 
