@@ -23,6 +23,16 @@ fn cssBox() -> Css {
     ")
 }
 
+fn cssButton() -> Css {
+    cssBox().add("
+        cursor: pointer;
+
+        &:hover {
+            color: red;
+        }
+    ")
+}
+
 fn cssWrapper() -> Css {
     Css::new().add("
         border:1px solid black;
@@ -57,12 +67,12 @@ pub fn simple_counter_render(simple_counter: &Rc<SimpleCounter>) -> Vec<VDom> {
                 text(format!("Counter value = {}", calue)),
             )),            
             node("button", vec!(
-                css(cssBox()),
+                css(cssButton()),
                 text("up"),
                 onClick(clickUp)
             )),
             node("button", vec!(
-                css(cssBox()),
+                css(cssButton()),
                 text("down"),
                 onClick(clickDown)
             ))

@@ -1,6 +1,8 @@
 use virtualdom::{
     computed::{
-        Dependencies::Dependencies, Value::Value
+        Dependencies::Dependencies,
+        Value::Value,
+        Computed::Computed,
     }
 };
 
@@ -13,16 +15,37 @@ pub struct AppState {
     pub counter1: StateBox<SimpleCounter>,
     pub counter2: StateBox<SimpleCounter>,
     pub counter3: StateBox<SimpleCounter>,
+
+    pub suma: Computed<u32>,
 }
 
 impl AppState {
     pub fn new(root: &Dependencies) -> AppState {
+        let counter1 = StateBox::new(&root, SimpleCounter::new(&root));
+        let counter2 = StateBox::new(&root, SimpleCounter::new(&root));
+        let counter3 = StateBox::new(&root, SimpleCounter::new(&root));
+
+        let suma = {
+            let counter1 = counter1.computed.clone();
+            let counter2 = counter2.computed.clone();
+            let counter3 = counter3.computed.clone();
+
+            root.from(move || {
+                let value1 = *counter1.getValue().counter.getValue();
+                let value2 = *counter2.getValue().counter.getValue();
+                let value3 = *counter3.getValue().counter.getValue();
+
+                value1 + value2 + value3
+            })
+        };
+
         AppState {
             value: root.newValue(33),
             at: root.newValue(999),
-            counter1: StateBox::new(&root, SimpleCounter::new(&root)),
-            counter2: StateBox::new(&root, SimpleCounter::new(&root)),
-            counter3: StateBox::new(&root, SimpleCounter::new(&root)),
+            counter1,
+            counter2,
+            counter3,
+            suma
         }
     }
 

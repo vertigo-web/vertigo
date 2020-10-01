@@ -50,6 +50,10 @@ fn cssBg() -> Css {
     Css::new().add("border: 1px solid black; padding: 10px; background-color: #e0e0e0;margin-bottom: 10px;")
 }
 
+fn cssButton() -> Css {
+    cssBg().add("cursor: pointer;")
+}
+
 //"border: 1px solid black; padding: 10px; background-color: #e0e0e0;")
 
 /*
@@ -79,6 +83,7 @@ pub fn main_render(app_state: &Rc<AppState>) -> Vec<VDom> {
 
     let at = app_state.at.getValue();
     let value = app_state.value.getValue();
+    let suma = app_state.suma.getValue();
 
     use NodeAttr::{buildNode, node, css, text, component, onClick, attr};
 
@@ -95,12 +100,12 @@ pub fn main_render(app_state: &Rc<AppState>) -> Vec<VDom> {
                 text(format!("aktualna wartosc = {} ({})", value, at)),
             )),
             node("div", vec!(
-                css(cssBg()),
+                css(cssButton()),
                 onClick(onUp),
                 text("up"),
             )),
             node("div", vec!(
-                css(cssBg()),
+                css(cssButton()),
                 onClick(onDown),
                 text("down"),
             )),
@@ -120,6 +125,10 @@ pub fn main_render(app_state: &Rc<AppState>) -> Vec<VDom> {
             component(app_state.counter1.render(simple_counter_render)),
             component(app_state.counter2.render(simple_counter_render)),
             component(app_state.counter3.render(simple_counter_render)),
+        )),
+
+        buildNode("div", vec!(
+            text(format!("suma = {}", suma))
         ))
     )
 }

@@ -147,6 +147,7 @@ export function startDriverLoop(callback) {
  */
 export function createNode(id, name) {
     const node = document.createElement(name);
+    node.setAttribute('debug-id', id);
     state.setChild(id, node);
 
 }

@@ -14,7 +14,7 @@ use crate::{
 
 pub struct StateBox<T: 'static> {
     pub state: Value<Rc<T>>,
-    computed: Computed<Rc<T>>,
+    pub computed: Computed<Rc<T>>,
 }
 
 impl<T: 'static> StateBox<T> {
