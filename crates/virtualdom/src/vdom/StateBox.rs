@@ -31,4 +31,8 @@ impl<T: 'static> StateBox<T> {
     pub fn render(&self, render: fn(&Rc<T>) -> Vec<VDom>) -> VDomComponent {
         VDomComponent::new(&self.computed, render)
     }
+
+    pub fn toComputed(&self) -> Computed<Rc<T>> {
+        self.computed.clone()
+    }
 }

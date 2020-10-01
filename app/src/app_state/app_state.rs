@@ -26,9 +26,9 @@ impl AppState {
         let counter3 = StateBox::new(&root, SimpleCounter::new(&root));
 
         let suma = {
-            let counter1 = counter1.computed.clone();
-            let counter2 = counter2.computed.clone();
-            let counter3 = counter3.computed.clone();
+            let counter1 = counter1.toComputed();
+            let counter2 = counter2.toComputed();
+            let counter3 = counter3.toComputed();
 
             root.from(move || {
                 let value1 = *counter1.getValue().counter.getValue();
