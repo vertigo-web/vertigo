@@ -3,6 +3,7 @@
 
 mod app_state;
 mod simple_counter;
+mod fetch;
 
 use wasm_bindgen::prelude::*;
 
@@ -42,7 +43,7 @@ thread_local! {
 }
 
 #[wasm_bindgen(start)]
-pub fn start_app() {
+pub async fn start_app() {
     console_error_panic_hook::set_once();
     wasm_logger::init(wasm_logger::Config::default());
 
@@ -55,17 +56,21 @@ pub fn start_app() {
     let body = document.body().expect("document should have a body");
 
     // Manufacture the element we're gonna append
-    let val = document.create_element("p").unwrap();
-    val.set_inner_html("Hello from Rust!");
+    let val1 = document.create_element("p").unwrap();
+    val1.set_inner_html("Hello from Rust!");
 
-    body.append_child(&val).unwrap();
+    body.append_child(&val1).unwrap();
     log::info!("po dodaniu");
 
-    val.set_attribute("debug", "debug").unwrap();
-    let val2 = val.clone();
+    val1.set_attribute("debug1", "debug1").unwrap();
+    let val2 = val1.clone();
     val2.set_attribute("debug2", "debug2").unwrap();
-    val.set_attribute("debug3", "debug3").unwrap();
+    val1.set_attribute("debug3", "debug3").unwrap();
     //web_sys::set_timeout_with_callback(this, handler)
+
+    let aa = fetch::run("rustwasm/wasm-bindgen".into()).await.unwrap();
+
+    log::info!("odpowiedź z serwera {:?}", aa);
 }
 
 
