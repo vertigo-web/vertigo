@@ -5,7 +5,8 @@ mod app_state;
 mod simple_counter;
 mod fetch;
 
-use wasm_bindgen::prelude::*;
+use wasm_bindgen::{JsCast, prelude::*};
+use web_sys::EventTarget;
 
 use std::cell::RefCell;
 
@@ -58,6 +59,37 @@ pub async fn start_app() {
     // Manufacture the element we're gonna append
     let val1 = document.create_element("p").unwrap();
     val1.set_inner_html("Hello from Rust!");
+
+
+
+    let closure = Closure::wrap(Box::new(move |event: web_sys::MouseEvent /*MouseEvent*/| {
+        log::info!("click ...");
+    }) as Box<dyn FnMut(_)>);
+
+    (&body).add_event_listener_with_callback(
+        "mousedown",
+        closure.as_ref().unchecked_ref()
+    ).unwrap();
+
+    closure.forget();
+
+
+
+
+    let closure = Closure::wrap(Box::new(move |event: web_sys::KeyboardEvent| {
+        log::info!("keydown ... {} {}", event.char_code(), event.key());
+    }) as Box<dyn FnMut(_)>);
+
+    (&body).add_event_listener_with_callback(
+        "keydown",
+        closure.as_ref().unchecked_ref()
+    ).unwrap();
+
+    closure.forget();
+
+
+
+
 
     body.append_child(&val1).unwrap();
     log::info!("po dodaniu");
