@@ -60,9 +60,28 @@ pub async fn start_app() {
     val1.set_inner_html("Hello from Rust!");
 
 
-    let closure: Closure<dyn FnMut(_)> = Closure::new(move |event: web_sys::MouseEvent| {
-        log::info!("click ...");
-    });
+    let closure: Closure<dyn FnMut(_)> = {
+        let val1 = val1.clone();
+    
+        Closure::new(move |event: web_sys::Event| {
+            log::info!("click ...");
+            // let target = event.related_target();
+
+            let target2 = event.target();
+
+            if let Some(target) = target2 {
+                let ta  = target.dyn_ref::<web_sys::Element>().unwrap();
+                log::info!("sprawdzam target {}", ta /* as web_sys::Element*/ == &val1);
+            } else {
+                log::info!("brak targeta");
+            }
+
+
+            let kon = event.dyn_ref::<web_sys::MouseEvent>();
+            log::info!("skonwertowanie na event myszy {:?}", kon);
+        })
+    };
+
 
     (&body).add_event_listener_with_callback(
         "mousedown",
@@ -98,17 +117,32 @@ pub async fn start_app() {
     val1.set_attribute("debug3", "debug3").unwrap();
     //web_sys::set_timeout_with_callback(this, handler)
 
+    log::info!("eeeq {}", val1 == val2);
+
     wasm_bindgen_futures::spawn_local(async {
         log::info!("test z forka");
     });
 
-    let aa = fetch::run("rustwasm/wasm-bindgen".into()).await.unwrap();
+    let aa = fetch::run("rustwasm/wasm-bindgen".into()).await;  //.unwrap();
 
-    log::info!("odpowiedź z serwera {:?}", aa);
+    match aa {
+        Ok(branch) => {
+            log::info!("odpowiedź z serwera {:?}", branch);
+
+        },
+        Err(err) => {
+            log::info!("błąd pobierania danych {:?}", err);
+        }
+    }
 }
 
 
 /*
+
+TODO - obadac ten sposób odpalania projektu wasm
+    https://github.com/IMI-eRnD-Be/wasm-run
+
+
 TODO - Dodać tranzakcyjną aktualizację
     self.deps.triggerChange([id1, id2, id3]);               //to powinno wystarczyc
 
