@@ -4,7 +4,7 @@ use crate::{
     computed::{
         Computed::Computed,
         Dependencies::Dependencies,
-        Value::Value
+        //Value::Value
     },
     vdom::models::{
         VDom::VDom,
@@ -13,7 +13,6 @@ use crate::{
 };
 
 pub struct StateBox<T: 'static> {
-    pub state: Value<Rc<T>>,
     pub computed: Computed<Rc<T>>,
 }
 
@@ -23,7 +22,6 @@ impl<T: 'static> StateBox<T> {
         let computed = state.toComputed();
 
         StateBox {
-            state,
             computed,
         }
     }

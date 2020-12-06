@@ -26,6 +26,9 @@ impl AppState {
         let counter3 = SimpleCounter::new(&root);
 
         let suma = {
+            // let counter1 = counter1.clone();
+            // let value1 = *counter1.counter;
+
             let counter1 = counter1.toComputed();
             let counter2 = counter2.toComputed();
             let counter3 = counter3.toComputed();
