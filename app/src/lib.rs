@@ -61,10 +61,9 @@ pub async fn start_app() {
     val1.set_inner_html("Hello from Rust!");
 
 
-
-    let closure = Closure::wrap(Box::new(move |event: web_sys::MouseEvent /*MouseEvent*/| {
+    let closure: Closure<dyn FnMut(_)> = Closure::new(move |event: web_sys::MouseEvent| {
         log::info!("click ...");
-    }) as Box<dyn FnMut(_)>);
+    });
 
     (&body).add_event_listener_with_callback(
         "mousedown",
@@ -76,9 +75,9 @@ pub async fn start_app() {
 
 
 
-    let closure = Closure::wrap(Box::new(move |event: web_sys::KeyboardEvent| {
+    let closure: Closure<dyn FnMut(_)> = Closure::new(move |event: web_sys::KeyboardEvent| {
         log::info!("keydown ... {} {}", event.char_code(), event.key());
-    }) as Box<dyn FnMut(_)>);
+    });
 
     (&body).add_event_listener_with_callback(
         "keydown",
@@ -100,6 +99,10 @@ pub async fn start_app() {
     val1.set_attribute("debug3", "debug3").unwrap();
     //web_sys::set_timeout_with_callback(this, handler)
 
+    wasm_bindgen_futures::spawn_local(async {
+        log::info!("test z forka");
+    });
+
     let aa = fetch::run("rustwasm/wasm-bindgen".into()).await.unwrap();
 
     log::info!("odpowiedź z serwera {:?}", aa);
@@ -115,6 +118,8 @@ TODO - Graph - usunac nieuzywane krawedzie (subskrybcje)
 TODO - Graph - zamienić Clone na Copy
 
 TODO - dodać jakieś makra które pozwolą na łatwe generowanie html-a (https://docs.rs/maplit/1.0.2/maplit/)
+    to wygląda obiecująco
+    https://github.com/chinedufn/percy/tree/master/crates/html-macro
 
 TODO - Będąc w bloku computed, albo subskrybcji, całkowicie ignorować wszelkie akcje które będą chciały zmienić wartość
        rzucać standardowy strumień błędów informację o incydencie. Dzięki temu nowa wadliwa funkcjonalność nie zepsuje tej juz dobrze ulezanej funkcjonalności
@@ -129,4 +134,28 @@ TODO - niezmienne struktury danych, https://docs.rs/im/15.0.0/im/
 
 https://github.com/rustwasm/console_error_panic_hook#readme
 https://rustwasm.github.io/wasm-bindgen/reference/passing-rust-closures-to-js.html
+*/
+
+
+
+
+/*
+#[wasm_bindgen(start)]
+pub fn main() {
+    future_to_promise(
+         Request::new(Method::Get, "example.org/test")
+            .header("Accept", "text/plain").send()
+            .and_then(|resp_value: JsValue| {
+                let resp: Response = resp_value.dyn_into().unwrap();
+                resp.text()
+            })
+            .and_then(|text: Promise| {
+                JsFuture::from(text)
+            })
+            .and_then(|body| {
+                println!("Response: {}", body.as_string().unwrap());
+                future::ok(JsValue::UNDEFINED)
+            })
+    );
+}
 */
