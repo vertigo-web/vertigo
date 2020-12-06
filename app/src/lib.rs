@@ -16,7 +16,6 @@ use virtualdom::{
     },
     vdom::{
         App::App,
-        StateBox::StateBox,
     }
 };
 
@@ -35,7 +34,7 @@ static ALLOC: wee_alloc::WeeAlloc = wee_alloc::WeeAlloc::INIT;
 thread_local! {
     static APP_STATE: RefCell<App> = RefCell::new({
         let root: Dependencies = Dependencies::new();
-        let appStateBox = StateBox::new(&root, AppState::new(&root));
+        let appStateBox = AppState::new(&root);
     
         let driver = DomDriverBrowser::new();
     

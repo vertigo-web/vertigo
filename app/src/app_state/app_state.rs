@@ -20,10 +20,10 @@ pub struct AppState {
 }
 
 impl AppState {
-    pub fn new(root: &Dependencies) -> AppState {
-        let counter1 = StateBox::new(&root, SimpleCounter::new(&root));
-        let counter2 = StateBox::new(&root, SimpleCounter::new(&root));
-        let counter3 = StateBox::new(&root, SimpleCounter::new(&root));
+    pub fn new(root: &Dependencies) -> StateBox<AppState> {
+        let counter1 = SimpleCounter::new(&root);
+        let counter2 = SimpleCounter::new(&root);
+        let counter3 = SimpleCounter::new(&root);
 
         let suma = {
             let counter1 = counter1.toComputed();
@@ -39,14 +39,14 @@ impl AppState {
             })
         };
 
-        AppState {
+        StateBox::new(&root,AppState {
             value: root.newValue(33),
             at: root.newValue(999),
             counter1,
             counter2,
             counter3,
             suma
-        }
+        })
     }
 
     pub fn increment(&self) {
