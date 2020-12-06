@@ -13,7 +13,7 @@ use crate::{
 };
 
 pub struct StateBox<T: 'static> {
-    pub computed: Computed<Rc<T>>,
+    computed: Computed<Rc<T>>,
 }
 
 impl<T: 'static> StateBox<T> {
