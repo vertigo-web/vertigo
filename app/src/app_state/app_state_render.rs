@@ -13,10 +13,9 @@ use super::app_state::AppState;
 use virtualdom::vdom::models::{
     Css::Css,
     NodeAttr,
-    VDomComponent::VDomComponent,
 };
 
-use crate::simple_counter::{simple_counter, simple_counter_render::simple_counter_render};
+use crate::simple_counter::{simple_counter_render::simple_counter_render};
 
 // fn wrapper1() -> Css {
 //     Css::new().add("windth: 30px; height: 20px;")
@@ -125,9 +124,9 @@ pub fn main_render(app_state: Rc<AppState>) -> Vec<VDom> {
         )),
 
         buildNode("div", vec!(
-            component(VDomComponent::new(app_state.counter1.clone(), simple_counter_render)),
-            component(VDomComponent::new(app_state.counter2.clone(), simple_counter_render)),
-            component(VDomComponent::new(app_state.counter3.clone(), simple_counter_render)),
+            component(app_state.counter1.clone(), simple_counter_render),
+            component(app_state.counter2.clone(), simple_counter_render),
+            component(app_state.counter3.clone(), simple_counter_render),
         )),
 
         buildNode("div", vec!(

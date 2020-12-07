@@ -5,6 +5,9 @@ use crate::vdom::models::{
     VDomComponent::VDomComponent,
 };
 use crate::vdom::models::Css::Css;
+use crate::computed::{
+    Computed::Computed,
+};
 
 pub enum NodeAttr {
     Css {
@@ -55,13 +58,11 @@ pub fn text<T: Into<String>>(name: T) -> NodeAttr {
     }
 }
 
-pub fn component(component: VDomComponent) -> NodeAttr {
+pub fn component<T: 'static>(params: Computed<T>, render: fn(Rc<T>) -> Vec<VDom>) -> NodeAttr {
     NodeAttr::Node {
-        node:VDom::component(component)
+        node:VDom::component(VDomComponent::new(params, render))
     }
 }
-
-
 
 pub fn buildNode(name: &'static str, childList: Vec<NodeAttr>) -> VDom {
     VDom::node(name, childList)
