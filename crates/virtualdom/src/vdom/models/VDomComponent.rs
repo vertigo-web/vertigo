@@ -1,3 +1,5 @@
+use std::rc::Rc;
+
 use crate::computed::{
     Computed::Computed,
 };
@@ -21,10 +23,10 @@ pub struct VDomComponent {
 }
 
 impl VDomComponent {
-    pub fn new<T: 'static>(params: &Computed<T>, render: fn(&T) -> Vec<VDom>) -> VDomComponent {
+    pub fn new<T: 'static>(params: Computed<T>, render: fn(Rc<T>) -> Vec<VDom>) -> VDomComponent {
 
         let componentId = VDomComponentId::new(&params, render);
-        let render = params.clone().map(render);
+        let render = params.map(render);
 
         VDomComponent {
             id: componentId,

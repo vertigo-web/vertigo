@@ -13,9 +13,10 @@ use super::app_state::AppState;
 use virtualdom::vdom::models::{
     Css::Css,
     NodeAttr,
+    VDomComponent::VDomComponent,
 };
 
-use crate::simple_counter::simple_counter_render::simple_counter_render;
+use crate::simple_counter::{simple_counter, simple_counter_render::simple_counter_render};
 
 // fn wrapper1() -> Css {
 //     Css::new().add("windth: 30px; height: 20px;")
@@ -65,7 +66,7 @@ fn cssButton() -> Css {
     // wrapper2(true);
     // wrapper2(false);
 
-pub fn main_render(app_state: &Rc<AppState>) -> Vec<VDom> {
+pub fn main_render(app_state: Rc<AppState>) -> Vec<VDom> {
     let onDown = {
         let app_state = app_state.clone();
         move || {
@@ -88,6 +89,8 @@ pub fn main_render(app_state: &Rc<AppState>) -> Vec<VDom> {
     use NodeAttr::{buildNode, node, css, text, component, onClick, attr};
 
     let showColor = *value % 2 == 0;
+
+    // let counter2 = app_state.counter2.clone();
 
     vec!(
         buildNode("div", vec!(
@@ -122,9 +125,9 @@ pub fn main_render(app_state: &Rc<AppState>) -> Vec<VDom> {
         )),
 
         buildNode("div", vec!(
-            component(app_state.counter1.render(simple_counter_render)),
-            component(app_state.counter2.render(simple_counter_render)),
-            component(app_state.counter3.render(simple_counter_render)),
+            component(VDomComponent::new(app_state.counter1.clone(), simple_counter_render)),
+            component(VDomComponent::new(app_state.counter2.clone(), simple_counter_render)),
+            component(VDomComponent::new(app_state.counter3.clone(), simple_counter_render)),
         )),
 
         buildNode("div", vec!(

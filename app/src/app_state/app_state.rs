@@ -7,20 +7,19 @@ use virtualdom::{
 };
 
 use crate::simple_counter::simple_counter::SimpleCounter;
-use virtualdom::vdom::StateBox::StateBox;
 
 pub struct AppState {
     pub value: Value<u32>,
     pub at: Value<u32>,
-    pub counter1: StateBox<SimpleCounter>,
-    pub counter2: StateBox<SimpleCounter>,
-    pub counter3: StateBox<SimpleCounter>,
+    pub counter1: Computed<SimpleCounter>,
+    pub counter2: Computed<SimpleCounter>,
+    pub counter3: Computed<SimpleCounter>,
 
     pub suma: Computed<u32>,
 }
 
 impl AppState {
-    pub fn new(root: &Dependencies) -> StateBox<AppState> {
+    pub fn new(root: &Dependencies) -> Computed<AppState> {
         let counter1 = SimpleCounter::new(&root);
         let counter2 = SimpleCounter::new(&root);
         let counter3 = SimpleCounter::new(&root);
@@ -29,9 +28,9 @@ impl AppState {
             // let counter1 = counter1.clone();
             // let value1 = *counter1.counter;
 
-            let counter1 = counter1.toComputed();
-            let counter2 = counter2.toComputed();
-            let counter3 = counter3.toComputed();
+            let counter1 = counter1.clone();
+            let counter2 = counter2.clone();
+            let counter3 = counter3.clone();
 
             root.from(move || {
                 let value1 = *counter1.getValue().counter.getValue();
@@ -42,7 +41,7 @@ impl AppState {
             })
         };
 
-        StateBox::new(&root,AppState {
+        root.newComputedFrom(AppState {
             value: root.newValue(33),
             at: root.newValue(999),
             counter1,
@@ -60,5 +59,9 @@ impl AppState {
     pub fn decrement(&self) {
         let rr = self.value.getValue();
         self.value.setValue(*rr - 1);
+    }
+
+    async fn cos() -> u32 {
+        4
     }
 }

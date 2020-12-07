@@ -16,7 +16,10 @@ use virtualdom::{
     },
     vdom::{
         App::App,
-    }
+    },
+    vdom::models::{
+        VDomComponent::VDomComponent,
+    },
 };
 
 use browserdriver::{
@@ -38,7 +41,7 @@ thread_local! {
     
         let driver = DomDriverBrowser::new();
     
-        App::new(driver, appStateBox.render(main_render))
+        App::new(driver, VDomComponent::new(appStateBox, main_render))
     });
 }
 
@@ -81,6 +84,11 @@ pub async fn start_app() {
             log::info!("skonwertowanie na event myszy {:?}", kon);
         })
     };
+
+
+    // let aa = BoxClouser::new(move || {
+        
+    // });
 
 
     (&body).add_event_listener_with_callback(

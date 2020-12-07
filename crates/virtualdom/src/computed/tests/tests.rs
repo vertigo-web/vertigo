@@ -1,4 +1,5 @@
 
+use std::rc::Rc;
 
 #[test]
 fn basic() {
@@ -72,8 +73,8 @@ fn basic2() {
         a + b
     });
 
-    let suma2 = sum.clone().map(|value: &i32| -> i32 {
-        2 * value
+    let suma2 = sum.clone().map(|value: Rc<i32>| -> i32 {
+        2 * (*value)
     });
 
     let subscription = {

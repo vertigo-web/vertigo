@@ -1,18 +1,18 @@
 use virtualdom::{
     computed::{
+        Computed::Computed,
         Dependencies::Dependencies, Value::Value
     }
 };
-use virtualdom::vdom::StateBox::StateBox;
+// use virtualdom::vdom::StateBox::StateBox;
 
 pub struct SimpleCounter {
     pub counter: Value<u32>,
 }
 
 impl SimpleCounter {
-    pub fn new(root: &Dependencies) -> StateBox<SimpleCounter> {
-        StateBox::new(
-            root,
+    pub fn new(root: &Dependencies) -> Computed<SimpleCounter> {
+        root.newComputedFrom(
             SimpleCounter {
                 counter: Value::new(root.clone(), 0)
             }

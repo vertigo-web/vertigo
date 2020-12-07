@@ -49,6 +49,11 @@ impl Dependencies {
         Value::new(self.clone(), value)
     }
 
+    pub fn newComputedFrom<T>(&self, value: T) -> Computed<T> {
+        let value = self.newValue(value);
+        value.toComputed()
+    }
+
     pub fn triggerChange(&self, parentId: GraphId) {
 
         let refreshToken: Vec<RefreshToken> = self.inner.getWithContext(
