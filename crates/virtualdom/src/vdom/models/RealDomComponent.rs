@@ -18,6 +18,6 @@ pub struct RealDomComponent {
 
 impl RealDomComponent {
     pub fn id(&self) -> RealDomId {
-        self.node.idDom.clone()
+        self.node.idDom()
     }
 }

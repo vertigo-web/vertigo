@@ -3,7 +3,7 @@ use std::rc::Rc;
 use virtualdom::{
     vdom::{
         models::{
-            VDom::VDom,
+            VDomNode::VDomNode,
         },
     },
 };
@@ -65,7 +65,7 @@ fn cssButton() -> Css {
     // wrapper2(true);
     // wrapper2(false);
 
-pub fn main_render(app_state: Rc<AppState>) -> Vec<VDom> {
+pub fn main_render(app_state: Rc<AppState>) -> VDomNode {
     let onDown = {
         let app_state = app_state.clone();
         move || {
@@ -85,13 +85,13 @@ pub fn main_render(app_state: Rc<AppState>) -> Vec<VDom> {
     let value = app_state.value.getValue();
     let suma = app_state.suma.getValue();
 
-    use NodeAttr::{buildNode, node, css, text, component, onClick, attr};
+    use NodeAttr::{buildRoot, buildNode, node, css, text, component, onClick, attr};
 
     let showColor = *value % 2 == 0;
 
     // let counter2 = app_state.counter2.clone();
 
-    vec!(
+    buildRoot("div", vec!(
         buildNode("div", vec!(
             node("div", vec!(
                 css(cssBg()),
@@ -132,7 +132,7 @@ pub fn main_render(app_state: Rc<AppState>) -> Vec<VDom> {
         buildNode("div", vec!(
             text(format!("suma = {}", suma))
         ))
-    )
+    ))
 }
 
     /*

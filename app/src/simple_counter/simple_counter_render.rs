@@ -4,7 +4,7 @@ use std::rc::Rc;
 use virtualdom::{
     vdom::{
         models::{
-            VDom::VDom,
+            VDomNode::VDomNode,
         },
     },
 };
@@ -40,8 +40,8 @@ fn cssWrapper() -> Css {
     ")
 }
 
-pub fn simple_counter_render(simple_counter: Rc<SimpleCounter>) -> Vec<VDom> {
-    use NodeAttr::{buildNode, node, css, text, onClick};
+pub fn simple_counter_render(simple_counter: Rc<SimpleCounter>) -> VDomNode {
+    use NodeAttr::{buildRoot, buildNode, node, css, text, onClick};
 
     let calue =  *(simple_counter.counter.getValue());
 
@@ -59,7 +59,7 @@ pub fn simple_counter_render(simple_counter: Rc<SimpleCounter>) -> Vec<VDom> {
         }
     };
 
-    vec!(
+    buildRoot("div", vec!(
         buildNode("div", vec!(
             css(cssWrapper()),
             node("div", vec!(
@@ -77,5 +77,5 @@ pub fn simple_counter_render(simple_counter: Rc<SimpleCounter>) -> Vec<VDom> {
                 onClick(clickDown)
             ))
         ))
-    )
+    ))
 }
