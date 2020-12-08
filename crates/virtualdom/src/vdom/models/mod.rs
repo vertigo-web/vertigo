@@ -3,7 +3,6 @@ pub mod RealDomId;
 pub mod RealDomChildList;
 pub mod RealDomNode;
 pub mod RealDomText;
-pub mod RealDomComment;
 pub mod RealDomComponent;
 pub mod VDom;
 pub mod VDomNode;

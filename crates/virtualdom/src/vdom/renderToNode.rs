@@ -12,7 +12,6 @@ use crate::{
     vdom::{
         models::{
             RealDom::RealDom,
-            RealDomChildList::RealDomChildList,
             RealDomNode::RealDomNode,
             RealDomText::RealDomText,
             RealDomComponent::RealDomComponent,
@@ -22,30 +21,24 @@ use crate::{
             VDomComponentId::VDomComponentId,
             VDomText::VDomText,
             CssManager::CssManager,
+            RealDomId::RealDomId,
         }
     }
 };
 
+                                                                //TODO - przekazywać tylko referencję do CssManager-a (nie klonować)
+
 struct CacheNode<K: Eq + Hash, RNode, VNode> {
-    cssManager: CssManager,
-    target: RealDomChildList,
-    createNew: fn(&CssManager, &RealDomChildList, &VNode) -> RNode,
-    synchronize: fn (&CssManager, &mut RNode, &VNode),
+    createNew: fn(&CssManager, &mut RealDomNode, &VNode) -> RNode,
     data: HashMap<K, VecDeque<RNode>>,
 }
 
 impl<K: Eq + Hash, RNode, VNode> CacheNode<K, RNode, VNode> {
     fn new(
-        cssManager: CssManager,
-        target: RealDomChildList,
-        createNew: fn(&CssManager, &RealDomChildList, &VNode) -> RNode,
-        synchronize: fn (&CssManager, &mut RNode, &VNode)
+        createNew: fn(&CssManager, &mut RealDomNode, &VNode) -> RNode,
     ) -> CacheNode<K, RNode, VNode> {
         CacheNode {
-            cssManager,
-            target,
             createNew,
-            synchronize,
             data: HashMap::new()
         }
     }
@@ -55,97 +48,51 @@ impl<K: Eq + Hash, RNode, VNode> CacheNode<K, RNode, VNode> {
         item.push_back(node);
     }
 
-    fn getOrCreate(&mut self, key: K, vnode: &VNode) -> RNode {
+    fn getOrCreate(&mut self, cssManager: &CssManager, target: &mut RealDomNode, key: K, vnode: &VNode) -> RNode {
         let item = self.data.entry(key).or_insert_with(VecDeque::new);
 
         let node = item.pop_front();
 
-        let CacheNode { createNew, synchronize, .. } = self;
+        let CacheNode { createNew, .. } = self;
 
         match node {
-            Some(mut node) => {
-                synchronize(&self.cssManager, &mut node, &vnode);
-                node
-            },
-            None => {
-                createNew(&self.cssManager, &self.target, &vnode)
-            }
+            Some(node) => node,
+            None => createNew(cssManager, target, &vnode)
         }
     }
 }
 
-fn nodeCreateNew(cssManager: &CssManager, target: &RealDomChildList, node: &VDomNode) -> RealDomNode {
-    let mut realNode = target.createNode(node.name);
 
-    let css = &node.css;
-    let className = match css {
-        Some (css) => Some(cssManager.getClassName(css)),
-        None => None,
-    };
-
-    realNode.updateAttr(&node.attr, className);
-    realNode.updateOnClick(node.onClick.clone());
-    realNode
-}
-
-fn nodeSynchronize(cssManager: &CssManager, realNode: &mut RealDomNode, node: &VDomNode) {
-
-    let css = &node.css;
-    let className = match css {
-        Some (css) => Some(cssManager.getClassName(css)),
-        None => None,
-    };
-
-    realNode.updateAttr(&node.attr, className);
-    realNode.updateOnClick(node.onClick.clone());
-}
-
-fn textCreateNew(_cssManager: &CssManager, target: &RealDomChildList, node: &VDomText) -> RealDomText {
-    target.createText(node.value.clone())
-}
-
-fn textSynchronize(_cssManager: &CssManager, real: &mut RealDomText, node: &VDomText) {
-    real.update(&node.value);
-}
-
-fn componentCreateNew(cssManager: &CssManager, target: &RealDomChildList, node: &VDomComponent) -> RealDomComponent {
-    let child = target.createChildList();
-    let subscription = renderToNode(cssManager.clone(), child.clone(), node.clone());
-
-    RealDomComponent {
-        id: node.id.clone(),
-        subscription,
-        child
-    }
-}
-
-fn componentSynchronize(_cssManager: &CssManager, _real: &mut RealDomComponent, _node: &VDomComponent) {
-    //nic nie trzeba synchronizować. Komponent sam się synchronizuje.
-}
-
-
-fn applyNewViewChild(cssManager: CssManager, target: &RealDomChildList, newVersion: &Vec<VDom>) {
+fn updateNodeChild(cssManager: &CssManager, target: &mut RealDomNode, newVersion: &VDomNode) {
 
     let mut realNode: CacheNode<&'static str, RealDomNode, VDomNode> = CacheNode::new(
-        cssManager.clone(),
-        target.clone(),
-        nodeCreateNew, 
-        nodeSynchronize
+        |_cssManager: &CssManager, target: &mut RealDomNode, node: &VDomNode| -> RealDomNode {
+            target.child.createNode(node.name)
+        }, 
     );
     let mut realText: CacheNode<String, RealDomText, VDomText> = CacheNode::new(                    //TODO - trzeci parametr HashMap<String, String>
-        cssManager.clone(),
-        target.clone(),
-        textCreateNew,
-        textSynchronize
+        |_cssManager: &CssManager, target: &mut RealDomNode, node: &VDomText| -> RealDomText {
+            target.child.createText(node.value.clone())
+        },
     );
     let mut realComponent: CacheNode<VDomComponentId, RealDomComponent, VDomComponent> = CacheNode::new(
-        cssManager.clone(),
-        target.clone(),
-        componentCreateNew,
-        componentSynchronize
+        |cssManager: &CssManager, target: &mut RealDomNode, node: &VDomComponent| -> RealDomComponent {
+
+            let node_root = target.child.createNode("div");
+
+            let node_root_for_id = node_root.cloneOnlyForId();                          //TODO - pozbyć się tej funkcji cloneOnlyForId
+
+            let subscription = renderToNode(cssManager.clone(), node_root, node.clone());
+
+            RealDomComponent {
+                id: node.id.clone(),
+                subscription,
+                node: node_root_for_id,
+            }
+        },
     );
 
-    let realChild = target.extract();
+    let realChild = target.child.extract();
 
     for item in realChild {
         match item {
@@ -163,40 +110,74 @@ fn applyNewViewChild(cssManager: CssManager, target: &RealDomChildList, newVersi
         }
     }
 
-    for item in newVersion.iter() {
+
+    let mut wsk: Option<RealDomId> = None;
+
+    for item in newVersion.child.iter() {
 
         match item {
             VDom::Node { node } => {
                 let id = node.name.clone();
-                let domChild = realNode.getOrCreate(id, &node);
+                let mut domChild = realNode.getOrCreate(cssManager, target, id, &node);
+                let newWsk = domChild.idDom.clone();
 
-                applyNewViewChild(cssManager.clone(), &domChild.child, &node.child);
+                updateNodeAttr(&cssManager, &mut domChild, &node);
+                updateNodeChild(cssManager, &mut domChild, &node);                
 
-                target.append(RealDom::Node { node: domChild });
-
+                target.child.appendAfter(wsk, RealDom::Node { node: domChild });
+                wsk = Some(newWsk);
             },
             VDom::Text { node } => {
                 let id = node.value.clone();
-                let domChild = realText.getOrCreate(id, &node);
-                
-                target.append(RealDom::Text { node: domChild });
+                let mut domChild = realText.getOrCreate(cssManager, target,id, &node);
+                let newWsk = domChild.idDom.clone();
+
+                domChild.update(&node.value);
+
+                target.child.appendAfter(wsk, RealDom::Text { node: domChild });
+                wsk = Some(newWsk);
             },
             VDom::Component { node } => {
                 let id = node.id.clone();
-                let domChild = realComponent.getOrCreate(id, &node);
+                let domChild = realComponent.getOrCreate(cssManager, target,id, &node);
+                let newWsk = domChild.id();
 
-                target.append(RealDom::Component { node: domChild });
+                target.child.appendAfter(wsk, RealDom::Component { node: domChild });
+                wsk = Some(newWsk);
             }
         }
     }
 }
 
 
-pub fn renderToNode(cssManager: CssManager, target: RealDomChildList, component: VDomComponent) -> Client { 
+fn updateNodeAttr(cssManager: &CssManager, realNode: &mut RealDomNode, node: &VDomNode) {
+    let css = &node.css;
+    let className = match css {
+        Some (css) => Some(cssManager.getClassName(css)),
+        None => None,
+    };
+
+    realNode.updateAttr(&node.attr, className);
+    realNode.updateOnClick(node.onClick.clone());
+}
+
+fn updateNode(cssManager: &CssManager, target: &mut RealDomNode, newVersion: &VDomNode) {
+
+    //updejt nazwy taga ...
+    //TODO !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
+
+    //updejt atrybutów
+    updateNodeAttr(&cssManager, target, &newVersion);
+
+    //odpal updejt dzieci
+    updateNodeChild(cssManager, target, &newVersion);
+}
+
+pub fn renderToNode(cssManager: CssManager, mut target: RealDomNode, component: VDomComponent) -> Client { 
     let subscription: Client = component.subscribe(move |newVersion| {
-        applyNewViewChild(
-            cssManager.clone(),
-            &target, 
+        updateNode(
+            &cssManager,
+            &mut target, 
             newVersion
         );
     });

@@ -6,7 +6,7 @@ use crate::computed::{
 
 use crate::{
     vdom::{
-        models::VDom::VDom,
+        models::VDomNode::VDomNode,
     }
 };
 
@@ -17,7 +17,7 @@ pub struct VDomComponentId {
 }
 
 impl VDomComponentId {
-    pub fn new<T>(params: &Computed<T>, render: fn(Rc<T>) -> Vec<VDom>) -> VDomComponentId {
+    pub fn new<T>(params: &Computed<T>, render: fn(Rc<T>) -> VDomNode) -> VDomComponentId {
 
         let idFunction = render as *const () as u64;
         VDomComponentId {

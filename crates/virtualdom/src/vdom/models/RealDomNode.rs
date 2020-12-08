@@ -19,13 +19,12 @@ pub struct RealDomNode {
 }
 
 impl RealDomNode {
-    pub fn new(driver: DomDriver, name: &'static str, refAfter: RealDomId) -> RealDomNode {
+    pub fn new(driver: DomDriver, name: &'static str) -> RealDomNode {
         let nodeId = RealDomId::new();
 
         driver.createNode(nodeId.clone(), name);
-        driver.insertAfter(refAfter, nodeId.clone());
 
-        let domChild = RealDomChildList::newWithParent(driver.clone(), nodeId.clone());
+        let domChild = RealDomChildList::new(driver.clone(), nodeId.clone());
 
         let node = RealDomNode {
             domDriver: driver,
@@ -36,6 +35,31 @@ impl RealDomNode {
         };
 
         node
+    }
+
+    pub fn createWithId(driver: DomDriver, id: RealDomId) -> RealDomNode {
+        let domChild = RealDomChildList::new(driver.clone(), id.clone());
+
+        let node = RealDomNode {
+            domDriver: driver,
+            idDom: id,
+            name: "div",
+            attr: HashMap::new(),
+            child: domChild,
+        };
+
+        node
+    }
+
+                                                            //TODO - koniecznie pozbyć się tej funkcji
+    pub fn cloneOnlyForId(&self) -> RealDomNode {
+        RealDomNode {
+            domDriver: self.domDriver.clone(),
+            idDom: self.idDom.clone(),
+            name: self.name,
+            attr: HashMap::with_capacity(0),
+            child: self.child.clone(),
+        }
     }
 
     fn updateAttrOne(&mut self, name: &'static str, value: &String) {

@@ -10,7 +10,7 @@ use crate::{
     },
     vdom::{
         models::{
-            VDom::VDom,
+            VDomNode::VDomNode,
             VDomComponentId::VDomComponentId,
         }
     }
@@ -19,11 +19,11 @@ use crate::{
 #[derive(Clone)]
 pub struct VDomComponent {
     pub id: VDomComponentId,
-    render: Computed<Vec<VDom>>,
+    render: Computed<VDomNode>,
 }
 
 impl VDomComponent {
-    pub fn new<T: 'static>(params: Computed<T>, render: fn(Rc<T>) -> Vec<VDom>) -> VDomComponent {
+    pub fn new<T: 'static>(params: Computed<T>, render: fn(Rc<T>) -> VDomNode) -> VDomComponent {
 
         let componentId = VDomComponentId::new(&params, render);
         let render = params.map(render);
@@ -34,7 +34,7 @@ impl VDomComponent {
         }
     }
 
-    pub fn subscribe<F: Fn(&Vec<VDom>) + 'static>(self, render: F) -> Client {
+    pub fn subscribe<F: Fn(&VDomNode) + 'static>(self, render: F) -> Client {
         self.render.subscribe(render)
     }
 }

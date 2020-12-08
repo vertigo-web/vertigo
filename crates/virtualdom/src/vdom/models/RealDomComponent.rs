@@ -4,7 +4,7 @@ use crate::computed::{
 
 use crate::vdom::{
     models::{
-        RealDomChildList::RealDomChildList,
+        RealDomNode::RealDomNode,
         VDomComponentId::VDomComponentId,
         RealDomId::RealDomId,
     },
@@ -13,18 +13,11 @@ use crate::vdom::{
 pub struct RealDomComponent {
     pub id: VDomComponentId,                    //do porównywania
     pub subscription: Client,                   //Subskrybcją, , wstawia do handler
-    pub child: RealDomChildList,
+    pub node: RealDomNode,
 }
 
 impl RealDomComponent {
-    pub fn firstChildId(&self) -> RealDomId {
-        self.child.firstChildId()
-    }
-    pub fn lastChildId(&self) -> RealDomId {
-        self.child.lastChildId()
-    }
-
-    pub fn childIds(&self) -> Vec<RealDomId> {
-        self.child.childIds()
+    pub fn id(&self) -> RealDomId {
+        self.node.idDom.clone()
     }
 }
