@@ -46,7 +46,7 @@ thread_local! {
     });
 }
 
-use event::{DomEvent, DomEventDisconnect};
+use event::{DomEventMouse, DomEventKeyboard, DomEventDisconnect};
 
 thread_local! {
     static EVENTS: RefCell<Vec<DomEventDisconnect>> = RefCell::new(Vec::new());
@@ -73,12 +73,8 @@ pub async fn start_app() {
     let mut counter = 0;
 
 
-    let body_event = DomEvent::new(move |event: web_sys::Event| {
+    let body_event = DomEventMouse::new(move |event: &web_sys::MouseEvent| {
         log::info!("click ... !!==!!");
-        // let target = event.related_target();
-
-        let kon = event.dyn_ref::<web_sys::MouseEvent>();
-        log::info!("skonwertowanie na event myszy {:?}", kon);
 
         counter += 1;
 
@@ -88,29 +84,19 @@ pub async fn start_app() {
         }
     });
 
-    let connection_event = body_event.append_to("mousedown", &body);
+    let connection_event = body_event.append_to_mousedown(&body);
 
     EVENTS.with(move |state| state.borrow_mut().push(connection_event));
 
 
 
-    let keyboard = DomEvent::new(move |event: web_sys::Event| {
-        //move |event: web_sys::KeyboardEvent| {
-        let event_keyboard = event.dyn_ref::<web_sys::KeyboardEvent>().unwrap();
-        log::info!("keydown ... {} {}", event_keyboard.char_code(), event_keyboard.key());
+    let keyboard = DomEventKeyboard::new(move |event: &web_sys::KeyboardEvent| {
+        log::info!("keydown ... {} {}", event.char_code(), event.key());
     });
 
-    let connection_keyboard = keyboard.append_to("keydown", &body);
+    let connection_keyboard = keyboard.append_to_keydown(&body);
 
     EVENTS.with(move |state| state.borrow_mut().push(connection_keyboard));
-
-    // (&body).add_event_listener_with_callback(
-    //     "keydown",
-    //     closure.as_ref().unchecked_ref()
-    // ).unwrap();
-
-    // closure.forget();
-
 
 
 
