@@ -61,7 +61,7 @@ impl AppState {
         self.value.setValue(*rr - 1);
     }
 
-    async fn cos() -> u32 {
-        4
-    }
+    // async fn cos() -> u32 {
+    //     4
+    // }
 }

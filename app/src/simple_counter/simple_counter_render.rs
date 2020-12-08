@@ -41,7 +41,7 @@ fn cssWrapper() -> Css {
 }
 
 pub fn simple_counter_render(simple_counter: Rc<SimpleCounter>) -> Vec<VDom> {
-    use NodeAttr::{buildNode, node, css, text, component, onClick, attr};
+    use NodeAttr::{buildNode, node, css, text, onClick};
 
     let calue =  *(simple_counter.counter.getValue());
 

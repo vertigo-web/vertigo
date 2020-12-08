@@ -4,9 +4,10 @@
 mod app_state;
 mod simple_counter;
 mod fetch;
+mod event;
 
 use wasm_bindgen::{JsCast, prelude::*};
-use web_sys::EventTarget;
+
 
 use std::cell::RefCell;
 
@@ -45,6 +46,12 @@ thread_local! {
     });
 }
 
+use event::{DomEvent, DomEventDisconnect};
+
+thread_local! {
+    static EVENTS: RefCell<Vec<DomEventDisconnect>> = RefCell::new(Vec::new());
+}
+
 #[wasm_bindgen(start)]
 pub async fn start_app() {
     console_error_panic_hook::set_once();
@@ -63,54 +70,46 @@ pub async fn start_app() {
     val1.set_inner_html("Hello from Rust!");
 
 
-    let closure: Closure<dyn FnMut(_)> = {
-        let val1 = val1.clone();
-    
-        Closure::new(move |event: web_sys::Event| {
-            log::info!("click ...");
-            // let target = event.related_target();
-
-            let target2 = event.target();
-
-            if let Some(target) = target2 {
-                let ta  = target.dyn_ref::<web_sys::Element>().unwrap();
-                log::info!("sprawdzam target {}", ta /* as web_sys::Element*/ == &val1);
-            } else {
-                log::info!("brak targeta");
-            }
+    let mut counter = 0;
 
 
-            let kon = event.dyn_ref::<web_sys::MouseEvent>();
-            log::info!("skonwertowanie na event myszy {:?}", kon);
-        })
-    };
+    let body_event = DomEvent::new(move |event: web_sys::Event| {
+        log::info!("click ... !!==!!");
+        // let target = event.related_target();
 
+        let kon = event.dyn_ref::<web_sys::MouseEvent>();
+        log::info!("skonwertowanie na event myszy {:?}", kon);
 
-    // let aa = BoxClouser::new(move || {
-        
-    // });
+        counter += 1;
 
-
-    (&body).add_event_listener_with_callback(
-        "mousedown",
-        closure.as_ref().unchecked_ref()
-    ).unwrap();
-
-    closure.forget();
-
-
-
-
-    let closure: Closure<dyn FnMut(_)> = Closure::new(move |event: web_sys::KeyboardEvent| {
-        log::info!("keydown ... {} {}", event.char_code(), event.key());
+        if counter > 10 {
+            log::info!("Odlłączam %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%");
+            EVENTS.with(move |state| state.borrow_mut().clear());
+        }
     });
 
-    (&body).add_event_listener_with_callback(
-        "keydown",
-        closure.as_ref().unchecked_ref()
-    ).unwrap();
+    let connection_event = body_event.append_to("mousedown", &body);
 
-    closure.forget();
+    EVENTS.with(move |state| state.borrow_mut().push(connection_event));
+
+
+
+    let keyboard = DomEvent::new(move |event: web_sys::Event| {
+        //move |event: web_sys::KeyboardEvent| {
+        let event_keyboard = event.dyn_ref::<web_sys::KeyboardEvent>().unwrap();
+        log::info!("keydown ... {} {}", event_keyboard.char_code(), event_keyboard.key());
+    });
+
+    let connection_keyboard = keyboard.append_to("keydown", &body);
+
+    EVENTS.with(move |state| state.borrow_mut().push(connection_keyboard));
+
+    // (&body).add_event_listener_with_callback(
+    //     "keydown",
+    //     closure.as_ref().unchecked_ref()
+    // ).unwrap();
+
+    // closure.forget();
 
 
 
