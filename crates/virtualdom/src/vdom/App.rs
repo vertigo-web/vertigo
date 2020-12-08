@@ -4,7 +4,7 @@ use crate::computed::{
 
 use crate::vdom::{
     models::{
-        RealDomChildList::RealDomChildList,
+        RealDomNode::RealDomNode,
         RealDomId::RealDomId,
         CssManager::CssManager,
         VDomComponent::VDomComponent,
@@ -27,7 +27,7 @@ impl App {
         let driver = DomDriver::new(driverIn);
 
         let cssManager = CssManager::new(&driver);
-        let nodeList = RealDomChildList::newWithParent(driver, RealDomId::root());
+        let nodeList = RealDomNode::createWithId(driver, RealDomId::root());
 
         let subscription = renderToNode(cssManager.clone(), nodeList, computed);
 

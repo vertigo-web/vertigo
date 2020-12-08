@@ -9,175 +9,49 @@ use crate::vdom::{
         RealDomNode::RealDomNode,
         RealDomText::RealDomText,
         RealDomId::RealDomId,
-        RealDomComment::RealDomComment,
     },
 };
 
-enum RealDomChildState {
-    Empty {
-        comment: RealDomComment,
-    },
-    List {
-        first: RealDom,
-        child: Vec<RealDom>,
-    }
-}
-
-impl RealDomChildState {
-    fn isEmpty(&self) -> bool {
-        match self {
-            RealDomChildState::Empty { .. } => true,
-            RealDomChildState::List { .. } => false,
-        }
-    }
-}
 
 struct RealDomChildListInner {
     domDriver: DomDriver,
-    state: RealDomChildState,
+    parentId: RealDomId,
+    child: Vec<RealDom>,
 }
 
 impl RealDomChildListInner {
-    pub fn new(domDriver: DomDriver, comment: RealDomComment) -> RealDomChildListInner {
+    pub fn new(domDriver: DomDriver, parentId: RealDomId) -> RealDomChildListInner {
         RealDomChildListInner {
             domDriver,
-            state: RealDomChildState::Empty {
-                comment
-            }
+            parentId,
+            child: Vec::new(),
         }
-    }
-
-    pub fn newWithParent(driver: DomDriver, parent: RealDomId) -> RealDomChildListInner {
-        let nodeComment = RealDomComment::new(driver.clone(), "".into());
-        driver.addChild(parent, nodeComment.idDom.clone());
-        let nodeList = RealDomChildListInner::new(driver,  nodeComment);
-
-        nodeList
-    }
-
-    pub fn newAfter(driver: DomDriver, afterRef: RealDomId) -> RealDomChildListInner {
-        let nodeComment = RealDomComment::new(driver.clone(), "".into());
-        driver.insertAfter(afterRef, nodeComment.idDom.clone());
-        let nodeList = RealDomChildListInner::new(driver,  nodeComment);
-
-        nodeList
     }
 
     pub fn extract(&mut self) -> Vec<RealDom> {
-        let isEmpty = self.state.isEmpty();
-
-        if isEmpty {
-            return Vec::new();
-        }
-    
-        let firstChildId = self.firstChildId();
-        let nodeComment = RealDomComment::new(self.domDriver.clone(), "".into());
-        self.domDriver.insertBefore(firstChildId, nodeComment.idDom.clone());
-
-        let prevState = std::mem::replace(&mut self.state, RealDomChildState::Empty {
-            comment: nodeComment
-        });
-
-        match prevState {
-            RealDomChildState::Empty { .. } => {
-                unreachable!();
-            },
-            RealDomChildState::List { first, child } => {
-                let mut out = Vec::new();
-                out.push(first);
-                out.extend(child);
-                out
-            }
-        }
+        let prev_child = std::mem::replace(&mut self.child, Vec::new());
+        prev_child
     }
 
-    pub fn append(&mut self, newChild: RealDom) {
-        let childIds = newChild.childIds();
-        let mut refId = self.lastChildId();
-
-        for item in childIds {
-            self.domDriver.insertAfter(refId, item.clone());
-            refId = item;
-        }
-
-        let isEmpty = self.state.isEmpty();
-
-        if isEmpty {
-            self.state = RealDomChildState::List {
-                first: newChild,
-                child: Vec::new(),
-            };
-        } else {
-            match &mut self.state {
-                RealDomChildState::Empty { .. } => {
-                    unreachable!();
-                },
-                RealDomChildState::List { child, .. } => {
-                    (*child).push(newChild);
-                }
-            };
-        }
-    }
-
-    pub fn firstChildId(&self) -> RealDomId {
-        match &self.state {
-            RealDomChildState::Empty { comment } => {
-                comment.idDom.clone()
-            },
-            RealDomChildState::List { first, .. } => {
-                first.firstChildId()
+    pub fn appendAfter(&mut self, prevNode: Option<RealDomId>, newChild: RealDom) {
+        match prevNode {
+            Some(prevNode) => {
+                self.domDriver.insertAfter(prevNode, newChild.id());
             }
-        }
-    }
-
-    pub fn lastChildId(&self) -> RealDomId {
-        match &self.state {
-            RealDomChildState::Empty { comment } => {
-                comment.idDom.clone()
-            },
-            RealDomChildState::List { first, child, .. } => {
-                let last = child.last();
-
-                if let Some(last) = last {
-                    last.lastChildId()
-                } else {
-                    first.lastChildId()
-                }
+            None => {
+                self.domDriver.addChild(self.parentId.clone(), newChild.id());
             }
-        }
-    }
-
-    pub fn childIds(&self) -> Vec<RealDomId> {
-        let mut out = Vec::new();
-
-        match &self.state {
-            RealDomChildState::Empty { comment } => {
-                out.push(comment.idDom.clone())
-            },
-            RealDomChildState::List { first, child } => {
-                out.extend(first.childIds());
-
-                for childItem in child {
-                    out.extend(childItem.childIds());
-                }
-            }
-        }
-
-        out
+        };
+        
+        self.child.push(newChild);
     }
 
     fn createNode(&self, name: &'static str) -> RealDomNode {
-        RealDomNode::new(self.domDriver.clone(), name, self.lastChildId())
+        RealDomNode::new(self.domDriver.clone(), name)
     }
 
     fn createText(&self, name: String) -> RealDomText {
-        let node = RealDomText::new(self.domDriver.clone(), name);
-        self.domDriver.insertAfter(self.lastChildId(), node.idDom.clone());
-        node
-    }
-
-    fn createChildList(&self) -> RealDomChildListInner {
-        RealDomChildListInner::newAfter(self.domDriver.clone(), self.lastChildId())
+        RealDomText::new(self.domDriver.clone(), name)
     }
 }
 
@@ -186,10 +60,10 @@ pub struct RealDomChildList {
 }
 
 impl RealDomChildList {
-    pub fn newWithParent(driver: DomDriver, parent: RealDomId) -> RealDomChildList {
+    pub fn new(driver: DomDriver, parentId: RealDomId) -> RealDomChildList {
         RealDomChildList {
             inner: Rc::new(BoxRefCell::new(
-                RealDomChildListInner::newWithParent(driver, parent)
+                RealDomChildListInner::new(driver, parentId)
             ))
         }
     }
@@ -200,27 +74,11 @@ impl RealDomChildList {
         })
     }
 
-    pub fn append(&self, child: RealDom) {
-        self.inner.change(child, |state, child| {
-            state.append(child)
-        })
-    }
-
-    pub fn firstChildId(&self) -> RealDomId {
-        self.inner.get(|state| {
-            state.firstChildId()
-        })
-    }
-
-    pub fn lastChildId(&self) -> RealDomId {
-        self.inner.get(|state| {
-            state.lastChildId()
-        })
-    }
-
-    pub fn childIds(&self) -> Vec<RealDomId> {
-        self.inner.get(|state| {
-            state.childIds()
+    pub fn appendAfter(&self, prevNode: Option<RealDomId>, child: RealDom) {
+        self.inner.change(
+            (prevNode, child), 
+            |state, (prevNode, child)| {
+            state.appendAfter(prevNode, child)
         })
     }
 
@@ -240,16 +98,6 @@ impl RealDomChildList {
         self.inner.getWithContext(name, |state, name| {
             state.createText(name)
         })
-    }
-
-    pub fn createChildList(&self) -> RealDomChildList {
-        let newChildList = self.inner.get(|state| {
-            state.createChildList()
-        });
-
-        RealDomChildList {
-            inner: Rc::new(BoxRefCell::new(newChildList))
-        }
     }
 }
 

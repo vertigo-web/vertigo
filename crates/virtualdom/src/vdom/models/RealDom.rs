@@ -20,7 +20,7 @@ pub enum RealDom {
 }
 
 impl RealDom {
-    pub fn firstChildId(&self) -> RealDomId {
+    pub fn id(&self) -> RealDomId {
         match self {
             RealDom::Node { node } => {
                 node.idDom.clone()
@@ -29,35 +29,7 @@ impl RealDom {
                 node.idDom.clone()
             },
             RealDom::Component { node } => {
-                node.firstChildId()
-            }
-        }
-    }
-
-    pub fn lastChildId(&self) -> RealDomId {
-        match self {
-            RealDom::Node { node } => {
-                node.idDom.clone()
-            },
-            RealDom::Text { node } => {
-                node.idDom.clone()
-            },
-            RealDom::Component { node } => {
-                node.lastChildId()
-            }
-        }
-    }
-
-    pub fn childIds(&self) -> Vec<RealDomId> {
-        match self {
-            RealDom::Node { node } => {
-                vec!(node.idDom.clone())
-            },
-            RealDom::Text { node } => {
-                vec!(node.idDom.clone())
-            },
-            RealDom::Component { node } => {
-                node.childIds()
+                node.node.idDom.clone()
             }
         }
     }
