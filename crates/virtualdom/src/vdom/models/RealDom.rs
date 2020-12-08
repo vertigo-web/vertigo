@@ -23,13 +23,13 @@ impl RealDom {
     pub fn id(&self) -> RealDomId {
         match self {
             RealDom::Node { node } => {
-                node.idDom.clone()
+                node.idDom()
             },
             RealDom::Text { node } => {
                 node.idDom.clone()
             },
             RealDom::Component { node } => {
-                node.node.idDom.clone()
+                node.node.idDom()
             }
         }
     }

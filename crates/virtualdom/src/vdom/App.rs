@@ -27,9 +27,9 @@ impl App {
         let driver = DomDriver::new(driverIn);
 
         let cssManager = CssManager::new(&driver);
-        let nodeList = RealDomNode::createWithId(driver, RealDomId::root());
+        let root = RealDomNode::createWithId(driver, RealDomId::root());
 
-        let subscription = renderToNode(cssManager.clone(), nodeList, computed);
+        let subscription = renderToNode(cssManager.clone(), root, computed);
 
         App {
             _subscription: subscription,

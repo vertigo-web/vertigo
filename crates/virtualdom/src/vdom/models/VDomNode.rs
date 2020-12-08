@@ -46,4 +46,14 @@ impl VDomNode {
 
         result
     }
+
+    pub fn newWithVDom(name: &'static str, childList: Vec<VDom>) -> VDomNode {
+        VDomNode {
+            name: name.into(),
+            attr: HashMap::new(),
+            child: childList,
+            onClick: None,
+            css: None,
+        }
+    }
 }

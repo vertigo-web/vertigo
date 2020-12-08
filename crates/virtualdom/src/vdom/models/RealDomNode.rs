@@ -9,8 +9,9 @@ use crate::vdom::{
         DomDriver::DomDriver,
     },
 };
+use crate::computed::BoxRefCell::BoxRefCell;
 
-pub struct RealDomNode {
+pub struct RealDomNodeInner {
     domDriver: DomDriver,
     pub idDom: RealDomId,
     pub name: &'static str,
@@ -18,15 +19,15 @@ pub struct RealDomNode {
     pub child: RealDomChildList,
 }
 
-impl RealDomNode {
-    pub fn new(driver: DomDriver, name: &'static str) -> RealDomNode {
+impl RealDomNodeInner {
+    pub fn new(driver: DomDriver, name: &'static str) -> RealDomNodeInner {
         let nodeId = RealDomId::new();
 
         driver.createNode(nodeId.clone(), name);
 
         let domChild = RealDomChildList::new(driver.clone(), nodeId.clone());
 
-        let node = RealDomNode {
+        let node = RealDomNodeInner {
             domDriver: driver,
             idDom: nodeId,
             name,
@@ -37,10 +38,10 @@ impl RealDomNode {
         node
     }
 
-    pub fn createWithId(driver: DomDriver, id: RealDomId) -> RealDomNode {
+    pub fn createWithId(driver: DomDriver, id: RealDomId) -> RealDomNodeInner {
         let domChild = RealDomChildList::new(driver.clone(), id.clone());
 
-        let node = RealDomNode {
+        let node = RealDomNodeInner {
             domDriver: driver,
             idDom: id,
             name: "div",
@@ -50,18 +51,7 @@ impl RealDomNode {
 
         node
     }
-
                                                             //TODO - koniecznie pozbyć się tej funkcji
-    pub fn cloneOnlyForId(&self) -> RealDomNode {
-        RealDomNode {
-            domDriver: self.domDriver.clone(),
-            idDom: self.idDom.clone(),
-            name: self.name,
-            attr: HashMap::with_capacity(0),
-            child: self.child.clone(),
-        }
-    }
-
     fn updateAttrOne(&mut self, name: &'static str, value: &String) {
         let needUpdate = {
             let item = self.attr.get(name);
@@ -119,8 +109,81 @@ impl RealDomNode {
     }
 }
 
-impl Drop for RealDomNode {
+impl Drop for RealDomNodeInner {
     fn drop(&mut self) {
         self.domDriver.remove(self.idDom.clone());
+    }
+}
+
+
+pub struct RealDomNode {
+    inner: Rc<BoxRefCell<RealDomNodeInner>>,
+}
+
+impl RealDomNode {
+    pub fn new(driver: DomDriver, name: &'static str) -> RealDomNode {
+        RealDomNode {
+            inner: Rc::new(
+                BoxRefCell::new(
+                    RealDomNodeInner::new(driver, name)
+                )
+            )
+        }
+    }
+
+    pub fn createWithId(driver: DomDriver, id: RealDomId) -> RealDomNode {
+        RealDomNode {
+            inner: Rc::new(
+                BoxRefCell::new(
+                    RealDomNodeInner::createWithId(driver, id)
+                )
+            )
+        }
+    }
+
+    pub fn updateAttr(&self, attr: &HashMap<&'static str, String>, className: Option<String>) {
+        self.inner.change(
+            (attr, className),
+            |state, (attr, className)| {
+                state.updateAttr(attr, className)
+        })
+    }
+
+    pub fn updateOnClick(&self, onClick: Option<Rc<dyn Fn()>>) {
+        self.inner.change(
+            onClick,
+            |state, onClick| {
+                state.updateOnClick(onClick)
+        })
+    }
+
+    pub fn child(&self) -> RealDomChildList {
+        self.inner.get(
+            |state| {
+                state.child.clone()
+        })
+    }
+
+    pub fn idDom(&self) -> RealDomId {
+        self.inner.get(
+            |state| {
+                state.idDom.clone()
+        })
+    }
+
+    pub fn name(&self) -> &'static str {
+        self.inner.get(
+            |state| {
+                state.name
+        })
+    }
+}
+
+
+impl Clone for RealDomNode {
+    fn clone(&self) -> Self {
+        RealDomNode {
+            inner: self.inner.clone()
+        }
     }
 }
