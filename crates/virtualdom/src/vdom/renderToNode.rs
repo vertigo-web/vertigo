@@ -68,7 +68,7 @@ fn updateNodeChild(cssManager: &CssManager, target: &RealDomNode, newVersion: &V
             target.createNode(node.name)
         }, 
     );
-    let mut realText: CacheNode<String, RealDomText, VDomText> = CacheNode::new(                    //TODO - trzeci parametr HashMap<String, String>
+    let mut realText: CacheNode<String, RealDomText, VDomText> = CacheNode::new(
         |_cssManager: &CssManager, target: &RealDomNode, node: &VDomText| -> RealDomText {
             target.createText(node.value.clone())
         },
