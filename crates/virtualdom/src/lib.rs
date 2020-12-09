@@ -15,6 +15,7 @@ pub use vdom::models::RealDomId::RealDomId;
 pub use vdom::models::VDomComponent::VDomComponent;
 pub use vdom::models::VDomNode::VDomNode;
 pub use vdom::models::Css::Css;
+pub use vdom::models::Css::CssFrames;
 pub use vdom::models::NodeAttr;
 
 pub use app::App;

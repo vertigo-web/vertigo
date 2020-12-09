@@ -5,7 +5,7 @@ use crate::computed::BoxRefCell;
 
 use crate::driver::DomDriver;
 use crate::vdom::models::Css::{
-    Css,
+    Css, CssFrames,
     CssGroup
 };
 
@@ -102,6 +102,12 @@ impl CssManager {
         }
 
         out.join(" ")
+    }
+
+    pub fn addFrames(&self, frames: &CssFrames) {
+        self.inner.change(frames, |state, frames|
+            state.driver.insertCss(format!("@keyframes {}", frames.name), frames.content.clone())
+        )
     }
 }
 

@@ -12,6 +12,11 @@ pub struct Css {
     pub groups: Vec<CssGroup>,
 }
 
+pub struct CssFrames {
+    pub name: String,
+    pub content: String,
+}
+
 impl Default for Css {
     fn default() -> Self {
         Self {
@@ -54,6 +59,16 @@ impl Css {
         self.groups.push(CssGroup::CssDynamic {
             value
         })
+    }
+}
+
+
+impl CssFrames {
+    pub fn new(name: &'static str, content: &'static str) -> Self {
+        Self {
+            name: name.to_string(),
+            content: content.to_string(),
+        }
     }
 }
 

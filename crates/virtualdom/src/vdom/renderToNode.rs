@@ -160,7 +160,7 @@ fn updateNodeChild(cssManager: &CssManager, target: &RealDomNode, newVersion: &V
     let mut realNode: CacheNode<&'static str, RealDomNode, VDomNode> = CacheNode::new(
         |_cssManager: &CssManager, target: &RealDomNode, node: &VDomNode| -> RealDomNode {
             target.createNode(node.name)
-        }, 
+        },
     );
     let mut realText: CacheNode<String, RealDomText, VDomText> = CacheNode::new(
         |_cssManager: &CssManager, target: &RealDomNode, node: &VDomText| -> RealDomText {
@@ -247,6 +247,10 @@ fn updateNodeAttr(cssManager: &CssManager, realNode: &RealDomNode, node: &VDomNo
         None => None,
     };
 
+    if let Some(frames) = &node.cssFrames {
+        cssManager.addFrames(frames);
+    }
+
     realNode.updateAttr(&node.attr, className);
     realNode.updateOnClick(node.onClick.clone());
 }
@@ -267,7 +271,7 @@ pub fn renderToNode(cssManager: CssManager, target: RealDomNode, component: VDom
     let subscription: Client = component.view.subscribe(move |newVersion| {
         updateNode(
             &cssManager,
-            &target, 
+            &target,
             newVersion
         );
     });
