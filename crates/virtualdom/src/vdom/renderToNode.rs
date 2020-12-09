@@ -115,12 +115,12 @@ fn updateNodeChild(cssManager: &CssManager, target: &RealDomNode, newVersion: &V
 
         match item {
             VDom::Node { node } => {
-                let id = node.name.clone();
-                let mut domChild = realNode.getOrCreate(cssManager, target, id, node);
+                let id = node.name;
+                let domChild = realNode.getOrCreate(cssManager, target, id, node);
                 let newWsk = domChild.idDom();
 
-                updateNodeAttr(&cssManager, &mut domChild, &node);
-                updateNodeChild(cssManager, &mut domChild, &node);                
+                updateNodeAttr(&cssManager, &domChild, &node);
+                updateNodeChild(cssManager, &domChild, &node);
 
                 target.appendAfter(wsk, RealDom::Node { node: domChild });
                 wsk = Some(newWsk);

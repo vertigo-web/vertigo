@@ -6,7 +6,7 @@ use virtualdom::{
     }
 };
 
-use crate::simple_counter::simple_counter::SimpleCounter;
+use crate::simple_counter::simple_counter_state::SimpleCounter;
 
 pub struct AppState {
     pub value: Value<u32>,

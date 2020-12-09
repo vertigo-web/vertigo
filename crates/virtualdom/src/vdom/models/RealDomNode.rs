@@ -6,7 +6,7 @@ use crate::vdom::{
         RealDomId::RealDomId,
         RealDomText::RealDomText,
     },
-    DomDriver::{
+    driver::{
         DomDriver::DomDriver,
     },
 };
@@ -22,19 +22,17 @@ pub struct RealDomNodeInner {
 
 impl RealDomNodeInner {
     pub fn new(driver: DomDriver, name: &'static str) -> RealDomNodeInner {
-        let nodeId = RealDomId::new();
+        let nodeId = RealDomId::default();
 
         driver.createNode(nodeId.clone(), name);
 
-        let node = RealDomNodeInner {
+        RealDomNodeInner {
             domDriver: driver,
             idDom: nodeId,
             name,
             attr: HashMap::new(),
             child: Vec::new(),
-        };
-
-        node
+        }
     }
 
     pub fn createWithId(driver: DomDriver, id: RealDomId) -> RealDomNodeInner {
@@ -47,15 +45,11 @@ impl RealDomNodeInner {
         }
     }
 
-    fn updateAttrOne(&mut self, name: &'static str, value: &String) {
+    fn updateAttrOne(&mut self, name: &'static str, value: &str) {
         let needUpdate = {
             let item = self.attr.get(name);
             if let Some(item) = item {
-                if *item == *value {
-                    false
-                } else {
-                    true
-                }
+                *item != *value
             } else {
                 true
             }
@@ -63,7 +57,7 @@ impl RealDomNodeInner {
 
         if needUpdate {
             self.domDriver.setAttr(self.idDom.clone(), &name, &value);
-            self.attr.insert(name.clone(), value.clone());
+            self.attr.insert(name, value.to_string());
        }
     }
 
@@ -72,7 +66,7 @@ impl RealDomNodeInner {
 
         if let Some(className) = className {
             let attrClass = attr.get("class");
-            
+
             let valueToSet: String = match attrClass {
                 Some(attrClass) => format!("{} {}", className, attrClass),
                 None => className
@@ -80,7 +74,7 @@ impl RealDomNodeInner {
 
             attr.insert("class", valueToSet);
         }
-    
+
         attr
     }
 
@@ -90,8 +84,7 @@ impl RealDomNodeInner {
         self.attr.retain(|key, _value| {
             let key: &str = *key;
 
-            let keyExist = attr.contains_key(key);
-            keyExist
+            attr.contains_key(key)
         });
 
         for (key, value) in attr.iter() {
@@ -105,8 +98,7 @@ impl RealDomNodeInner {
 
 
     pub fn extract_child(&mut self) -> Vec<RealDom> {
-        let prev_child = std::mem::replace(&mut self.child, Vec::new());
-        prev_child
+        std::mem::replace(&mut self.child, Vec::new())
     }
 
     pub fn appendAfter(&mut self, prevNode: Option<RealDomId>, newChild: RealDom) {
@@ -118,7 +110,7 @@ impl RealDomNodeInner {
                 self.domDriver.addChild(self.idDom.clone(), newChild.id());
             }
         };
-        
+
         self.child.push(newChild);
     }
 }

@@ -1,4 +1,4 @@
-use super::simple_counter::SimpleCounter;
+use super::simple_counter_state::SimpleCounter;
 
 use std::rc::Rc;
 use virtualdom::{
@@ -18,13 +18,13 @@ use virtualdom::vdom::models::{
 };
 
 fn cssBox() -> Css {
-    Css::new().add("
+    Css::one("
         margin: 5px;
     ")
 }
 
 fn cssButton() -> Css {
-    cssBox().add("
+    cssBox().push("
         cursor: pointer;
 
         &:hover {
@@ -34,7 +34,7 @@ fn cssButton() -> Css {
 }
 
 fn cssWrapper() -> Css {
-    Css::new().add("
+    Css::one("
         border:1px solid black;
         margin: 5px 0;
     ")
@@ -53,7 +53,6 @@ pub fn simple_counter_render(simple_counter: Rc<SimpleCounter>) -> VDomNode {
     };
 
     let clickDown = {
-        let simple_counter = simple_counter.clone();
         move || {
             simple_counter.decrement();
         }
@@ -64,7 +63,7 @@ pub fn simple_counter_render(simple_counter: Rc<SimpleCounter>) -> VDomNode {
         node("div", vec!(
             css(cssBox()),
             text(format!("Counter value = {}", calue)),
-        )),            
+        )),
         node("button", vec!(
             css(cssButton()),
             text("up"),

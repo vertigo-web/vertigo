@@ -16,7 +16,7 @@ pub struct Value<T: 'static> {
 impl<T: 'static> Value<T> {
     pub fn new(deps: Dependencies, value: T) -> Value<T> {
         Value {
-            id: GraphId::new(),
+            id: GraphId::default(),
             value: Rc::new(BoxRefCell::new(Rc::new(value))),
             deps
         }
@@ -33,11 +33,9 @@ impl<T: 'static> Value<T> {
     pub fn getValue(&self) -> Rc<T> {
         self.deps.reportDependenceInStack(self.id.clone());
 
-        let value = self.value.get(|state| {
+        self.value.get(|state| {
             state.clone()
-        });
-
-        value
+        })
     }
 
     pub fn toComputed(&self) -> Computed<T> {

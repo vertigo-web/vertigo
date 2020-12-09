@@ -30,7 +30,7 @@ impl AppState {
                 let val1 = com1.getValue();
                 let val2 = com2.getValue();
                 let val3 = com3.getValue();
-    
+
                 *val1 + *val2 + *val3
             })
         };
@@ -46,13 +46,13 @@ impl AppState {
 
 #[test]
 fn test_app_state() {
-    let root = Dependencies::new();
+    let root = Dependencies::default();
 
     let appState = AppState::new(&root);
 
     let suma3 = {
         let appState = appState.clone();
-        
+
         root.from(move || -> i32 {
             let val1 = appState.value1.getValue();
             let val3 = appState.value3.getValue();
@@ -61,7 +61,7 @@ fn test_app_state() {
         })
     };
 
-    
+
     let suma3Box: BoxValue<i32> = BoxValue::new(0);
     let sumaTotalBox: BoxValue<i32> = BoxValue::new(0);
 

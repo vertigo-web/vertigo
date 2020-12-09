@@ -13,16 +13,18 @@ pub struct RealDomId {
     id: u64,
 }
 
+impl Default for RealDomId {
+    fn default() -> Self {
+        Self {
+            id: get_unique_id()
+        }
+    }
+}
+
 impl RealDomId {
     pub fn root() -> RealDomId {
         RealDomId {
             id: ROOT_ID
-        }
-    }
-
-    pub fn new() -> RealDomId {
-        RealDomId {
-            id: get_unique_id()
         }
     }
 

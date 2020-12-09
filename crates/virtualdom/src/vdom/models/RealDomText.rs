@@ -2,7 +2,7 @@ use crate::vdom::{
     models::{
         RealDomId::RealDomId,
     },
-    DomDriver::{
+    driver::{
         DomDriver::DomDriver,
     },
 };
@@ -15,22 +15,20 @@ pub struct RealDomText {
 
 impl RealDomText {
     pub fn new(domDriver: DomDriver, value: String) -> RealDomText {
-        let id = RealDomId::new();
+        let id = RealDomId::default();
 
         domDriver.createText(id.clone(), &value);
 
-        let node = RealDomText {
+        RealDomText {
             domDriver,
             idDom: id,
             value,
-        };
-
-        node
+        }
     }
 
-    pub fn update(&mut self, newValue: &String) {
+    pub fn update(&mut self, newValue: &str) {
         if self.value != *newValue {
-            self.value = newValue.clone();
+            self.value = newValue.to_string();
         }
     }
 }

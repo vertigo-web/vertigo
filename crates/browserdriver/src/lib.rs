@@ -6,7 +6,7 @@ use std::rc::Rc;
 use std::collections::HashMap;
 
 use virtualdom::computed::BoxRefCell::BoxRefCell;
-use virtualdom::vdom::DomDriver::DomDriver::DomDriverTrait;
+use virtualdom::vdom::driver::DomDriver::DomDriverTrait;
 use virtualdom::vdom::models::RealDomId::RealDomId;
 
 use wasm_bindgen::JsValue;
@@ -101,9 +101,9 @@ pub struct DomDriverBrowserInner {
     dataOnClick: BoxRefCell<HashMap<u64, Rc<dyn Fn()>>>,
 }
 
-impl DomDriverBrowserInner {
-    pub fn new() -> DomDriverBrowserInner {
-        DomDriverBrowserInner {
+impl Default for DomDriverBrowserInner {
+    fn default() -> Self {
+        Self {
             parent: BoxRefCell::new(HashMap::new()),
             dataOnClick: BoxRefCell::new(HashMap::new()),
         }
@@ -117,21 +117,21 @@ impl DomDriverBrowserInner {
         }
     }
 
-    fn createText(&self, id: RealDomId, value: &String) {
+    fn createText(&self, id: RealDomId, value: &str) {
         unsafe {
-            DriverJS::createText(id.to_u64(), value.as_str());
+            DriverJS::createText(id.to_u64(), value);
         }
     }
 
-    fn createComment(&self, id: RealDomId, value: &String) {
+    fn createComment(&self, id: RealDomId, value: &str) {
         unsafe {
-            DriverJS::createComment(id.to_u64(), value.as_str());
+            DriverJS::createComment(id.to_u64(), value);
         }
     }
 
-    fn setAttr(&self, id: RealDomId, key: &'static str, value: &String) {
+    fn setAttr(&self, id: RealDomId, key: &'static str, value: &str) {
         unsafe {
-            DriverJS::setAttr(id.to_u64(), key, value.as_str());
+            DriverJS::setAttr(id.to_u64(), key, value);
         }
     }
 
@@ -219,14 +219,14 @@ impl DomDriverBrowserInner {
 
     fn getEvent(&self, nodeId: &u64) -> Option<Rc<dyn Fn()>> {
         self.dataOnClick.getWithContext(nodeId, |state, nodeId| {
-            state.get(nodeId).map(|item| item.clone())
+            state.get(nodeId).cloned()
         })
     }
 
     fn getParentNode(&self, childId: &u64) -> Option<u64> {
         self.parent.getWithContext(childId, |state, childId| {
             let parent = state.get(&childId);
-            parent.map(|item| *item)
+            parent.copied()
         })
     }
 
@@ -309,7 +309,7 @@ impl DomDriverBrowserRc {
 
     fn new() -> DomDriverBrowserRc {
         DomDriverBrowserRc {
-            inner: Rc::new(DomDriverBrowserInner::new())
+            inner: Rc::new(DomDriverBrowserInner::default())
         }
     }
 }
@@ -328,9 +328,8 @@ pub struct DomDriverBrowser {
     _callFromJS: Rc<Closure<dyn FnMut()>>,
 }
 
-impl DomDriverBrowser {
-    pub fn new() -> DomDriverBrowser {
-
+impl Default for DomDriverBrowser {
+    fn default() -> Self {
         let driver = DomDriverBrowserRc::new();
 
         let callFromJS: Closure<dyn FnMut()> = {
@@ -346,12 +345,14 @@ impl DomDriverBrowser {
             back
         };
 
-        DomDriverBrowser {
+        Self {
             driver,
             _callFromJS: Rc::new(callFromJS),
         }
     }
+}
 
+impl DomDriverBrowser {
     pub fn consoleLog(&self, message: &str) {
         unsafe {
             DriverJS::consoleLog(message);
@@ -364,15 +365,15 @@ impl DomDriverTrait for DomDriverBrowser {
         self.driver.inner.createNode(id, name);
     }
 
-    fn createText(&self, id: RealDomId, value: &String) {
+    fn createText(&self, id: RealDomId, value: &str) {
         self.driver.inner.createText(id, value);
     }
 
-    fn createComment(&self, id: RealDomId, value: &String) {
+    fn createComment(&self, id: RealDomId, value: &str) {
         self.driver.inner.createComment(id, value);
     }
 
-    fn setAttr(&self, id: RealDomId, key: &'static str, value: &String) {
+    fn setAttr(&self, id: RealDomId, key: &'static str, value: &str) {
         self.driver.inner.setAttr(id, key, value);
     }
 

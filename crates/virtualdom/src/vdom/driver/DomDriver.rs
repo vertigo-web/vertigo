@@ -7,9 +7,9 @@ const SHOW_LOG: bool = false;
 
 pub trait DomDriverTrait {
     fn createNode(&self, id: RealDomId, name: &'static str);
-    fn createText(&self, id: RealDomId, value: &String);
-    fn createComment(&self, id: RealDomId, value: &String);
-    fn setAttr(&self, id: RealDomId, key: &'static str, value: &String);
+    fn createText(&self, id: RealDomId, value: &str);
+    fn createComment(&self, id: RealDomId, value: &str);
+    fn setAttr(&self, id: RealDomId, key: &'static str, value: &str);
     fn removeAttr(&self, id: RealDomId, name: &'static str);
     fn remove(&self, id: RealDomId);
     fn insertAsFirstChild(&self, parent: RealDomId, child: RealDomId);
@@ -54,17 +54,17 @@ impl DomDriver {
         self.driver.createNode(id, name);
     }
 
-    pub fn createText(&self, id: RealDomId, value: &String) {
+    pub fn createText(&self, id: RealDomId, value: &str) {
         show_log(format!("createText {} {}", id, value));
         self.driver.createText(id, value);
     }
 
-    pub fn createComment(&self, id: RealDomId, value: &String) {
+    pub fn createComment(&self, id: RealDomId, value: &str) {
         show_log(format!("createComment {} {}", id, value));
         self.driver.createComment(id, value);
     }
 
-    pub fn setAttr(&self, id: RealDomId, key: &'static str, value: &String) {
+    pub fn setAttr(&self, id: RealDomId, key: &'static str, value: &str) {
         show_log(format!("setAttr {} {}", key, value));
         self.driver.setAttr(id, key, value);
     }

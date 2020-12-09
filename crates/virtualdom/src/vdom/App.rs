@@ -10,12 +10,10 @@ use crate::vdom::{
         VDomComponent::VDomComponent,
     },
     renderToNode::renderToNode,
-    DomDriver::{
-        DomDriver::DomDriver,
+    driver::{
+        DomDriver::{DomDriver, DomDriverTrait},
     }
 };
-
-use super::DomDriver::DomDriver::DomDriverTrait;
 
 pub struct App {
     _subscription: Client,

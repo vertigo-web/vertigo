@@ -20,7 +20,7 @@ pub struct VDomNode {
 impl VDomNode {
     pub fn new(name: &'static str, childList: Vec<NodeAttr>) -> VDomNode {
         let mut result = VDomNode {
-            name: name.into(),
+            name,
             attr: HashMap::new(),
             child: Vec::new(),
             onClick: None,
@@ -49,7 +49,7 @@ impl VDomNode {
 
     pub fn newWithVDom(name: &'static str, childList: Vec<VDom>) -> VDomNode {
         VDomNode {
-            name: name.into(),
+            name,
             attr: HashMap::new(),
             child: childList,
             onClick: None,

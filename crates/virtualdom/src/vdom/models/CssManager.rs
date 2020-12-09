@@ -3,7 +3,7 @@ use std::rc::Rc;
 
 use crate::computed::BoxRefCell::BoxRefCell;
 
-use crate::vdom::DomDriver::DomDriver::DomDriver;
+use crate::vdom::driver::DomDriver::DomDriver;
 use crate::vdom::models::Css::{
     Css,
     CssGroup
@@ -65,26 +65,24 @@ impl CssManager {
 
             let classId = state.getNextClassId();
             let selector = getSelector(classId);
-            state.driver.insertCss(format!(".{}", selector.clone()), css.to_string());
+            state.driver.insertCss(format!(".{}", selector), css.to_string());
             state.idsStatic.insert(cssStaticId, classId);
-            
+
             selector
         })
     }
 
-    fn getDynamic(&self, css: &String) -> String {
-        let css = css.clone();
-
+    fn getDynamic(&self, css: &str) -> String {
         self.inner.change(css, |state, css| {
-            if let Some(classId) = state.idsDynamic.get(&css) {
+            if let Some(classId) = state.idsDynamic.get(css) {
                 return getSelector(*classId);
             }
 
             let classId = state.getNextClassId();
             let selector = getSelector(classId);
-            state.driver.insertCss(format!(".{}", selector.clone()), css.to_string());
-            state.idsDynamic.insert(css, classId);
-            
+            state.driver.insertCss(format!(".{}", selector), css.to_string());
+            state.idsDynamic.insert(css.to_string(), classId);
+
             selector
         })
     }

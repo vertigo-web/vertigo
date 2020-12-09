@@ -1,7 +1,7 @@
 #![allow(non_snake_case)]
 #![allow(non_camel_case_types)]
 
-mod app_state;
+mod my_app;
 mod simple_counter;
 mod fetch;
 mod event;
@@ -27,8 +27,8 @@ use browserdriver::{
     DomDriverBrowser,
 };
 
-use crate::app_state::app_state::AppState;
-use crate::app_state::app_state_render::main_render;
+use crate::my_app::app_state::AppState;
+use crate::my_app::app_state_render::main_render;
 
 
 #[cfg(feature = "wee_alloc")]
@@ -37,11 +37,11 @@ static ALLOC: wee_alloc::WeeAlloc = wee_alloc::WeeAlloc::INIT;
 
 thread_local! {
     static APP_STATE: RefCell<App> = RefCell::new({
-        let root: Dependencies = Dependencies::new();
+        let root: Dependencies = Dependencies::default();
         let appStateBox = AppState::new(&root);
-    
-        let driver = DomDriverBrowser::new();
-    
+
+        let driver = DomDriverBrowser::default();
+
         App::new(driver, VDomComponent::new(appStateBox, main_render))
     });
 }

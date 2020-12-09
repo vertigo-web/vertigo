@@ -30,28 +30,28 @@ use crate::simple_counter::{simple_counter_render::simple_counter_render};
 
 //     let url: Option<String> = None;
 //     if let Some(url) = url {
-        
+
 //     }
 
 //     out
 // }
 
 fn cssFooter(showColor: bool) -> Css {
-    let base = Css::new().add("background-color: yellow;");
+    let base = Css::one("background-color: yellow;");
 
     if showColor {
-        base.add("color: green;")
+        base.push("color: green;")
     } else {
-        base.add("color: blue;")
+        base.push("color: blue;")
     }
 }
 
 fn cssBg() -> Css {
-    Css::new().add("border: 1px solid black; padding: 10px; background-color: #e0e0e0;margin-bottom: 10px;")
+    Css::one("border: 1px solid black; padding: 10px; background-color: #e0e0e0;margin-bottom: 10px;")
 }
 
 fn cssButton() -> Css {
-    cssBg().add("cursor: pointer;")
+    cssBg().push("cursor: pointer;")
 }
 
 //"border: 1px solid black; padding: 10px; background-color: #e0e0e0;")

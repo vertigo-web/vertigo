@@ -4,4 +4,4 @@
 pub mod models;
 mod renderToNode;
 pub mod App;
-pub mod DomDriver;
+pub mod driver;
