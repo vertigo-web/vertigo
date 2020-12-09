@@ -14,6 +14,7 @@ pub struct AppState {
     pub counter1: Computed<SimpleCounter>,
     pub counter2: Computed<SimpleCounter>,
     pub counter3: Computed<SimpleCounter>,
+    pub counter4: Computed<SimpleCounter>,
 
     pub suma: Computed<u32>,
 }
@@ -23,6 +24,7 @@ impl AppState {
         let counter1 = SimpleCounter::new(&root);
         let counter2 = SimpleCounter::new(&root);
         let counter3 = SimpleCounter::new(&root);
+        let counter4 = SimpleCounter::new(&root);
 
         let suma = {
             // let counter1 = counter1.clone();
@@ -47,6 +49,7 @@ impl AppState {
             counter1,
             counter2,
             counter3,
+            counter4,
             suma
         })
     }

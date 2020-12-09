@@ -89,7 +89,16 @@ pub fn main_render(app_state: Rc<AppState>) -> VDomNode {
 
     let showColor = *value % 2 == 0;
 
-    // let counter2 = app_state.counter2.clone();
+    let footer_dom = if *value % 10 == 0 {
+        node("div", vec!(
+            text(format!("jakis footer {} {} - BEZKLASIE", *value % 2, *value % 3)),
+        ))
+    } else {
+        node("div", vec!(
+            css(cssFooter(showColor)),
+            text(format!("jakis footer {} {}", *value % 2, *value % 3)),
+        ))
+    };
 
     buildNode("div", vec!(
         node("div", vec!(
@@ -111,10 +120,7 @@ pub fn main_render(app_state: Rc<AppState>) -> VDomNode {
                 onClick(onDown),
                 text("down"),
             )),
-            node("div", vec!(
-                css(cssFooter(showColor)),
-                text(format!("jakis footer {} {}", *value % 2, *value % 3)),
-            )),
+            footer_dom,
         )),
 
         node("div", vec!(
@@ -127,6 +133,7 @@ pub fn main_render(app_state: Rc<AppState>) -> VDomNode {
             component(app_state.counter1.clone(), simple_counter_render),
             component(app_state.counter2.clone(), simple_counter_render),
             component(app_state.counter3.clone(), simple_counter_render),
+            component(app_state.counter4.clone(), simple_counter_render),
         )),
 
         node("div", vec!(

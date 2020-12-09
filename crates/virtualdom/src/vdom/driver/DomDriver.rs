@@ -65,7 +65,7 @@ impl DomDriver {
     }
 
     pub fn setAttr(&self, id: RealDomId, key: &'static str, value: &str) {
-        show_log(format!("setAttr {} {}", key, value));
+        show_log(format!("setAttr {} {} {}", id, key, value));
         self.driver.setAttr(id, key, value);
     }
 

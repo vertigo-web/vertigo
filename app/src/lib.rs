@@ -160,7 +160,8 @@ Css::one("
     ")
 
 
-
+TODO - zrobić analizator Cargo.lock, wyszukiwać biblioteki w rónych wersjach które posiadają zmienne globalne
+    przykład tokio ....
 */
 
 

@@ -12,6 +12,24 @@ use crate::vdom::{
 };
 use crate::computed::BoxRefCell::BoxRefCell;
 
+
+fn mergeAttr(attr: &HashMap<&'static str, String>, className: Option<String>) -> HashMap<&'static str, String> {
+    let mut attr = attr.clone();
+
+    if let Some(className) = className {
+        let attrClass = attr.get("class");
+
+        let valueToSet: String = match attrClass {
+            Some(attrClass) => format!("{} {}", className, attrClass),
+            None => className
+        };
+
+        attr.insert("class", valueToSet);
+    }
+
+    attr
+}
+
 pub struct RealDomNodeInner {
     domDriver: DomDriver,
     pub idDom: RealDomId,
@@ -61,25 +79,20 @@ impl RealDomNodeInner {
        }
     }
 
-    fn mergeAttr(&mut self, attr: &HashMap<&'static str, String>, className: Option<String>) -> HashMap<&'static str, String> {
-        let mut attr = attr.clone();
+    pub fn updateAttr(&mut self, attr: &HashMap<&'static str, String>, className: Option<String>) {
+        let attr = mergeAttr(attr, className);
 
-        if let Some(className) = className {
-            let attrClass = attr.get("class");
-
-            let valueToSet: String = match attrClass {
-                Some(attrClass) => format!("{} {}", className, attrClass),
-                None => className
-            };
-
-            attr.insert("class", valueToSet);
+        let mut to_delate: Vec<&str> = Vec::new();
+        
+        for (key, _) in self.attr.iter() {
+            if !attr.contains_key(*key) {
+                to_delate.push(*key);
+            }
         }
 
-        attr
-    }
-
-    pub fn updateAttr(&mut self, attr: &HashMap<&'static str, String>, className: Option<String>) {
-        let attr = self.mergeAttr(attr, className);
+        for key_to_delete in to_delate.into_iter() {
+            self.domDriver.removeAttr(self.idDom.clone(), key_to_delete)
+        }
 
         self.attr.retain(|key, _value| {
             let key: &str = *key;
