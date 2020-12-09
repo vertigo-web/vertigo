@@ -67,18 +67,18 @@ fn updateNodeChild(cssManager: &CssManager, target: &RealDomNode, newVersion: &V
 
     let mut realNode: CacheNode<&'static str, RealDomNode, VDomNode> = CacheNode::new(
         |_cssManager: &CssManager, target: &RealDomNode, node: &VDomNode| -> RealDomNode {
-            target.child().createNode(node.name)
+            target.createNode(node.name)
         }, 
     );
     let mut realText: CacheNode<String, RealDomText, VDomText> = CacheNode::new(                    //TODO - trzeci parametr HashMap<String, String>
         |_cssManager: &CssManager, target: &RealDomNode, node: &VDomText| -> RealDomText {
-            target.child().createText(node.value.clone())
+            target.createText(node.value.clone())
         },
     );
     let mut realComponent: CacheNode<VDomComponentId, RealDomComponent, VDomComponent> = CacheNode::new(
         |cssManager: &CssManager, target: &RealDomNode, node: &VDomComponent| -> RealDomComponent {
 
-            let node_root = target.child().createNode("div");
+            let node_root = target.createNode("div");
 
             let node_root_for_id = node_root.clone();
 
@@ -92,7 +92,7 @@ fn updateNodeChild(cssManager: &CssManager, target: &RealDomNode, newVersion: &V
         },
     );
 
-    let realChild = target.child().extract();
+    let realChild = target.extract_child();
 
     for item in realChild {
         match item {
@@ -118,31 +118,31 @@ fn updateNodeChild(cssManager: &CssManager, target: &RealDomNode, newVersion: &V
         match item {
             VDom::Node { node } => {
                 let id = node.name.clone();
-                let mut domChild = realNode.getOrCreate(cssManager, target, id, &node);
+                let mut domChild = realNode.getOrCreate(cssManager, target, id, node);
                 let newWsk = domChild.idDom();
 
                 updateNodeAttr(&cssManager, &mut domChild, &node);
                 updateNodeChild(cssManager, &mut domChild, &node);                
 
-                target.child().appendAfter(wsk, RealDom::Node { node: domChild });
+                target.appendAfter(wsk, RealDom::Node { node: domChild });
                 wsk = Some(newWsk);
             },
             VDom::Text { node } => {
                 let id = node.value.clone();
-                let mut domChild = realText.getOrCreate(cssManager, target,id, &node);
+                let mut domChild = realText.getOrCreate(cssManager, target,id, node);
                 let newWsk = domChild.idDom.clone();
 
                 domChild.update(&node.value);
 
-                target.child().appendAfter(wsk, RealDom::Text { node: domChild });
+                target.appendAfter(wsk, RealDom::Text { node: domChild });
                 wsk = Some(newWsk);
             },
             VDom::Component { node } => {
                 let id = node.id.clone();
-                let domChild = realComponent.getOrCreate(cssManager, target,id, &node);
+                let domChild = realComponent.getOrCreate(cssManager, target,id, node);
                 let newWsk = domChild.id();
 
-                target.child().appendAfter(wsk, RealDom::Component { node: domChild });
+                target.appendAfter(wsk, RealDom::Component { node: domChild });
                 wsk = Some(newWsk);
             }
         }
@@ -173,8 +173,8 @@ fn updateNode(cssManager: &CssManager, target: &RealDomNode, newVersion: &VDomNo
     updateNodeChild(cssManager, target, &newVersion);
 }
 
-pub fn renderToNode(cssManager: CssManager, target: RealDomNode, component: VDomComponent) -> Client { 
-    let subscription: Client = component.subscribe(move |newVersion| {
+pub fn renderToNode(cssManager: CssManager, target: RealDomNode, component: VDomComponent) -> Client {
+    let subscription: Client = component.view.subscribe(move |newVersion| {
         updateNode(
             &cssManager,
             &target, 

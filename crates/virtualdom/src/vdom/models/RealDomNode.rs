@@ -2,8 +2,9 @@ use std::collections::HashMap;
 use std::rc::Rc;
 use crate::vdom::{
     models::{
+        RealDom::RealDom,
         RealDomId::RealDomId,
-        RealDomChildList::RealDomChildList,
+        RealDomText::RealDomText,
     },
     DomDriver::{
         DomDriver::DomDriver,
@@ -16,7 +17,7 @@ pub struct RealDomNodeInner {
     pub idDom: RealDomId,
     pub name: &'static str,
     attr: HashMap<&'static str, String>,
-    pub child: RealDomChildList,
+    pub child: Vec<RealDom>,
 }
 
 impl RealDomNodeInner {
@@ -25,31 +26,25 @@ impl RealDomNodeInner {
 
         driver.createNode(nodeId.clone(), name);
 
-        let domChild = RealDomChildList::new(driver.clone(), nodeId.clone());
-
         let node = RealDomNodeInner {
             domDriver: driver,
             idDom: nodeId,
             name,
             attr: HashMap::new(),
-            child: domChild,
+            child: Vec::new(),
         };
 
         node
     }
 
     pub fn createWithId(driver: DomDriver, id: RealDomId) -> RealDomNodeInner {
-        let domChild = RealDomChildList::new(driver.clone(), id.clone());
-
-        let node = RealDomNodeInner {
+        RealDomNodeInner {
             domDriver: driver,
             idDom: id,
             name: "div",
             attr: HashMap::new(),
-            child: domChild,
-        };
-
-        node
+            child: Vec::new(),
+        }
     }
                                                             //TODO - koniecznie pozbyć się tej funkcji
     fn updateAttrOne(&mut self, name: &'static str, value: &String) {
@@ -107,6 +102,25 @@ impl RealDomNodeInner {
     pub fn updateOnClick(&mut self, onClick: Option<Rc<dyn Fn()>>) {
         self.domDriver.setOnClick(self.idDom.clone(), onClick);
     }
+
+
+    pub fn extract_child(&mut self) -> Vec<RealDom> {
+        let prev_child = std::mem::replace(&mut self.child, Vec::new());
+        prev_child
+    }
+
+    pub fn appendAfter(&mut self, prevNode: Option<RealDomId>, newChild: RealDom) {
+        match prevNode {
+            Some(prevNode) => {
+                self.domDriver.insertAfter(prevNode, newChild.id());
+            }
+            None => {
+                self.domDriver.addChild(self.idDom.clone(), newChild.id());
+            }
+        };
+        
+        self.child.push(newChild);
+    }
 }
 
 impl Drop for RealDomNodeInner {
@@ -157,13 +171,6 @@ impl RealDomNode {
         })
     }
 
-    pub fn child(&self) -> RealDomChildList {
-        self.inner.get(
-            |state| {
-                state.child.clone()
-        })
-    }
-
     pub fn idDom(&self) -> RealDomId {
         self.inner.get(
             |state| {
@@ -176,6 +183,37 @@ impl RealDomNode {
             |state| {
                 state.name
         })
+    }
+
+    pub fn extract_child(&self) -> Vec<RealDom> {
+        self.inner.change(
+            (),
+            |state, ()| {
+                state.extract_child()
+        })
+    }
+
+    pub fn appendAfter(&self, prevNode: Option<RealDomId>, newChild: RealDom) {
+        self.inner.change(
+            (prevNode, newChild),
+            |state, (prevNode, newChild)| {
+                state.appendAfter(prevNode, newChild)
+        })
+    }
+
+    fn domDriver(&self) -> DomDriver {
+        self.inner.get(
+            |state| {
+                state.domDriver.clone()
+        })
+    }
+
+    pub fn createNode(&self, name: &'static str) -> RealDomNode {
+        RealDomNode::new(self.domDriver(), name)
+    }
+
+    pub fn createText(&self, name: String) -> RealDomText {
+        RealDomText::new(self.domDriver(), name)
     }
 }
 

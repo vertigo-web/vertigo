@@ -1,6 +1,5 @@
 pub mod RealDom;
 pub mod RealDomId;
-pub mod RealDomChildList;
 pub mod RealDomNode;
 pub mod RealDomText;
 pub mod RealDomComponent;

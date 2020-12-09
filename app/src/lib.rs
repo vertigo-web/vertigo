@@ -6,7 +6,7 @@ mod simple_counter;
 mod fetch;
 mod event;
 
-use wasm_bindgen::{JsCast, prelude::*};
+use wasm_bindgen::prelude::*;
 
 
 use std::cell::RefCell;
@@ -73,7 +73,7 @@ pub async fn start_app() {
     let mut counter = 0;
 
 
-    let body_event = DomEventMouse::new(move |event: &web_sys::MouseEvent| {
+    let body_event = DomEventMouse::new(move |_event: &web_sys::MouseEvent| {
         log::info!("click ... !!==!!");
 
         counter += 1;
@@ -149,14 +149,6 @@ TODO - dodać jakieś makra które pozwolą na łatwe generowanie html-a (http
 
 TODO - Będąc w bloku computed, albo subskrybcji, całkowicie ignorować wszelkie akcje które będą chciały zmienić wartość
        rzucać standardowy strumień błędów informację o incydencie. Dzięki temu nowa wadliwa funkcjonalność nie zepsuje tej juz dobrze ulezanej funkcjonalności
-    
-TODO - poprawić mechanizm synchronizowania listy dzieci
-    1. brać listę istniejących juz nodów (bez odczepiania od parenta)
-    2. wygenerowac nowa liste
-    3. wyszukac pierwszy usuniety node, za nim podczapiac te nowe we własciwej kolejnośli
-        lub wyszukac pierwszy który istnieje i za nim podczepiać te kolejne
-
-TODO - niezmienne struktury danych, https://docs.rs/im/15.0.0/im/
 
 https://github.com/rustwasm/console_error_panic_hook#readme
 https://rustwasm.github.io/wasm-bindgen/reference/passing-rust-closures-to-js.html
