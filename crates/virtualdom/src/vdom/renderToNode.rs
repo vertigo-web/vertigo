@@ -138,7 +138,7 @@ fn updateNodeChild(cssManager: &CssManager, target: &RealDomNode, newVersion: &V
             VDom::Component { node } => {
                 let id = node.id.clone();
                 let domChild = realComponent.getOrCreate(cssManager, target,id, node);
-                let newWsk = domChild.id();
+                let newWsk = domChild.domId();
 
                 target.appendAfter(wsk, RealDom::Component { node: domChild });
                 wsk = Some(newWsk);

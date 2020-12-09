@@ -17,7 +17,7 @@ pub struct RealDomComponent {
 }
 
 impl RealDomComponent {
-    pub fn id(&self) -> RealDomId {
+    pub fn domId(&self) -> RealDomId {
         self.node.idDom()
     }
 }
