@@ -26,8 +26,6 @@ use crate::{
     }
 };
 
-                                                                //TODO - przekazywać tylko referencję do CssManager-a (nie klonować)
-
 struct CacheNode<K: Eq + Hash, RNode, VNode> {
     createNew: fn(&CssManager, &RealDomNode, &VNode) -> RNode,
     data: HashMap<K, VecDeque<RNode>>,

@@ -46,7 +46,7 @@ impl RealDomNodeInner {
             child: Vec::new(),
         }
     }
-                                                            //TODO - koniecznie pozbyć się tej funkcji
+
     fn updateAttrOne(&mut self, name: &'static str, value: &String) {
         let needUpdate = {
             let item = self.attr.get(name);
