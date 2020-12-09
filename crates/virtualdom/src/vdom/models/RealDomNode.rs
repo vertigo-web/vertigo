@@ -83,7 +83,7 @@ impl RealDomNodeInner {
         let attr = mergeAttr(attr, className);
 
         let mut to_delate: Vec<&str> = Vec::new();
-        
+
         for (key, _) in self.attr.iter() {
             if !attr.contains_key(*key) {
                 to_delate.push(*key);

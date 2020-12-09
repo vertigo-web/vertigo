@@ -5,7 +5,7 @@ use crate::vdom::models::{
     VDom::VDom,
 };
 use crate::vdom::models::{
-    Css::Css,
+    Css::{Css, CssFrames},
     NodeAttr::NodeAttr,
 };
 
@@ -15,6 +15,7 @@ pub struct VDomNode {
     pub child: Vec<VDom>,
     pub onClick: Option<Rc<dyn Fn()>>,
     pub css: Option<Css>,
+    pub cssFrames: Option<CssFrames>,
 }
 
 impl VDomNode {
@@ -25,12 +26,16 @@ impl VDomNode {
             child: Vec::new(),
             onClick: None,
             css: None,
+            cssFrames: None,
         };
 
         for child in childList {
             match child {
                 NodeAttr::Css { css } => {
                     result.css = Some(css);
+                },
+                NodeAttr::CssFrames { frames } => {
+                    result.cssFrames = Some(frames);
                 },
                 NodeAttr::OnClick { event } => {
                     result.onClick = Some(event);
@@ -54,6 +59,7 @@ impl VDomNode {
             child: childList,
             onClick: None,
             css: None,
+            cssFrames: None,
         }
     }
 }
