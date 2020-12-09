@@ -152,6 +152,15 @@ TODO - Będąc w bloku computed, albo subskrybcji, całkowicie ignorować wszel
 
 https://github.com/rustwasm/console_error_panic_hook#readme
 https://rustwasm.github.io/wasm-bindgen/reference/passing-rust-closures-to-js.html
+
+
+TODO - makro które wycina białe znaki ?
+Css::one("
+        margin: 5px;
+    ")
+
+
+
 */
 
 
