@@ -27,13 +27,13 @@ impl GraphOne {
 
             listIds.remove(edgeB);
 
-            listIds.len() > 0
+            !listIds.is_empty()
         });
     }
 
     pub fn getAllDeps(&self, edgeA: GraphId) -> HashSet<GraphId> {
         let mut result = HashSet::new();
-        let mut toTraverse: Vec<GraphId> = vec!(edgeA.clone());
+        let mut toTraverse: Vec<GraphId> = vec!(edgeA);
 
         loop {
             let nextToTraverse = toTraverse.pop();
@@ -45,7 +45,7 @@ impl GraphOne {
                     if let Some(list) = list {
                         for item in list {
                             let isContain = result.contains(item);
-                            if isContain == false {
+                            if !isContain {
                                 result.insert(item.clone());
                                 toTraverse.push(item.clone());
                             }
@@ -109,15 +109,17 @@ pub struct Graph {
     stack: Stack,
 }
 
-impl Graph {
-    pub fn new() -> Graph {
-        Graph {
+impl Default for Graph {
+    fn default() -> Self {
+        Self {
             rel: GraphOne::new(),
             //revert: GraphOne::new(),
             stack: Stack::new(),
         }
     }
+}
 
+impl Graph {
     fn addRelation(&mut self, parentId: GraphId, clientId: GraphId) {
         self.rel.add(parentId, clientId);
         //self.revert.add(clientId, parentId);

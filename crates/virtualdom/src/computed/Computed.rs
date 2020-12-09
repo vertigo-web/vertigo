@@ -43,7 +43,7 @@ impl<T> Clone for Computed<T> {
 impl<T: 'static> Computed<T> {
     pub fn new<F: Fn() -> Rc<T> + 'static>(deps: Dependencies, getValue: F) -> Computed<T> {
 
-        let id = GraphId::new();
+        let id = GraphId::default();
         let isFreshCell = Rc::new(BoxRefCell::new(true));
 
         let getValue = deps.wrapGetValue(getValue, id.clone());
@@ -57,7 +57,7 @@ impl<T: 'static> Computed<T> {
                 deps,
                 getValueFromParent: getValue,
                 id,
-                isFreshCell: isFreshCell,
+                isFreshCell,
                 valueCell: BoxRefCell::new(value),
             })
         }
@@ -76,7 +76,7 @@ impl<T: 'static> Computed<T> {
 
         let shouldRecalculate = {
             self.inner.isFreshCell.changeNoParams(|state|{
-                let shouldRecalculate = *state == false;
+                let shouldRecalculate = !(*state);
                 *state = true;
                 shouldRecalculate
             })
@@ -90,20 +90,17 @@ impl<T: 'static> Computed<T> {
             None
         };
 
-        let result = inner.valueCell.change(newValue, |state, newValue| {
+        inner.valueCell.change(newValue, |state, newValue| {
             if let Some(value) = newValue {
                 *state = value;
             }
 
             (*state).clone()
-        });
-
-        result
+        })
     }
 
     pub fn subscribe<F: Fn(&T) + 'static>(self, call: F) -> Client {
-        let client = Client::new(self.inner.deps.clone(), self.clone(), call);
-        client
+        Client::new(self.inner.deps.clone(), self.clone(), call)
     }
 
     pub fn from2<A: Debug, B: Debug>(
@@ -128,9 +125,8 @@ impl<T: 'static> Computed<T> {
 
         Computed::new(deps, move || {
             let value = self.getValue();
-            let result = fun(value.clone());
+            let result = fun(value);
             Rc::new(result)
         })
     }
 }
-

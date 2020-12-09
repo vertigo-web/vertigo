@@ -51,7 +51,7 @@ impl DomEvent {
         });
 
         DomEvent {
-            closure: closure
+            closure
         }
     }
 

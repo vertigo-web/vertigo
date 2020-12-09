@@ -8,7 +8,7 @@ fn basic() {
     };
     use crate::computed::tests::BoxValue::BoxValue;
 
-    let root = Dependencies::new();
+    let root = Dependencies::default();
 
     let value1 = root.newValue(1);
     let value2 = root.newValue(2);
@@ -58,7 +58,7 @@ fn basic2() {
     };
     use crate::computed::tests::BoxValue::BoxValue;
 
-    let root = Dependencies::new();
+    let root = Dependencies::default();
 
     let val1 = root.newValue(4);
     let val2 = root.newValue(5);
@@ -122,13 +122,13 @@ fn basic2() {
 
 #[test]
 fn pointers() {
-    
+
     //konwertowanie do wskaźnika
 
     fn foo1() -> i32 {
         0
     }
-    
+
     fn foo2() -> i32 {
         0
     }
@@ -192,7 +192,7 @@ fn test_subscription() {
     };
     use crate::computed::tests::BoxValue::BoxValue;
 
-    let root = Dependencies::new();
+    let root = Dependencies::default();
 
     let val1 = root.newValue(1);
     let val2 = root.newValue(2);

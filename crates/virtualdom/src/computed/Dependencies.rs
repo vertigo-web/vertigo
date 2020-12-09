@@ -21,7 +21,7 @@ impl DependenciesInner {
     fn new() -> DependenciesInner {
         DependenciesInner {
             refreshToken: HashMap::new(),
-            graph: Graph::new(),
+            graph: Graph::default(),
         }
     }
 }
@@ -38,13 +38,15 @@ impl Clone for Dependencies {
     }
 }
 
-impl Dependencies {
-    pub fn new() -> Dependencies {
-        Dependencies {
+impl Default for Dependencies {
+    fn default() -> Self {
+        Self {
             inner: Rc::new(BoxRefCell::new(DependenciesInner::new()))
         }
     }
+}
 
+impl Dependencies {
     pub fn newValue<T>(&self, value: T) -> Value<T> {
         Value::new(self.clone(), value)
     }
@@ -96,7 +98,7 @@ impl Dependencies {
         self.inner.change(
             (clientId, refreshToken),
             |state, (clientId, refreshToken)| {
-                state.refreshToken.insert(clientId.clone(), refreshToken);
+                state.refreshToken.insert(clientId, refreshToken);
             }
         );
     }
@@ -151,8 +153,6 @@ impl Dependencies {
             Rc::new(result)
         });
 
-        let result = Computed::new(deps, getValue);
-
-        result
+        Computed::new(deps, getValue)
     }
 }

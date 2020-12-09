@@ -13,8 +13,8 @@ pub struct Client {
 impl Client {
     pub fn new<T: 'static, F: Fn(&T) + 'static>(deps: Dependencies, computed: Computed<T>, call: F) -> Client {
 
-        let id = GraphId::new();
-        
+        let id = GraphId::default();
+
         let getValue = deps.wrapGetValue(move || {
             computed.getValue()
         }, id.clone());
@@ -23,7 +23,7 @@ impl Client {
             let value = getValue();
             call(value.as_ref());
         };
-        
+
         refresh();
 
         deps.registerRefreshToken(id.clone(), RefreshToken::newClient(refresh));

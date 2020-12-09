@@ -4,7 +4,7 @@ pub enum CssGroup {
         value: &'static str,                    //&str -- moze zachowywac sie jako id po ktorym odnajdujemy interesujaca regule
     },
     CssDynamic {
-        value: String,                          //w tym wypadku String, jest kluczem do hashmapy z wynikowa nazwa klasy       
+        value: String,                          //w tym wypadku String, jest kluczem do hashmapy z wynikowa nazwa klasy
     }
 }
 
@@ -12,14 +12,24 @@ pub struct Css {
     pub groups: Vec<CssGroup>,
 }
 
-impl Css {
-    pub fn new() -> Css {
-        Css {
+impl Default for Css {
+    fn default() -> Self {
+        Self {
             groups: Vec::new()
         }
     }
+}
 
-    pub fn add(mut self, value: &'static str) -> Self {
+impl Css {
+    pub fn one(value: &'static str) -> Self {
+        Self {
+            groups: vec!(CssGroup::CssStatic {
+                value
+            })
+        }
+    }
+
+    pub fn push(mut self, value: &'static str) -> Self {
         self.groups.push(CssGroup::CssStatic {
             value
         });

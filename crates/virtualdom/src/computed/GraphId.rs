@@ -5,13 +5,15 @@ pub struct GraphId {
     pub id: u64,
 }
 
-impl GraphId {
-    pub fn new() -> GraphId {
-        GraphId {
+impl Default for GraphId {
+    fn default() -> Self {
+        Self {
             id: GraphId::get_unique_id()
         }
     }
+}
 
+impl GraphId {
     fn get_unique_id() -> u64 {
         use std::sync::atomic::{AtomicU64, Ordering};
         static COUNTER:AtomicU64 = AtomicU64::new(1);

@@ -7,7 +7,7 @@ pub enum RefreshToken {
         isFreshCell: Rc<BoxRefCell<bool>>,
     },
     Client {
-        refresh: Rc<Box<dyn Fn()>>,
+        refresh: Rc<dyn Fn()>,
     }
 }
 
@@ -33,7 +33,7 @@ impl RefreshToken {
             },
             RefreshToken::Client { refresh, .. } => {
                 refresh();
-            } 
+            }
         }
     }
 

@@ -4,34 +4,29 @@ use crate::vdom::{
     models::{
         RealDomId::RealDomId,
     },
-    DomDriver::DomDriver::DomDriverTrait,
+    driver::DomDriver::DomDriverTrait,
 };
 
+#[derive(Default)]
 pub struct DomDriverPrint {}
-
-impl DomDriverPrint {
-    pub fn new() -> DomDriverPrint {
-        DomDriverPrint {}
-    }
-}
 
 impl DomDriverTrait for DomDriverPrint {
     fn createNode(&self, id: RealDomId, name: &'static str) {
         log::info!("createNode {} - {}", id, name);
     }
 
-    fn createText(&self, id: RealDomId, value: &String) {
+    fn createText(&self, id: RealDomId, value: &str) {
         log::info!("createText {} {}", id, value);
     }
 
-    fn createComment(&self, id: RealDomId, value: &String) {
+    fn createComment(&self, id: RealDomId, value: &str) {
         log::info!("createComment {} {}", id, value);
     }
 
-    fn setAttr(&self, id: RealDomId, key: &'static str, value: &String) {
+    fn setAttr(&self, id: RealDomId, key: &'static str, value: &str) {
         log::info!("setAttr {} {} {}", id, key, value);
     }
-    
+
     fn removeAttr(&self, id: RealDomId, name: &'static str) {
         log::info!("removeAttr {} {}", id, name);
     }
