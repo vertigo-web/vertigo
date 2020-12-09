@@ -65,12 +65,8 @@ pub fn component<T: 'static>(params: Computed<T>, render: fn(Rc<T>) -> VDomNode)
     }
 }
 
-pub fn buildRoot(name: &'static str, childList: Vec<VDom>) -> VDomNode {
-    VDomNode::newWithVDom(name, childList)
-}
-
-pub fn buildNode(name: &'static str, childList: Vec<NodeAttr>) -> VDom {
-    VDom::node(name, childList)
+pub fn buildNode(name: &'static str, childList: Vec<NodeAttr>) -> VDomNode {
+    VDomNode::new(name, childList)
 }
 
 pub fn buildText<T: Into<String>>(name: T) -> VDom {

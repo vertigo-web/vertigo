@@ -85,14 +85,14 @@ pub fn main_render(app_state: Rc<AppState>) -> VDomNode {
     let value = app_state.value.getValue();
     let suma = app_state.suma.getValue();
 
-    use NodeAttr::{buildRoot, buildNode, node, css, text, component, onClick, attr};
+    use NodeAttr::{buildNode, node, css, text, component, onClick, attr};
 
     let showColor = *value % 2 == 0;
 
     // let counter2 = app_state.counter2.clone();
 
-    buildRoot("div", vec!(
-        buildNode("div", vec!(
+    buildNode("div", vec!(
+        node("div", vec!(
             node("div", vec!(
                 css(cssBg()),
                 text("bla bla bla"),
@@ -117,19 +117,19 @@ pub fn main_render(app_state: Rc<AppState>) -> VDomNode {
             )),
         )),
 
-        buildNode("div", vec!(
+        node("div", vec!(
             attr("aaa", "one"),
             attr("bbb", "two"),
             text("Abudabi")
         )),
 
-        buildNode("div", vec!(
+        node("div", vec!(
             component(app_state.counter1.clone(), simple_counter_render),
             component(app_state.counter2.clone(), simple_counter_render),
             component(app_state.counter3.clone(), simple_counter_render),
         )),
 
-        buildNode("div", vec!(
+        node("div", vec!(
             text(format!("suma = {}", suma))
         ))
     ))

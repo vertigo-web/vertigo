@@ -41,7 +41,7 @@ fn cssWrapper() -> Css {
 }
 
 pub fn simple_counter_render(simple_counter: Rc<SimpleCounter>) -> VDomNode {
-    use NodeAttr::{buildRoot, buildNode, node, css, text, onClick};
+    use NodeAttr::{buildNode, node, css, text, onClick};
 
     let calue =  *(simple_counter.counter.getValue());
 
@@ -59,23 +59,21 @@ pub fn simple_counter_render(simple_counter: Rc<SimpleCounter>) -> VDomNode {
         }
     };
 
-    buildRoot("div", vec!(
-        buildNode("div", vec!(
-            css(cssWrapper()),
-            node("div", vec!(
-                css(cssBox()),
-                text(format!("Counter value = {}", calue)),
-            )),            
-            node("button", vec!(
-                css(cssButton()),
-                text("up"),
-                onClick(clickUp)
-            )),
-            node("button", vec!(
-                css(cssButton()),
-                text("down"),
-                onClick(clickDown)
-            ))
+    buildNode("div", vec!(
+        css(cssWrapper()),
+        node("div", vec!(
+            css(cssBox()),
+            text(format!("Counter value = {}", calue)),
+        )),            
+        node("button", vec!(
+            css(cssButton()),
+            text("up"),
+            onClick(clickUp)
+        )),
+        node("button", vec!(
+            css(cssButton()),
+            text("down"),
+            onClick(clickDown)
         ))
     ))
 }
