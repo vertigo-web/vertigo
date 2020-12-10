@@ -1,4 +1,5 @@
 
+use std::hash::Hash;
 const ROOT_ID: u64 = 1;
 const START_ID: u64 = 2;
 
@@ -8,7 +9,7 @@ fn get_unique_id() -> u64 {
     COUNTER.fetch_add(1, Ordering::Relaxed)
 }
 
-#[derive(Clone, Debug)]
+#[derive(Clone, Debug, PartialEq, Eq, Hash)]
 pub struct RealDomId {
     id: u64,
 }

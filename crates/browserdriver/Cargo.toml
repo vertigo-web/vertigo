@@ -12,3 +12,17 @@ wasm-bindgen = {version = "0.2.63", features = ["nightly", "serde-serialize"]}
 log = "0.4.11"
 serde = { version = "1.0.114", features = ["derive", "rc"] }
 serde_json = "1.0.55"
+web-sys = { version="0.3.46", features=[
+    "Document",
+    "HtmlElement",
+    "Headers",
+    "Request",
+    "RequestInit",
+    "RequestMode",
+    "Response",
+    "Window",
+    "MouseEvent",
+    "KeyboardEvent",
+    "Text",
+    "HtmlHeadElement",
+]}

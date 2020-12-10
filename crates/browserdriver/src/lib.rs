@@ -1,7 +1,7 @@
 #![allow(non_snake_case)]
 #![allow(non_camel_case_types)]
 
-use wasm_bindgen::prelude::*;
+use web_sys::{Document, Element, Text, HtmlHeadElement, Node};
 use std::rc::Rc;
 use std::collections::HashMap;
 
@@ -9,403 +9,295 @@ use virtualdom::computed::BoxRefCell::BoxRefCell;
 use virtualdom::vdom::driver::DomDriver::DomDriverTrait;
 use virtualdom::vdom::models::RealDomId::RealDomId;
 
-use wasm_bindgen::JsValue;
-use crate::event::EventModel;
+use wasm_bindgen::JsCast;
+use dom_event::{DomEventDisconnect, DomEventMouse};
 
-mod event;
+mod dom_event;
 
-#[wasm_bindgen(module = "/src/driver.js")]
-extern "C" {
-    fn consoleLog(message: &str);
-    fn startDriverLoop(closure: &Closure<dyn FnMut()>);
-
-    fn createNode(id: u64, name: &str);
-    fn createText(id: u64, value: &str);
-    fn createComment(id: u64, value: &str);
-    fn setAttr(id: u64, key: &str, value: &str);
-    fn removeAttr(id: u64, name: &str);
-    fn remove(id: u64);
-    fn insertAsFirstChild(parent: u64, child: u64);
-
-    fn insertBefore(refId: u64, child: u64);
-    fn insertAfter(refId: u64, child: u64);
-    fn addChild(parent: u64, child: u64);
-
-    fn getEventData() -> JsValue;
-
-    fn insertCss(class: String, value: String);
+fn get_document() -> (Document, HtmlHeadElement) {
+    let window = web_sys::window().expect("no global `window` exists");
+    let document = window.document().expect("should have a document on window");
+    let head = document.head().unwrap();
+    (document, head)
 }
 
-struct DriverJS {}
+fn create_root(document: &Document) -> Element {
+    let body = document.body().expect("document should have a body");
+    let root = document.create_element("div").unwrap();
+    body.append_child(&root).unwrap();
+    root
+}
 
-impl DriverJS {
-    unsafe fn consoleLog(message: &str) {
-        consoleLog(message);
-    }
-
-    unsafe fn startDriverLoop(closure: &Closure<dyn FnMut()>) {
-        startDriverLoop(closure);
-    }
-
-    unsafe fn createNode(id: u64, name: &str) {
-        createNode(id, name);
-    }
-
-    unsafe fn createText(id: u64, value: &str) {
-        createText(id, value);
-    }
-
-    unsafe fn createComment(id: u64, value: &str) {
-        createComment(id, value);
-    }
-
-    unsafe fn setAttr(id: u64, key: &str, value: &str) {
-        setAttr(id, key, value);
-    }
-
-    unsafe fn removeAttr(id: u64, name: &str) {
-        removeAttr(id, name)
-    }
-
-    unsafe fn remove(id: u64) {
-        remove(id);
-    }
-
-    unsafe fn insertAsFirstChild(parent: u64, child: u64) {
-        insertAsFirstChild(parent, child);
-    }
-
-    unsafe fn insertBefore(refId: u64, child: u64) {
-        insertBefore(refId, child);
-    }
-
-    unsafe fn insertAfter(refId: u64, child: u64) {
-        insertAfter(refId, child);
-    }
-
-    unsafe fn addChild(parent: u64, child: u64) {
-        addChild(parent, child);
-    }
-
-    unsafe fn getEventData() -> JsValue {
-        getEventData()
-    }
-
-    unsafe fn insertCss(class: String, value: String) {
-        insertCss(class, value)
-    }
+enum ElementItem {
+    Element {
+        node: Element,
+    },
+    Text {
+        text: Text
+    },
 }
 
 pub struct DomDriverBrowserInner {
-    parent: BoxRefCell<HashMap<u64, u64>>,                                  //child -> parent
-    dataOnClick: BoxRefCell<HashMap<u64, Rc<dyn Fn()>>>,
+    document: Document,
+    head: HtmlHeadElement,
+    elements: HashMap<RealDomId, ElementItem>,
+    eventsOnClick: HashMap<RealDomId, DomEventDisconnect>,
 }
 
 impl Default for DomDriverBrowserInner {
     fn default() -> Self {
+        let (document, head) = get_document();
+        let root = create_root(&document);
+
+        let mut elements = HashMap::new();    
+        elements.insert(RealDomId::root(), ElementItem::Element { node: root });
+
         Self {
-            parent: BoxRefCell::new(HashMap::new()),
-            dataOnClick: BoxRefCell::new(HashMap::new()),
+            document,
+            head,
+            elements,
+            eventsOnClick: HashMap::new(),
         }
     }
 }
 
 impl DomDriverBrowserInner {
-    fn createNode(&self, id: RealDomId, name: &'static str) {
-        unsafe {
-            DriverJS::createNode(id.to_u64(), name);
-        }
+    fn createNode(&mut self, id: RealDomId, name: &'static str) {
+        let node = self.document.create_element(name).unwrap();
+        let id_str = format!("{}", id.to_u64());
+        node.set_attribute("debug-id", id_str.as_str()).unwrap();
+        self.elements.insert(id, ElementItem::Element { node });
     }
 
-    fn createText(&self, id: RealDomId, value: &str) {
-        unsafe {
-            DriverJS::createText(id.to_u64(), value);
-        }
+    fn createText(&mut self, id: RealDomId, value: &str) {
+        let text = self.document.create_text_node(value);
+        self.elements.insert(id, ElementItem::Text { text });
     }
 
-    fn createComment(&self, id: RealDomId, value: &str) {
-        unsafe {
-            DriverJS::createComment(id.to_u64(), value);
-        }
-    }
+    fn setAttr(&mut self, id: RealDomId, name: &'static str, value: &str) {
+        let elem = self.elements.get_mut(&id);
 
-    fn setAttr(&self, id: RealDomId, key: &'static str, value: &str) {
-        unsafe {
-            DriverJS::setAttr(id.to_u64(), key, value);
-        }
-    }
-
-    fn removeAttr(&self, id: RealDomId, name: &'static str) {
-        unsafe {
-            DriverJS::removeAttr(id.to_u64(), name);
-        }
-    }
-
-    fn remove(&self, id: RealDomId) {
-        let id = id.to_u64();
-        unsafe {
-            DriverJS::remove(id);
+        if let Some(elem) = elem {
+            match elem {
+                ElementItem::Element { node } => {
+                    node.set_attribute(name, value).unwrap();
+                },
+                ElementItem::Text { .. } => {
+                    log::error!("Cannot set attribute on a text node id={}", id);
+                }
+            }
+            return;
         }
 
-        self.dataOnClick.change(&id, |state, id| {
-            state.remove(id);
-        });
-
-        self.parent.change(&id, |state, id| {
-            state.remove(&id);
-        })
+        log::error!("Missing element with id={}", id);
     }
 
-    fn setParent(&self, parent: RealDomId, child: RealDomId) {
-        self.parent.change((parent, child), |state, (parent, child)| {
-            state.insert(child.to_u64(), parent.to_u64());
-        })
+    fn removeAttr(&mut self, id: RealDomId, name: &'static str) {
+        let elem = self.elements.get_mut(&id);
+
+        if let Some(elem) = elem {
+            match elem {
+                ElementItem::Element { node } => {
+                    node.remove_attribute(name).unwrap();
+                },
+                ElementItem::Text { .. } => {
+                    log::error!("Cannot remove attribute on a text node id={}", id);
+                }
+            }
+            return;
+        }
+
+        log::error!("Missing element with id={}", id);
     }
 
-    fn setRel(&self, relId: RealDomId, child: RealDomId) {
-        self.parent.change((relId, child), |state, (relId, child)| {
-            let relId = relId.to_u64();
-            let child = child.to_u64();
+    fn remove(&mut self, id: RealDomId) {
+        let elem = self.elements.remove(&id);
 
-            let parent = state.get(&relId);
+        if let Some(elem) = elem {
+            match elem {
+                ElementItem::Element { node } => {
+                    node.remove();
+                },
+                ElementItem::Text { text } => {
+                    text.remove();
+                }
+            }
+            return;
+        }
 
-            let parent = *(parent.unwrap());                       //TODO - koniecznie musi być ten idk
-            state.insert(child, parent);
-        });
+        log::error!("Missing element with id={}", id);
+    }
+
+    fn get_node(&self, refId: RealDomId) -> Option<Node> {
+        let child_item = self.elements.get(&refId);
+
+        match child_item {
+            Some(ElementItem::Element { node }) => {
+                let node = node.clone().dyn_into::<Node>().unwrap();
+                Some(node)
+            },
+            Some(ElementItem::Text { text }) => {
+                let node = text.clone().dyn_into::<Node>().unwrap();
+                Some(node)
+            },
+            None => {
+                log::error!("no element was found id={}", refId);
+                None
+            }
+        }
     }
 
     fn insertAsFirstChild(&self, parent: RealDomId, child: RealDomId) {
-        unsafe {
-            DriverJS::insertAsFirstChild(parent.to_u64(), child.to_u64());
-        }
-        self.setParent(parent, child);
+        let parent_item = self.get_node(parent).unwrap();
+        let child_item = self.get_node(child).unwrap();
+
+        parent_item.insert_before(&child_item, None).unwrap();
     }
 
     fn insertBefore(&self, refId: RealDomId, child: RealDomId) {
-        unsafe {
-            DriverJS::insertBefore(refId.to_u64(), child.to_u64());
-        }
-        self.setRel(refId, child);
+        let refId_item = self.get_node(refId).unwrap();
+        let child_item = self.get_node(child).unwrap();
+
+        let parent: Node = refId_item.parent_node().unwrap();
+
+        parent.insert_before(&child_item, Some(&refId_item)).unwrap();
     }
 
     fn insertAfter(&self, refId: RealDomId, child: RealDomId) {
-        unsafe {
-            DriverJS::insertAfter(refId.to_u64(), child.to_u64());
-        }
-        self.setRel(refId, child);
-    }
+        let refId_item = self.get_node(refId).unwrap();
+        let child_item = self.get_node(child).unwrap();
 
-    fn addChild(&self, parent: RealDomId, child: RealDomId) {
-        unsafe {
-            DriverJS::addChild(parent.to_u64(), child.to_u64());
-        }
-        self.setParent(parent, child);
-    }
+        let parent: Node = refId_item.parent_node().unwrap();
+        let next: Option<Node> = refId_item.next_sibling();
 
-    fn setOnClick(&self, node: RealDomId, onClick: Option<Rc<dyn Fn()>>) {
-        self.dataOnClick.change((node, onClick), |state, (node, onClick)| {
-            let id = node.to_u64();
-
-            match onClick {
-                Some(onClick) => {
-                    state.insert(id, onClick);
-                },
-                None => {
-                    state.remove(&id);
-                }
-            };
-        });
-    }
-
-    fn getEvent(&self, nodeId: &u64) -> Option<Rc<dyn Fn()>> {
-        self.dataOnClick.getWithContext(nodeId, |state, nodeId| {
-            state.get(nodeId).cloned()
-        })
-    }
-
-    fn getParentNode(&self, childId: &u64) -> Option<u64> {
-        self.parent.getWithContext(childId, |state, childId| {
-            let parent = state.get(&childId);
-            parent.copied()
-        })
-    }
-
-    fn insertCss(&self, class: String, value: String) {
-        unsafe {
-            DriverJS::insertCss(class, value)
-        }
-    }
-
-    fn sendEvent(&self, event: &EventModel) {
-        log::info!("Przyszedł event {:?}", event);
-
-        match event {
-            EventModel::OnClick { nodeId} => {
-                let mut nodeId = *nodeId;
-
-                while nodeId != 1 {
-                    let event = self.getEvent(&nodeId);
-
-                    if let Some(event) = event {
-                        event();
-                        return;
-                    }
-
-                    let parent = self.getParentNode(&nodeId);
-
-                    if let Some(parent) = parent {
-                        if parent == 1 {
-                            log::info!("sendEvent - trafiono na root");
-                            return;
-                        }
-
-                        nodeId = parent;
-
-                    } else {
-                        log::info!("sendEvent - nie znaleziono roota");
-                    }
-                }
-            }
-        }
-    }
-
-    fn fromCallback(&self) {
-        let data = unsafe {
-            DriverJS::getEventData()
-        };
-
-        let result: Result<Vec<EventModel>, serde_json::error::Error> = data.into_serde::<Vec<EventModel>>();
-
-        match result {
-            Ok(event) => {
-
-                //TODO - tranzakcja start
-
-                for item in event.iter() {
-                    let item: &EventModel = item;
-                    self.sendEvent(item);
-                }
-
-                //złapać tranzakcją
-                    //w tej tranzakcji, w petli aktualizowac
-
-                //TODO - tranzakcja stop
+        match next {
+            Some(next) => {
+                parent.insert_before(&child_item, Some(&next)).unwrap();
             },
-            Err(err) => {
-                log::error!("Przyszedł zepsuty event {:?}", err);
+            None => {
+                parent.insert_before(&child_item, None).unwrap();
             }
-        };
-    }
-}
-
-pub struct DomDriverBrowserRc {
-    inner: Rc<DomDriverBrowserInner>,
-}
-
-impl DomDriverBrowserRc {
-    fn fromCallback(&self) {
-        self.inner.fromCallback();
-    }
-
-    fn new() -> DomDriverBrowserRc {
-        DomDriverBrowserRc {
-            inner: Rc::new(DomDriverBrowserInner::default())
         }
     }
-}
 
-impl Clone for DomDriverBrowserRc {
-    fn clone(&self) -> Self {
-        DomDriverBrowserRc {
-            inner: self.inner.clone()
+    fn addChild(&mut self, parent: RealDomId, child: RealDomId) {
+        let parent_item = self.get_node(parent).unwrap();
+        let child_item = self.get_node(child).unwrap();
+
+        parent_item.append_child(&child_item).unwrap();
+    }
+
+    fn setOnClick(&mut self, node_id: RealDomId, onClick: Option<Rc<dyn Fn()>>) {
+        
+        match onClick {
+            Some(onClick) => {
+                let node_item = self.get_node(node_id.clone()).unwrap();
+                let clouser = DomEventMouse::new(move |_event: &web_sys::MouseEvent| {
+                    onClick();
+                });
+
+                let disconnect = clouser.append_to_mousedown(&node_item);
+                
+                self.eventsOnClick.insert(node_id, disconnect);
+            },
+            None => {
+                self.eventsOnClick.remove(&node_id);
+            }
         }
+    }
+
+    fn insertCss(&self, selector: String, value: String) {
+        let style = self.document.create_element("style").unwrap();
+        let content = self.document.create_text_node(format!("{} {{ {} }}", selector, value).as_str());
+        style.append_child(&content).unwrap();
+
+        self.head.append_child(&style).unwrap();
     }
 }
 
 
 pub struct DomDriverBrowser {
-    driver: DomDriverBrowserRc,
-    _callFromJS: Rc<Closure<dyn FnMut()>>,
+    driver: Rc<BoxRefCell<DomDriverBrowserInner>>,
 }
 
 impl Default for DomDriverBrowser {
     fn default() -> Self {
-        let driver = DomDriverBrowserRc::new();
-
-        let callFromJS: Closure<dyn FnMut()> = {
-            let driver = driver.clone();
-            let back = Closure::new(move || {
-                driver.fromCallback();
-            });
-
-            unsafe {
-                DriverJS::startDriverLoop(&back);
-            }
-
-            back
-        };
+        let driver = Rc::new(
+            BoxRefCell::new(
+                DomDriverBrowserInner::default()
+            )
+        );
 
         Self {
             driver,
-            _callFromJS: Rc::new(callFromJS),
-        }
-    }
-}
-
-impl DomDriverBrowser {
-    pub fn consoleLog(&self, message: &str) {
-        unsafe {
-            DriverJS::consoleLog(message);
         }
     }
 }
 
 impl DomDriverTrait for DomDriverBrowser {
     fn createNode(&self, id: RealDomId, name: &'static str) {
-        self.driver.inner.createNode(id, name);
+        self.driver.change((id, name), |state, (id, name)| {
+            state.createNode(id, name);
+        });
     }
 
     fn createText(&self, id: RealDomId, value: &str) {
-        self.driver.inner.createText(id, value);
-    }
-
-    fn createComment(&self, id: RealDomId, value: &str) {
-        self.driver.inner.createComment(id, value);
+        self.driver.change((id, value), |state, (id, value)| {
+            state.createText(id, value);
+        });
     }
 
     fn setAttr(&self, id: RealDomId, key: &'static str, value: &str) {
-        self.driver.inner.setAttr(id, key, value);
+        self.driver.change((id, key, value), |state, (id, key, value)| {
+            state.setAttr(id, key, value);
+        });
     }
 
     fn removeAttr(&self, id: RealDomId, name: &'static str) {
-        self.driver.inner.removeAttr(id, name);
+        self.driver.change((id, name), |state, (id, name)| {
+            state.removeAttr(id, name);
+        });
     }
 
     fn remove(&self, id: RealDomId) {
-        self.driver.inner.remove(id);
+        self.driver.change(id, |state, id| {
+            state.remove(id);
+        });
     }
 
     fn insertAsFirstChild(&self, parent: RealDomId, child: RealDomId) {
-        self.driver.inner.insertAsFirstChild(parent, child);
+        self.driver.change((parent, child), |state, (parent, child)| {
+            state.insertAsFirstChild(parent, child);
+        });
     }
 
     fn insertBefore(&self, refId: RealDomId, child: RealDomId) {
-        self.driver.inner.insertBefore(refId, child);
+        self.driver.change((refId, child), |state, (refId, child)| {
+            state.insertBefore(refId, child);
+        });
     }
 
     fn insertAfter(&self, refId: RealDomId, child: RealDomId) {
-        self.driver.inner.insertAfter(refId, child);
+        self.driver.change((refId, child), |state, (refId, child)| {
+            state.insertAfter(refId, child);
+        });
     }
 
     fn addChild(&self, parent: RealDomId, child: RealDomId) {
-        self.driver.inner.addChild(parent, child);
+        self.driver.change((parent, child), |state, (parent, child)| {
+            state.addChild(parent, child);
+        });
     }
 
     fn insertCss(&self, class: String, value: String) {
-        self.driver.inner.insertCss(class, value);
+        self.driver.change((class, value), |state, (class, value)| {
+            state.insertCss(class, value);
+        });
     }
 
     fn setOnClick(&self, node: RealDomId, onClick: Option<Rc<dyn Fn()>>) {
-        self.driver.inner.setOnClick(node, onClick);
+        self.driver.change((node, onClick), |state, (node, onClick)| {
+            state.setOnClick(node, onClick);
+        });
     }
 }

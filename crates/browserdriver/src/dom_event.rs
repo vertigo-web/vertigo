@@ -1,43 +1,6 @@
 use web_sys::{Event, MouseEvent, KeyboardEvent, EventTarget};
 use wasm_bindgen::{JsCast, prelude::Closure};
 
-// let closure: Closure<dyn FnMut(_)> = {
-//     let val1 = val1.clone();
-
-//     Closure::new(move |event: web_sys::Event| {
-//         log::info!("click ...");
-//         // let target = event.related_target();
-
-//         let target2 = event.target();
-
-//         if let Some(target) = target2 {
-//             let ta  = target.dyn_ref::<web_sys::Element>().unwrap();
-//             log::info!("sprawdzam target {}", ta /* as web_sys::Element*/ == &val1);
-//         } else {
-//             log::info!("brak targeta");
-//         }
-
-
-//         let kon = event.dyn_ref::<web_sys::MouseEvent>();
-//         log::info!("skonwertowanie na event myszy {:?}", kon);
-//     })
-// };
-
-// (&body).add_event_listener_with_callback(
-//     "mousedown",
-//     closure.as_ref().unchecked_ref()
-// ).unwrap();
-
-// closure.forget();
-
-// (&body).add_event_listener_with_callback(
-//     "keydown",
-//     closure.as_ref().unchecked_ref()
-// ).unwrap();
-
-// closure.forget();
-
-
 pub struct DomEvent {
     closure: Closure<dyn FnMut(Event)>,
 }

@@ -26,6 +26,7 @@ dependencies = [
  "serde_json",
  "virtualdom",
  "wasm-bindgen",
+ "web-sys",
 ]
 
 [[package]]

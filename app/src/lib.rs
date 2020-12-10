@@ -4,7 +4,6 @@
 mod my_app;
 mod simple_counter;
 mod fetch;
-mod event;
 
 use wasm_bindgen::prelude::*;
 
@@ -46,12 +45,6 @@ thread_local! {
     });
 }
 
-use event::{DomEventMouse, DomEventKeyboard, DomEventDisconnect};
-
-thread_local! {
-    static EVENTS: RefCell<Vec<DomEventDisconnect>> = RefCell::new(Vec::new());
-}
-
 #[wasm_bindgen(start)]
 pub async fn start_app() {
     console_error_panic_hook::set_once();
@@ -68,38 +61,6 @@ pub async fn start_app() {
     // Manufacture the element we're gonna append
     let val1 = document.create_element("p").unwrap();
     val1.set_inner_html("Hello from Rust!");
-
-
-    let mut counter = 0;
-
-
-    let body_event = DomEventMouse::new(move |_event: &web_sys::MouseEvent| {
-        log::info!("click ... !!==!!");
-
-        counter += 1;
-
-        if counter > 10 {
-            log::info!("Odlłączam %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%");
-            EVENTS.with(move |state| state.borrow_mut().clear());
-        }
-    });
-
-    let connection_event = body_event.append_to_mousedown(&body);
-
-    EVENTS.with(move |state| state.borrow_mut().push(connection_event));
-
-
-
-    let keyboard = DomEventKeyboard::new(move |event: &web_sys::KeyboardEvent| {
-        log::info!("keydown ... {} {}", event.char_code(), event.key());
-    });
-
-    let connection_keyboard = keyboard.append_to_keydown(&body);
-
-    EVENTS.with(move |state| state.borrow_mut().push(connection_keyboard));
-
-
-
 
     body.append_child(&val1).unwrap();
     log::info!("po dodaniu");
@@ -131,6 +92,8 @@ pub async fn start_app() {
 
 
 /*
+TODO - wydzielić computed do osobnego crates
+
 
 TODO - obadac ten sposób odpalania projektu wasm
     https://github.com/IMI-eRnD-Be/wasm-run
@@ -152,6 +115,11 @@ TODO - Będąc w bloku computed, albo subskrybcji, całkowicie ignorować wszel
 
 https://github.com/rustwasm/console_error_panic_hook#readme
 https://rustwasm.github.io/wasm-bindgen/reference/passing-rust-closures-to-js.html
+
+
+TODO - insertAsFirstChild, insertAfter. Wywalić te dwie funkcje.
+    trzeba odwrócić kolejność synchronizowania węzłów. Korzystać z metody insertBefore. Najmniejszy narzut pod kątem ilości zmian w domie
+
 
 
 TODO - makro które wycina białe znaki ?
