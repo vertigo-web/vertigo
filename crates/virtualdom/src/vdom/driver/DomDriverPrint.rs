@@ -19,10 +19,6 @@ impl DomDriverTrait for DomDriverPrint {
         log::info!("createText {} {}", id, value);
     }
 
-    fn createComment(&self, id: RealDomId, value: &str) {
-        log::info!("createComment {} {}", id, value);
-    }
-
     fn setAttr(&self, id: RealDomId, key: &'static str, value: &str) {
         log::info!("setAttr {} {} {}", id, key, value);
     }

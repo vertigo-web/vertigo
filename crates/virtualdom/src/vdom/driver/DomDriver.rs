@@ -8,7 +8,6 @@ const SHOW_LOG: bool = false;
 pub trait DomDriverTrait {
     fn createNode(&self, id: RealDomId, name: &'static str);
     fn createText(&self, id: RealDomId, value: &str);
-    fn createComment(&self, id: RealDomId, value: &str);
     fn setAttr(&self, id: RealDomId, key: &'static str, value: &str);
     fn removeAttr(&self, id: RealDomId, name: &'static str);
     fn remove(&self, id: RealDomId);
@@ -16,9 +15,7 @@ pub trait DomDriverTrait {
     fn insertBefore(&self, refId: RealDomId, child: RealDomId);
     fn insertAfter(&self, refId: RealDomId, child: RealDomId);
     fn addChild(&self, parent: RealDomId, child: RealDomId);
-
     fn insertCss(&self, selector: String, value: String);
-
     fn setOnClick(&self, node: RealDomId, onClick: Option<Rc<dyn Fn()>>);
 }
 
@@ -57,11 +54,6 @@ impl DomDriver {
     pub fn createText(&self, id: RealDomId, value: &str) {
         show_log(format!("createText {} {}", id, value));
         self.driver.createText(id, value);
-    }
-
-    pub fn createComment(&self, id: RealDomId, value: &str) {
-        show_log(format!("createComment {} {}", id, value));
-        self.driver.createComment(id, value);
     }
 
     pub fn setAttr(&self, id: RealDomId, key: &'static str, value: &str) {

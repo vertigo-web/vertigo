@@ -60,6 +60,17 @@ impl<K: Eq + Hash, RNode, VNode> CacheNode<K, RNode, VNode> {
     }
 }
 
+/*
+    abcdefgh
+
+    bcdeafgh
+
+    złap pierwszy nowy element,
+    sprawdź czy kolejny element za nim jest tym którym powinien być
+
+    wyznac duze fragmenty które się zgaedzają
+    najmniejszy z elementów przenies na swoje miejsce
+*/
 
 fn updateNodeChild(cssManager: &CssManager, target: &RealDomNode, newVersion: &VDomNode) {
 
