@@ -54,25 +54,6 @@ pub async fn start_app() {
 
     APP_STATE.with(|state| state.borrow().start_app());
 
-    let window = web_sys::window().expect("no global `window` exists");
-    let document = window.document().expect("should have a document on window");
-    let body = document.body().expect("document should have a body");
-
-    // Manufacture the element we're gonna append
-    let val1 = document.create_element("p").unwrap();
-    val1.set_inner_html("Hello from Rust!");
-
-    body.append_child(&val1).unwrap();
-    log::info!("po dodaniu");
-
-    val1.set_attribute("debug1", "debug1").unwrap();
-    let val2 = val1.clone();
-    val2.set_attribute("debug2", "debug2").unwrap();
-    val1.set_attribute("debug3", "debug3").unwrap();
-    //web_sys::set_timeout_with_callback(this, handler)
-
-    log::info!("eeeq {}", val1 == val2);
-
     wasm_bindgen_futures::spawn_local(async {
         log::info!("test z forka");
     });

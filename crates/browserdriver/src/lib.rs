@@ -37,11 +37,41 @@ enum ElementItem {
     },
 }
 
+impl ElementItem {
+    pub fn fromNode(node: Element) -> ElementItem {
+        ElementItem::Element { node }
+    }
+
+    pub fn fromText(text: Text) -> ElementItem {
+        ElementItem::Text { text }
+    }
+}
+
+struct ElementWrapper {
+    item: ElementItem,
+    onClick: Option<DomEventDisconnect>,
+}
+
+impl ElementWrapper {
+    pub fn fromNode(node: Element) -> ElementWrapper {
+        ElementWrapper {
+            item: ElementItem::fromNode(node),
+            onClick: None,
+        }
+    }
+
+    pub fn fromText(text: Text) -> ElementWrapper {
+        ElementWrapper {
+            item: ElementItem::fromText(text),
+            onClick: None,
+        }
+    }
+}
+
 pub struct DomDriverBrowserInner {
     document: Document,
     head: HtmlHeadElement,
-    elements: HashMap<RealDomId, ElementItem>,
-    eventsOnClick: HashMap<RealDomId, DomEventDisconnect>,
+    elements: HashMap<RealDomId, ElementWrapper>,
 }
 
 impl Default for DomDriverBrowserInner {
@@ -50,13 +80,12 @@ impl Default for DomDriverBrowserInner {
         let root = create_root(&document);
 
         let mut elements = HashMap::new();    
-        elements.insert(RealDomId::root(), ElementItem::Element { node: root });
+        elements.insert(RealDomId::root(), ElementWrapper::fromNode(root));
 
         Self {
             document,
             head,
             elements,
-            eventsOnClick: HashMap::new(),
         }
     }
 }
@@ -66,12 +95,12 @@ impl DomDriverBrowserInner {
         let node = self.document.create_element(name).unwrap();
         let id_str = format!("{}", id.to_u64());
         node.set_attribute("debug-id", id_str.as_str()).unwrap();
-        self.elements.insert(id, ElementItem::Element { node });
+        self.elements.insert(id, ElementWrapper::fromNode(node));
     }
 
     fn createText(&mut self, id: RealDomId, value: &str) {
         let text = self.document.create_text_node(value);
-        self.elements.insert(id, ElementItem::Text { text });
+        self.elements.insert(id, ElementWrapper::fromText(text));
     }
 
     fn setAttr(&mut self, id: RealDomId, name: &'static str, value: &str) {
@@ -79,10 +108,10 @@ impl DomDriverBrowserInner {
 
         if let Some(elem) = elem {
             match elem {
-                ElementItem::Element { node } => {
+                ElementWrapper { item: ElementItem::Element { node }, ..} => {
                     node.set_attribute(name, value).unwrap();
                 },
-                ElementItem::Text { .. } => {
+                ElementWrapper { item: ElementItem::Text { .. }, ..} => {
                     log::error!("Cannot set attribute on a text node id={}", id);
                 }
             }
@@ -97,10 +126,10 @@ impl DomDriverBrowserInner {
 
         if let Some(elem) = elem {
             match elem {
-                ElementItem::Element { node } => {
+                ElementWrapper { item: ElementItem::Element { node }, ..} => {
                     node.remove_attribute(name).unwrap();
                 },
-                ElementItem::Text { .. } => {
+                ElementWrapper { item: ElementItem::Text { .. }, ..} => {
                     log::error!("Cannot remove attribute on a text node id={}", id);
                 }
             }
@@ -111,16 +140,14 @@ impl DomDriverBrowserInner {
     }
 
     fn remove(&mut self, id: RealDomId) {
-        self.setOnClick(id.clone(), None);
-
         let elem = self.elements.remove(&id);
 
         if let Some(elem) = elem {
             match elem {
-                ElementItem::Element { node } => {
+                ElementWrapper { item: ElementItem::Element { node }, ..} => {
                     node.remove();
                 },
-                ElementItem::Text { text } => {
+                ElementWrapper { item: ElementItem::Text { text }, ..} => {
                     text.remove();
                 }
             }
@@ -134,11 +161,11 @@ impl DomDriverBrowserInner {
         let child_item = self.elements.get(&refId);
 
         match child_item {
-            Some(ElementItem::Element { node }) => {
+            Some(ElementWrapper { item: ElementItem::Element { node }, ..}) => {
                 let node = node.clone().dyn_into::<Node>().unwrap();
                 Some(node)
             },
-            Some(ElementItem::Text { text }) => {
+            Some(ElementWrapper { item: ElementItem::Text { text }, ..}) => {
                 let node = text.clone().dyn_into::<Node>().unwrap();
                 Some(node)
             },
@@ -190,20 +217,27 @@ impl DomDriverBrowserInner {
     }
 
     fn setOnClick(&mut self, node_id: RealDomId, onClick: Option<Rc<dyn Fn()>>) {
-        
+        let item = self.elements.get_mut(&node_id).unwrap();
+
         match onClick {
             Some(onClick) => {
-                let node_item = self.get_node(node_id.clone()).unwrap();
-                let clouser = DomEventMouse::new(move |_event: &web_sys::MouseEvent| {
-                    onClick();
-                });
+                let disconnect = match item {
+                    ElementWrapper { item: ElementItem::Element { node }, ..} => {
+                        let clouser = DomEventMouse::new(move |_event: &web_sys::MouseEvent| {
+                            onClick();
+                        });
+        
+                        clouser.append_to_mousedown(&node)
+                    },
+                    _ => {
+                        unreachable!();
+                    }
+                };
 
-                let disconnect = clouser.append_to_mousedown(&node_item);
-                
-                self.eventsOnClick.insert(node_id, disconnect);
+                item.onClick = Some(disconnect);
             },
             None => {
-                self.eventsOnClick.remove(&node_id);
+                item.onClick = None;
             }
         }
     }
