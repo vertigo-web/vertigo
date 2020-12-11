@@ -111,6 +111,8 @@ impl DomDriverBrowserInner {
     }
 
     fn remove(&mut self, id: RealDomId) {
+        self.setOnClick(id.clone(), None);
+
         let elem = self.elements.remove(&id);
 
         if let Some(elem) = elem {
