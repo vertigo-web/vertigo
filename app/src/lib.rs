@@ -1,7 +1,7 @@
 #![allow(non_snake_case)]
 #![allow(non_camel_case_types)]
 
-mod my_app;
+mod app;
 mod simple_counter;
 mod fetch;
 
@@ -26,8 +26,8 @@ use browserdriver::{
     DomDriverBrowser,
 };
 
-use crate::my_app::app_state::AppState;
-use crate::my_app::app_state_render::main_render;
+use crate::app::app_state::AppState;
+use crate::app::app_render::main_render;
 
 
 #[cfg(feature = "wee_alloc")]
