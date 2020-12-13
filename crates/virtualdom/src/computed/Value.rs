@@ -7,6 +7,7 @@ use crate::computed::{
     GraphId::GraphId,
 };
 
+#[derive(Clone)]
 pub struct Value<T: 'static> {
     id: GraphId,
     value: Rc<BoxRefCell<Rc<T>>>,

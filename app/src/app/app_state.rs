@@ -7,6 +7,7 @@ use virtualdom::{
 };
 
 use crate::simple_counter::simple_counter_state::SimpleCounter;
+use crate::sudoku::state::Sudoku;
 
 pub struct AppState {
     pub value: Value<u32>,
@@ -17,6 +18,8 @@ pub struct AppState {
     pub counter4: Computed<SimpleCounter>,
 
     pub suma: Computed<u32>,
+
+    pub sudoku: Sudoku,
 }
 
 impl AppState {
@@ -50,7 +53,8 @@ impl AppState {
             counter2,
             counter3,
             counter4,
-            suma
+            suma,
+            sudoku: Sudoku::new(root)
         })
     }
 
