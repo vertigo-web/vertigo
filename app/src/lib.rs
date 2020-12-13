@@ -4,6 +4,7 @@
 mod app;
 mod simple_counter;
 mod fetch;
+mod sudoku;
 
 use wasm_bindgen::prelude::*;
 

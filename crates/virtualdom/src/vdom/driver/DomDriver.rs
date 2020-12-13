@@ -3,7 +3,7 @@ use crate::vdom::models::{
     RealDomId::RealDomId,
 };
 
-const SHOW_LOG: bool = false;
+const SHOW_LOG: bool = true;
 
 pub trait DomDriverTrait {
     fn createNode(&self, id: RealDomId, name: &'static str);
