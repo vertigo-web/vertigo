@@ -120,12 +120,11 @@ impl<T: 'static> Computed<T> {
         })
     }
 
-    pub fn map<K>(self, fun: fn(Rc<T>) -> K) -> Computed<K> {
+    pub fn map<K>(self, fun: fn(&Computed<T>) -> K) -> Computed<K> {
         let deps = self.inner.deps.clone();
 
         Computed::new(deps, move || {
-            let value = self.getValue();
-            let result = fun(value);
+            let result = fun(&self);
             Rc::new(result)
         })
     }

@@ -1,6 +1,11 @@
 
 use std::rc::Rc;
 
+use crate::computed::{
+    Computed::Computed,
+    Value::Value
+};
+
 #[test]
 fn basic() {
     use crate::computed::{
@@ -8,12 +13,12 @@ fn basic() {
     };
     use crate::computed::tests::BoxValue::BoxValue;
 
-    let root = Dependencies::default();
+    let root: Dependencies = Dependencies::default();
 
-    let value1 = root.newValue(1);
-    let value2 = root.newValue(2);
+    let value1: Value<i32> = root.newValue(1);
+    let value2: Value<i32> = root.newValue(2);
 
-    let sum = {
+    let sum: Computed<i32> = {
         let com1 = value1.toComputed();
         let com2 = value2.toComputed();
 
@@ -73,7 +78,8 @@ fn basic2() {
         a + b
     });
 
-    let suma2 = sum.clone().map(|value: Rc<i32>| -> i32 {
+    let suma2 = sum.clone().map(|value: &Computed<i32>| -> i32 {
+        let value = value.getValue();
         2 * (*value)
     });
 

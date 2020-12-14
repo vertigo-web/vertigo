@@ -1,4 +1,3 @@
-use std::rc::Rc;
 use crate::computed::{
     Computed::Computed,
     GraphId::GraphId,
@@ -17,7 +16,7 @@ pub struct VDomComponentId {
 }
 
 impl VDomComponentId {
-    pub fn new<T>(params: &Computed<T>, render: fn(Rc<T>) -> VDomNode) -> VDomComponentId {
+    pub fn new<T>(params: &Computed<T>, render: fn(&Computed<T>) -> VDomNode) -> VDomComponentId {
 
         let idFunction = render as *const () as u64;
         VDomComponentId {

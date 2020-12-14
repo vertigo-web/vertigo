@@ -1,12 +1,9 @@
 
-use std::rc::Rc;
-use virtualdom::{
-    vdom::{
+use virtualdom::{computed::Computed::Computed, vdom::{
         models::{
             VDomNode::VDomNode,
         },
-    },
-};
+    }};
 
 use super::app_state::AppState;
 
@@ -16,6 +13,7 @@ use virtualdom::vdom::models::{
 };
 
 use crate::simple_counter::{simple_counter_render::simple_counter_render};
+use crate::sudoku::render::sudoku_render;
 
 // fn wrapper1() -> Css {
 //     Css::new().add("windth: 30px; height: 20px;")
@@ -65,7 +63,22 @@ fn cssButton() -> Css {
     // wrapper2(true);
     // wrapper2(false);
 
-pub fn main_render(app_state: Rc<AppState>) -> VDomNode {
+pub fn main_render(app_state: &Computed<AppState>) -> VDomNode {
+    // let counter1 = app_state.map(|app_state| {
+    //     let app_state = app_state.getValue().counter1.clone();
+    //     let g = *app_state.getValue();
+    // });
+
+    /*
+        computed<T>
+            .map(
+                Computed<T> -> Computed<K>
+            )
+
+            zwraca finalnie Computed<K>
+    */
+
+    let app_state = app_state.getValue();
     let onDown = {
         let app_state = app_state.clone();
         move || {
@@ -138,6 +151,10 @@ pub fn main_render(app_state: Rc<AppState>) -> VDomNode {
 
         node("div", vec!(
             text(format!("suma = {}", suma))
+        )),
+
+        node("div", vec!(
+            component(app_state.sudoku.clone(), sudoku_render)
         ))
     ))
 }

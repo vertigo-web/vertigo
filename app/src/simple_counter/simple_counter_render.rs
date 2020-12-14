@@ -1,13 +1,10 @@
 use super::simple_counter_state::SimpleCounter;
 
-use std::rc::Rc;
-use virtualdom::{
-    vdom::{
+use virtualdom::{computed::Computed::Computed, vdom::{
         models::{
             VDomNode::VDomNode,
         },
-    },
-};
+    }};
 
 use virtualdom::vdom::models::{
     NodeAttr,
@@ -40,10 +37,11 @@ fn cssWrapper() -> Css {
     ")
 }
 
-pub fn simple_counter_render(simple_counter: Rc<SimpleCounter>) -> VDomNode {
+pub fn simple_counter_render(simple_counter: &Computed<SimpleCounter>) -> VDomNode {
     use NodeAttr::{buildNode, node, css, text, onClick};
 
-    let calue =  *(simple_counter.counter.getValue());
+    let simple_counter = simple_counter.getValue();
+    let calue = *(simple_counter.counter.getValue());
 
     let clickUp = {
         let simple_counter = simple_counter.clone();
@@ -57,6 +55,14 @@ pub fn simple_counter_render(simple_counter: Rc<SimpleCounter>) -> VDomNode {
             simple_counter.decrement();
         }
     };
+
+    // html! {
+    //     <div css={cssWrapper()}>
+    //         <div css={cssBox()}>{ format!("Counter value = {}", calue) }</div>
+    //         <div css={cssButton()} onClick={clickUp}>up</div>
+    //         <div css={cssButton()} onClick={clickDown}>down</div>
+    //     </div>
+    // }
 
     buildNode("div", vec!(
         css(cssWrapper()),

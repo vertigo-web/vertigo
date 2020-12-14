@@ -20,7 +20,7 @@ pub struct VDomComponent {
 }
 
 impl VDomComponent {
-    pub fn new<T: 'static>(params: Computed<T>, render: fn(Rc<T>) -> VDomNode) -> VDomComponent {
+    pub fn new<T: 'static>(params: Computed<T>, render: fn(&Computed<T>) -> VDomNode) -> VDomComponent {
 
         let componentId = VDomComponentId::new(&params, render);
         let view = params.map(render);

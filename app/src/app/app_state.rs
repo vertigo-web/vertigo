@@ -19,7 +19,7 @@ pub struct AppState {
 
     pub suma: Computed<u32>,
 
-    pub sudoku: Sudoku,
+    pub sudoku: Computed<Sudoku>,
 }
 
 impl AppState {

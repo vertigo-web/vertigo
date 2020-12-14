@@ -1,4 +1,4 @@
-use virtualdom::computed::Dependencies::Dependencies;
+use virtualdom::computed::{Computed::Computed, Dependencies::Dependencies};
 
 use self::{
     number_item::{NumberItem, create_number_item},
@@ -41,14 +41,13 @@ fn createGridPossibleLast(
         })
     })
 }
-struct Cell {
-    number: NumberItem,
-    possible: PossibleValues,
-    possibleLast: PossibleValuesLast,
+pub struct Cell {
+    pub number: NumberItem,
+    pub possible: PossibleValues,
+    pub possibleLast: PossibleValuesLast,
 }
 
 fn creatergidView(
-    deps: &Dependencies,
     gridNumber: SudokuSquare<SudokuSquare<NumberItem>>,
     gridPossible: SudokuSquare<SudokuSquare<PossibleValues>>,
     gridPossibleLast: SudokuSquare<SudokuSquare<PossibleValuesLast>>,
@@ -70,18 +69,18 @@ fn creatergidView(
 }
 
 pub struct Sudoku {
-    grid: SudokuSquare<SudokuSquare<Cell>>,
+    pub grid: SudokuSquare<SudokuSquare<Cell>>,
 }
 
 impl Sudoku {
-    pub fn new(deps: &Dependencies) -> Sudoku {
+    pub fn new(deps: &Dependencies) -> Computed<Sudoku> {
         let gridNumber = createGrid(deps);
         let gridPossible = createGridPossible(deps, &gridNumber);
         let gridPossibleLast = createGridPossibleLast(deps, &gridNumber, &gridPossible);
 
-        Sudoku {
-            grid: creatergidView(deps, gridNumber, gridPossible, gridPossibleLast),
-        }
+        deps.newComputedFrom(Sudoku {
+            grid: creatergidView(gridNumber, gridPossible, gridPossibleLast),
+        })
     }
 }
 
