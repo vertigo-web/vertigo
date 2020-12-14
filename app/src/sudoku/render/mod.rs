@@ -5,7 +5,11 @@ use virtualdom::vdom::models::{
 use virtualdom::vdom::models::{
     Css::Css
 };
+use self::config::Config;
+
 use super::state::Sudoku;
+
+pub mod config;
 
 fn CssCenter() -> Css {
     Css::one("
@@ -15,16 +19,17 @@ fn CssCenter() -> Css {
 }
 
 fn CssWrapper() -> Css {
-    Css::one("
+    let config = Config::new();
+    Css::new(format!("
         display: grid;
         grid-template-columns: 1fr 1fr 1fr;
         flex-shrink: 0;
 
-        width: ${props => props.theme.config.allWidth}px;
-        height: ${props => props.theme.config.allWidth}px;
+        width: {}px;
+        height: {}px;
 
         border: 2px solid blue;
-    ")
+    ", config.allWidth, config.allWidth))
 }
 
 pub fn sudoku_render(sudoku: &Computed<Sudoku>) -> VDomNode {

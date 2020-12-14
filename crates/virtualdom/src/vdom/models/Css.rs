@@ -29,6 +29,14 @@ impl Css {
         }
     }
 
+    pub fn new(value: String) -> Self {
+        Self {
+            groups: vec!(CssGroup::CssDynamic {
+                value
+            })
+        }
+    }
+
     pub fn push(mut self, value: &'static str) -> Self {
         self.groups.push(CssGroup::CssStatic {
             value
