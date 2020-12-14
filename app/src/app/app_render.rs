@@ -59,26 +59,15 @@ fn cssButton() -> Css {
     więc kademu statycznemu stringowi będzie odpowiadał jakiś identyfikator
 */
 
-    // wrapper1();
-    // wrapper2(true);
-    // wrapper2(false);
+fn render_header(app_state: &Computed<AppState>) -> VDomNode {
+    use NodeAttr::{buildNode, node, css, text, component, onClick, attr};
 
-pub fn main_render(app_state: &Computed<AppState>) -> VDomNode {
-    // let counter1 = app_state.map(|app_state| {
-    //     let app_state = app_state.getValue().counter1.clone();
-    //     let g = *app_state.getValue();
-    // });
-
-    /*
-        computed<T>
-            .map(
-                Computed<T> -> Computed<K>
-            )
-
-            zwraca finalnie Computed<K>
-    */
 
     let app_state = app_state.getValue();
+
+    let at = app_state.at.getValue();
+    let value = app_state.value.getValue();
+
     let onDown = {
         let app_state = app_state.clone();
         move || {
@@ -93,12 +82,6 @@ pub fn main_render(app_state: &Computed<AppState>) -> VDomNode {
             app_state.increment();
         }
     };
-
-    let at = app_state.at.getValue();
-    let value = app_state.value.getValue();
-    let suma = app_state.suma.getValue();
-
-    use NodeAttr::{buildNode, node, css, text, component, onClick, attr};
 
     let showColor = *value % 2 == 0;
 
@@ -134,7 +117,39 @@ pub fn main_render(app_state: &Computed<AppState>) -> VDomNode {
                 text("down"),
             )),
             footer_dom,
-        )),
+        ))
+    ))
+}
+
+    // wrapper1();
+    // wrapper2(true);
+    // wrapper2(false);
+
+pub fn main_render(app_state: &Computed<AppState>) -> VDomNode {
+    // let counter1 = app_state.map(|app_state| {
+    //     let app_state = app_state.getValue().counter1.clone();
+    //     let g = *app_state.getValue();
+    // });
+
+    /*
+        computed<T>
+            .map(
+                Computed<T> -> Computed<K>
+            )
+
+            zwraca finalnie Computed<K>
+    */
+
+    let header = component(app_state.clone(), render_header);
+
+    let app_state = app_state.getValue();
+
+    let suma = app_state.suma.getValue();
+
+    use NodeAttr::{buildNode, node, css, text, component, onClick, attr};
+
+    buildNode("div", vec!(
+        header,
 
         node("div", vec!(
             attr("aaa", "one"),
