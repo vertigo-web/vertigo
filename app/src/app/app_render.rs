@@ -121,9 +121,21 @@ fn render_header(app_state: &Computed<AppState>) -> VDomNode {
     ))
 }
 
-    // wrapper1();
-    // wrapper2(true);
-    // wrapper2(false);
+// wrapper1();
+// wrapper2(true);
+// wrapper2(false);
+
+fn render_suma(app_state: &Computed<AppState>) -> VDomNode {
+    use NodeAttr::{buildNode, node, css, text, component, onClick, attr};
+
+    let app_state = app_state.getValue();
+
+    let suma = app_state.suma.getValue();
+
+    buildNode("div", vec!(
+        text(format!("suma = {}", suma))
+    ))
+}
 
 pub fn main_render(app_state: &Computed<AppState>) -> VDomNode {
     // let counter1 = app_state.map(|app_state| {
@@ -140,13 +152,12 @@ pub fn main_render(app_state: &Computed<AppState>) -> VDomNode {
             zwraca finalnie Computed<K>
     */
 
+    use NodeAttr::{buildNode, node, css, text, component, onClick, attr};
+
     let header = component(app_state.clone(), render_header);
+    let suma = component(app_state.clone(), render_suma);
 
     let app_state = app_state.getValue();
-
-    let suma = app_state.suma.getValue();
-
-    use NodeAttr::{buildNode, node, css, text, component, onClick, attr};
 
     buildNode("div", vec!(
         header,
@@ -164,9 +175,7 @@ pub fn main_render(app_state: &Computed<AppState>) -> VDomNode {
             component(app_state.counter4.clone(), simple_counter_render),
         )),
 
-        node("div", vec!(
-            text(format!("suma = {}", suma))
-        )),
+        suma,
 
         node("div", vec!(
             component(app_state.sudoku.clone(), sudoku_render)
