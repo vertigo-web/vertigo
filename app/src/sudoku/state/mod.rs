@@ -7,11 +7,11 @@ use self::{
     sudoku_square::SudokuSquare
 };
 
-mod tree_box;
-mod sudoku_square;
-mod number_item;
-mod possible_values;
-mod possible_values_last;
+pub mod tree_box;
+pub mod sudoku_square;
+pub mod number_item;
+pub mod possible_values;
+pub mod possible_values_last;
 
 
 fn createGrid(deps: &Dependencies,) -> SudokuSquare<SudokuSquare<NumberItem>> {

@@ -78,7 +78,7 @@ fn basic2() {
         a + b
     });
 
-    let suma2 = sum.clone().map(|value: &Computed<i32>| -> i32 {
+    let suma2 = sum.clone().map_for_render(|value: &Computed<i32>| -> i32 {
         let value = value.getValue();
         2 * (*value)
     });

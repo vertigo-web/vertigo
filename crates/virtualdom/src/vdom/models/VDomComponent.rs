@@ -23,7 +23,7 @@ impl VDomComponent {
     pub fn new<T: 'static>(params: Computed<T>, render: fn(&Computed<T>) -> VDomNode) -> VDomComponent {
 
         let componentId = VDomComponentId::new(&params, render);
-        let view = params.map(render);
+        let view = params.map_for_render(render);
 
         VDomComponent {
             id: componentId,
