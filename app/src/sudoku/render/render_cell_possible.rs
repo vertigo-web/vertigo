@@ -128,14 +128,6 @@ pub fn render_cell_possible(item: &Computed<Cell>) -> VDomNode {
     for number in SudokuValue::variants() {
         let shouldShow = possible.contains(&number);
 
-    //     const onClick = () => {                                      //TODO
-    //         if (shouldShow) {
-    //             cell.number.value = number;
-    //         }
-    //     };
-
-    //     onClick={onClick}
-
         let label = if shouldShow {
             format!("{}", number.to_u16())
         } else {
@@ -145,6 +137,12 @@ pub fn render_cell_possible(item: &Computed<Cell>) -> VDomNode {
         out.push(
             node("div", vec!(
                 css(cssItem(shouldShow)),
+                onClick({
+                    let cell = cell.clone();
+                    move || {
+                        cell.number.setValue(Some(number));
+                    }
+                }),
                 text(label)
             ))
         );
