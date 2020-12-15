@@ -74,8 +74,8 @@ fn basic2() {
     let sumBox1: BoxValue<Option<i32>> = BoxValue::new(None);
     let sumBox2: BoxValue<Option<i32>> = BoxValue::new(None);
 
-    let sum = Computed::from2(com1, com2, |a: &i32, b: &i32| -> i32 {
-        a + b
+    let sum = Computed::from2(com1, com2, |a: Rc<i32>, b: Rc<i32>| -> i32 {
+        *a + *b
     });
 
     let suma2 = sum.clone().map_for_render(|value: &Computed<i32>| -> i32 {

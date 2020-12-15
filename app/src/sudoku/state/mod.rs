@@ -1,11 +1,6 @@
-use virtualdom::computed::{Computed::Computed, Dependencies::Dependencies};
+use virtualdom::computed::{Computed::Computed, Dependencies::Dependencies, Value::Value};
 
-use self::{
-    number_item::{NumberItem, create_number_item},
-    possible_values::{PossibleValues, possible_values},
-    possible_values_last::{PossibleValuesLast, possible_values_last},
-    sudoku_square::SudokuSquare
-};
+use self::{number_item::{NumberItem, SudokuValue, create_number_item}, possible_values::{PossibleValues, possible_values}, possible_values_last::{PossibleValuesLast, possible_values_last}, sudoku_square::SudokuSquare, tree_box::TreeBoxIndex};
 
 pub mod tree_box;
 pub mod sudoku_square;
@@ -45,9 +40,11 @@ pub struct Cell {
     pub number: NumberItem,
     pub possible: PossibleValues,
     pub possibleLast: PossibleValuesLast,
+    pub show_delete: Value<bool>,
 }
 
 fn creatergidView(
+    deps: &Dependencies,
     gridNumber: SudokuSquare<SudokuSquare<NumberItem>>,
     gridPossible: SudokuSquare<SudokuSquare<PossibleValues>>,
     gridPossibleLast: SudokuSquare<SudokuSquare<PossibleValuesLast>>,
@@ -63,6 +60,7 @@ fn creatergidView(
                 number,
                 possible,
                 possibleLast,
+                show_delete: deps.newValue(false)
             }
         });
     });
@@ -75,11 +73,12 @@ pub struct Sudoku {
 impl Sudoku {
     pub fn new(deps: &Dependencies) -> Computed<Sudoku> {
         let gridNumber = createGrid(deps);
+        gridNumber.getFrom(TreeBoxIndex::First, TreeBoxIndex::First).getFrom(TreeBoxIndex::First, TreeBoxIndex::First).setValue(Some(SudokuValue::Value2));         //TODO - testowo
         let gridPossible = createGridPossible(deps, &gridNumber);
         let gridPossibleLast = createGridPossibleLast(deps, &gridNumber, &gridPossible);
 
         deps.newComputedFrom(Sudoku {
-            grid: creatergidView(gridNumber, gridPossible, gridPossibleLast),
+            grid: creatergidView(deps, gridNumber, gridPossible, gridPossibleLast),
         })
     }
 }

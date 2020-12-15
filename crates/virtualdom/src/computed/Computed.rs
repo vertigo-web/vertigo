@@ -103,10 +103,14 @@ impl<T: 'static> Computed<T> {
         Client::new(self.inner.deps.clone(), self.clone(), call)
     }
 
+    pub fn dependencies(&self) -> Dependencies {
+        self.inner.deps.clone()
+    }
+
     pub fn from2<A: Debug, B: Debug>(
         a: Computed<A>,
         b: Computed<B>,
-        calculate: fn(&A, &B) -> T
+        calculate: fn(Rc<A>, Rc<B>) -> T
     ) -> Computed<T> {
         let deps = a.inner.deps.clone();
 
@@ -114,7 +118,7 @@ impl<T: 'static> Computed<T> {
             let aValue = a.getValue();
             let bValue = b.getValue();
 
-            let result = calculate(aValue.as_ref(), bValue.as_ref());
+            let result = calculate(aValue, bValue);
 
             Rc::new(result)
         })
