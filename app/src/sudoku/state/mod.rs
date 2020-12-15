@@ -92,5 +92,31 @@ impl Sudoku {
             grid: creatergidView(deps, gridNumber, gridPossible, gridPossibleLast),
         })
     }
+
+    pub fn clear(&self) {
+        log::info!("clear");
+
+        for x0 in TreeBoxIndex::variants() {
+            for y0 in TreeBoxIndex::variants() {
+                for x1 in TreeBoxIndex::variants() {
+                    for y1 in TreeBoxIndex::variants() {
+                        self.grid.getFrom(x0, y0).getFrom(x1, y1).number.value.setValue(None);
+                    }
+                }
+            }
+        }
+    }
+
+    pub fn example1(&self) {
+        log::info!("przykład1");
+    }
+
+    pub fn example2(&self) {
+        log::info!("przykład2");
+    }
+
+    pub fn example3(&self) {
+        log::info!("przykład3");
+    }
 }
 

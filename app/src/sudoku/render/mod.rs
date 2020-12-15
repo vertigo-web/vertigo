@@ -144,3 +144,70 @@ pub fn sudoku_render(sudoku: &Computed<Sudoku>) -> VDomNode {
         ))
     ))
 }
+
+fn cssSudokuExample() -> Css {
+    Css::one("
+        border: 1px solid black;
+        padding: 10px;
+        margin: 10px 0;
+    ")
+}
+
+fn cssSudokuExampleButton() -> Css {
+    Css::one("
+        margin: 5px;
+        cursor: pointer;
+    ")
+}
+pub fn sudoku_examples_render(sudoku: &Computed<Sudoku>) -> VDomNode {
+    use NodeAttr::{buildNode, node, css, text, onClick, component};
+
+    let sudoku = sudoku.getValue();
+    buildNode("div", vec!(
+        css(cssSudokuExample()),
+        node("button", vec!(
+            css(cssSudokuExampleButton()),
+            onClick({
+                let sudoku = sudoku.clone();
+
+                move || {
+                    sudoku.clear();
+                }
+            }),
+            text("Wyczyść")
+        )),
+        node("button", vec!(
+            css(cssSudokuExampleButton()),
+            onClick({
+                let sudoku = sudoku.clone();
+
+                move || {
+                    sudoku.example1();
+                }
+            }),
+            text("Przykład 1")
+        )),
+        node("button", vec!(
+            css(cssSudokuExampleButton()),
+            onClick({
+                let sudoku = sudoku.clone();
+
+                move || {
+                    sudoku.example2();
+                }
+            }),
+            text("Przykład 2")
+        )),
+        node("button", vec!(
+            css(cssSudokuExampleButton()),
+            onClick({
+                let sudoku = sudoku.clone();
+
+                move || {
+                    sudoku.example3();
+                }
+            }),
+            text("Przykład 3")
+        ))
+    ))
+}
