@@ -41,6 +41,8 @@ fn cssDelete() -> Css {
     ")
 }
 
+
+
 pub fn render_cell_value(value: SudokuValue, item: &Computed<Cell>, ) -> VDomNode {
     let cell = item.getValue();
 
@@ -50,20 +52,29 @@ pub fn render_cell_value(value: SudokuValue, item: &Computed<Cell>, ) -> VDomNod
 
     use NodeAttr::{buildNode, node, css, text, onClick, component};
 
-    buildNode("div", vec!(
+    let mut out = vec!(
         css(cssItemNumberWrapper()),
         text(format!("{}", value.to_u16())),
-                                                                    //TODO - dorobić obsługę delete ...
-    ))
+    );
+
+    //TODO - dorobić obsługę delete ...
+
+    if show_delete {
+        out.push(node("div", vec!(
+            css(cssDelete()),
+            onClick({
+                let cell = cell.clone();
+                move || {
+                    cell.number.value.setValue(None);
+                }
+            }),
+            text("X")
+        )));
+    }
+
+    buildNode("div", out)
 }
 
-    // class State {
-    //     showDelete: boolean = false;
-
-    //     constructor(readonly cell: CellType,) {
-
-    //         makeAutoObservable(this);
-    //     }
 
     //     onMouseEnter = () => {
     //         this.showDelete = true;
@@ -73,53 +84,10 @@ pub fn render_cell_value(value: SudokuValue, item: &Computed<Cell>, ) -> VDomNod
     //         this.showDelete = false;
     //     }
 
-    //     onDelete = (e: React.MouseEvent<HTMLDivElement, MouseEvent>) => {
-    //         e.stopPropagation();
-
-    //         this.cell.number.value = null;
-    //     }
     // }
-
-    // interface ItemNumberPropsType {
-    //     cell: CellType,
-    //     number: SudokuValue
-    // }
-
-    // export const ItemNumber = observer((props: ItemNumberPropsType) => {
-    //     const [ state ] = React.useState(() => new State(props.cell));
-
     //     return (
-    //         <ItemNumberWrapper onMouseOver ={state.onMouseEnter} onMouseLeave={state.onMouseOut}>
-    //             { props.number }
-    //             { state.showDelete ? <Delete title="Delete" onClick={state.onDelete}>X</Delete> : null }
+    //         <ItemNumberWrapper onMouseOver={state.onMouseEnter} onMouseLeave={state.onMouseOut}>
     //         </ItemNumberWrapper>
     //     )
     // })
 
-
-
-
-    // const ItemNumberWrapper = styled('div')`
-    //     position: relative;
-    //     text-align: center;
-    //     font-size: 40px;
-    //     color: blue;
-    //     height: ${props => props.theme.config.itemWidthSize}px;
-    //     line-height: ${props => props.theme.config.itemWidthSize}px;
-    // `;
-
-    // const Delete = styled('div')`
-    //     position: absolute;
-    //     top: 3px;
-    //     right: 3px;
-    //     width: 20px;
-    //     height: 20px;
-    //     background-color: #ff000030;
-    //     cursor: pointer;
-    //     font-size: 12px;
-    //     line-height: 12px;
-
-    //     display: flex;
-    //     align-items: center;
-    //     justify-content: center;
-    // `;

@@ -1,6 +1,18 @@
 use virtualdom::computed::{Computed::Computed, Dependencies::Dependencies, Value::Value};
 
-use self::{number_item::{NumberItem, SudokuValue}, possible_values::{PossibleValues, possible_values}, possible_values_last::{PossibleValuesLast, possible_values_last}, sudoku_square::SudokuSquare, tree_box::TreeBoxIndex};
+use self::{
+    number_item::NumberItem,
+    possible_values::{
+        PossibleValues,
+        possible_values
+    },
+    possible_values_last::{
+        PossibleValuesLast,
+        possible_values_last
+    },
+    sudoku_square::SudokuSquare,
+    tree_box::TreeBoxIndex
+};
 
 pub mod tree_box;
 pub mod sudoku_square;
@@ -60,7 +72,7 @@ fn creatergidView(
                 number,
                 possible,
                 possibleLast,
-                show_delete: deps.newValue(false)
+                show_delete: deps.newValue(true)
             }
         });
     });
@@ -73,7 +85,6 @@ pub struct Sudoku {
 impl Sudoku {
     pub fn new(deps: &Dependencies) -> Computed<Sudoku> {
         let gridNumber = createGrid(deps);
-        gridNumber.getFrom(TreeBoxIndex::First, TreeBoxIndex::First).getFrom(TreeBoxIndex::First, TreeBoxIndex::First).value.setValue(Some(SudokuValue::Value2));         //TODO - testowo
         let gridPossible = createGridPossible(deps, &gridNumber);
         let gridPossibleLast = createGridPossibleLast(deps, &gridNumber, &gridPossible);
 

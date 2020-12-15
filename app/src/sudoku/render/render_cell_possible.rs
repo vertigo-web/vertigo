@@ -10,14 +10,14 @@ use virtualdom::vdom::models::{
 use super::config::Config;
 
 
-fn cssCell() -> Css {
-    let config = Config::new();
-    Css::new(format!("
-        border: {}px solid green;
-        width: {}px;
-        height: {}px;
-    ", config.itemBorderSize, config.itemWidthSize, config.itemWidthSize))
-}
+// fn cssCell() -> Css {
+//     let config = Config::new();
+//     Css::new(format!("
+//         border: {}px solid green;
+//         width: {}px;
+//         height: {}px;
+//     ", config.itemBorderSize, config.itemWidthSize, config.itemWidthSize))
+// }
 
 fn cssItemOnlyOne() -> Css {
     let config = Config::new();

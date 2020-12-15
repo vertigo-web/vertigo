@@ -30,19 +30,18 @@ impl AppState {
         let counter4 = SimpleCounter::new(&root);
 
         let suma = {
-            // let counter1 = counter1.clone();
-            // let value1 = *counter1.counter;
-
             let counter1 = counter1.clone();
             let counter2 = counter2.clone();
             let counter3 = counter3.clone();
+            let counter4 = counter4.clone();
 
             root.from(move || {
                 let value1 = *counter1.getValue().counter.getValue();
                 let value2 = *counter2.getValue().counter.getValue();
                 let value3 = *counter3.getValue().counter.getValue();
+                let value4 = *counter4.getValue().counter.getValue();
 
-                value1 + value2 + value3
+                value1 + value2 + value3 + value4
             })
         };
 
