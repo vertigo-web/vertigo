@@ -47,7 +47,7 @@ thread_local! {
 }
 
 #[wasm_bindgen(start)]
-pub async fn start_app() {
+pub /*async*/ fn start_app() {
     console_error_panic_hook::set_once();
     wasm_logger::init(wasm_logger::Config::default());
 
@@ -59,17 +59,19 @@ pub async fn start_app() {
         log::info!("test z forka");
     });
 
-    let aa = fetch::run("rustwasm/wasm-bindgen".into()).await;  //.unwrap();
+    wasm_bindgen_futures::spawn_local(async {
+        let aa = fetch::run("rustwasm/wasm-bindgen".into()).await;  //.unwrap();
 
-    match aa {
-        Ok(branch) => {
-            log::info!("odpowiedź z serwera {:?}", branch);
+        match aa {
+            Ok(branch) => {
+                log::info!("odpowiedź z serwera {:?}", branch);
 
-        },
-        Err(err) => {
-            log::info!("błąd pobierania danych {:?}", err);
+            },
+            Err(err) => {
+                log::info!("błąd pobierania danych {:?}", err);
+            }
         }
-    }
+    });
 }
 
 

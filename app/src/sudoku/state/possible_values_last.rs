@@ -66,7 +66,7 @@ fn valueByRow(
         let isNumberFilled = {
             let gridInput = gridInput.clone();
             move |x0, x1| -> bool {
-                gridInput.getFrom(x0, level0y).getFrom(x1, level1y).getValue().is_some()
+                gridInput.getFrom(x0, level0y).getFrom(x1, level1y).value.getValue().is_some()
             }
         };
 
@@ -101,7 +101,7 @@ fn valueByCol(
         let isNumberFilled = {
             let gridInput = gridInput.clone();
             move |y0, y1| -> bool {
-                gridInput.getFrom(level0x, y0).getFrom(level1x, y1).getValue().is_some()
+                gridInput.getFrom(level0x, y0).getFrom(level1x, y1).value.getValue().is_some()
             }
         };
 
@@ -135,7 +135,7 @@ fn valueBySquare(
         let isNumberFilled = {
             let gridInput = gridInput.clone();
             move |x1, y1| -> bool {
-                gridInput.getFrom(level0x, level0y).getFrom(x1, y1).getValue().is_some()
+                gridInput.getFrom(level0x, level0y).getFrom(x1, y1).value.getValue().is_some()
             }
         };
 

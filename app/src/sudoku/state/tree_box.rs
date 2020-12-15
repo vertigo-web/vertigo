@@ -1,6 +1,6 @@
 use std::rc::Rc;
 
-#[derive(Copy, Clone)]
+#[derive(Copy, Clone, Debug)]
 pub enum TreeBoxIndex {
     First,
     Middle,

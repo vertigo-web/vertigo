@@ -1,6 +1,8 @@
 use virtualdom::computed::Value::Value;
 use virtualdom::computed::Dependencies::Dependencies;
 
+use super::tree_box::TreeBoxIndex;
+
 //export type SudokuValue = 1 | 2 | 3 | 4 | 5 | 6 | 7 | 8 | 9;
 
 //export const getIteratorByAllSudokuValue = (): Array<SudokuValue> => [1, 2, 3, 4, 5, 6, 7, 8, 9];
@@ -49,8 +51,32 @@ impl SudokuValue {
         )
     }}
 
-pub type NumberItem = Value<Option<SudokuValue>>;
+// pub type NumberItem = Value<Option<SudokuValue>>;
 
-pub fn create_number_item(deps: &Dependencies, value: Option<SudokuValue>) -> Value<Option<SudokuValue>> {
-    deps.newValue(value)
+#[derive(Clone)]
+pub struct NumberItem {
+    pub x0: TreeBoxIndex,
+    pub y0: TreeBoxIndex,
+    pub x1: TreeBoxIndex,
+    pub y1: TreeBoxIndex,
+    pub value: Value<Option<SudokuValue>>
+}
+
+impl NumberItem {
+    pub fn new(
+        deps: &Dependencies,
+        x0: TreeBoxIndex,
+        y0: TreeBoxIndex,
+        x1: TreeBoxIndex,
+        y1: TreeBoxIndex,
+        value: Option<SudokuValue>
+    ) -> NumberItem {
+        NumberItem {
+            x0,
+            y0,
+            x1,
+            y1,
+            value: deps.newValue(value),
+        }
+    }
 }

@@ -86,14 +86,19 @@ pub fn render_cell_possible(item: &Computed<Cell>) -> VDomNode {
         out.push(css(cssWrapperOne()));
 
         for number in possible.iter() {
-            // const onClick = () => {
-            //     cell.number.value = number;
-            // };
+            let onSet = {
+                let number = number.clone();
+                let cell = cell.clone();
+
+                move || {
+                    cell.number.value.setValue(Some(number));
+                }
+            };
     
             out.push(
                 node("div", vec!(
                     css(cssItemOnlyOne()),
-                    //      onClick={onClick}>                              //TODO
+                    onClick(onSet),
                     text(format!("{}", number.to_u16()))
                 ))
             );
@@ -107,15 +112,20 @@ pub fn render_cell_possible(item: &Computed<Cell>) -> VDomNode {
     let possibleLastValue = *cell.possibleLast.getValue();
 
     if let Some(possibleLastValue) = possibleLastValue {
-        //     const onClick = () => {
-        //         cell.number.value = possibleLastValue;
-        //     };
+        let onSet = {
+            let possibleLastValue = possibleLastValue.clone();
+            let cell = cell.clone();
+
+            move || {
+                cell.number.value.setValue(Some(possibleLastValue));
+            }
+        };
 
         return buildNode("div", vec!(
             css(cssWrapperOne()),
             node("div", vec!(
                 css(cssItemOnlyOne()),
-                //      onClick={onClick}>                              //TODO
+                onClick(onSet),
                 text(format!("{}", possibleLastValue.to_u16()))
             ))
         ));
@@ -140,7 +150,9 @@ pub fn render_cell_possible(item: &Computed<Cell>) -> VDomNode {
                 onClick({
                     let cell = cell.clone();
                     move || {
-                        cell.number.setValue(Some(number));
+                        if shouldShow {
+                            cell.number.value.setValue(Some(number));
+                        }
                     }
                 }),
                 text(label)

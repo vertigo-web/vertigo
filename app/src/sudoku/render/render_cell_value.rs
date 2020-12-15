@@ -44,7 +44,7 @@ fn cssDelete() -> Css {
 pub fn render_cell_value(value: SudokuValue, item: &Computed<Cell>, ) -> VDomNode {
     let cell = item.getValue();
 
-    cell.show_delete.setValue(true);
+    //cell.show_delete.setValue(true);
 
     let show_delete = *cell.show_delete.getValue();
 

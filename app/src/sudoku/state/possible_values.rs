@@ -40,7 +40,7 @@ pub fn possible_values(
         for x0 in TreeBoxIndex::variants() {
             for x1 in TreeBoxIndex::variants() {
                 let value = grid.getFrom(x0, level0y).getFrom(x1, level1y);
-                let value = *value.getValue();
+                let value = *value.value.getValue();
                 if let Some(value) = value {
                     currentNumbersInCeis.remove(&value);
                 }
@@ -51,7 +51,7 @@ pub fn possible_values(
         for y0 in TreeBoxIndex::variants() {
             for y1 in TreeBoxIndex::variants() {
                 let value = grid.getFrom(level0x, y0).getFrom(level1x, y1);
-                let value = *value.getValue();
+                let value = *value.value.getValue();
                 if let Some(value) = value {
                     currentNumbersInCeis.remove(&value);
                 }
@@ -62,7 +62,7 @@ pub fn possible_values(
         for x1 in TreeBoxIndex::variants() {
             for y1 in TreeBoxIndex::variants() {
                 let value = grid.getFrom(level0x, level0y).getFrom(x1, y1);
-                let value = *value.getValue();
+                let value = *value.value.getValue();
                 if let Some(value) = value {
                     currentNumbersInCeis.remove(&value);
                 }

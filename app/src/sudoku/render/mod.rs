@@ -60,7 +60,7 @@ fn cssCellWrapper() -> Css {
 fn render_cell(item: &Computed<Cell>) -> VDomNode {
     use NodeAttr::{buildNode, node, css, text, onClick, component};
 
-    let value = *item.getValue().number.getValue();
+    let value = *item.getValue().number.value.getValue();
 
     if let Some(value) = value {
         return render_cell_value::render_cell_value(value, item);
