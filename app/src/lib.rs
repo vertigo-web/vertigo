@@ -78,13 +78,8 @@ pub /*async*/ fn start_app() {
 /*
 TODO - wydzielić computed do osobnego crates
 
-
 TODO - obadac ten sposób odpalania projektu wasm
     https://github.com/IMI-eRnD-Be/wasm-run
-
-
-TODO - Dodać tranzakcyjną aktualizację
-    self.deps.triggerChange([id1, id2, id3]);               //to powinno wystarczyc
 
 TODO - Graph - usunac nieuzywane krawedzie (subskrybcje)
 
@@ -94,16 +89,12 @@ TODO - dodać jakieś makra które pozwolą na łatwe generowanie html-a (http
     to wygląda obiecująco
     https://github.com/chinedufn/percy/tree/master/crates/html-macro
 
-TODO - Będąc w bloku computed, albo subskrybcji, całkowicie ignorować wszelkie akcje które będą chciały zmienić wartość
-       rzucać standardowy strumień błędów informację o incydencie. Dzięki temu nowa wadliwa funkcjonalność nie zepsuje tej juz dobrze ulezanej funkcjonalności
-
 https://github.com/rustwasm/console_error_panic_hook#readme
 https://rustwasm.github.io/wasm-bindgen/reference/passing-rust-closures-to-js.html
 
 
 TODO - insertAsFirstChild, insertAfter. Wywalić te dwie funkcje.
     trzeba odwrócić kolejność synchronizowania węzłów. Korzystać z metody insertBefore. Najmniejszy narzut pod kątem ilości zmian w domie
-
 
 
 TODO - makro które wycina białe znaki ?

@@ -24,11 +24,13 @@ impl<T: 'static> Value<T> {
     }
 
     pub fn setValue(&self, value: T) {
-        self.value.change(value, |state, value| {
-            *state = Rc::new(value);
-        });
+        self.deps.transaction(||{
+            self.value.change(value, |state, value| {
+                *state = Rc::new(value);
+            });
 
-        self.deps.triggerChange(self.id.clone());
+            self.deps.triggerChange(self.id.clone());
+        });
     }
 
     pub fn getValue(&self) -> Rc<T> {

@@ -126,7 +126,7 @@ pub fn render_cell_possible(item: &Computed<Cell>) -> VDomNode {
             node("div", vec!(
                 css(cssItemOnlyOne()),
                 onClick(onSet),
-                text(format!("{}", possibleLastValue.to_u16()))
+                text(format!("{}.", possibleLastValue.to_u16()))
             ))
         ));
     }

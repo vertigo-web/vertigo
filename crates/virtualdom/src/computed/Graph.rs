@@ -17,10 +17,6 @@ impl GraphOne {
         list.insert(edgeB);
     }
 
-    #[allow(dead_code)]
-    pub fn removeA(&mut self, edgeA: GraphId) {
-        self.rel.remove(&edgeA);
-    }
 
     pub fn removeB(&mut self, edgeB: &GraphId) {
         self.rel.retain(|_k, listIds| -> bool {

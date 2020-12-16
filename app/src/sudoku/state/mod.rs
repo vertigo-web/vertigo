@@ -79,6 +79,7 @@ fn creatergidView(
 }
 
 pub struct Sudoku {
+    deps: Dependencies,
     pub grid: SudokuSquare<SudokuSquare<Cell>>,
 }
 
@@ -89,6 +90,7 @@ impl Sudoku {
         let gridPossibleLast = createGridPossibleLast(deps, &gridNumber, &gridPossible);
 
         deps.newComputedFrom(Sudoku {
+            deps: deps.clone(),
             grid: creatergidView(deps, gridNumber, gridPossible, gridPossibleLast),
         })
     }
@@ -96,15 +98,17 @@ impl Sudoku {
     pub fn clear(&self) {
         log::info!("clear");
 
-        for x0 in TreeBoxIndex::variants() {
-            for y0 in TreeBoxIndex::variants() {
-                for x1 in TreeBoxIndex::variants() {
-                    for y1 in TreeBoxIndex::variants() {
-                        self.grid.getFrom(x0, y0).getFrom(x1, y1).number.value.setValue(None);
+        self.deps.transaction(||{
+            for x0 in TreeBoxIndex::variants() {
+                for y0 in TreeBoxIndex::variants() {
+                    for x1 in TreeBoxIndex::variants() {
+                        for y1 in TreeBoxIndex::variants() {
+                            self.grid.getFrom(x0, y0).getFrom(x1, y1).number.value.setValue(None);
+                        }
                     }
                 }
             }
-        }
+        });
     }
 
     pub fn example1(&self) {
