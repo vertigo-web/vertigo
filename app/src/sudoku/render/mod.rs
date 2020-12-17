@@ -1,10 +1,4 @@
-use virtualdom::{computed::Computed, vdom::models::VDomNode::VDomNode};
-use virtualdom::vdom::models::{
-    NodeAttr,
-};
-use virtualdom::vdom::models::{
-    Css::Css
-};
+use virtualdom::{computed::Computed, VDomNode, NodeAttr, Css};
 use self::config::Config;
 
 use super::state::{Cell, Sudoku, sudoku_square::SudokuSquare, tree_box::TreeBoxIndex};

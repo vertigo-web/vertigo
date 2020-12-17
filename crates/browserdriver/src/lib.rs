@@ -6,8 +6,8 @@ use std::rc::Rc;
 use std::collections::HashMap;
 
 use virtualdom::computed::BoxRefCell;
-use virtualdom::vdom::driver::DomDriver::DomDriverTrait;
-use virtualdom::vdom::models::RealDomId::RealDomId;
+use virtualdom::DomDriverTrait;
+use virtualdom::RealDomId;
 
 use wasm_bindgen::JsCast;
 use dom_event::{DomEventDisconnect, DomEventMouse};

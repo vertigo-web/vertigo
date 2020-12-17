@@ -1,12 +1,6 @@
-use virtualdom::{computed::Computed, vdom::models::VDomNode::VDomNode};
+use virtualdom::{computed::Computed, VDomNode, NodeAttr, Css};
 
 use crate::sudoku::state::{Cell, number_item::SudokuValue};
-use virtualdom::vdom::models::{
-    NodeAttr,
-};
-use virtualdom::vdom::models::{
-    Css::Css
-};
 use super::config::Config;
 
 

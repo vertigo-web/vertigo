@@ -1,16 +1,12 @@
 
-use virtualdom::{computed::Computed, vdom::{
-        models::{
-            VDomNode::VDomNode,
-        },
-    }};
-
-use super::app_state::AppState;
-
-use virtualdom::vdom::models::{
-    Css::Css,
+use virtualdom::{
+    computed::Computed,
+    VDomNode,
+    Css,
     NodeAttr,
 };
+
+use super::app_state::AppState;
 
 use crate::simple_counter::{simple_counter_render::simple_counter_render};
 use crate::sudoku::render::{sudoku_render, sudoku_examples_render};

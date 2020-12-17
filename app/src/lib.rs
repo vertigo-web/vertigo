@@ -15,12 +15,8 @@ use virtualdom::{
     computed::{
         Dependencies,
     },
-    vdom::{
-        App::App,
-    },
-    vdom::models::{
-        VDomComponent::VDomComponent,
-    },
+    App,
+    VDomComponent,
 };
 
 use browserdriver::{

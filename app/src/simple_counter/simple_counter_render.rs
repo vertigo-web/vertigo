@@ -1,17 +1,10 @@
 use super::simple_counter_state::SimpleCounter;
 
-use virtualdom::{computed::Computed, vdom::{
-        models::{
-            VDomNode::VDomNode,
-        },
-    }};
-
-use virtualdom::vdom::models::{
+use virtualdom::{
+    computed::Computed,
+    VDomNode,
     NodeAttr,
-};
-
-use virtualdom::vdom::models::{
-    Css::Css
+    Css
 };
 
 fn cssBox() -> Css {
