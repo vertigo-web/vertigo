@@ -1,4 +1,4 @@
-use web_sys::{Event, MouseEvent, KeyboardEvent, EventTarget};
+use web_sys::{Event, MouseEvent, /*KeyboardEvent,*/ EventTarget};
 use wasm_bindgen::{JsCast, prelude::Closure};
 
 pub struct DomEvent {
@@ -71,28 +71,27 @@ impl DomEventMouse {
 }
 
 
+// pub struct DomEventKeyboard {
+//     event: DomEvent,
+// }
 
-pub struct DomEventKeyboard {
-    event: DomEvent,
-}
+// impl DomEventKeyboard {
+//     pub fn new<F: FnMut(&KeyboardEvent) + 'static>(func: F) -> DomEventKeyboard {
+//         let mut func_boxed = Box::new(func);
 
-impl DomEventKeyboard {
-    pub fn new<F: FnMut(&KeyboardEvent) + 'static>(func: F) -> DomEventKeyboard {
-        let mut func_boxed = Box::new(func);
+//         let event = DomEvent::new(move |event: Event| {
+//             let event_keyboard = event.dyn_ref::<KeyboardEvent>().unwrap();
+//             func_boxed(event_keyboard);
+//         });
 
-        let event = DomEvent::new(move |event: Event| {
-            let event_keyboard = event.dyn_ref::<KeyboardEvent>().unwrap();
-            func_boxed(event_keyboard);
-        });
+//         DomEventKeyboard {
+//             event
+//         }
+//     }
 
-        DomEventKeyboard {
-            event
-        }
-    }
-
-    pub fn append_to_keydown(self, target: &EventTarget) -> DomEventDisconnect {
-        self.event.append_to("keydown", target)
-    }
-}
+//     pub fn append_to_keydown(self, target: &EventTarget) -> DomEventDisconnect {
+//         self.event.append_to("keydown", target)
+//     }
+// }
 
 

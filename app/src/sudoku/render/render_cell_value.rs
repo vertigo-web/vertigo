@@ -1,4 +1,4 @@
-use virtualdom::{computed::{Computed::Computed, Value::Value}, vdom::models::VDomNode::VDomNode};
+use virtualdom::{computed::{Computed::Computed}, vdom::models::VDomNode::VDomNode};
 
 use crate::sudoku::state::{Cell, number_item::SudokuValue};
 
@@ -23,7 +23,6 @@ fn cssItemNumberWrapper() -> Css {
 }
 
 fn cssDelete() -> Css {
-    let config = Config::new();
     Css::one("
         position: absolute;
         top: 3px;
@@ -50,7 +49,7 @@ pub fn render_cell_value(value: SudokuValue, item: &Computed<Cell>, ) -> VDomNod
 
     let show_delete = *cell.show_delete.getValue();
 
-    use NodeAttr::{buildNode, node, css, text, onClick, component};
+    use NodeAttr::{buildNode, node, css, text, onClick};
 
     let mut out = vec!(
         css(cssItemNumberWrapper()),

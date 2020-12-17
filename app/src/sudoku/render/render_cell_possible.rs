@@ -73,7 +73,7 @@ fn cssItem(shouldShow: bool) -> Css {
 }
 
 pub fn render_cell_possible(item: &Computed<Cell>) -> VDomNode {
-    use NodeAttr::{buildNode, node, css, text, onClick, component};
+    use NodeAttr::{buildNode, node, css, text, onClick};
 
     let cell = (*item).getValue();
 

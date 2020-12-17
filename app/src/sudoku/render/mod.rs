@@ -58,8 +58,6 @@ fn cssCellWrapper() -> Css {
 }
 
 fn render_cell(item: &Computed<Cell>) -> VDomNode {
-    use NodeAttr::{buildNode, node, css, text, onClick, component};
-
     let value = *item.getValue().number.value.getValue();
 
     if let Some(value) = value {
@@ -70,7 +68,7 @@ fn render_cell(item: &Computed<Cell>) -> VDomNode {
 }
 
 fn render_group(group: &Computed<SudokuSquare<Cell>>) -> VDomNode {
-    use NodeAttr::{buildNode, node, css, text, onClick, component};
+    use NodeAttr::{buildNode, node, css, component};
 
     let getCell = |group: &Computed<SudokuSquare<Cell>>, x: TreeBoxIndex, y: TreeBoxIndex| -> Computed<Cell> {
         group.clone().map(move |state| {
@@ -120,7 +118,7 @@ fn render_group(group: &Computed<SudokuSquare<Cell>>) -> VDomNode {
 }
 
 pub fn sudoku_render(sudoku: &Computed<Sudoku>) -> VDomNode {
-    use NodeAttr::{buildNode, node, css, text, onClick, component};
+    use NodeAttr::{buildNode, node, css, component};
 
     let getGroup = |sudoku: &Computed<Sudoku>, x: TreeBoxIndex, y: TreeBoxIndex| -> Computed<SudokuSquare<Cell>> {
         sudoku.clone().map(move |state| {
@@ -160,7 +158,7 @@ fn cssSudokuExampleButton() -> Css {
     ")
 }
 pub fn sudoku_examples_render(sudoku: &Computed<Sudoku>) -> VDomNode {
-    use NodeAttr::{buildNode, node, css, text, onClick, component};
+    use NodeAttr::{buildNode, node, css, text, onClick};
 
     let sudoku = sudoku.getValue();
     buildNode("div", vec!(

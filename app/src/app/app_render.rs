@@ -60,7 +60,7 @@ fn cssButton() -> Css {
 */
 
 fn render_header(app_state: &Computed<AppState>) -> VDomNode {
-    use NodeAttr::{buildNode, node, css, text, component, onClick, attr};
+    use NodeAttr::{buildNode, node, css, text, onClick};
 
 
     let app_state = app_state.getValue();
@@ -126,7 +126,7 @@ fn render_header(app_state: &Computed<AppState>) -> VDomNode {
 // wrapper2(false);
 
 fn render_suma(app_state: &Computed<AppState>) -> VDomNode {
-    use NodeAttr::{buildNode, node, css, text, component, onClick, attr};
+    use NodeAttr::{buildNode, text};
 
     let app_state = app_state.getValue();
 
@@ -152,7 +152,7 @@ pub fn main_render(app_state: &Computed<AppState>) -> VDomNode {
             zwraca finalnie Computed<K>
     */
 
-    use NodeAttr::{buildNode, node, css, text, component, onClick, attr};
+    use NodeAttr::{buildNode, node, text, component, attr};
 
     let header = component(app_state.clone(), render_header);
     let suma = component(app_state.clone(), render_suma);
