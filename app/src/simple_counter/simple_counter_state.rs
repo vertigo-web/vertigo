@@ -1,7 +1,8 @@
 use virtualdom::{
     computed::{
-        Computed::Computed,
-        Dependencies::Dependencies, Value::Value
+        Computed,
+        Dependencies,
+        Value
     }
 };
 // use virtualdom::vdom::StateBox::StateBox;

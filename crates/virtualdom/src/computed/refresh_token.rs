@@ -1,6 +1,6 @@
 use std::rc::Rc;
 
-use crate::computed::BoxRefCell::BoxRefCell;
+use crate::computed::BoxRefCell;
 
 pub enum RefreshToken {
     Computed {

@@ -1,6 +1,9 @@
 use std::collections::HashSet;
 
-use virtualdom::computed::{Computed::Computed, Dependencies::Dependencies};
+use virtualdom::computed::{
+    Computed,
+    Dependencies
+};
 
 use super::{number_item::{NumberItem, SudokuValue}, possible_values::PossibleValues, sudoku_square::SudokuSquare, tree_box::TreeBoxIndex};
 

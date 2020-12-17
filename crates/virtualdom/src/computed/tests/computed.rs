@@ -2,14 +2,14 @@
 use std::rc::Rc;
 
 use crate::computed::{
-    Computed::Computed,
-    Value::Value
+    Computed,
+    Value
 };
 
 #[test]
 fn basic() {
     use crate::computed::{
-        Dependencies::Dependencies,
+        Dependencies,
     };
     use crate::computed::tests::BoxValue::BoxValue;
 
@@ -58,8 +58,8 @@ fn basic() {
 #[test]
 fn basic2() {
     use crate::computed::{
-        Dependencies::Dependencies,
-        Computed::Computed,
+        Dependencies,
+        Computed,
     };
     use crate::computed::tests::BoxValue::BoxValue;
 
@@ -193,8 +193,8 @@ fn pointers() {
 #[test]
 fn test_subscription() {
     use crate::computed::{
-        Dependencies::Dependencies,
-        Computed::Computed,
+        Dependencies,
+        Computed,
     };
     use crate::computed::tests::BoxValue::BoxValue;
 

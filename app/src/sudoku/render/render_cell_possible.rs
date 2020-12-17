@@ -1,4 +1,4 @@
-use virtualdom::{computed::Computed::Computed, vdom::models::VDomNode::VDomNode};
+use virtualdom::{computed::Computed, vdom::models::VDomNode::VDomNode};
 
 use crate::sudoku::state::{Cell, number_item::SudokuValue};
 use virtualdom::vdom::models::{

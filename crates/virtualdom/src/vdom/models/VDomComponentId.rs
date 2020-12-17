@@ -1,5 +1,5 @@
 use crate::computed::{
-    Computed::Computed,
+    Computed,
     GraphId::GraphId,
 };
 

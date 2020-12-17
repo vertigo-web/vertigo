@@ -1,7 +1,7 @@
 use crate::computed::{
-    Dependencies::Dependencies,
-    Computed::Computed,
-    RefreshToken::RefreshToken,
+    Dependencies,
+    Computed,
+    refresh_token::RefreshToken,
     GraphId::GraphId,
 };
 

@@ -1,6 +1,6 @@
 use virtualdom::computed::{
-    Computed::Computed,
-    Dependencies::Dependencies
+    Computed,
+    Dependencies
 };
 
 use super::{

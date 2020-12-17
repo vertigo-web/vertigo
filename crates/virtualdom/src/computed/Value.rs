@@ -1,9 +1,9 @@
 use std::rc::Rc;
 
 use crate::computed::{
-    BoxRefCell::BoxRefCell,
-    Dependencies::Dependencies,
-    Computed::Computed,
+    BoxRefCell,
+    Dependencies,
+    Computed,
     GraphId::GraphId,
 };
 

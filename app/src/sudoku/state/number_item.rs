@@ -1,5 +1,7 @@
-use virtualdom::computed::Value::Value;
-use virtualdom::computed::Dependencies::Dependencies;
+use virtualdom::computed::{
+    Value,
+    Dependencies
+};
 
 use super::tree_box::TreeBoxIndex;
 

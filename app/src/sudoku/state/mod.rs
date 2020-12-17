@@ -1,4 +1,8 @@
-use virtualdom::computed::{Computed::Computed, Dependencies::Dependencies, Value::Value};
+use virtualdom::computed::{
+    Computed,
+    Dependencies,
+    Value
+};
 
 use self::{
     number_item::NumberItem,

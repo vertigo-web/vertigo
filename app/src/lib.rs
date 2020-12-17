@@ -13,7 +13,7 @@ use std::cell::RefCell;
 
 use virtualdom::{
     computed::{
-        Dependencies::Dependencies,
+        Dependencies,
     },
     vdom::{
         App::App,

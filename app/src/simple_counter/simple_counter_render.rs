@@ -1,6 +1,6 @@
 use super::simple_counter_state::SimpleCounter;
 
-use virtualdom::{computed::Computed::Computed, vdom::{
+use virtualdom::{computed::Computed, vdom::{
         models::{
             VDomNode::VDomNode,
         },

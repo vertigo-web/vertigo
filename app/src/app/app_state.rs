@@ -1,8 +1,8 @@
 use virtualdom::{
     computed::{
-        Dependencies::Dependencies,
-        Value::Value,
-        Computed::Computed,
+        Dependencies,
+        Value,
+        Computed,
     }
 };
 

@@ -1,4 +1,4 @@
-use virtualdom::{computed::Computed::Computed, vdom::models::VDomNode::VDomNode};
+use virtualdom::{computed::Computed, vdom::models::VDomNode::VDomNode};
 use virtualdom::vdom::models::{
     NodeAttr,
 };

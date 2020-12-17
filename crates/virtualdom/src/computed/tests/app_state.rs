@@ -1,8 +1,8 @@
 
 use crate::computed::{
-    Value::Value,
-    Dependencies::Dependencies,
-    Computed::Computed,
+    Value,
+    Dependencies,
+    Computed,
 };
 use crate::computed::tests::{
     BoxValue::BoxValue,

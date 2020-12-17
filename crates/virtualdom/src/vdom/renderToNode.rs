@@ -5,7 +5,7 @@ use std::collections::{
 use std::hash::Hash;
 
 use crate::computed::{
-    Client::Client,
+    Client,
 };
 
 use crate::{

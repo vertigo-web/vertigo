@@ -1,5 +1,5 @@
 
-use virtualdom::{computed::Computed::Computed, vdom::{
+use virtualdom::{computed::Computed, vdom::{
         models::{
             VDomNode::VDomNode,
         },

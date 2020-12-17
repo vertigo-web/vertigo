@@ -7,7 +7,7 @@ use crate::vdom::models::{
 };
 use crate::vdom::models::Css::Css;
 use crate::computed::{
-    Computed::Computed,
+    Computed,
 };
 
 pub enum NodeAttr {

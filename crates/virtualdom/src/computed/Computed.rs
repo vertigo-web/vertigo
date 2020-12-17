@@ -2,10 +2,10 @@ use std::rc::Rc;
 use std::fmt::Debug;
 
 use crate::computed::{
-    BoxRefCell::BoxRefCell,
-    Dependencies::Dependencies,
-    Client::Client,
-    RefreshToken::RefreshToken,
+    BoxRefCell,
+    Dependencies,
+    Client,
+    refresh_token::RefreshToken,
     GraphId::GraphId,
 };
 

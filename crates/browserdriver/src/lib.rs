@@ -5,7 +5,7 @@ use web_sys::{Document, Element, Text, HtmlHeadElement, Node};
 use std::rc::Rc;
 use std::collections::HashMap;
 
-use virtualdom::computed::BoxRefCell::BoxRefCell;
+use virtualdom::computed::BoxRefCell;
 use virtualdom::vdom::driver::DomDriver::DomDriverTrait;
 use virtualdom::vdom::models::RealDomId::RealDomId;
 

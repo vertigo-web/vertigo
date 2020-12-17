@@ -1,7 +1,7 @@
 use std::rc::Rc;
 
 use crate::computed::{
-    BoxRefCell::BoxRefCell,
+    BoxRefCell,
 };
 
 pub struct BoxValue<T: Copy> {

@@ -1,7 +1,7 @@
 use std::collections::HashMap;
 use std::rc::Rc;
 
-use crate::computed::BoxRefCell::BoxRefCell;
+use crate::computed::BoxRefCell;
 
 use crate::vdom::driver::DomDriver::DomDriver;
 use crate::vdom::models::Css::{

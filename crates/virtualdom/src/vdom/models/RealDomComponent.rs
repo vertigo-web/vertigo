@@ -1,5 +1,5 @@
 use crate::computed::{
-    Client::Client,
+    Client,
 };
 
 use crate::vdom::{

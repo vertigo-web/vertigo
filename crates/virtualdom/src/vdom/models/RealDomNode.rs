@@ -10,7 +10,7 @@ use crate::vdom::{
         DomDriver::DomDriver,
     },
 };
-use crate::computed::BoxRefCell::BoxRefCell;
+use crate::computed::BoxRefCell;
 
 
 fn mergeAttr(attr: &HashMap<&'static str, String>, className: Option<String>) -> HashMap<&'static str, String> {
