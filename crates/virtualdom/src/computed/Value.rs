@@ -4,7 +4,7 @@ use crate::computed::{
     BoxRefCell,
     Dependencies,
     Computed,
-    GraphId::GraphId,
+    GraphId,
 };
 
 #[derive(Clone)]

@@ -6,7 +6,7 @@ use crate::computed::{
     Dependencies,
     Client,
     refresh_token::RefreshToken,
-    GraphId::GraphId,
+    graph_id::GraphId,
 };
 
 

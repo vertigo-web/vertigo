@@ -2,7 +2,7 @@ use crate::computed::{
     Dependencies,
     Computed,
     refresh_token::RefreshToken,
-    GraphId::GraphId,
+    graph_id::GraphId,
 };
 
 pub struct Client {

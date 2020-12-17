@@ -1,5 +1,5 @@
 mod box_ref_cell;
-pub mod GraphId;
+mod graph_id;
 mod dependencies;
 mod value;
 mod computed;
@@ -16,3 +16,4 @@ pub use computed::Computed;
 pub use client::Client;
 pub use dependencies::Dependencies;
 pub use box_ref_cell::BoxRefCell;
+pub use graph_id::GraphId;

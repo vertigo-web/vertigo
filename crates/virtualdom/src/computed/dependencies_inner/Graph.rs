@@ -1,5 +1,5 @@
 use std::collections::{HashSet, HashMap, VecDeque};
-use crate::computed::GraphId::GraphId;
+use crate::computed::graph_id::GraphId;
 
 struct GraphOne {
     rel: HashMap<GraphId, HashSet<GraphId>>,                //A <-> B

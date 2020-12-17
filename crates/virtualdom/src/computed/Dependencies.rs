@@ -7,7 +7,7 @@ use crate::computed::{
     Value,
     refresh_token::RefreshToken,
     Computed,
-    GraphId::GraphId,
+    GraphId,
 };
 
 use super::dependencies_inner::{Graph::Graph, TransactionState::TransactionState};

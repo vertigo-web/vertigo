@@ -1,6 +1,6 @@
 use std::collections::HashSet;
 
-use crate::computed::GraphId::GraphId;
+use crate::computed::graph_id::GraphId;
 
 
 pub enum TransactionState {

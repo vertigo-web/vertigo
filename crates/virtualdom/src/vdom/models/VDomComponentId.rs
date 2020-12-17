@@ -1,6 +1,6 @@
 use crate::computed::{
     Computed,
-    GraphId::GraphId,
+    GraphId,
 };
 
 use crate::{
