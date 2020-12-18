@@ -1,4 +1,4 @@
-use super::simple_counter_state::SimpleCounter;
+use super::state::State;
 
 use virtualdom::{
     computed::Computed,
@@ -30,7 +30,7 @@ fn cssWrapper() -> Css {
     ")
 }
 
-pub fn simple_counter_render(simple_counter: &Computed<SimpleCounter>) -> VDomNode {
+pub fn render(simple_counter: &Computed<State>) -> VDomNode {
     use NodeAttr::{buildNode, node, css, text, onClick};
 
     let simple_counter = simple_counter.getValue();

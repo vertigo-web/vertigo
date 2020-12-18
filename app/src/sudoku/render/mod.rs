@@ -111,7 +111,7 @@ fn render_group(group: &Computed<SudokuSquare<Cell>>) -> VDomNode {
     ))
 }
 
-pub fn sudoku_render(sudoku: &Computed<Sudoku>) -> VDomNode {
+pub fn main_render(sudoku: &Computed<Sudoku>) -> VDomNode {
     use NodeAttr::{buildNode, node, css, component};
 
     let getGroup = |sudoku: &Computed<Sudoku>, x: TreeBoxIndex, y: TreeBoxIndex| -> Computed<SudokuSquare<Cell>> {
@@ -151,7 +151,7 @@ fn cssSudokuExampleButton() -> Css {
         cursor: pointer;
     ")
 }
-pub fn sudoku_examples_render(sudoku: &Computed<Sudoku>) -> VDomNode {
+pub fn examples_render(sudoku: &Computed<Sudoku>) -> VDomNode {
     use NodeAttr::{buildNode, node, css, text, onClick};
 
     let sudoku = sudoku.getValue();

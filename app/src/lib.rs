@@ -23,9 +23,6 @@ use browserdriver::{
     DomDriverBrowser,
 };
 
-use crate::app::app_state::AppState;
-use crate::app::app_render::main_render;
-
 
 #[cfg(feature = "wee_alloc")]
 #[global_allocator]
@@ -34,11 +31,11 @@ static ALLOC: wee_alloc::WeeAlloc = wee_alloc::WeeAlloc::INIT;
 thread_local! {
     static APP_STATE: RefCell<App> = RefCell::new({
         let root: Dependencies = Dependencies::default();
-        let appStateBox = AppState::new(&root);
+        let appStateBox = app::State::new(&root);
 
         let driver = DomDriverBrowser::default();
 
-        App::new(driver, VDomComponent::new(appStateBox, main_render))
+        App::new(driver, VDomComponent::new(appStateBox, app::render))
     });
 }
 

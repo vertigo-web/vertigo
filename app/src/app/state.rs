@@ -6,28 +6,28 @@ use virtualdom::{
     }
 };
 
-use crate::simple_counter::simple_counter_state::SimpleCounter;
-use crate::sudoku::state::Sudoku;
+use crate::simple_counter;
+use crate::sudoku;
 
-pub struct AppState {
+pub struct State {
     pub value: Value<u32>,
     pub at: Value<u32>,
-    pub counter1: Computed<SimpleCounter>,
-    pub counter2: Computed<SimpleCounter>,
-    pub counter3: Computed<SimpleCounter>,
-    pub counter4: Computed<SimpleCounter>,
+    pub counter1: Computed<simple_counter::State>,
+    pub counter2: Computed<simple_counter::State>,
+    pub counter3: Computed<simple_counter::State>,
+    pub counter4: Computed<simple_counter::State>,
 
     pub suma: Computed<u32>,
 
-    pub sudoku: Computed<Sudoku>,
+    pub sudoku: Computed<sudoku::Sudoku>,
 }
 
-impl AppState {
-    pub fn new(root: &Dependencies) -> Computed<AppState> {
-        let counter1 = SimpleCounter::new(&root);
-        let counter2 = SimpleCounter::new(&root);
-        let counter3 = SimpleCounter::new(&root);
-        let counter4 = SimpleCounter::new(&root);
+impl State {
+    pub fn new(root: &Dependencies) -> Computed<State> {
+        let counter1 = simple_counter::State::new(&root);
+        let counter2 = simple_counter::State::new(&root);
+        let counter3 = simple_counter::State::new(&root);
+        let counter4 = simple_counter::State::new(&root);
 
         let suma = {
             let counter1 = counter1.clone();
@@ -45,7 +45,7 @@ impl AppState {
             })
         };
 
-        root.newComputedFrom(AppState {
+        root.newComputedFrom(State {
             value: root.newValue(33),
             at: root.newValue(999),
             counter1,
@@ -53,7 +53,7 @@ impl AppState {
             counter3,
             counter4,
             suma,
-            sudoku: Sudoku::new(root)
+            sudoku: sudoku::Sudoku::new(root)
         })
     }
 

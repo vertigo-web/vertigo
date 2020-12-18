@@ -7,14 +7,14 @@ use virtualdom::{
 };
 // use virtualdom::vdom::StateBox::StateBox;
 
-pub struct SimpleCounter {
+pub struct State {
     pub counter: Value<u32>,
 }
 
-impl SimpleCounter {
-    pub fn new(root: &Dependencies) -> Computed<SimpleCounter> {
+impl State {
+    pub fn new(root: &Dependencies) -> Computed<State> {
         root.newComputedFrom(
-            SimpleCounter {
+            State {
                 counter: Value::new(root.clone(), 0)
             }
         )

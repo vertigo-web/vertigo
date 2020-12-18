@@ -1,2 +1,5 @@
-pub mod simple_counter_state;
-pub mod simple_counter_render;
+mod state;
+mod render;
+
+pub use state::State;
+pub use render::render;
