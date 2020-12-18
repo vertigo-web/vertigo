@@ -19,7 +19,7 @@ pub fn fetch(
     Box::pin(async move {
         let mut opts = RequestInit::new();
         opts.method(method.to_string());
-        // opts.mode(RequestMode::Cors);
+        //opts.mode(RequestMode::Cors);
 
         let request = Request::new_with_str_and_init(&url, &opts).unwrap();
 

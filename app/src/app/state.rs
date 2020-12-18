@@ -1,10 +1,8 @@
-use virtualdom::{
-    computed::{
+use virtualdom::{DomDriver, FetchMethod, computed::{
         Dependencies,
         Value,
         Computed,
-    }
-};
+    }};
 
 use crate::simple_counter;
 use crate::sudoku;
@@ -23,7 +21,7 @@ pub struct State {
 }
 
 impl State {
-    pub fn new(root: &Dependencies) -> Computed<State> {
+    pub fn new(root: &Dependencies, driver: &DomDriver) -> Computed<State> {
         let counter1 = simple_counter::State::new(&root);
         let counter2 = simple_counter::State::new(&root);
         let counter3 = simple_counter::State::new(&root);
@@ -44,6 +42,13 @@ impl State {
                 value1 + value2 + value3 + value4
             })
         };
+
+        let driver_span = driver.clone();
+        driver.spawn_local(async move {
+            let url: String = "https://api.github.com/feeds".into();
+            let response = driver_span.fetch(FetchMethod::GET, url, None, None).await;
+            log::info!("Odpowiedź {}", response);
+        });
 
         root.newComputedFrom(State {
             value: root.newValue(33),

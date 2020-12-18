@@ -30,7 +30,7 @@ thread_local! {
         let driver = DomDriverBrowser::new();
 
         let root: Dependencies = Dependencies::default();
-        let appStateBox = app::State::new(&root);
+        let appStateBox = app::State::new(&root, &driver);
 
         App::new(driver, VDomComponent::new(appStateBox, app::render))
     });
@@ -128,5 +128,7 @@ TODO - zrobić analizator Cargo.lock, wyszukiwać biblioteki w rónych wersjac
     przykład tokio ....
 
 TODO - fetch - pozbyć się unwrapow
+
+TODO - dodać do DomDriver asynchronicznego sleep-a
 */
 
