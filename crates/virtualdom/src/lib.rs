@@ -3,11 +3,16 @@
 
 pub mod computed;
 mod vdom;
+mod driver;
+mod app;
+
+pub use driver::DomDriverTrait;
+pub use driver::FetchMethod;
 
 pub use vdom::models::RealDomId::RealDomId;
-pub use vdom::driver::DomDriver::DomDriverTrait;
 pub use vdom::models::VDomComponent::VDomComponent;
-pub use vdom::App::App;
 pub use vdom::models::VDomNode::VDomNode;
 pub use vdom::models::Css::Css;
 pub use vdom::models::NodeAttr;
+
+pub use app::App;

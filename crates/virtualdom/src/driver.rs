@@ -2,6 +2,24 @@ use std::rc::Rc;
 use crate::vdom::models::{
     RealDomId::RealDomId,
 };
+use std::pin::Pin;
+use std::future::Future;
+use std::collections::HashMap;
+
+#[derive(Debug)]
+pub enum FetchMethod {
+    GET,
+    POST,
+}
+
+impl FetchMethod {
+    pub fn to_string(&self) -> &str {
+        match self {
+            FetchMethod::GET => "GET",
+            FetchMethod::POST => "POST",
+        }
+    }
+}
 
 const SHOW_LOG: bool = false;
 
@@ -17,8 +35,8 @@ pub trait DomDriverTrait {
     fn addChild(&self, parent: RealDomId, child: RealDomId);
     fn insertCss(&self, selector: String, value: String);
     fn setOnClick(&self, node: RealDomId, onClick: Option<Rc<dyn Fn()>>);
+    fn fetch(&self, method: FetchMethod, url: String, headers: Option<HashMap<String, String>>, body: Option<String>) -> Pin<Box<dyn Future<Output=String> + 'static>>; 
 }
-
 
 pub struct DomDriver {
     driver: Rc<dyn DomDriverTrait>,
@@ -99,5 +117,10 @@ impl DomDriver {
     pub fn setOnClick(&self, node: RealDomId, onClick: Option<Rc<dyn Fn()>>) {
         show_log(format!("setOnClick {} --onClick--", node));
         self.driver.setOnClick(node, onClick);
+    }
+
+    pub fn fetch(&self, method: FetchMethod, url: String, headers: Option<HashMap<String, String>>, body: Option<String>) -> Pin<Box<dyn Future<Output=String> + 'static>> {
+        show_log(format!("fetch {:?} {}", method, url));
+        self.driver.fetch(method, url, headers, body)
     }
 }

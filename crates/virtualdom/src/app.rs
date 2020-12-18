@@ -2,17 +2,17 @@ use crate::computed::{
     Client,
 };
 
-use crate::vdom::{
-    models::{
-        RealDomNode::RealDomNode,
-        RealDomId::RealDomId,
-        CssManager::CssManager,
-        VDomComponent::VDomComponent,
+use crate::{
+    vdom::{
+        models::{
+            RealDomNode::RealDomNode,
+            RealDomId::RealDomId,
+            CssManager::CssManager,
+            VDomComponent::VDomComponent,
+        },
+        renderToNode::renderToNode,
     },
-    renderToNode::renderToNode,
-    driver::{
-        DomDriver::{DomDriver, DomDriverTrait},
-    }
+    driver::{DomDriver, DomDriverTrait},
 };
 
 pub struct App {

@@ -9,9 +9,8 @@ edition = "2018"
 [dependencies]
 virtualdom = { path = "../../crates/virtualdom" }
 wasm-bindgen = {version = "0.2.63", features = ["nightly", "serde-serialize"]}
+wasm-bindgen-futures = "0.4.19"
 log = "0.4.11"
-serde = { version = "1.0.114", features = ["derive", "rc"] }
-serde_json = "1.0.55"
 web-sys = { version="0.3.46", features=[
     "Document",
     "HtmlElement",
@@ -25,4 +24,8 @@ web-sys = { version="0.3.46", features=[
     "KeyboardEvent",
     "Text",
     "HtmlHeadElement",
+    "Request"
 ]}
+
+#serde = { version = "1.0.114", features = ["derive", "rc"] }
+#serde_json = "1.0.55"

@@ -1,14 +1,14 @@
 use std::collections::HashMap;
 use std::rc::Rc;
-use crate::vdom::{
-    models::{
-        RealDom::RealDom,
-        RealDomId::RealDomId,
-        RealDomText::RealDomText,
+use crate::{
+    vdom::{
+        models::{
+            RealDom::RealDom,
+            RealDomId::RealDomId,
+            RealDomText::RealDomText,
+        },
     },
-    driver::{
-        DomDriver::DomDriver,
-    },
+    driver::DomDriver,
 };
 use crate::computed::BoxRefCell;
 

@@ -6,13 +6,17 @@ use std::rc::Rc;
 use std::collections::HashMap;
 
 use virtualdom::computed::BoxRefCell;
-use virtualdom::DomDriverTrait;
+use virtualdom::{DomDriverTrait, FetchMethod};
 use virtualdom::RealDomId;
 
 use wasm_bindgen::JsCast;
 use dom_event::{DomEventDisconnect, DomEventMouse};
 
+use std::pin::Pin;
+use std::future::Future;
+
 mod dom_event;
+mod fetch;
 
 fn get_document() -> (Document, HtmlHeadElement) {
     let window = web_sys::window().expect("no global `window` exists");
@@ -335,5 +339,9 @@ impl DomDriverTrait for DomDriverBrowser {
         self.driver.change((node, onClick), |state, (node, onClick)| {
             state.setOnClick(node, onClick);
         });
+    }
+
+    fn fetch(&self, method: FetchMethod, url: String, headers: Option<HashMap<String, String>>, body: Option<String>) -> Pin<Box<dyn Future<Output=String> + 'static>> {
+        fetch::fetch(method, url, headers, body)
     }
 }

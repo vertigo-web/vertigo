@@ -1,10 +1,10 @@
-use crate::vdom::{
-    models::{
-        RealDomId::RealDomId,
+use crate::{
+    vdom::{
+        models::{
+            RealDomId::RealDomId,
+        },
     },
-    driver::{
-        DomDriver::DomDriver,
-    },
+    driver::DomDriver,
 };
 
 pub struct RealDomText {

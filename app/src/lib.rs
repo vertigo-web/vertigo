@@ -16,12 +16,10 @@ use virtualdom::{
         Dependencies,
     },
     App,
-    VDomComponent,
+    VDomComponent
 };
 
-use browserdriver::{
-    DomDriverBrowser,
-};
+use browserdriver::DomDriverBrowser;
 
 
 #[cfg(feature = "wee_alloc")]
@@ -40,7 +38,7 @@ thread_local! {
 }
 
 #[wasm_bindgen(start)]
-pub /*async*/ fn start_app() {
+pub async fn start_app() {
     console_error_panic_hook::set_once();
     wasm_logger::init(wasm_logger::Config::default());
 
@@ -53,20 +51,11 @@ pub /*async*/ fn start_app() {
     });
 
     wasm_bindgen_futures::spawn_local(async {
-        let aa = fetch::run("rustwasm/wasm-bindgen".into()).await;  //.unwrap();
+        let branch = fetch::run("rustwasm/wasm-bindgen".into()).await;  //.unwrap();
 
-        match aa {
-            Ok(branch) => {
-                log::info!("odpowiedź z serwera {:?}", branch);
-
-            },
-            Err(err) => {
-                log::info!("błąd pobierania danych {:?}", err);
-            }
-        }
+        log::info!("odpowiedź z serwera {:?}", branch);
     });
 }
-
 
 /*
 TODO - wydzielić computed do osobnego crates
@@ -100,26 +89,3 @@ TODO - zrobić analizator Cargo.lock, wyszukiwać biblioteki w rónych wersjac
     przykład tokio ....
 */
 
-
-
-
-/*
-#[wasm_bindgen(start)]
-pub fn main() {
-    future_to_promise(
-         Request::new(Method::Get, "example.org/test")
-            .header("Accept", "text/plain").send()
-            .and_then(|resp_value: JsValue| {
-                let resp: Response = resp_value.dyn_into().unwrap();
-                resp.text()
-            })
-            .and_then(|text: Promise| {
-                JsFuture::from(text)
-            })
-            .and_then(|body| {
-                println!("Response: {}", body.as_string().unwrap());
-                future::ok(JsValue::UNDEFINED)
-            })
-    );
-}
-*/

@@ -3,7 +3,7 @@ use std::rc::Rc;
 
 use crate::computed::BoxRefCell;
 
-use crate::vdom::driver::DomDriver::DomDriver;
+use crate::driver::DomDriver;
 use crate::vdom::models::Css::{
     Css,
     CssGroup
