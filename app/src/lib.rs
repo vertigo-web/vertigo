@@ -3,7 +3,6 @@
 
 mod app;
 mod simple_counter;
-mod fetch;
 mod sudoku;
 
 use wasm_bindgen::prelude::*;
@@ -53,7 +52,45 @@ pub async fn start_app() {
     });
 
     driver.spawn_local(async {
-        let branch = fetch::run("rustwasm/wasm-bindgen".into()).await;  //.unwrap();
+        // let branch = fetch::run("rustwasm/wasm-bindgen".into()).await;  //.unwrap();
+
+        use browserdriver::DomDriverBrowser;
+        use serde::{Deserialize, Serialize};
+        use virtualdom::FetchMethod;
+        
+        #[derive(Debug, Serialize, Deserialize)]
+        pub struct Branch {
+            pub name: String,
+            pub commit: Commit,
+        }
+
+        #[derive(Debug, Serialize, Deserialize)]
+        pub struct Commit {
+            pub sha: String,
+            pub commit: CommitDetails,
+        }
+
+        #[derive(Debug, Serialize, Deserialize)]
+        pub struct CommitDetails {
+            pub author: Signature,
+            pub committer: Signature,
+        }
+
+        #[derive(Debug, Serialize, Deserialize)]
+        pub struct Signature {
+            pub name: String,
+            pub email: String,
+        }
+
+        let repo: String = "rustwasm/wasm-bindgen".into();
+
+        let driver = DomDriverBrowser::new();
+
+        let url = format!("https://api.github.com/repos/{}/branches/master", repo);
+
+        let response = driver.fetch(FetchMethod::GET, url, None, None).await;
+
+        let branch = serde_json::from_str::<Branch>(response.as_str()).unwrap();
 
         log::info!("odpowiedź z serwera {:?}", branch);
     });
