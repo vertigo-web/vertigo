@@ -5,7 +5,7 @@ use web_sys::{Document, Element, Text, HtmlHeadElement, Node};
 use std::rc::Rc;
 use std::collections::HashMap;
 
-use virtualdom::computed::BoxRefCell;
+use virtualdom::{DomDriver, computed::BoxRefCell};
 use virtualdom::{DomDriverTrait, FetchMethod};
 use virtualdom::RealDomId;
 
@@ -260,17 +260,23 @@ pub struct DomDriverBrowser {
     driver: Rc<BoxRefCell<DomDriverBrowserInner>>,
 }
 
-impl Default for DomDriverBrowser {
-    fn default() -> Self {
+impl DomDriverBrowser {
+    pub fn new() -> DomDriver {
         let driver = Rc::new(
             BoxRefCell::new(
                 DomDriverBrowserInner::default()
             )
         );
 
-        Self {
+        let domDriverBrowser = DomDriverBrowser {
             driver,
-        }
+        };
+
+        let driver = DomDriver::new(domDriverBrowser, Box::new(|fut: Pin<Box<dyn Future<Output = ()> + 'static>>| {
+            wasm_bindgen_futures::spawn_local(fut);
+        }));
+
+        driver
     }
 }
 

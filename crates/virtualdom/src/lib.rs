@@ -6,6 +6,7 @@ mod vdom;
 mod driver;
 mod app;
 
+pub use driver::DomDriver;
 pub use driver::DomDriverTrait;
 pub use driver::FetchMethod;
 

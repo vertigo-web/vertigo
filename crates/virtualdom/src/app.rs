@@ -12,7 +12,7 @@ use crate::{
         },
         renderToNode::renderToNode,
     },
-    driver::{DomDriver, DomDriverTrait},
+    driver::DomDriver,
 };
 
 pub struct App {
@@ -21,9 +21,7 @@ pub struct App {
 }
 
 impl App {
-    pub fn new<D: DomDriverTrait + 'static>(driverIn: D, computed: VDomComponent) -> App {
-        let driver = DomDriver::new(driverIn);
-
+    pub fn new(driver: DomDriver, computed: VDomComponent) -> App {
         let cssManager = CssManager::new(&driver);
         let root = RealDomNode::createWithId(driver, RealDomId::root());
 

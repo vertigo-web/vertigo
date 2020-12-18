@@ -38,14 +38,20 @@ pub trait DomDriverTrait {
     fn fetch(&self, method: FetchMethod, url: String, headers: Option<HashMap<String, String>>, body: Option<String>) -> Pin<Box<dyn Future<Output=String> + 'static>>; 
 }
 
+type Executor = Box<dyn Fn(Pin<Box<dyn Future<Output = ()> + 'static>>) -> ()>;
+
 pub struct DomDriver {
     driver: Rc<dyn DomDriverTrait>,
+    spawn_local_executor: Rc<Executor>,
 }
 
 impl DomDriver {
-    pub fn new<T: DomDriverTrait + 'static>(driver: T) -> DomDriver {
+    pub fn new<
+        T: DomDriverTrait + 'static,
+    >(driver: T, spawn_local: Executor) -> DomDriver {
         DomDriver {
-            driver: Rc::new(driver)
+            driver: Rc::new(driver),
+            spawn_local_executor: Rc::new(spawn_local)
         }
     }
 }
@@ -53,7 +59,8 @@ impl DomDriver {
 impl Clone for DomDriver {
     fn clone(&self) -> DomDriver {
         DomDriver {
-            driver: self.driver.clone()
+            driver: self.driver.clone(),
+            spawn_local_executor: self.spawn_local_executor.clone(),
         }
     }
 }
@@ -63,7 +70,16 @@ fn show_log(message: String) {
         log::info!("{}", message);
     }
 }
+
 impl DomDriver {
+    pub fn spawn_local<F>(&self, future: F)
+        where F: Future<Output = ()> + 'static {
+        
+            let fur = Box::pin(future);
+
+            let spawn_local_executor = self.spawn_local_executor.clone();
+            spawn_local_executor(fur)
+}
     pub fn createNode(&self, id: RealDomId, name: &'static str) {
         show_log(format!("createNode {} {}", id, name));
         self.driver.createNode(id, name);

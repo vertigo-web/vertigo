@@ -1,7 +1,7 @@
 use browserdriver::DomDriverBrowser;
 use serde::{Deserialize, Serialize};
 
-use virtualdom::{DomDriverTrait, FetchMethod};
+use virtualdom::FetchMethod;
 #[derive(Debug, Serialize, Deserialize)]
 pub struct Branch {
     pub name: String,
@@ -29,7 +29,7 @@ pub struct Signature {
 
 pub async fn run(repo: String) -> Branch {
 
-    let driver = DomDriverBrowser::default();
+    let driver = DomDriverBrowser::new();
 
     let url = format!("https://api.github.com/repos/{}/branches/master", repo);
 

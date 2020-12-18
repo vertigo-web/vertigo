@@ -16,7 +16,7 @@ use virtualdom::{
         Dependencies,
     },
     App,
-    VDomComponent
+    VDomComponent,
 };
 
 use browserdriver::DomDriverBrowser;
@@ -28,10 +28,10 @@ static ALLOC: wee_alloc::WeeAlloc = wee_alloc::WeeAlloc::INIT;
 
 thread_local! {
     static APP_STATE: RefCell<App> = RefCell::new({
+        let driver = DomDriverBrowser::new();
+
         let root: Dependencies = Dependencies::default();
         let appStateBox = app::State::new(&root);
-
-        let driver = DomDriverBrowser::default();
 
         App::new(driver, VDomComponent::new(appStateBox, app::render))
     });
@@ -46,11 +46,13 @@ pub async fn start_app() {
 
     APP_STATE.with(|state| state.borrow().start_app());
 
-    wasm_bindgen_futures::spawn_local(async {
+    let driver = DomDriverBrowser::new();
+
+    driver.spawn_local(async {
         log::info!("test z forka");
     });
 
-    wasm_bindgen_futures::spawn_local(async {
+    driver.spawn_local(async {
         let branch = fetch::run("rustwasm/wasm-bindgen".into()).await;  //.unwrap();
 
         log::info!("odpowiedź z serwera {:?}", branch);
@@ -87,5 +89,7 @@ Css::one("
 
 TODO - zrobić analizator Cargo.lock, wyszukiwać biblioteki w rónych wersjach które posiadają zmienne globalne
     przykład tokio ....
+
+TODO - fetch - pozbyć się unwrapow
 */
 
