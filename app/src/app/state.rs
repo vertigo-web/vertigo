@@ -50,6 +50,14 @@ impl State {
             log::info!("Odpowiedź {}", response);
         });
 
+        let driver_span2 = driver.clone();
+
+        driver.spawn_local(async move {
+            let url: String = "http://127.0.0.1:4000/api/list.json".into();
+            let response = driver_span2.fetch(FetchMethod::GET, url, None, None).await;
+            log::info!("Odpowiedź z listą {}", response);
+        });
+
         root.newComputedFrom(State {
             value: root.newValue(33),
             at: root.newValue(999),
