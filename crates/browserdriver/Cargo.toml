@@ -26,6 +26,3 @@ web-sys = { version="0.3.46", features=[
     "HtmlHeadElement",
     "Request"
 ]}
-
-#serde = { version = "1.0.114", features = ["derive", "rc"] }
-#serde_json = "1.0.55"
