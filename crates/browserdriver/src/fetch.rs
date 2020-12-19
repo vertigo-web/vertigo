@@ -8,14 +8,14 @@ use std::future::Future;
 
 use std::collections::HashMap;
 
-use virtualdom::FetchMethod;
+use virtualdom::{FetchMethod, FetchError};
 
 pub fn fetch(
     method: FetchMethod,
     url: String,
     headers: Option<HashMap<String, String>>,
     _body: Option<String>
-) -> Pin<Box<dyn Future<Output=String> + 'static>> {
+) -> Pin<Box<dyn Future<Output=Result<String, FetchError>> + 'static>> {
     Box::pin(async move {
         let mut opts = RequestInit::new();
         opts.method(method.to_string());
@@ -33,7 +33,14 @@ pub fn fetch(
 
         let window = web_sys::window().unwrap();
 
-        let resp_value = JsFuture::from(window.fetch_with_request(&request)).await.unwrap();
+        let resp_value = JsFuture::from(window.fetch_with_request(&request)).await;
+        
+        let resp_value = match resp_value {
+            Ok(resp_value) => resp_value,
+            Err(_) => {
+                return Err(FetchError::Error);
+            }
+        };
 
         // `resp_value` is a `Response` object.
         assert!(resp_value.is_instance_of::<Response>());
@@ -42,6 +49,6 @@ pub fn fetch(
         // Convert this other `Promise` into a rust `Future`.
         let json: JsValue = JsFuture::from(resp.text().unwrap()).await.unwrap();
 
-        json.as_string().unwrap()
+        Ok(json.as_string().unwrap())
     })
 }

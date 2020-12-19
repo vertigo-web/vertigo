@@ -6,7 +6,7 @@ use std::rc::Rc;
 use std::collections::HashMap;
 
 use virtualdom::{DomDriver, computed::BoxRefCell};
-use virtualdom::{DomDriverTrait, FetchMethod};
+use virtualdom::{DomDriverTrait, FetchMethod, FetchError};
 use virtualdom::RealDomId;
 
 use wasm_bindgen::JsCast;
@@ -347,7 +347,7 @@ impl DomDriverTrait for DomDriverBrowser {
         });
     }
 
-    fn fetch(&self, method: FetchMethod, url: String, headers: Option<HashMap<String, String>>, body: Option<String>) -> Pin<Box<dyn Future<Output=String> + 'static>> {
+    fn fetch(&self, method: FetchMethod, url: String, headers: Option<HashMap<String, String>>, body: Option<String>) -> Pin<Box<dyn Future<Output=Result<String, FetchError>> + 'static>> {
         fetch::fetch(method, url, headers, body)
     }
 }

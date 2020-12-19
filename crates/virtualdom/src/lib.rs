@@ -9,6 +9,7 @@ mod app;
 pub use driver::DomDriver;
 pub use driver::DomDriverTrait;
 pub use driver::FetchMethod;
+pub use driver::FetchError;
 
 pub use vdom::models::RealDomId::RealDomId;
 pub use vdom::models::VDomComponent::VDomComponent;

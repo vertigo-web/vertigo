@@ -43,8 +43,8 @@ impl State {
             })
         };
 
-        run1(&driver);
-        run2(&driver);
+        // run1(&driver);
+        // run2(&driver);
         run3(&driver);
 
         root.newComputedFrom(State {
@@ -75,24 +75,24 @@ impl State {
 }
 
 
-fn run1(driver: &DomDriver) {
-    let driver_span = driver.clone();
-    driver.spawn_local(async move {
-        let url: String = "https://api.github.com/feeds".into();
-        let response = driver_span.fetch(FetchMethod::GET, url, None, None).await;
-        log::info!("Odpowiedź {}", response);
-    });
-}
+// fn run1(driver: &DomDriver) {
+//     let driver_span = driver.clone();
+//     driver.spawn_local(async move {
+//         let url: String = "https://api.github.com/feeds".into();
+//         let response = driver_span.fetch(FetchMethod::GET, url, None, None).await;
+//         log::info!("Odpowiedź {}", response);
+//     });
+// }
 
-fn run2(driver: &DomDriver) {
-    let driver_span2 = driver.clone();
+// fn run2(driver: &DomDriver) {
+//     let driver_span2 = driver.clone();
 
-    driver.spawn_local(async move {
-        let url: String = "http://127.0.0.1:4000/api/list.json".into();
-        let response = driver_span2.fetch(FetchMethod::GET, url, None, None).await;
-        log::info!("Odpowiedź z listą {}", response);
-    });
-}
+//     driver.spawn_local(async move {
+//         let url: String = "http://127.0.0.1:4000/api/list.json".into();
+//         let response = driver_span2.fetch(FetchMethod::GET, url, None, None).await;
+//         log::info!("Odpowiedź z listą {}", response);
+//     });
+// }
 
 fn run3(driver: &DomDriver) {
     let driver_span = driver.clone();
@@ -130,8 +130,15 @@ fn run3(driver: &DomDriver) {
 
         let response = driver_span.fetch(FetchMethod::GET, url, None, None).await;
 
-        let branch = serde_json::from_str::<Branch>(response.as_str()).unwrap();
+        match response {
+            Ok(response) => {
+                let branch = serde_json::from_str::<Branch>(response.as_str()).unwrap();
 
-        log::info!("odpowiedź z serwera {:?}", branch);
+                log::info!("odpowiedź z serwera {:?}", branch);
+            },
+            Err(_) => {
+                log::error!("Error fetch branch");
+            }
+        }
     });
 }

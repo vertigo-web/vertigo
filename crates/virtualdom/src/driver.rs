@@ -21,6 +21,10 @@ impl FetchMethod {
     }
 }
 
+pub enum FetchError {
+    Error,
+}
+
 const SHOW_LOG: bool = false;
 
 pub trait DomDriverTrait {
@@ -35,7 +39,7 @@ pub trait DomDriverTrait {
     fn addChild(&self, parent: RealDomId, child: RealDomId);
     fn insertCss(&self, selector: String, value: String);
     fn setOnClick(&self, node: RealDomId, onClick: Option<Rc<dyn Fn()>>);
-    fn fetch(&self, method: FetchMethod, url: String, headers: Option<HashMap<String, String>>, body: Option<String>) -> Pin<Box<dyn Future<Output=String> + 'static>>; 
+    fn fetch(&self, method: FetchMethod, url: String, headers: Option<HashMap<String, String>>, body: Option<String>) -> Pin<Box<dyn Future<Output=Result<String, FetchError>> + 'static>>; 
 }
 
 type Executor = Box<dyn Fn(Pin<Box<dyn Future<Output = ()> + 'static>>) -> ()>;
@@ -135,7 +139,7 @@ impl DomDriver {
         self.driver.setOnClick(node, onClick);
     }
 
-    pub fn fetch(&self, method: FetchMethod, url: String, headers: Option<HashMap<String, String>>, body: Option<String>) -> Pin<Box<dyn Future<Output=String> + 'static>> {
+    pub fn fetch(&self, method: FetchMethod, url: String, headers: Option<HashMap<String, String>>, body: Option<String>) -> Pin<Box<dyn Future<Output=Result<String, FetchError>> + 'static>> {
         show_log(format!("fetch {:?} {}", method, url));
         self.driver.fetch(method, url, headers, body)
     }
