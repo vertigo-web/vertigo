@@ -37,7 +37,7 @@ pub async fn start_app() {
     console_error_panic_hook::set_once();
     wasm_logger::init(wasm_logger::Config::default());
 
-    log::info!("Start rustowego modułu ...");
+    log::info!("Start rustowego modułu ... 2");
 
     APP_STATE.with(|state| state.borrow().start_app());
 }

@@ -1,6 +1,12 @@
 Reactive webassembly
 ===================
 
+
+How to run:
+https://github.com/IMI-eRnD-Be/wasm-run
+
+
+
 Basic commands
 --------------
 - `cargo run` - Run project
@@ -16,19 +22,7 @@ Links
 - `https://github.com/brson/basic-http-server` - cargo install basic-http-server
 
 
-Struktura aplikacji, szkic
---------------
-
-AppDataState --- stan dotyczący danych                              (konstruktor tworzy Rc<AppDataState>)
-
-AppViewState (wstrzyknięty AppDataState) - stan dotyczący widoku    (konstruktor tworzy Rc<AppDataState>)
-
-AppState {
-    data: AppDataState,
-    view: AppViewState,
-}
-
-Jak odpalić
+Old version
 
 --------------
 - cargo install basic-http-server

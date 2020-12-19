@@ -1,5 +1,5 @@
+use structopt::StructOpt;
 
-pub fn main() {
-    println!("server ...");
-
-}
+#[wasm_run::main]
+#[derive(StructOpt, Debug)]
+enum Cli {}
