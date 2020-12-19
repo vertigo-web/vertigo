@@ -5,21 +5,17 @@ mod app;
 mod simple_counter;
 mod sudoku;
 
-use wasm_bindgen::prelude::*;
-
+use wasm_bindgen::prelude::wasm_bindgen;
 
 use std::cell::RefCell;
 
 use virtualdom::{
-    computed::{
-        Dependencies,
-    },
+    computed::Dependencies,
     App,
     VDomComponent,
 };
 
 use browserdriver::DomDriverBrowser;
-
 
 #[cfg(feature = "wee_alloc")]
 #[global_allocator]
@@ -44,56 +40,6 @@ pub async fn start_app() {
     log::info!("Start rustowego modułu ...");
 
     APP_STATE.with(|state| state.borrow().start_app());
-
-    let driver = DomDriverBrowser::new();
-
-    driver.spawn_local(async {
-        log::info!("test z forka");
-    });
-
-    driver.spawn_local(async {
-        // let branch = fetch::run("rustwasm/wasm-bindgen".into()).await;  //.unwrap();
-
-        use browserdriver::DomDriverBrowser;
-        use serde::{Deserialize, Serialize};
-        use virtualdom::FetchMethod;
-        
-        #[derive(Debug, Serialize, Deserialize)]
-        pub struct Branch {
-            pub name: String,
-            pub commit: Commit,
-        }
-
-        #[derive(Debug, Serialize, Deserialize)]
-        pub struct Commit {
-            pub sha: String,
-            pub commit: CommitDetails,
-        }
-
-        #[derive(Debug, Serialize, Deserialize)]
-        pub struct CommitDetails {
-            pub author: Signature,
-            pub committer: Signature,
-        }
-
-        #[derive(Debug, Serialize, Deserialize)]
-        pub struct Signature {
-            pub name: String,
-            pub email: String,
-        }
-
-        let repo: String = "rustwasm/wasm-bindgen".into();
-
-        let driver = DomDriverBrowser::new();
-
-        let url = format!("https://api.github.com/repos/{}/branches/master", repo);
-
-        let response = driver.fetch(FetchMethod::GET, url, None, None).await;
-
-        let branch = serde_json::from_str::<Branch>(response.as_str()).unwrap();
-
-        log::info!("odpowiedź z serwera {:?}", branch);
-    });
 }
 
 /*
