@@ -1,2 +1,1 @@
-basic-http-server ./app/dist/
-
+cargo run -- serve
