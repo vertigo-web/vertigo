@@ -6,6 +6,12 @@ members = [
     "crates/virtualdom",
 ]
 
+
 [profile.release]
-# Tell `rustc` to optimize for small code size.
-opt-level = "s"
+lto = true
+
+#for speed
+opt-level = 's'
+
+#for size
+#opt-level = 'z'
