@@ -45,9 +45,6 @@ pub async fn start_app() {
 /*
 TODO - wydzielić computed do osobnego crates
 
-TODO - obadac ten sposób odpalania projektu wasm
-    https://github.com/IMI-eRnD-Be/wasm-run
-
 TODO - Graph - usunac nieuzywane krawedzie (subskrybcje)
 
 TODO - Graph - zamienić Clone na Copy
@@ -55,9 +52,6 @@ TODO - Graph - zamienić Clone na Copy
 TODO - dodać jakieś makra które pozwolą na łatwe generowanie html-a (https://docs.rs/maplit/1.0.2/maplit/)
     to wygląda obiecująco
     https://github.com/chinedufn/percy/tree/master/crates/html-macro
-
-https://github.com/rustwasm/console_error_panic_hook#readme
-https://rustwasm.github.io/wasm-bindgen/reference/passing-rust-closures-to-js.html
 
 
 TODO - insertAsFirstChild, insertAfter. Wywalić te dwie funkcje.
@@ -76,5 +70,13 @@ TODO - zrobić analizator Cargo.lock, wyszukiwać biblioteki w rónych wersjac
 TODO - fetch - pozbyć się unwrapow
 
 TODO - dodać do DomDriver asynchronicznego sleep-a
+
+TODO - zrobić podpinanie tylko jednego głównego event na root ? Wtedy powinno się ograniczyć ilość interakcji z domem
+    kazdy element ma swoje id, po tym id identyfikoac w jaki element nastapilo klikniecie
+
+
+https://github.com/rustwasm/console_error_panic_hook#readme
+https://rustwasm.github.io/wasm-bindgen/reference/passing-rust-closures-to-js.html
+
 */
 
