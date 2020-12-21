@@ -29,6 +29,12 @@ impl RealDomId {
         }
     }
 
+    pub fn from_u64(id: u64) -> RealDomId {
+        RealDomId {
+            id
+        }
+    }
+
     pub fn to_u64(&self) -> u64 {
         self.id
     }

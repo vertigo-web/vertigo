@@ -25,9 +25,16 @@ fn get_document() -> (Document, HtmlHeadElement) {
     (document, head)
 }
 
-fn create_root(document: &Document) -> Element {
+fn create_node(document: &Document, id: &RealDomId, name: &'static str) -> Element {
+    let node = document.create_element(name).unwrap();
+    let id_str = format!("{}", id.to_u64());
+    node.set_attribute("data-id", id_str.as_str()).unwrap();
+    node
+}
+
+fn create_root(document: &Document, root_id: &RealDomId) -> Element {
     let body = document.body().expect("document should have a body");
-    let root = document.create_element("div").unwrap();
+    let root = create_node(document, root_id, "div");
     body.append_child(&root).unwrap();
     root
 }
@@ -53,7 +60,7 @@ impl ElementItem {
 
 struct ElementWrapper {
     item: ElementItem,
-    onClick: Option<DomEventDisconnect>,
+    onClick: Option<Rc<dyn Fn()>>,
 }
 
 impl ElementWrapper {
@@ -72,33 +79,104 @@ impl ElementWrapper {
     }
 }
 
+fn find_event(inner: &Rc<BoxRefCell<DomDriverBrowserInner>>, id: u64) -> Option<Rc<dyn Fn()>> {
+    let id = RealDomId::from_u64(id);
+
+    let on_click = inner.getWithContext(
+        id,
+        |state, id| -> Option<Rc<dyn Fn()>> {
+            let mut wsk = id;
+            let mut count = 0;
+
+            loop {
+                count += 1;
+
+                if count > 100 {
+                    log::error!("Too many nested levels");
+                    return None;
+                }
+
+                let item = state.elements.get(&wsk).unwrap();
+
+                if let Some(on_click) = &item.onClick {
+                    return Some(on_click.clone());
+                }
+
+                let parent = state.child_parent.get(&wsk);
+                if let Some(parent) = parent {
+                    wsk = parent.clone();
+                } else {
+                    return None;
+                }
+            }
+        }
+    );
+
+    on_click
+}
+
 pub struct DomDriverBrowserInner {
     document: Document,
     head: HtmlHeadElement,
     elements: HashMap<RealDomId, ElementWrapper>,
-}
-
-impl Default for DomDriverBrowserInner {
-    fn default() -> Self {
-        let (document, head) = get_document();
-        let root = create_root(&document);
-
-        let mut elements = HashMap::new();    
-        elements.insert(RealDomId::root(), ElementWrapper::fromNode(root));
-
-        Self {
-            document,
-            head,
-            elements,
-        }
-    }
+    child_parent: HashMap<RealDomId, RealDomId>,            //child -> parent
+    _mouse_down: Option<DomEventDisconnect>,
 }
 
 impl DomDriverBrowserInner {
+    fn new() -> Rc<BoxRefCell<Self>> {
+        let (document, head) = get_document();
+
+        let root_id = RealDomId::root();
+        let root = create_root(&document, &root_id);
+
+        let inner = Rc::new(
+            BoxRefCell::new(
+                DomDriverBrowserInner {
+                    document,
+                    head,
+                    elements: HashMap::new(),
+                    child_parent: HashMap::new(),
+                    _mouse_down: None
+                }
+            )
+        );
+
+        let clouser = {
+            let inner = inner.clone();
+
+            DomEventMouse::new(move |event: &web_sys::MouseEvent| {
+                // log::info!("event click ... {:?}", event);
+
+                let target = event.target().unwrap();
+                let element = target.dyn_ref::<Element>().unwrap();
+
+                let option_id: Option<String> = (*element).get_attribute("data-id");
+                let id: u64 = option_id.unwrap().parse::<u64>().unwrap();
+
+                let event_to_run = find_event(&inner, id);
+
+                if let Some(event_to_run) = event_to_run {
+                    event_to_run();
+                }
+            })
+        };
+
+        let mouse_down = clouser.append_to_mousedown(&root);
+
+        inner.change(
+            (mouse_down, root_id, root),
+            |state, (mouse_down, root_id, root)| {
+                state.elements.insert(root_id, ElementWrapper::fromNode(root));
+                state._mouse_down = Some(mouse_down);
+            }
+        );
+
+        inner
+    }
+
     fn createNode(&mut self, id: RealDomId, name: &'static str) {
-        let node = self.document.create_element(name).unwrap();
-        let id_str = format!("{}", id.to_u64());
-        node.set_attribute("debug-id", id_str.as_str()).unwrap();
+        let node = create_node(&self.document, &id, name);
         self.elements.insert(id, ElementWrapper::fromNode(node));
     }
 
@@ -158,11 +236,13 @@ impl DomDriverBrowserInner {
             return;
         }
 
+        self.child_parent.remove(&id);
+
         log::error!("Missing element with id={}", id);
     }
 
-    fn get_node(&self, refId: RealDomId) -> Option<Node> {
-        let child_item = self.elements.get(&refId);
+    fn get_node(&self, refId: &RealDomId) -> Option<Node> {
+        let child_item = self.elements.get(refId);
 
         match child_item {
             Some(ElementWrapper { item: ElementItem::Element { node }, ..}) => {
@@ -180,25 +260,32 @@ impl DomDriverBrowserInner {
         }
     }
 
-    fn insertAsFirstChild(&self, parent: RealDomId, child: RealDomId) {
-        let parent_item = self.get_node(parent).unwrap();
-        let child_item = self.get_node(child).unwrap();
-
-        parent_item.insert_before(&child_item, None).unwrap();
+    fn copy_parent_from_rel(&mut self, child: &RealDomId, rel: &RealDomId) {
+        let rel_parent = self.child_parent.get(rel).unwrap().clone();
+        self.child_parent.insert(child.clone(), rel_parent);
     }
 
-    fn insertBefore(&self, refId: RealDomId, child: RealDomId) {
-        let refId_item = self.get_node(refId).unwrap();
-        let child_item = self.get_node(child).unwrap();
+    fn insertAsFirstChild(&mut self, parent: RealDomId, child: RealDomId) {
+        let parent_item = self.get_node(&parent).unwrap();
+        let child_item = self.get_node(&child).unwrap();
+
+        parent_item.insert_before(&child_item, None).unwrap();
+        self.child_parent.insert(child, parent);
+    }
+
+    fn insertBefore(&mut self, refId: RealDomId, child: RealDomId) {
+        let refId_item = self.get_node(&refId).unwrap();
+        let child_item = self.get_node(&child).unwrap();
 
         let parent: Node = refId_item.parent_node().unwrap();
 
         parent.insert_before(&child_item, Some(&refId_item)).unwrap();
+        self.copy_parent_from_rel(&child, &refId);
     }
 
-    fn insertAfter(&self, refId: RealDomId, child: RealDomId) {
-        let refId_item = self.get_node(refId).unwrap();
-        let child_item = self.get_node(child).unwrap();
+    fn insertAfter(&mut self, refId: RealDomId, child: RealDomId) {
+        let refId_item = self.get_node(&refId).unwrap();
+        let child_item = self.get_node(&child).unwrap();
 
         let parent: Node = refId_item.parent_node().unwrap();
         let next: Option<Node> = refId_item.next_sibling();
@@ -211,39 +298,20 @@ impl DomDriverBrowserInner {
                 parent.insert_before(&child_item, None).unwrap();
             }
         }
+        self.copy_parent_from_rel(&child, &refId);
     }
 
     fn addChild(&mut self, parent: RealDomId, child: RealDomId) {
-        let parent_item = self.get_node(parent).unwrap();
-        let child_item = self.get_node(child).unwrap();
+        let parent_item = self.get_node(&parent).unwrap();
+        let child_item = self.get_node(&child).unwrap();
 
         parent_item.append_child(&child_item).unwrap();
+        self.child_parent.insert(child, parent);
     }
 
     fn setOnClick(&mut self, node_id: RealDomId, onClick: Option<Rc<dyn Fn()>>) {
         let item = self.elements.get_mut(&node_id).unwrap();
-
-        match onClick {
-            Some(onClick) => {
-                let disconnect = match item {
-                    ElementWrapper { item: ElementItem::Element { node }, ..} => {
-                        let clouser = DomEventMouse::new(move |_event: &web_sys::MouseEvent| {
-                            onClick();
-                        });
-        
-                        clouser.append_to_mousedown(&node)
-                    },
-                    _ => {
-                        unreachable!();
-                    }
-                };
-
-                item.onClick = Some(disconnect);
-            },
-            None => {
-                item.onClick = None;
-            }
-        }
+        item.onClick = onClick;
     }
 
     fn insertCss(&self, selector: String, value: String) {
@@ -262,11 +330,7 @@ pub struct DomDriverBrowser {
 
 impl DomDriverBrowser {
     pub fn new() -> DomDriver {
-        let driver = Rc::new(
-            BoxRefCell::new(
-                DomDriverBrowserInner::default()
-            )
-        );
+        let driver = DomDriverBrowserInner::new();
 
         let domDriverBrowser = DomDriverBrowser {
             driver,
