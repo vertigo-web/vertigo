@@ -71,8 +71,7 @@ TODO - fetch - pozbyć się unwrapow
 
 TODO - dodać do DomDriver asynchronicznego sleep-a
 
-TODO - zrobić podpinanie tylko jednego głównego event na root ? Wtedy powinno się ograniczyć ilość interakcji z domem
-    kazdy element ma swoje id, po tym id identyfikoac w jaki element nastapilo klikniecie
+TODO - dorobić event od klawiatury. Mozliwość wpisania tekstu.
 
 
 https://github.com/rustwasm/console_error_panic_hook#readme
