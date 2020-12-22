@@ -2,6 +2,7 @@ mod box_ref_cell;
 mod graph_id;
 mod dependencies;
 mod value;
+mod auto_map;
 mod computed;
 mod client;
 
@@ -12,6 +13,7 @@ mod dependencies_inner;
 mod tests;
 
 pub use value::Value;
+pub use auto_map::AutoMap;
 pub use computed::Computed;
 pub use client::Client;
 pub use dependencies::Dependencies;

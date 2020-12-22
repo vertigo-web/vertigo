@@ -24,7 +24,7 @@ impl<T: 'static> Value<T> {
     }
 
     pub fn setValue(&self, value: T) {
-        self.deps.transaction(||{
+        self.deps.transaction(|| {
             self.value.change(value, |state, value| {
                 *state = Rc::new(value);
             });
