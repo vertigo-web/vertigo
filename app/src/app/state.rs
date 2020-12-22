@@ -1,4 +1,4 @@
-use virtualdom::{DomDriver, FetchMethod, computed::{
+use virtualdom::{DomDriver, computed::{
         Dependencies,
         Value,
         Computed,
@@ -7,6 +7,7 @@ use virtualdom::{DomDriver, FetchMethod, computed::{
 use crate::simple_counter;
 use crate::sudoku;
 use crate::input;
+use crate::github_explorer;
 
 pub struct State {
     pub value: Value<u32>,
@@ -21,6 +22,8 @@ pub struct State {
     pub sudoku: Computed<sudoku::Sudoku>,
 
     pub input: Computed<input::State>,
+
+    pub github_explorer: Computed<github_explorer::State>,
 }
 
 impl State {
@@ -48,7 +51,6 @@ impl State {
 
         // run1(&driver);
         // run2(&driver);
-        run3(&driver);
 
         root.newComputedFrom(State {
             value: root.newValue(33),
@@ -59,7 +61,8 @@ impl State {
             counter4,
             suma,
             sudoku: sudoku::Sudoku::new(root),
-            input: input::State::new(&root)
+            input: input::State::new(&root),
+            github_explorer: github_explorer::State::new(&root, driver),
         })
     }
 
@@ -97,52 +100,3 @@ impl State {
 //         log::info!("Odpowiedź z listą {}", response);
 //     });
 // }
-
-fn run3(driver: &DomDriver) {
-    let driver_span = driver.clone();
-
-    driver.spawn_local(async move {
-        use serde::{Deserialize, Serialize};
-        
-        #[derive(Debug, Serialize, Deserialize)]
-        pub struct Branch {
-            pub name: String,
-            pub commit: Commit,
-        }
-
-        #[derive(Debug, Serialize, Deserialize)]
-        pub struct Commit {
-            pub sha: String,
-            pub commit: CommitDetails,
-        }
-
-        #[derive(Debug, Serialize, Deserialize)]
-        pub struct CommitDetails {
-            pub author: Signature,
-            pub committer: Signature,
-        }
-
-        #[derive(Debug, Serialize, Deserialize)]
-        pub struct Signature {
-            pub name: String,
-            pub email: String,
-        }
-
-        let repo: String = "rustwasm/wasm-bindgen".into();
-
-        let url = format!("https://api.github.com/repos/{}/branches/master", repo);
-
-        let response = driver_span.fetch(FetchMethod::GET, url, None, None).await;
-
-        match response {
-            Ok(response) => {
-                let branch = serde_json::from_str::<Branch>(response.as_str()).unwrap();
-
-                log::info!("odpowiedź z serwera {:?}", branch);
-            },
-            Err(_) => {
-                log::error!("Error fetch branch");
-            }
-        }
-    });
-}
