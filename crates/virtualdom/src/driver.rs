@@ -40,6 +40,7 @@ pub trait DomDriverTrait {
     fn addChild(&self, parent: RealDomId, child: RealDomId);
     fn insertCss(&self, selector: String, value: String);
     fn setOnClick(&self, node: RealDomId, onClick: Option<Rc<dyn Fn()>>);
+    fn setOnInput(&self, node: RealDomId, onClick: Option<Rc<dyn Fn(String)>>);
     fn fetch(&self, method: FetchMethod, url: String, headers: Option<HashMap<String, String>>, body: Option<String>) -> Pin<Box<dyn Future<Output=Result<String, FetchError>> + 'static>>; 
 }
 
@@ -143,6 +144,11 @@ impl DomDriver {
     pub fn setOnClick(&self, node: RealDomId, onClick: Option<Rc<dyn Fn()>>) {
         show_log(format!("setOnClick {} --onClick--", node));
         self.driver.setOnClick(node, onClick);
+    }
+
+    pub fn setOnInput(&self, node: RealDomId, setOnInput: Option<Rc<dyn Fn(String)>>) {
+        show_log(format!("setOnInput {} --setOnInput--", node));
+        self.driver.setOnInput(node, setOnInput);
     }
 
     pub fn fetch(&self, method: FetchMethod, url: String, headers: Option<HashMap<String, String>>, body: Option<String>) -> Pin<Box<dyn Future<Output=Result<String, FetchError>> + 'static>> {

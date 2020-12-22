@@ -14,6 +14,7 @@ pub struct VDomNode {
     pub attr: HashMap<&'static str, String>,
     pub child: Vec<VDom>,
     pub onClick: Option<Rc<dyn Fn()>>,
+    pub onInput: Option<Rc<dyn Fn(String)>>,
     pub css: Option<Css>,
     pub cssFrames: Option<CssFrames>,
 }
@@ -25,6 +26,7 @@ impl VDomNode {
             attr: HashMap::new(),
             child: Vec::new(),
             onClick: None,
+            onInput: None,
             css: None,
             cssFrames: None,
         };
@@ -39,6 +41,9 @@ impl VDomNode {
                 },
                 NodeAttr::OnClick { event } => {
                     result.onClick = Some(event);
+                },
+                NodeAttr::OnInput { event } => {
+                    result.onInput = Some(event);
                 },
                 NodeAttr::Attr { name , value} => {
                     result.attr.insert(name, value);
@@ -58,6 +63,7 @@ impl VDomNode {
             attr: HashMap::new(),
             child: childList,
             onClick: None,
+            onInput: None,
             css: None,
             cssFrames: None,
         }

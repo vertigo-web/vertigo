@@ -48,7 +48,7 @@ TODO - dorobić konwersję wejściowego argumentu.
     obecnie trzeba robić: value.setValue("value 1".into());
         ma obsługiwać setValue(String) oraz setValue(&str)
 
-TODO - animacje, pozbyć się konieczności wymy≥ślania nazwy animacji
+TODO - animacje, pozbyć się konieczności wymyślania nazwy animacji
 
 TODO - wydzielić computed do osobnego crates
 
@@ -81,6 +81,11 @@ TODO - dodać do DomDriver asynchronicznego sleep-a
 TODO - dorobić event od klawiatury. Mozliwość wpisania tekstu.
 
 TODO - updejt nazwy taga ...
+
+TODO - 
+    <textarea value="" />
+    makro html pewnie będzie mogło przyjmować ten atrybut lub <textarea>value</textarea>
+
 
 https://github.com/rustwasm/console_error_panic_hook#readme
 https://rustwasm.github.io/wasm-bindgen/reference/passing-rust-closures-to-js.html

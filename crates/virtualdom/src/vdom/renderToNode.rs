@@ -253,6 +253,7 @@ fn updateNodeAttr(cssManager: &CssManager, realNode: &RealDomNode, node: &VDomNo
 
     realNode.updateAttr(&node.attr, className);
     realNode.updateOnClick(node.onClick.clone());
+    realNode.updateOnInput(node.onInput.clone());
 }
 
 fn updateNode(cssManager: &CssManager, target: &RealDomNode, newVersion: &VDomNode) {

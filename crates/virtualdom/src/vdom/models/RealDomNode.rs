@@ -109,6 +109,9 @@ impl RealDomNodeInner {
         self.domDriver.setOnClick(self.idDom.clone(), onClick);
     }
 
+    pub fn updateOnInput(&mut self, onClick: Option<Rc<dyn Fn(String)>>) {
+        self.domDriver.setOnInput(self.idDom.clone(), onClick);
+    }
 
     pub fn extract_child(&mut self) -> Vec<RealDom> {
         std::mem::replace(&mut self.child, Vec::new())
@@ -177,6 +180,14 @@ impl RealDomNode {
             onClick,
             |state, onClick| {
                 state.updateOnClick(onClick)
+        })
+    }
+
+    pub fn updateOnInput(&self, onClick: Option<Rc<dyn Fn(String)>>) {
+        self.inner.change(
+            onClick,
+            |state, onClick| {
+                state.updateOnInput(onClick)
         })
     }
 

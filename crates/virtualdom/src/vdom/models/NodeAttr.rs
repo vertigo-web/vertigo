@@ -20,6 +20,9 @@ pub enum NodeAttr {
     OnClick {
         event: Rc<dyn Fn()>
     },
+    OnInput {
+        event: Rc<dyn Fn(String)>
+    },
     Attr {
         name: &'static str,
         value: String,
@@ -45,6 +48,12 @@ pub fn cssFrames(frames: CssFrames) -> NodeAttr {
 
 pub fn onClick<F: Fn() + 'static>(callback: F) -> NodeAttr {
     NodeAttr::OnClick {
+        event: Rc::new(callback),
+    }
+}
+
+pub fn onInput<F: Fn(String) + 'static>(callback: F) -> NodeAttr {
+    NodeAttr::OnInput {
         event: Rc::new(callback),
     }
 }

@@ -53,8 +53,18 @@ fn button_css() -> Css {
     ")
 }
 
+fn text_css() -> Css {
+    Css::one("
+        width: 600px;
+        height: 300px;
+        border: 1px solid black;
+        padding: 5px;
+        margin: 10px;
+    ")
+}
+
 pub fn render(state: &Computed<State>) -> VDomNode {
-    use NodeAttr::{buildNode, node, css, text, attr, onClick};
+    use NodeAttr::{buildNode, node, css, text, attr, onClick, onInput};
 
     let state = state.getValue();
 
@@ -74,6 +84,22 @@ pub fn render(state: &Computed<State>) -> VDomNode {
         }
     };
 
+    let on_set3 = {
+        let value = state.value.clone();
+        move |new_value: String| {
+            log::info!(" nowa wartosc3 {}", new_value);
+            value.setValue(new_value);
+        }
+    };
+
+    let on_set4 = {
+        let value = state.value.clone();
+        move |new_value: String| {
+            log::info!(" nowa wartosc4 {}", new_value);
+            value.setValue(new_value);
+        }
+    };
+
     let value = state.value.getValue();
 
     buildNode("div", vec!(
@@ -81,7 +107,8 @@ pub fn render(state: &Computed<State>) -> VDomNode {
         text("To jest input"),
         node("input", vec!(
             css(input_css()),
-            attr("value", (*value).as_str())
+            attr("value", (*value).as_str()),
+            onInput(on_set3),
         )),
         node("button", vec!(
             css(button_css()),
@@ -93,5 +120,10 @@ pub fn render(state: &Computed<State>) -> VDomNode {
             onClick(on_set2),
             text("set 2")
         )),
+        node("textarea", vec!(
+            css(text_css()),
+            attr("value", (*value).as_str()),
+            onInput(on_set4),
+        ))
     ))
 }

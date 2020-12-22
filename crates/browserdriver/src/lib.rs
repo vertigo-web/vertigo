@@ -1,7 +1,7 @@
 #![allow(non_snake_case)]
 #![allow(non_camel_case_types)]
 
-use web_sys::{Document, Element, Text, HtmlHeadElement, Node};
+use web_sys::{Document, Element, Text, HtmlHeadElement, Node, HtmlInputElement, HtmlTextAreaElement};
 use std::rc::Rc;
 use std::collections::HashMap;
 
@@ -10,7 +10,7 @@ use virtualdom::{DomDriverTrait, FetchMethod, FetchError};
 use virtualdom::RealDomId;
 
 use wasm_bindgen::JsCast;
-use dom_event::{DomEventDisconnect, DomEventMouse};
+use dom_event::{DomEventDisconnect, DomEvent, /*DomEventKeyboard, DomEventMouse */};
 
 use std::pin::Pin;
 use std::future::Future;
@@ -61,6 +61,7 @@ impl ElementItem {
 struct ElementWrapper {
     item: ElementItem,
     onClick: Option<Rc<dyn Fn()>>,
+    onInput: Option<Rc<dyn Fn(String)>>,
 }
 
 impl ElementWrapper {
@@ -68,6 +69,7 @@ impl ElementWrapper {
         ElementWrapper {
             item: ElementItem::fromNode(node),
             onClick: None,
+            onInput: None,
         }
     }
 
@@ -75,11 +77,12 @@ impl ElementWrapper {
         ElementWrapper {
             item: ElementItem::fromText(text),
             onClick: None,
+            onInput: None,
         }
     }
 }
 
-fn find_event(inner: &Rc<BoxRefCell<DomDriverBrowserInner>>, id: u64) -> Option<Rc<dyn Fn()>> {
+fn find_event_on_click(inner: &Rc<BoxRefCell<DomDriverBrowserInner>>, id: u64) -> Option<Rc<dyn Fn()>> {
     let id = RealDomId::from_u64(id);
 
     let on_click = inner.getWithContext(
@@ -115,12 +118,38 @@ fn find_event(inner: &Rc<BoxRefCell<DomDriverBrowserInner>>, id: u64) -> Option<
     on_click
 }
 
+fn find_event_on_input(inner: &Rc<BoxRefCell<DomDriverBrowserInner>>, id: u64) -> Option<Rc<dyn Fn(String)>> {
+    let id = RealDomId::from_u64(id);
+
+    let on_input = inner.getWithContext(
+        id,
+        |state, id| -> Option<Rc<dyn Fn(String)>> {
+            let item = state.elements.get(&id).unwrap();
+
+            if let Some(on_input) = &item.onInput {
+                return Some(on_input.clone());
+            }
+            return None;
+        }
+    );
+    on_input
+}
+
+fn find_dom_id(event: &web_sys::Event) -> u64 {
+    let target = event.target().unwrap();
+    let element = target.dyn_ref::<Element>().unwrap();
+
+    let option_id: Option<String> = (*element).get_attribute("data-id");
+    let id: u64 = option_id.unwrap().parse::<u64>().unwrap();
+    id
+}
+
 pub struct DomDriverBrowserInner {
     document: Document,
     head: HtmlHeadElement,
     elements: HashMap<RealDomId, ElementWrapper>,
     child_parent: HashMap<RealDomId, RealDomId>,            //child -> parent
-    _mouse_down: Option<DomEventDisconnect>,
+    _dom_event_disconnect: Vec<DomEventDisconnect>,
 }
 
 impl DomDriverBrowserInner {
@@ -137,38 +166,61 @@ impl DomDriverBrowserInner {
                     head,
                     elements: HashMap::new(),
                     child_parent: HashMap::new(),
-                    _mouse_down: None
+                    _dom_event_disconnect: Vec::new(),
                 }
             )
         );
 
-        let clouser = {
+        let mut dom_event_disconnect = Vec::new();
+
+        dom_event_disconnect.push({
             let inner = inner.clone();
 
-            DomEventMouse::new(move |event: &web_sys::MouseEvent| {
+            DomEvent::new_event(&root, "mousedown",move |event: web_sys::Event| {
                 // log::info!("event click ... {:?}", event);
 
-                let target = event.target().unwrap();
-                let element = target.dyn_ref::<Element>().unwrap();
+                let dom_id = find_dom_id(&event);
 
-                let option_id: Option<String> = (*element).get_attribute("data-id");
-                let id: u64 = option_id.unwrap().parse::<u64>().unwrap();
-
-                let event_to_run = find_event(&inner, id);
+                let event_to_run = find_event_on_click(&inner, dom_id);
 
                 if let Some(event_to_run) = event_to_run {
                     event_to_run();
                 }
             })
-        };
+        });
 
-        let mouse_down = clouser.append_to_mousedown(&root);
+        dom_event_disconnect.push({
+            let inner = inner.clone();
+
+            DomEvent::new_event(&root, "input", move |event: web_sys::Event| {
+
+                let dom_id = find_dom_id(&event);
+                let event_to_run = find_event_on_input(&inner, dom_id);
+
+                if let Some(event_to_run) = event_to_run {
+                    let target = event.target().unwrap();
+                    let input = target.dyn_ref::<HtmlInputElement>();
+
+                    if let Some(input) = input {
+                        event_to_run(input.value());
+                        return;
+                    }
+
+                    let input = target.dyn_ref::<HtmlTextAreaElement>();
+
+                    if let Some(input) = input {
+                        event_to_run(input.value());
+                        return;
+                    }
+                }
+            })
+        });
 
         inner.change(
-            (mouse_down, root_id, root),
-            |state, (mouse_down, root_id, root)| {
+            (dom_event_disconnect, root_id, root),
+            |state, (dom_event_disconnect, root_id, root)| {
                 state.elements.insert(root_id, ElementWrapper::fromNode(root));
-                state._mouse_down = Some(mouse_down);
+                state._dom_event_disconnect = dom_event_disconnect;
             }
         );
 
@@ -210,6 +262,22 @@ impl DomDriverBrowserInner {
             match elem {
                 ElementWrapper { item: ElementItem::Element { node }, ..} => {
                     node.set_attribute(name, value).unwrap();
+
+                    if name == "value" {
+                        let input_node = node.clone().dyn_into::<HtmlInputElement>();
+
+                        if let Ok(input_node) = input_node {
+                            input_node.set_value(value);
+                            return;
+                        }
+
+                        let textarea_node = node.clone().dyn_into::<HtmlTextAreaElement>();
+
+                        if let Ok(textarea_node) = textarea_node {
+                            textarea_node.set_value(value);
+                            return;
+                        }
+                    }
                 },
                 ElementWrapper { item: ElementItem::Text { .. }, ..} => {
                     log::error!("Cannot set attribute on a text node id={}", id);
@@ -332,6 +400,11 @@ impl DomDriverBrowserInner {
         item.onClick = onClick;
     }
 
+    fn setOnInput(&mut self, node_id: RealDomId, onInput: Option<Rc<dyn Fn(String)>>) {
+        let item = self.elements.get_mut(&node_id).unwrap();
+        item.onInput = onInput;
+    }
+
     fn insertCss(&self, selector: String, value: String) {
         let style = self.document.create_element("style").unwrap();
         let content = self.document.create_text_node(format!("{} {{ {} }}", selector, value).as_str());
@@ -432,6 +505,12 @@ impl DomDriverTrait for DomDriverBrowser {
     fn setOnClick(&self, node: RealDomId, onClick: Option<Rc<dyn Fn()>>) {
         self.driver.change((node, onClick), |state, (node, onClick)| {
             state.setOnClick(node, onClick);
+        });
+    }
+
+    fn setOnInput(&self, node: RealDomId, onInput: Option<Rc<dyn Fn(String)>>) {
+        self.driver.change((node, onInput), |state, (node, onInput)| {
+            state.setOnInput(node, onInput);
         });
     }
 
