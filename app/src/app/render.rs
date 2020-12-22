@@ -6,7 +6,7 @@ use virtualdom::{
     NodeAttr,
 };
 
-use crate::app;
+use crate::{app, github_explorer};
 
 use crate::simple_counter;
 use crate::sudoku;
@@ -137,5 +137,7 @@ pub fn render(app_state: &Computed<app::State>) -> VDomNode {
         )),
 
         component(app_state.input.clone(), input::render),
+
+        component(app_state.github_explorer.clone(), github_explorer::render),
     ))
 }

@@ -5,6 +5,7 @@ mod app;
 mod simple_counter;
 mod sudoku;
 mod input;
+mod github_explorer;
 
 use wasm_bindgen::prelude::wasm_bindgen;
 
