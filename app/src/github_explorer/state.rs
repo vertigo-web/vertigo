@@ -31,17 +31,15 @@ impl State {
         root.newComputedFrom(State {
             repo_input: root.newValue("".into()),
             repo_shown: root.newValue("".into()),
-            data: AutoMap::new(root.clone(), Box::new(
-                move |repo_name| {
-                    log::info!("Creating for {}", repo_name);
-                    let new_value = root_inner.newValue(Resource::Loading);
-                    let new_computed = new_value.toComputed();
-
-                    fetch_repo(repo_name, new_value, &driver_inner);
-
-                    new_computed
-                }
-            ))
+            data: AutoMap::new(root, move |repo_name: &String| -> Computed<Resource<Branch>> {
+                log::info!("Creating for {}", repo_name);
+                let new_value = root_inner.newValue(Resource::Loading);
+                let new_computed = new_value.toComputed();
+    
+                fetch_repo(repo_name.as_str(), new_value, &driver_inner);
+    
+                new_computed
+            }),
         })
     }
 }
