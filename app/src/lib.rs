@@ -4,6 +4,7 @@
 mod app;
 mod simple_counter;
 mod sudoku;
+mod input;
 
 use wasm_bindgen::prelude::wasm_bindgen;
 
@@ -43,6 +44,12 @@ pub async fn start_app() {
 }
 
 /*
+TODO - dorobić konwersję wejściowego argumentu.
+    obecnie trzeba robić: value.setValue("value 1".into());
+        ma obsługiwać setValue(String) oraz setValue(&str)
+
+TODO - animacje, pozbyć się konieczności wymy≥ślania nazwy animacji
+
 TODO - wydzielić computed do osobnego crates
 
 TODO - Graph - usunac nieuzywane krawedzie (subskrybcje)

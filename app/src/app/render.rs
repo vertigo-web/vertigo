@@ -10,6 +10,7 @@ use crate::app;
 
 use crate::simple_counter;
 use crate::sudoku;
+use crate::input;
 
 use super::spinner::spinner;
 
@@ -133,6 +134,8 @@ pub fn render(app_state: &Computed<app::State>) -> VDomNode {
         node("div", vec!(
             component(app_state.sudoku.clone(), sudoku::examples_render),
             component(app_state.sudoku.clone(), sudoku::main_render)
-        ))
+        )),
+
+        component(app_state.input.clone(), input::render),
     ))
 }

@@ -6,6 +6,7 @@ use virtualdom::{DomDriver, FetchMethod, computed::{
 
 use crate::simple_counter;
 use crate::sudoku;
+use crate::input;
 
 pub struct State {
     pub value: Value<u32>,
@@ -18,6 +19,8 @@ pub struct State {
     pub suma: Computed<u32>,
 
     pub sudoku: Computed<sudoku::Sudoku>,
+
+    pub input: Computed<input::State>,
 }
 
 impl State {
@@ -55,7 +58,8 @@ impl State {
             counter3,
             counter4,
             suma,
-            sudoku: sudoku::Sudoku::new(root)
+            sudoku: sudoku::Sudoku::new(root),
+            input: input::State::new(&root)
         })
     }
 
