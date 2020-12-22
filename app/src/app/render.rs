@@ -11,6 +11,8 @@ use crate::app;
 use crate::simple_counter;
 use crate::sudoku;
 
+use super::spinner::spinner;
+
 fn cssFooter(showColor: bool) -> Css {
     let base = Css::one("background-color: yellow;");
 
@@ -70,6 +72,7 @@ fn render_header(app_state: &Computed<app::State>) -> VDomNode {
         node("div", vec!(
             css(cssBg()),
             text("bla bla bla"),
+            spinner(),
         )),
         node("div", vec!(
             onClick(onUp.clone()),
