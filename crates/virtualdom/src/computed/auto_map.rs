@@ -17,29 +17,32 @@ pub struct AutoMap<K: Eq + Hash + Clone, V: 'static> {
 }
 
 impl<K: Eq + Hash + Clone, V: 'static> AutoMap<K, V> {
-    pub fn new(deps: Dependencies, create: Box<dyn Fn(&K) -> Computed<V>>) -> AutoMap<K, V> {
+    pub fn new<C: Fn(&K) -> Computed<V> + 'static>(deps: &Dependencies, create: C) -> AutoMap<K, V> {
         AutoMap {
             id: GraphId::default(),
-            create,
+            create: Box::new(create),
             values: Rc::new(BoxRefCell::new(HashMap::new())),
-            deps
+            deps: deps.clone(),
         }
     }
 
     pub fn getValue(&self, key: &K) -> Computed<V> {
         self.deps.reportDependenceInStack(self.id.clone());
 
-        let values_inner = self.values.get(|state| state.clone());
+        self.values.change(
+            (key, &(self.create)), 
+            |state, (key, create)| -> Computed<V> {
+                let item = (*state).get(key);
 
-        match values_inner.get(key) {
-            None => {
-                let new_val = (self.create)(key);
-                self.values.change(new_val.clone(), |state, value| {
-                    state.insert(key.to_owned(), value);
-                });
-                new_val
-            }
-            Some(v) => v.clone(),
-        }
+                if let Some(item) = item {
+                    return item.clone();
+                }
+
+                let new_item = create(key);
+
+                (*state).insert(key.clone(), new_item.clone());
+
+                new_item
+        })
     }
 }
