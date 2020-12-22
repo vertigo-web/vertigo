@@ -114,6 +114,10 @@ impl RealDomNodeInner {
         std::mem::replace(&mut self.child, Vec::new())
     }
 
+    pub fn put_child(&mut self, child: Vec<RealDom>) -> Vec<RealDom> {
+        std::mem::replace(&mut self.child, child)
+    }
+
     pub fn appendAfter(&mut self, prevNode: Option<RealDomId>, newChild: RealDom) {
         match prevNode {
             Some(prevNode) => {
@@ -195,6 +199,12 @@ impl RealDomNode {
             (),
             |state, ()| {
                 state.extract_child()
+        })
+    }
+
+    pub fn put_child(&self, child: Vec<RealDom>) {
+        self.inner.change(child, |state, child| {
+            state.put_child(child);
         })
     }
 

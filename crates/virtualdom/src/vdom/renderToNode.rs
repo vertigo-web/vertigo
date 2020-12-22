@@ -60,19 +60,102 @@ impl<K: Eq + Hash, RNode, VNode> CacheNode<K, RNode, VNode> {
     }
 }
 
-/*
-    abcdefgh
+enum NodePairs<'a> {
+    Component {
+        real: &'a RealDomComponent,
+        new: &'a VDomComponent
+    },
+    Node {
+        real: &'a RealDomNode,
+        new: &'a VDomNode,
+    },
+    Text {
+        real: &'a RealDomText,
+        new: &'a VDomText,
+    }
+}
 
-    bcdeafgh
+fn get_pair_for_update<'a>(real: &'a RealDom, new: &'a VDom) -> Option<NodePairs<'a>> {
+    match real {
+        RealDom::Component { node } => {
+            if let VDom::Component { node: vnode } = new {
+                if node.id == vnode.id {
+                    return Some(NodePairs::Component {
+                        real: node,
+                        new: vnode
+                    });
+                }
+            }
+        },
+        RealDom::Node { node } => {
+            if let VDom::Node { node : vnode} = new {
+                if node.name() == vnode.name {
+                    return Some(NodePairs::Node {
+                        real: node,
+                        new: vnode,
+                    });
+                }
+            }
+        },
+        RealDom::Text { node } => {
+            if let VDom::Text { node: vnode } = new {
+                return Some(NodePairs::Text {
+                    real: node,
+                    new: vnode
+                });
+            }
+        }
+    }
 
-    złap pierwszy nowy element,
-    sprawdź czy kolejny element za nim jest tym którym powinien być
+    None
+}
 
-    wyznac duze fragmenty które się zgaedzają
-    najmniejszy z elementów przenies na swoje miejsce
-*/
+fn updateNodeChildUpdatedWithOrder(cssManager: &CssManager, target: &Vec<RealDom>, newVersion: &Vec<VDom>) -> bool {
+    if target.len() != newVersion.len() {
+        return false;
+    }
+
+    let max_index = target.len();
+
+    let mut for_update: Vec<NodePairs> = Vec::new();
+
+    for index in 0..max_index {
+        let real = &target[index];
+        let new = &newVersion[index];
+
+        if let Some(pair) = get_pair_for_update(real, new) {
+            for_update.push(pair);
+        } else {
+            return false;
+        }
+    }
+
+    for item in for_update {
+        match item {
+            NodePairs::Component { real: _real, new: _new } => {
+            },
+            NodePairs::Node { real, new } => {
+                updateNodeAttr(&cssManager, real, new);
+                updateNodeChild(cssManager, real, new);
+            },
+            NodePairs::Text { real, new } => {
+                real.update(&new.value);
+            },
+        }
+    }
+
+    true
+}
 
 fn updateNodeChild(cssManager: &CssManager, target: &RealDomNode, newVersion: &VDomNode) {
+
+    let mut realChild = target.extract_child();
+
+    let update_order_ok = updateNodeChildUpdatedWithOrder(cssManager, &mut realChild, &newVersion.child);
+    if update_order_ok {
+        target.put_child(realChild);
+        return;
+    }
 
     let mut realNode: CacheNode<&'static str, RealDomNode, VDomNode> = CacheNode::new(
         |_cssManager: &CssManager, target: &RealDomNode, node: &VDomNode| -> RealDomNode {
@@ -101,15 +184,13 @@ fn updateNodeChild(cssManager: &CssManager, target: &RealDomNode, newVersion: &V
         },
     );
 
-    let realChild = target.extract_child();
-
     for item in realChild {
         match item {
             RealDom::Node { node }=> {
                 realNode.insert(node.name(), node);
             },
             RealDom::Text { node } => {
-                let id = node.value.clone();
+                let id = node.get_value();
                 realText.insert(id, node);
             },
             RealDom::Component { node } => {
@@ -138,7 +219,7 @@ fn updateNodeChild(cssManager: &CssManager, target: &RealDomNode, newVersion: &V
             },
             VDom::Text { node } => {
                 let id = node.value.clone();
-                let mut domChild = realText.getOrCreate(cssManager, target,id, node);
+                let domChild = realText.getOrCreate(cssManager, target,id, node);
                 let newWsk = domChild.idDom.clone();
 
                 domChild.update(&node.value);

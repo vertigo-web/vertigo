@@ -185,6 +185,24 @@ impl DomDriverBrowserInner {
         self.elements.insert(id, ElementWrapper::fromText(text));
     }
 
+    fn updateText(&mut self, id: RealDomId, value: &str) {
+        let elem = self.elements.get(&id);
+
+        if let Some(elem) = elem {
+            match elem {
+                ElementWrapper { item: ElementItem::Element { .. }, ..} => {
+                    log::error!("Cannot update text on node id={}", id);
+                },
+                ElementWrapper { item: ElementItem::Text { text }, ..} => {
+                    text.set_data(value);
+                }
+            }
+            return;
+        }
+
+        log::error!("Missing element with id={}", id);
+    }
+
     fn setAttr(&mut self, id: RealDomId, name: &'static str, value: &str) {
         let elem = self.elements.get_mut(&id);
 
@@ -354,6 +372,12 @@ impl DomDriverTrait for DomDriverBrowser {
     fn createText(&self, id: RealDomId, value: &str) {
         self.driver.change((id, value), |state, (id, value)| {
             state.createText(id, value);
+        });
+    }
+
+    fn updateText(&self, id: RealDomId, value: &str) {
+        self.driver.change((id, value), |state, (id, value)| {
+            state.updateText(id, value);
         });
     }
 

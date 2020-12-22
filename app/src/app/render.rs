@@ -68,26 +68,24 @@ fn render_header(app_state: &Computed<app::State>) -> VDomNode {
 
     buildNode("div", vec!(
         node("div", vec!(
-            node("div", vec!(
-                css(cssBg()),
-                text("bla bla bla"),
-            )),
-            node("div", vec!(
-                onClick(onUp.clone()),
-                text(format!("aktualna wartosc = {} ({})", value, at)),
-            )),
-            node("div", vec!(
-                css(cssButton()),
-                onClick(onUp),
-                text("up"),
-            )),
-            node("div", vec!(
-                css(cssButton()),
-                onClick(onDown),
-                text("down"),
-            )),
-            footer_dom,
-        ))
+            css(cssBg()),
+            text("bla bla bla"),
+        )),
+        node("div", vec!(
+            onClick(onUp.clone()),
+            text(format!("aktualna wartosc = {} ({})", value, at)),
+        )),
+        node("div", vec!(
+            css(cssButton()),
+            onClick(onUp),
+            text("up"),
+        )),
+        node("div", vec!(
+            css(cssButton()),
+            onClick(onDown),
+            text("down"),
+        )),
+        footer_dom,
     ))
 }
 

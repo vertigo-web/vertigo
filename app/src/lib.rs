@@ -73,6 +73,7 @@ TODO - dodać do DomDriver asynchronicznego sleep-a
 
 TODO - dorobić event od klawiatury. Mozliwość wpisania tekstu.
 
+TODO - updejt nazwy taga ...
 
 https://github.com/rustwasm/console_error_panic_hook#readme
 https://rustwasm.github.io/wasm-bindgen/reference/passing-rust-closures-to-js.html

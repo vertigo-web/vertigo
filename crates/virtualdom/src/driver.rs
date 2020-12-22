@@ -30,6 +30,7 @@ const SHOW_LOG: bool = false;
 pub trait DomDriverTrait {
     fn createNode(&self, id: RealDomId, name: &'static str);
     fn createText(&self, id: RealDomId, value: &str);
+    fn updateText(&self, id: RealDomId, value: &str);
     fn setAttr(&self, id: RealDomId, key: &'static str, value: &str);
     fn removeAttr(&self, id: RealDomId, name: &'static str);
     fn remove(&self, id: RealDomId);
@@ -92,6 +93,11 @@ impl DomDriver {
     pub fn createText(&self, id: RealDomId, value: &str) {
         show_log(format!("createText {} {}", id, value));
         self.driver.createText(id, value);
+    }
+
+    pub fn updateText(&self, id: RealDomId, value: &str) {
+        show_log(format!("updateText {} {}", id, value));
+        self.driver.updateText(id, value);
     }
 
     pub fn setAttr(&self, id: RealDomId, key: &'static str, value: &str) {
