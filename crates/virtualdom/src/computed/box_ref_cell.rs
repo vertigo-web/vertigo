@@ -12,7 +12,7 @@ impl<T> BoxRefCell<T> {
         }
     }
 
-    pub fn get<R>(&self, getter: fn(&T) -> R) -> R {
+    pub fn get<R>(&self, getter: impl Fn(&T) -> R) -> R {
         let value = self.value.borrow();
         let state = &*value;
         getter(&state)
@@ -30,7 +30,7 @@ impl<T> BoxRefCell<T> {
         changeFn(&mut state)
     }
 
-    pub fn change<D, R>(&self, data: D, changeFn: fn(&mut T, D) -> R) -> R {
+    pub fn change<D, R>(&self, data: D, changeFn: impl Fn(&mut T, D) -> R) -> R {
         let value = self.value.borrow_mut();
         let mut state = value;
         changeFn(&mut state, data)
