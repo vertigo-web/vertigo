@@ -29,20 +29,35 @@ impl<K: Eq + Hash + Clone, V: 'static> AutoMap<K, V> {
     pub fn getValue(&self, key: &K) -> Computed<V> {
         self.deps.reportDependenceInStack(self.id.clone());
 
-        self.values.change(
-            (key, &(self.create)), 
-            |state, (key, create)| -> Computed<V> {
+        let item: Option<Computed<V>> = self.values.getWithContext(
+            key, 
+            |state, key| -> Option<Computed<V>> {
                 let item = (*state).get(key);
 
                 if let Some(item) = item {
-                    return item.clone();
+                    return Some(item.clone());
                 }
 
-                let new_item = create(key);
+                None
+            }
+        );
 
+        if let Some(item) = item {
+            return item;
+        }
+
+        let new_item = {
+            let create = &self.create;
+            create(key)
+        };
+
+        self.values.change(
+            (key, &new_item),
+            |state, (key, new_item)| {
                 (*state).insert(key.clone(), new_item.clone());
+            }
+        );
 
-                new_item
-        })
+        new_item
     }
 }
