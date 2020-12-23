@@ -1,6 +1,6 @@
 use serde::{Deserialize, Serialize};
 
-use virtualdom::{
+use vertigo::{
     DomDriver,
     FetchMethod,
     computed::{

@@ -1,6 +1,6 @@
 use std::collections::HashMap;
 use std::rc::Rc;
-use crate::{driver::{DomDriver, EventCallback}, vdom::{
+use crate::{driver::{DomDriver, EventCallback}, virtualdom::{
         models::{
             RealDom::RealDom,
             RealDomId::RealDomId,

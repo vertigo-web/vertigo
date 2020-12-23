@@ -1,4 +1,4 @@
-use virtualdom::{
+use vertigo::{
     Css, CssFrames,
     NodeAttr::{NodeAttr, node, css, cssFrames}
 };

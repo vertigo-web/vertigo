@@ -3,7 +3,7 @@
 members = [
     "app",
     "crates/browserdriver",
-    "crates/virtualdom",
+    "crates/vertigo",
 ]
 
 

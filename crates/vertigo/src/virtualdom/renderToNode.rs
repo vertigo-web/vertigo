@@ -12,7 +12,7 @@ use crate::{
 };
 
 use crate::{
-    vdom::{
+    virtualdom::{
         models::{
             RealDom::RealDom,
             RealDomNode::RealDomNode,

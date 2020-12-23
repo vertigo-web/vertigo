@@ -1,4 +1,4 @@
-use virtualdom::computed::{
+use vertigo::computed::{
     Computed,
     Dependencies,
     Value

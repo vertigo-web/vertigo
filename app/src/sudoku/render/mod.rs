@@ -1,4 +1,4 @@
-use virtualdom::{computed::Computed, VDomNode, NodeAttr, Css};
+use vertigo::{computed::Computed, VDomNode, NodeAttr, Css};
 use self::config::Config;
 
 use super::state::{Cell, Sudoku, sudoku_square::SudokuSquare, tree_box::TreeBoxIndex};

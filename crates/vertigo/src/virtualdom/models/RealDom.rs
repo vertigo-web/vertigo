@@ -1,4 +1,4 @@
-use crate::vdom::{
+use crate::virtualdom::{
     models::{
         RealDomNode::RealDomNode,
         RealDomText::RealDomText,

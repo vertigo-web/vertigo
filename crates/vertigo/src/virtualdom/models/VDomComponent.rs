@@ -3,7 +3,7 @@ use crate::computed::{
 };
 
 use crate::{
-    vdom::{
+    virtualdom::{
         models::{
             VDomNode::VDomNode,
             VDomComponentId::VDomComponentId,

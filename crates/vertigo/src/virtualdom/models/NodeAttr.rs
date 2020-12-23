@@ -1,11 +1,11 @@
 use std::rc::Rc;
 
-use crate::vdom::models::{
+use crate::virtualdom::models::{
     VDom::VDom,
     VDomNode::VDomNode,
     VDomComponent::VDomComponent,
 };
-use crate::vdom::models::Css::{Css, CssFrames};
+use crate::virtualdom::models::Css::{Css, CssFrames};
 use crate::computed::{
     Computed,
 };

@@ -1,5 +1,5 @@
 
-use virtualdom::{
+use vertigo::{
     computed::Computed,
     VDomNode,
     Css,
