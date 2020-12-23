@@ -64,7 +64,7 @@ fn text_css() -> Css {
 }
 
 pub fn render(state: &Computed<State>) -> VDomNode {
-    use NodeAttr::{buildNode, node, css, text, attr, onClick, onInput};
+    use NodeAttr::{buildNode, node, css, text, attr, onClick, onInput, onMouseEnter, onMouseLeave};
 
     let state = state.getValue();
 
@@ -100,11 +100,23 @@ pub fn render(state: &Computed<State>) -> VDomNode {
         }
     };
 
+    let mouse_in = || {
+        log::info!("enter");
+    };
+
+    let mouse_out = || {
+        log::info!("out");
+    };
+
     let value = state.value.getValue();
+
+    let count = value.len();
 
     buildNode("div", vec!(
         css(wrapper()),
         text("To jest input"),
+        onMouseEnter(mouse_in),
+        onMouseLeave(mouse_out),
         node("input", vec!(
             css(input_css()),
             attr("value", (*value).as_str()),
@@ -124,6 +136,9 @@ pub fn render(state: &Computed<State>) -> VDomNode {
             css(text_css()),
             attr("value", (*value).as_str()),
             onInput(on_set4),
-        ))
+        )),
+        node("div", vec!(
+            text(format!("count = {}", count)),
+        )),
     ))
 }

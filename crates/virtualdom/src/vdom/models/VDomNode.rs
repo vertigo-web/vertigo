@@ -15,6 +15,8 @@ pub struct VDomNode {
     pub child: Vec<VDom>,
     pub onClick: Option<Rc<dyn Fn()>>,
     pub onInput: Option<Rc<dyn Fn(String)>>,
+    pub onMouseEnter: Option<Rc<dyn Fn()>>,
+    pub onMouseLeave: Option<Rc<dyn Fn()>>,
     pub css: Option<Css>,
     pub cssFrames: Option<CssFrames>,
 }
@@ -27,6 +29,8 @@ impl VDomNode {
             child: Vec::new(),
             onClick: None,
             onInput: None,
+            onMouseEnter: None,
+            onMouseLeave: None,
             css: None,
             cssFrames: None,
         };
@@ -44,6 +48,12 @@ impl VDomNode {
                 },
                 NodeAttr::OnInput { event } => {
                     result.onInput = Some(event);
+                },
+                NodeAttr::onMouseEnter { event } => {
+                    result.onMouseEnter = Some(event);
+                },
+                NodeAttr::onMouseLeave { event } => {
+                    result.onMouseLeave = Some(event);
                 },
                 NodeAttr::Attr { name , value} => {
                     result.attr.insert(name, value);
@@ -64,6 +74,8 @@ impl VDomNode {
             child: childList,
             onClick: None,
             onInput: None,
+            onMouseEnter: None,
+            onMouseLeave: None,
             css: None,
             cssFrames: None,
         }

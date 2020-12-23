@@ -23,6 +23,12 @@ pub enum NodeAttr {
     OnInput {
         event: Rc<dyn Fn(String)>
     },
+    onMouseEnter {
+        event: Rc<dyn Fn()>
+    },
+    onMouseLeave {
+        event: Rc<dyn Fn()>
+    },
     Attr {
         name: &'static str,
         value: String,
@@ -54,6 +60,18 @@ pub fn onClick<F: Fn() + 'static>(callback: F) -> NodeAttr {
 
 pub fn onInput<F: Fn(String) + 'static>(callback: F) -> NodeAttr {
     NodeAttr::OnInput {
+        event: Rc::new(callback),
+    }
+}
+
+pub fn onMouseEnter<F: Fn() + 'static>(callback: F) -> NodeAttr {
+    NodeAttr::onMouseEnter {
+        event: Rc::new(callback),
+    }
+}
+
+pub fn onMouseLeave<F: Fn() + 'static>(callback: F) -> NodeAttr {
+    NodeAttr::onMouseLeave {
         event: Rc::new(callback),
     }
 }

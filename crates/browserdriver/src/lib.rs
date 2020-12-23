@@ -63,6 +63,8 @@ struct ElementWrapper {
     item: ElementItem,
     onClick: Option<Rc<dyn Fn()>>,
     onInput: Option<Rc<dyn Fn(String)>>,
+    onMouseEnter: Option<Rc<dyn Fn()>>,
+    onMouseLeave: Option<Rc<dyn Fn()>>,
 }
 
 impl ElementWrapper {
@@ -71,6 +73,8 @@ impl ElementWrapper {
             item: ElementItem::fromNode(node),
             onClick: None,
             onInput: None,
+            onMouseEnter: None,
+            onMouseLeave: None,
         }
     }
 
@@ -79,16 +83,22 @@ impl ElementWrapper {
             item: ElementItem::fromText(text),
             onClick: None,
             onInput: None,
+            onMouseEnter: None,
+            onMouseLeave: None,
         }
     }
 }
 
-fn find_event_on_click(inner: &Rc<BoxRefCell<DomDriverBrowserInner>>, id: u64) -> Option<Rc<dyn Fn()>> {
+fn find_event<T: Clone>(
+    inner: &Rc<BoxRefCell<DomDriverBrowserInner>>,
+    id: u64,
+    find_event_on_click_item: fn(&ElementWrapper) -> &Option<T>,
+) -> Option<T> {
     let id = RealDomId::from_u64(id);
 
     let on_click = inner.getWithContext(
-        id,
-        |state, id| -> Option<Rc<dyn Fn()>> {
+        (id, find_event_on_click_item),
+        |state, (id, find_event_on_click_item)| -> Option<T> {
             let mut wsk = id;
             let mut count = 0;
 
@@ -102,7 +112,9 @@ fn find_event_on_click(inner: &Rc<BoxRefCell<DomDriverBrowserInner>>, id: u64) -
 
                 let item = state.elements.get(&wsk).unwrap();
 
-                if let Some(on_click) = &item.onClick {
+                let item_inner = find_event_on_click_item(item);
+
+                if let Some(on_click) = item_inner {
                     return Some(on_click.clone());
                 }
 
@@ -182,13 +194,48 @@ impl DomDriverBrowserInner {
 
                 let dom_id = find_dom_id(&event);
 
-                let event_to_run = find_event_on_click(&inner, dom_id);
+                let event_to_run = find_event(&inner, dom_id, |item| &item.onClick);
 
                 if let Some(event_to_run) = event_to_run {
                     event_to_run();
                 }
             })
         });
+
+        // dom_event_disconnect.push({
+        //     let inner = inner.clone();
+
+        //     ///*"mouseenter"*/
+        //     DomEvent::new_event(&root, "mouseover",move |event: web_sys::Event| {
+        //         log::info!("event mouseenter ... {:?}", event);
+
+        //         let dom_id = find_dom_id(&event);
+
+        //         let event_to_run = find_event(&inner, dom_id, |item| &item.onMouseEnter);
+
+        //         if let Some(event_to_run) = event_to_run {
+        //             event_to_run();
+        //         }
+        //     })
+        // });
+
+        // dom_event_disconnect.push({
+        //     let inner = inner.clone();
+
+        //     /*"mouseleave"*/
+        //     DomEvent::new_event(&root, "mouseout",move |event: web_sys::Event| {
+        //         log::info!("event mouseleave ... {:?}", event);
+
+        //         let dom_id = find_dom_id(&event);
+
+        //         let event_to_run = find_event(&inner, dom_id, |item| &item.onMouseLeave);
+
+        //         if let Some(event_to_run) = event_to_run {
+        //             event_to_run();
+        //         }
+        //     })
+        // });
+
 
         dom_event_disconnect.push({
             let inner = inner.clone();
@@ -405,7 +452,13 @@ impl DomDriverBrowserInner {
             },
             EventCallback::OnInput { callback } => {
                 item.onInput = callback;
-            }
+            },
+            EventCallback::OnMouseEnter { callback } => {
+                item.onMouseEnter = callback;
+            },
+            EventCallback::OnMouseLeave { callback } => {
+                item.onMouseLeave = callback;
+            },
         }
     }
 

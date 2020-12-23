@@ -32,6 +32,14 @@ pub enum EventCallback {
     OnInput {
         callback: Option<Rc<dyn Fn(String)>>,
     },
+                //mouseenter
+    OnMouseEnter {
+        callback: Option<Rc<dyn Fn()>>,
+    },
+                //mouseleave
+    OnMouseLeave {
+        callback: Option<Rc<dyn Fn()>>,
+    },
 }
 
 impl EventCallback {
@@ -49,6 +57,20 @@ impl EventCallback {
                     "onInput set"
                 } else {
                     "onInput clear"
+                }
+            },
+            EventCallback::OnMouseEnter { callback } =>{
+                if callback.is_some() {
+                    "onMouseEnter set"
+                } else {
+                    "onMouseEnter clear"
+                }
+            },
+            EventCallback::OnMouseLeave { callback } =>{
+                if callback.is_some() {
+                    "onMouseLeave set"
+                } else {
+                    "onMouseLeave clear"
                 }
             },
         }
