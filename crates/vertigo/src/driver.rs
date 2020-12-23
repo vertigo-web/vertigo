@@ -1,5 +1,5 @@
 use std::rc::Rc;
-use crate::vdom::models::{
+use crate::virtualdom::models::{
     RealDomId::RealDomId,
 };
 use std::pin::Pin;

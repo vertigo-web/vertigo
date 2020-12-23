@@ -1,8 +1,10 @@
 [package]
-name = "virtualdom"
-version = "0.1.0"
+name = "vertigo"
+version = "0.1.0-alpha.0"
 authors = ["Grzegorz Szeliga <grzegorz.szeliga@twoupdigital.com>"]
 edition = "2018"
+license = "MIT OR Apache-2.0"
+description = "Virtual DOM library for Rust"
 
 # See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
 

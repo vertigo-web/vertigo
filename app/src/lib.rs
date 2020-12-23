@@ -11,7 +11,7 @@ use wasm_bindgen::prelude::wasm_bindgen;
 
 use std::cell::RefCell;
 
-use virtualdom::{
+use vertigo::{
     computed::Dependencies,
     App,
     VDomComponent,

@@ -5,10 +5,10 @@ use web_sys::{Document, Element, Text, HtmlHeadElement, Node, HtmlInputElement, 
 use std::rc::Rc;
 use std::collections::HashMap;
 
-use virtualdom::{DomDriver, computed::BoxRefCell};
-use virtualdom::{DomDriverTrait, FetchMethod, FetchError};
-use virtualdom::RealDomId;
-use virtualdom::EventCallback;
+use vertigo::{DomDriver, computed::BoxRefCell};
+use vertigo::{DomDriverTrait, FetchMethod, FetchError};
+use vertigo::RealDomId;
+use vertigo::EventCallback;
 
 use wasm_bindgen::JsCast;
 use dom_event::{DomEventDisconnect, DomEvent, /*DomEventKeyboard, DomEventMouse */};

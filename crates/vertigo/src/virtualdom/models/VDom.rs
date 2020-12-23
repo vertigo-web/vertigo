@@ -1,4 +1,4 @@
-use crate::vdom::models::{
+use crate::virtualdom::models::{
     VDomComponent::VDomComponent,
     VDomNode::VDomNode,
     VDomText::VDomText,

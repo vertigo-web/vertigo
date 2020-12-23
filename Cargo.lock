@@ -88,7 +88,7 @@ dependencies = [
  "serde",
  "serde_json",
  "structopt",
- "virtualdom",
+ "vertigo",
  "wasm-bindgen",
  "wasm-bindgen-futures",
  "wasm-logger",
@@ -463,7 +463,7 @@ name = "browserdriver"
 version = "0.1.0"
 dependencies = [
  "log",
- "virtualdom",
+ "vertigo",
  "wasm-bindgen",
  "wasm-bindgen-futures",
  "web-sys",
@@ -2155,8 +2155,8 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "b5a972e5669d67ba988ce3dc826706fb0a8b01471c088cb0b6110b805cc36aed"
 
 [[package]]
-name = "virtualdom"
-version = "0.1.0"
+name = "vertigo"
+version = "0.1.0-alpha.0"
 dependencies = [
  "log",
 ]

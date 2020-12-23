@@ -1,4 +1,4 @@
-use virtualdom::{computed::Computed, VDomNode, NodeAttr, Css};
+use vertigo::{computed::Computed, VDomNode, NodeAttr, Css};
 
 use crate::sudoku::state::{Cell, number_item::SudokuValue};
 

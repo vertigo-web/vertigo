@@ -8,7 +8,7 @@ use std::future::Future;
 
 use std::collections::HashMap;
 
-use virtualdom::{FetchMethod, FetchError};
+use vertigo::{FetchMethod, FetchError};
 
 pub fn fetch(
     method: FetchMethod,

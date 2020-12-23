@@ -1,4 +1,4 @@
-use virtualdom::{DomDriver, computed::{
+use vertigo::{DomDriver, computed::{
         Dependencies,
         Value,
         Computed,

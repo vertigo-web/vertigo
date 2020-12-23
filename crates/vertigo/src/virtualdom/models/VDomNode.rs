@@ -1,10 +1,10 @@
 use std::collections::HashMap;
 use std::rc::Rc;
 
-use crate::vdom::models::{
+use crate::virtualdom::models::{
     VDom::VDom,
 };
-use crate::vdom::models::{
+use crate::virtualdom::models::{
     Css::{Css, CssFrames},
     NodeAttr::NodeAttr,
 };

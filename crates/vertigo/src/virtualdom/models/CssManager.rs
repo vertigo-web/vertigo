@@ -4,7 +4,7 @@ use std::rc::Rc;
 use crate::computed::BoxRefCell;
 
 use crate::driver::DomDriver;
-use crate::vdom::models::Css::{
+use crate::virtualdom::models::Css::{
     Css, CssFrames,
     CssGroup
 };

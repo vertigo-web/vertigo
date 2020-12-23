@@ -2,7 +2,7 @@ use crate::computed::{
     Client,
 };
 
-use crate::vdom::{
+use crate::virtualdom::{
     models::{
         RealDomNode::RealDomNode,
         VDomComponentId::VDomComponentId,
