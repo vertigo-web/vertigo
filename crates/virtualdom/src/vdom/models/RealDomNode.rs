@@ -1,15 +1,12 @@
 use std::collections::HashMap;
 use std::rc::Rc;
-use crate::{
-    vdom::{
+use crate::{driver::{DomDriver, EventCallback}, vdom::{
         models::{
             RealDom::RealDom,
             RealDomId::RealDomId,
             RealDomText::RealDomText,
         },
-    },
-    driver::DomDriver,
-};
+    }};
 use crate::computed::BoxRefCell;
 
 
@@ -105,12 +102,8 @@ impl RealDomNodeInner {
         }
     }
 
-    pub fn updateOnClick(&mut self, onClick: Option<Rc<dyn Fn()>>) {
-        self.domDriver.setOnClick(self.idDom.clone(), onClick);
-    }
-
-    pub fn updateOnInput(&mut self, onClick: Option<Rc<dyn Fn(String)>>) {
-        self.domDriver.setOnInput(self.idDom.clone(), onClick);
+    pub fn setEvent(&mut self, callback: EventCallback) {
+        self.domDriver.setEvent(self.idDom.clone(), callback);
     }
 
     pub fn extract_child(&mut self) -> Vec<RealDom> {
@@ -175,19 +168,11 @@ impl RealDomNode {
         })
     }
 
-    pub fn updateOnClick(&self, onClick: Option<Rc<dyn Fn()>>) {
+    pub fn setEvent(&self, callback: EventCallback) {
         self.inner.change(
-            onClick,
-            |state, onClick| {
-                state.updateOnClick(onClick)
-        })
-    }
-
-    pub fn updateOnInput(&self, onClick: Option<Rc<dyn Fn(String)>>) {
-        self.inner.change(
-            onClick,
-            |state, onClick| {
-                state.updateOnInput(onClick)
+            callback,
+            |state, callback| {
+                state.setEvent(callback)
         })
     }
 

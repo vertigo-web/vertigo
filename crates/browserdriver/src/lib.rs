@@ -8,6 +8,7 @@ use std::collections::HashMap;
 use virtualdom::{DomDriver, computed::BoxRefCell};
 use virtualdom::{DomDriverTrait, FetchMethod, FetchError};
 use virtualdom::RealDomId;
+use virtualdom::EventCallback;
 
 use wasm_bindgen::JsCast;
 use dom_event::{DomEventDisconnect, DomEvent, /*DomEventKeyboard, DomEventMouse */};
@@ -395,14 +396,17 @@ impl DomDriverBrowserInner {
         self.child_parent.insert(child, parent);
     }
 
-    fn setOnClick(&mut self, node_id: RealDomId, onClick: Option<Rc<dyn Fn()>>) {
+    fn setEvent(&mut self, node_id: RealDomId, callback: EventCallback) {
         let item = self.elements.get_mut(&node_id).unwrap();
-        item.onClick = onClick;
-    }
 
-    fn setOnInput(&mut self, node_id: RealDomId, onInput: Option<Rc<dyn Fn(String)>>) {
-        let item = self.elements.get_mut(&node_id).unwrap();
-        item.onInput = onInput;
+        match callback {
+            EventCallback::OnClick { callback } => {
+                item.onClick = callback;
+            },
+            EventCallback::OnInput { callback } => {
+                item.onInput = callback;
+            }
+        }
     }
 
     fn insertCss(&self, selector: String, value: String) {
@@ -502,15 +506,9 @@ impl DomDriverTrait for DomDriverBrowser {
         });
     }
 
-    fn setOnClick(&self, node: RealDomId, onClick: Option<Rc<dyn Fn()>>) {
-        self.driver.change((node, onClick), |state, (node, onClick)| {
-            state.setOnClick(node, onClick);
-        });
-    }
-
-    fn setOnInput(&self, node: RealDomId, onInput: Option<Rc<dyn Fn(String)>>) {
-        self.driver.change((node, onInput), |state, (node, onInput)| {
-            state.setOnInput(node, onInput);
+    fn setEvent(&self, node: RealDomId, callback: EventCallback) {
+        self.driver.change((node, callback), |state, (node, callback)| {
+            state.setEvent(node, callback);
         });
     }
 

@@ -78,13 +78,21 @@ TODO - fetch - pozbyć się unwrapow
 
 TODO - dodać do DomDriver asynchronicznego sleep-a
 
-TODO - dorobić event od klawiatury. Mozliwość wpisania tekstu.
-
 TODO - updejt nazwy taga ...
 
 TODO - 
     <textarea value="" />
     makro html pewnie będzie mogło przyjmować ten atrybut lub <textarea>value</textarea>
+
+
+To co jest wywoływane w callbacku eventu powinno być wywoływane w tranzakcji ?
+    let on_set3 = {
+        let state = state.clone();
+        move |new_value: String| {
+            let value = state.value.clone();
+            value.setValue(new_value);
+        }
+    };
 
 
 https://github.com/rustwasm/console_error_panic_hook#readme

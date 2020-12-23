@@ -25,6 +25,36 @@ pub enum FetchError {
     Error,
 }
 
+pub enum EventCallback {
+    OnClick {
+        callback: Option<Rc<dyn Fn()>>,
+    },
+    OnInput {
+        callback: Option<Rc<dyn Fn(String)>>,
+    },
+}
+
+impl EventCallback {
+    pub fn to_string(&self) -> &str {
+        match self {
+            EventCallback::OnClick { callback} => {
+                if callback.is_some() {
+                    "onClick set"
+                } else {
+                    "onClick clear"
+                }
+            },
+            EventCallback::OnInput { callback } =>{
+                if callback.is_some() {
+                    "onInput set"
+                } else {
+                    "onInput clear"
+                }
+            },
+        }
+    }
+}
+
 const SHOW_LOG: bool = false;
 
 pub trait DomDriverTrait {
@@ -39,8 +69,7 @@ pub trait DomDriverTrait {
     fn insertAfter(&self, refId: RealDomId, child: RealDomId);
     fn addChild(&self, parent: RealDomId, child: RealDomId);
     fn insertCss(&self, selector: String, value: String);
-    fn setOnClick(&self, node: RealDomId, onClick: Option<Rc<dyn Fn()>>);
-    fn setOnInput(&self, node: RealDomId, onClick: Option<Rc<dyn Fn(String)>>);
+    fn setEvent(&self, node: RealDomId, callback: EventCallback);
     fn fetch(&self, method: FetchMethod, url: String, headers: Option<HashMap<String, String>>, body: Option<String>) -> Pin<Box<dyn Future<Output=Result<String, FetchError>> + 'static>>; 
 }
 
@@ -141,14 +170,9 @@ impl DomDriver {
         self.driver.insertCss(selector, value);
     }
 
-    pub fn setOnClick(&self, node: RealDomId, onClick: Option<Rc<dyn Fn()>>) {
-        show_log(format!("setOnClick {} --onClick--", node));
-        self.driver.setOnClick(node, onClick);
-    }
-
-    pub fn setOnInput(&self, node: RealDomId, setOnInput: Option<Rc<dyn Fn(String)>>) {
-        show_log(format!("setOnInput {} --setOnInput--", node));
-        self.driver.setOnInput(node, setOnInput);
+    pub fn setEvent(&self, node: RealDomId, callback: EventCallback) {
+        show_log(format!("setEvent {} {}", node, callback.to_string()));
+        self.driver.setEvent(node, callback);
     }
 
     pub fn fetch(&self, method: FetchMethod, url: String, headers: Option<HashMap<String, String>>, body: Option<String>) -> Pin<Box<dyn Future<Output=Result<String, FetchError>> + 'static>> {

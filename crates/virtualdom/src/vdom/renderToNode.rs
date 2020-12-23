@@ -4,8 +4,11 @@ use std::collections::{
 };
 use std::hash::Hash;
 
-use crate::computed::{
-    Client,
+use crate::{
+    computed::{
+        Client,
+    },
+    driver::EventCallback
 };
 
 use crate::{
@@ -252,8 +255,8 @@ fn updateNodeAttr(cssManager: &CssManager, realNode: &RealDomNode, node: &VDomNo
     }
 
     realNode.updateAttr(&node.attr, className);
-    realNode.updateOnClick(node.onClick.clone());
-    realNode.updateOnInput(node.onInput.clone());
+    realNode.setEvent(EventCallback::OnClick { callback: node.onClick.clone() });
+    realNode.setEvent(EventCallback::OnInput { callback: node.onInput.clone() });
 }
 
 fn updateNode(cssManager: &CssManager, target: &RealDomNode, newVersion: &VDomNode) {

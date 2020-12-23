@@ -85,17 +85,17 @@ pub fn render(state: &Computed<State>) -> VDomNode {
     };
 
     let on_set3 = {
-        let value = state.value.clone();
+        let state = state.clone();
         move |new_value: String| {
-            log::info!(" nowa wartosc3 {}", new_value);
+            let value = state.value.clone();
             value.setValue(new_value);
         }
     };
 
     let on_set4 = {
-        let value = state.value.clone();
+        let state = state.clone();
         move |new_value: String| {
-            log::info!(" nowa wartosc4 {}", new_value);
+            let value = state.value.clone();
             value.setValue(new_value);
         }
     };
