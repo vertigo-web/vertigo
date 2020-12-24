@@ -7,14 +7,14 @@ use vertigo::{
     Css
 };
 
-fn cssBox() -> Css {
+fn css_box() -> Css {
     Css::one("
         margin: 5px;
     ")
 }
 
-fn cssButton() -> Css {
-    cssBox().push("
+fn css_button() -> Css {
+    css_box().push("
         cursor: pointer;
 
         &:hover {
@@ -23,7 +23,7 @@ fn cssButton() -> Css {
     ")
 }
 
-fn cssWrapper() -> Css {
+fn css_wrapper() -> Css {
     Css::one("
         border:1px solid black;
         margin: 5px 0;
@@ -33,17 +33,17 @@ fn cssWrapper() -> Css {
 pub fn render(simple_counter: &Computed<State>) -> VDomNode {
     use NodeAttr::{buildNode, node, css, text, onClick};
 
-    let simple_counter = simple_counter.getValue();
-    let calue = *(simple_counter.counter.getValue());
+    let simple_counter = simple_counter.get_value();
+    let calue = *(simple_counter.counter.get_value());
 
-    let clickUp = {
+    let click_up = {
         let simple_counter = simple_counter.clone();
         move || {
             simple_counter.increment();
         }
     };
 
-    let clickDown = {
+    let click_down = {
         move || {
             simple_counter.decrement();
         }
@@ -58,20 +58,20 @@ pub fn render(simple_counter: &Computed<State>) -> VDomNode {
     // }
 
     buildNode("div", vec!(
-        css(cssWrapper()),
+        css(css_wrapper()),
         node("div", vec!(
-            css(cssBox()),
+            css(css_box()),
             text(format!("Counter value = {}", calue)),
         )),
         node("button", vec!(
-            css(cssButton()),
+            css(css_button()),
             text("up"),
-            onClick(clickUp)
+            onClick(click_up)
         )),
         node("button", vec!(
-            css(cssButton()),
+            css(css_button()),
             text("down"),
-            onClick(clickDown)
+            onClick(click_down)
         ))
     ))
 }

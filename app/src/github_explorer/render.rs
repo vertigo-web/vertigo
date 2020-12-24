@@ -41,31 +41,31 @@ fn text_css() -> Css {
 pub fn render(state: &Computed<State>) -> VDomNode {
     use NodeAttr::{buildNode, node, css, text, attr, onClick, onInput};
 
-    let state = state.getValue();
+    let state = state.get_value();
 
     let on_input = {
         let value = state.repo_input.clone();
         move |new_value: String| {
             log::info!(" nowa wartosc3 {}", new_value);
-            value.setValue(new_value);
+            value.set_value(new_value);
         }
     };
 
     let on_show = {
-        let value = state.repo_input.getValue();
+        let value = state.repo_input.get_value();
         let state_inner = state.clone();
         move || {
             log::info!(" nowa wartosc3 {}", value);
-            state_inner.repo_shown.setValue((*value).clone());
+            state_inner.repo_shown.set_value((*value).clone());
         }
     };
 
-    let repo_input = state.repo_input.getValue();
-    let repo_shown = state.repo_shown.getValue();
+    let repo_input = state.repo_input.get_value();
+    let repo_shown = state.repo_shown.get_value();
 
     let commit_sha = match repo_shown.as_str() {
         "" => "".to_string(),
-        _ => match &*state.data.getValue(&repo_shown).getValue() {
+        _ => match &*state.data.get_value(&repo_shown).get_value() {
             Resource::Loading => "Loading...".to_string(),
             Resource::Ready(branch) => branch.commit.sha.clone(),
             Resource::Failed(err) => format!("Error: {}", err),

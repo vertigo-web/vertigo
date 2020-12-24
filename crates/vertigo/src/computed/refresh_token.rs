@@ -4,7 +4,7 @@ use crate::computed::BoxRefCell;
 
 pub enum RefreshToken {
     Computed {
-        isFreshCell: Rc<BoxRefCell<bool>>,
+        is_fresh_cell: Rc<BoxRefCell<bool>>,
     },
     Client {
         refresh: Rc<dyn Fn()>,
@@ -12,13 +12,13 @@ pub enum RefreshToken {
 }
 
 impl RefreshToken {
-    pub fn newComputed(isFreshCell: Rc<BoxRefCell<bool>>) -> RefreshToken {
+    pub fn new_computed(is_fresh_cell: Rc<BoxRefCell<bool>>) -> RefreshToken {
         RefreshToken::Computed {
-            isFreshCell,
+            is_fresh_cell: is_fresh_cell,
         }
     }
 
-    pub fn newClient<F: Fn() + 'static>(refresh: F) -> RefreshToken {
+    pub fn new_client<F: Fn() + 'static>(refresh: F) -> RefreshToken {
         RefreshToken::Client {
             refresh: Rc::new(Box::new(refresh)),
         }
@@ -26,8 +26,8 @@ impl RefreshToken {
 
     pub fn update(&self) {
         match self {
-            RefreshToken::Computed { isFreshCell, .. } => {
-                isFreshCell.change((), |state, _data| {
+            RefreshToken::Computed { is_fresh_cell, .. } => {
+                is_fresh_cell.change((), |state, _data| {
                     *state = false;
                 });
             },
@@ -37,7 +37,7 @@ impl RefreshToken {
         }
     }
 
-    pub fn isComputed(&self) -> bool {
+    pub fn is_computed(&self) -> bool {
         match self {
             RefreshToken::Computed { .. } => true,
             RefreshToken::Client { .. } => false,
@@ -48,9 +48,9 @@ impl RefreshToken {
 impl Clone for RefreshToken {
     fn clone(&self) -> Self {
         match self {
-            RefreshToken::Computed { isFreshCell, .. } => {
+            RefreshToken::Computed { is_fresh_cell, .. } => {
                 RefreshToken::Computed {
-                    isFreshCell: isFreshCell.clone(),
+                    is_fresh_cell: is_fresh_cell.clone(),
                 }
             },
             RefreshToken::Client { refresh } => {

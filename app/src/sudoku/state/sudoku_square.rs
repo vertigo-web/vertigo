@@ -12,18 +12,18 @@ impl<T> SudokuSquare<T> {
         }
     }
 
-    pub fn createWithIterator<F: Fn(TreeBoxIndex, TreeBoxIndex) -> T>(create: F) -> SudokuSquare<T> {
+    pub fn create_with_iterator<F: Fn(TreeBoxIndex, TreeBoxIndex) -> T>(create: F) -> SudokuSquare<T> {
         SudokuSquare::new(
-            ThreeBox::createWithIterator(|level0x| {
-                ThreeBox::createWithIterator(|level0y| {
+            ThreeBox::create_with_iterator(|level0x| {
+                ThreeBox::create_with_iterator(|level0y| {
                     create(level0x, level0y)
                 })
             })
         )
     }
 
-    pub fn getFrom(&self, x: TreeBoxIndex, y: TreeBoxIndex) -> Rc<T> {
-        self.data.getFrom(x).getFrom(y)
+    pub fn get_from(&self, x: TreeBoxIndex, y: TreeBoxIndex) -> Rc<T> {
+        self.data.get_from(x).get_from(y)
     }
 }
 

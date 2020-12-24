@@ -14,7 +14,7 @@ impl RealDomText {
     pub fn new(domDriver: DomDriver, value: String) -> RealDomText {
         let id = RealDomId::default();
 
-        domDriver.createText(id.clone(), &value);
+        domDriver.create_text(id.clone(), &value);
 
         RealDomText {
             domDriver,
@@ -34,7 +34,7 @@ impl RealDomText {
         });
 
         if should_update {
-            self.domDriver.updateText(self.idDom.clone(), newValue);
+            self.domDriver.update_text(self.idDom.clone(), newValue);
         }
     }
 

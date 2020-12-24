@@ -4,7 +4,7 @@ use crate::sudoku::state::{Cell, number_item::SudokuValue};
 
 use super::config::Config;
 
-fn cssItemNumberWrapper() -> Css {
+fn css_item_number_wrapper() -> Css {
     let config = Config::new();
     Css::new(format!("
         position: relative;
@@ -13,10 +13,10 @@ fn cssItemNumberWrapper() -> Css {
         color: blue;
         height: {}px;
         line-height: {}px;
-    ", config.itemWidthSize, config.itemWidthSize))
+    ", config.item_width_size, config.item_width_size))
 }
 
-fn cssDelete() -> Css {
+fn css_delete() -> Css {
     Css::one("
         position: absolute;
         top: 3px;
@@ -37,16 +37,16 @@ fn cssDelete() -> Css {
 
 
 pub fn render_cell_value(value: SudokuValue, item: &Computed<Cell>, ) -> VDomNode {
-    let cell = item.getValue();
+    let cell = item.get_value();
 
     //cell.show_delete.setValue(true);
 
-    let show_delete = *cell.show_delete.getValue();
+    let show_delete = *cell.show_delete.get_value();
 
     use NodeAttr::{buildNode, node, css, text, onClick};
 
     let mut out = vec!(
-        css(cssItemNumberWrapper()),
+        css(css_item_number_wrapper()),
         text(format!("{}", value.to_u16())),
     );
 
@@ -54,11 +54,11 @@ pub fn render_cell_value(value: SudokuValue, item: &Computed<Cell>, ) -> VDomNod
 
     if show_delete {
         out.push(node("div", vec!(
-            css(cssDelete()),
+            css(css_delete()),
             onClick({
                 let cell = cell.clone();
                 move || {
-                    cell.number.value.setValue(None);
+                    cell.number.value.set_value(None);
                 }
             }),
             text("X")

@@ -16,9 +16,9 @@ pub struct State {
 
 impl State {
     pub fn new(root: &Dependencies) -> Computed<State> {
-        root.newComputedFrom(
+        root.new_computed_from(
             State {
-                value: root.newValue("".into())
+                value: root.new_value("".into())
             }
         )
     }
@@ -66,13 +66,13 @@ fn text_css() -> Css {
 pub fn render(state: &Computed<State>) -> VDomNode {
     use NodeAttr::{buildNode, node, css, text, attr, onClick, onInput, onMouseEnter, onMouseLeave};
 
-    let state = state.getValue();
+    let state = state.get_value();
 
     let on_set1 = {
         let value = state.value.clone();
 
         move || {
-            value.setValue("value 1".into());
+            value.set_value("value 1".into());
         }
     };
 
@@ -80,7 +80,7 @@ pub fn render(state: &Computed<State>) -> VDomNode {
         let value = state.value.clone();
 
         move || {
-            value.setValue("value 2".into());
+            value.set_value("value 2".into());
         }
     };
 
@@ -88,7 +88,7 @@ pub fn render(state: &Computed<State>) -> VDomNode {
         let state = state.clone();
         move |new_value: String| {
             let value = state.value.clone();
-            value.setValue(new_value);
+            value.set_value(new_value);
         }
     };
 
@@ -96,7 +96,7 @@ pub fn render(state: &Computed<State>) -> VDomNode {
         let state = state.clone();
         move |new_value: String| {
             let value = state.value.clone();
-            value.setValue(new_value);
+            value.set_value(new_value);
         }
     };
 
@@ -108,7 +108,7 @@ pub fn render(state: &Computed<State>) -> VDomNode {
         log::info!("out");
     };
 
-    let value = state.value.getValue();
+    let value = state.value.get_value();
 
     let count = value.len();
 

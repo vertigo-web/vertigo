@@ -10,20 +10,20 @@ use crate::computed::{
     GraphId,
 };
 
-use super::dependencies_inner::{Graph::Graph, TransactionState::TransactionState};
+use super::dependencies_inner::{graph::Graph, transaction_state::TransactionState};
 
 struct DependenciesInner {
-    refreshToken: HashMap<GraphId, RefreshToken>,               //Tablica z zarejestrowanymi tokenami
+    refresh_token: HashMap<GraphId, RefreshToken>,               //Tablica z zarejestrowanymi tokenami
     graph: Graph,
-    transactionState: TransactionState,              //aktualny poziom tranzakcyjności
+    transaction_state: TransactionState,              //aktualny poziom tranzakcyjności
 }
 
 impl DependenciesInner {
     fn new() -> DependenciesInner {
         DependenciesInner {
-            refreshToken: HashMap::new(),
+            refresh_token: HashMap::new(),
             graph: Graph::default(),
-            transactionState: TransactionState::Idle,
+            transaction_state: TransactionState::Idle,
         }
     }
 }
@@ -49,28 +49,28 @@ impl Default for Dependencies {
 }
 
 impl Dependencies {
-    pub fn newValue<T>(&self, value: T) -> Value<T> {
+    pub fn new_value<T>(&self, value: T) -> Value<T> {
         Value::new(self.clone(), value)
     }
 
-    pub fn newComputedFrom<T>(&self, value: T) -> Computed<T> {
-        let value = self.newValue(value);
-        value.toComputed()
+    pub fn new_computed_from<T>(&self, value: T) -> Computed<T> {
+        let value = self.new_value(value);
+        value.to_computed()
     }
 
     fn refresh_edges(&self, edges: HashSet<GraphId>) {
-        let refreshToken: Vec<RefreshToken> = self.inner.getWithContext(
+        let refresh_token: Vec<RefreshToken> = self.inner.get_with_context(
             edges,
             |state, edges| {
                 let mut out: Vec<RefreshToken> = Vec::new();
 
-                for itemId in edges.iter() {
-                    let item = state.refreshToken.get(itemId);
+                for item_id in edges.iter() {
+                    let item = state.refresh_token.get(item_id);
 
                     if let Some(item) = item {
                         out.push(item.clone());
                     } else {
-                        log::error!("Coś poszło nie tak z pobieraniem refresh tokenów {:?}", itemId);
+                        log::error!("Coś poszło nie tak z pobieraniem refresh tokenów {:?}", item_id);
                     }
                 }
 
@@ -78,24 +78,24 @@ impl Dependencies {
             }
         );
 
-        let mut clientRefreshToken = Vec::new();
+        let mut client_refresh_token = Vec::new();
 
-        for item in refreshToken.iter() {
-            if item.isComputed() {
+        for item in refresh_token.iter() {
+            if item.is_computed() {
                 item.update();
             } else {
-                clientRefreshToken.push(item);
+                client_refresh_token.push(item);
             }
         }
 
-        for item in clientRefreshToken {
+        for item in client_refresh_token {
             item.update();
         }
     }
 
     pub fn transaction<F: FnOnce()>(&self, func: F) {
-        let success = self.inner.changeNoParams(|state| {
-            state.transactionState.up()
+        let success = self.inner.change_no_params(|state| {
+            state.transaction_state.up()
         });
 
         if !success {
@@ -104,71 +104,71 @@ impl Dependencies {
 
         func();
 
-        let edges_for_refresh = self.inner.changeNoParams(|state| {
-            state.transactionState.down()
+        let edges_for_refresh = self.inner.change_no_params(|state| {
+            state.transaction_state.down()
         });
 
         if let Some(edges) = edges_for_refresh {
             self.refresh_edges(edges);
 
-            self.inner.changeNoParams(|state| {
-                state.transactionState.to_idle()
+            self.inner.change_no_params(|state| {
+                state.transaction_state.to_idle()
             });
         }
     }
 
-    pub fn triggerChange(&self, parentId: GraphId) {
-        self.inner.change(parentId, |state, parentId| {
-            let edges = state.graph.getAllDeps(parentId);
-            state.transactionState.add_edges_to_refresh(edges);
+    pub fn trigger_change(&self, parent_id: GraphId) {
+        self.inner.change(parent_id, |state, parent_id| {
+            let edges = state.graph.get_all_deps(parent_id);
+            state.transaction_state.add_edges_to_refresh(edges);
         });
     }
 
-    pub fn registerRefreshToken(&self, clientId: GraphId, refreshToken: RefreshToken) {
+    pub fn register_refresh_token(&self, client_id: GraphId, refresh_token: RefreshToken) {
         self.inner.change(
-            (clientId, refreshToken),
-            |state, (clientId, refreshToken)| {
-                state.refreshToken.insert(clientId, refreshToken);
+            (client_id, refresh_token),
+            |state, (client_id, refresh_token)| {
+                state.refresh_token.insert(client_id, refresh_token);
             }
         );
     }
 
-    pub fn removeRelation(&self, clientId: &GraphId) -> Option<RefreshToken> {
-        self.inner.change(clientId, |state, clientId| {
-            let refreshToken = state.refreshToken.remove(&clientId);
-            state.graph.removeRelation(&clientId);
-            refreshToken
+    pub fn remove_relation(&self, client_id: &GraphId) -> Option<RefreshToken> {
+        self.inner.change(client_id, |state, client_id| {
+            let refresh_token = state.refresh_token.remove(&client_id);
+            state.graph.remove_relation(&client_id);
+            refresh_token
         })
     }
 
-    fn startTrack(&self) {
-        self.inner.changeNoParams(|state| {
-            state.graph.startTrack();
+    fn start_track(&self) {
+        self.inner.change_no_params(|state| {
+            state.graph.start_track();
         });
     }
 
-    fn stopTrack(&self, clientId: GraphId) {
-        self.inner.change(clientId, |state, clientId| {
-            state.graph.stopTrack(clientId);
+    fn stop_track(&self, client_id: GraphId) {
+        self.inner.change(client_id, |state, client_id| {
+            state.graph.stop_track(client_id);
         })
     }
 
-    pub fn reportDependenceInStack(&self, parentId: GraphId) {
-        self.inner.change(parentId, |state, parentId| {
-            state.graph.reportDependence(parentId);
+    pub fn report_dependence_in_stack(&self, parent_id: GraphId) {
+        self.inner.change(parent_id, |state, parent_id| {
+            state.graph.report_dependence(parent_id);
         });
     }
 
-    pub fn wrapGetValue<T, F: Fn() -> T + 'static>(&self, getValue: F, clientId: GraphId) -> Box<dyn Fn() -> T> {
-        let selfClone = self.clone();
+    pub fn wrap_get_value<T, F: Fn() -> T + 'static>(&self, get_value: F, client_id: GraphId) -> Box<dyn Fn() -> T> {
+        let self_clone = self.clone();
 
         Box::new(move || {
 
-            selfClone.startTrack();
+            self_clone.start_track();
 
-            let result = getValue();
+            let result = get_value();
 
-            selfClone.stopTrack(clientId.clone());
+            self_clone.stop_track(client_id.clone());
 
             result
         })
@@ -177,12 +177,12 @@ impl Dependencies {
     pub fn from<T: 'static, F: Fn() -> T + 'static>(&self, calculate: F) -> Computed<T> {
         let deps = self.clone();
 
-        let getValue = Box::new(move || {
+        let get_value = Box::new(move || {
             let result = calculate();
 
             Rc::new(result)
         });
 
-        Computed::new(deps, getValue)
+        Computed::new(deps, get_value)
     }
 }

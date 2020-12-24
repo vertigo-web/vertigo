@@ -15,16 +15,16 @@ fn basic() {
 
     let root: Dependencies = Dependencies::default();
 
-    let value1: Value<i32> = root.newValue(1);
-    let value2: Value<i32> = root.newValue(2);
+    let value1: Value<i32> = root.new_value(1);
+    let value2: Value<i32> = root.new_value(2);
 
     let sum: Computed<i32> = {
-        let com1 = value1.toComputed();
-        let com2 = value2.toComputed();
+        let com1 = value1.to_computed();
+        let com2 = value2.to_computed();
 
         root.from(move || -> i32 {
-            let value1 = com1.getValue();
-            let value2 = com2.getValue();
+            let value1 = com1.get_value();
+            let value2 = com2.get_value();
 
             *value1 + *value2
         })
@@ -43,15 +43,15 @@ fn basic() {
 
     assert_eq!(sumValue.get(), Some(3));
 
-    value1.setValue(4);
+    value1.set_value(4);
     assert_eq!(sumValue.get(), Some(6));
 
-    value2.setValue(5);
+    value2.set_value(5);
     assert_eq!(sumValue.get(), Some(9));
 
     sub.off();
 
-    value2.setValue(99);
+    value2.set_value(99);
     assert_eq!(sumValue.get(), Some(9));
 }
 
@@ -65,11 +65,11 @@ fn basic2() {
 
     let root = Dependencies::default();
 
-    let val1 = root.newValue(4);
-    let val2 = root.newValue(5);
+    let val1 = root.new_value(4);
+    let val2 = root.new_value(5);
 
-    let com1: Computed<i32> = val1.toComputed();
-    let com2: Computed<i32> = val2.toComputed();
+    let com1: Computed<i32> = val1.to_computed();
+    let com2: Computed<i32> = val2.to_computed();
 
     let sumBox1: BoxValue<Option<i32>> = BoxValue::new(None);
     let sumBox2: BoxValue<Option<i32>> = BoxValue::new(None);
@@ -79,7 +79,7 @@ fn basic2() {
     });
 
     let suma2 = sum.clone().map_for_render(|value: &Computed<i32>| -> i32 {
-        let value = value.getValue();
+        let value = value.get_value();
         2 * (*value)
     });
 
@@ -104,12 +104,12 @@ fn basic2() {
     assert_eq!(sumBox1.get(), Some(9));
     assert_eq!(sumBox2.get(), Some(18));
 
-    val1.setValue(111);
+    val1.set_value(111);
 
     assert_eq!(sumBox1.get(), Some(116));
     assert_eq!(sumBox2.get(), Some(232));
 
-    val2.setValue(888);
+    val2.set_value(888);
 
     assert_eq!(sumBox1.get(), Some(999));
     assert_eq!(sumBox2.get(), Some(1998));
@@ -119,7 +119,7 @@ fn basic2() {
     subscription.off();
     sub2.off();
 
-    val2.setValue(999);
+    val2.set_value(999);
 
     assert_eq!(sumBox1.get(), Some(999));
     assert_eq!(sumBox2.get(), Some(1998));
@@ -200,14 +200,14 @@ fn test_subscription() {
 
     let root = Dependencies::default();
 
-    let val1 = root.newValue(1);
-    let val2 = root.newValue(2);
-    let val3 = root.newValue(3);
+    let val1 = root.new_value(1);
+    let val2 = root.new_value(2);
+    let val3 = root.new_value(3);
 
-    let com1: Computed<i32> = val1.toComputed();
-    let com2: Computed<i32> = val2.toComputed();
+    let com1: Computed<i32> = val1.to_computed();
+    let com2: Computed<i32> = val2.to_computed();
     #[allow(unused_variables)]
-    let com3: Computed<i32> = val3.toComputed();
+    let com3: Computed<i32> = val3.to_computed();
 
     #[derive(Copy, Clone, Debug, PartialEq)]
     struct Sum {
@@ -228,8 +228,8 @@ fn test_subscription() {
     assert_eq!(sumValue.get(), Sum::new(1, None));
 
     let sum = root.from(move || -> i32 {
-        let value1 = com1.getValue();
-        let value2 = com2.getValue();
+        let value1 = com1.get_value();
+        let value2 = com2.get_value();
 
         *value1 + *value2
     });
@@ -245,22 +245,22 @@ fn test_subscription() {
     };
 
     assert_eq!(sumValue.get(), Sum::new(2, Some(3)));
-    val1.setValue(2);
+    val1.set_value(2);
     assert_eq!(sumValue.get(), Sum::new(3, Some(4)));
-    val2.setValue(10);
+    val2.set_value(10);
     assert_eq!(sumValue.get(), Sum::new(4, Some(12)));
-    val3.setValue(10);
+    val3.set_value(10);
     assert_eq!(sumValue.get(), Sum::new(4, Some(12)));
-    val2.setValue(20);
+    val2.set_value(20);
     assert_eq!(sumValue.get(), Sum::new(5, Some(22)));
 
     sub.off();
 
-    val1.setValue(2);
+    val1.set_value(2);
     assert_eq!(sumValue.get(), Sum::new(5, Some(22)));
-    val2.setValue(2);
+    val2.set_value(2);
     assert_eq!(sumValue.get(), Sum::new(5, Some(22)));
-    val3.setValue(2);
+    val3.set_value(2);
     assert_eq!(sumValue.get(), Sum::new(5, Some(22)));
 }
 

@@ -28,13 +28,13 @@ impl State {
         let root_inner = root.clone();
         let driver_inner = driver.clone();
 
-        root.newComputedFrom(State {
-            repo_input: root.newValue("".into()),
-            repo_shown: root.newValue("".into()),
+        root.new_computed_from(State {
+            repo_input: root.new_value("".into()),
+            repo_shown: root.new_value("".into()),
             data: AutoMap::new(root, move |repo_name: &String| -> Computed<Resource<Branch>> {
                 log::info!("Creating for {}", repo_name);
-                let new_value = root_inner.newValue(Resource::Loading);
-                let new_computed = new_value.toComputed();
+                let new_value = root_inner.new_value(Resource::Loading);
+                let new_computed = new_value.to_computed();
     
                 fetch_repo(repo_name.as_str(), new_value, &driver_inner);
     
@@ -59,11 +59,11 @@ fn fetch_repo(repo: &str, value: Value<Resource<Branch>>, driver: &DomDriver) {
                 match serde_json::from_str::<Branch>(response.as_str()) {
                     Ok(branch) => {
                         log::info!("odpowiedź z serwera {:?}", branch);
-                        value.setValue(Resource::Ready(branch));
+                        value.set_value(Resource::Ready(branch));
                     },
                     Err(err) => {
                         log::error!("Error parsing response: {}", err);
-                        value.setValue(Resource::Failed(err.to_string()));
+                        value.set_value(Resource::Failed(err.to_string()));
                     }
                 }
             },

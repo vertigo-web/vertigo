@@ -23,32 +23,32 @@ impl<T: 'static> Value<T> {
         }
     }
 
-    pub fn setValue(&self, value: T) {
+    pub fn set_value(&self, value: T) {
         self.deps.transaction(|| {
             self.value.change(value, |state, value| {
                 *state = Rc::new(value);
             });
 
-            self.deps.triggerChange(self.id.clone());
+            self.deps.trigger_change(self.id.clone());
         });
     }
 
-    pub fn getValue(&self) -> Rc<T> {
-        self.deps.reportDependenceInStack(self.id.clone());
+    pub fn get_value(&self) -> Rc<T> {
+        self.deps.report_dependence_in_stack(self.id.clone());
 
         self.value.get(|state| {
             state.clone()
         })
     }
 
-    pub fn toComputed(&self) -> Computed<T> {
+    pub fn to_computed(&self) -> Computed<T> {
         let value = self.value.clone();
         let deps = self.deps.clone();
 
-        let selfId = self.id.clone();
+        let self_id = self.id.clone();
 
         Computed::new(deps.clone(), move || {
-            deps.reportDependenceInStack(selfId.clone());
+            deps.report_dependence_in_stack(self_id.clone());
             value.get(|state| {
                 state.clone()
             })

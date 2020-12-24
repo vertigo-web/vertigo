@@ -80,18 +80,18 @@ impl EventCallback {
 const SHOW_LOG: bool = false;
 
 pub trait DomDriverTrait {
-    fn createNode(&self, id: RealDomId, name: &'static str);
-    fn createText(&self, id: RealDomId, value: &str);
-    fn updateText(&self, id: RealDomId, value: &str);
-    fn setAttr(&self, id: RealDomId, key: &'static str, value: &str);
-    fn removeAttr(&self, id: RealDomId, name: &'static str);
+    fn create_node(&self, id: RealDomId, name: &'static str);
+    fn create_text(&self, id: RealDomId, value: &str);
+    fn update_text(&self, id: RealDomId, value: &str);
+    fn set_attr(&self, id: RealDomId, key: &'static str, value: &str);
+    fn remove_attr(&self, id: RealDomId, name: &'static str);
     fn remove(&self, id: RealDomId);
-    fn insertAsFirstChild(&self, parent: RealDomId, child: RealDomId);
-    fn insertBefore(&self, refId: RealDomId, child: RealDomId);
-    fn insertAfter(&self, refId: RealDomId, child: RealDomId);
-    fn addChild(&self, parent: RealDomId, child: RealDomId);
-    fn insertCss(&self, selector: String, value: String);
-    fn setEvent(&self, node: RealDomId, callback: EventCallback);
+    fn insert_as_first_child(&self, parent: RealDomId, child: RealDomId);
+    fn insert_before(&self, ref_id: RealDomId, child: RealDomId);
+    fn insert_after(&self, ref_id: RealDomId, child: RealDomId);
+    fn add_child(&self, parent: RealDomId, child: RealDomId);
+    fn insert_css(&self, selector: String, value: String);
+    fn set_event(&self, node: RealDomId, callback: EventCallback);
     fn fetch(&self, method: FetchMethod, url: String, headers: Option<HashMap<String, String>>, body: Option<String>) -> Pin<Box<dyn Future<Output=Result<String, FetchError>> + 'static>>; 
 }
 
@@ -137,29 +137,29 @@ impl DomDriver {
             let spawn_local_executor = self.spawn_local_executor.clone();
             spawn_local_executor(fur)
 }
-    pub fn createNode(&self, id: RealDomId, name: &'static str) {
-        show_log(format!("createNode {} {}", id, name));
-        self.driver.createNode(id, name);
+    pub fn create_node(&self, id: RealDomId, name: &'static str) {
+        show_log(format!("create_node {} {}", id, name));
+        self.driver.create_node(id, name);
     }
 
-    pub fn createText(&self, id: RealDomId, value: &str) {
-        show_log(format!("createText {} {}", id, value));
-        self.driver.createText(id, value);
+    pub fn create_text(&self, id: RealDomId, value: &str) {
+        show_log(format!("create_text {} {}", id, value));
+        self.driver.create_text(id, value);
     }
 
-    pub fn updateText(&self, id: RealDomId, value: &str) {
-        show_log(format!("updateText {} {}", id, value));
-        self.driver.updateText(id, value);
+    pub fn update_text(&self, id: RealDomId, value: &str) {
+        show_log(format!("update_text {} {}", id, value));
+        self.driver.update_text(id, value);
     }
 
-    pub fn setAttr(&self, id: RealDomId, key: &'static str, value: &str) {
-        show_log(format!("setAttr {} {} {}", id, key, value));
-        self.driver.setAttr(id, key, value);
+    pub fn set_attr(&self, id: RealDomId, key: &'static str, value: &str) {
+        show_log(format!("set_attr {} {} {}", id, key, value));
+        self.driver.set_attr(id, key, value);
     }
 
-    pub fn removeAttr(&self, id: RealDomId, name: &'static str) {
-        show_log(format!("removeAttr {} {}", id, name));
-        self.driver.removeAttr(id, name);
+    pub fn remove_attr(&self, id: RealDomId, name: &'static str) {
+        show_log(format!("remove_attr {} {}", id, name));
+        self.driver.remove_attr(id, name);
     }
 
     pub fn remove(&self, id: RealDomId) {
@@ -167,34 +167,34 @@ impl DomDriver {
         self.driver.remove(id);
     }
 
-    pub fn insertAsFirstChild(&self, parent: RealDomId, child: RealDomId) {
-        show_log(format!("insertAsFirstChild parent={} child={}", parent, child));
-        self.driver.insertAsFirstChild(parent, child);
+    pub fn insert_as_first_child(&self, parent: RealDomId, child: RealDomId) {
+        show_log(format!("insert_as_first_child parent={} child={}", parent, child));
+        self.driver.insert_as_first_child(parent, child);
     }
 
-    pub fn insertBefore(&self, refId: RealDomId, child: RealDomId) {
-        show_log(format!("insertBefore refId={} child={}", refId, child));
-        self.driver.insertBefore(refId, child);
+    pub fn insert_before(&self, ref_id: RealDomId, child: RealDomId) {
+        show_log(format!("insert_before refId={} child={}", ref_id, child));
+        self.driver.insert_before(ref_id, child);
     }
 
-    pub fn insertAfter(&self, refId: RealDomId, child: RealDomId) {
-        show_log(format!("insertAfter refId={} child={}", refId, child));
-        self.driver.insertAfter(refId, child);
+    pub fn insert_after(&self, ref_id: RealDomId, child: RealDomId) {
+        show_log(format!("insert_after refId={} child={}", ref_id, child));
+        self.driver.insert_after(ref_id, child);
     }
 
-    pub fn addChild(&self, parent: RealDomId, child: RealDomId) {
-        show_log(format!("addChild parent={} child={}", parent, child));
-        self.driver.addChild(parent, child);
+    pub fn add_child(&self, parent: RealDomId, child: RealDomId) {
+        show_log(format!("add_child parent={} child={}", parent, child));
+        self.driver.add_child(parent, child);
     }
 
-    pub fn insertCss(&self, selector: String, value: String) {
-        show_log(format!("insertCss selector={} value={}", selector, value));
-        self.driver.insertCss(selector, value);
+    pub fn insert_css(&self, selector: String, value: String) {
+        show_log(format!("insert_css selector={} value={}", selector, value));
+        self.driver.insert_css(selector, value);
     }
 
-    pub fn setEvent(&self, node: RealDomId, callback: EventCallback) {
-        show_log(format!("setEvent {} {}", node, callback.to_string()));
-        self.driver.setEvent(node, callback);
+    pub fn set_event(&self, node: RealDomId, callback: EventCallback) {
+        show_log(format!("set_event {} {}", node, callback.to_string()));
+        self.driver.set_event(node, callback);
     }
 
     pub fn fetch(&self, method: FetchMethod, url: String, headers: Option<HashMap<String, String>>, body: Option<String>) -> Pin<Box<dyn Future<Output=Result<String, FetchError>> + 'static>> {

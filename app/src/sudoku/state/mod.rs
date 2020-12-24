@@ -25,58 +25,58 @@ pub mod possible_values;
 pub mod possible_values_last;
 
 
-fn createGrid(deps: &Dependencies,) -> SudokuSquare<SudokuSquare<NumberItem>> {
-    SudokuSquare::createWithIterator(move |level0x, level0y| {
-        SudokuSquare::createWithIterator(move |level1x, level1y| {
+fn create_grid(deps: &Dependencies,) -> SudokuSquare<SudokuSquare<NumberItem>> {
+    SudokuSquare::create_with_iterator(move |level0x, level0y| {
+        SudokuSquare::create_with_iterator(move |level1x, level1y| {
             NumberItem::new(deps, level0x, level0y, level1x, level1y, None)
         })
     })
 }
 
-fn createGridPossible(deps: &Dependencies, gridNumber: &SudokuSquare<SudokuSquare<NumberItem>>) -> SudokuSquare<SudokuSquare<PossibleValues>> {
-    SudokuSquare::createWithIterator(|level0x, level0y| {
-        SudokuSquare::createWithIterator(|level1x, level1y| {
-            possible_values(deps, gridNumber, level0x, level0y, level1x, level1y)
+fn create_grid_possible(deps: &Dependencies, grid_number: &SudokuSquare<SudokuSquare<NumberItem>>) -> SudokuSquare<SudokuSquare<PossibleValues>> {
+    SudokuSquare::create_with_iterator(|level0x, level0y| {
+        SudokuSquare::create_with_iterator(|level1x, level1y| {
+            possible_values(deps, grid_number, level0x, level0y, level1x, level1y)
         })
     })
 }
 
-fn createGridPossibleLast(
+fn create_grid_possible_last(
     deps: &Dependencies,
-    gridNumber: &SudokuSquare<SudokuSquare<NumberItem>>,
-    gridPossible: &SudokuSquare<SudokuSquare<PossibleValues>>
+    grid_number: &SudokuSquare<SudokuSquare<NumberItem>>,
+    grid_possible: &SudokuSquare<SudokuSquare<PossibleValues>>
 ) -> SudokuSquare<SudokuSquare<PossibleValuesLast>> {
-    SudokuSquare::createWithIterator(|level0x, level0y| {
-        SudokuSquare::createWithIterator(|level1x, level1y| {
-            possible_values_last(deps, gridNumber, gridPossible, level0x, level0y, level1x, level1y)
+    SudokuSquare::create_with_iterator(|level0x, level0y| {
+        SudokuSquare::create_with_iterator(|level1x, level1y| {
+            possible_values_last(deps, grid_number, grid_possible, level0x, level0y, level1x, level1y)
         })
     })
 }
 pub struct Cell {
     pub number: NumberItem,
     pub possible: PossibleValues,
-    pub possibleLast: PossibleValuesLast,
+    pub possible_last: PossibleValuesLast,
     pub show_delete: Value<bool>,
 }
 
-fn creatergidView(
+fn creatergid_view(
     deps: &Dependencies,
-    gridNumber: SudokuSquare<SudokuSquare<NumberItem>>,
-    gridPossible: SudokuSquare<SudokuSquare<PossibleValues>>,
-    gridPossibleLast: SudokuSquare<SudokuSquare<PossibleValuesLast>>,
+    grid_number: SudokuSquare<SudokuSquare<NumberItem>>,
+    grid_possible: SudokuSquare<SudokuSquare<PossibleValues>>,
+    grid_possible_last: SudokuSquare<SudokuSquare<PossibleValuesLast>>,
 ) -> SudokuSquare<SudokuSquare<Cell>> {
 
-    return SudokuSquare::createWithIterator(|level0x, level0y| {
-        return SudokuSquare::createWithIterator(|level1x, level1y| {
-            let number = (*gridNumber.getFrom(level0x, level0y).getFrom(level1x, level1y)).clone();
-            let possible = (*gridPossible.getFrom(level0x, level0y).getFrom(level1x, level1y)).clone();
-            let possibleLast = (*gridPossibleLast.getFrom(level0x, level0y).getFrom(level1x, level1y)).clone();
+    return SudokuSquare::create_with_iterator(|level0x, level0y| {
+        return SudokuSquare::create_with_iterator(|level1x, level1y| {
+            let number = (*grid_number.get_from(level0x, level0y).get_from(level1x, level1y)).clone();
+            let possible = (*grid_possible.get_from(level0x, level0y).get_from(level1x, level1y)).clone();
+            let possible_last = (*grid_possible_last.get_from(level0x, level0y).get_from(level1x, level1y)).clone();
 
             Cell {
                 number,
                 possible,
-                possibleLast,
-                show_delete: deps.newValue(true)
+                possible_last: possible_last,
+                show_delete: deps.new_value(true)
             }
         });
     });
@@ -89,13 +89,13 @@ pub struct Sudoku {
 
 impl Sudoku {
     pub fn new(deps: &Dependencies) -> Computed<Sudoku> {
-        let gridNumber = createGrid(deps);
-        let gridPossible = createGridPossible(deps, &gridNumber);
-        let gridPossibleLast = createGridPossibleLast(deps, &gridNumber, &gridPossible);
+        let grid_number = create_grid(deps);
+        let grid_possible = create_grid_possible(deps, &grid_number);
+        let grid_possible_last = create_grid_possible_last(deps, &grid_number, &grid_possible);
 
-        deps.newComputedFrom(Sudoku {
+        deps.new_computed_from(Sudoku {
             deps: deps.clone(),
-            grid: creatergidView(deps, gridNumber, gridPossible, gridPossibleLast),
+            grid: creatergid_view(deps, grid_number, grid_possible, grid_possible_last),
         })
     }
 
@@ -107,7 +107,7 @@ impl Sudoku {
                 for y0 in TreeBoxIndex::variants() {
                     for x1 in TreeBoxIndex::variants() {
                         for y1 in TreeBoxIndex::variants() {
-                            self.grid.getFrom(x0, y0).getFrom(x1, y1).number.value.setValue(None);
+                            self.grid.get_from(x0, y0).get_from(x1, y1).number.value.set_value(None);
                         }
                     }
                 }

@@ -39,7 +39,7 @@ impl RealDomNodeInner {
     pub fn new(driver: DomDriver, name: &'static str) -> RealDomNodeInner {
         let nodeId = RealDomId::default();
 
-        driver.createNode(nodeId.clone(), name);
+        driver.create_node(nodeId.clone(), name);
 
         RealDomNodeInner {
             domDriver: driver,
@@ -71,7 +71,7 @@ impl RealDomNodeInner {
         };
 
         if needUpdate {
-            self.domDriver.setAttr(self.idDom.clone(), &name, &value);
+            self.domDriver.set_attr(self.idDom.clone(), &name, &value);
             self.attr.insert(name, value.to_string());
        }
     }
@@ -88,7 +88,7 @@ impl RealDomNodeInner {
         }
 
         for key_to_delete in to_delate.into_iter() {
-            self.domDriver.removeAttr(self.idDom.clone(), key_to_delete)
+            self.domDriver.remove_attr(self.idDom.clone(), key_to_delete)
         }
 
         self.attr.retain(|key, _value| {
@@ -103,7 +103,7 @@ impl RealDomNodeInner {
     }
 
     pub fn setEvent(&mut self, callback: EventCallback) {
-        self.domDriver.setEvent(self.idDom.clone(), callback);
+        self.domDriver.set_event(self.idDom.clone(), callback);
     }
 
     pub fn extract_child(&mut self) -> Vec<RealDom> {
@@ -117,10 +117,10 @@ impl RealDomNodeInner {
     pub fn appendAfter(&mut self, prevNode: Option<RealDomId>, newChild: RealDom) {
         match prevNode {
             Some(prevNode) => {
-                self.domDriver.insertAfter(prevNode, newChild.id());
+                self.domDriver.insert_after(prevNode, newChild.id());
             }
             None => {
-                self.domDriver.addChild(self.idDom.clone(), newChild.id());
+                self.domDriver.add_child(self.idDom.clone(), newChild.id());
             }
         };
 

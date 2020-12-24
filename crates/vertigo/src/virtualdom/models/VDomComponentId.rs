@@ -20,7 +20,7 @@ impl VDomComponentId {
 
         let idFunction = render as *const () as u64;
         VDomComponentId {
-            idComputed: params.getId(),
+            idComputed: params.get_id(),
             idFunction
         }
     }

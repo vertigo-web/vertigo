@@ -13,7 +13,7 @@ pub struct State {
 
 impl State {
     pub fn new(root: &Dependencies) -> Computed<State> {
-        root.newComputedFrom(
+        root.new_computed_from(
             State {
                 counter: Value::new(root.clone(), 0)
             }
@@ -21,11 +21,11 @@ impl State {
     }
 
     pub fn increment(&self) {
-        self.counter.setValue(*self.counter.getValue() + 1);
+        self.counter.set_value(*self.counter.get_value() + 1);
     }
 
     pub fn decrement(&self) {
-        self.counter.setValue(*self.counter.getValue() - 1);
+        self.counter.set_value(*self.counter.get_value() - 1);
     }
 }
 

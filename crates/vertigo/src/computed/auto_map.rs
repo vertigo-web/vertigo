@@ -26,10 +26,10 @@ impl<K: Eq + Hash + Clone, V: 'static> AutoMap<K, V> {
         }
     }
 
-    pub fn getValue(&self, key: &K) -> Computed<V> {
-        self.deps.reportDependenceInStack(self.id.clone());
+    pub fn get_value(&self, key: &K) -> Computed<V> {
+        self.deps.report_dependence_in_stack(self.id.clone());
 
-        let item: Option<Computed<V>> = self.values.getWithContext(
+        let item: Option<Computed<V>> = self.values.get_with_context(
             key, 
             |state, key| -> Option<Computed<V>> {
                 let item = (*state).get(key);

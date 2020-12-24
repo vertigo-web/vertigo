@@ -15,18 +15,18 @@ impl Client {
 
         let id = GraphId::default();
 
-        let getValue = deps.wrapGetValue(move || {
-            computed.getValue()
+        let get_value = deps.wrap_get_value(move || {
+            computed.get_value()
         }, id.clone());
 
         let refresh = move || {
-            let value = getValue();
+            let value = get_value();
             call(value.as_ref());
         };
 
         refresh();
 
-        deps.registerRefreshToken(id.clone(), RefreshToken::newClient(refresh));
+        deps.register_refresh_token(id.clone(), RefreshToken::new_client(refresh));
 
         Client {
             deps,
@@ -40,6 +40,6 @@ impl Client {
 
 impl Drop for Client {
     fn drop(&mut self) {
-        self.deps.removeRelation(&self.id);
+        self.deps.remove_relation(&self.id);
     }
 }
