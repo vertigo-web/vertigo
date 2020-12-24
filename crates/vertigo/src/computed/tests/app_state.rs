@@ -5,7 +5,7 @@ use crate::computed::{
     Computed,
 };
 use crate::computed::tests::{
-    BoxValue::BoxValue,
+    box_value::BoxValue,
 };
 
 struct AppState {
@@ -48,75 +48,75 @@ impl AppState {
 fn test_app_state() {
     let root = Dependencies::default();
 
-    let appState = AppState::new(&root);
+    let app_state = AppState::new(&root);
 
     let suma3 = {
-        let appState = appState.clone();
+        let app_state = app_state.clone();
 
         root.from(move || -> i32 {
-            let val1 = appState.value1.get_value();
-            let val3 = appState.value3.get_value();
+            let val1 = app_state.value1.get_value();
+            let val3 = app_state.value3.get_value();
 
             *val1 + *val3
         })
     };
 
 
-    let suma3Box: BoxValue<i32> = BoxValue::new(0);
-    let sumaTotalBox: BoxValue<i32> = BoxValue::new(0);
+    let suma3_box: BoxValue<i32> = BoxValue::new(0);
+    let suma_total_box: BoxValue<i32> = BoxValue::new(0);
 
-    assert_eq!((suma3Box.get(), sumaTotalBox.get()), (0, 0));
+    assert_eq!((suma3_box.get(), suma_total_box.get()), (0, 0));
 
 
     let suma3sub = {
-        let suma3Box = suma3Box.clone();
+        let suma3_box = suma3_box.clone();
 
         suma3.subscribe(move |value| {
-            suma3Box.set(*value);
+            suma3_box.set(*value);
         })
     };
 
-    appState.value1.set_value(2);
+    app_state.value1.set_value(2);
 
-    assert_eq!((suma3Box.get(), sumaTotalBox.get()), (5, 0));
+    assert_eq!((suma3_box.get(), suma_total_box.get()), (5, 0));
 
-    appState.value1.set_value(3);
-    assert_eq!((suma3Box.get(), sumaTotalBox.get()), (6, 0));
+    app_state.value1.set_value(3);
+    assert_eq!((suma3_box.get(), suma_total_box.get()), (6, 0));
 
-    appState.value2.set_value(4);
-    assert_eq!((suma3Box.get(), sumaTotalBox.get()), (6, 0));
+    app_state.value2.set_value(4);
+    assert_eq!((suma3_box.get(), suma_total_box.get()), (6, 0));
 
-    appState.value2.set_value(5);
-    assert_eq!((suma3Box.get(), sumaTotalBox.get()), (6, 0));
+    app_state.value2.set_value(5);
+    assert_eq!((suma3_box.get(), suma_total_box.get()), (6, 0));
 
-    appState.value3.set_value(6);
-    assert_eq!((suma3Box.get(), sumaTotalBox.get()), (9, 0));
+    app_state.value3.set_value(6);
+    assert_eq!((suma3_box.get(), suma_total_box.get()), (9, 0));
 
-    appState.value3.set_value(7);
-    assert_eq!((suma3Box.get(), sumaTotalBox.get()), (10, 0));
+    app_state.value3.set_value(7);
+    assert_eq!((suma3_box.get(), suma_total_box.get()), (10, 0));
 
     suma3sub.off();
-    appState.value3.set_value(8);
-    assert_eq!((suma3Box.get(), sumaTotalBox.get()), (10, 0));
+    app_state.value3.set_value(8);
+    assert_eq!((suma3_box.get(), suma_total_box.get()), (10, 0));
 
 
-    let sumaTotal = {
-        let sumaTotalBox = sumaTotalBox.clone();
-        appState.suma.clone().subscribe(move |value| {
-            sumaTotalBox.set(*value);
+    let suma_total = {
+        let suma_total_box = suma_total_box.clone();
+        app_state.suma.clone().subscribe(move |value| {
+            suma_total_box.set(*value);
         })
     };
 
-    assert_eq!((suma3Box.get(), sumaTotalBox.get()), (10, 16));
+    assert_eq!((suma3_box.get(), suma_total_box.get()), (10, 16));
 
-    appState.value1.set_value(2);
-    assert_eq!((suma3Box.get(), sumaTotalBox.get()), (10, 15));
+    app_state.value1.set_value(2);
+    assert_eq!((suma3_box.get(), suma_total_box.get()), (10, 15));
 
-    appState.value2.set_value(3);
-    assert_eq!((suma3Box.get(), sumaTotalBox.get()), (10, 13));
+    app_state.value2.set_value(3);
+    assert_eq!((suma3_box.get(), suma_total_box.get()), (10, 13));
 
-    appState.value3.set_value(4);
-    assert_eq!((suma3Box.get(), sumaTotalBox.get()), (10, 9));
+    app_state.value3.set_value(4);
+    assert_eq!((suma3_box.get(), suma_total_box.get()), (10, 9));
 
-    sumaTotal.off();
+    suma_total.off();
 }

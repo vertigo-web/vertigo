@@ -16,12 +16,14 @@ fn css_box() -> Css {
 fn css_button() -> Css {
     css_box().push("
         cursor: pointer;
+    ")
+}
 
+/*
         &:hover {
             color: red;
         }
-    ")
-}
+*/
 
 fn css_wrapper() -> Css {
     Css::one("

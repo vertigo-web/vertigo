@@ -1,0 +1,20 @@
+fn custom_css() -> Css {
+    let width = 30;
+    css! {
+        height: 20px;
+        width: {width}px;
+    }
+}
+
+
+transform to ====>
+
+
+fn custom_css() -> Css {
+    let width = 30;
+    Css::one(format!("
+        height: 20px;
+        width: {}px;
+    }
+    ", width))
+}

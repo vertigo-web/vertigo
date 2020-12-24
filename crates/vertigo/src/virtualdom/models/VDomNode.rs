@@ -5,7 +5,7 @@ use crate::virtualdom::models::{
     VDom::VDom,
 };
 use crate::virtualdom::models::{
-    Css::{Css, CssFrames},
+    Css::Css,
     NodeAttr::NodeAttr,
 };
 
@@ -18,7 +18,6 @@ pub struct VDomNode {
     pub onMouseEnter: Option<Rc<dyn Fn()>>,
     pub onMouseLeave: Option<Rc<dyn Fn()>>,
     pub css: Option<Css>,
-    pub cssFrames: Option<CssFrames>,
 }
 
 impl VDomNode {
@@ -32,16 +31,12 @@ impl VDomNode {
             onMouseEnter: None,
             onMouseLeave: None,
             css: None,
-            cssFrames: None,
         };
 
         for child in childList {
             match child {
                 NodeAttr::Css { css } => {
                     result.css = Some(css);
-                },
-                NodeAttr::CssFrames { frames } => {
-                    result.cssFrames = Some(frames);
                 },
                 NodeAttr::OnClick { event } => {
                     result.onClick = Some(event);
@@ -77,7 +72,6 @@ impl VDomNode {
             onMouseEnter: None,
             onMouseLeave: None,
             css: None,
-            cssFrames: None,
         }
     }
 }

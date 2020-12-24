@@ -1,6 +1,6 @@
 use vertigo::{
-    Css, CssFrames,
-    NodeAttr::{NodeAttr, node, css, cssFrames}
+    Css,
+    NodeAttr::{NodeAttr, node, css}
 };
 
 pub fn spinner() -> NodeAttr {
@@ -11,19 +11,17 @@ pub fn spinner() -> NodeAttr {
             background-color: #d26913;
 
             border-radius: 100%;
-            -webkit-animation: sk-scaleout 1.0s infinite ease-in-out;
-            animation: sk-scaleout 1.0s infinite ease-in-out;
-        ")),
-
-        cssFrames(CssFrames::new("sk-scaleout", "
-            0% {
-                -webkit-transform: scale(0);
-                transform: scale(0);
-            } 100% {
-                -webkit-transform: scale(1.0);
-                transform: scale(1.0);
-                opacity: 0;
-            }
+            animation: 1.0s infinite ease-in-out {
+                0% {
+                    -webkit-transform: scale(0);
+                    transform: scale(0);
+                }
+                100% {
+                    -webkit-transform: scale(1.0);
+                    transform: scale(1.0);
+                    opacity: 0;
+                }
+            };
         ")),
     ))
 }

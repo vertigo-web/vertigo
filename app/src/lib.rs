@@ -46,10 +46,6 @@ TODO - dorobić konwersję wejściowego argumentu.
     obecnie trzeba robić: value.setValue("value 1".into());
         ma obsługiwać setValue(String) oraz setValue(&str)
 
-TODO - animacje, pozbyć się konieczności wymyślania nazwy animacji
-
-TODO - wydzielić computed do osobnego crates
-
 TODO - Graph - usunac nieuzywane krawedzie (subskrybcje)
 
 TODO - Graph - zamienić Clone na Copy
@@ -57,6 +53,7 @@ TODO - Graph - zamienić Clone na Copy
 TODO - dodać jakieś makra które pozwolą na łatwe generowanie html-a (https://docs.rs/maplit/1.0.2/maplit/)
     to wygląda obiecująco
     https://github.com/chinedufn/percy/tree/master/crates/html-macro
+    https://github.com/rbalicki2/scoped_css
 
 
 TODO - insertAsFirstChild, insertAfter. Wywalić te dwie funkcje.
@@ -67,10 +64,6 @@ TODO - makro które wycina białe znaki ?
 Css::one("
         margin: 5px;
     ")
-
-
-TODO - zrobić analizator Cargo.lock, wyszukiwać biblioteki w rónych wersjach które posiadają zmienne globalne
-    przykład tokio ....
 
 TODO - fetch - pozbyć się unwrapow
 
@@ -97,4 +90,5 @@ https://github.com/rustwasm/console_error_panic_hook#readme
 https://rustwasm.github.io/wasm-bindgen/reference/passing-rust-closures-to-js.html
 
 */
+
 

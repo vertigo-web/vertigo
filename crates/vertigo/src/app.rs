@@ -7,11 +7,11 @@ use crate::{
         models::{
             RealDomNode::RealDomNode,
             RealDomId::RealDomId,
-            CssManager::CssManager,
             VDomComponent::VDomComponent,
         },
         renderToNode::renderToNode,
     },
+    css_manager::css_manager::CssManager,
     driver::DomDriver,
 };
 
