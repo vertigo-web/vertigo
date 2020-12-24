@@ -40,10 +40,10 @@ impl State {
             let counter4 = counter4.clone();
 
             root.from(move || {
-                let value1 = *counter1.getValue().counter.getValue();
-                let value2 = *counter2.getValue().counter.getValue();
-                let value3 = *counter3.getValue().counter.getValue();
-                let value4 = *counter4.getValue().counter.getValue();
+                let value1 = *counter1.get_value().counter.get_value();
+                let value2 = *counter2.get_value().counter.get_value();
+                let value3 = *counter3.get_value().counter.get_value();
+                let value4 = *counter4.get_value().counter.get_value();
 
                 value1 + value2 + value3 + value4
             })
@@ -52,9 +52,9 @@ impl State {
         // run1(&driver);
         // run2(&driver);
 
-        root.newComputedFrom(State {
-            value: root.newValue(33),
-            at: root.newValue(999),
+        root.new_computed_from(State {
+            value: root.new_value(33),
+            at: root.new_value(999),
             counter1,
             counter2,
             counter3,
@@ -67,13 +67,13 @@ impl State {
     }
 
     pub fn increment(&self) {
-        let rr = self.value.getValue();
-        self.value.setValue(*rr + 1);
+        let rr = self.value.get_value();
+        self.value.set_value(*rr + 1);
     }
 
     pub fn decrement(&self) {
-        let rr = self.value.getValue();
-        self.value.setValue(*rr - 1);
+        let rr = self.value.get_value();
+        self.value.set_value(*rr - 1);
     }
 
     // async fn cos() -> u32 {

@@ -14,41 +14,41 @@ use crate::input;
 
 use super::spinner::spinner;
 
-fn cssFooter(showColor: bool) -> Css {
+fn css_footer(show_color: bool) -> Css {
     let base = Css::one("background-color: yellow;");
 
-    if showColor {
+    if show_color {
         base.push("color: green;")
     } else {
         base.push("color: blue;")
     }
 }
 
-fn cssBg() -> Css {
+fn css_bg() -> Css {
     Css::one("border: 1px solid black; padding: 10px; background-color: #e0e0e0;margin-bottom: 10px;")
 }
 
-fn cssButton() -> Css {
-    cssBg().push("cursor: pointer;")
+fn css_button() -> Css {
+    css_bg().push("cursor: pointer;")
 }
 
 fn render_header(app_state: &Computed<app::State>) -> VDomNode {
     use NodeAttr::{buildNode, node, css, text, onClick};
 
 
-    let app_state = app_state.getValue();
+    let app_state = app_state.get_value();
 
-    let at = app_state.at.getValue();
-    let value = app_state.value.getValue();
+    let at = app_state.at.get_value();
+    let value = app_state.value.get_value();
 
-    let onDown = {
+    let on_down = {
         let app_state = app_state.clone();
         move || {
             app_state.decrement();
         }
     };
 
-    let onUp = {
+    let on_up = {
         let app_state = app_state.clone();
         move || {
             log::info!("on click");
@@ -56,7 +56,7 @@ fn render_header(app_state: &Computed<app::State>) -> VDomNode {
         }
     };
 
-    let showColor = *value % 2 == 0;
+    let show_color = *value % 2 == 0;
 
     let footer_dom = if *value % 10 == 0 {
         node("div", vec!(
@@ -64,29 +64,29 @@ fn render_header(app_state: &Computed<app::State>) -> VDomNode {
         ))
     } else {
         node("div", vec!(
-            css(cssFooter(showColor)),
+            css(css_footer(show_color)),
             text(format!("jakis footer {} {}", *value % 2, *value % 3)),
         ))
     };
 
     buildNode("div", vec!(
         node("div", vec!(
-            css(cssBg()),
+            css(css_bg()),
             text("bla bla bla"),
             spinner(),
         )),
         node("div", vec!(
-            onClick(onUp.clone()),
+            onClick(on_up.clone()),
             text(format!("aktualna wartosc = {} ({})", value, at)),
         )),
         node("div", vec!(
-            css(cssButton()),
-            onClick(onUp),
+            css(css_button()),
+            onClick(on_up),
             text("up"),
         )),
         node("div", vec!(
-            css(cssButton()),
-            onClick(onDown),
+            css(css_button()),
+            onClick(on_down),
             text("down"),
         )),
         footer_dom,
@@ -96,9 +96,9 @@ fn render_header(app_state: &Computed<app::State>) -> VDomNode {
 fn render_suma(app_state: &Computed<app::State>) -> VDomNode {
     use NodeAttr::{buildNode, text};
 
-    let app_state = app_state.getValue();
+    let app_state = app_state.get_value();
 
-    let suma = app_state.suma.getValue();
+    let suma = app_state.suma.get_value();
 
     buildNode("div", vec!(
         text(format!("suma = {}", suma))
@@ -111,7 +111,7 @@ pub fn render(app_state: &Computed<app::State>) -> VDomNode {
     let header = component(app_state.clone(), render_header);
     let suma = component(app_state.clone(), render_suma);
 
-    let app_state = app_state.getValue();
+    let app_state = app_state.get_value();
 
     buildNode("div", vec!(
         header,

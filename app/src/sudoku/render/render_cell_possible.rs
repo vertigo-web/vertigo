@@ -13,7 +13,7 @@ use super::config::Config;
 //     ", config.itemBorderSize, config.itemWidthSize, config.itemWidthSize))
 // }
 
-fn cssItemOnlyOne() -> Css {
+fn css_item_only_one() -> Css {
     let config = Config::new();
     Css::new(format!("
         display: flex;
@@ -25,18 +25,18 @@ fn cssItemOnlyOne() -> Css {
         font-size: 40px;
         color: blue;
         cursor: pointer;
-    ", config.itemWidth, config.itemWidth))
+    ", config.item_width, config.item_width))
 }
 
-fn cssWrapperOne() -> Css {
+fn css_wrapper_one() -> Css {
     let config = Config::new();
     Css::new(format!("
         width: {}px;
         height: {}px;
-    ", config.itemWidth, config.itemWidth))
+    ", config.item_width, config.item_width))
 }
 
-fn cssWrapper() -> Css {
+fn css_wrapper() -> Css {
     let config = Config::new();
     Css::new(format!("
         width: {}px;
@@ -46,17 +46,17 @@ fn cssWrapper() -> Css {
         grid-template-columns: 1fr 1fr 1fr;
         grid-template-rows: 1fr 1fr 1fr;
         flex-shrink: 0;
-    ", config.itemWidth, config.itemWidth))
+    ", config.item_width, config.item_width))
 }
 
-fn cssItem(shouldShow: bool) -> Css {
+fn css_item(should_show: bool) -> Css {
     let mut css = Css::one("
         display: flex;
         align-items: center;
         justify-content: center;
     ");
 
-    if shouldShow {
+    if should_show {
         css.str("
             background-color: #00ff0030;
             cursor: pointer;
@@ -69,30 +69,30 @@ fn cssItem(shouldShow: bool) -> Css {
 pub fn render_cell_possible(item: &Computed<Cell>) -> VDomNode {
     use NodeAttr::{buildNode, node, css, text, onClick};
 
-    let cell = (*item).getValue();
+    let cell = (*item).get_value();
 
-    let possible = (*cell).possible.getValue();
-    let onlyOnePossible = possible.len() == 1;
+    let possible = (*cell).possible.get_value();
+    let only_one_possible = possible.len() == 1;
 
-    if onlyOnePossible {
+    if only_one_possible {
         let mut out = Vec::new();
         
-        out.push(css(cssWrapperOne()));
+        out.push(css(css_wrapper_one()));
 
         for number in possible.iter() {
-            let onSet = {
+            let on_set = {
                 let number = number.clone();
                 let cell = cell.clone();
 
                 move || {
-                    cell.number.value.setValue(Some(number));
+                    cell.number.value.set_value(Some(number));
                 }
             };
     
             out.push(
                 node("div", vec!(
-                    css(cssItemOnlyOne()),
-                    onClick(onSet),
+                    css(css_item_only_one()),
+                    onClick(on_set),
                     text(format!("{}", number.to_u16()))
                 ))
             );
@@ -103,36 +103,36 @@ pub fn render_cell_possible(item: &Computed<Cell>) -> VDomNode {
 
 
 
-    let possibleLastValue = *cell.possibleLast.getValue();
+    let possible_last_value = *cell.possible_last.get_value();
 
-    if let Some(possibleLastValue) = possibleLastValue {
-        let onSet = {
-            let possibleLastValue = possibleLastValue.clone();
+    if let Some(possible_last_value) = possible_last_value {
+        let on_set = {
+            let possible_last_value = possible_last_value.clone();
             let cell = cell.clone();
 
             move || {
-                cell.number.value.setValue(Some(possibleLastValue));
+                cell.number.value.set_value(Some(possible_last_value));
             }
         };
 
         return buildNode("div", vec!(
-            css(cssWrapperOne()),
+            css(css_wrapper_one()),
             node("div", vec!(
-                css(cssItemOnlyOne()),
-                onClick(onSet),
-                text(format!("{}.", possibleLastValue.to_u16()))
+                css(css_item_only_one()),
+                onClick(on_set),
+                text(format!("{}.", possible_last_value.to_u16()))
             ))
         ));
     }
 
 
     let mut out = Vec::new();
-    out.push(css(cssWrapper()));
+    out.push(css(css_wrapper()));
 
     for number in SudokuValue::variants() {
-        let shouldShow = possible.contains(&number);
+        let should_show = possible.contains(&number);
 
-        let label = if shouldShow {
+        let label = if should_show {
             format!("{}", number.to_u16())
         } else {
             "".into()
@@ -140,12 +140,12 @@ pub fn render_cell_possible(item: &Computed<Cell>) -> VDomNode {
         
         out.push(
             node("div", vec!(
-                css(cssItem(shouldShow)),
+                css(css_item(should_show)),
                 onClick({
                     let cell = cell.clone();
                     move || {
-                        if shouldShow {
-                            cell.number.value.setValue(Some(number));
+                        if should_show {
+                            cell.number.value.set_value(Some(number));
                         }
                     }
                 }),

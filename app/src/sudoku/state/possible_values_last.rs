@@ -5,7 +5,7 @@ use vertigo::computed::{
 
 use super::{number_item::{NumberItem, SudokuValue}, possible_values::PossibleValues, sudoku_square::SudokuSquare, tree_box::TreeBoxIndex};
 
-fn iterateBy() -> Vec<(TreeBoxIndex, TreeBoxIndex)> {
+fn iterate_by() -> Vec<(TreeBoxIndex, TreeBoxIndex)> {
     let mut out: Vec<(TreeBoxIndex, TreeBoxIndex)> = Vec::new();
 
     for x0 in TreeBoxIndex::variants() {
@@ -23,28 +23,28 @@ struct CellForComputed {
     pub possible: PossibleValues,
 }
 
-fn getPossibleValue<
+fn get_possible_value<
     S: Fn(TreeBoxIndex, TreeBoxIndex) -> CellForComputed,
 >(
     current: CellForComputed,
-    selectFromGrid: S
+    select_from_grid: S
 ) -> Option<SudokuValue> {
-    for possibleValue in (*current.possible.getValue()).iter() {
+    for possible_value in (*current.possible.get_value()).iter() {
 
         let mut count = 0;
 
-        for (check_x0, check_x1) in iterateBy() {
-            let cell = selectFromGrid(check_x0, check_x1);
+        for (check_x0, check_x1) in iterate_by() {
+            let cell = select_from_grid(check_x0, check_x1);
 
-            let input_value = cell.input.value.getValue();
+            let input_value = cell.input.value.get_value();
 
-            if input_value.is_none() && cell.possible.getValue().contains(&possibleValue) {
+            if input_value.is_none() && cell.possible.get_value().contains(&possible_value) {
                 count += 1;
             }
         }
 
         if count == 1 {
-            return Some(*possibleValue);
+            return Some(*possible_value);
         }
     }
 
@@ -53,71 +53,71 @@ fn getPossibleValue<
 
 pub type PossibleValuesLast = Computed<Option<SudokuValue>>;
 
-fn valueByRow(
+fn value_by_row(
     deps: &Dependencies,
-    gridComputed: &SudokuSquare<SudokuSquare<CellForComputed>>,
+    grid_computed: &SudokuSquare<SudokuSquare<CellForComputed>>,
     level0x: TreeBoxIndex,
     level0y: TreeBoxIndex,
     level1x: TreeBoxIndex,
     level1y: TreeBoxIndex
 ) -> Computed<Option<SudokuValue>> {
-    let gridComputed = (*gridComputed).clone();
+    let grid_computed = (*grid_computed).clone();
 
     deps.from(move || {
-        let getCurrent = (*gridComputed.getFrom(level0x, level0y).getFrom(level1x, level1y)).clone();
+        let get_current = (*grid_computed.get_from(level0x, level0y).get_from(level1x, level1y)).clone();
 
         //iterowaine po wierszu
-        getPossibleValue(getCurrent, {
-            let grid = gridComputed.clone();
+        get_possible_value(get_current, {
+            let grid = grid_computed.clone();
             move |x0, x1| -> CellForComputed {
-                (*grid.getFrom(x0, level0y).getFrom(x1, level1y)).clone()
+                (*grid.get_from(x0, level0y).get_from(x1, level1y)).clone()
             }
         })
     })
 }
 
 
-fn valueByCol(
+fn value_by_col(
     deps: &Dependencies,
-    gridComputed: &SudokuSquare<SudokuSquare<CellForComputed>>,
+    grid_computed: &SudokuSquare<SudokuSquare<CellForComputed>>,
     level0x: TreeBoxIndex,
     level0y: TreeBoxIndex,
     level1x: TreeBoxIndex,
     level1y: TreeBoxIndex
 ) -> Computed<Option<SudokuValue>> {
-    let gridComputed = (*gridComputed).clone();
+    let grid_computed = (*grid_computed).clone();
 
     deps.from(move || {
-        let getCurrent = (*gridComputed.getFrom(level0x, level0y).getFrom(level1x, level1y)).clone();
+        let get_current = (*grid_computed.get_from(level0x, level0y).get_from(level1x, level1y)).clone();
 
         //iterowanie po kolumnie
-        getPossibleValue(getCurrent, {
-            let grid = gridComputed.clone();
+        get_possible_value(get_current, {
+            let grid = grid_computed.clone();
             move |y0, y1| -> CellForComputed {
-                (*grid.getFrom(level0x, y0).getFrom(level1x, y1)).clone()
+                (*grid.get_from(level0x, y0).get_from(level1x, y1)).clone()
             }
         })
     })
 }
 
-fn valueBySquare(
+fn value_by_square(
     deps: &Dependencies,
-    gridComputed: &SudokuSquare<SudokuSquare<CellForComputed>>,
+    grid_computed: &SudokuSquare<SudokuSquare<CellForComputed>>,
     level0x: TreeBoxIndex,
     level0y: TreeBoxIndex,
     level1x: TreeBoxIndex,
     level1y: TreeBoxIndex
 ) -> Computed<Option<SudokuValue>> {
-    let gridComputed = (*gridComputed).clone();
+    let grid_computed = (*grid_computed).clone();
     deps.from(move || {
 
-        let getCurrent = (*gridComputed.getFrom(level0x, level0y).getFrom(level1x, level1y)).clone();
+        let get_current = (*grid_computed.get_from(level0x, level0y).get_from(level1x, level1y)).clone();
 
         //iterowanie po kwadracie
-        getPossibleValue(getCurrent, {
-            let grid = gridComputed.clone();
+        get_possible_value(get_current, {
+            let grid = grid_computed.clone();
             move |x1, y1| -> CellForComputed {
-                (*grid.getFrom(level0x, level0y).getFrom(x1, y1)).clone()
+                (*grid.get_from(level0x, level0y).get_from(x1, y1)).clone()
             }
         })
     })
@@ -125,19 +125,19 @@ fn valueBySquare(
 
 pub fn possible_values_last(
     deps: &Dependencies,
-    gridInput: &SudokuSquare<SudokuSquare<NumberItem>>,
-    gridPossible: &SudokuSquare<SudokuSquare<PossibleValues>>,
+    grid_input: &SudokuSquare<SudokuSquare<NumberItem>>,
+    grid_possible: &SudokuSquare<SudokuSquare<PossibleValues>>,
     level0x: TreeBoxIndex,
     level0y: TreeBoxIndex,
     level1x: TreeBoxIndex,
     level1y: TreeBoxIndex
 ) -> Computed<Option<SudokuValue>> {
 
-    let gridComputed: SudokuSquare<SudokuSquare<CellForComputed>> = {
-        SudokuSquare::createWithIterator(|level0x, level0y| {
-            SudokuSquare::createWithIterator(|level1x, level1y| {
-                let input = (*gridInput.getFrom(level0x, level0y).getFrom(level1x, level1y)).clone();
-                let possible = (*gridPossible.getFrom(level0x, level0y).getFrom(level1x, level1y)).clone();
+    let grid_computed: SudokuSquare<SudokuSquare<CellForComputed>> = {
+        SudokuSquare::create_with_iterator(|level0x, level0y| {
+            SudokuSquare::create_with_iterator(|level1x, level1y| {
+                let input = (*grid_input.get_from(level0x, level0y).get_from(level1x, level1y)).clone();
+                let possible = (*grid_possible.get_from(level0x, level0y).get_from(level1x, level1y)).clone();
     
                 CellForComputed {
                     input,
@@ -147,22 +147,22 @@ pub fn possible_values_last(
         })
     };
 
-    let byRow = valueByRow(deps, &gridComputed, level0x, level0y, level1x, level1y);
-    let byCol = valueByCol(deps, &gridComputed, level0x, level0y, level1x, level1y);
-    let bySquare = valueBySquare(deps, &gridComputed, level0x, level0y, level1x, level1y);
+    let by_row = value_by_row(deps, &grid_computed, level0x, level0y, level1x, level1y);
+    let by_col = value_by_col(deps, &grid_computed, level0x, level0y, level1x, level1y);
+    let by_square = value_by_square(deps, &grid_computed, level0x, level0y, level1x, level1y);
     
     deps.from(move || {
-        let by_row = *byRow.getValue();
+        let by_row = *by_row.get_value();
         if let Some(by_row) = by_row {
             return Some(by_row);
         }
 
-        let by_col = *byCol.getValue();
+        let by_col = *by_col.get_value();
         if let Some(by_col) = by_col {
             return Some(by_col);
         }
 
-        let by_square = *bySquare.getValue();
+        let by_square = *by_square.get_value();
         if let Some(by_square) = by_square {
             return Some(by_square);
         }

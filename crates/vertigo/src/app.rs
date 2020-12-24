@@ -17,19 +17,19 @@ use crate::{
 
 pub struct App {
     _subscription: Client,
-    _cssManager: CssManager
+    _css_manager: CssManager
 }
 
 impl App {
     pub fn new(driver: DomDriver, computed: VDomComponent) -> App {
-        let cssManager = CssManager::new(&driver);
+        let css_manager = CssManager::new(&driver);
         let root = RealDomNode::createWithId(driver, RealDomId::root());
 
-        let subscription = renderToNode(cssManager.clone(), root, computed);
+        let subscription = renderToNode(css_manager.clone(), root, computed);
 
         App {
             _subscription: subscription,
-            _cssManager: cssManager,
+            _css_manager: css_manager,
         }
     }
 

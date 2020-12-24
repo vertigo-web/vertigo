@@ -17,19 +17,19 @@ struct AppState {
 
 impl AppState {
     pub fn new(root: &Dependencies) -> std::rc::Rc<AppState> {
-        let value1 = root.newValue(1);
-        let value2 = root.newValue(2);
-        let value3 = root.newValue(3);
+        let value1 = root.new_value(1);
+        let value2 = root.new_value(2);
+        let value3 = root.new_value(3);
 
         let suma = {
-            let com1 = value1.toComputed();
-            let com2 = value2.toComputed();
-            let com3 = value3.toComputed();
+            let com1 = value1.to_computed();
+            let com2 = value2.to_computed();
+            let com3 = value3.to_computed();
 
             root.from(move || {
-                let val1 = com1.getValue();
-                let val2 = com2.getValue();
-                let val3 = com3.getValue();
+                let val1 = com1.get_value();
+                let val2 = com2.get_value();
+                let val3 = com3.get_value();
 
                 *val1 + *val2 + *val3
             })
@@ -54,8 +54,8 @@ fn test_app_state() {
         let appState = appState.clone();
 
         root.from(move || -> i32 {
-            let val1 = appState.value1.getValue();
-            let val3 = appState.value3.getValue();
+            let val1 = appState.value1.get_value();
+            let val3 = appState.value3.get_value();
 
             *val1 + *val3
         })
@@ -76,27 +76,27 @@ fn test_app_state() {
         })
     };
 
-    appState.value1.setValue(2);
+    appState.value1.set_value(2);
 
     assert_eq!((suma3Box.get(), sumaTotalBox.get()), (5, 0));
 
-    appState.value1.setValue(3);
+    appState.value1.set_value(3);
     assert_eq!((suma3Box.get(), sumaTotalBox.get()), (6, 0));
 
-    appState.value2.setValue(4);
+    appState.value2.set_value(4);
     assert_eq!((suma3Box.get(), sumaTotalBox.get()), (6, 0));
 
-    appState.value2.setValue(5);
+    appState.value2.set_value(5);
     assert_eq!((suma3Box.get(), sumaTotalBox.get()), (6, 0));
 
-    appState.value3.setValue(6);
+    appState.value3.set_value(6);
     assert_eq!((suma3Box.get(), sumaTotalBox.get()), (9, 0));
 
-    appState.value3.setValue(7);
+    appState.value3.set_value(7);
     assert_eq!((suma3Box.get(), sumaTotalBox.get()), (10, 0));
 
     suma3sub.off();
-    appState.value3.setValue(8);
+    appState.value3.set_value(8);
     assert_eq!((suma3Box.get(), sumaTotalBox.get()), (10, 0));
 
 
@@ -109,13 +109,13 @@ fn test_app_state() {
 
     assert_eq!((suma3Box.get(), sumaTotalBox.get()), (10, 16));
 
-    appState.value1.setValue(2);
+    appState.value1.set_value(2);
     assert_eq!((suma3Box.get(), sumaTotalBox.get()), (10, 15));
 
-    appState.value2.setValue(3);
+    appState.value2.set_value(3);
     assert_eq!((suma3Box.get(), sumaTotalBox.get()), (10, 13));
 
-    appState.value3.setValue(4);
+    appState.value3.set_value(4);
     assert_eq!((suma3Box.get(), sumaTotalBox.get()), (10, 9));
 
     sumaTotal.off();

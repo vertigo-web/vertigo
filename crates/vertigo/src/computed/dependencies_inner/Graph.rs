@@ -12,38 +12,38 @@ impl GraphOne {
         }
     }
 
-    fn add(&mut self, edgeA: GraphId, edgeB: GraphId) {
-        let list = self.rel.entry(edgeA).or_insert_with(HashSet::new);
-        list.insert(edgeB);
+    fn add(&mut self, edge_a: GraphId, edge_b: GraphId) {
+        let list = self.rel.entry(edge_a).or_insert_with(HashSet::new);
+        list.insert(edge_b);
     }
 
 
-    pub fn removeB(&mut self, edgeB: &GraphId) {
-        self.rel.retain(|_k, listIds| -> bool {
+    pub fn remove_b(&mut self, edge_b: &GraphId) {
+        self.rel.retain(|_k, list_ids| -> bool {
 
-            listIds.remove(edgeB);
+            list_ids.remove(edge_b);
 
-            !listIds.is_empty()
+            !list_ids.is_empty()
         });
     }
 
-    pub fn getAllDeps(&self, edgeA: GraphId) -> HashSet<GraphId> {
+    pub fn get_all_deps(&self, edge_a: GraphId) -> HashSet<GraphId> {
         let mut result = HashSet::new();
-        let mut toTraverse: Vec<GraphId> = vec!(edgeA);
+        let mut to_traverse: Vec<GraphId> = vec!(edge_a);
 
         loop {
-            let nextToTraverse = toTraverse.pop();
+            let next_to_traverse = to_traverse.pop();
 
-            match nextToTraverse {
+            match next_to_traverse {
                 Some(next) => {
                     let list = self.rel.get(&next);
 
                     if let Some(list) = list {
                         for item in list {
-                            let isContain = result.contains(item);
-                            if !isContain {
+                            let is_contain = result.contains(item);
+                            if !is_contain {
                                 result.insert(item.clone());
-                                toTraverse.push(item.clone());
+                                to_traverse.push(item.clone());
                             }
                         }
                     }
@@ -57,35 +57,35 @@ impl GraphOne {
 }
 
 struct Stack {
-    stackRelations: VecDeque<HashSet<GraphId>>,
+    stack_relations: VecDeque<HashSet<GraphId>>,
 }
 
 impl Stack {
     fn new() -> Stack {
         Stack {
-            stackRelations: VecDeque::new(),
+            stack_relations: VecDeque::new(),
         }
     }
 
-    fn startTrack(&mut self) {
-        let stackFrame = HashSet::new();
-        self.stackRelations.push_back(stackFrame);
+    fn start_track(&mut self) {
+        let stack_frame = HashSet::new();
+        self.stack_relations.push_back(stack_frame);
     }
 
-    fn reportDependence(&mut self, parentId: GraphId) {
-        let len = self.stackRelations.len();
+    fn report_dependence(&mut self, parent_id: GraphId) {
+        let len = self.stack_relations.len();
 
         if len < 1 {
             log::warn!("frame with stack - not found len=0");
             return;
         }
 
-        let lastIndex = len - 1;
-        let lastItem = self.stackRelations.get_mut(lastIndex);
+        let last_index = len - 1;
+        let last_item = self.stack_relations.get_mut(last_index);
 
-        match lastItem {
-            Some(lastItem) => {
-                lastItem.insert(parentId);
+        match last_item {
+            Some(last_item) => {
+                last_item.insert(parent_id);
             },
             None => {
                 log::warn!("frame with stack - not found get_mut=None");
@@ -93,8 +93,8 @@ impl Stack {
         }
     }
 
-    fn stopTrack(&mut self) -> Option<HashSet<GraphId>> {
-        self.stackRelations.pop_back()
+    fn stop_track(&mut self) -> Option<HashSet<GraphId>> {
+        self.stack_relations.pop_back()
     }
 }
 
@@ -116,37 +116,37 @@ impl Default for Graph {
 }
 
 impl Graph {
-    fn addRelation(&mut self, parentId: GraphId, clientId: GraphId) {
-        self.rel.add(parentId, clientId);
+    fn add_relation(&mut self, parent_id: GraphId, client_id: GraphId) {
+        self.rel.add(parent_id, client_id);
         //self.revert.add(clientId, parentId);
     }
 
-    pub fn removeRelation(&mut self, clientId: &GraphId) {
-        self.rel.removeB(&clientId);
+    pub fn remove_relation(&mut self, client_id: &GraphId) {
+        self.rel.remove_b(&client_id);
         //self.revert.removeA(clientId);
     }
 
-    pub fn getAllDeps(&self, parentId: GraphId) -> HashSet<GraphId> {
-        self.rel.getAllDeps(parentId)
+    pub fn get_all_deps(&self, parent_id: GraphId) -> HashSet<GraphId> {
+        self.rel.get_all_deps(parent_id)
     }
 
-    pub fn reportDependence(&mut self, parentId: GraphId) {
-        self.stack.reportDependence(parentId);
+    pub fn report_dependence(&mut self, parent_id: GraphId) {
+        self.stack.report_dependence(parent_id);
     }
 
-    pub fn startTrack(&mut self) {
-        self.stack.startTrack();
+    pub fn start_track(&mut self) {
+        self.stack.start_track();
     }
 
-    pub fn stopTrack(&mut self, clientId: GraphId) {
+    pub fn stop_track(&mut self, client_id: GraphId) {
 
-        let lastItem = self.stack.stopTrack();
+        let last_item = self.stack.stop_track();
 
-        match lastItem {
-            Some(lastItem) => {
+        match last_item {
+            Some(last_item) => {
 
-                for parentId in lastItem {
-                    self.addRelation(parentId, clientId.clone());
+                for parent_id in last_item {
+                    self.add_relation(parent_id, client_id.clone());
                 }
             },
             None => {

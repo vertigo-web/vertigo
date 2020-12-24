@@ -65,7 +65,7 @@ impl CssManager {
 
             let classId = state.getNextClassId();
             let selector = getSelector(classId);
-            state.driver.insertCss(format!(".{}", selector), css.to_string());
+            state.driver.insert_css(format!(".{}", selector), css.to_string());
             state.idsStatic.insert(cssStaticId, classId);
 
             selector
@@ -80,7 +80,7 @@ impl CssManager {
 
             let classId = state.getNextClassId();
             let selector = getSelector(classId);
-            state.driver.insertCss(format!(".{}", selector), css.to_string());
+            state.driver.insert_css(format!(".{}", selector), css.to_string());
             state.idsDynamic.insert(css.to_string(), classId);
 
             selector
@@ -106,7 +106,7 @@ impl CssManager {
 
     pub fn addFrames(&self, frames: &CssFrames) {
         self.inner.change(frames, |state, frames|
-            state.driver.insertCss(format!("@keyframes {}", frames.name), frames.content.clone())
+            state.driver.insert_css(format!("@keyframes {}", frames.name), frames.content.clone())
         )
     }
 }

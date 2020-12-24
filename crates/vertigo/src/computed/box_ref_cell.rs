@@ -18,21 +18,21 @@ impl<T> BoxRefCell<T> {
         getter(&state)
     }
 
-    pub fn getWithContext<D, R>(&self, data: D, getter: fn(&T, D) -> R) -> R {
+    pub fn get_with_context<D, R>(&self, data: D, getter: fn(&T, D) -> R) -> R {
         let value = self.value.borrow();
         let state = &*value;
         getter(&state, data)
     }
 
-    pub fn changeNoParams<R>(&self, changeFn: fn(&mut T) -> R) -> R {
+    pub fn change_no_params<R>(&self, change_fn: fn(&mut T) -> R) -> R {
         let value = self.value.borrow_mut();
         let mut state = value;
-        changeFn(&mut state)
+        change_fn(&mut state)
     }
 
-    pub fn change<D, R>(&self, data: D, changeFn: fn(&mut T, D) -> R) -> R {
+    pub fn change<D, R>(&self, data: D, change_fn: fn(&mut T, D) -> R) -> R {
         let value = self.value.borrow_mut();
         let mut state = value;
-        changeFn(&mut state, data)
+        change_fn(&mut state, data)
     }
 }

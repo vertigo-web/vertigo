@@ -78,7 +78,7 @@ impl NumberItem {
             y0,
             x1,
             y1,
-            value: deps.newValue(value),
+            value: deps.new_value(value),
         }
     }
 }

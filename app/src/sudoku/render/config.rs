@@ -1,40 +1,40 @@
 pub struct Config {
     pub border: u32,
-    pub itemWidth: u32,
-    pub itemPossibleWidth: u32,
-    pub itemBorderSize: u32,
-    pub itemWidthSize: u32,
-    pub itemWidthSizeOuther: u32,
-    pub groupBorderSize: u32,
-    pub groupWidthSize: u32,
-    pub groupWidthSizeOuther: u32,
-    pub allWidth: u32,
+    pub item_width: u32,
+    pub item_possible_width: u32,
+    pub item_border_size: u32,
+    pub item_width_size: u32,
+    pub item_width_size_outher: u32,
+    pub group_border_size: u32,
+    pub group_width_size: u32,
+    pub group_width_size_outher: u32,
+    pub all_width: u32,
 }
 
 impl Config {
     pub fn new() -> Config {
         let border = 1;
-        let itemWidth = 80;
-        let itemPossibleWidth = 20;
-        let itemBorderSize = border;                                        //1
-        let itemWidthSize = itemWidth;                                      //20
-        let itemWidthSizeOuther = itemWidthSize + (2 * itemBorderSize);     //22
-        let groupBorderSize = border;                                       //1
-        let groupWidthSize = 3 * itemWidthSizeOuther;                       //66
-        let groupWidthSizeOuther = groupWidthSize + (2 * groupBorderSize);  //68
-        let allWidth = groupWidthSizeOuther * 3;                            //204
+        let item_width = 80;
+        let item_possible_width = 20;
+        let item_border_size = border;                                        //1
+        let item_width_size = item_width;                                      //20
+        let item_width_size_outher = item_width_size + (2 * item_border_size);     //22
+        let group_border_size = border;                                       //1
+        let group_width_size = 3 * item_width_size_outher;                       //66
+        let group_width_size_outher = group_width_size + (2 * group_border_size);  //68
+        let all_width = group_width_size_outher * 3;                            //204
 
         Config {
             border,
-            itemWidth,
-            itemPossibleWidth,
-            itemBorderSize,
-            itemWidthSize,
-            itemWidthSizeOuther,
-            groupBorderSize,
-            groupWidthSize,
-            groupWidthSizeOuther,
-            allWidth,
+            item_width: item_width,
+            item_possible_width: item_possible_width,
+            item_border_size: item_border_size,
+            item_width_size: item_width_size,
+            item_width_size_outher: item_width_size_outher,
+            group_border_size: group_border_size,
+            group_width_size: group_width_size,
+            group_width_size_outher: group_width_size_outher,
+            all_width: all_width,
         }
     }
 }

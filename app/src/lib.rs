@@ -1,6 +1,3 @@
-#![allow(non_snake_case)]
-#![allow(non_camel_case_types)]
-
 mod app;
 mod simple_counter;
 mod sudoku;
@@ -28,9 +25,9 @@ thread_local! {
         let driver = DomDriverBrowser::new();
 
         let root: Dependencies = Dependencies::default();
-        let appStateBox = app::State::new(&root, &driver);
+        let app_state = app::State::new(&root, &driver);
 
-        App::new(driver, VDomComponent::new(appStateBox, app::render))
+        App::new(driver, VDomComponent::new(app_state, app::render))
     });
 }
 

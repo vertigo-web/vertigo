@@ -28,7 +28,7 @@ impl<T> ThreeBox<T> {
         }
     }
 
-    pub fn createWithIterator<F: Fn(TreeBoxIndex) -> T>(create: F) -> ThreeBox<T> {
+    pub fn create_with_iterator<F: Fn(TreeBoxIndex) -> T>(create: F) -> ThreeBox<T> {
         ThreeBox::new(
             create(TreeBoxIndex::First),
             create(TreeBoxIndex::Middle),
@@ -36,7 +36,7 @@ impl<T> ThreeBox<T> {
         )
     }
 
-    pub fn getFrom(&self, index: TreeBoxIndex) -> Rc<T> {
+    pub fn get_from(&self, index: TreeBoxIndex) -> Rc<T> {
         match index {
             TreeBoxIndex::First => self.data0.clone(),
             TreeBoxIndex::Middle => self.data1.clone(),

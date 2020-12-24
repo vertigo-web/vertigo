@@ -14,15 +14,15 @@ use crate::computed::{
 
 pub struct ComputedInner<T: 'static> {
     deps: Dependencies,
-    getValueFromParent: Box<dyn Fn() -> Rc<T> + 'static>,
+    get_value_from_parent: Box<dyn Fn() -> Rc<T> + 'static>,
     id: GraphId,
-    isFreshCell: Rc<BoxRefCell<bool>>,
-    valueCell: BoxRefCell<Rc<T>>,
+    is_fresh_cell: Rc<BoxRefCell<bool>>,
+    value_cell: BoxRefCell<Rc<T>>,
 }
 
 impl<T> Drop for ComputedInner<T> {
     fn drop(&mut self) {
-        self.deps.removeRelation(&self.id);
+        self.deps.remove_relation(&self.id);
     }
 }
 
@@ -41,57 +41,57 @@ impl<T> Clone for Computed<T> {
 }
 
 impl<T: 'static> Computed<T> {
-    pub fn new<F: Fn() -> Rc<T> + 'static>(deps: Dependencies, getValue: F) -> Computed<T> {
+    pub fn new<F: Fn() -> Rc<T> + 'static>(deps: Dependencies, get_value: F) -> Computed<T> {
 
         let id = GraphId::default();
-        let isFreshCell = Rc::new(BoxRefCell::new(true));
+        let is_fresh_cell = Rc::new(BoxRefCell::new(true));
 
-        let getValue = deps.wrapGetValue(getValue, id.clone());
+        let get_value = deps.wrap_get_value(get_value, id.clone());
 
-        deps.registerRefreshToken(id.clone(), RefreshToken::newComputed(isFreshCell.clone()));
+        deps.register_refresh_token(id.clone(), RefreshToken::new_computed(is_fresh_cell.clone()));
 
-        let value = getValue();
+        let value = get_value();
 
         Computed {
             inner: Rc::new(ComputedInner {
                 deps,
-                getValueFromParent: getValue,
+                get_value_from_parent: get_value,
                 id,
-                isFreshCell,
-                valueCell: BoxRefCell::new(value),
+                is_fresh_cell: is_fresh_cell,
+                value_cell: BoxRefCell::new(value),
             })
         }
     }
 
-    pub fn getId(&self) -> GraphId {
+    pub fn get_id(&self) -> GraphId {
         self.inner.id.clone()
     }
 
-    pub fn getValue(&self) -> Rc<T> {
+    pub fn get_value(&self) -> Rc<T> {
         let inner = self.inner.as_ref();
-        let selfId = inner.id.clone();
+        let self_id = inner.id.clone();
         let deps = inner.deps.clone();
 
-        deps.reportDependenceInStack(selfId);
+        deps.report_dependence_in_stack(self_id);
 
-        let shouldRecalculate = {
-            self.inner.isFreshCell.changeNoParams(|state|{
-                let shouldRecalculate = !(*state);
+        let should_recalculate = {
+            self.inner.is_fresh_cell.change_no_params(|state|{
+                let should_recalculate = !(*state);
                 *state = true;
-                shouldRecalculate
+                should_recalculate
             })
         };
 
-        let newValue = if shouldRecalculate {
-            let ComputedInner { getValueFromParent, .. } = self.inner.as_ref();
-            let result = getValueFromParent();
+        let new_value = if should_recalculate {
+            let ComputedInner { get_value_from_parent, .. } = self.inner.as_ref();
+            let result = get_value_from_parent();
             Some(result)
         } else {
             None
         };
 
-        inner.valueCell.change(newValue, |state, newValue| {
-            if let Some(value) = newValue {
+        inner.value_cell.change(new_value, |state, new_value| {
+            if let Some(value) = new_value {
                 *state = value;
             }
 
@@ -115,10 +115,10 @@ impl<T: 'static> Computed<T> {
         let deps = a.inner.deps.clone();
 
         Computed::new(deps, move || {
-            let aValue = a.getValue();
-            let bValue = b.getValue();
+            let a_value = a.get_value();
+            let b_value = b.get_value();
 
-            let result = calculate(aValue, bValue);
+            let result = calculate(a_value, b_value);
 
             Rc::new(result)
         })
