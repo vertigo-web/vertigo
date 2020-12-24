@@ -5,7 +5,7 @@ use crate::virtualdom::models::{
     VDomNode::VDomNode,
     VDomComponent::VDomComponent,
 };
-use crate::virtualdom::models::Css::{Css, CssFrames};
+use crate::virtualdom::models::Css::Css;
 use crate::computed::{
     Computed,
 };
@@ -13,9 +13,6 @@ use crate::computed::{
 pub enum NodeAttr {
     Css {
         css: Css
-    },
-    CssFrames {
-        frames: CssFrames
     },
     OnClick {
         event: Rc<dyn Fn()>
@@ -43,12 +40,6 @@ pub enum NodeAttr {
 pub fn css(css: Css) -> NodeAttr {
     NodeAttr::Css {
         css,
-    }
-}
-
-pub fn cssFrames(frames: CssFrames) -> NodeAttr {
-    NodeAttr::CssFrames {
-        frames
     }
 }
 

@@ -798,6 +798,12 @@ dependencies = [
 ]
 
 [[package]]
+name = "fs_extra"
+version = "1.2.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "2022715d62ab30faffd124d40b76f4134a550a87792276512b18d63272333394"
+
+[[package]]
 name = "fsevent"
 version = "0.4.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -2374,15 +2380,16 @@ dependencies = [
 
 [[package]]
 name = "wasm-run"
-version = "0.5.0"
+version = "0.7.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "3e7a483350f49bf4e7b0360caae9314eddc1091fee647953ea80ef78690df70d"
+checksum = "7edf393d281fef9457e3b28f77359bcdfd4c095425a4f7533fc89b5f13f97efa"
 dependencies = [
  "anyhow",
  "async-std",
  "binaryen",
  "cargo_metadata",
  "downcast-rs",
+ "fs_extra",
  "futures",
  "notify",
  "once_cell",
@@ -2394,9 +2401,9 @@ dependencies = [
 
 [[package]]
 name = "wasm-run-proc-macro"
-version = "0.5.0"
+version = "0.7.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "04991b1cd2e57b33a6cf77c7347c404059780dcd33cd747be0e0ae7b14554727"
+checksum = "5d8e07cbe767761abb125e3b92250cfad420d645220ba368ee7384662c8f906e"
 dependencies = [
  "cargo_metadata",
  "proc-macro2",

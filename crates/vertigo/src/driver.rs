@@ -90,7 +90,7 @@ pub trait DomDriverTrait {
     fn insert_before(&self, ref_id: RealDomId, child: RealDomId);
     fn insert_after(&self, ref_id: RealDomId, child: RealDomId);
     fn add_child(&self, parent: RealDomId, child: RealDomId);
-    fn insert_css(&self, selector: String, value: String);
+    fn insert_css(&self, selector: &str, value: &str);
     fn set_event(&self, node: RealDomId, callback: EventCallback);
     fn fetch(&self, method: FetchMethod, url: String, headers: Option<HashMap<String, String>>, body: Option<String>) -> Pin<Box<dyn Future<Output=Result<String, FetchError>> + 'static>>; 
 }
@@ -187,7 +187,7 @@ impl DomDriver {
         self.driver.add_child(parent, child);
     }
 
-    pub fn insert_css(&self, selector: String, value: String) {
+    pub fn insert_css(&self, selector: &str, value: &str) {
         show_log(format!("insert_css selector={} value={}", selector, value));
         self.driver.insert_css(selector, value);
     }

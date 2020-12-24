@@ -23,10 +23,10 @@ use crate::{
             VDomComponent::VDomComponent,
             VDomComponentId::VDomComponentId,
             VDomText::VDomText,
-            CssManager::CssManager,
             RealDomId::RealDomId,
         }
-    }
+    },
+    css_manager::css_manager::CssManager,
 };
 
 struct CacheNode<K: Eq + Hash, RNode, VNode> {
@@ -243,20 +243,16 @@ fn updateNodeChild(cssManager: &CssManager, target: &RealDomNode, newVersion: &V
 }
 
 
-fn updateNodeAttr(cssManager: &CssManager, realNode: &RealDomNode, node: &VDomNode) {
+fn updateNodeAttr(css_manager: &CssManager, real_node: &RealDomNode, node: &VDomNode) {
     let css = &node.css;
-    let className = match css {
-        Some (css) => Some(cssManager.getClassName(css)),
+    let class_name = match css {
+        Some (css) => Some(css_manager.get_class_name(css)),
         None => None,
     };
 
-    if let Some(frames) = &node.cssFrames {
-        cssManager.addFrames(frames);
-    }
-
-    realNode.updateAttr(&node.attr, className);
-    realNode.setEvent(EventCallback::OnClick { callback: node.onClick.clone() });
-    realNode.setEvent(EventCallback::OnInput { callback: node.onInput.clone() });
+    real_node.updateAttr(&node.attr, class_name);
+    real_node.setEvent(EventCallback::OnClick { callback: node.onClick.clone() });
+    real_node.setEvent(EventCallback::OnInput { callback: node.onInput.clone() });
 }
 
 fn updateNode(cssManager: &CssManager, target: &RealDomNode, newVersion: &VDomNode) {

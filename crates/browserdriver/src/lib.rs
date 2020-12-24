@@ -459,7 +459,7 @@ impl DomDriverBrowserInner {
         }
     }
 
-    fn insert_css(&self, selector: String, value: String) {
+    fn insert_css(&self, selector: &str, value: &str) {
         let style = self.document.create_element("style").unwrap();
         let content = self.document.create_text_node(format!("{} {{ {} }}", selector, value).as_str());
         style.append_child(&content).unwrap();
@@ -550,7 +550,7 @@ impl DomDriverTrait for DomDriverBrowser {
         });
     }
 
-    fn insert_css(&self, class: String, value: String) {
+    fn insert_css(&self, class: &str, value: &str) {
         self.driver.change((class, value), |state, (class, value)| {
             state.insert_css(class, value);
         });
