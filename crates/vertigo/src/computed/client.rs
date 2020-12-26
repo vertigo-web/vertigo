@@ -1,36 +1,27 @@
+use std::rc::Rc;
 use crate::computed::{
     Dependencies,
     Computed,
-    refresh_token::RefreshToken,
-    graph_id::GraphId,
+    GraphValue,
 };
+use std::cmp::PartialEq;
 
 pub struct Client {
-    deps: Dependencies,
-    id: GraphId,
+    _graph_value: GraphValue<()>,
 }
 
 impl Client {
-    pub fn new<T: 'static, F: Fn(&T) + 'static>(deps: Dependencies, computed: Computed<T>, call: F) -> Client {
-
-        let id = GraphId::default();
-
-        let get_value = deps.wrap_get_value(move || {
-            computed.get_value()
-        }, id.clone());
-
-        let refresh = move || {
-            let value = get_value();
+    pub fn new<T: PartialEq + 'static, F: Fn(&T) + 'static>(deps: Dependencies, computed: Computed<T>, call: F) -> Client {
+        let graph_value = GraphValue::new_client(&deps, move || {
+            let value = computed.get_value();
             call(value.as_ref());
-        };
+            Rc::new(())
+        });
 
-        refresh();
-
-        deps.register_refresh_token(id.clone(), RefreshToken::new_client(refresh));
+        let _ = graph_value.get_value();
 
         Client {
-            deps,
-            id,
+            _graph_value: graph_value
         }
     }
 
@@ -38,8 +29,3 @@ impl Client {
     }
 }
 
-impl Drop for Client {
-    fn drop(&mut self) {
-        self.deps.remove_relation(&self.id);
-    }
-}

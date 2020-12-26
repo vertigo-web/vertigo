@@ -1,118 +1,56 @@
 use std::rc::Rc;
-use std::fmt::Debug;
+use std::cmp::PartialEq;
 
-use crate::computed::{
-    BoxRefCell,
-    Dependencies,
-    Client,
-    refresh_token::RefreshToken,
-    graph_id::GraphId,
+use crate::{
+    computed::{
+        Dependencies,
+        Client,
+        graph_id::GraphId,
+        GraphValue
+    }
 };
 
-
-
-
-pub struct ComputedInner<T: 'static> {
-    deps: Dependencies,
-    get_value_from_parent: Box<dyn Fn() -> Rc<T> + 'static>,
-    id: GraphId,
-    is_fresh_cell: Rc<BoxRefCell<bool>>,
-    value_cell: BoxRefCell<Rc<T>>,
+pub struct Computed<T: PartialEq + 'static> {
+    inner: GraphValue<T>,
 }
 
-impl<T> Drop for ComputedInner<T> {
-    fn drop(&mut self) {
-        self.deps.remove_relation(&self.id);
-    }
-}
-
-
-
-pub struct Computed<T: 'static> {
-    inner: Rc<ComputedInner<T>>,
-}
-
-impl<T> Clone for Computed<T> {
+impl<T: PartialEq + 'static> Clone for Computed<T> {
     fn clone(&self) -> Self {
         Computed {
-            inner: self.inner.clone()
+            inner: self.inner.clone(),
         }
     }
 }
 
-impl<T: 'static> Computed<T> {
+impl<T: PartialEq + 'static> Computed<T> {
     pub fn new<F: Fn() -> Rc<T> + 'static>(deps: Dependencies, get_value: F) -> Computed<T> {
-
-        let id = GraphId::default();
-        let is_fresh_cell = Rc::new(BoxRefCell::new(true));
-
-        let get_value = deps.wrap_get_value(get_value, id.clone());
-
-        deps.register_refresh_token(id.clone(), RefreshToken::new_computed(is_fresh_cell.clone()));
-
-        let value = get_value();
-
         Computed {
-            inner: Rc::new(ComputedInner {
-                deps,
-                get_value_from_parent: get_value,
-                id,
-                is_fresh_cell: is_fresh_cell,
-                value_cell: BoxRefCell::new(value),
-            })
+            inner: GraphValue::new_computed(&deps, get_value)
         }
     }
 
     pub fn get_id(&self) -> GraphId {
-        self.inner.id.clone()
+        self.inner.id()
     }
 
     pub fn get_value(&self) -> Rc<T> {
-        let inner = self.inner.as_ref();
-        let self_id = inner.id.clone();
-        let deps = inner.deps.clone();
-
-        deps.report_dependence_in_stack(self_id);
-
-        let should_recalculate = {
-            self.inner.is_fresh_cell.change_no_params(|state|{
-                let should_recalculate = !(*state);
-                *state = true;
-                should_recalculate
-            })
-        };
-
-        let new_value = if should_recalculate {
-            let ComputedInner { get_value_from_parent, .. } = self.inner.as_ref();
-            let result = get_value_from_parent();
-            Some(result)
-        } else {
-            None
-        };
-
-        inner.value_cell.change(new_value, |state, new_value| {
-            if let Some(value) = new_value {
-                *state = value;
-            }
-
-            (*state).clone()
-        })
+        self.inner.get_value()
     }
 
     pub fn subscribe<F: Fn(&T) + 'static>(self, call: F) -> Client {
-        Client::new(self.inner.deps.clone(), self.clone(), call)
+        Client::new(self.inner.deps(), self.clone(), call)
     }
 
     pub fn dependencies(&self) -> Dependencies {
-        self.inner.deps.clone()
+        self.inner.deps()
     }
 
-    pub fn from2<A: Debug, B: Debug>(
+    pub fn from2<A: PartialEq, B: PartialEq>(
         a: Computed<A>,
         b: Computed<B>,
         calculate: fn(Rc<A>, Rc<B>) -> T
     ) -> Computed<T> {
-        let deps = a.inner.deps.clone();
+        let deps = a.inner.deps();
 
         Computed::new(deps, move || {
             let a_value = a.get_value();
@@ -124,8 +62,8 @@ impl<T: 'static> Computed<T> {
         })
     }
 
-    pub fn map_for_render<K>(self, fun: fn(&Computed<T>) -> K) -> Computed<K> {
-        let deps = self.inner.deps.clone();
+    pub fn map_for_render<K: PartialEq>(self, fun: fn(&Computed<T>) -> K) -> Computed<K> {
+        let deps = self.inner.deps();
 
         Computed::new(deps, move || {
             let result = fun(&self);
@@ -133,12 +71,22 @@ impl<T: 'static> Computed<T> {
         })
     }
 
-    pub fn map<K, F: 'static + Fn(&Computed<T>) -> Rc<K>>(self, fun: F) -> Computed<K> {
-        let deps = self.inner.deps.clone();
+    pub fn map<K: PartialEq, F: 'static + Fn(&Computed<T>) -> Rc<K>>(self, fun: F) -> Computed<K> {
+        let deps = self.inner.deps();
 
         Computed::new(deps, move || {
             let result = fun(&self);
             result
         })
+    }
+}
+
+impl<T: PartialEq + 'static> PartialEq for Computed<T> {
+    fn eq(&self, other: &Computed<T>) -> bool {
+        self.inner.id() == other.inner.id()
+    }
+
+    fn ne(&self, other: &Computed<T>) -> bool {
+        self.inner.id() != other.inner.id()
     }
 }

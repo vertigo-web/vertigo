@@ -1,11 +1,13 @@
 use std::rc::Rc;
+use std::cmp::PartialEq;
 use super::tree_box::{ThreeBox, TreeBoxIndex};
 
-pub struct SudokuSquare<T> {
+#[derive(PartialEq)]
+pub struct SudokuSquare<T: PartialEq> {
     data: Rc<ThreeBox<ThreeBox<T>>>,
 }
 
-impl<T> SudokuSquare<T> {
+impl<T: PartialEq> SudokuSquare<T> {
     pub fn new(data: ThreeBox<ThreeBox<T>>) -> SudokuSquare<T> {
         SudokuSquare {
             data: Rc::new(data),
@@ -27,7 +29,7 @@ impl<T> SudokuSquare<T> {
     }
 }
 
-impl<T> Clone for SudokuSquare<T> {
+impl<T: PartialEq> Clone for SudokuSquare<T> {
     fn clone(&self) -> Self {
         SudokuSquare {
             data: self.data.clone(),

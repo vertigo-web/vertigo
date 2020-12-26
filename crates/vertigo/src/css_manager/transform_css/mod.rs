@@ -159,8 +159,6 @@ pub fn transform_css_animation_value(css: &str, next_id: &mut NextId) -> (String
         let keyframe_content = central_word;
 
         let new_css = format!("{} {} {}", start_word, selector, end_word);
-        //TODO - przydzielać nowy id dla tej animacji
-        // state.driver.insertCss(format!("@keyframes {}", frames.name), frames.content.clone())
 
         return (new_css, Some((keyframe_name, keyframe_content.into())));
     }

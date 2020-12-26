@@ -1,4 +1,5 @@
 use std::rc::Rc;
+use std::cmp::PartialEq;
 
 use crate::computed::{
     BoxRefCell,
@@ -7,20 +8,35 @@ use crate::computed::{
     GraphId,
 };
 
-#[derive(Clone)]
 pub struct Value<T: 'static> {
     id: GraphId,
     value: Rc<BoxRefCell<Rc<T>>>,
     deps: Dependencies,
 }
 
-impl<T: 'static> Value<T> {
+impl<T: PartialEq + 'static> Clone for Value<T> {
+    fn clone(&self) -> Self {
+        Value {
+            id: self.id.clone(),
+            value: self.value.clone(),
+            deps: self.deps.clone(),
+        }
+    }
+}
+
+impl<T: PartialEq + 'static> Value<T> {
     pub fn new(deps: Dependencies, value: T) -> Value<T> {
         Value {
             id: GraphId::default(),
             value: Rc::new(BoxRefCell::new(Rc::new(value))),
             deps
         }
+    }
+
+    pub fn new_value_wrap_width_computed(deps: Dependencies, value: T) -> Computed<Value<T>> {
+        let value = deps.new_value(value);
+        //let computed = value.to_computed();                   //TODO - uncommenting this line causes performance to down
+        deps.new_computed_from(value)
     }
 
     pub fn set_value(&self, value: T) {
@@ -34,7 +50,7 @@ impl<T: 'static> Value<T> {
     }
 
     pub fn get_value(&self) -> Rc<T> {
-        self.deps.report_dependence_in_stack(self.id.clone());
+        self.deps.report_parent_in_stack(self.id.clone());
 
         self.value.get(|state| {
             state.clone()
@@ -42,16 +58,20 @@ impl<T: 'static> Value<T> {
     }
 
     pub fn to_computed(&self) -> Computed<T> {
-        let value = self.value.clone();
-        let deps = self.deps.clone();
+        let self_clone = self.clone();
 
-        let self_id = self.id.clone();
-
-        Computed::new(deps.clone(), move || {
-            deps.report_dependence_in_stack(self_id.clone());
-            value.get(|state| {
-                state.clone()
-            })
+        Computed::new(self.deps.clone(), move || {
+            self_clone.get_value()
         })
+    }
+}
+
+impl<T: PartialEq + 'static> PartialEq for Value<T> {
+    fn eq(&self, other: &Value<T>) -> bool {
+        self.id == other.id
+    }
+
+    fn ne(&self, other: &Value<T>) -> bool {
+        self.id != other.id
     }
 }

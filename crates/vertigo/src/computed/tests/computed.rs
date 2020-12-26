@@ -52,7 +52,7 @@ fn basic() {
     sub.off();
 
     value2.set_value(99);
-    assert_eq!(sum_value.get(), Some(9));
+    assert_eq!(sum_value.get(), Some(103));
 }
 
 #[test]
@@ -121,8 +121,8 @@ fn basic2() {
 
     val2.set_value(999);
 
-    assert_eq!(sum_box1.get(), Some(999));
-    assert_eq!(sum_box2.get(), Some(1998));
+    assert_eq!(sum_box1.get(), Some(1110));
+    assert_eq!(sum_box2.get(), Some(2220));
 
 }
 
@@ -258,9 +258,11 @@ fn test_subscription() {
 
     val1.set_value(2);
     assert_eq!(sum_value.get(), Sum::new(5, Some(22)));
+    val1.set_value(2);
+    assert_eq!(sum_value.get(), Sum::new(5, Some(22)));
     val2.set_value(2);
-    assert_eq!(sum_value.get(), Sum::new(5, Some(22)));
+    assert_eq!(sum_value.get(), Sum::new(6, Some(4)));
     val3.set_value(2);
-    assert_eq!(sum_value.get(), Sum::new(5, Some(22)));
+    assert_eq!(sum_value.get(), Sum::new(6, Some(4)));
 }
 

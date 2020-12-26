@@ -1,6 +1,7 @@
 use std::fmt::Debug;
+use std::cmp::{PartialOrd, Ord};
 
-#[derive(Hash, PartialEq, Eq, Clone, Debug)]
+#[derive(Hash, PartialEq, Eq, Clone, Copy, Debug, PartialOrd, Ord)]
 pub struct GraphId {
     pub id: u64,
 }

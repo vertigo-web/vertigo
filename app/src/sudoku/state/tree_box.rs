@@ -1,6 +1,6 @@
 use std::rc::Rc;
 
-#[derive(Copy, Clone, Debug)]
+#[derive(Copy, Clone, Debug, PartialEq)]
 pub enum TreeBoxIndex {
     First,
     Middle,
@@ -13,13 +13,14 @@ impl TreeBoxIndex {
     }
 }
 
-pub struct ThreeBox<T> {
+#[derive(PartialEq)]
+pub struct ThreeBox<T: PartialEq> {
     data0: Rc<T>,
     data1: Rc<T>,
     data2: Rc<T>
 }
 
-impl<T> ThreeBox<T> {
+impl<T: PartialEq> ThreeBox<T> {
     pub fn new(data0: T, data1: T, data2: T) -> ThreeBox<T> {
         ThreeBox {
             data0: Rc::new(data0),

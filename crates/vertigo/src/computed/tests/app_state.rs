@@ -97,7 +97,7 @@ fn test_app_state() {
 
     suma3sub.off();
     app_state.value3.set_value(8);
-    assert_eq!((suma3_box.get(), suma_total_box.get()), (10, 0));
+    assert_eq!((suma3_box.get(), suma_total_box.get()), (11, 0));
 
 
     let suma_total = {
@@ -107,7 +107,7 @@ fn test_app_state() {
         })
     };
 
-    assert_eq!((suma3_box.get(), suma_total_box.get()), (10, 16));
+    assert_eq!((suma3_box.get(), suma_total_box.get()), (11, 16));
 
     app_state.value1.set_value(2);
     assert_eq!((suma3_box.get(), suma_total_box.get()), (10, 15));
@@ -116,7 +116,7 @@ fn test_app_state() {
     assert_eq!((suma3_box.get(), suma_total_box.get()), (10, 13));
 
     app_state.value3.set_value(4);
-    assert_eq!((suma3_box.get(), suma_total_box.get()), (10, 9));
+    assert_eq!((suma3_box.get(), suma_total_box.get()), (6, 9));
 
     suma_total.off();
 }

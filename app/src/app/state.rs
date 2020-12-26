@@ -1,14 +1,19 @@
-use vertigo::{DomDriver, computed::{
+use std::cmp::PartialEq;
+use vertigo::{
+    DomDriver,
+    computed::{
         Dependencies,
         Value,
         Computed,
-    }};
+    }
+};
 
-use crate::simple_counter;
+use crate::{game_of_life, simple_counter};
 use crate::sudoku;
 use crate::input;
 use crate::github_explorer;
 
+#[derive(PartialEq)]
 pub struct State {
     pub value: Value<u32>,
     pub at: Value<u32>,
@@ -24,6 +29,8 @@ pub struct State {
     pub input: Computed<input::State>,
 
     pub github_explorer: Computed<github_explorer::State>,
+
+    pub game_of_life: Computed<game_of_life::State>,
 }
 
 impl State {
@@ -49,9 +56,6 @@ impl State {
             })
         };
 
-        // run1(&driver);
-        // run2(&driver);
-
         root.new_computed_from(State {
             value: root.new_value(33),
             at: root.new_value(999),
@@ -63,6 +67,7 @@ impl State {
             sudoku: sudoku::Sudoku::new(root),
             input: input::State::new(&root),
             github_explorer: github_explorer::State::new(&root, driver),
+            game_of_life: game_of_life::State::new(&root),
         })
     }
 
@@ -80,23 +85,3 @@ impl State {
     //     4
     // }
 }
-
-
-// fn run1(driver: &DomDriver) {
-//     let driver_span = driver.clone();
-//     driver.spawn_local(async move {
-//         let url: String = "https://api.github.com/feeds".into();
-//         let response = driver_span.fetch(FetchMethod::GET, url, None, None).await;
-//         log::info!("Odpowiedź {}", response);
-//     });
-// }
-
-// fn run2(driver: &DomDriver) {
-//     let driver_span2 = driver.clone();
-
-//     driver.spawn_local(async move {
-//         let url: String = "http://127.0.0.1:4000/api/list.json".into();
-//         let response = driver_span2.fetch(FetchMethod::GET, url, None, None).await;
-//         log::info!("Odpowiedź z listą {}", response);
-//     });
-// }
