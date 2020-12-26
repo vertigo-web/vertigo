@@ -1,5 +1,6 @@
 use std::collections::HashMap;
 use std::rc::Rc;
+use std::cmp::PartialEq;
 
 use crate::virtualdom::models::{
     VDom::VDom,
@@ -73,5 +74,15 @@ impl VDomNode {
             onMouseLeave: None,
             css: None,
         }
+    }
+}
+
+impl PartialEq for VDomNode {
+    fn eq(&self, _other: &VDomNode) -> bool {
+        false                                       //Always not-eq
+    }
+
+    fn ne(&self, _other: &VDomNode) -> bool {
+        true
     }
 }

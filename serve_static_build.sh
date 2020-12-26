@@ -1,1 +1,0 @@
-basic-http-server ./build

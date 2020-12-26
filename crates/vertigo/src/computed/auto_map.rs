@@ -1,35 +1,30 @@
 use std::collections::HashMap;
 use std::hash::Hash;
 use std::rc::Rc;
+use std::cmp::PartialEq;
 
 use crate::computed::{
     BoxRefCell,
-    Dependencies,
     Computed,
-    GraphId,
+    EqBox,
 };
 
-pub struct AutoMap<K: Eq + Hash + Clone, V: 'static> {
-    id: GraphId,
-    create: Box<dyn Fn(&K) -> Computed<V>>,
-    values: Rc<BoxRefCell<HashMap<K, Computed<V>>>>,
-    deps: Dependencies,
+#[derive(PartialEq)]
+pub struct AutoMap<K: Eq + Hash + Clone, V: PartialEq + 'static> {
+    create: EqBox<Box<dyn Fn(&K) -> Computed<V>>>,
+    values: Rc<EqBox<BoxRefCell<HashMap<K, Computed<V>>>>>,
 }
 
-impl<K: Eq + Hash + Clone, V: 'static> AutoMap<K, V> {
-    pub fn new<C: Fn(&K) -> Computed<V> + 'static>(deps: &Dependencies, create: C) -> AutoMap<K, V> {
+impl<K: Eq + Hash + Clone, V: PartialEq + 'static> AutoMap<K, V> {
+    pub fn new<C: Fn(&K) -> Computed<V> + 'static>(create: C) -> AutoMap<K, V> {
         AutoMap {
-            id: GraphId::default(),
-            create: Box::new(create),
-            values: Rc::new(BoxRefCell::new(HashMap::new())),
-            deps: deps.clone(),
+            create: EqBox::new(Box::new(create)),
+            values: Rc::new(EqBox::new(BoxRefCell::new(HashMap::new()))),
         }
     }
 
     pub fn get_value(&self, key: &K) -> Computed<V> {
-        self.deps.report_dependence_in_stack(self.id.clone());
-
-        let item: Option<Computed<V>> = self.values.get_with_context(
+        let item: Option<Computed<V>> = self.values.value.get_with_context(
             key, 
             |state, key| -> Option<Computed<V>> {
                 let item = (*state).get(key);
@@ -47,11 +42,11 @@ impl<K: Eq + Hash + Clone, V: 'static> AutoMap<K, V> {
         }
 
         let new_item = {
-            let create = &self.create;
+            let create = &self.create.value;
             create(key)
         };
 
-        self.values.change(
+        self.values.value.change(
             (key, &new_item),
             |state, (key, new_item)| {
                 (*state).insert(key.clone(), new_item.clone());

@@ -1,4 +1,5 @@
 use std::rc::Rc;
+use std::cmp::PartialEq;
 
 use crate::virtualdom::models::{
     VDom::VDom,
@@ -86,7 +87,7 @@ pub fn text<T: Into<String>>(name: T) -> NodeAttr {
     }
 }
 
-pub fn component<T: 'static>(params: Computed<T>, render: fn(&Computed<T>) -> VDomNode) -> NodeAttr {
+pub fn component<T: PartialEq + 'static>(params: Computed<T>, render: fn(&Computed<T>) -> VDomNode) -> NodeAttr {
     NodeAttr::Node {
         node:VDom::component(VDomComponent::new(params, render))
     }

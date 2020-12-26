@@ -1,3 +1,4 @@
+use std::cmp::PartialEq;
 use crate::computed::{
     Computed,
 };
@@ -18,7 +19,7 @@ pub struct VDomComponent {
 }
 
 impl VDomComponent {
-    pub fn new<T: 'static>(params: Computed<T>, render: fn(&Computed<T>) -> VDomNode) -> VDomComponent {
+    pub fn new<T: PartialEq + 'static>(params: Computed<T>, render: fn(&Computed<T>) -> VDomNode) -> VDomComponent {
 
         let componentId = VDomComponentId::new(&params, render);
         let view = params.map_for_render(render);

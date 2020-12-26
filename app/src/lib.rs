@@ -3,6 +3,7 @@ mod simple_counter;
 mod sudoku;
 mod input;
 mod github_explorer;
+mod game_of_life;
 
 use wasm_bindgen::prelude::wasm_bindgen;
 
@@ -42,14 +43,6 @@ pub async fn start_app() {
 }
 
 /*
-TODO - dorobić konwersję wejściowego argumentu.
-    obecnie trzeba robić: value.setValue("value 1".into());
-        ma obsługiwać setValue(String) oraz setValue(&str)
-
-TODO - Graph - usunac nieuzywane krawedzie (subskrybcje)
-
-TODO - Graph - zamienić Clone na Copy
-
 TODO - dodać jakieś makra które pozwolą na łatwe generowanie html-a (https://docs.rs/maplit/1.0.2/maplit/)
     to wygląda obiecująco
     https://github.com/chinedufn/percy/tree/master/crates/html-macro

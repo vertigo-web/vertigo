@@ -1,4 +1,4 @@
-use std::collections::HashSet;
+use std::collections::BTreeSet;
 
 use crate::computed::graph_id::GraphId;
 
@@ -7,7 +7,7 @@ pub enum TransactionState {
     Idle,
     Modification {                          //Modifying the first layer
         level: u16,                         //current transacion level
-        edges: HashSet<GraphId>,            //edges to refresh
+        edges: BTreeSet<GraphId>,            //edges to refresh
     },
     Refreshing
 }
@@ -18,7 +18,7 @@ impl TransactionState {
             TransactionState::Idle => {
                 *self = TransactionState::Modification {
                     level: 1,
-                    edges: HashSet::new()
+                    edges: BTreeSet::new()
                 };
 
                 true
@@ -34,7 +34,7 @@ impl TransactionState {
         }
     }
 
-    pub fn down(&mut self) -> Option<HashSet<GraphId>> {
+    pub fn down(&mut self) -> Option<BTreeSet<GraphId>> {
         match self {
             TransactionState::Idle => {
                 log::error!("You cannot call 'down' for a state 'TransactionState::Idle'");
@@ -45,7 +45,7 @@ impl TransactionState {
                 *level -= 1;
 
                 if *level == 0 {
-                    let edges = std::mem::replace(edges, HashSet::new());
+                    let edges = std::mem::replace(edges, BTreeSet::new());
                     *self = TransactionState::Refreshing;
                     return Some(edges);
                 }
@@ -73,12 +73,10 @@ impl TransactionState {
         }
     }
 
-    pub fn add_edges_to_refresh(&mut self, mut new_edges: HashSet<GraphId>) {
+    pub fn add_edge_to_refresh(&mut self, new_edge: GraphId) {
         match self {
             TransactionState::Modification { edges, .. } => {
-                for id in new_edges.drain() {
-                    edges.insert(id);
-                }
+                edges.insert(new_edge);
             },
             _ => {
                 log::error!("You can only call the trigger if you are in a transaction block");

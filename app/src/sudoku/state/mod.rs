@@ -1,8 +1,5 @@
-use vertigo::computed::{
-    Computed,
-    Dependencies,
-    Value
-};
+use std::cmp::PartialEq;
+use vertigo::computed::{Computed, Dependencies, Value};
 
 use self::{
     number_item::NumberItem,
@@ -52,6 +49,8 @@ fn create_grid_possible_last(
         })
     })
 }
+
+#[derive(PartialEq)]
 pub struct Cell {
     pub number: NumberItem,
     pub possible: PossibleValues,
@@ -82,6 +81,7 @@ fn creatergid_view(
     });
 }
 
+#[derive(PartialEq)]
 pub struct Sudoku {
     deps: Dependencies,
     pub grid: SudokuSquare<SudokuSquare<Cell>>,
@@ -127,4 +127,3 @@ impl Sudoku {
         log::info!("przykład3");
     }
 }
-

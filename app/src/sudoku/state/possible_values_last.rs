@@ -17,7 +17,7 @@ fn iterate_by() -> Vec<(TreeBoxIndex, TreeBoxIndex)> {
     out
 }
 
-#[derive(Clone)]
+#[derive(Clone, PartialEq)]
 struct CellForComputed {
     pub input: NumberItem,
     pub possible: PossibleValues,

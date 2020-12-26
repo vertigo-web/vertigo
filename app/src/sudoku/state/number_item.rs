@@ -55,7 +55,7 @@ impl SudokuValue {
 
 // pub type NumberItem = Value<Option<SudokuValue>>;
 
-#[derive(Clone)]
+#[derive(Clone, PartialEq)]
 pub struct NumberItem {
     pub x0: TreeBoxIndex,
     pub y0: TreeBoxIndex,

@@ -6,7 +6,7 @@ use vertigo::{
     NodeAttr,
 };
 
-use crate::{app, github_explorer};
+use crate::{app, game_of_life, github_explorer};
 
 use crate::simple_counter;
 use crate::sudoku;
@@ -139,5 +139,7 @@ pub fn render(app_state: &Computed<app::State>) -> VDomNode {
         component(app_state.input.clone(), input::render),
 
         component(app_state.github_explorer.clone(), github_explorer::render),
+
+        component(app_state.game_of_life.clone(), game_of_life::render),
     ))
 }

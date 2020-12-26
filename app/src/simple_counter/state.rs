@@ -1,3 +1,4 @@
+use std::cmp::PartialEq;
 use vertigo::{
     computed::{
         Computed,
@@ -7,6 +8,7 @@ use vertigo::{
 };
 // use virtualdom::vdom::StateBox::StateBox;
 
+#[derive(PartialEq)]
 pub struct State {
     pub counter: Value<u32>,
 }

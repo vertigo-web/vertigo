@@ -16,7 +16,7 @@ pub struct VDomComponentId {
 }
 
 impl VDomComponentId {
-    pub fn new<T>(params: &Computed<T>, render: fn(&Computed<T>) -> VDomNode) -> VDomComponentId {
+    pub fn new<T: PartialEq>(params: &Computed<T>, render: fn(&Computed<T>) -> VDomNode) -> VDomComponentId {
 
         let idFunction = render as *const () as u64;
         VDomComponentId {

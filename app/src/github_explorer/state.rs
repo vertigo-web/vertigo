@@ -1,3 +1,4 @@
+use std::cmp::PartialEq;
 use serde::{Deserialize, Serialize};
 
 use vertigo::{
@@ -11,12 +12,14 @@ use vertigo::{
     }
 };
 
-pub enum Resource<T> {
+#[derive(PartialEq)]
+pub enum Resource<T: PartialEq> {
     Loading,
     Ready(T),
     Failed(String),
 }
 
+#[derive(PartialEq)]
 pub struct State {
     pub repo_input: Value<String>,
     pub repo_shown: Value<String>,
@@ -31,7 +34,7 @@ impl State {
         root.new_computed_from(State {
             repo_input: root.new_value("".into()),
             repo_shown: root.new_value("".into()),
-            data: AutoMap::new(root, move |repo_name: &String| -> Computed<Resource<Branch>> {
+            data: AutoMap::new(move |repo_name: &String| -> Computed<Resource<Branch>> {
                 log::info!("Creating for {}", repo_name);
                 let new_value = root_inner.new_value(Resource::Loading);
                 let new_computed = new_value.to_computed();
@@ -74,25 +77,25 @@ fn fetch_repo(repo: &str, value: Value<Resource<Branch>>, driver: &DomDriver) {
     });
 }
 
-#[derive(Debug, Serialize, Deserialize)]
+#[derive(Debug, Serialize, Deserialize, PartialEq)]
 pub struct Commit {
     pub sha: String,
     pub commit: CommitDetails,
 }
 
-#[derive(Debug, Serialize, Deserialize)]
+#[derive(Debug, Serialize, Deserialize, PartialEq)]
 pub struct CommitDetails {
     pub author: Signature,
     pub committer: Signature,
 }
 
-#[derive(Debug, Serialize, Deserialize)]
+#[derive(Debug, Serialize, Deserialize, PartialEq)]
 pub struct Signature {
     pub name: String,
     pub email: String,
 }
 
-#[derive(Debug, Serialize, Deserialize)]
+#[derive(Debug, Serialize, Deserialize, PartialEq)]
 pub struct Branch {
     pub name: String,
     pub commit: Commit,
