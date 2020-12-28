@@ -22,7 +22,7 @@ impl GraphMap {
     pub fn remove_connection(&mut self, parent_id: GraphId, client_id: GraphId) {
         let parent_list = self.data.get_mut(&parent_id);
 
-        let shold_clear = if let Some(parent_list) = parent_list {
+        let should_clear = if let Some(parent_list) = parent_list {
             parent_list.remove(&client_id);
             parent_list.len() == 0
         } else {
@@ -30,7 +30,7 @@ impl GraphMap {
             false
         };
 
-        if shold_clear {
+        if should_clear {
             self.data.remove(&parent_id);
         }
     }

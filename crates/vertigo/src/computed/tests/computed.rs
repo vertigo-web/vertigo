@@ -1,9 +1,14 @@
 
 use std::rc::Rc;
 
-use crate::computed::{
+use crate::{computed::{
     Computed,
-    Value
+    Value,
+    Dependencies
+}};
+
+use crate::computed::tests::{
+    box_value_version::SubscribeValueVer,
 };
 
 #[test]
@@ -11,7 +16,6 @@ fn basic() {
     use crate::computed::{
         Dependencies,
     };
-    use crate::computed::tests::box_value::BoxValue;
 
     let root: Dependencies = Dependencies::default();
 
@@ -30,39 +34,24 @@ fn basic() {
         })
     };
 
-    let sum_value: BoxValue<Option<i32>> = BoxValue::new(None);
+    let mut sum_value = SubscribeValueVer::new(sum);
 
-    assert_eq!(sum_value.get(), None);
-
-    let sub = {
-        let sum_value = sum_value.clone();
-        sum.subscribe(move |value| {
-            sum_value.set(Some(*value));
-        })
-    };
-
-    assert_eq!(sum_value.get(), Some(3));
+    assert_eq!(sum_value.get(), (3, 1));
 
     value1.set_value(4);
-    assert_eq!(sum_value.get(), Some(6));
+    assert_eq!(sum_value.get(), (6, 2));
 
     value2.set_value(5);
-    assert_eq!(sum_value.get(), Some(9));
+    assert_eq!(sum_value.get(), (9, 3));
 
-    sub.off();
+    sum_value.off();
 
     value2.set_value(99);
-    assert_eq!(sum_value.get(), Some(103));
+    assert_eq!(sum_value.get(), (9, 3));
 }
 
 #[test]
 fn basic2() {
-    use crate::computed::{
-        Dependencies,
-        Computed,
-    };
-    use crate::computed::tests::box_value::BoxValue;
-
     let root = Dependencies::default();
 
     let val1 = root.new_value(4);
@@ -70,9 +59,6 @@ fn basic2() {
 
     let com1: Computed<i32> = val1.to_computed();
     let com2: Computed<i32> = val2.to_computed();
-
-    let sum_box1: BoxValue<Option<i32>> = BoxValue::new(None);
-    let sum_box2: BoxValue<Option<i32>> = BoxValue::new(None);
 
     let sum = Computed::from2(com1, com2, |a: Rc<i32>, b: Rc<i32>| -> i32 {
         *a + *b
@@ -83,47 +69,31 @@ fn basic2() {
         2 * (*value)
     });
 
-    let subscription = {
-        let sum_box1 = sum_box1.clone();
+    let mut sum_box1 = SubscribeValueVer::new(sum);
+    let mut sum_box2 = SubscribeValueVer::new(suma2);
 
-        sum.subscribe(move |sum: &i32| {
-            println!("___Suma: {}___", sum);
-            sum_box1.set(Some(*sum));
-        })
-    };
-
-    let sub2 = {
-        let sum_box2 = sum_box2.clone();
-
-        suma2.subscribe(move |sum2: &i32| {
-            println!("___Suma2: {}___", sum2);
-            sum_box2.set(Some(*sum2));
-        })
-    };
-
-    assert_eq!(sum_box1.get(), Some(9));
-    assert_eq!(sum_box2.get(), Some(18));
+    assert_eq!(sum_box1.get(), (9, 1));
+    assert_eq!(sum_box2.get(), (18, 1));
 
     val1.set_value(111);
 
-    assert_eq!(sum_box1.get(), Some(116));
-    assert_eq!(sum_box2.get(), Some(232));
+    assert_eq!(sum_box1.get(), (116, 2));
+    assert_eq!(sum_box2.get(), (232, 2));
 
     val2.set_value(888);
 
-    assert_eq!(sum_box1.get(), Some(999));
-    assert_eq!(sum_box2.get(), Some(1998));
+    assert_eq!(sum_box1.get(), (999, 3));
+    assert_eq!(sum_box2.get(), (1998, 3));
 
     println!("subscription off");
 
-    subscription.off();
-    sub2.off();
+    sum_box1.off();
+    sum_box2.off();
 
     val2.set_value(999);
 
-    assert_eq!(sum_box1.get(), Some(1110));
-    assert_eq!(sum_box2.get(), Some(2220));
-
+    assert_eq!(sum_box1.get(), (999, 3));
+    assert_eq!(sum_box2.get(), (1998, 3));
 }
 
 #[test]
@@ -192,12 +162,6 @@ fn pointers() {
 
 #[test]
 fn test_subscription() {
-    use crate::computed::{
-        Dependencies,
-        Computed,
-    };
-    use crate::computed::tests::box_value::BoxValue;
-
     let root = Dependencies::default();
 
     let val1 = root.new_value(1);
@@ -209,24 +173,6 @@ fn test_subscription() {
     #[allow(unused_variables)]
     let com3: Computed<i32> = val3.to_computed();
 
-    #[derive(Copy, Clone, Debug, PartialEq)]
-    struct Sum {
-        version: u32,
-        value: Option<i32>
-    }
-    impl Sum {
-        fn new(version: u32, value: Option<i32>) -> Sum {
-            Sum {
-                version,
-                value,
-            }
-        }
-    }
-
-    let sum_value: BoxValue<Sum> = BoxValue::new(Sum::new(1, None));
-
-    assert_eq!(sum_value.get(), Sum::new(1, None));
-
     let sum = root.from(move || -> i32 {
         let value1 = com1.get_value();
         let value2 = com2.get_value();
@@ -234,35 +180,156 @@ fn test_subscription() {
         *value1 + *value2
     });
 
-    let sub = {
-        let sum_value = sum_value.clone();
-        sum.subscribe(move |value| {
-            sum_value.change(move |state| {
-                state.version += 1;
-                state.value = Some(*value);
-            });
+    let mut sum_value = SubscribeValueVer::new(sum);
+
+    assert_eq!(sum_value.get(), (3, 1));
+    val1.set_value(2);
+    assert_eq!(sum_value.get(), (4, 2));
+    val2.set_value(10);
+    assert_eq!(sum_value.get(), (12, 3));
+    val3.set_value(10);
+    assert_eq!(sum_value.get(), (12, 3));
+    val2.set_value(20);
+    assert_eq!(sum_value.get(), (22, 4));
+
+    sum_value.off();
+
+    val1.set_value(2);
+    assert_eq!(sum_value.get(), (22, 4));
+    val1.set_value(2);
+    assert_eq!(sum_value.get(), (22, 4));
+    val2.set_value(2);
+    assert_eq!(sum_value.get(), (22, 4));
+    val3.set_value(2);
+    assert_eq!(sum_value.get(), (22, 4));
+}
+
+
+#[test]
+fn test_computed_cache() {
+
+    let root = Dependencies::default();
+
+    assert_eq!(root.all_connections_len(), 0);
+
+    {
+        //a
+        //b
+        //c = a + b
+        //d = c % 2;
+
+        let a = root.new_value::<u32>(1);
+        let b = root.new_value::<u32>(2);
+
+        let c: Computed<u32> = {
+            let a = a.clone();
+            let b = b.clone();
+
+            root.from(move || {
+                let a_val = a.get_value();
+                let b_val = b.get_value();
+
+                *a_val + *b_val
+            })
+        };
+
+        let d: Computed<bool> = {                   //is even
+            let c = c.clone();
+            root.from(move || -> bool {
+                let c_value = c.get_value();
+
+                *c_value % 2 == 0
+            })
+        };
+
+        let mut c = SubscribeValueVer::new(c);
+        let mut d = SubscribeValueVer::new(d);
+
+        assert_eq!(c.get(), (3, 1));
+        assert_eq!(d.get(), (false, 1));
+
+        a.set_value(2);
+
+        assert_eq!(c.get(), (4, 2));
+        assert_eq!(d.get(), (true, 2));
+
+        a.set_value(2);
+
+        assert_eq!(c.get(), (4, 2));
+        assert_eq!(d.get(), (true, 2));
+
+        a.set_value(4);
+
+        assert_eq!(c.get(), (6, 3));
+        assert_eq!(d.get(), (true, 2));
+
+        assert_eq!(root.all_connections_len(), 5);
+
+        c.off();
+        d.off();
+
+        assert_eq!(root.all_connections_len(), 0);
+    }
+
+    assert_eq!(root.all_connections_len(), 0);
+}
+
+
+#[test]
+fn test_computed_new_value() {
+
+    /*
+        a
+        b
+        c
+        d = a + b
+        e = d + c
+    */
+
+    let root = Dependencies::default();
+
+    let a = root.new_value::<u32>(0);
+    let b = root.new_value::<u32>(0);
+    let c = root.new_value::<u32>(0);
+
+    let d: Computed<u32> = {
+        let a = a.clone();
+        let b = b.clone();
+
+        root.from(move || {
+            let a_val = a.get_value();
+            let b_val = b.get_value();
+
+            *a_val + *b_val
         })
     };
 
-    assert_eq!(sum_value.get(), Sum::new(2, Some(3)));
-    val1.set_value(2);
-    assert_eq!(sum_value.get(), Sum::new(3, Some(4)));
-    val2.set_value(10);
-    assert_eq!(sum_value.get(), Sum::new(4, Some(12)));
-    val3.set_value(10);
-    assert_eq!(sum_value.get(), Sum::new(4, Some(12)));
-    val2.set_value(20);
-    assert_eq!(sum_value.get(), Sum::new(5, Some(22)));
+    let e: Computed<u32> = {                   //is even
+        let d = d.clone();
+        let c = c.clone();
+        root.from(move || -> u32 {
+            let d_val = d.get_value();
+            let c_val = c.get_value();
 
-    sub.off();
+            *d_val + *c_val
+        })
+    };
 
-    val1.set_value(2);
-    assert_eq!(sum_value.get(), Sum::new(5, Some(22)));
-    val1.set_value(2);
-    assert_eq!(sum_value.get(), Sum::new(5, Some(22)));
-    val2.set_value(2);
-    assert_eq!(sum_value.get(), Sum::new(6, Some(4)));
-    val3.set_value(2);
-    assert_eq!(sum_value.get(), Sum::new(6, Some(4)));
+    let mut d = SubscribeValueVer::new(d);
+    let mut e = SubscribeValueVer::new(e);
+
+    assert_eq!(d.get(), (0, 1));
+    assert_eq!(e.get(), (0, 1));
+
+    a.set_value(33);
+    assert_eq!(d.get(), (33, 2));
+    assert_eq!(e.get(), (33, 2));
+
+    c.set_value(66);
+    assert_eq!(d.get(), (33, 2));
+    assert_eq!(e.get(), (99, 3));
+
+    d.off();
+    e.off();
+    assert_eq!(root.all_connections_len(), 0);
 }
-

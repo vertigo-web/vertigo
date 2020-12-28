@@ -5,7 +5,7 @@ use crate::computed::{
     Computed,
 };
 use crate::computed::tests::{
-    box_value::BoxValue,
+    box_value_version::SubscribeValueVer,
 };
 
 struct AppState {
@@ -62,61 +62,51 @@ fn test_app_state() {
     };
 
 
-    let suma3_box: BoxValue<i32> = BoxValue::new(0);
-    let suma_total_box: BoxValue<i32> = BoxValue::new(0);
+    let mut suma3_box = SubscribeValueVer::new(suma3);
 
-    assert_eq!((suma3_box.get(), suma_total_box.get()), (0, 0));
+    assert_eq!(suma3_box.get(), (4, 1));    //1 _ 3
+
+    app_state.value1.set_value(2);          //2 _ 3
+
+    assert_eq!(suma3_box.get(), (5, 2));
+
+    app_state.value1.set_value(3);          //3 _ 3
+    assert_eq!(suma3_box.get(), (6, 3));
+
+    app_state.value2.set_value(4);          //3 _ 3
+    assert_eq!(suma3_box.get(), (6, 3));
+
+    app_state.value2.set_value(5);          //3 _ 3
+    assert_eq!(suma3_box.get(), (6, 3));
+
+    app_state.value3.set_value(6);          //3 _ 6
+    assert_eq!(suma3_box.get(), (9, 4));
+
+    app_state.value3.set_value(7);          //3 _ 7
+    assert_eq!(suma3_box.get(), (10, 5));
+
+    suma3_box.off();
 
 
-    let suma3sub = {
-        let suma3_box = suma3_box.clone();
-
-        suma3.subscribe(move |value| {
-            suma3_box.set(*value);
-        })
-    };
-
-    app_state.value1.set_value(2);
-
-    assert_eq!((suma3_box.get(), suma_total_box.get()), (5, 0));
-
-    app_state.value1.set_value(3);
-    assert_eq!((suma3_box.get(), suma_total_box.get()), (6, 0));
-
-    app_state.value2.set_value(4);
-    assert_eq!((suma3_box.get(), suma_total_box.get()), (6, 0));
-
-    app_state.value2.set_value(5);
-    assert_eq!((suma3_box.get(), suma_total_box.get()), (6, 0));
-
-    app_state.value3.set_value(6);
-    assert_eq!((suma3_box.get(), suma_total_box.get()), (9, 0));
-
-    app_state.value3.set_value(7);
-    assert_eq!((suma3_box.get(), suma_total_box.get()), (10, 0));
-
-    suma3sub.off();
     app_state.value3.set_value(8);
-    assert_eq!((suma3_box.get(), suma_total_box.get()), (11, 0));
 
+    assert_eq!(suma3_box.get(), (10, 5));
 
-    let suma_total = {
-        let suma_total_box = suma_total_box.clone();
-        app_state.suma.clone().subscribe(move |value| {
-            suma_total_box.set(*value);
-        })
-    };
+    let mut suma_total = SubscribeValueVer::new(app_state.suma.clone());
 
-    assert_eq!((suma3_box.get(), suma_total_box.get()), (11, 16));
+    assert_eq!((suma3_box.get(), suma_total.get()), ((10, 5), (16, 1)));
 
     app_state.value1.set_value(2);
-    assert_eq!((suma3_box.get(), suma_total_box.get()), (10, 15));
+    assert_eq!((suma3_box.get(), suma_total.get()), ((10, 5), (15, 2)));
 
     app_state.value2.set_value(3);
-    assert_eq!((suma3_box.get(), suma_total_box.get()), (10, 13));
+    assert_eq!((suma3_box.get(), suma_total.get()), ((10, 5), (13, 3)));
 
     app_state.value3.set_value(4);
-    assert_eq!((suma3_box.get(), suma_total_box.get()), (6, 9));
+    assert_eq!((suma3_box.get(), suma_total.get()), ((10, 5), (9, 4)));
+
+    app_state.value3.set_value(4);
+    assert_eq!((suma3_box.get(), suma_total.get()), ((10, 5), (9, 4)));
 
     suma_total.off();
 }
