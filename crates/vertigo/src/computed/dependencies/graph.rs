@@ -58,7 +58,7 @@ impl Graph {
             self.counters.remove(&id);
 
             if self.client_parents.relation_len(&client_id) == 0 {
-                let graph_value = self.refresh.remove(&client_id);
+                let graph_value = self.refresh.get(&client_id);
                 if let Some(graph_value) = graph_value {
                     graph_value.drop_value();
                 } else {
@@ -68,7 +68,7 @@ impl Graph {
         }
     }
 
-    pub fn report_graph_value_as_refresh_token(&mut self, graph_value_refresh: GraphValueRefresh) {
+    pub fn refresh_token_add(&mut self, graph_value_refresh: GraphValueRefresh) {
         let id = graph_value_refresh.id;
         let prev_refresh = self.refresh.insert(id, graph_value_refresh);
 
@@ -80,9 +80,17 @@ impl Graph {
         log::error!("Another refresh token has been overwritten");
     }
 
-    fn get_all_deps(&self, edges: BTreeSet<GraphId>) -> BTreeSet<GraphId> {
+    pub fn refresh_token_drop(&mut self, id: GraphId) {
+        self.refresh.remove(&id);
+    }
+
+    fn get_all_deps(&self, edges: &BTreeSet<GraphId>) -> BTreeSet<GraphId> {
         let mut result = BTreeSet::new();
-        let mut to_traverse: Vec<GraphId> = edges.into_iter().collect();
+        let mut to_traverse: Vec<GraphId> = Vec::new();
+        
+        for item in edges.iter() {
+            to_traverse.push(item.clone());
+        }
 
         loop {
             let next_to_traverse = to_traverse.pop();
@@ -108,7 +116,7 @@ impl Graph {
         }
     }
 
-    pub fn get_edges_to_refresh(&self, edges: BTreeSet<GraphId>) -> Vec<GraphValueRefresh> {
+    pub fn get_edges_to_refresh(&self, edges: &BTreeSet<GraphId>) -> Vec<GraphValueRefresh> {
 
         let mut result = Vec::new();
 
@@ -135,5 +143,15 @@ impl Graph {
         }
 
         Vec::new()
+    }
+
+    pub fn all_connections_len(&self) -> u64 {
+        let mut count: u64 = 0;
+
+        for (_, item_count) in &self.counters { //}: BTreeMap<(GraphId, GraphId), u8>,
+            count += *item_count as u64;
+        }
+
+        count
     }
 }

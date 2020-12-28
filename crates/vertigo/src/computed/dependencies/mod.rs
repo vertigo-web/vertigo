@@ -86,16 +86,16 @@ impl Dependencies {
 
         func();
 
-        let edges_for_refresh = self.inner.value.change_no_params(|state| {
+        let edges_values = self.inner.value.change_no_params(|state| {
             state.transaction_state.down()
         });
 
-        if let Some(edges) = edges_for_refresh {
-            let edges_to_refresh = self.inner.value.change(edges, |state, edges| {
-                state.graph.get_edges_to_refresh(edges)
+        if let Some(edges_values) = edges_values {
+            let edges_to_refresh = self.inner.value.change(&edges_values, |state, edges_values| {
+                state.graph.get_edges_to_refresh(edges_values)
             });
 
-            refresh_edges::refresh_edges(&self, edges_to_refresh);
+            refresh_edges::refresh_edges(&self, &edges_values, edges_to_refresh);
 
             self.inner.value.change_no_params(|state| {
                 state.transaction_state.to_idle()
@@ -121,12 +121,18 @@ impl Dependencies {
         });
     }
 
-    pub(crate) fn report_graph_value_as_refresh_token(&self, graph_value: GraphValueRefresh) {
+    pub(crate) fn refresh_token_add(&self, graph_value: GraphValueRefresh) {
         self.inner.value.change(graph_value, |state, graph_value| {
-            state.graph.report_graph_value_as_refresh_token(graph_value);
+            state.graph.refresh_token_add(graph_value);
         });
     }
 
+    pub(crate) fn refresh_token_drop(&self, id: GraphId) {
+        self.inner.value.change(id, |state, id| {
+            state.graph.refresh_token_drop(id);
+        });
+    }
+    
     pub(crate) fn start_track(&self) {
         self.inner.value.change_no_params(|state| {
             state.stack.start_track();
@@ -161,5 +167,11 @@ impl Dependencies {
         });
 
         Computed::new(deps, get_value)
+    }
+
+    pub fn all_connections_len(&self) -> u64 {
+        self.inner.value.get(|state| {
+            state.graph.all_connections_len()
+        })
     }
 }
