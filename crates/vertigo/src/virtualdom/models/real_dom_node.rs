@@ -2,12 +2,12 @@ use std::collections::HashMap;
 use std::rc::Rc;
 use crate::{driver::{DomDriver, EventCallback}, virtualdom::{
         models::{
-            RealDom::RealDom,
-            RealDomId::RealDomId,
-            RealDomText::RealDomText,
+            real_dom::RealDom,
+            real_dom_id::RealDomId,
+            real_dom_text::RealDomText,
         },
     }};
-use crate::computed::BoxRefCell;
+use crate::utils::BoxRefCell;
 
 
 fn mergeAttr(attr: &HashMap<&'static str, String>, className: Option<String>) -> HashMap<&'static str, String> {

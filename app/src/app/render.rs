@@ -3,7 +3,7 @@ use vertigo::{
     computed::Computed,
     VDomNode,
     Css,
-    NodeAttr,
+    node_attr,
 };
 
 use crate::{app, game_of_life, github_explorer};
@@ -33,7 +33,7 @@ fn css_button() -> Css {
 }
 
 fn render_header(app_state: &Computed<app::State>) -> VDomNode {
-    use NodeAttr::{buildNode, node, css, text, onClick};
+    use node_attr::{buildNode, node, css, text, onClick};
 
 
     let app_state = app_state.get_value();
@@ -94,7 +94,7 @@ fn render_header(app_state: &Computed<app::State>) -> VDomNode {
 }
 
 fn render_suma(app_state: &Computed<app::State>) -> VDomNode {
-    use NodeAttr::{buildNode, text};
+    use node_attr::{buildNode, text};
 
     let app_state = app_state.get_value();
 
@@ -106,7 +106,7 @@ fn render_suma(app_state: &Computed<app::State>) -> VDomNode {
 }
 
 pub fn render(app_state: &Computed<app::State>) -> VDomNode {
-    use NodeAttr::{buildNode, node, text, component, attr};
+    use node_attr::{buildNode, node, text, component, attr};
 
     let header = component(app_state.clone(), render_header);
     let suma = component(app_state.clone(), render_suma);

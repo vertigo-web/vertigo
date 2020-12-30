@@ -1,10 +1,15 @@
-use std::rc::Rc;
-use crate::virtualdom::models::{
-    RealDomId::RealDomId,
+use std::{
+    collections::HashMap,
+    future::Future,
+    pin::Pin,
+    rc::Rc,
 };
-use std::pin::Pin;
-use std::future::Future;
-use std::collections::HashMap;
+
+use crate::virtualdom::models::{
+    real_dom_id::RealDomId,
+};
+
+use crate::utils::EqBox;
 
 #[derive(Debug)]
 pub enum FetchMethod {
@@ -15,8 +20,8 @@ pub enum FetchMethod {
 impl FetchMethod {
     pub fn to_string(&self) -> &str {
         match self {
-            FetchMethod::GET => "GET",
-            FetchMethod::POST => "POST",
+            Self::GET => "GET",
+            Self::POST => "POST",
         }
     }
 }
@@ -92,14 +97,15 @@ pub trait DomDriverTrait {
     fn add_child(&self, parent: RealDomId, child: RealDomId);
     fn insert_css(&self, selector: &str, value: &str);
     fn set_event(&self, node: RealDomId, callback: EventCallback);
-    fn fetch(&self, method: FetchMethod, url: String, headers: Option<HashMap<String, String>>, body: Option<String>) -> Pin<Box<dyn Future<Output=Result<String, FetchError>> + 'static>>; 
+    fn fetch(&self, method: FetchMethod, url: String, headers: Option<HashMap<String, String>>, body: Option<String>) -> Pin<Box<dyn Future<Output=Result<String, FetchError>> + 'static>>;
 }
 
 type Executor = Box<dyn Fn(Pin<Box<dyn Future<Output = ()> + 'static>>) -> ()>;
 
+#[derive(PartialEq)]
 pub struct DomDriver {
-    driver: Rc<dyn DomDriverTrait>,
-    spawn_local_executor: Rc<Executor>,
+    driver: EqBox<Rc<dyn DomDriverTrait>>,
+    spawn_local_executor: EqBox<Rc<Executor>>,
 }
 
 impl DomDriver {
@@ -107,8 +113,8 @@ impl DomDriver {
         T: DomDriverTrait + 'static,
     >(driver: T, spawn_local: Executor) -> DomDriver {
         DomDriver {
-            driver: Rc::new(driver),
-            spawn_local_executor: Rc::new(spawn_local)
+            driver: EqBox::new(Rc::new(driver)),
+            spawn_local_executor: EqBox::new(Rc::new(spawn_local))
         }
     }
 }
@@ -131,7 +137,7 @@ fn show_log(message: String) {
 impl DomDriver {
     pub fn spawn_local<F>(&self, future: F)
         where F: Future<Output = ()> + 'static {
-        
+
             let fur = Box::pin(future);
 
             let spawn_local_executor = self.spawn_local_executor.clone();

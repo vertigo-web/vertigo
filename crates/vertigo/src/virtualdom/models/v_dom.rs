@@ -1,8 +1,8 @@
 use crate::virtualdom::models::{
-    VDomComponent::VDomComponent,
-    VDomNode::VDomNode,
-    VDomText::VDomText,
-    NodeAttr::NodeAttr,
+    v_dom_component::VDomComponent,
+    v_dom_node::VDomNode,
+    v_dom_text::VDomText,
+    node_attr::NodeAttr,
 };
 
 pub enum VDom {

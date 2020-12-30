@@ -3,12 +3,14 @@ use std::cmp::PartialEq;
 use std::collections::BTreeSet;
 
 use crate::computed::{
-    BoxRefCell,
     Value,
     Computed,
     GraphId,
-    EqBox,
     GraphValueRefresh,
+};
+use crate::utils::{
+    BoxRefCell,
+    EqBox,
 };
 
 mod graph;

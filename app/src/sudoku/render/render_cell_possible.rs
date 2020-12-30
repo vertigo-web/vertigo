@@ -1,4 +1,4 @@
-use vertigo::{computed::Computed, VDomNode, NodeAttr, Css};
+use vertigo::{computed::Computed, VDomNode, node_attr, Css};
 
 use crate::sudoku::state::{Cell, number_item::SudokuValue};
 use super::config::Config;
@@ -67,7 +67,7 @@ fn css_item(should_show: bool) -> Css {
 }
 
 pub fn render_cell_possible(item: &Computed<Cell>) -> VDomNode {
-    use NodeAttr::{buildNode, node, css, text, onClick};
+    use node_attr::{buildNode, node, css, text, onClick};
 
     let cell = (*item).get_value();
 
@@ -76,7 +76,7 @@ pub fn render_cell_possible(item: &Computed<Cell>) -> VDomNode {
 
     if only_one_possible {
         let mut out = Vec::new();
-        
+
         out.push(css(css_wrapper_one()));
 
         for number in possible.iter() {
@@ -88,7 +88,7 @@ pub fn render_cell_possible(item: &Computed<Cell>) -> VDomNode {
                     cell.number.value.set_value(Some(number));
                 }
             };
-    
+
             out.push(
                 node("div", vec!(
                     css(css_item_only_one()),
@@ -97,7 +97,7 @@ pub fn render_cell_possible(item: &Computed<Cell>) -> VDomNode {
                 ))
             );
         }
-    
+
         return buildNode("div", out);
     }
 
@@ -137,7 +137,7 @@ pub fn render_cell_possible(item: &Computed<Cell>) -> VDomNode {
         } else {
             "".into()
         };
-        
+
         out.push(
             node("div", vec!(
                 css(css_item(should_show)),

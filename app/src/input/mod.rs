@@ -6,7 +6,7 @@ use vertigo::{
         Value
     },
     VDomNode,
-    NodeAttr,
+    node_attr,
     Css,
 };
 // use virtualdom::vdom::StateBox::StateBox;
@@ -66,7 +66,7 @@ fn text_css() -> Css {
 }
 
 pub fn render(state: &Computed<State>) -> VDomNode {
-    use NodeAttr::{buildNode, node, css, text, attr, onClick, onInput, onMouseEnter, onMouseLeave};
+    use node_attr::{buildNode, node, css, text, attr, onClick, onInput, onMouseEnter, onMouseLeave};
 
     let state = state.get_value();
 

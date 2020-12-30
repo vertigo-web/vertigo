@@ -2,7 +2,7 @@ use web_sys::{Document, Element, Text, HtmlHeadElement, Node, HtmlInputElement, 
 use std::rc::Rc;
 use std::collections::HashMap;
 
-use vertigo::{DomDriver, computed::BoxRefCell};
+use vertigo::{DomDriver, utils::BoxRefCell};
 use vertigo::{DomDriverTrait, FetchMethod, FetchError};
 use vertigo::RealDomId;
 use vertigo::EventCallback;

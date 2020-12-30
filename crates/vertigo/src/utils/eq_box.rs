@@ -1,4 +1,5 @@
 use std::cmp::PartialEq;
+use std::ops::Deref;
 
 fn get_unique_id() -> u64 {
     use std::sync::atomic::{AtomicU64, Ordering};
@@ -6,6 +7,7 @@ fn get_unique_id() -> u64 {
     EQ_COUNTER.fetch_add(1, Ordering::Relaxed)
 }
 
+#[derive(Clone)]
 pub struct EqBox<T> {
     id: u64,
     pub value: T,
@@ -18,6 +20,11 @@ impl<T> EqBox<T> {
             value
         }
     }
+}
+
+impl<T> Deref for EqBox<T> {
+    type Target = T;
+    fn deref(&self) -> &T { &self.value }
 }
 
 impl<T> PartialEq for EqBox<T> {

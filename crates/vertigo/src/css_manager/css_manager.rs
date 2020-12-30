@@ -1,10 +1,10 @@
 use std::collections::HashMap;
 use std::rc::Rc;
 
-use crate::computed::BoxRefCell;
+use crate::utils::BoxRefCell;
 
 use crate::driver::DomDriver;
-use crate::virtualdom::models::Css::{
+use crate::virtualdom::models::css::{
     Css,
     CssGroup
 };
