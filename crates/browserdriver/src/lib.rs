@@ -1,26 +1,24 @@
-use web_sys::{Document, Element, Text, HtmlHeadElement, Node, HtmlInputElement, HtmlTextAreaElement};
-use std::rc::Rc;
-use std::collections::HashMap;
+use std::{
+    collections::HashMap,
+    future::Future,
+    pin::Pin,
+    rc::Rc,
+};
+use wasm_bindgen::{JsCast, prelude::Closure, JsValue};
+use web_sys::{Document, Element, Event, Text, HtmlHeadElement, Node, HtmlInputElement, HtmlTextAreaElement, Window};
 
-use vertigo::{DomDriver, utils::BoxRefCell};
-use vertigo::{DomDriverTrait, FetchMethod, FetchError};
-use vertigo::RealDomId;
-use vertigo::EventCallback;
+use vertigo::{DomDriver, DomDriverTrait, EventCallback, FetchError, FetchMethod, HashRoutingReceiver, RealDomId, utils::BoxRefCell};
 
-use wasm_bindgen::JsCast;
 use dom_event::{DomEventDisconnect, DomEvent, /*DomEventKeyboard, DomEventMouse */};
-
-use std::pin::Pin;
-use std::future::Future;
 
 mod dom_event;
 mod fetch;
 
-fn get_document() -> (Document, HtmlHeadElement) {
+fn get_window_elements() -> (Window, Document, HtmlHeadElement) {
     let window = web_sys::window().expect("no global `window` exists");
     let document = window.document().expect("should have a document on window");
     let head = document.head().unwrap();
-    (document, head)
+    (window, document, head)
 }
 
 fn create_node(document: &Document, id: &RealDomId, name: &'static str) -> Element {
@@ -155,6 +153,7 @@ fn find_dom_id(event: &web_sys::Event) -> u64 {
 }
 
 pub struct DomDriverBrowserInner {
+    window: Window,
     document: Document,
     head: HtmlHeadElement,
     elements: HashMap<RealDomId, ElementWrapper>,
@@ -164,7 +163,7 @@ pub struct DomDriverBrowserInner {
 
 impl DomDriverBrowserInner {
     fn new() -> Rc<BoxRefCell<Self>> {
-        let (document, head) = get_document();
+        let (window, document, head) = get_window_elements();
 
         let root_id = RealDomId::root();
         let root = create_root(&document, &root_id);
@@ -172,6 +171,7 @@ impl DomDriverBrowserInner {
         let inner = Rc::new(
             BoxRefCell::new(
                 DomDriverBrowserInner {
+                    window,
                     document,
                     head,
                     elements: HashMap::new(),
@@ -466,9 +466,20 @@ impl DomDriverBrowserInner {
 
         self.head.append_child(&style).unwrap();
     }
+
+    fn get_hash_location(&self) -> String {
+        self.window.location().hash().expect("Can't read hash from location bar").to_string()
+    }
+
+    fn push_hash_location(&self, path: &str) {
+        let path = format!("#{}", path);
+        let history = self.window.history().expect("Can't read history from window");
+        history.push_state_with_url(&JsValue::from_str(""), "", Some(&path)).expect("Can't push state to history");
+    }
 }
 
 
+#[derive(Clone)]
 pub struct DomDriverBrowser {
     driver: Rc<BoxRefCell<DomDriverBrowserInner>>,
 }
@@ -564,5 +575,53 @@ impl DomDriverTrait for DomDriverBrowser {
 
     fn fetch(&self, method: FetchMethod, url: String, headers: Option<HashMap<String, String>>, body: Option<String>) -> Pin<Box<dyn Future<Output=Result<String, FetchError>> + 'static>> {
         fetch::fetch(method, url, headers, body)
+    }
+
+    fn get_hash_location(&self) -> String {
+        self.driver.get(|state| {
+            let mut path = state.get_hash_location();
+
+            // Remove '#'
+            match path.char_indices().nth(1) {
+                Some((pos, _)) => {
+                    path.drain(..pos);
+                }
+                None => {
+                    path.clear();
+                }
+            }
+
+            path
+        })
+    }
+
+    fn push_hash_location(&self, path: &str) {
+        self.driver.change(path, |state, path| {
+            state.push_hash_location(path);
+        });
+    }
+
+    fn on_hash_route_change(&self, on_change: Box<dyn Fn(String)>) -> HashRoutingReceiver {
+        let myself = self.clone();
+
+        let on_popstate = Closure::<dyn Fn(Event)>::new({
+            move |_: Event| {
+                let path = myself.get_hash_location();
+                on_change(path);
+            }
+        });
+
+        self.driver.change(on_popstate, |state, on_popstate| {
+            state.window.set_onpopstate(Some(on_popstate.as_ref().unchecked_ref()));
+            on_popstate.forget();
+        });
+
+        HashRoutingReceiver::new(self.clone())
+    }
+
+    fn clear_hash_route_callback(&self) {
+        self.driver.change_no_params(|state| {
+            state.window.set_onpopstate(None);
+        });
     }
 }

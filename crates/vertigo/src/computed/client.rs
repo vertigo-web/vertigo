@@ -1,14 +1,16 @@
 use std::rc::Rc;
+
 use crate::computed::{
     Dependencies,
     Computed,
     GraphValue,
     GraphId,
 };
-use std::cmp::PartialEq;
+use crate::utils::EqBox;
 
+#[derive(PartialEq)]
 pub struct Client {
-    graph_value: GraphValue<()>,
+    graph_value: EqBox<GraphValue<()>>,
 }
 
 impl Client {
@@ -22,7 +24,7 @@ impl Client {
         let _ = graph_value.get_value(false);
 
         Client {
-            graph_value
+            graph_value: EqBox::new(graph_value)
         }
     }
 
@@ -33,4 +35,3 @@ impl Client {
         self.graph_value.id()
     }
 }
-

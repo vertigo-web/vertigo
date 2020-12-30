@@ -146,7 +146,7 @@ impl Dependencies {
             state.refresh_token_drop(id);
         });
     }
-    
+
     pub(crate) fn start_track(&self) {
         self.stack.value.change_no_params(|state| {
             state.start_track();
