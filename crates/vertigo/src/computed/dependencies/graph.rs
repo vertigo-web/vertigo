@@ -154,4 +154,14 @@ impl Graph {
 
         count
     }
+
+    pub fn all_connections(&self) -> Vec<(GraphId, GraphId, u8)> {
+        let mut result = Vec::new();
+
+        for ((parent_id, client_id), counter) in &self.counters {
+            result.push((*parent_id, *client_id, *counter))
+        }
+
+        result
+    }
 }

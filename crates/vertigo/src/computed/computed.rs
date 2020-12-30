@@ -79,6 +79,10 @@ impl<T: PartialEq + 'static> Computed<T> {
             result
         })
     }
+
+    pub fn id(&self) -> GraphId {
+        self.inner.id()
+    }
 }
 
 impl<T: PartialEq + 'static> PartialEq for Computed<T> {

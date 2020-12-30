@@ -333,3 +333,127 @@ fn test_computed_new_value() {
     e.off();
     assert_eq!(root.all_connections_len(), 0);
 }
+
+
+#[test]
+fn test_computed_switch_subscription() {
+    
+    #[derive(PartialEq)]
+    enum Switch {
+        Ver1,
+        Ver2,
+        Ver3
+    }
+
+    //a, b, c
+
+    let root = Dependencies::default();
+
+    let switch = root.new_value(Switch::Ver1);
+    let a = root.new_value::<u32>(0);
+    let b = root.new_value::<u32>(0);
+    let c = root.new_value::<u32>(0);
+
+    // println!("s {:?}", switch.id());
+    // println!("a {:?}", a.id());
+    // println!("b {:?}", b.id());
+    // println!("c {:?}", c.id());
+
+    let sum: Computed<u32> = {
+        let switch = switch.clone();
+        let a = a.clone();
+        let b = b.clone();
+        let c = c.clone();
+
+        root.from(move || -> u32 {
+            let switch_value = switch.get_value();
+
+            match *switch_value {
+                Switch::Ver1 => {
+                    let a_value = a.get_value();
+                    *a_value
+                }
+                Switch::Ver2 => {
+                    let a_value = a.get_value();
+                    let b_value = b.get_value();
+                    *a_value + *b_value
+                }
+                Switch::Ver3 => {
+                    let a_value = a.get_value();
+                    let b_value = b.get_value();
+                    let c_value = c.get_value();
+                    *a_value + *b_value + *c_value
+                }
+            }
+        })
+    };
+    
+    assert_eq!(root.all_connections_len(), 0);
+    let mut sum = SubscribeValueVer::new(sum);
+    assert_eq!(root.all_connections_len(), 3);                                  //TODO - tutaj prawdopodobnie powinny być ju 4 połaczenia
+    //println!("aaa {:?}", root.all_connections());
+    
+    assert_eq!(sum.get(), (0, 1));
+    assert_eq!(root.all_connections_len(), 3);
+
+    a.set_value(1);
+    assert_eq!(sum.get(), (1, 2));
+    assert_eq!(root.all_connections_len(), 3);
+
+    b.set_value(1);
+    assert_eq!(sum.get(), (1, 2));
+    c.set_value(1);
+    assert_eq!(sum.get(), (1, 2));
+
+    a.set_value(0);
+    b.set_value(0);
+    c.set_value(0);
+    assert_eq!(sum.get(), (0, 3));
+
+    assert_eq!(root.all_connections_len(), 3);
+    switch.set_value(Switch::Ver2);
+    assert_eq!(root.all_connections_len(), 4);
+    // println!("bbb1 {:?}", root.all_connections());
+
+    assert_eq!(sum.get(), (0, 3));      //no rerender
+
+    a.set_value(1);
+
+    assert_eq!(root.all_connections_len(), 4);
+
+    assert_eq!(sum.get(), (1, 4));
+    b.set_value(1);
+    assert_eq!(sum.get(), (2, 5));
+    c.set_value(1);
+    assert_eq!(sum.get(), (2, 5));
+
+    a.set_value(0);
+    b.set_value(0);
+    c.set_value(0);
+    assert_eq!(sum.get(), (0, 7));
+
+
+    switch.set_value(Switch::Ver3);
+    assert_eq!(sum.get(), (0, 7));      //no rerender
+
+    assert_eq!(root.all_connections_len(), 5);
+
+    a.set_value(1);
+    assert_eq!(sum.get(), (1, 8));
+    b.set_value(1);
+    assert_eq!(sum.get(), (2, 9));
+    c.set_value(1);
+    assert_eq!(sum.get(), (3, 10));
+
+
+    root.transaction(|| {
+        a.set_value(0);
+        b.set_value(0);
+        c.set_value(0);
+    });
+
+    assert_eq!(sum.get(), (0, 11));
+
+    sum.off();
+    assert_eq!(root.all_connections_len(), 0);
+}

@@ -94,15 +94,14 @@ impl<T: PartialEq + 'static> GraphValueData<T> {
         if let Some(state) = &self.state {
             let (new_value, parents_list) = self.calculate_new_value();
 
-            if new_value != state.value {
-                self.state = Some(GraphValueDataState {
-                    value: new_value,
-                    _list: self.convert_to_relation(parents_list)
-                });
-                return true;
-            }
+            let is_new = new_value != state.value;
 
-            return false;
+            self.state = Some(GraphValueDataState {
+                value: new_value,
+                _list: self.convert_to_relation(parents_list)
+            });
+
+            return is_new;
 
         } else {
             log::error!("Incoherent state");
@@ -279,7 +278,7 @@ impl<T: PartialEq + 'static> GraphValue<T> {
         })
     }
     
-    pub fn id(&self) -> GraphId {
+    pub(crate) fn id(&self) -> GraphId {
         self.inner.inner.get(|state| {
             state.id.clone()
         })

@@ -64,6 +64,10 @@ impl<T: PartialEq + 'static> Value<T> {
             self_clone.get_value()
         })
     }
+
+    pub fn id(&self) -> GraphId {
+        self.id
+    }
 }
 
 impl<T: PartialEq + 'static> PartialEq for Value<T> {

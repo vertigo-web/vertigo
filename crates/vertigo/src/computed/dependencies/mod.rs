@@ -174,4 +174,11 @@ impl Dependencies {
             state.graph.all_connections_len()
         })
     }
+
+    pub fn all_connections(&self) -> Vec<(GraphId, GraphId, u8)> {
+        self.inner.value.get(|state| {
+            state.graph.all_connections()
+        })
+    }
+    
 }

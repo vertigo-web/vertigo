@@ -3,11 +3,12 @@ use crate::computed::{
     Dependencies,
     Computed,
     GraphValue,
+    GraphId,
 };
 use std::cmp::PartialEq;
 
 pub struct Client {
-    _graph_value: GraphValue<()>,
+    graph_value: GraphValue<()>,
 }
 
 impl Client {
@@ -21,11 +22,15 @@ impl Client {
         let _ = graph_value.get_value();
 
         Client {
-            _graph_value: graph_value
+            graph_value
         }
     }
 
     pub fn off(self: Client) {
+    }
+
+    pub fn id(&self) -> GraphId {
+        self.graph_value.id()
     }
 }
 
