@@ -203,7 +203,7 @@ impl<T: PartialEq + 'static> GraphValueInner<T> {
     pub fn new<F: Fn() -> Rc<T> + 'static>(deps: &Dependencies, value_type: GraphValueType, get_value: F) -> Rc<GraphValueInner<T>> {
 
         let (id, graph_value_data) = GraphValueData::new(deps, value_type, get_value);
-        
+
         let refresh_token = GraphValueRefresh::new(id, graph_value_data.clone());
 
         deps.refresh_token_add(refresh_token);
@@ -279,7 +279,6 @@ impl<T: PartialEq + 'static> GraphValue<T> {
         })
     }
 
-    
     pub(crate) fn id(&self) -> GraphId {
         self.inner.inner.get(|state| {
             state.id.clone()

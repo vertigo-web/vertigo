@@ -5,11 +5,8 @@ use std::{
     rc::Rc,
 };
 
-use crate::virtualdom::models::{
-    real_dom_id::RealDomId,
-};
-
 use crate::utils::EqBox;
+use crate::virtualdom::models::real_dom_id::RealDomId;
 
 #[derive(Debug)]
 pub enum FetchMethod {
@@ -98,6 +95,11 @@ pub trait DomDriverTrait {
     fn insert_css(&self, selector: &str, value: &str);
     fn set_event(&self, node: RealDomId, callback: EventCallback);
     fn fetch(&self, method: FetchMethod, url: String, headers: Option<HashMap<String, String>>, body: Option<String>) -> Pin<Box<dyn Future<Output=Result<String, FetchError>> + 'static>>;
+
+    fn get_hash_location(&self) -> String;
+    fn push_hash_location(&self, path: &str);
+    fn on_hash_route_change(&self, on_change: Box<dyn Fn(String)>) -> HashRoutingReceiver;
+    fn clear_hash_route_callback(&self);
 }
 
 type Executor = Box<dyn Fn(Pin<Box<dyn Future<Output = ()> + 'static>>) -> ()>;
@@ -206,5 +208,43 @@ impl DomDriver {
     pub fn fetch(&self, method: FetchMethod, url: String, headers: Option<HashMap<String, String>>, body: Option<String>) -> Pin<Box<dyn Future<Output=Result<String, FetchError>> + 'static>> {
         show_log(format!("fetch {:?} {}", method, url));
         self.driver.fetch(method, url, headers, body)
+    }
+
+    pub fn get_hash_location(&self) -> String {
+        show_log("get_location".to_string());
+        self.driver.get_hash_location()
+    }
+
+    pub fn push_hash_location(&self, path: String) {
+        show_log(format!("set_location {}", path));
+        self.driver.push_hash_location(&path)
+    }
+
+    pub fn on_hash_route_change(&self, on_change: Box<dyn Fn(String)>) -> HashRoutingReceiver {
+        show_log("on_route_change".to_string());
+        self.driver.on_hash_route_change(on_change)
+    }
+
+    pub fn clear_hash_route_callback(&self) {
+        self.driver.clear_hash_route_callback()
+    }
+}
+
+#[derive(PartialEq)]
+pub struct HashRoutingReceiver {
+    driver: EqBox<Rc<dyn DomDriverTrait>>,
+}
+
+impl HashRoutingReceiver {
+    pub fn new<T: DomDriverTrait + 'static>(driver: T) -> Self {
+        Self {
+            driver: EqBox::new(Rc::new(driver)),
+        }
+    }
+}
+
+impl Drop for HashRoutingReceiver {
+    fn drop(&mut self) {
+        self.driver.clear_hash_route_callback()
     }
 }

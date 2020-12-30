@@ -1,4 +1,3 @@
-
 use vertigo::{
     computed::Computed,
     VDomNode,
@@ -13,6 +12,7 @@ use crate::sudoku;
 use crate::input;
 
 use super::spinner::spinner;
+use super::route::Route;
 
 fn css_footer(show_color: bool) -> Css {
     let base = Css::one("background-color: yellow;");
@@ -22,6 +22,27 @@ fn css_footer(show_color: bool) -> Css {
     } else {
         base.push("color: blue;")
     }
+}
+
+fn css_menu() -> Css {
+    Css::one("
+        list-style-type: none;
+        margin: 10px;
+        padding: 0;
+    ")
+}
+
+fn css_menu_item(active: bool) -> Css {
+    Css::new(
+        format!("
+            display: inline;
+            width: 60px;
+            padding: 5px 10px;
+            margin: 5px;
+            cursor: pointer;
+            background-color: {};
+        ", if active { "lightblue" } else { "lightgreen" })
+    )
 }
 
 fn css_bg() -> Css {
@@ -38,58 +59,60 @@ fn render_header(app_state: &Computed<app::State>) -> VDomNode {
 
     let app_state = app_state.get_value();
 
-    let at = app_state.at.get_value();
-    let value = app_state.value.get_value();
-
-    let on_down = {
-        let app_state = app_state.clone();
-        move || {
-            app_state.decrement();
-        }
-    };
-
-    let on_up = {
-        let app_state = app_state.clone();
-        move || {
-            log::info!("on click");
-            app_state.increment();
-        }
-    };
-
-    let show_color = *value % 2 == 0;
-
-    let footer_dom = if *value % 10 == 0 {
-        node("div", vec!(
-            text(format!("jakis footer {} {} - BEZKLASIE", *value % 2, *value % 3)),
-        ))
-    } else {
-        node("div", vec!(
-            css(css_footer(show_color)),
-            text(format!("jakis footer {} {}", *value % 2, *value % 3)),
-        ))
-    };
+    let current_page = &*app_state.route.get_value();
 
     buildNode("div", vec!(
-        node("div", vec!(
-            css(css_bg()),
-            text("bla bla bla"),
-            spinner(),
+        node("ul", vec!(
+            css(css_menu()),
+            node("li", vec!(
+                text("Main"),
+                css(css_menu_item(current_page == &Route::Main)),
+                onClick({
+                    let app_state = app_state.clone();
+                    move || app_state.clone().navigate_to(Route::Main)
+                })
+            )),
+            node("li", vec!(
+                text("Counters"),
+                css(css_menu_item(current_page == &Route::Counters)),
+                onClick({
+                    let app_state = app_state.clone();
+                    move || app_state.navigate_to(Route::Counters)
+                })
+            )),
+            node("li", vec!(
+                text("Sudoku"),
+                css(css_menu_item(current_page == &Route::Sudoku)),
+                onClick({
+                    let app_state = app_state.clone();
+                    move || app_state.navigate_to(Route::Sudoku)
+                })
+            )),
+            node("li", vec!(
+                text("Input"),
+                css(css_menu_item(current_page == &Route::Input)),
+                onClick({
+                    let app_state = app_state.clone();
+                    move || app_state.navigate_to(Route::Input)
+                })
+            )),
+            node("li", vec!(
+                text("GitHub Explorer"),
+                css(css_menu_item(current_page == &Route::GithubExplorer)),
+                onClick({
+                    let app_state = app_state.clone();
+                    move || app_state.navigate_to(Route::GithubExplorer)
+                })
+            )),
+            node("li", vec!(
+                text("Game Of Life"),
+                css(css_menu_item(current_page == &Route::GameOfLife)),
+                onClick({
+                    let app_state = app_state.clone();
+                    move || app_state.navigate_to(Route::GameOfLife)
+                })
+            )),
         )),
-        node("div", vec!(
-            onClick(on_up.clone()),
-            text(format!("aktualna wartosc = {} ({})", value, at)),
-        )),
-        node("div", vec!(
-            css(css_button()),
-            onClick(on_up),
-            text("up"),
-        )),
-        node("div", vec!(
-            css(css_button()),
-            onClick(on_down),
-            text("down"),
-        )),
-        footer_dom,
     ))
 }
 
@@ -106,7 +129,7 @@ fn render_suma(app_state: &Computed<app::State>) -> VDomNode {
 }
 
 pub fn render(app_state: &Computed<app::State>) -> VDomNode {
-    use node_attr::{buildNode, node, text, component, attr};
+    use node_attr::{buildNode, css, onClick, node, text, component, attr};
 
     let header = component(app_state.clone(), render_header);
     let suma = component(app_state.clone(), render_suma);
@@ -116,30 +139,94 @@ pub fn render(app_state: &Computed<app::State>) -> VDomNode {
     buildNode("div", vec!(
         header,
 
-        node("div", vec!(
-            attr("aaa", "one"),
-            attr("bbb", "two"),
-            text("Abudabi")
-        )),
 
-        node("div", vec!(
-            component(app_state.counter1.clone(), simple_counter::render),
-            component(app_state.counter2.clone(), simple_counter::render),
-            component(app_state.counter3.clone(), simple_counter::render),
-            component(app_state.counter4.clone(), simple_counter::render),
-        )),
+        match *app_state.route.get_value() {
+            Route::Main => {
+                let at = app_state.at.get_value();
+                let value = app_state.value.get_value();
 
-        suma,
+                let on_down = {
+                    let app_state = app_state.clone();
+                    move || {
+                        app_state.decrement();
+                    }
+                };
 
-        node("div", vec!(
-            component(app_state.sudoku.clone(), sudoku::examples_render),
-            component(app_state.sudoku.clone(), sudoku::main_render)
-        )),
+                let on_up = {
+                    let app_state = app_state.clone();
+                    move || {
+                        log::info!("on click");
+                        app_state.increment();
+                    }
+                };
 
-        component(app_state.input.clone(), input::render),
+                let show_color = *value % 2 == 0;
 
-        component(app_state.github_explorer.clone(), github_explorer::render),
+                let footer_dom = if *value % 10 == 0 {
+                    node("div", vec!(
+                        text(format!("jakis footer {} {} - BEZKLASIE", *value % 2, *value % 3)),
+                    ))
+                } else {
+                    node("div", vec!(
+                        css(css_footer(show_color)),
+                        text(format!("jakis footer {} {}", *value % 2, *value % 3)),
+                    ))
+                };
 
-        component(app_state.game_of_life.clone(), game_of_life::render),
+                node("div", vec!(
+                    attr("aaa", "one"),
+                    attr("bbb", "two"),
+                    text("Abudabi"),
+                    node("div", vec!(
+                        css(css_bg()),
+                        text("bla bla bla"),
+                        spinner(),
+                    )),
+                    node("div", vec!(
+                        onClick(on_up.clone()),
+                        text(format!("aktualna wartosc = {} ({})", value, at)),
+                    )),
+                    node("div", vec!(
+                        css(css_button()),
+                        onClick(on_up),
+                        text("up"),
+                    )),
+                    node("div", vec!(
+                        css(css_button()),
+                        onClick(on_down),
+                        text("down"),
+                    )),
+                    footer_dom,
+                ))
+            }
+
+            Route::Counters =>
+                node("div", vec!(
+                    component(app_state.counter1.clone(), simple_counter::render),
+                    component(app_state.counter2.clone(), simple_counter::render),
+                    component(app_state.counter3.clone(), simple_counter::render),
+                    component(app_state.counter4.clone(), simple_counter::render),
+                    suma,
+                )),
+
+            Route::Sudoku =>
+                node("div", vec!(
+                    component(app_state.sudoku.clone(), sudoku::examples_render),
+                    component(app_state.sudoku.clone(), sudoku::main_render)
+                )),
+
+            Route::Input =>
+                component(app_state.input.clone(), input::render),
+
+            Route::GithubExplorer =>
+                component(app_state.github_explorer.clone(), github_explorer::render),
+
+            Route::GameOfLife =>
+                component(app_state.game_of_life.clone(), game_of_life::render),
+
+            Route::NotFound =>
+                node("div", vec!(text("Page Not Found"))),
+        }
+
     ))
 }

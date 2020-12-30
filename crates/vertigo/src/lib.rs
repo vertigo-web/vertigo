@@ -2,6 +2,7 @@ mod app;
 pub mod computed;
 mod css_manager;
 mod driver;
+pub mod router;
 pub mod utils;
 mod virtualdom;
 
@@ -12,6 +13,7 @@ pub use driver::DomDriverTrait;
 pub use driver::FetchMethod;
 pub use driver::FetchError;
 pub use driver::EventCallback;
+pub use driver::HashRoutingReceiver;
 
 pub use virtualdom::models::real_dom_id::RealDomId;
 pub use virtualdom::models::v_dom_component::VDomComponent;

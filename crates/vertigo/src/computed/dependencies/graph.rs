@@ -78,7 +78,7 @@ impl Graph {
     pub(crate) fn get_all_deps(&self, edges: &BTreeSet<GraphId>) -> BTreeSet<GraphId> {
         let mut result = BTreeSet::new();
         let mut to_traverse: Vec<GraphId> = Vec::new();
-        
+
         for item in edges.iter() {
             to_traverse.push(item.clone());
         }
@@ -127,7 +127,7 @@ impl Graph {
     pub fn get_parents(&self, client_id: GraphId) -> Vec<GraphId> {
         if let Some(item) = self.client_parents.get_relation(&client_id) {
             let mut result: Vec<GraphId> = Vec::new();
-            
+
             for parent_id in item.iter() {
                 result.push(*parent_id);
             }
