@@ -14,16 +14,16 @@ use crate::{
 use crate::{
     virtualdom::{
         models::{
-            RealDom::RealDom,
-            RealDomNode::RealDomNode,
-            RealDomText::RealDomText,
-            RealDomComponent::RealDomComponent,
-            VDom::VDom,
-            VDomNode::VDomNode,
-            VDomComponent::VDomComponent,
-            VDomComponentId::VDomComponentId,
-            VDomText::VDomText,
-            RealDomId::RealDomId,
+            real_dom::RealDom,
+            real_dom_node::RealDomNode,
+            real_dom_text::RealDomText,
+            real_dom_component::RealDomComponent,
+            v_dom::VDom,
+            v_dom_node::VDomNode,
+            v_dom_component::VDomComponent,
+            v_dom_component_id::VDomComponentId,
+            v_dom_text::VDomText,
+            real_dom_id::RealDomId,
         }
     },
     css_manager::css_manager::CssManager,

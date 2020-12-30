@@ -3,9 +3,9 @@ use std::hash::Hash;
 use std::rc::Rc;
 use std::cmp::PartialEq;
 
-use crate::computed::{
+use crate::computed::Computed;
+use crate::utils::{
     BoxRefCell,
-    Computed,
     EqBox,
 };
 
@@ -25,7 +25,7 @@ impl<K: Eq + Hash + Clone, V: PartialEq + 'static> AutoMap<K, V> {
 
     pub fn get_value(&self, key: &K) -> Computed<V> {
         let item: Option<Computed<V>> = self.values.value.get_with_context(
-            key, 
+            key,
             |state, key| -> Option<Computed<V>> {
                 let item = (*state).get(key);
 

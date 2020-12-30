@@ -3,11 +3,11 @@ use std::rc::Rc;
 use std::cmp::PartialEq;
 
 use crate::virtualdom::models::{
-    VDom::VDom,
+    v_dom::VDom,
 };
 use crate::virtualdom::models::{
-    Css::Css,
-    NodeAttr::NodeAttr,
+    css::Css,
+    node_attr::NodeAttr,
 };
 
 pub struct VDomNode {

@@ -1,7 +1,7 @@
 use std::cmp::PartialEq;
 use vertigo::{
     Css,
-    NodeAttr,
+    node_attr,
     VDomNode,
     computed::{
         Computed,
@@ -84,7 +84,7 @@ fn css_cell(is_active: bool) -> Css {
 }
 
 pub fn render(state: &Computed<State>) -> VDomNode {
-    use NodeAttr::{buildNode, node, css, text};
+    use node_attr::{buildNode, node, css, text};
 
     let value = state.get_value().matrix.get_value();
     let value_inner = &*value;
@@ -98,10 +98,10 @@ pub fn render(state: &Computed<State>) -> VDomNode {
     ))
 }
 
-fn render_matrix(matrix: &Vec<Vec<Computed<Value<bool>>>>) -> NodeAttr::NodeAttr {
-    use NodeAttr::{node};
+fn render_matrix(matrix: &Vec<Vec<Computed<Value<bool>>>>) -> node_attr::NodeAttr {
+    use node_attr::{node};
 
-    let mut out: Vec<NodeAttr::NodeAttr> = Vec::new();
+    let mut out: Vec<node_attr::NodeAttr> = Vec::new();
 
     for item in matrix.iter() {
         out.push(render_row(item));
@@ -110,10 +110,10 @@ fn render_matrix(matrix: &Vec<Vec<Computed<Value<bool>>>>) -> NodeAttr::NodeAttr
     node("div", out)
 }
 
-fn render_row(matrix: &Vec<Computed<Value<bool>>>) -> NodeAttr::NodeAttr {
-    use NodeAttr::{node, css, component};
+fn render_row(matrix: &Vec<Computed<Value<bool>>>) -> node_attr::NodeAttr {
+    use node_attr::{node, css, component};
 
-    let mut out: Vec<NodeAttr::NodeAttr> = Vec::new();
+    let mut out: Vec<node_attr::NodeAttr> = Vec::new();
 
     out.push(css(css_row()));
 
@@ -125,7 +125,7 @@ fn render_row(matrix: &Vec<Computed<Value<bool>>>) -> NodeAttr::NodeAttr {
 }
 
 fn render_cell(cell: &Computed<Value<bool>>) -> VDomNode {
-    use NodeAttr::{buildNode, css, onClick};
+    use node_attr::{buildNode, css, onClick};
 
     let value = cell.get_value();
     let is_active = value.get_value();

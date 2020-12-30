@@ -2,11 +2,11 @@ use std::rc::Rc;
 use std::cmp::PartialEq;
 
 use crate::computed::{
-    BoxRefCell,
     Dependencies,
     Computed,
     GraphId,
 };
+use crate::utils::BoxRefCell;
 
 pub struct Value<T: 'static> {
     id: GraphId,

@@ -1,6 +1,6 @@
 use vertigo::{
     Css,
-    NodeAttr::{NodeAttr, node, css}
+    node_attr::{NodeAttr, node, css}
 };
 
 pub fn spinner() -> NodeAttr {

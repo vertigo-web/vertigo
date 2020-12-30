@@ -1,4 +1,4 @@
-use vertigo::{computed::Computed, VDomNode, NodeAttr, Css};
+use vertigo::{computed::Computed, VDomNode, node_attr, Css};
 
 use crate::sudoku::state::{Cell, number_item::SudokuValue};
 
@@ -43,7 +43,7 @@ pub fn render_cell_value(value: SudokuValue, item: &Computed<Cell>, ) -> VDomNod
 
     let show_delete = *cell.show_delete.get_value();
 
-    use NodeAttr::{buildNode, node, css, text, onClick};
+    use node_attr::{buildNode, node, css, text, onClick};
 
     let mut out = vec!(
         css(css_item_number_wrapper()),

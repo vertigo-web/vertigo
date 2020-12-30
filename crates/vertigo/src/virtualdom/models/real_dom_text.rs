@@ -1,6 +1,6 @@
-use crate::{computed::BoxRefCell, driver::DomDriver, virtualdom::{
+use crate::{utils::BoxRefCell, driver::DomDriver, virtualdom::{
         models::{
-            RealDomId::RealDomId,
+            real_dom_id::RealDomId,
         },
     }};
 

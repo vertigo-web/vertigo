@@ -19,8 +19,8 @@ impl<T> SubscribeValueVerInner<T> {
     }
 }
 
-use crate::computed::BoxRefCell;
 use crate::computed::Client;
+use crate::utils::BoxRefCell;
 
 pub struct SubscribeValueVer<T: PartialEq + Clone> {
     client: Option<Client>,

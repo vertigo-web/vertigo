@@ -1,12 +1,13 @@
 use std::rc::Rc;
 use std::collections::BTreeSet;
 use std::cmp::PartialEq;
+
 use crate::computed::{
-    BoxRefCell,
     Dependencies,
     GraphId,
     GraphRelation,
 };
+use crate::utils::BoxRefCell;
 
 #[derive(PartialEq)]
 enum GraphValueType {

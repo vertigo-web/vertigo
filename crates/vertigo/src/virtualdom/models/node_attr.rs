@@ -2,11 +2,11 @@ use std::rc::Rc;
 use std::cmp::PartialEq;
 
 use crate::virtualdom::models::{
-    VDom::VDom,
-    VDomNode::VDomNode,
-    VDomComponent::VDomComponent,
+    v_dom::VDom,
+    v_dom_node::VDomNode,
+    v_dom_component::VDomComponent,
 };
-use crate::virtualdom::models::Css::Css;
+use crate::virtualdom::models::css::Css;
 use crate::computed::{
     Computed,
 };

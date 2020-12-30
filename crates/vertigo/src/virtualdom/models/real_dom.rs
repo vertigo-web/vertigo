@@ -1,9 +1,9 @@
 use crate::virtualdom::{
     models::{
-        RealDomNode::RealDomNode,
-        RealDomText::RealDomText,
-        RealDomId::RealDomId,
-        RealDomComponent::RealDomComponent,
+        real_dom_node::RealDomNode,
+        real_dom_text::RealDomText,
+        real_dom_id::RealDomId,
+        real_dom_component::RealDomComponent,
     },
 };
 

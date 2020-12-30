@@ -4,9 +4,9 @@ use crate::computed::{
 
 use crate::virtualdom::{
     models::{
-        RealDomNode::RealDomNode,
-        VDomComponentId::VDomComponentId,
-        RealDomId::RealDomId,
+        real_dom_node::RealDomNode,
+        v_dom_component_id::VDomComponentId,
+        real_dom_id::RealDomId,
     },
 };
 
