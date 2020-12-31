@@ -13,6 +13,7 @@ use super::route::Route;
 
 #[derive(PartialEq)]
 pub struct State {
+    root: Dependencies,
     pub route: Value<Route>,
 
     pub value: Value<u32>,
@@ -59,6 +60,7 @@ impl State {
         let hash_router = HashRouter::new(driver, route.clone(), None);
 
         let state = State {
+            root: root.clone(),
             route,
             value: root.new_value(33),
             at: root.new_value(999),
@@ -90,5 +92,6 @@ impl State {
 
     pub fn navigate_to(&self, route: Route) {
         self.route.set_value(route);
+        //log::info!("conn = {}", self.root.all_connections_len());
     }
 }
