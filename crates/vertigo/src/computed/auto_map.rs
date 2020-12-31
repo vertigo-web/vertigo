@@ -24,7 +24,7 @@ impl<K: Eq + Hash + Clone, V: PartialEq + 'static> AutoMap<K, V> {
     }
 
     pub fn get_value(&self, key: &K) -> Computed<V> {
-        let item: Option<Computed<V>> = self.values.value.get_with_context(
+        let item: Option<Computed<V>> = self.values.get_with_context(
             key,
             |state, key| -> Option<Computed<V>> {
                 let item = (*state).get(key);
@@ -42,11 +42,11 @@ impl<K: Eq + Hash + Clone, V: PartialEq + 'static> AutoMap<K, V> {
         }
 
         let new_item = {
-            let create = &self.create.value;
+            let create = &self.create;
             create(key)
         };
 
-        self.values.value.change(
+        self.values.change(
             (key, &new_item),
             |state, (key, new_item)| {
                 (*state).insert(key.clone(), new_item.clone());

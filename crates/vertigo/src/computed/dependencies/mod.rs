@@ -71,7 +71,7 @@ impl Dependencies {
     }
 
     pub fn transaction<F: FnOnce()>(&self, func: F) {
-        let success = self.transaction_state.value.change_no_params(|state| {
+        let success = self.transaction_state.change_no_params(|state| {
             state.up()
         });
 
@@ -81,7 +81,7 @@ impl Dependencies {
 
         func();
 
-        let edges_values = self.transaction_state.value.change_no_params(|state| {
+        let edges_values = self.transaction_state.change_no_params(|state| {
             state.down()
         });
 
@@ -90,7 +90,7 @@ impl Dependencies {
 
             refresh_edges::refresh_edges(&self, &edges_values, edges_to_refresh);
 
-            self.transaction_state.value.change_no_params(|state| {
+            self.transaction_state.change_no_params(|state| {
                 state.to_idle()
             });
         }
@@ -112,61 +112,61 @@ impl Dependencies {
     }
 
     fn get_all_deps(&self, edges: &BTreeSet<GraphId>) -> BTreeSet<GraphId> {
-        self.graph.value.get_with_context(edges, |state, edges| {
+        self.graph.get_with_context(edges, |state, edges| {
             state.get_all_deps(edges)
         })
     }
 
     pub(crate) fn trigger_change(&self, parent_id: GraphId) {
-        self.transaction_state.value.change(parent_id, |state, parent_id| {
+        self.transaction_state.change(parent_id, |state, parent_id| {
             state.add_edge_to_refresh(parent_id);
         });
     }
 
     pub(crate) fn add_graph_connection(&self, parent_id: GraphId, client_id: GraphId) {
-        self.graph.value.change((parent_id, client_id), |state, (parent_id, client_id)| {
+        self.graph.change((parent_id, client_id), |state, (parent_id, client_id)| {
             state.add_graph_connection(parent_id, client_id);
         });
     }
 
     pub(crate) fn remove_graph_connection(&self, parent_id: GraphId, client_id: GraphId) {
-        self.graph.value.change((parent_id, client_id), |state, (parent_id, client_id)| {
+        self.graph.change((parent_id, client_id), |state, (parent_id, client_id)| {
             state.remove_graph_connection(parent_id, client_id);
         });
     }
 
     pub(crate) fn refresh_token_add(&self, graph_value: GraphValueRefresh) {
-        self.refresh.value.change(graph_value, |state, graph_value| {
+        self.refresh.change(graph_value, |state, graph_value| {
             state.refresh_token_add(graph_value);
         });
     }
 
     pub(crate) fn refresh_token_drop(&self, id: GraphId) {
-        self.refresh.value.change(id, |state, id| {
+        self.refresh.change(id, |state, id| {
             state.refresh_token_drop(id);
         });
     }
 
     pub(crate) fn start_track(&self) {
-        self.stack.value.change_no_params(|state| {
+        self.stack.change_no_params(|state| {
             state.start_track();
         });
     }
 
     pub(crate) fn report_parent_in_stack(&self, parent_id: GraphId) {
-        self.stack.value.change(parent_id, |state, parent_id| {
+        self.stack.change(parent_id, |state, parent_id| {
             state.report_parent_in_stack(parent_id);
         });
     }
 
     pub(crate) fn stop_track(&self) -> BTreeSet<GraphId> {
-        self.stack.value.change_no_params(|state| {
+        self.stack.change_no_params(|state| {
             state.stop_track()
         })
     }
 
     pub(crate) fn get_parents(&self, client_id: GraphId) -> Vec<GraphId> {
-        self.graph.value.get_with_context(client_id, |state, client_id| {
+        self.graph.get_with_context(client_id, |state, client_id| {
             state.get_parents(client_id)
         })
     }
@@ -184,37 +184,37 @@ impl Dependencies {
     }
 
     pub fn all_connections_len(&self) -> u64 {
-        self.graph.value.get(|state| {
+        self.graph.get(|state| {
             state.all_connections_len()
         })
     }
 
     pub fn all_connections(&self) -> Vec<(GraphId, GraphId, u8)> {
-        self.graph.value.get(|state| {
+        self.graph.get(|state| {
             state.all_connections()
         })
     }
 
     pub fn has_listeners(&self, parent_id: &GraphId) -> bool {
-        self.graph.value.get_with_context(parent_id, |state, parent_id| {
+        self.graph.get_with_context(parent_id, |state, parent_id| {
             state.has_listeners(parent_id)
         })
     }
 
     pub fn refresh_get(&self, id: &GraphId) -> Option<GraphValueRefresh> {
-        self.refresh.value.get_with_context(id, |state, id| {
+        self.refresh.get_with_context(id, |state, id| {
             state.get(id)
         })
     }
 
     pub fn drop_value(&self, parent_id: &GraphId) {
-        self.refresh.value.get_with_context(parent_id, |state, parent_id| {
+        self.refresh.get_with_context(parent_id, |state, parent_id| {
             state.drop_value(parent_id);
         })
     }
 
     pub fn drain_removables(&self) -> Vec<GraphId> {
-        self.graph.value.change_no_params(|state| {
+        self.graph.change_no_params(|state| {
             state.drain_removables()
         })
     }
