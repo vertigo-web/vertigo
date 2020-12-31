@@ -97,8 +97,6 @@ fn refresh_edges_computed(
     loop {
         let new_edges = calculate_level(deps, state_refreshing, &edges_to_refresh);
 
-        drop_edges(deps);
-
         if new_edges.len() == 0 {
             return;
         }
@@ -172,4 +170,6 @@ pub fn refresh_edges(deps: &Dependencies, edges_values: &BTreeSet<GraphId>, edge
     refresh_edges_computed(deps, &mut state_refreshing, edges_computed);
 
     refresh_edges_client(deps, &mut state_refreshing, edges_client);
+
+    drop_edges(deps);
 }
