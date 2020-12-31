@@ -1,13 +1,12 @@
 use std::collections::{BTreeMap, BTreeSet};
 use crate::computed::graph_id::GraphId;
-use crate::computed::graph_value::GraphValueRefresh;
 use super::graph_map::GraphMap;
 
 pub struct Graph {
     parent_childs: GraphMap,                            //ParentId <- ClientId
     client_parents: GraphMap,                           //ClientId <- ParentId
-    refresh: BTreeMap<GraphId, GraphValueRefresh>,      //Reference to GraphValue for refreshing if necessary
     counters: BTreeMap<(GraphId, GraphId), u8>,         //Relation counter
+    will_be_dropped: BTreeSet<GraphId>,
 }
 
 impl Graph {
@@ -15,12 +14,14 @@ impl Graph {
         Graph {
             parent_childs: GraphMap::new(),
             client_parents: GraphMap::new(),
-            refresh: BTreeMap::new(),
             counters: BTreeMap::new(),
+            will_be_dropped: BTreeSet::new(),
         }
     }
 
     pub fn add_graph_connection(&mut self, parent_id: GraphId, client_id: GraphId) {
+        self.will_be_dropped.remove(&parent_id);
+
         let id = (parent_id, client_id);
         let counter = self.counters.get_mut(&id);
 
@@ -57,6 +58,11 @@ impl Graph {
             self.client_parents.remove_connection(client_id, parent_id);
             self.counters.remove(&id);
 
+            if self.parent_childs.relation_len(&parent_id) == 0 {
+                self.will_be_dropped.insert(parent_id);
+            }
+
+            /*
             if self.client_parents.relation_len(&client_id) == 0 {
                 let graph_value = self.refresh.get(&client_id);
                 if let Some(graph_value) = graph_value {
@@ -65,26 +71,11 @@ impl Graph {
                     log::error!("Refresh token missing");
                 }
             }
+            */
         }
     }
 
-    pub fn refresh_token_add(&mut self, graph_value_refresh: GraphValueRefresh) {
-        let id = graph_value_refresh.id;
-        let prev_refresh = self.refresh.insert(id, graph_value_refresh);
-
-        if prev_refresh.is_none() {
-            //Correct transition
-            return;
-        }
-
-        log::error!("Another refresh token has been overwritten");
-    }
-
-    pub fn refresh_token_drop(&mut self, id: GraphId) {
-        self.refresh.remove(&id);
-    }
-
-    fn get_all_deps(&self, edges: &BTreeSet<GraphId>) -> BTreeSet<GraphId> {
+    pub(crate) fn get_all_deps(&self, edges: &BTreeSet<GraphId>) -> BTreeSet<GraphId> {
         let mut result = BTreeSet::new();
         let mut to_traverse: Vec<GraphId> = Vec::new();
         
@@ -116,20 +107,22 @@ impl Graph {
         }
     }
 
-    pub fn get_edges_to_refresh(&self, edges: &BTreeSet<GraphId>) -> Vec<GraphValueRefresh> {
+    pub fn has_listeners(&self, parent_id: &GraphId) -> bool {
+        self.parent_childs.relation_len(&parent_id) > 0
+    }
 
+    pub fn drain_removables(&mut self) -> Vec<GraphId> {
         let mut result = Vec::new();
 
-        for id in self.get_all_deps(edges) {
-            if let Some(item) = self.refresh.get(&id) {
-                result.push((*item).clone());
-            } else {
-                log::error!("Missing refresh token for {:?}", id);
-            }
+        for item in &self.will_be_dropped {
+            result.push(*item);
         }
+
+        self.will_be_dropped = BTreeSet::new();
 
         result
     }
+    
 
     pub fn get_parents(&self, client_id: GraphId) -> Vec<GraphId> {
         if let Some(item) = self.client_parents.get_relation(&client_id) {

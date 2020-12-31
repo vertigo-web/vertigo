@@ -1,8 +1,8 @@
 use std::collections::{BTreeMap, BTreeSet};
 use crate::computed::{Dependencies, GraphId, graph_value::GraphValueRefresh};
 
-enum RefreshState {
-    Unknown,
+pub enum RefreshState {
+    CalculationPending,
     NewValue,
     PreviousValue,
 }
@@ -31,7 +31,7 @@ fn calculate_level(
 
         for parent_id in deps.get_parents(item.id) {
             match state_refreshing.get(&parent_id) {
-                Some(RefreshState::Unknown) => {
+                Some(RefreshState::CalculationPending) => {
                     counter_unknown_value += 1;
                 },
                 Some(RefreshState::NewValue) => {
@@ -48,10 +48,14 @@ fn calculate_level(
         }
 
         let new_status = if counter_new_value > 0 {
-            if item.refresh() {
-                RefreshState::NewValue
-            } else {
-                RefreshState::PreviousValue
+            match item.refresh(&state_refreshing) {
+                RefreshState::NewValue => RefreshState::NewValue,
+                RefreshState::PreviousValue => RefreshState::PreviousValue,
+                RefreshState::CalculationPending => {
+                    log::warn!("continue computation ...");
+                    result.push(item.clone());
+                    continue;
+                }
             }
         } else {
             RefreshState::PreviousValue
@@ -70,6 +74,20 @@ fn calculate_level(
 //     }
 // }
 
+fn drop_edges(deps: &Dependencies) {
+    loop {
+        let edges = deps.drain_removables();
+
+        if edges.len() == 0 {
+            return;
+        }
+
+        for dropped_id in edges {
+            deps.drop_value(&dropped_id);
+        }
+    }
+}
+
 fn refresh_edges_computed(
     deps: &Dependencies,
     state_refreshing: &mut BTreeMap::<GraphId, RefreshState>,
@@ -78,6 +96,8 @@ fn refresh_edges_computed(
 
     loop {
         let new_edges = calculate_level(deps, state_refreshing, &edges_to_refresh);
+
+        drop_edges(deps);
 
         if new_edges.len() == 0 {
             return;
@@ -92,6 +112,9 @@ fn refresh_edges_computed(
 }
 
 fn refresh_edges_client(deps: &Dependencies, state_refreshing: &mut BTreeMap<GraphId, RefreshState>, edges_to_refresh: Vec<GraphValueRefresh>) {
+
+    let empty_state_refreshing = BTreeMap::new();
+
     for item in edges_to_refresh {
 
         let mut counter_new_value: u32 = 0;
@@ -100,7 +123,7 @@ fn refresh_edges_client(deps: &Dependencies, state_refreshing: &mut BTreeMap<Gra
 
         for parent_id in parents {
             match state_refreshing.get(&parent_id) {
-                Some(RefreshState::Unknown) => {
+                Some(RefreshState::CalculationPending) => {
                     //panic!("Incorrect graph condition {:?}", parent_id);
                                             //TODO - trzeba sprawdzić, jesli odwolujemy sie do innego klienta, to pomiń to połaczenie
                 },
@@ -113,7 +136,7 @@ fn refresh_edges_client(deps: &Dependencies, state_refreshing: &mut BTreeMap<Gra
         }
 
         if counter_new_value > 0 {
-            item.refresh();
+            item.refresh(&empty_state_refreshing);
         }
     }
 }
@@ -126,7 +149,7 @@ fn crete_state_refreshing(edges_values: &BTreeSet<GraphId>, edges_to_refresh: &V
     }
 
     for refresh_item in edges_to_refresh.iter() {
-        state_refreshing.insert(refresh_item.id, RefreshState::Unknown);
+        state_refreshing.insert(refresh_item.id, RefreshState::CalculationPending);
     }
 
     state_refreshing

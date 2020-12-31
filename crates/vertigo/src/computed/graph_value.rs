@@ -1,5 +1,5 @@
 use std::rc::Rc;
-use std::collections::BTreeSet;
+use std::collections::{BTreeSet, BTreeMap};
 use std::cmp::PartialEq;
 
 use crate::computed::{
@@ -8,6 +8,8 @@ use crate::computed::{
     GraphRelation,
 };
 use crate::utils::BoxRefCell;
+
+use super::dependencies::refresh_edges::RefreshState;
 
 #[derive(PartialEq)]
 enum GraphValueType {
@@ -74,8 +76,10 @@ impl<T: PartialEq + 'static> GraphValueData<T> {
         get_value_from_parent()
     }
 
-    pub fn get_value(&mut self) -> Rc<T> {
-        self.deps.report_parent_in_stack(self.id);
+    pub fn get_value(&mut self, is_computed: bool) -> Rc<T> {
+        if is_computed {
+            self.deps.report_parent_in_stack(self.id);
+        }
 
         if let Some(state) = &self.state {
             return state.value.clone();
@@ -91,9 +95,16 @@ impl<T: PartialEq + 'static> GraphValueData<T> {
         new_value
     }
 
-    pub fn refresh(&mut self) -> bool {
+    pub fn refresh(&mut self, state_refresh: &BTreeMap::<GraphId, RefreshState>) -> RefreshState {
         if let Some(state) = &self.state {
             let (new_value, parents_list) = self.calculate_new_value();
+
+            for parent in &parents_list {
+                let parent_item = state_refresh.get(parent);
+                if let Some(RefreshState::CalculationPending) = parent_item {
+                    return RefreshState::CalculationPending;
+                }
+            }
 
             let is_new = new_value != state.value;
 
@@ -102,13 +113,17 @@ impl<T: PartialEq + 'static> GraphValueData<T> {
                 _list: self.convert_to_relation(parents_list)
             });
 
-            return is_new;
+            if is_new {
+                return RefreshState::NewValue;
+            } else {
+                return RefreshState::PreviousValue;
+            }
 
         } else {
             log::error!("Incoherent state");
         }
 
-        false
+        RefreshState::PreviousValue
     }
 
     pub fn drop_value(&mut self) {
@@ -125,10 +140,9 @@ impl<T: PartialEq + 'static> GraphValueData<T> {
     }
 }
 
-
 pub trait GraphValueControl {
     fn drop_value(&self);
-    fn refresh(&self) -> bool;               //true - value is new
+    fn refresh(&self, state: &BTreeMap::<GraphId, RefreshState>) -> RefreshState;
     fn is_computed(&self) -> bool;
 }
 
@@ -138,10 +152,9 @@ impl<T: PartialEq + 'static> GraphValueControl for BoxRefCell<GraphValueData<T>>
             state.drop_value();
         });
     }
-
-    fn refresh(&self) -> bool {
-        self.change_no_params(|state| {
-            state.refresh()
+    fn refresh(&self, state_refresh: &BTreeMap::<GraphId, RefreshState>) -> RefreshState {
+        self.change(state_refresh, |state, state_refresh| {
+            state.refresh(state_refresh)
         })
     }
 
@@ -170,9 +183,8 @@ impl GraphValueRefresh {
     pub fn drop_value(&self) {
         self.control.drop_value();
     }
-
-    pub fn refresh(&self) -> bool {
-        self.control.refresh()
+    pub fn refresh(&self, state_refresh: &BTreeMap::<GraphId, RefreshState>) -> RefreshState {
+        self.control.refresh(state_refresh)
     }
 
     pub fn is_computed(&self) -> bool {
@@ -255,9 +267,9 @@ impl<T: PartialEq + 'static> GraphValue<T> {
         })
     }
 
-    pub fn get_value(&self) -> Rc<T> {
-        self.inner.inner.change_no_params(|state| {
-            state.get_value()
+    pub fn get_value(&self, is_computed: bool) -> Rc<T> {
+        self.inner.inner.change(is_computed, |state, is_computed| {
+            state.get_value(is_computed)
         })
     }
 
@@ -267,17 +279,6 @@ impl<T: PartialEq + 'static> GraphValue<T> {
         })
     }
 
-    pub fn refresh(&self) -> bool {
-        self.inner.inner.change_no_params(|state| {
-            state.refresh()
-        })
-    }
-
-    pub fn drop_value_inner(&self) {
-        self.inner.inner.change_no_params(|state| {
-            state.drop_value();
-        })
-    }
     
     pub(crate) fn id(&self) -> GraphId {
         self.inner.inner.get(|state| {

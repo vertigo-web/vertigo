@@ -5,8 +5,8 @@ use crate::computed::{
 
 pub struct GraphRelation {
     deps: Dependencies,
-    parent_id: GraphId,
-    client_id: GraphId,
+    pub parent_id: GraphId,
+    pub client_id: GraphId,
 }
 
 impl GraphRelation {
