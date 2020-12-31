@@ -17,40 +17,31 @@ mod graph;
 mod graph_map;
 mod transaction_state;
 mod stack;
-mod refresh_edges;
+mod refresh;
+pub mod refresh_edges;
 
 use {
     graph::Graph,
     stack::Stack,
     transaction_state::TransactionState,
+    refresh::Refresh,
 };
-
-
-struct DependenciesInner {
-    graph: Graph,
-    stack: Stack,
-    transaction_state: TransactionState,              //aktualny poziom tranzakcyjności
-}
-
-impl DependenciesInner {
-    fn new() -> DependenciesInner {
-        DependenciesInner {
-            graph: Graph::new(),
-            stack: Stack::new(),
-            transaction_state: TransactionState::Idle,
-        }
-    }
-}
 
 #[derive(PartialEq)]
 pub struct Dependencies {
-    inner: Rc<EqBox<BoxRefCell<DependenciesInner>>>,
+    graph: Rc<EqBox<BoxRefCell<Graph>>>,
+    stack: Rc<EqBox<BoxRefCell<Stack>>>,
+    refresh: Rc<EqBox<BoxRefCell<Refresh>>>,
+    transaction_state: Rc<EqBox<BoxRefCell<TransactionState>>>,
 }
 
 impl Clone for Dependencies {
     fn clone(&self) -> Self {
         Dependencies {
-            inner: self.inner.clone()
+            graph: self.graph.clone(),
+            stack: self.stack.clone(),
+            refresh: self.refresh.clone(),
+            transaction_state: self.transaction_state.clone(),
         }
     }
 }
@@ -58,8 +49,10 @@ impl Clone for Dependencies {
 impl Default for Dependencies {
     fn default() -> Self {
         Self {
-            inner: Rc::new(EqBox::new(BoxRefCell::new(DependenciesInner::new())))
-        }
+            graph: Rc::new(EqBox::new(BoxRefCell::new(Graph::new()))),
+            stack: Rc::new(EqBox::new(BoxRefCell::new(Stack::new()))),
+            refresh: Rc::new(EqBox::new(BoxRefCell::new(Refresh::new()))),
+            transaction_state: Rc::new(EqBox::new(BoxRefCell::new(TransactionState::Idle))),        }
     }
 }
 
@@ -78,8 +71,8 @@ impl Dependencies {
     }
 
     pub fn transaction<F: FnOnce()>(&self, func: F) {
-        let success = self.inner.value.change_no_params(|state| {
-            state.transaction_state.up()
+        let success = self.transaction_state.value.change_no_params(|state| {
+            state.up()
         });
 
         if !success {
@@ -88,74 +81,93 @@ impl Dependencies {
 
         func();
 
-        let edges_values = self.inner.value.change_no_params(|state| {
-            state.transaction_state.down()
+        let edges_values = self.transaction_state.value.change_no_params(|state| {
+            state.down()
         });
 
         if let Some(edges_values) = edges_values {
-            let edges_to_refresh = self.inner.value.change(&edges_values, |state, edges_values| {
-                state.graph.get_edges_to_refresh(edges_values)
-            });
+            let edges_to_refresh = self.get_edges_to_refresh(&edges_values);
 
             refresh_edges::refresh_edges(&self, &edges_values, edges_to_refresh);
 
-            self.inner.value.change_no_params(|state| {
-                state.transaction_state.to_idle()
+            self.transaction_state.value.change_no_params(|state| {
+                state.to_idle()
             });
         }
     }
 
+    fn get_edges_to_refresh(&self, edges: &BTreeSet<GraphId>) -> Vec<GraphValueRefresh> {
+
+        let mut result = Vec::new();
+
+        for id in self.get_all_deps(edges) {
+            if let Some(item) = self.refresh_get(&id) {
+                result.push(item);
+            } else {
+                log::error!("Missing refresh token for(1) {:?}", id);
+            }
+        }
+
+        result
+    }
+
+    fn get_all_deps(&self, edges: &BTreeSet<GraphId>) -> BTreeSet<GraphId> {
+        self.graph.value.get_with_context(edges, |state, edges| {
+            state.get_all_deps(edges)
+        })
+    }
+
     pub(crate) fn trigger_change(&self, parent_id: GraphId) {
-        self.inner.value.change(parent_id, |state, parent_id| {
-            state.transaction_state.add_edge_to_refresh(parent_id);
+        self.transaction_state.value.change(parent_id, |state, parent_id| {
+            state.add_edge_to_refresh(parent_id);
         });
     }
 
     pub(crate) fn add_graph_connection(&self, parent_id: GraphId, client_id: GraphId) {
-        self.inner.value.change((parent_id, client_id), |state, (parent_id, client_id)| {
-            state.graph.add_graph_connection(parent_id, client_id);
+        self.graph.value.change((parent_id, client_id), |state, (parent_id, client_id)| {
+            state.add_graph_connection(parent_id, client_id);
         });
     }
 
     pub(crate) fn remove_graph_connection(&self, parent_id: GraphId, client_id: GraphId) {
-        self.inner.value.change((parent_id, client_id), |state, (parent_id, client_id)| {
-            state.graph.remove_graph_connection(parent_id, client_id);
+        self.graph.value.change((parent_id, client_id), |state, (parent_id, client_id)| {
+            state.remove_graph_connection(parent_id, client_id);
         });
     }
 
     pub(crate) fn refresh_token_add(&self, graph_value: GraphValueRefresh) {
-        self.inner.value.change(graph_value, |state, graph_value| {
-            state.graph.refresh_token_add(graph_value);
+        self.refresh.value.change(graph_value, |state, graph_value| {
+            state.refresh_token_add(graph_value);
         });
     }
 
     pub(crate) fn refresh_token_drop(&self, id: GraphId) {
-        self.inner.value.change(id, |state, id| {
-            state.graph.refresh_token_drop(id);
+        self.refresh.value.change(id, |state, id| {
+            state.refresh_token_drop(id);
         });
     }
     
     pub(crate) fn start_track(&self) {
-        self.inner.value.change_no_params(|state| {
-            state.stack.start_track();
+        self.stack.value.change_no_params(|state| {
+            state.start_track();
         });
     }
 
     pub(crate) fn report_parent_in_stack(&self, parent_id: GraphId) {
-        self.inner.value.change(parent_id, |state, parent_id| {
-            state.stack.report_parent_in_stack(parent_id);
+        self.stack.value.change(parent_id, |state, parent_id| {
+            state.report_parent_in_stack(parent_id);
         });
     }
 
     pub(crate) fn stop_track(&self) -> BTreeSet<GraphId> {
-        self.inner.value.change_no_params(|state| {
-            state.stack.stop_track()
+        self.stack.value.change_no_params(|state| {
+            state.stop_track()
         })
     }
 
     pub(crate) fn get_parents(&self, client_id: GraphId) -> Vec<GraphId> {
-        self.inner.value.get_with_context(client_id, |state, client_id| {
-            state.graph.get_parents(client_id)
+        self.graph.value.get_with_context(client_id, |state, client_id| {
+            state.get_parents(client_id)
         })
     }
 
@@ -172,15 +184,38 @@ impl Dependencies {
     }
 
     pub fn all_connections_len(&self) -> u64 {
-        self.inner.value.get(|state| {
-            state.graph.all_connections_len()
+        self.graph.value.get(|state| {
+            state.all_connections_len()
         })
     }
 
     pub fn all_connections(&self) -> Vec<(GraphId, GraphId, u8)> {
-        self.inner.value.get(|state| {
-            state.graph.all_connections()
+        self.graph.value.get(|state| {
+            state.all_connections()
         })
     }
-    
+
+    pub fn has_listeners(&self, parent_id: &GraphId) -> bool {
+        self.graph.value.get_with_context(parent_id, |state, parent_id| {
+            state.has_listeners(parent_id)
+        })
+    }
+
+    pub fn refresh_get(&self, id: &GraphId) -> Option<GraphValueRefresh> {
+        self.refresh.value.get_with_context(id, |state, id| {
+            state.get(id)
+        })
+    }
+
+    pub fn drop_value(&self, parent_id: &GraphId) {
+        self.refresh.value.get_with_context(parent_id, |state, parent_id| {
+            state.drop_value(parent_id);
+        })
+    }
+
+    pub fn drain_removables(&self) -> Vec<GraphId> {
+        self.graph.value.change_no_params(|state| {
+            state.drain_removables()
+        })
+    }
 }

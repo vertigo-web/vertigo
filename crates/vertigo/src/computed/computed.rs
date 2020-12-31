@@ -34,7 +34,7 @@ impl<T: PartialEq + 'static> Computed<T> {
     }
 
     pub fn get_value(&self) -> Rc<T> {
-        self.inner.get_value()
+        self.inner.get_value(true)
     }
 
     pub fn subscribe<F: Fn(&T) + 'static>(self, call: F) -> Client {

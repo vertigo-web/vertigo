@@ -15,6 +15,7 @@ use crate::github_explorer;
 
 #[derive(PartialEq)]
 pub struct State {
+    root: Dependencies,
     pub value: Value<u32>,
     pub at: Value<u32>,
     pub counter1: Computed<simple_counter::State>,
@@ -56,7 +57,8 @@ impl State {
             })
         };
 
-        root.new_computed_from(State {
+        let state = State {
+            root: root.clone(),
             value: root.new_value(33),
             at: root.new_value(999),
             counter1,
@@ -68,7 +70,9 @@ impl State {
             input: input::State::new(&root),
             github_explorer: github_explorer::State::new(&root, driver),
             game_of_life: game_of_life::State::new(&root),
-        })
+        };
+
+        root.new_computed_from(state)
     }
 
     pub fn increment(&self) {

@@ -19,7 +19,7 @@ impl Client {
             Rc::new(())
         });
 
-        let _ = graph_value.get_value();
+        let _ = graph_value.get_value(false);
 
         Client {
             graph_value
