@@ -19,6 +19,7 @@ mod transaction_state;
 mod stack;
 mod refresh;
 pub mod refresh_edges;
+pub mod hook;
 
 use {
     graph::Graph,
@@ -52,7 +53,8 @@ impl Default for Dependencies {
             graph: Rc::new(EqBox::new(BoxRefCell::new(Graph::new()))),
             stack: Rc::new(EqBox::new(BoxRefCell::new(Stack::new()))),
             refresh: Rc::new(EqBox::new(BoxRefCell::new(Refresh::new()))),
-            transaction_state: Rc::new(EqBox::new(BoxRefCell::new(TransactionState::Idle))),        }
+            transaction_state: Rc::new(EqBox::new(BoxRefCell::new(TransactionState::new()))),
+        }
     }
 }
 
@@ -66,6 +68,15 @@ impl Dependencies {
         value.to_computed()
     }
 
+
+    pub fn set_hook(&self, before_start: Box<dyn Fn()>, after_end: Box<dyn Fn()>) {
+        self.transaction_state.change(
+            (before_start, after_end), 
+            |state, (before_start, after_end)| {
+                state.set_hook(before_start, after_end);
+            }
+        );
+    }
 
     pub fn transaction<F: FnOnce()>(&self, func: F) {
         let success = self.transaction_state.change_no_params(|state| {
