@@ -1,9 +1,9 @@
 use std::collections::BTreeSet;
 
 use crate::computed::graph_id::GraphId;
+use super::hook::Hooks;
 
-
-pub enum TransactionState {
+enum State {
     Idle,
     Modification {                          //Modifying the first layer
         level: u16,                         //current transacion level
@@ -12,75 +12,112 @@ pub enum TransactionState {
     Refreshing
 }
 
+pub struct TransactionState {
+    state: State,
+    hooks: Hooks,
+}
+
 impl TransactionState {
-    pub fn up(&mut self) -> bool {
-        match self {
-            TransactionState::Idle => {
-                *self = TransactionState::Modification {
+    pub fn new() -> TransactionState {
+        TransactionState {
+            state: State::Idle,
+            hooks: Hooks::new(),
+        }
+    }
+
+    fn up_state(state: &mut State, hooks: &mut Hooks) -> bool {
+        match state {
+            State::Idle => {
+                hooks.fire_start();
+
+                *state = State::Modification {
                     level: 1,
                     edges: BTreeSet::new()
                 };
 
                 true
             },
-            TransactionState::Modification { level, .. } => {
+            State::Modification { level, .. } => {
                 *level += 1;
                 true
             },
-            TransactionState::Refreshing => {
+            State::Refreshing => {
                 log::error!("You cannot change the source value while the dependency graph is being refreshed");
                 false
             }
         }
     }
 
-    pub fn down(&mut self) -> Option<BTreeSet<GraphId>> {
-        match self {
-            TransactionState::Idle => {
+    pub fn up(&mut self) -> bool {
+        let TransactionState { state, hooks} = self;
+        TransactionState::up_state(state, hooks)
+    }
+
+    fn down_state(state: &mut State) -> Option<BTreeSet<GraphId>> {
+        match state {
+            State::Idle => {
                 log::error!("You cannot call 'down' for a state 'TransactionState::Idle'");
 
                 None
             },
-            TransactionState::Modification { level, edges } => {
+            State::Modification { level, edges } => {
                 *level -= 1;
 
                 if *level == 0 {
                     let edges = std::mem::replace(edges, BTreeSet::new());
-                    *self = TransactionState::Refreshing;
+                    *state = State::Refreshing;
                     return Some(edges);
                 }
 
                 None
             },
-            TransactionState::Refreshing => {
+            State::Refreshing => {
                 log::error!("You cannot change the source value while the dependency graph is being refreshed");
                 None
             }
         }
     }
 
-    pub fn to_idle(&mut self) {
-        match self {
-            TransactionState::Idle => {
+    pub fn down(&mut self) -> Option<BTreeSet<GraphId>> {
+        TransactionState::down_state(&mut self.state)
+    }
+
+    fn to_idle_state(state: &mut State, hooks: &mut Hooks) {
+        match state {
+            State::Idle => {
                 log::error!("you cannot go from 'TransactionState::Idle' to 'TransactionState::Idle'");
             },
-            TransactionState::Modification { .. } => {
+            State::Modification { .. } => {
                 log::error!("you cannot go from 'TransactionState::Modification' to 'TransactionState::Idle'");
             },
-            TransactionState::Refreshing => {
-                *self = TransactionState::Idle;
+            State::Refreshing => {
+                *state = State::Idle;
+                hooks.fire_end();
             }
         }
     }
 
-    pub fn add_edge_to_refresh(&mut self, new_edge: GraphId) {
-        match self {
-            TransactionState::Modification { edges, .. } => {
+    pub fn to_idle(&mut self) {
+        let TransactionState { state, hooks} = self;
+        TransactionState::to_idle_state(state, hooks)
+    }
+
+    fn add_edge_to_refresh_state(state: &mut State, new_edge: GraphId) {
+        match state {
+            State::Modification { edges, .. } => {
                 edges.insert(new_edge);
             },
             _ => {
                 log::error!("You can only call the trigger if you are in a transaction block");
             }
         }
+    }
+
+    pub fn add_edge_to_refresh(&mut self, new_edge: GraphId) {
+        TransactionState::add_edge_to_refresh_state(&mut self.state, new_edge);
+    }
+
+    pub fn set_hook(&mut self, before_start: Box<dyn Fn()>, after_end: Box<dyn Fn()>) {
+        self.hooks.add(before_start, after_end);
     }
 }

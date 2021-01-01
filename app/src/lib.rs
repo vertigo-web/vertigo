@@ -31,6 +31,16 @@ pub async fn start_app() {
     let root: Dependencies = Dependencies::default();
     let app_state = app::State::new(&root, &driver);
 
+    //for testing
+    // root.set_hook(
+    //     Box::new(|| {
+    //         log::info!("before start");
+    //     }),
+    //     Box::new(|| {
+    //         log::info!("after end");
+    //     })
+    // );
+
     let app = App::new(driver.clone(), VDomComponent::new(app_state, app::render));
 
     app.start_app().await;
