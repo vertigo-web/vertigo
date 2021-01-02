@@ -1,3 +1,6 @@
+use alloc::{
+    collections::BTreeSet,
+};
 use vertigo::computed::{
     Computed,
     Dependencies
@@ -11,9 +14,7 @@ use super::{
     sudoku_square::SudokuSquare, tree_box::TreeBoxIndex
 };
 
-use std::collections::HashSet;
-
-pub type PossibleValues = Computed<HashSet<SudokuValue>>;
+pub type PossibleValues = Computed<BTreeSet<SudokuValue>>;
 
 pub fn possible_values(
     deps: &Dependencies,
@@ -22,10 +23,10 @@ pub fn possible_values(
     level0y: TreeBoxIndex,
     level1x: TreeBoxIndex,
     level1y: TreeBoxIndex,
-) -> Computed<HashSet<SudokuValue>> {
+) -> Computed<BTreeSet<SudokuValue>> {
     let grid = grid.clone();
     deps.from(move || {
-        let mut current_numbers_in_ceis: HashSet<SudokuValue> = HashSet::new();
+        let mut current_numbers_in_ceis: BTreeSet<SudokuValue> = BTreeSet::new();
         current_numbers_in_ceis.insert(SudokuValue::Value1);
         current_numbers_in_ceis.insert(SudokuValue::Value2);
         current_numbers_in_ceis.insert(SudokuValue::Value3);

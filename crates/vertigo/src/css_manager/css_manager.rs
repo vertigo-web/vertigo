@@ -1,5 +1,9 @@
-use std::collections::HashMap;
-use std::rc::Rc;
+use alloc::{
+    rc::Rc,
+    collections::BTreeMap,
+    string::String,
+    vec::Vec,
+};
 
 use crate::utils::BoxRefCell;
 
@@ -13,8 +17,8 @@ use super::{get_selector::get_selector, next_id::NextId, transform_css::transfor
 struct CssManagerInner {
     driver: DomDriver,
     next_id: NextId,
-    ids_static: HashMap<u64, u64>,
-    ids_dynamic: HashMap<String, u64>,
+    ids_static: BTreeMap<u64, u64>,
+    ids_dynamic: BTreeMap<String, u64>,
 }
 
 impl CssManagerInner {
@@ -22,8 +26,8 @@ impl CssManagerInner {
         CssManagerInner {
             driver,
             next_id: NextId::new(),
-            ids_static: HashMap::new(),
-            ids_dynamic: HashMap::new(),
+            ids_static: BTreeMap::new(),
+            ids_dynamic: BTreeMap::new(),
         }
     }
 
@@ -72,7 +76,7 @@ impl CssManager {
             }
 
             let class_id = state.insert_css(css);
-            state.ids_dynamic.insert(css.to_string(), class_id);
+            state.ids_dynamic.insert(css.into(), class_id);
 
             get_selector(&class_id)
         })

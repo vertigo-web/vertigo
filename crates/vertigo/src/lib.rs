@@ -1,3 +1,6 @@
+#![no_std]
+extern crate alloc;
+
 mod app;
 pub mod computed;
 mod css_manager;

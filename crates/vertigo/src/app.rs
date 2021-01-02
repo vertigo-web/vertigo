@@ -1,3 +1,9 @@
+use core::{
+    future::Future,
+    pin::Pin,
+    task::{Context, Poll},
+};
+
 use crate::computed::{
     Client,
 };
@@ -15,9 +21,19 @@ use crate::{
     driver::DomDriver,
 };
 
+
+struct WaitFuture {}
+
+impl Future for WaitFuture {
+    type Output = ();
+    fn poll(self: Pin<&mut Self>, _: &mut Context<'_>) -> Poll<<Self as Future>::Output> {
+        Poll::Pending
+    }
+}
+
 pub struct App {
     _subscription: Client,
-    _css_manager: CssManager
+    _css_manager: CssManager,
 }
 
 impl App {
@@ -33,7 +49,10 @@ impl App {
         }
     }
 
-    pub fn start_app(&self) {
+    pub async fn start_app(&self) {
         log::info!("START APP");
+
+        let wait = WaitFuture{};
+        wait.await
     }
 }

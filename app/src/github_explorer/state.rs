@@ -1,4 +1,8 @@
-use std::cmp::PartialEq;
+use core::cmp::PartialEq;
+use alloc::{
+    string::String,
+    format,
+};
 use serde::{Deserialize, Serialize};
 
 use vertigo::{
@@ -66,7 +70,7 @@ fn fetch_repo(repo: &str, value: Value<Resource<Branch>>, driver: &DomDriver) {
                     },
                     Err(err) => {
                         log::error!("Error parsing response: {}", err);
-                        value.set_value(Resource::Failed(err.to_string()));
+                        value.set_value(Resource::Failed(format!("{}", err)));
                     }
                 }
             },

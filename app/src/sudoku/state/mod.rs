@@ -1,4 +1,4 @@
-use std::cmp::PartialEq;
+use core::cmp::PartialEq;
 use vertigo::computed::{Computed, Dependencies, Value};
 
 use self::{

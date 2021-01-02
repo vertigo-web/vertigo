@@ -1,3 +1,6 @@
+use alloc::{
+    string::String,
+};
 #[derive(PartialEq, Clone, Debug)]
 pub enum Route {
     Main,
@@ -39,6 +42,6 @@ impl Into<String> for Route {
             Self::GithubExplorer => "github_explorer",
             Self::GameOfLife => "game_of_life",
             Self::NotFound => "",
-        }.to_string()
+        }.into()
     }
 }

@@ -1,4 +1,6 @@
-use std::collections::BTreeSet;
+use alloc::{
+    collections::BTreeSet,
+};
 
 use crate::computed::graph_id::GraphId;
 
@@ -45,7 +47,7 @@ impl TransactionState {
                 *level -= 1;
 
                 if *level == 0 {
-                    let edges = std::mem::replace(edges, BTreeSet::new());
+                    let edges = core::mem::replace(edges, BTreeSet::new());
                     *self = TransactionState::Refreshing;
                     return Some(edges);
                 }

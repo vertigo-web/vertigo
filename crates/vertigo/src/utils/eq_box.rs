@@ -1,8 +1,8 @@
-use std::cmp::PartialEq;
-use std::ops::Deref;
+use core::cmp::PartialEq;
+use core::ops::Deref;
 
 fn get_unique_id() -> u64 {
-    use std::sync::atomic::{AtomicU64, Ordering};
+    use core::sync::atomic::{AtomicU64, Ordering};
     static EQ_COUNTER:AtomicU64 = AtomicU64::new(1);
     EQ_COUNTER.fetch_add(1, Ordering::Relaxed)
 }

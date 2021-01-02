@@ -1,7 +1,12 @@
-use std::collections::HashMap;
-use std::hash::Hash;
-use std::rc::Rc;
-use std::cmp::PartialEq;
+use core::{
+    hash::Hash,
+    cmp::PartialEq,
+};
+use alloc::{
+    rc::Rc,
+    boxed::Box,
+    collections::BTreeMap,
+};
 
 use crate::computed::Computed;
 use crate::utils::{
@@ -10,16 +15,16 @@ use crate::utils::{
 };
 
 #[derive(PartialEq)]
-pub struct AutoMap<K: Eq + Hash + Clone, V: PartialEq + 'static> {
+pub struct AutoMap<K: Eq + Hash + Clone + Ord, V: PartialEq + 'static> {
     create: EqBox<Box<dyn Fn(&K) -> Computed<V>>>,
-    values: Rc<EqBox<BoxRefCell<HashMap<K, Computed<V>>>>>,
+    values: Rc<EqBox<BoxRefCell<BTreeMap<K, Computed<V>>>>>,
 }
 
-impl<K: Eq + Hash + Clone, V: PartialEq + 'static> AutoMap<K, V> {
+impl<K: Eq + Hash + Clone + Ord, V: PartialEq + 'static> AutoMap<K, V> {
     pub fn new<C: Fn(&K) -> Computed<V> + 'static>(create: C) -> AutoMap<K, V> {
         AutoMap {
             create: EqBox::new(Box::new(create)),
-            values: Rc::new(EqBox::new(BoxRefCell::new(HashMap::new()))),
+            values: Rc::new(EqBox::new(BoxRefCell::new(BTreeMap::new()))),
         }
     }
 

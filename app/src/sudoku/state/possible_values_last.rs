@@ -1,3 +1,6 @@
+use alloc::{
+    vec::Vec,
+};
 use vertigo::computed::{
     Computed,
     Dependencies

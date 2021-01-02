@@ -1,3 +1,7 @@
+use alloc::{
+    format,
+    vec,
+};
 use vertigo::{
     computed::Computed,
     VDomNode,

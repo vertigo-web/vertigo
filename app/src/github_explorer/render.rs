@@ -1,3 +1,8 @@
+use alloc::{
+    string::String,
+    format,
+    vec,
+};
 use vertigo::{
     computed::Computed,
     VDomNode,
@@ -64,9 +69,9 @@ pub fn render(state: &Computed<State>) -> VDomNode {
     let repo_shown = state.repo_shown.get_value();
 
     let commit_sha = match repo_shown.as_str() {
-        "" => "".to_string(),
+        "" => "".into(),
         _ => match &*state.data.get_value(&repo_shown).get_value() {
-            Resource::Loading => "Loading...".to_string(),
+            Resource::Loading => "Loading...".into(),
             Resource::Ready(branch) => branch.commit.sha.clone(),
             Resource::Failed(err) => format!("Error: {}", err),
         }

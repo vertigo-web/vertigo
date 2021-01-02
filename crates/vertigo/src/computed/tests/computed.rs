@@ -1,5 +1,5 @@
 
-use std::rc::Rc;
+use alloc::rc::Rc;
 
 use crate::{computed::{
     Computed,
@@ -84,8 +84,6 @@ fn basic2() {
 
     assert_eq!(sum_box1.get(), (999, 3));
     assert_eq!(sum_box2.get(), (1998, 3));
-
-    println!("subscription off");
 
     sum_box1.off();
     sum_box2.off();

@@ -19,3 +19,17 @@ Links
 - `https://doc.rust-lang.org/cargo/`
 - `https://doc.rust-lang.org/book/`
 - `https://chinedufn.github.io/percy`
+
+
+No std
+--------------
+- `https://rahul-thakoor.github.io/using-no-standard-library-crates-with-webassembly/`
+- `https://justjjy.com/Rust-no-std`
+- `https://rust-embedded.github.io/book/intro/no-std.html`
+- `https://doc.rust-lang.org/core/`
+- `https://doc.rust-lang.org/nightly/alloc/index.html`
+- `https://crates.io/crates/serde-json-wasm`
+- `https://crates.io/crates/serde-wasm-bindgen`
+- `https://crates.io/crates/intrusive-collections`
+- `https://github.com/rust-embedded/awesome-embedded-rust#no-std-crates`
+

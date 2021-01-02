@@ -1,3 +1,7 @@
+use alloc::{
+    vec,
+    format,
+};
 use vertigo::{computed::Computed, VDomNode, node_attr, Css};
 
 use crate::sudoku::state::{Cell, number_item::SudokuValue};

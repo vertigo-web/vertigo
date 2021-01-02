@@ -1,6 +1,12 @@
-use std::rc::Rc;
-use std::collections::{BTreeSet, BTreeMap};
-use std::cmp::PartialEq;
+use core::{
+    cmp::PartialEq,
+};
+use alloc::{
+    collections::{BTreeSet, BTreeMap},
+    rc::Rc,
+    vec::Vec,
+    boxed::Box,
+};
 
 use crate::computed::{
     Dependencies,

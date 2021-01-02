@@ -1,3 +1,7 @@
+use alloc::{
+    vec::Vec,
+    vec,
+};
 use vertigo::computed::{
     Value,
     Dependencies
@@ -9,7 +13,7 @@ use super::tree_box::TreeBoxIndex;
 
 //export const getIteratorByAllSudokuValue = (): Array<SudokuValue> => [1, 2, 3, 4, 5, 6, 7, 8, 9];
 
-#[derive(Copy, Clone, PartialEq, Eq, Hash, Debug)]
+#[derive(Copy, Clone, PartialEq, Eq, Hash, Debug, PartialOrd, Ord)]
 pub enum SudokuValue {
     Value1,
     Value2,

@@ -1,5 +1,9 @@
-use std::rc::Rc;
-use std::cmp::PartialEq;
+use core::{
+    cmp::PartialEq,
+};
+use alloc::{
+    rc::Rc,
+};
 
 use crate::computed::{
     Dependencies,

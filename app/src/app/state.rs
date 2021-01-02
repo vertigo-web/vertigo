@@ -1,4 +1,4 @@
-use std::cmp::PartialEq;
+use core::cmp::PartialEq;
 use vertigo::{
     DomDriver,
     computed::{Computed, Dependencies, Value},

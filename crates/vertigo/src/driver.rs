@@ -1,8 +1,13 @@
-use std::{
-    collections::HashMap,
+use core::{
     future::Future,
     pin::Pin,
+};
+use alloc::{
+    collections::BTreeMap,
     rc::Rc,
+    string::String,
+    boxed::Box,
+    format,
 };
 
 use crate::utils::EqBox;
@@ -15,7 +20,7 @@ pub enum FetchMethod {
 }
 
 impl FetchMethod {
-    pub fn to_string(&self) -> &str {
+    pub fn as_str(&self) -> &str {
         match self {
             Self::GET => "GET",
             Self::POST => "POST",
@@ -94,7 +99,7 @@ pub trait DomDriverTrait {
     fn add_child(&self, parent: RealDomId, child: RealDomId);
     fn insert_css(&self, selector: &str, value: &str);
     fn set_event(&self, node: RealDomId, callback: EventCallback);
-    fn fetch(&self, method: FetchMethod, url: String, headers: Option<HashMap<String, String>>, body: Option<String>) -> Pin<Box<dyn Future<Output=Result<String, FetchError>> + 'static>>;
+    fn fetch(&self, method: FetchMethod, url: String, headers: Option<BTreeMap<String, String>>, body: Option<String>) -> Pin<Box<dyn Future<Output=Result<String, FetchError>> + 'static>>;
 
     fn get_hash_location(&self) -> String;
     fn push_hash_location(&self, path: &str);
@@ -144,7 +149,8 @@ impl DomDriver {
 
             let spawn_local_executor = self.spawn_local_executor.clone();
             spawn_local_executor(fur)
-}
+    }
+
     pub fn create_node(&self, id: RealDomId, name: &'static str) {
         show_log(format!("create_node {} {}", id, name));
         self.driver.create_node(id, name);
@@ -205,13 +211,13 @@ impl DomDriver {
         self.driver.set_event(node, callback);
     }
 
-    pub fn fetch(&self, method: FetchMethod, url: String, headers: Option<HashMap<String, String>>, body: Option<String>) -> Pin<Box<dyn Future<Output=Result<String, FetchError>> + 'static>> {
+    pub fn fetch(&self, method: FetchMethod, url: String, headers: Option<BTreeMap<String, String>>, body: Option<String>) -> Pin<Box<dyn Future<Output=Result<String, FetchError>> + 'static>> {
         show_log(format!("fetch {:?} {}", method, url));
         self.driver.fetch(method, url, headers, body)
     }
 
     pub fn get_hash_location(&self) -> String {
-        show_log("get_location".to_string());
+        show_log("get_location".into());
         self.driver.get_hash_location()
     }
 
@@ -221,7 +227,7 @@ impl DomDriver {
     }
 
     pub fn on_hash_route_change(&self, on_change: Box<dyn Fn(String)>) -> HashRoutingReceiver {
-        show_log("on_route_change".to_string());
+        show_log("on_route_change".into());
         self.driver.on_hash_route_change(on_change)
     }
 

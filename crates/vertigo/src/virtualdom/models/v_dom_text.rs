@@ -1,3 +1,5 @@
+use alloc::string::String;
+
 #[derive(Clone)]
 pub struct VDomText {
     pub value: String,

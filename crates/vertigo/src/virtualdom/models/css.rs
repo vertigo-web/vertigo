@@ -1,3 +1,9 @@
+use alloc::{
+    string::String,
+    vec::Vec,
+    vec,
+};
+
 pub enum CssGroup {
     CssStatic {
         value: &'static str,                    //&str -- moze zachowywac sie jako id po ktorym odnajdujemy interesujaca regule

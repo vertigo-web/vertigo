@@ -1,4 +1,6 @@
-use std::collections::{BTreeMap, BTreeSet};
+use alloc::{
+    collections::{BTreeMap, BTreeSet},
+};
 use crate::computed::graph_id::GraphId;
 
 pub struct GraphMap {

@@ -1,4 +1,7 @@
-use std::collections::{BTreeMap, BTreeSet};
+use alloc::{
+    collections::{BTreeMap, BTreeSet},
+    vec::Vec,
+};
 use crate::computed::graph_id::GraphId;
 use super::graph_map::GraphMap;
 

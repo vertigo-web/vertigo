@@ -1,4 +1,9 @@
-use std::cmp::PartialEq;
+use core::cmp::PartialEq;
+use alloc::{
+    string::String,
+    vec,
+    format,
+};
 use vertigo::{
     computed::{
         Computed,

@@ -1,6 +1,12 @@
-use std::rc::Rc;
-use std::cmp::PartialEq;
-use std::collections::BTreeSet;
+use core::{
+    cmp::PartialEq,
+};
+use alloc::{
+    rc::Rc,
+    collections::BTreeSet,
+    vec::Vec,
+    boxed::Box,
+};
 
 use crate::computed::{
     Value,

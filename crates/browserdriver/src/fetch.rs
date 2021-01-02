@@ -3,22 +3,28 @@ use wasm_bindgen::JsCast;
 use wasm_bindgen_futures::JsFuture;
 use web_sys::{Request, RequestInit, /*RequestMode,*/ Response};
 
-use std::pin::Pin;
-use std::future::Future;
-
-use std::collections::HashMap;
+use core::{
+    pin::Pin,
+    future::Future
+};
+use alloc::{
+    boxed::Box,
+    string::String,
+    collections::BTreeMap,
+};
 
 use vertigo::{FetchMethod, FetchError};
+
 
 pub fn fetch(
     method: FetchMethod,
     url: String,
-    headers: Option<HashMap<String, String>>,
+    headers: Option<BTreeMap<String, String>>,
     _body: Option<String>
 ) -> Pin<Box<dyn Future<Output=Result<String, FetchError>> + 'static>> {
     Box::pin(async move {
         let mut opts = RequestInit::new();
-        opts.method(method.to_string());
+        opts.method(method.as_str());
         //opts.mode(RequestMode::Cors);
 
         let request = Request::new_with_str_and_init(&url, &opts).unwrap();

@@ -1,4 +1,8 @@
-use std::cmp::PartialEq;
+use core::cmp::PartialEq;
+use alloc::{
+    vec::Vec,
+    vec,
+};
 use vertigo::{
     Css,
     node_attr,

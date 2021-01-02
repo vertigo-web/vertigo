@@ -1,4 +1,6 @@
-use std::collections::{VecDeque, BTreeSet};
+use alloc::{
+    collections::{VecDeque, BTreeSet},
+};
 use crate::computed::graph_id::GraphId;
 
 pub struct Stack {

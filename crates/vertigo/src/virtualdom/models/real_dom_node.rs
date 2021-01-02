@@ -1,16 +1,28 @@
-use std::collections::HashMap;
-use std::rc::Rc;
-use crate::{driver::{DomDriver, EventCallback}, virtualdom::{
+use alloc::{
+    rc::Rc,
+    collections::BTreeMap,
+    string::String,
+    vec::Vec,
+    format,
+};
+use crate::{
+    driver::{
+        DomDriver,
+        EventCallback
+    },
+    virtualdom::{
         models::{
             real_dom::RealDom,
             real_dom_id::RealDomId,
             real_dom_text::RealDomText,
         },
-    }};
+    },
+};
+
 use crate::utils::BoxRefCell;
 
 
-fn mergeAttr(attr: &HashMap<&'static str, String>, className: Option<String>) -> HashMap<&'static str, String> {
+fn mergeAttr(attr: &BTreeMap<&'static str, String>, className: Option<String>) -> BTreeMap<&'static str, String> {
     let mut attr = attr.clone();
 
     if let Some(className) = className {
@@ -31,7 +43,7 @@ pub struct RealDomNodeInner {
     domDriver: DomDriver,
     pub idDom: RealDomId,
     pub name: &'static str,
-    attr: HashMap<&'static str, String>,
+    attr: BTreeMap<&'static str, String>,
     pub child: Vec<RealDom>,
 }
 
@@ -45,7 +57,7 @@ impl RealDomNodeInner {
             domDriver: driver,
             idDom: nodeId,
             name,
-            attr: HashMap::new(),
+            attr: BTreeMap::new(),
             child: Vec::new(),
         }
     }
@@ -55,7 +67,7 @@ impl RealDomNodeInner {
             domDriver: driver,
             idDom: id,
             name: "div",
-            attr: HashMap::new(),
+            attr: BTreeMap::new(),
             child: Vec::new(),
         }
     }
@@ -72,11 +84,11 @@ impl RealDomNodeInner {
 
         if needUpdate {
             self.domDriver.set_attr(self.idDom.clone(), &name, &value);
-            self.attr.insert(name, value.to_string());
+            self.attr.insert(name, value.into());
        }
     }
 
-    pub fn updateAttr(&mut self, attr: &HashMap<&'static str, String>, className: Option<String>) {
+    pub fn updateAttr(&mut self, attr: &BTreeMap<&'static str, String>, className: Option<String>) {
         let attr = mergeAttr(attr, className);
 
         let mut to_delate: Vec<&str> = Vec::new();
@@ -88,14 +100,9 @@ impl RealDomNodeInner {
         }
 
         for key_to_delete in to_delate.into_iter() {
-            self.domDriver.remove_attr(self.idDom.clone(), key_to_delete)
+            self.domDriver.remove_attr(self.idDom.clone(), key_to_delete);
+            self.attr.remove(key_to_delete);
         }
-
-        self.attr.retain(|key, _value| {
-            let key: &str = *key;
-
-            attr.contains_key(key)
-        });
 
         for (key, value) in attr.iter() {
             self.updateAttrOne(key, value);
@@ -107,11 +114,11 @@ impl RealDomNodeInner {
     }
 
     pub fn extract_child(&mut self) -> Vec<RealDom> {
-        std::mem::replace(&mut self.child, Vec::new())
+        core::mem::replace(&mut self.child, Vec::new())
     }
 
     pub fn put_child(&mut self, child: Vec<RealDom>) -> Vec<RealDom> {
-        std::mem::replace(&mut self.child, child)
+        core::mem::replace(&mut self.child, child)
     }
 
     pub fn appendAfter(&mut self, prevNode: Option<RealDomId>, newChild: RealDom) {
@@ -160,7 +167,7 @@ impl RealDomNode {
         }
     }
 
-    pub fn updateAttr(&self, attr: &HashMap<&'static str, String>, className: Option<String>) {
+    pub fn updateAttr(&self, attr: &BTreeMap<&'static str, String>, className: Option<String>) {
         self.inner.change(
             (attr, className),
             |state, (attr, className)| {

@@ -1,6 +1,8 @@
 use web_sys::{Event, /* MouseEvent, KeyboardEvent,*/ EventTarget};
 use wasm_bindgen::{JsCast, prelude::Closure};
 
+use alloc::boxed::Box;
+
 pub struct DomEvent {
     closure: Closure<dyn Fn(Event)>,
 }

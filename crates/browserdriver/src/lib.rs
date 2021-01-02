@@ -1,9 +1,20 @@
-use std::{
-    collections::HashMap,
-    future::Future,
+#![no_std]
+extern crate alloc;
+
+use core::{
+    prelude::v1::*,
     pin::Pin,
-    rc::Rc,
+    future::Future,
 };
+use alloc::{
+    boxed::Box,
+    rc::Rc,
+    string::String,
+    vec::Vec,
+    collections::BTreeMap,
+    format,
+};
+
 use wasm_bindgen::{JsCast, prelude::Closure, JsValue};
 use web_sys::{Document, Element, Event, Text, HtmlHeadElement, Node, HtmlInputElement, HtmlTextAreaElement, Window};
 
@@ -156,8 +167,8 @@ pub struct DomDriverBrowserInner {
     window: Window,
     document: Document,
     head: HtmlHeadElement,
-    elements: HashMap<RealDomId, ElementWrapper>,
-    child_parent: HashMap<RealDomId, RealDomId>,            //child -> parent
+    elements: BTreeMap<RealDomId, ElementWrapper>,
+    child_parent: BTreeMap<RealDomId, RealDomId>,            //child -> parent
     _dom_event_disconnect: Vec<DomEventDisconnect>,
 }
 
@@ -174,8 +185,8 @@ impl DomDriverBrowserInner {
                     window,
                     document,
                     head,
-                    elements: HashMap::new(),
-                    child_parent: HashMap::new(),
+                    elements: BTreeMap::new(),
+                    child_parent: BTreeMap::new(),
                     _dom_event_disconnect: Vec::new(),
                 }
             )
@@ -468,7 +479,7 @@ impl DomDriverBrowserInner {
     }
 
     fn get_hash_location(&self) -> String {
-        self.window.location().hash().expect("Can't read hash from location bar").to_string()
+        self.window.location().hash().expect("Can't read hash from location bar").into()
     }
 
     fn push_hash_location(&self, path: &str) {
@@ -573,7 +584,7 @@ impl DomDriverTrait for DomDriverBrowser {
         });
     }
 
-    fn fetch(&self, method: FetchMethod, url: String, headers: Option<HashMap<String, String>>, body: Option<String>) -> Pin<Box<dyn Future<Output=Result<String, FetchError>> + 'static>> {
+    fn fetch(&self, method: FetchMethod, url: String, headers: Option<BTreeMap<String, String>>, body: Option<String>) -> Pin<Box<dyn Future<Output=Result<String, FetchError>> + 'static>> {
         fetch::fetch(method, url, headers, body)
     }
 

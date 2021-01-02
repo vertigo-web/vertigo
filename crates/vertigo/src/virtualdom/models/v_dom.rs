@@ -1,3 +1,7 @@
+use alloc::{
+    vec::Vec,
+    string::String,
+};
 use crate::virtualdom::models::{
     v_dom_component::VDomComponent,
     v_dom_node::VDomNode,

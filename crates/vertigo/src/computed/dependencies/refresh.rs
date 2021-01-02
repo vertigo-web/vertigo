@@ -1,4 +1,4 @@
-use std::collections::{BTreeMap};
+use alloc::collections::{BTreeMap};
 use crate::computed::graph_id::GraphId;
 use crate::computed::graph_value::GraphValueRefresh;
 

@@ -1,8 +1,9 @@
-use std::collections::{
-    HashMap,
-    VecDeque,
+use core::hash::Hash;
+use alloc::{
+    collections::{BTreeMap, VecDeque},
+    vec::Vec,
+    string::String,
 };
-use std::hash::Hash;
 
 use crate::{
     computed::{
@@ -29,18 +30,18 @@ use crate::{
     css_manager::css_manager::CssManager,
 };
 
-struct CacheNode<K: Eq + Hash, RNode, VNode> {
+struct CacheNode<K: Eq + Hash + Ord, RNode, VNode> {
     createNew: fn(&CssManager, &RealDomNode, &VNode) -> RNode,
-    data: HashMap<K, VecDeque<RNode>>,
+    data: BTreeMap<K, VecDeque<RNode>>,
 }
 
-impl<K: Eq + Hash, RNode, VNode> CacheNode<K, RNode, VNode> {
+impl<K: Eq + Hash + Ord, RNode, VNode> CacheNode<K, RNode, VNode> {
     fn new(
         createNew: fn(&CssManager, &RealDomNode, &VNode) -> RNode,
     ) -> CacheNode<K, RNode, VNode> {
         CacheNode {
             createNew,
-            data: HashMap::new()
+            data: BTreeMap::new()
         }
     }
 

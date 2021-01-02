@@ -1,4 +1,8 @@
-use std::rc::Rc;
+use alloc::{
+    rc::Rc,
+    string::String,
+    boxed::Box,
+};
 
 use crate::{
     computed::{Client, Value},

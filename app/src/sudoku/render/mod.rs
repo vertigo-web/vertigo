@@ -1,3 +1,7 @@
+use alloc::{
+    vec,
+    format,
+};
 use vertigo::{computed::Computed, VDomNode, node_attr, Css};
 use self::config::Config;
 

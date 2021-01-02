@@ -1,6 +1,12 @@
-use std::collections::HashMap;
-use std::rc::Rc;
-use std::cmp::PartialEq;
+use core::{
+    cmp::PartialEq,
+};
+use alloc::{
+    rc::Rc,
+    collections::BTreeMap,
+    string::String,
+    vec::Vec,
+};
 
 use crate::virtualdom::models::{
     v_dom::VDom,
@@ -12,7 +18,7 @@ use crate::virtualdom::models::{
 
 pub struct VDomNode {
     pub name: &'static str,
-    pub attr: HashMap<&'static str, String>,
+    pub attr: BTreeMap<&'static str, String>,
     pub child: Vec<VDom>,
     pub onClick: Option<Rc<dyn Fn()>>,
     pub onInput: Option<Rc<dyn Fn(String)>>,
@@ -25,7 +31,7 @@ impl VDomNode {
     pub fn new(name: &'static str, childList: Vec<NodeAttr>) -> VDomNode {
         let mut result = VDomNode {
             name,
-            attr: HashMap::new(),
+            attr: BTreeMap::new(),
             child: Vec::new(),
             onClick: None,
             onInput: None,
@@ -66,7 +72,7 @@ impl VDomNode {
     pub fn newWithVDom(name: &'static str, childList: Vec<VDom>) -> VDomNode {
         VDomNode {
             name,
-            attr: HashMap::new(),
+            attr: BTreeMap::new(),
             child: childList,
             onClick: None,
             onInput: None,

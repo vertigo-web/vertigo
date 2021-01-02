@@ -1,4 +1,4 @@
-
+use alloc::rc::Rc;
 use crate::computed::{
     Value,
     Dependencies,
@@ -16,7 +16,7 @@ struct AppState {
 }
 
 impl AppState {
-    pub fn new(root: &Dependencies) -> std::rc::Rc<AppState> {
+    pub fn new(root: &Dependencies) -> Rc<AppState> {
         let value1 = root.new_value(1);
         let value2 = root.new_value(2);
         let value3 = root.new_value(3);
@@ -35,7 +35,7 @@ impl AppState {
             })
         };
 
-        std::rc::Rc::new(AppState {
+        Rc::new(AppState {
             value1,
             value2,
             value3,

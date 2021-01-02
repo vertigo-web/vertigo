@@ -1,4 +1,7 @@
-use std::collections::{BTreeMap, BTreeSet};
+use alloc::{
+    collections::{BTreeMap, BTreeSet},
+    vec::Vec,
+};
 use crate::computed::{Dependencies, GraphId, graph_value::GraphValueRefresh};
 
 pub enum RefreshState {

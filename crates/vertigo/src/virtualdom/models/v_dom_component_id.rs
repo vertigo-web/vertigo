@@ -9,7 +9,7 @@ use crate::{
     }
 };
 
-#[derive(Clone, Eq, PartialEq, Hash)]
+#[derive(Clone, Eq, PartialEq, Hash, PartialOrd, Ord)]
 pub struct VDomComponentId {
     idComputed: GraphId,        //id tego computed
     idFunction: u64,            //id tej konkretnej funkcji statycznej (renderującej komponent)

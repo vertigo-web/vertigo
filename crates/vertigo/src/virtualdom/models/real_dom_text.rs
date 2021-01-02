@@ -1,8 +1,13 @@
-use crate::{utils::BoxRefCell, driver::DomDriver, virtualdom::{
+use alloc::string::String;
+use crate::{
+    utils::BoxRefCell,
+    driver::DomDriver,
+    virtualdom::{
         models::{
             real_dom_id::RealDomId,
         },
-    }};
+    }
+};
 
 pub struct RealDomText {
     domDriver: DomDriver,
@@ -26,7 +31,7 @@ impl RealDomText {
     pub fn update(&self, newValue: &str) {
         let should_update = self.value.change(newValue, |state, newValue| {
             if *state != *newValue {
-                *state = newValue.to_string();
+                *state = newValue.into();
                 true
             } else {
                 false

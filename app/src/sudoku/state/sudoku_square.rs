@@ -1,5 +1,5 @@
-use std::rc::Rc;
-use std::cmp::PartialEq;
+use alloc::rc::Rc;
+use core::cmp::PartialEq;
 use super::tree_box::{ThreeBox, TreeBoxIndex};
 
 #[derive(PartialEq)]
