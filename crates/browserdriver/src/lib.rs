@@ -7,12 +7,25 @@ use std::{
 use wasm_bindgen::{JsCast, prelude::Closure, JsValue};
 use web_sys::{Document, Element, Event, Text, HtmlHeadElement, Node, HtmlInputElement, HtmlTextAreaElement, Window};
 
-use vertigo::{DomDriver, DomDriverTrait, EventCallback, FetchError, FetchMethod, HashRoutingReceiver, RealDomId, utils::BoxRefCell};
+use vertigo::{
+    DomDriver,
+    DomDriverTrait,
+    EventCallback,
+    FetchError,
+    FetchMethod,
+    HashRoutingReceiver,
+    RealDomId,
+    utils::{
+        BoxRefCell,
+        DropResource,
+    }
+};
 
 use dom_event::{DomEventDisconnect, DomEvent, /*DomEventKeyboard, DomEventMouse */};
 
 mod dom_event;
 mod fetch;
+mod set_interval;
 
 fn get_window_elements() -> (Window, Document, HtmlHeadElement) {
     let window = web_sys::window().expect("no global `window` exists");
@@ -623,5 +636,13 @@ impl DomDriverTrait for DomDriverBrowser {
         self.driver.change_no_params(|state| {
             state.window.set_onpopstate(None);
         });
+    }
+
+    fn set_interval(&self, time: u32, func: Box<dyn Fn()>) -> DropResource {
+        let drop_resource = crate::set_interval::Interval::new(time, func);
+
+        DropResource::new(move || {
+            drop_resource.off();
+        })
     }
 }

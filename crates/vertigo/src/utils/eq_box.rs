@@ -1,5 +1,6 @@
 use std::cmp::PartialEq;
 use std::ops::Deref;
+use std::fmt::{self, Debug};
 
 fn get_unique_id() -> u64 {
     use std::sync::atomic::{AtomicU64, Ordering};
@@ -20,6 +21,10 @@ impl<T> EqBox<T> {
             value
         }
     }
+
+    pub fn into_inner(self) -> T {
+        self.value
+    }
 }
 
 impl<T> Deref for EqBox<T> {
@@ -34,5 +39,14 @@ impl<T> PartialEq for EqBox<T> {
 
     fn ne(&self, other: &EqBox<T>) -> bool {
         self.id != other.id
+    }
+}
+
+impl<T> Debug for EqBox<T> {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        f.debug_struct("EqBox")
+            .field("id", &self.id)
+            .field("value", &"---")
+            .finish()
     }
 }

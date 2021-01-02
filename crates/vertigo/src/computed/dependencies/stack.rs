@@ -21,7 +21,7 @@ impl Stack {
         let len = self.stack_relations.len();
 
         if len < 1 {
-            log::warn!("frame with stack - not found len=0");
+            //log::warn!("frame with stack - not found len=0");
             return;
         }
 

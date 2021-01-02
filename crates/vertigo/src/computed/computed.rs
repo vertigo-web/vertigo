@@ -45,23 +45,6 @@ impl<T: PartialEq + 'static> Computed<T> {
         self.inner.deps()
     }
 
-    pub fn from2<A: PartialEq, B: PartialEq>(
-        a: Computed<A>,
-        b: Computed<B>,
-        calculate: fn(Rc<A>, Rc<B>) -> T
-    ) -> Computed<T> {
-        let deps = a.inner.deps();
-
-        Computed::new(deps, move || {
-            let a_value = a.get_value();
-            let b_value = b.get_value();
-
-            let result = calculate(a_value, b_value);
-
-            Rc::new(result)
-        })
-    }
-
     pub fn map_for_render<K: PartialEq>(self, fun: fn(&Computed<T>) -> K) -> Computed<K> {
         let deps = self.inner.deps();
 

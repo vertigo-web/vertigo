@@ -8,6 +8,7 @@ use crate::virtualdom::models::{
 };
 use crate::virtualdom::models::css::Css;
 use crate::computed::{
+    Value,
     Computed,
 };
 
@@ -90,6 +91,12 @@ pub fn text<T: Into<String>>(name: T) -> NodeAttr {
 pub fn component<T: PartialEq + 'static>(params: Computed<T>, render: fn(&Computed<T>) -> VDomNode) -> NodeAttr {
     NodeAttr::Node {
         node:VDom::component(VDomComponent::new(params, render))
+    }
+}
+
+pub fn component_value<T: PartialEq + 'static>(params: Value<T>, render: fn(&Value<T>) -> VDomNode) -> NodeAttr {
+    NodeAttr::Node {
+        node:VDom::component(VDomComponent::from_value(params, render))
     }
 }
 

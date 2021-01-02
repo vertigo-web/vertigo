@@ -66,9 +66,6 @@ impl Dependencies {
         value.to_computed()
     }
 
-    pub fn new_value_wrap_width_computed<T: PartialEq>(&self, value: T) -> Computed<Value<T>> {
-        Value::new_value_wrap_width_computed(self.clone(), value)
-    }
 
     pub fn transaction<F: FnOnce()>(&self, func: F) {
         let success = self.transaction_state.change_no_params(|state| {

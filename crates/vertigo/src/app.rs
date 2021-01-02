@@ -33,7 +33,10 @@ impl App {
         }
     }
 
-    pub fn start_app(&self) {
+    pub async fn start_app(&self) {
         log::info!("START APP");
+
+        let wait = std::future::pending();
+        wait.await
     }
 }

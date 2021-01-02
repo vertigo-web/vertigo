@@ -1,6 +1,3 @@
-
-use std::rc::Rc;
-
 use crate::{computed::{
     Computed,
     Value,
@@ -60,7 +57,9 @@ fn basic2() {
     let com1: Computed<i32> = val1.to_computed();
     let com2: Computed<i32> = val2.to_computed();
 
-    let sum = Computed::from2(com1, com2, |a: Rc<i32>, b: Rc<i32>| -> i32 {
+    let sum = root.from(move || {
+        let a = com1.get_value();
+        let b = com2.get_value();
         *a + *b
     });
 
