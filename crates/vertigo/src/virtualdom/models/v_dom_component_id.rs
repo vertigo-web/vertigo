@@ -1,4 +1,5 @@
 use crate::computed::{
+    Value,
     Computed,
     GraphId,
 };
@@ -11,17 +12,24 @@ use crate::{
 
 #[derive(Clone, Eq, PartialEq, Hash)]
 pub struct VDomComponentId {
-    idComputed: GraphId,        //id tego computed
-    idFunction: u64,            //id tej konkretnej funkcji statycznej (renderującej komponent)
+    id_computed: GraphId,        //id tego computed
+    id_function: u64,            //id tej konkretnej funkcji statycznej (renderującej komponent)
 }
 
 impl VDomComponentId {
     pub fn new<T: PartialEq>(params: &Computed<T>, render: fn(&Computed<T>) -> VDomNode) -> VDomComponentId {
-
-        let idFunction = render as *const () as u64;
+        let id_function = render as *const () as u64;
         VDomComponentId {
-            idComputed: params.get_id(),
-            idFunction
+            id_computed: params.get_id(),
+            id_function
+        }
+    }
+
+    pub fn new_value<T: PartialEq>(params: &Value<T>, render: fn(&Value<T>) -> VDomNode) -> VDomComponentId {
+        let id_function = render as *const () as u64;
+        VDomComponentId {
+            id_computed: params.id(),
+            id_function
         }
     }
 }

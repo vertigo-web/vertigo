@@ -106,10 +106,16 @@ fn render_header(app_state: &Computed<app::State>) -> VDomNode {
             )),
             node("li", vec!(
                 text("Game Of Life"),
-                css(css_menu_item(current_page == &Route::GameOfLife)),
+                css(css_menu_item(current_page.is_game_of_life())),
                 onClick({
                     let app_state = app_state.clone();
-                    move || app_state.navigate_to(Route::GameOfLife)
+                    move || {
+                        let timer = app_state.game_of_life.get_value().start_timer();
+                        let route = Route::GameOfLife {
+                            timer
+                        };
+                        app_state.navigate_to(route);
+                    }
                 })
             )),
         )),
@@ -221,7 +227,7 @@ pub fn render(app_state: &Computed<app::State>) -> VDomNode {
             Route::GithubExplorer =>
                 component(app_state.github_explorer.clone(), github_explorer::render),
 
-            Route::GameOfLife =>
+            Route::GameOfLife {..} =>
                 component(app_state.game_of_life.clone(), game_of_life::render),
 
             Route::NotFound =>

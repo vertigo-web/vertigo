@@ -55,9 +55,18 @@ impl State {
             })
         };
 
-        let route: Value<Route> = root.new_value(driver.get_hash_location().into());
+        let game_of_life = game_of_life::State::new(&root, driver);
 
-        let hash_router = HashRouter::new(driver, route.clone(), None);
+        let route: Value<Route> = root.new_value(Route::new(driver.get_hash_location(), &game_of_life));
+
+        let hash_router = HashRouter::new(driver, route.clone(), {
+            let route = route.clone();
+            let game_of_life = game_of_life.clone();
+
+            Box::new(move |url: String|{
+                route.set_value(Route::new(url, &game_of_life));
+            })
+        });
 
         let state = State {
             root: root.clone(),
@@ -72,7 +81,7 @@ impl State {
             sudoku: sudoku::Sudoku::new(root),
             input: input::State::new(&root),
             github_explorer: github_explorer::State::new(&root, driver),
-            game_of_life: game_of_life::State::new(&root),
+            game_of_life: game_of_life,
 
             hash_router,
         };

@@ -11,7 +11,7 @@ use crate::utils::BoxRefCell;
 pub struct Value<T: 'static> {
     id: GraphId,
     value: Rc<BoxRefCell<Rc<T>>>,
-    deps: Dependencies,
+    pub deps: Dependencies,
 }
 
 impl<T: PartialEq + 'static> Clone for Value<T> {
@@ -31,12 +31,6 @@ impl<T: PartialEq + 'static> Value<T> {
             value: Rc::new(BoxRefCell::new(Rc::new(value))),
             deps
         }
-    }
-
-    pub fn new_value_wrap_width_computed(deps: Dependencies, value: T) -> Computed<Value<T>> {
-        let value = deps.new_value(value);
-        //let computed = value.to_computed();                   //TODO - uncommenting this line causes performance to down
-        deps.new_computed_from(value)
     }
 
     pub fn set_value(&self, value: T) {

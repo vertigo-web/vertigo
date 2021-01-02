@@ -22,9 +22,9 @@ pub struct HashRouter {
 impl HashRouter {
     /// Create new HashRouter which sets route value upon hash change in browser bar.
     /// If callback is provided then it is fired instead.
-    pub fn new<T>(driver: &DomDriver, route: Value<T>, callback: Option<Box<dyn Fn(String)>>) -> Self
+    pub fn new<T>(driver: &DomDriver, route: Value<T>, callback: Box<dyn Fn(String)>) -> Self
     where
-        T: PartialEq + From<String> + Into<String> + Clone
+        T: PartialEq + ToString
     {
         let direction = Rc::new(BoxRefCell::new(Direction::Loading));
 
@@ -38,7 +38,7 @@ impl HashRouter {
                     Direction::Loading =>
                         direction.change_no_params(|state| *state = Direction::Pushing),
                     Direction::Pushing =>
-                        driver.push_hash_location(route.clone().into()),
+                        driver.push_hash_location(route.to_string()),
                     _ => ()
                 }
             }
@@ -48,10 +48,7 @@ impl HashRouter {
             let direction = direction.clone();
             Box::new(move |url: String| {
                 direction.change_no_params(|state| *state = Direction::Popping);
-                match &callback {
-                    Some(cb) => cb(url),
-                    None => route.set_value(url.into()),
-                }
+                callback(url);
                 direction.change_no_params(|state| *state = Direction::Pushing);
             })
         });

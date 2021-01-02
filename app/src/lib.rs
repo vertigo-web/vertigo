@@ -3,11 +3,9 @@ mod simple_counter;
 mod sudoku;
 mod input;
 mod github_explorer;
-mod game_of_life;
+pub mod game_of_life;
 
 use wasm_bindgen::prelude::wasm_bindgen;
-
-use std::cell::RefCell;
 
 use vertigo::{
     computed::Dependencies,
@@ -21,17 +19,6 @@ use browserdriver::DomDriverBrowser;
 #[global_allocator]
 static ALLOC: wee_alloc::WeeAlloc = wee_alloc::WeeAlloc::INIT;
 
-thread_local! {
-    static APP_STATE: RefCell<App> = RefCell::new({
-        let driver = DomDriverBrowser::new();
-
-        let root: Dependencies = Dependencies::default();
-        let app_state = app::State::new(&root, &driver);
-
-        App::new(driver, VDomComponent::new(app_state, app::render))
-    });
-}
-
 #[wasm_bindgen(start)]
 pub async fn start_app() {
     console_error_panic_hook::set_once();
@@ -39,8 +26,16 @@ pub async fn start_app() {
 
     log::info!("Start rustowego modułu ...");
 
-    APP_STATE.with(|state| state.borrow().start_app());
+    let driver = DomDriverBrowser::new();
+
+    let root: Dependencies = Dependencies::default();
+    let app_state = app::State::new(&root, &driver);
+
+    let app = App::new(driver.clone(), VDomComponent::new(app_state, app::render));
+
+    app.start_app().await;
 }
+
 
 /*
 TODO - dodać jakieś makra które pozwolą na łatwe generowanie html-a (https://docs.rs/maplit/1.0.2/maplit/)

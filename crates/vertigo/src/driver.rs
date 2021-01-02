@@ -5,7 +5,7 @@ use std::{
     rc::Rc,
 };
 
-use crate::utils::EqBox;
+use crate::utils::{EqBox, DropResource};
 use crate::virtualdom::models::real_dom_id::RealDomId;
 
 #[derive(Debug)]
@@ -100,6 +100,8 @@ pub trait DomDriverTrait {
     fn push_hash_location(&self, path: &str);
     fn on_hash_route_change(&self, on_change: Box<dyn Fn(String)>) -> HashRoutingReceiver;
     fn clear_hash_route_callback(&self);
+
+    fn set_interval(&self, time: u32, func: Box<dyn Fn()>) -> DropResource;
 }
 
 type Executor = Box<dyn Fn(Pin<Box<dyn Future<Output = ()> + 'static>>) -> ()>;
@@ -227,6 +229,10 @@ impl DomDriver {
 
     pub fn clear_hash_route_callback(&self) {
         self.driver.clear_hash_route_callback()
+    }
+
+    pub fn set_interval<F: Fn() + 'static>(&self, time: u32, func: F) -> DropResource{
+        self.driver.set_interval(time, Box::new(func))
     }
 }
 
