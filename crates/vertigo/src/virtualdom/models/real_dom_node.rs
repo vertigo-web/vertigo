@@ -1,4 +1,7 @@
-use std::collections::HashMap;
+use std::collections::{
+    HashMap,
+    VecDeque,
+};
 use std::rc::Rc;
 use crate::{driver::{DomDriver, EventCallback}, virtualdom::{
         models::{
@@ -32,7 +35,7 @@ pub struct RealDomNodeInner {
     pub idDom: RealDomId,
     pub name: &'static str,
     attr: HashMap<&'static str, String>,
-    pub child: Vec<RealDom>,
+    pub child: VecDeque<RealDom>,
 }
 
 impl RealDomNodeInner {
@@ -46,7 +49,7 @@ impl RealDomNodeInner {
             idDom: nodeId,
             name,
             attr: HashMap::new(),
-            child: Vec::new(),
+            child: VecDeque::new(),
         }
     }
 
@@ -56,7 +59,7 @@ impl RealDomNodeInner {
             idDom: id,
             name: "div",
             attr: HashMap::new(),
-            child: Vec::new(),
+            child: VecDeque::new(),
         }
     }
 
@@ -106,25 +109,17 @@ impl RealDomNodeInner {
         self.domDriver.set_event(self.idDom.clone(), callback);
     }
 
-    pub fn extract_child(&mut self) -> Vec<RealDom> {
-        std::mem::replace(&mut self.child, Vec::new())
+    pub fn extract_child(&mut self) -> VecDeque<RealDom> {
+        std::mem::replace(&mut self.child, VecDeque::new())
     }
 
-    pub fn put_child(&mut self, child: Vec<RealDom>) -> Vec<RealDom> {
+    pub fn put_child(&mut self, child: VecDeque<RealDom>) -> VecDeque<RealDom> {
         std::mem::replace(&mut self.child, child)
     }
 
-    pub fn appendAfter(&mut self, prevNode: Option<RealDomId>, newChild: RealDom) {
-        match prevNode {
-            Some(prevNode) => {
-                self.domDriver.insert_after(prevNode, newChild.id());
-            }
-            None => {
-                self.domDriver.add_child(self.idDom.clone(), newChild.id());
-            }
-        };
-
-        self.child.push(newChild);
+    pub fn insert_before(&mut self, new_child: RealDom, prev_node: Option<RealDomId>) {
+        self.domDriver.insert_before(self.idDom.clone(), new_child.id(), prev_node);
+        self.child.push_front(new_child);
     }
 }
 
@@ -190,7 +185,7 @@ impl RealDomNode {
         })
     }
 
-    pub fn extract_child(&self) -> Vec<RealDom> {
+    pub fn extract_child(&self) -> VecDeque<RealDom> {
         self.inner.change(
             (),
             |state, ()| {
@@ -198,17 +193,17 @@ impl RealDomNode {
         })
     }
 
-    pub fn put_child(&self, child: Vec<RealDom>) {
+    pub fn put_child(&self, child: VecDeque<RealDom>) {
         self.inner.change(child, |state, child| {
             state.put_child(child);
         })
     }
 
-    pub fn appendAfter(&self, prevNode: Option<RealDomId>, newChild: RealDom) {
+    pub fn insert_before(&self, new_child: RealDom, prev_node: Option<RealDomId>) {
         self.inner.change(
-            (prevNode, newChild),
-            |state, (prevNode, newChild)| {
-                state.appendAfter(prevNode, newChild)
+            (new_child, prev_node),
+            |state, (new_child, prev_node)| {
+                state.insert_before(new_child, prev_node)
         })
     }
 

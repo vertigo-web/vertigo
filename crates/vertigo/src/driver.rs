@@ -88,10 +88,7 @@ pub trait DomDriverTrait {
     fn set_attr(&self, id: RealDomId, key: &'static str, value: &str);
     fn remove_attr(&self, id: RealDomId, name: &'static str);
     fn remove(&self, id: RealDomId);
-    fn insert_as_first_child(&self, parent: RealDomId, child: RealDomId);
-    fn insert_before(&self, ref_id: RealDomId, child: RealDomId);
-    fn insert_after(&self, ref_id: RealDomId, child: RealDomId);
-    fn add_child(&self, parent: RealDomId, child: RealDomId);
+    fn insert_before(&self, parent: RealDomId, child: RealDomId, ref_id: Option<RealDomId>);
     fn insert_css(&self, selector: &str, value: &str);
     fn set_event(&self, node: RealDomId, callback: EventCallback);
     fn fetch(&self, method: FetchMethod, url: String, headers: Option<HashMap<String, String>>, body: Option<String>) -> Pin<Box<dyn Future<Output=Result<String, FetchError>> + 'static>>;
@@ -177,24 +174,17 @@ impl DomDriver {
         self.driver.remove(id);
     }
 
-    pub fn insert_as_first_child(&self, parent: RealDomId, child: RealDomId) {
-        show_log(format!("insert_as_first_child parent={} child={}", parent, child));
-        self.driver.insert_as_first_child(parent, child);
-    }
-
-    pub fn insert_before(&self, ref_id: RealDomId, child: RealDomId) {
-        show_log(format!("insert_before refId={} child={}", ref_id, child));
-        self.driver.insert_before(ref_id, child);
-    }
-
-    pub fn insert_after(&self, ref_id: RealDomId, child: RealDomId) {
-        show_log(format!("insert_after refId={} child={}", ref_id, child));
-        self.driver.insert_after(ref_id, child);
-    }
-
-    pub fn add_child(&self, parent: RealDomId, child: RealDomId) {
-        show_log(format!("add_child parent={} child={}", parent, child));
-        self.driver.add_child(parent, child);
+    pub fn insert_before(&self, parent: RealDomId, child: RealDomId, ref_id: Option<RealDomId>) {
+        match &ref_id {
+            Some(ref_id) => {
+                show_log(format!("insert_before child={} refId={}", child, ref_id));
+            },
+            None => {
+                show_log(format!("insert_before child={} refId=None", child));
+            }
+        }
+        
+        self.driver.insert_before(parent, child, ref_id);
     }
 
     pub fn insert_css(&self, selector: &str, value: &str) {
