@@ -113,7 +113,7 @@ fn get_pair_for_update<'a>(real: &'a RealDom, new: &'a VDom) -> Option<NodePairs
     None
 }
 
-fn updateNodeChildUpdatedWithOrder(cssManager: &CssManager, target: &Vec<RealDom>, newVersion: &Vec<VDom>) -> bool {
+fn updateNodeChildUpdatedWithOrder(cssManager: &CssManager, target: &VecDeque<RealDom>, newVersion: &Vec<VDom>) -> bool {
     if target.len() != newVersion.len() {
         return false;
     }
@@ -206,7 +206,7 @@ fn updateNodeChild(cssManager: &CssManager, target: &RealDomNode, newVersion: &V
 
     let mut wsk: Option<RealDomId> = None;
 
-    for item in newVersion.child.iter() {
+    for item in newVersion.child.iter().rev() {
 
         match item {
             VDom::Node { node } => {
@@ -217,7 +217,7 @@ fn updateNodeChild(cssManager: &CssManager, target: &RealDomNode, newVersion: &V
                 updateNodeAttr(&cssManager, &domChild, &node);
                 updateNodeChild(cssManager, &domChild, &node);
 
-                target.appendAfter(wsk, RealDom::Node { node: domChild });
+                target.insert_before(RealDom::Node { node: domChild }, wsk);
                 wsk = Some(newWsk);
             },
             VDom::Text { node } => {
@@ -227,7 +227,7 @@ fn updateNodeChild(cssManager: &CssManager, target: &RealDomNode, newVersion: &V
 
                 domChild.update(&node.value);
 
-                target.appendAfter(wsk, RealDom::Text { node: domChild });
+                target.insert_before(RealDom::Text { node: domChild }, wsk);
                 wsk = Some(newWsk);
             },
             VDom::Component { node } => {
@@ -235,7 +235,7 @@ fn updateNodeChild(cssManager: &CssManager, target: &RealDomNode, newVersion: &V
                 let domChild = realComponent.getOrCreate(cssManager, target,id, node);
                 let newWsk = domChild.domId();
 
-                target.appendAfter(wsk, RealDom::Component { node: domChild });
+                target.insert_before(RealDom::Component { node: domChild }, wsk);
                 wsk = Some(newWsk);
             }
         }

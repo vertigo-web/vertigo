@@ -404,53 +404,22 @@ impl DomDriverBrowserInner {
         }
     }
 
-    fn copy_parent_from_rel(&mut self, child: &RealDomId, rel: &RealDomId) {
-        let rel_parent = self.child_parent.get(rel).unwrap().clone();
-        self.child_parent.insert(child.clone(), rel_parent);
-    }
-
-    fn insert_as_first_child(&mut self, parent: RealDomId, child: RealDomId) {
-        let parent_item = self.get_node(&parent).unwrap();
+    fn insert_before(&mut self, parent: RealDomId, child: RealDomId, ref_id: Option<RealDomId>) {
+        let parent_item: Node = self.get_node(&parent).unwrap();
         let child_item = self.get_node(&child).unwrap();
 
-        parent_item.insert_before(&child_item, None).unwrap();
-        self.child_parent.insert(child, parent);
-    }
+        match ref_id {
+            Some(ref_id) => {
+                let rel_node = self.get_node(&ref_id).unwrap();
 
-    fn insert_before(&mut self, ref_id: RealDomId, child: RealDomId) {
-        let ref_id_item = self.get_node(&ref_id).unwrap();
-        let child_item = self.get_node(&child).unwrap();
-
-        let parent: Node = ref_id_item.parent_node().unwrap();
-
-        parent.insert_before(&child_item, Some(&ref_id_item)).unwrap();
-        self.copy_parent_from_rel(&child, &ref_id);
-    }
-
-    fn insert_after(&mut self, ref_id: RealDomId, child: RealDomId) {
-        let ref_id_item = self.get_node(&ref_id).unwrap();
-        let child_item = self.get_node(&child).unwrap();
-
-        let parent: Node = ref_id_item.parent_node().unwrap();
-        let next: Option<Node> = ref_id_item.next_sibling();
-
-        match next {
-            Some(next) => {
-                parent.insert_before(&child_item, Some(&next)).unwrap();
+                parent_item.insert_before(&child_item, Some(&rel_node)).unwrap();
             },
             None => {
-                parent.insert_before(&child_item, None).unwrap();
-            }
+                parent_item.insert_before(&child_item, None).unwrap();
+            },
         }
-        self.copy_parent_from_rel(&child, &ref_id);
-    }
 
-    fn add_child(&mut self, parent: RealDomId, child: RealDomId) {
-        let parent_item = self.get_node(&parent).unwrap();
-        let child_item = self.get_node(&child).unwrap();
-
-        parent_item.append_child(&child_item).unwrap();
-        self.child_parent.insert(child, parent);
+        self.child_parent.insert(child.clone(), parent);
     }
 
     fn set_event(&mut self, node_id: RealDomId, callback: EventCallback) {
@@ -550,27 +519,9 @@ impl DomDriverTrait for DomDriverBrowser {
         });
     }
 
-    fn insert_as_first_child(&self, parent: RealDomId, child: RealDomId) {
-        self.driver.change((parent, child), |state, (parent, child)| {
-            state.insert_as_first_child(parent, child);
-        });
-    }
-
-    fn insert_before(&self, ref_id: RealDomId, child: RealDomId) {
-        self.driver.change((ref_id, child), |state, (ref_id, child)| {
-            state.insert_before(ref_id, child);
-        });
-    }
-
-    fn insert_after(&self, ref_id: RealDomId, child: RealDomId) {
-        self.driver.change((ref_id, child), |state, (ref_id, child)| {
-            state.insert_after(ref_id, child);
-        });
-    }
-
-    fn add_child(&self, parent: RealDomId, child: RealDomId) {
-        self.driver.change((parent, child), |state, (parent, child)| {
-            state.add_child(parent, child);
+    fn insert_before(&self, parent: RealDomId, child: RealDomId, ref_id: Option<RealDomId>) {
+        self.driver.change((parent, ref_id, child), |state, (parent, ref_id, child)| {
+            state.insert_before(parent, child, ref_id);
         });
     }
 

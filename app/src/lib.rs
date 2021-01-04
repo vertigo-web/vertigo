@@ -43,19 +43,12 @@ TODO - dodać jakieś makra które pozwolą na łatwe generowanie html-a (http
     https://github.com/chinedufn/percy/tree/master/crates/html-macro
     https://github.com/rbalicki2/scoped_css
 
-
-TODO - insertAsFirstChild, insertAfter. Wywalić te dwie funkcje.
-    trzeba odwrócić kolejność synchronizowania węzłów. Korzystać z metody insertBefore. Najmniejszy narzut pod kątem ilości zmian w domie
-
-
 TODO - makro które wycina białe znaki ?
 Css::one("
         margin: 5px;
     ")
 
 TODO - fetch - pozbyć się unwrapow
-
-TODO - dodać do DomDriver asynchronicznego sleep-a
 
 TODO - updejt nazwy taga ...
 
