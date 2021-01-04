@@ -148,7 +148,6 @@ pub fn render(app_state: &Computed<app::State>) -> VDomNode {
 
         match *app_state.route.get_value() {
             Route::Main => {
-                let at = app_state.at.get_value();
                 let value = app_state.value.get_value();
 
                 let on_down = {
@@ -190,7 +189,7 @@ pub fn render(app_state: &Computed<app::State>) -> VDomNode {
                     )),
                     node("div", vec!(
                         onClick(on_up.clone()),
-                        text(format!("aktualna wartosc = {} ({})", value, at)),
+                        text(format!("aktualna wartosc = {}", value)),
                     )),
                     node("div", vec!(
                         css(css_button()),

@@ -35,11 +35,15 @@ impl<T: PartialEq + 'static> Value<T> {
 
     pub fn set_value(&self, value: T) {
         self.deps.transaction(|| {
-            self.value.change(value, |state, value| {
+            let value_has_change = self.value.change(value, |state, value| {
+                let value_has_change = **state != value;
                 *state = Rc::new(value);
+                value_has_change
             });
 
-            self.deps.trigger_change(self.id.clone());
+            if value_has_change {
+                self.deps.trigger_change(self.id.clone());
+            }
         });
     }
 

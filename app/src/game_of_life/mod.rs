@@ -160,6 +160,36 @@ fn render_header(state: &Computed<State>) -> VDomNode {
         ))
     };
 
+    let button_random = {
+        node("button", vec!(
+            css(css_button()),
+            text("Random"),
+            onClick({
+                move || {
+                    log::info!("random ...");
+
+                    let x_count = *state.x_count.get_value();
+                    let y_count = *state.y_count.get_value();
+
+                    let matrix = state.matrix.get_value();
+
+                    for (y, row) in matrix.iter().enumerate() {
+                        for (x, cell) in row.iter().enumerate() {
+                            let new_value: bool = (y * 2 + ((x + 4))) % 2 == 0;
+                            cell.set_value(new_value);
+
+                            if x as u16 == x_count / 2 && y as u16 == y_count / 2 {
+                                cell.set_value(false);
+                            }
+                        }
+                    }
+
+
+                }
+            })
+        ))
+    };
+
     buildNode("div", vec!(
         node("div", vec!(
             text("Game of life")
@@ -167,7 +197,8 @@ fn render_header(state: &Computed<State>) -> VDomNode {
         node("div", vec!(
             text(format!("year = {}", year))
         )),
-        button
+        button,
+        button_random
     ))
 }
 
