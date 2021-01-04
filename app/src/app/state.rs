@@ -17,7 +17,6 @@ pub struct State {
     pub route: Value<Route>,
 
     pub value: Value<u32>,
-    pub at: Value<u32>,
     pub counter1: Computed<simple_counter::State>,
     pub counter2: Computed<simple_counter::State>,
     pub counter3: Computed<simple_counter::State>,
@@ -72,7 +71,6 @@ impl State {
             root: root.clone(),
             route,
             value: root.new_value(33),
-            at: root.new_value(999),
             counter1,
             counter2,
             counter3,
