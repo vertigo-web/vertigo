@@ -8,8 +8,8 @@ use crate::computed::{
 use crate::{
     virtualdom::{
         models::{
-            v_dom_node::VDomNode,
-            v_dom_component_id::VDomComponentId,
+            vdom_node::VDomNode,
+            vdom_component_id::VDomComponentId,
         }
     }
 };

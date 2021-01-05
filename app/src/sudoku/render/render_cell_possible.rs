@@ -67,7 +67,7 @@ fn css_item(should_show: bool) -> Css {
 }
 
 pub fn render_cell_possible(item: &Computed<Cell>) -> VDomNode {
-    use node_attr::{buildNode, node, css, text, onClick};
+    use node_attr::{build_node, node, css, text, on_click};
 
     let cell = (*item).get_value();
 
@@ -92,13 +92,13 @@ pub fn render_cell_possible(item: &Computed<Cell>) -> VDomNode {
             out.push(
                 node("div", vec!(
                     css(css_item_only_one()),
-                    onClick(on_set),
+                    on_click(on_set),
                     text(format!("{}", number.to_u16()))
                 ))
             );
         }
 
-        return buildNode("div", out);
+        return build_node("div", out);
     }
 
 
@@ -115,11 +115,11 @@ pub fn render_cell_possible(item: &Computed<Cell>) -> VDomNode {
             }
         };
 
-        return buildNode("div", vec!(
+        return build_node("div", vec!(
             css(css_wrapper_one()),
             node("div", vec!(
                 css(css_item_only_one()),
-                onClick(on_set),
+                on_click(on_set),
                 text(format!("{}.", possible_last_value.to_u16()))
             ))
         ));
@@ -141,7 +141,7 @@ pub fn render_cell_possible(item: &Computed<Cell>) -> VDomNode {
         out.push(
             node("div", vec!(
                 css(css_item(should_show)),
-                onClick({
+                on_click({
                     let cell = cell.clone();
                     move || {
                         if should_show {
@@ -154,5 +154,5 @@ pub fn render_cell_possible(item: &Computed<Cell>) -> VDomNode {
         );
     }
 
-    buildNode("div", out)
+    build_node("div", out)
 }

@@ -4,9 +4,9 @@ use crate::computed::{
 
 use crate::virtualdom::{
     models::{
-        real_dom_node::RealDomNode,
-        v_dom_component_id::VDomComponentId,
-        real_dom_id::RealDomId,
+        realdom_node::RealDomNode,
+        vdom_component_id::VDomComponentId,
+        realdom_id::RealDomId,
     },
 };
 
@@ -17,7 +17,7 @@ pub struct RealDomComponent {
 }
 
 impl RealDomComponent {
-    pub fn domId(&self) -> RealDomId {
-        self.node.idDom()
+    pub fn dom_id(&self) -> RealDomId {
+        self.node.id_dom()
     }
 }

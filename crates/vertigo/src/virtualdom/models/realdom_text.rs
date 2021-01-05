@@ -1,32 +1,32 @@
 use crate::{utils::BoxRefCell, driver::DomDriver, virtualdom::{
         models::{
-            real_dom_id::RealDomId,
+            realdom_id::RealDomId,
         },
     }};
 
 pub struct RealDomText {
-    domDriver: DomDriver,
-    pub idDom: RealDomId,
+    dom_driver: DomDriver,
+    pub id_dom: RealDomId,
     value: BoxRefCell<String>,
 }
 
 impl RealDomText {
-    pub fn new(domDriver: DomDriver, value: String) -> RealDomText {
+    pub fn new(dom_driver: DomDriver, value: String) -> RealDomText {
         let id = RealDomId::default();
 
-        domDriver.create_text(id.clone(), &value);
+        dom_driver.create_text(id.clone(), &value);
 
         RealDomText {
-            domDriver,
-            idDom: id,
+            dom_driver: dom_driver,
+            id_dom: id,
             value: BoxRefCell::new(value),
         }
     }
 
-    pub fn update(&self, newValue: &str) {
-        let should_update = self.value.change(newValue, |state, newValue| {
-            if *state != *newValue {
-                *state = newValue.to_string();
+    pub fn update(&self, new_value: &str) {
+        let should_update = self.value.change(new_value, |state, new_value| {
+            if *state != *new_value {
+                *state = new_value.to_string();
                 true
             } else {
                 false
@@ -34,7 +34,7 @@ impl RealDomText {
         });
 
         if should_update {
-            self.domDriver.update_text(self.idDom.clone(), newValue);
+            self.dom_driver.update_text(self.id_dom.clone(), new_value);
         }
     }
 
@@ -47,6 +47,6 @@ impl RealDomText {
 
 impl Drop for RealDomText {
     fn drop(&mut self) {
-        self.domDriver.remove(self.idDom.clone());
+        self.dom_driver.remove(self.id_dom.clone());
     }
 }

@@ -5,34 +5,34 @@ use std::collections::{
 use std::rc::Rc;
 use crate::{driver::{DomDriver, EventCallback}, virtualdom::{
         models::{
-            real_dom::RealDom,
-            real_dom_id::RealDomId,
-            real_dom_text::RealDomText,
+            realdom::RealDom,
+            realdom_id::RealDomId,
+            realdom_text::RealDomText,
         },
     }};
 use crate::utils::BoxRefCell;
 
 
-fn mergeAttr(attr: &HashMap<&'static str, String>, className: Option<String>) -> HashMap<&'static str, String> {
+fn merge_attr(attr: &HashMap<&'static str, String>, class_name: Option<String>) -> HashMap<&'static str, String> {
     let mut attr = attr.clone();
 
-    if let Some(className) = className {
-        let attrClass = attr.get("class");
+    if let Some(class_name) = class_name {
+        let attr_class = attr.get("class");
 
-        let valueToSet: String = match attrClass {
-            Some(attrClass) => format!("{} {}", className, attrClass),
-            None => className
+        let value_to_set: String = match attr_class {
+            Some(attr_class) => format!("{} {}", class_name, attr_class),
+            None => class_name
         };
 
-        attr.insert("class", valueToSet);
+        attr.insert("class", value_to_set);
     }
 
     attr
 }
 
 pub struct RealDomNodeInner {
-    domDriver: DomDriver,
-    pub idDom: RealDomId,
+    dom_driver: DomDriver,
+    pub id_dom: RealDomId,
     pub name: &'static str,
     attr: HashMap<&'static str, String>,
     pub child: VecDeque<RealDom>,
@@ -40,31 +40,31 @@ pub struct RealDomNodeInner {
 
 impl RealDomNodeInner {
     pub fn new(driver: DomDriver, name: &'static str) -> RealDomNodeInner {
-        let nodeId = RealDomId::default();
+        let node_id = RealDomId::default();
 
-        driver.create_node(nodeId.clone(), name);
+        driver.create_node(node_id.clone(), name);
 
         RealDomNodeInner {
-            domDriver: driver,
-            idDom: nodeId,
+            dom_driver: driver,
+            id_dom: node_id,
             name,
             attr: HashMap::new(),
             child: VecDeque::new(),
         }
     }
 
-    pub fn createWithId(driver: DomDriver, id: RealDomId) -> RealDomNodeInner {
+    pub fn create_with_id(driver: DomDriver, id: RealDomId) -> RealDomNodeInner {
         RealDomNodeInner {
-            domDriver: driver,
-            idDom: id,
+            dom_driver: driver,
+            id_dom: id,
             name: "div",
             attr: HashMap::new(),
             child: VecDeque::new(),
         }
     }
 
-    fn updateAttrOne(&mut self, name: &'static str, value: &str) {
-        let needUpdate = {
+    fn update_attr_one(&mut self, name: &'static str, value: &str) {
+        let need_update = {
             let item = self.attr.get(name);
             if let Some(item) = item {
                 *item != *value
@@ -73,14 +73,14 @@ impl RealDomNodeInner {
             }
         };
 
-        if needUpdate {
-            self.domDriver.set_attr(self.idDom.clone(), &name, &value);
+        if need_update {
+            self.dom_driver.set_attr(self.id_dom.clone(), &name, &value);
             self.attr.insert(name, value.to_string());
        }
     }
 
-    pub fn updateAttr(&mut self, attr: &HashMap<&'static str, String>, className: Option<String>) {
-        let attr = mergeAttr(attr, className);
+    pub fn update_attr(&mut self, attr: &HashMap<&'static str, String>, class_name: Option<String>) {
+        let attr = merge_attr(attr, class_name);
 
         let mut to_delate: Vec<&str> = Vec::new();
 
@@ -91,7 +91,7 @@ impl RealDomNodeInner {
         }
 
         for key_to_delete in to_delate.into_iter() {
-            self.domDriver.remove_attr(self.idDom.clone(), key_to_delete)
+            self.dom_driver.remove_attr(self.id_dom.clone(), key_to_delete)
         }
 
         self.attr.retain(|key, _value| {
@@ -101,12 +101,12 @@ impl RealDomNodeInner {
         });
 
         for (key, value) in attr.iter() {
-            self.updateAttrOne(key, value);
+            self.update_attr_one(key, value);
         }
     }
 
-    pub fn setEvent(&mut self, callback: EventCallback) {
-        self.domDriver.set_event(self.idDom.clone(), callback);
+    pub fn set_event(&mut self, callback: EventCallback) {
+        self.dom_driver.set_event(self.id_dom.clone(), callback);
     }
 
     pub fn extract_child(&mut self) -> VecDeque<RealDom> {
@@ -118,14 +118,14 @@ impl RealDomNodeInner {
     }
 
     pub fn insert_before(&mut self, new_child: RealDom, prev_node: Option<RealDomId>) {
-        self.domDriver.insert_before(self.idDom.clone(), new_child.id(), prev_node);
+        self.dom_driver.insert_before(self.id_dom.clone(), new_child.id(), prev_node);
         self.child.push_front(new_child);
     }
 }
 
 impl Drop for RealDomNodeInner {
     fn drop(&mut self) {
-        self.domDriver.remove(self.idDom.clone());
+        self.dom_driver.remove(self.id_dom.clone());
     }
 }
 
@@ -145,36 +145,36 @@ impl RealDomNode {
         }
     }
 
-    pub fn createWithId(driver: DomDriver, id: RealDomId) -> RealDomNode {
+    pub fn create_with_id(driver: DomDriver, id: RealDomId) -> RealDomNode {
         RealDomNode {
             inner: Rc::new(
                 BoxRefCell::new(
-                    RealDomNodeInner::createWithId(driver, id)
+                    RealDomNodeInner::create_with_id(driver, id)
                 )
             )
         }
     }
 
-    pub fn updateAttr(&self, attr: &HashMap<&'static str, String>, className: Option<String>) {
+    pub fn update_attr(&self, attr: &HashMap<&'static str, String>, class_name: Option<String>) {
         self.inner.change(
-            (attr, className),
-            |state, (attr, className)| {
-                state.updateAttr(attr, className)
+            (attr, class_name),
+            |state, (attr, class_name)| {
+                state.update_attr(attr, class_name)
         })
     }
 
-    pub fn setEvent(&self, callback: EventCallback) {
+    pub fn set_event(&self, callback: EventCallback) {
         self.inner.change(
             callback,
             |state, callback| {
-                state.setEvent(callback)
+                state.set_event(callback)
         })
     }
 
-    pub fn idDom(&self) -> RealDomId {
+    pub fn id_dom(&self) -> RealDomId {
         self.inner.get(
             |state| {
-                state.idDom.clone()
+                state.id_dom.clone()
         })
     }
 
@@ -207,19 +207,19 @@ impl RealDomNode {
         })
     }
 
-    fn domDriver(&self) -> DomDriver {
+    fn dom_driver(&self) -> DomDriver {
         self.inner.get(
             |state| {
-                state.domDriver.clone()
+                state.dom_driver.clone()
         })
     }
 
-    pub fn createNode(&self, name: &'static str) -> RealDomNode {
-        RealDomNode::new(self.domDriver(), name)
+    pub fn create_node(&self, name: &'static str) -> RealDomNode {
+        RealDomNode::new(self.dom_driver(), name)
     }
 
-    pub fn createText(&self, name: String) -> RealDomText {
-        RealDomText::new(self.domDriver(), name)
+    pub fn create_text(&self, name: String) -> RealDomText {
+        RealDomText::new(self.dom_driver(), name)
     }
 }
 

@@ -66,7 +66,7 @@ fn text_css() -> Css {
 }
 
 pub fn render(state: &Computed<State>) -> VDomNode {
-    use node_attr::{buildNode, node, css, text, attr, onClick, onInput, onMouseEnter, onMouseLeave};
+    use node_attr::{build_node, node, css, text, attr, on_click, on_input, on_mouse_enter, on_mouse_leave};
 
     let state = state.get_value();
 
@@ -114,30 +114,30 @@ pub fn render(state: &Computed<State>) -> VDomNode {
 
     let count = value.len();
 
-    buildNode("div", vec!(
+    build_node("div", vec!(
         css(wrapper()),
         text("To jest input"),
-        onMouseEnter(mouse_in),
-        onMouseLeave(mouse_out),
+        on_mouse_enter(mouse_in),
+        on_mouse_leave(mouse_out),
         node("input", vec!(
             css(input_css()),
             attr("value", (*value).as_str()),
-            onInput(on_set3),
+            on_input(on_set3),
         )),
         node("button", vec!(
             css(button_css()),
-            onClick(on_set1),
+            on_click(on_set1),
             text("set 1")
         )),
         node("button", vec!(
             css(button_css()),
-            onClick(on_set2),
+            on_click(on_set2),
             text("set 2")
         )),
         node("textarea", vec!(
             css(text_css()),
             attr("value", (*value).as_str()),
-            onInput(on_set4),
+            on_input(on_set4),
         )),
         node("div", vec!(
             text(format!("count = {}", count)),

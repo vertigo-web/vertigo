@@ -1,9 +1,9 @@
 use crate::virtualdom::{
     models::{
-        real_dom_node::RealDomNode,
-        real_dom_text::RealDomText,
-        real_dom_id::RealDomId,
-        real_dom_component::RealDomComponent,
+        realdom_node::RealDomNode,
+        realdom_text::RealDomText,
+        realdom_id::RealDomId,
+        realdom_component::RealDomComponent,
     },
 };
 
@@ -23,13 +23,13 @@ impl RealDom {
     pub fn id(&self) -> RealDomId {
         match self {
             RealDom::Node { node } => {
-                node.idDom()
+                node.id_dom()
             },
             RealDom::Text { node } => {
-                node.idDom.clone()
+                node.id_dom.clone()
             },
             RealDom::Component { node } => {
-                node.node.idDom()
+                node.node.id_dom()
             }
         }
     }

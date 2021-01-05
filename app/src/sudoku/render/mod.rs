@@ -63,7 +63,7 @@ fn render_cell(item: &Computed<Cell>) -> VDomNode {
 }
 
 fn render_group(group: &Computed<SudokuSquare<Cell>>) -> VDomNode {
-    use node_attr::{buildNode, node, css, component};
+    use node_attr::{build_node, node, css, component};
 
     //log::info!("render group");
 
@@ -73,7 +73,7 @@ fn render_group(group: &Computed<SudokuSquare<Cell>>) -> VDomNode {
         })
     };
 
-    buildNode("div", vec!(
+    build_node("div", vec!(
         css(css_item_wrapper()),
         node("div", vec!(
             css(css_cell_wrapper()),
@@ -115,7 +115,7 @@ fn render_group(group: &Computed<SudokuSquare<Cell>>) -> VDomNode {
 }
 
 pub fn main_render(sudoku: &Computed<Sudoku>) -> VDomNode {
-    use node_attr::{buildNode, node, css, component};
+    use node_attr::{build_node, node, css, component};
 
     let get_group = |sudoku: &Computed<Sudoku>, x: TreeBoxIndex, y: TreeBoxIndex| -> Computed<SudokuSquare<Cell>> {
         sudoku.clone().map(move |state| {
@@ -123,7 +123,7 @@ pub fn main_render(sudoku: &Computed<Sudoku>) -> VDomNode {
         })
     };
     
-    buildNode("div", vec!(
+    build_node("div", vec!(
         css(css_center()),
         node("div", vec!(
             css(css_wrapper()),
@@ -155,14 +155,14 @@ fn css_sudoku_example_button() -> Css {
     ")
 }
 pub fn examples_render(sudoku: &Computed<Sudoku>) -> VDomNode {
-    use node_attr::{buildNode, node, css, text, onClick};
+    use node_attr::{build_node, node, css, text, on_click};
 
     let sudoku = sudoku.get_value();
-    buildNode("div", vec!(
+    build_node("div", vec!(
         css(css_sudoku_example()),
         node("button", vec!(
             css(css_sudoku_example_button()),
-            onClick({
+            on_click({
                 let sudoku = sudoku.clone();
 
                 move || {
@@ -173,7 +173,7 @@ pub fn examples_render(sudoku: &Computed<Sudoku>) -> VDomNode {
         )),
         node("button", vec!(
             css(css_sudoku_example_button()),
-            onClick({
+            on_click({
                 let sudoku = sudoku.clone();
 
                 move || {
@@ -184,7 +184,7 @@ pub fn examples_render(sudoku: &Computed<Sudoku>) -> VDomNode {
         )),
         node("button", vec!(
             css(css_sudoku_example_button()),
-            onClick({
+            on_click({
                 let sudoku = sudoku.clone();
 
                 move || {
@@ -195,7 +195,7 @@ pub fn examples_render(sudoku: &Computed<Sudoku>) -> VDomNode {
         )),
         node("button", vec!(
             css(css_sudoku_example_button()),
-            onClick({
+            on_click({
                 let sudoku = sudoku.clone();
 
                 move || {

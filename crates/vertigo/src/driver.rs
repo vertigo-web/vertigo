@@ -6,7 +6,7 @@ use std::{
 };
 
 use crate::utils::{EqBox, DropResource};
-use crate::virtualdom::models::real_dom_id::RealDomId;
+use crate::virtualdom::models::realdom_id::RealDomId;
 
 #[derive(Debug)]
 pub enum FetchMethod {

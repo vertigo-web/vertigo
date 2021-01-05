@@ -5,11 +5,11 @@ use crate::computed::{
 use crate::{
     virtualdom::{
         models::{
-            real_dom_node::RealDomNode,
-            real_dom_id::RealDomId,
-            v_dom_component::VDomComponent,
+            realdom_node::RealDomNode,
+            realdom_id::RealDomId,
+            vdom_component::VDomComponent,
         },
-        renderToNode::renderToNode,
+        render_to_node::render_to_node,
     },
     css_manager::css_manager::CssManager,
     driver::DomDriver,
@@ -23,9 +23,9 @@ pub struct App {
 impl App {
     pub fn new(driver: DomDriver, computed: VDomComponent) -> App {
         let css_manager = CssManager::new(&driver);
-        let root = RealDomNode::createWithId(driver, RealDomId::root());
+        let root = RealDomNode::create_with_id(driver, RealDomId::root());
 
-        let subscription = renderToNode(css_manager.clone(), root, computed);
+        let subscription = render_to_node(css_manager.clone(), root, computed);
 
         App {
             _subscription: subscription,

@@ -43,7 +43,7 @@ pub fn render_cell_value(value: SudokuValue, item: &Computed<Cell>, ) -> VDomNod
 
     let show_delete = *cell.show_delete.get_value();
 
-    use node_attr::{buildNode, node, css, text, onClick};
+    use node_attr::{build_node, node, css, text, on_click};
 
     let mut out = vec!(
         css(css_item_number_wrapper()),
@@ -55,7 +55,7 @@ pub fn render_cell_value(value: SudokuValue, item: &Computed<Cell>, ) -> VDomNod
     if show_delete {
         out.push(node("div", vec!(
             css(css_delete()),
-            onClick({
+            on_click({
                 let cell = cell.clone();
                 move || {
                     cell.number.value.set_value(None);
@@ -65,7 +65,7 @@ pub fn render_cell_value(value: SudokuValue, item: &Computed<Cell>, ) -> VDomNod
         )));
     }
 
-    buildNode("div", out)
+    build_node("div", out)
 }
 
 

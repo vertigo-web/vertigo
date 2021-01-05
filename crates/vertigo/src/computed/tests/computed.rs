@@ -389,8 +389,7 @@ fn test_computed_switch_subscription() {
     
     assert_eq!(root.all_connections_len(), 0);
     let mut sum = SubscribeValueVer::new(sum);
-    assert_eq!(root.all_connections_len(), 3);                                  //TODO - tutaj prawdopodobnie powinny być ju 4 połaczenia
-    //println!("aaa {:?}", root.all_connections());
+    assert_eq!(root.all_connections_len(), 3);
     
     assert_eq!(sum.get(), (0, 1));
     assert_eq!(root.all_connections_len(), 3);
@@ -412,7 +411,6 @@ fn test_computed_switch_subscription() {
     assert_eq!(root.all_connections_len(), 3);
     switch.set_value(Switch::Ver2);
     assert_eq!(root.all_connections_len(), 4);
-    // println!("bbb1 {:?}", root.all_connections());
 
     assert_eq!(sum.get(), (0, 3));      //no rerender
 

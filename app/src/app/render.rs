@@ -54,20 +54,20 @@ fn css_button() -> Css {
 }
 
 fn render_header(app_state: &Computed<app::State>) -> VDomNode {
-    use node_attr::{buildNode, node, css, text, onClick};
+    use node_attr::{build_node, node, css, text, on_click};
 
 
     let app_state = app_state.get_value();
 
     let current_page = &*app_state.route.get_value();
 
-    buildNode("div", vec!(
+    build_node("div", vec!(
         node("ul", vec!(
             css(css_menu()),
             node("li", vec!(
                 text("Main"),
                 css(css_menu_item(current_page == &Route::Main)),
-                onClick({
+                on_click({
                     let app_state = app_state.clone();
                     move || app_state.clone().navigate_to(Route::Main)
                 })
@@ -75,7 +75,7 @@ fn render_header(app_state: &Computed<app::State>) -> VDomNode {
             node("li", vec!(
                 text("Counters"),
                 css(css_menu_item(current_page == &Route::Counters)),
-                onClick({
+                on_click({
                     let app_state = app_state.clone();
                     move || app_state.navigate_to(Route::Counters)
                 })
@@ -83,7 +83,7 @@ fn render_header(app_state: &Computed<app::State>) -> VDomNode {
             node("li", vec!(
                 text("Sudoku"),
                 css(css_menu_item(current_page == &Route::Sudoku)),
-                onClick({
+                on_click({
                     let app_state = app_state.clone();
                     move || app_state.navigate_to(Route::Sudoku)
                 })
@@ -91,7 +91,7 @@ fn render_header(app_state: &Computed<app::State>) -> VDomNode {
             node("li", vec!(
                 text("Input"),
                 css(css_menu_item(current_page == &Route::Input)),
-                onClick({
+                on_click({
                     let app_state = app_state.clone();
                     move || app_state.navigate_to(Route::Input)
                 })
@@ -99,7 +99,7 @@ fn render_header(app_state: &Computed<app::State>) -> VDomNode {
             node("li", vec!(
                 text("GitHub Explorer"),
                 css(css_menu_item(current_page == &Route::GithubExplorer)),
-                onClick({
+                on_click({
                     let app_state = app_state.clone();
                     move || app_state.navigate_to(Route::GithubExplorer)
                 })
@@ -107,7 +107,7 @@ fn render_header(app_state: &Computed<app::State>) -> VDomNode {
             node("li", vec!(
                 text("Game Of Life"),
                 css(css_menu_item(current_page.is_game_of_life())),
-                onClick({
+                on_click({
                     let app_state = app_state.clone();
                     move || {
                         let timer = app_state.game_of_life.get_value().start_timer();
@@ -123,26 +123,26 @@ fn render_header(app_state: &Computed<app::State>) -> VDomNode {
 }
 
 fn render_suma(app_state: &Computed<app::State>) -> VDomNode {
-    use node_attr::{buildNode, text};
+    use node_attr::{build_node, text};
 
     let app_state = app_state.get_value();
 
     let suma = app_state.suma.get_value();
 
-    buildNode("div", vec!(
+    build_node("div", vec!(
         text(format!("suma = {}", suma))
     ))
 }
 
 pub fn render(app_state: &Computed<app::State>) -> VDomNode {
-    use node_attr::{buildNode, css, onClick, node, text, component, attr};
+    use node_attr::{build_node, css, on_click, node, text, component, attr};
 
     let header = component(app_state.clone(), render_header);
     let suma = component(app_state.clone(), render_suma);
 
     let app_state = app_state.get_value();
 
-    buildNode("div", vec!(
+    build_node("div", vec!(
         header,
 
 
@@ -188,17 +188,17 @@ pub fn render(app_state: &Computed<app::State>) -> VDomNode {
                         spinner(),
                     )),
                     node("div", vec!(
-                        onClick(on_up.clone()),
+                        on_click(on_up.clone()),
                         text(format!("aktualna wartosc = {}", value)),
                     )),
                     node("div", vec!(
                         css(css_button()),
-                        onClick(on_up),
+                        on_click(on_up),
                         text("up"),
                     )),
                     node("div", vec!(
                         css(css_button()),
-                        onClick(on_down),
+                        on_click(on_down),
                         text("down"),
                     )),
                     footer_dom,

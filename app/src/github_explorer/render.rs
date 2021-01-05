@@ -39,11 +39,11 @@ fn text_css() -> Css {
 }
 
 pub fn render(state: &Computed<State>) -> VDomNode {
-    use node_attr::{buildNode, node, css, text, attr, onClick, onInput};
+    use node_attr::{build_node, node, css, text, attr, on_click, on_input};
 
     let state = state.get_value();
 
-    let on_input = {
+    let on_input_callback = {
         let value = state.repo_input.clone();
         move |new_value: String| {
             log::info!(" nowa wartosc3 {}", new_value);
@@ -72,17 +72,17 @@ pub fn render(state: &Computed<State>) -> VDomNode {
         }
     };
 
-    buildNode("div", vec!(
+    build_node("div", vec!(
         css(wrapper()),
         text("Enter author/repo tuple:"),
         node("input", vec!(
             css(input_css()),
             attr("value", (*repo_input).as_str()),
-            onInput(on_input),
+            on_input(on_input_callback),
         )),
         node("button", vec!(
             css(button_css()),
-            onClick(on_show),
+            on_click(on_show),
             text("Fetch")
         )),
         node("div", vec!(
