@@ -33,7 +33,7 @@ fn css_wrapper() -> Css {
 }
 
 pub fn render(simple_counter: &Computed<State>) -> VDomNode {
-    use node_attr::{buildNode, node, css, text, onClick};
+    use node_attr::{build_node, node, css, text, on_click};
 
     let simple_counter = simple_counter.get_value();
     let calue = *(simple_counter.counter.get_value());
@@ -59,7 +59,7 @@ pub fn render(simple_counter: &Computed<State>) -> VDomNode {
     //     </div>
     // }
 
-    buildNode("div", vec!(
+    build_node("div", vec!(
         css(css_wrapper()),
         node("div", vec!(
             css(css_box()),
@@ -68,12 +68,12 @@ pub fn render(simple_counter: &Computed<State>) -> VDomNode {
         node("button", vec!(
             css(css_button()),
             text("up"),
-            onClick(click_up)
+            on_click(click_up)
         )),
         node("button", vec!(
             css(css_button()),
             text("down"),
-            onClick(click_down)
+            on_click(click_down)
         ))
     ))
 }

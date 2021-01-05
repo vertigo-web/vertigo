@@ -6,7 +6,7 @@ use crate::computed::{
 
 use crate::{
     virtualdom::{
-        models::v_dom_node::VDomNode,
+        models::vdom_node::VDomNode,
     }
 };
 

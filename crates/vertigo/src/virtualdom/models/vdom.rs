@@ -1,7 +1,7 @@
 use crate::virtualdom::models::{
-    v_dom_component::VDomComponent,
-    v_dom_node::VDomNode,
-    v_dom_text::VDomText,
+    vdom_component::VDomComponent,
+    vdom_node::VDomNode,
+    vdom_text::VDomText,
     node_attr::NodeAttr,
 };
 
@@ -18,9 +18,9 @@ pub enum VDom {
 }
 
 impl VDom {
-    pub fn node(name: &'static str, childList: Vec<NodeAttr>) -> VDom {
+    pub fn node(name: &'static str, child_list: Vec<NodeAttr>) -> VDom {
         VDom::Node {
-            node: VDomNode::new(name, childList)
+            node: VDomNode::new(name, child_list)
         }
     }
 

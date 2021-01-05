@@ -2,9 +2,9 @@ use std::rc::Rc;
 use std::cmp::PartialEq;
 
 use crate::virtualdom::models::{
-    v_dom::VDom,
-    v_dom_node::VDomNode,
-    v_dom_component::VDomComponent,
+    vdom::VDom,
+    vdom_node::VDomNode,
+    vdom_component::VDomComponent,
 };
 use crate::virtualdom::models::css::Css;
 use crate::computed::{
@@ -22,10 +22,10 @@ pub enum NodeAttr {
     OnInput {
         event: Rc<dyn Fn(String)>
     },
-    onMouseEnter {
+    OnMouseEnter {
         event: Rc<dyn Fn()>
     },
-    onMouseLeave {
+    OnMouseLeave {
         event: Rc<dyn Fn()>
     },
     Attr {
@@ -45,26 +45,26 @@ pub fn css(css: Css) -> NodeAttr {
     }
 }
 
-pub fn onClick<F: Fn() + 'static>(callback: F) -> NodeAttr {
+pub fn on_click<F: Fn() + 'static>(callback: F) -> NodeAttr {
     NodeAttr::OnClick {
         event: Rc::new(callback),
     }
 }
 
-pub fn onInput<F: Fn(String) + 'static>(callback: F) -> NodeAttr {
+pub fn on_input<F: Fn(String) + 'static>(callback: F) -> NodeAttr {
     NodeAttr::OnInput {
         event: Rc::new(callback),
     }
 }
 
-pub fn onMouseEnter<F: Fn() + 'static>(callback: F) -> NodeAttr {
-    NodeAttr::onMouseEnter {
+pub fn on_mouse_enter<F: Fn() + 'static>(callback: F) -> NodeAttr {
+    NodeAttr::OnMouseEnter {
         event: Rc::new(callback),
     }
 }
 
-pub fn onMouseLeave<F: Fn() + 'static>(callback: F) -> NodeAttr {
-    NodeAttr::onMouseLeave {
+pub fn on_mouse_leave<F: Fn() + 'static>(callback: F) -> NodeAttr {
+    NodeAttr::OnMouseLeave {
         event: Rc::new(callback),
     }
 }
@@ -76,9 +76,9 @@ pub fn attr<K: Into<String>>(name: &'static str, value: K) -> NodeAttr {
     }
 }
 
-pub fn node(name: &'static str, childList: Vec<NodeAttr>) -> NodeAttr {
+pub fn node(name: &'static str, child_list: Vec<NodeAttr>) -> NodeAttr {
     NodeAttr::Node {
-        node: VDom::node(name, childList)
+        node: VDom::node(name, child_list)
     }
 }
 
@@ -100,10 +100,10 @@ pub fn component_value<T: PartialEq + 'static>(params: Value<T>, render: fn(&Val
     }
 }
 
-pub fn buildNode(name: &'static str, childList: Vec<NodeAttr>) -> VDomNode {
-    VDomNode::new(name, childList)
+pub fn build_node(name: &'static str, child_list: Vec<NodeAttr>) -> VDomNode {
+    VDomNode::new(name, child_list)
 }
 
-pub fn buildText<T: Into<String>>(name: T) -> VDom {
+pub fn build_text<T: Into<String>>(name: T) -> VDom {
     VDom::text(name)
 }

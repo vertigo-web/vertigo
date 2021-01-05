@@ -128,7 +128,7 @@ fn css_button() -> Css {
 }
 
 fn render_header(state: &Computed<State>) -> VDomNode {
-    use node_attr::{buildNode, css, node, text, onClick};
+    use node_attr::{build_node, css, node, text, on_click};
 
     let state = state.get_value();
     let year = state.year.get_value();
@@ -138,7 +138,7 @@ fn render_header(state: &Computed<State>) -> VDomNode {
         node("button", vec!(
             css(css_button()),
             text("Stop"),
-            onClick({
+            on_click({
                 let timer_enable = state.timer_enable.clone();
                 move || {
                     timer_enable.set_value(false);
@@ -150,7 +150,7 @@ fn render_header(state: &Computed<State>) -> VDomNode {
         node("button", vec!(
             css(css_button()),
             text("Start"),
-            onClick({
+            on_click({
                 let timer_enable = state.timer_enable.clone();
                 move || {
                     timer_enable.set_value(true);
@@ -164,7 +164,7 @@ fn render_header(state: &Computed<State>) -> VDomNode {
         node("button", vec!(
             css(css_button()),
             text("Random"),
-            onClick({
+            on_click({
                 move || {
                     log::info!("random ...");
 
@@ -190,7 +190,7 @@ fn render_header(state: &Computed<State>) -> VDomNode {
         ))
     };
 
-    buildNode("div", vec!(
+    build_node("div", vec!(
         node("div", vec!(
             text("Game of life")
         )),
@@ -203,12 +203,12 @@ fn render_header(state: &Computed<State>) -> VDomNode {
 }
 
 pub fn render(state: &Computed<State>) -> VDomNode {
-    use node_attr::{buildNode, css, component};
+    use node_attr::{build_node, css, component};
 
     let value = state.get_value().matrix.get_value();
     let value_inner = &*value;
 
-    buildNode("div", vec!(
+    build_node("div", vec!(
         css(css_wrapper()),
         component(state.clone(), render_header),
         render_matrix(value_inner)
@@ -242,11 +242,11 @@ fn render_row(matrix: &Vec<Value<bool>>) -> node_attr::NodeAttr {
 }
 
 fn render_cell(cell: &Value<bool>) -> VDomNode {
-    use node_attr::{buildNode, css, onClick};
+    use node_attr::{build_node, css, on_click};
 
     let is_active = cell.get_value();
 
-    let on_click = {
+    let on_click_callback = {
         let cell = cell.clone();
         let is_active = *is_active;
 
@@ -255,8 +255,8 @@ fn render_cell(cell: &Value<bool>) -> VDomNode {
         }
     };
 
-    buildNode("div", vec!(
-        onClick(on_click),
+    build_node("div", vec!(
+        on_click(on_click_callback),
         css(css_cell(*is_active)),
     ))
 }
