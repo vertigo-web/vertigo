@@ -2,7 +2,7 @@ use vertigo::{
     computed::Computed,
     utils::DropResource,
 };
-use crate::game_of_life::State as GameOfLifeState;
+use super::game_of_life::State as GameOfLifeState;
 
 #[derive(PartialEq, Debug)]
 pub enum Route {

@@ -1,10 +1,3 @@
-mod app;
-mod simple_counter;
-mod sudoku;
-mod input;
-mod github_explorer;
-pub mod game_of_life;
-
 use wasm_bindgen::prelude::wasm_bindgen;
 
 use vertigo::{
@@ -14,6 +7,8 @@ use vertigo::{
 };
 
 use browserdriver::DomDriverBrowser;
+
+mod app;
 
 #[cfg(feature = "wee_alloc")]
 #[global_allocator]
@@ -45,41 +40,3 @@ pub async fn start_app() {
 
     app.start_app().await;
 }
-
-
-/*
-TODO - dodać jakieś makra które pozwolą na łatwe generowanie html-a (https://docs.rs/maplit/1.0.2/maplit/)
-    to wygląda obiecująco
-    https://github.com/chinedufn/percy/tree/master/crates/html-macro
-    https://github.com/rbalicki2/scoped_css
-
-TODO - makro które wycina białe znaki ?
-Css::one("
-        margin: 5px;
-    ")
-
-TODO - fetch - pozbyć się unwrapow
-
-TODO - updejt nazwy taga ...
-
-TODO - 
-    <textarea value="" />
-    makro html pewnie będzie mogło przyjmować ten atrybut lub <textarea>value</textarea>
-
-
-To co jest wywoływane w callbacku eventu powinno być wywoływane w tranzakcji ?
-    let on_set3 = {
-        let state = state.clone();
-        move |new_value: String| {
-            let value = state.value.clone();
-            value.setValue(new_value);
-        }
-    };
-
-
-https://github.com/rustwasm/console_error_panic_hook#readme
-https://rustwasm.github.io/wasm-bindgen/reference/passing-rust-closures-to-js.html
-
-*/
-
-
