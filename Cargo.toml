@@ -4,6 +4,7 @@ members = [
     "app",
     "crates/browserdriver",
     "crates/vertigo",
+    "crates/vertigo-html",
 ]
 
 
