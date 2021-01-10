@@ -89,6 +89,7 @@ dependencies = [
  "serde_json",
  "structopt",
  "vertigo",
+ "vertigo-html",
  "wasm-bindgen",
  "wasm-bindgen-futures",
  "wasm-logger",
@@ -1923,9 +1924,9 @@ checksum = "1e81da0851ada1f3e9d4312c704aa4f8806f0f9d69faaf8df2f3464b4a9437c2"
 
 [[package]]
 name = "syn"
-version = "1.0.54"
+version = "1.0.58"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "9a2af957a63d6bd42255c359c93d9bfdb97076bd3b820897ce55ffbfbf107f44"
+checksum = "cc60a3d73ea6594cd712d830cc1f0390fd71542d8c8cd24e70cc54cdfd5e05d5"
 dependencies = [
  "proc-macro2",
  "quote",
@@ -2165,6 +2166,19 @@ name = "vertigo"
 version = "0.1.0-alpha.0"
 dependencies = [
  "log",
+]
+
+[[package]]
+name = "vertigo-html"
+version = "0.1.0-alpha.0"
+dependencies = [
+ "log",
+ "pest",
+ "pest_derive",
+ "proc-macro-error",
+ "proc-macro2",
+ "syn",
+ "vertigo",
 ]
 
 [[package]]
