@@ -12,12 +12,12 @@ html = _{
 //
 // NODES
 //
-root_node = { el_normal }
+root_node = { node_element }
 node = _{ node_comment | node_element | expression | node_text }
 node_comment = _{ comment_if | comment_normal }
 node_text = { (!(node_element | comment_tag_start | expression) ~ ANY)+ }
 //node_text = { text_chars+ }
-node_element = { el_void | el_void_xml | el_raw_text | el_normal | el_dangling }
+node_element = _{ el_vcomponent | el_velement | el_void | el_void_xml | el_raw_text | el_normal | el_dangling }
 
 //
 // COMMENTS
@@ -88,15 +88,22 @@ el_void_name_svg = @{
     | ^"circle"
 }
 el_void_name = @{ el_void_name_html | el_void_name_svg }
-el_void = _{ chevron_left_normal ~ el_void_name ~ attr* ~ (chevron_right_normal | chevron_right_closed) }
-el_void_xml = _{ chevron_left_normal ~ el_name ~ attr* ~ chevron_right_closed }
+el_void = { chevron_left_normal ~ el_void_name ~ attr* ~ (chevron_right_normal | chevron_right_closed) }
+el_void_xml = { chevron_left_normal ~ el_name ~ attr* ~ chevron_right_closed }
 
 // Open elements are default element that can take children
 // and have both a start tag and an end tag
 // Ex: <html lang="en"></html>
-el_normal = _{ el_normal_start ~ (!el_normal_end ~ node)* ~ el_normal_end }
+el_normal = { el_normal_start ~ (!el_normal_end ~ node)* ~ el_normal_end }
 el_normal_start = _{ chevron_left_normal ~ PUSH(el_name) ~ attr* ~ chevron_right_normal}
 el_normal_end = { chevron_left_closed ~ POP ~ chevron_right_normal}
+
+el_vcomponent = { chevron_left_normal ~ "component" ~ vcomp_render_func ~ vcomp_data_attr? ~ attr* ~ chevron_right_closed }
+vcomp_render_func = @{ ASCII_ALPHA ~ text_chars* ~ "()"? }
+vcomp_data_attr = { "data" ~ equal ~ attr_expression }
+
+el_velement = { chevron_left_normal ~ "element" ~ velem_value ~ chevron_right_closed }
+velem_value = _{ attr_expression }
 
 // Raw text elements are elements with text/script content that
 // might interfere with the normal html syntax
