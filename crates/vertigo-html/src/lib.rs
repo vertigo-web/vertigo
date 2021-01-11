@@ -10,12 +10,21 @@ use crate::parser::HtmlParser;
 
 #[proc_macro]
 #[proc_macro_error]
-pub fn html(input: TokenStream) -> TokenStream {
+pub fn html_component(input: TokenStream) -> TokenStream {
     let call_site = Span::call_site();
-
-    let string_stream = input.to_string().replace("\n", " ");
-
-    let result = HtmlParser::parse_stream(call_site, &string_stream);
-
+    let result = HtmlParser::parse_stream(call_site, &unformat(input), true);
     result.into()
+}
+
+#[proc_macro]
+#[proc_macro_error]
+pub fn html_element(input: TokenStream) -> TokenStream {
+    let call_site = Span::call_site();
+    let result = HtmlParser::parse_stream(call_site, &unformat(input), false);
+    result.into()
+}
+
+fn unformat(input: TokenStream) -> String {
+    // TokenStream breaks html tags (f. ex. "< \n div >"), so we need to remove all newlines.
+    input.to_string().replace("\n", " ")
 }
