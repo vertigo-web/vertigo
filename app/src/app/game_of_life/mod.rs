@@ -2,7 +2,7 @@ use std::cmp::PartialEq;
 use vertigo::{
     Css,
     DomDriver,
-    VDomNode,
+    VDomElement,
     computed::{
         Computed,
         Dependencies,
@@ -127,7 +127,7 @@ fn css_button() -> Css {
     ")
 }
 
-fn render_header(state: &Computed<State>) -> VDomNode {
+fn render_header(state: &Computed<State>) -> VDomElement {
     use node_attr::{build_node, css, node, text, on_click};
 
     let state = state.get_value();
@@ -202,7 +202,7 @@ fn render_header(state: &Computed<State>) -> VDomNode {
     ))
 }
 
-pub fn render(state: &Computed<State>) -> VDomNode {
+pub fn render(state: &Computed<State>) -> VDomElement {
     use node_attr::{build_node, css, component};
 
     let value = state.get_value().matrix.get_value();
@@ -241,7 +241,7 @@ fn render_row(matrix: &Vec<Value<bool>>) -> node_attr::NodeAttr {
     node("div", out)
 }
 
-fn render_cell(cell: &Value<bool>) -> VDomNode {
+fn render_cell(cell: &Value<bool>) -> VDomElement {
     use node_attr::{build_node, css, on_click};
 
     let is_active = cell.get_value();

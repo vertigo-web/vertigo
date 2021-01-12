@@ -1,6 +1,6 @@
 use vertigo::{
     node_attr,
-    VDomNode,
+    VDomElement,
     Css,
     computed::{
         Value,
@@ -53,7 +53,7 @@ fn css_button() -> Css {
     css_bg().push("cursor: pointer;")
 }
 
-pub fn main_render(state: &Computed<MainState>) -> VDomNode {
+pub fn main_render(state: &Computed<MainState>) -> VDomElement {
     use node_attr::{build_node, css, on_click, node, text, attr};
     let state = state.get_value();
     let value = state.value.get_value();

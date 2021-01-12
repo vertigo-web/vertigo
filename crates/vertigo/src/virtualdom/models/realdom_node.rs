@@ -5,7 +5,7 @@ use std::collections::{
 use std::rc::Rc;
 use crate::{driver::{DomDriver, EventCallback}, virtualdom::{
         models::{
-            realdom::RealDom,
+            realdom::RealDomNode,
             realdom_id::RealDomId,
             realdom_text::RealDomText,
         },
@@ -35,7 +35,7 @@ pub struct RealDomNodeInner {
     pub id_dom: RealDomId,
     pub name: &'static str,
     attr: HashMap<&'static str, String>,
-    pub child: VecDeque<RealDom>,
+    pub child: VecDeque<RealDomNode>,
 }
 
 impl RealDomNodeInner {
@@ -109,15 +109,15 @@ impl RealDomNodeInner {
         self.dom_driver.set_event(self.id_dom.clone(), callback);
     }
 
-    pub fn extract_child(&mut self) -> VecDeque<RealDom> {
+    pub fn extract_child(&mut self) -> VecDeque<RealDomNode> {
         std::mem::replace(&mut self.child, VecDeque::new())
     }
 
-    pub fn put_child(&mut self, child: VecDeque<RealDom>) -> VecDeque<RealDom> {
+    pub fn put_child(&mut self, child: VecDeque<RealDomNode>) -> VecDeque<RealDomNode> {
         std::mem::replace(&mut self.child, child)
     }
 
-    pub fn insert_before(&mut self, new_child: RealDom, prev_node: Option<RealDomId>) {
+    pub fn insert_before(&mut self, new_child: RealDomNode, prev_node: Option<RealDomId>) {
         self.dom_driver.insert_before(self.id_dom.clone(), new_child.id(), prev_node);
         self.child.push_front(new_child);
     }
@@ -130,13 +130,13 @@ impl Drop for RealDomNodeInner {
 }
 
 
-pub struct RealDomNode {
+pub struct RealDomElement {
     inner: Rc<BoxRefCell<RealDomNodeInner>>,
 }
 
-impl RealDomNode {
-    pub fn new(driver: DomDriver, name: &'static str) -> RealDomNode {
-        RealDomNode {
+impl RealDomElement {
+    pub fn new(driver: DomDriver, name: &'static str) -> RealDomElement {
+        RealDomElement {
             inner: Rc::new(
                 BoxRefCell::new(
                     RealDomNodeInner::new(driver, name)
@@ -145,8 +145,8 @@ impl RealDomNode {
         }
     }
 
-    pub fn create_with_id(driver: DomDriver, id: RealDomId) -> RealDomNode {
-        RealDomNode {
+    pub fn create_with_id(driver: DomDriver, id: RealDomId) -> RealDomElement {
+        RealDomElement {
             inner: Rc::new(
                 BoxRefCell::new(
                     RealDomNodeInner::create_with_id(driver, id)
@@ -185,7 +185,7 @@ impl RealDomNode {
         })
     }
 
-    pub fn extract_child(&self) -> VecDeque<RealDom> {
+    pub fn extract_child(&self) -> VecDeque<RealDomNode> {
         self.inner.change(
             (),
             |state, ()| {
@@ -193,13 +193,13 @@ impl RealDomNode {
         })
     }
 
-    pub fn put_child(&self, child: VecDeque<RealDom>) {
+    pub fn put_child(&self, child: VecDeque<RealDomNode>) {
         self.inner.change(child, |state, child| {
             state.put_child(child);
         })
     }
 
-    pub fn insert_before(&self, new_child: RealDom, prev_node: Option<RealDomId>) {
+    pub fn insert_before(&self, new_child: RealDomNode, prev_node: Option<RealDomId>) {
         self.inner.change(
             (new_child, prev_node),
             |state, (new_child, prev_node)| {
@@ -214,8 +214,8 @@ impl RealDomNode {
         })
     }
 
-    pub fn create_node(&self, name: &'static str) -> RealDomNode {
-        RealDomNode::new(self.dom_driver(), name)
+    pub fn create_node(&self, name: &'static str) -> RealDomElement {
+        RealDomElement::new(self.dom_driver(), name)
     }
 
     pub fn create_text(&self, name: String) -> RealDomText {
@@ -224,9 +224,9 @@ impl RealDomNode {
 }
 
 
-impl Clone for RealDomNode {
+impl Clone for RealDomElement {
     fn clone(&self) -> Self {
-        RealDomNode {
+        RealDomElement {
             inner: self.inner.clone()
         }
     }

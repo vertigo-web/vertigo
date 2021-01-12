@@ -14,12 +14,12 @@ use crate::{
 use crate::{
     virtualdom::{
         models::{
-            realdom::RealDom,
-            realdom_node::RealDomNode,
+            realdom::RealDomNode,
+            realdom_node::RealDomElement,
             realdom_text::RealDomText,
             realdom_component::RealDomComponent,
-            vdom::VDom,
-            vdom_node::VDomNode,
+            vdom::VDomNode,
+            vdom_node::VDomElement,
             vdom_component::VDomComponent,
             vdom_component_id::VDomComponentId,
             vdom_text::VDomText,
@@ -30,13 +30,13 @@ use crate::{
 };
 
 struct CacheNode<K: Eq + Hash, RNode, VNode> {
-    create_new: fn(&CssManager, &RealDomNode, &VNode) -> RNode,
+    create_new: fn(&CssManager, &RealDomElement, &VNode) -> RNode,
     data: HashMap<K, VecDeque<RNode>>,
 }
 
 impl<K: Eq + Hash, RNode, VNode> CacheNode<K, RNode, VNode> {
     fn new(
-        create_new: fn(&CssManager, &RealDomNode, &VNode) -> RNode,
+        create_new: fn(&CssManager, &RealDomElement, &VNode) -> RNode,
     ) -> CacheNode<K, RNode, VNode> {
         CacheNode {
             create_new,
@@ -49,7 +49,7 @@ impl<K: Eq + Hash, RNode, VNode> CacheNode<K, RNode, VNode> {
         item.push_back(node);
     }
 
-    fn get_or_create(&mut self, css_manager: &CssManager, target: &RealDomNode, key: K, vnode: &VNode) -> RNode {
+    fn get_or_create(&mut self, css_manager: &CssManager, target: &RealDomElement, key: K, vnode: &VNode) -> RNode {
         let item = self.data.entry(key).or_insert_with(VecDeque::new);
 
         let node = item.pop_front();
@@ -69,8 +69,8 @@ enum NodePairs<'a> {
         new: &'a VDomComponent
     },
     Node {
-        real: &'a RealDomNode,
-        new: &'a VDomNode,
+        real: &'a RealDomElement,
+        new: &'a VDomElement,
     },
     Text {
         real: &'a RealDomText,
@@ -78,10 +78,10 @@ enum NodePairs<'a> {
     }
 }
 
-fn get_pair_for_update<'a>(real: &'a RealDom, new: &'a VDom) -> Option<NodePairs<'a>> {
+fn get_pair_for_update<'a>(real: &'a RealDomNode, new: &'a VDomNode) -> Option<NodePairs<'a>> {
     match real {
-        RealDom::Component { node } => {
-            if let VDom::Component { node: vnode } = new {
+        RealDomNode::Component { node } => {
+            if let VDomNode::Component { node: vnode } = new {
                 if node.id == vnode.id {
                     return Some(NodePairs::Component {
                         real: node,
@@ -90,8 +90,8 @@ fn get_pair_for_update<'a>(real: &'a RealDom, new: &'a VDom) -> Option<NodePairs
                 }
             }
         },
-        RealDom::Node { node } => {
-            if let VDom::Node { node : vnode} = new {
+        RealDomNode::Node { node } => {
+            if let VDomNode::Node { node : vnode} = new {
                 if node.name() == vnode.name {
                     return Some(NodePairs::Node {
                         real: node,
@@ -100,8 +100,8 @@ fn get_pair_for_update<'a>(real: &'a RealDom, new: &'a VDom) -> Option<NodePairs
                 }
             }
         },
-        RealDom::Text { node } => {
-            if let VDom::Text { node: vnode } = new {
+        RealDomNode::Text { node } => {
+            if let VDomNode::Text { node: vnode } = new {
                 return Some(NodePairs::Text {
                     real: node,
                     new: vnode
@@ -113,7 +113,7 @@ fn get_pair_for_update<'a>(real: &'a RealDom, new: &'a VDom) -> Option<NodePairs
     None
 }
 
-fn update_node_child_updated_with_order(css_manager: &CssManager, target: &VecDeque<RealDom>, new_version: &Vec<VDom>) -> bool {
+fn update_node_child_updated_with_order(css_manager: &CssManager, target: &VecDeque<RealDomNode>, new_version: &Vec<VDomNode>) -> bool {
     if target.len() != new_version.len() {
         return false;
     }
@@ -150,7 +150,7 @@ fn update_node_child_updated_with_order(css_manager: &CssManager, target: &VecDe
     true
 }
 
-fn update_node_child(css_manager: &CssManager, target: &RealDomNode, new_version: &VDomNode) {
+fn update_node_child(css_manager: &CssManager, target: &RealDomElement, new_version: &VDomElement) {
 
     let mut real_child = target.extract_child();
 
@@ -160,18 +160,18 @@ fn update_node_child(css_manager: &CssManager, target: &RealDomNode, new_version
         return;
     }
 
-    let mut real_node: CacheNode<&'static str, RealDomNode, VDomNode> = CacheNode::new(
-        |_css_manager: &CssManager, target: &RealDomNode, node: &VDomNode| -> RealDomNode {
+    let mut real_node: CacheNode<&'static str, RealDomElement, VDomElement> = CacheNode::new(
+        |_css_manager: &CssManager, target: &RealDomElement, node: &VDomElement| -> RealDomElement {
             target.create_node(node.name)
         },
     );
     let mut real_text: CacheNode<String, RealDomText, VDomText> = CacheNode::new(
-        |_css_manager: &CssManager, target: &RealDomNode, node: &VDomText| -> RealDomText {
+        |_css_manager: &CssManager, target: &RealDomElement, node: &VDomText| -> RealDomText {
             target.create_text(node.value.clone())
         },
     );
     let mut real_component: CacheNode<VDomComponentId, RealDomComponent, VDomComponent> = CacheNode::new(
-        |css_manager: &CssManager, target: &RealDomNode, node: &VDomComponent| -> RealDomComponent {
+        |css_manager: &CssManager, target: &RealDomElement, node: &VDomComponent| -> RealDomComponent {
 
             let node_root = target.create_node("div");
 
@@ -189,14 +189,14 @@ fn update_node_child(css_manager: &CssManager, target: &RealDomNode, new_version
 
     for item in real_child {
         match item {
-            RealDom::Node { node }=> {
+            RealDomNode::Node { node }=> {
                 real_node.insert(node.name(), node);
             },
-            RealDom::Text { node } => {
+            RealDomNode::Text { node } => {
                 let id = node.get_value();
                 real_text.insert(id, node);
             },
-            RealDom::Component { node } => {
+            RealDomNode::Component { node } => {
                 let id = node.id.clone();
                 real_component.insert(id, node);
             }
@@ -209,7 +209,7 @@ fn update_node_child(css_manager: &CssManager, target: &RealDomNode, new_version
     for item in new_version.child.iter().rev() {
 
         match item {
-            VDom::Node { node } => {
+            VDomNode::Node { node } => {
                 let id = node.name;
                 let dom_child = real_node.get_or_create(css_manager, target, id, node);
                 let new_wsk = dom_child.id_dom();
@@ -217,25 +217,25 @@ fn update_node_child(css_manager: &CssManager, target: &RealDomNode, new_version
                 update_node_attr(&css_manager, &dom_child, &node);
                 update_node_child(css_manager, &dom_child, &node);
 
-                target.insert_before(RealDom::Node { node: dom_child }, wsk);
+                target.insert_before(RealDomNode::Node { node: dom_child }, wsk);
                 wsk = Some(new_wsk);
             },
-            VDom::Text { node } => {
+            VDomNode::Text { node } => {
                 let id = node.value.clone();
                 let dom_child = real_text.get_or_create(css_manager, target,id, node);
                 let new_wsk = dom_child.id_dom.clone();
 
                 dom_child.update(&node.value);
 
-                target.insert_before(RealDom::Text { node: dom_child }, wsk);
+                target.insert_before(RealDomNode::Text { node: dom_child }, wsk);
                 wsk = Some(new_wsk);
             },
-            VDom::Component { node } => {
+            VDomNode::Component { node } => {
                 let id = node.id.clone();
                 let dom_child = real_component.get_or_create(css_manager, target,id, node);
                 let new_wsk = dom_child.dom_id();
 
-                target.insert_before(RealDom::Component { node: dom_child }, wsk);
+                target.insert_before(RealDomNode::Component { node: dom_child }, wsk);
                 wsk = Some(new_wsk);
             }
         }
@@ -243,7 +243,7 @@ fn update_node_child(css_manager: &CssManager, target: &RealDomNode, new_version
 }
 
 
-fn update_node_attr(css_manager: &CssManager, real_node: &RealDomNode, node: &VDomNode) {
+fn update_node_attr(css_manager: &CssManager, real_node: &RealDomElement, node: &VDomElement) {
     let css = &node.css;
     let class_name = match css {
         Some (css) => Some(css_manager.get_class_name(css)),
@@ -255,7 +255,7 @@ fn update_node_attr(css_manager: &CssManager, real_node: &RealDomNode, node: &VD
     real_node.set_event(EventCallback::OnInput { callback: node.on_input.clone() });
 }
 
-fn update_node(css_manager: &CssManager, target: &RealDomNode, new_version: &VDomNode) {
+fn update_node(css_manager: &CssManager, target: &RealDomElement, new_version: &VDomElement) {
 
     //updejt nazwy taga ...
     //TODO !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
@@ -267,7 +267,7 @@ fn update_node(css_manager: &CssManager, target: &RealDomNode, new_version: &VDo
     update_node_child(css_manager, target, &new_version);
 }
 
-pub fn render_to_node(css_manager: CssManager, target: RealDomNode, component: VDomComponent) -> Client {
+pub fn render_to_node(css_manager: CssManager, target: RealDomElement, component: VDomComponent) -> Client {
     let subscription: Client = component.view.subscribe(move |new_version| {
         update_node(
             &css_manager,

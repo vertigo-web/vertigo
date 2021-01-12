@@ -3,17 +3,17 @@ use std::rc::Rc;
 use std::cmp::PartialEq;
 
 use crate::virtualdom::models::{
-    vdom::VDom,
+    vdom::VDomNode,
 };
 use crate::virtualdom::models::{
     css::Css,
     node_attr::NodeAttr,
 };
 
-pub struct VDomNode {
+pub struct VDomElement {
     pub name: &'static str,
     pub attr: HashMap<&'static str, String>,
-    pub child: Vec<VDom>,
+    pub child: Vec<VDomNode>,
     pub on_click: Option<Rc<dyn Fn()>>,
     pub on_input: Option<Rc<dyn Fn(String)>>,
     pub on_mouse_enter: Option<Rc<dyn Fn()>>,
@@ -21,9 +21,9 @@ pub struct VDomNode {
     pub css: Option<Css>,
 }
 
-impl VDomNode {
-    pub fn new(name: &'static str, child_list: Vec<NodeAttr>) -> VDomNode {
-        let mut result = VDomNode {
+impl VDomElement {
+    pub fn new(name: &'static str, child_list: Vec<NodeAttr>) -> VDomElement {
+        let mut result = VDomElement {
             name,
             attr: HashMap::new(),
             child: Vec::new(),
@@ -63,8 +63,8 @@ impl VDomNode {
         result
     }
 
-    pub fn new_with_v_dom(name: &'static str, child_list: Vec<VDom>) -> VDomNode {
-        VDomNode {
+    pub fn new_with_v_dom(name: &'static str, child_list: Vec<VDomNode>) -> VDomElement {
+        VDomElement {
             name,
             attr: HashMap::new(),
             child: child_list,
@@ -77,12 +77,12 @@ impl VDomNode {
     }
 }
 
-impl PartialEq for VDomNode {
-    fn eq(&self, _other: &VDomNode) -> bool {
+impl PartialEq for VDomElement {
+    fn eq(&self, _other: &VDomElement) -> bool {
         false                                       //Always not-eq
     }
 
-    fn ne(&self, _other: &VDomNode) -> bool {
+    fn ne(&self, _other: &VDomElement) -> bool {
         true
     }
 }

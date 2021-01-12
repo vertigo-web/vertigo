@@ -1,4 +1,4 @@
-use vertigo::{computed::Computed, VDomNode, node_attr, Css};
+use vertigo::{computed::Computed, VDomElement, node_attr, Css};
 use self::config::Config;
 
 use super::state::{Cell, Sudoku, sudoku_square::SudokuSquare, tree_box::TreeBoxIndex};
@@ -51,7 +51,7 @@ fn css_cell_wrapper() -> Css {
     ", config.item_border_size, config.item_width_size, config.item_width_size))
 }
 
-fn render_cell(item: &Computed<Cell>) -> VDomNode {
+fn render_cell(item: &Computed<Cell>) -> VDomElement {
     let value = *item.get_value().number.value.get_value();
 
     // log::warn!("cell {:?}", value);
@@ -62,7 +62,7 @@ fn render_cell(item: &Computed<Cell>) -> VDomNode {
     render_cell_possible::render_cell_possible(item)
 }
 
-fn render_group(group: &Computed<SudokuSquare<Cell>>) -> VDomNode {
+fn render_group(group: &Computed<SudokuSquare<Cell>>) -> VDomElement {
     use node_attr::{build_node, node, css, component};
 
     //log::info!("render group");
@@ -114,7 +114,7 @@ fn render_group(group: &Computed<SudokuSquare<Cell>>) -> VDomNode {
     ))
 }
 
-pub fn main_render(sudoku: &Computed<Sudoku>) -> VDomNode {
+pub fn main_render(sudoku: &Computed<Sudoku>) -> VDomElement {
     use node_attr::{build_node, node, css, component};
 
     let get_group = |sudoku: &Computed<Sudoku>, x: TreeBoxIndex, y: TreeBoxIndex| -> Computed<SudokuSquare<Cell>> {
@@ -154,7 +154,7 @@ fn css_sudoku_example_button() -> Css {
         cursor: pointer;
     ")
 }
-pub fn examples_render(sudoku: &Computed<Sudoku>) -> VDomNode {
+pub fn examples_render(sudoku: &Computed<Sudoku>) -> VDomElement {
     use node_attr::{build_node, node, css, text, on_click};
 
     let sudoku = sudoku.get_value();

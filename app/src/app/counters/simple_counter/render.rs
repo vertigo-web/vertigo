@@ -2,7 +2,7 @@ use super::state::State;
 
 use vertigo::{
     computed::Computed,
-    VDomNode,
+    VDomElement,
     node_attr,
     Css
 };
@@ -32,7 +32,7 @@ fn css_wrapper() -> Css {
     ")
 }
 
-pub fn render(simple_counter: &Computed<State>) -> VDomNode {
+pub fn render(simple_counter: &Computed<State>) -> VDomElement {
     use node_attr::{build_node, node, css, text, on_click};
 
     let simple_counter = simple_counter.get_value();

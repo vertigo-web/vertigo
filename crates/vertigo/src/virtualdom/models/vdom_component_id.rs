@@ -6,7 +6,7 @@ use crate::computed::{
 
 use crate::{
     virtualdom::{
-        models::vdom_node::VDomNode,
+        models::vdom_node::VDomElement,
     }
 };
 
@@ -17,7 +17,7 @@ pub struct VDomComponentId {
 }
 
 impl VDomComponentId {
-    pub fn new<T: PartialEq>(params: &Computed<T>, render: fn(&Computed<T>) -> VDomNode) -> VDomComponentId {
+    pub fn new<T: PartialEq>(params: &Computed<T>, render: fn(&Computed<T>) -> VDomElement) -> VDomComponentId {
         let id_function = render as *const () as u64;
         VDomComponentId {
             id_computed: params.get_id(),
@@ -25,7 +25,7 @@ impl VDomComponentId {
         }
     }
 
-    pub fn new_value<T: PartialEq>(params: &Value<T>, render: fn(&Value<T>) -> VDomNode) -> VDomComponentId {
+    pub fn new_value<T: PartialEq>(params: &Value<T>, render: fn(&Value<T>) -> VDomElement) -> VDomComponentId {
         let id_function = render as *const () as u64;
         VDomComponentId {
             id_computed: params.id(),

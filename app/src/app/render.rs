@@ -1,6 +1,6 @@
 use vertigo::{
     computed::Computed,
-    VDomNode,
+    VDomElement,
     Css,
     node_attr,
 };
@@ -34,7 +34,7 @@ fn css_menu_item(active: bool) -> Css {
     )
 }
 
-fn render_header(app_state: &Computed<app::State>) -> VDomNode {
+fn render_header(app_state: &Computed<app::State>) -> VDomElement {
     use node_attr::{build_node, node, css, text, on_click};
 
     let app_state = app_state.get_value();
@@ -102,7 +102,7 @@ fn render_header(app_state: &Computed<app::State>) -> VDomNode {
     ))
 }
 
-pub fn render(app_state: &Computed<app::State>) -> VDomNode {
+pub fn render(app_state: &Computed<app::State>) -> VDomElement {
     use node_attr::{build_node, node, text, component};
 
     let header = component(app_state.clone(), render_header);
