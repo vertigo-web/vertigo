@@ -39,9 +39,22 @@ impl HtmlParser {
 
     fn generate_node_element(call_site: Span, pair: Pair<Rule>, is_root: bool) -> TokenStream {
         let mut tag_name = "";
+
+        // FIXME:
+        //
+        // children are regular elements added into HTML
+        // children_lists are { ..something } ones (it's a list of lists)
+        //
+        // Regular children will always render first no matter how places in HTML, so
+        //    <div> "foo" { ..vec1 } "bar" { ..vec2 } {value} </div>
+        // will render as:
+        //    <div> "foo" "bar" {value} { ..vec1 } { ..vec2 } </div>
+
         let mut children = Vec::new();
+        let mut children_lists = Vec::new();
 
         for pair in pair.into_inner() {
+            // emit_warning!(call_site, "HTML: generate_node_element debug: {:?}", pair);
             match pair.as_rule() {
                 Rule::el_name => tag_name = pair.as_str(),
                 Rule::regular_attr => children.push(HtmlParser::generate_regular_attr(call_site, pair)),
@@ -52,6 +65,7 @@ impl HtmlParser {
                 Rule::el_normal => children.push(HtmlParser::generate_node_element(call_site, pair, false)),
                 Rule::node_text => children.push(HtmlParser::generate_text(call_site, pair)),
                 Rule::expression => children.push(HtmlParser::generate_expression(call_site, pair)),
+                Rule::children => children_lists.push(HtmlParser::generate_children(call_site, pair)),
                 Rule::el_normal_end => {},
                 _ => {
                     emit_warning!(call_site, "HTML: unhandler pair in generate_node_element: {:?}", pair);
@@ -65,20 +79,42 @@ impl HtmlParser {
             quote! { node }
         };
 
-        quote! {
-            vertigo::node_attr::#builder(#tag_name, vec![#(#children),*])
+        if children_lists.is_empty() {
+            quote! {
+                vertigo::node_attr::#builder(
+                    #tag_name,
+                    vec![#(#children),*]
+                )
+            }
+        } else {
+            quote! {
+                vertigo::node_attr::#builder(
+                    #tag_name,
+                    {
+                        let mut children = vec![#(#children),*];
+                        #(children.extend(#children_lists);)*
+                        children
+                    }
+                )
+            }
         }
     }
 
     fn generate_vcomponent(call_site: Span, pair: Pair<Rule>) -> TokenStream {
-        let mut render_func = Ident::new("undefined", call_site);
+        let mut render_func = None::<Expr>;
         let mut data_expr = None::<Expr>;
 
         for pair in pair.into_inner() {
             match pair.as_rule() {
-                Rule::vcomp_render_func => render_func = Ident::new(pair.as_str(), call_site),
+                Rule::vcomp_render_func => {
+                    let value = pair.into_inner().next().unwrap().as_str();
+                    render_func = Some(parse_str(value).unwrap_or_else(|e| {
+                        emit_error!(call_site, "Error while parsing `{}`: {}", value, e);
+                        Expr::__Nonexhaustive
+                    }));
+                },
                 Rule::vcomp_data_attr => {
-                    let value = pair.as_str();
+                    let value = pair.into_inner().next().unwrap().as_str();
                     data_expr = Some(parse_str(value).unwrap_or_else(|e| {
                         emit_error!(call_site, "Error while parsing `{}`: {}", value, e);
                         Expr::__Nonexhaustive
@@ -90,10 +126,15 @@ impl HtmlParser {
             }
         }
 
-        if let Some(data_expr) = data_expr {
-            quote! { vertigo::node_attr::component(#data_expr, #render_func) }
+        if let Some(render_func) = render_func {
+            if let Some(data_expr) = data_expr {
+                quote! { vertigo::node_attr::component(#data_expr, #render_func) }
+            } else {
+                emit_warning!(call_site, "HTML: Component don't have data attribute");
+                quote! { }
+            }
         } else {
-            emit_warning!(call_site, "HTML: Component {} don't have data attribute", render_func);
+            emit_warning!(call_site, "HTML: Component don't have render function defined");
             quote! { }
         }
     }
@@ -139,7 +180,25 @@ impl HtmlParser {
                     emit_error!(call_site, "Error while parsing `{}`: {}", value, e);
                     Expr::__Nonexhaustive
                 });
-                quote! { vertigo::node_attr::text(#expr .to_string()) }
+                quote! { #expr .embed() }
+            },
+            _ => {
+                emit_warning!(call_site, "HTML: unhandler pair in generate_expression: {:?}", pair);
+                quote! { }
+            }
+        }
+    }
+
+    fn generate_children(call_site: Span, pair: Pair<Rule>) -> TokenStream {
+        let pair = pair.into_inner().next().unwrap();
+        match pair.as_rule() {
+            Rule::expression_value => {
+                let value = pair.as_str();
+                let expr: Expr = parse_str(value).unwrap_or_else(|e| {
+                    emit_error!(call_site, "Error while parsing `{}`: {}", value, e);
+                    Expr::__Nonexhaustive
+                });
+                quote! { #expr }
             },
             _ => {
                 emit_warning!(call_site, "HTML: unhandler pair in generate_expression: {:?}", pair);

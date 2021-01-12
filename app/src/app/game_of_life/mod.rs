@@ -11,6 +11,7 @@ use vertigo::{
     node_attr,
     utils::DropResource
 };
+use vertigo_html::{Inline, NodeAttr, html_component, html_element};
 
 mod next_generation;
 
@@ -203,47 +204,48 @@ fn render_header(state: &Computed<State>) -> VDomElement {
 }
 
 pub fn render(state: &Computed<State>) -> VDomElement {
-    use node_attr::{build_node, css, component};
-
     let value = state.get_value().matrix.get_value();
     let value_inner = &*value;
 
-    build_node("div", vec!(
-        css(css_wrapper()),
-        component(state.clone(), render_header),
-        render_matrix(value_inner)
-    ))
+    html_component! {
+        <div css={css_wrapper()}>
+            <component {render_header} data={state.clone()} />
+            { render_matrix(value_inner) }
+        </div>
+    }
 }
 
-fn render_matrix(matrix: &Vec<Vec<Value<bool>>>) -> node_attr::NodeAttr {
-    use node_attr::{node};
-
-    let mut out: Vec<node_attr::NodeAttr> = Vec::new();
+fn render_matrix(matrix: &Vec<Vec<Value<bool>>>) -> NodeAttr {
+    let mut out = Vec::new();
 
     for item in matrix.iter() {
         out.push(render_row(item));
     }
 
-    node("div", out)
+    html_element! {
+        <div>
+            { ..out }
+        </div>
+    }
 }
 
-fn render_row(matrix: &Vec<Value<bool>>) -> node_attr::NodeAttr {
+fn render_row(matrix: &Vec<Value<bool>>) -> NodeAttr {
     use node_attr::{node, css, component_value};
 
-    let mut out: Vec<node_attr::NodeAttr> = Vec::new();
-
-    out.push(css(css_row()));
+    let mut out = Vec::new();
 
     for item in matrix.iter() {
         out.push(component_value(item.clone(), render_cell));
     }
 
-    node("div", out)
+    html_element! {
+        <div css={css_row()}>
+            { ..out }
+        </div>
+    }
 }
 
 fn render_cell(cell: &Value<bool>) -> VDomElement {
-    use node_attr::{build_node, css, on_click};
-
     let is_active = cell.get_value();
 
     let on_click_callback = {
@@ -255,8 +257,7 @@ fn render_cell(cell: &Value<bool>) -> VDomElement {
         }
     };
 
-    build_node("div", vec!(
-        on_click(on_click_callback),
-        css(css_cell(*is_active)),
-    ))
+    html_component! {
+        <div css={css_cell(*is_active)} onClick={on_click_callback} />
+    }
 }

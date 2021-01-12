@@ -1,30 +1,9 @@
-#[macro_use] extern crate pest_derive;
-#[macro_use] extern crate proc_macro_error;
+mod inline;
 
-mod parser;
+pub use inline::Inline;
 
-use proc_macro::TokenStream;
-use proc_macro2::Span;
+// Proc-macros can't be defined in the same crate, so all we can do is re-export it here from separate "sub-crate"
+pub use vertigo_html_macro::{html_component, html_element};
 
-use crate::parser::HtmlParser;
-
-#[proc_macro]
-#[proc_macro_error]
-pub fn html_component(input: TokenStream) -> TokenStream {
-    let call_site = Span::call_site();
-    let result = HtmlParser::parse_stream(call_site, &unformat(input), true);
-    result.into()
-}
-
-#[proc_macro]
-#[proc_macro_error]
-pub fn html_element(input: TokenStream) -> TokenStream {
-    let call_site = Span::call_site();
-    let result = HtmlParser::parse_stream(call_site, &unformat(input), false);
-    result.into()
-}
-
-fn unformat(input: TokenStream) -> String {
-    // TokenStream breaks html tags (f. ex. "< \n div >"), so we need to remove all newlines.
-    input.to_string().replace("\n", " ")
-}
+// For convenience
+pub use vertigo::node_attr::NodeAttr;

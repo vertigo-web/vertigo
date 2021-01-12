@@ -3,9 +3,10 @@ use super::state::State;
 use vertigo::{
     computed::Computed,
     VDomElement,
-    node_attr,
     Css
 };
+
+use vertigo_html::{Inline, html_component};
 
 fn css_box() -> Css {
     Css::one("
@@ -33,8 +34,6 @@ fn css_wrapper() -> Css {
 }
 
 pub fn render(simple_counter: &Computed<State>) -> VDomElement {
-    use node_attr::{build_node, node, css, text, on_click};
-
     let simple_counter = simple_counter.get_value();
     let calue = *(simple_counter.counter.get_value());
 
@@ -51,29 +50,11 @@ pub fn render(simple_counter: &Computed<State>) -> VDomElement {
         }
     };
 
-    // html! {
-    //     <div css={cssWrapper()}>
-    //         <div css={cssBox()}>{ format!("Counter value = {}", calue) }</div>
-    //         <div css={cssButton()} onClick={clickUp}>up</div>
-    //         <div css={cssButton()} onClick={clickDown}>down</div>
-    //     </div>
-    // }
-
-    build_node("div", vec!(
-        css(css_wrapper()),
-        node("div", vec!(
-            css(css_box()),
-            text(format!("Counter value = {}", calue)),
-        )),
-        node("button", vec!(
-            css(css_button()),
-            text("up"),
-            on_click(click_up)
-        )),
-        node("button", vec!(
-            css(css_button()),
-            text("down"),
-            on_click(click_down)
-        ))
-    ))
+    html_component! {
+        <div css={css_wrapper()}>
+            <div css={css_box()}>{$ format!("Counter value = {}", calue) $}</div>
+            <button css={css_button()} onClick={click_up}>up</button>
+            <button css={css_button()} onClick={click_down}>down</button>
+        </div>
+    }
 }

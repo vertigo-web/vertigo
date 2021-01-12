@@ -7,7 +7,7 @@ use vertigo::{
         Dependencies
     },
 };
-use vertigo_html::{html_component, html_element};
+use vertigo_html::{Inline, html_component, html_element};
 
 mod spinner;
 
@@ -95,13 +95,13 @@ pub fn main_render(state: &Computed<MainState>) -> VDomElement {
             Abudabi
             <div css={css_bg()}>
                 {$ if *value > 35 { "terefere kuku" } else { "bla bla bla" } $}
-                <element {spinner()} />
+                { spinner() }
             </div>
             <div css={css_bg()} onClick={on_up.clone()}>
                 {$ format!("aktualna wartosc = {}", value) $}
             </div>
             <div css={css_bg()}>
-                {$ "Aktualna wartość: " $} {$ value $}
+                { "Aktualna wartość: " } { value }
             </div>
             <div css={css_button()} onClick={on_up}>
                 up
@@ -109,7 +109,7 @@ pub fn main_render(state: &Computed<MainState>) -> VDomElement {
             <div css={css_button()} onClick={on_down}>
                 down
             </div>
-            <element {footer_dom} />
+            { footer_dom }
         </div>
     }
 }
