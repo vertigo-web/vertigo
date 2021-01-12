@@ -1,5 +1,5 @@
 [package]
-name = "vertigo-html"
+name = "vertigo-html-macro"
 version = "0.1.0-alpha.0"
 authors = ["Michał Pokrywka <wolfmoon@o2.pl>"]
 edition = "2018"
@@ -7,8 +7,14 @@ license = "MIT OR Apache-2.0"
 description = "Html2Vertigo conversion macro"
 
 [lib]
-name = "vertigo_html"
+name = "vertigo_html_macro"
+proc-macro = true
 
 [dependencies]
+log = "0.4.11"
+pest = "2.1.3"
+pest_derive = "2.1.0"
+proc-macro2 = "1.0.24"
+proc-macro-error = "1.0.4"
+syn = "1.0.58"
 vertigo = { path = "../vertigo" }
-vertigo-html-macro = { path = "../vertigo-html-macro" }

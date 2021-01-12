@@ -13,7 +13,7 @@ html = _{
 // NODES
 //
 root_node = { node_element }
-node = _{ node_comment | node_element | expression | node_text }
+node = _{ node_comment | node_element | children | expression | node_text }
 node_comment = _{ comment_if | comment_normal }
 node_text = { (!(node_element | comment_tag_start | expression) ~ ANY)+ }
 //node_text = { text_chars+ }
@@ -41,14 +41,17 @@ css_attr = { "css" ~ equal ~ attr_expression }
 onclick_attr = { "onClick" ~ equal ~ attr_expression }
 regular_attr = { attr_key ~ (equal ~ (attr_non_quoted | attr_quoted ))? }
 
-attr_quoted =  _{PUSH(quote) ~ attr_value ~ POP }
+attr_quoted =  _{ PUSH(quote) ~ attr_value ~ POP }
 attr_non_quoted = @{ !quote ~ (!(WHITESPACE | chevron_right) ~ ANY)* }
 attr_key = { ASCII_ALPHA ~ text_chars* }
 attr_value = { (!PEEK ~ ANY)* }
 
-// {$ $} expressions
-expression = { brace_left ~ PUSH("$"+) ~ expression_value ~ POP ~ brace_right }
+// { } and {$ $} expressions
+expression = { brace_left ~ PUSH("$"*) ~ expression_value ~ POP ~ brace_right }
 expression_value = { (!(PEEK ~ brace_right) ~ ANY)* }
+
+// { ..vector } and {$ ..vector $} expression
+children = { brace_left ~ PUSH("$"*) ~ ".." ~ expression_value ~ POP ~ brace_right }
 
 // { } expression in attribute value
 attr_expression = _{ brace_left ~ attr_expression_value ~ brace_right }
@@ -99,7 +102,7 @@ el_normal_start = _{ chevron_left_normal ~ PUSH(el_name) ~ attr* ~ chevron_right
 el_normal_end = { chevron_left_closed ~ POP ~ chevron_right_normal}
 
 el_vcomponent = { chevron_left_normal ~ "component" ~ vcomp_render_func ~ vcomp_data_attr? ~ attr* ~ chevron_right_closed }
-vcomp_render_func = @{ ASCII_ALPHA ~ text_chars* ~ "()"? }
+vcomp_render_func = { attr_expression }
 vcomp_data_attr = { "data" ~ equal ~ attr_expression }
 
 el_velement = { chevron_left_normal ~ "element" ~ velem_value ~ chevron_right_closed }
@@ -130,16 +133,10 @@ text_chars = _{'a'..'z' | 'A'..'Z' | "_" | "-" | ":" |'0'..'9'}
 chevron_left_normal = _{ "< " }
 chevron_left_closed = _{ "< / " }
 chevron_left_bang = _{ "< ! " }
-chevron_left_question = _{ "< ? " }
 
 chevron_right_normal = _{ ">" }
 chevron_right_closed = _{ "/ >" }
-chevron_right_question = _{ "? >" }
-chevron_right = _{
-    chevron_right_normal
-    | chevron_right_closed
-    | chevron_right_question
-}
+chevron_right = _{ chevron_right_normal | chevron_right_closed }
 
 equal = _{ "=" }
 quote_dubble = _{ "\"" }

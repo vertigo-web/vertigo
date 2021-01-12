@@ -2172,6 +2172,14 @@ dependencies = [
 name = "vertigo-html"
 version = "0.1.0-alpha.0"
 dependencies = [
+ "vertigo",
+ "vertigo-html-macro",
+]
+
+[[package]]
+name = "vertigo-html-macro"
+version = "0.1.0-alpha.0"
+dependencies = [
  "log",
  "pest",
  "pest_derive",

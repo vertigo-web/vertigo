@@ -8,6 +8,8 @@ use vertigo::{
     }
 };
 
+use vertigo_html::{Inline, html_component};
+
 mod simple_counter;
 
 #[derive(PartialEq)]
@@ -60,23 +62,27 @@ fn render_suma(state: &Computed<State>) -> VDomElement {
 
     let suma = state.suma.get_value();
 
-    build_node("div", vec!(
-        text(format!("suma = {}", suma))
-    ))
+    html_component! {
+        <div>
+            suma = {$ suma $}
+        </div>
+    }
 }
 
 pub fn render(state: &Computed<State>) -> VDomElement {
-    use node_attr::{build_node, component};
+    use node_attr::component;
 
     let suma = component(state.clone(), render_suma);
 
     let state = state.get_value();
 
-    build_node("div", vec!(
-        component(state.counter1.clone(), simple_counter::render),
-        component(state.counter2.clone(), simple_counter::render),
-        component(state.counter3.clone(), simple_counter::render),
-        component(state.counter4.clone(), simple_counter::render),
-        suma,
-    ))
+    html_component! {
+        <div>
+            <component {simple_counter::render} data={state.counter1.clone()} />
+            <component {simple_counter::render} data={state.counter2.clone()} />
+            <component {simple_counter::render} data={state.counter3.clone()} />
+            <component {simple_counter::render} data={state.counter4.clone()} />
+            { suma }
+        </div>
+    }
 }
