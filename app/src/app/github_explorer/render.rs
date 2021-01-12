@@ -1,6 +1,6 @@
 use vertigo::{
     computed::Computed,
-    VDomNode,
+    VDomElement,
     node_attr,
     Css,
 };
@@ -38,7 +38,7 @@ fn text_css() -> Css {
     ")
 }
 
-pub fn render(state: &Computed<State>) -> VDomNode {
+pub fn render(state: &Computed<State>) -> VDomElement {
     use node_attr::{build_node, node, css, text, attr, on_click, on_input};
 
     let state = state.get_value();

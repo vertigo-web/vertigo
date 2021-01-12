@@ -1,4 +1,4 @@
-use vertigo::{computed::Computed, VDomNode, node_attr, Css};
+use vertigo::{computed::Computed, VDomElement, node_attr, Css};
 
 use crate::app::sudoku::state::{Cell, number_item::SudokuValue};
 
@@ -36,7 +36,7 @@ fn css_delete() -> Css {
 
 
 
-pub fn render_cell_value(value: SudokuValue, item: &Computed<Cell>, ) -> VDomNode {
+pub fn render_cell_value(value: SudokuValue, item: &Computed<Cell>, ) -> VDomElement {
     let cell = item.get_value();
 
     //cell.show_delete.setValue(true);

@@ -1,13 +1,13 @@
 use crate::virtualdom::models::{
     vdom_component::VDomComponent,
-    vdom_node::VDomNode,
+    vdom_node::VDomElement,
     vdom_text::VDomText,
     node_attr::NodeAttr,
 };
 
-pub enum VDom {
+pub enum VDomNode {
     Node {
-        node: VDomNode,
+        node: VDomElement,
     },
     Text {
         node: VDomText,
@@ -17,21 +17,21 @@ pub enum VDom {
     },
 }
 
-impl VDom {
-    pub fn node(name: &'static str, child_list: Vec<NodeAttr>) -> VDom {
-        VDom::Node {
-            node: VDomNode::new(name, child_list)
+impl VDomNode {
+    pub fn node(name: &'static str, child_list: Vec<NodeAttr>) -> VDomNode {
+        VDomNode::Node {
+            node: VDomElement::new(name, child_list)
         }
     }
 
-    pub fn text<T: Into<String>>(value: T) -> VDom {
-        VDom::Text {
+    pub fn text<T: Into<String>>(value: T) -> VDomNode {
+        VDomNode::Text {
             node: VDomText::new(value)
         }
     }
 
-    pub fn component(value: VDomComponent) -> VDom {
-        VDom::Component {
+    pub fn component(value: VDomComponent) -> VDomNode {
+        VDomNode::Component {
             node: value
         }
     }

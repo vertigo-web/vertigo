@@ -2,8 +2,8 @@ use std::rc::Rc;
 use std::cmp::PartialEq;
 
 use crate::virtualdom::models::{
-    vdom::VDom,
-    vdom_node::VDomNode,
+    vdom::VDomNode,
+    vdom_node::VDomElement,
     vdom_component::VDomComponent,
 };
 use crate::virtualdom::models::css::Css;
@@ -33,7 +33,7 @@ pub enum NodeAttr {
         value: String,
     },
     Node {
-        node: VDom,
+        node: VDomNode,
     }
 }
 
@@ -78,32 +78,32 @@ pub fn attr<K: Into<String>>(name: &'static str, value: K) -> NodeAttr {
 
 pub fn node(name: &'static str, child_list: Vec<NodeAttr>) -> NodeAttr {
     NodeAttr::Node {
-        node: VDom::node(name, child_list)
+        node: VDomNode::node(name, child_list)
     }
 }
 
 pub fn text<T: Into<String>>(name: T) -> NodeAttr {
     NodeAttr::Node {
-        node: VDom::text(name)
+        node: VDomNode::text(name)
     }
 }
 
-pub fn component<T: PartialEq + 'static>(params: Computed<T>, render: fn(&Computed<T>) -> VDomNode) -> NodeAttr {
+pub fn component<T: PartialEq + 'static>(params: Computed<T>, render: fn(&Computed<T>) -> VDomElement) -> NodeAttr {
     NodeAttr::Node {
-        node:VDom::component(VDomComponent::new(params, render))
+        node:VDomNode::component(VDomComponent::new(params, render))
     }
 }
 
-pub fn component_value<T: PartialEq + 'static>(params: Value<T>, render: fn(&Value<T>) -> VDomNode) -> NodeAttr {
+pub fn component_value<T: PartialEq + 'static>(params: Value<T>, render: fn(&Value<T>) -> VDomElement) -> NodeAttr {
     NodeAttr::Node {
-        node:VDom::component(VDomComponent::from_value(params, render))
+        node:VDomNode::component(VDomComponent::from_value(params, render))
     }
 }
 
-pub fn build_node(name: &'static str, child_list: Vec<NodeAttr>) -> VDomNode {
-    VDomNode::new(name, child_list)
+pub fn build_node(name: &'static str, child_list: Vec<NodeAttr>) -> VDomElement {
+    VDomElement::new(name, child_list)
 }
 
-pub fn build_text<T: Into<String>>(name: T) -> VDom {
-    VDom::text(name)
+pub fn build_text<T: Into<String>>(name: T) -> VDomNode {
+    VDomNode::text(name)
 }

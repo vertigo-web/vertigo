@@ -1,15 +1,15 @@
 use crate::virtualdom::{
     models::{
-        realdom_node::RealDomNode,
+        realdom_node::RealDomElement,
         realdom_text::RealDomText,
         realdom_id::RealDomId,
         realdom_component::RealDomComponent,
     },
 };
 
-pub enum RealDom {
+pub enum RealDomNode {
     Node {
-        node: RealDomNode,
+        node: RealDomElement,
     },
     Text {
         node: RealDomText,
@@ -19,16 +19,16 @@ pub enum RealDom {
     }
 }
 
-impl RealDom {
+impl RealDomNode {
     pub fn id(&self) -> RealDomId {
         match self {
-            RealDom::Node { node } => {
+            RealDomNode::Node { node } => {
                 node.id_dom()
             },
-            RealDom::Text { node } => {
+            RealDomNode::Text { node } => {
                 node.id_dom.clone()
             },
-            RealDom::Component { node } => {
+            RealDomNode::Component { node } => {
                 node.node.id_dom()
             }
         }

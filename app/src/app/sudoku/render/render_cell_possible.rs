@@ -1,4 +1,4 @@
-use vertigo::{computed::Computed, VDomNode, node_attr, Css};
+use vertigo::{computed::Computed, VDomElement, node_attr, Css};
 
 use crate::app::sudoku::state::{Cell, number_item::SudokuValue};
 use super::config::Config;
@@ -65,7 +65,7 @@ fn css_item(should_show: bool) -> Css {
     css
 }
 
-pub fn render_cell_possible(item: &Computed<Cell>) -> VDomNode {
+pub fn render_cell_possible(item: &Computed<Cell>) -> VDomElement {
     use node_attr::{build_node, node, css, text, on_click};
 
     let cell = (*item).get_value();

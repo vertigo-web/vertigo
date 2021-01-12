@@ -1,7 +1,7 @@
 use std::cmp::PartialEq;
 use vertigo::{
     node_attr,
-    VDomNode,
+    VDomElement,
     computed::{
         Computed,
         Dependencies
@@ -53,7 +53,7 @@ impl State {
     }
 }
 
-fn render_suma(state: &Computed<State>) -> VDomNode {
+fn render_suma(state: &Computed<State>) -> VDomElement {
     use node_attr::{build_node, text};
 
     let state = state.get_value();
@@ -65,7 +65,7 @@ fn render_suma(state: &Computed<State>) -> VDomNode {
     ))
 }
 
-pub fn render(state: &Computed<State>) -> VDomNode {
+pub fn render(state: &Computed<State>) -> VDomElement {
     use node_attr::{build_node, component};
 
     let suma = component(state.clone(), render_suma);
