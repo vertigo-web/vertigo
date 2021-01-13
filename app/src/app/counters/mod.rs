@@ -56,8 +56,6 @@ impl State {
 }
 
 fn render_suma(state: &Computed<State>) -> VDomElement {
-    use node_attr::{build_node, text};
-
     let state = state.get_value();
 
     let suma = state.suma.get_value();

@@ -6,9 +6,9 @@ use vertigo::{
         Value
     },
     VDomElement,
-    node_attr,
     Css,
 };
+use vertigo_html::{Inline, html_component};
 // use virtualdom::vdom::StateBox::StateBox;
 
 #[derive(PartialEq)]
@@ -66,8 +66,6 @@ fn text_css() -> Css {
 }
 
 pub fn render(state: &Computed<State>) -> VDomElement {
-    use node_attr::{build_node, node, css, text, attr, on_click, on_input, on_mouse_enter, on_mouse_leave};
-
     let state = state.get_value();
 
     let on_set1 = {
@@ -114,33 +112,16 @@ pub fn render(state: &Computed<State>) -> VDomElement {
 
     let count = value.len();
 
-    build_node("div", vec!(
-        css(wrapper()),
-        text("To jest input"),
-        on_mouse_enter(mouse_in),
-        on_mouse_leave(mouse_out),
-        node("input", vec!(
-            css(input_css()),
-            attr("value", (*value).as_str()),
-            on_input(on_set3),
-        )),
-        node("button", vec!(
-            css(button_css()),
-            on_click(on_set1),
-            text("set 1")
-        )),
-        node("button", vec!(
-            css(button_css()),
-            on_click(on_set2),
-            text("set 2")
-        )),
-        node("textarea", vec!(
-            css(text_css()),
-            attr("value", (*value).as_str()),
-            on_input(on_set4),
-        )),
-        node("div", vec!(
-            text(format!("count = {}", count)),
-        )),
-    ))
+    html_component! {
+        <div css={wrapper()} onMouseEnter={mouse_in} onMouseLeave={mouse_out}>
+            { "To jest input" }
+            <input css={input_css()} value={(*value).as_str()} onInput={on_set3} />
+            <button css={button_css()} onClick={on_set1}>set 1</button>
+            <button css={button_css()} onClick={on_set2}>set 2</button>
+            <textarea css={text_css()} onInput={on_set4}>
+                { (*value).as_str() }
+            </textarea>
+            <div>{"count = "} { count }</div>
+        </div>
+    }
 }

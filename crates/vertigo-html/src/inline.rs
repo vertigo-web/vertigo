@@ -12,6 +12,18 @@ impl Inline for NodeAttr {
     }
 }
 
+impl Inline for &str {
+    fn embed(self) -> NodeAttr {
+        text(self)
+    }
+}
+
+impl Inline for String {
+    fn embed(self) -> NodeAttr {
+        text(&self)
+    }
+}
+
 macro_rules! impl_to_string {
     ($ty: ty) => {
         impl Inline for $ty {
@@ -21,9 +33,6 @@ macro_rules! impl_to_string {
         }
     };
 }
-
-impl_to_string!(&str);
-impl_to_string!(String);
 
 impl_to_string!(i8);
 impl_to_string!(i16);
@@ -36,6 +45,8 @@ impl_to_string!(u16);
 impl_to_string!(u32);
 impl_to_string!(u64);
 impl_to_string!(u128);
+
+impl_to_string!(usize);
 
 impl_to_string!(Rc<i8>);
 impl_to_string!(Rc<i16>);

@@ -129,78 +129,75 @@ fn css_button() -> Css {
 }
 
 fn render_header(state: &Computed<State>) -> VDomElement {
-    use node_attr::{build_node, css, node, text, on_click};
-
     let state = state.get_value();
     let year = state.year.get_value();
     let timer_enable = state.timer_enable.get_value();
 
     let button = if *timer_enable {
-        node("button", vec!(
-            css(css_button()),
-            text("Stop"),
-            on_click({
-                let timer_enable = state.timer_enable.clone();
-                move || {
-                    timer_enable.set_value(false);
-                    log::info!("stop ...");
-                }
-            })
-        ))
+        let on_click = {
+            let timer_enable = state.timer_enable.clone();
+            move || {
+                timer_enable.set_value(false);
+                log::info!("stop ...");
+            }
+        };
+        html_element! {
+            <button css={css_button()} onClick={on_click}>
+                Stop
+            </button>
+        }
     } else {
-        node("button", vec!(
-            css(css_button()),
-            text("Start"),
-            on_click({
-                let timer_enable = state.timer_enable.clone();
-                move || {
-                    timer_enable.set_value(true);
-                    log::info!("start ...");
-                }
-            })
-        ))
+        let on_click = {
+            let timer_enable = state.timer_enable.clone();
+            move || {
+                timer_enable.set_value(true);
+                log::info!("start ...");
+            }
+        };
+
+        html_element! {
+            <button css={css_button()} onClick={on_click}>
+                Start
+            </button>
+        }
     };
 
     let button_random = {
-        node("button", vec!(
-            css(css_button()),
-            text("Random"),
-            on_click({
-                move || {
-                    log::info!("random ...");
+        let on_click = move || {
+            log::info!("random ...");
 
-                    let x_count = *state.x_count.get_value();
-                    let y_count = *state.y_count.get_value();
+            let x_count = *state.x_count.get_value();
+            let y_count = *state.y_count.get_value();
 
-                    let matrix = state.matrix.get_value();
+            let matrix = state.matrix.get_value();
 
-                    for (y, row) in matrix.iter().enumerate() {
-                        for (x, cell) in row.iter().enumerate() {
-                            let new_value: bool = (y * 2 + ((x + 4))) % 2 == 0;
-                            cell.set_value(new_value);
+            for (y, row) in matrix.iter().enumerate() {
+                for (x, cell) in row.iter().enumerate() {
+                    let new_value: bool = (y * 2 + (x + 4)) % 2 == 0;
+                    cell.set_value(new_value);
 
-                            if x as u16 == x_count / 2 && y as u16 == y_count / 2 {
-                                cell.set_value(false);
-                            }
-                        }
+                    if x as u16 == x_count / 2 && y as u16 == y_count / 2 {
+                        cell.set_value(false);
                     }
-
-
                 }
-            })
-        ))
+            }
+        };
+
+        html_element! {
+            <button css={css_button()} onClick={on_click}>
+                Random
+            </button>
+        }
     };
 
-    build_node("div", vec!(
-        node("div", vec!(
-            text("Game of life")
-        )),
-        node("div", vec!(
-            text(format!("year = {}", year))
-        )),
-        button,
-        button_random
-    ))
+    html_component! {
+        <div>
+            <div>Game of life</div>
+            <div>year = { year }</div>
+            { button }
+            { button_random }
+        </div>
+    }
 }
 
 pub fn render(state: &Computed<State>) -> VDomElement {
@@ -215,7 +212,7 @@ pub fn render(state: &Computed<State>) -> VDomElement {
     }
 }
 
-fn render_matrix(matrix: &Vec<Vec<Value<bool>>>) -> NodeAttr {
+fn render_matrix(matrix: &[Vec<Value<bool>>]) -> NodeAttr {
     let mut out = Vec::new();
 
     for item in matrix.iter() {
@@ -229,8 +226,8 @@ fn render_matrix(matrix: &Vec<Vec<Value<bool>>>) -> NodeAttr {
     }
 }
 
-fn render_row(matrix: &Vec<Value<bool>>) -> NodeAttr {
-    use node_attr::{node, css, component_value};
+fn render_row(matrix: &[Value<bool>]) -> NodeAttr {
+    use node_attr::component_value;
 
     let mut out = Vec::new();
 
