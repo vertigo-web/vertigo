@@ -1,4 +1,5 @@
 use vertigo::{computed::Computed, VDomElement, node_attr, Css};
+use vertigo_html::{Inline, html_component, html_element};
 
 use crate::app::sudoku::state::{Cell, number_item::SudokuValue};
 use super::config::Config;
@@ -66,7 +67,7 @@ fn css_item(should_show: bool) -> Css {
 }
 
 pub fn render_cell_possible(item: &Computed<Cell>) -> VDomElement {
-    use node_attr::{build_node, node, css, text, on_click};
+    use node_attr::css;
 
     let cell = (*item).get_value();
 
@@ -80,7 +81,7 @@ pub fn render_cell_possible(item: &Computed<Cell>) -> VDomElement {
 
         for number in possible.iter() {
             let on_set = {
-                let number = number.clone();
+                let number = *number;
                 let cell = cell.clone();
 
                 move || {
@@ -89,15 +90,17 @@ pub fn render_cell_possible(item: &Computed<Cell>) -> VDomElement {
             };
 
             out.push(
-                node("div", vec!(
-                    css(css_item_only_one()),
-                    on_click(on_set),
-                    text(format!("{}", number.to_u16()))
-                ))
+                html_element! {
+                    <div css={css_item_only_one()} onClick={on_set}>
+                        { number.to_u16() }
+                    </div>
+                }
             );
         }
 
-        return build_node("div", out);
+        return html_component! {
+            <div>{ ..out }</div>
+        }
     }
 
 
@@ -106,22 +109,18 @@ pub fn render_cell_possible(item: &Computed<Cell>) -> VDomElement {
 
     if let Some(possible_last_value) = possible_last_value {
         let on_set = {
-            let possible_last_value = possible_last_value.clone();
-            let cell = cell.clone();
-
             move || {
                 cell.number.value.set_value(Some(possible_last_value));
             }
         };
 
-        return build_node("div", vec!(
-            css(css_wrapper_one()),
-            node("div", vec!(
-                css(css_item_only_one()),
-                on_click(on_set),
-                text(format!("{}.", possible_last_value.to_u16()))
-            ))
-        ));
+        return html_component! {
+            <div css={css_wrapper_one()}>
+                <div css={css_item_only_one()} onClick={on_set}>
+                    {$ format!("{}.", possible_last_value.to_u16()) $}
+                </div>
+            </div>
+        }
     }
 
 
@@ -137,21 +136,24 @@ pub fn render_cell_possible(item: &Computed<Cell>) -> VDomElement {
             "".into()
         };
 
-        out.push(
-            node("div", vec!(
-                css(css_item(should_show)),
-                on_click({
-                    let cell = cell.clone();
-                    move || {
-                        if should_show {
-                            cell.number.value.set_value(Some(number));
-                        }
+        out.push({
+            let on_click = {
+                let cell = cell.clone();
+                move || {
+                    if should_show {
+                        cell.number.value.set_value(Some(number));
                     }
-                }),
-                text(label)
-            ))
-        );
+                }
+            };
+            html_element! {
+                <div css={css_item(should_show)} onClick={on_click}>
+                    { label }
+                 </div>
+            }
+        });
     }
 
-    build_node("div", out)
+    html_component! {
+        <div>{ ..out }</div>
+    }
 }

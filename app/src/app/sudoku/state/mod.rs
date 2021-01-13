@@ -116,14 +116,14 @@ impl Sudoku {
     }
 
     pub fn example1(&self) {
-        log::info!("przykład1");
+        log::info!("example 1");
     }
 
     pub fn example2(&self) {
-        log::info!("przykład2");
+        log::info!("example 2");
     }
 
     pub fn example3(&self) {
-        log::info!("przykład3");
+        log::info!("example 3");
     }
 }

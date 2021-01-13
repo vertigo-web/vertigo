@@ -1,7 +1,7 @@
 
 use pest::{Parser, iterators::Pair};
 
-use proc_macro2::{TokenStream, Ident, Span};
+use proc_macro2::{TokenStream, Span};
 use syn::{Expr, parse_str};
 
 #[derive(Parser)]
@@ -57,18 +57,24 @@ impl HtmlParser {
             // emit_warning!(call_site, "HTML: generate_node_element debug: {:?}", pair);
             match pair.as_rule() {
                 Rule::el_name => tag_name = pair.as_str(),
+                Rule::el_void_name => tag_name = pair.as_str(),
                 Rule::regular_attr => children.push(HtmlParser::generate_regular_attr(call_site, pair)),
                 Rule::css_attr => children.push(HtmlParser::generate_css_attr(call_site, pair)),
                 Rule::onclick_attr => children.push(HtmlParser::generate_onclick_attr(call_site, pair)),
+                Rule::oninput_attr => children.push(HtmlParser::generate_oninput_attr(call_site, pair)),
+                Rule::onmouseenter_attr => children.push(HtmlParser::generate_onmouseenter_attr(call_site, pair)),
+                Rule::onmouseleave_attr => children.push(HtmlParser::generate_onmouseleave_attr(call_site, pair)),
+                Rule::expression_attr => children.push(HtmlParser::generate_expression_attr(call_site, pair)),
                 Rule::el_vcomponent => children.push(HtmlParser::generate_vcomponent(call_site, pair)),
                 Rule::el_velement => children.push(HtmlParser::generate_velement(call_site, pair)),
                 Rule::el_normal => children.push(HtmlParser::generate_node_element(call_site, pair, false)),
+                Rule::el_void => children.push(HtmlParser::generate_node_element(call_site, pair, false)),
                 Rule::node_text => children.push(HtmlParser::generate_text(call_site, pair)),
                 Rule::expression => children.push(HtmlParser::generate_expression(call_site, pair)),
                 Rule::children => children_lists.push(HtmlParser::generate_children(call_site, pair)),
                 Rule::el_normal_end => {},
                 _ => {
-                    emit_warning!(call_site, "HTML: unhandler pair in generate_node_element: {:?}", pair);
+                    emit_error!(call_site, "HTML: unhandler pair in generate_node_element: {:?}", pair);
                 }
             }
         }
@@ -240,6 +246,8 @@ impl HtmlParser {
         quote! { }
     }
 
+    // FIXME: Following several generators should be refactored into one general
+
     fn generate_onclick_attr(call_site: Span, pair: Pair<Rule>) -> TokenStream {
         let expression_val = pair.into_inner().next().unwrap();
         match expression_val.as_rule() {
@@ -250,6 +258,80 @@ impl HtmlParser {
                     Expr::__Nonexhaustive
                 });
                 return quote! { vertigo::node_attr::on_click(#expr) }
+            },
+            _ => {
+                emit_warning!(call_site, "HTML: unhandler pair in generate_onclick_attr: {:?}", expression_val);
+            }
+        };
+        quote! { }
+    }
+
+    fn generate_oninput_attr(call_site: Span, pair: Pair<Rule>) -> TokenStream {
+        let expression_val = pair.into_inner().next().unwrap();
+        match expression_val.as_rule() {
+            Rule::attr_expression_value => {
+                let value = expression_val.as_str();
+                let expr: Expr = parse_str(value).unwrap_or_else(|e| {
+                    emit_error!(call_site, "Error while parsing `{}`: {}", value, e);
+                    Expr::__Nonexhaustive
+                });
+                return quote! { vertigo::node_attr::on_input(#expr) }
+            },
+            _ => {
+                emit_warning!(call_site, "HTML: unhandler pair in generate_oninput_attr: {:?}", expression_val);
+            }
+        };
+        quote! { }
+    }
+
+    fn generate_onmouseenter_attr(call_site: Span, pair: Pair<Rule>) -> TokenStream {
+        let expression_val = pair.into_inner().next().unwrap();
+        match expression_val.as_rule() {
+            Rule::attr_expression_value => {
+                let value = expression_val.as_str();
+                let expr: Expr = parse_str(value).unwrap_or_else(|e| {
+                    emit_error!(call_site, "Error while parsing `{}`: {}", value, e);
+                    Expr::__Nonexhaustive
+                });
+                return quote! { vertigo::node_attr::on_mouse_enter(#expr) }
+            },
+            _ => {
+                emit_warning!(call_site, "HTML: unhandler pair in generate_oninput_attr: {:?}", expression_val);
+            }
+        };
+        quote! { }
+    }
+
+    fn generate_onmouseleave_attr(call_site: Span, pair: Pair<Rule>) -> TokenStream {
+        let expression_val = pair.into_inner().next().unwrap();
+        match expression_val.as_rule() {
+            Rule::attr_expression_value => {
+                let value = expression_val.as_str();
+                let expr: Expr = parse_str(value).unwrap_or_else(|e| {
+                    emit_error!(call_site, "Error while parsing `{}`: {}", value, e);
+                    Expr::__Nonexhaustive
+                });
+                return quote! { vertigo::node_attr::on_mouse_leave(#expr) }
+            },
+            _ => {
+                emit_warning!(call_site, "HTML: unhandler pair in generate_oninput_attr: {:?}", expression_val);
+            }
+        };
+        quote! { }
+    }
+
+    fn generate_expression_attr(call_site: Span, pair: Pair<Rule>) -> TokenStream {
+        let mut pair = pair.into_inner();
+        let attr_key = pair.next().unwrap().as_str();
+        let expression_val = pair.next().unwrap();
+        match expression_val.as_rule() {
+            Rule::attr_expression_value => {
+                let value = expression_val.as_str();
+                let expr: Expr = parse_str(value).unwrap_or_else(|e| {
+                    emit_error!(call_site, "Error while parsing `{}`: {}", value, e);
+                    Expr::__Nonexhaustive
+                });
+                return quote! { vertigo::node_attr::attr(#attr_key, #expr) }
             },
             _ => {
                 emit_warning!(call_site, "HTML: unhandler pair in generate_onclick_attr: {:?}", expression_val);

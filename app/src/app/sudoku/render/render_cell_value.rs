@@ -1,4 +1,5 @@
-use vertigo::{computed::Computed, VDomElement, node_attr, Css};
+use vertigo::{computed::Computed, VDomElement, Css};
+use vertigo_html::{Inline, html_component, html_element};
 
 use crate::app::sudoku::state::{Cell, number_item::SudokuValue};
 
@@ -43,29 +44,37 @@ pub fn render_cell_value(value: SudokuValue, item: &Computed<Cell>, ) -> VDomEle
 
     let show_delete = *cell.show_delete.get_value();
 
-    use node_attr::{build_node, node, css, text, on_click};
-
-    let mut out = vec!(
-        css(css_item_number_wrapper()),
-        text(format!("{}", value.to_u16())),
-    );
-
     //TODO - dorobić obsługę delete ...
+    let mut out = Vec::new();
 
     if show_delete {
-        out.push(node("div", vec!(
-            css(css_delete()),
-            on_click({
-                let cell = cell.clone();
-                move || {
-                    cell.number.value.set_value(None);
-                }
-            }),
-            text("X")
-        )));
+        let on_click = move || {
+            cell.number.value.set_value(None);
+        };
+
+        out.push(
+            html_element! {
+                <div css={css_delete()} onClick={on_click}>
+                    X
+                </div>
+            }
+            // node("div", vec!(
+            // css(css_delete()),
+            // on_click({
+            //     move || {
+            //         cell.number.value.set_value(None);
+            //     }
+            // }),
+            // text("X")
+        );
     }
 
-    build_node("div", out)
+    html_component! {
+        <div css={css_item_number_wrapper()}>
+            { value.to_u16() }
+            { ..out }
+        </div>
+    }
 }
 
 

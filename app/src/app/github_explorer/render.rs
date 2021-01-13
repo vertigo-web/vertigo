@@ -1,9 +1,9 @@
 use vertigo::{
     computed::Computed,
     VDomElement,
-    node_attr,
     Css,
 };
+use vertigo_html::{Inline, html_component};
 
 use super::state::{State, Resource};
 
@@ -39,8 +39,6 @@ fn text_css() -> Css {
 }
 
 pub fn render(state: &Computed<State>) -> VDomElement {
-    use node_attr::{build_node, node, css, text, attr, on_click, on_input};
-
     let state = state.get_value();
 
     let on_input_callback = {
@@ -72,26 +70,17 @@ pub fn render(state: &Computed<State>) -> VDomElement {
         }
     };
 
-    build_node("div", vec!(
-        css(wrapper()),
-        text("Enter author/repo tuple:"),
-        node("input", vec!(
-            css(input_css()),
-            attr("value", (*repo_input).as_str()),
-            on_input(on_input_callback),
-        )),
-        node("button", vec!(
-            css(button_css()),
-            on_click(on_show),
-            text("Fetch")
-        )),
-        node("div", vec!(
-            css(button_css()),
-            text(repo_shown.as_str())
-        )),
-        node("div", vec!(
-            css(text_css()),
-            text(commit_sha)
-        ))
-    ))
+    html_component! {
+        <div css={wrapper()}>
+            { "Enter author/repo tuple:" }
+            <input css={input_css()} value={(*repo_input).as_str()} onInput={on_input_callback} />
+            <button css={button_css()} onClick={on_show}>Fetch</button>
+            <div css={button_css()}>
+                { repo_shown.as_str() }
+            </div>
+            <div css={text_css()}>
+                { commit_sha }
+            </div>
+        </div>
+    }
 }

@@ -1,4 +1,4 @@
-// Simplified and modified grammar from https://github.com/mathiversen/html-parser
+// Modified grammar from https://github.com/mathiversen/html-parser
 //
 // HTML
 //
@@ -35,10 +35,14 @@ comment_if_end = _{ chevron_left_bang ~ "[" ~ ^"endif" ~ "]" ~ comment_tag_end }
 // ATTRIBUTES
 //
 
-attr = _{ css_attr | onclick_attr | regular_attr }
+attr = _{ css_attr | onclick_attr | oninput_attr | onmouseenter_attr | onmouseleave_attr | expression_attr | regular_attr }
 
 css_attr = { "css" ~ equal ~ attr_expression }
 onclick_attr = { "onClick" ~ equal ~ attr_expression }
+oninput_attr = { "onInput" ~ equal ~ attr_expression }
+onmouseenter_attr = { "onMouseEnter" ~ equal ~ attr_expression }
+onmouseleave_attr = { "onMouseLeave" ~ equal ~ attr_expression }
+expression_attr = { attr_key ~ equal ~ attr_expression }
 regular_attr = { attr_key ~ (equal ~ (attr_non_quoted | attr_quoted ))? }
 
 attr_quoted =  _{ PUSH(quote) ~ attr_value ~ POP }
@@ -110,16 +114,16 @@ velem_value = _{ attr_expression }
 
 // Raw text elements are elements with text/script content that
 // might interfere with the normal html syntax
-el_raw_text_name = {
+el_raw_text_name = _{
     ^"style"
     | ^"script"
     | ^"title"
     | ^"textarea"
 }
 el_raw_text_content = { (!el_raw_text_end ~ ANY)* }
-el_raw_text = _{ el_raw_text_start ~ el_raw_text_content ~ el_raw_text_end }
+el_raw_text = _{ el_raw_text_start ~ (expression | el_raw_text_content) ~ el_raw_text_end }
 el_raw_text_start = _{ chevron_left_normal ~ PUSH(el_raw_text_name) ~ attr* ~ chevron_right_normal}
-el_raw_text_end = { chevron_left_closed ~ POP ~ chevron_right_normal}
+el_raw_text_end = _{ chevron_left_closed ~ POP ~ chevron_right_normal}
 
 // Catch dangling elements
 // Ex: <div/></div>

@@ -1,6 +1,7 @@
-use vertigo::{computed::Computed, VDomElement, node_attr, Css};
-use self::config::Config;
+use vertigo::{computed::Computed, VDomElement, Css};
+use vertigo_html::html_component;
 
+use self::config::Config;
 use super::state::{Cell, Sudoku, sudoku_square::SudokuSquare, tree_box::TreeBoxIndex};
 
 pub mod config;
@@ -63,8 +64,6 @@ fn render_cell(item: &Computed<Cell>) -> VDomElement {
 }
 
 fn render_group(group: &Computed<SudokuSquare<Cell>>) -> VDomElement {
-    use node_attr::{build_node, node, css, component};
-
     //log::info!("render group");
 
     let get_cell = |group: &Computed<SudokuSquare<Cell>>, x: TreeBoxIndex, y: TreeBoxIndex| -> Computed<Cell> {
@@ -73,71 +72,61 @@ fn render_group(group: &Computed<SudokuSquare<Cell>>) -> VDomElement {
         })
     };
 
-    build_node("div", vec!(
-        css(css_item_wrapper()),
-        node("div", vec!(
-            css(css_cell_wrapper()),
-            component(get_cell(group, TreeBoxIndex::First,  TreeBoxIndex::First),  render_cell),
-        )),
-        node("div", vec!(
-            css(css_cell_wrapper()),
-            component(get_cell(group, TreeBoxIndex::First,  TreeBoxIndex::Middle), render_cell),
-        )),
-        node("div", vec!(
-            css(css_cell_wrapper()),
-            component(get_cell(group, TreeBoxIndex::First,  TreeBoxIndex::Last),   render_cell),
-        )),
-        node("div", vec!(
-            css(css_cell_wrapper()),
-            component(get_cell(group, TreeBoxIndex::Middle, TreeBoxIndex::First),  render_cell),
-        )),
-        node("div", vec!(
-            css(css_cell_wrapper()),
-            component(get_cell(group, TreeBoxIndex::Middle, TreeBoxIndex::Middle), render_cell),
-        )),
-        node("div", vec!(
-            css(css_cell_wrapper()),
-            component(get_cell(group, TreeBoxIndex::Middle, TreeBoxIndex::Last),   render_cell),
-        )),
-        node("div", vec!(
-            css(css_cell_wrapper()),
-            component(get_cell(group, TreeBoxIndex::Last,   TreeBoxIndex::First),  render_cell),
-        )),
-        node("div", vec!(
-            css(css_cell_wrapper()),
-            component(get_cell(group, TreeBoxIndex::Last,   TreeBoxIndex::Middle), render_cell),
-        )),
-        node("div", vec!(
-            css(css_cell_wrapper()),
-            component(get_cell(group, TreeBoxIndex::Last,   TreeBoxIndex::Last),   render_cell),
-        ))
-    ))
+    html_component! {
+        <div css={css_item_wrapper()}>
+            <div css={css_cell_wrapper()}>
+                <component {render_cell} data={get_cell(group, TreeBoxIndex::First,  TreeBoxIndex::First)} />
+            </div>
+            <div css={css_cell_wrapper()}>
+                <component {render_cell} data={get_cell(group, TreeBoxIndex::First,  TreeBoxIndex::Middle)} />
+            </div>
+            <div css={css_cell_wrapper()}>
+                <component {render_cell} data={get_cell(group, TreeBoxIndex::First,  TreeBoxIndex::Last)} />
+            </div>
+            <div css={css_cell_wrapper()}>
+                <component {render_cell} data={get_cell(group, TreeBoxIndex::Middle,  TreeBoxIndex::First)} />
+            </div>
+            <div css={css_cell_wrapper()}>
+                <component {render_cell} data={get_cell(group, TreeBoxIndex::Middle,  TreeBoxIndex::Middle)} />
+            </div>
+            <div css={css_cell_wrapper()}>
+                <component {render_cell} data={get_cell(group, TreeBoxIndex::Middle,  TreeBoxIndex::Last)} />
+            </div>
+            <div css={css_cell_wrapper()}>
+                <component {render_cell} data={get_cell(group, TreeBoxIndex::Last,  TreeBoxIndex::First)} />
+            </div>
+            <div css={css_cell_wrapper()}>
+                <component {render_cell} data={get_cell(group, TreeBoxIndex::Last,  TreeBoxIndex::Middle)} />
+            </div>
+            <div css={css_cell_wrapper()}>
+                <component {render_cell} data={get_cell(group, TreeBoxIndex::Last,  TreeBoxIndex::Last)} />
+            </div>
+        </div>
+    }
 }
 
 pub fn main_render(sudoku: &Computed<Sudoku>) -> VDomElement {
-    use node_attr::{build_node, node, css, component};
-
     let get_group = |sudoku: &Computed<Sudoku>, x: TreeBoxIndex, y: TreeBoxIndex| -> Computed<SudokuSquare<Cell>> {
         sudoku.clone().map(move |state| {
             state.get_value().grid.get_from(x, y)
         })
     };
-    
-    build_node("div", vec!(
-        css(css_center()),
-        node("div", vec!(
-            css(css_wrapper()),
-            component(get_group(sudoku, TreeBoxIndex::First,  TreeBoxIndex::First),  render_group),
-            component(get_group(sudoku, TreeBoxIndex::First,  TreeBoxIndex::Middle), render_group),
-            component(get_group(sudoku, TreeBoxIndex::First,  TreeBoxIndex::Last),   render_group),
-            component(get_group(sudoku, TreeBoxIndex::Middle, TreeBoxIndex::First),  render_group),
-            component(get_group(sudoku, TreeBoxIndex::Middle, TreeBoxIndex::Middle), render_group),
-            component(get_group(sudoku, TreeBoxIndex::Middle, TreeBoxIndex::Last),   render_group),
-            component(get_group(sudoku, TreeBoxIndex::Last,   TreeBoxIndex::First),  render_group),
-            component(get_group(sudoku, TreeBoxIndex::Last,   TreeBoxIndex::Middle), render_group),
-            component(get_group(sudoku, TreeBoxIndex::Last,   TreeBoxIndex::Last),   render_group),
-        ))
-    ))
+
+    html_component! {
+        <div css={css_center()}>
+            <div css={css_wrapper()}>
+                <component {render_group} data={get_group(sudoku, TreeBoxIndex::First,  TreeBoxIndex::First)} />
+                <component {render_group} data={get_group(sudoku, TreeBoxIndex::First,  TreeBoxIndex::Middle)} />
+                <component {render_group} data={get_group(sudoku, TreeBoxIndex::First,  TreeBoxIndex::Last)} />
+                <component {render_group} data={get_group(sudoku, TreeBoxIndex::Middle,  TreeBoxIndex::First)} />
+                <component {render_group} data={get_group(sudoku, TreeBoxIndex::Middle,  TreeBoxIndex::Middle)} />
+                <component {render_group} data={get_group(sudoku, TreeBoxIndex::Middle,  TreeBoxIndex::Last)} />
+                <component {render_group} data={get_group(sudoku, TreeBoxIndex::Last,  TreeBoxIndex::First)} />
+                <component {render_group} data={get_group(sudoku, TreeBoxIndex::Last,  TreeBoxIndex::Middle)} />
+                <component {render_group} data={get_group(sudoku, TreeBoxIndex::Last,  TreeBoxIndex::Last)} />
+            </div>
+        </div>
+    }
 }
 
 fn css_sudoku_example() -> Css {
@@ -155,54 +144,35 @@ fn css_sudoku_example_button() -> Css {
     ")
 }
 pub fn examples_render(sudoku: &Computed<Sudoku>) -> VDomElement {
-    use node_attr::{build_node, node, css, text, on_click};
-
     let sudoku = sudoku.get_value();
-    build_node("div", vec!(
-        css(css_sudoku_example()),
-        node("button", vec!(
-            css(css_sudoku_example_button()),
-            on_click({
-                let sudoku = sudoku.clone();
 
-                move || {
-                    sudoku.clear();
-                }
-            }),
-            text("Wyczyść")
-        )),
-        node("button", vec!(
-            css(css_sudoku_example_button()),
-            on_click({
-                let sudoku = sudoku.clone();
+    let clear = {
+        let sudoku = sudoku.clone();
+        move || {
+            sudoku.clear();
+        }
+    };
 
-                move || {
-                    sudoku.example1();
-                }
-            }),
-            text("Przykład 1")
-        )),
-        node("button", vec!(
-            css(css_sudoku_example_button()),
-            on_click({
-                let sudoku = sudoku.clone();
+    let example1 = {
+        let sudoku = sudoku.clone();
+        move || { sudoku.example1(); }
+    };
 
-                move || {
-                    sudoku.example2();
-                }
-            }),
-            text("Przykład 2")
-        )),
-        node("button", vec!(
-            css(css_sudoku_example_button()),
-            on_click({
-                let sudoku = sudoku.clone();
+    let example2 = {
+        let sudoku = sudoku.clone();
+        move || { sudoku.example2(); }
+    };
 
-                move || {
-                    sudoku.example3();
-                }
-            }),
-            text("Przykład 3")
-        ))
-    ))
+    let example3 = {
+        move || { sudoku.example3(); }
+    };
+
+    html_component! {
+        <div css={css_sudoku_example()}>
+            <button css={css_sudoku_example_button()} onClick={clear}> Clear </button>
+            <button css={css_sudoku_example_button()} onClick={example1}> Example 1 </button>
+            <button css={css_sudoku_example_button()} onClick={example2}> Example 2 </button>
+            <button css={css_sudoku_example_button()} onClick={example3}> Example 3 </button>
+        </div>
+    }
 }
