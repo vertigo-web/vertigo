@@ -62,7 +62,7 @@ fn render_suma(state: &Computed<State>) -> VDomElement {
 
     html_component! {
         <div>
-            suma = {$ suma $}
+            {$ format!("suma = {}", suma) $}
         </div>
     }
 }

@@ -16,7 +16,6 @@ root_node = { node_element }
 node = _{ node_comment | node_element | children | expression | node_text }
 node_comment = _{ comment_if | comment_normal }
 node_text = { (!(node_element | comment_tag_start | expression) ~ ANY)+ }
-//node_text = { text_chars+ }
 node_element = _{ el_vcomponent | el_velement | el_void | el_void_xml | el_raw_text | el_normal | el_dangling }
 
 //
