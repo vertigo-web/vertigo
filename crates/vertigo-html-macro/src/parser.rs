@@ -58,6 +58,7 @@ impl HtmlParser {
             match pair.as_rule() {
                 Rule::el_name => tag_name = pair.as_str(),
                 Rule::el_void_name => tag_name = pair.as_str(),
+                Rule::el_raw_text_name => tag_name = pair.as_str(),
                 Rule::regular_attr => children.push(HtmlParser::generate_regular_attr(call_site, pair)),
                 Rule::css_attr => children.push(HtmlParser::generate_expression_attr(call_site, pair, Some("css"))),
                 Rule::onclick_attr => children.push(HtmlParser::generate_expression_attr(call_site, pair, Some("on_click"))),
@@ -69,6 +70,8 @@ impl HtmlParser {
                 Rule::el_velement => children.push(HtmlParser::generate_velement(call_site, pair)),
                 Rule::el_normal => children.push(HtmlParser::generate_node_element(call_site, pair, false)),
                 Rule::el_void => children.push(HtmlParser::generate_node_element(call_site, pair, false)),
+                Rule::el_raw_text => children.push(HtmlParser::generate_node_element(call_site, pair, false)),
+                Rule::el_raw_text_content => children.push(HtmlParser::generate_text(call_site, pair)),
                 Rule::node_text => children.push(HtmlParser::generate_text(call_site, pair)),
                 Rule::expression => children.push(HtmlParser::generate_expression(call_site, pair)),
                 Rule::children => children_lists.push(HtmlParser::generate_children(call_site, pair)),
