@@ -193,7 +193,7 @@ fn render_header(state: &Computed<State>) -> VDomElement {
     html_component! {
         <div>
             <div>Game of life</div>
-            <div>year = { year }</div>
+            <div>{$ format!("year = {}", year) $}</div>
             { button }
             { button_random }
         </div>
