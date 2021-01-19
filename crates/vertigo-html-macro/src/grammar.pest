@@ -119,7 +119,7 @@ el_raw_text_name = {
     | ^"title"
     | ^"textarea"
 }
-el_raw_text_content = { (!el_raw_text_end ~ ANY)* }
+el_raw_text_content = { (!el_raw_text_end ~ ANY)+ }
 el_raw_text = { el_raw_text_start ~ (expression | el_raw_text_content) ~ el_raw_text_end }
 el_raw_text_start = _{ chevron_left_normal ~ PUSH(el_raw_text_name) ~ attr* ~ chevron_right_normal}
 el_raw_text_end = _{ chevron_left_closed ~ POP ~ chevron_right_normal}

@@ -28,3 +28,13 @@ fn unformat(input: TokenStream) -> String {
     // TokenStream breaks html tags (f. ex. "< \n div >"), so we need to remove all newlines.
     input.to_string().replace("\n", " ")
 }
+
+
+#[proc_macro]
+#[proc_macro_error]
+pub fn debug_html_component(input: TokenStream) -> TokenStream {
+    let call_site = Span::call_site();
+    let result = HtmlParser::parse_stream(call_site, &unformat(input), true);
+    emit_warning!(call_site, "HTML: output: {}", result);
+    result.into()
+}

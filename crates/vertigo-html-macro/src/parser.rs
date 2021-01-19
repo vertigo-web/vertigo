@@ -26,9 +26,7 @@ impl HtmlParser {
                         }
                     }
                 }
-                let output = quote! { #(#children)* };
-                // emit_warning!(call_site, "HTML: output: {}", output);
-                output
+                quote! { #(#children)* }
             },
             Err(e) => {
                 emit_error!(call_site, "HTML Parsing fatal error: {}", e);
@@ -168,7 +166,8 @@ impl HtmlParser {
 
     fn generate_text(call_site: Span, pair: Pair<Rule>) -> TokenStream {
         match pair.as_rule() {
-            Rule::node_text => {
+            Rule::node_text |
+            Rule::el_raw_text_content => {
                 let content = pair.as_str();
                 quote! { vertigo::node_attr::text(#content) }
             },
@@ -189,7 +188,7 @@ impl HtmlParser {
                     emit_error!(call_site, "Error while parsing `{}`: {}", value, e);
                     Expr::__Nonexhaustive
                 });
-                quote! { #expr .embed() }
+                quote! { (#expr) .embed() }
             },
             _ => {
                 emit_warning!(call_site, "HTML: unhandler pair in generate_expression: {:?}", pair);
@@ -249,10 +248,10 @@ impl HtmlParser {
                 if attr_key_opt.is_some() {
                     // Vertigo attribute
                     let attr_key = Ident::new(attr_key, call_site);
-                    return quote! { vertigo::node_attr::#attr_key(#expr) }
+                    return quote! { vertigo::node_attr::#attr_key((#expr)) }
                 } else {
                     // Custom attribute
-                    return quote! { vertigo::node_attr::attr(#attr_key, #expr) }
+                    return quote! { vertigo::node_attr::attr(#attr_key, (#expr)) }
                 }
             },
             _ => {
