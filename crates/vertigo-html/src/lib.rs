@@ -7,3 +7,6 @@ pub use vertigo_html_macro::{html_component, html_element};
 
 // For convenience
 pub use vertigo::node_attr::NodeAttr;
+
+#[cfg(test)]
+mod tests;
