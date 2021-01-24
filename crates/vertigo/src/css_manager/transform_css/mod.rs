@@ -4,7 +4,7 @@ use super::{get_selector::get_selector, next_id::NextId};
 mod tests;
 
 fn css_row_split_to_pair(row: &str) -> Option<(&str, String)> {
-    let chunks: Vec<&str> = row.split(":").collect();
+    let chunks: Vec<&str> = row.split(':').collect();
 
     if chunks.len() < 2 {
         return None;
@@ -88,12 +88,10 @@ pub fn css_split_rows(css: &str) -> Vec<&str> {
             }
         }
 
-        if char == ';' {
-            if state == ParsingRowState::Right {
-                out.push(&css[start..index].trim());
-                start = index + 1;
-                state = ParsingRowState::Left;
-            }
+        if char == ';' && state == ParsingRowState::Right {
+            out.push(&css[start..index].trim());
+            start = index + 1;
+            state = ParsingRowState::Left;
         }
     }
 
@@ -163,7 +161,7 @@ pub fn transform_css_animation_value(css: &str, next_id: &mut NextId) -> (String
         return (new_css, Some((keyframe_name, keyframe_content.into())));
     }
 
-    return (css.into(), None);
+    (css.into(), None)
 }
 
 pub fn transform_css(css: &str, next_id: &mut NextId) -> (u64, Vec<(String, String)>) {
@@ -187,7 +185,7 @@ pub fn transform_css(css: &str, next_id: &mut NextId) -> (u64, Vec<(String, Stri
                 } else {
                     value
                 };
-                
+
                 css_out.push(format!("{}: {}", name, value_parsed));
             },
             None => {

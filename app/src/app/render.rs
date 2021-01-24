@@ -2,10 +2,11 @@ use vertigo::{
     computed::Computed,
     VDomElement,
     Css,
-    node_attr,
+    node_attr::component,
 };
+use vertigo_html::{Inline, html_component, html_element};
 
-use crate::{app};
+use crate::{app, navigate_to};
 
 use super::sudoku;
 use super::input;
@@ -35,109 +36,73 @@ fn css_menu_item(active: bool) -> Css {
 }
 
 fn render_header(app_state: &Computed<app::State>) -> VDomElement {
-    use node_attr::{build_node, node, css, text, on_click};
+    let state = app_state.get_value();
 
-    let app_state = app_state.get_value();
+    let current_page = &*state.route.get_value();
 
-    let current_page = &*app_state.route.get_value();
+    let navigate_to_gameoflife = {
+        let state = state.clone();
+        move || {
+            let timer = state.game_of_life.get_value().start_timer();
+            let route = Route::GameOfLife {
+                timer
+            };
+            state.navigate_to(route);
+        }
+    };
 
-    build_node("div", vec!(
-        node("ul", vec!(
-            css(css_menu()),
-            node("li", vec!(
-                text("Main"),
-                css(css_menu_item(current_page == &Route::Main)),
-                on_click({
-                    let app_state = app_state.clone();
-                    move || app_state.clone().navigate_to(Route::Main)
-                })
-            )),
-            node("li", vec!(
-                text("Counters"),
-                css(css_menu_item(current_page == &Route::Counters)),
-                on_click({
-                    let app_state = app_state.clone();
-                    move || app_state.navigate_to(Route::Counters)
-                })
-            )),
-            node("li", vec!(
-                text("Sudoku"),
-                css(css_menu_item(current_page == &Route::Sudoku)),
-                on_click({
-                    let app_state = app_state.clone();
-                    move || app_state.navigate_to(Route::Sudoku)
-                })
-            )),
-            node("li", vec!(
-                text("Input"),
-                css(css_menu_item(current_page == &Route::Input)),
-                on_click({
-                    let app_state = app_state.clone();
-                    move || app_state.navigate_to(Route::Input)
-                })
-            )),
-            node("li", vec!(
-                text("GitHub Explorer"),
-                css(css_menu_item(current_page == &Route::GithubExplorer)),
-                on_click({
-                    let app_state = app_state.clone();
-                    move || app_state.navigate_to(Route::GithubExplorer)
-                })
-            )),
-            node("li", vec!(
-                text("Game Of Life"),
-                css(css_menu_item(current_page.is_game_of_life())),
-                on_click({
-                    let app_state = app_state.clone();
-                    move || {
-                        let timer = app_state.game_of_life.get_value().start_timer();
-                        let route = Route::GameOfLife {
-                            timer
-                        };
-                        app_state.navigate_to(route);
-                    }
-                })
-            )),
-        )),
-    ))
+    let is_game_of_life = matches!(current_page, Route::GameOfLife { .. });
+
+    html_component! {
+        <div>
+            <ul css={css_menu()}>
+                <li css={css_menu_item(current_page == &Route::Main)} onClick={navigate_to!(state, Main)}> Main </li>
+                <li css={css_menu_item(current_page == &Route::Counters)} onClick={navigate_to!(state, Counters)}> Counters </li>
+                <li css={css_menu_item(current_page == &Route::Sudoku)} onClick={navigate_to!(state, Sudoku)}> Sudoku </li>
+                <li css={css_menu_item(current_page == &Route::Input)} onClick={navigate_to!(state, Input)}> Input </li>
+                <li css={css_menu_item(current_page == &Route::GithubExplorer)} onClick={navigate_to!(state, GithubExplorer)}> Github Explorer </li>
+                <li css={css_menu_item(is_game_of_life)} onClick={navigate_to_gameoflife}> Game Of Life </li>
+            </ul>
+        </div>
+    }
 }
 
 pub fn render(app_state: &Computed<app::State>) -> VDomElement {
-    use node_attr::{build_node, node, text, component};
+    let state = app_state.get_value();
 
-    let header = component(app_state.clone(), render_header);
-
-    let app_state = app_state.get_value();
-
-    build_node("div", vec!(
-        header,
-
-        match *app_state.route.get_value() {
-            Route::Main => {
-                component(app_state.main.clone(), super::main::main_render)
-            }
-
-            Route::Counters =>
-                component(app_state.counters.clone(), super::counters::render),
-
-            Route::Sudoku =>
-                node("div", vec!(
-                    component(app_state.sudoku.clone(), sudoku::examples_render),
-                    component(app_state.sudoku.clone(), sudoku::main_render)
-                )),
-
-            Route::Input =>
-                component(app_state.input.clone(), input::render),
-
-            Route::GithubExplorer =>
-                component(app_state.github_explorer.clone(), github_explorer::render),
-
-            Route::GameOfLife {..} =>
-                component(app_state.game_of_life.clone(), game_of_life::render),
-
-            Route::NotFound =>
-                node("div", vec!(text("Page Not Found"))),
+    let child = match *state.route.get_value() {
+        Route::Main => {
+            component(state.main.clone(), super::main::main_render)
         }
 
-    ))
+        Route::Counters =>
+            component(state.counters.clone(), super::counters::render),
+
+        Route::Sudoku =>
+            html_element! {
+                <div>
+                    <component {sudoku::examples_render} data={state.sudoku.clone()} />
+                    <component {sudoku::main_render} data={state.sudoku.clone()} />
+                </div>
+            },
+
+        Route::Input =>
+            component(state.input.clone(), input::render),
+
+        Route::GithubExplorer =>
+            component(state.github_explorer.clone(), github_explorer::render),
+
+        Route::GameOfLife {..} =>
+            component(state.game_of_life.clone(), game_of_life::render),
+
+        Route::NotFound =>
+            html_element! { <div>Page Not Found</div> },
+    };
+
+    html_component! {
+        <div>
+            <component {render_header} data={app_state.clone()} />
+            {child}
+        </div>
+    }
 }

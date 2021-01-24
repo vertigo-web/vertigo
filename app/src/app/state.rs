@@ -52,7 +52,7 @@ impl State {
             sudoku: sudoku::Sudoku::new(root),
             input: input::State::new(&root),
             github_explorer: github_explorer::State::new(&root, driver),
-            game_of_life: game_of_life,
+            game_of_life,
 
             hash_router,
         };

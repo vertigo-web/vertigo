@@ -222,7 +222,6 @@ fn test_computed_cache() {
 
         let c: Computed<u32> = {
             let a = a.clone();
-            let b = b.clone();
 
             root.from(move || {
                 let a_val = a.get_value();
@@ -276,7 +275,6 @@ fn test_computed_cache() {
 
 #[test]
 fn test_computed_new_value() {
-
     /*
         a
         b
@@ -284,6 +282,8 @@ fn test_computed_new_value() {
         d = a + b
         e = d + c
     */
+
+    #![allow(clippy::many_single_char_names)]
 
     let root = Dependencies::default();
 
@@ -293,7 +293,6 @@ fn test_computed_new_value() {
 
     let d: Computed<u32> = {
         let a = a.clone();
-        let b = b.clone();
 
         root.from(move || {
             let a_val = a.get_value();

@@ -20,7 +20,7 @@ pub enum RefreshState {
 fn calculate_level(
     deps: &Dependencies,
     state_refreshing: &mut BTreeMap::<GraphId, RefreshState>,
-    edges_to_refresh: &Vec<GraphValueRefresh>
+    edges_to_refresh: &[GraphValueRefresh]
 ) -> Vec<GraphValueRefresh> {
     let mut result: Vec<GraphValueRefresh> = Vec::new();
 
@@ -78,7 +78,7 @@ fn drop_edges(deps: &Dependencies) {
     loop {
         let edges = deps.drain_removables();
 
-        if edges.len() == 0 {
+        if edges.is_empty() {
             return;
         }
 
@@ -97,7 +97,7 @@ fn refresh_edges_computed(
     loop {
         let new_edges = calculate_level(deps, state_refreshing, &edges_to_refresh);
 
-        if new_edges.len() == 0 {
+        if new_edges.is_empty() {
             return;
         }
 
@@ -139,11 +139,11 @@ fn refresh_edges_client(deps: &Dependencies, state_refreshing: &mut BTreeMap<Gra
     }
 }
 
-fn crete_state_refreshing(edges_values: &BTreeSet<GraphId>, edges_to_refresh: &Vec<GraphValueRefresh>) -> BTreeMap::<GraphId, RefreshState> {
+fn crete_state_refreshing(edges_values: &BTreeSet<GraphId>, edges_to_refresh: &[GraphValueRefresh]) -> BTreeMap::<GraphId, RefreshState> {
     let mut state_refreshing = BTreeMap::<GraphId, RefreshState>::new();
-    
-    for valute_id in edges_values {
-        state_refreshing.insert(valute_id.clone(), RefreshState::NewValue);
+
+    for value_id in edges_values {
+        state_refreshing.insert(*value_id, RefreshState::NewValue);
     }
 
     for refresh_item in edges_to_refresh.iter() {

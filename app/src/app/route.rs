@@ -40,14 +40,6 @@ impl Route {
             _ => Self::NotFound,
         }
     }
-
-    pub fn is_game_of_life(&self) -> bool {
-        if let Route::GameOfLife {..} = self {
-            true
-        } else {
-            false
-        }
-    }
 }
 
 impl ToString for Route {
@@ -58,8 +50,16 @@ impl ToString for Route {
             Self::Sudoku => "sudoku",
             Self::Input => "input",
             Self::GithubExplorer => "github_explorer",
-            Self::GameOfLife { .. }=> "game_of_life",
+            Self::GameOfLife { .. } => "game_of_life",
             Self::NotFound => "",
         }.to_string()
     }
+}
+
+#[macro_export]
+macro_rules! navigate_to {
+    ($state:ident, $route:ident) => {{
+        let $state = $state.clone();
+        move || $state.navigate_to(Route::$route)
+    }}
 }

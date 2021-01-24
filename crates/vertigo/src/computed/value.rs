@@ -17,7 +17,7 @@ pub struct Value<T: 'static> {
 impl<T: PartialEq + 'static> Clone for Value<T> {
     fn clone(&self) -> Self {
         Value {
-            id: self.id.clone(),
+            id: self.id,
             value: self.value.clone(),
             deps: self.deps.clone(),
         }
@@ -42,13 +42,13 @@ impl<T: PartialEq + 'static> Value<T> {
             });
 
             if value_has_change {
-                self.deps.trigger_change(self.id.clone());
+                self.deps.trigger_change(self.id);
             }
         });
     }
 
     pub fn get_value(&self) -> Rc<T> {
-        self.deps.report_parent_in_stack(self.id.clone());
+        self.deps.report_parent_in_stack(self.id);
 
         self.value.get(|state| {
             state.clone()
@@ -71,9 +71,5 @@ impl<T: PartialEq + 'static> Value<T> {
 impl<T: PartialEq + 'static> PartialEq for Value<T> {
     fn eq(&self, other: &Value<T>) -> bool {
         self.id == other.id
-    }
-
-    fn ne(&self, other: &Value<T>) -> bool {
-        self.id != other.id
     }
 }

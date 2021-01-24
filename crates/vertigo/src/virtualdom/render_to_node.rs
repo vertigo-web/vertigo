@@ -113,7 +113,7 @@ fn get_pair_for_update<'a>(real: &'a RealDomNode, new: &'a VDomNode) -> Option<N
     None
 }
 
-fn update_node_child_updated_with_order(css_manager: &CssManager, target: &VecDeque<RealDomNode>, new_version: &Vec<VDomNode>) -> bool {
+fn update_node_child_updated_with_order(css_manager: &CssManager, target: &VecDeque<RealDomNode>, new_version: &[VDomNode]) -> bool {
     if target.len() != new_version.len() {
         return false;
     }
@@ -152,9 +152,9 @@ fn update_node_child_updated_with_order(css_manager: &CssManager, target: &VecDe
 
 fn update_node_child(css_manager: &CssManager, target: &RealDomElement, new_version: &VDomElement) {
 
-    let mut real_child = target.extract_child();
+    let real_child = target.extract_child();
 
-    let update_order_ok = update_node_child_updated_with_order(css_manager, &mut real_child, &new_version.child);
+    let update_order_ok = update_node_child_updated_with_order(css_manager, &real_child, &new_version.child);
     if update_order_ok {
         target.put_child(real_child);
         return;

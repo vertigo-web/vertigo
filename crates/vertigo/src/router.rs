@@ -45,7 +45,6 @@ impl HashRouter {
         });
 
         let receiver = driver.on_hash_route_change({
-            let direction = direction.clone();
             Box::new(move |url: String| {
                 direction.change_no_params(|state| *state = Direction::Popping);
                 callback(url);

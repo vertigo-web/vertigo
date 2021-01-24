@@ -24,7 +24,7 @@ impl GraphMap {
 
         let should_clear = if let Some(parent_list) = parent_list {
             parent_list.remove(&client_id);
-            parent_list.len() == 0
+            parent_list.is_empty()
         } else {
             log::error!("Missing relation in GraphMap");
             false

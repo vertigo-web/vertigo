@@ -65,7 +65,7 @@ impl<T: PartialEq + 'static> GraphValueData<T> {
         let mut list_relations: Vec<GraphRelation> = Vec::new();
 
         for parent_id in edges {
-            list_relations.push(GraphRelation::new(self.deps.clone(), parent_id, self.id.clone()));
+            list_relations.push(GraphRelation::new(self.deps.clone(), parent_id, self.id));
         }
 
         list_relations
@@ -281,7 +281,7 @@ impl<T: PartialEq + 'static> GraphValue<T> {
 
     pub(crate) fn id(&self) -> GraphId {
         self.inner.inner.get(|state| {
-            state.id.clone()
+            state.id
         })
     }
 }

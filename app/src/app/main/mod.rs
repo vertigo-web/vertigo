@@ -67,10 +67,9 @@ pub fn main_render(state: &Computed<MainState>) -> VDomElement {
     };
 
     let on_up = {
-        let app_state = state.clone();
         move || {
             log::info!("on click");
-            app_state.increment();
+            state.increment();
         }
     };
 

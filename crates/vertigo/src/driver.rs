@@ -101,7 +101,7 @@ pub trait DomDriverTrait {
     fn set_interval(&self, time: u32, func: Box<dyn Fn()>) -> DropResource;
 }
 
-type Executor = Box<dyn Fn(Pin<Box<dyn Future<Output = ()> + 'static>>) -> ()>;
+type Executor = Box<dyn Fn(Pin<Box<dyn Future<Output = ()> + 'static>>)>;
 
 #[derive(PartialEq)]
 pub struct DomDriver {
