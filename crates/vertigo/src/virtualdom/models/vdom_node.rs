@@ -81,8 +81,4 @@ impl PartialEq for VDomElement {
     fn eq(&self, _other: &VDomElement) -> bool {
         false                                       //Always not-eq
     }
-
-    fn ne(&self, _other: &VDomElement) -> bool {
-        true
-    }
 }

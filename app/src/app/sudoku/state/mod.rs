@@ -65,8 +65,8 @@ fn creatergid_view(
     grid_possible_last: SudokuSquare<SudokuSquare<PossibleValuesLast>>,
 ) -> SudokuSquare<SudokuSquare<Cell>> {
 
-    return SudokuSquare::create_with_iterator(|level0x, level0y| {
-        return SudokuSquare::create_with_iterator(|level1x, level1y| {
+    SudokuSquare::create_with_iterator(|level0x, level0y| {
+        SudokuSquare::create_with_iterator(|level1x, level1y| {
             let number = (*grid_number.get_from(level0x, level0y).get_from(level1x, level1y)).clone();
             let possible = (*grid_possible.get_from(level0x, level0y).get_from(level1x, level1y)).clone();
             let possible_last = (*grid_possible_last.get_from(level0x, level0y).get_from(level1x, level1y)).clone();
@@ -74,11 +74,11 @@ fn creatergid_view(
             Cell {
                 number,
                 possible,
-                possible_last: possible_last,
+                possible_last,
                 show_delete: deps.new_value(true)
             }
-        });
-    });
+        })
+    })
 }
 
 #[derive(PartialEq)]

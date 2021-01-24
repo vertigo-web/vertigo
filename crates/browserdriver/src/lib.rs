@@ -150,7 +150,7 @@ fn find_event_on_input(inner: &Rc<BoxRefCell<DomDriverBrowserInner>>, id: u64) -
             if let Some(on_input) = &item.on_input {
                 return Some(on_input.clone());
             }
-            return None;
+            None
         }
     );
     on_input
@@ -419,7 +419,7 @@ impl DomDriverBrowserInner {
             },
         }
 
-        self.child_parent.insert(child.clone(), parent);
+        self.child_parent.insert(child, parent);
     }
 
     fn set_event(&mut self, node_id: RealDomId, callback: EventCallback) {
@@ -450,7 +450,7 @@ impl DomDriverBrowserInner {
     }
 
     fn get_hash_location(&self) -> String {
-        self.window.location().hash().expect("Can't read hash from location bar").to_string()
+        self.window.location().hash().expect("Can't read hash from location bar")
     }
 
     fn push_hash_location(&self, path: &str) {
@@ -474,11 +474,9 @@ impl DomDriverBrowser {
             driver,
         };
 
-        let driver = DomDriver::new(dom_driver_browser, Box::new(|fut: Pin<Box<dyn Future<Output = ()> + 'static>>| {
+        DomDriver::new(dom_driver_browser, Box::new(|fut: Pin<Box<dyn Future<Output = ()> + 'static>>| {
             wasm_bindgen_futures::spawn_local(fut);
-        }));
-
-        driver
+        }))
     }
 }
 

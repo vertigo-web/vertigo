@@ -30,7 +30,7 @@ impl Graph {
             return;
         }
 
-        self.parent_childs.add_connection(parent_id.clone(), client_id.clone());
+        self.parent_childs.add_connection(parent_id, client_id);
         self.client_parents.add_connection(client_id, parent_id);
         self.counters.insert(id, 1);
     }
@@ -54,7 +54,7 @@ impl Graph {
         };
 
         if should_clear {
-            self.parent_childs.remove_connection(parent_id.clone(), client_id.clone());
+            self.parent_childs.remove_connection(parent_id, client_id);
             self.client_parents.remove_connection(client_id, parent_id);
             self.counters.remove(&id);
 
@@ -80,7 +80,7 @@ impl Graph {
         let mut to_traverse: Vec<GraphId> = Vec::new();
 
         for item in edges.iter() {
-            to_traverse.push(item.clone());
+            to_traverse.push(*item);
         }
 
         loop {
@@ -94,8 +94,8 @@ impl Graph {
                         for item in list {
                             let is_contain = result.contains(item);
                             if !is_contain {
-                                result.insert(item.clone());
-                                to_traverse.push(item.clone());
+                                result.insert(*item);
+                                to_traverse.push(*item);
                             }
                         }
                     }
@@ -141,7 +141,7 @@ impl Graph {
     pub fn all_connections_len(&self) -> u64 {
         let mut count: u64 = 0;
 
-        for (_, item_count) in &self.counters { //}: BTreeMap<(GraphId, GraphId), u8>,
+        for item_count in self.counters.values() { //}: BTreeMap<(GraphId, GraphId), u8>,
             count += *item_count as u64;
         }
 

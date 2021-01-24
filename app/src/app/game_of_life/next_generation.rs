@@ -58,18 +58,13 @@ fn next_life(current_life: bool, neighbours: usize) -> bool {
     current_life && neighbours == 2
 }
 
-pub fn next_generation(root: &Dependencies, x_count: u16, y_count: u16, matrix: &Vec<Vec<Value<bool>>>) {
+pub fn next_generation(root: &Dependencies, x_count: u16, y_count: u16, matrix: &[Vec<Value<bool>>]) {
     let mut next_generation: Vec<Vec<bool>> = {
 
         let mut matrix = Vec::new();
 
         for _ in 0..y_count {
-            let mut row = Vec::new();
-            
-            for _ in 0..x_count {
-                row.push(false);
-            }
-            
+            let row = vec!(false; x_count.into());
             matrix.push(row);
         }
 

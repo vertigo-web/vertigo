@@ -36,10 +36,6 @@ impl<T> PartialEq for EqBox<T> {
     fn eq(&self, other: &EqBox<T>) -> bool {
         self.id == other.id
     }
-
-    fn ne(&self, other: &EqBox<T>) -> bool {
-        self.id != other.id
-    }
 }
 
 impl<T> Debug for EqBox<T> {

@@ -38,7 +38,7 @@ impl<T: PartialEq + 'static> Computed<T> {
     }
 
     pub fn subscribe<F: Fn(&T) + 'static>(self, call: F) -> Client {
-        Client::new(self.inner.deps(), self.clone(), call)
+        Client::new(self.inner.deps(), self, call)
     }
 
     pub fn dependencies(&self) -> Dependencies {
@@ -57,10 +57,9 @@ impl<T: PartialEq + 'static> Computed<T> {
     pub fn map<K: PartialEq, F: 'static + Fn(&Computed<T>) -> Rc<K>>(self, fun: F) -> Computed<K> {
         let deps = self.inner.deps();
 
-        Computed::new(deps, move || {
-            let result = fun(&self);
-            result
-        })
+        Computed::new(deps, move ||
+            fun(&self)
+        )
     }
 
     pub fn id(&self) -> GraphId {
@@ -71,9 +70,5 @@ impl<T: PartialEq + 'static> Computed<T> {
 impl<T: PartialEq + 'static> PartialEq for Computed<T> {
     fn eq(&self, other: &Computed<T>) -> bool {
         self.inner.id() == other.inner.id()
-    }
-
-    fn ne(&self, other: &Computed<T>) -> bool {
-        self.inner.id() != other.inner.id()
     }
 }

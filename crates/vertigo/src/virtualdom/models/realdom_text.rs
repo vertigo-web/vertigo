@@ -17,7 +17,7 @@ impl RealDomText {
         dom_driver.create_text(id.clone(), &value);
 
         RealDomText {
-            dom_driver: dom_driver,
+            dom_driver,
             id_dom: id,
             value: BoxRefCell::new(value),
         }

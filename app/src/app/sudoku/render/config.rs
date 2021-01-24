@@ -26,15 +26,15 @@ impl Config {
 
         Config {
             border,
-            item_width: item_width,
-            item_possible_width: item_possible_width,
-            item_border_size: item_border_size,
-            item_width_size: item_width_size,
-            item_width_size_outher: item_width_size_outher,
-            group_border_size: group_border_size,
-            group_width_size: group_width_size,
-            group_width_size_outher: group_width_size_outher,
-            all_width: all_width,
+            item_width,
+            item_possible_width,
+            item_border_size,
+            item_width_size,
+            item_width_size_outher,
+            group_border_size,
+            group_width_size,
+            group_width_size_outher,
+            all_width,
         }
     }
 }
