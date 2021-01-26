@@ -3,22 +3,17 @@ use super::state::State;
 use vertigo::{
     computed::Computed,
     VDomElement,
-    Css
 };
 
-use vertigo_html::{Inline, html_component};
+use vertigo_html::{Inline, html_component, css_fn, css_fn_push};
 
-fn css_box() -> Css {
-    Css::one("
-        margin: 5px;
-    ")
-}
+css_fn! { css_box, {
+    margin: 5px;
+}}
 
-fn css_button() -> Css {
-    css_box().push("
-        cursor: pointer;
-    ")
-}
+css_fn_push! { css_button, css_box, {
+    cursor: pointer;
+}}
 
 /*
         &:hover {
@@ -26,16 +21,14 @@ fn css_button() -> Css {
         }
 */
 
-fn css_wrapper() -> Css {
-    Css::one("
-        border:1px solid black;
-        margin: 5px 0;
-    ")
-}
+css_fn! { css_wrapper, {
+    border: 1px solid black;
+    margin: 5px 0;
+}}
 
 pub fn render(simple_counter: &Computed<State>) -> VDomElement {
     let simple_counter = simple_counter.get_value();
-    let calue = *(simple_counter.counter.get_value());
+    let value = *(simple_counter.counter.get_value());
 
     let click_up = {
         let simple_counter = simple_counter.clone();
@@ -52,7 +45,7 @@ pub fn render(simple_counter: &Computed<State>) -> VDomElement {
 
     html_component! {
         <div css={css_wrapper()}>
-            <div css={css_box()}>{$ format!("Counter value = {}", calue) $}</div>
+            <div css={css_box()}>{$ format!("Counter value = {}", value) $}</div>
             <button css={css_button()} onClick={click_up}>up</button>
             <button css={css_button()} onClick={click_down}>down</button>
         </div>

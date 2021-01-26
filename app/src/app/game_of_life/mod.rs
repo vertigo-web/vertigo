@@ -11,7 +11,7 @@ use vertigo::{
     node_attr,
     utils::DropResource
 };
-use vertigo_html::{Inline, NodeAttr, html_component, html_element};
+use vertigo_html::{Inline, NodeAttr, html_component, html_element, css, css_fn};
 
 mod next_generation;
 
@@ -89,44 +89,32 @@ impl State {
     }
 }
 
-fn css_wrapper() -> Css {
-    Css::one("
-        border: 1px solid black;
-        padding: 10px;
-        margin: 10px;
-        background-color: #e0e0e0;
-    ")
-}
+css_fn! { css_wrapper, {
+    border: 1px solid black;
+    padding: 10px;
+    margin: 10px;
+    background-color: #e0e0e0;
+}}
 
-fn css_row() -> Css {
-    Css::one("
-        display: flex;
-        flex-direction: row;
-        height: 10px
-    ")
-}
+css_fn! { css_row, {
+    display: flex;
+    flex-direction: row;
+    height: 10px;
+}}
 
 fn css_cell(is_active: bool) -> Css {
-    let mut css = Css::one("
+    let color = if is_active { "black" } else { "white" };
+    css! {
         width: 10px;
         height: 10px;
         cursor: pointer;
-    ");
-
-    if is_active {
-        css.str("background-color: black");
-    } else {
-        css.str("background-color: white");
+        background-color: { color };
     }
-
-    css
 }
 
-fn css_button() -> Css {
-    Css::one("
-        cursor: pointer;
-    ")
-}
+css_fn! { css_button, {
+    cursor: pointer;
+}}
 
 fn render_header(state: &Computed<State>) -> VDomElement {
     let state = state.get_value();

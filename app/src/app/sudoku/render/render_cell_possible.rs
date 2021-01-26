@@ -1,69 +1,65 @@
 use vertigo::{computed::Computed, VDomElement, node_attr, Css};
-use vertigo_html::{Inline, html_component, html_element};
+use vertigo_html::{Inline, html_component, html_element, css};
 
 use crate::app::sudoku::state::{Cell, number_item::SudokuValue};
 use super::config::Config;
 
 // fn cssCell() -> Css {
 //     let config = Config::new();
-//     Css::new(format!("
-//         border: {}px solid green;
-//         width: {}px;
-//         height: {}px;
-//     ", config.itemBorderSize, config.itemWidthSize, config.itemWidthSize))
+//     css! {
+//         border: {config.item_border_size}px solid green;
+//         width: {config.item_width_size}px;
+//         height: {config.item_width_size}px;
+//     }
 // }
 
 fn css_item_only_one() -> Css {
     let config = Config::new();
-    Css::new(format!("
+    css! {
         display: flex;
         align-items: center;
         justify-content: center;
-        width: {}px;
-        height: {}px;
+        width: {config.item_width}px;
+        height: {config.item_width}px;
         background-color: #00ff00;
         font-size: 40px;
         color: blue;
         cursor: pointer;
-    ", config.item_width, config.item_width))
+    }
 }
 
 fn css_wrapper_one() -> Css {
     let config = Config::new();
-    Css::new(format!("
-        width: {}px;
-        height: {}px;
-    ", config.item_width, config.item_width))
+    css! {
+        width: {config.item_width}px;
+        height: {config.item_width}px;
+    }
 }
 
 fn css_wrapper() -> Css {
     let config = Config::new();
-    Css::new(format!("
-        width: {}px;
-        height: {}px;
+    css! {
+        width: {config.item_width}px;
+        height: {config.item_width}px;
 
         display: grid;
         grid-template-columns: 1fr 1fr 1fr;
         grid-template-rows: 1fr 1fr 1fr;
         flex-shrink: 0;
-    ", config.item_width, config.item_width))
+    }
 }
 
 fn css_item(should_show: bool) -> Css {
-    let mut css = Css::one("
+    let bg_color = if should_show { "#00ff0030" } else { "inherit" };
+    let cursor = if should_show { "pointer" } else { "inherit" };
+
+    css! {
         display: flex;
         align-items: center;
         justify-content: center;
-    ");
-
-    if should_show {
-        css.str("
-            background-color: #00ff0030;
-            cursor: pointer;
-        ");
+        background-color: {bg_color};
+        cursor: {cursor};
     }
-
-    css
 }
 
 pub fn render_cell_possible(item: &Computed<Cell>) -> VDomElement {
@@ -75,9 +71,9 @@ pub fn render_cell_possible(item: &Computed<Cell>) -> VDomElement {
     let only_one_possible = possible.len() == 1;
 
     if only_one_possible {
-        let mut out = Vec::new();
-
-        out.push(css(css_wrapper_one()));
+        let mut out = vec![
+            css(css_wrapper_one())
+        ];
 
         for number in possible.iter() {
             let on_set = {
@@ -124,8 +120,9 @@ pub fn render_cell_possible(item: &Computed<Cell>) -> VDomElement {
     }
 
 
-    let mut out = Vec::new();
-    out.push(css(css_wrapper()));
+    let mut out = vec![
+        css(css_wrapper())
+    ];
 
     for number in SudokuValue::variants() {
         let should_show = possible.contains(&number);

@@ -4,7 +4,7 @@ use vertigo::{
     Css,
     node_attr::component,
 };
-use vertigo_html::{Inline, html_component, html_element};
+use vertigo_html::{Inline, html_component, html_element, css, css_fn};
 
 use crate::{app, navigate_to};
 
@@ -14,25 +14,22 @@ use super::game_of_life;
 use super::github_explorer;
 use super::route::Route;
 
-fn css_menu() -> Css {
-    Css::one("
-        list-style-type: none;
-        margin: 10px;
-        padding: 0;
-    ")
-}
+css_fn! { css_menu, {
+    list-style-type: none;
+    margin: 10px;
+    padding: 0;
+}}
 
 fn css_menu_item(active: bool) -> Css {
-    Css::new(
-        format!("
-            display: inline;
-            width: 60px;
-            padding: 5px 10px;
-            margin: 5px;
-            cursor: pointer;
-            background-color: {};
-        ", if active { "lightblue" } else { "lightgreen" })
-    )
+    let bg_color = if active { "lightblue" } else { "lightgreen" };
+    css! {
+        display: inline;
+        width: 60px;
+        padding: 5px 10px;
+        margin: 5px;
+        cursor: pointer;
+        background-color: {bg_color};
+    }
 }
 
 fn render_header(app_state: &Computed<app::State>) -> VDomElement {

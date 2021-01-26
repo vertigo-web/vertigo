@@ -71,3 +71,19 @@ fn div_with_value_expression() {
     let inner = get_text(&div.child[0]);
     assert_eq!(inner.value, "9")
 }
+
+#[test]
+fn div_with_rc_string_expression() {
+    let title = std::rc::Rc::new(String::from("The Title"));
+    let div = html_component! {
+        <div>
+            { title }
+        </div>
+    };
+
+    assert_eq!(div.name, "div");
+    assert_eq!(div.child.len(), 1);
+
+    let inner = get_text(&div.child[0]);
+    assert_eq!(inner.value, "The Title")
+}

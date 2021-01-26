@@ -7,7 +7,7 @@ use vertigo::{
         Dependencies
     },
 };
-use vertigo_html::{Inline, html_component, html_element};
+use vertigo_html::{Inline, html_component, html_element, css, css_fn, css_fn_push};
 
 mod spinner;
 
@@ -38,22 +38,23 @@ impl MainState {
 }
 
 fn css_footer(show_color: bool) -> Css {
-    let base = Css::one("background-color: yellow;");
-
-    if show_color {
-        base.push("color: green;")
-    } else {
-        base.push("color: blue;")
+    let color = if show_color { "green" } else { "blue" };
+    css! {
+        background-color: yellow;
+        color: { color };
     }
 }
 
-fn css_bg() -> Css {
-    Css::one("border: 1px solid black; padding: 10px; background-color: #e0e0e0;margin-bottom: 10px;")
-}
+css_fn! { css_bg, {
+    border: 1px solid black;
+    padding: 10px;
+    background-color: #e0e0e0;
+    margin-bottom: 10px;
+}}
 
-fn css_button() -> Css {
-    css_bg().push("cursor: pointer;")
-}
+css_fn_push! { css_button, css_bg, {
+    cursor: pointer;
+}}
 
 pub fn main_render(state: &Computed<MainState>) -> VDomElement {
     let state = state.get_value();
