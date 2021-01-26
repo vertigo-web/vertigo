@@ -1,5 +1,5 @@
 use vertigo::{computed::Computed, VDomElement, Css};
-use vertigo_html::html_component;
+use vertigo_html::{html_component, css_fn, css};
 
 use self::config::Config;
 use super::state::{Cell, Sudoku, sudoku_square::SudokuSquare, tree_box::TreeBoxIndex};
@@ -8,48 +8,46 @@ pub mod config;
 pub mod render_cell_value;
 pub mod render_cell_possible;
 
-fn css_center() -> Css {
-    Css::one("
-        display: flex;
-        justify-content: center;
-    ")
-}
+css_fn! { css_center, {
+    display: flex;
+    justify-content: center;
+}}
 
 fn css_wrapper() -> Css {
     let config = Config::new();
-    Css::new(format!("
+    css! {
         display: grid;
         grid-template-columns: 1fr 1fr 1fr;
         flex-shrink: 0;
 
-        width: {}px;
-        height: {}px;
+        width: {config.all_width}px;
+        height: {config.all_width}px;
 
         border: 2px solid blue;
-    ", config.all_width, config.all_width))
+    }
 }
 
 fn css_item_wrapper() -> Css {
     let config = Config::new();
-    Css::new(format!("
-        border: {}px solid black;
+    css! {
+        border: {config.group_border_size}px solid black;
 
-        width: {}px;
-        height: {}px;
+        width: {config.group_width_size}px;
+        height: {config.group_width_size}px;
 
         display: grid;
         grid-template-columns: 1fr 1fr 1fr;
         flex-shrink: 0;
-    ", config.group_border_size, config.group_width_size, config.group_width_size))
+    }
 }
 
 fn css_cell_wrapper() -> Css {
     let config = Config::new();
-    Css::new(format!("
-        border: {}px solid green;
-        width: {}px;
-        height: {}px;
-    ", config.item_border_size, config.item_width_size, config.item_width_size))
+    css! {
+        border: {config.item_border_size}px solid green;
+        width: {config.item_width_size}px;
+        height: {config.item_width_size}px;
+    }
 }
 
 fn render_cell(item: &Computed<Cell>) -> VDomElement {
@@ -129,20 +127,17 @@ pub fn main_render(sudoku: &Computed<Sudoku>) -> VDomElement {
     }
 }
 
-fn css_sudoku_example() -> Css {
-    Css::one("
-        border: 1px solid black;
-        padding: 10px;
-        margin: 10px 0;
-    ")
-}
+css_fn! { css_sudoku_example, {
+    border: 1px solid black;
+    padding: 10px;
+    margin: 10px 0;
+}}
 
-fn css_sudoku_example_button() -> Css {
-    Css::one("
-        margin: 5px;
-        cursor: pointer;
-    ")
-}
+css_fn! { css_sudoku_example_button, {
+    margin: 5px;
+    cursor: pointer;
+}}
+
 pub fn examples_render(sudoku: &Computed<Sudoku>) -> VDomElement {
     let sudoku = sudoku.get_value();
 

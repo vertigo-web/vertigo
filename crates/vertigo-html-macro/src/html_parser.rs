@@ -1,11 +1,10 @@
-
 use pest::{Parser, iterators::Pair};
 
 use proc_macro2::{TokenStream, Ident, Span};
 use syn::{Expr, parse_str};
 
 #[derive(Parser)]
-#[grammar = "grammar.pest"]
+#[grammar = "html.pest"]
 pub struct HtmlParser;
 
 impl HtmlParser {

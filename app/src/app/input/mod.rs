@@ -6,9 +6,8 @@ use vertigo::{
         Value
     },
     VDomElement,
-    Css,
 };
-use vertigo_html::{Inline, html_component};
+use vertigo_html::{Inline, html_component, css_fn};
 // use virtualdom::vdom::StateBox::StateBox;
 
 #[derive(PartialEq)]
@@ -34,36 +33,28 @@ impl State {
     // }
 }
 
-fn wrapper() -> Css {
-    Css::one("
-        border: 1px solid black;
-        margin: 20px 0;
-        padding: 10px;
-    ")
-}
+css_fn! { wrapper, {
+    border: 1px solid black;
+    margin: 20px 0;
+    padding: 10px;
+}}
 
-fn input_css() -> Css {
-    Css::one("
-        margin-left: 10px;
-    ")
-}
+css_fn! { input_css, {
+    margin-left: 10px;
+}}
 
-fn button_css() -> Css {
-    Css::one("
-        margin: 0 10px;
-        cursor: pointer;
-    ")
-}
+css_fn! { button_css, {
+    margin: 0 10px;
+    cursor: pointer;
+}}
 
-fn text_css() -> Css {
-    Css::one("
-        width: 600px;
-        height: 300px;
-        border: 1px solid black;
-        padding: 5px;
-        margin: 10px;
-    ")
-}
+css_fn! { text_css, {
+    width: 600px;
+    height: 300px;
+    border: 1px solid black;
+    padding: 5px;
+    margin: 10px;
+}}
 
 pub fn render(state: &Computed<State>) -> VDomElement {
     let state = state.get_value();

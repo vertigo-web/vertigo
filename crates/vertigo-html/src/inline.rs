@@ -24,6 +24,12 @@ impl Inline for String {
     }
 }
 
+impl Inline for Rc<String> {
+    fn embed(self) -> NodeAttr {
+        text(&*self)
+    }
+}
+
 macro_rules! impl_to_string {
     ($ty: ty) => {
         impl Inline for $ty {

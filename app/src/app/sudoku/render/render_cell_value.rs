@@ -1,5 +1,5 @@
 use vertigo::{computed::Computed, VDomElement, Css};
-use vertigo_html::{Inline, html_component, html_element};
+use vertigo_html::{Inline, html_component, html_element, css, css_fn};
 
 use crate::app::sudoku::state::{Cell, number_item::SudokuValue};
 
@@ -7,33 +7,31 @@ use super::config::Config;
 
 fn css_item_number_wrapper() -> Css {
     let config = Config::new();
-    Css::new(format!("
+    css! {
         position: relative;
         text-align: center;
         font-size: 40px;
         color: blue;
-        height: {}px;
-        line-height: {}px;
-    ", config.item_width_size, config.item_width_size))
+        height: {config.item_width_size}px;
+        line-height: {config.item_width_size}px;
+    }
 }
 
-fn css_delete() -> Css {
-    Css::one("
-        position: absolute;
-        top: 3px;
-        right: 3px;
-        width: 20px;
-        height: 20px;
-        background-color: #ff000030;
-        cursor: pointer;
-        font-size: 12px;
-        line-height: 12px;
+css_fn! { css_delete, {
+    position: absolute;
+    top: 3px;
+    right: 3px;
+    width: 20px;
+    height: 20px;
+    background-color: #ff000030;
+    cursor: pointer;
+    font-size: 12px;
+    line-height: 12px;
 
-        display: flex;
-        align-items: center;
-        justify-content: center;
-    ")
-}
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}}
 
 
 

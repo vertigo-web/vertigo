@@ -38,9 +38,9 @@ impl State {
                 log::info!("Creating for {}", repo_name);
                 let new_value = root_inner.new_value(Resource::Loading);
                 let new_computed = new_value.to_computed();
-    
+
                 fetch_repo(repo_name.as_str(), new_value, &driver_inner);
-    
+
                 new_computed
             }),
         })

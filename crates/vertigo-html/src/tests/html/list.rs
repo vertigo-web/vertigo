@@ -4,10 +4,10 @@ use super::utils::*;
 
 #[test]
 fn div_with_list() {
-    let mut list = Vec::new();
-
-    list.push(html_element! { <input /> });
-    list.push(html_element! { <button /> });
+    let list = vec![
+        html_element! { <input /> },
+        html_element! { <button /> },
+    ];
 
     let div = html_component! {
         <div>
@@ -32,10 +32,10 @@ fn div_with_list() {
 #[test]
 #[ignore]
 fn div_with_element_after_list() {
-    let mut list = Vec::new();
-
-    list.push(html_element! { <input /> });
-    list.push(html_element! { <button /> });
+    let list = vec![
+        html_element! { <input /> },
+        html_element! { <button /> },
+    ];
 
     let div = html_component! {
         <div>

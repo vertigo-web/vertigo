@@ -194,9 +194,7 @@ impl DomDriverBrowserInner {
             )
         );
 
-        let mut dom_event_disconnect = Vec::new();
-
-        dom_event_disconnect.push({
+        let mut dom_event_disconnect = vec![{
             let inner = inner.clone();
 
             DomEvent::new_event(&root, "mousedown",move |event: web_sys::Event| {
@@ -210,7 +208,7 @@ impl DomDriverBrowserInner {
                     event_to_run();
                 }
             })
-        });
+        }];
 
         // dom_event_disconnect.push({
         //     let inner = inner.clone();
