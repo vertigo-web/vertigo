@@ -115,17 +115,17 @@ impl HtmlParser {
             match pair.as_rule() {
                 Rule::vcomp_render_func => {
                     let value = pair.into_inner().next().unwrap().as_str();
-                    render_func = Some(parse_str(value).unwrap_or_else(|e| {
+                    render_func = parse_str(value).map_err(|e| {
                         emit_error!(call_site, "Error while parsing `{}`: {}", value, e);
-                        Expr::__Nonexhaustive
-                    }));
+                        e
+                    }).ok();
                 },
                 Rule::vcomp_data_attr => {
                     let value = pair.into_inner().next().unwrap().as_str();
-                    data_expr = Some(parse_str(value).unwrap_or_else(|e| {
+                    data_expr = parse_str(value).map_err(|e| {
                         emit_error!(call_site, "Error while parsing `{}`: {}", value, e);
-                        Expr::__Nonexhaustive
-                    }));
+                        e
+                    }).ok();
                 }
                 _ => {
                     emit_warning!(call_site, "HTML: unhandler pair in generate_component: {:?}", pair);
@@ -151,10 +151,7 @@ impl HtmlParser {
         match velem_value.as_rule() {
             Rule::attr_expression_value => {
                 let value = velem_value.as_str();
-                let expr: Expr = parse_str(value).unwrap_or_else(|e| {
-                    emit_error!(call_site, "Error while parsing `{}`: {}", value, e);
-                    Expr::__Nonexhaustive
-                });
+                let expr: Expr = parse_str(value).unwrap_or_else(|e| panic!("Error while parsing `{}`: {}", value, e));
                 return quote! { #expr }
             }
             _ => {
@@ -184,10 +181,7 @@ impl HtmlParser {
         match pair.as_rule() {
             Rule::expression_value => {
                 let value = pair.as_str();
-                let expr: Expr = parse_str(value).unwrap_or_else(|e| {
-                    emit_error!(call_site, "Error while parsing `{}`: {}", value, e);
-                    Expr::__Nonexhaustive
-                });
+                let expr: Expr = parse_str(value).unwrap_or_else(|e| panic!("Error while parsing `{}`: {}", value, e));
                 quote! { (#expr) .embed() }
             },
             _ => {
@@ -202,10 +196,7 @@ impl HtmlParser {
         match pair.as_rule() {
             Rule::expression_value => {
                 let value = pair.as_str();
-                let expr: Expr = parse_str(value).unwrap_or_else(|e| {
-                    emit_error!(call_site, "Error while parsing `{}`: {}", value, e);
-                    Expr::__Nonexhaustive
-                });
+                let expr: Expr = parse_str(value).unwrap_or_else(|e| panic!("Error while parsing `{}`: {}", value, e));
                 quote! { #expr }
             },
             _ => {
@@ -241,10 +232,7 @@ impl HtmlParser {
         match expression_val.as_rule() {
             Rule::attr_expression_value => {
                 let value = expression_val.as_str();
-                let expr: Expr = parse_str(value).unwrap_or_else(|e| {
-                    emit_error!(call_site, "Error while parsing `{}`: {}", value, e);
-                    Expr::__Nonexhaustive
-                });
+                let expr: Expr = parse_str(value).unwrap_or_else(|e| panic!("Error while parsing `{}`: {}", value, e));
                 if attr_key_opt.is_some() {
                     // Vertigo attribute
                     let attr_key = Ident::new(attr_key, call_site);
