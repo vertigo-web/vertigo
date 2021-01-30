@@ -8,10 +8,10 @@ edition = "2018"
 
 [dependencies]
 vertigo = { path = "../../crates/vertigo" }
-wasm-bindgen = {version = "0.2.63", features = ["nightly", "serde-serialize"]}
-wasm-bindgen-futures = "0.4.19"
-log = "0.4.11"
-web-sys = { version="0.3.46", features=[
+wasm-bindgen = {version = "0.2.70", features = ["nightly", "serde-serialize"]}
+wasm-bindgen-futures = "0.4.20"
+log = "0.4.14"
+web-sys = { version="0.3.47", features=[
     "Document",
     "Headers",
     "History",
