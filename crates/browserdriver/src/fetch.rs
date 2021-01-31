@@ -14,13 +14,18 @@ pub fn fetch(
     method: FetchMethod,
     url: String,
     headers: Option<HashMap<String, String>>,
-    _body: Option<String>
+    body: Option<String>
 ) -> Pin<Box<dyn Future<Output=Result<String, FetchError>> + 'static>> {
     Box::pin(async move {
         let mut opts = RequestInit::new();
         opts.method(method.to_string());
         //opts.mode(RequestMode::Cors);
 
+        if let Some(body) = body {
+            let value = JsValue::from_str(body.as_str());
+            opts.body(Some(&value));
+        }
+    
         let request = Request::new_with_str_and_init(&url, &opts).unwrap();
 
         if let Some(headers) = headers {
@@ -30,6 +35,8 @@ pub fn fetch(
                 request_headers.set(key, val).unwrap();
             }
         }
+
+        request.headers().set("Content-Type", "application/json").unwrap();
 
         let window = web_sys::window().unwrap();
 
