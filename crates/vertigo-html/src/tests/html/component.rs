@@ -14,16 +14,16 @@ fn div_with_text() {
     let value = Value::new(deps, "old value".to_string());
 
     fn my_component(state: &Computed<String>) -> VDomElement {
-        html_component! {
+        html_component!("
             <div>Value {state.get_value().as_str()}</div>
-        }
+        ")
     }
 
-    let div = html_component! {
+    let div = html_component!("
         <div>
             <component {my_component} data={value.to_computed()} />
         </div>
-    };
+    ");
 
     assert_eq!(div.name, "div");
     assert_eq!(div.child.len(), 1);

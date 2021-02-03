@@ -1,6 +1,6 @@
 use vertigo_html::{html_element, css_fn, NodeAttr};
 
-css_fn! { spinner_css, {
+css_fn! { spinner_css, "
     width: 40px;
     height: 40px;
     background-color: #d26913;
@@ -17,11 +17,11 @@ css_fn! { spinner_css, {
             opacity: 0;
         }
     };
-}}
+" }
 
 pub fn spinner() -> NodeAttr {
-    html_element! {
+    html_element!("
         <div css={spinner_css()}>
         </div>
-    }
+    ")
 }

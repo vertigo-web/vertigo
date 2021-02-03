@@ -66,13 +66,13 @@ impl CssParser {
         let mut pairs = pair.into_inner();
         let rule_ident = pairs.next().unwrap();
 
-        let ident_str = rule_ident.as_str().replace(" ", "");
+        let ident_str = rule_ident.as_str();
         let mut value_strs = Vec::new();
 
         for value in pairs {
             let value_str = match value.as_rule() {
-                Rule::color_value => value.as_str().replace(" ", ""),
-                Rule::unquoted_value => value.as_str().replace(" %", "%"),
+                Rule::color_value => value.as_str().to_string(),
+                Rule::unquoted_value => value.as_str().to_string(),
                 Rule::quoted_value => value.as_str().to_string(),
                 Rule::expression => {
                     params.insert(
@@ -97,13 +97,13 @@ impl CssParser {
 
         for value in pairs {
             let value_str = match value.as_rule() {
-                Rule::animation_params_fallback => value.as_str().replace(" - ", "-").replace(" %", "%"),
+                Rule::animation_params_fallback => value.as_str().to_string(),
                 Rule::frames => {
                     let frames_strs = value.into_inner()
                         .into_iter()
                         .map(|frame| {
                             let mut frame_children = frame.into_inner();
-                            let step = frame_children.next().unwrap().as_str().replace(" %", "%");
+                            let step = frame_children.next().unwrap().as_str();
                             let frame_rules = frame_children
                                 .map(|rule| {
                                     // emit_warning!(call_site, "{:?}", rule);

@@ -7,9 +7,9 @@ use super::utils::*;
 
 #[test]
 fn button() {
-    let button = html_component! {
+    let button = html_component!("
         <button>Label</button>
-    };
+    ");
 
     assert_eq!(button.name, "button");
     assert_eq!(button.child.len(), 1);
@@ -29,9 +29,9 @@ fn clickable_button() {
         }
     };
 
-    let button = html_component! {
+    let button = html_component!("
         <button onClick={on_click} />
-    };
+    ");
 
     assert_empty(&button, "button");
 
@@ -45,11 +45,11 @@ fn clickable_button() {
 fn button_with_css() {
     fn my_css() -> Css { Css::one("background-color: gray") }
 
-    let button = html_component! {
+    let button = html_component!("
         <button css={my_css()}>
             Some text
         </button>
-    };
+    ");
 
     assert_eq!(button.name, "button");
     assert_eq!(button.child.len(), 1);

@@ -6,10 +6,10 @@ use super::utils::*;
 
 #[test]
 fn unknown_rule() {
-    css_fn! { unknown, {
+    css_fn! { unknown, "
         unknown-rule-one: somevalue;
-        unknown-rule-two: "quotedvalue";
-    } }
+        unknown-rule-two: \"quotedvalue\";
+    " }
 
     let value = unknown();
 
@@ -19,10 +19,10 @@ fn unknown_rule() {
 #[test]
 fn unknown_rule_expression() {
     fn css_factory(color: &str, back_color: &str) -> Css {
-        css! {
+        css!("
             some-color-rule: { color };
             background-color: { back_color };
-        }
+        ")
     }
 
     let value = css_factory("red", "#asdf");

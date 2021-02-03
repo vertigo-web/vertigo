@@ -7,13 +7,13 @@ use vertigo::{
 
 use vertigo_html::{Inline, html_component, css_fn, css_fn_push};
 
-css_fn! { css_box, {
+css_fn! { css_box, "
     margin: 5px;
-}}
+" }
 
-css_fn_push! { css_button, css_box, {
+css_fn_push! { css_button, css_box, "
     cursor: pointer;
-}}
+" }
 
 /*
         &:hover {
@@ -21,10 +21,10 @@ css_fn_push! { css_button, css_box, {
         }
 */
 
-css_fn! { css_wrapper, {
+css_fn! { css_wrapper, "
     border: 1px solid black;
     margin: 5px 0;
-}}
+" }
 
 pub fn render(simple_counter: &Computed<State>) -> VDomElement {
     let simple_counter = simple_counter.get_value();
@@ -43,11 +43,11 @@ pub fn render(simple_counter: &Computed<State>) -> VDomElement {
         }
     };
 
-    html_component! {
+    html_component!(r#"
         <div css={css_wrapper()}>
             <div css={css_box()}>{$ format!("Counter value = {}", value) $}</div>
             <button css={css_button()} onClick={click_up}>up</button>
             <button css={css_button()} onClick={click_down}>down</button>
         </div>
-    }
+    "#)
 }

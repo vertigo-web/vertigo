@@ -33,28 +33,28 @@ impl State {
     // }
 }
 
-css_fn! { wrapper, {
+css_fn! { wrapper, "
     border: 1px solid black;
     margin: 20px 0;
     padding: 10px;
-}}
+" }
 
-css_fn! { input_css, {
+css_fn! { input_css, "
     margin-left: 10px;
-}}
+" }
 
-css_fn! { button_css, {
+css_fn! { button_css, "
     margin: 0 10px;
     cursor: pointer;
-}}
+" }
 
-css_fn! { text_css, {
+css_fn! { text_css, "
     width: 600px;
     height: 300px;
     border: 1px solid black;
     padding: 5px;
     margin: 10px;
-}}
+" }
 
 pub fn render(state: &Computed<State>) -> VDomElement {
     let state = state.get_value();
@@ -103,7 +103,7 @@ pub fn render(state: &Computed<State>) -> VDomElement {
 
     let count = value.len();
 
-    html_component! {
+    html_component!(r#"
         <div css={wrapper()} onMouseEnter={mouse_in} onMouseLeave={mouse_out}>
             { "To jest input" }
             <input css={input_css()} value={(*value).as_str()} onInput={on_set3} />
@@ -114,5 +114,5 @@ pub fn render(state: &Computed<State>) -> VDomElement {
             </textarea>
             <div>{"count = "} { count }</div>
         </div>
-    }
+    "#)
 }

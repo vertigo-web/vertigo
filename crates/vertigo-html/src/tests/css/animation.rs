@@ -4,7 +4,7 @@ use super::utils::*;
 
 #[test]
 fn animation_css() {
-    css_fn! { css_factory, {
+    css_fn! { css_factory, "
         animation: 5s linear 2s infinite alternate {
             0%   {background-color: red; left: 0px; top: 0px;}
             25%  {background-color: yellow; left: 200px; top: 0px;}
@@ -12,7 +12,7 @@ fn animation_css() {
             75%  {background-color: green; left: 0px; top: 200px;}
             100% {background-color: red; left: 0px; top: 0px;}
         };
-    }}
+    " }
 
     let value = css_factory();
 

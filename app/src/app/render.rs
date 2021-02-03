@@ -14,22 +14,22 @@ use super::game_of_life;
 use super::github_explorer;
 use super::route::Route;
 
-css_fn! { css_menu, {
+css_fn! { css_menu, "
     list-style-type: none;
     margin: 10px;
     padding: 0;
-}}
+" }
 
 fn css_menu_item(active: bool) -> Css {
     let bg_color = if active { "lightblue" } else { "lightgreen" };
-    css! {
+    css!("
         display: inline;
         width: 60px;
         padding: 5px 10px;
         margin: 5px;
         cursor: pointer;
         background-color: {bg_color};
-    }
+    ")
 }
 
 fn render_header(app_state: &Computed<app::State>) -> VDomElement {
@@ -50,7 +50,7 @@ fn render_header(app_state: &Computed<app::State>) -> VDomElement {
 
     let is_game_of_life = matches!(current_page, Route::GameOfLife { .. });
 
-    html_component! {
+    html_component!("
         <div>
             <ul css={css_menu()}>
                 <li css={css_menu_item(current_page == &Route::Main)} onClick={navigate_to!(state, Main)}> Main </li>
@@ -61,7 +61,7 @@ fn render_header(app_state: &Computed<app::State>) -> VDomElement {
                 <li css={css_menu_item(is_game_of_life)} onClick={navigate_to_gameoflife}> Game Of Life </li>
             </ul>
         </div>
-    }
+    ")
 }
 
 pub fn render(app_state: &Computed<app::State>) -> VDomElement {
@@ -76,12 +76,12 @@ pub fn render(app_state: &Computed<app::State>) -> VDomElement {
             component(state.counters.clone(), super::counters::render),
 
         Route::Sudoku =>
-            html_element! {
+            html_element!("
                 <div>
                     <component {sudoku::examples_render} data={state.sudoku.clone()} />
                     <component {sudoku::main_render} data={state.sudoku.clone()} />
                 </div>
-            },
+            "),
 
         Route::Input =>
             component(state.input.clone(), input::render),
@@ -93,13 +93,13 @@ pub fn render(app_state: &Computed<app::State>) -> VDomElement {
             component(state.game_of_life.clone(), game_of_life::render),
 
         Route::NotFound =>
-            html_element! { <div>Page Not Found</div> },
+            html_element!("<div>Page Not Found</div>"),
     };
 
-    html_component! {
+    html_component!("
         <div>
             <component {render_header} data={app_state.clone()} />
             {child}
         </div>
-    }
+    ")
 }

@@ -4,7 +4,9 @@
 //
 css_block = _{ SOI ~ rule* ~ EOI }
 
-rule = _{ simple_rule | unknown_rule }
+rule = _{ comment | simple_rule | unknown_rule }
+
+comment = _{ comment_start ~ (!comment_end ~ ANY)* ~ comment_end }
 
 simple_rule = _{
     // align-content 	Specifies the alignment between the lines inside a flexible container when the items do not use all available space
@@ -301,6 +303,8 @@ quote = _{ singlequote | doublequote }
 hash = { "#" }
 brace_left = _{ "{" }
 brace_right = _{ "}" }
+comment_start = _{ "/*" }
+comment_end = _{ "*/" }
 
 WHITESPACE = _{ " " | "\t" | "\r" | "\n" }
 

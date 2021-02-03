@@ -22,9 +22,9 @@ fn div_with_mouse_events() {
         }
     };
 
-    let div = html_component! {
+    let div = html_component!("
         <div onMouseEnter={mouse_in} onMouseLeave={mouse_out} />
-    };
+    ");
 
     assert_empty(&div, "div");
 

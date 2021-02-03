@@ -6,28 +6,28 @@ use vertigo_html::{Inline, html_component, css_fn};
 
 use super::state::{State, Resource};
 
-css_fn! { wrapper, {
+css_fn! { wrapper, "
     border: 1px solid black;
     margin: 20px 0;
     padding: 10px;
-}}
+" }
 
-css_fn! { input_css, {
+css_fn! { input_css, "
     margin-left: 10px;
-}}
+" }
 
-css_fn! { button_css, {
+css_fn! { button_css, "
     margin: 0 10px;
     cursor: pointer;
-}}
+" }
 
-css_fn! { text_css, {
+css_fn! { text_css, "
     width: 600px;
     height: 300px;
     border: 1px solid black;
     padding: 5px;
     margin: 10px;
-}}
+" }
 
 pub fn render(state: &Computed<State>) -> VDomElement {
     let state = state.get_value();
@@ -61,7 +61,7 @@ pub fn render(state: &Computed<State>) -> VDomElement {
         }
     };
 
-    html_component! {
+    html_component!(r#"
         <div css={wrapper()}>
             { "Enter author/repo tuple:" }
             <input css={input_css()} value={(*repo_input).as_str()} onInput={on_input_callback} />
@@ -73,5 +73,5 @@ pub fn render(state: &Computed<State>) -> VDomElement {
                 { commit_sha }
             </div>
         </div>
-    }
+    "#)
 }

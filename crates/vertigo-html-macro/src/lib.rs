@@ -6,6 +6,7 @@ mod css_parser;
 
 use proc_macro2::{Span, TokenStream as TokenStream2};
 use proc_macro::TokenStream;
+use syn::{ExprLit, Lit};
 
 use crate::html_parser::HtmlParser;
 use crate::css_parser::CssParser;
@@ -14,7 +15,7 @@ use crate::css_parser::CssParser;
 #[proc_macro_error]
 pub fn html_component(input: TokenStream) -> TokenStream {
     let call_site = Span::call_site();
-    let result = HtmlParser::parse_stream(call_site, &unformat(input), true);
+    let result = HtmlParser::parse_stream(call_site, &get_string(input), true);
     // emit_warning!(call_site, "HTML: output: {}", result);
     result.into()
 }
@@ -23,7 +24,7 @@ pub fn html_component(input: TokenStream) -> TokenStream {
 #[proc_macro_error]
 pub fn html_element(input: TokenStream) -> TokenStream {
     let call_site = Span::call_site();
-    let result = HtmlParser::parse_stream(call_site, &unformat(input), false);
+    let result = HtmlParser::parse_stream(call_site, &get_string(input), false);
     // emit_warning!(call_site, "HTML: output: {}", result);
     result.into()
 }
@@ -49,12 +50,19 @@ pub fn css(input: TokenStream) -> TokenStream {
 
 fn generate_css_string(input: TokenStream) -> (TokenStream2, bool) {
     let call_site = Span::call_site();
-    let result = CssParser::parse_stream(call_site, &unformat(input));
+    // emit_warning!(call_site, "Parsing: {:?}", input);
+    CssParser::parse_stream(call_site, &get_string(input))
+    // let result = CssParser::parse_stream(call_site, &get_string(input));
     // emit_warning!(call_site, "CSS: output: {}", result.0); // FIXME: deleteme
-    result
+    // result
 }
 
-fn unformat(input: TokenStream) -> String {
-    // TokenStream breaks html tags (f. ex. "< \n div >"), so we need to remove all newlines.
-    input.to_string().replace("\n", " ")
+fn get_string(input: TokenStream) -> String {
+    match syn::parse::<ExprLit>(input) {
+        Ok(str_input) => match str_input.lit {
+            Lit::Str(lit_str) => lit_str.value(),
+            _ => panic!("Unsupported input type"),
+        },
+        Err(e) => panic!("Error parsing input: {}", e),
+    }
 }
