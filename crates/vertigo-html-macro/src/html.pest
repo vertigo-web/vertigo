@@ -133,12 +133,12 @@ el_dangling = { chevron_left_closed ~ el_name ~ chevron_right_normal}
 //
 text_chars = _{'a'..'z' | 'A'..'Z' | "_" | "-" | ":" |'0'..'9'}
 
-chevron_left_normal = _{ "< " }
-chevron_left_closed = _{ "< / " }
-chevron_left_bang = _{ "< ! " }
+chevron_left_normal = _{ "<" }
+chevron_left_closed = _{ "</" }
+chevron_left_bang = _{ "<!" }
 
 chevron_right_normal = _{ ">" }
-chevron_right_closed = _{ "/ >" }
+chevron_right_closed = _{ "/>" }
 chevron_right = _{ chevron_right_normal | chevron_right_closed }
 
 equal = _{ "=" }

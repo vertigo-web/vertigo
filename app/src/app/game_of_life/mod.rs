@@ -89,32 +89,32 @@ impl State {
     }
 }
 
-css_fn! { css_wrapper, {
+css_fn! { css_wrapper, "
     border: 1px solid black;
     padding: 10px;
     margin: 10px;
     background-color: #e0e0e0;
-}}
+" }
 
-css_fn! { css_row, {
+css_fn! { css_row, "
     display: flex;
     flex-direction: row;
     height: 10px;
-}}
+" }
 
 fn css_cell(is_active: bool) -> Css {
     let color = if is_active { "black" } else { "white" };
-    css! {
+    css!("
         width: 10px;
         height: 10px;
         cursor: pointer;
         background-color: { color };
-    }
+    ")
 }
 
-css_fn! { css_button, {
+css_fn! { css_button, "
     cursor: pointer;
-}}
+" }
 
 fn render_header(state: &Computed<State>) -> VDomElement {
     let state = state.get_value();
@@ -129,11 +129,11 @@ fn render_header(state: &Computed<State>) -> VDomElement {
                 log::info!("stop ...");
             }
         };
-        html_element! {
+        html_element!("
             <button css={css_button()} onClick={on_click}>
                 Stop
             </button>
-        }
+        ")
     } else {
         let on_click = {
             let timer_enable = state.timer_enable.clone();
@@ -143,11 +143,11 @@ fn render_header(state: &Computed<State>) -> VDomElement {
             }
         };
 
-        html_element! {
+        html_element!("
             <button css={css_button()} onClick={on_click}>
                 Start
             </button>
-        }
+        ")
     };
 
     let button_random = {
@@ -171,33 +171,33 @@ fn render_header(state: &Computed<State>) -> VDomElement {
             }
         };
 
-        html_element! {
+        html_element!("
             <button css={css_button()} onClick={on_click}>
                 Random
             </button>
-        }
+        ")
     };
 
-    html_component! {
+    html_component!(r#"
         <div>
             <div>Game of life</div>
             <div>{$ format!("year = {}", year) $}</div>
             { button }
             { button_random }
         </div>
-    }
+    "#)
 }
 
 pub fn render(state: &Computed<State>) -> VDomElement {
     let value = state.get_value().matrix.get_value();
     let value_inner = &*value;
 
-    html_component! {
+    html_component!("
         <div css={css_wrapper()}>
             <component {render_header} data={state.clone()} />
             { render_matrix(value_inner) }
         </div>
-    }
+    ")
 }
 
 fn render_matrix(matrix: &[Vec<Value<bool>>]) -> NodeAttr {
@@ -207,11 +207,11 @@ fn render_matrix(matrix: &[Vec<Value<bool>>]) -> NodeAttr {
         out.push(render_row(item));
     }
 
-    html_element! {
+    html_element!("
         <div>
             { ..out }
         </div>
-    }
+    ")
 }
 
 fn render_row(matrix: &[Value<bool>]) -> NodeAttr {
@@ -223,11 +223,11 @@ fn render_row(matrix: &[Value<bool>]) -> NodeAttr {
         out.push(component_value(item.clone(), render_cell));
     }
 
-    html_element! {
+    html_element!("
         <div css={css_row()}>
             { ..out }
         </div>
-    }
+    ")
 }
 
 fn render_cell(cell: &Value<bool>) -> VDomElement {
@@ -242,7 +242,7 @@ fn render_cell(cell: &Value<bool>) -> VDomElement {
         }
     };
 
-    html_component! {
+    html_component!("
         <div css={css_cell(*is_active)} onClick={on_click_callback} />
-    }
+    ")
 }

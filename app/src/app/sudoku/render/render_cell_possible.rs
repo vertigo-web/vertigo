@@ -6,16 +6,16 @@ use super::config::Config;
 
 // fn cssCell() -> Css {
 //     let config = Config::new();
-//     css! {
+//     css!("
 //         border: {config.item_border_size}px solid green;
 //         width: {config.item_width_size}px;
 //         height: {config.item_width_size}px;
-//     }
+//     ")
 // }
 
 fn css_item_only_one() -> Css {
     let config = Config::new();
-    css! {
+    css!("
         display: flex;
         align-items: center;
         justify-content: center;
@@ -25,20 +25,20 @@ fn css_item_only_one() -> Css {
         font-size: 40px;
         color: blue;
         cursor: pointer;
-    }
+    ")
 }
 
 fn css_wrapper_one() -> Css {
     let config = Config::new();
-    css! {
+    css!("
         width: {config.item_width}px;
         height: {config.item_width}px;
-    }
+    ")
 }
 
 fn css_wrapper() -> Css {
     let config = Config::new();
-    css! {
+    css!("
         width: {config.item_width}px;
         height: {config.item_width}px;
 
@@ -46,20 +46,20 @@ fn css_wrapper() -> Css {
         grid-template-columns: 1fr 1fr 1fr;
         grid-template-rows: 1fr 1fr 1fr;
         flex-shrink: 0;
-    }
+    ")
 }
 
 fn css_item(should_show: bool) -> Css {
     let bg_color = if should_show { "#00ff0030" } else { "inherit" };
     let cursor = if should_show { "pointer" } else { "inherit" };
 
-    css! {
+    css!("
         display: flex;
         align-items: center;
         justify-content: center;
         background-color: {bg_color};
         cursor: {cursor};
-    }
+    ")
 }
 
 pub fn render_cell_possible(item: &Computed<Cell>) -> VDomElement {
@@ -86,17 +86,17 @@ pub fn render_cell_possible(item: &Computed<Cell>) -> VDomElement {
             };
 
             out.push(
-                html_element! {
+                html_element!("
                     <div css={css_item_only_one()} onClick={on_set}>
                         { number.to_u16() }
                     </div>
-                }
+                ")
             );
         }
 
-        return html_component! {
+        return html_component!("
             <div>{ ..out }</div>
-        }
+        ")
     }
 
 
@@ -110,13 +110,13 @@ pub fn render_cell_possible(item: &Computed<Cell>) -> VDomElement {
             }
         };
 
-        return html_component! {
+        return html_component!(r#"
             <div css={css_wrapper_one()}>
                 <div css={css_item_only_one()} onClick={on_set}>
                     {$ format!("{}.", possible_last_value.to_u16()) $}
                 </div>
             </div>
-        }
+        "#)
     }
 
 
@@ -142,15 +142,15 @@ pub fn render_cell_possible(item: &Computed<Cell>) -> VDomElement {
                     }
                 }
             };
-            html_element! {
+            html_element!("
                 <div css={css_item(should_show)} onClick={on_click}>
                     { label }
                  </div>
-            }
+                ")
         });
     }
 
-    html_component! {
+    html_component!("
         <div>{ ..out }</div>
-    }
+    ")
 }

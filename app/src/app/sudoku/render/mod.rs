@@ -8,14 +8,14 @@ pub mod config;
 pub mod render_cell_value;
 pub mod render_cell_possible;
 
-css_fn! { css_center, {
+css_fn! { css_center, "
     display: flex;
     justify-content: center;
-}}
+" }
 
 fn css_wrapper() -> Css {
     let config = Config::new();
-    css! {
+    css!("
         display: grid;
         grid-template-columns: 1fr 1fr 1fr;
         flex-shrink: 0;
@@ -24,12 +24,12 @@ fn css_wrapper() -> Css {
         height: {config.all_width}px;
 
         border: 2px solid blue;
-    }
+    ")
 }
 
 fn css_item_wrapper() -> Css {
     let config = Config::new();
-    css! {
+    css!("
         border: {config.group_border_size}px solid black;
 
         width: {config.group_width_size}px;
@@ -38,16 +38,16 @@ fn css_item_wrapper() -> Css {
         display: grid;
         grid-template-columns: 1fr 1fr 1fr;
         flex-shrink: 0;
-    }
+    ")
 }
 
 fn css_cell_wrapper() -> Css {
     let config = Config::new();
-    css! {
+    css!("
         border: {config.item_border_size}px solid green;
         width: {config.item_width_size}px;
         height: {config.item_width_size}px;
-    }
+    ")
 }
 
 fn render_cell(item: &Computed<Cell>) -> VDomElement {
@@ -70,7 +70,7 @@ fn render_group(group: &Computed<SudokuSquare<Cell>>) -> VDomElement {
         })
     };
 
-    html_component! {
+    html_component!("
         <div css={css_item_wrapper()}>
             <div css={css_cell_wrapper()}>
                 <component {render_cell} data={get_cell(group, TreeBoxIndex::First,  TreeBoxIndex::First)} />
@@ -100,7 +100,7 @@ fn render_group(group: &Computed<SudokuSquare<Cell>>) -> VDomElement {
                 <component {render_cell} data={get_cell(group, TreeBoxIndex::Last,  TreeBoxIndex::Last)} />
             </div>
         </div>
-    }
+    ")
 }
 
 pub fn main_render(sudoku: &Computed<Sudoku>) -> VDomElement {
@@ -110,7 +110,7 @@ pub fn main_render(sudoku: &Computed<Sudoku>) -> VDomElement {
         })
     };
 
-    html_component! {
+    html_component!("
         <div css={css_center()}>
             <div css={css_wrapper()}>
                 <component {render_group} data={get_group(sudoku, TreeBoxIndex::First,  TreeBoxIndex::First)} />
@@ -124,19 +124,19 @@ pub fn main_render(sudoku: &Computed<Sudoku>) -> VDomElement {
                 <component {render_group} data={get_group(sudoku, TreeBoxIndex::Last,  TreeBoxIndex::Last)} />
             </div>
         </div>
-    }
+    ")
 }
 
-css_fn! { css_sudoku_example, {
+css_fn! { css_sudoku_example, "
     border: 1px solid black;
     padding: 10px;
     margin: 10px 0;
-}}
+" }
 
-css_fn! { css_sudoku_example_button, {
+css_fn! { css_sudoku_example_button, "
     margin: 5px;
     cursor: pointer;
-}}
+" }
 
 pub fn examples_render(sudoku: &Computed<Sudoku>) -> VDomElement {
     let sudoku = sudoku.get_value();
@@ -162,12 +162,12 @@ pub fn examples_render(sudoku: &Computed<Sudoku>) -> VDomElement {
         move || { sudoku.example3(); }
     };
 
-    html_component! {
+    html_component!("
         <div css={css_sudoku_example()}>
             <button css={css_sudoku_example_button()} onClick={clear}> Clear </button>
             <button css={css_sudoku_example_button()} onClick={example1}> Example 1 </button>
             <button css={css_sudoku_example_button()} onClick={example2}> Example 2 </button>
             <button css={css_sudoku_example_button()} onClick={example3}> Example 3 </button>
         </div>
-    }
+    ")
 }

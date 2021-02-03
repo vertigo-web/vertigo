@@ -4,10 +4,10 @@ use super::utils::*;
 
 #[test]
 fn basic_colors_css() {
-    css_fn! { css_factory, {
+    css_fn! { css_factory, "
         color: red;
         background-color: #667787;
-    } }
+    " }
 
     let value = css_factory();
 
@@ -16,10 +16,10 @@ fn basic_colors_css() {
 
 #[test]
 fn hex_value_colors_css() {
-    css_fn! { css_factory, {
+    css_fn! { css_factory, "
         color: #deadbeef;
         background-color: #01020304;
-    } }
+    " }
 
     let value = css_factory();
 
@@ -28,10 +28,10 @@ fn hex_value_colors_css() {
 
 #[test]
 fn rgb_value_colors_css() {
-    css_fn! { css_factory, {
+    css_fn! { css_factory, "
         color: rgb(1, 128, 256);
         background-color: rgba(0, 96, 192, 255);
-    } }
+    " }
 
     let value = css_factory();
 
@@ -40,10 +40,10 @@ fn rgb_value_colors_css() {
 
 #[test]
 fn hsl_value_colors_css() {
-    css_fn! { css_factory, {
+    css_fn! { css_factory, "
         color: hsl(1, 50%, 25%);
         background-color: hsla(0, 96%, 19%, 2);
-    } }
+    " }
 
     let value = css_factory();
 

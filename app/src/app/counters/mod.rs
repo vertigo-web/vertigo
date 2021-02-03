@@ -60,11 +60,11 @@ fn render_suma(state: &Computed<State>) -> VDomElement {
 
     let suma = state.suma.get_value();
 
-    html_component! {
+    html_component!(r#"
         <div>
             {$ format!("suma = {}", suma) $}
         </div>
-    }
+    "#)
 }
 
 pub fn render(state: &Computed<State>) -> VDomElement {
@@ -74,7 +74,7 @@ pub fn render(state: &Computed<State>) -> VDomElement {
 
     let state = state.get_value();
 
-    html_component! {
+    html_component!("
         <div>
             <component {simple_counter::render} data={state.counter1.clone()} />
             <component {simple_counter::render} data={state.counter2.clone()} />
@@ -82,5 +82,5 @@ pub fn render(state: &Computed<State>) -> VDomElement {
             <component {simple_counter::render} data={state.counter4.clone()} />
             { suma }
         </div>
-    }
+    ")
 }

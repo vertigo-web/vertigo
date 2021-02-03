@@ -39,22 +39,22 @@ impl MainState {
 
 fn css_footer(show_color: bool) -> Css {
     let color = if show_color { "green" } else { "blue" };
-    css! {
+    css!("
         background-color: yellow;
         color: { color };
-    }
+    ")
 }
 
-css_fn! { css_bg, {
+css_fn! { css_bg, "
     border: 1px solid black;
     padding: 10px;
     background-color: #e0e0e0;
     margin-bottom: 10px;
-}}
+" }
 
-css_fn_push! { css_button, css_bg, {
+css_fn_push! { css_button, css_bg, "
     cursor: pointer;
-}}
+" }
 
 pub fn main_render(state: &Computed<MainState>) -> VDomElement {
     let state = state.get_value();
@@ -77,20 +77,20 @@ pub fn main_render(state: &Computed<MainState>) -> VDomElement {
     let show_color = *value % 2 == 0;
 
     let footer_dom = if *value % 10 == 0 {
-        html_element! {
+        html_element!(r#"
             <div>
                 {$ format!("jakis footer {} {} - BEZKLASIE", *value % 2, *value % 3) $}
             </div>
-        }
+        "#)
     } else {
-        html_element! {
+        html_element!(r#"
             <div css={css_footer(show_color)}>
                 {$ format!("jakis footer {} {}", *value % 2, *value % 3) $}
             </div>
-        }
+        "#)
     };
 
-    html_component! {
+    html_component!(r#"
         <div aaa="one" bbb="two">
             Abudabi
             <div css={css_bg()}>
@@ -111,5 +111,5 @@ pub fn main_render(state: &Computed<MainState>) -> VDomElement {
             </div>
             { footer_dom }
         </div>
-    }
+    "#)
 }

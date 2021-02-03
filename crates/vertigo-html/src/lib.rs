@@ -12,7 +12,7 @@ pub use vertigo::node_attr::NodeAttr;
 macro_rules! css_fn {
     ($name: ident, $block: tt) => {
         fn $name() -> vertigo::Css {
-            $crate::css! $block
+            $crate::css! ($block)
         }
     };
 }
@@ -21,7 +21,7 @@ macro_rules! css_fn {
 macro_rules! css_fn_push {
     ($name: ident, $base: ident, $block: tt) => {
         fn $name() -> vertigo::Css {
-            $base().push($crate::css_block! $block)
+            $base().push($crate::css_block! ($block))
         }
     }
 }

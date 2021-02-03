@@ -7,17 +7,17 @@ use super::config::Config;
 
 fn css_item_number_wrapper() -> Css {
     let config = Config::new();
-    css! {
+    css!("
         position: relative;
         text-align: center;
         font-size: 40px;
         color: blue;
         height: {config.item_width_size}px;
         line-height: {config.item_width_size}px;
-    }
+    ")
 }
 
-css_fn! { css_delete, {
+css_fn! { css_delete, "
     position: absolute;
     top: 3px;
     right: 3px;
@@ -31,7 +31,7 @@ css_fn! { css_delete, {
     display: flex;
     align-items: center;
     justify-content: center;
-}}
+" }
 
 
 
@@ -51,11 +51,11 @@ pub fn render_cell_value(value: SudokuValue, item: &Computed<Cell>, ) -> VDomEle
         };
 
         out.push(
-            html_element! {
+            html_element!("
                 <div css={css_delete()} onClick={on_click}>
                     X
                 </div>
-            }
+            ")
             // node("div", vec!(
             // css(css_delete()),
             // on_click({
@@ -67,12 +67,12 @@ pub fn render_cell_value(value: SudokuValue, item: &Computed<Cell>, ) -> VDomEle
         );
     }
 
-    html_component! {
+    html_component!("
         <div css={css_item_number_wrapper()}>
             { value.to_u16() }
             { ..out }
         </div>
-    }
+    ")
 }
 
 
