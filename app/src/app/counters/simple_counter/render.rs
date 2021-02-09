@@ -5,7 +5,7 @@ use vertigo::{
     VDomElement,
 };
 
-use vertigo_html::{Inline, html_component, css_fn, css_fn_push};
+use vertigo_html::{html_component, css_fn, css_fn_push};
 
 css_fn! { css_box, "
     margin: 5px;

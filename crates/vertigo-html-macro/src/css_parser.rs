@@ -10,29 +10,43 @@ use itertools::Itertools;
 
 #[derive(Parser)]
 #[grammar = "css.pest"]
-pub struct CssParser;
+pub struct CssParser {
+    call_site: Span,
+    children: Vec<String>,
+    params: ParamsEnumerator,
+}
 
 impl CssParser {
-    pub fn parse_stream(call_site: Span, input: &str) -> (TokenStream, bool) {
-        let mut params_enumerator = ParamsEnumerator::default();
+    pub fn new(call_site: Span) -> Self {
+        Self {
+            call_site,
+            children: Vec::new(),
+            params: ParamsEnumerator::default(),
+        }
+    }
 
+    pub fn parse_stream(call_site: Span, input: &str) -> (TokenStream, bool) {
         match CssParser::parse(Rule::css_block, input) {
             Ok(pairs) => {
-                let mut children = Vec::new();
+                let mut parser = Self::new(call_site);
                 for pair in pairs {
                     // emit_warning!(call_site, "Pair: {:?}", pair);
                     match pair.as_rule() {
-                        Rule::unknown_rule => children.push(Self::generate_unknown_rule(call_site, &mut params_enumerator, pair)),
+                        Rule::unknown_rule => {
+                            let child = parser.generate_unknown_rule(pair);
+                            parser.children.push(child)
+                        },
                         Rule::animation_rule => {
-                            children.push(Self::generate_animation_rule(call_site, &mut params_enumerator, pair));
+                            let child = parser.generate_animation_rule(pair);
+                            parser.children.push(child);
                         }
                         _ => (),
                     }
                 }
 
-                let css_output = children.join("\n");
+                let css_output = parser.children.join("\n");
 
-                let params = params_enumerator.into_hashmap();
+                let params = parser.params.into_hashmap();
 
                 if params.is_empty() {
                     (quote! { #css_output }, false)
@@ -62,7 +76,7 @@ impl CssParser {
         }
     }
 
-    fn generate_unknown_rule(call_site: Span, params: &mut ParamsEnumerator, pair: Pair<Rule>) -> String {
+    fn generate_unknown_rule(&mut self, pair: Pair<Rule>) -> String {
         let mut pairs = pair.into_inner();
         let rule_ident = pairs.next().unwrap();
 
@@ -75,12 +89,12 @@ impl CssParser {
                 Rule::unquoted_value => value.as_str().to_string(),
                 Rule::quoted_value => value.as_str().to_string(),
                 Rule::expression => {
-                    params.insert(
+                    self.params.insert(
                         value.into_inner().next().unwrap().as_str().to_string()
                     )
                 }
                 _ => {
-                    emit_warning!(call_site, "CSS: unhandler value in generate_unknown_rule: {:?}", value);
+                    emit_warning!(self.call_site, "CSS: unhandler value in generate_unknown_rule: {:?}", value);
                     "".to_string()
                 }
             };
@@ -90,7 +104,7 @@ impl CssParser {
         format!("{}: {};", ident_str, value_strs.join(" ").replace("} px", "}px"))
     }
 
-    fn generate_animation_rule(call_site: Span, params: &mut ParamsEnumerator, pair: Pair<Rule>) -> String {
+    fn generate_animation_rule(&mut self, pair: Pair<Rule>) -> String {
         let pairs = pair.into_inner();
 
         let mut value_strs = Vec::new();
@@ -107,7 +121,7 @@ impl CssParser {
                             let frame_rules = frame_children
                                 .map(|rule| {
                                     // emit_warning!(call_site, "{:?}", rule);
-                                    CssParser::generate_unknown_rule(call_site, params, rule)
+                                    self.generate_unknown_rule(rule)
                                 })
                                 .collect::<Vec<_>>()
                                 .join("\n");
@@ -118,7 +132,7 @@ impl CssParser {
                     format!("{{ {} }}", frames_strs)
                 },
                 _ => {
-                    emit_warning!(call_site, "CSS: unhandler value in generate_unknown_rule: {:?}", value);
+                    emit_warning!(self.call_site, "CSS: unhandler value in generate_unknown_rule: {:?}", value);
                     "".to_string()
                 }
             };

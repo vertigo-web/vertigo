@@ -11,7 +11,7 @@ use vertigo::{
     node_attr,
     utils::DropResource
 };
-use vertigo_html::{Inline, NodeAttr, html_component, html_element, css, css_fn};
+use vertigo_html::{NodeAttr, html_component, html_element, css, css_fn};
 
 mod next_generation;
 
