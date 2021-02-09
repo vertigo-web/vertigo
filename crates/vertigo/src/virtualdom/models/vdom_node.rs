@@ -22,11 +22,11 @@ pub struct VDomElement {
 }
 
 impl VDomElement {
-    pub fn new(name: &'static str, child_list: Vec<NodeAttr>) -> VDomElement {
+    pub fn new(name: &'static str, attr_list: Vec<NodeAttr>, children: Vec<VDomNode>) -> Self {
         let mut result = VDomElement {
             name,
             attr: HashMap::new(),
-            child: Vec::new(),
+            child: children,
             on_click: None,
             on_input: None,
             on_mouse_enter: None,
@@ -34,7 +34,7 @@ impl VDomElement {
             css: None,
         };
 
-        for child in child_list {
+        for child in attr_list {
             match child {
                 NodeAttr::Css { css } => {
                     result.css = Some(css);
@@ -54,9 +54,9 @@ impl VDomElement {
                 NodeAttr::Attr { name , value} => {
                     result.attr.insert(name, value);
                 },
-                NodeAttr::Node { node } => {
-                    result.child.push(node);
-                }
+                // NodeAttr::Node { node } => {
+                //     result.child.push(node);
+                // }
             }
         }
 

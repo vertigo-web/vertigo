@@ -18,20 +18,20 @@ pub enum VDomNode {
 }
 
 impl VDomNode {
-    pub fn node(name: &'static str, child_list: Vec<NodeAttr>) -> VDomNode {
+    pub fn node(name: &'static str, attr_list: Vec<NodeAttr>, children: Vec<Self>) -> Self {
         VDomNode::Node {
-            node: VDomElement::new(name, child_list)
+            node: VDomElement::new(name, attr_list, children)
         }
     }
 
-    pub fn text<T: Into<String>>(value: T) -> VDomNode {
-        VDomNode::Text {
+    pub fn text<T: Into<String>>(value: T) -> Self {
+        Self::Text {
             node: VDomText::new(value)
         }
     }
 
-    pub fn component(value: VDomComponent) -> VDomNode {
-        VDomNode::Component {
+    pub fn component(value: VDomComponent) -> Self {
+        Self::Component {
             node: value
         }
     }

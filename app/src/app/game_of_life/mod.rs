@@ -8,10 +8,9 @@ use vertigo::{
         Dependencies,
         Value
     },
-    node_attr,
     utils::DropResource
 };
-use vertigo_html::{NodeAttr, html_component, html_element, css, css_fn};
+use vertigo_html::{VDomNode, html_component, html_element, css, css_fn};
 
 mod next_generation;
 
@@ -200,7 +199,7 @@ pub fn render(state: &Computed<State>) -> VDomElement {
     ")
 }
 
-fn render_matrix(matrix: &[Vec<Value<bool>>]) -> NodeAttr {
+fn render_matrix(matrix: &[Vec<Value<bool>>]) -> VDomNode {
     let mut out = Vec::new();
 
     for item in matrix.iter() {
@@ -214,13 +213,13 @@ fn render_matrix(matrix: &[Vec<Value<bool>>]) -> NodeAttr {
     ")
 }
 
-fn render_row(matrix: &[Value<bool>]) -> NodeAttr {
-    use node_attr::component_value;
-
+fn render_row(matrix: &[Value<bool>]) -> VDomNode {
     let mut out = Vec::new();
 
     for item in matrix.iter() {
-        out.push(component_value(item.clone(), render_cell));
+        out.push(
+            html_element!("<component_val {render_cell} data={item} />")
+        )
     }
 
     html_element!("

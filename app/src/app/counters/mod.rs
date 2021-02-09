@@ -1,6 +1,5 @@
 use std::cmp::PartialEq;
 use vertigo::{
-    node_attr,
     VDomElement,
     computed::{
         Computed,
@@ -68,19 +67,15 @@ fn render_suma(state: &Computed<State>) -> VDomElement {
 }
 
 pub fn render(state: &Computed<State>) -> VDomElement {
-    use node_attr::component;
-
-    let suma = component(state.clone(), render_suma);
-
-    let state = state.get_value();
+    let st = state.get_value();
 
     html_component!("
         <div>
-            <component {simple_counter::render} data={state.counter1.clone()} />
-            <component {simple_counter::render} data={state.counter2.clone()} />
-            <component {simple_counter::render} data={state.counter3.clone()} />
-            <component {simple_counter::render} data={state.counter4.clone()} />
-            { suma }
+            <component {simple_counter::render} data={st.counter1.clone()} />
+            <component {simple_counter::render} data={st.counter2.clone()} />
+            <component {simple_counter::render} data={st.counter3.clone()} />
+            <component {simple_counter::render} data={st.counter4.clone()} />
+            <component {render_suma} data={state} />
         </div>
     ")
 }

@@ -23,18 +23,29 @@ impl HtmlParser {
             Ok(pairs) => {
                 let mut parser = Self::new(call_site);
                 for pair in pairs {
+                    // emit_warning!(call_site, "HTML: parse_stream debug: {:?}", pair);
                     match pair.as_rule() {
                         Rule::html => { },
-                        Rule::root_node => {
-                            let child = parser.generate_node_element(pair.into_inner().next().unwrap(), is_root);
+
+                        Rule::el_normal |
+                        Rule::el_void |
+                        Rule::el_void_xml |
+                        Rule::el_raw_text => {
+                            let child = parser.generate_node_element(pair, is_root);
                             parser.children.push(child);
                         },
+
+                        Rule::el_vcomponent => parser.children.push(parser.generate_vcomponent(pair, false)),
+                        Rule::el_vcomponent_val => parser.children.push(parser.generate_vcomponent(pair, true)),
+
                         Rule::node_text => {
                             emit_warning!(call_site, "HTML: Plain text can't be a root node");
                         },
+
                         Rule::EOI => { }
+
                         _ => {
-                            emit_warning!(call_site, "HTML: unhandler pair: {:?}", pair);
+                            emit_warning!(call_site, "HTML: unhandler root pair: {:?}", pair);
                         }
                     }
                 }
@@ -61,6 +72,7 @@ impl HtmlParser {
         // will render as:
         //    <div> "foo" "bar" {value} { ..vec1 } { ..vec2 } </div>
 
+        let mut attrs = Vec::new();
         let mut children = Vec::new();
         let mut children_lists = Vec::new();
 
@@ -70,22 +82,28 @@ impl HtmlParser {
                 Rule::el_name => tag_name = pair.as_str(),
                 Rule::el_void_name => tag_name = pair.as_str(),
                 Rule::el_raw_text_name => tag_name = pair.as_str(),
-                Rule::regular_attr => children.push(self.generate_regular_attr(pair)),
-                Rule::css_attr => children.push(self.generate_expression_attr(pair, Some("css"))),
-                Rule::onclick_attr => children.push(self.generate_expression_attr(pair, Some("on_click"))),
-                Rule::oninput_attr => children.push(self.generate_expression_attr(pair, Some("on_input"))),
-                Rule::onmouseenter_attr => children.push(self.generate_expression_attr(pair, Some("on_mouse_enter"))),
-                Rule::onmouseleave_attr => children.push(self.generate_expression_attr(pair, Some("on_mouse_leave"))),
-                Rule::expression_attr => children.push(self.generate_expression_attr(pair, None)),
-                Rule::el_vcomponent => children.push(self.generate_vcomponent(pair)),
-                Rule::el_velement => children.push(self.generate_velement(pair)),
+
+                Rule::regular_attr => attrs.push(self.generate_regular_attr(pair)),
+                Rule::css_attr => attrs.push(self.generate_expression_attr(pair, Some("css"))),
+                Rule::onclick_attr => attrs.push(self.generate_expression_attr(pair, Some("on_click"))),
+                Rule::oninput_attr => attrs.push(self.generate_expression_attr(pair, Some("on_input"))),
+                Rule::onmouseenter_attr => attrs.push(self.generate_expression_attr(pair, Some("on_mouse_enter"))),
+                Rule::onmouseleave_attr => attrs.push(self.generate_expression_attr(pair, Some("on_mouse_leave"))),
+                Rule::expression_attr => attrs.push(self.generate_expression_attr(pair, None)),
+
+                Rule::el_vcomponent => children.push(self.generate_vcomponent(pair, false)),
+                Rule::el_vcomponent_val => children.push(self.generate_vcomponent(pair, true)),
                 Rule::el_normal => children.push(self.generate_node_element(pair, false)),
                 Rule::el_void => children.push(self.generate_node_element(pair, false)),
+                Rule::el_void_xml => children.push(self.generate_node_element(pair, false)),
                 Rule::el_raw_text => children.push(self.generate_node_element(pair, false)),
                 Rule::el_raw_text_content => children.push(self.generate_text(pair)),
+                Rule::el_velement => children.push(self.generate_velement(pair)),
                 Rule::node_text => children.push(self.generate_text(pair)),
                 Rule::expression => children.push(self.generate_expression(pair)),
+
                 Rule::children => children_lists.push(self.generate_children(pair)),
+
                 Rule::el_normal_end => {},
                 _ => {
                     emit_error!(self.call_site, "HTML: unhandler pair in generate_node_element: {:?}", pair);
@@ -94,22 +112,24 @@ impl HtmlParser {
         }
 
         let builder = if is_root {
-            quote! { build_node }
+            quote! { vertigo::VDomElement::new }
         } else {
-            quote! { node }
+            quote! { vertigo::VDomNode::node }
         };
 
         if children_lists.is_empty() {
             quote! {
-                vertigo::node_attr::#builder(
+                #builder(
                     #tag_name,
-                    vec![#(#children),*]
+                    vec![#(#attrs),*],
+                    vec![#(#children),*],
                 )
             }
         } else {
             quote! {
-                vertigo::node_attr::#builder(
+                #builder(
                     #tag_name,
+                    vec![#(#attrs),*],
                     {
                         let mut children = vec![#(#children),*];
                         #(children.extend(#children_lists);)*
@@ -120,7 +140,7 @@ impl HtmlParser {
         }
     }
 
-    fn generate_vcomponent(&self, pair: Pair<Rule>) -> TokenStream {
+    fn generate_vcomponent(&self, pair: Pair<Rule>, value: bool) -> TokenStream {
         let mut render_func = None::<Expr>;
         let mut data_expr = None::<Expr>;
 
@@ -146,9 +166,15 @@ impl HtmlParser {
             }
         }
 
+        let builder = if value {
+            quote! { vertigo::VDomComponent::from_value }
+        } else {
+            quote! { vertigo::VDomComponent::new }
+        };
+
         if let Some(render_func) = render_func {
             if let Some(data_expr) = data_expr {
-                quote! { vertigo::node_attr::component(#data_expr, #render_func) }
+                quote! { vertigo::VDomNode::component(#builder(#data_expr.clone(), #render_func)) }
             } else {
                 emit_warning!(self.call_site, "HTML: Component don't have data attribute");
                 quote! { }
@@ -179,7 +205,7 @@ impl HtmlParser {
             Rule::node_text |
             Rule::el_raw_text_content => {
                 let content = pair.as_str();
-                quote! { vertigo::node_attr::text(#content) }
+                quote! { vertigo::VDomNode::text(#content) }
             },
             _ => {
                 emit_warning!(self.call_site, "HTML: unhandler pair in generate_text: {:?}", pair);

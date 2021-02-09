@@ -12,11 +12,11 @@ html = _{
 //
 // NODES
 //
-root_node = { node_element }
+root_node = _{ node_element }
 node = _{ node_comment | node_element | children | expression | node_text }
 node_comment = _{ comment_if | comment_normal }
 node_text = { (!(node_element | comment_tag_start | expression) ~ ANY)+ }
-node_element = _{ el_vcomponent | el_velement | el_void | el_void_xml | el_raw_text | el_normal | el_dangling }
+node_element = _{ el_vcomponent_val | el_vcomponent | el_velement | el_void | el_void_xml | el_raw_text | el_normal | el_dangling }
 
 //
 // COMMENTS
@@ -107,6 +107,9 @@ el_normal_end = { chevron_left_closed ~ POP ~ chevron_right_normal}
 el_vcomponent = { chevron_left_normal ~ "component" ~ vcomp_render_func ~ vcomp_data_attr? ~ attr* ~ chevron_right_closed }
 vcomp_render_func = { attr_expression }
 vcomp_data_attr = { "data" ~ equal ~ attr_expression }
+
+// TODO: Hack this out
+el_vcomponent_val = { chevron_left_normal ~ "component_val" ~ vcomp_render_func ~ vcomp_data_attr? ~ attr* ~ chevron_right_closed }
 
 el_velement = { chevron_left_normal ~ "element" ~ velem_value ~ chevron_right_closed }
 velem_value = _{ attr_expression }
