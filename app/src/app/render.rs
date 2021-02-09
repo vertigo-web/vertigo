@@ -4,7 +4,7 @@ use vertigo::{
     Css,
     node_attr::component,
 };
-use vertigo_html::{Inline, html_component, html_element, css, css_fn};
+use vertigo_html::{html_component, html_element, css, css_fn};
 
 use crate::{app, navigate_to};
 

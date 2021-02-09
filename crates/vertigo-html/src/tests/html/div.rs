@@ -1,6 +1,9 @@
 use vertigo::computed::{Dependencies, Value};
 
-use crate::{Inline, html_component};
+use crate::html_component;
+
+// Make crate available by its name for html macro
+use crate as vertigo_html;
 
 use super::utils::*;
 

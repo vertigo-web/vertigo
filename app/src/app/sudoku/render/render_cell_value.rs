@@ -1,5 +1,5 @@
 use vertigo::{computed::Computed, VDomElement, Css};
-use vertigo_html::{Inline, html_component, html_element, css, css_fn};
+use vertigo_html::{html_component, html_element, css, css_fn};
 
 use crate::app::sudoku::state::{Cell, number_item::SudokuValue};
 

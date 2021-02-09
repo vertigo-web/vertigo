@@ -7,7 +7,7 @@ use vertigo::{
         Dependencies
     },
 };
-use vertigo_html::{Inline, html_component, html_element, css, css_fn, css_fn_push};
+use vertigo_html::{html_component, html_element, css, css_fn, css_fn_push};
 
 mod spinner;
 

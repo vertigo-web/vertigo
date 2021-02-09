@@ -8,7 +8,7 @@ use vertigo::{
     }
 };
 
-use vertigo_html::{Inline, html_component};
+use vertigo_html::html_component;
 
 mod simple_counter;
 
