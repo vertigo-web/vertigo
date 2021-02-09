@@ -6,7 +6,7 @@ pub use inline::Inline;
 pub use vertigo_html_macro::{html_component, html_element, css, css_block};
 
 // For convenience
-pub use vertigo::node_attr::NodeAttr;
+pub use vertigo::VDomNode;
 
 #[macro_export]
 macro_rules! css_fn {

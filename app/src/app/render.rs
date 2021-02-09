@@ -2,7 +2,6 @@ use vertigo::{
     computed::Computed,
     VDomElement,
     Css,
-    node_attr::component,
 };
 use vertigo_html::{html_component, html_element, css, css_fn};
 
@@ -68,12 +67,11 @@ pub fn render(app_state: &Computed<app::State>) -> VDomElement {
     let state = app_state.get_value();
 
     let child = match *state.route.get_value() {
-        Route::Main => {
-            component(state.main.clone(), super::main::main_render)
-        }
+        Route::Main =>
+            html_element!("<component {super::main::main_render} data={state.main} />"),
 
         Route::Counters =>
-            component(state.counters.clone(), super::counters::render),
+            html_element!("<component {super::counters::render} data={state.counters} />"),
 
         Route::Sudoku =>
             html_element!("
@@ -84,13 +82,13 @@ pub fn render(app_state: &Computed<app::State>) -> VDomElement {
             "),
 
         Route::Input =>
-            component(state.input.clone(), input::render),
+            html_element!("<component {input::render} data={state.input} />"),
 
         Route::GithubExplorer =>
-            component(state.github_explorer.clone(), github_explorer::render),
+            html_element!("<component {github_explorer::render} data={state.github_explorer} />"),
 
         Route::GameOfLife {..} =>
-            component(state.game_of_life.clone(), game_of_life::render),
+            html_element!("<component {game_of_life::render} data={state.game_of_life} />"),
 
         Route::NotFound =>
             html_element!("<div>Page Not Found</div>"),

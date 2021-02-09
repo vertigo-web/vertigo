@@ -1,4 +1,4 @@
-use vertigo::{computed::Computed, VDomElement, node_attr, Css};
+use vertigo::{computed::Computed, VDomElement, Css};
 use vertigo_html::{html_component, html_element, css};
 
 use crate::app::sudoku::state::{Cell, number_item::SudokuValue};
@@ -63,43 +63,37 @@ fn css_item(should_show: bool) -> Css {
 }
 
 pub fn render_cell_possible(item: &Computed<Cell>) -> VDomElement {
-    use node_attr::css;
-
     let cell = (*item).get_value();
 
     let possible = (*cell).possible.get_value();
     let only_one_possible = possible.len() == 1;
 
     if only_one_possible {
-        let mut out = vec![
-            css(css_wrapper_one())
-        ];
+        let out: Vec<_> = possible.iter()
+            .map(|number| {
+                let on_set = {
+                    let number = *number;
+                    let cell = cell.clone();
 
-        for number in possible.iter() {
-            let on_set = {
-                let number = *number;
-                let cell = cell.clone();
+                    move || {
+                        cell.number.value.set_value(Some(number));
+                    }
+                };
 
-                move || {
-                    cell.number.value.set_value(Some(number));
-                }
-            };
-
-            out.push(
                 html_element!("
                     <div css={css_item_only_one()} onClick={on_set}>
                         { number.to_u16() }
                     </div>
                 ")
-            );
-        }
+            })
+            .collect();
 
         return html_component!("
-            <div>{ ..out }</div>
+            <div css={css_wrapper_one()}>
+                { ..out }
+            </div>
         ")
     }
-
-
 
     let possible_last_value = *cell.possible_last.get_value();
 
@@ -120,20 +114,16 @@ pub fn render_cell_possible(item: &Computed<Cell>) -> VDomElement {
     }
 
 
-    let mut out = vec![
-        css(css_wrapper())
-    ];
+    let out: Vec<_> = SudokuValue::variants().into_iter()
+        .map(|number| {
+            let should_show = possible.contains(&number);
 
-    for number in SudokuValue::variants() {
-        let should_show = possible.contains(&number);
+            let label = if should_show {
+                format!("{}", number.to_u16())
+            } else {
+                "".into()
+            };
 
-        let label = if should_show {
-            format!("{}", number.to_u16())
-        } else {
-            "".into()
-        };
-
-        out.push({
             let on_click = {
                 let cell = cell.clone();
                 move || {
@@ -142,15 +132,18 @@ pub fn render_cell_possible(item: &Computed<Cell>) -> VDomElement {
                     }
                 }
             };
+
             html_element!("
                 <div css={css_item(should_show)} onClick={on_click}>
                     { label }
-                 </div>
-                ")
-        });
-    }
+                </div>
+            ")
+        })
+        .collect();
 
     html_component!("
-        <div>{ ..out }</div>
+        <div css={css_wrapper()}>
+            { ..out }
+        </div>
     ")
 }
