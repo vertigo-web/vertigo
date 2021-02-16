@@ -1,8 +1,6 @@
 use std::rc::Rc;
 
-use crate::virtualdom::models::{
-    vdom::VDomNode,
-};
+use crate::virtualdom::models::vdom_node::VDomNode;
 use crate::virtualdom::models::css::Css;
 
 pub enum NodeAttr {

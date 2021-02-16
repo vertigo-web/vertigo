@@ -17,8 +17,8 @@ pub use driver::HashRoutingReceiver;
 
 pub use virtualdom::models::realdom_id::RealDomId;
 pub use virtualdom::models::vdom_component::VDomComponent;
-pub use virtualdom::models::vdom_node::VDomElement;
+pub use virtualdom::models::vdom_element::VDomElement;
 pub use virtualdom::models::vdom_text::VDomText;
-pub use virtualdom::models::vdom::VDomNode;
+pub use virtualdom::models::vdom_node::VDomNode;
 pub use virtualdom::models::css::{Css, CssGroup};
 pub use virtualdom::models::node_attr;

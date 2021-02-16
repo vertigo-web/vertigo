@@ -8,7 +8,7 @@ use crate::computed::{
 use crate::{
     virtualdom::{
         models::{
-            vdom_node::VDomElement,
+            vdom_element::VDomElement,
             vdom_component_id::VDomComponentId,
         }
     }
@@ -46,7 +46,6 @@ impl VDomComponent {
             Rc::new(render(value))
         });
 
-        
         VDomComponent {
             id: component_id,
             view,
