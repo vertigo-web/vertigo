@@ -1,30 +1,46 @@
 // use vertigo::node_attr::{NodeAttr, text};
-use vertigo::VDomNode;
+use vertigo::{VDomComponent, VDomElement, VDomNode};
 use std::rc::Rc;
 
-pub trait Inline {
+pub trait Embed {
     fn embed(self) -> VDomNode;
 }
 
-impl Inline for VDomNode {
+impl Embed for VDomNode {
     fn embed(self) -> VDomNode {
         self
     }
 }
 
-impl Inline for &str {
+impl Embed for VDomElement {
+    fn embed(self) -> VDomNode {
+        VDomNode::Element {
+            node: self
+        }
+    }
+}
+
+impl Embed for VDomComponent {
+    fn embed(self) -> VDomNode {
+        VDomNode::Component {
+            node: self
+        }
+    }
+}
+
+impl Embed for &str {
     fn embed(self) -> VDomNode {
         VDomNode::text(self)
     }
 }
 
-impl Inline for String {
+impl Embed for String {
     fn embed(self) -> VDomNode {
         VDomNode::text(&self)
     }
 }
 
-impl Inline for Rc<String> {
+impl Embed for Rc<String> {
     fn embed(self) -> VDomNode {
         VDomNode::text(&*self)
     }
@@ -32,7 +48,7 @@ impl Inline for Rc<String> {
 
 macro_rules! impl_to_string {
     ($ty: ty) => {
-        impl Inline for $ty {
+        impl Embed for $ty {
             fn embed(self) -> VDomNode {
                 VDomNode::text(self.to_string())
             }

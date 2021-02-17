@@ -1,12 +1,12 @@
 use vertigo::computed::{Dependencies, Value};
 
-use crate::html_component;
+use crate::html;
 
 use super::utils::*;
 
 #[test]
 fn div_with_label_and_input() {
-    let div = html_component!(r#"
+    let div = html!(r#"
         <div>
             Label
             <input value="some_value" />
@@ -35,7 +35,7 @@ fn managed_input() {
         }
     };
 
-    let input = html_component!("
+    let input = html!("
         <input value={value.get_value().as_str()} onInput={on_input} />
     ");
 

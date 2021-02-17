@@ -10,7 +10,7 @@ use vertigo::{
     },
     utils::DropResource
 };
-use vertigo_html::{VDomNode, html_component, html_element, css, css_fn};
+use vertigo_html::{html, css, css_fn};
 
 mod next_generation;
 
@@ -128,7 +128,7 @@ fn render_header(state: &Computed<State>) -> VDomElement {
                 log::info!("stop ...");
             }
         };
-        html_element!("
+        html!("
             <button css={css_button()} onClick={on_click}>
                 Stop
             </button>
@@ -142,7 +142,7 @@ fn render_header(state: &Computed<State>) -> VDomElement {
             }
         };
 
-        html_element!("
+        html!("
             <button css={css_button()} onClick={on_click}>
                 Start
             </button>
@@ -170,14 +170,14 @@ fn render_header(state: &Computed<State>) -> VDomElement {
             }
         };
 
-        html_element!("
+        html!("
             <button css={css_button()} onClick={on_click}>
                 Random
             </button>
         ")
     };
 
-    html_component!(r#"
+    html!(r#"
         <div>
             <div>Game of life</div>
             <div>{$ format!("year = {}", year) $}</div>
@@ -191,7 +191,7 @@ pub fn render(state: &Computed<State>) -> VDomElement {
     let value = state.get_value().matrix.get_value();
     let value_inner = &*value;
 
-    html_component!("
+    html!("
         <div css={css_wrapper()}>
             <component {render_header} data={state.clone()} />
             { render_matrix(value_inner) }
@@ -199,30 +199,30 @@ pub fn render(state: &Computed<State>) -> VDomElement {
     ")
 }
 
-fn render_matrix(matrix: &[Vec<Value<bool>>]) -> VDomNode {
+fn render_matrix(matrix: &[Vec<Value<bool>>]) -> VDomElement {
     let mut out = Vec::new();
 
     for item in matrix.iter() {
         out.push(render_row(item));
     }
 
-    html_element!("
+    html!("
         <div>
             { ..out }
         </div>
     ")
 }
 
-fn render_row(matrix: &[Value<bool>]) -> VDomNode {
+fn render_row(matrix: &[Value<bool>]) -> VDomElement {
     let mut out = Vec::new();
 
     for item in matrix.iter() {
         out.push(
-            html_element!("<component_val {render_cell} data={item} />")
+            html!("<component_val {render_cell} data={item} />")
         )
     }
 
-    html_element!("
+    html!("
         <div css={css_row()}>
             { ..out }
         </div>
@@ -241,7 +241,7 @@ fn render_cell(cell: &Value<bool>) -> VDomElement {
         }
     };
 
-    html_component!("
+    html!("
         <div css={css_cell(*is_active)} onClick={on_click_callback} />
     ")
 }

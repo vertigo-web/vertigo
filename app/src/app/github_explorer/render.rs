@@ -2,7 +2,7 @@ use vertigo::{
     computed::Computed,
     VDomElement,
 };
-use vertigo_html::{html_component, css_fn};
+use vertigo_html::{html, css_fn};
 
 use super::state::{State, Resource};
 
@@ -61,7 +61,7 @@ pub fn render(state: &Computed<State>) -> VDomElement {
         }
     };
 
-    html_component!(r#"
+    html!(r#"
         <div css={wrapper()}>
             { "Enter author/repo tuple:" }
             <input css={input_css()} value={(*repo_input).as_str()} onInput={on_input_callback} />

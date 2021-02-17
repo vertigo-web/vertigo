@@ -1,5 +1,5 @@
 use vertigo::{computed::Computed, VDomElement, Css};
-use vertigo_html::{html_component, css_fn, css};
+use vertigo_html::{html, css_fn, css};
 
 use self::config::Config;
 use super::state::{Cell, Sudoku, sudoku_square::SudokuSquare, tree_box::TreeBoxIndex};
@@ -70,7 +70,7 @@ fn render_group(group: &Computed<SudokuSquare<Cell>>) -> VDomElement {
         })
     };
 
-    html_component!("
+    html!("
         <div css={css_item_wrapper()}>
             <div css={css_cell_wrapper()}>
                 <component {render_cell} data={get_cell(group, TreeBoxIndex::First,  TreeBoxIndex::First)} />
@@ -110,7 +110,7 @@ pub fn main_render(sudoku: &Computed<Sudoku>) -> VDomElement {
         })
     };
 
-    html_component!("
+    html!("
         <div css={css_center()}>
             <div css={css_wrapper()}>
                 <component {render_group} data={get_group(sudoku, TreeBoxIndex::First,  TreeBoxIndex::First)} />
@@ -162,7 +162,7 @@ pub fn examples_render(sudoku: &Computed<Sudoku>) -> VDomElement {
         move || { sudoku.example3(); }
     };
 
-    html_component!("
+    html!("
         <div css={css_sudoku_example()}>
             <button css={css_sudoku_example_button()} onClick={clear}> Clear </button>
             <button css={css_sudoku_example_button()} onClick={example1}> Example 1 </button>

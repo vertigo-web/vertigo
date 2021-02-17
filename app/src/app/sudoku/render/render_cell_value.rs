@@ -1,5 +1,5 @@
 use vertigo::{computed::Computed, VDomElement, Css};
-use vertigo_html::{html_component, html_element, css, css_fn};
+use vertigo_html::{html, css, css_fn};
 
 use crate::app::sudoku::state::{Cell, number_item::SudokuValue};
 
@@ -51,7 +51,7 @@ pub fn render_cell_value(value: SudokuValue, item: &Computed<Cell>, ) -> VDomEle
         };
 
         out.push(
-            html_element!("
+            html!("
                 <div css={css_delete()} onClick={on_click}>
                     X
                 </div>
@@ -67,8 +67,7 @@ pub fn render_cell_value(value: SudokuValue, item: &Computed<Cell>, ) -> VDomEle
         );
     }
 
-    html_component!("
-        <div css={css_item_number_wrapper()}>
+    html!("<div css={css_item_number_wrapper()}>
             { value.to_u16() }
             { ..out }
         </div>

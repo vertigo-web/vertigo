@@ -1,4 +1,4 @@
-use crate::html_component;
+use crate::html;
 
 // Make crate available by its name for html macro
 use crate as vertigo_html;
@@ -7,7 +7,7 @@ use super::utils::*;
 
 #[test]
 fn empty_textarea() {
-    let textarea = html_component!("
+    let textarea = html!("
         <textarea></textarea>
     ");
 
@@ -16,7 +16,7 @@ fn empty_textarea() {
 
 #[test]
 fn textarea_with_expression() {
-    let textarea = html_component!(r#"
+    let textarea = html!(r#"
         <textarea>{$ format!("Some {}", "Value") $}</textarea>
     "#);
 
@@ -28,7 +28,7 @@ fn textarea_with_expression() {
 
 #[test]
 fn div_with_textarea() {
-    let div = html_component!("
+    let div = html!("
         <div>
             Label
             <textarea>Some Value</textarea>

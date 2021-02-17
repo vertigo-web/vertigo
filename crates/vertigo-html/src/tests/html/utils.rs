@@ -7,7 +7,7 @@ pub fn assert_empty(el: &VDomElement, name: &str) {
 
 pub fn get_node(node: &VDomNode) -> &VDomElement {
     match node {
-        VDomNode::Node { node } => node,
+        VDomNode::Element { node } => node,
         VDomNode::Text { .. } => panic!("get_node: expected Node, got Text"),
         VDomNode::Component { .. } => panic!("get_node: expected Node, got Component"),
     }
@@ -15,7 +15,7 @@ pub fn get_node(node: &VDomNode) -> &VDomElement {
 
 pub fn get_text(node: &VDomNode) -> &VDomText {
     match node {
-        VDomNode::Node { .. } => panic!("get_text: Expected text, got Node"),
+        VDomNode::Element { .. } => panic!("get_text: Expected text, got Node"),
         VDomNode::Text { node } => node,
         VDomNode::Component { .. } => panic!("get_text: Expected text, got Component"),
     }
@@ -23,7 +23,7 @@ pub fn get_text(node: &VDomNode) -> &VDomText {
 
 pub fn get_component(node: &VDomNode) -> &VDomComponent {
     match node {
-        VDomNode::Node { .. } => panic!("get_component: Expected Component, got Node"),
+        VDomNode::Element { .. } => panic!("get_component: Expected Component, got Node"),
         VDomNode::Text { .. } => panic!("get_component: Expected Component, got Text"),
         VDomNode::Component { node } => node,
     }

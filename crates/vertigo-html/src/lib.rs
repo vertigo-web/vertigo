@@ -1,12 +1,12 @@
-mod inline;
+mod embed;
 
-pub use inline::Inline;
+pub use embed::Embed;
 
 // Proc-macros can't be defined in the same crate, so all we can do is re-export it here from separate "sub-crate"
-pub use vertigo_html_macro::{html_component, html_element, css, css_block};
+pub use vertigo_html_macro::{html, css, css_block};
 
 // For convenience
-pub use vertigo::VDomNode;
+pub use vertigo::VDomElement;
 
 #[macro_export]
 macro_rules! css_fn {

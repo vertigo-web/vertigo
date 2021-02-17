@@ -13,18 +13,9 @@ use crate::css_parser::CssParser;
 
 #[proc_macro]
 #[proc_macro_error]
-pub fn html_component(input: TokenStream) -> TokenStream {
+pub fn html(input: TokenStream) -> TokenStream {
     let call_site = Span::call_site();
     let result = HtmlParser::parse_stream(call_site, &get_string(input), true);
-    // emit_warning!(call_site, "HTML: output: {}", result);
-    result.into()
-}
-
-#[proc_macro]
-#[proc_macro_error]
-pub fn html_element(input: TokenStream) -> TokenStream {
-    let call_site = Span::call_site();
-    let result = HtmlParser::parse_stream(call_site, &get_string(input), false);
     // emit_warning!(call_site, "HTML: output: {}", result);
     result.into()
 }

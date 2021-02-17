@@ -1,6 +1,6 @@
 use vertigo::Css;
 
-use crate::html_component;
+use crate::html;
 
 use super::utils::*;
 
@@ -8,7 +8,7 @@ use super::utils::*;
 fn div_with_static_css() {
     fn my_css() -> Css { Css::one("color: green") }
 
-    let div = html_component!("
+    let div = html!("
         <div css={my_css()}>
             Some text
         </div>
@@ -30,7 +30,7 @@ fn div_with_static_css() {
 fn div_with_dynamic_css() {
     fn my_css() -> Css { Css::new("color: black".to_string()) }
 
-    let div = html_component!("
+    let div = html!("
         <div css={my_css()} />
     ");
 
@@ -51,7 +51,7 @@ fn div_with_multiple_css_groups() {
     }
 
     // second css attribute overwrites the first one
-    let div = html_component!("
+    let div = html!("
         <div css={my_css()} css={my_second_css()} />
     ");
 

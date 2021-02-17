@@ -1,6 +1,6 @@
 use vertigo::computed::{Dependencies, Value};
 
-use crate::html_component;
+use crate::html;
 
 use super::utils::*;
 
@@ -22,7 +22,7 @@ fn div_with_mouse_events() {
         }
     };
 
-    let div = html_component!("
+    let div = html!("
         <div onMouseEnter={mouse_in} onMouseLeave={mouse_out} />
     ");
 

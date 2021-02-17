@@ -3,7 +3,7 @@ use vertigo::{
     VDomElement,
     Css,
 };
-use vertigo_html::{html_component, html_element, css, css_fn};
+use vertigo_html::{html, css, css_fn};
 
 use crate::{app, navigate_to};
 
@@ -49,7 +49,7 @@ fn render_header(app_state: &Computed<app::State>) -> VDomElement {
 
     let is_game_of_life = matches!(current_page, Route::GameOfLife { .. });
 
-    html_component!("
+    html!("
         <div>
             <ul css={css_menu()}>
                 <li css={css_menu_item(current_page == &Route::Main)} onClick={navigate_to!(state, Main)}> Main </li>
@@ -68,33 +68,33 @@ pub fn render(app_state: &Computed<app::State>) -> VDomElement {
 
     let child = match *state.route.get_value() {
         Route::Main =>
-            html_element!("<component {super::main::main_render} data={state.main} />"),
+            html!("<component {super::main::main_render} data={state.main} />"),
 
         Route::Counters =>
-            html_element!("<component {super::counters::render} data={state.counters} />"),
+            html!("<component {super::counters::render} data={state.counters} />"),
 
         Route::Sudoku =>
-            html_element!("
+            html!("
                 <div>
                     <component {sudoku::examples_render} data={state.sudoku.clone()} />
                     <component {sudoku::main_render} data={state.sudoku.clone()} />
                 </div>
-            "),
+            ").into(),
 
         Route::Input =>
-            html_element!("<component {input::render} data={state.input} />"),
+            html!("<component {input::render} data={state.input} />"),
 
         Route::GithubExplorer =>
-            html_element!("<component {github_explorer::render} data={state.github_explorer} />"),
+            html!("<component {github_explorer::render} data={state.github_explorer} />"),
 
         Route::GameOfLife {..} =>
-            html_element!("<component {game_of_life::render} data={state.game_of_life} />"),
+            html!("<component {game_of_life::render} data={state.game_of_life} />"),
 
         Route::NotFound =>
-            html_element!("<div>Page Not Found</div>"),
+            html!("<div>Page Not Found</div>").into(),
     };
 
-    html_component!("
+    html!("
         <div>
             <component {render_header} data={app_state.clone()} />
             {child}

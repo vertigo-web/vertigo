@@ -1,13 +1,13 @@
 use vertigo::computed::{Dependencies, Value};
 use vertigo::Css;
 
-use crate::html_component;
+use crate::html;
 
 use super::utils::*;
 
 #[test]
 fn button() {
-    let button = html_component!("
+    let button = html!("
         <button>Label</button>
     ");
 
@@ -29,7 +29,7 @@ fn clickable_button() {
         }
     };
 
-    let button = html_component!("
+    let button = html!("
         <button onClick={on_click} />
     ");
 
@@ -45,7 +45,7 @@ fn clickable_button() {
 fn button_with_css() {
     fn my_css() -> Css { Css::one("background-color: gray") }
 
-    let button = html_component!("
+    let button = html!("
         <button css={my_css()}>
             Some text
         </button>
