@@ -91,7 +91,7 @@ fn get_pair_for_update<'a>(real: &'a RealDomNode, new: &'a VDomNode) -> Option<N
             }
         },
         RealDomNode::Node { node } => {
-            if let VDomNode::Node { node : vnode} = new {
+            if let VDomNode::Element { node : vnode} = new {
                 if node.name() == vnode.name {
                     return Some(NodePairs::Node {
                         real: node,
@@ -209,7 +209,7 @@ fn update_node_child(css_manager: &CssManager, target: &RealDomElement, new_vers
     for item in new_version.child.iter().rev() {
 
         match item {
-            VDomNode::Node { node } => {
+            VDomNode::Element { node } => {
                 let id = node.name;
                 let dom_child = real_node.get_or_create(css_manager, target, id, node);
                 let new_wsk = dom_child.id_dom();

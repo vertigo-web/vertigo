@@ -7,7 +7,7 @@ use vertigo::{
         Dependencies
     },
 };
-use vertigo_html::{html_component, html_element, css, css_fn, css_fn_push};
+use vertigo_html::{html, css, css_fn, css_fn_push};
 
 mod spinner;
 
@@ -77,20 +77,20 @@ pub fn main_render(state: &Computed<MainState>) -> VDomElement {
     let show_color = *value % 2 == 0;
 
     let footer_dom = if *value % 10 == 0 {
-        html_element!(r#"
+        html!(r#"
             <div>
                 {$ format!("jakis footer {} {} - BEZKLASIE", *value % 2, *value % 3) $}
             </div>
         "#)
     } else {
-        html_element!(r#"
+        html!(r#"
             <div css={css_footer(show_color)}>
                 {$ format!("jakis footer {} {}", *value % 2, *value % 3) $}
             </div>
         "#)
     };
 
-    html_component!(r#"
+    html!(r#"
         <div aaa="one" bbb="two">
             Abudabi
             <div css={css_bg()}>

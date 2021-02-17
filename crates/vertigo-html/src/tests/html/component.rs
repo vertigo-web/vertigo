@@ -3,7 +3,7 @@ use vertigo::{
     VDomElement,
 };
 
-use crate::html_component;
+use crate::html;
 
 // Make crate available by its name for html macro
 use crate as vertigo_html;
@@ -17,12 +17,12 @@ fn div_with_text() {
     let value = Value::new(deps, "old value".to_string());
 
     fn my_component(state: &Computed<String>) -> VDomElement {
-        html_component!("
+        html!("
             <div>Value {state.get_value().as_str()}</div>
         ")
     }
 
-    let div = html_component!("
+    let div = html!("
         <div>
             <component {my_component} data={value.to_computed()} />
         </div>

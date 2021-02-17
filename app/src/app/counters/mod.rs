@@ -7,7 +7,7 @@ use vertigo::{
     }
 };
 
-use vertigo_html::html_component;
+use vertigo_html::html;
 
 mod simple_counter;
 
@@ -59,7 +59,7 @@ fn render_suma(state: &Computed<State>) -> VDomElement {
 
     let suma = state.suma.get_value();
 
-    html_component!(r#"
+    html!(r#"
         <div>
             {$ format!("suma = {}", suma) $}
         </div>
@@ -69,7 +69,7 @@ fn render_suma(state: &Computed<State>) -> VDomElement {
 pub fn render(state: &Computed<State>) -> VDomElement {
     let st = state.get_value();
 
-    html_component!("
+    html!("
         <div>
             <component {simple_counter::render} data={st.counter1.clone()} />
             <component {simple_counter::render} data={st.counter2.clone()} />

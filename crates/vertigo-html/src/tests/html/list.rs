@@ -1,15 +1,18 @@
-use crate::{html_component, html_element};
+use crate::html;
+
+// Make crate available by its name for html macro
+use crate as vertigo_html;
 
 use super::utils::*;
 
 #[test]
 fn div_with_list() {
     let list = vec![
-        html_element!("<input />"),
-        html_element!("<button />"),
+        html!("<input />"),
+        html!("<button />"),
     ];
 
-    let div = html_component!("
+    let div = html!("
         <div>
             Label
             { ..list }
@@ -33,11 +36,11 @@ fn div_with_list() {
 #[ignore]
 fn div_with_element_after_list() {
     let list = vec![
-        html_element!("<input />"),
-        html_element!("<button />"),
+        html!("<input />"),
+        html!("<button />"),
     ];
 
-    let div = html_component!("
+    let div = html!("
         <div>
             { ..list }
             Error

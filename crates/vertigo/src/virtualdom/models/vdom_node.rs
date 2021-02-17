@@ -6,7 +6,7 @@ use crate::virtualdom::models::{
 };
 
 pub enum VDomNode {
-    Node {
+    Element {
         node: VDomElement,
     },
     Text {
@@ -19,7 +19,7 @@ pub enum VDomNode {
 
 impl VDomNode {
     pub fn node(name: &'static str, attr_list: Vec<NodeAttr>, children: Vec<Self>) -> Self {
-        VDomNode::Node {
+        VDomNode::Element {
             node: VDomElement::new(name, attr_list, children)
         }
     }
@@ -34,5 +34,18 @@ impl VDomNode {
         Self::Component {
             node: value
         }
+    }
+}
+
+
+impl From<VDomComponent> for VDomNode {
+    fn from(node: VDomComponent) -> Self {
+        Self::Component { node }
+    }
+}
+
+impl From<VDomElement> for VDomNode {
+    fn from(node: VDomElement) -> Self {
+        Self::Element { node }
     }
 }

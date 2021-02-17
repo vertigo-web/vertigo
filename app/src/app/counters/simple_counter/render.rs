@@ -5,7 +5,7 @@ use vertigo::{
     VDomElement,
 };
 
-use vertigo_html::{html_component, css_fn, css_fn_push};
+use vertigo_html::{html, css_fn, css_fn_push};
 
 css_fn! { css_box, "
     margin: 5px;
@@ -43,7 +43,7 @@ pub fn render(simple_counter: &Computed<State>) -> VDomElement {
         }
     };
 
-    html_component!(r#"
+    html!(r#"
         <div css={css_wrapper()}>
             <div css={css_box()}>{$ format!("Counter value = {}", value) $}</div>
             <button css={css_button()} onClick={click_up}>up</button>

@@ -1,5 +1,5 @@
 use vertigo::{computed::Computed, VDomElement, Css};
-use vertigo_html::{html_component, html_element, css};
+use vertigo_html::{html, css};
 
 use crate::app::sudoku::state::{Cell, number_item::SudokuValue};
 use super::config::Config;
@@ -80,7 +80,7 @@ pub fn render_cell_possible(item: &Computed<Cell>) -> VDomElement {
                     }
                 };
 
-                html_element!("
+                html!("
                     <div css={css_item_only_one()} onClick={on_set}>
                         { number.to_u16() }
                     </div>
@@ -88,7 +88,7 @@ pub fn render_cell_possible(item: &Computed<Cell>) -> VDomElement {
             })
             .collect();
 
-        return html_component!("
+        return html!("
             <div css={css_wrapper_one()}>
                 { ..out }
             </div>
@@ -104,7 +104,7 @@ pub fn render_cell_possible(item: &Computed<Cell>) -> VDomElement {
             }
         };
 
-        return html_component!(r#"
+        return html!(r#"
             <div css={css_wrapper_one()}>
                 <div css={css_item_only_one()} onClick={on_set}>
                     {$ format!("{}.", possible_last_value.to_u16()) $}
@@ -133,7 +133,7 @@ pub fn render_cell_possible(item: &Computed<Cell>) -> VDomElement {
                 }
             };
 
-            html_element!("
+            html!("
                 <div css={css_item(should_show)} onClick={on_click}>
                     { label }
                 </div>
@@ -141,7 +141,7 @@ pub fn render_cell_possible(item: &Computed<Cell>) -> VDomElement {
         })
         .collect();
 
-    html_component!("
+    html!("
         <div css={css_wrapper()}>
             { ..out }
         </div>

@@ -1,4 +1,4 @@
-use vertigo_html::{html_element, css_fn, VDomNode};
+use vertigo_html::{html, css_fn, VDomElement};
 
 css_fn! { spinner_css, "
     width: 40px;
@@ -19,8 +19,8 @@ css_fn! { spinner_css, "
     };
 " }
 
-pub fn spinner() -> VDomNode {
-    html_element!("
+pub fn spinner() -> VDomElement {
+    html!("
         <div css={spinner_css()}>
         </div>
     ")

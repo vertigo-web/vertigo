@@ -7,7 +7,7 @@ use vertigo::{
     },
     VDomElement,
 };
-use vertigo_html::{html_component, css_fn};
+use vertigo_html::{html, css_fn};
 // use virtualdom::vdom::StateBox::StateBox;
 
 #[derive(PartialEq)]
@@ -103,7 +103,7 @@ pub fn render(state: &Computed<State>) -> VDomElement {
 
     let count = value.len();
 
-    html_component!(r#"
+    html!(r#"
         <div css={wrapper()} onMouseEnter={mouse_in} onMouseLeave={mouse_out}>
             { "To jest input" }
             <input css={input_css()} value={(*value).as_str()} onInput={on_set3} />

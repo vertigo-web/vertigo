@@ -221,7 +221,7 @@ impl HtmlParser {
             Rule::expression_value => {
                 let value = pair.as_str();
                 let expr: Expr = parse_str(value).unwrap_or_else(|e| panic!("Error while parsing `{}`: {}", value, e));
-                quote! { vertigo_html::Inline::embed((#expr)) }
+                quote! { vertigo_html::Embed::embed((#expr)) }
             },
             _ => {
                 emit_warning!(self.call_site, "HTML: unhandler pair in generate_expression: {:?}", pair);
@@ -236,7 +236,7 @@ impl HtmlParser {
             Rule::expression_value => {
                 let value = pair.as_str();
                 let expr: Expr = parse_str(value).unwrap_or_else(|e| panic!("Error while parsing `{}`: {}", value, e));
-                quote! { #expr }
+                quote! { (#expr).into_iter().map(|e| vertigo_html::Embed::embed(e)) }
             },
             _ => {
                 emit_warning!(self.call_site, "HTML: unhandler pair in generate_expression: {:?}", pair);
