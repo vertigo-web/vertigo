@@ -11,7 +11,7 @@ use crate::virtualdom::models::{
 pub struct VDomElement {
     pub name: &'static str,
     pub attr: HashMap<&'static str, String>,
-    pub child: Vec<VDomNode>,
+    pub children: Vec<VDomNode>,
     pub on_click: Option<Rc<dyn Fn()>>,
     pub on_input: Option<Rc<dyn Fn(String)>>,
     pub on_mouse_enter: Option<Rc<dyn Fn()>>,
@@ -24,7 +24,7 @@ impl VDomElement {
         let mut result = VDomElement {
             name,
             attr: HashMap::new(),
-            child: children,
+            children,
             on_click: None,
             on_input: None,
             on_mouse_enter: None,
@@ -52,26 +52,10 @@ impl VDomElement {
                 NodeAttr::Attr { name , value} => {
                     result.attr.insert(name, value);
                 },
-                // NodeAttr::Node { node } => {
-                //     result.child.push(node);
-                // }
             }
         }
 
         result
-    }
-
-    pub fn new_with_v_dom(name: &'static str, child_list: Vec<VDomNode>) -> VDomElement {
-        VDomElement {
-            name,
-            attr: HashMap::new(),
-            child: child_list,
-            on_click: None,
-            on_input: None,
-            on_mouse_enter: None,
-            on_mouse_leave: None,
-            css: None,
-        }
     }
 }
 

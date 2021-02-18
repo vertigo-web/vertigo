@@ -22,7 +22,7 @@ fn textarea_with_expression() {
 
     assert_eq!(textarea.name, "textarea");
 
-    let text = get_text(&textarea.child[0]);
+    let text = get_text(&textarea.children[0]);
     assert_eq!(text.value, "Some Value");
 }
 
@@ -36,14 +36,14 @@ fn div_with_textarea() {
     ");
 
     assert_eq!(div.name, "div");
-    assert_eq!(div.child.len(), 2);
+    assert_eq!(div.children.len(), 2);
 
-    let label = get_text(&div.child[0]);
+    let label = get_text(&div.children[0]);
     assert_eq!(label.value, "Label");
 
-    let textarea = get_node(&div.child[1]);
+    let textarea = get_node(&div.children[1]);
     assert_eq!(textarea.name, "textarea");
 
-    let text = get_text(&textarea.child[0]);
+    let text = get_text(&textarea.children[0]);
     assert_eq!(text.value, "Some Value");
 }

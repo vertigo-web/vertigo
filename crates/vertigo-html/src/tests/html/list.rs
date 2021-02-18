@@ -20,15 +20,15 @@ fn div_with_list() {
     ");
 
     assert_eq!(div.name, "div");
-    assert_eq!(div.child.len(), 3);
+    assert_eq!(div.children.len(), 3);
 
-    let inner1 = get_text(&div.child[0]);
+    let inner1 = get_text(&div.children[0]);
     assert_eq!(&inner1.value, "Label");
 
-    let inner2 = get_node(&div.child[1]);
+    let inner2 = get_node(&div.children[1]);
     assert_empty(&inner2, "input");
 
-    let inner3 = get_node(&div.child[2]);
+    let inner3 = get_node(&div.children[2]);
     assert_empty(&inner3, "button");
 }
 
@@ -48,14 +48,14 @@ fn div_with_element_after_list() {
     ");
 
     assert_eq!(div.name, "div");
-    assert_eq!(div.child.len(), 3);
+    assert_eq!(div.children.len(), 3);
 
-    let inner1 = get_node(&div.child[0]);
+    let inner1 = get_node(&div.children[0]);
     assert_empty(&inner1, "input");
 
-    let inner2 = get_node(&div.child[1]);
+    let inner2 = get_node(&div.children[1]);
     assert_empty(&inner2, "button");
 
-    let inner3 = get_text(&div.child[2]);
+    let inner3 = get_text(&div.children[2]);
     assert_eq!(&inner3.value, "Error");
 }

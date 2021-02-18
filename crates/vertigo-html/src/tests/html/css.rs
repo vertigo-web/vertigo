@@ -6,7 +6,7 @@ use super::utils::*;
 
 #[test]
 fn div_with_static_css() {
-    fn my_css() -> Css { Css::one("color: green") }
+    fn my_css() -> Css { Css::str("color: green") }
 
     let div = html!("
         <div css={my_css()}>
@@ -15,20 +15,20 @@ fn div_with_static_css() {
     ");
 
     assert_eq!(div.name, "div");
-    assert_eq!(div.child.len(), 1);
+    assert_eq!(div.children.len(), 1);
 
     let css_groups = div.css.unwrap().groups;
     assert_eq!(css_groups.len(), 1);
     let css_value = get_static_css(&css_groups[0]);
     assert_eq!(css_value, "color: green");
 
-    let text = get_text(&div.child[0]);
+    let text = get_text(&div.children[0]);
     assert_eq!(text.value, "Some text");
 }
 
 #[test]
 fn div_with_dynamic_css() {
-    fn my_css() -> Css { Css::new("color: black".to_string()) }
+    fn my_css() -> Css { Css::string("color: black".to_string()) }
 
     let div = html!("
         <div css={my_css()} />
@@ -44,10 +44,10 @@ fn div_with_dynamic_css() {
 
 #[test]
 fn div_with_multiple_css_groups() {
-    fn my_css() -> Css { Css::one("color: black") }
+    fn my_css() -> Css { Css::str("color: black") }
 
     fn my_second_css() -> Css {
-        my_css().push("color: white")
+        my_css().push_str("color: white")
     }
 
     // second css attribute overwrites the first one

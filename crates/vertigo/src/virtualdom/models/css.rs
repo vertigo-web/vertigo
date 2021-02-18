@@ -20,7 +20,7 @@ impl Default for Css {
 }
 
 impl Css {
-    pub fn one(value: &'static str) -> Self {
+    pub fn str(value: &'static str) -> Self {
         Self {
             groups: vec!(CssGroup::CssStatic {
                 value
@@ -28,7 +28,7 @@ impl Css {
         }
     }
 
-    pub fn new(value: String) -> Self {
+    pub fn string(value: String) -> Self {
         Self {
             groups: vec!(CssGroup::CssDynamic {
                 value
@@ -36,20 +36,14 @@ impl Css {
         }
     }
 
-    pub fn push(mut self, value: &'static str) -> Self {
+    pub fn push_str(mut self, value: &'static str) -> Self {
         self.groups.push(CssGroup::CssStatic {
             value
         });
         self
     }
 
-    pub fn str(&mut self, value: &'static str) {
-        self.groups.push(CssGroup::CssStatic {
-            value
-        })
-    }
-
-    pub fn dynamic(&mut self, value: String) {
+    pub fn push_string(&mut self, value: String) {
         self.groups.push(CssGroup::CssDynamic {
             value
         })

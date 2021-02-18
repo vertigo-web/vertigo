@@ -21,7 +21,7 @@ macro_rules! css_fn {
 macro_rules! css_fn_push {
     ($name: ident, $base: ident, $block: tt) => {
         fn $name() -> vertigo::Css {
-            $base().push($crate::css_block! ($block))
+            $base().push_str($crate::css_block! ($block))
         }
     }
 }

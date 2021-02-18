@@ -12,9 +12,9 @@ fn button() {
     ");
 
     assert_eq!(button.name, "button");
-    assert_eq!(button.child.len(), 1);
+    assert_eq!(button.children.len(), 1);
 
-    let label = get_text(&button.child[0]);
+    let label = get_text(&button.children[0]);
     assert_eq!(label.value, "Label");
 }
 
@@ -43,7 +43,7 @@ fn clickable_button() {
 
 #[test]
 fn button_with_css() {
-    fn my_css() -> Css { Css::one("background-color: gray") }
+    fn my_css() -> Css { Css::str("background-color: gray") }
 
     let button = html!("
         <button css={my_css()}>
@@ -52,13 +52,13 @@ fn button_with_css() {
     ");
 
     assert_eq!(button.name, "button");
-    assert_eq!(button.child.len(), 1);
+    assert_eq!(button.children.len(), 1);
 
     let css_groups = button.css.unwrap().groups;
     assert_eq!(css_groups.len(), 1);
     let css_value = get_static_css(&css_groups[0]);
     assert_eq!(css_value, "background-color: gray");
 
-    let text = get_text(&button.child[0]);
+    let text = get_text(&button.children[0]);
     assert_eq!(text.value, "Some text");
 }

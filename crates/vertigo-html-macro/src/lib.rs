@@ -32,19 +32,18 @@ pub fn css_block(input: TokenStream) -> TokenStream {
 pub fn css(input: TokenStream) -> TokenStream {
     let (css_str, is_dynamic) = generate_css_string(input);
     let result = if is_dynamic {
-        quote! { vertigo::Css::new(#css_str) }
+        quote! { vertigo::Css::string(#css_str) }
     } else {
-        quote! { vertigo::Css::one(#css_str) }
+        quote! { vertigo::Css::str(#css_str) }
     };
     result.into()
 }
 
 fn generate_css_string(input: TokenStream) -> (TokenStream2, bool) {
     let call_site = Span::call_site();
-    // emit_warning!(call_site, "Parsing: {:?}", input);
     CssParser::parse_stream(call_site, &get_string(input))
     // let result = CssParser::parse_stream(call_site, &get_string(input));
-    // emit_warning!(call_site, "CSS: output: {}", result.0); // FIXME: deleteme
+    // emit_warning!(call_site, "CSS: output: {}", result.0);
     // result
 }
 
