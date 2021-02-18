@@ -14,12 +14,12 @@ fn div_with_label_and_input() {
     "#);
 
     assert_eq!(div.name, "div");
-    assert_eq!(div.child.len(), 2);
+    assert_eq!(div.children.len(), 2);
 
-    let label = get_text(&div.child[0]);
+    let label = get_text(&div.children[0]);
     assert_eq!(label.value, "Label");
 
-    let input = get_node(&div.child[1]);
+    let input = get_node(&div.children[1]);
     assert_eq!(input.name, "input");
     assert_eq!(input.attr.get("value"), Some(&"some_value".to_string()));
 }

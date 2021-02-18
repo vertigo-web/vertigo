@@ -154,7 +154,7 @@ fn update_node_child(css_manager: &CssManager, target: &RealDomElement, new_vers
 
     let real_child = target.extract_child();
 
-    let update_order_ok = update_node_child_updated_with_order(css_manager, &real_child, &new_version.child);
+    let update_order_ok = update_node_child_updated_with_order(css_manager, &real_child, &new_version.children);
     if update_order_ok {
         target.put_child(real_child);
         return;
@@ -206,7 +206,7 @@ fn update_node_child(css_manager: &CssManager, target: &RealDomElement, new_vers
 
     let mut wsk: Option<RealDomId> = None;
 
-    for item in new_version.child.iter().rev() {
+    for item in new_version.children.iter().rev() {
 
         match item {
             VDomNode::Element { node } => {

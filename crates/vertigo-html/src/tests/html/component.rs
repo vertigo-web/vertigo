@@ -29,23 +29,23 @@ fn div_with_text() {
     ");
 
     assert_eq!(div.name, "div");
-    assert_eq!(div.child.len(), 1);
+    assert_eq!(div.children.len(), 1);
 
-    let comp = get_component(&div.child[0]);
+    let comp = get_component(&div.children[0]);
     let inner_div = comp.view.get_value();
     assert_eq!(inner_div.name, "div");
-    assert_eq!(inner_div.child.len(), 2);
+    assert_eq!(inner_div.children.len(), 2);
 
-    let label = get_text(&inner_div.child[0]);
+    let label = get_text(&inner_div.children[0]);
     assert_eq!(label.value, "Value");
-    let expr = get_text(&inner_div.child[1]);
+    let expr = get_text(&inner_div.children[1]);
     assert_eq!(expr.value, "old value");
 
     value.set_value("new value".to_string());
 
     // Get the component again after changing state
-    let comp = get_component(&div.child[0]);
+    let comp = get_component(&div.children[0]);
     let inner_div = comp.view.get_value();
-    let expr = get_text(&inner_div.child[1]);
+    let expr = get_text(&inner_div.children[1]);
     assert_eq!(expr.value, "new value");
 }

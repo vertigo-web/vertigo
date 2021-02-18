@@ -22,9 +22,9 @@ fn div_with_text() {
     ");
 
     assert_eq!(div.name, "div");
-    assert_eq!(div.child.len(), 1);
+    assert_eq!(div.children.len(), 1);
 
-    let text = get_text(&div.child[0]);
+    let text = get_text(&div.children[0]);
     assert_eq!(text.value, "Some text");
 }
 
@@ -37,9 +37,9 @@ fn div_with_div() {
     ");
 
     assert_eq!(div.name, "div");
-    assert_eq!(div.child.len(), 1);
+    assert_eq!(div.children.len(), 1);
 
-    let inner = get_node(&div.child[0]);
+    let inner = get_node(&div.children[0]);
     assert_empty(&inner, "div");
 }
 
@@ -52,9 +52,9 @@ fn div_with_simple_expression() {
     ");
 
     assert_eq!(div.name, "div");
-    assert_eq!(div.child.len(), 1);
+    assert_eq!(div.children.len(), 1);
 
-    let inner = get_text(&div.child[0]);
+    let inner = get_text(&div.children[0]);
     assert_eq!(inner.value, "10")
 }
 
@@ -69,9 +69,9 @@ fn div_with_value_expression() {
     ");
 
     assert_eq!(div.name, "div");
-    assert_eq!(div.child.len(), 1);
+    assert_eq!(div.children.len(), 1);
 
-    let inner = get_text(&div.child[0]);
+    let inner = get_text(&div.children[0]);
     assert_eq!(inner.value, "9")
 }
 
@@ -85,8 +85,8 @@ fn div_with_rc_string_expression() {
     ");
 
     assert_eq!(div.name, "div");
-    assert_eq!(div.child.len(), 1);
+    assert_eq!(div.children.len(), 1);
 
-    let inner = get_text(&div.child[0]);
+    let inner = get_text(&div.children[0]);
     assert_eq!(inner.value, "The Title")
 }

@@ -1,6 +1,5 @@
 use std::rc::Rc;
 
-use crate::virtualdom::models::vdom_node::VDomNode;
 use crate::virtualdom::models::css::Css;
 
 pub enum NodeAttr {
@@ -62,8 +61,4 @@ pub fn attr<K: Into<String>>(name: &'static str, value: K) -> NodeAttr {
         name,
         value: value.into()
     }
-}
-
-pub fn build_text<T: Into<String>>(name: T) -> VDomNode {
-    VDomNode::text(name)
 }
