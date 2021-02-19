@@ -6,7 +6,7 @@ use vertigo::{
     VDomComponent,
 };
 
-use browserdriver::DomDriverBrowser;
+use vertigo_browserdriver::DomDriverBrowser;
 
 mod app;
 

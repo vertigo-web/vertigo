@@ -2,7 +2,7 @@
 
 members = [
     "app",
-    "crates/browserdriver",
+    "crates/vertigo-browserdriver",
     "crates/vertigo",
     "crates/vertigo-html",
     "crates/vertigo-html-macro",
