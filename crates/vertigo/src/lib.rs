@@ -22,3 +22,6 @@ pub use virtualdom::models::vdom_text::VDomText;
 pub use virtualdom::models::vdom_node::VDomNode;
 pub use virtualdom::models::css::{Css, CssGroup};
 pub use virtualdom::models::node_attr;
+
+// Export log module which can be used in vertigo plugins
+pub use log;

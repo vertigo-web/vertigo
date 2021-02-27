@@ -40,6 +40,12 @@ impl Embed for String {
     }
 }
 
+impl Embed for &String {
+    fn embed(self) -> VDomNode {
+        VDomNode::text(self)
+    }
+}
+
 impl Embed for Rc<String> {
     fn embed(self) -> VDomNode {
         VDomNode::text(&*self)
