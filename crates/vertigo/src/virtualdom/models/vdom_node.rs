@@ -49,3 +49,9 @@ impl From<VDomElement> for VDomNode {
         Self::Element { node }
     }
 }
+
+impl From<VDomText> for VDomNode {
+    fn from(node: VDomText) -> Self {
+        Self::Text { node }
+    }
+}
