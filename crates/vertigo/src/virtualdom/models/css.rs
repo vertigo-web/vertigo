@@ -1,3 +1,4 @@
+#[derive(Debug)]
 pub enum CssGroup {
     CssStatic {
         value: &'static str,                    //&str -- moze zachowywac sie jako id po ktorym odnajdujemy interesujaca regule
@@ -7,6 +8,7 @@ pub enum CssGroup {
     }
 }
 
+#[derive(Debug)]
 pub struct Css {
     pub groups: Vec<CssGroup>,
 }

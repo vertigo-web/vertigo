@@ -1,4 +1,4 @@
-#[derive(Clone)]
+#[derive(Debug, Clone)]
 pub struct VDomText {
     pub value: String,
 }
@@ -10,4 +10,3 @@ impl VDomText {
         }
     }
 }
-

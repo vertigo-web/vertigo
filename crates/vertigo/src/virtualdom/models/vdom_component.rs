@@ -1,5 +1,7 @@
 use std::cmp::PartialEq;
 use std::rc::Rc;
+use std::fmt;
+
 use crate::computed::{
     Value,
     Computed,
@@ -50,5 +52,14 @@ impl VDomComponent {
             id: component_id,
             view,
         }
+    }
+}
+
+impl fmt::Debug for VDomComponent {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        f.debug_struct("VDomElement")
+            .field("id", &self.id)
+            .field("view", &self.view.get_value())
+            .finish()
     }
 }
