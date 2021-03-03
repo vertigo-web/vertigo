@@ -1,6 +1,7 @@
 use std::collections::HashMap;
 use std::rc::Rc;
 use std::cmp::PartialEq;
+use std::fmt;
 
 use crate::virtualdom::models::vdom_node::VDomNode;
 use crate::virtualdom::models::{
@@ -62,5 +63,20 @@ impl VDomElement {
 impl PartialEq for VDomElement {
     fn eq(&self, _other: &VDomElement) -> bool {
         false                                       //Always not-eq
+    }
+}
+
+impl fmt::Debug for VDomElement {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        f.debug_struct("VDomElement")
+            .field("name", &self.name)
+            .field("attr", &self.attr)
+            .field("children", &self.children)
+            .field("on_click", &self.on_click.as_ref().map(|f| f.as_ref() as *const dyn Fn()))
+            .field("on_input", &self.on_input.as_ref().map(|f| f.as_ref() as *const dyn Fn(String)))
+            .field("on_mouse_enter", &self.on_mouse_enter.as_ref().map(|f| f.as_ref() as *const dyn Fn()))
+            .field("on_mouse_leave", &self.on_mouse_leave.as_ref().map(|f| f.as_ref() as *const dyn Fn()))
+            .field("css", &self.css)
+            .finish()
     }
 }

@@ -5,6 +5,7 @@ use crate::virtualdom::models::{
     node_attr::NodeAttr,
 };
 
+#[derive(Debug)]
 pub enum VDomNode {
     Element {
         node: VDomElement,
