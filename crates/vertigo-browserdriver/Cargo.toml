@@ -1,6 +1,6 @@
 [package]
 name = "vertigo-browserdriver"
-version = "0.1.0-alpha.1"
+version = "0.1.0-alpha.2"
 authors = ["Grzegorz Szeliga <grzegorz.szeliga@twoupdigital.com>"]
 edition = "2018"
 license = "MIT OR Apache-2.0"
@@ -9,11 +9,11 @@ description = "Virtual DOM library for Rust - web-browser rendering driver"
 # See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
 
 [dependencies]
-vertigo = { path = "../../crates/vertigo", version="0.1.0-alpha.1" }
-wasm-bindgen = {version = "0.2.70", features = ["nightly", "serde-serialize"]}
-wasm-bindgen-futures = "0.4.20"
+vertigo = { path = "../../crates/vertigo", version="0.1.0-alpha.2" }
+wasm-bindgen = {version = "0.2", features = ["nightly", "serde-serialize"]}
+wasm-bindgen-futures = "0.4"
 log = "0.4.14"
-web-sys = { version="0.3.47", features=[
+web-sys = { version="0.3", features=[
     "Document",
     "Headers",
     "History",

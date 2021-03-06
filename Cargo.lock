@@ -2548,14 +2548,14 @@ checksum = "b5a972e5669d67ba988ce3dc826706fb0a8b01471c088cb0b6110b805cc36aed"
 
 [[package]]
 name = "vertigo"
-version = "0.1.0-alpha.1"
+version = "0.1.0-alpha.2"
 dependencies = [
  "log",
 ]
 
 [[package]]
 name = "vertigo-browserdriver"
-version = "0.1.0-alpha.1"
+version = "0.1.0-alpha.2"
 dependencies = [
  "log",
  "vertigo",
@@ -2566,7 +2566,7 @@ dependencies = [
 
 [[package]]
 name = "vertigo-html"
-version = "0.1.0-alpha.1"
+version = "0.1.0-alpha.2"
 dependencies = [
  "vertigo",
  "vertigo-html-macro",
@@ -2574,7 +2574,7 @@ dependencies = [
 
 [[package]]
 name = "vertigo-html-macro"
-version = "0.1.0-alpha.1"
+version = "0.1.0-alpha.2"
 dependencies = [
  "itertools",
  "log",
@@ -2588,7 +2588,7 @@ dependencies = [
 
 [[package]]
 name = "vertigo-testing"
-version = "0.1.0-alpha.1"
+version = "0.1.0-alpha.2"
 dependencies = [
  "vertigo",
 ]
