@@ -36,7 +36,7 @@ impl Embed for &str {
 
 impl Embed for String {
     fn embed(self) -> VDomNode {
-        VDomNode::text(&self)
+        VDomNode::text(self)
     }
 }
 

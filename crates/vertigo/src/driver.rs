@@ -23,6 +23,7 @@ impl FetchMethod {
     }
 }
 
+#[derive(Debug, PartialEq)]
 pub enum FetchError {
     Error,
 }
@@ -183,7 +184,7 @@ impl DomDriver {
                 show_log(format!("insert_before child={} refId=None", child));
             }
         }
-        
+
         self.driver.insert_before(parent, child, ref_id);
     }
 
