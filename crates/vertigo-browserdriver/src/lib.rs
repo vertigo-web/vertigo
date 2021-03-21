@@ -190,7 +190,8 @@ impl DomDriverBrowserInner {
                     elements: HashMap::new(),
                     child_parent: HashMap::new(),
                     _dom_event_disconnect: Vec::new(),
-                }
+                },
+                "DomDriverBrowserInner"
             )
         );
 
@@ -580,7 +581,7 @@ impl DomDriverTrait for DomDriverBrowser {
     }
 
     fn clear_hash_route_callback(&self) {
-        self.driver.change_no_params(|state| {
+        self.driver.change((), |state, _| {
             state.window.set_onpopstate(None);
         });
     }

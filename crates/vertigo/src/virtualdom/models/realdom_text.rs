@@ -19,7 +19,7 @@ impl RealDomText {
         RealDomText {
             dom_driver,
             id_dom: id,
-            value: BoxRefCell::new(value),
+            value: BoxRefCell::new(value, "RealDomText"),
         }
     }
 

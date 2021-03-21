@@ -7,8 +7,7 @@ use vertigo::{
         Computed,
         Dependencies,
         Value
-    },
-    utils::DropResource
+    }
 };
 use vertigo_html::{html, css, css_fn};
 
@@ -42,48 +41,70 @@ pub struct State {
     pub y_count: Value<u16>,
     pub matrix: Computed<Vec<Vec<Value<bool>>>>,
     pub timer_enable: Value<bool>,
-    pub year: Value<u32>,
+    pub year: Computed<u32>,
 }
 
 impl State {
     pub fn new(root: &Dependencies, dom_driver: &DomDriver) -> Computed<State> {
-        let x_count = 120;
-        let y_count = 70;
+        let x_count_len = 120;
+        let y_count_len = 70;
+
+        let x_count = root.new_value(x_count_len);
+        let y_count = root.new_value(y_count_len);
+        let matrix = root.new_computed_from(create_matrix(root, x_count_len, y_count_len));
+
+        let timer_enable = root.new_value(false);
+
+        let year = {
+            let root0 = root.clone();
+            let root = root.clone();
+            let dom_driver = dom_driver.clone();
+            let timer_enable = timer_enable.clone();
+
+            let x_count = x_count.clone();
+            let y_count = y_count.clone();
+            let matrix = matrix.clone();
+
+            root0.new_with_connect(0, move |self_value| {
+                let root = root.clone();
+                let timer_enable = timer_enable.clone();
+                let self_value = self_value.clone();
+
+                let x_count = x_count.clone();
+                let y_count = y_count.clone();
+                let matrix = matrix.clone();
+
+                log::info!("start timer");
+
+                let drop_timer = dom_driver.set_interval(1000, move || {
+
+                    let timer_enable = timer_enable.get_value();
+        
+                    if *timer_enable {
+                        let current = self_value.get_value();
+                        self_value.set_value(*current + 1);
+        
+                        let x_count = x_count.get_value();
+                        let y_count = y_count.get_value();
+                        let matrix = matrix.get_value();
+        
+                        next_generation::next_generation(&root, *x_count, *y_count, &*matrix)
+                    }
+                });
+
+                Box::new(drop_timer)
+            })
+        };
+
 
         root.new_computed_from(State {
             dom_driver: dom_driver.clone(),
             root: root.clone(),
-            x_count: root.new_value(x_count),
-            y_count: root.new_value(y_count),
-            matrix: root.new_computed_from(create_matrix(root, x_count, y_count)),
-            timer_enable: root.new_value(false),
-            year: root.new_value(0),
-        })
-    }
-
-    pub fn start_timer(&self) -> DropResource {
-        let year = self.year.clone();
-        let timer_enable = self.timer_enable.clone();
-
-        let root = self.root.clone();
-        let x_count = self.x_count.clone();
-        let y_count = self.y_count.clone();
-        let matrix = self.matrix.clone();
-
-        self.dom_driver.set_interval(100, move || {
-
-            let timer_enable = timer_enable.get_value();
-
-            if *timer_enable {
-                let current = year.get_value();
-                year.set_value(*current + 1);
-
-                let x_count = x_count.get_value();
-                let y_count = y_count.get_value();
-                let matrix = matrix.get_value();
-
-                next_generation::next_generation(&root, *x_count, *y_count, &*matrix)
-            }
+            x_count,
+            y_count,
+            matrix,
+            timer_enable,
+            year,
         })
     }
 }

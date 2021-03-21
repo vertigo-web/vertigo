@@ -39,11 +39,7 @@ fn render_header(app_state: &Computed<app::State>) -> VDomElement {
     let navigate_to_gameoflife = {
         let state = state.clone();
         move || {
-            let timer = state.game_of_life.get_value().start_timer();
-            let route = Route::GameOfLife {
-                timer
-            };
-            state.navigate_to(route);
+            state.navigate_to(Route::GameOfLife);
         }
     };
 

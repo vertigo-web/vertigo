@@ -13,7 +13,8 @@ impl<T> SubscribeValueVerInner<T> {
                 SubscribeValueVerInner {
                     version: 0,
                     value: None,
-                }
+                },
+                "SubscribeValueVerInner"
             )
         )
     }

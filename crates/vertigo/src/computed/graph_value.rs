@@ -54,7 +54,8 @@ impl<T: PartialEq + 'static> GraphValueData<T> {
                     id,
                     get_value_from_parent: get_value,
                     state: None,
-                }
+                },
+                "GraphValueData",
             )
         );
 
@@ -148,7 +149,7 @@ pub trait GraphValueControl {
 
 impl<T: PartialEq + 'static> GraphValueControl for BoxRefCell<GraphValueData<T>> {
     fn drop_value(&self) {
-        self.change_no_params(|state| {
+        self.change((), |state, _| {
             state.drop_value();
         });
     }
@@ -159,7 +160,7 @@ impl<T: PartialEq + 'static> GraphValueControl for BoxRefCell<GraphValueData<T>>
     }
 
     fn is_computed(&self) -> bool {
-        self.change_no_params(|state| {
+        self.change((), |state, _| {
             state.is_computed()
         })
     }

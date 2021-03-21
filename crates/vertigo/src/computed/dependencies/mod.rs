@@ -1,6 +1,7 @@
 use std::rc::Rc;
 use std::cmp::PartialEq;
 use std::collections::BTreeSet;
+use std::any::Any;
 
 use crate::computed::{
     Value,
@@ -13,6 +14,8 @@ use crate::utils::{
     EqBox,
 };
 
+use self::external_connections::ExternalConnections;
+
 mod graph;
 mod graph_map;
 mod transaction_state;
@@ -20,6 +23,7 @@ mod stack;
 mod refresh;
 pub mod refresh_edges;
 pub mod hook;
+mod external_connections;
 
 use {
     graph::Graph,
@@ -34,6 +38,7 @@ pub struct Dependencies {
     stack: Rc<EqBox<BoxRefCell<Stack>>>,
     refresh: Rc<EqBox<BoxRefCell<Refresh>>>,
     transaction_state: Rc<EqBox<BoxRefCell<TransactionState>>>,
+    pub external_connections: ExternalConnections,
 }
 
 impl Clone for Dependencies {
@@ -43,17 +48,24 @@ impl Clone for Dependencies {
             stack: self.stack.clone(),
             refresh: self.refresh.clone(),
             transaction_state: self.transaction_state.clone(),
+            external_connections: self.external_connections.clone(),
         }
     }
 }
 
 impl Default for Dependencies {
     fn default() -> Self {
+        let external_connections = ExternalConnections::new();
+
         Self {
-            graph: Rc::new(EqBox::new(BoxRefCell::new(Graph::new()))),
-            stack: Rc::new(EqBox::new(BoxRefCell::new(Stack::new()))),
-            refresh: Rc::new(EqBox::new(BoxRefCell::new(Refresh::new()))),
-            transaction_state: Rc::new(EqBox::new(BoxRefCell::new(TransactionState::new()))),
+            graph: Rc::new(EqBox::new(BoxRefCell::new(
+                Graph::new(external_connections.clone()),
+                "graph"
+            ))),
+            stack: Rc::new(EqBox::new(BoxRefCell::new(Stack::new(), "stack"))),
+            refresh: Rc::new(EqBox::new(BoxRefCell::new(Refresh::new(), "refresh"))),
+            transaction_state: Rc::new(EqBox::new(BoxRefCell::new(TransactionState::new(), "transaction_state"))),
+            external_connections,
         }
     }
 }
@@ -62,6 +74,11 @@ impl Dependencies {
     pub fn new_value<T: PartialEq>(&self, value: T) -> Value<T> {
         Value::new(self.clone(), value)
     }
+
+    pub fn new_with_connect<T: PartialEq, F: Fn(&Value<T>) -> Box<dyn Any> + 'static>(&self, value: T, create: F) -> Computed<T> {
+        Value::<T>::new_selfcomputed_value::<F>(self.clone(), value, create)
+    }
+
 
     pub fn new_computed_from<T: PartialEq>(&self, value: T) -> Computed<T> {
         let value = self.new_value(value);
@@ -79,7 +96,7 @@ impl Dependencies {
     }
 
     pub fn transaction<F: FnOnce()>(&self, func: F) {
-        let success = self.transaction_state.change_no_params(|state| {
+        let success = self.transaction_state.change((), |state, _| {
             state.up()
         });
 
@@ -89,7 +106,7 @@ impl Dependencies {
 
         func();
 
-        let edges_values = self.transaction_state.change_no_params(|state| {
+        let edges_values = self.transaction_state.change((), |state, _| {
             state.down()
         });
 
@@ -98,7 +115,7 @@ impl Dependencies {
 
             refresh_edges::refresh_edges(&self, &edges_values, edges_to_refresh);
 
-            self.transaction_state.change_no_params(|state| {
+            self.transaction_state.change((), |state, _| {
                 state.to_idle()
             });
         }
@@ -139,7 +156,7 @@ impl Dependencies {
 
     pub(crate) fn remove_graph_connection(&self, parent_id: GraphId, client_id: GraphId) {
         self.graph.change((parent_id, client_id), |state, (parent_id, client_id)| {
-            state.remove_graph_connection(parent_id, client_id);
+            state.remove_graph_connection(parent_id, client_id)
         });
     }
 
@@ -156,7 +173,7 @@ impl Dependencies {
     }
 
     pub(crate) fn start_track(&self) {
-        self.stack.change_no_params(|state| {
+        self.stack.change((), |state, _| {
             state.start_track();
         });
     }
@@ -168,7 +185,7 @@ impl Dependencies {
     }
 
     pub(crate) fn stop_track(&self) -> BTreeSet<GraphId> {
-        self.stack.change_no_params(|state| {
+        self.stack.change((), |state, _| {
             state.stop_track()
         })
     }
@@ -222,7 +239,7 @@ impl Dependencies {
     }
 
     pub fn drain_removables(&self) -> Vec<GraphId> {
-        self.graph.change_no_params(|state| {
+        self.graph.change((), |state, ()| {
             state.drain_removables()
         })
     }

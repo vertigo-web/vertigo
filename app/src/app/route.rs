@@ -1,9 +1,3 @@
-use vertigo::{
-    computed::Computed,
-    utils::DropResource,
-};
-use super::game_of_life::State as GameOfLifeState;
-
 #[derive(PartialEq, Debug)]
 pub enum Route {
     Main,
@@ -11,9 +5,7 @@ pub enum Route {
     Sudoku,
     Input,
     GithubExplorer,
-    GameOfLife {
-        timer: DropResource,
-    },
+    GameOfLife,
     NotFound,
 }
 
@@ -24,19 +16,14 @@ impl Default for Route {
 }
 
 impl Route {
-    pub fn new(path: String, game_of_life: &Computed<GameOfLifeState>) -> Route {
+    pub fn new(path: String) -> Route {
         match path.as_str() {
             "" | "/" => Self::Main,
             "counters" => Self::Counters,
             "sudoku" => Self::Sudoku,
             "input" => Self::Input,
             "github_explorer" => Self::GithubExplorer,
-            "game_of_life" => {
-                let game_of_life = game_of_life.get_value();
-                Self::GameOfLife {
-                    timer: game_of_life.start_timer(),
-                }
-            },
+            "game_of_life" => Self::GameOfLife,
             _ => Self::NotFound,
         }
     }

@@ -1,21 +1,26 @@
 use std::collections::{BTreeMap, BTreeSet};
 use crate::computed::graph_id::GraphId;
-use super::graph_map::GraphMap;
+use super::{
+    external_connections::ExternalConnections,
+    graph_map::GraphMap
+};
 
 pub struct Graph {
     parent_childs: GraphMap,                            //ParentId <- ClientId
     client_parents: GraphMap,                           //ClientId <- ParentId
     counters: BTreeMap<(GraphId, GraphId), u8>,         //Relation counter
     will_be_dropped: BTreeSet<GraphId>,
+    external_connections: ExternalConnections,
 }
 
 impl Graph {
-    pub fn new() -> Graph {
+    pub fn new(external_connections: ExternalConnections) -> Graph {
         Graph {
             parent_childs: GraphMap::new(),
             client_parents: GraphMap::new(),
             counters: BTreeMap::new(),
             will_be_dropped: BTreeSet::new(),
+            external_connections,
         }
     }
 
@@ -33,6 +38,9 @@ impl Graph {
         self.parent_childs.add_connection(parent_id, client_id);
         self.client_parents.add_connection(client_id, parent_id);
         self.counters.insert(id, 1);
+
+        //Connect start
+        self.external_connections.need_connection(parent_id);
     }
 
     pub fn remove_graph_connection(&mut self, parent_id: GraphId, client_id: GraphId) {
@@ -62,16 +70,8 @@ impl Graph {
                 self.will_be_dropped.insert(parent_id);
             }
 
-            /*
-            if self.client_parents.relation_len(&client_id) == 0 {
-                let graph_value = self.refresh.get(&client_id);
-                if let Some(graph_value) = graph_value {
-                    graph_value.drop_value();
-                } else {
-                    log::error!("Refresh token missing");
-                }
-            }
-            */
+            //Connect down
+            self.external_connections.need_disconnection(parent_id);
         }
     }
 
@@ -122,7 +122,6 @@ impl Graph {
 
         result
     }
-    
 
     pub fn get_parents(&self, client_id: GraphId) -> Vec<GraphId> {
         if let Some(item) = self.client_parents.get_relation(&client_id) {

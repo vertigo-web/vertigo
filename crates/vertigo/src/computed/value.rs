@@ -1,5 +1,6 @@
 use std::rc::Rc;
 use std::cmp::PartialEq;
+use std::any::Any;
 
 use crate::computed::{
     Dependencies,
@@ -8,17 +9,44 @@ use crate::computed::{
 };
 use crate::utils::BoxRefCell;
 
-pub struct Value<T: 'static> {
+struct ValueInner<T: PartialEq + 'static> {
     id: GraphId,
-    value: Rc<BoxRefCell<Rc<T>>>,
+    value: Rc<T>,
+    deps: Dependencies,
+}
+
+impl<T: PartialEq + 'static> ValueInner<T> {
+    fn set_value(&mut self, value: T) {
+        if *(self.value) == value {
+            return;
+        }
+
+        self.value = Rc::new(value);
+        self.deps.trigger_change(self.id);
+    }
+
+    fn get_value(&self) -> Rc<T> {
+        self.deps.report_parent_in_stack(self.id);
+        self.value.clone()
+    }
+}
+
+impl<T: PartialEq + 'static> Drop for ValueInner<T> {
+    fn drop(&mut self) {
+        self.deps.external_connections.unregister_connect(self.id);
+    }
+}
+
+
+pub struct Value<T: PartialEq + 'static> {
+    inner: Rc<BoxRefCell<ValueInner<T>>>,
     pub deps: Dependencies,
 }
 
 impl<T: PartialEq + 'static> Clone for Value<T> {
     fn clone(&self) -> Self {
         Value {
-            id: self.id,
-            value: self.value.clone(),
+            inner: self.inner.clone(),
             deps: self.deps.clone(),
         }
     }
@@ -27,49 +55,71 @@ impl<T: PartialEq + 'static> Clone for Value<T> {
 impl<T: PartialEq + 'static> Value<T> {
     pub fn new(deps: Dependencies, value: T) -> Value<T> {
         Value {
-            id: GraphId::default(),
-            value: Rc::new(BoxRefCell::new(Rc::new(value))),
-            deps
+            inner: Rc::new(BoxRefCell::new(
+                ValueInner {
+                    id: GraphId::default(),
+                    value: Rc::new(value),
+                    deps: deps.clone(),
+                },
+                "value inner"
+            )),
+            deps,
         }
     }
 
-    pub fn set_value(&self, value: T) {
-        self.deps.transaction(|| {
-            let value_has_change = self.value.change(value, |state, value| {
-                let value_has_change = **state != value;
-                *state = Rc::new(value);
-                value_has_change
-            });
+    pub fn new_selfcomputed_value<F: Fn(&Value<T>) -> Box<dyn Any> + 'static>(deps: Dependencies, value: T, create: F) -> Computed<T> {
+        let id = GraphId::default();
 
-            if value_has_change {
-                self.deps.trigger_change(self.id);
-            }
-        });
+        let value = Value {
+            inner: Rc::new(BoxRefCell::new(
+                ValueInner {
+                    id: id.clone(),
+                    value: Rc::new(value),
+                    deps: deps.clone(),
+                },
+                "value inner connect"
+            )),
+            deps: deps.clone(),
+        };
+
+        let computed = value.to_computed();
+
+        deps.external_connections.register_connect(id, Box::new(move || {
+            create(&value)
+        }));
+
+        computed
     }
 
-    pub fn get_value(&self) -> Rc<T> {
-        self.deps.report_parent_in_stack(self.id);
-
-        self.value.get(|state| {
-            state.clone()
+    pub fn set_value(&self, value: T) {
+        self.deps.clone().transaction(|| {
+            self.inner.change(value, move |state, value| {
+                state.set_value(value);
+            })
         })
     }
 
-    pub fn to_computed(&self) -> Computed<T> {
-        let self_clone = self.clone();
+    pub fn get_value(&self) -> Rc<T> {
+        self.inner.get(|state| state.get_value())
+    }
 
-        Computed::new(self.deps.clone(), move || {
-            self_clone.get_value()
+    pub fn to_computed(&self) -> Computed<T> {
+        let inner_clone = self.inner.clone();
+
+        let deps = self.deps.clone();
+
+        Computed::new(deps, move || {
+            inner_clone.get(|state| state.get_value())
         })
     }
 
     pub fn id(&self) -> GraphId {
-        self.id
+        self.inner.get(|state| state.id)
     }
 }
 
 impl<T: PartialEq + 'static> PartialEq for Value<T> {
     fn eq(&self, other: &Value<T>) -> bool {
-        self.id == other.id
+        self.id() == other.id()
     }
 }

@@ -139,7 +139,8 @@ impl RealDomElement {
         RealDomElement {
             inner: Rc::new(
                 BoxRefCell::new(
-                    RealDomNodeInner::new(driver, name)
+                    RealDomNodeInner::new(driver, name),
+                    "RealDomElement",
                 )
             )
         }
@@ -149,7 +150,8 @@ impl RealDomElement {
         RealDomElement {
             inner: Rc::new(
                 BoxRefCell::new(
-                    RealDomNodeInner::create_with_id(driver, id)
+                    RealDomNodeInner::create_with_id(driver, id),
+                    "RealDomElement",
                 )
             )
         }
