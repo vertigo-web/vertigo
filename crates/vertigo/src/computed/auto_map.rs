@@ -19,7 +19,7 @@ impl<K: Eq + Hash + Clone, V: PartialEq + 'static> AutoMap<K, V> {
     pub fn new<C: Fn(&K) -> Computed<V> + 'static>(create: C) -> AutoMap<K, V> {
         AutoMap {
             create: EqBox::new(Box::new(create)),
-            values: Rc::new(EqBox::new(BoxRefCell::new(HashMap::new()))),
+            values: Rc::new(EqBox::new(BoxRefCell::new(HashMap::new(), "auto map values"))),
         }
     }
 

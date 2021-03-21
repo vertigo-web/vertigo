@@ -8,6 +8,7 @@ Basic commands
 - `cargo doc` - Build build documentation
 - `cargo doc --open` - Open the documentation in the browser
 - `cargo update --dry-run` - Checking for updates
+- `rustup target add wasm32-unknown-unknown` - add webassembly
 
 Links
 --------------

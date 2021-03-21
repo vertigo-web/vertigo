@@ -172,4 +172,6 @@ pub fn refresh_edges(deps: &Dependencies, edges_values: &BTreeSet<GraphId>, edge
     refresh_edges_client(deps, &mut state_refreshing, edges_client);
 
     drop_edges(deps);
+
+    deps.external_connections.refresh_connect();
 }

@@ -46,7 +46,7 @@ pub struct CssManager {
 impl CssManager {
     pub fn new(driver: &DomDriver) -> CssManager {
         CssManager {
-            inner: Rc::new(BoxRefCell::new(CssManagerInner::new(driver.clone())))
+            inner: Rc::new(BoxRefCell::new(CssManagerInner::new(driver.clone()), "css manager"))
         }
     }
 
