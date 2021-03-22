@@ -22,8 +22,8 @@ node_element = _{ el_vcomponent_val | el_vcomponent | el_velement | el_void | el
 // COMMENTS
 //
 comment_normal = _{ comment_tag_start ~ (!comment_tag_end ~ ANY)* ~ comment_tag_end }
-comment_tag_start = _{ chevron_left_bang ~ "- -" }
-comment_tag_end = _{ "- -" ~ chevron_right_normal }
+comment_tag_start = _{ chevron_left_bang ~ "--" }
+comment_tag_end = _{ "--" ~ chevron_right_normal }
 
 // Compatability with old IE browsers... This is not necessary for newer browsers
 comment_if = _{ comment_if_start ~ (!comment_if_end ~ ANY)* ~ comment_if_end }
@@ -54,7 +54,8 @@ expression = { brace_left ~ PUSH("$"*) ~ expression_value ~ POP ~ brace_right }
 expression_value = { (!(PEEK ~ brace_right) ~ ANY)* }
 
 // { ..vector } and {$ ..vector $} expression
-children = { brace_left ~ PUSH("$"*) ~ ".." ~ expression_value ~ POP ~ brace_right }
+// TODO: Try using !-rule instead of manual whitespacing it
+children = !{ brace_left ~ PUSH("$"*) ~ ".." ~ expression_value ~ POP ~ brace_right }
 
 // { } expression in attribute value
 attr_expression = _{ brace_left ~ attr_expression_value ~ brace_right }
@@ -94,24 +95,24 @@ el_void_name_svg = @{
     | ^"circle"
 }
 el_void_name = @{ el_void_name_html | el_void_name_svg }
-el_void = { chevron_left_normal ~ el_void_name ~ attr* ~ (chevron_right_normal | chevron_right_closed) }
+el_void = !{ chevron_left_normal ~ el_void_name ~ (attr)* ~ (chevron_right_normal | chevron_right_closed) }
 el_void_xml = { chevron_left_normal ~ el_name ~ attr* ~ chevron_right_closed }
 
 // Open elements are default element that can take children
 // and have both a start tag and an end tag
 // Ex: <html lang="en"></html>
-el_normal = { el_normal_start ~ (!el_normal_end ~ node)* ~ el_normal_end }
-el_normal_start = _{ chevron_left_normal ~ PUSH(el_name) ~ attr* ~ chevron_right_normal}
-el_normal_end = { chevron_left_closed ~ POP ~ chevron_right_normal}
+el_normal = ${ el_normal_start ~ (!el_normal_end ~ node)* ~ el_normal_end }
+el_normal_start = !{ chevron_left_normal ~ PUSH(el_name) ~ attr* ~ chevron_right_normal}
+el_normal_end = !{ chevron_left_closed ~ POP ~ chevron_right_normal}
 
-el_vcomponent = { chevron_left_normal ~ "component" ~ vcomp_render_func ~ vcomp_data_attr? ~ attr* ~ chevron_right_closed }
+el_vcomponent = !{ chevron_left_normal ~ "component" ~ vcomp_render_func ~ vcomp_data_attr? ~ attr* ~ chevron_right_closed }
 vcomp_render_func = { attr_expression }
 vcomp_data_attr = { "data" ~ equal ~ attr_expression }
 
 // TODO: Hack this out
-el_vcomponent_val = { chevron_left_normal ~ "component_val" ~ vcomp_render_func ~ vcomp_data_attr? ~ attr* ~ chevron_right_closed }
+el_vcomponent_val = !{ chevron_left_normal ~ "component_val" ~ vcomp_render_func ~ vcomp_data_attr? ~ attr* ~ chevron_right_closed }
 
-el_velement = { chevron_left_normal ~ "element" ~ velem_value ~ chevron_right_closed }
+el_velement = !{ chevron_left_normal ~ "element" ~ velem_value ~ chevron_right_closed }
 velem_value = _{ attr_expression }
 
 // Raw text elements are elements with text/script content that

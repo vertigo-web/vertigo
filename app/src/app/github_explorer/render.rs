@@ -63,7 +63,7 @@ pub fn render(state: &Computed<State>) -> VDomElement {
 
     html!(r#"
         <div css={wrapper()}>
-            { "Enter author/repo tuple:" }
+            Enter author/repo tuple:
             <input css={input_css()} value={(*repo_input).as_str()} onInput={on_input_callback} />
             <button css={button_css()} onClick={on_show}>Fetch</button>
             <div css={button_css()}>

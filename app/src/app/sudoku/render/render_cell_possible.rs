@@ -107,7 +107,7 @@ pub fn render_cell_possible(item: &Computed<Cell>) -> VDomElement {
         return html!(r#"
             <div css={css_wrapper_one()}>
                 <div css={css_item_only_one()} onClick={on_set}>
-                    {$ format!("{}.", possible_last_value.to_u16()) $}
+                    { possible_last_value.to_u16() }.
                 </div>
             </div>
         "#)
