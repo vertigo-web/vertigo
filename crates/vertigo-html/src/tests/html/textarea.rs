@@ -39,7 +39,7 @@ fn div_with_textarea() {
     assert_eq!(div.children.len(), 2);
 
     let label = get_text(&div.children[0]);
-    assert_eq!(label.value, "Label");
+    assert_eq!(label.value, "Label ");
 
     let textarea = get_node(&div.children[1]);
     assert_eq!(textarea.name, "textarea");

@@ -11,7 +11,7 @@ use crate as vertigo_html;
 use super::utils::*;
 
 #[test]
-fn div_with_text() {
+fn div_with_component() {
     let deps = Dependencies::default();
 
     let value = Value::new(deps, "old value".to_string());
@@ -37,7 +37,7 @@ fn div_with_text() {
     assert_eq!(inner_div.children.len(), 2);
 
     let label = get_text(&inner_div.children[0]);
-    assert_eq!(label.value, "Value");
+    assert_eq!(label.value, "Value ");
     let expr = get_text(&inner_div.children[1]);
     assert_eq!(expr.value, "old value");
 

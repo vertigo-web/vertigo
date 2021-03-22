@@ -58,7 +58,7 @@ css_fn_push! { css_button, css_bg, "
 
 pub fn main_render(state: &Computed<MainState>) -> VDomElement {
     let state = state.get_value();
-    let value = state.value.get_value();
+    let value = *state.value.get_value();
 
     let on_down = {
         let app_state = state.clone();
@@ -74,18 +74,18 @@ pub fn main_render(state: &Computed<MainState>) -> VDomElement {
         }
     };
 
-    let show_color = *value % 2 == 0;
+    let show_color = value % 2 == 0;
 
-    let footer_dom = if *value % 10 == 0 {
+    let footer_dom = if value % 10 == 0 {
         html!(r#"
             <div>
-                {$ format!("jakis footer {} {} - BEZKLASIE", *value % 2, *value % 3) $}
+                jakis footer {value % 2} {value % 3} - BEZKLASIE
             </div>
         "#)
     } else {
         html!(r#"
             <div css={css_footer(show_color)}>
-                {$ format!("jakis footer {} {}", *value % 2, *value % 3) $}
+                jakis footer {value % 2} {value % 3}
             </div>
         "#)
     };
@@ -94,14 +94,14 @@ pub fn main_render(state: &Computed<MainState>) -> VDomElement {
         <div aaa="one" bbb="two">
             Abudabi
             <div css={css_bg()}>
-                {$ if *value > 35 { "terefere kuku" } else { "bla bla bla" } $}
+                {$ if value > 35 { "terefere kuku" } else { "bla bla bla" } $}
                 { spinner() }
             </div>
             <div css={css_bg()} onClick={on_up.clone()}>
-                {$ format!("aktualna wartosc = {}", value) $}
+                Actual value = { value }
             </div>
             <div css={css_bg()}>
-                { "Aktualna wartość: " } { value }
+                Actual value: { value }
             </div>
             <div css={css_button()} onClick={on_up}>
                 up
@@ -109,7 +109,7 @@ pub fn main_render(state: &Computed<MainState>) -> VDomElement {
             <div css={css_button()} onClick={on_down}>
                 down
             </div>
-            { footer_dom }
+            <p>{ footer_dom }</p>
         </div>
     "#)
 }

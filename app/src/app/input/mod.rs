@@ -112,7 +112,7 @@ pub fn render(state: &Computed<State>) -> VDomElement {
             <textarea css={text_css()} onInput={on_set4}>
                 { (*value).as_str() }
             </textarea>
-            <div>{"count = "} { count }</div>
+            <div>count = { count }</div>
         </div>
     "#)
 }

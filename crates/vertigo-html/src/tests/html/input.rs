@@ -17,7 +17,7 @@ fn div_with_label_and_input() {
     assert_eq!(div.children.len(), 2);
 
     let label = get_text(&div.children[0]);
-    assert_eq!(label.value, "Label");
+    assert_eq!(label.value, "Label ");
 
     let input = get_node(&div.children[1]);
     assert_eq!(input.name, "input");

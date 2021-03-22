@@ -8,6 +8,7 @@ use syn::{Expr, parse_str};
 pub struct HtmlParser {
     call_site: Span,
     children: Vec<TokenStream>,
+    in_pre: bool,
 }
 
 impl HtmlParser {
@@ -15,6 +16,7 @@ impl HtmlParser {
         Self {
             call_site,
             children: Vec::new(),
+            in_pre: false,
         }
     }
 
@@ -79,7 +81,12 @@ impl HtmlParser {
         for pair in pair.into_inner() {
             // emit_warning!(self.call_site, "HTML: generate_node_element debug: {:?}", pair);
             match pair.as_rule() {
-                Rule::el_name => tag_name = pair.as_str(),
+                Rule::el_name => {
+                    tag_name = pair.as_str();
+                    if tag_name == "pre" {
+                        self.in_pre = true;
+                    }
+                },
                 Rule::el_void_name => tag_name = pair.as_str(),
                 Rule::el_raw_text_name => tag_name = pair.as_str(),
 
@@ -91,24 +98,94 @@ impl HtmlParser {
                 Rule::onmouseleave_attr => attrs.push(self.generate_expression_attr(pair, Some("on_mouse_leave"))),
                 Rule::expression_attr => attrs.push(self.generate_expression_attr(pair, None)),
 
-                Rule::el_vcomponent => children.push(self.generate_vcomponent(pair, false)),
-                Rule::el_vcomponent_val => children.push(self.generate_vcomponent(pair, true)),
-                Rule::el_normal => children.push(self.generate_node_element(pair, false)),
-                Rule::el_void => children.push(self.generate_node_element(pair, false)),
-                Rule::el_void_xml => children.push(self.generate_node_element(pair, false)),
-                Rule::el_raw_text => children.push(self.generate_node_element(pair, false)),
-                Rule::el_raw_text_content => children.push(self.generate_text(pair)),
-                Rule::el_velement => children.push(self.generate_velement(pair)),
-                Rule::node_text => children.push(self.generate_text(pair)),
-                Rule::expression => children.push(self.generate_expression(pair)),
+                Rule::el_vcomponent => children.push(pair),
+                Rule::el_vcomponent_val => children.push(pair),
+                Rule::el_normal => children.push(pair),
+                Rule::el_void => children.push(pair),
+                Rule::el_void_xml => children.push(pair),
+                Rule::el_raw_text => children.push(pair),
+                Rule::el_raw_text_content => children.push(pair),
+                Rule::el_velement => children.push(pair),
+                Rule::node_text => children.push(pair),
+                Rule::expression => children.push(pair),
 
-                Rule::children => children_lists.push(self.generate_children(pair)),
+                Rule::el_normal_start => {
+                    for tag_pair in pair.into_inner() {
+                        // TODO: Refactor: These repeated variants should be taken into some separate function
+                        match tag_pair.as_rule() {
+                            Rule::el_name => {
+                                tag_name = tag_pair.as_str();
+                                if tag_name == "pre" {
+                                    self.in_pre = true;
+                                }
+                            },
+                            Rule::el_void_name => tag_name = tag_pair.as_str(),
+                            Rule::el_raw_text_name => tag_name = tag_pair.as_str(),
 
+                            Rule::regular_attr => attrs.push(self.generate_regular_attr(tag_pair)),
+                            Rule::css_attr => attrs.push(self.generate_expression_attr(tag_pair, Some("css"))),
+                            Rule::onclick_attr => attrs.push(self.generate_expression_attr(tag_pair, Some("on_click"))),
+                            Rule::oninput_attr => attrs.push(self.generate_expression_attr(tag_pair, Some("on_input"))),
+                            Rule::onmouseenter_attr => attrs.push(self.generate_expression_attr(tag_pair, Some("on_mouse_enter"))),
+                            Rule::onmouseleave_attr => attrs.push(self.generate_expression_attr(tag_pair, Some("on_mouse_leave"))),
+                            Rule::expression_attr => attrs.push(self.generate_expression_attr(tag_pair, None)),
+
+                            _ => {
+                                emit_error!(self.call_site, "HTML: unhandled tag_pair in generate_node_element: {:?}", tag_pair);
+                            }
+                        }
+                    }
+                }
                 Rule::el_normal_end => {},
+
+                Rule::children => children_lists.push(pair),
+
                 _ => {
-                    emit_error!(self.call_site, "HTML: unhandler pair in generate_node_element: {:?}", pair);
+                    emit_error!(self.call_site, "HTML: unhandled pair in generate_node_element: {:?}", pair);
                 }
             }
+        }
+
+        // Generate children with proper spacing for text elements
+        let children_len = children.len();
+
+        let mut generated_children = Vec::new();
+        for (idx, pair) in children.into_iter().enumerate() {
+            let first = idx == 0;
+            // Child is not last if there are other children to unpack
+            let last = idx >= children_len - 1 && children_lists.is_empty();
+            match pair.as_rule() {
+                Rule::el_vcomponent => generated_children.push(self.generate_vcomponent(pair, false)),
+                Rule::el_vcomponent_val => generated_children.push(self.generate_vcomponent(pair, true)),
+                Rule::el_normal => generated_children.push(self.generate_node_element(pair, false)),
+                Rule::el_void => generated_children.push(self.generate_node_element(pair, false)),
+                Rule::el_void_xml => generated_children.push(self.generate_node_element(pair, false)),
+                Rule::el_raw_text => generated_children.push(self.generate_node_element(pair, false)),
+                Rule::el_raw_text_content => {
+                    self.in_pre = true;
+                    if let Some(ts) = self.generate_text(pair, first, last) {
+                        generated_children.push(ts)
+                    }
+                    self.in_pre = false;
+                },
+                Rule::el_velement => generated_children.push(self.generate_velement(pair)),
+                Rule::node_text => if let Some(ts) = self.generate_text(pair, first, last) {
+                    generated_children.push(ts)
+                }
+                Rule::expression => generated_children.push(self.generate_expression(pair)),
+                _ => {
+                    emit_error!(self.call_site, "HTML: unhandled child pair in generate_node_element: {:?}", pair);
+                }
+            }
+        }
+
+        let mut generated_children_lists = Vec::new();
+        for pair in children_lists {
+            generated_children_lists.push(self.generate_children(pair))
+        }
+
+        if tag_name == "pre" {
+            self.in_pre = false;
         }
 
         let builder = if is_root {
@@ -117,12 +194,12 @@ impl HtmlParser {
             quote! { vertigo::VDomNode::node }
         };
 
-        if children_lists.is_empty() {
+        if generated_children_lists.is_empty() {
             quote! {
                 #builder(
                     #tag_name,
                     vec![#(#attrs),*],
-                    vec![#(#children),*],
+                    vec![#(#generated_children),*],
                 )
             }
         } else {
@@ -131,8 +208,8 @@ impl HtmlParser {
                     #tag_name,
                     vec![#(#attrs),*],
                     {
-                        let mut children = vec![#(#children),*];
-                        #(children.extend(#children_lists);)*
+                        let mut children = vec![#(#generated_children),*];
+                        #(children.extend(#generated_children_lists);)*
                         children
                     }
                 )
@@ -200,16 +277,35 @@ impl HtmlParser {
         quote! { }
     }
 
-    fn generate_text(&self, pair: Pair<Rule>) -> TokenStream {
+    fn generate_text(&self, pair: Pair<Rule>, first: bool, last: bool) -> Option<TokenStream> {
         match pair.as_rule() {
             Rule::node_text |
             Rule::el_raw_text_content => {
-                let content = pair.as_str();
-                quote! { vertigo::VDomNode::text(#content) }
+                if self.in_pre {
+                    let content = pair.as_str();
+                    Some(quote! { vertigo::VDomNode::text(#content) })
+                } else {
+                    // Left/right trim value but leave 1 space on left/right side in special circumstances
+                    fn match_func(c: char) -> bool {
+                        c.is_whitespace() || c == '\x0a'
+                    }
+
+                    let ltrimmed = pair.as_str().trim_start_matches(match_func);
+                    let prefix = if ltrimmed.len() < pair.as_str().len() && !first { " " } else { "" };
+                    let rtrimmed = ltrimmed.trim_end_matches(match_func);
+                    let postfix = if rtrimmed.len() < ltrimmed.len() && !last { " " } else { "" };
+
+                    if rtrimmed.is_empty() {
+                        None
+                    } else {
+                        let content = format!("{}{}{}", prefix, rtrimmed, postfix);
+                        Some(quote! { vertigo::VDomNode::text(#content) })
+                    }
+                }
             },
             _ => {
                 emit_warning!(self.call_site, "HTML: unhandler pair in generate_text: {:?}", pair);
-                quote! { }
+                None
             }
         }
     }
@@ -239,7 +335,7 @@ impl HtmlParser {
                 quote! { (#expr).into_iter().map(|e| vertigo_html::Embed::embed(e)) }
             },
             _ => {
-                emit_warning!(self.call_site, "HTML: unhandler pair in generate_expression: {:?}", pair);
+                emit_warning!(self.call_site, "HTML: unhandler pair in generate_children: {:?}", pair);
                 quote! { }
             }
         }

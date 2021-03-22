@@ -23,7 +23,7 @@ fn div_with_list() {
     assert_eq!(div.children.len(), 3);
 
     let inner1 = get_text(&div.children[0]);
-    assert_eq!(&inner1.value, "Label");
+    assert_eq!(&inner1.value, "Label ");
 
     let inner2 = get_node(&div.children[1]);
     assert_empty(&inner2, "input");

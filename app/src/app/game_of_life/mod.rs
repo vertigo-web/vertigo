@@ -138,7 +138,7 @@ css_fn! { css_button, "
 
 fn render_header(state: &Computed<State>) -> VDomElement {
     let state = state.get_value();
-    let year = state.year.get_value();
+    let year = *state.year.get_value();
     let timer_enable = state.timer_enable.get_value();
 
     let button = if *timer_enable {
@@ -201,7 +201,7 @@ fn render_header(state: &Computed<State>) -> VDomElement {
     html!(r#"
         <div>
             <div>Game of life</div>
-            <div>{$ format!("year = {}", year) $}</div>
+            <div>year = { year }</div>
             { button }
             { button_random }
         </div>
