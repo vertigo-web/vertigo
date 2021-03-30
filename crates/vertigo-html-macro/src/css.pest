@@ -4,9 +4,12 @@
 //
 css_block = _{ SOI ~ rule* ~ EOI }
 
-rule = _{ comment | simple_rule | unknown_rule }
+rule = _{ comment | simple_rule | unknown_rule | sub_rule }
 
 comment = _{ comment_start ~ (!comment_end ~ ANY)* ~ comment_end }
+
+sub_rule = { sub_selector ~ brace_left ~ rule+ ~ brace_right ~ semicolon? }
+sub_selector = { colon ~ (!brace_left~ ANY)+ }
 
 simple_rule = _{
     // align-content 	Specifies the alignment between the lines inside a flexible container when the items do not use all available space

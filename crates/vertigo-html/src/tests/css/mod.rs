@@ -2,6 +2,7 @@ use crate::css_fn;
 
 mod animation;
 mod colors;
+mod pseudoselectors;
 mod unknown;
 mod utils;
 

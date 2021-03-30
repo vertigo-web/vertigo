@@ -76,16 +76,8 @@ pub fn css_split_rows(css: &str) -> Vec<&str> {
 
         }
 
-        if char == ':' {
-            if state == ParsingRowState::Left {
-                state = ParsingRowState::Right;
-            } else if let ParsingRowState::RightBracketOpen(..) = state {
-                //ignore
-            } else {
-                log::error!("css {:?}", css);
-                log::error!("stan {:?}", state);
-                panic!("unsupported use case");
-            }
+        if char == ':' && state == ParsingRowState::Left {
+            state = ParsingRowState::Right;
         }
 
         if char == ';' && state == ParsingRowState::Right {
@@ -164,6 +156,18 @@ pub fn transform_css_animation_value(css: &str, next_id: &mut NextId) -> (String
     (css.into(), None)
 }
 
+pub fn transform_css_selector_value(row: &str, parent_selector: &str) -> Option<(String, String)> {
+
+    let brackets = find_brackets(row);
+
+    if let Some((start_word, central_word, _end_word)) = brackets {
+        let new_selector = format!("{}{}", parent_selector, start_word);
+        return Some((new_selector, central_word.into()));
+    }
+
+    None
+}
+
 pub fn transform_css(css: &str, next_id: &mut NextId) -> (u64, Vec<(String, String)>) {
     let class_id = next_id.get_next_id();
     let selector = format!(".{}", get_selector(&class_id));
@@ -172,24 +176,33 @@ pub fn transform_css(css: &str, next_id: &mut NextId) -> (u64, Vec<(String, Stri
     let mut css_documents: Vec<(String, String)> = Vec::new();
 
     for row in css_split_rows(css) {
-        match css_row_split_to_pair(row) {
-            Some((name, value)) => {
-                let value_parsed = if name.trim() == "animation" {
-                    let (value_parsed, extra_animation) = transform_css_animation_value(&value, next_id);
+        if row.starts_with(':') {
+            let extra_rule = transform_css_selector_value(&row, &selector);
 
-                    if let Some(extra_animation) = extra_animation {
-                        css_documents.push(extra_animation);
-                    }
+            if let Some(extra_rule) = extra_rule {
+                css_documents.push(extra_rule);
+            }
+        } else {
+            match css_row_split_to_pair(row) {
+                Some((name, value)) => {
+                    let value_parsed =
+                        if name.trim() == "animation" {
+                            let (value_parsed, extra_animation) = transform_css_animation_value(&value, next_id);
 
-                    value_parsed
-                } else {
-                    value
-                };
+                            if let Some(extra_animation) = extra_animation {
+                                css_documents.push(extra_animation);
+                            }
 
-                css_out.push(format!("{}: {}", name, value_parsed));
-            },
-            None => {
-                css_out.push(row.into());
+                            value_parsed
+                        } else {
+                            value
+                        };
+
+                    css_out.push(format!("{}: {}", name, value_parsed));
+                },
+                None => {
+                    css_out.push(row.into());
+                }
             }
         }
     }
