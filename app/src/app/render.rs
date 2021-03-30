@@ -28,6 +28,15 @@ fn css_menu_item(active: bool) -> Css {
         margin: 5px;
         cursor: pointer;
         background-color: {bg_color};
+
+        :hover {
+            text-decoration: underline;
+        }
+
+        :nth-of-type(1):hover {
+            color: crimson;
+            text-decoration: line-through;
+        };
     ")
 }
 

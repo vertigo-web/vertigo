@@ -31,17 +31,8 @@ impl CssParser {
                 let mut parser = Self::new(call_site);
                 for pair in pairs {
                     // emit_warning!(call_site, "Pair: {:?}", pair);
-                    match pair.as_rule() {
-                        Rule::unknown_rule => {
-                            let child = parser.generate_unknown_rule(pair);
-                            parser.children.push(child)
-                        },
-                        Rule::animation_rule => {
-                            let child = parser.generate_animation_rule(pair);
-                            parser.children.push(child);
-                        }
-                        _ => (),
-                    }
+                    let new_children = parser.generate_rule(pair);
+                    parser.children.extend(new_children);
                 }
 
                 let css_output = parser.children.join("\n");
@@ -49,6 +40,9 @@ impl CssParser {
                 let params = parser.params.into_hashmap();
 
                 if params.is_empty() {
+                    let css_output = css_output
+                        .replace("{{", "{")
+                        .replace("}}", "}");
                     (quote! { #css_output }, false)
                 } else {
                     let params_stream = TokenStream::from_iter(
@@ -74,6 +68,26 @@ impl CssParser {
                 (quote! { }, false)
             },
         }
+    }
+
+    fn generate_rule(&mut self, pair: Pair<Rule>) -> Vec<String> {
+        let mut children = Vec::new();
+        match pair.as_rule() {
+            Rule::unknown_rule => {
+                let child = self.generate_unknown_rule(pair);
+                children.push(child)
+            },
+            Rule::animation_rule => {
+                let child = self.generate_animation_rule(pair);
+                children.push(child);
+            },
+            Rule::sub_rule => {
+                let child = self.generate_sub_rule(pair);
+                children.push(child);
+            }
+            _ => (),
+        }
+        children
     }
 
     fn generate_unknown_rule(&mut self, pair: Pair<Rule>) -> String {
@@ -125,11 +139,11 @@ impl CssParser {
                                 })
                                 .collect::<Vec<_>>()
                                 .join("\n");
-                            format!("{} {{ {} }}", step, frame_rules)
+                            format!("{} {{{{ {} }}}}", step, frame_rules)
                         })
                         .collect::<Vec<_>>()
                         .join("\n");
-                    format!("{{ {} }}", frames_strs)
+                    format!("{{{{ {} }}}}", frames_strs)
                 },
                 _ => {
                     emit_warning!(self.call_site, "CSS: unhandler value in generate_unknown_rule: {:?}", value);
@@ -140,6 +154,29 @@ impl CssParser {
         }
 
         format!("animation: {};", value_strs.join(" "))
+    }
+
+    fn generate_sub_rule(&mut self, pair: Pair<Rule>) -> String {
+        let pairs = pair.into_inner();
+
+        let mut sub_selector = None;
+        let mut value_strs = Vec::new();
+
+        for pair in pairs {
+            match pair.as_rule() {
+                Rule::sub_selector => sub_selector = Some(pair.as_str()),
+                _ => {
+                    value_strs.extend(self.generate_rule(pair));
+                }
+            };
+        }
+
+        if let Some(sub_selector) = sub_selector {
+            format!("{} {{{{ {} }}}};", sub_selector, value_strs.join("\n"))
+        } else {
+            emit_warning!(self.call_site, "CSS: Generated empty sub-rule");
+            "".to_string()
+        }
     }
 }
 
