@@ -245,8 +245,8 @@ impl DomDriver {
         self.driver.set_event(node, callback);
     }
 
-    pub fn fetch(&self, url: String) -> FetchBuilder {
-        FetchBuilder::new(self.driver.clone(), url)
+    pub fn fetch<U: Into<String>>(&self, url: U) -> FetchBuilder {
+        FetchBuilder::new(self.driver.clone(), url.into())
     }
 
     pub fn get_hash_location(&self) -> String {
