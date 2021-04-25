@@ -11,7 +11,6 @@ use vertigo::{
     DomDriver,
     DomDriverTrait,
     EventCallback,
-    FetchError,
     FetchMethod,
     HashRoutingReceiver,
     RealDomId,
@@ -534,7 +533,7 @@ impl DomDriverTrait for DomDriverBrowser {
         });
     }
 
-    fn fetch(&self, method: FetchMethod, url: String, headers: Option<HashMap<String, String>>, body: Option<String>) -> Pin<Box<dyn Future<Output=Result<String, FetchError>> + 'static>> {
+    fn fetch(&self, method: FetchMethod, url: String, headers: Option<HashMap<String, String>>, body: Option<String>) -> Pin<Box<dyn Future<Output=Result<String, String>> + 'static>> {
         fetch::fetch(method, url, headers, body)
     }
 

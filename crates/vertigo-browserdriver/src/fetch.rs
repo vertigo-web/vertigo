@@ -8,14 +8,14 @@ use std::future::Future;
 
 use std::collections::HashMap;
 
-use vertigo::{FetchMethod, FetchError};
+use vertigo::FetchMethod;
 
 pub fn fetch(
     method: FetchMethod,
     url: String,
     headers: Option<HashMap<String, String>>,
     body: Option<String>
-) -> Pin<Box<dyn Future<Output=Result<String, FetchError>> + 'static>> {
+) -> Pin<Box<dyn Future<Output=Result<String, String>> + 'static>> {
     Box::pin(async move {
         let mut opts = RequestInit::new();
         opts.method(method.to_string());
@@ -44,8 +44,12 @@ pub fn fetch(
         
         let resp_value = match resp_value {
             Ok(resp_value) => resp_value,
-            Err(_) => {
-                return Err(FetchError::Error);
+            Err(err) => {
+                if let Some(err) = err.as_string() {
+                    return Err(format!("fetch error: {}", err));
+                }
+
+                return Err("unknown fetch error".into());
             }
         };
 
