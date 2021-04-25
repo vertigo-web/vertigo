@@ -3,7 +3,6 @@ use serde::{Deserialize, Serialize};
 
 use vertigo::{
     DomDriver,
-    FetchMethod,
     computed::{
         Dependencies,
         Value,
@@ -55,7 +54,7 @@ fn fetch_repo(repo: &str, value: Value<Resource<Branch>>, driver: &DomDriver) {
 
     driver.spawn_local(async move {
         log::info!("Fetching2 {}", url);
-        let response = driver_span.fetch(FetchMethod::GET, url, None, None).await;
+        let response = driver_span.fetch(url).get().await;
 
         match response {
             Ok(response) => {

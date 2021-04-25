@@ -11,7 +11,6 @@ pub use app::App;
 pub use driver::DomDriver;
 pub use driver::DomDriverTrait;
 pub use driver::FetchMethod;
-pub use driver::FetchError;
 pub use driver::EventCallback;
 pub use driver::HashRoutingReceiver;
 

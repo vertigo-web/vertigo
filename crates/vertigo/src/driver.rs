@@ -23,11 +23,6 @@ impl FetchMethod {
     }
 }
 
-#[derive(Debug, PartialEq)]
-pub enum FetchError {
-    Error,
-}
-
 pub enum EventCallback {
     OnClick {
         callback: Option<Rc<dyn Fn()>>,
@@ -92,7 +87,7 @@ pub trait DomDriverTrait {
     fn insert_before(&self, parent: RealDomId, child: RealDomId, ref_id: Option<RealDomId>);
     fn insert_css(&self, selector: &str, value: &str);
     fn set_event(&self, node: RealDomId, callback: EventCallback);
-    fn fetch(&self, method: FetchMethod, url: String, headers: Option<HashMap<String, String>>, body: Option<String>) -> Pin<Box<dyn Future<Output=Result<String, FetchError>> + 'static>>;
+    fn fetch(&self, method: FetchMethod, url: String, headers: Option<HashMap<String, String>>, body: Option<String>) -> Pin<Box<dyn Future<Output=Result<String, String>> + 'static>>;
 
     fn get_hash_location(&self) -> String;
     fn push_hash_location(&self, path: &str);
@@ -100,6 +95,58 @@ pub trait DomDriverTrait {
     fn clear_hash_route_callback(&self);
 
     fn set_interval(&self, time: u32, func: Box<dyn Fn()>) -> DropResource;
+}
+
+pub struct FetchBuilder {
+    driver: EqBox<Rc<dyn DomDriverTrait>>,
+    url: String,
+    headers: Option<HashMap<String, String>>,
+    body: Option<String>
+}
+
+impl FetchBuilder {
+    pub fn new(driver: EqBox<Rc<dyn DomDriverTrait>>, url: String) -> FetchBuilder {
+        FetchBuilder {
+            driver,
+            url,
+            headers: None,
+            body: None,
+        }
+    }
+
+    pub fn set_headres(self, headers: HashMap<String, String>) -> Self {
+        let FetchBuilder { driver, url, body , .. } = self;
+        FetchBuilder {
+            driver,
+            url,
+            headers: Some(headers),
+            body,
+        }
+    }
+
+    pub fn set_body(self, body: String) -> Self {
+        let FetchBuilder { driver, url, headers , .. } = self;
+        FetchBuilder {
+            driver,
+            url,
+            headers,
+            body: Some(body),
+        }
+    }
+
+    async fn run(self, method: FetchMethod) -> Result<String, String> {
+        show_log(format!("fetch {:?} {}", method, &self.url));
+        let fut = self.driver.fetch(method, self.url, self. headers, self.body);
+        fut.await
+    }
+
+    pub async fn get(self) -> Result<String, String> {
+        self.run(FetchMethod::GET).await
+    }
+
+    pub async fn post(self) -> Result<String, String> {
+        self.run(FetchMethod::POST).await
+    }
 }
 
 type Executor = Box<dyn Fn(Pin<Box<dyn Future<Output = ()> + 'static>>)>;
@@ -198,9 +245,8 @@ impl DomDriver {
         self.driver.set_event(node, callback);
     }
 
-    pub fn fetch(&self, method: FetchMethod, url: String, headers: Option<HashMap<String, String>>, body: Option<String>) -> Pin<Box<dyn Future<Output=Result<String, FetchError>> + 'static>> {
-        show_log(format!("fetch {:?} {}", method, url));
-        self.driver.fetch(method, url, headers, body)
+    pub fn fetch(&self, url: String) -> FetchBuilder {
+        FetchBuilder::new(self.driver.clone(), url)
     }
 
     pub fn get_hash_location(&self) -> String {
