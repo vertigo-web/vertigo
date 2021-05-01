@@ -54,7 +54,7 @@ pub fn render(state: &Computed<State>) -> VDomElement {
 
     let commit_sha = match repo_shown.as_str() {
         "" => "".to_string(),
-        _ => match &*state.data.get_value(&repo_shown).get_value() {
+        _ => match state.data.get_value(&repo_shown).get() {
             Resource::Loading => "Loading...".to_string(),
             Resource::Ready(branch) => branch.commit.sha.clone(),
             Resource::Failed(err) => format!("Error: {}", err),
