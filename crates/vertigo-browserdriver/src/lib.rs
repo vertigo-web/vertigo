@@ -34,7 +34,12 @@ fn get_window_elements() -> (Window, Document, HtmlHeadElement) {
 }
 
 fn create_node(document: &Document, id: &RealDomId, name: &'static str) -> Element {
-    let node = document.create_element(name).unwrap();
+    let node = if name == "path" || name == "svg" {
+        document.create_element_ns(Some("http://www.w3.org/2000/svg"), name).unwrap()
+    } else {
+        document.create_element(name).unwrap()
+    };
+
     let id_str = format!("{}", id.to_u64());
     node.set_attribute("data-id", id_str.as_str()).unwrap();
     node
