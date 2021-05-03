@@ -20,9 +20,8 @@ pub async fn start_app() {
 
     log::info!("Start rustowego modułu ...");
 
-    let driver = DomDriverBrowser::new();
-
     let root: Dependencies = Dependencies::default();
+    let driver = DomDriverBrowser::new(&root);
     let app_state = app::State::new(&root, &driver);
 
     //for testing
