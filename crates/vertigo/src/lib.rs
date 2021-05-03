@@ -1,6 +1,7 @@
 mod app;
 pub mod computed;
 mod css_manager;
+mod fetch_builder;
 mod driver;
 pub mod router;
 pub mod utils;

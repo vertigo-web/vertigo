@@ -4,27 +4,29 @@ use std::{
     pin::Pin,
     rc::Rc,
 };
+use element_wrapper::ElementWrapper;
 use wasm_bindgen::{JsCast, prelude::Closure, JsValue};
-use web_sys::{Document, Element, Event, Text, HtmlHeadElement, Node, HtmlInputElement, HtmlTextAreaElement, Window};
+use web_sys::{Document, Element, Event, HtmlHeadElement, Node, HtmlInputElement, HtmlTextAreaElement, Window};
 
-use vertigo::{
-    DomDriver,
-    DomDriverTrait,
-    EventCallback,
-    FetchMethod,
-    HashRoutingReceiver,
-    RealDomId,
-    utils::{
+use vertigo::{DomDriver, DomDriverTrait, EventCallback, FetchMethod, HashRoutingReceiver, RealDomId, computed::Dependencies, utils::{
         BoxRefCell,
         DropResource,
-    }
-};
+    }};
 
-use dom_event::{DomEventDisconnect, DomEvent, /*DomEventKeyboard, DomEventMouse */};
+use dom_event::{DomEventDisconnect};
+
+use crate::{element_wrapper::ElementItem, events::{
+        input::create_input_event,
+        mousedown::create_mousedown_event,
+        mouseenter::create_mouseenter_event
+    }, transaction::Transaction};
 
 mod dom_event;
 mod fetch;
 mod set_interval;
+mod events;
+mod element_wrapper;
+mod transaction;
 
 fn get_window_elements() -> (Window, Document, HtmlHeadElement) {
     let window = web_sys::window().expect("no global `window` exists");
@@ -52,123 +54,6 @@ fn create_root(document: &Document, root_id: &RealDomId) -> Element {
     root
 }
 
-enum ElementItem {
-    Element {
-        node: Element,
-    },
-    Text {
-        text: Text
-    },
-}
-
-impl ElementItem {
-    pub fn from_node(node: Element) -> ElementItem {
-        ElementItem::Element { node }
-    }
-
-    pub fn from_text(text: Text) -> ElementItem {
-        ElementItem::Text { text }
-    }
-}
-
-struct ElementWrapper {
-    item: ElementItem,
-    on_click: Option<Rc<dyn Fn()>>,
-    on_input: Option<Rc<dyn Fn(String)>>,
-    on_mouse_enter: Option<Rc<dyn Fn()>>,
-    on_mouse_leave: Option<Rc<dyn Fn()>>,
-}
-
-impl ElementWrapper {
-    pub fn from_node(node: Element) -> ElementWrapper {
-        ElementWrapper {
-            item: ElementItem::from_node(node),
-            on_click: None,
-            on_input: None,
-            on_mouse_enter: None,
-            on_mouse_leave: None,
-        }
-    }
-
-    pub fn from_text(text: Text) -> ElementWrapper {
-        ElementWrapper {
-            item: ElementItem::from_text(text),
-            on_click: None,
-            on_input: None,
-            on_mouse_enter: None,
-            on_mouse_leave: None,
-        }
-    }
-}
-
-fn find_event<T: Clone>(
-    inner: &Rc<BoxRefCell<DomDriverBrowserInner>>,
-    id: u64,
-    find_event_on_click_item: fn(&ElementWrapper) -> &Option<T>,
-) -> Option<T> {
-    let id = RealDomId::from_u64(id);
-
-    let on_click = inner.get_with_context(
-        (id, find_event_on_click_item),
-        |state, (id, find_event_on_click_item)| -> Option<T> {
-            let mut wsk = id;
-            let mut count = 0;
-
-            loop {
-                count += 1;
-
-                if count > 100 {
-                    log::error!("Too many nested levels");
-                    return None;
-                }
-
-                let item = state.elements.get(&wsk).unwrap();
-
-                let item_inner = find_event_on_click_item(item);
-
-                if let Some(on_click) = item_inner {
-                    return Some(on_click.clone());
-                }
-
-                let parent = state.child_parent.get(&wsk);
-                if let Some(parent) = parent {
-                    wsk = parent.clone();
-                } else {
-                    return None;
-                }
-            }
-        }
-    );
-
-    on_click
-}
-
-fn find_event_on_input(inner: &Rc<BoxRefCell<DomDriverBrowserInner>>, id: u64) -> Option<Rc<dyn Fn(String)>> {
-    let id = RealDomId::from_u64(id);
-
-    let on_input = inner.get_with_context(
-        id,
-        |state, id| -> Option<Rc<dyn Fn(String)>> {
-            let item = state.elements.get(&id).unwrap();
-
-            if let Some(on_input) = &item.on_input {
-                return Some(on_input.clone());
-            }
-            None
-        }
-    );
-    on_input
-}
-
-fn find_dom_id(event: &web_sys::Event) -> u64 {
-    let target = event.target().unwrap();
-    let element = target.dyn_ref::<Element>().unwrap();
-
-    let option_id: Option<String> = (*element).get_attribute("data-id");
-    let id: u64 = option_id.unwrap().parse::<u64>().unwrap();
-    id
-}
-
 pub struct DomDriverBrowserInner {
     window: Window,
     document: Document,
@@ -179,7 +64,7 @@ pub struct DomDriverBrowserInner {
 }
 
 impl DomDriverBrowserInner {
-    fn new() -> Rc<BoxRefCell<Self>> {
+    fn new(dependencies: &Dependencies) -> Rc<BoxRefCell<Self>> {
         let (window, document, head) = get_window_elements();
 
         let root_id = RealDomId::root();
@@ -199,83 +84,13 @@ impl DomDriverBrowserInner {
             )
         );
 
-        let mut dom_event_disconnect = vec![{
-            let inner = inner.clone();
+        let transaction = Transaction::new(dependencies);
 
-            DomEvent::new_event(&root, "mousedown",move |event: web_sys::Event| {
-                // log::info!("event click ... {:?}", event);
-
-                let dom_id = find_dom_id(&event);
-
-                let event_to_run = find_event(&inner, dom_id, |item| &item.on_click);
-
-                if let Some(event_to_run) = event_to_run {
-                    event_to_run();
-                }
-            })
-        }];
-
-        // dom_event_disconnect.push({
-        //     let inner = inner.clone();
-
-        //     ///*"mouseenter"*/
-        //     DomEvent::new_event(&root, "mouseover",move |event: web_sys::Event| {
-        //         log::info!("event mouseenter ... {:?}", event);
-
-        //         let dom_id = find_dom_id(&event);
-
-        //         let event_to_run = find_event(&inner, dom_id, |item| &item.onMouseEnter);
-
-        //         if let Some(event_to_run) = event_to_run {
-        //             event_to_run();
-        //         }
-        //     })
-        // });
-
-        // dom_event_disconnect.push({
-        //     let inner = inner.clone();
-
-        //     /*"mouseleave"*/
-        //     DomEvent::new_event(&root, "mouseout",move |event: web_sys::Event| {
-        //         log::info!("event mouseleave ... {:?}", event);
-
-        //         let dom_id = find_dom_id(&event);
-
-        //         let event_to_run = find_event(&inner, dom_id, |item| &item.onMouseLeave);
-
-        //         if let Some(event_to_run) = event_to_run {
-        //             event_to_run();
-        //         }
-        //     })
-        // });
-
-
-        dom_event_disconnect.push({
-            let inner = inner.clone();
-
-            DomEvent::new_event(&root, "input", move |event: web_sys::Event| {
-
-                let dom_id = find_dom_id(&event);
-                let event_to_run = find_event_on_input(&inner, dom_id);
-
-                if let Some(event_to_run) = event_to_run {
-                    let target = event.target().unwrap();
-                    let input = target.dyn_ref::<HtmlInputElement>();
-
-                    if let Some(input) = input {
-                        event_to_run(input.value());
-                        return;
-                    }
-
-                    let input = target.dyn_ref::<HtmlTextAreaElement>();
-
-                    if let Some(input) = input {
-                        event_to_run(input.value());
-                        return;
-                    }
-                }
-            })
-        });
+        let dom_event_disconnect = vec![
+            create_mousedown_event(&inner, &root),
+            create_input_event(&inner, &root),
+            create_mouseenter_event(&inner, &root, transaction),
+        ];
 
         inner.change(
             (dom_event_disconnect, root_id, root),
@@ -470,8 +285,8 @@ pub struct DomDriverBrowser {
 }
 
 impl DomDriverBrowser {
-    pub fn new() -> DomDriver {
-        let driver = DomDriverBrowserInner::new();
+    pub fn new(root: &Dependencies) -> DomDriver {
+        let driver = DomDriverBrowserInner::new(root);
 
         let dom_driver_browser = DomDriverBrowser {
             driver,
