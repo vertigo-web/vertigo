@@ -2,6 +2,8 @@ use std::rc::Rc;
 
 use crate::virtualdom::models::css::Css;
 
+use super::vdom_element::KeyDownEvent;
+
 pub enum NodeAttr {
     Css {
         css: Css
@@ -17,6 +19,9 @@ pub enum NodeAttr {
     },
     OnMouseLeave {
         event: Rc<dyn Fn()>
+    },
+    OnKeyDown {
+        event: Rc<dyn Fn(KeyDownEvent)>,
     },
     Attr {
         name: &'static str,
@@ -52,6 +57,12 @@ pub fn on_mouse_enter<F: Fn() + 'static>(callback: F) -> NodeAttr {
 
 pub fn on_mouse_leave<F: Fn() + 'static>(callback: F) -> NodeAttr {
     NodeAttr::OnMouseLeave {
+        event: Rc::new(callback),
+    }
+}
+
+pub fn on_key_down<F: Fn(KeyDownEvent) + 'static>(callback: F) -> NodeAttr {
+    NodeAttr::OnKeyDown {
         event: Rc::new(callback),
     }
 }

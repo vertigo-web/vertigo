@@ -13,20 +13,23 @@ use vertigo::{DomDriver, DomDriverTrait, EventCallback, FetchMethod, HashRouting
         DropResource,
     }};
 
-use dom_event::{DomEventDisconnect};
+use dom_event::{DomEvent};
 
-use crate::{element_wrapper::ElementItem, events::{
+use crate::{
+    element_wrapper::ElementItem,
+    events::{
         input::create_input_event,
+        keydown::create_keydown_event,
         mousedown::create_mousedown_event,
         mouseenter::create_mouseenter_event
-    }, transaction::Transaction};
+    }
+};
 
 mod dom_event;
 mod fetch;
 mod set_interval;
 mod events;
 mod element_wrapper;
-mod transaction;
 
 fn get_window_elements() -> (Window, Document, HtmlHeadElement) {
     let window = web_sys::window().expect("no global `window` exists");
@@ -60,7 +63,7 @@ pub struct DomDriverBrowserInner {
     head: HtmlHeadElement,
     elements: HashMap<RealDomId, ElementWrapper>,
     child_parent: HashMap<RealDomId, RealDomId>,            //child -> parent
-    _dom_event_disconnect: Vec<DomEventDisconnect>,
+    _dom_event_disconnect: Vec<DomEvent>,
 }
 
 impl DomDriverBrowserInner {
@@ -74,7 +77,7 @@ impl DomDriverBrowserInner {
             BoxRefCell::new(
                 DomDriverBrowserInner {
                     window,
-                    document,
+                    document: document.clone(),
                     head,
                     elements: HashMap::new(),
                     child_parent: HashMap::new(),
@@ -84,12 +87,11 @@ impl DomDriverBrowserInner {
             )
         );
 
-        let transaction = Transaction::new(dependencies);
-
         let dom_event_disconnect = vec![
             create_mousedown_event(&inner, &root),
             create_input_event(&inner, &root),
-            create_mouseenter_event(&inner, &root, transaction),
+            create_mouseenter_event(&inner, &root, dependencies),
+            create_keydown_event(&document, &inner),
         ];
 
         inner.change(
@@ -256,6 +258,9 @@ impl DomDriverBrowserInner {
             EventCallback::OnMouseLeave { callback } => {
                 item.on_mouse_leave = callback;
             },
+            EventCallback::OnKeyDown { callback} => {
+                item.on_keydown = callback;
+            }
         }
     }
 

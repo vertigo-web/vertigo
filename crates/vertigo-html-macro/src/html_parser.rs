@@ -96,6 +96,7 @@ impl HtmlParser {
                 Rule::oninput_attr => attrs.push(self.generate_expression_attr(pair, Some("on_input"))),
                 Rule::onmouseenter_attr => attrs.push(self.generate_expression_attr(pair, Some("on_mouse_enter"))),
                 Rule::onmouseleave_attr => attrs.push(self.generate_expression_attr(pair, Some("on_mouse_leave"))),
+                Rule::onkeydown_attr => attrs.push(self.generate_expression_attr(pair, Some("on_key_down"))),
                 Rule::expression_attr => attrs.push(self.generate_expression_attr(pair, None)),
 
                 Rule::el_vcomponent => children.push(pair),
@@ -128,6 +129,7 @@ impl HtmlParser {
                             Rule::oninput_attr => attrs.push(self.generate_expression_attr(tag_pair, Some("on_input"))),
                             Rule::onmouseenter_attr => attrs.push(self.generate_expression_attr(tag_pair, Some("on_mouse_enter"))),
                             Rule::onmouseleave_attr => attrs.push(self.generate_expression_attr(tag_pair, Some("on_mouse_leave"))),
+                            Rule::onkeydown_attr => attrs.push(self.generate_expression_attr(tag_pair, Some("on_key_down"))),
                             Rule::expression_attr => attrs.push(self.generate_expression_attr(tag_pair, None)),
 
                             _ => {

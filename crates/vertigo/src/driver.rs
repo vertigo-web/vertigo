@@ -5,7 +5,7 @@ use std::{
     rc::Rc,
 };
 
-use crate::{fetch_builder::FetchBuilder, utils::{EqBox, DropResource}};
+use crate::{KeyDownEvent, fetch_builder::FetchBuilder, utils::{EqBox, DropResource}};
 use crate::virtualdom::models::realdom_id::RealDomId;
 
 #[derive(Debug)]
@@ -30,14 +30,15 @@ pub enum EventCallback {
     OnInput {
         callback: Option<Rc<dyn Fn(String)>>,
     },
-                //mouseenter
     OnMouseEnter {
         callback: Option<Rc<dyn Fn()>>,
     },
-                //mouseleave
     OnMouseLeave {
         callback: Option<Rc<dyn Fn()>>,
     },
+    OnKeyDown {
+        callback: Option<Rc<dyn Fn(KeyDownEvent)>>,
+    }
 }
 
 impl EventCallback {
@@ -69,6 +70,13 @@ impl EventCallback {
                     "onMouseLeave set"
                 } else {
                     "onMouseLeave clear"
+                }
+            },
+            EventCallback::OnKeyDown { callback } =>{
+                if callback.is_some() {
+                    "OnKeyDown set"
+                } else {
+                    "OnKeyDown clear"
                 }
             },
         }

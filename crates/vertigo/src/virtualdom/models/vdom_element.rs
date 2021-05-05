@@ -1,4 +1,4 @@
-use std::collections::HashMap;
+use std::{collections::HashMap};
 use std::rc::Rc;
 use std::cmp::PartialEq;
 use std::fmt;
@@ -9,6 +9,23 @@ use crate::virtualdom::models::{
     node_attr::NodeAttr,
 };
 
+//https://docs.rs/web-sys/0.3.50/web_sys/struct.KeyboardEvent.html
+#[derive(Debug)]
+pub struct KeyDownEvent {
+    pub key: String,
+    pub code: String,
+    pub alt_key: bool,
+    pub ctrl_key: bool,
+    pub shift_key: bool,
+    pub meta_key: bool,
+}
+
+impl std::fmt::Display for KeyDownEvent {
+    fn fmt(&self, f: &mut std::fmt::Formatter) -> std::fmt::Result {
+        write!(f, "KeyDownEvent={}", self.key)
+    }
+}
+
 pub struct VDomElement {
     pub name: &'static str,
     pub attr: HashMap<&'static str, String>,
@@ -17,6 +34,7 @@ pub struct VDomElement {
     pub on_input: Option<Rc<dyn Fn(String)>>,
     pub on_mouse_enter: Option<Rc<dyn Fn()>>,
     pub on_mouse_leave: Option<Rc<dyn Fn()>>,
+    pub on_key_down: Option<Rc<dyn Fn(KeyDownEvent)>>,
     pub css: Option<Css>,
 }
 
@@ -30,6 +48,7 @@ impl VDomElement {
             on_input: None,
             on_mouse_enter: None,
             on_mouse_leave: None,
+            on_key_down: None,
             css: None,
         };
 
@@ -49,6 +68,9 @@ impl VDomElement {
                 },
                 NodeAttr::OnMouseLeave { event } => {
                     result.on_mouse_leave = Some(event);
+                },
+                NodeAttr::OnKeyDown { event } => {
+                    result.on_key_down = Some(event);
                 },
                 NodeAttr::Attr { name , value} => {
                     result.attr.insert(name, value);
