@@ -1,6 +1,7 @@
 use std::{
     rc::Rc,
 };
+use vertigo::KeyDownEvent;
 use web_sys::{Element, Text};
 
 pub enum ElementItem {
@@ -28,26 +29,28 @@ pub struct ElementWrapper {
     pub on_input: Option<Rc<dyn Fn(String)>>,
     pub on_mouse_enter: Option<Rc<dyn Fn()>>,
     pub on_mouse_leave: Option<Rc<dyn Fn()>>,
+    pub on_keydown: Option<Rc<dyn Fn(KeyDownEvent)>>,
 }
 
 impl ElementWrapper {
-    pub fn from_node(node: Element) -> ElementWrapper {
+    fn from_element(element: ElementItem) -> ElementWrapper {
         ElementWrapper {
-            item: ElementItem::from_node(node),
+            item: element,
             on_click: None,
             on_input: None,
             on_mouse_enter: None,
             on_mouse_leave: None,
+            on_keydown: None,
         }
     }
 
+    pub fn from_node(node: Element) -> ElementWrapper {
+        let item = ElementItem::from_node(node);
+        ElementWrapper::from_element(item)
+    }
+
     pub fn from_text(text: Text) -> ElementWrapper {
-        ElementWrapper {
-            item: ElementItem::from_text(text),
-            on_click: None,
-            on_input: None,
-            on_mouse_enter: None,
-            on_mouse_leave: None,
-        }
+        let item = ElementItem::from_text(text);
+        ElementWrapper::from_element(item)
     }
 }
