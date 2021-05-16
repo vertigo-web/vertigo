@@ -3,7 +3,7 @@ use std::rc::Rc;
 use vertigo::{KeyDownEvent, RealDomId, utils::BoxRefCell};
 use web_sys::{Document, KeyboardEvent};
 
-use crate::{DomDriverBrowserInner, dom_event::DomEvent, events::find_dom_id_option};
+use crate::{DomDriverBrowserInner, dom_event::DomEvent, events::find_dom_id};
 
 use super::{find_all_nodes, get_from_node};
 
@@ -42,14 +42,7 @@ pub fn create_keydown_event(document: &Document, inner: &Rc<BoxRefCell<DomDriver
     let inner = inner.clone();
 
     DomEvent::new(document, "keydown", move |event: web_sys::Event| {
-        let dom_id = find_dom_id_option(&event);
-
-        let dom_id = match dom_id {
-            Some(dom_id) => dom_id,
-            None => {
-                return;
-            }
-        };
+        let dom_id = find_dom_id(&event);
 
         let event_to_run = find_event(&inner, dom_id);
 

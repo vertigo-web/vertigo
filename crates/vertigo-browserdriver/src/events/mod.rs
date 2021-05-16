@@ -73,7 +73,7 @@ pub fn find_all_nodes(
     )
 }
 
-fn find_dom_id_option(event: &web_sys::Event) -> Option<RealDomId> {
+fn find_dom_id(event: &web_sys::Event) -> RealDomId {
     let target = event.target().unwrap();
     let element = target.dyn_ref::<Element>().unwrap();
 
@@ -81,18 +81,14 @@ fn find_dom_id_option(event: &web_sys::Event) -> Option<RealDomId> {
     let option_id = match option_id {
         Some(option_id) => option_id,
         None => {
-            return None;
+            return RealDomId::root();
         }
     };
 
     let id = option_id.parse::<u64>();
 
     match id {
-        Ok(id) => Some(RealDomId::from_u64(id)),
-        Err(_) => None
+        Ok(id) => RealDomId::from_u64(id),
+        Err(_) => RealDomId::root()
     }
-}
-
-fn find_dom_id(event: &web_sys::Event) -> RealDomId {
-    find_dom_id_option(event).unwrap()
 }
