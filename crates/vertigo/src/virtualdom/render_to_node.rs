@@ -204,7 +204,7 @@ fn update_node_child(css_manager: &CssManager, target: &RealDomElement, new_vers
     }
 
 
-    let mut wsk: Option<RealDomId> = None;
+    let mut ref_id: Option<RealDomId> = None;
 
     for item in new_version.children.iter().rev() {
 
@@ -212,31 +212,31 @@ fn update_node_child(css_manager: &CssManager, target: &RealDomElement, new_vers
             VDomNode::Element { node } => {
                 let id = node.name;
                 let dom_child = real_node.get_or_create(css_manager, target, id, node);
-                let new_wsk = dom_child.id_dom();
+                let new_ref_id = dom_child.id_dom();
 
                 update_node_attr(&css_manager, &dom_child, &node);
                 update_node_child(css_manager, &dom_child, &node);
 
-                target.insert_before(RealDomNode::Node { node: dom_child }, wsk);
-                wsk = Some(new_wsk);
+                target.insert_before(RealDomNode::Node { node: dom_child }, ref_id);
+                ref_id = Some(new_ref_id);
             },
             VDomNode::Text { node } => {
                 let id = node.value.clone();
                 let dom_child = real_text.get_or_create(css_manager, target,id, node);
-                let new_wsk = dom_child.id_dom.clone();
+                let new_ref_id = dom_child.id_dom.clone();
 
                 dom_child.update(&node.value);
 
-                target.insert_before(RealDomNode::Text { node: dom_child }, wsk);
-                wsk = Some(new_wsk);
+                target.insert_before(RealDomNode::Text { node: dom_child }, ref_id);
+                ref_id = Some(new_ref_id);
             },
             VDomNode::Component { node } => {
                 let id = node.id.clone();
                 let dom_child = real_component.get_or_create(css_manager, target,id, node);
-                let new_wsk = dom_child.dom_id();
+                let new_ref_id = dom_child.dom_id();
 
-                target.insert_before(RealDomNode::Component { node: dom_child }, wsk);
-                wsk = Some(new_wsk);
+                target.insert_before(RealDomNode::Component { node: dom_child }, ref_id);
+                ref_id = Some(new_ref_id);
             }
         }
     }
@@ -260,8 +260,8 @@ fn update_node_attr(css_manager: &CssManager, real_node: &RealDomElement, node: 
 
 fn update_node(css_manager: &CssManager, target: &RealDomElement, new_version: &VDomElement) {
 
-    //updejt nazwy taga ...
-    //TODO !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
+    //updejt tag name
+    target.update_name(new_version.name);
 
     //updejt atrybutów
     update_node_attr(&css_manager, target, &new_version);

@@ -63,6 +63,22 @@ impl RealDomNodeInner {
         }
     }
 
+    fn update_name(&mut self, name: &'static str) {
+        if self.name == name {
+            return;
+        }
+
+        self.dom_driver.create_node(self.id_dom.clone(), name);
+        self.name = name;
+
+        let mut ref_id: Option<RealDomId> = None;
+
+        for child in self.child.iter().rev() {
+            self.dom_driver.insert_before(self.id_dom.clone(), child.id(), ref_id);
+            ref_id = Some(child.id());
+        }
+    }
+
     fn update_attr_one(&mut self, name: &'static str, value: &str) {
         let need_update = {
             let item = self.attr.get(name);
@@ -174,24 +190,22 @@ impl RealDomElement {
     }
 
     pub fn id_dom(&self) -> RealDomId {
-        self.inner.get(
-            |state| {
-                state.id_dom.clone()
-        })
+        self.inner.get(|state| state.id_dom.clone())
     }
 
     pub fn name(&self) -> &'static str {
-        self.inner.get(
-            |state| {
-                state.name
+        self.inner.get(|state| state.name)
+    }
+
+    pub fn update_name(&self, name: &'static str) {
+        self.inner.change(name, |state, name| {
+            state.update_name(name);
         })
     }
 
     pub fn extract_child(&self) -> VecDeque<RealDomNode> {
-        self.inner.change(
-            (),
-            |state, ()| {
-                state.extract_child()
+        self.inner.change((), |state, ()| {
+            state.extract_child()
         })
     }
 
@@ -210,9 +224,8 @@ impl RealDomElement {
     }
 
     fn dom_driver(&self) -> DomDriver {
-        self.inner.get(
-            |state| {
-                state.dom_driver.clone()
+        self.inner.get(|state| {
+            state.dom_driver.clone()
         })
     }
 
@@ -224,7 +237,6 @@ impl RealDomElement {
         RealDomText::new(self.dom_driver(), name)
     }
 }
-
 
 impl Clone for RealDomElement {
     fn clone(&self) -> Self {
