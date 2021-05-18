@@ -13,7 +13,7 @@ use super::{get_selector::get_selector, next_id::NextId, transform_css::transfor
 struct CssManagerInner {
     driver: DomDriver,
     next_id: NextId,
-    ids_static: HashMap<u64, u64>,
+    ids_static: HashMap<&'static str, u64>,
     ids_dynamic: HashMap<String, u64>,
 }
 
@@ -51,15 +51,13 @@ impl CssManager {
     }
 
     fn get_static(&self, css: &'static str) -> String {
-        let css_static_id: u64 = css.as_ptr() as u64;
-
-         self.inner.change((css_static_id, css), |state, (css_static_id, css)| {
-            if let Some(class_id) = state.ids_static.get(&css_static_id) {
+         self.inner.change(css, |state, css| {
+            if let Some(class_id) = state.ids_static.get(&css) {
                 return get_selector(class_id);
             }
 
             let class_id = state.insert_css(css);
-            state.ids_static.insert(css_static_id, class_id);
+            state.ids_static.insert(css, class_id);
 
             get_selector(&class_id)
         })
