@@ -173,7 +173,7 @@ fn update_node_child(css_manager: &CssManager, target: &RealDomElement, new_vers
     let mut real_component: CacheNode<VDomComponentId, RealDomComponent, VDomComponent> = CacheNode::new(
         |css_manager: &CssManager, target: &RealDomElement, node: &VDomComponent| -> RealDomComponent {
 
-            let node_root = target.create_node("div");
+            let node_root = target.create_node(node.view.get_value().name);
 
             let node_root_for_id = node_root.clone();
 
