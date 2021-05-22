@@ -8,7 +8,6 @@ use syn::{Expr, parse_str};
 pub struct HtmlParser {
     call_site: Span,
     children: Vec<TokenStream>,
-    in_pre: bool,
 }
 
 impl HtmlParser {
@@ -16,7 +15,6 @@ impl HtmlParser {
         Self {
             call_site,
             children: Vec::new(),
-            in_pre: false,
         }
     }
 
@@ -69,7 +67,7 @@ impl HtmlParser {
         // children are regular elements added into HTML
         // children_lists are { ..something } ones (it's a list of lists)
         //
-        // Regular children will always render first no matter how places in HTML, so
+        // Regular children will always render first no matter how placed in HTML, so
         //    <div> "foo" { ..vec1 } "bar" { ..vec2 } {value} </div>
         // will render as:
         //    <div> "foo" "bar" {value} { ..vec1 } { ..vec2 } </div>
@@ -81,12 +79,7 @@ impl HtmlParser {
         for pair in pair.into_inner() {
             // emit_warning!(self.call_site, "HTML: generate_node_element debug: {:?}", pair);
             match pair.as_rule() {
-                Rule::el_name => {
-                    tag_name = pair.as_str();
-                    if tag_name == "pre" {
-                        self.in_pre = true;
-                    }
-                },
+                Rule::el_name => tag_name = pair.as_str(),
                 Rule::el_void_name => tag_name = pair.as_str(),
                 Rule::el_raw_text_name => tag_name = pair.as_str(),
 
@@ -114,12 +107,7 @@ impl HtmlParser {
                     for tag_pair in pair.into_inner() {
                         // TODO: Refactor: These repeated variants should be taken into some separate function
                         match tag_pair.as_rule() {
-                            Rule::el_name => {
-                                tag_name = tag_pair.as_str();
-                                if tag_name == "pre" {
-                                    self.in_pre = true;
-                                }
-                            },
+                            Rule::el_name => tag_name = tag_pair.as_str(),
                             Rule::el_void_name => tag_name = tag_pair.as_str(),
                             Rule::el_raw_text_name => tag_name = tag_pair.as_str(),
 
@@ -148,14 +136,8 @@ impl HtmlParser {
             }
         }
 
-        // Generate children with proper spacing for text elements
-        let children_len = children.len();
-
         let mut generated_children = Vec::new();
-        for (idx, pair) in children.into_iter().enumerate() {
-            let first = idx == 0;
-            // Child is not last if there are other children to unpack
-            let last = idx >= children_len - 1 && children_lists.is_empty();
+        for pair in children.into_iter() {
             match pair.as_rule() {
                 Rule::el_vcomponent => generated_children.push(self.generate_vcomponent(pair, false)),
                 Rule::el_vcomponent_val => generated_children.push(self.generate_vcomponent(pair, true)),
@@ -164,14 +146,12 @@ impl HtmlParser {
                 Rule::el_void_xml => generated_children.push(self.generate_node_element(pair, false)),
                 Rule::el_raw_text => generated_children.push(self.generate_node_element(pair, false)),
                 Rule::el_raw_text_content => {
-                    self.in_pre = true;
-                    if let Some(ts) = self.generate_text(pair, first, last) {
+                    if let Some(ts) = self.generate_text(pair) {
                         generated_children.push(ts)
                     }
-                    self.in_pre = false;
                 },
                 Rule::el_velement => generated_children.push(self.generate_velement(pair)),
-                Rule::node_text => if let Some(ts) = self.generate_text(pair, first, last) {
+                Rule::node_text => if let Some(ts) = self.generate_text(pair) {
                     generated_children.push(ts)
                 }
                 Rule::expression => generated_children.push(self.generate_expression(pair)),
@@ -184,10 +164,6 @@ impl HtmlParser {
         let mut generated_children_lists = Vec::new();
         for pair in children_lists {
             generated_children_lists.push(self.generate_children(pair))
-        }
-
-        if tag_name == "pre" {
-            self.in_pre = false;
         }
 
         let builder = if is_root {
@@ -279,31 +255,16 @@ impl HtmlParser {
         quote! { }
     }
 
-    fn generate_text(&self, pair: Pair<Rule>, first: bool, last: bool) -> Option<TokenStream> {
+    fn generate_text(&self, pair: Pair<Rule>) -> Option<TokenStream> {
         match pair.as_rule() {
             Rule::node_text |
             Rule::el_raw_text_content => {
-                if self.in_pre {
-                    let content = pair.as_str();
-                    Some(quote! { vertigo::VDomNode::text(#content) })
-                } else {
-                    // Left/right trim value but leave 1 space on left/right side in special circumstances
-                    fn match_func(c: char) -> bool {
-                        c.is_whitespace() || c == '\x0a'
-                    }
-
-                    let ltrimmed = pair.as_str().trim_start_matches(match_func);
-                    let prefix = if ltrimmed.len() < pair.as_str().len() && !first { " " } else { "" };
-                    let rtrimmed = ltrimmed.trim_end_matches(match_func);
-                    let postfix = if rtrimmed.len() < ltrimmed.len() && !last { " " } else { "" };
-
-                    if rtrimmed.is_empty() {
-                        None
-                    } else {
-                        let content = format!("{}{}{}", prefix, rtrimmed, postfix);
-                        Some(quote! { vertigo::VDomNode::text(#content) })
-                    }
+                let trimmed = pair.as_str().trim();
+                let unquoted = trimmed.trim_matches('"');
+                if unquoted.len() + 2 != trimmed.len() {
+                    emit_error!(self.call_site, "Please double-quote strings in your HTML to avoid problems with formatting");
                 }
+                Some(quote! { vertigo::VDomNode::text(#unquoted) })
             },
             _ => {
                 emit_warning!(self.call_site, "HTML: unhandler pair in generate_text: {:?}", pair);
@@ -347,7 +308,7 @@ impl HtmlParser {
         match pair.as_rule() {
             Rule::regular_attr => {
                 let mut inner = pair.into_inner();
-                let key = inner.next().unwrap().as_str();
+                let key = inner.next().unwrap().as_str().replace(' ', "");
                 let value = inner.next().unwrap().as_str();
                 quote! { vertigo::node_attr::attr(#key, #value) }
             }
@@ -362,7 +323,7 @@ impl HtmlParser {
         let mut pair = pair.into_inner();
 
         // Use vertigo attr if provided, otherwise read custom attr from grammar
-        let attr_key = attr_key_opt.unwrap_or_else(|| pair.next().unwrap().as_str());
+        let attr_key = attr_key_opt.unwrap_or_else(|| pair.next().unwrap().as_str()).replace(' ', "");
 
         let expression_val = pair.next().unwrap();
 
@@ -372,7 +333,7 @@ impl HtmlParser {
                 let expr: Expr = parse_str(value).unwrap_or_else(|e| panic!("Error while parsing `{}`: {}", value, e));
                 if attr_key_opt.is_some() {
                     // Vertigo attribute
-                    let attr_key = Ident::new(attr_key, self.call_site);
+                    let attr_key = Ident::new(&attr_key, self.call_site);
                     return quote! { vertigo::node_attr::#attr_key((#expr)) }
                 } else {
                     // Custom attribute

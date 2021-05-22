@@ -22,8 +22,8 @@ node_element = _{ el_vcomponent_val | el_vcomponent | el_velement | el_void | el
 // COMMENTS
 //
 comment_normal = _{ comment_tag_start ~ (!comment_tag_end ~ ANY)* ~ comment_tag_end }
-comment_tag_start = _{ chevron_left_bang ~ "--" }
-comment_tag_end = _{ "--" ~ chevron_right_normal }
+comment_tag_start = _{ chevron_left_bang ~ "-" ~ "-" }
+comment_tag_end = _{ "-" ~ "-" ~ chevron_right_normal }
 
 // Compatability with old IE browsers... This is not necessary for newer browsers
 comment_if = _{ comment_if_start ~ (!comment_if_end ~ ANY)* ~ comment_if_end }
@@ -102,7 +102,7 @@ el_void_xml = { chevron_left_normal ~ el_name ~ attr* ~ chevron_right_closed }
 // Open elements are default element that can take children
 // and have both a start tag and an end tag
 // Ex: <html lang="en"></html>
-el_normal = ${ el_normal_start ~ (!el_normal_end ~ node)* ~ el_normal_end }
+el_normal = { el_normal_start ~ (!el_normal_end ~ node)* ~ el_normal_end }
 el_normal_start = !{ chevron_left_normal ~ PUSH(el_name) ~ attr* ~ chevron_right_normal}
 el_normal_end = !{ chevron_left_closed ~ POP ~ chevron_right_normal}
 
@@ -139,11 +139,11 @@ el_dangling = { chevron_left_closed ~ el_name ~ chevron_right_normal}
 text_chars = _{'a'..'z' | 'A'..'Z' | "_" | "-" | ":" |'0'..'9'}
 
 chevron_left_normal = _{ "<" }
-chevron_left_closed = _{ "</" }
-chevron_left_bang = _{ "<!" }
+chevron_left_closed = _{ "<" ~ "/" }
+chevron_left_bang = _{ "<" ~ "!" }
 
 chevron_right_normal = _{ ">" }
-chevron_right_closed = _{ "/>" }
+chevron_right_closed = _{ "/" ~ ">" }
 chevron_right = _{ chevron_right_normal | chevron_right_closed }
 
 equal = _{ "=" }

@@ -17,16 +17,16 @@ fn div_with_component() {
     let value = Value::new(deps, "old value".to_string());
 
     fn my_component(state: &Computed<String>) -> VDomElement {
-        html!("
-            <div>Value {state.get_value().as_str()}</div>
-        ")
+        html! {
+            <div>"Value "{state.get_value().as_str()}</div>
+        }
     }
 
-    let div = html!("
+    let div = html! {
         <div>
             <component {my_component} data={value.to_computed()} />
         </div>
-    ");
+    };
 
     assert_eq!(div.name, "div");
     assert_eq!(div.children.len(), 1);

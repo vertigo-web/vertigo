@@ -80,19 +80,19 @@ pub fn render_cell_possible(item: &Computed<Cell>) -> VDomElement {
                     }
                 };
 
-                html!("
+                html! {
                     <div css={css_item_only_one()} onClick={on_set}>
                         { number.to_u16() }
                     </div>
-                ")
+                }
             })
             .collect();
 
-        return html!("
+        return html! {
             <div css={css_wrapper_one()}>
                 { ..out }
             </div>
-        ")
+        }
     }
 
     let possible_last_value = *cell.possible_last.get_value();
@@ -104,13 +104,13 @@ pub fn render_cell_possible(item: &Computed<Cell>) -> VDomElement {
             }
         };
 
-        return html!(r#"
+        return html! {
             <div css={css_wrapper_one()}>
                 <div css={css_item_only_one()} onClick={on_set}>
-                    { possible_last_value.to_u16() }.
+                    { possible_last_value.to_u16() }"."
                 </div>
             </div>
-        "#)
+        }
     }
 
 
@@ -133,17 +133,17 @@ pub fn render_cell_possible(item: &Computed<Cell>) -> VDomElement {
                 }
             };
 
-            html!("
+            html! {
                 <div css={css_item(should_show)} onClick={on_click}>
                     { label }
                 </div>
-            ")
+            }
         })
         .collect();
 
-    html!("
+    html! {
         <div css={css_wrapper()}>
             { ..out }
         </div>
-    ")
+    }
 }

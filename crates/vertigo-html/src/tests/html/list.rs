@@ -8,16 +8,16 @@ use super::utils::*;
 #[test]
 fn div_with_list() {
     let list = vec![
-        html!("<input />"),
-        html!("<button />"),
+        html! { <input /> },
+        html! { <button /> },
     ];
 
-    let div = html!("
+    let div = html! {
         <div>
-            Label
+            "Label "
             { ..list }
         </div>
-    ");
+    };
 
     assert_eq!(div.name, "div");
     assert_eq!(div.children.len(), 3);
@@ -36,16 +36,16 @@ fn div_with_list() {
 #[ignore]
 fn div_with_element_after_list() {
     let list = vec![
-        html!("<input />"),
-        html!("<button />"),
+        html! { <input /> },
+        html! { <button /> },
     ];
 
-    let div = html!("
+    let div = html! {
         <div>
             { ..list }
-            Error
+            "Error"
         </div>
-    ");
+    };
 
     assert_eq!(div.name, "div");
     assert_eq!(div.children.len(), 3);

@@ -51,11 +51,11 @@ pub fn render_cell_value(value: SudokuValue, item: &Computed<Cell>, ) -> VDomEle
         };
 
         out.push(
-            html!("
+            html! {
                 <div css={css_delete()} onClick={on_click}>
-                    X
+                    "X"
                 </div>
-            ")
+            }
             // node("div", vec!(
             // css(css_delete()),
             // on_click({
@@ -67,11 +67,12 @@ pub fn render_cell_value(value: SudokuValue, item: &Computed<Cell>, ) -> VDomEle
         );
     }
 
-    html!("<div css={css_item_number_wrapper()}>
+    html! {
+        <div css={css_item_number_wrapper()}>
             { value.to_u16() }
             { ..out }
         </div>
-    ")
+    }
 }
 
 

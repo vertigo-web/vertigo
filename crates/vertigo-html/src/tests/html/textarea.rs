@@ -7,18 +7,18 @@ use super::utils::*;
 
 #[test]
 fn empty_textarea() {
-    let textarea = html!("
+    let textarea = html! {
         <textarea></textarea>
-    ");
+    };
 
     assert_empty(&textarea, "textarea");
 }
 
 #[test]
 fn textarea_with_expression() {
-    let textarea = html!(r#"
+    let textarea = html! {
         <textarea>{$ format!("Some {}", "Value") $}</textarea>
-    "#);
+    };
 
     assert_eq!(textarea.name, "textarea");
 
@@ -28,12 +28,12 @@ fn textarea_with_expression() {
 
 #[test]
 fn div_with_textarea() {
-    let div = html!("
+    let div = html! {
         <div>
-            Label
-            <textarea>Some Value</textarea>
+            "Label "
+            <textarea>"Some Value"</textarea>
         </div>
-    ");
+    };
 
     assert_eq!(div.name, "div");
     assert_eq!(div.children.len(), 2);

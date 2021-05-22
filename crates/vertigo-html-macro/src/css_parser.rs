@@ -1,8 +1,5 @@
 use pest::{Parser, iterators::Pair};
-use std::{
-    collections::HashMap,
-    iter::FromIterator
-};
+use std::collections::HashMap;
 
 use proc_macro2::{Span, TokenStream};
 use syn::{Ident, Expr, parse_str};
@@ -45,8 +42,8 @@ impl CssParser {
                         .replace("}}", "}");
                     (quote! { #css_output }, false)
                 } else {
-                    let params_stream = TokenStream::from_iter(
-                        params.into_iter().map(|(param_expr, param_key)| {
+                    let params_stream: TokenStream = params.into_iter()
+                        .map(|(param_expr, param_key)| {
                             // let ident = Ident::new(&p, call_site);
                             let data_expr: Option<Expr> = parse_str(&param_expr).map_err(|e| {
                                 emit_error!(call_site, "Error while parsing `{}`: {}", param_expr, e);
@@ -59,7 +56,7 @@ impl CssParser {
                                 quote! { }
                             }
                         })
-                    );
+                        .collect();
                     (quote! { format!(#css_output, #params_stream) }, true)
                 }
             },

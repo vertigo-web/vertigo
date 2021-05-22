@@ -77,39 +77,39 @@ pub fn main_render(state: &Computed<MainState>) -> VDomElement {
     let show_color = value % 2 == 0;
 
     let footer_dom = if value % 10 == 0 {
-        html!(r#"
+        html! {
             <div>
-                jakis footer {value % 2} {value % 3} - BEZKLASIE
+                "jakis footer" {value % 2} {value % 3} "- BEZKLASIE"
             </div>
-        "#)
+        }
     } else {
-        html!(r#"
+        html! {
             <div css={css_footer(show_color)}>
-                jakis footer {value % 2} {value % 3}
+                "jakis footer" {value % 2} {value % 3}
             </div>
-        "#)
+        }
     };
 
-    html!(r#"
+    html! {
         <div aaa="one" bbb="two">
-            Abudabi
+            "Abudabi"
             <div css={css_bg()}>
                 {$ if value > 35 { "terefere kuku" } else { "bla bla bla" } $}
                 { spinner() }
             </div>
             <div css={css_bg()} onClick={on_up.clone()}>
-                Actual value = { value }
+                "Actual value = " { value }
             </div>
             <div css={css_bg()}>
-                Actual value: { value }
+                "Actual value: " { value }
             </div>
             <div css={css_button()} onClick={on_up}>
-                up
+                "up"
             </div>
             <div css={css_button()} onClick={on_down}>
-                down
+                "down"
             </div>
             <p>{ footer_dom }</p>
         </div>
-    "#)
+    }
 }
