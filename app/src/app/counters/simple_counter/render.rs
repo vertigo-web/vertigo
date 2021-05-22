@@ -43,11 +43,11 @@ pub fn render(simple_counter: &Computed<State>) -> VDomElement {
         }
     };
 
-    html!(r#"
+    html! {
         <div css={css_wrapper()}>
-            <div css={css_box()}>Counter value = { value }</div>
-            <button css={css_button()} onClick={click_up}>up</button>
-            <button css={css_button()} onClick={click_down}>down</button>
+            <div css={css_box()}>"Counter value = " { value }</div>
+            <button css={css_button()} onClick={click_up}>"up"</button>
+            <button css={css_button()} onClick={click_down}>"down"</button>
         </div>
-    "#)
+    }
 }

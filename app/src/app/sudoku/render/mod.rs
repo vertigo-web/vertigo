@@ -70,7 +70,7 @@ fn render_group(group: &Computed<SudokuSquare<Cell>>) -> VDomElement {
         })
     };
 
-    html!("
+    html! {
         <div css={css_item_wrapper()}>
             <div css={css_cell_wrapper()}>
                 <component {render_cell} data={get_cell(group, TreeBoxIndex::First,  TreeBoxIndex::First)} />
@@ -100,7 +100,7 @@ fn render_group(group: &Computed<SudokuSquare<Cell>>) -> VDomElement {
                 <component {render_cell} data={get_cell(group, TreeBoxIndex::Last,  TreeBoxIndex::Last)} />
             </div>
         </div>
-    ")
+    }
 }
 
 pub fn main_render(sudoku: &Computed<Sudoku>) -> VDomElement {
@@ -110,7 +110,7 @@ pub fn main_render(sudoku: &Computed<Sudoku>) -> VDomElement {
         })
     };
 
-    html!("
+    html! {
         <div css={css_center()}>
             <div css={css_wrapper()}>
                 <component {render_group} data={get_group(sudoku, TreeBoxIndex::First,  TreeBoxIndex::First)} />
@@ -124,7 +124,7 @@ pub fn main_render(sudoku: &Computed<Sudoku>) -> VDomElement {
                 <component {render_group} data={get_group(sudoku, TreeBoxIndex::Last,  TreeBoxIndex::Last)} />
             </div>
         </div>
-    ")
+    }
 }
 
 css_fn! { css_sudoku_example, "
@@ -162,12 +162,12 @@ pub fn examples_render(sudoku: &Computed<Sudoku>) -> VDomElement {
         move || { sudoku.example3(); }
     };
 
-    html!("
+    html! {
         <div css={css_sudoku_example()}>
-            <button css={css_sudoku_example_button()} onClick={clear}> Clear </button>
-            <button css={css_sudoku_example_button()} onClick={example1}> Example 1 </button>
-            <button css={css_sudoku_example_button()} onClick={example2}> Example 2 </button>
-            <button css={css_sudoku_example_button()} onClick={example3}> Example 3 </button>
+            <button css={css_sudoku_example_button()} onClick={clear}>"Clear"</button>
+            <button css={css_sudoku_example_button()} onClick={example1}>"Example 1"</button>
+            <button css={css_sudoku_example_button()} onClick={example2}>"Example 2"</button>
+            <button css={css_sudoku_example_button()} onClick={example3}>"Example 3"</button>
         </div>
-    ")
+    }
 }

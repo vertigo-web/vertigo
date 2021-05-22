@@ -7,18 +7,18 @@ use super::utils::*;
 
 #[test]
 fn empty_pre() {
-    let el = html!("<pre></pre>");
+    let el = html! { <pre></pre> };
     assert_empty(&el, "pre");
 }
 
 #[test]
 fn pre_with_text() {
     // Note the trailing space after "Some text"
-    let div = html!("
-        <pre>
+    let div = html! {
+        <pre>"
             Some text 
-        </pre>
-    ");
+        "</pre>
+    };
 
     assert_eq!(div.name, "pre");
     assert_eq!(div.children.len(), 1);
@@ -34,9 +34,9 @@ fn pre_with_text() {
 #[test]
 fn pre_with_tight_expression() {
     let value = String::from("bar");
-    let div = html!("
-        <pre>Foo{value}</pre>
-    ");
+    let div = html! {
+        <pre>"Foo"{value}</pre>
+    };
 
     assert_eq!(div.name, "pre");
     assert_eq!(div.children.len(), 2);
@@ -55,9 +55,9 @@ fn pre_with_multiline_expression() {
         Foo 
             Bar
     ");
-    let div = html!("
+    let div = html! {
         <pre>{&value}</pre>
-    ");
+    };
 
     assert_eq!(div.name, "pre");
     assert_eq!(div.children.len(), 1);
@@ -69,9 +69,9 @@ fn pre_with_multiline_expression() {
 #[test]
 fn pre_with_spaced_expression() {
     let value = String::from("bar");
-    let div = html!("
-        <pre>Foo {value}</pre>
-    ");
+    let div = html! {
+        <pre>"Foo "{value}</pre>
+    };
 
     assert_eq!(div.name, "pre");
     assert_eq!(div.children.len(), 2);

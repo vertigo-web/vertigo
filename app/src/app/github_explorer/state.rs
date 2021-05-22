@@ -78,7 +78,7 @@ pub struct Item {
 }
 
 impl Item {
-    pub fn new(root: &Dependencies, driver: &DomDriver, repo_name: &String) -> Item {
+    pub fn new(root: &Dependencies, driver: &DomDriver, repo_name: &str) -> Item {
         log::info!("Creating for {}", repo_name);
         let new_value = root.new_value(Resource::Loading);
         let new_computed = new_value.to_computed();

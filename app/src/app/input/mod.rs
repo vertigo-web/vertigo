@@ -103,16 +103,16 @@ pub fn render(state: &Computed<State>) -> VDomElement {
 
     let count = value.len();
 
-    html!(r#"
+    html! {
         <div css={wrapper()} onMouseEnter={mouse_in} onMouseLeave={mouse_out}>
             { "To jest input" }
             <input css={input_css()} value={(*value).as_str()} onInput={on_set3} />
-            <button css={button_css()} onClick={on_set1}>set 1</button>
-            <button css={button_css()} onClick={on_set2}>set 2</button>
+            <button css={button_css()} onClick={on_set1}>"set 1"</button>
+            <button css={button_css()} onClick={on_set2}>"set 2"</button>
             <textarea css={text_css()} onInput={on_set4}>
                 { (*value).as_str() }
             </textarea>
-            <div>count = { count }</div>
+            <div>"count = " { count }</div>
         </div>
-    "#)
+    }
 }

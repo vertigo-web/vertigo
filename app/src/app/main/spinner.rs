@@ -20,8 +20,8 @@ css_fn! { spinner_css, "
 " }
 
 pub fn spinner() -> VDomElement {
-    html!("
+    html! {
         <div css={spinner_css()}>
         </div>
-    ")
+    }
 }

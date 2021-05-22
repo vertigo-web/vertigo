@@ -1,4 +1,4 @@
-use std::{collections::HashMap};
+use std::collections::{BTreeMap, HashMap};
 use std::rc::Rc;
 use std::cmp::PartialEq;
 use std::fmt;
@@ -80,6 +80,30 @@ impl VDomElement {
 
         result
     }
+
+    pub fn build(name: &'static str) -> Self {
+        VDomElement {
+            name,
+            attr: HashMap::new(),
+            children: Vec::new(),
+            on_click: None,
+            on_input: None,
+            on_mouse_enter: None,
+            on_mouse_leave: None,
+            on_key_down: None,
+            css: None,
+        }
+    }
+
+    pub fn attr<T: Into<String>>(mut self, attr: &'static str, value: T) -> Self {
+        self.attr.insert(attr, value.into());
+        self
+    }
+
+    pub fn child(mut self, children: Vec<VDomNode>) -> Self {
+        self.children = children;
+        self
+    }
 }
 
 impl PartialEq for VDomElement {
@@ -92,7 +116,8 @@ impl fmt::Debug for VDomElement {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         f.debug_struct("VDomElement")
             .field("name", &self.name)
-            .field("attr", &self.attr)
+            // Convert HashMap to BTreeMap to have attributes always in the same order
+            .field("attr", &self.attr.iter().collect::<BTreeMap<_,_>>())
             .field("children", &self.children)
             .field("on_click", &self.on_click.as_ref().map(|f| f.as_ref() as *const dyn Fn()))
             .field("on_input", &self.on_input.as_ref().map(|f| f.as_ref() as *const dyn Fn(String)))

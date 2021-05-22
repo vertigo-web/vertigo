@@ -56,16 +56,16 @@ pub fn render(state: &Computed<State>) -> VDomElement {
         "" => "".to_string(),
         _ => match state.data.get_value(&repo_shown).get() {
             Resource::Loading => "Loading...".to_string(),
-            Resource::Ready(branch) => branch.commit.sha.clone(),
+            Resource::Ready(branch) => branch.commit.sha,
             Resource::Failed(err) => format!("Error: {}", err),
         }
     };
 
-    html!(r#"
+    html! {
         <div css={wrapper()}>
-            Enter author/repo tuple:
+            "Enter author/repo tuple: "
             <input css={input_css()} value={(*repo_input).as_str()} onInput={on_input_callback} />
-            <button css={button_css()} onClick={on_show}>Fetch</button>
+            <button css={button_css()} onClick={on_show}>"Fetch"</button>
             <div css={button_css()}>
                 { repo_shown.as_str() }
             </div>
@@ -73,5 +73,5 @@ pub fn render(state: &Computed<State>) -> VDomElement {
                 { commit_sha }
             </div>
         </div>
-    "#)
+    }
 }

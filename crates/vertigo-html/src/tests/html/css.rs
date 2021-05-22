@@ -1,4 +1,4 @@
-use vertigo::Css;
+use vertigo::{Css, VDomElement, VDomText};
 
 use crate::html;
 
@@ -8,11 +8,11 @@ use super::utils::*;
 fn div_with_static_css() {
     fn my_css() -> Css { Css::str("color: green") }
 
-    let div = html!("
+    let div = html! {
         <div css={my_css()}>
-            Some text
+            "Some text"
         </div>
-    ");
+    };
 
     assert_eq!(div.name, "div");
     assert_eq!(div.children.len(), 1);
@@ -30,9 +30,9 @@ fn div_with_static_css() {
 fn div_with_dynamic_css() {
     fn my_css() -> Css { Css::string("color: black".to_string()) }
 
-    let div = html!("
+    let div = html! {
         <div css={my_css()} />
-    ");
+    };
 
     assert_empty(&div, "div");
 
@@ -51,9 +51,9 @@ fn div_with_multiple_css_groups() {
     }
 
     // second css attribute overwrites the first one
-    let div = html!("
+    let div = html! {
         <div css={my_css()} css={my_second_css()} />
-    ");
+    };
 
     assert_empty(&div, "div");
 
@@ -63,4 +63,26 @@ fn div_with_multiple_css_groups() {
     assert_eq!(css_value, "color: black");
     let css_value = get_static_css(&css_groups[1]);
     assert_eq!(css_value, "color: white");
+}
+
+#[test]
+fn style_basic() {
+    let dom1 = html!{
+        <style>"html, body { width: 100%; }"</style>
+    };
+
+
+    let dom2 = VDomElement::build("style")
+        .child(
+            vec!(
+                VDomText::new("html, body { width: 100%; }")
+                    .into()
+            )
+        )
+    ;
+
+    assert_eq!(
+        format!("{:?}", dom1),
+        format!("{:?}", dom2)
+    );
 }

@@ -54,18 +54,18 @@ fn render_header(app_state: &Computed<app::State>) -> VDomElement {
 
     let is_game_of_life = matches!(current_page, Route::GameOfLife { .. });
 
-    html!("
+    html! {
         <div>
             <ul css={css_menu()}>
-                <li css={css_menu_item(current_page == &Route::Main)} onClick={navigate_to!(state, Main)}> Main </li>
-                <li css={css_menu_item(current_page == &Route::Counters)} onClick={navigate_to!(state, Counters)}> Counters </li>
-                <li css={css_menu_item(current_page == &Route::Sudoku)} onClick={navigate_to!(state, Sudoku)}> Sudoku </li>
-                <li css={css_menu_item(current_page == &Route::Input)} onClick={navigate_to!(state, Input)}> Input </li>
-                <li css={css_menu_item(current_page == &Route::GithubExplorer)} onClick={navigate_to!(state, GithubExplorer)}> Github Explorer </li>
-                <li css={css_menu_item(is_game_of_life)} onClick={navigate_to_gameoflife}> Game Of Life </li>
+                <li css={css_menu_item(current_page == &Route::Main)} onClick={navigate_to!(state, Main)}>"Main"</li>
+                <li css={css_menu_item(current_page == &Route::Counters)} onClick={navigate_to!(state, Counters)}>"Counters"</li>
+                <li css={css_menu_item(current_page == &Route::Sudoku)} onClick={navigate_to!(state, Sudoku)}>"Sudoku"</li>
+                <li css={css_menu_item(current_page == &Route::Input)} onClick={navigate_to!(state, Input)}>"Input"</li>
+                <li css={css_menu_item(current_page == &Route::GithubExplorer)} onClick={navigate_to!(state, GithubExplorer)}>"Github Explorer"</li>
+                <li css={css_menu_item(is_game_of_life)} onClick={navigate_to_gameoflife}>"Game Of Life"</li>
             </ul>
         </div>
-    ")
+    }
 }
 
 pub fn render(app_state: &Computed<app::State>) -> VDomElement {
@@ -73,36 +73,36 @@ pub fn render(app_state: &Computed<app::State>) -> VDomElement {
 
     let child = match *state.route.get_value() {
         Route::Main =>
-            html!("<component {super::main::main_render} data={state.main} />"),
+            html! { <component {super::main::main_render} data={state.main} /> },
 
         Route::Counters =>
-            html!("<component {super::counters::render} data={state.counters} />"),
+            html! { <component {super::counters::render} data={state.counters} /> },
 
         Route::Sudoku =>
-            html!("
+            html! {
                 <div>
                     <component {sudoku::examples_render} data={state.sudoku.clone()} />
                     <component {sudoku::main_render} data={state.sudoku.clone()} />
                 </div>
-            ").into(),
+            }.into(),
 
         Route::Input =>
-            html!("<component {input::render} data={state.input} />"),
+            html! { <component {input::render} data={state.input} /> },
 
         Route::GithubExplorer =>
-            html!("<component {github_explorer::render} data={state.github_explorer} />"),
+            html! { <component {github_explorer::render} data={state.github_explorer} /> },
 
         Route::GameOfLife {..} =>
-            html!("<component {game_of_life::render} data={state.game_of_life} />"),
+            html! { <component {game_of_life::render} data={state.game_of_life} /> },
 
         Route::NotFound =>
-            html!("<div>Page Not Found</div>").into(),
+            html! { <div>"Page Not Found"</div> }.into(),
     };
 
-    html!("
+    html! {
         <div>
             <component {render_header} data={app_state.clone()} />
             {child}
         </div>
-    ")
+    }
 }

@@ -7,9 +7,9 @@ use super::utils::*;
 
 #[test]
 fn button() {
-    let button = html!("
-        <button>Label</button>
-    ");
+    let button = html! {
+        <button>"Label"</button>
+    };
 
     assert_eq!(button.name, "button");
     assert_eq!(button.children.len(), 1);
@@ -29,27 +29,27 @@ fn clickable_button() {
         }
     };
 
-    let button = html!("
+    let button = html! {
         <button onClick={on_click} />
-    ");
+    };
 
     assert_empty(&button, "button");
 
     let click = button.on_click.unwrap();
-    assert_eq!(*value.get_value(), false);
+    assert!(!*value.get_value());
     click();
-    assert_eq!(*value.get_value(), true);
+    assert!(*value.get_value());
 }
 
 #[test]
 fn button_with_css() {
     fn my_css() -> Css { Css::str("background-color: gray") }
 
-    let button = html!("
+    let button = html! {
         <button css={my_css()}>
-            Some text
+            "Some text"
         </button>
-    ");
+    };
 
     assert_eq!(button.name, "button");
     assert_eq!(button.children.len(), 1);
