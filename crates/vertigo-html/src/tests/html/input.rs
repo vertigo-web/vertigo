@@ -1,4 +1,7 @@
-use vertigo::computed::{Dependencies, Value};
+use vertigo::{
+    computed::{Dependencies, Value},
+    VDomElement, VDomText
+};
 
 use crate::html;
 
@@ -6,22 +9,25 @@ use super::utils::*;
 
 #[test]
 fn div_with_label_and_input() {
-    let div = html! {
+    let dom1 = html! {
         <div>
             "Label "
             <input value="some_value" />
         </div>
     };
 
-    assert_eq!(div.name, "div");
-    assert_eq!(div.children.len(), 2);
+    let dom2 = VDomElement::build("div")
+        .children(vec![
+            VDomText::new("Label ").into(),
+            VDomElement::build("input")
+                .attr("value", "some_value")
+                .into()
+        ]);
 
-    let label = get_text(&div.children[0]);
-    assert_eq!(label.value, "Label ");
-
-    let input = get_node(&div.children[1]);
-    assert_eq!(input.name, "input");
-    assert_eq!(input.attr.get("value"), Some(&"some_value".to_string()));
+    assert_eq!(
+        format!("{:?}", dom1),
+        format!("{:?}", dom2)
+    );
 }
 
 #[test]

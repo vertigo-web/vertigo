@@ -1,56 +1,71 @@
-use vertigo::computed::{Dependencies, Value};
+use vertigo::{
+    computed::{Dependencies, Value},
+    VDomElement, VDomText
+};
 
 use crate::html;
 
 // Make crate available by its name for html macro
 use crate as vertigo_html;
 
-use super::utils::*;
-
 #[test]
 fn div_with_simple_expression() {
-    let div = html! {
+    let dom1 = html! {
         <div>
             { 5 + 5 }
         </div>
     };
 
-    assert_eq!(div.name, "div");
-    assert_eq!(div.children.len(), 1);
+    let dom2 = VDomElement::build("div")
+        .children(vec![
+            VDomText::new("10").into()
+        ]);
 
-    let inner = get_text(&div.children[0]);
-    assert_eq!(inner.value, "10")
+    assert_eq!(
+        format!("{:?}", dom1),
+        format!("{:?}", dom2)
+    );
 }
 
 #[test]
 fn div_with_value_expression() {
     let x = Value::new(Dependencies::default(), 6);
     let y = Value::new(Dependencies::default(), 3);
-    let div = html! {
+
+    let dom1 = html! {
         <div>
             { *x.get_value() + *y.get_value() }
         </div>
     };
 
-    assert_eq!(div.name, "div");
-    assert_eq!(div.children.len(), 1);
+    let dom2 = VDomElement::build("div")
+        .children(vec![
+            VDomText::new("9").into()
+        ]);
 
-    let inner = get_text(&div.children[0]);
-    assert_eq!(inner.value, "9")
+    assert_eq!(
+        format!("{:?}", dom1),
+        format!("{:?}", dom2)
+    );
 }
 
 #[test]
 fn div_with_rc_string_expression() {
     let title = std::rc::Rc::new(String::from("The Title"));
-    let div = html! {
+
+    let dom1 = html! {
         <div>
             { title }
         </div>
     };
 
-    assert_eq!(div.name, "div");
-    assert_eq!(div.children.len(), 1);
+    let dom2 = VDomElement::build("div")
+        .children(vec![
+            VDomText::new("The Title").into()
+        ]);
 
-    let inner = get_text(&div.children[0]);
-    assert_eq!(inner.value, "The Title")
+    assert_eq!(
+        format!("{:?}", dom1),
+        format!("{:?}", dom2)
+    );
 }

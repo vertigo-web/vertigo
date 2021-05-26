@@ -100,7 +100,12 @@ impl VDomElement {
         self
     }
 
-    pub fn child(mut self, children: Vec<VDomNode>) -> Self {
+    pub fn css(mut self, css: Css) -> Self {
+        self.css = Some(css);
+        self
+    }
+
+    pub fn children(mut self, children: Vec<VDomNode>) -> Self {
         self.children = children;
         self
     }

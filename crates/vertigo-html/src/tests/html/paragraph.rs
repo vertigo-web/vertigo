@@ -15,11 +15,11 @@ fn style_basic2() {
 
 
     let dom2 = VDomElement::build("p")
-        .child(
+        .children(
             vec!(
                 VDomText::new("text1").into(),
                 VDomElement::build("span")
-                    .child(vec!(
+                    .children(vec!(
                         VDomText::new("mokate").into(),
                     ))
                     .into(),
@@ -43,7 +43,7 @@ fn test_p() {
 
 
     let dom2 = VDomElement::build("p")
-        .child(
+        .children(
             vec!(
                 VDomText::new("text33333 dsadsada ^^ && $$$ fff")
                     .into()
