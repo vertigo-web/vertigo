@@ -1,5 +1,5 @@
 use vertigo::computed::{Dependencies, Value};
-use vertigo::Css;
+use vertigo::{Css, VDomElement, VDomText};
 
 use crate::html;
 
@@ -7,15 +7,19 @@ use super::utils::*;
 
 #[test]
 fn button() {
-    let button = html! {
+    let dom1 = html! {
         <button>"Label"</button>
     };
 
-    assert_eq!(button.name, "button");
-    assert_eq!(button.children.len(), 1);
+    let dom2 = VDomElement::build("button")
+        .children(vec![
+            VDomText::new("Label").into()
+        ]);
 
-    let label = get_text(&button.children[0]);
-    assert_eq!(label.value, "Label");
+    assert_eq!(
+        format!("{:?}", dom1),
+        format!("{:?}", dom2)
+    );
 }
 
 #[test]
@@ -45,20 +49,20 @@ fn clickable_button() {
 fn button_with_css() {
     fn my_css() -> Css { Css::str("background-color: gray") }
 
-    let button = html! {
+    let dom1 = html! {
         <button css={my_css()}>
             "Some text"
         </button>
     };
 
-    assert_eq!(button.name, "button");
-    assert_eq!(button.children.len(), 1);
+    let dom2 = VDomElement::build("button")
+        .css(my_css())
+        .children(vec![
+            VDomText::new("Some text").into()
+        ]);
 
-    let css_groups = button.css.unwrap().groups;
-    assert_eq!(css_groups.len(), 1);
-    let css_value = get_static_css(&css_groups[0]);
-    assert_eq!(css_value, "background-color: gray");
-
-    let text = get_text(&button.children[0]);
-    assert_eq!(text.value, "Some text");
+    assert_eq!(
+        format!("{:?}", dom1),
+        format!("{:?}", dom2)
+    );
 }

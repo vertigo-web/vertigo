@@ -1,3 +1,5 @@
+use vertigo::{VDomElement, VDomText};
+
 use crate::html;
 
 // Make crate available by its name for html macro
@@ -14,38 +16,44 @@ fn empty_pre() {
 #[test]
 fn pre_with_text() {
     // Note the trailing space after "Some text"
-    let div = html! {
+    let dom1 = html! {
         <pre>"
             Some text 
         "</pre>
     };
 
-    assert_eq!(div.name, "pre");
-    assert_eq!(div.children.len(), 1);
-
-    let text = get_text(&div.children[0]);
-
-    // Note the trailing space after "Some text"
-    assert_eq!(text.value, "
+    let dom2 = VDomElement::build("pre")
+        .children(vec![
+            // Note the trailing space after "Some text"
+            VDomText::new("
             Some text 
-        ");
+        ").into(),
+        ]);
+
+    assert_eq!(
+        format!("{:?}", dom1),
+        format!("{:?}", dom2)
+    );
 }
 
 #[test]
 fn pre_with_tight_expression() {
     let value = String::from("bar");
-    let div = html! {
+
+    let dom1 = html! {
         <pre>"Foo"{value}</pre>
     };
 
-    assert_eq!(div.name, "pre");
-    assert_eq!(div.children.len(), 2);
+    let dom2 = VDomElement::build("pre")
+        .children(vec![
+            VDomText::new("Foo").into(),
+            VDomText::new("bar").into(),
+        ]);
 
-    let inner = get_text(&div.children[0]);
-    assert_eq!(inner.value, "Foo");
-
-    let inner = get_text(&div.children[1]);
-    assert_eq!(inner.value, "bar");
+    assert_eq!(
+        format!("{:?}", dom1),
+        format!("{:?}", dom2)
+    );
 }
 
 #[test]
@@ -55,30 +63,41 @@ fn pre_with_multiline_expression() {
         Foo 
             Bar
     ");
-    let div = html! {
+
+    let dom1 = html! {
         <pre>{&value}</pre>
     };
 
-    assert_eq!(div.name, "pre");
-    assert_eq!(div.children.len(), 1);
+    let dom2 = VDomElement::build("pre")
+        .children(vec![
+            // Note the trailing space after "Foo"
+            VDomText::new(r"#
+        Foo 
+            Bar
+    ").into(),
+        ]);
 
-    let inner = get_text(&div.children[0]);
-    assert_eq!(inner.value, value);
+    assert_eq!(
+        format!("{:?}", dom1),
+        format!("{:?}", dom2)
+    );
 }
 
 #[test]
 fn pre_with_spaced_expression() {
     let value = String::from("bar");
-    let div = html! {
+    let dom1 = html! {
         <pre>"Foo "{value}</pre>
     };
 
-    assert_eq!(div.name, "pre");
-    assert_eq!(div.children.len(), 2);
+    let dom2 = VDomElement::build("pre")
+        .children(vec![
+            VDomText::new("Foo ").into(),
+            VDomText::new("bar").into(),
+        ]);
 
-    let inner = get_text(&div.children[0]);
-    assert_eq!(inner.value, "Foo ");
-
-    let inner = get_text(&div.children[1]);
-    assert_eq!(inner.value, "bar");
+    assert_eq!(
+        format!("{:?}", dom1),
+        format!("{:?}", dom2)
+    );
 }

@@ -1,6 +1,6 @@
 use vertigo::{
     computed::{Computed, Dependencies, Value},
-    VDomElement,
+    VDomElement, VDomComponent,
 };
 
 use crate::html;
@@ -15,6 +15,7 @@ fn div_with_component() {
     let deps = Dependencies::default();
 
     let value = Value::new(deps, "old value".to_string());
+    let value_computed = value.to_computed();
 
     fn my_component(state: &Computed<String>) -> VDomElement {
         html! {
@@ -22,29 +23,33 @@ fn div_with_component() {
         }
     }
 
-    let div = html! {
+    let dom1 = html! {
         <div>
-            <component {my_component} data={value.to_computed()} />
+            <component {my_component} data={value_computed} />
         </div>
     };
 
-    assert_eq!(div.name, "div");
-    assert_eq!(div.children.len(), 1);
+    let dom2 = VDomElement::build("div")
+        .children(vec![
+            VDomComponent::new(value_computed, my_component).into()
+        ]);
 
-    let comp = get_component(&div.children[0]);
+    assert_eq!(
+        format!("{:?}", dom1),
+        format!("{:?}", dom2)
+    );
+
+    // Check if computed value changes
+
+    let comp = get_component(&dom1.children[0]);
     let inner_div = comp.view.get_value();
-    assert_eq!(inner_div.name, "div");
-    assert_eq!(inner_div.children.len(), 2);
-
-    let label = get_text(&inner_div.children[0]);
-    assert_eq!(label.value, "Value ");
     let expr = get_text(&inner_div.children[1]);
     assert_eq!(expr.value, "old value");
 
     value.set_value("new value".to_string());
 
     // Get the component again after changing state
-    let comp = get_component(&div.children[0]);
+    let comp = get_component(&dom1.children[0]);
     let inner_div = comp.view.get_value();
     let expr = get_text(&inner_div.children[1]);
     assert_eq!(expr.value, "new value");

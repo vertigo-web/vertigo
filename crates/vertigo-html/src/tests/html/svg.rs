@@ -27,7 +27,7 @@ fn basic() {
         .attr("viewBox", "0 0 24 24")
         .attr("fill", "none")
         .attr("xmlns", "http://www.w3.org/2000/svg")
-        .child(
+        .children(
             vec!(
                 VDomElement::build("path")
                     .attr("fill-rule", "evenodd")

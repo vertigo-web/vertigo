@@ -1,66 +1,83 @@
+use vertigo::{VDomElement, VDomText};
+
 use crate::html;
 
 // Make crate available by its name for html macro
 use crate as vertigo_html;
 
-use super::utils::*;
-
 #[test]
 fn empty_div() {
-    let el = html! { <div></div> };
-    assert_empty(&el, "div");
+    let dom1 = html! { <div></div> };
+    let dom2 = VDomElement::build("div");
+
+    assert_eq!(
+        format!("{:?}", dom1),
+        format!("{:?}", dom2)
+    );
 }
 
 #[test]
 fn div_with_text() {
-    let div = html! {
+    let dom1 = html! {
         <div>
             "Some text"
         </div>
     };
 
-    assert_eq!(div.name, "div");
-    assert_eq!(div.children.len(), 1);
+    let dom2 = VDomElement::build("div")
+        .children(vec![
+            VDomText::new("Some text").into()
+        ]);
 
-    let text = get_text(&div.children[0]);
-    assert_eq!(text.value, "Some text");
+    assert_eq!(
+        format!("{:?}", dom1),
+        format!("{:?}", dom2)
+    );
 }
 
 #[test]
 fn div_with_div() {
-    let div = html! {
+    let dom1 = html! {
         <div>
             <div></div>
         </div>
     };
 
-    assert_eq!(div.name, "div");
-    assert_eq!(div.children.len(), 1);
+    let dom2 = VDomElement::build("div")
+        .children(vec![
+            VDomElement::build("div").into()
+        ]);
 
-    let inner = get_node(&div.children[0]);
-    assert_empty(&inner, "div");
+    assert_eq!(
+        format!("{:?}", dom1),
+        format!("{:?}", dom2)
+    );
 }
 
 #[test]
 fn div_with_selfclosing_div() {
-    let div = html! {
+    let dom1 = html! {
         <div>
             <div />
         </div>
     };
 
-    assert_eq!(div.name, "div");
-    assert_eq!(div.children.len(), 1);
+    let dom2 = VDomElement::build("div")
+        .children(vec![
+            VDomElement::build("div").into()
+        ]);
 
-    let inner = get_node(&div.children[0]);
-    assert_empty(&inner, "div");
+    assert_eq!(
+        format!("{:?}", dom1),
+        format!("{:?}", dom2)
+    );
 }
 
 #[test]
 fn div_children_spacing() {
     let value1 = std::rc::Rc::new(String::from("Value 1"));
     let value2 = std::rc::Rc::new(String::from("Value 2"));
-    let div = html! {
+    let dom1 = html! {
         <div>
             "Text1 "
             { value1 }
@@ -70,19 +87,19 @@ fn div_children_spacing() {
         </div>
     };
 
-    assert_eq!(div.name, "div");
-    assert_eq!(div.children.len(), 5);
+    let dom2 = VDomElement::build("div")
+        .children(vec![
+            VDomText::new("Text1 ").into(),
+            VDomText::new("Value 1").into(),
+            VDomText::new(" Text2 ").into(),
+            VDomText::new("Value 2").into(),
+            VDomText::new(" Text3").into(),
+        ]);
 
-    let inner = get_text(&div.children[0]);
-    assert_eq!(inner.value, "Text1 ");
-    let inner = get_text(&div.children[1]);
-    assert_eq!(inner.value, "Value 1");
-    let inner = get_text(&div.children[2]);
-    assert_eq!(inner.value, " Text2 ");
-    let inner = get_text(&div.children[3]);
-    assert_eq!(inner.value, "Value 2");
-    let inner = get_text(&div.children[4]);
-    assert_eq!(inner.value, " Text3");
+    assert_eq!(
+        format!("{:?}", dom1),
+        format!("{:?}", dom2)
+    );
 }
 
 #[test]
@@ -92,7 +109,7 @@ fn div_unpacked_children_spacing() {
         html! { <div>"1"</div> },
         html! { <div>"2"</div> },
     ];
-    let div = html! {
+    let dom1 = html! {
         <div>
             "Text1 "
             { value1 }
@@ -101,31 +118,44 @@ fn div_unpacked_children_spacing() {
         </div>
     };
 
-    assert_eq!(div.name, "div");
-    assert_eq!(div.children.len(), 5);
+    let dom2 = VDomElement::build("div")
+        .children(vec![
+            VDomText::new("Text1 ").into(),
+            VDomText::new("Value 1").into(),
+            VDomText::new(" Text2 ").into(),
+            VDomElement::build("div")
+                .children(vec![
+                    VDomText::new("1").into(),
+                ]).into(),
+            VDomElement::build("div")
+                .children(vec![
+                    VDomText::new("2").into(),
+                ]).into(),
+        ]);
 
-    let inner = get_text(&div.children[0]);
-    assert_eq!(inner.value, "Text1 ");
-    let inner = get_text(&div.children[1]);
-    assert_eq!(inner.value, "Value 1");
-    let inner = get_text(&div.children[2]);
-    assert_eq!(inner.value, " Text2 ");
+    assert_eq!(
+        format!("{:?}", dom1),
+        format!("{:?}", dom2)
+    );
 }
 
 #[test]
 fn div_no_spacing() {
     let value = std::rc::Rc::new(String::from("Value"));
-    let div = html! {
+    let dom1 = html! {
         <div>
             { value }"Text"
         </div>
     };
 
-    assert_eq!(div.name, "div");
-    assert_eq!(div.children.len(), 2);
+    let dom2 = VDomElement::build("div")
+        .children(vec![
+            VDomText::new("Value").into(),
+            VDomText::new("Text").into(),
+        ]);
 
-    let inner = get_text(&div.children[0]);
-    assert_eq!(inner.value, "Value");
-    let inner = get_text(&div.children[1]);
-    assert_eq!(inner.value, "Text");
+    assert_eq!(
+        format!("{:?}", dom1),
+        format!("{:?}", dom2)
+    );
 }
