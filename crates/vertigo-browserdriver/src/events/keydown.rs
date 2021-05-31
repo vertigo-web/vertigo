@@ -62,6 +62,9 @@ pub fn create_keydown_event(document: &Document, inner: &Rc<BoxRefCell<DomDriver
                 meta_key: event_keyboard.meta_key(),
             };
             
+            event_keyboard.prevent_default();
+            event_keyboard.stop_propagation();
+
             event_to_run(event);
         }
     })

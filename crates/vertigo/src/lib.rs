@@ -18,6 +18,7 @@ pub use driver::HashRoutingReceiver;
 pub use virtualdom::models::realdom_id::RealDomId;
 pub use virtualdom::models::vdom_component::VDomComponent;
 pub use virtualdom::models::vdom_element::{VDomElement, KeyDownEvent};
+pub use virtualdom::models::vdom_refs::{NodeRefs, NodeRefsItem, NodeRefsItemTrait};
 pub use virtualdom::models::vdom_text::VDomText;
 pub use virtualdom::models::vdom_node::VDomNode;
 pub use virtualdom::models::css::{Css, CssGroup};

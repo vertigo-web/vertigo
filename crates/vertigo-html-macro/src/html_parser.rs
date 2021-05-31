@@ -310,7 +310,12 @@ impl HtmlParser {
                 let mut inner = pair.into_inner();
                 let key = inner.next().unwrap().as_str().replace(' ', "");
                 let value = inner.next().unwrap().as_str();
-                quote! { vertigo::node_attr::attr(#key, #value) }
+
+                if key == "dom_ref" {
+                    quote! { vertigo::node_attr::dom_ref((#value)) }
+                } else {
+                    quote! { vertigo::node_attr::attr(#key, #value) }
+                }
             }
             _ => {
                 emit_warning!(self.call_site, "HTML: unhandler pair in generate_regular_attr: {:?}", pair);
@@ -335,6 +340,10 @@ impl HtmlParser {
                     // Vertigo attribute
                     let attr_key = Ident::new(&attr_key, self.call_site);
                     return quote! { vertigo::node_attr::#attr_key((#expr)) }
+                } else if attr_key == "dom_ref" {
+                    return quote! { vertigo::node_attr::dom_ref((#expr)) }
+                } else if attr_key == "dom_apply" {
+                    return quote! { vertigo::node_attr::dom_apply((#expr)) }
                 } else {
                     // Custom attribute
                     return quote! { vertigo::node_attr::attr(#attr_key, (#expr)) }
@@ -346,4 +355,5 @@ impl HtmlParser {
         };
         quote! { }
     }
+
 }

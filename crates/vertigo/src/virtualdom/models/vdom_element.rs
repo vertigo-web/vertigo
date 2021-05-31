@@ -9,6 +9,8 @@ use crate::virtualdom::models::{
     node_attr::NodeAttr,
 };
 
+use super::vdom_refs::NodeRefs;
+
 //https://docs.rs/web-sys/0.3.50/web_sys/struct.KeyboardEvent.html
 #[derive(Debug)]
 pub struct KeyDownEvent {
@@ -30,6 +32,8 @@ pub struct VDomElement {
     pub name: &'static str,
     pub attr: HashMap<&'static str, String>,
     pub children: Vec<VDomNode>,
+    pub dom_ref: Option<&'static str>,
+    pub dom_apply: Option<Rc<dyn Fn(&NodeRefs) -> ()>>,
     pub on_click: Option<Rc<dyn Fn()>>,
     pub on_input: Option<Rc<dyn Fn(String)>>,
     pub on_mouse_enter: Option<Rc<dyn Fn()>>,
@@ -44,6 +48,8 @@ impl VDomElement {
             name,
             attr: HashMap::new(),
             children,
+            dom_ref: None,
+            dom_apply: None,
             on_click: None,
             on_input: None,
             on_mouse_enter: None,
@@ -75,6 +81,12 @@ impl VDomElement {
                 NodeAttr::Attr { name , value} => {
                     result.attr.insert(name, value);
                 },
+                NodeAttr::DomRef { name } => {
+                    result.dom_ref = Some(name);
+                },
+                NodeAttr::DomApply { apply} => {
+                    result.dom_apply = Some(apply);
+                }
             }
         }
 
@@ -86,6 +98,8 @@ impl VDomElement {
             name,
             attr: HashMap::new(),
             children: Vec::new(),
+            dom_ref: None,
+            dom_apply: None,
             on_click: None,
             on_input: None,
             on_mouse_enter: None,
