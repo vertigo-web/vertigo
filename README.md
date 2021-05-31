@@ -1,6 +1,19 @@
 Reactive webassembly
 ===================
 
+Installation and usage
+--------------
+
+If you already have rust installed then you have to add webassembly to your toolchain:
+- `rustup target add wasm32-unknown-unknown`
+
+then build and run project using:
+- `cargo run` or `./start.sh`
+
+eventually terminal will let you know that app is available under http://localhost:3000/
+
+<br />
+
 Basic commands
 --------------
 - `cargo run -- serve` - Run project (dev)
