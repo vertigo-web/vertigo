@@ -3,6 +3,7 @@ use std::collections::{
     VecDeque,
 };
 use std::rc::Rc;
+use crate::NodeRefsItem;
 use crate::{driver::{DomDriver, EventCallback}, virtualdom::{
         models::{
             realdom::RealDomNode,
@@ -137,6 +138,10 @@ impl RealDomNodeInner {
         self.dom_driver.insert_before(self.id_dom.clone(), new_child.id(), prev_node);
         self.child.push_front(new_child);
     }
+
+    pub fn get_ref(&self) -> Option<NodeRefsItem> {
+        self.dom_driver.get_ref(self.id_dom.clone())
+    }
 }
 
 impl Drop for RealDomNodeInner {
@@ -235,6 +240,10 @@ impl RealDomElement {
 
     pub fn create_text(&self, name: String) -> RealDomText {
         RealDomText::new(self.dom_driver(), name)
+    }
+
+    pub fn get_ref(&self) -> Option<NodeRefsItem> {
+        self.inner.get(|state| state.get_ref())
     }
 }
 

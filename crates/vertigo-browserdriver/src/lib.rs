@@ -8,7 +8,7 @@ use element_wrapper::ElementWrapper;
 use wasm_bindgen::{JsCast, prelude::Closure, JsValue};
 use web_sys::{Document, Element, Event, HtmlHeadElement, Node, HtmlInputElement, HtmlTextAreaElement, Window};
 
-use vertigo::{DomDriver, DomDriverTrait, EventCallback, FetchMethod, HashRoutingReceiver, RealDomId, computed::Dependencies, utils::{
+use vertigo::{DomDriver, DomDriverTrait, EventCallback, FetchMethod, HashRoutingReceiver, NodeRefsItem, RealDomId, computed::Dependencies, utils::{
         BoxRefCell,
         DropResource,
     }};
@@ -113,6 +113,14 @@ impl DomDriverBrowserInner {
     fn create_text(&mut self, id: RealDomId, value: &str) {
         let text = self.document.create_text_node(value);
         self.elements.insert(id, ElementWrapper::from_text(text));
+    }
+
+    fn get_ref(&self, id: RealDomId) -> Option<NodeRefsItem> {
+        if let Some(elem) = self.elements.get(&id) {
+            return elem.to_ref();
+        }
+
+        None
     }
 
     fn update_text(&mut self, id: RealDomId, value: &str) {
@@ -314,6 +322,12 @@ impl DomDriverTrait for DomDriverBrowser {
         self.driver.change((id, value), |state, (id, value)| {
             state.create_text(id, value);
         });
+    }
+
+    fn get_ref(&self, id: RealDomId) -> Option<NodeRefsItem> {
+        self.driver.change(id, |state, id| {
+            state.get_ref(id)
+        })
     }
 
     fn update_text(&self, id: RealDomId, value: &str) {

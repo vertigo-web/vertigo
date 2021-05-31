@@ -3,6 +3,7 @@ use std::rc::Rc;
 use crate::virtualdom::models::css::Css;
 
 use super::vdom_element::KeyDownEvent;
+use super::vdom_refs::NodeRefs;
 
 pub enum NodeAttr {
     Css {
@@ -27,6 +28,12 @@ pub enum NodeAttr {
         name: &'static str,
         value: String,
     },
+    DomRef {
+        name: &'static str,
+    },
+    DomApply {
+        apply: Rc<dyn Fn(&NodeRefs) -> ()>,
+    }
 }
 
 
@@ -71,5 +78,17 @@ pub fn attr<K: Into<String>>(name: &'static str, value: K) -> NodeAttr {
     NodeAttr::Attr {
         name,
         value: value.into()
+    }
+}
+
+pub fn dom_ref(name: &'static str) -> NodeAttr {
+    NodeAttr::DomRef {
+        name,
+    }
+}
+
+pub fn dom_apply<F: Fn(&NodeRefs) -> () + 'static>(f: F) -> NodeAttr {
+    NodeAttr::DomApply {
+        apply: Rc::new(f)
     }
 }

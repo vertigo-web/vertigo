@@ -5,6 +5,7 @@ pub mod realdom_text;
 pub mod realdom_component;
 pub mod vdom_node;
 pub mod vdom_element;
+pub mod vdom_refs;
 pub mod vdom_text;
 pub mod vdom_component;
 pub mod vdom_component_id;

@@ -5,7 +5,7 @@ use std::{
     rc::Rc,
 };
 
-use crate::{KeyDownEvent, fetch_builder::FetchBuilder, utils::{EqBox, DropResource}};
+use crate::{KeyDownEvent, NodeRefsItem, fetch_builder::FetchBuilder, utils::{EqBox, DropResource}};
 use crate::virtualdom::models::realdom_id::RealDomId;
 
 #[derive(Debug)]
@@ -88,6 +88,7 @@ const SHOW_LOG: bool = false;
 pub trait DomDriverTrait {
     fn create_node(&self, id: RealDomId, name: &'static str);
     fn create_text(&self, id: RealDomId, value: &str);
+    fn get_ref(&self, id: RealDomId) -> Option<NodeRefsItem>;
     fn update_text(&self, id: RealDomId, value: &str);
     fn set_attr(&self, id: RealDomId, key: &'static str, value: &str);
     fn remove_attr(&self, id: RealDomId, name: &'static str);
@@ -156,6 +157,11 @@ impl DomDriver {
     pub fn create_text(&self, id: RealDomId, value: &str) {
         show_log(format!("create_text {} {}", id, value));
         self.driver.create_text(id, value);
+    }
+
+    pub fn get_ref(&self, id: RealDomId) -> Option<NodeRefsItem> {
+        show_log(format!("get_ref {}", id));
+        self.driver.get_ref(id)
     }
 
     pub fn update_text(&self, id: RealDomId, value: &str) {

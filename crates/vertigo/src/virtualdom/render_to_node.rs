@@ -1,15 +1,8 @@
-use std::collections::{
-    HashMap,
-    VecDeque,
-};
-use std::hash::Hash;
+use std::{collections::{VecDeque}, rc::Rc};
 
-use crate::{
-    computed::{
+use crate::{NodeRefs, computed::{
         Client,
-    },
-    driver::EventCallback
-};
+    }, driver::EventCallback};
 
 use crate::{
     virtualdom::{
@@ -29,91 +22,19 @@ use crate::{
     css_manager::css_manager::CssManager,
 };
 
-struct CacheNode<K: Eq + Hash, RNode, VNode> {
-    create_new: fn(&CssManager, &RealDomElement, &VNode) -> RNode,
-    data: HashMap<K, VecDeque<RNode>>,
+use super::render::{CacheNode, get_pair_for_update, NodePairs};
+
+struct RefsContext {
+    apply: Vec<Rc<dyn Fn(&NodeRefs) -> ()>>,
+    node_refs: NodeRefs,
 }
 
-impl<K: Eq + Hash, RNode, VNode> CacheNode<K, RNode, VNode> {
-    fn new(
-        create_new: fn(&CssManager, &RealDomElement, &VNode) -> RNode,
-    ) -> CacheNode<K, RNode, VNode> {
-        CacheNode {
-            create_new,
-            data: HashMap::new()
-        }
-    }
-
-    fn insert(&mut self, key: K, node: RNode) {
-        let item = self.data.entry(key).or_insert_with(VecDeque::new);
-        item.push_back(node);
-    }
-
-    fn get_or_create(&mut self, css_manager: &CssManager, target: &RealDomElement, key: K, vnode: &VNode) -> RNode {
-        let item = self.data.entry(key).or_insert_with(VecDeque::new);
-
-        let node = item.pop_front();
-
-        let CacheNode { create_new, .. } = self;
-
-        match node {
-            Some(node) => node,
-            None => create_new(css_manager, target, &vnode)
-        }
-    }
-}
-
-enum NodePairs<'a> {
-    Component {
-        real: &'a RealDomComponent,
-        new: &'a VDomComponent
-    },
-    Node {
-        real: &'a RealDomElement,
-        new: &'a VDomElement,
-    },
-    Text {
-        real: &'a RealDomText,
-        new: &'a VDomText,
-    }
-}
-
-fn get_pair_for_update<'a>(real: &'a RealDomNode, new: &'a VDomNode) -> Option<NodePairs<'a>> {
-    match real {
-        RealDomNode::Component { node } => {
-            if let VDomNode::Component { node: vnode } = new {
-                if node.id == vnode.id {
-                    return Some(NodePairs::Component {
-                        real: node,
-                        new: vnode
-                    });
-                }
-            }
-        },
-        RealDomNode::Node { node } => {
-            if let VDomNode::Element { node : vnode} = new {
-                if node.name() == vnode.name {
-                    return Some(NodePairs::Node {
-                        real: node,
-                        new: vnode,
-                    });
-                }
-            }
-        },
-        RealDomNode::Text { node } => {
-            if let VDomNode::Text { node: vnode } = new {
-                return Some(NodePairs::Text {
-                    real: node,
-                    new: vnode
-                });
-            }
-        }
-    }
-
-    None
-}
-
-fn update_node_child_updated_with_order(css_manager: &CssManager, target: &VecDeque<RealDomNode>, new_version: &[VDomNode]) -> bool {
+fn update_node_child_updated_with_order(
+    css_manager: &CssManager,
+    refs_context: &mut RefsContext,
+    target: &VecDeque<RealDomNode>,
+    new_version: &[VDomNode]
+) -> bool {
     if target.len() != new_version.len() {
         return false;
     }
@@ -139,7 +60,7 @@ fn update_node_child_updated_with_order(css_manager: &CssManager, target: &VecDe
             },
             NodePairs::Node { real, new } => {
                 update_node_attr(&css_manager, real, new);
-                update_node_child(css_manager, real, new);
+                update_node_child(css_manager, refs_context, real, new);
             },
             NodePairs::Text { real, new } => {
                 real.update(&new.value);
@@ -150,11 +71,24 @@ fn update_node_child_updated_with_order(css_manager: &CssManager, target: &VecDe
     true
 }
 
-fn update_node_child(css_manager: &CssManager, target: &RealDomElement, new_version: &VDomElement) {
+fn update_node_child(
+    css_manager: &CssManager,
+    refs_context: &mut RefsContext,
+    target: &RealDomElement,
+    new_version: &VDomElement
+) {
+
+    if let Some(ref_name) = new_version.dom_ref {
+        refs_context.node_refs.set(ref_name, target.get_ref().unwrap());            //TODO - we always expect ref
+    }
+
+    if let Some(dom_apply) = &new_version.dom_apply {
+        refs_context.apply.push(dom_apply.clone());
+    }
 
     let real_child = target.extract_child();
 
-    let update_order_ok = update_node_child_updated_with_order(css_manager, &real_child, &new_version.children);
+    let update_order_ok = update_node_child_updated_with_order(css_manager, refs_context, &real_child, &new_version.children);
     if update_order_ok {
         target.put_child(real_child);
         return;
@@ -215,7 +149,7 @@ fn update_node_child(css_manager: &CssManager, target: &RealDomElement, new_vers
                 let new_ref_id = dom_child.id_dom();
 
                 update_node_attr(&css_manager, &dom_child, &node);
-                update_node_child(css_manager, &dom_child, &node);
+                update_node_child(css_manager, refs_context, &dom_child, &node);
 
                 target.insert_before(RealDomNode::Node { node: dom_child }, ref_id);
                 ref_id = Some(new_ref_id);
@@ -258,7 +192,12 @@ fn update_node_attr(css_manager: &CssManager, real_node: &RealDomElement, node: 
     real_node.set_event(EventCallback::OnKeyDown { callback: node.on_key_down.clone() });
 }
 
-fn update_node(css_manager: &CssManager, target: &RealDomElement, new_version: &VDomElement) {
+fn update_node(
+    css_manager: &CssManager,
+    refs_context: &mut RefsContext,
+    target: &RealDomElement,
+    new_version: &VDomElement
+) {
 
     //updejt tag name
     target.update_name(new_version.name);
@@ -267,16 +206,29 @@ fn update_node(css_manager: &CssManager, target: &RealDomElement, new_version: &
     update_node_attr(&css_manager, target, &new_version);
 
     //odpal updejt dzieci
-    update_node_child(css_manager, target, &new_version);
+    update_node_child(css_manager, refs_context, target, &new_version);
 }
 
 pub fn render_to_node(css_manager: CssManager, target: RealDomElement, component: VDomComponent) -> Client {
     let subscription: Client = component.view.subscribe(move |new_version| {
+
+        let mut refs_context = RefsContext {
+            apply: Vec::new(),
+            node_refs: NodeRefs::new(),
+        };
+
         update_node(
             &css_manager,
+            &mut refs_context,
             &target,
             new_version
         );
+
+        let RefsContext { apply, node_refs} = refs_context;
+
+        for apply_fun in apply {
+            apply_fun(&node_refs);
+        }
     });
 
     subscription
