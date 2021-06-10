@@ -22,7 +22,7 @@ pub enum NodeAttr {
         event: Rc<dyn Fn()>
     },
     OnKeyDown {
-        event: Rc<dyn Fn(KeyDownEvent)>,
+        event: Rc<dyn Fn(KeyDownEvent) -> bool>,
     },
     Attr {
         name: &'static str,
@@ -68,7 +68,7 @@ pub fn on_mouse_leave<F: Fn() + 'static>(callback: F) -> NodeAttr {
     }
 }
 
-pub fn on_key_down<F: Fn(KeyDownEvent) + 'static>(callback: F) -> NodeAttr {
+pub fn on_key_down<F: Fn(KeyDownEvent) -> bool + 'static>(callback: F) -> NodeAttr {
     NodeAttr::OnKeyDown {
         event: Rc::new(callback),
     }

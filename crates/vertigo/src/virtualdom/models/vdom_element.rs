@@ -38,7 +38,7 @@ pub struct VDomElement {
     pub on_input: Option<Rc<dyn Fn(String)>>,
     pub on_mouse_enter: Option<Rc<dyn Fn()>>,
     pub on_mouse_leave: Option<Rc<dyn Fn()>>,
-    pub on_key_down: Option<Rc<dyn Fn(KeyDownEvent)>>,
+    pub on_key_down: Option<Rc<dyn Fn(KeyDownEvent) -> bool>>,
     pub css: Option<Css>,
 }
 
