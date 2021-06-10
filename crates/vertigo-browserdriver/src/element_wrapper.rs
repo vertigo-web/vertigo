@@ -87,7 +87,7 @@ pub struct ElementWrapper {
     pub on_input: Option<Rc<dyn Fn(String)>>,
     pub on_mouse_enter: Option<Rc<dyn Fn()>>,
     pub on_mouse_leave: Option<Rc<dyn Fn()>>,
-    pub on_keydown: Option<Rc<dyn Fn(KeyDownEvent)>>,
+    pub on_keydown: Option<Rc<dyn Fn(KeyDownEvent) -> bool>>,
 }
 
 impl ElementWrapper {

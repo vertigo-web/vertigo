@@ -10,7 +10,7 @@ use super::{find_all_nodes, get_from_node};
 fn find_event(
     inner: &Rc<BoxRefCell<DomDriverBrowserInner>>,
     id: RealDomId,
-) -> Option<Rc<dyn Fn(KeyDownEvent)>> {
+) -> Option<Rc<dyn Fn(KeyDownEvent) -> bool>> {
     let all_nodes = find_all_nodes(inner, id);
 
     for node_id in all_nodes {
@@ -61,11 +61,13 @@ pub fn create_keydown_event(document: &Document, inner: &Rc<BoxRefCell<DomDriver
                 shift_key: event_keyboard.shift_key(),
                 meta_key: event_keyboard.meta_key(),
             };
-            
-            event_keyboard.prevent_default();
-            event_keyboard.stop_propagation();
 
-            event_to_run(event);
+            let prevent_default = event_to_run(event);
+
+            if prevent_default {
+                event_keyboard.prevent_default();
+                event_keyboard.stop_propagation();
+            }
         }
     })
 }

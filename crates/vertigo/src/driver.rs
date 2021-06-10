@@ -37,7 +37,7 @@ pub enum EventCallback {
         callback: Option<Rc<dyn Fn()>>,
     },
     OnKeyDown {
-        callback: Option<Rc<dyn Fn(KeyDownEvent)>>,
+        callback: Option<Rc<dyn Fn(KeyDownEvent) -> bool>>,
     }
 }
 
