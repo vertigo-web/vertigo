@@ -8,8 +8,6 @@ pub mod utils;
 mod virtualdom;
 mod callback;
 
-pub use app::App;
-
 pub use driver::DomDriver;
 pub use driver::DomDriverTrait;
 pub use driver::FetchMethod;
@@ -29,3 +27,4 @@ pub use virtualdom::models::node_attr;
 pub use log;
 pub use callback::Callback;
 
+pub use app::start_app;
