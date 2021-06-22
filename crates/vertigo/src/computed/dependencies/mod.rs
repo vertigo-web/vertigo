@@ -85,6 +85,28 @@ impl Dependencies {
         value.to_computed()
     }
 
+    pub fn new_state<T: PartialEq, F: Fn(&Computed<T>) -> T>(&self, create: F) -> Computed<T> {
+
+        let state : Rc<BoxRefCell<Option<Rc<T>>>> = Rc::new(BoxRefCell::new(None, "new_state"));
+
+        let computed = {
+            let state = state.clone();
+            
+            Computed::new(self.clone(), move || -> Rc<T> {
+                state.get(|state| -> Rc<T> {
+                    state.clone().unwrap()
+                }) 
+            })
+        };
+
+        let clear_state = create(&computed);
+
+        state.change(clear_state, |state, clear_state| {
+            *state = Some(Rc::new(clear_state));
+        });
+
+        computed
+    }
 
     pub fn set_hook(&self, before_start: Box<dyn Fn()>, after_end: Box<dyn Fn()>) {
         self.transaction_state.change(

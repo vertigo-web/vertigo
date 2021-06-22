@@ -6,7 +6,6 @@ mod driver;
 pub mod router;
 pub mod utils;
 mod virtualdom;
-mod callback;
 
 pub use driver::DomDriver;
 pub use driver::DomDriverTrait;
@@ -25,6 +24,5 @@ pub use virtualdom::models::node_attr;
 
 // Export log module which can be used in vertigo plugins
 pub use log;
-pub use callback::Callback;
 
 pub use app::start_app;
