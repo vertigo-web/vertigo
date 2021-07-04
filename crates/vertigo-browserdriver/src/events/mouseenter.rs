@@ -3,9 +3,8 @@ use std::collections::HashMap;
 use vertigo::{RealDomId, computed::Dependencies, utils::BoxRefCell};
 use web_sys::{Element};
 
-use crate::{DomDriverBrowserInner, dom_event::DomEvent};
-
-use super::{find_all_nodes, find_dom_id, get_from_node};
+use crate::dom_driver_browser::DomDriverBrowser;
+use crate::dom_event::DomEvent;
 
 struct VisitedNode {
     on_mouse_leave: Option<Rc<dyn Fn()>>,
@@ -36,27 +35,27 @@ impl Drop for VisitedNode {
 //struktura do zarządzania ostnio odwiedzonymi węzłami
 
 struct VisitedNodeManager {
-    inner: Rc<BoxRefCell<DomDriverBrowserInner>>,
+    dom_driver: DomDriverBrowser,
     dependencies: Dependencies,
     nodes: BoxRefCell<HashMap::<RealDomId, VisitedNode>>,
 }
 
 impl VisitedNodeManager {
-    fn new(inner: Rc<BoxRefCell<DomDriverBrowserInner>>, dependencies: &Dependencies) -> VisitedNodeManager {
+    fn new(dom_driver: &DomDriverBrowser, dependencies: &Dependencies) -> VisitedNodeManager {
         let nodes = HashMap::new();
 
         VisitedNodeManager {
-            inner,
+            dom_driver: dom_driver.clone(),
             dependencies: dependencies.clone(),
             nodes: BoxRefCell::new(nodes, "VisitedNodeManager nodes")
         }
     }
 
     fn push_new_nodes(&self, new_nodes: Vec<RealDomId>) {
-        let VisitedNodeManager {inner, dependencies, nodes} = self;
+        let VisitedNodeManager {dom_driver, dependencies, nodes} = self;
 
         dependencies.transaction(move || {
-            nodes.change((new_nodes, inner), |state, (new_nodes, inner)| {
+            nodes.change((new_nodes, dom_driver), |state, (new_nodes, dom_driver)| {
                 let mut new_state = HashMap::<RealDomId, VisitedNode>::new();
 
                 for node_id in new_nodes {
@@ -67,14 +66,12 @@ impl VisitedNodeManager {
                         continue;
                     }
 
-                    let on_enter = get_from_node(
-                        inner,
+                    let on_enter = dom_driver.get_from_node(
                         &node_id,
                         |elem| elem.on_mouse_enter.clone()
                     );
 
-                    let on_leave = get_from_node(
-                        inner,
+                    let on_leave = dom_driver.get_from_node(
                         &node_id,
                         |elem| elem.on_mouse_leave.clone()
                     );
@@ -88,14 +85,14 @@ impl VisitedNodeManager {
     }
 }
 
-pub fn create_mouseenter_event(inner: &Rc<BoxRefCell<DomDriverBrowserInner>>, root: &Element, dependencies: &Dependencies) -> DomEvent {
+pub fn create_mouseenter_event(dom_driver: &DomDriverBrowser, root: &Element, dependencies: &Dependencies) -> DomEvent {
 
-    let inner = inner.clone();
-    let current_visited = VisitedNodeManager::new(inner.clone(), dependencies);
+    let dom_driver = dom_driver.clone();
+    let current_visited = VisitedNodeManager::new(&dom_driver, dependencies);
 
     DomEvent::new(&root, "mouseover",move |event: web_sys::Event| {
-        let dom_id = find_dom_id(&event);
-        let nodes = find_all_nodes(&inner, dom_id.clone());
+        let dom_id = dom_driver.find_dom_id(&event);
+        let nodes = dom_driver.find_all_nodes(dom_id.clone());
 
         current_visited.push_new_nodes(nodes);
     })

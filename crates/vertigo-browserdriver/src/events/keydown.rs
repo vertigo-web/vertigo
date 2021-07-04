@@ -1,21 +1,19 @@
 use std::rc::Rc;
 
-use vertigo::{KeyDownEvent, RealDomId, utils::BoxRefCell};
+use vertigo::{KeyDownEvent, RealDomId};
 use web_sys::{Document, KeyboardEvent};
 
-use crate::{DomDriverBrowserInner, dom_event::DomEvent, events::find_dom_id};
-
-use super::{find_all_nodes, get_from_node};
+use crate::dom_driver_browser::DomDriverBrowser;
+use crate::{dom_event::DomEvent};
 
 fn find_event(
-    inner: &Rc<BoxRefCell<DomDriverBrowserInner>>,
+    dom_driver: &DomDriverBrowser,
     id: RealDomId,
 ) -> Option<Rc<dyn Fn(KeyDownEvent) -> bool>> {
-    let all_nodes = find_all_nodes(inner, id);
+    let all_nodes = dom_driver.find_all_nodes(id);
 
     for node_id in all_nodes {
-        let on_input = get_from_node(
-            inner,
+        let on_input = dom_driver.get_from_node(
             &node_id,
             |elem| elem.on_input.clone()
         );
@@ -24,8 +22,7 @@ fn find_event(
             return None;
         }
 
-        let on_key = get_from_node(
-            inner,
+        let on_key = dom_driver.get_from_node(
             &node_id,
             |elem| elem.on_keydown.clone()
         );
@@ -38,13 +35,13 @@ fn find_event(
     None
 }
 
-pub fn create_keydown_event(document: &Document, inner: &Rc<BoxRefCell<DomDriverBrowserInner>>) -> DomEvent {
-    let inner = inner.clone();
+pub fn create_keydown_event(document: &Document, dom_driver: &DomDriverBrowser) -> DomEvent {
+    let dom_driver = dom_driver.clone();
 
     DomEvent::new(document, "keydown", move |event: web_sys::Event| {
-        let dom_id = find_dom_id(&event);
+        let dom_id = dom_driver.find_dom_id(&event);
 
-        let event_to_run = find_event(&inner, dom_id);
+        let event_to_run = find_event(&dom_driver, dom_id);
 
         if let Some(event_to_run) = event_to_run {
             
