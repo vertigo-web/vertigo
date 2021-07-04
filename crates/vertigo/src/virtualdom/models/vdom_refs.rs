@@ -1,21 +1,16 @@
 use std::{collections::{HashMap}, rc::Rc};
 use std::fmt;
 pub trait NodeRefsItemTrait {
-    fn get_bounding_client_rect(&self) -> (f64, f64, f64, f64);     //x, y, width, height
+    fn get_bounding_client_rect_x(&self) -> f64;
+    fn get_bounding_client_rect_y(&self) -> f64;
+    fn get_bounding_client_rect_width(&self) -> f64;
+    fn get_bounding_client_rect_height(&self) -> f64;
     fn scroll_top(&self) -> i32;
     fn set_scroll_top(&self, value: i32);
     fn scroll_left(&self) -> i32;
     fn set_scroll_left(&self, value: i32);
     fn scroll_width(&self) -> i32;
     fn scroll_height(&self) -> i32;
-}
-
-#[derive(Debug)]
-pub struct NodeRefsItemRect {
-    pub x: f64,
-    pub y: f64,
-    pub width: f64,
-    pub height: f64,
 }
 
 #[derive(Clone)]
@@ -38,9 +33,20 @@ impl NodeRefsItem {
         }
     }
 
-    pub fn get_bounding_client_rect(&self) -> NodeRefsItemRect {
-        let (x, y, width, height) = self.item.get_bounding_client_rect();
-        NodeRefsItemRect { x, y, width, height }
+    pub fn get_bounding_client_rect_x(&self) -> f64 {
+        self.item.get_bounding_client_rect_x()
+    }
+
+    pub fn get_bounding_client_rect_y(&self) -> f64 {
+        self.item.get_bounding_client_rect_y()
+    }
+
+    pub fn get_bounding_client_rect_width(&self) -> f64 {
+        self.item.get_bounding_client_rect_width()
+    }
+
+    pub fn get_bounding_client_rect_height(&self) -> f64 {
+        self.item.get_bounding_client_rect_height()
     }
 
     pub fn scroll_top(&self) -> i32 {
@@ -87,7 +93,7 @@ impl NodeRefs {
             return item;
         }
 
-        return &[];
+        &[]
     }
 
     pub fn expect_one(&self, ref_name: &str) -> Option<NodeRefsItem> {
