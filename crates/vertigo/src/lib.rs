@@ -11,7 +11,6 @@ pub use driver::DomDriver;
 pub use driver::DomDriverTrait;
 pub use driver::FetchMethod;
 pub use driver::EventCallback;
-pub use driver::HashRoutingReceiver;
 
 pub use virtualdom::models::realdom_id::RealDomId;
 pub use virtualdom::models::vdom_component::VDomComponent;

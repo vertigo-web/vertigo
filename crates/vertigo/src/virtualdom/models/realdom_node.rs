@@ -146,7 +146,7 @@ impl RealDomNodeInner {
 
 impl Drop for RealDomNodeInner {
     fn drop(&mut self) {
-        self.dom_driver.remove(self.id_dom.clone());
+        self.dom_driver.remove_node(self.id_dom.clone());
     }
 }
 

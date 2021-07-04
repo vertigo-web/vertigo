@@ -10,26 +10,6 @@ description = "Virtual DOM library for Rust - web-browser rendering driver"
 
 [dependencies]
 vertigo = { path = "../../crates/vertigo", version="0.1.0-alpha.2" }
-wasm-bindgen = {version = "0.2", features = ["nightly", "serde-serialize"]}
-wasm-bindgen-futures = "0.4"
+wasm-bindgen = {version = "0.2.74", features = ["nightly"]}
+wasm-bindgen-futures = "0.4.24"
 log = "0.4.14"
-web-sys = { version="0.3", features=[
-    "Document",
-    "Headers",
-    "History",
-    "HtmlElement",
-    "HtmlHeadElement",
-    "HtmlInputElement",
-    "HtmlTextAreaElement",
-    "KeyboardEvent",
-    "Location",
-    "MouseEvent",
-    "Request",
-    "Request",
-    "RequestInit",
-    "RequestMode",
-    "Response",
-    "Text",
-    "Window",
-    "DomRect",
-]}

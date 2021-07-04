@@ -1,0 +1,12 @@
+{
+  "name": "jsdriver",
+  "version": "1.0.0",
+  "main": "index.js",
+  "license": "MIT",
+  "dependencies": {
+    "@rollup/plugin-typescript": "^8.2.1",
+    "rollup": "^2.52.7",
+    "tslib": "^2.3.0",
+    "typescript": "^4.3.5"
+  }
+}

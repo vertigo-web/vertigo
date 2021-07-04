@@ -16,7 +16,7 @@ impl Default for Route {
 }
 
 impl Route {
-    pub fn new(path: String) -> Route {
+    pub fn new(path: &String) -> Route {
         match path.as_str() {
             "" | "/" => Self::Main,
             "counters" => Self::Counters,

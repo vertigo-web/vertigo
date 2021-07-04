@@ -33,12 +33,12 @@ impl State {
 
         let game_of_life = game_of_life::State::new(&root, driver);
 
-        let route: Value<Route> = root.new_value(Route::new(driver.get_hash_location()));
+        let route: Value<Route> = root.new_value(Route::new(&driver.get_hash_location()));
 
         let hash_router = HashRouter::new(driver, route.clone(), {
             let route = route.clone();
 
-            Box::new(move |url: String|{
+            Box::new(move |url: &String|{
                 route.set_value(Route::new(url));
             })
         });

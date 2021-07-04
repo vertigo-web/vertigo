@@ -47,6 +47,6 @@ impl RealDomText {
 
 impl Drop for RealDomText {
     fn drop(&mut self) {
-        self.dom_driver.remove(self.id_dom.clone());
+        self.dom_driver.remove_text(self.id_dom.clone());
     }
 }

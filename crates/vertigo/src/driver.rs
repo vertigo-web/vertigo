@@ -86,22 +86,24 @@ impl EventCallback {
 const SHOW_LOG: bool = false;
 
 pub trait DomDriverTrait {
-    fn create_node(&self, id: RealDomId, name: &'static str);
     fn create_text(&self, id: RealDomId, value: &str);
-    fn get_ref(&self, id: RealDomId) -> Option<NodeRefsItem>;
     fn update_text(&self, id: RealDomId, value: &str);
+    fn remove_text(&self, id: RealDomId);
+
+    fn create_node(&self, id: RealDomId, name: &'static str);
+    fn get_ref(&self, id: RealDomId) -> Option<NodeRefsItem>;
     fn set_attr(&self, id: RealDomId, key: &'static str, value: &str);
     fn remove_attr(&self, id: RealDomId, name: &'static str);
-    fn remove(&self, id: RealDomId);
+    fn remove_node(&self, id: RealDomId);
     fn insert_before(&self, parent: RealDomId, child: RealDomId, ref_id: Option<RealDomId>);
+
     fn insert_css(&self, selector: &str, value: &str);
     fn set_event(&self, node: RealDomId, callback: EventCallback);
     fn fetch(&self, method: FetchMethod, url: String, headers: Option<HashMap<String, String>>, body: Option<String>) -> Pin<Box<dyn Future<Output=Result<String, String>> + 'static>>;
 
     fn get_hash_location(&self) -> String;
     fn push_hash_location(&self, path: &str);
-    fn on_hash_route_change(&self, on_change: Box<dyn Fn(String)>) -> HashRoutingReceiver;
-    fn clear_hash_route_callback(&self);
+    fn on_hash_route_change(&self, on_change: Box<dyn Fn(&String)>) -> DropResource;
 
     fn set_interval(&self, time: u32, func: Box<dyn Fn()>) -> DropResource;
 }
@@ -179,9 +181,14 @@ impl DomDriver {
         self.driver.remove_attr(id, name);
     }
 
-    pub fn remove(&self, id: RealDomId) {
-        show_log(format!("remove {}", id));
-        self.driver.remove(id);
+    pub fn remove_node(&self, id: RealDomId) {
+        show_log(format!("remove node {}", id));
+        self.driver.remove_node(id);
+    }
+
+    pub fn remove_text(&self, id: RealDomId) {
+        show_log(format!("remove text {}", id));
+        self.driver.remove_text(id);
     }
 
     pub fn insert_before(&self, parent: RealDomId, child: RealDomId, ref_id: Option<RealDomId>) {
@@ -221,35 +228,12 @@ impl DomDriver {
         self.driver.push_hash_location(&path)
     }
 
-    pub fn on_hash_route_change(&self, on_change: Box<dyn Fn(String)>) -> HashRoutingReceiver {
+    pub fn on_hash_route_change(&self, on_change: Box<dyn Fn(&String)>) -> DropResource {
         show_log("on_route_change".to_string());
         self.driver.on_hash_route_change(on_change)
     }
 
-    pub fn clear_hash_route_callback(&self) {
-        self.driver.clear_hash_route_callback()
-    }
-
-    pub fn set_interval<F: Fn() + 'static>(&self, time: u32, func: F) -> DropResource{
+    pub fn set_interval<F: Fn() + 'static>(&self, time: u32, func: F) -> DropResource {
         self.driver.set_interval(time, Box::new(func))
-    }
-}
-
-#[derive(PartialEq)]
-pub struct HashRoutingReceiver {
-    driver: EqBox<Rc<dyn DomDriverTrait>>,
-}
-
-impl HashRoutingReceiver {
-    pub fn new<T: DomDriverTrait + 'static>(driver: T) -> Self {
-        Self {
-            driver: EqBox::new(Rc::new(driver)),
-        }
-    }
-}
-
-impl Drop for HashRoutingReceiver {
-    fn drop(&mut self) {
-        self.driver.clear_hash_route_callback()
     }
 }
