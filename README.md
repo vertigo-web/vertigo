@@ -7,8 +7,17 @@ Installation and usage
 If you already have rust installed then you have to add webassembly to your toolchain:
 - `rustup target add wasm32-unknown-unknown`
 
+Install wasm-pack
+- `cargo install wasm-pack`
+
+Install a simple static resource http server
+- `cargo install basic-http-server`
+
+Install cargo-watch
+- `cargo install cargo-watch`
+
 then build and run project using:
-- `cargo run` or `./start.sh`
+- `./start.sh` or `./start_dev.sh`
 
 eventually terminal will let you know that app is available under http://localhost:3000/
 
@@ -16,8 +25,6 @@ eventually terminal will let you know that app is available under http://localho
 
 Basic commands
 --------------
-- `cargo run -- serve` - Run project (dev)
-- `cargo run -- build` - Build project in release mode
 - `cargo doc` - Build build documentation
 - `cargo doc --open` - Open the documentation in the browser
 - `cargo update --dry-run` - Checking for updates
