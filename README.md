@@ -1,29 +1,31 @@
-Reactive webassembly
+Vertigo - reactive webassembly
 ===================
 
-Installation and usage
+Installation and usage of demo application
 --------------
 
-If you already have rust installed then you have to add webassembly to your toolchain:
-- `rustup target add wasm32-unknown-unknown`
+Install cargo-make that takes care of all other dependencies
+- `cargo install cargo-make`
 
-Install wasm-pack
-- `cargo install wasm-pack`
+Build and run project using:
+- `cargo make app-start`
 
-Install a simple static resource http server
-- `cargo install basic-http-server`
+Eventually terminal will let you know that app is available under http://localhost:3000/
 
-Install cargo-watch
-- `cargo install cargo-watch`
+If you want to play around with the code, you can make cargo to watch for your changes:
+- `cargo make app-watch`
 
-then build and run project using:
-- `./start.sh` or `./start_dev.sh`
+Keep in mind that you still need to refresh page in the browser after project recompiles.
 
-eventually terminal will let you know that app is available under http://localhost:3000/
+Different build profiles
+--------------
+- `cargo make app-watch --profile profiling`
+- `cargo make app-watch --profile release`
 
-<br />
+Some random dev stuff below
+===================
 
-Basic commands
+Helpful commands
 --------------
 - `cargo doc` - Build build documentation
 - `cargo doc --open` - Open the documentation in the browser
