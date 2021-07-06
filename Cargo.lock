@@ -3,23 +3,6 @@
 version = 3
 
 [[package]]
-name = "app_rust"
-version = "0.1.0"
-dependencies = [
- "console_error_panic_hook",
- "log",
- "serde",
- "serde_json",
- "vertigo",
- "vertigo-browserdriver",
- "vertigo-html",
- "wasm-bindgen",
- "wasm-bindgen-futures",
- "wasm-logger",
- "wee_alloc",
-]
-
-[[package]]
 name = "block-buffer"
 version = "0.7.3"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -344,14 +327,14 @@ checksum = "b5a972e5669d67ba988ce3dc826706fb0a8b01471c088cb0b6110b805cc36aed"
 
 [[package]]
 name = "vertigo"
-version = "0.1.0-alpha.2"
+version = "0.1.0-alpha.3"
 dependencies = [
  "log",
 ]
 
 [[package]]
 name = "vertigo-browserdriver"
-version = "0.1.0-alpha.2"
+version = "0.1.0-alpha.3"
 dependencies = [
  "log",
  "vertigo",
@@ -361,8 +344,25 @@ dependencies = [
 ]
 
 [[package]]
+name = "vertigo-demo"
+version = "0.1.0"
+dependencies = [
+ "console_error_panic_hook",
+ "log",
+ "serde",
+ "serde_json",
+ "vertigo",
+ "vertigo-browserdriver",
+ "vertigo-html",
+ "wasm-bindgen",
+ "wasm-bindgen-futures",
+ "wasm-logger",
+ "wee_alloc",
+]
+
+[[package]]
 name = "vertigo-html"
-version = "0.1.0-alpha.2"
+version = "0.1.0-alpha.3"
 dependencies = [
  "vertigo",
  "vertigo-html-macro",
@@ -370,7 +370,7 @@ dependencies = [
 
 [[package]]
 name = "vertigo-html-macro"
-version = "0.1.0-alpha.2"
+version = "0.1.0-alpha.3"
 dependencies = [
  "itertools",
  "log",
@@ -384,7 +384,7 @@ dependencies = [
 
 [[package]]
 name = "vertigo-testing"
-version = "0.1.0-alpha.2"
+version = "0.1.0-alpha.3"
 dependencies = [
  "vertigo",
 ]
