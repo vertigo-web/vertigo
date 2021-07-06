@@ -10,14 +10,14 @@ PROFILE="release"
 [config]
 default_to_workspace = false
 
-[tasks.app-watch]
+[tasks.demo-watch]
 command = "cargo"
-args = [ "watch", "--watch", "./app", "--watch", "crates", "--delay", "0.5", "-x", "make app-start --profile ${PROFILE}" ]
+args = [ "watch", "--watch", "./demo", "--watch", "crates", "--delay", "0.5", "-x", "make demo-start --profile ${PROFILE}" ]
 
-[tasks.app-clean]
+[tasks.demo-clean]
 script = "rm -Rf ./build"
 
-[tasks.app-build]
+[tasks.demo-build]
 install_script = '''
     if [ "$(rustup target list | grep wasm32-unknown-unknown | grep installed)" = "" ];
     then
@@ -26,22 +26,22 @@ install_script = '''
 '''
 install_crate = { crate_name = "wasm-pack", binary = "wasm-pack", test_arg = ["--version"] }
 script = [
-    "wasm-pack build app --no-typescript --target web --out-dir ../build --out-name app --${PROFILE}",
-    "cp ./app/index.html ./build",
+    "wasm-pack build demo --no-typescript --target web --out-dir ../build --out-name demo --${PROFILE}",
+    "cp ./demo/index.html ./build",
     "rm ./build/.gitignore",
     "rm ./build/package.json",
 ]
 
-[tasks.app-serve]
+[tasks.demo-serve]
 install_crate = { crate_name = "basic-http-server", binary = "basic-http-server", test_arg = ["--version"] }
 command = "basic-http-server"
 args = [ "--addr", "127.0.0.1:3000", "./build" ]
 
-[tasks.app-start]
+[tasks.demo-start]
 dependencies = [
-    "app-clean",
-    "app-build",
-    "app-serve"
+    "demo-clean",
+    "demo-build",
+    "demo-serve"
 ]
 
 [tasks.upgrade-wasm-pack]

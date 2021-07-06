@@ -1,7 +1,7 @@
 [workspace]
 
 members = [
-    "app",
+    "demo",
     "crates/vertigo-browserdriver",
     "crates/vertigo",
     "crates/vertigo-html",
