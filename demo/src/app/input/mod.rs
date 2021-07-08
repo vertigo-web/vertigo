@@ -109,9 +109,9 @@ pub fn render(state: &Computed<State>) -> VDomElement {
             <input css={input_css()} value={(*value).as_str()} onInput={on_set3} />
             <button css={button_css()} onClick={on_set1}>"set 1"</button>
             <button css={button_css()} onClick={on_set2}>"set 2"</button>
-            <textarea css={text_css()} onInput={on_set4}>
+            <textarea css={text_css()} onInput={on_set4} value=
                 { (*value).as_str() }
-            </textarea>
+            />
             <div>"count = " { count }</div>
         </div>
     }

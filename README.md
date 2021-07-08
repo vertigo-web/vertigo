@@ -5,7 +5,7 @@ Installation and usage of demo application
 --------------
 
 Make sure you're using nigthly version of rust:
-- `rustup default nigthly`
+- `rustup default nightly`
 
 Install cargo-make that takes care of all other dependencies:
 - `cargo install cargo-make`

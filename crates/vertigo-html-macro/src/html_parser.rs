@@ -172,6 +172,10 @@ impl HtmlParser {
             quote! { vertigo::VDomNode::node }
         };
 
+        if tag_name == "textarea" && (!generated_children_lists.is_empty() || !generated_children.is_empty()) {
+            emit_error!(self.call_site, "HTML: Textarea content can be passed only through value attribute!");
+        }
+
         if generated_children_lists.is_empty() {
             quote! {
                 #builder(
