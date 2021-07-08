@@ -2,15 +2,12 @@ use vertigo::{VDomElement, VDomText};
 
 use crate::html;
 
-// Make crate available by its name for html macro
-use crate as vertigo_html;
-
 use super::utils::*;
 
 #[test]
 fn empty_textarea() {
     let textarea = html! {
-        <textarea></textarea>
+        <textarea />
     };
 
     assert_empty(&textarea, "textarea");
@@ -18,14 +15,13 @@ fn empty_textarea() {
 
 #[test]
 fn textarea_with_expression() {
+    let value = "Some Value";
     let dom1 = html! {
-        <textarea>{$ format!("Some {}", "Value") $}</textarea>
+        <textarea value={value} />
     };
 
     let dom2 = VDomElement::build("textarea")
-        .children(vec![
-            VDomText::new("Some Value").into(),
-        ]);
+        .attr("value", "Some Value");
 
     assert_eq!(
         format!("{:?}", dom1),
@@ -38,7 +34,7 @@ fn div_with_textarea() {
     let dom1 = html! {
         <div>
             "Label "
-            <textarea>"Some Value"</textarea>
+            <textarea value="Some Value" />
         </div>
     };
 
@@ -46,9 +42,7 @@ fn div_with_textarea() {
         .children(vec![
             VDomText::new("Label ").into(),
             VDomElement::build("textarea")
-                .children(vec![
-                    VDomText::new("Some Value").into(),
-                ])
+                .attr("value", "Some Value")
                 .into(),
         ]);
 
@@ -57,3 +51,10 @@ fn div_with_textarea() {
         format!("{:?}", dom2)
     );
 }
+
+// #[test]
+// fn textarea_with_body_generates_error() {
+//     let dom1 = html! {
+//         <textarea>"Some Value"</textarea>
+//     };
+// }
