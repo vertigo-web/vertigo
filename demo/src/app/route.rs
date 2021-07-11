@@ -16,8 +16,8 @@ impl Default for Route {
 }
 
 impl Route {
-    pub fn new(path: &String) -> Route {
-        match path.as_str() {
+    pub fn new(path: &str) -> Route {
+        match path {
             "" | "/" => Self::Main,
             "counters" => Self::Counters,
             "sudoku" => Self::Sudoku,

@@ -55,7 +55,7 @@ impl Clone for Dependencies {
 
 impl Default for Dependencies {
     fn default() -> Self {
-        let external_connections = ExternalConnections::new();
+        let external_connections = ExternalConnections::default();
 
         Self {
             graph: Rc::new(EqBox::new(BoxRefCell::new(
@@ -135,10 +135,10 @@ impl Dependencies {
         if let Some(edges_values) = edges_values {
             let edges_to_refresh = self.get_edges_to_refresh(&edges_values);
 
-            refresh_edges::refresh_edges(&self, &edges_values, edges_to_refresh);
+            refresh_edges::refresh_edges(self, &edges_values, edges_to_refresh);
 
             self.transaction_state.change((), |state, _| {
-                state.to_idle()
+                state.move_to_idle()
             });
         }
     }

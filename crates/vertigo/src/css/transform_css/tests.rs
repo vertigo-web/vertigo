@@ -1,4 +1,4 @@
-use crate::css_manager::next_id::NextId;
+use crate::css::next_id::NextId;
 
 use super::{css_split_rows, css_split_rows_pair, transform_css, transform_css_animation_value};
 

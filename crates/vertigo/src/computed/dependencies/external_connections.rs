@@ -53,7 +53,7 @@ impl ExternalConnectionsInner {
             return;
         }
 
-        let will_connect = std::mem::replace(&mut self.will_connect, BTreeMap::new());
+        let will_connect = std::mem::take(&mut self.will_connect);
 
         for (id, should_connect) in will_connect.into_iter() {
             if should_connect {
@@ -71,7 +71,7 @@ pub struct ExternalConnections {
 }
 
 impl ExternalConnections {
-    pub fn new() -> ExternalConnections {
+    pub fn default() -> Self {
         ExternalConnections {
             inner: Rc::new(EqBox::new(BoxRefCell::new(
                 ExternalConnectionsInner::new(), 

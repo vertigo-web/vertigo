@@ -7,7 +7,7 @@ use crate::{
         },
         render_to_node::render_to_node,
     },
-    css_manager::css_manager::CssManager,
+    css::css_manager::CssManager,
     driver::DomDriver,
 };
 

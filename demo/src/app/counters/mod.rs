@@ -23,10 +23,10 @@ pub struct State {
 
 impl State {
     pub fn new(root: &Dependencies) -> Computed<State> {
-        let counter1 = simple_counter::State::new(&root);
-        let counter2 = simple_counter::State::new(&root);
-        let counter3 = simple_counter::State::new(&root);
-        let counter4 = simple_counter::State::new(&root);
+        let counter1 = simple_counter::State::new(root);
+        let counter2 = simple_counter::State::new(root);
+        let counter3 = simple_counter::State::new(root);
+        let counter4 = simple_counter::State::new(root);
 
         let suma = {
             let counter1 = counter1.clone();

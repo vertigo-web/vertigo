@@ -33,7 +33,7 @@ pub struct VDomElement {
     pub attr: HashMap<&'static str, String>,
     pub children: Vec<VDomNode>,
     pub dom_ref: Option<&'static str>,
-    pub dom_apply: Option<Rc<dyn Fn(&NodeRefs) -> ()>>,
+    pub dom_apply: Option<Rc<dyn Fn(&NodeRefs)>>,
     pub on_click: Option<Rc<dyn Fn()>>,
     pub on_input: Option<Rc<dyn Fn(String)>>,
     pub on_mouse_enter: Option<Rc<dyn Fn()>>,

@@ -23,7 +23,7 @@ pub enum SudokuValue {
 }
 
 impl SudokuValue {
-    pub fn to_u16(&self) -> u16 {
+    pub fn as_u16(&self) -> u16 {
         match self {
             SudokuValue::Value1 => 1,
             SudokuValue::Value2 => 2,

@@ -1,5 +1,3 @@
-#![allow(clippy::nonstandard_macro_braces)]
-
 use wasm_bindgen::prelude::wasm_bindgen;
 
 use vertigo::{

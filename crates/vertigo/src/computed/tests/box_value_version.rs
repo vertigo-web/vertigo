@@ -24,7 +24,7 @@ use crate::computed::Client;
 use crate::utils::BoxRefCell;
 
 pub struct SubscribeValueVer<T: PartialEq + Clone> {
-    client: Option<Client>,
+    _client: Option<Client>,
     value: Rc<BoxRefCell<SubscribeValueVerInner<T>>>,
 }
 
@@ -43,7 +43,7 @@ impl<T: PartialEq + Clone> SubscribeValueVer<T> {
         };
 
         SubscribeValueVer {
-            client: Some(client),
+            _client: Some(client),
             value
         }
     }
@@ -61,6 +61,6 @@ impl<T: PartialEq + Clone> SubscribeValueVer<T> {
     }
 
     pub fn off(&mut self) {
-        self.client = None;
+        self._client = None;
     }
 }

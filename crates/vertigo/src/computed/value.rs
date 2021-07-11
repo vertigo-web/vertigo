@@ -73,7 +73,7 @@ impl<T: PartialEq + 'static> Value<T> {
         let value = Value {
             inner: Rc::new(BoxRefCell::new(
                 ValueInner {
-                    id: id.clone(),
+                    id,
                     value: Rc::new(value),
                     deps: deps.clone(),
                 },

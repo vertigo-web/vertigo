@@ -31,7 +31,7 @@ pub struct State {
 impl State {
     pub fn new(root: &Dependencies, driver: &DomDriver) -> Computed<State> {
 
-        let game_of_life = game_of_life::State::new(&root, driver);
+        let game_of_life = game_of_life::State::new(root, driver);
 
         let route: Value<Route> = root.new_value(Route::new(&driver.get_hash_location()));
 
@@ -46,11 +46,11 @@ impl State {
         let state = State {
             root: root.clone(),
             route,
-            main: super::main::MainState::new(&root),
-            counters: CountersState::new(&root),
+            main: super::main::MainState::new(root),
+            counters: CountersState::new(root),
             sudoku: sudoku::Sudoku::new(root),
-            input: input::State::new(&root),
-            github_explorer: github_explorer::State::new(&root, driver),
+            input: input::State::new(root),
+            github_explorer: github_explorer::State::new(root, driver),
             game_of_life,
 
             hash_router,

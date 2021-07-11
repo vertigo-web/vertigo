@@ -81,13 +81,13 @@ pub fn css_split_rows(css: &str) -> Vec<&str> {
         }
 
         if char == ';' && state == ParsingRowState::Right {
-            out.push(&css[start..index].trim());
+            out.push(css[start..index].trim());
             start = index + 1;
             state = ParsingRowState::Left;
         }
     }
 
-    out.push(&css[start..css.len()].trim());
+    out.push(css[start..css.len()].trim());
 
     out.into_iter().filter(|item|{
         item.trim() != ""
@@ -177,7 +177,7 @@ pub fn transform_css(css: &str, next_id: &mut NextId) -> (u64, Vec<(String, Stri
 
     for row in css_split_rows(css) {
         if row.starts_with(':') {
-            let extra_rule = transform_css_selector_value(&row, &selector);
+            let extra_rule = transform_css_selector_value(row, &selector);
 
             if let Some(extra_rule) = extra_rule {
                 css_documents.push(extra_rule);

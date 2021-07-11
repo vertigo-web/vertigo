@@ -10,7 +10,7 @@ use crate::{
             realdom_node::RealDomElement,
         }
     },
-    css_manager::css_manager::CssManager,
+    css::css_manager::CssManager,
 };
 
 
@@ -43,7 +43,7 @@ impl<K: Eq + Hash, RNode, VNode> CacheNode<K, RNode, VNode> {
 
         match node {
             Some(node) => node,
-            None => create_new(css_manager, target, &vnode)
+            None => create_new(css_manager, target, vnode)
         }
     }
 }

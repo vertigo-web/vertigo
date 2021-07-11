@@ -39,8 +39,40 @@ impl JsonMapBuilder {
             records.push(format!("\"{}\":\"{}\"", key, value));
         }
 
-        let content = records.as_slice().join(":");
+        let content = records.as_slice().join(",");
 
         format!("{{{}}}", content)
     }
+}
+
+#[test]
+fn basic() {
+    let builder = JsonMapBuilder::new();
+    let result = builder.build();
+    assert_eq!(result, "{}");
+}
+
+#[test]
+fn basic2() {
+    let mut builder = JsonMapBuilder::new();
+    builder.set_string("Content-Type", "application/json");
+    let result = builder.build();
+    assert_eq!(result, "{\"Content-Type\":\"application/json\"}");
+}
+
+#[test]
+fn basic3() {
+    let mut builder = JsonMapBuilder::new();
+    builder.set_string("Content-Type", "application/json");
+    builder.set_string("token", "3333");
+    let result = builder.build();
+    assert_eq!(result, "{\"Content-Type\":\"application/json\",\"token\":\"3333\"}");
+}
+
+#[test]
+fn basic4() {
+    let mut builder = JsonMapBuilder::new();
+    builder.set_string("token", "33\"33");
+    let result = builder.build();
+    assert_eq!(result, "{\"token\":\"33\\\"33\"}");
 }

@@ -8,9 +8,12 @@ use crate::utils::{
     EqBox,
 };
 
+
+type CreateType<K, V> = EqBox<Box<dyn Fn(&K) -> V>>;
+
 #[derive(PartialEq, Clone)]
 pub struct AutoMap<K: Eq + Hash + Clone, V: PartialEq + Clone + 'static> {
-    create: Rc<EqBox<Box<dyn Fn(&K) -> V>>>,
+    create: Rc<CreateType<K, V>>,
     values: Rc<EqBox<BoxRefCell<HashMap<K, V>>>>,
 }
 

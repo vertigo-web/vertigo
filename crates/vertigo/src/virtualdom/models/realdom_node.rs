@@ -91,7 +91,7 @@ impl RealDomNodeInner {
         };
 
         if need_update {
-            self.dom_driver.set_attr(self.id_dom.clone(), &name, &value);
+            self.dom_driver.set_attr(self.id_dom.clone(), name, value);
             self.attr.insert(name, value.to_string());
        }
     }
@@ -127,7 +127,7 @@ impl RealDomNodeInner {
     }
 
     pub fn extract_child(&mut self) -> VecDeque<RealDomNode> {
-        std::mem::replace(&mut self.child, VecDeque::new())
+        std::mem::take(&mut self.child)
     }
 
     pub fn put_child(&mut self, child: VecDeque<RealDomNode>) -> VecDeque<RealDomNode> {

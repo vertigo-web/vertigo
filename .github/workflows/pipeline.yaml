@@ -17,7 +17,7 @@ jobs:
       - uses: actions-rs/clippy-check@v1
         with:
           token: ${{ secrets.GITHUB_TOKEN }}
-          args: --all-features --target wasm32-unknown-unknown
+          args: --all-features --target wasm32-unknown-unknown -- -Dwarnings
           name: Clippy Output
 
   nightly-tests:
@@ -34,23 +34,23 @@ jobs:
           command: test
           args: --all-features
 
-  latest-nightly-clippy:
-    name: Latest Nightly clippy (wasm32)
-    runs-on: ubuntu-latest
-    continue-on-error: true
-    steps:
-      - uses: actions/checkout@v2
-      - uses: actions-rs/toolchain@v1
-        with:
-          toolchain: nightly
-          target: wasm32-unknown-unknown
-          components: clippy
-          override: true
-      - uses: actions-rs/clippy-check@v1
-        with:
-          token: ${{ secrets.GITHUB_TOKEN }}
-          args: --all-features --target wasm32-unknown-unknown
-          name: Clippy Output
+  # latest-nightly-clippy:
+  #   name: Latest Nightly clippy (wasm32)
+  #   runs-on: ubuntu-latest
+  #   continue-on-error: true
+  #   steps:
+  #     - uses: actions/checkout@v2
+  #     - uses: actions-rs/toolchain@v1
+  #       with:
+  #         toolchain: nightly
+  #         target: wasm32-unknown-unknown
+  #         components: clippy
+  #         override: true
+  #     - uses: actions-rs/clippy-check@v1
+  #       with:
+  #         token: ${{ secrets.GITHUB_TOKEN }}
+  #         args: --all-features --target wasm32-unknown-unknown -- -Dwarnings
+  #         name: Clippy Output
 
   # stable-clippy:
   #   name: Stable clippy

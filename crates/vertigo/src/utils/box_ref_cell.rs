@@ -20,7 +20,7 @@ impl<T> BoxRefCell<T> {
         match value {
             Ok(value) => {
                 let state = &*value;
-                getter(&state)
+                getter(state)
             },
             Err(msg) => {
                 panic!("Error borrow for '{}', {}", self.label, msg);
@@ -31,7 +31,7 @@ impl<T> BoxRefCell<T> {
     pub fn get_with_context<D, R>(&self, data: D, getter: fn(&T, D) -> R) -> R {
         let value = self.value.borrow();
         let state = &*value;
-        getter(&state, data)
+        getter(state, data)
     }
 
     pub fn change<D, R>(&self, data: D, change_fn: fn(&mut T, D) -> R) -> R {
