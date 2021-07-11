@@ -32,7 +32,7 @@ pub enum NodeAttr {
         name: &'static str,
     },
     DomApply {
-        apply: Rc<dyn Fn(&NodeRefs) -> ()>,
+        apply: Rc<dyn Fn(&NodeRefs)>,
     }
 }
 
@@ -87,7 +87,7 @@ pub fn dom_ref(name: &'static str) -> NodeAttr {
     }
 }
 
-pub fn dom_apply<F: Fn(&NodeRefs) -> () + 'static>(f: F) -> NodeAttr {
+pub fn dom_apply<F: Fn(&NodeRefs) + 'static>(f: F) -> NodeAttr {
     NodeAttr::DomApply {
         apply: Rc::new(f)
     }

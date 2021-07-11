@@ -1,5 +1,5 @@
 mod auto_map;
-mod computed;
+mod computed_box;
 mod client;
 mod dependencies;
 mod graph_id;
@@ -11,7 +11,7 @@ mod value;
 mod tests;
 
 pub use auto_map::{AutoMap};
-pub use computed::Computed;
+pub use computed_box::Computed;
 pub use client::Client;
 pub use dependencies::Dependencies;
 pub use graph_id::GraphId;

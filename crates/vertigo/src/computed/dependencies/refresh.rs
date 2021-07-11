@@ -31,7 +31,7 @@ impl Refresh {
     }
 
     pub fn drop_value(&self, parent_id: &GraphId) {
-        if let Some(item) = self.refresh.get(&parent_id) {
+        if let Some(item) = self.refresh.get(parent_id) {
             item.drop_value();
         } else {
             //log::error!("Missing refresh token for(2) {:?}", parent_id);
@@ -39,7 +39,7 @@ impl Refresh {
     }
 
     pub(crate) fn get(&self, id: &GraphId) -> Option<GraphValueRefresh> {
-        if let Some(item) = self.refresh.get(&id) {
+        if let Some(item) = self.refresh.get(id) {
             return Some(item.clone());
         }
 

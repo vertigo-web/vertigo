@@ -34,11 +34,9 @@ impl DriverData {
 
         let mut wsk = id.clone();
         let mut count = 0;
-        let mut out: Vec<RealDomId> = Vec::new();
+        let mut out: Vec<RealDomId> = vec![wsk.clone()];
 
         loop {
-            out.push(wsk.clone());
-
             count += 1;
 
             if count > 100 {
@@ -52,11 +50,12 @@ impl DriverData {
             );
 
             if let Some(parent) = parent {
-                if parent == RealDomId::root() {
-                    out.push(parent);
+                out.push(parent.clone());
+
+                if parent == RealDomId::root() {    
                     return out;
                 } else {
-                    wsk = parent.clone();
+                    wsk = parent;
                 }
             } else {
                 log::error!("It should never have happened {:?}", id);

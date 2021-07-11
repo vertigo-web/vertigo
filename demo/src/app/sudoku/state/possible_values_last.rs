@@ -38,7 +38,7 @@ fn get_possible_value<
 
             let input_value = cell.input.value.get_value();
 
-            if input_value.is_none() && cell.possible.get_value().contains(&possible_value) {
+            if input_value.is_none() && cell.possible.get_value().contains(possible_value) {
                 count += 1;
             }
         }

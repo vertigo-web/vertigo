@@ -48,7 +48,7 @@ fn calculate_level(
         }
 
         let new_status = if counter_new_value > 0 {
-            match item.refresh(&state_refreshing) {
+            match item.refresh(state_refreshing) {
                 RefreshState::NewValue => RefreshState::NewValue,
                 RefreshState::PreviousValue => RefreshState::PreviousValue,
                 RefreshState::CalculationPending => {
@@ -154,7 +154,7 @@ fn crete_state_refreshing(edges_values: &BTreeSet<GraphId>, edges_to_refresh: &[
 }
 
 pub fn refresh_edges(deps: &Dependencies, edges_values: &BTreeSet<GraphId>, edges_to_refresh: Vec<GraphValueRefresh>) {
-    let mut state_refreshing = crete_state_refreshing(&edges_values, &edges_to_refresh);
+    let mut state_refreshing = crete_state_refreshing(edges_values, &edges_to_refresh);
 
     let mut edges_computed = Vec::new();
     let mut edges_client = Vec::new();

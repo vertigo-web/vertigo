@@ -19,13 +19,13 @@ use crate::{
             realdom_id::RealDomId,
         }
     },
-    css_manager::css_manager::CssManager,
+    css::css_manager::CssManager,
 };
 
 use super::render::{CacheNode, get_pair_for_update, NodePairs};
 
 struct RefsContext {
-    apply: Vec<Rc<dyn Fn(&NodeRefs) -> ()>>,
+    apply: Vec<Rc<dyn Fn(&NodeRefs)>>,
     node_refs: NodeRefs,
 }
 
@@ -59,7 +59,7 @@ fn update_node_child_updated_with_order(
             NodePairs::Component { real: _real, new: _new } => {
             },
             NodePairs::Node { real, new } => {
-                update_node_attr(&css_manager, real, new);
+                update_node_attr(css_manager, real, new);
                 update_node_child(css_manager, refs_context, real, new);
             },
             NodePairs::Text { real, new } => {
@@ -148,8 +148,8 @@ fn update_node_child(
                 let dom_child = real_node.get_or_create(css_manager, target, id, node);
                 let new_ref_id = dom_child.id_dom();
 
-                update_node_attr(&css_manager, &dom_child, &node);
-                update_node_child(css_manager, refs_context, &dom_child, &node);
+                update_node_attr(css_manager, &dom_child, node);
+                update_node_child(css_manager, refs_context, &dom_child, node);
 
                 target.insert_before(RealDomNode::Node { node: dom_child }, ref_id);
                 ref_id = Some(new_ref_id);
@@ -179,10 +179,7 @@ fn update_node_child(
 
 fn update_node_attr(css_manager: &CssManager, real_node: &RealDomElement, node: &VDomElement) {
     let css = &node.css;
-    let class_name = match css {
-        Some (css) => Some(css_manager.get_class_name(css)),
-        None => None,
-    };
+    let class_name = css.as_ref().map(|css| css_manager.get_class_name(css));
 
     real_node.update_attr(&node.attr, class_name);
     real_node.set_event(EventCallback::OnClick { callback: node.on_click.clone() });
@@ -203,10 +200,10 @@ fn update_node(
     target.update_name(new_version.name);
 
     //updejt atrybutów
-    update_node_attr(&css_manager, target, &new_version);
+    update_node_attr(css_manager, target, new_version);
 
     //odpal updejt dzieci
-    update_node_child(css_manager, refs_context, target, &new_version);
+    update_node_child(css_manager, refs_context, target, new_version);
 }
 
 pub fn render_to_node(css_manager: CssManager, target: RealDomElement, component: VDomComponent) -> Client {

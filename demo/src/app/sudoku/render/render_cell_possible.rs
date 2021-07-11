@@ -82,7 +82,7 @@ pub fn render_cell_possible(item: &Computed<Cell>) -> VDomElement {
 
                 html! {
                     <div css={css_item_only_one()} onClick={on_set}>
-                        { number.to_u16() }
+                        { number.as_u16() }
                     </div>
                 }
             })
@@ -107,7 +107,7 @@ pub fn render_cell_possible(item: &Computed<Cell>) -> VDomElement {
         return html! {
             <div css={css_wrapper_one()}>
                 <div css={css_item_only_one()} onClick={on_set}>
-                    { possible_last_value.to_u16() }"."
+                    { possible_last_value.as_u16() }"."
                 </div>
             </div>
         }
@@ -119,7 +119,7 @@ pub fn render_cell_possible(item: &Computed<Cell>) -> VDomElement {
             let should_show = possible.contains(&number);
 
             let label = if should_show {
-                format!("{}", number.to_u16())
+                format!("{}", number.as_u16())
             } else {
                 "".into()
             };

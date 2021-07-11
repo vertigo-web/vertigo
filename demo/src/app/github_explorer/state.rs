@@ -83,7 +83,7 @@ impl Item {
         let new_value = root.new_value(Resource::Loading);
         let new_computed = new_value.to_computed();
 
-        fetch_repo(repo_name, new_value, &driver);
+        fetch_repo(repo_name, new_value, driver);
 
         Item {
             value: new_computed,

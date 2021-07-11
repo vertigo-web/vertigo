@@ -64,9 +64,9 @@ impl TransactionState {
                 *level -= 1;
 
                 if *level == 0 {
-                    let edges = std::mem::replace(edges, BTreeSet::new());
+                    let edges_copy = std::mem::take(edges);
                     *state = State::Refreshing;
-                    return Some(edges);
+                    return Some(edges_copy);
                 }
 
                 None
@@ -82,7 +82,7 @@ impl TransactionState {
         TransactionState::down_state(&mut self.state)
     }
 
-    fn to_idle_state(state: &mut State, hooks: &mut Hooks) {
+    fn move_to_idle_state(state: &mut State, hooks: &mut Hooks) {
         match state {
             State::Idle => {
                 log::error!("you cannot go from 'TransactionState::Idle' to 'TransactionState::Idle'");
@@ -97,9 +97,9 @@ impl TransactionState {
         }
     }
 
-    pub fn to_idle(&mut self) {
+    pub fn move_to_idle(&mut self) {
         let TransactionState { state, hooks} = self;
-        TransactionState::to_idle_state(state, hooks)
+        TransactionState::move_to_idle_state(state, hooks)
     }
 
     fn add_edge_to_refresh_state(state: &mut State, new_edge: GraphId) {

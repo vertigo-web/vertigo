@@ -108,7 +108,7 @@ impl Graph {
     }
 
     pub fn has_listeners(&self, parent_id: &GraphId) -> bool {
-        self.parent_childs.relation_len(&parent_id) > 0
+        self.parent_childs.relation_len(parent_id) > 0
     }
 
     pub fn drain_removables(&mut self) -> Vec<GraphId> {

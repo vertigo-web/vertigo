@@ -1,9 +1,6 @@
 #[macro_use] extern crate pest_derive;
 #[macro_use] extern crate proc_macro_error;
 
-// https://github.com/pest-parser/pest/issues/490
-#[allow(clippy::upper_case_acronyms)]
-
 mod html_parser;
 mod css_parser;
 

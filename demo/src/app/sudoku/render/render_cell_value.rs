@@ -69,7 +69,7 @@ pub fn render_cell_value(value: SudokuValue, item: &Computed<Cell>, ) -> VDomEle
 
     html! {
         <div css={css_item_number_wrapper()}>
-            { value.to_u16() }
+            { value.as_u16() }
             { ..out }
         </div>
     }
