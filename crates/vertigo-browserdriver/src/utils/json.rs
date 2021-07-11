@@ -1,6 +1,5 @@
 use std::collections::HashMap;
 
-
 pub struct JsonMapBuilder {
     data: HashMap<String, String>,
 }

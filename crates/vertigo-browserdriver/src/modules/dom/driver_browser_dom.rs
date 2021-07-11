@@ -1,18 +1,12 @@
-
+use wasm_bindgen::prelude::Closure;
 use std::rc::Rc;
 
 use vertigo::{EventCallback, KeyDownEvent, NodeRefsItem, RealDomId, computed::Dependencies};
 
-mod driver_browser_dom_js;
-mod driver_data;
-mod element_wrapper;
-mod visited_node_manager;
-
-use driver_browser_dom_js::DriverBrowserDomJs;
-use element_wrapper::{DomElement, DomText};
-use wasm_bindgen::prelude::Closure;
-
-use self::{driver_data::DriverData, visited_node_manager::VisitedNodeManager};
+use super::js_dom::DriverBrowserDomJs;
+use super::driver_data::DriverData;
+use super::element_wrapper::{DomElement, DomText};
+use super::visited_node_manager::VisitedNodeManager;
 
 type KeydownClosureType = Closure<dyn Fn(Option<u64>, String, String, bool, bool, bool, bool) -> bool>;
 
@@ -48,7 +42,7 @@ impl DriverBrowserDom {
         let mouse_enter: Closure<dyn Fn(Option<u64>)> = {
             let data = data.clone();
             let current_visited = VisitedNodeManager::new(&data, dependencies);
-            
+
             Closure::new(Box::new(move |dom_id: Option<u64>| {
                 match dom_id {
                     Some(dom_id) => {
@@ -92,7 +86,7 @@ impl DriverBrowserDom {
 
                 if let Some(event_to_run) = event_to_run {
                     let prevent_default = event_to_run(event);
-        
+
                     if prevent_default {
                         return true;
                     }
@@ -104,7 +98,7 @@ impl DriverBrowserDom {
 
         let oninput: Closure<dyn Fn(u64, String)> = {
             let data = data.clone();
-            
+
             Closure::new(Box::new(move |dom_id: u64, text: String| {
                 let event_to_run = data.find_event_on_input(RealDomId::from_u64(dom_id));
 
@@ -254,4 +248,3 @@ impl DriverBrowserDom {
         });
     }
 }
-

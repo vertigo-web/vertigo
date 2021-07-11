@@ -1,8 +1,9 @@
 use std::rc::Rc;
 use std::collections::HashMap;
+
 use vertigo::{RealDomId, computed::Dependencies, utils::BoxRefCell};
 
-use super::DriverData;
+use super::driver_data::DriverData;
 
 struct VisitedNode {
     on_mouse_leave: Option<Rc<dyn Fn()>>,

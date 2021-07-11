@@ -5,7 +5,7 @@ use wasm_bindgen::prelude::Closure;
 
 use crate::{utils::callback_manager::CallbackManager};
 
-use super::driver_browser_interval_js::DriverBrowserIntervalJs;
+use super::js_interval::DriverBrowserIntervalJs;
 
 pub struct DriverBrowserInterval {
     driver_js: Rc<DriverBrowserIntervalJs>,

@@ -5,11 +5,11 @@ use std::{
     pin::Pin,
     rc::Rc
 };
-use crate::{
-    driver_browser_dom::DriverBrowserDom,
-    driver_browser_fetch::DriverBrowserFetch,
-    driver_browser_hashrouter::DriverBrowserHashrouter,
-    driver_browser_interval::DriverBrowserInterval
+use crate::modules::{
+    dom::DriverBrowserDom,
+    fetch::DriverBrowserFetch,
+    hashrouter::DriverBrowserHashrouter,
+    interval::DriverBrowserInterval
 };
 
 use vertigo::{
