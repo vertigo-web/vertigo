@@ -1,13 +1,14 @@
 
 use std::rc::Rc;
-use crate::{DriverBrowserDomJs};
 
 use vertigo::{EventCallback, KeyDownEvent, NodeRefsItem, RealDomId, computed::Dependencies};
 
+mod driver_browser_dom_js;
 mod driver_data;
 mod element_wrapper;
 mod visited_node_manager;
 
+use driver_browser_dom_js::DriverBrowserDomJs;
 use element_wrapper::{DomElement, DomText};
 use wasm_bindgen::prelude::Closure;
 

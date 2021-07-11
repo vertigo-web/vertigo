@@ -3,7 +3,7 @@ use std::{
 };
 use vertigo::{KeyDownEvent, NodeRefsItem, NodeRefsItemTrait, RealDomId};
 
-use crate::DriverBrowserDomJs;
+use super::driver_browser_dom_js::DriverBrowserDomJs;
 
 pub struct ElementRef {
     dom_js: Rc<DriverBrowserDomJs>,

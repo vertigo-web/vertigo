@@ -1,7 +1,9 @@
 use vertigo::utils::DropResource;
 use wasm_bindgen::prelude::Closure;
 
-use crate::{DriverBrowserHashRouteJs, utils::callback_manager::CallbackManager};
+use crate::{utils::callback_manager::CallbackManager};
+
+use super::driver_browser_hashrouter_js::DriverBrowserHashRouteJs;
 
 pub struct DriverBrowserHashrouter {
     driver: DriverBrowserHashRouteJs,

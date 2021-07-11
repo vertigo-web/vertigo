@@ -3,7 +3,9 @@ use std::rc::Rc;
 use vertigo::utils::DropResource;
 use wasm_bindgen::prelude::Closure;
 
-use crate::{DriverBrowserIntervalJs, utils::callback_manager::CallbackManager};
+use crate::{utils::callback_manager::CallbackManager};
+
+use super::driver_browser_interval_js::DriverBrowserIntervalJs;
 
 pub struct DriverBrowserInterval {
     driver_js: Rc<DriverBrowserIntervalJs>,

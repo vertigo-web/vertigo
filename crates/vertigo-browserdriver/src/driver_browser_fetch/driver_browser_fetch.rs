@@ -5,7 +5,7 @@ use std::pin::Pin;
 
 use vertigo::FetchMethod;
 
-use crate::DriverBrowserFetchJs;
+use super::driver_browser_fetch_js::DriverBrowserFetchJs;
 use crate::utils::counter_rc::CounterRc;
 use crate::utils::future::{CbFutureSend, new_future};
 use crate::utils::hash_map_rc::HashMapRc;
