@@ -1,6 +1,6 @@
 use wasm_bindgen::prelude::{wasm_bindgen, Closure};
 
-#[wasm_bindgen(module = "/src/driver_browser_dom/driver_browser_dom_js.js")]
+#[wasm_bindgen(module = "/src/modules/dom/js_dom.js")]
 extern "C" {
 
     pub type DriverBrowserDomJs;

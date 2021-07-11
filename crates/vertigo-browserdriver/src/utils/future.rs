@@ -37,7 +37,9 @@ impl<T> CbFutureSend<T> {
 
     pub fn publish(&self, result:T) {
         self.inner.result.set(Some(result));
-        self.inner.waker.take().map(|w| w.wake());
+        if let Some(w) = self.inner.waker.take() {
+            w.wake()
+        }
     }
 }
 

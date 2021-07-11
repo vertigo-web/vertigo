@@ -5,7 +5,7 @@ use std::pin::Pin;
 
 use vertigo::FetchMethod;
 
-use super::driver_browser_fetch_js::DriverBrowserFetchJs;
+use super::js_fetch::DriverBrowserFetchJs;
 use crate::utils::counter_rc::CounterRc;
 use crate::utils::future::{CbFutureSend, new_future};
 use crate::utils::hash_map_rc::HashMapRc;
@@ -27,7 +27,7 @@ impl DriverBrowserFetch {
 
             Closure::new(Box::new(move |request_id: u64, success: bool, response: String| {
                 let sender = data.remove(&request_id);
-                
+
                 if let Some(sender) = sender {
                     let response = match success {
                         true => Ok(response),
@@ -86,5 +86,3 @@ impl DriverBrowserFetch {
         Box::pin(receiver)
     }
 }
-
-

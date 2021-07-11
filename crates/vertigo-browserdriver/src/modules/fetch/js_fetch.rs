@@ -1,6 +1,6 @@
 use wasm_bindgen::prelude::{wasm_bindgen, Closure};
 
-#[wasm_bindgen(module = "/src/driver_browser_fetch/driver_browser_fetch_js.js")]
+#[wasm_bindgen(module = "/src/modules/fetch/js_fetch.js")]
 extern "C" {
     pub type DriverBrowserFetchJs;
 
@@ -16,4 +16,3 @@ extern "C" {
         body: Option<String>
     );
 }
-

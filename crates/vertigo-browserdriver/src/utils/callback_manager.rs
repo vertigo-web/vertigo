@@ -38,4 +38,3 @@ impl<V> CallbackManager<V> {
         }
     }
 }
-

@@ -1,14 +1,13 @@
-
 use std::rc::Rc;
-use crate::utils::hash_map_rc::HashMapRc;
 
 use vertigo::{
     KeyDownEvent,
     RealDomId,
 };
 
-use super::element_wrapper::{DomElement, DomText};
+use crate::utils::hash_map_rc::HashMapRc;
 
+use super::element_wrapper::{DomElement, DomText};
 
 pub struct DriverData {
     pub elements: HashMapRc<RealDomId, DomElement>,
@@ -32,7 +31,7 @@ impl DriverData {
         if id == RealDomId::root() {
             return vec![RealDomId::root()];
         }
-        
+
         let mut wsk = id.clone();
         let mut count = 0;
         let mut out: Vec<RealDomId> = Vec::new();

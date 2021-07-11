@@ -1,5 +1,6 @@
-use std::cell::{RefCell};
+// FIXME: To be removed in favor of standard RefCell
 
+use std::cell::{RefCell};
 
 pub struct BoxRefCell<T> {
     label: &'static str,

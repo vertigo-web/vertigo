@@ -1,6 +1,6 @@
 use wasm_bindgen::prelude::{wasm_bindgen, Closure};
 
-#[wasm_bindgen(module = "/src/driver_browser_interval/driver_browser_interval_js.js")]
+#[wasm_bindgen(module = "/src/modules/interval/js_interval.js")]
 extern "C" {
     pub type DriverBrowserIntervalJs;
 

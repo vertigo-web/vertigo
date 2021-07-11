@@ -1,4 +1,3 @@
-
 export class DriverBrowserFetchJs {
 
     private readonly callback: (request_id: number, success: boolean, response: string) => void;
