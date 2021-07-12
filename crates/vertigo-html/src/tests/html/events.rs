@@ -23,7 +23,7 @@ fn div_with_mouse_events() {
     };
 
     let div = html! {
-        <div onMouseEnter={mouse_in} onMouseLeave={mouse_out} />
+        <div on_mouse_enter={mouse_in} on_mouse_leave={mouse_out} />
     };
 
     assert_empty(&div, "div");

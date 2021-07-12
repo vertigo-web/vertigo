@@ -53,9 +53,9 @@ impl EventCallback {
             },
             EventCallback::OnInput { callback } =>{
                 if callback.is_some() {
-                    "onInput set"
+                    "on_input set"
                 } else {
-                    "onInput clear"
+                    "on_input clear"
                 }
             },
             EventCallback::OnMouseEnter { callback } =>{
@@ -67,9 +67,9 @@ impl EventCallback {
             },
             EventCallback::OnMouseLeave { callback } =>{
                 if callback.is_some() {
-                    "onMouseLeave set"
+                    "on_mouse_leave set"
                 } else {
-                    "onMouseLeave clear"
+                    "on_mouse_leave clear"
                 }
             },
             EventCallback::OnKeyDown { callback } =>{

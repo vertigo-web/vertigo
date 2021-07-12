@@ -64,8 +64,8 @@ pub fn render(state: &Computed<State>) -> VDomElement {
     html! {
         <div css={wrapper()}>
             "Enter author/repo tuple: "
-            <input css={input_css()} value={(*repo_input).as_str()} onInput={on_input_callback} />
-            <button css={button_css()} onClick={on_show}>"Fetch"</button>
+            <input css={input_css()} value={(*repo_input).as_str()} on_input={on_input_callback} />
+            <button css={button_css()} on_click={on_show}>"Fetch"</button>
             <div css={button_css()}>
                 { repo_shown.as_str() }
             </div>

@@ -42,7 +42,7 @@ fn managed_input() {
     };
 
     let input = html! {
-        <input value={value.get_value().as_str()} onInput={on_input} />
+        <input value={value.get_value().as_str()} on_input={on_input} />
     };
 
     assert_empty(&input, "input");

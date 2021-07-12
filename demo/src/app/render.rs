@@ -57,12 +57,12 @@ fn render_header(app_state: &Computed<app::State>) -> VDomElement {
     html! {
         <div>
             <ul css={css_menu()}>
-                <li css={css_menu_item(current_page == &Route::Main)} onClick={navigate_to!(state, Main)}>"Main"</li>
-                <li css={css_menu_item(current_page == &Route::Counters)} onClick={navigate_to!(state, Counters)}>"Counters"</li>
-                <li css={css_menu_item(current_page == &Route::Sudoku)} onClick={navigate_to!(state, Sudoku)}>"Sudoku"</li>
-                <li css={css_menu_item(current_page == &Route::Input)} onClick={navigate_to!(state, Input)}>"Input"</li>
-                <li css={css_menu_item(current_page == &Route::GithubExplorer)} onClick={navigate_to!(state, GithubExplorer)}>"Github Explorer"</li>
-                <li css={css_menu_item(is_game_of_life)} onClick={navigate_to_gameoflife}>"Game Of Life"</li>
+                <li css={css_menu_item(current_page == &Route::Main)} on_click={navigate_to!(state, Main)}>"Main"</li>
+                <li css={css_menu_item(current_page == &Route::Counters)} on_click={navigate_to!(state, Counters)}>"Counters"</li>
+                <li css={css_menu_item(current_page == &Route::Sudoku)} on_click={navigate_to!(state, Sudoku)}>"Sudoku"</li>
+                <li css={css_menu_item(current_page == &Route::Input)} on_click={navigate_to!(state, Input)}>"Input"</li>
+                <li css={css_menu_item(current_page == &Route::GithubExplorer)} on_click={navigate_to!(state, GithubExplorer)}>"Github Explorer"</li>
+                <li css={css_menu_item(is_game_of_life)} on_click={navigate_to_gameoflife}>"Game Of Life"</li>
             </ul>
         </div>
     }

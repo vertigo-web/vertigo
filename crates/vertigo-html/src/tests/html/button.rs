@@ -34,7 +34,7 @@ fn clickable_button() {
     };
 
     let button = html! {
-        <button onClick={on_click} />
+        <button on_click={on_click} />
     };
 
     assert_empty(&button, "button");
