@@ -164,10 +164,10 @@ pub fn examples_render(sudoku: &Computed<Sudoku>) -> VDomElement {
 
     html! {
         <div css={css_sudoku_example()}>
-            <button css={css_sudoku_example_button()} onClick={clear}>"Clear"</button>
-            <button css={css_sudoku_example_button()} onClick={example1}>"Example 1"</button>
-            <button css={css_sudoku_example_button()} onClick={example2}>"Example 2"</button>
-            <button css={css_sudoku_example_button()} onClick={example3}>"Example 3"</button>
+            <button css={css_sudoku_example_button()} on_click={clear}>"Clear"</button>
+            <button css={css_sudoku_example_button()} on_click={example1}>"Example 1"</button>
+            <button css={css_sudoku_example_button()} on_click={example2}>"Example 2"</button>
+            <button css={css_sudoku_example_button()} on_click={example3}>"Example 3"</button>
         </div>
     }
 }

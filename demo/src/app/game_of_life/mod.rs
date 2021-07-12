@@ -150,7 +150,7 @@ fn render_header(state: &Computed<State>) -> VDomElement {
             }
         };
         html! {
-            <button css={css_button()} onClick={on_click}>
+            <button css={css_button()} on_click={on_click}>
                 "Stop"
             </button>
         }
@@ -164,7 +164,7 @@ fn render_header(state: &Computed<State>) -> VDomElement {
         };
 
         html! {
-            <button css={css_button()} onClick={on_click}>
+            <button css={css_button()} on_click={on_click}>
                 "Start"
             </button>
         }
@@ -192,7 +192,7 @@ fn render_header(state: &Computed<State>) -> VDomElement {
         };
 
         html! {
-            <button css={css_button()} onClick={on_click}>
+            <button css={css_button()} on_click={on_click}>
                 "Random"
             </button>
         }
@@ -263,6 +263,6 @@ fn render_cell(cell: &Value<bool>) -> VDomElement {
     };
 
     html! {
-        <div css={css_cell(*is_active)} onClick={on_click_callback} />
+        <div css={css_cell(*is_active)} on_click={on_click_callback} />
     }
 }

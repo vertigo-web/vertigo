@@ -81,7 +81,7 @@ pub fn render_cell_possible(item: &Computed<Cell>) -> VDomElement {
                 };
 
                 html! {
-                    <div css={css_item_only_one()} onClick={on_set}>
+                    <div css={css_item_only_one()} on_click={on_set}>
                         { number.as_u16() }
                     </div>
                 }
@@ -106,7 +106,7 @@ pub fn render_cell_possible(item: &Computed<Cell>) -> VDomElement {
 
         return html! {
             <div css={css_wrapper_one()}>
-                <div css={css_item_only_one()} onClick={on_set}>
+                <div css={css_item_only_one()} on_click={on_set}>
                     { possible_last_value.as_u16() }"."
                 </div>
             </div>
@@ -134,7 +134,7 @@ pub fn render_cell_possible(item: &Computed<Cell>) -> VDomElement {
             };
 
             html! {
-                <div css={css_item(should_show)} onClick={on_click}>
+                <div css={css_item(should_show)} on_click={on_click}>
                     { label }
                 </div>
             }

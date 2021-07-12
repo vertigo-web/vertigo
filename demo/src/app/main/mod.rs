@@ -97,16 +97,16 @@ pub fn main_render(state: &Computed<MainState>) -> VDomElement {
                 {$ if value > 35 { "terefere kuku" } else { "bla bla bla" } $}
                 { spinner() }
             </div>
-            <div css={css_bg()} onClick={on_up.clone()}>
+            <div css={css_bg()} on_click={on_up.clone()}>
                 "Actual value = " { value }
             </div>
             <div css={css_bg()}>
                 "Actual value: " { value }
             </div>
-            <div css={css_button()} onClick={on_up}>
+            <div css={css_button()} on_click={on_up}>
                 "up"
             </div>
-            <div css={css_button()} onClick={on_down}>
+            <div css={css_button()} on_click={on_down}>
                 "down"
             </div>
             <p>{ footer_dom }</p>

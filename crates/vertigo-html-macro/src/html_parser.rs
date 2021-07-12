@@ -85,11 +85,11 @@ impl HtmlParser {
 
                 Rule::regular_attr => attrs.push(self.generate_regular_attr(pair)),
                 Rule::css_attr => attrs.push(self.generate_expression_attr(pair, Some("css"))),
-                Rule::onclick_attr => attrs.push(self.generate_expression_attr(pair, Some("on_click"))),
-                Rule::oninput_attr => attrs.push(self.generate_expression_attr(pair, Some("on_input"))),
-                Rule::onmouseenter_attr => attrs.push(self.generate_expression_attr(pair, Some("on_mouse_enter"))),
-                Rule::onmouseleave_attr => attrs.push(self.generate_expression_attr(pair, Some("on_mouse_leave"))),
-                Rule::onkeydown_attr => attrs.push(self.generate_expression_attr(pair, Some("on_key_down"))),
+                Rule::on_click_attr => attrs.push(self.generate_expression_attr(pair, Some("on_click"))),
+                Rule::on_input_attr => attrs.push(self.generate_expression_attr(pair, Some("on_input"))),
+                Rule::on_mouse_enter_attr => attrs.push(self.generate_expression_attr(pair, Some("on_mouse_enter"))),
+                Rule::on_mouse_leave_attr => attrs.push(self.generate_expression_attr(pair, Some("on_mouse_leave"))),
+                Rule::on_key_down_attr => attrs.push(self.generate_expression_attr(pair, Some("on_key_down"))),
                 Rule::expression_attr => attrs.push(self.generate_expression_attr(pair, None)),
 
                 Rule::el_vcomponent => children.push(pair),
@@ -113,11 +113,11 @@ impl HtmlParser {
 
                             Rule::regular_attr => attrs.push(self.generate_regular_attr(tag_pair)),
                             Rule::css_attr => attrs.push(self.generate_expression_attr(tag_pair, Some("css"))),
-                            Rule::onclick_attr => attrs.push(self.generate_expression_attr(tag_pair, Some("on_click"))),
-                            Rule::oninput_attr => attrs.push(self.generate_expression_attr(tag_pair, Some("on_input"))),
-                            Rule::onmouseenter_attr => attrs.push(self.generate_expression_attr(tag_pair, Some("on_mouse_enter"))),
-                            Rule::onmouseleave_attr => attrs.push(self.generate_expression_attr(tag_pair, Some("on_mouse_leave"))),
-                            Rule::onkeydown_attr => attrs.push(self.generate_expression_attr(tag_pair, Some("on_key_down"))),
+                            Rule::on_click_attr => attrs.push(self.generate_expression_attr(tag_pair, Some("on_click"))),
+                            Rule::on_input_attr => attrs.push(self.generate_expression_attr(tag_pair, Some("on_input"))),
+                            Rule::on_mouse_enter_attr => attrs.push(self.generate_expression_attr(tag_pair, Some("on_mouse_enter"))),
+                            Rule::on_mouse_leave_attr => attrs.push(self.generate_expression_attr(tag_pair, Some("on_mouse_leave"))),
+                            Rule::on_key_down_attr => attrs.push(self.generate_expression_attr(tag_pair, Some("on_key_down"))),
                             Rule::expression_attr => attrs.push(self.generate_expression_attr(tag_pair, None)),
 
                             _ => {

@@ -52,7 +52,7 @@ pub fn render_cell_value(value: SudokuValue, item: &Computed<Cell>, ) -> VDomEle
 
         out.push(
             html! {
-                <div css={css_delete()} onClick={on_click}>
+                <div css={css_delete()} on_click={on_click}>
                     "X"
                 </div>
             }
