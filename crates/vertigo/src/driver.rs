@@ -85,6 +85,8 @@ impl EventCallback {
 
 const SHOW_LOG: bool = false;
 
+pub type FetchResult = Result<(u32, String), String>;
+
 pub trait DomDriverTrait {
     fn create_text(&self, id: RealDomId, value: &str);
     fn update_text(&self, id: RealDomId, value: &str);
@@ -99,7 +101,7 @@ pub trait DomDriverTrait {
 
     fn insert_css(&self, selector: &str, value: &str);
     fn set_event(&self, node: RealDomId, callback: EventCallback);
-    fn fetch(&self, method: FetchMethod, url: String, headers: Option<HashMap<String, String>>, body: Option<String>) -> Pin<Box<dyn Future<Output=Result<String, String>> + 'static>>;
+    fn fetch(&self, method: FetchMethod, url: String, headers: Option<HashMap<String, String>>, body: Option<String>) -> Pin<Box<dyn Future<Output=FetchResult> + 'static>>;
 
     fn get_hash_location(&self) -> String;
     fn push_hash_location(&self, path: &str);

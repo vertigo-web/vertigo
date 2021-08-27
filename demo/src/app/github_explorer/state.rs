@@ -52,10 +52,10 @@ fn fetch_repo(repo: &str, value: Value<Resource<Branch>>, driver: &DomDriver) {
         let response = driver_span.fetch(url).get().await;
 
         match response {
-            Ok(response) => {
+            Ok((200, response)) => {
                 match serde_json::from_str::<Branch>(response.as_str()) {
                     Ok(branch) => {
-                        log::info!("odpowiedź z serwera {:?}", branch);
+                        log::info!("Response from server {:?}", branch);
                         value.set_value(Resource::Ready(branch));
                     },
                     Err(err) => {
@@ -64,8 +64,11 @@ fn fetch_repo(repo: &str, value: Value<Resource<Branch>>, driver: &DomDriver) {
                     }
                 }
             },
-            Err(_) => {
-                log::error!("Error fetch branch")
+            Ok((status, err)) => {
+                log::error!("Error fetching branch: {} {}", status, err)
+            }
+            Err(err) => {
+                log::error!("Error fetching branch: {}", err)
             }
         }
     });

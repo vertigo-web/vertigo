@@ -9,6 +9,7 @@ mod virtualdom;
 
 pub use driver::DomDriver;
 pub use driver::DomDriverTrait;
+pub use driver::FetchResult;
 pub use driver::FetchMethod;
 pub use driver::EventCallback;
 

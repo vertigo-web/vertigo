@@ -5,7 +5,7 @@ extern "C" {
     pub type DriverBrowserFetchJs;
 
     #[wasm_bindgen(constructor)]
-    pub fn new(callback: &Closure<dyn Fn(u64, bool, String)>) -> DriverBrowserFetchJs;
+    pub fn new(callback: &Closure<dyn Fn(u64, bool, u32, String)>) -> DriverBrowserFetchJs;
     #[wasm_bindgen(method)]
     pub fn send_request(
         this: &DriverBrowserFetchJs,
