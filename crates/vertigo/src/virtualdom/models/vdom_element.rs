@@ -142,6 +142,7 @@ impl fmt::Debug for VDomElement {
             .field("on_input", &self.on_input.as_ref().map(|f| f.as_ref() as *const dyn Fn(String)))
             .field("on_mouse_enter", &self.on_mouse_enter.as_ref().map(|f| f.as_ref() as *const dyn Fn()))
             .field("on_mouse_leave", &self.on_mouse_leave.as_ref().map(|f| f.as_ref() as *const dyn Fn()))
+            .field("on_key_down", &self.on_key_down.as_ref().map(|f| f.as_ref() as *const dyn Fn(KeyDownEvent) -> bool))
             .field("css", &self.css)
             .finish()
     }

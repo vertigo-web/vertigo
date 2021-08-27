@@ -39,6 +39,8 @@ impl JsonMapBuilder {
             records.push(format!("\"{}\":\"{}\"", key, value));
         }
 
+        records.sort();
+
         let content = records.as_slice().join(",");
 
         format!("{{{}}}", content)
