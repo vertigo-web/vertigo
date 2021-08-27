@@ -3,7 +3,7 @@ use std::{
     rc::Rc,
 };
 
-use crate::{DomDriverTrait, FetchMethod, driver::show_log, utils::{EqBox}};
+use crate::{DomDriverTrait, FetchResult, FetchMethod, driver::show_log, utils::{EqBox}};
 
 
 pub struct FetchBuilder {
@@ -43,17 +43,17 @@ impl FetchBuilder {
         }
     }
 
-    async fn run(self, method: FetchMethod) -> Result<String, String> {
+    async fn run(self, method: FetchMethod) -> FetchResult {
         show_log(format!("fetch {:?} {}", method, &self.url));
         let fut = self.driver.fetch(method, self.url, self. headers, self.body);
         fut.await
     }
 
-    pub async fn get(self) -> Result<String, String> {
+    pub async fn get(self) -> FetchResult {
         self.run(FetchMethod::GET).await
     }
 
-    pub async fn post(self) -> Result<String, String> {
+    pub async fn post(self) -> FetchResult {
         self.run(FetchMethod::POST).await
     }
 }

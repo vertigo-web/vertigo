@@ -17,6 +17,7 @@ use vertigo::{
     DomDriverTrait,
     EventCallback,
     FetchMethod,
+    FetchResult,
     NodeRefsItem,
     RealDomId,
     computed::Dependencies,
@@ -115,7 +116,7 @@ impl DomDriverTrait for DriverBrowser {
         url: String,
         headers: Option<HashMap<String, String>>,
         body: Option<String>
-    ) -> Pin<Box<dyn Future<Output=Result<String, String>> + 'static>> {
+    ) -> Pin<Box<dyn Future<Output=FetchResult> + 'static>> {
         self.driver.driver_fetch.fetch(
             method,
             url,
