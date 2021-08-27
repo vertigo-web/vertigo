@@ -98,15 +98,6 @@ impl DriverData {
         let all_nodes = self.find_all_nodes(id);
 
         for node_id in all_nodes {
-            let on_input = self.get_from_node(
-                &node_id,
-                |elem| elem.on_input.clone()
-            );
-                                    //cancel the bubbling event
-            if on_input.is_some() {
-                return None;
-            }
-
             let on_key = self.get_from_node(
                 &node_id,
                 |elem| elem.on_keydown.clone()

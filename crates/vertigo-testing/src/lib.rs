@@ -25,27 +25,31 @@ pub fn eq_els(el1: &VDomElement, el2: &VDomElement) -> EqResult {
     }
 
     if el1.on_click.is_some() != el2.on_click.is_some() {
-        return EqResult::NotEqual(format!("Out of {} and {}, on has on_click and one not", el1.name, el2.name))
+        return EqResult::NotEqual(format!("Out of {} and {}, one has on_click and one not", el1.name, el2.name))
     }
 
     if el1.on_input.is_some() != el2.on_input.is_some() {
-        return EqResult::NotEqual(format!("Out of {} and {}, on has on_input and one not", el1.name, el2.name))
+        return EqResult::NotEqual(format!("Out of {} and {}, one has on_input and one not", el1.name, el2.name))
     }
 
     if el1.on_input.is_some() != el2.on_input.is_some() {
-        return EqResult::NotEqual(format!("Out of {} and {}, on has on_input and one not", el1.name, el2.name))
+        return EqResult::NotEqual(format!("Out of {} and {}, one has on_input and one not", el1.name, el2.name))
     }
 
     if el1.on_mouse_enter.is_some() != el2.on_mouse_enter.is_some() {
-        return EqResult::NotEqual(format!("Out of {} and {}, on has on_mouse_enter and one not", el1.name, el2.name))
+        return EqResult::NotEqual(format!("Out of {} and {}, one has on_mouse_enter and one not", el1.name, el2.name))
     }
 
     if el1.on_mouse_leave.is_some() != el2.on_mouse_leave.is_some() {
-        return EqResult::NotEqual(format!("Out of {} and {}, on has on_mouse_leave and one not", el1.name, el2.name))
+        return EqResult::NotEqual(format!("Out of {} and {}, one has on_mouse_leave and one not", el1.name, el2.name))
+    }
+
+    if el1.on_key_down.is_some() != el2.on_key_down.is_some() {
+        return EqResult::NotEqual(format!("Out of {} and {}, one has on_key_down and one not", el1.name, el2.name))
     }
 
     if el1.css.is_some() != el2.css.is_some() {
-        return EqResult::NotEqual(format!("Out of {} and {}, on has css and one not", el1.name, el2.name))
+        return EqResult::NotEqual(format!("Out of {} and {}, one has css and one not", el1.name, el2.name))
     }
 
     if let (Some(css1), Some(css2)) = (el1.css.as_ref(), el2.css.as_ref()) {
