@@ -8,17 +8,9 @@ pub enum CssGroup {
     }
 }
 
-#[derive(Debug)]
+#[derive(Debug, Default)]
 pub struct Css {
     pub groups: Vec<CssGroup>,
-}
-
-impl Default for Css {
-    fn default() -> Self {
-        Self {
-            groups: Vec::new()
-        }
-    }
 }
 
 impl Css {

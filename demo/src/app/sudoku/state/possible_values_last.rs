@@ -64,13 +64,13 @@ fn value_by_row(
     let grid_computed = (*grid_computed).clone();
 
     deps.from(move || {
-        let get_current = (*grid_computed.get_from(level0x, level0y).get_from(level1x, level1y)).clone();
+        let get_current = grid_computed.get_from(level0x, level0y).get_from(level1x, level1y);
 
         //iterowaine po wierszu
         get_possible_value(get_current, {
             let grid = grid_computed.clone();
             move |x0, x1| -> CellForComputed {
-                (*grid.get_from(x0, level0y).get_from(x1, level1y)).clone()
+                grid.get_from(x0, level0y).get_from(x1, level1y)
             }
         })
     })
@@ -88,13 +88,13 @@ fn value_by_col(
     let grid_computed = (*grid_computed).clone();
 
     deps.from(move || {
-        let get_current = (*grid_computed.get_from(level0x, level0y).get_from(level1x, level1y)).clone();
+        let get_current = grid_computed.get_from(level0x, level0y).get_from(level1x, level1y);
 
         //iterowanie po kolumnie
         get_possible_value(get_current, {
             let grid = grid_computed.clone();
             move |y0, y1| -> CellForComputed {
-                (*grid.get_from(level0x, y0).get_from(level1x, y1)).clone()
+                grid.get_from(level0x, y0).get_from(level1x, y1)
             }
         })
     })
@@ -111,13 +111,13 @@ fn value_by_square(
     let grid_computed = (*grid_computed).clone();
     deps.from(move || {
 
-        let get_current = (*grid_computed.get_from(level0x, level0y).get_from(level1x, level1y)).clone();
+        let get_current = grid_computed.get_from(level0x, level0y).get_from(level1x, level1y);
 
         //iterowanie po kwadracie
         get_possible_value(get_current, {
             let grid = grid_computed.clone();
             move |x1, y1| -> CellForComputed {
-                (*grid.get_from(level0x, level0y).get_from(x1, y1)).clone()
+                grid.get_from(level0x, level0y).get_from(x1, y1)
             }
         })
     })
@@ -136,8 +136,8 @@ pub fn possible_values_last(
     let grid_computed: SudokuSquare<SudokuSquare<CellForComputed>> = {
         SudokuSquare::create_with_iterator(|level0x, level0y| {
             SudokuSquare::create_with_iterator(|level1x, level1y| {
-                let input = (*grid_input.get_from(level0x, level0y).get_from(level1x, level1y)).clone();
-                let possible = (*grid_possible.get_from(level0x, level0y).get_from(level1x, level1y)).clone();
+                let input = grid_input.get_from(level0x, level0y).get_from(level1x, level1y);
+                let possible = grid_possible.get_from(level0x, level0y).get_from(level1x, level1y);
     
                 CellForComputed {
                     input,
