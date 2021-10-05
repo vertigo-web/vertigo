@@ -69,7 +69,7 @@ pub fn render_cell_possible(item: &Computed<Cell>) -> VDomElement {
     let only_one_possible = possible.len() == 1;
 
     if only_one_possible {
-        let out: Vec<_> = possible.iter()
+        let out= possible.iter()
             .map(|number| {
                 let on_set = {
                     let number = *number;
@@ -85,8 +85,7 @@ pub fn render_cell_possible(item: &Computed<Cell>) -> VDomElement {
                         { number.as_u16() }
                     </div>
                 }
-            })
-            .collect();
+            });
 
         return html! {
             <div css={css_wrapper_one()}>
@@ -114,7 +113,7 @@ pub fn render_cell_possible(item: &Computed<Cell>) -> VDomElement {
     }
 
 
-    let out: Vec<_> = SudokuValue::variants().into_iter()
+    let out = SudokuValue::variants().into_iter()
         .map(|number| {
             let should_show = possible.contains(&number);
 
@@ -138,8 +137,7 @@ pub fn render_cell_possible(item: &Computed<Cell>) -> VDomElement {
                     { label }
                 </div>
             }
-        })
-        .collect();
+        });
 
     html! {
         <div css={css_wrapper()}>

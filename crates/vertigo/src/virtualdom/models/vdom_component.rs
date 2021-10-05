@@ -42,10 +42,10 @@ impl VDomComponent {
 
         let comp = deps.new_computed_from(params);
 
-        let view = comp.map(move |wrapper_computed: &Computed<Value<T>>| -> Rc<VDomElement> {
+        let view = comp.map(move |wrapper_computed: &Computed<Value<T>>| -> VDomElement {
             let value: Rc<Value<T>> = wrapper_computed.get_value();
             let value: &Value<T> = value.as_ref();
-            Rc::new(render(value))
+            render(value)
         });
 
         VDomComponent {

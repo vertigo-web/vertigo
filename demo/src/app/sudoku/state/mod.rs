@@ -50,7 +50,7 @@ fn create_grid_possible_last(
     })
 }
 
-#[derive(PartialEq)]
+#[derive(PartialEq, Clone)]
 pub struct Cell {
     pub number: NumberItem,
     pub possible: PossibleValues,
@@ -67,9 +67,9 @@ fn creatergid_view(
 
     SudokuSquare::create_with_iterator(|level0x, level0y| {
         SudokuSquare::create_with_iterator(|level1x, level1y| {
-            let number = (*grid_number.get_from(level0x, level0y).get_from(level1x, level1y)).clone();
-            let possible = (*grid_possible.get_from(level0x, level0y).get_from(level1x, level1y)).clone();
-            let possible_last = (*grid_possible_last.get_from(level0x, level0y).get_from(level1x, level1y)).clone();
+            let number = grid_number.get_from(level0x, level0y).get_from(level1x, level1y);
+            let possible = grid_possible.get_from(level0x, level0y).get_from(level1x, level1y);
+            let possible_last = grid_possible_last.get_from(level0x, level0y).get_from(level1x, level1y);
 
             Cell {
                 number,

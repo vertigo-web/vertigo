@@ -1,5 +1,3 @@
-use std::rc::Rc;
-
 #[derive(Copy, Clone, Debug, PartialEq)]
 pub enum TreeBoxIndex {
     First,
@@ -13,19 +11,19 @@ impl TreeBoxIndex {
     }
 }
 
-#[derive(PartialEq)]
-pub struct ThreeBox<T: PartialEq> {
-    data0: Rc<T>,
-    data1: Rc<T>,
-    data2: Rc<T>
+#[derive(PartialEq, Clone)]
+pub struct ThreeBox<T: PartialEq + Clone> {
+    data0: T,
+    data1: T,
+    data2: T,
 }
 
-impl<T: PartialEq> ThreeBox<T> {
+impl<T: PartialEq + Clone> ThreeBox<T> {
     pub fn new(data0: T, data1: T, data2: T) -> ThreeBox<T> {
         ThreeBox {
-            data0: Rc::new(data0),
-            data1: Rc::new(data1),
-            data2: Rc::new(data2),
+            data0,
+            data1,
+            data2,
         }
     }
 
@@ -37,7 +35,7 @@ impl<T: PartialEq> ThreeBox<T> {
         )
     }
 
-    pub fn get_from(&self, index: TreeBoxIndex) -> Rc<T> {
+    pub fn get_from(&self, index: TreeBoxIndex) -> T {
         match index {
             TreeBoxIndex::First => self.data0.clone(),
             TreeBoxIndex::Middle => self.data1.clone(),

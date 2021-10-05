@@ -54,11 +54,11 @@ impl<T: PartialEq + 'static> Computed<T> {
         })
     }
 
-    pub fn map<K: PartialEq, F: 'static + Fn(&Computed<T>) -> Rc<K>>(self, fun: F) -> Computed<K> {
+    pub fn map<K: PartialEq, F: 'static + Fn(&Computed<T>) -> K>(self, fun: F) -> Computed<K> {
         let deps = self.inner.deps();
 
         Computed::new(deps, move ||
-            fun(&self)
+            Rc::new(fun(&self))
         )
     }
 
