@@ -19,7 +19,7 @@ impl State {
     pub fn new(root: &Dependencies) -> Computed<State> {
         root.new_computed_from(
             State {
-                value: root.new_value("".into())
+                value: root.new_value(String::from(""))
             }
         )
     }

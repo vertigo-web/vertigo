@@ -9,6 +9,22 @@ use crate::computed::{
 };
 use crate::utils::BoxRefCell;
 
+pub trait ToRc<T> {
+    fn to_rc(self) -> Rc<T>;
+}
+
+impl<T> ToRc<T> for Rc<T> {
+    fn to_rc(self) -> Rc<T> {
+        self
+    }
+}
+
+impl<T> ToRc<T> for T {
+    fn to_rc(self) -> Rc<T> {
+        Rc::new(self)
+    }
+}
+
 struct ValueInner<T: PartialEq + 'static> {
     id: GraphId,
     value: Rc<T>,
@@ -53,12 +69,12 @@ impl<T: PartialEq + 'static> Clone for Value<T> {
 }
 
 impl<T: PartialEq + 'static> Value<T> {
-    pub fn new(deps: Dependencies, value: T) -> Value<T> {
+    pub fn new(deps: Dependencies, value: impl ToRc<T>) -> Value<T> {
         Value {
             inner: Rc::new(BoxRefCell::new(
                 ValueInner {
                     id: GraphId::default(),
-                    value: Rc::new(value),
+                    value: value.to_rc(),
                     deps: deps.clone(),
                 },
                 "value inner"

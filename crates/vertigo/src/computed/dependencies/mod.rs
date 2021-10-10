@@ -16,6 +16,8 @@ use crate::utils::{
 
 use self::external_connections::ExternalConnections;
 
+use super::value::ToRc;
+
 mod graph;
 mod graph_map;
 mod transaction_state;
@@ -71,7 +73,7 @@ impl Default for Dependencies {
 }
 
 impl Dependencies {
-    pub fn new_value<T: PartialEq>(&self, value: T) -> Value<T> {
+    pub fn new_value<T: PartialEq>(&self, value: impl ToRc<T>) -> Value<T> {
         Value::new(self.clone(), value)
     }
 
@@ -80,7 +82,7 @@ impl Dependencies {
     }
 
 
-    pub fn new_computed_from<T: PartialEq>(&self, value: T) -> Computed<T> {
+    pub fn new_computed_from<T: PartialEq>(&self, value: impl ToRc<T>) -> Computed<T> {
         let value = self.new_value(value);
         value.to_computed()
     }
