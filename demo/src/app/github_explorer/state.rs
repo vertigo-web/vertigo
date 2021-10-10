@@ -111,8 +111,8 @@ impl State {
         let driver = driver.clone();
 
         root.new_computed_from(State {
-            repo_input: root.new_value("".into()),
-            repo_shown: root.new_value("".into()),
+            repo_input: root.new_value(String::from("")),
+            repo_shown: root.new_value(String::from("")),
             data: AutoMap::new({
                 let root = root.clone();
 

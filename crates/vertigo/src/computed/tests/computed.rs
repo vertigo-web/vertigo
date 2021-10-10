@@ -217,8 +217,8 @@ fn test_computed_cache() {
         //c = a + b
         //d = c % 2;
 
-        let a = root.new_value::<u32>(1);
-        let b = root.new_value::<u32>(2);
+        let a = root.new_value(1);
+        let b = root.new_value(2);
 
         let c: Computed<u32> = {
             let a = a.clone();
@@ -287,9 +287,9 @@ fn test_computed_new_value() {
 
     let root = Dependencies::default();
 
-    let a = root.new_value::<u32>(0);
-    let b = root.new_value::<u32>(0);
-    let c = root.new_value::<u32>(0);
+    let a = root.new_value(0);
+    let b = root.new_value(0);
+    let c = root.new_value(0);
 
     let d: Computed<u32> = {
         let a = a.clone();
@@ -348,9 +348,9 @@ fn test_computed_switch_subscription() {
     let root = Dependencies::default();
 
     let switch = root.new_value(Switch::Ver1);
-    let a = root.new_value::<u32>(0);
-    let b = root.new_value::<u32>(0);
-    let c = root.new_value::<u32>(0);
+    let a = root.new_value(0);
+    let b = root.new_value(0);
+    let c = root.new_value(0);
 
     // println!("s {:?}", switch.id());
     // println!("a {:?}", a.id());
