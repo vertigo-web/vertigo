@@ -69,15 +69,8 @@ impl RealDomNodeInner {
             return;
         }
 
-        self.dom_driver.create_node(self.id_dom.clone(), name);
+        self.dom_driver.rename_node(self.id_dom.clone(), name);
         self.name = name;
-
-        let mut ref_id: Option<RealDomId> = None;
-
-        for child in self.child.iter().rev() {
-            self.dom_driver.insert_before(self.id_dom.clone(), child.id(), ref_id);
-            ref_id = Some(child.id());
-        }
     }
 
     fn update_attr_one(&mut self, name: &'static str, value: &str) {
@@ -122,6 +115,11 @@ impl RealDomNodeInner {
         }
     }
 
+    pub fn get_attr(&self, name: &'static str) -> Option<String> {
+        let value = self.attr.get(name).cloned();
+        value
+    }
+
     pub fn set_event(&mut self, callback: EventCallback) {
         self.dom_driver.set_event(self.id_dom.clone(), callback);
     }
@@ -134,9 +132,8 @@ impl RealDomNodeInner {
         std::mem::replace(&mut self.child, child)
     }
 
-    pub fn insert_before(&mut self, new_child: RealDomNode, prev_node: Option<RealDomId>) {
-        self.dom_driver.insert_before(self.id_dom.clone(), new_child.id(), prev_node);
-        self.child.push_front(new_child);
+    pub fn insert_before(&mut self, new_child: RealDomId, prev_node: Option<RealDomId>) {
+        self.dom_driver.insert_before(self.id_dom.clone(), new_child, prev_node);
     }
 
     pub fn get_ref(&self) -> Option<NodeRefsItem> {
@@ -186,6 +183,14 @@ impl RealDomElement {
         })
     }
 
+    pub fn get_attr(&self, name: &'static str) -> Option<String> {
+        self.inner.get_with_context(
+            name,
+            |state, name| {
+                state.get_attr(name)
+        })
+    }
+
     pub fn set_event(&self, callback: EventCallback) {
         self.inner.change(
             callback,
@@ -220,7 +225,7 @@ impl RealDomElement {
         })
     }
 
-    pub fn insert_before(&self, new_child: RealDomNode, prev_node: Option<RealDomId>) {
+    pub fn insert_before(&self, new_child: RealDomId, prev_node: Option<RealDomId>) {
         self.inner.change(
             (new_child, prev_node),
             |state, (new_child, prev_node)| {

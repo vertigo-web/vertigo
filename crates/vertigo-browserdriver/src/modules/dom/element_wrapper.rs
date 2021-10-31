@@ -86,6 +86,10 @@ impl DomElement {
         }
     }
 
+    pub fn rename_name(&self, name: &str) {
+        self.dom_js.rename_node(self.dom_id.to_u64(), name);
+    }
+
     pub fn set_attr(&self, attr: &str, value: &str) {
         self.dom_js.set_attribute(self.dom_id.to_u64(), attr, value);
     }

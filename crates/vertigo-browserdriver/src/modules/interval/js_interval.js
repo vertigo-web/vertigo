@@ -1,4 +1,5 @@
 export class DriverBrowserIntervalJs {
+    callback;
     constructor(callback) {
         this.callback = callback;
     }

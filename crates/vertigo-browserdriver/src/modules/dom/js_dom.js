@@ -7,6 +7,7 @@ const createElement = (name) => {
     }
 };
 class MapNodes {
+    data;
     constructor() {
         this.data = new Map();
     }
@@ -58,6 +59,13 @@ class MapNodes {
     }
 }
 export class DriverBrowserDomJs {
+    mouse_down;
+    mouse_over;
+    keydown;
+    oninput;
+    nodes;
+    texts;
+    all;
     constructor(mouse_down, mouse_over, keydown, oninput) {
         this.mouse_down = mouse_down;
         this.mouse_over = mouse_over;
@@ -127,6 +135,23 @@ export class DriverBrowserDomJs {
         const node = createElement(name);
         this.nodes.set(id, node);
         this.all.set(node, id);
+    }
+    rename_node(id, name) {
+        this.nodes.get("rename_node", id, (node) => {
+            const new_node = createElement(name);
+            while (true) {
+                const firstChild = node.firstChild;
+                if (firstChild) {
+                    new_node.appendChild(firstChild);
+                }
+                else {
+                    this.all.delete(node);
+                    this.all.set(new_node, id);
+                    this.nodes.set(id, new_node);
+                    return;
+                }
+            }
+        });
     }
     set_attribute(id, name, value) {
         this.nodes.get("set_attribute", id, (node) => {

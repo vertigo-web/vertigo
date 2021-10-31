@@ -93,6 +93,7 @@ pub trait DomDriverTrait {
     fn remove_text(&self, id: RealDomId);
 
     fn create_node(&self, id: RealDomId, name: &'static str);
+    fn rename_node(&self, id: RealDomId, new_name: &'static str);
     fn get_ref(&self, id: RealDomId) -> Option<NodeRefsItem>;
     fn set_attr(&self, id: RealDomId, key: &'static str, value: &str);
     fn remove_attr(&self, id: RealDomId, name: &'static str);
@@ -152,10 +153,16 @@ impl DomDriver {
 
             let spawn_local_executor = self.spawn_local_executor.clone();
             spawn_local_executor(fur)
-}
+    }
+
     pub fn create_node(&self, id: RealDomId, name: &'static str) {
         show_log(format!("create_node {} {}", id, name));
         self.driver.create_node(id, name);
+    }
+
+    pub fn rename_node(&self, id: RealDomId, new_name: &'static str) {
+        show_log(format!("rename_node {} {}", id, new_name));
+        self.driver.rename_node(id, new_name);
     }
 
     pub fn create_text(&self, id: RealDomId, value: &str) {
