@@ -138,6 +138,12 @@ impl DriverBrowserDom {
         self.inner.data.elements.insert(id, element);
     }
 
+    pub fn rename_node(&self, id: RealDomId, name: &'static str) {
+        self.inner.data.elements.must_get(&id, |elem| {
+            elem.rename_name(name);
+        });
+    }
+
     pub fn create_text(&self, id: RealDomId, value: &str) {
         let text = DomText::new(self.inner.dom_js.clone(), id.clone(), value);
         self.inner.data.texts.insert(id, text);

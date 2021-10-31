@@ -70,6 +70,10 @@ impl DomDriverTrait for DriverBrowser {
         self.driver.driver_dom.create_node(id, name);
     }
 
+    fn rename_node(&self, id: RealDomId, new_name: &'static str) {
+        self.driver.driver_dom.rename_node(id, new_name);
+    }
+
     fn create_text(&self, id: RealDomId, value: &str) {
         self.driver.driver_dom.create_text(id, value);
     }

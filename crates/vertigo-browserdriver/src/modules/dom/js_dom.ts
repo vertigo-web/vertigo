@@ -3,7 +3,7 @@ const createElement = (name: string): Element => {
         return document.createElementNS("http://www.w3.org/2000/svg", name);
     } else {
         return document.createElement(name);
-    };
+    }
 }
 
 class MapNodes<K, V> {
@@ -193,6 +193,25 @@ export class DriverBrowserDomJs {
         const node = createElement(name);
         this.nodes.set(id, node);
         this.all.set(node, id);
+    }
+
+    public rename_node(id: number, name: string) {
+        this.nodes.get("rename_node", id, (node) => {
+            const new_node = createElement(name);
+
+            while (true) {
+                const firstChild = node.firstChild;
+
+                if (firstChild) {
+                    new_node.appendChild(firstChild);
+                } else {
+                    this.all.delete(node);
+                    this.all.set(new_node, id);
+                    this.nodes.set(id, new_node);
+                    return;
+                }
+            }
+        });
     }
 
     public set_attribute(id: number, name: string, value: string) {

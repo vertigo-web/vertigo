@@ -6,7 +6,7 @@ use crate::{utils::BoxRefCell, driver::DomDriver, virtualdom::{
 
 pub struct RealDomText {
     dom_driver: DomDriver,
-    pub id_dom: RealDomId,
+    id_dom: RealDomId,
     value: BoxRefCell<String>,
 }
 
@@ -42,6 +42,10 @@ impl RealDomText {
         self.value.get(|state| {
             (*state).clone()
         })
+    }
+
+    pub fn id_dom(&self) -> RealDomId {
+        self.id_dom.clone()
     }
 }
 

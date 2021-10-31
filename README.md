@@ -11,7 +11,7 @@ Install cargo-make that takes care of all other dependencies:
 - `cargo install cargo-make`
 
 Build and run project using:
-- `cargo make demo-start`
+- `cargo make demo-start --profile release`
 
 Eventually terminal will let you know that app is available under http://localhost:3000/
 

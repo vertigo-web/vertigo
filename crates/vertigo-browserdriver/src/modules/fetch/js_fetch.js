@@ -1,4 +1,5 @@
 export class DriverBrowserFetchJs {
+    callback;
     constructor(callback) {
         this.callback = callback;
     }

@@ -25,6 +25,8 @@ extern "C" {
     #[wasm_bindgen(method)]
     pub fn create_node(this: &DriverBrowserDomJs, id: u64, name: &str);
     #[wasm_bindgen(method)]
+    pub fn rename_node(this: &DriverBrowserDomJs, id: u64, name: &str);
+    #[wasm_bindgen(method)]
     pub fn set_attribute(this: &DriverBrowserDomJs, id: u64, attr: &str, value: &str);
     #[wasm_bindgen(method)]
     pub fn remove_attribute(this: &DriverBrowserDomJs, id: u64, attr: &str);
