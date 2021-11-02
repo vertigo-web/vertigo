@@ -69,7 +69,7 @@ pub fn render_cell_possible(item: &Computed<Cell>) -> VDomElement {
     let only_one_possible = possible.len() == 1;
 
     if only_one_possible {
-        let out= possible.iter()
+        let out = possible.iter()
             .map(|number| {
                 let on_set = {
                     let number = *number;

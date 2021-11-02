@@ -36,7 +36,7 @@ pub fn possible_values(
         current_numbers_in_ceis.insert(SudokuValue::Value8);
         current_numbers_in_ceis.insert(SudokuValue::Value9);
 
-        //iterowaine po wierszu
+        // Iterate by row
         for x0 in TreeBoxIndex::variants() {
             for x1 in TreeBoxIndex::variants() {
                 let value = grid.get_from(x0, level0y).get_from(x1, level1y);
@@ -47,7 +47,7 @@ pub fn possible_values(
             }
         }
 
-        //iterowanie po kolumnie
+        // Iterate by column
         for y0 in TreeBoxIndex::variants() {
             for y1 in TreeBoxIndex::variants() {
                 let value = grid.get_from(level0x, y0).get_from(level1x, y1);
@@ -58,7 +58,7 @@ pub fn possible_values(
             }
         }
 
-        //iterowanie po kwadracie
+        // Iterate by square
         for x1 in TreeBoxIndex::variants() {
             for y1 in TreeBoxIndex::variants() {
                 let value = grid.get_from(level0x, level0y).get_from(x1, y1);

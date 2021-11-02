@@ -9,6 +9,7 @@ use crate::modules::{
     dom::DriverBrowserDom,
     fetch::DriverBrowserFetch,
     hashrouter::DriverBrowserHashrouter,
+    instant::js_instant,
     interval::DriverBrowserInterval
 };
 
@@ -18,10 +19,11 @@ use vertigo::{
     EventCallback,
     FetchMethod,
     FetchResult,
+    InstantType,
     NodeRefsItem,
     RealDomId,
     computed::Dependencies,
-    utils::DropResource,
+    utils::DropResource
 };
 
 struct DriverBrowserInner {
@@ -145,5 +147,9 @@ impl DomDriverTrait for DriverBrowser {
         self.driver.driver_interval.set_interval(time, move |_| {
             func();
         })
+    }
+
+    fn now(&self) -> InstantType {
+        js_instant::now().round() as InstantType
     }
 }
