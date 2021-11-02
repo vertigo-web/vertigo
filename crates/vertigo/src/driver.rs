@@ -5,7 +5,7 @@ use std::{
     rc::Rc,
 };
 
-use crate::{KeyDownEvent, NodeRefsItem, fetch_builder::FetchBuilder, utils::{EqBox, DropResource}};
+use crate::{Instant, InstantType, KeyDownEvent, NodeRefsItem, fetch_builder::FetchBuilder, utils::{EqBox, DropResource}};
 use crate::virtualdom::models::realdom_id::RealDomId;
 
 #[derive(Debug)]
@@ -109,6 +109,7 @@ pub trait DomDriverTrait {
     fn on_hash_route_change(&self, on_change: Box<dyn Fn(&String)>) -> DropResource;
 
     fn set_interval(&self, time: u32, func: Box<dyn Fn()>) -> DropResource;
+    fn now(&self) -> InstantType;
 }
 
 type Executor = Box<dyn Fn(Pin<Box<dyn Future<Output = ()> + 'static>>)>;
@@ -244,5 +245,9 @@ impl DomDriver {
 
     pub fn set_interval<F: Fn() + 'static>(&self, time: u32, func: F) -> DropResource {
         self.driver.set_interval(time, Box::new(func))
+    }
+
+    pub fn now(&self) -> Instant {
+        Instant::new(self.driver.clone())
     }
 }

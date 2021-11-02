@@ -102,7 +102,7 @@ impl Sudoku {
     pub fn clear(&self) {
         log::info!("clear");
 
-        self.deps.transaction(||{
+        self.deps.transaction(|| {
             for x0 in TreeBoxIndex::variants() {
                 for y0 in TreeBoxIndex::variants() {
                     for x1 in TreeBoxIndex::variants() {

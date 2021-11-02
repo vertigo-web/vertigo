@@ -90,7 +90,7 @@ fn value_by_col(
     deps.from(move || {
         let get_current = grid_computed.get_from(level0x, level0y).get_from(level1x, level1y);
 
-        //iterowanie po kolumnie
+        // Iterate by column
         get_possible_value(get_current, {
             let grid = grid_computed.clone();
             move |y0, y1| -> CellForComputed {
@@ -113,7 +113,7 @@ fn value_by_square(
 
         let get_current = grid_computed.get_from(level0x, level0y).get_from(level1x, level1y);
 
-        //iterowanie po kwadracie
+        // Iterate by square
         get_possible_value(get_current, {
             let grid = grid_computed.clone();
             move |x1, y1| -> CellForComputed {
@@ -138,7 +138,7 @@ pub fn possible_values_last(
             SudokuSquare::create_with_iterator(|level1x, level1y| {
                 let input = grid_input.get_from(level0x, level0y).get_from(level1x, level1y);
                 let possible = grid_possible.get_from(level0x, level0y).get_from(level1x, level1y);
-    
+
                 CellForComputed {
                     input,
                     possible,
@@ -150,7 +150,7 @@ pub fn possible_values_last(
     let by_row = value_by_row(deps, &grid_computed, level0x, level0y, level1x, level1y);
     let by_col = value_by_col(deps, &grid_computed, level0x, level0y, level1x, level1y);
     let by_square = value_by_square(deps, &grid_computed, level0x, level0y, level1x, level1y);
-    
+
     deps.from(move || {
         let by_row = *by_row.get_value();
         if let Some(by_row) = by_row {
