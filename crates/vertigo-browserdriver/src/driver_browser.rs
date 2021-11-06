@@ -10,16 +10,28 @@ use crate::modules::{
     fetch::DriverBrowserFetch,
     hashrouter::DriverBrowserHashrouter,
     instant::js_instant,
-    interval::DriverBrowserInterval
+    interval::DriverBrowserInterval,
+    websocket::DriverWebsocket,
 };
 
-use vertigo::{Driver, DriverTrait, EventCallback, FetchMethod, FetchResult, InstantType, RealDomId, RefsContext, computed::Dependencies, utils::DropResource};
+use vertigo::Driver;
+use vertigo::DriverTrait;
+use vertigo::EventCallback;
+use vertigo::FetchMethod;
+use vertigo::FetchResult;
+use vertigo::InstantType;
+use vertigo::RealDomId;
+use vertigo::RefsContext;
+use vertigo::WebcocketMessageDriver;
+use vertigo::computed::Dependencies;
+use vertigo::utils::DropResource;
 
 struct DriverBrowserInner {
     driver_dom: DriverBrowserDom,
     driver_interval: DriverBrowserInterval,
     driver_hashrouter: DriverBrowserHashrouter,
     driver_fetch: DriverBrowserFetch,
+    driver_websocket: DriverWebsocket,
 }
 
 impl DriverBrowserInner {
@@ -33,6 +45,7 @@ impl DriverBrowserInner {
             driver_interval,
             driver_hashrouter,
             driver_fetch: DriverBrowserFetch::new(),
+            driver_websocket: DriverWebsocket::new(),
         }
     }
 }
@@ -136,6 +149,14 @@ impl DriverTrait for DriverBrowser {
 
     fn now(&self) -> InstantType {
         js_instant::now().round() as InstantType
+    }
+
+    fn websocket(&self, host: String, callback: Box<dyn Fn(WebcocketMessageDriver)>) -> DropResource {
+        self.driver.driver_websocket.websocket_start(host, callback)
+    }
+
+    fn websocket_send_message(&self, callback_id: u64, message: String) {
+        self.driver.driver_websocket.websocket_send_message(callback_id, message);
     }
 
     fn get_bounding_client_rect_x(&self, id: RealDomId) -> f64 {

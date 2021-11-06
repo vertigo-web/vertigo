@@ -33,10 +33,14 @@ script = [
     "rm ./build/package.json",
 ]
 
-[tasks.demo-serve]
+[tasks.demo-serve-old]
 install_crate = { crate_name = "basic-http-server", binary = "basic-http-server", test_arg = ["--version"] }
 command = "basic-http-server"
 args = [ "--addr", "127.0.0.1:3000", "./build" ]
+
+[tasks.demo-serve]
+command = "cargo"
+args = [ "run", "--bin", "vertigo-demo-server" ]
 
 [tasks.demo-start]
 dependencies = [

@@ -5,6 +5,7 @@ use vertigo::{
 };
 use vertigo_html::{html, css, css_fn};
 
+use crate::app::chat;
 use crate::{app, navigate_to};
 
 use super::sudoku;
@@ -63,6 +64,7 @@ fn render_header(app_state: &Computed<app::State>) -> VDomElement {
                 <li css={css_menu_item(current_page == &Route::Input)} on_click={navigate_to!(state, Input)}>"Input"</li>
                 <li css={css_menu_item(current_page == &Route::GithubExplorer)} on_click={navigate_to!(state, GithubExplorer)}>"Github Explorer"</li>
                 <li css={css_menu_item(is_game_of_life)} on_click={navigate_to_gameoflife}>"Game Of Life"</li>
+                <li css={css_menu_item(current_page == &Route::Chat)} on_click={navigate_to!(state, Chat)}>"Chat"</li>
             </ul>
         </div>
     }
@@ -94,6 +96,14 @@ pub fn render(app_state: &Computed<app::State>) -> VDomElement {
 
         Route::GameOfLife {..} =>
             html! { <component {game_of_life::render} data={state.game_of_life} /> },
+
+        Route::Chat => {
+            let state = chat::ChatState::new(&state.root, &state.driver);
+
+            html! {
+                <component {chat::render} data={state} />
+            }
+        },
 
         Route::NotFound =>
             html! { <div>"Page Not Found"</div> }.into(),

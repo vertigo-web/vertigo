@@ -1,9 +1,5 @@
 use std::cmp::PartialEq;
-use vertigo::{
-    Driver,
-    computed::{Computed, Dependencies, Value},
-    router::HashRouter,
-};
+use vertigo::{Driver, computed::{Computed, Dependencies, Value}, router::HashRouter};
 
 use super::sudoku;
 use super::input;
@@ -15,7 +11,8 @@ use super::game_of_life;
 
 #[derive(PartialEq)]
 pub struct State {
-    root: Dependencies,
+    pub driver: Driver,
+    pub root: Dependencies,
     pub route: Value<Route>,
 
     pub main: Computed<MainState>,
@@ -44,6 +41,7 @@ impl State {
         });
 
         let state = State {
+            driver: driver.clone(),
             root: root.clone(),
             route,
             main: super::main::MainState::new(root),

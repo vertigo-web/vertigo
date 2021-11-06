@@ -7,6 +7,7 @@ mod game_of_life;
 mod github_explorer;
 pub mod sudoku;
 mod input;
+mod chat;
 
 pub use state::State;
 pub use render::render;
