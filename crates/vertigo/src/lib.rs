@@ -12,6 +12,7 @@ pub mod utils;
 mod virtualdom;
 mod resource;
 mod request_builder;
+mod websocket;
 
 pub use driver::Driver;
 pub use driver::DriverTrait;
@@ -38,3 +39,4 @@ pub use app::start_app;
 
 pub use request_builder::RequestTrait;
 pub use resource::Resource;
+pub use websocket::{WebcocketMessageDriver, WebcocketMessage, WebcocketConnection};

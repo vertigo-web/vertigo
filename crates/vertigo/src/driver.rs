@@ -5,18 +5,14 @@ use std::{
     rc::Rc,
 };
 
-use crate::{
-    Instant,
-    InstantType,
-    KeyDownEvent,
-    driver_refs::RefsContext,
-    fetch_builder::FetchBuilder,
-    request_builder::RequestBuilder,
-    utils::{
-        DropResource,
-        EqBox
-    }
-};
+use crate::Instant;
+use crate::InstantType;
+use crate::KeyDownEvent;
+use crate::{WebcocketMessage, WebcocketMessageDriver, WebcocketConnection};
+use crate::driver_refs::RefsContext;
+use crate::fetch_builder::FetchBuilder;
+use crate::request_builder::RequestBuilder;
+use crate::utils::{DropResource, EqBox};
 use crate::virtualdom::models::realdom_id::RealDomId;
 
 #[derive(Debug)]
@@ -131,6 +127,9 @@ pub trait DriverTrait {
     fn set_interval(&self, time: u32, func: Box<dyn Fn()>) -> DropResource;
     fn now(&self) -> InstantType;
 
+    fn websocket(&self, host: String, callback: Box<dyn Fn(WebcocketMessageDriver)>) -> DropResource;
+    fn websocket_send_message(&self, callback_id: u64, message: String);
+
     fn push_ref_context(&self, context: RefsContext);
     fn flush_update(&self);
 }
@@ -215,6 +214,27 @@ impl Driver {
         RequestBuilder::new(self, url)
     }
 
+    pub fn websocket(&self, host: impl Into<String>, callback: Box<dyn Fn(WebcocketMessage)>) -> DropResource {
+        let driver = self.clone();
+        let host: String = host.into();
+
+        self.inner.driver.websocket(host, Box::new(move |message: WebcocketMessageDriver| {
+            let message = match message {
+                WebcocketMessageDriver::Connection{ callback_id} => {
+                    let connection = WebcocketConnection::new(callback_id, driver.clone());
+                    WebcocketMessage::Connection(connection)
+                },
+                WebcocketMessageDriver::Message(message) => WebcocketMessage::Message(message),
+                WebcocketMessageDriver::Close => WebcocketMessage::Close,
+            };
+
+            callback(message);
+        }))
+    }
+
+    pub(crate) fn websocket_send_message(&self, callback_id: u64, message: String) {
+        self.inner.driver.websocket_send_message(callback_id, message);
+    }
 
 
     //To interact with the dom. Used exclusively by vertigo
