@@ -1,10 +1,11 @@
 use vertigo::{
+    Resource,
     computed::Computed,
     VDomElement,
 };
 use vertigo_html::{html, css_fn};
 
-use super::state::{State, Resource};
+use super::state::{State};
 
 css_fn! { wrapper, "
     border: 1px solid black;
@@ -57,7 +58,7 @@ pub fn render(state: &Computed<State>) -> VDomElement {
         _ => match state.data.get_value(&repo_shown).get() {
             Resource::Loading => "Loading...".to_string(),
             Resource::Ready(branch) => branch.commit.sha,
-            Resource::Failed(err) => format!("Error: {}", err),
+            Resource::Error(err) => format!("Error: {}", err),
         }
     };
 

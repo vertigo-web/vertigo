@@ -3,13 +3,14 @@ use serde::{Deserialize, Serialize};
 
 use vertigo::{
     DomDriver,
+    RequestTrait,
+    Resource,
     computed::{
         Dependencies,
         Value,
         AutoMap,
         Computed,
-    }
-};
+    }};
 
 #[derive(Debug, Serialize, Deserialize, PartialEq, Clone)]
 pub struct Commit {
@@ -35,41 +36,34 @@ pub struct Branch {
     pub commit: Commit,
 }
 
-#[derive(PartialEq, Clone)]
-pub enum Resource<T: PartialEq> {
-    Loading,
-    Ready(T),
-    Failed(String),
+impl RequestTrait for Branch {
+    fn into_string(self) -> Result<String, String> {
+        serde_json::to_string(&self)
+            .map_err(|err| format!("error serialize {}", err))
+    }
+
+    fn from_string(data: &str) -> Result<Self, String> {
+        serde_json::from_str::<Self>(data)
+            .map_err(|err| format!("error deserialize {}", err))
+    }
 }
 
 fn fetch_repo(repo: &str, value: Value<Resource<Branch>>, driver: &DomDriver) {
-    let driver_span = driver.clone();
-    let url = format!("https://api.github.com/repos/{}/branches/master", repo);
-    log::info!("Fetching1 {}", url);
+    driver.spawn({
+        let driver = driver.clone();
+        let url = format!("https://api.github.com/repos/{}/branches/master", repo);
+        log::info!("Fetching {}", url);
 
-    driver.spawn_local(async move {
-        log::info!("Fetching2 {}", url);
-        let response = driver_span.fetch(url).get().await;
-
-        match response {
-            Ok((200, response)) => {
-                match serde_json::from_str::<Branch>(response.as_str()) {
-                    Ok(branch) => {
-                        log::info!("Response from server {:?}", branch);
-                        value.set_value(Resource::Ready(branch));
-                    },
-                    Err(err) => {
-                        log::error!("Error parsing response: {}", err);
-                        value.set_value(Resource::Failed(err.to_string()));
-                    }
+        async move {
+            let response = driver.request(url).get().await.into(|status, body| {
+                if status == 200 {
+                    return Some(body.into::<Branch>());
                 }
-            },
-            Ok((status, err)) => {
-                log::error!("Error fetching branch: {} {}", status, err)
-            }
-            Err(err) => {
-                log::error!("Error fetching branch: {}", err)
-            }
+
+                None
+            });
+
+            value.set_value(response);
         }
     });
 }
@@ -94,7 +88,7 @@ impl Item {
     }
 
     pub fn get(&self) -> Resource<Branch>{
-        self.value.get_value().as_ref().clone()
+        self.value.get_value().ref_clone()
     }
 }
 

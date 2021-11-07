@@ -5,7 +5,15 @@ use std::{
     rc::Rc,
 };
 
-use crate::{Instant, InstantType, KeyDownEvent, NodeRefsItem, fetch_builder::FetchBuilder, utils::{EqBox, DropResource}};
+use crate::{
+    Instant,
+    InstantType,
+    KeyDownEvent,
+    NodeRefsItem,
+    fetch_builder::FetchBuilder,
+    request_builder::RequestBuilder,
+    utils::{EqBox, DropResource}
+};
 use crate::virtualdom::models::realdom_id::RealDomId;
 
 #[derive(Debug)]
@@ -147,84 +155,14 @@ pub fn show_log(message: String) {
 }
 
 impl DomDriver {
-    pub fn spawn_local<F>(&self, future: F)
-        where F: Future<Output = ()> + 'static {
+    pub fn spawn<F>(&self, future: F) where F: Future<Output = ()> + 'static {
+        let fur = Box::pin(future);
 
-            let fur = Box::pin(future);
-
-            let spawn_local_executor = self.spawn_local_executor.clone();
-            spawn_local_executor(fur)
+        let spawn_local_executor = self.spawn_local_executor.clone();
+        spawn_local_executor(fur)
     }
 
-    pub fn create_node(&self, id: RealDomId, name: &'static str) {
-        show_log(format!("create_node {} {}", id, name));
-        self.driver.create_node(id, name);
-    }
-
-    pub fn rename_node(&self, id: RealDomId, new_name: &'static str) {
-        show_log(format!("rename_node {} {}", id, new_name));
-        self.driver.rename_node(id, new_name);
-    }
-
-    pub fn create_text(&self, id: RealDomId, value: &str) {
-        show_log(format!("create_text {} {}", id, value));
-        self.driver.create_text(id, value);
-    }
-
-    pub fn get_ref(&self, id: RealDomId) -> Option<NodeRefsItem> {
-        show_log(format!("get_ref {}", id));
-        self.driver.get_ref(id)
-    }
-
-    pub fn update_text(&self, id: RealDomId, value: &str) {
-        show_log(format!("update_text {} {}", id, value));
-        self.driver.update_text(id, value);
-    }
-
-    pub fn set_attr(&self, id: RealDomId, key: &'static str, value: &str) {
-        show_log(format!("set_attr {} {} {}", id, key, value));
-        self.driver.set_attr(id, key, value);
-    }
-
-    pub fn remove_attr(&self, id: RealDomId, name: &'static str) {
-        show_log(format!("remove_attr {} {}", id, name));
-        self.driver.remove_attr(id, name);
-    }
-
-    pub fn remove_node(&self, id: RealDomId) {
-        show_log(format!("remove node {}", id));
-        self.driver.remove_node(id);
-    }
-
-    pub fn remove_text(&self, id: RealDomId) {
-        show_log(format!("remove text {}", id));
-        self.driver.remove_text(id);
-    }
-
-    pub fn insert_before(&self, parent: RealDomId, child: RealDomId, ref_id: Option<RealDomId>) {
-        match &ref_id {
-            Some(ref_id) => {
-                show_log(format!("insert_before child={} refId={}", child, ref_id));
-            },
-            None => {
-                show_log(format!("insert_before child={} refId=None", child));
-            }
-        }
-
-        self.driver.insert_before(parent, child, ref_id);
-    }
-
-    pub fn insert_css(&self, selector: &str, value: &str) {
-        show_log(format!("insert_css selector={} value={}", selector, value));
-        self.driver.insert_css(selector, value);
-    }
-
-    pub fn set_event(&self, node: RealDomId, callback: EventCallback) {
-        show_log(format!("set_event {} {}", node, callback.to_string()));
-        self.driver.set_event(node, callback);
-    }
-
-    pub fn fetch<U: Into<String>>(&self, url: U) -> FetchBuilder {
+    pub fn fetch(&self, url: impl Into<String>) -> FetchBuilder {
         FetchBuilder::new(self.driver.clone(), url.into())
     }
 
@@ -243,11 +181,86 @@ impl DomDriver {
         self.driver.on_hash_route_change(on_change)
     }
 
-    pub fn set_interval<F: Fn() + 'static>(&self, time: u32, func: F) -> DropResource {
+    pub fn set_interval(&self, time: u32, func: impl Fn() + 'static) -> DropResource {
         self.driver.set_interval(time, Box::new(func))
     }
 
     pub fn now(&self) -> Instant {
         Instant::new(self.driver.clone())
+    }
+
+    pub fn request(&self, url: impl Into<String>) -> RequestBuilder {
+        RequestBuilder::new(self, url)
+    }
+
+
+    //To interact with the dom. Used exclusively by vertigo
+
+    pub(crate) fn create_node(&self, id: RealDomId, name: &'static str) {
+        show_log(format!("create_node {} {}", id, name));
+        self.driver.create_node(id, name);
+    }
+
+    pub(crate) fn rename_node(&self, id: RealDomId, new_name: &'static str) {
+        show_log(format!("rename_node {} {}", id, new_name));
+        self.driver.rename_node(id, new_name);
+    }
+
+    pub(crate) fn create_text(&self, id: RealDomId, value: &str) {
+        show_log(format!("create_text {} {}", id, value));
+        self.driver.create_text(id, value);
+    }
+
+    pub(crate) fn get_ref(&self, id: RealDomId) -> Option<NodeRefsItem> {
+        show_log(format!("get_ref {}", id));
+        self.driver.get_ref(id)
+    }
+
+    pub(crate) fn update_text(&self, id: RealDomId, value: &str) {
+        show_log(format!("update_text {} {}", id, value));
+        self.driver.update_text(id, value);
+    }
+
+    pub(crate) fn set_attr(&self, id: RealDomId, key: &'static str, value: &str) {
+        show_log(format!("set_attr {} {} {}", id, key, value));
+        self.driver.set_attr(id, key, value);
+    }
+
+    pub(crate) fn remove_attr(&self, id: RealDomId, name: &'static str) {
+        show_log(format!("remove_attr {} {}", id, name));
+        self.driver.remove_attr(id, name);
+    }
+
+    pub(crate) fn remove_node(&self, id: RealDomId) {
+        show_log(format!("remove node {}", id));
+        self.driver.remove_node(id);
+    }
+
+    pub(crate) fn remove_text(&self, id: RealDomId) {
+        show_log(format!("remove text {}", id));
+        self.driver.remove_text(id);
+    }
+
+    pub(crate) fn insert_before(&self, parent: RealDomId, child: RealDomId, ref_id: Option<RealDomId>) {
+        match &ref_id {
+            Some(ref_id) => {
+                show_log(format!("insert_before child={} refId={}", child, ref_id));
+            },
+            None => {
+                show_log(format!("insert_before child={} refId=None", child));
+            }
+        }
+
+        self.driver.insert_before(parent, child, ref_id);
+    }
+
+    pub(crate) fn insert_css(&self, selector: &str, value: &str) {
+        show_log(format!("insert_css selector={} value={}", selector, value));
+        self.driver.insert_css(selector, value);
+    }
+
+    pub(crate) fn set_event(&self, node: RealDomId, callback: EventCallback) {
+        show_log(format!("set_event {} {}", node, callback.to_string()));
+        self.driver.set_event(node, callback);
     }
 }

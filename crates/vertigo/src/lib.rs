@@ -1,3 +1,5 @@
+#![feature(try_trait_v2)]               //https://github.com/rust-lang/rust/issues/84277
+
 mod app;
 pub mod computed;
 mod css;
@@ -7,6 +9,8 @@ mod driver;
 pub mod router;
 pub mod utils;
 mod virtualdom;
+mod resource;
+mod request_builder;
 
 pub use driver::DomDriver;
 pub use driver::DomDriverTrait;
@@ -29,3 +33,6 @@ pub use instant::{Instant, InstantType};
 pub use log;
 
 pub use app::start_app;
+
+pub use request_builder::RequestTrait;
+pub use resource::Resource;

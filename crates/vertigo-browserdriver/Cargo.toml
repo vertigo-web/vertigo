@@ -8,6 +8,6 @@ description = "Virtual DOM library for Rust - web-browser rendering driver"
 
 [dependencies]
 vertigo = { path = "../../crates/vertigo", version="0.1.0-alpha.3" }
-wasm-bindgen = {version = "0.2.74", features = ["nightly"]}
-wasm-bindgen-futures = "0.4.24"
+wasm-bindgen = {version = "0.2.78", features = ["nightly"]}
+wasm-bindgen-futures = "0.4.28"
 log = "0.4.14"
