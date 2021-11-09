@@ -1,17 +1,17 @@
-use crate::{utils::BoxRefCell, driver::DomDriver, virtualdom::{
+use crate::{utils::BoxRefCell, driver::Driver, virtualdom::{
         models::{
             realdom_id::RealDomId,
         },
     }};
 
 pub struct RealDomText {
-    dom_driver: DomDriver,
+    dom_driver: Driver,
     id_dom: RealDomId,
     value: BoxRefCell<String>,
 }
 
 impl RealDomText {
-    pub fn new(dom_driver: DomDriver, value: String) -> RealDomText {
+    pub fn new(dom_driver: Driver, value: String) -> RealDomText {
         let id = RealDomId::default();
 
         dom_driver.create_text(id.clone(), &value);

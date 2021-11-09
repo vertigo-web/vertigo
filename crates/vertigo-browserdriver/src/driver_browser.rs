@@ -14,8 +14,8 @@ use crate::modules::{
 };
 
 use vertigo::{
-    DomDriver,
-    DomDriverTrait,
+    Driver,
+    DriverTrait,
     EventCallback,
     FetchMethod,
     FetchResult,
@@ -54,20 +54,20 @@ pub struct DriverBrowser {
 }
 
 impl DriverBrowser {
-    pub fn new(dependencies: &Dependencies) -> DomDriver {
+    pub fn new(dependencies: &Dependencies) -> Driver {
         let driver = DriverBrowserInner::new(dependencies);
 
         let dom_driver_browser = DriverBrowser {
             driver: Rc::new(driver),
         };
 
-        DomDriver::new(dom_driver_browser, Box::new(|fut: Pin<Box<dyn Future<Output = ()> + 'static>>| {
+        Driver::new(dom_driver_browser, Box::new(|fut: Pin<Box<dyn Future<Output = ()> + 'static>>| {
             wasm_bindgen_futures::spawn_local(fut);
         }))
     }
 }
 
-impl DomDriverTrait for DriverBrowser {
+impl DriverTrait for DriverBrowser {
     fn create_node(&self, id: RealDomId, name: &'static str) {
         self.driver.driver_dom.create_node(id, name);
     }

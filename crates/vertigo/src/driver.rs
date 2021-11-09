@@ -95,7 +95,7 @@ const SHOW_LOG: bool = false;
 
 pub type FetchResult = Result<(u32, String), String>;
 
-pub trait DomDriverTrait {
+pub trait DriverTrait {
     fn create_text(&self, id: RealDomId, value: &str);
     fn update_text(&self, id: RealDomId, value: &str);
     fn remove_text(&self, id: RealDomId);
@@ -123,25 +123,25 @@ pub trait DomDriverTrait {
 type Executor = Box<dyn Fn(Pin<Box<dyn Future<Output = ()> + 'static>>)>;
 
 #[derive(PartialEq)]
-pub struct DomDriver {
-    driver: EqBox<Rc<dyn DomDriverTrait>>,
+pub struct Driver {
+    driver: EqBox<Rc<dyn DriverTrait>>,
     spawn_local_executor: EqBox<Rc<Executor>>,
 }
 
-impl DomDriver {
+impl Driver {
     pub fn new<
-        T: DomDriverTrait + 'static,
-    >(driver: T, spawn_local: Executor) -> DomDriver {
-        DomDriver {
+        T: DriverTrait + 'static,
+    >(driver: T, spawn_local: Executor) -> Driver {
+        Driver {
             driver: EqBox::new(Rc::new(driver)),
             spawn_local_executor: EqBox::new(Rc::new(spawn_local))
         }
     }
 }
 
-impl Clone for DomDriver {
-    fn clone(&self) -> DomDriver {
-        DomDriver {
+impl Clone for Driver {
+    fn clone(&self) -> Driver {
+        Driver {
             driver: self.driver.clone(),
             spawn_local_executor: self.spawn_local_executor.clone(),
         }
@@ -154,7 +154,7 @@ pub fn show_log(message: String) {
     }
 }
 
-impl DomDriver {
+impl Driver {
     pub fn spawn<F>(&self, future: F) where F: Future<Output = ()> + 'static {
         let fur = Box::pin(future);
 

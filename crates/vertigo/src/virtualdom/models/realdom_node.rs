@@ -4,7 +4,7 @@ use std::collections::{
 };
 use std::rc::Rc;
 use crate::NodeRefsItem;
-use crate::{driver::{DomDriver, EventCallback}, virtualdom::{
+use crate::{driver::{Driver, EventCallback}, virtualdom::{
         models::{
             realdom::RealDomNode,
             realdom_id::RealDomId,
@@ -32,7 +32,7 @@ fn merge_attr(attr: &HashMap<&'static str, String>, class_name: Option<String>) 
 }
 
 pub struct RealDomNodeInner {
-    dom_driver: DomDriver,
+    dom_driver: Driver,
     pub id_dom: RealDomId,
     pub name: &'static str,
     attr: HashMap<&'static str, String>,
@@ -40,7 +40,7 @@ pub struct RealDomNodeInner {
 }
 
 impl RealDomNodeInner {
-    pub fn new(driver: DomDriver, name: &'static str) -> RealDomNodeInner {
+    pub fn new(driver: Driver, name: &'static str) -> RealDomNodeInner {
         let node_id = RealDomId::default();
 
         driver.create_node(node_id.clone(), name);
@@ -54,7 +54,7 @@ impl RealDomNodeInner {
         }
     }
 
-    pub fn create_with_id(driver: DomDriver, id: RealDomId) -> RealDomNodeInner {
+    pub fn create_with_id(driver: Driver, id: RealDomId) -> RealDomNodeInner {
         RealDomNodeInner {
             dom_driver: driver,
             id_dom: id,
@@ -153,7 +153,7 @@ pub struct RealDomElement {
 }
 
 impl RealDomElement {
-    pub fn new(driver: DomDriver, name: &'static str) -> RealDomElement {
+    pub fn new(driver: Driver, name: &'static str) -> RealDomElement {
         RealDomElement {
             inner: Rc::new(
                 BoxRefCell::new(
@@ -164,7 +164,7 @@ impl RealDomElement {
         }
     }
 
-    pub fn create_with_id(driver: DomDriver, id: RealDomId) -> RealDomElement {
+    pub fn create_with_id(driver: Driver, id: RealDomId) -> RealDomElement {
         RealDomElement {
             inner: Rc::new(
                 BoxRefCell::new(
@@ -233,7 +233,7 @@ impl RealDomElement {
         })
     }
 
-    fn dom_driver(&self) -> DomDriver {
+    fn dom_driver(&self) -> Driver {
         self.inner.get(|state| {
             state.dom_driver.clone()
         })

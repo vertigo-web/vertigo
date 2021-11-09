@@ -3,7 +3,7 @@ use std::rc::Rc;
 
 use crate::utils::BoxRefCell;
 
-use crate::driver::DomDriver;
+use crate::driver::Driver;
 use crate::virtualdom::models::css::{
     Css,
     CssGroup
@@ -11,14 +11,14 @@ use crate::virtualdom::models::css::{
 use super::{get_selector::get_selector, next_id::NextId, transform_css::transform_css};
 
 struct CssManagerInner {
-    driver: DomDriver,
+    driver: Driver,
     next_id: NextId,
     ids_static: HashMap<&'static str, u64>,
     ids_dynamic: HashMap<String, u64>,
 }
 
 impl CssManagerInner {
-    pub fn new(driver: DomDriver) -> CssManagerInner {
+    pub fn new(driver: Driver) -> CssManagerInner {
         CssManagerInner {
             driver,
             next_id: NextId::new(),
@@ -44,7 +44,7 @@ pub struct CssManager {
 }
 
 impl CssManager {
-    pub fn new(driver: &DomDriver) -> CssManager {
+    pub fn new(driver: &Driver) -> CssManager {
         CssManager {
             inner: Rc::new(BoxRefCell::new(CssManagerInner::new(driver.clone()), "css manager"))
         }

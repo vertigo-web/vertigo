@@ -2,7 +2,7 @@ use std::cmp::PartialEq;
 use serde::{Deserialize, Serialize};
 
 use vertigo::{
-    DomDriver,
+    Driver,
     RequestTrait,
     Resource,
     computed::{
@@ -48,7 +48,7 @@ impl RequestTrait for Branch {
     }
 }
 
-fn fetch_repo(repo: &str, value: Value<Resource<Branch>>, driver: &DomDriver) {
+fn fetch_repo(repo: &str, value: Value<Resource<Branch>>, driver: &Driver) {
     driver.spawn({
         let driver = driver.clone();
         let url = format!("https://api.github.com/repos/{}/branches/master", repo);
@@ -75,7 +75,7 @@ pub struct Item {
 }
 
 impl Item {
-    pub fn new(root: &Dependencies, driver: &DomDriver, repo_name: &str) -> Item {
+    pub fn new(root: &Dependencies, driver: &Driver, repo_name: &str) -> Item {
         log::info!("Creating for {}", repo_name);
         let new_value = root.new_value(Resource::Loading);
         let new_computed = new_value.to_computed();
@@ -100,7 +100,7 @@ pub struct State {
 }
 
 impl State {
-    pub fn new(root: &Dependencies, driver: &DomDriver) -> Computed<State> {
+    pub fn new(root: &Dependencies, driver: &Driver) -> Computed<State> {
         let root = root.clone();
         let driver = driver.clone();
 

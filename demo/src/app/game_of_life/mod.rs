@@ -1,7 +1,7 @@
 use std::cmp::PartialEq;
 use vertigo::{
     Css,
-    DomDriver,
+    Driver,
     VDomElement,
     computed::{
         Computed,
@@ -35,7 +35,7 @@ fn create_matrix(root: &Dependencies, x_count: u16, y_count: u16) -> Vec<Vec<Val
 
 #[derive(PartialEq)]
 pub struct State {
-    pub dom_driver: DomDriver,
+    pub dom_driver: Driver,
     pub root: Dependencies,
     pub x_count: Value<u16>,
     pub y_count: Value<u16>,
@@ -45,7 +45,7 @@ pub struct State {
 }
 
 impl State {
-    pub fn new(root: &Dependencies, dom_driver: &DomDriver) -> Computed<State> {
+    pub fn new(root: &Dependencies, dom_driver: &Driver) -> Computed<State> {
         let x_count_len = 120;
         let y_count_len = 70;
 

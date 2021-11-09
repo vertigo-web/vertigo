@@ -1,17 +1,17 @@
 use std::rc::Rc;
 
-use crate::{DomDriverTrait, utils::EqBox};
+use crate::{DriverTrait, utils::EqBox};
 
 pub type InstantType = u64;
 
 #[derive(Clone)]
 pub struct Instant {
-    driver: EqBox<Rc<dyn DomDriverTrait>>,
+    driver: EqBox<Rc<dyn DriverTrait>>,
     pub instant: InstantType,
 }
 
 impl Instant {
-    pub fn new(driver: EqBox<Rc<dyn DomDriverTrait>>) -> Self {
+    pub fn new(driver: EqBox<Rc<dyn DriverTrait>>) -> Self {
         Self {
             instant: driver.now(),
             driver,
