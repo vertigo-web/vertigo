@@ -1,6 +1,6 @@
 use std::rc::Rc;
 
-use crate::{DomDriver, computed::{Client, Value}, utils::{BoxRefCell, DropResource}};
+use crate::{Driver, computed::{Client, Value}, utils::{BoxRefCell, DropResource}};
 
 #[derive(PartialEq, Clone, Copy)]
 enum Direction {
@@ -18,7 +18,7 @@ pub struct HashRouter {
 impl HashRouter {
     /// Create new HashRouter which sets route value upon hash change in browser bar.
     /// If callback is provided then it is fired instead.
-    pub fn new<T>(driver: &DomDriver, route: Value<T>, callback: Box<dyn Fn(&String)>) -> Self
+    pub fn new<T>(driver: &Driver, route: Value<T>, callback: Box<dyn Fn(&String)>) -> Self
     where
         T: PartialEq + ToString
     {

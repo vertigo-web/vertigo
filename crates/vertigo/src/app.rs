@@ -8,10 +8,10 @@ use crate::{
         render_to_node::render_to_node,
     },
     css::css_manager::CssManager,
-    driver::DomDriver,
+    driver::Driver,
 };
 
-pub async fn start_app(driver: DomDriver, computed: VDomComponent) {
+pub async fn start_app(driver: Driver, computed: VDomComponent) {
     let css_manager = CssManager::new(&driver);
     let root = RealDomElement::create_with_id(driver, RealDomId::root());
 

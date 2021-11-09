@@ -1,6 +1,6 @@
 use std::cmp::PartialEq;
 use vertigo::{
-    DomDriver,
+    Driver,
     computed::{Computed, Dependencies, Value},
     router::HashRouter,
 };
@@ -29,7 +29,7 @@ pub struct State {
 }
 
 impl State {
-    pub fn new(root: &Dependencies, driver: &DomDriver) -> Computed<State> {
+    pub fn new(root: &Dependencies, driver: &Driver) -> Computed<State> {
 
         let game_of_life = game_of_life::State::new(root, driver);
 

@@ -1,5 +1,5 @@
 use std::{collections::HashMap};
-use crate::DomDriver;
+use crate::Driver;
 use crate::resource::Resource;
 
 #[derive(Debug)]
@@ -27,7 +27,7 @@ pub trait RequestTrait: Sized {
 pub enum RequestBuilder {
     ErrorInput(String),
     Data {
-        driver: DomDriver,
+        driver: Driver,
         url: String,
         headers: Option<HashMap<String, String>>,
         body: Option<String>,
@@ -35,7 +35,7 @@ pub enum RequestBuilder {
 }
 
 impl RequestBuilder {
-    pub fn new(driver: &DomDriver, url: impl Into<String>) -> RequestBuilder {
+    pub fn new(driver: &Driver, url: impl Into<String>) -> RequestBuilder {
         RequestBuilder::Data {
             driver: driver.clone(),
             url: url.into(),

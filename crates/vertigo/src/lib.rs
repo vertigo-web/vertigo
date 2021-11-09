@@ -12,8 +12,8 @@ mod virtualdom;
 mod resource;
 mod request_builder;
 
-pub use driver::DomDriver;
-pub use driver::DomDriverTrait;
+pub use driver::Driver;
+pub use driver::DriverTrait;
 pub use driver::EventCallback;
 pub use driver::FetchResult;
 pub use driver::FetchMethod;
