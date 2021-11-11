@@ -3,18 +3,18 @@ use std::{
     rc::Rc,
 };
 
-use crate::{DriverTrait, FetchResult, FetchMethod, driver::show_log, utils::{EqBox}};
+use crate::{DriverTrait, FetchResult, FetchMethod, driver::show_log};
 
 
 pub struct FetchBuilder {
-    driver: EqBox<Rc<dyn DriverTrait>>,
+    driver: Rc<dyn DriverTrait>,
     url: String,
     headers: Option<HashMap<String, String>>,
     body: Option<String>
 }
 
 impl FetchBuilder {
-    pub fn new(driver: EqBox<Rc<dyn DriverTrait>>, url: String) -> FetchBuilder {
+    pub fn new(driver: Rc<dyn DriverTrait>, url: String) -> FetchBuilder {
         FetchBuilder {
             driver,
             url,

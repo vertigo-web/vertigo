@@ -18,7 +18,7 @@ pub async fn start_application() {
     console_error_panic_hook::set_once();
     wasm_logger::init(wasm_logger::Config::default());
 
-    log::info!("Start rustowego modułu ...");
+    log::info!("Starting application ...");
 
     let root: Dependencies = Dependencies::default();
     let driver = DriverBrowser::new(&root);

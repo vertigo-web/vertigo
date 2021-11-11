@@ -1,21 +1,12 @@
-use std::{collections::{HashMap}, rc::Rc};
+use std::collections::HashMap;
 use std::fmt;
-pub trait NodeRefsItemTrait {
-    fn get_bounding_client_rect_x(&self) -> f64;
-    fn get_bounding_client_rect_y(&self) -> f64;
-    fn get_bounding_client_rect_width(&self) -> f64;
-    fn get_bounding_client_rect_height(&self) -> f64;
-    fn scroll_top(&self) -> i32;
-    fn set_scroll_top(&self, value: i32);
-    fn scroll_left(&self) -> i32;
-    fn set_scroll_left(&self, value: i32);
-    fn scroll_width(&self) -> i32;
-    fn scroll_height(&self) -> i32;
-}
+
+use crate::{Driver, RealDomId};
 
 #[derive(Clone)]
 pub struct NodeRefsItem {
-    item: Rc<dyn NodeRefsItemTrait>,
+    id: RealDomId,
+    driver: Driver,
 }
 
 impl fmt::Debug for NodeRefsItem {
@@ -27,50 +18,51 @@ impl fmt::Debug for NodeRefsItem {
 }
 
 impl NodeRefsItem {
-    pub fn new<I: NodeRefsItemTrait + 'static>(item: I) -> NodeRefsItem {
+    pub fn new(driver: Driver, id: RealDomId) -> NodeRefsItem {
         NodeRefsItem {
-            item: Rc::new(item)
+            id,
+            driver,
         }
     }
 
     pub fn get_bounding_client_rect_x(&self) -> f64 {
-        self.item.get_bounding_client_rect_x()
+        self.driver.get_bounding_client_rect_x(self.id)
     }
 
     pub fn get_bounding_client_rect_y(&self) -> f64 {
-        self.item.get_bounding_client_rect_y()
+        self.driver.get_bounding_client_rect_y(self.id)
     }
 
     pub fn get_bounding_client_rect_width(&self) -> f64 {
-        self.item.get_bounding_client_rect_width()
+        self.driver.get_bounding_client_rect_width(self.id)
     }
 
     pub fn get_bounding_client_rect_height(&self) -> f64 {
-        self.item.get_bounding_client_rect_height()
+        self.driver.get_bounding_client_rect_height(self.id)
     }
 
     pub fn scroll_top(&self) -> i32 {
-        self.item.scroll_top()
+        self.driver.scroll_top(self.id)
     }
 
     pub fn set_scroll_top(&self, value: i32) {
-        self.item.set_scroll_top(value);
+        self.driver.set_scroll_top(self.id, value);
     }
 
     pub fn scroll_left(&self) -> i32 {
-        self.item.scroll_left()
+        self.driver.scroll_left(self.id)
     }
 
     pub fn set_scroll_left(&self, value: i32) {
-        self.item.set_scroll_left(value);
+        self.driver.set_scroll_left(self.id, value);
     }
 
     pub fn scroll_width(&self) -> i32 {
-        self.item.scroll_width()
+        self.driver.scroll_width(self.id)
     }
 
     pub fn scroll_height(&self) -> i32 {
-        self.item.scroll_height()
+        self.driver.scroll_height(self.id)
     }
 }
 

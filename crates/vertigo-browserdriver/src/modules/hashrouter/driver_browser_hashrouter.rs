@@ -18,9 +18,9 @@ impl DriverBrowserHashrouter {
         let closure: Closure<dyn Fn(String)> = {
             let callback_manager = callback_manager.clone();
 
-            Closure::new(Box::new(move |new_hash: String| {
+            Closure::new(move |new_hash: String| {
                 callback_manager.trigger(new_hash);
-            }))
+            })
         };
 
         let driver = DriverBrowserHashRouteJs::new(&closure);

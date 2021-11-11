@@ -34,18 +34,6 @@ impl<K: Eq + Hash + Display, V> HashMapRc<K, V> {
         })
     }
 
-    pub fn try_get<R, F: FnOnce(&V) -> R>(&self, key: &K, callback: F) -> Option<R> {
-        self.data.get_with_context((key, callback), |state, (key, callback)| {
-            let item = state.get(key);
-
-            if let Some(elem) = item {
-                return Some(callback(elem));
-            }
-
-            None
-        })
-    }
-
     pub fn must_change<R, F: FnOnce(&mut V) -> R>(&self, key: &K, callback: F) -> Option<R> {
         self.data.change((self.label, key, callback), |state, (label, key, callback)| {
             let item = state.get_mut(key);
