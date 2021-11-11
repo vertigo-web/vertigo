@@ -7,11 +7,10 @@ use vertigo::{
 
 use crate::utils::hash_map_rc::HashMapRc;
 
-use super::element_wrapper::{DomElement, DomText};
+use super::element_wrapper::{DomElement};
 
 pub struct DriverData {
     pub elements: HashMapRc<RealDomId, DomElement>,
-    pub texts: HashMapRc<RealDomId, DomText>,
     pub child_parent: HashMapRc<RealDomId, RealDomId>,            //child -> parent
 }
 
@@ -19,7 +18,6 @@ impl DriverData {
     pub fn new() -> Rc<DriverData> {
         Rc::new(DriverData {
             elements: HashMapRc::new("DriverData elements"),
-            texts: HashMapRc::new("DriverData texts"),
             child_parent: HashMapRc::new("DriverData child_parent"),
         })
     }
@@ -32,9 +30,9 @@ impl DriverData {
             return vec![RealDomId::root()];
         }
 
-        let mut wsk = id.clone();
+        let mut wsk = id;
         let mut count = 0;
-        let mut out: Vec<RealDomId> = vec![wsk.clone()];
+        let mut out: Vec<RealDomId> = vec![wsk];
 
         loop {
             count += 1;
@@ -46,11 +44,11 @@ impl DriverData {
 
             let parent = self.child_parent.must_get(
                 &wsk,
-                |item| item.clone()
+                |item| *item
             );
 
             if let Some(parent) = parent {
-                out.push(parent.clone());
+                out.push(parent);
 
                 if parent == RealDomId::root() {    
                     return out;

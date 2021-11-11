@@ -6,6 +6,56 @@ const createElement = (name: string): Element => {
     }
 }
 
+type CommandType = {
+    type: 'mount_node'
+    id: number,
+} | {
+    type: 'create_node',
+    id: number,
+    name: string,
+} | {
+    type: 'rename_node',
+    id: number,
+    new_name: string,
+} | {
+    type: 'create_text',
+    id: number,
+    value: string
+} | {
+    type: 'update_text',
+    id: number,
+    value: string
+} | {
+    type: 'set_attr',
+    id: number,
+    key: string,
+    value: string
+} | {
+    type: 'remove_attr',
+    id: number,
+    name: string,
+} | {
+    type: 'remove_node',
+    id: number,
+} | {
+    type: 'remove_text',
+    id: number,
+} | {
+    type: 'insert_before',
+    parent: number,
+    child: number,
+    ref_id: number | null,
+} | {
+    type: 'insert_css',
+    selector: string,
+    value: string
+};
+
+const assertNeverCommand = (data: never): never => {
+    console.error(data);
+    throw Error('unknown command');
+};
+
 class MapNodes<K, V> {
     private data: Map<K, V>;
 
@@ -72,7 +122,7 @@ class MapNodes<K, V> {
 }
 
 type KeydownCallbackType = (
-    dom_id: number | null | undefined,
+    dom_id: BigInt | null,
     key: string,
     code: string,
     alt_key: boolean,
@@ -82,19 +132,19 @@ type KeydownCallbackType = (
 ) => boolean;
 
 export class DriverBrowserDomJs {
-    private readonly mouse_down: (dom_id: number) => void;
-    private readonly mouse_over: (dom_id: number | null | undefined) => void;
+    private readonly mouse_down: (dom_id: BigInt) => void;
+    private readonly mouse_over: (dom_id: BigInt | null) => void;
     private readonly keydown: KeydownCallbackType;
-    private readonly oninput: (dom_id: number, text: string) => void;
-    private readonly nodes: MapNodes<number, Element>;
-    private readonly texts: MapNodes<number, Text>;
-    private readonly all: Map<Element | Text, number>;
+    private readonly oninput: (dom_id: BigInt, text: string) => void;
+    private readonly nodes: MapNodes<BigInt, Element>;
+    private readonly texts: MapNodes<BigInt, Text>;
+    private readonly all: Map<Element | Text, BigInt>;
 
     public constructor(
-        mouse_down: (dom_id: number) => void,
-        mouse_over: (dom_id: number | null | undefined) => void,
+        mouse_down: (dom_id: BigInt) => void,
+        mouse_over: (dom_id: BigInt | null) => void,
         keydown: KeydownCallbackType,
-        oninput: (dom_id: number, text: string) => void,
+        oninput: (dom_id: BigInt, text: string) => void,
     ) {
         this.mouse_down = mouse_down;
         this.mouse_over = mouse_over;
@@ -125,6 +175,11 @@ export class DriverBrowserDomJs {
             if (target instanceof Element) {
                 const id = this.all.get(target);
 
+                if (id === undefined) {
+                    this.mouse_over(null);
+                    return;
+                }
+
                 this.mouse_over(id);
                 return;
             }
@@ -139,7 +194,7 @@ export class DriverBrowserDomJs {
                 const id = this.all.get(target);
 
                 const stopPropagate = this.keydown(
-                    id,
+                    id === undefined ? null : id,
                     event.key,
                     event.code,
                     event.altKey,
@@ -183,19 +238,19 @@ export class DriverBrowserDomJs {
         }, false);
     }
 
-    public mount_root(root_id: number) {
+    private mount_node(root_id: BigInt) {
         this.nodes.get("append_to_body", root_id, (root) => {
             document.body.appendChild(root);
         });
     }
 
-    public create_node(id: number, name: string) {
+    private create_node(id: BigInt, name: string) {
         const node = createElement(name);
         this.nodes.set(id, node);
         this.all.set(node, id);
     }
 
-    public rename_node(id: number, name: string) {
+    private rename_node(id: BigInt, name: string) {
         this.nodes.get("rename_node", id, (node) => {
             const new_node = createElement(name);
 
@@ -214,7 +269,7 @@ export class DriverBrowserDomJs {
         });
     }
 
-    public set_attribute(id: number, name: string, value: string) {
+    private set_attribute(id: BigInt, name: string, value: string) {
         this.nodes.get("set_attribute", id, (node) => {
             node.setAttribute(name, value);
 
@@ -233,13 +288,13 @@ export class DriverBrowserDomJs {
         });
     }
 
-    public remove_attribute(id: number, name: string) {
+    private remove_attribute(id: BigInt, name: string) {
         this.nodes.get("remove_attribute", id, (node) => {
             node.removeAttribute(name);
         });
     }
 
-    public remove_node(id: number) {
+    private remove_node(id: BigInt) {
         this.nodes.delete("remove_node", id, (node) => {
             this.all.delete(node);
 
@@ -250,13 +305,13 @@ export class DriverBrowserDomJs {
         });
     }
 
-    public create_text(id: number, value: string) {
+    private create_text(id: BigInt, value: string) {
         const text = document.createTextNode(value);
         this.texts.set(id, text);
         this.all.set(text, id);
     }
 
-    public remove_text(id: number) {
+    private remove_text(id: BigInt) {
         this.texts.delete("remove_node", id, (text) => {
             this.all.delete(text);
 
@@ -267,13 +322,13 @@ export class DriverBrowserDomJs {
         });
     }
 
-    public update_text(id: number, value: string) {
+    private update_text(id: BigInt, value: string) {
         this.texts.get("set_attribute", id, (text) => {
             text.textContent = value;
         });
     }
 
-    private get_node(label: string, id: number, callback: (node: Element | Text) => void) {
+    private get_node(label: string, id: BigInt, callback: (node: Element | Text) => void) {
         const node = this.nodes.getItem(id);
         if (node !== undefined) {
             callback(node);
@@ -290,7 +345,7 @@ export class DriverBrowserDomJs {
         return;
     }
 
-    public insert_before(parent: number, child: number, ref_id: number | null | undefined) {
+    private insert_before(parent: BigInt, child: BigInt, ref_id: BigInt | null | undefined) {
         this.nodes.get("insert_before", parent, (parentNode) => {
             this.get_node("insert_before child", child, (childNode) => {
 
@@ -305,7 +360,7 @@ export class DriverBrowserDomJs {
         });
     }
 
-    public insert_css(selector: string, value: string) {
+    private insert_css(selector: string, value: string) {
         const style = document.createElement('style');
         const content = document.createTextNode(`${selector} { ${value} }`);
         style.appendChild(content);
@@ -313,43 +368,110 @@ export class DriverBrowserDomJs {
         document.head.appendChild(style);
     }
 
-    public get_bounding_client_rect_x(node_id: number): number {
+    public bulk_update(value: string) {
+        const commands: Array<CommandType> = JSON.parse(value);
+
+        for (const command of commands) {
+            this.bulk_update_command(command);
+        }
+    }
+
+    private bulk_update_command(command: CommandType) {
+        if (command.type === 'remove_node') {
+            this.remove_node(BigInt(command.id));
+            return;
+        }
+
+        if (command.type === 'insert_before') {
+            this.insert_before(BigInt(command.parent), BigInt(command.child), command.ref_id === null ? null : BigInt(command.ref_id));
+            return;
+        }
+
+        if (command.type === 'mount_node') {
+            this.mount_node(BigInt(command.id));
+            return;
+        }
+
+        if (command.type === 'create_node') {
+            this.create_node(BigInt(command.id), command.name);
+            return;
+        }
+
+        if (command.type === 'rename_node') {
+            this.rename_node(BigInt(command.id), command.new_name);
+            return;
+        }
+
+        if (command.type === 'create_text') {
+            this.create_text(BigInt(command.id), command.value);
+            return;
+        }
+
+        if (command.type === 'update_text') {
+            this.update_text(BigInt(command.id), command.value);
+            return;
+        }
+
+        if (command.type === 'set_attr') {
+            this.set_attribute(BigInt(command.id), command.key, command.value);
+            return;
+        }
+
+        if (command.type === 'remove_attr') {
+            this.remove_attribute(BigInt(command.id), command.name);
+            return;
+        }
+
+        if (command.type === 'remove_text') {
+            this.remove_text(BigInt(command.id));
+            return;
+        }
+
+        if (command.type === 'insert_css') {
+            this.insert_css(command.selector, command.value);
+            return;
+        }
+
+        return assertNeverCommand(command);
+    }
+
+    public get_bounding_client_rect_x(node_id: BigInt): number {
         return this.nodes.mustGetItem(node_id).getBoundingClientRect().x;
     }
 
-    public get_bounding_client_rect_y(node_id: number): number {
+    public get_bounding_client_rect_y(node_id: BigInt): number {
         return this.nodes.mustGetItem(node_id).getBoundingClientRect().y;
     }
 
-    public get_bounding_client_rect_width(node_id: number): number {
+    public get_bounding_client_rect_width(node_id: BigInt): number {
         return this.nodes.mustGetItem(node_id).getBoundingClientRect().width;
     }
 
-    public get_bounding_client_rect_height(node_id: number): number {
+    public get_bounding_client_rect_height(node_id: BigInt): number {
         return this.nodes.mustGetItem(node_id).getBoundingClientRect().height;
     }
 
-    public scroll_top(node_id: number): number {
+    public scroll_top(node_id: BigInt): number {
         return this.nodes.mustGetItem(node_id).scrollTop;
     }
 
-    public set_scroll_top(node_id: number, value: number) {
+    public set_scroll_top(node_id: BigInt, value: number) {
         this.nodes.mustGetItem(node_id).scrollTop = value;
     }
 
-    public scroll_left(node_id: number): number {
+    public scroll_left(node_id: BigInt): number {
         return this.nodes.mustGetItem(node_id).scrollLeft;
     }
 
-    public set_scroll_left(node_id: number, value: number) {
+    public set_scroll_left(node_id: BigInt, value: number) {
         return this.nodes.mustGetItem(node_id).scrollLeft = value;
     }
 
-    public scroll_width(node_id: number): number {
+    public scroll_width(node_id: BigInt): number {
         return this.nodes.mustGetItem(node_id).scrollWidth;
     }
 
-    public scroll_height(node_id: number): number {
+    public scroll_height(node_id: BigInt): number {
         return this.nodes.mustGetItem(node_id).scrollHeight;
     }
 }

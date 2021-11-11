@@ -14,7 +14,7 @@ impl RealDomText {
     pub fn new(dom_driver: Driver, value: String) -> RealDomText {
         let id = RealDomId::default();
 
-        dom_driver.create_text(id.clone(), &value);
+        dom_driver.create_text(id, &value);
 
         RealDomText {
             dom_driver,
@@ -34,7 +34,7 @@ impl RealDomText {
         });
 
         if should_update {
-            self.dom_driver.update_text(self.id_dom.clone(), new_value);
+            self.dom_driver.update_text(self.id_dom, new_value);
         }
     }
 
@@ -45,12 +45,12 @@ impl RealDomText {
     }
 
     pub fn id_dom(&self) -> RealDomId {
-        self.id_dom.clone()
+        self.id_dom
     }
 }
 
 impl Drop for RealDomText {
     fn drop(&mut self) {
-        self.dom_driver.remove_text(self.id_dom.clone());
+        self.dom_driver.remove_text(self.id_dom);
     }
 }

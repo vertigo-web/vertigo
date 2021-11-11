@@ -1,43 +1,5 @@
-[env]
-PROFILE="dev"
-
-[env.profiling]
-PROFILE="profiling"
-
-[env.release]
-PROFILE="release"
-
 [config]
 default_to_workspace = false
-
-[tasks.demo-watch]
-command = "cargo"
-args = [ "watch", "--watch", "./demo", "--watch", "crates", "--delay", "0.5", "-x", "make demo-start --profile ${PROFILE}" ]
-
-[tasks.demo-clean]
-script = "rm -Rf ./build"
-
-[tasks.demo-build]
-dependencies = [ "wasm32-target" ]
-install_crate = { crate_name = "wasm-pack", binary = "wasm-pack", test_arg = ["--version"] }
-script = [
-    "wasm-pack build demo --no-typescript --target web --out-dir ../build --out-name demo --${PROFILE}",
-    "cp ./demo/index.html ./build",
-    "rm ./build/.gitignore",
-    "rm ./build/package.json",
-]
-
-[tasks.demo-serve]
-install_crate = { crate_name = "basic-http-server", binary = "basic-http-server", test_arg = ["--version"] }
-command = "basic-http-server"
-args = [ "--addr", "127.0.0.1:3000", "./build" ]
-
-[tasks.demo-start]
-dependencies = [
-    "demo-clean",
-    "demo-build",
-    "demo-serve"
-]
 
 [tasks.wasm32-target]
 install_script = '''
@@ -57,3 +19,32 @@ script = [
 dependencies = [ "wasm32-target" ]
 command = "cargo"
 args = [ "clippy", "--all-features", "--target", "wasm32-unknown-unknown" ]
+
+[tasks.demo-clean]
+script = "rm -Rf ./build"
+
+[tasks.demo-build]
+dependencies = [ "wasm32-target" ]
+install_crate = { crate_name = "wasm-pack", binary = "wasm-pack", test_arg = ["--version"] }
+script = [
+    "wasm-pack build demo --no-typescript --target web --out-dir ../build --out-name demo --release",
+    "cp ./demo/index.html ./build",
+    "rm ./build/.gitignore",
+    "rm ./build/package.json",
+]
+
+[tasks.demo-serve]
+install_crate = { crate_name = "basic-http-server", binary = "basic-http-server", test_arg = ["--version"] }
+command = "basic-http-server"
+args = [ "--addr", "127.0.0.1:3000", "./build" ]
+
+[tasks.demo-start]
+dependencies = [
+    "demo-clean",
+    "demo-build",
+    "demo-serve"
+]
+
+[tasks.demo-watch]
+command = "cargo"
+args = [ "watch", "--watch", "./demo", "--watch", "crates", "--delay", "0.5", "-x", "make demo-start" ]

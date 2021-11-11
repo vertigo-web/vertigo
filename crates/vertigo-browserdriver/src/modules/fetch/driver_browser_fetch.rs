@@ -25,7 +25,7 @@ impl DriverBrowserFetch {
         let closure = {
             let data = data.clone();
 
-            Closure::new(Box::new(move |request_id: u64, success: bool, status: u32, response: String| {
+            Closure::new(move |request_id: u64, success: bool, status: u32, response: String| {
                 let sender = data.remove(&request_id);
 
                 if let Some(sender) = sender {
@@ -37,7 +37,7 @@ impl DriverBrowserFetch {
                 } else {
                     log::error!("Request with ID={} not found", request_id);
                 }
-            }))
+            })
         };
 
         let driver_js = DriverBrowserFetchJs::new(&closure);

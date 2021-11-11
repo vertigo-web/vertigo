@@ -11,8 +11,13 @@ fn string_escape(text: &str) -> String {
     for char in text.chars() {
         if char == '"' {
             out.push('\\');
+            out.push(char);
+        } else if char == '\n' {
+            out.push('\\');
+            out.push('n');
+        } else {
+            out.push(char);
         }
-        out.push(char);
     }
 
     out.into_iter().collect()
@@ -28,7 +33,21 @@ impl JsonMapBuilder {
     pub fn set_string(&mut self, key: &str, value: &str) {
         self.data.insert(
             string_escape(key),
-            string_escape(value)
+            format!("\"{}\"", string_escape(value))
+        );
+    }
+
+    pub fn set_u64(&mut self, key: &str, value: u64) {
+        self.data.insert(
+            string_escape(key),
+            value.to_string()
+        );
+    }
+
+    pub fn set_null(&mut self, key: &str) {
+        self.data.insert(
+            string_escape(key),
+            "null".into()
         );
     }
 
@@ -36,7 +55,7 @@ impl JsonMapBuilder {
         let mut records: Vec<String> = Vec::new();
 
         for (key, value) in self.data.into_iter() {
-            records.push(format!("\"{}\":\"{}\"", key, value));
+            records.push(format!("\"{}\":{}", key, value));
         }
 
         records.sort();
@@ -46,6 +65,9 @@ impl JsonMapBuilder {
         format!("{{{}}}", content)
     }
 }
+
+//JSON Formatter & Validator
+//https://jsonformatter.curiousconcept.com/
 
 #[test]
 fn basic() {
@@ -77,4 +99,30 @@ fn basic4() {
     builder.set_string("token", "33\"33");
     let result = builder.build();
     assert_eq!(result, "{\"token\":\"33\\\"33\"}");
+}
+
+
+#[test]
+fn basic5() {
+    let mut builder = JsonMapBuilder::new();
+    builder.set_u64("token", 4);
+    let result = builder.build();
+    assert_eq!(result, "{\"token\":4}");
+}
+
+#[test]
+fn basic6() {
+    let mut builder = JsonMapBuilder::new();
+    builder.set_null("token");
+    let result = builder.build();
+    assert_eq!(result, "{\"token\":null}");
+}
+
+#[test]
+fn basic7() {
+    let mut builder = JsonMapBuilder::new();
+    builder.set_string("css", r#"color: crimson;
+text-decoration: line-through;"#);
+    let result = builder.build();
+    assert_eq!(result, "{\"css\":\"color: crimson;\\ntext-decoration: line-through;\"}");
 }

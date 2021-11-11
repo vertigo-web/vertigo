@@ -4,13 +4,19 @@ use std::collections::{
 };
 use std::rc::Rc;
 use crate::NodeRefsItem;
-use crate::{driver::{Driver, EventCallback}, virtualdom::{
+use crate::{
+    driver::{
+        Driver,
+        EventCallback
+    },
+    virtualdom::{
         models::{
             realdom::RealDomNode,
             realdom_id::RealDomId,
             realdom_text::RealDomText,
         },
-    }};
+    }
+};
 use crate::utils::BoxRefCell;
 
 
@@ -43,7 +49,7 @@ impl RealDomNodeInner {
     pub fn new(driver: Driver, name: &'static str) -> RealDomNodeInner {
         let node_id = RealDomId::default();
 
-        driver.create_node(node_id.clone(), name);
+        driver.create_node(node_id, name);
 
         RealDomNodeInner {
             dom_driver: driver,
@@ -69,7 +75,7 @@ impl RealDomNodeInner {
             return;
         }
 
-        self.dom_driver.rename_node(self.id_dom.clone(), name);
+        self.dom_driver.rename_node(self.id_dom, name);
         self.name = name;
     }
 
@@ -84,7 +90,7 @@ impl RealDomNodeInner {
         };
 
         if need_update {
-            self.dom_driver.set_attr(self.id_dom.clone(), name, value);
+            self.dom_driver.set_attr(self.id_dom, name, value);
             self.attr.insert(name, value.to_string());
        }
     }
@@ -101,7 +107,7 @@ impl RealDomNodeInner {
         }
 
         for key_to_delete in to_delate.into_iter() {
-            self.dom_driver.remove_attr(self.id_dom.clone(), key_to_delete)
+            self.dom_driver.remove_attr(self.id_dom, key_to_delete)
         }
 
         self.attr.retain(|key, _value| {
@@ -121,7 +127,7 @@ impl RealDomNodeInner {
     }
 
     pub fn set_event(&mut self, callback: EventCallback) {
-        self.dom_driver.set_event(self.id_dom.clone(), callback);
+        self.dom_driver.set_event(self.id_dom, callback);
     }
 
     pub fn extract_child(&mut self) -> VecDeque<RealDomNode> {
@@ -133,17 +139,13 @@ impl RealDomNodeInner {
     }
 
     pub fn insert_before(&mut self, new_child: RealDomId, prev_node: Option<RealDomId>) {
-        self.dom_driver.insert_before(self.id_dom.clone(), new_child, prev_node);
-    }
-
-    pub fn get_ref(&self) -> Option<NodeRefsItem> {
-        self.dom_driver.get_ref(self.id_dom.clone())
+        self.dom_driver.insert_before(self.id_dom, new_child, prev_node);
     }
 }
 
 impl Drop for RealDomNodeInner {
     fn drop(&mut self) {
-        self.dom_driver.remove_node(self.id_dom.clone());
+        self.dom_driver.remove_node(self.id_dom);
     }
 }
 
@@ -200,7 +202,7 @@ impl RealDomElement {
     }
 
     pub fn id_dom(&self) -> RealDomId {
-        self.inner.get(|state| state.id_dom.clone())
+        self.inner.get(|state| state.id_dom)
     }
 
     pub fn name(&self) -> &'static str {
@@ -247,8 +249,11 @@ impl RealDomElement {
         RealDomText::new(self.dom_driver(), name)
     }
 
-    pub fn get_ref(&self) -> Option<NodeRefsItem> {
-        self.inner.get(|state| state.get_ref())
+    pub fn get_ref(&self) -> NodeRefsItem {
+        let driver = self.inner.get(|state| state.dom_driver.clone());
+        let id = self.id_dom();
+
+        NodeRefsItem::new(driver, id)
     }
 }
 

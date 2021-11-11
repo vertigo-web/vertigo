@@ -9,7 +9,7 @@ fn get_unique_id() -> u64 {
     COUNTER.fetch_add(1, Ordering::Relaxed)
 }
 
-#[derive(Clone, Debug, PartialEq, Eq, Hash)]
+#[derive(Copy, Clone, Debug, PartialEq, Eq, Hash)]
 pub struct RealDomId {
     id: u64,
 }

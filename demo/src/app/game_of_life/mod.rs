@@ -76,7 +76,7 @@ impl State {
 
                 log::info!("start timer");
 
-                let drop_timer = dom_driver.set_interval(1000, move || {
+                let drop_timer = dom_driver.set_interval(150, move || {
 
                     let timer_enable = timer_enable.get_value();
 

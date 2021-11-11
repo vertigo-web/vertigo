@@ -11,7 +11,7 @@ Install cargo-make that takes care of all other dependencies:
 - `cargo install cargo-make`
 
 Build and run project using:
-- `cargo make demo-start --profile release`
+- `cargo make demo-start`
 
 Eventually terminal will let you know that app is available under http://localhost:3000/
 
@@ -19,11 +19,6 @@ If you want to play around with the code, you can make cargo to watch for your c
 - `cargo make demo-watch`
 
 Keep in mind that you still need to refresh page in the browser after project recompiles.
-
-Different build profiles
---------------
-- `cargo make demo-watch --profile profiling`
-- `cargo make demo-watch --profile release`
 
 Some random dev stuff below
 ===================

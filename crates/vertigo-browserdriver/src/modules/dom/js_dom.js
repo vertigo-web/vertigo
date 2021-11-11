@@ -6,6 +6,10 @@ const createElement = (name) => {
         return document.createElement(name);
     }
 };
+const assertNeverCommand = (data) => {
+    console.error(data);
+    throw Error('unknown command');
+};
 class MapNodes {
     data;
     constructor() {
@@ -89,6 +93,10 @@ export class DriverBrowserDomJs {
             const target = event.target;
             if (target instanceof Element) {
                 const id = this.all.get(target);
+                if (id === undefined) {
+                    this.mouse_over(null);
+                    return;
+                }
                 this.mouse_over(id);
                 return;
             }
@@ -98,7 +106,7 @@ export class DriverBrowserDomJs {
             const target = event.target;
             if (target instanceof Element && event instanceof KeyboardEvent) {
                 const id = this.all.get(target);
-                const stopPropagate = this.keydown(id, event.key, event.code, event.altKey, event.ctrlKey, event.shiftKey, event.metaKey);
+                const stopPropagate = this.keydown(id === undefined ? null : id, event.key, event.code, event.altKey, event.ctrlKey, event.shiftKey, event.metaKey);
                 if (stopPropagate) {
                     event.preventDefault();
                     event.stopPropagation();
@@ -126,7 +134,7 @@ export class DriverBrowserDomJs {
             console.warn('mouseover ignore', target);
         }, false);
     }
-    mount_root(root_id) {
+    mount_node(root_id) {
         this.nodes.get("append_to_body", root_id, (root) => {
             document.body.appendChild(root);
         });
@@ -235,6 +243,59 @@ export class DriverBrowserDomJs {
         const content = document.createTextNode(`${selector} { ${value} }`);
         style.appendChild(content);
         document.head.appendChild(style);
+    }
+    bulk_update(value) {
+        const commands = JSON.parse(value);
+        for (const command of commands) {
+            this.bulk_update_command(command);
+        }
+    }
+    bulk_update_command(command) {
+        if (command.type === 'remove_node') {
+            this.remove_node(BigInt(command.id));
+            return;
+        }
+        if (command.type === 'insert_before') {
+            this.insert_before(BigInt(command.parent), BigInt(command.child), command.ref_id === null ? null : BigInt(command.ref_id));
+            return;
+        }
+        if (command.type === 'mount_node') {
+            this.mount_node(BigInt(command.id));
+            return;
+        }
+        if (command.type === 'create_node') {
+            this.create_node(BigInt(command.id), command.name);
+            return;
+        }
+        if (command.type === 'rename_node') {
+            this.rename_node(BigInt(command.id), command.new_name);
+            return;
+        }
+        if (command.type === 'create_text') {
+            this.create_text(BigInt(command.id), command.value);
+            return;
+        }
+        if (command.type === 'update_text') {
+            this.update_text(BigInt(command.id), command.value);
+            return;
+        }
+        if (command.type === 'set_attr') {
+            this.set_attribute(BigInt(command.id), command.key, command.value);
+            return;
+        }
+        if (command.type === 'remove_attr') {
+            this.remove_attribute(BigInt(command.id), command.name);
+            return;
+        }
+        if (command.type === 'remove_text') {
+            this.remove_text(BigInt(command.id));
+            return;
+        }
+        if (command.type === 'insert_css') {
+            this.insert_css(command.selector, command.value);
+            return;
+        }
+        return assertNeverCommand(command);
     }
     get_bounding_client_rect_x(node_id) {
         return this.nodes.mustGetItem(node_id).getBoundingClientRect().x;

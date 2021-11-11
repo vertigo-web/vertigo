@@ -9,10 +9,13 @@ use crate::{
     Instant,
     InstantType,
     KeyDownEvent,
-    NodeRefsItem,
+    driver_refs::RefsContext,
     fetch_builder::FetchBuilder,
     request_builder::RequestBuilder,
-    utils::{EqBox, DropResource}
+    utils::{
+        DropResource,
+        EqBox
+    }
 };
 use crate::virtualdom::models::realdom_id::RealDomId;
 
@@ -99,17 +102,26 @@ pub trait DriverTrait {
     fn create_text(&self, id: RealDomId, value: &str);
     fn update_text(&self, id: RealDomId, value: &str);
     fn remove_text(&self, id: RealDomId);
-
     fn create_node(&self, id: RealDomId, name: &'static str);
     fn rename_node(&self, id: RealDomId, new_name: &'static str);
-    fn get_ref(&self, id: RealDomId) -> Option<NodeRefsItem>;
     fn set_attr(&self, id: RealDomId, key: &'static str, value: &str);
     fn remove_attr(&self, id: RealDomId, name: &'static str);
     fn remove_node(&self, id: RealDomId);
     fn insert_before(&self, parent: RealDomId, child: RealDomId, ref_id: Option<RealDomId>);
-
     fn insert_css(&self, selector: &str, value: &str);
     fn set_event(&self, node: RealDomId, callback: EventCallback);
+
+    fn get_bounding_client_rect_x(&self, id: RealDomId) -> f64;
+    fn get_bounding_client_rect_y(&self, id: RealDomId) -> f64;
+    fn get_bounding_client_rect_width(&self, id: RealDomId) -> f64;
+    fn get_bounding_client_rect_height(&self, id: RealDomId) -> f64;
+    fn scroll_top(&self, id: RealDomId) -> i32;
+    fn set_scroll_top(&self, id: RealDomId, value: i32);
+    fn scroll_left(&self, id: RealDomId) -> i32;
+    fn set_scroll_left(&self, id: RealDomId, value: i32);
+    fn scroll_width(&self, id: RealDomId) -> i32;
+    fn scroll_height(&self, id: RealDomId) -> i32;
+
     fn fetch(&self, method: FetchMethod, url: String, headers: Option<HashMap<String, String>>, body: Option<String>) -> Pin<Box<dyn Future<Output=FetchResult> + 'static>>;
 
     fn get_hash_location(&self) -> String;
@@ -118,32 +130,23 @@ pub trait DriverTrait {
 
     fn set_interval(&self, time: u32, func: Box<dyn Fn()>) -> DropResource;
     fn now(&self) -> InstantType;
+
+    fn push_ref_context(&self, context: RefsContext);
+    fn flush_update(&self);
 }
 
 type Executor = Box<dyn Fn(Pin<Box<dyn Future<Output = ()> + 'static>>)>;
 
-#[derive(PartialEq)]
-pub struct Driver {
-    driver: EqBox<Rc<dyn DriverTrait>>,
-    spawn_local_executor: EqBox<Rc<Executor>>,
+pub struct DriverInner {
+    driver: Rc<dyn DriverTrait>,
+    spawn_local_executor: Rc<Executor>,
 }
 
-impl Driver {
-    pub fn new<
-        T: DriverTrait + 'static,
-    >(driver: T, spawn_local: Executor) -> Driver {
-        Driver {
-            driver: EqBox::new(Rc::new(driver)),
-            spawn_local_executor: EqBox::new(Rc::new(spawn_local))
-        }
-    }
-}
-
-impl Clone for Driver {
-    fn clone(&self) -> Driver {
-        Driver {
-            driver: self.driver.clone(),
-            spawn_local_executor: self.spawn_local_executor.clone(),
+impl DriverInner {
+    pub fn new(driver: impl DriverTrait + 'static, spawn_local: Executor) -> DriverInner {
+        DriverInner {
+            driver: Rc::new(driver),
+            spawn_local_executor: Rc::new(spawn_local),
         }
     }
 }
@@ -154,39 +157,58 @@ pub fn show_log(message: String) {
     }
 }
 
+#[derive(PartialEq)]
+pub struct Driver {
+    inner: EqBox<Rc<DriverInner>>,
+}
+
+impl Clone for Driver {
+    fn clone(&self) -> Driver {
+        Driver {
+            inner: self.inner.clone(),
+        }
+    }
+}
+
 impl Driver {
+    pub fn new(driver: impl DriverTrait + 'static, spawn_local: Executor) -> Driver {
+        Driver {
+            inner: EqBox::new(Rc::new(DriverInner::new(driver, spawn_local))),
+        }
+    }
+
     pub fn spawn<F>(&self, future: F) where F: Future<Output = ()> + 'static {
         let fur = Box::pin(future);
 
-        let spawn_local_executor = self.spawn_local_executor.clone();
+        let spawn_local_executor = self.inner.spawn_local_executor.clone();
         spawn_local_executor(fur)
     }
 
     pub fn fetch(&self, url: impl Into<String>) -> FetchBuilder {
-        FetchBuilder::new(self.driver.clone(), url.into())
+        FetchBuilder::new(self.inner.driver.clone(), url.into())
     }
 
     pub fn get_hash_location(&self) -> String {
         show_log("get_location".to_string());
-        self.driver.get_hash_location()
+        self.inner.driver.get_hash_location()
     }
 
     pub fn push_hash_location(&self, path: String) {
         show_log(format!("set_location {}", path));
-        self.driver.push_hash_location(&path)
+        self.inner.driver.push_hash_location(&path)
     }
 
     pub fn on_hash_route_change(&self, on_change: Box<dyn Fn(&String)>) -> DropResource {
         show_log("on_route_change".to_string());
-        self.driver.on_hash_route_change(on_change)
+        self.inner.driver.on_hash_route_change(on_change)
     }
 
     pub fn set_interval(&self, time: u32, func: impl Fn() + 'static) -> DropResource {
-        self.driver.set_interval(time, Box::new(func))
+        self.inner.driver.set_interval(time, Box::new(func))
     }
 
     pub fn now(&self) -> Instant {
-        Instant::new(self.driver.clone())
+        Instant::new(self.inner.driver.clone())
     }
 
     pub fn request(&self, url: impl Into<String>) -> RequestBuilder {
@@ -194,51 +216,47 @@ impl Driver {
     }
 
 
+
     //To interact with the dom. Used exclusively by vertigo
 
     pub(crate) fn create_node(&self, id: RealDomId, name: &'static str) {
         show_log(format!("create_node {} {}", id, name));
-        self.driver.create_node(id, name);
+        self.inner.driver.create_node(id, name);
     }
 
     pub(crate) fn rename_node(&self, id: RealDomId, new_name: &'static str) {
         show_log(format!("rename_node {} {}", id, new_name));
-        self.driver.rename_node(id, new_name);
+        self.inner.driver.rename_node(id, new_name);
     }
 
     pub(crate) fn create_text(&self, id: RealDomId, value: &str) {
         show_log(format!("create_text {} {}", id, value));
-        self.driver.create_text(id, value);
-    }
-
-    pub(crate) fn get_ref(&self, id: RealDomId) -> Option<NodeRefsItem> {
-        show_log(format!("get_ref {}", id));
-        self.driver.get_ref(id)
+        self.inner.driver.create_text(id, value);
     }
 
     pub(crate) fn update_text(&self, id: RealDomId, value: &str) {
         show_log(format!("update_text {} {}", id, value));
-        self.driver.update_text(id, value);
+        self.inner.driver.update_text(id, value);
     }
 
     pub(crate) fn set_attr(&self, id: RealDomId, key: &'static str, value: &str) {
         show_log(format!("set_attr {} {} {}", id, key, value));
-        self.driver.set_attr(id, key, value);
+        self.inner.driver.set_attr(id, key, value);
     }
 
     pub(crate) fn remove_attr(&self, id: RealDomId, name: &'static str) {
         show_log(format!("remove_attr {} {}", id, name));
-        self.driver.remove_attr(id, name);
+        self.inner.driver.remove_attr(id, name);
     }
 
     pub(crate) fn remove_node(&self, id: RealDomId) {
         show_log(format!("remove node {}", id));
-        self.driver.remove_node(id);
+        self.inner.driver.remove_node(id);
     }
 
     pub(crate) fn remove_text(&self, id: RealDomId) {
         show_log(format!("remove text {}", id));
-        self.driver.remove_text(id);
+        self.inner.driver.remove_text(id);
     }
 
     pub(crate) fn insert_before(&self, parent: RealDomId, child: RealDomId, ref_id: Option<RealDomId>) {
@@ -251,16 +269,66 @@ impl Driver {
             }
         }
 
-        self.driver.insert_before(parent, child, ref_id);
+        self.inner.driver.insert_before(parent, child, ref_id);
     }
 
     pub(crate) fn insert_css(&self, selector: &str, value: &str) {
         show_log(format!("insert_css selector={} value={}", selector, value));
-        self.driver.insert_css(selector, value);
+        self.inner.driver.insert_css(selector, value);
     }
+
+
 
     pub(crate) fn set_event(&self, node: RealDomId, callback: EventCallback) {
         show_log(format!("set_event {} {}", node, callback.to_string()));
-        self.driver.set_event(node, callback);
+        self.inner.driver.set_event(node, callback);
+    }
+
+    pub(crate) fn get_bounding_client_rect_x(&self, id: RealDomId) -> f64 {
+        self.inner.driver.get_bounding_client_rect_x(id)
+    }
+
+    pub(crate) fn get_bounding_client_rect_y(&self, id: RealDomId) -> f64 {
+        self.inner.driver.get_bounding_client_rect_y(id)
+    }
+
+    pub(crate) fn get_bounding_client_rect_width(&self, id: RealDomId) -> f64 {
+        self.inner.driver.get_bounding_client_rect_width(id)
+    }
+
+    pub(crate) fn get_bounding_client_rect_height(&self, id: RealDomId) -> f64 {
+        self.inner.driver.get_bounding_client_rect_height(id)
+    }
+
+    pub(crate) fn scroll_top(&self, id: RealDomId) -> i32 {
+        self.inner.driver.scroll_top(id)
+    }
+
+    pub(crate) fn set_scroll_top(&self, id: RealDomId, value: i32) {
+        self.inner.driver.set_scroll_top(id, value);
+    }
+
+    pub(crate) fn scroll_left(&self, id: RealDomId) -> i32 {
+        self.inner.driver.scroll_left(id)
+    }
+
+    pub(crate) fn set_scroll_left(&self, id: RealDomId, value: i32) {
+        self.inner.driver.set_scroll_left(id, value);
+    }
+
+    pub(crate) fn scroll_width(&self, id: RealDomId) -> i32 {
+        self.inner.driver.scroll_width(id)
+    }
+
+    pub(crate) fn scroll_height(&self, id: RealDomId) -> i32 {
+        self.inner.driver.scroll_height(id)
+    }
+
+    pub(crate) fn push_ref_context(&self, context: RefsContext) {
+        self.inner.driver.push_ref_context(context);
+    }
+
+    pub(crate) fn flush_update(&self) {
+        self.inner.driver.flush_update();
     }
 }

@@ -15,16 +15,16 @@ use crate::{
 
 
 pub struct CacheNode<K: Eq + Hash, RNode, VNode> {
-    create_new: fn(&CssManager, &RealDomElement, &VNode) -> RNode,
+    create_new: Box<dyn Fn(&CssManager, &RealDomElement, &VNode) -> RNode>,
     data: HashMap<K, VecDeque<RNode>>,
 }
 
 impl<K: Eq + Hash, RNode, VNode> CacheNode<K, RNode, VNode> {
     pub fn new(
-        create_new: fn(&CssManager, &RealDomElement, &VNode) -> RNode,
+        create_new: impl Fn(&CssManager, &RealDomElement, &VNode) -> RNode + 'static,
     ) -> CacheNode<K, RNode, VNode> {
         CacheNode {
-            create_new,
+            create_new: Box::new(create_new),
             data: HashMap::new()
         }
     }

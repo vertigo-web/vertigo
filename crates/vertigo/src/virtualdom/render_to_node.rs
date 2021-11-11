@@ -1,9 +1,10 @@
-use std::{collections::VecDeque, rc::Rc};
+use std::{collections::VecDeque};
 
+use crate::Driver;
 use crate::{
-    NodeRefs,
     computed::Client,
-    driver::EventCallback
+    driver::EventCallback,
+    driver_refs::RefsContext,
 };
 
 use crate::{
@@ -68,11 +69,6 @@ impl DomNodeKey {
         let key2 = DomNodeKey::from_virtual(vdom);
         key1 == key2
     }
-}
-
-struct RefsContext {
-    apply: Vec<Rc<dyn Fn(&NodeRefs)>>,
-    node_refs: NodeRefs,
 }
 
 enum CurrentNodePairs<'a> {
@@ -230,6 +226,7 @@ fn get_pairs_bottom<'a>(real_child: &mut VecDeque<RealDomNode>, new_child: &mut 
 }
 
 fn get_pairs_middle<'a>(
+    driver: Driver,
     target: &RealDomElement,
     css_manager: &CssManager,
     last_before: Option<RealDomId>,
@@ -250,13 +247,13 @@ fn get_pairs_middle<'a>(
         },
     );
     let mut real_component: CacheNode<VDomComponentId, RealDomComponent, VDomComponent> = CacheNode::new(
-        |css_manager: &CssManager, target: &RealDomElement, component: &VDomComponent| -> RealDomComponent {
+        move |css_manager: &CssManager, target: &RealDomElement, component: &VDomComponent| -> RealDomComponent {
 
             // TODO - to rethink the component concept
             // let node_root = target.create_node(component.view.get_value().name);
             let node = target.create_node("div");
 
-            let subscription = render_to_node(css_manager.clone(), node.clone(), component.clone());
+            let subscription = render_to_node(driver.clone(), css_manager.clone(), node.clone(), component.clone());
 
             RealDomComponent {
                 id: component.id.clone(),
@@ -326,7 +323,7 @@ fn get_pairs_middle<'a>(
             }
         };
 
-        target.insert_before(child_id.clone(), last_before);
+        target.insert_before(child_id, last_before);
         last_before = Some(child_id);
     }
 
@@ -334,18 +331,18 @@ fn get_pairs_middle<'a>(
 }
 
 fn update_node_child(
+    driver: Driver,
     css_manager: &CssManager,
     refs_context: &mut RefsContext,
     target: &RealDomElement,
     new_version: &VDomElement
 ) {
-
     if let Some(ref_name) = new_version.dom_ref {
-        refs_context.node_refs.set(ref_name, target.get_ref().unwrap());            //TODO - we always expect ref
+        refs_context.set_ref(ref_name, target.get_ref());
     }
 
     if let Some(dom_apply) = &new_version.dom_apply {
-        refs_context.apply.push(dom_apply.clone());
+        refs_context.add_apply(dom_apply);
     }
 
     let pairs: VecDeque<CurrentNodePairs> = {
@@ -357,6 +354,7 @@ fn update_node_child(
 
         let last_before: Option<RealDomId> = find_first_dom(&pairs_bottom);
         let mut pairs_middle = get_pairs_middle(
+            driver.clone(),
             target,
             css_manager,
             last_before,
@@ -378,7 +376,7 @@ fn update_node_child(
             match item {
                 CurrentNodePairs::Node { node, new } => {
                     update_node_attr(css_manager, &node, new);
-                    update_node_child(css_manager, refs_context, &node, new);
+                    update_node_child(driver.clone(), css_manager, refs_context, &node, new);
                     new_child.push_back(RealDomNode::new_node(node));
                 },
                 CurrentNodePairs::Text { node, new } => {
@@ -411,6 +409,7 @@ fn update_node_attr(css_manager: &CssManager, real_node: &RealDomElement, node: 
 }
 
 fn update_node(
+    driver: Driver,
     css_manager: &CssManager,
     refs_context: &mut RefsContext,
     target: &RealDomElement,
@@ -424,30 +423,22 @@ fn update_node(
     update_node_attr(css_manager, target, new_version);
 
     //update child
-    update_node_child(css_manager, refs_context, target, new_version);
+    update_node_child(driver, css_manager, refs_context, target, new_version);
 }
 
-pub fn render_to_node(css_manager: CssManager, target: RealDomElement, component: VDomComponent) -> Client {
-    let subscription: Client = component.view.subscribe(move |new_version| {
+pub fn render_to_node(driver: Driver, css_manager: CssManager, target: RealDomElement, component: VDomComponent) -> Client {
+    component.view.subscribe(move |new_version| {
 
-        let mut refs_context = RefsContext {
-            apply: Vec::new(),
-            node_refs: NodeRefs::new(),
-        };
+        let mut refs_context = RefsContext::default();
 
         update_node(
+            driver.clone(),
             &css_manager,
             &mut refs_context,
             &target,
             new_version
         );
 
-        let RefsContext { apply, node_refs} = refs_context;
-
-        for apply_fun in apply {
-            apply_fun(&node_refs);
-        }
-    });
-
-    subscription
+        driver.push_ref_context(refs_context);
+    })
 }

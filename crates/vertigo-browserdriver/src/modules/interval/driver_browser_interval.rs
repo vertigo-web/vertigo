@@ -20,7 +20,7 @@ impl DriverBrowserInterval {
         let closure = {
             let callback_manager = callback_manager.clone();
 
-            Closure::new(Box::new(move |callback_id: u64| {
+            Closure::new(move |callback_id: u64| {
                 log::info!("Interval ... {}", callback_id);
 
                 let callback = callback_manager.get(callback_id);
@@ -30,7 +30,7 @@ impl DriverBrowserInterval {
                 } else {
                     log::error!("Missing callback for id={}", callback_id);
                 }
-            }))
+            })
         };
 
         let driver_js = Rc::new(DriverBrowserIntervalJs::new(&closure));

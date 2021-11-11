@@ -13,18 +13,7 @@ use crate::modules::{
     interval::DriverBrowserInterval
 };
 
-use vertigo::{
-    Driver,
-    DriverTrait,
-    EventCallback,
-    FetchMethod,
-    FetchResult,
-    InstantType,
-    NodeRefsItem,
-    RealDomId,
-    computed::Dependencies,
-    utils::DropResource
-};
+use vertigo::{Driver, DriverTrait, EventCallback, FetchMethod, FetchResult, InstantType, RealDomId, RefsContext, computed::Dependencies, utils::DropResource};
 
 struct DriverBrowserInner {
     driver_dom: DriverBrowserDom,
@@ -78,10 +67,6 @@ impl DriverTrait for DriverBrowser {
 
     fn create_text(&self, id: RealDomId, value: &str) {
         self.driver.driver_dom.create_text(id, value);
-    }
-
-    fn get_ref(&self, id: RealDomId) -> Option<NodeRefsItem> {
-        self.driver.driver_dom.get_ref(id)
     }
 
     fn update_text(&self, id: RealDomId, value: &str) {
@@ -151,5 +136,53 @@ impl DriverTrait for DriverBrowser {
 
     fn now(&self) -> InstantType {
         js_instant::now().round() as InstantType
+    }
+
+    fn get_bounding_client_rect_x(&self, id: RealDomId) -> f64 {
+        self.driver.driver_dom.get_bounding_client_rect_x(id)
+    }
+
+    fn get_bounding_client_rect_y(&self, id: RealDomId) -> f64 {
+        self.driver.driver_dom.get_bounding_client_rect_y(id)
+    }
+
+    fn get_bounding_client_rect_width(&self, id: RealDomId) -> f64 {
+        self.driver.driver_dom.get_bounding_client_rect_width(id)
+    }
+
+    fn get_bounding_client_rect_height(&self, id: RealDomId) -> f64 {
+        self.driver.driver_dom.get_bounding_client_rect_height(id)
+    }
+
+    fn scroll_top(&self, id: RealDomId) -> i32 {
+        self.driver.driver_dom.scroll_top(id)
+    }
+
+    fn set_scroll_top(&self, id: RealDomId, value: i32) {
+        self.driver.driver_dom.set_scroll_top(id, value)
+    }
+
+    fn scroll_left(&self, id: RealDomId) -> i32 {
+        self.driver.driver_dom.scroll_left(id)
+    }
+
+    fn set_scroll_left(&self, id: RealDomId, value: i32) {
+        self.driver.driver_dom.set_scroll_left(id, value)
+    }
+
+    fn scroll_width(&self, id: RealDomId) -> i32 {
+        self.driver.driver_dom.scroll_width(id)
+    }
+
+    fn scroll_height(&self, id: RealDomId) -> i32 {
+        self.driver.driver_dom.scroll_height(id)
+    }
+
+    fn push_ref_context(&self, context: RefsContext) {
+        self.driver.driver_dom.push_ref_context(context);
+    }
+
+    fn flush_update(&self) {
+        self.driver.driver_dom.flush_dom_changes();
     }
 }
