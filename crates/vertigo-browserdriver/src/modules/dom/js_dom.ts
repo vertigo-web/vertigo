@@ -369,10 +369,16 @@ export class DriverBrowserDomJs {
     }
 
     public bulk_update(value: string) {
-        const commands: Array<CommandType> = JSON.parse(value);
+        try {
+            const commands: Array<CommandType> = JSON.parse(value);
 
-        for (const command of commands) {
-            this.bulk_update_command(command);
+            for (const command of commands) {
+                this.bulk_update_command(command);
+            }
+        } catch (error) {
+            console.warn('buil_update - check in: https://jsonformatter.curiousconcept.com/')
+            console.warn('bulk_update - param', value);
+            console.error('bulk_update - incorrectly json data', error);
         }
     }
 
