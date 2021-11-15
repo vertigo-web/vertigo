@@ -4,19 +4,44 @@ pub struct JsonMapBuilder {
     data: HashMap<String, String>,
 }
 
+//Escape and Unicode encoding in JSON serialization
+//https://developpaper.com/escape-and-unicode-encoding-in-json-serialization/
+
 fn string_escape(text: &str) -> String {
     let new_capacity = 2 * text.len() + 2;
     let mut out: Vec<char> = Vec::with_capacity(new_capacity);
 
     for char in text.chars() {
-        if char == '"' {
-            out.push('\\');
-            out.push(char);
-        } else if char == '\n' {
-            out.push('\\');
-            out.push('n');
-        } else {
-            out.push(char);
+        match char {
+            '"' => {
+                out.push('\\');
+                out.push('"');
+            },
+            // / - ignore
+            '\\' => {
+                out.push('\\');
+                out.push('\\');
+            },
+            // \b - ignore
+            // \f - ignore
+            '\t' => {
+                out.push('\\');
+                out.push('t');
+            },
+            '\r' => {
+                out.push('\\');
+                out.push('r');
+            },
+            '\n' => {
+                out.push('\\');
+                out.push('n');
+            },
+            // < - ignore
+            // > - ignore
+            // & - ignore
+            _ => {
+                out.push(char);
+            }
         }
     }
 
@@ -125,4 +150,31 @@ fn basic7() {
 text-decoration: line-through;"#);
     let result = builder.build();
     assert_eq!(result, "{\"css\":\"color: crimson;\\ntext-decoration: line-through;\"}");
+}
+
+
+#[test]
+fn basic_tab() {
+
+    let text = "https://example.com/\t";
+
+    let mut builder = JsonMapBuilder::new();
+    builder.set_string("value", text);
+
+
+    let result = builder.build();
+    assert_eq!(result, "{\"value\":\"https://example.com/\\t\"}");
+}
+
+
+#[test]
+fn basic_slash() {
+    let text = "aa\\bb";
+
+    let mut builder = JsonMapBuilder::new();
+    builder.set_string("value", text);
+
+
+    let result = builder.build();
+    assert_eq!(result, "{\"value\":\"aa\\\\bb\"}");
 }
