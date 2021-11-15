@@ -1,6 +1,6 @@
 use std::{collections::HashMap};
 use crate::Driver;
-use crate::resource::Resource;
+use super::resource::Resource;
 
 #[derive(Debug)]
 enum Method {
@@ -75,7 +75,7 @@ impl RequestBuilder {
         let body_string: Result<String, String> = body.into_string();
 
         match body_string {
-            Ok(body) => {         
+            Ok(body) => {
                 let mut request = self.body(body);
                 request.set_header("Content-Type".into(), "application/json".into());
                 request
@@ -171,6 +171,14 @@ impl RequestResponse {
         }
     }
 
+    pub fn status(&self) -> Option<u32> {
+        if let Ok((status, _)) = self.data {
+            return Some(status);
+        }
+
+        None
+    }
+
     pub fn into<T: PartialEq + RequestTrait>(self, convert: fn(u32, RequestResponseBody) -> Option<Resource<T>>) -> Resource<T> {
         let result = match self.data {
             Ok((status, body)) => {
@@ -194,5 +202,20 @@ impl RequestResponse {
         }
 
         result
+    }
+
+    pub fn into_data<T: PartialEq + RequestTrait>(self) -> Resource<T> {
+        self.into(|_, response_body| {
+            Some(response_body.into::<T>())
+        })
+    }
+
+    pub fn into_error_message<T: PartialEq + RequestTrait>(self) -> Resource<T> {
+        let body = match self.data {
+            Ok((code, body)) => format!("API error {}: {}", code, body),
+            Err(body) => format!("Network error: {}", body),
+        };
+
+        Resource::Error(body)
     }
 }

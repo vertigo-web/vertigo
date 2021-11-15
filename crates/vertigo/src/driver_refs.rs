@@ -11,7 +11,7 @@ impl Default for RefsContext {
         RefsContext {
             apply: Vec::new(),
             node_refs: NodeRefs::new(),
-        }    
+        }
     }
 }
 
