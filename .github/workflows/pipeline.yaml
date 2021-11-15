@@ -17,7 +17,23 @@ jobs:
       - uses: actions-rs/clippy-check@v1
         with:
           token: ${{ secrets.GITHUB_TOKEN }}
-          args: --all-features --target wasm32-unknown-unknown -- -Dwarnings
+          args: -p vertigo -p vertigo-html -p vertigo-html-macro -p vertigo-testing -p vertigo-demo --all-features --target wasm32-unknown-unknown -- -Dwarnings
+          name: Clippy Output
+
+  nightly-clippy-demo-server:
+    name: Fixed Nightly clippy demo server (amd64)
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v2
+      - uses: actions-rs/toolchain@v1
+        with:
+          toolchain: nightly-2021-07-02
+          components: clippy
+          override: true
+      - uses: actions-rs/clippy-check@v1
+        with:
+          token: ${{ secrets.GITHUB_TOKEN }}
+          args: -p vertigo-demo-server --all-features -- -Dwarnings
           name: Clippy Output
 
   nightly-tests:
