@@ -11,14 +11,14 @@ pub struct Instant {
 }
 
 impl Instant {
-    pub fn new(driver: Rc<dyn DriverTrait>) -> Self {
+    pub fn now(driver: Rc<dyn DriverTrait>) -> Self {
         Self {
             instant: driver.now(),
             driver,
         }
     }
 
-    pub fn now(&self) -> Self {
+    pub fn refresh(&self) -> Self {
         Self {
             instant: self.driver.now(),
             driver: self.driver.clone(),

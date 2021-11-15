@@ -10,8 +10,8 @@ use crate::InstantType;
 use crate::KeyDownEvent;
 use crate::{WebcocketMessage, WebcocketMessageDriver, WebcocketConnection};
 use crate::driver_refs::RefsContext;
-use crate::fetch_builder::FetchBuilder;
-use crate::request_builder::RequestBuilder;
+use crate::fetch::fetch_builder::FetchBuilder;
+use crate::fetch::request_builder::RequestBuilder;
 use crate::utils::{DropResource, EqBox};
 use crate::virtualdom::models::realdom_id::RealDomId;
 
@@ -207,7 +207,7 @@ impl Driver {
     }
 
     pub fn now(&self) -> Instant {
-        Instant::new(self.inner.driver.clone())
+        Instant::now(self.inner.driver.clone())
     }
 
     pub fn request(&self, url: impl Into<String>) -> RequestBuilder {

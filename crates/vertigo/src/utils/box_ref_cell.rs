@@ -2,6 +2,7 @@
 
 use std::cell::{RefCell};
 
+#[derive(PartialEq)]
 pub struct BoxRefCell<T> {
     label: &'static str,
     value: RefCell<T>,

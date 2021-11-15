@@ -1,17 +1,16 @@
+#![feature(trait_alias)]
 #![feature(try_trait_v2)]               //https://github.com/rust-lang/rust/issues/84277
 
 mod app;
 pub mod computed;
 mod css;
-mod fetch_builder;
+mod fetch;
 mod instant;
 mod driver;
 mod driver_refs;
 pub mod router;
 pub mod utils;
 mod virtualdom;
-mod resource;
-mod request_builder;
 mod websocket;
 
 pub use driver::Driver;
@@ -37,6 +36,7 @@ pub use log;
 
 pub use app::start_app;
 
-pub use request_builder::RequestTrait;
-pub use resource::Resource;
+pub use fetch::request_builder::RequestTrait;
+pub use fetch::resource::Resource;
+pub use fetch::lazy_cache;
 pub use websocket::{WebcocketMessageDriver, WebcocketMessage, WebcocketConnection};
