@@ -1,4 +1,4 @@
-use vertigo::computed::{Computed, Dependencies, Value};
+use vertigo::computed::{Computed, Value};
 use vertigo::utils::DropResource;
 use vertigo::{Driver, VDomElement, WebcocketConnection};
 use vertigo::{WebcocketMessage};
@@ -29,10 +29,10 @@ fn add_message(messages: &Value<Vec<Rc<String>>>, message: String) {
 }
 
 impl ChatState {
-    pub fn new(root: &Dependencies, driver: &Driver) -> Computed<ChatState> {
-        let connect = root.new_value(None);
-        let messages = root.new_value(Vec::new());
-        let input_text = root.new_value(String::from(""));
+    pub fn new(driver: &Driver) -> Computed<ChatState> {
+        let connect = driver.new_value(None);
+        let messages = driver.new_value(Vec::new());
+        let input_text = driver.new_value(String::from(""));
 
         let ws_connect = {
             let connect = connect.clone();
@@ -57,7 +57,7 @@ impl ChatState {
             }))
         };
 
-        root.new_computed_from(ChatState {
+        driver.new_computed_from(ChatState {
             _ws_connect: ws_connect,
             connect,
             messages,

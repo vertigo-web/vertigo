@@ -1,12 +1,9 @@
 use std::cmp::PartialEq;
-use vertigo::{
-    computed::{
-        Computed,
-        Dependencies,
-        Value
-    }
+use vertigo::Driver;
+use vertigo::computed::{
+    Computed,
+    Value
 };
-// use virtualdom::vdom::StateBox::StateBox;
 
 #[derive(PartialEq)]
 pub struct State {
@@ -14,10 +11,10 @@ pub struct State {
 }
 
 impl State {
-    pub fn new(root: &Dependencies) -> Computed<State> {
-        root.new_computed_from(
+    pub fn new(driver: &Driver) -> Computed<State> {
+        driver.new_computed_from(
             State {
-                counter: Value::new(root.clone(), 0)
+                counter: driver.new_value(0),
             }
         )
     }

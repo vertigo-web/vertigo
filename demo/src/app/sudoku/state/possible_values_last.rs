@@ -1,6 +1,6 @@
+use vertigo::Driver;
 use vertigo::computed::{
     Computed,
-    Dependencies
 };
 
 use super::{number_item::{NumberItem, SudokuValue}, possible_values::PossibleValues, sudoku_square::SudokuSquare, tree_box::TreeBoxIndex};
@@ -54,7 +54,7 @@ fn get_possible_value<
 pub type PossibleValuesLast = Computed<Option<SudokuValue>>;
 
 fn value_by_row(
-    deps: &Dependencies,
+    driver: &Driver,
     grid_computed: &SudokuSquare<SudokuSquare<CellForComputed>>,
     level0x: TreeBoxIndex,
     level0y: TreeBoxIndex,
@@ -63,7 +63,7 @@ fn value_by_row(
 ) -> Computed<Option<SudokuValue>> {
     let grid_computed = (*grid_computed).clone();
 
-    deps.from(move || {
+    driver.from(move || {
         let get_current = grid_computed.get_from(level0x, level0y).get_from(level1x, level1y);
 
         //iterowaine po wierszu
@@ -78,7 +78,7 @@ fn value_by_row(
 
 
 fn value_by_col(
-    deps: &Dependencies,
+    driver: &Driver,
     grid_computed: &SudokuSquare<SudokuSquare<CellForComputed>>,
     level0x: TreeBoxIndex,
     level0y: TreeBoxIndex,
@@ -87,7 +87,7 @@ fn value_by_col(
 ) -> Computed<Option<SudokuValue>> {
     let grid_computed = (*grid_computed).clone();
 
-    deps.from(move || {
+    driver.from(move || {
         let get_current = grid_computed.get_from(level0x, level0y).get_from(level1x, level1y);
 
         // Iterate by column
@@ -101,7 +101,7 @@ fn value_by_col(
 }
 
 fn value_by_square(
-    deps: &Dependencies,
+    driver: &Driver,
     grid_computed: &SudokuSquare<SudokuSquare<CellForComputed>>,
     level0x: TreeBoxIndex,
     level0y: TreeBoxIndex,
@@ -109,7 +109,7 @@ fn value_by_square(
     level1y: TreeBoxIndex
 ) -> Computed<Option<SudokuValue>> {
     let grid_computed = (*grid_computed).clone();
-    deps.from(move || {
+    driver.from(move || {
 
         let get_current = grid_computed.get_from(level0x, level0y).get_from(level1x, level1y);
 
@@ -124,7 +124,7 @@ fn value_by_square(
 }
 
 pub fn possible_values_last(
-    deps: &Dependencies,
+    driver: &Driver,
     grid_input: &SudokuSquare<SudokuSquare<NumberItem>>,
     grid_possible: &SudokuSquare<SudokuSquare<PossibleValues>>,
     level0x: TreeBoxIndex,
@@ -147,11 +147,11 @@ pub fn possible_values_last(
         })
     };
 
-    let by_row = value_by_row(deps, &grid_computed, level0x, level0y, level1x, level1y);
-    let by_col = value_by_col(deps, &grid_computed, level0x, level0y, level1x, level1y);
-    let by_square = value_by_square(deps, &grid_computed, level0x, level0y, level1x, level1y);
+    let by_row = value_by_row(driver, &grid_computed, level0x, level0y, level1x, level1y);
+    let by_col = value_by_col(driver, &grid_computed, level0x, level0y, level1x, level1y);
+    let by_square = value_by_square(driver, &grid_computed, level0x, level0y, level1x, level1y);
 
-    deps.from(move || {
+    driver.from(move || {
         let by_row = *by_row.get_value();
         if let Some(by_row) = by_row {
             return Some(by_row);

@@ -1,5 +1,7 @@
 use std::cmp::PartialEq;
-use vertigo::{Driver, computed::{Computed, Dependencies, Value}, router::HashRouter};
+use vertigo::Driver;
+use vertigo::computed::{Computed, Value};
+use vertigo::router::HashRouter;
 
 use super::sudoku;
 use super::input;
@@ -12,7 +14,6 @@ use super::game_of_life;
 #[derive(PartialEq)]
 pub struct State {
     pub driver: Driver,
-    pub root: Dependencies,
     pub route: Value<Route>,
 
     pub main: Computed<MainState>,
@@ -26,11 +27,11 @@ pub struct State {
 }
 
 impl State {
-    pub fn new(root: &Dependencies, driver: &Driver) -> Computed<State> {
+    pub fn new(driver: &Driver) -> Computed<State> {
 
-        let game_of_life = game_of_life::State::new(root, driver);
+        let game_of_life = game_of_life::State::new(driver);
 
-        let route: Value<Route> = root.new_value(Route::new(&driver.get_hash_location()));
+        let route: Value<Route> = driver.new_value(Route::new(&driver.get_hash_location()));
 
         let hash_router = HashRouter::new(driver, route.clone(), {
             let route = route.clone();
@@ -42,19 +43,18 @@ impl State {
 
         let state = State {
             driver: driver.clone(),
-            root: root.clone(),
             route,
-            main: super::main::MainState::new(root),
-            counters: CountersState::new(root),
-            sudoku: sudoku::Sudoku::new(root),
-            input: input::State::new(root),
-            github_explorer: github_explorer::State::new(root, driver),
+            main: super::main::MainState::new(driver),
+            counters: CountersState::new(driver),
+            sudoku: sudoku::Sudoku::new(driver),
+            input: input::State::new(driver),
+            github_explorer: github_explorer::State::new(driver),
             game_of_life,
 
             hash_router,
         };
 
-        root.new_computed_from(state)
+        driver.new_computed_from(state)
     }
 
     pub fn navigate_to(&self, route: Route) {

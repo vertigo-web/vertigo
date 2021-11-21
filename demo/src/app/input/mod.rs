@@ -2,9 +2,9 @@ use std::cmp::PartialEq;
 use vertigo::{
     computed::{
         Computed,
-        Dependencies,
         Value
     },
+    Driver,
     VDomElement,
 };
 use vertigo_html::{html, css_fn};
@@ -16,10 +16,10 @@ pub struct State {
 }
 
 impl State {
-    pub fn new(root: &Dependencies) -> Computed<State> {
-        root.new_computed_from(
+    pub fn new(driver: &Driver) -> Computed<State> {
+        driver.new_computed_from(
             State {
-                value: root.new_value(String::from(""))
+                value: driver.new_value(String::from(""))
             }
         )
     }

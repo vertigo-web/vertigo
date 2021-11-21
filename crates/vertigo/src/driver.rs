@@ -1,10 +1,11 @@
+use std::any::Any;
 use std::{
     collections::HashMap,
     future::Future,
     pin::Pin,
     rc::Rc,
 };
-
+use crate::computed::{Computed, Dependencies, ToRc, Value};
 use crate::Instant;
 use crate::InstantType;
 use crate::KeyDownEvent;
@@ -137,14 +138,16 @@ pub trait DriverTrait {
 type Executor = Box<dyn Fn(Pin<Box<dyn Future<Output = ()> + 'static>>)>;
 
 pub struct DriverInner {
+    dependencies: Dependencies,
     driver: Rc<dyn DriverTrait>,
     spawn_local_executor: Rc<Executor>,
 }
 
 impl DriverInner {
-    pub fn new(driver: impl DriverTrait + 'static, spawn_local: Executor) -> DriverInner {
+    pub fn new(dependencies: Dependencies, driver: impl DriverTrait + 'static, spawn_local: Executor) -> DriverInner {
         DriverInner {
             driver: Rc::new(driver),
+            dependencies,
             spawn_local_executor: Rc::new(spawn_local),
         }
     }
@@ -170,9 +173,9 @@ impl Clone for Driver {
 }
 
 impl Driver {
-    pub fn new(driver: impl DriverTrait + 'static, spawn_local: Executor) -> Driver {
+    pub fn new(dependencies: Dependencies, driver: impl DriverTrait + 'static, spawn_local: Executor) -> Driver {
         Driver {
-            inner: EqBox::new(Rc::new(DriverInner::new(driver, spawn_local))),
+            inner: EqBox::new(Rc::new(DriverInner::new(dependencies, driver, spawn_local))),
         }
     }
 
@@ -234,6 +237,29 @@ impl Driver {
 
     pub(crate) fn websocket_send_message(&self, callback_id: u64, message: String) {
         self.inner.driver.websocket_send_message(callback_id, message);
+    }
+
+
+
+    pub fn new_value<T: PartialEq>(&self, value: T) -> Value<T> {
+        self.inner.dependencies.new_value(value)
+    }
+
+    pub fn new_computed_from<T: PartialEq>(&self, value: impl ToRc<T>) -> Computed<T> {
+        let value = self.inner.dependencies.new_value(value);
+        value.to_computed()
+    }
+
+    pub fn transaction<F: FnOnce()>(&self, func: F) {
+        self.inner.dependencies.transaction(func);
+    }
+
+    pub fn new_with_connect<T: PartialEq, F: Fn(&Value<T>) -> Box<dyn Any> + 'static>(&self, value: T, create: F) -> Computed<T> {
+        self.inner.dependencies.new_with_connect(value, create)
+    }
+
+    pub fn from<T: PartialEq + 'static, F: Fn() -> T + 'static>(&self, calculate: F) -> Computed<T> {
+        self.inner.dependencies.from(calculate)
     }
 
 

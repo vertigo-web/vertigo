@@ -56,14 +56,16 @@ pub struct DriverBrowser {
 }
 
 impl DriverBrowser {
-    pub fn new(dependencies: &Dependencies) -> Driver {
-        let driver = DriverBrowserInner::new(dependencies);
+    pub fn new() -> Driver {
+        let dependencies = Dependencies::default();
+
+        let driver = DriverBrowserInner::new(&dependencies);
 
         let dom_driver_browser = DriverBrowser {
             driver: Rc::new(driver),
         };
 
-        Driver::new(dom_driver_browser, Box::new(|fut: Pin<Box<dyn Future<Output = ()> + 'static>>| {
+        Driver::new(dependencies, dom_driver_browser, Box::new(|fut: Pin<Box<dyn Future<Output = ()> + 'static>>| {
             wasm_bindgen_futures::spawn_local(fut);
         }))
     }

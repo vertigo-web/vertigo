@@ -7,6 +7,7 @@ pub enum Route {
     GithubExplorer,
     GameOfLife,
     Chat,
+    Todo,
     NotFound,
 }
 
@@ -26,6 +27,7 @@ impl Route {
             "github_explorer" => Self::GithubExplorer,
             "game_of_life" => Self::GameOfLife,
             "chat" => Self::Chat,
+            "todo" => Self::Todo,
             _ => Self::NotFound,
         }
     }
@@ -41,6 +43,7 @@ impl ToString for Route {
             Self::GithubExplorer => "github_explorer",
             Self::GameOfLife { .. } => "game_of_life",
             Self::Chat => "chat",
+            Self::Todo => "todo",
             Self::NotFound => "",
         }.to_string()
     }

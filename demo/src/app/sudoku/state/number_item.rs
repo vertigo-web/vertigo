@@ -1,7 +1,5 @@
-use vertigo::computed::{
-    Value,
-    Dependencies
-};
+use vertigo::Driver;
+use vertigo::computed::Value;
 
 use super::tree_box::TreeBoxIndex;
 
@@ -66,7 +64,7 @@ pub struct NumberItem {
 
 impl NumberItem {
     pub fn new(
-        deps: &Dependencies,
+        driver: &Driver,
         x0: TreeBoxIndex,
         y0: TreeBoxIndex,
         x1: TreeBoxIndex,
@@ -78,7 +76,7 @@ impl NumberItem {
             y0,
             x1,
             y1,
-            value: deps.new_value(value),
+            value: driver.new_value(value),
         }
     }
 }

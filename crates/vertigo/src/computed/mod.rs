@@ -20,4 +20,4 @@ pub use graph_value::{
     GraphValue,
 };
 pub use graph_relation::GraphRelation;
-pub use value::Value;
+pub use value::{Value, ToRc};

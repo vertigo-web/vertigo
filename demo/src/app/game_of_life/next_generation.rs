@@ -1,9 +1,5 @@
-use vertigo::{
-    computed::{
-        Dependencies,
-        Value,
-    }
-};
+use vertigo::Driver;
+use vertigo::computed::Value;
 
 enum Offset {
     Sub,    //-1
@@ -58,7 +54,7 @@ fn next_life(current_life: bool, neighbours: usize) -> bool {
     current_life && neighbours == 2
 }
 
-pub fn next_generation(root: &Dependencies, x_count: u16, y_count: u16, matrix: &[Vec<Value<bool>>]) {
+pub fn next_generation(driver: &Driver, x_count: u16, y_count: u16, matrix: &[Vec<Value<bool>>]) {
     let mut next_generation: Vec<Vec<bool>> = {
 
         let mut matrix = Vec::new();
@@ -71,7 +67,7 @@ pub fn next_generation(root: &Dependencies, x_count: u16, y_count: u16, matrix: 
         matrix
     };
 
-    root.transaction(|| {
+    driver.transaction(|| {
         for y in 0..y_count {
             for x in 0..x_count {
                 let x_prev = modulo(x_count, x, Offset::Sub);

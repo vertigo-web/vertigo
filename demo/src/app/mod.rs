@@ -8,6 +8,7 @@ mod github_explorer;
 pub mod sudoku;
 mod input;
 mod chat;
+mod todo;
 
 pub use state::State;
 pub use render::render;

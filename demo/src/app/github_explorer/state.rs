@@ -1,16 +1,12 @@
 use std::cmp::PartialEq;
 use serde::{Deserialize, Serialize};
 
-use vertigo::{
-    Driver,
-    RequestTrait,
-    Resource,
-    computed::{
-        Dependencies,
-        Value,
-        AutoMap,
-        Computed,
-    }};
+use vertigo::{Driver, RequestTrait, Resource, make_serde_request_trait};
+use vertigo::computed::{
+    Value,
+    AutoMap,
+    Computed,
+};
 
 #[derive(Debug, Serialize, Deserialize, PartialEq, Clone)]
 pub struct Commit {
@@ -36,17 +32,7 @@ pub struct Branch {
     pub commit: Commit,
 }
 
-impl RequestTrait for Branch {
-    fn into_string(self) -> Result<String, String> {
-        serde_json::to_string(&self)
-            .map_err(|err| format!("error serialize {}", err))
-    }
-
-    fn from_string(data: &str) -> Result<Self, String> {
-        serde_json::from_str::<Self>(data)
-            .map_err(|err| format!("error deserialize {}", err))
-    }
-}
+make_serde_request_trait!(Branch);
 
 fn fetch_repo(repo: &str, value: Value<Resource<Branch>>, driver: &Driver) {
     driver.spawn({
@@ -75,9 +61,9 @@ pub struct Item {
 }
 
 impl Item {
-    pub fn new(root: &Dependencies, driver: &Driver, repo_name: &str) -> Item {
+    pub fn new(driver: &Driver, repo_name: &str) -> Item {
         log::info!("Creating for {}", repo_name);
-        let new_value = root.new_value(Resource::Loading);
+        let new_value = driver.new_value(Resource::Loading);
         let new_computed = new_value.to_computed();
 
         fetch_repo(repo_name, new_value, driver);
@@ -100,17 +86,16 @@ pub struct State {
 }
 
 impl State {
-    pub fn new(root: &Dependencies, driver: &Driver) -> Computed<State> {
-        let root = root.clone();
+    pub fn new(driver: &Driver) -> Computed<State> {
         let driver = driver.clone();
 
-        root.new_computed_from(State {
-            repo_input: root.new_value(String::from("")),
-            repo_shown: root.new_value(String::from("")),
+        driver.new_computed_from(State {
+            repo_input: driver.new_value(String::from("")),
+            repo_shown: driver.new_value(String::from("")),
             data: AutoMap::new({
-                let root = root.clone();
+                let driver = driver.clone();
 
-                move |repo_name: &String| Item::new(&root, &driver, repo_name)
+                move |repo_name: &String| Item::new(&driver, repo_name)
             })
         })
     }
