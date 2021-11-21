@@ -1,7 +1,6 @@
-use vertigo::computed::{
+use vertigo::{Driver, computed::{
     Computed,
-    Dependencies
-};
+}};
 
 use super::{
     number_item::{
@@ -16,7 +15,7 @@ use std::collections::HashSet;
 pub type PossibleValues = Computed<HashSet<SudokuValue>>;
 
 pub fn possible_values(
-    deps: &Dependencies,
+    driver: &Driver,
     grid: &SudokuSquare<SudokuSquare<NumberItem>>,
     level0x: TreeBoxIndex,
     level0y: TreeBoxIndex,
@@ -24,7 +23,7 @@ pub fn possible_values(
     level1y: TreeBoxIndex,
 ) -> Computed<HashSet<SudokuValue>> {
     let grid = grid.clone();
-    deps.from(move || {
+    driver.from(move || {
         let mut current_numbers_in_ceis: HashSet<SudokuValue> = HashSet::new();
         current_numbers_in_ceis.insert(SudokuValue::Value1);
         current_numbers_in_ceis.insert(SudokuValue::Value2);

@@ -1,11 +1,6 @@
 use std::cmp::PartialEq;
-use vertigo::{
-    VDomElement,
-    computed::{
-        Computed,
-        Dependencies
-    }
-};
+use vertigo::{Driver, VDomElement};
+use vertigo::computed::Computed;
 
 use vertigo_html::html;
 
@@ -22,11 +17,11 @@ pub struct State {
 }
 
 impl State {
-    pub fn new(root: &Dependencies) -> Computed<State> {
-        let counter1 = simple_counter::State::new(root);
-        let counter2 = simple_counter::State::new(root);
-        let counter3 = simple_counter::State::new(root);
-        let counter4 = simple_counter::State::new(root);
+    pub fn new(driver: &Driver) -> Computed<State> {
+        let counter1 = simple_counter::State::new(driver);
+        let counter2 = simple_counter::State::new(driver);
+        let counter3 = simple_counter::State::new(driver);
+        let counter4 = simple_counter::State::new(driver);
 
         let suma = {
             let counter1 = counter1.clone();
@@ -34,7 +29,7 @@ impl State {
             let counter3 = counter3.clone();
             let counter4 = counter4.clone();
 
-            root.from(move || {
+            driver.from(move || {
                 let value1 = *counter1.get_value().counter.get_value();
                 let value2 = *counter2.get_value().counter.get_value();
                 let value3 = *counter3.get_value().counter.get_value();
@@ -44,7 +39,7 @@ impl State {
             })
         };
 
-        root.new_computed_from(State {
+        driver.new_computed_from(State {
             counter1,
             counter2,
             counter3,

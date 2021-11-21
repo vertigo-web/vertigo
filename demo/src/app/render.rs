@@ -65,6 +65,7 @@ fn render_header(app_state: &Computed<app::State>) -> VDomElement {
                 <li css={css_menu_item(current_page == &Route::GithubExplorer)} on_click={navigate_to!(state, GithubExplorer)}>"Github Explorer"</li>
                 <li css={css_menu_item(is_game_of_life)} on_click={navigate_to_gameoflife}>"Game Of Life"</li>
                 <li css={css_menu_item(current_page == &Route::Chat)} on_click={navigate_to!(state, Chat)}>"Chat"</li>
+                <li css={css_menu_item(current_page == &Route::Todo)} on_click={navigate_to!(state, Todo)}>"Todo"</li>
             </ul>
         </div>
     }
@@ -98,12 +99,21 @@ pub fn render(app_state: &Computed<app::State>) -> VDomElement {
             html! { <component {game_of_life::render} data={state.game_of_life} /> },
 
         Route::Chat => {
-            let state = chat::ChatState::new(&state.root, &state.driver);
+            let state = chat::ChatState::new(&state.driver);
 
             html! {
                 <component {chat::render} data={state} />
             }
         },
+
+        Route::Todo => {
+            let driver = state.driver.clone();
+            let state = super::todo::TodoState::new(driver);
+
+            html! {
+                <component {super::todo::todo_render} data={state} />
+            }
+        }
 
         Route::NotFound =>
             html! { <div>"Page Not Found"</div> }.into(),

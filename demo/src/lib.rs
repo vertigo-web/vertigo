@@ -1,7 +1,6 @@
 use wasm_bindgen::prelude::wasm_bindgen;
 
 use vertigo::{
-    computed::Dependencies,
     start_app,
     VDomComponent,
 };
@@ -20,9 +19,8 @@ pub async fn start_application() {
 
     log::info!("Starting application ...");
 
-    let root: Dependencies = Dependencies::default();
-    let driver = DriverBrowser::new(&root);
-    let app_state = app::State::new(&root, &driver);
+    let driver = DriverBrowser::new();
+    let app_state = app::State::new(&driver);
 
     start_app(driver, VDomComponent::new(app_state, app::render)).await;
 }

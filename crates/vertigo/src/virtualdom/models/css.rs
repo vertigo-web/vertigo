@@ -42,4 +42,12 @@ impl Css {
             value
         })
     }
+
+    pub fn extend(mut self, new_css: Css) -> Css {
+        for item in new_css.groups {
+            self.groups.push(item);
+        }
+
+        self
+    }
 }

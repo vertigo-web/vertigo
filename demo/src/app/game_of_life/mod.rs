@@ -5,7 +5,6 @@ use vertigo::{
     VDomElement,
     computed::{
         Computed,
-        Dependencies,
         Value
     }
 };
@@ -13,21 +12,21 @@ use vertigo_html::{html, css, css_fn};
 
 mod next_generation;
 
-fn create_matrix_row(root: &Dependencies, x_count: u16) -> Vec<Value<bool>> {
+fn create_matrix_row(driver: &Driver, x_count: u16) -> Vec<Value<bool>> {
     let mut row = Vec::new();
 
     for _ in 0..x_count {
-        row.push(root.new_value(false));
+        row.push(driver.new_value(false));
     }
 
     row
 }
 
-fn create_matrix(root: &Dependencies, x_count: u16, y_count: u16) -> Vec<Vec<Value<bool>>> {
+fn create_matrix(driver: &Driver, x_count: u16, y_count: u16) -> Vec<Vec<Value<bool>>> {
     let mut matrix = Vec::new();
 
     for _ in 0..y_count {
-        matrix.push(create_matrix_row(root, x_count));
+        matrix.push(create_matrix_row(driver, x_count));
     }
 
     matrix
@@ -35,8 +34,7 @@ fn create_matrix(root: &Dependencies, x_count: u16, y_count: u16) -> Vec<Vec<Val
 
 #[derive(PartialEq)]
 pub struct State {
-    pub dom_driver: Driver,
-    pub root: Dependencies,
+    pub driver: Driver,
     pub x_count: Value<u16>,
     pub y_count: Value<u16>,
     pub matrix: Computed<Vec<Vec<Value<bool>>>>,
@@ -45,61 +43,64 @@ pub struct State {
 }
 
 impl State {
-    pub fn new(root: &Dependencies, dom_driver: &Driver) -> Computed<State> {
+    pub fn new(driver: &Driver) -> Computed<State> {
         let x_count_len = 120;
         let y_count_len = 70;
 
-        let x_count = root.new_value(x_count_len);
-        let y_count = root.new_value(y_count_len);
-        let matrix = root.new_computed_from(create_matrix(root, x_count_len, y_count_len));
+        let x_count = driver.new_value(x_count_len);
+        let y_count = driver.new_value(y_count_len);
+        let matrix = driver.new_computed_from(create_matrix(driver, x_count_len, y_count_len));
 
-        let timer_enable = root.new_value(false);
+        let timer_enable = driver.new_value(false);
 
         let year = {
-            let root0 = root.clone();
-            let root = root.clone();
-            let dom_driver = dom_driver.clone();
             let timer_enable = timer_enable.clone();
 
             let x_count = x_count.clone();
             let y_count = y_count.clone();
             let matrix = matrix.clone();
 
-            root0.new_with_connect(0, move |self_value| {
-                let root = root.clone();
-                let timer_enable = timer_enable.clone();
-                let self_value = self_value.clone();
+            driver.new_with_connect(0, {
+                let driver = driver.clone();
 
-                let x_count = x_count.clone();
-                let y_count = y_count.clone();
-                let matrix = matrix.clone();
+                move |self_value| {
+                    let driver = driver.clone();
+                    let timer_enable = timer_enable.clone();
+                    let self_value = self_value.clone();
 
-                log::info!("start timer");
+                    let x_count = x_count.clone();
+                    let y_count = y_count.clone();
+                    let matrix = matrix.clone();
 
-                let drop_timer = dom_driver.set_interval(150, move || {
+                    log::info!("start timer");
 
-                    let timer_enable = timer_enable.get_value();
+                    let drop_timer = driver.set_interval(150, {
+                        let driver = driver.clone();
+                        move || {
 
-                    if *timer_enable {
-                        let current = self_value.get_value();
-                        self_value.set_value(*current + 1);
+                            let timer_enable = timer_enable.get_value();
 
-                        let x_count = x_count.get_value();
-                        let y_count = y_count.get_value();
-                        let matrix = matrix.get_value();
+                            if *timer_enable {
+                                let current = self_value.get_value();
+                                self_value.set_value(*current + 1);
 
-                        next_generation::next_generation(&root, *x_count, *y_count, &*matrix)
-                    }
-                });
+                                let x_count = x_count.get_value();
+                                let y_count = y_count.get_value();
+                                let matrix = matrix.get_value();
 
-                Box::new(drop_timer)
+                                next_generation::next_generation(&driver, *x_count, *y_count, &*matrix)
+                            }
+                        }
+                    });
+
+                    Box::new(drop_timer)
+                }
             })
         };
 
 
-        root.new_computed_from(State {
-            dom_driver: dom_driver.clone(),
-            root: root.clone(),
+        driver.new_computed_from(State {
+            driver: driver.clone(),
             x_count,
             y_count,
             matrix,

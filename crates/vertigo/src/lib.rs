@@ -40,3 +40,36 @@ pub use fetch::request_builder::RequestTrait;
 pub use fetch::resource::Resource;
 pub use fetch::lazy_cache;
 pub use websocket::{WebcocketMessageDriver, WebcocketMessage, WebcocketConnection};
+
+
+
+#[macro_export]
+macro_rules! make_serde_request_trait {
+    ($model:ident) => {
+        impl RequestTrait for $model {
+            fn into_string(self) -> Result<String, String> {
+                serde_json::to_string(&self)
+                    .map_err(|err| format!("error serialize {}", err))
+            }
+
+            fn list_from_string(data: &str) -> Result<Vec<Self>, String> {
+
+                #[derive(Serialize, Deserialize)]
+                struct List(Vec<$model>);
+        
+                let result = serde_json::from_str::<List>(data)
+                    .map_err(|err| format!("error deserialize list {}", err))?;
+                
+                let List(list) = result;
+                Ok(list)
+            }
+
+            fn from_string(data: &str) -> Result<Self, String> {
+                serde_json::from_str::<Self>(data)
+                    .map_err(|err| format!("error deserialize {}", err))
+            }
+        }
+    }
+}
+
+

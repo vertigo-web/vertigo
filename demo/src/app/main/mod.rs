@@ -1,11 +1,7 @@
-use vertigo::{
-    VDomElement,
-    Css,
-    computed::{
-        Value,
-        Computed,
-        Dependencies
-    },
+use vertigo::{Css, Driver, VDomElement};
+use vertigo::computed::{
+    Value,
+    Computed,
 };
 use vertigo_html::{html, css, css_fn, css_fn_push};
 
@@ -19,9 +15,9 @@ pub struct MainState {
 }
 
 impl MainState {
-    pub fn new(root: &Dependencies) -> Computed<MainState> {
-        root.new_computed_from(MainState {
-            value: root.new_value(33),
+    pub fn new(driver: &Driver) -> Computed<MainState> {
+        driver.new_computed_from(MainState {
+            value: driver.new_value(33),
         })
     }
 

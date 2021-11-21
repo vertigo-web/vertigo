@@ -4,12 +4,12 @@ use std::rc::Rc;
 
 use crate::{
     Driver, Instant, InstantType, Resource,
-    computed::{Value, Dependencies},
+    computed::{Value},
     utils::BoxRefCell,
 };
 
 /// Function that updates cached value
-pub trait Loader<T: PartialEq> = Fn() -> LoaderResult<T> + 'static;
+pub trait Loader<T: PartialEq> = Fn(Driver) -> LoaderResult<T> + 'static;
 pub type LoaderResult<T> = Pin<Box<dyn Future<Output=Resource<T>>>>;
 
 pub struct CachedValue<T: PartialEq + 'static> {
@@ -49,10 +49,10 @@ impl<T: PartialEq> CachedValue<T> {
 }
 
 impl<T: PartialEq> LazyCache<T> {
-    pub fn new(driver: &Driver, dependencies: &Dependencies, max_age: InstantType, loader: impl Loader<T>) -> Self {
+    pub fn new(driver: &Driver, max_age: InstantType, loader: impl Loader<T>) -> Self {
         Self {
             res: Rc::new(CachedValue {
-                value: dependencies.new_value(Resource::Loading),
+                value: driver.new_value(Resource::Loading),
                 updated_at: BoxRefCell::new(driver.now(), "CachedValue::updated_at"),
                 set: BoxRefCell::new(false, "CachedValue::set"),
             }),
@@ -61,6 +61,10 @@ impl<T: PartialEq> LazyCache<T> {
             queued: Rc::new(BoxRefCell::new(false, "LazyCache::queued")),
             driver: driver.clone(),
         }
+    }
+
+    pub fn result<F: Future<Output=Resource<T>> + 'static>(future: F) -> LoaderResult<T> {
+        Box::pin(future)
     }
 
     pub fn get_value(&self) -> Rc<Resource<T>> {
@@ -75,9 +79,11 @@ impl<T: PartialEq> LazyCache<T> {
         let res = self.res.clone();
         let queued = self.queued.clone();
         queued.change((), |x, _| *x = true);
+        let driver = self.driver.clone();
+
         self.driver.spawn(async move {
             res.set_value(Resource::Loading);
-            res.set_value(loader().await);
+            res.set_value(loader(driver).await);
             queued.change((), |x, _| *x = false);
         })
     }

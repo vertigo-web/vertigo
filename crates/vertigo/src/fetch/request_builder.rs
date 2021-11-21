@@ -17,11 +17,10 @@ impl Method {
     }
 }
 
-//dodać makro, które będzie automatycznie implementowało te traity wraz z serde ...
-
 pub trait RequestTrait: Sized {
     fn into_string(self) -> Result<String, String>;
     fn from_string(data: &str) -> Result<Self, String>;
+    fn list_from_string(data: &str) -> Result<Vec<Self>, String>;
 }
 
 pub enum RequestBuilder {
@@ -58,17 +57,27 @@ impl RequestBuilder {
         }
     }
 
-    fn set_header(&mut self, name: String, value: String) {
-        if let RequestBuilder::Data { headers, .. } = self {
-            if let Some(headers) = headers {
+    pub fn bearer_auth(self, token: impl Into<String>) -> RequestBuilder {
+        let token: String = token.into();    
+        self.set_header("Authorization", format!("Bearer {}", token))
+    }
+
+    pub fn set_header(self, name: impl Into<String>, value: impl Into<String>) -> RequestBuilder {
+        let name: String = name.into();
+        let value: String = value.into();
+
+        if let RequestBuilder::Data { headers, driver, url, body } = self {
+            if let Some(mut headers) = headers {
                 headers.insert(name, value);
-                return;
+                return RequestBuilder::Data { headers: Some(headers), driver, url, body };
             }
 
             let mut new_headers = HashMap::new();
             new_headers.insert(name, value);
-            *headers = Some(new_headers);
+            return RequestBuilder::Data { headers: Some(new_headers), driver, url, body };
         }
+
+        self
     }
 
     pub fn body_json(self, body: impl RequestTrait) -> RequestBuilder {
@@ -76,9 +85,7 @@ impl RequestBuilder {
 
         match body_string {
             Ok(body) => {
-                let mut request = self.body(body);
-                request.set_header("Content-Type".into(), "application/json".into());
-                request
+                self.body(body).set_header("Content-Type", "application/json")
             },
             Err(message) => {
                 RequestBuilder::ErrorInput(message)
@@ -155,6 +162,13 @@ impl RequestResponseBody {
             Err(err) => Resource::Error(err)
         }
     }
+
+    pub fn into_vec<T: PartialEq + RequestTrait>(self) -> Resource<Vec<T>> {
+        match T::list_from_string(self.body.as_str()) {
+            Ok(data) => Resource::Ready(data),
+            Err(err) => Resource::Error(err),
+        }
+    }
 }
 
 #[derive(Debug)]
@@ -179,7 +193,7 @@ impl RequestResponse {
         None
     }
 
-    pub fn into<T: PartialEq + RequestTrait>(self, convert: fn(u32, RequestResponseBody) -> Option<Resource<T>>) -> Resource<T> {
+    pub fn into<T: PartialEq>(self, convert: impl Fn(u32, RequestResponseBody) -> Option<Resource<T>>) -> Resource<T> {
         let result = match self.data {
             Ok((status, body)) => {
                 let body = RequestResponseBody::new(body);
