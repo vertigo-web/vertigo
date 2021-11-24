@@ -1,0 +1,19 @@
+[package]
+name = "vertigo-macro"
+version = "0.1.0-alpha.3"
+authors = ["Grzegorz Szeliga <szeligagrzegorz@gmail.com>", "Michał Pokrywka <wolfmoon@o2.pl>"]
+edition = "2018"
+license = "MIT OR Apache-2.0"
+description = "Virtual DOM library for Rust - macros for html and fetch"
+
+[lib]
+name = "vertigo_macro"
+proc-macro = true
+
+[dependencies]
+pest = "2.1.3"
+pest_derive = "2.1.0"
+proc-macro2 = "1.0.24"
+proc-macro-error = "1.0.4"
+syn = "1.0.60"
+itertools = "0.10.0"

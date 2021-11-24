@@ -1,8 +1,9 @@
 use serde::{Deserialize, Serialize};
-use vertigo::{Css, Driver, RequestTrait, Resource, VDomElement, make_serde_request_trait};
-use vertigo::computed::{AutoMap, Computed, Value};
-use vertigo::lazy_cache::{LazyCache};
-use vertigo_html::{css, html};
+use vertigo::{
+    Css, Driver, Resource, LazyCache, VDomElement,
+    computed::{AutoMap, Computed, Value},
+    css, html, SerdeRequest,
+};
 use std::rc::Rc;
 
 #[derive(PartialEq)]
@@ -16,7 +17,7 @@ enum View {
     }
 }
 
-#[derive(PartialEq, Serialize, Deserialize, Debug)]
+#[derive(PartialEq, Serialize, Deserialize, SerdeRequest, Debug)]
 struct PostModel {
     id: u32,
     title: String,
@@ -24,9 +25,7 @@ struct PostModel {
     // userId: u32,
 }
 
-make_serde_request_trait!(PostModel);
-
-#[derive(PartialEq, Serialize, Deserialize, Debug)]
+#[derive(PartialEq, Serialize, Deserialize, SerdeRequest, Debug)]
 struct CommentModel {
     id: u32,
     body: String,
@@ -34,8 +33,6 @@ struct CommentModel {
     name: String,
     // postId: u32,
 }
-
-make_serde_request_trait!(CommentModel);
 
 #[derive(PartialEq)]
 pub struct TodoState {
@@ -292,10 +289,10 @@ fn todo_post_render(state: &Computed<TodoPostState>) -> VDomElement {
                     view.set_value(View::User { email: email.clone() });
                 }
             };
-    
+
             let css_author = css_comment_author()
                 .extend(css_hover_item());
-            
+
 
             comments_out.push(html! {
                 <div css={css_comment_wrapper()}>

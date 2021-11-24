@@ -1,5 +1,4 @@
-use vertigo::{computed::Computed, VDomElement, Css};
-use vertigo_html::{html, css_fn, css};
+use vertigo::{computed::Computed, VDomElement, Css, html, css_fn, css};
 
 use self::config::Config;
 use super::state::{Cell, Sudoku, sudoku_square::SudokuSquare, tree_box::TreeBoxIndex};

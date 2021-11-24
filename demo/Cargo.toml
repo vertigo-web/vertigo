@@ -1,10 +1,8 @@
 [package]
 name = "vertigo-demo"
 version = "0.1.0"
-authors = ["Grzegorz Szeliga <grzegorz.szeliga@twoupdigital.com>"]
+authors = ["Grzegorz Szeliga <szeligagrzegorz@gmail.com>", "Michał Pokrywka <wolfmoon@o2.pl>"]
 edition = "2018"
-
-# See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
 
 [lib]
 crate-type = ["cdylib", "rlib"]
@@ -17,8 +15,6 @@ wasm-bindgen-futures = "0.4.24"
 wasm-logger = "0.2.0"
 wee_alloc = "0.4.5"
 
-vertigo = { path = "../crates/vertigo", version = "0.1.0-alpha.3" }
-vertigo-html = { path = "../crates/vertigo-html", version = "0.1.0-alpha.3" }
+vertigo = { path = "../crates/vertigo", version = "0.1.0-alpha.3", features = [ "serde_request" ] }
 vertigo-browserdriver = { path = "../crates/vertigo-browserdriver", version = "0.1.0-alpha.3" }
 serde = { version = "1.0.126", features = ["derive"] }
-serde_json = "1.0.64"

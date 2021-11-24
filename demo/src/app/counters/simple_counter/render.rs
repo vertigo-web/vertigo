@@ -3,9 +3,8 @@ use super::state::State;
 use vertigo::{
     computed::Computed,
     VDomElement,
+    html, css_fn, css_fn_push,
 };
-
-use vertigo_html::{html, css_fn, css_fn_push};
 
 css_fn! { css_box, "
     margin: 5px;

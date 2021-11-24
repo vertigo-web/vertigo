@@ -1,12 +1,15 @@
 [package]
 name = "vertigo"
 version = "0.1.0-alpha.3"
-authors = ["Grzegorz Szeliga <grzegorz.szeliga@twoupdigital.com>"]
+authors = ["Grzegorz Szeliga <szeligagrzegorz@gmail.com>", "Michał Pokrywka <wolfmoon@o2.pl>"]
 edition = "2018"
 license = "MIT OR Apache-2.0"
 description = "Virtual DOM library for Rust"
 
-# See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
+[features]
+serde_request = [ "serde_json" ]
 
 [dependencies]
 log = "0.4.14"
+serde_json = { version = "1.0", optional = true }
+vertigo-macro = { path = "../../crates/vertigo-macro", version="0.1.0-alpha.3" }

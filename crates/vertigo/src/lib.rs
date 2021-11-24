@@ -5,6 +5,7 @@ mod app;
 pub mod computed;
 mod css;
 mod fetch;
+mod html_macro;
 mod instant;
 mod driver;
 mod driver_refs;
@@ -31,45 +32,20 @@ pub use virtualdom::models::node_attr;
 
 pub use instant::{Instant, InstantType};
 
+pub use html_macro::Embed;
+pub use vertigo_macro::{html, css, css_block};
+
+#[cfg(feature = "serde_request")]
+pub use vertigo_macro::{SerdeRequest, SerdeSingleRequest, SerdeListRequest};
+#[cfg(feature = "serde_request")]
+pub use serde_json;
+
 // Export log module which can be used in vertigo plugins
 pub use log;
 
 pub use app::start_app;
 
-pub use fetch::request_builder::RequestTrait;
+pub use fetch::request_builder::{SingleRequestTrait, ListRequestTrait};
 pub use fetch::resource::Resource;
-pub use fetch::lazy_cache;
+pub use fetch::lazy_cache::LazyCache;
 pub use websocket::{WebcocketMessageDriver, WebcocketMessage, WebcocketConnection};
-
-
-
-#[macro_export]
-macro_rules! make_serde_request_trait {
-    ($model:ident) => {
-        impl RequestTrait for $model {
-            fn into_string(self) -> Result<String, String> {
-                serde_json::to_string(&self)
-                    .map_err(|err| format!("error serialize {}", err))
-            }
-
-            fn list_from_string(data: &str) -> Result<Vec<Self>, String> {
-
-                #[derive(Serialize, Deserialize)]
-                struct List(Vec<$model>);
-        
-                let result = serde_json::from_str::<List>(data)
-                    .map_err(|err| format!("error deserialize list {}", err))?;
-                
-                let List(list) = result;
-                Ok(list)
-            }
-
-            fn from_string(data: &str) -> Result<Self, String> {
-                serde_json::from_str::<Self>(data)
-                    .map_err(|err| format!("error deserialize {}", err))
-            }
-        }
-    }
-}
-
-

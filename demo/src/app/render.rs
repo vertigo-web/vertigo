@@ -2,8 +2,8 @@ use vertigo::{
     computed::Computed,
     VDomElement,
     Css,
+    html, css, css_fn,
 };
-use vertigo_html::{html, css, css_fn};
 
 use crate::app::chat;
 use crate::{app, navigate_to};

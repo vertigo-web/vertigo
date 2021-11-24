@@ -1,11 +1,13 @@
 use std::cmp::PartialEq;
 use serde::{Deserialize, Serialize};
 
-use vertigo::{Driver, RequestTrait, Resource, make_serde_request_trait};
-use vertigo::computed::{
-    Value,
-    AutoMap,
-    Computed,
+use vertigo::{
+    Driver, SerdeSingleRequest, Resource,
+    computed::{
+        Value,
+        AutoMap,
+        Computed,
+    },
 };
 
 #[derive(Debug, Serialize, Deserialize, PartialEq, Clone)]
@@ -26,13 +28,11 @@ pub struct Signature {
     pub email: String,
 }
 
-#[derive(Debug, Serialize, Deserialize, PartialEq, Clone)]
+#[derive(Debug, Serialize, Deserialize, SerdeSingleRequest, PartialEq, Clone)]
 pub struct Branch {
     pub name: String,
     pub commit: Commit,
 }
-
-make_serde_request_trait!(Branch);
 
 fn fetch_repo(repo: &str, value: Value<Resource<Branch>>, driver: &Driver) {
     driver.spawn({

@@ -17,9 +17,13 @@ impl Method {
     }
 }
 
-pub trait RequestTrait: Sized {
+pub trait SingleRequestTrait: Sized {
     fn into_string(self) -> Result<String, String>;
     fn from_string(data: &str) -> Result<Self, String>;
+}
+
+pub trait ListRequestTrait: Sized {
+    fn list_into_string(vec: Vec<Self>) -> Result<String, String>;
     fn list_from_string(data: &str) -> Result<Vec<Self>, String>;
 }
 
@@ -58,7 +62,7 @@ impl RequestBuilder {
     }
 
     pub fn bearer_auth(self, token: impl Into<String>) -> RequestBuilder {
-        let token: String = token.into();    
+        let token: String = token.into();
         self.set_header("Authorization", format!("Bearer {}", token))
     }
 
@@ -80,7 +84,7 @@ impl RequestBuilder {
         self
     }
 
-    pub fn body_json(self, body: impl RequestTrait) -> RequestBuilder {
+    pub fn body_json(self, body: impl SingleRequestTrait) -> RequestBuilder {
         let body_string: Result<String, String> = body.into_string();
 
         match body_string {
@@ -156,14 +160,14 @@ impl RequestResponseBody {
         }
     }
 
-    pub fn into<T: PartialEq + RequestTrait>(self) -> Resource<T> {
+    pub fn into<T: PartialEq + SingleRequestTrait>(self) -> Resource<T> {
         match T::from_string(self.body.as_str()) {
             Ok(data) => Resource::Ready(data),
             Err(err) => Resource::Error(err)
         }
     }
 
-    pub fn into_vec<T: PartialEq + RequestTrait>(self) -> Resource<Vec<T>> {
+    pub fn into_vec<T: PartialEq + ListRequestTrait>(self) -> Resource<Vec<T>> {
         match T::list_from_string(self.body.as_str()) {
             Ok(data) => Resource::Ready(data),
             Err(err) => Resource::Error(err),
@@ -218,13 +222,13 @@ impl RequestResponse {
         result
     }
 
-    pub fn into_data<T: PartialEq + RequestTrait>(self) -> Resource<T> {
+    pub fn into_data<T: PartialEq + SingleRequestTrait>(self) -> Resource<T> {
         self.into(|_, response_body| {
             Some(response_body.into::<T>())
         })
     }
 
-    pub fn into_error_message<T: PartialEq + RequestTrait>(self) -> Resource<T> {
+    pub fn into_error_message<T: PartialEq>(self) -> Resource<T> {
         let body = match self.data {
             Ok((code, body)) => format!("API error {}: {}", code, body),
             Err(body) => format!("Network error: {}", body),

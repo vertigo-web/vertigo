@@ -2,10 +2,10 @@ use vertigo::{
     Resource,
     computed::Computed,
     VDomElement,
+    html, css_fn,
 };
-use vertigo_html::{html, css_fn};
 
-use super::state::{State};
+use super::state::State;
 
 css_fn! { wrapper, "
     border: 1px solid black;

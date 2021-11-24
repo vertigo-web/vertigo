@@ -72,7 +72,7 @@ dependencies = [
  "block-padding",
  "byte-tools",
  "byteorder",
- "generic-array 0.12.3",
+ "generic-array 0.12.4",
 ]
 
 [[package]]
@@ -131,11 +131,11 @@ checksum = "baf1de4339761588bc0619e3cbc0120ee582ebb74b53b4efbf79117bd2da40fd"
 
 [[package]]
 name = "console_error_panic_hook"
-version = "0.1.6"
+version = "0.1.7"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "b8d976903543e0c48546a91908f21588a680a8c8f984df9a5d69feccb2b2a211"
+checksum = "a06aeb73f470f66dcdbf7223caeebb85984942f22f1adb2a088cf9668146bbbc"
 dependencies = [
- "cfg-if 0.1.10",
+ "cfg-if 1.0.0",
  "wasm-bindgen",
 ]
 
@@ -154,7 +154,7 @@ version = "0.8.1"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "f3d0c8c8752312f9713efd397ff63acb9f85585afbf179282e720e7704954dd5"
 dependencies = [
- "generic-array 0.12.3",
+ "generic-array 0.12.4",
 ]
 
 [[package]]
@@ -290,9 +290,9 @@ dependencies = [
 
 [[package]]
 name = "generic-array"
-version = "0.12.3"
+version = "0.12.4"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "c68f0274ae0e023facc3c97b2e00f076be70e254bc851d972503b328db79b2ec"
+checksum = "ffdf9f34f1447443d37393cc6c2b8313aebddcd96906caf34e54c68d8e57d7bd"
 dependencies = [
  "typenum",
 ]
@@ -406,9 +406,9 @@ dependencies = [
 
 [[package]]
 name = "itertools"
-version = "0.10.0"
+version = "0.10.1"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "37d572918e350e82412fe766d24b15e6682fb2ed2bbe018280caa810397cb319"
+checksum = "69ddb889f9d0d08a67338271fa9b62996bc788c7796a5c18cf057420aaed5eaf"
 dependencies = [
  "either",
 ]
@@ -1178,6 +1178,8 @@ name = "vertigo"
 version = "0.1.0-alpha.3"
 dependencies = [
  "log",
+ "serde_json",
+ "vertigo-macro",
 ]
 
 [[package]]
@@ -1197,10 +1199,8 @@ dependencies = [
  "console_error_panic_hook",
  "log",
  "serde",
- "serde_json",
  "vertigo",
  "vertigo-browserdriver",
- "vertigo-html",
  "wasm-bindgen",
  "wasm-bindgen-futures",
  "wasm-logger",
@@ -1218,32 +1218,15 @@ dependencies = [
 ]
 
 [[package]]
-name = "vertigo-html"
-version = "0.1.0-alpha.3"
-dependencies = [
- "vertigo",
- "vertigo-html-macro",
-]
-
-[[package]]
-name = "vertigo-html-macro"
+name = "vertigo-macro"
 version = "0.1.0-alpha.3"
 dependencies = [
  "itertools",
- "log",
  "pest",
  "pest_derive",
  "proc-macro-error",
  "proc-macro2",
  "syn",
- "vertigo",
-]
-
-[[package]]
-name = "vertigo-testing"
-version = "0.1.0-alpha.3"
-dependencies = [
- "vertigo",
 ]
 
 [[package]]

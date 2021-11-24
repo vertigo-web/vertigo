@@ -17,7 +17,7 @@ jobs:
       - uses: actions-rs/clippy-check@v1
         with:
           token: ${{ secrets.GITHUB_TOKEN }}
-          args: -p vertigo -p vertigo-html -p vertigo-html-macro -p vertigo-testing -p vertigo-demo --all-features --target wasm32-unknown-unknown -- -Dwarnings
+          args: -p vertigo -p vertigo-macro -p vertigo-browserdriver -p vertigo-demo --all-features --target wasm32-unknown-unknown -- -Dwarnings
           name: Clippy Output
 
   nightly-clippy-demo-server:
