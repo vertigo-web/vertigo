@@ -1,6 +1,16 @@
 Vertigo - reactive webassembly
 ===================
 
+Features
+--------------
+
+* **Virtual DOM** - Lightweight representation of JavaScript DOM that can be used to optimally update real DOM
+* **Reactive dependencies** - A graph of values and clients that can automatically compute what to refresh after one value change
+* **HTML/CSS macros** - Allows to construct Virtual DOM nodes using HTML and CSS
+
+See [Changelog](CHANGES.md) for a more features.
+
+
 Installation and usage of demo application
 --------------
 
