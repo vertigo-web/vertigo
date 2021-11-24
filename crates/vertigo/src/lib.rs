@@ -47,5 +47,6 @@ pub use app::start_app;
 
 pub use fetch::request_builder::{SingleRequestTrait, ListRequestTrait};
 pub use fetch::resource::Resource;
+pub use fetch::lazy_cache;
 pub use fetch::lazy_cache::LazyCache;
 pub use websocket::{WebcocketMessageDriver, WebcocketMessage, WebcocketConnection};
