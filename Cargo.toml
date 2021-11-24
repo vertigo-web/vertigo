@@ -5,9 +5,7 @@ members = [
     "demo-server",
     "crates/vertigo-browserdriver",
     "crates/vertigo",
-    "crates/vertigo-html",
-    "crates/vertigo-html-macro",
-    "crates/vertigo-testing",
+    "crates/vertigo-macro",
 ]
 
 

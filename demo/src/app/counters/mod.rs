@@ -1,8 +1,9 @@
 use std::cmp::PartialEq;
-use vertigo::{Driver, VDomElement};
-use vertigo::computed::Computed;
-
-use vertigo_html::html;
+use vertigo::{
+    Driver, VDomElement,
+    computed::Computed,
+    html,
+};
 
 mod simple_counter;
 

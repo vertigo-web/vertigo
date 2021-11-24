@@ -3,7 +3,7 @@ use vertigo::computed::{
     Value,
     Computed,
 };
-use vertigo_html::{html, css, css_fn, css_fn_push};
+use vertigo::{html, css, css_fn, css_fn_push};
 
 mod spinner;
 

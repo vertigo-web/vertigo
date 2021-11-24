@@ -6,9 +6,9 @@ use vertigo::{
     computed::{
         Computed,
         Value
-    }
+    },
+    html, css, css_fn,
 };
-use vertigo_html::{html, css, css_fn};
 
 mod next_generation;
 

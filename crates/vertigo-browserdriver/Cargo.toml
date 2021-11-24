@@ -1,7 +1,7 @@
 [package]
 name = "vertigo-browserdriver"
 version = "0.1.0-alpha.3"
-authors = ["Grzegorz Szeliga <grzegorz.szeliga@twoupdigital.com>"]
+authors = ["Grzegorz Szeliga <szeligagrzegorz@gmail.com>", "Michał Pokrywka <wolfmoon@o2.pl>"]
 edition = "2018"
 license = "MIT OR Apache-2.0"
 description = "Virtual DOM library for Rust - web-browser rendering driver"

@@ -1,8 +1,10 @@
-use vertigo::computed::{Computed, Value};
-use vertigo::utils::DropResource;
-use vertigo::{Driver, VDomElement, WebcocketConnection};
-use vertigo::{WebcocketMessage};
-use vertigo_html::html;
+use vertigo::{
+    computed::{Computed, Value},
+    utils::DropResource,
+    Driver, VDomElement, WebcocketConnection,
+    WebcocketMessage,
+    html,
+};
 use std::rc::Rc;
 
 #[derive(PartialEq)]

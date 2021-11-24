@@ -6,8 +6,8 @@ use vertigo::{
     },
     Driver,
     VDomElement,
+    html, css_fn,
 };
-use vertigo_html::{html, css_fn};
 // use virtualdom::vdom::StateBox::StateBox;
 
 #[derive(PartialEq)]
