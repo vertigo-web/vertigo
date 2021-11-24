@@ -1,5 +1,4 @@
 [workspace]
-
 members = [
     "demo",
     "demo-server",
