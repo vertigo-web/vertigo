@@ -23,7 +23,7 @@ pub struct KeyDownEvent {
 }
 
 impl std::fmt::Display for KeyDownEvent {
-    fn fmt(&self, f: &mut std::fmt::Formatter) -> std::fmt::Result {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         write!(f, "KeyDownEvent={}", self.key)
     }
 }

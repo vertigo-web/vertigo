@@ -1,3 +1,4 @@
+#![deny(rust_2018_idioms)]
 #![allow(clippy::new_ret_no_self)]
 #![allow(clippy::module_inception)]
 

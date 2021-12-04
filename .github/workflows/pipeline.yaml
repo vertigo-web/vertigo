@@ -4,13 +4,14 @@ on: [push]
 jobs:
 
   nightly-clippy:
-    name: Fixed Nightly clippy (wasm32)
+    name: Nightly clippy (wasm32)
     runs-on: ubuntu-latest
+    continue-on-error: true
     steps:
       - uses: actions/checkout@v2
       - uses: actions-rs/toolchain@v1
         with:
-          toolchain: nightly-2021-07-02
+          toolchain: nightly
           target: wasm32-unknown-unknown
           components: clippy
           override: true
@@ -21,13 +22,13 @@ jobs:
           name: Clippy Output
 
   nightly-clippy-demo-server:
-    name: Fixed Nightly clippy demo server (amd64)
+    name: Nightly clippy demo server (amd64)
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v2
       - uses: actions-rs/toolchain@v1
         with:
-          toolchain: nightly-2021-07-02
+          toolchain: nightly
           components: clippy
           override: true
       - uses: actions-rs/clippy-check@v1
@@ -50,23 +51,22 @@ jobs:
           command: test
           args: --all-features
 
-  # latest-nightly-clippy:
-  #   name: Latest Nightly clippy (wasm32)
-  #   runs-on: ubuntu-latest
-  #   continue-on-error: true
-  #   steps:
-  #     - uses: actions/checkout@v2
-  #     - uses: actions-rs/toolchain@v1
-  #       with:
-  #         toolchain: nightly
-  #         target: wasm32-unknown-unknown
-  #         components: clippy
-  #         override: true
-  #     - uses: actions-rs/clippy-check@v1
-  #       with:
-  #         token: ${{ secrets.GITHUB_TOKEN }}
-  #         args: --all-features --target wasm32-unknown-unknown -- -Dwarnings
-  #         name: Clippy Output
+  fixed-nightly-clippy:
+    name: Fixed Nightly clippy (wasm32)
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v2
+      - uses: actions-rs/toolchain@v1
+        with:
+          toolchain: nightly-2021-12-06
+          target: wasm32-unknown-unknown
+          components: clippy
+          override: true
+      - uses: actions-rs/clippy-check@v1
+        with:
+          token: ${{ secrets.GITHUB_TOKEN }}
+          args: -p vertigo -p vertigo-macro -p vertigo-browserdriver -p vertigo-demo --all-features --target wasm32-unknown-unknown -- -Dwarnings
+          name: Clippy Output
 
   # stable-clippy:
   #   name: Stable clippy

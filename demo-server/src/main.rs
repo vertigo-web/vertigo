@@ -1,3 +1,4 @@
+#![deny(rust_2018_idioms)]
 #![feature(map_try_insert)]
 
 use std::{
