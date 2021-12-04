@@ -69,12 +69,12 @@ impl<T: PartialEq> LazyCache<T> {
 
     pub fn get_value(&self) -> Rc<Resource<T>> {
         if self.needs_update() {
-            self.force_update()
+            self.force_update(true)
         }
         self.res.get_value()
     }
 
-    pub fn force_update(&self) {
+    pub fn force_update(&self, with_loading: bool) {
         let loader = self.loader.clone();
         let res = self.res.clone();
         let queued = self.queued.clone();
@@ -82,7 +82,9 @@ impl<T: PartialEq> LazyCache<T> {
         let driver = self.driver.clone();
 
         self.driver.spawn(async move {
-            res.set_value(Resource::Loading);
+            if with_loading {
+                res.set_value(Resource::Loading);
+            }
             res.set_value(loader(driver).await);
             queued.change((), |x, _| *x = false);
         })
