@@ -10,7 +10,7 @@ mod value;
 #[cfg(test)]
 mod tests;
 
-pub use auto_map::{AutoMap};
+pub use auto_map::AutoMap;
 pub use computed_box::Computed;
 pub use client::Client;
 pub use dependencies::Dependencies;

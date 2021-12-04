@@ -1,9 +1,7 @@
-use vertigo::{Css, Driver, VDomElement};
-use vertigo::computed::{
-    Value,
-    Computed,
+use vertigo::{
+    Computed, Css, Driver, Value,VDomElement,
+    html, css, css_fn, css_fn_push,
 };
-use vertigo::{html, css, css_fn, css_fn_push};
 
 mod spinner;
 

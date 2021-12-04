@@ -1,6 +1,6 @@
 use std::cmp::PartialEq;
-use vertigo::computed::{Computed, Value};
-use vertigo::Driver;
+use vertigo::{Computed, Driver, Value};
+
 use self::{
     number_item::NumberItem,
     possible_values::{

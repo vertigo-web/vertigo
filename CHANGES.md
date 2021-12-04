@@ -1,5 +1,10 @@
 # Changes
 
+## Unreleased
+
+### Added
+* Re-exports for AutoMap, Computed, Value, DropResource
+
 ## 0.1.0-alpha.3 - 2021-11-29
 
 ### Added
@@ -40,7 +45,7 @@
 
 ## 0.1.0-alpha.0 - 2020-12-23
 
-Initial relase
+Initial release
 
 * Virtual DOM - Lightweight representation of JavaScript DOM that can be used to optimally update real DOM
 * Reactive dependencies - A graph of values and clients that can automatically compute what to refresh after one value change

@@ -1,5 +1,4 @@
-use vertigo::Driver;
-use vertigo::computed::Value;
+use vertigo::{Driver, Value};
 
 use super::tree_box::TreeBoxIndex;
 

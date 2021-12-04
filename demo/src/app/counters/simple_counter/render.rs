@@ -1,10 +1,6 @@
-use super::state::State;
+use vertigo::{Computed, VDomElement, html, css_fn, css_fn_push};
 
-use vertigo::{
-    computed::Computed,
-    VDomElement,
-    html, css_fn, css_fn_push,
-};
+use super::state::State;
 
 css_fn! { css_box, "
     margin: 5px;

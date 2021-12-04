@@ -1,6 +1,5 @@
 use std::cmp::PartialEq;
-use vertigo::Driver;
-use vertigo::computed::{Computed, Value};
+use vertigo::{Computed, Driver, Value};
 use vertigo::router::HashRouter;
 
 use super::sudoku;

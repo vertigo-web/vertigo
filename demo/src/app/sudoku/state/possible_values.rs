@@ -1,6 +1,5 @@
-use vertigo::{Driver, computed::{
-    Computed,
-}};
+use std::collections::HashSet;
+use vertigo::{Computed, Driver};
 
 use super::{
     number_item::{
@@ -9,8 +8,6 @@ use super::{
     },
     sudoku_square::SudokuSquare, tree_box::TreeBoxIndex
 };
-
-use std::collections::HashSet;
 
 pub type PossibleValues = Computed<HashSet<SudokuValue>>;
 

@@ -1,9 +1,5 @@
 use std::cmp::PartialEq;
-use vertigo::Driver;
-use vertigo::computed::{
-    Computed,
-    Value
-};
+use vertigo::{Computed, Driver, Value};
 
 #[derive(PartialEq)]
 pub struct State {

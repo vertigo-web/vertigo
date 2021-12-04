@@ -1,9 +1,6 @@
 use wasm_bindgen::prelude::wasm_bindgen;
 
-use vertigo::{
-    start_app,
-    VDomComponent,
-};
+use vertigo::{start_app, VDomComponent};
 
 use vertigo_browserdriver::DriverBrowser;
 

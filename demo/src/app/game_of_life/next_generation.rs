@@ -1,10 +1,9 @@
-use vertigo::Driver;
-use vertigo::computed::Value;
+use vertigo::{Driver, Value};
 
 enum Offset {
-    Sub,    //-1
-    None,   //0
-    Add     //1
+    Sub,    // -1
+    None,   // 0
+    Add     // 1
 }
 
 fn modulo(base: u16, current: u16, offset: Offset) -> usize {

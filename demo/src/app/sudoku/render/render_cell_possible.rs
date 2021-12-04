@@ -1,6 +1,7 @@
-use vertigo::{computed::Computed, VDomElement, Css, html, css};
+use vertigo::{Computed, Css, VDomElement, html, css};
 
 use crate::app::sudoku::state::{Cell, number_item::SudokuValue};
+
 use super::config::Config;
 
 // fn cssCell() -> Css {

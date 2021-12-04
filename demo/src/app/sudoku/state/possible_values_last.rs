@@ -1,7 +1,4 @@
-use vertigo::Driver;
-use vertigo::computed::{
-    Computed,
-};
+use vertigo::{Driver, Computed};
 
 use super::{number_item::{NumberItem, SudokuValue}, possible_values::PossibleValues, sudoku_square::SudokuSquare, tree_box::TreeBoxIndex};
 
