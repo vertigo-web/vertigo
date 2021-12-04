@@ -1,3 +1,4 @@
+#![deny(rust_2018_idioms)]
 #![feature(trait_alias)]
 #![feature(try_trait_v2)] // https://github.com/rust-lang/rust/issues/84277
 

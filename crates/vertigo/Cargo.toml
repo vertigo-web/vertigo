@@ -10,7 +10,7 @@ repository = "https://github.com/vertigo-web/vertigo"
 documentation = "https://docs.rs/vertigo/"
 categories = ["asynchronous", "gui", "wasm", "web-programming"]
 license = "MIT OR Apache-2.0"
-edition = "2018"
+edition = "2021"
 
 [features]
 serde_request = [ "serde_json" ]

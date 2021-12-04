@@ -96,7 +96,7 @@ impl<'a> CurrentNodePairs<'a> {
     }
 }
 
-fn get_pair_for_update(real: RealDomNode, new: &VDomNode) -> Result<CurrentNodePairs, (RealDomNode, &VDomNode)> {
+fn get_pair_for_update(real: RealDomNode, new: &VDomNode) -> Result<CurrentNodePairs<'_>, (RealDomNode, &VDomNode)> {
     match real {
         RealDomNode::Component { node } => {
             if let VDomNode::Component { node: vnode } = new {
@@ -144,7 +144,7 @@ fn get_pair_for_update(real: RealDomNode, new: &VDomNode) -> Result<CurrentNodeP
     }
 }
 
-fn find_first_dom(list: &VecDeque<CurrentNodePairs>) -> Option<RealDomId> {
+fn find_first_dom(list: &VecDeque<CurrentNodePairs<'_>>) -> Option<RealDomId> {
     if let Some(first) = list.get(0) {
         return Some(first.id_dom());
     }
@@ -345,7 +345,7 @@ fn update_node_child(
         refs_context.add_apply(dom_apply);
     }
 
-    let pairs: VecDeque<CurrentNodePairs> = {
+    let pairs: VecDeque<CurrentNodePairs<'_>> = {
         let mut real_child: VecDeque<RealDomNode> = target.extract_child();
         let mut new_child: VecDeque<&VDomNode> = new_version.children.iter().collect();
 
