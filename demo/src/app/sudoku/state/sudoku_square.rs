@@ -1,4 +1,5 @@
 use std::cmp::PartialEq;
+
 use super::tree_box::{ThreeBox, TreeBoxIndex};
 
 #[derive(PartialEq)]

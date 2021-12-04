@@ -1,7 +1,7 @@
-use vertigo::{computed::Computed, VDomElement, Css, html, css_fn, css};
+use vertigo::{Computed, Css, VDomElement, html, css_fn, css};
 
-use self::config::Config;
 use super::state::{Cell, Sudoku, sudoku_square::SudokuSquare, tree_box::TreeBoxIndex};
+use self::config::Config;
 
 pub mod config;
 pub mod render_cell_value;

@@ -1,14 +1,6 @@
-use std::cmp::PartialEq;
 use serde::{Deserialize, Serialize};
-
-use vertigo::{
-    Driver, SerdeSingleRequest, Resource,
-    computed::{
-        Value,
-        AutoMap,
-        Computed,
-    },
-};
+use std::cmp::PartialEq;
+use vertigo::{AutoMap, Computed, Driver, Resource, SerdeSingleRequest, Value};
 
 #[derive(Debug, Serialize, Deserialize, PartialEq, Clone)]
 pub struct Commit {

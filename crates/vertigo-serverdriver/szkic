@@ -1,3 +1,0 @@
-instancja serwera powinna trzymać uchwyty do odpalonych wątków
-zrzucenie tego obiektu powinno anulować odpalone wątki i timery.
-

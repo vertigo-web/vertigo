@@ -1,8 +1,6 @@
 use vertigo::{
-    computed::{Computed, Value},
-    utils::DropResource,
-    Driver, VDomElement, WebcocketConnection,
-    WebcocketMessage,
+    Computed, Driver, DropResource, Value, VDomElement,
+    WebcocketConnection, WebcocketMessage,
     html,
 };
 use std::rc::Rc;

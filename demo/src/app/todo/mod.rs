@@ -1,10 +1,9 @@
 use serde::{Deserialize, Serialize};
-use vertigo::{
-    Css, Driver, Resource, LazyCache, VDomElement,
-    computed::{AutoMap, Computed, Value},
-    css, html, SerdeRequest,
-};
 use std::rc::Rc;
+use vertigo::{
+    AutoMap, Computed, Css, Driver, LazyCache, Resource, VDomElement, Value,
+    html, css, SerdeRequest,
+};
 
 #[derive(PartialEq)]
 enum View {

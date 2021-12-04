@@ -1,10 +1,10 @@
 [package]
 name = "vertigo"
-version = "0.1.0-alpha.3"
+version = "0.1.0-beta.1"
 authors = ["Grzegorz Szeliga <szeligagrzegorz@gmail.com>", "Michał Pokrywka <wolfmoon@o2.pl>"]
 description = "Virtual DOM library for Rust"
 readme = "README.md"
-keywords = ["wasm", "webassembly", "web", "webasm", "framework", "virtualdom", "vdom", "reactive", "javascript"]
+keywords = ["wasm", "web", "virtualdom", "reactive", "javascript"]
 homepage = "https://github.com/vertigo-web/"
 repository = "https://github.com/vertigo-web/vertigo"
 documentation = "https://docs.rs/vertigo/"
@@ -18,4 +18,4 @@ serde_request = [ "serde_json" ]
 [dependencies]
 log = "0.4.14"
 serde_json = { version = "1.0", optional = true }
-vertigo-macro = { path = "../../crates/vertigo-macro", version="0.1.0-alpha.3" }
+vertigo-macro = { path = "../../crates/vertigo-macro", version="0.1.0-beta.1" }

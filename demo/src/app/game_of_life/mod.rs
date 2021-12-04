@@ -1,14 +1,5 @@
 use std::cmp::PartialEq;
-use vertigo::{
-    Css,
-    Driver,
-    VDomElement,
-    computed::{
-        Computed,
-        Value
-    },
-    html, css, css_fn,
-};
+use vertigo::{Css, Driver, Computed, Value, VDomElement, html, css, css_fn};
 
 mod next_generation;
 

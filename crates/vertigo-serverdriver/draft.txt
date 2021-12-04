@@ -1,0 +1,2 @@
+Server instance should hold handles to launched threads.
+Dropping of such handle should cancel corresponding running thread and timers.

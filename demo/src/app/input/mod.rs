@@ -1,14 +1,5 @@
 use std::cmp::PartialEq;
-use vertigo::{
-    computed::{
-        Computed,
-        Value
-    },
-    Driver,
-    VDomElement,
-    html, css_fn,
-};
-// use virtualdom::vdom::StateBox::StateBox;
+use vertigo::{Computed, Driver, Value, VDomElement, html, css_fn};
 
 #[derive(PartialEq)]
 pub struct State {
