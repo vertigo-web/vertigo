@@ -123,20 +123,6 @@ impl Graph {
         result
     }
 
-    pub fn get_parents(&self, client_id: GraphId) -> Vec<GraphId> {
-        if let Some(item) = self.client_parents.get_relation(&client_id) {
-            let mut result: Vec<GraphId> = Vec::new();
-
-            for parent_id in item.iter() {
-                result.push(*parent_id);
-            }
-
-            return result;
-        }
-
-        Vec::new()
-    }
-
     pub fn all_connections_len(&self) -> u64 {
         let mut count: u64 = 0;
 

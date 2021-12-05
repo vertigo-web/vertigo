@@ -110,11 +110,11 @@ impl Dependencies {
         let edges_values = self.transaction_state.change((), |state, _| {
             state.down()
         });
-
+    
         if let Some(edges_values) = edges_values {
             let edges_to_refresh = self.get_edges_to_refresh(&edges_values);
 
-            refresh_edges::refresh_edges(self, &edges_values, edges_to_refresh);
+            refresh_edges::refresh_edges(self, edges_to_refresh);
 
             self.transaction_state.change((), |state, _| {
                 state.move_to_idle()
@@ -191,12 +191,6 @@ impl Dependencies {
         })
     }
 
-    pub(crate) fn get_parents(&self, client_id: GraphId) -> Vec<GraphId> {
-        self.graph.get_with_context(client_id, |state, client_id| {
-            state.get_parents(client_id)
-        })
-    }
-
     pub fn from<T: PartialEq + 'static, F: Fn() -> T + 'static>(&self, calculate: F) -> Computed<T> {
         let deps = self.clone();
 
@@ -230,12 +224,6 @@ impl Dependencies {
     pub fn refresh_get(&self, id: &GraphId) -> Option<GraphValueRefresh> {
         self.refresh.get_with_context(id, |state, id| {
             state.get(id)
-        })
-    }
-
-    pub fn drop_value(&self, parent_id: &GraphId) {
-        self.refresh.get_with_context(parent_id, |state, parent_id| {
-            state.drop_value(parent_id);
         })
     }
 

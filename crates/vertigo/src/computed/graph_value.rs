@@ -1,5 +1,5 @@
 use std::rc::Rc;
-use std::collections::{BTreeSet, BTreeMap};
+use std::collections::{BTreeSet};
 use std::cmp::PartialEq;
 
 use crate::computed::{
@@ -9,12 +9,19 @@ use crate::computed::{
 };
 use crate::utils::BoxRefCell;
 
-use super::dependencies::refresh_edges::RefreshState;
-
 #[derive(PartialEq)]
 enum GraphValueType {
     Computed,
     Client,
+}
+
+impl GraphValueType {
+    fn is_computed(&self) -> bool {
+        match self {
+            Self::Computed => true,
+            Self::Client => false,
+        }
+    }
 }
 
 struct GraphValueDataState<T: PartialEq + 'static> {
@@ -23,6 +30,7 @@ struct GraphValueDataState<T: PartialEq + 'static> {
 }
 
 struct GraphValueData<T: PartialEq + 'static> {
+    is_drop: bool,
     value_type: GraphValueType,
     deps: Dependencies,
     id: GraphId,
@@ -49,6 +57,7 @@ impl<T: PartialEq + 'static> GraphValueData<T> {
         let inst = Rc::new(
             BoxRefCell::new(
                 GraphValueData {
+                    is_drop: false,
                     value_type,
                     deps: deps.clone(),
                     id,
@@ -96,35 +105,23 @@ impl<T: PartialEq + 'static> GraphValueData<T> {
         new_value
     }
 
-    pub fn refresh(&mut self, state_refresh: &BTreeMap::<GraphId, RefreshState>) -> RefreshState {
-        if let Some(state) = &self.state {
-            let (new_value, parents_list) = self.calculate_new_value();
-
-            for parent in &parents_list {
-                let parent_item = state_refresh.get(parent);
-                if let Some(RefreshState::CalculationPending) = parent_item {
-                    return RefreshState::CalculationPending;
-                }
-            }
-
-            let is_new = new_value != state.value;
-
-            self.state = Some(GraphValueDataState {
-                value: new_value,
-                _list: self.convert_to_relation(parents_list)
-            });
-
-            if is_new {
-                return RefreshState::NewValue;
-            } else {
-                return RefreshState::PreviousValue;
-            }
-
-        } else {
-            log::error!("Incoherent state");
+    pub fn refresh(&mut self) {
+        if self.value_type.is_computed() {
+            log::error!("The refresh function should never be executed on a client node");
+            return;
         }
 
-        RefreshState::PreviousValue
+        if self.is_drop {
+            log::info!("Client unsubscribed, skip refreshing");
+            return;
+        }
+
+        let (new_value, parents_list) = self.calculate_new_value();
+
+        self.state = Some(GraphValueDataState {
+            value: new_value,
+            _list: self.convert_to_relation(parents_list)
+        });
     }
 
     pub fn drop_value(&mut self) {
@@ -143,7 +140,7 @@ impl<T: PartialEq + 'static> GraphValueData<T> {
 
 pub trait GraphValueControl {
     fn drop_value(&self);
-    fn refresh(&self, state: &BTreeMap::<GraphId, RefreshState>) -> RefreshState;
+    fn refresh(&self);
     fn is_computed(&self) -> bool;
 }
 
@@ -153,9 +150,10 @@ impl<T: PartialEq + 'static> GraphValueControl for BoxRefCell<GraphValueData<T>>
             state.drop_value();
         });
     }
-    fn refresh(&self, state_refresh: &BTreeMap::<GraphId, RefreshState>) -> RefreshState {
-        self.change(state_refresh, |state, state_refresh| {
-            state.refresh(state_refresh)
+
+    fn refresh(&self) {
+        self.change((), |state, _| {
+            state.refresh()
         })
     }
 
@@ -184,8 +182,9 @@ impl GraphValueRefresh {
     pub fn drop_value(&self) {
         self.control.drop_value();
     }
-    pub fn refresh(&self, state_refresh: &BTreeMap::<GraphId, RefreshState>) -> RefreshState {
-        self.control.refresh(state_refresh)
+
+    pub fn refresh(&self) {
+        self.control.refresh()
     }
 
     pub fn is_computed(&self) -> bool {
@@ -220,7 +219,8 @@ impl<T: PartialEq + 'static> GraphValueInner<T> {
 
 impl<T: PartialEq + 'static> Drop for GraphValueInner<T> {
     fn drop(&mut self) {
-        let deps = self.inner.get(|state| {
+        let deps = self.inner.change((), |state, _| {
+            state.is_drop = true;
             state.deps.clone()
         });
 

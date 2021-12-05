@@ -13,7 +13,6 @@ impl Refresh {
         }
     }
 
-
     pub fn refresh_token_add(&mut self, graph_value_refresh: GraphValueRefresh) {
         let id = graph_value_refresh.id;
         let prev_refresh = self.refresh.insert(id, graph_value_refresh);
@@ -28,14 +27,6 @@ impl Refresh {
 
     pub fn refresh_token_drop(&mut self, id: GraphId) {
         self.refresh.remove(&id);
-    }
-
-    pub fn drop_value(&self, parent_id: &GraphId) {
-        if let Some(item) = self.refresh.get(parent_id) {
-            item.drop_value();
-        } else {
-            //log::error!("Missing refresh token for(2) {:?}", parent_id);
-        }
     }
 
     pub(crate) fn get(&self, id: &GraphId) -> Option<GraphValueRefresh> {
