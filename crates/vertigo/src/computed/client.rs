@@ -45,9 +45,6 @@ impl Client {
         }
     }
 
-    pub fn off(self: Client) {
-    }
-
     pub fn id(&self) -> GraphId {
         self.graph_value.id()
     }

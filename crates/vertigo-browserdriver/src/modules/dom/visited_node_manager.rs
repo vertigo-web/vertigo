@@ -1,7 +1,7 @@
 use std::rc::Rc;
 use std::collections::HashMap;
 
-use vertigo::{RealDomId, computed::Dependencies, utils::BoxRefCell};
+use vertigo::{RealDomId, Dependencies, utils::BoxRefCell};
 
 use super::driver_data::DriverData;
 

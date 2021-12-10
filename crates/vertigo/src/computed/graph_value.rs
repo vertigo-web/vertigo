@@ -256,18 +256,6 @@ impl<T: PartialEq + 'static> GraphValue<T> {
         GraphValue::new(deps, GraphValueType::Client, get_value)
     }
 
-    pub fn is_computed(&self) -> bool {
-        self.inner.inner.get(|state| {
-            state.value_type == GraphValueType::Computed
-        })
-    }
-
-    pub fn is_client(&self) -> bool {
-        self.inner.inner.get(|state| {
-            state.value_type == GraphValueType::Client
-        })
-    }
-
     pub fn get_value(&self, is_computed: bool) -> Rc<T> {
         self.inner.inner.change(is_computed, |state, is_computed| {
             state.get_value(is_computed)

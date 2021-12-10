@@ -1,7 +1,7 @@
 use crate::Driver;
 
 #[derive(Debug)]
-pub enum WebcocketMessageDriver {
+pub enum WebsocketMessageDriver {
     Message(String),
     Connection {
         callback_id: u64,
@@ -9,7 +9,7 @@ pub enum WebcocketMessageDriver {
     Close,
 }
 
-pub enum WebcocketMessage {
+pub enum WebsocketMessage {
     Message(String),
     Connection(WebcocketConnection),
     Close,

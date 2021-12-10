@@ -5,6 +5,7 @@ use crate::virtualdom::models::css::Css;
 use super::vdom_element::KeyDownEvent;
 use super::vdom_refs::NodeRefs;
 
+/// Virtual DOM node attribute.
 pub enum NodeAttr {
     Css {
         css: Css

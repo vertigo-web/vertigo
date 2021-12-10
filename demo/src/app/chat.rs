@@ -1,6 +1,6 @@
 use vertigo::{
     Computed, Driver, DropResource, Value, VDomElement,
-    WebcocketConnection, WebcocketMessage,
+    WebcocketConnection, WebsocketMessage,
     html,
 };
 use std::rc::Rc;
@@ -40,16 +40,16 @@ impl ChatState {
 
             driver.websocket("ws://127.0.0.1:3000/ws", Box::new(move |message| {
                 match message {
-                    WebcocketMessage::Connection(connection) => {
+                    WebsocketMessage::Connection(connection) => {
                         connect.set_value(Some(connection));
                         log::info!("socket demo - connect ...");
                     },
-                    WebcocketMessage::Message(message) => {
+                    WebsocketMessage::Message(message) => {
                         log::info!("socket demo - new message {}", message);
 
                         add_message(&messages, message);
                     },
-                    WebcocketMessage::Close => {
+                    WebsocketMessage::Close => {
                         connect.set_value(None);
                         log::info!("socket demo - close ...");
                     }

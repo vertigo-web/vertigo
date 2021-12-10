@@ -4,6 +4,7 @@ use crate::DriverTrait;
 
 pub type InstantType = u64;
 
+/// Monotonically nondecrasing clock using a driver, similar to [std::time::Instant].
 #[derive(Clone)]
 pub struct Instant {
     driver: Rc<dyn DriverTrait>,

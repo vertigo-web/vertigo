@@ -28,6 +28,21 @@ impl std::fmt::Display for KeyDownEvent {
     }
 }
 
+/// Virtual DOM node that represents a DOM element, a basic building block.
+///
+/// Usually returned from a render function:
+///
+/// ```rust,no_run
+/// use vertigo::{VDomElement, html};
+///
+/// fn my_render() -> VDomElement {
+///     html! {
+///         <div>
+///             <p>"Hello!"</p>
+///         </div>
+///     }
+/// }
+/// ```
 pub struct VDomElement {
     pub name: &'static str,
     pub attr: HashMap<&'static str, String>,

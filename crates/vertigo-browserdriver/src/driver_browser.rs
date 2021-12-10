@@ -22,8 +22,8 @@ use vertigo::FetchResult;
 use vertigo::InstantType;
 use vertigo::RealDomId;
 use vertigo::RefsContext;
-use vertigo::WebcocketMessageDriver;
-use vertigo::computed::Dependencies;
+use vertigo::WebsocketMessageDriver;
+use vertigo::Dependencies;
 use vertigo::utils::DropResource;
 
 struct DriverBrowserInner {
@@ -153,7 +153,7 @@ impl DriverTrait for DriverBrowser {
         js_instant::now().round() as InstantType
     }
 
-    fn websocket(&self, host: String, callback: Box<dyn Fn(WebcocketMessageDriver)>) -> DropResource {
+    fn websocket(&self, host: String, callback: Box<dyn Fn(WebsocketMessageDriver)>) -> DropResource {
         self.driver.driver_websocket.websocket_start(host, callback)
     }
 

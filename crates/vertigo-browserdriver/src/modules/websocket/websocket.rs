@@ -1,14 +1,14 @@
 use std::rc::Rc;
 use wasm_bindgen::closure::Closure;
 
-use vertigo::{WebcocketMessageDriver, utils::DropResource};
+use vertigo::{WebsocketMessageDriver, utils::DropResource};
 use crate::modules::websocket::js_websocket::DriverWebsocketJs;
 use crate::utils::callback_manager::CallbackManagerOwner;
 use vertigo::utils::BoxRefCell;
 
 #[derive(Clone)]
 struct Callback {
-    stack: Rc<BoxRefCell<CallbackManagerOwner<WebcocketMessageDriver>>>,
+    stack: Rc<BoxRefCell<CallbackManagerOwner<WebsocketMessageDriver>>>,
 }
 
 impl Callback {
@@ -18,7 +18,7 @@ impl Callback {
         }
     }
 
-    pub fn register(&self, callback: Box<dyn Fn(WebcocketMessageDriver)>) -> u64 {
+    pub fn register(&self, callback: Box<dyn Fn(WebsocketMessageDriver)>) -> u64 {
         self.stack.change(callback, |state, callback| {
             state.set(callback)
         })
@@ -30,7 +30,7 @@ impl Callback {
         });
     }
 
-    pub fn trigger_callback(&self, callback_id: u64, message: WebcocketMessageDriver) {
+    pub fn trigger_callback(&self, callback_id: u64, message: WebsocketMessageDriver) {
         self.stack.get_with_context((callback_id, message), |state, (callback_id, message)| {
             state.trigger(callback_id, message);
         });
@@ -52,21 +52,21 @@ impl DriverWebsocket {
         let callback_socket = {
             let callback = callback.clone();
             Closure::new(move |callback_id: u64| {
-                callback.trigger_callback(callback_id, WebcocketMessageDriver::Connection { callback_id });
+                callback.trigger_callback(callback_id, WebsocketMessageDriver::Connection { callback_id });
             })
         };
 
         let callback_message = {
             let callback = callback.clone();
             Closure::new(move |callback_id: u64, message: String| {
-                callback.trigger_callback(callback_id, WebcocketMessageDriver::Message(message));
+                callback.trigger_callback(callback_id, WebsocketMessageDriver::Message(message));
             })
         };
 
         let callback_close = {
             let callback = callback.clone();
             Closure::new(move |callback_id: u64| {
-                callback.trigger_callback(callback_id, WebcocketMessageDriver::Close);
+                callback.trigger_callback(callback_id, WebsocketMessageDriver::Close);
             })
         };
 
@@ -85,7 +85,7 @@ impl DriverWebsocket {
         }
     }
 
-    pub fn websocket_start(&self, host: String, callback: Box<dyn Fn(WebcocketMessageDriver)>) -> DropResource {
+    pub fn websocket_start(&self, host: String, callback: Box<dyn Fn(WebsocketMessageDriver)>) -> DropResource {
         let callback_id = self.callback.register(callback);
         self.driver_js.register_callback(host, callback_id);
         

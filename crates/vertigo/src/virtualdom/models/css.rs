@@ -1,13 +1,36 @@
+
+/// Css chunk, represented either as static or dynamic string.
 #[derive(Debug)]
 pub enum CssGroup {
+    // &str - can be used as id using which we can find particular rule
     CssStatic {
-        value: &'static str,                    //&str -- moze zachowywac sie jako id po ktorym odnajdujemy interesujaca regule
+        value: &'static str,
     },
+    // string in this case, is a key to hashmap with the class name
     CssDynamic {
-        value: String,                          //w tym wypadku String, jest kluczem do hashmapy z wynikowa nazwa klasy
+        value: String,
     }
 }
 
+/// CSS styles definition for Virtual DOM.
+///
+/// Consists of a vector of css chunks which can be extended.
+///
+/// ```rust,no_run
+/// use vertigo::{Css, CssGroup, html};
+///
+/// let blue_text = Css::str("color: blue");
+/// let black_background = Css::str("background: black");
+///
+/// let my_styles = Css::str("
+///     font-family: courier;
+///     font-size: 160%
+/// ")
+///     .extend(blue_text)
+///     .extend(black_background);
+///
+/// let element = html! { <div css={my_styles} /> };
+/// ```
 #[derive(Debug, Default)]
 pub struct Css {
     pub groups: Vec<CssGroup>,

@@ -11,6 +11,17 @@ use crate::utils::{
 
 type CreateType<K, V> = EqBox<Box<dyn Fn(&K) -> V>>;
 
+/// A structure similar to HashMap
+/// but allows to provide a function `create` for creating a new value if particular key doesn't exists.
+///
+/// Such a function can for example [fetch](struct.Driver.html#method.fetch) data from internet.
+///
+/// ```rust
+/// use vertigo::AutoMap;
+///
+/// let my_map = AutoMap::<i32, i32>::new(|x| x*2);
+/// assert_eq!(my_map.get_value(&5), 10);
+/// ```
 #[derive(PartialEq, Clone)]
 pub struct AutoMap<K: Eq + Hash + Clone, V: PartialEq + Clone + 'static> {
     create: Rc<CreateType<K, V>>,

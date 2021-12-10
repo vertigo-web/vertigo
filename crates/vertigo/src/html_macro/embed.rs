@@ -1,6 +1,35 @@
 use crate::{VDomComponent, VDomElement, VDomNode};
 use std::rc::Rc;
 
+/// Trait for embedding custom types into [html!](macro.html.html) macro
+///
+/// ```rust
+/// use vertigo::{Embed, html, VDomNode};
+///
+/// struct Point {
+///     pub x: i32,
+///     pub y: i32,
+/// }
+///
+/// impl Embed for Point {
+///     fn embed(self) -> VDomNode {
+///         VDomNode::text(format!("({}, {})", self.x, self.y))
+///     }
+/// }
+///
+/// let x = Point { x: 1, y: 2 };
+///
+/// let rendered = html! {
+///     <div> {x} </div>
+/// };
+///
+/// assert_eq!(
+///     format!("{:?}", rendered),
+///     format!("{:?}", html! {
+///         <div> "(1, 2)" </div>
+///     })
+/// )
+/// ```
 pub trait Embed {
     fn embed(self) -> VDomNode;
 }
