@@ -16,6 +16,24 @@ use crate::{
     }
 };
 
+/// A component is a virtual dom element with render function attached to it.
+///
+/// Usually used as a main component for the application.
+///
+/// ```rust,no_run
+/// use vertigo::{Computed, VDomComponent, VDomElement, Dependencies, html};
+///
+/// // Here some driver should be used instead of pure dependency graph.
+/// let deps = Dependencies::default();
+///
+/// let state = deps.new_computed_from(5);
+///
+/// fn comp_render(state: &Computed<i32>) -> VDomElement {
+///     html! { <p>{*state.get_value()}</p> }
+/// }
+///
+/// let main_component = VDomComponent::new(state, comp_render);
+/// ```
 #[derive(Clone)]
 pub struct VDomComponent {
     pub id: VDomComponentId,

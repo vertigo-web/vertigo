@@ -18,6 +18,52 @@ pub struct CachedValue<T: PartialEq + 'static> {
     set: BoxRefCell<bool>,
 }
 
+/// A structure similar to Value but supports Loading/Error states and automatic refresh
+/// after defined amount of time.
+///
+/// ```rust,ignore
+/// use vertigo::{Computed, Driver, LazyCache, SerdeRequest};
+/// use serde::{Serialize, Deserialize};
+///
+/// #[derive(PartialEq, Serialize, Deserialize, SerdeRequest)]
+/// pub struct Model {
+///     id: i32,
+///     name: String,
+/// }
+///
+/// #[derive(PartialEq)]
+/// pub struct TodoState {
+///     driver: Driver,
+///     posts: LazyCache<Vec<Model>>,
+/// }
+///
+/// impl TodoState {
+///     pub fn new(driver: Driver) -> Computed<TodoState> {
+///         let posts = LazyCache::new(&driver, 300, move |driver: Driver| {
+///             let request =  driver
+///                 .request("https://some.api/posts")
+///                 .get();
+///
+///             LazyCache::result(async move {
+///                 request.await.into(|status, body| {
+///                     if status == 200 {
+///                         Some(body.into_vec::<Model>())
+///                     } else {
+///                         None
+///                     }
+///                 })
+///             })
+///         });
+///
+///         driver.new_computed_from(TodoState {
+///             driver: driver.clone(),
+///             posts,
+///         })
+///     }
+/// }
+/// ```
+///
+/// See ["todo" example](../src/vertigo_demo/app/todo/mod.rs.html) in vertigo-demo package for more.
 pub struct LazyCache<T: PartialEq + 'static> {
     res: Rc<CachedValue<T>>,
     max_age: InstantType,

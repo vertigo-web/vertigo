@@ -10,6 +10,45 @@ use crate::{
     }
 };
 
+/// A reactive value that is read-only and computed by dependency graph.
+///
+/// ## Computed directly from Value
+///
+/// ```rust
+/// use vertigo::{Computed, Dependencies};
+///
+/// let deps = Dependencies::default();
+///
+/// let value = deps.new_value(5);
+///
+/// let comp = value.to_computed();
+///
+/// assert_eq!(*comp.get_value(), 5);
+///
+/// // Can't do that
+/// // comp.set_value(10);
+/// ```
+///
+/// ## Computed from Value by provided function
+///
+/// ```rust
+/// use vertigo::{Computed, Dependencies};
+///
+/// let deps = Dependencies::default();
+///
+/// let value = deps.new_value(2);
+///
+/// let comp_2 = {
+///     let v = value.clone();
+///     deps.from(move || *v.get_value() * 2)
+/// };
+///
+/// assert_eq!(*comp_2.get_value(), 4);
+///
+/// value.set_value(6);
+///
+/// assert_eq!(*comp_2.get_value(), 12);
+/// ```
 pub struct Computed<T: PartialEq + 'static> {
     inner: GraphValue<T>,
 }

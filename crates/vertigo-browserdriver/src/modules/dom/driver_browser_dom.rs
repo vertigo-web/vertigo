@@ -3,7 +3,7 @@ use vertigo::utils::BoxRefCell;
 use wasm_bindgen::prelude::Closure;
 use std::rc::Rc;
 
-use vertigo::{EventCallback, KeyDownEvent, RealDomId, computed::Dependencies};
+use vertigo::{EventCallback, KeyDownEvent, RealDomId, Dependencies};
 
 use super::driver_dom_command::DriverDomCommand;
 use super::js_dom::DriverBrowserDomJs;

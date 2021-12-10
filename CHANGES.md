@@ -1,9 +1,15 @@
 # Changes
 
-## Unreleased
+## 0.1.0-beta.1 - 2021-12-10
 
 ### Added
 * Re-exports for AutoMap, Computed, Value, DropResource
+* Tutorial
+* Some docstrings with examples
+
+### Changed
+* LazyCache::force_update - Added parameter with_loading
+* Simplified computed refresh function
 
 ## 0.1.0-alpha.3 - 2021-11-29
 

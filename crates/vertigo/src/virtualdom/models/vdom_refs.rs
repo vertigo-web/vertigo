@@ -1,7 +1,8 @@
 use std::collections::HashMap;
 use std::fmt;
 
-use crate::{Driver, RealDomId};
+use crate::Driver;
+use super::realdom_id::RealDomId;
 
 #[derive(Clone)]
 pub struct NodeRefsItem {

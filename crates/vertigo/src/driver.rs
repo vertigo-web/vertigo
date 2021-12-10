@@ -9,7 +9,7 @@ use crate::computed::{Computed, Dependencies, ToRc, Value};
 use crate::Instant;
 use crate::InstantType;
 use crate::KeyDownEvent;
-use crate::{WebcocketMessage, WebcocketMessageDriver, WebcocketConnection};
+use crate::{WebsocketMessage, WebsocketMessageDriver, WebcocketConnection};
 use crate::driver_refs::RefsContext;
 use crate::fetch::fetch_builder::FetchBuilder;
 use crate::fetch::request_builder::RequestBuilder;
@@ -128,7 +128,7 @@ pub trait DriverTrait {
     fn set_interval(&self, time: u32, func: Box<dyn Fn()>) -> DropResource;
     fn now(&self) -> InstantType;
 
-    fn websocket(&self, host: String, callback: Box<dyn Fn(WebcocketMessageDriver)>) -> DropResource;
+    fn websocket(&self, host: String, callback: Box<dyn Fn(WebsocketMessageDriver)>) -> DropResource;
     fn websocket_send_message(&self, callback_id: u64, message: String);
 
     fn push_ref_context(&self, context: RefsContext);
@@ -159,6 +159,12 @@ pub fn show_log(message: String) {
     }
 }
 
+/// Main connection to vertigo facilities - dependencies and rendering client (the browser).
+///
+/// This is in fact only a box for inner generic driver.
+/// This way a web developer don't need to worry about the specific driver used,
+/// though usually it is [BrowserDriver](../vertigo_browserdriver/struct.DriverBrowser.html)
+/// which is used to create a Driver.
 #[derive(PartialEq)]
 pub struct Driver {
     inner: EqBox<Rc<DriverInner>>,
@@ -179,6 +185,7 @@ impl Driver {
         }
     }
 
+    /// Spawn a future - thus allowing to fire async functions in, for example, event handler. Handy when fetching resources from internet.
     pub fn spawn<F>(&self, future: F) where F: Future<Output = ()> + 'static {
         let fur = Box::pin(future);
 
@@ -186,49 +193,57 @@ impl Driver {
         spawn_local_executor(fur)
     }
 
+    /// Create new FetchBuilder.
     pub fn fetch(&self, url: impl Into<String>) -> FetchBuilder {
         FetchBuilder::new(self.inner.driver.clone(), url.into())
     }
 
+    /// Retrieves the hash part of location URL from client (browser)
     pub fn get_hash_location(&self) -> String {
         show_log("get_location".to_string());
         self.inner.driver.get_hash_location()
     }
 
+    /// Sets the hash part of location URL from client (browser)
     pub fn push_hash_location(&self, path: String) {
         show_log(format!("set_location {}", path));
         self.inner.driver.push_hash_location(&path)
     }
 
+    /// Set event handler upon hash location change
     pub fn on_hash_route_change(&self, on_change: Box<dyn Fn(&String)>) -> DropResource {
         show_log("on_route_change".to_string());
         self.inner.driver.on_hash_route_change(on_change)
     }
 
+    /// Make `func` fire every `time` seconds.
     pub fn set_interval(&self, time: u32, func: impl Fn() + 'static) -> DropResource {
         self.inner.driver.set_interval(time, Box::new(func))
     }
 
+    /// Gets current value of monotonic clock.
     pub fn now(&self) -> Instant {
         Instant::now(self.inner.driver.clone())
     }
 
+    /// Create new RequestBuilder (more complex version of [fetch](struct.Driver.html#method.fetch))
     pub fn request(&self, url: impl Into<String>) -> RequestBuilder {
         RequestBuilder::new(self, url)
     }
 
-    pub fn websocket(&self, host: impl Into<String>, callback: Box<dyn Fn(WebcocketMessage)>) -> DropResource {
+    /// Initiate a websocket connection. Provided callback should handle a single [WebsocketMessage].
+    pub fn websocket(&self, host: impl Into<String>, callback: Box<dyn Fn(WebsocketMessage)>) -> DropResource {
         let driver = self.clone();
         let host: String = host.into();
 
-        self.inner.driver.websocket(host, Box::new(move |message: WebcocketMessageDriver| {
+        self.inner.driver.websocket(host, Box::new(move |message: WebsocketMessageDriver| {
             let message = match message {
-                WebcocketMessageDriver::Connection{ callback_id} => {
+                WebsocketMessageDriver::Connection{ callback_id} => {
                     let connection = WebcocketConnection::new(callback_id, driver.clone());
-                    WebcocketMessage::Connection(connection)
+                    WebsocketMessage::Connection(connection)
                 },
-                WebcocketMessageDriver::Message(message) => WebcocketMessage::Message(message),
-                WebcocketMessageDriver::Close => WebcocketMessage::Close,
+                WebsocketMessageDriver::Message(message) => WebsocketMessage::Message(message),
+                WebsocketMessageDriver::Close => WebsocketMessage::Close,
             };
 
             callback(message);
@@ -240,30 +255,37 @@ impl Driver {
     }
 
 
-
+    /// Create new reactive value in dependency graph.
     pub fn new_value<T: PartialEq>(&self, value: T) -> Value<T> {
         self.inner.dependencies.new_value(value)
     }
 
+    /// Create new computed from provided value
     pub fn new_computed_from<T: PartialEq>(&self, value: impl ToRc<T>) -> Computed<T> {
         let value = self.inner.dependencies.new_value(value);
         value.to_computed()
     }
 
+    /// Fire provided function in a way that all changes in graph made by this function will trigger only one run of updates,
+    /// just like the changes were done all at once.
     pub fn transaction<F: FnOnce()>(&self, func: F) {
         self.inner.dependencies.transaction(func);
     }
 
+    /// Create a value that is connected to a generator, where `value` parameter is a starting value, and `create` function takes care of updating it.
+    ///
+    /// See [game of life](../src/vertigo_demo/app/game_of_life/mod.rs.html#54) example.
     pub fn new_with_connect<T: PartialEq, F: Fn(&Value<T>) -> Box<dyn Any> + 'static>(&self, value: T, create: F) -> Computed<T> {
         self.inner.dependencies.new_with_connect(value, create)
     }
 
+    /// Create new computed value calculated using provided function.
     pub fn from<T: PartialEq + 'static, F: Fn() -> T + 'static>(&self, calculate: F) -> Computed<T> {
         self.inner.dependencies.from(calculate)
     }
 
 
-    //To interact with the dom. Used exclusively by vertigo
+    // Below - methods to interact with the dom. Used exclusively by vertigo.
 
     pub(crate) fn create_node(&self, id: RealDomId, name: &'static str) {
         show_log(format!("create_node {} {}", id, name));

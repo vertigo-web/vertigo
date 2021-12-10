@@ -53,7 +53,24 @@ impl<T: PartialEq + 'static> Drop for ValueInner<T> {
     }
 }
 
-
+/// A reactive value. Basic building block of app state.
+///
+/// Can be read or written.
+///
+/// ```rust
+/// use vertigo::{Computed, Dependencies};
+///
+/// let deps = Dependencies::default();
+///
+/// let value = deps.new_value(5);
+///
+/// assert_eq!(*value.get_value(), 5);
+///
+/// value.set_value(10);
+///
+/// assert_eq!(*value.get_value(), 10);
+/// ```
+///
 pub struct Value<T: PartialEq + 'static> {
     inner: Rc<BoxRefCell<ValueInner<T>>>,
     pub deps: Dependencies,

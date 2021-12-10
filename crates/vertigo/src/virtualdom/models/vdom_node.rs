@@ -5,6 +5,7 @@ use crate::virtualdom::models::{
     node_attr::NodeAttr,
 };
 
+/// Virtual DOM node, can be an element, text or a component.
 #[derive(Debug)]
 pub enum VDomNode {
     Element {
