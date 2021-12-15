@@ -1,5 +1,7 @@
 use std::{collections::HashMap};
+
 use crate::Driver;
+
 use super::resource::Resource;
 
 #[derive(Debug)]
@@ -17,16 +19,21 @@ impl Method {
     }
 }
 
+/// Ensures that this type is serializable and deserializable so can be used for defining a resource.
 pub trait SingleRequestTrait: Sized {
     fn into_string(self) -> Result<String, String>;
     fn from_string(data: &str) -> Result<Self, String>;
 }
 
+/// Ensures that vector of objects of this type is serializable and deserializable so can be used for defining a resource.
 pub trait ListRequestTrait: Sized {
     fn list_into_string(vec: Vec<Self>) -> Result<String, String>;
     fn list_from_string(data: &str) -> Result<Vec<Self>, String>;
 }
 
+/// Builder for typed requests (more complex version of [FetchBuilder](struct.FetchBuilder.html)).
+///
+/// Unlike in the FetchBuilder, here request and response data is a type implementing [SingleRequestTrait] or [ListRequestTrait].
 pub enum RequestBuilder {
     ErrorInput(String),
     Data {
@@ -175,6 +182,7 @@ impl RequestResponseBody {
     }
 }
 
+/// Result from request made using [RequestBuilder].
 #[derive(Debug)]
 pub struct RequestResponse {
     request_details: Option<(Method, String)>,

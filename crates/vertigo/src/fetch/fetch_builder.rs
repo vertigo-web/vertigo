@@ -3,9 +3,9 @@ use std::{
     rc::Rc,
 };
 
-use crate::{DriverTrait, FetchResult, FetchMethod, driver::show_log};
+use crate::driver::{DriverTrait, FetchResult, FetchMethod, show_log};
 
-
+/// Builder for simple requests.
 pub struct FetchBuilder {
     driver: Rc<dyn DriverTrait>,
     url: String,

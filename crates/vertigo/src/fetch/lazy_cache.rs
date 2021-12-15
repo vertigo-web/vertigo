@@ -10,8 +10,11 @@ use crate::{
 
 /// Function that updates cached value
 pub trait Loader<T: PartialEq> = Fn(Driver) -> LoaderResult<T> + 'static;
+
+/// Type that should be returned from [Loader] which is in fact a future [resource](Resource).
 pub type LoaderResult<T> = Pin<Box<dyn Future<Output=Resource<T>>>>;
 
+/// Value that [LazyCache] holds.
 pub struct CachedValue<T: PartialEq + 'static> {
     value: Value<Resource<T>>,
     updated_at: BoxRefCell<Instant>,

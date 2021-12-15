@@ -1,5 +1,6 @@
 use core::ops::{Try, FromResidual, ControlFlow};
 
+/// The state of the resource.
 #[derive(PartialEq, Clone, Debug)]
 pub enum Resource<T: PartialEq> {
     Loading,

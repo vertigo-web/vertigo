@@ -1,5 +1,6 @@
 use crate::utils::EqBox;
 
+/// A struct used by [driver](struct.Driver.html) to tidy things up on javascript side after a rust object goes out of scope.
 #[derive(PartialEq, Debug)]
 pub struct DropResource {
     drop_fun: Option<EqBox<Box<dyn FnOnce()>>>,

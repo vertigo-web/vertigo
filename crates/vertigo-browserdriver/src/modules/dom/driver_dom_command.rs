@@ -1,4 +1,5 @@
-use vertigo::RealDomId;
+use vertigo::dev::RealDomId;
+
 use crate::utils::json::JsonMapBuilder;
 
 pub enum DriverDomCommand {

@@ -1,5 +1,4 @@
 use pest::{Parser, iterators::Pair};
-
 use proc_macro2::{TokenStream, Ident, Span};
 use syn::{Expr, parse_str};
 
@@ -316,9 +315,9 @@ impl HtmlParser {
                 let value = inner.next().unwrap().as_str();
 
                 if key == "dom_ref" {
-                    quote! { vertigo::node_attr::dom_ref((#value)) }
+                    quote! { vertigo::dev::node_attr::dom_ref((#value)) }
                 } else {
-                    quote! { vertigo::node_attr::attr(#key, #value) }
+                    quote! { vertigo::dev::node_attr::attr(#key, #value) }
                 }
             }
             _ => {
@@ -343,14 +342,14 @@ impl HtmlParser {
                 if attr_key_opt.is_some() {
                     // Vertigo attribute
                     let attr_key = Ident::new(&attr_key, self.call_site);
-                    return quote! { vertigo::node_attr::#attr_key((#expr)) }
+                    return quote! { vertigo::dev::node_attr::#attr_key((#expr)) }
                 } else if attr_key == "dom_ref" {
-                    return quote! { vertigo::node_attr::dom_ref((#expr)) }
+                    return quote! { vertigo::dev::node_attr::dom_ref((#expr)) }
                 } else if attr_key == "dom_apply" {
-                    return quote! { vertigo::node_attr::dom_apply((#expr)) }
+                    return quote! { vertigo::dev::node_attr::dom_apply((#expr)) }
                 } else {
                     // Custom attribute
-                    return quote! { vertigo::node_attr::attr(#attr_key, (#expr)) }
+                    return quote! { vertigo::dev::node_attr::attr(#attr_key, (#expr)) }
                 }
             },
             _ => {

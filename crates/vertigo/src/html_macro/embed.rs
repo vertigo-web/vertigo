@@ -1,7 +1,8 @@
-use crate::{VDomComponent, VDomElement, VDomNode};
 use std::rc::Rc;
 
-/// Trait for embedding custom types into [html!](macro.html.html) macro
+use crate::{VDomComponent, VDomElement, VDomNode};
+
+/// Allows for embedding into [html!](macro.html.html) macro.
 ///
 /// ```rust
 /// use vertigo::{Embed, html, VDomNode};

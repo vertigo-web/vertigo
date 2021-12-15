@@ -1,6 +1,6 @@
 use vertigo::{
     Computed, Driver, DropResource, Value, VDomElement,
-    WebcocketConnection, WebsocketMessage,
+    WebsocketConnection, WebsocketMessage,
     html,
 };
 use std::rc::Rc;
@@ -9,7 +9,7 @@ use std::rc::Rc;
 pub struct ChatState {
     _ws_connect: DropResource,
 
-    connect: Value<Option<WebcocketConnection>>,
+    connect: Value<Option<WebsocketConnection>>,
     messages: Value<Vec<Rc<String>>>,
     input_text: Value<String>,
 }
