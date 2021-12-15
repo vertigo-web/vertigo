@@ -6,13 +6,13 @@ use std::{
     rc::Rc,
 };
 use crate::computed::{Computed, Dependencies, ToRc, Value};
-use crate::Instant;
-use crate::InstantType;
-use crate::KeyDownEvent;
-use crate::{WebsocketMessage, WebsocketMessageDriver, WebcocketConnection};
+use crate::dev::WebsocketMessageDriver;
 use crate::driver_refs::RefsContext;
-use crate::fetch::fetch_builder::FetchBuilder;
-use crate::fetch::request_builder::RequestBuilder;
+use crate::{Instant, InstantType, KeyDownEvent, WebsocketMessage, WebsocketConnection};
+use crate::fetch::{
+    fetch_builder::FetchBuilder,
+    request_builder::RequestBuilder,
+};
 use crate::utils::{DropResource, EqBox};
 use crate::virtualdom::models::realdom_id::RealDomId;
 
@@ -93,6 +93,11 @@ impl EventCallback {
 
 const SHOW_LOG: bool = false;
 
+/// Result from request made using [FetchBuilder].
+///
+/// Variants:
+/// - `Ok(status_code, response)` if request succeded,
+/// - `Err(response)` if request failed (because ofnetwork error for example).
 pub type FetchResult = Result<(u32, String), String>;
 
 pub trait DriverTrait {
@@ -163,8 +168,10 @@ pub fn show_log(message: String) {
 ///
 /// This is in fact only a box for inner generic driver.
 /// This way a web developer don't need to worry about the specific driver used,
-/// though usually it is [BrowserDriver](../vertigo_browserdriver/struct.DriverBrowser.html)
+/// though usually it is the [BrowserDriver](../vertigo_browserdriver/struct.DriverBrowser.html)
 /// which is used to create a Driver.
+///
+/// Additionally driver struct wraps [Dependencies] object.
 #[derive(PartialEq)]
 pub struct Driver {
     inner: EqBox<Rc<DriverInner>>,
@@ -239,7 +246,7 @@ impl Driver {
         self.inner.driver.websocket(host, Box::new(move |message: WebsocketMessageDriver| {
             let message = match message {
                 WebsocketMessageDriver::Connection{ callback_id} => {
-                    let connection = WebcocketConnection::new(callback_id, driver.clone());
+                    let connection = WebsocketConnection::new(callback_id, driver.clone());
                     WebsocketMessage::Connection(connection)
                 },
                 WebsocketMessageDriver::Message(message) => WebsocketMessage::Message(message),
@@ -255,7 +262,7 @@ impl Driver {
     }
 
 
-    /// Create new reactive value in dependency graph.
+    /// Create new reactive value in [dependency graph](struct.Dependencies.html).
     pub fn new_value<T: PartialEq>(&self, value: T) -> Value<T> {
         self.inner.dependencies.new_value(value)
     }
@@ -266,8 +273,8 @@ impl Driver {
         value.to_computed()
     }
 
-    /// Fire provided function in a way that all changes in graph made by this function will trigger only one run of updates,
-    /// just like the changes were done all at once.
+    /// Fire provided function in a way that all changes in [dependency graph](struct.Dependencies.html) made by this function
+    /// will trigger only one run of updates, just like the changes were done all at once.
     pub fn transaction<F: FnOnce()>(&self, func: F) {
         self.inner.dependencies.transaction(func);
     }

@@ -1,5 +1,6 @@
 use std::rc::Rc;
-use crate::{NodeRefs, NodeRefsItem};
+
+use crate::virtualdom::models::vdom_refs::{NodeRefs, NodeRefsItem};
 
 pub struct RefsContext {
     apply: Vec<Rc<dyn Fn(&NodeRefs)>>,

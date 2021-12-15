@@ -9,21 +9,23 @@ pub enum WebsocketMessageDriver {
     Close,
 }
 
+/// Websocket message type on which a websocket handler operates.
 pub enum WebsocketMessage {
     Message(String),
-    Connection(WebcocketConnection),
+    Connection(WebsocketConnection),
     Close,
 }
 
+/// Represents websocket connection.
 #[derive(PartialEq)]
-pub struct WebcocketConnection {
+pub struct WebsocketConnection {
     callback_id: u64,
     driver: Driver,
 }
 
-impl WebcocketConnection {
-    pub fn new(callback_id: u64, driver: Driver) -> WebcocketConnection {
-        WebcocketConnection {
+impl WebsocketConnection {
+    pub fn new(callback_id: u64, driver: Driver) -> WebsocketConnection {
+        WebsocketConnection {
             callback_id,
             driver
         }
@@ -34,4 +36,3 @@ impl WebcocketConnection {
         self.driver.websocket_send_message(self.callback_id, message);
     }
 }
-

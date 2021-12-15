@@ -1,10 +1,15 @@
-
+use vertigo::{
+    Dependencies,Driver, FetchResult, InstantType,
+    dev::{DriverTrait, EventCallback, FetchMethod, RealDomId, RefsContext, WebsocketMessageDriver},
+    utils::DropResource,
+};
 use std::{
     collections::HashMap,
     future::Future,
     pin::Pin,
     rc::Rc
 };
+
 use crate::modules::{
     dom::DriverBrowserDom,
     fetch::DriverBrowserFetch,
@@ -13,18 +18,6 @@ use crate::modules::{
     interval::DriverBrowserInterval,
     websocket::DriverWebsocket,
 };
-
-use vertigo::Driver;
-use vertigo::DriverTrait;
-use vertigo::EventCallback;
-use vertigo::FetchMethod;
-use vertigo::FetchResult;
-use vertigo::InstantType;
-use vertigo::RealDomId;
-use vertigo::RefsContext;
-use vertigo::WebsocketMessageDriver;
-use vertigo::Dependencies;
-use vertigo::utils::DropResource;
 
 struct DriverBrowserInner {
     driver_dom: DriverBrowserDom,
@@ -50,6 +43,7 @@ impl DriverBrowserInner {
     }
 }
 
+/// Implementation of vertigo driver for web browsers.
 #[derive(Clone)]
 pub struct DriverBrowser {
     driver: Rc<DriverBrowserInner>,

@@ -1,15 +1,19 @@
-use wasm_bindgen::prelude::*;
-use std::collections::HashMap;
-use std::future::Future;
-use std::pin::Pin;
+use vertigo::{FetchResult, dev::FetchMethod};
 
-use vertigo::{FetchResult, FetchMethod};
+use wasm_bindgen::prelude::*;
+use std::{
+    collections::HashMap,
+    future::Future,
+    pin::Pin,
+};
 
 use super::js_fetch::DriverBrowserFetchJs;
-use crate::utils::counter_rc::CounterRc;
-use crate::utils::future::{CbFutureSend, new_future};
-use crate::utils::hash_map_rc::HashMapRc;
-use crate::utils::json::JsonMapBuilder;
+use crate::utils::{
+    counter_rc::CounterRc,
+    future::{CbFutureSend, new_future},
+    hash_map_rc::HashMapRc,
+    json::JsonMapBuilder,
+};
 
 pub struct DriverBrowserFetch {
     driver_js: DriverBrowserFetchJs,

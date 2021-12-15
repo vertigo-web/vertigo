@@ -1,7 +1,8 @@
-use std::rc::Rc;
-use std::collections::HashMap;
-
-use vertigo::{RealDomId, Dependencies, utils::BoxRefCell};
+use vertigo::{dev::RealDomId, Dependencies, utils::BoxRefCell};
+use std::{
+    collections::HashMap,
+    rc::Rc,
+};
 
 use super::driver_data::DriverData;
 

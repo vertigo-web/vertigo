@@ -1,10 +1,12 @@
-use std::rc::Rc;
+use vertigo::{
+    dev::WebsocketMessageDriver,
+    utils::{BoxRefCell, DropResource},
+};
 use wasm_bindgen::closure::Closure;
+use std::rc::Rc;
 
-use vertigo::{WebsocketMessageDriver, utils::DropResource};
 use crate::modules::websocket::js_websocket::DriverWebsocketJs;
 use crate::utils::callback_manager::CallbackManagerOwner;
-use vertigo::utils::BoxRefCell;
 
 #[derive(Clone)]
 struct Callback {
@@ -88,7 +90,7 @@ impl DriverWebsocket {
     pub fn websocket_start(&self, host: String, callback: Box<dyn Fn(WebsocketMessageDriver)>) -> DropResource {
         let callback_id = self.callback.register(callback);
         self.driver_js.register_callback(host, callback_id);
-        
+
         DropResource::new({
             let driver_js = self.driver_js.clone();
             let callback = self.callback.clone();

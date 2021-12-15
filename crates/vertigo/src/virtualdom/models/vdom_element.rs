@@ -1,17 +1,21 @@
-use std::collections::{BTreeMap, HashMap};
-use std::rc::Rc;
-use std::cmp::PartialEq;
-use std::fmt;
+use std::{
+    collections::{BTreeMap, HashMap},
+    cmp::PartialEq,
+    fmt,
+    rc::Rc,
+};
 
-use crate::virtualdom::models::vdom_node::VDomNode;
 use crate::virtualdom::models::{
     css::Css,
     node_attr::NodeAttr,
+    vdom_node::VDomNode,
 };
 
 use super::vdom_refs::NodeRefs;
 
 //https://docs.rs/web-sys/0.3.50/web_sys/struct.KeyboardEvent.html
+
+/// Structure passed as a parameter to callback on on_key_down event.
 #[derive(Debug)]
 pub struct KeyDownEvent {
     pub key: String,

@@ -3,21 +3,21 @@ use std::collections::{
     VecDeque,
 };
 use std::rc::Rc;
-use crate::NodeRefsItem;
 use crate::{
     driver::{
         Driver,
         EventCallback
     },
+    utils::BoxRefCell,
     virtualdom::{
         models::{
             realdom::RealDomNode,
             realdom_id::RealDomId,
             realdom_text::RealDomText,
+            vdom_refs::NodeRefsItem,
         },
-    }
+    },
 };
-use crate::utils::BoxRefCell;
 
 
 fn merge_attr(attr: &HashMap<&'static str, String>, class_name: Option<String>) -> HashMap<&'static str, String> {

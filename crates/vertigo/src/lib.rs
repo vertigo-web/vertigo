@@ -68,10 +68,10 @@ mod websocket;
 
 pub use app::start_app;
 pub use computed::{AutoMap, Computed, Dependencies, Value};
-pub use driver::{Driver, DriverTrait, EventCallback, FetchResult, FetchMethod};
-pub use driver_refs::RefsContext;
+pub use driver::{Driver, FetchResult};
 pub use fetch::{
-    request_builder::{SingleRequestTrait, ListRequestTrait},
+    fetch_builder::FetchBuilder,
+    request_builder::{RequestBuilder, RequestResponse, SingleRequestTrait, ListRequestTrait},
     resource::Resource,
     lazy_cache,
     lazy_cache::LazyCache,
@@ -80,19 +80,37 @@ pub use html_macro::Embed;
 pub use instant::{Instant, InstantType};
 pub use utils::DropResource;
 pub use virtualdom::models::{
-    realdom_id::RealDomId,
     vdom_component::VDomComponent,
     vdom_element::{VDomElement, KeyDownEvent},
-    vdom_refs::{NodeRefs, NodeRefsItem},
     vdom_text::VDomText,
     vdom_node::VDomNode,
     css::{Css, CssGroup},
-    node_attr,
 };
-pub use websocket::{WebsocketMessageDriver, WebsocketMessage, WebcocketConnection};
+pub use websocket::{WebsocketMessage, WebsocketConnection};
+
+pub mod dev {
+    pub use super::driver::{DriverTrait, EventCallback, FetchMethod};
+    pub use super::driver_refs::RefsContext;
+    pub use super::virtualdom::models::{
+        node_attr,
+        realdom_id::RealDomId,
+        vdom_refs::{NodeRefs, NodeRefsItem},
+    };
+    pub use super::websocket::WebsocketMessageDriver;
+}
 
 #[cfg(feature = "serde_request")]
-pub use vertigo_macro::{SerdeRequest, SerdeSingleRequest, SerdeListRequest};
+/// Implements [SingleRequestTrait] using serde (needs `serde_request` feature).
+pub use vertigo_macro::SerdeListRequest;
+
+#[cfg(feature = "serde_request")]
+/// Implements both [SingleRequestTrait] and [ListRequestTrait] using serde (needs `serde_request` feature).
+pub use vertigo_macro::SerdeRequest;
+
+#[cfg(feature = "serde_request")]
+/// Implements [ListRequestTrait] using serde (needs `serde_request` feature).
+pub use vertigo_macro::SerdeSingleRequest;
+
 #[cfg(feature = "serde_request")]
 pub use serde_json;
 
@@ -129,7 +147,7 @@ pub use vertigo_macro::html;
 /// ```
 pub use vertigo_macro::css;
 
-/// Coostructs a CSS block that can be manually pushed into existing Css styles instance.
+/// Constructs a CSS block that can be manually pushed into existing Css styles instance.
 ///
 /// ```rust,no_run
 /// use vertigo::{css_fn, css_block};

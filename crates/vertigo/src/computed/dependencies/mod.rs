@@ -34,6 +34,15 @@ use {
     refresh::Refresh,
 };
 
+/// A graph of values and clients that can automatically compute what to refresh after one value change.
+///
+/// A [Driver](struct.Driver.html) object wrapps dependency graph, so you do not need to use this under normal circumstances.
+///
+/// - Dependency graph holds values, computed values ([computeds](struct.Computed.html)) and clients (render functions).
+/// - Upon changing some value all dependent computeds get computed, and all dependent clients get rendered.
+/// - Render function (a component) takes a computed state provided by the graph and returns a rendered element ([VDomElement](struct.VDomElement.html)).
+/// - Upon change in VDOM the real DOM is also updated.
+/// - Components can provide the DOM with functions that get fired on events like [on_click](struct.VDomElement.html#structfield.on_click), which may modify the state, thus triggering necessary computing once again.
 #[derive(PartialEq)]
 pub struct Dependencies {
     graph: Rc<EqBox<BoxRefCell<Graph>>>,
@@ -110,7 +119,7 @@ impl Dependencies {
         let edges_values = self.transaction_state.change((), |state, _| {
             state.down()
         });
-    
+
         if let Some(edges_values) = edges_values {
             let edges_to_refresh = self.get_edges_to_refresh(&edges_values);
 

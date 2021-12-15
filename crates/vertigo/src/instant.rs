@@ -1,7 +1,8 @@
 use std::rc::Rc;
 
-use crate::DriverTrait;
+use crate::driver::DriverTrait;
 
+/// Duration in seconds, returned from [Instant] methods.
 pub type InstantType = u64;
 
 /// Monotonically nondecrasing clock using a driver, similar to [std::time::Instant].
