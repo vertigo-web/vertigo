@@ -1,6 +1,10 @@
 use std::rc::Rc;
 
-use crate::{Driver, computed::{Client, Value}, utils::{BoxRefCell, DropResource}};
+use crate::{
+    computed::{Client, Value},
+    Driver,
+    utils::{BoxRefCell, DropResource},
+};
 
 #[derive(PartialEq, Clone, Copy)]
 enum Direction {
@@ -15,12 +19,75 @@ pub struct HashRouter {
     receiver: DropResource,
 }
 
+/// Router based on hash part of current location.
+///
+/// ```rust
+/// use vertigo::{Computed, Driver, Value};
+/// use vertigo::router::HashRouter;
+///
+/// #[derive(PartialEq, Debug)]
+/// pub enum Route {
+///     Page1,
+///     Page2,
+///     NotFound,
+/// }
+///
+/// impl Route {
+///     pub fn new(path: &str) -> Route {
+///         match path {
+///             "" | "/" | "/page1" => Self::Page1,
+///             "page2" => Self::Page2,
+///             _ => Self::NotFound,
+///         }
+///     }
+/// }
+///
+/// impl ToString for Route {
+///     fn to_string(&self) -> String {
+///         match self {
+///             Self::Page1 => "",
+///             Self::Page2 => "page2",
+///             Self::NotFound => "",
+///         }.to_string()
+///     }
+/// }
+///
+/// #[derive(PartialEq)]
+/// pub struct State {
+///     pub driver: Driver,
+///     pub route: Value<Route>,
+///
+///     hash_router: HashRouter,
+/// }
+///
+/// impl State {
+///     pub fn new(driver: &Driver) -> Computed<State> {
+///         let route: Value<Route> = driver.new_value(Route::new(&driver.get_hash_location()));
+///
+///         let hash_router = HashRouter::new(driver, route.clone(), {
+///             let route = route.clone();
+///
+///             Box::new(move |url: &String|{
+///                 route.set_value(Route::new(url));
+///             })
+///         });
+///
+///         let state = State {
+///             driver: driver.clone(),
+///             route,
+///             hash_router,
+///         };
+///
+///         driver.new_computed_from(state)
+///     }
+/// }
+/// ```
 impl HashRouter {
     /// Create new HashRouter which sets route value upon hash change in browser bar.
     /// If callback is provided then it is fired instead.
     pub fn new<T>(driver: &Driver, route: Value<T>, callback: Box<dyn Fn(&String)>) -> Self
     where
-        T: PartialEq + ToString
+        T: PartialEq + ToString,
     {
         let direction = Rc::new(BoxRefCell::new(Direction::Loading, "hash router"));
 
@@ -31,11 +98,9 @@ impl HashRouter {
                 let dir = direction.get(|state| *state);
                 match dir {
                     // First change is upon page loading, ignore it but accept further pushes
-                    Direction::Loading =>
-                        direction.change((), |state, _| *state = Direction::Pushing),
-                    Direction::Pushing =>
-                        driver.push_hash_location(route.to_string()),
-                    _ => ()
+                    Direction::Loading => direction.change((), |state, _| *state = Direction::Pushing),
+                    Direction::Pushing => driver.push_hash_location(route.to_string()),
+                    _ => (),
                 }
             }
         });
@@ -48,9 +113,6 @@ impl HashRouter {
             })
         });
 
-        Self {
-            sender,
-            receiver,
-        }
+        Self { sender, receiver }
     }
 }

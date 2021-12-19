@@ -1,7 +1,7 @@
 use vertigo::utils::DropResource;
 use wasm_bindgen::prelude::Closure;
 
-use crate::{utils::callback_manager::CallbackManager};
+use crate::utils::callback_manager::CallbackManager;
 
 use super::js_hashrouter::DriverBrowserHashRouteJs;
 
@@ -28,7 +28,7 @@ impl DriverBrowserHashrouter {
         DriverBrowserHashrouter {
             driver,
             _closure: closure,
-            callback_manager
+            callback_manager,
         }
     }
 

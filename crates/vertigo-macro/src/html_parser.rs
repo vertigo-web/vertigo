@@ -1,6 +1,6 @@
-use pest::{Parser, iterators::Pair};
-use proc_macro2::{TokenStream, Ident, Span};
-use syn::{Expr, parse_str};
+use pest::{iterators::Pair, Parser};
+use proc_macro2::{Ident, Span, TokenStream};
+use syn::{parse_str, Expr};
 
 #[derive(Parser)]
 #[grammar = "html.pest"]
@@ -24,24 +24,21 @@ impl HtmlParser {
                 for pair in pairs {
                     // emit_warning!(call_site, "HTML: parse_stream debug: {:?}", pair);
                     match pair.as_rule() {
-                        Rule::html => { },
+                        Rule::html => {}
 
-                        Rule::el_normal |
-                        Rule::el_void |
-                        Rule::el_void_xml |
-                        Rule::el_raw_text => {
+                        Rule::el_normal | Rule::el_void | Rule::el_void_xml | Rule::el_raw_text => {
                             let child = parser.generate_node_element(pair, is_root);
                             parser.children.push(child);
-                        },
+                        }
 
                         Rule::el_vcomponent => parser.children.push(parser.generate_vcomponent(pair, false)),
                         Rule::el_vcomponent_val => parser.children.push(parser.generate_vcomponent(pair, true)),
 
                         Rule::node_text => {
                             emit_warning!(call_site, "HTML: Plain text can't be a root node");
-                        },
+                        }
 
-                        Rule::EOI => { }
+                        Rule::EOI => {}
 
                         _ => {
                             emit_warning!(call_site, "HTML: unhandler root pair: {:?}", pair);
@@ -50,11 +47,11 @@ impl HtmlParser {
                 }
                 let children = parser.children;
                 quote! { #(#children)* }
-            },
+            }
             Err(e) => {
                 emit_error!(call_site, "HTML Parsing fatal error: {}", e);
-                quote! { }
-            },
+                quote! {}
+            }
         }
     }
 
@@ -125,7 +122,7 @@ impl HtmlParser {
                         }
                     }
                 }
-                Rule::el_normal_end => {},
+                Rule::el_normal_end => {}
 
                 Rule::children => children_lists.push(pair),
 
@@ -148,10 +145,12 @@ impl HtmlParser {
                     if let Some(ts) = self.generate_text(pair) {
                         generated_children.push(ts)
                     }
-                },
+                }
                 Rule::el_velement => generated_children.push(self.generate_velement(pair)),
-                Rule::node_text => if let Some(ts) = self.generate_text(pair) {
-                    generated_children.push(ts)
+                Rule::node_text => {
+                    if let Some(ts) = self.generate_text(pair) {
+                        generated_children.push(ts)
+                    }
                 }
                 Rule::expression => generated_children.push(self.generate_expression(pair)),
                 _ => {
@@ -206,17 +205,21 @@ impl HtmlParser {
             match pair.as_rule() {
                 Rule::vcomp_render_func => {
                     let value = pair.into_inner().next().unwrap().as_str();
-                    render_func = parse_str(value).map_err(|e| {
-                        emit_error!(self.call_site, "Error while parsing `{}`: {}", value, e);
-                        e
-                    }).ok();
-                },
+                    render_func = parse_str(value)
+                        .map_err(|e| {
+                            emit_error!(self.call_site, "Error while parsing `{}`: {}", value, e);
+                            e
+                        })
+                        .ok();
+                }
                 Rule::vcomp_data_attr => {
                     let value = pair.into_inner().next().unwrap().as_str();
-                    data_expr = parse_str(value).map_err(|e| {
-                        emit_error!(self.call_site, "Error while parsing `{}`: {}", value, e);
-                        e
-                    }).ok();
+                    data_expr = parse_str(value)
+                        .map_err(|e| {
+                            emit_error!(self.call_site, "Error while parsing `{}`: {}", value, e);
+                            e
+                        })
+                        .ok();
                 }
                 _ => {
                     emit_warning!(self.call_site, "HTML: unhandler pair in generate_component: {:?}", pair);
@@ -235,11 +238,11 @@ impl HtmlParser {
                 quote! { vertigo::VDomNode::component(#builder(#data_expr.clone(), #render_func)) }
             } else {
                 emit_warning!(self.call_site, "HTML: Component don't have data attribute");
-                quote! { }
+                quote! {}
             }
         } else {
             emit_warning!(self.call_site, "HTML: Component don't have render function defined");
-            quote! { }
+            quote! {}
         }
     }
 
@@ -249,26 +252,25 @@ impl HtmlParser {
             Rule::attr_expression_value => {
                 let value = velem_value.as_str();
                 let expr: Expr = parse_str(value).unwrap_or_else(|e| panic!("Error while parsing `{}`: {}", value, e));
-                return quote! { #expr }
+                return quote! { #expr };
             }
             _ => {
                 emit_warning!(self.call_site, "HTML: unhandler pair in generate_velement (2): {:?}", velem_value);
             }
         };
-        quote! { }
+        quote! {}
     }
 
     fn generate_text(&self, pair: Pair<Rule>) -> Option<TokenStream> {
         match pair.as_rule() {
-            Rule::node_text |
-            Rule::el_raw_text_content => {
+            Rule::node_text | Rule::el_raw_text_content => {
                 let trimmed = pair.as_str().trim();
                 let unquoted = trimmed.trim_matches('"');
                 if unquoted.len() + 2 != trimmed.len() {
                     emit_error!(self.call_site, "Please double-quote strings in your HTML to avoid problems with formatting");
                 }
                 Some(quote! { vertigo::VDomNode::text(#unquoted) })
-            },
+            }
             _ => {
                 emit_warning!(self.call_site, "HTML: unhandler pair in generate_text: {:?}", pair);
                 None
@@ -284,10 +286,10 @@ impl HtmlParser {
                 let value = pair.as_str();
                 let expr: Expr = parse_str(value).unwrap_or_else(|e| panic!("Error while parsing `{}`: {}", value, e));
                 quote! { vertigo::Embed::embed((#expr)) }
-            },
+            }
             _ => {
                 emit_warning!(self.call_site, "HTML: unhandler pair in generate_expression: {:?}", pair);
-                quote! { }
+                quote! {}
             }
         }
     }
@@ -299,10 +301,10 @@ impl HtmlParser {
                 let value = pair.as_str();
                 let expr: Expr = parse_str(value).unwrap_or_else(|e| panic!("Error while parsing `{}`: {}", value, e));
                 quote! { (#expr).into_iter().map(|e| vertigo::Embed::embed(e)) }
-            },
+            }
             _ => {
                 emit_warning!(self.call_site, "HTML: unhandler pair in generate_children: {:?}", pair);
-                quote! { }
+                quote! {}
             }
         }
     }
@@ -322,7 +324,7 @@ impl HtmlParser {
             }
             _ => {
                 emit_warning!(self.call_site, "HTML: unhandler pair in generate_regular_attr: {:?}", pair);
-                quote! { }
+                quote! {}
             }
         }
     }
@@ -331,7 +333,9 @@ impl HtmlParser {
         let mut pair = pair.into_inner();
 
         // Use vertigo attr if provided, otherwise read custom attr from grammar
-        let attr_key = attr_key_opt.unwrap_or_else(|| pair.next().unwrap().as_str()).replace(' ', "");
+        let attr_key = attr_key_opt
+            .unwrap_or_else(|| pair.next().unwrap().as_str())
+            .replace(' ', "");
 
         let expression_val = pair.next().unwrap();
 
@@ -342,21 +346,20 @@ impl HtmlParser {
                 if attr_key_opt.is_some() {
                     // Vertigo attribute
                     let attr_key = Ident::new(&attr_key, self.call_site);
-                    return quote! { vertigo::dev::node_attr::#attr_key((#expr)) }
+                    return quote! { vertigo::dev::node_attr::#attr_key((#expr)) };
                 } else if attr_key == "dom_ref" {
-                    return quote! { vertigo::dev::node_attr::dom_ref((#expr)) }
+                    return quote! { vertigo::dev::node_attr::dom_ref((#expr)) };
                 } else if attr_key == "dom_apply" {
-                    return quote! { vertigo::dev::node_attr::dom_apply((#expr)) }
+                    return quote! { vertigo::dev::node_attr::dom_apply((#expr)) };
                 } else {
                     // Custom attribute
-                    return quote! { vertigo::dev::node_attr::attr(#attr_key, (#expr)) }
+                    return quote! { vertigo::dev::node_attr::attr(#attr_key, (#expr)) };
                 }
-            },
+            }
             _ => {
                 emit_warning!(self.call_site, "HTML: unhandler pair in generate_expression_attr, attr_key {}: {:?}", attr_key, expression_val);
             }
         };
-        quote! { }
+        quote! {}
     }
-
 }

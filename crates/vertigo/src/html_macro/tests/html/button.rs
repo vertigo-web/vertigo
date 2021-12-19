@@ -1,6 +1,4 @@
-use crate::computed::{Dependencies, Value};
-use crate::{Css, VDomElement, VDomText};
-use crate::html;
+use crate::{Css, Dependencies, Value, VDomElement, VDomText, html};
 
 use super::utils::*;
 
@@ -49,7 +47,9 @@ fn clickable_button() {
 
 #[test]
 fn button_with_css() {
-    fn my_css() -> Css { Css::str("background-color: gray") }
+    fn my_css() -> Css {
+        Css::str("background-color: gray")
+    }
 
     let dom1 = html! {
         <button css={my_css()}>

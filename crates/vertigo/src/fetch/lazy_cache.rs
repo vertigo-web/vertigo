@@ -4,7 +4,7 @@ use std::rc::Rc;
 
 use crate::{
     Driver, Instant, InstantType, Resource,
-    computed::{Value},
+    computed::Value,
     utils::BoxRefCell,
 };
 
@@ -12,7 +12,7 @@ use crate::{
 pub trait Loader<T: PartialEq> = Fn(Driver) -> LoaderResult<T> + 'static;
 
 /// Type that should be returned from [Loader] which is in fact a future [resource](Resource).
-pub type LoaderResult<T> = Pin<Box<dyn Future<Output=Resource<T>>>>;
+pub type LoaderResult<T> = Pin<Box<dyn Future<Output = Resource<T>>>>;
 
 /// Value that [LazyCache] holds.
 pub struct CachedValue<T: PartialEq + 'static> {
@@ -112,7 +112,7 @@ impl<T: PartialEq> LazyCache<T> {
         }
     }
 
-    pub fn result<F: Future<Output=Resource<T>> + 'static>(future: F) -> LoaderResult<T> {
+    pub fn result<F: Future<Output = Resource<T>> + 'static>(future: F) -> LoaderResult<T> {
         Box::pin(future)
     }
 
@@ -141,11 +141,11 @@ impl<T: PartialEq> LazyCache<T> {
 
     pub fn needs_update(&self) -> bool {
         if self.is_loading_queued() {
-            return false
+            return false;
         }
 
         if !self.res.is_set() {
-            return true
+            return true;
         }
 
         self.res.age() >= self.max_age

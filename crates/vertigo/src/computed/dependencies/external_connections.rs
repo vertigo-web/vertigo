@@ -1,9 +1,12 @@
-use std::collections::BTreeMap;
-use crate::{computed::graph_id::GraphId, utils::EqBox};
-use std::any::Any;
-use std::rc::Rc;
-use crate::utils::{
-    BoxRefCell,
+use std::{
+    any::Any,
+    collections::BTreeMap,
+    rc::Rc,
+};
+
+use crate::{
+    computed::graph_id::GraphId,
+    utils::{BoxRefCell, EqBox},
 };
 
 pub type ConnectType = Box<dyn Fn() -> Box<dyn Any>>;
@@ -74,9 +77,9 @@ impl ExternalConnections {
     pub fn default() -> Self {
         ExternalConnections {
             inner: Rc::new(EqBox::new(BoxRefCell::new(
-                ExternalConnectionsInner::new(), 
-                "ExternalConnections"
-            )))
+                ExternalConnectionsInner::new(),
+                "ExternalConnections",
+            ))),
         }
     }
 

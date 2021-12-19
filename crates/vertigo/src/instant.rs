@@ -20,6 +20,7 @@ impl Instant {
         }
     }
 
+    #[must_use]
     pub fn refresh(&self) -> Self {
         Self {
             instant: self.driver.now(),

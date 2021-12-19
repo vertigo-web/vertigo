@@ -9,7 +9,7 @@ pub struct DropResource {
 impl DropResource {
     pub fn new<F: FnOnce() + 'static>(drop_fun: F) -> DropResource {
         DropResource {
-            drop_fun: Some(EqBox::new(Box::new(drop_fun)))
+            drop_fun: Some(EqBox::new(Box::new(drop_fun))),
         }
     }
 

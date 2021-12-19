@@ -1,15 +1,15 @@
-use std::collections::{BTreeMap};
-use crate::computed::graph_id::GraphId;
-use crate::computed::graph_value::GraphValueRefresh;
+use std::collections::BTreeMap;
+
+use crate::computed::{graph_id::GraphId, graph_value::GraphValueRefresh};
 
 pub struct Refresh {
-    refresh: BTreeMap<GraphId, GraphValueRefresh>,      //Reference to GraphValue for refreshing if necessary
+    refresh: BTreeMap<GraphId, GraphValueRefresh>, // Reference to GraphValue for refreshing if necessary
 }
 
 impl Refresh {
     pub fn new() -> Refresh {
         Refresh {
-            refresh: BTreeMap::new()
+            refresh: BTreeMap::new(),
         }
     }
 

@@ -42,6 +42,6 @@ fn basic() {
 
     assert_eq!(
         format!("{:?}", dom),
-        format!("{:?}", dom2)
+        format!("{:?}", dom2),
     );
 }

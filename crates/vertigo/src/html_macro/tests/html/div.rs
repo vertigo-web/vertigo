@@ -10,7 +10,7 @@ fn empty_div() {
 
     assert_eq!(
         format!("{:?}", dom1),
-        format!("{:?}", dom2)
+        format!("{:?}", dom2),
     );
 }
 
@@ -29,7 +29,7 @@ fn div_with_text() {
 
     assert_eq!(
         format!("{:?}", dom1),
-        format!("{:?}", dom2)
+        format!("{:?}", dom2),
     );
 }
 
@@ -48,7 +48,7 @@ fn div_with_div() {
 
     assert_eq!(
         format!("{:?}", dom1),
-        format!("{:?}", dom2)
+        format!("{:?}", dom2),
     );
 }
 
@@ -67,7 +67,7 @@ fn div_with_selfclosing_div() {
 
     assert_eq!(
         format!("{:?}", dom1),
-        format!("{:?}", dom2)
+        format!("{:?}", dom2),
     );
 }
 
@@ -96,7 +96,7 @@ fn div_children_spacing() {
 
     assert_eq!(
         format!("{:?}", dom1),
-        format!("{:?}", dom2)
+        format!("{:?}", dom2),
     );
 }
 
@@ -133,7 +133,7 @@ fn div_unpacked_children_spacing() {
 
     assert_eq!(
         format!("{:?}", dom1),
-        format!("{:?}", dom2)
+        format!("{:?}", dom2),
     );
 }
 

@@ -1,14 +1,14 @@
 use crate::{
+    css::css_manager::CssManager,
+    driver::Driver,
     virtualdom::{
         models::{
-            realdom_node::RealDomElement,
             realdom_id::RealDomId,
-            vdom_component::VDomComponent,
+            realdom_node::RealDomElement,
+            vdom_component::VDomComponent
         },
         render_to_node::render_to_node,
     },
-    css::css_manager::CssManager,
-    driver::Driver,
 };
 
 /// Starting point of the app. Given the driver and root component of the app,

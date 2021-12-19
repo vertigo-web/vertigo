@@ -9,15 +9,7 @@ extern "C" {
     pub fn new(
         mouse_down: &Closure<dyn Fn(u64)>,
         mouse_over: &Closure<dyn Fn(Option<u64>)>,
-        keydown: &Closure<dyn Fn(
-            Option<u64>,
-            String,
-            String,
-            bool,
-            bool,
-            bool,
-            bool,
-        ) -> bool>,
+        keydown: &Closure<dyn Fn(Option<u64>, String, String, bool, bool, bool, bool) -> bool>,
         oninput: &Closure<dyn Fn(u64, String)>,
     ) -> DriverBrowserDomJs;
 

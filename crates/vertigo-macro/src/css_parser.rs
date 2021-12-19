@@ -1,10 +1,9 @@
-use pest::{Parser, iterators::Pair};
-use std::collections::HashMap;
-
-use proc_macro2::{Span, TokenStream as TokenStream2};
-use proc_macro::TokenStream;
-use syn::{Ident, Expr, parse_str, ExprLit, Lit};
 use itertools::Itertools;
+use pest::{iterators::Pair, Parser};
+use proc_macro::TokenStream;
+use proc_macro2::{Span, TokenStream as TokenStream2};
+use std::collections::HashMap;
+use syn::{parse_str, Expr, ExprLit, Ident, Lit};
 
 #[derive(Parser)]
 #[grammar = "css.pest"]
@@ -43,28 +42,31 @@ impl CssParser {
                         .replace("}}", "}");
                     (quote! { #css_output }, false)
                 } else {
-                    let params_stream: TokenStream2 = params.into_iter()
+                    let params_stream: TokenStream2 = params
+                        .into_iter()
                         .map(|(param_expr, param_key)| {
                             // let ident = Ident::new(&p, call_site);
-                            let data_expr: Option<Expr> = parse_str(&param_expr).map_err(|e| {
-                                emit_error!(call_site, "Error while parsing `{}`: {}", param_expr, e);
-                                e
-                            }).ok();
+                            let data_expr: Option<Expr> = parse_str(&param_expr)
+                                .map_err(|e| {
+                                    emit_error!(call_site, "Error while parsing `{}`: {}", param_expr, e);
+                                    e
+                                })
+                                .ok();
                             if let Some(data_expr) = data_expr {
                                 let param_ident = Ident::new(&param_key, call_site);
                                 quote! { #param_ident=#data_expr, }
                             } else {
-                                quote! { }
+                                quote! {}
                             }
                         })
                         .collect();
                     (quote! { format!(#css_output, #params_stream) }, true)
                 }
-            },
+            }
             Err(e) => {
                 emit_error!(call_site, "HTML Parsing fatal error: {}", e);
-                (quote! { }, false)
-            },
+                (quote! {}, false)
+            }
         }
     }
 
@@ -74,11 +76,11 @@ impl CssParser {
             Rule::unknown_rule => {
                 let child = self.generate_unknown_rule(pair);
                 children.push(child)
-            },
+            }
             Rule::animation_rule => {
                 let child = self.generate_animation_rule(pair);
                 children.push(child);
-            },
+            }
             Rule::sub_rule => {
                 let child = self.generate_sub_rule(pair);
                 children.push(child);
@@ -125,7 +127,8 @@ impl CssParser {
             let value_str = match value.as_rule() {
                 Rule::animation_params_fallback => value.as_str().to_string(),
                 Rule::frames => {
-                    let frames_strs = value.into_inner()
+                    let frames_strs = value
+                        .into_inner()
                         .into_iter()
                         .map(|frame| {
                             let mut frame_children = frame.into_inner();
@@ -142,7 +145,7 @@ impl CssParser {
                         .collect::<Vec<_>>()
                         .join("\n");
                     format!("{{{{ {} }}}}", frames_strs)
-                },
+                }
                 _ => {
                     emit_warning!(self.call_site, "CSS: unhandler value in generate_unknown_rule: {:?}", value);
                     "".to_string()
@@ -179,8 +182,8 @@ impl CssParser {
 }
 
 struct ParamsEnumerator {
-    seq: Box<dyn Iterator<Item=String>>,
-    params: HashMap<String, String>
+    seq: Box<dyn Iterator<Item = String>>,
+    params: HashMap<String, String>,
 }
 
 impl Default for ParamsEnumerator {

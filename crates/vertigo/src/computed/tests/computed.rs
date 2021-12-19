@@ -1,18 +1,10 @@
-use crate::{computed::{
-    Computed,
-    Value,
-    Dependencies
-}};
+use crate::computed::{Computed, Dependencies, Value};
 
-use crate::computed::tests::{
-    box_value_version::SubscribeValueVer,
-};
+use crate::computed::tests::box_value_version::SubscribeValueVer;
 
 #[test]
 fn basic() {
-    use crate::computed::{
-        Dependencies,
-    };
+    use crate::computed::Dependencies;
 
     let root: Dependencies = Dependencies::default();
 
@@ -97,7 +89,6 @@ fn basic2() {
 
 #[test]
 fn pointers() {
-
     //konwertowanie do wskaźnika
 
     fn foo1() -> i32 {
@@ -117,7 +108,6 @@ fn pointers() {
     // println!("RRRRR {}", aa);
     // println!("RRRRR {}", std::mem::size_of_val(&aa));
 
-
     let pointer1: u64 = foo1 as *const () as u64;
     let pointer2: u64 = foo2 as *const () as u64;
     let pointer11: u64 = foo1 as *const () as u64;
@@ -126,7 +116,6 @@ fn pointers() {
     assert_eq!(pointer1 == pointer2, false);
     assert_eq!(pointer1 == pointer11, true);
     assert_eq!(pointer1 == pointer4, false);
-
 
     // println!("gg1 {:x}", gg1);
     // println!("gg2 {:x}", gg2);
@@ -203,10 +192,8 @@ fn test_subscription() {
     assert_eq!(sum_value.get(), (22, 4));
 }
 
-
 #[test]
 fn test_computed_cache() {
-
     let root = Dependencies::default();
 
     assert_eq!(root.all_connections_len(), 0);
@@ -231,7 +218,8 @@ fn test_computed_cache() {
             })
         };
 
-        let d: Computed<bool> = {                   //is even
+        let d: Computed<bool> = {
+            //is even
             let c = c.clone();
             root.from(move || -> bool {
                 let c_value = c.get_value();
@@ -272,7 +260,6 @@ fn test_computed_cache() {
     assert_eq!(root.all_connections_len(), 0);
 }
 
-
 #[test]
 fn test_computed_new_value() {
     /*
@@ -302,7 +289,8 @@ fn test_computed_new_value() {
         })
     };
 
-    let e: Computed<u32> = {                   //is even
+    let e: Computed<u32> = {
+        //is even
         let d = d.clone();
         let c = c.clone();
         root.from(move || -> u32 {
@@ -332,15 +320,13 @@ fn test_computed_new_value() {
     assert_eq!(root.all_connections_len(), 0);
 }
 
-
 #[test]
 fn test_computed_switch_subscription() {
-    
     #[derive(PartialEq)]
     enum Switch {
         Ver1,
         Ver2,
-        Ver3
+        Ver3,
     }
 
     //a, b, c
@@ -385,11 +371,11 @@ fn test_computed_switch_subscription() {
             }
         })
     };
-    
+
     assert_eq!(root.all_connections_len(), 0);
     let mut sum = SubscribeValueVer::new(sum);
     assert_eq!(root.all_connections_len(), 3);
-    
+
     assert_eq!(sum.get(), (0, 1));
     assert_eq!(root.all_connections_len(), 3);
 
@@ -411,7 +397,7 @@ fn test_computed_switch_subscription() {
     switch.set_value(Switch::Ver2);
     assert_eq!(root.all_connections_len(), 4);
 
-    assert_eq!(sum.get(), (0, 3));      //no rerender
+    assert_eq!(sum.get(), (0, 3)); //no rerender
 
     a.set_value(1);
 
@@ -428,9 +414,8 @@ fn test_computed_switch_subscription() {
     c.set_value(0);
     assert_eq!(sum.get(), (0, 7));
 
-
     switch.set_value(Switch::Ver3);
-    assert_eq!(sum.get(), (0, 7));      //no rerender
+    assert_eq!(sum.get(), (0, 7)); //no rerender
 
     assert_eq!(root.all_connections_len(), 5);
 
@@ -440,7 +425,6 @@ fn test_computed_switch_subscription() {
     assert_eq!(sum.get(), (2, 9));
     c.set_value(1);
     assert_eq!(sum.get(), (3, 10));
-
 
     root.transaction(|| {
         a.set_value(0);

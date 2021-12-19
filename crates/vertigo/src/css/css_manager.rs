@@ -1,14 +1,19 @@
-use std::collections::HashMap;
-use std::rc::Rc;
-
-use crate::utils::BoxRefCell;
-
-use crate::driver::Driver;
-use crate::virtualdom::models::css::{
-    Css,
-    CssGroup
+use std::{
+    collections::HashMap,
+    rc::Rc,
 };
-use super::{get_selector::get_selector, next_id::NextId, transform_css::transform_css};
+
+use crate::{
+    driver::Driver,
+    utils::BoxRefCell,
+    virtualdom::models::css::{Css, CssGroup},
+};
+
+use super::{
+    get_selector::get_selector,
+    next_id::NextId,
+    transform_css::transform_css,
+};
 
 struct CssManagerInner {
     driver: Driver,
@@ -40,18 +45,18 @@ impl CssManagerInner {
 
 #[derive(Clone)]
 pub struct CssManager {
-    inner:  Rc<BoxRefCell<CssManagerInner>>,
+    inner: Rc<BoxRefCell<CssManagerInner>>,
 }
 
 impl CssManager {
     pub fn new(driver: &Driver) -> CssManager {
         CssManager {
-            inner: Rc::new(BoxRefCell::new(CssManagerInner::new(driver.clone()), "css manager"))
+            inner: Rc::new(BoxRefCell::new(CssManagerInner::new(driver.clone()), "css manager")),
         }
     }
 
     fn get_static(&self, css: &'static str) -> String {
-         self.inner.change(css, |state, css| {
+        self.inner.change(css, |state, css| {
             if let Some(class_id) = state.ids_static.get(&css) {
                 return get_selector(class_id);
             }
@@ -83,7 +88,7 @@ impl CssManager {
             match item {
                 CssGroup::CssStatic { value } => {
                     out.push(self.get_static(value));
-                },
+                }
                 CssGroup::CssDynamic { value } => {
                     out.push(self.get_dynamic(value));
                 }

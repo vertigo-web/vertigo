@@ -1,33 +1,28 @@
-use std::rc::Rc;
-use std::cmp::PartialEq;
-use std::collections::BTreeSet;
-use std::any::Any;
-
-use crate::computed::{
-    Value,
-    Computed,
-    GraphId,
-    GraphValueRefresh,
-};
-use crate::utils::{
-    BoxRefCell,
-    EqBox,
+use std::{
+    any::Any,
+    cmp::PartialEq,
+    collections::BTreeSet,
+    rc::Rc,
 };
 
-use self::external_connections::ExternalConnections;
+use crate::{
+    computed::{Computed, GraphId, GraphValueRefresh, Value},
+    utils::{BoxRefCell, EqBox},
+};
 
 use super::value::ToRc;
 
+mod external_connections;
 mod graph;
 mod graph_map;
-mod transaction_state;
-mod stack;
+pub mod hook;
 mod refresh;
 pub mod refresh_edges;
-pub mod hook;
-mod external_connections;
+mod stack;
+mod transaction_state;
 
 use {
+    external_connections::ExternalConnections,
     graph::Graph,
     stack::Stack,
     transaction_state::TransactionState,
@@ -71,11 +66,14 @@ impl Default for Dependencies {
         Self {
             graph: Rc::new(EqBox::new(BoxRefCell::new(
                 Graph::new(external_connections.clone()),
-                "graph"
+                "graph",
             ))),
             stack: Rc::new(EqBox::new(BoxRefCell::new(Stack::new(), "stack"))),
             refresh: Rc::new(EqBox::new(BoxRefCell::new(Refresh::new(), "refresh"))),
-            transaction_state: Rc::new(EqBox::new(BoxRefCell::new(TransactionState::new(), "transaction_state"))),
+            transaction_state: Rc::new(EqBox::new(BoxRefCell::new(
+                TransactionState::new(),
+                "transaction_state",
+            ))),
             external_connections,
         }
     }
@@ -86,10 +84,13 @@ impl Dependencies {
         Value::new(self.clone(), value)
     }
 
-    pub fn new_with_connect<T: PartialEq, F: Fn(&Value<T>) -> Box<dyn Any> + 'static>(&self, value: T, create: F) -> Computed<T> {
+    pub fn new_with_connect<T, F>(&self, value: T, create: F) -> Computed<T>
+    where
+        T: PartialEq,
+        F: Fn(&Value<T>) -> Box<dyn Any> + 'static
+    {
         Value::<T>::new_selfcomputed_value::<F>(self.clone(), value, create)
     }
-
 
     pub fn new_computed_from<T: PartialEq>(&self, value: impl ToRc<T>) -> Computed<T> {
         let value = self.new_value(value);
@@ -132,7 +133,6 @@ impl Dependencies {
     }
 
     fn get_edges_to_refresh(&self, edges: &BTreeSet<GraphId>) -> Vec<GraphValueRefresh> {
-
         let mut result = Vec::new();
 
         for id in self.get_all_deps(edges) {

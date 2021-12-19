@@ -1,8 +1,9 @@
 use std::collections::{BTreeMap, BTreeSet};
+
 use crate::computed::graph_id::GraphId;
 
 pub struct GraphMap {
-    data: BTreeMap<GraphId, BTreeSet<GraphId>>      //A <- B
+    data: BTreeMap<GraphId, BTreeSet<GraphId>>, // A <- B
 }
 
 impl GraphMap {

@@ -1,12 +1,9 @@
 use std::rc::Rc;
 
-use crate::computed::{
-    Dependencies,
-    Computed,
-    GraphValue,
-    GraphId,
+use crate::{
+    computed::{Computed, Dependencies, GraphId, GraphValue},
+    utils::{BoxRefCell, EqBox},
 };
-use crate::utils::{EqBox, BoxRefCell};
 
 #[derive(PartialEq)]
 pub struct Client {
@@ -14,7 +11,11 @@ pub struct Client {
 }
 
 impl Client {
-    pub fn new<T: PartialEq + 'static, F: Fn(&T) + 'static>(deps: Dependencies, computed: Computed<T>, call: F) -> Client {
+    pub fn new<T, F>(deps: Dependencies, computed: Computed<T>, call: F) -> Client
+    where
+        T: PartialEq + 'static,
+        F: Fn(&T) + 'static,
+    {
         let graph_value = GraphValue::new_client(&deps, {
             let prev_value: BoxRefCell<Option<Rc<T>>> = BoxRefCell::new(None, "client - prev state");
 
@@ -41,7 +42,7 @@ impl Client {
         let _ = graph_value.get_value(false);
 
         Client {
-            graph_value: EqBox::new(graph_value)
+            graph_value: EqBox::new(graph_value),
         }
     }
 

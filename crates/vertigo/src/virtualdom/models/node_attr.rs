@@ -7,42 +7,19 @@ use super::vdom_refs::NodeRefs;
 
 /// Virtual DOM node attribute.
 pub enum NodeAttr {
-    Css {
-        css: Css
-    },
-    OnClick {
-        event: Rc<dyn Fn()>
-    },
-    OnInput {
-        event: Rc<dyn Fn(String)>
-    },
-    OnMouseEnter {
-        event: Rc<dyn Fn()>
-    },
-    OnMouseLeave {
-        event: Rc<dyn Fn()>
-    },
-    OnKeyDown {
-        event: Rc<dyn Fn(KeyDownEvent) -> bool>,
-    },
-    Attr {
-        name: &'static str,
-        value: String,
-    },
-    DomRef {
-        name: &'static str,
-    },
-    DomApply {
-        apply: Rc<dyn Fn(&NodeRefs)>,
-    }
+    Css { css: Css },
+    OnClick { event: Rc<dyn Fn()> },
+    OnInput { event: Rc<dyn Fn(String)> },
+    OnMouseEnter { event: Rc<dyn Fn()> },
+    OnMouseLeave { event: Rc<dyn Fn()> },
+    OnKeyDown { event: Rc<dyn Fn(KeyDownEvent) -> bool> },
+    Attr { name: &'static str, value: String },
+    DomRef { name: &'static str },
+    DomApply { apply: Rc<dyn Fn(&NodeRefs)> },
 }
 
-
-
 pub fn css(css: Css) -> NodeAttr {
-    NodeAttr::Css {
-        css,
-    }
+    NodeAttr::Css { css }
 }
 
 pub fn on_click<F: Fn() + 'static>(callback: F) -> NodeAttr {
@@ -78,18 +55,14 @@ pub fn on_key_down<F: Fn(KeyDownEvent) -> bool + 'static>(callback: F) -> NodeAt
 pub fn attr<K: Into<String>>(name: &'static str, value: K) -> NodeAttr {
     NodeAttr::Attr {
         name,
-        value: value.into()
+        value: value.into(),
     }
 }
 
 pub fn dom_ref(name: &'static str) -> NodeAttr {
-    NodeAttr::DomRef {
-        name,
-    }
+    NodeAttr::DomRef { name }
 }
 
 pub fn dom_apply<F: Fn(&NodeRefs) + 'static>(f: F) -> NodeAttr {
-    NodeAttr::DomApply {
-        apply: Rc::new(f)
-    }
+    NodeAttr::DomApply { apply: Rc::new(f) }
 }

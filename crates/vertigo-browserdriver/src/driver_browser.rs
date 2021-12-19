@@ -1,13 +1,12 @@
-use vertigo::{
-    Dependencies,Driver, FetchResult, InstantType,
-    dev::{DriverTrait, EventCallback, FetchMethod, RealDomId, RefsContext, WebsocketMessageDriver},
-    utils::DropResource,
-};
 use std::{
     collections::HashMap,
     future::Future,
     pin::Pin,
     rc::Rc
+};
+use vertigo::{
+    dev::{DriverTrait, EventCallback, FetchMethod, RealDomId, RefsContext, WebsocketMessageDriver},
+    Dependencies, DropResource, Driver, FetchResult, InstantType,
 };
 
 use crate::modules::{
@@ -59,9 +58,13 @@ impl DriverBrowser {
             driver: Rc::new(driver),
         };
 
-        Driver::new(dependencies, dom_driver_browser, Box::new(|fut: Pin<Box<dyn Future<Output = ()> + 'static>>| {
-            wasm_bindgen_futures::spawn_local(fut);
-        }))
+        Driver::new(
+            dependencies,
+            dom_driver_browser,
+            Box::new(|fut: Pin<Box<dyn Future<Output = ()> + 'static>>| {
+                wasm_bindgen_futures::spawn_local(fut);
+            }),
+        )
     }
 }
 
@@ -115,14 +118,9 @@ impl DriverTrait for DriverBrowser {
         method: FetchMethod,
         url: String,
         headers: Option<HashMap<String, String>>,
-        body: Option<String>
-    ) -> Pin<Box<dyn Future<Output=FetchResult> + 'static>> {
-        self.driver.driver_fetch.fetch(
-            method,
-            url,
-            headers,
-            body
-        )
+        body: Option<String>,
+    ) -> Pin<Box<dyn Future<Output = FetchResult> + 'static>> {
+        self.driver.driver_fetch.fetch(method, url, headers, body)
     }
 
     fn get_hash_location(&self) -> String {

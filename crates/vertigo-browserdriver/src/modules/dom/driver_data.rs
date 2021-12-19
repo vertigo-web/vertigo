@@ -1,8 +1,5 @@
-use vertigo::{
-    KeyDownEvent,
-    dev::RealDomId,
-};
 use std::rc::Rc;
+use vertigo::{dev::RealDomId, KeyDownEvent};
 
 use crate::utils::hash_map_rc::HashMapRc;
 
@@ -10,7 +7,7 @@ use super::element_wrapper::DomElement;
 
 pub struct DriverData {
     pub elements: HashMapRc<RealDomId, DomElement>,
-    pub child_parent: HashMapRc<RealDomId, RealDomId>,            //child -> parent
+    pub child_parent: HashMapRc<RealDomId, RealDomId>, // child -> parent
 }
 
 impl DriverData {
@@ -21,10 +18,7 @@ impl DriverData {
         })
     }
 
-    pub fn find_all_nodes(
-        &self,
-        id: RealDomId,
-    ) -> Vec<RealDomId> {
+    pub fn find_all_nodes(&self, id: RealDomId) -> Vec<RealDomId> {
         if id == RealDomId::root() {
             return vec![RealDomId::root()];
         }
@@ -41,15 +35,12 @@ impl DriverData {
                 return out;
             }
 
-            let parent = self.child_parent.must_get(
-                &wsk,
-                |item| *item
-            );
+            let parent = self.child_parent.must_get(&wsk, |item| *item);
 
             if let Some(parent) = parent {
                 out.push(parent);
 
-                if parent == RealDomId::root() {    
+                if parent == RealDomId::root() {
                     return out;
                 } else {
                     wsk = parent;
@@ -65,12 +56,7 @@ impl DriverData {
         self.elements.must_get(node_id, map).flatten()
     }
 
-
-    pub fn find_event_click(
-        &self,
-        id: RealDomId,
-    ) -> Option<Rc<dyn Fn()>> {
-
+    pub fn find_event_click(&self, id: RealDomId) -> Option<Rc<dyn Fn()>> {
         let all_nodes = self.find_all_nodes(id);
 
         for node_id in all_nodes {
@@ -88,10 +74,7 @@ impl DriverData {
         None
     }
 
-    pub fn find_event_keydown(
-        &self,
-        id: RealDomId,
-    ) -> Option<Rc<dyn Fn(KeyDownEvent) -> bool>> {
+    pub fn find_event_keydown(&self, id: RealDomId) -> Option<Rc<dyn Fn(KeyDownEvent) -> bool>> {
         let all_nodes = self.find_all_nodes(id);
 
         for node_id in all_nodes {

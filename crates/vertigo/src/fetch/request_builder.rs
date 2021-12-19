@@ -1,4 +1,4 @@
-use std::{collections::HashMap};
+use std::collections::HashMap;
 
 use crate::Driver;
 
@@ -41,7 +41,7 @@ pub enum RequestBuilder {
         url: String,
         headers: Option<HashMap<String, String>>,
         body: Option<String>,
-    }
+    },
 }
 
 impl RequestBuilder {
@@ -54,30 +54,32 @@ impl RequestBuilder {
         }
     }
 
+    #[must_use]
     pub fn body(self, body: String) -> RequestBuilder {
         match self {
             RequestBuilder::ErrorInput(message) => RequestBuilder::ErrorInput(message),
-            RequestBuilder::Data { driver , url, headers, body: _ } => {
+            RequestBuilder::Data { driver, url, headers, .. } =>
                 RequestBuilder::Data {
                     driver,
                     url,
                     headers,
-                    body: Some(body)
-                }
-            }
+                    body: Some(body),
+                },
         }
     }
 
+    #[must_use]
     pub fn bearer_auth(self, token: impl Into<String>) -> RequestBuilder {
         let token: String = token.into();
         self.set_header("Authorization", format!("Bearer {}", token))
     }
 
+    #[must_use]
     pub fn set_header(self, name: impl Into<String>, value: impl Into<String>) -> RequestBuilder {
         let name: String = name.into();
         let value: String = value.into();
 
-        if let RequestBuilder::Data { headers, driver, url, body } = self {
+        if let RequestBuilder::Data { headers, driver, url, body} = self {
             if let Some(mut headers) = headers {
                 headers.insert(name, value);
                 return RequestBuilder::Data { headers: Some(headers), driver, url, body };
@@ -91,46 +93,40 @@ impl RequestBuilder {
         self
     }
 
+    #[must_use]
     pub fn body_json(self, body: impl SingleRequestTrait) -> RequestBuilder {
         let body_string: Result<String, String> = body.into_string();
 
         match body_string {
-            Ok(body) => {
-                self.body(body).set_header("Content-Type", "application/json")
-            },
-            Err(message) => {
-                RequestBuilder::ErrorInput(message)
-            },
+            Ok(body) => self.body(body).set_header("Content-Type", "application/json"),
+            Err(message) => RequestBuilder::ErrorInput(message),
         }
     }
 
+    #[must_use]
     pub fn headers(self, headers: HashMap<String, String>) -> RequestBuilder {
         match self {
             RequestBuilder::ErrorInput(message) => RequestBuilder::ErrorInput(message),
-            RequestBuilder::Data { driver, url, headers: _, body } => {
-                RequestBuilder::Data {
-                    driver,
-                    url,
-                    headers: Some(headers),
-                    body
-                }
-            }
+            RequestBuilder::Data { driver, url, body, .. } => RequestBuilder::Data {
+                driver,
+                url,
+                headers: Some(headers),
+                body,
+            },
         }
     }
 
     async fn call(self, method: Method) -> RequestResponse {
         let (driver, url, headers, body) = match self {
-            RequestBuilder::ErrorInput(message) => {
-                return RequestResponse::new(None, Err(message));
-            },
-            RequestBuilder::Data { driver, url, headers, body } => (driver, url, headers, body)
+            RequestBuilder::ErrorInput(message) => return RequestResponse::new(None, Err(message)),
+            RequestBuilder::Data { driver, url, headers, body } => (driver, url, headers, body),
         };
 
         let builder = driver.fetch(url.clone());
 
         let builder = match body {
             None => builder,
-            Some(body) => builder.set_body(body)
+            Some(body) => builder.set_body(body),
         };
 
         let builder = match headers {
@@ -162,15 +158,13 @@ pub struct RequestResponseBody {
 
 impl RequestResponseBody {
     fn new(body: String) -> RequestResponseBody {
-        RequestResponseBody {
-            body
-        }
+        RequestResponseBody { body }
     }
 
     pub fn into<T: PartialEq + SingleRequestTrait>(self) -> Resource<T> {
         match T::from_string(self.body.as_str()) {
             Ok(data) => Resource::Ready(data),
-            Err(err) => Resource::Error(err)
+            Err(err) => Resource::Error(err),
         }
     }
 
@@ -191,10 +185,7 @@ pub struct RequestResponse {
 
 impl RequestResponse {
     fn new(request_details: Option<(Method, String)>, data: Result<(u32, String), String>) -> RequestResponse {
-        RequestResponse {
-            request_details,
-            data
-        }
+        RequestResponse { request_details, data }
     }
 
     pub fn status(&self) -> Option<u32> {
@@ -213,10 +204,8 @@ impl RequestResponse {
                     Some(result) => result,
                     None => Resource::Error(format!("Unhandled response code {}", status)),
                 }
-            },
-            Err(err) => {
-                Resource::Error(err)
             }
+            Err(err) => Resource::Error(err),
         };
 
         if let Resource::Error(err) = &result {

@@ -1,8 +1,5 @@
-use vertigo::{dev::RealDomId, Dependencies, utils::BoxRefCell};
-use std::{
-    collections::HashMap,
-    rc::Rc,
-};
+use std::{collections::HashMap, rc::Rc};
+use vertigo::{dev::RealDomId, utils::BoxRefCell, Dependencies};
 
 use super::driver_data::DriverData;
 
@@ -12,14 +9,11 @@ struct VisitedNode {
 
 impl VisitedNode {
     pub fn new(on_mouse_enter: Option<Rc<dyn Fn()>>, on_mouse_leave: Option<Rc<dyn Fn()>>) -> VisitedNode {
-
         if let Some(on_mouse_enter) = on_mouse_enter {
             on_mouse_enter();
         }
 
-        VisitedNode {
-            on_mouse_leave,
-        }
+        VisitedNode { on_mouse_leave }
     }
 }
 impl Drop for VisitedNode {
@@ -37,7 +31,7 @@ impl Drop for VisitedNode {
 pub(crate) struct VisitedNodeManager {
     driver_data: Rc<DriverData>,
     dependencies: Dependencies,
-    nodes: BoxRefCell<HashMap::<RealDomId, VisitedNode>>,
+    nodes: BoxRefCell<HashMap<RealDomId, VisitedNode>>,
 }
 
 impl VisitedNodeManager {
@@ -47,7 +41,7 @@ impl VisitedNodeManager {
         VisitedNodeManager {
             driver_data: driver_data.clone(),
             dependencies: dependencies.clone(),
-            nodes: BoxRefCell::new(nodes, "VisitedNodeManager nodes")
+            nodes: BoxRefCell::new(nodes, "VisitedNodeManager nodes"),
         }
     }
 

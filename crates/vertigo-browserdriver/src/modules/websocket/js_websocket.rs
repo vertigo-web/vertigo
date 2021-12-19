@@ -12,24 +12,11 @@ extern "C" {
     ) -> DriverWebsocketJs;
 
     #[wasm_bindgen(method)]
-    pub fn register_callback(
-        this: &DriverWebsocketJs,
-        host: String,
-        callback_id: u64
-    );
+    pub fn register_callback(this: &DriverWebsocketJs, host: String, callback_id: u64);
 
     #[wasm_bindgen(method)]
-    pub fn unregister_callback(
-        this: &DriverWebsocketJs,
-        callback_id: u64
-    );
+    pub fn unregister_callback(this: &DriverWebsocketJs, callback_id: u64);
 
     #[wasm_bindgen(method)]
-    pub fn send_message(
-        this: &DriverWebsocketJs,
-        callback_id: u64,
-        message: String,
-    );
+    pub fn send_message(this: &DriverWebsocketJs, callback_id: u64, message: String);
 }
-
-

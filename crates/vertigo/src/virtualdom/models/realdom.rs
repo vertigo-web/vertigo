@@ -1,21 +1,13 @@
-use crate::virtualdom::{
-    models::{
-        realdom_node::RealDomElement,
-        realdom_text::RealDomText,
-        realdom_component::RealDomComponent,
-    },
+use crate::virtualdom::models::{
+    realdom_component::RealDomComponent,
+    realdom_node::RealDomElement,
+    realdom_text::RealDomText,
 };
 
 pub enum RealDomNode {
-    Node {
-        node: RealDomElement,
-    },
-    Text {
-        node: RealDomText,
-    },
-    Component {
-        node: RealDomComponent,
-    }
+    Node { node: RealDomElement },
+    Text { node: RealDomText },
+    Component { node: RealDomComponent },
 }
 
 impl RealDomNode {

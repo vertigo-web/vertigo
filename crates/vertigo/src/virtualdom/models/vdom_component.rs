@@ -1,18 +1,14 @@
-use std::cmp::PartialEq;
-use std::rc::Rc;
-use std::fmt;
-
-use crate::computed::{
-    Value,
-    Computed,
+use std::{
+    cmp::PartialEq,
+    fmt,
+    rc::Rc,
 };
 
 use crate::{
-    virtualdom::{
-        models::{
-            vdom_component_id::VDomComponentId,
-            vdom_element::VDomElement,
-        }
+    computed::{Computed, Value},
+    virtualdom::models::{
+        vdom_component_id::VDomComponentId,
+        vdom_element::VDomElement
     }
 };
 
@@ -42,18 +38,13 @@ pub struct VDomComponent {
 
 impl VDomComponent {
     pub fn new<T: PartialEq + 'static>(params: Computed<T>, render: fn(&Computed<T>) -> VDomElement) -> VDomComponent {
-
         let component_id = VDomComponentId::new(&params, render);
         let view = params.map_for_render(render);
 
-        VDomComponent {
-            id: component_id,
-            view,
-        }
+        VDomComponent { id: component_id, view }
     }
 
     pub fn from_value<T: PartialEq + 'static>(params: Value<T>, render: fn(&Value<T>) -> VDomElement) -> VDomComponent {
-
         let component_id = VDomComponentId::new_value(&params, render);
 
         let deps = params.deps.clone();
@@ -66,10 +57,7 @@ impl VDomComponent {
             render(value)
         });
 
-        VDomComponent {
-            id: component_id,
-            view,
-        }
+        VDomComponent { id: component_id, view }
     }
 }
 

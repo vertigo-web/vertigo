@@ -1,8 +1,8 @@
-use crate::{utils::BoxRefCell, driver::Driver, virtualdom::{
-        models::{
-            realdom_id::RealDomId,
-        },
-    }};
+use crate::{
+    driver::Driver,
+    utils::BoxRefCell,
+    virtualdom::models::realdom_id::RealDomId
+};
 
 pub struct RealDomText {
     dom_driver: Driver,

@@ -1,4 +1,5 @@
-use std::collections::{VecDeque, BTreeSet};
+use std::collections::{BTreeSet, VecDeque};
+
 use crate::computed::graph_id::GraphId;
 
 pub struct Stack {
@@ -31,7 +32,7 @@ impl Stack {
         match last_item {
             Some(last_item) => {
                 last_item.insert(parent_id);
-            },
+            }
             None => {
                 log::warn!("frame with stack - not found get_mut=None");
             }

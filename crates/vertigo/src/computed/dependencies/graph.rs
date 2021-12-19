@@ -1,14 +1,13 @@
 use std::collections::{BTreeMap, BTreeSet};
+
 use crate::computed::graph_id::GraphId;
-use super::{
-    external_connections::ExternalConnections,
-    graph_map::GraphMap
-};
+
+use super::{external_connections::ExternalConnections, graph_map::GraphMap};
 
 pub struct Graph {
-    parent_childs: GraphMap,                            //ParentId <- ClientId
-    client_parents: GraphMap,                           //ClientId <- ParentId
-    counters: BTreeMap<(GraphId, GraphId), u8>,         //Relation counter
+    parent_childs: GraphMap,                    // ParentId <- ClientId
+    client_parents: GraphMap,                   // ClientId <- ParentId
+    counters: BTreeMap<(GraphId, GraphId), u8>, // Relation counter
     will_be_dropped: BTreeSet<GraphId>,
     external_connections: ExternalConnections,
 }
@@ -99,7 +98,7 @@ impl Graph {
                             }
                         }
                     }
-                },
+                }
                 None => {
                     return result;
                 }
@@ -126,7 +125,7 @@ impl Graph {
     pub fn all_connections_len(&self) -> u64 {
         let mut count: u64 = 0;
 
-        for item_count in self.counters.values() { //}: BTreeMap<(GraphId, GraphId), u8>,
+        for item_count in self.counters.values() {
             count += *item_count as u64;
         }
 

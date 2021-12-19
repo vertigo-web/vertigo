@@ -1,4 +1,4 @@
-use core::ops::{Try, FromResidual, ControlFlow};
+use core::ops::{ControlFlow, FromResidual, Try};
 
 /// The state of the resource.
 #[derive(PartialEq, Clone, Debug)]
@@ -32,12 +32,11 @@ impl<T: PartialEq> Try for Resource<T> {
     }
 }
 
-
 impl<T: PartialEq> FromResidual<ResourceError> for Resource<T> {
     fn from_residual(residual: ResourceError) -> Resource<T> {
         match residual {
             ResourceError::Error(message) => Resource::Error(message),
-            ResourceError::Loading => Resource::Loading
+            ResourceError::Loading => Resource::Loading,
         }
     }
 }
@@ -61,11 +60,12 @@ impl<T: PartialEq> Resource<T> {
 }
 
 impl<T: PartialEq + Clone> Resource<T> {
-    pub fn ref_clone(&self) -> Resource<T> {
+    #[must_use]
+    pub fn ref_clone(&self) -> Self {
         match self {
             Resource::Loading => Resource::Loading,
             Resource::Ready(data) => Resource::Ready(data.clone()),
-            Resource::Error(error) => Resource::Error(error.clone())
+            Resource::Error(error) => Resource::Error(error.clone()),
         }
     }
 }

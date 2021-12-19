@@ -8,7 +8,7 @@ mod input;
 mod list;
 mod paragraph;
 mod pre;
-mod textarea;
 mod svg;
+mod textarea;
 
 mod utils;

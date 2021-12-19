@@ -13,6 +13,6 @@ extern "C" {
         method: String,
         url: String,
         headers: String,
-        body: Option<String>
+        body: Option<String>,
     );
 }

@@ -1,7 +1,10 @@
-use std::collections::HashMap;
-use std::fmt;
+use std::{
+    collections::HashMap,
+    fmt,
+};
 
 use crate::Driver;
+
 use super::realdom_id::RealDomId;
 
 #[derive(Clone)]
@@ -20,10 +23,7 @@ impl fmt::Debug for NodeRefsItem {
 
 impl NodeRefsItem {
     pub fn new(driver: Driver, id: RealDomId) -> NodeRefsItem {
-        NodeRefsItem {
-            id,
-            driver,
-        }
+        NodeRefsItem { id, driver }
     }
 
     pub fn get_bounding_client_rect_x(&self) -> f64 {
@@ -68,14 +68,12 @@ impl NodeRefsItem {
 }
 
 pub struct NodeRefs {
-    data: HashMap<&'static str, Vec<NodeRefsItem>>
+    data: HashMap<&'static str, Vec<NodeRefsItem>>,
 }
 
 impl NodeRefs {
     pub(crate) fn new() -> NodeRefs {
-        NodeRefs {
-            data: HashMap::new(),
-        }
+        NodeRefs { data: HashMap::new() }
     }
 
     pub fn get(&self, ref_name: &str) -> &[NodeRefsItem] {

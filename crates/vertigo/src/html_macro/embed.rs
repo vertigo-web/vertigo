@@ -43,17 +43,13 @@ impl Embed for VDomNode {
 
 impl Embed for VDomElement {
     fn embed(self) -> VDomNode {
-        VDomNode::Element {
-            node: self
-        }
+        VDomNode::Element { node: self }
     }
 }
 
 impl Embed for VDomComponent {
     fn embed(self) -> VDomNode {
-        VDomNode::Component {
-            node: self
-        }
+        VDomNode::Component { node: self }
     }
 }
 

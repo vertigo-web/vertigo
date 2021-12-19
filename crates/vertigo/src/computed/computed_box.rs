@@ -1,14 +1,9 @@
-use std::rc::Rc;
-use std::cmp::PartialEq;
-
-use crate::{
-    computed::{
-        Dependencies,
-        Client,
-        graph_id::GraphId,
-        GraphValue
-    }
+use std::{
+    cmp::PartialEq,
+    rc::Rc,
 };
+
+use crate::computed::{Client, Dependencies, GraphValue, graph_id::GraphId};
 
 /// A reactive value that is read-only and computed by dependency graph.
 ///
@@ -64,7 +59,7 @@ impl<T: PartialEq + 'static> Clone for Computed<T> {
 impl<T: PartialEq + 'static> Computed<T> {
     pub fn new<F: Fn() -> Rc<T> + 'static>(deps: Dependencies, get_value: F) -> Computed<T> {
         Computed {
-            inner: GraphValue::new_computed(&deps, get_value)
+            inner: GraphValue::new_computed(&deps, get_value),
         }
     }
 

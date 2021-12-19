@@ -1,15 +1,10 @@
-
 /// Css chunk, represented either as static or dynamic string.
 #[derive(Debug)]
 pub enum CssGroup {
     // &str - can be used as id using which we can find particular rule
-    CssStatic {
-        value: &'static str,
-    },
+    CssStatic { value: &'static str },
     // string in this case, is a key to hashmap with the class name
-    CssDynamic {
-        value: String,
-    }
+    CssDynamic { value: String },
 }
 
 /// CSS styles definition for Virtual DOM.
@@ -39,34 +34,28 @@ pub struct Css {
 impl Css {
     pub fn str(value: &'static str) -> Self {
         Self {
-            groups: vec!(CssGroup::CssStatic {
-                value
-            })
+            groups: vec![CssGroup::CssStatic { value }],
         }
     }
 
     pub fn string(value: String) -> Self {
         Self {
-            groups: vec!(CssGroup::CssDynamic {
-                value
-            })
+            groups: vec![CssGroup::CssDynamic { value }],
         }
     }
 
+    #[must_use]
     pub fn push_str(mut self, value: &'static str) -> Self {
-        self.groups.push(CssGroup::CssStatic {
-            value
-        });
+        self.groups.push(CssGroup::CssStatic { value });
         self
     }
 
     pub fn push_string(&mut self, value: String) {
-        self.groups.push(CssGroup::CssDynamic {
-            value
-        })
+        self.groups.push(CssGroup::CssDynamic { value })
     }
 
-    pub fn extend(mut self, new_css: Css) -> Css {
+    #[must_use]
+    pub fn extend(mut self, new_css: Self) -> Self {
         for item in new_css.groups {
             self.groups.push(item);
         }

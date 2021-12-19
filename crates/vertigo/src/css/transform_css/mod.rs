@@ -47,7 +47,6 @@ pub fn css_split_rows(css: &str) -> Vec<&str> {
     let mut start = 0;
 
     for (index, char) in css.char_indices() {
-
         if char == '{' {
             if state == ParsingRowState::Right {
                 state = ParsingRowState::RightBracketOpen(1);
@@ -73,7 +72,6 @@ pub fn css_split_rows(css: &str) -> Vec<&str> {
             if should_clouse {
                 state = ParsingRowState::Right;
             }
-
         }
 
         if char == ':' && state == ParsingRowState::Left {
@@ -89,9 +87,9 @@ pub fn css_split_rows(css: &str) -> Vec<&str> {
 
     out.push(css[start..css.len()].trim());
 
-    out.into_iter().filter(|item|{
-        item.trim() != ""
-    }).collect()
+    out.into_iter()
+        .filter(|item| item.trim() != "")
+        .collect()
 }
 
 pub fn find_brackets(line: &str) -> Option<(&str, &str, &str)> {
@@ -116,14 +114,13 @@ pub fn find_brackets(line: &str) -> Option<(&str, &str, &str)> {
 
     if let (Some(start), Some(end)) = (start, end) {
         let start_word = &line[0..start];
-        let central_word = &line[start+1..end];
-        let end_word = &line[end+1..];
+        let central_word = &line[start + 1..end];
+        let end_word = &line[end + 1..];
         return Some((start_word.trim(), central_word.trim(), end_word.trim()));
     }
 
     None
 }
-
 
 #[test]
 fn test_find_brackets() {
@@ -138,7 +135,6 @@ fn test_find_brackets() {
 }
 
 pub fn transform_css_animation_value(css: &str, next_id: &mut NextId) -> (String, Option<(String, String)>) {
-
     let brackets = find_brackets(css);
 
     if let Some((start_word, central_word, end_word)) = brackets {
@@ -157,7 +153,6 @@ pub fn transform_css_animation_value(css: &str, next_id: &mut NextId) -> (String
 }
 
 pub fn transform_css_selector_value(row: &str, parent_selector: &str) -> Option<(String, String)> {
-
     let brackets = find_brackets(row);
 
     if let Some((start_word, central_word, _end_word)) = brackets {
@@ -185,21 +180,20 @@ pub fn transform_css(css: &str, next_id: &mut NextId) -> (u64, Vec<(String, Stri
         } else {
             match css_row_split_to_pair(row) {
                 Some((name, value)) => {
-                    let value_parsed =
-                        if name.trim() == "animation" {
-                            let (value_parsed, extra_animation) = transform_css_animation_value(&value, next_id);
+                    let value_parsed = if name.trim() == "animation" {
+                        let (value_parsed, extra_animation) = transform_css_animation_value(&value, next_id);
 
-                            if let Some(extra_animation) = extra_animation {
-                                css_documents.push(extra_animation);
-                            }
+                        if let Some(extra_animation) = extra_animation {
+                            css_documents.push(extra_animation);
+                        }
 
-                            value_parsed
-                        } else {
-                            value
-                        };
+                        value_parsed
+                    } else {
+                        value
+                    };
 
                     css_out.push(format!("{}: {}", name, value_parsed));
-                },
+                }
                 None => {
                     css_out.push(row.into());
                 }
