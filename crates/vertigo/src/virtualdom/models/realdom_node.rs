@@ -1,24 +1,18 @@
-use std::collections::{
-    HashMap,
-    VecDeque,
-};
-use std::rc::Rc;
-use crate::{
-    driver::{
-        Driver,
-        EventCallback
-    },
-    utils::BoxRefCell,
-    virtualdom::{
-        models::{
-            realdom::RealDomNode,
-            realdom_id::RealDomId,
-            realdom_text::RealDomText,
-            vdom_refs::NodeRefsItem,
-        },
-    },
+use std::{
+    collections::{HashMap, VecDeque},
+    rc::Rc,
 };
 
+use crate::{
+    driver::{Driver, EventCallback},
+    utils::BoxRefCell,
+    virtualdom::models::{
+        realdom::RealDomNode,
+        realdom_id::RealDomId,
+        realdom_text::RealDomText,
+        vdom_refs::NodeRefsItem,
+    },
+};
 
 fn merge_attr(attr: &HashMap<&'static str, String>, class_name: Option<String>) -> HashMap<&'static str, String> {
     let mut attr = attr.clone();
@@ -28,7 +22,7 @@ fn merge_attr(attr: &HashMap<&'static str, String>, class_name: Option<String>) 
 
         let value_to_set: String = match attr_class {
             Some(attr_class) => format!("{} {}", class_name, attr_class),
-            None => class_name
+            None => class_name,
         };
 
         attr.insert("class", value_to_set);
@@ -92,7 +86,7 @@ impl RealDomNodeInner {
         if need_update {
             self.dom_driver.set_attr(self.id_dom, name, value);
             self.attr.insert(name, value.to_string());
-       }
+        }
     }
 
     pub fn update_attr(&mut self, attr: &HashMap<&'static str, String>, class_name: Option<String>) {
@@ -149,7 +143,6 @@ impl Drop for RealDomNodeInner {
     }
 }
 
-
 pub struct RealDomElement {
     inner: Rc<BoxRefCell<RealDomNodeInner>>,
 }
@@ -162,7 +155,7 @@ impl RealDomElement {
                     RealDomNodeInner::new(driver, name),
                     "RealDomElement",
                 )
-            )
+            ),
         }
     }
 
@@ -173,7 +166,7 @@ impl RealDomElement {
                     RealDomNodeInner::create_with_id(driver, id),
                     "RealDomElement",
                 )
-            )
+            ),
         }
     }
 
@@ -260,7 +253,7 @@ impl RealDomElement {
 impl Clone for RealDomElement {
     fn clone(&self) -> Self {
         RealDomElement {
-            inner: self.inner.clone()
+            inner: self.inner.clone(),
         }
     }
 }

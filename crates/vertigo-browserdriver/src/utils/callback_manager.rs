@@ -39,7 +39,6 @@ impl<V> CallbackManager<V> {
     }
 }
 
-
 #[derive(Clone)]
 pub struct CallbackManagerOwner<V> {
     next_id: CounterRc,
@@ -74,7 +73,7 @@ impl<V> CallbackManagerOwner<V> {
         match callback {
             Some(callback) => {
                 callback(value);
-            },
+            }
             None => {
                 log::error!("Missing callback id {} ", callback_id);
             }

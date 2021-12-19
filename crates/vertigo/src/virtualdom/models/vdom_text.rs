@@ -8,8 +8,6 @@ pub struct VDomText {
 
 impl VDomText {
     pub fn new<T: Into<String>>(value: T) -> VDomText {
-        VDomText {
-            value: value.into()
-        }
+        VDomText { value: value.into() }
     }
 }

@@ -18,7 +18,7 @@ impl Default for RefsContext {
 
 impl RefsContext {
     pub fn run(self) {
-        let RefsContext { apply, node_refs} = self;
+        let RefsContext { apply, node_refs } = self;
 
         for apply_fun in apply {
             apply_fun(&node_refs);

@@ -1,15 +1,17 @@
 use std::collections::BTreeSet;
 
 use crate::computed::graph_id::GraphId;
+
 use super::hook::Hooks;
 
 enum State {
     Idle,
-    Modification {                          //Modifying the first layer
-        level: u16,                         //current transacion level
-        edges: BTreeSet<GraphId>,            //edges to refresh
+    Modification {
+        //Modifying the first layer
+        level: u16,               //current transacion level
+        edges: BTreeSet<GraphId>, //edges to refresh
     },
-    Refreshing
+    Refreshing,
 }
 
 pub struct TransactionState {
@@ -32,15 +34,15 @@ impl TransactionState {
 
                 *state = State::Modification {
                     level: 1,
-                    edges: BTreeSet::new()
+                    edges: BTreeSet::new(),
                 };
 
                 true
-            },
+            }
             State::Modification { level, .. } => {
                 *level += 1;
                 true
-            },
+            }
             State::Refreshing => {
                 log::error!("You cannot change the source value while the dependency graph is being refreshed");
                 false
@@ -49,7 +51,7 @@ impl TransactionState {
     }
 
     pub fn up(&mut self) -> bool {
-        let TransactionState { state, hooks} = self;
+        let TransactionState { state, hooks } = self;
         TransactionState::up_state(state, hooks)
     }
 
@@ -59,7 +61,7 @@ impl TransactionState {
                 log::error!("You cannot call 'down' for a state 'TransactionState::Idle'");
 
                 None
-            },
+            }
             State::Modification { level, edges } => {
                 *level -= 1;
 
@@ -70,7 +72,7 @@ impl TransactionState {
                 }
 
                 None
-            },
+            }
             State::Refreshing => {
                 log::error!("You cannot change the source value while the dependency graph is being refreshed");
                 None
@@ -86,10 +88,10 @@ impl TransactionState {
         match state {
             State::Idle => {
                 log::error!("you cannot go from 'TransactionState::Idle' to 'TransactionState::Idle'");
-            },
+            }
             State::Modification { .. } => {
                 log::error!("you cannot go from 'TransactionState::Modification' to 'TransactionState::Idle'");
-            },
+            }
             State::Refreshing => {
                 *state = State::Idle;
                 hooks.fire_end();
@@ -98,7 +100,7 @@ impl TransactionState {
     }
 
     pub fn move_to_idle(&mut self) {
-        let TransactionState { state, hooks} = self;
+        let TransactionState { state, hooks } = self;
         TransactionState::move_to_idle_state(state, hooks)
     }
 
@@ -106,7 +108,7 @@ impl TransactionState {
         match state {
             State::Modification { edges, .. } => {
                 edges.insert(new_edge);
-            },
+            }
             _ => {
                 log::error!("You can only call the trigger if you are in a transaction block");
             }

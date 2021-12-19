@@ -5,7 +5,9 @@ use crate as vertigo;
 
 #[test]
 fn div_with_static_css() {
-    fn my_css() -> Css { Css::str("color: green") }
+    fn my_css() -> Css {
+        Css::str("color: green")
+    }
 
     let dom1 = html! {
         <div css={my_css()}>
@@ -27,7 +29,9 @@ fn div_with_static_css() {
 
 #[test]
 fn div_with_dynamic_css() {
-    fn my_css() -> Css { Css::string("color: black".to_string()) }
+    fn my_css() -> Css {
+        Css::string("color: black".to_string())
+    }
 
     let dom1 = html! {
         <div css={my_css()} />
@@ -44,7 +48,9 @@ fn div_with_dynamic_css() {
 
 #[test]
 fn div_with_multiple_css_groups() {
-    fn my_css() -> Css { Css::str("color: black") }
+    fn my_css() -> Css {
+        Css::str("color: black")
+    }
 
     fn my_second_css() -> Css {
         my_css().push_str("color: white")
@@ -66,15 +72,14 @@ fn div_with_multiple_css_groups() {
 
 #[test]
 fn style_basic() {
-    let dom1 = html!{
+    let dom1 = html! {
         <style>"html, body { width: 100%; }"</style>
     };
 
     let dom2 = VDomElement::build("style")
         .children(
             vec!(
-                VDomText::new("html, body { width: 100%; }")
-                    .into()
+                VDomText::new("html, body { width: 100%; }").into()
             )
         )
     ;

@@ -3,7 +3,7 @@ use std::rc::Rc;
 use vertigo::utils::DropResource;
 use wasm_bindgen::prelude::Closure;
 
-use crate::{utils::callback_manager::CallbackManager};
+use crate::utils::callback_manager::CallbackManager;
 
 use super::js_interval::DriverBrowserIntervalJs;
 
@@ -38,7 +38,7 @@ impl DriverBrowserInterval {
         DriverBrowserInterval {
             driver_js,
             _closure: closure,
-            callback_manager
+            callback_manager,
         }
     }
 

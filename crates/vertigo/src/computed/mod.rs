@@ -1,6 +1,6 @@
 mod auto_map;
-mod computed_box;
 mod client;
+mod computed_box;
 mod dependencies;
 mod graph_id;
 mod graph_relation;
@@ -11,13 +11,10 @@ mod value;
 mod tests;
 
 pub use auto_map::AutoMap;
-pub use computed_box::Computed;
 pub use client::Client;
+pub use computed_box::Computed;
 pub use dependencies::Dependencies;
 pub use graph_id::GraphId;
-pub use graph_value::{
-    GraphValueRefresh,
-    GraphValue,
-};
 pub use graph_relation::GraphRelation;
-pub use value::{Value, ToRc};
+pub use graph_value::{GraphValue, GraphValueRefresh};
+pub use value::{ToRc, Value};

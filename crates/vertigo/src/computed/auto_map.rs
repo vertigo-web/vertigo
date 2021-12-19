@@ -1,13 +1,11 @@
-use std::collections::HashMap;
-use std::hash::Hash;
-use std::rc::Rc;
-use std::cmp::PartialEq;
-
-use crate::utils::{
-    BoxRefCell,
-    EqBox,
+use std::{
+    cmp::PartialEq,
+    collections::HashMap,
+    hash::Hash,
+    rc::Rc,
 };
 
+use crate::utils::{BoxRefCell, EqBox};
 
 type CreateType<K, V> = EqBox<Box<dyn Fn(&K) -> V>>;
 

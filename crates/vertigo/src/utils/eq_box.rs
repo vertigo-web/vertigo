@@ -1,10 +1,10 @@
 use std::cmp::PartialEq;
-use std::ops::Deref;
 use std::fmt::{self, Debug};
+use std::ops::Deref;
 
 fn get_unique_id() -> u64 {
     use std::sync::atomic::{AtomicU64, Ordering};
-    static EQ_COUNTER:AtomicU64 = AtomicU64::new(1);
+    static EQ_COUNTER: AtomicU64 = AtomicU64::new(1);
     EQ_COUNTER.fetch_add(1, Ordering::Relaxed)
 }
 
@@ -18,7 +18,7 @@ impl<T> EqBox<T> {
     pub fn new(value: T) -> EqBox<T> {
         EqBox {
             id: get_unique_id(),
-            value
+            value,
         }
     }
 
@@ -29,7 +29,9 @@ impl<T> EqBox<T> {
 
 impl<T> Deref for EqBox<T> {
     type Target = T;
-    fn deref(&self) -> &T { &self.value }
+    fn deref(&self) -> &T {
+        &self.value
+    }
 }
 
 impl<T> PartialEq for EqBox<T> {

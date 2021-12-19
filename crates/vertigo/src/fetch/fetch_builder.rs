@@ -3,14 +3,14 @@ use std::{
     rc::Rc,
 };
 
-use crate::driver::{DriverTrait, FetchResult, FetchMethod, show_log};
+use crate::driver::{show_log, DriverTrait, FetchMethod, FetchResult};
 
 /// Builder for simple requests.
 pub struct FetchBuilder {
     driver: Rc<dyn DriverTrait>,
     url: String,
     headers: Option<HashMap<String, String>>,
-    body: Option<String>
+    body: Option<String>,
 }
 
 impl FetchBuilder {
@@ -23,8 +23,9 @@ impl FetchBuilder {
         }
     }
 
+    #[must_use]
     pub fn set_headres(self, headers: HashMap<String, String>) -> Self {
-        let FetchBuilder { driver, url, body , .. } = self;
+        let FetchBuilder { driver, url, body, .. } = self;
         FetchBuilder {
             driver,
             url,
@@ -33,8 +34,9 @@ impl FetchBuilder {
         }
     }
 
+    #[must_use]
     pub fn set_body(self, body: String) -> Self {
-        let FetchBuilder { driver, url, headers , .. } = self;
+        let FetchBuilder { driver, url, headers, .. } = self;
         FetchBuilder {
             driver,
             url,
@@ -45,7 +47,7 @@ impl FetchBuilder {
 
     async fn run(self, method: FetchMethod) -> FetchResult {
         show_log(format!("fetch {:?} {}", method, &self.url));
-        let fut = self.driver.fetch(method, self.url, self. headers, self.body);
+        let fut = self.driver.fetch(method, self.url, self.headers, self.body);
         fut.await
     }
 

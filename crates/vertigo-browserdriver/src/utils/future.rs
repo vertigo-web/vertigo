@@ -1,17 +1,19 @@
-use std::task::{Waker, Context, Poll};
-use std::cell::Cell;
-use std::future::Future;
-use std::rc::Rc;
-use std::pin::Pin;
+use std::{
+    cell::Cell,
+    future::Future,
+    pin::Pin,
+    rc::Rc,
+    task::{Context, Poll, Waker},
+};
 
-//https://users.rust-lang.org/t/how-to-receive-a-async-callback/40110/3
-//https://users.rust-lang.org/t/can-you-turn-a-callback-into-a-future-into-async-await/49378/16
-//https://play.rust-lang.org/?version=stable&mode=debug&edition=2018&gist=10cd4b012f678705c9d78fed5ca81857
+// https://users.rust-lang.org/t/how-to-receive-a-async-callback/40110/3
+// https://users.rust-lang.org/t/can-you-turn-a-callback-into-a-future-into-async-await/49378/16
+// https://play.rust-lang.org/?version=stable&mode=debug&edition=2018&gist=10cd4b012f678705c9d78fed5ca81857
 
 #[derive(Default)]
 pub(crate) struct CallbackFutureInner<T> {
     waker: Cell<Option<Waker>>,
-    result: Cell<Option<T>>
+    result: Cell<Option<T>>,
 }
 
 impl<T> CallbackFutureInner<T> {
@@ -23,19 +25,17 @@ impl<T> CallbackFutureInner<T> {
     }
 }
 
-#[derive(Default,Clone)]
+#[derive(Default, Clone)]
 pub(crate) struct CbFutureSend<T> {
-    inner: Rc<CallbackFutureInner<T>>
+    inner: Rc<CallbackFutureInner<T>>,
 }
 
 impl<T> CbFutureSend<T> {
     pub(crate) fn new(inner: Rc<CallbackFutureInner<T>>) -> CbFutureSend<T> {
-        CbFutureSend {
-            inner
-        }
+        CbFutureSend { inner }
     }
 
-    pub fn publish(&self, result:T) {
+    pub fn publish(&self, result: T) {
         self.inner.result.set(Some(result));
         if let Some(w) = self.inner.waker.take() {
             w.wake()
@@ -43,22 +43,19 @@ impl<T> CbFutureSend<T> {
     }
 }
 
-
-#[derive(Default,Clone)]
+#[derive(Default, Clone)]
 pub(crate) struct CbFutureReceiver<T> {
-    inner: Rc<CallbackFutureInner<T>>
+    inner: Rc<CallbackFutureInner<T>>,
 }
 
 impl<T> CbFutureReceiver<T> {
     pub fn new(inner: Rc<CallbackFutureInner<T>>) -> CbFutureReceiver<T> {
-        CbFutureReceiver {
-            inner
-        }
+        CbFutureReceiver { inner }
     }
 }
 
 impl<T> Future for CbFutureReceiver<T> {
-    type Output=T;
+    type Output = T;
     fn poll(self: Pin<&mut Self>, cx: &mut Context<'_>) -> Poll<Self::Output> {
         match self.inner.result.take() {
             Some(x) => Poll::Ready(x),

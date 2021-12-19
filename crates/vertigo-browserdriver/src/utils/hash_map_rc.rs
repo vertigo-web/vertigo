@@ -11,7 +11,7 @@ impl<K: Eq + Hash + Display, V> HashMapRc<K, V> {
     pub fn new(label: &'static str) -> HashMapRc<K, V> {
         HashMapRc {
             label,
-            data: Rc::new(BoxRefCell::new(HashMap::new(), "HashMapRc"))
+            data: Rc::new(BoxRefCell::new(HashMap::new(), "HashMapRc")),
         }
     }
 
@@ -22,29 +22,31 @@ impl<K: Eq + Hash + Display, V> HashMapRc<K, V> {
     }
 
     pub fn must_get<R, F: FnOnce(&V) -> R>(&self, key: &K, callback: F) -> Option<R> {
-        self.data.get_with_context((self.label, key, callback), |state, (label, key, callback)| {
-            let item = state.get(key);
+        self.data
+            .get_with_context((self.label, key, callback), |state, (label, key, callback)| {
+                let item = state.get(key);
 
-            if let Some(elem) = item {
-                return Some(callback(elem));
-            }
+                if let Some(elem) = item {
+                    return Some(callback(elem));
+                }
 
-            log::error!("{} -> get -> Missing element with id={}", label, key);
-            None
-        })
+                log::error!("{} -> get -> Missing element with id={}", label, key);
+                None
+            })
     }
 
     pub fn must_change<R, F: FnOnce(&mut V) -> R>(&self, key: &K, callback: F) -> Option<R> {
-        self.data.change((self.label, key, callback), |state, (label, key, callback)| {
-            let item = state.get_mut(key);
+        self.data
+            .change((self.label, key, callback), |state, (label, key, callback)| {
+                let item = state.get_mut(key);
 
-            if let Some(elem) = item {
-                return Some(callback(elem));
-            }
+                if let Some(elem) = item {
+                    return Some(callback(elem));
+                }
 
-            log::error!("{} ->change ->  Missing element with id={}", label, key);
-            None
-        })
+                log::error!("{} ->change ->  Missing element with id={}", label, key);
+                None
+            })
     }
 
     pub fn remove(&self, key: &K) -> Option<V> {

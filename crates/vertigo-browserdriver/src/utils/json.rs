@@ -16,26 +16,26 @@ fn string_escape(text: &str) -> String {
             '"' => {
                 out.push('\\');
                 out.push('"');
-            },
+            }
             // / - ignore
             '\\' => {
                 out.push('\\');
                 out.push('\\');
-            },
+            }
             // \b - ignore
             // \f - ignore
             '\t' => {
                 out.push('\\');
                 out.push('t');
-            },
+            }
             '\r' => {
                 out.push('\\');
                 out.push('r');
-            },
+            }
             '\n' => {
                 out.push('\\');
                 out.push('n');
-            },
+            }
             // < - ignore
             // > - ignore
             // & - ignore
@@ -50,29 +50,27 @@ fn string_escape(text: &str) -> String {
 
 impl JsonMapBuilder {
     pub fn new() -> JsonMapBuilder {
-        JsonMapBuilder {
-            data: HashMap::new()
-        }
+        JsonMapBuilder { data: HashMap::new() }
     }
 
     pub fn set_string(&mut self, key: &str, value: &str) {
         self.data.insert(
             string_escape(key),
-            format!("\"{}\"", string_escape(value))
+            format!("\"{}\"", string_escape(value)),
         );
     }
 
     pub fn set_u64(&mut self, key: &str, value: u64) {
         self.data.insert(
             string_escape(key),
-            value.to_string()
+            value.to_string(),
         );
     }
 
     pub fn set_null(&mut self, key: &str) {
         self.data.insert(
             string_escape(key),
-            "null".into()
+            "null".into(),
         );
     }
 
@@ -126,7 +124,6 @@ fn basic4() {
     assert_eq!(result, "{\"token\":\"33\\\"33\"}");
 }
 
-
 #[test]
 fn basic5() {
     let mut builder = JsonMapBuilder::new();
@@ -152,20 +149,16 @@ text-decoration: line-through;"#);
     assert_eq!(result, "{\"css\":\"color: crimson;\\ntext-decoration: line-through;\"}");
 }
 
-
 #[test]
 fn basic_tab() {
-
     let text = "https://example.com/\t";
 
     let mut builder = JsonMapBuilder::new();
     builder.set_string("value", text);
 
-
     let result = builder.build();
     assert_eq!(result, "{\"value\":\"https://example.com/\\t\"}");
 }
-
 
 #[test]
 fn basic_slash() {
@@ -173,7 +166,6 @@ fn basic_slash() {
 
     let mut builder = JsonMapBuilder::new();
     builder.set_string("value", text);
-
 
     let result = builder.build();
     assert_eq!(result, "{\"value\":\"aa\\\\bb\"}");

@@ -1,6 +1,6 @@
 use std::{
-    collections::{BTreeMap, HashMap},
     cmp::PartialEq,
+    collections::{BTreeMap, HashMap},
     fmt,
     rc::Rc,
 };
@@ -63,7 +63,7 @@ pub struct VDomElement {
 
 impl VDomElement {
     pub fn new(name: &'static str, attr_list: Vec<NodeAttr>, children: Vec<VDomNode>) -> Self {
-        let mut result = VDomElement {
+        let mut result = Self {
             name,
             attr: HashMap::new(),
             children,
@@ -81,29 +81,29 @@ impl VDomElement {
             match child {
                 NodeAttr::Css { css } => {
                     result.css = Some(css);
-                },
+                }
                 NodeAttr::OnClick { event } => {
                     result.on_click = Some(event);
-                },
+                }
                 NodeAttr::OnInput { event } => {
                     result.on_input = Some(event);
-                },
+                }
                 NodeAttr::OnMouseEnter { event } => {
                     result.on_mouse_enter = Some(event);
-                },
+                }
                 NodeAttr::OnMouseLeave { event } => {
                     result.on_mouse_leave = Some(event);
-                },
+                }
                 NodeAttr::OnKeyDown { event } => {
                     result.on_key_down = Some(event);
-                },
-                NodeAttr::Attr { name , value} => {
+                }
+                NodeAttr::Attr { name, value } => {
                     result.attr.insert(name, value);
-                },
+                }
                 NodeAttr::DomRef { name } => {
                     result.dom_ref = Some(name);
-                },
-                NodeAttr::DomApply { apply} => {
+                }
+                NodeAttr::DomApply { apply } => {
                     result.dom_apply = Some(apply);
                 }
             }
@@ -113,7 +113,7 @@ impl VDomElement {
     }
 
     pub fn build(name: &'static str) -> Self {
-        VDomElement {
+        Self {
             name,
             attr: HashMap::new(),
             children: Vec::new(),
@@ -128,16 +128,19 @@ impl VDomElement {
         }
     }
 
+    #[must_use]
     pub fn attr<T: Into<String>>(mut self, attr: &'static str, value: T) -> Self {
         self.attr.insert(attr, value.into());
         self
     }
 
+    #[must_use]
     pub fn css(mut self, css: Css) -> Self {
         self.css = Some(css);
         self
     }
 
+    #[must_use]
     pub fn children(mut self, children: Vec<VDomNode>) -> Self {
         self.children = children;
         self
@@ -145,8 +148,8 @@ impl VDomElement {
 }
 
 impl PartialEq for VDomElement {
-    fn eq(&self, _other: &VDomElement) -> bool {
-        false                                       //Always not-eq
+    fn eq(&self, _other: &Self) -> bool {
+        false // Always not-eq
     }
 }
 

@@ -1,16 +1,16 @@
-use vertigo::{FetchResult, dev::FetchMethod};
+use vertigo::{dev::FetchMethod, FetchResult};
 
-use wasm_bindgen::prelude::*;
 use std::{
     collections::HashMap,
     future::Future,
-    pin::Pin,
+    pin::Pin
 };
+use wasm_bindgen::prelude::*;
 
 use super::js_fetch::DriverBrowserFetchJs;
 use crate::utils::{
     counter_rc::CounterRc,
-    future::{CbFutureSend, new_future},
+    future::{new_future, CbFutureSend},
     hash_map_rc::HashMapRc,
     json::JsonMapBuilder,
 };
@@ -71,9 +71,8 @@ impl DriverBrowserFetch {
         method: FetchMethod,
         url: String,
         headers: Option<HashMap<String, String>>,
-        body: Option<String>
-    ) -> Pin<Box<dyn Future<Output=FetchResult> + 'static>> {
-
+        body: Option<String>,
+    ) -> Pin<Box<dyn Future<Output = FetchResult> + 'static>> {
         let id_request = self.auto_id.get_next();
         let (sender, receiver) = new_future();
 
@@ -84,7 +83,7 @@ impl DriverBrowserFetch {
             String::from(method.to_string()),
             url,
             self.serialize_headers(headers),
-            body
+            body,
         );
 
         Box::pin(receiver)

@@ -1,22 +1,20 @@
-use std::rc::Rc;
 use crate::computed::Computed;
+use std::rc::Rc;
 
 struct SubscribeValueVerInner<T> {
     version: u32,
-    value: Option<T>
+    value: Option<T>,
 }
 
 impl<T> SubscribeValueVerInner<T> {
     pub fn new() -> Rc<BoxRefCell<SubscribeValueVerInner<T>>> {
-        Rc::new(
-            BoxRefCell::new(
-                SubscribeValueVerInner {
-                    version: 0,
-                    value: None,
-                },
-                "SubscribeValueVerInner"
-            )
-        )
+        Rc::new(BoxRefCell::new(
+            SubscribeValueVerInner {
+                version: 0,
+                value: None,
+            },
+            "SubscribeValueVerInner",
+        ))
     }
 }
 
@@ -44,7 +42,7 @@ impl<T: PartialEq + Clone> SubscribeValueVer<T> {
 
         SubscribeValueVer {
             _client: Some(client),
-            value
+            value,
         }
     }
 

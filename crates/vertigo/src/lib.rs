@@ -71,22 +71,22 @@ pub use computed::{AutoMap, Computed, Dependencies, Value};
 pub use driver::{Driver, FetchResult};
 pub use fetch::{
     fetch_builder::FetchBuilder,
-    request_builder::{RequestBuilder, RequestResponse, SingleRequestTrait, ListRequestTrait},
-    resource::Resource,
     lazy_cache,
     lazy_cache::LazyCache,
+    request_builder::{ListRequestTrait, RequestBuilder, RequestResponse, SingleRequestTrait},
+    resource::Resource,
 };
 pub use html_macro::Embed;
 pub use instant::{Instant, InstantType};
 pub use utils::DropResource;
 pub use virtualdom::models::{
-    vdom_component::VDomComponent,
-    vdom_element::{VDomElement, KeyDownEvent},
-    vdom_text::VDomText,
-    vdom_node::VDomNode,
     css::{Css, CssGroup},
+    vdom_component::VDomComponent,
+    vdom_element::{KeyDownEvent, VDomElement},
+    vdom_node::VDomNode,
+    vdom_text::VDomText,
 };
-pub use websocket::{WebsocketMessage, WebsocketConnection};
+pub use websocket::{WebsocketConnection, WebsocketMessage};
 
 pub mod dev {
     pub use super::driver::{DriverTrait, EventCallback, FetchMethod};

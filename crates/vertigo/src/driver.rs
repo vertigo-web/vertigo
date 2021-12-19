@@ -1,20 +1,20 @@
-use std::any::Any;
 use std::{
+    any::Any,
     collections::HashMap,
     future::Future,
     pin::Pin,
-    rc::Rc,
+    rc::Rc
 };
-use crate::computed::{Computed, Dependencies, ToRc, Value};
-use crate::dev::WebsocketMessageDriver;
-use crate::driver_refs::RefsContext;
-use crate::{Instant, InstantType, KeyDownEvent, WebsocketMessage, WebsocketConnection};
-use crate::fetch::{
-    fetch_builder::FetchBuilder,
-    request_builder::RequestBuilder,
+
+use crate::{
+    Computed, Dependencies, Value, Instant, InstantType, KeyDownEvent, WebsocketConnection, WebsocketMessage,
+    computed::ToRc,
+    dev::WebsocketMessageDriver,
+    driver_refs::RefsContext,
+    fetch::{fetch_builder::FetchBuilder, request_builder::RequestBuilder},
+    utils::{DropResource, EqBox},
+    virtualdom::models::realdom_id::RealDomId,
 };
-use crate::utils::{DropResource, EqBox};
-use crate::virtualdom::models::realdom_id::RealDomId;
 
 #[derive(Debug)]
 pub enum FetchMethod {
@@ -46,47 +46,47 @@ pub enum EventCallback {
     },
     OnKeyDown {
         callback: Option<Rc<dyn Fn(KeyDownEvent) -> bool>>,
-    }
+    },
 }
 
 impl EventCallback {
     pub fn to_string(&self) -> &str {
         match self {
-            EventCallback::OnClick { callback} => {
+            EventCallback::OnClick { callback } => {
                 if callback.is_some() {
                     "onClick set"
                 } else {
                     "onClick clear"
                 }
-            },
-            EventCallback::OnInput { callback } =>{
+            }
+            EventCallback::OnInput { callback } => {
                 if callback.is_some() {
                     "on_input set"
                 } else {
                     "on_input clear"
                 }
-            },
-            EventCallback::OnMouseEnter { callback } =>{
+            }
+            EventCallback::OnMouseEnter { callback } => {
                 if callback.is_some() {
                     "onMouseEnter set"
                 } else {
                     "onMouseEnter clear"
                 }
-            },
-            EventCallback::OnMouseLeave { callback } =>{
+            }
+            EventCallback::OnMouseLeave { callback } => {
                 if callback.is_some() {
                     "on_mouse_leave set"
                 } else {
                     "on_mouse_leave clear"
                 }
-            },
-            EventCallback::OnKeyDown { callback } =>{
+            }
+            EventCallback::OnKeyDown { callback } => {
                 if callback.is_some() {
                     "OnKeyDown set"
                 } else {
                     "OnKeyDown clear"
                 }
-            },
+            }
         }
     }
 }
@@ -124,7 +124,13 @@ pub trait DriverTrait {
     fn scroll_width(&self, id: RealDomId) -> i32;
     fn scroll_height(&self, id: RealDomId) -> i32;
 
-    fn fetch(&self, method: FetchMethod, url: String, headers: Option<HashMap<String, String>>, body: Option<String>) -> Pin<Box<dyn Future<Output=FetchResult> + 'static>>;
+    fn fetch(
+        &self,
+        method: FetchMethod,
+        url: String,
+        headers: Option<HashMap<String, String>>,
+        body: Option<String>,
+    ) -> Pin<Box<dyn Future<Output = FetchResult> + 'static>>;
 
     fn get_hash_location(&self) -> String;
     fn push_hash_location(&self, path: &str);
@@ -193,7 +199,10 @@ impl Driver {
     }
 
     /// Spawn a future - thus allowing to fire async functions in, for example, event handler. Handy when fetching resources from internet.
-    pub fn spawn<F>(&self, future: F) where F: Future<Output = ()> + 'static {
+    pub fn spawn<F>(&self, future: F)
+    where
+        F: Future<Output = ()> + 'static,
+    {
         let fur = Box::pin(future);
 
         let spawn_local_executor = self.inner.spawn_local_executor.clone();
@@ -243,24 +252,26 @@ impl Driver {
         let driver = self.clone();
         let host: String = host.into();
 
-        self.inner.driver.websocket(host, Box::new(move |message: WebsocketMessageDriver| {
-            let message = match message {
-                WebsocketMessageDriver::Connection{ callback_id} => {
-                    let connection = WebsocketConnection::new(callback_id, driver.clone());
-                    WebsocketMessage::Connection(connection)
-                },
-                WebsocketMessageDriver::Message(message) => WebsocketMessage::Message(message),
-                WebsocketMessageDriver::Close => WebsocketMessage::Close,
-            };
+        self.inner.driver.websocket(
+            host,
+            Box::new(move |message: WebsocketMessageDriver| {
+                let message = match message {
+                    WebsocketMessageDriver::Connection { callback_id } => {
+                        let connection = WebsocketConnection::new(callback_id, driver.clone());
+                        WebsocketMessage::Connection(connection)
+                    }
+                    WebsocketMessageDriver::Message(message) => WebsocketMessage::Message(message),
+                    WebsocketMessageDriver::Close => WebsocketMessage::Close,
+                };
 
-            callback(message);
-        }))
+                callback(message);
+            }),
+        )
     }
 
     pub(crate) fn websocket_send_message(&self, callback_id: u64, message: String) {
         self.inner.driver.websocket_send_message(callback_id, message);
     }
-
 
     /// Create new reactive value in [dependency graph](struct.Dependencies.html).
     pub fn new_value<T: PartialEq>(&self, value: T) -> Value<T> {
@@ -282,7 +293,11 @@ impl Driver {
     /// Create a value that is connected to a generator, where `value` parameter is a starting value, and `create` function takes care of updating it.
     ///
     /// See [game of life](../src/vertigo_demo/app/game_of_life/mod.rs.html#54) example.
-    pub fn new_with_connect<T: PartialEq, F: Fn(&Value<T>) -> Box<dyn Any> + 'static>(&self, value: T, create: F) -> Computed<T> {
+    pub fn new_with_connect<T, F>(&self, value: T, create: F) -> Computed<T>
+    where
+        T: PartialEq,
+        F: Fn(&Value<T>) -> Box<dyn Any> + 'static,
+    {
         self.inner.dependencies.new_with_connect(value, create)
     }
 
@@ -290,7 +305,6 @@ impl Driver {
     pub fn from<T: PartialEq + 'static, F: Fn() -> T + 'static>(&self, calculate: F) -> Computed<T> {
         self.inner.dependencies.from(calculate)
     }
-
 
     // Below - methods to interact with the dom. Used exclusively by vertigo.
 
@@ -338,7 +352,7 @@ impl Driver {
         match &ref_id {
             Some(ref_id) => {
                 show_log(format!("insert_before child={} refId={}", child, ref_id));
-            },
+            }
             None => {
                 show_log(format!("insert_before child={} refId=None", child));
             }
@@ -351,8 +365,6 @@ impl Driver {
         show_log(format!("insert_css selector={} value={}", selector, value));
         self.inner.driver.insert_css(selector, value);
     }
-
-
 
     pub(crate) fn set_event(&self, node: RealDomId, callback: EventCallback) {
         show_log(format!("set_event {} {}", node, callback.to_string()));

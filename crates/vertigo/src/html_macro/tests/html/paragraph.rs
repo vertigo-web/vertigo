@@ -5,7 +5,7 @@ use crate as vertigo;
 
 #[test]
 fn style_basic2() {
-    let dom1 = html!{
+    let dom1 = html! {
         <p>
             "text1"
             <span>"mokate"</span>
@@ -25,19 +25,17 @@ fn style_basic2() {
                     .into(),
                 VDomText::new("text2").into()
             )
-        )
-    ;
+        );
 
     assert_eq!(
         format!("{:?}", dom1),
-        format!("{:?}", dom2)
+        format!("{:?}", dom2),
     );
 }
 
-
 #[test]
 fn test_p() {
-    let dom1 = html!{
+    let dom1 = html! {
         <p>"text33333 dsadsada ^^ && $$$ fff"</p>
     };
 

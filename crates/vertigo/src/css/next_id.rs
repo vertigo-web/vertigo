@@ -1,4 +1,3 @@
-
 pub struct NextId {
     counter: u64,
 }

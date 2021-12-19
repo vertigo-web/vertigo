@@ -1,18 +1,12 @@
-use std::collections::{
-    HashMap,
-    VecDeque,
+use std::{
+    collections::{HashMap, VecDeque},
+    hash::Hash,
 };
-use std::hash::Hash;
 
 use crate::{
-    virtualdom::{
-        models::{
-            realdom_node::RealDomElement,
-        }
-    },
     css::css_manager::CssManager,
+    virtualdom::models::realdom_node::RealDomElement
 };
-
 
 pub struct CacheNode<K: Eq + Hash, RNode, VNode> {
     create_new: Box<dyn Fn(&CssManager, &RealDomElement, &VNode) -> RNode>,
@@ -25,7 +19,7 @@ impl<K: Eq + Hash, RNode, VNode> CacheNode<K, RNode, VNode> {
     ) -> CacheNode<K, RNode, VNode> {
         CacheNode {
             create_new: Box::new(create_new),
-            data: HashMap::new()
+            data: HashMap::new(),
         }
     }
 
@@ -43,7 +37,7 @@ impl<K: Eq + Hash, RNode, VNode> CacheNode<K, RNode, VNode> {
 
         match node {
             Some(node) => node,
-            None => create_new(css_manager, target, vnode)
+            None => create_new(css_manager, target, vnode),
         }
     }
 }

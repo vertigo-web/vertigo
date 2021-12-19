@@ -1,6 +1,6 @@
 // FIXME: To be removed in favor of standard RefCell
 
-use std::cell::{RefCell};
+use std::cell::RefCell;
 
 #[derive(PartialEq)]
 pub struct BoxRefCell<T> {
@@ -22,7 +22,7 @@ impl<T> BoxRefCell<T> {
             Ok(value) => {
                 let state = &*value;
                 getter(state)
-            },
+            }
             Err(msg) => {
                 panic!("Error borrow for '{}', {}", self.label, msg);
             }
@@ -41,7 +41,7 @@ impl<T> BoxRefCell<T> {
             Ok(value) => {
                 let mut state = value;
                 change_fn(&mut state, data)
-            },
+            }
             Err(msg) => {
                 panic!("Error mut borrow for '{}', {}", self.label, msg);
             }

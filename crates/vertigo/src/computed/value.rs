@@ -1,13 +1,13 @@
-use std::rc::Rc;
-use std::cmp::PartialEq;
-use std::any::Any;
-
-use crate::computed::{
-    Dependencies,
-    Computed,
-    GraphId,
+use std::{
+    any::Any,
+    cmp::PartialEq,
+    rc::Rc,
 };
-use crate::utils::BoxRefCell;
+
+use crate::{
+    computed::{Computed, Dependencies, GraphId},
+    utils::BoxRefCell,
+};
 
 pub trait ToRc<T> {
     fn to_rc(self) -> Rc<T>;
@@ -94,13 +94,16 @@ impl<T: PartialEq + 'static> Value<T> {
                     value: value.to_rc(),
                     deps: deps.clone(),
                 },
-                "value inner"
+                "value inner",
             )),
             deps,
         }
     }
 
-    pub fn new_selfcomputed_value<F: Fn(&Value<T>) -> Box<dyn Any> + 'static>(deps: Dependencies, value: T, create: F) -> Computed<T> {
+    pub fn new_selfcomputed_value<F>(deps: Dependencies, value: T, create: F) -> Computed<T>
+    where
+        F: Fn(&Value<T>) -> Box<dyn Any> + 'static,
+    {
         let id = GraphId::default();
 
         let value = Value {
@@ -110,7 +113,7 @@ impl<T: PartialEq + 'static> Value<T> {
                     value: Rc::new(value),
                     deps: deps.clone(),
                 },
-                "value inner connect"
+                "value inner connect",
             )),
             deps: deps.clone(),
         };

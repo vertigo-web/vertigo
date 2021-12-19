@@ -1,4 +1,4 @@
-use crate::{VDomNode, VDomText, VDomComponent, VDomElement};
+use crate::{VDomComponent, VDomElement, VDomNode, VDomText};
 
 pub fn assert_empty(el: &VDomElement, name: &str) {
     assert_eq!(el.name, name);

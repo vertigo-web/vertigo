@@ -12,12 +12,11 @@ fn test_css_split_rows1() {
     );
 
     let rows_pairs = css_split_rows_pair(css);
+
     assert_eq!(
         rows_pairs,
-        vec!(
-            ("cursor", "pointer".into()),
-        )
-    )
+        vec!(("cursor", "pointer".into()),)
+    );
 }
 
 #[test]
@@ -26,7 +25,12 @@ fn test_css_split_rows2() {
 
     assert_eq!(
         css_split_rows(css),
-        vec!("border: 1px solid black", "padding: 10px", "background-color: #e0e0e0", "margin-bottom: 10px")
+        vec!(
+            "border: 1px solid black",
+            "padding: 10px",
+            "background-color: #e0e0e0",
+            "margin-bottom: 10px"
+        )
     );
 
     let rows_pairs = css_split_rows_pair(css);
@@ -48,7 +52,12 @@ fn test_css_split_rows3() {
     let rows = css_split_rows(css);
     assert_eq!(
         &rows,
-        &vec!("border: 1px solid black", "padding: 10px", "background-color: #e0e0e0", "margin-bottom: 10px")
+        &vec!(
+            "border: 1px solid black",
+            "padding: 10px",
+            "background-color: #e0e0e0",
+            "margin-bottom: 10px"
+        )
     );
 
     let rows_pairs = css_split_rows_pair(css);
@@ -85,9 +94,13 @@ fn test_basic2() {
 
     let (id, selectors) = transform_css(css, &mut next_id);
 
-    assert_eq!(selectors, vec!(
-        (".autocss_1".into(), "border: 1px solid black; padding: 10px; background-color: #e0e0e0; margin-bottom: 10px".into())
-    ));
+    assert_eq!(
+        selectors,
+        vec!((
+            ".autocss_1".into(),
+            "border: 1px solid black; padding: 10px; background-color: #e0e0e0; margin-bottom: 10px".into()
+        ))
+    );
 
     assert_eq!(id, 1);
     assert_eq!(next_id.current(), 1);
@@ -100,12 +113,14 @@ fn test_basic3() {
         margin: 5px 0;
     ";
 
-
     let mut next_id = NextId::new();
 
     let (id, selectors) = transform_css(css, &mut next_id);
 
-    assert_eq!(selectors, vec!((".autocss_1".into(), "border: 1px solid black; margin: 5px 0".into())));
+    assert_eq!(
+        selectors,
+        vec!((".autocss_1".into(), "border: 1px solid black; margin: 5px 0".into()))
+    );
 
     assert_eq!(id, 1);
     assert_eq!(next_id.current(), 1);
@@ -113,7 +128,6 @@ fn test_basic3() {
 
 #[test]
 fn test_transform_css_animation_value() {
-
     let mut next_id = NextId::new();
 
     let css_value = "1.0s infinite ease-in-out {
@@ -142,7 +156,6 @@ fn test_transform_css_animation_value() {
 
 #[test]
 fn test_animation() {
-
     let css = "
     width: 40px;
     animation: 1.0s infinite ease-in-out {
@@ -158,7 +171,6 @@ fn test_animation() {
     };
     ";
 
-
     let mut next_id = NextId::new();
 
     let (id, selectors) = transform_css(css, &mut next_id);
@@ -166,15 +178,17 @@ fn test_animation() {
     assert_eq!(id, 1);
     assert_eq!(next_id.current(), 2);
 
-    assert_eq!(selectors, vec!(
-        ("@keyframes autocss_2".into(), "0% {\n            -webkit-transform: scale(0);\n            transform: scale(0);\n        }\n        100% {\n            -webkit-transform: scale(1.0);\n            transform: scale(1.0);\n            opacity: 0;\n        }".into()),
-        (".autocss_1".into(), "width: 40px; animation: 1.0s infinite ease-in-out autocss_2 ".into())
-    ));
+    assert_eq!(
+        selectors,
+        vec!(
+            ("@keyframes autocss_2".into(), "0% {\n            -webkit-transform: scale(0);\n            transform: scale(0);\n        }\n        100% {\n            -webkit-transform: scale(1.0);\n            transform: scale(1.0);\n            opacity: 0;\n        }".into()),
+            (".autocss_1".into(), "width: 40px; animation: 1.0s infinite ease-in-out autocss_2 ".into())
+        )
+    );
 }
 
 #[test]
 fn test_hover() {
-
     let css = "
     width: 40px;
     :hover {
@@ -182,7 +196,6 @@ fn test_hover() {
     };
     ";
 
-
     let mut next_id = NextId::new();
 
     let (id, selectors) = transform_css(css, &mut next_id);
@@ -190,15 +203,17 @@ fn test_hover() {
     assert_eq!(id, 1);
     assert_eq!(next_id.current(), 1);
 
-    assert_eq!(selectors, vec!(
-        (".autocss_1:hover".into(), "color: red;".into()),
-        (".autocss_1".into(), "width: 40px".into())
-    ));
+    assert_eq!(
+        selectors,
+        vec!(
+            (".autocss_1:hover".into(), "color: red;".into()),
+            (".autocss_1".into(), "width: 40px".into())
+        )
+    );
 }
 
 #[test]
 fn test_of_type() {
-
     let css = "
     width: 40px;
     :nth-of-type(2) {
@@ -206,7 +221,6 @@ fn test_of_type() {
     };
     ";
 
-
     let mut next_id = NextId::new();
 
     let (id, selectors) = transform_css(css, &mut next_id);
@@ -214,15 +228,17 @@ fn test_of_type() {
     assert_eq!(id, 1);
     assert_eq!(next_id.current(), 1);
 
-    assert_eq!(selectors, vec!(
-        (".autocss_1:nth-of-type(2)".into(), "color: red;".into()),
-        (".autocss_1".into(), "width: 40px".into())
-    ));
+    assert_eq!(
+        selectors,
+        vec!(
+            (".autocss_1:nth-of-type(2)".into(), "color: red;".into()),
+            (".autocss_1".into(), "width: 40px".into())
+        )
+    );
 }
 
 #[test]
 fn test_doubled() {
-
     let css = "
     width: 40px;
 
@@ -242,9 +258,12 @@ fn test_doubled() {
     assert_eq!(id, 1);
     assert_eq!(next_id.current(), 1);
 
-    assert_eq!(selectors, vec!(
-        (".autocss_1:focus".into(), "color: red;".into()),
-        (".autocss_1:focus::first-letter".into(), "color: crimson;".into()),
-        (".autocss_1".into(), "width: 40px".into())
-    ));
+    assert_eq!(
+        selectors,
+        vec!(
+            (".autocss_1:focus".into(), "color: red;".into()),
+            (".autocss_1:focus::first-letter".into(), "color: crimson;".into()),
+            (".autocss_1".into(), "width: 40px".into())
+        )
+    );
 }

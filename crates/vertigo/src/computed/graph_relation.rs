@@ -1,7 +1,4 @@
-use crate::computed::{
-    Dependencies,
-    GraphId,
-};
+use crate::computed::{Dependencies, GraphId};
 
 pub struct GraphRelation {
     deps: Dependencies,
@@ -11,7 +8,6 @@ pub struct GraphRelation {
 
 impl GraphRelation {
     pub fn new(deps: Dependencies, parent_id: GraphId, client_id: GraphId) -> GraphRelation {
-
         deps.add_graph_connection(parent_id, client_id);
 
         GraphRelation {
@@ -27,4 +23,3 @@ impl Drop for GraphRelation {
         self.deps.remove_graph_connection(self.parent_id, self.client_id);
     }
 }
-

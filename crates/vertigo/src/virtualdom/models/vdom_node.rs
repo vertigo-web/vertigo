@@ -1,44 +1,35 @@
 use crate::virtualdom::models::{
+    node_attr::NodeAttr,
     vdom_component::VDomComponent,
     vdom_element::VDomElement,
     vdom_text::VDomText,
-    node_attr::NodeAttr,
 };
 
 /// Virtual DOM node, can be an element, text or a component.
 #[derive(Debug)]
 pub enum VDomNode {
-    Element {
-        node: VDomElement,
-    },
-    Text {
-        node: VDomText,
-    },
-    Component {
-        node: VDomComponent,
-    },
+    Element { node: VDomElement },
+    Text { node: VDomText },
+    Component { node: VDomComponent },
 }
 
 impl VDomNode {
     pub fn node(name: &'static str, attr_list: Vec<NodeAttr>, children: Vec<Self>) -> Self {
         VDomNode::Element {
-            node: VDomElement::new(name, attr_list, children)
+            node: VDomElement::new(name, attr_list, children),
         }
     }
 
     pub fn text<T: Into<String>>(value: T) -> Self {
         Self::Text {
-            node: VDomText::new(value)
+            node: VDomText::new(value),
         }
     }
 
     pub fn component(value: VDomComponent) -> Self {
-        Self::Component {
-            node: value
-        }
+        Self::Component { node: value }
     }
 }
-
 
 impl From<VDomComponent> for VDomNode {
     fn from(node: VDomComponent) -> Self {

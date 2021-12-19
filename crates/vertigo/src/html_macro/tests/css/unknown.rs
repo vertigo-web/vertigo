@@ -1,6 +1,6 @@
 use crate::Css;
 
-use crate::{css_fn, css};
+use crate::{css, css_fn};
 
 use super::utils::*;
 

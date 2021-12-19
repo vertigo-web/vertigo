@@ -1,9 +1,9 @@
+use std::rc::Rc;
 use vertigo::{
     dev::WebsocketMessageDriver,
     utils::{BoxRefCell, DropResource},
 };
 use wasm_bindgen::closure::Closure;
-use std::rc::Rc;
 
 use crate::modules::websocket::js_websocket::DriverWebsocketJs;
 use crate::utils::callback_manager::CallbackManagerOwner;
@@ -72,11 +72,7 @@ impl DriverWebsocket {
             })
         };
 
-        let driver_js = DriverWebsocketJs::new(
-            &callback_socket,
-            &callback_message,
-            &callback_close
-        );
+        let driver_js = DriverWebsocketJs::new(&callback_socket, &callback_message, &callback_close);
 
         DriverWebsocket {
             callback,
