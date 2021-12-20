@@ -1,6 +1,6 @@
 # Vertigo Tutorial
 
-*Up to date with version 0.1.0-beta.1*
+*Up to date with version 0.1.0-beta.2*
 
 ### Table of contents
 
@@ -26,6 +26,7 @@ Vertigo uses trait aliases[^traitaliases] so until it stabilizes we need rust ni
 If you're just starting with rust, make sure you have the essential tools for compiling programs in your system. We will also use a kickstarter template to start as fast as possible. This will require `openssl` installed in your system. For example, in debian-based distros this requires to have the following packages installed: `build-essential pkg-config libssl-dev`.
 
 Now let's install the necessary tools to use the template:
+
 - `cargo install cargo-generate cargo-make`
 
 ## 2. Generate project
@@ -199,23 +200,14 @@ To see how all these are connected, see `src/lib.rs`:
 ```rust
 #[wasm_bindgen(start)]
 pub async fn start_application() {
-    // Throw panics in using console.error
-    console_error_panic_hook::set_once();
-
-    // Redirect logging into console
-    wasm_logger::init(wasm_logger::Config::default());
-
     // Create rendering driver with dependency graph inside
     let driver = DriverBrowser::new();
 
     // Create application state lain on this graph
     let app_state = state::State::new(&driver);
 
-    // Main component
-    let main_component = VDomComponent::new(app_state, app::render);
-
-    // Run component in rendering driver
-    start_app(driver, main_component).await;
+    // Run application (using provided state and render function) in rendering driver
+    start_app(driver, app_state, app::render).await;
 }
 ```
 
@@ -423,7 +415,7 @@ Now `html!` macro in our main `src/app.rs` yields an error - we need to provide 
 
 Another error appears:
 
-```
+```text
 borrow of moved value: `state`
 borrow occurs due to deref coercion to `state::State`
 ```
@@ -629,7 +621,6 @@ And here's the usage in render:
 Complete code for this tutorial should be found [here](https://github.com/vertigo-web/vertigo-app-template/tree/tutorial).
 
 For any more complex scenarios please refer to the examples in the [demo](/demo/src/app) package.
-
 
 [^traitaliases]: https://github.com/rust-lang/rust/issues/41517
 

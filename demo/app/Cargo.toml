@@ -1,0 +1,20 @@
+[package]
+name = "vertigo-demo"
+version = "0.1.0"
+authors = ["Grzegorz Szeliga <szeligagrzegorz@gmail.com>", "Michał Pokrywka <wolfmoon@o2.pl>"]
+edition = "2021"
+
+[lib]
+crate-type = ["cdylib", "rlib"]
+
+[dependencies]
+console_error_panic_hook = "0.1.6"
+log = "0.4.14"
+wasm-bindgen = {version = "0.2.74", features = ["nightly"]}
+wasm-bindgen-futures = "0.4.24"
+wasm-logger = "0.2.0"
+wee_alloc = "0.4.5"
+
+vertigo = { path = "../../crates/vertigo", version = "0.1.0-beta.2", features = [ "serde_request" ] }
+vertigo-browserdriver = { path = "../../crates/vertigo-browserdriver", version = "0.1.0-beta.2" }
+serde = { version = "1.0.126", features = ["derive"] }

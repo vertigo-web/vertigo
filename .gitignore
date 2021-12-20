@@ -1,3 +1,4 @@
 /target
-/build
+/demo/build
+/examples/build
 .vscode

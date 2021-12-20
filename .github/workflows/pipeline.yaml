@@ -18,8 +18,13 @@ jobs:
       - uses: actions-rs/clippy-check@v1
         with:
           token: ${{ secrets.GITHUB_TOKEN }}
-          args: -p vertigo -p vertigo-macro -p vertigo-browserdriver -p vertigo-demo --all-features --target wasm32-unknown-unknown -- -Dwarnings
-          name: Clippy Output
+          args: -p vertigo -p vertigo-macro -p vertigo-browserdriver --all-features --target wasm32-unknown-unknown -- -Dwarnings
+          name: Vertigo Clippy Output
+      - uses: actions-rs/clippy-check@v1
+        with:
+          token: ${{ secrets.GITHUB_TOKEN }}
+          args: -p vertigo-demo -p vertigo-example-counter -p vertigo-example-router --all-features --target wasm32-unknown-unknown -- -Dwarnings
+          name: Demo/Examples Clippy Output
 
   nightly-clippy-demo-server:
     name: Nightly clippy demo server (amd64)
@@ -65,8 +70,13 @@ jobs:
       - uses: actions-rs/clippy-check@v1
         with:
           token: ${{ secrets.GITHUB_TOKEN }}
-          args: -p vertigo -p vertigo-macro -p vertigo-browserdriver -p vertigo-demo --all-features --target wasm32-unknown-unknown -- -Dwarnings
-          name: Clippy Output
+          args: -p vertigo -p vertigo-macro -p vertigo-browserdriver --all-features --target wasm32-unknown-unknown -- -Dwarnings
+          name: Vertigo Clippy Output
+      - uses: actions-rs/clippy-check@v1
+        with:
+          token: ${{ secrets.GITHUB_TOKEN }}
+          args: -p vertigo-demo -p vertigo-example-counter -p vertigo-example-router --all-features --target wasm32-unknown-unknown -- -Dwarnings
+          name: Demo/Examples Clippy Output
 
   # stable-clippy:
   #   name: Stable clippy

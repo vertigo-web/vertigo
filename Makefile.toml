@@ -1,36 +1,29 @@
 [config]
 default_to_workspace = false
 
-[tasks.wasm32-target]
-install_script = '''
-    if [ "$(rustup target list | grep wasm32-unknown-unknown | grep installed)" = "" ];
-    then
-        rustup target add wasm32-unknown-unknown;
-    fi
-'''
 
-[tasks.upgrade-wasm-pack]
-script = [
-    "cargo install --force wasm-pack",
-    "cargo clean",
-]
+# Run clippy for wasm32 target
 
 [tasks.clippy-wasm32]
 dependencies = [ "wasm32-target" ]
 command = "cargo"
-args = [ "clippy", "--all-features", "--target", "wasm32-unknown-unknown" ]
+args = [
+    "clippy", "--all-features", "--target", "wasm32-unknown-unknown",
+    "-p", "vertigo", "-p", "vertigo-macro", "-p", "vertigo-browserdriver",
+    "-p", "vertigo-demo", "-p", "vertigo-example-counter", "-p", "vertigo-example-router"
+]
 
-[tasks.demo-clean]
-script = "rm -Rf ./build"
+
+# Demo tasks
 
 [tasks.demo-build]
 dependencies = [ "wasm32-target" ]
 install_crate = { crate_name = "wasm-pack", binary = "wasm-pack", test_arg = ["--version"] }
 script = [
-    "wasm-pack build demo --no-typescript --target web --out-dir ../build --out-name demo --release",
-    "cp ./demo/index.html ./build",
-    "rm ./build/.gitignore",
-    "rm ./build/package.json",
+    "wasm-pack build demo/app --no-typescript --target web --out-dir ../build --out-name demo --release",
+    "cp ./demo/app/index.html ./demo/build",
+    "rm ./demo/build/.gitignore",
+    "rm ./demo/build/package.json",
 ]
 
 [tasks.demo-serve-old]
@@ -51,9 +44,62 @@ dependencies = [
 
 [tasks.demo-watch]
 command = "cargo"
-args = [ "watch", "--watch", "./demo", "--watch", "crates", "--delay", "0.5", "-x", "make demo-start" ]
+args = [ "watch", "--watch", "./demo/app", "--watch", "crates", "--delay", "0.5", "-x", "make demo-start" ]
+
+[tasks.demo-clean]
+command = "rm"
+args = [ "-rf", "demo/build" ]
 
 
+# Examples tasks
+
+[env]
+EXAMPLES = "counter router"
+
+[tasks.examples-build]
+dependencies = [ "wasm32-target" ]
+install_crate = { crate_name = "wasm-pack", binary = "wasm-pack", test_arg = ["--version"] }
+script = '''
+    NAME=${@}
+    if [ "$NAME" = "" ]; then
+        echo "Provide name of example (one of: ${EXAMPLES})."
+        exit 1
+    else
+        wasm-pack build examples/${NAME} --no-typescript --target web --out-dir ../build/${NAME} --out-name app --release
+        cp examples/${NAME}/index.html examples/build/${NAME}
+        rm examples/build/${NAME}/.gitignore
+        rm examples/build/${NAME}/package.json
+    fi
+'''
+
+[tasks.examples-build-all]
+script = [
+    "for name in ${EXAMPLES}; do cargo make examples-build ${name}; done"
+]
+
+[tasks.examples-clean]
+command = "rm"
+args = [ "-rf", "examples/build" ]
+
+
+# Dependencies
+
+[tasks.wasm32-target]
+install_script = '''
+    if [ "$(rustup target list | grep wasm32-unknown-unknown | grep installed)" = "" ];
+    then
+        rustup target add wasm32-unknown-unknown;
+    fi
+'''
+
+[tasks.upgrade-wasm-pack]
+script = [
+    "cargo install --force wasm-pack",
+    "cargo clean",
+]
+
+
+# JavaScript dev builds
 
 [tasks.build-js-dom]
 command = "npx"
