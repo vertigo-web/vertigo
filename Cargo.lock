@@ -1175,16 +1175,18 @@ checksum = "b5a972e5669d67ba988ce3dc826706fb0a8b01471c088cb0b6110b805cc36aed"
 
 [[package]]
 name = "vertigo"
-version = "0.1.0-beta.1"
+version = "0.1.0-beta.2"
 dependencies = [
+ "console_error_panic_hook",
  "log",
  "serde_json",
  "vertigo-macro",
+ "wasm-logger",
 ]
 
 [[package]]
 name = "vertigo-browserdriver"
-version = "0.1.0-beta.1"
+version = "0.1.0-beta.2"
 dependencies = [
  "log",
  "vertigo",
@@ -1218,8 +1220,29 @@ dependencies = [
 ]
 
 [[package]]
+name = "vertigo-example-counter"
+version = "0.1.0"
+dependencies = [
+ "vertigo",
+ "vertigo-browserdriver",
+ "wasm-bindgen",
+ "wasm-bindgen-futures",
+]
+
+[[package]]
+name = "vertigo-example-router"
+version = "0.1.0"
+dependencies = [
+ "log",
+ "vertigo",
+ "vertigo-browserdriver",
+ "wasm-bindgen",
+ "wasm-bindgen-futures",
+]
+
+[[package]]
 name = "vertigo-macro"
-version = "0.1.0-beta.1"
+version = "0.1.0-beta.2"
 dependencies = [
  "itertools",
  "pest",

@@ -1,12 +1,15 @@
 [workspace]
 members = [
-    "demo",
-    "demo-server",
-    "crates/vertigo-browserdriver",
     "crates/vertigo",
     "crates/vertigo-macro",
-]
+    "crates/vertigo-browserdriver",
 
+    "demo/app",
+    "demo/server",
+
+    "examples/counter",
+    "examples/router",
+]
 
 [profile.release]
 lto = true
