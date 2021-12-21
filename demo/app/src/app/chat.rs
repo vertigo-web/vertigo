@@ -1,5 +1,8 @@
 use std::rc::Rc;
-use vertigo::{html, Computed, Driver, DropResource, VDomElement, Value, WebsocketConnection, WebsocketMessage};
+use vertigo::{
+    html, Computed, Driver, DropResource, KeyDownEvent,
+    VDomElement, Value, WebsocketConnection, WebsocketMessage
+};
 
 #[derive(PartialEq)]
 pub struct ChatState {
@@ -107,7 +110,7 @@ pub fn render_input_text(state: &Computed<ChatState>) -> VDomElement {
         }
     };
 
-    let on_click = {
+    let submit = {
         let connect = state.connect.clone();
         let text_value = text_value.clone();
         move || {
@@ -121,11 +124,24 @@ pub fn render_input_text(state: &Computed<ChatState>) -> VDomElement {
         }
     };
 
+    let on_key_down = {
+        let submit = submit.clone();
+        move |key: KeyDownEvent| {
+            if key.code == "Enter" {
+                submit();
+                return true;
+            }
+            false
+        }
+    };
+
     html! {
         <div>
             <hr/>
-            <input type="text" value={text_value} on_input={on_input} />
-            <div on_click={on_click}>"Send"</div>
+            <div on_key_down={on_key_down}>
+                <input type="text" value={text_value} on_input={on_input} />
+                <button on_click={submit}>"Send"</button>
+            </div>
         </div>
     }
 }

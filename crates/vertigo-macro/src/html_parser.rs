@@ -167,7 +167,7 @@ impl HtmlParser {
         let builder = if is_root {
             quote! { vertigo::VDomElement::new }
         } else {
-            quote! { vertigo::VDomNode::node }
+            quote! { vertigo::dev::VDomNode::node }
         };
 
         if tag_name == "textarea" && (!generated_children_lists.is_empty() || !generated_children.is_empty()) {
@@ -228,14 +228,14 @@ impl HtmlParser {
         }
 
         let builder = if value {
-            quote! { vertigo::VDomComponent::from_value }
+            quote! { vertigo::dev::VDomComponent::from_value }
         } else {
-            quote! { vertigo::VDomComponent::new }
+            quote! { vertigo::dev::VDomComponent::new }
         };
 
         if let Some(render_func) = render_func {
             if let Some(data_expr) = data_expr {
-                quote! { vertigo::VDomNode::component(#builder(#data_expr.clone(), #render_func)) }
+                quote! { vertigo::dev::VDomNode::component(#builder(#data_expr.clone(), #render_func)) }
             } else {
                 emit_warning!(self.call_site, "HTML: Component don't have data attribute");
                 quote! {}
@@ -269,7 +269,7 @@ impl HtmlParser {
                 if unquoted.len() + 2 != trimmed.len() {
                     emit_error!(self.call_site, "Please double-quote strings in your HTML to avoid problems with formatting");
                 }
-                Some(quote! { vertigo::VDomNode::text(#unquoted) })
+                Some(quote! { vertigo::dev::VDomNode::text(#unquoted) })
             }
             _ => {
                 emit_warning!(self.call_site, "HTML: unhandler pair in generate_text: {:?}", pair);

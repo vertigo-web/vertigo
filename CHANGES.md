@@ -1,3 +1,4 @@
+<!-- markdownlint-configure-file { "no-duplicate-heading": { "siblings_only": true } } -->
 # Changes
 
 ## 0.1.0-beta.2 - 2021-12-21

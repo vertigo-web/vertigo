@@ -21,8 +21,6 @@ impl DriverBrowserInterval {
             let callback_manager = callback_manager.clone();
 
             Closure::new(move |callback_id: u64| {
-                log::info!("Interval ... {}", callback_id);
-
                 let callback = callback_manager.get(callback_id);
 
                 if let Some(callback) = callback {

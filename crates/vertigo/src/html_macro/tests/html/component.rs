@@ -1,6 +1,7 @@
 use crate::{
     computed::{Computed, Dependencies, Value},
-    VDomComponent, VDomElement, html,
+    dev::VDomComponent,
+    VDomElement, html,
 };
 
 use super::utils::*;
