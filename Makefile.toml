@@ -56,14 +56,16 @@ args = [ "-rf", "demo/build" ]
 [env]
 EXAMPLES = "counter router"
 
+# Run without arguments to build all examples; provide example name to build only this particular example
 [tasks.examples-build]
 dependencies = [ "wasm32-target" ]
 install_crate = { crate_name = "wasm-pack", binary = "wasm-pack", test_arg = ["--version"] }
 script = '''
     NAME=${@}
     if [ "$NAME" = "" ]; then
-        echo "Provide name of example (one of: ${EXAMPLES})."
-        exit 1
+        for name in ${EXAMPLES}; do
+            cargo make examples-build ${name}
+        done
     else
         wasm-pack build examples/${NAME} --no-typescript --target web --out-dir ../build/${NAME} --out-name app --release
         cp examples/${NAME}/index.html examples/build/${NAME}
@@ -71,11 +73,6 @@ script = '''
         rm examples/build/${NAME}/package.json
     fi
 '''
-
-[tasks.examples-build-all]
-script = [
-    "for name in ${EXAMPLES}; do cargo make examples-build ${name}; done"
-]
 
 [tasks.examples-clean]
 command = "rm"

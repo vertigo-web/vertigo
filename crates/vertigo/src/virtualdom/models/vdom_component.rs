@@ -17,7 +17,7 @@ use crate::{
 /// Usually used as a main component for the application.
 ///
 /// ```rust,no_run
-/// use vertigo::{Computed, VDomComponent, VDomElement, Dependencies, html};
+/// use vertigo::{Computed, Dependencies, dev::VDomComponent, VDomElement, html};
 ///
 /// // Here some driver should be used instead of pure dependency graph.
 /// let deps = Dependencies::default();

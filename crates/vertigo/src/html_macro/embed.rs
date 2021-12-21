@@ -1,11 +1,11 @@
 use std::rc::Rc;
 
-use crate::{VDomComponent, VDomElement, VDomNode};
+use crate::{dev::{VDomComponent, VDomNode}, VDomElement};
 
 /// Allows for embedding into [html!](macro.html.html) macro.
 ///
 /// ```rust
-/// use vertigo::{Embed, html, VDomNode};
+/// use vertigo::{dev::VDomNode, Embed, html};
 ///
 /// struct Point {
 ///     pub x: i32,

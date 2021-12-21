@@ -1,4 +1,4 @@
-use crate::{Css, Dependencies, Value, VDomElement, VDomText, html};
+use crate::{Css, Dependencies, dev::VDomText, Value, VDomElement, html};
 
 use super::utils::*;
 

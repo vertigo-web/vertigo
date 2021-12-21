@@ -81,10 +81,7 @@ pub use instant::{Instant, InstantType};
 pub use utils::DropResource;
 pub use virtualdom::models::{
     css::{Css, CssGroup},
-    vdom_component::VDomComponent,
     vdom_element::{KeyDownEvent, VDomElement},
-    vdom_node::VDomNode,
-    vdom_text::VDomText,
 };
 pub use websocket::{WebsocketConnection, WebsocketMessage};
 
@@ -94,7 +91,10 @@ pub mod dev {
     pub use super::virtualdom::models::{
         node_attr,
         realdom_id::RealDomId,
+        vdom_component::VDomComponent,
+        vdom_node::VDomNode,
         vdom_refs::{NodeRefs, NodeRefsItem},
+        vdom_text::VDomText,
     };
     pub use super::websocket::WebsocketMessageDriver;
 }

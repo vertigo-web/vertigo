@@ -1,4 +1,4 @@
-use crate::{VDomElement, VDomText, html};
+use crate::{dev::VDomText, VDomElement, html};
 
 // Make crate available by its name for html macro
 use crate as vertigo;

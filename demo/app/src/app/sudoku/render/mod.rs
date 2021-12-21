@@ -24,6 +24,7 @@ fn css_wrapper() -> Css {
         height: {config.all_width}px;
 
         border: 2px solid blue;
+        user-select: none;
     "
     )
 }

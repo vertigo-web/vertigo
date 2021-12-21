@@ -23,78 +23,98 @@ fn create_matrix(driver: &Driver, x_count: u16, y_count: u16) -> Vec<Vec<Value<b
     matrix
 }
 
-#[derive(PartialEq)]
+#[derive(Clone, PartialEq)]
 pub struct State {
     pub driver: Driver,
-    pub x_count: Value<u16>,
-    pub y_count: Value<u16>,
     pub matrix: Computed<Vec<Vec<Value<bool>>>>,
     pub timer_enable: Value<bool>,
-    pub year: Computed<u32>,
+    pub new_delay: Value<u32>,
+    pub year: Value<Computed<u32>>,
 }
 
 impl State {
-    pub fn new(driver: &Driver) -> Computed<State> {
-        let x_count_len = 120;
-        let y_count_len = 70;
+    const X_LEN: u16 = 120;
+    const Y_LEN: u16 = 70;
 
-        let x_count = driver.new_value(x_count_len);
-        let y_count = driver.new_value(y_count_len);
-        let matrix = driver.new_computed_from(create_matrix(driver, x_count_len, y_count_len));
+    pub fn new(driver: &Driver) -> Computed<State> {
+        let matrix = driver.new_computed_from(create_matrix(driver, State::X_LEN, State::Y_LEN));
 
         let timer_enable = driver.new_value(false);
-
-        let year = {
-            let timer_enable = timer_enable.clone();
-
-            let x_count = x_count.clone();
-            let y_count = y_count.clone();
-            let matrix = matrix.clone();
-
-            driver.new_with_connect(0, {
-                let driver = driver.clone();
-
-                move |self_value| {
-                    let driver = driver.clone();
-                    let timer_enable = timer_enable.clone();
-                    let self_value = self_value.clone();
-
-                    let x_count = x_count.clone();
-                    let y_count = y_count.clone();
-                    let matrix = matrix.clone();
-
-                    log::info!("start timer");
-
-                    let drop_timer = driver.set_interval(150, {
-                        let driver = driver.clone();
-                        move || {
-                            let timer_enable = timer_enable.get_value();
-
-                            if *timer_enable {
-                                let current = self_value.get_value();
-                                self_value.set_value(*current + 1);
-
-                                let x_count = x_count.get_value();
-                                let y_count = y_count.get_value();
-                                let matrix = matrix.get_value();
-
-                                next_generation::next_generation(&driver, *x_count, *y_count, &*matrix)
-                            }
-                        }
-                    });
-
-                    Box::new(drop_timer)
-                }
-            })
-        };
+        let new_delay = driver.new_value(150);
+        let year = driver.new_value(Self::create_timer(driver, &matrix, &timer_enable, &new_delay, 0));
 
         driver.new_computed_from(State {
             driver: driver.clone(),
-            x_count,
-            y_count,
             matrix,
             timer_enable,
+            new_delay,
             year,
+        })
+    }
+
+    pub fn accept_new_delay(&self) -> impl Fn() {
+        let state = self.clone();
+        move ||
+            state.year.set_value(
+                State::create_timer(&state.driver, &state.matrix, &state.timer_enable, &state.new_delay, *state.year.get_value().get_value())
+            )
+    }
+
+    pub fn randomize(&self)-> impl Fn() {
+        let matrix = self.matrix.clone();
+        move || {
+            log::info!("random ...");
+
+            let matrix = matrix.get_value();
+
+            for (y, row) in matrix.iter().enumerate() {
+                for (x, cell) in row.iter().enumerate() {
+                    let new_value: bool = (y * 2 + (x + 4)) % 2 == 0;
+                    cell.set_value(new_value);
+
+                    if x as u16 == State::X_LEN / 2 && y as u16 == State::Y_LEN / 2 {
+                        cell.set_value(false);
+                    }
+                }
+            }
+        }
+    }
+
+    pub fn create_timer(driver: &Driver, matrix: &Computed<Vec<Vec<Value<bool>>>>, timer_enable: &Value<bool>, new_delay: &Value<u32>, starting_year: u32) -> Computed<u32> {
+        let matrix = matrix.clone();
+        let timer_enable = timer_enable.clone();
+        let new_delay = *new_delay.get_value();
+
+        driver.new_with_connect(starting_year, {
+            let driver = driver.clone();
+
+            move |self_value| {
+                let driver = driver.clone();
+                let timer_enable = timer_enable.clone();
+                let self_value = self_value.clone();
+
+                let matrix = matrix.clone();
+
+                log::info!("Setting timer for {} ms", new_delay);
+
+                let drop_timer = driver.set_interval(new_delay, {
+                    let driver = driver.clone();
+                    move || {
+                        let timer_enable = timer_enable.get_value();
+
+                        if *timer_enable {
+                            let current = self_value.get_value();
+                            self_value.set_value(*current + 1);
+
+                            let matrix = matrix.get_value();
+
+                            next_generation::next_generation(&driver, State::X_LEN, State::Y_LEN, &*matrix)
+                        }
+                    }
+                });
+
+                Box::new(drop_timer)
+            }
         })
     }
 }
@@ -128,10 +148,17 @@ css_fn! { css_button, "
     cursor: pointer;
 " }
 
+css_fn! { flex_menu, "
+    display: flex;
+    gap: 50px;
+    margin-bottom: 5px;
+" }
+
 fn render_header(state: &Computed<State>) -> VDomElement {
     let state = state.get_value();
-    let year = *state.year.get_value();
+    let year = *state.year.get_value().get_value();
     let timer_enable = state.timer_enable.get_value();
+    let new_delay = state.new_delay.get_value();
 
     let button = if *timer_enable {
         let on_click = {
@@ -162,40 +189,26 @@ fn render_header(state: &Computed<State>) -> VDomElement {
         }
     };
 
-    let button_random = {
-        let on_click = move || {
-            log::info!("random ...");
-
-            let x_count = *state.x_count.get_value();
-            let y_count = *state.y_count.get_value();
-
-            let matrix = state.matrix.get_value();
-
-            for (y, row) in matrix.iter().enumerate() {
-                for (x, cell) in row.iter().enumerate() {
-                    let new_value: bool = (y * 2 + (x + 4)) % 2 == 0;
-                    cell.set_value(new_value);
-
-                    if x as u16 == x_count / 2 && y as u16 == y_count / 2 {
-                        cell.set_value(false);
-                    }
-                }
-            }
-        };
-
-        html! {
-            <button css={css_button()} on_click={on_click}>
-                "Random"
-            </button>
+    let on_input = {
+        let new_delay = state.new_delay.clone();
+        move |new_value: String| {
+            new_delay.set_value(new_value.parse().unwrap_or_default());
         }
     };
 
     html! {
-        <div>
+        <div css={flex_menu()}>
             <div>"Game of life"</div>
-            <div>"year = " { year }</div>
-            { button }
-            { button_random }
+            <div>"Year = " { year }</div>
+            <div>
+                { button }
+                <button css={css_button()} on_click={state.randomize()}>"Random"</button>
+            </div>
+            <div>
+                "Set delay: "
+                <input value={new_delay.to_string()} on_input={on_input} />
+                " " <button css={css_button()} on_click={state.accept_new_delay()}>"Set"</button>
+            </div>
         </div>
     }
 }
