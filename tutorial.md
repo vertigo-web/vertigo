@@ -198,7 +198,7 @@ impl State {
 To see how all these are connected, see `src/lib.rs`:
 
 ```rust
-#[wasm_bindgen(start)]
+#[wasm_bindgen_derive(start)]
 pub async fn start_application() {
     // Create rendering driver with dependency graph inside
     let driver = DriverBrowser::new();

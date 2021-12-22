@@ -50,17 +50,19 @@ impl DriverDomInner {
         });
     }
 
-    fn get_commands(&self) -> String {
+    fn get_commands(&self) -> Option<String> {
         self.commands.change((), |state, _| {
+            if state.is_empty() {
+                return None
+            }
+
             let mut out = Vec::<String>::new();
 
-            let commands = std::mem::take(state);
-
-            for command in commands.into_iter() {
+            for command in state.drain(..) {
                 out.push(command.into_string());
             }
 
-            format!("[{}]", out.join(","))
+            Some(format!("[{}]", out.join(",")))
         })
     }
 }
@@ -258,8 +260,10 @@ impl DriverBrowserDom {
 
     pub fn flush_dom_changes(&self) {
         let commands = self.inner.get_commands();
-        self.inner.dom_js.bulk_update(commands.as_str());
-        self.inner.ref_run();
+        if let Some(commands) = commands {
+            self.inner.dom_js.bulk_update(commands.as_str());
+            self.inner.ref_run();
+        }
     }
 
     pub fn set_event(&self, id: RealDomId, callback: EventCallback) {
