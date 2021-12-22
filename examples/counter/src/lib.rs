@@ -1,6 +1,5 @@
-use wasm_bindgen::prelude::wasm_bindgen;
 use vertigo::{html, start_app, Computed, Driver, VDomElement, Value};
-use vertigo_browserdriver::DriverBrowser;
+use vertigo_browserdriver::prelude::*;
 
 #[derive(PartialEq)]
 pub struct State {
@@ -38,7 +37,7 @@ pub fn render(app_state: &Computed<State>) -> VDomElement {
     }
 }
 
-#[wasm_bindgen(start)]
+#[wasm_bindgen_derive(start)]
 pub async fn start_application() {
     let driver = DriverBrowser::new();
     let state = State::new(&driver);
