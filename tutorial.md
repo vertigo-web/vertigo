@@ -1,7 +1,9 @@
 # Vertigo Tutorial
 
+<!-- markdownlint-disable-next-line no-emphasis-as-heading -->
 *Up to date with version 0.1.0-beta.2*
 
+<!-- markdownlint-disable-next-line heading-increment -->
 ### Table of contents
 
 1. [Prepare your system](#1-Prepare-your-system)
@@ -206,8 +208,8 @@ pub async fn start_application() {
     // Create application state lain on this graph
     let app_state = state::State::new(&driver);
 
-    // Run application (using provided state and render function) in rendering driver
-    start_app(driver, app_state, app::render).await;
+    // Run application (using provided driver, state and render function) in browser rendering driver
+    start_browser_app(driver, state::State::new, app::render).await;
 }
 ```
 
