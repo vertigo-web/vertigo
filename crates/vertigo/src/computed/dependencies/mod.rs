@@ -99,7 +99,7 @@ impl Dependencies {
 
     pub fn set_hook(&self, before_start: Box<dyn Fn()>, after_end: Box<dyn Fn()>) {
         self.transaction_state.change(
-            (before_start, after_end), 
+            (before_start, after_end),
             |state, (before_start, after_end)| {
                 state.set_hook(before_start, after_end);
             }

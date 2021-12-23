@@ -6,8 +6,14 @@ description = "Virtual DOM library for Rust - web-browser rendering driver"
 edition = "2021"
 license = "MIT OR Apache-2.0"
 
+[features]
+default = [ "wasm_logger" ]
+wasm_logger = [ "wasm-logger", "console_error_panic_hook" ]
+
 [dependencies]
+console_error_panic_hook = { version = "0.1.7", optional = true }
 vertigo = { path = "../../crates/vertigo", version="0.1.0-beta.2" }
 wasm-bindgen = {version = "0.2.78", features = ["nightly"]}
 wasm-bindgen-futures = "0.4.28"
+wasm-logger = { version = "0.2.0", optional = true}
 log = "0.4.14"

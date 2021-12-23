@@ -5,9 +5,18 @@
 
 ### Added
 
-* Optional wasm-logger configuration
+* `start_browser_app` function with optional wasm-logger configuration
 * Examples directory
 * More docstrings
+* Demo: Speed setting in game of life
+
+### Changed
+
+* `wasm-bindgen` is now re-exported in `vertigo-browserdriver` so it is easier to use its proper version
+
+### Removed
+
+* We-alloc usage as it caused memory problems on wasm-js border
 
 ## 0.1.0-beta.1 - 2021-12-10
 

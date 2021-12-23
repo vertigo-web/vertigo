@@ -18,8 +18,6 @@ Example
 Dependencies:
 
 ```toml
-wasm-bindgen = "0.2.74"
-wasm-bindgen-futures = "0.4.24"
 vertigo = "0.1.0-beta.2"
 vertigo-browserdriver = "0.1.0-beta.2"
 ```
@@ -27,9 +25,8 @@ vertigo-browserdriver = "0.1.0-beta.2"
 Code:
 
 ```rust
-use wasm_bindgen::prelude::wasm_bindgen;
-use vertigo::{html, configure_and_start_app,Computed, Driver, VDomElement, Value};
-use vertigo_browserdriver::DriverBrowser;
+use vertigo::{html, Computed, Driver, VDomElement, Value};
+use vertigo_browserdriver::prelude::*;
 
 #[derive(PartialEq)]
 pub struct State {
@@ -67,16 +64,15 @@ pub fn render(app_state: &Computed<State>) -> VDomElement {
     }
 }
 
-#[wasm_bindgen(start)]
+#[wasm_bindgen_derive(start)]
 pub async fn start_application() {
     let driver = DriverBrowser::new();
     let state = State::new(&driver);
-
-    configure_and_start_app(driver, state, render).await;
+    start_browser_app(driver, state, render).await;
 }
 ```
 
-Ale take a looka at **[More examples here](/examples)**.
+Take a look at **[More examples here](/examples)**.
 
 Demo App - installation and usage
 --------------
@@ -100,6 +96,12 @@ If you want to play around with the code, you can make cargo to watch for your c
 * `cargo make demo-watch`
 
 Keep in mind that you still need to refresh page in the browser after project recompiles.
+
+To compile all examples run:
+
+* `cargo make examples-build`
+
+This will build examples in `examples/build` directory. Now point your browser to `index.html` file of a particular example.
 
 A community, soon to grow
 --------------

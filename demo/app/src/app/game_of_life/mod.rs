@@ -61,22 +61,25 @@ impl State {
     }
 
     pub fn randomize(&self)-> impl Fn() {
+        let driver = self.driver.clone();
         let matrix = self.matrix.clone();
         move || {
             log::info!("random ...");
 
-            let matrix = matrix.get_value();
+            driver.transaction(|| {
+                let matrix = matrix.get_value();
 
-            for (y, row) in matrix.iter().enumerate() {
-                for (x, cell) in row.iter().enumerate() {
-                    let new_value: bool = (y * 2 + (x + 4)) % 2 == 0;
-                    cell.set_value(new_value);
+                for (y, row) in matrix.iter().enumerate() {
+                    for (x, cell) in row.iter().enumerate() {
+                        let new_value: bool = (y * 2 + (x + 4)) % 2 == 0;
+                        cell.set_value(new_value);
 
-                    if x as u16 == State::X_LEN / 2 && y as u16 == State::Y_LEN / 2 {
-                        cell.set_value(false);
+                        if x as u16 == State::X_LEN / 2 && y as u16 == State::Y_LEN / 2 {
+                            cell.set_value(false);
+                        }
                     }
                 }
-            }
+            });
         }
     }
 

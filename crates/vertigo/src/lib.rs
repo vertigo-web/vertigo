@@ -66,7 +66,6 @@ pub mod utils;
 mod virtualdom;
 mod websocket;
 
-pub use app::start_app;
 pub use computed::{AutoMap, Computed, Dependencies, Value};
 pub use driver::{Driver, FetchResult};
 pub use fetch::{
@@ -86,6 +85,7 @@ pub use virtualdom::models::{
 pub use websocket::{WebsocketConnection, WebsocketMessage};
 
 pub mod dev {
+    pub use super::app::start_app;
     pub use super::driver::{DriverTrait, EventCallback, FetchMethod};
     pub use super::driver_refs::RefsContext;
     pub use super::virtualdom::models::{

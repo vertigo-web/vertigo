@@ -1,6 +1,8 @@
 use crate::{
     css::css_manager::CssManager,
+    Computed,
     driver::Driver,
+    VDomElement,
     virtualdom::{
         models::{
             realdom_id::RealDomId,
@@ -11,20 +13,14 @@ use crate::{
     },
 };
 
-#[cfg(feature = "wasm_logger")]
-use crate::{Computed, VDomElement};
-
 /// Starting point of the app.
 ///
 /// Given the driver, the state and main render function, it creates necessary vertigo facilities
 /// and runs a never-ending future of reactivity.
+///
+/// See [start_browser_app](../vertigo_browserdriver/fn.start_browser_app.html)
+/// for a shortcut to run browser-based application.
 pub async fn start_app<T: PartialEq + 'static>(driver: Driver, app_state: Computed<T>, render: fn(&Computed<T>) -> VDomElement) {
-    #[cfg(feature = "wasm_logger")]
-    {
-        console_error_panic_hook::set_once();
-        wasm_logger::init(wasm_logger::Config::default());
-    }
-
     let component = VDomComponent::new(app_state, render);
     let css_manager = CssManager::new(&driver);
     let root = RealDomElement::create_with_id(driver.clone(), RealDomId::root());

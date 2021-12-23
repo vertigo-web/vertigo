@@ -1,4 +1,4 @@
-use vertigo::{html, start_app, Computed, Driver, VDomElement, Value};
+use vertigo::{html, Computed, Driver, VDomElement, Value};
 use vertigo_browserdriver::prelude::*;
 
 #[derive(PartialEq)]
@@ -41,6 +41,5 @@ pub fn render(app_state: &Computed<State>) -> VDomElement {
 pub async fn start_application() {
     let driver = DriverBrowser::new();
     let state = State::new(&driver);
-
-    start_app(driver, state, render).await;
+    start_browser_app(driver, state, render).await;
 }
