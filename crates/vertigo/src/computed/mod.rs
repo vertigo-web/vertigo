@@ -6,6 +6,7 @@ mod graph_id;
 mod graph_relation;
 mod graph_value;
 mod value;
+pub mod struct_mut;
 
 #[cfg(test)]
 mod tests;

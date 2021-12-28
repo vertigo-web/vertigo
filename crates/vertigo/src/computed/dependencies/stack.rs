@@ -1,24 +1,24 @@
-use std::collections::{BTreeSet, VecDeque};
+use std::collections::{BTreeSet};
 
-use crate::computed::graph_id::GraphId;
+use crate::{computed::graph_id::GraphId, struct_mut::VecDequeMut};
 
 pub struct Stack {
-    stack_relations: VecDeque<BTreeSet<GraphId>>,
+    stack_relations: VecDequeMut<BTreeSet<GraphId>>,
 }
 
 impl Stack {
     pub fn new() -> Stack {
         Stack {
-            stack_relations: VecDeque::new(),
+            stack_relations: VecDequeMut::new(),
         }
     }
 
-    pub fn start_track(&mut self) {
+    pub fn start_track(&self) {
         let stack_frame = BTreeSet::new();
         self.stack_relations.push_back(stack_frame);
     }
 
-    pub fn report_parent_in_stack(&mut self, parent_id: GraphId) {
+    pub fn report_parent_in_stack(&self, parent_id: GraphId) {
         let len = self.stack_relations.len();
 
         if len < 1 {
@@ -27,19 +27,20 @@ impl Stack {
         }
 
         let last_index = len - 1;
-        let last_item = self.stack_relations.get_mut(last_index);
 
-        match last_item {
-            Some(last_item) => {
-                last_item.insert(parent_id);
+        self.stack_relations.get_mut(last_index, |last_item| {
+            match last_item {
+                Some(last_item) => {
+                    last_item.insert(parent_id);
+                }
+                None => {
+                    log::warn!("frame with stack - not found get_mut=None");
+                }
             }
-            None => {
-                log::warn!("frame with stack - not found get_mut=None");
-            }
-        }
+        });
     }
 
-    pub fn stop_track(&mut self) -> BTreeSet<GraphId> {
+    pub fn stop_track(&self) -> BTreeSet<GraphId> {
         let last_item = self.stack_relations.pop_back();
 
         if let Some(last_item) = last_item {

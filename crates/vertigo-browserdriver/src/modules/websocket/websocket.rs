@@ -1,7 +1,7 @@
 use std::rc::Rc;
 use vertigo::{
     dev::WebsocketMessageDriver,
-    utils::{BoxRefCell, DropResource},
+    utils::{DropResource},
 };
 use wasm_bindgen::closure::Closure;
 
@@ -10,32 +10,26 @@ use crate::utils::callback_manager::CallbackManagerOwner;
 
 #[derive(Clone)]
 struct Callback {
-    stack: Rc<BoxRefCell<CallbackManagerOwner<WebsocketMessageDriver>>>,
+    stack: Rc<CallbackManagerOwner<WebsocketMessageDriver>>,
 }
 
 impl Callback {
     pub fn new() -> Callback {
         Callback {
-            stack: Rc::new(BoxRefCell::new(CallbackManagerOwner::new(), "DriverWebsocket -> Callback -> stack"))
+            stack: Rc::new(CallbackManagerOwner::new())
         }
     }
 
     pub fn register(&self, callback: Box<dyn Fn(WebsocketMessageDriver)>) -> u64 {
-        self.stack.change(callback, |state, callback| {
-            state.set(callback)
-        })
+        self.stack.set(callback)
     }
 
     pub fn remove_callback(&self, callback_id: u64) {
-        self.stack.change(callback_id, |state, callback_id| {
-            state.remove(callback_id);
-        });
+        self.stack.remove(callback_id);
     }
 
     pub fn trigger_callback(&self, callback_id: u64, message: WebsocketMessageDriver) {
-        self.stack.get_with_context((callback_id, message), |state, (callback_id, message)| {
-            state.trigger(callback_id, message);
-        });
+        self.stack.trigger(callback_id, message);
     }
 }
 

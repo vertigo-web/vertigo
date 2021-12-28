@@ -47,7 +47,7 @@ impl VDomComponent {
     pub fn from_value<T: PartialEq + 'static>(params: Value<T>, render: fn(&Value<T>) -> VDomElement) -> VDomComponent {
         let component_id = VDomComponentId::new_value(&params, render);
 
-        let deps = params.deps.clone();
+        let deps = params.deps();
 
         let comp = deps.new_computed_from(params);
 

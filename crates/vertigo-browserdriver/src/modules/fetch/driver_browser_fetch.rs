@@ -3,28 +3,32 @@ use vertigo::{dev::FetchMethod, FetchResult};
 use std::{
     collections::HashMap,
     future::Future,
-    pin::Pin
+    pin::Pin,
+    rc::Rc,
 };
 use wasm_bindgen::prelude::*;
 
 use super::js_fetch::DriverBrowserFetchJs;
 use crate::utils::{
-    counter_rc::CounterRc,
     future::{new_future, CbFutureSend},
-    hash_map_rc::HashMapRc,
     json::JsonMapBuilder,
+};
+
+use vertigo::struct_mut::{
+    CounterMut,
+    HashMapMut,
 };
 
 pub struct DriverBrowserFetch {
     driver_js: DriverBrowserFetchJs,
-    auto_id: CounterRc,
-    data: HashMapRc<u64, CbFutureSend<FetchResult>>,
+    auto_id: CounterMut,
+    data: Rc<HashMapMut<u64, CbFutureSend<FetchResult>>>,
     _clouser: Closure<dyn Fn(u64, bool, u32, String)>,
 }
 
 impl DriverBrowserFetch {
     pub fn new() -> DriverBrowserFetch {
-        let data: HashMapRc<u64, CbFutureSend<FetchResult>> = HashMapRc::new("driver fetch HashMapRc");
+        let data: Rc<HashMapMut<u64, CbFutureSend<FetchResult>>> = Rc::new(HashMapMut::new());
 
         let closure = {
             let data = data.clone();
@@ -48,7 +52,7 @@ impl DriverBrowserFetch {
 
         DriverBrowserFetch {
             driver_js,
-            auto_id: CounterRc::new(1),
+            auto_id: CounterMut::new(1),
             data,
             _clouser: closure,
         }

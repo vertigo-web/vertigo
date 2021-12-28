@@ -1,29 +1,27 @@
-use crate::computed::Computed;
+use crate::{computed::Computed, struct_mut::ValueMut};
 use std::rc::Rc;
 
-struct SubscribeValueVerInner<T> {
-    version: u32,
-    value: Option<T>,
+struct SubscribeValueVerInner<T: PartialEq + Clone> {
+    version: ValueMut<u32>,
+    value: ValueMut<Option<T>>,
 }
 
-impl<T> SubscribeValueVerInner<T> {
-    pub fn new() -> Rc<BoxRefCell<SubscribeValueVerInner<T>>> {
-        Rc::new(BoxRefCell::new(
+impl<T: PartialEq + Clone> SubscribeValueVerInner<T> {
+    pub fn new() -> Rc<SubscribeValueVerInner<T>> {
+        Rc::new(
             SubscribeValueVerInner {
-                version: 0,
-                value: None,
-            },
-            "SubscribeValueVerInner",
-        ))
+                version: ValueMut::new(0),
+                value: ValueMut::new(None),
+            }
+        )
     }
 }
 
 use crate::computed::Client;
-use crate::utils::BoxRefCell;
 
 pub struct SubscribeValueVer<T: PartialEq + Clone> {
     _client: Option<Client>,
-    value: Rc<BoxRefCell<SubscribeValueVerInner<T>>>,
+    value: Rc<SubscribeValueVerInner<T>>,
 }
 
 impl<T: PartialEq + Clone> SubscribeValueVer<T> {
@@ -33,10 +31,9 @@ impl<T: PartialEq + Clone> SubscribeValueVer<T> {
         let client = {
             let value = value.clone();
             com.subscribe(move |new_value| {
-                value.change(new_value, |state, new_value| {
-                    state.value = Some(new_value.clone());
-                    state.version += 1;
-                });
+                value.value.set(Some(new_value.clone()));
+                let current = value.version.get();
+                value.version.set(current + 1);
             })
         };
 
@@ -47,15 +44,10 @@ impl<T: PartialEq + Clone> SubscribeValueVer<T> {
     }
 
     pub fn get(&self) -> (T, u32) {
-        self.value.get(|state| {
-            if let Some(value) = &state.value {
-                let version = state.version;
+        let value = self.value.value.get().unwrap();
+        let version = self.value.version.get();
 
-                (value.clone(), version)
-            } else {
-                panic!("expected value");
-            }
-        })
+        (value, version)
     }
 
     pub fn off(&mut self) {

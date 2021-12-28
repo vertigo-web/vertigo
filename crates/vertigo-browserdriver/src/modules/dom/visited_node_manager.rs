@@ -1,5 +1,7 @@
 use std::{collections::HashMap, rc::Rc};
-use vertigo::{dev::RealDomId, utils::BoxRefCell, Dependencies};
+use vertigo::{dev::RealDomId, Dependencies};
+
+use vertigo::struct_mut::HashMapMut;
 
 use super::driver_data::DriverData;
 
@@ -31,17 +33,17 @@ impl Drop for VisitedNode {
 pub(crate) struct VisitedNodeManager {
     driver_data: Rc<DriverData>,
     dependencies: Dependencies,
-    nodes: BoxRefCell<HashMap<RealDomId, VisitedNode>>,
+    nodes: HashMapMut<RealDomId, VisitedNode>,
 }
 
 impl VisitedNodeManager {
     pub(crate) fn new(driver_data: &Rc<DriverData>, dependencies: &Dependencies) -> VisitedNodeManager {
-        let nodes = HashMap::new();
+        let nodes = HashMapMut::new();
 
         VisitedNodeManager {
             driver_data: driver_data.clone(),
             dependencies: dependencies.clone(),
-            nodes: BoxRefCell::new(nodes, "VisitedNodeManager nodes"),
+            nodes,
         }
     }
 
@@ -49,10 +51,8 @@ impl VisitedNodeManager {
         let VisitedNodeManager {dependencies, nodes, ..} = self;
 
         dependencies.transaction(move || {
-            nodes.change((), |state, _| {
-                let new_state = HashMap::<RealDomId, VisitedNode>::new();
-                let _ = std::mem::replace(state, new_state);
-            })
+            let new_state = HashMap::<RealDomId, VisitedNode>::new();
+            let _ = nodes.mem_replace(new_state);
         });
     }
 
@@ -60,32 +60,30 @@ impl VisitedNodeManager {
         let VisitedNodeManager {driver_data, dependencies, nodes} = self;
 
         dependencies.transaction(move || {
-            nodes.change((new_nodes, driver_data), |state, (new_nodes, driver_data)| {
-                let mut new_state = HashMap::<RealDomId, VisitedNode>::new();
+            let mut new_state = HashMap::<RealDomId, VisitedNode>::new();
 
-                for node_id in new_nodes {
-                    let old_node = state.remove(&node_id);
+            for node_id in new_nodes {
+                let old_node = nodes.remove(&node_id);
 
-                    if let Some(old_node) = old_node {
-                        new_state.insert(node_id, old_node);
-                        continue;
-                    }
-
-                    let on_enter = driver_data.get_from_node(
-                        &node_id,
-                        |elem| elem.on_mouse_enter.clone()
-                    );
-
-                    let on_leave = driver_data.get_from_node(
-                        &node_id,
-                        |elem| elem.on_mouse_leave.clone()
-                    );
-
-                    new_state.insert(node_id, VisitedNode::new(on_enter, on_leave));
+                if let Some(old_node) = old_node {
+                    new_state.insert(node_id, old_node);
+                    continue;
                 }
 
-                std::mem::replace(state, new_state)
-            });
+                let on_enter = driver_data.get_from_node(
+                    &node_id,
+                    |elem| elem.on_mouse_enter.clone()
+                );
+
+                let on_leave = driver_data.get_from_node(
+                    &node_id,
+                    |elem| elem.on_mouse_leave.clone()
+                );
+
+                new_state.insert(node_id, VisitedNode::new(on_enter, on_leave));
+            }
+
+            nodes.mem_replace(new_state);
         });
     }
 }

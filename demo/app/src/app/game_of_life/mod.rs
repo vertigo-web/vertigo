@@ -103,16 +103,18 @@ impl State {
                 let drop_timer = driver.set_interval(new_delay, {
                     let driver = driver.clone();
                     move || {
-                        let timer_enable = timer_enable.get_value();
+                        driver.transaction(|| {
+                            let timer_enable = timer_enable.get_value();
 
-                        if *timer_enable {
-                            let current = self_value.get_value();
-                            self_value.set_value(*current + 1);
+                            if *timer_enable {
+                                let current = self_value.get_value();
+                                self_value.set_value(*current + 1);
 
-                            let matrix = matrix.get_value();
+                                let matrix = matrix.get_value();
 
-                            next_generation::next_generation(&driver, State::X_LEN, State::Y_LEN, &*matrix)
-                        }
+                                next_generation::next_generation(&driver, State::X_LEN, State::Y_LEN, &*matrix)
+                            }
+                        })
                     }
                 });
 
@@ -223,6 +225,12 @@ pub fn render(state: &Computed<State>) -> VDomElement {
     html! {
         <div css={css_wrapper()}>
             <component {render_header} data={state.clone()} />
+            <br/>
+            <a href="https://www.youtube.com/watch?v=C2vgICfQawE" target="_blank">
+                "https://www.youtube.com/watch?v=C2vgICfQawE"
+            </a>
+            <br/>
+            <br/>
             { render_matrix(value_inner) }
         </div>
     }

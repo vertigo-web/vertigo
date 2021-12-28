@@ -1,13 +1,13 @@
 use crate::{
     driver::Driver,
-    utils::BoxRefCell,
+    computed::struct_mut::ValueMut,
     virtualdom::models::realdom_id::RealDomId
 };
 
 pub struct RealDomText {
     dom_driver: Driver,
     id_dom: RealDomId,
-    value: BoxRefCell<String>,
+    value: ValueMut<String>,
 }
 
 impl RealDomText {
@@ -19,29 +19,19 @@ impl RealDomText {
         RealDomText {
             dom_driver,
             id_dom: id,
-            value: BoxRefCell::new(value, "RealDomText"),
+            value: ValueMut::new(value)
         }
     }
 
     pub fn update(&self, new_value: &str) {
-        let should_update = self.value.change(new_value, |state, new_value| {
-            if *state != *new_value {
-                *state = new_value.to_string();
-                true
-            } else {
-                false
-            }
-        });
-
+        let should_update = self.value.set_and_check(new_value.to_string());
         if should_update {
             self.dom_driver.update_text(self.id_dom, new_value);
         }
     }
 
     pub fn get_value(&self) -> String {
-        self.value.get(|state| {
-            (*state).clone()
-        })
+        self.value.get()
     }
 
     pub fn id_dom(&self) -> RealDomId {

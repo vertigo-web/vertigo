@@ -2,7 +2,7 @@ use std::rc::Rc;
 
 use crate::{
     computed::{Computed, Dependencies, GraphId, GraphValue},
-    utils::{BoxRefCell, EqBox},
+    utils::{EqBox}, struct_mut::ValueMut,
 };
 
 #[derive(PartialEq)]
@@ -17,19 +17,11 @@ impl Client {
         F: Fn(&T) + 'static,
     {
         let graph_value = GraphValue::new_client(&deps, {
-            let prev_value: BoxRefCell<Option<Rc<T>>> = BoxRefCell::new(None, "client - prev state");
+            let prev_value = ValueMut::new(None);
 
             move || {
                 let value = computed.get_value();
-
-                let should_update = prev_value.change(value.clone(), |state, value| {
-                    if *state == Some(value.clone()) {
-                        false
-                    } else {
-                        *state = Some(value);
-                        true
-                    }
-                });
+                let should_update = prev_value.set_and_check(Some(value.clone()));
 
                 if should_update {
                     call(value.as_ref());

@@ -7,7 +7,7 @@ use std::{
 
 use crate::{
     computed::{Computed, GraphId, GraphValueRefresh, Value},
-    utils::{BoxRefCell, EqBox},
+    utils::{EqBox},
 };
 
 use super::value::ToRc;
@@ -40,10 +40,10 @@ use {
 /// - Components can provide the DOM with functions that get fired on events like [on_click](struct.VDomElement.html#structfield.on_click), which may modify the state, thus triggering necessary computing once again.
 #[derive(PartialEq)]
 pub struct Dependencies {
-    graph: Rc<EqBox<BoxRefCell<Graph>>>,
-    stack: Rc<EqBox<BoxRefCell<Stack>>>,
-    refresh: Rc<EqBox<BoxRefCell<Refresh>>>,
-    transaction_state: Rc<EqBox<BoxRefCell<TransactionState>>>,
+    graph: Rc<EqBox<Graph>>,
+    stack: Rc<EqBox<Stack>>,
+    refresh: Rc<EqBox<Refresh>>,
+    transaction_state: Rc<EqBox<TransactionState>>,
     pub external_connections: ExternalConnections,
 }
 
@@ -64,16 +64,14 @@ impl Default for Dependencies {
         let external_connections = ExternalConnections::default();
 
         Self {
-            graph: Rc::new(EqBox::new(BoxRefCell::new(
+            graph: Rc::new(EqBox::new(
                 Graph::new(external_connections.clone()),
-                "graph",
-            ))),
-            stack: Rc::new(EqBox::new(BoxRefCell::new(Stack::new(), "stack"))),
-            refresh: Rc::new(EqBox::new(BoxRefCell::new(Refresh::new(), "refresh"))),
-            transaction_state: Rc::new(EqBox::new(BoxRefCell::new(
-                TransactionState::new(),
-                "transaction_state",
-            ))),
+            )),
+            stack: Rc::new(EqBox::new(Stack::new())),
+            refresh: Rc::new(EqBox::new(Refresh::new())),
+            transaction_state: Rc::new(EqBox::new(
+                TransactionState::new()
+            )),
             external_connections,
         }
     }
@@ -98,18 +96,11 @@ impl Dependencies {
     }
 
     pub fn set_hook(&self, before_start: Box<dyn Fn()>, after_end: Box<dyn Fn()>) {
-        self.transaction_state.change(
-            (before_start, after_end),
-            |state, (before_start, after_end)| {
-                state.set_hook(before_start, after_end);
-            }
-        );
+        self.transaction_state.set_hook(before_start, after_end);
     }
 
     pub fn transaction<F: FnOnce()>(&self, func: F) {
-        let success = self.transaction_state.change((), |state, _| {
-            state.up()
-        });
+        let success = self.transaction_state.up();
 
         if !success {
             return;
@@ -117,22 +108,18 @@ impl Dependencies {
 
         func();
 
-        let edges_values = self.transaction_state.change((), |state, _| {
-            state.down()
-        });
+        let edges_values = self.transaction_state.down();
 
         if let Some(edges_values) = edges_values {
-            let edges_to_refresh = self.get_edges_to_refresh(&edges_values);
+            let edges_to_refresh = self.get_edges_to_refresh(edges_values);
 
             refresh_edges::refresh_edges(self, edges_to_refresh);
 
-            self.transaction_state.change((), |state, _| {
-                state.move_to_idle()
-            });
+            self.transaction_state.move_to_idle();
         }
     }
 
-    fn get_edges_to_refresh(&self, edges: &BTreeSet<GraphId>) -> Vec<GraphValueRefresh> {
+    fn get_edges_to_refresh(&self, edges: BTreeSet<GraphId>) -> Vec<GraphValueRefresh> {
         let mut result = Vec::new();
 
         for id in self.get_all_deps(edges) {
@@ -146,99 +133,60 @@ impl Dependencies {
         result
     }
 
-    fn get_all_deps(&self, edges: &BTreeSet<GraphId>) -> BTreeSet<GraphId> {
-        self.graph.get_with_context(edges, |state, edges| {
-            state.get_all_deps(edges)
-        })
+    fn get_all_deps(&self, edges: BTreeSet<GraphId>) -> BTreeSet<GraphId> {
+        self.graph.get_all_deps(edges)
     }
 
     pub(crate) fn trigger_change(&self, parent_id: GraphId) {
-        self.transaction_state.change(parent_id, |state, parent_id| {
-            state.add_edge_to_refresh(parent_id);
-        });
+        self.transaction_state.add_edge_to_refresh(parent_id);
     }
 
-    pub(crate) fn add_graph_connection(&self, parent_id: GraphId, client_id: GraphId) {
-        self.graph.change((parent_id, client_id), |state, (parent_id, client_id)| {
-            state.add_graph_connection(parent_id, client_id);
-        });
+    pub(crate) fn add_graph_connection(&self, parent_id: Rc<BTreeSet<GraphId>>, client_id: GraphId) {
+        self.graph.add_graph_connection(parent_id, client_id);
     }
 
-    pub(crate) fn remove_graph_connection(&self, parent_id: GraphId, client_id: GraphId) {
-        self.graph.change((parent_id, client_id), |state, (parent_id, client_id)| {
-            state.remove_graph_connection(parent_id, client_id)
-        });
+    pub(crate) fn remove_graph_connection(&self, parent_id: &Rc<BTreeSet<GraphId>>, client_id: GraphId) {
+        self.graph.remove_graph_connection(parent_id, client_id);
     }
 
     pub(crate) fn refresh_token_add(&self, graph_value: GraphValueRefresh) {
-        self.refresh.change(graph_value, |state, graph_value| {
-            state.refresh_token_add(graph_value);
-        });
+        self.refresh.refresh_token_add(graph_value);
     }
 
     pub(crate) fn refresh_token_drop(&self, id: GraphId) {
-        self.refresh.change(id, |state, id| {
-            state.refresh_token_drop(id);
-        });
+        self.refresh.refresh_token_drop(id);
     }
 
     pub(crate) fn start_track(&self) {
-        self.stack.change((), |state, _| {
-            state.start_track();
-        });
+        self.stack.start_track();
     }
 
     pub(crate) fn report_parent_in_stack(&self, parent_id: GraphId) {
-        self.stack.change(parent_id, |state, parent_id| {
-            state.report_parent_in_stack(parent_id);
-        });
+        self.stack.report_parent_in_stack(parent_id);
     }
 
     pub(crate) fn stop_track(&self) -> BTreeSet<GraphId> {
-        self.stack.change((), |state, _| {
-            state.stop_track()
-        })
+        self.stack.stop_track()
     }
 
     pub fn from<T: PartialEq + 'static, F: Fn() -> T + 'static>(&self, calculate: F) -> Computed<T> {
         let deps = self.clone();
-
-        let get_value = Box::new(move || {
-            let result = calculate();
-
-            Rc::new(result)
-        });
-
-        Computed::new(deps, get_value)
+        Computed::new(deps, move || Rc::new(calculate()))
     }
 
     pub fn all_connections_len(&self) -> u64 {
-        self.graph.get(|state| {
-            state.all_connections_len()
-        })
+        self.graph.all_connections_len()
     }
 
     pub fn all_connections(&self) -> Vec<(GraphId, GraphId, u8)> {
-        self.graph.get(|state| {
-            state.all_connections()
-        })
+        self.graph.all_connections()
     }
 
     pub fn has_listeners(&self, parent_id: &GraphId) -> bool {
-        self.graph.get_with_context(parent_id, |state, parent_id| {
-            state.has_listeners(parent_id)
-        })
+        self.graph.has_listeners(parent_id)
     }
 
     pub fn refresh_get(&self, id: &GraphId) -> Option<GraphValueRefresh> {
-        self.refresh.get_with_context(id, |state, id| {
-            state.get(id)
-        })
-    }
-
-    pub fn drain_removables(&self) -> Vec<GraphId> {
-        self.graph.change((), |state, ()| {
-            state.drain_removables()
-        })
+        self.refresh.get(id)
     }
 }

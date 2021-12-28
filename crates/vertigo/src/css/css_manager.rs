@@ -1,12 +1,10 @@
 use std::{
-    collections::HashMap,
     rc::Rc,
 };
 
 use crate::{
     driver::Driver,
-    utils::BoxRefCell,
-    virtualdom::models::css::{Css, CssGroup},
+    virtualdom::models::css::{Css, CssGroup}, struct_mut::HashMapMut,
 };
 
 use super::{
@@ -18,8 +16,8 @@ use super::{
 struct CssManagerInner {
     driver: Driver,
     next_id: NextId,
-    ids_static: HashMap<&'static str, u64>,
-    ids_dynamic: HashMap<String, u64>,
+    ids_static: HashMapMut<&'static str, u64>,
+    ids_dynamic: HashMapMut<String, u64>,
 }
 
 impl CssManagerInner {
@@ -27,13 +25,13 @@ impl CssManagerInner {
         CssManagerInner {
             driver,
             next_id: NextId::new(),
-            ids_static: HashMap::new(),
-            ids_dynamic: HashMap::new(),
+            ids_static: HashMapMut::new(),
+            ids_dynamic: HashMapMut::new(),
         }
     }
 
-    fn insert_css(&mut self, css: &str) -> u64 {
-        let (class_id, css_selectors) = transform_css(css, &mut self.next_id);
+    fn insert_css(&self, css: &str) -> u64 {
+        let (class_id, css_selectors) = transform_css(css, &self.next_id);
 
         for (selector, selector_data) in css_selectors {
             self.driver.insert_css(&selector, &selector_data);
@@ -45,40 +43,37 @@ impl CssManagerInner {
 
 #[derive(Clone)]
 pub struct CssManager {
-    inner: Rc<BoxRefCell<CssManagerInner>>,
+    inner: Rc<CssManagerInner>,
 }
 
 impl CssManager {
     pub fn new(driver: &Driver) -> CssManager {
         CssManager {
-            inner: Rc::new(BoxRefCell::new(CssManagerInner::new(driver.clone()), "css manager")),
+            inner: Rc::new(CssManagerInner::new(driver.clone())),
         }
     }
 
     fn get_static(&self, css: &'static str) -> String {
-        self.inner.change(css, |state, css| {
-            if let Some(class_id) = state.ids_static.get(&css) {
-                return get_selector(class_id);
-            }
+        if let Some(class_id) = self.inner.ids_static.get(&css) {
+            return get_selector(&class_id);
+        }
 
-            let class_id = state.insert_css(css);
-            state.ids_static.insert(css, class_id);
+        let class_id = self.inner.insert_css(css);
+        self.inner.ids_static.insert(css, class_id);
 
-            get_selector(&class_id)
-        })
+        get_selector(&class_id)
     }
 
-    fn get_dynamic(&self, css: &str) -> String {
-        self.inner.change(css, |state, css| {
-            if let Some(class_id) = state.ids_dynamic.get(css) {
-                return get_selector(class_id);
-            }
+    fn get_dynamic(&self, css: impl Into<String>) -> String {
+        let css = css.into();
+        if let Some(class_id) = self.inner.ids_dynamic.get(&css) {
+            return get_selector(&class_id);
+        }
 
-            let class_id = state.insert_css(css);
-            state.ids_dynamic.insert(css.to_string(), class_id);
+        let class_id = self.inner.insert_css(css.as_str());
+        self.inner.ids_dynamic.insert(css, class_id);
 
-            get_selector(&class_id)
-        })
+        get_selector(&class_id)
     }
 
     pub fn get_class_name(&self, css: &Css) -> String {

@@ -91,8 +91,6 @@ impl EventCallback {
     }
 }
 
-const SHOW_LOG: bool = false;
-
 /// Result from request made using [FetchBuilder].
 ///
 /// Variants:
@@ -164,12 +162,6 @@ impl DriverInner {
     }
 }
 
-pub fn show_log(message: String) {
-    if SHOW_LOG {
-        log::info!("{}", message);
-    }
-}
-
 /// Main connection to vertigo facilities - dependencies and rendering client (the browser).
 ///
 /// This is in fact only a box for inner generic driver.
@@ -216,19 +208,16 @@ impl Driver {
 
     /// Retrieves the hash part of location URL from client (browser)
     pub fn get_hash_location(&self) -> String {
-        show_log("get_location".to_string());
         self.inner.driver.get_hash_location()
     }
 
     /// Sets the hash part of location URL from client (browser)
     pub fn push_hash_location(&self, path: String) {
-        show_log(format!("set_location {}", path));
         self.inner.driver.push_hash_location(&path)
     }
 
     /// Set event handler upon hash location change
     pub fn on_hash_route_change(&self, on_change: Box<dyn Fn(&String)>) -> DropResource {
-        show_log("on_route_change".to_string());
         self.inner.driver.on_hash_route_change(on_change)
     }
 
@@ -309,65 +298,46 @@ impl Driver {
     // Below - methods to interact with the dom. Used exclusively by vertigo.
 
     pub(crate) fn create_node(&self, id: RealDomId, name: &'static str) {
-        show_log(format!("create_node {} {}", id, name));
         self.inner.driver.create_node(id, name);
     }
 
     pub(crate) fn rename_node(&self, id: RealDomId, new_name: &'static str) {
-        show_log(format!("rename_node {} {}", id, new_name));
         self.inner.driver.rename_node(id, new_name);
     }
 
     pub(crate) fn create_text(&self, id: RealDomId, value: &str) {
-        show_log(format!("create_text {} {}", id, value));
         self.inner.driver.create_text(id, value);
     }
 
     pub(crate) fn update_text(&self, id: RealDomId, value: &str) {
-        show_log(format!("update_text {} {}", id, value));
         self.inner.driver.update_text(id, value);
     }
 
     pub(crate) fn set_attr(&self, id: RealDomId, key: &'static str, value: &str) {
-        show_log(format!("set_attr {} {} {}", id, key, value));
         self.inner.driver.set_attr(id, key, value);
     }
 
     pub(crate) fn remove_attr(&self, id: RealDomId, name: &'static str) {
-        show_log(format!("remove_attr {} {}", id, name));
         self.inner.driver.remove_attr(id, name);
     }
 
     pub(crate) fn remove_node(&self, id: RealDomId) {
-        show_log(format!("remove node {}", id));
         self.inner.driver.remove_node(id);
     }
 
     pub(crate) fn remove_text(&self, id: RealDomId) {
-        show_log(format!("remove text {}", id));
         self.inner.driver.remove_text(id);
     }
 
     pub(crate) fn insert_before(&self, parent: RealDomId, child: RealDomId, ref_id: Option<RealDomId>) {
-        match &ref_id {
-            Some(ref_id) => {
-                show_log(format!("insert_before child={} refId={}", child, ref_id));
-            }
-            None => {
-                show_log(format!("insert_before child={} refId=None", child));
-            }
-        }
-
         self.inner.driver.insert_before(parent, child, ref_id);
     }
 
     pub(crate) fn insert_css(&self, selector: &str, value: &str) {
-        show_log(format!("insert_css selector={} value={}", selector, value));
         self.inner.driver.insert_css(selector, value);
     }
 
     pub(crate) fn set_event(&self, node: RealDomId, callback: EventCallback) {
-        show_log(format!("set_event {} {}", node, callback.to_string()));
         self.inner.driver.set_event(node, callback);
     }
 

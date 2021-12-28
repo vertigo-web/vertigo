@@ -3,7 +3,7 @@ use std::rc::Rc;
 use crate::{
     computed::{Client, Value},
     Driver,
-    utils::{BoxRefCell, DropResource},
+    utils::{DropResource}, struct_mut::ValueMut,
 };
 
 #[derive(PartialEq, Clone, Copy)]
@@ -89,16 +89,16 @@ impl HashRouter {
     where
         T: PartialEq + ToString,
     {
-        let direction = Rc::new(BoxRefCell::new(Direction::Loading, "hash router"));
+        let direction = Rc::new(ValueMut::new(Direction::Loading));
 
         let sender = route.to_computed().subscribe({
             let driver = driver.clone();
             let direction = direction.clone();
             move |route| {
-                let dir = direction.get(|state| *state);
+                let dir = direction.get();
                 match dir {
                     // First change is upon page loading, ignore it but accept further pushes
-                    Direction::Loading => direction.change((), |state, _| *state = Direction::Pushing),
+                    Direction::Loading => direction.set(Direction::Pushing),
                     Direction::Pushing => driver.push_hash_location(route.to_string()),
                     _ => (),
                 }
@@ -107,9 +107,9 @@ impl HashRouter {
 
         let receiver = driver.on_hash_route_change({
             Box::new(move |url: &String| {
-                direction.change((), |state, _| *state = Direction::Popping);
+                direction.set(Direction::Popping);
                 callback(url);
-                direction.change((), |state, _| *state = Direction::Pushing);
+                direction.set(Direction::Pushing);
             })
         });
 

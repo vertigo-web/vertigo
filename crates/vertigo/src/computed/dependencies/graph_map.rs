@@ -1,38 +1,41 @@
-use std::collections::{BTreeMap, BTreeSet};
+use std::collections::{BTreeSet};
 
-use crate::computed::graph_id::GraphId;
+use crate::{computed::graph_id::GraphId, struct_mut::BTreeMapMut};
 
 pub struct GraphMap {
-    data: BTreeMap<GraphId, BTreeSet<GraphId>>, // A <- B
+    data: BTreeMapMut<GraphId, BTreeSet<GraphId>>, // A <- B
 }
 
 impl GraphMap {
     pub fn new() -> GraphMap {
         GraphMap {
-            data: BTreeMap::new(),
+            data: BTreeMapMut::new(),
         }
     }
 
-    pub fn add_connection(&mut self, parent_id: GraphId, client_id: GraphId) {
-        self.data
-            .entry(parent_id)
-            .or_insert_with(BTreeSet::new)
-            .insert(client_id);
+    pub fn add_connection(&self, parent_id: GraphId, client_id: GraphId) {
+        self.data.change(|data| {
+            data
+                .entry(parent_id)
+                .or_insert_with(BTreeSet::new)
+                .insert(client_id);
+        })
     }
 
-    pub fn remove_connection(&mut self, parent_id: GraphId, client_id: GraphId) {
-        let parent_list = self.data.get_mut(&parent_id);
-
-        let should_clear = if let Some(parent_list) = parent_list {
+    pub fn remove_connection(&self, parent_id: GraphId, client_id: GraphId) {
+        let should_clear = self.data.get_mut(&parent_id, |parent_list| {
             parent_list.remove(&client_id);
             parent_list.is_empty()
-        } else {
-            log::error!("Missing relation in GraphMap");
-            false
-        };
+        });
 
-        if should_clear {
-            self.data.remove(&parent_id);
+        match should_clear {
+            Some(true) => {
+                self.data.remove(&parent_id);
+            },
+            Some(false) => {},
+            None => {
+                log::error!("Missing relation in GraphMap");
+            }
         }
     }
 
@@ -46,7 +49,33 @@ impl GraphMap {
         }
     }
 
-    pub fn get_relation(&self, id: &GraphId) -> Option<&BTreeSet<GraphId>> {
-        self.data.get(id)
+    pub(crate) fn get_all_deps(&self, edges: BTreeSet<GraphId>) -> BTreeSet<GraphId> {
+        self.data.map(move |state| -> BTreeSet<GraphId> {
+            let mut result = BTreeSet::new();
+            let mut to_traverse: Vec<GraphId> = edges.into_iter().collect();
+
+            loop {
+                let next_to_traverse = to_traverse.pop();
+
+                match next_to_traverse {
+                    Some(next) => {
+                        let list = state.get(&next);
+
+                        if let Some(list) = list {
+                            for item in list {
+                                let is_contain = result.contains(item);
+                                if !is_contain {
+                                    result.insert(*item);
+                                    to_traverse.push(*item);
+                                }
+                            }
+                        }
+                    }
+                    None => {
+                        return result;
+                    }
+                }
+            }
+        })
     }
 }
