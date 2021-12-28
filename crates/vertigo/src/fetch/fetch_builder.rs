@@ -3,7 +3,7 @@ use std::{
     rc::Rc,
 };
 
-use crate::driver::{show_log, DriverTrait, FetchMethod, FetchResult};
+use crate::driver::{DriverTrait, FetchMethod, FetchResult};
 
 /// Builder for simple requests.
 pub struct FetchBuilder {
@@ -46,7 +46,6 @@ impl FetchBuilder {
     }
 
     async fn run(self, method: FetchMethod) -> FetchResult {
-        show_log(format!("fetch {:?} {}", method, &self.url));
         let fut = self.driver.fetch(method, self.url, self.headers, self.body);
         fut.await
     }

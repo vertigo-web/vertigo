@@ -1,20 +1,22 @@
+use crate::struct_mut::VecMut;
+
 struct Hook {
     before_start: Box<dyn Fn()>,
     after_end: Box<dyn Fn()>,
 }
 
 pub struct Hooks {
-    list: Vec<Hook>,
+    list: VecMut<Hook>,
 }
 
 impl Hooks {
     pub fn new() -> Hooks {
         Hooks {
-            list: Vec::new(),
+            list: VecMut::new(),
         }
     }
 
-    pub fn add(&mut self, before_start: Box<dyn Fn()>, after_end: Box<dyn Fn()>) {
+    pub fn add(&self, before_start: Box<dyn Fn()>, after_end: Box<dyn Fn()>) {
         self.list.push(Hook {
             before_start,
             after_end,
@@ -22,16 +24,16 @@ impl Hooks {
     }
 
     pub fn fire_start(&self) {
-        for hook in &self.list {
+        self.list.for_each(|hook| {
             let before_start = &hook.before_start;
             before_start();
-        }
+        });
     }
 
     pub fn fire_end(&self) {
-        for hook in &self.list {
+        self.list.for_each(|hook| {
             let after_end = &hook.after_end;
             after_end();
-        }
+        });
     }
 }

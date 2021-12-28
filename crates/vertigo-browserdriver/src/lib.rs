@@ -1,6 +1,7 @@
 #![deny(rust_2018_idioms)]
 #![allow(clippy::new_ret_no_self)]
 #![allow(clippy::module_inception)]
+#![allow(clippy::type_complexity)]
 
 mod browser_app;
 mod driver_browser;

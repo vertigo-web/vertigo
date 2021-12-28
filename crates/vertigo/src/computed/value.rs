@@ -5,8 +5,7 @@ use std::{
 };
 
 use crate::{
-    computed::{Computed, Dependencies, GraphId},
-    utils::BoxRefCell,
+    computed::{Computed, Dependencies, GraphId}, struct_mut::ValueMut,
 };
 
 pub trait ToRc<T> {
@@ -27,24 +26,8 @@ impl<T> ToRc<T> for T {
 
 struct ValueInner<T: PartialEq + 'static> {
     id: GraphId,
-    value: Rc<T>,
+    value: ValueMut<Rc<T>>,
     deps: Dependencies,
-}
-
-impl<T: PartialEq + 'static> ValueInner<T> {
-    fn set_value(&mut self, value: T) {
-        if *(self.value) == value {
-            return;
-        }
-
-        self.value = Rc::new(value);
-        self.deps.trigger_change(self.id);
-    }
-
-    fn get_value(&self) -> Rc<T> {
-        self.deps.report_parent_in_stack(self.id);
-        self.value.clone()
-    }
 }
 
 impl<T: PartialEq + 'static> Drop for ValueInner<T> {
@@ -72,15 +55,13 @@ impl<T: PartialEq + 'static> Drop for ValueInner<T> {
 /// ```
 ///
 pub struct Value<T: PartialEq + 'static> {
-    inner: Rc<BoxRefCell<ValueInner<T>>>,
-    pub deps: Dependencies,
+    inner: Rc<ValueInner<T>>,
 }
 
 impl<T: PartialEq + 'static> Clone for Value<T> {
     fn clone(&self) -> Self {
         Value {
             inner: self.inner.clone(),
-            deps: self.deps.clone(),
         }
     }
 }
@@ -88,15 +69,13 @@ impl<T: PartialEq + 'static> Clone for Value<T> {
 impl<T: PartialEq + 'static> Value<T> {
     pub fn new(deps: Dependencies, value: impl ToRc<T>) -> Value<T> {
         Value {
-            inner: Rc::new(BoxRefCell::new(
+            inner: Rc::new(
                 ValueInner {
                     id: GraphId::default(),
-                    value: value.to_rc(),
-                    deps: deps.clone(),
-                },
-                "value inner",
-            )),
-            deps,
+                    value: ValueMut::new(value.to_rc()),
+                    deps,
+                }
+            )
         }
     }
 
@@ -107,20 +86,18 @@ impl<T: PartialEq + 'static> Value<T> {
         let id = GraphId::default();
 
         let value = Value {
-            inner: Rc::new(BoxRefCell::new(
+            inner: Rc::new(
                 ValueInner {
                     id,
-                    value: Rc::new(value),
+                    value: ValueMut::new(Rc::new(value)),
                     deps: deps.clone(),
                 },
-                "value inner connect",
-            )),
-            deps: deps.clone(),
+            )
         };
 
         let computed = value.to_computed();
 
-        deps.external_connections.register_connect(id, Box::new(move || {
+        deps.external_connections.register_connect(id, Rc::new(move || {
             create(&value)
         }));
 
@@ -128,29 +105,34 @@ impl<T: PartialEq + 'static> Value<T> {
     }
 
     pub fn set_value(&self, value: T) {
-        self.deps.clone().transaction(|| {
-            self.inner.change(value, move |state, value| {
-                state.set_value(value);
-            })
-        })
+        self.inner.deps.clone().transaction(|| {
+            let need_update = self.inner.value.set_and_check(Rc::new(value));
+
+            if need_update {
+                self.inner.deps.trigger_change(self.inner.id);
+            }
+        });
     }
 
     pub fn get_value(&self) -> Rc<T> {
-        self.inner.get(|state| state.get_value())
+        self.inner.deps.report_parent_in_stack(self.inner.id);
+        self.inner.value.get()
     }
 
     pub fn to_computed(&self) -> Computed<T> {
-        let inner_clone = self.inner.clone();
+        let self_clone = self.clone();
 
-        let deps = self.deps.clone();
-
-        Computed::new(deps, move || {
-            inner_clone.get(|state| state.get_value())
+        Computed::new(self.deps(), move || {
+            self_clone.get_value()
         })
     }
 
     pub fn id(&self) -> GraphId {
-        self.inner.get(|state| state.id)
+        self.inner.id
+    }
+
+    pub fn deps(&self) -> Dependencies {
+        self.inner.deps.clone()
     }
 }
 

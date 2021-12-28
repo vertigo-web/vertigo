@@ -1,21 +1,104 @@
+use std::hash::Hash;
 use std::rc::Rc;
-use vertigo::{dev::RealDomId, KeyDownEvent};
-
-use crate::utils::hash_map_rc::HashMapRc;
+use vertigo::{dev::{RealDomId, EventCallback}, KeyDownEvent};
+use std::fmt::Display;
+use vertigo::struct_mut::HashMapMut;
 
 use super::element_wrapper::DomElement;
 
+struct HashMapRcWithLabel<K: Eq + Hash + Display, V> {
+    label: &'static str,
+    data: HashMapMut<K, V>
+}
+
+impl<K: Eq + Hash + Display, V> HashMapRcWithLabel<K, V> {
+    pub fn new(label: &'static str) -> HashMapRcWithLabel<K, V> {
+        HashMapRcWithLabel {
+            label,
+            data: HashMapMut::new(),
+        }
+    }
+
+    pub fn insert(&self, key: K, value: V) -> Option<V> {
+        self.data.insert(key, value)
+    }
+
+    pub fn remove(&self, key: &K) -> Option<V> {
+        self.data.remove(key)
+    }
+
+    pub fn must_get<R, F: FnOnce(&V) -> R>(&self, key: &K, callback: F) -> Option<R> {
+        let state = self.data.get_and_map(key, callback);
+
+        if state.is_none() {
+            log::error!("{} -> get -> Missing element with id={}", self.label, key);
+        }
+
+        state
+    }
+
+    pub fn must_change<R, F: FnOnce(&mut V) -> R>(&self, key: &K, callback: F) -> Option<R> {
+        let item = self.data.must_change(key, callback);
+
+        if item.is_none() {
+            let label = self.label;
+            log::error!("{label} ->change ->  Missing element with id={key}");
+        }
+
+        item
+    }
+}
+
 pub struct DriverData {
-    pub elements: HashMapRc<RealDomId, DomElement>,
-    pub child_parent: HashMapRc<RealDomId, RealDomId>, // child -> parent
+    elements: HashMapRcWithLabel<RealDomId, DomElement>,
+    child_parent: HashMapRcWithLabel<RealDomId, RealDomId>, // child -> parent
 }
 
 impl DriverData {
     pub fn new() -> Rc<DriverData> {
         Rc::new(DriverData {
-            elements: HashMapRc::new("DriverData elements"),
-            child_parent: HashMapRc::new("DriverData child_parent"),
+            elements: HashMapRcWithLabel::new("DriverData elements"),
+            child_parent: HashMapRcWithLabel::new("DriverData child_parent"),
         })
+    }
+
+    pub fn create_node(&self, id: RealDomId) {
+        self.elements.insert(id, DomElement::new());
+    }
+
+    pub fn remove_text(&self, id: RealDomId) {
+        self.child_parent.remove(&id);
+    }
+
+    pub fn remove_node(&self, id: RealDomId) {
+        self.child_parent.remove(&id);
+        self.elements.remove(&id);
+    }
+
+    pub fn set_parent(&self, child: RealDomId, parent: RealDomId) {
+        self.child_parent.insert(child, parent);
+    }
+
+    pub fn set_event(&self, id: RealDomId, callback: EventCallback) {
+        self.elements.must_change(&id, move |node|
+            match callback {
+                EventCallback::OnClick { callback } => {
+                    node.on_click = callback;
+                }
+                EventCallback::OnInput { callback } => {
+                    node.on_input = callback;
+                }
+                EventCallback::OnMouseEnter { callback } => {
+                    node.on_mouse_enter = callback;
+                }
+                EventCallback::OnMouseLeave { callback } => {
+                    node.on_mouse_leave = callback;
+                }
+                EventCallback::OnKeyDown { callback } => {
+                    node.on_keydown = callback;
+                }
+            }
+        );
     }
 
     pub fn find_all_nodes(&self, id: RealDomId) -> Vec<RealDomId> {

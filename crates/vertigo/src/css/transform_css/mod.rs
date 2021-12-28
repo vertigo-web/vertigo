@@ -134,7 +134,7 @@ fn test_find_brackets() {
     assert_eq!(find_brackets(css), Some(("1.0s infinite ease-in-out", "dsd", "fff")));
 }
 
-pub fn transform_css_animation_value(css: &str, next_id: &mut NextId) -> (String, Option<(String, String)>) {
+pub fn transform_css_animation_value(css: &str, next_id: &NextId) -> (String, Option<(String, String)>) {
     let brackets = find_brackets(css);
 
     if let Some((start_word, central_word, end_word)) = brackets {
@@ -163,7 +163,7 @@ pub fn transform_css_selector_value(row: &str, parent_selector: &str) -> Option<
     None
 }
 
-pub fn transform_css(css: &str, next_id: &mut NextId) -> (u64, Vec<(String, String)>) {
+pub fn transform_css(css: &str, next_id: &NextId) -> (u64, Vec<(String, String)>) {
     let class_id = next_id.get_next_id();
     let selector = format!(".{}", get_selector(&class_id));
 

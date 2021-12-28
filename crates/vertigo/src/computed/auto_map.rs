@@ -1,11 +1,11 @@
 use std::{
     cmp::PartialEq,
-    collections::HashMap,
     hash::Hash,
     rc::Rc,
+    fmt::Display,
 };
 
-use crate::utils::{BoxRefCell, EqBox};
+use crate::{utils::{EqBox}, struct_mut::HashMapMut};
 
 type CreateType<K, V> = EqBox<Box<dyn Fn(&K) -> V>>;
 
@@ -21,32 +21,21 @@ type CreateType<K, V> = EqBox<Box<dyn Fn(&K) -> V>>;
 /// assert_eq!(my_map.get_value(&5), 10);
 /// ```
 #[derive(PartialEq, Clone)]
-pub struct AutoMap<K: Eq + Hash + Clone, V: PartialEq + Clone + 'static> {
+pub struct AutoMap<K: Eq + Hash + Clone + Display, V: PartialEq + Clone + 'static> {
     create: Rc<CreateType<K, V>>,
-    values: Rc<EqBox<BoxRefCell<HashMap<K, V>>>>,
+    values: Rc<EqBox<HashMapMut<K, V>>>,
 }
 
-impl<K: Eq + Hash + Clone, V: PartialEq + Clone + 'static> AutoMap<K, V> {
+impl<K: Eq + Hash + Clone + Display, V: PartialEq + Clone + 'static> AutoMap<K, V> {
     pub fn new<C: Fn(&K) -> V + 'static>(create: C) -> AutoMap<K, V> {
         AutoMap {
             create: Rc::new(EqBox::new(Box::new(create))),
-            values: Rc::new(EqBox::new(BoxRefCell::new(HashMap::new(), "auto map box values"))),
+            values: Rc::new(EqBox::new(HashMapMut::new())),
         }
     }
 
     pub fn get_value(&self, key: &K) -> V {
-        let item: Option<V> = self.values.get_with_context(
-            key,
-            |state, key| -> Option<V> {
-                let item = (*state).get(key);
-
-                if let Some(item) = item {
-                    return Some(item.clone());
-                }
-
-                None
-            }
-        );
+        let item: Option<V> = self.values.get(key);
 
         if let Some(item) = item {
             return item;
@@ -57,12 +46,7 @@ impl<K: Eq + Hash + Clone, V: PartialEq + Clone + 'static> AutoMap<K, V> {
             create(key)
         };
 
-        self.values.change(
-            (key, &new_item),
-            |state, (key, new_item)| {
-                (*state).insert(key.clone(), new_item.clone());
-            }
-        );
+        self.values.insert(key.clone(), new_item.clone());
 
         new_item
     }

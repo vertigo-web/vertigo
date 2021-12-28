@@ -4,8 +4,7 @@ use std::rc::Rc;
 
 use crate::{
     Driver, Instant, InstantType, Resource,
-    computed::Value,
-    utils::BoxRefCell,
+    computed::Value, struct_mut::ValueMut,
 };
 
 /// Function that updates cached value
@@ -17,8 +16,8 @@ pub type LoaderResult<T> = Pin<Box<dyn Future<Output = Resource<T>>>>;
 /// Value that [LazyCache] holds.
 pub struct CachedValue<T: PartialEq + 'static> {
     value: Value<Resource<T>>,
-    updated_at: BoxRefCell<Instant>,
-    set: BoxRefCell<bool>,
+    updated_at: ValueMut<Instant>,
+    set: ValueMut<bool>,
 }
 
 /// A structure similar to Value but supports Loading/Error states and automatic refresh
@@ -71,7 +70,7 @@ pub struct LazyCache<T: PartialEq + 'static> {
     res: Rc<CachedValue<T>>,
     max_age: InstantType,
     loader: Rc<dyn Loader<T>>,
-    queued: Rc<BoxRefCell<bool>>,
+    queued: Rc<ValueMut<bool>>,
     driver: Driver,
 }
 
@@ -82,18 +81,20 @@ impl<T: PartialEq> CachedValue<T> {
 
     pub fn set_value(&self, value: Resource<T>) {
         self.value.set_value(value);
-        self.updated_at.change((), |val, _| *val = val.refresh());
+        let current_updated_at = self.updated_at.get();
+        self.updated_at.set(current_updated_at.refresh());
+        // self.updated_at.change((), |val, _| *val = val.refresh());
         if !self.is_set() {
-            self.set.change((), |val, _| *val = true);
+            self.set.set(true);
         }
     }
 
     fn age(&self) -> InstantType {
-        self.updated_at.get(|val| val.seconds_elapsed())
+        self.updated_at.get().seconds_elapsed()
     }
 
     fn is_set(&self) -> bool {
-        self.set.get(|val| *val)
+        self.set.get()
     }
 }
 
@@ -102,12 +103,12 @@ impl<T: PartialEq> LazyCache<T> {
         Self {
             res: Rc::new(CachedValue {
                 value: driver.new_value(Resource::Loading),
-                updated_at: BoxRefCell::new(driver.now(), "CachedValue::updated_at"),
-                set: BoxRefCell::new(false, "CachedValue::set"),
+                updated_at: ValueMut::new(driver.now()),
+                set: ValueMut::new(false),
             }),
             max_age,
             loader: Rc::new(loader),
-            queued: Rc::new(BoxRefCell::new(false, "LazyCache::queued")),
+            queued: Rc::new(ValueMut::new(false)),
             driver: driver.clone(),
         }
     }
@@ -127,7 +128,7 @@ impl<T: PartialEq> LazyCache<T> {
         let loader = self.loader.clone();
         let res = self.res.clone();
         let queued = self.queued.clone();
-        queued.change((), |x, _| *x = true);
+        queued.set(true);
         let driver = self.driver.clone();
 
         self.driver.spawn(async move {
@@ -135,7 +136,7 @@ impl<T: PartialEq> LazyCache<T> {
                 res.set_value(Resource::Loading);
             }
             res.set_value(loader(driver).await);
-            queued.change((), |x, _| *x = false);
+            queued.set(false);
         })
     }
 
@@ -152,7 +153,7 @@ impl<T: PartialEq> LazyCache<T> {
     }
 
     fn is_loading_queued(&self) -> bool {
-        self.queued.get(|val| *val)
+        self.queued.get()
     }
 }
 

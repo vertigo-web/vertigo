@@ -5,45 +5,29 @@ use std::{
 };
 
 use crate::{
-    computed::{Dependencies, GraphId, GraphRelation},
-    utils::BoxRefCell,
+    computed::{Dependencies, GraphId, GraphRelation}, struct_mut::ValueMut,
 };
-
-#[derive(PartialEq)]
-enum GraphValueType {
-    Computed,
-    Client,
-}
-
-impl GraphValueType {
-    fn is_computed(&self) -> bool {
-        match self {
-            Self::Computed => true,
-            Self::Client => false,
-        }
-    }
-}
 
 struct GraphValueDataState<T: PartialEq + 'static> {
     value: Rc<T>,
-    _list: Vec<GraphRelation>,
+    _list: GraphRelation,
 }
 
 struct GraphValueData<T: PartialEq + 'static> {
-    is_drop: bool,
-    value_type: GraphValueType,
+    is_drop: ValueMut<bool>,
+    is_computed_type: bool,
     deps: Dependencies,
     id: GraphId,
     get_value_from_parent: Box<dyn Fn() -> (Rc<T>, BTreeSet<GraphId>) + 'static>,
-    state: Option<GraphValueDataState<T>>,
+    state: ValueMut<Option<GraphValueDataState<T>>>,
 }
 
 impl<T: PartialEq + 'static> GraphValueData<T> {
     pub fn new<F: Fn() -> Rc<T> + 'static>(
         deps: &Dependencies,
-        value_type: GraphValueType,
+        is_computed_type: bool,
         get_value: F,
-    ) -> (GraphId, Rc<BoxRefCell<GraphValueData<T>>>) {
+    ) -> (GraphId, Rc<GraphValueData<T>>) {
         let id = GraphId::default();
 
         let get_value = {
@@ -58,30 +42,21 @@ impl<T: PartialEq + 'static> GraphValueData<T> {
         };
 
         let inst = Rc::new(
-            BoxRefCell::new(
-                GraphValueData {
-                    is_drop: false,
-                    value_type,
-                    deps: deps.clone(),
-                    id,
-                    get_value_from_parent: get_value,
-                    state: None,
-                },
-                "GraphValueData",
-            )
+            GraphValueData {
+                is_drop: ValueMut::new(false),
+                is_computed_type,
+                deps: deps.clone(),
+                id,
+                get_value_from_parent: get_value,
+                state: ValueMut::new(None),
+            }
         );
 
         (id, inst)
     }
 
-    fn convert_to_relation(&self, edges: BTreeSet<GraphId>) -> Vec<GraphRelation> {
-        let mut list_relations: Vec<GraphRelation> = Vec::new();
-
-        for parent_id in edges {
-            list_relations.push(GraphRelation::new(self.deps.clone(), parent_id, self.id));
-        }
-
-        list_relations
+    fn convert_to_relation(&self, edges: BTreeSet<GraphId>) -> GraphRelation {
+        GraphRelation::new(self.deps.clone(), edges, self.id)
     }
 
     fn calculate_new_value(&self) -> (Rc<T>, BTreeSet<GraphId>) {
@@ -89,55 +64,60 @@ impl<T: PartialEq + 'static> GraphValueData<T> {
         get_value_from_parent()
     }
 
-    pub fn get_value(&mut self, is_computed: bool) -> Rc<T> {
+    pub fn get_value(&self, is_computed: bool) -> Rc<T> {
         if is_computed {
             self.deps.report_parent_in_stack(self.id);
         }
 
-        if let Some(state) = &self.state {
-            return state.value.clone();
+        let inner_value = self.state.map(|value| {
+            if let Some(value) = value {
+                return Some(value.value.clone());
+            }
+            None
+        });
+
+        if let Some(value) = inner_value {
+            return value;
         }
 
         let (new_value, parents_list) = self.calculate_new_value();
 
-        self.state = Some(GraphValueDataState {
+        self.state.set(Some(GraphValueDataState {
             value: new_value.clone(),
             _list: self.convert_to_relation(parents_list),
-        });
+        }));
 
         new_value
     }
 
-    pub fn refresh(&mut self) {
-        if self.value_type.is_computed() {
+    fn control_refresh(&self) {
+        if self.is_computed_type {
             log::error!("The refresh function should never be executed on a client node");
             return;
         }
 
-        if self.is_drop {
+        if self.is_drop.get() {
             log::info!("Client unsubscribed, skip refreshing");
             return;
         }
 
         let (new_value, parents_list) = self.calculate_new_value();
 
-        self.state = Some(GraphValueDataState {
+        self.state.set(Some(GraphValueDataState {
             value: new_value,
             _list: self.convert_to_relation(parents_list),
-        });
+        }));
     }
 
-    pub fn drop_value(&mut self) {
-        if self.state.is_none() {
-            log::error!("Incoherent state");
+    fn control_drop_value(&self) {
+        let is_none = self.state.map(|value| value.is_none());
+
+        if is_none {
+            log::error!("control_drop_value - Incoherent state");
             return;
         }
 
-        self.state = None;
-    }
-
-    fn is_computed(&self) -> bool {
-        self.value_type == GraphValueType::Computed
+        self.state.set(None);
     }
 }
 
@@ -147,23 +127,17 @@ pub trait GraphValueControl {
     fn is_computed(&self) -> bool;
 }
 
-impl<T: PartialEq + 'static> GraphValueControl for BoxRefCell<GraphValueData<T>> {
+impl<T: PartialEq + 'static> GraphValueControl for GraphValueData<T> {
     fn drop_value(&self) {
-        self.change((), |state, _| {
-            state.drop_value();
-        });
+        self.control_drop_value();
     }
 
     fn refresh(&self) {
-        self.change((), |state, _| {
-            state.refresh()
-        })
+        self.control_refresh();
     }
 
     fn is_computed(&self) -> bool {
-        self.change((), |state, _| {
-            state.is_computed()
-        })
+        self.is_computed_type
     }
 }
 
@@ -193,42 +167,58 @@ impl GraphValueRefresh {
 
 struct GraphValueInner<T: PartialEq + 'static> {
     id: GraphId,
-    inner: Rc<BoxRefCell<GraphValueData<T>>>,
-}
-
-impl<T: PartialEq + 'static> GraphValueInner<T> {
-    pub fn new<F>(deps: &Dependencies, value_type: GraphValueType, get_value: F) -> Rc<GraphValueInner<T>>
-    where
-        F: Fn() -> Rc<T> + 'static
-    {
-        let (id, graph_value_data) = GraphValueData::new(deps, value_type, get_value);
-
-        let refresh_token = GraphValueRefresh::new(id, graph_value_data.clone());
-
-        deps.refresh_token_add(refresh_token);
-
-        Rc::new(
-            GraphValueInner {
-                id,
-                inner: graph_value_data,
-            }
-        )
-    }
+    inner: Rc<GraphValueData<T>>,
 }
 
 impl<T: PartialEq + 'static> Drop for GraphValueInner<T> {
     fn drop(&mut self) {
-        let deps = self.inner.change((), |state, _| {
-            state.is_drop = true;
-            state.deps.clone()
-        });
-
-        deps.refresh_token_drop(self.id);
+        self.inner.is_drop.set(true);
+        self.inner.deps.refresh_token_drop(self.id);
     }
 }
 
 pub struct GraphValue<T: PartialEq + 'static> {
     inner: Rc<GraphValueInner<T>>,
+}
+
+impl<T: PartialEq + 'static> GraphValue<T> {
+    fn new<F: Fn() -> Rc<T> + 'static>(deps: &Dependencies, is_computed_type: bool, /*value_type: GraphValueType,*/ get_value: F) -> GraphValue<T> {
+
+        let (id, graph_value_data) = GraphValueData::new(deps, is_computed_type, /*value_type,*/ get_value);
+
+        let refresh_token = GraphValueRefresh::new(id, graph_value_data.clone());
+
+        deps.refresh_token_add(refresh_token);
+
+        GraphValue {
+            inner: Rc::new(
+                GraphValueInner {
+                    id,
+                    inner: graph_value_data,
+                }
+            )
+        }
+    }
+
+    pub fn new_computed<F: Fn() -> Rc<T> + 'static>(deps: &Dependencies, get_value: F) -> GraphValue<T> {
+        GraphValue::new(deps, true, get_value)
+    }
+
+    pub fn new_client<F: Fn() -> Rc<T> + 'static>(deps: &Dependencies, get_value: F) -> GraphValue<T> {
+        GraphValue::new(deps, false, get_value)
+    }
+
+    pub fn get_value(&self, is_computed: bool) -> Rc<T> {
+        self.inner.inner.get_value(is_computed)
+    }
+
+    pub fn deps(&self) -> Dependencies {
+        self.inner.inner.deps.clone()
+    }
+
+    pub(crate) fn id(&self) -> GraphId {
+        self.inner.inner.id
+    }
 }
 
 impl<T: PartialEq + 'static> Clone for GraphValue<T> {
@@ -239,36 +229,3 @@ impl<T: PartialEq + 'static> Clone for GraphValue<T> {
     }
 }
 
-impl<T: PartialEq + 'static> GraphValue<T> {
-    fn new<F: Fn() -> Rc<T> + 'static>(deps: &Dependencies, value_type: GraphValueType, get_value: F) -> GraphValue<T> {
-        GraphValue {
-            inner: GraphValueInner::new(deps, value_type, get_value),
-        }
-    }
-
-    pub fn new_computed<F: Fn() -> Rc<T> + 'static>(deps: &Dependencies, get_value: F) -> GraphValue<T> {
-        GraphValue::new(deps, GraphValueType::Computed, get_value)
-    }
-
-    pub fn new_client<F: Fn() -> Rc<T> + 'static>(deps: &Dependencies, get_value: F) -> GraphValue<T> {
-        GraphValue::new(deps, GraphValueType::Client, get_value)
-    }
-
-    pub fn get_value(&self, is_computed: bool) -> Rc<T> {
-        self.inner.inner.change(is_computed, |state, is_computed| {
-            state.get_value(is_computed)
-        })
-    }
-
-    pub fn deps(&self) -> Dependencies {
-        self.inner.inner.get(|state| {
-            state.deps.clone()
-        })
-    }
-
-    pub(crate) fn id(&self) -> GraphId {
-        self.inner.inner.get(|state| {
-            state.id
-        })
-    }
-}
