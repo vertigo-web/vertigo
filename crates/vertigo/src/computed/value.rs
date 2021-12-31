@@ -32,7 +32,7 @@ struct ValueInner<T: PartialEq + 'static> {
 
 impl<T: PartialEq + 'static> Drop for ValueInner<T> {
     fn drop(&mut self) {
-        self.deps.external_connections.unregister_connect(self.id);
+        self.deps.external_connections_unregister_connect(self.id);
     }
 }
 
@@ -97,7 +97,7 @@ impl<T: PartialEq + 'static> Value<T> {
 
         let computed = value.to_computed();
 
-        deps.external_connections.register_connect(id, Rc::new(move || {
+        deps.external_connections_register_connect(id, Rc::new(move || {
             create(&value)
         }));
 

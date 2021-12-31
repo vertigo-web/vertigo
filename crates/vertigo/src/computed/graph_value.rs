@@ -14,7 +14,6 @@ struct GraphValueDataState<T: PartialEq + 'static> {
 }
 
 struct GraphValueData<T: PartialEq + 'static> {
-    is_drop: ValueMut<bool>,
     is_computed_type: bool,
     deps: Dependencies,
     id: GraphId,
@@ -43,7 +42,6 @@ impl<T: PartialEq + 'static> GraphValueData<T> {
 
         let inst = Rc::new(
             GraphValueData {
-                is_drop: ValueMut::new(false),
                 is_computed_type,
                 deps: deps.clone(),
                 id,
@@ -91,37 +89,24 @@ impl<T: PartialEq + 'static> GraphValueData<T> {
     }
 
     fn control_refresh(&self) {
-        if self.is_computed_type {
-            log::error!("The refresh function should never be executed on a client node");
-            return;
+        let is_some = self.state.map(|item| item.is_some());
+
+        if is_some {
+            let (new_value, parents_list) = self.calculate_new_value();
+
+            self.state.set(Some(GraphValueDataState {
+                value: new_value,
+                _list: self.convert_to_relation(parents_list),
+            }));
         }
-
-        if self.is_drop.get() {
-            log::info!("Client unsubscribed, skip refreshing");
-            return;
-        }
-
-        let (new_value, parents_list) = self.calculate_new_value();
-
-        self.state.set(Some(GraphValueDataState {
-            value: new_value,
-            _list: self.convert_to_relation(parents_list),
-        }));
     }
 
     fn control_drop_value(&self) {
-        let is_none = self.state.map(|value| value.is_none());
-
-        if is_none {
-            log::error!("control_drop_value - Incoherent state");
-            return;
-        }
-
         self.state.set(None);
     }
 }
 
-pub trait GraphValueControl {
+trait GraphValueControl {
     fn drop_value(&self);
     fn refresh(&self);
     fn is_computed(&self) -> bool;
@@ -148,7 +133,7 @@ pub struct GraphValueRefresh { // add type ?
 }
 
 impl GraphValueRefresh {
-    pub fn new(id: GraphId, control: Rc<dyn GraphValueControl>) -> GraphValueRefresh {
+    fn new(id: GraphId, control: Rc<dyn GraphValueControl>) -> GraphValueRefresh {
         GraphValueRefresh { id, control }
     }
 
@@ -170,10 +155,27 @@ struct GraphValueInner<T: PartialEq + 'static> {
     inner: Rc<GraphValueData<T>>,
 }
 
+impl<T: PartialEq + 'static> GraphValueInner<T> {
+    fn new<F: Fn() -> Rc<T> + 'static>(deps: &Dependencies, is_computed_type: bool, get_value: F) -> GraphValueInner<T> {
+
+        let (id, graph_value_data) = GraphValueData::new(deps, is_computed_type, get_value);
+
+        let refresh_token = GraphValueRefresh::new(id, graph_value_data.clone());
+
+        deps.refresh_token_add(refresh_token);
+
+        GraphValueInner {
+            id,
+            inner: graph_value_data,
+        }
+    }
+}
+
 impl<T: PartialEq + 'static> Drop for GraphValueInner<T> {
     fn drop(&mut self) {
-        self.inner.is_drop.set(true);
         self.inner.deps.refresh_token_drop(self.id);
+        self.inner.state.set(None);
+        self.inner.deps.external_connections_refresh();
     }
 }
 
@@ -182,20 +184,10 @@ pub struct GraphValue<T: PartialEq + 'static> {
 }
 
 impl<T: PartialEq + 'static> GraphValue<T> {
-    fn new<F: Fn() -> Rc<T> + 'static>(deps: &Dependencies, is_computed_type: bool, /*value_type: GraphValueType,*/ get_value: F) -> GraphValue<T> {
-
-        let (id, graph_value_data) = GraphValueData::new(deps, is_computed_type, /*value_type,*/ get_value);
-
-        let refresh_token = GraphValueRefresh::new(id, graph_value_data.clone());
-
-        deps.refresh_token_add(refresh_token);
-
+    fn new<F: Fn() -> Rc<T> + 'static>(deps: &Dependencies, is_computed_type: bool, get_value: F) -> GraphValue<T> {
         GraphValue {
             inner: Rc::new(
-                GraphValueInner {
-                    id,
-                    inner: graph_value_data,
-                }
+                GraphValueInner::new(deps, is_computed_type, get_value)
             )
         }
     }

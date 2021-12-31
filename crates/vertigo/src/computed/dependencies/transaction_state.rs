@@ -4,6 +4,7 @@ use crate::{computed::graph_id::GraphId, struct_mut::ValueMut};
 
 use super::hook::Hooks;
 
+#[derive(PartialEq)]
 enum State {
     Idle,
     Modification {
@@ -133,5 +134,9 @@ impl TransactionState {
 
     pub fn set_hook(&self, before_start: Box<dyn Fn()>, after_end: Box<dyn Fn()>) {
         self.hooks.add(before_start, after_end);
+    }
+
+    pub fn is_idle(&self) -> bool {
+        self.state.map(|state| *state == State::Idle)
     }
 }

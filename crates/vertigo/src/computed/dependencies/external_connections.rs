@@ -51,22 +51,15 @@ impl ExternalConnections {
     }
 
     pub fn refresh_connect(&self) {
-        if self.inner.will_connect.is_empty() {
-            return;
-        }
-
         let will_connect = self.inner.will_connect.take();
         for (id, should_connect) in will_connect.into_iter() {
             if should_connect {
-                if self.inner.connect_resource.contains_key(&id) {
-                    return;
-                }
-        
-                //must be connected
-        
-                if let Some(connect_func) = self.inner.connect.get(&id) {
-                    let connect_resource = connect_func();
-                    self.inner.connect_resource.insert(id, connect_resource);
+                if !self.inner.connect_resource.contains_key(&id) {
+                    //must be connected
+                    if let Some(connect_func) = self.inner.connect.get(&id) {
+                        let connect_resource = connect_func();
+                        self.inner.connect_resource.insert(id, connect_resource);
+                    }
                 }
             } else {
                 self.inner.connect_resource.remove(&id);
