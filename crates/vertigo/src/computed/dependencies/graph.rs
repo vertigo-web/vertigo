@@ -1,26 +1,28 @@
 use std::collections::BTreeSet;
-use std::rc::Rc;
 use crate::computed::graph_id::GraphId;
 use crate::struct_mut::BTreeMapMut;
 use super::external_connections::ExternalConnections;
 use super::graph_map::GraphMap;
+use super::refresh::Refresh;
 
 pub struct Graph {
+    refresh: Refresh,
     parent_childs: GraphMap,                    // ParentId <- ClientId
     counters: BTreeMapMut<(GraphId, GraphId), u8>, // Relation counter
     external_connections: ExternalConnections,
 }
 
 impl Graph {
-    pub fn new(external_connections: ExternalConnections) -> Graph {
+    pub fn new(external_connections: ExternalConnections, refresh: Refresh) -> Graph {
         Graph {
+            refresh,
             parent_childs: GraphMap::new(),
             counters: BTreeMapMut::new(),
             external_connections,
         }
     }
 
-    pub fn add_graph_connection(&self, parent_id_set: Rc<BTreeSet<GraphId>>, client_id: GraphId) {
+    pub fn add_graph_connection(&self, parent_id_set: &BTreeSet<GraphId>, client_id: GraphId) {
         for parent_id in parent_id_set.iter() {
             let id = (*parent_id, client_id);
             let increase_success = self.counters.get_mut(&id, |counter| {
@@ -38,7 +40,7 @@ impl Graph {
         }
     }
 
-    pub fn remove_graph_connection(&self, parent_id_set: &Rc<BTreeSet<GraphId>>, client_id: GraphId) {
+    pub fn remove_graph_connection(&self, parent_id_set: &BTreeSet<GraphId>, client_id: GraphId) {
         for parent_id in parent_id_set.iter() {
             let id = (*parent_id, client_id);
             let should_clear = self.counters.get_mut(&id, |counter| {
@@ -56,6 +58,12 @@ impl Graph {
                 if should_clear {
                     self.parent_childs.remove_connection(*parent_id, client_id);
                     self.counters.remove(&id);
+
+                    if self.parent_childs.relation_len(parent_id) == 0 {
+                        if let Some(token) = self.refresh.get(parent_id) {
+                            token.drop_value();
+                        }
+                    }
 
                     //Connect down
                     self.external_connections.need_disconnection(*parent_id);

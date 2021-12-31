@@ -44,7 +44,7 @@ pub struct Dependencies {
     stack: Rc<EqBox<Stack>>,
     refresh: Rc<EqBox<Refresh>>,
     transaction_state: Rc<EqBox<TransactionState>>,
-    pub external_connections: ExternalConnections,
+    external_connections: ExternalConnections,
 }
 
 impl Clone for Dependencies {
@@ -62,13 +62,14 @@ impl Clone for Dependencies {
 impl Default for Dependencies {
     fn default() -> Self {
         let external_connections = ExternalConnections::default();
+        let refresh: Refresh = Refresh::new();
 
         Self {
             graph: Rc::new(EqBox::new(
-                Graph::new(external_connections.clone()),
+                Graph::new(external_connections.clone(), refresh.clone()),
             )),
             stack: Rc::new(EqBox::new(Stack::new())),
-            refresh: Rc::new(EqBox::new(Refresh::new())),
+            refresh: Rc::new(EqBox::new(refresh)),
             transaction_state: Rc::new(EqBox::new(
                 TransactionState::new()
             )),
@@ -141,11 +142,11 @@ impl Dependencies {
         self.transaction_state.add_edge_to_refresh(parent_id);
     }
 
-    pub(crate) fn add_graph_connection(&self, parent_id: Rc<BTreeSet<GraphId>>, client_id: GraphId) {
+    pub(crate) fn add_graph_connection(&self, parent_id: &BTreeSet<GraphId>, client_id: GraphId) {
         self.graph.add_graph_connection(parent_id, client_id);
     }
 
-    pub(crate) fn remove_graph_connection(&self, parent_id: &Rc<BTreeSet<GraphId>>, client_id: GraphId) {
+    pub(crate) fn remove_graph_connection(&self, parent_id: &BTreeSet<GraphId>, client_id: GraphId) {
         self.graph.remove_graph_connection(parent_id, client_id);
     }
 
@@ -188,5 +189,19 @@ impl Dependencies {
 
     pub fn refresh_get(&self, id: &GraphId) -> Option<GraphValueRefresh> {
         self.refresh.get(id)
+    }
+
+    pub fn external_connections_register_connect(&self, id: GraphId, connect: Rc<dyn Fn() -> Box<dyn Any>>) {
+        self.external_connections.register_connect(id, connect);
+    }
+
+    pub fn external_connections_unregister_connect(&self, id: GraphId) {
+        self.external_connections.unregister_connect(id);
+    }
+
+    pub fn external_connections_refresh(&self) {
+        if self.transaction_state.is_idle() {
+            self.external_connections.refresh_connect();
+        }
     }
 }

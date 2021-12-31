@@ -1,13 +1,15 @@
+use std::rc::Rc;
 use crate::{computed::{graph_id::GraphId, graph_value::GraphValueRefresh}, struct_mut::BTreeMapMut};
 
+#[derive(Clone)]
 pub struct Refresh {
-    refresh: BTreeMapMut<GraphId, GraphValueRefresh>, // Reference to GraphValue for refreshing if necessary
+    refresh: Rc<BTreeMapMut<GraphId, GraphValueRefresh>>, // Reference to GraphValue for refreshing if necessary
 }
 
 impl Refresh {
     pub fn new() -> Refresh {
         Refresh {
-            refresh: BTreeMapMut::new(),
+            refresh: Rc::new(BTreeMapMut::new()),
         }
     }
 
@@ -32,7 +34,6 @@ impl Refresh {
             return Some(item);
         }
 
-        log::error!("Missing refresh token for(3) {:?}", id);
         None
     }
 }

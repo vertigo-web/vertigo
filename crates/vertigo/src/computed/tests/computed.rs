@@ -1,6 +1,10 @@
+use std::rc::Rc;
+
+use crate::DropResource;
 use crate::computed::{Computed, Dependencies, Value};
 
 use crate::computed::tests::box_value_version::SubscribeValueVer;
+use crate::struct_mut::ValueMut;
 
 #[test]
 fn basic() {
@@ -436,4 +440,66 @@ fn test_computed_switch_subscription() {
 
     sum.off();
     assert_eq!(root.all_connections_len(), 0);
+}
+
+
+#[test]
+fn test_connect() {
+
+    let root = Dependencies::default();
+
+    let is_subscribe = Rc::new(ValueMut::new(false));
+
+    let value = root.new_with_connect(10, {
+        let is_subscribe = is_subscribe.clone();
+
+        move |_value| {
+            is_subscribe.set(true);
+
+            Box::new(DropResource::new({
+                let is_subscribe = is_subscribe.clone();
+                move || {
+                    is_subscribe.set(false);
+                }
+            }))
+        }
+    });
+
+    assert_eq!(is_subscribe.get(), false);
+
+    let current_value = Rc::new(ValueMut::new(0));
+
+    println!("Subskrybcja 1 {:?}", value.id());
+
+    let client = value.clone().subscribe({
+        let current_value = current_value.clone();
+        move |val| {
+            current_value.set(*val);
+        }
+    });
+
+    println!("Subskrybcja 2");
+
+    assert_eq!(is_subscribe.get(), true);
+
+    drop(client);
+
+    assert_eq!(is_subscribe.get(), false);
+
+    println!("Subskrybcja 3 {:?}", value.id());
+
+    let client = value.subscribe({
+        let current_value = current_value.clone();
+        move |val| {
+            current_value.set(*val);
+        }
+    });
+
+    assert_eq!(is_subscribe.get(), true);
+
+    drop(client);
+
+    assert_eq!(is_subscribe.get(), false);
+
+    println!("Subskrybcja 4");
 }

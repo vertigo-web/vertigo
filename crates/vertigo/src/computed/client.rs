@@ -32,6 +32,7 @@ impl Client {
         });
 
         let _ = graph_value.get_value(false);
+        deps.external_connections_refresh();
 
         Client {
             graph_value: EqBox::new(graph_value),
