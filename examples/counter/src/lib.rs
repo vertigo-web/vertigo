@@ -38,8 +38,8 @@ pub fn render(app_state: &Computed<State>) -> VDomElement {
 }
 
 #[wasm_bindgen_derive(start)]
-pub async fn start_application() {
+pub fn start_application() {
     let driver = DriverBrowser::new();
     let state = State::new(&driver);
-    start_browser_app(driver, state, render).await;
+    start_browser_app(driver, state, render);
 }

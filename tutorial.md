@@ -201,7 +201,7 @@ To see how all these are connected, see `src/lib.rs`:
 
 ```rust
 #[wasm_bindgen_derive(start)]
-pub async fn start_application() {
+pub fn start_application() {
     // Create rendering driver with dependency graph inside
     let driver = DriverBrowser::new();
 
@@ -209,7 +209,7 @@ pub async fn start_application() {
     let app_state = state::State::new(&driver);
 
     // Run application (using provided driver, state and render function) in browser rendering driver
-    start_browser_app(driver, state::State::new, app::render).await;
+    start_browser_app(driver, state::State::new, app::render);
 }
 ```
 
