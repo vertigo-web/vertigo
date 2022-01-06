@@ -142,22 +142,19 @@ pub trait DriverTrait {
 
     fn push_ref_context(&self, context: RefsContext);
     fn flush_update(&self);
+    fn spawn(&self, fut: Pin<Box<dyn Future<Output = ()> + 'static>>);
 }
-
-type Executor = Box<dyn Fn(Pin<Box<dyn Future<Output = ()> + 'static>>)>;
 
 pub struct DriverInner {
     dependencies: Dependencies,
     driver: Rc<dyn DriverTrait>,
-    spawn_local_executor: Rc<Executor>,
 }
 
 impl DriverInner {
-    pub fn new(dependencies: Dependencies, driver: impl DriverTrait + 'static, spawn_local: Executor) -> DriverInner {
+    pub fn new(dependencies: Dependencies, driver: impl DriverTrait + 'static) -> DriverInner {
         DriverInner {
             driver: Rc::new(driver),
             dependencies,
-            spawn_local_executor: Rc::new(spawn_local),
         }
     }
 }
@@ -172,7 +169,7 @@ impl DriverInner {
 /// Additionally driver struct wraps [Dependencies] object.
 #[derive(PartialEq)]
 pub struct Driver {
-    inner: EqBox<Rc<DriverInner>>,
+    inner: Rc<EqBox<DriverInner>>,
 }
 
 impl Clone for Driver {
@@ -184,21 +181,16 @@ impl Clone for Driver {
 }
 
 impl Driver {
-    pub fn new(dependencies: Dependencies, driver: impl DriverTrait + 'static, spawn_local: Executor) -> Driver {
+    pub fn new(dependencies: Dependencies, driver: impl DriverTrait + 'static) -> Driver {
         Driver {
-            inner: EqBox::new(Rc::new(DriverInner::new(dependencies, driver, spawn_local))),
+            inner: Rc::new(EqBox::new(DriverInner::new(dependencies, driver))),
         }
     }
 
     /// Spawn a future - thus allowing to fire async functions in, for example, event handler. Handy when fetching resources from internet.
-    pub fn spawn<F>(&self, future: F)
-    where
-        F: Future<Output = ()> + 'static,
-    {
-        let fur = Box::pin(future);
-
-        let spawn_local_executor = self.inner.spawn_local_executor.clone();
-        spawn_local_executor(fur)
+    pub fn spawn(&self, future: impl Future<Output = ()> + 'static) {
+        let future_box = Box::pin(future);
+        self.inner.driver.spawn(future_box);
     }
 
     /// Create new FetchBuilder.

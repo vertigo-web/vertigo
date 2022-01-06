@@ -24,10 +24,11 @@ struct DriverBrowserInner {
     driver_hashrouter: DriverBrowserHashrouter,
     driver_fetch: DriverBrowserFetch,
     driver_websocket: DriverWebsocket,
+    spawn_executor: Rc<dyn Fn(Pin<Box<dyn Future<Output = ()> + 'static>>)>,
 }
 
 impl DriverBrowserInner {
-    fn new(dependencies: &Dependencies) -> Self {
+    fn new(dependencies: &Dependencies, spawn_executor: Rc<dyn Fn(Pin<Box<dyn Future<Output = ()> + 'static>>)>,) -> Self {
         let driver_dom = DriverBrowserDom::new(dependencies);
         let driver_interval = DriverBrowserInterval::new();
         let driver_hashrouter = DriverBrowserHashrouter::new();
@@ -38,6 +39,7 @@ impl DriverBrowserInner {
             driver_hashrouter,
             driver_fetch: DriverBrowserFetch::new(),
             driver_websocket: DriverWebsocket::new(),
+            spawn_executor
         }
     }
 }
@@ -52,7 +54,12 @@ impl DriverBrowser {
     pub fn new() -> Driver {
         let dependencies = Dependencies::default();
 
-        let driver = DriverBrowserInner::new(&dependencies);
+        let driver = DriverBrowserInner::new(
+            &dependencies,
+            Rc::new(|fut: Pin<Box<dyn Future<Output = ()> + 'static>>| {
+                wasm_bindgen_futures::spawn_local(fut);
+            })
+        );
 
         let dom_driver_browser = DriverBrowser {
             driver: Rc::new(driver),
@@ -61,9 +68,6 @@ impl DriverBrowser {
         Driver::new(
             dependencies,
             dom_driver_browser,
-            Box::new(|fut: Pin<Box<dyn Future<Output = ()> + 'static>>| {
-                wasm_bindgen_futures::spawn_local(fut);
-            }),
         )
     }
 }
@@ -199,5 +203,10 @@ impl DriverTrait for DriverBrowser {
 
     fn flush_update(&self) {
         self.driver.driver_dom.flush_dom_changes();
+    }
+
+    fn spawn(&self, fut: Pin<Box<dyn Future<Output = ()> + 'static>>) {
+        let spawn_executor = self.driver.spawn_executor.clone();
+        spawn_executor(fut);
     }
 }

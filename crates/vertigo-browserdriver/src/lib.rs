@@ -15,6 +15,5 @@ pub mod prelude {
     pub use crate::browser_app::start_browser_app;
     pub use crate::driver_browser::DriverBrowser;
     pub use wasm_bindgen;
-    pub use wasm_bindgen_futures;
     pub use wasm_bindgen::prelude::wasm_bindgen as wasm_bindgen_derive;
 }
