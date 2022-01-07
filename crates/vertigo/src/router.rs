@@ -6,13 +6,6 @@ use crate::{
     utils::{DropResource}, struct_mut::ValueMut,
 };
 
-#[derive(PartialEq, Clone, Copy)]
-enum Direction {
-    Loading,
-    Pushing,
-    Popping,
-}
-
 #[derive(PartialEq)]
 pub struct HashRouter {
     sender: Client,
@@ -89,29 +82,34 @@ impl HashRouter {
     where
         T: PartialEq + ToString,
     {
-        let direction = Rc::new(ValueMut::new(Direction::Loading));
+        let block_subscrition = Rc::new(ValueMut::new(true));
 
         let sender = route.to_computed().subscribe({
             let driver = driver.clone();
-            let direction = direction.clone();
+            let block_subscrition = block_subscrition.clone();
             move |route| {
-                let dir = direction.get();
-                match dir {
-                    // First change is upon page loading, ignore it but accept further pushes
-                    Direction::Loading => direction.set(Direction::Pushing),
-                    Direction::Pushing => driver.push_hash_location(route.to_string()),
-                    _ => (),
+                if block_subscrition.get() {
+                    return;
                 }
+
+                driver.push_hash_location(route.to_string());
             }
         });
 
         let receiver = driver.on_hash_route_change({
+            let driver = driver.clone();
+            let block_subscrition = block_subscrition.clone();
+
             Box::new(move |url: &String| {
-                direction.set(Direction::Popping);
-                callback(url);
-                direction.set(Direction::Pushing);
+                block_subscrition.set(true);
+                driver.transaction(|| {
+                    callback(url);
+                });
+                block_subscrition.set(false);
             })
         });
+
+        block_subscrition.set(false);
 
         Self { sender, receiver }
     }
