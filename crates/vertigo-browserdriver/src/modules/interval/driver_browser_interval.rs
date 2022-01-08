@@ -1,53 +1,78 @@
 use std::rc::Rc;
-
 use vertigo::utils::DropResource;
-use wasm_bindgen::prelude::Closure;
 
-use crate::utils::callback_manager::CallbackManager;
+use crate::{utils::callback_manager::CallbackManager, api::ApiImport};
 
-use super::js_interval::DriverBrowserIntervalJs;
-
+#[derive(Clone)]
 pub struct DriverBrowserInterval {
-    driver_js: Rc<DriverBrowserIntervalJs>,
-    _closure: Closure<dyn Fn(u64)>,
-    callback_manager: CallbackManager<()>,
+    api: Rc<ApiImport>,
+    interval_callback_manager: CallbackManager<()>,
+    timeout_callback_manager: CallbackManager<()>,
 }
 
 impl DriverBrowserInterval {
-    pub fn new() -> DriverBrowserInterval {
-        let callback_manager = CallbackManager::new();
-
-        let closure = {
-            let callback_manager = callback_manager.clone();
-
-            Closure::new(move |callback_id: u64| {
-                let callback = callback_manager.get(callback_id);
-
-                if let Some(callback) = callback {
-                    callback(&());
-                } else {
-                    log::error!("Missing callback for id={}", callback_id);
-                }
-            })
-        };
-
-        let driver_js = Rc::new(DriverBrowserIntervalJs::new(&closure));
-
+    pub fn new(api: &Rc<ApiImport>) -> DriverBrowserInterval {
         DriverBrowserInterval {
-            driver_js,
-            _closure: closure,
-            callback_manager,
+            api: api.clone(),
+            interval_callback_manager: CallbackManager::new(),
+            timeout_callback_manager: CallbackManager::new(),
         }
     }
 
-    pub fn set_interval<F: Fn(&()) + 'static>(&self, time: u32, callback: F) -> DropResource {
-        let callback_id = self.callback_manager.set(callback);
+    pub fn set_interval<F: Fn(&()) + 'static>(&self, duration: u32, callback: F) -> DropResource {
+        let callback_id = self.interval_callback_manager.set(callback);
 
-        let timer_id = self.driver_js.set_interval(time, callback_id);
-        let driver_js = self.driver_js.clone();
+        let timer_id = self.api.interval_set(duration, callback_id);
 
-        DropResource::new(move || {
-            driver_js.clear_interval(timer_id);
+        DropResource::new({
+            let interval_callback_manager = self.interval_callback_manager.clone();
+            let api = self.api.clone();
+            move || {
+                api.interval_clear(timer_id);
+                interval_callback_manager.remove(callback_id);
+            }
         })
+    }
+
+    pub(crate) fn export_interval_run_callback(&self, callback_id: u32) {
+        let callback = self.interval_callback_manager.get(callback_id);
+
+        if let Some(callback) = callback {
+            callback(&());
+        } else {
+            log::error!("Missing callback for id={}", callback_id);
+        }
+    }
+
+    pub fn set_timeout_and_detach<F: Fn(&()) + 'static>(&self, duration: u32, callback: F) {
+        let callback_id = self.timeout_callback_manager.set(callback);
+
+        let _ = self.api.timeout_set(duration, callback_id);
+    }
+
+    #[allow(dead_code)]
+    pub fn set_timeout<F: Fn(&()) + 'static>(&self, duration: u32, callback: F) -> DropResource {
+        let callback_id = self.timeout_callback_manager.set(callback);
+
+        let timer_id = self.api.timeout_set(duration, callback_id);
+
+        DropResource::new({
+            let timeout_callback_manager = self.timeout_callback_manager.clone();
+            let api = self.api.clone();
+            move || {
+                api.timeout_clear(timer_id);
+                timeout_callback_manager.remove(callback_id);
+            }
+        })
+    }
+
+    pub(crate) fn export_timeout_run_callback(&self, callback_id: u32) {
+        let callback = self.timeout_callback_manager.remove(callback_id);
+
+        if let Some(callback) = callback {
+            callback(&());
+        } else {
+            log::error!("Missing callback for id={}", callback_id);
+        }
     }
 }

@@ -1,17 +1,17 @@
 use std::cell::RefCell;
 
 pub struct CounterMut {
-    counter: RefCell<u64>,
+    counter: RefCell<u32>,
 }
 
 impl CounterMut {
-    pub fn new(init: u64) -> CounterMut {
+    pub fn new(init: u32) -> CounterMut {
         CounterMut {
             counter: RefCell::new(init),
         }
     }
 
-    pub fn get_next(&self) -> u64 {
+    pub fn get_next(&self) -> u32 {
         let mut state = self.counter.borrow_mut();
         let id = *state;
         *state += 1;

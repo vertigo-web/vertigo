@@ -26,19 +26,19 @@ impl NodeRefsItem {
         NodeRefsItem { id, driver }
     }
 
-    pub fn get_bounding_client_rect_x(&self) -> f64 {
+    pub fn get_bounding_client_rect_x(&self) -> i32 {
         self.driver.get_bounding_client_rect_x(self.id)
     }
 
-    pub fn get_bounding_client_rect_y(&self) -> f64 {
+    pub fn get_bounding_client_rect_y(&self) -> i32 {
         self.driver.get_bounding_client_rect_y(self.id)
     }
 
-    pub fn get_bounding_client_rect_width(&self) -> f64 {
+    pub fn get_bounding_client_rect_width(&self) -> u32 {
         self.driver.get_bounding_client_rect_width(self.id)
     }
 
-    pub fn get_bounding_client_rect_height(&self) -> f64 {
+    pub fn get_bounding_client_rect_height(&self) -> u32 {
         self.driver.get_bounding_client_rect_height(self.id)
     }
 
@@ -58,11 +58,11 @@ impl NodeRefsItem {
         self.driver.set_scroll_left(self.id, value);
     }
 
-    pub fn scroll_width(&self) -> i32 {
+    pub fn scroll_width(&self) -> u32 {
         self.driver.scroll_width(self.id)
     }
 
-    pub fn scroll_height(&self) -> i32 {
+    pub fn scroll_height(&self) -> u32 {
         self.driver.scroll_height(self.id)
     }
 }

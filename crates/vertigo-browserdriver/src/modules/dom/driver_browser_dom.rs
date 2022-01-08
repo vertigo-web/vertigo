@@ -3,28 +3,23 @@ use vertigo::{
     dev::{EventCallback, RealDomId, RefsContext},
     Dependencies, KeyDownEvent,
 };
-use wasm_bindgen::prelude::Closure;
-
 use vertigo::struct_mut::VecMut;
+
+use crate::api::ApiImport;
 
 use super::{
     driver_data::DriverData,
     driver_dom_command::DriverDomCommand,
-    js_dom::DriverBrowserDomJs,
     visited_node_manager::VisitedNodeManager,
 };
 
-type KeydownClosureType = Closure<dyn Fn(Option<u64>, String, String, bool, bool, bool, bool) -> bool>;
 
 struct DriverDomInner {
+    api: Rc<ApiImport>,
     data: Rc<DriverData>,
-    dom_js: Rc<DriverBrowserDomJs>,
-    _mouse_down: Closure<dyn Fn(u64)>,
-    _mouse_enter: Closure<dyn Fn(Option<u64>)>,
-    _keydown: KeydownClosureType,
-    _oninput: Closure<dyn Fn(u64, String)>,
     refs: VecMut<RefsContext>,
     commands: VecMut<DriverDomCommand>,
+    current_visited: VisitedNodeManager,
 }
 
 #[derive(Clone)]
@@ -33,104 +28,17 @@ pub struct DriverBrowserDom {
 }
 
 impl DriverBrowserDom {
-    pub fn new(dependencies: &Dependencies) -> DriverBrowserDom {
+    pub fn new(dependencies: &Dependencies, api: &Rc<ApiImport>) -> DriverBrowserDom {
         let data = DriverData::new();
-
-        let mouse_down = {
-            let data = data.clone();
-
-            Closure::new(move |dom_id: u64| {
-                let event_to_run = data.find_event_click(RealDomId::from_u64(dom_id));
-
-                if let Some(event_to_run) = event_to_run {
-                    event_to_run();
-                }
-            })
-        };
-
-        let mouse_enter: Closure<dyn Fn(Option<u64>)> = {
-            let data = data.clone();
-            let current_visited = VisitedNodeManager::new(&data, dependencies);
-
-            Closure::new(move |dom_id: Option<u64>| {
-                match dom_id {
-                    Some(dom_id) => {
-                        let nodes = data.find_all_nodes(RealDomId::from_u64(dom_id));
-                        current_visited.push_new_nodes(nodes);
-                    }
-                    None => {
-                        current_visited.clear();
-                    }
-                }
-            })
-        };
-
-        let keydown: KeydownClosureType = {
-            let data = data.clone();
-
-            Closure::new(
-                move |
-                    dom_id: Option<u64>,
-                    key: String,
-                    code: String,
-                    alt_key: bool,
-                    ctrl_key: bool,
-                    shift_key: bool,
-                    meta_key: bool
-                | -> bool {
-                    let event = KeyDownEvent {
-                        key,
-                        code,
-                        alt_key,
-                        ctrl_key,
-                        shift_key,
-                        meta_key,
-                    };
-
-                    let id = match dom_id {
-                        Some(id) => RealDomId::from_u64(id),
-                        None => RealDomId::root(),
-                    };
-
-                    let event_to_run = data.find_event_keydown(id);
-
-                    if let Some(event_to_run) = event_to_run {
-                        let prevent_default = event_to_run(event);
-
-                        if prevent_default {
-                            return true;
-                        }
-                    }
-
-                    false
-                }
-            )
-        };
-
-        let oninput: Closure<dyn Fn(u64, String)> = {
-            let data = data.clone();
-
-            Closure::new(move |dom_id: u64, text: String| {
-                let event_to_run = data.find_event_on_input(RealDomId::from_u64(dom_id));
-
-                if let Some(event_to_run) = event_to_run {
-                    event_to_run(text);
-                }
-            })
-        };
-
-        let dom_js = Rc::new(DriverBrowserDomJs::new(&mouse_down, &mouse_enter, &keydown, &oninput));
+        let current_visited = VisitedNodeManager::new(&data, dependencies);
 
         let driver_browser = DriverBrowserDom {
             inner: Rc::new(DriverDomInner {
+                api: api.clone(),
                 data,
-                dom_js,
-                _mouse_down: mouse_down,
-                _mouse_enter: mouse_enter,
-                _keydown: keydown,
-                _oninput: oninput,
                 refs: VecMut::new(),
                 commands: VecMut::new(),
+                current_visited,
             }),
         };
 
@@ -154,6 +62,63 @@ impl DriverBrowserDom {
 }
 
 impl DriverBrowserDom {
+
+    pub fn export_dom_mousedown(&self, dom_id: u64) {
+        let event_to_run = self.inner.data.find_event_click(RealDomId::from_u64(dom_id));
+
+        if let Some(event_to_run) = event_to_run {
+            event_to_run();
+        }
+    }
+
+    pub fn export_dom_mouseover(&self, dom_id: Option<u64>) {
+        match dom_id {
+            None => {
+                self.inner.current_visited.clear();
+            },
+            Some(dom_id) => {
+                let nodes = self.inner.data.find_all_nodes(RealDomId::from_u64(dom_id));
+                self.inner.current_visited.push_new_nodes(nodes);
+            }
+        }
+    }
+
+    pub fn export_dom_keydown(&self, dom_id: Option<u64>, key: String, code: String, alt_key: bool, ctrl_key: bool, shift_key: bool, meta_key: bool) -> bool {
+        let event = KeyDownEvent {
+            key,
+            code,
+            alt_key,
+            ctrl_key,
+            shift_key,
+            meta_key,
+        };
+
+        let id = match dom_id {
+            None => RealDomId::root(),
+            Some(id) => RealDomId::from_u64(id),
+        };
+
+        let event_to_run = self.inner.data.find_event_keydown(id);
+
+        if let Some(event_to_run) = event_to_run {
+            let prevent_default = event_to_run(event);
+
+            if prevent_default {
+                return true;
+            }
+        }
+
+        false
+    }
+
+    pub fn export_dom_oninput(&self, dom_id: u64, text: String) {
+        let event_to_run = self.inner.data.find_event_on_input(RealDomId::from_u64(dom_id));
+
+        if let Some(event_to_run) = event_to_run {
+            event_to_run(text);
+        }
+    }
+
     fn mount_node(&self, id: RealDomId) {
         self.inner.commands.push(DriverDomCommand::MountNode { id });
     }
@@ -230,7 +195,7 @@ impl DriverBrowserDom {
             }
     
             let command_str = format!("[{}]", out.join(","));
-            self.inner.dom_js.bulk_update(command_str.as_str());
+            self.inner.api.dom_bulk_update(command_str.as_str());
         }
 
         let refs = self.inner.refs.take();
@@ -244,44 +209,44 @@ impl DriverBrowserDom {
         self.inner.data.set_event(id, callback);
     }
 
-    pub fn get_bounding_client_rect_x(&self, id: RealDomId) -> f64 {
-        self.inner.dom_js.get_bounding_client_rect_x(id.to_u64())
+    pub fn get_bounding_client_rect_x(&self, id: RealDomId) -> i32 {
+        self.inner.api.dom_get_bounding_client_rect_x(id.to_u64())
     }
 
-    pub fn get_bounding_client_rect_y(&self, id: RealDomId) -> f64 {
-        self.inner.dom_js.get_bounding_client_rect_y(id.to_u64())
+    pub fn get_bounding_client_rect_y(&self, id: RealDomId) -> i32 {
+        self.inner.api.dom_get_bounding_client_rect_y(id.to_u64())
     }
 
-    pub fn get_bounding_client_rect_width(&self, id: RealDomId) -> f64 {
-        self.inner.dom_js.get_bounding_client_rect_width(id.to_u64())
+    pub fn get_bounding_client_rect_width(&self, id: RealDomId) -> u32 {
+        self.inner.api.dom_get_bounding_client_rect_width(id.to_u64())
     }
 
-    pub fn get_bounding_client_rect_height(&self, id: RealDomId) -> f64 {
-        self.inner.dom_js.get_bounding_client_rect_height(id.to_u64())
+    pub fn get_bounding_client_rect_height(&self, id: RealDomId) -> u32 {
+        self.inner.api.dom_get_bounding_client_rect_height(id.to_u64())
     }
 
     pub fn scroll_top(&self, id: RealDomId) -> i32 {
-        self.inner.dom_js.scroll_top(id.to_u64())
+        self.inner.api.dom_scroll_top(id.to_u64())
     }
 
     pub fn set_scroll_top(&self, id: RealDomId, value: i32) {
-        self.inner.dom_js.set_scroll_top(id.to_u64(), value)
+        self.inner.api.dom_set_scroll_top(id.to_u64(), value)
     }
 
     pub fn scroll_left(&self, id: RealDomId) -> i32 {
-        self.inner.dom_js.scroll_left(id.to_u64())
+        self.inner.api.dom_scroll_left(id.to_u64())
     }
 
     pub fn set_scroll_left(&self, id: RealDomId, value: i32) {
-        self.inner.dom_js.set_scroll_left(id.to_u64(), value)
+        self.inner.api.dom_set_scroll_left(id.to_u64(), value)
     }
 
-    pub fn scroll_width(&self, id: RealDomId) -> i32 {
-        self.inner.dom_js.scroll_width(id.to_u64())
+    pub fn scroll_width(&self, id: RealDomId) -> u32 {
+        self.inner.api.dom_scroll_width(id.to_u64())
     }
 
-    pub fn scroll_height(&self, id: RealDomId) -> i32 {
-        self.inner.dom_js.scroll_height(id.to_u64())
+    pub fn scroll_height(&self, id: RealDomId) -> u32 {
+        self.inner.api.dom_scroll_height(id.to_u64())
     }
 
     pub(crate) fn push_ref_context(&self, context: RefsContext) {

@@ -1,35 +1,27 @@
+use std::rc::Rc;
+
 use vertigo::utils::DropResource;
-use wasm_bindgen::prelude::Closure;
 
-use crate::utils::callback_manager::CallbackManager;
+use crate::{utils::callback_manager::CallbackManager, api::ApiImport};
 
-use super::js_hashrouter::DriverBrowserHashRouteJs;
-
+#[derive(Clone)]
 pub struct DriverBrowserHashrouter {
-    driver: DriverBrowserHashRouteJs,
-    _closure: Closure<dyn Fn(String)>,
+    api: Rc<ApiImport>,
     callback_manager: CallbackManager<String>,
 }
 
 impl DriverBrowserHashrouter {
-    pub fn new() -> DriverBrowserHashrouter {
+    pub fn new(api: &Rc<ApiImport>) -> DriverBrowserHashrouter {
         let callback_manager = CallbackManager::new();
 
-        let closure: Closure<dyn Fn(String)> = {
-            let callback_manager = callback_manager.clone();
-
-            Closure::new(move |new_hash: String| {
-                callback_manager.trigger(new_hash);
-            })
-        };
-
-        let driver = DriverBrowserHashRouteJs::new(&closure);
-
         DriverBrowserHashrouter {
-            driver,
-            _closure: closure,
+            api: api.clone(),
             callback_manager,
         }
+    }
+
+    pub fn export_hashrouter_hashchange_callback(&self, new_hash: String) {
+        self.callback_manager.trigger(new_hash);
     }
 
     pub fn on_hash_route_change<F: Fn(&String) + 'static>(&self, callback: F) -> DropResource {
@@ -42,10 +34,10 @@ impl DriverBrowserHashrouter {
     }
 
     pub fn get_hash_location(&self) -> String {
-        self.driver.get_hash_location()
+        self.api.hashrouter_get_hash_location()
     }
 
     pub fn push_hash_location(&self, hash: &str) {
-        self.driver.push_hash_location(hash.into());
+        self.api.hashrouter_push_hash_location(hash);
     }
 }

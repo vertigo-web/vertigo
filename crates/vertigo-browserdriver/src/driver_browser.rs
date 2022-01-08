@@ -2,23 +2,26 @@ use std::{
     collections::HashMap,
     future::Future,
     pin::Pin,
-    rc::Rc
+    rc::Rc, cell::RefCell
 };
 use vertigo::{
     dev::{DriverTrait, EventCallback, FetchMethod, RealDomId, RefsContext, WebsocketMessageDriver},
-    Dependencies, DropResource, Driver, FetchResult, InstantType,
+    Dependencies, DropResource, Driver, FetchResult, InstantType, Client,
 };
 
+use crate::{api::ApiImport, utils::futures_spawn::spawn_local, init_env::init_env};
 use crate::modules::{
     dom::DriverBrowserDom,
     fetch::DriverBrowserFetch,
     hashrouter::DriverBrowserHashrouter,
-    instant::js_instant,
     interval::DriverBrowserInterval,
     websocket::DriverWebsocket,
 };
 
-struct DriverBrowserInner {
+#[derive(Clone)]
+pub struct DriverBrowserInner {
+    api: Rc<ApiImport>,
+    dependencies: Dependencies,
     driver_dom: DriverBrowserDom,
     driver_interval: DriverBrowserInterval,
     driver_hashrouter: DriverBrowserHashrouter,
@@ -28,18 +31,143 @@ struct DriverBrowserInner {
 }
 
 impl DriverBrowserInner {
-    fn new(dependencies: &Dependencies, spawn_executor: Rc<dyn Fn(Pin<Box<dyn Future<Output = ()> + 'static>>)>,) -> Self {
-        let driver_dom = DriverBrowserDom::new(dependencies);
-        let driver_interval = DriverBrowserInterval::new();
-        let driver_hashrouter = DriverBrowserHashrouter::new();
+    pub fn new(api: Rc<ApiImport>) -> Self {
+        let dependencies = Dependencies::default();
+        let driver_dom = DriverBrowserDom::new(&dependencies, &api);
+        let driver_interval = DriverBrowserInterval::new(&api);
+        let driver_hashrouter = DriverBrowserHashrouter::new(&api);
+        let driver_fetch = DriverBrowserFetch::new(&api);
+        let driver_websocket = DriverWebsocket::new(&api);
+        let spawn_executor = {
+            let driver_interval = driver_interval.clone();
+
+            Rc::new(move |fut: Pin<Box<dyn Future<Output = ()> + 'static>>| {
+                spawn_local(driver_interval.clone(), fut);
+            })
+        };
 
         DriverBrowserInner {
+            api,
+            dependencies,
             driver_dom,
             driver_interval,
             driver_hashrouter,
-            driver_fetch: DriverBrowserFetch::new(),
-            driver_websocket: DriverWebsocket::new(),
+            driver_fetch,
+            driver_websocket,
             spawn_executor
+        }
+    }
+
+    fn pop_string(&self) -> String {
+        self.api.stack.pop()
+    }
+
+    pub fn alloc(&self, len: u64) -> u64 {
+        self.api.stack.alloc(len as usize) as u64
+    }
+
+    pub fn alloc_empty_string(&self) {
+        self.api.stack.alloc_empty_string()
+    }
+
+    pub fn export_interval_run_callback(&self, callback_id: u32) {
+        self.driver_interval.export_interval_run_callback(callback_id);
+    }
+
+    pub fn export_timeout_run_callback(&self, callback_id: u32) {
+        self.driver_interval.export_timeout_run_callback(callback_id);
+    }
+
+    pub fn export_hashrouter_hashchange_callback(&self) {
+        let new_hash = self.pop_string();
+        self.driver_hashrouter.export_hashrouter_hashchange_callback(new_hash);
+    }
+
+    pub fn export_fetch_callback(&self, request_id: u32, success: u32, status: u32) {
+        let success = success > 0;
+        let response = self.pop_string();
+        self.driver_fetch.export_fetch_callback(request_id, success, status, response);
+    }
+
+    pub fn export_websocket_callback_socket(&self, callback_id: u32) {
+        self.driver_websocket.export_websocket_callback_socket(callback_id);
+    }
+
+    pub fn export_websocket_callback_message(&self, callback_id: u32) {
+        let message = self.pop_string();
+        self.driver_websocket.export_websocket_callback_message(callback_id, message);
+    }
+
+    pub fn export_websocket_callback_close(&self, callback_id: u32) {
+        self.driver_websocket.export_websocket_callback_close(callback_id);
+    }
+
+    pub fn export_dom_keydown(
+        &self,
+        dom_id: u64,                                                                         // 0 - null
+        alt_key: u32,                                                                        // 0 - false, >0 - true
+        ctrl_key: u32,                                                                       // 0 - false, >0 - true
+        shift_key: u32,                                                                      // 0 - false, >0 - true
+        meta_key: u32                                                                        // 0 - false, >0 - true
+    ) -> u32 {
+        let code = self.pop_string();
+        let key = self.pop_string();
+    
+        let dom_id = if dom_id == 0 { None } else { Some(dom_id) };
+        let alt_key = alt_key > 0;
+        let ctrl_key = ctrl_key > 0;
+        let shift_key = shift_key > 0;
+        let meta_key = meta_key > 0;
+    
+        let prevent_default = self.driver_dom.export_dom_keydown(
+            dom_id,
+            key,
+            code,
+            alt_key,
+            ctrl_key,
+            shift_key,
+            meta_key
+        );
+        
+        match prevent_default {
+            true => 1,
+            false => 0
+        }
+    }
+    
+    pub fn export_dom_oninput(&self, dom_id: u64) {
+        let text = self.pop_string();
+        self.driver_dom.export_dom_oninput(dom_id, text);
+    }
+
+    pub fn export_dom_mouseover(&self, dom_id: u64) {
+        let dom_id = if dom_id == 0 { None } else { Some(dom_id) };
+        self.driver_dom.export_dom_mouseover(dom_id);
+    }
+
+    pub fn export_dom_mousedown(&self, dom_id: u64) {
+        self.driver_dom.export_dom_mousedown(dom_id);
+    }
+
+    pub fn init_env(&self) {
+        init_env(self.api.logger.clone());
+    }
+}
+
+pub struct DriverConstruct {
+    pub driver_inner: Rc<DriverBrowserInner>,
+    pub driver: Driver,
+    pub subscription: RefCell<Option<Client>>,
+}
+
+impl DriverConstruct {
+    pub fn new(api: ApiImport) -> DriverConstruct {
+        let (driver_inner, driver) = DriverBrowser::new(api);
+
+        DriverConstruct {
+            driver_inner,
+            driver,
+            subscription: RefCell::new(None),
         }
     }
 }
@@ -51,24 +179,21 @@ pub struct DriverBrowser {
 }
 
 impl DriverBrowser {
-    pub fn new() -> Driver {
-        let dependencies = Dependencies::default();
-
-        let driver = DriverBrowserInner::new(
-            &dependencies,
-            Rc::new(|fut: Pin<Box<dyn Future<Output = ()> + 'static>>| {
-                wasm_bindgen_futures::spawn_local(fut);
-            })
-        );
+    #[allow(clippy::new_ret_no_self)]
+    fn new(api: ApiImport) -> (Rc<DriverBrowserInner>, Driver) {
+        let driver_inner = Rc::new(DriverBrowserInner::new(Rc::new(api)));
+        let dependencies = driver_inner.dependencies.clone();
 
         let dom_driver_browser = DriverBrowser {
-            driver: Rc::new(driver),
+            driver: driver_inner.clone(),
         };
 
-        Driver::new(
+        let driver = Driver::new(
             dependencies,
             dom_driver_browser,
-        )
+        );
+
+        (driver_inner, driver)
     }
 }
 
@@ -146,30 +271,30 @@ impl DriverTrait for DriverBrowser {
     }
 
     fn now(&self) -> InstantType {
-        js_instant::now().round() as InstantType
+        self.driver.api.instant_now()
     }
 
     fn websocket(&self, host: String, callback: Box<dyn Fn(WebsocketMessageDriver)>) -> DropResource {
         self.driver.driver_websocket.websocket_start(host, callback)
     }
 
-    fn websocket_send_message(&self, callback_id: u64, message: String) {
+    fn websocket_send_message(&self, callback_id: u32, message: String) {
         self.driver.driver_websocket.websocket_send_message(callback_id, message);
     }
 
-    fn get_bounding_client_rect_x(&self, id: RealDomId) -> f64 {
+    fn get_bounding_client_rect_x(&self, id: RealDomId) -> i32 {
         self.driver.driver_dom.get_bounding_client_rect_x(id)
     }
 
-    fn get_bounding_client_rect_y(&self, id: RealDomId) -> f64 {
+    fn get_bounding_client_rect_y(&self, id: RealDomId) -> i32 {
         self.driver.driver_dom.get_bounding_client_rect_y(id)
     }
 
-    fn get_bounding_client_rect_width(&self, id: RealDomId) -> f64 {
+    fn get_bounding_client_rect_width(&self, id: RealDomId) -> u32 {
         self.driver.driver_dom.get_bounding_client_rect_width(id)
     }
 
-    fn get_bounding_client_rect_height(&self, id: RealDomId) -> f64 {
+    fn get_bounding_client_rect_height(&self, id: RealDomId) -> u32 {
         self.driver.driver_dom.get_bounding_client_rect_height(id)
     }
 
@@ -189,11 +314,11 @@ impl DriverTrait for DriverBrowser {
         self.driver.driver_dom.set_scroll_left(id, value)
     }
 
-    fn scroll_width(&self, id: RealDomId) -> i32 {
+    fn scroll_width(&self, id: RealDomId) -> u32 {
         self.driver.driver_dom.scroll_width(id)
     }
 
-    fn scroll_height(&self, id: RealDomId) -> i32 {
+    fn scroll_height(&self, id: RealDomId) -> u32 {
         self.driver.driver_dom.scroll_height(id)
     }
 

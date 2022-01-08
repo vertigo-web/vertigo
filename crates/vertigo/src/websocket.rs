@@ -3,7 +3,7 @@ use crate::Driver;
 #[derive(Debug)]
 pub enum WebsocketMessageDriver {
     Message(String),
-    Connection { callback_id: u64 },
+    Connection { callback_id: u32 },
     Close,
 }
 
@@ -17,12 +17,12 @@ pub enum WebsocketMessage {
 /// Represents websocket connection.
 #[derive(PartialEq)]
 pub struct WebsocketConnection {
-    callback_id: u64,
+    callback_id: u32,
     driver: Driver,
 }
 
 impl WebsocketConnection {
-    pub fn new(callback_id: u64, driver: Driver) -> WebsocketConnection {
+    pub fn new(callback_id: u32, driver: Driver) -> WebsocketConnection {
         WebsocketConnection { callback_id, driver }
     }
 

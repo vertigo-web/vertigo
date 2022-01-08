@@ -6,55 +6,32 @@ use std::{
     pin::Pin,
     rc::Rc,
 };
-use wasm_bindgen::prelude::*;
 
-use super::js_fetch::DriverBrowserFetchJs;
-use crate::utils::{
+use crate::{utils::{
     future::{new_future, CbFutureSend},
     json::JsonMapBuilder,
-};
+}, api::ApiImport};
 
 use vertigo::struct_mut::{
     CounterMut,
     HashMapMut,
 };
 
+#[derive(Clone)]
 pub struct DriverBrowserFetch {
-    driver_js: DriverBrowserFetchJs,
-    auto_id: CounterMut,
-    data: Rc<HashMapMut<u64, CbFutureSend<FetchResult>>>,
-    _clouser: Closure<dyn Fn(u64, bool, u32, String)>,
+    api: Rc<ApiImport>,
+    auto_id: Rc<CounterMut>,
+    data: Rc<HashMapMut<u32, CbFutureSend<FetchResult>>>,
 }
 
 impl DriverBrowserFetch {
-    pub fn new() -> DriverBrowserFetch {
-        let data: Rc<HashMapMut<u64, CbFutureSend<FetchResult>>> = Rc::new(HashMapMut::new());
-
-        let closure = {
-            let data = data.clone();
-
-            Closure::new(move |request_id: u64, success: bool, status: u32, response: String| {
-                let sender = data.remove(&request_id);
-
-                if let Some(sender) = sender {
-                    let response = match success {
-                        true => Ok((status, response)),
-                        false => Err(response),
-                    };
-                    sender.publish(response);
-                } else {
-                    log::error!("Request with ID={} not found", request_id);
-                }
-            })
-        };
-
-        let driver_js = DriverBrowserFetchJs::new(&closure);
+    pub fn new(api: &Rc<ApiImport>) -> DriverBrowserFetch {
+        let data: Rc<HashMapMut<u32, CbFutureSend<FetchResult>>> = Rc::new(HashMapMut::new());
 
         DriverBrowserFetch {
-            driver_js,
-            auto_id: CounterMut::new(1),
+            api: api.clone(),
+            auto_id: Rc::new(CounterMut::new(1)),
             data,
-            _clouser: closure,
         }
     }
 
@@ -82,7 +59,7 @@ impl DriverBrowserFetch {
 
         self.data.insert(id_request, sender);
 
-        self.driver_js.send_request(
+        self.api.fetch_send_request(
             id_request,
             String::from(method.to_string()),
             url,
@@ -91,5 +68,19 @@ impl DriverBrowserFetch {
         );
 
         Box::pin(receiver)
+    }
+
+    pub(crate) fn export_fetch_callback(&self, request_id: u32, success: bool, status: u32, response: String) {
+        let sender = self.data.remove(&request_id);
+
+        if let Some(sender) = sender {
+            let response = match success {
+                true => Ok((status, response)),
+                false => Err(response),
+            };
+            sender.publish(response);
+        } else {
+            log::error!("Request with ID={} not found", request_id);
+        }
     }
 }
