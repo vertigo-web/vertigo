@@ -17,13 +17,13 @@ args = [
 # Demo tasks
 
 [tasks.demo-build]
-dependencies = [ "wasm32-target" ]
-install_crate = { crate_name = "wasm-pack", binary = "wasm-pack", test_arg = ["--version"] }
+dependencies = [ "wasm32-target", "demo-clean" ]
 script = [
-    "wasm-pack build demo/app --no-typescript --target web --out-dir ../build --out-name demo --release",
+    "mkdir -p demo/build",
+    "cargo build -p vertigo-demo --release --target wasm32-unknown-unknown",
+    "cp ${CARGO_MAKE_CRATE_TARGET_DIRECTORY}/wasm32-unknown-unknown/release/wasm_run.js ./demo/build/wasm_run.js",
+    "wasm-opt -Os --strip-debug -o ./demo/build/vertigo_demo.wasm ${CARGO_MAKE_CRATE_TARGET_DIRECTORY}/wasm32-unknown-unknown/release/vertigo_demo.wasm",
     "cp ./demo/app/index.html ./demo/build",
-    "rm ./demo/build/.gitignore",
-    "rm ./demo/build/package.json",
 ]
 
 [tasks.demo-serve-old]
@@ -37,7 +37,6 @@ args = [ "run", "--bin", "vertigo-demo-server" ]
 
 [tasks.demo-start]
 dependencies = [
-    "demo-clean",
     "demo-build",
     "demo-serve"
 ]
@@ -47,9 +46,9 @@ command = "cargo"
 args = [ "watch", "--watch", "./demo/app", "--watch", "crates", "--delay", "0.5", "-x", "make demo-start" ]
 
 [tasks.demo-clean]
-command = "rm"
-args = [ "-rf", "demo/build" ]
-
+script = [
+    "rm -Rf demo/build"
+]
 
 # Examples tasks
 
@@ -89,48 +88,24 @@ install_script = '''
     fi
 '''
 
-[tasks.upgrade-wasm-pack]
-script = [
-    "cargo install --force wasm-pack",
-    "cargo clean",
-]
-
-
 # JavaScript dev builds
 
-[tasks.build-js-dom]
+[tasks.build-js-run-ts]
 command = "npx"
-args = [ "-p", "typescript", "tsc", "--strict", "--noUncheckedIndexedAccess", "--noEmitOnError", "--lib", "esnext,dom,es6", "--target", "esnext", "--module", "es6", "crates/vertigo-browserdriver/src/modules/dom/js_dom.ts"]
-
-[tasks.build-js-fetch]
-command = "npx"
-args = [ "-p", "typescript", "tsc", "--strict", "--noUncheckedIndexedAccess", "--noEmitOnError", "--lib", "esnext,dom,es6", "--target", "esnext", "--module", "es6", "crates/vertigo-browserdriver/src/modules/fetch/js_fetch.ts"]
-
-[tasks.build-js-hashrouter]
-command = "npx"
-args = [ "-p", "typescript", "tsc", "--strict", "--noUncheckedIndexedAccess", "--noEmitOnError", "--lib", "esnext,dom,es6", "--target", "esnext", "--module", "es6", "crates/vertigo-browserdriver/src/modules/hashrouter/js_hashrouter.ts"]
-
-[tasks.build-js-interval]
-command = "npx"
-args = [ "-p", "typescript", "tsc", "--strict", "--noUncheckedIndexedAccess", "--noEmitOnError", "--lib", "esnext,dom,es6", "--target", "esnext", "--module", "es6", "crates/vertigo-browserdriver/src/modules/interval/js_interval.ts"]
-
-[tasks.build-js-instant]
-command = "npx"
-args = [ "-p", "typescript", "tsc", "--strict", "--noUncheckedIndexedAccess", "--noEmitOnError", "--lib", "esnext,dom,es6", "--target", "esnext", "--module", "es6", "crates/vertigo-browserdriver/src/modules/instant/js_instant"]
-
-[tasks.build-js-websocket]
-command = "npx"
-args = [ "-p", "typescript", "tsc", "--strict", "--noUncheckedIndexedAccess", "--noEmitOnError", "--lib", "esnext,dom,es6", "--target", "esnext", "--module", "es6", "crates/vertigo-browserdriver/src/modules/websocket/js_websocket.ts"]
-
+args = [ "-p", "typescript", "tsc",
+    "--strict",
+    "--noUnusedLocals", "--noUnusedParameters", "--noUncheckedIndexedAccess",
+    "--noEmitOnError",
+    "--lib", "es6,dom,esnext",
+    "--target", "esnext",
+    "--module", "es6",
+    "--outDir", "crates/vertigo-browserdriver/src_js_build",
+    "crates/vertigo-browserdriver/src_js/index.ts",
+]
 
 [tasks.build-js]
-dependencies = [
-    "build-js-dom",
-    "build-js-fetch",
-    "build-js-hashrouter",
-    "build-js-interval",
-    "build-js-instant",
-    "build-js-websocket"
+dependencies = [ "build-js-run-ts" ]
+script = [
+    "npx rollup crates/vertigo-browserdriver/src_js_build/index.js --file crates/vertigo-browserdriver/src/wasm_run.js",
+    "rm -rf crates/vertigo-browserdriver/src_js_build",
 ]
-command = "echo"
-args = [ "build-js complete"]

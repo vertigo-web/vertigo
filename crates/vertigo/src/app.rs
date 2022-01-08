@@ -1,6 +1,7 @@
 use crate::{
     css::css_manager::CssManager,
     Computed,
+    computed::Client,
     driver::Driver,
     VDomElement,
     virtualdom::{
@@ -17,16 +18,13 @@ use crate::{
 ///
 /// Given the driver, the state and main render function, it creates necessary vertigo facilities
 /// and runs a never-ending future of reactivity.
-///
-/// See [start_browser_app](../vertigo_browserdriver/fn.start_browser_app.html)
-/// for a shortcut to run browser-based application.
-pub async fn start_app<T: PartialEq + 'static>(driver: Driver, app_state: Computed<T>, render: fn(&Computed<T>) -> VDomElement) {
+pub fn start_app<T: PartialEq + 'static>(driver: Driver, app_state: Computed<T>, render: fn(&Computed<T>) -> VDomElement) -> Client {
     let component = VDomComponent::new(app_state, render);
     let css_manager = CssManager::new(&driver);
     let root = RealDomElement::create_with_id(driver.clone(), RealDomId::root());
 
-    let _subscription = render_to_node(driver.clone(), css_manager.clone(), root, component);
+    let subscription = render_to_node(driver.clone(), css_manager, root, component);
     driver.flush_update();
 
-    std::future::pending::<()>().await
+    subscription
 }

@@ -4,7 +4,7 @@ use vertigo::struct_mut::{CounterMut, HashMapMut};
 #[derive(Clone)]
 pub struct CallbackManager<V> {
     next_id: Rc<CounterMut>,
-    data: Rc<HashMapMut<u64, Rc<dyn Fn(&V)>>>,
+    data: Rc<HashMapMut<u32, Rc<dyn Fn(&V)>>>,
 }
 
 impl<V> CallbackManager<V> {
@@ -15,18 +15,18 @@ impl<V> CallbackManager<V> {
         }
     }
 
-    pub fn set<F: Fn(&V) + 'static>(&self, callback: F) -> u64 {
+    pub fn set<F: Fn(&V) + 'static>(&self, callback: F) -> u32 {
         let next_id = self.next_id.get_next();
         self.data.insert(next_id, Rc::new(callback));
         next_id
     }
 
-    pub fn get(&self, callback_id: u64) -> Option<Rc<dyn Fn(&V)>> {
+    pub fn get(&self, callback_id: u32) -> Option<Rc<dyn Fn(&V)>> {
         self.data.get(&callback_id)
     }
 
-    pub fn remove(&self, callback_id: u64) {
-        self.data.remove(&callback_id);
+    pub fn remove(&self, callback_id: u32) -> Option<Rc<dyn Fn(&V)>> {
+        self.data.remove(&callback_id)
     }
 
     pub fn trigger(&self, value: V) {
@@ -41,7 +41,7 @@ impl<V> CallbackManager<V> {
 #[derive(Clone)]
 pub struct CallbackManagerOwner<V> {
     next_id: Rc<CounterMut>,
-    data: Rc<HashMapMut<u64, Rc<dyn Fn(V)>>>,
+    data: Rc<HashMapMut<u32, Rc<dyn Fn(V)>>>,
 }
 
 impl<V> CallbackManagerOwner<V> {
@@ -52,21 +52,21 @@ impl<V> CallbackManagerOwner<V> {
         }
     }
 
-    pub fn set(&self, callback: impl Fn(V) + 'static) -> u64 {
+    pub fn set(&self, callback: impl Fn(V) + 'static) -> u32 {
         let next_id = self.next_id.get_next();
         self.data.insert(next_id, Rc::new(callback));
         next_id
     }
 
-    fn get(&self, callback_id: u64) -> Option<Rc<dyn Fn(V)>> {
+    fn get(&self, callback_id: u32) -> Option<Rc<dyn Fn(V)>> {
         self.data.get(&callback_id)
     }
 
-    pub fn remove(&self, callback_id: u64) {
+    pub fn remove(&self, callback_id: u32) {
         self.data.remove(&callback_id);
     }
 
-    pub fn trigger(&self, callback_id: u64, value: V) {
+    pub fn trigger(&self, callback_id: u32, value: V) {
         let callback = self.get(callback_id);
 
         match callback {

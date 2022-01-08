@@ -1,12 +1,10 @@
 #![deny(rust_2018_idioms)]
 
-use vertigo_browserdriver::prelude::*;
+use vertigo_browserdriver::start_browser_app;
 
 mod app;
 
-#[wasm_bindgen_derive(start)]
+#[no_mangle]
 pub fn start_application() {
-    let driver = DriverBrowser::new();
-    let state = app::State::new(&driver);
-    start_browser_app(driver, state, app::render);
+    start_browser_app(app::State::new, app::render);
 }

@@ -111,16 +111,16 @@ pub trait DriverTrait {
     fn insert_css(&self, selector: &str, value: &str);
     fn set_event(&self, node: RealDomId, callback: EventCallback);
 
-    fn get_bounding_client_rect_x(&self, id: RealDomId) -> f64;
-    fn get_bounding_client_rect_y(&self, id: RealDomId) -> f64;
-    fn get_bounding_client_rect_width(&self, id: RealDomId) -> f64;
-    fn get_bounding_client_rect_height(&self, id: RealDomId) -> f64;
+    fn get_bounding_client_rect_x(&self, id: RealDomId) -> i32;
+    fn get_bounding_client_rect_y(&self, id: RealDomId) -> i32;
+    fn get_bounding_client_rect_width(&self, id: RealDomId) -> u32;
+    fn get_bounding_client_rect_height(&self, id: RealDomId) -> u32;
     fn scroll_top(&self, id: RealDomId) -> i32;
     fn set_scroll_top(&self, id: RealDomId, value: i32);
     fn scroll_left(&self, id: RealDomId) -> i32;
     fn set_scroll_left(&self, id: RealDomId, value: i32);
-    fn scroll_width(&self, id: RealDomId) -> i32;
-    fn scroll_height(&self, id: RealDomId) -> i32;
+    fn scroll_width(&self, id: RealDomId) -> u32;
+    fn scroll_height(&self, id: RealDomId) -> u32;
 
     fn fetch(
         &self,
@@ -138,7 +138,7 @@ pub trait DriverTrait {
     fn now(&self) -> InstantType;
 
     fn websocket(&self, host: String, callback: Box<dyn Fn(WebsocketMessageDriver)>) -> DropResource;
-    fn websocket_send_message(&self, callback_id: u64, message: String);
+    fn websocket_send_message(&self, callback_id: u32, message: String);
 
     fn push_ref_context(&self, context: RefsContext);
     fn flush_update(&self);
@@ -250,7 +250,7 @@ impl Driver {
         )
     }
 
-    pub(crate) fn websocket_send_message(&self, callback_id: u64, message: String) {
+    pub(crate) fn websocket_send_message(&self, callback_id: u32, message: String) {
         self.inner.driver.websocket_send_message(callback_id, message);
     }
 
@@ -333,19 +333,19 @@ impl Driver {
         self.inner.driver.set_event(node, callback);
     }
 
-    pub(crate) fn get_bounding_client_rect_x(&self, id: RealDomId) -> f64 {
+    pub(crate) fn get_bounding_client_rect_x(&self, id: RealDomId) -> i32 {
         self.inner.driver.get_bounding_client_rect_x(id)
     }
 
-    pub(crate) fn get_bounding_client_rect_y(&self, id: RealDomId) -> f64 {
+    pub(crate) fn get_bounding_client_rect_y(&self, id: RealDomId) -> i32 {
         self.inner.driver.get_bounding_client_rect_y(id)
     }
 
-    pub(crate) fn get_bounding_client_rect_width(&self, id: RealDomId) -> f64 {
+    pub(crate) fn get_bounding_client_rect_width(&self, id: RealDomId) -> u32 {
         self.inner.driver.get_bounding_client_rect_width(id)
     }
 
-    pub(crate) fn get_bounding_client_rect_height(&self, id: RealDomId) -> f64 {
+    pub(crate) fn get_bounding_client_rect_height(&self, id: RealDomId) -> u32 {
         self.inner.driver.get_bounding_client_rect_height(id)
     }
 
@@ -365,11 +365,11 @@ impl Driver {
         self.inner.driver.set_scroll_left(id, value);
     }
 
-    pub(crate) fn scroll_width(&self, id: RealDomId) -> i32 {
+    pub(crate) fn scroll_width(&self, id: RealDomId) -> u32 {
         self.inner.driver.scroll_width(id)
     }
 
-    pub(crate) fn scroll_height(&self, id: RealDomId) -> i32 {
+    pub(crate) fn scroll_height(&self, id: RealDomId) -> u32 {
         self.inner.driver.scroll_height(id)
     }
 

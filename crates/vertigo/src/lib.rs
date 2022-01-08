@@ -66,7 +66,7 @@ pub mod utils;
 mod virtualdom;
 mod websocket;
 
-pub use computed::{AutoMap, Computed, Dependencies, Value, struct_mut};
+pub use computed::{AutoMap, Computed, Dependencies, Value, struct_mut, Client};
 pub use driver::{Driver, FetchResult};
 pub use fetch::{
     fetch_builder::FetchBuilder,
@@ -83,6 +83,8 @@ pub use virtualdom::models::{
     vdom_element::{KeyDownEvent, VDomElement},
 };
 pub use websocket::{WebsocketConnection, WebsocketMessage};
+pub use app::start_app;
+
 pub mod dev {
     pub use super::app::start_app;
     pub use super::driver::{DriverTrait, EventCallback, FetchMethod};
