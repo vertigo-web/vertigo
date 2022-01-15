@@ -1,7 +1,7 @@
 <!-- markdownlint-configure-file { "no-duplicate-heading": { "siblings_only": true } } -->
 # Changes
 
-## 0.1.0-beta.3 - Unreleased
+## 0.1.0-beta.3 - 2022-01-22
 
 ### Added
 
@@ -12,6 +12,10 @@
 * Improved initiation of spawn executor
 * Improvements in Graph
 * RC-structures, BoxRefCell removed
+
+### Removed
+
+* Removed wasm-bindgen
 
 ## 0.1.0-beta.2 - 2021-12-21
 
