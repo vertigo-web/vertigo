@@ -1,7 +1,7 @@
 # Vertigo Tutorial
 
 <!-- markdownlint-disable-next-line no-emphasis-as-heading -->
-*Up to date with version 0.1.0-beta.2*
+*Up to date with version 0.1.0-beta.3*
 
 <!-- markdownlint-disable-next-line heading-increment -->
 ### Table of contents
@@ -200,16 +200,9 @@ impl State {
 To see how all these are connected, see `src/lib.rs`:
 
 ```rust
-#[wasm_bindgen_derive(start)]
+#[no_mangle]
 pub fn start_application() {
-    // Create rendering driver with dependency graph inside
-    let driver = DriverBrowser::new();
-
-    // Create application state lain on this graph
-    let app_state = state::State::new(&driver);
-
-    // Run application (using provided driver, state and render function) in browser rendering driver
-    start_browser_app(driver, state::State::new, app::render);
+    start_browser_app(state::State::new, app::render);
 }
 ```
 
@@ -569,7 +562,7 @@ Now we can use this computed in render function:
 
 ## 12. Parametrized styles
 
-As a bonus feature, we'll delve inthe styles. First we'll make the list to change font color for every other row. Remember to import `css_fn` from vertigo.
+As a bonus feature, we'll delve in the styles. First we'll make the list to change font color for every other row. Remember to import `css_fn` from vertigo.
 
 ```rust
 css_fn! { alternate_rows, "
