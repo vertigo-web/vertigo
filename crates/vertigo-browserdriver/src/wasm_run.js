@@ -705,11 +705,25 @@ class DriverWebsocket {
     };
 }
 
-const wasmInit = async (wasmBinPath, imports) => {
+const fetchModule = async (wasmBinPath, imports) => {
+    if (typeof WebAssembly.instantiateStreaming === 'function') {
+        console.info('fetchModule by WebAssembly.instantiateStreaming');
+        try {
+            const module = await WebAssembly.instantiateStreaming(fetch(wasmBinPath), imports);
+            return module;
+        }
+        catch (err) {
+            console.warn("`WebAssembly.instantiateStreaming` failed because your server does not serve wasm with `application/wasm` MIME type. Falling back to `WebAssembly.instantiate` which is slower. Original error:\n", err);
+        }
+    }
+    console.info('fetchModule by WebAssembly.instantiate');
     const resp = await fetch(wasmBinPath);
     const binary = await resp.arrayBuffer();
-    const imports_inst = imports;
-    const module_instance = await WebAssembly.instantiate(binary, imports_inst);
+    const module_instance = await WebAssembly.instantiate(binary, imports);
+    return module_instance;
+};
+const wasmInit = async (wasmBinPath, imports) => {
+    const module_instance = await fetchModule(wasmBinPath, imports);
     let cachegetUint8Memory = new Uint8Array(1);
     const getUint8Memory = () => {
         if (module_instance.instance.exports.memory instanceof WebAssembly.Memory) {

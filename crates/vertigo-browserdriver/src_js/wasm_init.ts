@@ -10,16 +10,32 @@ export interface ModuleControllerType<ExportType extends BaseExportType> {
     pushString: (value: string) => void,
 }
 
+const fetchModule = async (wasmBinPath: string, imports: Record<string, WebAssembly.ModuleImports>): Promise<WebAssembly.WebAssemblyInstantiatedSource> => {
+    if (typeof WebAssembly.instantiateStreaming === 'function') {
+        console.info('fetchModule by WebAssembly.instantiateStreaming');
+
+        try {
+            const module = await WebAssembly.instantiateStreaming(fetch(wasmBinPath), imports);
+            return module;
+        } catch (err) {
+            console.warn("`WebAssembly.instantiateStreaming` failed because your server does not serve wasm with `application/wasm` MIME type. Falling back to `WebAssembly.instantiate` which is slower. Original error:\n", err);
+        }
+    }
+
+    console.info('fetchModule by WebAssembly.instantiate');
+
+    const resp = await fetch(wasmBinPath);
+    const binary = await resp.arrayBuffer();
+    const module_instance = await WebAssembly.instantiate(binary, imports);
+    return module_instance;
+};
+
 export const wasmInit = async <ImportType extends Record<string, Function>, ExportType extends BaseExportType>(
     wasmBinPath: string,
     imports: { mod: ImportType },
 ): Promise<ModuleControllerType<ExportType>> => {
-    const resp = await fetch(wasmBinPath);
-    const binary = await resp.arrayBuffer();
-
-    const imports_inst: Record<string, WebAssembly.ModuleImports> = imports;
-    const module_instance = await WebAssembly.instantiate(binary, imports_inst);
-
+    const module_instance = await fetchModule(wasmBinPath, imports);
+    
     let cachegetUint8Memory: Uint8Array = new Uint8Array(1);
 
     const getUint8Memory = () => {
