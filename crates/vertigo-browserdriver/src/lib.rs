@@ -406,7 +406,7 @@ pub fn websocket_callback_close(callback_id: u32) {
 }
 
 #[no_mangle]
-pub fn dom_keydown(dom_id: u64, alt_key: u32, ctrl_key: u32, shift_key: u32, meta_key: u32) {
+pub fn dom_keydown(dom_id: u64, alt_key: u32, ctrl_key: u32, shift_key: u32, meta_key: u32) -> u32 {
     DRIVER_BROWSER.with(|state|
         state.driver_inner.export_dom_keydown(
             dom_id,
@@ -415,7 +415,7 @@ pub fn dom_keydown(dom_id: u64, alt_key: u32, ctrl_key: u32, shift_key: u32, met
             shift_key,
             meta_key
         )
-    );
+    )
 }
 
 #[no_mangle]

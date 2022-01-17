@@ -98,17 +98,10 @@ impl DriverBrowserDom {
             Some(id) => RealDomId::from_u64(id),
         };
 
-        let event_to_run = self.inner.data.find_event_keydown(id);
-
-        if let Some(event_to_run) = event_to_run {
-            let prevent_default = event_to_run(event);
-
-            if prevent_default {
-                return true;
-            }
+        match self.inner.data.find_event_keydown(id) {
+            Some(event_to_run) => event_to_run(event),
+            None => false,
         }
-
-        false
     }
 
     pub fn export_dom_oninput(&self, dom_id: u64, text: String) {
