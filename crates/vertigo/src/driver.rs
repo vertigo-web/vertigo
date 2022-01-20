@@ -130,6 +130,8 @@ pub trait DriverTrait {
         body: Option<String>,
     ) -> Pin<Box<dyn Future<Output = FetchResult> + 'static>>;
 
+    fn cookie_get(&self, cname: &str) -> String;
+    fn cookie_set(&self, cname: &str, cvalue: &str, expires_in: u64);
     fn get_hash_location(&self) -> String;
     fn push_hash_location(&self, path: &str);
     fn on_hash_route_change(&self, on_change: Box<dyn Fn(&String)>) -> DropResource;
@@ -196,6 +198,16 @@ impl Driver {
     /// Create new FetchBuilder.
     pub fn fetch(&self, url: impl Into<String>) -> FetchBuilder {
         FetchBuilder::new(self.inner.driver.clone(), url.into())
+    }
+
+    /// Gets a cookie by name
+    pub fn cookie_get(&self, cname: &str) -> String {
+        self.inner.driver.cookie_get(cname)
+    }
+
+    /// Sets a cookie under provided name
+    pub fn cookie_set(&self, cname: &str, cvalue: &str, expires_in: u64) {
+        self.inner.driver.cookie_set(cname, cvalue, expires_in)
     }
 
     /// Retrieves the hash part of location URL from client (browser)

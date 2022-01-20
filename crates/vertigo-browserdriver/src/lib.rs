@@ -50,6 +50,12 @@ mod inner_unsafe {
             arg4_ptr: u64, arg4_len: u64,
         );
 
+        pub fn cookie_get(cname_ptr: u64, cname_len: u64);
+        pub fn cookie_set(
+            cname_ptr: u64, cname_len: u64,
+            cvalue_ptr: u64, cvalue_len: u64,
+            expires_in: u64,
+        );
         pub fn interval_set(duration: u32, callback_id: u32) -> u32;
         pub fn interval_clear(timer_id: u32);
         pub fn timeout_set(duration: u32, callback_id: u32) -> u32;
@@ -127,7 +133,7 @@ thread_local! {
                 );
             }
         }
-        
+
         fn safe_console_info_4(
             arg1_ptr: u64, arg1_len: u64,
             arg2_ptr: u64, arg2_len: u64,
@@ -172,6 +178,26 @@ thread_local! {
                     arg2_ptr, arg2_len,
                     arg3_ptr, arg3_len,
                     arg4_ptr, arg4_len,
+                );
+            }
+        }
+
+        fn safe_cookie_get(cname_ptr: u64, cname_len: u64) {
+            unsafe {
+                cookie_get(cname_ptr, cname_len)
+            }
+        }
+
+        fn safe_cookie_set(
+            cname_ptr: u64, cname_len: u64,
+            cvalue_ptr: u64, cvalue_len: u64,
+            expires_in: u64,
+        ) {
+            unsafe {
+                cookie_set(
+                    cname_ptr, cname_len,
+                    cvalue_ptr, cvalue_len,
+                    expires_in,
                 );
             }
         }
@@ -334,6 +360,8 @@ thread_local! {
             safe_console_info_4,
             safe_console_warn_4,
             safe_console_error_4,
+            safe_cookie_get,
+            safe_cookie_set,
             safe_interval_set,
             safe_interval_clear,
             safe_timeout_set,

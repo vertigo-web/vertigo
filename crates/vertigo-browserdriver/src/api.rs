@@ -124,6 +124,13 @@ impl ApiLoggerImport {
 pub struct ApiImport {
     pub logger: Arc<ApiLoggerImport>,
 
+    pub cookie_get: fn(name_ptr: u64, name_len: u64),
+    pub cookie_set: fn(
+        name_ptr: u64, name_len: u64,
+        value_ptr: u64, value_len: u64,
+        expires_in: u64,
+    ),
+
     pub interval_set: fn(duration: u32, callback_id: u32) -> u32,
     pub interval_clear: fn(timer_id: u32),
     pub timeout_set: fn(duration: u32, callback_id: u32) -> u32,
@@ -195,11 +202,17 @@ impl ApiImport {
             arg4_ptr: u64, arg4_len: u64,
         ),
 
+        cookie_get: fn(name_ptr: u64, name_len: u64),
+        cookie_set: fn(
+            name_ptr: u64, name_len: u64,
+            value_ptr: u64, value_len: u64,
+            expires_in: u64,
+        ),
         interval_set: fn(duration: u32, callback_id: u32) -> u32,
         interval_clear: fn(timer_id: u32),
         timeout_set: fn(duration: u32, callback_id: u32) -> u32,
         timeout_clear: fn(timer_id: u32),
-    
+
         instant_now: fn() -> u32,
         hashrouter_get_hash_location: fn (),
         hashrouter_push_hash_location: fn(new_hash_ptr: u64, new_hash_length: u64),
@@ -240,6 +253,8 @@ impl ApiImport {
 
         ApiImport {
             logger: Arc::new(logger),
+            cookie_get,
+            cookie_set,
             interval_set,
             interval_clear,
             timeout_set,
@@ -289,6 +304,20 @@ impl ApiImport {
 
     pub fn console_error_4(&self, arg1: &str, arg2: &str, arg3: &str, arg4: &str) {
         self.logger.console_error_4(arg1, arg2, arg3, arg4);
+    }
+
+    pub fn cookie_get(&self, cname: &str) -> String {
+        let (cname_ptr, cname_len) = str_to_pointer(cname);
+        let cookies_get = self.cookie_get;
+        cookies_get(cname_ptr, cname_len);
+        self.stack.pop()
+    }
+
+    pub fn cookie_set(&self, cname: &str, cvalue: &str, expires_in: u64) {
+        let (cname_ptr, cname_len) = str_to_pointer(cname);
+        let (cvalue_ptr, cvalue_len) = str_to_pointer(cvalue);
+        let cookies_set = self.cookie_set;
+        cookies_set(cname_ptr, cname_len, cvalue_ptr, cvalue_len, expires_in);
     }
 
     pub fn interval_set(&self, duration: u32, callback_id: u32) -> u32 {
@@ -617,7 +646,7 @@ impl ApiImport {
 //                     meta_key
 //                 )
 //             );
-            
+
 //             match prevent_default {
 //                 true => 1,
 //                 false => 0
@@ -641,7 +670,7 @@ impl ApiImport {
 //         pub fn dom_mousedown(dom_id: u64) {
 //             DRIVER_BROWSER_INNER.with(|state| state.driver_dom.export_dom_mousedown(dom_id));
 //         }
-        
+
 //         #[no_mangle]
 //         pub fn start_application($driver) {
 //             $body

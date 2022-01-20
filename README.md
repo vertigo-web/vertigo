@@ -18,8 +18,8 @@ Example
 Dependencies:
 
 ```toml
-vertigo = "0.1.0-beta.2"
-vertigo-browserdriver = "0.1.0-beta.2"
+vertigo = "0.1.0-beta.3"
+vertigo-browserdriver = "0.1.0-beta.3"
 ```
 
 Code:

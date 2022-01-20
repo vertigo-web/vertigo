@@ -1,7 +1,11 @@
 <!-- markdownlint-configure-file { "no-duplicate-heading": { "siblings_only": true } } -->
 # Changes
 
-## Unreleased
+## 0.1.0-beta.3 - Unreleased
+
+### Added
+
+* Cookies support in JS Driver
 
 ### Changed
 

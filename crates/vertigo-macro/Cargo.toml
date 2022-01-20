@@ -1,6 +1,6 @@
 [package]
 name = "vertigo-macro"
-version = "0.1.0-beta.2"
+version = "0.1.0-beta.3"
 authors = ["Grzegorz Szeliga <szeligagrzegorz@gmail.com>", "Michał Pokrywka <wolfmoon@o2.pl>"]
 description = "Virtual DOM library for Rust - macros for html and fetch"
 edition = "2021"

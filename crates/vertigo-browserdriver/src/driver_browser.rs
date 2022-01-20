@@ -112,13 +112,13 @@ impl DriverBrowserInner {
     ) -> u32 {
         let code = self.pop_string();
         let key = self.pop_string();
-    
+
         let dom_id = if dom_id == 0 { None } else { Some(dom_id) };
         let alt_key = alt_key > 0;
         let ctrl_key = ctrl_key > 0;
         let shift_key = shift_key > 0;
         let meta_key = meta_key > 0;
-    
+
         let prevent_default = self.driver_dom.export_dom_keydown(
             dom_id,
             key,
@@ -128,13 +128,13 @@ impl DriverBrowserInner {
             shift_key,
             meta_key
         );
-        
+
         match prevent_default {
             true => 1,
             false => 0
         }
     }
-    
+
     pub fn export_dom_oninput(&self, dom_id: u64) {
         let text = self.pop_string();
         self.driver_dom.export_dom_oninput(dom_id, text);
@@ -250,6 +250,14 @@ impl DriverTrait for DriverBrowser {
         body: Option<String>,
     ) -> Pin<Box<dyn Future<Output = FetchResult> + 'static>> {
         self.driver.driver_fetch.fetch(method, url, headers, body)
+    }
+
+    fn cookie_get(&self, cname: &str) -> String {
+        self.driver.api.cookie_get(cname)
+    }
+
+    fn cookie_set(&self, cname: &str, cvalue: &str, expires_in: u64) {
+        self.driver.api.cookie_set(cname, cvalue, expires_in)
     }
 
     fn get_hash_location(&self) -> String {
