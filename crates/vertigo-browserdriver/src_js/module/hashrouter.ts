@@ -13,7 +13,7 @@ export class HashRouter {
         }, false);
     }
 
-    public hashrouter_get_hash_location = () => {                     //zwraca przez stos stringa
+    public hashrouter_get_hash_location = () => {             // returns string using stack
         const currentHash = location.hash.substr(1);
         this.getWasm().pushString(currentHash);
     }

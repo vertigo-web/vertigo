@@ -1,9 +1,10 @@
+import { Cookies } from './module/cookies';
 import { DriverDom } from './module/dom/dom';
+import { DriverWebsocket } from './module/websocket/websocket';
 import { Fetch } from './module/fetch';
 import { HashRouter } from './module/hashrouter';
 import { instant_now } from './module/instant';
 import { Interval } from './module/interval';
-import { DriverWebsocket } from './module/websocket/websocket';
 import { wasmInit, ModuleControllerType } from './wasm_init';
 
 //Number -> u32 or i32
@@ -30,7 +31,13 @@ export type ImportType = {
     console_warn_4: Console4Type,
     console_error_4: Console4Type,
 
-    interval_set: (duration: number, callback_id: number) => number, 
+    cookie_get: (cname_ptr: BigInt, cname_len: BigInt) => void,
+    cookie_set: (
+        cname_ptr: BigInt, cname_len: BigInt,
+        cvalue_ptr: BigInt, cvalue_len: BigInt,
+        expires_in: BigInt,
+    ) => void,
+    interval_set: (duration: number, callback_id: number) => number,
     interval_clear: (timer_id: number) => void,
     timeout_set: (duration: number, callback_id: number) => number,
     timeout_clear: (timer_id: number) => void,
@@ -38,7 +45,7 @@ export type ImportType = {
     instant_now: () => number,
 
     hashrouter_get_hash_location: () => void,                                                   //return from js on the stack with the current hash
-    hashrouter_push_hash_location: (new_hash_ptr: BigInt, new_hash_length: BigInt) => void, 
+    hashrouter_push_hash_location: (new_hash_ptr: BigInt, new_hash_length: BigInt) => void,
 
     fetch_send_request: (
         request_id: number,
@@ -125,6 +132,7 @@ export class WasmModule {
             return wasmModule;
         }
 
+        const cookies = new Cookies(getWasm);
         const interval = new Interval(getWasm);
         const hashRouter = new HashRouter(getWasm);
         const fetchModule = new Fetch(getWasm);
@@ -217,6 +225,8 @@ export class WasmModule {
                 console_info_4,
                 console_warn_4,
                 console_error_4,
+                cookie_get: cookies.get,
+                cookie_set: cookies.set,
                 interval_set: interval.interval_set,
                 interval_clear: interval.interval_clear,
                 timeout_set: interval.timeout_set,

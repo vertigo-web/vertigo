@@ -35,7 +35,7 @@ export const wasmInit = async <ImportType extends Record<string, Function>, Expo
     imports: { mod: ImportType },
 ): Promise<ModuleControllerType<ExportType>> => {
     const module_instance = await fetchModule(wasmBinPath, imports);
-    
+
     let cachegetUint8Memory: Uint8Array = new Uint8Array(1);
 
     const getUint8Memory = () => {

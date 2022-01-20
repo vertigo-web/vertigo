@@ -1,3 +1,43 @@
+class Cookies {
+    getWasm;
+    constructor(getWasm) {
+        this.getWasm = getWasm;
+    }
+    get = (cname_ptr, cname_len) => {
+        const wasm = this.getWasm();
+        const cname = wasm.decodeText(cname_ptr, cname_len);
+        for (const cookie of document.cookie.split(';')) {
+            if (cookie === "")
+                continue;
+            const cookieChunk = cookie.trim().split('=');
+            if (cookieChunk.length !== 2) {
+                console.warn(`Cookies.get: Incorrect number of cookieChunk => ${cookieChunk.length} in ${cookie}`);
+                continue;
+            }
+            const cookieName = cookieChunk[0];
+            const cookieValue = cookieChunk[1];
+            if (cookieName === undefined || cookieValue === undefined) {
+                console.warn(`Cookies.get: Broken cookie part => ${cookie}`);
+                continue;
+            }
+            if (cookieName === cname) {
+                return wasm.pushString(decodeURIComponent(cookieValue));
+            }
+        }
+        wasm.pushString("");
+    };
+    set = (cname_ptr, cname_len, cvalue_ptr, cvalue_len, expires_in) => {
+        const wasm = this.getWasm();
+        const cname = wasm.decodeText(cname_ptr, cname_len);
+        const cvalue = wasm.decodeText(cvalue_ptr, cvalue_len);
+        const cvalueEncoded = cvalue == null ? "" : encodeURIComponent(cvalue);
+        const d = new Date();
+        d.setTime(d.getTime() + (Number(expires_in) * 1000));
+        let expires = "expires=" + d.toUTCString();
+        document.cookie = cname + "=" + cvalueEncoded + ";" + expires + ";path=/;samesite=strict";
+    };
+}
+
 class MapNodes {
     data;
     constructor() {
@@ -339,90 +379,6 @@ class DriverDom {
     };
 }
 
-class Fetch {
-    getWasm;
-    constructor(getWasm) {
-        this.getWasm = getWasm;
-    }
-    fetch_send_request = (request_id, method_ptr, method_len, url_ptr, url_len, headers_ptr, headers_len, body_ptr, body_len) => {
-        const wasm = this.getWasm();
-        const method = wasm.decodeText(method_ptr, method_len);
-        const url = wasm.decodeText(url_ptr, url_len);
-        const headers = wasm.decodeText(headers_ptr, headers_len);
-        const body = wasm.decodeTextNull(body_ptr, body_len);
-        const headers_record = JSON.parse(headers);
-        fetch(url, {
-            method,
-            body,
-            headers: Object.keys(headers_record).length === 0 ? undefined : headers_record,
-        })
-            .then((response) => response.text()
-            .then((responseText) => {
-            wasm.pushString(responseText);
-            wasm.exports.fetch_callback(request_id, 1, response.status);
-        })
-            .catch((err) => {
-            console.error('fetch error (2)', err);
-            const responseMessage = new String(err).toString();
-            wasm.pushString(responseMessage);
-            wasm.exports.fetch_callback(request_id, 0, response.status);
-        }))
-            .catch((err) => {
-            console.error('fetch error (1)', err);
-            const responseMessage = new String(err).toString();
-            wasm.pushString(responseMessage);
-            wasm.exports.fetch_callback(request_id, 0, 0);
-        });
-    };
-}
-
-class HashRouter {
-    getWasm;
-    constructor(getWasm) {
-        this.getWasm = getWasm;
-        window.addEventListener("hashchange", () => {
-            this.hashrouter_get_hash_location();
-            this.getWasm().exports.hashrouter_hashchange_callback();
-        }, false);
-    }
-    hashrouter_get_hash_location = () => {
-        const currentHash = location.hash.substr(1);
-        this.getWasm().pushString(currentHash);
-    };
-    hashrouter_push_hash_location = (/*new_hash: string*/ new_hash_ptr, new_hash_length) => {
-        location.hash = this.getWasm().decodeText(new_hash_ptr, new_hash_length);
-    };
-}
-
-const instant_now = () => {
-    return Date.now();
-};
-
-class Interval {
-    getWasm;
-    constructor(getWasm) {
-        this.getWasm = getWasm;
-    }
-    interval_set = (duration, callback_id) => {
-        const timer_id = setInterval(() => {
-            this.getWasm().exports.interval_run_callback(callback_id);
-        }, Number(duration));
-        return timer_id;
-    };
-    interval_clear = (timer_id) => {
-        clearInterval(timer_id);
-    };
-    timeout_set = (duration, callback_id) => {
-        const timeout_id = setTimeout(() => {
-            this.getWasm().exports.timeout_run_callback(callback_id);
-        }, duration);
-        return timeout_id;
-    };
-    timeout_clear = (timer_id) => {
-        clearTimeout(timer_id);
-    };
-}
-
 class EventEmmiter {
     events;
     constructor() {
@@ -705,6 +661,90 @@ class DriverWebsocket {
     };
 }
 
+class Fetch {
+    getWasm;
+    constructor(getWasm) {
+        this.getWasm = getWasm;
+    }
+    fetch_send_request = (request_id, method_ptr, method_len, url_ptr, url_len, headers_ptr, headers_len, body_ptr, body_len) => {
+        const wasm = this.getWasm();
+        const method = wasm.decodeText(method_ptr, method_len);
+        const url = wasm.decodeText(url_ptr, url_len);
+        const headers = wasm.decodeText(headers_ptr, headers_len);
+        const body = wasm.decodeTextNull(body_ptr, body_len);
+        const headers_record = JSON.parse(headers);
+        fetch(url, {
+            method,
+            body,
+            headers: Object.keys(headers_record).length === 0 ? undefined : headers_record,
+        })
+            .then((response) => response.text()
+            .then((responseText) => {
+            wasm.pushString(responseText);
+            wasm.exports.fetch_callback(request_id, 1, response.status);
+        })
+            .catch((err) => {
+            console.error('fetch error (2)', err);
+            const responseMessage = new String(err).toString();
+            wasm.pushString(responseMessage);
+            wasm.exports.fetch_callback(request_id, 0, response.status);
+        }))
+            .catch((err) => {
+            console.error('fetch error (1)', err);
+            const responseMessage = new String(err).toString();
+            wasm.pushString(responseMessage);
+            wasm.exports.fetch_callback(request_id, 0, 0);
+        });
+    };
+}
+
+class HashRouter {
+    getWasm;
+    constructor(getWasm) {
+        this.getWasm = getWasm;
+        window.addEventListener("hashchange", () => {
+            this.hashrouter_get_hash_location();
+            this.getWasm().exports.hashrouter_hashchange_callback();
+        }, false);
+    }
+    hashrouter_get_hash_location = () => {
+        const currentHash = location.hash.substr(1);
+        this.getWasm().pushString(currentHash);
+    };
+    hashrouter_push_hash_location = (/*new_hash: string*/ new_hash_ptr, new_hash_length) => {
+        location.hash = this.getWasm().decodeText(new_hash_ptr, new_hash_length);
+    };
+}
+
+const instant_now = () => {
+    return Date.now();
+};
+
+class Interval {
+    getWasm;
+    constructor(getWasm) {
+        this.getWasm = getWasm;
+    }
+    interval_set = (duration, callback_id) => {
+        const timer_id = setInterval(() => {
+            this.getWasm().exports.interval_run_callback(callback_id);
+        }, Number(duration));
+        return timer_id;
+    };
+    interval_clear = (timer_id) => {
+        clearInterval(timer_id);
+    };
+    timeout_set = (duration, callback_id) => {
+        const timeout_id = setTimeout(() => {
+            this.getWasm().exports.timeout_run_callback(callback_id);
+        }, duration);
+        return timeout_id;
+    };
+    timeout_clear = (timer_id) => {
+        clearTimeout(timer_id);
+    };
+}
+
 const fetchModule = async (wasmBinPath, imports) => {
     if (typeof WebAssembly.instantiateStreaming === 'function') {
         console.info('fetchModule by WebAssembly.instantiateStreaming');
@@ -789,6 +829,7 @@ class WasmModule {
             }
             return wasmModule;
         };
+        const cookies = new Cookies(getWasm);
         const interval = new Interval(getWasm);
         const hashRouter = new HashRouter(getWasm);
         const fetchModule = new Fetch(getWasm);
@@ -847,6 +888,8 @@ class WasmModule {
                 console_info_4,
                 console_warn_4,
                 console_error_4,
+                cookie_get: cookies.get,
+                cookie_set: cookies.set,
                 interval_set: interval.interval_set,
                 interval_clear: interval.interval_clear,
                 timeout_set: interval.timeout_set,
