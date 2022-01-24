@@ -1,6 +1,6 @@
 use std::rc::Rc;
 
-use crate::{dev::{VDomComponent, VDomNode}, VDomElement};
+use crate::{dev::{VDomNode}, VDomElement, VDomComponent};
 
 /// Allows for embedding into [html!](macro.html.html) macro.
 ///

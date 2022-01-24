@@ -25,7 +25,7 @@ vertigo-browserdriver = "0.1.0-beta.3"
 Code:
 
 ```rust
-use vertigo::{html, Computed, Driver, VDomElement, Value};
+use vertigo::{html, Computed, Driver, VDomElement, VDomComponent, Value};
 use vertigo_browserdriver::{start_browser_app};
 
 #[derive(PartialEq)]
@@ -34,11 +34,11 @@ pub struct State {
 }
 
 impl State {
-    pub fn new(driver: &Driver) -> Computed<State> {
+    pub fn component(driver: &Driver) -> VDomComponent {
         let state = State {
             count: driver.new_value(0),
         };
-        driver.new_computed_from(state)
+        driver.bind_render(state, render)
     }
 }
 
@@ -66,7 +66,7 @@ pub fn render(app_state: &Computed<State>) -> VDomElement {
 
 #[no_mangle]
 pub fn start_application() {
-    start_browser_app(State::new, render);
+    start_browser_app(State::component);
 }
 ```
 

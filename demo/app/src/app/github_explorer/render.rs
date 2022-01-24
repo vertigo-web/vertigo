@@ -1,6 +1,6 @@
 use vertigo::{css_fn, html, Computed, Resource, VDomElement};
 
-use super::state::State;
+use super::State;
 
 css_fn! { wrapper, "
     border: 1px solid black;

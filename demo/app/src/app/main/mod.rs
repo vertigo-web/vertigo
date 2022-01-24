@@ -1,4 +1,4 @@
-use vertigo::{css, css_fn, css_fn_push, html, Computed, Css, Driver, VDomElement, Value};
+use vertigo::{css, css_fn, css_fn_push, html, Computed, Css, Driver, VDomElement, Value, VDomComponent};
 
 mod spinner;
 
@@ -10,10 +10,12 @@ pub struct MainState {
 }
 
 impl MainState {
-    pub fn new(driver: &Driver) -> Computed<MainState> {
-        driver.new_computed_from(MainState {
+    pub fn component(driver: &Driver) -> VDomComponent {
+        let state = MainState {
             value: driver.new_value(33),
-        })
+        };
+
+        driver.bind_render(state, main_render)
     }
 
     pub fn increment(&self) {

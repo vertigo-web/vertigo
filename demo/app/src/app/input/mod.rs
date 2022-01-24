@@ -1,5 +1,5 @@
 use std::cmp::PartialEq;
-use vertigo::{css_fn, html, Computed, Driver, VDomElement, Value};
+use vertigo::{css_fn, html, Computed, Driver, VDomElement, Value, VDomComponent};
 
 #[derive(PartialEq)]
 pub struct State {
@@ -7,10 +7,12 @@ pub struct State {
 }
 
 impl State {
-    pub fn new(driver: &Driver) -> Computed<State> {
-        driver.new_computed_from(State {
+    pub fn component(driver: &Driver) -> VDomComponent {
+        let state = State {
             value: driver.new_value(String::from("")),
-        })
+        };
+
+        driver.bind_render(state, render)
     }
 
     // pub fn increment(&self) {
@@ -45,7 +47,7 @@ css_fn! { text_css, "
     margin: 10px;
 " }
 
-pub fn render(state: &Computed<State>) -> VDomElement {
+fn render(state: &Computed<State>) -> VDomElement {
     let state = state.get_value();
 
     let on_set1 = {

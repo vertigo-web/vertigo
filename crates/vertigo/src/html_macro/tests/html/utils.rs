@@ -1,5 +1,6 @@
 use crate::{
-    dev::{VDomComponent, VDomNode, VDomText},
+    dev::{VDomNode, VDomText},
+    VDomComponent,
     VDomElement
 };
 

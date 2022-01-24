@@ -1,6 +1,6 @@
 use serde::{Deserialize, Serialize};
 use std::rc::Rc;
-use vertigo::{css, html, AutoMap, Computed, Css, Driver, LazyCache, Resource, SerdeRequest, VDomElement, Value};
+use vertigo::{css, html, AutoMap, Computed, Css, Driver, LazyCache, Resource, SerdeRequest, VDomElement, Value, VDomComponent};
 
 #[derive(PartialEq)]
 enum View {
@@ -36,10 +36,10 @@ pub struct TodoState {
 }
 
 impl TodoState {
-    pub fn new(driver: Driver) -> Computed<TodoState> {
+    pub fn component(driver: &Driver) -> VDomComponent {
         let view = driver.new_value(View::Main);
 
-        let posts = LazyCache::new(&driver, 10 * 60 * 60 * 1000, move |driver: Driver| {
+        let posts = LazyCache::new(driver, 10 * 60 * 60 * 1000, move |driver: Driver| {
             let request = driver.request("https://jsonplaceholder.typicode.com/posts").get();
 
             LazyCache::result(async move {
@@ -80,34 +80,36 @@ impl TodoState {
             }
         });
 
-        driver.new_computed_from(TodoState {
+        let state = TodoState {
             driver: driver.clone(),
             view,
             posts,
             comments,
-        })
+        };
+
+        driver.bind_render(state, todo_render)
     }
 }
 
-pub fn todo_render(state: &Computed<TodoState>) -> VDomElement {
+fn todo_render(state: &Computed<TodoState>) -> VDomElement {
     let state_value = state.get_value();
 
     match state_value.view.get_value().as_ref() {
         View::Main => {
-            let main = TodoMainState::new(&state_value.driver, state.clone());
+            let main = TodoMainState::component(&state_value.driver, state.clone());
 
             html! {
                 <div>
-                    <component {todo_main_render} data={main} />
+                    { main }
                 </div>
             }
         }
         View::Post { id } => {
-            let post_state = TodoPostState::new(&state_value.driver, state.clone(), *id);
+            let post_view = TodoPostState::component(&state_value.driver, state.clone(), *id);
 
             html! {
                 <div>
-                    <component {todo_post_render} data={post_state} />
+                    { post_view }
                 </div>
             }
         }
@@ -139,8 +141,9 @@ struct TodoMainState {
 }
 
 impl TodoMainState {
-    fn new(driver: &Driver, state: Computed<TodoState>) -> Computed<TodoMainState> {
-        driver.new_computed_from(TodoMainState { state })
+    fn component(driver: &Driver, state: Computed<TodoState>) -> VDomComponent {
+        let state = TodoMainState { state };
+        driver.bind_render(state, todo_main_render)
     }
 }
 
@@ -214,8 +217,9 @@ struct TodoPostState {
 }
 
 impl TodoPostState {
-    pub fn new(driver: &Driver, state: Computed<TodoState>, post_id: u32) -> Computed<TodoPostState> {
-        driver.new_computed_from(TodoPostState { state, post_id })
+    pub fn component(driver: &Driver, state: Computed<TodoState>, post_id: u32) -> VDomComponent {
+        let state = TodoPostState { state, post_id };
+        driver.bind_render(state, todo_post_render)
     }
 }
 

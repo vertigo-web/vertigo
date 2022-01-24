@@ -1,5 +1,5 @@
 use vertigo::router::HashRouter;
-use vertigo::{html, Computed, Driver, VDomElement, Value};
+use vertigo::{html, Computed, Driver, VDomElement, Value, VDomComponent};
 
 #[derive(PartialEq, Debug)]
 pub enum Route {
@@ -37,7 +37,7 @@ pub struct State {
 }
 
 impl State {
-    pub fn new(driver: &Driver) -> Computed<State> {
+    pub fn component(driver: &Driver) -> VDomComponent {
         let route: Value<Route> = driver.new_value(Route::new(&driver.get_hash_location()));
 
         let hash_router = HashRouter::new(driver, route.clone(), {
@@ -53,7 +53,7 @@ impl State {
             hash_router,
         };
 
-        driver.new_computed_from(state)
+        driver.bind_render(state, render)
     }
 
     pub fn navigate_to(&self, route: Route) {
@@ -61,7 +61,7 @@ impl State {
     }
 }
 
-pub fn render(app_state: &Computed<State>) -> VDomElement {
+fn render(app_state: &Computed<State>) -> VDomElement {
     let state = app_state.get_value();
 
     let navigate_to_page1 = {

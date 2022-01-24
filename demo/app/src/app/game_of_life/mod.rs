@@ -1,5 +1,5 @@
 use std::cmp::PartialEq;
-use vertigo::{css, css_fn, html, Computed, Css, Driver, VDomElement, Value};
+use vertigo::{css, css_fn, html, Computed, Css, Driver, VDomElement, Value, VDomComponent};
 
 mod next_generation;
 
@@ -26,7 +26,7 @@ fn create_matrix(driver: &Driver, x_count: u16, y_count: u16) -> Vec<Vec<Value<b
 #[derive(Clone, PartialEq)]
 pub struct State {
     pub driver: Driver,
-    pub matrix: Computed<Vec<Vec<Value<bool>>>>,
+    pub matrix: Value<Vec<Vec<Value<bool>>>>,
     pub timer_enable: Value<bool>,
     pub new_delay: Value<u32>,
     pub year: Value<Computed<u32>>,
@@ -36,20 +36,22 @@ impl State {
     const X_LEN: u16 = 120;
     const Y_LEN: u16 = 70;
 
-    pub fn new(driver: &Driver) -> Computed<State> {
-        let matrix = driver.new_computed_from(create_matrix(driver, State::X_LEN, State::Y_LEN));
+    pub fn component(driver: &Driver) -> VDomComponent {
+        let matrix = driver.new_value(create_matrix(driver, State::X_LEN, State::Y_LEN));
 
         let timer_enable = driver.new_value(false);
         let new_delay = driver.new_value(150);
         let year = driver.new_value(Self::create_timer(driver, &matrix, &timer_enable, &new_delay, 0));
 
-        driver.new_computed_from(State {
+        let state = State {
             driver: driver.clone(),
             matrix,
             timer_enable,
             new_delay,
             year,
-        })
+        };
+
+        driver.bind_render(state, render)
     }
 
     pub fn accept_new_delay(&self) -> impl Fn() {
@@ -83,7 +85,7 @@ impl State {
         }
     }
 
-    pub fn create_timer(driver: &Driver, matrix: &Computed<Vec<Vec<Value<bool>>>>, timer_enable: &Value<bool>, new_delay: &Value<u32>, starting_year: u32) -> Computed<u32> {
+    pub fn create_timer(driver: &Driver, matrix: &Value<Vec<Vec<Value<bool>>>>, timer_enable: &Value<bool>, new_delay: &Value<u32>, starting_year: u32) -> Computed<u32> {
         let matrix = matrix.clone();
         let timer_enable = timer_enable.clone();
         let new_delay = *new_delay.get_value();

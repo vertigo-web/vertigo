@@ -7,13 +7,12 @@ use std::{
 };
 
 use crate::{
-    Computed, Dependencies, Value, Instant, InstantType, KeyDownEvent, WebsocketConnection, WebsocketMessage,
-    computed::ToRc,
+    Computed, Dependencies, Value, Instant, InstantType, KeyDownEvent, WebsocketConnection, WebsocketMessage, VDomElement,
     dev::WebsocketMessageDriver,
     driver_refs::RefsContext,
     fetch::{fetch_builder::FetchBuilder, request_builder::RequestBuilder},
     utils::{DropResource, EqBox},
-    virtualdom::models::realdom_id::RealDomId,
+    virtualdom::models::{realdom_id::RealDomId, vdom_component::VDomComponent, vdom_component_id::VDomComponentId},
 };
 
 #[derive(Debug)]
@@ -195,6 +194,13 @@ impl Driver {
         self.inner.driver.spawn(future_box);
     }
 
+    pub fn bind_render<T: PartialEq + 'static>(&self, state: T, render: fn (&Computed<T>) -> VDomElement) -> VDomComponent {
+        let computed = self.inner.dependencies.new_value(state).to_computed();
+        let id = VDomComponentId::new(&computed, render);
+        let view = computed.map_for_render::<VDomElement>(render);
+        VDomComponent::from_view(id, view)
+    }
+
     /// Create new FetchBuilder.
     pub fn fetch(&self, url: impl Into<String>) -> FetchBuilder {
         FetchBuilder::new(self.inner.driver.clone(), url.into())
@@ -269,12 +275,6 @@ impl Driver {
     /// Create new reactive value in [dependency graph](struct.Dependencies.html).
     pub fn new_value<T: PartialEq>(&self, value: T) -> Value<T> {
         self.inner.dependencies.new_value(value)
-    }
-
-    /// Create new computed from provided value
-    pub fn new_computed_from<T: PartialEq>(&self, value: impl ToRc<T>) -> Computed<T> {
-        let value = self.inner.dependencies.new_value(value);
-        value.to_computed()
     }
 
     /// Fire provided function in a way that all changes in [dependency graph](struct.Dependencies.html) made by this function
