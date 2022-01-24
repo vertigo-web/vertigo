@@ -1,7 +1,7 @@
 use std::rc::Rc;
 use vertigo::{
     html, Computed, Driver, DropResource, KeyDownEvent,
-    VDomElement, Value, WebsocketConnection, WebsocketMessage
+    VDomElement, Value, WebsocketConnection, WebsocketMessage, VDomComponent
 };
 
 #[derive(PartialEq)]
@@ -27,7 +27,7 @@ fn add_message(messages: &Value<Vec<Rc<String>>>, message: String) {
 }
 
 impl ChatState {
-    pub fn new(driver: &Driver) -> Computed<ChatState> {
+    pub fn component(driver: &Driver) -> VDomComponent {
         let connect = driver.new_value(None);
         let messages = driver.new_value(Vec::new());
         let input_text = driver.new_value(String::from(""));
@@ -56,12 +56,14 @@ impl ChatState {
             )
         };
 
-        driver.new_computed_from(ChatState {
+        let state = ChatState {
             _ws_connect: ws_connect,
             connect,
             messages,
             input_text,
-        })
+        };
+
+        driver.bind_render(state, render)
     }
 }
 

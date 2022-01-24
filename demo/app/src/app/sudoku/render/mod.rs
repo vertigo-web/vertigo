@@ -108,6 +108,15 @@ fn render_group(group: &Computed<SudokuSquare<Cell>>) -> VDomElement {
 }
 
 pub fn main_render(sudoku: &Computed<Sudoku>) -> VDomElement {
+    html! {
+        <div>
+            <component {examples_render} data={sudoku.clone()} />
+            <component {main_render_inner} data={sudoku.clone()} />
+        </div>
+    }
+}
+
+pub fn main_render_inner(sudoku: &Computed<Sudoku>) -> VDomElement {
     let get_group = |sudoku: &Computed<Sudoku>, x: TreeBoxIndex, y: TreeBoxIndex| -> Computed<SudokuSquare<Cell>> {
         sudoku
             .clone()

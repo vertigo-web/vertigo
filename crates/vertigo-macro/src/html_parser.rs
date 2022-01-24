@@ -228,9 +228,9 @@ impl HtmlParser {
         }
 
         let builder = if value {
-            quote! { vertigo::dev::VDomComponent::from_value }
+            quote! { vertigo::VDomComponent::from_value }
         } else {
-            quote! { vertigo::dev::VDomComponent::new }
+            quote! { vertigo::VDomComponent::new }
         };
 
         if let Some(render_func) = render_func {

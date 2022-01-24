@@ -1,9 +1,7 @@
 use crate::{
     css::css_manager::CssManager,
-    Computed,
     computed::Client,
     driver::Driver,
-    VDomElement,
     virtualdom::{
         models::{
             realdom_id::RealDomId,
@@ -18,8 +16,7 @@ use crate::{
 ///
 /// Given the driver, the state and main render function, it creates necessary vertigo facilities
 /// and runs a never-ending future of reactivity.
-pub fn start_app<T: PartialEq + 'static>(driver: Driver, app_state: Computed<T>, render: fn(&Computed<T>) -> VDomElement) -> Client {
-    let component = VDomComponent::new(app_state, render);
+pub fn start_app(driver: Driver, component: VDomComponent) -> Client {
     let css_manager = CssManager::new(&driver);
     let root = RealDomElement::create_with_id(driver.clone(), RealDomId::root());
 

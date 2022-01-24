@@ -15,7 +15,7 @@ pub struct HashRouter {
 /// Router based on hash part of current location.
 ///
 /// ```rust
-/// use vertigo::{Computed, Driver, Value};
+/// use vertigo::{html, Computed, Driver, Value, VDomElement, VDomComponent};
 /// use vertigo::router::HashRouter;
 ///
 /// #[derive(PartialEq, Debug)]
@@ -54,7 +54,7 @@ pub struct HashRouter {
 /// }
 ///
 /// impl State {
-///     pub fn new(driver: &Driver) -> Computed<State> {
+///     pub fn component(driver: &Driver) -> VDomComponent {
 ///         let route: Value<Route> = driver.new_value(Route::new(&driver.get_hash_location()));
 ///
 ///         let hash_router = HashRouter::new(driver, route.clone(), {
@@ -71,7 +71,15 @@ pub struct HashRouter {
 ///             hash_router,
 ///         };
 ///
-///         driver.new_computed_from(state)
+///         driver.bind_render(state, render)
+///     }
+/// }
+/// 
+/// fn render(state: &Computed<State>) -> VDomElement {
+///     html! {
+///         <div>
+///             "..."
+///         </div>
 ///     }
 /// }
 /// ```

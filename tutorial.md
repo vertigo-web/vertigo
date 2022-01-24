@@ -182,17 +182,17 @@ I our state we have a `Driver` handle, which is our connection to two things:
 
 We also have one `Value` with a string inside. The state and all types wrapped in `Value` are required to implement `PartialEq` so the dependency graph knows that values are changing.
 
-To create our state we use `new()` method with gets a `Driver` handle, and returns a `Computed<State>`. Driver handle is used to create all necessary values and also to create the "computed" version of state itself.
+To create our state we use `new()` method with gets a `Driver` handle, and returns a `VDomComponent`. Driver handle is used to create all necessary values and also to create the "computed" version of state itself.
 
 ```rust
 impl State {
-    pub fn new(driver: &Driver) -> Computed<State> {
+    pub fn component(driver: &Driver) -> VDomComponent {
         let state = State {
             driver: driver.clone(),
             message: driver.new_value("Hello world".to_string()),
         };
 
-        driver.new_computed_from(state)
+        driver.bind_render(state, app::render)
     }
 }
 ```
@@ -202,7 +202,7 @@ To see how all these are connected, see `src/lib.rs`:
 ```rust
 #[no_mangle]
 pub fn start_application() {
-    start_browser_app(state::State::new, app::render);
+    start_browser_app(state::State::component);
 }
 ```
 
@@ -325,7 +325,7 @@ pub struct State {
 }
 
 impl State {
-    pub fn new(driver: &Driver) -> Computed<State> {
+    pub fn component(driver: &Driver) -> VDomComputed {
         let state = State {
             items: driver.new_value(vec![
                 "Item 1".to_string(),
@@ -333,7 +333,7 @@ impl State {
             ]),
         };
 
-        driver.new_computed_from(state)
+        driver.bind_render(state, render)
     }
 }
 ```
@@ -353,7 +353,7 @@ pub struct State {
 }
 
 impl State {
-    pub fn new(driver: &Driver) -> Computed<State> {
+    pub fn component(driver: &Driver) -> VDomComputed {
         let state = State {
             driver: driver.clone(),
             message: driver.new_value("Hello world".to_string()),
@@ -361,7 +361,7 @@ impl State {
             list: list::State::new(driver),
         };
 
-        driver.new_computed_from(state)
+        driver.bind_render(state, render)
     }
 }
 ```
@@ -442,7 +442,7 @@ Our component cries out for adding more items. To implement this we need to:
 So the whole `src/list.rs` will look like this:
 
 ```rust
-use vertigo::{Computed, Driver, Value, VDomElement, html};
+use vertigo::{Computed, Driver, Value, VDomElement, VDomComponent, html};
 
 #[derive(PartialEq)]
 pub struct State {
@@ -451,7 +451,7 @@ pub struct State {
 }
 
 impl State {
-    pub fn new(driver: &Driver) -> Computed<State> {
+    pub fn component(driver: &Driver) -> VDomComponent {
         let state = State {
             items: driver.new_value(vec![
                 "Item 1".to_string(),
@@ -460,7 +460,7 @@ impl State {
             new_item: driver.new_value("".to_string()),
         };
 
-        driver.new_computed_from(state)
+        driver.bind_render(state, render)
     }
 
     pub fn add(&self) -> impl Fn() {
@@ -526,7 +526,7 @@ pub struct State {
 Then we need to reorganize a little how we create an instance of the state:
 
 ```rust
-    pub fn new(driver: &Driver) -> Computed<State> {
+    pub fn component(driver: &Driver) -> VDomComponent {
         let items = driver.new_value(vec![
             "Item 1".to_string(),
             "Item 2".to_string(),
@@ -543,7 +543,7 @@ Then we need to reorganize a little how we create an instance of the state:
             count,
         };
 
-        driver.new_computed_from(state)
+        driver.bind_render(state)
     }
 ```
 

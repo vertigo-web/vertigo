@@ -1,5 +1,5 @@
 use std::cmp::PartialEq;
-use vertigo::{Computed, Driver, Value};
+use vertigo::{Driver, Value, VDomComponent};
 
 use self::{
     number_item::NumberItem,
@@ -83,15 +83,18 @@ pub struct Sudoku {
 }
 
 impl Sudoku {
-    pub fn new(driver: &Driver) -> Computed<Sudoku> {
+    pub fn component(driver: &Driver) -> VDomComponent {
         let grid_number = create_grid(driver);
         let grid_possible = create_grid_possible(driver, &grid_number);
         let grid_possible_last = create_grid_possible_last(driver, &grid_number, &grid_possible);
-
-        driver.new_computed_from(Sudoku {
+            
+        let state = Sudoku {
             driver: driver.clone(),
             grid: creatergid_view(driver, grid_number, grid_possible, grid_possible_last),
-        })
+        };
+
+        driver.bind_render(state, crate::app::sudoku::render::main_render)
+
     }
 
     pub fn clear(&self) {

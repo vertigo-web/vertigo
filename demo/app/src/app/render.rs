@@ -1,13 +1,9 @@
-use vertigo::{css, css_fn, html, Computed, Css, VDomElement};
+use vertigo::{css, css_fn, html, Computed, Css, VDomNode, VDomElement};
 
 use crate::app::chat;
 use crate::{app, navigate_to};
 
-use super::game_of_life;
-use super::github_explorer;
-use super::input;
 use super::route::Route;
-use super::sudoku;
 
 css_fn! { css_menu, "
     list-style-type: none;
@@ -71,46 +67,15 @@ fn render_header(app_state: &Computed<app::State>) -> VDomElement {
 pub fn render(app_state: &Computed<app::State>) -> VDomElement {
     let state = app_state.get_value();
 
-    let child = match *state.route.get_value() {
-        Route::Main => html! { <component {super::main::main_render} data={state.main} /> },
-
-        Route::Counters => html! { <component {super::counters::render} data={state.counters} /> },
-
-        Route::Sudoku => html! {
-            <div>
-                <component {sudoku::examples_render} data={state.sudoku.clone()} />
-                <component {sudoku::main_render} data={state.sudoku.clone()} />
-            </div>
-        }
-        .into(),
-
-        Route::Input => html! { <component {input::render} data={state.input} /> },
-
-        Route::GithubExplorer => {
-            html! { <component {github_explorer::render} data={state.github_explorer} /> }
-        }
-
-        Route::GameOfLife { .. } => {
-            html! { <component {game_of_life::render} data={state.game_of_life} /> }
-        }
-
-        Route::Chat => {
-            let state = chat::ChatState::new(&state.driver);
-
-            html! {
-                <component {chat::render} data={state} />
-            }
-        }
-
-        Route::Todo => {
-            let driver = state.driver.clone();
-            let state = super::todo::TodoState::new(driver);
-
-            html! {
-                <component {super::todo::todo_render} data={state} />
-            }
-        }
-
+    let child: VDomNode = match *state.route.get_value() {
+        Route::Main => state.main.clone().into(),
+        Route::Counters => state.counters.clone().into(),
+        Route::Sudoku => state.sudoku.clone().into(),
+        Route::Input => state.input.clone().into(),
+        Route::GithubExplorer => state.github_explorer.clone().into(),
+        Route::GameOfLife { .. } => state.game_of_life.clone().into(),
+        Route::Chat => chat::ChatState::component(&state.driver).into(),
+        Route::Todo => super::todo::TodoState::component(&state.driver).into(),
         Route::NotFound => html! { <div>"Page Not Found"</div> }.into(),
     };
 

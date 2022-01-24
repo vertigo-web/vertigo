@@ -10,7 +10,7 @@
 //!
 //! ```rust,no_run
 //! use std::cmp::PartialEq;
-//! use vertigo::{Computed, Driver, VDomElement, Value, html, css_fn};
+//! use vertigo::{Computed, Driver, VDomElement, VDomComponent, Value, html, css_fn};
 //!
 //! #[derive(PartialEq)]
 //! pub struct State {
@@ -20,13 +20,13 @@
 //! }
 //!
 //! impl State {
-//!     pub fn new(driver: &Driver) -> Computed<State> {
+//!     pub fn component(driver: &Driver) -> VDomComponent {
 //!         let state = State {
 //!             driver: driver.clone(),
 //!             message: driver.new_value("Hello world".to_string()),
 //!         };
 //!
-//!         driver.new_computed_from(state)
+//!         driver.bind_render(state, render)
 //!     }
 //! }
 //!
@@ -34,7 +34,7 @@
 //!     color: darkblue;
 //! " }
 //!
-//! pub fn render(app_state: &Computed<State>) -> VDomElement {
+//! fn render(app_state: &Computed<State>) -> VDomElement {
 //!     let state = app_state.get_value();
 //!
 //!     html! {
@@ -66,7 +66,7 @@ pub mod utils;
 mod virtualdom;
 mod websocket;
 
-pub use computed::{AutoMap, Computed, Dependencies, Value, struct_mut, Client};
+pub use computed::{AutoMap, Computed, Dependencies, Value, struct_mut, Client, GraphId};
 pub use driver::{Driver, FetchResult};
 pub use fetch::{
     fetch_builder::FetchBuilder,
@@ -81,21 +81,23 @@ pub use utils::DropResource;
 pub use virtualdom::models::{
     css::{Css, CssGroup},
     vdom_element::{KeyDownEvent, VDomElement},
+    vdom_component::VDomComponent,
+    vdom_node::VDomNode,
 };
 pub use websocket::{WebsocketConnection, WebsocketMessage};
-pub use app::start_app;
+pub use app::{start_app};
 
 pub mod dev {
-    pub use super::app::start_app;
+    pub use super::app::{start_app};
     pub use super::driver::{DriverTrait, EventCallback, FetchMethod};
     pub use super::driver_refs::RefsContext;
     pub use super::virtualdom::models::{
         node_attr,
         realdom_id::RealDomId,
-        vdom_component::VDomComponent,
         vdom_node::VDomNode,
         vdom_refs::{NodeRefs, NodeRefsItem},
         vdom_text::VDomText,
+        vdom_component_id::VDomComponentId,
     };
     pub use super::websocket::WebsocketMessageDriver;
 }

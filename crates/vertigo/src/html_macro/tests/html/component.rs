@@ -1,6 +1,6 @@
 use crate::{
     computed::{Computed, Dependencies, Value},
-    dev::VDomComponent,
+    VDomComponent,
     VDomElement, html,
 };
 

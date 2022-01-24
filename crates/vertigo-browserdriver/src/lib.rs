@@ -9,7 +9,7 @@ mod stack;
 mod api;
 mod init_env;
 
-use vertigo::{start_app, Computed, VDomElement};
+use vertigo::{start_app, VDomComponent};
 use driver_browser::DriverConstruct;
 pub use api::ApiImport;
 use vertigo::{Driver};
@@ -461,15 +461,15 @@ pub fn dom_mousedown(dom_id: u64) {
     DRIVER_BROWSER.with(|state| state.driver_inner.export_dom_mousedown(dom_id));
 }
 
-pub fn start_browser_app<
-    T: PartialEq + 'static,
->(create_state: fn(&Driver) -> Computed<T>, render: fn(&Computed<T>) -> VDomElement) {
+pub fn start_browser_app(create_view: fn(&Driver) -> VDomComponent) {
     DRIVER_BROWSER.with(|state| {
         state.driver_inner.init_env();
         let driver = state.driver.clone();
-        let app_state = create_state(&driver);
 
-        let client = start_app(driver, app_state, render);
+
+        let component = create_view(&driver);
+
+        let client = start_app(driver, component);
 
         let mut inner = state.subscription.borrow_mut();
         *inner = Some(client);

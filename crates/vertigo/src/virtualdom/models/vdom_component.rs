@@ -17,7 +17,7 @@ use crate::{
 /// Usually used as a main component for the application.
 ///
 /// ```rust,no_run
-/// use vertigo::{Computed, Dependencies, dev::VDomComponent, VDomElement, html};
+/// use vertigo::{Computed, Dependencies, VDomComponent, VDomElement, html};
 ///
 /// // Here some driver should be used instead of pure dependency graph.
 /// let deps = Dependencies::default();
@@ -30,7 +30,7 @@ use crate::{
 ///
 /// let main_component = VDomComponent::new(state, comp_render);
 /// ```
-#[derive(Clone)]
+#[derive(Clone, PartialEq)]
 pub struct VDomComponent {
     pub id: VDomComponentId,
     pub view: Computed<VDomElement>,
@@ -58,6 +58,10 @@ impl VDomComponent {
         });
 
         VDomComponent { id: component_id, view }
+    }
+
+    pub fn from_view(id: VDomComponentId, view: Computed<VDomElement>) -> VDomComponent {
+        VDomComponent { id, view }
     }
 }
 

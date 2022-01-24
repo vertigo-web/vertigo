@@ -1,12 +1,11 @@
 use std::cmp::PartialEq;
 use vertigo::router::HashRouter;
-use vertigo::{Computed, Driver, Value};
+use vertigo::{Driver, Value, VDomComponent};
 
 use super::counters::State as CountersState;
 use super::game_of_life;
 use super::github_explorer;
 use super::input;
-use super::main::MainState;
 use super::route::Route;
 use super::sudoku;
 
@@ -15,19 +14,19 @@ pub struct State {
     pub driver: Driver,
     pub route: Value<Route>,
 
-    pub main: Computed<MainState>,
-    pub counters: Computed<CountersState>,
-    pub sudoku: Computed<sudoku::Sudoku>,
-    pub input: Computed<input::State>,
-    pub github_explorer: Computed<github_explorer::State>,
-    pub game_of_life: Computed<game_of_life::State>,
+    pub main: VDomComponent,
+    pub counters: VDomComponent,
+    pub sudoku: VDomComponent,
+    pub input: VDomComponent,
+    pub github_explorer: VDomComponent,
+    pub game_of_life: VDomComponent,
 
     hash_router: HashRouter,
 }
 
 impl State {
-    pub fn new(driver: &Driver) -> Computed<State> {
-        let game_of_life = game_of_life::State::new(driver);
+    pub fn component(driver: &Driver) -> VDomComponent {
+        let game_of_life = game_of_life::State::component(driver);
 
         let route: Value<Route> = driver.new_value(Route::new(&driver.get_hash_location()));
 
@@ -42,17 +41,17 @@ impl State {
         let state = State {
             driver: driver.clone(),
             route,
-            main: super::main::MainState::new(driver),
-            counters: CountersState::new(driver),
-            sudoku: sudoku::Sudoku::new(driver),
-            input: input::State::new(driver),
-            github_explorer: github_explorer::State::new(driver),
+            main: super::main::MainState::component(driver),
+            counters: CountersState::component(driver),
+            sudoku: sudoku::Sudoku::component(driver),
+            input: input::State::component(driver),
+            github_explorer: github_explorer::State::component(driver),
             game_of_life,
 
             hash_router,
         };
 
-        driver.new_computed_from(state)
+        driver.bind_render(state, super::render)
     }
 
     pub fn navigate_to(&self, route: Route) {
