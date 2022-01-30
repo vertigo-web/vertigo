@@ -120,7 +120,7 @@ pub fn main_render_inner(sudoku: &Computed<Sudoku>) -> VDomElement {
     let get_group = |sudoku: &Computed<Sudoku>, x: TreeBoxIndex, y: TreeBoxIndex| -> Computed<SudokuSquare<Cell>> {
         sudoku
             .clone()
-            .map(move |state| (&state.get_value().grid.get_from(x, y)).clone())
+            .map(move |state| (state.get_value().grid.get_from(x, y)))
     };
 
     html! {
