@@ -21,7 +21,8 @@ class Cookies {
                 continue;
             }
             if (cookieName === cname) {
-                return wasm.pushString(decodeURIComponent(cookieValue));
+                wasm.pushString(decodeURIComponent(cookieValue));
+                return;
             }
         }
         wasm.pushString("");
@@ -34,7 +35,7 @@ class Cookies {
         const d = new Date();
         d.setTime(d.getTime() + (Number(expires_in) * 1000));
         let expires = "expires=" + d.toUTCString();
-        document.cookie = cname + "=" + cvalueEncoded + ";" + expires + ";path=/;samesite=strict";
+        document.cookie = `${cname}=${cvalueEncoded};${expires};path=/;samesite=strict"`;
     };
 }
 
@@ -288,16 +289,37 @@ class DriverDom {
     }
     dom_bulk_update = (value_ptr, value_len) => {
         const value = this.getWasm().decodeText(value_ptr, value_len);
+        const setFocus = new Set();
         try {
             const commands = JSON.parse(value);
             for (const command of commands) {
                 this.bulk_update_command(command);
+                if (command.type === 'set_attr' && command.name.toLocaleLowerCase() === 'autofocus') {
+                    setFocus.add(command.id);
+                }
+                else if (command.type === 'remove_attr' && command.name.toLocaleLowerCase() === 'autofocus') {
+                    setFocus.delete(command.id);
+                }
             }
         }
         catch (error) {
             console.warn('buil_update - check in: https://jsonformatter.curiousconcept.com/');
             console.warn('bulk_update - param', value);
             console.error('bulk_update - incorrectly json data', error);
+        }
+        if (setFocus.size > 0) {
+            setTimeout(() => {
+                for (const id of setFocus) {
+                    this.nodes.get(`set focus ${id}`, BigInt(id), (node) => {
+                        if (node instanceof HTMLElement) {
+                            node.focus();
+                        }
+                        else {
+                            console.error('setfocus: HTMLElement expected');
+                        }
+                    });
+                }
+            }, 0);
         }
     };
     bulk_update_command(command) {
@@ -330,7 +352,7 @@ class DriverDom {
             return;
         }
         if (command.type === 'set_attr') {
-            this.set_attribute(BigInt(command.id), command.key, command.value);
+            this.set_attribute(BigInt(command.id), command.name, command.value);
             return;
         }
         if (command.type === 'remove_attr') {

@@ -143,10 +143,10 @@ impl DriverBrowserDom {
         });
     }
 
-    pub fn set_attr(&self, id: RealDomId, key: &'static str, value: &str) {
+    pub fn set_attr(&self, id: RealDomId, name: &'static str, value: &str) {
         self.add_command(DriverDomCommand::SetAttr {
             id,
-            key,
+            name,
             value: value.into(),
         });
     }

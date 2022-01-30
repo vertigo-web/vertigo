@@ -24,7 +24,7 @@ pub enum DriverDomCommand {
     },
     SetAttr {
         id: RealDomId,
-        key: &'static str,
+        name: &'static str,
         value: String,
     },
     RemoveAttr {
@@ -77,10 +77,10 @@ impl DriverDomCommand {
                 out.set_u64("id", id.to_u64());
                 out.set_string("value", value.as_str());
             }
-            Self::SetAttr { id, key, value } => {
+            Self::SetAttr { id, name, value } => {
                 out.set_string("type", "set_attr");
                 out.set_u64("id", id.to_u64());
-                out.set_string("key", key);
+                out.set_string("name", name);
                 out.set_string("value", value.as_str());
             }
             Self::RemoveAttr { id, name } => {

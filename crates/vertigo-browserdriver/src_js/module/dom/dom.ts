@@ -32,7 +32,7 @@ type CommandType = {
 } | {
     type: 'set_attr',
     id: number,
-    key: string,
+    name: string,
     value: string
 } | {
     type: 'remove_attr',
@@ -294,16 +294,38 @@ export class DriverDom {
     public dom_bulk_update = (value_ptr: BigInt, value_len: BigInt) => {
         const value = this.getWasm().decodeText(value_ptr, value_len);
 
+        const setFocus: Set<number> = new Set();
+
         try {
             const commands: Array<CommandType> = JSON.parse(value);
 
             for (const command of commands) {
                 this.bulk_update_command(command);
+
+                if (command.type === 'set_attr' && command.name.toLocaleLowerCase() === 'autofocus') {
+                    setFocus.add(command.id);
+                } else if (command.type === 'remove_attr' && command.name.toLocaleLowerCase() === 'autofocus') {
+                    setFocus.delete(command.id);
+                }
             }
         } catch (error) {
             console.warn('buil_update - check in: https://jsonformatter.curiousconcept.com/')
             console.warn('bulk_update - param', value);
             console.error('bulk_update - incorrectly json data', error);
+        }
+
+        if (setFocus.size > 0) {
+            setTimeout(() => {
+                for (const id of setFocus) {
+                    this.nodes.get(`set focus ${id}`, BigInt(id), (node) => {
+                        if (node instanceof HTMLElement) {
+                            node.focus();
+                        } else {
+                            console.error('setfocus: HTMLElement expected');
+                        }
+                    });
+                }
+            }, 0);
         }
     }
 
@@ -344,7 +366,7 @@ export class DriverDom {
         }
 
         if (command.type === 'set_attr') {
-            this.set_attribute(BigInt(command.id), command.key, command.value);
+            this.set_attribute(BigInt(command.id), command.name, command.value);
             return;
         }
 
