@@ -1,20 +1,19 @@
-use std::cmp::PartialEq;
-use vertigo::{Driver, Value, VDomComponent};
+use vertigo::{Value, VDomComponent};
 
 mod render;
 
-#[derive(PartialEq)]
+#[derive(Clone)]
 pub struct State {
     pub counter: Value<u32>,
 }
 
 impl State {
-    pub fn component(driver: &Driver, counter: &Value<u32>) -> VDomComponent {
+    pub fn component(counter: &Value<u32>) -> VDomComponent {
         let state = State {
             counter: counter.clone(),
         };
 
-        driver.bind_render(state, render::render)
+        VDomComponent::new(state, render::render)
     }
 
     pub fn increment(&self) {

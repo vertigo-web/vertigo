@@ -1,4 +1,6 @@
-use vertigo::{css, css_fn, html, Computed, Css, VDomNode, VDomElement};
+use std::rc::Rc;
+
+use vertigo::{css, css_fn, html, Css, VDomNode, VDomElement, VDomComponent};
 
 use crate::app::chat;
 use crate::{app, navigate_to};
@@ -34,10 +36,9 @@ fn css_menu_item(active: bool) -> Css {
     )
 }
 
-fn render_header(app_state: &Computed<app::State>) -> VDomElement {
-    let state = app_state.get_value();
-
-    let current_page = &*state.route.get_value();
+fn render_header(state: &Rc<app::State>) -> VDomElement {
+    let route = state.route.get_value();
+    let current_page = route.as_ref();
 
     let navigate_to_gameoflife = {
         let state = state.clone();
@@ -64,25 +65,27 @@ fn render_header(app_state: &Computed<app::State>) -> VDomElement {
     }
 }
 
-pub fn render(app_state: &Computed<app::State>) -> VDomElement {
-    let state = app_state.get_value();
+pub fn render(state: Rc<app::State>) -> VDomComponent {
+    let header = VDomComponent::new(state.clone(), render_header);
 
-    let child: VDomNode = match *state.route.get_value() {
-        Route::Main => state.main.clone().into(),
-        Route::Counters => state.counters.clone().into(),
-        Route::Sudoku => state.sudoku.clone().into(),
-        Route::Input => state.input.clone().into(),
-        Route::GithubExplorer => state.github_explorer.clone().into(),
-        Route::GameOfLife { .. } => state.game_of_life.clone().into(),
-        Route::Chat => chat::ChatState::component(&state.driver).into(),
-        Route::Todo => super::todo::TodoState::component(&state.driver).into(),
-        Route::NotFound => html! { <div>"Page Not Found"</div> }.into(),
-    };
+    VDomComponent::new(state, move |state: &Rc<app::State>| -> VDomElement {
+        let child: VDomNode = match *state.route.get_value() {
+            Route::Main => state.main.clone().into(),
+            Route::Counters => state.counters.clone().into(),
+            Route::Sudoku => state.sudoku.clone().into(),
+            Route::Input => state.input.clone().into(),
+            Route::GithubExplorer => state.github_explorer.clone().into(),
+            Route::GameOfLife { .. } => state.game_of_life.clone().into(),
+            Route::Chat => chat::ChatState::component(&state.driver).into(),
+            Route::Todo => super::todo::TodoState::component(&state.driver).into(),
+            Route::NotFound => html! { <div>"Page Not Found"</div> }.into(),
+        };
 
-    html! {
-        <div>
-            <component {render_header} data={app_state.clone()} />
-            {child}
-        </div>
-    }
+        html! {
+            <div>
+                { header.clone() }
+                {child}
+            </div>
+        }
+    })
 }

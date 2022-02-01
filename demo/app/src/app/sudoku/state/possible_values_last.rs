@@ -25,7 +25,7 @@ struct CellForComputed {
     pub possible: PossibleValues,
 }
 
-fn get_possible_value<S>(current: CellForComputed, select_from_grid: S) -> Option<SudokuValue>
+fn get_possible_value<S>(current: &CellForComputed, select_from_grid: S) -> Option<SudokuValue>
 where
     S: Fn(TreeBoxIndex, TreeBoxIndex) -> CellForComputed,
 {
@@ -68,7 +68,7 @@ fn value_by_row(
         // Iterate by row
         get_possible_value(get_current, {
             let grid = grid_computed.clone();
-            move |x0, x1| -> CellForComputed { grid.get_from(x0, level0y).get_from(x1, level1y) }
+            move |x0, x1| -> CellForComputed { grid.get_from(x0, level0y).get_from(x1, level1y).clone() }
         })
     })
 }
@@ -89,7 +89,7 @@ fn value_by_col(
         // Iterate by column
         get_possible_value(get_current, {
             let grid = grid_computed.clone();
-            move |y0, y1| -> CellForComputed { grid.get_from(level0x, y0).get_from(level1x, y1) }
+            move |y0, y1| -> CellForComputed { grid.get_from(level0x, y0).get_from(level1x, y1).clone() }
         })
     })
 }
@@ -109,7 +109,7 @@ fn value_by_square(
         // Iterate by square
         get_possible_value(get_current, {
             let grid = grid_computed.clone();
-            move |x1, y1| -> CellForComputed { grid.get_from(level0x, level0y).get_from(x1, y1) }
+            move |x1, y1| -> CellForComputed { grid.get_from(level0x, level0y).get_from(x1, y1).clone() }
         })
     })
 }
@@ -129,7 +129,7 @@ pub fn possible_values_last(
                 let input = grid_input.get_from(level0x, level0y).get_from(level1x, level1y);
                 let possible = grid_possible.get_from(level0x, level0y).get_from(level1x, level1y);
 
-                CellForComputed { input, possible }
+                CellForComputed { input: input.clone(), possible: possible.clone() }
             })
         })
     };

@@ -13,10 +13,9 @@ use crate::{
         realdom_node::RealDomElement,
         realdom_text::RealDomText,
         vdom_component::VDomComponent,
-        vdom_component_id::VDomComponentId,
         vdom_element::VDomElement,
         vdom_node::VDomNode, vdom_text::VDomText,
-    },
+    }, GraphId,
 };
 
 use super::render::CacheNode;
@@ -84,7 +83,7 @@ fn get_pair_for_update(real: RealDomNode, new: &VDomNode) -> Result<CurrentNodeP
     match real {
         RealDomNode::Component { node } => {
             if let VDomNode::Component { node: vnode } = new {
-                if node.id == vnode.id {
+                if node.id == vnode.id() {
                     return Ok(CurrentNodePairs::Component {
                         node,
                         // new: vnode
@@ -219,7 +218,7 @@ fn get_pairs_middle<'a>(
             target.create_text(node.value.clone())
         },
     );
-    let mut real_component: CacheNode<VDomComponentId, RealDomComponent, VDomComponent> = CacheNode::new(
+    let mut real_component: CacheNode<GraphId, RealDomComponent, VDomComponent> = CacheNode::new(
         move |css_manager: &CssManager, target: &RealDomElement, component: &VDomComponent| -> RealDomComponent {
             // TODO - to rethink the component concept
             // let node_root = target.create_node(component.view.get_value().name);
@@ -228,7 +227,7 @@ fn get_pairs_middle<'a>(
             let subscription = render_to_node(driver.clone(), css_manager.clone(), node.clone(), component.clone());
 
             RealDomComponent {
-                id: component.id.clone(),
+                id: component.id(),
                 subscription,
                 node,
             }
@@ -246,7 +245,7 @@ fn get_pairs_middle<'a>(
                 real_text.insert(id, node);
             }
             RealDomNode::Component { node } => {
-                let id = node.id.clone();
+                let id = node.id;
                 real_component.insert(id, node);
             }
         }
@@ -275,7 +274,7 @@ fn get_pairs_middle<'a>(
                 child_id
             }
             VDomNode::Component { node } => {
-                let id = node.id.clone();
+                let id = node.id();
                 let child = real_component.get_or_create(css_manager, target, id, node);
                 let child_id = child.dom_id();
 
@@ -389,7 +388,9 @@ pub fn render_to_node(
     target: RealDomElement,
     component: VDomComponent,
 ) -> Client {
-    component.view.subscribe(move |new_version| {
+    let view = driver.from(move || component.render.render());
+
+    view.subscribe(move |new_version| {
         let mut refs_context = RefsContext::default();
 
         update_node(driver.clone(), &css_manager, &mut refs_context, &target, new_version);

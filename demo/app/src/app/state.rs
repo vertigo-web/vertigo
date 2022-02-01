@@ -1,4 +1,5 @@
-use std::cmp::PartialEq;
+use std::rc::Rc;
+
 use vertigo::router::HashRouter;
 use vertigo::{Driver, Value, VDomComponent};
 
@@ -9,7 +10,6 @@ use super::input;
 use super::route::Route;
 use super::sudoku;
 
-#[derive(PartialEq)]
 pub struct State {
     pub driver: Driver,
     pub route: Value<Route>,
@@ -21,7 +21,7 @@ pub struct State {
     pub github_explorer: VDomComponent,
     pub game_of_life: VDomComponent,
 
-    hash_router: HashRouter,
+    _hash_router: HashRouter,
 }
 
 impl State {
@@ -38,7 +38,7 @@ impl State {
             })
         });
 
-        let state = State {
+        let state = Rc::new(State {
             driver: driver.clone(),
             route,
             main: super::main::MainState::component(driver),
@@ -48,10 +48,10 @@ impl State {
             github_explorer: github_explorer::State::component(driver),
             game_of_life,
 
-            hash_router,
-        };
+            _hash_router: hash_router,
+        });
 
-        driver.bind_render(state, super::render)
+        super::render(state)
     }
 
     pub fn navigate_to(&self, route: Route) {

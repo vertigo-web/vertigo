@@ -7,12 +7,12 @@ use std::{
 };
 
 use crate::{
-    Computed, Dependencies, Value, Instant, InstantType, KeyDownEvent, WebsocketConnection, WebsocketMessage, VDomElement,
+    Computed, Dependencies, Value, Instant, InstantType, KeyDownEvent, WebsocketConnection, WebsocketMessage,
     dev::WebsocketMessageDriver,
     driver_refs::RefsContext,
     fetch::{fetch_builder::FetchBuilder, request_builder::RequestBuilder},
     utils::{DropResource, EqBox},
-    virtualdom::models::{realdom_id::RealDomId, vdom_component::VDomComponent, vdom_component_id::VDomComponentId},
+    virtualdom::models::{realdom_id::RealDomId},
 };
 
 #[derive(Debug)]
@@ -192,13 +192,6 @@ impl Driver {
     pub fn spawn(&self, future: impl Future<Output = ()> + 'static) {
         let future_box = Box::pin(future);
         self.inner.driver.spawn(future_box);
-    }
-
-    pub fn bind_render<T: PartialEq + 'static>(&self, state: T, render: fn (&Computed<T>) -> VDomElement) -> VDomComponent {
-        let computed = self.inner.dependencies.new_value(state).to_computed();
-        let id = VDomComponentId::new(&computed, render);
-        let view = computed.map_for_render::<VDomElement>(render);
-        VDomComponent::from_view(id, view)
     }
 
     /// Create new FetchBuilder.

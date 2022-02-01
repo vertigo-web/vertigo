@@ -1,4 +1,4 @@
-use vertigo::{css, html, Computed, Css, VDomElement};
+use vertigo::{css, html, Css, VDomElement};
 
 use crate::app::sudoku::state::{number_item::SudokuValue, Cell};
 
@@ -70,9 +70,7 @@ fn css_item(should_show: bool) -> Css {
     )
 }
 
-pub fn render_cell_possible(item: &Computed<Cell>) -> VDomElement {
-    let cell = (*item).get_value();
-
+pub fn render_cell_possible(cell: &Cell) -> VDomElement {
     let possible = (*cell).possible.get_value();
     let only_one_possible = possible.len() == 1;
 
@@ -105,6 +103,7 @@ pub fn render_cell_possible(item: &Computed<Cell>) -> VDomElement {
 
     if let Some(possible_last_value) = possible_last_value {
         let on_set = {
+            let cell = cell.clone();
             move || {
                 cell.number.value.set_value(Some(possible_last_value));
             }

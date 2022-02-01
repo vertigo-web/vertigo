@@ -1,4 +1,4 @@
-use vertigo::{css, css_fn, html, Computed, Css, VDomElement};
+use vertigo::{css, css_fn, html, Css, VDomElement};
 
 use crate::app::sudoku::state::{number_item::SudokuValue, Cell};
 
@@ -34,8 +34,8 @@ css_fn! { css_delete, "
     justify-content: center;
 " }
 
-pub fn render_cell_value(value: SudokuValue, item: &Computed<Cell>) -> VDomElement {
-    let cell = item.get_value();
+pub fn render_cell_value(value: SudokuValue, cell: &Cell) -> VDomElement {
+    // let cell = item.get_value();
 
     //cell.show_delete.setValue(true);
 
@@ -45,8 +45,11 @@ pub fn render_cell_value(value: SudokuValue, item: &Computed<Cell>) -> VDomEleme
     let mut out = Vec::new();
 
     if show_delete {
-        let on_click = move || {
-            cell.number.value.set_value(None);
+        let on_click = {
+            let cell = cell.clone();
+            move || {
+                cell.number.value.set_value(None);
+            }
         };
 
         out.push(

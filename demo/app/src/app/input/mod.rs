@@ -1,7 +1,6 @@
-use std::cmp::PartialEq;
-use vertigo::{css_fn, html, Computed, Driver, VDomElement, Value, VDomComponent};
+use vertigo::{css_fn, html, Driver, VDomElement, Value, VDomComponent};
 
-#[derive(PartialEq)]
+#[derive(Clone)]
 pub struct State {
     pub value: Value<String>,
 }
@@ -12,7 +11,7 @@ impl State {
             value: driver.new_value(String::from("")),
         };
 
-        driver.bind_render(state, render)
+        VDomComponent::new(state, render)
     }
 
     // pub fn increment(&self) {
@@ -47,9 +46,7 @@ css_fn! { text_css, "
     margin: 10px;
 " }
 
-fn render(state: &Computed<State>) -> VDomElement {
-    let state = state.get_value();
-
+fn render(state: &State) -> VDomElement {
     let on_set1 = {
         let value = state.value.clone();
 

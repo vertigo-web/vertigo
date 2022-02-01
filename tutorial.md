@@ -66,9 +66,7 @@ css_fn! { main_div, "
     color: darkblue;
 " }
 
-pub fn render(app_state: &Computed<State>) -> VDomElement {
-    let state = app_state.get_value();
-
+pub fn render(state: &State) -> VDomElement {
     html! {
         <div css={main_div()}>
             "Message to the world: "
@@ -121,7 +119,7 @@ The component will be rendered using this `State` struct as the input value.
 Using `css_fn!` macro we define here a function named `main_div` which returns styles[^styles] defined by `color: darkblue` body.
 
 ```rust
-    pub fn render(app_state: &Computed<State>) -> VDomElement {
+    pub fn render(state: &State) -> VDomElement {
 ```
 
 Here we define the render function itself.
@@ -167,7 +165,6 @@ The `div` tag must be of course closed as in regular HTML.
 Take a look at the state of the app in file `src/state.rs`. First let's see what is in the struct:
 
 ```rust
-#[derive(PartialEq)]
 pub struct State {
     driver: Driver,
 
@@ -192,7 +189,7 @@ impl State {
             message: driver.new_value("Hello world".to_string()),
         };
 
-        driver.bind_render(state, app::render)
+        VDomComponent::new(state, app::render)
     }
 }
 ```
@@ -223,8 +220,7 @@ to State and
 to `new()` method. Then in render function you can use this value:
 
 ```rust
-pub fn render(app_state: &Computed<State>) -> VDomElement {
-    let state = app_state.get_value();
+pub fn render(state: &State) -> VDomElement {
     let message = state.message.get_value();
 
     let message_element = if *state.strong.get_value() {
@@ -319,7 +315,6 @@ To go dynamic, add a struct to `src/list.rs`, which will be our sub-state for th
 ```rust
 use vertigo::{Computed, Driver, Value, VDomElement, html};
 
-#[derive(PartialEq)]
 pub struct State {
     items: Value<Vec<String>>,
 }
@@ -333,7 +328,7 @@ impl State {
             ]),
         };
 
-        driver.bind_render(state, render)
+        VDomComputed::new(state, render)
     }
 }
 ```
@@ -343,7 +338,6 @@ And add this sub-state into our main state in `src/state.rs`:
 ```rust
 use crate::list;
 
-#[derive(PartialEq)]
 pub struct State {
     driver: Driver,
 
@@ -361,7 +355,7 @@ impl State {
             list: list::State::new(driver),
         };
 
-        driver.bind_render(state, render)
+        VDomComputed::new(state, render)
     }
 }
 ```
@@ -369,8 +363,7 @@ impl State {
 Now we can use this state to render our component dynamically. In `src/list.rs` modify `render` function this way:
 
 ```rust
-pub fn render(state: &Computed<State>) -> VDomElement {
-    let state = state.get_value();
+pub fn render(state: &State) -> VDomElement {
     let items = state.items.get_value();
 
     let elements = items.iter()
@@ -444,7 +437,6 @@ So the whole `src/list.rs` will look like this:
 ```rust
 use vertigo::{Computed, Driver, Value, VDomElement, VDomComponent, html};
 
-#[derive(PartialEq)]
 pub struct State {
     items: Value<Vec<String>>,
     new_item: Value<String>,
@@ -460,7 +452,7 @@ impl State {
             new_item: driver.new_value("".to_string()),
         };
 
-        driver.bind_render(state, render)
+        VDomComponent::new(state, render)
     }
 
     pub fn add(&self) -> impl Fn() {
@@ -482,8 +474,7 @@ impl State {
     }
 }
 
-pub fn render(state: &Computed<State>) -> VDomElement {
-    let state = state.get_value();
+pub fn render(state: &State) -> VDomElement {
     let items = state.items.get_value();
 
     let elements = items.iter()
@@ -515,7 +506,6 @@ We've added 2 methods to state, both returning an event handler. Method `add` re
 It is possible to have a value that is automatically computed. Let's show the amount of items in the list. First add a computed type to the list's state:
 
 ```rust
-#[derive(PartialEq)]
 pub struct State {
     items: Value<Vec<String>>,
     new_item: Value<String>,
@@ -543,7 +533,7 @@ Then we need to reorganize a little how we create an instance of the state:
             count,
         };
 
-        driver.bind_render(state)
+        VDomComponent::new(state, render)
     }
 ```
 

@@ -1,4 +1,3 @@
-use std::cmp::PartialEq;
 use vertigo::{Driver, Value, VDomComponent};
 
 use self::{
@@ -46,7 +45,7 @@ fn create_grid_possible_last(
     })
 }
 
-#[derive(PartialEq, Clone)]
+#[derive(Clone)]
 pub struct Cell {
     pub number: NumberItem,
     pub possible: PossibleValues,
@@ -67,16 +66,16 @@ fn creatergid_view(
             let possible_last = grid_possible_last.get_from(level0x, level0y).get_from(level1x, level1y);
 
             Cell {
-                number,
-                possible,
-                possible_last,
+                number: number.clone(),
+                possible: possible.clone(),
+                possible_last: possible_last.clone(),
                 show_delete: driver.new_value(true),
             }
         })
     })
 }
 
-#[derive(PartialEq)]
+#[derive(Clone)]
 pub struct Sudoku {
     driver: Driver,
     pub grid: SudokuSquare<SudokuSquare<Cell>>,
@@ -93,8 +92,7 @@ impl Sudoku {
             grid: creatergid_view(driver, grid_number, grid_possible, grid_possible_last),
         };
 
-        driver.bind_render(state, crate::app::sudoku::render::main_render)
-
+        crate::app::sudoku::render::main_render(state)
     }
 
     pub fn clear(&self) {

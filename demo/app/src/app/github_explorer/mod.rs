@@ -69,7 +69,7 @@ impl Item {
     }
 }
 
-#[derive(PartialEq)]
+#[derive(Clone)]
 pub struct State {
     pub repo_input: Value<String>,
     pub repo_shown: Value<String>,
@@ -78,8 +78,6 @@ pub struct State {
 
 impl State {
     pub fn component(driver: &Driver) -> VDomComponent {
-        let driver = driver.clone();
-
         let state = State {
             repo_input: driver.new_value(String::from("")),
             repo_shown: driver.new_value(String::from("")),
@@ -90,7 +88,7 @@ impl State {
             }),
         };
 
-        driver.bind_render(state, render::render)
+        VDomComponent::new(state, render::render)
     }
 }
 
