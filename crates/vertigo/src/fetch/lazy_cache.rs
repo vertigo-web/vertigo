@@ -74,6 +74,18 @@ pub struct LazyCache<T: PartialEq + 'static> {
     driver: Driver,
 }
 
+impl<T: PartialEq> Clone for LazyCache<T> {
+    fn clone(&self) -> Self {
+        LazyCache {
+            res: self.res.clone(),
+            max_age: self.max_age,
+            loader: self.loader.clone(),
+            queued: self.queued.clone(),
+            driver: self.driver.clone()
+        }
+    }
+}
+
 impl<T: PartialEq> CachedValue<T> {
     fn get_value(&self) -> Rc<Resource<T>> {
         self.value.get_value()

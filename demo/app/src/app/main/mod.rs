@@ -1,10 +1,10 @@
-use vertigo::{css, css_fn, css_fn_push, html, Computed, Css, Driver, VDomElement, Value, VDomComponent};
+use vertigo::{css, css_fn, css_fn_push, html, Css, Driver, VDomElement, Value, VDomComponent};
 
 mod spinner;
 
 use spinner::spinner;
 
-#[derive(PartialEq)]
+#[derive(Clone)]
 pub struct MainState {
     pub value: Value<u32>,
 }
@@ -15,7 +15,7 @@ impl MainState {
             value: driver.new_value(33),
         };
 
-        driver.bind_render(state, main_render)
+        VDomComponent::new(state, main_render)
     }
 
     pub fn increment(&self) {
@@ -50,8 +50,7 @@ css_fn_push! { css_button, css_bg, "
     cursor: pointer;
 " }
 
-pub fn main_render(state: &Computed<MainState>) -> VDomElement {
-    let state = state.get_value();
+pub fn main_render(state: &MainState) -> VDomElement {
     let value = *state.value.get_value();
 
     let on_down = {
@@ -62,6 +61,7 @@ pub fn main_render(state: &Computed<MainState>) -> VDomElement {
     };
 
     let on_up = {
+        let state = state.clone();
         move || {
             log::info!("on click");
             state.increment();

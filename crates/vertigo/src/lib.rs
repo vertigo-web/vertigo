@@ -26,7 +26,7 @@
 //!             message: driver.new_value("Hello world".to_string()),
 //!         };
 //!
-//!         driver.bind_render(state, render)
+//!         VDomComponent::new(state, render)
 //!     }
 //! }
 //!
@@ -34,9 +34,7 @@
 //!     color: darkblue;
 //! " }
 //!
-//! fn render(app_state: &Computed<State>) -> VDomElement {
-//!     let state = app_state.get_value();
-//!
+//! fn render(state: &State) -> VDomElement {
 //!     html! {
 //!         <div css={main_div()}>
 //!             "Message to the world: "
@@ -97,7 +95,6 @@ pub mod dev {
         vdom_node::VDomNode,
         vdom_refs::{NodeRefs, NodeRefsItem},
         vdom_text::VDomText,
-        vdom_component_id::VDomComponentId,
     };
     pub use super::websocket::WebsocketMessageDriver;
 }

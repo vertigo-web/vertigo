@@ -1,6 +1,6 @@
 use serde::{Deserialize, Serialize};
 use std::rc::Rc;
-use vertigo::{css, html, AutoMap, Computed, Css, Driver, LazyCache, Resource, SerdeRequest, VDomElement, Value, VDomComponent};
+use vertigo::{css, html, AutoMap, Css, Driver, LazyCache, Resource, SerdeRequest, VDomElement, Value, VDomComponent};
 
 #[derive(PartialEq)]
 enum View {
@@ -26,9 +26,8 @@ struct CommentModel {
     // postId: u32,
 }
 
-#[derive(PartialEq)]
+#[derive(Clone)]
 pub struct TodoState {
-    driver: Driver,
     view: Value<View>,
     // Resources
     posts: LazyCache<Vec<PostModel>>, //Vec<<>>
@@ -81,22 +80,19 @@ impl TodoState {
         });
 
         let state = TodoState {
-            driver: driver.clone(),
             view,
             posts,
             comments,
         };
 
-        driver.bind_render(state, todo_render)
+        VDomComponent::new(state, todo_render)
     }
 }
 
-fn todo_render(state: &Computed<TodoState>) -> VDomElement {
-    let state_value = state.get_value();
-
-    match state_value.view.get_value().as_ref() {
+fn todo_render(state: &TodoState) -> VDomElement {
+    match state.view.get_value().as_ref() {
         View::Main => {
-            let main = TodoMainState::component(&state_value.driver, state.clone());
+            let main = TodoMainState::component(state);
 
             html! {
                 <div>
@@ -105,7 +101,7 @@ fn todo_render(state: &Computed<TodoState>) -> VDomElement {
             }
         }
         View::Post { id } => {
-            let post_view = TodoPostState::component(&state_value.driver, state.clone(), *id);
+            let post_view = TodoPostState::component(state, *id);
 
             html! {
                 <div>
@@ -114,7 +110,7 @@ fn todo_render(state: &Computed<TodoState>) -> VDomElement {
             }
         }
         View::User { email } => {
-            let view = state_value.view.clone();
+            let view = state.view.clone();
             let messag = format!("user = {}", email);
 
             let on_click = move || {
@@ -135,15 +131,15 @@ fn todo_render(state: &Computed<TodoState>) -> VDomElement {
     }
 }
 
-#[derive(PartialEq)]
+#[derive(Clone)]
 struct TodoMainState {
-    state: Computed<TodoState>,
+    state: TodoState,
 }
 
 impl TodoMainState {
-    fn component(driver: &Driver, state: Computed<TodoState>) -> VDomComponent {
-        let state = TodoMainState { state };
-        driver.bind_render(state, todo_main_render)
+    fn component(state: &TodoState) -> VDomComponent {
+        let state = TodoMainState { state: state.clone() };
+        VDomComponent::new(state, todo_main_render)
     }
 }
 
@@ -156,10 +152,8 @@ fn css_hover_item() -> Css {
     "}
 }
 
-fn todo_main_render(state: &Computed<TodoMainState>) -> VDomElement {
-    let state_value = state.get_value();
-
-    let todo_state = state_value.state.get_value();
+fn todo_main_render(state_value: &TodoMainState) -> VDomElement {
+    let todo_state = &state_value.state;
 
     let posts = todo_state.posts.get_value();
 
@@ -210,16 +204,19 @@ fn todo_main_render(state: &Computed<TodoMainState>) -> VDomElement {
     }
 }
 
-#[derive(PartialEq)]
+#[derive(Clone)]
 struct TodoPostState {
-    state: Computed<TodoState>,
+    state: TodoState,
     post_id: u32,
 }
 
 impl TodoPostState {
-    pub fn component(driver: &Driver, state: Computed<TodoState>, post_id: u32) -> VDomComponent {
-        let state = TodoPostState { state, post_id };
-        driver.bind_render(state, todo_post_render)
+    pub fn component(state: &TodoState, post_id: u32) -> VDomComponent {
+        let state = TodoPostState {
+            state: state.clone(),
+            post_id
+        };
+        VDomComponent::new(state, todo_post_render)
     }
 }
 
@@ -243,11 +240,10 @@ fn css_comment_body() -> Css {
     "}
 }
 
-fn todo_post_render(state: &Computed<TodoPostState>) -> VDomElement {
-    let state_value = state.get_value();
+fn todo_post_render(state_value: &TodoPostState) -> VDomElement {
     let post_id = state_value.post_id;
     let message = format!("post_id = {}", post_id);
-    let view = state_value.state.get_value().view.clone();
+    let view = state_value.state.view.clone();
 
     let on_click = {
         let view = view.clone();
@@ -256,7 +252,7 @@ fn todo_post_render(state: &Computed<TodoPostState>) -> VDomElement {
         }
     };
 
-    let comments = state_value.state.get_value().comments.get_value(&post_id);
+    let comments = state_value.state.comments.get_value(&post_id);
     let comments_list = comments.get_value();
 
     let mut comments_out: Vec<VDomElement> = Vec::new();

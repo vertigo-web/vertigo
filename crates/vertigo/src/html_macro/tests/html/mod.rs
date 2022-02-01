@@ -1,5 +1,4 @@
 mod button;
-mod component;
 mod css;
 mod div;
 mod events;

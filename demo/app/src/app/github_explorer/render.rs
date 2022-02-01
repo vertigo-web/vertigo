@@ -1,4 +1,4 @@
-use vertigo::{css_fn, html, Computed, Resource, VDomElement};
+use vertigo::{css_fn, html, Resource, VDomElement};
 
 use super::State;
 
@@ -25,9 +25,7 @@ css_fn! { text_css, "
     margin: 10px;
 " }
 
-pub fn render(state: &Computed<State>) -> VDomElement {
-    let state = state.get_value();
-
+pub fn render(state: &State) -> VDomElement {
     let on_input_callback = {
         let value = state.repo_input.clone();
         move |new_value: String| {

@@ -1,12 +1,9 @@
-use std::cmp::PartialEq;
 use vertigo::{html, Computed, Driver, VDomElement, Value};
 use vertigo::VDomComponent;
 
 mod simple_counter;
 
-#[derive(PartialEq)]
 pub struct State {
-    driver: Driver,
     counter1: Value<u32>,
     counter2: Value<u32>,
     counter3: Value<u32>,
@@ -38,7 +35,6 @@ impl State {
         };
 
         let state = State {
-            driver: driver.clone(),
             counter1,
             counter2,
             counter3,
@@ -46,14 +42,12 @@ impl State {
             sum
         };
 
-        driver.bind_render(state, render)
+        render(state)
     }
 }
 
-fn render_sum(state: &Computed<State>) -> VDomElement {
-    let state = state.get_value();
-
-    let sum = state.sum.get_value();
+fn render_sum(sum: &Computed<u32>) -> VDomElement {
+    let sum = sum.get_value();
 
     html! {
         <div>
@@ -62,21 +56,22 @@ fn render_sum(state: &Computed<State>) -> VDomElement {
     }
 }
 
-pub fn render(state: &Computed<State>) -> VDomElement {
-    let st = state.get_value();
+pub fn render(state: State) -> VDomComponent {
+    let view1 = simple_counter::State::component(&state.counter1);
+    let view2 = simple_counter::State::component(&state.counter2);
+    let view3 = simple_counter::State::component(&state.counter3);
+    let view4 = simple_counter::State::component(&state.counter4);
+    let view_sum = VDomComponent::new(state.sum.clone(), render_sum);
 
-    let view1 = simple_counter::State::component(&st.driver, &st.counter1);
-    let view2 = simple_counter::State::component(&st.driver, &st.counter2);
-    let view3 = simple_counter::State::component(&st.driver, &st.counter3);
-    let view4 = simple_counter::State::component(&st.driver, &st.counter4);
-
-    html! {
-        <div>
-            { view1 }
-            { view2 }
-            { view3 }
-            { view4 }
-            <component {render_sum} data={state} />
-        </div>
-    }
+    VDomComponent::new(state, move |_: &State| {
+        html! {
+            <div>
+                { view1.clone() }
+                { view2.clone() }
+                { view3.clone() }
+                { view4.clone() }
+                { view_sum.clone() }
+            </div>
+        }
+    })
 }

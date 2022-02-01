@@ -1,10 +1,9 @@
 use std::rc::Rc;
 use vertigo::{
-    html, Computed, Driver, DropResource, KeyDownEvent,
+    html, Driver, DropResource, KeyDownEvent,
     VDomElement, Value, WebsocketConnection, WebsocketMessage, VDomComponent
 };
 
-#[derive(PartialEq)]
 pub struct ChatState {
     _ws_connect: DropResource,
 
@@ -56,52 +55,56 @@ impl ChatState {
             )
         };
 
-        let state = ChatState {
+        let state = Rc::new(ChatState {
             _ws_connect: ws_connect,
             connect,
             messages,
             input_text,
+        });
+
+        render(state)
+    }
+}
+
+pub fn render(state: Rc<ChatState>) -> VDomComponent {
+    let input_view = VDomComponent::new(state.clone(), render_input_text);
+    
+    VDomComponent::new(state, move |state_value: &Rc<ChatState>| {
+            
+        let is_connect = state_value.connect.get_value().is_some();
+
+        let network_info = match is_connect {
+            true => "Connection active",
+            false => "disconnect",
         };
 
-        driver.bind_render(state, render)
-    }
+        let mut list = Vec::new();
+
+        let messages = state_value.messages.get_value();
+        for message in messages.iter() {
+            list.push(html! {
+                <div>
+                    { message.clone() }
+                </div>
+            });
+        }
+
+        html! {
+            <div>
+                <div>
+                    { network_info }
+                </div>
+                <div>
+                    { ..list }
+                </div>
+                { input_view.clone() }
+            </div>
+        }
+    })
 }
 
-pub fn render(state: &Computed<ChatState>) -> VDomElement {
-    let state_value = state.get_value();
-
-    let is_connect = state_value.connect.get_value().is_some();
-
-    let network_info = match is_connect {
-        true => "Connection active",
-        false => "disconnect",
-    };
-
-    let mut list = Vec::new();
-
-    let messages = state_value.messages.get_value();
-    for message in messages.iter() {
-        list.push(html! {
-            <div>
-                { message.clone() }
-            </div>
-        });
-    }
-    html! {
-        <div>
-            <div>
-                { network_info }
-            </div>
-            <div>
-                { ..list }
-            </div>
-            <component {render_input_text} data={state.clone()} />
-        </div>
-    }
-}
-
-pub fn render_input_text(state: &Computed<ChatState>) -> VDomElement {
-    let state = state.get_value();
+pub fn render_input_text(state: &Rc<ChatState>) -> VDomElement {
+    let state = state.clone();
     let text = state.input_text.get_value();
     let text_value = (*text).clone();
 

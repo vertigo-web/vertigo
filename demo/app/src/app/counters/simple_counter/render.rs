@@ -1,4 +1,4 @@
-use vertigo::{css_fn, css_fn_push, html, Computed, VDomElement};
+use vertigo::{css_fn, css_fn_push, html, VDomElement};
 
 use super::State;
 
@@ -21,8 +21,8 @@ css_fn! { css_wrapper, "
     margin: 5px 0;
 " }
 
-pub fn render(simple_counter: &Computed<State>) -> VDomElement {
-    let simple_counter = simple_counter.get_value();
+pub fn render(simple_counter: &State) -> VDomElement {
+    // let simple_counter = simple_counter.get_value();
     let value = *(simple_counter.counter.get_value());
 
     let click_up = {
@@ -33,6 +33,7 @@ pub fn render(simple_counter: &Computed<State>) -> VDomElement {
     };
 
     let click_down = {
+        let simple_counter = simple_counter.clone();
         move || {
             simple_counter.decrement();
         }

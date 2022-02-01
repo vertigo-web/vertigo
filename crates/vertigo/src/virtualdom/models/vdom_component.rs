@@ -1,16 +1,40 @@
 use std::{
-    cmp::PartialEq,
     fmt,
     rc::Rc,
 };
 
 use crate::{
-    computed::{Computed, Value},
     virtualdom::models::{
-        vdom_component_id::VDomComponentId,
         vdom_element::VDomElement
-    }
+    }, GraphId
 };
+
+pub trait RenderVDom {
+    fn render(&self) -> VDomElement;
+}
+
+struct VDomComponentRender<T> {
+    state: T,
+    render: Box<dyn Fn(&T) -> VDomElement>,
+}
+
+impl<T> VDomComponentRender<T> {
+    pub fn new(state: T, render: impl Fn(&T) -> VDomElement + 'static) -> VDomComponentRender<T> {
+        VDomComponentRender {
+            state,
+            render: Box::new(render),
+        }
+    }
+}
+
+impl<T> RenderVDom for VDomComponentRender<T> {
+    fn render(&self) -> VDomElement {
+        let state = &self.state;
+        let render = &self.render;
+
+        render(state)
+    }
+}
 
 /// A component is a virtual dom element with render function attached to it.
 ///
@@ -30,46 +54,30 @@ use crate::{
 ///
 /// let main_component = VDomComponent::new(state, comp_render);
 /// ```
-#[derive(Clone, PartialEq)]
+#[derive(Clone)]
 pub struct VDomComponent {
-    pub id: VDomComponentId,
-    pub view: Computed<VDomElement>,
+    id: GraphId,
+    pub render: Rc<dyn RenderVDom>,
 }
 
 impl VDomComponent {
-    pub fn new<T: PartialEq + 'static>(params: Computed<T>, render: fn(&Computed<T>) -> VDomElement) -> VDomComponent {
-        let component_id = VDomComponentId::new(&params, render);
-        let view = params.map_for_render(render);
-
-        VDomComponent { id: component_id, view }
+    pub fn id(&self) -> GraphId {
+        self.id
     }
 
-    pub fn from_value<T: PartialEq + 'static>(params: Value<T>, render: fn(&Value<T>) -> VDomElement) -> VDomComponent {
-        let component_id = VDomComponentId::new_value(&params, render);
-
-        let deps = params.deps();
-
-        let comp = deps.new_computed_from(params);
-
-        let view = comp.map(move |wrapper_computed: &Computed<Value<T>>| -> VDomElement {
-            let value: Rc<Value<T>> = wrapper_computed.get_value();
-            let value: &Value<T> = value.as_ref();
-            render(value)
-        });
-
-        VDomComponent { id: component_id, view }
-    }
-
-    pub fn from_view(id: VDomComponentId, view: Computed<VDomElement>) -> VDomComponent {
-        VDomComponent { id, view }
+    pub fn new<T: 'static>(state: T, render: impl Fn(&T) -> VDomElement + 'static) -> VDomComponent {
+        VDomComponent {
+            id: GraphId::default(),
+            render: Rc::new(VDomComponentRender::new(state, render)),
+        }
     }
 }
 
 impl fmt::Debug for VDomComponent {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
-        f.debug_struct("VDomElement")
+        f.debug_struct("VDomComponent")
             .field("id", &self.id)
-            .field("view", &self.view.get_value())
+            .field("render", &(self.render.as_ref() as *const dyn RenderVDom))
             .finish()
     }
 }

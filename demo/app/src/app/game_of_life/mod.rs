@@ -1,4 +1,4 @@
-use std::cmp::PartialEq;
+use std::{rc::Rc};
 use vertigo::{css, css_fn, html, Computed, Css, Driver, VDomElement, Value, VDomComponent};
 
 mod next_generation;
@@ -23,10 +23,10 @@ fn create_matrix(driver: &Driver, x_count: u16, y_count: u16) -> Vec<Vec<Value<b
     matrix
 }
 
-#[derive(Clone, PartialEq)]
+#[derive(Clone)]
 pub struct State {
     pub driver: Driver,
-    pub matrix: Value<Vec<Vec<Value<bool>>>>,
+    pub matrix: Rc<Vec<Vec<Value<bool>>>>,
     pub timer_enable: Value<bool>,
     pub new_delay: Value<u32>,
     pub year: Value<Computed<u32>>,
@@ -37,7 +37,7 @@ impl State {
     const Y_LEN: u16 = 70;
 
     pub fn component(driver: &Driver) -> VDomComponent {
-        let matrix = driver.new_value(create_matrix(driver, State::X_LEN, State::Y_LEN));
+        let matrix = Rc::new(create_matrix(driver, State::X_LEN, State::Y_LEN));
 
         let timer_enable = driver.new_value(false);
         let new_delay = driver.new_value(150);
@@ -51,7 +51,7 @@ impl State {
             year,
         };
 
-        driver.bind_render(state, render)
+        render(state)
     }
 
     pub fn accept_new_delay(&self) -> impl Fn() {
@@ -65,12 +65,11 @@ impl State {
     pub fn randomize(&self)-> impl Fn() {
         let driver = self.driver.clone();
         let matrix = self.matrix.clone();
+
         move || {
             log::info!("random ...");
 
             driver.transaction(|| {
-                let matrix = matrix.get_value();
-
                 for (y, row) in matrix.iter().enumerate() {
                     for (x, cell) in row.iter().enumerate() {
                         let new_value: bool = (y * 2 + (x + 4)) % 2 == 0;
@@ -85,13 +84,13 @@ impl State {
         }
     }
 
-    pub fn create_timer(driver: &Driver, matrix: &Value<Vec<Vec<Value<bool>>>>, timer_enable: &Value<bool>, new_delay: &Value<u32>, starting_year: u32) -> Computed<u32> {
-        let matrix = matrix.clone();
+    pub fn create_timer(driver: &Driver, matrix: &Rc<Vec<Vec<Value<bool>>>>, timer_enable: &Value<bool>, new_delay: &Value<u32>, starting_year: u32) -> Computed<u32> {
         let timer_enable = timer_enable.clone();
         let new_delay = *new_delay.get_value();
 
         driver.new_with_connect(starting_year, {
             let driver = driver.clone();
+            let matrix = matrix.clone();
 
             move |self_value| {
                 let driver = driver.clone();
@@ -111,8 +110,6 @@ impl State {
                             if *timer_enable {
                                 let current = self_value.get_value();
                                 self_value.set_value(*current + 1);
-
-                                let matrix = matrix.get_value();
 
                                 next_generation::next_generation(&driver, State::X_LEN, State::Y_LEN, &*matrix)
                             }
@@ -161,8 +158,7 @@ css_fn! { flex_menu, "
     margin-bottom: 5px;
 " }
 
-fn render_header(state: &Computed<State>) -> VDomElement {
-    let state = state.get_value();
+fn render_header(state: &State) -> VDomElement {
     let year = *state.year.get_value().get_value();
     let timer_enable = state.timer_enable.get_value();
     let new_delay = state.new_delay.get_value();
@@ -220,25 +216,29 @@ fn render_header(state: &Computed<State>) -> VDomElement {
     }
 }
 
-pub fn render(state: &Computed<State>) -> VDomElement {
-    let value = state.get_value().matrix.get_value();
-    let value_inner = &*value;
+pub fn render(state: State) -> VDomComponent {
 
-    html! {
-        <div css={css_wrapper()}>
-            <component {render_header} data={state.clone()} />
-            <br/>
-            <a href="https://www.youtube.com/watch?v=C2vgICfQawE" target="_blank">
-                "https://www.youtube.com/watch?v=C2vgICfQawE"
-            </a>
-            <br/>
-            <br/>
-            { render_matrix(value_inner) }
-        </div>
-    }
+    let view_header = VDomComponent::new(state.clone(), render_header);
+
+    VDomComponent::new(state, move |state: &State| -> VDomElement {
+        let matrix = &state.matrix;
+
+        html! {
+            <div css={css_wrapper()}>
+                { view_header.clone() }
+                <br/>
+                <a href="https://www.youtube.com/watch?v=C2vgICfQawE" target="_blank">
+                    "https://www.youtube.com/watch?v=C2vgICfQawE"
+                </a>
+                <br/>
+                <br/>
+                { render_matrix(matrix) }
+            </div>
+        }
+    })
 }
 
-fn render_matrix(matrix: &[Vec<Value<bool>>]) -> VDomElement {
+fn render_matrix(matrix: &Rc<Vec<Vec<Value<bool>>>>) -> VDomElement {
     let mut out = Vec::new();
 
     for item in matrix.iter() {
@@ -256,7 +256,7 @@ fn render_row(matrix: &[Value<bool>]) -> VDomElement {
     let mut out = Vec::new();
 
     for item in matrix.iter() {
-        out.push(html! { <component_val {render_cell} data={item} /> })
+        out.push(VDomComponent::new(item.clone(), render_cell))
     }
 
     html! {

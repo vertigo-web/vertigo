@@ -71,11 +71,11 @@ pub struct HashRouter {
 ///             hash_router,
 ///         };
 ///
-///         driver.bind_render(state, render)
+///         VDomComponent::new(state, render)
 ///     }
 /// }
 /// 
-/// fn render(state: &Computed<State>) -> VDomElement {
+/// fn render(state: &State) -> VDomElement {
 ///     html! {
 ///         <div>
 ///             "..."
