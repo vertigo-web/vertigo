@@ -1,6 +1,5 @@
 use std::{cell::RefCell};
 
-#[derive(PartialEq)]
 pub struct ValueMut<T> {
     value: RefCell<T>,
 }
@@ -22,7 +21,7 @@ impl<T> ValueMut<T> {
         fun(&state)
     }
 
-    pub fn change(&self, change: impl Fn(&mut T)) {
+    pub fn change(&self, change: impl FnOnce(&mut T)) {
         let mut state = self.value.borrow_mut();
         change(&mut state);
     }

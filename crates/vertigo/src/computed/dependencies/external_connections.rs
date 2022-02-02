@@ -1,36 +1,35 @@
 use std::{
-    any::Any,
     rc::Rc,
 };
 
 use crate::{
     computed::graph_id::GraphId,
-    utils::{EqBox}, struct_mut::BTreeMapMut,
+    struct_mut::BTreeMapMut, DropResource,
 };
 
-pub type ConnectType = Rc<dyn Fn() -> Box<dyn Any>>;
+pub type ConnectType = Rc<dyn Fn() -> DropResource>;
 
 struct ExternalConnectionsInner {
     connect: BTreeMapMut<GraphId, ConnectType>,
-    connect_resource: BTreeMapMut<GraphId, Box<dyn Any>>,
+    connected_resource: BTreeMapMut<GraphId, DropResource>,
     will_connect: BTreeMapMut<GraphId, bool>,
 }
 
-#[derive(PartialEq, Clone)]
+#[derive(Clone)]
 pub struct ExternalConnections {
-    inner: Rc<EqBox<ExternalConnectionsInner>>,
+    inner: Rc<ExternalConnectionsInner>,
 }
 
 impl ExternalConnections {
     pub fn default() -> Self {
         ExternalConnections {
-            inner: Rc::new(EqBox::new(
+            inner: Rc::new(
                 ExternalConnectionsInner {
                     connect: BTreeMapMut::new(),
-                    connect_resource: BTreeMapMut::new(),
+                    connected_resource: BTreeMapMut::new(),
                     will_connect: BTreeMapMut::new(),
                 }
-            )),
+            ),
         }
     }
 
@@ -54,15 +53,17 @@ impl ExternalConnections {
         let will_connect = self.inner.will_connect.take();
         for (id, should_connect) in will_connect.into_iter() {
             if should_connect {
-                if !self.inner.connect_resource.contains_key(&id) {
-                    //must be connected
-                    if let Some(connect_func) = self.inner.connect.get(&id) {
-                        let connect_resource = connect_func();
-                        self.inner.connect_resource.insert(id, connect_resource);
-                    }
+                if self.inner.connected_resource.contains_key(&id) {
+                    continue;
+                }
+
+                //must be connected
+                if let Some(connect_func) = self.inner.connect.get(&id) {
+                    let connect_resource = connect_func();
+                    self.inner.connected_resource.insert(id, connect_resource);
                 }
             } else {
-                self.inner.connect_resource.remove(&id);
+                self.inner.connected_resource.remove(&id);
             }
         }
     }

@@ -15,10 +15,15 @@ pub enum WebsocketMessage {
 }
 
 /// Represents websocket connection.
-#[derive(PartialEq)]
 pub struct WebsocketConnection {
     callback_id: u32,
     driver: Driver,
+}
+
+impl PartialEq for WebsocketConnection {
+    fn eq(&self, other: &Self) -> bool {
+        self.callback_id == other.callback_id
+    }
 }
 
 impl WebsocketConnection {

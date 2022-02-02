@@ -59,7 +59,7 @@ impl<T: PartialEq + 'static> Clone for Computed<T> {
 impl<T: PartialEq + 'static> Computed<T> {
     pub fn new<F: Fn() -> Rc<T> + 'static>(deps: Dependencies, get_value: F) -> Computed<T> {
         Computed {
-            inner: GraphValue::new_computed(&deps, get_value),
+            inner: GraphValue::new(&deps, true, get_value),
         }
     }
 
@@ -68,7 +68,7 @@ impl<T: PartialEq + 'static> Computed<T> {
     }
 
     pub fn get_value(&self) -> Rc<T> {
-        self.inner.get_value(true)
+        self.inner.get_value()
     }
 
     pub fn subscribe<F: Fn(&T) + 'static>(self, call: F) -> Client {

@@ -1,7 +1,6 @@
 use std::rc::Rc;
 
-use crate::DropResource;
-use crate::computed::{Computed, Dependencies, Value};
+use crate::computed::{Computed, Dependencies, Value, DropResource};
 
 use crate::computed::tests::box_value_version::SubscribeValueVer;
 use crate::struct_mut::ValueMut;
@@ -456,12 +455,12 @@ fn test_connect() {
         move |_value| {
             is_subscribe.set(true);
 
-            Box::new(DropResource::new({
+            DropResource::new({
                 let is_subscribe = is_subscribe.clone();
                 move || {
                     is_subscribe.set(false);
                 }
-            }))
+            })
         }
     });
 

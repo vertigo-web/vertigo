@@ -5,9 +5,9 @@ use std::{
     fmt::Display,
 };
 
-use crate::{utils::{EqBox}, struct_mut::HashMapMut};
+use crate::{struct_mut::HashMapMut};
 
-type CreateType<K, V> = EqBox<Box<dyn Fn(&K) -> V>>;
+type CreateType<K, V> = Box<dyn Fn(&K) -> V>;
 
 /// A structure similar to HashMap
 /// but allows to provide a function `create` for creating a new value if particular key doesn't exists.
@@ -20,17 +20,17 @@ type CreateType<K, V> = EqBox<Box<dyn Fn(&K) -> V>>;
 /// let my_map = AutoMap::<i32, i32>::new(|x| x*2);
 /// assert_eq!(my_map.get_value(&5), 10);
 /// ```
-#[derive(PartialEq, Clone)]
+#[derive(Clone)]
 pub struct AutoMap<K: Eq + Hash + Clone + Display, V: PartialEq + Clone + 'static> {
     create: Rc<CreateType<K, V>>,
-    values: Rc<EqBox<HashMapMut<K, V>>>,
+    values: Rc<HashMapMut<K, V>>,
 }
 
 impl<K: Eq + Hash + Clone + Display, V: PartialEq + Clone + 'static> AutoMap<K, V> {
     pub fn new<C: Fn(&K) -> V + 'static>(create: C) -> AutoMap<K, V> {
         AutoMap {
-            create: Rc::new(EqBox::new(Box::new(create))),
-            values: Rc::new(EqBox::new(HashMapMut::new())),
+            create: Rc::new(Box::new(create)),
+            values: Rc::new(HashMapMut::new()),
         }
     }
 

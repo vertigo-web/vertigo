@@ -1,11 +1,10 @@
 use std::{
-    any::Any,
     cmp::PartialEq,
     rc::Rc,
 };
 
 use crate::{
-    computed::{Computed, Dependencies, GraphId}, struct_mut::ValueMut,
+    computed::{Computed, Dependencies, GraphId}, struct_mut::ValueMut, DropResource,
 };
 
 pub trait ToRc<T> {
@@ -81,7 +80,7 @@ impl<T: PartialEq + 'static> Value<T> {
 
     pub fn new_selfcomputed_value<F>(deps: Dependencies, value: T, create: F) -> Computed<T>
     where
-        F: Fn(&Value<T>) -> Box<dyn Any> + 'static,
+        F: Fn(&Value<T>) -> DropResource + 'static,
     {
         let id = GraphId::default();
 

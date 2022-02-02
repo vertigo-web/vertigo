@@ -1,6 +1,6 @@
 use std::rc::Rc;
 
-use vertigo::utils::DropResource;
+use vertigo::DropResource;
 
 use crate::{utils::callback_manager::CallbackManager, api::ApiImport};
 
