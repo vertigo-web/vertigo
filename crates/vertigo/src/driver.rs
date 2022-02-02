@@ -1,5 +1,4 @@
 use std::{
-    any::Any,
     collections::HashMap,
     future::Future,
     pin::Pin,
@@ -11,7 +10,7 @@ use crate::{
     dev::WebsocketMessageDriver,
     driver_refs::RefsContext,
     fetch::{fetch_builder::FetchBuilder, request_builder::RequestBuilder},
-    utils::{DropResource, EqBox},
+    DropResource,
     virtualdom::models::{realdom_id::RealDomId},
 };
 
@@ -168,9 +167,8 @@ impl DriverInner {
 /// which is used to create a Driver.
 ///
 /// Additionally driver struct wraps [Dependencies] object.
-#[derive(PartialEq)]
 pub struct Driver {
-    inner: Rc<EqBox<DriverInner>>,
+    inner: Rc<DriverInner>,
 }
 
 impl Clone for Driver {
@@ -184,7 +182,7 @@ impl Clone for Driver {
 impl Driver {
     pub fn new(dependencies: Dependencies, driver: impl DriverTrait + 'static) -> Driver {
         Driver {
-            inner: Rc::new(EqBox::new(DriverInner::new(dependencies, driver))),
+            inner: Rc::new(DriverInner::new(dependencies, driver)),
         }
     }
 
@@ -282,7 +280,7 @@ impl Driver {
     pub fn new_with_connect<T, F>(&self, value: T, create: F) -> Computed<T>
     where
         T: PartialEq,
-        F: Fn(&Value<T>) -> Box<dyn Any> + 'static,
+        F: Fn(&Value<T>) -> DropResource + 'static,
     {
         self.inner.dependencies.new_with_connect(value, create)
     }

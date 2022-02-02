@@ -14,7 +14,7 @@ impl Refresh {
     }
 
     pub fn refresh_token_add(&self, graph_value_refresh: GraphValueRefresh) {
-        let id = graph_value_refresh.id;
+        let id = graph_value_refresh.id();
         let prev_refresh = self.refresh.insert(id, graph_value_refresh);
 
         if prev_refresh.is_none() {

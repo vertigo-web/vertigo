@@ -101,7 +101,7 @@ impl State {
 
                 log::info!("Setting timer for {} ms", new_delay);
 
-                let drop_timer = driver.set_interval(new_delay, {
+                driver.set_interval(new_delay, {
                     let driver = driver.clone();
                     move || {
                         driver.transaction(|| {
@@ -115,9 +115,7 @@ impl State {
                             }
                         })
                     }
-                });
-
-                Box::new(drop_timer)
+                })
             }
         })
     }

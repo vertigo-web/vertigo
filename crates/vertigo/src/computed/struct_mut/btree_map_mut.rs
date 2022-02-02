@@ -1,7 +1,6 @@
 use std::{cell::RefCell, collections::BTreeMap};
 
 
-#[derive(PartialEq)]
 pub struct BTreeMapMut<K: Ord, V> {
     data: RefCell<BTreeMap<K, V>>,
 }
@@ -50,6 +49,11 @@ impl<K: Ord, V> BTreeMapMut<K, V> {
     }
 
     pub fn change(&self, change_f: impl Fn(&mut BTreeMap<K, V>)) {
+        let mut state = self.data.borrow_mut();
+        change_f(&mut state)
+    }
+
+    pub fn map_and_change<R>(&self, change_f: impl FnOnce(&mut BTreeMap<K, V>) -> R) -> R {
         let mut state = self.data.borrow_mut();
         change_f(&mut state)
     }

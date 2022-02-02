@@ -2,12 +2,11 @@ use std::rc::Rc;
 
 use crate::{
     computed::{Computed, Dependencies, GraphId, GraphValue},
-    utils::{EqBox}, struct_mut::ValueMut,
+    struct_mut::ValueMut,
 };
 
-#[derive(PartialEq)]
 pub struct Client {
-    graph_value: EqBox<GraphValue<()>>,
+    graph_value: GraphValue<()>,
 }
 
 impl Client {
@@ -16,7 +15,7 @@ impl Client {
         T: PartialEq + 'static,
         F: Fn(&T) + 'static,
     {
-        let graph_value = GraphValue::new_client(&deps, {
+        let graph_value = GraphValue::new(&deps, false, {
             let prev_value = ValueMut::new(None);
 
             move || {
@@ -31,11 +30,11 @@ impl Client {
             }
         });
 
-        let _ = graph_value.get_value(false);
+        graph_value.subscribe_value();
         deps.external_connections_refresh();
 
         Client {
-            graph_value: EqBox::new(graph_value),
+            graph_value,
         }
     }
 

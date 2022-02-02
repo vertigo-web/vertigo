@@ -1,7 +1,7 @@
 use std::rc::Rc;
 use vertigo::{
     dev::WebsocketMessageDriver,
-    utils::{DropResource},
+    DropResource,
 };
 
 use crate::{utils::callback_manager::CallbackManagerOwner, api::ApiImport};

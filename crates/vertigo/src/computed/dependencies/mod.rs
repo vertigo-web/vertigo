@@ -1,13 +1,11 @@
 use std::{
-    any::Any,
     cmp::PartialEq,
     collections::BTreeSet,
     rc::Rc,
 };
 
 use crate::{
-    computed::{Computed, GraphId, GraphValueRefresh, Value},
-    utils::{EqBox},
+    computed::{Computed, GraphId, GraphValueRefresh, Value}, DropResource,
 };
 
 use super::value::ToRc;
@@ -17,7 +15,6 @@ mod graph;
 mod graph_map;
 pub mod hook;
 mod refresh;
-pub mod refresh_edges;
 mod stack;
 mod transaction_state;
 
@@ -38,12 +35,11 @@ use {
 /// - Render function (a component) takes a computed state provided by the graph and returns a rendered element ([VDomElement](struct.VDomElement.html)).
 /// - Upon change in VDOM the real DOM is also updated.
 /// - Components can provide the DOM with functions that get fired on events like [on_click](struct.VDomElement.html#structfield.on_click), which may modify the state, thus triggering necessary computing once again.
-#[derive(PartialEq)]
 pub struct Dependencies {
-    graph: Rc<EqBox<Graph>>,
-    stack: Rc<EqBox<Stack>>,
-    refresh: Rc<EqBox<Refresh>>,
-    transaction_state: Rc<EqBox<TransactionState>>,
+    graph: Rc<Graph>,
+    stack: Rc<Stack>,
+    refresh: Rc<Refresh>,
+    transaction_state: Rc<TransactionState>,
     external_connections: ExternalConnections,
 }
 
@@ -65,14 +61,14 @@ impl Default for Dependencies {
         let refresh: Refresh = Refresh::new();
 
         Self {
-            graph: Rc::new(EqBox::new(
+            graph: Rc::new(
                 Graph::new(external_connections.clone(), refresh.clone()),
-            )),
-            stack: Rc::new(EqBox::new(Stack::new())),
-            refresh: Rc::new(EqBox::new(refresh)),
-            transaction_state: Rc::new(EqBox::new(
+            ),
+            stack: Rc::new(Stack::new()),
+            refresh: Rc::new(refresh),
+            transaction_state: Rc::new(
                 TransactionState::new()
-            )),
+            ),
             external_connections,
         }
     }
@@ -86,7 +82,7 @@ impl Dependencies {
     pub fn new_with_connect<T, F>(&self, value: T, create: F) -> Computed<T>
     where
         T: PartialEq,
-        F: Fn(&Value<T>) -> Box<dyn Any> + 'static
+        F: Fn(&Value<T>) -> DropResource + 'static
     {
         Value::<T>::new_selfcomputed_value::<F>(self.clone(), value, create)
     }
@@ -114,7 +110,21 @@ impl Dependencies {
         if let Some(edges_values) = edges_values {
             let edges_to_refresh = self.get_edges_to_refresh(edges_values);
 
-            refresh_edges::refresh_edges(self, edges_to_refresh);
+            let mut edges_client = Vec::new();
+
+            for item in edges_to_refresh {
+                if item.is_computed() {
+                    item.drop_value();
+                } else {
+                    edges_client.push(item);
+                }
+            }
+        
+            for item in edges_client {
+                item.refresh();
+            }
+        
+            self.external_connections.refresh_connect();
 
             self.transaction_state.move_to_idle();
         }
@@ -123,8 +133,8 @@ impl Dependencies {
     fn get_edges_to_refresh(&self, edges: BTreeSet<GraphId>) -> Vec<GraphValueRefresh> {
         let mut result = Vec::new();
 
-        for id in self.get_all_deps(edges) {
-            if let Some(item) = self.refresh_get(&id) {
+        for id in self.graph.get_all_deps(edges) {
+            if let Some(item) = self.refresh.get(&id) {
                 result.push(item);
             } else {
                 log::error!("Missing refresh token for(1) {:?}", id);
@@ -134,20 +144,16 @@ impl Dependencies {
         result
     }
 
-    fn get_all_deps(&self, edges: BTreeSet<GraphId>) -> BTreeSet<GraphId> {
-        self.graph.get_all_deps(edges)
-    }
-
     pub(crate) fn trigger_change(&self, parent_id: GraphId) {
         self.transaction_state.add_edge_to_refresh(parent_id);
     }
 
-    pub(crate) fn add_graph_connection(&self, parent_id: &BTreeSet<GraphId>, client_id: GraphId) {
-        self.graph.add_graph_connection(parent_id, client_id);
+    pub(crate) fn set_parent_for_client(&self, client_id: GraphId, parents_list: BTreeSet<GraphId>) {
+        self.graph.set_parent_for_client(client_id, parents_list);
     }
 
-    pub(crate) fn remove_graph_connection(&self, parent_id: &BTreeSet<GraphId>, client_id: GraphId) {
-        self.graph.remove_graph_connection(parent_id, client_id);
+    pub(crate) fn remove_client(&self, client_id: GraphId) {
+        self.graph.remove_client(client_id);
     }
 
     pub(crate) fn refresh_token_add(&self, graph_value: GraphValueRefresh) {
@@ -179,19 +185,7 @@ impl Dependencies {
         self.graph.all_connections_len()
     }
 
-    pub fn all_connections(&self) -> Vec<(GraphId, GraphId, u8)> {
-        self.graph.all_connections()
-    }
-
-    pub fn has_listeners(&self, parent_id: &GraphId) -> bool {
-        self.graph.has_listeners(parent_id)
-    }
-
-    pub fn refresh_get(&self, id: &GraphId) -> Option<GraphValueRefresh> {
-        self.refresh.get(id)
-    }
-
-    pub fn external_connections_register_connect(&self, id: GraphId, connect: Rc<dyn Fn() -> Box<dyn Any>>) {
+    pub fn external_connections_register_connect(&self, id: GraphId, connect: Rc<dyn Fn() -> DropResource>) {
         self.external_connections.register_connect(id, connect);
     }
 

@@ -12,17 +12,13 @@
 //! use std::cmp::PartialEq;
 //! use vertigo::{Computed, Driver, VDomElement, VDomComponent, Value, html, css_fn};
 //!
-//! #[derive(PartialEq)]
 //! pub struct State {
-//!     driver: Driver,
-//!
 //!     pub message: Value<String>,
 //! }
 //!
 //! impl State {
 //!     pub fn component(driver: &Driver) -> VDomComponent {
 //!         let state = State {
-//!             driver: driver.clone(),
 //!             message: driver.new_value("Hello world".to_string()),
 //!         };
 //!
@@ -60,11 +56,10 @@ mod fetch;
 mod html_macro;
 mod instant;
 pub mod router;
-pub mod utils;
 mod virtualdom;
 mod websocket;
 
-pub use computed::{AutoMap, Computed, Dependencies, Value, struct_mut, Client, GraphId};
+pub use computed::{AutoMap, Computed, Dependencies, Value, struct_mut, Client, GraphId, DropResource};
 pub use driver::{Driver, FetchResult};
 pub use fetch::{
     fetch_builder::FetchBuilder,
@@ -75,7 +70,6 @@ pub use fetch::{
 };
 pub use html_macro::Embed;
 pub use instant::{Instant, InstantType};
-pub use utils::DropResource;
 pub use virtualdom::models::{
     css::{Css, CssGroup},
     vdom_element::{KeyDownEvent, VDomElement},

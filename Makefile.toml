@@ -2,6 +2,11 @@
 default_to_workspace = false
 
 
+[tasks.vertigo-test]
+script = [
+    "cargo test -p vertigo"
+]
+
 # Run clippy for wasm32 target
 
 [tasks.clippy-wasm32]

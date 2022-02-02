@@ -33,7 +33,6 @@ pub struct CachedValue<T: PartialEq + 'static> {
 ///     name: String,
 /// }
 ///
-/// #[derive(PartialEq)]
 /// pub struct TodoState {
 ///     driver: Driver,
 ///     posts: LazyCache<Vec<Model>>,

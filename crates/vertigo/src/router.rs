@@ -1,15 +1,14 @@
 use std::rc::Rc;
 
 use crate::{
-    computed::{Client, Value},
+    computed::{Client, Value, DropResource},
     Driver,
-    utils::{DropResource}, struct_mut::ValueMut,
+    struct_mut::ValueMut,
 };
 
-#[derive(PartialEq)]
 pub struct HashRouter {
-    sender: Client,
-    receiver: DropResource,
+    _sender: Client,
+    _receiver: DropResource,
 }
 
 /// Router based on hash part of current location.
@@ -45,7 +44,6 @@ pub struct HashRouter {
 ///     }
 /// }
 ///
-/// #[derive(PartialEq)]
 /// pub struct State {
 ///     pub driver: Driver,
 ///     pub route: Value<Route>,
@@ -119,6 +117,9 @@ impl HashRouter {
 
         block_subscrition.set(false);
 
-        Self { sender, receiver }
+        Self {
+            _sender: sender,
+            _receiver: receiver
+        }
     }
 }
