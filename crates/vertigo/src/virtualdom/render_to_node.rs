@@ -363,6 +363,7 @@ fn update_node_attr(css_manager: &CssManager, real_node: &RealDomElement, node: 
     real_node.set_event(EventCallback::OnMouseEnter { callback: node.on_mouse_enter.clone() });
     real_node.set_event(EventCallback::OnMouseLeave { callback: node.on_mouse_leave.clone() });
     real_node.set_event(EventCallback::OnKeyDown { callback: node.on_key_down.clone() });
+    real_node.set_event(EventCallback::HookKeyDown { callback: node.hook_key_down.clone() });
 }
 
 fn update_node(

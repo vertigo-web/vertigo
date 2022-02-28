@@ -45,6 +45,9 @@ pub enum EventCallback {
     OnKeyDown {
         callback: Option<Rc<dyn Fn(KeyDownEvent) -> bool>>,
     },
+    HookKeyDown {
+        callback: Option<Rc<dyn Fn(KeyDownEvent) -> bool>>,
+    },
 }
 
 impl EventCallback {
@@ -83,6 +86,13 @@ impl EventCallback {
                     "OnKeyDown set"
                 } else {
                     "OnKeyDown clear"
+                }
+            },
+            EventCallback::HookKeyDown { callback } => {
+                if callback.is_some() {
+                    "HookKeyDown set"
+                } else {
+                    "HookKeyDown clear"
                 }
             }
         }

@@ -143,8 +143,8 @@ pub fn render_input_text(state: &Rc<ChatState>) -> VDomElement {
     html! {
         <div>
             <hr/>
-            <div on_key_down={on_key_down}>
-                <input type="text" value={text_value} on_input={on_input} />
+            <div>
+                <input type="text" value={text_value} on_input={on_input} on_key_down={on_key_down}/>
                 <button on_click={submit}>"Send"</button>
             </div>
         </div>

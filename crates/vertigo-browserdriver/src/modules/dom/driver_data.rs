@@ -47,6 +47,10 @@ impl<K: Eq + Hash + Display, V> HashMapRcWithLabel<K, V> {
 
         item
     }
+
+    pub fn filter_and_map<R>(&self, map: fn(&V) -> Option<R>) -> Vec<R> {
+        self.data.filter_and_map(map)
+    }
 }
 
 pub struct DriverData {
@@ -96,6 +100,9 @@ impl DriverData {
                 }
                 EventCallback::OnKeyDown { callback } => {
                     node.on_keydown = callback;
+                },
+                EventCallback::HookKeyDown { callback } => {
+                    node.hook_keydown = callback;
                 }
             }
         );
@@ -155,6 +162,12 @@ impl DriverData {
         }
 
         None
+    }
+
+    pub fn find_hook_keydown(&self) -> Vec<Rc<dyn Fn(KeyDownEvent) -> bool>> {
+        self.elements.filter_and_map(|item| -> Option<Rc<dyn Fn(KeyDownEvent) -> bool>> {
+            item.hook_keydown.clone()
+        })
     }
 
     pub fn find_event_keydown(&self, id: RealDomId) -> Option<Rc<dyn Fn(KeyDownEvent) -> bool>> {

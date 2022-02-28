@@ -13,6 +13,7 @@ pub enum NodeAttr {
     OnMouseEnter { event: Rc<dyn Fn()> },
     OnMouseLeave { event: Rc<dyn Fn()> },
     OnKeyDown { event: Rc<dyn Fn(KeyDownEvent) -> bool> },
+    HookKeyDown { event: Rc<dyn Fn(KeyDownEvent) -> bool> },
     Attr { name: &'static str, value: String },
     DomRef { name: &'static str },
     DomApply { apply: Rc<dyn Fn(&NodeRefs)> },
@@ -48,6 +49,12 @@ pub fn on_mouse_leave<F: Fn() + 'static>(callback: F) -> NodeAttr {
 
 pub fn on_key_down<F: Fn(KeyDownEvent) -> bool + 'static>(callback: F) -> NodeAttr {
     NodeAttr::OnKeyDown {
+        event: Rc::new(callback),
+    }
+}
+
+pub fn hook_key_down<F: Fn(KeyDownEvent) -> bool + 'static>(callback: F) -> NodeAttr {
+    NodeAttr::HookKeyDown {
         event: Rc::new(callback),
     }
 }

@@ -71,6 +71,17 @@ impl VDomComponent {
             render: Rc::new(VDomComponentRender::new(state, render)),
         }
     }
+
+    pub fn from_fn(render: impl Fn() -> VDomElement + 'static) -> VDomComponent {
+        let function = move |_: &()| -> VDomElement {
+            render()
+        };
+
+        VDomComponent {
+            id: GraphId::default(),
+            render: Rc::new(VDomComponentRender::new((), function)),
+        }
+    }
 }
 
 impl fmt::Debug for VDomComponent {

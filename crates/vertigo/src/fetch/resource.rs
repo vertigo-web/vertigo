@@ -42,7 +42,7 @@ impl<T: PartialEq> FromResidual<ResourceError> for Resource<T> {
 }
 
 impl<T: PartialEq> Resource<T> {
-    pub fn map<K: PartialEq>(self, map: fn(T) -> K) -> Resource<K> {
+    pub fn map<K: PartialEq>(self, map: impl Fn(T) -> K) -> Resource<K> {
         match self {
             Resource::Loading => Resource::Loading,
             Resource::Ready(data) => Resource::Ready(map(data)),
@@ -50,7 +50,7 @@ impl<T: PartialEq> Resource<T> {
         }
     }
 
-    pub fn ref_map<K: PartialEq>(&self, map: fn(&T) -> K) -> Resource<K> {
+    pub fn ref_map<K: PartialEq>(&self, map: impl Fn(&T) -> K) -> Resource<K> {
         match self {
             Resource::Loading => Resource::Loading,
             Resource::Ready(data) => Resource::Ready(map(data)),

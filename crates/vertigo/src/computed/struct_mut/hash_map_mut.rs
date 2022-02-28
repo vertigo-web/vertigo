@@ -61,6 +61,18 @@ impl<K: Eq + Hash + Display, V> HashMapMut<K, V> {
         let mut state = self.data.borrow_mut();
         state.retain(f)
     }
+
+    pub fn filter_and_map<R>(&self, map: fn(&V) -> Option<R>) -> Vec<R> {
+        let state = self.data.borrow();
+        let mut list = Vec::new();
+        for (_, value) in (*state).iter() {
+            if let Some(mapped) = map(value) {
+                list.push(mapped);
+            }
+        }
+
+        list
+    }
 }
 
 impl<K: Eq + Hash + Display, V: Clone> HashMapMut<K, V> {
