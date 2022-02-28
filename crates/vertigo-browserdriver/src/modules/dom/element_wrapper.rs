@@ -7,6 +7,7 @@ pub struct DomElement {
     pub on_mouse_enter: Option<Rc<dyn Fn()>>,
     pub on_mouse_leave: Option<Rc<dyn Fn()>>,
     pub on_keydown: Option<Rc<dyn Fn(KeyDownEvent) -> bool>>,
+    pub hook_keydown: Option<Rc<dyn Fn(KeyDownEvent) -> bool>>,
 }
 
 impl DomElement {
@@ -17,6 +18,7 @@ impl DomElement {
             on_mouse_enter: None,
             on_mouse_leave: None,
             on_keydown: None,
+            hook_keydown: None,
         }
     }
 }

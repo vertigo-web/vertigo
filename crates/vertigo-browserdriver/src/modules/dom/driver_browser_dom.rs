@@ -93,6 +93,14 @@ impl DriverBrowserDom {
             meta_key,
         };
 
+        for callback in self.inner.data.find_hook_keydown() {
+            let stop_propagate = callback(event.clone());
+
+            if stop_propagate {
+                return true;
+            }
+        }
+
         let id = match dom_id {
             None => RealDomId::root(),
             Some(id) => RealDomId::from_u64(id),

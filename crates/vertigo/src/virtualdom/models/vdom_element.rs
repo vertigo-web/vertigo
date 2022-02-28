@@ -16,7 +16,7 @@ use super::vdom_refs::NodeRefs;
 //https://docs.rs/web-sys/0.3.50/web_sys/struct.KeyboardEvent.html
 
 /// Structure passed as a parameter to callback on on_key_down event.
-#[derive(Debug)]
+#[derive(Debug, Clone)]
 pub struct KeyDownEvent {
     pub key: String,
     pub code: String,
@@ -58,6 +58,7 @@ pub struct VDomElement {
     pub on_mouse_enter: Option<Rc<dyn Fn()>>,
     pub on_mouse_leave: Option<Rc<dyn Fn()>>,
     pub on_key_down: Option<Rc<dyn Fn(KeyDownEvent) -> bool>>,
+    pub hook_key_down: Option<Rc<dyn Fn(KeyDownEvent) -> bool>>,
     pub css: Option<Css>,
 }
 
@@ -74,6 +75,7 @@ impl VDomElement {
             on_mouse_enter: None,
             on_mouse_leave: None,
             on_key_down: None,
+            hook_key_down: None,
             css: None,
         };
 
@@ -96,6 +98,9 @@ impl VDomElement {
                 }
                 NodeAttr::OnKeyDown { event } => {
                     result.on_key_down = Some(event);
+                }
+                NodeAttr::HookKeyDown { event } => {
+                    result.hook_key_down = Some(event);
                 }
                 NodeAttr::Attr { name, value } => {
                     result.attr.insert(name, value);
@@ -124,6 +129,7 @@ impl VDomElement {
             on_mouse_enter: None,
             on_mouse_leave: None,
             on_key_down: None,
+            hook_key_down: None,
             css: None,
         }
     }
