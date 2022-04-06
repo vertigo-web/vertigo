@@ -1,5 +1,4 @@
 use serde::{Deserialize, Serialize};
-use std::rc::Rc;
 use vertigo::{css, html, AutoMap, Css, Driver, LazyCache, Resource, SerdeRequest, VDomElement, Value, VDomComponent};
 
 #[derive(PartialEq)]
@@ -31,34 +30,32 @@ pub struct TodoState {
     view: Value<View>,
     // Resources
     posts: LazyCache<Vec<PostModel>>, //Vec<<>>
-    comments: AutoMap<u32, Rc<LazyCache<Vec<CommentModel>>>>,
+    comments: AutoMap<u32, LazyCache<Vec<CommentModel>>>,
 }
 
 impl TodoState {
     pub fn component(driver: &Driver) -> VDomComponent {
         let view = driver.new_value(View::Main);
 
-        let posts = LazyCache::new(driver, 10 * 60 * 60 * 1000, move |driver: Driver| {
+        let posts = LazyCache::new(driver, 10 * 60 * 60 * 1000, move |driver: Driver| async move {
             let request = driver.request("https://jsonplaceholder.typicode.com/posts").get();
 
-            LazyCache::result(async move {
-                request.await.into(|status, body| {
-                    if status == 200 {
-                        Some(body.into_vec::<PostModel>())
-                    } else {
-                        None
-                    }
-                })
+            request.await.into(|status, body| {
+                if status == 200 {
+                    Some(body.into_vec::<PostModel>())
+                } else {
+                    None
+                }
             })
         });
 
         let comments = AutoMap::new({
             let driver = driver.clone();
 
-            move |post_id: &u32| -> Rc<LazyCache<Vec<CommentModel>>> {
+            move |post_id: &u32| -> LazyCache<Vec<CommentModel>> {
                 let post_id = *post_id;
 
-                Rc::new(LazyCache::new(&driver, 10 * 60 * 60 * 1000, move |driver: Driver| {
+                LazyCache::new(&driver, 10 * 60 * 60 * 1000, move |driver: Driver| async move {
                     let request = driver
                         .request(format!(
                             "https://jsonplaceholder.typicode.com/posts/{}/comments",
@@ -66,16 +63,14 @@ impl TodoState {
                         ))
                         .get();
 
-                    LazyCache::result(async move {
-                        request.await.into(|status, body| {
-                            if status == 200 {
-                                Some(body.into_vec::<CommentModel>())
-                            } else {
-                                None
-                            }
-                        })
+                    request.await.into(|status, body| {
+                        if status == 200 {
+                            Some(body.into_vec::<CommentModel>())
+                        } else {
+                            None
+                        }
                     })
-                }))
+                })
             }
         });
 

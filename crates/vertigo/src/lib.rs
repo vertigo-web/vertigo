@@ -44,7 +44,6 @@
 //! at the [Tutorial](https://github.com/vertigo-web/vertigo/blob/master/tutorial.md).
 
 #![deny(rust_2018_idioms)]
-#![feature(trait_alias)]
 #![feature(try_trait_v2)] // https://github.com/rust-lang/rust/issues/84277
 
 mod app;

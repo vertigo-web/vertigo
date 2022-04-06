@@ -1,6 +1,6 @@
 use serde::{Deserialize, Serialize};
-use std::cmp::PartialEq;
-use vertigo::{AutoMap, Computed, Driver, Resource, SerdeSingleRequest, Value, VDomComponent};
+use std::{cmp::PartialEq};
+use vertigo::{AutoMap, Driver, Resource, SerdeSingleRequest, Value, VDomComponent, LazyCache};
 
 mod render;
 
@@ -28,44 +28,39 @@ pub struct Branch {
     pub commit: Commit,
 }
 
-fn fetch_repo(repo: &str, value: Value<Resource<Branch>>, driver: &Driver) {
-    driver.spawn({
-        let driver = driver.clone();
-        let url = format!("https://api.github.com/repos/{}/branches/master", repo);
-        log::info!("Fetching {}", url);
-
-        async move {
-            let response = driver.request(url).get().await.into(|status, body| {
-                if status == 200 {
-                    return Some(body.into::<Branch>());
-                }
-
-                None
-            });
-
-            value.set_value(response);
-        }
-    });
-}
-
 #[derive(PartialEq, Clone)]
 pub struct Item {
-    value: Computed<Resource<Branch>>,
+    branch: LazyCache<Branch>,
 }
 
 impl Item {
     pub fn new(driver: &Driver, repo_name: &str) -> Item {
         log::info!("Creating for {}", repo_name);
-        let new_value = driver.new_value(Resource::Loading);
-        let new_computed = new_value.to_computed();
 
-        fetch_repo(repo_name, new_value, driver);
+        let url = format!("https://api.github.com/repos/{}/branches/master", repo_name);
 
-        Item { value: new_computed }
+        let branch = LazyCache::new(driver, 10 * 60 * 60 * 1000, move |driver: Driver| {
+            let url = url.clone();
+
+            async move {
+                let url = url.clone();
+                let aa = driver.request(url).get().await.into(|status, body| {
+                    if status == 200 {
+                        return Some(body.into::<Branch>());
+                    }
+
+                    None
+                });
+
+                aa
+            }
+        });
+
+        Item { branch }
     }
 
     pub fn get(&self) -> Resource<Branch> {
-        self.value.get_value().ref_clone()
+        self.branch.get_value().ref_clone()
     }
 }
 

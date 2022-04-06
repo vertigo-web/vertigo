@@ -1,5 +1,4 @@
 use std::future::Future;
-use std::pin::Pin;
 use std::rc::Rc;
 
 use crate::{
@@ -7,11 +6,7 @@ use crate::{
     computed::Value, struct_mut::ValueMut,
 };
 
-/// Function that updates cached value
-pub trait Loader<T: PartialEq> = Fn(Driver) -> LoaderResult<T> + 'static;
-
-/// Type that should be returned from [Loader] which is in fact a future [resource](Resource).
-pub type LoaderResult<T> = Pin<Box<dyn Future<Output = Resource<T>>>>;
+use super::pinboxfut::PinBoxFuture;
 
 /// Value that [LazyCache] holds.
 pub struct CachedValue<T: PartialEq + 'static> {
@@ -68,7 +63,7 @@ pub struct CachedValue<T: PartialEq + 'static> {
 pub struct LazyCache<T: PartialEq + 'static> {
     res: Rc<CachedValue<T>>,
     max_age: InstantType,
-    loader: Rc<dyn Loader<T>>,
+    loader: Rc<dyn Fn(Driver) -> PinBoxFuture<Resource<T>>>,
     queued: Rc<ValueMut<bool>>,
     driver: Driver,
 }
@@ -110,7 +105,11 @@ impl<T: PartialEq> CachedValue<T> {
 }
 
 impl<T: PartialEq> LazyCache<T> {
-    pub fn new(driver: &Driver, max_age: InstantType, loader: impl Loader<T>) -> Self {
+    pub fn new<Fut: Future<Output = Resource<T>> + 'static, F: Fn(Driver) -> Fut + 'static>(driver: &Driver, max_age: InstantType, loader: F) -> Self {
+        let loader_rc: Rc<dyn Fn(Driver) -> PinBoxFuture<Resource<T>>> = Rc::new(move |driver: Driver| -> PinBoxFuture<Resource<T>> {
+            Box::pin(loader(driver))
+        });
+
         Self {
             res: Rc::new(CachedValue {
                 value: driver.new_value(Resource::Loading),
@@ -118,14 +117,10 @@ impl<T: PartialEq> LazyCache<T> {
                 set: ValueMut::new(false),
             }),
             max_age,
-            loader: Rc::new(loader),
+            loader: loader_rc,
             queued: Rc::new(ValueMut::new(false)),
             driver: driver.clone(),
         }
-    }
-
-    pub fn result<F: Future<Output = Resource<T>> + 'static>(future: F) -> LoaderResult<T> {
-        Box::pin(future)
     }
 
     pub fn get_value(&self) -> Rc<Resource<T>> {
