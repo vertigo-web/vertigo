@@ -4,7 +4,7 @@ use std::{
     pin::Pin,
     rc::Rc
 };
-
+use crate::fetch::pinboxfut::PinBoxFuture;
 use crate::{
     Computed, Dependencies, Value, Instant, InstantType, KeyDownEvent, WebsocketConnection, WebsocketMessage,
     dev::WebsocketMessageDriver,
@@ -12,6 +12,7 @@ use crate::{
     fetch::{fetch_builder::FetchBuilder, request_builder::RequestBuilder},
     DropResource,
     virtualdom::models::{realdom_id::RealDomId},
+    FutureBox,
 };
 
 #[derive(Debug)]
@@ -32,6 +33,9 @@ impl FetchMethod {
 pub enum EventCallback {
     OnClick {
         callback: Option<Rc<dyn Fn()>>,
+    },
+    OnClickAsync {
+        callback: Option<Rc<dyn Fn() -> PinBoxFuture<()>>>,
     },
     OnInput {
         callback: Option<Rc<dyn Fn(String)>>,
@@ -58,6 +62,13 @@ impl EventCallback {
                     "onClick set"
                 } else {
                     "onClick clear"
+                }
+            }
+            EventCallback::OnClickAsync { callback } => {
+                if callback.is_some() {
+                    "onClickAsync set"
+                } else {
+                    "onClickAsync clear"
                 }
             }
             EventCallback::OnInput { callback } => {
@@ -146,6 +157,7 @@ pub trait DriverTrait {
 
     fn set_interval(&self, time: u32, func: Box<dyn Fn()>) -> DropResource;
     fn now(&self) -> InstantType;
+    fn sleep(&self, time: u32) -> FutureBox<()>;
 
     fn websocket(&self, host: String, callback: Box<dyn Fn(WebsocketMessageDriver)>) -> DropResource;
     fn websocket_send_message(&self, callback_id: u32, message: String);
@@ -235,6 +247,10 @@ impl Driver {
     /// Make `func` fire every `time` seconds.
     pub fn set_interval(&self, time: u32, func: impl Fn() + 'static) -> DropResource {
         self.inner.driver.set_interval(time, Box::new(func))
+    }
+
+    pub async fn sleep(&self, time: u32) {
+        self.inner.driver.sleep(time).await;
     }
 
     /// Gets current value of monotonic clock.

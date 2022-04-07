@@ -79,3 +79,43 @@ impl<V> CallbackManagerOwner<V> {
         }
     }
 }
+
+
+#[derive(Clone)]
+pub struct CallbackManagerOnce<V> {
+    next_id: Rc<CounterMut>,
+    data: Rc<HashMapMut<u32, Box<dyn FnOnce(V)>>>,
+}
+
+impl<V> CallbackManagerOnce<V> {
+    pub fn new() -> CallbackManagerOnce<V> {
+        CallbackManagerOnce {
+            next_id: Rc::new(CounterMut::new(1)),
+            data: Rc::new(HashMapMut::new()),
+        }
+    }
+
+    pub fn set(&self, callback: impl FnOnce(V) + 'static) -> u32 {
+        let next_id = self.next_id.get_next();
+        self.data.insert(next_id, Box::new(callback));
+        next_id
+    }
+
+    pub fn remove(&self, callback_id: u32) -> Option<Box<dyn FnOnce(V)>> {
+        self.data.remove(&callback_id)
+    }
+
+    #[allow(dead_code)]
+    pub fn trigger(&self, callback_id: u32, value: V) {
+        let callback = self.data.remove(&callback_id);
+
+        match callback {
+            Some(callback) => {
+                callback(value);
+            }
+            None => {
+                log::error!("Missing callback id {} ", callback_id);
+            }
+        }
+    }
+}

@@ -6,7 +6,7 @@ use crate::{
     computed::Value, struct_mut::ValueMut,
 };
 
-use super::pinboxfut::PinBoxFuture;
+use crate::fetch::pinboxfut::PinBoxFuture;
 
 /// Value that [LazyCache] holds.
 pub struct CachedValue<T: PartialEq + 'static> {

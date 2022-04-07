@@ -1,4 +1,4 @@
-use vertigo::{dev::FetchMethod, FetchResult};
+use vertigo::{dev::FetchMethod, FetchResult, FutureBox, FutureBoxSend};
 
 use std::{
     collections::HashMap,
@@ -8,7 +8,6 @@ use std::{
 };
 
 use crate::{utils::{
-    future::{new_future, CbFutureSend},
     json::JsonMapBuilder,
 }, api::ApiImport};
 
@@ -21,12 +20,12 @@ use vertigo::struct_mut::{
 pub struct DriverBrowserFetch {
     api: Rc<ApiImport>,
     auto_id: Rc<CounterMut>,
-    data: Rc<HashMapMut<u32, CbFutureSend<FetchResult>>>,
+    data: Rc<HashMapMut<u32, FutureBoxSend<FetchResult>>>,
 }
 
 impl DriverBrowserFetch {
     pub fn new(api: &Rc<ApiImport>) -> DriverBrowserFetch {
-        let data: Rc<HashMapMut<u32, CbFutureSend<FetchResult>>> = Rc::new(HashMapMut::new());
+        let data: Rc<HashMapMut<u32, FutureBoxSend<FetchResult>>> = Rc::new(HashMapMut::new());
 
         DriverBrowserFetch {
             api: api.clone(),
@@ -55,7 +54,7 @@ impl DriverBrowserFetch {
         body: Option<String>,
     ) -> Pin<Box<dyn Future<Output = FetchResult> + 'static>> {
         let id_request = self.auto_id.get_next();
-        let (sender, receiver) = new_future();
+        let (sender, receiver) = FutureBox::new();
 
         self.data.insert(id_request, sender);
 

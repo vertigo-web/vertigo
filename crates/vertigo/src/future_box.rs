@@ -11,13 +11,13 @@ use std::{
 // https://play.rust-lang.org/?version=stable&mode=debug&edition=2018&gist=10cd4b012f678705c9d78fed5ca81857
 
 #[derive(Default)]
-pub(crate) struct CallbackFutureInner<T> {
+pub struct CallbackFutureInner<T> {
     waker: Cell<Option<Waker>>,
     result: Cell<Option<T>>,
 }
 
 impl<T> CallbackFutureInner<T> {
-    pub fn new() -> Rc<CallbackFutureInner<T>> {
+    fn new() -> Rc<CallbackFutureInner<T>> {
         Rc::new(CallbackFutureInner {
             waker: Cell::new(None),
             result: Cell::new(None),
@@ -26,13 +26,13 @@ impl<T> CallbackFutureInner<T> {
 }
 
 #[derive(Default, Clone)]
-pub(crate) struct CbFutureSend<T> {
+pub struct FutureBoxSend<T> {
     inner: Rc<CallbackFutureInner<T>>,
 }
 
-impl<T> CbFutureSend<T> {
-    pub(crate) fn new(inner: Rc<CallbackFutureInner<T>>) -> CbFutureSend<T> {
-        CbFutureSend { inner }
+impl<T> FutureBoxSend<T> {
+    fn new(inner: Rc<CallbackFutureInner<T>>) -> FutureBoxSend<T> {
+        FutureBoxSend { inner }
     }
 
     pub fn publish(&self, result: T) {
@@ -44,17 +44,20 @@ impl<T> CbFutureSend<T> {
 }
 
 #[derive(Default, Clone)]
-pub(crate) struct CbFutureReceiver<T> {
+pub struct FutureBox<T> {
     inner: Rc<CallbackFutureInner<T>>,
 }
 
-impl<T> CbFutureReceiver<T> {
-    pub fn new(inner: Rc<CallbackFutureInner<T>>) -> CbFutureReceiver<T> {
-        CbFutureReceiver { inner }
+impl<T> FutureBox<T> {
+    pub fn new() -> (FutureBoxSend<T>, FutureBox<T>) {
+        let inner = CallbackFutureInner::new();
+        let sender = FutureBoxSend::new(inner.clone());
+        let future = FutureBox { inner };
+        (sender, future)
     }
 }
 
-impl<T> Future for CbFutureReceiver<T> {
+impl<T> Future for FutureBox<T> {
     type Output = T;
     fn poll(self: Pin<&mut Self>, cx: &mut Context<'_>) -> Poll<Self::Output> {
         match self.inner.result.take() {
@@ -65,11 +68,4 @@ impl<T> Future for CbFutureReceiver<T> {
             }
         }
     }
-}
-
-pub(crate) fn new_future<T>() -> (CbFutureSend<T>, CbFutureReceiver<T>) {
-    let inner = CallbackFutureInner::new();
-    let sender = CbFutureSend::new(inner.clone());
-    let future = CbFutureReceiver::new(inner);
-    (sender, future)
 }

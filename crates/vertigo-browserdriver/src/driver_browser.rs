@@ -6,7 +6,7 @@ use std::{
 };
 use vertigo::{
     dev::{DriverTrait, EventCallback, FetchMethod, RealDomId, RefsContext, WebsocketMessageDriver},
-    Dependencies, DropResource, Driver, FetchResult, InstantType, Client,
+    Dependencies, DropResource, Driver, FetchResult, InstantType, Client, FutureBox,
 };
 
 use crate::{api::ApiImport, utils::futures_spawn::spawn_local, init_env::init_env};
@@ -33,11 +33,8 @@ pub struct DriverBrowserInner {
 impl DriverBrowserInner {
     pub fn new(api: Rc<ApiImport>) -> Self {
         let dependencies = Dependencies::default();
-        let driver_dom = DriverBrowserDom::new(&dependencies, &api);
         let driver_interval = DriverBrowserInterval::new(&api);
-        let driver_hashrouter = DriverBrowserHashrouter::new(&api);
-        let driver_fetch = DriverBrowserFetch::new(&api);
-        let driver_websocket = DriverWebsocket::new(&api);
+
         let spawn_executor = {
             let driver_interval = driver_interval.clone();
 
@@ -45,6 +42,11 @@ impl DriverBrowserInner {
                 spawn_local(driver_interval.clone(), fut);
             })
         };
+
+        let driver_dom = DriverBrowserDom::new(&dependencies, &api, spawn_executor.clone());
+        let driver_hashrouter = DriverBrowserHashrouter::new(&api);
+        let driver_fetch = DriverBrowserFetch::new(&api);
+        let driver_websocket = DriverWebsocket::new(&api);
 
         DriverBrowserInner {
             api,
@@ -280,6 +282,15 @@ impl DriverTrait for DriverBrowser {
 
     fn now(&self) -> InstantType {
         self.driver.api.instant_now()
+    }
+
+    fn sleep(&self, time: u32) -> FutureBox<()> {
+        let (sender, future) = FutureBox::new();
+        self.driver.driver_interval.set_timeout_and_detach(time, move |_| {
+            sender.publish(());
+        });
+
+        future
     }
 
     fn websocket(&self, host: String, callback: Box<dyn Fn(WebsocketMessageDriver)>) -> DropResource {
