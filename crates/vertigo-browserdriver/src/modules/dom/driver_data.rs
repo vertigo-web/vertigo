@@ -1,9 +1,8 @@
 use std::hash::Hash;
 use std::rc::Rc;
-use vertigo::{dev::{RealDomId, EventCallback}, KeyDownEvent};
+use vertigo::{dev::{RealDomId, EventCallback, PinBoxFuture}, KeyDownEvent};
 use std::fmt::Display;
 use vertigo::struct_mut::HashMapMut;
-
 use super::element_wrapper::DomElement;
 
 struct HashMapRcWithLabel<K: Eq + Hash + Display, V> {
@@ -53,6 +52,12 @@ impl<K: Eq + Hash + Display, V> HashMapRcWithLabel<K, V> {
     }
 }
 
+pub enum OnClickCallback {
+    Sync (Rc<dyn Fn()>),
+    Async (Rc<dyn Fn() -> PinBoxFuture<()>>),
+    None,
+}
+
 pub struct DriverData {
     elements: HashMapRcWithLabel<RealDomId, DomElement>,
     child_parent: HashMapRcWithLabel<RealDomId, RealDomId>, // child -> parent
@@ -88,6 +93,9 @@ impl DriverData {
             match callback {
                 EventCallback::OnClick { callback } => {
                     node.on_click = callback;
+                }
+                EventCallback::OnClickAsync { callback } => {
+                    node.on_click_async = callback;
                 }
                 EventCallback::OnInput { callback } => {
                     node.on_input = callback;
@@ -146,22 +154,27 @@ impl DriverData {
         self.elements.must_get(node_id, map).flatten()
     }
 
-    pub fn find_event_click(&self, id: RealDomId) -> Option<Rc<dyn Fn()>> {
+    pub fn find_event_click(&self, id: RealDomId) -> OnClickCallback { //Option<Rc<dyn Fn()>> {
         let all_nodes = self.find_all_nodes(id);
 
         for node_id in all_nodes {
 
-            let on_click = self.get_from_node(
+            if let Some(on_click_async) = self.get_from_node(
+                &node_id,
+                |elem| elem.on_click_async.clone()
+            ) {
+                return OnClickCallback::Async(on_click_async);
+            }
+
+            if let Some(on_click) = self.get_from_node(
                 &node_id,
                 |elem| elem.on_click.clone()
-            );
-
-            if on_click.is_some() {
-                return on_click;
+            ) {
+                return OnClickCallback::Sync(on_click);
             }
         }
 
-        None
+        OnClickCallback::None
     }
 
     pub fn find_hook_keydown(&self) -> Vec<Rc<dyn Fn(KeyDownEvent) -> bool>> {

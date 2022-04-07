@@ -6,13 +6,17 @@ use spinner::spinner;
 
 #[derive(Clone)]
 pub struct MainState {
+    driver: Driver,
     pub value: Value<u32>,
+    pub progress: Value<u32>,
 }
 
 impl MainState {
     pub fn component(driver: &Driver) -> VDomComponent {
         let state = MainState {
+            driver: driver.clone(),
             value: driver.new_value(33),
+            progress: driver.new_value(0),
         };
 
         VDomComponent::new(state, main_render)
@@ -26,6 +30,13 @@ impl MainState {
     pub fn decrement(&self) {
         let rr = self.value.get_value();
         self.value.set_value(*rr - 1);
+    }
+
+    pub async fn start_animation(self) {
+        for i in 0..50 {
+            self.progress.set_value(i as u32);
+            self.driver.sleep(100).await;
+        }
     }
 }
 
@@ -84,6 +95,23 @@ pub fn main_render(state: &MainState) -> VDomElement {
         }
     };
 
+    let progress = *(state.progress.get_value().as_ref());
+
+    let mut progress_html = Vec::new();
+
+    for _ in 0..progress {
+        progress_html.push(html!{
+            <span>
+                " . "
+            </span>
+        });
+    }
+
+    let on_click_progress = {
+        let state = state.clone();
+        move || state.clone().start_animation()
+    };
+
     html! {
         <div aaa="one" bbb="two">
             "Abudabi"
@@ -104,6 +132,15 @@ pub fn main_render(state: &MainState) -> VDomElement {
                 "down"
             </div>
             <p>{ footer_dom }</p>
+
+            <button on_click_async={on_click_progress}>
+                <span>
+                    "start the progress bar"
+                </span>
+                <span>
+                    { ..progress_html }
+                </span>
+            </button>
         </div>
     }
 }

@@ -57,6 +57,7 @@ mod instant;
 pub mod router;
 mod virtualdom;
 mod websocket;
+mod future_box;
 
 pub use computed::{AutoMap, Computed, Dependencies, Value, struct_mut, Client, GraphId, DropResource};
 pub use driver::{Driver, FetchResult};
@@ -77,6 +78,7 @@ pub use virtualdom::models::{
 };
 pub use websocket::{WebsocketConnection, WebsocketMessage};
 pub use app::{start_app};
+pub use future_box::{FutureBoxSend, FutureBox};
 
 pub mod dev {
     pub use super::app::{start_app};
@@ -90,6 +92,7 @@ pub mod dev {
         vdom_text::VDomText,
     };
     pub use super::websocket::WebsocketMessageDriver;
+    pub use crate::fetch::pinboxfut::PinBoxFuture;
 }
 
 #[cfg(feature = "serde_request")]

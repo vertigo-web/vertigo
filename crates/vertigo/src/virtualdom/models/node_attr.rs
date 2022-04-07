@@ -1,14 +1,16 @@
 use std::rc::Rc;
-
+use std::future::Future;
 use crate::virtualdom::models::css::Css;
 
 use super::vdom_element::KeyDownEvent;
 use super::vdom_refs::NodeRefs;
+use crate::fetch::pinboxfut::PinBoxFuture;
 
 /// Virtual DOM node attribute.
 pub enum NodeAttr {
     Css { css: Css },
     OnClick { event: Rc<dyn Fn()> },
+    OnClickAsync { event: Rc<dyn Fn() -> PinBoxFuture<()>> },
     OnInput { event: Rc<dyn Fn(String)> },
     OnMouseEnter { event: Rc<dyn Fn()> },
     OnMouseLeave { event: Rc<dyn Fn()> },
@@ -26,6 +28,17 @@ pub fn css(css: Css) -> NodeAttr {
 pub fn on_click<F: Fn() + 'static>(callback: F) -> NodeAttr {
     NodeAttr::OnClick {
         event: Rc::new(callback),
+    }
+}
+
+pub fn on_click_async<Fut: Future<Output=()> + 'static, F: Fn() -> Fut  + 'static>(callback: F) -> NodeAttr {
+    let callback2: Rc<dyn Fn() -> PinBoxFuture<()>> = Rc::new(move || -> PinBoxFuture<()> {
+        let fut = callback();
+        Box::pin(fut)
+    });
+
+    NodeAttr::OnClickAsync {
+        event: callback2,
     }
 }
 

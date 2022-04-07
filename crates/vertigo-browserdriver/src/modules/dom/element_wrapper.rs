@@ -1,8 +1,10 @@
 use std::rc::Rc;
 use vertigo::KeyDownEvent;
+use vertigo::dev::PinBoxFuture;
 
 pub struct DomElement {
     pub on_click: Option<Rc<dyn Fn()>>,
+    pub on_click_async: Option<Rc<dyn Fn() -> PinBoxFuture<()>>>,
     pub on_input: Option<Rc<dyn Fn(String)>>,
     pub on_mouse_enter: Option<Rc<dyn Fn()>>,
     pub on_mouse_leave: Option<Rc<dyn Fn()>>,
@@ -14,6 +16,7 @@ impl DomElement {
     pub(crate) fn new() -> DomElement {
         DomElement {
             on_click: None,
+            on_click_async: None,
             on_input: None,
             on_mouse_enter: None,
             on_mouse_leave: None,
