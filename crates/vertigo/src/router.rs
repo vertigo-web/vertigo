@@ -6,9 +6,15 @@ use crate::{
     struct_mut::ValueMut,
 };
 
-pub struct HashRouter {
+struct HashSubscriptions {
     _sender: Client,
     _receiver: DropResource,
+}
+
+#[derive(Clone)]
+pub struct HashRouter<T: ToString + From<String> + PartialEq + 'static> {
+    route: Value<T>,
+    _subscriptions: Rc<HashSubscriptions>,
 }
 
 /// Router based on hash part of current location.
@@ -43,30 +49,25 @@ pub struct HashRouter {
 ///         }.to_string()
 ///     }
 /// }
+/// 
+/// impl From<String> for Route {
+///     fn from(url: String) -> Self {
+///         Route::new(url.as_str())
+///     }
+/// }
 ///
 /// pub struct State {
 ///     pub driver: Driver,
-///     pub route: Value<Route>,
-///
-///     hash_router: HashRouter,
+///     route: HashRouter<Route>,
 /// }
 ///
 /// impl State {
 ///     pub fn component(driver: &Driver) -> VDomComponent {
-///         let route: Value<Route> = driver.new_value(Route::new(&driver.get_hash_location()));
-///
-///         let hash_router = HashRouter::new(driver, route.clone(), {
-///             let route = route.clone();
-///
-///             Box::new(move |url: &String|{
-///                 route.set_value(Route::new(url));
-///             })
-///         });
+///         let route = HashRouter::new(driver);
 ///
 ///         let state = State {
 ///             driver: driver.clone(),
 ///             route,
-///             hash_router,
 ///         };
 ///
 ///         VDomComponent::new(state, render)
@@ -81,13 +82,12 @@ pub struct HashRouter {
 ///     }
 /// }
 /// ```
-impl HashRouter {
+impl<T: ToString + From<String> + PartialEq + 'static> HashRouter<T> {
     /// Create new HashRouter which sets route value upon hash change in browser bar.
     /// If callback is provided then it is fired instead.
-    pub fn new<T>(driver: &Driver, route: Value<T>, callback: Box<dyn Fn(&String)>) -> Self
-    where
-        T: PartialEq + ToString,
-    {
+    pub fn new(driver: &Driver) -> Self {
+        let route: Value<T> = driver.new_value(T::from(driver.get_hash_location()));
+
         let block_subscrition = Rc::new(ValueMut::new(true));
 
         let sender = route.to_computed().subscribe({
@@ -103,14 +103,12 @@ impl HashRouter {
         });
 
         let receiver = driver.on_hash_route_change({
-            let driver = driver.clone();
+            let route = route.clone();
             let block_subscrition = block_subscrition.clone();
 
             Box::new(move |url: &String| {
                 block_subscrition.set(true);
-                driver.transaction(|| {
-                    callback(url);
-                });
+                route.set_value_and_compare(T::from(url.clone()));
                 block_subscrition.set(false);
             })
         });
@@ -118,8 +116,19 @@ impl HashRouter {
         block_subscrition.set(false);
 
         Self {
-            _sender: sender,
-            _receiver: receiver
+            route,
+            _subscriptions: Rc::new(HashSubscriptions {
+                _sender: sender,
+                _receiver: receiver
+            })
         }
+    }
+
+    pub fn get_value(&self) -> Rc<T> {
+        self.route.get_value()
+    }
+
+    pub fn set_value(&self, value: T) {
+        self.route.set_value_and_compare(value);
     }
 }

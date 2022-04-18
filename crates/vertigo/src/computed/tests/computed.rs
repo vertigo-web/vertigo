@@ -325,7 +325,6 @@ fn test_computed_new_value() {
 
 #[test]
 fn test_computed_switch_subscription() {
-    #[derive(PartialEq)]
     enum Switch {
         Ver1,
         Ver2,

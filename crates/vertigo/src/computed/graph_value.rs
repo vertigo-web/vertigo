@@ -1,5 +1,4 @@
 use std::{
-    cmp::PartialEq,
     rc::Rc,
 };
 
@@ -8,7 +7,7 @@ use crate::{
 };
 
 
-struct GraphValueData<T: PartialEq + 'static> {
+struct GraphValueData<T: 'static> {
     is_computed_type: bool,
     deps: Dependencies,
     id: GraphId,
@@ -16,7 +15,7 @@ struct GraphValueData<T: PartialEq + 'static> {
     state: ValueMut<Option<Rc<T>>>,
 }
 
-impl<T: PartialEq + 'static> GraphValueData<T> {
+impl<T: 'static> GraphValueData<T> {
     pub fn new<F: Fn() -> Rc<T> + 'static>(
         deps: &Dependencies,
         is_computed_type: bool,
@@ -84,7 +83,7 @@ trait GraphValueControl {
     fn id(&self) -> GraphId;
 }
 
-impl<T: PartialEq + 'static> GraphValueControl for GraphValueData<T> {
+impl<T> GraphValueControl for GraphValueData<T> {
     fn drop_value(&self) {
         self.control_drop_value();
     }
@@ -129,11 +128,11 @@ impl GraphValueRefresh {
     }
 }
 
-struct GraphValueInner<T: PartialEq + 'static> {
+struct GraphValueInner<T: 'static> {
     inner: Rc<GraphValueData<T>>,
 }
 
-impl<T: PartialEq + 'static> GraphValueInner<T> {
+impl<T: 'static> GraphValueInner<T> {
     fn new<F: Fn() -> Rc<T> + 'static>(deps: &Dependencies, is_computed_type: bool, get_value: F) -> GraphValueInner<T> {
 
         let graph_value = GraphValueData::new(deps, is_computed_type, get_value);
@@ -146,7 +145,7 @@ impl<T: PartialEq + 'static> GraphValueInner<T> {
     }
 }
 
-impl<T: PartialEq + 'static> Drop for GraphValueInner<T> {
+impl<T: 'static> Drop for GraphValueInner<T> {
     fn drop(&mut self) {
         self.inner.deps.refresh_token_drop(self.inner.id);
         self.inner.control_drop_value();
@@ -154,11 +153,11 @@ impl<T: PartialEq + 'static> Drop for GraphValueInner<T> {
     }
 }
 
-pub struct GraphValue<T: PartialEq + 'static> {
+pub struct GraphValue<T: 'static> {
     inner: Rc<GraphValueInner<T>>,
 }
 
-impl<T: PartialEq + 'static> GraphValue<T> {
+impl<T: 'static> GraphValue<T> {
     pub fn new<F: Fn() -> Rc<T> + 'static>(deps: &Dependencies, is_computed_type: bool, get_value: F) -> GraphValue<T> {
         GraphValue {
             inner: Rc::new(
@@ -184,7 +183,7 @@ impl<T: PartialEq + 'static> GraphValue<T> {
     }
 }
 
-impl<T: PartialEq + 'static> Clone for GraphValue<T> {
+impl<T: 'static> Clone for GraphValue<T> {
     fn clone(&self) -> Self {
         GraphValue {
             inner: self.inner.clone(),

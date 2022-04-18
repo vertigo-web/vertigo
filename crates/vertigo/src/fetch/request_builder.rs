@@ -161,14 +161,14 @@ impl RequestResponseBody {
         RequestResponseBody { body }
     }
 
-    pub fn into<T: PartialEq + SingleRequestTrait>(self) -> Resource<T> {
+    pub fn into<T: SingleRequestTrait>(self) -> Resource<T> {
         match T::from_string(self.body.as_str()) {
             Ok(data) => Resource::Ready(data),
             Err(err) => Resource::Error(err),
         }
     }
 
-    pub fn into_vec<T: PartialEq + ListRequestTrait>(self) -> Resource<Vec<T>> {
+    pub fn into_vec<T: ListRequestTrait>(self) -> Resource<Vec<T>> {
         match T::list_from_string(self.body.as_str()) {
             Ok(data) => Resource::Ready(data),
             Err(err) => Resource::Error(err),
@@ -196,7 +196,7 @@ impl RequestResponse {
         None
     }
 
-    pub fn into<T: PartialEq>(self, convert: impl Fn(u32, RequestResponseBody) -> Option<Resource<T>>) -> Resource<T> {
+    pub fn into<T>(self, convert: impl Fn(u32, RequestResponseBody) -> Option<Resource<T>>) -> Resource<T> {
         let result = match self.data {
             Ok((status, body)) => {
                 let body = RequestResponseBody::new(body);
@@ -219,13 +219,13 @@ impl RequestResponse {
         result
     }
 
-    pub fn into_data<T: PartialEq + SingleRequestTrait>(self) -> Resource<T> {
+    pub fn into_data<T: SingleRequestTrait>(self) -> Resource<T> {
         self.into(|_, response_body| {
             Some(response_body.into::<T>())
         })
     }
 
-    pub fn into_error_message<T: PartialEq>(self) -> Resource<T> {
+    pub fn into_error_message<T>(self) -> Resource<T> {
         let body = match self.data {
             Ok((code, body)) => format!("API error {}: {}", code, body),
             Err(body) => format!("Network error: {}", body),

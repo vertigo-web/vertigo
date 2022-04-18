@@ -9,7 +9,6 @@
 //! ## Example
 //!
 //! ```rust,no_run
-//! use std::cmp::PartialEq;
 //! use vertigo::{Computed, Driver, VDomElement, VDomComponent, Value, html, css_fn};
 //!
 //! pub struct State {

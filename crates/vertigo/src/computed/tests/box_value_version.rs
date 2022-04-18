@@ -1,12 +1,12 @@
 use crate::{computed::Computed, struct_mut::ValueMut};
 use std::rc::Rc;
 
-struct SubscribeValueVerInner<T: PartialEq + Clone> {
+struct SubscribeValueVerInner<T: Clone> {
     version: ValueMut<u32>,
     value: ValueMut<Option<T>>,
 }
 
-impl<T: PartialEq + Clone> SubscribeValueVerInner<T> {
+impl<T: Clone> SubscribeValueVerInner<T> {
     pub fn new() -> Rc<SubscribeValueVerInner<T>> {
         Rc::new(
             SubscribeValueVerInner {

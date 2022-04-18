@@ -1,5 +1,11 @@
 <!-- markdownlint-configure-file { "no-duplicate-heading": { "siblings_only": true } } -->
-# Changes
+
+## Unreleased
+
+### Changed
+
+* Dropped PartialEq constraint from Value, Computed and others implementations
+* Removed callback from HashRouter; it can be now treated similarly to Value
 
 ## 0.1.0-beta.3 - 2022-01-22
 

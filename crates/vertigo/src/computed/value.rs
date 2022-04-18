@@ -23,13 +23,13 @@ impl<T> ToRc<T> for T {
     }
 }
 
-struct ValueInner<T: PartialEq + 'static> {
+struct ValueInner<T> {
     id: GraphId,
     value: ValueMut<Rc<T>>,
     deps: Dependencies,
 }
 
-impl<T: PartialEq + 'static> Drop for ValueInner<T> {
+impl<T> Drop for ValueInner<T> {
     fn drop(&mut self) {
         self.deps.external_connections_unregister_connect(self.id);
     }
@@ -53,11 +53,11 @@ impl<T: PartialEq + 'static> Drop for ValueInner<T> {
 /// assert_eq!(*value.get_value(), 10);
 /// ```
 ///
-pub struct Value<T: PartialEq + 'static> {
+pub struct Value<T> {
     inner: Rc<ValueInner<T>>,
 }
 
-impl<T: PartialEq + 'static> Clone for Value<T> {
+impl<T> Clone for Value<T> {
     fn clone(&self) -> Self {
         Value {
             inner: self.inner.clone(),
@@ -65,7 +65,7 @@ impl<T: PartialEq + 'static> Clone for Value<T> {
     }
 }
 
-impl<T: PartialEq + 'static> Value<T> {
+impl<T> Value<T> {
     pub fn new(deps: Dependencies, value: impl ToRc<T>) -> Value<T> {
         Value {
             inner: Rc::new(
@@ -105,11 +105,8 @@ impl<T: PartialEq + 'static> Value<T> {
 
     pub fn set_value(&self, value: T) {
         self.inner.deps.clone().transaction(|| {
-            let need_update = self.inner.value.set_and_check(Rc::new(value));
-
-            if need_update {
-                self.inner.deps.trigger_change(self.inner.id);
-            }
+            self.inner.value.set(Rc::new(value));
+            self.inner.deps.trigger_change(self.inner.id);
         });
     }
 
@@ -135,8 +132,14 @@ impl<T: PartialEq + 'static> Value<T> {
     }
 }
 
-impl<T: PartialEq + 'static> PartialEq for Value<T> {
-    fn eq(&self, other: &Value<T>) -> bool {
-        self.id() == other.id()
+impl<T: PartialEq + 'static> Value<T> {
+    pub fn set_value_and_compare(&self, value: T) {
+        self.inner.deps.clone().transaction(|| {
+            let need_update = self.inner.value.set_and_check(Rc::new(value));
+
+            if need_update {
+                self.inner.deps.trigger_change(self.inner.id);
+            }
+        });
     }
 }

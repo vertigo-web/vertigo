@@ -33,6 +33,12 @@ impl Route {
     }
 }
 
+impl From<String> for Route {
+    fn from(url: String) -> Self {
+        Route::new(url.as_str())
+    }
+}
+
 impl ToString for Route {
     fn to_string(&self) -> String {
         match self {

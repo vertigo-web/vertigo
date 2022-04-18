@@ -1,7 +1,7 @@
 use std::rc::Rc;
 
 use vertigo::router::HashRouter;
-use vertigo::{Driver, Value, VDomComponent};
+use vertigo::{Driver, VDomComponent};
 
 use super::counters::State as CountersState;
 use super::game_of_life;
@@ -12,7 +12,6 @@ use super::sudoku;
 
 pub struct State {
     pub driver: Driver,
-    pub route: Value<Route>,
 
     pub main: VDomComponent,
     pub counters: VDomComponent,
@@ -21,26 +20,17 @@ pub struct State {
     pub github_explorer: VDomComponent,
     pub game_of_life: VDomComponent,
 
-    _hash_router: HashRouter,
+    pub route: HashRouter<Route>,
 }
 
 impl State {
     pub fn component(driver: &Driver) -> VDomComponent {
         let game_of_life = game_of_life::State::component(driver);
 
-        let route: Value<Route> = driver.new_value(Route::new(&driver.get_hash_location()));
-
-        let hash_router = HashRouter::new(driver, route.clone(), {
-            let route = route.clone();
-
-            Box::new(move |url: &String| {
-                route.set_value(Route::new(url));
-            })
-        });
+        let route = HashRouter::new(driver);
 
         let state = Rc::new(State {
             driver: driver.clone(),
-            route,
             main: super::main::MainState::component(driver),
             counters: CountersState::component(driver),
             sudoku: sudoku::Sudoku::component(driver),
@@ -48,7 +38,7 @@ impl State {
             github_explorer: github_explorer::State::component(driver),
             game_of_life,
 
-            _hash_router: hash_router,
+            route,
         });
 
         super::render(state)

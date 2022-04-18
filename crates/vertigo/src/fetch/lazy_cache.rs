@@ -9,7 +9,7 @@ use crate::{
 use crate::fetch::pinboxfut::PinBoxFuture;
 
 /// Value that [LazyCache] holds.
-pub struct CachedValue<T: PartialEq + 'static> {
+pub struct CachedValue<T: 'static> {
     value: Value<Resource<T>>,
     updated_at: ValueMut<Instant>,
     set: ValueMut<bool>,
@@ -22,7 +22,7 @@ pub struct CachedValue<T: PartialEq + 'static> {
 /// use vertigo::{Computed, Driver, LazyCache, SerdeRequest};
 /// use serde::{Serialize, Deserialize};
 ///
-/// #[derive(PartialEq, Serialize, Deserialize, SerdeRequest)]
+/// #[derive(Serialize, Deserialize, SerdeRequest)]
 /// pub struct Model {
 ///     id: i32,
 ///     name: String,
@@ -60,7 +60,7 @@ pub struct CachedValue<T: PartialEq + 'static> {
 /// ```
 ///
 /// See ["todo" example](../src/vertigo_demo/app/todo/mod.rs.html) in vertigo-demo package for more.
-pub struct LazyCache<T: PartialEq + 'static> {
+pub struct LazyCache<T: 'static> {
     res: Rc<CachedValue<T>>,
     max_age: InstantType,
     loader: Rc<dyn Fn(Driver) -> PinBoxFuture<Resource<T>>>,
@@ -68,7 +68,7 @@ pub struct LazyCache<T: PartialEq + 'static> {
     driver: Driver,
 }
 
-impl<T: PartialEq> Clone for LazyCache<T> {
+impl<T> Clone for LazyCache<T> {
     fn clone(&self) -> Self {
         LazyCache {
             res: self.res.clone(),
@@ -80,7 +80,7 @@ impl<T: PartialEq> Clone for LazyCache<T> {
     }
 }
 
-impl<T: PartialEq> CachedValue<T> {
+impl<T> CachedValue<T> {
     fn get_value(&self) -> Rc<Resource<T>> {
         self.value.get_value()
     }
@@ -104,7 +104,7 @@ impl<T: PartialEq> CachedValue<T> {
     }
 }
 
-impl<T: PartialEq> LazyCache<T> {
+impl<T> LazyCache<T> {
     pub fn new<Fut: Future<Output = Resource<T>> + 'static, F: Fn(Driver) -> Fut + 'static>(driver: &Driver, max_age: InstantType, loader: F) -> Self {
         let loader_rc: Rc<dyn Fn(Driver) -> PinBoxFuture<Resource<T>>> = Rc::new(move |driver: Driver| -> PinBoxFuture<Resource<T>> {
             Box::pin(loader(driver))
@@ -160,17 +160,5 @@ impl<T: PartialEq> LazyCache<T> {
 
     fn is_loading_queued(&self) -> bool {
         self.queued.get()
-    }
-}
-
-impl<T: PartialEq> PartialEq for CachedValue<T> {
-    fn eq(&self, rhs: &Self) -> bool {
-        self.value.eq(&rhs.value)
-    }
-}
-
-impl<T: PartialEq> PartialEq for LazyCache<T> {
-    fn eq(&self, rhs: &Self) -> bool {
-        self.res.eq(&rhs.res)
     }
 }

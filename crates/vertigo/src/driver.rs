@@ -290,7 +290,7 @@ impl Driver {
     }
 
     /// Create new reactive value in [dependency graph](struct.Dependencies.html).
-    pub fn new_value<T: PartialEq>(&self, value: T) -> Value<T> {
+    pub fn new_value<T>(&self, value: T) -> Value<T> {
         self.inner.dependencies.new_value(value)
     }
 
@@ -305,14 +305,13 @@ impl Driver {
     /// See [game of life](../src/vertigo_demo/app/game_of_life/mod.rs.html#54) example.
     pub fn new_with_connect<T, F>(&self, value: T, create: F) -> Computed<T>
     where
-        T: PartialEq,
         F: Fn(&Value<T>) -> DropResource + 'static,
     {
         self.inner.dependencies.new_with_connect(value, create)
     }
 
     /// Create new computed value calculated using provided function.
-    pub fn from<T: PartialEq + 'static, F: Fn() -> T + 'static>(&self, calculate: F) -> Computed<T> {
+    pub fn from<T: 'static, F: Fn() -> T + 'static>(&self, calculate: F) -> Computed<T> {
         self.inner.dependencies.from(calculate)
     }
 
