@@ -1,5 +1,4 @@
 use std::{
-    cmp::PartialEq,
     collections::BTreeSet,
     rc::Rc,
 };
@@ -75,19 +74,18 @@ impl Default for Dependencies {
 }
 
 impl Dependencies {
-    pub fn new_value<T: PartialEq>(&self, value: impl ToRc<T>) -> Value<T> {
+    pub fn new_value<T>(&self, value: impl ToRc<T>) -> Value<T> {
         Value::new(self.clone(), value)
     }
 
     pub fn new_with_connect<T, F>(&self, value: T, create: F) -> Computed<T>
     where
-        T: PartialEq,
         F: Fn(&Value<T>) -> DropResource + 'static
     {
         Value::<T>::new_selfcomputed_value::<F>(self.clone(), value, create)
     }
 
-    pub fn new_computed_from<T: PartialEq>(&self, value: impl ToRc<T>) -> Computed<T> {
+    pub fn new_computed_from<T>(&self, value: impl ToRc<T>) -> Computed<T> {
         let value = self.new_value(value);
         value.to_computed()
     }
@@ -176,7 +174,7 @@ impl Dependencies {
         self.stack.stop_track()
     }
 
-    pub fn from<T: PartialEq + 'static, F: Fn() -> T + 'static>(&self, calculate: F) -> Computed<T> {
+    pub fn from<T: 'static, F: Fn() -> T + 'static>(&self, calculate: F) -> Computed<T> {
         let deps = self.clone();
         Computed::new(deps, move || Rc::new(calculate()))
     }

@@ -1,8 +1,8 @@
 use core::ops::{ControlFlow, FromResidual, Try};
 
 /// The state of the resource.
-#[derive(PartialEq, Clone, Debug)]
-pub enum Resource<T: PartialEq> {
+#[derive(Clone, Debug)]
+pub enum Resource<T> {
     Loading,
     Ready(T),
     Error(String),
@@ -13,7 +13,7 @@ pub enum ResourceError {
     Error(String),
 }
 
-impl<T: PartialEq> Try for Resource<T> {
+impl<T> Try for Resource<T> {
     type Output = T;
     type Residual = ResourceError;
 
@@ -32,7 +32,7 @@ impl<T: PartialEq> Try for Resource<T> {
     }
 }
 
-impl<T: PartialEq> FromResidual<ResourceError> for Resource<T> {
+impl<T> FromResidual<ResourceError> for Resource<T> {
     fn from_residual(residual: ResourceError) -> Resource<T> {
         match residual {
             ResourceError::Error(message) => Resource::Error(message),
@@ -41,8 +41,8 @@ impl<T: PartialEq> FromResidual<ResourceError> for Resource<T> {
     }
 }
 
-impl<T: PartialEq> Resource<T> {
-    pub fn map<K: PartialEq>(self, map: impl Fn(T) -> K) -> Resource<K> {
+impl<T> Resource<T> {
+    pub fn map<K>(self, map: impl Fn(T) -> K) -> Resource<K> {
         match self {
             Resource::Loading => Resource::Loading,
             Resource::Ready(data) => Resource::Ready(map(data)),
@@ -50,7 +50,7 @@ impl<T: PartialEq> Resource<T> {
         }
     }
 
-    pub fn ref_map<K: PartialEq>(&self, map: impl Fn(&T) -> K) -> Resource<K> {
+    pub fn ref_map<K>(&self, map: impl Fn(&T) -> K) -> Resource<K> {
         match self {
             Resource::Loading => Resource::Loading,
             Resource::Ready(data) => Resource::Ready(map(data)),
@@ -59,7 +59,7 @@ impl<T: PartialEq> Resource<T> {
     }
 }
 
-impl<T: PartialEq + Clone> Resource<T> {
+impl<T: Clone> Resource<T> {
     #[must_use]
     pub fn ref_clone(&self) -> Self {
         match self {

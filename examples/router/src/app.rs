@@ -1,6 +1,6 @@
 use std::rc::Rc;
 use vertigo::router::HashRouter;
-use vertigo::{html, Driver, VDomElement, Value, VDomComponent};
+use vertigo::{html, Driver, VDomElement, VDomComponent};
 
 #[derive(PartialEq, Debug)]
 pub enum Route {
@@ -30,26 +30,22 @@ impl ToString for Route {
     }
 }
 
+impl From<String> for Route {
+    fn from(url: String) -> Self {
+        Route::new(url.as_str())
+    }
+}
+
 pub struct State {
-    pub route: Value<Route>,
-    _hash_router: HashRouter,
+    pub route: HashRouter<Route>,
 }
 
 impl State {
     pub fn component(driver: &Driver) -> VDomComponent {
-        let route: Value<Route> = driver.new_value(Route::new(&driver.get_hash_location()));
-
-        let hash_router = HashRouter::new(driver, route.clone(), {
-            let route = route.clone();
-
-            Box::new(move |url: &String| {
-                route.set_value(Route::new(url));
-            })
-        });
+        let route = HashRouter::new(driver);
 
         let state = Rc::new(State {
             route,
-            _hash_router: hash_router,
         });
 
         VDomComponent::new(state, render)

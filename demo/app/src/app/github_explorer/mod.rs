@@ -28,7 +28,7 @@ pub struct Branch {
     pub commit: Commit,
 }
 
-#[derive(PartialEq, Clone)]
+#[derive(Clone)]
 pub struct Item {
     branch: LazyCache<Branch>,
 }
