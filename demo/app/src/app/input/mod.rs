@@ -1,4 +1,4 @@
-use vertigo::{css_fn, html, Driver, VDomElement, Value, VDomComponent};
+use vertigo::{css_fn, html, Driver, VDomElement, Value, VDomComponent, bind};
 
 #[derive(Clone)]
 pub struct State {
@@ -11,7 +11,7 @@ impl State {
             value: driver.new_value(String::from("")),
         };
 
-        VDomComponent::new(state, render)
+        VDomComponent::from(state, render)
     }
 
     // pub fn increment(&self) {
@@ -47,37 +47,21 @@ css_fn! { text_css, "
 " }
 
 fn render(state: &State) -> VDomElement {
-    let on_set1 = {
-        let value = state.value.clone();
+    let on_set1 = bind(state).call(|state| {
+        state.value.set_value("value 1".into());
+    });
 
-        move || {
-            value.set_value("value 1".into());
-        }
-    };
+    let on_set2 = bind(state).call(|state| {
+        state.value.set_value("value 2".into());
+    });
 
-    let on_set2 = {
-        let value = state.value.clone();
+    let on_set3 = bind(state).call_param(|state, new_value: String| {
+        state.value.set_value(new_value);
+    });
 
-        move || {
-            value.set_value("value 2".into());
-        }
-    };
-
-    let on_set3 = {
-        let state = state.clone();
-        move |new_value: String| {
-            let value = state.value.clone();
-            value.set_value(new_value);
-        }
-    };
-
-    let on_set4 = {
-        let state = state.clone();
-        move |new_value: String| {
-            let value = state.value.clone();
-            value.set_value(new_value);
-        }
-    };
+    let on_set4 = bind(state).call_param(|state, new_value: String| {
+        state.value.set_value(new_value);
+    });
 
     let mouse_in = || {
         log::info!("enter");

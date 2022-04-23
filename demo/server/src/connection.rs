@@ -53,7 +53,7 @@ impl Connection {
         let message = message.into();
 
         use futures::SinkExt;
-        let _ = self.sender.lock().await.send(Message::Text(message)).await?;
+        self.sender.lock().await.send(Message::Text(message)).await?;
         Ok(())
     }
 

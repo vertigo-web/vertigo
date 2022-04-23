@@ -1,9 +1,7 @@
-use std::rc::Rc;
-
-use vertigo::{css, css_fn, html, Css, VDomNode, VDomElement, VDomComponent};
+use vertigo::{css, css_fn, html, Css, VDomNode, VDomElement, VDomComponent, bind};
 
 use crate::app::chat;
-use crate::{app, navigate_to};
+use crate::{app};
 
 use super::route::Route;
 
@@ -36,39 +34,81 @@ fn css_menu_item(active: bool) -> Css {
     )
 }
 
-fn render_header(state: &Rc<app::State>) -> VDomElement {
+fn navigate_to(state: &app::State, route: Route) -> impl Fn() {
+    bind(state)
+        .and(&route)
+        .call(|state, route| {
+            state.navigate_to(route.clone())
+        })
+}
+
+
+fn render_header(state: &app::State) -> VDomElement {
     let route = state.route.get_value();
     let current_page = route.as_ref();
-
-    let navigate_to_gameoflife = {
-        let state = state.clone();
-        move || {
-            state.navigate_to(Route::GameOfLife);
-        }
-    };
 
     let is_game_of_life = matches!(current_page, Route::GameOfLife { .. });
 
     html! {
         <div>
             <ul css={css_menu()}>
-                <li css={css_menu_item(current_page == &Route::Main)} on_click={navigate_to!(state, Main)}>"Main"</li>
-                <li css={css_menu_item(current_page == &Route::Counters)} on_click={navigate_to!(state, Counters)}>"Counters"</li>
-                <li css={css_menu_item(current_page == &Route::Sudoku)} on_click={navigate_to!(state, Sudoku)}>"Sudoku"</li>
-                <li css={css_menu_item(current_page == &Route::Input)} on_click={navigate_to!(state, Input)}>"Input"</li>
-                <li css={css_menu_item(current_page == &Route::GithubExplorer)} on_click={navigate_to!(state, GithubExplorer)}>"Github Explorer"</li>
-                <li css={css_menu_item(is_game_of_life)} on_click={navigate_to_gameoflife}>"Game Of Life"</li>
-                <li css={css_menu_item(current_page == &Route::Chat)} on_click={navigate_to!(state, Chat)}>"Chat"</li>
-                <li css={css_menu_item(current_page == &Route::Todo)} on_click={navigate_to!(state, Todo)}>"Todo"</li>
+                <li
+                    css={css_menu_item(current_page == &Route::Main)}
+                    on_click={navigate_to(state, Route::Main)}
+                >
+                    "Main"
+                </li>
+                <li
+                    css={css_menu_item(current_page == &Route::Counters)}
+                    on_click={navigate_to(state, Route::Counters)}
+                >
+                    "Counters"
+                </li>
+                <li
+                    css={css_menu_item(current_page == &Route::Sudoku)}
+                    on_click={navigate_to(state, Route::Sudoku)}
+                >
+                    "Sudoku"
+                </li>
+                <li
+                    css={css_menu_item(current_page == &Route::Input)}
+                    on_click={navigate_to(state, Route::Input)}
+                >
+                    "Input"
+                </li>
+                <li
+                    css={css_menu_item(current_page == &Route::GithubExplorer)}
+                    on_click={navigate_to(state, Route::GithubExplorer)}
+                >
+                    "Github Explorer"
+                </li>
+                <li
+                    css={css_menu_item(is_game_of_life)}
+                    on_click={navigate_to(state, Route::GameOfLife)}
+                >
+                    "Game Of Life"
+                </li>
+                <li
+                    css={css_menu_item(current_page == &Route::Chat)}
+                    on_click={navigate_to(state, Route::Chat)}
+                >
+                    "Chat"
+                </li>
+                <li
+                    css={css_menu_item(current_page == &Route::Todo)}
+                    on_click={navigate_to(state, Route::Todo)}
+                >
+                    "Todo"
+                </li>
             </ul>
         </div>
     }
 }
 
-pub fn render(state: Rc<app::State>) -> VDomComponent {
-    let header = VDomComponent::new(state.clone(), render_header);
+pub fn render(state: app::State) -> VDomComponent {
+    let header = VDomComponent::from_ref(&state, render_header);
 
-    VDomComponent::new(state, move |state: &Rc<app::State>| -> VDomElement {
+    VDomComponent::from(state, move |state: &app::State| -> VDomElement {
         let child: VDomNode = match *state.route.get_value() {
             Route::Main => state.main.clone().into(),
             Route::Counters => state.counters.clone().into(),

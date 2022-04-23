@@ -34,11 +34,10 @@ comment_if_end = _{ chevron_left_bang ~ "[" ~ ^"endif" ~ "]" ~ comment_tag_end }
 // ATTRIBUTES
 //
 
-attr = _{ css_attr | on_click_attr | on_click_async_attr | on_input_attr | on_mouse_enter_attr | on_mouse_leave_attr | on_key_down_attr | hook_key_down_attr | expression_attr | regular_attr }
+attr = _{ css_attr | on_click_attr | on_input_attr | on_mouse_enter_attr | on_mouse_leave_attr | on_key_down_attr | hook_key_down_attr | expression_attr | regular_attr }
 
 css_attr = { "css" ~ equal ~ attr_expression }
 on_click_attr = { "on_click" ~ equal ~ attr_expression }
-on_click_async_attr = { "on_click_async" ~ equal ~ attr_expression }
 on_input_attr = { "on_input" ~ equal ~ attr_expression }
 on_mouse_enter_attr = { "on_mouse_enter" ~ equal ~ attr_expression }
 on_mouse_leave_attr = { "on_mouse_leave" ~ equal ~ attr_expression }

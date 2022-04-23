@@ -189,7 +189,7 @@ impl State {
             message: driver.new_value("Hello world".to_string()),
         };
 
-        VDomComponent::new(state, app::render)
+        VDomComponent::from(state, app::render)
     }
 }
 ```
@@ -437,6 +437,7 @@ So the whole `src/list.rs` will look like this:
 ```rust
 use vertigo::{Computed, Driver, Value, VDomElement, VDomComponent, html};
 
+#[derive(Clone)]
 pub struct State {
     items: Value<Vec<String>>,
     new_item: Value<String>,
@@ -452,7 +453,7 @@ impl State {
             new_item: driver.new_value("".to_string()),
         };
 
-        VDomComponent::new(state, render)
+        VDomComponent::from(state, render)
     }
 
     pub fn add(&self) -> impl Fn() {
@@ -506,6 +507,7 @@ We've added 2 methods to state, both returning an event handler. Method `add` re
 It is possible to have a value that is automatically computed. Let's show the amount of items in the list. First add a computed type to the list's state:
 
 ```rust
+#[derive(Clone)]
 pub struct State {
     items: Value<Vec<String>>,
     new_item: Value<String>,
@@ -533,7 +535,7 @@ Then we need to reorganize a little how we create an instance of the state:
             count,
         };
 
-        VDomComponent::new(state, render)
+        VDomComponent::from(state, render)
     }
 ```
 

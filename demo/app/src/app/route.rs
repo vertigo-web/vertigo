@@ -1,4 +1,4 @@
-#[derive(PartialEq, Debug)]
+#[derive(PartialEq, Debug, Clone)]
 pub enum Route {
     Main,
     Counters,
@@ -54,12 +54,4 @@ impl ToString for Route {
         }
         .to_string()
     }
-}
-
-#[macro_export]
-macro_rules! navigate_to {
-    ($state:ident, $route:ident) => {{
-        let $state = $state.clone();
-        move || $state.navigate_to(Route::$route)
-    }};
 }

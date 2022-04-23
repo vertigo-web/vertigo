@@ -83,7 +83,7 @@ impl State {
             }),
         };
 
-        VDomComponent::new(state, render::render)
+        VDomComponent::from(state, render::render)
     }
 }
 

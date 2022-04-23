@@ -1,7 +1,7 @@
 use std::rc::Rc;
 use vertigo::{
     html, Driver, DropResource, KeyDownEvent,
-    VDomElement, Value, WebsocketConnection, WebsocketMessage, VDomComponent
+    VDomElement, Value, WebsocketConnection, WebsocketMessage, VDomComponent, bind
 };
 
 pub struct ChatState {
@@ -64,12 +64,23 @@ impl ChatState {
 
         render(state)
     }
+
+    fn submit(&self) {
+        let connect = self.connect.get_value();
+        if let Some(connect) = connect.as_ref() {
+            let text = self.input_text.get_value();
+            connect.send(text.as_ref());
+            self.input_text.set_value(String::from(""));
+        } else {
+            log::error!("missing connection");
+        }
+    }
 }
 
 pub fn render(state: Rc<ChatState>) -> VDomComponent {
-    let input_view = VDomComponent::new(state.clone(), render_input_text);
+    let input_view = VDomComponent::from_ref(&state, render_input_text);
     
-    VDomComponent::new(state, move |state_value: &Rc<ChatState>| {
+    VDomComponent::from(state, move |state_value: &Rc<ChatState>| {
             
         let is_connect = state_value.connect.get_value().is_some();
 
@@ -108,37 +119,21 @@ pub fn render_input_text(state: &Rc<ChatState>) -> VDomElement {
     let text = state.input_text.get_value();
     let text_value = (*text).clone();
 
-    let on_input = {
-        let state = state.clone();
-        move |new_text: String| {
-            state.input_text.set_value(new_text);
-        }
-    };
+    let on_input = bind(&state).call_param(|state, new_text: String| {
+        state.input_text.set_value(new_text);
+    });
 
-    let submit = {
-        let connect = state.connect.clone();
-        let text_value = text_value.clone();
-        move || {
-            let connect = connect.get_value();
-            if let Some(connect) = &*connect {
-                connect.send(text_value.clone());
-                state.input_text.set_value(String::from(""));
-            } else {
-                log::error!("missing connection");
-            }
-        }
-    };
+    let submit = bind(&state).call(|state| {
+        state.submit();
+    });
 
-    let on_key_down = {
-        let submit = submit.clone();
-        move |key: KeyDownEvent| {
-            if key.code == "Enter" {
-                submit();
-                return true;
-            }
-            false
+    let on_key_down = bind(&state).call_param(|state, key: KeyDownEvent| {
+        if key.code == "Enter" {
+            state.submit();
+            return true;
         }
-    };
+        false
+    });
 
     html! {
         <div>

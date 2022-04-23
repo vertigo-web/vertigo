@@ -1,5 +1,3 @@
-use std::rc::Rc;
-
 use vertigo::router::HashRouter;
 use vertigo::{Driver, VDomComponent};
 
@@ -10,6 +8,7 @@ use super::input;
 use super::route::Route;
 use super::sudoku;
 
+#[derive(Clone)]
 pub struct State {
     pub driver: Driver,
 
@@ -29,7 +28,7 @@ impl State {
 
         let route = HashRouter::new(driver);
 
-        let state = Rc::new(State {
+        let state = State {
             driver: driver.clone(),
             main: super::main::MainState::component(driver),
             counters: CountersState::component(driver),
@@ -39,7 +38,7 @@ impl State {
             game_of_life,
 
             route,
-        });
+        };
 
         super::render(state)
     }

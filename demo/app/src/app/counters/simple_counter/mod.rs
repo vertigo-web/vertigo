@@ -13,7 +13,7 @@ impl State {
             counter: counter.clone(),
         };
 
-        VDomComponent::new(state, render::render)
+        VDomComponent::from(state, render::render)
     }
 
     pub fn increment(&self) {

@@ -1,5 +1,5 @@
 use serde::{Deserialize, Serialize};
-use vertigo::{css, html, AutoMap, Css, Driver, LazyCache, Resource, SerdeRequest, VDomElement, Value, VDomComponent};
+use vertigo::{css, html, AutoMap, Css, Driver, LazyCache, Resource, SerdeRequest, VDomElement, Value, VDomComponent, bind};
 
 #[derive(PartialEq)]
 enum View {
@@ -80,7 +80,7 @@ impl TodoState {
             comments,
         };
 
-        VDomComponent::new(state, todo_render)
+        VDomComponent::from(state, todo_render)
     }
 }
 
@@ -134,7 +134,7 @@ struct TodoMainState {
 impl TodoMainState {
     fn component(state: &TodoState) -> VDomComponent {
         let state = TodoMainState { state: state.clone() };
-        VDomComponent::new(state, todo_main_render)
+        VDomComponent::from(state, todo_main_render)
     }
 }
 
@@ -211,7 +211,7 @@ impl TodoPostState {
             state: state.clone(),
             post_id
         };
-        VDomComponent::new(state, todo_post_render)
+        VDomComponent::from(state, todo_post_render)
     }
 }
 
@@ -240,12 +240,9 @@ fn todo_post_render(state_value: &TodoPostState) -> VDomElement {
     let message = format!("post_id = {}", post_id);
     let view = state_value.state.view.clone();
 
-    let on_click = {
-        let view = view.clone();
-        move || {
-            view.set_value(View::Main);
-        }
-    };
+    let on_click = bind(&view).call(|view| {
+        view.set_value(View::Main);
+    });
 
     let comments = state_value.state.comments.get_value(&post_id);
     let comments_list = comments.get_value();
@@ -260,13 +257,11 @@ fn todo_post_render(state_value: &TodoPostState) -> VDomElement {
         });
 
         for comment in list.iter() {
-            let on_click_author = {
-                let view = view.clone();
-                let email = comment.email.clone();
-                move || {
+            let on_click_author = bind(&view)
+                .and(&comment.email)
+                .call(|view, email| {
                     view.set_value(View::User { email: email.clone() });
-                }
-            };
+                });
 
             let css_author = css_comment_author().extend(css_hover_item());
 

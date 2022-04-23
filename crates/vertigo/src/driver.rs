@@ -4,7 +4,6 @@ use std::{
     pin::Pin,
     rc::Rc
 };
-use crate::fetch::pinboxfut::PinBoxFuture;
 use crate::{
     Computed, Dependencies, Value, Instant, InstantType, KeyDownEvent, WebsocketConnection, WebsocketMessage,
     dev::WebsocketMessageDriver,
@@ -34,9 +33,6 @@ pub enum EventCallback {
     OnClick {
         callback: Option<Rc<dyn Fn()>>,
     },
-    OnClickAsync {
-        callback: Option<Rc<dyn Fn() -> PinBoxFuture<()>>>,
-    },
     OnInput {
         callback: Option<Rc<dyn Fn(String)>>,
     },
@@ -62,13 +58,6 @@ impl EventCallback {
                     "onClick set"
                 } else {
                     "onClick clear"
-                }
-            }
-            EventCallback::OnClickAsync { callback } => {
-                if callback.is_some() {
-                    "onClickAsync set"
-                } else {
-                    "onClickAsync clear"
                 }
             }
             EventCallback::OnInput { callback } => {
@@ -407,5 +396,24 @@ impl Driver {
 
     pub(crate) fn flush_update(&self) {
         self.inner.driver.flush_update();
+    }
+
+    pub fn spawn_bind2<
+        T1: Clone + 'static,
+        T2: Clone + 'static,
+        Fut: Future<Output=()> + 'static,
+        F: Fn(T1, T2) -> Fut + 'static
+    >(&self, param1: &T1, param2: &T2, fun: F) -> impl Fn() {
+        let driver = self.clone();
+
+        let param1 = param1.clone();
+        let param2 = param2.clone();
+    
+        move || {
+            let param1 = param1.clone();
+            let param2 = param2.clone();
+            let future = fun(param1, param2);
+            driver.spawn(future);
+        }
     }
 }

@@ -46,12 +46,14 @@ impl GraphMap {
         result
     }
 
-    pub fn add_connection(&self, parent_id: GraphId, client_id: GraphId) {
-        self.data.change(|data| {
-            data
-                .entry(parent_id)
-                .or_insert_with(BTreeSet::new)
-                .insert(client_id);
+    pub fn add_connection(&self, parent_list: &BTreeSet<GraphId>, client_id: GraphId) {
+        self.data.change(move |data| {
+            for parent_id in parent_list {
+                data
+                    .entry(*parent_id)
+                    .or_insert_with(BTreeSet::new)
+                    .insert(client_id);
+            }
         })
     }
 

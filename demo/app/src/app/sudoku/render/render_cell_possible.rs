@@ -1,4 +1,4 @@
-use vertigo::{css, html, Css, VDomElement};
+use vertigo::{css, html, Css, VDomElement, bind};
 
 use crate::app::sudoku::state::{number_item::SudokuValue, Cell};
 
@@ -76,14 +76,11 @@ pub fn render_cell_possible(cell: &Cell) -> VDomElement {
 
     if only_one_possible {
         let out = possible.iter().map(|number| {
-            let on_set = {
-                let number = *number;
-                let cell = cell.clone();
-
-                move || {
-                    cell.number.value.set_value(Some(number));
-                }
-            };
+            let on_set = bind(cell)
+                .and(number)
+                .call(|cell, number| {
+                    cell.number.value.set_value(Some(*number));
+                });
 
             html! {
                 <div css={css_item_only_one()} on_click={on_set}>
@@ -102,12 +99,11 @@ pub fn render_cell_possible(cell: &Cell) -> VDomElement {
     let possible_last_value = *cell.possible_last.get_value();
 
     if let Some(possible_last_value) = possible_last_value {
-        let on_set = {
-            let cell = cell.clone();
-            move || {
-                cell.number.value.set_value(Some(possible_last_value));
-            }
-        };
+        let on_set = bind(cell)
+            .and(&possible_last_value)
+            .call(|cell, possible_last_value| {
+                cell.number.value.set_value(Some(*possible_last_value));
+            });
 
         return html! {
             <div css={css_wrapper_one()}>
@@ -127,14 +123,14 @@ pub fn render_cell_possible(cell: &Cell) -> VDomElement {
             "".into()
         };
 
-        let on_click = {
-            let cell = cell.clone();
-            move || {
-                if should_show {
-                    cell.number.value.set_value(Some(number));
+        let on_click = bind(cell)
+            .and(&should_show)
+            .and(&number)
+            .call(|cell, should_show, number| {
+                if *should_show {
+                    cell.number.value.set_value(Some(*number));
                 }
-            }
-        };
+            });
 
         html! {
             <div css={css_item(should_show)} on_click={on_click}>

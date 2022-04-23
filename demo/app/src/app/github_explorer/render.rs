@@ -1,4 +1,4 @@
-use vertigo::{css_fn, html, Resource, VDomElement};
+use vertigo::{css_fn, html, Resource, VDomElement, bind};
 
 use super::State;
 
@@ -26,22 +26,16 @@ css_fn! { text_css, "
 " }
 
 pub fn render(state: &State) -> VDomElement {
-    let on_input_callback = {
-        let value = state.repo_input.clone();
-        move |new_value: String| {
-            log::info!(" nowa wartosc3 {}", new_value);
-            value.set_value(new_value);
-        }
-    };
+    let on_input_callback = bind(state).call_param(|state, new_value: String| {
+        log::info!(" nowa wartosc3 {}", new_value);
+        state.repo_input.set_value(new_value);
+    });
 
-    let on_show = {
-        let value = state.repo_input.get_value();
-        let state_inner = state.clone();
-        move || {
-            log::info!(" nowa wartosc3 {}", value);
-            state_inner.repo_shown.set_value((*value).clone());
-        }
-    };
+    let on_show = bind(state).call(|state| {
+        let value = state.repo_input.get_value().as_ref().clone();
+        log::info!(" nowa wartosc3 {}", value);
+        state.repo_shown.set_value(value);
+    });
 
     let repo_input = state.repo_input.get_value();
     let repo_shown = state.repo_shown.get_value();

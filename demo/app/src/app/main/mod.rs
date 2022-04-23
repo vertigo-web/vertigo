@@ -1,4 +1,4 @@
-use vertigo::{css, css_fn, css_fn_push, html, Css, Driver, VDomElement, Value, VDomComponent};
+use vertigo::{css, css_fn, css_fn_push, html, Css, Driver, VDomElement, Value, VDomComponent, bind};
 
 mod spinner;
 
@@ -19,7 +19,7 @@ impl MainState {
             progress: driver.new_value(0),
         };
 
-        VDomComponent::new(state, main_render)
+        VDomComponent::from(state, main_render)
     }
 
     pub fn increment(&self) {
@@ -107,10 +107,9 @@ pub fn main_render(state: &MainState) -> VDomElement {
         });
     }
 
-    let on_click_progress = {
-        let state = state.clone();
-        move || state.clone().start_animation()
-    };
+    let on_click_progress = bind(state).spawn(state.driver.clone(), |state| {
+        state.start_animation()
+    });
 
     html! {
         <div aaa="one" bbb="two">
@@ -133,7 +132,7 @@ pub fn main_render(state: &MainState) -> VDomElement {
             </div>
             <p>{ footer_dom }</p>
 
-            <button on_click_async={on_click_progress}>
+            <button on_click={on_click_progress}>
                 <span>
                     "start the progress bar"
                 </span>

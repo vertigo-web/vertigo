@@ -1,7 +1,5 @@
 use std::{
     rc::Rc,
-    future::Future,
-    pin::Pin,
 };
 use vertigo::{
     dev::{EventCallback, RealDomId, RefsContext},
@@ -12,7 +10,7 @@ use vertigo::struct_mut::VecMut;
 use crate::api::ApiImport;
 
 use super::{
-    driver_data::{DriverData, OnClickCallback},
+    driver_data::DriverData,
     driver_dom_command::DriverDomCommand,
     visited_node_manager::VisitedNodeManager,
 };
@@ -29,14 +27,12 @@ struct DriverDomInner {
 #[derive(Clone)]
 pub struct DriverBrowserDom {
     inner: Rc<DriverDomInner>,
-    spawn_executor: Rc<dyn Fn(Pin<Box<dyn Future<Output = ()> + 'static>>)>,
 }
 
 impl DriverBrowserDom {
     pub fn new(
         dependencies: &Dependencies,
         api: &Rc<ApiImport>,
-        spawn_executor: Rc<dyn Fn(Pin<Box<dyn Future<Output = ()> + 'static>>)>,
     ) -> DriverBrowserDom {
         let data = DriverData::new();
         let current_visited = VisitedNodeManager::new(&data, dependencies);
@@ -48,8 +44,7 @@ impl DriverBrowserDom {
                 refs: VecMut::new(),
                 commands: VecMut::new(),
                 current_visited,
-            }),
-            spawn_executor
+            })
         };
 
         let root_id = RealDomId::root();
@@ -76,17 +71,8 @@ impl DriverBrowserDom {
     pub fn export_dom_mousedown(&self, dom_id: u64) {
         let event_to_run = self.inner.data.find_event_click(RealDomId::from_u64(dom_id));
 
-        match event_to_run {
-            OnClickCallback::Async(callback) => {
-                let spawn_executor = self.spawn_executor.clone();
-                let fut = callback();
-                spawn_executor(fut);
-            },
-            OnClickCallback::Sync(callback) => {
-                callback();
-            },
-            OnClickCallback::None => {
-            }
+        if let Some(callback) = event_to_run {
+            callback();
         }
     }
 

@@ -13,9 +13,15 @@ script = [
 dependencies = [ "wasm32-target" ]
 command = "cargo"
 args = [
-    "clippy", "--all-features", "--target", "wasm32-unknown-unknown",
-    "-p", "vertigo", "-p", "vertigo-macro", "-p", "vertigo-browserdriver",
-    "-p", "vertigo-demo", "-p", "vertigo-example-counter", "-p", "vertigo-example-router"
+    "clippy",
+    "--all-features",
+    "--target", "wasm32-unknown-unknown",
+    "-p", "vertigo",
+    "-p", "vertigo-macro",
+    "-p", "vertigo-browserdriver",
+    "-p", "vertigo-demo",
+    "-p", "vertigo-example-counter",
+    "-p", "vertigo-example-router"
 ]
 
 

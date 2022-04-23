@@ -3,6 +3,7 @@ use vertigo::VDomComponent;
 
 mod simple_counter;
 
+#[derive(Clone)]
 pub struct State {
     counter1: Value<u32>,
     counter2: Value<u32>,
@@ -61,9 +62,9 @@ pub fn render(state: State) -> VDomComponent {
     let view2 = simple_counter::State::component(&state.counter2);
     let view3 = simple_counter::State::component(&state.counter3);
     let view4 = simple_counter::State::component(&state.counter4);
-    let view_sum = VDomComponent::new(state.sum.clone(), render_sum);
+    let view_sum = VDomComponent::from_ref(&state.sum, render_sum);
 
-    VDomComponent::new(state, move |_: &State| {
+    VDomComponent::from(state, move |_: &State| {
         html! {
             <div>
                 { view1.clone() }

@@ -1,6 +1,6 @@
 use std::rc::Rc;
 use vertigo::router::HashRouter;
-use vertigo::{html, Driver, VDomElement, VDomComponent};
+use vertigo::{html, Driver, VDomElement, VDomComponent, bind};
 
 #[derive(PartialEq, Debug)]
 pub enum Route {
@@ -48,7 +48,7 @@ impl State {
             route,
         });
 
-        VDomComponent::new(state, render)
+        VDomComponent::from(state, render)
     }
 
     pub fn navigate_to(&self, route: Route) {
@@ -57,19 +57,13 @@ impl State {
 }
 
 fn render(state: &Rc<State>) -> VDomElement {
-    let navigate_to_page1 = {
-        let state = state.clone();
-        move || {
-            state.navigate_to(Route::Page1);
-        }
-    };
+    let navigate_to_page1 = bind(state).call(|state| {
+        state.navigate_to(Route::Page1);
+    });
 
-    let navigate_to_page2 = {
-        let state = state.clone();
-        move || {
-            state.navigate_to(Route::Page2);
-        }
-    };
+    let navigate_to_page2 = bind(state).call(|state| {
+        state.navigate_to(Route::Page2);
+    });
 
     let child = match *state.route.get_value() {
         Route::Page1 => html! { <div>"Page 1"</div> },

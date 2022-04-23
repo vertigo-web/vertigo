@@ -1,4 +1,4 @@
-use vertigo::{css, css_fn, html, Css, VDomElement, VDomComponent};
+use vertigo::{css, css_fn, html, Css, VDomElement, VDomComponent, bind};
 
 use self::config::Config;
 use super::state::{sudoku_square::SudokuSquare, tree_box::TreeBoxIndex, Cell, Sudoku};
@@ -70,17 +70,17 @@ fn render_cell(item: &Cell) -> VDomElement {
 fn render_group(group: &SudokuSquare<Cell>) -> VDomComponent {
     //log::info!("render group");
 
-    let view1 = VDomComponent::new(group.get_from(TreeBoxIndex::First , TreeBoxIndex::First ).clone(), render_cell);
-    let view2 = VDomComponent::new(group.get_from(TreeBoxIndex::First , TreeBoxIndex::Middle).clone(), render_cell);
-    let view3 = VDomComponent::new(group.get_from(TreeBoxIndex::First , TreeBoxIndex::Last  ).clone(), render_cell);
-    let view4 = VDomComponent::new(group.get_from(TreeBoxIndex::Middle, TreeBoxIndex::First ).clone(), render_cell);
-    let view5 = VDomComponent::new(group.get_from(TreeBoxIndex::Middle, TreeBoxIndex::Middle).clone(), render_cell);
-    let view6 = VDomComponent::new(group.get_from(TreeBoxIndex::Middle, TreeBoxIndex::Last  ).clone(), render_cell);
-    let view7 = VDomComponent::new(group.get_from(TreeBoxIndex::Last  , TreeBoxIndex::First ).clone(), render_cell);
-    let view8 = VDomComponent::new(group.get_from(TreeBoxIndex::Last  , TreeBoxIndex::Middle).clone(), render_cell);
-    let view9 = VDomComponent::new(group.get_from(TreeBoxIndex::Last  , TreeBoxIndex::Last  ).clone(), render_cell);
+    let view1 = VDomComponent::from_ref(group.get_from(TreeBoxIndex::First , TreeBoxIndex::First ), render_cell);
+    let view2 = VDomComponent::from_ref(group.get_from(TreeBoxIndex::First , TreeBoxIndex::Middle), render_cell);
+    let view3 = VDomComponent::from_ref(group.get_from(TreeBoxIndex::First , TreeBoxIndex::Last  ), render_cell);
+    let view4 = VDomComponent::from_ref(group.get_from(TreeBoxIndex::Middle, TreeBoxIndex::First ), render_cell);
+    let view5 = VDomComponent::from_ref(group.get_from(TreeBoxIndex::Middle, TreeBoxIndex::Middle), render_cell);
+    let view6 = VDomComponent::from_ref(group.get_from(TreeBoxIndex::Middle, TreeBoxIndex::Last  ), render_cell);
+    let view7 = VDomComponent::from_ref(group.get_from(TreeBoxIndex::Last  , TreeBoxIndex::First ), render_cell);
+    let view8 = VDomComponent::from_ref(group.get_from(TreeBoxIndex::Last  , TreeBoxIndex::Middle), render_cell);
+    let view9 = VDomComponent::from_ref(group.get_from(TreeBoxIndex::Last  , TreeBoxIndex::Last  ), render_cell);
 
-    VDomComponent::new(group.clone(), move |_group: &SudokuSquare<Cell>| -> VDomElement {
+    VDomComponent::from_ref(group, move |_group: &SudokuSquare<Cell>| -> VDomElement {
         html! {
             <div css={css_item_wrapper()}>
                 <div css={css_cell_wrapper()}>
@@ -116,10 +116,10 @@ fn render_group(group: &SudokuSquare<Cell>) -> VDomComponent {
 }
 
 pub fn main_render(sudoku: Sudoku) -> VDomComponent {
-    let view1 = VDomComponent::new(sudoku.clone(), examples_render);
+    let view1 = VDomComponent::from_ref(&sudoku, examples_render);
     let view2 = main_render_inner(&sudoku);
 
-    VDomComponent::new(sudoku, move |_sudoku: &Sudoku| -> VDomElement {
+    VDomComponent::from(sudoku, move |_sudoku: &Sudoku| -> VDomElement {
         html! {
             <div>
                 { view1.clone() }
@@ -140,7 +140,7 @@ pub fn main_render_inner(sudoku: &Sudoku) -> VDomComponent {
     let view8 = render_group(sudoku.grid.get_from(TreeBoxIndex::Last  , TreeBoxIndex::Middle));
     let view9 = render_group(sudoku.grid.get_from(TreeBoxIndex::Last  , TreeBoxIndex::Last  ));
 
-    VDomComponent::new(sudoku.clone(), move |_sudoku: &Sudoku| -> VDomElement {
+    VDomComponent::from_ref(sudoku, move |_sudoku: &Sudoku| -> VDomElement {
         html! {
             <div css={css_center()}>
                 <div css={css_wrapper()}>
@@ -171,33 +171,21 @@ css_fn! { css_sudoku_example_button, "
 " }
 
 pub fn examples_render(sudoku: &Sudoku) -> VDomElement {
-    let clear = {
-        let sudoku = sudoku.clone();
-        move || {
-            sudoku.clear();
-        }
-    };
+    let clear = bind(sudoku).call(|sudoku| {
+        sudoku.clear();
+    });
 
-    let example1 = {
-        let sudoku = sudoku.clone();
-        move || {
-            sudoku.example1();
-        }
-    };
+    let example1 = bind(sudoku).call(|sudoku| {
+        sudoku.example1();
+    });
 
-    let example2 = {
-        let sudoku = sudoku.clone();
-        move || {
-            sudoku.example2();
-        }
-    };
+    let example2 = bind(sudoku).call(|sudoku| {
+        sudoku.example2();
+    });
 
-    let example3 = {
-        let sudoku = sudoku.clone();
-        move || {
-            sudoku.example3();
-        }
-    };
+    let example3 = bind(sudoku).call(|sudoku| {
+        sudoku.example3();
+    });
 
     html! {
         <div css={css_sudoku_example()}>
