@@ -42,13 +42,8 @@ impl Graph {
     }
 
     fn edges_on(&self, client_id: GraphId, parent_list: BTreeSet<GraphId>) {
-        for parent_id in parent_list {
-
-            self.parent_client.add_connection(parent_id, client_id);
-
-            //Connect start
-            self.external_connections.need_connection(parent_id);
-        }
+        self.parent_client.add_connection(&parent_list, client_id);
+        self.external_connections.need_connection(parent_list);
     }
 
     fn edges_off(&self, client_id: GraphId, parent_list: BTreeSet<GraphId>) {

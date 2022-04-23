@@ -1,4 +1,4 @@
-use vertigo::{css, css_fn, html, Css, VDomElement};
+use vertigo::{css, css_fn, html, Css, VDomElement, bind};
 
 use crate::app::sudoku::state::{number_item::SudokuValue, Cell};
 
@@ -45,12 +45,9 @@ pub fn render_cell_value(value: SudokuValue, cell: &Cell) -> VDomElement {
     let mut out = Vec::new();
 
     if show_delete {
-        let on_click = {
-            let cell = cell.clone();
-            move || {
-                cell.number.value.set_value(None);
-            }
-        };
+        let on_click = bind(cell).call(|cell| {
+            cell.number.value.set_value(None);
+        });
 
         out.push(
             html! {

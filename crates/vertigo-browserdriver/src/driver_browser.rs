@@ -43,7 +43,7 @@ impl DriverBrowserInner {
             })
         };
 
-        let driver_dom = DriverBrowserDom::new(&dependencies, &api, spawn_executor.clone());
+        let driver_dom = DriverBrowserDom::new(&dependencies, &api);
         let driver_hashrouter = DriverBrowserHashrouter::new(&api);
         let driver_fetch = DriverBrowserFetch::new(&api);
         let driver_websocket = DriverWebsocket::new(&api);

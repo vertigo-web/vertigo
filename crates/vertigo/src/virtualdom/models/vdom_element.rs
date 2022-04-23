@@ -4,7 +4,6 @@ use std::{
     fmt,
     rc::Rc,
 };
-use crate::fetch::pinboxfut::PinBoxFuture;
 use crate::virtualdom::models::{
     css::Css,
     node_attr::NodeAttr,
@@ -54,7 +53,6 @@ pub struct VDomElement {
     pub dom_ref: Option<&'static str>,
     pub dom_apply: Option<Rc<dyn Fn(&NodeRefs)>>,
     pub on_click: Option<Rc<dyn Fn()>>,
-    pub on_click_async: Option<Rc<dyn Fn() -> PinBoxFuture<()>>>,
     pub on_input: Option<Rc<dyn Fn(String)>>,
     pub on_mouse_enter: Option<Rc<dyn Fn()>>,
     pub on_mouse_leave: Option<Rc<dyn Fn()>>,
@@ -72,7 +70,6 @@ impl VDomElement {
             dom_ref: None,
             dom_apply: None,
             on_click: None,
-            on_click_async: None,
             on_input: None,
             on_mouse_enter: None,
             on_mouse_leave: None,
@@ -88,9 +85,6 @@ impl VDomElement {
                 }
                 NodeAttr::OnClick { event } => {
                     result.on_click = Some(event);
-                }
-                NodeAttr::OnClickAsync { event } => {
-                    result.on_click_async = Some(event);
                 }
                 NodeAttr::OnInput { event } => {
                     result.on_input = Some(event);
@@ -130,7 +124,6 @@ impl VDomElement {
             dom_ref: None,
             dom_apply: None,
             on_click: None,
-            on_click_async: None,
             on_input: None,
             on_mouse_enter: None,
             on_mouse_leave: None,

@@ -1,7 +1,7 @@
 use std::{
     rc::Rc,
 };
-
+use std::collections::BTreeSet;
 use crate::{
     computed::graph_id::GraphId,
     struct_mut::BTreeMapMut, DropResource,
@@ -41,8 +41,12 @@ impl ExternalConnections {
         self.inner.connect.remove(&id);
     }
 
-    pub fn need_connection(&self, id: GraphId) {
-        self.inner.will_connect.insert(id, true);
+    pub fn need_connection(&self, parent_list: BTreeSet<GraphId>) {
+        self.inner.will_connect.map_and_change(move |state| {
+            for id in parent_list {
+                state.insert(id, true);
+            }
+        });
     }
 
     pub fn need_disconnection(&self, id: GraphId) {

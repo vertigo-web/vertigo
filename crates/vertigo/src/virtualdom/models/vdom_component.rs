@@ -4,9 +4,8 @@ use std::{
 };
 
 use crate::{
-    virtualdom::models::{
-        vdom_element::VDomElement
-    }, GraphId
+    virtualdom::models::vdom_element::VDomElement,
+    GraphId
 };
 
 pub trait RenderVDom {
@@ -36,6 +35,17 @@ impl<T> RenderVDom for VDomComponentRender<T> {
     }
 }
 
+struct VDomFunction {
+    render: Box<dyn Fn() -> VDomElement>,
+}
+
+impl RenderVDom for VDomFunction {
+    fn render(&self) -> VDomElement {
+        let render = &self.render;
+        render()
+    }
+}
+
 /// A component is a virtual dom element with render function attached to it.
 ///
 /// Usually used as a main component for the application.
@@ -52,7 +62,7 @@ impl<T> RenderVDom for VDomComponentRender<T> {
 ///     html! { <p>{*state.get_value()}</p> }
 /// }
 ///
-/// let main_component = VDomComponent::new(state, comp_render);
+/// let main_component = VDomComponent::from(state, comp_render);
 /// ```
 #[derive(Clone)]
 pub struct VDomComponent {
@@ -65,21 +75,26 @@ impl VDomComponent {
         self.id
     }
 
-    pub fn new<T: 'static>(state: T, render: impl Fn(&T) -> VDomElement + 'static) -> VDomComponent {
+    pub fn from<T: 'static>(state: T, render: impl Fn(&T) -> VDomElement + 'static) -> VDomComponent {
         VDomComponent {
             id: GraphId::default(),
             render: Rc::new(VDomComponentRender::new(state, render)),
         }
     }
 
-    pub fn from_fn(render: impl Fn() -> VDomElement + 'static) -> VDomComponent {
-        let function = move |_: &()| -> VDomElement {
-            render()
-        };
-
+    pub fn from_ref<T: Clone + 'static>(state: &T, render: impl Fn(&T) -> VDomElement + 'static) -> VDomComponent {
         VDomComponent {
             id: GraphId::default(),
-            render: Rc::new(VDomComponentRender::new((), function)),
+            render: Rc::new(VDomComponentRender::new(state.clone(), render)),
+        }
+    }
+
+    pub fn from_fn(render: impl Fn() -> VDomElement + 'static) -> VDomComponent {
+        VDomComponent {
+            id: GraphId::default(),
+            render: Rc::new(VDomFunction {
+                render: Box::new(render)
+            })
         }
     }
 }

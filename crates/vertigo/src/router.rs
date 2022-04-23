@@ -23,7 +23,7 @@ pub struct HashRouter<T: ToString + From<String> + PartialEq + 'static> {
 /// use vertigo::{html, Computed, Driver, Value, VDomElement, VDomComponent};
 /// use vertigo::router::HashRouter;
 ///
-/// #[derive(PartialEq, Debug)]
+/// #[derive(Clone, PartialEq, Debug)]
 /// pub enum Route {
 ///     Page1,
 ///     Page2,
@@ -56,6 +56,7 @@ pub struct HashRouter<T: ToString + From<String> + PartialEq + 'static> {
 ///     }
 /// }
 ///
+/// #[derive(Clone)]
 /// pub struct State {
 ///     pub driver: Driver,
 ///     route: HashRouter<Route>,
@@ -70,7 +71,7 @@ pub struct HashRouter<T: ToString + From<String> + PartialEq + 'static> {
 ///             route,
 ///         };
 ///
-///         VDomComponent::new(state, render)
+///         VDomComponent::from(state, render)
 ///     }
 /// }
 /// 

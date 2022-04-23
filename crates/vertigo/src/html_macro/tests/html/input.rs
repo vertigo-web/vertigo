@@ -1,4 +1,4 @@
-use crate::{Dependencies, dev::VDomText, Value, VDomElement, html};
+use crate::{Dependencies, dev::VDomText, Value, VDomElement, html, bind};
 
 use super::utils::*;
 
@@ -32,12 +32,9 @@ fn div_with_label_and_input() {
 fn managed_input() {
     let value = Value::new(Dependencies::default(), "old value".to_string());
 
-    let on_input = {
-        let value = value.clone();
-        move |new: String| {
-            value.set_value(new);
-        }
-    };
+    let on_input = bind(&value).call_param(|value, new: String| {
+        value.set_value(new);
+    });
 
     let input = html! {
         <input value={value.get_value().as_str()} on_input={on_input} />

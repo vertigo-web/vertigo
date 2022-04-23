@@ -1,5 +1,5 @@
 use std::{rc::Rc};
-use vertigo::{css, css_fn, html, Computed, Css, Driver, VDomElement, Value, VDomComponent};
+use vertigo::{css, css_fn, html, Computed, Css, Driver, VDomElement, Value, VDomComponent, bind};
 
 mod next_generation;
 
@@ -162,26 +162,21 @@ fn render_header(state: &State) -> VDomElement {
     let new_delay = state.new_delay.get_value();
 
     let button = if *timer_enable {
-        let on_click = {
-            let timer_enable = state.timer_enable.clone();
-            move || {
-                timer_enable.set_value(false);
-                log::info!("stop ...");
-            }
-        };
+        let on_click = bind(state).call(|state| {
+            state.timer_enable.set_value(false);
+            log::info!("stop ...");
+        });
+
         html! {
             <button css={css_button()} on_click={on_click}>
                 "Stop"
             </button>
         }
     } else {
-        let on_click = {
-            let timer_enable = state.timer_enable.clone();
-            move || {
-                timer_enable.set_value(true);
-                log::info!("start ...");
-            }
-        };
+        let on_click = bind(state).call(|state| {
+            state.timer_enable.set_value(true);
+            log::info!("start ...");
+        });
 
         html! {
             <button css={css_button()} on_click={on_click}>
@@ -190,12 +185,9 @@ fn render_header(state: &State) -> VDomElement {
         }
     };
 
-    let on_input = {
-        let new_delay = state.new_delay.clone();
-        move |new_value: String| {
-            new_delay.set_value(new_value.parse().unwrap_or_default());
-        }
-    };
+    let on_input = bind(state).call_param(|state, new_value: String| {
+        state.new_delay.set_value(new_value.parse().unwrap_or_default());
+    });
 
     html! {
         <div css={flex_menu()}>
@@ -216,9 +208,9 @@ fn render_header(state: &State) -> VDomElement {
 
 pub fn render(state: State) -> VDomComponent {
 
-    let view_header = VDomComponent::new(state.clone(), render_header);
+    let view_header = VDomComponent::from_ref(&state, render_header);
 
-    VDomComponent::new(state, move |state: &State| -> VDomElement {
+    VDomComponent::from(state, move |state: &State| -> VDomElement {
         let matrix = &state.matrix;
 
         html! {
@@ -254,7 +246,7 @@ fn render_row(matrix: &[Value<bool>]) -> VDomElement {
     let mut out = Vec::new();
 
     for item in matrix.iter() {
-        out.push(VDomComponent::new(item.clone(), render_cell))
+        out.push(VDomComponent::from_ref(item, render_cell))
     }
 
     html! {
@@ -265,18 +257,15 @@ fn render_row(matrix: &[Value<bool>]) -> VDomElement {
 }
 
 fn render_cell(cell: &Value<bool>) -> VDomElement {
-    let is_active = cell.get_value();
+    let is_active = *cell.get_value();
 
-    let on_click_callback = {
-        let cell = cell.clone();
-        let is_active = *is_active;
-
-        move || {
-            cell.set_value(!is_active);
-        }
-    };
+    let on_click_callback = bind(cell)
+        .and(&is_active)
+        .call(|cell, is_active| {
+            cell.set_value(!*is_active);
+        });
 
     html! {
-        <div css={css_cell(*is_active)} on_click={on_click_callback} />
+        <div css={css_cell(is_active)} on_click={on_click_callback} />
     }
 }

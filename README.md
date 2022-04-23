@@ -25,7 +25,7 @@ vertigo-browserdriver = "0.1.0-beta.3"
 Code:
 
 ```rust
-use vertigo::{html, Computed, Driver, VDomElement, VDomComponent, Value};
+use vertigo::{html, Computed, Driver, VDomElement, VDomComponent, Value, bind};
 use vertigo_browserdriver::{start_browser_app};
 
 pub struct State {
@@ -37,20 +37,18 @@ impl State {
         let state = State {
             count: driver.new_value(0),
         };
-        VDomComponent::new(state, render)
+        VDomComponent::from(state, render)
     }
 }
 
 pub fn render(state: &State) -> VDomElement {
-    let increment = {
-        let count = state.count.clone();
-        move || count.set_value(*count.get_value() + 1)
-    };
+    let increment = bind(state).call(|state| {
+        state.count.set_value(*state.count.get_value() + 1);
+    });
 
-    let decrement = {
-        let count = state.count.clone();
-        move || count.set_value(*count.get_value() - 1)
-    };
+    let decrement = bind(state).call(|state| {
+        state.count.set_value(*state.count.get_value() - 1);
+    });
 
     html! {
         <div>

@@ -1,5 +1,6 @@
-use vertigo::{html, Driver, VDomElement, Value, VDomComponent};
+use vertigo::{html, Driver, VDomElement, Value, VDomComponent, bind};
 use vertigo_browserdriver::start_browser_app;
+
 
 pub struct State {
     pub count: Value<i32>,
@@ -11,20 +12,18 @@ impl State {
             count: driver.new_value(0),
         };
 
-        VDomComponent::new(state, render)
+        VDomComponent::from(state, render)
     }
 }
 
 pub fn render(state: &State) -> VDomElement {
-    let increment = {
-        let count = state.count.clone();
-        move || count.set_value(*count.get_value() + 1)
-    };
+    let increment = bind(&state.count).call(|count| {
+        count.set_value(*count.get_value() + 1)
+    });
 
-    let decrement = {
-        let count = state.count.clone();
-        move || count.set_value(*count.get_value() - 1)
-    };
+    let decrement = bind(&state.count).call(|count| {
+        count.set_value(*count.get_value() - 1)
+    });
 
     html! {
         <div>

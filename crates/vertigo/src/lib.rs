@@ -21,7 +21,7 @@
 //!             message: driver.new_value("Hello world".to_string()),
 //!         };
 //!
-//!         VDomComponent::new(state, render)
+//!         VDomComponent::from(state, render)
 //!     }
 //! }
 //!
@@ -57,6 +57,7 @@ pub mod router;
 mod virtualdom;
 mod websocket;
 mod future_box;
+mod bind;
 
 pub use computed::{AutoMap, Computed, Dependencies, Value, struct_mut, Client, GraphId, DropResource};
 pub use driver::{Driver, FetchResult};
@@ -78,7 +79,7 @@ pub use virtualdom::models::{
 pub use websocket::{WebsocketConnection, WebsocketMessage};
 pub use app::{start_app};
 pub use future_box::{FutureBoxSend, FutureBox};
-
+pub use bind::bind;
 pub mod dev {
     pub use super::app::{start_app};
     pub use super::driver::{DriverTrait, EventCallback, FetchMethod};
