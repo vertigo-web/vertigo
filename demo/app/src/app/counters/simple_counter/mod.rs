@@ -17,10 +17,10 @@ impl State {
     }
 
     pub fn increment(&self) {
-        self.counter.set_value(*self.counter.get_value() + 1);
+        self.counter.set(self.counter.get() + 1);
     }
 
     pub fn decrement(&self) {
-        self.counter.set_value(*self.counter.get_value() - 1);
+        self.counter.set(self.counter.get() - 1);
     }
 }

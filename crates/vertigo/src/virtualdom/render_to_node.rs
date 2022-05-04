@@ -1,4 +1,4 @@
-use std::collections::VecDeque;
+use std::{collections::VecDeque, rc::Rc};
 
 use crate::{
     Driver,
@@ -389,12 +389,15 @@ pub fn render_to_node(
     target: RealDomElement,
     component: VDomComponent,
 ) -> Client {
-    let view = Computed::from(move || component.render.render());
+    let view = Computed::from(move || {
+        let dom_element = component.render.render();
+        Rc::new(dom_element)
+    });
 
     view.subscribe(move |new_version| {
         let mut refs_context = RefsContext::default();
 
-        update_node(driver.clone(), &css_manager, &mut refs_context, &target, new_version);
+        update_node(driver.clone(), &css_manager, &mut refs_context, &target, new_version.as_ref());
 
         driver.push_ref_context(refs_context);
     })

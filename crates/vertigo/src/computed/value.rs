@@ -7,25 +7,9 @@ use crate::{
     computed::{Computed, Dependencies, GraphId}, struct_mut::ValueMut, DropResource, get_dependencies,
 };
 
-pub trait ToRc<T> {
-    fn to_rc(self) -> Rc<T>;
-}
-
-impl<T> ToRc<T> for Rc<T> {
-    fn to_rc(self) -> Rc<T> {
-        self
-    }
-}
-
-impl<T> ToRc<T> for T {
-    fn to_rc(self) -> Rc<T> {
-        Rc::new(self)
-    }
-}
-
 struct ValueInner<T> {
     id: GraphId,
-    value: ValueMut<Rc<T>>,
+    value: ValueMut<T>,
     deps: Dependencies,
 }
 
@@ -44,18 +28,18 @@ impl<T> Drop for ValueInner<T> {
 ///
 /// let value = Value::new(5);
 ///
-/// assert_eq!(*value.get_value(), 5);
+/// assert_eq!(value.get(), 5);
 ///
-/// value.set_value(10);
+/// value.set(10);
 ///
-/// assert_eq!(*value.get_value(), 10);
+/// assert_eq!(value.get(), 10);
 /// ```
 ///
-pub struct Value<T> {
+pub struct Value<T: Clone> {
     inner: Rc<ValueInner<T>>,
 }
 
-impl<T> Clone for Value<T> {
+impl<T: Clone> Clone for Value<T> {
     fn clone(&self) -> Self {
         Value {
             inner: self.inner.clone(),
@@ -63,14 +47,14 @@ impl<T> Clone for Value<T> {
     }
 }
 
-impl<T> Value<T> {
-    pub fn new(value: impl ToRc<T>) -> Value<T> {
+impl<T: Clone> Value<T> {
+    pub fn new(value: T) -> Value<T> {
         let deps = get_dependencies();
         Value {
             inner: Rc::new(
                 ValueInner {
                     id: GraphId::default(),
-                    value: ValueMut::new(value.to_rc()),
+                    value: ValueMut::new(value),
                     deps,
                 }
             )
@@ -91,7 +75,7 @@ impl<T> Value<T> {
             inner: Rc::new(
                 ValueInner {
                     id,
-                    value: ValueMut::new(Rc::new(value)),
+                    value: ValueMut::new(value),
                     deps: deps.clone(),
                 },
             )
@@ -106,14 +90,14 @@ impl<T> Value<T> {
         computed
     }
 
-    pub fn set_value(&self, value: T) {
+    pub fn set(&self, value: T) {
         self.inner.deps.clone().transaction(|| {
-            self.inner.value.set(Rc::new(value));
+            self.inner.value.set(value);
             self.inner.deps.trigger_change(self.inner.id);
         });
     }
 
-    pub fn get_value(&self) -> Rc<T> {
+    pub fn get(&self) -> T {
         self.inner.deps.report_parent_in_stack(self.inner.id);
         self.inner.value.get()
     }
@@ -122,7 +106,7 @@ impl<T> Value<T> {
         let self_clone = self.clone();
 
         Computed::new(move || {
-            self_clone.get_value()
+            self_clone.get()
         })
     }
 
@@ -135,10 +119,10 @@ impl<T> Value<T> {
     }
 }
 
-impl<T: PartialEq + 'static> Value<T> {
+impl<T: Clone + PartialEq + 'static> Value<T> {
     pub fn set_value_and_compare(&self, value: T) {
         self.inner.deps.clone().transaction(|| {
-            let need_update = self.inner.value.set_and_check(Rc::new(value));
+            let need_update = self.inner.value.set_and_check(value);
 
             if need_update {
                 self.inner.deps.trigger_change(self.inner.id);

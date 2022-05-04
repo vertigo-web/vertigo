@@ -98,7 +98,7 @@ impl Sudoku {
                 for y0 in TreeBoxIndex::variants() {
                     for x1 in TreeBoxIndex::variants() {
                         for y1 in TreeBoxIndex::variants() {
-                            self.grid.get_from(x0, y0).get_from(x1, y1).number.value.set_value(None);
+                            self.grid.get_from(x0, y0).get_from(x1, y1).number.value.set(None);
                         }
                     }
                 }

@@ -13,14 +13,14 @@ fn div_with_mouse_events() {
     let mouse_in = {
         let value = value.clone();
         move || {
-            value.set_value("mouse in".to_string());
+            value.set("mouse in".to_string());
         }
     };
 
     let mouse_out = {
         let value = value.clone();
         move || {
-            value.set_value("mouse out".to_string());
+            value.set("mouse out".to_string());
         }
     };
 
@@ -31,8 +31,8 @@ fn div_with_mouse_events() {
     assert_empty(&div, "div");
 
     div.on_mouse_enter.unwrap()();
-    assert_eq!(*value.get_value(), "mouse in");
+    assert_eq!(value.get(), "mouse in");
 
     div.on_mouse_leave.unwrap()();
-    assert_eq!(*value.get_value(), "mouse out");
+    assert_eq!(value.get(), "mouse out");
 }

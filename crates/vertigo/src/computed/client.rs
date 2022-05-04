@@ -1,5 +1,3 @@
-use std::rc::Rc;
-
 use crate::{
     computed::{Computed, GraphId, GraphValue},
     struct_mut::ValueMut, external_connections_refresh,
@@ -10,23 +8,21 @@ pub struct Client {
 }
 
 impl Client {
-    pub fn new<T, F>(computed: Computed<T>, call: F) -> Client
+    pub fn new<T: Clone, F>(computed: Computed<T>, call: F) -> Client
     where
         T: PartialEq + 'static,
-        F: Fn(&T) + 'static,
+        F: Fn(T) + 'static,
     {
         let graph_value = GraphValue::new(false, {
             let prev_value = ValueMut::new(None);
 
             move || {
-                let value = computed.get_value();
+                let value = computed.get();
                 let should_update = prev_value.set_and_check(Some(value.clone()));
 
                 if should_update {
-                    call(value.as_ref());
+                    call(value);
                 }
-
-                Rc::new(())
             }
         });
 

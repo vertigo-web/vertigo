@@ -16,10 +16,10 @@ fn basic() {
         let com2 = value2.to_computed();
 
         Computed::from(move || -> i32 {
-            let value1 = com1.get_value();
-            let value2 = com2.get_value();
+            let value1 = com1.get();
+            let value2 = com2.get();
 
-            *value1 + *value2
+            value1 + value2
         })
     };
 
@@ -27,15 +27,15 @@ fn basic() {
 
     assert_eq!(sum_value.get(), (3, 1));
 
-    value1.set_value(4);
+    value1.set(4);
     assert_eq!(sum_value.get(), (6, 2));
 
-    value2.set_value(5);
+    value2.set(5);
     assert_eq!(sum_value.get(), (9, 3));
 
     sum_value.off();
 
-    value2.set_value(99);
+    value2.set(99);
     assert_eq!(sum_value.get(), (9, 3));
 }
 
@@ -48,14 +48,14 @@ fn basic2() {
     let com2: Computed<i32> = val2.to_computed();
 
     let sum = Computed::from(move || {
-        let a = com1.get_value();
-        let b = com2.get_value();
-        *a + *b
+        let a = com1.get();
+        let b = com2.get();
+        a + b
     });
 
     let suma2 = sum.clone().map_for_render(|value: &Computed<i32>| -> i32 {
-        let value = value.get_value();
-        2 * (*value)
+        let value = value.get();
+        2 * (value)
     });
 
     let mut sum_box1 = SubscribeValueVer::new(sum);
@@ -64,12 +64,12 @@ fn basic2() {
     assert_eq!(sum_box1.get(), (9, 1));
     assert_eq!(sum_box2.get(), (18, 1));
 
-    val1.set_value(111);
+    val1.set(111);
 
     assert_eq!(sum_box1.get(), (116, 2));
     assert_eq!(sum_box2.get(), (232, 2));
 
-    val2.set_value(888);
+    val2.set(888);
 
     assert_eq!(sum_box1.get(), (999, 3));
     assert_eq!(sum_box2.get(), (1998, 3));
@@ -79,7 +79,7 @@ fn basic2() {
     sum_box1.off();
     sum_box2.off();
 
-    val2.set_value(999);
+    val2.set(999);
 
     assert_eq!(sum_box1.get(), (999, 3));
     assert_eq!(sum_box2.get(), (1998, 3));
@@ -158,33 +158,33 @@ fn test_subscription() {
     let com3: Computed<i32> = val3.to_computed();
 
     let sum = Computed::from(move || -> i32 {
-        let value1 = com1.get_value();
-        let value2 = com2.get_value();
+        let value1 = com1.get();
+        let value2 = com2.get();
 
-        *value1 + *value2
+        value1 + value2
     });
 
     let mut sum_value = SubscribeValueVer::new(sum);
 
     assert_eq!(sum_value.get(), (3, 1));
-    val1.set_value(2);
+    val1.set(2);
     assert_eq!(sum_value.get(), (4, 2));
-    val2.set_value(10);
+    val2.set(10);
     assert_eq!(sum_value.get(), (12, 3));
-    val3.set_value(10);
+    val3.set(10);
     assert_eq!(sum_value.get(), (12, 3));
-    val2.set_value(20);
+    val2.set(20);
     assert_eq!(sum_value.get(), (22, 4));
 
     sum_value.off();
 
-    val1.set_value(2);
+    val1.set(2);
     assert_eq!(sum_value.get(), (22, 4));
-    val1.set_value(2);
+    val1.set(2);
     assert_eq!(sum_value.get(), (22, 4));
-    val2.set_value(2);
+    val2.set(2);
     assert_eq!(sum_value.get(), (22, 4));
-    val3.set_value(2);
+    val3.set(2);
     assert_eq!(sum_value.get(), (22, 4));
 }
 
@@ -207,10 +207,10 @@ fn test_computed_cache() {
             let a = a.clone();
 
             Computed::from(move || {
-                let a_val = a.get_value();
-                let b_val = b.get_value();
+                let a_val = a.get();
+                let b_val = b.get();
 
-                *a_val + *b_val
+                a_val + b_val
             })
         };
 
@@ -218,9 +218,9 @@ fn test_computed_cache() {
             //is even
             let c = c.clone();
             Computed::from(move || -> bool {
-                let c_value = c.get_value();
+                let c_value = c.get();
 
-                *c_value % 2 == 0
+                c_value % 2 == 0
             })
         };
 
@@ -230,17 +230,17 @@ fn test_computed_cache() {
         assert_eq!(c.get(), (3, 1));
         assert_eq!(d.get(), (false, 1));
 
-        a.set_value(2);
+        a.set(2);
 
         assert_eq!(c.get(), (4, 2));
         assert_eq!(d.get(), (true, 2));
 
-        a.set_value(2);
+        a.set(2);
 
         assert_eq!(c.get(), (4, 2));
         assert_eq!(d.get(), (true, 2));
 
-        a.set_value(4);
+        a.set(4);
 
         assert_eq!(c.get(), (6, 3));
         assert_eq!(d.get(), (true, 2));
@@ -278,10 +278,10 @@ fn test_computed_new_value() {
         let a = a.clone();
 
         Computed::from(move || {
-            let a_val = a.get_value();
-            let b_val = b.get_value();
+            let a_val = a.get();
+            let b_val = b.get();
 
-            *a_val + *b_val
+            a_val + b_val
         })
     };
 
@@ -290,10 +290,10 @@ fn test_computed_new_value() {
         let d = d.clone();
         let c = c.clone();
         Computed::from(move || -> u32 {
-            let d_val = d.get_value();
-            let c_val = c.get_value();
+            let d_val = d.get();
+            let c_val = c.get();
 
-            *d_val + *c_val
+            d_val + c_val
         })
     };
 
@@ -303,11 +303,11 @@ fn test_computed_new_value() {
     assert_eq!(d.get(), (0, 1));
     assert_eq!(e.get(), (0, 1));
 
-    a.set_value(33);
+    a.set(33);
     assert_eq!(d.get(), (33, 2));
     assert_eq!(e.get(), (33, 2));
 
-    c.set_value(66);
+    c.set(66);
     assert_eq!(d.get(), (33, 2));
     assert_eq!(e.get(), (99, 3));
 
@@ -318,6 +318,7 @@ fn test_computed_new_value() {
 
 #[test]
 fn test_computed_switch_subscription() {
+    #[derive(Clone)]
     enum Switch {
         Ver1,
         Ver2,
@@ -345,23 +346,23 @@ fn test_computed_switch_subscription() {
         let c = c.clone();
 
         Computed::from(move || -> u32 {
-            let switch_value = switch.get_value();
+            let switch_value = switch.get();
 
-            match *switch_value {
+            match switch_value {
                 Switch::Ver1 => {
-                    let a_value = a.get_value();
-                    *a_value
+                    let a_value = a.get();
+                    a_value
                 }
                 Switch::Ver2 => {
-                    let a_value = a.get_value();
-                    let b_value = b.get_value();
-                    *a_value + *b_value
+                    let a_value = a.get();
+                    let b_value = b.get();
+                    a_value + b_value
                 }
                 Switch::Ver3 => {
-                    let a_value = a.get_value();
-                    let b_value = b.get_value();
-                    let c_value = c.get_value();
-                    *a_value + *b_value + *c_value
+                    let a_value = a.get();
+                    let b_value = b.get();
+                    let c_value = c.get();
+                    a_value + b_value + c_value
                 }
             }
         })
@@ -374,57 +375,57 @@ fn test_computed_switch_subscription() {
     assert_eq!(sum.get(), (0, 1));
     assert_eq!(root.all_connections_len(), 3);
 
-    a.set_value(1);
+    a.set(1);
     assert_eq!(sum.get(), (1, 2));
     assert_eq!(root.all_connections_len(), 3);
 
-    b.set_value(1);
+    b.set(1);
     assert_eq!(sum.get(), (1, 2));
-    c.set_value(1);
+    c.set(1);
     assert_eq!(sum.get(), (1, 2));
 
-    a.set_value(0);
-    b.set_value(0);
-    c.set_value(0);
+    a.set(0);
+    b.set(0);
+    c.set(0);
     assert_eq!(sum.get(), (0, 3));
 
     assert_eq!(root.all_connections_len(), 3);
-    switch.set_value(Switch::Ver2);
+    switch.set(Switch::Ver2);
     assert_eq!(root.all_connections_len(), 4);
 
     assert_eq!(sum.get(), (0, 3)); //no rerender
 
-    a.set_value(1);
+    a.set(1);
 
     assert_eq!(root.all_connections_len(), 4);
 
     assert_eq!(sum.get(), (1, 4));
-    b.set_value(1);
+    b.set(1);
     assert_eq!(sum.get(), (2, 5));
-    c.set_value(1);
+    c.set(1);
     assert_eq!(sum.get(), (2, 5));
 
-    a.set_value(0);
-    b.set_value(0);
-    c.set_value(0);
+    a.set(0);
+    b.set(0);
+    c.set(0);
     assert_eq!(sum.get(), (0, 7));
 
-    switch.set_value(Switch::Ver3);
+    switch.set(Switch::Ver3);
     assert_eq!(sum.get(), (0, 7)); //no rerender
 
     assert_eq!(root.all_connections_len(), 5);
 
-    a.set_value(1);
+    a.set(1);
     assert_eq!(sum.get(), (1, 8));
-    b.set_value(1);
+    b.set(1);
     assert_eq!(sum.get(), (2, 9));
-    c.set_value(1);
+    c.set(1);
     assert_eq!(sum.get(), (3, 10));
 
     root.transaction(|| {
-        a.set_value(0);
-        b.set_value(0);
-        c.set_value(0);
+        a.set(0);
+        b.set(0);
+        c.set(0);
     });
 
     assert_eq!(sum.get(), (0, 11));
@@ -462,7 +463,7 @@ fn test_connect() {
     let client = value.clone().subscribe({
         let current_value = current_value.clone();
         move |val| {
-            current_value.set(*val);
+            current_value.set(val);
         }
     });
 
@@ -479,7 +480,7 @@ fn test_connect() {
     let client = value.subscribe({
         let current_value = current_value.clone();
         move |val| {
-            current_value.set(*val);
+            current_value.set(val);
         }
     });
 

@@ -1,6 +1,5 @@
 use std::{
     cmp::PartialEq,
-    rc::Rc,
 };
 
 use crate::computed::{Client, GraphValue, graph_id::GraphId};
@@ -16,10 +15,10 @@ use crate::computed::{Client, GraphValue, graph_id::GraphId};
 ///
 /// let comp = value.to_computed();
 ///
-/// assert_eq!(*comp.get_value(), 5);
+/// assert_eq!(comp.get(), 5);
 ///
 /// // Can't do that
-/// // comp.set_value(10);
+/// // comp.set(10);
 /// ```
 ///
 /// ## Computed from Value by provided function
@@ -31,20 +30,20 @@ use crate::computed::{Client, GraphValue, graph_id::GraphId};
 ///
 /// let comp_2 = {
 ///     let v = value.clone();
-///     Computed::from(move || *v.get_value() * 2)
+///     Computed::from(move || v.get() * 2)
 /// };
 ///
-/// assert_eq!(*comp_2.get_value(), 4);
+/// assert_eq!(comp_2.get(), 4);
 ///
-/// value.set_value(6);
+/// value.set(6);
 ///
-/// assert_eq!(*comp_2.get_value(), 12);
+/// assert_eq!(comp_2.get(), 12);
 /// ```
-pub struct Computed<T: 'static> {
+pub struct Computed<T: Clone + 'static> {
     inner: GraphValue<T>,
 }
 
-impl<T: 'static> Clone for Computed<T> {
+impl<T: Clone + 'static> Clone for Computed<T> {
     fn clone(&self) -> Self {
         Computed {
             inner: self.inner.clone(),
@@ -52,8 +51,8 @@ impl<T: 'static> Clone for Computed<T> {
     }
 }
 
-impl<T: 'static> Computed<T> {
-    pub fn new<F: Fn() -> Rc<T> + 'static>(get_value: F) -> Computed<T> {
+impl<T: Clone + 'static> Computed<T> {
+    pub fn new<F: Fn() -> T + 'static>(get_value: F) -> Computed<T> {
         Computed {
             inner: GraphValue::new(true, get_value),
         }
@@ -62,7 +61,7 @@ impl<T: 'static> Computed<T> {
     pub fn from<F: Fn() -> T + 'static>(get_value: F) -> Computed<T> {
         Computed {
             inner: GraphValue::new(true, move || {
-                Rc::new(get_value())
+                get_value()
             })
         }
     }
@@ -71,20 +70,19 @@ impl<T: 'static> Computed<T> {
         self.inner.id()
     }
 
-    pub fn get_value(&self) -> Rc<T> {
+    pub fn get(&self) -> T {
         self.inner.get_value()
     }
 
-    pub fn map_for_render<K: 'static>(self, fun: fn(&Computed<T>) -> K) -> Computed<K> {
-        Computed::new(move || {
-            let result = fun(&self);
-            Rc::new(result)
-        })
+    pub fn map_for_render<K: Clone + 'static>(self, fun: fn(&Computed<T>) -> K) -> Computed<K> {
+        Computed::new(move ||
+            fun(&self)
+        )
     }
 
-    pub fn map<K, F: 'static + Fn(&Computed<T>) -> K>(self, fun: F) -> Computed<K> {
+    pub fn map<K: Clone, F: 'static + Fn(&Computed<T>) -> K>(self, fun: F) -> Computed<K> {
         Computed::new(move ||
-            Rc::new(fun(&self))
+            fun(&self)
         )
     }
 
@@ -93,8 +91,8 @@ impl<T: 'static> Computed<T> {
     }
 }
 
-impl<T: 'static + PartialEq> Computed<T> {
-    pub fn subscribe<F: Fn(&T) + 'static>(self, call: F) -> Client {
+impl<T: 'static + PartialEq + Clone> Computed<T> {
+    pub fn subscribe<F: Fn(T) + 'static>(self, call: F) -> Client {
         Client::new(self, call)
     }
 }

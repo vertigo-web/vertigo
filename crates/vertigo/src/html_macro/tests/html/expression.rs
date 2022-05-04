@@ -29,7 +29,7 @@ fn div_with_value_expression() {
 
     let dom1 = html! {
         <div>
-            { *x.get_value() + *y.get_value() }
+            { x.get() + y.get() }
         </div>
     };
 

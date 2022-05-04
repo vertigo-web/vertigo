@@ -26,10 +26,10 @@ impl State {
             let counter4 = counter4.clone();
 
             Computed::from(move || {
-                let value1 = *counter1.get_value();
-                let value2 = *counter2.get_value();
-                let value3 = *counter3.get_value();
-                let value4 = *counter4.get_value();
+                let value1 = counter1.get();
+                let value2 = counter2.get();
+                let value3 = counter3.get();
+                let value4 = counter4.get();
 
                 value1 + value2 + value3 + value4
             })
@@ -48,7 +48,7 @@ impl State {
 }
 
 fn render_sum(sum: &Computed<u32>) -> VDomElement {
-    let sum = sum.get_value();
+    let sum = sum.get();
 
     html! {
         <div>

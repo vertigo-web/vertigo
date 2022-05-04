@@ -71,7 +71,7 @@ fn css_item(should_show: bool) -> Css {
 }
 
 pub fn render_cell_possible(cell: &Cell) -> VDomElement {
-    let possible = (*cell).possible.get_value();
+    let possible = (*cell).possible.get();
     let only_one_possible = possible.len() == 1;
 
     if only_one_possible {
@@ -79,7 +79,7 @@ pub fn render_cell_possible(cell: &Cell) -> VDomElement {
             let on_set = bind(cell)
                 .and(number)
                 .call(|cell, number| {
-                    cell.number.value.set_value(Some(*number));
+                    cell.number.value.set(Some(*number));
                 });
 
             html! {
@@ -96,13 +96,13 @@ pub fn render_cell_possible(cell: &Cell) -> VDomElement {
         };
     }
 
-    let possible_last_value = *cell.possible_last.get_value();
+    let possible_last_value = cell.possible_last.get();
 
     if let Some(possible_last_value) = possible_last_value {
         let on_set = bind(cell)
             .and(&possible_last_value)
             .call(|cell, possible_last_value| {
-                cell.number.value.set_value(Some(*possible_last_value));
+                cell.number.value.set(Some(*possible_last_value));
             });
 
         return html! {
@@ -128,7 +128,7 @@ pub fn render_cell_possible(cell: &Cell) -> VDomElement {
             .and(&number)
             .call(|cell, should_show, number| {
                 if *should_show {
-                    cell.number.value.set_value(Some(*number));
+                    cell.number.value.set(Some(*number));
                 }
             });
 

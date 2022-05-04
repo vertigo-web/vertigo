@@ -33,7 +33,7 @@
 //!     html! {
 //!         <div css={main_div()}>
 //!             "Message to the world: "
-//!             {state.message.get_value()}
+//!             {state.message.get()}
 //!         </div>
 //!     }
 //! }

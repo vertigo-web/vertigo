@@ -56,7 +56,7 @@ impl RenderVDom for VDomFunction {
 /// let state = Value::new(5);
 ///
 /// fn comp_render(state: &Value<i32>) -> VDomElement {
-///     html! { <p>{*state.get_value()}</p> }
+///     html! { <p>{state.get()}</p> }
 /// }
 ///
 /// let main_component = VDomComponent::from(state, comp_render);

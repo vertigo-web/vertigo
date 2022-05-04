@@ -52,7 +52,7 @@ impl State {
     }
 
     pub fn navigate_to(&self, route: Route) {
-        self.route.set_value(route);
+        self.route.set(route);
     }
 }
 
@@ -65,7 +65,7 @@ fn render(state: &State) -> VDomElement {
         state.navigate_to(Route::Page2);
     });
 
-    let child = match *state.route.get_value() {
+    let child = match state.route.get() {
         Route::Page1 => html! { <div>"Page 1"</div> },
         Route::Page2 => html! { <div>"Page 2"</div> },
         Route::NotFound => html! { <div>"Page Not Found"</div> },

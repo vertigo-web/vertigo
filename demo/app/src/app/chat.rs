@@ -13,7 +13,7 @@ pub struct ChatState {
 }
 
 fn add_message(messages: &Value<Vec<Rc<String>>>, message: String) {
-    let prev_list: Rc<Vec<Rc<String>>> = messages.get_value();
+    let prev_list: Vec<Rc<String>> = messages.get();
     let mut new_list: Vec<Rc<String>> = Vec::new();
 
     for item in prev_list.iter() {
@@ -22,7 +22,7 @@ fn add_message(messages: &Value<Vec<Rc<String>>>, message: String) {
 
     new_list.push(Rc::new(message));
 
-    messages.set_value(new_list);
+    messages.set(new_list);
 }
 
 impl ChatState {
@@ -39,7 +39,7 @@ impl ChatState {
                 "ws://127.0.0.1:3000/ws",
                 Box::new(move |message| match message {
                     WebsocketMessage::Connection(connection) => {
-                        connect.set_value(Some(connection));
+                        connect.set(Some(connection));
                         log::info!("socket demo - connect ...");
                     }
                     WebsocketMessage::Message(message) => {
@@ -48,7 +48,7 @@ impl ChatState {
                         add_message(&messages, message);
                     }
                     WebsocketMessage::Close => {
-                        connect.set_value(None);
+                        connect.set(None);
                         log::info!("socket demo - close ...");
                     }
                 }),
@@ -66,11 +66,11 @@ impl ChatState {
     }
 
     fn submit(&self) {
-        let connect = self.connect.get_value();
+        let connect = self.connect.get();
         if let Some(connect) = connect.as_ref() {
-            let text = self.input_text.get_value();
-            connect.send(text.as_ref());
-            self.input_text.set_value(String::from(""));
+            let text = self.input_text.get();
+            connect.send(text);
+            self.input_text.set(String::from(""));
         } else {
             log::error!("missing connection");
         }
@@ -82,7 +82,7 @@ pub fn render(state: Rc<ChatState>) -> VDomComponent {
     
     VDomComponent::from(state, move |state_value: &Rc<ChatState>| {
             
-        let is_connect = state_value.connect.get_value().is_some();
+        let is_connect = state_value.connect.get().is_some();
 
         let network_info = match is_connect {
             true => "Connection active",
@@ -91,7 +91,7 @@ pub fn render(state: Rc<ChatState>) -> VDomComponent {
 
         let mut list = Vec::new();
 
-        let messages = state_value.messages.get_value();
+        let messages = state_value.messages.get();
         for message in messages.iter() {
             list.push(html! {
                 <div>
@@ -116,11 +116,10 @@ pub fn render(state: Rc<ChatState>) -> VDomComponent {
 
 pub fn render_input_text(state: &Rc<ChatState>) -> VDomElement {
     let state = state.clone();
-    let text = state.input_text.get_value();
-    let text_value = (*text).clone();
+    let text_value = state.input_text.get();
 
     let on_input = bind(&state).call_param(|state, new_text: String| {
-        state.input_text.set_value(new_text);
+        state.input_text.set(new_text);
     });
 
     let submit = bind(&state).call(|state| {

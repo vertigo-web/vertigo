@@ -21,18 +21,18 @@ impl MainState {
     }
 
     pub fn increment(&self) {
-        let rr = self.value.get_value();
-        self.value.set_value(*rr + 1);
+        let rr = self.value.get();
+        self.value.set(rr + 1);
     }
 
     pub fn decrement(&self) {
-        let rr = self.value.get_value();
-        self.value.set_value(*rr - 1);
+        let rr = self.value.get();
+        self.value.set(rr - 1);
     }
 
     pub async fn start_animation(self) {
         for i in 0..50 {
-            self.progress.set_value(i as u32);
+            self.progress.set(i as u32);
             get_driver().sleep(100).await;
         }
     }
@@ -60,7 +60,7 @@ css_fn_push! { css_button, css_bg, "
 " }
 
 pub fn main_render(state: &MainState) -> VDomElement {
-    let value = *state.value.get_value();
+    let value = state.value.get();
 
     let on_down = {
         let app_state = state.clone();
@@ -93,7 +93,7 @@ pub fn main_render(state: &MainState) -> VDomElement {
         }
     };
 
-    let progress = *(state.progress.get_value().as_ref());
+    let progress = state.progress.get();
 
     let mut progress_html = Vec::new();
 

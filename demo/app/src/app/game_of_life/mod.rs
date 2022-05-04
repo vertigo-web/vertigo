@@ -55,8 +55,8 @@ impl State {
     pub fn accept_new_delay(&self) -> impl Fn() {
         let state = self.clone();
         move ||
-            state.year.set_value(
-                State::create_timer(&state.matrix, &state.timer_enable, &state.new_delay, *state.year.get_value().get_value())
+            state.year.set(
+                State::create_timer(&state.matrix, &state.timer_enable, &state.new_delay, state.year.get().get())
             )
     }
 
@@ -70,10 +70,10 @@ impl State {
                 for (y, row) in matrix.iter().enumerate() {
                     for (x, cell) in row.iter().enumerate() {
                         let new_value: bool = (y * 2 + (x + 4)) % 2 == 0;
-                        cell.set_value(new_value);
+                        cell.set(new_value);
 
                         if x as u16 == State::X_LEN / 2 && y as u16 == State::Y_LEN / 2 {
-                            cell.set_value(false);
+                            cell.set(false);
                         }
                     }
                 }
@@ -83,7 +83,7 @@ impl State {
 
     pub fn create_timer(matrix: &Rc<Vec<Vec<Value<bool>>>>, timer_enable: &Value<bool>, new_delay: &Value<u32>, starting_year: u32) -> Computed<u32> {
         let timer_enable = timer_enable.clone();
-        let new_delay = *new_delay.get_value();
+        let new_delay = new_delay.get();
 
         Value::with_connect(starting_year, {
             let matrix = matrix.clone();
@@ -99,11 +99,11 @@ impl State {
                 get_driver().set_interval(new_delay, {
                     move || {
                         get_driver().transaction(|| {
-                            let timer_enable = timer_enable.get_value();
+                            let timer_enable = timer_enable.get();
 
-                            if *timer_enable {
-                                let current = self_value.get_value();
-                                self_value.set_value(*current + 1);
+                            if timer_enable {
+                                let current = self_value.get();
+                                self_value.set(current + 1);
 
                                 next_generation::next_generation(State::X_LEN, State::Y_LEN, &*matrix)
                             }
@@ -151,13 +151,13 @@ css_fn! { flex_menu, "
 " }
 
 fn render_header(state: &State) -> VDomElement {
-    let year = *state.year.get_value().get_value();
-    let timer_enable = state.timer_enable.get_value();
-    let new_delay = state.new_delay.get_value();
+    let year = state.year.get().get();
+    let timer_enable = state.timer_enable.get();
+    let new_delay = state.new_delay.get();
 
-    let button = if *timer_enable {
+    let button = if timer_enable {
         let on_click = bind(state).call(|state| {
-            state.timer_enable.set_value(false);
+            state.timer_enable.set(false);
             log::info!("stop ...");
         });
 
@@ -168,7 +168,7 @@ fn render_header(state: &State) -> VDomElement {
         }
     } else {
         let on_click = bind(state).call(|state| {
-            state.timer_enable.set_value(true);
+            state.timer_enable.set(true);
             log::info!("start ...");
         });
 
@@ -180,7 +180,7 @@ fn render_header(state: &State) -> VDomElement {
     };
 
     let on_input = bind(state).call_param(|state, new_value: String| {
-        state.new_delay.set_value(new_value.parse().unwrap_or_default());
+        state.new_delay.set(new_value.parse().unwrap_or_default());
     });
 
     html! {
@@ -251,12 +251,12 @@ fn render_row(matrix: &[Value<bool>]) -> VDomElement {
 }
 
 fn render_cell(cell: &Value<bool>) -> VDomElement {
-    let is_active = *cell.get_value();
+    let is_active = cell.get();
 
     let on_click_callback = bind(cell)
         .and(&is_active)
         .call(|cell, is_active| {
-            cell.set_value(!*is_active);
+            cell.set(!*is_active);
         });
 
     html! {

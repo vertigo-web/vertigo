@@ -48,19 +48,19 @@ css_fn! { text_css, "
 
 fn render(state: &State) -> VDomElement {
     let on_set1 = bind(state).call(|state| {
-        state.value.set_value("value 1".into());
+        state.value.set("value 1".into());
     });
 
     let on_set2 = bind(state).call(|state| {
-        state.value.set_value("value 2".into());
+        state.value.set("value 2".into());
     });
 
     let on_set3 = bind(state).call_param(|state, new_value: String| {
-        state.value.set_value(new_value);
+        state.value.set(new_value);
     });
 
     let on_set4 = bind(state).call_param(|state, new_value: String| {
-        state.value.set_value(new_value);
+        state.value.set(new_value);
     });
 
     let mouse_in = || {
@@ -71,17 +71,17 @@ fn render(state: &State) -> VDomElement {
         log::info!("out");
     };
 
-    let value = state.value.get_value();
+    let value = state.value.get();
 
     let count = value.len();
 
     html! {
         <div css={wrapper()} on_mouse_enter={mouse_in} on_mouse_leave={mouse_out}>
             { "To jest input" }
-            <input css={input_css()} value={(*value).as_str()} on_input={on_set3} />
+            <input css={input_css()} value={value.as_str()} on_input={on_set3} />
             <button css={button_css()} on_click={on_set1}>"set 1"</button>
             <button css={button_css()} on_click={on_set2}>"set 2"</button>
-            <textarea css={text_css()} on_input={on_set4} value={(*value).as_str()} />
+            <textarea css={text_css()} on_input={on_set4} value={value.as_str()} />
             <div>"count = " { count }</div>
         </div>
     }

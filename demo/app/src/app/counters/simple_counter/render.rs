@@ -22,7 +22,7 @@ css_fn! { css_wrapper, "
 " }
 
 pub fn render(simple_counter: &State) -> VDomElement {
-    let value = *(simple_counter.counter.get_value());
+    let value = simple_counter.counter.get();
 
     let click_up = bind(simple_counter).call(|simple_counter| {
         simple_counter.increment();

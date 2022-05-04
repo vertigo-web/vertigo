@@ -70,7 +70,7 @@ pub fn render(state: &State) -> VDomElement {
     html! {
         <div css={main_div()}>
             "Message to the world: "
-            {state.message.get_value()}
+            {state.message.get()}
         </div>
     }
 }
@@ -125,10 +125,10 @@ Using `css_fn!` macro we define here a function named `main_div` which returns s
 Here we define the render function itself.
 
 ```rust
-    let state = app_state.get_value();
+    let state = app_state.get();
 ```
 
-We need to get a direct reference to the state to be able to read its fields. This is done by `get_value()`[^subscription] method invoked on `Computed`.
+We need to get a direct reference to the state to be able to read its fields. This is done by `get()`[^subscription] method invoked on `Computed`.
 
 ```rust
     html! {
@@ -149,10 +149,10 @@ Here we define a VDom node using `div` tag, and assign it style using the css fu
 Next, in the `div` we insert a text node. Strings in `html!` macro must always be double-quoted. This assures us we won't miss a space between the text and the next VDom element.
 
 ```rust
-            {state.message.get_value()}
+            {state.message.get()}
 ```
 
-Here we're inserting some value from the state. The `message` field in the state is of type `Value`. This type is similar to computed (has `get_value()` method), but it can also be changed using corresponding `set_value()` (more on this later).
+Here we're inserting some value from the state. The `message` field in the state is of type `Value`. This type is similar to computed (has `get()` method), but it can also be changed using corresponding `set()` (more on this later).
 
 ```rust
         </div>
@@ -198,7 +198,7 @@ To see how all these are connected, see `src/lib.rs`:
 ```rust
 #[no_mangle]
 pub fn start_application() {
-    start_browser_app(state::State::component);
+    start_app(state::State::component);
 }
 ```
 
@@ -220,9 +220,9 @@ to `new()` method. Then in render function you can use this value:
 
 ```rust
 pub fn render(state: &State) -> VDomElement {
-    let message = state.message.get_value();
+    let message = state.message.get();
 
-    let message_element = if *state.strong.get_value() {
+    let message_element = if state.strong.get() {
         html! { <strong>{message}</strong> }
     } else {
         html! { <span>{message}</span> }
@@ -246,7 +246,7 @@ Let's do some reactivity already. Add switch closure to our render function and 
 ```rust
     let switch = move || {
         state.strong.set_value(
-            !*state.strong.get_value()
+            !state.strong.get()
         )
     };
 
@@ -259,7 +259,7 @@ Let's do some reactivity already. Add switch closure to our render function and 
     }
 ```
 
-We're using asterisk (`*`) on `.get_value()` to get out of `Rc`. Make sure you don't modify the state during rendering. If you do so, *vertigo* will tell you about it only in runtime.
+We're using asterisk (`*`) on `.get()` to get out of `Rc`. Make sure you don't modify the state during rendering. If you do so, *vertigo* will tell you about it only in runtime.
 
 ## 8. New component
 
@@ -360,7 +360,7 @@ Now we can use this state to render our component dynamically. In `src/list.rs` 
 
 ```rust
 pub fn render(state: &State) -> VDomElement {
-    let items = state.items.get_value();
+    let items = state.items.get();
 
     let elements = items.iter()
         .map(|item|
@@ -410,8 +410,8 @@ This is because of the fact that our `switch` closure takes the whole state. Hap
     let switch = {
         let strong = state.strong.clone();
         move || {
-            strong.set_value(
-                !*strong.get_value()
+            strong.set(
+                !strong.get()
             )
         }
     };
@@ -456,8 +456,8 @@ impl State {
         let items = self.items.clone();
         let new_item = self.new_item.clone();
         move || {
-            let mut items_vec = items.get_value().to_vec();
-            items_vec.push(new_item.get_value().to_string());
+            let mut items_vec = items.get().to_vec();
+            items_vec.push(new_item.get().to_string());
             items.set_value(items_vec);
             new_item.set_value("".to_string());
         }
@@ -472,7 +472,7 @@ impl State {
 }
 
 pub fn render(state: &State) -> VDomElement {
-    let items = state.items.get_value();
+    let items = state.items.get();
 
     let elements = items.iter()
         .map(|item|
@@ -481,7 +481,7 @@ pub fn render(state: &State) -> VDomElement {
             }
         );
 
-    let new_value = &*state.new_item.get_value();
+    let new_value = &*state.new_item.get();
 
     html! {
         <div>
@@ -522,7 +522,7 @@ Then we need to reorganize a little how we create an instance of the state:
 
         let count = {
             let items = items.clone();
-            driver.from(move || items.get_value().len())
+            driver.from(move || items.get().len())
         };
 
         let state = State {
@@ -535,12 +535,12 @@ Then we need to reorganize a little how we create an instance of the state:
     }
 ```
 
-First we need to create the list of items, then we will create the `Computed` using the `Driver::from` method which accepts a function that calculates the value. We need to clone "the access"[^clone] to the list first to be able to move it into the closure. As it was stated earlier, firing `.get_value()` method creates a dependency in the driver's graph, so every client reading computed will get a new value from the computed everytime the list has changed.
+First we need to create the list of items, then we will create the `Computed` using the `Driver::from` method which accepts a function that calculates the value. We need to clone "the access"[^clone] to the list first to be able to move it into the closure. As it was stated earlier, firing `.get()` method creates a dependency in the driver's graph, so every client reading computed will get a new value from the computed everytime the list has changed.
 
 Now we can use this computed in render function:
 
 ```rust
-    let count = *state.count.get_value();
+    let count = *state.count.get();
 
     html! {
         <div>
@@ -615,6 +615,6 @@ For any more complex scenarios please refer to the examples in the [demo](/demo/
 
 [^styles]: Styles are being attached to document's `HEAD` as classes with unique auto-generated names. These names are then used in HTML tags. This way you can use such CSS functions multiple times to different HTML tags and they'll all use the same class.
 
-[^subscription]: `get_value()` method creates a subscription in dependency graph so the render function is now dependent on the value, and will be fired everytime the value changes. This is similar to how the MobX library works in React world.
+[^subscription]: `get()` method creates a subscription in dependency graph so the render function is now dependent on the value, and will be fired everytime the value changes. This is similar to how the MobX library works in React world.
 
 [^clone]: Every `Value` and `Computed` wrap it's inner value in an `Rc` so cloning does not clone the content. It just creates another pointer - a handler to access the value.

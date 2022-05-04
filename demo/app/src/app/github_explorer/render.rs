@@ -28,23 +28,23 @@ css_fn! { text_css, "
 pub fn render(state: &State) -> VDomElement {
     let on_input_callback = bind(state).call_param(|state, new_value: String| {
         log::info!(" nowa wartosc3 {}", new_value);
-        state.repo_input.set_value(new_value);
+        state.repo_input.set(new_value);
     });
 
     let on_show = bind(state).call(|state| {
-        let value = state.repo_input.get_value().as_ref().clone();
+        let value = state.repo_input.get();
         log::info!(" nowa wartosc3 {}", value);
-        state.repo_shown.set_value(value);
+        state.repo_shown.set(value);
     });
 
-    let repo_input = state.repo_input.get_value();
-    let repo_shown = state.repo_shown.get_value();
+    let repo_input = state.repo_input.get();
+    let repo_shown = state.repo_shown.get();
 
     let commit_sha = match repo_shown.as_str() {
         "" => "".to_string(),
-        _ => match state.data.get_value(&repo_shown).get() {
+        _ => match state.data.get(&repo_shown).get() {
             Resource::Loading => "Loading...".to_string(),
-            Resource::Ready(branch) => branch.commit.sha,
+            Resource::Ready(branch) => branch.as_ref().commit.sha.clone(),
             Resource::Error(err) => format!("Error: {}", err),
         },
     };
@@ -52,7 +52,7 @@ pub fn render(state: &State) -> VDomElement {
     html! {
         <div css={wrapper()}>
             "Enter author/repo tuple: "
-            <input css={input_css()} value={(*repo_input).as_str()} on_input={on_input_callback} />
+            <input css={input_css()} value={repo_input.as_str()} on_input={on_input_callback} />
             <button css={button_css()} on_click={on_show}>"Fetch"</button>
             <div css={button_css()}>
                 { repo_shown.as_str() }

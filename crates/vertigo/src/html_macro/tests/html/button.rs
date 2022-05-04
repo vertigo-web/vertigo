@@ -29,7 +29,7 @@ fn clickable_button() {
     let on_click = {
         let value = value.clone();
         move || {
-            value.set_value(true);
+            value.set(true);
         }
     };
 
@@ -40,9 +40,9 @@ fn clickable_button() {
     assert_empty(&button, "button");
 
     let click = button.on_click.unwrap();
-    assert!(!*value.get_value());
+    assert!(!value.get());
     click();
-    assert!(*value.get_value());
+    assert!(value.get());
 }
 
 #[test]
