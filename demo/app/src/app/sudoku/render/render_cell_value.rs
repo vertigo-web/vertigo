@@ -39,14 +39,14 @@ pub fn render_cell_value(value: SudokuValue, cell: &Cell) -> VDomElement {
 
     //cell.show_delete.setValue(true);
 
-    let show_delete = *cell.show_delete.get_value();
+    let show_delete = cell.show_delete.get();
 
     //TODO - Add delete possibility...
     let mut out = Vec::new();
 
     if show_delete {
         let on_click = bind(cell).call(|cell| {
-            cell.number.value.set_value(None);
+            cell.number.value.set(None);
         });
 
         out.push(

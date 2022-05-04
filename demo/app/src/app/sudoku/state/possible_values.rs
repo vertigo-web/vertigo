@@ -33,7 +33,7 @@ pub fn possible_values(
         for x0 in TreeBoxIndex::variants() {
             for x1 in TreeBoxIndex::variants() {
                 let value = grid.get_from(x0, level0y).get_from(x1, level1y);
-                let value = *value.value.get_value();
+                let value = value.value.get();
                 if let Some(value) = value {
                     current_numbers_in_ceis.remove(&value);
                 }
@@ -44,7 +44,7 @@ pub fn possible_values(
         for y0 in TreeBoxIndex::variants() {
             for y1 in TreeBoxIndex::variants() {
                 let value = grid.get_from(level0x, y0).get_from(level1x, y1);
-                let value = *value.value.get_value();
+                let value = value.value.get();
                 if let Some(value) = value {
                     current_numbers_in_ceis.remove(&value);
                 }
@@ -55,7 +55,7 @@ pub fn possible_values(
         for x1 in TreeBoxIndex::variants() {
             for y1 in TreeBoxIndex::variants() {
                 let value = grid.get_from(level0x, level0y).get_from(x1, y1);
-                let value = *value.value.get_value();
+                let value = value.value.get();
                 if let Some(value) = value {
                     current_numbers_in_ceis.remove(&value);
                 }

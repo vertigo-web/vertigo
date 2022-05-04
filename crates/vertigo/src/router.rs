@@ -11,7 +11,7 @@ struct HashSubscriptions {
 }
 
 #[derive(Clone)]
-pub struct HashRouter<T: ToString + From<String> + PartialEq + 'static> {
+pub struct HashRouter<T: Clone + ToString + From<String> + PartialEq + 'static> {
     route: Value<T>,
     _subscriptions: Rc<HashSubscriptions>,
 }
@@ -80,7 +80,7 @@ pub struct HashRouter<T: ToString + From<String> + PartialEq + 'static> {
 ///     }
 /// }
 /// ```
-impl<T: ToString + From<String> + PartialEq + 'static> HashRouter<T> {
+impl<T: Clone + ToString + From<String> + PartialEq + 'static> HashRouter<T> {
     /// Create new HashRouter which sets route value upon hash change in browser bar.
     /// If callback is provided then it is fired instead.
     pub fn new() -> Self {
@@ -123,11 +123,11 @@ impl<T: ToString + From<String> + PartialEq + 'static> HashRouter<T> {
         }
     }
 
-    pub fn get_value(&self) -> Rc<T> {
-        self.route.get_value()
+    pub fn get(&self) -> T {
+        self.route.get()
     }
 
-    pub fn set_value(&self, value: T) {
+    pub fn set(&self, value: T) {
         self.route.set_value_and_compare(value);
     }
 }

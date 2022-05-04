@@ -11,9 +11,33 @@ use crate::fetch::pinboxfut::PinBoxFuture;
 
 /// Value that [LazyCache] holds.
 pub struct CachedValue<T: 'static> {
-    value: Value<Resource<T>>,
+    value: Value<Resource<Rc<T>>>,
     updated_at: ValueMut<Instant>,
     set: ValueMut<bool>,
+}
+
+impl<T> CachedValue<T> {
+    fn get_value(&self) -> Resource<Rc<T>> {
+        self.value.get()
+    }
+
+    pub fn set_value(&self, value: Resource<T>) {
+        self.value.set(value.map(|value| Rc::new(value)));
+        let current_updated_at = self.updated_at.get();
+        self.updated_at.set(current_updated_at.refresh());
+        // self.updated_at.change((), |val, _| *val = val.refresh());
+        if !self.is_set() {
+            self.set.set(true);
+        }
+    }
+
+    fn age(&self) -> InstantType {
+        self.updated_at.get().seconds_elapsed()
+    }
+
+    fn is_set(&self) -> bool {
+        self.set.get()
+    }
 }
 
 /// A structure similar to Value but supports Loading/Error states and automatic refresh
@@ -77,30 +101,6 @@ impl<T> Clone for LazyCache<T> {
     }
 }
 
-impl<T> CachedValue<T> {
-    fn get_value(&self) -> Rc<Resource<T>> {
-        self.value.get_value()
-    }
-
-    pub fn set_value(&self, value: Resource<T>) {
-        self.value.set_value(value);
-        let current_updated_at = self.updated_at.get();
-        self.updated_at.set(current_updated_at.refresh());
-        // self.updated_at.change((), |val, _| *val = val.refresh());
-        if !self.is_set() {
-            self.set.set(true);
-        }
-    }
-
-    fn age(&self) -> InstantType {
-        self.updated_at.get().seconds_elapsed()
-    }
-
-    fn is_set(&self) -> bool {
-        self.set.get()
-    }
-}
-
 impl<T> LazyCache<T> {
     pub fn new<Fut: Future<Output = Resource<T>> + 'static, F: Fn() -> Fut + 'static>(max_age: InstantType, loader: F) -> Self {
         let loader_rc: Rc<dyn Fn() -> PinBoxFuture<Resource<T>>> = Rc::new(move || -> PinBoxFuture<Resource<T>> {
@@ -119,7 +119,7 @@ impl<T> LazyCache<T> {
         }
     }
 
-    pub fn get_value(&self) -> Rc<Resource<T>> {
+    pub fn get(&self) -> Resource<Rc<T>> {
         if self.needs_update() {
             self.force_update(true)
         }

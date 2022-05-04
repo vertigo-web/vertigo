@@ -57,7 +57,7 @@ fn css_cell_wrapper() -> Css {
 }
 
 fn render_cell(item: &Cell) -> VDomElement {
-    let value = *item.number.value.get_value();
+    let value = item.number.value.get();
 
     // log::warn!("cell {:?}", value);
     if let Some(value) = value {

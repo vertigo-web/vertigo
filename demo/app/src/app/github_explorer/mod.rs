@@ -1,5 +1,5 @@
 use serde::{Deserialize, Serialize};
-use std::cmp::PartialEq;
+use std::{cmp::PartialEq, rc::Rc};
 use vertigo::{AutoMap, Resource, SerdeSingleRequest, Value, VDomComponent, LazyCache, get_driver};
 
 mod render;
@@ -58,8 +58,8 @@ impl Item {
         Item { branch }
     }
 
-    pub fn get(&self) -> Resource<Branch> {
-        self.branch.get_value().ref_clone()
+    pub fn get(&self) -> Resource<Rc<Branch>> {
+        self.branch.get()
     }
 }
 

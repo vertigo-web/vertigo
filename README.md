@@ -45,16 +45,16 @@ impl State {
 
 pub fn render(state: &State) -> VDomElement {
     let increment = bind(state).call(|state| {
-        state.count.set_value(*state.count.get_value() + 1);
+        state.count.set(state.count.get() + 1);
     });
 
     let decrement = bind(state).call(|state| {
-        state.count.set_value(*state.count.get_value() - 1);
+        state.count.set(state.count.get() - 1);
     });
 
     html! {
         <div>
-            <p>"Counter: " { *state.count.get_value() }</p>
+            <p>"Counter: " { state.count.get() }</p>
             <button on_click={decrement}>"-"</button>
             <button on_click={increment}>"+"</button>
         </div>

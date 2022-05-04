@@ -140,6 +140,7 @@ impl Driver {
     }
 
     /// Create new FetchBuilder.
+    #[must_use]
     pub fn fetch(&self, url: impl Into<String>) -> FetchBuilder {
         FetchBuilder::new(self.inner.clone(), url.into())
     }
@@ -165,11 +166,13 @@ impl Driver {
     }
 
     /// Set event handler upon hash location change
+    #[must_use]
     pub fn on_hash_route_change(&self, on_change: Box<dyn Fn(&String)>) -> DropResource {
         self.inner.on_hash_route_change(on_change)
     }
 
     /// Make `func` fire every `time` seconds.
+    #[must_use]
     pub fn set_interval(&self, time: u32, func: impl Fn() + 'static) -> DropResource {
         self.inner.set_interval(time, Box::new(func))
     }
@@ -184,13 +187,14 @@ impl Driver {
     }
 
     /// Create new RequestBuilder (more complex version of [fetch](struct.Driver.html#method.fetch))
+    #[must_use]
     pub fn request(&self, url: impl Into<String>) -> RequestBuilder {
         RequestBuilder::new(self, url)
     }
 
     /// Initiate a websocket connection. Provided callback should handle a single [WebsocketMessage].
+    #[must_use]
     pub fn websocket(&self, host: impl Into<String>, callback: Box<dyn Fn(WebsocketMessage)>) -> DropResource {
-        let driver = self.clone();
         let host: String = host.into();
 
         self.inner.websocket(
@@ -198,7 +202,7 @@ impl Driver {
             Box::new(move |message: WebsocketMessageDriver| {
                 let message = match message {
                     WebsocketMessageDriver::Connection { callback_id } => {
-                        let connection = WebsocketConnection::new(callback_id, driver.clone());
+                        let connection = WebsocketConnection::new(callback_id);
                         WebsocketMessage::Connection(connection)
                     }
                     WebsocketMessageDriver::Message(message) => WebsocketMessage::Message(message),

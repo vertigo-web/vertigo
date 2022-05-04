@@ -1,4 +1,4 @@
-use crate::Driver;
+use crate::get_driver;
 
 #[derive(Debug)]
 pub enum WebsocketMessageDriver {
@@ -15,9 +15,9 @@ pub enum WebsocketMessage {
 }
 
 /// Represents websocket connection.
+#[derive(Clone)]
 pub struct WebsocketConnection {
     callback_id: u32,
-    driver: Driver,
 }
 
 impl PartialEq for WebsocketConnection {
@@ -27,12 +27,12 @@ impl PartialEq for WebsocketConnection {
 }
 
 impl WebsocketConnection {
-    pub fn new(callback_id: u32, driver: Driver) -> WebsocketConnection {
-        WebsocketConnection { callback_id, driver }
+    pub fn new(callback_id: u32) -> WebsocketConnection {
+        WebsocketConnection { callback_id }
     }
 
     pub fn send(&self, message: impl Into<String>) {
         let message = message.into();
-        self.driver.websocket_send_message(self.callback_id, message);
+        get_driver().websocket_send_message(self.callback_id, message);
     }
 }

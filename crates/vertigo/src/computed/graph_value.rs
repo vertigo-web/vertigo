@@ -7,16 +7,16 @@ use crate::{
 };
 
 
-struct GraphValueData<T: 'static> {
+struct GraphValueData<T: Clone + 'static> {
     is_computed_type: bool,
     deps: Dependencies,
     id: GraphId,
-    get_value: Box<dyn Fn() -> Rc<T> + 'static>,
-    state: ValueMut<Option<Rc<T>>>,
+    get_value: Box<dyn Fn() -> T + 'static>,
+    state: ValueMut<Option<T>>,
 }
 
-impl<T: 'static> GraphValueData<T> {
-    pub fn new<F: Fn() -> Rc<T> + 'static>(
+impl<T: Clone + 'static> GraphValueData<T> {
+    pub fn new<F: Fn() -> T + 'static>(
         deps: &Dependencies,
         is_computed_type: bool,
         get_value: F,
@@ -34,7 +34,7 @@ impl<T: 'static> GraphValueData<T> {
         )
     }
 
-    fn calculate_new_value(&self) -> Rc<T> {
+    fn calculate_new_value(&self) -> T {
         self.deps.start_track();
         let get_value = &self.get_value;
         let new_value = get_value();
@@ -46,7 +46,7 @@ impl<T: 'static> GraphValueData<T> {
         new_value
     }
 
-    pub fn get_value(&self) -> Rc<T> {
+    pub fn get_value(&self) -> T {
         self.deps.report_parent_in_stack(self.id);
 
         let inner_value = self.state.map(|value| value.clone());
@@ -83,7 +83,7 @@ trait GraphValueControl {
     fn id(&self) -> GraphId;
 }
 
-impl<T> GraphValueControl for GraphValueData<T> {
+impl<T: Clone> GraphValueControl for GraphValueData<T> {
     fn drop_value(&self) {
         self.control_drop_value();
     }
@@ -128,12 +128,12 @@ impl GraphValueRefresh {
     }
 }
 
-struct GraphValueInner<T: 'static> {
+struct GraphValueInner<T: Clone + 'static> {
     inner: Rc<GraphValueData<T>>,
 }
 
-impl<T: 'static> GraphValueInner<T> {
-    fn new<F: Fn() -> Rc<T> + 'static>(is_computed_type: bool, get_value: F) -> GraphValueInner<T> {
+impl<T: Clone + 'static> GraphValueInner<T> {
+    fn new<F: Fn() -> T + 'static>(is_computed_type: bool, get_value: F) -> GraphValueInner<T> {
         let deps = get_dependencies();
 
         let graph_value = GraphValueData::new(&deps, is_computed_type, get_value);
@@ -146,7 +146,7 @@ impl<T: 'static> GraphValueInner<T> {
     }
 }
 
-impl<T: 'static> Drop for GraphValueInner<T> {
+impl<T: Clone + 'static> Drop for GraphValueInner<T> {
     fn drop(&mut self) {
         self.inner.deps.refresh_token_drop(self.inner.id);
         self.inner.control_drop_value();
@@ -154,12 +154,12 @@ impl<T: 'static> Drop for GraphValueInner<T> {
     }
 }
 
-pub struct GraphValue<T: 'static> {
+pub struct GraphValue<T: Clone + 'static> {
     inner: Rc<GraphValueInner<T>>,
 }
 
-impl<T: 'static> GraphValue<T> {
-    pub fn new<F: Fn() -> Rc<T> + 'static>(is_computed_type: bool, get_value: F) -> GraphValue<T> {
+impl<T: Clone + 'static> GraphValue<T> {
+    pub fn new<F: Fn() -> T + 'static>(is_computed_type: bool, get_value: F) -> GraphValue<T> {
         GraphValue {
             inner: Rc::new(
                 GraphValueInner::new(is_computed_type, get_value)
@@ -167,7 +167,7 @@ impl<T: 'static> GraphValue<T> {
         }
     }
 
-    pub fn get_value(&self) -> Rc<T> {
+    pub fn get_value(&self) -> T {
         self.inner.inner.get_value()
     }
 
@@ -180,7 +180,7 @@ impl<T: 'static> GraphValue<T> {
     }
 }
 
-impl<T: 'static> Clone for GraphValue<T> {
+impl<T: Clone + 'static> Clone for GraphValue<T> {
     fn clone(&self) -> Self {
         GraphValue {
             inner: self.inner.clone(),

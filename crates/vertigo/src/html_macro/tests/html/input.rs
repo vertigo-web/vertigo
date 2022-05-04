@@ -33,19 +33,19 @@ fn managed_input() {
     let value = Value::new("old value".to_string());
 
     let on_input = bind(&value).call_param(|value, new: String| {
-        value.set_value(new);
+        value.set(new);
     });
 
     let input = html! {
-        <input value={value.get_value().as_str()} on_input={on_input} />
+        <input value={value.get().as_str()} on_input={on_input} />
     };
 
     assert_empty(&input, "input");
 
     let func = input.on_input.unwrap();
-    assert_eq!(*value.get_value(), "old value");
+    assert_eq!(value.get(), "old value");
     assert_eq!(input.attr.get("value").unwrap(), "old value");
 
     func("new value".to_string());
-    assert_eq!(*value.get_value(), "new value");
+    assert_eq!(value.get(), "new value");
 }

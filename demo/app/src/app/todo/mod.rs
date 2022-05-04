@@ -1,7 +1,7 @@
 use serde::{Deserialize, Serialize};
 use vertigo::{css, html, AutoMap, Css, LazyCache, Resource, SerdeRequest, VDomElement, Value, VDomComponent, bind, get_driver};
 
-#[derive(PartialEq)]
+#[derive(PartialEq, Clone)]
 enum View {
     Main,
     Post { id: u32 },
@@ -83,7 +83,7 @@ impl TodoState {
 }
 
 fn todo_render(state: &TodoState) -> VDomElement {
-    match state.view.get_value().as_ref() {
+    match state.view.get() {
         View::Main => {
             let main = TodoMainState::component(state);
 
@@ -94,7 +94,7 @@ fn todo_render(state: &TodoState) -> VDomElement {
             }
         }
         View::Post { id } => {
-            let post_view = TodoPostState::component(state, *id);
+            let post_view = TodoPostState::component(state, id);
 
             html! {
                 <div>
@@ -107,7 +107,7 @@ fn todo_render(state: &TodoState) -> VDomElement {
             let messag = format!("user = {}", email);
 
             let on_click = move || {
-                view.set_value(View::Main);
+                view.set(View::Main);
             };
 
             html! {
@@ -148,9 +148,9 @@ fn css_hover_item() -> Css {
 fn todo_main_render(state_value: &TodoMainState) -> VDomElement {
     let todo_state = &state_value.state;
 
-    let posts = todo_state.posts.get_value();
+    let posts = todo_state.posts.get();
 
-    match posts.as_ref() {
+    match posts {
         Resource::Error(err) => {
             let message = format!("Error loading posts {}", err);
             html! {
@@ -169,7 +169,7 @@ fn todo_main_render(state_value: &TodoMainState) -> VDomElement {
         Resource::Ready(list) => {
             let mut out: Vec<VDomElement> = Vec::new();
 
-            for item in list {
+            for item in list.as_ref() {
                 let message = format!("post = {}", item.title);
 
                 let on_click = {
@@ -177,7 +177,7 @@ fn todo_main_render(state_value: &TodoMainState) -> VDomElement {
                     let id = item.id;
 
                     move || {
-                        view.set_value(View::Post { id });
+                        view.set(View::Post { id });
                     }
                 };
 
@@ -239,15 +239,15 @@ fn todo_post_render(state_value: &TodoPostState) -> VDomElement {
     let view = state_value.state.view.clone();
 
     let on_click = bind(&view).call(|view| {
-        view.set_value(View::Main);
+        view.set(View::Main);
     });
 
-    let comments = state_value.state.comments.get_value(&post_id);
-    let comments_list = comments.get_value();
+    let comments = state_value.state.comments.get(&post_id);
+    let comments_list = comments.get();
 
     let mut comments_out: Vec<VDomElement> = Vec::new();
 
-    if let Resource::Ready(list) = comments_list.as_ref() {
+    if let Resource::Ready(list) = &comments_list {
         comments_out.push(html! {
             <div css={css_comment_wrapper()}>
                 <strong>"Comments:"</strong>
@@ -258,7 +258,7 @@ fn todo_post_render(state_value: &TodoPostState) -> VDomElement {
             let on_click_author = bind(&view)
                 .and(&comment.email)
                 .call(|view, email| {
-                    view.set_value(View::User { email: email.clone() });
+                    view.set(View::User { email: email.clone() });
                 });
 
             let css_author = css_comment_author().extend(css_hover_item());
@@ -276,7 +276,7 @@ fn todo_post_render(state_value: &TodoPostState) -> VDomElement {
         }
     }
 
-    if let Resource::Loading = comments_list.as_ref() {
+    if let Resource::Loading = comments_list {
         comments_out.push(html! {
             <div css={css_comment_wrapper()}>
                 <strong>"Loading ..."</strong>

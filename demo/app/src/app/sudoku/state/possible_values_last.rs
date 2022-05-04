@@ -29,15 +29,15 @@ fn get_possible_value<S>(current: &CellForComputed, select_from_grid: S) -> Opti
 where
     S: Fn(TreeBoxIndex, TreeBoxIndex) -> CellForComputed,
 {
-    for possible_value in (*current.possible.get_value()).iter() {
+    for possible_value in current.possible.get().iter() {
         let mut count = 0;
 
         for (check_x0, check_x1) in iterate_by() {
             let cell = select_from_grid(check_x0, check_x1);
 
-            let input_value = cell.input.value.get_value();
+            let input_value = cell.input.value.get();
 
-            if input_value.is_none() && cell.possible.get_value().contains(possible_value) {
+            if input_value.is_none() && cell.possible.get().contains(possible_value) {
                 count += 1;
             }
         }
@@ -135,17 +135,17 @@ pub fn possible_values_last(
     let by_square = value_by_square(&grid_computed, level0x, level0y, level1x, level1y);
 
     Computed::from(move || {
-        let by_row = *by_row.get_value();
+        let by_row = by_row.get();
         if let Some(by_row) = by_row {
             return Some(by_row);
         }
 
-        let by_col = *by_col.get_value();
+        let by_col = by_col.get();
         if let Some(by_col) = by_col {
             return Some(by_col);
         }
 
-        let by_square = *by_square.get_value();
+        let by_square = by_square.get();
         if let Some(by_square) = by_square {
             return Some(by_square);
         }
