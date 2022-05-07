@@ -1,23 +1,23 @@
 use std::{rc::Rc};
-use vertigo::{css, css_fn, html, Computed, Css, Driver, VDomElement, Value, VDomComponent, bind};
+use vertigo::{css, css_fn, html, Computed, Css, VDomElement, Value, VDomComponent, bind, get_driver};
 
 mod next_generation;
 
-fn create_matrix_row(driver: &Driver, x_count: u16) -> Vec<Value<bool>> {
+fn create_matrix_row(x_count: u16) -> Vec<Value<bool>> {
     let mut row = Vec::new();
 
     for _ in 0..x_count {
-        row.push(driver.new_value(false));
+        row.push(Value::new(false));
     }
 
     row
 }
 
-fn create_matrix(driver: &Driver, x_count: u16, y_count: u16) -> Vec<Vec<Value<bool>>> {
+fn create_matrix(x_count: u16, y_count: u16) -> Vec<Vec<Value<bool>>> {
     let mut matrix = Vec::new();
 
     for _ in 0..y_count {
-        matrix.push(create_matrix_row(driver, x_count));
+        matrix.push(create_matrix_row(x_count));
     }
 
     matrix
@@ -25,7 +25,6 @@ fn create_matrix(driver: &Driver, x_count: u16, y_count: u16) -> Vec<Vec<Value<b
 
 #[derive(Clone)]
 pub struct State {
-    pub driver: Driver,
     pub matrix: Rc<Vec<Vec<Value<bool>>>>,
     pub timer_enable: Value<bool>,
     pub new_delay: Value<u32>,
@@ -36,15 +35,14 @@ impl State {
     const X_LEN: u16 = 120;
     const Y_LEN: u16 = 70;
 
-    pub fn component(driver: &Driver) -> VDomComponent {
-        let matrix = Rc::new(create_matrix(driver, State::X_LEN, State::Y_LEN));
+    pub fn component() -> VDomComponent {
+        let matrix = Rc::new(create_matrix(State::X_LEN, State::Y_LEN));
 
-        let timer_enable = driver.new_value(false);
-        let new_delay = driver.new_value(150);
-        let year = driver.new_value(Self::create_timer(driver, &matrix, &timer_enable, &new_delay, 0));
+        let timer_enable = Value::new(false);
+        let new_delay = Value::new(150);
+        let year = Value::new(Self::create_timer(&matrix, &timer_enable, &new_delay, 0));
 
         let state = State {
-            driver: driver.clone(),
             matrix,
             timer_enable,
             new_delay,
@@ -58,18 +56,17 @@ impl State {
         let state = self.clone();
         move ||
             state.year.set_value(
-                State::create_timer(&state.driver, &state.matrix, &state.timer_enable, &state.new_delay, *state.year.get_value().get_value())
+                State::create_timer(&state.matrix, &state.timer_enable, &state.new_delay, *state.year.get_value().get_value())
             )
     }
 
     pub fn randomize(&self)-> impl Fn() {
-        let driver = self.driver.clone();
         let matrix = self.matrix.clone();
 
         move || {
             log::info!("random ...");
 
-            driver.transaction(|| {
+            get_driver().transaction(|| {
                 for (y, row) in matrix.iter().enumerate() {
                     for (x, cell) in row.iter().enumerate() {
                         let new_value: bool = (y * 2 + (x + 4)) % 2 == 0;
@@ -84,16 +81,14 @@ impl State {
         }
     }
 
-    pub fn create_timer(driver: &Driver, matrix: &Rc<Vec<Vec<Value<bool>>>>, timer_enable: &Value<bool>, new_delay: &Value<u32>, starting_year: u32) -> Computed<u32> {
+    pub fn create_timer(matrix: &Rc<Vec<Vec<Value<bool>>>>, timer_enable: &Value<bool>, new_delay: &Value<u32>, starting_year: u32) -> Computed<u32> {
         let timer_enable = timer_enable.clone();
         let new_delay = *new_delay.get_value();
 
-        driver.new_with_connect(starting_year, {
-            let driver = driver.clone();
+        Value::with_connect(starting_year, {
             let matrix = matrix.clone();
 
             move |self_value| {
-                let driver = driver.clone();
                 let timer_enable = timer_enable.clone();
                 let self_value = self_value.clone();
 
@@ -101,17 +96,16 @@ impl State {
 
                 log::info!("Setting timer for {} ms", new_delay);
 
-                driver.set_interval(new_delay, {
-                    let driver = driver.clone();
+                get_driver().set_interval(new_delay, {
                     move || {
-                        driver.transaction(|| {
+                        get_driver().transaction(|| {
                             let timer_enable = timer_enable.get_value();
 
                             if *timer_enable {
                                 let current = self_value.get_value();
                                 self_value.set_value(*current + 1);
 
-                                next_generation::next_generation(&driver, State::X_LEN, State::Y_LEN, &*matrix)
+                                next_generation::next_generation(State::X_LEN, State::Y_LEN, &*matrix)
                             }
                         })
                     }

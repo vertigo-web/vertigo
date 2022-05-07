@@ -1,4 +1,4 @@
-use crate::{Css, Dependencies, dev::VDomText, Value, VDomElement, html};
+use crate::{Css, dev::VDomText, Value, VDomElement, html};
 
 use super::utils::*;
 
@@ -24,7 +24,7 @@ fn button() {
 
 #[test]
 fn clickable_button() {
-    let value = Value::new(Dependencies::default(), false);
+    let value = Value::new(false);
 
     let on_click = {
         let value = value.clone();

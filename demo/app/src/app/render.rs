@@ -116,8 +116,8 @@ pub fn render(state: app::State) -> VDomComponent {
             Route::Input => state.input.clone().into(),
             Route::GithubExplorer => state.github_explorer.clone().into(),
             Route::GameOfLife { .. } => state.game_of_life.clone().into(),
-            Route::Chat => chat::ChatState::component(&state.driver).into(),
-            Route::Todo => super::todo::TodoState::component(&state.driver).into(),
+            Route::Chat => chat::ChatState::component().into(),
+            Route::Todo => super::todo::TodoState::component().into(),
             Route::NotFound => html! { <div>"Page Not Found"</div> }.into(),
         };
 

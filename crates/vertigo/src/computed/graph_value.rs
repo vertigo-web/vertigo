@@ -3,7 +3,7 @@ use std::{
 };
 
 use crate::{
-    computed::{Dependencies, GraphId}, struct_mut::ValueMut,
+    computed::{Dependencies, GraphId}, struct_mut::ValueMut, get_dependencies,
 };
 
 
@@ -133,9 +133,10 @@ struct GraphValueInner<T: 'static> {
 }
 
 impl<T: 'static> GraphValueInner<T> {
-    fn new<F: Fn() -> Rc<T> + 'static>(deps: &Dependencies, is_computed_type: bool, get_value: F) -> GraphValueInner<T> {
+    fn new<F: Fn() -> Rc<T> + 'static>(is_computed_type: bool, get_value: F) -> GraphValueInner<T> {
+        let deps = get_dependencies();
 
-        let graph_value = GraphValueData::new(deps, is_computed_type, get_value);
+        let graph_value = GraphValueData::new(&deps, is_computed_type, get_value);
 
         deps.refresh_token_add(GraphValueRefresh::new(graph_value.clone()));
 
@@ -158,10 +159,10 @@ pub struct GraphValue<T: 'static> {
 }
 
 impl<T: 'static> GraphValue<T> {
-    pub fn new<F: Fn() -> Rc<T> + 'static>(deps: &Dependencies, is_computed_type: bool, get_value: F) -> GraphValue<T> {
+    pub fn new<F: Fn() -> Rc<T> + 'static>(is_computed_type: bool, get_value: F) -> GraphValue<T> {
         GraphValue {
             inner: Rc::new(
-                GraphValueInner::new(deps, is_computed_type, get_value)
+                GraphValueInner::new(is_computed_type, get_value)
             )
         }
     }
@@ -172,10 +173,6 @@ impl<T: 'static> GraphValue<T> {
 
     pub fn subscribe_value(&self) {
         self.inner.inner.subscribe_value();
-    }
-
-    pub fn deps(&self) -> Dependencies {
-        self.inner.inner.deps.clone()
     }
 
     pub(crate) fn id(&self) -> GraphId {

@@ -1,4 +1,4 @@
-use vertigo::{dev::FetchMethod, FetchResult, FutureBox, FutureBoxSend};
+use crate::{dev::FetchMethod, FetchResult, FutureBox, FutureBoxSend};
 
 use std::{
     collections::HashMap,
@@ -7,11 +7,11 @@ use std::{
     rc::Rc,
 };
 
-use crate::{utils::{
+use crate::{driver_module::utils::{
     json::JsonMapBuilder,
-}, api::ApiImport};
+}, driver_module::api::ApiImport};
 
-use vertigo::struct_mut::{
+use crate::struct_mut::{
     CounterMut,
     HashMapMut,
 };

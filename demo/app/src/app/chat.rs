@@ -1,7 +1,7 @@
 use std::rc::Rc;
 use vertigo::{
-    html, Driver, DropResource, KeyDownEvent,
-    VDomElement, Value, WebsocketConnection, WebsocketMessage, VDomComponent, bind
+    html, DropResource, KeyDownEvent,
+    VDomElement, Value, WebsocketConnection, WebsocketMessage, VDomComponent, bind, get_driver
 };
 
 pub struct ChatState {
@@ -26,16 +26,16 @@ fn add_message(messages: &Value<Vec<Rc<String>>>, message: String) {
 }
 
 impl ChatState {
-    pub fn component(driver: &Driver) -> VDomComponent {
-        let connect = driver.new_value(None);
-        let messages = driver.new_value(Vec::new());
-        let input_text = driver.new_value(String::from(""));
+    pub fn component() -> VDomComponent {
+        let connect = Value::new(None);
+        let messages = Value::new(Vec::new());
+        let input_text = Value::new(String::from(""));
 
         let ws_connect = {
             let connect = connect.clone();
             let messages = messages.clone();
 
-            driver.websocket(
+            get_driver().websocket(
                 "ws://127.0.0.1:3000/ws",
                 Box::new(move |message| match message {
                     WebsocketMessage::Connection(connection) => {

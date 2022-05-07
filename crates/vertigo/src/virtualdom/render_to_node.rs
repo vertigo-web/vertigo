@@ -15,7 +15,7 @@ use crate::{
         vdom_component::VDomComponent,
         vdom_element::VDomElement,
         vdom_node::VDomNode, vdom_text::VDomText,
-    }, GraphId,
+    }, GraphId, Computed,
 };
 
 use super::render::CacheNode;
@@ -389,7 +389,7 @@ pub fn render_to_node(
     target: RealDomElement,
     component: VDomComponent,
 ) -> Client {
-    let view = driver.from(move || component.render.render());
+    let view = Computed::from(move || component.render.render());
 
     view.subscribe(move |new_version| {
         let mut refs_context = RefsContext::default();

@@ -1,13 +1,13 @@
 use std::{
     rc::Rc,
 };
-use vertigo::{
+use crate::{
     dev::{EventCallback, RealDomId, RefsContext},
     Dependencies, KeyDownEvent,
 };
-use vertigo::struct_mut::VecMut;
+use crate::struct_mut::VecMut;
 
-use crate::api::ApiImport;
+use crate::driver_module::api::ApiImport;
 
 use super::{
     driver_data::DriverData,

@@ -1,8 +1,8 @@
 use std::rc::Rc;
 
 use crate::{
-    computed::{Computed, Dependencies, GraphId, GraphValue},
-    struct_mut::ValueMut,
+    computed::{Computed, GraphId, GraphValue},
+    struct_mut::ValueMut, external_connections_refresh,
 };
 
 pub struct Client {
@@ -10,12 +10,12 @@ pub struct Client {
 }
 
 impl Client {
-    pub fn new<T, F>(deps: Dependencies, computed: Computed<T>, call: F) -> Client
+    pub fn new<T, F>(computed: Computed<T>, call: F) -> Client
     where
         T: PartialEq + 'static,
         F: Fn(&T) + 'static,
     {
-        let graph_value = GraphValue::new(&deps, false, {
+        let graph_value = GraphValue::new(false, {
             let prev_value = ValueMut::new(None);
 
             move || {
@@ -31,7 +31,7 @@ impl Client {
         });
 
         graph_value.subscribe_value();
-        deps.external_connections_refresh();
+        external_connections_refresh();
 
         Client {
             graph_value,

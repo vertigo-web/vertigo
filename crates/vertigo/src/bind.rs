@@ -1,6 +1,6 @@
 
 use std::future::Future;
-use crate::Driver;
+use crate::get_driver;
 
 pub fn bind<T1: Clone>(param1: &T1) -> Bind1<T1> {
     let param1 = param1.clone();
@@ -40,13 +40,13 @@ impl<T1: Clone> Bind1<T1> {
 
     pub fn spawn<
         Fut: Future<Output=()> + 'static
-    >(self, driver: Driver, fun: fn(T1) -> Fut) -> impl Fn() {
+    >(self, fun: fn(T1) -> Fut) -> impl Fn() {
         let Self { param1 } = self;
 
         move || {
             let param1 = param1.clone();
             let future = fun(param1);
-            driver.spawn(future);
+            get_driver().spawn(future);
         }
     }
 }
@@ -83,14 +83,14 @@ impl<T1: Clone, T2: Clone> Bind2<T1, T2> {
 
     pub fn spawn<
         Fut: Future<Output=()> + 'static
-    >(self, driver: Driver, fun: fn(T1, T2) -> Fut) -> impl Fn() {
+    >(self, fun: fn(T1, T2) -> Fut) -> impl Fn() {
         let Self { param1, param2 } = self;
 
         move || {
             let param1 = param1.clone();
             let param2 = param2.clone();
             let future = fun(param1, param2);
-            driver.spawn(future);
+            get_driver().spawn(future);
         }
     }
 }
@@ -130,7 +130,7 @@ impl<T1: Clone, T2: Clone, T3: Clone> Bind3<T1, T2, T3> {
 
     pub fn spawn<
         Fut: Future<Output=()> + 'static
-    >(self, driver: Driver, fun: fn(T1, T2, T3) -> Fut) -> impl Fn() {
+    >(self, fun: fn(T1, T2, T3) -> Fut) -> impl Fn() {
         let Self { param1, param2, param3 } = self;
 
         move || {
@@ -138,7 +138,7 @@ impl<T1: Clone, T2: Clone, T3: Clone> Bind3<T1, T2, T3> {
             let param2 = param2.clone();
             let param3 = param3.clone();
             let future = fun(param1, param2, param3);
-            driver.spawn(future);
+            get_driver().spawn(future);
         }
     }
 }
@@ -170,7 +170,7 @@ impl<T1: Clone, T2: Clone, T3: Clone, T4: Clone> Bind4<T1, T2, T3, T4> {
 
     pub fn spawn<
         Fut: Future<Output=()> + 'static,
-    >(self, driver: Driver, fun: fn(T1, T2, T3, T4) -> Fut) -> impl Fn() {
+    >(self, fun: fn(T1, T2, T3, T4) -> Fut) -> impl Fn() {
         let Self { param1, param2, param3, param4 } = self;
 
         move || {
@@ -179,7 +179,7 @@ impl<T1: Clone, T2: Clone, T3: Clone, T4: Clone> Bind4<T1, T2, T3, T4> {
             let param3 = param3.clone();
             let param4 = param4.clone();
             let future = fun(param1, param2, param3, param4);
-            driver.spawn(future);
+            get_driver().spawn(future);
         }
     }
 }

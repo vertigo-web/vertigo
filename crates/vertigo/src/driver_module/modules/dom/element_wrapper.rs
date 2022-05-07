@@ -1,5 +1,5 @@
 use std::rc::Rc;
-use vertigo::KeyDownEvent;
+use crate::KeyDownEvent;
 
 pub struct DomElement {
     pub on_click: Option<Rc<dyn Fn()>>,

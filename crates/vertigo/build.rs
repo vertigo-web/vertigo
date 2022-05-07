@@ -5,8 +5,8 @@ use std::path::PathBuf;
 fn main() {
     println!("cargo:rerun-if-changed=wasm_run.js");
 
-    let glue = fs::read_to_string("src/wasm_run.js")
-        .expect("src/wasm_run.js");
+    let glue = fs::read_to_string("src/driver_module/wasm_run.js")
+        .expect("src/driver_module/wasm_run.js");
 
     let filename = PathBuf::from(env::var("OUT_DIR").unwrap())
         .join("../../../wasm_run.js");

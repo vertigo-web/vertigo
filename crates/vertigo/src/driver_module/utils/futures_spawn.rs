@@ -5,7 +5,7 @@ use std::pin::Pin;
 use std::rc::Rc;
 use std::task::{Context, RawWaker, RawWakerVTable, Waker};
 
-use crate::modules::interval::DriverBrowserInterval;
+use crate::driver_module::modules::interval::DriverBrowserInterval;
 
 #[inline]
 pub fn spawn_local<F>(interval: DriverBrowserInterval, future: F)

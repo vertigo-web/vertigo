@@ -1,18 +1,15 @@
-use vertigo::{html, Driver, VDomElement, Value, VDomComponent, bind};
-use vertigo_browserdriver::start_browser_app;
-
+#![allow(clippy::new_without_default)]
+use vertigo::{start_app, html, VDomElement, Value, VDomComponent, bind};
 
 pub struct State {
     pub count: Value<i32>,
 }
 
 impl State {
-    pub fn component(driver: &Driver) -> VDomComponent {
-        let state = State {
-            count: driver.new_value(0),
-        };
-
-        VDomComponent::from(state, render)
+    pub fn new() -> State {
+        State {
+            count: Value::new(0),
+        }
     }
 }
 
@@ -36,5 +33,7 @@ pub fn render(state: &State) -> VDomElement {
 
 #[no_mangle]
 pub fn start_application() {
-    start_browser_app(State::component);
+    let state = State::new();
+    let component = VDomComponent::from(state, render);
+    start_app(component);
 }

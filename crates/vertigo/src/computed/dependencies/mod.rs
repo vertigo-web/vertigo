@@ -4,10 +4,9 @@ use std::{
 };
 
 use crate::{
-    computed::{Computed, GraphId, GraphValueRefresh, Value}, DropResource,
+    computed::{GraphId, GraphValueRefresh}, DropResource,
 };
 
-use super::value::ToRc;
 
 mod external_connections;
 mod graph;
@@ -74,22 +73,6 @@ impl Default for Dependencies {
 }
 
 impl Dependencies {
-    pub fn new_value<T>(&self, value: impl ToRc<T>) -> Value<T> {
-        Value::new(self.clone(), value)
-    }
-
-    pub fn new_with_connect<T, F>(&self, value: T, create: F) -> Computed<T>
-    where
-        F: Fn(&Value<T>) -> DropResource + 'static
-    {
-        Value::<T>::new_selfcomputed_value::<F>(self.clone(), value, create)
-    }
-
-    pub fn new_computed_from<T>(&self, value: impl ToRc<T>) -> Computed<T> {
-        let value = self.new_value(value);
-        value.to_computed()
-    }
-
     pub fn set_hook(&self, before_start: Box<dyn Fn()>, after_end: Box<dyn Fn()>) {
         self.transaction_state.set_hook(before_start, after_end);
     }
@@ -172,11 +155,6 @@ impl Dependencies {
 
     pub(crate) fn stop_track(&self) -> BTreeSet<GraphId> {
         self.stack.stop_track()
-    }
-
-    pub fn from<T: 'static, F: Fn() -> T + 'static>(&self, calculate: F) -> Computed<T> {
-        let deps = self.clone();
-        Computed::new(deps, move || Rc::new(calculate()))
     }
 
     pub fn all_connections_len(&self) -> u64 {

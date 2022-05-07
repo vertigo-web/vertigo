@@ -51,14 +51,11 @@ impl RenderVDom for VDomFunction {
 /// Usually used as a main component for the application.
 ///
 /// ```rust,no_run
-/// use vertigo::{Computed, Dependencies, VDomComponent, VDomElement, html};
+/// use vertigo::{Computed, Value, VDomComponent, VDomElement, html};
 ///
-/// // Here some driver should be used instead of pure dependency graph.
-/// let deps = Dependencies::default();
+/// let state = Value::new(5);
 ///
-/// let state = deps.new_computed_from(5);
-///
-/// fn comp_render(state: &Computed<i32>) -> VDomElement {
+/// fn comp_render(state: &Value<i32>) -> VDomElement {
 ///     html! { <p>{*state.get_value()}</p> }
 /// }
 ///

@@ -1,4 +1,4 @@
-use vertigo::{css_fn, html, Driver, VDomElement, Value, VDomComponent, bind};
+use vertigo::{css_fn, html, VDomElement, Value, VDomComponent, bind};
 
 #[derive(Clone)]
 pub struct State {
@@ -6,9 +6,9 @@ pub struct State {
 }
 
 impl State {
-    pub fn component(driver: &Driver) -> VDomComponent {
+    pub fn component() -> VDomComponent {
         let state = State {
-            value: driver.new_value(String::from("")),
+            value: Value::new(String::from("")),
         };
 
         VDomComponent::from(state, render)
