@@ -1,8 +1,8 @@
 use std::rc::Rc;
 
-use vertigo::DropResource;
+use crate::DropResource;
 
-use crate::{utils::callback_manager::CallbackManager, api::ApiImport};
+use crate::{driver_module::utils::callback_manager::CallbackManager, driver_module::api::ApiImport};
 
 #[derive(Clone)]
 pub struct DriverBrowserHashrouter {

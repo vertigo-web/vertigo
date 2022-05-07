@@ -1,7 +1,7 @@
 use std::{collections::HashMap, rc::Rc};
-use vertigo::{dev::RealDomId, Dependencies};
+use crate::{dev::RealDomId, Dependencies};
 
-use vertigo::struct_mut::HashMapMut;
+use crate::struct_mut::HashMapMut;
 
 use super::driver_data::DriverData;
 

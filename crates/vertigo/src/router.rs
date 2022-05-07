@@ -2,8 +2,7 @@ use std::rc::Rc;
 
 use crate::{
     computed::{Client, Value, DropResource},
-    Driver,
-    struct_mut::ValueMut,
+    struct_mut::ValueMut, get_driver,
 };
 
 struct HashSubscriptions {
@@ -20,7 +19,7 @@ pub struct HashRouter<T: ToString + From<String> + PartialEq + 'static> {
 /// Router based on hash part of current location.
 ///
 /// ```rust
-/// use vertigo::{html, Computed, Driver, Value, VDomElement, VDomComponent};
+/// use vertigo::{html, Computed, Value, VDomElement, VDomComponent};
 /// use vertigo::router::HashRouter;
 ///
 /// #[derive(Clone, PartialEq, Debug)]
@@ -58,16 +57,14 @@ pub struct HashRouter<T: ToString + From<String> + PartialEq + 'static> {
 ///
 /// #[derive(Clone)]
 /// pub struct State {
-///     pub driver: Driver,
 ///     route: HashRouter<Route>,
 /// }
 ///
 /// impl State {
-///     pub fn component(driver: &Driver) -> VDomComponent {
-///         let route = HashRouter::new(driver);
+///     pub fn component() -> VDomComponent {
+///         let route = HashRouter::new();
 ///
 ///         let state = State {
-///             driver: driver.clone(),
 ///             route,
 ///         };
 ///
@@ -86,8 +83,9 @@ pub struct HashRouter<T: ToString + From<String> + PartialEq + 'static> {
 impl<T: ToString + From<String> + PartialEq + 'static> HashRouter<T> {
     /// Create new HashRouter which sets route value upon hash change in browser bar.
     /// If callback is provided then it is fired instead.
-    pub fn new(driver: &Driver) -> Self {
-        let route: Value<T> = driver.new_value(T::from(driver.get_hash_location()));
+    pub fn new() -> Self {
+        let driver = get_driver();
+        let route: Value<T> = Value::new(T::from(driver.get_hash_location()));
 
         let block_subscrition = Rc::new(ValueMut::new(true));
 

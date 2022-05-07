@@ -1,5 +1,5 @@
 use std::rc::Rc;
-use vertigo::struct_mut::{CounterMut, HashMapMut};
+use crate::struct_mut::{CounterMut, HashMapMut};
 
 #[derive(Clone)]
 pub struct CallbackManager<V> {

@@ -19,25 +19,27 @@ Dependencies:
 
 ```toml
 vertigo = "0.1.0-beta.3"
-vertigo-browserdriver = "0.1.0-beta.3"
 ```
 
 Code:
 
 ```rust
-use vertigo::{html, Computed, Driver, VDomElement, VDomComponent, Value, bind};
-use vertigo_browserdriver::{start_browser_app};
+use vertigo::{html, VDomElement, VDomComponent, Value, bind, start_app};
 
+#[derive(Clone)]
 pub struct State {
     pub count: Value<i32>,
 }
 
 impl State {
-    pub fn component(driver: &Driver) -> VDomComponent {
-        let state = State {
-            count: driver.new_value(0),
-        };
-        VDomComponent::from(state, render)
+    pub fn new() -> State {
+        State {
+            count: Value::new(0),
+        }
+    }
+
+    pub fn render(&self) -> VDomComponent {
+        VDomComponent::from(self, render)
     }
 }
 
@@ -61,7 +63,9 @@ pub fn render(state: &State) -> VDomElement {
 
 #[no_mangle]
 pub fn start_application() {
-    start_browser_app(State::component);
+    let state = State::new();
+    let component = state.render();
+    start_app(component);
 }
 ```
 

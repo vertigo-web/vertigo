@@ -1,4 +1,4 @@
-use vertigo::{Computed, Driver};
+use vertigo::Computed;
 
 use super::{
     number_item::{NumberItem, SudokuValue},
@@ -53,7 +53,6 @@ where
 pub type PossibleValuesLast = Computed<Option<SudokuValue>>;
 
 fn value_by_row(
-    driver: &Driver,
     grid_computed: &SudokuSquare<SudokuSquare<CellForComputed>>,
     level0x: TreeBoxIndex,
     level0y: TreeBoxIndex,
@@ -62,7 +61,7 @@ fn value_by_row(
 ) -> Computed<Option<SudokuValue>> {
     let grid_computed = (*grid_computed).clone();
 
-    driver.from(move || {
+    Computed::from(move || {
         let get_current = grid_computed.get_from(level0x, level0y).get_from(level1x, level1y);
 
         // Iterate by row
@@ -74,7 +73,6 @@ fn value_by_row(
 }
 
 fn value_by_col(
-    driver: &Driver,
     grid_computed: &SudokuSquare<SudokuSquare<CellForComputed>>,
     level0x: TreeBoxIndex,
     level0y: TreeBoxIndex,
@@ -83,7 +81,7 @@ fn value_by_col(
 ) -> Computed<Option<SudokuValue>> {
     let grid_computed = (*grid_computed).clone();
 
-    driver.from(move || {
+    Computed::from(move || {
         let get_current = grid_computed.get_from(level0x, level0y).get_from(level1x, level1y);
 
         // Iterate by column
@@ -95,7 +93,6 @@ fn value_by_col(
 }
 
 fn value_by_square(
-    driver: &Driver,
     grid_computed: &SudokuSquare<SudokuSquare<CellForComputed>>,
     level0x: TreeBoxIndex,
     level0y: TreeBoxIndex,
@@ -103,7 +100,7 @@ fn value_by_square(
     level1y: TreeBoxIndex,
 ) -> Computed<Option<SudokuValue>> {
     let grid_computed = (*grid_computed).clone();
-    driver.from(move || {
+    Computed::from(move || {
         let get_current = grid_computed.get_from(level0x, level0y).get_from(level1x, level1y);
 
         // Iterate by square
@@ -115,7 +112,6 @@ fn value_by_square(
 }
 
 pub fn possible_values_last(
-    driver: &Driver,
     grid_input: &SudokuSquare<SudokuSquare<NumberItem>>,
     grid_possible: &SudokuSquare<SudokuSquare<PossibleValues>>,
     level0x: TreeBoxIndex,
@@ -134,11 +130,11 @@ pub fn possible_values_last(
         })
     };
 
-    let by_row = value_by_row(driver, &grid_computed, level0x, level0y, level1x, level1y);
-    let by_col = value_by_col(driver, &grid_computed, level0x, level0y, level1x, level1y);
-    let by_square = value_by_square(driver, &grid_computed, level0x, level0y, level1x, level1y);
+    let by_row = value_by_row(&grid_computed, level0x, level0y, level1x, level1y);
+    let by_col = value_by_col(&grid_computed, level0x, level0y, level1x, level1y);
+    let by_square = value_by_square(&grid_computed, level0x, level0y, level1x, level1y);
 
-    driver.from(move || {
+    Computed::from(move || {
         let by_row = *by_row.get_value();
         if let Some(by_row) = by_row {
             return Some(by_row);

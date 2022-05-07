@@ -1,4 +1,4 @@
-use vertigo::{html, Computed, Driver, VDomElement, Value};
+use vertigo::{html, Computed, VDomElement, Value};
 use vertigo::VDomComponent;
 
 mod simple_counter;
@@ -13,11 +13,11 @@ pub struct State {
 }
 
 impl State {
-    pub fn component(driver: &Driver) -> VDomComponent {
-        let counter1 = driver.new_value(0);
-        let counter2 = driver.new_value(0);
-        let counter3 = driver.new_value(0);
-        let counter4 = driver.new_value(0);
+    pub fn component() -> VDomComponent {
+        let counter1 = Value::new(0);
+        let counter2 = Value::new(0);
+        let counter3 = Value::new(0);
+        let counter4 = Value::new(0);
 
         let sum = {
             let counter1 = counter1.clone();
@@ -25,7 +25,7 @@ impl State {
             let counter3 = counter3.clone();
             let counter4 = counter4.clone();
 
-            driver.from(move || {
+            Computed::from(move || {
                 let value1 = *counter1.get_value();
                 let value2 = *counter2.get_value();
                 let value3 = *counter3.get_value();

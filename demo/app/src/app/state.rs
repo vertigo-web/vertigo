@@ -1,5 +1,5 @@
 use vertigo::router::HashRouter;
-use vertigo::{Driver, VDomComponent};
+use vertigo::{VDomComponent};
 
 use super::counters::State as CountersState;
 use super::game_of_life;
@@ -10,8 +10,6 @@ use super::sudoku;
 
 #[derive(Clone)]
 pub struct State {
-    pub driver: Driver,
-
     pub main: VDomComponent,
     pub counters: VDomComponent,
     pub sudoku: VDomComponent,
@@ -23,18 +21,17 @@ pub struct State {
 }
 
 impl State {
-    pub fn component(driver: &Driver) -> VDomComponent {
-        let game_of_life = game_of_life::State::component(driver);
+    pub fn component() -> VDomComponent {
+        let game_of_life = game_of_life::State::component();
 
-        let route = HashRouter::new(driver);
+        let route = HashRouter::new();
 
         let state = State {
-            driver: driver.clone(),
-            main: super::main::MainState::component(driver),
-            counters: CountersState::component(driver),
-            sudoku: sudoku::Sudoku::component(driver),
-            input: input::State::component(driver),
-            github_explorer: github_explorer::State::component(driver),
+            main: super::main::MainState::component(),
+            counters: CountersState::component(),
+            sudoku: sudoku::Sudoku::component(),
+            input: input::State::component(),
+            github_explorer: github_explorer::State::component(),
             game_of_life,
 
             route,

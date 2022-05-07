@@ -1,6 +1,4 @@
-use std::rc::Rc;
-
-use crate::driver::DriverTrait;
+use crate::driver_module::driver_browser::DriverBrowser;
 
 /// Duration in seconds, returned from [Instant] methods.
 pub type InstantType = u64;
@@ -8,12 +6,12 @@ pub type InstantType = u64;
 /// Monotonically nondecrasing clock using a driver, similar to [std::time::Instant].
 #[derive(Clone)]
 pub struct Instant {
-    driver: Rc<dyn DriverTrait>,
+    driver: DriverBrowser,
     pub instant: InstantType,
 }
 
 impl Instant {
-    pub fn now(driver: Rc<dyn DriverTrait>) -> Self {
+    pub fn now(driver: DriverBrowser) -> Self {
         Self {
             instant: driver.now(),
             driver,

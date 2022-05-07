@@ -1,20 +1,17 @@
-use std::{
-    collections::HashMap,
-    rc::Rc,
-};
+use std::collections::HashMap;
 
-use crate::driver::{DriverTrait, FetchMethod, FetchResult};
+use crate::{driver::{FetchMethod, FetchResult}, driver_module::driver_browser::DriverBrowser};
 
 /// Builder for simple requests.
 pub struct FetchBuilder {
-    driver: Rc<dyn DriverTrait>,
+    driver: DriverBrowser,
     url: String,
     headers: Option<HashMap<String, String>>,
     body: Option<String>,
 }
 
 impl FetchBuilder {
-    pub fn new(driver: Rc<dyn DriverTrait>, url: String) -> FetchBuilder {
+    pub fn new(driver: DriverBrowser, url: String) -> FetchBuilder {
         FetchBuilder {
             driver,
             url,

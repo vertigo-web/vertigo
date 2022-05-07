@@ -4,7 +4,7 @@ use std::{
 };
 
 use crate::{
-    computed::{Computed, Dependencies, GraphId}, struct_mut::ValueMut, DropResource,
+    computed::{Computed, Dependencies, GraphId}, struct_mut::ValueMut, DropResource, get_dependencies,
 };
 
 pub trait ToRc<T> {
@@ -39,12 +39,10 @@ impl<T> Drop for ValueInner<T> {
 ///
 /// Can be read or written.
 ///
-/// ```rust
-/// use vertigo::{Computed, Dependencies};
+/// ```rust,no_run
+/// use vertigo::{Computed, Value};
 ///
-/// let deps = Dependencies::default();
-///
-/// let value = deps.new_value(5);
+/// let value = Value::new(5);
 ///
 /// assert_eq!(*value.get_value(), 5);
 ///
@@ -66,7 +64,8 @@ impl<T> Clone for Value<T> {
 }
 
 impl<T> Value<T> {
-    pub fn new(deps: Dependencies, value: impl ToRc<T>) -> Value<T> {
+    pub fn new(value: impl ToRc<T>) -> Value<T> {
+        let deps = get_dependencies();
         Value {
             inner: Rc::new(
                 ValueInner {
@@ -78,10 +77,14 @@ impl<T> Value<T> {
         }
     }
 
-    pub fn new_selfcomputed_value<F>(deps: Dependencies, value: T, create: F) -> Computed<T>
+    /// Create a value that is connected to a generator, where `value` parameter is a starting value, and `create` function takes care of updating it.
+    ///
+    /// See [game of life](../src/vertigo_demo/app/game_of_life/mod.rs.html#54) example.
+    pub fn with_connect<F>(value: T, create: F) -> Computed<T>
     where
         F: Fn(&Value<T>) -> DropResource + 'static,
     {
+        let deps = get_dependencies();
         let id = GraphId::default();
 
         let value = Value {
@@ -118,7 +121,7 @@ impl<T> Value<T> {
     pub fn to_computed(&self) -> Computed<T> {
         let self_clone = self.clone();
 
-        Computed::new(self.deps(), move || {
+        Computed::new(move || {
             self_clone.get_value()
         })
     }

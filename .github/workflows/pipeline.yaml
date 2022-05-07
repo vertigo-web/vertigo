@@ -18,7 +18,7 @@ jobs:
       - uses: actions-rs/clippy-check@v1
         with:
           token: ${{ secrets.GITHUB_TOKEN }}
-          args: -p vertigo -p vertigo-macro -p vertigo-browserdriver --all-features --target wasm32-unknown-unknown -- -Dwarnings
+          args: -p vertigo -p vertigo-macro --all-features --target wasm32-unknown-unknown -- -Dwarnings
           name: Vertigo Clippy Output
       - uses: actions-rs/clippy-check@v1
         with:
@@ -70,7 +70,7 @@ jobs:
       - uses: actions-rs/clippy-check@v1
         with:
           token: ${{ secrets.GITHUB_TOKEN }}
-          args: -p vertigo -p vertigo-macro -p vertigo-browserdriver --all-features --target wasm32-unknown-unknown -- -Dwarnings
+          args: -p vertigo -p vertigo-macro --all-features --target wasm32-unknown-unknown -- -Dwarnings
           name: Vertigo Clippy Output
       - uses: actions-rs/clippy-check@v1
         with:

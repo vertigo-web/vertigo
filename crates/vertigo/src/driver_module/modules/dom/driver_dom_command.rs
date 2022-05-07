@@ -1,6 +1,6 @@
-use vertigo::dev::RealDomId;
+use crate::dev::RealDomId;
 
-use crate::utils::json::JsonMapBuilder;
+use crate::driver_module::utils::json::JsonMapBuilder;
 
 pub enum DriverDomCommand {
     MountNode {

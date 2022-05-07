@@ -3,18 +3,16 @@ use std::{
     rc::Rc,
 };
 
-use crate::computed::{Client, Dependencies, GraphValue, graph_id::GraphId};
+use crate::computed::{Client, GraphValue, graph_id::GraphId};
 
 /// A reactive value that is read-only and computed by dependency graph.
 ///
 /// ## Computed directly from Value
 ///
-/// ```rust
-/// use vertigo::{Computed, Dependencies};
+/// ```rust,no_run
+/// use vertigo::{Computed, Value};
 ///
-/// let deps = Dependencies::default();
-///
-/// let value = deps.new_value(5);
+/// let value = Value::new(5);
 ///
 /// let comp = value.to_computed();
 ///
@@ -26,16 +24,14 @@ use crate::computed::{Client, Dependencies, GraphValue, graph_id::GraphId};
 ///
 /// ## Computed from Value by provided function
 ///
-/// ```rust
-/// use vertigo::{Computed, Dependencies};
+/// ```rust,no_run
+/// use vertigo::{Computed, Value};
 ///
-/// let deps = Dependencies::default();
-///
-/// let value = deps.new_value(2);
+/// let value = Value::new(2);
 ///
 /// let comp_2 = {
 ///     let v = value.clone();
-///     deps.from(move || *v.get_value() * 2)
+///     Computed::from(move || *v.get_value() * 2)
 /// };
 ///
 /// assert_eq!(*comp_2.get_value(), 4);
@@ -57,9 +53,17 @@ impl<T: 'static> Clone for Computed<T> {
 }
 
 impl<T: 'static> Computed<T> {
-    pub fn new<F: Fn() -> Rc<T> + 'static>(deps: Dependencies, get_value: F) -> Computed<T> {
+    pub fn new<F: Fn() -> Rc<T> + 'static>(get_value: F) -> Computed<T> {
         Computed {
-            inner: GraphValue::new(&deps, true, get_value),
+            inner: GraphValue::new(true, get_value),
+        }
+    }
+
+    pub fn from<F: Fn() -> T + 'static>(get_value: F) -> Computed<T> {
+        Computed {
+            inner: GraphValue::new(true, move || {
+                Rc::new(get_value())
+            })
         }
     }
 
@@ -71,23 +75,15 @@ impl<T: 'static> Computed<T> {
         self.inner.get_value()
     }
 
-    pub fn dependencies(&self) -> Dependencies {
-        self.inner.deps()
-    }
-
     pub fn map_for_render<K: 'static>(self, fun: fn(&Computed<T>) -> K) -> Computed<K> {
-        let deps = self.inner.deps();
-
-        Computed::new(deps, move || {
+        Computed::new(move || {
             let result = fun(&self);
             Rc::new(result)
         })
     }
 
     pub fn map<K, F: 'static + Fn(&Computed<T>) -> K>(self, fun: F) -> Computed<K> {
-        let deps = self.inner.deps();
-
-        Computed::new(deps, move ||
+        Computed::new(move ||
             Rc::new(fun(&self))
         )
     }
@@ -99,7 +95,7 @@ impl<T: 'static> Computed<T> {
 
 impl<T: 'static + PartialEq> Computed<T> {
     pub fn subscribe<F: Fn(&T) + 'static>(self, call: F) -> Client {
-        Client::new(self.inner.deps(), self, call)
+        Client::new(self, call)
     }
 }
 

@@ -1,6 +1,6 @@
 use std::panic;
 use log::{Level, Log, Metadata, Record};
-use crate::api::ApiLoggerImport;
+use crate::driver_module::api::ApiLoggerImport;
 
 fn hook_impl(info: &panic::PanicInfo<'_>) {
     let msg = info.to_string();

@@ -18,7 +18,6 @@ args = [
     "--target", "wasm32-unknown-unknown",
     "-p", "vertigo",
     "-p", "vertigo-macro",
-    "-p", "vertigo-browserdriver",
     "-p", "vertigo-demo",
     "-p", "vertigo-example-counter",
     "-p", "vertigo-example-router"
@@ -110,13 +109,13 @@ args = [ "-p", "typescript", "tsc",
     "--lib", "es6,dom,esnext",
     "--target", "esnext",
     "--module", "es6",
-    "--outDir", "crates/vertigo-browserdriver/src_js_build",
-    "crates/vertigo-browserdriver/src_js/index.ts",
+    "--outDir", "crates/vertigo/src/driver_module/src_js_build",
+    "crates/vertigo/src/driver_module/src_js/index.ts",
 ]
 
 [tasks.build-js]
 dependencies = [ "build-js-run-ts" ]
 script = [
-    "npx rollup crates/vertigo-browserdriver/src_js_build/index.js --file crates/vertigo-browserdriver/src/wasm_run.js",
-    "rm -rf crates/vertigo-browserdriver/src_js_build",
+    "npx rollup crates/vertigo/src/driver_module/src_js_build/index.js --file crates/vertigo/src/driver_module/wasm_run.js",
+    "rm -rf crates/vertigo/src/driver_module/src_js_build",
 ]

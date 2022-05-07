@@ -1,4 +1,4 @@
-use vertigo::{Driver, Value, VDomComponent};
+use vertigo::{ Value, VDomComponent, get_driver};
 
 use self::{
     number_item::NumberItem,
@@ -14,33 +14,31 @@ pub mod possible_values_last;
 pub mod sudoku_square;
 pub mod tree_box;
 
-fn create_grid(driver: &Driver) -> SudokuSquare<SudokuSquare<NumberItem>> {
+fn create_grid() -> SudokuSquare<SudokuSquare<NumberItem>> {
     SudokuSquare::create_with_iterator(move |level0x, level0y| {
         SudokuSquare::create_with_iterator(move |level1x, level1y| {
-            NumberItem::new(driver, level0x, level0y, level1x, level1y, None)
+            NumberItem::new(level0x, level0y, level1x, level1y, None)
         })
     })
 }
 
 fn create_grid_possible(
-    driver: &Driver,
     grid_number: &SudokuSquare<SudokuSquare<NumberItem>>,
 ) -> SudokuSquare<SudokuSquare<PossibleValues>> {
     SudokuSquare::create_with_iterator(|level0x, level0y| {
         SudokuSquare::create_with_iterator(|level1x, level1y| {
-            possible_values(driver, grid_number, level0x, level0y, level1x, level1y)
+            possible_values(grid_number, level0x, level0y, level1x, level1y)
         })
     })
 }
 
 fn create_grid_possible_last(
-    driver: &Driver,
     grid_number: &SudokuSquare<SudokuSquare<NumberItem>>,
     grid_possible: &SudokuSquare<SudokuSquare<PossibleValues>>,
 ) -> SudokuSquare<SudokuSquare<PossibleValuesLast>> {
     SudokuSquare::create_with_iterator(|level0x, level0y| {
         SudokuSquare::create_with_iterator(|level1x, level1y| {
-            possible_values_last(driver, grid_number, grid_possible, level0x, level0y, level1x, level1y)
+            possible_values_last(grid_number, grid_possible, level0x, level0y, level1x, level1y)
         })
     })
 }
@@ -54,7 +52,6 @@ pub struct Cell {
 }
 
 fn creatergid_view(
-    driver: &Driver,
     grid_number: SudokuSquare<SudokuSquare<NumberItem>>,
     grid_possible: SudokuSquare<SudokuSquare<PossibleValues>>,
     grid_possible_last: SudokuSquare<SudokuSquare<PossibleValuesLast>>,
@@ -69,7 +66,7 @@ fn creatergid_view(
                 number: number.clone(),
                 possible: possible.clone(),
                 possible_last: possible_last.clone(),
-                show_delete: driver.new_value(true),
+                show_delete: Value::new(true),
             }
         })
     })
@@ -77,19 +74,17 @@ fn creatergid_view(
 
 #[derive(Clone)]
 pub struct Sudoku {
-    driver: Driver,
     pub grid: SudokuSquare<SudokuSquare<Cell>>,
 }
 
 impl Sudoku {
-    pub fn component(driver: &Driver) -> VDomComponent {
-        let grid_number = create_grid(driver);
-        let grid_possible = create_grid_possible(driver, &grid_number);
-        let grid_possible_last = create_grid_possible_last(driver, &grid_number, &grid_possible);
+    pub fn component() -> VDomComponent {
+        let grid_number = create_grid();
+        let grid_possible = create_grid_possible(&grid_number);
+        let grid_possible_last = create_grid_possible_last(&grid_number, &grid_possible);
             
         let state = Sudoku {
-            driver: driver.clone(),
-            grid: creatergid_view(driver, grid_number, grid_possible, grid_possible_last),
+            grid: creatergid_view(grid_number, grid_possible, grid_possible_last),
         };
 
         crate::app::sudoku::render::main_render(state)
@@ -98,7 +93,7 @@ impl Sudoku {
     pub fn clear(&self) {
         log::info!("clear");
 
-        self.driver.transaction(|| {
+        get_driver().transaction(|| {
             for x0 in TreeBoxIndex::variants() {
                 for y0 in TreeBoxIndex::variants() {
                     for x1 in TreeBoxIndex::variants() {

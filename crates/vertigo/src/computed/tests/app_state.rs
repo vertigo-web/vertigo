@@ -1,5 +1,5 @@
 use crate::computed::{
-    Computed, Dependencies, Value,
+    Computed, Value,
     tests::box_value_version::SubscribeValueVer,
 };
 
@@ -11,17 +11,17 @@ struct AppState {
 }
 
 impl AppState {
-    pub fn new(root: &Dependencies) -> std::rc::Rc<AppState> {
-        let value1 = root.new_value(1);
-        let value2 = root.new_value(2);
-        let value3 = root.new_value(3);
+    pub fn new() -> std::rc::Rc<AppState> {
+        let value1 = Value::new(1);
+        let value2 = Value::new(2);
+        let value3 = Value::new(3);
 
         let sum = {
             let com1 = value1.to_computed();
             let com2 = value2.to_computed();
             let com3 = value3.to_computed();
 
-            root.from(move || {
+            Computed::from(move || {
                 let val1 = com1.get_value();
                 let val2 = com2.get_value();
                 let val3 = com3.get_value();
@@ -41,14 +41,12 @@ impl AppState {
 
 #[test]
 fn test_app_state() {
-    let root = Dependencies::default();
-
-    let app_state = AppState::new(&root);
+    let app_state = AppState::new();
 
     let sum3 = {
         let app_state = app_state.clone();
 
-        root.from(move || -> i32 {
+        Computed::from(move || -> i32 {
             let val1 = app_state.value1.get_value();
             let val3 = app_state.value3.get_value();
 

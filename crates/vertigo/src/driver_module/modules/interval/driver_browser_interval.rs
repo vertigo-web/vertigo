@@ -1,7 +1,7 @@
 use std::rc::Rc;
-use vertigo::DropResource;
+use crate::DropResource;
 
-use crate::{utils::callback_manager::{CallbackManager, CallbackManagerOnce}, api::ApiImport};
+use crate::{driver_module::utils::callback_manager::{CallbackManager, CallbackManagerOnce}, driver_module::api::ApiImport};
 
 #[derive(Clone)]
 pub struct DriverBrowserInterval {

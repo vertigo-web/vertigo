@@ -183,10 +183,9 @@ To create our state we use `new()` method with gets a `Driver` handle, and retur
 
 ```rust
 impl State {
-    pub fn component(driver: &Driver) -> VDomComponent {
+    pub fn component() -> VDomComponent {
         let state = State {
-            driver: driver.clone(),
-            message: driver.new_value("Hello world".to_string()),
+            message: Value::new("Hello world".to_string()),
         };
 
         VDomComponent::from(state, app::render)
@@ -339,23 +338,20 @@ And add this sub-state into our main state in `src/state.rs`:
 use crate::list;
 
 pub struct State {
-    driver: Driver,
-
     pub message: Value<String>,
     pub strong: Value<bool>,
     pub list: Computed<list::State>,
 }
 
 impl State {
-    pub fn component(driver: &Driver) -> VDomComputed {
+    pub fn component() -> VDomComputed {
         let state = State {
-            driver: driver.clone(),
-            message: driver.new_value("Hello world".to_string()),
-            strong: driver.new_value(true),
+            message: Value::new("Hello world".to_string()),
+            strong: Value::new(true),
             list: list::State::new(driver),
         };
 
-        VDomComputed::new(state, render)
+        VDomComputed::new(&state, render)
     }
 }
 ```
@@ -435,7 +431,7 @@ Our component cries out for adding more items. To implement this we need to:
 So the whole `src/list.rs` will look like this:
 
 ```rust
-use vertigo::{Computed, Driver, Value, VDomElement, VDomComponent, html};
+use vertigo::{Computed, Value, VDomElement, VDomComponent, html};
 
 #[derive(Clone)]
 pub struct State {
@@ -444,13 +440,13 @@ pub struct State {
 }
 
 impl State {
-    pub fn component(driver: &Driver) -> VDomComponent {
+    pub fn component() -> VDomComponent {
         let state = State {
-            items: driver.new_value(vec![
+            items: Value::new(vec![
                 "Item 1".to_string(),
                 "Item 2".to_string(),
             ]),
-            new_item: driver.new_value("".to_string()),
+            new_item: Value::new("".to_string()),
         };
 
         VDomComponent::from(state, render)
@@ -518,8 +514,8 @@ pub struct State {
 Then we need to reorganize a little how we create an instance of the state:
 
 ```rust
-    pub fn component(driver: &Driver) -> VDomComponent {
-        let items = driver.new_value(vec![
+    pub fn component() -> VDomComponent {
+        let items = Value::new(vec![
             "Item 1".to_string(),
             "Item 2".to_string(),
         ]);
@@ -531,7 +527,7 @@ Then we need to reorganize a little how we create an instance of the state:
 
         let state = State {
             items,
-            new_item: driver.new_value("".to_string()),
+            new_item: Value::new("".to_string()),
             count,
         };
 

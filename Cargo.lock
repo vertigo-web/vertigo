@@ -1146,21 +1146,12 @@ dependencies = [
 ]
 
 [[package]]
-name = "vertigo-browserdriver"
-version = "0.1.0-beta.3"
-dependencies = [
- "log",
- "vertigo",
-]
-
-[[package]]
 name = "vertigo-demo"
 version = "0.1.0"
 dependencies = [
  "log",
  "serde",
  "vertigo",
- "vertigo-browserdriver",
 ]
 
 [[package]]
@@ -1178,7 +1169,6 @@ name = "vertigo-example-counter"
 version = "0.1.0"
 dependencies = [
  "vertigo",
- "vertigo-browserdriver",
 ]
 
 [[package]]
@@ -1187,7 +1177,6 @@ version = "0.1.0"
 dependencies = [
  "log",
  "vertigo",
- "vertigo-browserdriver",
 ]
 
 [[package]]

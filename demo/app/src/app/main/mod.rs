@@ -1,4 +1,4 @@
-use vertigo::{css, css_fn, css_fn_push, html, Css, Driver, VDomElement, Value, VDomComponent, bind};
+use vertigo::{css, css_fn, css_fn_push, html, Css, VDomElement, Value, VDomComponent, bind, get_driver};
 
 mod spinner;
 
@@ -6,17 +6,15 @@ use spinner::spinner;
 
 #[derive(Clone)]
 pub struct MainState {
-    driver: Driver,
     pub value: Value<u32>,
     pub progress: Value<u32>,
 }
 
 impl MainState {
-    pub fn component(driver: &Driver) -> VDomComponent {
+    pub fn component() -> VDomComponent {
         let state = MainState {
-            driver: driver.clone(),
-            value: driver.new_value(33),
-            progress: driver.new_value(0),
+            value: Value::new(33),
+            progress: Value::new(0),
         };
 
         VDomComponent::from(state, main_render)
@@ -35,7 +33,7 @@ impl MainState {
     pub async fn start_animation(self) {
         for i in 0..50 {
             self.progress.set_value(i as u32);
-            self.driver.sleep(100).await;
+            get_driver().sleep(100).await;
         }
     }
 }
@@ -107,7 +105,7 @@ pub fn main_render(state: &MainState) -> VDomElement {
         });
     }
 
-    let on_click_progress = bind(state).spawn(state.driver.clone(), |state| {
+    let on_click_progress = bind(state).spawn(|state| {
         state.start_animation()
     });
 

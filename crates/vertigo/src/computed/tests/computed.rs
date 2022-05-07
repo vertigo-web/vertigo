@@ -1,24 +1,21 @@
 use std::rc::Rc;
 
-use crate::computed::{Computed, Dependencies, Value, DropResource};
+use crate::{get_dependencies};
+use crate::computed::{Computed, Value, DropResource};
 
 use crate::computed::tests::box_value_version::SubscribeValueVer;
 use crate::struct_mut::ValueMut;
 
 #[test]
 fn basic() {
-    use crate::computed::Dependencies;
-
-    let root: Dependencies = Dependencies::default();
-
-    let value1: Value<i32> = root.new_value(1);
-    let value2: Value<i32> = root.new_value(2);
+    let value1: Value<i32> = Value::new(1);
+    let value2: Value<i32> = Value::new(2);
 
     let sum: Computed<i32> = {
         let com1 = value1.to_computed();
         let com2 = value2.to_computed();
 
-        root.from(move || -> i32 {
+        Computed::from(move || -> i32 {
             let value1 = com1.get_value();
             let value2 = com2.get_value();
 
@@ -44,15 +41,13 @@ fn basic() {
 
 #[test]
 fn basic2() {
-    let root = Dependencies::default();
-
-    let val1 = root.new_value(4);
-    let val2 = root.new_value(5);
+    let val1 = Value::new(4);
+    let val2 = Value::new(5);
 
     let com1: Computed<i32> = val1.to_computed();
     let com2: Computed<i32> = val2.to_computed();
 
-    let sum = root.from(move || {
+    let sum = Computed::from(move || {
         let a = com1.get_value();
         let b = com2.get_value();
         *a + *b
@@ -153,18 +148,16 @@ fn pointers() {
 
 #[test]
 fn test_subscription() {
-    let root = Dependencies::default();
-
-    let val1 = root.new_value(1);
-    let val2 = root.new_value(2);
-    let val3 = root.new_value(3);
+    let val1 = Value::new(1);
+    let val2 = Value::new(2);
+    let val3 = Value::new(3);
 
     let com1: Computed<i32> = val1.to_computed();
     let com2: Computed<i32> = val2.to_computed();
     #[allow(unused_variables)]
     let com3: Computed<i32> = val3.to_computed();
 
-    let sum = root.from(move || -> i32 {
+    let sum = Computed::from(move || -> i32 {
         let value1 = com1.get_value();
         let value2 = com2.get_value();
 
@@ -197,7 +190,7 @@ fn test_subscription() {
 
 #[test]
 fn test_computed_cache() {
-    let root = Dependencies::default();
+    let root = get_dependencies();
 
     assert_eq!(root.all_connections_len(), 0);
 
@@ -207,13 +200,13 @@ fn test_computed_cache() {
         //c = a + b
         //d = c % 2;
 
-        let a = root.new_value(1);
-        let b = root.new_value(2);
+        let a = Value::new(1);
+        let b = Value::new(2);
 
         let c: Computed<u32> = {
             let a = a.clone();
 
-            root.from(move || {
+            Computed::from(move || {
                 let a_val = a.get_value();
                 let b_val = b.get_value();
 
@@ -224,7 +217,7 @@ fn test_computed_cache() {
         let d: Computed<bool> = {
             //is even
             let c = c.clone();
-            root.from(move || -> bool {
+            Computed::from(move || -> bool {
                 let c_value = c.get_value();
 
                 *c_value % 2 == 0
@@ -275,16 +268,16 @@ fn test_computed_new_value() {
 
     #![allow(clippy::many_single_char_names)]
 
-    let root = Dependencies::default();
+    let root = get_dependencies();
 
-    let a = root.new_value(0);
-    let b = root.new_value(0);
-    let c = root.new_value(0);
+    let a = Value::new(0);
+    let b = Value::new(0);
+    let c = Value::new(0);
 
     let d: Computed<u32> = {
         let a = a.clone();
 
-        root.from(move || {
+        Computed::from(move || {
             let a_val = a.get_value();
             let b_val = b.get_value();
 
@@ -296,7 +289,7 @@ fn test_computed_new_value() {
         //is even
         let d = d.clone();
         let c = c.clone();
-        root.from(move || -> u32 {
+        Computed::from(move || -> u32 {
             let d_val = d.get_value();
             let c_val = c.get_value();
 
@@ -333,12 +326,12 @@ fn test_computed_switch_subscription() {
 
     //a, b, c
 
-    let root = Dependencies::default();
+    let root = get_dependencies();
 
-    let switch = root.new_value(Switch::Ver1);
-    let a = root.new_value(0);
-    let b = root.new_value(0);
-    let c = root.new_value(0);
+    let switch = Value::new(Switch::Ver1);
+    let a = Value::new(0);
+    let b = Value::new(0);
+    let c = Value::new(0);
 
     // println!("s {:?}", switch.id());
     // println!("a {:?}", a.id());
@@ -351,7 +344,7 @@ fn test_computed_switch_subscription() {
         let b = b.clone();
         let c = c.clone();
 
-        root.from(move || -> u32 {
+        Computed::from(move || -> u32 {
             let switch_value = switch.get_value();
 
             match *switch_value {
@@ -443,12 +436,9 @@ fn test_computed_switch_subscription() {
 
 #[test]
 fn test_connect() {
-
-    let root = Dependencies::default();
-
     let is_subscribe = Rc::new(ValueMut::new(false));
 
-    let value = root.new_with_connect(10, {
+    let value = Value::with_connect(10, {
         let is_subscribe = is_subscribe.clone();
 
         move |_value| {

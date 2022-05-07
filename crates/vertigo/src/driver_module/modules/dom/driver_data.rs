@@ -1,8 +1,8 @@
 use std::hash::Hash;
 use std::rc::Rc;
-use vertigo::{dev::{RealDomId, EventCallback}, KeyDownEvent};
+use crate::{dev::{RealDomId, EventCallback}, KeyDownEvent};
 use std::fmt::Display;
-use vertigo::struct_mut::HashMapMut;
+use crate::struct_mut::HashMapMut;
 use super::element_wrapper::DomElement;
 
 struct HashMapRcWithLabel<K: Eq + Hash + Display, V> {

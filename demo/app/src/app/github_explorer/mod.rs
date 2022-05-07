@@ -1,6 +1,6 @@
 use serde::{Deserialize, Serialize};
-use std::{cmp::PartialEq};
-use vertigo::{AutoMap, Driver, Resource, SerdeSingleRequest, Value, VDomComponent, LazyCache};
+use std::cmp::PartialEq;
+use vertigo::{AutoMap, Resource, SerdeSingleRequest, Value, VDomComponent, LazyCache, get_driver};
 
 mod render;
 
@@ -34,17 +34,16 @@ pub struct Item {
 }
 
 impl Item {
-    pub fn new(driver: &Driver, repo_name: &str) -> Item {
+    pub fn new(repo_name: &str) -> Item {
         log::info!("Creating for {}", repo_name);
 
         let url = format!("https://api.github.com/repos/{}/branches/master", repo_name);
 
-        let branch = LazyCache::new(driver, 10 * 60 * 60 * 1000, move |driver: Driver| {
+        let branch = LazyCache::new(10 * 60 * 60 * 1000, move || {
             let url = url.clone();
 
             async move {
-                let url = url.clone();
-                let aa = driver.request(url).get().await.into(|status, body| {
+                let aa = get_driver().request(url).get().await.into(|status, body| {
                     if status == 200 {
                         return Some(body.into::<Branch>());
                     }
@@ -72,15 +71,11 @@ pub struct State {
 }
 
 impl State {
-    pub fn component(driver: &Driver) -> VDomComponent {
+    pub fn component() -> VDomComponent {
         let state = State {
-            repo_input: driver.new_value(String::from("")),
-            repo_shown: driver.new_value(String::from("")),
-            data: AutoMap::new({
-                let driver = driver.clone();
-
-                move |repo_name: &String| Item::new(&driver, repo_name)
-            }),
+            repo_input: Value::new(String::from("")),
+            repo_shown: Value::new(String::from("")),
+            data: AutoMap::new(move |repo_name: &String| Item::new(repo_name)),
         };
 
         VDomComponent::from(state, render::render)

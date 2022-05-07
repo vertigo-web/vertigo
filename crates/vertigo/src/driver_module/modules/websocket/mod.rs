@@ -1,10 +1,10 @@
 use std::rc::Rc;
-use vertigo::{
+use crate::{
     dev::WebsocketMessageDriver,
     DropResource,
 };
 
-use crate::{utils::callback_manager::CallbackManagerOwner, api::ApiImport};
+use crate::{driver_module::utils::callback_manager::CallbackManagerOwner, driver_module::api::ApiImport};
 
 #[derive(Clone)]
 struct Callback {

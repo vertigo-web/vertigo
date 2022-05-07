@@ -1,5 +1,5 @@
 use serde::{Deserialize, Serialize};
-use vertigo::{css, html, AutoMap, Css, Driver, LazyCache, Resource, SerdeRequest, VDomElement, Value, VDomComponent, bind};
+use vertigo::{css, html, AutoMap, Css, LazyCache, Resource, SerdeRequest, VDomElement, Value, VDomComponent, bind, get_driver};
 
 #[derive(PartialEq)]
 enum View {
@@ -34,11 +34,11 @@ pub struct TodoState {
 }
 
 impl TodoState {
-    pub fn component(driver: &Driver) -> VDomComponent {
-        let view = driver.new_value(View::Main);
+    pub fn component() -> VDomComponent {
+        let view = Value::new(View::Main);
 
-        let posts = LazyCache::new(driver, 10 * 60 * 60 * 1000, move |driver: Driver| async move {
-            let request = driver.request("https://jsonplaceholder.typicode.com/posts").get();
+        let posts = LazyCache::new(10 * 60 * 60 * 1000, move || async move {
+            let request = get_driver().request("https://jsonplaceholder.typicode.com/posts").get();
 
             request.await.into(|status, body| {
                 if status == 200 {
@@ -50,13 +50,11 @@ impl TodoState {
         });
 
         let comments = AutoMap::new({
-            let driver = driver.clone();
-
             move |post_id: &u32| -> LazyCache<Vec<CommentModel>> {
                 let post_id = *post_id;
 
-                LazyCache::new(&driver, 10 * 60 * 60 * 1000, move |driver: Driver| async move {
-                    let request = driver
+                LazyCache::new(10 * 60 * 60 * 1000, move || async move {
+                    let request = get_driver()
                         .request(format!(
                             "https://jsonplaceholder.typicode.com/posts/{}/comments",
                             post_id

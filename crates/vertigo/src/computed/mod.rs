@@ -17,5 +17,5 @@ pub use computed_box::Computed;
 pub use dependencies::Dependencies;
 pub use graph_id::GraphId;
 pub use graph_value::{GraphValue, GraphValueRefresh};
-pub use value::{ToRc, Value};
+pub use value::{Value};
 pub use drop_resource::DropResource;

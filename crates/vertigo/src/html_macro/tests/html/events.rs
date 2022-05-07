@@ -1,4 +1,4 @@
-use crate::computed::{Dependencies, Value};
+use crate::computed::Value;
 use crate::html;
 
 use super::utils::*;
@@ -8,7 +8,7 @@ use crate as vertigo;
 
 #[test]
 fn div_with_mouse_events() {
-    let value = Value::new(Dependencies::default(), "".to_string());
+    let value = Value::new("".to_string());
 
     let mouse_in = {
         let value = value.clone();
