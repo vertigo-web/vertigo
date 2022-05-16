@@ -19,8 +19,8 @@ pub struct CachedValue<T: 'static> {
 /// A structure similar to Value but supports Loading/Error states and automatic refresh
 /// after defined amount of time.
 ///
-/// ```rust,ignore
-/// use vertigo::{get_driver, Computed, LazyCache, SerdeRequest};
+/// ```rust
+/// use vertigo::{get_driver, Computed, LazyCache, SerdeRequest, Resource};
 /// use serde::{Serialize, Deserialize};
 ///
 /// #[derive(Serialize, Deserialize, SerdeRequest)]
@@ -34,13 +34,13 @@ pub struct CachedValue<T: 'static> {
 /// }
 ///
 /// impl TodoState {
-///     pub fn new() -> Computed<TodoState> {
+///     pub fn new() -> Self {
 ///         let posts = LazyCache::new(300, move || {
 ///             let request = get_driver()
 ///                 .request("https://some.api/posts")
 ///                 .get();
 ///
-///             LazyCache::result(async move {
+///             async move {
 ///                 request.await.into(|status, body| {
 ///                     if status == 200 {
 ///                         Some(body.into_vec::<Model>())
@@ -48,13 +48,12 @@ pub struct CachedValue<T: 'static> {
 ///                         None
 ///                     }
 ///                 })
-///             })
+///             }
 ///         });
 ///
-///         driver.new_computed_from(TodoState {
-///             driver: driver.clone(),
-///             posts,
-///         })
+///         TodoState {
+///             posts
+///         }
 ///     }
 /// }
 /// ```

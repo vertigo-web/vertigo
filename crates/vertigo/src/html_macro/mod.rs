@@ -4,7 +4,7 @@ pub use embed::Embed;
 
 /// Allows to define a Css styles factory function for virtual DOM.
 ///
-/// ```rust,no_run
+/// ```rust
 /// use vertigo::css_fn;
 ///
 /// css_fn! { green_on_red, "
@@ -24,7 +24,7 @@ macro_rules! css_fn {
 /// Allows to define a Css styles factory function for virtual DOM
 /// based on existing function but with added new rules.
 ///
-/// ```rust,no_run
+/// ```rust
 /// use vertigo::{css_fn, css_fn_push};
 ///
 /// css_fn! { green, "

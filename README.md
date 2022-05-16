@@ -18,7 +18,7 @@ Example
 Dependencies:
 
 ```toml
-vertigo = "0.1.0-beta.3"
+vertigo = "0.1.0-beta.4"
 ```
 
 Code:

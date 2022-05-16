@@ -50,7 +50,7 @@ impl RenderVDom for VDomFunction {
 ///
 /// Usually used as a main component for the application.
 ///
-/// ```rust,no_run
+/// ```rust
 /// use vertigo::{Computed, Value, VDomComponent, VDomElement, html};
 ///
 /// let state = Value::new(5);

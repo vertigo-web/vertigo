@@ -11,7 +11,7 @@ pub enum CssGroup {
 ///
 /// Consists of a vector of css chunks which can be extended.
 ///
-/// ```rust,no_run
+/// ```rust
 /// use vertigo::{Css, CssGroup, html};
 ///
 /// let blue_text = Css::str("color: blue");
