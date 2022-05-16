@@ -4,8 +4,13 @@
 
 ### Changed
 
-* Dropped PartialEq constraint from Value, Computed and others implementations
-* Removed callback from HashRouter; it can be now treated similarly to Value
+* `Driver` object is now global, so there's no need to passed it as parameter in all functions
+* Dropped `PartialEq` constraint from `Value`, `Computed` and other implementations
+
+### Removed
+
+* `vertigo-browserdriver` package - it is now integrated into `vertigo` as the default and only driver
+* Callback from `HashRouter` - it can be now treated similarly to `Value`
 
 ## 0.1.0-beta.3 - 2022-01-22
 

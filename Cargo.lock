@@ -1138,9 +1138,10 @@ checksum = "b5a972e5669d67ba988ce3dc826706fb0a8b01471c088cb0b6110b805cc36aed"
 
 [[package]]
 name = "vertigo"
-version = "0.1.0-beta.3"
+version = "0.1.0-beta.4"
 dependencies = [
  "log",
+ "serde",
  "serde_json",
  "vertigo-macro",
 ]
@@ -1181,7 +1182,7 @@ dependencies = [
 
 [[package]]
 name = "vertigo-macro"
-version = "0.1.0-beta.3"
+version = "0.1.0-beta.4"
 dependencies = [
  "itertools",
  "pest",

@@ -35,7 +35,7 @@ impl std::fmt::Display for KeyDownEvent {
 ///
 /// Usually returned from a render function:
 ///
-/// ```rust,no_run
+/// ```rust
 /// use vertigo::{VDomElement, html};
 ///
 /// fn my_render() -> VDomElement {

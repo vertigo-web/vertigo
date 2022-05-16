@@ -9,7 +9,7 @@ use crate::computed::{Client, GraphValue, graph_id::GraphId};
 ///
 /// ## Computed directly from Value
 ///
-/// ```rust,no_run
+/// ```rust
 /// use vertigo::{Computed, Value};
 ///
 /// let value = Value::new(5);
@@ -24,7 +24,7 @@ use crate::computed::{Client, GraphValue, graph_id::GraphId};
 ///
 /// ## Computed from Value by provided function
 ///
-/// ```rust,no_run
+/// ```rust
 /// use vertigo::{Computed, Value};
 ///
 /// let value = Value::new(2);
