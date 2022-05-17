@@ -37,7 +37,7 @@ impl DriverBrowserHashrouter {
         self.api.hashrouter_get_hash_location()
     }
 
-    pub fn push_hash_location(&self, hash: &str) {
-        self.api.hashrouter_push_hash_location(hash);
+    pub fn push_hash_location(&self, hash: String) {
+        self.api.hashrouter_push_hash_location(hash.as_str());
     }
 }

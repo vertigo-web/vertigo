@@ -1,4 +1,5 @@
 use std::rc::Rc;
+use crate::DropFileEvent;
 use crate::virtualdom::models::css::Css;
 
 use super::vdom_element::KeyDownEvent;
@@ -13,6 +14,7 @@ pub enum NodeAttr {
     OnMouseLeave { event: Rc<dyn Fn()> },
     OnKeyDown { event: Rc<dyn Fn(KeyDownEvent) -> bool> },
     HookKeyDown { event: Rc<dyn Fn(KeyDownEvent) -> bool> },
+    OnDropFile { event: Rc<dyn Fn(DropFileEvent)> },
     Attr { name: &'static str, value: String },
     DomRef { name: &'static str },
     DomApply { apply: Rc<dyn Fn(&NodeRefs)> },
@@ -54,6 +56,12 @@ pub fn on_key_down<F: Fn(KeyDownEvent) -> bool + 'static>(callback: F) -> NodeAt
 
 pub fn hook_key_down<F: Fn(KeyDownEvent) -> bool + 'static>(callback: F) -> NodeAttr {
     NodeAttr::HookKeyDown {
+        event: Rc::new(callback),
+    }
+}
+
+pub fn on_dropfile<F: Fn(DropFileEvent) + 'static>(callback: F) -> NodeAttr {
+    NodeAttr::OnDropFile {
         event: Rc::new(callback),
     }
 }

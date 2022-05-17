@@ -1,4 +1,6 @@
-use crate::driver_module::driver_browser::DriverBrowser;
+use std::rc::Rc;
+
+use crate::{ApiImport};
 
 /// Duration in seconds, returned from [Instant] methods.
 pub type InstantType = u64;
@@ -6,28 +8,28 @@ pub type InstantType = u64;
 /// Monotonically nondecrasing clock using a driver, similar to [std::time::Instant].
 #[derive(Clone)]
 pub struct Instant {
-    driver: DriverBrowser,
+    api: Rc<ApiImport>,
     pub instant: InstantType,
 }
 
 impl Instant {
-    pub fn now(driver: DriverBrowser) -> Self {
+    pub fn now(api: Rc<ApiImport>) -> Self {
         Self {
-            instant: driver.now(),
-            driver,
+            instant: api.instant_now(),
+            api,
         }
     }
 
     #[must_use]
     pub fn refresh(&self) -> Self {
         Self {
-            instant: self.driver.now(),
-            driver: self.driver.clone(),
+            instant: self.api.instant_now(),
+            api: self.api.clone(),
         }
     }
 
     pub fn elapsed(&self) -> InstantType {
-        self.driver.now() - self.instant
+        self.api.instant_now() - self.instant
     }
 
     pub fn seconds_elapsed(&self) -> InstantType {

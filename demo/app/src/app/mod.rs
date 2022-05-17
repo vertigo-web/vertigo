@@ -9,6 +9,7 @@ mod route;
 mod state;
 pub mod sudoku;
 mod todo;
+mod dropfile;
 
 pub use render::render;
 pub use state::State;

@@ -4,7 +4,8 @@ use std::{
 };
 
 use crate::{
-    driver::{Driver, EventCallback},
+    driver_module::driver_browser::{Driver},
+    driver_module::driver_browser::{EventCallback},
     virtualdom::models::{
         realdom::RealDomNode,
         realdom_id::RealDomId,

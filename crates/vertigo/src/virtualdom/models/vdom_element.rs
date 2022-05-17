@@ -31,6 +31,34 @@ impl std::fmt::Display for KeyDownEvent {
     }
 }
 
+#[derive(Debug, Clone)]
+pub struct DropFileItem {
+    pub name: String,
+    pub data: Rc<Vec<u8>>,
+}
+
+impl DropFileItem {
+    pub fn new(name: String, data: Vec<u8>) -> DropFileItem {
+        DropFileItem {
+            name,
+            data: Rc::new(data),
+        }
+    }
+}
+
+#[derive(Debug, Clone)]
+pub struct DropFileEvent {
+    pub items: Vec<DropFileItem>,
+}
+
+impl DropFileEvent {
+    pub fn new(items: Vec<DropFileItem>) -> DropFileEvent {
+        DropFileEvent {
+            items
+        }
+    }
+}
+
 /// Virtual DOM node that represents a DOM element, a basic building block.
 ///
 /// Usually returned from a render function:
@@ -58,6 +86,7 @@ pub struct VDomElement {
     pub on_mouse_leave: Option<Rc<dyn Fn()>>,
     pub on_key_down: Option<Rc<dyn Fn(KeyDownEvent) -> bool>>,
     pub hook_key_down: Option<Rc<dyn Fn(KeyDownEvent) -> bool>>,
+    pub on_dropfile: Option<Rc<dyn Fn(DropFileEvent)>>,
     pub css: Option<Css>,
 }
 
@@ -75,6 +104,7 @@ impl VDomElement {
             on_mouse_leave: None,
             on_key_down: None,
             hook_key_down: None,
+            on_dropfile: None,
             css: None,
         };
 
@@ -100,6 +130,9 @@ impl VDomElement {
                 }
                 NodeAttr::HookKeyDown { event } => {
                     result.hook_key_down = Some(event);
+                }
+                NodeAttr::OnDropFile { event } => {
+                    result.on_dropfile = Some(event);
                 }
                 NodeAttr::Attr { name, value } => {
                     result.attr.insert(name, value);
@@ -129,6 +162,7 @@ impl VDomElement {
             on_mouse_leave: None,
             on_key_down: None,
             hook_key_down: None,
+            on_dropfile: None,
             css: None,
         }
     }

@@ -20,12 +20,10 @@ export class DriverWebsocket {
     }
 
     public websocket_register_callback = (
-        host_ptr: BigInt,   //string,
-        host_len: BigInt,
+        host: string,
         callback_id: number,
     ) => {
         const wasm = this.getWasm();
-        const host = wasm.decodeText(host_ptr, host_len);
 
         let controller = SocketConnection.startSocket(
             host,
@@ -44,8 +42,12 @@ export class DriverWebsocket {
                 }
         
                 if (message.type === 'message') {
-                    wasm.pushString(message.message);
-                    wasm.exports.websocket_callback_message(callback_id);
+                    const new_params = wasm.newList();
+                    new_params.push_u32(callback_id);
+                    new_params.push_string(message.message);
+                    const new_params_id = new_params.freeze();
+
+                    wasm.exports.websocket_callback_message(new_params_id);
                     return;
                 }
 
@@ -76,10 +78,8 @@ export class DriverWebsocket {
 
     public websocket_send_message = (
         callback_id: number,
-        message_ptr: BigInt, //string,
-        message_len: BigInt,
+        message: string,
     ) => {
-        const message = this.getWasm().decodeText(message_ptr, message_len);
         const socket = this.socket.get(callback_id);
 
         if (socket === undefined) {

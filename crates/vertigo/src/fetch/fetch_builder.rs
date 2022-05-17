@@ -1,22 +1,22 @@
 use std::collections::HashMap;
 
 use crate::{
-    driver::{FetchMethod, FetchResult},
-    driver_module::driver_browser::DriverBrowser,
+    driver_module::driver_browser::{FetchMethod, FetchResult},
+    driver_module::{modules::fetch::DriverBrowserFetch},
 };
 
 /// Builder for simple requests.
 pub struct FetchBuilder {
-    driver: DriverBrowser,
+    driver_fetch: DriverBrowserFetch,
     url: String,
     headers: Option<HashMap<String, String>>,
     body: Option<String>,
 }
 
 impl FetchBuilder {
-    pub fn new(driver: DriverBrowser, url: String) -> FetchBuilder {
+    pub fn new(driver_fetch: DriverBrowserFetch, url: String) -> FetchBuilder {
         FetchBuilder {
-            driver,
+            driver_fetch,
             url,
             headers: None,
             body: None,
@@ -25,9 +25,9 @@ impl FetchBuilder {
 
     #[must_use]
     pub fn set_headres(self, headers: HashMap<String, String>) -> Self {
-        let FetchBuilder { driver, url, body, .. } = self;
+        let FetchBuilder { driver_fetch, url, body, .. } = self;
         FetchBuilder {
-            driver,
+            driver_fetch,
             url,
             headers: Some(headers),
             body,
@@ -36,9 +36,9 @@ impl FetchBuilder {
 
     #[must_use]
     pub fn set_body(self, body: String) -> Self {
-        let FetchBuilder { driver, url, headers, .. } = self;
+        let FetchBuilder { driver_fetch, url, headers, .. } = self;
         FetchBuilder {
-            driver,
+            driver_fetch,
             url,
             headers,
             body: Some(body),
@@ -46,7 +46,7 @@ impl FetchBuilder {
     }
 
     async fn run(self, method: FetchMethod) -> FetchResult {
-        let fut = self.driver.fetch(method, self.url, self.headers, self.body);
+        let fut = self.driver_fetch.fetch(method, self.url, self.headers, self.body);
         fut.await
     }
 

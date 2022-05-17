@@ -4,7 +4,7 @@ use crate::{
     Driver,
     computed::Client,
     css::css_manager::CssManager,
-    driver::EventCallback,
+    driver_module::driver_browser::EventCallback,
     driver_refs::RefsContext,
     virtualdom::models::{
         realdom::RealDomNode,
@@ -364,6 +364,7 @@ fn update_node_attr(css_manager: &CssManager, real_node: &RealDomElement, node: 
     real_node.set_event(EventCallback::OnMouseLeave { callback: node.on_mouse_leave.clone() });
     real_node.set_event(EventCallback::OnKeyDown { callback: node.on_key_down.clone() });
     real_node.set_event(EventCallback::HookKeyDown { callback: node.hook_key_down.clone() });
+    real_node.set_event(EventCallback::OnDropFile { callback: node.on_dropfile.clone() })
 }
 
 fn update_node(

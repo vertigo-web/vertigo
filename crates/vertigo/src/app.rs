@@ -1,7 +1,7 @@
 use crate::{
     css::css_manager::CssManager,
     computed::Client,
-    driver::Driver,
+    driver_module::driver_browser::Driver,
     virtualdom::{
         models::{
             realdom_id::RealDomId,

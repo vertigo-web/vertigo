@@ -87,6 +87,7 @@ impl HtmlParser {
                 Rule::on_mouse_leave_attr => attrs.push(self.generate_expression_attr(pair, Some("on_mouse_leave"))),
                 Rule::on_key_down_attr => attrs.push(self.generate_expression_attr(pair, Some("on_key_down"))),
                 Rule::hook_key_down_attr => attrs.push(self.generate_expression_attr(pair, Some("hook_key_down"))),
+                Rule::on_dropfile => attrs.push(self.generate_expression_attr(pair, Some("on_dropfile"))),
                 Rule::expression_attr => attrs.push(self.generate_expression_attr(pair, None)),
 
                 Rule::el_vcomponent => children.push(pair),
@@ -116,6 +117,7 @@ impl HtmlParser {
                             Rule::on_mouse_leave_attr => attrs.push(self.generate_expression_attr(tag_pair, Some("on_mouse_leave"))),
                             Rule::on_key_down_attr => attrs.push(self.generate_expression_attr(tag_pair, Some("on_key_down"))),
                             Rule::hook_key_down_attr => attrs.push(self.generate_expression_attr(tag_pair, Some("hook_key_down"))),
+                            Rule::on_dropfile => attrs.push(self.generate_expression_attr(tag_pair, Some("on_dropfile"))),
                             Rule::expression_attr => attrs.push(self.generate_expression_attr(tag_pair, None)),
 
                             _ => {
