@@ -1,5 +1,5 @@
 use std::rc::Rc;
-use crate::KeyDownEvent;
+use crate::{KeyDownEvent, DropFileEvent};
 
 pub struct DomElement {
     pub on_click: Option<Rc<dyn Fn()>>,
@@ -8,6 +8,7 @@ pub struct DomElement {
     pub on_mouse_leave: Option<Rc<dyn Fn()>>,
     pub on_keydown: Option<Rc<dyn Fn(KeyDownEvent) -> bool>>,
     pub hook_keydown: Option<Rc<dyn Fn(KeyDownEvent) -> bool>>,
+    pub on_dropfile: Option<Rc<dyn Fn(DropFileEvent)>>,
 }
 
 impl DomElement {
@@ -19,6 +20,7 @@ impl DomElement {
             on_mouse_leave: None,
             on_keydown: None,
             hook_keydown: None,
+            on_dropfile: None,
         }
     }
 }

@@ -1,135 +1,29 @@
-use std::sync::Arc;
-
 use crate::InstantType;
-use crate::driver_module::stack::StackStringAlloc;
 
-fn str_to_pointer(value: &str) -> (u64, u64) {
-    let value_ptr = value.as_ptr() as u64;
-    let value_len = value.len() as u64;
-    (value_ptr, value_len)
+use super::stack::{ParamListBuilder, ArgumentsManager, ParamList};
+
+#[derive(Clone)]
+pub struct PanicMessage {
+    panic_message: fn(ptr: u32, size: u32),
 }
 
-pub struct ApiLoggerImport {
-    pub console_error_1: fn(arg1_ptr: u64, arg1_len: u64),
-    pub console_debug_4: fn(
-        arg1_ptr: u64, arg1_len: u64,
-        arg2_ptr: u64, arg2_len: u64,
-        arg3_ptr: u64, arg3_len: u64,
-        arg4_ptr: u64, arg4_len: u64,
-    ),
-    pub console_log_4: fn (
-        arg1_ptr: u64, arg1_len: u64,
-        arg2_ptr: u64, arg2_len: u64,
-        arg3_ptr: u64, arg3_len: u64,
-        arg4_ptr: u64, arg4_len: u64,
-    ),
-    pub console_info_4: fn(
-        arg1_ptr: u64, arg1_len: u64,
-        arg2_ptr: u64, arg2_len: u64,
-        arg3_ptr: u64, arg3_len: u64,
-        arg4_ptr: u64, arg4_len: u64,
-    ),
-    pub console_warn_4: fn(
-        arg1_ptr: u64, arg1_len: u64,
-        arg2_ptr: u64, arg2_len: u64,
-        arg3_ptr: u64, arg3_len: u64,
-        arg4_ptr: u64, arg4_len: u64,
-    ),
-    pub console_error_4: fn(
-        arg1_ptr: u64, arg1_len: u64,
-        arg2_ptr: u64, arg2_len: u64,
-        arg3_ptr: u64, arg3_len: u64,
-        arg4_ptr: u64, arg4_len: u64,
-    ),
-}
-
-impl ApiLoggerImport {
-    pub fn console_error_1(&self, arg1: &str) {
-        let (arg1_ptr, arg1_len) = str_to_pointer(arg1);
-        let console_error_1 = self.console_error_1;
-        console_error_1(arg1_ptr, arg1_len);
+impl PanicMessage {
+    pub fn new(panic_message: fn(ptr: u32, size: u32)) -> PanicMessage {
+        PanicMessage {
+            panic_message
+        }
     }
 
-    pub fn console_debug_4(&self, arg1: &str, arg2: &str, arg3: &str, arg4: &str) {
-        let (arg1_ptr, arg1_len) = str_to_pointer(arg1);
-        let (arg2_ptr, arg2_len) = str_to_pointer(arg2);
-        let (arg3_ptr, arg3_len) = str_to_pointer(arg3);
-        let (arg4_ptr, arg4_len) = str_to_pointer(arg4);
-        let console_debug_4 = self.console_debug_4;
-        console_debug_4(
-            arg1_ptr, arg1_len,
-            arg2_ptr, arg2_len,
-            arg3_ptr, arg3_len,
-            arg4_ptr, arg4_len,
-        );
-    }
-
-    pub fn console_log_4(&self, arg1: &str, arg2: &str, arg3: &str, arg4: &str) {
-        let (arg1_ptr, arg1_len) = str_to_pointer(arg1);
-        let (arg2_ptr, arg2_len) = str_to_pointer(arg2);
-        let (arg3_ptr, arg3_len) = str_to_pointer(arg3);
-        let (arg4_ptr, arg4_len) = str_to_pointer(arg4);
-        let console_log_4 = self.console_log_4;
-        console_log_4(
-            arg1_ptr, arg1_len,
-            arg2_ptr, arg2_len,
-            arg3_ptr, arg3_len,
-            arg4_ptr, arg4_len,
-        );
-    }
-
-    pub fn console_info_4(&self, arg1: &str, arg2: &str, arg3: &str, arg4: &str) {
-        let (arg1_ptr, arg1_len) = str_to_pointer(arg1);
-        let (arg2_ptr, arg2_len) = str_to_pointer(arg2);
-        let (arg3_ptr, arg3_len) = str_to_pointer(arg3);
-        let (arg4_ptr, arg4_len) = str_to_pointer(arg4);
-        let console_info_4 = self.console_info_4;
-        console_info_4(
-            arg1_ptr, arg1_len,
-            arg2_ptr, arg2_len,
-            arg3_ptr, arg3_len,
-            arg4_ptr, arg4_len,
-        );
-    }
-
-    pub fn console_warn_4(&self, arg1: &str, arg2: &str, arg3: &str, arg4: &str) {
-        let (arg1_ptr, arg1_len) = str_to_pointer(arg1);
-        let (arg2_ptr, arg2_len) = str_to_pointer(arg2);
-        let (arg3_ptr, arg3_len) = str_to_pointer(arg3);
-        let (arg4_ptr, arg4_len) = str_to_pointer(arg4);
-        let console_warn_4 = self.console_warn_4;
-        console_warn_4(
-            arg1_ptr, arg1_len,
-            arg2_ptr, arg2_len,
-            arg3_ptr, arg3_len,
-            arg4_ptr, arg4_len,
-        );
-    }
-
-    pub fn console_error_4(&self, arg1: &str, arg2: &str, arg3: &str, arg4: &str) {
-        let (arg1_ptr, arg1_len) = str_to_pointer(arg1);
-        let (arg2_ptr, arg2_len) = str_to_pointer(arg2);
-        let (arg3_ptr, arg3_len) = str_to_pointer(arg3);
-        let (arg4_ptr, arg4_len) = str_to_pointer(arg4);
-        let console_error_4 = self.console_error_4;
-        console_error_4(
-            arg1_ptr, arg1_len,
-            arg2_ptr, arg2_len,
-            arg3_ptr, arg3_len,
-            arg4_ptr, arg4_len,
-        );
+    pub fn show(&self, message: String) {
+        let ptr = message.as_ptr() as u32;
+        let len = message.len() as u32;
+        (self.panic_message)(ptr, len);
     }
 }
 
 pub struct ApiImport {
-    pub logger: Arc<ApiLoggerImport>,
-
-    pub cookie_get: fn(name_ptr: u64, name_len: u64),
-    pub cookie_set: fn(
-        name_ptr: u64, name_len: u64,
-        value_ptr: u64, value_len: u64,
-        expires_in: u64,
-    ),
+    pub panic_message: PanicMessage,
+    js_call: fn(params: u32) -> u32,
 
     pub interval_set: fn(duration: u32, callback_id: u32) -> u32,
     pub interval_clear: fn(timer_id: u32),
@@ -137,23 +31,6 @@ pub struct ApiImport {
     pub timeout_clear: fn(timer_id: u32),
 
     pub instant_now: fn() -> u32,
-    pub hashrouter_get_hash_location: fn (),
-    pub hashrouter_push_hash_location: fn(new_hash_ptr: u64, new_hash_length: u64),
-    pub fetch_send_request: fn (
-        request_id: u32,
-        method_ptr: u64,
-        method_len: u64,
-        url_ptr: u64,
-        url_len: u64,
-        headers_ptr: u64,
-        headers_len: u64,
-        body_ptr: u64,
-        body_len: u64,
-    ),
-    pub websocket_register_callback: fn(host_ptr: u64, host_len: u64, callback_id: u32),
-    pub websocket_unregister_callback: fn(callback_id: u32),
-    pub websocket_send_message: fn(callback_id: u32, message_ptr: u64, message_len: u64),
-    pub dom_bulk_update: fn(value_ptr: u64, value_len: u64),
     pub dom_get_bounding_client_rect_x: fn(id: u64) -> i32,
     pub dom_get_bounding_client_rect_y: fn(id: u64) -> i32,
     pub dom_get_bounding_client_rect_width: fn(id: u64) -> u32,
@@ -164,73 +41,21 @@ pub struct ApiImport {
     pub dom_set_scroll_left: fn(node_id: u64, value: i32),
     pub dom_scroll_width: fn(node_id: u64) -> u32,
     pub dom_scroll_height: fn(node_id: u64) -> u32,
-    pub stack: StackStringAlloc,
+    pub arguments: ArgumentsManager,
 }
 
 impl ApiImport {
 
     pub fn new(
-        console_error_1: fn(arg1_ptr: u64, arg1_len: u64),
-        console_debug_4: fn(
-            arg1_ptr: u64, arg1_len: u64,
-            arg2_ptr: u64, arg2_len: u64,
-            arg3_ptr: u64, arg3_len: u64,
-            arg4_ptr: u64, arg4_len: u64,
-        ),
-        console_log_4: fn (
-            arg1_ptr: u64, arg1_len: u64,
-            arg2_ptr: u64, arg2_len: u64,
-            arg3_ptr: u64, arg3_len: u64,
-            arg4_ptr: u64, arg4_len: u64,
-        ),
-        console_info_4: fn(
-            arg1_ptr: u64, arg1_len: u64,
-            arg2_ptr: u64, arg2_len: u64,
-            arg3_ptr: u64, arg3_len: u64,
-            arg4_ptr: u64, arg4_len: u64,
-        ),
-        console_warn_4: fn(
-            arg1_ptr: u64, arg1_len: u64,
-            arg2_ptr: u64, arg2_len: u64,
-            arg3_ptr: u64, arg3_len: u64,
-            arg4_ptr: u64, arg4_len: u64,
-        ),
-        console_error_4: fn(
-            arg1_ptr: u64, arg1_len: u64,
-            arg2_ptr: u64, arg2_len: u64,
-            arg3_ptr: u64, arg3_len: u64,
-            arg4_ptr: u64, arg4_len: u64,
-        ),
+        panic_message: fn(ptr: u32, size: u32),
+        js_call: fn(params: u32) -> u32,
 
-        cookie_get: fn(name_ptr: u64, name_len: u64),
-        cookie_set: fn(
-            name_ptr: u64, name_len: u64,
-            value_ptr: u64, value_len: u64,
-            expires_in: u64,
-        ),
         interval_set: fn(duration: u32, callback_id: u32) -> u32,
         interval_clear: fn(timer_id: u32),
         timeout_set: fn(duration: u32, callback_id: u32) -> u32,
         timeout_clear: fn(timer_id: u32),
 
         instant_now: fn() -> u32,
-        hashrouter_get_hash_location: fn (),
-        hashrouter_push_hash_location: fn(new_hash_ptr: u64, new_hash_length: u64),
-        fetch_send_request: fn (
-            request_id: u32,
-            method_ptr: u64,
-            method_len: u64,
-            url_ptr: u64,
-            url_len: u64,
-            headers_ptr: u64,
-            headers_len: u64,
-            body_ptr: u64,
-            body_len: u64,
-        ),
-        websocket_register_callback: fn(host_ptr: u64, host_len: u64, callback_id: u32),
-        websocket_unregister_callback: fn(callback_id: u32),
-        websocket_send_message: fn(callback_id: u32, message_ptr: u64, message_len: u64),
-        dom_bulk_update: fn(value_ptr: u64, value_len: u64),
         dom_get_bounding_client_rect_x: fn(id: u64) -> i32,
         dom_get_bounding_client_rect_y: fn(id: u64) -> i32,
         dom_get_bounding_client_rect_width: fn(id: u64) -> u32,
@@ -242,32 +67,17 @@ impl ApiImport {
         dom_scroll_width: fn(node_id: u64) -> u32,
         dom_scroll_height: fn(node_id: u64) -> u32,
     ) -> ApiImport {
-        let logger = ApiLoggerImport {
-            console_error_1,
-            console_debug_4,
-            console_log_4,
-            console_info_4,
-            console_warn_4,
-            console_error_4
-        };
+        let panic_message = PanicMessage::new(panic_message);
 
         ApiImport {
-            logger: Arc::new(logger),
-            cookie_get,
-            cookie_set,
+            panic_message: panic_message.clone(),
+            js_call,
             interval_set,
             interval_clear,
             timeout_set,
             timeout_clear,
 
             instant_now,
-            hashrouter_get_hash_location,
-            hashrouter_push_hash_location,
-            fetch_send_request,
-            websocket_register_callback,
-            websocket_unregister_callback,
-            websocket_send_message,
-            dom_bulk_update,
             dom_get_bounding_client_rect_x,
             dom_get_bounding_client_rect_y,
             dom_get_bounding_client_rect_width,
@@ -278,46 +88,93 @@ impl ApiImport {
             dom_set_scroll_left,
             dom_scroll_width,
             dom_scroll_height,
-            stack: StackStringAlloc::new(),
+            arguments: ArgumentsManager::new(panic_message),
         }
     }
 
-    pub fn console_error_1(&self, arg1: &str) {
-        self.logger.console_error_1(arg1);
+    fn new_params(&self) -> ParamListBuilder {
+        ParamListBuilder::new(&self.arguments)
+    }
+
+    pub fn show_panic_message(&self, message: String) {
+        self.panic_message.show(message);
+    }
+
+    fn js_call(&self, params: ParamListBuilder) -> Option<ParamList> {
+        let params_memory = params.build();
+        let ptr = params_memory.to_ptr();
+
+        let result = (self.js_call)(ptr);
+        drop(params_memory);
+
+        self.arguments.unfreeze(result)
+    }
+
+    fn console_4(&self, kind: &'static str, arg1: &str, arg2: &str, arg3: &str, arg4: &str) {
+        let params = self.new_params()
+            .str("module")
+            .str("consoleLog")
+            .str(kind)
+            .string(arg1)
+            .string(arg2)
+            .string(arg3)
+            .string(arg4);
+
+        let _ = self.js_call(params);
     }
 
     pub fn console_debug_4(&self, arg1: &str, arg2: &str, arg3: &str, arg4: &str) {
-        self.logger.console_debug_4(arg1, arg2, arg3, arg4);
+        self.console_4("debug", arg1, arg2, arg3, arg4)
     }
 
     pub fn console_log_4(&self, arg1: &str, arg2: &str, arg3: &str, arg4: &str) {
-        self.logger.console_log_4(arg1, arg2, arg3, arg4);
+        self.console_4("log", arg1, arg2, arg3, arg4)
     }
 
     pub fn console_info_4(&self, arg1: &str, arg2: &str, arg3: &str, arg4: &str) {
-        self.logger.console_info_4(arg1, arg2, arg3, arg4);
+        self.console_4("info", arg1, arg2, arg3, arg4)
     }
 
     pub fn console_warn_4(&self, arg1: &str, arg2: &str, arg3: &str, arg4: &str) {
-        self.logger.console_warn_4(arg1, arg2, arg3, arg4);
+        self.console_4("warn", arg1, arg2, arg3, arg4)
     }
 
     pub fn console_error_4(&self, arg1: &str, arg2: &str, arg3: &str, arg4: &str) {
-        self.logger.console_error_4(arg1, arg2, arg3, arg4);
+        self.console_4("error", arg1, arg2, arg3, arg4)
     }
 
     pub fn cookie_get(&self, cname: &str) -> String {
-        let (cname_ptr, cname_len) = str_to_pointer(cname);
-        let cookies_get = self.cookie_get;
-        cookies_get(cname_ptr, cname_len);
-        self.stack.pop()
+        let params = self.new_params()
+            .str("module")
+            .str("cookie")
+            .str("get")
+            .string(cname);
+
+        let result = self.js_call(params);
+
+        result
+            .unwrap_or_default()
+            .convert::<String, _>(|mut params| {
+                let first = params.get_string("first")?;
+                params.expect_no_more()?;
+                Ok(first)
+            })
+            .unwrap_or_else(|error| {
+                log::error!("cookie_get -> params decode error -> {error}");
+                String::from("")
+            })
     }
 
     pub fn cookie_set(&self, cname: &str, cvalue: &str, expires_in: u64) {
-        let (cname_ptr, cname_len) = str_to_pointer(cname);
-        let (cvalue_ptr, cvalue_len) = str_to_pointer(cvalue);
-        let cookies_set = self.cookie_set;
-        cookies_set(cname_ptr, cname_len, cvalue_ptr, cvalue_len, expires_in);
+        let params = self.new_params()
+            .str("module")
+            .str("cookie")
+            .str("set")
+            .string(cname)
+            .string(cvalue)
+            .u64(expires_in);
+
+        let _ = self.js_call(params);
     }
 
     pub fn interval_set(&self, duration: u32, callback_id: u32) -> u32 {
@@ -347,15 +204,34 @@ impl ApiImport {
     }
 
     pub fn hashrouter_get_hash_location(&self) -> String {
-        let hashrouter_get_hash_location = self.hashrouter_get_hash_location;
-        hashrouter_get_hash_location();
-        self.stack.pop()
+        let params = self.new_params()
+            .str("module")
+            .str("hashrouter")
+            .str("get");
+
+        let result = self.js_call(params);
+
+        result
+            .unwrap_or_default()
+            .convert::<String, _>(|mut params| {
+                let first = params.get_string("first")?;
+                params.expect_no_more()?;
+                Ok(first)
+            })
+            .unwrap_or_else(|error| {
+                log::error!("hashrouter_get_hash_location -> params decode error -> {error}");
+                String::from("")
+            })
     }
 
     pub fn hashrouter_push_hash_location(&self, new_hash: &str) {
-        let (new_hash_ptr, new_hash_len) = str_to_pointer(new_hash);
-        let hashrouter_push_hash_location = self.hashrouter_push_hash_location;
-        hashrouter_push_hash_location(new_hash_ptr, new_hash_len);
+        let params = self.new_params()
+            .str("module")
+            .str("hashrouter")
+            .str("push")
+            .string(new_hash);
+
+        let _ = self.js_call(params);
     }
 
     pub fn fetch_send_request(
@@ -366,69 +242,59 @@ impl ApiImport {
         headers: String,
         body: Option<String>,
     ) {
-        let (method_ptr, method_len) = str_to_pointer(method.as_str());
-        let (url_ptr, url_len) = str_to_pointer(url.as_str());
-        let (headers_ptr, headers_len) = str_to_pointer(headers.as_str());
+        let params = self.new_params()
+            .str("module")
+            .str("fetch")
+            .str("send")
+            .u32(request_id)
+            .string(method)
+            .string(url)
+            .string(headers)
+            .string_option(body);
 
-        let fetch_send_request = self.fetch_send_request;
-
-        match body {
-            Some(body) => {
-                let (body_ptr, body_len) = str_to_pointer(body.as_str());
-
-                fetch_send_request(
-                    request_id,
-                    method_ptr,
-                    method_len,
-                    url_ptr,
-                    url_len,
-                    headers_ptr,
-                    headers_len,
-                    body_ptr,
-                    body_len,
-                );
-            },
-            None => {
-                let body_ptr = 0;
-                let body_len = 0;
-
-                fetch_send_request(
-                    request_id,
-                    method_ptr,
-                    method_len,
-                    url_ptr,
-                    url_len,
-                    headers_ptr,
-                    headers_len,
-                    body_ptr,
-                    body_len,
-                );
-            }
-        };
-
+        let _ = self.js_call(params);
     }
 
     pub fn websocket_register_callback(&self, host: &str, callback_id: u32) {
-        let (host_ptr, host_len) = str_to_pointer(host);
-        let websocket_register_callback = self.websocket_register_callback;
-        websocket_register_callback(host_ptr, host_len, callback_id);
+        let params = self.new_params()
+            .str("module")
+            .str("websocket")
+            .str("register_callback")
+            .string(host)
+            .u32(callback_id);
+
+        let _ = self.js_call(params);
     }
 
     pub fn websocket_unregister_callback(&self, callback_id: u32) {
-        let websocket_unregister_callback = self.websocket_unregister_callback;
-        websocket_unregister_callback(callback_id);
+        let params = self.new_params()
+            .str("module")
+            .str("websocket")
+            .str("unregister_callback")
+            .u32(callback_id);
+
+    let _ = self.js_call(params);
     }
 
     pub fn websocket_send_message(&self, callback_id: u32, message: &str) {
-        let (message_ptr, message_len) = str_to_pointer(message);
-        let websocket_send_message = self.websocket_send_message;
-        websocket_send_message(callback_id, message_ptr, message_len);
+        let params = self.new_params()
+            .str("module")
+            .str("websocket")
+            .str("send_message")
+            .u32(callback_id)
+            .string(message);
+
+        let _ = self.js_call(params);
     }
 
     pub fn dom_bulk_update(&self, value: &str) {
-        let (value_ptr, value_len) = str_to_pointer(value);
-        let dom_bulk_update = self.dom_bulk_update;
-        dom_bulk_update(value_ptr, value_len);
+        let params = self.new_params()
+            .str("module")
+            .str("dom")
+            .str("dom_bulk_update")
+            .string(value);
+
+        let _ = self.js_call(params);
     }
 
     pub fn dom_get_bounding_client_rect_x(&self, id: u64) -> i32 {

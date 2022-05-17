@@ -1,5 +1,5 @@
 use crate::{
-    driver::Driver,
+    driver_module::driver_browser::Driver,
     computed::struct_mut::ValueMut,
     virtualdom::models::realdom_id::RealDomId
 };

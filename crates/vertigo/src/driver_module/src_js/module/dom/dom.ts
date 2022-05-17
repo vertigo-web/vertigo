@@ -2,6 +2,11 @@ import { ModuleControllerType } from "../../wasm_init";
 import { ExportType } from "../../wasm_module";
 import { MapNodes } from "./map_nodes";
 
+interface FileItemType {
+    name: string,
+    data: Uint8Array,
+}
+
 const createElement = (name: string): Element => {
     if (name == "path" || name == "svg") {
         return document.createElementNS("http://www.w3.org/2000/svg", name);
@@ -111,18 +116,22 @@ export class DriverDom {
             if (target instanceof Element && event instanceof KeyboardEvent) {
                 const id = this.all.get(target);
 
-                this.getWasm().pushString(event.key);
-                this.getWasm().pushString(event.code);
+                const new_params = this.getWasm().newList();
+                if (id === undefined) {
+                    new_params.push_null();
+                } else {
+                    new_params.push_u64(id);
+                }
 
-                const stopPropagate = this.getWasm().exports.dom_keydown(
-                    id === undefined ? 0n : id,
-                    // event.key,
-                    // event.code,
-                    event.altKey === true ? 1 : 0,
-                    event.ctrlKey === true ? 1 : 0,
-                    event.shiftKey === true ? 1 : 0,
-                    event.metaKey === true ? 1 : 0,
-                );
+                new_params.push_string(event.key);
+                new_params.push_string(event.code);
+                new_params.push_bool(event.altKey);
+                new_params.push_bool(event.ctrlKey);
+                new_params.push_bool(event.shiftKey);
+                new_params.push_bool(event.metaKey);
+                const new_params_id = new_params.freeze();
+
+                const stopPropagate = this.getWasm().exports.dom_keydown(new_params_id);
 
                 if (stopPropagate > 0) {
                     event.preventDefault();
@@ -141,24 +150,99 @@ export class DriverDom {
                 const id = this.all.get(target);
 
                 if (id !== undefined) {
-                    if (target instanceof HTMLInputElement) {
-                        this.getWasm().pushString(target.value);
-                        this.getWasm().exports.dom_oninput(id);
+                    if (target instanceof HTMLInputElement || target instanceof HTMLTextAreaElement) {
+                        const new_params = this.getWasm().newList();
+                        new_params.push_u64(id);
+                        new_params.push_string(target.value);
+                        const new_params_id = new_params.freeze();
+
+                        this.getWasm().exports.dom_oninput(new_params_id);
                         return;
                     }
 
-                    if (target instanceof HTMLTextAreaElement) {
-                        this.getWasm().pushString(target.value);
-                        this.getWasm().exports.dom_oninput(id);
-                        return;
-                    }
-
+                    console.warn('input ignore', target);
                     return;
                 }
             }
 
-            console.warn('mouseover ignore', target);
+            console.warn('input ignore', target);
         }, false);
+
+
+        document.addEventListener('dragover', (ev): void => {
+            // console.log('File(s) in drop zone');
+            ev.preventDefault();
+        });
+
+        document.addEventListener('drop', (event): void => {            
+            event.preventDefault();
+
+            const dom_id = this.getIdByTarget(event.target);
+
+            if (dom_id === null) {
+                console.warn('drop ignore', event.target);
+                return;
+            }
+
+            if (event.dataTransfer === null) {
+                console.error('dom -> drop -> dataTransfer null');
+            } else {
+                const files: Array<Promise<FileItemType>> = [];
+
+                for (let i = 0; i < event.dataTransfer.items.length; i++) {
+                    const item = event.dataTransfer.items[i];
+
+                    if (item === undefined) {
+                        console.error('dom -> drop -> item - undefined');
+                    } else {
+                        const file = item.getAsFile();
+
+                        if (file === null) {
+                            console.error(`dom -> drop -> index:${i} -> It's not a file`);
+                        } else {
+                            files.push(file
+                                .arrayBuffer()
+                                .then((data): FileItemType => ({
+                                    name: file.name,
+                                    data: new Uint8Array(data),
+                                }))
+                            );
+                        }
+                    }
+                }
+
+                if (files.length) {
+                    Promise.all(files).then((files) => {
+                        const params = this.getWasm().newList();
+
+                        params.push_u64(dom_id);
+
+                        params.push_list((params_files) => {
+                            for (const file of files) {
+                                params_files.push_list((params_details) => {
+                                    params_details.push_string(file.name);
+                                    params_details.push_buffer(file.data);
+                                });
+                            }
+                        });
+
+                        this.getWasm().exports.dom_ondropfile(params.freeze());
+                    });
+                } else {
+                    console.error('No files to send');
+                }
+            }
+        }, false);
+    }
+
+    private getIdByTarget(target: EventTarget | null): BigInt | null {
+        if (target instanceof Element) {
+            const id = this.all.get(target);
+
+            return id ?? null;
+        }
+
+        return null;
     }
 
     private mount_node(root_id: BigInt) {
@@ -291,9 +375,7 @@ export class DriverDom {
         document.head.appendChild(style);
     }
 
-    public dom_bulk_update = (value_ptr: BigInt, value_len: BigInt) => {
-        const value = this.getWasm().decodeText(value_ptr, value_len);
-
+    public dom_bulk_update = (value: string) => {
         const setFocus: Set<number> = new Set();
 
         try {

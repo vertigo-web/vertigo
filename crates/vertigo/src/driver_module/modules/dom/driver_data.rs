@@ -1,6 +1,6 @@
 use std::hash::Hash;
 use std::rc::Rc;
-use crate::{dev::{RealDomId, EventCallback}, KeyDownEvent};
+use crate::{dev::{RealDomId, EventCallback}, KeyDownEvent, DropFileEvent};
 use std::fmt::Display;
 use crate::struct_mut::HashMapMut;
 use super::element_wrapper::DomElement;
@@ -102,6 +102,9 @@ impl DriverData {
                 },
                 EventCallback::HookKeyDown { callback } => {
                     node.hook_keydown = callback;
+                },
+                EventCallback::OnDropFile { callback } => {
+                    node.on_dropfile = callback;
                 }
             }
         );
@@ -187,6 +190,13 @@ impl DriverData {
         self.get_from_node(
             &id,
             |elem| elem.on_input.clone()
+        )
+    }
+
+    pub fn find_event_on_dropfile(&self, id: RealDomId) -> Option<Rc<dyn Fn(DropFileEvent)>> {
+        self.get_from_node(
+            &id,
+            |elem| elem.on_dropfile.clone()
         )
     }
 }

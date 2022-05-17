@@ -1,43 +1,20 @@
-use std::panic;
+use std::{panic, rc::Rc};
 use log::{Level, Log, Metadata, Record};
-use crate::driver_module::api::ApiLoggerImport;
+use crate::{ApiImport};
 
-fn hook_impl(info: &panic::PanicInfo<'_>) {
-    let msg = info.to_string();
+use std::sync::{Once};
 
-    log::error!("Panic: {msg}");
-    // Add the error stack to our message.
-    //
-    // This ensures that even if the `console` implementation doesn't
-    // include stacks for `console.error`, the stack is still available
-    // for the user. Additionally, Firefox's console tries to clean up
-    // stack traces, and ruins Rust symbols in the process
-    // (https://bugzilla.mozilla.org/show_bug.cgi?id=1519569) but since
-    // it only touches the logged message's associated stack, and not
-    // the message's contents, by including the stack in the message
-    // contents we make sure it is available to the user.
-    // msg.push_str("\n\nStack:\n\n");
-    // let e = Error::new();
-    // let stack = e.stack();
-    // msg.push_str(&stack);
-
-    // // Safari's devtools, on the other hand, _do_ mess with logged
-    // // messages' contents, so we attempt to break their heuristics for
-    // // doing that by appending some whitespace.
-    // // https://github.com/rustwasm/console_error_panic_hook/issues/7
-    // msg.push_str("\n\n");
-
-    // // Finally, log the panic with `console.error`!
-    // error(msg);
-}
-
-use std::sync::{Once, Arc};
 static SET_HOOK: Once = Once::new();
 
-pub fn init_env(api: Arc<ApiLoggerImport>) {
+pub fn init_env(api: Rc<ApiImport>) {
     SET_HOOK.call_once(|| {
+        let panic_message = api.panic_message.clone();
         init_logger(api);
-        panic::set_hook(Box::new(hook_impl));
+
+        panic::set_hook(Box::new(move |info: &panic::PanicInfo<'_>| {
+            let message = info.to_string();
+            panic_message.show(message);
+        }));
     });
 }
 
@@ -84,10 +61,13 @@ impl Style {
 }
 
 struct WasmLogger {
-    api: Arc<ApiLoggerImport>,
+    api: Rc<ApiImport>,
     config: Config,
     style: Style,
 }
+
+unsafe impl Send for WasmLogger {}
+unsafe impl Sync for WasmLogger {}
 
 impl Log for WasmLogger {
     fn enabled(&self, metadata: &Metadata<'_>) -> bool {
@@ -139,7 +119,7 @@ impl Log for WasmLogger {
     fn flush(&self) {}
 }
 
-fn init_logger(api: Arc<ApiLoggerImport>) {
+fn init_logger(api: Rc<ApiImport>) {
     let config = Config::default();
     let max_level = config.level;
     let wl = WasmLogger {
@@ -152,7 +132,7 @@ fn init_logger(api: Arc<ApiLoggerImport>) {
         Ok(_) => log::set_max_level(max_level.to_level_filter()),
         Err(e) => {
             let message = e.to_string();
-            api.console_error_1(message.as_str());
+            api.show_panic_message(message);
         },
     }
 }

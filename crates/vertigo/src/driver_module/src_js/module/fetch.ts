@@ -10,21 +10,12 @@ export class Fetch {
 
     public fetch_send_request = (
         request_id: number,
-        method_ptr: BigInt,
-        method_len: BigInt,
-        url_ptr: BigInt,
-        url_len: BigInt,
-        headers_ptr: BigInt,
-        headers_len: BigInt,
-        body_ptr: BigInt,
-        body_len: BigInt,
+        method: string,
+        url: string,
+        headers: string,
+        body: string | null,
     ) => {
         const wasm = this.getWasm();
-
-        const method = wasm.decodeText(method_ptr, method_len);
-        const url = wasm.decodeText(url_ptr, url_len);
-        const headers = wasm.decodeText(headers_ptr, headers_len);
-        const body = wasm.decodeTextNull(body_ptr, body_len);
 
         const headers_record: Record<string, string> = JSON.parse(headers);
 
@@ -36,21 +27,41 @@ export class Fetch {
             .then((response) =>
                 response.text()
                     .then((responseText) => {
-                        wasm.pushString(responseText);
-                        wasm.exports.fetch_callback(request_id, 1, response.status);
+                        const new_params = this.getWasm().newList();
+                        new_params.push_u32(request_id);            //request_id
+                        new_params.push_bool(true);                 //ok
+                        new_params.push_u32(response.status);       //http code
+                        new_params.push_string(responseText);       //body
+                        let params_id = new_params.freeze();
+
+                        wasm.exports.fetch_callback(params_id);
                     })
                     .catch((err) => {
                         console.error('fetch error (2)', err);
                         const responseMessage = new String(err).toString();
-                        wasm.pushString(responseMessage);
-                        wasm.exports.fetch_callback(request_id, 0, response.status);
+
+                        const new_params = this.getWasm().newList();
+                        new_params.push_u32(request_id);            //request_id
+                        new_params.push_bool(false);                //ok
+                        new_params.push_u32(response.status);       //http code
+                        new_params.push_string(responseMessage);    //body
+                        let params_id = new_params.freeze();
+
+                        wasm.exports.fetch_callback(params_id);
                     })
             )
             .catch((err) => {
                 console.error('fetch error (1)', err);
                 const responseMessage = new String(err).toString();
-                wasm.pushString(responseMessage);
-                wasm.exports.fetch_callback(request_id, 0, 0);
+
+                const new_params = this.getWasm().newList();
+                new_params.push_u32(request_id);                    //request_id
+                new_params.push_bool(false);                        //ok
+                new_params.push_u32(0);                             //http code
+                new_params.push_string(responseMessage);            //body
+                let params_id = new_params.freeze();
+
+                wasm.exports.fetch_callback(params_id);
             })
         ;
     }

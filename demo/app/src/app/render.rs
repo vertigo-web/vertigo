@@ -1,8 +1,9 @@
-use vertigo::{css, css_fn, html, Css, VDomNode, VDomElement, VDomComponent, bind};
+use vertigo::{css, css_fn, html, Css, VDomNode, VDomElement, VDomComponent, bind, KeyDownEvent};
 
 use crate::app::chat;
 use crate::{app};
 
+use super::dropfile::DropFilesState;
 use super::route::Route;
 
 css_fn! { css_menu, "
@@ -100,6 +101,12 @@ fn render_header(state: &app::State) -> VDomElement {
                 >
                     "Todo"
                 </li>
+                <li
+                    css={css_menu_item(current_page == Route::DropFile)}
+                    on_click={navigate_to(state, Route::DropFile)}
+                >
+                    "Drop File"
+                </li>
             </ul>
         </div>
     }
@@ -118,11 +125,20 @@ pub fn render(state: app::State) -> VDomComponent {
             Route::GameOfLife { .. } => state.game_of_life.clone().into(),
             Route::Chat => chat::ChatState::component().into(),
             Route::Todo => super::todo::TodoState::component().into(),
+            Route::DropFile => {
+                let state = DropFilesState::new();
+                state.render().into()
+            }
             Route::NotFound => html! { <div>"Page Not Found"</div> }.into(),
         };
 
+        let on_keydown = |event: KeyDownEvent| -> bool {
+            log::info!("event = {event:?}");
+            false
+        };
+    
         html! {
-            <div>
+            <div on_key_down={on_keydown}>
                 { header.clone() }
                 {child}
             </div>

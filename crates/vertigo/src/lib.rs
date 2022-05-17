@@ -48,11 +48,11 @@
 #![allow(clippy::too_many_arguments)]
 #![allow(clippy::new_without_default)]
 #![allow(clippy::large_enum_variant)]
+#![allow(clippy::non_send_fields_in_send_ty)]
 
 mod app;
 mod computed;
 mod css;
-mod driver;
 mod driver_refs;
 mod fetch;
 mod html_macro;
@@ -65,7 +65,9 @@ mod bind;
 mod driver_module;
 
 pub use computed::{AutoMap, Computed, Dependencies, Value, struct_mut, Client, GraphId, DropResource};
-pub use driver::{Driver, FetchResult};
+pub use driver_module::driver_browser::{Driver};
+pub use driver_module::driver_browser::{FetchResult};
+use driver_module::stack::ListId;
 pub use fetch::{
     fetch_builder::FetchBuilder,
     lazy_cache,
@@ -77,7 +79,7 @@ pub use html_macro::Embed;
 pub use instant::{Instant, InstantType};
 pub use virtualdom::models::{
     css::{Css, CssGroup},
-    vdom_element::{KeyDownEvent, VDomElement},
+    vdom_element::{KeyDownEvent, DropFileEvent, DropFileItem, VDomElement},
     vdom_component::VDomComponent,
     vdom_node::VDomNode,
 };
@@ -85,7 +87,7 @@ pub use websocket::{WebsocketConnection, WebsocketMessage};
 pub use future_box::{FutureBoxSend, FutureBox};
 pub use bind::bind;
 pub mod dev {
-    pub use super::driver::{EventCallback, FetchMethod};
+    pub use super::driver_module::driver_browser::{EventCallback, FetchMethod};
     pub use super::driver_refs::RefsContext;
     pub use super::virtualdom::models::{
         node_attr,
@@ -170,84 +172,190 @@ pub use vertigo_macro::css_block;
 mod external_api;
 use external_api::DRIVER_BROWSER;
 
+//------------------------------------------------------------------------------------------------------------------
+// methods for memory allocation
+//------------------------------------------------------------------------------------------------------------------
+
 #[no_mangle]
-pub fn alloc(len: u64) -> u64 {
-    DRIVER_BROWSER.with(|state| state.driver.inner.driver.alloc(len))
+pub fn arguments_new_list() -> u32 {
+    DRIVER_BROWSER.with(|state| {
+        state.driver.driver.api.arguments.new_list().to_u32()
+    })
 }
 
 #[no_mangle]
-pub fn alloc_empty_string() {
-    DRIVER_BROWSER.with(|state| state.driver.inner.driver.alloc_empty_string())
+pub fn arguments_debug(list_id: u32) {
+    let list_id = ListId(list_id);
+    DRIVER_BROWSER.with(|state| {
+        state.driver.driver.api.arguments.debug(list_id)
+    })
 }
+
+#[no_mangle]
+pub fn arguments_push_string_empty(list_id: u32) {
+    let list_id = ListId(list_id);
+    DRIVER_BROWSER.with(|state| {
+        state.driver.driver.api.arguments.push_string_empty(list_id);
+    })
+}
+
+#[no_mangle]
+pub fn arguments_push_string_alloc(list_id: u32, size: u32) -> u32 {
+    let list_id = ListId(list_id);
+    DRIVER_BROWSER.with(|state| {
+        state.driver.driver.api.arguments.push_string_alloc(list_id, size).to_u32()
+    })
+}
+
+#[no_mangle]
+pub fn arguments_push_buffer_alloc(list_id: u32, size: u32) -> u32 {
+    let list_id = ListId(list_id);
+    DRIVER_BROWSER.with(|state| {
+        state.driver.driver.api.arguments.push_buffer_alloc(list_id, size).to_u32()
+    })
+}
+
+#[no_mangle]
+pub fn arguments_push_u32(list_id: u32, value: u32) {
+    let list_id = ListId(list_id);
+    DRIVER_BROWSER.with(|state| {
+        state.driver.driver.api.arguments.push_u32(list_id, value)
+    })
+}
+
+#[no_mangle]
+pub fn arguments_push_i32(list_id: u32, value: i32) {
+    let list_id = ListId(list_id);
+    DRIVER_BROWSER.with(|state| {
+        state.driver.driver.api.arguments.push_i32(list_id, value)
+    })
+}
+
+#[no_mangle]
+pub fn arguments_push_u64(list_id: u32, value: u64) {
+    let list_id = ListId(list_id);
+    DRIVER_BROWSER.with(|state| {
+        state.driver.driver.api.arguments.push_u64(list_id, value)
+    })
+}
+
+#[no_mangle]
+pub fn arguments_push_i64(list_id: u32, value: i64) {
+    let list_id = ListId(list_id);
+    DRIVER_BROWSER.with(|state| {
+        state.driver.driver.api.arguments.push_i64(list_id, value)
+    })
+}
+
+#[no_mangle]
+pub fn arguments_push_true(list_id: u32) {
+    let list_id = ListId(list_id);
+    DRIVER_BROWSER.with(|state| {
+        state.driver.driver.api.arguments.push_true(list_id)
+    })
+}
+
+#[no_mangle]
+pub fn arguments_push_false(list_id: u32) {
+    let list_id = ListId(list_id);
+    DRIVER_BROWSER.with(|state| {
+        state.driver.driver.api.arguments.push_false(list_id)
+    })
+}
+
+#[no_mangle]
+pub fn arguments_push_null(list_id: u32) {
+    let list_id = ListId(list_id);
+    DRIVER_BROWSER.with(|state| {
+        state.driver.driver.api.arguments.push_null(list_id)
+    })
+}
+
+#[no_mangle]
+pub fn arguments_push_sublist(id: u32, sub_params_id: u32) {
+    let id = ListId(id);
+    let sub_params_id = ListId(sub_params_id);
+    DRIVER_BROWSER.with(|state| {
+        state.driver.driver.api.arguments.push_list(id, sub_params_id);
+    })
+}
+
+#[no_mangle]
+pub fn arguments_freeze(list_id: u32) {
+    let list_id = ListId(list_id);
+    DRIVER_BROWSER.with(|state| {
+        state.driver.driver.api.arguments.freeze(list_id)
+    })
+}
+
+//------------------------------------------------------------------------------------------------------------------
 
 #[no_mangle]
 pub fn interval_run_callback(callback_id: u32) {
-    DRIVER_BROWSER.with(|state| state.driver.inner.driver.export_interval_run_callback(callback_id));
+    DRIVER_BROWSER.with(|state| state.driver.driver.export_interval_run_callback(callback_id));
 }
 
 #[no_mangle]
 pub fn timeout_run_callback(callback_id: u32) {
-    DRIVER_BROWSER.with(|state| state.driver.inner.driver.export_timeout_run_callback(callback_id));
+    DRIVER_BROWSER.with(|state| state.driver.driver.export_timeout_run_callback(callback_id));
 }
 
 #[no_mangle]
-pub fn hashrouter_hashchange_callback() {
-    DRIVER_BROWSER.with(|state| state.driver.inner.driver.export_hashrouter_hashchange_callback());
+pub fn hashrouter_hashchange_callback(list_id: u32) {
+    DRIVER_BROWSER.with(|state| state.driver.driver.export_hashrouter_hashchange_callback(list_id));
 }
 
 #[no_mangle]
-pub fn fetch_callback(request_id: u32, success: u32, status: u32) {
-    DRIVER_BROWSER.with(|state| state.driver.inner.driver.export_fetch_callback(request_id, success, status));
+pub fn fetch_callback(params_id: u32) {
+    DRIVER_BROWSER.with(|state| state.driver.driver.export_fetch_callback(params_id));
 }
 
 #[no_mangle]
 pub fn websocket_callback_socket(callback_id: u32) {
-    DRIVER_BROWSER.with(|state| state.driver.inner.driver.export_websocket_callback_socket(callback_id));
+    DRIVER_BROWSER.with(|state| state.driver.driver.export_websocket_callback_socket(callback_id));
 }
 
 #[no_mangle]
 pub fn websocket_callback_message(callback_id: u32) {
-    DRIVER_BROWSER.with(|state| state.driver.inner.driver.export_websocket_callback_message(callback_id));
+    DRIVER_BROWSER.with(|state| state.driver.driver.export_websocket_callback_message(callback_id));
 }
 
 #[no_mangle]
 pub fn websocket_callback_close(callback_id: u32) {
-    DRIVER_BROWSER.with(|state| state.driver.inner.driver.export_websocket_callback_close(callback_id));
+    DRIVER_BROWSER.with(|state| state.driver.driver.export_websocket_callback_close(callback_id));
 }
 
 #[no_mangle]
-pub fn dom_keydown(dom_id: u64, alt_key: u32, ctrl_key: u32, shift_key: u32, meta_key: u32) -> u32 {
+pub fn dom_keydown(params_id: u32) -> u32 {
     DRIVER_BROWSER.with(|state|
-        state.driver.inner.driver.export_dom_keydown(
-            dom_id,
-            alt_key,
-            ctrl_key,
-            shift_key,
-            meta_key
-        )
+        state.driver.driver.export_dom_keydown(params_id)
     )
 }
 
 #[no_mangle]
-pub fn dom_oninput(dom_id: u64) {
-    DRIVER_BROWSER.with(|state| state.driver.inner.driver.export_dom_oninput(dom_id));
+pub fn dom_oninput(params_id: u32) {
+    DRIVER_BROWSER.with(|state| state.driver.driver.export_dom_oninput(params_id));
 }
 
 #[no_mangle]
 pub fn dom_mouseover(dom_id: u64) {
-    DRIVER_BROWSER.with(|state| state.driver.inner.driver.export_dom_mouseover(dom_id));
+    DRIVER_BROWSER.with(|state| state.driver.driver.export_dom_mouseover(dom_id));
 }
 
 #[no_mangle]
 pub fn dom_mousedown(dom_id: u64) {
-    DRIVER_BROWSER.with(|state| state.driver.inner.driver.export_dom_mousedown(dom_id));
+    DRIVER_BROWSER.with(|state| state.driver.driver.export_dom_mousedown(dom_id));
+}
+
+#[no_mangle]
+pub fn dom_ondropfile(params_id: u32) {
+    DRIVER_BROWSER.with(|state| state.driver.driver.export_dom_ondropfile(params_id));
 }
 
 pub fn start_app(get_component: impl FnOnce() -> VDomComponent) {
     DRIVER_BROWSER.with(|state| {
-        state.driver.inner.driver.init_env();
+        state.driver.driver.init_env();
         let component = get_component();
-
         let driver = state.driver.clone();
 
         let client = crate::app::start_app(driver, component);
@@ -263,14 +371,16 @@ pub(crate) fn get_dependencies() -> Dependencies {
     })
 }
 
-pub(crate) fn external_connections_refresh() {
+pub(crate) fn external_connections_refresh() {                      //TODO - move somewhere ?
     DRIVER_BROWSER.with(|state| {
         state.driver.external_connections_refresh();
     });
 }
 
-pub fn get_driver() -> Driver {
+pub fn get_driver() -> Driver {                                     //TODO - move somewhere ?
     DRIVER_BROWSER.with(|state| {
         state.driver.clone()
     })
 }
+
+

@@ -8,6 +8,7 @@ pub enum Route {
     GameOfLife,
     Chat,
     Todo,
+    DropFile,
     NotFound,
 }
 
@@ -28,6 +29,7 @@ impl Route {
             "game_of_life" => Self::GameOfLife,
             "chat" => Self::Chat,
             "todo" => Self::Todo,
+            "drop-file" => Self::DropFile,
             _ => Self::NotFound,
         }
     }
@@ -50,6 +52,7 @@ impl ToString for Route {
             Self::GameOfLife { .. } => "game_of_life",
             Self::Chat => "chat",
             Self::Todo => "todo",
+            Self::DropFile => "drop-file",
             Self::NotFound => "",
         }
         .to_string()

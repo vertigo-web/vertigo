@@ -3,7 +3,7 @@ use std::{
 };
 
 use crate::{
-    driver::Driver,
+    driver_module::driver_browser::Driver,
     virtualdom::models::css::{Css, CssGroup}, struct_mut::HashMapMut,
 };
 

@@ -3,7 +3,7 @@ use std::{
 };
 use crate::{
     dev::{EventCallback, RealDomId, RefsContext},
-    Dependencies, KeyDownEvent,
+    Dependencies, KeyDownEvent, DropFileEvent,
 };
 use crate::struct_mut::VecMut;
 
@@ -122,6 +122,14 @@ impl DriverBrowserDom {
 
         if let Some(event_to_run) = event_to_run {
             event_to_run(text);
+        }
+    }
+
+    pub fn export_dom_ondropfile(&self, dom_id: u64, event: DropFileEvent) {
+        let event_to_run = self.inner.data.find_event_on_dropfile(RealDomId::from_u64(dom_id));
+
+        if let Some(event_to_run) = event_to_run {
+            event_to_run(event);
         }
     }
 

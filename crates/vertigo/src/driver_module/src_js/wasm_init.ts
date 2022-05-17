@@ -1,13 +1,27 @@
+import { argumentsDecode, ListItemType, ParamListBuilder } from "./arguments";
+
 export interface BaseExportType {
-    alloc: (length: BigInt) => BigInt,
-    alloc_empty_string: () => void,
+    arguments_debug: (listId: number) => void,                                  //fn(u32)
+    arguments_new_list: () => number,                                           //fn() -> u32
+    arguments_push_string_empty: (listId: number) => void,                      //fn(u32) -> u32
+    arguments_push_string_alloc: (listId: number, size: number) => number,      //fn(u32, u32) -> u32
+    arguments_push_buffer_alloc: (listId: number, size: number) => number,      //fn(u32, u32) -> u32
+    arguments_push_u32: (listId: number, value: number) => void,                //fn(u32, u32)
+    arguments_push_i32: (listId: number, value: number) => void,                //fn(u32, i32)
+    arguments_push_u64: (listId: number, value: BigInt) => void,                //fn(u32, u64)
+    arguments_push_i64: (listId: number, value: BigInt) => void,                //fn(u32, i64)
+    arguments_push_true: (listId: number) => void,                              //fn(u32)
+    arguments_push_false: (listId: number) => void,                             //fn(u32)
+    arguments_push_null: (listId: number) => void,                              //fn(u32)
+    arguments_push_sublist: (paramsId: number, sub_params_id: number) => void,  //fn(u32, u32)
+    arguments_freeze: (listId: number) => void,                                  //fn(u32)
 };
 
 export interface ModuleControllerType<ExportType extends BaseExportType> {
     exports: ExportType,
-    decodeText: (ptr: BigInt, length: BigInt) => string,
-    decodeTextNull: (ptr: BigInt, length: BigInt) => string | null,
-    pushString: (value: string) => void,
+    decodeArguments: (ptr: number) => ListItemType,
+    newList: () => ParamListBuilder,
+    getUint8Memory: () => Uint8Array,
 }
 
 const fetchModule = async (wasmBinPath: string, imports: Record<string, WebAssembly.ModuleImports>): Promise<WebAssembly.WebAssemblyInstantiatedSource> => {
@@ -50,48 +64,17 @@ export const wasmInit = async <ImportType extends Record<string, Function>, Expo
         }
     };
 
-
-    const decodeTextNull = (ptr: BigInt, length: BigInt): string | null => {
-        if (length === 0n) {
-            return null;
-        }
-
-        const m = getUint8Memory().subarray(Number(ptr), Number(ptr) + Number(length));
-        var decoder = new TextDecoder("utf-8");
-        return decoder.decode(m.slice(0, Number(length)));
-    };
-
-    const decodeText = (ptr: BigInt, length: BigInt): string => {
-        if (length === 0n) {
-            return '';
-        }
-
-        const m = getUint8Memory().subarray(Number(ptr), Number(ptr) + Number(length));
-        var decoder = new TextDecoder("utf-8");
-        return decoder.decode(m.slice(0, Number(length)));
-    };
-
     //@ts-expect-error
     const exports: ExportType = module_instance.instance.exports;
 
-    const cachedTextEncoder = new TextEncoder();
+    const decodeArguments = (ptr: number) => argumentsDecode(getUint8Memory, ptr);
 
-    const pushString = (arg: string) => {
-        if (arg.length === 0) {
-            exports.alloc_empty_string();
-            return;
-        }
-
-        const buf = cachedTextEncoder.encode(arg);
-        const ptr = Number(exports.alloc(BigInt(buf.length)));
-
-        getUint8Memory().subarray(ptr, ptr + buf.length).set(buf);
-    };
+    const newList = (): ParamListBuilder => new ParamListBuilder(getUint8Memory, exports);
 
     return {
         exports,
-        decodeText,
-        decodeTextNull,
-        pushString
+        decodeArguments,
+        getUint8Memory,
+        newList
     };
 };
