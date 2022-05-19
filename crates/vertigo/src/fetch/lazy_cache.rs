@@ -10,13 +10,13 @@ use crate::{
 use crate::fetch::pinboxfut::PinBoxFuture;
 
 /// Value that [LazyCache] holds.
-pub struct CachedValue<T: 'static> {
+pub struct CachedValue<T> {
     value: Value<Resource<Rc<T>>>,
     updated_at: ValueMut<Instant>,
     set: ValueMut<bool>,
 }
 
-impl<T> CachedValue<T> {
+impl<T: 'static> CachedValue<T> {
     fn get_value(&self) -> Resource<Rc<T>> {
         self.value.get()
     }

@@ -51,7 +51,7 @@ impl<T: Clone> ValueMut<T> {
     }
 }
 
-impl<T: PartialEq + Clone> ValueMut<T> {
+impl<T: PartialEq> ValueMut<T> {
     pub fn set_and_check(&self, value: T) -> bool {
         let mut state = self.value.borrow_mut();
         let is_change = *state != value;

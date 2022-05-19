@@ -228,7 +228,7 @@ impl DriverBrowser {
         url: String,
         headers: Option<HashMap<String, String>>,
         body: Option<String>,
-    ) -> Pin<Box<dyn Future<Output = FetchResult> + 'static>> {
+    ) -> Pin<Box<dyn Future<Output = FetchResult>>> {
         self.driver.driver_fetch.fetch(method, url, headers, body)
     }
 
@@ -327,7 +327,7 @@ impl DriverBrowser {
         self.driver.driver_dom.flush_dom_changes();
     }
 
-    pub fn spawn(&self, fut: Pin<Box<dyn Future<Output = ()> + 'static>>) {
+    pub fn spawn(&self, fut: Pin<Box<dyn Future<Output = ()>>>) {
         let spawn_executor = self.driver.spawn_executor.clone();
         spawn_executor(fut);
     }

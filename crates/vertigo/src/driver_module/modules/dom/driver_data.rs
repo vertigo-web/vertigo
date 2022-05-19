@@ -5,7 +5,7 @@ use std::fmt::Display;
 use crate::struct_mut::HashMapMut;
 use super::element_wrapper::DomElement;
 
-struct HashMapRcWithLabel<K: Eq + Hash + Display, V> {
+struct HashMapRcWithLabel<K: Eq + Hash, V> {
     label: &'static str,
     data: HashMapMut<K, V>
 }

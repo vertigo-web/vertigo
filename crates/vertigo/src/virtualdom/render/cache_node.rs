@@ -8,7 +8,7 @@ use crate::{
     virtualdom::models::realdom_node::RealDomElement
 };
 
-pub struct CacheNode<K: Eq + Hash, RNode, VNode> {
+pub struct CacheNode<K, RNode, VNode> {
     create_new: Box<dyn Fn(&CssManager, &RealDomElement, &VNode) -> RNode>,
     data: HashMap<K, VecDeque<RNode>>,
 }

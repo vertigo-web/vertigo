@@ -16,7 +16,7 @@ where
 }
 
 struct Inner {
-    future: Pin<Box<dyn Future<Output = ()> + 'static>>,
+    future: Pin<Box<dyn Future<Output = ()>>>,
     waker: Waker,
 }
 
@@ -26,7 +26,7 @@ pub(crate) struct Task {
 }
 
 impl Task {
-    pub(crate) fn spawn(interval: DriverBrowserInterval, future: Pin<Box<dyn Future<Output = ()> + 'static>>) {
+    pub(crate) fn spawn(interval: DriverBrowserInterval, future: Pin<Box<dyn Future<Output = ()>>>) {
         let this = Rc::new(Self {
             inner: RefCell::new(None),
             interval,

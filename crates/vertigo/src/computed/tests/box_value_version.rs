@@ -1,12 +1,12 @@
 use crate::{computed::Computed, struct_mut::ValueMut};
 use std::rc::Rc;
 
-struct SubscribeValueVerInner<T: Clone> {
+struct SubscribeValueVerInner<T> {
     version: ValueMut<u32>,
     value: ValueMut<Option<T>>,
 }
 
-impl<T: Clone> SubscribeValueVerInner<T> {
+impl<T> SubscribeValueVerInner<T> {
     pub fn new() -> Rc<SubscribeValueVerInner<T>> {
         Rc::new(
             SubscribeValueVerInner {
@@ -19,19 +19,19 @@ impl<T: Clone> SubscribeValueVerInner<T> {
 
 use crate::computed::Client;
 
-pub struct SubscribeValueVer<T: PartialEq + Clone> {
+pub struct SubscribeValueVer<T> {
     _client: Option<Client>,
     value: Rc<SubscribeValueVerInner<T>>,
 }
 
-impl<T: PartialEq + Clone> SubscribeValueVer<T> {
+impl<T: PartialEq + Clone + 'static> SubscribeValueVer<T> {
     pub fn new(com: Computed<T>) -> SubscribeValueVer<T> {
         let value = SubscribeValueVerInner::new();
 
         let client = {
             let value = value.clone();
             com.subscribe(move |new_value| {
-                value.value.set(Some(new_value.clone()));
+                value.value.set(Some(new_value));
                 let current = value.version.get();
                 value.version.set(current + 1);
             })

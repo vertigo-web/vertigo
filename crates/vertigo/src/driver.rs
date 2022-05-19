@@ -327,16 +327,16 @@ impl Driver {
     }
 
     pub fn spawn_bind2<
-        T1: Clone + 'static,
-        T2: Clone + 'static,
+        T1: Clone,
+        T2: Clone,
         Fut: Future<Output=()> + 'static,
-        F: Fn(T1, T2) -> Fut + 'static
+        F: Fn(T1, T2) -> Fut
     >(&self, param1: &T1, param2: &T2, fun: F) -> impl Fn() {
         let driver = self.clone();
 
         let param1 = param1.clone();
         let param2 = param2.clone();
-    
+
         move || {
             let param1 = param1.clone();
             let param2 = param2.clone();

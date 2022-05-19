@@ -97,7 +97,7 @@ impl GraphMap {
             for (_, item) in state.iter()  {
                 count += item.len() as u64;
             }
-    
+
             count
         })
     }

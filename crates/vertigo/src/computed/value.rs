@@ -35,11 +35,11 @@ impl<T> Drop for ValueInner<T> {
 /// assert_eq!(value.get(), 10);
 /// ```
 ///
-pub struct Value<T: Clone> {
+pub struct Value<T> {
     inner: Rc<ValueInner<T>>,
 }
 
-impl<T: Clone> Clone for Value<T> {
+impl<T> Clone for Value<T> {
     fn clone(&self) -> Self {
         Value {
             inner: self.inner.clone(),
@@ -47,7 +47,7 @@ impl<T: Clone> Clone for Value<T> {
     }
 }
 
-impl<T: Clone> Value<T> {
+impl<T: Clone + 'static> Value<T> {
     pub fn new(value: T) -> Value<T> {
         let deps = get_dependencies();
         Value {

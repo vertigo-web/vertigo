@@ -10,7 +10,7 @@ pub fn bind<T1: Clone>(param1: &T1) -> Bind1<T1> {
     }
 }
 
-pub struct Bind1<T1: Clone> {
+pub struct Bind1<T1> {
     param1: T1,
 }
 
@@ -51,7 +51,7 @@ impl<T1: Clone> Bind1<T1> {
     }
 }
 
-pub struct Bind2<T1: Clone, T2: Clone> {
+pub struct Bind2<T1, T2> {
     param1: T1,
     param2: T2,
 }
@@ -96,7 +96,7 @@ impl<T1: Clone, T2: Clone> Bind2<T1, T2> {
 }
 
 
-pub struct Bind3<T1: Clone, T2: Clone, T3: Clone> {
+pub struct Bind3<T1, T2, T3> {
     param1: T1,
     param2: T2,
     param3: T3,
@@ -144,7 +144,7 @@ impl<T1: Clone, T2: Clone, T3: Clone> Bind3<T1, T2, T3> {
 }
 
 
-pub struct Bind4<T1: Clone, T2: Clone, T3: Clone, T4: Clone> {
+pub struct Bind4<T1, T2, T3, T4> {
     param1: T1,
     param2: T2,
     param3: T3,

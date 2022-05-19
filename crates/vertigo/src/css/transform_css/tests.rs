@@ -76,9 +76,9 @@ fn test_css_split_rows3() {
 fn test_basic1() {
     let css = "cursor: pointer;";
 
-    let mut next_id = NextId::new();
+    let next_id = NextId::new();
 
-    let (id, selectors) = transform_css(css, &mut next_id);
+    let (id, selectors) = transform_css(css, &next_id);
 
     assert_eq!(selectors, vec!((".autocss_1".into(), "cursor: pointer".into())));
 
@@ -90,9 +90,9 @@ fn test_basic1() {
 fn test_basic2() {
     let css = "border: 1px solid black; padding: 10px; background-color: #e0e0e0;margin-bottom: 10px;";
 
-    let mut next_id = NextId::new();
+    let next_id = NextId::new();
 
-    let (id, selectors) = transform_css(css, &mut next_id);
+    let (id, selectors) = transform_css(css, &next_id);
 
     assert_eq!(
         selectors,
@@ -113,9 +113,9 @@ fn test_basic3() {
         margin: 5px 0;
     ";
 
-    let mut next_id = NextId::new();
+    let next_id = NextId::new();
 
-    let (id, selectors) = transform_css(css, &mut next_id);
+    let (id, selectors) = transform_css(css, &next_id);
 
     assert_eq!(
         selectors,
@@ -128,7 +128,7 @@ fn test_basic3() {
 
 #[test]
 fn test_transform_css_animation_value() {
-    let mut next_id = NextId::new();
+    let next_id = NextId::new();
 
     let css_value = "1.0s infinite ease-in-out {
         0% {
@@ -140,7 +140,7 @@ fn test_transform_css_animation_value() {
         }
     }";
 
-    let (css_parsed, css_document) = transform_css_animation_value(css_value, &mut next_id);
+    let (css_parsed, css_document) = transform_css_animation_value(css_value, &next_id);
 
     assert_eq!(next_id.current(), 1);
     assert_eq!(css_parsed, "1.0s infinite ease-in-out autocss_1 ");
@@ -171,9 +171,9 @@ fn test_animation() {
     };
     ";
 
-    let mut next_id = NextId::new();
+    let next_id = NextId::new();
 
-    let (id, selectors) = transform_css(css, &mut next_id);
+    let (id, selectors) = transform_css(css, &next_id);
 
     assert_eq!(id, 1);
     assert_eq!(next_id.current(), 2);
@@ -196,9 +196,9 @@ fn test_hover() {
     };
     ";
 
-    let mut next_id = NextId::new();
+    let next_id = NextId::new();
 
-    let (id, selectors) = transform_css(css, &mut next_id);
+    let (id, selectors) = transform_css(css, &next_id);
 
     assert_eq!(id, 1);
     assert_eq!(next_id.current(), 1);
@@ -221,9 +221,9 @@ fn test_of_type() {
     };
     ";
 
-    let mut next_id = NextId::new();
+    let next_id = NextId::new();
 
-    let (id, selectors) = transform_css(css, &mut next_id);
+    let (id, selectors) = transform_css(css, &next_id);
 
     assert_eq!(id, 1);
     assert_eq!(next_id.current(), 1);
@@ -251,9 +251,9 @@ fn test_doubled() {
     };
     ";
 
-    let mut next_id = NextId::new();
+    let next_id = NextId::new();
 
-    let (id, selectors) = transform_css(css, &mut next_id);
+    let (id, selectors) = transform_css(css, &next_id);
 
     assert_eq!(id, 1);
     assert_eq!(next_id.current(), 1);

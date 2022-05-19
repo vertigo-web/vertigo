@@ -8,9 +8,9 @@ pub struct Client {
 }
 
 impl Client {
-    pub fn new<T: Clone, F>(computed: Computed<T>, call: F) -> Client
+    pub fn new<T, F>(computed: Computed<T>, call: F) -> Client
     where
-        T: PartialEq + 'static,
+        T: Clone + PartialEq + 'static,
         F: Fn(T) + 'static,
     {
         let graph_value = GraphValue::new(false, {

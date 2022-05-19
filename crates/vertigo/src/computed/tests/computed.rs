@@ -111,9 +111,9 @@ fn pointers() {
     let pointer11: u64 = foo1 as *const () as u64;
     let pointer4: u64 = foo3 as *const () as u64;
 
-    assert_eq!(pointer1 == pointer2, false);
-    assert_eq!(pointer1 == pointer11, true);
-    assert_eq!(pointer1 == pointer4, false);
+    assert!(pointer1 != pointer2);
+    assert!(pointer1 == pointer11);
+    assert!(pointer1 != pointer4);
 
     // println!("gg1 {:x}", gg1);
     // println!("gg2 {:x}", gg2);
@@ -350,8 +350,7 @@ fn test_computed_switch_subscription() {
 
             match switch_value {
                 Switch::Ver1 => {
-                    let a_value = a.get();
-                    a_value
+                    a.get()
                 }
                 Switch::Ver2 => {
                     let a_value = a.get();
@@ -454,7 +453,7 @@ fn test_connect() {
         }
     });
 
-    assert_eq!(is_subscribe.get(), false);
+    assert!(!is_subscribe.get());
 
     let current_value = Rc::new(ValueMut::new(0));
 
@@ -469,26 +468,25 @@ fn test_connect() {
 
     println!("Subskrybcja 2");
 
-    assert_eq!(is_subscribe.get(), true);
+    assert!(is_subscribe.get());
 
     drop(client);
 
-    assert_eq!(is_subscribe.get(), false);
+    assert!(!is_subscribe.get());
 
     println!("Subskrybcja 3 {:?}", value.id());
 
     let client = value.subscribe({
-        let current_value = current_value.clone();
         move |val| {
             current_value.set(val);
         }
     });
 
-    assert_eq!(is_subscribe.get(), true);
+    assert!(is_subscribe.get());
 
     drop(client);
 
-    assert_eq!(is_subscribe.get(), false);
+    assert!(!is_subscribe.get());
 
     println!("Subskrybcja 4");
 }
