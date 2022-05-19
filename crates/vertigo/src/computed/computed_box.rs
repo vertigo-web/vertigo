@@ -39,7 +39,7 @@ use crate::computed::{Client, GraphValue, graph_id::GraphId};
 ///
 /// assert_eq!(comp_2.get(), 12);
 /// ```
-pub struct Computed<T: Clone + 'static> {
+pub struct Computed<T: Clone> {
     inner: GraphValue<T>,
 }
 
@@ -80,7 +80,7 @@ impl<T: Clone + 'static> Computed<T> {
         )
     }
 
-    pub fn map<K: Clone, F: 'static + Fn(&Computed<T>) -> K>(self, fun: F) -> Computed<K> {
+    pub fn map<K: Clone + 'static, F: 'static + Fn(&Computed<T>) -> K>(self, fun: F) -> Computed<K> {
         Computed::new(move ||
             fun(&self)
         )

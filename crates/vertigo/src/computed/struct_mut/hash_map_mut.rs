@@ -1,17 +1,18 @@
-use std::{collections::HashMap, fmt::Display, hash::Hash};
 use std::cell::RefCell;
+use std::collections::HashMap;
+use std::hash::Hash;
 
-pub struct HashMapMut<K: Eq + Hash + Display, V> {
+pub struct HashMapMut<K, V> {
     data: RefCell<HashMap<K, V>>,
 }
 
-impl<K: Eq + Hash + Display, V> Default for HashMapMut<K, V> {
+impl<K: Eq + Hash, V> Default for HashMapMut<K, V> {
     fn default() -> Self {
         Self::new()
     }
 }
 
-impl<K: Eq + Hash + Display, V> HashMapMut<K, V> {
+impl<K: Eq + Hash, V> HashMapMut<K, V> {
     pub fn new() -> HashMapMut<K, V> {
         HashMapMut {
             data: RefCell::new(HashMap::new()),
@@ -75,7 +76,7 @@ impl<K: Eq + Hash + Display, V> HashMapMut<K, V> {
     }
 }
 
-impl<K: Eq + Hash + Display, V: Clone> HashMapMut<K, V> {
+impl<K: Eq + Hash, V: Clone> HashMapMut<K, V> {
     pub fn get_all_values(&self) -> Vec<V> {
         let state = self.data.borrow();
 
@@ -94,7 +95,7 @@ impl<K: Eq + Hash + Display, V: Clone> HashMapMut<K, V> {
     }
 }
 
-impl<K: Eq + Hash + Display, V: PartialEq> HashMapMut<K, V> {
+impl<K: Eq + Hash, V: PartialEq> HashMapMut<K, V> {
     pub fn insert_and_check(&self, key: K, value: V) -> bool {
         let mut state = self.data.borrow_mut();
         let is_change = state.get(&key) != Some(&value);

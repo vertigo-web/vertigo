@@ -199,7 +199,7 @@ impl DriverBrowserDom {
             for command in state {
                 out.push(command.into_string());
             }
-    
+
             let command_str = format!("[{}]", out.join(","));
             self.inner.api.dom_bulk_update(command_str.as_str());
         }

@@ -1,7 +1,6 @@
 use std::{
     hash::Hash,
     rc::Rc,
-    fmt::Display,
 };
 
 use crate::{struct_mut::HashMapMut};
@@ -20,12 +19,12 @@ type CreateType<K, V> = Box<dyn Fn(&K) -> V>;
 /// assert_eq!(my_map.get(&5), 10);
 /// ```
 #[derive(Clone)]
-pub struct AutoMap<K: Eq + Hash + Clone + Display, V: Clone + 'static> {
+pub struct AutoMap<K, V> {
     create: Rc<CreateType<K, V>>,
     values: Rc<HashMapMut<K, V>>,
 }
 
-impl<K: Eq + Hash + Clone + Display, V: Clone + 'static> AutoMap<K, V> {
+impl<K: Eq + Hash + Clone, V: Clone> AutoMap<K, V> {
     pub fn new<C: Fn(&K) -> V + 'static>(create: C) -> AutoMap<K, V> {
         AutoMap {
             create: Rc::new(Box::new(create)),

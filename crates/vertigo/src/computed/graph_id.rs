@@ -1,5 +1,4 @@
 use std::cmp::{Ord, PartialOrd};
-use std::fmt::Debug;
 
 #[derive(Hash, PartialEq, Eq, Clone, Copy, Debug, PartialOrd, Ord)]
 pub struct GraphId {

@@ -120,7 +120,7 @@ fn find_first_dom(list: &VecDeque<CurrentNodePairs<'_>>) -> Option<RealDomId> {
     None
 }
 
-//próbuj dopasować od góry
+// Try to match starting from top
 fn get_pairs_top<'a>(
     real_child: &mut VecDeque<RealDomNode>,
     new_child: &mut VecDeque<&'a VDomNode>,
@@ -159,7 +159,7 @@ fn get_pairs_top<'a>(
     }
 }
 
-//próbuj dopasować od dołu
+// Try to match starting from bottom
 fn get_pairs_bottom<'a>(
     real_child: &mut VecDeque<RealDomNode>,
     new_child: &mut VecDeque<&'a VDomNode>,

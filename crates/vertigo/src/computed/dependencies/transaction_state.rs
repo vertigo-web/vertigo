@@ -41,7 +41,7 @@ impl TransactionState {
             match state {
                 State::Idle => {
                     hooks.fire_start();
-    
+
                     (
                         State::Modification {
                             level: 1,
@@ -75,23 +75,23 @@ impl TransactionState {
             match state {
                 State::Idle => {
                     log::error!("You cannot call 'down' for a state 'TransactionState::Idle'");
-    
+
                     (State::Idle, None)
                 }
                 State::Modification { mut level, mut edges } => {
                     level -= 1;
-    
+
                     if level == 0 {
                         let edges_copy = std::mem::take(&mut edges);
-                        
+
                         return (State::Refreshing, Some(edges_copy));
                     }
-    
+
                     (State::Modification { level, edges }, None)
                 }
                 State::Refreshing => {
                     log::error!("You cannot change the source value while the dependency graph is being refreshed");
-                    
+
                     (State::Refreshing, None)
                 }
             }

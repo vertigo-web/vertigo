@@ -7,15 +7,15 @@ use crate::{
 };
 
 
-struct GraphValueData<T: Clone + 'static> {
+struct GraphValueData<T> {
     is_computed_type: bool,
     deps: Dependencies,
     id: GraphId,
-    get_value: Box<dyn Fn() -> T + 'static>,
+    get_value: Box<dyn Fn() -> T>,
     state: ValueMut<Option<T>>,
 }
 
-impl<T: Clone + 'static> GraphValueData<T> {
+impl<T: Clone> GraphValueData<T> {
     pub fn new<F: Fn() -> T + 'static>(
         deps: &Dependencies,
         is_computed_type: bool,
@@ -128,7 +128,7 @@ impl GraphValueRefresh {
     }
 }
 
-struct GraphValueInner<T: Clone + 'static> {
+struct GraphValueInner<T: Clone> {
     inner: Rc<GraphValueData<T>>,
 }
 
@@ -146,7 +146,7 @@ impl<T: Clone + 'static> GraphValueInner<T> {
     }
 }
 
-impl<T: Clone + 'static> Drop for GraphValueInner<T> {
+impl<T: Clone> Drop for GraphValueInner<T> {
     fn drop(&mut self) {
         self.inner.deps.refresh_token_drop(self.inner.id);
         self.inner.control_drop_value();
@@ -154,7 +154,7 @@ impl<T: Clone + 'static> Drop for GraphValueInner<T> {
     }
 }
 
-pub struct GraphValue<T: Clone + 'static> {
+pub struct GraphValue<T: Clone> {
     inner: Rc<GraphValueInner<T>>,
 }
 
@@ -180,7 +180,7 @@ impl<T: Clone + 'static> GraphValue<T> {
     }
 }
 
-impl<T: Clone + 'static> Clone for GraphValue<T> {
+impl<T: Clone> Clone for GraphValue<T> {
     fn clone(&self) -> Self {
         GraphValue {
             inner: self.inner.clone(),

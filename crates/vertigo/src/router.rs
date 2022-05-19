@@ -48,7 +48,7 @@ pub struct HashRouter<T: Clone + ToString + From<String> + PartialEq + 'static> 
 ///         }.to_string()
 ///     }
 /// }
-/// 
+///
 /// impl From<String> for Route {
 ///     fn from(url: String) -> Self {
 ///         Route::new(url.as_str())
@@ -71,7 +71,7 @@ pub struct HashRouter<T: Clone + ToString + From<String> + PartialEq + 'static> 
 ///         VDomComponent::from(state, render)
 ///     }
 /// }
-/// 
+///
 /// fn render(state: &State) -> VDomElement {
 ///     html! {
 ///         <div>

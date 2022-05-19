@@ -1,6 +1,9 @@
 use std::collections::HashMap;
 
-use crate::{driver::{FetchMethod, FetchResult}, driver_module::driver_browser::DriverBrowser};
+use crate::{
+    driver::{FetchMethod, FetchResult},
+    driver_module::driver_browser::DriverBrowser,
+};
 
 /// Builder for simple requests.
 pub struct FetchBuilder {
