@@ -177,18 +177,18 @@ export class DriverDom {
         this.nodes.get("rename_node", id, (node) => {
             const new_node = createElement(name);
 
-            while (true) {
-                const firstChild = node.firstChild;
-
-                if (firstChild) {
-                    new_node.appendChild(firstChild);
-                } else {
-                    this.all.delete(node);
-                    this.all.set(new_node, id);
-                    this.nodes.set(id, new_node);
-                    return;
-                }
+            while (node.firstChild) {
+                new_node.appendChild(node.firstChild);
             }
+
+            if (node.parentElement !== null) {
+                node.parentElement.insertBefore(new_node, node);
+                node.parentElement.removeChild(node);
+            }
+
+            this.all.delete(node);
+            this.all.set(new_node, id);
+            this.nodes.set(id, new_node);
         });
     }
 
