@@ -119,7 +119,7 @@ pub fn next_generation(x_count: u16, y_count: u16, matrix: &[Vec<Value<bool>>]) 
 
         for y in 0..y_count as usize {
             for x in 0..x_count as usize {
-                matrix[y][x].set(next_generation[y][x]);
+                matrix[y][x].set_value_and_compare(next_generation[y][x]);
             }
         }
     });

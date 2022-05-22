@@ -1,4 +1,4 @@
-#[derive(PartialEq, Debug, Clone)]
+#[derive(PartialEq, Eq, Debug, Clone)]
 pub enum Route {
     Main,
     Counters,

@@ -95,7 +95,7 @@ impl Dependencies {
 
             for item in edges_to_refresh {
                 if item.is_computed() {
-                    item.drop_value();
+                    item.clear_cache();
                 } else {
                     edges_client.push(item);
                 }

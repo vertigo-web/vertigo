@@ -4,25 +4,25 @@ use vertigo::{AutoMap, Resource, SerdeSingleRequest, Value, VDomComponent, LazyC
 
 mod render;
 
-#[derive(Debug, Serialize, Deserialize, PartialEq, Clone)]
+#[derive(Debug, Serialize, Deserialize, PartialEq, Eq, Clone)]
 pub struct Commit {
     pub sha: String,
     pub commit: CommitDetails,
 }
 
-#[derive(Debug, Serialize, Deserialize, PartialEq, Clone)]
+#[derive(Debug, Serialize, Deserialize, PartialEq, Eq, Clone)]
 pub struct CommitDetails {
     pub author: Signature,
     pub committer: Signature,
 }
 
-#[derive(Debug, Serialize, Deserialize, PartialEq, Clone)]
+#[derive(Debug, Serialize, Deserialize, PartialEq, Eq, Clone)]
 pub struct Signature {
     pub name: String,
     pub email: String,
 }
 
-#[derive(Debug, Serialize, Deserialize, SerdeSingleRequest, PartialEq, Clone)]
+#[derive(Debug, Serialize, Deserialize, SerdeSingleRequest, PartialEq, Eq, Clone)]
 pub struct Branch {
     pub name: String,
     pub commit: Commit,

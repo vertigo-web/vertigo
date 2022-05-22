@@ -4,7 +4,7 @@ use crate::{computed::graph_id::GraphId, struct_mut::ValueMut};
 
 use super::hook::Hooks;
 
-#[derive(PartialEq)]
+#[derive(PartialEq, Eq)]
 enum State {
     Idle,
     Modification {
