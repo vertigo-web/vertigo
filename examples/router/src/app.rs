@@ -1,7 +1,7 @@
 use vertigo::router::HashRouter;
 use vertigo::{html, VDomElement, VDomComponent, bind};
 
-#[derive(Clone, PartialEq, Debug)]
+#[derive(Clone, PartialEq, Eq, Debug)]
 pub enum Route {
     Page1,
     Page2,

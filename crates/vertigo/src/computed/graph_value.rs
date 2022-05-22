@@ -70,6 +70,10 @@ impl<T: Clone> GraphValueData<T> {
         }
     }
 
+    fn control_clear_cache(&self) {
+        self.state.set(None);
+    }
+
     fn control_drop_value(&self) {
         self.state.set(None);
         self.deps.remove_client(self.id);
@@ -77,28 +81,34 @@ impl<T: Clone> GraphValueData<T> {
 }
 
 trait GraphValueControl {
-    fn drop_value(&self);
-    fn refresh(&self);
-    fn is_computed(&self) -> bool;
     fn id(&self) -> GraphId;
+    fn is_computed(&self) -> bool;
+    fn clear_cache(&self);          //for Computed
+    fn refresh(&self);              //for Client
+    fn drop_value(&self);           //For Drop
 }
 
 impl<T: Clone> GraphValueControl for GraphValueData<T> {
-    fn drop_value(&self) {
-        self.control_drop_value();
-    }
-
-    fn refresh(&self) {
-        self.control_refresh();
+    fn id(&self) -> GraphId {
+        self.id
     }
 
     fn is_computed(&self) -> bool {
         self.is_computed_type
     }
 
-    fn id(&self) -> GraphId {
-        self.id
+    fn clear_cache(&self) {
+        self.control_clear_cache();
     }
+
+    fn refresh(&self) {
+        self.control_refresh();
+    }
+
+    fn drop_value(&self) {
+        self.control_drop_value();
+    }
+
 }
 
 #[derive(Clone)]
@@ -111,20 +121,24 @@ impl GraphValueRefresh {
         GraphValueRefresh { control }
     }
 
-    pub fn drop_value(&self) {
-        self.control.drop_value();
-    }
-
-    pub fn refresh(&self) {
-        self.control.refresh()
+    pub fn id(&self) -> GraphId {
+        self.control.id()
     }
 
     pub fn is_computed(&self) -> bool {
         self.control.is_computed()
     }
 
-    pub fn id(&self) -> GraphId {
-        self.control.id()
+    pub fn clear_cache(&self) {
+        self.control.clear_cache();
+    }
+
+    pub fn refresh(&self) {
+        self.control.refresh()
+    }
+
+    pub fn drop_value(&self) {
+        self.control.drop_value();
     }
 }
 

@@ -1,14 +1,14 @@
 use serde::{Deserialize, Serialize};
 use vertigo::{css, html, AutoMap, Css, LazyCache, Resource, SerdeRequest, VDomElement, Value, VDomComponent, bind, get_driver};
 
-#[derive(PartialEq, Clone)]
+#[derive(PartialEq, Eq, Clone)]
 enum View {
     Main,
     Post { id: u32 },
     User { email: String },
 }
 
-#[derive(PartialEq, Serialize, Deserialize, SerdeRequest, Debug)]
+#[derive(PartialEq, Eq, Serialize, Deserialize, SerdeRequest, Debug)]
 struct PostModel {
     id: u32,
     title: String,
@@ -16,7 +16,7 @@ struct PostModel {
     // userId: u32,
 }
 
-#[derive(PartialEq, Serialize, Deserialize, SerdeRequest, Debug)]
+#[derive(PartialEq, Eq, Serialize, Deserialize, SerdeRequest, Debug)]
 struct CommentModel {
     id: u32,
     body: String,
