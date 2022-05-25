@@ -243,9 +243,11 @@ pub fn dom_mousedown(dom_id: u64) {
     DRIVER_BROWSER.with(|state| state.driver.inner.driver.export_dom_mousedown(dom_id));
 }
 
-pub fn start_app(component: VDomComponent) {
+pub fn start_app(get_component: impl FnOnce() -> VDomComponent) {
     DRIVER_BROWSER.with(|state| {
         state.driver.inner.driver.init_env();
+        let component = get_component();
+
         let driver = state.driver.clone();
 
         let client = crate::app::start_app(driver, component);

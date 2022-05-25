@@ -63,9 +63,10 @@ pub fn render(state: &State) -> VDomElement {
 
 #[no_mangle]
 pub fn start_application() {
-    let state = State::new();
-    let component = state.render();
-    start_app(component);
+    start_app(|| {
+        let state = State::new();
+        state.render()
+    });
 }
 ```
 
