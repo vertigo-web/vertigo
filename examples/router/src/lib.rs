@@ -5,5 +5,5 @@ mod app;
 
 #[no_mangle]
 pub fn start_application() {
-    start_app(app::State::component());
+    start_app(app::State::component);
 }
