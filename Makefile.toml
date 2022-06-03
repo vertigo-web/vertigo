@@ -26,13 +26,30 @@ args = [
 
 # Demo tasks
 
+[tasks.opt_try]
+ignore_errors = true
+script = [
+    "wasm-opt -Os --strip-debug -o ./demo/build/vertigo_demo.wasm ${CARGO_MAKE_CRATE_TARGET_DIRECTORY}/wasm32-unknown-unknown/release/vertigo_demo.wasm",
+]
+
+[tasks.opt_catch.condition]
+files_not_exist = ["./demo/build/vertigo_demo.wasm"]
+[tasks.opt_catch]
+script = [
+    "echo \" \\033[31m You do not have a command \"wasm-opt\" in your system  \\033[0m \" >&2",
+    "echo \" \\033[31m You need to install Binaryen: https://github.com/WebAssembly/binaryen \\033[0m \" >&2",
+    "cp ${CARGO_MAKE_CRATE_TARGET_DIRECTORY}/wasm32-unknown-unknown/release/vertigo_demo.wasm ./demo/build/vertigo_demo.wasm",
+]
+
+
 [tasks.demo-build]
 dependencies = [ "wasm32-target", "demo-clean" ]
 script = [
     "mkdir -p demo/build",
     "cargo build -p vertigo-demo --release --target wasm32-unknown-unknown",
     "cp ${CARGO_MAKE_CRATE_TARGET_DIRECTORY}/wasm32-unknown-unknown/release/wasm_run.js ./demo/build/wasm_run.js",
-    "wasm-opt -Os --strip-debug -o ./demo/build/vertigo_demo.wasm ${CARGO_MAKE_CRATE_TARGET_DIRECTORY}/wasm32-unknown-unknown/release/vertigo_demo.wasm",
+    "cargo make opt_try",
+    "cargo make opt_catch",
     "cp ./demo/app/index.html ./demo/build",
 ]
 
