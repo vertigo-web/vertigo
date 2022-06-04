@@ -7,6 +7,7 @@ mod graph_value;
 mod value;
 pub mod struct_mut;
 mod drop_resource;
+pub mod context;
 
 #[cfg(test)]
 mod tests;

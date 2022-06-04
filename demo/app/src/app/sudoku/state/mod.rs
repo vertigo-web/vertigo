@@ -1,4 +1,4 @@
-use vertigo::{ Value, VDomComponent, get_driver};
+use vertigo::{ Value, get_driver, DomElement};
 
 use self::{
     number_item::NumberItem,
@@ -78,22 +78,24 @@ pub struct Sudoku {
 }
 
 impl Sudoku {
-    pub fn component() -> VDomComponent {
+    pub fn new() -> Sudoku {
         let grid_number = create_grid();
         let grid_possible = create_grid_possible(&grid_number);
         let grid_possible_last = create_grid_possible_last(&grid_number, &grid_possible);
             
-        let state = Sudoku {
+        Sudoku {
             grid: creatergid_view(grid_number, grid_possible, grid_possible_last),
-        };
+        }
+    }
 
-        crate::app::sudoku::render::main_render(state)
+    pub fn render(&self) -> DomElement {
+        crate::app::sudoku::render::main_render(self)
     }
 
     pub fn clear(&self) {
         log::info!("clear");
 
-        get_driver().transaction(|| {
+        get_driver().transaction(|_| {
             for x0 in TreeBoxIndex::variants() {
                 for y0 in TreeBoxIndex::variants() {
                     for x1 in TreeBoxIndex::variants() {

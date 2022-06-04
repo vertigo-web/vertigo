@@ -1,5 +1,5 @@
 use serde::{Deserialize, Serialize};
-use vertigo::{css, html, AutoMap, Css, LazyCache, Resource, SerdeRequest, VDomElement, Value, VDomComponent, bind, get_driver};
+use vertigo::{css, AutoMap, Css, LazyCache, SerdeRequest, Value, bind, get_driver, DomElement, dom, Resource};
 
 #[derive(PartialEq, Eq, Clone)]
 enum View {
@@ -8,7 +8,7 @@ enum View {
     User { email: String },
 }
 
-#[derive(PartialEq, Eq, Serialize, Deserialize, SerdeRequest, Debug)]
+#[derive(PartialEq, Eq, Serialize, Deserialize, SerdeRequest, Debug, Clone)]
 struct PostModel {
     id: u32,
     title: String,
@@ -16,7 +16,7 @@ struct PostModel {
     // userId: u32,
 }
 
-#[derive(PartialEq, Eq, Serialize, Deserialize, SerdeRequest, Debug)]
+#[derive(PartialEq, Eq, Serialize, Deserialize, SerdeRequest, Debug, Clone, PartialOrd)]
 struct CommentModel {
     id: u32,
     body: String,
@@ -34,7 +34,7 @@ pub struct TodoState {
 }
 
 impl TodoState {
-    pub fn component() -> VDomComponent {
+    pub fn new() -> TodoState {
         let view = Value::new(View::Main);
 
         let posts = LazyCache::new(10 * 60 * 60 * 1000, move || async move {
@@ -72,67 +72,54 @@ impl TodoState {
             }
         });
 
-        let state = TodoState {
+        TodoState {
             view,
             posts,
             comments,
-        };
+        }
+    }
 
-        VDomComponent::from(state, todo_render)
+    pub fn render(&self) -> DomElement {
+        todo_render(self)
     }
 }
 
-fn todo_render(state: &TodoState) -> VDomElement {
-    match state.view.get() {
-        View::Main => {
-            let main = TodoMainState::component(state);
+fn todo_render(state: &TodoState) -> DomElement {
+    let state = state.clone();
 
-            html! {
-                <div>
-                    { main }
-                </div>
+    let render = state.view.render_value({
+        let state = state.clone();
+        move |view|{
+            match view {
+                View::Main => todo_main_render(&state),
+                View::Post { id } => todo_post_render(&state, id),
+                View::User { email } => {
+                    let view = state.view.clone();
+                    let messag: String = format!("user = {}", email);
+
+                    let on_click = move || {
+                        view.set(View::Main);
+                    };
+                    
+                    dom!{
+                        <div>
+                            <div>
+                                { messag }
+                            </div>
+                            <div on_click={on_click} css={css_hover_item()}>
+                                "go to post list"
+                            </div>
+                        </div>
+                    }
+                }
             }
         }
-        View::Post { id } => {
-            let post_view = TodoPostState::component(state, id);
+    });
 
-            html! {
-                <div>
-                    { post_view }
-                </div>
-            }
-        }
-        View::User { email } => {
-            let view = state.view.clone();
-            let messag = format!("user = {}", email);
-
-            let on_click = move || {
-                view.set(View::Main);
-            };
-
-            html! {
-                <div>
-                    <div>
-                        { messag }
-                    </div>
-                    <div on_click={on_click} css={css_hover_item()}>
-                        "go to post list"
-                    </div>
-                </div>
-            }
-        }
-    }
-}
-
-#[derive(Clone)]
-struct TodoMainState {
-    state: TodoState,
-}
-
-impl TodoMainState {
-    fn component(state: &TodoState) -> VDomComponent {
-        let state = TodoMainState { state: state.clone() };
-        VDomComponent::from(state, todo_main_render)
+    dom! {
+        <div>
+            { render }
+        </div>
     }
 }
 
@@ -145,71 +132,60 @@ fn css_hover_item() -> Css {
     "}
 }
 
-fn todo_main_render(state_value: &TodoMainState) -> VDomElement {
-    let todo_state = &state_value.state;
+fn todo_main_render(state: &TodoState) -> DomElement {
+    let state = state.clone();
 
-    let posts = todo_state.posts.get();
+    let posts = state.posts.to_computed().render_value(move |posts| {
+        let todo_state = state.clone();
 
-    match posts {
-        Resource::Error(err) => {
-            let message = format!("Error loading posts {}", err);
-            html! {
-                <div>
-                    { message }
-                </div>
-            }
-        }
-        Resource::Loading => {
-            html! {
-                <div>
-                    "loading ..."
-                </div>
-            }
-        }
-        Resource::Ready(list) => {
-            let mut out: Vec<VDomElement> = Vec::new();
-
-            for item in list.as_ref() {
-                let message = format!("post = {}", item.title);
-
-                let on_click = {
-                    let view = todo_state.view.clone();
-                    let id = item.id;
-
-                    move || {
-                        view.set(View::Post { id });
-                    }
+        match posts {
+            Resource::Ready(posts) => {
+                let result = dom! {
+                    <div />
                 };
 
-                out.push(html! {
-                    <div on_click={on_click} css={css_hover_item()}>
+                for post in posts.as_ref() {
+                    let on_click = {
+                        let view = todo_state.view.clone();
+                        let id = post.id;
+
+                        move || {
+                            view.set(View::Post { id });
+                        }
+                    };
+
+                    result.add_child(dom! {
+                        <div on_click={on_click} css={css_hover_item()}>
+                            "post = "
+                            { post.title.clone() }
+                        </div>
+                    });
+                }
+    
+                result
+            },
+            Resource::Error(message) => {
+                dom! {
+                    <div>
+                        "Error loading posts "
                         { message }
                     </div>
-                });
-            }
-
-            html! {
-                <div>
-                    { ..out }
-                </div>
+                }
+            },
+            Resource::Loading => {
+                dom! {
+                    <div>
+                        "loading ..."
+                    </div>
+                }
             }
         }
-    }
-}
+    });
 
-#[derive(Clone)]
-struct TodoPostState {
-    state: TodoState,
-    post_id: u32,
-}
-
-impl TodoPostState {
-    pub fn component(state: &TodoState, post_id: u32) -> VDomComponent {
-        let state = TodoPostState {
-            state: state.clone(),
-            post_id
-        };
-        VDomComponent::from(state, todo_post_render)
+    dom! {
+        <div>
+            {posts}
+        </div>
     }
 }
 
@@ -233,69 +209,107 @@ fn css_comment_body() -> Css {
     "}
 }
 
-fn todo_post_render(state_value: &TodoPostState) -> VDomElement {
-    let post_id = state_value.post_id;
-    let message = format!("post_id = {}", post_id);
-    let view = state_value.state.view.clone();
+fn todo_post_render(state: &TodoState, post_id: u32) -> DomElement {
+    let state = state.clone();
 
-    let on_click = bind(&view).call(|view| {
+    let view = state.view.clone();
+
+    let on_click = bind(&view).call(|_, view| {
         view.set(View::Main);
     });
 
-    let comments = state_value.state.comments.get(&post_id);
-    let comments_list = comments.get();
+    let message = render_message(post_id);
+    let comments_out = render_comments(&state, post_id);
 
-    let mut comments_out: Vec<VDomElement> = Vec::new();
-
-    if let Resource::Ready(list) = &comments_list {
-        comments_out.push(html! {
-            <div css={css_comment_wrapper()}>
-                <strong>"Comments:"</strong>
-            </div>
-        });
-
-        for comment in list.iter() {
-            let on_click_author = bind(&view)
-                .and(&comment.email)
-                .call(|view, email| {
-                    view.set(View::User { email: email.clone() });
-                });
-
-            let css_author = css_comment_author().extend(css_hover_item());
-
-            comments_out.push(html! {
-                <div css={css_comment_wrapper()}>
-                    <span css={css_author} on_click={on_click_author}>
-                        {&comment.email}
-                    </span>
-                    <span css={css_comment_body()}>
-                        {&comment.body}
-                    </span>
-                </div>
-            })
-        }
-    }
-
-    if let Resource::Loading = comments_list {
-        comments_out.push(html! {
-            <div css={css_comment_wrapper()}>
-                <strong>"Loading ..."</strong>
-            </div>
-        });
-    }
-
-    html! {
+    dom! {
         <div>
-            <div>
-                { message }
-            </div>
-            <div on_click={on_click} css={css_hover_item()}>
+            { message }
+            <div css={css_hover_item()} on_click={on_click}>
                 "go to post list"
             </div>
-            <hr/>
-            <hr/>
+            <hr />
+            <hr />
+            { comments_out }
+        </div>
+    }
+}
 
-            { ..comments_out }
+fn render_message(post_id: u32) -> DomElement {
+    let message = format!("post_id = {}", post_id);
+
+    dom! {
+        <div>
+            { message }
+        </div>
+    }
+}
+
+fn render_comments(state: &TodoState, post_id: u32) -> DomElement {
+    let view = state.view.clone();
+
+    let comments = state.comments.get(&post_id);
+
+    let comments_component = comments.to_computed().render_value(move |value| {
+        let view = view.clone();
+            
+        match value {
+            Resource::Ready(list) => {
+                let result = dom! {
+                    <div>
+                        <div css={css_comment_wrapper()}>
+                            <strong>
+                                "Comments:"
+                            </strong>
+                        </div>
+                    </div>
+                };
+
+                for comment in list.as_ref() {
+                    let on_click_author = bind(&view)
+                        .and(&comment.email)
+                        .call(|_, view, email| {
+                            view.set(View::User { email: email.clone() });
+                        });
+
+                    let css_author = css_comment_author().extend(css_hover_item());
+
+                    result.add_child(dom! {
+                        <div css={css_comment_wrapper()}>
+                            <span css={css_author} on_click={on_click_author}>
+                                {&comment.email}
+                            </span>
+                            <span css={css_comment_body()}>
+                                { &comment.body }
+                            </span>
+                        </div>
+                    });
+                }
+
+                result
+            },
+            Resource::Error(message) => {
+                dom! {
+                    <div>
+                        "Error = "
+                        { message }
+                    </div>
+                }
+            },
+            Resource::Loading => {
+                dom! {
+                    <div css={css_comment_wrapper()}>
+                        <strong>
+                            "Loading ..."
+                        </strong>
+                    </div>
+                }
+            }
+        }
+    });
+
+    dom! {
+        <div>
+            { comments_component }
         </div>
     }
 }

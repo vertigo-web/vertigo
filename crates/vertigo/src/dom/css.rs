@@ -1,5 +1,7 @@
+use crate::get_driver;
+
 /// Css chunk, represented either as static or dynamic string.
-#[derive(Debug)]
+#[derive(Debug, Clone, PartialEq, Eq)]
 pub enum CssGroup {
     // &str - can be used as id using which we can find particular rule
     CssStatic { value: &'static str },
@@ -12,7 +14,7 @@ pub enum CssGroup {
 /// Consists of a vector of css chunks which can be extended.
 ///
 /// ```rust
-/// use vertigo::{Css, CssGroup, html};
+/// use vertigo::{Css, CssGroup, dom};
 ///
 /// let blue_text = Css::str("color: blue");
 /// let black_background = Css::str("background: black");
@@ -24,9 +26,9 @@ pub enum CssGroup {
 ///     .extend(blue_text)
 ///     .extend(black_background);
 ///
-/// let element = html! { <div css={my_styles} /> };
+/// let element = dom! { <div css={my_styles} /> };
 /// ```
-#[derive(Debug, Default)]
+#[derive(Debug, Default, Clone, PartialEq, Eq)]
 pub struct Css {
     pub groups: Vec<CssGroup>,
 }
@@ -61,5 +63,9 @@ impl Css {
         }
 
         self
+    }
+
+    pub fn convert_to_string(&self) -> String {
+        get_driver().get_class_name(self)
     }
 }

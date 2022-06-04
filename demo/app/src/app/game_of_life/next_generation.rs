@@ -1,4 +1,4 @@
-use vertigo::{get_driver, Value};
+use vertigo::{Value, transaction};
 
 enum Offset {
     Sub,  // -1
@@ -63,7 +63,7 @@ pub fn next_generation(x_count: u16, y_count: u16, matrix: &[Vec<Value<bool>>]) 
         matrix
     };
 
-    get_driver().transaction(|| {
+    transaction(|context| {
         for y in 0..y_count {
             for x in 0..x_count {
                 let x_prev = modulo(x_count, x, Offset::Sub);
@@ -77,39 +77,39 @@ pub fn next_generation(x_count: u16, y_count: u16, matrix: &[Vec<Value<bool>>]) 
                 let mut neighbours = 0;
 
                 //prev row
-                if matrix[y_prev][x_prev].get() {
+                if matrix[y_prev][x_prev].get(context) {
                     neighbours += 1;
                 }
 
-                if matrix[y_prev][x_curr].get() {
+                if matrix[y_prev][x_curr].get(context) {
                     neighbours += 1;
                 }
 
-                if matrix[y_prev][x_next].get() {
+                if matrix[y_prev][x_next].get(context) {
                     neighbours += 1;
                 }
 
                 //current row
-                if matrix[y_curr][x_prev].get() {
+                if matrix[y_curr][x_prev].get(context) {
                     neighbours += 1;
                 }
 
-                let current_life = matrix[y_curr][x_curr].get();
+                let current_life = matrix[y_curr][x_curr].get(context);
 
-                if matrix[y_curr][x_next].get() {
+                if matrix[y_curr][x_next].get(context) {
                     neighbours += 1;
                 }
 
                 //next row
-                if matrix[y_next][x_prev].get() {
+                if matrix[y_next][x_prev].get(context) {
                     neighbours += 1;
                 }
 
-                if matrix[y_next][x_curr].get() {
+                if matrix[y_next][x_curr].get(context) {
                     neighbours += 1;
                 }
 
-                if matrix[y_next][x_next].get() {
+                if matrix[y_next][x_next].get(context) {
                     neighbours += 1;
                 }
 

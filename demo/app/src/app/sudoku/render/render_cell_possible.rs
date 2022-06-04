@@ -1,17 +1,10 @@
-use vertigo::{css, html, Css, VDomElement, bind};
+use std::collections::HashSet;
+
+use vertigo::{css, Css, bind, DomElement, dom, Computed};
 
 use crate::app::sudoku::state::{number_item::SudokuValue, Cell};
 
 use super::config::Config;
-
-// fn cssCell() -> Css {
-//     let config = Config::new();
-//     css!("
-//         border: {config.item_border_size}px solid green;
-//         width: {config.item_width_size}px;
-//         height: {config.item_width_size}px;
-//     ")
-// }
 
 fn css_item_only_one() -> Css {
     let config = Config::new();
@@ -70,51 +63,59 @@ fn css_item(should_show: bool) -> Css {
     )
 }
 
-pub fn render_cell_possible(cell: &Cell) -> VDomElement {
-    let possible = (*cell).possible.get();
-    let only_one_possible = possible.len() == 1;
+fn view_one_possible(cell: &Cell) -> DomElement {
+    let cell = cell.clone();
 
-    if only_one_possible {
-        let out = possible.iter().map(|number| {
-            let on_set = bind(cell)
-                .and(number)
-                .call(|cell, number| {
-                    cell.number.value.set(Some(*number));
+    let render = cell.possible.render_value({
+        let cell = cell.clone();
+        move |possible| {
+            let wrapper = dom! { <div /> };
+
+            for number in possible.iter() {
+                let on_set = bind(&cell)
+                    .and(number)
+                    .call(|_, cell, number| {
+                        cell.number.value.set(Some(*number));
+                    });
+
+                wrapper.add_child(dom! {
+                    <div css={css_item_only_one()} on_click={on_set}>
+                        { number.as_u16() }
+                    </div>
                 });
-
-            html! {
-                <div css={css_item_only_one()} on_click={on_set}>
-                    { number.as_u16() }
-                </div>
             }
+
+            wrapper
+        }
+    });
+
+    dom! {
+        <div css={css_wrapper_one()}>
+            {render}
+        </div>
+    }
+}
+
+fn view_last_value(cell: &Cell, possible_last_value: SudokuValue) -> DomElement {
+    let on_set = bind(cell)
+        .and(&possible_last_value)
+        .call(|_, cell, possible_last_value| {
+            cell.number.value.set(Some(*possible_last_value));
         });
 
-        return html! {
-            <div css={css_wrapper_one()}>
-                { ..out }
+    dom! {
+        <div css={css_wrapper_one()}>
+            <div css={css_item_only_one()} on_click={on_set}>
+                { possible_last_value.as_u16() }"."
             </div>
-        };
+        </div>
     }
+}
 
-    let possible_last_value = cell.possible_last.get();
+fn view_default(cell: &Cell, possible: HashSet<SudokuValue>) -> DomElement {
+    let wrapper = dom! { <div css={css_wrapper()} /> };
 
-    if let Some(possible_last_value) = possible_last_value {
-        let on_set = bind(cell)
-            .and(&possible_last_value)
-            .call(|cell, possible_last_value| {
-                cell.number.value.set(Some(*possible_last_value));
-            });
-
-        return html! {
-            <div css={css_wrapper_one()}>
-                <div css={css_item_only_one()} on_click={on_set}>
-                    { possible_last_value.as_u16() }"."
-                </div>
-            </div>
-        };
-    }
-
-    let out = SudokuValue::variants().into_iter().map(|number| {
+    for number in SudokuValue::variants().into_iter() {
         let should_show = possible.contains(&number);
 
         let label = if should_show {
@@ -126,22 +127,64 @@ pub fn render_cell_possible(cell: &Cell) -> VDomElement {
         let on_click = bind(cell)
             .and(&should_show)
             .and(&number)
-            .call(|cell, should_show, number| {
+            .call(|_, cell, should_show, number| {
                 if *should_show {
                     cell.number.value.set(Some(*number));
                 }
             });
 
-        html! {
+        wrapper.add_child(dom! {
             <div css={css_item(should_show)} on_click={on_click}>
                 { label }
             </div>
+        });
+    }
+
+    wrapper
+}
+
+#[derive(Clone, PartialEq, Eq)]
+enum CellView {
+    One,
+    LastPossible(SudokuValue),
+    Default(HashSet<SudokuValue>)
+}
+
+pub fn render_cell_possible(cell: &Cell) -> DomElement {
+    let cell = cell.clone();
+
+    let view = Computed::from({
+        let cell = cell.clone();
+
+        move |context| {
+            let possible = cell.possible.get(context);
+            let only_one_possible = possible.len() == 1;
+        
+            if only_one_possible {
+                return CellView::One;
+            }
+        
+            let possible_last_value = cell.possible_last.get(context);
+        
+            if let Some(possible_last_value) = possible_last_value {
+                return CellView::LastPossible(possible_last_value);
+            }
+        
+            CellView::Default(possible)
         }
     });
 
-    html! {
-        <div css={css_wrapper()}>
-            { ..out }
+    let render = view.render_value(move |view| {
+        match view {
+            CellView::One => view_one_possible(&cell),
+            CellView::LastPossible(last) => view_last_value(&cell, last),
+            CellView::Default(possible) => view_default(&cell, possible),
+        }
+    });
+
+    dom! {
+        <div>
+            {render}
         </div>
     }
 }

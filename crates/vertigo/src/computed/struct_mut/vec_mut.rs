@@ -33,4 +33,8 @@ impl<V> VecMut<V> {
             callback(item);
         }
     }
+    pub fn map<K>(&self, map: impl Fn(&Vec<V>) -> K) -> K {
+        let data = self.data.borrow_mut();
+        map(&*data)
+    }
 }

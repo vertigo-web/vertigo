@@ -1,4 +1,4 @@
-use vertigo::{Value, VDomComponent};
+use vertigo::{Value, DomElement, transaction};
 
 mod render;
 
@@ -8,19 +8,23 @@ pub struct State {
 }
 
 impl State {
-    pub fn component(counter: &Value<u32>) -> VDomComponent {
+    pub fn component(counter: &Value<u32>) -> DomElement {
         let state = State {
             counter: counter.clone(),
         };
 
-        VDomComponent::from(state, render::render)
+        render::render(state)
     }
 
     pub fn increment(&self) {
-        self.counter.set(self.counter.get() + 1);
+        transaction(|context|{
+            self.counter.set(self.counter.get(context) + 1);
+        });
     }
 
     pub fn decrement(&self) {
-        self.counter.set(self.counter.get() - 1);
+        transaction(|context|{
+            self.counter.set(self.counter.get(context) - 1);
+        });
     }
 }

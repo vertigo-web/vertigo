@@ -1,6 +1,6 @@
 
 use std::future::Future;
-use crate::get_driver;
+use crate::{get_driver, Context};
 
 pub fn bind<T1: Clone>(param1: &T1) -> Bind1<T1> {
     let param1 = param1.clone();
@@ -22,31 +22,36 @@ impl<T1: Clone> Bind1<T1> {
         }
     }
 
-    pub fn call<R>(self, fun: fn(&T1) -> R) -> impl Fn() -> R {
+    pub fn call<R>(self, fun: fn(&Context, &T1) -> R) -> impl Fn() -> R {
         let Self { param1 } = self;
 
         move || -> R {
-            fun(&param1)
+            let context = Context::new();
+            fun(&context, &param1)
         }
     }
 
-    pub fn call_param<T2, R>(self, fun: fn(&T1, T2) -> R) -> impl Fn(T2) -> R {
+    pub fn call_param<T2, R>(self, fun: fn(&Context, &T1, T2) -> R) -> impl Fn(T2) -> R {
         let Self { param1 } = self;
 
         move |param2: T2| -> R {
-            fun(&param1, param2)
+            let context = Context::new();
+            fun(&context, &param1, param2)
         }
     }
 
     pub fn spawn<
-        Fut: Future<Output=()> + 'static
-    >(self, fun: fn(T1) -> Fut) -> impl Fn() {
+        Fut: Future<Output=Context> + 'static
+    >(self, fun: fn(Context, T1) -> Fut) -> impl Fn() {
         let Self { param1 } = self;
 
         move || {
+            let context = Context::new();
             let param1 = param1.clone();
-            let future = fun(param1);
-            get_driver().spawn(future);
+            let future = fun(context, param1);
+            get_driver().spawn(async move {
+                future.await;
+            });
         }
     }
 }
@@ -65,32 +70,37 @@ impl<T1: Clone, T2: Clone> Bind2<T1, T2> {
         }
     }
 
-    pub fn call<R>(self, fun: fn(&T1, &T2) -> R) -> impl Fn() -> R {
+    pub fn call<R>(self, fun: fn(&Context, &T1, &T2) -> R) -> impl Fn() -> R {
         let Self { param1, param2 } = self;
 
         move || -> R {
-            fun(&param1, &param2)
+            let context = Context::new();
+            fun(&context, &param1, &param2)
         }
     }
 
-    pub fn call_param<T3, R>(self, fun: fn(&T1, &T2, T3) -> R) -> impl Fn(T3) -> R {
+    pub fn call_param<T3, R>(self, fun: fn(&Context, &T1, &T2, T3) -> R) -> impl Fn(T3) -> R {
         let Self { param1, param2 } = self;
 
         move |param3: T3| -> R {
-            fun(&param1, &param2, param3)
+            let context = Context::new();
+            fun(&context, &param1, &param2, param3)
         }
     }
 
     pub fn spawn<
-        Fut: Future<Output=()> + 'static
-    >(self, fun: fn(T1, T2) -> Fut) -> impl Fn() {
+        Fut: Future<Output=Context> + 'static
+    >(self, fun: fn(Context, T1, T2) -> Fut) -> impl Fn() {
         let Self { param1, param2 } = self;
 
         move || {
+            let context = Context::new();
             let param1 = param1.clone();
             let param2 = param2.clone();
-            let future = fun(param1, param2);
-            get_driver().spawn(future);
+            let future = fun(context, param1, param2);
+            get_driver().spawn(async move {
+                future.await;
+            });
         }
     }
 }
@@ -112,33 +122,38 @@ impl<T1: Clone, T2: Clone, T3: Clone> Bind3<T1, T2, T3> {
         }
     }
 
-    pub fn call<R>(self, fun: fn(&T1, &T2, &T3) -> R) -> impl Fn() -> R {
+    pub fn call<R>(self, fun: fn(&Context, &T1, &T2, &T3) -> R) -> impl Fn() -> R {
         let Self { param1, param2, param3 } = self;
 
         move || -> R {
-            fun(&param1, &param2, &param3)
+            let context = Context::new();
+            fun(&context, &param1, &param2, &param3)
         }
     }
 
-    pub fn call_param<T4, R>(self, fun: fn(&T1, &T2, &T3, T4) -> R) -> impl Fn(T4) -> R {
+    pub fn call_param<T4, R>(self, fun: fn(&Context, &T1, &T2, &T3, T4) -> R) -> impl Fn(T4) -> R {
         let Self { param1, param2, param3 } = self;
 
         move |param4: T4| -> R {
-            fun(&param1, &param2, &param3, param4)
+            let context = Context::new();
+            fun(&context, &param1, &param2, &param3, param4)
         }
     }
 
     pub fn spawn<
-        Fut: Future<Output=()> + 'static
-    >(self, fun: fn(T1, T2, T3) -> Fut) -> impl Fn() {
+        Fut: Future<Output=Context> + 'static
+    >(self, fun: fn(Context, T1, T2, T3) -> Fut) -> impl Fn() {
         let Self { param1, param2, param3 } = self;
 
         move || {
+            let context = Context::new();
             let param1 = param1.clone();
             let param2 = param2.clone();
             let param3 = param3.clone();
-            let future = fun(param1, param2, param3);
-            get_driver().spawn(future);
+            let future = fun(context, param1, param2, param3);
+            get_driver().spawn(async move {
+                future.await;
+            });
         }
     }
 }
@@ -152,34 +167,39 @@ pub struct Bind4<T1, T2, T3, T4> {
 }
 
 impl<T1: Clone, T2: Clone, T3: Clone, T4: Clone> Bind4<T1, T2, T3, T4> {
-    pub fn call<R>(self, fun: fn(&T1, &T2, &T3, &T4) -> R) -> impl Fn() -> R {
+    pub fn call<R>(self, fun: fn(&Context, &T1, &T2, &T3, &T4) -> R) -> impl Fn() -> R {
         let Self { param1, param2, param3, param4 } = self;
 
         move || -> R {
-            fun(&param1, &param2, &param3, &param4)
+            let context = Context::new();
+            fun(&context, &param1, &param2, &param3, &param4)
         }
     }
 
-    pub fn call_param<T5, R>(self, fun: fn(&T1, &T2, &T3, &T4, T5) -> R) -> impl Fn(T5) -> R {
+    pub fn call_param<T5, R>(self, fun: fn(&Context, &T1, &T2, &T3, &T4, T5) -> R) -> impl Fn(T5) -> R {
         let Self { param1, param2, param3, param4 } = self;
 
         move |param5: T5| -> R {
-            fun(&param1, &param2, &param3, &param4, param5)
+            let context = Context::new();
+            fun(&context, &param1, &param2, &param3, &param4, param5)
         }
     }
 
     pub fn spawn<
-        Fut: Future<Output=()> + 'static,
-    >(self, fun: fn(T1, T2, T3, T4) -> Fut) -> impl Fn() {
+        Fut: Future<Output=Context> + 'static,
+    >(self, fun: fn(Context, T1, T2, T3, T4) -> Fut) -> impl Fn() {
         let Self { param1, param2, param3, param4 } = self;
 
         move || {
+            let context = Context::new();
             let param1 = param1.clone();
             let param2 = param2.clone();
             let param3 = param3.clone();
             let param4 = param4.clone();
-            let future = fun(param1, param2, param3, param4);
-            get_driver().spawn(future);
+            let future = fun(context, param1, param2, param3, param4);
+            get_driver().spawn(async move {
+                future.await;
+            });
         }
     }
 }

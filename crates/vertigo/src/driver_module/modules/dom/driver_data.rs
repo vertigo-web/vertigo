@@ -1,6 +1,6 @@
 use std::hash::Hash;
 use std::rc::Rc;
-use crate::{dev::{RealDomId, EventCallback}, KeyDownEvent, DropFileEvent};
+use crate::{dev::{DomId, EventCallback}, KeyDownEvent, DropFileEvent};
 use std::fmt::Display;
 use crate::struct_mut::HashMapMut;
 use super::element_wrapper::DomElement;
@@ -53,8 +53,8 @@ impl<K: Eq + Hash + Display, V> HashMapRcWithLabel<K, V> {
 }
 
 pub struct DriverData {
-    elements: HashMapRcWithLabel<RealDomId, DomElement>,
-    child_parent: HashMapRcWithLabel<RealDomId, RealDomId>, // child -> parent
+    elements: HashMapRcWithLabel<DomId, DomElement>,
+    child_parent: HashMapRcWithLabel<DomId, DomId>, // child -> parent
 }
 
 impl DriverData {
@@ -65,24 +65,24 @@ impl DriverData {
         })
     }
 
-    pub fn create_node(&self, id: RealDomId) {
+    pub fn create_node(&self, id: DomId) {
         self.elements.insert(id, DomElement::new());
     }
 
-    pub fn remove_text(&self, id: RealDomId) {
+    pub fn remove_text(&self, id: DomId) {
         self.child_parent.remove(&id);
     }
 
-    pub fn remove_node(&self, id: RealDomId) {
+    pub fn remove_node(&self, id: DomId) {
         self.child_parent.remove(&id);
         self.elements.remove(&id);
     }
 
-    pub fn set_parent(&self, child: RealDomId, parent: RealDomId) {
+    pub fn set_parent(&self, child: DomId, parent: DomId) {
         self.child_parent.insert(child, parent);
     }
 
-    pub fn set_event(&self, id: RealDomId, callback: EventCallback) {
+    pub fn set_event(&self, id: DomId, callback: EventCallback) {
         self.elements.must_change(&id, move |node|
             match callback {
                 EventCallback::OnClick { callback } => {
@@ -110,14 +110,14 @@ impl DriverData {
         );
     }
 
-    pub fn find_all_nodes(&self, id: RealDomId) -> Vec<RealDomId> {
-        if id == RealDomId::root() {
-            return vec![RealDomId::root()];
+    pub fn find_all_nodes(&self, id: DomId) -> Vec<DomId> {
+        if id == DomId::root() {
+            return vec![DomId::root()];
         }
 
         let mut wsk = id;
         let mut count = 0;
-        let mut out: Vec<RealDomId> = vec![wsk];
+        let mut out: Vec<DomId> = vec![wsk];
 
         loop {
             count += 1;
@@ -132,7 +132,7 @@ impl DriverData {
             if let Some(parent) = parent {
                 out.push(parent);
 
-                if parent == RealDomId::root() {
+                if parent == DomId::root() {
                     return out;
                 } else {
                     wsk = parent;
@@ -144,11 +144,11 @@ impl DriverData {
         }
     }
 
-    pub fn get_from_node<R>(&self, node_id: &RealDomId, map: fn(&DomElement) -> Option<R>) -> Option<R> {
+    pub fn get_from_node<R>(&self, node_id: &DomId, map: fn(&DomElement) -> Option<R>) -> Option<R> {
         self.elements.must_get(node_id, map).flatten()
     }
 
-    pub fn find_event_click(&self, id: RealDomId) -> Option<Rc<dyn Fn()>> {
+    pub fn find_event_click(&self, id: DomId) -> Option<Rc<dyn Fn()>> {
         let all_nodes = self.find_all_nodes(id);
 
         for node_id in all_nodes {
@@ -169,7 +169,7 @@ impl DriverData {
         })
     }
 
-    pub fn find_event_keydown(&self, id: RealDomId) -> Option<Rc<dyn Fn(KeyDownEvent) -> bool>> {
+    pub fn find_event_keydown(&self, id: DomId) -> Option<Rc<dyn Fn(KeyDownEvent) -> bool>> {
         let all_nodes = self.find_all_nodes(id);
 
         for node_id in all_nodes {
@@ -186,14 +186,14 @@ impl DriverData {
         None
     }
 
-    pub fn find_event_on_input(&self, id: RealDomId) -> Option<Rc<dyn Fn(String)>> {
+    pub fn find_event_on_input(&self, id: DomId) -> Option<Rc<dyn Fn(String)>> {
         self.get_from_node(
             &id,
             |elem| elem.on_input.clone()
         )
     }
 
-    pub fn find_event_on_dropfile(&self, id: RealDomId) -> Option<Rc<dyn Fn(DropFileEvent)>> {
+    pub fn find_event_on_dropfile(&self, id: DomId) -> Option<Rc<dyn Fn(DropFileEvent)>> {
         self.get_from_node(
             &id,
             |elem| elem.on_dropfile.clone()

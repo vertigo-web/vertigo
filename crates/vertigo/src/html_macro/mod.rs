@@ -1,6 +1,6 @@
-mod embed;
+mod dom;
 
-pub use embed::Embed;
+pub use dom::EmbedDom;
 
 /// Allows to define a Css styles factory function for virtual DOM.
 ///

@@ -4,9 +4,10 @@ use std::{
     rc::Rc,
 };
 use crate::{
-    dev::{RealDomId, RefsContext, WebsocketMessageDriver},
+    dev::{DomId, WebsocketMessageDriver},
     Dependencies, DropResource, FutureBox,
-    KeyDownEvent, FetchBuilder, Instant, RequestBuilder, WebsocketMessage, WebsocketConnection, DropFileEvent, virtualdom::models::vdom_element::DropFileItem,
+    DropFileItem,
+    KeyDownEvent, FetchBuilder, Instant, RequestBuilder, WebsocketMessage, WebsocketConnection, DropFileEvent, get_driver, css::css_manager::CssManager, Css, Context,
 };
 
 use crate::{
@@ -122,7 +123,8 @@ impl EventCallback {
 pub struct DriverBrowserInner {
     pub(crate) api: Rc<ApiImport>,
     dependencies: Dependencies,
-    driver_dom: DriverBrowserDom,
+    css_manager: CssManager,
+    pub(crate) driver_dom: DriverBrowserDom,
     driver_interval: DriverBrowserInterval,
     driver_hashrouter: DriverBrowserHashrouter,
     driver_fetch: DriverBrowserFetch,
@@ -148,9 +150,17 @@ impl DriverBrowserInner {
         let driver_fetch = DriverBrowserFetch::new(&api);
         let driver_websocket = DriverWebsocket::new(&api);
 
+        let css_manager = {
+            let driver_dom = driver_dom.clone();
+            CssManager::new(move |selector: &str, value: &str| {
+                driver_dom.insert_css(selector, value);
+            })
+        };
+
         DriverBrowserInner {
             api,
             dependencies,
+            css_manager,
             driver_dom,
             driver_interval,
             driver_hashrouter,
@@ -183,7 +193,9 @@ impl DriverBrowserInner {
                 String::from("")
             });
 
-        self.driver_hashrouter.export_hashrouter_hashchange_callback(new_hash);
+        get_driver().transaction(|_|{
+            self.driver_hashrouter.export_hashrouter_hashchange_callback(new_hash);
+        });
     }
 
     pub fn export_fetch_callback(&self, params_id: u32) {
@@ -202,7 +214,9 @@ impl DriverBrowserInner {
 
         match params {
             Ok((request_id, success, status, response)) => {
-                self.driver_fetch.export_fetch_callback(request_id, success, status, response);
+                get_driver().transaction(|_|{
+                    self.driver_fetch.export_fetch_callback(request_id, success, status, response);
+                });
             },
             Err(error) => {
                 log::error!("export_fetch_callback -> params decode error -> {error}");
@@ -228,7 +242,9 @@ impl DriverBrowserInner {
 
         match params {
             Ok((callback_id, response)) => {
-                self.driver_websocket.export_websocket_callback_message(callback_id, response);
+                get_driver().transaction(|_|{
+                    self.driver_websocket.export_websocket_callback_message(callback_id, response);
+                });
             },
             Err(error) => {
                 log::error!("export_websocket_callback_message -> params decode error -> {error}");
@@ -237,7 +253,9 @@ impl DriverBrowserInner {
     }
 
     pub fn export_websocket_callback_close(&self, callback_id: u32) {
-        self.driver_websocket.export_websocket_callback_close(callback_id);
+        get_driver().transaction(|_| {
+            self.driver_websocket.export_websocket_callback_close(callback_id);
+        });
     }
 
     pub fn export_dom_keydown(&self, params_id: u32) -> u32 {
@@ -260,20 +278,31 @@ impl DriverBrowserInner {
 
         match params {
             Ok((dom_id, key, code, alt_key, ctrl_key, shift_key, meta_key)) => {
-                let prevent_default = self.driver_dom.export_dom_keydown(
-                    dom_id,
-                    key,
-                    code,
-                    alt_key,
-                    ctrl_key,
-                    shift_key,
-                    meta_key
-                );
+                let mut result: Option<u32> = None;
 
-                match prevent_default {
-                    true => 1,
-                    false => 0
+                get_driver().transaction(|_| {
+                    let prevent_default = self.driver_dom.export_dom_keydown(
+                        dom_id,
+                        key,
+                        code,
+                        alt_key,
+                        ctrl_key,
+                        shift_key,
+                        meta_key
+                    );
+
+                    result = Some(match prevent_default {
+                        true => 1,
+                        false => 0
+                    })
+                });
+
+                if let Some(result) = result {
+                    return result;
                 }
+
+                log::error!("The returned value was expected");
+                0
             },
             Err(error) => {
                 log::error!("export_websocket_callback_message -> params decode error -> {error}");
@@ -297,7 +326,9 @@ impl DriverBrowserInner {
 
         match params {
             Ok((dom_id, text)) => {
-                self.driver_dom.export_dom_oninput(dom_id, text);
+                get_driver().transaction(|_| {
+                    self.driver_dom.export_dom_oninput(dom_id, text);
+                });
             },
             Err(error) => {
                 log::error!("export_dom_oninput -> params decode error -> {error}");
@@ -325,7 +356,9 @@ impl DriverBrowserInner {
 
         match params {
             Ok((dom_id, files)) => {
-                self.driver_dom.export_dom_ondropfile(dom_id, files);
+                get_driver().transaction(|_| {
+                    self.driver_dom.export_dom_ondropfile(dom_id, files);
+                });
             },
             Err(error) => {
                 log::error!("export_dom_ondropfile -> params decode error -> {error}");
@@ -335,11 +368,15 @@ impl DriverBrowserInner {
 
     pub fn export_dom_mouseover(&self, dom_id: u64) {
         let dom_id = if dom_id == 0 { None } else { Some(dom_id) };
-        self.driver_dom.export_dom_mouseover(dom_id);
+        get_driver().transaction(|_|{
+            self.driver_dom.export_dom_mouseover(dom_id);
+        });
     }
 
     pub fn export_dom_mousedown(&self, dom_id: u64) {
-        self.driver_dom.export_dom_mousedown(dom_id);
+        get_driver().transaction(|_|{
+            self.driver_dom.export_dom_mousedown(dom_id);
+        });
     }
 
     pub fn init_env(&self) {
@@ -365,7 +402,7 @@ pub type FetchResult = Result<(u32, String), String>;
 /// Additionally driver struct wraps [Dependencies] object.
 #[derive(Clone)]
 pub struct Driver {
-    pub driver: Rc<DriverBrowserInner>,
+    pub(crate) driver: Rc<DriverBrowserInner>,
 }
 
 impl Driver {
@@ -382,47 +419,47 @@ impl Driver {
 impl Driver {
     // Below - methods to interact with the dom. Used exclusively by vertigo.
 
-    pub(crate) fn create_node(&self, id: RealDomId, name: &'static str) {
+    pub(crate) fn create_node(&self, id: DomId, name: &'static str) {
         self.driver.driver_dom.create_node(id, name);
     }
 
-    pub(crate) fn rename_node(&self, id: RealDomId, new_name: &'static str) {
-        self.driver.driver_dom.rename_node(id, new_name);
-    }
-
-    pub(crate) fn create_text(&self, id: RealDomId, value: &str) {
+    pub(crate) fn create_text(&self, id: DomId, value: &str) {
         self.driver.driver_dom.create_text(id, value);
     }
 
-    pub(crate) fn update_text(&self, id: RealDomId, value: &str) {
+    pub(crate) fn update_text(&self, id: DomId, value: &str) {
         self.driver.driver_dom.update_text(id, value);
     }
 
-    pub(crate) fn set_attr(&self, id: RealDomId, key: &'static str, value: &str) {
+    pub(crate) fn set_attr(&self, id: DomId, key: &'static str, value: &str) {
         self.driver.driver_dom.set_attr(id, key, value);
     }
 
-    pub(crate) fn remove_attr(&self, id: RealDomId, name: &'static str) {
-        self.driver.driver_dom.remove_attr(id, name);
-    }
-
-    pub(crate) fn remove_node(&self, id: RealDomId) {
+    pub(crate) fn remove_node(&self, id: DomId) {
         self.driver.driver_dom.remove_node(id);
     }
 
-    pub(crate) fn remove_text(&self, id: RealDomId) {
+    pub(crate) fn remove_text(&self, id: DomId) {
         self.driver.driver_dom.remove_text(id);
     }
 
-    pub(crate) fn insert_before(&self, parent: RealDomId, child: RealDomId, ref_id: Option<RealDomId>) {
+    pub(crate) fn create_comment(&self, id: DomId, value: String) {
+        self.driver.driver_dom.create_comment(id, value);
+    }
+
+    pub(crate) fn update_comment(&self, id: DomId, value: String) {
+        self.driver.driver_dom.update_comment(id, value);
+    }
+
+    pub(crate) fn remove_comment(&self, id: DomId) {
+        self.driver.driver_dom.remove_comment(id);
+    }
+
+    pub(crate) fn insert_before(&self, parent: DomId, child: DomId, ref_id: Option<DomId>) {
         self.driver.driver_dom.insert_before(parent, child, ref_id);
     }
 
-    pub(crate) fn insert_css(&self, selector: &str, value: &str) {
-        self.driver.driver_dom.insert_css(selector, value);
-    }
-
-    pub(crate) fn set_event(&self, id: RealDomId, callback: EventCallback) {
+    pub(crate) fn set_event(&self, id: DomId, callback: EventCallback) {
         self.driver.driver_dom.set_event(id, callback);
     }
 
@@ -512,50 +549,6 @@ impl Driver {
         self.driver.driver_websocket.websocket_send_message(callback_id, message);
     }
 
-    pub(crate) fn get_bounding_client_rect_x(&self, id: RealDomId) -> i32 {
-        self.driver.driver_dom.get_bounding_client_rect_x(id)
-    }
-
-    pub(crate) fn get_bounding_client_rect_y(&self, id: RealDomId) -> i32 {
-        self.driver.driver_dom.get_bounding_client_rect_y(id)
-    }
-
-    pub(crate) fn get_bounding_client_rect_width(&self, id: RealDomId) -> u32 {
-        self.driver.driver_dom.get_bounding_client_rect_width(id)
-    }
-
-    pub(crate) fn get_bounding_client_rect_height(&self, id: RealDomId) -> u32 {
-        self.driver.driver_dom.get_bounding_client_rect_height(id)
-    }
-
-    pub(crate) fn scroll_top(&self, id: RealDomId) -> i32 {
-        self.driver.driver_dom.scroll_top(id)
-    }
-
-    pub(crate) fn set_scroll_top(&self, id: RealDomId, value: i32) {
-        self.driver.driver_dom.set_scroll_top(id, value)
-    }
-
-    pub(crate) fn scroll_left(&self, id: RealDomId) -> i32 {
-        self.driver.driver_dom.scroll_left(id)
-    }
-
-    pub(crate) fn set_scroll_left(&self, id: RealDomId, value: i32) {
-        self.driver.driver_dom.set_scroll_left(id, value)
-    }
-
-    pub(crate) fn scroll_width(&self, id: RealDomId) -> u32 {
-        self.driver.driver_dom.scroll_width(id)
-    }
-
-    pub(crate) fn scroll_height(&self, id: RealDomId) -> u32 {
-        self.driver.driver_dom.scroll_height(id)
-    }
-
-    pub(crate) fn push_ref_context(&self, context: RefsContext) {
-        self.driver.driver_dom.push_ref_context(context);
-    }
-
     pub(crate) fn flush_update(&self) {
         self.driver.driver_dom.flush_dom_changes();
     }
@@ -569,7 +562,7 @@ impl Driver {
 
     /// Fire provided function in a way that all changes in [dependency graph](struct.Dependencies.html) made by this function
     /// will trigger only one run of updates, just like the changes were done all at once.
-    pub fn transaction<F: FnOnce()>(&self, func: F) {
+    pub fn transaction<F: FnOnce(&Context)>(&self, func: F) {
         self.driver.dependencies.transaction(func);
     }
 
@@ -577,8 +570,8 @@ impl Driver {
         self.driver.dependencies.clone()
     }
 
-    pub(crate) fn external_connections_refresh(&self) {
-        self.driver.dependencies.external_connections_refresh();
+    pub (crate) fn get_class_name(&self, css: &Css) -> String {
+        self.driver.css_manager.get_class_name(css)
     }
 }
 

@@ -58,7 +58,7 @@ After the task is completed you can point your browser to `http://127.0.0.1:3000
 Open `/src/app.rs` file.
 
 ```rust
-use vertigo::{Computed, VDomElement, html, css_fn};
+use vertigo::{Computed, DomElement, dom, css_fn};
 
 use super::state::State;
 
@@ -66,11 +66,11 @@ css_fn! { main_div, "
     color: darkblue;
 " }
 
-pub fn render(state: &State) -> VDomElement {
-    html! {
+pub fn render(state: &State) -> DomElement {
+    dom! {
         <div css={main_div()}>
             "Message to the world: "
-            {state.message.get()}
+            <text computed={&state.message} />
         </div>
     }
 }
@@ -146,10 +146,10 @@ Here we define a VDom node using `div` tag, and assign it style using the css fu
             "Message to the world: "
 ```
 
-Next, in the `div` we insert a text node. Strings in `html!` macro must always be double-quoted. This assures us we won't miss a space between the text and the next VDom element.
+Next, in the `div` we insert a text node. Strings in `dom!` macro must always be double-quoted. This assures us we won't miss a space between the text and the next VDom element.
 
 ```rust
-            {state.message.get()}
+            <text computed={&state.message} />
 ```
 
 Here we're inserting some value from the state. The `message` field in the state is of type `Value`. This type is similar to computed (has `get()` method), but it can also be changed using corresponding `set()` (more on this later).
@@ -179,16 +179,16 @@ I our state we have a `Driver` handle, which is our connection to two things:
 
 We also have one `Value` with a string inside. The state and all types wrapped in `Value` are required to implement `PartialEq` so the dependency graph knows that values are changing.
 
-To create our state we use `new()` method with gets a `Driver` handle, and returns a `VDomComponent`. Driver handle is used to create all necessary values and also to create the "computed" version of state itself.
+To create our state we use `new()` method with gets a `Driver` handle, and returns a `DomElement`. Driver handle is used to create all necessary values and also to create the "computed" version of state itself.
 
 ```rust
 impl State {
-    pub fn component() -> VDomComponent {
+    pub fn component() -> DomElement {
         let state = State {
             message: Value::new("Hello world".to_string()),
         };
 
-        VDomComponent::from(state, app::render)
+        app::render(state)
     }
 }
 ```
@@ -431,7 +431,7 @@ Our component cries out for adding more items. To implement this we need to:
 So the whole `src/list.rs` will look like this:
 
 ```rust
-use vertigo::{Computed, Value, VDomElement, VDomComponent, html};
+use vertigo::{Computed, Value, DomElement, html};
 
 #[derive(Clone)]
 pub struct State {
@@ -440,7 +440,7 @@ pub struct State {
 }
 
 impl State {
-    pub fn component() -> VDomComponent {
+    pub fn component() -> DomElement {
         let state = State {
             items: Value::new(vec![
                 "Item 1".to_string(),
@@ -449,7 +449,7 @@ impl State {
             new_item: Value::new("".to_string()),
         };
 
-        VDomComponent::from(state, render)
+        render(state)
     }
 
     pub fn add(&self) -> impl Fn() {
@@ -514,7 +514,7 @@ pub struct State {
 Then we need to reorganize a little how we create an instance of the state:
 
 ```rust
-    pub fn component() -> VDomComponent {
+    pub fn component() -> DomElement {
         let items = Value::new(vec![
             "Item 1".to_string(),
             "Item 2".to_string(),
@@ -531,7 +531,7 @@ Then we need to reorganize a little how we create an instance of the state:
             count,
         };
 
-        VDomComponent::from(state, render)
+        render(state)
     }
 ```
 

@@ -1,28 +1,28 @@
 use serde::{Deserialize, Serialize};
 use std::{cmp::PartialEq, rc::Rc};
-use vertigo::{AutoMap, Resource, SerdeSingleRequest, Value, VDomComponent, LazyCache, get_driver};
+use vertigo::{AutoMap, Resource, SerdeSingleRequest, Value, LazyCache, get_driver, DomElement, Context};
 
 mod render;
 
-#[derive(Debug, Serialize, Deserialize, PartialEq, Eq, Clone)]
+#[derive(Debug, Serialize, Deserialize, PartialEq, Eq, Clone, Default)]
 pub struct Commit {
     pub sha: String,
     pub commit: CommitDetails,
 }
 
-#[derive(Debug, Serialize, Deserialize, PartialEq, Eq, Clone)]
+#[derive(Debug, Serialize, Deserialize, PartialEq, Eq, Clone, Default)]
 pub struct CommitDetails {
     pub author: Signature,
     pub committer: Signature,
 }
 
-#[derive(Debug, Serialize, Deserialize, PartialEq, Eq, Clone)]
+#[derive(Debug, Serialize, Deserialize, PartialEq, Eq, Clone, Default)]
 pub struct Signature {
     pub name: String,
     pub email: String,
 }
 
-#[derive(Debug, Serialize, Deserialize, SerdeSingleRequest, PartialEq, Eq, Clone)]
+#[derive(Debug, Serialize, Deserialize, SerdeSingleRequest, PartialEq, Eq, Clone, Default)]
 pub struct Branch {
     pub name: String,
     pub commit: Commit,
@@ -43,23 +43,21 @@ impl Item {
             let url = url.clone();
 
             async move {
-                let aa = get_driver().request(url).get().await.into(|status, body| {
+                get_driver().request(url).get().await.into(|status, body| {
                     if status == 200 {
                         return Some(body.into::<Branch>());
                     }
 
                     None
-                });
-
-                aa
+                })
             }
         });
 
         Item { branch }
     }
 
-    pub fn get(&self) -> Resource<Rc<Branch>> {
-        self.branch.get()
+    pub fn get(&self, context: &Context) -> Resource<Rc<Branch>> {
+        self.branch.get(context)
     }
 }
 
@@ -71,14 +69,16 @@ pub struct State {
 }
 
 impl State {
-    pub fn component() -> VDomComponent {
-        let state = State {
+    pub fn new() -> State {
+        State {
             repo_input: Value::new(String::from("")),
             repo_shown: Value::new(String::from("")),
             data: AutoMap::new(move |repo_name: &String| Item::new(repo_name)),
-        };
+        }
+    }
 
-        VDomComponent::from(state, render::render)
+    pub fn render(&self) -> DomElement {
+        render::render(self)
     }
 }
 

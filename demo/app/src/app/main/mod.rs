@@ -1,51 +1,47 @@
-use vertigo::{css, css_fn, css_fn_push, html, Css, VDomElement, Value, VDomComponent, bind, get_driver};
+use std::rc::Rc;
+
+use vertigo::{css_fn, css_fn_push, Value, bind, get_driver, struct_mut::ValueMut, DomElement, dom};
 
 mod spinner;
 
 use spinner::spinner;
 
 #[derive(Clone)]
-pub struct MainState {
-    pub value: Value<u32>,
+pub struct AnimationsState {
     pub progress: Value<u32>,
+    in_progress: Rc<ValueMut<bool>>,
 }
 
-impl MainState {
-    pub fn component() -> VDomComponent {
-        let state = MainState {
-            value: Value::new(33),
+impl AnimationsState {
+    pub fn new() -> AnimationsState {
+        AnimationsState {
             progress: Value::new(0),
-        };
-
-        VDomComponent::from(state, main_render)
+            in_progress: Rc::new(ValueMut::new(false)),
+        }
     }
-
-    pub fn increment(&self) {
-        let rr = self.value.get();
-        self.value.set(rr + 1);
-    }
-
-    pub fn decrement(&self) {
-        let rr = self.value.get();
-        self.value.set(rr - 1);
+    pub fn render(&self) -> DomElement {
+        main_render(self)
     }
 
     pub async fn start_animation(self) {
+        if self.in_progress.get() {
+            return;
+        }
+
+        self.in_progress.set(true);
+
         for i in 0..50 {
             self.progress.set(i as u32);
-            get_driver().sleep(100).await;
+            get_driver().sleep(20).await;
         }
-    }
-}
 
-fn css_footer(show_color: bool) -> Css {
-    let color = if show_color { "green" } else { "blue" };
-    css!(
-        "
-        background-color: yellow;
-        color: { color };
-    "
-    )
+        for i in (0..50).rev() {
+            self.progress.set(i as u32);
+            get_driver().sleep(10).await;
+        }
+
+        self.in_progress.set(false);
+    }
 }
 
 css_fn! { css_bg, "
@@ -59,83 +55,42 @@ css_fn_push! { css_button, css_bg, "
     cursor: pointer;
 " }
 
-pub fn main_render(state: &MainState) -> VDomElement {
-    let value = state.value.get();
+pub fn main_render(state: &AnimationsState) -> DomElement {
 
-    let on_down = {
-        let app_state = state.clone();
-        move || {
-            app_state.decrement();
+    let ids = state.progress.map(|progress| {
+        let mut list_ids = Vec::new();
+        for id in 0..progress {
+            list_ids.push(id);
         }
-    };
-
-    let on_up = {
-        let state = state.clone();
-        move || {
-            log::info!("on click");
-            state.increment();
-        }
-    };
-
-    let show_color = value % 2 == 0;
-
-    let footer_dom = if value % 10 == 0 {
-        html! {
-            <div>
-                "jakis footer" {value % 2} {value % 3} "- BEZKLASIE"
-            </div>
-        }
-    } else {
-        html! {
-            <div css={css_footer(show_color)}>
-                "jakis footer" {value % 2} {value % 3}
-            </div>
-        }
-    };
-
-    let progress = state.progress.get();
-
-    let mut progress_html = Vec::new();
-
-    for _ in 0..progress {
-        progress_html.push(html!{
-            <span>
-                " . "
-            </span>
-        });
-    }
-
-    let on_click_progress = bind(state).spawn(|state| {
-        state.start_animation()
+        list_ids
     });
 
-    html! {
-        <div aaa="one" bbb="two">
-            "Abudabi"
+    let list = ids.render_list(
+        |id| *id,
+        |_id| dom!{
+            <span>
+                "."
+            </span>
+        }
+    );
+
+    let on_click_progress = bind(state).spawn(|context, state| async move {
+        state.start_animation().await;
+        context
+    });
+
+    dom! {
+        <div>
             <div css={css_bg()}>
-                {$ if value > 35 { "terefere kuku" } else { "bla bla bla" } $}
                 { spinner() }
             </div>
-            <div css={css_bg()} on_click={on_up.clone()}>
-                "Actual value = " { value }
-            </div>
-            <div css={css_bg()}>
-                "Actual value: " { value }
-            </div>
-            <div css={css_button()} on_click={on_up}>
-                "up"
-            </div>
-            <div css={css_button()} on_click={on_down}>
-                "down"
-            </div>
-            <p>{ footer_dom }</p>
 
             <button on_click={on_click_progress}>
                 <span>
                     "start the progress bar"
                 </span>
                 <span>
-                    { ..progress_html }
+                    { list }
                 </span>
             </button>
         </div>

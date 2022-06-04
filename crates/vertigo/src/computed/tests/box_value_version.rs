@@ -20,7 +20,7 @@ impl<T> SubscribeValueVerInner<T> {
 use crate::computed::Client;
 
 pub struct SubscribeValueVer<T> {
-    _client: Option<Client>,
+    client: Option<Client>,
     value: Rc<SubscribeValueVerInner<T>>,
 }
 
@@ -38,7 +38,7 @@ impl<T: PartialEq + Clone + 'static> SubscribeValueVer<T> {
         };
 
         SubscribeValueVer {
-            _client: Some(client),
+            client: Some(client),
             value,
         }
     }
@@ -51,6 +51,6 @@ impl<T: PartialEq + Clone + 'static> SubscribeValueVer<T> {
     }
 
     pub fn off(&mut self) {
-        self._client = None;
+        self.client = None;
     }
 }

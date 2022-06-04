@@ -1,15 +1,43 @@
 use std::cmp::{Ord, PartialOrd};
 
 #[derive(Hash, PartialEq, Eq, Clone, Copy, Debug, PartialOrd, Ord)]
-pub struct GraphId {
-    pub id: u64,
+pub enum GraphIdKind {
+    Value,
+    Computed,
+    Client,
 }
 
-impl Default for GraphId {
-    fn default() -> Self {
-        Self {
-            id: GraphId::get_unique_id(),
-        }
+#[derive(Hash, PartialEq, Eq, Clone, Copy, Debug, PartialOrd, Ord)]
+pub struct GraphId(GraphIdKind, u64);
+
+impl GraphId {
+    pub fn new_value() -> GraphId {
+        GraphId(
+            GraphIdKind::Value,
+            GraphId::get_unique_id(),
+        )
+    }
+
+    pub fn new_computed() -> GraphId {
+        GraphId(
+            GraphIdKind::Computed,
+            GraphId::get_unique_id(),
+        )
+    }
+
+    pub fn new_client() -> GraphId {
+        GraphId(
+            GraphIdKind::Client,
+            GraphId::get_unique_id(),
+        )
+    }
+
+    pub fn id(&self) -> u64 {
+        self.1
+    }
+
+    pub fn get_type(&self) -> GraphIdKind {
+        self.0
     }
 }
 
