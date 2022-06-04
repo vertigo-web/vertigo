@@ -1,5 +1,4 @@
-use vertigo::{html, Computed, VDomElement, Value};
-use vertigo::VDomComponent;
+use vertigo::{Computed, Value, DomElement, dom};
 
 mod simple_counter;
 
@@ -13,7 +12,7 @@ pub struct State {
 }
 
 impl State {
-    pub fn component() -> VDomComponent {
+    pub fn new() -> State {
         let counter1 = Value::new(0);
         let counter2 = Value::new(0);
         let counter3 = Value::new(0);
@@ -25,54 +24,50 @@ impl State {
             let counter3 = counter3.clone();
             let counter4 = counter4.clone();
 
-            Computed::from(move || {
-                let value1 = counter1.get();
-                let value2 = counter2.get();
-                let value3 = counter3.get();
-                let value4 = counter4.get();
+            Computed::from(move |context| {
+                let value1 = counter1.get(context);
+                let value2 = counter2.get(context);
+                let value3 = counter3.get(context);
+                let value4 = counter4.get(context);
 
                 value1 + value2 + value3 + value4
             })
         };
 
-        let state = State {
+        State {
             counter1,
             counter2,
             counter3,
             counter4,
             sum
-        };
+        }
+    }
 
-        render(state)
+    pub fn render(&self) -> DomElement {
+        render(self)
     }
 }
 
-fn render_sum(sum: &Computed<u32>) -> VDomElement {
-    let sum = sum.get();
+fn render_sum(sum: &Computed<u32>) -> DomElement {
+    let sum = sum.clone().map(|sum| { sum.to_string() });
 
-    html! {
+    dom! {
         <div>
-            {$ format!("sum = {}", sum) $}
+            "sum = "
+            <text computed={sum} />
         </div>
     }
 }
 
-pub fn render(state: State) -> VDomComponent {
-    let view1 = simple_counter::State::component(&state.counter1);
-    let view2 = simple_counter::State::component(&state.counter2);
-    let view3 = simple_counter::State::component(&state.counter3);
-    let view4 = simple_counter::State::component(&state.counter4);
-    let view_sum = VDomComponent::from_ref(&state.sum, render_sum);
-
-    VDomComponent::from(state, move |_: &State| {
-        html! {
-            <div>
-                { view1.clone() }
-                { view2.clone() }
-                { view3.clone() }
-                { view4.clone() }
-                { view_sum.clone() }
-            </div>
-        }
-    })
+pub fn render(state: &State) -> DomElement {
+    dom! {
+        <div>
+            { simple_counter::State::component(&state.counter1) }
+            { simple_counter::State::component(&state.counter2) }
+            { simple_counter::State::component(&state.counter3) }
+            { simple_counter::State::component(&state.counter4) }
+            { render_sum(&state.sum) }
+        </div>
+    }
 }
+

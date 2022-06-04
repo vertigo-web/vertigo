@@ -1,4 +1,4 @@
-use crate::{Css, dev::VDomText, Value, VDomElement, html};
+use crate::{Css, dev::VDomText, Value, VDomElement, html, transaction};
 
 use super::utils::*;
 
@@ -40,9 +40,13 @@ fn clickable_button() {
     assert_empty(&button, "button");
 
     let click = button.on_click.unwrap();
-    assert!(!value.get());
+    transaction(|conxtext| {
+        assert!(!value.get(conxtext));
+    });
     click();
-    assert!(value.get());
+    transaction(|conxtext| {
+        assert!(value.get(conxtext));
+    });
 }
 
 #[test]

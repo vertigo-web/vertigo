@@ -1,7 +1,7 @@
 #[derive(PartialEq, Eq, Debug, Clone)]
 pub enum Route {
-    Main,
     Counters,
+    Animations,
     Sudoku,
     Input,
     GithubExplorer,
@@ -14,15 +14,15 @@ pub enum Route {
 
 impl Default for Route {
     fn default() -> Self {
-        Self::Main
+        Self::Counters
     }
 }
 
 impl Route {
     pub fn new(path: &str) -> Route {
         match path {
-            "" | "/" => Self::Main,
-            "counters" => Self::Counters,
+            "" | "/" | "counters" => Self::Counters,
+            "animations" => Self::Animations,
             "sudoku" => Self::Sudoku,
             "input" => Self::Input,
             "github_explorer" => Self::GithubExplorer,
@@ -31,6 +31,21 @@ impl Route {
             "todo" => Self::Todo,
             "drop-file" => Self::DropFile,
             _ => Self::NotFound,
+        }
+    }
+
+    pub fn label(&self) -> &'static str {
+        match self {
+            Self::Counters => "Counters",
+            Self::Animations => "Animations",
+            Self::Sudoku => "Sudoku",
+            Self::Input => "Input",
+            Self::GithubExplorer => "Github Explorer",
+            Self::GameOfLife => "Game Of Life",
+            Self::Chat => "Chat",
+            Self::Todo => "Todo",
+            Self::DropFile => "Drop File",
+            Self::NotFound => "Not Found",
         }
     }
 }
@@ -44,8 +59,8 @@ impl From<String> for Route {
 impl ToString for Route {
     fn to_string(&self) -> String {
         match self {
-            Self::Main => "",
             Self::Counters => "counters",
+            Self::Animations => "animations",
             Self::Sudoku => "sudoku",
             Self::Input => "input",
             Self::GithubExplorer => "github_explorer",

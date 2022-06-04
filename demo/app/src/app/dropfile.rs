@@ -1,4 +1,4 @@
-use vertigo::{DropFileItem, Value, VDomElement, VDomComponent, DropFileEvent, html, Css, css, bind};
+use vertigo::{DropFileItem, Value, DropFileEvent, Css, css, bind, dom, DomElement};
 
 #[derive(Clone)]
 pub struct DropFilesState {
@@ -12,8 +12,8 @@ impl DropFilesState {
         }
     }
 
-    pub fn render(self) -> VDomComponent {
-        VDomComponent::from(self, render)
+    pub fn render(self) -> DomElement {
+        render(self)
     }
 }
 
@@ -31,11 +31,22 @@ fn format_line(file: &DropFileItem) -> String {
     format!("file name={file_name} size={size}")
 }
 
-fn render(state: &DropFilesState) -> VDomElement {
-    let on_dropfile = bind(state)
-        .call_param(|state, event: DropFileEvent| {
-
-            let mut current = state.list.get();
+fn render(state: DropFilesState) -> DomElement {
+    let list_view = state.list.render_list(
+        |item| item.name.clone(),
+        |file| {
+            let message = format_line(file);
+            dom! {
+                <div>
+                    { message }
+                </div>
+            }
+        }
+    );
+    
+    let on_dropfile = bind(&state)
+        .call_param(|context, state, event: DropFileEvent| {
+            let mut current = state.list.get(context);
 
             for file in event.items.into_iter() {
                 let message = format_line(&file);
@@ -47,25 +58,13 @@ fn render(state: &DropFilesState) -> VDomElement {
             state.list.set(current);
         });
 
-    
-    let mut list = Vec::new();
-
-    for file in state.list.get() {
-        let message = format_line(&file);
-        list.push(html! {
-            <div>
-                { message }
-            </div>
-        })
-    }
-    
-    html! {
-        <div on_dropfile={on_dropfile} css={css_drop()}>
+    dom! {
+        <div css={css_drop()} on_dropfile={on_dropfile}>
             <div>
                 "drop file"
             </div>
             <div>
-                { ..list }
+                { list_view }
             </div>
         </div>
     }

@@ -31,16 +31,6 @@ pub struct ApiImport {
     pub timeout_clear: fn(timer_id: u32),
 
     pub instant_now: fn() -> u32,
-    pub dom_get_bounding_client_rect_x: fn(id: u64) -> i32,
-    pub dom_get_bounding_client_rect_y: fn(id: u64) -> i32,
-    pub dom_get_bounding_client_rect_width: fn(id: u64) -> u32,
-    pub dom_get_bounding_client_rect_height: fn(id: u64) -> u32,
-    pub dom_scroll_top: fn(node_id: u64) -> i32,
-    pub dom_set_scroll_top: fn(node_id: u64, value: i32),
-    pub dom_scroll_left: fn(node_id: u64) -> i32,
-    pub dom_set_scroll_left: fn(node_id: u64, value: i32),
-    pub dom_scroll_width: fn(node_id: u64) -> u32,
-    pub dom_scroll_height: fn(node_id: u64) -> u32,
     pub arguments: ArgumentsManager,
 }
 
@@ -56,16 +46,6 @@ impl ApiImport {
         timeout_clear: fn(timer_id: u32),
 
         instant_now: fn() -> u32,
-        dom_get_bounding_client_rect_x: fn(id: u64) -> i32,
-        dom_get_bounding_client_rect_y: fn(id: u64) -> i32,
-        dom_get_bounding_client_rect_width: fn(id: u64) -> u32,
-        dom_get_bounding_client_rect_height: fn(id: u64) -> u32,
-        dom_scroll_top: fn(node_id: u64) -> i32,
-        dom_set_scroll_top: fn(node_id: u64, value: i32),
-        dom_scroll_left: fn(node_id: u64) -> i32,
-        dom_set_scroll_left: fn(node_id: u64, value: i32),
-        dom_scroll_width: fn(node_id: u64) -> u32,
-        dom_scroll_height: fn(node_id: u64) -> u32,
     ) -> ApiImport {
         let panic_message = PanicMessage::new(panic_message);
 
@@ -78,16 +58,6 @@ impl ApiImport {
             timeout_clear,
 
             instant_now,
-            dom_get_bounding_client_rect_x,
-            dom_get_bounding_client_rect_y,
-            dom_get_bounding_client_rect_width,
-            dom_get_bounding_client_rect_height,
-            dom_scroll_top,
-            dom_set_scroll_top,
-            dom_scroll_left,
-            dom_set_scroll_left,
-            dom_scroll_width,
-            dom_scroll_height,
             arguments: ArgumentsManager::new(panic_message),
         }
     }
@@ -295,56 +265,6 @@ impl ApiImport {
             .string(value);
 
         let _ = self.js_call(params);
-    }
-
-    pub fn dom_get_bounding_client_rect_x(&self, id: u64) -> i32 {
-        let dom_get_bounding_client_rect_x = self.dom_get_bounding_client_rect_x;
-        dom_get_bounding_client_rect_x(id)
-    }
-
-    pub fn dom_get_bounding_client_rect_y(&self, id: u64) -> i32 {
-        let dom_get_bounding_client_rect_y = self.dom_get_bounding_client_rect_y;
-        dom_get_bounding_client_rect_y(id)
-    }
-
-    pub fn dom_get_bounding_client_rect_width(&self, id: u64) -> u32 {
-        let dom_get_bounding_client_rect_width = self.dom_get_bounding_client_rect_width;
-        dom_get_bounding_client_rect_width(id)
-    }
-
-    pub fn dom_get_bounding_client_rect_height(&self, id: u64) -> u32 {
-        let dom_get_bounding_client_rect_height = self.dom_get_bounding_client_rect_height;
-        dom_get_bounding_client_rect_height(id)
-    }
-
-    pub fn dom_scroll_top(&self, node_id: u64) -> i32 {
-        let dom_scroll_top = self.dom_scroll_top;
-        dom_scroll_top(node_id)
-    }
-
-    pub fn dom_set_scroll_top(&self, node_id: u64, value: i32) {
-        let dom_set_scroll_top = self.dom_set_scroll_top;
-        dom_set_scroll_top(node_id, value);
-    }
-
-    pub fn dom_scroll_left(&self, node_id: u64) -> i32 {
-        let dom_scroll_left = self.dom_scroll_left;
-        dom_scroll_left(node_id)
-    }
-
-    pub fn dom_set_scroll_left(&self, node_id: u64, value: i32) {
-        let dom_set_scroll_left = self.dom_set_scroll_left;
-        dom_set_scroll_left(node_id, value);
-    }
-
-    pub fn dom_scroll_width(&self, node_id: u64) -> u32 {
-        let dom_scroll_width = self.dom_scroll_width;
-        dom_scroll_width(node_id)
-    }
-
-    pub fn dom_scroll_height(&self, node_id: u64) -> u32 {
-        let dom_scroll_height = self.dom_scroll_height;
-        dom_scroll_height(node_id)
     }
 }
 

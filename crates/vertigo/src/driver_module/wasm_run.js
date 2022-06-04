@@ -115,19 +115,19 @@ class DriverDom {
             }
             console.warn('mousedown ignore', target);
         }, false);
-        document.addEventListener('mouseover', (event) => {
-            const target = event.target;
-            if (target instanceof Element) {
-                const id = this.all.get(target);
-                if (id === undefined) {
-                    this.getWasm().exports.dom_mouseover(0n);
-                    return;
-                }
-                this.getWasm().exports.dom_mouseover(id);
-                return;
-            }
-            console.warn('mouseover ignore', target);
-        }, false);
+        // document.addEventListener('mouseover', (event) => {
+        //     const target = event.target;
+        //     if (target instanceof Element) {
+        //         const id = this.all.get(target);
+        //         if (id === undefined) {
+        //             this.getWasm().exports.dom_mouseover(0n);
+        //             return;
+        //         }
+        //         this.getWasm().exports.dom_mouseover(id);
+        //         return;
+        //     }
+        //     console.warn('mouseover ignore', target);
+        // }, false);
         document.addEventListener('keydown', (event) => {
             const target = event.target;
             if (target instanceof Element && event instanceof KeyboardEvent) {
@@ -265,23 +265,33 @@ class DriverDom {
     }
     set_attribute(id, name, value) {
         this.nodes.get("set_attribute", id, (node) => {
-            node.setAttribute(name, value);
-            if (name == "value") {
-                if (node instanceof HTMLInputElement) {
-                    node.value = value;
-                    return;
+            if (node instanceof Element) {
+                node.setAttribute(name, value);
+                if (name == "value") {
+                    if (node instanceof HTMLInputElement) {
+                        node.value = value;
+                        return;
+                    }
+                    if (node instanceof HTMLTextAreaElement) {
+                        node.value = value;
+                        node.defaultValue = value;
+                        return;
+                    }
                 }
-                if (node instanceof HTMLTextAreaElement) {
-                    node.value = value;
-                    node.defaultValue = value;
-                    return;
-                }
+            }
+            else {
+                console.error("set_attribute error");
             }
         });
     }
     remove_attribute(id, name) {
         this.nodes.get("remove_attribute", id, (node) => {
-            node.removeAttribute(name);
+            if (node instanceof Element) {
+                node.removeAttribute(name);
+            }
+            else {
+                console.error("remove_attribute error");
+            }
         });
     }
     remove_node(id) {
@@ -425,38 +435,28 @@ class DriverDom {
             this.insert_css(command.selector, command.value);
             return;
         }
+        if (command.type === 'create_comment') {
+            const comment = document.createComment(command.value);
+            this.nodes.set(BigInt(command.id), comment);
+            return;
+        }
+        if (command.type === 'update_comment') {
+            this.nodes.get("insert_before", BigInt(command.id), (comment) => {
+                comment.textContent = command.value;
+            });
+            return;
+        }
+        if (command.type === 'remove_comment') {
+            this.nodes.delete("remove_comment", BigInt(command.id), (comment) => {
+                const parent = comment.parentElement;
+                if (parent !== null) {
+                    parent.removeChild(comment);
+                }
+            });
+            return;
+        }
         return assertNeverCommand(command);
     }
-    dom_get_bounding_client_rect_x = (node_id) => {
-        return this.nodes.mustGetItem(node_id).getBoundingClientRect().x;
-    };
-    dom_get_bounding_client_rect_y = (node_id) => {
-        return this.nodes.mustGetItem(node_id).getBoundingClientRect().y;
-    };
-    dom_get_bounding_client_rect_width = (node_id) => {
-        return this.nodes.mustGetItem(node_id).getBoundingClientRect().width;
-    };
-    dom_get_bounding_client_rect_height = (node_id) => {
-        return this.nodes.mustGetItem(node_id).getBoundingClientRect().height;
-    };
-    dom_scroll_top = (node_id) => {
-        return this.nodes.mustGetItem(node_id).scrollTop;
-    };
-    dom_set_scroll_top = (node_id, value) => {
-        this.nodes.mustGetItem(node_id).scrollTop = value;
-    };
-    dom_scroll_left = (node_id) => {
-        return this.nodes.mustGetItem(node_id).scrollLeft;
-    };
-    dom_set_scroll_left = (node_id, value) => {
-        return this.nodes.mustGetItem(node_id).scrollLeft = value;
-    };
-    dom_scroll_width = (node_id) => {
-        return this.nodes.mustGetItem(node_id).scrollWidth;
-    };
-    dom_scroll_height = (node_id) => {
-        return this.nodes.mustGetItem(node_id).scrollHeight;
-    };
 }
 
 class EventEmmiter {
@@ -801,7 +801,7 @@ class HashRouter {
         location.hash = new_hash;
     };
     get() {
-        return location.hash.substr(1);
+        return decodeURIComponent(location.hash.substr(1));
     }
 }
 
@@ -1261,16 +1261,6 @@ class WasmModule {
                 timeout_set: interval.timeout_set,
                 timeout_clear: interval.timeout_clear,
                 instant_now,
-                dom_get_bounding_client_rect_x: dom.dom_get_bounding_client_rect_x,
-                dom_get_bounding_client_rect_y: dom.dom_get_bounding_client_rect_y,
-                dom_get_bounding_client_rect_width: dom.dom_get_bounding_client_rect_width,
-                dom_get_bounding_client_rect_height: dom.dom_get_bounding_client_rect_height,
-                dom_scroll_top: dom.dom_scroll_top,
-                dom_set_scroll_top: dom.dom_set_scroll_top,
-                dom_scroll_left: dom.dom_scroll_left,
-                dom_set_scroll_left: dom.dom_set_scroll_left,
-                dom_scroll_width: dom.dom_scroll_width,
-                dom_scroll_height: dom.dom_scroll_height,
             }
         });
         return new WasmModule(wasmModule);

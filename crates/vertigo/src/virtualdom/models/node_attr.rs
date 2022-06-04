@@ -3,7 +3,6 @@ use crate::DropFileEvent;
 use crate::virtualdom::models::css::Css;
 
 use super::vdom_element::KeyDownEvent;
-use super::vdom_refs::NodeRefs;
 
 /// Virtual DOM node attribute.
 pub enum NodeAttr {
@@ -16,8 +15,6 @@ pub enum NodeAttr {
     HookKeyDown { event: Rc<dyn Fn(KeyDownEvent) -> bool> },
     OnDropFile { event: Rc<dyn Fn(DropFileEvent)> },
     Attr { name: &'static str, value: String },
-    DomRef { name: &'static str },
-    DomApply { apply: Rc<dyn Fn(&NodeRefs)> },
 }
 
 pub fn css(css: Css) -> NodeAttr {
@@ -73,10 +70,3 @@ pub fn attr<K: Into<String>>(name: &'static str, value: K) -> NodeAttr {
     }
 }
 
-pub fn dom_ref(name: &'static str) -> NodeAttr {
-    NodeAttr::DomRef { name }
-}
-
-pub fn dom_apply<F: Fn(&NodeRefs) + 'static>(f: F) -> NodeAttr {
-    NodeAttr::DomApply { apply: Rc::new(f) }
-}

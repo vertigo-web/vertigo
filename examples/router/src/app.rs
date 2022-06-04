@@ -1,5 +1,5 @@
 use vertigo::router::HashRouter;
-use vertigo::{html, VDomElement, VDomComponent, bind};
+use vertigo::{VDomComponent, bind, dom, DomElement};
 
 #[derive(Clone, PartialEq, Eq, Debug)]
 pub enum Route {
@@ -48,7 +48,7 @@ impl State {
             route,
         };
 
-        VDomComponent::from(state, render)
+        VDomComponent::dom(render(state))
     }
 
     pub fn navigate_to(&self, route: Route) {
@@ -56,22 +56,24 @@ impl State {
     }
 }
 
-fn render(state: &State) -> VDomElement {
-    let navigate_to_page1 = bind(state).call(|state| {
+fn render(state: State) -> DomElement {
+    let navigate_to_page1 = bind(&state).call(|_, state| {
         state.navigate_to(Route::Page1);
     });
 
-    let navigate_to_page2 = bind(state).call(|state| {
+    let navigate_to_page2 = bind(&state).call(|_, state| {
         state.navigate_to(Route::Page2);
     });
 
-    let child = match state.route.get() {
-        Route::Page1 => html! { <div>"Page 1"</div> },
-        Route::Page2 => html! { <div>"Page 2"</div> },
-        Route::NotFound => html! { <div>"Page Not Found"</div> },
-    };
+    let child = state.route.route.render_value(|value| {
+        match value {
+            Route::Page1 => dom! { <div>"Page 1"</div> },
+            Route::Page2 => dom! { <div>"Page 2"</div> },
+            Route::NotFound => dom! { <div>"Page Not Found"</div> },
+        }
+    });
 
-    html! {
+    dom! {
         <div>
             <div>
                 "My Page"

@@ -1,10 +1,10 @@
 use std::rc::Rc;
 
-use crate::{get_dependencies};
+use crate::{get_dependencies, Client, transaction};
 use crate::computed::{Computed, Value, DropResource};
 
 use crate::computed::tests::box_value_version::SubscribeValueVer;
-use crate::struct_mut::ValueMut;
+use crate::struct_mut::{ValueMut};
 
 #[test]
 fn basic() {
@@ -15,9 +15,9 @@ fn basic() {
         let com1 = value1.to_computed();
         let com2 = value2.to_computed();
 
-        Computed::from(move || -> i32 {
-            let value1 = com1.get();
-            let value2 = com2.get();
+        Computed::from(move |context| -> i32 {
+            let value1 = com1.get(context);
+            let value2 = com2.get(context);
 
             value1 + value2
         })
@@ -47,14 +47,13 @@ fn basic2() {
     let com1: Computed<i32> = val1.to_computed();
     let com2: Computed<i32> = val2.to_computed();
 
-    let sum = Computed::from(move || {
-        let a = com1.get();
-        let b = com2.get();
+    let sum = Computed::from(move |context| {
+        let a = com1.get(context);
+        let b = com2.get(context);
         a + b
     });
 
-    let suma2 = sum.clone().map_for_render(|value: &Computed<i32>| -> i32 {
-        let value = value.get();
+    let suma2 = sum.clone().map(|value: i32| -> i32 {
         2 * (value)
     });
 
@@ -73,8 +72,6 @@ fn basic2() {
 
     assert_eq!(sum_box1.get(), (999, 3));
     assert_eq!(sum_box2.get(), (1998, 3));
-
-    println!("subscription off");
 
     sum_box1.off();
     sum_box2.off();
@@ -100,11 +97,6 @@ fn pointers() {
     fn foo3(_yy: i32) -> i32 {
         0
     }
-    //println!("aaa {}", std::mem::size_of<* ()>);
-
-    // let aa = std::mem::size_of_val(&foo1);
-    // println!("RRRRR {}", aa);
-    // println!("RRRRR {}", std::mem::size_of_val(&aa));
 
     let pointer1: u64 = foo1 as *const () as u64;
     let pointer2: u64 = foo2 as *const () as u64;
@@ -114,36 +106,6 @@ fn pointers() {
     assert!(pointer1 != pointer2);
     assert!(pointer1 == pointer11);
     assert!(pointer1 != pointer4);
-
-    // println!("gg1 {:x}", gg1);
-    // println!("gg2 {:x}", gg2);
-    // println!("gg3 {:x}", gg3);
-    // println!("gg4 {:x}", gg4);
-
-    // println!("tt1 {:x}", tt1);
-    // println!("tt2 {:x}", tt2);
-    // println!("tt3 {:x}", tt3);
-    // println!("tt4 {:x}", tt4);
-
-    // let bb1: u32 = foo1 as u32;
-    // let bb2: u32 = foo2 as u32;
-    // let bb3: u32 = foo1 as u32;
-    // let bb4: u32 = foo3 as u32;
-
-    // println!("bb1 {:x}", bb1);
-    // println!("bb2 {:x}", bb2);
-    // println!("bb3 {:x}", bb3);
-    // println!("bb4 {:x}", bb4);
-
-    // let cc1: u128 = foo1 as u128;
-    // let cc2: u128 = foo2 as u128;
-    // let cc3: u128 = foo1 as u128;
-    // let cc4: u128 = foo3 as u128;
-
-    // println!("cc1 {:x}", cc1);
-    // println!("cc2 {:x}", cc2);
-    // println!("cc3 {:x}", cc3);
-    // println!("cc4 {:x}", cc4);
 }
 
 #[test]
@@ -157,9 +119,9 @@ fn test_subscription() {
     #[allow(unused_variables)]
     let com3: Computed<i32> = val3.to_computed();
 
-    let sum = Computed::from(move || -> i32 {
-        let value1 = com1.get();
-        let value2 = com2.get();
+    let sum = Computed::from(move |context| -> i32 {
+        let value1 = com1.get(context);
+        let value2 = com2.get(context);
 
         value1 + value2
     });
@@ -206,9 +168,9 @@ fn test_computed_cache() {
         let c: Computed<u32> = {
             let a = a.clone();
 
-            Computed::from(move || {
-                let a_val = a.get();
-                let b_val = b.get();
+            Computed::from(move |context| {
+                let a_val = a.get(context);
+                let b_val = b.get(context);
 
                 a_val + b_val
             })
@@ -217,8 +179,8 @@ fn test_computed_cache() {
         let d: Computed<bool> = {
             //is even
             let c = c.clone();
-            Computed::from(move || -> bool {
-                let c_value = c.get();
+            Computed::from(move |context| -> bool {
+                let c_value = c.get(context);
 
                 c_value % 2 == 0
             })
@@ -277,9 +239,9 @@ fn test_computed_new_value() {
     let d: Computed<u32> = {
         let a = a.clone();
 
-        Computed::from(move || {
-            let a_val = a.get();
-            let b_val = b.get();
+        Computed::from(move |context| {
+            let a_val = a.get(context);
+            let b_val = b.get(context);
 
             a_val + b_val
         })
@@ -289,9 +251,9 @@ fn test_computed_new_value() {
         //is even
         let d = d.clone();
         let c = c.clone();
-        Computed::from(move || -> u32 {
-            let d_val = d.get();
-            let c_val = c.get();
+        Computed::from(move |context| -> u32 {
+            let d_val = d.get(context);
+            let c_val = c.get(context);
 
             d_val + c_val
         })
@@ -316,6 +278,38 @@ fn test_computed_new_value() {
     assert_eq!(root.all_connections_len(), 0);
 }
 
+
+#[test]
+fn test_computed_new_value2() {
+    #![allow(clippy::many_single_char_names)]
+
+    let root = get_dependencies();
+
+    let a = Value::new(0);
+    let b = Value::new(0);
+
+    let d: Computed<u32> = {
+        let a = a.clone();
+        let b = b.clone();
+        Computed::from(move |context| a.get(context) + b.get(context))
+    };
+
+    let mut d = SubscribeValueVer::new(d);
+
+    assert_eq!(d.get(), (0, 1));
+    a.set(2);
+    assert_eq!(d.get(), (2, 2));
+    b.set(9);
+    assert_eq!(d.get(), (11, 3));
+    a.set(3);
+    assert_eq!(d.get(), (12, 4));
+    a.set(4);
+    assert_eq!(d.get(), (13, 5));
+
+    d.off();
+    assert_eq!(root.all_connections_len(), 0);
+}
+
 #[test]
 fn test_computed_switch_subscription() {
     #[derive(Clone)]
@@ -334,33 +328,28 @@ fn test_computed_switch_subscription() {
     let b = Value::new(0);
     let c = Value::new(0);
 
-    // println!("s {:?}", switch.id());
-    // println!("a {:?}", a.id());
-    // println!("b {:?}", b.id());
-    // println!("c {:?}", c.id());
-
     let sum: Computed<u32> = {
         let switch = switch.clone();
         let a = a.clone();
         let b = b.clone();
         let c = c.clone();
 
-        Computed::from(move || -> u32 {
-            let switch_value = switch.get();
+        Computed::from(move |context| -> u32 {
+            let switch_value = switch.get(context);
 
             match switch_value {
                 Switch::Ver1 => {
-                    a.get()
+                    a.get(context)
                 }
                 Switch::Ver2 => {
-                    let a_value = a.get();
-                    let b_value = b.get();
+                    let a_value = a.get(context);
+                    let b_value = b.get(context);
                     a_value + b_value
                 }
                 Switch::Ver3 => {
-                    let a_value = a.get();
-                    let b_value = b.get();
-                    let c_value = c.get();
+                    let a_value = a.get(context);
+                    let b_value = b.get(context);
+                    let c_value = c.get(context);
                     a_value + b_value + c_value
                 }
             }
@@ -421,7 +410,7 @@ fn test_computed_switch_subscription() {
     c.set(1);
     assert_eq!(sum.get(), (3, 10));
 
-    root.transaction(|| {
+    root.transaction(|_| {
         a.set(0);
         b.set(0);
         c.set(0);
@@ -431,6 +420,49 @@ fn test_computed_switch_subscription() {
 
     sum.off();
     assert_eq!(root.all_connections_len(), 0);
+}
+
+
+#[test]
+fn test_transaction() {
+    let root = get_dependencies();
+    assert_eq!(root.all_connections_len(), 0);
+
+    let val1 = Value::new(1);
+    let val2 = Value::new(2);
+
+    let val3 = Computed::from({
+        let val1 = val1.clone();
+        let val2 = val2.clone();
+
+        move |context| {
+            val1.get(context) + val2.get(context)
+        }
+    });
+
+    let mut val2sub = SubscribeValueVer::new(val3);
+
+    assert_eq!(val2sub.get(), (3, 1));
+
+    val1.set(444);
+
+    assert_eq!(val2sub.get(), (446, 2));
+
+    root.transaction(|context| {
+        assert_eq!(val2sub.get(), (446, 2));
+        val1.set(222);
+        assert_eq!(val1.get(context), 222);
+        assert_eq!(val2sub.get(), (446, 2));
+        val2.set(333);
+        assert_eq!(val2.get(context), 333);
+        assert_eq!(val2sub.get(), (446, 2));
+    });
+
+    assert_eq!(val2sub.get(), (555, 3));
+
+    val2sub.off();
+    assert_eq!(root.all_connections_len(), 0);
+
 }
 
 
@@ -445,6 +477,7 @@ fn test_connect() {
             is_subscribe.set(true);
 
             DropResource::new({
+
                 let is_subscribe = is_subscribe.clone();
                 move || {
                     is_subscribe.set(false);
@@ -453,11 +486,9 @@ fn test_connect() {
         }
     });
 
-    assert!(!is_subscribe.get());
+    assert_eq!(is_subscribe.get(), false);
 
     let current_value = Rc::new(ValueMut::new(0));
-
-    println!("Subskrybcja 1 {:?}", value.id());
 
     let client = value.clone().subscribe({
         let current_value = current_value.clone();
@@ -466,15 +497,12 @@ fn test_connect() {
         }
     });
 
-    println!("Subskrybcja 2");
-
-    assert!(is_subscribe.get());
+    assert_eq!(is_subscribe.get(), true);
 
     drop(client);
 
-    assert!(!is_subscribe.get());
+    assert_eq!(is_subscribe.get(), false);
 
-    println!("Subskrybcja 3 {:?}", value.id());
 
     let client = value.subscribe({
         move |val| {
@@ -482,11 +510,106 @@ fn test_connect() {
         }
     });
 
-    assert!(is_subscribe.get());
+    assert_eq!(is_subscribe.get(), true);
 
     drop(client);
 
-    assert!(!is_subscribe.get());
+    assert_eq!(is_subscribe.get(), false);
+}
 
-    println!("Subskrybcja 4");
+#[test]
+fn test_without_subscription() {
+    let value = Value::new(2);
+
+    let comp_2 = {
+        let v = value.clone();
+        Computed::from(move |context| v.get(context) * 2)
+    };
+
+    transaction(|context| {
+        assert_eq!(comp_2.get(context), 4);
+    });
+
+    value.set(6);
+
+    transaction(|context| {
+        assert_eq!(comp_2.get(context), 12);
+    });
+}
+
+#[test]
+fn test_set_value_and_compare() {
+    let value = Value::new(2);
+
+    let value_com = value.to_computed();
+
+    let value_com = value_com.map(|item| item);
+
+    fn build(value: &Computed<i32>) -> (Rc<ValueMut<i32>>, Client) {
+            
+        let boxik = Rc::new(ValueMut::new(0));
+        
+        let router = Computed::from({
+            let value = value.clone();
+
+            move |context| {
+                value.get(context)
+            }
+        });
+
+        let router = Computed::from(move |context| {
+            router.get(context)
+        });
+
+        let router = router.map(|item| {
+            item
+        });
+
+        let router = router.map(|item| {
+            item
+        });
+
+        let router = router.map(|item| {
+            item
+        });
+
+        let client = router.subscribe({
+            let boxik = boxik.clone();
+            move |sub_value| {
+                println!("callback");
+                boxik.set(sub_value);
+            }
+        });
+
+        (boxik, client)
+    }
+
+    let (boxik, client) = build(&value_com);
+    let (boxik2, client2) = build(&value_com);
+    let (boxik3, client3) = build(&value_com);
+
+    assert_eq!(boxik.get(), 2);
+
+    value.set(3);
+    assert_eq!(boxik.get(), 3);
+
+    value.set_value_and_compare(4);
+    assert_eq!(boxik.get(), 4);
+    value.set_value_and_compare(4);
+    assert_eq!(boxik.get(), 4);
+
+    value.set_value_and_compare(5);
+    assert_eq!(boxik.get(), 5);
+    value.set_value_and_compare(5);
+    assert_eq!(boxik.get(), 5);
+
+    value.set(6);
+    assert_eq!(boxik.get(), 6);
+    assert_eq!(boxik2.get(), 6);
+    assert_eq!(boxik3.get(), 6);
+
+    drop(client);
+    drop(client2);
+    drop(client3);
+
 }

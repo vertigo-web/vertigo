@@ -1,69 +1,127 @@
 use std::collections::BTreeSet;
-use crate::computed::graph_id::GraphId;
+use crate::computed::dependencies::stack::StackCommand;
+use crate::computed::graph_id::{GraphId, GraphIdKind};
+use crate::struct_mut::ValueMut;
 use super::external_connections::ExternalConnections;
-use super::graph_map::GraphMap;
+use super::graph_connections::GraphConnections;
 use super::refresh::Refresh;
+use super::stack::Stack;
 
 pub struct Graph {
-    refresh: Refresh,
-    parent_client: GraphMap,                    // ParentId <- ClientId
-    client_parent: GraphMap,
-    external_connections: ExternalConnections,
+    recalculate_in_progress: ValueMut<bool>,
+    pub stack: Stack,
+    pub refresh: Refresh,
+    pub connections: GraphConnections,
+    pub external_connections: ExternalConnections,
 }
 
 impl Graph {
-    pub fn new(external_connections: ExternalConnections, refresh: Refresh) -> Graph {
+    pub fn new() -> Graph {
+        let external_connections = ExternalConnections::default();
+        let refresh: Refresh = Refresh::new();
+
         Graph {
+            recalculate_in_progress: ValueMut::new(false),
+            stack: Stack::new(),
             refresh,
-            parent_client: GraphMap::new(),
-            client_parent: GraphMap::new(),
+            connections: GraphConnections::new(),
             external_connections,
         }
     }
 
-    pub fn set_parent_for_client(&self, client_id: GraphId, parents_list: BTreeSet<GraphId>) {        
-        let (off, on) = self.client_parent.set_connectios(&client_id, parents_list);
-
-        self.edges_on(client_id, on);
-        self.edges_off(client_id, off);
-    }
-
+    ///used by Drop in GraphValue
     pub fn remove_client(&self, client_id: GraphId) {
-        let parent_list = self.client_parent.remove_by(client_id);
+        self.stack.remove_client(client_id);
+        self.recalculate_edges();
+    }
 
-        let parent_list = match parent_list {
-            Some(parent) => parent,
-            None => {
-                return;
+    pub(crate) fn get_all_deps(&self, edges: BTreeSet<GraphId>) -> BTreeSet<GraphId> {
+        self.connections.get_all_deps(edges)
+    }
+
+    pub fn all_connections_len(&self) -> u64 {
+        self.connections.all_connections_len()
+    }
+
+    ///This method can only be executed once
+    pub fn recalculate_edges(&self) {
+        if !self.stack.is_empty() {
+            return;
+        }
+
+        if self.recalculate_in_progress.get() {
+            return;
+        }
+
+        self.recalculate_in_progress.set(true);
+
+        let mut off_edges_all = BTreeSet::new();
+
+        loop {
+            let command = self.stack.get_command();
+
+            if command.is_empty() {
+                break;
             }
-        };
 
-        self.edges_off(client_id, parent_list);
+            let mut local_off_edges = BTreeSet::new();
+
+            for action in command.into_iter() {
+                let off_edges = match action {
+                    StackCommand::Set { parent_ids, client_id } => {
+                        off_edges_all.insert(client_id);
+                        local_off_edges.extend(parent_ids.iter());
+                        self.connections.set_parent_for_client(parent_ids, client_id)
+                    },
+                    StackCommand::Remove { client_id } => {
+                        self.connections.set_parent_for_client(BTreeSet::new(), client_id)
+                    }
+                };
+
+                if let Some(off_edges) = off_edges {
+                    local_off_edges.extend(off_edges.iter());
+                }
+            }
+
+            for id in local_off_edges.iter() {
+                self.should_clear_node(id);
+            }
+
+            off_edges_all.extend(local_off_edges.into_iter());
+        }
+
+        for id in off_edges_all {
+            self.should_clear_node(&id);
+
+            if let GraphIdKind::Value = id.get_type() {
+                let has_subscribers = self.connections.has_subscribers(&id);
+                self.external_connections.set_connection(id, has_subscribers);
+            }
+        }
+
+        self.recalculate_in_progress.set(false);
+
     }
 
-    fn edges_on(&self, client_id: GraphId, parent_list: BTreeSet<GraphId>) {
-        self.parent_client.add_connection(&parent_list, client_id);
-        self.external_connections.need_connection(parent_list);
-    }
-
-    fn edges_off(&self, client_id: GraphId, parent_list: BTreeSet<GraphId>) {
-        for parent_id in parent_list {
-            self.parent_client.remove_connection(parent_id, client_id);
-            self.external_connections.need_disconnection(parent_id);
-
-            if self.parent_client.relation_len(&parent_id) == 0 {
-                if let Some(token) = self.refresh.get(&parent_id) {
-                    token.drop_value();
+    fn should_clear_node(&self, id: &GraphId) {
+        match id.get_type() {
+            GraphIdKind::Value => {
+            },
+            GraphIdKind::Computed => {
+                let has_subscribers = self.connections.has_subscribers(id);
+    
+                if !has_subscribers {
+                    self.refresh.clear_cache(id);
+                    self.stack.remove_client(*id);
+                }
+            },
+            GraphIdKind::Client => {
+                if !self.connections.has_parents(id) {
+                    self.refresh.clear_cache(id);
+                    self.stack.remove_client(*id);
                 }
             }
         }
     }
 
-    pub(crate) fn get_all_deps(&self, edges: BTreeSet<GraphId>) -> BTreeSet<GraphId> {
-        self.parent_client.get_all_deps(edges)
-    }
-
-    pub fn all_connections_len(&self) -> u64 {
-        self.parent_client.relation_len_all()
-    }
 }

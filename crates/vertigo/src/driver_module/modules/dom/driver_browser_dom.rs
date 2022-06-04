@@ -2,7 +2,7 @@ use std::{
     rc::Rc,
 };
 use crate::{
-    dev::{EventCallback, RealDomId, RefsContext},
+    dev::{EventCallback, DomId},
     Dependencies, KeyDownEvent, DropFileEvent,
 };
 use crate::struct_mut::VecMut;
@@ -19,7 +19,6 @@ use super::{
 struct DriverDomInner {
     api: Rc<ApiImport>,
     data: Rc<DriverData>,
-    refs: VecMut<RefsContext>,
     commands: VecMut<DriverDomCommand>,
     current_visited: VisitedNodeManager,
 }
@@ -41,13 +40,12 @@ impl DriverBrowserDom {
             inner: Rc::new(DriverDomInner {
                 api: api.clone(),
                 data,
-                refs: VecMut::new(),
                 commands: VecMut::new(),
                 current_visited,
             })
         };
 
-        let root_id = RealDomId::root();
+        let root_id = DomId::root();
 
         driver_browser.create_node(root_id, "div");
         driver_browser.mount_node(root_id);
@@ -69,7 +67,7 @@ impl DriverBrowserDom {
 impl DriverBrowserDom {
 
     pub fn export_dom_mousedown(&self, dom_id: u64) {
-        let event_to_run = self.inner.data.find_event_click(RealDomId::from_u64(dom_id));
+        let event_to_run = self.inner.data.find_event_click(DomId::from_u64(dom_id));
 
         if let Some(callback) = event_to_run {
             callback();
@@ -82,7 +80,7 @@ impl DriverBrowserDom {
                 self.inner.current_visited.clear();
             },
             Some(dom_id) => {
-                let nodes = self.inner.data.find_all_nodes(RealDomId::from_u64(dom_id));
+                let nodes = self.inner.data.find_all_nodes(DomId::from_u64(dom_id));
                 self.inner.current_visited.push_new_nodes(nodes);
             }
         }
@@ -107,8 +105,8 @@ impl DriverBrowserDom {
         }
 
         let id = match dom_id {
-            None => RealDomId::root(),
-            Some(id) => RealDomId::from_u64(id),
+            None => DomId::root(),
+            Some(id) => DomId::from_u64(id),
         };
 
         match self.inner.data.find_event_keydown(id) {
@@ -118,7 +116,7 @@ impl DriverBrowserDom {
     }
 
     pub fn export_dom_oninput(&self, dom_id: u64, text: String) {
-        let event_to_run = self.inner.data.find_event_on_input(RealDomId::from_u64(dom_id));
+        let event_to_run = self.inner.data.find_event_on_input(DomId::from_u64(dom_id));
 
         if let Some(event_to_run) = event_to_run {
             event_to_run(text);
@@ -126,14 +124,14 @@ impl DriverBrowserDom {
     }
 
     pub fn export_dom_ondropfile(&self, dom_id: u64, event: DropFileEvent) {
-        let event_to_run = self.inner.data.find_event_on_dropfile(RealDomId::from_u64(dom_id));
+        let event_to_run = self.inner.data.find_event_on_dropfile(DomId::from_u64(dom_id));
 
         if let Some(event_to_run) = event_to_run {
             event_to_run(event);
         }
     }
 
-    fn mount_node(&self, id: RealDomId) {
+    fn mount_node(&self, id: DomId) {
         self.inner.commands.push(DriverDomCommand::MountNode { id });
     }
 
@@ -141,30 +139,30 @@ impl DriverBrowserDom {
         self.inner.commands.push(command);
     }
 
-    pub fn create_node(&self, id: RealDomId, name: &'static str) {
+    pub fn create_node(&self, id: DomId, name: &'static str) {
         self.inner.data.create_node(id);
         self.add_command(DriverDomCommand::CreateNode { id, name });
     }
 
-    pub fn rename_node(&self, id: RealDomId, name: &'static str) {
+    pub fn rename_node(&self, id: DomId, name: &'static str) {
         self.add_command(DriverDomCommand::RenameNode { id, new_name: name })
     }
 
-    pub fn create_text(&self, id: RealDomId, value: &str) {
+    pub fn create_text(&self, id: DomId, value: &str) {
         self.add_command(DriverDomCommand::CreateText {
             id,
             value: value.into(),
         })
     }
 
-    pub fn update_text(&self, id: RealDomId, value: &str) {
+    pub fn update_text(&self, id: DomId, value: &str) {
         self.add_command(DriverDomCommand::UpdateText {
             id,
             value: value.into(),
         });
     }
 
-    pub fn set_attr(&self, id: RealDomId, name: &'static str, value: &str) {
+    pub fn set_attr(&self, id: DomId, name: &'static str, value: &str) {
         self.add_command(DriverDomCommand::SetAttr {
             id,
             name,
@@ -172,21 +170,21 @@ impl DriverBrowserDom {
         });
     }
 
-    pub fn remove_attr(&self, id: RealDomId, name: &'static str) {
+    pub fn remove_attr(&self, id: DomId, name: &'static str) {
         self.add_command(DriverDomCommand::RemoveAttr { id, name });
     }
 
-    pub fn remove_text(&self, id: RealDomId) {
+    pub fn remove_text(&self, id: DomId) {
         self.inner.data.remove_text(id);
         self.add_command(DriverDomCommand::RemoveText { id });
     }
 
-    pub fn remove_node(&self, id: RealDomId) {
+    pub fn remove_node(&self, id: DomId) {
         self.inner.data.remove_node(id);
         self.add_command(DriverDomCommand::RemoveNode { id });
     }
 
-    pub fn insert_before(&self, parent: RealDomId, child: RealDomId, ref_id: Option<RealDomId>) {
+    pub fn insert_before(&self, parent: DomId, child: DomId, ref_id: Option<DomId>) {
         self.inner.data.set_parent(child, parent);
         self.add_command(DriverDomCommand::InsertBefore { parent, child, ref_id });
     }
@@ -198,6 +196,25 @@ impl DriverBrowserDom {
         });
     }
 
+    pub fn create_comment(&self, id: DomId, value: String) {
+        self.add_command(DriverDomCommand::CreateComment {
+            id,
+            value,
+        })
+    }
+
+    pub fn update_comment(&self, id: DomId, value: String) {
+        self.add_command(DriverDomCommand::UpdateComment {
+            id,
+            value,
+        });
+    }
+
+    pub fn remove_comment(&self, id: DomId) {
+        self.inner.data.remove_text(id);
+        self.add_command(DriverDomCommand::RemoveComment { id });
+    }
+    
     pub fn flush_dom_changes(&self) {
         let state = self.inner.commands.take();
 
@@ -211,59 +228,9 @@ impl DriverBrowserDom {
             let command_str = format!("[{}]", out.join(","));
             self.inner.api.dom_bulk_update(command_str.as_str());
         }
-
-        let refs = self.inner.refs.take();
-
-        for context in refs {
-            context.run();
-        }
     }
 
-    pub fn set_event(&self, id: RealDomId, callback: EventCallback) {
+    pub fn set_event(&self, id: DomId, callback: EventCallback) {
         self.inner.data.set_event(id, callback);
-    }
-
-    pub fn get_bounding_client_rect_x(&self, id: RealDomId) -> i32 {
-        self.inner.api.dom_get_bounding_client_rect_x(id.to_u64())
-    }
-
-    pub fn get_bounding_client_rect_y(&self, id: RealDomId) -> i32 {
-        self.inner.api.dom_get_bounding_client_rect_y(id.to_u64())
-    }
-
-    pub fn get_bounding_client_rect_width(&self, id: RealDomId) -> u32 {
-        self.inner.api.dom_get_bounding_client_rect_width(id.to_u64())
-    }
-
-    pub fn get_bounding_client_rect_height(&self, id: RealDomId) -> u32 {
-        self.inner.api.dom_get_bounding_client_rect_height(id.to_u64())
-    }
-
-    pub fn scroll_top(&self, id: RealDomId) -> i32 {
-        self.inner.api.dom_scroll_top(id.to_u64())
-    }
-
-    pub fn set_scroll_top(&self, id: RealDomId, value: i32) {
-        self.inner.api.dom_set_scroll_top(id.to_u64(), value)
-    }
-
-    pub fn scroll_left(&self, id: RealDomId) -> i32 {
-        self.inner.api.dom_scroll_left(id.to_u64())
-    }
-
-    pub fn set_scroll_left(&self, id: RealDomId, value: i32) {
-        self.inner.api.dom_set_scroll_left(id.to_u64(), value)
-    }
-
-    pub fn scroll_width(&self, id: RealDomId) -> u32 {
-        self.inner.api.dom_scroll_width(id.to_u64())
-    }
-
-    pub fn scroll_height(&self, id: RealDomId) -> u32 {
-        self.inner.api.dom_scroll_height(id.to_u64())
-    }
-
-    pub(crate) fn push_ref_context(&self, context: RefsContext) {
-        self.inner.refs.push(context);
     }
 }

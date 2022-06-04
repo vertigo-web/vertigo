@@ -70,21 +70,13 @@ impl<T: Clone> Resource<T> {
     }
 }
 
-/*
-Exampl:
-
-fn get1() -> Resource<String> {
-    todo!()
+impl<T: PartialEq> PartialEq for Resource<T> {
+    fn eq(&self, other: &Self) -> bool {
+        match (self, other) {
+            (Resource::Loading, Resource::Loading) => true,
+            (Resource::Error(message1), Resource::Error(message2)) => message1.eq(message2),
+            (Resource::Ready(val1), Resource::Ready(val2)) => val1.eq(val2),
+            _ => false,
+        }
+    }
 }
-
-fn get2() -> Resource<u32> {
-    todo!()
-}
-
-fn get3() -> Resource<String> {
-    let val1: String = get1()?;
-    let val2: u32 = get2()?;
-
-    todo!();
-}
-*/

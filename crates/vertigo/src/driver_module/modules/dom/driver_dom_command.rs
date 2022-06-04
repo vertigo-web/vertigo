@@ -1,50 +1,62 @@
-use crate::dev::RealDomId;
+use crate::dev::DomId;
 
 use crate::driver_module::utils::json::JsonMapBuilder;
 
 pub enum DriverDomCommand {
     MountNode {
-        id: RealDomId,
+        id: DomId,
     },
     CreateNode {
-        id: RealDomId,
+        id: DomId,
         name: &'static str,
     },
     RenameNode {
-        id: RealDomId,
+        id: DomId,
         new_name: &'static str,
     },
     CreateText {
-        id: RealDomId,
+        id: DomId,
         value: String,
     },
     UpdateText {
-        id: RealDomId,
+        id: DomId,
         value: String,
     },
     SetAttr {
-        id: RealDomId,
+        id: DomId,
         name: &'static str,
         value: String,
     },
     RemoveAttr {
-        id: RealDomId,
+        id: DomId,
         name: &'static str,
     },
     RemoveNode {
-        id: RealDomId,
+        id: DomId,
     },
     RemoveText {
-        id: RealDomId,
+        id: DomId,
     },
     InsertBefore {
-        parent: RealDomId,
-        child: RealDomId,
-        ref_id: Option<RealDomId>,
+        parent: DomId,
+        child: DomId,
+        ref_id: Option<DomId>,
     },
     InsertCss {
         selector: String,
         value: String,
+    },
+
+    CreateComment {
+        id: DomId,
+        value: String,
+    },
+    UpdateComment{
+        id: DomId,
+        value: String,
+    },
+    RemoveComment {
+        id: DomId,
     },
 }
 
@@ -96,6 +108,22 @@ impl DriverDomCommand {
                 out.set_string("type", "remove_text");
                 out.set_u64("id", id.to_u64());
             }
+
+            Self::CreateComment { id, value } => {
+                out.set_string("type", "create_comment");
+                out.set_u64("id", id.to_u64());
+                out.set_string("value", value.as_str());
+            },
+            Self::UpdateComment { id, value } => {
+                out.set_string("type", "update_comment");
+                out.set_u64("id", id.to_u64());
+                out.set_string("value", value.as_str());
+            },
+            Self::RemoveComment { id } => {
+                out.set_string("type", "remove_comment");
+                out.set_u64("id", id.to_u64());
+            },
+
             Self::InsertBefore { parent, child, ref_id } => {
                 out.set_string("type", "insert_before");
                 out.set_u64("parent", parent.to_u64());

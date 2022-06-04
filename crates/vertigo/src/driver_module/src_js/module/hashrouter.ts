@@ -17,6 +17,6 @@ export class HashRouter {
     }
 
     public get(): string {
-        return location.hash.substr(1);
+        return decodeURIComponent(location.hash.substr(1));
     }
 }

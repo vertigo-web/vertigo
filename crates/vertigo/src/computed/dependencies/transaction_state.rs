@@ -41,7 +41,6 @@ impl TransactionState {
             match state {
                 State::Idle => {
                     hooks.fire_start();
-
                     (
                         State::Modification {
                             level: 1,

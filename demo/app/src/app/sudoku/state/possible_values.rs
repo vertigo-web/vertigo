@@ -17,7 +17,7 @@ pub fn possible_values(
     level1y: TreeBoxIndex,
 ) -> Computed<HashSet<SudokuValue>> {
     let grid = grid.clone();
-    Computed::from(move || {
+    Computed::from(move |context| {
         let mut current_numbers_in_ceis: HashSet<SudokuValue> = HashSet::new();
         current_numbers_in_ceis.insert(SudokuValue::Value1);
         current_numbers_in_ceis.insert(SudokuValue::Value2);
@@ -33,7 +33,7 @@ pub fn possible_values(
         for x0 in TreeBoxIndex::variants() {
             for x1 in TreeBoxIndex::variants() {
                 let value = grid.get_from(x0, level0y).get_from(x1, level1y);
-                let value = value.value.get();
+                let value = value.value.get(context);
                 if let Some(value) = value {
                     current_numbers_in_ceis.remove(&value);
                 }
@@ -44,7 +44,7 @@ pub fn possible_values(
         for y0 in TreeBoxIndex::variants() {
             for y1 in TreeBoxIndex::variants() {
                 let value = grid.get_from(level0x, y0).get_from(level1x, y1);
-                let value = value.value.get();
+                let value = value.value.get(context);
                 if let Some(value) = value {
                     current_numbers_in_ceis.remove(&value);
                 }
@@ -55,7 +55,7 @@ pub fn possible_values(
         for x1 in TreeBoxIndex::variants() {
             for y1 in TreeBoxIndex::variants() {
                 let value = grid.get_from(level0x, level0y).get_from(x1, y1);
-                let value = value.value.get();
+                let value = value.value.get(context);
                 if let Some(value) = value {
                     current_numbers_in_ceis.remove(&value);
                 }

@@ -1,4 +1,4 @@
-use crate::{dev::VDomText, Value, VDomElement, html};
+use crate::{dev::VDomText, VDomElement, html};
 
 // Make crate available by its name for html macro
 use crate as vertigo;
@@ -24,12 +24,12 @@ fn div_with_simple_expression() {
 
 #[test]
 fn div_with_value_expression() {
-    let x = Value::new(6);
-    let y = Value::new(3);
+    // let x = Value::new(6);
+    // let y = Value::new(3);
 
     let dom1 = html! {
         <div>
-            { x.get() + y.get() }
+            { 9 }
         </div>
     };
 

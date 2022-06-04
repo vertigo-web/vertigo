@@ -1,5 +1,5 @@
 use std::{collections::HashMap, rc::Rc};
-use crate::{dev::RealDomId, Dependencies};
+use crate::{dev::DomId, Dependencies};
 
 use crate::struct_mut::HashMapMut;
 
@@ -33,7 +33,7 @@ impl Drop for VisitedNode {
 pub(crate) struct VisitedNodeManager {
     driver_data: Rc<DriverData>,
     dependencies: Dependencies,
-    nodes: HashMapMut<RealDomId, VisitedNode>,
+    nodes: HashMapMut<DomId, VisitedNode>,
 }
 
 impl VisitedNodeManager {
@@ -50,17 +50,17 @@ impl VisitedNodeManager {
     pub fn clear(&self) {
         let VisitedNodeManager {dependencies, nodes, ..} = self;
 
-        dependencies.transaction(move || {
-            let new_state = HashMap::<RealDomId, VisitedNode>::new();
+        dependencies.transaction(move |_| {
+            let new_state = HashMap::<DomId, VisitedNode>::new();
             let _ = nodes.mem_replace(new_state);
         });
     }
 
-    pub fn push_new_nodes(&self, new_nodes: Vec<RealDomId>) {
+    pub fn push_new_nodes(&self, new_nodes: Vec<DomId>) {
         let VisitedNodeManager {driver_data, dependencies, nodes} = self;
 
-        dependencies.transaction(move || {
-            let mut new_state = HashMap::<RealDomId, VisitedNode>::new();
+        dependencies.transaction(move |_| {
+            let mut new_state = HashMap::<DomId, VisitedNode>::new();
 
             for node_id in new_nodes {
                 let old_node = nodes.remove(&node_id);
