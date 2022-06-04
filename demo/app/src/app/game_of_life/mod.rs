@@ -1,5 +1,5 @@
 use std::{rc::Rc};
-use vertigo::{css, css_fn, html, Computed, Css, VDomElement, Value, VDomComponent, bind, get_driver};
+use vertigo::{css, css_fn, Css, Value, bind, get_driver, DomElement, DropResource, dom, transaction};
 
 mod next_generation;
 
@@ -26,38 +26,35 @@ fn create_matrix(x_count: u16, y_count: u16) -> Vec<Vec<Value<bool>>> {
 #[derive(Clone)]
 pub struct State {
     pub matrix: Rc<Vec<Vec<Value<bool>>>>,
-    pub timer_enable: Value<bool>,
+    pub timer: Value<Option<Rc<DropResource>>>,             //???
+    pub delay: Value<u32>,
     pub new_delay: Value<u32>,
-    pub year: Value<Computed<u32>>,
+    pub year: Value<u32>,
 }
 
 impl State {
     const X_LEN: u16 = 120;
     const Y_LEN: u16 = 70;
 
-    pub fn component() -> VDomComponent {
+    pub fn new() -> State {
         let matrix = Rc::new(create_matrix(State::X_LEN, State::Y_LEN));
 
-        let timer_enable = Value::new(false);
+        let timer = Value::new(None);
+        let delay = Value::new(150);
         let new_delay = Value::new(150);
-        let year = Value::new(Self::create_timer(&matrix, &timer_enable, &new_delay, 0));
+        let year = Value::new(1);
 
-        let state = State {
+        State {
             matrix,
-            timer_enable,
+            timer,
+            delay,
             new_delay,
             year,
-        };
-
-        render(state)
+        }
     }
 
-    pub fn accept_new_delay(&self) -> impl Fn() {
-        let state = self.clone();
-        move ||
-            state.year.set(
-                State::create_timer(&state.matrix, &state.timer_enable, &state.new_delay, state.year.get().get())
-            )
+    pub fn render(&self) -> DomElement {
+        render(self)
     }
 
     pub fn randomize(&self)-> impl Fn() {
@@ -66,7 +63,7 @@ impl State {
         move || {
             log::info!("random ...");
 
-            get_driver().transaction(|| {
+            transaction(|_| {
                 for (y, row) in matrix.iter().enumerate() {
                     for (x, cell) in row.iter().enumerate() {
                         let new_value: bool = (y * 2 + (x + 4)) % 2 == 0;
@@ -81,37 +78,41 @@ impl State {
         }
     }
 
-    pub fn create_timer(matrix: &Rc<Vec<Vec<Value<bool>>>>, timer_enable: &Value<bool>, new_delay: &Value<u32>, starting_year: u32) -> Computed<u32> {
-        let timer_enable = timer_enable.clone();
-        let new_delay = new_delay.get();
+    fn start_timer(&self) {
+        transaction(|context| {
+            let delay = self.delay.get(context);
+            let matrix = self.matrix.clone();
+            let state = self.clone();
 
-        Value::with_connect(starting_year, {
-            let matrix = matrix.clone();
+            log::info!("Setting timer for {} ms", delay);
 
-            move |self_value| {
-                let timer_enable = timer_enable.clone();
-                let self_value = self_value.clone();
+            let timer = get_driver().set_interval(delay, {
+                move || {
+                    transaction(|context| {
+                        let current = state.year.get(context);
+                        state.year.set(current + 1);
 
-                let matrix = matrix.clone();
+                        next_generation::next_generation(State::X_LEN, State::Y_LEN, &matrix)
+                    })
+                }
+            });
 
-                log::info!("Setting timer for {} ms", new_delay);
-
-                get_driver().set_interval(new_delay, {
-                    move || {
-                        get_driver().transaction(|| {
-                            let timer_enable = timer_enable.get();
-
-                            if timer_enable {
-                                let current = self_value.get();
-                                self_value.set(current + 1);
-
-                                next_generation::next_generation(State::X_LEN, State::Y_LEN, &*matrix)
-                            }
-                        })
-                    }
-                })
-            }
+            self.timer.set(Some(Rc::new(timer)));
         })
+    }
+
+    fn accept_new_delay(&self) -> impl Fn() {
+        let state = self.clone();
+
+        move || {
+            transaction(|context| {
+                state.delay.set(state.new_delay.get(context));
+
+                if state.timer.get(context).is_some() {
+                    state.start_timer();
+                }
+            });
+        }
     }
 }
 
@@ -146,120 +147,126 @@ css_fn! { css_button, "
 
 css_fn! { flex_menu, "
     display: flex;
-    gap: 50px;
+    gap: 40px;
     margin-bottom: 5px;
 " }
 
-fn render_header(state: &State) -> VDomElement {
-    let year = state.year.get().get();
-    let timer_enable = state.timer_enable.get();
-    let new_delay = state.new_delay.get();
+fn render_header(state: &State) -> DomElement {
+    let year = state.year.map(|item| {
+        item.to_string()
+    });
+    let delay = state.delay.map(|item| {
+        item.to_string()
+    });
+    let new_delay = state.new_delay.map(|item| {
+        item.to_string()
+    });
 
-    let button = if timer_enable {
-        let on_click = bind(state).call(|state| {
-            state.timer_enable.set(false);
-            log::info!("stop ...");
-        });
+    let on_toggle_timer = {
+        let state = state.clone();
+        move || {
+            transaction(|context| {
+                let timer = state.timer.get(context);
 
-        html! {
-            <button css={css_button()} on_click={on_click}>
-                "Stop"
-            </button>
-        }
-    } else {
-        let on_click = bind(state).call(|state| {
-            state.timer_enable.set(true);
-            log::info!("start ...");
-        });
-
-        html! {
-            <button css={css_button()} on_click={on_click}>
-                "Start"
-            </button>
+                if timer.is_some() {
+                    state.timer.set(None);
+                } else {
+                    state.start_timer();
+                }
+            });
         }
     };
 
-    let on_input = bind(state).call_param(|state, new_value: String| {
+    let button_label = state.timer.map(|item| -> &'static str {
+        match item.is_some() {
+            true => "Stop",
+            false => "Start",
+        }
+    });
+
+    let on_input = bind(state).call_param(|_, state, new_value: String| {
         state.new_delay.set(new_value.parse().unwrap_or_default());
     });
 
-    html! {
+    dom! {
         <div css={flex_menu()}>
-            <div>"Game of life"</div>
-            <div>"Year = " { year }</div>
             <div>
-                { button }
+                "Game of life"
+            </div>
+            <div>
+                "Year = "
+                <text computed={ year } />
+            </div>
+            <div>
+                <button css={css_button()} on_click={on_toggle_timer}>
+                    <text computed={button_label} />
+                </button>
                 <button css={css_button()} on_click={state.randomize()}>"Random"</button>
             </div>
             <div>
+                <div>
+                    "delay = "
+                    <text computed={delay} />
+                </div>
                 "Set delay: "
-                <input value={new_delay.to_string()} on_input={on_input} />
+                <input value={new_delay} on_input={on_input} />
                 " " <button css={css_button()} on_click={state.accept_new_delay()}>"Set"</button>
             </div>
         </div>
     }
 }
 
-pub fn render(state: State) -> VDomComponent {
+pub fn render(state: &State) -> DomElement {
 
-    let view_header = VDomComponent::from_ref(&state, render_header);
+    let matrix = &state.matrix;
 
-    VDomComponent::from(state, move |state: &State| -> VDomElement {
-        let matrix = &state.matrix;
-
-        html! {
-            <div css={css_wrapper()}>
-                { view_header.clone() }
-                <br/>
-                <a href="https://www.youtube.com/watch?v=C2vgICfQawE" target="_blank">
-                    "https://www.youtube.com/watch?v=C2vgICfQawE"
-                </a>
-                <br/>
-                <br/>
-                { render_matrix(matrix) }
-            </div>
-        }
-    })
-}
-
-fn render_matrix(matrix: &Rc<Vec<Vec<Value<bool>>>>) -> VDomElement {
-    let mut out = Vec::new();
-
-    for item in matrix.iter() {
-        out.push(render_row(item));
-    }
-
-    html! {
-        <div>
-            { ..out }
+    dom! {
+        <div css={css_wrapper()}>
+            { render_header(state) }
+            <br/>
+            <a href="https://www.youtube.com/watch?v=C2vgICfQawE" target="_blank">
+                "https://www.youtube.com/watch?v=C2vgICfQawE"
+            </a>
+            <br/>
+            <br/>
+            { render_matrix(matrix) }
         </div>
     }
 }
 
-fn render_row(matrix: &[Value<bool>]) -> VDomElement {
-    let mut out = Vec::new();
+fn render_matrix(matrix: &Rc<Vec<Vec<Value<bool>>>>) -> DomElement {
+    let out = DomElement::new("div");
 
     for item in matrix.iter() {
-        out.push(VDomComponent::from_ref(item, render_cell))
+        out.add_child(render_row(item));
     }
 
-    html! {
-        <div css={css_row()}>
-            { ..out }
-        </div>
-    }
+    out
 }
 
-fn render_cell(cell: &Value<bool>) -> VDomElement {
-    let is_active = cell.get();
+fn render_row(matrix: &[Value<bool>]) -> DomElement {
+    let wrapper = dom! {
+        <div css={css_row()} />
+    };
+    
+    for item in matrix.iter() {
+        wrapper.add_child(render_cell(item));
+    }
+
+    wrapper
+}
+
+fn render_cell(cell: &Value<bool>) -> DomElement {
+
+    let css_computed = cell.map(css_cell);
 
     let on_click_callback = bind(cell)
-        .and(&is_active)
-        .call(|cell, is_active| {
-            cell.set(!*is_active);
+        .call(|context, cell| {
+            let is_active = cell.get(context);
+            cell.set(!is_active);
         });
 
-    html! {
-        <div css={css_cell(is_active)} on_click={on_click_callback} />
-    }
+        dom! {
+            <div on_click={on_click_callback} css={css_computed} />
+        }
 }

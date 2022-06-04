@@ -1,10 +1,10 @@
-use std::cell::RefCell;
+use std::{cell::RefCell, any::Any};
 
-use crate::{ApiImport, Client, Driver};
+use crate::{ApiImport, Driver};
 
 pub struct DriverConstruct {
     pub driver: Driver,
-    pub subscription: RefCell<Option<Client>>,
+    pub subscription: RefCell<Option<Box<dyn Any>>>,
 }
 
 impl DriverConstruct {
@@ -32,16 +32,6 @@ mod api {
             pub fn timeout_clear(timer_id: u32);
 
             pub fn instant_now() -> u32;
-            pub fn dom_get_bounding_client_rect_x(id: u64) -> i32;
-            pub fn dom_get_bounding_client_rect_y(id: u64) -> i32;
-            pub fn dom_get_bounding_client_rect_width(id: u64) -> u32;
-            pub fn dom_get_bounding_client_rect_height(id: u64) -> u32;
-            pub fn dom_scroll_top(node_id: u64) -> i32;
-            pub fn dom_set_scroll_top(node_id: u64, value: i32);
-            pub fn dom_scroll_left(node_id: u64) -> i32;
-            pub fn dom_set_scroll_left(node_id: u64, value: i32);
-            pub fn dom_scroll_width(node_id: u64) -> u32;
-            pub fn dom_scroll_height(node_id: u64) -> u32;
         }
     }
 
@@ -89,66 +79,6 @@ mod api {
                 instant_now()
             }
         }
-
-        pub fn safe_dom_get_bounding_client_rect_x(id: u64) -> i32 {
-            unsafe {
-                dom_get_bounding_client_rect_x(id)
-            }
-        }
-
-        pub fn safe_dom_get_bounding_client_rect_y(id: u64) -> i32 {
-            unsafe {
-                dom_get_bounding_client_rect_y(id)
-            }
-        }
-
-        pub fn safe_dom_get_bounding_client_rect_width(id: u64) -> u32 {
-            unsafe {
-                dom_get_bounding_client_rect_width(id)
-            }
-        }
-
-        pub fn safe_dom_get_bounding_client_rect_height(id: u64) -> u32 {
-            unsafe {
-                dom_get_bounding_client_rect_height(id)
-            }
-        }
-
-        pub fn safe_dom_scroll_top(node_id: u64) -> i32 {
-            unsafe {
-                dom_scroll_top(node_id)
-            }
-        }
-
-        pub fn safe_dom_set_scroll_top(node_id: u64, value: i32) {
-            unsafe {
-                dom_set_scroll_top(node_id, value)
-            }
-        }
-
-        pub fn safe_dom_scroll_left(node_id: u64) -> i32 {
-            unsafe {
-                dom_scroll_left(node_id)
-            }
-        }
-
-        pub fn safe_dom_set_scroll_left(node_id: u64, value: i32) {
-            unsafe {
-                dom_set_scroll_left(node_id, value)
-            }
-        }
-
-        pub fn safe_dom_scroll_width(node_id: u64) -> u32 {
-            unsafe {
-                dom_scroll_width(node_id)
-            }
-        }
-
-        pub fn safe_dom_scroll_height(node_id: u64) -> u32 {
-            unsafe {
-                dom_scroll_height(node_id)
-            }
-        }
     }
 }
 
@@ -183,46 +113,6 @@ mod api {
         pub fn safe_instant_now() -> u32 {
             unimplemented!("safe_instant_now");
         }
-
-        pub fn safe_dom_get_bounding_client_rect_x(_id: u64) -> i32 {
-            unimplemented!("safe_dom_get_bounding_client_rect_x");
-        }
-
-        pub fn safe_dom_get_bounding_client_rect_y(_id: u64) -> i32 {
-            unimplemented!("safe_dom_get_bounding_client_rect_y");
-        }
-
-        pub fn safe_dom_get_bounding_client_rect_width(_id: u64) -> u32 {
-            unimplemented!("safe_dom_get_bounding_client_rect_width");
-        }
-
-        pub fn safe_dom_get_bounding_client_rect_height(_id: u64) -> u32 {
-            unimplemented!("safe_dom_get_bounding_client_rect_height");
-        }
-
-        pub fn safe_dom_scroll_top(_node_id: u64) -> i32 {
-            unimplemented!("safe_dom_scroll_top");
-        }
-
-        pub fn safe_dom_set_scroll_top(_node_id: u64, _value: i32) {
-            unimplemented!("safe_dom_set_scroll_top");
-        }
-
-        pub fn safe_dom_scroll_left(_node_id: u64) -> i32 {
-            unimplemented!("safe_dom_scroll_left");
-        }
-
-        pub fn safe_dom_set_scroll_left(_node_id: u64, _value: i32) {
-            unimplemented!("safe_dom_set_scroll_left");
-        }
-
-        pub fn safe_dom_scroll_width(_node_id: u64) -> u32 {
-            unimplemented!("safe_dom_scroll_width");
-        }
-
-        pub fn safe_dom_scroll_height(_node_id: u64) -> u32 {
-            unimplemented!("safe_dom_scroll_width");
-        }
     }
 }
 
@@ -239,16 +129,6 @@ thread_local! {
             safe_timeout_set,
             safe_timeout_clear,
             safe_instant_now,
-            safe_dom_get_bounding_client_rect_x,
-            safe_dom_get_bounding_client_rect_y,
-            safe_dom_get_bounding_client_rect_width,
-            safe_dom_get_bounding_client_rect_height,
-            safe_dom_scroll_top,
-            safe_dom_set_scroll_top,
-            safe_dom_scroll_left,
-            safe_dom_set_scroll_left,
-            safe_dom_scroll_width,
-            safe_dom_scroll_height
         )
     });
 }

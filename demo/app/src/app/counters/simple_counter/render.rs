@@ -1,4 +1,4 @@
-use vertigo::{css_fn, css_fn_push, html, VDomElement, bind};
+use vertigo::{css_fn, css_fn_push, bind, DomElement, dom};
 
 use super::State;
 
@@ -21,20 +21,23 @@ css_fn! { css_wrapper, "
     margin: 5px 0;
 " }
 
-pub fn render(simple_counter: &State) -> VDomElement {
-    let value = simple_counter.counter.get();
-
-    let click_up = bind(simple_counter).call(|simple_counter| {
+pub fn render(simple_counter: State) -> DomElement {
+    let click_up = bind(&simple_counter).call(|_, simple_counter| {
         simple_counter.increment();
     });
 
-    let click_down = bind(simple_counter).call(|simple_counter| {
+    let click_down = bind(&simple_counter).call(|_, simple_counter| {
         simple_counter.decrement();
     });
 
-    html! {
+    let value = simple_counter.counter.map(|item| item.to_string());
+
+    dom! {
         <div css={css_wrapper()}>
-            <div css={css_box()}>"Counter value = " { value }</div>
+            <div css={css_box()}>
+                "Counter value = "
+                <text computed={value} />
+            </div>
             <button css={css_button()} on_click={click_up}>"up"</button>
             <button css={css_button()} on_click={click_down}>"down"</button>
         </div>

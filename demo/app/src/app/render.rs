@@ -1,8 +1,7 @@
-use vertigo::{css, css_fn, html, Css, VDomNode, VDomElement, VDomComponent, bind, KeyDownEvent};
-
-use crate::app::chat;
-use crate::{app};
-
+use vertigo::{css, css_fn, Css, bind, KeyDownEvent, DomElement, dom, Computed};
+use crate::app;
+use crate::app::chat::ChatState;
+use crate::app::todo::TodoState;
 use super::dropfile::DropFilesState;
 use super::route::Route;
 
@@ -26,11 +25,6 @@ fn css_menu_item(active: bool) -> Css {
         :hover {
             text-decoration: underline;
         }
-
-        :nth-of-type(1):hover {
-            color: crimson;
-            text-decoration: line-through;
-        };
     "
     )
 }
@@ -38,110 +32,75 @@ fn css_menu_item(active: bool) -> Css {
 fn navigate_to(state: &app::State, route: Route) -> impl Fn() {
     bind(state)
         .and(&route)
-        .call(|state, route| {
+        .call(|_, state, route| {
             state.navigate_to(route.clone())
         })
 }
 
+fn render_menu_item(state: &app::State, current_page: Computed<Route>, menu_item: Route) -> DomElement {
+    let css = current_page.map({
+        let menu_item = menu_item.clone();
+        move |current_page| {
+            css_menu_item(menu_item == current_page)
+        }
+    });
 
-fn render_header(state: &app::State) -> VDomElement {
-    let route = state.route.get();
-    let current_page = route;
+    dom! {
+        <li
+            css={css}
+            on_click={navigate_to(state, menu_item.clone())}
+        >
+            { menu_item.label() }
+        </li>
+    }
+}
 
-    let is_game_of_life = matches!(current_page, Route::GameOfLife { .. });
-
-    html! {
+fn render_header(state: &app::State) -> DomElement {
+    dom! {
         <div>
             <ul css={css_menu()}>
-                <li
-                    css={css_menu_item(current_page == Route::Main)}
-                    on_click={navigate_to(state, Route::Main)}
-                >
-                    "Main"
-                </li>
-                <li
-                    css={css_menu_item(current_page == Route::Counters)}
-                    on_click={navigate_to(state, Route::Counters)}
-                >
-                    "Counters"
-                </li>
-                <li
-                    css={css_menu_item(current_page == Route::Sudoku)}
-                    on_click={navigate_to(state, Route::Sudoku)}
-                >
-                    "Sudoku"
-                </li>
-                <li
-                    css={css_menu_item(current_page == Route::Input)}
-                    on_click={navigate_to(state, Route::Input)}
-                >
-                    "Input"
-                </li>
-                <li
-                    css={css_menu_item(current_page == Route::GithubExplorer)}
-                    on_click={navigate_to(state, Route::GithubExplorer)}
-                >
-                    "Github Explorer"
-                </li>
-                <li
-                    css={css_menu_item(is_game_of_life)}
-                    on_click={navigate_to(state, Route::GameOfLife)}
-                >
-                    "Game Of Life"
-                </li>
-                <li
-                    css={css_menu_item(current_page == Route::Chat)}
-                    on_click={navigate_to(state, Route::Chat)}
-                >
-                    "Chat"
-                </li>
-                <li
-                    css={css_menu_item(current_page == Route::Todo)}
-                    on_click={navigate_to(state, Route::Todo)}
-                >
-                    "Todo"
-                </li>
-                <li
-                    css={css_menu_item(current_page == Route::DropFile)}
-                    on_click={navigate_to(state, Route::DropFile)}
-                >
-                    "Drop File"
-                </li>
+                { render_menu_item(state, state.route.route.clone(), Route::Counters) }
+                { render_menu_item(state, state.route.route.clone(), Route::Animations) }
+                { render_menu_item(state, state.route.route.clone(), Route::Sudoku) }
+                { render_menu_item(state, state.route.route.clone(), Route::Input) }
+                { render_menu_item(state, state.route.route.clone(), Route::GithubExplorer) }
+                { render_menu_item(state, state.route.route.clone(), Route::GameOfLife) }
+                { render_menu_item(state, state.route.route.clone(), Route::Chat) }
+                { render_menu_item(state, state.route.route.clone(), Route::Todo) }
+                { render_menu_item(state, state.route.route.clone(), Route::DropFile) }
             </ul>
         </div>
     }
 }
 
-pub fn render(state: app::State) -> VDomComponent {
-    let header = VDomComponent::from_ref(&state, render_header);
+pub fn render(state: app::State) -> DomElement {
+    let header = render_header(&state);
 
-    VDomComponent::from(state, move |state: &app::State| -> VDomElement {
-        let child: VDomNode = match state.route.get() {
-            Route::Main => state.main.clone().into(),
-            Route::Counters => state.counters.clone().into(),
-            Route::Sudoku => state.sudoku.clone().into(),
-            Route::Input => state.input.clone().into(),
-            Route::GithubExplorer => state.github_explorer.clone().into(),
-            Route::GameOfLife { .. } => state.game_of_life.clone().into(),
-            Route::Chat => chat::ChatState::component().into(),
-            Route::Todo => super::todo::TodoState::component().into(),
-            Route::DropFile => {
-                let state = DropFilesState::new();
-                state.render().into()
+    let content = state.route.route.render_value(
+        move |route| {
+           match route {
+                Route::Animations => state.animations.render(),
+                Route::Counters => state.counters.render(),
+                Route::Sudoku => state.sudoku.render(),
+                Route::Input => state.input.render(),
+                Route::GithubExplorer => state.github_explorer.render(),
+                Route::GameOfLife { .. } => state.game_of_life.render(),
+                Route::Chat => ChatState::new().render(),
+                Route::Todo => TodoState::new().render(),
+                Route::DropFile => DropFilesState::new().render(),
+                Route::NotFound => dom! { <div>"Page Not Found"</div> },
             }
-            Route::NotFound => html! { <div>"Page Not Found"</div> }.into(),
-        };
-
-        let on_keydown = |event: KeyDownEvent| -> bool {
-            log::info!("event = {event:?}");
-            false
-        };
-    
-        html! {
-            <div on_key_down={on_keydown}>
-                { header.clone() }
-                {child}
-            </div>
         }
-    })
+    );
+
+    let on_keydown = |_event: KeyDownEvent| -> bool {
+        false
+    };
+
+    dom! {
+        <div on_key_down={on_keydown}>
+            { header }
+            { content }
+        </div>
+    }
 }

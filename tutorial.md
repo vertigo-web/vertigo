@@ -58,7 +58,7 @@ After the task is completed you can point your browser to `http://127.0.0.1:3000
 Open `/src/app.rs` file.
 
 ```rust
-use vertigo::{Computed, VDomElement, html, css_fn};
+use vertigo::{Computed, DomElement, dom, css_fn};
 
 use super::state::State;
 
@@ -66,11 +66,11 @@ css_fn! { main_div, "
     color: darkblue;
 " }
 
-pub fn render(state: &State) -> VDomElement {
-    html! {
+pub fn render(state: &State) -> DomElement {
+    dom! {
         <div css={main_div()}>
             "Message to the world: "
-            {state.message.get()}
+            <text computed={&state.message} />
         </div>
     }
 }
@@ -146,10 +146,10 @@ Here we define a VDom node using `div` tag, and assign it style using the css fu
             "Message to the world: "
 ```
 
-Next, in the `div` we insert a text node. Strings in `html!` macro must always be double-quoted. This assures us we won't miss a space between the text and the next VDom element.
+Next, in the `div` we insert a text node. Strings in `dom!` macro must always be double-quoted. This assures us we won't miss a space between the text and the next VDom element.
 
 ```rust
-            {state.message.get()}
+            <text computed={&state.message} />
 ```
 
 Here we're inserting some value from the state. The `message` field in the state is of type `Value`. This type is similar to computed (has `get()` method), but it can also be changed using corresponding `set()` (more on this later).

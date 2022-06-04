@@ -1,4 +1,4 @@
-use vertigo::{css_fn, html, VDomElement, Value, VDomComponent, bind};
+use vertigo::{css_fn, Value, bind, dom, DomElement};
 
 #[derive(Clone)]
 pub struct State {
@@ -6,21 +6,15 @@ pub struct State {
 }
 
 impl State {
-    pub fn component() -> VDomComponent {
-        let state = State {
+    pub fn new() -> State {
+        State {
             value: Value::new(String::from("")),
-        };
-
-        VDomComponent::from(state, render)
+        }
     }
 
-    // pub fn increment(&self) {
-    //     self.counter.setValue(*self.counter.getValue() + 1);
-    // }
-
-    // pub fn decrement(&self) {
-    //     self.counter.setValue(*self.counter.getValue() - 1);
-    // }
+    pub fn render(&self) -> DomElement {
+        render(self)
+    }
 }
 
 css_fn! { wrapper, "
@@ -46,20 +40,20 @@ css_fn! { text_css, "
     margin: 10px;
 " }
 
-fn render(state: &State) -> VDomElement {
-    let on_set1 = bind(state).call(|state| {
+fn render(state: &State) -> DomElement {
+    let on_set1 = bind(state).call(|_, state| {
         state.value.set("value 1".into());
     });
 
-    let on_set2 = bind(state).call(|state| {
+    let on_set2 = bind(state).call(|_, state| {
         state.value.set("value 2".into());
     });
 
-    let on_set3 = bind(state).call_param(|state, new_value: String| {
+    let on_set3 = bind(state).call_param(|_, state, new_value: String| {
         state.value.set(new_value);
     });
 
-    let on_set4 = bind(state).call_param(|state, new_value: String| {
+    let on_set4 = bind(state).call_param(|_, state, new_value: String| {
         state.value.set(new_value);
     });
 
@@ -71,18 +65,21 @@ fn render(state: &State) -> VDomElement {
         log::info!("out");
     };
 
-    let value = state.value.get();
+    let value = state.value.to_computed();
 
-    let count = value.len();
+    let count = value.map(|inner| inner.len().to_string());
 
-    html! {
+    dom! {
         <div css={wrapper()} on_mouse_enter={mouse_in} on_mouse_leave={mouse_out}>
-            { "To jest input" }
-            <input css={input_css()} value={value.as_str()} on_input={on_set3} />
+            "To jest input"
+            <input css={input_css()} value={value.clone()} on_input={on_set3} />
             <button css={button_css()} on_click={on_set1}>"set 1"</button>
             <button css={button_css()} on_click={on_set2}>"set 2"</button>
-            <textarea css={text_css()} on_input={on_set4} value={value.as_str()} />
-            <div>"count = " { count }</div>
+            <textarea css={text_css()} on_input={on_set4} value={value} />
+            <div>
+                "count = "
+                <text computed={count} />
+            </div>
         </div>
     }
 }

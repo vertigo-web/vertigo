@@ -1,8 +1,8 @@
 use std::rc::Rc;
 
 use crate::{
-    computed::{Client, Value, DropResource},
-    struct_mut::ValueMut, get_driver,
+    computed::{Client, Value, DropResource, context::Context},
+    struct_mut::ValueMut, get_driver, Computed,
 };
 
 struct HashSubscriptions {
@@ -12,14 +12,21 @@ struct HashSubscriptions {
 
 #[derive(Clone)]
 pub struct HashRouter<T: Clone + ToString + From<String> + PartialEq + 'static> {
-    route: Value<T>,
+    route_value: Value<T>,
+    pub route: Computed<T>,
     _subscriptions: Rc<HashSubscriptions>,
+}
+
+impl<T: Clone + ToString + From<String> + PartialEq + 'static> PartialEq for HashRouter<T> {
+    fn eq(&self, other: &Self) -> bool {
+        self.route_value.id() == other.route_value.id()
+    }
 }
 
 /// Router based on hash part of current location.
 ///
 /// ```rust
-/// use vertigo::{html, Computed, Value, VDomElement, VDomComponent};
+/// use vertigo::{html, Computed, Value, DomElement, VDomComponent, dom};
 /// use vertigo::router::HashRouter;
 ///
 /// #[derive(Clone, PartialEq, Debug)]
@@ -68,12 +75,12 @@ pub struct HashRouter<T: Clone + ToString + From<String> + PartialEq + 'static> 
 ///             route,
 ///         };
 ///
-///         VDomComponent::from(state, render)
+///         VDomComponent::dom(render(state))
 ///     }
 /// }
 ///
-/// fn render(state: &State) -> VDomElement {
-///     html! {
+/// fn render(state: State) -> DomElement {
+///     dom! {
 ///         <div>
 ///             "..."
 ///         </div>
@@ -85,11 +92,11 @@ impl<T: Clone + ToString + From<String> + PartialEq + 'static> HashRouter<T> {
     /// If callback is provided then it is fired instead.
     pub fn new() -> Self {
         let driver = get_driver();
-        let route: Value<T> = Value::new(T::from(driver.get_hash_location()));
+        let route_value: Value<T> = Value::new(T::from(driver.get_hash_location()));
 
         let block_subscrition = Rc::new(ValueMut::new(true));
 
-        let sender = route.to_computed().subscribe({
+        let sender = route_value.to_computed().subscribe({
             let driver = driver.clone();
             let block_subscrition = block_subscrition.clone();
             move |route| {
@@ -102,7 +109,7 @@ impl<T: Clone + ToString + From<String> + PartialEq + 'static> HashRouter<T> {
         });
 
         let receiver = driver.on_hash_route_change({
-            let route = route.clone();
+            let route = route_value.clone();
             let block_subscrition = block_subscrition.clone();
 
             Box::new(move |url: &String| {
@@ -114,7 +121,10 @@ impl<T: Clone + ToString + From<String> + PartialEq + 'static> HashRouter<T> {
 
         block_subscrition.set(false);
 
+        let route = route_value.to_computed();
+    
         Self {
+            route_value,
             route,
             _subscriptions: Rc::new(HashSubscriptions {
                 _sender: sender,
@@ -123,11 +133,11 @@ impl<T: Clone + ToString + From<String> + PartialEq + 'static> HashRouter<T> {
         }
     }
 
-    pub fn get(&self) -> T {
-        self.route.get()
+    pub fn set(&self, value: T) {
+        self.route_value.set_value_and_compare(value);
     }
 
-    pub fn set(&self, value: T) {
-        self.route.set_value_and_compare(value);
+    pub fn get(&self, context: &Context) -> T {
+        self.route_value.get(context)
     }
 }

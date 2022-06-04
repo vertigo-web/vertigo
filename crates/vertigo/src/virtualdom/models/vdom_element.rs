@@ -10,8 +10,6 @@ use crate::virtualdom::models::{
     vdom_node::VDomNode,
 };
 
-use super::vdom_refs::NodeRefs;
-
 //https://docs.rs/web-sys/0.3.50/web_sys/struct.KeyboardEvent.html
 
 /// Structure passed as a parameter to callback on on_key_down event.
@@ -31,7 +29,7 @@ impl std::fmt::Display for KeyDownEvent {
     }
 }
 
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone, PartialEq, Eq)]
 pub struct DropFileItem {
     pub name: String,
     pub data: Rc<Vec<u8>>,
@@ -74,12 +72,11 @@ impl DropFileEvent {
 ///     }
 /// }
 /// ```
+#[derive(Clone)]
 pub struct VDomElement {
     pub name: &'static str,
     pub attr: HashMap<&'static str, String>,
     pub children: Vec<VDomNode>,
-    pub dom_ref: Option<&'static str>,
-    pub dom_apply: Option<Rc<dyn Fn(&NodeRefs)>>,
     pub on_click: Option<Rc<dyn Fn()>>,
     pub on_input: Option<Rc<dyn Fn(String)>>,
     pub on_mouse_enter: Option<Rc<dyn Fn()>>,
@@ -96,8 +93,6 @@ impl VDomElement {
             name,
             attr: HashMap::new(),
             children,
-            dom_ref: None,
-            dom_apply: None,
             on_click: None,
             on_input: None,
             on_mouse_enter: None,
@@ -137,12 +132,6 @@ impl VDomElement {
                 NodeAttr::Attr { name, value } => {
                     result.attr.insert(name, value);
                 }
-                NodeAttr::DomRef { name } => {
-                    result.dom_ref = Some(name);
-                }
-                NodeAttr::DomApply { apply } => {
-                    result.dom_apply = Some(apply);
-                }
             }
         }
 
@@ -154,8 +143,6 @@ impl VDomElement {
             name,
             attr: HashMap::new(),
             children: Vec::new(),
-            dom_ref: None,
-            dom_apply: None,
             on_click: None,
             on_input: None,
             on_mouse_enter: None,
@@ -184,6 +171,55 @@ impl VDomElement {
         self.children = children;
         self
     }
+
+    #[must_use]
+    pub fn child(mut self, child: VDomElement) -> Self {
+        self.children.push(child.into());
+        self
+    }
+
+    #[must_use]
+    pub fn on_click<F: Fn() + 'static>(mut self, fun: F) -> Self {
+        self.on_click = Some(Rc::new(fun));
+        self
+    }
+
+    #[must_use]
+    pub fn on_input<F: Fn(String) + 'static>(mut self, fun: F) -> Self {
+        self.on_input = Some(Rc::new(fun));
+        self
+    }
+
+    #[must_use]
+    pub fn on_mouse_enter<F: Fn() + 'static>(mut self, fun: F) -> Self {
+        self.on_mouse_enter = Some(Rc::new(fun));
+        self
+    }
+
+    #[must_use]
+    pub fn on_mouse_leave<F: Fn() + 'static>(mut self, fun: F) -> Self {
+        self.on_mouse_leave = Some(Rc::new(fun));
+        self
+    }
+
+    #[must_use]
+    pub fn on_key_down<F: Fn(KeyDownEvent) -> bool + 'static>(mut self, fun: F) -> Self {
+        self.on_key_down = Some(Rc::new(fun));
+        self
+    }
+
+    #[must_use]
+    pub fn hook_key_down<F: Fn(KeyDownEvent) -> bool + 'static>(mut self, fun: F) -> Self {
+        self.hook_key_down = Some(Rc::new(fun));
+        self
+    }
+
+    #[must_use]
+    pub fn on_dropfile<F: Fn(DropFileEvent) + 'static>(mut self, fun: F) -> Self {
+        self.on_dropfile = Some(Rc::new(fun));
+        self
+    }
+
 }
 
 impl PartialEq for VDomElement {

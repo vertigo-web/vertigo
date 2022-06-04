@@ -1,23 +1,19 @@
-use std::{collections::VecDeque, rc::Rc};
+use std::{collections::VecDeque};
 
 use crate::{
-    Driver,
-    computed::Client,
-    css::css_manager::CssManager,
     driver_module::driver_browser::EventCallback,
-    driver_refs::RefsContext,
     virtualdom::models::{
-        realdom::RealDomNode,
-        realdom_component::RealDomComponent,
-        realdom_id::RealDomId,
-        realdom_node::RealDomElement,
-        realdom_text::RealDomText,
+        dom::DomNode,
+        dom_component::DomComponent,
+        dom_id::DomId,
+        dom_node::DomElement,
+        dom_text::DomText,
         vdom_component::VDomComponent,
         vdom_element::VDomElement,
         vdom_node::VDomNode, vdom_text::VDomText,
-    }, GraphId, Computed,
+    },
 };
-
+use crate::virtualdom::models::vdom_component_id::VDomComponentId;
 use super::render::CacheNode;
 
 #[derive(Clone, Hash, PartialEq, Eq, Debug)]
@@ -37,7 +33,7 @@ impl DomNodeKey {
         DomNodeKey::Tag { name: dom.name }
     }
 
-    fn from_real(dom: &RealDomElement) -> DomNodeKey {
+    fn from_real(dom: &DomElement) -> DomNodeKey {
         if dom.name() == "iframe" {
             if let Some(src) = dom.get_attr("src") {
                 return DomNodeKey::Iframe { src };
@@ -47,7 +43,7 @@ impl DomNodeKey {
         DomNodeKey::Tag { name: dom.name() }
     }
 
-    fn test_eq(real: &RealDomElement, vdom: &VDomElement) -> bool {
+    fn test_eq(real: &DomElement, vdom: &VDomElement) -> bool {
         let key1 = DomNodeKey::from_real(real);
         let key2 = DomNodeKey::from_virtual(vdom);
         key1 == key2
@@ -56,32 +52,32 @@ impl DomNodeKey {
 
 enum CurrentNodePairs<'a> {
     Component {
-        node: RealDomComponent,
+        node: DomComponent,
         // new: &'a VDomComponent
     },
     Node {
-        node: RealDomElement,
+        node: DomElement,
         new: &'a VDomElement,
     },
     Text {
-        node: RealDomText,
+        node: DomText,
         new: &'a VDomText,
     },
 }
 
 impl<'a> CurrentNodePairs<'a> {
-    fn id_dom(&self) -> RealDomId {
+    fn id_dom(&self) -> DomId {
         match self {
-            Self::Component { node, .. } => node.dom_id(),
+            Self::Component { node, .. } => node.id_dom(),
             Self::Node { node, .. } => node.id_dom(),
             Self::Text { node, .. } => node.id_dom(),
         }
     }
 }
 
-fn get_pair_for_update(real: RealDomNode, new: &VDomNode) -> Result<CurrentNodePairs<'_>, (RealDomNode, &VDomNode)> {
+fn get_pair_for_update(real: DomNode, new: &VDomNode) -> Result<CurrentNodePairs<'_>, (DomNode, &VDomNode)> {
     match real {
-        RealDomNode::Component { node } => {
+        DomNode::Component { node } => {
             if let VDomNode::Component { node: vnode } = new {
                 if node.id == vnode.id() {
                     return Ok(CurrentNodePairs::Component {
@@ -91,28 +87,31 @@ fn get_pair_for_update(real: RealDomNode, new: &VDomNode) -> Result<CurrentNodeP
                 }
             }
 
-            Err((RealDomNode::new_component(node), new))
+            Err((DomNode::new_component(node), new))
         }
-        RealDomNode::Node { node } => {
+        DomNode::Node { node } => {
             if let VDomNode::Element { node: vnode } = new {
                 if DomNodeKey::test_eq(&node, vnode) {
                     return Ok(CurrentNodePairs::Node { node, new: vnode });
                 }
             }
 
-            Err((RealDomNode::new_node(node), new))
+            Err((DomNode::new_node(node), new))
         }
-        RealDomNode::Text { node } => {
+        DomNode::Text { node } => {
             if let VDomNode::Text { node: vnode } = new {
                 return Ok(CurrentNodePairs::Text { node, new: vnode });
             }
 
-            Err((RealDomNode::new_text(node), new))
+            Err((DomNode::new_text(node), new))
+        },
+        DomNode::Comment { .. } => {
+            unreachable!()
         }
     }
 }
 
-fn find_first_dom(list: &VecDeque<CurrentNodePairs<'_>>) -> Option<RealDomId> {
+fn find_first_dom(list: &VecDeque<CurrentNodePairs<'_>>) -> Option<DomId> {
     if let Some(first) = list.get(0) {
         return Some(first.id_dom());
     }
@@ -122,7 +121,7 @@ fn find_first_dom(list: &VecDeque<CurrentNodePairs<'_>>) -> Option<RealDomId> {
 
 // Try to match starting from top
 fn get_pairs_top<'a>(
-    real_child: &mut VecDeque<RealDomNode>,
+    real_child: &mut VecDeque<DomNode>,
     new_child: &mut VecDeque<&'a VDomNode>,
 ) -> VecDeque<CurrentNodePairs<'a>> {
     let mut pairs_top = VecDeque::new();
@@ -161,7 +160,7 @@ fn get_pairs_top<'a>(
 
 // Try to match starting from bottom
 fn get_pairs_bottom<'a>(
-    real_child: &mut VecDeque<RealDomNode>,
+    real_child: &mut VecDeque<DomNode>,
     new_child: &mut VecDeque<&'a VDomNode>,
 ) -> VecDeque<CurrentNodePairs<'a>> {
     let mut pairs_bottom = VecDeque::new();
@@ -199,34 +198,33 @@ fn get_pairs_bottom<'a>(
 }
 
 fn get_pairs_middle<'a>(
-    driver: Driver,
-    target: &RealDomElement,
-    css_manager: &CssManager,
-    last_before: Option<RealDomId>,
-    real_child: VecDeque<RealDomNode>,
+    target: &DomElement,
+    last_before: Option<DomId>,
+    real_child: VecDeque<DomNode>,
     new_child: VecDeque<&'a VDomNode>,
 ) -> VecDeque<CurrentNodePairs<'a>> {
     let mut pairs_middle = VecDeque::new();
 
-    let mut real_node: CacheNode<DomNodeKey, RealDomElement, VDomElement> = CacheNode::new(
-        |_css_manager: &CssManager, target: &RealDomElement, node: &VDomElement| -> RealDomElement {
-            target.create_node(node.name)
+    let mut real_node: CacheNode<DomNodeKey, DomElement, VDomElement> = CacheNode::new(
+        |node: &VDomElement| -> DomElement {
+            DomElement::new(node.name)
         },
     );
-    let mut real_text: CacheNode<String, RealDomText, VDomText> = CacheNode::new(
-        |_css_manager: &CssManager, target: &RealDomElement, node: &VDomText| -> RealDomText {
-            target.create_text(node.value.clone())
+    let mut real_text: CacheNode<String, DomText, VDomText> = CacheNode::new(
+        |node: &VDomText| -> DomText {
+            DomText::new(node.value.clone())
         },
     );
-    let mut real_component: CacheNode<GraphId, RealDomComponent, VDomComponent> = CacheNode::new(
-        move |css_manager: &CssManager, target: &RealDomElement, component: &VDomComponent| -> RealDomComponent {
+
+    let mut real_component: CacheNode<VDomComponentId, DomComponent, VDomComponent> = CacheNode::new(
+        move |component: &VDomComponent| -> DomComponent {
             // TODO - to rethink the component concept
             // let node_root = target.create_node(component.view.get_value().name);
-            let node = target.create_node("div");
+            let node = DomElement::new("div");
 
-            let subscription = render_to_node(driver.clone(), css_manager.clone(), node.clone(), component.clone());
+            let subscription = component.clone().render_to(node.clone());
 
-            RealDomComponent {
+            DomComponent {
                 id: component.id(),
                 subscription,
                 node,
@@ -236,18 +234,19 @@ fn get_pairs_middle<'a>(
 
     for item in real_child {
         match item {
-            RealDomNode::Node { node } => {
+            DomNode::Node { node } => {
                 let key = DomNodeKey::from_real(&node);
                 real_node.insert(key, node);
             }
-            RealDomNode::Text { node } => {
+            DomNode::Text { node } => {
                 let id = node.get_value();
                 real_text.insert(id, node);
             }
-            RealDomNode::Component { node } => {
+            DomNode::Component { node } => {
                 let id = node.id;
                 real_component.insert(id, node);
-            }
+            },
+            DomNode::Comment { node: _ } => {}
         }
     }
 
@@ -257,7 +256,7 @@ fn get_pairs_middle<'a>(
         let child_id = match item {
             VDomNode::Element { node } => {
                 let key = DomNodeKey::from_virtual(node);
-                let child = real_node.get_or_create(css_manager, target, key, node);
+                let child = real_node.get_or_create(key, node);
                 let child_id = child.id_dom();
 
                 pairs_middle.push_front(CurrentNodePairs::Node { node: child, new: node });
@@ -266,7 +265,7 @@ fn get_pairs_middle<'a>(
             }
             VDomNode::Text { node } => {
                 let id = node.value.clone();
-                let child = real_text.get_or_create(css_manager, target, id, node);
+                let child = real_text.get_or_create(id, node);
                 let child_id = child.id_dom();
 
                 pairs_middle.push_front(CurrentNodePairs::Text { node: child, new: node });
@@ -275,8 +274,8 @@ fn get_pairs_middle<'a>(
             }
             VDomNode::Component { node } => {
                 let id = node.id();
-                let child = real_component.get_or_create(css_manager, target, id, node);
-                let child_id = child.dom_id();
+                let child = real_component.get_or_create(id, node);
+                let child_id = child.id_dom();
 
                 pairs_middle.push_front(CurrentNodePairs::Component {
                     node: child,
@@ -295,30 +294,19 @@ fn get_pairs_middle<'a>(
 }
 
 fn update_node_child(
-    driver: Driver,
-    css_manager: &CssManager,
-    refs_context: &mut RefsContext,
-    target: &RealDomElement,
+    target: &DomElement,
     new_version: &VDomElement,
 ) {
-    if let Some(ref_name) = new_version.dom_ref {
-        refs_context.set_ref(ref_name, target.get_ref());
-    }
-
-    if let Some(dom_apply) = &new_version.dom_apply {
-        refs_context.add_apply(dom_apply);
-    }
-
     let pairs: VecDeque<CurrentNodePairs<'_>> = {
-        let mut real_child: VecDeque<RealDomNode> = target.extract_child();
+        let mut real_child: VecDeque<DomNode> = target.extract_child();
         let mut new_child: VecDeque<&VDomNode> = new_version.children.iter().collect();
 
         let pairs_top = get_pairs_top(&mut real_child, &mut new_child);
         let mut pairs_bottom = get_pairs_bottom(&mut real_child, &mut new_child);
 
-        let last_before: Option<RealDomId> = find_first_dom(&pairs_bottom);
+        let last_before: Option<DomId> = find_first_dom(&pairs_bottom);
         let mut pairs_middle = get_pairs_middle(
-            driver.clone(), target, css_manager, last_before, real_child, new_child
+            target, last_before, real_child, new_child
         );
 
         let mut pairs = pairs_top;
@@ -327,22 +315,22 @@ fn update_node_child(
         pairs
     };
 
-    let new_child: VecDeque<RealDomNode> = {
+    let new_child: VecDeque<DomNode> = {
         let mut new_child = VecDeque::new();
 
         for item in pairs.into_iter() {
             match item {
                 CurrentNodePairs::Node { node, new } => {
-                    update_node_attr(css_manager, &node, new);
-                    update_node_child(driver.clone(), css_manager, refs_context, &node, new);
-                    new_child.push_back(RealDomNode::new_node(node));
+                    update_node_attr(&node, new);
+                    update_node_child(&node, new);
+                    new_child.push_back(DomNode::new_node(node));
                 }
                 CurrentNodePairs::Text { node, new } => {
                     node.update(&new.value);
-                    new_child.push_back(RealDomNode::new_text(node));
+                    new_child.push_back(DomNode::new_text(node));
                 }
                 CurrentNodePairs::Component { node, .. } => {
-                    new_child.push_back(RealDomNode::new_component(node));
+                    new_child.push_back(DomNode::new_component(node));
                 }
             }
         }
@@ -353,9 +341,9 @@ fn update_node_child(
     target.put_child(new_child);
 }
 
-fn update_node_attr(css_manager: &CssManager, real_node: &RealDomElement, node: &VDomElement) {
+fn update_node_attr(real_node: &DomElement, node: &VDomElement) {
     let css = &node.css;
-    let class_name = css.as_ref().map(|css| css_manager.get_class_name(css));
+    let class_name = css.as_ref().map(|css| css.convert_to_string());
 
     real_node.update_attr(&node.attr, class_name);
     real_node.set_event(EventCallback::OnClick { callback: node.on_click.clone() });
@@ -367,39 +355,17 @@ fn update_node_attr(css_manager: &CssManager, real_node: &RealDomElement, node: 
     real_node.set_event(EventCallback::OnDropFile { callback: node.on_dropfile.clone() })
 }
 
-fn update_node(
-    driver: Driver,
-    css_manager: &CssManager,
-    refs_context: &mut RefsContext,
-    target: &RealDomElement,
+pub fn update_node(
+    target: &DomElement,
     new_version: &VDomElement,
 ) {
     //update tag name
     target.update_name(new_version.name);
 
     //update attributes
-    update_node_attr(css_manager, target, new_version);
+    update_node_attr(target, new_version);
 
     //update child
-    update_node_child(driver, css_manager, refs_context, target, new_version);
+    update_node_child(target, new_version);
 }
 
-pub fn render_to_node(
-    driver: Driver,
-    css_manager: CssManager,
-    target: RealDomElement,
-    component: VDomComponent,
-) -> Client {
-    let view = Computed::from(move || {
-        let dom_element = component.render.render();
-        Rc::new(dom_element)
-    });
-
-    view.subscribe(move |new_version| {
-        let mut refs_context = RefsContext::default();
-
-        update_node(driver.clone(), &css_manager, &mut refs_context, &target, new_version.as_ref());
-
-        driver.push_ref_context(refs_context);
-    })
-}

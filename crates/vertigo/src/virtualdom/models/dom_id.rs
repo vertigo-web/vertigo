@@ -9,32 +9,30 @@ fn get_unique_id() -> u64 {
 }
 
 #[derive(Copy, Clone, Debug, PartialEq, Eq, Hash)]
-pub struct RealDomId {
-    id: u64,
-}
+pub struct DomId(u64);
 
-impl Default for RealDomId {
+impl Default for DomId {
     fn default() -> Self {
-        Self { id: get_unique_id() }
+        Self(get_unique_id())
     }
 }
 
-impl RealDomId {
-    pub fn root() -> RealDomId {
-        RealDomId { id: ROOT_ID }
+impl DomId {
+    pub fn root() -> DomId {
+        DomId(ROOT_ID)
     }
 
-    pub fn from_u64(id: u64) -> RealDomId {
-        RealDomId { id }
+    pub fn from_u64(id: u64) -> DomId {
+        DomId(id)
     }
 
     pub fn to_u64(&self) -> u64 {
-        self.id
+        self.0
     }
 }
 
-impl std::fmt::Display for RealDomId {
+impl std::fmt::Display for DomId {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-        write!(f, "RealDomNodeId={}", self.id)
+        write!(f, "RealDomNodeId={}", self.0)
     }
 }

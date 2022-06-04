@@ -1,5 +1,6 @@
 use std::{cell::RefCell};
 
+#[derive(Debug)]
 pub struct ValueMut<T> {
     value: RefCell<T>,
 }

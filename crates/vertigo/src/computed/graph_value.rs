@@ -3,12 +3,14 @@ use std::{
 };
 
 use crate::{
-    computed::{Dependencies, GraphId}, struct_mut::ValueMut, get_dependencies,
+    computed::{
+        Dependencies, GraphId
+    },
+    struct_mut::ValueMut,
+    get_dependencies,
 };
 
-
 struct GraphValueData<T> {
-    is_computed_type: bool,
     deps: Dependencies,
     id: GraphId,
     get_value: Box<dyn Fn() -> T>,
@@ -21,11 +23,13 @@ impl<T: Clone> GraphValueData<T> {
         is_computed_type: bool,
         get_value: F,
     ) -> Rc<GraphValueData<T>> {
-        let id = GraphId::default();
+        let id = match is_computed_type {
+            true => GraphId::new_computed(),
+            false => GraphId::new_client(),
+        };
 
         Rc::new(
             GraphValueData {
-                is_computed_type,
                 deps: deps.clone(),
                 id,
                 get_value: Box::new(get_value),
@@ -35,19 +39,19 @@ impl<T: Clone> GraphValueData<T> {
     }
 
     fn calculate_new_value(&self) -> T {
-        self.deps.start_track();
-        let get_value = &self.get_value;
-        let new_value = get_value();
-        let parents_list = self.deps.stop_track();
+        self.deps.start_track(self.id);
+        let new_value = (self.get_value)();
+        self.deps.stop_track();
 
         self.state.set(Some(new_value.clone()));
-        self.deps.set_parent_for_client(self.id, parents_list);
 
         new_value
     }
 
-    pub fn get_value(&self) -> T {
-        self.deps.report_parent_in_stack(self.id);
+    pub fn get_value(&self, report_parent: bool) -> T {
+        if report_parent {
+            self.deps.report_parent_in_stack(self.id);
+        }
 
         let inner_value = self.state.map(|value| value.clone());
 
@@ -57,35 +61,12 @@ impl<T: Clone> GraphValueData<T> {
 
         self.calculate_new_value()
     }
-
-    pub fn subscribe_value(&self) {
-        self.calculate_new_value();
-    }
-
-    fn control_refresh(&self) {
-        let is_some = self.state.map(|item| item.is_some());
-
-        if is_some {
-            self.calculate_new_value();
-        }
-    }
-
-    fn control_clear_cache(&self) {
-        self.state.set(None);
-    }
-
-    fn control_drop_value(&self) {
-        self.state.set(None);
-        self.deps.remove_client(self.id);
-    }
 }
 
 trait GraphValueControl {
     fn id(&self) -> GraphId;
-    fn is_computed(&self) -> bool;
     fn clear_cache(&self);          //for Computed
     fn refresh(&self);              //for Client
-    fn drop_value(&self);           //For Drop
 }
 
 impl<T: Clone> GraphValueControl for GraphValueData<T> {
@@ -93,22 +74,17 @@ impl<T: Clone> GraphValueControl for GraphValueData<T> {
         self.id
     }
 
-    fn is_computed(&self) -> bool {
-        self.is_computed_type
-    }
-
     fn clear_cache(&self) {
-        self.control_clear_cache();
+        self.state.set(None);
     }
 
     fn refresh(&self) {
-        self.control_refresh();
-    }
+        let is_some = self.state.map(|item| item.is_some());
 
-    fn drop_value(&self) {
-        self.control_drop_value();
+        if is_some {
+            self.calculate_new_value();
+        }
     }
-
 }
 
 #[derive(Clone)]
@@ -125,20 +101,12 @@ impl GraphValueRefresh {
         self.control.id()
     }
 
-    pub fn is_computed(&self) -> bool {
-        self.control.is_computed()
-    }
-
     pub fn clear_cache(&self) {
         self.control.clear_cache();
     }
 
     pub fn refresh(&self) {
         self.control.refresh()
-    }
-
-    pub fn drop_value(&self) {
-        self.control.drop_value();
     }
 }
 
@@ -163,8 +131,7 @@ impl<T: Clone + 'static> GraphValueInner<T> {
 impl<T: Clone> Drop for GraphValueInner<T> {
     fn drop(&mut self) {
         self.inner.deps.refresh_token_drop(self.inner.id);
-        self.inner.control_drop_value();
-        self.inner.deps.external_connections_refresh();
+        self.inner.deps.remove_client(self.inner.id);
     }
 }
 
@@ -181,12 +148,8 @@ impl<T: Clone + 'static> GraphValue<T> {
         }
     }
 
-    pub fn get_value(&self) -> T {
-        self.inner.inner.get_value()
-    }
-
-    pub fn subscribe_value(&self) {
-        self.inner.inner.subscribe_value();
+    pub fn get_value(&self, report_parent: bool) -> T {
+        self.inner.inner.get_value(report_parent)
     }
 
     pub(crate) fn id(&self) -> GraphId {

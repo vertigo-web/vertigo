@@ -29,11 +29,25 @@ impl Refresh {
         self.refresh.remove(&id);
     }
 
-    pub(crate) fn get(&self, id: &GraphId) -> Option<GraphValueRefresh> {
-        if let Some(item) = self.refresh.get(id) {
+    fn get(&self, id: &GraphId) -> Option<GraphValueRefresh> {
+        if let Some(item) = self.refresh.get_and_clone(id) {
             return Some(item);
         }
 
         None
+    }
+
+    pub(crate) fn refresh(&self, id: &GraphId) {
+        if let Some(item) = self.get(id) {
+            item.refresh();
+        } else {
+        }
+    }
+
+    pub(crate) fn clear_cache(&self, id: &GraphId) {
+        if let Some(item) = self.get(id) {
+            item.clear_cache();
+        } else {
+        }
     }
 }

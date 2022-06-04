@@ -48,7 +48,7 @@ impl<K: Ord, V> BTreeMapMut<K, V> {
         map_f(&state)
     }
 
-    pub fn change(&self, change_f: impl Fn(&mut BTreeMap<K, V>)) {
+    pub fn change(&self, change_f: impl FnOnce(&mut BTreeMap<K, V>)) {
         let mut state = self.data.borrow_mut();
         change_f(&mut state)
     }
@@ -73,7 +73,7 @@ impl<K: Ord, V> BTreeMapMut<K, V> {
 }
 
 impl<K: Ord, V: Clone> BTreeMapMut<K, V> {
-    pub fn get(&self, key: &K) -> Option<V> {
+    pub fn get_and_clone(&self, key: &K) -> Option<V> {
         let state = self.data.borrow();
         state.get(key).cloned()
     }

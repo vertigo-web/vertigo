@@ -1,7 +1,9 @@
+use std::fmt::Debug;
 use std::future::Future;
 use std::rc::Rc;
 
-use crate::get_driver;
+use crate::computed::context::Context;
+use crate::{get_driver, Computed};
 use crate::{
     Instant, InstantType, Resource,
     computed::Value, struct_mut::ValueMut,
@@ -9,16 +11,23 @@ use crate::{
 
 use crate::fetch::pinboxfut::PinBoxFuture;
 
+fn get_unique_id() -> u64 {
+    use std::sync::atomic::{AtomicU64, Ordering};
+    static COUNTER: AtomicU64 = AtomicU64::new(1);
+    COUNTER.fetch_add(1, Ordering::Relaxed)
+}
+
 /// Value that [LazyCache] holds.
-pub struct CachedValue<T> {
+struct CachedValue<T> {
+    id: u64,
     value: Value<Resource<Rc<T>>>,
     updated_at: ValueMut<Instant>,
     set: ValueMut<bool>,
 }
 
 impl<T: 'static> CachedValue<T> {
-    fn get_value(&self) -> Resource<Rc<T>> {
-        self.value.get()
+    fn get_value(&self, context: &Context) -> Resource<Rc<T>> {
+        self.value.get(context)
     }
 
     pub fn set_value(&self, value: Resource<T>) {
@@ -47,7 +56,7 @@ impl<T: 'static> CachedValue<T> {
 /// use vertigo::{get_driver, Computed, LazyCache, SerdeRequest, Resource};
 /// use serde::{Serialize, Deserialize};
 ///
-/// #[derive(Serialize, Deserialize, SerdeRequest)]
+/// #[derive(Serialize, Deserialize, SerdeRequest, PartialEq, Clone)]
 /// pub struct Model {
 ///     id: i32,
 ///     name: String,
@@ -90,6 +99,15 @@ pub struct LazyCache<T: 'static> {
     queued: Rc<ValueMut<bool>>,
 }
 
+impl<T: 'static> Debug for LazyCache<T> {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        f.debug_struct ("LazyCache")
+            .field("max_age", &self.max_age)
+            .field("queued", &self.queued)
+            .finish()
+    }
+}
+
 impl<T> Clone for LazyCache<T> {
     fn clone(&self) -> Self {
         LazyCache {
@@ -101,6 +119,12 @@ impl<T> Clone for LazyCache<T> {
     }
 }
 
+impl<T> PartialEq for LazyCache<T> {
+    fn eq(&self, other: &Self) -> bool {
+        self.res.id == other.res.id
+    }
+}
+
 impl<T> LazyCache<T> {
     pub fn new<Fut: Future<Output = Resource<T>> + 'static, F: Fn() -> Fut + 'static>(max_age: InstantType, loader: F) -> Self {
         let loader_rc: Rc<dyn Fn() -> PinBoxFuture<Resource<T>>> = Rc::new(move || -> PinBoxFuture<Resource<T>> {
@@ -109,6 +133,7 @@ impl<T> LazyCache<T> {
 
         Self {
             res: Rc::new(CachedValue {
+                id: get_unique_id(),
                 value: Value::new(Resource::Loading),
                 updated_at: ValueMut::new(get_driver().now()),
                 set: ValueMut::new(false),
@@ -119,11 +144,11 @@ impl<T> LazyCache<T> {
         }
     }
 
-    pub fn get(&self) -> Resource<Rc<T>> {
+    pub fn get(&self, context: &Context) -> Resource<Rc<T>> {
         if self.needs_update() {
             self.force_update(true)
         }
-        self.res.get_value()
+        self.res.get_value(context)
     }
 
     pub fn force_update(&self, with_loading: bool) {
@@ -155,5 +180,14 @@ impl<T> LazyCache<T> {
 
     fn is_loading_queued(&self) -> bool {
         self.queued.get()
+    }
+
+    pub fn to_computed(&self) -> Computed<Resource<Rc<T>>> {
+        Computed::from({
+            let state = self.clone();
+            move |context| {
+                state.get(context)
+            }
+        })
     }
 }

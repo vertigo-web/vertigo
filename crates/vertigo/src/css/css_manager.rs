@@ -3,8 +3,8 @@ use std::{
 };
 
 use crate::{
-    driver_module::driver_browser::Driver,
-    virtualdom::models::css::{Css, CssGroup}, struct_mut::HashMapMut,
+    virtualdom::models::css::{Css, CssGroup},
+    struct_mut::HashMapMut,
 };
 
 use super::{
@@ -14,16 +14,16 @@ use super::{
 };
 
 struct CssManagerInner {
-    driver: Driver,
+    insert_css: Box<dyn Fn(&str, &str)>,
     next_id: NextId,
     ids_static: HashMapMut<&'static str, u64>,
     ids_dynamic: HashMapMut<String, u64>,
 }
 
 impl CssManagerInner {
-    pub fn new(driver: Driver) -> CssManagerInner {
+    pub fn new(insert_css: Box<dyn Fn(&str, &str)>) -> CssManagerInner {
         CssManagerInner {
-            driver,
+            insert_css,
             next_id: NextId::new(),
             ids_static: HashMapMut::new(),
             ids_dynamic: HashMapMut::new(),
@@ -34,7 +34,7 @@ impl CssManagerInner {
         let (class_id, css_selectors) = transform_css(css, &self.next_id);
 
         for (selector, selector_data) in css_selectors {
-            self.driver.insert_css(&selector, &selector_data);
+            (self.insert_css)(&selector, &selector_data);
         }
 
         class_id
@@ -47,9 +47,9 @@ pub struct CssManager {
 }
 
 impl CssManager {
-    pub fn new(driver: &Driver) -> CssManager {
+    pub fn new(insert_css: impl Fn(&str, &str) + 'static) -> CssManager {
         CssManager {
-            inner: Rc::new(CssManagerInner::new(driver.clone())),
+            inner: Rc::new(CssManagerInner::new(Box::new(insert_css))),
         }
     }
 

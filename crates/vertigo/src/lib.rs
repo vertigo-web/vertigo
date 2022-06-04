@@ -9,7 +9,7 @@
 //! ## Example
 //!
 //! ```rust
-//! use vertigo::{Computed, VDomElement, VDomComponent, Value, html, css_fn};
+//! use vertigo::{Computed, DomElement, VDomComponent, Value, dom, css_fn};
 //!
 //! pub struct State {
 //!     pub message: Value<String>,
@@ -21,7 +21,7 @@
 //!             message: Value::new("Hello world".to_string()),
 //!         };
 //!
-//!         VDomComponent::from(state, render)
+//!         VDomComponent::dom(render(state))
 //!     }
 //! }
 //!
@@ -29,11 +29,11 @@
 //!     color: darkblue;
 //! " }
 //!
-//! fn render(state: &State) -> VDomElement {
-//!     html! {
+//! fn render(state: State) -> DomElement {
+//!     dom! {
 //!         <div css={main_div()}>
 //!             "Message to the world: "
-//!             {state.message.get()}
+//!             <text computed={&state.message} />
 //!         </div>
 //!     }
 //! }
@@ -53,7 +53,6 @@
 mod app;
 mod computed;
 mod css;
-mod driver_refs;
 mod fetch;
 mod html_macro;
 mod instant;
@@ -63,6 +62,8 @@ mod websocket;
 mod future_box;
 mod bind;
 mod driver_module;
+mod dom_value;
+mod dom_list;
 
 pub use computed::{AutoMap, Computed, Dependencies, Value, struct_mut, Client, GraphId, DropResource};
 pub use driver_module::driver_browser::{Driver};
@@ -75,31 +76,34 @@ pub use fetch::{
     request_builder::{ListRequestTrait, RequestBuilder, RequestResponse, SingleRequestTrait},
     resource::Resource,
 };
-pub use html_macro::Embed;
+pub use html_macro::{Embed, EmbedDom};
 pub use instant::{Instant, InstantType};
 pub use virtualdom::models::{
     css::{Css, CssGroup},
     vdom_element::{KeyDownEvent, DropFileEvent, DropFileItem, VDomElement},
     vdom_component::VDomComponent,
     vdom_node::VDomNode,
+    dom_node::DomElement,
+    dom_text::DomText,
+    dom_comment::DomComment,
+    dom::DomNode,
 };
 pub use websocket::{WebsocketConnection, WebsocketMessage};
 pub use future_box::{FutureBoxSend, FutureBox};
 pub use bind::bind;
 pub mod dev {
     pub use super::driver_module::driver_browser::{EventCallback, FetchMethod};
-    pub use super::driver_refs::RefsContext;
     pub use super::virtualdom::models::{
         node_attr,
-        realdom_id::RealDomId,
+        dom_id::DomId,
         vdom_node::VDomNode,
-        vdom_refs::{NodeRefs, NodeRefsItem},
         vdom_text::VDomText,
     };
     pub use super::websocket::WebsocketMessageDriver;
     pub use crate::fetch::pinboxfut::PinBoxFuture;
 }
 
+pub use computed::context::{Context};
 pub use crate::driver_module::api::ApiImport;
 
 #[cfg(feature = "serde_request")]
@@ -135,6 +139,7 @@ pub use log;
 /// };
 /// ```
 pub use vertigo_macro::html;
+pub use vertigo_macro::dom;
 
 /// Allows to create Css styles for virtual DOM.
 ///
@@ -356,9 +361,8 @@ pub fn start_app(get_component: impl FnOnce() -> VDomComponent) {
     DRIVER_BROWSER.with(|state| {
         state.driver.driver.init_env();
         let component = get_component();
-        let driver = state.driver.clone();
 
-        let client = crate::app::start_app(driver, component);
+        let client = crate::app::start_app(component);
 
         let mut inner = state.subscription.borrow_mut();
         *inner = Some(client);
@@ -373,7 +377,7 @@ pub(crate) fn get_dependencies() -> Dependencies {
 
 pub(crate) fn external_connections_refresh() {                      //TODO - move somewhere ?
     DRIVER_BROWSER.with(|state| {
-        state.driver.external_connections_refresh();
+        state.driver.get_dependencies().external_connections_refresh();
     });
 }
 
@@ -383,4 +387,7 @@ pub fn get_driver() -> Driver {                                     //TODO - mov
     })
 }
 
+pub fn transaction<F: FnOnce(&Context)>(f: F) {
+    get_driver().transaction(f)
+}
 

@@ -1,4 +1,4 @@
-use vertigo::{css_fn, html, Resource, VDomElement, bind};
+use vertigo::{css_fn, Resource, bind, DomElement, dom, DomComment, Computed};
 
 use super::State;
 
@@ -25,41 +25,53 @@ css_fn! { text_css, "
     margin: 10px;
 " }
 
-pub fn render(state: &State) -> VDomElement {
-    let on_input_callback = bind(state).call_param(|state, new_value: String| {
+fn render_commit(state: &State) -> DomComment {
+    let commit_message = Computed::from({
+        let state = state.clone();
+
+        move |context| {
+            let repo_shown = state.repo_shown.get(context);
+            match repo_shown.as_str() {
+                "" => "".to_string(),
+                _ => match state.data.get(&repo_shown).get(context) {
+                    Resource::Loading => "Loading...".to_string(),
+                    Resource::Ready(branch) => branch.as_ref().commit.sha.clone(),
+                    Resource::Error(err) => format!("Error: {}", err),
+                },
+            }
+        }
+    });
+
+    commit_message.render_value(|message| {
+        dom! {
+            <div css={text_css()}>
+                { message }
+            </div>
+        }
+    })
+}
+
+pub fn render(state: &State) -> DomElement {
+    let on_input_callback = bind(state).call_param(|_, state, new_value: String| {
         log::info!(" nowa wartosc3 {}", new_value);
         state.repo_input.set(new_value);
     });
 
-    let on_show = bind(state).call(|state| {
-        let value = state.repo_input.get();
+    let on_show = bind(state).call(|context, state| {
+        let value = state.repo_input.get(context);
         log::info!(" nowa wartosc3 {}", value);
         state.repo_shown.set(value);
     });
 
-    let repo_input = state.repo_input.get();
-    let repo_shown = state.repo_shown.get();
-
-    let commit_sha = match repo_shown.as_str() {
-        "" => "".to_string(),
-        _ => match state.data.get(&repo_shown).get() {
-            Resource::Loading => "Loading...".to_string(),
-            Resource::Ready(branch) => branch.as_ref().commit.sha.clone(),
-            Resource::Error(err) => format!("Error: {}", err),
-        },
-    };
-
-    html! {
+    dom! {
         <div css={wrapper()}>
             "Enter author/repo tuple: "
-            <input css={input_css()} value={repo_input.as_str()} on_input={on_input_callback} />
+            <input css={input_css()} value={state.repo_input.to_computed()} on_input={on_input_callback} />
             <button css={button_css()} on_click={on_show}>"Fetch"</button>
             <div css={button_css()}>
-                { repo_shown.as_str() }
+                <text computed={&state.repo_shown} />
             </div>
-            <div css={text_css()}>
-                { commit_sha }
-            </div>
+            { render_commit(state) }
         </div>
     }
 }

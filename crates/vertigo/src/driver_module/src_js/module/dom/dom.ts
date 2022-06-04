@@ -58,6 +58,17 @@ type CommandType = {
     type: 'insert_css',
     selector: string,
     value: string
+} | {
+    type: 'create_comment',
+    id: number,
+    value: string
+} | {
+    type: 'update_comment',
+    id: number,
+    value: string
+} | {
+    type: 'remove_comment',
+    id: number,
 };
 
 const assertNeverCommand = (data: never): never => {
@@ -67,9 +78,9 @@ const assertNeverCommand = (data: never): never => {
 
 export class DriverDom {
     private getWasm: () => ModuleControllerType<ExportType>;
-    private readonly nodes: MapNodes<BigInt, Element>;
+    private readonly nodes: MapNodes<BigInt, Element | Comment>;
     private readonly texts: MapNodes<BigInt, Text>;
-    private readonly all: Map<Element | Text, BigInt>;
+    private readonly all: Map<Element | Text | Comment, BigInt>;
 
     public constructor(getWasm: () => ModuleControllerType<ExportType>) {
         this.getWasm = getWasm;
@@ -92,23 +103,23 @@ export class DriverDom {
             console.warn('mousedown ignore', target);
         }, false);
 
-        document.addEventListener('mouseover', (event) => {
-            const target = event.target;
+        // document.addEventListener('mouseover', (event) => {
+        //     const target = event.target;
 
-            if (target instanceof Element) {
-                const id = this.all.get(target);
+        //     if (target instanceof Element) {
+        //         const id = this.all.get(target);
 
-                if (id === undefined) {
-                    this.getWasm().exports.dom_mouseover(0n);
-                    return;
-                }
+        //         if (id === undefined) {
+        //             this.getWasm().exports.dom_mouseover(0n);
+        //             return;
+        //         }
 
-                this.getWasm().exports.dom_mouseover(id);
-                return;
-            }
+        //         this.getWasm().exports.dom_mouseover(id);
+        //         return;
+        //     }
 
-            console.warn('mouseover ignore', target);
-        }, false);
+        //     console.warn('mouseover ignore', target);
+        // }, false);
 
         document.addEventListener('keydown', (event) => {
             const target = event.target;
@@ -278,26 +289,34 @@ export class DriverDom {
 
     private set_attribute(id: BigInt, name: string, value: string) {
         this.nodes.get("set_attribute", id, (node) => {
-            node.setAttribute(name, value);
+            if (node instanceof Element) {
+                node.setAttribute(name, value);
 
-            if (name == "value") {
-                if (node instanceof HTMLInputElement) {
-                    node.value = value;
-                    return;
-                }
+                if (name == "value") {
+                    if (node instanceof HTMLInputElement) {
+                        node.value = value;
+                        return;
+                    }
 
-                if (node instanceof HTMLTextAreaElement) {
-                    node.value = value;
-                    node.defaultValue = value;
-                    return;
+                    if (node instanceof HTMLTextAreaElement) {
+                        node.value = value;
+                        node.defaultValue = value;
+                        return;
+                    }
                 }
+            } else {
+                console.error("set_attribute error");
             }
         });
     }
 
     private remove_attribute(id: BigInt, name: string) {
         this.nodes.get("remove_attribute", id, (node) => {
-            node.removeAttribute(name);
+            if (node instanceof Element) {
+                node.removeAttribute(name);
+            } else {
+                console.error("remove_attribute error");
+            }
         });
     }
 
@@ -335,7 +354,7 @@ export class DriverDom {
         });
     }
 
-    private get_node(label: string, id: BigInt, callback: (node: Element | Text) => void) {
+    private get_node(label: string, id: BigInt, callback: (node: Element | Comment | Text) => void) {
         const node = this.nodes.getItem(id);
         if (node !== undefined) {
             callback(node);
@@ -467,46 +486,29 @@ export class DriverDom {
             return;
         }
 
+        if (command.type === 'create_comment') {
+            const comment = document.createComment(command.value);
+            this.nodes.set(BigInt(command.id), comment);
+            return;
+        }
+
+        if (command.type === 'update_comment') {
+            this.nodes.get("insert_before", BigInt(command.id), (comment) => {
+                comment.textContent = command.value;
+            });
+            return;
+        }
+
+        if (command.type === 'remove_comment') {
+            this.nodes.delete("remove_comment", BigInt(command.id), (comment) => {
+                const parent = comment.parentElement;
+                if (parent !== null) {
+                    parent.removeChild(comment);
+                }
+            });
+            return;
+        }
+
         return assertNeverCommand(command);
-    }
-
-    public dom_get_bounding_client_rect_x = (node_id: BigInt): number => {
-        return this.nodes.mustGetItem(node_id).getBoundingClientRect().x;
-    }
-
-    public dom_get_bounding_client_rect_y = (node_id: BigInt): number => {
-        return this.nodes.mustGetItem(node_id).getBoundingClientRect().y;
-    }
-
-    public dom_get_bounding_client_rect_width = (node_id: BigInt): number => {
-        return this.nodes.mustGetItem(node_id).getBoundingClientRect().width;
-    }
-
-    public dom_get_bounding_client_rect_height = (node_id: BigInt): number => {
-        return this.nodes.mustGetItem(node_id).getBoundingClientRect().height;
-    }
-
-    public dom_scroll_top = (node_id: BigInt): number => {
-        return this.nodes.mustGetItem(node_id).scrollTop;
-    }
-
-    public dom_set_scroll_top = (node_id: BigInt, value: number) => {
-        this.nodes.mustGetItem(node_id).scrollTop = value;
-    }
-
-    public dom_scroll_left = (node_id: BigInt): number => {
-        return this.nodes.mustGetItem(node_id).scrollLeft;
-    }
-
-    public dom_set_scroll_left = (node_id: BigInt, value: number) => {
-        return this.nodes.mustGetItem(node_id).scrollLeft = value;
-    }
-
-    public dom_scroll_width = (node_id: BigInt): number => {
-        return this.nodes.mustGetItem(node_id).scrollWidth;
-    }
-
-    public dom_scroll_height = (node_id: BigInt): number => {
-        return this.nodes.mustGetItem(node_id).scrollHeight;
     }
 }

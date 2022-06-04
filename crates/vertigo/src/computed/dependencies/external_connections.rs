@@ -1,7 +1,6 @@
 use std::{
     rc::Rc,
 };
-use std::collections::BTreeSet;
 use crate::{
     computed::graph_id::GraphId,
     struct_mut::BTreeMapMut, DropResource,
@@ -12,7 +11,6 @@ pub type ConnectType = Rc<dyn Fn() -> DropResource>;
 struct ExternalConnectionsInner {
     connect: BTreeMapMut<GraphId, ConnectType>,
     connected_resource: BTreeMapMut<GraphId, DropResource>,
-    will_connect: BTreeMapMut<GraphId, bool>,
 }
 
 #[derive(Clone)]
@@ -27,7 +25,6 @@ impl ExternalConnections {
                 ExternalConnectionsInner {
                     connect: BTreeMapMut::new(),
                     connected_resource: BTreeMapMut::new(),
-                    will_connect: BTreeMapMut::new(),
                 }
             ),
         }
@@ -41,34 +38,18 @@ impl ExternalConnections {
         self.inner.connect.remove(&id);
     }
 
-    pub fn need_connection(&self, parent_list: BTreeSet<GraphId>) {
-        self.inner.will_connect.map_and_change(move |state| {
-            for id in parent_list {
-                state.insert(id, true);
+    pub fn set_connection(&self, id: GraphId, should_connect: bool) {
+        if should_connect {
+            if self.inner.connected_resource.contains_key(&id) {
+                return;
             }
-        });
-    }
 
-    pub fn need_disconnection(&self, id: GraphId) {
-        self.inner.will_connect.insert(id, false);
-    }
-
-    pub fn refresh_connect(&self) {
-        let will_connect = self.inner.will_connect.take();
-        for (id, should_connect) in will_connect.into_iter() {
-            if should_connect {
-                if self.inner.connected_resource.contains_key(&id) {
-                    continue;
-                }
-
-                //must be connected
-                if let Some(connect_func) = self.inner.connect.get(&id) {
-                    let connect_resource = connect_func();
-                    self.inner.connected_resource.insert(id, connect_resource);
-                }
-            } else {
-                self.inner.connected_resource.remove(&id);
+            //must be connected
+            if let Some(connect_func) = self.inner.connect.get_and_clone(&id) {
+                self.inner.connected_resource.insert(id, connect_func());
             }
+        } else {
+            self.inner.connected_resource.remove(&id);
         }
     }
 }

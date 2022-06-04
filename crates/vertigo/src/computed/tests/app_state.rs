@@ -21,10 +21,10 @@ impl AppState {
             let com2 = value2.to_computed();
             let com3 = value3.to_computed();
 
-            Computed::from(move || {
-                let val1 = com1.get();
-                let val2 = com2.get();
-                let val3 = com3.get();
+            Computed::from(move |context| {
+                let val1 = com1.get(context);
+                let val2 = com2.get(context);
+                let val3 = com3.get(context);
 
                 val1 + val2 + val3
             })
@@ -46,9 +46,9 @@ fn test_app_state() {
     let sum3 = {
         let app_state = app_state.clone();
 
-        Computed::from(move || -> i32 {
-            let val1 = app_state.value1.get();
-            let val3 = app_state.value3.get();
+        Computed::from(move |context| -> i32 {
+            let val1 = app_state.value1.get(context);
+            let val3 = app_state.value3.get(context);
 
             val1 + val3
         })

@@ -6,7 +6,9 @@ extern crate proc_macro_error;
 mod css_parser;
 mod html_parser;
 mod serde_request;
+mod html_parser2;
 
+use html_parser2::dom_inner;
 use proc_macro::TokenStream;
 use proc_macro2::{Span, TokenStream as TokenStream2};
 
@@ -23,6 +25,12 @@ pub fn html(input: TokenStream) -> TokenStream {
     let result = HtmlParser::parse_stream(call_site, &input.to_string(), true);
     // emit_warning!(call_site, "HTML: output: {}", result);
     result.into()
+}
+
+#[proc_macro]
+#[proc_macro_error]
+pub fn dom(input: TokenStream) -> TokenStream {
+    dom_inner(input)
 }
 
 #[proc_macro]

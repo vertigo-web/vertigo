@@ -1,11 +1,20 @@
 use std::rc::Rc;
 use vertigo::{
-    html, DropResource, KeyDownEvent,
-    VDomElement, Value, WebsocketConnection, WebsocketMessage, VDomComponent, bind, get_driver
+    DropResource,
+    KeyDownEvent,
+    Value,
+    WebsocketConnection,
+    WebsocketMessage,
+    bind,
+    get_driver,
+    dom,
+    DomElement,
+    DomComment, transaction
 };
 
+#[derive(Clone)]
 pub struct ChatState {
-    _ws_connect: DropResource,
+    _ws_connect: Rc<DropResource>,
 
     connect: Value<Option<WebsocketConnection>>,
     messages: Value<Vec<Rc<String>>>,
@@ -13,20 +22,22 @@ pub struct ChatState {
 }
 
 fn add_message(messages: &Value<Vec<Rc<String>>>, message: String) {
-    let prev_list: Vec<Rc<String>> = messages.get();
-    let mut new_list: Vec<Rc<String>> = Vec::new();
+    transaction(|context| {
+        let prev_list: Vec<Rc<String>> = messages.get(context);
+        let mut new_list: Vec<Rc<String>> = Vec::new();
 
-    for item in prev_list.iter() {
-        new_list.push(item.clone());
-    }
+        for item in prev_list.iter() {
+            new_list.push(item.clone());
+        }
 
-    new_list.push(Rc::new(message));
+        new_list.push(Rc::new(message));
 
-    messages.set(new_list);
+        messages.set(new_list);
+    });
 }
 
 impl ChatState {
-    pub fn component() -> VDomComponent {
+    pub fn new() -> ChatState {
         let connect = Value::new(None);
         let messages = Value::new(Vec::new());
         let input_text = Value::new(String::from(""));
@@ -55,78 +66,87 @@ impl ChatState {
             )
         };
 
-        let state = Rc::new(ChatState {
-            _ws_connect: ws_connect,
+        ChatState {
+            _ws_connect: Rc::new(ws_connect),
             connect,
             messages,
             input_text,
-        });
+        }
+    }
 
-        render(state)
+    pub fn render(&self) -> DomElement {
+        render(self)
     }
 
     fn submit(&self) {
-        let connect = self.connect.get();
-        if let Some(connect) = connect.as_ref() {
-            let text = self.input_text.get();
-            connect.send(text);
-            self.input_text.set(String::from(""));
-        } else {
-            log::error!("missing connection");
-        }
+        transaction(|context| {
+            let connect = self.connect.get(context);
+            if let Some(connect) = connect.as_ref() {
+                let text = self.input_text.get(context);
+                connect.send(text);
+                self.input_text.set(String::from(""));
+            } else {
+                log::error!("missing connection");
+            }
+        });
     }
 }
 
-pub fn render(state: Rc<ChatState>) -> VDomComponent {
-    let input_view = VDomComponent::from_ref(&state, render_input_text);
-    
-    VDomComponent::from(state, move |state_value: &Rc<ChatState>| {
-            
-        let is_connect = state_value.connect.get().is_some();
+fn render_status(state: &ChatState) -> DomComment {
+    state.connect.render_value(
+        |is_connect| {
+            let message = match is_connect.is_some() {
+                true => "Connection active",
+                false => "disconnect",
+            };
+        
+            dom! {
+                <div>
+                    { message }
+                </div>
+            }
+        }
+    )
+}
 
-        let network_info = match is_connect {
-            true => "Connection active",
-            false => "disconnect",
-        };
 
-        let mut list = Vec::new();
+pub fn render(state: &ChatState) -> DomElement {
+    let input_view = render_input_text(state);
+    let status_view = render_status(state);
 
-        let messages = state_value.messages.get();
-        for message in messages.iter() {
-            list.push(html! {
+    let list = state.messages.render_list(
+        |item| item.clone(),
+        |message| {
+            dom! {
                 <div>
                     { message.clone() }
                 </div>
-            });
+            }
         }
+    );
 
-        html! {
-            <div>
-                <div>
-                    { network_info }
-                </div>
-                <div>
-                    { ..list }
-                </div>
-                { input_view.clone() }
-            </div>
-        }
-    })
+    dom! {
+        <div>
+            { status_view }
+            { list }
+            { input_view }
+        </div>
+    }
 }
 
-pub fn render_input_text(state: &Rc<ChatState>) -> VDomElement {
+pub fn render_input_text(state: &ChatState) -> DomElement {
     let state = state.clone();
-    let text_value = state.input_text.get();
+    let text_value = state.input_text.to_computed();
 
-    let on_input = bind(&state).call_param(|state, new_text: String| {
+    let on_input = bind(&state).call_param(|_, state, new_text: String| {
         state.input_text.set(new_text);
     });
 
-    let submit = bind(&state).call(|state| {
+    let submit = bind(&state).call(|_, state| {
         state.submit();
     });
 
-    let on_key_down = bind(&state).call_param(|state, key: KeyDownEvent| {
+    let on_key_down = bind(&state).call_param(|_, state, key: KeyDownEvent| {
         if key.code == "Enter" {
             state.submit();
             return true;
@@ -134,7 +154,7 @@ pub fn render_input_text(state: &Rc<ChatState>) -> VDomElement {
         false
     });
 
-    html! {
+    dom! {
         <div>
             <hr/>
             <div>

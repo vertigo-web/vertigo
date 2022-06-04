@@ -23,17 +23,6 @@ export type ImportType = {
     timeout_clear: (timer_id: number) => void,
 
     instant_now: () => number,
-
-    dom_get_bounding_client_rect_x: (id: BigInt) => number;
-    dom_get_bounding_client_rect_y: (id: BigInt) => number;
-    dom_get_bounding_client_rect_width: (id: BigInt) => number;
-    dom_get_bounding_client_rect_height: (id: BigInt) => number;
-    dom_scroll_top: (node_id: BigInt) => number;
-    dom_set_scroll_top: (node_id: BigInt, value: number) => void;
-    dom_scroll_left: (node_id: BigInt) => number;
-    dom_set_scroll_left: (node_id: BigInt, value: number) => void;
-    dom_scroll_width: (node_id: BigInt) => number;
-    dom_scroll_height: (node_id: BigInt) => number;
 }
 
 export type ExportType = {
@@ -125,16 +114,6 @@ export class WasmModule {
                 timeout_set: interval.timeout_set,
                 timeout_clear: interval.timeout_clear,
                 instant_now,
-                dom_get_bounding_client_rect_x: dom.dom_get_bounding_client_rect_x,
-                dom_get_bounding_client_rect_y: dom.dom_get_bounding_client_rect_y,
-                dom_get_bounding_client_rect_width: dom.dom_get_bounding_client_rect_width,
-                dom_get_bounding_client_rect_height: dom.dom_get_bounding_client_rect_height,
-                dom_scroll_top: dom.dom_scroll_top,
-                dom_set_scroll_top: dom.dom_set_scroll_top,
-                dom_scroll_left: dom.dom_scroll_left,
-                dom_set_scroll_left: dom.dom_set_scroll_left,
-                dom_scroll_width: dom.dom_scroll_width,
-                dom_scroll_height: dom.dom_scroll_height,
             }
         });
 

@@ -1,5 +1,5 @@
 use crate::computed::Value;
-use crate::html;
+use crate::{html, transaction};
 
 use super::utils::*;
 
@@ -31,8 +31,12 @@ fn div_with_mouse_events() {
     assert_empty(&div, "div");
 
     div.on_mouse_enter.unwrap()();
-    assert_eq!(value.get(), "mouse in");
+    transaction(|conxtext| {
+        assert_eq!(value.get(conxtext), "mouse in");
+    });
 
     div.on_mouse_leave.unwrap()();
-    assert_eq!(value.get(), "mouse out");
+    transaction(|conxtext| {
+        assert_eq!(value.get(conxtext), "mouse out");
+    });
 }

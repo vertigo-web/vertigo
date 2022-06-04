@@ -1,4 +1,4 @@
-use vertigo::{css, css_fn, html, Css, VDomElement, bind};
+use vertigo::{css, css_fn, Css, bind, dom, DomElement};
 
 use crate::app::sudoku::state::{number_item::SudokuValue, Cell};
 
@@ -34,41 +34,33 @@ css_fn! { css_delete, "
     justify-content: center;
 " }
 
-pub fn render_cell_value(value: SudokuValue, cell: &Cell) -> VDomElement {
-    // let cell = item.get_value();
+pub fn render_cell_value(value: SudokuValue, cell: &Cell) -> DomElement {
+    let cell = cell.clone();
 
-    //cell.show_delete.setValue(true);
+    let delete_component = cell.show_delete.render_value_option({
+        let cell = cell.clone();
+        move |show_delete| {
+            match show_delete {
+                true => {
+                    let on_click = bind(&cell).call(|_, cell| {
+                        cell.number.value.set(None);
+                    });
 
-    let show_delete = cell.show_delete.get();
+                    Some(dom! {
+                        <div css={css_delete()} on_click={on_click}>
+                            "X"
+                        </div>
+                    })
+                },
+                false => None,
+            }
+        }
+    });
 
-    //TODO - Add delete possibility...
-    let mut out = Vec::new();
-
-    if show_delete {
-        let on_click = bind(cell).call(|cell| {
-            cell.number.value.set(None);
-        });
-
-        out.push(
-            html! {
-                <div css={css_delete()} on_click={on_click}>
-                    "X"
-                </div>
-            }, // node("div", vec!(
-               // css(css_delete()),
-               // on_click({
-               //     move || {
-               //         cell.number.value.set_value(None);
-               //     }
-               // }),
-               // text("X")
-        );
-    }
-
-    html! {
+    dom! {
         <div css={css_item_number_wrapper()}>
             { value.as_u16() }
-            { ..out }
+            {delete_component}
         </div>
     }
 }

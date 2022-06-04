@@ -1,3 +1,4 @@
+use std::fmt::Debug;
 use std::{
     hash::Hash,
     rc::Rc,
@@ -6,6 +7,12 @@ use std::{
 use crate::{struct_mut::HashMapMut};
 
 type CreateType<K, V> = Box<dyn Fn(&K) -> V>;
+
+fn get_unique_id() -> u64 {
+    use std::sync::atomic::{AtomicU64, Ordering};
+    static COUNTER: AtomicU64 = AtomicU64::new(1);
+    COUNTER.fetch_add(1, Ordering::Relaxed)
+}
 
 /// A structure similar to HashMap
 /// but allows to provide a function `create` for creating a new value if particular key doesn't exists.
@@ -20,13 +27,28 @@ type CreateType<K, V> = Box<dyn Fn(&K) -> V>;
 /// ```
 #[derive(Clone)]
 pub struct AutoMap<K, V> {
+    id: u64,
     create: Rc<CreateType<K, V>>,
     values: Rc<HashMapMut<K, V>>,
+}
+
+impl<K, V> Debug for AutoMap<K, V> {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        f.debug_struct ("AutoMap")
+            .finish()
+    }
+}
+
+impl<K, V> PartialEq for AutoMap<K, V> {
+    fn eq(&self, other: &Self) -> bool {
+        self.id == other.id
+    }
 }
 
 impl<K: Eq + Hash + Clone, V: Clone> AutoMap<K, V> {
     pub fn new<C: Fn(&K) -> V + 'static>(create: C) -> AutoMap<K, V> {
         AutoMap {
+            id: get_unique_id(),
             create: Rc::new(Box::new(create)),
             values: Rc::new(HashMapMut::new()),
         }
