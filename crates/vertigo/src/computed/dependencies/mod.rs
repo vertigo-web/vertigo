@@ -28,9 +28,9 @@ use {
 ///
 /// - Dependency graph holds values, computed values ([computeds](struct.Computed.html)) and clients (render functions).
 /// - Upon changing some value all dependent computeds get computed, and all dependent clients get rendered.
-/// - Render function (a component) takes a computed state provided by the graph and returns a rendered element ([VDomElement](struct.VDomElement.html)).
+/// - Render function (a component) takes a computed state provided by the graph and returns a rendered element ([DomElement](struct.DomElement.html)).
 /// - Upon change in VDOM the real DOM is also updated.
-/// - Components can provide the DOM with functions that get fired on events like [on_click](struct.VDomElement.html#structfield.on_click), which may modify the state, thus triggering necessary computing once again.
+/// - Components can provide the DOM with functions that get fired on events like [on_click](struct.DomElement.html#structfield.on_click), which may modify the state, thus triggering necessary computing once again.
 pub struct Dependencies {
     graph: Rc<Graph>,
     transaction_state: Rc<TransactionState>,

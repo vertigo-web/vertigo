@@ -3,7 +3,7 @@ use std::{
 };
 
 use crate::{
-    virtualdom::models::css::{Css, CssGroup},
+    dom::css::{Css, CssGroup},
     struct_mut::HashMapMut,
 };
 

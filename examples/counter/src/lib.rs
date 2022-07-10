@@ -1,5 +1,5 @@
 #![allow(clippy::new_without_default)]
-use vertigo::{start_app, Value, VDomComponent, bind, DomElement, dom};
+use vertigo::{start_app, Value, bind, DomElement, dom};
 
 pub struct State {
     pub count: Value<i32>,
@@ -40,6 +40,6 @@ pub fn render(state: State) -> DomElement {
 pub fn start_application() {
     start_app(|| {
         let state = State::new();
-        VDomComponent::dom(render(state))
+        render(state)
     });
 }

@@ -26,7 +26,7 @@ impl<T: Clone + ToString + From<String> + PartialEq + 'static> PartialEq for Has
 /// Router based on hash part of current location.
 ///
 /// ```rust
-/// use vertigo::{html, Computed, Value, DomElement, VDomComponent, dom};
+/// use vertigo::{dom, Computed, Value, DomElement};
 /// use vertigo::router::HashRouter;
 ///
 /// #[derive(Clone, PartialEq, Debug)]
@@ -68,14 +68,14 @@ impl<T: Clone + ToString + From<String> + PartialEq + 'static> PartialEq for Has
 /// }
 ///
 /// impl State {
-///     pub fn component() -> VDomComponent {
+///     pub fn component() -> DomElement {
 ///         let route = HashRouter::new();
 ///
 ///         let state = State {
 ///             route,
 ///         };
 ///
-///         VDomComponent::dom(render(state))
+///         render(state)
 ///     }
 /// }
 ///

@@ -88,20 +88,20 @@ If we want to be a little more detailed in this description, then it would be:
 
 - Dependency graph holds values, computed values (computeds) and clients (render functions).
 - Upon changing some value all dependent computeds get computed, and all dependent clients get rendered.
-- Render function (a component) takes a computed state provided by the graph and returns a rendered element (`VDomElement`).
+- Render function (a component) takes a computed state provided by the graph and returns a rendered element (`DomElement`).
 - Upon change in VDOM the real DOM is also updated.
 - Components can provide the DOM with functions that get fired on events like `on_click`, which may modify the state, thus triggering necessary computing once again.
 
 Now let's breakdown the code line by line:
 
 ```rust
-use vertigo::{Computed, VDomElement, html, css_fn};
+use vertigo::{Computed, DomElement, html, css_fn};
 ```
 
-Here we import `Computed` and `VDomElement` structs that will define input and output of our render function.
+Here we import `Computed` and `DomElement` structs that will define input and output of our render function.
 We also import:
 
-- `html!` macro to use HTML tags to define the shape of the resultant element, and
+- `dom!` macro to use HTML tags to define the shape of the resultant element, and
 - `css_fn!` macro that helps define styles for DOM nodes using CSS syntax.
 
 ```rust
@@ -119,7 +119,7 @@ The component will be rendered using this `State` struct as the input value.
 Using `css_fn!` macro we define here a function named `main_div` which returns styles[^styles] defined by `color: darkblue` body.
 
 ```rust
-    pub fn render(state: &State) -> VDomElement {
+    pub fn render(state: &State) -> DomElement {
 ```
 
 Here we define the render function itself.
@@ -131,10 +131,10 @@ Here we define the render function itself.
 We need to get a direct reference to the state to be able to read its fields. This is done by `get()`[^subscription] method invoked on `Computed`.
 
 ```rust
-    html! {
+    dom! {
 ```
 
-The `html!` macro always returns `VDomElement` object so it usually is at the end of the render function which returns the same type. You may as well pre-generate parts of the component using this macro and use it in the body of another `html!` invocation.
+The `dom!` macro always returns `DomElement` object so it usually is at the end of the render function which returns the same type. You may as well pre-generate parts of the component using this macro and use it in the body of another `dom!` invocation.
 
 ```rust
         <div css={main_div()}>
@@ -179,16 +179,16 @@ I our state we have a `Driver` handle, which is our connection to two things:
 
 We also have one `Value` with a string inside. The state and all types wrapped in `Value` are required to implement `PartialEq` so the dependency graph knows that values are changing.
 
-To create our state we use `new()` method with gets a `Driver` handle, and returns a `VDomComponent`. Driver handle is used to create all necessary values and also to create the "computed" version of state itself.
+To create our state we use `new()` method with gets a `Driver` handle, and returns a `DomElement`. Driver handle is used to create all necessary values and also to create the "computed" version of state itself.
 
 ```rust
 impl State {
-    pub fn component() -> VDomComponent {
+    pub fn component() -> DomElement {
         let state = State {
             message: Value::new("Hello world".to_string()),
         };
 
-        VDomComponent::from(state, app::render)
+        app::render(state)
     }
 }
 ```
@@ -219,16 +219,16 @@ to State and
 to `new()` method. Then in render function you can use this value:
 
 ```rust
-pub fn render(state: &State) -> VDomElement {
+pub fn render(state: &State) -> DomElement {
     let message = state.message.get();
 
     let message_element = if state.strong.get() {
-        html! { <strong>{message}</strong> }
+        dom! { <strong>{message}</strong> }
     } else {
-        html! { <span>{message}</span> }
+        dom! { <span>{message}</span> }
     };
 
-    html! {
+    dom! {
         <div css={main_div()}>
             "Message to the world: "
             {message_element}
@@ -241,7 +241,7 @@ In the browser the message should be now in bold.
 
 ## 7. Set value
 
-Let's do some reactivity already. Add switch closure to our render function and use it in `html!` macro:
+Let's do some reactivity already. Add switch closure to our render function and use it in `dom!` macro:
 
 ```rust
     let switch = move || {
@@ -266,10 +266,10 @@ We're using asterisk (`*`) on `.get()` to get out of `Rc`. Make sure you don't m
 No app should be written as one big render function. Here how we can add a component to our app. Create file `src/list.rs`:
 
 ```rust
-use vertigo::{VDomElement, html};
+use vertigo::{DomElement, html};
 
-pub fn render() -> VDomElement {
-    html! {
+pub fn render() -> DomElement {
+    dom! {
         <div>
             <p>"My list"</p>
             <ol>
@@ -296,7 +296,7 @@ use crate::list;
 (...)
 
 ```rust
-    html! {
+    dom! {
         <div css={main_div()}>
             "Message to the world: "
             {message_element}
@@ -312,14 +312,14 @@ For now our component just shows a static list which is not a usual way of rende
 To go dynamic, add a struct to `src/list.rs`, which will be our sub-state for the component:
 
 ```rust
-use vertigo::{Computed, Driver, Value, VDomElement, html};
+use vertigo::{Computed, Driver, Value, DomElement, html};
 
 pub struct State {
     items: Value<Vec<String>>,
 }
 
 impl State {
-    pub fn component(driver: &Driver) -> VDomComputed {
+    pub fn component(driver: &Driver) -> DomElement {
         let state = State {
             items: driver.new_value(vec![
                 "Item 1".to_string(),
@@ -327,7 +327,7 @@ impl State {
             ]),
         };
 
-        VDomComputed::new(state, render)
+        render(state)
     }
 }
 ```
@@ -344,14 +344,14 @@ pub struct State {
 }
 
 impl State {
-    pub fn component() -> VDomComputed {
+    pub fn component() -> DomElement {
         let state = State {
             message: Value::new("Hello world".to_string()),
             strong: Value::new(true),
             list: list::State::new(driver),
         };
 
-        VDomComputed::new(&state, render)
+        render(&state)
     }
 }
 ```
@@ -359,17 +359,17 @@ impl State {
 Now we can use this state to render our component dynamically. In `src/list.rs` modify `render` function this way:
 
 ```rust
-pub fn render(state: &State) -> VDomElement {
+pub fn render(state: &State) -> DomElement {
     let items = state.items.get();
 
     let elements = items.iter()
         .map(|item|
-            html! {
+            dom! {
                 <li>{item}</li>
             }
         );
 
-    html! {
+    dom! {
         <div>
             <p>"My list"</p>
             <ol>
@@ -380,14 +380,14 @@ pub fn render(state: &State) -> VDomElement {
 }
 ```
 
-As you can see the function now takes its state as a parameter, gets items out of this state and maps them into a vector of `<li>` elements. The vector can then be inserted as a list of children in `html!` macro using `..elements` notation.
+As you can see the function now takes its state as a parameter, gets items out of this state and maps them into a vector of `<li>` elements. The vector can then be inserted as a list of children in `dom!` macro using `..elements` notation.
 
-Now `html!` macro in our main `src/app.rs` yields an error - we need to provide a state for `list::render` function:
+Now `dom!` macro in our main `src/app.rs` yields an error - we need to provide a state for `list::render` function:
 
 ```rust
     let list_state = &state.list;
 
-    html! {
+    dom! {
         <div css={main_div()}>
             "Message to the world: "
             {message_element}
@@ -431,7 +431,7 @@ Our component cries out for adding more items. To implement this we need to:
 So the whole `src/list.rs` will look like this:
 
 ```rust
-use vertigo::{Computed, Value, VDomElement, VDomComponent, html};
+use vertigo::{Computed, Value, DomElement, html};
 
 #[derive(Clone)]
 pub struct State {
@@ -440,7 +440,7 @@ pub struct State {
 }
 
 impl State {
-    pub fn component() -> VDomComponent {
+    pub fn component() -> DomElement {
         let state = State {
             items: Value::new(vec![
                 "Item 1".to_string(),
@@ -449,7 +449,7 @@ impl State {
             new_item: Value::new("".to_string()),
         };
 
-        VDomComponent::from(state, render)
+        render(state)
     }
 
     pub fn add(&self) -> impl Fn() {
@@ -471,19 +471,19 @@ impl State {
     }
 }
 
-pub fn render(state: &State) -> VDomElement {
+pub fn render(state: &State) -> DomElement {
     let items = state.items.get();
 
     let elements = items.iter()
         .map(|item|
-            html! {
+            dom! {
                 <li>{item}</li>
             }
         );
 
     let new_value = &*state.new_item.get();
 
-    html! {
+    dom! {
         <div>
             <p>"My list"</p>
             <ol>
@@ -514,7 +514,7 @@ pub struct State {
 Then we need to reorganize a little how we create an instance of the state:
 
 ```rust
-    pub fn component() -> VDomComponent {
+    pub fn component() -> DomElement {
         let items = Value::new(vec![
             "Item 1".to_string(),
             "Item 2".to_string(),
@@ -531,7 +531,7 @@ Then we need to reorganize a little how we create an instance of the state:
             count,
         };
 
-        VDomComponent::from(state, render)
+        render(state)
     }
 ```
 
@@ -542,7 +542,7 @@ Now we can use this computed in render function:
 ```rust
     let count = *state.count.get();
 
-    html! {
+    dom! {
         <div>
             <p>"My list (" { count } ")"</p>
             (...)
@@ -562,10 +562,10 @@ css_fn! { alternate_rows, "
 " }
 ```
 
-And use these styles in `html!` macro:
+And use these styles in `dom!` macro:
 
 ```rust
-            html! {
+            dom! {
                 <li css={alternate_rows()}>{item}</li>
             }
 ```
@@ -593,7 +593,7 @@ And here's the usage in render:
     let elements = items.iter()
         .map(|item| {
             let excl = item.ends_with('!');
-            html! {
+            dom! {
                 <li css={alternate_rows(excl)}>{item}</li>
             }
         });

@@ -1,5 +1,5 @@
+use vertigo::DomElement;
 use vertigo::router::HashRouter;
-use vertigo::VDomComponent;
 
 use super::counters::State as CountersState;
 use super::game_of_life;
@@ -22,7 +22,7 @@ pub struct State {
 }
 
 impl State {
-    pub fn component() -> VDomComponent {
+    pub fn component() -> DomElement {
         let game_of_life = game_of_life::State::new();
 
         let route = HashRouter::new();
@@ -38,9 +38,7 @@ impl State {
             route,
         };
 
-        let dom = super::render(state);
-
-        VDomComponent::dom(dom)
+        super::render(state)
     }
 
     pub fn navigate_to(&self, route: Route) {

@@ -4,28 +4,16 @@ extern crate pest_derive;
 extern crate proc_macro_error;
 
 mod css_parser;
-mod html_parser;
 mod serde_request;
 mod html_parser2;
 
 use html_parser2::dom_inner;
 use proc_macro::TokenStream;
-use proc_macro2::{Span, TokenStream as TokenStream2};
+use proc_macro2::{TokenStream as TokenStream2};
 
 use crate::{
     css_parser::generate_css_string,
-    html_parser::HtmlParser,
 };
-
-#[proc_macro]
-#[proc_macro_error]
-pub fn html(input: TokenStream) -> TokenStream {
-    let call_site = Span::call_site();
-    // emit_warning!(call_site, "HTML: input: {}", input.to_string());
-    let result = HtmlParser::parse_stream(call_site, &input.to_string(), true);
-    // emit_warning!(call_site, "HTML: output: {}", result);
-    result.into()
-}
 
 #[proc_macro]
 #[proc_macro_error]

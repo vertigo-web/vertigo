@@ -6,7 +6,7 @@ use std::{
 use crate::{
     dev::{DomId, WebsocketMessageDriver},
     Dependencies, DropResource, FutureBox,
-    KeyDownEvent, FetchBuilder, Instant, RequestBuilder, WebsocketMessage, WebsocketConnection, DropFileEvent, virtualdom::models::vdom_element::DropFileItem, get_driver, css::css_manager::CssManager, Css, Context,
+    KeyDownEvent, FetchBuilder, Instant, RequestBuilder, WebsocketMessage, WebsocketConnection, DropFileEvent, DropFileItem, get_driver, css::css_manager::CssManager, Css, Context,
 };
 
 use crate::{
@@ -422,10 +422,6 @@ impl Driver {
         self.driver.driver_dom.create_node(id, name);
     }
 
-    pub(crate) fn rename_node(&self, id: DomId, new_name: &'static str) {
-        self.driver.driver_dom.rename_node(id, new_name);
-    }
-
     pub(crate) fn create_text(&self, id: DomId, value: &str) {
         self.driver.driver_dom.create_text(id, value);
     }
@@ -438,10 +434,6 @@ impl Driver {
         self.driver.driver_dom.set_attr(id, key, value);
     }
 
-    pub(crate) fn remove_attr(&self, id: DomId, name: &'static str) {
-        self.driver.driver_dom.remove_attr(id, name);
-    }
-
     pub(crate) fn remove_node(&self, id: DomId) {
         self.driver.driver_dom.remove_node(id);
     }
@@ -452,10 +444,6 @@ impl Driver {
 
     pub(crate) fn create_comment(&self, id: DomId, value: String) {
         self.driver.driver_dom.create_comment(id, value);
-    }
-
-    pub(crate) fn update_comment(&self, id: DomId, value: String) {
-        self.driver.driver_dom.update_comment(id, value);
     }
 
     pub(crate) fn remove_comment(&self, id: DomId) {

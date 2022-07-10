@@ -1,5 +1,5 @@
 use vertigo::router::HashRouter;
-use vertigo::{VDomComponent, bind, dom, DomElement};
+use vertigo::{bind, dom, DomElement};
 
 #[derive(Clone, PartialEq, Eq, Debug)]
 pub enum Route {
@@ -41,14 +41,14 @@ pub struct State {
 }
 
 impl State {
-    pub fn component() -> VDomComponent {
+    pub fn component() -> DomElement {
         let route = HashRouter::new();
 
         let state = State {
             route,
         };
 
-        VDomComponent::dom(render(state))
+        render(state)
     }
 
     pub fn navigate_to(&self, route: Route) {

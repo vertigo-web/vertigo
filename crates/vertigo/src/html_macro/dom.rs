@@ -1,4 +1,4 @@
-use crate::{virtualdom::models::dom::DomNode, DomText, DomElement, DomComment};
+use crate::{dom::dom_node::DomNode, DomText, DomElement, DomComment};
 
 pub trait EmbedDom {
     fn embed(self) -> DomNode;

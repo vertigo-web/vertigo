@@ -1,10 +1,10 @@
-use std::{cell::RefCell, any::Any};
+use std::{cell::RefCell};
 
-use crate::{ApiImport, Driver};
+use crate::{ApiImport, Driver, DomElement};
 
 pub struct DriverConstruct {
     pub driver: Driver,
-    pub subscription: RefCell<Option<Box<dyn Any>>>,
+    pub subscription: RefCell<Option<DomElement>>,
 }
 
 impl DriverConstruct {

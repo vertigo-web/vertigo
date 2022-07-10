@@ -1,10 +1,9 @@
-use crate::{Driver, struct_mut::{ValueMut, VecMut}, get_driver, Client};
+use crate::{Driver, struct_mut::VecMut, get_driver, Client};
 use super::dom_id::DomId;
 
 pub struct DomComment {
     dom_driver: Driver,
     pub id_dom: DomId,
-    pub value: ValueMut<String>,
     on_mount: Option<Box<dyn FnOnce(DomId) -> Client>>,
     subscriptions: VecMut<Client>,
 }
@@ -15,12 +14,11 @@ impl DomComment {
         let dom_driver = get_driver();
         let id_dom = DomId::default();
 
-        dom_driver.create_comment(id_dom, text.clone());
+        dom_driver.create_comment(id_dom, text);
 
         DomComment {
             dom_driver,
             id_dom,
-            value: ValueMut::new(text),
             on_mount: None,
             subscriptions: VecMut::new(),
         }
@@ -28,13 +26,6 @@ impl DomComment {
 
     pub fn id_dom(&self) -> DomId {
         self.id_dom
-    }
-
-    pub fn update(&self, new_value: String) {
-        let should_update = self.value.set_and_check(new_value.to_string());
-        if should_update {
-            self.dom_driver.update_comment(self.id_dom, new_value);
-        }
     }
 
     pub(crate) fn set_on_mount(mut self, on_mount: impl FnOnce(DomId) -> Client + 'static) -> Self {
