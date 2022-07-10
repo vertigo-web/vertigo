@@ -80,11 +80,11 @@ pub use html_macro::EmbedDom;
 pub use instant::{Instant, InstantType};
 pub use dom::{
     css::{Css, CssGroup},
-    dom_node::{KeyDownEvent, DropFileEvent, DropFileItem},
-    dom_node::DomElement,
+    dom_element::{KeyDownEvent, DropFileEvent, DropFileItem},
+    dom_element::DomElement,
     dom_text::DomText,
     dom_comment::DomComment,
-    dom::DomNode,
+    dom_node::DomNode,
 };
 pub use websocket::{WebsocketConnection, WebsocketMessage};
 pub use future_box::{FutureBoxSend, FutureBox};
