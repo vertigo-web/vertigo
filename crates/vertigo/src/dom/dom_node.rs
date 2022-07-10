@@ -1,6 +1,5 @@
-use crate::virtualdom::models::{
-    dom_component::DomComponent,
-    dom_node::DomElement,
+use crate::dom::{
+    dom_element::DomElement,
     dom_text::DomText,
 };
 
@@ -10,7 +9,6 @@ pub enum DomNode {
     Node { node: DomElement },
     Text { node: DomText },
     Comment { node: DomComment },
-    Component { node: DomComponent },           //TODO - to remove
 }
 
 impl DomNode {
@@ -22,16 +20,11 @@ impl DomNode {
         DomNode::Text { node }
     }
 
-    pub fn new_component(node: DomComponent) -> DomNode {
-        DomNode::Component { node }
-    }
-
     pub fn id_dom(&self) -> DomId {
         match self {
             Self::Node { node } => node.id_dom(),
             Self::Text { node } => node.id_dom(),
             Self::Comment { node } => node.id_dom(),
-            Self::Component { node } => node.id_dom(),
         }
     }
 

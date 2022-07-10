@@ -24,37 +24,25 @@ vertigo = "0.1.0-beta.4"
 Code:
 
 ```rust
-use vertigo::{html, VDomElement, VDomComponent, Value, bind, start_app};
+use vertigo::{dom, DomElement, Value, bind, start_app};
 
-#[derive(Clone)]
-pub struct State {
-    pub count: Value<i32>,
-}
-
-impl State {
-    pub fn new() -> State {
-        State {
-            count: Value::new(0),
-        }
-    }
-
-    pub fn render(&self) -> VDomComponent {
-        VDomComponent::from(self, render)
-    }
-}
-
-pub fn render(state: &State) -> VDomElement {
-    let increment = bind(state).call(|state| {
-        state.count.set(state.count.get() + 1);
+pub fn render(count: Value<i32>) -> DomElement {
+    let increment = bind(count).call(|context, count| {
+        count.set(count.get(context) + 1);
     });
 
-    let decrement = bind(state).call(|state| {
-        state.count.set(state.count.get() - 1);
+    let decrement = bind(count).call(|context, count| {
+        count.set(count.get(context) - 1);
     });
 
-    html! {
+    let text_value = count.map(|value| value.to_string());
+
+    dom! {
         <div>
-            <p>"Counter: " { state.count.get() }</p>
+            <p>
+                "Counter: "
+                <text computed={text_value} />
+            </p>
             <button on_click={decrement}>"-"</button>
             <button on_click={increment}>"+"</button>
         </div>
@@ -63,9 +51,9 @@ pub fn render(state: &State) -> VDomElement {
 
 #[no_mangle]
 pub fn start_application() {
-    start_app(|| {
-        let state = State::new();
-        state.render()
+    start_app(|| -> DomElement {
+        let count = Value::new();
+        render(count)
     });
 }
 ```

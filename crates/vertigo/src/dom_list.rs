@@ -2,7 +2,7 @@ use std::collections::{VecDeque, HashMap};
 use std::hash::Hash;
 use std::rc::Rc;
 use crate::struct_mut::ValueMut;
-use crate::virtualdom::models::dom_id::DomId;
+use crate::dom::dom_id::DomId;
 use crate::{Computed, get_driver, DomComment, DomNode};
 
 pub fn render_list<

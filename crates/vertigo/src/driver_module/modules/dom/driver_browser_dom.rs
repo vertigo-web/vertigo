@@ -144,10 +144,6 @@ impl DriverBrowserDom {
         self.add_command(DriverDomCommand::CreateNode { id, name });
     }
 
-    pub fn rename_node(&self, id: DomId, name: &'static str) {
-        self.add_command(DriverDomCommand::RenameNode { id, new_name: name })
-    }
-
     pub fn create_text(&self, id: DomId, value: &str) {
         self.add_command(DriverDomCommand::CreateText {
             id,
@@ -168,10 +164,6 @@ impl DriverBrowserDom {
             name,
             value: value.into(),
         });
-    }
-
-    pub fn remove_attr(&self, id: DomId, name: &'static str) {
-        self.add_command(DriverDomCommand::RemoveAttr { id, name });
     }
 
     pub fn remove_text(&self, id: DomId) {
@@ -201,13 +193,6 @@ impl DriverBrowserDom {
             id,
             value,
         })
-    }
-
-    pub fn update_comment(&self, id: DomId, value: String) {
-        self.add_command(DriverDomCommand::UpdateComment {
-            id,
-            value,
-        });
     }
 
     pub fn remove_comment(&self, id: DomId) {

@@ -1,7 +1,6 @@
 use crate::{
     driver_module::driver_browser::Driver,
-    computed::struct_mut::ValueMut,
-    virtualdom::models::dom_id::DomId, get_driver, Client, struct_mut::VecMut, Computed, Value,
+    dom::dom_id::DomId, get_driver, Client, struct_mut::VecMut, Computed, Value,
 };
 
 pub trait ToComputed<T: Clone> {
@@ -36,7 +35,6 @@ impl<T: Clone + 'static> ToComputed<T> for &Value<T> {
 pub struct DomText {
     dom_driver: Driver,
     id_dom: DomId,
-    value: ValueMut<String>,                        //TODO - Delete when the virtual dom is deleted
     subscriptions: VecMut<Client>,
 }
 
@@ -51,7 +49,6 @@ impl DomText {
         DomText {
             dom_driver,
             id_dom: id,
-            value: ValueMut::new(value),
             subscriptions: VecMut::new(),
         }
     }
@@ -69,18 +66,6 @@ impl DomText {
 
         text_node.subscriptions.push(client);
         text_node
-    }
-
-                                                                                      //TODO - Delete when the virtual dom is deleted
-    pub fn update(&self, new_value: &str) {
-        let should_update = self.value.set_and_check(new_value.to_string());
-        if should_update {
-            self.dom_driver.update_text(self.id_dom, new_value);
-        }
-    }
-
-    pub fn get_value(&self) -> String {                                               //TODO - Delete when the virtual dom is deleted
-        self.value.get()
     }
 
     pub fn id_dom(&self) -> DomId {

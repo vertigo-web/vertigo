@@ -23,10 +23,6 @@ type CommandType = {
     id: number,
     name: string,
 } | {
-    type: 'rename_node',
-    id: number,
-    new_name: string,
-} | {
     type: 'create_text',
     id: number,
     value: string
@@ -39,10 +35,6 @@ type CommandType = {
     id: number,
     name: string,
     value: string
-} | {
-    type: 'remove_attr',
-    id: number,
-    name: string,
 } | {
     type: 'remove_node',
     id: number,
@@ -60,10 +52,6 @@ type CommandType = {
     value: string
 } | {
     type: 'create_comment',
-    id: number,
-    value: string
-} | {
-    type: 'update_comment',
     id: number,
     value: string
 } | {
@@ -268,25 +256,6 @@ export class DriverDom {
         this.all.set(node, id);
     }
 
-    private rename_node(id: BigInt, name: string) {
-        this.nodes.get("rename_node", id, (node) => {
-            const new_node = createElement(name);
-
-            while (node.firstChild) {
-                new_node.appendChild(node.firstChild);
-            }
-
-            if (node.parentElement !== null) {
-                node.parentElement.insertBefore(new_node, node);
-                node.parentElement.removeChild(node);
-            }
-
-            this.all.delete(node);
-            this.all.set(new_node, id);
-            this.nodes.set(id, new_node);
-        });
-    }
-
     private set_attribute(id: BigInt, name: string, value: string) {
         this.nodes.get("set_attribute", id, (node) => {
             if (node instanceof Element) {
@@ -306,16 +275,6 @@ export class DriverDom {
                 }
             } else {
                 console.error("set_attribute error");
-            }
-        });
-    }
-
-    private remove_attribute(id: BigInt, name: string) {
-        this.nodes.get("remove_attribute", id, (node) => {
-            if (node instanceof Element) {
-                node.removeAttribute(name);
-            } else {
-                console.error("remove_attribute error");
             }
         });
     }
@@ -405,8 +364,6 @@ export class DriverDom {
 
                 if (command.type === 'set_attr' && command.name.toLocaleLowerCase() === 'autofocus') {
                     setFocus.add(command.id);
-                } else if (command.type === 'remove_attr' && command.name.toLocaleLowerCase() === 'autofocus') {
-                    setFocus.delete(command.id);
                 }
             }
         } catch (error) {
@@ -451,11 +408,6 @@ export class DriverDom {
             return;
         }
 
-        if (command.type === 'rename_node') {
-            this.rename_node(BigInt(command.id), command.new_name);
-            return;
-        }
-
         if (command.type === 'create_text') {
             this.create_text(BigInt(command.id), command.value);
             return;
@@ -468,11 +420,6 @@ export class DriverDom {
 
         if (command.type === 'set_attr') {
             this.set_attribute(BigInt(command.id), command.name, command.value);
-            return;
-        }
-
-        if (command.type === 'remove_attr') {
-            this.remove_attribute(BigInt(command.id), command.name);
             return;
         }
 
@@ -489,13 +436,6 @@ export class DriverDom {
         if (command.type === 'create_comment') {
             const comment = document.createComment(command.value);
             this.nodes.set(BigInt(command.id), comment);
-            return;
-        }
-
-        if (command.type === 'update_comment') {
-            this.nodes.get("insert_before", BigInt(command.id), (comment) => {
-                comment.textContent = command.value;
-            });
             return;
         }
 

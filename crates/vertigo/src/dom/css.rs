@@ -14,7 +14,7 @@ pub enum CssGroup {
 /// Consists of a vector of css chunks which can be extended.
 ///
 /// ```rust
-/// use vertigo::{Css, CssGroup, html};
+/// use vertigo::{Css, CssGroup, dom};
 ///
 /// let blue_text = Css::str("color: blue");
 /// let black_background = Css::str("background: black");
@@ -26,7 +26,7 @@ pub enum CssGroup {
 ///     .extend(blue_text)
 ///     .extend(black_background);
 ///
-/// let element = html! { <div css={my_styles} /> };
+/// let element = dom! { <div css={my_styles} /> };
 /// ```
 #[derive(Debug, Default, Clone, PartialEq, Eq)]
 pub struct Css {
