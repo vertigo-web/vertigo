@@ -1,6 +1,6 @@
 use std::collections::HashMap;
 
-use crate::{driver_module::modules::fetch::DriverBrowserFetch, FetchBuilder};
+use crate::{driver_module::modules::fetch::DriverFetch, FetchBuilder};
 
 use super::resource::Resource;
 
@@ -37,7 +37,7 @@ pub trait ListRequestTrait: Sized {
 pub enum RequestBuilder {
     ErrorInput(String),
     Data {
-        driver_fetch: DriverBrowserFetch,
+        driver_fetch: DriverFetch,
         url: String,
         headers: Option<HashMap<String, String>>,
         body: Option<String>,
@@ -45,7 +45,7 @@ pub enum RequestBuilder {
 }
 
 impl RequestBuilder {
-    pub fn new(driver_fetch: &DriverBrowserFetch, url: impl Into<String>) -> RequestBuilder {
+    pub fn new(driver_fetch: &DriverFetch, url: impl Into<String>) -> RequestBuilder {
         RequestBuilder::Data {
             driver_fetch: driver_fetch.clone(),
             url: url.into(),

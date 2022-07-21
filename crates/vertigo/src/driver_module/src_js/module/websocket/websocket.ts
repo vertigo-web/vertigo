@@ -45,7 +45,7 @@ export class DriverWebsocket {
                     const new_params = wasm.newList();
                     new_params.push_u32(callback_id);
                     new_params.push_string(message.message);
-                    const new_params_id = new_params.freeze();
+                    const new_params_id = new_params.saveToBuffer();
 
                     wasm.exports.websocket_callback_message(new_params_id);
                     return;

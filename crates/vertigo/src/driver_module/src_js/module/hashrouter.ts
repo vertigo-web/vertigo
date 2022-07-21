@@ -6,9 +6,9 @@ export class HashRouter {
         window.addEventListener("hashchange", () => {
             const params = getWasm().newList();
             params.push_string(this.get());
-            const listId = params.freeze();
+            const ptr = params.saveToBuffer();
 
-            getWasm().exports.hashrouter_hashchange_callback(listId);
+            getWasm().exports.hashrouter_hashchange_callback(ptr);
         }, false);
     }
 

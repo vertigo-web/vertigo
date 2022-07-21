@@ -1,6 +1,6 @@
 use crate::InstantType;
 
-use super::stack::{ParamListBuilder, ArgumentsManager, ParamList};
+use super::{arguments::param_builder::ParamListBuilder, arguments::{Arguments, params::ParamItem}};
 
 #[derive(Clone)]
 pub struct PanicMessage {
@@ -23,7 +23,7 @@ impl PanicMessage {
 
 pub struct ApiImport {
     pub panic_message: PanicMessage,
-    js_call: fn(params: u32) -> u32,
+    js_call: fn(params: u32, size: u32) -> u32,
 
     pub interval_set: fn(duration: u32, callback_id: u32) -> u32,
     pub interval_clear: fn(timer_id: u32),
@@ -31,14 +31,14 @@ pub struct ApiImport {
     pub timeout_clear: fn(timer_id: u32),
 
     pub instant_now: fn() -> u32,
-    pub arguments: ArgumentsManager,
+    pub arguments: Arguments,
 }
 
 impl ApiImport {
 
     pub fn new(
         panic_message: fn(ptr: u32, size: u32),
-        js_call: fn(params: u32) -> u32,
+        js_call: fn(params: u32, size: u32) -> u32,
 
         interval_set: fn(duration: u32, callback_id: u32) -> u32,
         interval_clear: fn(timer_id: u32),
@@ -50,7 +50,7 @@ impl ApiImport {
         let panic_message = PanicMessage::new(panic_message);
 
         ApiImport {
-            panic_message: panic_message.clone(),
+            panic_message,
             js_call,
             interval_set,
             interval_clear,
@@ -58,26 +58,30 @@ impl ApiImport {
             timeout_clear,
 
             instant_now,
-            arguments: ArgumentsManager::new(panic_message),
+            arguments: Arguments::new(),
         }
     }
 
     fn new_params(&self) -> ParamListBuilder {
-        ParamListBuilder::new(&self.arguments)
+        ParamListBuilder::new()
     }
 
     pub fn show_panic_message(&self, message: String) {
         self.panic_message.show(message);
     }
 
-    fn js_call(&self, params: ParamListBuilder) -> Option<ParamList> {
+    fn js_call(&self, params: ParamListBuilder) -> Option<ParamItem> {
         let params_memory = params.build();
-        let ptr = params_memory.to_ptr();
+        let (ptr, size) = params_memory.get_ptr_and_size();
 
-        let result = (self.js_call)(ptr);
+        let result_ptr = (self.js_call)(ptr, size);
         drop(params_memory);
 
-        self.arguments.unfreeze(result)
+        if result_ptr == 0 {
+            return None;
+        }
+
+        self.arguments.get_by_ptr(result_ptr)
     }
 
     fn console_4(&self, kind: &'static str, arg1: &str, arg2: &str, arg3: &str, arg4: &str) {

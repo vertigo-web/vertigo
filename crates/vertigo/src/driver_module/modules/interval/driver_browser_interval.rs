@@ -4,15 +4,15 @@ use crate::DropResource;
 use crate::{driver_module::utils::callback_manager::{CallbackManager, CallbackManagerOnce}, driver_module::api::ApiImport};
 
 #[derive(Clone)]
-pub struct DriverBrowserInterval {
+pub struct DriverInterval {
     api: Rc<ApiImport>,
     interval_callback_manager: CallbackManager<()>,
     timeout_callback_manager: CallbackManagerOnce<()>,
 }
 
-impl DriverBrowserInterval {
-    pub fn new(api: &Rc<ApiImport>) -> DriverBrowserInterval {
-        DriverBrowserInterval {
+impl DriverInterval {
+    pub fn new(api: &Rc<ApiImport>) -> DriverInterval {
+        DriverInterval {
             api: api.clone(),
             interval_callback_manager: CallbackManager::new(),
             timeout_callback_manager: CallbackManagerOnce::new(),

@@ -5,10 +5,10 @@ use std::pin::Pin;
 use std::rc::Rc;
 use std::task::{Context, RawWaker, RawWakerVTable, Waker};
 
-use crate::driver_module::modules::interval::DriverBrowserInterval;
+use crate::driver_module::modules::interval::DriverInterval;
 
 #[inline]
-pub fn spawn_local<F>(interval: DriverBrowserInterval, future: F)
+pub fn spawn_local<F>(interval: DriverInterval, future: F)
 where
     F: Future<Output = ()> + 'static,
 {
@@ -22,11 +22,11 @@ struct Inner {
 
 pub(crate) struct Task {
     inner: RefCell<Option<Inner>>,
-    interval: DriverBrowserInterval,
+    interval: DriverInterval,
 }
 
 impl Task {
-    pub(crate) fn spawn(interval: DriverBrowserInterval, future: Pin<Box<dyn Future<Output = ()>>>) {
+    pub(crate) fn spawn(interval: DriverInterval, future: Pin<Box<dyn Future<Output = ()>>>) {
         let this = Rc::new(Self {
             inner: RefCell::new(None),
             interval,

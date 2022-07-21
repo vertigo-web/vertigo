@@ -29,7 +29,7 @@ export class Cookies {
     public set = (
         cname: string,
         cvalue: string,
-        expires_in: BigInt,
+        expires_in: bigint,
     ) => {
         const cvalueEncoded = cvalue == null ? "" : encodeURIComponent(cvalue);
 

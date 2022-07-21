@@ -10,7 +10,7 @@ export const initWebsocketModule = (websocket: DriverWebsocket) => (method: stri
             Guard.isNumber(callback_id) &&
             rest.length === 0
         ) {
-            websocket.websocket_register_callback(host, callback_id);
+            websocket.websocket_register_callback(host, callback_id.value);
             return 0;
         }
 
@@ -25,7 +25,7 @@ export const initWebsocketModule = (websocket: DriverWebsocket) => (method: stri
             Guard.isNumber(callback_id) &&
             rest.length === 0
         ) {
-            websocket.websocket_unregister_callback(callback_id);
+            websocket.websocket_unregister_callback(callback_id.value);
             return 0;
         }
 
@@ -41,7 +41,7 @@ export const initWebsocketModule = (websocket: DriverWebsocket) => (method: stri
             Guard.isString(message) && 
             rest.length === 0
         ) {
-            websocket.websocket_send_message(callback_id, message);
+            websocket.websocket_send_message(callback_id.value, message);
             return 0;
         }
 

@@ -1,7 +1,6 @@
 use std::rc::Rc;
 use crate::{
-    driver_module::driver_browser::{Driver},
-    driver_module::driver_browser::{EventCallback},
+    driver_module::driver::{Driver},
     dom::{
         dom_node::DomNode,
         dom_id::DomId,
@@ -52,7 +51,7 @@ impl From<Computed<Css>> for CssValue {
 }
 
 pub struct DomElement {
-    dom_driver: Driver,
+    driver: Driver,
     id_dom: DomId,
     child_node: VecDequeMut<DomNode>,
     subscriptions: VecMut<Client>,
@@ -67,7 +66,7 @@ impl DomElement {
         driver.create_node(node_id, name);
 
         DomElement {
-            dom_driver: driver,
+            driver,
             id_dom: node_id,
             child_node: VecDequeMut::new(),
             subscriptions: VecMut::new(),
@@ -78,7 +77,7 @@ impl DomElement {
         let driver = get_driver();
 
         DomElement {
-            dom_driver: driver,
+            driver,
             id_dom: id,
             child_node: VecDequeMut::new(),
             subscriptions: VecMut::new(),
@@ -94,11 +93,11 @@ impl DomElement {
         match css {
             CssValue::Css(css) => {
                 let class_name = get_driver().get_class_name(&css);
-                self.dom_driver.set_attr(self.id_dom, "class", &class_name);             //TODO - Change to &str when the virtual dom is deleted        
+                self.driver.set_attr(self.id_dom, "class", &class_name);             //TODO - Change to &str when the virtual dom is deleted        
             },
             CssValue::Computed(css) => {
                 let id_dom = self.id_dom;
-                let driver = self.dom_driver.clone();
+                let driver = self.driver.clone();
         
                 self.subscribe(css, move |css| {
                     let class_name = driver.get_class_name(&css);
@@ -139,7 +138,7 @@ impl DomElement {
         let parent_id = self.id_dom;
         let child_node = child_node.into().run_on_mount(parent_id);
         let child_id = child_node.id_dom();
-        self.dom_driver.insert_before(self.id_dom, child_id, None);
+        self.driver.insert_before(self.id_dom, child_id, None);
         self.child_node.push(child_node);
     }
 
@@ -149,44 +148,52 @@ impl DomElement {
     }
 
     pub fn on_click(self, on_click: impl Fn() + 'static) -> Self {
-        let callback = EventCallback::OnClick { callback: Some(Rc::new(on_click)) };
-        self.dom_driver.set_event(self.id_dom, callback);
+        self.driver.driver_inner.dom.data.change(self.id_dom, |element| {
+            element.on_click = Some(Rc::new(on_click));
+        });
+
         self
     }
 
     pub fn on_mouse_enter(self, on_mouse_enter: impl Fn() + 'static) -> Self {
-        let callback = EventCallback::OnMouseEnter { callback: Some(Rc::new(on_mouse_enter)) };
-        self.dom_driver.set_event(self.id_dom, callback);
+        self.driver.driver_inner.dom.data.change(self.id_dom, |element| {
+            element.on_mouse_enter = Some(Rc::new(on_mouse_enter));
+        });
         self
     }
 
     pub fn on_mouse_leave(self, on_mouse_leave: impl Fn() + 'static) -> Self {
-        let callback = EventCallback::OnMouseLeave { callback: Some(Rc::new(on_mouse_leave)) };
-        self.dom_driver.set_event(self.id_dom, callback);
+        self.driver.driver_inner.dom.data.change(self.id_dom, |element| {
+            element.on_mouse_leave = Some(Rc::new(on_mouse_leave));
+        });
         self
     }
 
     pub fn on_input(self, on_input: impl Fn(String) + 'static) -> Self {
-        let callback = EventCallback::OnInput { callback: Some(Rc::new(on_input)) };
-        self.dom_driver.set_event(self.id_dom, callback);
+        self.driver.driver_inner.dom.data.change(self.id_dom, |element| {
+            element.on_input = Some(Rc::new(on_input));
+        });
         self
     }
 
     pub fn on_key_down(self, on_key_down: impl Fn(KeyDownEvent) -> bool + 'static) -> Self {
-        let callback = EventCallback::OnKeyDown { callback: Some(Rc::new(on_key_down)) };
-        self.dom_driver.set_event(self.id_dom, callback);
+        self.driver.driver_inner.dom.data.change(self.id_dom, |element| {
+            element.on_keydown = Some(Rc::new(on_key_down));
+        });
         self
     }
 
     pub fn on_dropfile(self, on_dropfile: impl Fn(DropFileEvent) + 'static) -> Self {
-        let callback = EventCallback::OnDropFile { callback: Some(Rc::new(on_dropfile)) };
-        self.dom_driver.set_event(self.id_dom, callback);
+        self.driver.driver_inner.dom.data.change(self.id_dom, |element| {
+            element.on_dropfile = Some(Rc::new(on_dropfile));
+        });
         self
     }
 
     pub fn hook_key_down(self, on_hook_key_down: impl Fn(KeyDownEvent) -> bool + 'static) -> Self {
-        let callback = EventCallback::HookKeyDown { callback: Some(Rc::new(on_hook_key_down)) };
-        self.dom_driver.set_event(self.id_dom, callback);
+        self.driver.driver_inner.dom.data.change(self.id_dom, |element| {
+            element.hook_keydown = Some(Rc::new(on_hook_key_down));
+        });
         self
     }
 
@@ -194,6 +201,6 @@ impl DomElement {
 
 impl Drop for DomElement {
     fn drop(&mut self) {
-        self.dom_driver.remove_node(self.id_dom);
+        self.driver.remove_node(self.id_dom);
     }
 }

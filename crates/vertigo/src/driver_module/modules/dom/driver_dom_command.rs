@@ -1,4 +1,4 @@
-use crate::dev::DomId;
+use crate::DomId;
 
 use crate::driver_module::utils::json::JsonMapBuilder;
 

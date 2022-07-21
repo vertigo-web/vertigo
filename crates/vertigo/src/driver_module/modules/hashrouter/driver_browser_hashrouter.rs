@@ -5,16 +5,16 @@ use crate::DropResource;
 use crate::{driver_module::utils::callback_manager::CallbackManager, driver_module::api::ApiImport};
 
 #[derive(Clone)]
-pub struct DriverBrowserHashrouter {
+pub struct DriverHashrouter {
     api: Rc<ApiImport>,
     callback_manager: CallbackManager<String>,
 }
 
-impl DriverBrowserHashrouter {
-    pub fn new(api: &Rc<ApiImport>) -> DriverBrowserHashrouter {
+impl DriverHashrouter {
+    pub fn new(api: &Rc<ApiImport>) -> DriverHashrouter {
         let callback_manager = CallbackManager::new();
 
-        DriverBrowserHashrouter {
+        DriverHashrouter {
             api: api.clone(),
             callback_manager,
         }

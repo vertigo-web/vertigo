@@ -1,35 +1,6 @@
 use std::alloc::{alloc, Layout};
 use std::mem;
 
-
-#[derive(Clone, Copy)]
-pub struct WasmMemoryPtr(u32);
-
-impl WasmMemoryPtr {
-    pub fn to_u32(self) -> u32 {
-        self.0
-    }
-
-    pub fn from(value: &str) -> WasmMemoryPtr {
-        let ptr = value.as_ptr();
-        WasmMemoryPtr(ptr as u32)
-    }
-}
-
-pub struct WasmMemorySize(u32);
-
-impl WasmMemorySize {
-    pub fn convert_to_u32(self) -> u32 {
-        self.0
-    }
-
-    pub fn from(value: &str) -> WasmMemorySize {
-        let len = value.len();
-        WasmMemorySize(len as u32)
-    }
-}
-
-
 fn alloc_memory(size: usize) -> (*mut u8, Layout) {
 
     let align = mem::align_of::<usize>();
@@ -71,12 +42,12 @@ impl MemoryBlock {
         }
     }
 
-    pub fn get_ptr(&self) -> WasmMemoryPtr {
-        WasmMemoryPtr(self.ptr as u32)
+    pub fn get_ptr_and_size(&self) -> (u32, u32) {
+        (self.ptr as u32, self.size as u32)
     }
 
-    pub fn get_size(&self) -> WasmMemorySize {
-        WasmMemorySize(self.size as u32)
+    pub fn get_ptr(&self) -> u32 {
+        self.ptr as u32
     }
 
     pub fn write(&self, offset: u32, data: &[u8]) {
@@ -90,9 +61,10 @@ impl MemoryBlock {
             }
 
         } else {
-            panic!("Buffer overflow size={} offset={} new_data={}", self.get_size().convert_to_u32(), offset, data_len);
+            panic!("Buffer overflow size={} offset={} new_data={}", self.size, offset, data_len);
         }
     }
+
     pub fn convert_to_vec(self) -> Vec<u8> {
         let ptr = self.ptr;
         let size = self.size as usize;

@@ -1,25 +1,13 @@
-import { argumentsDecode, ListItemType, ParamListBuilder } from "./arguments";
+// import { argumentsDecode, ListItemType } from "./arguments";
+import { argumentsDecode, ListItemType, ParamListBuilder } from './arguments';
 
 export interface BaseExportType {
-    arguments_debug: (listId: number) => void,                                  //fn(u32)
-    arguments_new_list: () => number,                                           //fn() -> u32
-    arguments_push_string_empty: (listId: number) => void,                      //fn(u32) -> u32
-    arguments_push_string_alloc: (listId: number, size: number) => number,      //fn(u32, u32) -> u32
-    arguments_push_buffer_alloc: (listId: number, size: number) => number,      //fn(u32, u32) -> u32
-    arguments_push_u32: (listId: number, value: number) => void,                //fn(u32, u32)
-    arguments_push_i32: (listId: number, value: number) => void,                //fn(u32, i32)
-    arguments_push_u64: (listId: number, value: BigInt) => void,                //fn(u32, u64)
-    arguments_push_i64: (listId: number, value: BigInt) => void,                //fn(u32, i64)
-    arguments_push_true: (listId: number) => void,                              //fn(u32)
-    arguments_push_false: (listId: number) => void,                             //fn(u32)
-    arguments_push_null: (listId: number) => void,                              //fn(u32)
-    arguments_push_sublist: (paramsId: number, sub_params_id: number) => void,  //fn(u32, u32)
-    arguments_freeze: (listId: number) => void,                                  //fn(u32)
+    alloc: (size: number) => number,
 };
 
 export interface ModuleControllerType<ExportType extends BaseExportType> {
     exports: ExportType,
-    decodeArguments: (ptr: number) => ListItemType,
+    decodeArguments: (ptr: number, size: number) => ListItemType,
     newList: () => ParamListBuilder,
     getUint8Memory: () => Uint8Array,
 }
@@ -67,9 +55,9 @@ export const wasmInit = async <ImportType extends Record<string, Function>, Expo
     //@ts-expect-error
     const exports: ExportType = module_instance.instance.exports;
 
-    const decodeArguments = (ptr: number) => argumentsDecode(getUint8Memory, ptr);
+    const decodeArguments = (ptr: number, size: number) => argumentsDecode(getUint8Memory, ptr, size);
 
-    const newList = (): ParamListBuilder => new ParamListBuilder(getUint8Memory, exports);
+    const newList = (): ParamListBuilder => new ParamListBuilder(getUint8Memory, exports.alloc);
 
     return {
         exports,

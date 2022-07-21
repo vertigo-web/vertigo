@@ -1,4 +1,4 @@
-use std::{rc::Rc, collections::{BTreeSet, BTreeMap}, cell::RefCell};
+use std::{collections::{BTreeSet, BTreeMap}, cell::RefCell};
 
 use crate::GraphId;
 
@@ -146,15 +146,14 @@ usunięcie jakiegoś client_id, powinno spowodować, ze rekurencyjnie zostaną u
 */
 
 
-#[derive(Clone)]
 pub struct GraphConnections {
-    inner: Rc<RefCell<GraphConnectionsInner>>,
+    inner: RefCell<GraphConnectionsInner>,
 }
 
 impl GraphConnections {
     pub fn new() -> GraphConnections {
         GraphConnections { 
-            inner: Rc::new(RefCell::new(GraphConnectionsInner::new())),
+            inner: RefCell::new(GraphConnectionsInner::new()),
         }
     }
 
