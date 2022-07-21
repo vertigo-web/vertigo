@@ -1,4 +1,4 @@
-use crate::{dev::FetchMethod, FetchResult, FutureBox, FutureBoxSend};
+use crate::{FetchMethod, FetchResult, FutureBox, FutureBoxSend};
 
 use std::{
     collections::HashMap,
@@ -17,17 +17,17 @@ use crate::struct_mut::{
 };
 
 #[derive(Clone)]
-pub struct DriverBrowserFetch {
+pub struct DriverFetch {
     api: Rc<ApiImport>,
     auto_id: Rc<CounterMut>,
     data: Rc<HashMapMut<u32, FutureBoxSend<FetchResult>>>,
 }
 
-impl DriverBrowserFetch {
-    pub fn new(api: &Rc<ApiImport>) -> DriverBrowserFetch {
+impl DriverFetch {
+    pub fn new(api: &Rc<ApiImport>) -> DriverFetch {
         let data: Rc<HashMapMut<u32, FutureBoxSend<FetchResult>>> = Rc::new(HashMapMut::new());
 
-        DriverBrowserFetch {
+        DriverFetch {
             api: api.clone(),
             auto_id: Rc::new(CounterMut::new(1)),
             data,

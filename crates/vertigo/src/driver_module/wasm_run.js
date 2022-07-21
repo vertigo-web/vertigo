@@ -145,7 +145,7 @@ class DriverDom {
                 new_params.push_bool(event.ctrlKey);
                 new_params.push_bool(event.shiftKey);
                 new_params.push_bool(event.metaKey);
-                const new_params_id = new_params.freeze();
+                const new_params_id = new_params.saveToBuffer();
                 const stopPropagate = this.getWasm().exports.dom_keydown(new_params_id);
                 if (stopPropagate > 0) {
                     event.preventDefault();
@@ -164,7 +164,7 @@ class DriverDom {
                         const new_params = this.getWasm().newList();
                         new_params.push_u64(id);
                         new_params.push_string(target.value);
-                        const new_params_id = new_params.freeze();
+                        const new_params_id = new_params.saveToBuffer();
                         this.getWasm().exports.dom_oninput(new_params_id);
                         return;
                     }
@@ -222,7 +222,7 @@ class DriverDom {
                                 });
                             }
                         });
-                        this.getWasm().exports.dom_ondropfile(params.freeze());
+                        this.getWasm().exports.dom_ondropfile(params.saveToBuffer());
                     });
                 }
                 else {
@@ -665,7 +665,7 @@ class DriverWebsocket {
                 const new_params = wasm.newList();
                 new_params.push_u32(callback_id);
                 new_params.push_string(message.message);
-                const new_params_id = new_params.freeze();
+                const new_params_id = new_params.saveToBuffer();
                 wasm.exports.websocket_callback_message(new_params_id);
                 return;
             }
@@ -718,7 +718,7 @@ class Fetch {
             new_params.push_bool(true); //ok
             new_params.push_u32(response.status); //http code
             new_params.push_string(responseText); //body
-            let params_id = new_params.freeze();
+            let params_id = new_params.saveToBuffer();
             wasm.exports.fetch_callback(params_id);
         })
             .catch((err) => {
@@ -729,7 +729,7 @@ class Fetch {
             new_params.push_bool(false); //ok
             new_params.push_u32(response.status); //http code
             new_params.push_string(responseMessage); //body
-            let params_id = new_params.freeze();
+            let params_id = new_params.saveToBuffer();
             wasm.exports.fetch_callback(params_id);
         }))
             .catch((err) => {
@@ -740,7 +740,7 @@ class Fetch {
             new_params.push_bool(false); //ok
             new_params.push_u32(0); //http code
             new_params.push_string(responseMessage); //body
-            let params_id = new_params.freeze();
+            let params_id = new_params.saveToBuffer();
             wasm.exports.fetch_callback(params_id);
         });
     };
@@ -751,8 +751,8 @@ class HashRouter {
         window.addEventListener("hashchange", () => {
             const params = getWasm().newList();
             params.push_string(this.get());
-            const listId = params.freeze();
-            getWasm().exports.hashrouter_hashchange_callback(listId);
+            const ptr = params.saveToBuffer();
+            getWasm().exports.hashrouter_hashchange_callback(ptr);
         }, false);
     }
     push = (new_hash) => {
@@ -793,90 +793,145 @@ class Interval {
 }
 
 ///https://javascript.info/arraybuffer-binary-arrays#dataview
+const decoder = new TextDecoder("utf-8");
+const encoder = new TextEncoder();
 class BufferCursor {
-    dataView;
     getUint8Memory;
+    ptr;
+    size;
+    dataView;
     pointer = 0;
-    constructor(dataView, getUint8Memory) {
-        this.dataView = dataView;
+    constructor(getUint8Memory, ptr, size) {
         this.getUint8Memory = getUint8Memory;
+        this.ptr = ptr;
+        this.size = size;
+        this.getUint8Memory()[3] = 56;
+        this.dataView = new DataView(this.getUint8Memory().buffer, this.ptr, this.size);
     }
     getByte() {
         const value = this.dataView.getUint8(this.pointer);
         this.pointer += 1;
         return value;
     }
+    setByte(byte) {
+        this.dataView.setUint8(this.pointer, byte);
+        this.pointer += 1;
+    }
     getU16() {
         const value = this.dataView.getUint16(this.pointer);
         this.pointer += 2;
         return value;
+    }
+    setU16(value) {
+        this.dataView.setUint16(this.pointer, value);
+        this.pointer += 2;
     }
     getU32() {
         const value = this.dataView.getUint32(this.pointer);
         this.pointer += 4;
         return value;
     }
+    setU32(value) {
+        this.dataView.setUint32(this.pointer, value);
+        this.pointer += 4;
+    }
     getI32() {
         const value = this.dataView.getInt32(this.pointer);
         this.pointer += 4;
         return value;
+    }
+    setI32(value) {
+        this.dataView.setInt32(this.pointer, value);
+        this.pointer += 4;
     }
     getU64() {
         const value = this.dataView.getBigUint64(this.pointer);
         this.pointer += 8;
         return value;
     }
+    setU64(value) {
+        this.dataView.setBigUint64(this.pointer, value);
+        this.pointer += 8;
+    }
     getI64() {
         const value = this.dataView.getBigInt64(this.pointer);
         this.pointer += 8;
         return value;
     }
-    getString() {
-        const ptr = this.getU32();
-        const size = this.getU32();
-        const m = this.getUint8Memory().subarray(ptr, ptr + size);
-        return decoder.decode(m);
+    setI64(value) {
+        this.dataView.setBigInt64(this.pointer, value);
+        this.pointer += 8;
     }
     getBuffer() {
-        const ptr = this.getU32();
         const size = this.getU32();
-        return this.getUint8Memory().subarray(ptr, ptr + size);
+        const result = this
+            .getUint8Memory()
+            .subarray(this.ptr + this.pointer, this.ptr + this.pointer + size);
+        this.pointer += size;
+        return result;
+    }
+    setBuffer(buffer) {
+        const size = buffer.length;
+        this.setU32(size);
+        const subbugger = this
+            .getUint8Memory()
+            .subarray(this.ptr + this.pointer, this.ptr + this.pointer + size);
+        subbugger.set(buffer);
+        this.pointer += size;
+    }
+    getString() {
+        return decoder.decode(this.getBuffer());
+    }
+    setString(value) {
+        const buffer = encoder.encode(value);
+        this.setBuffer(buffer);
     }
 }
-const decoder = new TextDecoder("utf-8");
 const argumentsDecodeItem = (cursor) => {
     const typeParam = cursor.getByte();
     if (typeParam === 1) {
-        return '';
+        return {
+            type: 'u32',
+            value: cursor.getU32()
+        };
     }
-    if (typeParam === 2 || typeParam === 3 || typeParam === 4) {
-        return cursor.getString();
+    if (typeParam === 2) {
+        return {
+            type: 'u32',
+            value: cursor.getI32()
+        };
+    }
+    if (typeParam === 3) {
+        return {
+            type: 'u64',
+            value: cursor.getU64()
+        };
+    }
+    if (typeParam === 4) {
+        return {
+            type: 'i64',
+            value: cursor.getI64()
+        };
     }
     if (typeParam === 5) {
-        return cursor.getU32();
-    }
-    if (typeParam === 6) {
-        return cursor.getI32();
-    }
-    if (typeParam === 7) {
-        return cursor.getU64();
-    }
-    if (typeParam === 8) {
-        return cursor.getI64();
-    }
-    if (typeParam === 9) {
         return true;
     }
-    if (typeParam === 10) {
+    if (typeParam === 6) {
         return false;
     }
-    if (typeParam === 11) {
+    if (typeParam === 7) {
         return null;
     }
-    if (typeParam === 12) {
+    if (typeParam === 8) {
         return undefined;
     }
-    if (typeParam === 13) {
+    if (typeParam === 9) {
+        return cursor.getBuffer();
+    }
+    if (typeParam === 10) {
+        return cursor.getString();
+    }
+    if (typeParam === 11) {
         const out = [];
         const listSize = cursor.getU16();
         for (let i = 0; i < listSize; i++) {
@@ -884,16 +939,12 @@ const argumentsDecodeItem = (cursor) => {
         }
         return out;
     }
-    if (typeParam === 14) {
-        return cursor.getBuffer();
-    }
     console.error('typeParam', typeParam);
     throw Error('Nieprawidłowe odgałęzienie');
 };
-const argumentsDecode = (getUint8Memory, ptr) => {
+const argumentsDecode = (getUint8Memory, ptr, size) => {
     try {
-        const view = new DataView(getUint8Memory().buffer, ptr);
-        const cursor = new BufferCursor(view, getUint8Memory);
+        const cursor = new BufferCursor(getUint8Memory, ptr, size);
         return argumentsDecodeItem(cursor);
     }
     catch (err) {
@@ -910,73 +961,172 @@ var Guard;
         return value === null || typeof value === 'string';
     };
     Guard.isNumber = (value) => {
-        return typeof value === 'number';
+        if (typeof value === 'object' && value !== null && 'type' in value) {
+            return value.type === 'i32' || value.type === 'u32';
+        }
+        return false;
     };
     Guard.isBigInt = (value) => {
-        return typeof value === 'bigint';
+        if (typeof value === 'object' && value !== null && 'type' in value) {
+            return value.type === 'i64' || value.type === 'u64';
+        }
+        return false;
     };
 })(Guard || (Guard = {}));
+const assertNever = (_value) => {
+    throw Error("assert never");
+};
+const getSize = (value) => {
+    if (value === true ||
+        value === false ||
+        value === null ||
+        value === undefined) {
+        return 1;
+    }
+    if (Guard.isString(value)) {
+        return 1 + 4 + new TextEncoder().encode(value).length;
+    }
+    if (Array.isArray(value)) {
+        let sum = 1 + 2;
+        for (const item of value) {
+            sum += getSize(item);
+        }
+        return sum;
+    }
+    if (value instanceof Uint8Array) {
+        return 1 + 4 + value.length;
+    }
+    if (value.type === 'i32' || value.type === 'u32') {
+        return 5; //1 + 4
+    }
+    if (value.type === 'i64' || value.type === 'u64') {
+        return 9; //1 + 8
+    }
+    return assertNever();
+};
+const saveToBufferItem = (value, cursor) => {
+    if (value === true) {
+        cursor.setByte(5);
+        return;
+    }
+    if (value === false) {
+        cursor.setByte(6);
+        return;
+    }
+    if (value === null) {
+        cursor.setByte(7);
+        return;
+    }
+    if (value === undefined) {
+        cursor.setByte(8);
+        return;
+    }
+    if (value instanceof Uint8Array) {
+        cursor.setByte(9);
+        cursor.setBuffer(value);
+        return;
+    }
+    if (Guard.isString(value)) {
+        cursor.setByte(10);
+        cursor.setString(value);
+        return;
+    }
+    if (Array.isArray(value)) {
+        cursor.setByte(11);
+        cursor.setU16(value.length);
+        for (const item of value) {
+            saveToBufferItem(item, cursor);
+        }
+        return;
+    }
+    if (value.type === 'u32') {
+        cursor.setByte(1);
+        cursor.setU32(value.value);
+        return;
+    }
+    if (value.type === 'i32') {
+        cursor.setByte(2);
+        cursor.setI32(value.value);
+        return;
+    }
+    if (value.type === 'u64') {
+        cursor.setByte(3);
+        cursor.setU64(value.value);
+        return;
+    }
+    if (value.type === 'i64') {
+        cursor.setByte(4);
+        cursor.setI64(value.value);
+        return;
+    }
+    return assertNever();
+};
+const saveToBuffer = (getUint8Memory, alloc, value) => {
+    const size = getSize(value);
+    const ptr = alloc(size);
+    const cursor = new BufferCursor(getUint8Memory, ptr, size);
+    saveToBufferItem(value, cursor);
+    return ptr;
+};
 class ParamListBuilder {
     getUint8Memory;
-    exportsModule;
-    listId;
-    constructor(getUint8Memory, exportsModule) {
+    alloc;
+    params;
+    constructor(getUint8Memory, alloc) {
         this.getUint8Memory = getUint8Memory;
-        this.exportsModule = exportsModule;
-        this.listId = exportsModule.arguments_new_list();
-    }
-    debug() {
-        this.exportsModule.arguments_debug(this.listId);
+        this.alloc = alloc;
+        this.params = [];
     }
     push_string(value) {
-        if (value.length === 0) {
-            this.exportsModule.arguments_push_string_empty(this.listId);
-        }
-        else {
-            const encoder = new TextEncoder();
-            const buf = encoder.encode(value);
-            let ptr = this.exportsModule.arguments_push_string_alloc(this.listId, buf.length);
-            this.getUint8Memory().subarray(ptr, ptr + buf.length).set(buf);
-        }
+        this.params.push(value);
     }
     push_buffer(buf) {
-        const ptr = this.exportsModule.arguments_push_buffer_alloc(this.listId, buf.length);
-        this.getUint8Memory().subarray(ptr, ptr + buf.length).set(buf);
+        this.params.push(buf);
     }
     push_u32(value) {
-        this.exportsModule.arguments_push_u32(this.listId, value);
+        this.params.push({
+            type: 'u32',
+            value
+        });
     }
     push_i32(value) {
-        this.exportsModule.arguments_push_i32(this.listId, value);
+        this.params.push({
+            type: 'i32',
+            value
+        });
     }
     push_u64(value) {
-        this.exportsModule.arguments_push_u64(this.listId, value);
+        this.params.push({
+            type: 'u64',
+            value
+        });
     }
     push_i64(value) {
-        this.exportsModule.arguments_push_i64(this.listId, value);
+        this.params.push({
+            type: 'i64',
+            value
+        });
     }
     push_null() {
-        this.exportsModule.arguments_push_null(this.listId);
+        this.params.push(null);
     }
     push_bool(value) {
-        if (value) {
-            this.exportsModule.arguments_push_true(this.listId);
-        }
-        else {
-            this.exportsModule.arguments_push_false(this.listId);
-        }
+        this.params.push(value);
     }
     push_list(build) {
-        const sub_params = new ParamListBuilder(this.getUint8Memory, this.exportsModule);
+        const sub_params = new ParamListBuilder(this.getUint8Memory, this.alloc);
         build(sub_params);
-        this.exportsModule.arguments_push_sublist(this.listId, sub_params.listId);
+        this.params.push(sub_params.params);
     }
-    freeze() {
-        this.exportsModule.arguments_freeze(this.listId);
-        return this.listId;
+    saveToBuffer() {
+        return saveToBuffer(this.getUint8Memory, this.alloc, this.params);
+    }
+    debug() {
+        console.info('debug budowania listy', this.params);
     }
 }
 
+// import { argumentsDecode, ListItemType } from "./arguments";
 const fetchModule = async (wasmBinPath, imports) => {
     if (typeof WebAssembly.instantiateStreaming === 'function') {
         console.info('fetchModule by WebAssembly.instantiateStreaming');
@@ -1011,8 +1161,8 @@ const wasmInit = async (wasmBinPath, imports) => {
     };
     //@ts-expect-error
     const exports = module_instance.instance.exports;
-    const decodeArguments = (ptr) => argumentsDecode(getUint8Memory, ptr);
-    const newList = () => new ParamListBuilder(getUint8Memory, exports);
+    const decodeArguments = (ptr, size) => argumentsDecode(getUint8Memory, ptr, size);
+    const newList = () => new ParamListBuilder(getUint8Memory, exports.alloc);
     return {
         exports,
         decodeArguments,
@@ -1037,7 +1187,7 @@ const initCookie = (getWasm, cookies) => (method, args) => {
             const value = cookies.get(name);
             const params = getWasm().newList();
             params.push_string(value);
-            return params.freeze();
+            return params.saveToBuffer();
         }
         console.error('js-call -> module -> cookie -> get: incorrect parameters', args);
         return 0;
@@ -1048,7 +1198,7 @@ const initCookie = (getWasm, cookies) => (method, args) => {
             Guard.isString(value) &&
             Guard.isBigInt(expires_in) &&
             rest.length === 0) {
-            cookies.set(name, value, expires_in);
+            cookies.set(name, value, expires_in.value);
             return 0;
         }
         console.error('js-call -> module -> cookie -> set: incorrect parameters', args);
@@ -1081,7 +1231,7 @@ const initFetch = (fetch) => (method, args) => {
             Guard.isString(headers) &&
             Guard.isStringOrNull(body) &&
             rest.length === 0) {
-            fetch.fetch_send_request(requestId, httpMethod, url, headers, body);
+            fetch.fetch_send_request(requestId.value, httpMethod, url, headers, body);
             return 0;
         }
         console.error('js-call -> module -> fetch -> send: incorrect parameters', args);
@@ -1105,7 +1255,7 @@ const initHashrouter = (getWasm, hashRouter) => (method, args) => {
             const hash = hashRouter.get();
             const params = getWasm().newList();
             params.push_string(hash);
-            return params.freeze();
+            return params.saveToBuffer();
         }
         console.error('js-call -> module -> hashrouter -> get: incorrect parameters', args);
         return 0;
@@ -1120,7 +1270,7 @@ const initWebsocketModule = (websocket) => (method, args) => {
         if (Guard.isString(host) &&
             Guard.isNumber(callback_id) &&
             rest.length === 0) {
-            websocket.websocket_register_callback(host, callback_id);
+            websocket.websocket_register_callback(host, callback_id.value);
             return 0;
         }
         console.error('js-call -> module -> websocket -> register_callback: incorrect parameters', args);
@@ -1130,7 +1280,7 @@ const initWebsocketModule = (websocket) => (method, args) => {
         const [callback_id, ...rest] = args;
         if (Guard.isNumber(callback_id) &&
             rest.length === 0) {
-            websocket.websocket_unregister_callback(callback_id);
+            websocket.websocket_unregister_callback(callback_id.value);
             return 0;
         }
         console.error('js-call -> module -> websocket -> unregister_callback: incorrect parameters', args);
@@ -1141,7 +1291,7 @@ const initWebsocketModule = (websocket) => (method, args) => {
         if (Guard.isNumber(callback_id) &&
             Guard.isString(message) &&
             rest.length === 0) {
-            websocket.websocket_send_message(callback_id, message);
+            websocket.websocket_send_message(callback_id.value, message);
             return 0;
         }
         console.error('js-call -> module -> websocket -> send_message: incorrect parameters', args);
@@ -1160,9 +1310,9 @@ const js_call = (decodeArguments, getWasm, fetch, cookies, dom, hashRouter, webs
         fetch: initFetch(fetch),
         dom: initDom(dom),
     };
-    return (ptr) => {
-        const args = decodeArguments(ptr);
-        // console.info('js_call', arg);        //for debug
+    return (ptr, size) => {
+        const args = decodeArguments(ptr, size);
+        // console.info('js_call', args);        //for debug
         if (Array.isArray(args)) {
             const [modulePrefix, moduleName, newFunction, ...restNew] = args;
             if (modulePrefix === 'module' &&
@@ -1213,7 +1363,7 @@ class WasmModule {
                     const message = decoder.decode(m);
                     console.error('PANIC', message);
                 },
-                js_call: js_call((ptr) => getWasm().decodeArguments(ptr), getWasm, fetchModule, cookies, dom, hashRouter, websocket),
+                js_call: js_call((ptr, size) => getWasm().decodeArguments(ptr, size), getWasm, fetchModule, cookies, dom, hashRouter, websocket),
                 interval_set: interval.interval_set,
                 interval_clear: interval.interval_clear,
                 timeout_set: interval.timeout_set,

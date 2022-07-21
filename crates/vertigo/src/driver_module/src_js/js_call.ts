@@ -14,7 +14,7 @@ import { ModuleControllerType } from "./wasm_init";
 import { ExportType } from "./wasm_module";
 
 export const js_call = (
-    decodeArguments: (ptr: number) => ListItemType,
+    decodeArguments: (ptr: number, size: number) => ListItemType,
     getWasm: () => ModuleControllerType<ExportType>,
     fetch: Fetch,
     cookies: Cookies,
@@ -32,10 +32,10 @@ export const js_call = (
         dom: initDom(dom),
     }
 
-    return (ptr: number): number => {
-        const args = decodeArguments(ptr);
+    return (ptr: number, size: number): number => {
+        const args = decodeArguments(ptr, size);
 
-        // console.info('js_call', arg);        //for debug
+        // console.info('js_call', args);        //for debug
 
         if (Array.isArray(args)) {
             const [modulePrefix, moduleName, newFunction, ...restNew] = args;

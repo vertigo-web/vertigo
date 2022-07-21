@@ -2,8 +2,8 @@ use std::{
     rc::Rc,
 };
 use crate::{
-    dev::{EventCallback, DomId},
-    Dependencies, KeyDownEvent, DropFileEvent,
+    DomId,
+    KeyDownEvent, DropFileEvent,
 };
 use crate::struct_mut::VecMut;
 
@@ -16,33 +16,25 @@ use super::{
 };
 
 
-struct DriverDomInner {
+pub struct DriverDom {
     api: Rc<ApiImport>,
-    data: Rc<DriverData>,
+    pub(crate) data: DriverData,
     commands: VecMut<DriverDomCommand>,
     current_visited: VisitedNodeManager,
 }
 
-#[derive(Clone)]
-pub struct DriverBrowserDom {
-    inner: Rc<DriverDomInner>,
-}
-
-impl DriverBrowserDom {
+impl DriverDom {
     pub fn new(
-        dependencies: &Dependencies,
         api: &Rc<ApiImport>,
-    ) -> DriverBrowserDom {
+    ) -> DriverDom {
         let data = DriverData::new();
-        let current_visited = VisitedNodeManager::new(&data, dependencies);
+        let current_visited = VisitedNodeManager::new();
 
-        let driver_browser = DriverBrowserDom {
-            inner: Rc::new(DriverDomInner {
-                api: api.clone(),
-                data,
-                commands: VecMut::new(),
-                current_visited,
-            })
+        let driver_browser = DriverDom {
+            api: api.clone(),
+            data,
+            commands: VecMut::new(),
+            current_visited,
         };
 
         let root_id = DomId::root();
@@ -50,24 +42,11 @@ impl DriverBrowserDom {
         driver_browser.create_node(root_id, "div");
         driver_browser.mount_node(root_id);
 
-        dependencies.set_hook(
-            Box::new(|| {}),
-            {
-                let driver_browser = driver_browser.clone();
-                Box::new(move || {
-                    driver_browser.flush_dom_changes();
-                })
-            }
-        );
-
         driver_browser
     }
-}
-
-impl DriverBrowserDom {
 
     pub fn export_dom_mousedown(&self, dom_id: u64) {
-        let event_to_run = self.inner.data.find_event_click(DomId::from_u64(dom_id));
+        let event_to_run = self.data.find_event_click(DomId::from_u64(dom_id));
 
         if let Some(callback) = event_to_run {
             callback();
@@ -77,11 +56,11 @@ impl DriverBrowserDom {
     pub fn export_dom_mouseover(&self, dom_id: Option<u64>) {
         match dom_id {
             None => {
-                self.inner.current_visited.clear();
+                self.current_visited.clear();
             },
             Some(dom_id) => {
-                let nodes = self.inner.data.find_all_nodes(DomId::from_u64(dom_id));
-                self.inner.current_visited.push_new_nodes(nodes);
+                let nodes = self.data.find_all_nodes(DomId::from_u64(dom_id));
+                self.current_visited.push_new_nodes(&self.data, nodes);
             }
         }
     }
@@ -96,7 +75,7 @@ impl DriverBrowserDom {
             meta_key,
         };
 
-        for callback in self.inner.data.find_hook_keydown() {
+        for callback in self.data.find_hook_keydown() {
             let stop_propagate = callback(event.clone());
 
             if stop_propagate {
@@ -109,14 +88,14 @@ impl DriverBrowserDom {
             Some(id) => DomId::from_u64(id),
         };
 
-        match self.inner.data.find_event_keydown(id) {
+        match self.data.find_event_keydown(id) {
             Some(event_to_run) => event_to_run(event),
             None => false,
         }
     }
 
     pub fn export_dom_oninput(&self, dom_id: u64, text: String) {
-        let event_to_run = self.inner.data.find_event_on_input(DomId::from_u64(dom_id));
+        let event_to_run = self.data.find_event_on_input(DomId::from_u64(dom_id));
 
         if let Some(event_to_run) = event_to_run {
             event_to_run(text);
@@ -124,7 +103,7 @@ impl DriverBrowserDom {
     }
 
     pub fn export_dom_ondropfile(&self, dom_id: u64, event: DropFileEvent) {
-        let event_to_run = self.inner.data.find_event_on_dropfile(DomId::from_u64(dom_id));
+        let event_to_run = self.data.find_event_on_dropfile(DomId::from_u64(dom_id));
 
         if let Some(event_to_run) = event_to_run {
             event_to_run(event);
@@ -132,15 +111,15 @@ impl DriverBrowserDom {
     }
 
     fn mount_node(&self, id: DomId) {
-        self.inner.commands.push(DriverDomCommand::MountNode { id });
+        self.commands.push(DriverDomCommand::MountNode { id });
     }
 
     fn add_command(&self, command: DriverDomCommand) {
-        self.inner.commands.push(command);
+        self.commands.push(command);
     }
 
     pub fn create_node(&self, id: DomId, name: &'static str) {
-        self.inner.data.create_node(id);
+        self.data.create_node(id);
         self.add_command(DriverDomCommand::CreateNode { id, name });
     }
 
@@ -167,17 +146,17 @@ impl DriverBrowserDom {
     }
 
     pub fn remove_text(&self, id: DomId) {
-        self.inner.data.remove_text(id);
+        self.data.remove_text(id);
         self.add_command(DriverDomCommand::RemoveText { id });
     }
 
     pub fn remove_node(&self, id: DomId) {
-        self.inner.data.remove_node(id);
+        self.data.remove_node(id);
         self.add_command(DriverDomCommand::RemoveNode { id });
     }
 
     pub fn insert_before(&self, parent: DomId, child: DomId, ref_id: Option<DomId>) {
-        self.inner.data.set_parent(child, parent);
+        self.data.set_parent(child, parent);
         self.add_command(DriverDomCommand::InsertBefore { parent, child, ref_id });
     }
 
@@ -196,12 +175,12 @@ impl DriverBrowserDom {
     }
 
     pub fn remove_comment(&self, id: DomId) {
-        self.inner.data.remove_text(id);
+        self.data.remove_text(id);
         self.add_command(DriverDomCommand::RemoveComment { id });
     }
     
     pub fn flush_dom_changes(&self) {
-        let state = self.inner.commands.take();
+        let state = self.commands.take();
 
         if !state.is_empty() {
             let mut out = Vec::<String>::new();
@@ -211,11 +190,7 @@ impl DriverBrowserDom {
             }
 
             let command_str = format!("[{}]", out.join(","));
-            self.inner.api.dom_bulk_update(command_str.as_str());
+            self.api.dom_bulk_update(command_str.as_str());
         }
-    }
-
-    pub fn set_event(&self, id: DomId, callback: EventCallback) {
-        self.inner.data.set_event(id, callback);
     }
 }

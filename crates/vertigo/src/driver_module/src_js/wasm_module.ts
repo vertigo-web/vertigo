@@ -14,7 +14,7 @@ import { ListItemType } from './arguments';
 
 export type ImportType = {
     //call from rust
-    js_call: (params: number) => number,
+    js_call: (ptr: number, size: number) => number,             //return pointer to response
     panic_message: (ptr: number, length: number) => void,
 
     interval_set: (duration: number, callback_id: number) => number,
@@ -26,20 +26,7 @@ export type ImportType = {
 }
 
 export type ExportType = {
-    arguments_debug: (listId: number) => void,                                  //fn(u32)
-    arguments_new_list: () => number,                                           //fn() -> u32
-    arguments_push_string_empty: (listId: number) => void,                      //fn(u32) -> u32
-    arguments_push_string_alloc: (listId: number, size: number) => number,      //fn(u32, u32) -> u32
-    arguments_push_buffer_alloc: (listId: number, size: number) => number,      //fn(u32, u32) -> u32
-    arguments_push_u32: (listId: number, value: number) => void,                //fn(u32, u32)
-    arguments_push_i32: (listId: number, value: number) => void,                //fn(u32, i32)
-    arguments_push_u64: (listId: number, value: BigInt) => void,                //fn(u32, u64)
-    arguments_push_i64: (listId: number, value: BigInt) => void,                //fn(u32, i64)
-    arguments_push_true: (listId: number) => void,                              //fn(u32)
-    arguments_push_false: (listId: number) => void,                             //fn(u32)
-    arguments_push_null: (listId: number) => void,                              //fn(u32)
-    arguments_push_sublist: (paramsId: number, sub_params_id: number) => void,  //fn(u32, u32)
-    arguments_freeze: (listId: number) => void,                                  //fn(u32)
+    alloc: (size: number) => number,
 
     //call to rusta
     interval_run_callback: (callback_id: number) => void,
@@ -51,8 +38,8 @@ export type ExportType = {
     websocket_callback_message: (callback_id: number) => void;
     websocket_callback_close: (callback_id: number) => void;
 
-    dom_mousedown: (dom_id: BigInt) => void,
-    dom_mouseover: (dom_id: BigInt) => void;
+    dom_mousedown: (dom_id: bigint) => void,
+    dom_mouseover: (dom_id: bigint) => void;
     dom_keydown: (params_id: number) => number;       // 0 - false, >0 - true
     dom_oninput: (params_id: number) => void,
     dom_ondropfile: (params_id: number) => void,
@@ -101,7 +88,7 @@ export class WasmModule {
                     console.error('PANIC', message);
                 },
                 js_call: js_call(
-                    (ptr: number): ListItemType => getWasm().decodeArguments(ptr),
+                    (ptr: number, size: number): ListItemType => getWasm().decodeArguments(ptr, size),
                     getWasm,
                     fetchModule,
                     cookies,

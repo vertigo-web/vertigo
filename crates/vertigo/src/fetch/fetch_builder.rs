@@ -1,20 +1,20 @@
 use std::collections::HashMap;
 
 use crate::{
-    driver_module::driver_browser::{FetchMethod, FetchResult},
-    driver_module::{modules::fetch::DriverBrowserFetch},
+    driver_module::driver::{FetchMethod, FetchResult},
+    driver_module::{modules::fetch::DriverFetch},
 };
 
 /// Builder for simple requests.
 pub struct FetchBuilder {
-    driver_fetch: DriverBrowserFetch,
+    driver_fetch: DriverFetch,
     url: String,
     headers: Option<HashMap<String, String>>,
     body: Option<String>,
 }
 
 impl FetchBuilder {
-    pub fn new(driver_fetch: DriverBrowserFetch, url: String) -> FetchBuilder {
+    pub fn new(driver_fetch: DriverFetch, url: String) -> FetchBuilder {
         FetchBuilder {
             driver_fetch,
             url,

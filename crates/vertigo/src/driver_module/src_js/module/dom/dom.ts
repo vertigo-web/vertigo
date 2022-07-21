@@ -66,9 +66,9 @@ const assertNeverCommand = (data: never): never => {
 
 export class DriverDom {
     private getWasm: () => ModuleControllerType<ExportType>;
-    private readonly nodes: MapNodes<BigInt, Element | Comment>;
-    private readonly texts: MapNodes<BigInt, Text>;
-    private readonly all: Map<Element | Text | Comment, BigInt>;
+    private readonly nodes: MapNodes<bigint, Element | Comment>;
+    private readonly texts: MapNodes<bigint, Text>;
+    private readonly all: Map<Element | Text | Comment, bigint>;
 
     public constructor(getWasm: () => ModuleControllerType<ExportType>) {
         this.getWasm = getWasm;
@@ -128,8 +128,8 @@ export class DriverDom {
                 new_params.push_bool(event.ctrlKey);
                 new_params.push_bool(event.shiftKey);
                 new_params.push_bool(event.metaKey);
-                const new_params_id = new_params.freeze();
-
+                const new_params_id = new_params.saveToBuffer();
+    
                 const stopPropagate = this.getWasm().exports.dom_keydown(new_params_id);
 
                 if (stopPropagate > 0) {
@@ -153,7 +153,7 @@ export class DriverDom {
                         const new_params = this.getWasm().newList();
                         new_params.push_u64(id);
                         new_params.push_string(target.value);
-                        const new_params_id = new_params.freeze();
+                        const new_params_id = new_params.saveToBuffer();
 
                         this.getWasm().exports.dom_oninput(new_params_id);
                         return;
@@ -225,7 +225,7 @@ export class DriverDom {
                             }
                         });
 
-                        this.getWasm().exports.dom_ondropfile(params.freeze());
+                        this.getWasm().exports.dom_ondropfile(params.saveToBuffer());
                     });
                 } else {
                     console.error('No files to send');
@@ -234,7 +234,7 @@ export class DriverDom {
         }, false);
     }
 
-    private getIdByTarget(target: EventTarget | null): BigInt | null {
+    private getIdByTarget(target: EventTarget | null): bigint | null {
         if (target instanceof Element) {
             const id = this.all.get(target);
 
@@ -244,19 +244,19 @@ export class DriverDom {
         return null;
     }
 
-    private mount_node(root_id: BigInt) {
+    private mount_node(root_id: bigint) {
         this.nodes.get("append_to_body", root_id, (root) => {
             document.body.appendChild(root);
         });
     }
 
-    private create_node(id: BigInt, name: string) {
+    private create_node(id: bigint, name: string) {
         const node = createElement(name);
         this.nodes.set(id, node);
         this.all.set(node, id);
     }
 
-    private set_attribute(id: BigInt, name: string, value: string) {
+    private set_attribute(id: bigint, name: string, value: string) {
         this.nodes.get("set_attribute", id, (node) => {
             if (node instanceof Element) {
                 node.setAttribute(name, value);
@@ -279,7 +279,7 @@ export class DriverDom {
         });
     }
 
-    private remove_node(id: BigInt) {
+    private remove_node(id: bigint) {
         this.nodes.delete("remove_node", id, (node) => {
             this.all.delete(node);
 
@@ -290,13 +290,13 @@ export class DriverDom {
         });
     }
 
-    private create_text(id: BigInt, value: string) {
+    private create_text(id: bigint, value: string) {
         const text = document.createTextNode(value);
         this.texts.set(id, text);
         this.all.set(text, id);
     }
 
-    private remove_text(id: BigInt) {
+    private remove_text(id: bigint) {
         this.texts.delete("remove_node", id, (text) => {
             this.all.delete(text);
 
@@ -307,13 +307,13 @@ export class DriverDom {
         });
     }
 
-    private update_text(id: BigInt, value: string) {
+    private update_text(id: bigint, value: string) {
         this.texts.get("set_attribute", id, (text) => {
             text.textContent = value;
         });
     }
 
-    private get_node(label: string, id: BigInt, callback: (node: Element | Comment | Text) => void) {
+    private get_node(label: string, id: bigint, callback: (node: Element | Comment | Text) => void) {
         const node = this.nodes.getItem(id);
         if (node !== undefined) {
             callback(node);
@@ -330,7 +330,7 @@ export class DriverDom {
         return;
     }
 
-    private insert_before(parent: BigInt, child: BigInt, ref_id: BigInt | null | undefined) {
+    private insert_before(parent: bigint, child: bigint, ref_id: bigint | null | undefined) {
         this.nodes.get("insert_before", parent, (parentNode) => {
             this.get_node("insert_before child", child, (childNode) => {
 

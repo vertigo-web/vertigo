@@ -1,9 +1,33 @@
 use std::hash::Hash;
 use std::rc::Rc;
-use crate::{dev::{DomId, EventCallback}, KeyDownEvent, DropFileEvent};
+use crate::{DomId, KeyDownEvent, DropFileEvent};
 use std::fmt::Display;
 use crate::struct_mut::HashMapMut;
-use super::element_wrapper::DomElement;
+
+pub struct DomElement {
+    pub on_click: Option<Rc<dyn Fn()>>,
+    pub on_input: Option<Rc<dyn Fn(String)>>,
+    pub on_mouse_enter: Option<Rc<dyn Fn()>>,
+    pub on_mouse_leave: Option<Rc<dyn Fn()>>,
+    pub on_keydown: Option<Rc<dyn Fn(KeyDownEvent) -> bool>>,
+    pub hook_keydown: Option<Rc<dyn Fn(KeyDownEvent) -> bool>>,
+    pub on_dropfile: Option<Rc<dyn Fn(DropFileEvent)>>,
+}
+
+impl DomElement {
+    fn new() -> DomElement {
+        DomElement {
+            on_click: None,
+            on_input: None,
+            on_mouse_enter: None,
+            on_mouse_leave: None,
+            on_keydown: None,
+            hook_keydown: None,
+            on_dropfile: None,
+        }
+    }
+}
+
 
 struct HashMapRcWithLabel<K: Eq + Hash, V> {
     label: &'static str,
@@ -58,11 +82,11 @@ pub struct DriverData {
 }
 
 impl DriverData {
-    pub fn new() -> Rc<DriverData> {
-        Rc::new(DriverData {
+    pub fn new() -> DriverData {
+        DriverData {
             elements: HashMapRcWithLabel::new("DriverData elements"),
             child_parent: HashMapRcWithLabel::new("DriverData child_parent"),
-        })
+        }
     }
 
     pub fn create_node(&self, id: DomId) {
@@ -82,32 +106,8 @@ impl DriverData {
         self.child_parent.insert(child, parent);
     }
 
-    pub fn set_event(&self, id: DomId, callback: EventCallback) {
-        self.elements.must_change(&id, move |node|
-            match callback {
-                EventCallback::OnClick { callback } => {
-                    node.on_click = callback;
-                }
-                EventCallback::OnInput { callback } => {
-                    node.on_input = callback;
-                }
-                EventCallback::OnMouseEnter { callback } => {
-                    node.on_mouse_enter = callback;
-                }
-                EventCallback::OnMouseLeave { callback } => {
-                    node.on_mouse_leave = callback;
-                }
-                EventCallback::OnKeyDown { callback } => {
-                    node.on_keydown = callback;
-                },
-                EventCallback::HookKeyDown { callback } => {
-                    node.hook_keydown = callback;
-                },
-                EventCallback::OnDropFile { callback } => {
-                    node.on_dropfile = callback;
-                }
-            }
-        );
+    pub(crate) fn change<F: FnOnce(&mut DomElement)> (&self, id: DomId, change: F) {
+        self.elements.must_change(&id, change);
     }
 
     pub fn find_all_nodes(&self, id: DomId) -> Vec<DomId> {

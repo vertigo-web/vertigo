@@ -1,6 +1,6 @@
 use std::rc::Rc;
 use crate::{
-    dev::WebsocketMessageDriver,
+    WebsocketMessageDriver,
     DropResource,
 };
 

@@ -1,5 +1,6 @@
 use std::{collections::HashMap, rc::Rc};
-use crate::{dev::DomId, Dependencies};
+use crate::transaction;
+use crate::DomId;
 
 use crate::struct_mut::HashMapMut;
 
@@ -31,35 +32,29 @@ impl Drop for VisitedNode {
 //struktura do zarządzania ostnio odwiedzonymi węzłami
 
 pub(crate) struct VisitedNodeManager {
-    driver_data: Rc<DriverData>,
-    dependencies: Dependencies,
     nodes: HashMapMut<DomId, VisitedNode>,
 }
 
 impl VisitedNodeManager {
-    pub(crate) fn new(driver_data: &Rc<DriverData>, dependencies: &Dependencies) -> VisitedNodeManager {
-        let nodes = HashMapMut::new();
-
+    pub(crate) fn new() -> VisitedNodeManager {
         VisitedNodeManager {
-            driver_data: driver_data.clone(),
-            dependencies: dependencies.clone(),
-            nodes,
+            nodes: HashMapMut::new()
         }
     }
 
     pub fn clear(&self) {
-        let VisitedNodeManager {dependencies, nodes, ..} = self;
+        let VisitedNodeManager {nodes, ..} = self;
 
-        dependencies.transaction(move |_| {
+        transaction(move |_| {
             let new_state = HashMap::<DomId, VisitedNode>::new();
             let _ = nodes.mem_replace(new_state);
         });
     }
 
-    pub fn push_new_nodes(&self, new_nodes: Vec<DomId>) {
-        let VisitedNodeManager {driver_data, dependencies, nodes} = self;
+    pub fn push_new_nodes(&self, driver_data: &DriverData, new_nodes: Vec<DomId>) {
+        let VisitedNodeManager {nodes} = self;
 
-        dependencies.transaction(move |_| {
+        transaction(move |_| {
             let mut new_state = HashMap::<DomId, VisitedNode>::new();
 
             for node_id in new_nodes {

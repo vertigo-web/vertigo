@@ -22,7 +22,7 @@ export const initHashrouter = (getWasm: () => ModuleControllerType<ExportType>, 
 
             const params = getWasm().newList();
             params.push_string(hash);
-            return params.freeze();
+            return params.saveToBuffer();
         }
 
         console.error('js-call -> module -> hashrouter -> get: incorrect parameters', args);

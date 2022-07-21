@@ -12,7 +12,7 @@ export const initCookie = (getWasm: () => ModuleControllerType<ExportType>, cook
 
             const params = getWasm().newList();
             params.push_string(value);
-            return params.freeze();
+            return params.saveToBuffer();
         }
 
         console.error('js-call -> module -> cookie -> get: incorrect parameters', args);
@@ -28,7 +28,7 @@ export const initCookie = (getWasm: () => ModuleControllerType<ExportType>, cook
             Guard.isBigInt(expires_in) &&
             rest.length === 0
         ) {
-            cookies.set(name, value, expires_in);
+            cookies.set(name, value, expires_in.value);
             return 0;
         }
 

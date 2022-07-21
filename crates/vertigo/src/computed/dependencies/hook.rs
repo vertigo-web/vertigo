@@ -25,15 +25,13 @@ impl Hooks {
 
     pub fn fire_start(&self) {
         self.list.for_each(|hook| {
-            let before_start = &hook.before_start;
-            before_start();
+            (hook.before_start)();
         });
     }
 
     pub fn fire_end(&self) {
         self.list.for_each(|hook| {
-            let after_end = &hook.after_end;
-            after_end();
+            (hook.after_end)();
         });
     }
 }

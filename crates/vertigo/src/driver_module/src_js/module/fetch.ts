@@ -32,7 +32,7 @@ export class Fetch {
                         new_params.push_bool(true);                 //ok
                         new_params.push_u32(response.status);       //http code
                         new_params.push_string(responseText);       //body
-                        let params_id = new_params.freeze();
+                        let params_id = new_params.saveToBuffer();
 
                         wasm.exports.fetch_callback(params_id);
                     })
@@ -45,7 +45,7 @@ export class Fetch {
                         new_params.push_bool(false);                //ok
                         new_params.push_u32(response.status);       //http code
                         new_params.push_string(responseMessage);    //body
-                        let params_id = new_params.freeze();
+                        let params_id = new_params.saveToBuffer();
 
                         wasm.exports.fetch_callback(params_id);
                     })
@@ -59,7 +59,7 @@ export class Fetch {
                 new_params.push_bool(false);                        //ok
                 new_params.push_u32(0);                             //http code
                 new_params.push_string(responseMessage);            //body
-                let params_id = new_params.freeze();
+                let params_id = new_params.saveToBuffer();
 
                 wasm.exports.fetch_callback(params_id);
             })

@@ -13,7 +13,7 @@ export const initFetch = (fetch: Fetch) => (method: string, args: Array<ListItem
             Guard.isStringOrNull(body) &&
             rest.length === 0
         ) {
-            fetch.fetch_send_request(requestId, httpMethod, url, headers, body);
+            fetch.fetch_send_request(requestId.value, httpMethod, url, headers, body);
             return 0;
         }
 

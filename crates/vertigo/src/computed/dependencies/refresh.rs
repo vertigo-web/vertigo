@@ -1,15 +1,13 @@
-use std::rc::Rc;
 use crate::{computed::{graph_id::GraphId, graph_value::GraphValueRefresh}, struct_mut::BTreeMapMut};
 
-#[derive(Clone)]
 pub struct Refresh {
-    refresh: Rc<BTreeMapMut<GraphId, GraphValueRefresh>>, // Reference to GraphValue for refreshing if necessary
+    refresh: BTreeMapMut<GraphId, GraphValueRefresh>, // Reference to GraphValue for refreshing if necessary
 }
 
 impl Refresh {
     pub fn new() -> Refresh {
         Refresh {
-            refresh: Rc::new(BTreeMapMut::new()),
+            refresh: BTreeMapMut::new(),
         }
     }
 

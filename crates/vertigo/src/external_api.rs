@@ -24,7 +24,7 @@ mod api {
         #[link(wasm_import_module = "mod")]
         extern "C" {
             pub fn panic_message(ptr: u32, size: u32);
-            pub fn js_call(ptr: u32) -> u32;
+            pub fn js_call(ptr: u32, size: u32) -> u32;
 
             pub fn interval_set(duration: u32, callback_id: u32) -> u32;
             pub fn interval_clear(timer_id: u32);
@@ -44,9 +44,9 @@ mod api {
             }
         }
 
-        pub fn safe_js_call(params: u32) -> u32 {
+        pub fn safe_js_call(params: u32, size: u32) -> u32 {
             unsafe {
-                js_call(params)
+                js_call(params, size)
             }
         }
 
@@ -89,7 +89,7 @@ mod api {
             unimplemented!();
         }
 
-        pub fn safe_js_call(_params: u32) -> u32 {
+        pub fn safe_js_call(_params: u32, _size: u32) -> u32 {
             println!("safe js call");
             0
         }
