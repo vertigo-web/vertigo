@@ -1,6 +1,26 @@
 use crate::InstantType;
 
-use super::{arguments::param_builder::ParamListBuilder, arguments::{Arguments, params::ParamItem}};
+use super::{js_value::js_value_builder::JsValueBuilder, js_value::{Arguments, js_value_struct::JsValue}};
+
+enum ConsoleLogLevel {
+    Debug,
+    Info,
+    Log,
+    Warn,
+    Error
+}
+
+impl ConsoleLogLevel {
+    pub fn get_str(&self) -> &'static str {
+        match self {
+            Self::Debug => "debug",
+            Self::Info => "info",
+            Self::Log => "log",
+            Self::Warn => "warn",
+            Self::Error => "error",
+        }
+    }
+}
 
 #[derive(Clone)]
 pub struct PanicMessage {
@@ -31,6 +51,11 @@ pub struct ApiImport {
     pub timeout_clear: fn(timer_id: u32),
 
     pub instant_now: fn() -> u32,
+
+    pub dom_call: fn (ptr: u32, size: u32) -> u32,           //arg: dom-path, property, params: Vec<ParamItem>, return: ParamItem
+    pub dom_get: fn(pth: u32, size: u32) -> u32,             //arg: dom-path, property, return ParamItem
+    pub dom_set: fn(ptr: u32, size: u32),                    //arg: dom-path, property, value: ParamItem, return void
+
     pub arguments: Arguments,
 }
 
@@ -46,6 +71,11 @@ impl ApiImport {
         timeout_clear: fn(timer_id: u32),
 
         instant_now: fn() -> u32,
+
+        dom_call: fn (ptr: u32, size: u32) -> u32,
+        dom_get: fn(pth: u32, size: u32) -> u32,
+        dom_set: fn(ptr: u32, size: u32),
+    
     ) -> ApiImport {
         let panic_message = PanicMessage::new(panic_message);
 
@@ -58,63 +88,57 @@ impl ApiImport {
             timeout_clear,
 
             instant_now,
+
+            dom_call,
+            dom_get,
+            dom_set,
+
             arguments: Arguments::new(),
         }
     }
 
-    fn new_params(&self) -> ParamListBuilder {
-        ParamListBuilder::new()
+    fn new_params(&self) -> JsValueBuilder {
+        JsValueBuilder::new()
     }
 
     pub fn show_panic_message(&self, message: String) {
         self.panic_message.show(message);
     }
 
-    fn js_call(&self, params: ParamListBuilder) -> Option<ParamItem> {
+    fn js_call(&self, params: JsValueBuilder) -> Option<JsValue> {
         let params_memory = params.build();
         let (ptr, size) = params_memory.get_ptr_and_size();
 
         let result_ptr = (self.js_call)(ptr, size);
-        drop(params_memory);
-
-        if result_ptr == 0 {
-            return None;
-        }
-
         self.arguments.get_by_ptr(result_ptr)
     }
 
-    fn console_4(&self, kind: &'static str, arg1: &str, arg2: &str, arg3: &str, arg4: &str) {
-        let params = self.new_params()
-            .str("module")
-            .str("consoleLog")
-            .str(kind)
-            .string(arg1)
-            .string(arg2)
-            .string(arg3)
-            .string(arg4);
-
-        let _ = self.js_call(params);
+    fn console_4(&self, kind: ConsoleLogLevel, arg1: &str, arg2: &str, arg3: &str, arg4: &str) {
+        self.dom_call(
+            &["window", "console"],
+            kind.get_str(),
+            vec!(JsValue::str(arg1), JsValue::str(arg2), JsValue::str(arg3), JsValue::str(arg4))
+        );
     }
 
     pub fn console_debug_4(&self, arg1: &str, arg2: &str, arg3: &str, arg4: &str) {
-        self.console_4("debug", arg1, arg2, arg3, arg4)
+        self.console_4(ConsoleLogLevel::Debug, arg1, arg2, arg3, arg4)
     }
 
     pub fn console_log_4(&self, arg1: &str, arg2: &str, arg3: &str, arg4: &str) {
-        self.console_4("log", arg1, arg2, arg3, arg4)
+        self.console_4(ConsoleLogLevel::Log, arg1, arg2, arg3, arg4)
     }
 
     pub fn console_info_4(&self, arg1: &str, arg2: &str, arg3: &str, arg4: &str) {
-        self.console_4("info", arg1, arg2, arg3, arg4)
+        self.console_4(ConsoleLogLevel::Info, arg1, arg2, arg3, arg4)
     }
 
     pub fn console_warn_4(&self, arg1: &str, arg2: &str, arg3: &str, arg4: &str) {
-        self.console_4("warn", arg1, arg2, arg3, arg4)
+        self.console_4(ConsoleLogLevel::Warn, arg1, arg2, arg3, arg4)
     }
 
     pub fn console_error_4(&self, arg1: &str, arg2: &str, arg3: &str, arg4: &str) {
-        self.console_4("error", arg1, arg2, arg3, arg4)
+        self.console_4(ConsoleLogLevel::Error, arg1, arg2, arg3, arg4)
     }
 
     pub fn cookie_get(&self, cname: &str) -> String {
@@ -270,5 +294,68 @@ impl ApiImport {
 
         let _ = self.js_call(params);
     }
+
+    // pub dom_call: fn (ptr: u32, size: u32) -> u32,           //arg: dom-path, property, params: Vec<ParamItem>, return: ParamItem
+    // pub dom_get: fn(pth: u32, size: u32) -> u32,             //arg: dom-path, property, return ParamItem
+    // pub dom_set: fn(ptr: u32, size: u32),                    //arg: dom-path, property, value: ParamItem, return void
+
+    pub fn dom_call(&self, path: &[&'static str], property: &'static str, params: Vec<JsValue>) -> JsValue {
+        let params = self.new_params()
+            .list(move |mut list| {
+                for path_item in path {
+                    list.str_push(path_item);
+                }
+
+                list
+            })
+            .str(property)
+            .list_set(params)
+        ;
+        
+        let memory = params.build();
+        let (ptr, size) = memory.get_ptr_and_size();
+
+        let result_ptr = (self.dom_call)(ptr, size);
+        self.arguments.get_by_ptr(result_ptr).unwrap_or(JsValue::Undefined)
+    }
+
+    pub fn dom_get(&self, path: &[&'static str], property: &'static str) -> JsValue {
+        let params = self.new_params()
+            .list(move |mut list| {
+                for path_item in path {
+                    list.str_push(path_item);
+                }
+
+                list
+            })
+            .str(property)
+        ;
+        
+        let memory = params.build();
+        let (ptr, size) = memory.get_ptr_and_size();
+
+        let result_ptr = (self.dom_get)(ptr, size);
+        self.arguments.get_by_ptr(result_ptr).unwrap_or(JsValue::Undefined)
+    }
+
+    pub fn dom_set(&self, path: &[&'static str], property: &'static str, value: JsValue) {
+        let params = self.new_params()
+            .list(move |mut list| {
+                for path_item in path {
+                    list.str_push(path_item);
+                }
+
+                list
+            })
+            .str(property)
+            .value(value)
+        ;
+        
+        let memory = params.build();
+        let (ptr, size) = memory.get_ptr_and_size();
+
+        (self.dom_set)(ptr, size);
+    }
+
 }
 

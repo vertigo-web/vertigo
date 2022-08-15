@@ -1,7 +1,7 @@
-import { Guard, ListItemType } from "../arguments";
+import { Guard, JsValueType } from "../arguments";
 import { DriverDom } from "../module/dom/dom";
 
-export const initDom = (dom: DriverDom) => (method: string, args: Array<ListItemType>): number => {
+export const initDom = (dom: DriverDom) => (method: string, args: Array<JsValueType>): number => {
     if (method === 'dom_bulk_update') {
         const [value, ...rest] = args;
 

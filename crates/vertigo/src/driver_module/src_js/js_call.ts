@@ -1,5 +1,4 @@
-import { Guard, ListItemType } from "./arguments";
-import { consoleLog } from "./js_call/consoleLog";
+import { Guard, JsValueType } from "./arguments";
 import { initCookie } from "./js_call/cookie";
 import { initDom } from "./js_call/dom";
 import { initFetch } from "./js_call/fetch";
@@ -14,7 +13,7 @@ import { ModuleControllerType } from "./wasm_init";
 import { ExportType } from "./wasm_module";
 
 export const js_call = (
-    decodeArguments: (ptr: number, size: number) => ListItemType,
+    decodeArguments: (ptr: number, size: number) => JsValueType,
     getWasm: () => ModuleControllerType<ExportType>,
     fetch: Fetch,
     cookies: Cookies,
@@ -23,8 +22,7 @@ export const js_call = (
     websocket: DriverWebsocket,
 ) => {
 
-    const modules: Record<string, (method: string, arg: Array<ListItemType>) => number> = {
-        consoleLog: consoleLog,
+    const modules: Record<string, (method: string, arg: Array<JsValueType>) => number> = {
         hashrouter: initHashrouter(getWasm, hashRouter),
         websocket: initWebsocketModule(websocket),
         cookie: initCookie(getWasm, cookies),

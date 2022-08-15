@@ -125,7 +125,7 @@ class BufferCursor {
     }
 }
 
-export type ListItemType
+export type JsValueType
     = { type: 'u32', value: number, }
     | { type: 'i32', value: number, }
     | { type: 'u64', value: bigint, }
@@ -134,10 +134,21 @@ export type ListItemType
     | null
     | undefined
     | string
-    | Array<ListItemType>
-    | Uint8Array;
+    | Array<JsValueType>
+    | Uint8Array
+    | { type: 'object', value: ListItemMapType };
 
-const argumentsDecodeItem = (cursor: BufferCursor): ListItemType => {
+interface ListItemMapType {
+    [key: string]: JsValueType
+}
+
+//https://github.com/unsplash/unsplash-js/pull/174
+// export type AnyJson = boolean | number | string | null | JsonArray | JsonMap;
+// export interface JsonMap { [key: string]: AnyJson }
+// export interface JsonArray extends Array<AnyJson> {}
+
+
+const argumentsDecodeItem = (cursor: BufferCursor): JsValueType => {
     const typeParam = cursor.getByte();
 
     if (typeParam === 1) {
@@ -193,7 +204,7 @@ const argumentsDecodeItem = (cursor: BufferCursor): ListItemType => {
     }
 
     if (typeParam === 11) {
-        const out: Array<ListItemType> = [];
+        const out: Array<JsValueType> = [];
         
         const listSize = cursor.getU16();
 
@@ -204,11 +215,28 @@ const argumentsDecodeItem = (cursor: BufferCursor): ListItemType => {
         return out;
     }
 
+    if (typeParam === 12) {
+        const out: Record<string, JsValueType> = {};
+
+        const listSize = cursor.getU16();
+
+        for (let i=0; i<listSize; i++) {
+            const key = cursor.getString();
+            const value = argumentsDecodeItem(cursor);
+            out[key] = value;
+        }
+
+        return {
+            type:'object',
+            value: out
+        };
+    }
+
     console.error('typeParam', typeParam);
     throw Error('Nieprawidłowe odgałęzienie');
 };
 
-export const argumentsDecode = (getUint8Memory: () => Uint8Array, ptr: number, size: number): ListItemType => {
+export const argumentsDecode = (getUint8Memory: () => Uint8Array, ptr: number, size: number): JsValueType => {
     try {
         const cursor = new BufferCursor(getUint8Memory, ptr, size);
         return argumentsDecodeItem(cursor);
@@ -219,15 +247,15 @@ export const argumentsDecode = (getUint8Memory: () => Uint8Array, ptr: number, s
 };
 
 export namespace Guard {
-    export const isString = (value: ListItemType): value is string => {
+    export const isString = (value: JsValueType): value is string => {
         return typeof value === 'string';
     }
 
-    export const isStringOrNull = (value: ListItemType): value is string | null => {
+    export const isStringOrNull = (value: JsValueType): value is string | null => {
         return value === null || typeof value === 'string';
     }
 
-    export const isNumber = (value: ListItemType): value is { type: 'u32', value: number } | { type: 'i32', value: number } => {
+    export const isNumber = (value: JsValueType): value is { type: 'u32', value: number } | { type: 'i32', value: number } => {
         if (typeof value === 'object' && value !== null && 'type' in value) {
             return value.type === 'i32' || value.type === 'u32'
         }
@@ -235,7 +263,7 @@ export namespace Guard {
         return false;
     }
 
-    export const isBigInt = (value: ListItemType): value is { type: 'u64', value: bigint } | { type: 'i64', value: bigint } => {
+    export const isBigInt = (value: JsValueType): value is { type: 'u64', value: bigint } | { type: 'i64', value: bigint } => {
         if (typeof value === 'object' && value !== null && 'type' in value) {
             return value.type === 'i64' || value.type === 'u64'
         }
@@ -248,7 +276,11 @@ const assertNever = (_value: never) => {
     throw Error("assert never");
 }
 
-const getSize = (value: ListItemType): number => {
+const getStringSize = (value: string): number => {
+    return new TextEncoder().encode(value).length;
+};
+
+const getSize = (value: JsValueType): number => {
     if (
         value === true ||
         value === false ||
@@ -259,7 +291,7 @@ const getSize = (value: ListItemType): number => {
     }
 
     if (Guard.isString(value)) {
-        return 1 + 4 + new TextEncoder().encode(value).length;
+        return 1 + 4 + getStringSize(value);
     }
 
     if (Array.isArray(value)) {
@@ -284,10 +316,21 @@ const getSize = (value: ListItemType): number => {
         return 9;   //1 + 8
     }
 
+    if (value.type === 'object') {
+        let sum = 1 + 2;
+
+        for (const [key, propertyValue] of Object.entries(value.value)) {
+            sum += getStringSize(key);
+            sum += getSize(propertyValue);
+        }
+
+        return sum;
+    }
+
     return assertNever(value);
 };
 
-const saveToBufferItem = (value: ListItemType, cursor: BufferCursor) => {
+const saveToBufferItem = (value: JsValueType, cursor: BufferCursor) => {
     if (value === true) {
         cursor.setByte(5);
         return;
@@ -355,13 +398,30 @@ const saveToBufferItem = (value: ListItemType, cursor: BufferCursor) => {
         return;
     }
 
+    if (value.type === 'object') {
+        const list: Array<[string, JsValueType]> = [];
+
+        for (const [key, propertyValue] of Object.entries(value.value)) {
+            list.push([key, propertyValue]);
+        }
+
+        cursor.setByte(12);
+        cursor.setU16(list.length);
+
+        for (const [key, propertyValue] of list) {
+            cursor.setString(key);
+            saveToBufferItem(propertyValue, cursor);
+        }
+        return;
+    }
+
     return assertNever(value);
 };
 
 export const saveToBuffer = (
     getUint8Memory: () => Uint8Array,
     alloc: (size: number) => number,
-    value: ListItemType,
+    value: JsValueType,
 ): number => {
     const size = getSize(value);
     const ptr = alloc(size);
@@ -372,8 +432,8 @@ export const saveToBuffer = (
     return ptr;
 };
 
-export class ParamListBuilder {
-    private readonly params: Array<ListItemType>;
+export class JsValueBuilder {
+    private readonly params: Array<JsValueType>;
 
     constructor(
         private readonly getUint8Memory: () => Uint8Array,
@@ -426,8 +486,8 @@ export class ParamListBuilder {
         this.params.push(value);
     }
 
-    public push_list(build: (list: ParamListBuilder) => void) {
-        const sub_params = new ParamListBuilder(this.getUint8Memory, this.alloc);
+    public push_list(build: (list: JsValueBuilder) => void) {
+        const sub_params = new JsValueBuilder(this.getUint8Memory, this.alloc);
         build(sub_params);
         this.params.push(sub_params.params);
     }
@@ -436,7 +496,94 @@ export class ParamListBuilder {
         return saveToBuffer(this.getUint8Memory, this.alloc, this.params);
     }
 
+    public saveListItem(value: JsValueType): number {
+        return saveToBuffer(this.getUint8Memory, this.alloc, value);
+    }
+
     public debug() {
         console.info('debug budowania listy', this.params);
     }
 }
+
+export const convertFromListItem = (value: JsValueType): unknown => {
+    if (value === true) {
+        return true;
+    }
+
+    if (value === false) {
+        return false;
+    }
+
+    if (value === null) {
+        return null;
+    }
+
+    if (value === undefined) {
+        return undefined;
+    }
+
+    if (value instanceof Uint8Array) {
+        return value;
+    }
+
+    if (Guard.isString(value)) {
+        return value;
+    }
+
+    if (Array.isArray(value)) {
+        const newList = [];
+
+        for (const item of value) {
+            newList.push(convertFromListItem(item));
+        }
+
+        return newList;
+    }
+
+    if (value.type === 'u32' || value.type === 'i32') {
+        return value.value;
+    }
+
+    if (value.type === 'u64' || value.type === 'i64') {
+        return value.value;
+    }
+
+    if (value.type === 'object') {
+        const result: Record<string, unknown> = {};
+
+        for (const [key, propertyValue] of Object.entries(value.value)) {
+            result[key] = convertFromListItem(propertyValue);
+        }
+
+        return result;
+    }
+
+    return assertNever(value);
+};
+
+export const convertToListItem = (value: unknown): JsValueType => {
+    if (typeof value === 'string') {
+        return value;
+    }
+
+    if (value === true || value === false || value === undefined || value === null) {
+        return null;
+    }
+
+    if (typeof value === 'number') {
+        return {
+            type: 'i32',
+            value
+        };
+    }
+
+    if (typeof value === 'bigint') {
+        return {
+            type: 'i64',
+            value
+        };
+    }
+
+    console.error('convertToListItem', value);
+    throw Error('TODO');
+};

@@ -1,5 +1,7 @@
+import { JsValueType } from "../../arguments";
 import { ModuleControllerType } from "../../wasm_init";
 import { ExportType } from "../../wasm_module";
+import { FindDom as FindDom } from "./find_root";
 import { MapNodes } from "./map_nodes";
 
 interface FileItemType {
@@ -69,12 +71,14 @@ export class DriverDom {
     private readonly nodes: MapNodes<bigint, Element | Comment>;
     private readonly texts: MapNodes<bigint, Text>;
     private readonly all: Map<Element | Text | Comment, bigint>;
+    private readonly findDom: FindDom;
 
     public constructor(getWasm: () => ModuleControllerType<ExportType>) {
         this.getWasm = getWasm;
         this.nodes = new MapNodes();
         this.texts = new MapNodes();
         this.all = new Map();
+        this.findDom = new FindDom(this.nodes, this.texts);
 
         document.addEventListener('mousedown', (event) => {
             const target = event.target;
@@ -450,5 +454,46 @@ export class DriverDom {
         }
 
         return assertNeverCommand(command);
+    }
+
+    public dom_call = (path: Array<JsValueType>, property: string, params: Array<JsValueType>): JsValueType => {
+        const target = this.findDom.findDomByPath(path);
+
+        if (target === null) {
+            return null;
+        }
+
+        return target.callProperty(path, property, params);
+    }
+
+    public dom_get = (path: Array<JsValueType>, property: string): JsValueType => {
+        const target = this.findDom.findDomByPath(path);
+
+        if (target === null) {
+            return null;
+        }
+
+        return target.getProperty(path, property);
+    }
+
+    public dom_set = (path: Array<JsValueType>, property: string, value: JsValueType): void => {
+        const target = this.findDom.findDomByPath(path);
+
+        if (target === null) {
+            return;
+        }
+
+        target.setProperty(path, property, value);
+    }
+
+    /*
+        dom-path
+
+        [43, 'focus']                       (HtmlElement.focus)
+        ['window', 'location', 'hash']      (window.location.hash)
+    */
+
+    public dom_access = (_path: Array<JsValueType>): JsValueType => {
+        throw Error('TODO');
     }
 }

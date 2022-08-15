@@ -24,9 +24,7 @@ pub struct DriverDom {
 }
 
 impl DriverDom {
-    pub fn new(
-        api: &Rc<ApiImport>,
-    ) -> DriverDom {
+    pub fn new(api: &Rc<ApiImport>) -> DriverDom {
         let data = DriverData::new();
         let current_visited = VisitedNodeManager::new();
 

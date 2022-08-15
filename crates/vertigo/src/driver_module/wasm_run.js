@@ -29,6 +29,574 @@ class Cookies {
     };
 }
 
+///https://javascript.info/arraybuffer-binary-arrays#dataview
+const decoder = new TextDecoder("utf-8");
+const encoder = new TextEncoder();
+class BufferCursor {
+    getUint8Memory;
+    ptr;
+    size;
+    dataView;
+    pointer = 0;
+    constructor(getUint8Memory, ptr, size) {
+        this.getUint8Memory = getUint8Memory;
+        this.ptr = ptr;
+        this.size = size;
+        this.getUint8Memory()[3] = 56;
+        this.dataView = new DataView(this.getUint8Memory().buffer, this.ptr, this.size);
+    }
+    getByte() {
+        const value = this.dataView.getUint8(this.pointer);
+        this.pointer += 1;
+        return value;
+    }
+    setByte(byte) {
+        this.dataView.setUint8(this.pointer, byte);
+        this.pointer += 1;
+    }
+    getU16() {
+        const value = this.dataView.getUint16(this.pointer);
+        this.pointer += 2;
+        return value;
+    }
+    setU16(value) {
+        this.dataView.setUint16(this.pointer, value);
+        this.pointer += 2;
+    }
+    getU32() {
+        const value = this.dataView.getUint32(this.pointer);
+        this.pointer += 4;
+        return value;
+    }
+    setU32(value) {
+        this.dataView.setUint32(this.pointer, value);
+        this.pointer += 4;
+    }
+    getI32() {
+        const value = this.dataView.getInt32(this.pointer);
+        this.pointer += 4;
+        return value;
+    }
+    setI32(value) {
+        this.dataView.setInt32(this.pointer, value);
+        this.pointer += 4;
+    }
+    getU64() {
+        const value = this.dataView.getBigUint64(this.pointer);
+        this.pointer += 8;
+        return value;
+    }
+    setU64(value) {
+        this.dataView.setBigUint64(this.pointer, value);
+        this.pointer += 8;
+    }
+    getI64() {
+        const value = this.dataView.getBigInt64(this.pointer);
+        this.pointer += 8;
+        return value;
+    }
+    setI64(value) {
+        this.dataView.setBigInt64(this.pointer, value);
+        this.pointer += 8;
+    }
+    getBuffer() {
+        const size = this.getU32();
+        const result = this
+            .getUint8Memory()
+            .subarray(this.ptr + this.pointer, this.ptr + this.pointer + size);
+        this.pointer += size;
+        return result;
+    }
+    setBuffer(buffer) {
+        const size = buffer.length;
+        this.setU32(size);
+        const subbugger = this
+            .getUint8Memory()
+            .subarray(this.ptr + this.pointer, this.ptr + this.pointer + size);
+        subbugger.set(buffer);
+        this.pointer += size;
+    }
+    getString() {
+        return decoder.decode(this.getBuffer());
+    }
+    setString(value) {
+        const buffer = encoder.encode(value);
+        this.setBuffer(buffer);
+    }
+}
+//https://github.com/unsplash/unsplash-js/pull/174
+// export type AnyJson = boolean | number | string | null | JsonArray | JsonMap;
+// export interface JsonMap { [key: string]: AnyJson }
+// export interface JsonArray extends Array<AnyJson> {}
+const argumentsDecodeItem = (cursor) => {
+    const typeParam = cursor.getByte();
+    if (typeParam === 1) {
+        return {
+            type: 'u32',
+            value: cursor.getU32()
+        };
+    }
+    if (typeParam === 2) {
+        return {
+            type: 'u32',
+            value: cursor.getI32()
+        };
+    }
+    if (typeParam === 3) {
+        return {
+            type: 'u64',
+            value: cursor.getU64()
+        };
+    }
+    if (typeParam === 4) {
+        return {
+            type: 'i64',
+            value: cursor.getI64()
+        };
+    }
+    if (typeParam === 5) {
+        return true;
+    }
+    if (typeParam === 6) {
+        return false;
+    }
+    if (typeParam === 7) {
+        return null;
+    }
+    if (typeParam === 8) {
+        return undefined;
+    }
+    if (typeParam === 9) {
+        return cursor.getBuffer();
+    }
+    if (typeParam === 10) {
+        return cursor.getString();
+    }
+    if (typeParam === 11) {
+        const out = [];
+        const listSize = cursor.getU16();
+        for (let i = 0; i < listSize; i++) {
+            out.push(argumentsDecodeItem(cursor));
+        }
+        return out;
+    }
+    if (typeParam === 12) {
+        const out = {};
+        const listSize = cursor.getU16();
+        for (let i = 0; i < listSize; i++) {
+            const key = cursor.getString();
+            const value = argumentsDecodeItem(cursor);
+            out[key] = value;
+        }
+        return {
+            type: 'object',
+            value: out
+        };
+    }
+    console.error('typeParam', typeParam);
+    throw Error('Nieprawidłowe odgałęzienie');
+};
+const argumentsDecode = (getUint8Memory, ptr, size) => {
+    try {
+        const cursor = new BufferCursor(getUint8Memory, ptr, size);
+        return argumentsDecodeItem(cursor);
+    }
+    catch (err) {
+        console.error(err);
+        return [];
+    }
+};
+var Guard;
+(function (Guard) {
+    Guard.isString = (value) => {
+        return typeof value === 'string';
+    };
+    Guard.isStringOrNull = (value) => {
+        return value === null || typeof value === 'string';
+    };
+    Guard.isNumber = (value) => {
+        if (typeof value === 'object' && value !== null && 'type' in value) {
+            return value.type === 'i32' || value.type === 'u32';
+        }
+        return false;
+    };
+    Guard.isBigInt = (value) => {
+        if (typeof value === 'object' && value !== null && 'type' in value) {
+            return value.type === 'i64' || value.type === 'u64';
+        }
+        return false;
+    };
+})(Guard || (Guard = {}));
+const assertNever = (_value) => {
+    throw Error("assert never");
+};
+const getStringSize = (value) => {
+    return new TextEncoder().encode(value).length;
+};
+const getSize = (value) => {
+    if (value === true ||
+        value === false ||
+        value === null ||
+        value === undefined) {
+        return 1;
+    }
+    if (Guard.isString(value)) {
+        return 1 + 4 + getStringSize(value);
+    }
+    if (Array.isArray(value)) {
+        let sum = 1 + 2;
+        for (const item of value) {
+            sum += getSize(item);
+        }
+        return sum;
+    }
+    if (value instanceof Uint8Array) {
+        return 1 + 4 + value.length;
+    }
+    if (value.type === 'i32' || value.type === 'u32') {
+        return 5; //1 + 4
+    }
+    if (value.type === 'i64' || value.type === 'u64') {
+        return 9; //1 + 8
+    }
+    if (value.type === 'object') {
+        let sum = 1 + 2;
+        for (const [key, propertyValue] of Object.entries(value.value)) {
+            sum += getStringSize(key);
+            sum += getSize(propertyValue);
+        }
+        return sum;
+    }
+    return assertNever();
+};
+const saveToBufferItem = (value, cursor) => {
+    if (value === true) {
+        cursor.setByte(5);
+        return;
+    }
+    if (value === false) {
+        cursor.setByte(6);
+        return;
+    }
+    if (value === null) {
+        cursor.setByte(7);
+        return;
+    }
+    if (value === undefined) {
+        cursor.setByte(8);
+        return;
+    }
+    if (value instanceof Uint8Array) {
+        cursor.setByte(9);
+        cursor.setBuffer(value);
+        return;
+    }
+    if (Guard.isString(value)) {
+        cursor.setByte(10);
+        cursor.setString(value);
+        return;
+    }
+    if (Array.isArray(value)) {
+        cursor.setByte(11);
+        cursor.setU16(value.length);
+        for (const item of value) {
+            saveToBufferItem(item, cursor);
+        }
+        return;
+    }
+    if (value.type === 'u32') {
+        cursor.setByte(1);
+        cursor.setU32(value.value);
+        return;
+    }
+    if (value.type === 'i32') {
+        cursor.setByte(2);
+        cursor.setI32(value.value);
+        return;
+    }
+    if (value.type === 'u64') {
+        cursor.setByte(3);
+        cursor.setU64(value.value);
+        return;
+    }
+    if (value.type === 'i64') {
+        cursor.setByte(4);
+        cursor.setI64(value.value);
+        return;
+    }
+    if (value.type === 'object') {
+        const list = [];
+        for (const [key, propertyValue] of Object.entries(value.value)) {
+            list.push([key, propertyValue]);
+        }
+        cursor.setByte(12);
+        cursor.setU16(list.length);
+        for (const [key, propertyValue] of list) {
+            cursor.setString(key);
+            saveToBufferItem(propertyValue, cursor);
+        }
+        return;
+    }
+    return assertNever();
+};
+const saveToBuffer = (getUint8Memory, alloc, value) => {
+    const size = getSize(value);
+    const ptr = alloc(size);
+    const cursor = new BufferCursor(getUint8Memory, ptr, size);
+    saveToBufferItem(value, cursor);
+    return ptr;
+};
+class JsValueBuilder {
+    getUint8Memory;
+    alloc;
+    params;
+    constructor(getUint8Memory, alloc) {
+        this.getUint8Memory = getUint8Memory;
+        this.alloc = alloc;
+        this.params = [];
+    }
+    push_string(value) {
+        this.params.push(value);
+    }
+    push_buffer(buf) {
+        this.params.push(buf);
+    }
+    push_u32(value) {
+        this.params.push({
+            type: 'u32',
+            value
+        });
+    }
+    push_i32(value) {
+        this.params.push({
+            type: 'i32',
+            value
+        });
+    }
+    push_u64(value) {
+        this.params.push({
+            type: 'u64',
+            value
+        });
+    }
+    push_i64(value) {
+        this.params.push({
+            type: 'i64',
+            value
+        });
+    }
+    push_null() {
+        this.params.push(null);
+    }
+    push_bool(value) {
+        this.params.push(value);
+    }
+    push_list(build) {
+        const sub_params = new JsValueBuilder(this.getUint8Memory, this.alloc);
+        build(sub_params);
+        this.params.push(sub_params.params);
+    }
+    saveToBuffer() {
+        return saveToBuffer(this.getUint8Memory, this.alloc, this.params);
+    }
+    saveListItem(value) {
+        return saveToBuffer(this.getUint8Memory, this.alloc, value);
+    }
+    debug() {
+        console.info('debug budowania listy', this.params);
+    }
+}
+const convertFromListItem = (value) => {
+    if (value === true) {
+        return true;
+    }
+    if (value === false) {
+        return false;
+    }
+    if (value === null) {
+        return null;
+    }
+    if (value === undefined) {
+        return undefined;
+    }
+    if (value instanceof Uint8Array) {
+        return value;
+    }
+    if (Guard.isString(value)) {
+        return value;
+    }
+    if (Array.isArray(value)) {
+        const newList = [];
+        for (const item of value) {
+            newList.push(convertFromListItem(item));
+        }
+        return newList;
+    }
+    if (value.type === 'u32' || value.type === 'i32') {
+        return value.value;
+    }
+    if (value.type === 'u64' || value.type === 'i64') {
+        return value.value;
+    }
+    if (value.type === 'object') {
+        const result = {};
+        for (const [key, propertyValue] of Object.entries(value.value)) {
+            result[key] = convertFromListItem(propertyValue);
+        }
+        return result;
+    }
+    return assertNever();
+};
+const convertToListItem = (value) => {
+    if (typeof value === 'string') {
+        return value;
+    }
+    if (value === true || value === false || value === undefined || value === null) {
+        return null;
+    }
+    if (typeof value === 'number') {
+        return {
+            type: 'i32',
+            value
+        };
+    }
+    if (typeof value === 'bigint') {
+        return {
+            type: 'i64',
+            value
+        };
+    }
+    console.error('convertToListItem', value);
+    throw Error('TODO');
+};
+
+class JsNode {
+    wsk;
+    constructor(wsk) {
+        this.wsk = wsk;
+    }
+    getByProperty(property) {
+        try {
+            //@ts-expect-error
+            const nextCurrentPointer = this.wsk[property];
+            return new JsNode(nextCurrentPointer);
+        }
+        catch (error) {
+            console.error(error);
+            return null;
+        }
+    }
+    callProperty(path, property, params) {
+        try {
+            let paramsJs = params.map(convertFromListItem);
+            //@ts-expect-error
+            const result = this.wsk[property](...paramsJs);
+            return convertToListItem(result);
+        }
+        catch (error) {
+            console.error('A problem with call', {
+                path,
+                property,
+                error
+            });
+            return undefined;
+        }
+    }
+    getProperty(path, property) {
+        try {
+            //@ts-expect-error
+            const result = this.wsk[property];
+            return convertToListItem(result);
+        }
+        catch (error) {
+            console.error('A problem with get', {
+                path,
+                property,
+                error
+            });
+            return undefined;
+        }
+    }
+    setProperty(path, property, value) {
+        try {
+            //@ts-expect-error
+            this.wsk[property] = convertFromListItem(value);
+        }
+        catch (error) {
+            console.error('A problem with set', {
+                path,
+                property,
+                error
+            });
+            return undefined;
+        }
+    }
+}
+class FindDom {
+    nodes;
+    texts;
+    constructor(nodes, texts) {
+        this.nodes = nodes;
+        this.texts = texts;
+    }
+    find_root_dom(firstName) {
+        if (Guard.isString(firstName)) {
+            if (firstName === 'window') {
+                return new JsNode(window);
+            }
+            if (firstName === 'document') {
+                return new JsNode(document);
+            }
+            console.error(`Global name not found: ${firstName}`);
+            return null;
+        }
+        if (Guard.isNumber(firstName)) {
+            const domId = firstName.value;
+            const node = this.nodes.getItem(BigInt(domId));
+            if (node !== undefined) {
+                return new JsNode(node);
+            }
+            const text = this.texts.getItem(BigInt(domId));
+            if (text !== undefined) {
+                return new JsNode(text);
+            }
+            console.error(`No node with id=${domId}`);
+            return null;
+        }
+        console.error('find_root_dom - wrong parameter', firstName);
+        return null;
+    }
+    findDomByPath(path) {
+        const [firstName, ...restPath] = path;
+        try {
+            let currentPointer = this.find_root_dom(firstName);
+            if (currentPointer === null) {
+                return null;
+            }
+            while (true) {
+                const nextProperty = restPath.shift();
+                if (nextProperty === undefined) {
+                    return currentPointer;
+                }
+                if (Guard.isString(nextProperty)) {
+                    currentPointer = currentPointer.getByProperty(nextProperty);
+                    if (currentPointer === null) {
+                        return null;
+                    }
+                }
+                else {
+                    console.error('find_dom_by_path - wrong parameters', path);
+                    return null;
+                }
+            }
+        }
+        catch (error) {
+            console.error(`Error when searching for path=${path}`, error);
+            return null;
+        }
+    }
+}
+
 class MapNodes {
     data;
     constructor() {
@@ -99,11 +667,13 @@ class DriverDom {
     nodes;
     texts;
     all;
+    findDom;
     constructor(getWasm) {
         this.getWasm = getWasm;
         this.nodes = new MapNodes();
         this.texts = new MapNodes();
         this.all = new Map();
+        this.findDom = new FindDom(this.nodes, this.texts);
         document.addEventListener('mousedown', (event) => {
             const target = event.target;
             if (target instanceof Element) {
@@ -415,6 +985,36 @@ class DriverDom {
         }
         return assertNeverCommand(command);
     }
+    dom_call = (path, property, params) => {
+        const target = this.findDom.findDomByPath(path);
+        if (target === null) {
+            return null;
+        }
+        return target.callProperty(path, property, params);
+    };
+    dom_get = (path, property) => {
+        const target = this.findDom.findDomByPath(path);
+        if (target === null) {
+            return null;
+        }
+        return target.getProperty(path, property);
+    };
+    dom_set = (path, property, value) => {
+        const target = this.findDom.findDomByPath(path);
+        if (target === null) {
+            return;
+        }
+        target.setProperty(path, property, value);
+    };
+    /*
+        dom-path
+
+        [43, 'focus']                       (HtmlElement.focus)
+        ['window', 'location', 'hash']      (window.location.hash)
+    */
+    dom_access = (_path) => {
+        throw Error('TODO');
+    };
 }
 
 class EventEmmiter {
@@ -792,344 +1392,9 @@ class Interval {
     };
 }
 
-///https://javascript.info/arraybuffer-binary-arrays#dataview
-const decoder = new TextDecoder("utf-8");
-const encoder = new TextEncoder();
-class BufferCursor {
-    getUint8Memory;
-    ptr;
-    size;
-    dataView;
-    pointer = 0;
-    constructor(getUint8Memory, ptr, size) {
-        this.getUint8Memory = getUint8Memory;
-        this.ptr = ptr;
-        this.size = size;
-        this.getUint8Memory()[3] = 56;
-        this.dataView = new DataView(this.getUint8Memory().buffer, this.ptr, this.size);
-    }
-    getByte() {
-        const value = this.dataView.getUint8(this.pointer);
-        this.pointer += 1;
-        return value;
-    }
-    setByte(byte) {
-        this.dataView.setUint8(this.pointer, byte);
-        this.pointer += 1;
-    }
-    getU16() {
-        const value = this.dataView.getUint16(this.pointer);
-        this.pointer += 2;
-        return value;
-    }
-    setU16(value) {
-        this.dataView.setUint16(this.pointer, value);
-        this.pointer += 2;
-    }
-    getU32() {
-        const value = this.dataView.getUint32(this.pointer);
-        this.pointer += 4;
-        return value;
-    }
-    setU32(value) {
-        this.dataView.setUint32(this.pointer, value);
-        this.pointer += 4;
-    }
-    getI32() {
-        const value = this.dataView.getInt32(this.pointer);
-        this.pointer += 4;
-        return value;
-    }
-    setI32(value) {
-        this.dataView.setInt32(this.pointer, value);
-        this.pointer += 4;
-    }
-    getU64() {
-        const value = this.dataView.getBigUint64(this.pointer);
-        this.pointer += 8;
-        return value;
-    }
-    setU64(value) {
-        this.dataView.setBigUint64(this.pointer, value);
-        this.pointer += 8;
-    }
-    getI64() {
-        const value = this.dataView.getBigInt64(this.pointer);
-        this.pointer += 8;
-        return value;
-    }
-    setI64(value) {
-        this.dataView.setBigInt64(this.pointer, value);
-        this.pointer += 8;
-    }
-    getBuffer() {
-        const size = this.getU32();
-        const result = this
-            .getUint8Memory()
-            .subarray(this.ptr + this.pointer, this.ptr + this.pointer + size);
-        this.pointer += size;
-        return result;
-    }
-    setBuffer(buffer) {
-        const size = buffer.length;
-        this.setU32(size);
-        const subbugger = this
-            .getUint8Memory()
-            .subarray(this.ptr + this.pointer, this.ptr + this.pointer + size);
-        subbugger.set(buffer);
-        this.pointer += size;
-    }
-    getString() {
-        return decoder.decode(this.getBuffer());
-    }
-    setString(value) {
-        const buffer = encoder.encode(value);
-        this.setBuffer(buffer);
-    }
-}
-const argumentsDecodeItem = (cursor) => {
-    const typeParam = cursor.getByte();
-    if (typeParam === 1) {
-        return {
-            type: 'u32',
-            value: cursor.getU32()
-        };
-    }
-    if (typeParam === 2) {
-        return {
-            type: 'u32',
-            value: cursor.getI32()
-        };
-    }
-    if (typeParam === 3) {
-        return {
-            type: 'u64',
-            value: cursor.getU64()
-        };
-    }
-    if (typeParam === 4) {
-        return {
-            type: 'i64',
-            value: cursor.getI64()
-        };
-    }
-    if (typeParam === 5) {
-        return true;
-    }
-    if (typeParam === 6) {
-        return false;
-    }
-    if (typeParam === 7) {
-        return null;
-    }
-    if (typeParam === 8) {
-        return undefined;
-    }
-    if (typeParam === 9) {
-        return cursor.getBuffer();
-    }
-    if (typeParam === 10) {
-        return cursor.getString();
-    }
-    if (typeParam === 11) {
-        const out = [];
-        const listSize = cursor.getU16();
-        for (let i = 0; i < listSize; i++) {
-            out.push(argumentsDecodeItem(cursor));
-        }
-        return out;
-    }
-    console.error('typeParam', typeParam);
-    throw Error('Nieprawidłowe odgałęzienie');
-};
-const argumentsDecode = (getUint8Memory, ptr, size) => {
-    try {
-        const cursor = new BufferCursor(getUint8Memory, ptr, size);
-        return argumentsDecodeItem(cursor);
-    }
-    catch (err) {
-        console.error(err);
-        return [];
-    }
-};
-var Guard;
-(function (Guard) {
-    Guard.isString = (value) => {
-        return typeof value === 'string';
-    };
-    Guard.isStringOrNull = (value) => {
-        return value === null || typeof value === 'string';
-    };
-    Guard.isNumber = (value) => {
-        if (typeof value === 'object' && value !== null && 'type' in value) {
-            return value.type === 'i32' || value.type === 'u32';
-        }
-        return false;
-    };
-    Guard.isBigInt = (value) => {
-        if (typeof value === 'object' && value !== null && 'type' in value) {
-            return value.type === 'i64' || value.type === 'u64';
-        }
-        return false;
-    };
-})(Guard || (Guard = {}));
-const assertNever = (_value) => {
-    throw Error("assert never");
-};
-const getSize = (value) => {
-    if (value === true ||
-        value === false ||
-        value === null ||
-        value === undefined) {
-        return 1;
-    }
-    if (Guard.isString(value)) {
-        return 1 + 4 + new TextEncoder().encode(value).length;
-    }
-    if (Array.isArray(value)) {
-        let sum = 1 + 2;
-        for (const item of value) {
-            sum += getSize(item);
-        }
-        return sum;
-    }
-    if (value instanceof Uint8Array) {
-        return 1 + 4 + value.length;
-    }
-    if (value.type === 'i32' || value.type === 'u32') {
-        return 5; //1 + 4
-    }
-    if (value.type === 'i64' || value.type === 'u64') {
-        return 9; //1 + 8
-    }
-    return assertNever();
-};
-const saveToBufferItem = (value, cursor) => {
-    if (value === true) {
-        cursor.setByte(5);
-        return;
-    }
-    if (value === false) {
-        cursor.setByte(6);
-        return;
-    }
-    if (value === null) {
-        cursor.setByte(7);
-        return;
-    }
-    if (value === undefined) {
-        cursor.setByte(8);
-        return;
-    }
-    if (value instanceof Uint8Array) {
-        cursor.setByte(9);
-        cursor.setBuffer(value);
-        return;
-    }
-    if (Guard.isString(value)) {
-        cursor.setByte(10);
-        cursor.setString(value);
-        return;
-    }
-    if (Array.isArray(value)) {
-        cursor.setByte(11);
-        cursor.setU16(value.length);
-        for (const item of value) {
-            saveToBufferItem(item, cursor);
-        }
-        return;
-    }
-    if (value.type === 'u32') {
-        cursor.setByte(1);
-        cursor.setU32(value.value);
-        return;
-    }
-    if (value.type === 'i32') {
-        cursor.setByte(2);
-        cursor.setI32(value.value);
-        return;
-    }
-    if (value.type === 'u64') {
-        cursor.setByte(3);
-        cursor.setU64(value.value);
-        return;
-    }
-    if (value.type === 'i64') {
-        cursor.setByte(4);
-        cursor.setI64(value.value);
-        return;
-    }
-    return assertNever();
-};
-const saveToBuffer = (getUint8Memory, alloc, value) => {
-    const size = getSize(value);
-    const ptr = alloc(size);
-    const cursor = new BufferCursor(getUint8Memory, ptr, size);
-    saveToBufferItem(value, cursor);
-    return ptr;
-};
-class ParamListBuilder {
-    getUint8Memory;
-    alloc;
-    params;
-    constructor(getUint8Memory, alloc) {
-        this.getUint8Memory = getUint8Memory;
-        this.alloc = alloc;
-        this.params = [];
-    }
-    push_string(value) {
-        this.params.push(value);
-    }
-    push_buffer(buf) {
-        this.params.push(buf);
-    }
-    push_u32(value) {
-        this.params.push({
-            type: 'u32',
-            value
-        });
-    }
-    push_i32(value) {
-        this.params.push({
-            type: 'i32',
-            value
-        });
-    }
-    push_u64(value) {
-        this.params.push({
-            type: 'u64',
-            value
-        });
-    }
-    push_i64(value) {
-        this.params.push({
-            type: 'i64',
-            value
-        });
-    }
-    push_null() {
-        this.params.push(null);
-    }
-    push_bool(value) {
-        this.params.push(value);
-    }
-    push_list(build) {
-        const sub_params = new ParamListBuilder(this.getUint8Memory, this.alloc);
-        build(sub_params);
-        this.params.push(sub_params.params);
-    }
-    saveToBuffer() {
-        return saveToBuffer(this.getUint8Memory, this.alloc, this.params);
-    }
-    debug() {
-        console.info('debug budowania listy', this.params);
-    }
-}
-
 // import { argumentsDecode, ListItemType } from "./arguments";
 const fetchModule = async (wasmBinPath, imports) => {
     if (typeof WebAssembly.instantiateStreaming === 'function') {
-        console.info('fetchModule by WebAssembly.instantiateStreaming');
         try {
             const module = await WebAssembly.instantiateStreaming(fetch(wasmBinPath), imports);
             return module;
@@ -1162,22 +1427,13 @@ const wasmInit = async (wasmBinPath, imports) => {
     //@ts-expect-error
     const exports = module_instance.instance.exports;
     const decodeArguments = (ptr, size) => argumentsDecode(getUint8Memory, ptr, size);
-    const newList = () => new ParamListBuilder(getUint8Memory, exports.alloc);
+    const newList = () => new JsValueBuilder(getUint8Memory, exports.alloc);
     return {
         exports,
         decodeArguments,
         getUint8Memory,
         newList
     };
-};
-
-const consoleLog = (method, args) => {
-    if (method === 'debug' || method === 'info' || method === 'log' || method === 'warn' || method === 'error') {
-        console[method](...args);
-        return 0;
-    }
-    console.error('js-call -> module -> consoleLog: incorrect parameters', args);
-    return 0;
 };
 
 const initCookie = (getWasm, cookies) => (method, args) => {
@@ -1303,7 +1559,6 @@ const initWebsocketModule = (websocket) => (method, args) => {
 
 const js_call = (decodeArguments, getWasm, fetch, cookies, dom, hashRouter, websocket) => {
     const modules = {
-        consoleLog: consoleLog,
         hashrouter: initHashrouter(getWasm, hashRouter),
         websocket: initWebsocketModule(websocket),
         cookie: initCookie(getWasm, cookies),
@@ -1369,6 +1624,41 @@ class WasmModule {
                 timeout_set: interval.timeout_set,
                 timeout_clear: interval.timeout_clear,
                 instant_now,
+                dom_call: (ptr, size) => {
+                    let args = getWasm().decodeArguments(ptr, size);
+                    if (Array.isArray(args)) {
+                        const [domPath, property, params, ...rest] = args;
+                        if (Array.isArray(domPath) && Guard.isString(property) && Array.isArray(params) && rest.length === 0) {
+                            const response = dom.dom_call(domPath, property, params);
+                            return getWasm().newList().saveListItem(response);
+                        }
+                    }
+                    console.error('dom_call - wrong parameters', args);
+                    return 0;
+                },
+                dom_get: (ptr, size) => {
+                    let args = getWasm().decodeArguments(ptr, size);
+                    if (Array.isArray(args)) {
+                        const [domPath, property, ...rest] = args;
+                        if (Array.isArray(domPath) && Guard.isString(property) && rest.length === 0) {
+                            const response = dom.dom_get(domPath, property);
+                            return getWasm().newList().saveListItem(response);
+                        }
+                    }
+                    console.error('dom_get - wrong parameters', args);
+                    return 0;
+                },
+                dom_set: (ptr, size) => {
+                    let args = getWasm().decodeArguments(ptr, size);
+                    if (Array.isArray(args)) {
+                        const [domPath, property, value, ...rest] = args;
+                        if (Array.isArray(domPath) && Guard.isString(property) && rest.length === 0) {
+                            dom.dom_set(domPath, property, value);
+                            return;
+                        }
+                    }
+                    console.error('dom_set - wrong parameters', args);
+                }
             }
         });
         return new WasmModule(wasmModule);

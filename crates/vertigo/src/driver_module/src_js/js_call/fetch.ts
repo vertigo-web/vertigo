@@ -1,7 +1,7 @@
-import { Guard, ListItemType } from "../arguments";
+import { Guard, JsValueType } from "../arguments";
 import { Fetch } from "../module/fetch";
 
-export const initFetch = (fetch: Fetch) => (method: string, args: Array<ListItemType>): number => {
+export const initFetch = (fetch: Fetch) => (method: string, args: Array<JsValueType>): number => {
     if (method === 'send') {
         const [requestId, httpMethod, url, headers, body, ...rest] = args;
 

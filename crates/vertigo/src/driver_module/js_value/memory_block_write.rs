@@ -1,4 +1,4 @@
-use super::{memory_block::{MemoryBlock}, params::ParamItemNumber};
+use super::{memory_block::{MemoryBlock}, js_value_struct::JsValueNumberConst};
 
 #[derive(Debug)]
 pub struct MemoryBlockWrite {
@@ -29,7 +29,7 @@ impl MemoryBlockWrite {
         self.write(&[value]);
     }
 
-    pub fn write_param_type(&mut self, param_type: ParamItemNumber) {
+    pub fn write_param_type(&mut self, param_type: JsValueNumberConst) {
         let type_u8 = param_type as u8;
         self.write_u8(type_u8);
     }

@@ -1,7 +1,7 @@
-import { Guard, ListItemType } from "../arguments";
+import { Guard, JsValueType } from "../arguments";
 import { DriverWebsocket } from "../module/websocket/websocket";
 
-export const initWebsocketModule = (websocket: DriverWebsocket) => (method: string, args: Array<ListItemType>): number => {
+export const initWebsocketModule = (websocket: DriverWebsocket) => (method: string, args: Array<JsValueType>): number => {
     if (method === 'register_callback') {
         const [host, callback_id, ...rest] = args;
 

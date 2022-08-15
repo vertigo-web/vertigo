@@ -22,6 +22,8 @@ use crate::driver_module::modules::{
     websocket::DriverWebsocket,
 };
 
+use super::js_value::js_value_struct::JsValue;
+
 #[derive(Debug)]
 pub enum FetchMethod {
     GET,
@@ -53,23 +55,23 @@ pub struct DriverInner {
 impl DriverInner {
     pub fn new(api: Rc<ApiImport>) -> Self {
         let dependencies = Dependencies::default();
-        let driver_interval = DriverInterval::new(&api);
+        let interval = DriverInterval::new(&api);
 
         let spawn_executor = {
-            let driver_interval = driver_interval.clone();
+            let driver_interval = interval.clone();
 
             Rc::new(move |fut: Pin<Box<dyn Future<Output = ()> + 'static>>| {
                 spawn_local(driver_interval.clone(), fut);
             })
         };
 
-        let driver_dom = Rc::new(DriverDom::new(&api));
-        let driver_hashrouter = DriverHashrouter::new(&api);
+        let dom = Rc::new(DriverDom::new(&api));
+        let hashrouter = DriverHashrouter::new(&api);
         let driver_fetch = DriverFetch::new(&api);
-        let driver_websocket = DriverWebsocket::new(&api);
+        let websocket = DriverWebsocket::new(&api);
 
         let css_manager = {
-            let driver_dom = driver_dom.clone();
+            let driver_dom = dom.clone();
             CssManager::new(move |selector: &str, value: &str| {
                 driver_dom.insert_css(selector, value);
             })
@@ -78,7 +80,7 @@ impl DriverInner {
         dependencies.set_hook(
             Box::new(|| {}),
             {
-                let driver_browser = driver_dom.clone();
+                let driver_browser = dom.clone();
                 Box::new(move || {
                     driver_browser.flush_dom_changes();
                 })
@@ -89,227 +91,15 @@ impl DriverInner {
             api,
             dependencies,
             css_manager,
-            dom: driver_dom,
-            interval: driver_interval,
-            hashrouter: driver_hashrouter,
+            dom,
+            interval,
+            hashrouter,
             fetch: driver_fetch,
-            websocket: driver_websocket,
+            websocket,
             spawn_executor
         }
     }
 
-    pub fn export_interval_run_callback(&self, callback_id: u32) {
-        self.interval.export_interval_run_callback(callback_id);
-    }
-
-    pub fn export_timeout_run_callback(&self, callback_id: u32) {
-        self.interval.export_timeout_run_callback(callback_id);
-    }
-
-    pub fn export_hashrouter_hashchange_callback(&self, ptr: u32) {
-        let params = self.api.arguments.get_by_ptr(ptr);
-
-        let new_hash = params
-            .unwrap_or_default()
-            .convert::<String, _>(|mut params| {
-                let first = params.get_string("first")?;
-                params.expect_no_more()?;
-                Ok(first)
-            })
-            .unwrap_or_else(|error| {
-                log::error!("export_hashrouter_hashchange_callback -> params decode error -> {error}");
-                String::from("")
-            });
-
-        get_driver().transaction(|_|{
-            self.hashrouter.export_hashrouter_hashchange_callback(new_hash);
-        });
-    }
-
-    pub fn export_fetch_callback(&self, ptr: u32) {
-        let params = self.api.arguments.get_by_ptr(ptr);
-
-        let params = params
-            .unwrap_or_default()
-            .convert(|mut params| {
-                let request_id = params.get_u32("request_id")?;
-                let success = params.get_bool("success")?;
-                let status = params.get_u32("status")?;
-                let response = params.get_string("response")?;
-                params.expect_no_more()?;
-                Ok((request_id, success, status, response))
-            });
-
-        match params {
-            Ok((request_id, success, status, response)) => {
-                get_driver().transaction(|_|{
-                    self.fetch.export_fetch_callback(request_id, success, status, response);
-                });
-            },
-            Err(error) => {
-                log::error!("export_fetch_callback -> params decode error -> {error}");
-            }
-        }
-    }
-
-    pub fn export_websocket_callback_socket(&self, callback_id: u32) {
-        self.websocket.export_websocket_callback_socket(callback_id);
-    }
-
-    pub fn export_websocket_callback_message(&self, ptr: u32) {
-        let params = self.api.arguments.get_by_ptr(ptr);
-
-        let params = params
-            .unwrap_or_default()
-            .convert(|mut params| {
-                let callback_id = params.get_u32("callback_id")?;
-                let response = params.get_string("message")?;
-                params.expect_no_more()?;
-                Ok((callback_id, response))
-            });
-
-        match params {
-            Ok((callback_id, response)) => {
-                get_driver().transaction(|_|{
-                    self.websocket.export_websocket_callback_message(callback_id, response);
-                });
-            },
-            Err(error) => {
-                log::error!("export_websocket_callback_message -> params decode error -> {error}");
-            }
-        }
-    }
-
-    pub fn export_websocket_callback_close(&self, callback_id: u32) {
-        get_driver().transaction(|_| {
-            self.websocket.export_websocket_callback_close(callback_id);
-        });
-    }
-
-    pub fn export_dom_keydown(&self, ptr: u32) -> u32 {
-        let params = self.api.arguments.get_by_ptr(ptr);
-
-        let params = params
-            .unwrap_or_default()
-            .convert(|mut params| {
-                let dom_id = params.get_u64_or_null("dom_id")?;
-                let key = params.get_string("key")?;
-                let code = params.get_string("code")?;
-                let alt_key = params.get_bool("altKey")?;
-                let ctrl_key = params.get_bool("ctrlKey")?;
-                let shift_key = params.get_bool("shiftKey")?;
-                let meta_key = params.get_bool("metaKey")?;
-                params.expect_no_more()?;
-
-                Ok((dom_id, key, code, alt_key, ctrl_key, shift_key, meta_key))
-            });
-
-        match params {
-            Ok((dom_id, key, code, alt_key, ctrl_key, shift_key, meta_key)) => {
-                let mut result: Option<u32> = None;
-
-                get_driver().transaction(|_| {
-                    let prevent_default = self.dom.export_dom_keydown(
-                        dom_id,
-                        key,
-                        code,
-                        alt_key,
-                        ctrl_key,
-                        shift_key,
-                        meta_key
-                    );
-
-                    result = Some(match prevent_default {
-                        true => 1,
-                        false => 0
-                    })
-                });
-
-                if let Some(result) = result {
-                    return result;
-                }
-
-                log::error!("The returned value was expected");
-                0
-            },
-            Err(error) => {
-                log::error!("export_websocket_callback_message -> params decode error -> {error}");
-                0
-            }
-        }
-    }
-
-    pub fn export_dom_oninput(&self, ptr: u32) {
-        let params = self.api.arguments.get_by_ptr(ptr);
-
-        let params = params
-            .unwrap_or_default()
-            .convert(|mut params| {
-                let dom_id = params.get_u64("dom_id")?;
-                let text = params.get_string("text")?;
-                params.expect_no_more()?;
-
-                Ok((dom_id, text))
-            });
-
-        match params {
-            Ok((dom_id, text)) => {
-                get_driver().transaction(|_| {
-                    self.dom.export_dom_oninput(dom_id, text);
-                });
-            },
-            Err(error) => {
-                log::error!("export_dom_oninput -> params decode error -> {error}");
-            }
-        }
-    }
-
-    pub fn export_dom_ondropfile(&self, ptr: u32) {
-        let params = self.api.arguments.get_by_ptr(ptr);
-
-        let params = params
-            .unwrap_or_default()
-            .convert(|mut params| {
-                let dom_id = params.get_u64("dom_id")?;
-                let files = params.get_list("files", |mut item| {
-                    let name = item.get_string("name")?;
-                    let data = item.get_buffer("data")?;
-                    
-                    Ok(DropFileItem::new(name, data))
-                })?;
-                params.expect_no_more()?;
-
-                Ok((dom_id, DropFileEvent::new(files)))
-            });
-
-        match params {
-            Ok((dom_id, files)) => {
-                get_driver().transaction(|_| {
-                    self.dom.export_dom_ondropfile(dom_id, files);
-                });
-            },
-            Err(error) => {
-                log::error!("export_dom_ondropfile -> params decode error -> {error}");
-            }
-        }
-    }
-
-    pub fn export_dom_mouseover(&self, dom_id: u64) {
-        let dom_id = if dom_id == 0 { None } else { Some(dom_id) };
-        get_driver().transaction(|_|{
-            self.dom.export_dom_mouseover(dom_id);
-        });
-    }
-
-    pub fn export_dom_mousedown(&self, dom_id: u64) {
-        get_driver().transaction(|_|{
-            self.dom.export_dom_mousedown(dom_id);
-        });
-    }
-
-    pub fn init_env(&self) {
-        init_env(self.api.clone());
-    }
 }
 
 
@@ -493,5 +283,233 @@ impl Driver {
     pub (crate) fn get_class_name(&self, css: &Css) -> String {
         self.driver_inner.css_manager.get_class_name(css)
     }
+
+    pub fn dom_call(&self, path: &[&'static str], property: &'static str, params: Vec<JsValue>) -> JsValue {
+        self.driver_inner.api.dom_call(path, property, params)
+    }
+
+    pub fn dom_get(&self, path: &[&'static str], property: &'static str) -> JsValue {
+        self.driver_inner.api.dom_get(path, property)
+    }
+
+    pub fn dom_set(&self, path: &[&'static str], property: &'static str, value: JsValue) {
+        self.driver_inner.api.dom_set(path, property, value);
+    }
+
+    //....
+
+    pub(crate) fn init_env(&self) {
+        init_env(self.driver_inner.api.clone());
+    }
+
+    pub(crate) fn export_dom_mousedown(&self, dom_id: u64) {
+        get_driver().transaction(|_|{
+            self.driver_inner.dom.export_dom_mousedown(dom_id);
+        });
+    }
+
+    pub(crate) fn export_interval_run_callback(&self, callback_id: u32) {
+        self.driver_inner.interval.export_interval_run_callback(callback_id);
+    }
+
+    pub(crate) fn export_timeout_run_callback(&self, callback_id: u32) {
+        self.driver_inner.interval.export_timeout_run_callback(callback_id);
+    }
+
+    pub(crate) fn export_hashrouter_hashchange_callback(&self, ptr: u32) {
+        let params = self.driver_inner.api.arguments.get_by_ptr(ptr);
+
+        let new_hash = params
+            .unwrap_or_default()
+            .convert::<String, _>(|mut params| {
+                let first = params.get_string("first")?;
+                params.expect_no_more()?;
+                Ok(first)
+            })
+            .unwrap_or_else(|error| {
+                log::error!("export_hashrouter_hashchange_callback -> params decode error -> {error}");
+                String::from("")
+            });
+
+        get_driver().transaction(|_|{
+            self.driver_inner.hashrouter.export_hashrouter_hashchange_callback(new_hash);
+        });
+    }
+
+    pub(crate) fn export_fetch_callback(&self, ptr: u32) {
+        let params = self.driver_inner.api.arguments.get_by_ptr(ptr);
+
+        let params = params
+            .unwrap_or_default()
+            .convert(|mut params| {
+                let request_id = params.get_u32("request_id")?;
+                let success = params.get_bool("success")?;
+                let status = params.get_u32("status")?;
+                let response = params.get_string("response")?;
+                params.expect_no_more()?;
+                Ok((request_id, success, status, response))
+            });
+
+        match params {
+            Ok((request_id, success, status, response)) => {
+                get_driver().transaction(|_|{
+                    self.driver_inner.fetch.export_fetch_callback(request_id, success, status, response);
+                });
+            },
+            Err(error) => {
+                log::error!("export_fetch_callback -> params decode error -> {error}");
+            }
+        }
+    }
+
+    pub(crate) fn export_websocket_callback_socket(&self, callback_id: u32) {
+        self.driver_inner.websocket.export_websocket_callback_socket(callback_id);
+    }
+
+    pub(crate) fn export_websocket_callback_message(&self, ptr: u32) {
+        let params = self.driver_inner.api.arguments.get_by_ptr(ptr);
+
+        let params = params
+            .unwrap_or_default()
+            .convert(|mut params| {
+                let callback_id = params.get_u32("callback_id")?;
+                let response = params.get_string("message")?;
+                params.expect_no_more()?;
+                Ok((callback_id, response))
+            });
+
+        match params {
+            Ok((callback_id, response)) => {
+                get_driver().transaction(|_|{
+                    self.driver_inner.websocket.export_websocket_callback_message(callback_id, response);
+                });
+            },
+            Err(error) => {
+                log::error!("export_websocket_callback_message -> params decode error -> {error}");
+            }
+        }
+    }
+
+    pub(crate) fn export_websocket_callback_close(&self, callback_id: u32) {
+        get_driver().transaction(|_| {
+            self.driver_inner.websocket.export_websocket_callback_close(callback_id);
+        });
+    }
+
+    pub(crate) fn export_dom_keydown(&self, ptr: u32) -> u32 {
+        let params = self.driver_inner.api.arguments.get_by_ptr(ptr);
+
+        let params = params
+            .unwrap_or_default()
+            .convert(|mut params| {
+                let dom_id = params.get_u64_or_null("dom_id")?;
+                let key = params.get_string("key")?;
+                let code = params.get_string("code")?;
+                let alt_key = params.get_bool("altKey")?;
+                let ctrl_key = params.get_bool("ctrlKey")?;
+                let shift_key = params.get_bool("shiftKey")?;
+                let meta_key = params.get_bool("metaKey")?;
+                params.expect_no_more()?;
+
+                Ok((dom_id, key, code, alt_key, ctrl_key, shift_key, meta_key))
+            });
+
+        match params {
+            Ok((dom_id, key, code, alt_key, ctrl_key, shift_key, meta_key)) => {
+                let mut result: Option<u32> = None;
+
+                get_driver().transaction(|_| {
+                    let prevent_default = self.driver_inner.dom.export_dom_keydown(
+                        dom_id,
+                        key,
+                        code,
+                        alt_key,
+                        ctrl_key,
+                        shift_key,
+                        meta_key
+                    );
+
+                    result = Some(match prevent_default {
+                        true => 1,
+                        false => 0
+                    })
+                });
+
+                if let Some(result) = result {
+                    return result;
+                }
+
+                log::error!("The returned value was expected");
+                0
+            },
+            Err(error) => {
+                log::error!("export_websocket_callback_message -> params decode error -> {error}");
+                0
+            }
+        }
+    }
+
+    pub(crate) fn export_dom_oninput(&self, ptr: u32) {
+        let params = self.driver_inner.api.arguments.get_by_ptr(ptr);
+
+        let params = params
+            .unwrap_or_default()
+            .convert(|mut params| {
+                let dom_id = params.get_u64("dom_id")?;
+                let text = params.get_string("text")?;
+                params.expect_no_more()?;
+
+                Ok((dom_id, text))
+            });
+
+        match params {
+            Ok((dom_id, text)) => {
+                get_driver().transaction(|_| {
+                    self.driver_inner.dom.export_dom_oninput(dom_id, text);
+                });
+            },
+            Err(error) => {
+                log::error!("export_dom_oninput -> params decode error -> {error}");
+            }
+        }
+    }
+
+    pub(crate) fn export_dom_ondropfile(&self, ptr: u32) {
+        let params = self.driver_inner.api.arguments.get_by_ptr(ptr);
+
+        let params = params
+            .unwrap_or_default()
+            .convert(|mut params| {
+                let dom_id = params.get_u64("dom_id")?;
+                let files = params.get_list("files", |mut item| {
+                    let name = item.get_string("name")?;
+                    let data = item.get_buffer("data")?;
+                    
+                    Ok(DropFileItem::new(name, data))
+                })?;
+                params.expect_no_more()?;
+
+                Ok((dom_id, DropFileEvent::new(files)))
+            });
+
+        match params {
+            Ok((dom_id, files)) => {
+                get_driver().transaction(|_| {
+                    self.driver_inner.dom.export_dom_ondropfile(dom_id, files);
+                });
+            },
+            Err(error) => {
+                log::error!("export_dom_ondropfile -> params decode error -> {error}");
+            }
+        }
+    }
+
+    pub(crate) fn export_dom_mouseover(&self, dom_id: u64) {
+        let dom_id = if dom_id == 0 { None } else { Some(dom_id) };
+        get_driver().transaction(|_|{
+            self.driver_inner.dom.export_dom_mouseover(dom_id);
+        });
+    }
+
 }
 

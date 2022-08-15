@@ -1,9 +1,9 @@
-import { Guard, ListItemType } from "../arguments";
+import { Guard, JsValueType } from "../arguments";
 import { Cookies } from "../module/cookies";
 import { ModuleControllerType } from "../wasm_init";
 import { ExportType } from "../wasm_module";
 
-export const initCookie = (getWasm: () => ModuleControllerType<ExportType>, cookies: Cookies) => (method: string, args: Array<ListItemType>): number => {
+export const initCookie = (getWasm: () => ModuleControllerType<ExportType>, cookies: Cookies) => (method: string, args: Array<JsValueType>): number => {
     if (method === 'get') {
         const [name, ...rest] = args;
 

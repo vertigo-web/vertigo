@@ -1,5 +1,5 @@
 // import { argumentsDecode, ListItemType } from "./arguments";
-import { argumentsDecode, ListItemType, ParamListBuilder } from './arguments';
+import { argumentsDecode, JsValueType, JsValueBuilder } from './arguments';
 
 export interface BaseExportType {
     alloc: (size: number) => number,
@@ -7,14 +7,13 @@ export interface BaseExportType {
 
 export interface ModuleControllerType<ExportType extends BaseExportType> {
     exports: ExportType,
-    decodeArguments: (ptr: number, size: number) => ListItemType,
-    newList: () => ParamListBuilder,
+    decodeArguments: (ptr: number, size: number) => JsValueType,
+    newList: () => JsValueBuilder,
     getUint8Memory: () => Uint8Array,
 }
 
 const fetchModule = async (wasmBinPath: string, imports: Record<string, WebAssembly.ModuleImports>): Promise<WebAssembly.WebAssemblyInstantiatedSource> => {
     if (typeof WebAssembly.instantiateStreaming === 'function') {
-        console.info('fetchModule by WebAssembly.instantiateStreaming');
 
         try {
             const module = await WebAssembly.instantiateStreaming(fetch(wasmBinPath), imports);
@@ -57,7 +56,7 @@ export const wasmInit = async <ImportType extends Record<string, Function>, Expo
 
     const decodeArguments = (ptr: number, size: number) => argumentsDecode(getUint8Memory, ptr, size);
 
-    const newList = (): ParamListBuilder => new ParamListBuilder(getUint8Memory, exports.alloc);
+    const newList = (): JsValueBuilder => new JsValueBuilder(getUint8Memory, exports.alloc);
 
     return {
         exports,
