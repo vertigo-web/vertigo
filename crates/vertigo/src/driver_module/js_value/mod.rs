@@ -4,14 +4,14 @@ use crate::struct_mut::HashMapMut;
 
 use self::{
     memory_block::MemoryBlock,
-    params::{decode_params, ParamItem}
+    js_value_struct::{decode_js_value, JsValue}
 };
 
 pub mod memory_block_write;
 pub mod memory_block_read;
 pub mod memory_block;
-pub mod params;
-pub mod param_builder;
+pub mod js_value_struct;
+pub mod js_value_builder;
 
 #[derive(Clone)]
 pub struct Arguments {
@@ -32,11 +32,15 @@ impl Arguments {
         ptr
     }
 
-    pub fn get_by_ptr(&self, ptr: u32) -> Option<ParamItem> {
+    pub fn get_by_ptr(&self, ptr: u32) -> Option<JsValue> {
+        if ptr == 0 {
+            return None;
+        }
+
         let param = self.blocks.remove(&ptr);
 
         if let Some(param) = param {
-            match decode_params(param) {
+            match decode_js_value(param) {
                 Ok(value) => Some(value),
                 Err(err) => {
                     log::error!("get_by_ptr - error decode: {err}");

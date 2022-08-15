@@ -98,6 +98,7 @@ pub use crate::fetch::pinboxfut::PinBoxFuture;
 
 pub use computed::context::{Context};
 pub use crate::driver_module::api::ApiImport;
+pub use crate::driver_module::js_value::js_value_struct::JsValue;
 
 #[cfg(feature = "serde_request")]
 /// Implements [SingleRequestTrait] using serde (needs `serde_request` feature).
@@ -184,70 +185,70 @@ pub fn alloc(size: u32) -> u32 {
 
 #[no_mangle]
 pub fn interval_run_callback(callback_id: u32) {
-    DRIVER_BROWSER.with(|state| state.driver.driver_inner.export_interval_run_callback(callback_id));
+    DRIVER_BROWSER.with(|state| state.driver.export_interval_run_callback(callback_id));
 }
 
 #[no_mangle]
 pub fn timeout_run_callback(callback_id: u32) {
-    DRIVER_BROWSER.with(|state| state.driver.driver_inner.export_timeout_run_callback(callback_id));
+    DRIVER_BROWSER.with(|state| state.driver.export_timeout_run_callback(callback_id));
 }
 
 #[no_mangle]
 pub fn hashrouter_hashchange_callback(list_id: u32) {
-    DRIVER_BROWSER.with(|state| state.driver.driver_inner.export_hashrouter_hashchange_callback(list_id));
+    DRIVER_BROWSER.with(|state| state.driver.export_hashrouter_hashchange_callback(list_id));
 }
 
 #[no_mangle]
 pub fn fetch_callback(params_id: u32) {
-    DRIVER_BROWSER.with(|state| state.driver.driver_inner.export_fetch_callback(params_id));
+    DRIVER_BROWSER.with(|state| state.driver.export_fetch_callback(params_id));
 }
 
 #[no_mangle]
 pub fn websocket_callback_socket(callback_id: u32) {
-    DRIVER_BROWSER.with(|state| state.driver.driver_inner.export_websocket_callback_socket(callback_id));
+    DRIVER_BROWSER.with(|state| state.driver.export_websocket_callback_socket(callback_id));
 }
 
 #[no_mangle]
 pub fn websocket_callback_message(callback_id: u32) {
-    DRIVER_BROWSER.with(|state| state.driver.driver_inner.export_websocket_callback_message(callback_id));
+    DRIVER_BROWSER.with(|state| state.driver.export_websocket_callback_message(callback_id));
 }
 
 #[no_mangle]
 pub fn websocket_callback_close(callback_id: u32) {
-    DRIVER_BROWSER.with(|state| state.driver.driver_inner.export_websocket_callback_close(callback_id));
+    DRIVER_BROWSER.with(|state| state.driver.export_websocket_callback_close(callback_id));
 }
 
 #[no_mangle]
 pub fn dom_keydown(params_id: u32) -> u32 {
     DRIVER_BROWSER.with(|state|
-        state.driver.driver_inner.export_dom_keydown(params_id)
+        state.driver.export_dom_keydown(params_id)
     )
 }
 
 #[no_mangle]
 pub fn dom_oninput(params_id: u32) {
-    DRIVER_BROWSER.with(|state| state.driver.driver_inner.export_dom_oninput(params_id));
+    DRIVER_BROWSER.with(|state| state.driver.export_dom_oninput(params_id));
 }
 
 #[no_mangle]
 pub fn dom_mouseover(dom_id: u64) {
-    DRIVER_BROWSER.with(|state| state.driver.driver_inner.export_dom_mouseover(dom_id));
+    DRIVER_BROWSER.with(|state| state.driver.export_dom_mouseover(dom_id));
 }
 
 #[no_mangle]
 pub fn dom_mousedown(dom_id: u64) {
-    DRIVER_BROWSER.with(|state| state.driver.driver_inner.export_dom_mousedown(dom_id));
+    DRIVER_BROWSER.with(|state| state.driver.export_dom_mousedown(dom_id));
 }
 
 #[no_mangle]
 pub fn dom_ondropfile(params_id: u32) {
-    DRIVER_BROWSER.with(|state| state.driver.driver_inner.export_dom_ondropfile(params_id));
+    DRIVER_BROWSER.with(|state| state.driver.export_dom_ondropfile(params_id));
 }
 
 /// Starting point of the app.
 pub fn start_app(get_component: impl FnOnce() -> DomElement) {
     DRIVER_BROWSER.with(|state| {
-        state.driver.driver_inner.init_env();
+        state.driver.init_env();
         let app = get_component();
 
         let root = DomElement::create_with_id(DomId::root());

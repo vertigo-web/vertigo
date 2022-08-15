@@ -4,7 +4,7 @@ use crate::{
     dom::{
         dom_node::DomNode,
         dom_id::DomId,
-    }, get_driver, Css, Client, Computed, struct_mut::VecMut,
+    }, get_driver, Css, Client, Computed, struct_mut::VecMut, ApiImport,
 };
 
 use super::types::{KeyDownEvent, DropFileEvent};
@@ -50,6 +50,23 @@ impl From<Computed<Css>> for CssValue {
     }
 }
 
+#[derive(Clone)]
+pub struct DomElementRef {
+    _api: Rc<ApiImport>,
+    _id: DomId,
+}
+
+impl DomElementRef {
+    pub fn new(api: Rc<ApiImport>, id: DomId) -> DomElementRef {
+        DomElementRef {
+            _api: api,
+            _id: id,
+        }
+    }
+
+    //TODO 
+}
+
 pub struct DomElement {
     driver: Driver,
     id_dom: DomId,
@@ -71,6 +88,10 @@ impl DomElement {
             child_node: VecDequeMut::new(),
             subscriptions: VecMut::new(),
         }
+    }
+
+    pub fn get_ref(&self) -> DomElementRef {
+        DomElementRef::new(self.driver.driver_inner.api.clone(), self.id_dom)
     }
 
     pub fn create_with_id(id: DomId) -> DomElement {

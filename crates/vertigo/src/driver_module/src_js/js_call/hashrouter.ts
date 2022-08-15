@@ -1,9 +1,9 @@
-import { Guard, ListItemType } from "../arguments";
+import { Guard, JsValueType } from "../arguments";
 import { HashRouter } from "../module/hashrouter";
 import { ModuleControllerType } from "../wasm_init";
 import { ExportType } from "../wasm_module";
 
-export const initHashrouter = (getWasm: () => ModuleControllerType<ExportType>, hashRouter: HashRouter) => (method: string, args: Array<ListItemType>): number => {
+export const initHashrouter = (getWasm: () => ModuleControllerType<ExportType>, hashRouter: HashRouter) => (method: string, args: Array<JsValueType>): number => {
     if (method === 'push') {
         const [new_hash, ...rest] = args;
 

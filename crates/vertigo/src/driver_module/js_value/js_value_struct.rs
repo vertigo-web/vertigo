@@ -1,12 +1,13 @@
-use std::collections::VecDeque;
+use std::collections::{VecDeque, HashMap};
 
 use super::{memory_block_write::MemoryBlockWrite, memory_block_read::MemoryBlockRead, memory_block::MemoryBlock};
 
 const PARAM_TYPE: u32 = 1;
 const SIZE: u32 = 4;
 const LIST_COUNT: u32 = 2;
+const OBJECT_COUNT: u32 = 2;
 
-pub enum ParamItemNumber {
+pub enum JsValueNumberConst {
     U32 = 1,
     I32 = 2,
     U64 = 3,
@@ -20,10 +21,11 @@ pub enum ParamItemNumber {
     Vec = 9,
     String = 10,
     List = 11,
+    Object = 12,
 }
 
 #[derive(Debug)]
-pub enum ParamItem {
+pub enum JsValue {
     U32(u32),
     I32(i32),
     U64(u64),
@@ -36,10 +38,19 @@ pub enum ParamItem {
 
     Vec(Vec<u8>),               //type, length of the sequence of bytes, sequence of bytes
     String(String),             //type, length of the sequence of bytes, sequence of bytes
-    List(Vec<ParamItem>),       //type, length
+    List(Vec<JsValue>),         //type, length
+    Object(HashMap<String, JsValue>)
 }
 
-impl ParamItem {
+impl JsValue {
+    pub fn str(value: &str) -> JsValue {
+        JsValue::String(value.into())
+    }
+
+    fn get_string_size(value: &str) -> u32 {
+        PARAM_TYPE + SIZE + value.as_bytes().len() as u32
+    }
+
     fn get_size(&self) -> u32 {
         match self {
             Self::U32(..) => PARAM_TYPE + 4,
@@ -53,7 +64,7 @@ impl ParamItem {
             Self::Undefined => PARAM_TYPE,
 
             Self::Vec(value) => PARAM_TYPE + SIZE + value.len() as u32,
-            Self::String(value) => PARAM_TYPE + SIZE + value.as_bytes().len() as u32,
+            Self::String(value) => JsValue::get_string_size(value),
             Self::List(items) => {
                 let mut sum = PARAM_TYPE + LIST_COUNT;
 
@@ -63,61 +74,85 @@ impl ParamItem {
         
                 sum
             },
+            Self::Object(map) => {
+                let mut sum = PARAM_TYPE + OBJECT_COUNT;
+
+                for (key, value) in map {
+                    sum += Self::get_string_size(key);
+                    sum += value.get_size();
+                }
+
+                sum
+            }
         }
+    }
+
+    fn write_string_to(value: &str, buff: &mut MemoryBlockWrite) {
+        buff.write_param_type(JsValueNumberConst::String);
+        let data = value.as_bytes();
+        buff.write_u32(data.len() as u32);
+        buff.write(data);
+
     }
 
     fn write_to(&self, buff: &mut MemoryBlockWrite) {
         match self {
             Self::U32(value) => {
-                buff.write_param_type(ParamItemNumber::U32);
+                buff.write_param_type(JsValueNumberConst::U32);
                 buff.write_u32(*value);
             },
             Self::I32(value) => {
-                buff.write_param_type(ParamItemNumber::I32);
+                buff.write_param_type(JsValueNumberConst::I32);
                 buff.write_i32(*value);
             },
             Self::U64(value) => {
-                buff.write_param_type(ParamItemNumber::U64);
+                buff.write_param_type(JsValueNumberConst::U64);
                 buff.write_u64(*value);
             },
             Self::I64(value) => {
-                buff.write_param_type(ParamItemNumber::I64);
+                buff.write_param_type(JsValueNumberConst::I64);
                 buff.write_i64(*value);
             },
 
             Self::True => {
-                buff.write_param_type(ParamItemNumber::True);
+                buff.write_param_type(JsValueNumberConst::True);
             },
             Self::False => {
-                buff.write_param_type(ParamItemNumber::False);
+                buff.write_param_type(JsValueNumberConst::False);
             },
             Self::Null => {
-                buff.write_param_type(ParamItemNumber::Null);
+                buff.write_param_type(JsValueNumberConst::Null);
             },
             Self::Undefined => {
-                buff.write_param_type(ParamItemNumber::Undefined);
+                buff.write_param_type(JsValueNumberConst::Undefined);
             },
 
             Self::Vec(inner_buff) => {
-                buff.write_param_type(ParamItemNumber::Vec);
+                buff.write_param_type(JsValueNumberConst::Vec);
                 let data = inner_buff.as_slice();
                 buff.write_u32(data.len() as u32);
                 buff.write(inner_buff.as_slice());
             },
             Self::String(value) => {
-                buff.write_param_type(ParamItemNumber::String);
-                let data = value.as_bytes();
-                buff.write_u32(data.len() as u32);
-                buff.write(data);
+                Self::write_string_to(value.as_str(), buff);
             },        
             Self::List(list) => {
-                buff.write_param_type(ParamItemNumber::List);
+                buff.write_param_type(JsValueNumberConst::List);
                 buff.write_u16(list.len() as u16);
         
                 for param in list {
                     param.write_to(buff);
                 }
             },
+            Self::Object(map) => {
+                buff.write_param_type(JsValueNumberConst::Object);
+                buff.write_u16(map.len() as u16);
+
+                for (key, value) in map {
+                    Self::write_string_to(key.as_str(), buff);
+                    value.write_to(buff);
+                }
+            }
         }
     }
 
@@ -143,6 +178,7 @@ impl ParamItem {
             Self::Vec(..) => "vec",
             Self::String(..) => "string",
             Self::List(..) => "list",
+            Self::Object(..) => "object",
         }
     }
 
@@ -198,7 +234,7 @@ impl ParamItem {
         }
     }
 
-    pub fn try_get_list(self) -> Result<Vec<ParamItem>, String> {
+    pub fn try_get_list(self) -> Result<Vec<JsValue>, String> {
         match self {
             Self::List(list) => Ok(list),
             item => {
@@ -218,10 +254,10 @@ impl ParamItem {
         }
     }
 
-    pub fn convert<T, F: FnOnce(ParamListDecoder) -> Result<T, String>>(self, convert: F) -> Result<T, String> {
+    pub fn convert<T, F: FnOnce(JsValueListDecoder) -> Result<T, String>>(self, convert: F) -> Result<T, String> {
         match self {
-            ParamItem::List(list) => {
-                let decoder = ParamListDecoder::new(list);
+            JsValue::List(list) => {
+                let decoder = JsValueListDecoder::new(list);
                 convert(decoder)        
             },
             _ => {
@@ -232,19 +268,19 @@ impl ParamItem {
 
 }
 
-impl Default for ParamItem {
+impl Default for JsValue {
     fn default() -> Self {
-        ParamItem::List(Vec::new())
+        JsValue::List(Vec::new())
     }
 }
 
-pub struct ParamListDecoder {
-    data: VecDeque<ParamItem>,
+pub struct JsValueListDecoder {
+    data: VecDeque<JsValue>,
 }
 
-impl ParamListDecoder {
-    pub fn new(data: Vec<ParamItem>) -> ParamListDecoder {
-        ParamListDecoder {
+impl JsValueListDecoder {
+    pub fn new(data: Vec<JsValue>) -> JsValueListDecoder {
+        JsValueListDecoder {
             data: VecDeque::from(data),
         }
     }
@@ -317,7 +353,7 @@ impl ParamListDecoder {
 
     pub fn get_list<
         R,
-        F: Fn(ParamListDecoder) -> Result<R, String>,
+        F: Fn(JsValueListDecoder) -> Result<R, String>,
     >(
         &mut self,
         label: &'static str,
@@ -331,7 +367,7 @@ impl ParamListDecoder {
                     for (index, item) in list.into_iter().enumerate() {
                         match item.try_get_list() {
                             Ok(sublist) => {
-                                let decoder = ParamListDecoder::new(sublist);
+                                let decoder = JsValueListDecoder::new(sublist);
                                 match conver(decoder) {
                                     Ok(value) => {
                                         result.push(value);
@@ -366,55 +402,55 @@ impl ParamListDecoder {
 }
 
 
-fn decode_item(buffor: &mut MemoryBlockRead) -> Result<ParamItem, String> {
+fn decode_js_value_inner(buffor: &mut MemoryBlockRead) -> Result<JsValue, String> {
     let type_param = buffor.get_byte();
 
     if type_param == 1 {
         let value = buffor.get_u32();
-        return Ok(ParamItem::U32(value));
+        return Ok(JsValue::U32(value));
     }
 
     if type_param == 2 {
         let value = buffor.get_i32();
-        return Ok(ParamItem::I32(value));
+        return Ok(JsValue::I32(value));
     }
 
     if type_param == 3 {
         let value = buffor.get_u64();
-        return Ok(ParamItem::U64(value));
+        return Ok(JsValue::U64(value));
     }
 
     if type_param == 4 {
         let value = buffor.get_i64();
-        return Ok(ParamItem::I64(value));
+        return Ok(JsValue::I64(value));
     }
 
     if type_param == 5 {
-        return Ok(ParamItem::True);
+        return Ok(JsValue::True);
     }
 
     if type_param == 6 {
-        return Ok(ParamItem::False);
+        return Ok(JsValue::False);
     }
 
     if type_param == 7 {
-        return Ok(ParamItem::Null);
+        return Ok(JsValue::Null);
     }
 
     if type_param == 8 {
-        return Ok(ParamItem::Undefined);
+        return Ok(JsValue::Undefined);
     }
 
     if type_param == 9 {
         let len = buffor.get_u32();
         let param = buffor.get_vec(len);
-        return Ok(ParamItem::Vec(param));
+        return Ok(JsValue::Vec(param));
     }
 
     if type_param == 10 {
         let str_len = buffor.get_u32();
         let param = buffor.get_string(str_len)?;
-        return Ok(ParamItem::String(param));
+        return Ok(JsValue::String(param));
     }
 
     if type_param == 11 {
@@ -423,19 +459,18 @@ fn decode_item(buffor: &mut MemoryBlockRead) -> Result<ParamItem, String> {
         let list_size = buffor.get_u16();
 
         for _ in 0..list_size {
-            let param = decode_item(buffor)?;
+            let param = decode_js_value_inner(buffor)?;
             param_list.push(param);
         }
 
-        return Ok(ParamItem::List(param_list));
+        return Ok(JsValue::List(param_list));
     }
 
-    // buffor.debug_show_rest();
     Err(format!("Unknown data type prefix {type_param}"))
 }
 
 
-pub fn decode_params(buffor: MemoryBlock) -> Result<ParamItem, String> {
+pub fn decode_js_value(buffor: MemoryBlock) -> Result<JsValue, String> {
     let mut buffor = MemoryBlockRead::new(buffor);
-    decode_item(&mut buffor)
+    decode_js_value_inner(&mut buffor)
 }
