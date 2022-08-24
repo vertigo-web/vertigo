@@ -22,7 +22,7 @@ use crate::driver_module::modules::{
     websocket::DriverWebsocket,
 };
 
-use super::js_value::js_value_struct::JsValue;
+use super::api::DomAccess;
 
 #[derive(Debug)]
 pub enum FetchMethod {
@@ -77,15 +77,13 @@ impl DriverInner {
             })
         };
 
-        dependencies.set_hook(
-            Box::new(|| {}),
-            {
-                let driver_browser = dom.clone();
-                Box::new(move || {
-                    driver_browser.flush_dom_changes();
-                })
+        dependencies.on_after_transaction({
+            let dom = dom.clone();
+
+            move || {
+                dom.flush_dom_changes();
             }
-        );
+        });
 
         DriverInner {
             api,
@@ -120,7 +118,7 @@ pub type FetchResult = Result<(u32, String), String>;
 /// Additionally driver struct wraps [Dependencies] object.
 #[derive(Clone)]
 pub struct Driver {
-    pub(crate) driver_inner: Rc<DriverInner>,
+    pub(crate) inner: Rc<DriverInner>,
 }
 
 impl Driver {
@@ -129,7 +127,7 @@ impl Driver {
         let driver = Rc::new(DriverInner::new(Rc::new(api)));
 
         Driver {
-            driver_inner: driver,
+            inner: driver,
         }
     }
 }
@@ -138,95 +136,95 @@ impl Driver {
     // Below - methods to interact with the dom. Used exclusively by vertigo.
 
     pub(crate) fn create_node(&self, id: DomId, name: &'static str) {
-        self.driver_inner.dom.create_node(id, name);
+        self.inner.dom.create_node(id, name);
     }
 
     pub(crate) fn create_text(&self, id: DomId, value: &str) {
-        self.driver_inner.dom.create_text(id, value);
+        self.inner.dom.create_text(id, value);
     }
 
     pub(crate) fn update_text(&self, id: DomId, value: &str) {
-        self.driver_inner.dom.update_text(id, value);
+        self.inner.dom.update_text(id, value);
     }
 
     pub(crate) fn set_attr(&self, id: DomId, key: &'static str, value: &str) {
-        self.driver_inner.dom.set_attr(id, key, value);
+        self.inner.dom.set_attr(id, key, value);
     }
 
     pub(crate) fn remove_node(&self, id: DomId) {
-        self.driver_inner.dom.remove_node(id);
+        self.inner.dom.remove_node(id);
     }
 
     pub(crate) fn remove_text(&self, id: DomId) {
-        self.driver_inner.dom.remove_text(id);
+        self.inner.dom.remove_text(id);
     }
 
     pub(crate) fn create_comment(&self, id: DomId, value: String) {
-        self.driver_inner.dom.create_comment(id, value);
+        self.inner.dom.create_comment(id, value);
     }
 
     pub(crate) fn remove_comment(&self, id: DomId) {
-        self.driver_inner.dom.remove_comment(id);
+        self.inner.dom.remove_comment(id);
     }
 
     pub(crate) fn insert_before(&self, parent: DomId, child: DomId, ref_id: Option<DomId>) {
-        self.driver_inner.dom.insert_before(parent, child, ref_id);
+        self.inner.dom.insert_before(parent, child, ref_id);
     }
 
     /// Create new FetchBuilder.
     #[must_use]
     pub fn fetch(&self, url: impl Into<String>) -> FetchBuilder {
-        FetchBuilder::new(self.driver_inner.fetch.clone(), url.into())
+        FetchBuilder::new(self.inner.fetch.clone(), url.into())
     }
 
     /// Gets a cookie by name
     pub fn cookie_get(&self, cname: &str) -> String {
-        self.driver_inner.api.cookie_get(cname)
+        self.inner.api.cookie_get(cname)
     }
 
     /// Sets a cookie under provided name
     pub fn cookie_set(&self, cname: &str, cvalue: &str, expires_in: u64) {
-        self.driver_inner.api.cookie_set(cname, cvalue, expires_in)
+        self.inner.api.cookie_set(cname, cvalue, expires_in)
     }
 
     /// Retrieves the hash part of location URL from client (browser)
     pub fn get_hash_location(&self) -> String {
-        self.driver_inner.hashrouter.get_hash_location()
+        self.inner.hashrouter.get_hash_location()
     }
 
     /// Sets the hash part of location URL from client (browser)
     pub fn push_hash_location(&self, path: String) {
-        self.driver_inner.hashrouter.push_hash_location(path);
+        self.inner.hashrouter.push_hash_location(path);
     }
 
     /// Set event handler upon hash location change
     #[must_use]
     pub fn on_hash_route_change(&self, on_change: Box<dyn Fn(&String)>) -> DropResource {
-        self.driver_inner.hashrouter.on_hash_route_change(on_change)
+        self.inner.hashrouter.on_hash_route_change(on_change)
     }
 
     /// Make `func` fire every `time` seconds.
     #[must_use]
     pub fn set_interval(&self, time: u32, func: impl Fn() + 'static) -> DropResource {
-        self.driver_inner.interval.set_interval(time, move |_| {
+        self.inner.interval.set_interval(time, move |_| {
             func();
         })
     }
 
     /// Gets current value of monotonic clock.
     pub fn now(&self) -> Instant {
-        Instant::now(self.driver_inner.api.clone())
+        Instant::now(self.inner.api.clone())
     }
 
     /// Create new RequestBuilder (more complex version of [fetch](struct.Driver.html#method.fetch))
     #[must_use]
     pub fn request(&self, url: impl Into<String>) -> RequestBuilder {
-        RequestBuilder::new(&self.driver_inner.fetch, url)
+        RequestBuilder::new(&self.inner.fetch, url)
     }
 
     pub fn sleep(&self, time: u32) -> FutureBox<()> {
         let (sender, future) = FutureBox::new();
-        self.driver_inner.interval.set_timeout_and_detach(time, move |_| {
+        self.inner.interval.set_timeout_and_detach(time, move |_| {
             sender.publish(());
         });
 
@@ -238,7 +236,7 @@ impl Driver {
     pub fn websocket(&self, host: impl Into<String>, callback: Box<dyn Fn(WebsocketMessage)>) -> DropResource {
         let host: String = host.into();
 
-        self.driver_inner.websocket.websocket_start(
+        self.inner.websocket.websocket_start(
             host,
             Box::new(move |message: WebsocketMessageDriver| {
                 let message = match message {
@@ -256,68 +254,58 @@ impl Driver {
     }
 
     pub fn websocket_send_message(&self, callback_id: u32, message: String) {
-        self.driver_inner.websocket.websocket_send_message(callback_id, message);
+        self.inner.websocket.websocket_send_message(callback_id, message);
     }
 
     pub(crate) fn flush_update(&self) {
-        self.driver_inner.dom.flush_dom_changes();
+        self.inner.dom.flush_dom_changes();
     }
 
     /// Spawn a future - thus allowing to fire async functions in, for example, event handler. Handy when fetching resources from internet.
     pub fn spawn(&self, future: impl Future<Output = ()> + 'static) {
         let future = Box::pin(future);
-        let spawn_executor = self.driver_inner.spawn_executor.clone();
+        let spawn_executor = self.inner.spawn_executor.clone();
         spawn_executor(future);
     }
 
     /// Fire provided function in a way that all changes in [dependency graph](struct.Dependencies.html) made by this function
     /// will trigger only one run of updates, just like the changes were done all at once.
     pub fn transaction<F: FnOnce(&Context)>(&self, func: F) {
-        self.driver_inner.dependencies.transaction(func);
+        self.inner.dependencies.transaction(func);
     }
 
     pub(crate) fn get_dependencies(&self) -> Dependencies {
-        self.driver_inner.dependencies.clone()
+        self.inner.dependencies.clone()
     }
 
     pub (crate) fn get_class_name(&self, css: &Css) -> String {
-        self.driver_inner.css_manager.get_class_name(css)
+        self.inner.css_manager.get_class_name(css)
     }
 
-    pub fn dom_call(&self, path: &[&'static str], property: &'static str, params: Vec<JsValue>) -> JsValue {
-        self.driver_inner.api.dom_call(path, property, params)
+    pub fn dom_access(&self) -> DomAccess {
+        self.inner.api.dom_access()
     }
-
-    pub fn dom_get(&self, path: &[&'static str], property: &'static str) -> JsValue {
-        self.driver_inner.api.dom_get(path, property)
-    }
-
-    pub fn dom_set(&self, path: &[&'static str], property: &'static str, value: JsValue) {
-        self.driver_inner.api.dom_set(path, property, value);
-    }
-
-    //....
 
     pub(crate) fn init_env(&self) {
-        init_env(self.driver_inner.api.clone());
+        init_env(self.inner.api.clone());
     }
 
     pub(crate) fn export_dom_mousedown(&self, dom_id: u64) {
         get_driver().transaction(|_|{
-            self.driver_inner.dom.export_dom_mousedown(dom_id);
+            self.inner.dom.export_dom_mousedown(dom_id);
         });
     }
 
     pub(crate) fn export_interval_run_callback(&self, callback_id: u32) {
-        self.driver_inner.interval.export_interval_run_callback(callback_id);
+        self.inner.interval.export_interval_run_callback(callback_id);
     }
 
     pub(crate) fn export_timeout_run_callback(&self, callback_id: u32) {
-        self.driver_inner.interval.export_timeout_run_callback(callback_id);
+        self.inner.interval.export_timeout_run_callback(callback_id);
     }
 
     pub(crate) fn export_hashrouter_hashchange_callback(&self, ptr: u32) {
-        let params = self.driver_inner.api.arguments.get_by_ptr(ptr);
+        let params = self.inner.api.arguments.get_by_ptr(ptr);
 
         let new_hash = params
             .unwrap_or_default()
@@ -332,12 +320,12 @@ impl Driver {
             });
 
         get_driver().transaction(|_|{
-            self.driver_inner.hashrouter.export_hashrouter_hashchange_callback(new_hash);
+            self.inner.hashrouter.export_hashrouter_hashchange_callback(new_hash);
         });
     }
 
     pub(crate) fn export_fetch_callback(&self, ptr: u32) {
-        let params = self.driver_inner.api.arguments.get_by_ptr(ptr);
+        let params = self.inner.api.arguments.get_by_ptr(ptr);
 
         let params = params
             .unwrap_or_default()
@@ -353,7 +341,7 @@ impl Driver {
         match params {
             Ok((request_id, success, status, response)) => {
                 get_driver().transaction(|_|{
-                    self.driver_inner.fetch.export_fetch_callback(request_id, success, status, response);
+                    self.inner.fetch.export_fetch_callback(request_id, success, status, response);
                 });
             },
             Err(error) => {
@@ -363,11 +351,11 @@ impl Driver {
     }
 
     pub(crate) fn export_websocket_callback_socket(&self, callback_id: u32) {
-        self.driver_inner.websocket.export_websocket_callback_socket(callback_id);
+        self.inner.websocket.export_websocket_callback_socket(callback_id);
     }
 
     pub(crate) fn export_websocket_callback_message(&self, ptr: u32) {
-        let params = self.driver_inner.api.arguments.get_by_ptr(ptr);
+        let params = self.inner.api.arguments.get_by_ptr(ptr);
 
         let params = params
             .unwrap_or_default()
@@ -381,7 +369,7 @@ impl Driver {
         match params {
             Ok((callback_id, response)) => {
                 get_driver().transaction(|_|{
-                    self.driver_inner.websocket.export_websocket_callback_message(callback_id, response);
+                    self.inner.websocket.export_websocket_callback_message(callback_id, response);
                 });
             },
             Err(error) => {
@@ -392,12 +380,12 @@ impl Driver {
 
     pub(crate) fn export_websocket_callback_close(&self, callback_id: u32) {
         get_driver().transaction(|_| {
-            self.driver_inner.websocket.export_websocket_callback_close(callback_id);
+            self.inner.websocket.export_websocket_callback_close(callback_id);
         });
     }
 
     pub(crate) fn export_dom_keydown(&self, ptr: u32) -> u32 {
-        let params = self.driver_inner.api.arguments.get_by_ptr(ptr);
+        let params = self.inner.api.arguments.get_by_ptr(ptr);
 
         let params = params
             .unwrap_or_default()
@@ -419,7 +407,7 @@ impl Driver {
                 let mut result: Option<u32> = None;
 
                 get_driver().transaction(|_| {
-                    let prevent_default = self.driver_inner.dom.export_dom_keydown(
+                    let prevent_default = self.inner.dom.export_dom_keydown(
                         dom_id,
                         key,
                         code,
@@ -450,7 +438,7 @@ impl Driver {
     }
 
     pub(crate) fn export_dom_oninput(&self, ptr: u32) {
-        let params = self.driver_inner.api.arguments.get_by_ptr(ptr);
+        let params = self.inner.api.arguments.get_by_ptr(ptr);
 
         let params = params
             .unwrap_or_default()
@@ -465,7 +453,7 @@ impl Driver {
         match params {
             Ok((dom_id, text)) => {
                 get_driver().transaction(|_| {
-                    self.driver_inner.dom.export_dom_oninput(dom_id, text);
+                    self.inner.dom.export_dom_oninput(dom_id, text);
                 });
             },
             Err(error) => {
@@ -475,7 +463,7 @@ impl Driver {
     }
 
     pub(crate) fn export_dom_ondropfile(&self, ptr: u32) {
-        let params = self.driver_inner.api.arguments.get_by_ptr(ptr);
+        let params = self.inner.api.arguments.get_by_ptr(ptr);
 
         let params = params
             .unwrap_or_default()
@@ -495,7 +483,7 @@ impl Driver {
         match params {
             Ok((dom_id, files)) => {
                 get_driver().transaction(|_| {
-                    self.driver_inner.dom.export_dom_ondropfile(dom_id, files);
+                    self.inner.dom.export_dom_ondropfile(dom_id, files);
                 });
             },
             Err(error) => {
@@ -507,7 +495,7 @@ impl Driver {
     pub(crate) fn export_dom_mouseover(&self, dom_id: u64) {
         let dom_id = if dom_id == 0 { None } else { Some(dom_id) };
         get_driver().transaction(|_|{
-            self.driver_inner.dom.export_dom_mouseover(dom_id);
+            self.inner.dom.export_dom_mouseover(dom_id);
         });
     }
 

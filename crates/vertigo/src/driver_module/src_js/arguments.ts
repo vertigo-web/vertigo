@@ -136,9 +136,9 @@ export type JsValueType
     | string
     | Array<JsValueType>
     | Uint8Array
-    | { type: 'object', value: ListItemMapType };
+    | { type: 'object', value: JsValueMapType };
 
-interface ListItemMapType {
+interface JsValueMapType {
     [key: string]: JsValueType
 }
 
@@ -496,7 +496,7 @@ export class JsValueBuilder {
         return saveToBuffer(this.getUint8Memory, this.alloc, this.params);
     }
 
-    public saveListItem(value: JsValueType): number {
+    public saveJsValue(value: JsValueType): number {
         return saveToBuffer(this.getUint8Memory, this.alloc, value);
     }
 
@@ -505,7 +505,7 @@ export class JsValueBuilder {
     }
 }
 
-export const convertFromListItem = (value: JsValueType): unknown => {
+export const convertFromJsValue = (value: JsValueType): unknown => {
     if (value === true) {
         return true;
     }
@@ -534,7 +534,7 @@ export const convertFromListItem = (value: JsValueType): unknown => {
         const newList = [];
 
         for (const item of value) {
-            newList.push(convertFromListItem(item));
+            newList.push(convertFromJsValue(item));
         }
 
         return newList;
@@ -552,7 +552,7 @@ export const convertFromListItem = (value: JsValueType): unknown => {
         const result: Record<string, unknown> = {};
 
         for (const [key, propertyValue] of Object.entries(value.value)) {
-            result[key] = convertFromListItem(propertyValue);
+            result[key] = convertFromJsValue(propertyValue);
         }
 
         return result;
@@ -561,20 +561,27 @@ export const convertFromListItem = (value: JsValueType): unknown => {
     return assertNever(value);
 };
 
-export const convertToListItem = (value: unknown): JsValueType => {
+export const convertToJsValue = (value: unknown): JsValueType => {
     if (typeof value === 'string') {
         return value;
     }
 
     if (value === true || value === false || value === undefined || value === null) {
-        return null;
+        return value;
     }
 
     if (typeof value === 'number') {
+        if (-(2**31) <= value && value < 2**31) {
+            return {
+                type: 'i32',
+                value
+            };
+        }
+
         return {
-            type: 'i32',
-            value
-        };
+            type: 'i64',
+            value: BigInt(value)
+        };    
     }
 
     if (typeof value === 'bigint') {
@@ -584,6 +591,6 @@ export const convertToListItem = (value: unknown): JsValueType => {
         };
     }
 
-    console.error('convertToListItem', value);
+    console.error('convertToJsValue', value);
     throw Error('TODO');
 };

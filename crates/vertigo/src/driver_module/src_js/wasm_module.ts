@@ -3,11 +3,10 @@ import { DriverDom } from './module/dom/dom';
 import { DriverWebsocket } from './module/websocket/websocket';
 import { Fetch } from './module/fetch';
 import { HashRouter } from './module/hashrouter';
-import { instant_now } from './module/instant';
 import { Interval } from './module/interval';
 import { wasmInit, ModuleControllerType } from './wasm_init';
 import { js_call } from './js_call';
-import { Guard, JsValueType } from './arguments';
+import { JsValueType } from './arguments';
 
 //Number -> u32 or i32
 //BigInt -> u64 or i64
@@ -20,15 +19,11 @@ export type ImportType = {
     timeout_set: (duration: number, callback_id: number) => number,
     timeout_clear: (timer_id: number) => void,
 
-    instant_now: () => number,
-
-    //js_call will be replaced by dom_call, dom_get, dom_set            <-------------- TODO
+    //js_call will be replaced by dom_access                    <-------------- TODO
     js_call: (ptr: number, size: number) => number,             //return pointer to response
 
     //call from rust
-    dom_call: (ptr: number, size: number) => number,            //arg: dom-path, property, params: Vec<ParamItem>, return: ParamItem
-    dom_get: (pth: number, size: number) => number,             //arg: dom-path, property, return ParamItem
-    dom_set: (ptr: number, size: number) => void,               //arg: dom-path, property, value: ParamItem, return void
+    dom_access: (ptr: number, size: number) => number,
 }
 
 export type ExportType = {
@@ -106,49 +101,17 @@ export class WasmModule {
                 interval_clear: interval.interval_clear,
                 timeout_set: interval.timeout_set,
                 timeout_clear: interval.timeout_clear,
-                instant_now,
 
-                dom_call: (ptr: number, size: number): number => {
+                dom_access: (ptr: number, size: number): number => {
                     let args = getWasm().decodeArguments(ptr, size);
                     if (Array.isArray(args)) {
-                        const [domPath, property, params, ...rest] = args;
-
-                        if (Array.isArray(domPath) && Guard.isString(property) && Array.isArray(params) && rest.length === 0) {
-                            const response = dom.dom_call(domPath, property, params);
-                            return getWasm().newList().saveListItem(response);
-                        }
+                        const result = dom.dom_access(args);
+                        return getWasm().newList().saveJsValue(result);
                     }
 
-                    console.error('dom_call - wrong parameters', args);
+                    console.error('dom_access - wrong parameters', args);
                     return 0;
                 },
-                dom_get: (ptr: number, size: number): number => {
-                    let args = getWasm().decodeArguments(ptr, size);
-                    if (Array.isArray(args)) {
-                        const [domPath, property, ...rest] = args;
-
-                        if (Array.isArray(domPath) && Guard.isString(property) && rest.length === 0) {
-                            const response = dom.dom_get(domPath, property);
-                            return getWasm().newList().saveListItem(response);
-                        }
-                    }
-
-                    console.error('dom_get - wrong parameters', args);
-                    return 0;
-                },
-                dom_set: (ptr: number, size: number): void => {
-                    let args = getWasm().decodeArguments(ptr, size);
-                    if (Array.isArray(args)) {
-                        const [domPath, property, value, ...rest] = args;
-
-                        if (Array.isArray(domPath) && Guard.isString(property) && rest.length === 0) {
-                            dom.dom_set(domPath, property, value);
-                            return;
-                        }
-                    }
-
-                    console.error('dom_set - wrong parameters', args);
-                }
             }
         });
 

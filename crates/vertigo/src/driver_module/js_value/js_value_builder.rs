@@ -24,12 +24,12 @@ impl JsValueBuilder {
             None => self.null(),
         }
     }
-    pub fn str(mut self, value: &'static str) -> Self {
+    pub fn str(mut self, value: &str) -> Self {
         self.list.push(JsValue::String(value.into()));
         self
     }
 
-    pub fn str_push(&mut self, value: &'static str) {
+    pub fn str_push(&mut self, value: &str) {
         self.list.push(JsValue::String(value.into()));
     }
 
@@ -77,7 +77,10 @@ impl JsValueBuilder {
         self
     }
 
-    #[allow(dead_code)]
+    pub fn value_push(&mut self, value: JsValue) {
+        self.list.push(value);
+    }
+
     pub fn list(mut self, create: impl FnOnce(JsValueBuilder) -> JsValueBuilder ) -> Self {
         let sub_list = JsValueBuilder::new();
         let sub_list = create(sub_list);
@@ -85,13 +88,26 @@ impl JsValueBuilder {
         self
     }
 
-    pub fn list_set(mut self, list: Vec<JsValue>) -> Self {
+    #[allow(dead_code)]
+    pub fn list_push(mut self, list: Vec<JsValue>) -> Self {
         self.list.push(JsValue::List(list));
         self
     }
 
+    pub fn extend(mut self, list: Vec<JsValue>) -> Self {
+        for item in list {
+            self.list.push(item);
+        }
+
+        self
+    }
+
+    pub fn get(self) -> JsValue {
+        JsValue::List(self.list)
+    }
+
     pub fn build(self) -> MemoryBlock {
-        let list = JsValue::List(self.list);
-        list.to_snapshot()
+        self.get().to_snapshot()
     }
 }
+

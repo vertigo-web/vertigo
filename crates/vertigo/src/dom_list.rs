@@ -12,7 +12,7 @@ pub fn render_list<
 >(
     computed: Computed<Vec<T>>,
     get_key: impl Fn(&T) -> K + 'static,
-    render: impl Fn(&T) -> R + 'static
+    render: impl Fn(&T) -> R + 'static,
 ) -> DomComment {
 
     let comment = DomComment::new("list element");

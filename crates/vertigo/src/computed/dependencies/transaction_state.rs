@@ -131,8 +131,12 @@ impl TransactionState {
         })
     }
 
-    pub fn set_hook(&self, before_start: Box<dyn Fn()>, after_end: Box<dyn Fn()>) {
-        self.hooks.add(before_start, after_end);
+    pub fn on_before_transaction(&self, callback: impl Fn() + 'static) {
+        self.hooks.on_before_transaction(callback);
+    }
+
+    pub fn on_after_transaction(&self, callback: impl Fn() + 'static) {
+        self.hooks.on_after_transaction(callback);
     }
 
     pub fn is_idle(&self) -> bool {
