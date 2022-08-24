@@ -399,14 +399,14 @@ class JsValueBuilder {
     saveToBuffer() {
         return saveToBuffer(this.getUint8Memory, this.alloc, this.params);
     }
-    saveListItem(value) {
+    saveJsValue(value) {
         return saveToBuffer(this.getUint8Memory, this.alloc, value);
     }
     debug() {
         console.info('debug budowania listy', this.params);
     }
 }
-const convertFromListItem = (value) => {
+const convertFromJsValue = (value) => {
     if (value === true) {
         return true;
     }
@@ -428,7 +428,7 @@ const convertFromListItem = (value) => {
     if (Array.isArray(value)) {
         const newList = [];
         for (const item of value) {
-            newList.push(convertFromListItem(item));
+            newList.push(convertFromJsValue(item));
         }
         return newList;
     }
@@ -441,23 +441,29 @@ const convertFromListItem = (value) => {
     if (value.type === 'object') {
         const result = {};
         for (const [key, propertyValue] of Object.entries(value.value)) {
-            result[key] = convertFromListItem(propertyValue);
+            result[key] = convertFromJsValue(propertyValue);
         }
         return result;
     }
     return assertNever();
 };
-const convertToListItem = (value) => {
+const convertToJsValue = (value) => {
     if (typeof value === 'string') {
         return value;
     }
     if (value === true || value === false || value === undefined || value === null) {
-        return null;
+        return value;
     }
     if (typeof value === 'number') {
+        if (-(2 ** 31) <= value && value < 2 ** 31) {
+            return {
+                type: 'i32',
+                value
+            };
+        }
         return {
-            type: 'i32',
-            value
+            type: 'i64',
+            value: BigInt(value)
         };
     }
     if (typeof value === 'bigint') {
@@ -466,7 +472,7 @@ const convertToListItem = (value) => {
             value
         };
     }
-    console.error('convertToListItem', value);
+    console.error('convertToJsValue', value);
     throw Error('TODO');
 };
 
@@ -475,23 +481,57 @@ class JsNode {
     constructor(wsk) {
         this.wsk = wsk;
     }
-    getByProperty(property) {
+    static findRoot(nodes, texts, args) {
+        if (Array.isArray(args)) {
+            const [command, firstName, ...rest] = args;
+            if (command === 'get' && Guard.isString(firstName) && rest.length === 0) {
+                if (firstName === 'window') {
+                    return new JsNode(window);
+                }
+                if (firstName === 'document') {
+                    return new JsNode(document);
+                }
+                console.error(`findRoot: Global name not found -> ${firstName}`);
+                return null;
+            }
+            if (command === 'get' && Guard.isNumber(firstName) && rest.length === 0) {
+                const domId = firstName.value;
+                const node = nodes.getItem(BigInt(domId));
+                if (node !== undefined) {
+                    return new JsNode(node);
+                }
+                const text = texts.getItem(BigInt(domId));
+                if (text !== undefined) {
+                    return new JsNode(text);
+                }
+                console.error(`findRoot: No node with id=${domId}`);
+                return null;
+            }
+        }
+        console.error('findRoot: wrong parameter', args);
+        return null;
+    }
+    getByProperty(path, property) {
         try {
             //@ts-expect-error
             const nextCurrentPointer = this.wsk[property];
             return new JsNode(nextCurrentPointer);
         }
         catch (error) {
-            console.error(error);
+            console.error('A problem with call', {
+                path,
+                property,
+                error
+            });
             return null;
         }
     }
     callProperty(path, property, params) {
         try {
-            let paramsJs = params.map(convertFromListItem);
+            let paramsJs = params.map(convertFromJsValue);
             //@ts-expect-error
             const result = this.wsk[property](...paramsJs);
-            return convertToListItem(result);
+            return result;
         }
         catch (error) {
             console.error('A problem with call', {
@@ -506,7 +546,7 @@ class JsNode {
         try {
             //@ts-expect-error
             const result = this.wsk[property];
-            return convertToListItem(result);
+            return result;
         }
         catch (error) {
             console.error('A problem with get', {
@@ -520,7 +560,7 @@ class JsNode {
     setProperty(path, property, value) {
         try {
             //@ts-expect-error
-            this.wsk[property] = convertFromListItem(value);
+            this.wsk[property] = convertFromJsValue(value);
         }
         catch (error) {
             console.error('A problem with set', {
@@ -531,69 +571,73 @@ class JsNode {
             return undefined;
         }
     }
-}
-class FindDom {
-    nodes;
-    texts;
-    constructor(nodes, texts) {
-        this.nodes = nodes;
-        this.texts = texts;
+    toValue() {
+        return convertToJsValue(this.wsk);
     }
-    find_root_dom(firstName) {
-        if (Guard.isString(firstName)) {
-            if (firstName === 'window') {
-                return new JsNode(window);
+    next(path, command) {
+        if (Array.isArray(command)) {
+            const [commandName, ...args] = command;
+            if (commandName === 'get') {
+                return this.nextGet(path, args);
             }
-            if (firstName === 'document') {
-                return new JsNode(document);
+            if (commandName === 'set') {
+                return this.nextSet(path, args);
             }
-            console.error(`Global name not found: ${firstName}`);
+            if (commandName === 'call') {
+                return this.nextCall(path, args);
+            }
+            if (commandName === 'get_props') {
+                return this.nextGetProps(path, args);
+            }
+            console.error('JsNode.next - wrong commandName', commandName);
             return null;
         }
-        if (Guard.isNumber(firstName)) {
-            const domId = firstName.value;
-            const node = this.nodes.getItem(BigInt(domId));
-            if (node !== undefined) {
-                return new JsNode(node);
-            }
-            const text = this.texts.getItem(BigInt(domId));
-            if (text !== undefined) {
-                return new JsNode(text);
-            }
-            console.error(`No node with id=${domId}`);
-            return null;
-        }
-        console.error('find_root_dom - wrong parameter', firstName);
+        console.error('JsNode.next - array was expected', { path, command });
         return null;
     }
-    findDomByPath(path) {
-        const [firstName, ...restPath] = path;
-        try {
-            let currentPointer = this.find_root_dom(firstName);
-            if (currentPointer === null) {
-                return null;
-            }
-            while (true) {
-                const nextProperty = restPath.shift();
-                if (nextProperty === undefined) {
-                    return currentPointer;
-                }
-                if (Guard.isString(nextProperty)) {
-                    currentPointer = currentPointer.getByProperty(nextProperty);
-                    if (currentPointer === null) {
-                        return null;
-                    }
-                }
-                else {
-                    console.error('find_dom_by_path - wrong parameters', path);
+    nextGet(path, args) {
+        const [property, ...getArgs] = args;
+        if (Guard.isString(property) && getArgs.length === 0) {
+            return this.getByProperty(path, property);
+        }
+        console.error('JsNode.nextGet - wrong parameters', { path, args });
+        return null;
+    }
+    nextSet(path, args) {
+        const [property, value, ...setArgs] = args;
+        if (Guard.isString(property) && setArgs.length === 0) {
+            this.setProperty(path, property, value);
+            return new JsNode(undefined);
+        }
+        console.error('JsNode.nextSet - wrong parameters', { path, args });
+        return null;
+    }
+    nextCall(path, args) {
+        const [property, ...callArgs] = args;
+        if (Guard.isString(property)) {
+            const result = this.callProperty(path, property, callArgs);
+            return new JsNode(result);
+        }
+        console.error('JsNode.nextCall - wrong parameters', { path, args });
+        return null;
+    }
+    nextGetProps(path, args) {
+        const result = {};
+        for (const argItem of args) {
+            if (Guard.isString(argItem)) {
+                const property = argItem;
+                const value = this.getByProperty(path, property);
+                if (value === null) {
                     return null;
                 }
+                result[property] = value.toValue();
+            }
+            else {
+                console.error('JsNode.nextGetProps - wrong parameters', { path, args, argItem });
+                return null;
             }
         }
-        catch (error) {
-            console.error(`Error when searching for path=${path}`, error);
-            return null;
-        }
+        return new JsNode(result);
     }
 }
 
@@ -667,13 +711,11 @@ class DriverDom {
     nodes;
     texts;
     all;
-    findDom;
     constructor(getWasm) {
         this.getWasm = getWasm;
         this.nodes = new MapNodes();
         this.texts = new MapNodes();
         this.all = new Map();
-        this.findDom = new FindDom(this.nodes, this.texts);
         document.addEventListener('mousedown', (event) => {
             const target = event.target;
             if (target instanceof Element) {
@@ -842,10 +884,7 @@ class DriverDom {
     remove_node(id) {
         this.nodes.delete("remove_node", id, (node) => {
             this.all.delete(node);
-            const parent = node.parentElement;
-            if (parent !== null) {
-                parent.removeChild(node);
-            }
+            node.remove();
         });
     }
     create_text(id, value) {
@@ -856,10 +895,7 @@ class DriverDom {
     remove_text(id) {
         this.texts.delete("remove_node", id, (text) => {
             this.all.delete(text);
-            const parent = text.parentElement;
-            if (parent !== null) {
-                parent.removeChild(text);
-            }
+            text.remove();
         });
     }
     update_text(id, value) {
@@ -976,44 +1012,32 @@ class DriverDom {
         }
         if (command.type === 'remove_comment') {
             this.nodes.delete("remove_comment", BigInt(command.id), (comment) => {
-                const parent = comment.parentElement;
-                if (parent !== null) {
-                    parent.removeChild(comment);
-                }
+                comment.remove();
             });
             return;
         }
         return assertNeverCommand(command);
     }
-    dom_call = (path, property, params) => {
-        const target = this.findDom.findDomByPath(path);
-        if (target === null) {
-            return null;
+    dom_access = (path) => {
+        let wsk = new JsNode(null);
+        for (let index = 0; index < path.length; index++) {
+            const pathItem = path[index];
+            if (index === 0) {
+                const root = JsNode.findRoot(this.nodes, this.texts, pathItem);
+                if (root === null) {
+                    return undefined;
+                }
+                wsk = root;
+            }
+            else {
+                const newWsk = wsk.next(path, pathItem);
+                if (newWsk === null) {
+                    return null;
+                }
+                wsk = newWsk;
+            }
         }
-        return target.callProperty(path, property, params);
-    };
-    dom_get = (path, property) => {
-        const target = this.findDom.findDomByPath(path);
-        if (target === null) {
-            return null;
-        }
-        return target.getProperty(path, property);
-    };
-    dom_set = (path, property, value) => {
-        const target = this.findDom.findDomByPath(path);
-        if (target === null) {
-            return;
-        }
-        target.setProperty(path, property, value);
-    };
-    /*
-        dom-path
-
-        [43, 'focus']                       (HtmlElement.focus)
-        ['window', 'location', 'hash']      (window.location.hash)
-    */
-    dom_access = (_path) => {
-        throw Error('TODO');
+        return wsk.toValue();
     };
 }
 
@@ -1363,10 +1387,6 @@ class HashRouter {
     }
 }
 
-const instant_now = () => {
-    return Date.now();
-};
-
 class Interval {
     getWasm;
     constructor(getWasm) {
@@ -1392,7 +1412,6 @@ class Interval {
     };
 }
 
-// import { argumentsDecode, ListItemType } from "./arguments";
 const fetchModule = async (wasmBinPath, imports) => {
     if (typeof WebAssembly.instantiateStreaming === 'function') {
         try {
@@ -1623,42 +1642,15 @@ class WasmModule {
                 interval_clear: interval.interval_clear,
                 timeout_set: interval.timeout_set,
                 timeout_clear: interval.timeout_clear,
-                instant_now,
-                dom_call: (ptr, size) => {
+                dom_access: (ptr, size) => {
                     let args = getWasm().decodeArguments(ptr, size);
                     if (Array.isArray(args)) {
-                        const [domPath, property, params, ...rest] = args;
-                        if (Array.isArray(domPath) && Guard.isString(property) && Array.isArray(params) && rest.length === 0) {
-                            const response = dom.dom_call(domPath, property, params);
-                            return getWasm().newList().saveListItem(response);
-                        }
+                        const result = dom.dom_access(args);
+                        return getWasm().newList().saveJsValue(result);
                     }
-                    console.error('dom_call - wrong parameters', args);
+                    console.error('dom_access - wrong parameters', args);
                     return 0;
                 },
-                dom_get: (ptr, size) => {
-                    let args = getWasm().decodeArguments(ptr, size);
-                    if (Array.isArray(args)) {
-                        const [domPath, property, ...rest] = args;
-                        if (Array.isArray(domPath) && Guard.isString(property) && rest.length === 0) {
-                            const response = dom.dom_get(domPath, property);
-                            return getWasm().newList().saveListItem(response);
-                        }
-                    }
-                    console.error('dom_get - wrong parameters', args);
-                    return 0;
-                },
-                dom_set: (ptr, size) => {
-                    let args = getWasm().decodeArguments(ptr, size);
-                    if (Array.isArray(args)) {
-                        const [domPath, property, value, ...rest] = args;
-                        if (Array.isArray(domPath) && Guard.isString(property) && rest.length === 0) {
-                            dom.dom_set(domPath, property, value);
-                            return;
-                        }
-                    }
-                    console.error('dom_set - wrong parameters', args);
-                }
             }
         });
         return new WasmModule(wasmModule);

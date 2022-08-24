@@ -1,5 +1,5 @@
 use serde::{Deserialize, Serialize};
-use vertigo::{css, AutoMap, Css, LazyCache, SerdeRequest, Value, bind, get_driver, DomElement, dom, Resource};
+use vertigo::{css, AutoMap, Css, LazyCache, SerdeRequest, Value, bind, get_driver, DomElement, dom, Resource, bind2};
 
 #[derive(PartialEq, Eq, Clone)]
 enum View {
@@ -265,8 +265,7 @@ fn render_comments(state: &TodoState, post_id: u32) -> DomElement {
                 };
 
                 for comment in list.as_ref() {
-                    let on_click_author = bind(&view)
-                        .and(&comment.email)
+                    let on_click_author = bind2(&view, &comment.email)
                         .call(|_, view, email| {
                             view.set(View::User { email: email.clone() });
                         });

@@ -8,7 +8,7 @@ static SET_HOOK: Once = Once::new();
 
 pub fn init_env(api: Rc<ApiImport>) {
     SET_HOOK.call_once(|| {
-        let panic_message = api.panic_message.clone();
+        let panic_message = api.panic_message;
         init_logger(api);
 
         panic::set_hook(Box::new(move |info: &panic::PanicInfo<'_>| {

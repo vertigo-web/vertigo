@@ -1,4 +1,4 @@
-use vertigo::{css, css_fn, Css, bind, KeyDownEvent, DomElement, dom, Computed};
+use vertigo::{css, css_fn, Css, KeyDownEvent, DomElement, dom, Computed, bind2};
 use crate::app;
 use crate::app::chat::ChatState;
 use crate::app::todo::TodoState;
@@ -30,11 +30,9 @@ fn css_menu_item(active: bool) -> Css {
 }
 
 fn navigate_to(state: &app::State, route: Route) -> impl Fn() {
-    bind(state)
-        .and(&route)
-        .call(|_, state, route| {
-            state.navigate_to(route.clone())
-        })
+    bind2(state, &route).call(|_, state, route| {
+        state.navigate_to(route.clone())
+    })
 }
 
 fn render_menu_item(state: &app::State, current_page: Computed<Route>, menu_item: Route) -> DomElement {

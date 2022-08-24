@@ -131,7 +131,7 @@ impl<
     >(
         &self,
         get_key: impl Fn(&T) -> K + 'static,
-        render: impl Fn(&T) -> R + 'static
+        render: impl Fn(&T) -> R + 'static,
     ) -> DomComment {
         let list = self.map(|inner| {
             inner.into_iter().collect::<Vec<_>>()

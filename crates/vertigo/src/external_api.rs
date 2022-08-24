@@ -31,11 +31,7 @@ mod api {
             pub fn timeout_set(duration: u32, callback_id: u32) -> u32;
             pub fn timeout_clear(timer_id: u32);
 
-            pub fn instant_now() -> u32;
-
-            pub fn dom_call(ptr: u32, size: u32) -> u32;
-            pub fn dom_get(pth: u32, size: u32) -> u32;
-            pub fn dom_set(ptr: u32, size: u32);
+            pub fn dom_access(ptr: u32, size: u32) -> u32;
         }
     }
 
@@ -78,27 +74,9 @@ mod api {
             }
         }
 
-        pub fn safe_instant_now() -> u32 {
+        pub fn safe_dom_access(ptr: u32, size: u32) -> u32 {
             unsafe {
-                instant_now()
-            }
-        }
-
-        pub fn safe_dom_call(ptr: u32, size: u32) -> u32 {
-            unsafe {
-                dom_call(ptr, size)
-            }
-        }
-
-        pub fn safe_dom_get(ptr: u32, size: u32) -> u32 {
-            unsafe {
-                dom_get(ptr, size)
-            }
-        }
-
-        pub fn safe_dom_set(ptr: u32, size: u32) {
-            unsafe {
-                dom_set(ptr, size)
+                dom_access(ptr, size)
             }
         }
     }
@@ -132,20 +110,8 @@ mod api {
             unimplemented!("safe_timeout_clear");
         }
 
-        pub fn safe_instant_now() -> u32 {
-            unimplemented!("safe_instant_now");
-        }
-
-        pub fn safe_dom_call(_ptr: u32, _size: u32) -> u32 {
-            unimplemented!("safe_dom_call");
-        }
-
-        pub fn safe_dom_get(_pth: u32, _size: u32) -> u32 {
-            unimplemented!("safe_dom_get");
-        }
-
-        pub fn safe_dom_set(_ptr: u32, _size: u32) {
-            unimplemented!("safe_dom_set");
+        pub fn safe_dom_access(_ptr: u32, _size: u32) -> u32 {
+            unimplemented!("safe_dom_access");
         }
     }
 }
@@ -162,10 +128,7 @@ thread_local! {
             safe_interval_clear,
             safe_timeout_set,
             safe_timeout_clear,
-            safe_instant_now,
-            safe_dom_call,
-            safe_dom_get,
-            safe_dom_set,
+            safe_dom_access,
         )
     });
 }

@@ -1,6 +1,6 @@
 use std::collections::HashSet;
 
-use vertigo::{css, Css, bind, DomElement, dom, Computed};
+use vertigo::{css, Css, DomElement, dom, Computed, bind2, bind3};
 
 use crate::app::sudoku::state::{number_item::SudokuValue, Cell};
 
@@ -72,8 +72,7 @@ fn view_one_possible(cell: &Cell) -> DomElement {
             let wrapper = dom! { <div /> };
 
             for number in possible.iter() {
-                let on_set = bind(&cell)
-                    .and(number)
+                let on_set = bind2(&cell, number)
                     .call(|_, cell, number| {
                         cell.number.value.set(Some(*number));
                     });
@@ -97,8 +96,7 @@ fn view_one_possible(cell: &Cell) -> DomElement {
 }
 
 fn view_last_value(cell: &Cell, possible_last_value: SudokuValue) -> DomElement {
-    let on_set = bind(cell)
-        .and(&possible_last_value)
+    let on_set = bind2(cell, &possible_last_value)
         .call(|_, cell, possible_last_value| {
             cell.number.value.set(Some(*possible_last_value));
         });
@@ -124,9 +122,7 @@ fn view_default(cell: &Cell, possible: HashSet<SudokuValue>) -> DomElement {
             "".into()
         };
 
-        let on_click = bind(cell)
-            .and(&should_show)
-            .and(&number)
+        let on_click = bind3(cell, &should_show, &number)
             .call(|_, cell, should_show, number| {
                 if *should_show {
                     cell.number.value.set(Some(*number));

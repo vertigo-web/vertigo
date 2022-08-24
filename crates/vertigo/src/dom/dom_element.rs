@@ -1,6 +1,6 @@
 use std::rc::Rc;
 use crate::{
-    driver_module::driver::{Driver},
+    driver_module::{driver::{Driver}, api::DomAccess},
     dom::{
         dom_node::DomNode,
         dom_id::DomId,
@@ -52,19 +52,21 @@ impl From<Computed<Css>> for CssValue {
 
 #[derive(Clone)]
 pub struct DomElementRef {
-    _api: Rc<ApiImport>,
-    _id: DomId,
+    api: Rc<ApiImport>,
+    id: DomId,
 }
 
 impl DomElementRef {
     pub fn new(api: Rc<ApiImport>, id: DomId) -> DomElementRef {
         DomElementRef {
-            _api: api,
-            _id: id,
+            api,
+            id,
         }
     }
 
-    //TODO 
+    pub fn dom_access(&self) -> DomAccess {
+        self.api.dom_access().element(self.id.to_u64())
+    }
 }
 
 pub struct DomElement {
@@ -91,7 +93,7 @@ impl DomElement {
     }
 
     pub fn get_ref(&self) -> DomElementRef {
-        DomElementRef::new(self.driver.driver_inner.api.clone(), self.id_dom)
+        DomElementRef::new(self.driver.inner.api.clone(), self.id_dom)
     }
 
     pub fn create_with_id(id: DomId) -> DomElement {
@@ -169,7 +171,7 @@ impl DomElement {
     }
 
     pub fn on_click(self, on_click: impl Fn() + 'static) -> Self {
-        self.driver.driver_inner.dom.data.change(self.id_dom, |element| {
+        self.driver.inner.dom.data.change(self.id_dom, |element| {
             element.on_click = Some(Rc::new(on_click));
         });
 
@@ -177,42 +179,42 @@ impl DomElement {
     }
 
     pub fn on_mouse_enter(self, on_mouse_enter: impl Fn() + 'static) -> Self {
-        self.driver.driver_inner.dom.data.change(self.id_dom, |element| {
+        self.driver.inner.dom.data.change(self.id_dom, |element| {
             element.on_mouse_enter = Some(Rc::new(on_mouse_enter));
         });
         self
     }
 
     pub fn on_mouse_leave(self, on_mouse_leave: impl Fn() + 'static) -> Self {
-        self.driver.driver_inner.dom.data.change(self.id_dom, |element| {
+        self.driver.inner.dom.data.change(self.id_dom, |element| {
             element.on_mouse_leave = Some(Rc::new(on_mouse_leave));
         });
         self
     }
 
     pub fn on_input(self, on_input: impl Fn(String) + 'static) -> Self {
-        self.driver.driver_inner.dom.data.change(self.id_dom, |element| {
+        self.driver.inner.dom.data.change(self.id_dom, |element| {
             element.on_input = Some(Rc::new(on_input));
         });
         self
     }
 
     pub fn on_key_down(self, on_key_down: impl Fn(KeyDownEvent) -> bool + 'static) -> Self {
-        self.driver.driver_inner.dom.data.change(self.id_dom, |element| {
+        self.driver.inner.dom.data.change(self.id_dom, |element| {
             element.on_keydown = Some(Rc::new(on_key_down));
         });
         self
     }
 
     pub fn on_dropfile(self, on_dropfile: impl Fn(DropFileEvent) + 'static) -> Self {
-        self.driver.driver_inner.dom.data.change(self.id_dom, |element| {
+        self.driver.inner.dom.data.change(self.id_dom, |element| {
             element.on_dropfile = Some(Rc::new(on_dropfile));
         });
         self
     }
 
     pub fn hook_key_down(self, on_hook_key_down: impl Fn(KeyDownEvent) -> bool + 'static) -> Self {
-        self.driver.driver_inner.dom.data.change(self.id_dom, |element| {
+        self.driver.inner.dom.data.change(self.id_dom, |element| {
             element.hook_keydown = Some(Rc::new(on_hook_key_down));
         });
         self

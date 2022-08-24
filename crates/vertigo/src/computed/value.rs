@@ -172,7 +172,7 @@ impl<
     >(
         &self,
         get_key: impl Fn(&T) -> K + 'static,
-        render: impl Fn(&T) -> R + 'static
+        render: impl Fn(&T) -> R + 'static,
     ) -> DomComment {
         self.to_computed().render_list(get_key, render)
     }

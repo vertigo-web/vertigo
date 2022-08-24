@@ -59,8 +59,12 @@ impl Default for Dependencies {
 }
 
 impl Dependencies {
-    pub fn set_hook(&self, before_start: Box<dyn Fn()>, after_end: Box<dyn Fn()>) {
-        self.transaction_state.set_hook(before_start, after_end);
+    pub fn on_before_transaction(&self, callback: impl Fn() + 'static) {
+        self.transaction_state.on_before_transaction(callback);
+    }
+
+    pub fn on_after_transaction(&self, callback: impl Fn() + 'static) {
+        self.transaction_state.on_after_transaction(callback);
     }
 
     pub fn transaction<F: FnOnce(&Context)>(&self, func: F) {

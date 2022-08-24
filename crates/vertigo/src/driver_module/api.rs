@@ -22,7 +22,7 @@ impl ConsoleLogLevel {
     }
 }
 
-#[derive(Clone)]
+#[derive(Clone, Copy)]
 pub struct PanicMessage {
     panic_message: fn(ptr: u32, size: u32),
 }
@@ -34,10 +34,106 @@ impl PanicMessage {
         }
     }
 
-    pub fn show(&self, message: String) {
+    pub fn show(&self, message: impl Into<String>) {
+        let message = message.into();
         let ptr = message.as_ptr() as u32;
         let len = message.len() as u32;
         (self.panic_message)(ptr, len);
+    }
+}
+
+pub struct DomAccess {
+    panic_message: PanicMessage,
+    arguments: Arguments,
+    fn_dom_access: fn(ptr: u32, size: u32) -> u32,
+    builder: JsValueBuilder,
+}
+
+impl DomAccess {
+    pub fn new(panic_message: PanicMessage, arguments: Arguments, fn_dom_access: fn(ptr: u32, size: u32) -> u32) -> DomAccess {
+        DomAccess {
+            panic_message,
+            fn_dom_access,
+            arguments,
+            builder: JsValueBuilder::new(),
+        }
+    }
+
+    pub fn element(mut self, dom_id: u64) -> Self {
+        let value = JsValueBuilder::new()
+            .str("get")
+            .u64(dom_id)
+            .get();
+        
+        self.builder.value_push(value);
+        self
+    }
+
+    pub fn get(mut self, name: impl Into<String>) -> Self {
+        let value = JsValueBuilder::new()
+            .str("get")
+            .string(name)
+            .get();
+        
+            self.builder.value_push(value);
+        self
+    }
+
+    pub fn set(mut self, name: impl Into<String>, value: JsValue) -> Self {
+        let value = JsValueBuilder::new()
+            .str("set")
+            .string(name)
+            .value(value)
+            .get();
+        
+            self.builder.value_push(value);
+        self
+    }
+
+    pub fn call(mut self, name: impl Into<String>, params: Vec<JsValue>) -> Self {
+        let value = JsValueBuilder::new()
+            .str("call")
+            .string(name)
+            .extend(params);
+
+        self.builder.value_push(value.get());
+        self
+    }
+
+    pub fn get_props(mut self, props: &[&str]) -> Self {
+        let value = JsValueBuilder::new()
+            .str("get_props")
+            .list(|mut list| {
+                for prop in props {
+                    list.str_push(prop);
+                }
+
+                list
+            });
+            
+        self.builder.value_push(value.get());
+        self
+    }
+
+    pub fn exec(self) {
+        let panic_message = self.panic_message;
+
+        let result = self.fetch();
+
+        if let JsValue::Undefined = result {
+            //ok
+        } else {
+            let message = format!("Expected undefined dump={result:?}");
+            panic_message.show(message);
+        }
+    }
+
+    pub fn fetch(self) -> JsValue {
+        let memory = self.builder.build();
+        let (ptr, size) = memory.get_ptr_and_size();
+
+        let result_ptr = (self.fn_dom_access)(ptr, size);
+        self.arguments.get_by_ptr(result_ptr).unwrap_or(JsValue::Undefined)
     }
 }
 
@@ -50,11 +146,7 @@ pub struct ApiImport {
     pub timeout_set: fn(duration: u32, callback_id: u32) -> u32,
     pub timeout_clear: fn(timer_id: u32),
 
-    pub instant_now: fn() -> u32,
-
-    pub dom_call: fn (ptr: u32, size: u32) -> u32,           //arg: dom-path, property, params: Vec<ParamItem>, return: ParamItem
-    pub dom_get: fn(pth: u32, size: u32) -> u32,             //arg: dom-path, property, return ParamItem
-    pub dom_set: fn(ptr: u32, size: u32),                    //arg: dom-path, property, value: ParamItem, return void
+    pub fn_dom_access: fn(ptr: u32, size: u32) -> u32,
 
     pub arguments: Arguments,
 }
@@ -70,11 +162,7 @@ impl ApiImport {
         timeout_set: fn(duration: u32, callback_id: u32) -> u32,
         timeout_clear: fn(timer_id: u32),
 
-        instant_now: fn() -> u32,
-
-        dom_call: fn (ptr: u32, size: u32) -> u32,
-        dom_get: fn(pth: u32, size: u32) -> u32,
-        dom_set: fn(ptr: u32, size: u32),
+        fn_dom_access: fn(ptr: u32, size: u32) -> u32,
     
     ) -> ApiImport {
         let panic_message = PanicMessage::new(panic_message);
@@ -87,18 +175,10 @@ impl ApiImport {
             timeout_set,
             timeout_clear,
 
-            instant_now,
-
-            dom_call,
-            dom_get,
-            dom_set,
+            fn_dom_access,
 
             arguments: Arguments::new(),
         }
-    }
-
-    fn new_params(&self) -> JsValueBuilder {
-        JsValueBuilder::new()
     }
 
     pub fn show_panic_message(&self, message: String) {
@@ -114,11 +194,16 @@ impl ApiImport {
     }
 
     fn console_4(&self, kind: ConsoleLogLevel, arg1: &str, arg2: &str, arg3: &str, arg4: &str) {
-        self.dom_call(
-            &["window", "console"],
-            kind.get_str(),
-            vec!(JsValue::str(arg1), JsValue::str(arg2), JsValue::str(arg3), JsValue::str(arg4))
-        );
+        self.dom_access()
+            .get("window")
+            .get("console")
+            .call(kind.get_str(), vec!(
+                JsValue::str(arg1),
+                JsValue::str(arg2),
+                JsValue::str(arg3),
+                JsValue::str(arg4),
+            ))
+            .exec();
     }
 
     pub fn console_debug_4(&self, arg1: &str, arg2: &str, arg3: &str, arg4: &str) {
@@ -142,7 +227,7 @@ impl ApiImport {
     }
 
     pub fn cookie_get(&self, cname: &str) -> String {
-        let params = self.new_params()
+        let params = JsValueBuilder::new()
             .str("module")
             .str("cookie")
             .str("get")
@@ -164,7 +249,7 @@ impl ApiImport {
     }
 
     pub fn cookie_set(&self, cname: &str, cvalue: &str, expires_in: u64) {
-        let params = self.new_params()
+        let params = JsValueBuilder::new()
             .str("module")
             .str("cookie")
             .str("set")
@@ -197,12 +282,22 @@ impl ApiImport {
     }
 
     pub fn instant_now(&self) -> InstantType {
-        let instant_now = self.instant_now;
-        instant_now() as InstantType
+        let result = self.dom_access()
+            .get("window")
+            .get("Date")
+            .call("now", vec!())
+            .fetch();
+
+        if let JsValue::I64(time) = result {
+            time as u64 as InstantType
+        } else {
+            self.panic_message.show(format!("api.instant_now -> incorrect result {result:?}"));
+            0_u64
+        }
     }
 
     pub fn hashrouter_get_hash_location(&self) -> String {
-        let params = self.new_params()
+        let params = JsValueBuilder::new()
             .str("module")
             .str("hashrouter")
             .str("get");
@@ -223,7 +318,7 @@ impl ApiImport {
     }
 
     pub fn hashrouter_push_hash_location(&self, new_hash: &str) {
-        let params = self.new_params()
+        let params = JsValueBuilder::new()
             .str("module")
             .str("hashrouter")
             .str("push")
@@ -240,7 +335,7 @@ impl ApiImport {
         headers: String,
         body: Option<String>,
     ) {
-        let params = self.new_params()
+        let params = JsValueBuilder::new()
             .str("module")
             .str("fetch")
             .str("send")
@@ -254,7 +349,7 @@ impl ApiImport {
     }
 
     pub fn websocket_register_callback(&self, host: &str, callback_id: u32) {
-        let params = self.new_params()
+        let params = JsValueBuilder::new()
             .str("module")
             .str("websocket")
             .str("register_callback")
@@ -265,17 +360,17 @@ impl ApiImport {
     }
 
     pub fn websocket_unregister_callback(&self, callback_id: u32) {
-        let params = self.new_params()
+        let params = JsValueBuilder::new()
             .str("module")
             .str("websocket")
             .str("unregister_callback")
             .u32(callback_id);
 
-    let _ = self.js_call(params);
+        let _ = self.js_call(params);
     }
 
     pub fn websocket_send_message(&self, callback_id: u32, message: &str) {
-        let params = self.new_params()
+        let params = JsValueBuilder::new()
             .str("module")
             .str("websocket")
             .str("send_message")
@@ -286,7 +381,7 @@ impl ApiImport {
     }
 
     pub fn dom_bulk_update(&self, value: &str) {
-        let params = self.new_params()
+        let params = JsValueBuilder::new()
             .str("module")
             .str("dom")
             .str("dom_bulk_update")
@@ -295,67 +390,12 @@ impl ApiImport {
         let _ = self.js_call(params);
     }
 
-    // pub dom_call: fn (ptr: u32, size: u32) -> u32,           //arg: dom-path, property, params: Vec<ParamItem>, return: ParamItem
-    // pub dom_get: fn(pth: u32, size: u32) -> u32,             //arg: dom-path, property, return ParamItem
-    // pub dom_set: fn(ptr: u32, size: u32),                    //arg: dom-path, property, value: ParamItem, return void
-
-    pub fn dom_call(&self, path: &[&'static str], property: &'static str, params: Vec<JsValue>) -> JsValue {
-        let params = self.new_params()
-            .list(move |mut list| {
-                for path_item in path {
-                    list.str_push(path_item);
-                }
-
-                list
-            })
-            .str(property)
-            .list_set(params)
-        ;
-        
-        let memory = params.build();
-        let (ptr, size) = memory.get_ptr_and_size();
-
-        let result_ptr = (self.dom_call)(ptr, size);
-        self.arguments.get_by_ptr(result_ptr).unwrap_or(JsValue::Undefined)
+    pub fn dom_access(&self) -> DomAccess {
+        DomAccess::new(
+            self.panic_message,
+            self.arguments.clone(),
+            self.fn_dom_access
+        )
     }
-
-    pub fn dom_get(&self, path: &[&'static str], property: &'static str) -> JsValue {
-        let params = self.new_params()
-            .list(move |mut list| {
-                for path_item in path {
-                    list.str_push(path_item);
-                }
-
-                list
-            })
-            .str(property)
-        ;
-        
-        let memory = params.build();
-        let (ptr, size) = memory.get_ptr_and_size();
-
-        let result_ptr = (self.dom_get)(ptr, size);
-        self.arguments.get_by_ptr(result_ptr).unwrap_or(JsValue::Undefined)
-    }
-
-    pub fn dom_set(&self, path: &[&'static str], property: &'static str, value: JsValue) {
-        let params = self.new_params()
-            .list(move |mut list| {
-                for path_item in path {
-                    list.str_push(path_item);
-                }
-
-                list
-            })
-            .str(property)
-            .value(value)
-        ;
-        
-        let memory = params.build();
-        let (ptr, size) = memory.get_ptr_and_size();
-
-        (self.dom_set)(ptr, size);
-    }
-
 }
 

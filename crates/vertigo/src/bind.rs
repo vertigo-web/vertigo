@@ -56,6 +56,13 @@ impl<T1: Clone> Bind1<T1> {
     }
 }
 
+pub fn bind2<T1: Clone, T2: Clone>(param1: &T1, param2: &T2) -> Bind2<T1, T2> {
+    Bind2 {
+        param1: param1.clone(),
+        param2: param2.clone()
+    }
+}
+
 pub struct Bind2<T1, T2> {
     param1: T1,
     param2: T2,
@@ -105,6 +112,13 @@ impl<T1: Clone, T2: Clone> Bind2<T1, T2> {
     }
 }
 
+pub fn bind3<T1: Clone, T2: Clone, T3: Clone>(param1: &T1, param2: &T2, param3: &T3) -> Bind3<T1, T2, T3> {
+    Bind3 {
+        param1: param1.clone(),
+        param2: param2.clone(),
+        param3: param3.clone(),
+    }
+}
 
 pub struct Bind3<T1, T2, T3> {
     param1: T1,
@@ -158,6 +172,14 @@ impl<T1: Clone, T2: Clone, T3: Clone> Bind3<T1, T2, T3> {
     }
 }
 
+pub fn bind4<T1: Clone, T2: Clone, T3: Clone, T4: Clone>(param1: &T1, param2: &T2, param3: &T3, param4: &T4) -> Bind4<T1, T2, T3, T4> {
+    Bind4 {
+        param1: param1.clone(),
+        param2: param2.clone(),
+        param3: param3.clone(),
+        param4: param4.clone(),
+    }
+}
 
 pub struct Bind4<T1, T2, T3, T4> {
     param1: T1,

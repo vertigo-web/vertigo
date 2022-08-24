@@ -88,7 +88,7 @@ pub use dom::types::{
 };
 pub use websocket::{WebsocketConnection, WebsocketMessage};
 pub use future_box::{FutureBoxSend, FutureBox};
-pub use bind::bind;
+pub use bind::{bind, bind2, bind3, bind4};
 pub use driver_module::driver::{FetchMethod};
 pub use dom::{
     dom_id::DomId,
@@ -177,7 +177,7 @@ use external_api::DRIVER_BROWSER;
 #[no_mangle]
 pub fn alloc(size: u32) -> u32 {
     DRIVER_BROWSER.with(|state| {
-        state.driver.driver_inner.api.arguments.alloc(size)
+        state.driver.inner.api.arguments.alloc(size)
     })
 }
 
