@@ -1,4 +1,4 @@
-use vertigo::{css_fn, Resource, bind, DomElement, dom, DomComment, Computed};
+use vertigo::{css_fn, Resource, bind, DomElement, dom, Computed, DomCommentCreate};
 
 use super::State;
 
@@ -25,7 +25,7 @@ css_fn! { text_css, "
     margin: 10px;
 " }
 
-fn render_commit(state: &State) -> DomComment {
+fn render_commit(state: &State) -> DomCommentCreate {
     let commit_message = Computed::from({
         let state = state.clone();
 

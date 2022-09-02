@@ -7,7 +7,7 @@ use crate::{
     }, get_driver, Css, Client, Computed, struct_mut::VecMut, ApiImport,
 };
 
-use super::types::{KeyDownEvent, DropFileEvent};
+use super::{types::{KeyDownEvent, DropFileEvent}, dom_node::{DomNodeFragment}};
 use crate::struct_mut::VecDequeMut;
 
 pub enum AttrValue<T: Into<String> + Clone + PartialEq + 'static> {
@@ -157,15 +157,15 @@ impl DomElement {
         self.id_dom
     }
 
-    pub fn add_child(&self, child_node: impl Into<DomNode>) {
+    pub fn add_child(&self, child_node: impl Into<DomNodeFragment>) {
         let parent_id = self.id_dom;
-        let child_node = child_node.into().run_on_mount(parent_id);
+        let child_node = child_node.into().convert_to_node(parent_id);
         let child_id = child_node.id_dom();
         self.driver.insert_before(self.id_dom, child_id, None);
         self.child_node.push(child_node);
     }
 
-    pub fn child(self, child_node: impl Into<DomNode>) -> Self {
+    pub fn child(self, child_node: impl Into<DomNodeFragment>) -> Self {
         self.add_child(child_node);
         self
     }

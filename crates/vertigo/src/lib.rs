@@ -82,6 +82,7 @@ pub use dom::{
     dom_text::DomText,
     dom_comment::DomComment,
     dom_node::DomNode,
+    dom_comment_create::DomCommentCreate,
 };
 pub use dom::types::{
     KeyDownEvent, DropFileEvent, DropFileItem

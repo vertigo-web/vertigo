@@ -1,6 +1,8 @@
 use std::collections::{VecDeque, HashMap};
 use std::hash::Hash;
 use std::rc::Rc;
+use crate::dom::dom_comment_create::DomCommentCreate;
+use crate::dom::dom_node::DomNodeFragment;
 use crate::struct_mut::ValueMut;
 use crate::dom::dom_id::DomId;
 use crate::{Computed, get_driver, DomComment, DomNode};
@@ -8,27 +10,27 @@ use crate::{Computed, get_driver, DomComment, DomNode};
 pub fn render_list<
     T: PartialEq + Clone + 'static,
     K: Eq + Hash,
-    R: Into<DomNode>,
+    R: Into<DomNodeFragment>,
 >(
     computed: Computed<Vec<T>>,
     get_key: impl Fn(&T) -> K + 'static,
     render: impl Fn(&T) -> R + 'static,
-) -> DomComment {
+) -> DomCommentCreate {
 
-    let comment = DomComment::new("list element");
-    let comment_id = comment.id_dom();
+    DomCommentCreate::new(|parent_id| {
+        let comment = DomComment::new("list element");
+        let comment_id = comment.id_dom();
 
-    comment.set_on_mount(move |parent_id| {
         let current_list: ValueMut<VecDeque<(T, DomNode)>> = ValueMut::new(VecDeque::new());
 
         let get_key = Rc::new(get_key);
         let render = Rc::new(move |id: &T| -> DomNode {
-            render(id).into().run_on_mount(parent_id)
+            render(id).into().convert_to_node(parent_id)
         });
 
         get_driver().insert_before(parent_id, comment_id, None);
 
-        computed.subscribe(move |new_list| {
+        let client = computed.subscribe(move |new_list| {
             let new_list = VecDeque::from_iter(new_list.into_iter());
 
             let get_key = get_key.clone();
@@ -48,7 +50,10 @@ pub fn render_list<
                 
                 *current = new_order;
             });
-        })
+        });
+
+        comment.add_subscription(client);
+        comment
     })
 }
 
