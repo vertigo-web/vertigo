@@ -9,7 +9,7 @@ use vertigo::{
     get_driver,
     dom,
     DomElement,
-    DomComment, transaction
+    DomCommentCreate, transaction
 };
 
 #[derive(Clone)]
@@ -92,7 +92,7 @@ impl ChatState {
     }
 }
 
-fn render_status(state: &ChatState) -> DomComment {
+fn render_status(state: &ChatState) -> DomCommentCreate {
     state.connect.render_value(
         |is_connect| {
             let message = match is_connect.is_some() {

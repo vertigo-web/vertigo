@@ -1,5 +1,5 @@
 use std::{cmp::PartialEq};
-use crate::{computed::{Client, GraphValue, graph_id::GraphId}, dom_value::{render_value, render_value_option}, DomComment, dom_list::render_list, DomNode};
+use crate::{computed::{Client, GraphValue, graph_id::GraphId}, dom_value::{render_value, render_value_option}, dom_list::render_list, dom::{dom_comment_create::DomCommentCreate, dom_node::DomNodeFragment}};
 use std::hash::Hash;
 
 use super::context::Context;
@@ -112,11 +112,11 @@ impl<T: 'static + PartialEq + Clone> Computed<T> {
 }
 
 impl<T: 'static + PartialEq + Clone> Computed<T> {
-    pub fn render_value<R: Into<DomNode>>(&self, render: impl Fn(T) -> R + 'static) -> DomComment {
+    pub fn render_value<R: Into<DomNodeFragment>>(&self, render: impl Fn(T) -> R + 'static) -> DomCommentCreate {
         render_value(self.clone(), render)
     }
 
-    pub fn render_value_option<R: Into<DomNode>>(&self, render: impl Fn(T) -> Option<R> + 'static) -> DomComment {
+    pub fn render_value_option<R: Into<DomNodeFragment>>(&self, render: impl Fn(T) -> Option<R> + 'static) -> DomCommentCreate {
         render_value_option(self.clone(), render)
     }
 }
@@ -127,12 +127,12 @@ impl<
 > Computed<L> {
     pub fn render_list<
         K: Eq + Hash,
-        R: Into<DomNode>,
+        R: Into<DomNodeFragment>,
     >(
         &self,
         get_key: impl Fn(&T) -> K + 'static,
         render: impl Fn(&T) -> R + 'static,
-    ) -> DomComment {
+    ) -> DomCommentCreate {
         let list = self.map(|inner| {
             inner.into_iter().collect::<Vec<_>>()
         });

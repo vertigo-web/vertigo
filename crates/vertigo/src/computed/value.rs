@@ -3,9 +3,10 @@ use std::{
     rc::Rc,
 };
 use std::hash::Hash;
-use crate::DomNode;
+use crate::dom::dom_comment_create::DomCommentCreate;
+use crate::dom::dom_node::DomNodeFragment;
 use crate::{
-    computed::{Computed, Dependencies, GraphId}, struct_mut::ValueMut, DropResource, get_dependencies, DomComment,
+    computed::{Computed, Dependencies, GraphId}, struct_mut::ValueMut, DropResource, get_dependencies,
 };
 
 use super::context::Context;
@@ -153,11 +154,11 @@ impl<T: Clone + PartialEq + 'static> Value<T> {
 }
 
 impl<T: Clone + PartialEq + 'static> Value<T> {
-    pub fn render_value<R: Into<DomNode>>(&self, render: impl Fn(T) -> R + 'static) -> DomComment {
+    pub fn render_value<R: Into<DomNodeFragment>>(&self, render: impl Fn(T) -> R + 'static) -> DomCommentCreate {
         self.to_computed().render_value(render)
     }
 
-    pub fn render_value_option<R: Into<DomNode>>(&self, render: impl Fn(T) -> Option<R> + 'static) -> DomComment {
+    pub fn render_value_option<R: Into<DomNodeFragment>>(&self, render: impl Fn(T) -> Option<R> + 'static) -> DomCommentCreate {
         self.to_computed().render_value_option(render)
     }
 }
@@ -168,12 +169,12 @@ impl<
 > Value<L> {
     pub fn render_list<
         K: Eq + Hash,
-        R: Into<DomNode>,
+        R: Into<DomNodeFragment>,
     >(
         &self,
         get_key: impl Fn(&T) -> K + 'static,
         render: impl Fn(&T) -> R + 'static,
-    ) -> DomComment {
+    ) -> DomCommentCreate {
         self.to_computed().render_list(get_key, render)
     }
 }
