@@ -107,8 +107,12 @@ pub fn main_render(sudoku: &Sudoku) -> DomElement {
     let view1 = examples_render(sudoku);
     let view2 = main_render_inner(sudoku);
 
+    let wrapper_css = css!{"
+        display: flex;
+    "};
+
     dom! {
-        <div>
+        <div css={wrapper_css}>
             { view1 }
             { view2 }
         </div>
@@ -146,7 +150,10 @@ pub fn main_render_inner(sudoku: &Sudoku) -> DomElement {
 css_fn! { css_sudoku_example, "
     border: 1px solid black;
     padding: 10px;
-    margin: 10px 0;
+    flex-shrink: 1;
+    display: flex;
+    flex-direction: column;
+    margin-right: 10px;
 " }
 
 css_fn! { css_sudoku_example_button, "

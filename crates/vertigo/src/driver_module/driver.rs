@@ -3,10 +3,12 @@ use std::{
     pin::Pin,
     rc::Rc,
 };
+use crate::JsValue;
 use crate::{
-    DomId, WebsocketMessageDriver,
+    WebsocketMessageDriver,
     Dependencies, DropResource, FutureBox,
-    FetchBuilder, Instant, RequestBuilder, WebsocketMessage, WebsocketConnection, DropFileEvent, DropFileItem, get_driver, css::css_manager::CssManager, Css, Context,
+    FetchBuilder, Instant, RequestBuilder, WebsocketMessage, WebsocketConnection,
+    get_driver, css::css_manager::CssManager, Css, Context,
 };
 
 use crate::{
@@ -22,7 +24,8 @@ use crate::driver_module::modules::{
     websocket::DriverWebsocket,
 };
 
-use super::api::DomAccess;
+use super::DomAccess;
+use super::callbacks::{CallbackStore, CallbackId};
 
 #[derive(Debug)]
 pub enum FetchMethod {
@@ -42,7 +45,7 @@ impl FetchMethod {
 #[derive(Clone)]
 pub struct DriverInner {
     pub(crate) api: Rc<ApiImport>,
-    dependencies: Dependencies,
+    pub(crate) dependencies: Dependencies,
     css_manager: CssManager,
     pub(crate) dom: Rc<DriverDom>,
     interval: DriverInterval,
@@ -50,6 +53,7 @@ pub struct DriverInner {
     fetch: DriverFetch,
     websocket: DriverWebsocket,
     spawn_executor: Rc<dyn Fn(Pin<Box<dyn Future<Output = ()> + 'static>>)>,
+    pub(crate) callback_store: Rc<CallbackStore>,
 }
 
 impl DriverInner {
@@ -94,7 +98,8 @@ impl DriverInner {
             hashrouter,
             fetch: driver_fetch,
             websocket,
-            spawn_executor
+            spawn_executor,
+            callback_store: Rc::new(CallbackStore::new()),
         }
     }
 
@@ -133,44 +138,6 @@ impl Driver {
 }
 
 impl Driver {
-    // Below - methods to interact with the dom. Used exclusively by vertigo.
-
-    pub(crate) fn create_node(&self, id: DomId, name: &'static str) {
-        self.inner.dom.create_node(id, name);
-    }
-
-    pub(crate) fn create_text(&self, id: DomId, value: &str) {
-        self.inner.dom.create_text(id, value);
-    }
-
-    pub(crate) fn update_text(&self, id: DomId, value: &str) {
-        self.inner.dom.update_text(id, value);
-    }
-
-    pub(crate) fn set_attr(&self, id: DomId, key: &'static str, value: &str) {
-        self.inner.dom.set_attr(id, key, value);
-    }
-
-    pub(crate) fn remove_node(&self, id: DomId) {
-        self.inner.dom.remove_node(id);
-    }
-
-    pub(crate) fn remove_text(&self, id: DomId) {
-        self.inner.dom.remove_text(id);
-    }
-
-    pub(crate) fn create_comment(&self, id: DomId, value: String) {
-        self.inner.dom.create_comment(id, value);
-    }
-
-    pub(crate) fn remove_comment(&self, id: DomId) {
-        self.inner.dom.remove_comment(id);
-    }
-
-    pub(crate) fn insert_before(&self, parent: DomId, child: DomId, ref_id: Option<DomId>) {
-        self.inner.dom.insert_before(parent, child, ref_id);
-    }
-
     /// Create new FetchBuilder.
     #[must_use]
     pub fn fetch(&self, url: impl Into<String>) -> FetchBuilder {
@@ -257,10 +224,6 @@ impl Driver {
         self.inner.websocket.websocket_send_message(callback_id, message);
     }
 
-    pub(crate) fn flush_update(&self) {
-        self.inner.dom.flush_dom_changes();
-    }
-
     /// Spawn a future - thus allowing to fire async functions in, for example, event handler. Handy when fetching resources from internet.
     pub fn spawn(&self, future: impl Future<Output = ()> + 'static) {
         let future = Box::pin(future);
@@ -272,10 +235,6 @@ impl Driver {
     /// will trigger only one run of updates, just like the changes were done all at once.
     pub fn transaction<F: FnOnce(&Context)>(&self, func: F) {
         self.inner.dependencies.transaction(func);
-    }
-
-    pub(crate) fn get_dependencies(&self) -> Dependencies {
-        self.inner.dependencies.clone()
     }
 
     pub (crate) fn get_class_name(&self, css: &Css) -> String {
@@ -290,12 +249,6 @@ impl Driver {
         init_env(self.inner.api.clone());
     }
 
-    pub(crate) fn export_dom_mousedown(&self, dom_id: u64) {
-        get_driver().transaction(|_|{
-            self.inner.dom.export_dom_mousedown(dom_id);
-        });
-    }
-
     pub(crate) fn export_interval_run_callback(&self, callback_id: u32) {
         self.inner.interval.export_interval_run_callback(callback_id);
     }
@@ -308,7 +261,6 @@ impl Driver {
         let params = self.inner.api.arguments.get_by_ptr(ptr);
 
         let new_hash = params
-            .unwrap_or_default()
             .convert::<String, _>(|mut params| {
                 let first = params.get_string("first")?;
                 params.expect_no_more()?;
@@ -328,7 +280,6 @@ impl Driver {
         let params = self.inner.api.arguments.get_by_ptr(ptr);
 
         let params = params
-            .unwrap_or_default()
             .convert(|mut params| {
                 let request_id = params.get_u32("request_id")?;
                 let success = params.get_bool("success")?;
@@ -358,7 +309,6 @@ impl Driver {
         let params = self.inner.api.arguments.get_by_ptr(ptr);
 
         let params = params
-            .unwrap_or_default()
             .convert(|mut params| {
                 let callback_id = params.get_u32("callback_id")?;
                 let response = params.get_string("message")?;
@@ -384,119 +334,26 @@ impl Driver {
         });
     }
 
-    pub(crate) fn export_dom_keydown(&self, ptr: u32) -> u32 {
-        let params = self.inner.api.arguments.get_by_ptr(ptr);
+    pub(crate) fn export_dom_callback(&self, callback_id: u64, value_ptr: u32) -> (u32, u32) {
+        let value = self.inner.api.arguments.get_by_ptr(value_ptr);
+        let callback_id = CallbackId::from_u64(callback_id);
 
-        let params = params
-            .unwrap_or_default()
-            .convert(|mut params| {
-                let dom_id = params.get_u64_or_null("dom_id")?;
-                let key = params.get_string("key")?;
-                let code = params.get_string("code")?;
-                let alt_key = params.get_bool("altKey")?;
-                let ctrl_key = params.get_bool("ctrlKey")?;
-                let shift_key = params.get_bool("shiftKey")?;
-                let meta_key = params.get_bool("metaKey")?;
-                params.expect_no_more()?;
+        let driver = get_driver();
+        let mut result = JsValue::Undefined;
 
-                Ok((dom_id, key, code, alt_key, ctrl_key, shift_key, meta_key))
-            });
-
-        match params {
-            Ok((dom_id, key, code, alt_key, ctrl_key, shift_key, meta_key)) => {
-                let mut result: Option<u32> = None;
-
-                get_driver().transaction(|_| {
-                    let prevent_default = self.inner.dom.export_dom_keydown(
-                        dom_id,
-                        key,
-                        code,
-                        alt_key,
-                        ctrl_key,
-                        shift_key,
-                        meta_key
-                    );
-
-                    result = Some(match prevent_default {
-                        true => 1,
-                        false => 0
-                    })
-                });
-
-                if let Some(result) = result {
-                    return result;
-                }
-
-                log::error!("The returned value was expected");
-                0
-            },
-            Err(error) => {
-                log::error!("export_websocket_callback_message -> params decode error -> {error}");
-                0
-            }
-        }
-    }
-
-    pub(crate) fn export_dom_oninput(&self, ptr: u32) {
-        let params = self.inner.api.arguments.get_by_ptr(ptr);
-
-        let params = params
-            .unwrap_or_default()
-            .convert(|mut params| {
-                let dom_id = params.get_u64("dom_id")?;
-                let text = params.get_string("text")?;
-                params.expect_no_more()?;
-
-                Ok((dom_id, text))
-            });
-
-        match params {
-            Ok((dom_id, text)) => {
-                get_driver().transaction(|_| {
-                    self.inner.dom.export_dom_oninput(dom_id, text);
-                });
-            },
-            Err(error) => {
-                log::error!("export_dom_oninput -> params decode error -> {error}");
-            }
-        }
-    }
-
-    pub(crate) fn export_dom_ondropfile(&self, ptr: u32) {
-        let params = self.inner.api.arguments.get_by_ptr(ptr);
-
-        let params = params
-            .unwrap_or_default()
-            .convert(|mut params| {
-                let dom_id = params.get_u64("dom_id")?;
-                let files = params.get_list("files", |mut item| {
-                    let name = item.get_string("name")?;
-                    let data = item.get_buffer("data")?;
-                    
-                    Ok(DropFileItem::new(name, data))
-                })?;
-                params.expect_no_more()?;
-
-                Ok((dom_id, DropFileEvent::new(files)))
-            });
-
-        match params {
-            Ok((dom_id, files)) => {
-                get_driver().transaction(|_| {
-                    self.inner.dom.export_dom_ondropfile(dom_id, files);
-                });
-            },
-            Err(error) => {
-                log::error!("export_dom_ondropfile -> params decode error -> {error}");
-            }
-        }
-    }
-
-    pub(crate) fn export_dom_mouseover(&self, dom_id: u64) {
-        let dom_id = if dom_id == 0 { None } else { Some(dom_id) };
-        get_driver().transaction(|_|{
-            self.inner.dom.export_dom_mouseover(dom_id);
+        driver.transaction(|_| {
+            result = self.inner.callback_store.call(callback_id, value);
         });
+
+        if result == JsValue::Undefined {
+            return (0, 0);
+        }
+
+        let memory_block = result.to_snapshot();
+        let (ptr, size) = memory_block.get_ptr_and_size();
+        self.inner.api.arguments.set(memory_block);
+
+        (ptr, size)
     }
 
 }

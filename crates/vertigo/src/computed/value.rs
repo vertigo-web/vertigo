@@ -3,12 +3,12 @@ use std::{
     rc::Rc,
 };
 use std::hash::Hash;
-use crate::DomElement;
+use crate::{DomElement, get_driver};
 use crate::dom::dom_comment_create::DomCommentCreate;
 use crate::dom::dom_node::DomNodeFragment;
 use crate::dom_list::ListRendered;
 use crate::{
-    computed::{Computed, Dependencies, GraphId}, struct_mut::ValueMut, DropResource, get_dependencies,
+    computed::{Computed, Dependencies, GraphId}, struct_mut::ValueMut, DropResource,
 };
 
 use super::context::Context;
@@ -65,7 +65,7 @@ impl<T> PartialEq for Value<T> {
 
 impl<T: Clone + 'static> Value<T> {
     pub fn new(value: T) -> Value<T> {
-        let deps = get_dependencies();
+        let deps = get_driver().inner.dependencies.clone();
         Value {
             inner: Rc::new(
                 ValueInner {
@@ -84,7 +84,7 @@ impl<T: Clone + 'static> Value<T> {
     where
         F: Fn(&Value<T>) -> DropResource + 'static,
     {
-        let deps = get_dependencies();
+        let deps = get_driver().inner.dependencies.clone();
         let id = GraphId::new_value();
 
         let value = Value {

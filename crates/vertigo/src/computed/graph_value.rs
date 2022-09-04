@@ -7,7 +7,7 @@ use crate::{
         Dependencies, GraphId
     },
     struct_mut::ValueMut,
-    get_dependencies,
+    get_driver,
 };
 
 struct GraphValueData<T> {
@@ -116,7 +116,7 @@ struct GraphValueInner<T: Clone> {
 
 impl<T: Clone + 'static> GraphValueInner<T> {
     fn new<F: Fn() -> T + 'static>(is_computed_type: bool, get_value: F) -> GraphValueInner<T> {
-        let deps = get_dependencies();
+        let deps = get_driver().inner.dependencies.clone();
 
         let graph_value = GraphValueData::new(&deps, is_computed_type, get_value);
 

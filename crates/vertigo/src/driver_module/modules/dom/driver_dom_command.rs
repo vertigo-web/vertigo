@@ -1,6 +1,6 @@
 use crate::DomId;
-
 use crate::driver_module::utils::json::JsonMapBuilder;
+use crate::driver_module::callbacks::CallbackId;
 
 pub enum DriverDomCommand {
     MountNode {
@@ -46,9 +46,28 @@ pub enum DriverDomCommand {
     RemoveComment {
         id: DomId,
     },
+    CallbackAdd {
+        id: DomId,
+        event_name: String,
+        callback_id: CallbackId,
+    },
+    CallbackRemove {
+        id: DomId,
+        event_name: String,
+        callback_id: CallbackId,
+    }
 }
 
 impl DriverDomCommand {
+    fn is_event(&self) -> bool {
+        match self {
+            Self::RemoveNode { .. } => true,
+            Self::RemoveText { .. } => true,
+            Self::RemoveComment { .. } => true,
+            _ => false,
+        }
+    }
+
     pub fn into_string(self) -> String {
         let mut out = JsonMapBuilder::new();
 
@@ -115,9 +134,38 @@ impl DriverDomCommand {
                 out.set_string("type", "insert_css");
                 out.set_string("selector", selector.as_str());
                 out.set_string("value", value.as_str());
+            },
+            Self::CallbackAdd { id, event_name, callback_id } => {
+                out.set_string("type", "callback_add");
+                out.set_u64("id", id.to_u64());
+                out.set_string("event_name", event_name.as_str());
+                out.set_u64("callback_id", callback_id.to_u64());
+            },
+            Self::CallbackRemove { id, event_name, callback_id } => {
+                out.set_string("type", "callback_remove");
+                out.set_u64("id", id.to_u64());
+                out.set_string("event_name", event_name.as_str());
+                out.set_u64("callback_id", callback_id.to_u64());
             }
         }
 
         out.build()
     }
+}
+
+pub fn sort_commands(list: Vec<DriverDomCommand>) -> Vec<DriverDomCommand> {
+    let mut dom = Vec::new();
+    let mut events = Vec::new();
+
+    for command in list {
+        if command.is_event() {
+            events.push(command);
+        } else {
+            dom.push(command);
+        }
+    }
+
+    dom.extend(events.into_iter());
+
+    dom
 }

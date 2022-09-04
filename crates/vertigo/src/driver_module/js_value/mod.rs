@@ -32,24 +32,32 @@ impl Arguments {
         ptr
     }
 
-    pub fn get_by_ptr(&self, ptr: u32) -> Option<JsValue> {
+    pub fn free(&self, pointer: u32) {
+        let block = self.blocks.remove(&pointer);
+
+        if block.is_none() {
+            log::error!("Failed to release memory block at address: {pointer}");
+        }
+    }
+
+    pub fn get_by_ptr(&self, ptr: u32) -> JsValue {
         if ptr == 0 {
-            return None;
+            return JsValue::Undefined;
         }
 
         let param = self.blocks.remove(&ptr);
 
         if let Some(param) = param {
             match decode_js_value(param) {
-                Ok(value) => Some(value),
+                Ok(value) => value,
                 Err(err) => {
                     log::error!("get_by_ptr - error decode: {err}");
-                    None
+                    JsValue::Undefined
                 }
             }
         } else {
             log::error!("get_by_ptr - not found MemoryBlock ptr={ptr}");
-            None
+            JsValue::Undefined
         }
     }
 

@@ -24,7 +24,7 @@ pub enum JsValueNumberConst {
     Object = 12,
 }
 
-#[derive(Debug)]
+#[derive(Debug, PartialEq)]
 pub enum JsValue {
     U32(u32),
     I32(i32),

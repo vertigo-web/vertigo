@@ -14,7 +14,7 @@ pub struct Config {
 impl Config {
     pub fn new() -> Config {
         let border = 1;
-        let item_width = 80;
+        let item_width = 70;
         let item_possible_width = 20;
         let item_border_size = border; // 1
         let item_width_size = item_width; // 20

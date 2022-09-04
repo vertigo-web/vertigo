@@ -7,6 +7,11 @@ script = [
     "cargo test -p vertigo --all-features"
 ]
 
+[tasks.vertigo-test-single]
+script = [
+    "cargo test -p vertigo --all-features -- --test-threads=1"
+]
+
 # Run clippy for wasm32 target
 
 [tasks.clippy-wasm32]
