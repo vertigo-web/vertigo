@@ -1,5 +1,11 @@
 use std::{cmp::PartialEq};
-use crate::{computed::{Client, GraphValue, graph_id::GraphId}, dom_value::{render_value, render_value_option}, dom_list::render_list, dom::{dom_comment_create::DomCommentCreate, dom_node::DomNodeFragment}};
+use crate::{
+    computed::{Client, GraphValue, graph_id::GraphId},
+    dom_value::{render_value, render_value_option},
+    dom_list::{render_list, ListRendered},
+    dom::{dom_comment_create::DomCommentCreate, dom_node::DomNodeFragment},
+    DomElement
+};
 use std::hash::Hash;
 
 use super::context::Context;
@@ -127,12 +133,11 @@ impl<
 > Computed<L> {
     pub fn render_list<
         K: Eq + Hash,
-        R: Into<DomNodeFragment>,
     >(
         &self,
         get_key: impl Fn(&T) -> K + 'static,
-        render: impl Fn(&T) -> R + 'static,
-    ) -> DomCommentCreate {
+        render: impl Fn(&T) -> DomElement + 'static,
+    ) -> ListRendered<T> {
         let list = self.map(|inner| {
             inner.into_iter().collect::<Vec<_>>()
         });

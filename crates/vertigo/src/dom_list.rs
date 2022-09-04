@@ -2,78 +2,129 @@ use std::collections::{VecDeque, HashMap};
 use std::hash::Hash;
 use std::rc::Rc;
 use crate::dom::dom_comment_create::DomCommentCreate;
+use crate::dom::dom_element::DomElementRef;
 use crate::dom::dom_node::DomNodeFragment;
 use crate::struct_mut::ValueMut;
 use crate::dom::dom_id::DomId;
-use crate::{Computed, get_driver, DomComment, DomNode};
+use crate::{Computed, get_driver, DomComment, EmbedDom, DomElement};
+
+pub struct ListRendered<T: Clone> {
+    comment: DomCommentCreate,
+    pub refs: Computed<Vec<(T, DomElementRef)>>,
+}
+
+impl<T: Clone> EmbedDom for ListRendered<T> {
+    fn embed(self) -> DomNodeFragment {
+        self.comment.into()
+    }
+}
+
+fn get_refs<T: Clone>(list: &VecDeque<(T, DomElement)>) -> Vec<(T, DomElementRef)> {
+    let mut result = Vec::new();
+
+    for (item, element) in list {
+        result.push((item.clone(), element.get_ref()));
+    }
+
+    result
+}
 
 pub fn render_list<
     T: PartialEq + Clone + 'static,
     K: Eq + Hash,
-    R: Into<DomNodeFragment>,
 >(
     computed: Computed<Vec<T>>,
     get_key: impl Fn(&T) -> K + 'static,
-    render: impl Fn(&T) -> R + 'static,
-) -> DomCommentCreate {
+    render: impl Fn(&T) -> DomElement + 'static,
+) -> ListRendered<T> {
 
-    DomCommentCreate::new(|parent_id| {
-        let comment = DomComment::new("list element");
-        let comment_id = comment.id_dom();
+    let comment = DomComment::new("list element");
+    let comment_id = comment.id_dom();
 
-        let current_list: ValueMut<VecDeque<(T, DomNode)>> = ValueMut::new(VecDeque::new());
+    let parent: Rc<ValueMut<Option<DomId>>> = Rc::new(ValueMut::new(None));
+    let current_list: Rc<ValueMut<VecDeque<(T, DomElement)>>> = Rc::new(ValueMut::new(VecDeque::new()));
+
+    let list_refs = computed.map({
+        let current_list = current_list.clone();
+        let parent = parent.clone();
 
         let get_key = Rc::new(get_key);
-        let render = Rc::new(move |id: &T| -> DomNode {
-            render(id).into().convert_to_node(parent_id)
-        });
+        let render = Rc::new(render);
 
-        get_driver().insert_before(parent_id, comment_id, None);
-
-        let client = computed.subscribe(move |new_list| {
+        move |new_list| {
             let new_list = VecDeque::from_iter(new_list.into_iter());
+            current_list.change({
 
-            let get_key = get_key.clone();
-            let render = render.clone();
+                let get_key = get_key.clone();
+                let render = render.clone();
+                let parent = parent.clone();
+        
+                move |current| {
+                    let current_list = std::mem::take(current);
 
-            current_list.change(move |current| {
-                let current_list = std::mem::take(current);
+                    let new_order = reorder_nodes(
+                        parent,
+                        comment_id,
+                        current_list,
+                        new_list,
+                        get_key.clone(),
+                        render,
+                    );
+                    
 
-                let new_order = reorder_nodes(
-                    parent_id,
-                    comment_id,
-                    current_list,
-                    new_list,
-                    get_key.clone(),
-                    render,
-                );
-                
-                *current = new_order;
-            });
+                    let list_refs = get_refs(&new_order);
+                    *current = new_order;
+
+                    list_refs
+                }
+            })
+        }
+    });
+
+    let client = list_refs.clone().subscribe(|_| {});
+
+    comment.add_subscription(client);
+
+    let comment = DomCommentCreate::new(move |parent_id| {
+        parent.set(Some(parent_id));
+
+        let driver = get_driver();
+        let mut prev_item = comment_id;
+
+        current_list.change(|current_list| {
+            for (_, item) in current_list.iter().rev() {
+                let node_id = item.id_dom();
+                driver.insert_before(parent_id, node_id, Some(prev_item));
+                prev_item = node_id;
+            }
         });
 
-        comment.add_subscription(client);
         comment
-    })
+    });
+
+    ListRendered {
+        comment,
+        refs: list_refs
+    }
 }
 
 fn reorder_nodes<
     T: PartialEq,
     K: Eq + Hash,
 >(
-    parent_id: DomId,
+    parent: Rc<ValueMut<Option<DomId>>>,
     comment_id: DomId,
-    mut real_child: VecDeque<(T, DomNode)>,
+    mut real_child: VecDeque<(T, DomElement)>,
     mut new_child: VecDeque<T>,
     get_key: Rc<dyn Fn(&T) -> K + 'static>,
-    render: Rc<dyn Fn(&T) -> DomNode + 'static>,
-) -> VecDeque<(T, DomNode)> {
+    render: Rc<dyn Fn(&T) -> DomElement + 'static>,
+) -> VecDeque<(T, DomElement)> {
     let pairs_top = get_pairs_top(&mut real_child, &mut new_child);
     let mut pairs_bottom = get_pairs_bottom(&mut real_child, &mut new_child);
 
     let last_before: DomId = find_first_dom(&pairs_bottom).unwrap_or(comment_id);
     let mut pairs_middle = get_pairs_middle(
-        parent_id,
+        parent,
         last_before,
         real_child,
         new_child,
@@ -87,7 +138,7 @@ fn reorder_nodes<
     pairs
 }
 
-fn find_first_dom<T>(list: &VecDeque<(T, DomNode)>) -> Option<DomId> {
+fn find_first_dom<T>(list: &VecDeque<(T, DomElement)>) -> Option<DomId> {
     if let Some((_, first)) = list.get(0) {
         return Some(first.id_dom());
     }
@@ -97,9 +148,9 @@ fn find_first_dom<T>(list: &VecDeque<(T, DomNode)>) -> Option<DomId> {
 
 // Try to match starting from top
 fn get_pairs_top<T: PartialEq>(
-    current: &mut VecDeque<(T, DomNode)>,
+    current: &mut VecDeque<(T, DomElement)>,
     new_child: &mut VecDeque<T>,
-) -> VecDeque<(T, DomNode)> {
+) -> VecDeque<(T, DomElement)> {
     let mut pairs_top = VecDeque::new();
 
     loop {
@@ -131,9 +182,9 @@ fn get_pairs_top<T: PartialEq>(
 
 // Try to match starting from bottom
 fn get_pairs_bottom<T: PartialEq>(
-    current: &mut VecDeque<(T, DomNode)>,
+    current: &mut VecDeque<(T, DomElement)>,
     new_child: &mut VecDeque<T>,
-) -> VecDeque<(T, DomNode)> {
+) -> VecDeque<(T, DomElement)> {
     let mut pairs_bottom = VecDeque::new();
 
     loop {
@@ -167,14 +218,14 @@ fn get_pairs_middle<
     T: PartialEq,
     K: Eq + Hash,
 >(
-    parent_id: DomId,
+    parent: Rc<ValueMut<Option<DomId>>>,
     last_before: DomId,
-    real_child: VecDeque<(T, DomNode)>,
+    real_child: VecDeque<(T, DomElement)>,
     new_child: VecDeque<T>,
     get_key: Rc<dyn Fn(&T) -> K + 'static>,
-    render: Rc<dyn Fn(&T) -> DomNode + 'static>,
-) -> VecDeque<(T, DomNode)> {
-    let mut pairs_middle: VecDeque<(T, DomNode)> = VecDeque::new();
+    render: Rc<dyn Fn(&T) -> DomElement + 'static>,
+) -> VecDeque<(T, DomElement)> {
+    let mut pairs_middle: VecDeque<(T, DomElement)> = VecDeque::new();
 
     let mut real_node: CacheNode<K, T> = CacheNode::new(get_key, render);
 
@@ -185,13 +236,17 @@ fn get_pairs_middle<
     let driver = get_driver();
     let mut last_before = last_before;
 
+    let parent_id = parent.get();
+
     for item in new_child.into_iter().rev() {
 
         let node = real_node.get_or_create(&item);
         let node_id = node.id_dom();
         pairs_middle.push_front((item, node));
 
-        driver.insert_before(parent_id, node_id, Some(last_before));
+        if let Some(parent_id) = parent_id {
+            driver.insert_before(parent_id, node_id, Some(last_before));
+        }
         last_before = node_id;
     }
 
@@ -204,14 +259,14 @@ struct CacheNode<
     T,
 > {
     get_key: Rc<dyn Fn(&T) -> K + 'static>,
-    create_new: Rc<dyn Fn(&T) -> DomNode + 'static>,
-    data: HashMap<K, VecDeque<DomNode>>,
+    create_new: Rc<dyn Fn(&T) -> DomElement + 'static>,
+    data: HashMap<K, VecDeque<DomElement>>,
 }
 
 impl<K: Eq + Hash, T> CacheNode<K, T> {
     pub fn new(
         get_key: Rc<dyn Fn(&T) -> K + 'static>,
-        create_new: Rc<dyn Fn(&T) -> DomNode + 'static>,
+        create_new: Rc<dyn Fn(&T) -> DomElement + 'static>,
     ) -> CacheNode<K, T> {
         CacheNode {
             get_key,
@@ -220,19 +275,19 @@ impl<K: Eq + Hash, T> CacheNode<K, T> {
         }
     }
 
-    pub fn insert(&mut self, item: &T, node: DomNode) {
+    pub fn insert(&mut self, item: &T, element: DomElement) {
         let key = (self.get_key)(item);
         let item = self.data.entry(key).or_insert_with(VecDeque::new);
-        item.push_back(node);
+        item.push_back(element);
     }
 
-    pub fn get_or_create(&mut self, item: &T) -> DomNode {
+    pub fn get_or_create(&mut self, item: &T) -> DomElement {
         let key = (self.get_key)(item);
-        let node = self.data.entry(key).or_insert_with(VecDeque::new).pop_front();
+        let element = self.data.entry(key).or_insert_with(VecDeque::new).pop_front();
 
         let CacheNode { create_new, .. } = self;
 
-        match node {
+        match element {
             Some(node) => node,
             None => create_new(item),
         }

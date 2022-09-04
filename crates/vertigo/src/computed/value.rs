@@ -3,8 +3,10 @@ use std::{
     rc::Rc,
 };
 use std::hash::Hash;
+use crate::DomElement;
 use crate::dom::dom_comment_create::DomCommentCreate;
 use crate::dom::dom_node::DomNodeFragment;
+use crate::dom_list::ListRendered;
 use crate::{
     computed::{Computed, Dependencies, GraphId}, struct_mut::ValueMut, DropResource, get_dependencies,
 };
@@ -169,12 +171,11 @@ impl<
 > Value<L> {
     pub fn render_list<
         K: Eq + Hash,
-        R: Into<DomNodeFragment>,
     >(
         &self,
         get_key: impl Fn(&T) -> K + 'static,
-        render: impl Fn(&T) -> R + 'static,
-    ) -> DomCommentCreate {
+        render: impl Fn(&T) -> DomElement + 'static,
+    ) -> ListRendered<T> {
         self.to_computed().render_list(get_key, render)
     }
 }
