@@ -2,7 +2,7 @@ use crate::{Driver, struct_mut::VecMut, get_driver, Client};
 use super::dom_id::DomId;
 
 pub struct DomComment {
-    dom_driver: Driver,
+    driver: Driver,
     pub id_dom: DomId,
     subscriptions: VecMut<Client>,
 }
@@ -10,13 +10,13 @@ pub struct DomComment {
 impl DomComment {
     pub fn new(text: impl Into<String>) -> DomComment {
         let text = text.into();
-        let dom_driver = get_driver();
+        let driver = get_driver();
         let id_dom = DomId::default();
 
-        dom_driver.create_comment(id_dom, text);
+        driver.inner.dom.create_comment(id_dom, text);
 
         DomComment {
-            dom_driver,
+            driver,
             id_dom,
             subscriptions: VecMut::new(),
         }
@@ -33,6 +33,6 @@ impl DomComment {
 
 impl Drop for DomComment {
     fn drop(&mut self) {
-        self.dom_driver.remove_comment(self.id_dom);
+        self.driver.inner.dom.remove_comment(self.id_dom);
     }
 }

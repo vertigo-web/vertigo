@@ -1,10 +1,10 @@
 use std::rc::Rc;
 use crate::{
-    driver_module::{driver::{Driver}, api::DomAccess},
+    driver_module::{driver::Driver, DomAccess},
     dom::{
         dom_node::DomNode,
         dom_id::DomId,
-    }, get_driver, Css, Client, Computed, struct_mut::VecMut, ApiImport,
+    }, get_driver, Css, Client, Computed, struct_mut::VecMut, ApiImport, DropResource, JsValue, DropFileItem,
 };
 
 use super::{types::{KeyDownEvent, DropFileEvent}, dom_node::{DomNodeFragment}};
@@ -80,6 +80,7 @@ pub struct DomElement {
     id_dom: DomId,
     child_node: VecDequeMut<DomNode>,
     subscriptions: VecMut<Client>,
+    drop: VecMut<DropResource>,
 }
 
 impl DomElement {
@@ -88,13 +89,14 @@ impl DomElement {
 
         let driver = get_driver();
 
-        driver.create_node(node_id, name);
+        driver.inner.dom.create_node(node_id, name);
 
         DomElement {
             driver,
             id_dom: node_id,
             child_node: VecDequeMut::new(),
             subscriptions: VecMut::new(),
+            drop: VecMut::new(),
         }
     }
 
@@ -110,6 +112,7 @@ impl DomElement {
             id_dom: id,
             child_node: VecDequeMut::new(),
             subscriptions: VecMut::new(),
+            drop: VecMut::new(),
         }
     }
 
@@ -122,7 +125,7 @@ impl DomElement {
         match css {
             CssValue::Css(css) => {
                 let class_name = get_driver().get_class_name(&css);
-                self.driver.set_attr(self.id_dom, "class", &class_name);             //TODO - Change to &str when the virtual dom is deleted        
+                self.driver.inner.dom.set_attr(self.id_dom, "class", &class_name);             //TODO - Change to &str when the virtual dom is deleted        
             },
             CssValue::Computed(css) => {
                 let id_dom = self.id_dom;
@@ -130,7 +133,7 @@ impl DomElement {
         
                 self.subscribe(css, move |css| {
                     let class_name = driver.get_class_name(&css);
-                    driver.set_attr(id_dom, "class", &class_name);                                  //TODO - Change to &str when the virtual dom is deleted
+                    driver.inner.dom.set_attr(id_dom, "class", &class_name);                                  //TODO - Change to &str when the virtual dom is deleted
                 });
             }
         }
@@ -142,15 +145,15 @@ impl DomElement {
             AttrValue::String(value) => {
                 let id_dom = self.id_dom;
                 let value: String = value.into();
-                get_driver().set_attr(id_dom, name, &value);        
+                self.driver.inner.dom.set_attr(id_dom, name, &value);        
             },
             AttrValue::Computed(computed) => {
                 let id_dom = self.id_dom;
-                let driver = get_driver();
+                let driver = self.driver.clone();
         
                 self.subscribe(computed, move |value| {
                     let value: String = value.into();
-                    driver.set_attr(id_dom, name, &value);
+                    driver.inner.dom.set_attr(id_dom, name, &value);
                 });
         
             }
@@ -165,9 +168,12 @@ impl DomElement {
 
     pub fn add_child(&self, child_node: impl Into<DomNodeFragment>) {
         let parent_id = self.id_dom;
-        let child_node = child_node.into().convert_to_node(parent_id);
-        let child_id = child_node.id_dom();
-        self.driver.insert_before(self.id_dom, child_id, None);
+        let child_node = child_node.into();
+
+        let child_id = child_node.id();
+        self.driver.inner.dom.insert_before(self.id_dom, child_id, None);
+
+        let child_node = child_node.convert_to_node(parent_id);
         self.child_node.push(child_node);
     }
 
@@ -177,52 +183,200 @@ impl DomElement {
     }
 
     pub fn on_click(self, on_click: impl Fn() + 'static) -> Self {
-        self.driver.inner.dom.data.change(self.id_dom, |element| {
-            element.on_click = Some(Rc::new(on_click));
+        let (callback_id, drop) = self.driver.inner.callback_store.register(move |_data| {
+            on_click();
+            JsValue::Undefined
         });
+
+        let drop_event = DropResource::new({
+            let callback_id = callback_id.clone();
+            let driver = self.driver.clone();
+            move || {
+                driver.inner.dom.callback_remove(self.id_dom, "mousedown", callback_id);
+                drop.off();
+            }
+        });
+
+        self.driver.inner.dom.callback_add(self.id_dom, "mousedown", callback_id);
+        self.drop.push(drop_event);
 
         self
     }
 
     pub fn on_mouse_enter(self, on_mouse_enter: impl Fn() + 'static) -> Self {
-        self.driver.inner.dom.data.change(self.id_dom, |element| {
-            element.on_mouse_enter = Some(Rc::new(on_mouse_enter));
+        let (callback_id, drop) = self.driver.inner.callback_store.register(move |_data| {
+            on_mouse_enter();
+            JsValue::Undefined
         });
+
+        let drop_event = DropResource::new({
+            let callback_id = callback_id.clone();
+            let driver = self.driver.clone();
+            move || {
+                driver.inner.dom.callback_remove(self.id_dom, "mouseenter", callback_id);
+                drop.off();
+            }
+        });
+
+        self.driver.inner.dom.callback_add(self.id_dom, "mouseenter", callback_id);
+        self.drop.push(drop_event);
+
         self
     }
 
     pub fn on_mouse_leave(self, on_mouse_leave: impl Fn() + 'static) -> Self {
-        self.driver.inner.dom.data.change(self.id_dom, |element| {
-            element.on_mouse_leave = Some(Rc::new(on_mouse_leave));
+        let (callback_id, drop) = self.driver.inner.callback_store.register(move |_data| {
+            on_mouse_leave();
+            JsValue::Undefined
         });
+
+        let drop_event = DropResource::new({
+            let callback_id = callback_id.clone();
+            let driver = self.driver.clone();
+            move || {
+                driver.inner.dom.callback_remove(self.id_dom, "mouseleave", callback_id);
+                drop.off();
+            }
+        });
+
+        self.driver.inner.dom.callback_add(self.id_dom, "mouseleave", callback_id);
+        self.drop.push(drop_event);
+
         self
     }
 
     pub fn on_input(self, on_input: impl Fn(String) + 'static) -> Self {
-        self.driver.inner.dom.data.change(self.id_dom, |element| {
-            element.on_input = Some(Rc::new(on_input));
+        let (callback_id, drop) = self.driver.inner.callback_store.register(move |data| {
+            if let JsValue::String(text) = data {
+                on_input(text);
+            } else {
+                log::error!("Invalid data: on_input: {data:?}");
+            }
+
+            JsValue::Undefined
         });
+
+        let drop_event = DropResource::new({
+            let callback_id = callback_id.clone();
+            let driver = self.driver.clone();
+            move || {
+                driver.inner.dom.callback_remove(self.id_dom, "input", callback_id);
+                drop.off();
+            }
+        });
+
+        self.driver.inner.dom.callback_add(self.id_dom, "input", callback_id);
+        self.drop.push(drop_event);
+
         self
     }
 
     pub fn on_key_down(self, on_key_down: impl Fn(KeyDownEvent) -> bool + 'static) -> Self {
-        self.driver.inner.dom.data.change(self.id_dom, |element| {
-            element.on_keydown = Some(Rc::new(on_key_down));
+        let (callback_id, drop) = self.driver.inner.callback_store.register(move |data| {
+            match get_key_down_event(data) {
+                Ok(event) => {
+                    let prevent_default = on_key_down(event);
+
+                    match prevent_default {
+                        true => JsValue::True,
+                        false => JsValue::False,
+                    }
+                },
+                Err(error) => {
+                    log::error!("export_websocket_callback_message -> params decode error -> {error}");
+                    JsValue::False
+                }
+            }
         });
+
+        let drop_event = DropResource::new({
+            let callback_id = callback_id.clone();
+            let driver = self.driver.clone();
+            move || {
+                driver.inner.dom.callback_remove(self.id_dom, "keydown", callback_id);
+                drop.off();
+            }
+        });
+
+        self.driver.inner.dom.callback_add(self.id_dom, "keydown", callback_id);
+        self.drop.push(drop_event);
+
         self
     }
 
     pub fn on_dropfile(self, on_dropfile: impl Fn(DropFileEvent) + 'static) -> Self {
-        self.driver.inner.dom.data.change(self.id_dom, |element| {
-            element.on_dropfile = Some(Rc::new(on_dropfile));
+        let (callback_id, drop) = self.driver.inner.callback_store.register(move |data| {
+            let params = data
+                .convert(|mut params| {
+
+                    let files = params.get_list("files", |mut item| {
+                        let name = item.get_string("name")?;
+                        let data = item.get_buffer("data")?;
+                        
+                        Ok(DropFileItem::new(name, data))
+                    })?;
+                    params.expect_no_more()?;
+
+                    Ok(DropFileEvent::new(files))
+                });
+
+            match params {
+                Ok(params) => {
+                    on_dropfile(params);
+                },
+                Err(error) => {
+                    log::error!("on_dropfile -> params decode error -> {error}");
+                }
+            };
+
+            JsValue::Undefined
         });
+
+        let drop_event = DropResource::new({
+            let callback_id = callback_id.clone();
+            let driver = self.driver.clone();
+            move || {
+                driver.inner.dom.callback_remove(self.id_dom, "drop", callback_id);
+                drop.off();
+            }
+        });
+
+        self.driver.inner.dom.callback_add(self.id_dom, "drop", callback_id);
+        self.drop.push(drop_event);
+
         self
     }
 
     pub fn hook_key_down(self, on_hook_key_down: impl Fn(KeyDownEvent) -> bool + 'static) -> Self {
-        self.driver.inner.dom.data.change(self.id_dom, |element| {
-            element.hook_keydown = Some(Rc::new(on_hook_key_down));
+        let (callback_id, drop) = self.driver.inner.callback_store.register(move |data| {
+            match get_key_down_event(data) {
+                Ok(event) => {
+                    let prevent_default = on_hook_key_down(event);
+
+                    match prevent_default {
+                        true => JsValue::True,
+                        false => JsValue::False,
+                    }
+                },
+                Err(error) => {
+                    log::error!("export_websocket_callback_message -> params decode error -> {error}");
+                    JsValue::False
+                }
+            }
         });
+
+        let drop_event = DropResource::new({
+            let callback_id = callback_id.clone();
+            let driver = self.driver.clone();
+            move || {
+                driver.inner.dom.callback_remove(self.id_dom, "hook_keydown", callback_id);
+                drop.off();
+            }
+        });
+
+        self.driver.inner.dom.callback_add(self.id_dom, "hook_keydown", callback_id);
+        self.drop.push(drop_event);
+
         self
     }
 
@@ -230,6 +384,30 @@ impl DomElement {
 
 impl Drop for DomElement {
     fn drop(&mut self) {
-        self.driver.remove_node(self.id_dom);
+        self.driver.inner.dom.remove_node(self.id_dom);
     }
+}
+
+
+fn get_key_down_event(data: JsValue) -> Result<KeyDownEvent, String> {
+    data.convert(|mut params| {
+        let key = params.get_string("key")?;
+        let code = params.get_string("code")?;
+        let alt_key = params.get_bool("altKey")?;
+        let ctrl_key = params.get_bool("ctrlKey")?;
+        let shift_key = params.get_bool("shiftKey")?;
+        let meta_key = params.get_bool("metaKey")?;
+        params.expect_no_more()?;
+
+        Ok((key, code, alt_key, ctrl_key, shift_key, meta_key))
+    }).map(|(key, code, alt_key, ctrl_key, shift_key, meta_key)| {
+        KeyDownEvent {
+            key,
+            code,
+            alt_key,
+            ctrl_key,
+            shift_key,
+            meta_key,
+        }
+    })
 }

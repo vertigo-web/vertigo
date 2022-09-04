@@ -54,8 +54,22 @@ fn render_menu_item(state: &app::State, current_page: Computed<Route>, menu_item
 }
 
 fn render_header(state: &app::State) -> DomElement {
+    let hook_key_down = |event: KeyDownEvent| {
+        if event.code == "ArrowRight" {
+            log::info!("right");
+            return true;
+        }
+
+        if event.code == "ArrowLeft" {
+            log::info!("left");
+            return true;
+        }
+
+        false
+    };
+
     dom! {
-        <div>
+        <div hook_key_down={hook_key_down}>
             <ul css={css_menu()}>
                 { render_menu_item(state, state.route.route.clone(), Route::Counters) }
                 { render_menu_item(state, state.route.route.clone(), Route::Animations) }

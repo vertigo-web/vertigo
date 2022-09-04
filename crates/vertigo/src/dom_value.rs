@@ -7,24 +7,25 @@ pub fn render_value_option<T: Clone + PartialEq + 'static, R: Into<DomNodeFragme
     computed: Computed<T>,
     render: impl Fn(T) -> Option<R> + 'static
 ) -> DomCommentCreate {
-    DomCommentCreate::new(move |parent_id| {
+    let comment = DomComment::new("value element");
+    let comment_id = comment.id_dom();
+
+    DomCommentCreate::new(comment_id, move |parent_id| {
         let driver = get_driver();
 
-        let comment = DomComment::new("value element");
-        let comment_id = comment.id_dom();
-
-        driver.insert_before(parent_id, comment_id, None);
+        driver.inner.dom.insert_before(parent_id, comment_id, None);
         let current_node: ValueMut<Option<DomNode>> = ValueMut::new(None);
 
         let client = computed.subscribe(move |value| {
-            let new_element = render(value).map(|item| item.into().convert_to_node(parent_id));
+
+            let new_element = render(value).map(|item| {
+                let new_element: DomNodeFragment = item.into();
+                driver.inner.dom.insert_before(parent_id, new_element.id(), Some(comment_id));
+                new_element.convert_to_node(parent_id)
+            });
 
             current_node.change(|current| {
-                if let Some(new_element) = &new_element {
-                    driver.insert_before(parent_id, new_element.id_dom(), Some(comment_id));
-                }
-
-                let _ = std::mem::replace(current, new_element);
+                *current = new_element;
             });
         });
 

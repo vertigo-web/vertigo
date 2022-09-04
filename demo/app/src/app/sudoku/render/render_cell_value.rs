@@ -10,7 +10,7 @@ fn css_item_number_wrapper() -> Css {
         "
         position: relative;
         text-align: center;
-        font-size: 40px;
+        font-size: 30px;
         color: blue;
         height: {config.item_width_size}px;
         line-height: {config.item_width_size}px;

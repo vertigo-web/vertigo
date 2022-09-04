@@ -1,4 +1,4 @@
-import { argumentsDecode, JsValueType, JsValueBuilder } from './arguments';
+import { argumentsDecode, JsValueType, JsValueBuilder, saveToBuffer } from './arguments';
 
 export interface BaseExportType {
     alloc: (size: number) => number,
@@ -9,6 +9,7 @@ export interface ModuleControllerType<ExportType extends BaseExportType> {
     decodeArguments: (ptr: number, size: number) => JsValueType,
     newList: () => JsValueBuilder,
     getUint8Memory: () => Uint8Array,
+    saveJsValue: (value: JsValueType) => number,
 }
 
 const fetchModule = async (wasmBinPath: string, imports: Record<string, WebAssembly.ModuleImports>): Promise<WebAssembly.WebAssemblyInstantiatedSource> => {
@@ -57,10 +58,13 @@ export const wasmInit = async <ImportType extends Record<string, Function>, Expo
 
     const newList = (): JsValueBuilder => new JsValueBuilder(getUint8Memory, exports.alloc);
 
+    const saveJsValue = (value: JsValueType): number => saveToBuffer(getUint8Memory, exports.alloc, value);
+
     return {
         exports,
         decodeArguments,
         getUint8Memory,
-        newList
+        newList,
+        saveJsValue
     };
 };

@@ -79,9 +79,17 @@ pub fn main_render(state: &AnimationsState) -> DomElement {
         context
     });
 
+    let on_mouse_enter = || {
+        log::info!("enter");
+    };
+
+    let on_mouse_leave = || {
+        log::info!("out");
+    };
+
     dom! {
         <div>
-            <div css={css_bg()}>
+            <div css={css_bg()} on_mouse_enter={on_mouse_enter} on_mouse_leave={on_mouse_leave}>
                 { spinner() }
             </div>
 

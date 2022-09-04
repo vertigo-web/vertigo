@@ -18,6 +18,7 @@ impl JsValueBuilder {
         self
     }
 
+    #[allow(dead_code)]
     pub fn string_option(self, value: Option<String>) -> Self {
         match value {
             Some(body) => self.string(body),
@@ -33,6 +34,7 @@ impl JsValueBuilder {
         self.list.push(JsValue::String(value.into()));
     }
 
+    #[allow(dead_code)]
     pub fn u32(mut self, value: u32) -> Self {
         self.list.push(JsValue::U32(value));
         self

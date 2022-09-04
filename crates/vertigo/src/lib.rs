@@ -49,6 +49,8 @@
 #![allow(clippy::new_without_default)]
 #![allow(clippy::large_enum_variant)]
 #![allow(clippy::non_send_fields_in_send_ty)]
+#![allow(clippy::match_like_matches_macro)]
+#![allow(clippy::from_over_into)]
 
 mod computed;
 mod css;
@@ -82,8 +84,10 @@ pub use dom::{
     dom_text::DomText,
     dom_comment::DomComment,
     dom_node::DomNode,
+    dom_node::DomNodeFragment,
     dom_comment_create::DomCommentCreate,
 };
+pub use crate::dom_list::ListRendered;
 pub use dom::types::{
     KeyDownEvent, DropFileEvent, DropFileItem
 };
@@ -169,7 +173,17 @@ pub use vertigo_macro::css;
 pub use vertigo_macro::css_block;
 
 mod external_api;
-use external_api::DRIVER_BROWSER;
+use external_api::{DRIVER_BROWSER, DriverConstruct};
+
+fn get_driver_state<R: Default, F: FnOnce(&DriverConstruct) -> R>(label: &'static str, onec: F) -> R {
+    match DRIVER_BROWSER.try_with(onec) {
+        Ok(value) => value,
+        Err(_) => {
+            println!("error access {label}");
+            R::default()
+        }
+    }
+}
 
 //------------------------------------------------------------------------------------------------------------------
 // methods for memory allocation
@@ -177,8 +191,15 @@ use external_api::DRIVER_BROWSER;
 
 #[no_mangle]
 pub fn alloc(size: u32) -> u32 {
-    DRIVER_BROWSER.with(|state| {
+    get_driver_state("alloc", |state| {
         state.driver.inner.api.arguments.alloc(size)
+    })
+}
+
+#[no_mangle]
+pub fn free(pointer: u32) {
+    get_driver_state("free", |state| {
+        state.driver.inner.api.arguments.free(pointer);
     })
 }
 
@@ -186,69 +207,54 @@ pub fn alloc(size: u32) -> u32 {
 
 #[no_mangle]
 pub fn interval_run_callback(callback_id: u32) {
-    DRIVER_BROWSER.with(|state| state.driver.export_interval_run_callback(callback_id));
+    get_driver_state("interval_run_callback", |state| state.driver.export_interval_run_callback(callback_id));
 }
 
 #[no_mangle]
 pub fn timeout_run_callback(callback_id: u32) {
-    DRIVER_BROWSER.with(|state| state.driver.export_timeout_run_callback(callback_id));
+    get_driver_state("timeout_run_callback", |state| state.driver.export_timeout_run_callback(callback_id));
 }
 
 #[no_mangle]
 pub fn hashrouter_hashchange_callback(list_id: u32) {
-    DRIVER_BROWSER.with(|state| state.driver.export_hashrouter_hashchange_callback(list_id));
+    get_driver_state("hashrouter_hashchange_callback", |state| state.driver.export_hashrouter_hashchange_callback(list_id));
 }
 
 #[no_mangle]
 pub fn fetch_callback(params_id: u32) {
-    DRIVER_BROWSER.with(|state| state.driver.export_fetch_callback(params_id));
+    get_driver_state("fetch_callback", |state| state.driver.export_fetch_callback(params_id));
 }
 
 #[no_mangle]
 pub fn websocket_callback_socket(callback_id: u32) {
-    DRIVER_BROWSER.with(|state| state.driver.export_websocket_callback_socket(callback_id));
+    get_driver_state("websocket_callback_socket", |state| state.driver.export_websocket_callback_socket(callback_id));
 }
 
 #[no_mangle]
 pub fn websocket_callback_message(callback_id: u32) {
-    DRIVER_BROWSER.with(|state| state.driver.export_websocket_callback_message(callback_id));
+    get_driver_state("websocket_callback_message", |state| state.driver.export_websocket_callback_message(callback_id));
 }
 
 #[no_mangle]
 pub fn websocket_callback_close(callback_id: u32) {
-    DRIVER_BROWSER.with(|state| state.driver.export_websocket_callback_close(callback_id));
+    get_driver_state("websocket_callback_close", |state| state.driver.export_websocket_callback_close(callback_id));
 }
 
 #[no_mangle]
-pub fn dom_keydown(params_id: u32) -> u32 {
-    DRIVER_BROWSER.with(|state|
-        state.driver.export_dom_keydown(params_id)
-    )
-}
+pub fn export_dom_callback(callback_id: u64, value_ptr: u32) -> u64 {
+    get_driver_state("export_dom_callback", |state| {
+        let (ptr, size) = state.driver.export_dom_callback(callback_id, value_ptr);
 
-#[no_mangle]
-pub fn dom_oninput(params_id: u32) {
-    DRIVER_BROWSER.with(|state| state.driver.export_dom_oninput(params_id));
-}
+        let ptr = ptr as u64;
+        let size = size as u64;
 
-#[no_mangle]
-pub fn dom_mouseover(dom_id: u64) {
-    DRIVER_BROWSER.with(|state| state.driver.export_dom_mouseover(dom_id));
-}
-
-#[no_mangle]
-pub fn dom_mousedown(dom_id: u64) {
-    DRIVER_BROWSER.with(|state| state.driver.export_dom_mousedown(dom_id));
-}
-
-#[no_mangle]
-pub fn dom_ondropfile(params_id: u32) {
-    DRIVER_BROWSER.with(|state| state.driver.export_dom_ondropfile(params_id));
+        (ptr << 32) + size
+    })
 }
 
 /// Starting point of the app.
 pub fn start_app(get_component: impl FnOnce() -> DomElement) {
-    DRIVER_BROWSER.with(|state| {
+    get_driver_state("start_app", |state| {
         state.driver.init_env();
         let app = get_component();
 
@@ -259,23 +265,11 @@ pub fn start_app(get_component: impl FnOnce() -> DomElement) {
         *inner = Some(root);
         drop(inner);
 
-        get_driver().flush_update();
+        get_driver().inner.dom.flush_dom_changes();
     });
 }
 
-pub(crate) fn get_dependencies() -> Dependencies {
-    DRIVER_BROWSER.with(|state| {
-        state.driver.get_dependencies()
-    })
-}
-
-pub(crate) fn external_connections_refresh() {                      //TODO - move somewhere ?
-    DRIVER_BROWSER.with(|state| {
-        state.driver.get_dependencies().external_connections_refresh();
-    });
-}
-
-pub fn get_driver() -> Driver {                                     //TODO - move somewhere ?
+pub fn get_driver() -> Driver {
     DRIVER_BROWSER.with(|state| {
         state.driver.clone()
     })

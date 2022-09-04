@@ -1,7 +1,7 @@
 use crate::{dom::{
     dom_element::DomElement,
     dom_text::DomText,
-}, DomCommentCreate};
+}, DomCommentCreate, EmbedDom};
 
 use super::{dom_id::DomId, dom_comment::DomComment};
 
@@ -72,6 +72,15 @@ impl DomNodeFragment {
             }
         }
     }
+
+    pub fn id(&self) -> DomId {
+        match self {
+            Self::Node { node } => node.id_dom(),
+            Self::Text { node } => node.id_dom(),
+            Self::Comment { node } => node.id_dom(),
+            Self::CommentCreate { node } => node.id(),
+        }
+    }
 }
 
 impl From<DomElement> for DomNodeFragment {
@@ -105,5 +114,11 @@ impl From<DomNode> for DomNodeFragment {
             DomNode::Text { node } => DomNodeFragment::Text { node },
             DomNode::Comment { node } => DomNodeFragment::Comment { node },
         }
+    }
+}
+
+impl EmbedDom for DomNodeFragment {
+    fn embed(self) -> DomNodeFragment {
+        self
     }
 }

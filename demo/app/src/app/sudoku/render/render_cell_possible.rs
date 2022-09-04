@@ -16,7 +16,7 @@ fn css_item_only_one() -> Css {
         width: {config.item_width}px;
         height: {config.item_width}px;
         background-color: #00ff00;
-        font-size: 40px;
+        font-size: 30px;
         color: blue;
         cursor: pointer;
     "

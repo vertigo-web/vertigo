@@ -112,7 +112,7 @@ impl<T: Clone + 'static> Computed<T> {
 }
 
 impl<T: 'static + PartialEq + Clone> Computed<T> {
-    pub fn subscribe<F: Fn(T) + 'static>(self, call: F) -> Client {
+    pub fn subscribe<R: 'static, F: Fn(T) -> R + 'static>(self, call: F) -> Client {
         Client::new(self, call)
     }
 }

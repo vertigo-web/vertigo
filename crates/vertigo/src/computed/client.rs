@@ -1,6 +1,6 @@
 use crate::{
     computed::{Computed, GraphId, GraphValue},
-    struct_mut::ValueMut, external_connections_refresh, get_driver,
+    struct_mut::ValueMut, get_driver,
 };
 
 use super::context::Context;
@@ -10,15 +10,17 @@ pub struct Client {
 }
 
 impl Client {
-    pub fn new<T, F>(computed: Computed<T>, call: F) -> Client
+    pub fn new<T, R, F>(computed: Computed<T>, call: F) -> Client
     where
+        R: 'static,
         T: Clone + PartialEq + 'static,
-        F: Fn(T) + 'static,
+        F: Fn(T) -> R + 'static,
     {   
         let prev_value = ValueMut::new(None);
-        let deps = get_driver().get_dependencies();
+        let deps = get_driver().inner.dependencies.clone();
 
         let context = Context::new();
+        let resource_box = ValueMut::new(None);
 
         let graph_value = GraphValue::new(false, move || {
             let value = computed.get(&context);
@@ -26,7 +28,10 @@ impl Client {
 
             if should_update {
                 deps.block_tracking_on();
-                call(value);
+                let resource = call(value);
+                resource_box.change(move |inner| {
+                    *inner = Some(resource);
+                });
                 deps.block_tracking_off();
             }
         });
@@ -34,7 +39,7 @@ impl Client {
         graph_value.get_value(false);
 
         // graph_value.subscribe_value();
-        external_connections_refresh();
+        get_driver().inner.dependencies.external_connections_refresh();
 
         Client {
             graph_value,

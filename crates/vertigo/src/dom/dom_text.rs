@@ -33,7 +33,7 @@ impl<T: Clone + 'static> ToComputed<T> for &Value<T> {
 
 
 pub struct DomText {
-    dom_driver: Driver,
+    driver: Driver,
     id_dom: DomId,
     subscriptions: VecMut<Client>,
 }
@@ -43,11 +43,11 @@ impl DomText {
         let value = value.into();
         let id = DomId::default();
 
-        let dom_driver = get_driver();
-        dom_driver.create_text(id, &value);
+        let driver = get_driver();
+        driver.inner.dom.create_text(id, &value);
 
         DomText {
-            dom_driver,
+            driver,
             id_dom: id,
             subscriptions: VecMut::new(),
         }
@@ -61,7 +61,7 @@ impl DomText {
         let computed = computed.to_computed_param();
         let client = computed.subscribe(move |value| {
             let value: String = value.into();
-            driver.update_text(id_dom, &value);
+            driver.inner.dom.update_text(id_dom, &value);
         });
 
         text_node.subscriptions.push(client);
@@ -75,6 +75,6 @@ impl DomText {
 
 impl Drop for DomText {
     fn drop(&mut self) {
-        self.dom_driver.remove_text(self.id_dom);
+        self.driver.inner.dom.remove_text(self.id_dom);
     }
 }

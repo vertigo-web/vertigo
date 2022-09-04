@@ -19,6 +19,12 @@ impl<T: Clone> EmbedDom for ListRendered<T> {
     }
 }
 
+impl<T: Clone> Into<DomNodeFragment> for ListRendered<T> {
+    fn into(self) -> DomNodeFragment {
+        self.comment.into()
+    }
+}
+
 fn get_refs<T: Clone>(list: &VecDeque<(T, DomElement)>) -> Vec<(T, DomElementRef)> {
     let mut result = Vec::new();
 
@@ -85,7 +91,7 @@ pub fn render_list<
 
     comment.add_subscription(client);
 
-    let comment = DomCommentCreate::new(move |parent_id| {
+    let comment = DomCommentCreate::new(comment_id, move |parent_id| {
         parent.set(Some(parent_id));
 
         let driver = get_driver();
@@ -94,7 +100,7 @@ pub fn render_list<
         current_list.change(|current_list| {
             for (_, item) in current_list.iter().rev() {
                 let node_id = item.id_dom();
-                driver.insert_before(parent_id, node_id, Some(prev_item));
+                driver.inner.dom.insert_before(parent_id, node_id, Some(prev_item));
                 prev_item = node_id;
             }
         });
@@ -245,7 +251,7 @@ fn get_pairs_middle<
         pairs_middle.push_front((item, node));
 
         if let Some(parent_id) = parent_id {
-            driver.insert_before(parent_id, node_id, Some(last_before));
+            driver.inner.dom.insert_before(parent_id, node_id, Some(last_before));
         }
         last_before = node_id;
     }

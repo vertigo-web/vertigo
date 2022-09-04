@@ -1,35 +1,23 @@
-import { Cookies } from './module/cookies';
-import { DriverDom } from './module/dom/dom';
-import { DriverWebsocket } from './module/websocket/websocket';
-import { Fetch } from './module/fetch';
-import { HashRouter } from './module/hashrouter';
-import { Interval } from './module/interval';
 import { wasmInit, ModuleControllerType } from './wasm_init';
-import { js_call } from './js_call';
-import { JsValueType } from './arguments';
+import { ApiBrowser as ApiBrowser } from './api_browser';
+import { JsNode } from './js_node';
 
 //Number -> u32 or i32
 //BigInt -> u64 or i64
 
 export type ImportType = {
     panic_message: (ptr: number, length: number) => void,
-
-    interval_set: (duration: number, callback_id: number) => number,
-    interval_clear: (timer_id: number) => void,
-    timeout_set: (duration: number, callback_id: number) => number,
-    timeout_clear: (timer_id: number) => void,
-
-    //js_call will be replaced by dom_access                    <-------------- TODO
-    js_call: (ptr: number, size: number) => number,             //return pointer to response
-
     //call from rust
     dom_access: (ptr: number, size: number) => number,
 }
 
 export type ExportType = {
     alloc: (size: number) => number,
+    free: (pointer: number) => void,
+    start_application: () => void,
+    export_dom_callback: (callback_id: bigint, value_ptr: number) => bigint,  //result => pointer: 32bit, size: 32bit
 
-    //call to rusta
+    //call to rust
     interval_run_callback: (callback_id: number) => void,
     timeout_run_callback: (callback_id: number) => void,
     hashrouter_hashchange_callback: (listId: number) => void,
@@ -38,14 +26,6 @@ export type ExportType = {
     websocket_callback_socket: (callback_id: number) => void;
     websocket_callback_message: (callback_id: number) => void;
     websocket_callback_close: (callback_id: number) => void;
-
-    dom_mousedown: (dom_id: bigint) => void,
-    dom_mouseover: (dom_id: bigint) => void;
-    dom_keydown: (params_id: number) => number;       // 0 - false, >0 - true
-    dom_oninput: (params_id: number) => void,
-    dom_ondropfile: (params_id: number) => void,
-
-    start_application: () => void,
 }
 
 export class WasmModule {
@@ -73,12 +53,10 @@ export class WasmModule {
             return wasmModule;
         }
 
-        const cookies = new Cookies();
-        const interval = new Interval(getWasm);
-        const hashRouter = new HashRouter(getWasm);
-        const fetchModule = new Fetch(getWasm);
-        const websocket = new DriverWebsocket(getWasm);
-        const dom = new DriverDom(getWasm);
+        const apiBrowser = new ApiBrowser(getWasm);
+
+        //@ts-expect-error
+        window.$vertigoApi = apiBrowser;
 
         wasmModule = await wasmInit<ImportType, ExportType>(wasmBinPath, {
             mod: {
@@ -88,25 +66,23 @@ export class WasmModule {
                     const message = decoder.decode(m);
                     console.error('PANIC', message);
                 },
-                js_call: js_call(
-                    (ptr: number, size: number): JsValueType => getWasm().decodeArguments(ptr, size),
-                    getWasm,
-                    fetchModule,
-                    cookies,
-                    dom,
-                    hashRouter,
-                    websocket,
-                ),
-                interval_set: interval.interval_set,
-                interval_clear: interval.interval_clear,
-                timeout_set: interval.timeout_set,
-                timeout_clear: interval.timeout_clear,
-
                 dom_access: (ptr: number, size: number): number => {
                     let args = getWasm().decodeArguments(ptr, size);
                     if (Array.isArray(args)) {
-                        const result = dom.dom_access(args);
-                        return getWasm().newList().saveJsValue(result);
+                        const path = args;
+                        let wsk = new JsNode(apiBrowser, apiBrowser.dom.nodes, apiBrowser.dom.texts, null);
+
+                        for (const pathItem of path) {
+                            const newWsk = wsk.next(path, pathItem);
+
+                            if (newWsk === null) {
+                                return 0;
+                            }
+                
+                            wsk = newWsk;
+                        }
+                
+                        return getWasm().newList().saveJsValue(wsk.toValue());
                     }
 
                     console.error('dom_access - wrong parameters', args);
