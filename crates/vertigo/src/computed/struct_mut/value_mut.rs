@@ -22,9 +22,9 @@ impl<T> ValueMut<T> {
         fun(&state)
     }
 
-    pub fn change(&self, change: impl FnOnce(&mut T)) {
+    pub fn change<R>(&self, change: impl FnOnce(&mut T) -> R) -> R {
         let mut state = self.value.borrow_mut();
-        change(&mut state);
+        change(&mut state)
     }
 }
 

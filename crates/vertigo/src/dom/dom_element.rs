@@ -69,6 +69,12 @@ impl DomElementRef {
     }
 }
 
+impl PartialEq for DomElementRef {
+    fn eq(&self, other: &Self) -> bool {
+        self.id == other.id
+    }
+}
+
 pub struct DomElement {
     driver: Driver,
     id_dom: DomId,
