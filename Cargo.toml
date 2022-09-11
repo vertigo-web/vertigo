@@ -8,6 +8,8 @@ members = [
 
     "examples/counter",
     "examples/router",
+
+    "lint-project"
 ]
 
 [profile.release]

@@ -44,7 +44,15 @@ impl<T: PartialEq + Clone + 'static> SubscribeValueVer<T> {
     }
 
     pub fn get(&self) -> (T, u32) {
-        let value = self.value.value.get().unwrap();
+        let value = self.value.value.get();
+
+        let value = match value {
+            Some(value) => value,
+            None => {
+                panic!("expected value");
+            }
+        };
+
         let version = self.value.version.get();
 
         (value, version)

@@ -141,3 +141,6 @@ script = [
     "npx rollup crates/vertigo/src/driver_module/src_js_build/index.js --file crates/vertigo/src/driver_module/wasm_run.js",
     "rm -rf crates/vertigo/src/driver_module/src_js_build",
 ]
+
+[tasks.lint]
+script = "cargo run --bin lint-project"

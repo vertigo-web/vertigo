@@ -133,7 +133,7 @@ fn convert_node(node: Node) -> Result<TokenStream2, ()> {
                     emit_error!(span, "no support for the node".to_string());
                 },
                 None => {
-                    unimplemented!()
+                    panic!("the span element was expected");
                 }
             }
             return Err(());

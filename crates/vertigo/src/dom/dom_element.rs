@@ -125,7 +125,7 @@ impl DomElement {
         match css {
             CssValue::Css(css) => {
                 let class_name = get_driver().get_class_name(&css);
-                self.driver.inner.dom.set_attr(self.id_dom, "class", &class_name);             //TODO - Change to &str when the virtual dom is deleted        
+                self.driver.inner.dom.set_attr(self.id_dom, "class", &class_name);
             },
             CssValue::Computed(css) => {
                 let id_dom = self.id_dom;
@@ -133,7 +133,7 @@ impl DomElement {
         
                 self.subscribe(css, move |css| {
                     let class_name = driver.get_class_name(&css);
-                    driver.inner.dom.set_attr(id_dom, "class", &class_name);                                  //TODO - Change to &str when the virtual dom is deleted
+                    driver.inner.dom.set_attr(id_dom, "class", &class_name);
                 });
             }
         }
