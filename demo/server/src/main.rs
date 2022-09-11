@@ -42,7 +42,14 @@ async fn main() {
 
     let addr = SocketAddr::from(([127, 0, 0, 1], 3000));
 
-    axum::Server::bind(&addr).serve(app.into_make_service()).await.unwrap();
+    match axum::Server::bind(&addr).serve(app.into_make_service()).await {
+        Ok(()) => {
+            println!("server stop - ok");
+        },
+        Err(error) => {
+            println!("error run: {error:?}");
+        }
+    }
 }
 
 async fn websocket_handler(ws: WebSocketUpgrade, Extension(state): Extension<AppState>) -> impl IntoResponse {

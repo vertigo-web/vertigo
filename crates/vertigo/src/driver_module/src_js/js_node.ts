@@ -96,8 +96,6 @@ export class JsNode {
                 return new JsNode(this.api, this.nodes, this.texts, document);
             }
 
-            //TODO - api
-
             console.error(`JsNode.nextRoot: Global name not found -> ${firstName}`, {path, args});
             return null;
         }

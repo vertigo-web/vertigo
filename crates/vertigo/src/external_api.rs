@@ -49,7 +49,6 @@ mod api {
 mod api {
     pub mod safe_wrappers {
         pub fn safe_panic_message(_ptr: u32, _size: u32) {
-            unimplemented!();
         }
 
         pub fn safe_dom_access(_ptr: u32, _size: u32) -> u32 {
