@@ -32,6 +32,7 @@ impl<T: Clone + 'static> ToComputed<T> for &Value<T> {
 }
 
 
+/// A Real DOM representative - text kind
 pub struct DomText {
     driver: Driver,
     id_dom: DomId,

@@ -64,7 +64,7 @@ pub fn render_list<
                 let get_key = get_key.clone();
                 let render = render.clone();
                 let parent = parent.clone();
-        
+
                 move |current| {
                     let current_list = std::mem::take(current);
 
@@ -76,7 +76,7 @@ pub fn render_list<
                         get_key.clone(),
                         render,
                     );
-                    
+
 
                     let list_refs = get_refs(&new_order);
                     *current = new_order;

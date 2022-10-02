@@ -2,14 +2,14 @@
 //!
 //! It mainly consists of three parts:
 //!
-//! * **Virtual DOM** - Lightweight representation of JavaScript DOM that can be used to optimally update real DOM
-//! * **Reactive dependencies** - A graph of values and clients that can automatically compute what to refresh after one value change
-//! * **HTML/CSS macros** - Allows to construct Virtual DOM nodes using HTML and CSS
+//! * **Reactive dependencies** - A graph of values and clients (micro-subscriptions) that can automatically compute what to refresh after one value change
+//! * **Real DOM** - No intermediate Virtual DOM mechanism is necessary
+//! * **HTML/CSS macros** - Allows to construct Real DOM nodes using HTML and CSS
 //!
 //! ## Example
 //!
 //! ```rust
-//! use vertigo::{Computed, DomElement, Value, dom, css_fn};
+//! use vertigo::{DomElement, Value, dom, css_fn};
 //!
 //! pub struct State {
 //!     pub message: Value<String>,
@@ -33,7 +33,7 @@
 //!     dom! {
 //!         <div css={main_div()}>
 //!             "Message to the world: "
-//!             <text computed={&state.message} />
+//!             { state.message }
 //!         </div>
 //!     }
 //! }
@@ -93,7 +93,7 @@ pub use dom::types::{
 };
 pub use websocket::{WebsocketConnection, WebsocketMessage};
 pub use future_box::{FutureBoxSend, FutureBox};
-pub use bind::{bind, bind2, bind3, bind4};
+pub use bind::{bind, bind2, bind3, bind4, Bind1, Bind2, Bind3, Bind4};
 pub use driver_module::driver::{FetchMethod};
 pub use dom::{
     dom_id::DomId,

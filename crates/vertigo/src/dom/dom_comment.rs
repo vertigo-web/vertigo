@@ -1,6 +1,7 @@
 use crate::{Driver, struct_mut::VecMut, get_driver, Client};
 use super::dom_id::DomId;
 
+/// A Real DOM representative - comment kind
 pub struct DomComment {
     driver: Driver,
     pub id_dom: DomId,
