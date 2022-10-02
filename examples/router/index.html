@@ -3,8 +3,8 @@
     <head>
         <meta charset="utf-8"/>
         <script type="module">
-            import init from "./app.js";
-            init("./app_bg.wasm");
+            import { runModule } from "./wasm_run.js";
+            runModule("./vertigo_example_router.wasm");
         </script>
     </head>
     <body></body>

@@ -155,17 +155,17 @@ pub fn render_cell_possible(cell: &Cell) -> DomElement {
         move |context| {
             let possible = cell.possible.get(context);
             let only_one_possible = possible.len() == 1;
-        
+
             if only_one_possible {
                 return CellView::One;
             }
-        
+
             let possible_last_value = cell.possible_last.get(context);
-        
+
             if let Some(possible_last_value) = possible_last_value {
                 return CellView::LastPossible(possible_last_value);
             }
-        
+
             CellView::Default(possible)
         }
     });

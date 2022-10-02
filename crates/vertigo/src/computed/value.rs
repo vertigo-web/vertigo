@@ -119,7 +119,7 @@ impl<T: Clone + 'static> Value<T> {
     }
 
     pub fn map<K: Clone + 'static, F: 'static + Fn(T) -> K>(&self, fun: F) -> Computed<K> {
-        Computed::new({
+        Computed::from({
             let computed = self.clone();
             move |context| {
                 fun(computed.get(context))
@@ -130,7 +130,7 @@ impl<T: Clone + 'static> Value<T> {
     pub fn to_computed(&self) -> Computed<T> {
         let self_clone = self.clone();
 
-        Computed::new(move |context| {
+        Computed::from(move |context| {
             self_clone.get(context)
         })
     }

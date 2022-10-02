@@ -447,8 +447,9 @@ const convertToJsValue = (value) => {
 
 const fetchModule = async (wasmBinPath, imports) => {
     if (typeof WebAssembly.instantiateStreaming === 'function') {
+        const stream = fetch(wasmBinPath);
         try {
-            const module = await WebAssembly.instantiateStreaming(fetch(wasmBinPath), imports);
+            const module = await WebAssembly.instantiateStreaming(stream, imports);
             return module;
         }
         catch (err) {

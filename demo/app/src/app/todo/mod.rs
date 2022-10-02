@@ -100,7 +100,7 @@ fn todo_render(state: &TodoState) -> DomElement {
                     let on_click = move || {
                         view.set(View::Main);
                     };
-                    
+
                     dom!{
                         <div>
                             <div>
@@ -161,7 +161,7 @@ fn todo_main_render(state: &TodoState) -> DomElement {
                         </div>
                     });
                 }
-    
+
                 result
             },
             Resource::Error(message) => {
@@ -251,7 +251,7 @@ fn render_comments(state: &TodoState, post_id: u32) -> DomElement {
 
     let comments_component = comments.to_computed().render_value(move |value| {
         let view = view.clone();
-            
+
         match value {
             Resource::Ready(list) => {
                 let result = dom! {

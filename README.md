@@ -4,9 +4,9 @@ Vertigo - reactive webassembly
 Features
 --------------
 
-* **Virtual DOM** - Lightweight representation of JavaScript DOM that can be used to optimally update real DOM
-* **Reactive dependencies** - A graph of values and clients that can automatically compute what to refresh after one value change
-* **HTML/CSS macros** - Allows to construct Virtual DOM nodes using HTML and CSS
+* **Reactive dependencies** - A graph of values and clients (micro-subscriptions) that can automatically compute what to refresh after one value change
+* **Real DOM** - No intermediate Virtual DOM mechanism is necessary
+* **HTML/CSS macros** - Allows to construct Real DOM nodes using HTML and CSS
 
 See [Changelog](/CHANGES.md) for recent features.
 
@@ -27,22 +27,17 @@ Code:
 use vertigo::{dom, DomElement, Value, bind, start_app};
 
 pub fn render(count: Value<i32>) -> DomElement {
-    let increment = bind(count).call(|context, count| {
+    let increment = bind(&count).call(|context, count| {
         count.set(count.get(context) + 1);
     });
 
-    let decrement = bind(count).call(|context, count| {
+    let decrement = bind(&count).call(|context, count| {
         count.set(count.get(context) - 1);
     });
 
-    let text_value = count.map(|value| value.to_string());
-
     dom! {
         <div>
-            <p>
-                "Counter: "
-                <text computed={text_value} />
-            </p>
+            <p>"Counter: " { count }</p>
             <button on_click={decrement}>"-"</button>
             <button on_click={increment}>"+"</button>
         </div>
@@ -52,7 +47,7 @@ pub fn render(count: Value<i32>) -> DomElement {
 #[no_mangle]
 pub fn start_application() {
     start_app(|| -> DomElement {
-        let count = Value::new();
+        let count = Value::new(0);
         render(count)
     });
 }

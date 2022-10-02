@@ -5,9 +5,9 @@ extern crate proc_macro_error;
 
 mod css_parser;
 mod serde_request;
-mod html_parser2;
+mod html_parser;
 
-use html_parser2::dom_inner;
+use html_parser::dom_inner;
 use proc_macro::TokenStream;
 use proc_macro2::{TokenStream as TokenStream2};
 

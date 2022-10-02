@@ -26,22 +26,6 @@ jobs:
           args: -p vertigo-demo -p vertigo-example-counter -p vertigo-example-router --all-features --target wasm32-unknown-unknown -- -Dwarnings
           name: Demo/Examples Clippy Output
 
-  nightly-clippy-demo-server:
-    name: Nightly clippy demo server (amd64)
-    runs-on: ubuntu-latest
-    steps:
-      - uses: actions/checkout@v2
-      - uses: actions-rs/toolchain@v1
-        with:
-          toolchain: nightly
-          components: clippy
-          override: true
-      - uses: actions-rs/clippy-check@v1
-        with:
-          token: ${{ secrets.GITHUB_TOKEN }}
-          args: -p vertigo-demo-server --all-features -- -Dwarnings
-          name: Clippy Output
-
   nightly-tests:
     name: Nightly tests
     runs-on: ubuntu-latest
@@ -63,7 +47,7 @@ jobs:
       - uses: actions/checkout@v2
       - uses: actions-rs/toolchain@v1
         with:
-          toolchain: nightly-2021-12-06
+          toolchain: nightly-2022-09-27
           target: wasm32-unknown-unknown
           components: clippy
           override: true
@@ -78,33 +62,34 @@ jobs:
           args: -p vertigo-demo -p vertigo-example-counter -p vertigo-example-router --all-features --target wasm32-unknown-unknown -- -Dwarnings
           name: Demo/Examples Clippy Output
 
-  # stable-clippy:
-  #   name: Stable clippy
-  #   runs-on: ubuntu-latest
-  #   steps:
-  #     - uses: actions/checkout@v2
-  #     - uses: actions-rs/toolchain@v1
-  #       with:
-  #         toolchain: stable
-  #         target: wasm32-unknown-unknown
-  #         components: clippy
-  #         override: true
-  #     - uses: actions-rs/clippy-check@v1
-  #       with:
-  #         token: ${{ secrets.GITHUB_TOKEN }}
-  #         args: --all-features --target wasm32-unknown-unknown
-  #         name: Clippy Output
+  fixed-nightly-tests:
+    name: Fixed Nightly tests (wasm32)
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v2
+      - uses: actions-rs/toolchain@v1
+        with:
+          toolchain: nightly-2022-09-27
+          target: wasm32-unknown-unknown
+          components: clippy
+          override: true
+      - uses: actions-rs/cargo@v1
+        with:
+          command: test
+          args: --all-features
 
-  # stable-tests:
-  #   name: Stable tests
-  #   runs-on: ubuntu-latest
-  #   steps:
-  #     - uses: actions/checkout@v2
-  #     - uses: actions-rs/toolchain@v1
-  #       with:
-  #         toolchain: stable
-  #         override: true
-  #     - uses: actions-rs/cargo@v1
-  #       with:
-  #         command: test
-  #         args: --all-features
+  nightly-clippy-demo-server:
+    name: Nightly clippy demo server (amd64)
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v2
+      - uses: actions-rs/toolchain@v1
+        with:
+          toolchain: nightly
+          components: clippy
+          override: true
+      - uses: actions-rs/clippy-check@v1
+        with:
+          token: ${{ secrets.GITHUB_TOKEN }}
+          args: -p vertigo-demo-server --all-features -- -Dwarnings
+          name: Clippy Output
