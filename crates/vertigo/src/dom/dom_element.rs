@@ -75,6 +75,7 @@ impl PartialEq for DomElementRef {
     }
 }
 
+/// A Real DOM representative - element kind
 pub struct DomElement {
     driver: Driver,
     id_dom: DomId,

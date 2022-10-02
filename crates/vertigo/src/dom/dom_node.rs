@@ -5,6 +5,7 @@ use crate::{dom::{
 
 use super::{dom_id::DomId, dom_comment::DomComment};
 
+/// A Real DOM representative
 pub enum DomNode {
     Node { node: DomElement },
     Text { node: DomText },
@@ -53,7 +54,7 @@ impl<T: Into<String>> From<T> for DomNode {
     }
 }
 
-
+/// DomNode not connected yet to any parent
 pub enum DomNodeFragment {
     Node { node: DomElement },
     Text { node: DomText },
