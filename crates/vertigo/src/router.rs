@@ -122,7 +122,7 @@ impl<T: Clone + ToString + From<String> + PartialEq + 'static> HashRouter<T> {
         block_subscrition.set(false);
 
         let route = route_value.to_computed();
-    
+
         Self {
             route_value,
             route,

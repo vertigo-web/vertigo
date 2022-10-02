@@ -90,7 +90,6 @@ EXAMPLES = "counter router"
 # Run without arguments to build all examples; provide example name to build only this particular example
 [tasks.examples-build]
 dependencies = [ "wasm32-target" ]
-install_crate = { crate_name = "wasm-pack", binary = "wasm-pack", test_arg = ["--version"] }
 script = '''
     NAME=${@}
     if [ "$NAME" = "" ]; then
@@ -98,10 +97,15 @@ script = '''
             cargo make examples-build ${name}
         done
     else
-        wasm-pack build examples/${NAME} --no-typescript --target web --out-dir ../build/${NAME} --out-name app --release
+        mkdir -p examples/build/${NAME}
+        cargo build -p vertigo-example-${NAME} --release --target wasm32-unknown-unknown
+        cp ${CARGO_MAKE_CRATE_TARGET_DIRECTORY}/wasm32-unknown-unknown/release/wasm_run.js ./examples/build/${NAME}/wasm_run.js
+        # wasm-pack build examples/${NAME} --no-typescript --target web --out-dir ../build/${NAME} --out-name app --release
+        wasm-opt -Os --strip-debug -o ./examples/build/${NAME}/vertigo_example_${NAME}.wasm ${CARGO_MAKE_CRATE_TARGET_DIRECTORY}/wasm32-unknown-unknown/release/vertigo_example_${NAME}.wasm
+        # cargo make opt_try
+        # cargo make opt_catch
+        # cp ./demo/app/index.html ./demo/build
         cp examples/${NAME}/index.html examples/build/${NAME}
-        rm examples/build/${NAME}/.gitignore
-        rm examples/build/${NAME}/package.json
     fi
 '''
 

@@ -22,7 +22,7 @@ fn find_attribute(span: Span, attributes: &[Node], attribute: &'static str) -> R
 fn convert_expresion_without_brackets(expr: Expr) -> TokenStream2 {
     let expr_block = if let Expr::Block(expr) = expr.clone() {
         let mut stmts = expr.block.stmts;
-        
+
         let first = stmts.pop();
 
         if stmts.is_empty() {

@@ -99,7 +99,7 @@ fn render_status(state: &ChatState) -> DomCommentCreate {
                 true => "Connection active",
                 false => "disconnect",
             };
-        
+
             dom! {
                 <div>
                     { message }

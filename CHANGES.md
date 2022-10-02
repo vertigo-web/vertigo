@@ -1,16 +1,26 @@
 <!-- markdownlint-configure-file { "no-duplicate-heading": { "siblings_only": true } } -->
 
-## Unreleased
+## 0.1.0-beta.4 - 2022-10-02
+
+### Added
+
+* `hook_keydown` and `on_dropfile` events
+* `bind`, `bind2`... functions for creating event handlers
 
 ### Changed
 
-* `Driver` object is now global, so there's no need to passed it as parameter in all functions
+* `Driver` object is now global, so there's no need to pass it as parameter in all functions
+* `get_value` and `set_value` methods are now `get` and `set`
+* `start_app` initialization function now takes an `FnOnce` instead of ready `VDomComponent`
 * Dropped `PartialEq` constraint from `Value`, `Computed` and other implementations
+* Refactored subsystem for exchanging values between rust and js
 
 ### Removed
 
+* Removed virtual dom intermediate in favour of real dom operations
 * `vertigo-browserdriver` package - it is now integrated into `vertigo` as the default and only driver
 * Callback from `HashRouter` - it can be now treated similarly to `Value`
+* `EqBox`
 
 ## 0.1.0-beta.3 - 2022-01-22
 

@@ -14,12 +14,12 @@ export interface ModuleControllerType<ExportType extends BaseExportType> {
 
 const fetchModule = async (wasmBinPath: string, imports: Record<string, WebAssembly.ModuleImports>): Promise<WebAssembly.WebAssemblyInstantiatedSource> => {
     if (typeof WebAssembly.instantiateStreaming === 'function') {
-
+        const stream = fetch(wasmBinPath);
         try {
-            const module = await WebAssembly.instantiateStreaming(fetch(wasmBinPath), imports);
+            const module = await WebAssembly.instantiateStreaming(stream, imports);
             return module;
         } catch (err) {
-            console.warn("`WebAssembly.instantiateStreaming` failed because your server does not serve wasm with `application/wasm` MIME type. Falling back to `WebAssembly.instantiate` which is slower. Original error:\n", err);
+            console.warn("`WebAssembly.instantiateStreaming` failed. This could happen if your server does not serve wasm with `application/wasm` MIME type, but check the original error too. Falling back to `WebAssembly.instantiate` which is slower. Original error:\n", err);
         }
     }
 

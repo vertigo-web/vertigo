@@ -130,7 +130,7 @@ impl DomElement {
             CssValue::Computed(css) => {
                 let id_dom = self.id_dom;
                 let driver = self.driver.clone();
-        
+
                 self.subscribe(css, move |css| {
                     let class_name = driver.get_class_name(&css);
                     driver.inner.dom.set_attr(id_dom, "class", &class_name);
@@ -145,17 +145,17 @@ impl DomElement {
             AttrValue::String(value) => {
                 let id_dom = self.id_dom;
                 let value: String = value.into();
-                self.driver.inner.dom.set_attr(id_dom, name, &value);        
+                self.driver.inner.dom.set_attr(id_dom, name, &value);
             },
             AttrValue::Computed(computed) => {
                 let id_dom = self.id_dom;
                 let driver = self.driver.clone();
-        
+
                 self.subscribe(computed, move |value| {
                     let value: String = value.into();
                     driver.inner.dom.set_attr(id_dom, name, &value);
                 });
-        
+
             }
         };
 
@@ -312,7 +312,7 @@ impl DomElement {
                     let files = params.get_list("files", |mut item| {
                         let name = item.get_string("name")?;
                         let data = item.get_buffer("data")?;
-                        
+
                         Ok(DropFileItem::new(name, data))
                     })?;
                     params.expect_no_more()?;

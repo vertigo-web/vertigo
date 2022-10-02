@@ -22,14 +22,9 @@ pub fn render(state: State) -> DomElement {
         count.set(count.get(context) - 1)
     });
 
-    let text_value = state.count.map(|value| value.to_string());
-
     dom! {
         <div>
-            <p>
-                "Counter: "
-                <text computed={text_value} />
-            </p>
+            <p>"Counter: " { state.count }</p>
             <button on_click={decrement}>"-"</button>
             <button on_click={increment}>"+"</button>
         </div>

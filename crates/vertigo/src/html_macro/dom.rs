@@ -1,4 +1,7 @@
-use crate::{dom::dom_node::{DomNode, DomNodeFragment}, DomText, DomElement, DomComment, DomCommentCreate};
+use crate::{
+    dom::dom_node::{DomNode, DomNodeFragment},
+    Computed, DomText, DomElement, DomComment, DomCommentCreate, Value,
+};
 
 pub trait EmbedDom {
     fn embed(self) -> DomNodeFragment;
@@ -34,12 +37,34 @@ impl EmbedDom for DomNode {
     }
 }
 
-// impl EmbedDom for 
-
 impl<T: ToString> EmbedDom for T {
     fn embed(self) -> DomNodeFragment {
         DomNodeFragment::Text {
             node: DomText::new(self.to_string())
         }
+    }
+}
+
+impl<T: ToString + Clone + PartialEq + 'static> EmbedDom for &Computed<T> {
+    fn embed(self) -> DomNodeFragment {
+        let comment_create = self.render_value(|val|
+            DomNodeFragment::Text {
+                node: DomText::new(val.to_string())
+            }
+        );
+
+        comment_create.embed()
+    }
+}
+
+impl<T: ToString + Clone + PartialEq + 'static> EmbedDom for Computed<T> {
+    fn embed(self) -> DomNodeFragment {
+        (&self).embed()
+    }
+}
+
+impl<T: ToString + Clone + PartialEq + 'static> EmbedDom for Value<T> {
+    fn embed(self) -> DomNodeFragment {
+        self.to_computed().embed()
     }
 }

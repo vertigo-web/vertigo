@@ -50,7 +50,7 @@ use super::context::Context;
 /// transaction(|context| {
 ///     assert_eq!(comp_2.get(context), 12);
 /// });
-/// 
+///
 /// ```
 pub struct Computed<T: Clone> {
     inner: GraphValue<T>,
@@ -71,15 +71,6 @@ impl<T: Clone + 'static> PartialEq for Computed<T> {
 }
 
 impl<T: Clone + 'static> Computed<T> {
-    pub fn new<F: Fn(&Context) -> T + 'static>(get_value: F) -> Computed<T> {
-        Computed {
-            inner: GraphValue::new(true, move || {
-                let context = Context::new();
-                get_value(&context)
-            }),
-        }
-    }
-
     pub fn from<F: Fn(&Context) -> T + 'static>(get_value: F) -> Computed<T> {
         Computed {
             inner: GraphValue::new(true, move || {
@@ -98,7 +89,7 @@ impl<T: Clone + 'static> Computed<T> {
     }
 
     pub fn map<K: Clone + 'static, F: 'static + Fn(T) -> K>(&self, fun: F) -> Computed<K> {
-        Computed::new({
+        Computed::from({
             let computed = self.clone();
             move |context| {
                 fun(computed.get(context))
