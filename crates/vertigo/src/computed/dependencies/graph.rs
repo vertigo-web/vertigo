@@ -45,10 +45,6 @@ impl Graph {
 
     ///This method can only be executed once
     pub fn recalculate_edges(&self) {
-        if !self.stack.is_empty() {
-            return;
-        }
-
         if self.recalculate_in_progress.get() {
             return;
         }
