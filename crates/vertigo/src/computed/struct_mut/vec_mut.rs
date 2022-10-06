@@ -37,4 +37,8 @@ impl<V> VecMut<V> {
         let data = self.data.borrow_mut();
         map(&*data)
     }
+
+    pub fn into_inner(self) -> Vec<V> {
+        self.data.into_inner()
+    } 
 }

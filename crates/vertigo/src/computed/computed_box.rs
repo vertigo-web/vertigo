@@ -73,9 +73,8 @@ impl<T: Clone + 'static> PartialEq for Computed<T> {
 impl<T: Clone + 'static> Computed<T> {
     pub fn from<F: Fn(&Context) -> T + 'static>(get_value: F) -> Computed<T> {
         Computed {
-            inner: GraphValue::new(true, move || {
-                let context = Context::new();
-                get_value(&context)
+            inner: GraphValue::new(true, move |context| {
+                get_value(context)
             })
         }
     }
@@ -84,8 +83,8 @@ impl<T: Clone + 'static> Computed<T> {
         self.inner.id()
     }
 
-    pub fn get(&self, _context: &Context) -> T {
-        self.inner.get_value(true)
+    pub fn get(&self, context: &Context) -> T {
+        self.inner.get_value(context)
     }
 
     pub fn map<K: Clone + 'static, F: 'static + Fn(T) -> K>(&self, fun: F) -> Computed<K> {

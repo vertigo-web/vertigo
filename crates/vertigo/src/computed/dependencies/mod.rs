@@ -32,7 +32,7 @@ use {
 /// - Upon change in VDOM the real DOM is also updated.
 /// - Components can provide the DOM with functions that get fired on events like [on_click](struct.DomElement.html#structfield.on_click), which may modify the state, thus triggering necessary computing once again.
 pub struct Dependencies {
-    graph: Rc<Graph>,
+    pub(crate) graph: Rc<Graph>,
     transaction_state: Rc<TransactionState>,
 }
 
@@ -74,10 +74,9 @@ impl Dependencies {
             return;
         }
 
-        self.graph.stack.ignore_tracking_on();
         let context = Context::new();
         func(&context);
-        self.graph.stack.ignore_tracking_off();
+        let _ = context;
 
         let edges_values = self.transaction_state.down();
 
@@ -117,26 +116,6 @@ impl Dependencies {
 
     pub(crate) fn refresh_token_drop(&self, id: GraphId) {
         self.graph.refresh.refresh_token_drop(id);
-    }
-
-    pub(crate) fn start_track(&self, client_id: GraphId) {
-        self.graph.stack.start_track(client_id);
-    }
-
-    pub(crate) fn report_parent_in_stack(&self, parent_id: GraphId) {
-        self.graph.stack.report_parent_in_stack(parent_id);
-    }
-
-    pub(crate) fn stop_track(&self) {
-        self.graph.stack.stop_track()
-    }
-
-    pub(crate) fn block_tracking_on(&self) {
-        self.graph.stack.block_tracking_on()
-    }
-
-    pub(crate) fn block_tracking_off(&self) {
-        self.graph.stack.block_tracking_off()
     }
 
     pub(crate) fn remove_client(&self, client_id: GraphId) {

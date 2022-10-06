@@ -7,18 +7,18 @@ use crate::{
         Dependencies, GraphId
     },
     struct_mut::ValueMut,
-    get_driver,
+    get_driver, Context,
 };
 
 struct GraphValueData<T> {
     deps: Dependencies,
     id: GraphId,
-    get_value: Box<dyn Fn() -> T>,
+    get_value: Box<dyn Fn(&Context) -> T>,
     state: ValueMut<Option<T>>,
 }
 
 impl<T: Clone> GraphValueData<T> {
-    pub fn new<F: Fn() -> T + 'static>(
+    pub fn new<F: Fn(&Context) -> T + 'static>(
         deps: &Dependencies,
         is_computed_type: bool,
         get_value: F,
@@ -39,19 +39,17 @@ impl<T: Clone> GraphValueData<T> {
     }
 
     fn calculate_new_value(&self) -> T {
-        self.deps.start_track(self.id);
-        let new_value = (self.get_value)();
-        self.deps.stop_track();
+        let context = Context::new();
+        let new_value = (self.get_value)(&context);
+        self.deps.graph.stack.push_track(self.id, context);
 
         self.state.set(Some(new_value.clone()));
 
         new_value
     }
 
-    pub fn get_value(&self, report_parent: bool) -> T {
-        if report_parent {
-            self.deps.report_parent_in_stack(self.id);
-        }
+    pub fn get_value(&self, context: &Context) -> T {
+        context.add_parent(self.id);
 
         let inner_value = self.state.map(|value| value.clone());
 
@@ -115,7 +113,7 @@ struct GraphValueInner<T: Clone> {
 }
 
 impl<T: Clone + 'static> GraphValueInner<T> {
-    fn new<F: Fn() -> T + 'static>(is_computed_type: bool, get_value: F) -> GraphValueInner<T> {
+    fn new<F: Fn(&Context) -> T + 'static>(is_computed_type: bool, get_value: F) -> GraphValueInner<T> {
         let deps = get_driver().inner.dependencies.clone();
 
         let graph_value = GraphValueData::new(&deps, is_computed_type, get_value);
@@ -140,7 +138,7 @@ pub struct GraphValue<T: Clone> {
 }
 
 impl<T: Clone + 'static> GraphValue<T> {
-    pub fn new<F: Fn() -> T + 'static>(is_computed_type: bool, get_value: F) -> GraphValue<T> {
+    pub fn new<F: Fn(&Context) -> T + 'static>(is_computed_type: bool, get_value: F) -> GraphValue<T> {
         GraphValue {
             inner: Rc::new(
                 GraphValueInner::new(is_computed_type, get_value)
@@ -148,8 +146,8 @@ impl<T: Clone + 'static> GraphValue<T> {
         }
     }
 
-    pub fn get_value(&self, report_parent: bool) -> T {
-        self.inner.inner.get_value(report_parent)
+    pub fn get_value(&self, context: &Context) -> T {
+        self.inner.inner.get_value(context)
     }
 
     pub(crate) fn id(&self) -> GraphId {

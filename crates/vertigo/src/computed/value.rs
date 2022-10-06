@@ -113,8 +113,8 @@ impl<T: Clone + 'static> Value<T> {
         });
     }
 
-    pub fn get(&self, _context: &Context) -> T {
-        self.inner.deps.report_parent_in_stack(self.inner.id);
+    pub fn get(&self, context: &Context) -> T {
+        context.add_parent(self.inner.id);
         self.inner.value.get()
     }
 
