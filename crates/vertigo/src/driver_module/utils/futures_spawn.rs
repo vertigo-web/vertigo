@@ -1,4 +1,3 @@
-use std::cell::{RefCell};
 use std::future::Future;
 use std::mem::ManuallyDrop;
 use std::pin::Pin;
@@ -6,6 +5,7 @@ use std::rc::Rc;
 use std::task::{Context, RawWaker, RawWakerVTable, Waker};
 
 use crate::driver_module::modules::interval::DriverInterval;
+use crate::struct_mut::ValueMut;
 
 #[inline]
 pub fn spawn_local<F>(interval: DriverInterval, future: F)
@@ -21,20 +21,20 @@ struct Inner {
 }
 
 pub(crate) struct Task {
-    inner: RefCell<Option<Inner>>,
+    inner: ValueMut<Option<Inner>>,
     interval: DriverInterval,
 }
 
 impl Task {
     pub(crate) fn spawn(interval: DriverInterval, future: Pin<Box<dyn Future<Output = ()>>>) {
         let this = Rc::new(Self {
-            inner: RefCell::new(None),
+            inner: ValueMut::new(None),
             interval,
         });
 
         let waker = unsafe { Waker::from_raw(Task::into_raw_waker(Rc::clone(&this))) };
 
-        *this.inner.borrow_mut() = Some(Inner { future, waker });
+        this.inner.set(Some(Inner { future, waker }));
 
         Task::wake_by_ref(&this);
     }
@@ -74,20 +74,20 @@ impl Task {
     }
 
     fn run(&self) {
-        let mut borrow = self.inner.borrow_mut();
+        self.inner.change(|borrow| {
+            let inner = match borrow.as_mut() {
+                Some(inner) => inner,
+                None => return,
+            };
 
-        let inner = match borrow.as_mut() {
-            Some(inner) => inner,
-            None => return,
-        };
+            let poll = {
+                let mut cx = Context::from_waker(&inner.waker);
+                inner.future.as_mut().poll(&mut cx)
+            };
 
-        let poll = {
-            let mut cx = Context::from_waker(&inner.waker);
-            inner.future.as_mut().poll(&mut cx)
-        };
-
-        if poll.is_ready() {
-            *borrow = None;
-        }
+            if poll.is_ready() {
+                *borrow = None;
+            }
+        });
     }
 }

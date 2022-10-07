@@ -260,10 +260,7 @@ pub fn start_app(get_component: impl FnOnce() -> DomElement) {
 
         let root = DomElement::create_with_id(DomId::root());
         root.add_child(app);
-
-        let mut inner = state.subscription.borrow_mut();
-        *inner = Some(root);
-        drop(inner);
+        state.set_root(root);
 
         get_driver().inner.dom.flush_dom_changes();
     });

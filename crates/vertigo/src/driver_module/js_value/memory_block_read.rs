@@ -109,7 +109,7 @@ impl MemoryBlockRead {
         let to = (self.offset + len) as usize;
         let slice = &self.block[from..to];
 
-        self.offset += len as u32;
+        self.offset += len;
 
         slice.to_vec()
     }

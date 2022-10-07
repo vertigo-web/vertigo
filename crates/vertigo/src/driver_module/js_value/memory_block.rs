@@ -43,7 +43,7 @@ impl MemoryBlock {
     }
 
     pub fn get_ptr_and_size(&self) -> (u32, u32) {
-        (self.ptr as u32, self.size as u32)
+        (self.ptr as u32, self.size)
     }
 
     pub fn get_ptr(&self) -> u32 {

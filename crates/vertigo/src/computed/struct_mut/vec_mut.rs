@@ -1,7 +1,7 @@
-use std::cell::RefCell;
+use super::inner_value::InnerValue;
 
 pub struct VecMut<V> {
-    data: RefCell<Vec<V>>,
+    data: InnerValue<Vec<V>>,
 }
 
 impl<V> Default for VecMut<V> {
@@ -13,28 +13,28 @@ impl<V> Default for VecMut<V> {
 impl<V> VecMut<V> {
     pub fn new() -> VecMut<V> {
         VecMut {
-            data: RefCell::new(Vec::new())
+            data: InnerValue::new(Vec::new())
         }
     }
 
     pub fn push(&self, value: V) {
-        let mut state = self.data.borrow_mut();
+        let state = self.data.get_mut();
         state.push(value);
     }
 
     pub fn take(&self) -> Vec<V> {
-        let mut state = self.data.borrow_mut();
-        std::mem::take(&mut state)
+        let state = self.data.get_mut();
+        std::mem::take(state)
     }
 
     pub fn for_each(&self, callback: impl Fn(&V)) {
-        let state = self.data.borrow();
+        let state = self.data.get();
         for item in state.iter() {
             callback(item);
         }
     }
     pub fn map<K>(&self, map: impl Fn(&Vec<V>) -> K) -> K {
-        let data = self.data.borrow_mut();
+        let data = self.data.get_mut();
         map(&*data)
     }
 

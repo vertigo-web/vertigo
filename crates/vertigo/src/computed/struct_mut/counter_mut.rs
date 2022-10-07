@@ -1,18 +1,18 @@
-use std::cell::RefCell;
+use super::inner_value::InnerValue;
 
 pub struct CounterMut {
-    counter: RefCell<u32>,
+    counter: InnerValue<u32>,
 }
 
 impl CounterMut {
     pub fn new(init: u32) -> CounterMut {
         CounterMut {
-            counter: RefCell::new(init),
+            counter: InnerValue::new(init),
         }
     }
 
     pub fn get_next(&self) -> u32 {
-        let mut state = self.counter.borrow_mut();
+        let state = self.counter.get_mut();
         let id = *state;
         *state += 1;
         id

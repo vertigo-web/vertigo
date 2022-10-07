@@ -1,10 +1,8 @@
-use std::{cell::RefCell};
-
-use crate::{ApiImport, Driver, DomElement};
+use crate::{ApiImport, Driver, DomElement, struct_mut::ValueMut};
 
 pub struct DriverConstruct {
     pub driver: Driver,
-    pub subscription: RefCell<Option<DomElement>>,
+    subscription: ValueMut<Option<DomElement>>,
 }
 
 impl DriverConstruct {
@@ -13,8 +11,12 @@ impl DriverConstruct {
 
         DriverConstruct {
             driver,
-            subscription: RefCell::new(None),
+            subscription: ValueMut::new(None),
         }
+    }
+
+    pub fn set_root(&self, root: DomElement) {
+        self.subscription.set(Some(root));
     }
 }
 
