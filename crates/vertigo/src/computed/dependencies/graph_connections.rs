@@ -1,6 +1,6 @@
-use std::{collections::{BTreeSet, BTreeMap}, cell::RefCell};
+use std::collections::{BTreeSet, BTreeMap};
 
-use crate::GraphId;
+use crate::{GraphId, struct_mut::ValueMut};
 
 fn add_connection(data: &mut BTreeMap<GraphId, BTreeSet<GraphId>>, parent_list: &BTreeSet<GraphId>, client_id: GraphId) {
     if parent_list.is_empty() {
@@ -147,38 +147,35 @@ usunięcie jakiegoś client_id, powinno spowodować, ze rekurencyjnie zostaną u
 
 
 pub struct GraphConnections {
-    inner: RefCell<GraphConnectionsInner>,
+    inner: ValueMut<GraphConnectionsInner>,
 }
 
 impl GraphConnections {
     pub fn new() -> GraphConnections {
         GraphConnections { 
-            inner: RefCell::new(GraphConnectionsInner::new()),
+            inner: ValueMut::new(GraphConnectionsInner::new()),
         }
     }
 
     pub(crate) fn set_parent_for_client(&self, parents_list: BTreeSet<GraphId>, client_id: GraphId) -> Option<BTreeSet<GraphId>> {
-        let mut inner = self.inner.borrow_mut();
-        inner.set_parent_for_client(parents_list, client_id)
+        self.inner.change(move |state| {
+            state.set_parent_for_client(parents_list, client_id)
+        })
     }
 
     pub(crate) fn has_subscribers(&self, id: &GraphId) -> bool {
-        let inner = self.inner.borrow();
-        inner.has_subscribers(id)
+        self.inner.map(|state| state.has_subscribers(id))
     }
 
     pub(crate) fn has_parents(&self, id: &GraphId) -> bool {
-        let inner = self.inner.borrow();
-        inner.has_parents(id)
+        self.inner.map(|state| state.has_parents(id))
     }
 
     pub(crate) fn get_all_deps(&self, edges: BTreeSet<GraphId>) -> BTreeSet<GraphId> {
-        let inner = self.inner.borrow();
-        inner.get_all_deps(edges)
+        self.inner.change(|state| state.get_all_deps(edges))
     }
 
     pub(crate) fn all_connections_len(&self) -> u64 {
-        let inner = self.inner.borrow();
-        inner.all_connections_len()
+        self.inner.map(|state| state.all_connections_len())
     }
 }

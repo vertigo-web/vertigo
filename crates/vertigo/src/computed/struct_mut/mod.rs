@@ -4,6 +4,7 @@ mod vec_mut;
 mod vec_deque_mut;
 mod value_mut;
 mod btree_map_mut;
+mod inner_value;
 
 pub use counter_mut::CounterMut;
 pub use hash_map_mut::HashMapMut;
