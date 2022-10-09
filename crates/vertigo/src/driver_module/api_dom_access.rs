@@ -23,7 +23,7 @@ impl DomAccess {
         let value = JsValueBuilder::new()
             .str("api")
             .get();
-        
+
         self.builder.value_push(value);
         self
     }
@@ -34,7 +34,7 @@ impl DomAccess {
             .str("root")
             .u64(dom_id)
             .get();
-        
+
         self.builder.value_push(value);
         self
     }
@@ -45,7 +45,7 @@ impl DomAccess {
             .str("root")
             .string(name)
             .get();
-        
+
         self.builder.value_push(value);
         self
     }
@@ -56,7 +56,7 @@ impl DomAccess {
             .str("get")
             .string(name)
             .get();
-        
+
         self.builder.value_push(value);
         self
     }
@@ -68,7 +68,7 @@ impl DomAccess {
             .string(name)
             .value(value)
             .get();
-        
+
         self.builder.value_push(value);
         self
     }
@@ -95,7 +95,7 @@ impl DomAccess {
 
                 list
             });
-            
+
         self.builder.value_push(value.get());
         self
     }

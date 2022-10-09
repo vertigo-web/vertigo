@@ -1,4 +1,6 @@
+use std::cell::Cell;
 use std::rc::Rc;
+
 use crate::DomId;
 use crate::struct_mut::VecMut;
 
@@ -10,6 +12,10 @@ use super::driver_dom_command::{DriverDomCommand, sort_commands};
 pub struct DriverDom {
     api: Rc<ApiImport>,
     commands: VecMut<DriverDomCommand>,
+
+    // For testing/debuging purposes
+    log_enabled: Cell<bool>,
+    log_vec: VecMut<DriverDomCommand>,
 }
 
 impl DriverDom {
@@ -18,6 +24,8 @@ impl DriverDom {
         let driver_browser = DriverDom {
             api: api.clone(),
             commands: VecMut::new(),
+            log_enabled: Cell::new(false),
+            log_vec: VecMut::new(),
         };
 
         let root_id = DomId::root();
@@ -29,10 +37,18 @@ impl DriverDom {
     }
 
     fn mount_node(&self, id: DomId) {
-        self.commands.push(DriverDomCommand::MountNode { id });
+        let command = DriverDomCommand::MountNode { id };
+        if self.log_enabled.get() {
+            self.log_vec.push(command.clone());
+        }
+        self.commands.push(command);
     }
 
     fn add_command(&self, command: DriverDomCommand) {
+        if self.log_enabled.get() {
+            self.log_vec.push(command.clone());
+        }
+
         self.commands.push(command);
     }
 
@@ -91,7 +107,7 @@ impl DriverDom {
     pub fn remove_comment(&self, id: DomId) {
         self.add_command(DriverDomCommand::RemoveComment { id });
     }
-    
+
     pub fn flush_dom_changes(&self) {
         let state = self.commands.take();
 
@@ -123,5 +139,16 @@ impl DriverDom {
             event_name: event_name.into(),
             callback_id
         });
+    }
+
+    pub fn log_start(&self) {
+        if self.log_enabled.replace(true) {
+            println!("log_start: already started");
+        }
+    }
+
+    pub fn log_take(&self) -> Vec<DriverDomCommand> {
+        self.log_enabled.replace(false);
+        self.log_vec.take()
     }
 }
