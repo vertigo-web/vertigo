@@ -1,6 +1,6 @@
 use crate::{
     computed::{Computed, GraphId, GraphValue},
-    struct_mut::ValueMut, get_driver,
+    struct_mut::ValueMut,
 };
 
 use super::context::Context;
@@ -36,9 +36,6 @@ impl Client {
         let context = Context::new();
         graph_value.get_value(&context);
         let _ = context;
-
-        // graph_value.subscribe_value();
-        get_driver().inner.dependencies.external_connections_refresh();
 
         Client {
             graph_value,
