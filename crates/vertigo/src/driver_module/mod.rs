@@ -5,6 +5,6 @@ pub mod api;
 mod api_dom_access; 
 pub mod init_env;
 pub mod js_value;
-mod callbacks;
+pub(crate) mod callbacks;
 
 pub use api_dom_access::DomAccess;

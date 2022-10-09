@@ -56,6 +56,7 @@ mod computed;
 mod css;
 mod fetch;
 mod html_macro;
+pub mod inspect;
 mod instant;
 pub mod router;
 mod dom;
@@ -67,8 +68,8 @@ mod dom_value;
 mod dom_list;
 
 pub use computed::{AutoMap, Computed, Dependencies, Value, struct_mut, Client, GraphId, DropResource};
-pub use driver_module::driver::{Driver};
-pub use driver_module::driver::{FetchResult};
+pub use driver_module::driver::{Driver, FetchResult};
+pub use driver_module::modules::dom::DriverDomCommand;
 pub use fetch::{
     fetch_builder::FetchBuilder,
     lazy_cache,

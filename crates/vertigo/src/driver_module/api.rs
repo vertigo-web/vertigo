@@ -54,7 +54,7 @@ impl ApiImport {
     pub fn new(
         panic_message: fn(ptr: u32, size: u32),
         fn_dom_access: fn(ptr: u32, size: u32) -> u32,
-    
+
     ) -> ApiImport {
         let panic_message = PanicMessage::new(panic_message);
 
@@ -140,7 +140,7 @@ impl ApiImport {
                 JsValue::U32(callback_id),
             ))
             .fetch();
-        
+
         if let JsValue::I32(timer_id) = result {
             timer_id
         } else {
@@ -156,7 +156,7 @@ impl ApiImport {
             .call("interval_clear", vec!(
                 JsValue::I32(timer_id),
             ))
-            .exec();  
+            .exec();
     }
 
     pub fn timeout_set(&self, duration: u32, callback_id: u32) -> i32 {
@@ -168,7 +168,7 @@ impl ApiImport {
                 JsValue::U32(callback_id),
             ))
             .fetch();
-        
+
         if let JsValue::I32(timer_id) = result {
             timer_id
         } else {

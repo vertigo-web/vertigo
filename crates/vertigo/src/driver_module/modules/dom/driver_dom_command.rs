@@ -2,6 +2,7 @@ use crate::DomId;
 use crate::driver_module::utils::json::JsonMapBuilder;
 use crate::driver_module::callbacks::CallbackId;
 
+#[derive(Clone, Debug)]
 pub enum DriverDomCommand {
     MountNode {
         id: DomId,
