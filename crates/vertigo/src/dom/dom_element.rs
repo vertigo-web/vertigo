@@ -85,14 +85,14 @@ pub struct DomElement {
 }
 
 impl DomElement {
-    pub fn new(name: &'static str) -> DomElement {
+    pub fn new(name: &'static str) -> Self {
         let node_id = DomId::default();
 
         let driver = get_driver();
 
         driver.inner.dom.create_node(node_id, name);
 
-        DomElement {
+        Self {
             driver,
             id_dom: node_id,
             child_node: VecDequeMut::new(),
@@ -101,14 +101,28 @@ impl DomElement {
         }
     }
 
+    pub fn from_parts<T: Into<String> + Clone + PartialEq>(name: &'static str, attrs: Vec<(&'static str, AttrValue<T>)>, children: Vec<DomNode>) -> Self {
+        let mut dom_element = Self::new(name);
+
+        for (attr_name, attr_value) in attrs {
+            dom_element = dom_element.attr(attr_name, attr_value);
+        }
+
+        for child_node in children {
+            dom_element = dom_element.child(child_node);
+        }
+
+        dom_element
+    }
+
     pub fn get_ref(&self) -> DomElementRef {
         DomElementRef::new(self.driver.inner.api.clone(), self.id_dom)
     }
 
-    pub fn create_with_id(id: DomId) -> DomElement {
+    pub fn create_with_id(id: DomId) -> Self {
         let driver = get_driver();
 
-        DomElement {
+        Self {
             driver,
             id_dom: id,
             child_node: VecDequeMut::new(),
