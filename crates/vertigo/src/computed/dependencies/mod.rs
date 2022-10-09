@@ -13,7 +13,6 @@ mod external_connections;
 mod graph;
 pub mod hook;
 mod refresh;
-mod stack;
 mod transaction_state;
 mod graph_connections;
 
@@ -101,7 +100,6 @@ impl Dependencies {
                 self.graph.refresh.refresh(&id);
             }
 
-            self.graph.recalculate_edges();
             self.transaction_state.move_to_idle();
         }
     }
@@ -118,10 +116,6 @@ impl Dependencies {
         self.graph.refresh.refresh_token_drop(id);
     }
 
-    pub(crate) fn remove_client(&self, client_id: GraphId) {
-        self.graph.remove_client(client_id);
-    }
-
     pub fn all_connections_len(&self) -> u64 {
         self.graph.all_connections_len()
     }
@@ -132,11 +126,5 @@ impl Dependencies {
 
     pub fn external_connections_unregister_connect(&self, id: GraphId) {
         self.graph.external_connections.unregister_connect(id);
-    }
-
-    pub fn external_connections_refresh(&self) {
-        if self.transaction_state.is_idle() {
-            self.graph.recalculate_edges();
-        }
     }
 }

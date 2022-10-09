@@ -41,7 +41,7 @@ impl<T: Clone> GraphValueData<T> {
     fn calculate_new_value(&self) -> T {
         let context = Context::new();
         let new_value = (self.get_value)(&context);
-        self.deps.graph.stack.push_track(self.id, context);
+        self.deps.graph.push_context(self.id, context);
 
         self.state.set(Some(new_value.clone()));
 
@@ -129,7 +129,7 @@ impl<T: Clone + 'static> GraphValueInner<T> {
 impl<T: Clone> Drop for GraphValueInner<T> {
     fn drop(&mut self) {
         self.inner.deps.refresh_token_drop(self.inner.id);
-        self.inner.deps.remove_client(self.inner.id);
+        self.inner.deps.graph.remove_client(self.inner.id);
     }
 }
 

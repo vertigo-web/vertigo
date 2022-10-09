@@ -1,35 +1,55 @@
-use std::collections::{BTreeSet, BTreeMap};
+use std::{collections::{BTreeSet, BTreeMap}};
 
 use crate::{GraphId, struct_mut::ValueMut};
 
-fn add_connection(data: &mut BTreeMap<GraphId, BTreeSet<GraphId>>, parent_list: &BTreeSet<GraphId>, client_id: GraphId) {
-    if parent_list.is_empty() {
-        return;
-    }
+fn add_connection(data: &mut BTreeMap<GraphId, BTreeSet<GraphId>>, parent_id: GraphId, client_id: GraphId) {
+    data
+        .entry(parent_id)
+        .or_insert_with(BTreeSet::new)
+        .insert(client_id);
+}
 
-    for parent_id in parent_list {
-        data
-            .entry(*parent_id)
-            .or_insert_with(BTreeSet::new)
-            .insert(client_id);
+fn remove_connection(data: &mut BTreeMap<GraphId, BTreeSet<GraphId>>, parent_id: GraphId, client_id: GraphId) {
+    let should_clear = match data.get_mut(&parent_id) {
+        Some(parent_list) =>  {
+            parent_list.remove(&client_id);
+            parent_list.is_empty()
+        }
+        None => false
+    };
+
+    if should_clear {
+        data.remove(&parent_id);
     }
 }
 
-fn remove_connection(data: &mut BTreeMap<GraphId, BTreeSet<GraphId>>, parent_list: &BTreeSet<GraphId>, client_id: GraphId) {
-    for parent_id in parent_list {
+fn get_relation(data: &BTreeMap<GraphId, BTreeSet<GraphId>>, client_id: GraphId) -> BTreeSet<GraphId> {
+    match data.get(&client_id) {
+        Some(client) => client.clone(),
+        None => BTreeSet::new()
+    }
+}
 
-        let should_clear = if let Some(parent_list) = data.get_mut(parent_id) {
-            parent_list.remove(&client_id);
-            parent_list.is_empty()
-        } else {
-            false
-        };
+enum UpdateConnection {
+    Add {
+        parent: GraphId,
+        client: GraphId
+    },
+    Remove {
+        parent: GraphId,
+        client: GraphId
+    },
+}
 
-        if should_clear {
-            data.remove(parent_id);
+impl UpdateConnection {
+    fn get_parent(&self) -> GraphId {
+        match self {
+            Self::Add { parent, .. } => *parent,
+            Self::Remove { parent, .. } => *parent
         }
     }
 }
+
 
 struct GraphConnectionsInner {
     parent_client: BTreeMap<GraphId, BTreeSet<GraphId>>,                    // ParentId <- ClientId
@@ -44,45 +64,98 @@ impl GraphConnectionsInner {
         }
     }
 
-    fn set_parent_for_client(&mut self, new_parents: BTreeSet<GraphId>, client_id: GraphId) -> Option<BTreeSet<GraphId>> {
-        let prev_parents = self.client_parent.remove(&client_id);
+    fn exec_command(&mut self, command: UpdateConnection) -> Vec<UpdateConnection> {
+        match command {
+            UpdateConnection::Add { parent, client } => {
+                add_connection(&mut self.parent_client, parent, client);
+                add_connection(&mut self.client_parent, client, parent);
+                Vec::new()
+            },
+            UpdateConnection::Remove { parent, client } => {
+                remove_connection(&mut self.parent_client, parent, client);
+                remove_connection(&mut self.client_parent, client, parent);
 
-        let off_edges = match prev_parents {
+                let child = get_relation(&self.parent_client, parent);
+
+                if child.is_empty() {
+                    get_relation(&self.client_parent, parent)
+                        .into_iter()
+                        .map(|parent_next| UpdateConnection::Remove { parent: parent_next, client: parent })
+                        .collect()
+                } else {
+                    Vec::new()
+                }
+            }
+        }
+    }
+
+
+    fn exec_command_list(&mut self, command_list: Vec<UpdateConnection>) -> Vec<UpdateConnection> {
+        let mut new_list = Vec::new();
+
+        for command in command_list {
+            new_list.extend(self.exec_command(command).into_iter());
+        }
+
+        new_list
+    }
+
+    ///The function receives new parents. Calculates the updates that should be applied to the graph
+    fn get_update_commands(&self, client_id: GraphId, new_parents: BTreeSet<GraphId>) -> Vec<UpdateConnection> {
+        match self.client_parent.get(&client_id) {
             Some(prev_parents) => {
-                let edge_on = new_parents.difference(&prev_parents).copied().collect();
-                let edge_off: BTreeSet<GraphId> = prev_parents.difference(&new_parents).copied().collect();
+                let mut edge_on: Vec<UpdateConnection> = new_parents
+                    .difference(prev_parents)
+                    .map(|parent| UpdateConnection::Add { parent: *parent, client: client_id })
+                    .collect();
 
-                add_connection(&mut self.parent_client, &edge_on, client_id);
-                remove_connection(&mut self.parent_client, &edge_off, client_id);
+                let edge_off = prev_parents
+                    .difference(&new_parents)
+                    .map(|parent| UpdateConnection::Remove { parent: *parent, client: client_id });
 
-                Some(edge_off)
+                edge_on.extend(edge_off);
+                edge_on
             },
             None => {
-                add_connection(&mut self.parent_client, &new_parents, client_id);
-                None
+                new_parents
+                    .into_iter()
+                    .map(|parent| UpdateConnection::Add { parent, client: client_id })
+                    .collect()
             }
-        };
-
-        if !new_parents.is_empty() {
-            self.client_parent.insert(client_id, new_parents);
-        }
-
-        off_edges
-    }
-
-    pub fn has_subscribers(&self, id: &GraphId) -> bool {
-        if let Some(item) = self.parent_client.get(id) {
-            !item.is_empty()
-        } else {
-            false
         }
     }
 
-    pub fn has_parents(&self, id: &GraphId) -> bool {
-        if let Some(item) = self.client_parent.get(id) {
-            !item.is_empty()
-        } else {
-            false
+    fn get_info_about_active(&self, nodes_for_refresh: BTreeSet<GraphId>) -> BTreeMap<GraphId, bool> {
+        let mut result = BTreeMap::new();
+
+        for client_id in nodes_for_refresh {
+            let node_is_active = match self.parent_client.get(&client_id) {
+                Some(client) => !client.is_empty(),
+                None => false
+            };
+
+            result.insert(client_id, node_is_active);
+        }
+
+        result
+    }
+
+    fn set_parent_for_client(&mut self, client_id: GraphId, new_parents: BTreeSet<GraphId>) -> BTreeMap<GraphId, bool> {
+        let mut nodes_for_refresh: BTreeSet<GraphId> = BTreeSet::new();
+        nodes_for_refresh.insert(client_id);
+
+        let mut commands = self.get_update_commands(client_id, new_parents);
+
+        loop {
+            for command in commands.iter() {
+                nodes_for_refresh.insert(command.get_parent());
+            }
+
+            commands = self.exec_command_list(commands);
+
+            if commands.is_empty() {
+                return self.get_info_about_active(nodes_for_refresh);
+            }
         }
     }
 
@@ -157,18 +230,10 @@ impl GraphConnections {
         }
     }
 
-    pub(crate) fn set_parent_for_client(&self, parents_list: BTreeSet<GraphId>, client_id: GraphId) -> Option<BTreeSet<GraphId>> {
+    pub(crate) fn set_parent_for_client(&self, client_id: GraphId, parents_list: BTreeSet<GraphId>) -> BTreeMap<GraphId, bool> {
         self.inner.change(move |state| {
-            state.set_parent_for_client(parents_list, client_id)
+            state.set_parent_for_client(client_id, parents_list)
         })
-    }
-
-    pub(crate) fn has_subscribers(&self, id: &GraphId) -> bool {
-        self.inner.map(|state| state.has_subscribers(id))
-    }
-
-    pub(crate) fn has_parents(&self, id: &GraphId) -> bool {
-        self.inner.map(|state| state.has_parents(id))
     }
 
     pub(crate) fn get_all_deps(&self, edges: BTreeSet<GraphId>) -> BTreeSet<GraphId> {

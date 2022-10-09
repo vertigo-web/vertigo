@@ -138,8 +138,4 @@ impl TransactionState {
     pub fn on_after_transaction(&self, callback: impl Fn() + 'static) {
         self.hooks.on_after_transaction(callback);
     }
-
-    pub fn is_idle(&self) -> bool {
-        self.state.map(|state| *state == State::Idle)
-    }
 }
