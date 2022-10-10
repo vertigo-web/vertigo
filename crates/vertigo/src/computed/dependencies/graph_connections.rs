@@ -1,34 +1,6 @@
 use std::{collections::{BTreeSet, BTreeMap}};
-
 use crate::{GraphId, struct_mut::ValueMut};
-
-fn add_connection(data: &mut BTreeMap<GraphId, BTreeSet<GraphId>>, parent_id: GraphId, client_id: GraphId) {
-    data
-        .entry(parent_id)
-        .or_insert_with(BTreeSet::new)
-        .insert(client_id);
-}
-
-fn remove_connection(data: &mut BTreeMap<GraphId, BTreeSet<GraphId>>, parent_id: GraphId, client_id: GraphId) {
-    let should_clear = match data.get_mut(&parent_id) {
-        Some(parent_list) =>  {
-            parent_list.remove(&client_id);
-            parent_list.is_empty()
-        }
-        None => false
-    };
-
-    if should_clear {
-        data.remove(&parent_id);
-    }
-}
-
-fn get_relation(data: &BTreeMap<GraphId, BTreeSet<GraphId>>, client_id: GraphId) -> BTreeSet<GraphId> {
-    match data.get(&client_id) {
-        Some(client) => client.clone(),
-        None => BTreeSet::new()
-    }
-}
+use super::graph_one_to_many::GraphOneToMany;
 
 enum UpdateConnection {
     Add {
@@ -50,35 +22,34 @@ impl UpdateConnection {
     }
 }
 
-
 struct GraphConnectionsInner {
-    parent_client: BTreeMap<GraphId, BTreeSet<GraphId>>,                    // ParentId <- ClientId
-    client_parent: BTreeMap<GraphId, BTreeSet<GraphId>>,
+    parent_client: GraphOneToMany,                    // ParentId <- ClientId
+    client_parent: GraphOneToMany,
 }
 
 impl GraphConnectionsInner {
     pub fn new() -> GraphConnectionsInner {
         GraphConnectionsInner {
-            parent_client: BTreeMap::new(),
-            client_parent: BTreeMap::new(),
+            parent_client: GraphOneToMany::new(),
+            client_parent: GraphOneToMany::new(),
         }
     }
 
     fn exec_command(&mut self, command: UpdateConnection) -> Vec<UpdateConnection> {
         match command {
             UpdateConnection::Add { parent, client } => {
-                add_connection(&mut self.parent_client, parent, client);
-                add_connection(&mut self.client_parent, client, parent);
+                self.parent_client.add(parent, client);
+                self.client_parent.add(client, parent);
                 Vec::new()
             },
             UpdateConnection::Remove { parent, client } => {
-                remove_connection(&mut self.parent_client, parent, client);
-                remove_connection(&mut self.client_parent, client, parent);
+                self.parent_client.remove(parent, client);
+                self.client_parent.remove(client, parent);
 
-                let child = get_relation(&self.parent_client, parent);
+                let child = self.parent_client.get_relation(parent);
 
                 if child.is_empty() {
-                    get_relation(&self.client_parent, parent)
+                    self.client_parent.get_relation(parent)
                         .into_iter()
                         .map(|parent_next| UpdateConnection::Remove { parent: parent_next, client: parent })
                         .collect()
@@ -102,38 +73,29 @@ impl GraphConnectionsInner {
 
     ///The function receives new parents. Calculates the updates that should be applied to the graph
     fn get_update_commands(&self, client_id: GraphId, new_parents: BTreeSet<GraphId>) -> Vec<UpdateConnection> {
-        match self.client_parent.get(&client_id) {
-            Some(prev_parents) => {
-                let mut edge_on: Vec<UpdateConnection> = new_parents
-                    .difference(prev_parents)
-                    .map(|parent| UpdateConnection::Add { parent: *parent, client: client_id })
-                    .collect();
+        let prev_parents = self
+            .client_parent
+            .get_relation(client_id)
+            .collect::<BTreeSet<_>>();
 
-                let edge_off = prev_parents
-                    .difference(&new_parents)
-                    .map(|parent| UpdateConnection::Remove { parent: *parent, client: client_id });
+        let mut edge_on: Vec<UpdateConnection> = new_parents
+            .difference(&prev_parents)
+            .map(|parent| UpdateConnection::Add { parent: *parent, client: client_id })
+            .collect();
 
-                edge_on.extend(edge_off);
-                edge_on
-            },
-            None => {
-                new_parents
-                    .into_iter()
-                    .map(|parent| UpdateConnection::Add { parent, client: client_id })
-                    .collect()
-            }
-        }
+        let edge_off = prev_parents
+            .difference(&new_parents)
+            .map(|parent| UpdateConnection::Remove { parent: *parent, client: client_id });
+
+        edge_on.extend(edge_off);
+        edge_on
     }
 
     fn get_info_about_active(&self, nodes_for_refresh: BTreeSet<GraphId>) -> BTreeMap<GraphId, bool> {
         let mut result = BTreeMap::new();
 
         for client_id in nodes_for_refresh {
-            let node_is_active = match self.parent_client.get(&client_id) {
-                Some(client) => !client.is_empty(),
-                None => false
-            };
-
+            let node_is_active = !self.parent_client.get_relation(client_id).is_empty();
             result.insert(client_id, node_is_active);
         }
 
@@ -168,14 +130,12 @@ impl GraphConnectionsInner {
 
             match next_to_traverse {
                 Some(next) => {
-                    let list = self.parent_client.get(&next);
+                    let list = self.parent_client.get_relation(next);
 
-                    if let Some(list) = list {
-                        for item in list {
-                            let is_added = result.insert(*item);
-                            if is_added {
-                                to_traverse.push(*item);
-                            }
+                    for item in list {
+                        let is_added = result.insert(item);
+                        if is_added {
+                            to_traverse.push(item);
                         }
                     }
                 }
@@ -187,13 +147,7 @@ impl GraphConnectionsInner {
     }
 
     fn all_connections_len(&self) -> u64 {
-        let mut count: u64 = 0;
-
-        for (_, item) in self.parent_client.iter()  {
-            count += item.len() as u64;
-        }
-
-        count
+        self.parent_client.all_connections_len()
     }
 
     // pub fn debug(&self) {
