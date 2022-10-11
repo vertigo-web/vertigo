@@ -23,6 +23,14 @@ pub fn dom(input: TokenStream) -> TokenStream {
 
 #[proc_macro]
 #[proc_macro_error]
+pub fn dom_debug(input: TokenStream) -> TokenStream {
+    let stream = dom_inner(input);
+    emit_warning!("debug: {:?}", stream);
+    stream
+}
+
+#[proc_macro]
+#[proc_macro_error]
 pub fn css_block(input: TokenStream) -> TokenStream {
     let (css_str, _) = generate_css_string(input);
     let result = quote! { #css_str };
