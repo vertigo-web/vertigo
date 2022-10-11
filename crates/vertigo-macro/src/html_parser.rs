@@ -19,7 +19,8 @@ fn find_attribute(span: Span, attributes: &[Node], attribute: &'static str) -> R
     Err(())
 }
 
-fn convert_expresion_without_brackets(expr: Expr) -> TokenStream2 {
+/// Strips expression from excessive brackets (only once)
+fn strip_brackets(expr: Expr) -> TokenStream2 {
     let expr_block = if let Expr::Block(expr) = expr.clone() {
         let mut stmts = expr.block.stmts;
 
@@ -41,6 +42,42 @@ fn convert_expresion_without_brackets(expr: Expr) -> TokenStream2 {
     expr.to_token_stream()
 }
 
+/// Tags starting with uppercase letter are considered components
+fn is_component_name(name: &str) -> bool {
+    name.chars().next().map(char::is_uppercase).unwrap_or_default()
+}
+
+fn convert_to_component(node: Node) -> TokenStream2 {
+    let component = node.name;
+    let attributes = node.attributes.into_iter()
+        .filter_map(|attr_node| {
+            let span = attr_node.name_span().unwrap();
+            if let (Some(key), Some(value)) = (attr_node.name, attr_node.value) {
+                let value = strip_brackets(value);
+                Some(quote! { #key: vertigo::clone_if_ref(#value), })
+            } else {
+                emit_error!(span, "Expected key=value attribute");
+                None
+            }
+        })
+        .collect::<Vec<_>>();
+    quote! {
+        {
+            let cmp = #component {
+                #(#attributes)*
+            };
+            cmp.render()
+        }
+    }
+}
+
+fn convert_child_to_component(node: Node) -> TokenStream2 {
+    let cmp_stream = convert_to_component(node);
+    quote! {
+        .child(#cmp_stream)
+    }
+}
+
 fn convert_node(node: Node) -> Result<TokenStream2, ()> {
     assert_eq!(node.node_type, NodeType::Element);
     let node_name = node.name_as_string().unwrap();
@@ -50,11 +87,15 @@ fn convert_node(node: Node) -> Result<TokenStream2, ()> {
         let span = node.name_span().unwrap();
 
         let computed = find_attribute(span, &node.attributes, "computed")?;
-        let computed = convert_expresion_without_brackets(computed);
+        let computed = strip_brackets(computed);
 
         return Ok(quote!{
             vertigo::DomText::new_computed(#computed)
         });
+    }
+
+    if is_component_name(&node_name) {
+        return Ok(convert_to_component(node))
     }
 
     let mut out_attr = Vec::new();
@@ -66,7 +107,7 @@ fn convert_node(node: Node) -> Result<TokenStream2, ()> {
         let name = attr_item.name_as_string().unwrap();
         let value = attr_item.value.unwrap();
 
-        let value = convert_expresion_without_brackets(value);
+        let value = strip_brackets(value);
         if name == "on_click" {
             out_attr.push(quote!{
                 .on_click(#value)
@@ -113,14 +154,21 @@ fn convert_node(node: Node) -> Result<TokenStream2, ()> {
                 .child(vertigo::DomText::new(#child_value))
             });
         } else if child.node_type == NodeType::Element {
-            let node_ready = convert_node(child)?;
+            match child.name_as_string() {
+                Some(tag_name) if is_component_name(&tag_name) => {
+                    out_child.push(convert_child_to_component(child))
+                }
+                _ => {
+                    let node_ready = convert_node(child)?;
 
-            out_child.push(quote! {
-                .child(#node_ready)
-            });
+                    out_child.push(quote! {
+                        .child(#node_ready)
+                    });
+                }
+            }
         } else if child.node_type == NodeType::Block {
             let block = child.value.unwrap();
-            let block = convert_expresion_without_brackets(block);
+            let block = strip_brackets(block);
 
             out_child.push(quote! {
                 .child(vertigo::EmbedDom::embed(#block))

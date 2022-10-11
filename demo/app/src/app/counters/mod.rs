@@ -1,6 +1,7 @@
 use vertigo::{Computed, Value, DomElement, dom};
 
 mod simple_counter;
+use simple_counter::SimpleCounter;
 
 #[derive(Clone)]
 pub struct State {
@@ -13,10 +14,10 @@ pub struct State {
 
 impl State {
     pub fn new() -> State {
-        let counter1 = Value::new(0);
-        let counter2 = Value::new(0);
-        let counter3 = Value::new(0);
-        let counter4 = Value::new(0);
+        let counter1 = Value::new(1);
+        let counter2 = Value::new(2);
+        let counter3 = Value::new(3);
+        let counter4 = Value::new(4);
 
         let sum = {
             let counter1 = counter1.clone();
@@ -48,26 +49,28 @@ impl State {
     }
 }
 
-fn render_sum(sum: &Computed<u32>) -> DomElement {
-    let sum = sum.clone().map(|sum| { sum.to_string() });
+struct Sum {
+    sum: Computed<u32>,
+}
 
-    dom! {
-        <div>
-            "sum = "
-            <text computed={sum} />
-        </div>
+impl Sum {
+    pub fn render(self) -> DomElement {
+        dom! {
+            <div>
+                "sum = " {self.sum}
+            </div>
+        }
     }
 }
 
 pub fn render(state: &State) -> DomElement {
     dom! {
         <div>
-            { simple_counter::State::component(&state.counter1) }
-            { simple_counter::State::component(&state.counter2) }
-            { simple_counter::State::component(&state.counter3) }
-            { simple_counter::State::component(&state.counter4) }
-            { render_sum(&state.sum) }
+            <SimpleCounter label={"counter1 value"} value={&state.counter1} />
+            <SimpleCounter label={"counter2 value"} value={&state.counter2} />
+            <SimpleCounter label={"counter3 value"} value={&state.counter3} />
+            <SimpleCounter label={"counter4 value"} value={&state.counter4} />
+            <Sum sum={&state.sum} />
         </div>
     }
 }
-

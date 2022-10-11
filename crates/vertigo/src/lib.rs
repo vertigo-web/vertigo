@@ -77,7 +77,7 @@ pub use fetch::{
     request_builder::{ListRequestTrait, RequestBuilder, RequestResponse, SingleRequestTrait},
     resource::Resource,
 };
-pub use html_macro::EmbedDom;
+pub use html_macro::{EmbedDom, clone_if_ref};
 pub use instant::{Instant, InstantType};
 pub use dom::{
     css::{Css, CssGroup},
@@ -139,6 +139,9 @@ pub use log;
 /// };
 /// ```
 pub use vertigo_macro::dom;
+
+/// Version of `dom!` macro that additionally emits compiler warning with generated code.
+pub use vertigo_macro::dom_debug;
 
 /// Allows to create Css styles for virtual DOM.
 ///
