@@ -5,7 +5,7 @@ use crate::{ApiImport};
 /// Duration in seconds, returned from [Instant] methods.
 pub type InstantType = u64;
 
-/// Monotonically nondecrasing clock using a driver, similar to [std::time::Instant].
+/// Monotonically non-decreasing clock using a driver, similar to [std::time::Instant].
 #[derive(Clone)]
 pub struct Instant {
     api: Rc<ApiImport>,

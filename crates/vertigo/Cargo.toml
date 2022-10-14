@@ -2,7 +2,7 @@
 name = "vertigo"
 version = "0.1.0-beta.5"
 authors = ["Grzegorz Szeliga <szeligagrzegorz@gmail.com>", "Michał Pokrywka <wolfmoon@o2.pl>"]
-description = "Real DOM library for Rust"
+description = "Reactive Real-DOM library for Rust"
 readme = "README.md"
 keywords = ["wasm", "web", "virtualdom", "reactive", "javascript"]
 homepage = "https://github.com/vertigo-web/"

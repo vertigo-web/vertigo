@@ -1,6 +1,7 @@
 use std::rc::Rc;
 use crate::struct_mut::{CounterMut, HashMapMut};
 
+
 #[derive(Clone)]
 pub struct CallbackManager<V> {
     next_id: Rc<CounterMut>,

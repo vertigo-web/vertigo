@@ -66,7 +66,7 @@ fn convert_to_component(node: Node) -> TokenStream2 {
             let cmp = #component {
                 #(#attributes)*
             };
-            cmp.render()
+            cmp.mount()
         }
     }
 }

@@ -13,18 +13,12 @@ pub mod memory_block;
 pub mod js_value_struct;
 pub mod js_value_builder;
 
-#[derive(Clone)]
+#[derive(Clone, Default)]
 pub struct Arguments {
     blocks: Rc<HashMapMut<u32, MemoryBlock>>
 }
 
 impl Arguments {
-    pub fn new() -> Arguments {
-        Arguments {
-            blocks: Rc::new(HashMapMut::new()),
-        }
-    }
-
     pub fn alloc(&self, size: u32) -> u32 {
         let block = MemoryBlock::new(size);
         let ptr = block.get_ptr();

@@ -1,5 +1,5 @@
 [package]
-name = "vertigo-example-counter"
+name = "vertigo-example-trafficlights"
 version = "0.1.0"
 authors = ["Grzegorz Szeliga <szeligagrzegorz@gmail.com>", "Michał Pokrywka <wolfmoon@o2.pl>"]
 edition = "2021"

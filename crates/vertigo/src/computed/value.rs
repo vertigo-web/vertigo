@@ -49,6 +49,12 @@ pub struct Value<T> {
     inner: Rc<ValueInner<T>>,
 }
 
+impl<T: Clone + Default + 'static> Default for Value<T> {
+    fn default() -> Self {
+        Self::new(Default::default())
+    }
+}
+
 impl<T> Clone for Value<T> {
     fn clone(&self) -> Self {
         Value {

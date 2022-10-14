@@ -61,12 +61,11 @@ pub enum DriverDomCommand {
 
 impl DriverDomCommand {
     fn is_event(&self) -> bool {
-        match self {
-            Self::RemoveNode { .. } => true,
-            Self::RemoveText { .. } => true,
-            Self::RemoveComment { .. } => true,
-            _ => false,
-        }
+        matches!(self,
+            Self::RemoveNode { .. } |
+            Self::RemoveText { .. } |
+            Self::RemoveComment { .. }
+        )
     }
 
     pub fn into_string(self) -> String {

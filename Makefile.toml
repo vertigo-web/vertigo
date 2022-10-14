@@ -85,7 +85,7 @@ script = [
 # Examples tasks
 
 [env]
-EXAMPLES = "counter router"
+EXAMPLES = "counter router trafficlights"
 
 # Run without arguments to build all examples; provide example name to build only this particular example
 [tasks.examples-build]

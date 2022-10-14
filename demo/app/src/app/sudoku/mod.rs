@@ -1,6 +1,5 @@
-mod render;
+mod component;
 mod state;
 
-pub use render::examples_render;
-pub use render::main_render;
-pub use state::Sudoku;
+pub use component::Sudoku;
+pub use state::SudokuState;

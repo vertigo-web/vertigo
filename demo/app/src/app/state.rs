@@ -1,20 +1,18 @@
 use vertigo::DomElement;
 use vertigo::router::HashRouter;
 
-use super::counters::State as CountersState;
+use super::counters;
 use super::game_of_life;
 use super::github_explorer;
-use super::input;
-use super::main::AnimationsState;
+use super::input::MyInput;
 use super::route::Route;
-use super::sudoku::Sudoku;
+use super::sudoku::SudokuState;
 
 #[derive(Clone)]
 pub struct State {
-    pub counters: CountersState,
-    pub animations: AnimationsState,
-    pub sudoku: Sudoku,
-    pub input: input::State,
+    pub counters: counters::State,
+    pub sudoku: SudokuState,
+    pub input: MyInput,
     pub github_explorer: github_explorer::State,
     pub game_of_life: game_of_life::State,
 
@@ -28,10 +26,9 @@ impl State {
         let route = HashRouter::new();
 
         let state = State {
-            counters: CountersState::new(),
-            animations: AnimationsState::new(),
-            sudoku: Sudoku::new(),
-            input: input::State::new(),
+            counters: counters::State::new(),
+            sudoku: SudokuState::new(),
+            input: MyInput::default(),
             github_explorer: github_explorer::State::new(),
             game_of_life,
 

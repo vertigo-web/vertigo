@@ -53,7 +53,7 @@ fn basic2() {
         a + b
     });
 
-    let suma2 = sum.clone().map(|value: i32| -> i32 {
+    let suma2 = sum.map(|value: i32| -> i32 {
         2 * (value)
     });
 
@@ -467,6 +467,7 @@ fn test_transaction() {
 
 
 #[test]
+#[allow(clippy::bool_assert_comparison)]
 fn test_connect() {
     let is_subscribe = Rc::new(ValueMut::new(false));
 
@@ -546,9 +547,9 @@ fn test_set_value_and_compare() {
     let value_com = value_com.map(|item| item);
 
     fn build(value: &Computed<i32>) -> (Rc<ValueMut<i32>>, Client) {
-            
+
         let boxik = Rc::new(ValueMut::new(0));
-        
+
         let router = Computed::from({
             let value = value.clone();
 

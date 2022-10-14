@@ -36,51 +36,49 @@ impl From<String> for Route {
 }
 
 #[derive(Clone)]
-pub struct State {
+pub struct App {
     pub route: HashRouter<Route>,
 }
 
-impl State {
-    pub fn component() -> DomElement {
+impl App {
+    pub fn new() -> Self {
         let route = HashRouter::new();
 
-        let state = State {
+        Self {
             route,
-        };
+        }
+    }
 
-        render(state)
+    pub fn mount(self) -> DomElement {
+        let navigate_to_page1 = bind(&self).call(|_, state| {
+            state.navigate_to(Route::Page1);
+        });
+
+        let navigate_to_page2 = bind(&self).call(|_, state| {
+            state.navigate_to(Route::Page2);
+        });
+
+        let child = self.route.route.render_value(|value| {
+            match value {
+                Route::Page1 => dom! { <div>"Page 1"</div> },
+                Route::Page2 => dom! { <div>"Page 2"</div> },
+                Route::NotFound => dom! { <div>"Page Not Found"</div> },
+            }
+        });
+
+        dom! {
+            <div>
+                <div>
+                    "My Page"
+                    <button on_click={navigate_to_page1}>"Page 1"</button>
+                    <button on_click={navigate_to_page2}>"Page 2"</button>
+                </div>
+                {child}
+            </div>
+        }
     }
 
     pub fn navigate_to(&self, route: Route) {
         self.route.set(route);
-    }
-}
-
-fn render(state: State) -> DomElement {
-    let navigate_to_page1 = bind(&state).call(|_, state| {
-        state.navigate_to(Route::Page1);
-    });
-
-    let navigate_to_page2 = bind(&state).call(|_, state| {
-        state.navigate_to(Route::Page2);
-    });
-
-    let child = state.route.route.render_value(|value| {
-        match value {
-            Route::Page1 => dom! { <div>"Page 1"</div> },
-            Route::Page2 => dom! { <div>"Page 2"</div> },
-            Route::NotFound => dom! { <div>"Page Not Found"</div> },
-        }
-    });
-
-    dom! {
-        <div>
-            <div>
-                "My Page"
-                <button on_click={navigate_to_page1}>"Page 1"</button>
-                <button on_click={navigate_to_page2}>"Page 2"</button>
-            </div>
-            {child}
-        </div>
     }
 }

@@ -1,19 +1,52 @@
 use vertigo::{css_fn, Value, bind, dom, DomElement};
 
-#[derive(Clone)]
-pub struct State {
+#[derive(Clone, Default)]
+pub struct MyInput {
     pub value: Value<String>,
 }
 
-impl State {
-    pub fn new() -> State {
-        State {
-            value: Value::new(String::from("")),
-        }
-    }
+impl MyInput {
+    pub fn mount(&self) -> DomElement {
+        let on_set1 = bind(&self.value).call(|_, value| {
+            value.set("value 1".into());
+        });
 
-    pub fn render(&self) -> DomElement {
-        render(self)
+        let on_set2 = bind(&self.value).call(|_, value| {
+            value.set("value 2".into());
+        });
+
+        let on_set3 = bind(&self.value).call_param(|_, value, new_value: String| {
+            value.set(new_value);
+        });
+
+        let on_set4 = bind(&self.value).call_param(|_, value, new_value: String| {
+            value.set(new_value);
+        });
+
+        let mouse_in = || {
+            log::info!("enter");
+        };
+
+        let mouse_out = || {
+            log::info!("out");
+        };
+
+        let value = self.value.to_computed();
+
+        let count = value.map(|inner| inner.len().to_string());
+
+        dom! {
+            <div css={wrapper()} on_mouse_enter={mouse_in} on_mouse_leave={mouse_out}>
+                "This is input"
+                <input css={input_css()} value={value.clone()} on_input={on_set3} />
+                <button css={button_css()} on_click={on_set1}>"set 1"</button>
+                <button css={button_css()} on_click={on_set2}>"set 2"</button>
+                <textarea css={text_css()} on_input={on_set4} value={value} />
+                <div>
+                    "count = " {count}
+                </div>
+            </div>
+        }
     }
 }
 
@@ -39,47 +72,3 @@ css_fn! { text_css, "
     padding: 5px;
     margin: 10px;
 " }
-
-fn render(state: &State) -> DomElement {
-    let on_set1 = bind(state).call(|_, state| {
-        state.value.set("value 1".into());
-    });
-
-    let on_set2 = bind(state).call(|_, state| {
-        state.value.set("value 2".into());
-    });
-
-    let on_set3 = bind(state).call_param(|_, state, new_value: String| {
-        state.value.set(new_value);
-    });
-
-    let on_set4 = bind(state).call_param(|_, state, new_value: String| {
-        state.value.set(new_value);
-    });
-
-    let mouse_in = || {
-        log::info!("enter");
-    };
-
-    let mouse_out = || {
-        log::info!("out");
-    };
-
-    let value = state.value.to_computed();
-
-    let count = value.map(|inner| inner.len().to_string());
-
-    dom! {
-        <div css={wrapper()} on_mouse_enter={mouse_in} on_mouse_leave={mouse_out}>
-            "To jest input"
-            <input css={input_css()} value={value.clone()} on_input={on_set3} />
-            <button css={button_css()} on_click={on_set1}>"set 1"</button>
-            <button css={button_css()} on_click={on_set2}>"set 2"</button>
-            <textarea css={text_css()} on_input={on_set4} value={value} />
-            <div>
-                "count = "
-                <text computed={count} />
-            </div>
-        </div>
-    }
-}

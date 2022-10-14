@@ -1,9 +1,18 @@
 use vertigo::{css, css_fn, Css, KeyDownEvent, DomElement, dom, Computed, bind2};
 use crate::app;
-use crate::app::chat::ChatState;
-use crate::app::todo::TodoState;
-use super::dropfile::DropFilesState;
-use super::route::Route;
+
+use super::{
+    dropfiles::DropFiles,
+    route::Route,
+    animations::Animations,
+    counters::CountersDemo,
+    game_of_life::GameOfLife,
+    github_explorer::GitHubExplorer,
+    input::MyInput,
+    sudoku::Sudoku,
+    chat::Chat,
+    todo::Todo,
+};
 
 css_fn! { css_menu, "
     list-style-type: none;
@@ -91,15 +100,15 @@ pub fn render(state: app::State) -> DomElement {
     let content = state.route.route.render_value(
         move |route| {
            match route {
-                Route::Animations => state.animations.render(),
-                Route::Counters => state.counters.render(),
-                Route::Sudoku => state.sudoku.render(),
-                Route::Input => state.input.render(),
-                Route::GithubExplorer => state.github_explorer.render(),
-                Route::GameOfLife { .. } => state.game_of_life.render(),
-                Route::Chat => ChatState::new().render(),
-                Route::Todo => TodoState::new().render(),
-                Route::DropFile => DropFilesState::new().render(),
+                Route::Animations => dom! { <Animations /> },
+                Route::Counters => dom!{ <CountersDemo state={&state.counters} /> },
+                Route::Sudoku => dom! { <Sudoku state={&state.sudoku} /> },
+                Route::Input => dom! { <MyInput value={&state.input.value} /> },
+                Route::GithubExplorer => dom! { <GitHubExplorer state={&state.github_explorer} /> },
+                Route::GameOfLife { .. } => dom! { <GameOfLife state={&state.game_of_life} /> },
+                Route::Chat => dom! { <Chat /> },
+                Route::Todo => dom! { <Todo /> },
+                Route::DropFile => dom! { <DropFiles /> },
                 Route::NotFound => dom! { <div>"Page Not Found"</div> },
             }
         }
