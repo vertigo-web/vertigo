@@ -2,26 +2,60 @@
 //!
 //! It mainly consists of three parts:
 //!
-//! * **Reactive dependencies** - A graph of values and clients (micro-subscriptions) that can automatically compute what to refresh after one value change
-//! * **Real DOM** - No intermediate Virtual DOM mechanism is necessary
+//! * **Reactive dependencies** - A graph of values and clients (micro-subscriptions)
+//!   that can automatically compute what to refresh after one or more change(s)
+//! * **Real DOM operations** - No intermediate Virtual DOM mechanism is necessary
 //! * **HTML/CSS macros** - Allows to construct Real DOM nodes using HTML and CSS
 //!
-//! ## Example
+//! ## Example 1
+//!
+//! ```rust
+//! use vertigo::{dom, DomElement, Value, bind, start_app};
+//!
+//! pub fn render(count: Value<i32>) -> DomElement {
+//!     let increment = bind(&count).call(|context, count| {
+//!         count.set(count.get(context) + 1);
+//!     });
+//!
+//!     let decrement = bind(&count).call(|context, count| {
+//!         count.set(count.get(context) - 1);
+//!     });
+//!
+//!     dom! {
+//!         <div>
+//!             <p>"Counter: " { count }</p>
+//!             <button on_click={decrement}>"-"</button>
+//!             <button on_click={increment}>"+"</button>
+//!         </div>
+//!     }
+//! }
+//!
+//! #[no_mangle]
+//! pub fn start_application() {
+//!     start_app(|| -> DomElement {
+//!         let count = Value::new(0);
+//!         render(count)
+//!     });
+//! }
+//! ```
+//!
+//! ## Example 2
 //!
 //! ```rust
 //! use vertigo::{DomElement, Value, dom, css_fn};
 //!
-//! pub struct State {
+//! pub struct MyMessage {
 //!     pub message: Value<String>,
 //! }
 //!
-//! impl State {
-//!     pub fn component() -> DomElement {
-//!         let state = State {
-//!             message: Value::new("Hello world".to_string()),
-//!         };
-//!
-//!         render(state)
+//! impl MyMessage {
+//!     pub fn mount(self) -> DomElement {
+//!         dom! {
+//!             <p>
+//!                 "Message to the world: "
+//!                 { self.message }
+//!             </p>
+//!         }
 //!     }
 //! }
 //!
@@ -29,82 +63,75 @@
 //!     color: darkblue;
 //! " }
 //!
-//! fn render(state: State) -> DomElement {
+//! fn render() -> DomElement {
+//!     let message = Value::new("Hello world!".to_string());
+//!
 //!     dom! {
 //!         <div css={main_div()}>
-//!             "Message to the world: "
-//!             { state.message }
+//!             <MyMessage message={message} />
 //!         </div>
 //!     }
 //! }
 //! ```
 //!
-//! More description soon! For now, to get started you may consider looking
-//! at the [Tutorial](https://github.com/vertigo-web/vertigo/blob/master/tutorial.md).
+//! To get started you may consider looking at the
+//! [Tutorial](https://github.com/vertigo-web/vertigo/blob/master/tutorial.md).
 
 #![deny(rust_2018_idioms)]
 #![feature(try_trait_v2)] // https://github.com/rust-lang/rust/issues/84277
-#![allow(clippy::type_complexity)]
-#![allow(clippy::too_many_arguments)]
-#![allow(clippy::new_without_default)]
-#![allow(clippy::large_enum_variant)]
-#![allow(clippy::non_send_fields_in_send_ty)]
-#![allow(clippy::match_like_matches_macro)]
-#![allow(clippy::from_over_into)]
 
+mod bind;
 mod computed;
 mod css;
+mod dom_list;
+mod dom_value;
+mod dom;
+mod driver_module;
 mod fetch;
+mod future_box;
 mod html_macro;
 pub mod inspect;
 mod instant;
 pub mod router;
-mod dom;
 mod websocket;
-mod future_box;
-mod bind;
-mod driver_module;
-mod dom_value;
-mod dom_list;
 
-pub use computed::{AutoMap, Computed, Dependencies, Value, struct_mut, Client, GraphId, DropResource};
-pub use driver_module::driver::{Driver, FetchResult};
-pub use driver_module::modules::dom::DriverDomCommand;
+pub use bind::{bind, bind2, bind3, bind4, Bind1, Bind2, Bind3, Bind4};
+pub use computed::{
+    AutoMap, Client, Computed, context::Context, Dependencies, DropResource, GraphId, struct_mut, Value
+};
+pub use dom::{
+    css::{Css, CssGroup},
+    dom_id::DomId,
+    dom_comment::DomComment,
+    dom_comment_create::DomCommentCreate,
+    dom_element::DomElement,
+    dom_node::{DomNode, DomNodeFragment},
+    dom_text::DomText,
+    types::{KeyDownEvent, DropFileEvent, DropFileItem},
+};
+pub use dom_list::ListRendered;
+pub use driver_module::{
+    api::ApiImport,
+    driver::{Driver, FetchResult, FetchMethod},
+    js_value::js_value_struct::JsValue,
+    modules::dom::DriverDomCommand,
+};
 pub use fetch::{
     fetch_builder::FetchBuilder,
-    lazy_cache,
-    lazy_cache::LazyCache,
+    lazy_cache::{self, LazyCache},
+    pinboxfut::PinBoxFuture,
     request_builder::{ListRequestTrait, RequestBuilder, RequestResponse, SingleRequestTrait},
     resource::Resource,
 };
-pub use html_macro::{EmbedDom, clone_if_ref};
-pub use instant::{Instant, InstantType};
-pub use dom::{
-    css::{Css, CssGroup},
-    dom_element::DomElement,
-    dom_text::DomText,
-    dom_comment::DomComment,
-    dom_node::DomNode,
-    dom_node::DomNodeFragment,
-    dom_comment_create::DomCommentCreate,
-};
-pub use crate::dom_list::ListRendered;
-pub use dom::types::{
-    KeyDownEvent, DropFileEvent, DropFileItem
-};
-pub use websocket::{WebsocketConnection, WebsocketMessage};
 pub use future_box::{FutureBoxSend, FutureBox};
-pub use bind::{bind, bind2, bind3, bind4, Bind1, Bind2, Bind3, Bind4};
-pub use driver_module::driver::{FetchMethod};
-pub use dom::{
-    dom_id::DomId,
+pub use html_macro::{
+    EmbedDom, clone_if_ref
 };
-pub use websocket::WebsocketMessageDriver;
-pub use crate::fetch::pinboxfut::PinBoxFuture;
+pub use instant::{
+    Instant, InstantType
+};
+pub use websocket::{WebsocketConnection, WebsocketMessageDriver, WebsocketMessage};
 
-pub use computed::context::{Context};
-pub use crate::driver_module::api::ApiImport;
-pub use crate::driver_module::js_value::js_value_struct::JsValue;
 
 #[cfg(feature = "serde_request")]
 /// Implements [SingleRequestTrait] using serde (needs `serde_request` feature).
@@ -176,11 +203,41 @@ pub use vertigo_macro::css;
 /// ```
 pub use vertigo_macro::css_block;
 
+/// Starting point of the app.
+pub fn start_app(get_component: impl FnOnce() -> DomElement) {
+    get_driver_state("start_app", |state| {
+        state.driver.init_env();
+        let app = get_component();
+
+        let root = DomElement::create_with_id(DomId::root());
+        root.add_child(app);
+        state.set_root(root);
+
+        get_driver().inner.dom.flush_dom_changes();
+    });
+}
+
+/// Getter for Driver singleton.
+pub fn get_driver() -> Driver {
+    DRIVER_BROWSER.with(|state| {
+        state.driver.clone()
+    })
+}
+
+/// Do bunch of operations without triggering anything in between.
+pub fn transaction<F: FnOnce(&Context)>(f: F) {
+    get_driver().transaction(f)
+}
+
+//------------------------------------------------------------------------------------------------------------------
+// Internals below
+//------------------------------------------------------------------------------------------------------------------
+
 mod external_api;
 use external_api::{DRIVER_BROWSER, DriverConstruct};
 
-fn get_driver_state<R: Default, F: FnOnce(&DriverConstruct) -> R>(label: &'static str, onec: F) -> R {
-    match DRIVER_BROWSER.try_with(onec) {
+fn get_driver_state<R: Default, F: FnOnce(&DriverConstruct) -> R>(label: &'static str, once: F) -> R {
+    match DRIVER_BROWSER.try_with(once) {
         Ok(value) => value,
         Err(_) => {
             println!("error access {label}");
@@ -189,9 +246,7 @@ fn get_driver_state<R: Default, F: FnOnce(&DriverConstruct) -> R>(label: &'stati
     }
 }
 
-//------------------------------------------------------------------------------------------------------------------
-// methods for memory allocation
-//------------------------------------------------------------------------------------------------------------------
+// Methods for memory allocation
 
 #[no_mangle]
 pub fn alloc(size: u32) -> u32 {
@@ -207,7 +262,7 @@ pub fn free(pointer: u32) {
     })
 }
 
-//------------------------------------------------------------------------------------------------------------------
+// Callbacks gateways
 
 #[no_mangle]
 pub fn interval_run_callback(callback_id: u32) {
@@ -255,28 +310,3 @@ pub fn export_dom_callback(callback_id: u64, value_ptr: u32) -> u64 {
         (ptr << 32) + size
     })
 }
-
-/// Starting point of the app.
-pub fn start_app(get_component: impl FnOnce() -> DomElement) {
-    get_driver_state("start_app", |state| {
-        state.driver.init_env();
-        let app = get_component();
-
-        let root = DomElement::create_with_id(DomId::root());
-        root.add_child(app);
-        state.set_root(root);
-
-        get_driver().inner.dom.flush_dom_changes();
-    });
-}
-
-pub fn get_driver() -> Driver {
-    DRIVER_BROWSER.with(|state| {
-        state.driver.clone()
-    })
-}
-
-pub fn transaction<F: FnOnce(&Context)>(f: F) {
-    get_driver().transaction(f)
-}
-

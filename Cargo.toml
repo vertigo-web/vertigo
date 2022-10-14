@@ -8,6 +8,7 @@ members = [
 
     "examples/counter",
     "examples/router",
+    "examples/trafficlights",
 
     "lint-project"
 ]

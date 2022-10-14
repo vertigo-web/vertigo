@@ -90,6 +90,7 @@ impl<T: Clone + ToString + From<String> + PartialEq + 'static> PartialEq for Has
 impl<T: Clone + ToString + From<String> + PartialEq + 'static> HashRouter<T> {
     /// Create new HashRouter which sets route value upon hash change in browser bar.
     /// If callback is provided then it is fired instead.
+    #[allow(clippy::new_without_default)]
     pub fn new() -> Self {
         let driver = get_driver();
         let route_value: Value<T> = Value::new(T::from(driver.get_hash_location()));

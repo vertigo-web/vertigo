@@ -12,6 +12,7 @@ fn get_unique_id() -> u64 {
 }
 
 impl CallbackId {
+    #[allow(clippy::new_without_default)]
     pub fn new() -> CallbackId {
         CallbackId(get_unique_id())
     }
@@ -25,9 +26,10 @@ impl CallbackId {
     }
 }
 
+type CallBackFn = dyn Fn(JsValue) -> JsValue + 'static;
 
 pub struct CallbackStore {
-    data: Rc<HashMapMut<CallbackId, Rc<dyn Fn(JsValue) -> JsValue + 'static>>>,
+    data: Rc<HashMapMut<CallbackId, Rc<CallBackFn>>>,
 }
 
 impl CallbackStore {

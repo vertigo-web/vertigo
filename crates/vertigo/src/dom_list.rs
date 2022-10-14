@@ -19,9 +19,9 @@ impl<T: Clone> EmbedDom for ListRendered<T> {
     }
 }
 
-impl<T: Clone> Into<DomNodeFragment> for ListRendered<T> {
-    fn into(self) -> DomNodeFragment {
-        self.comment.into()
+impl<T: Clone> From<ListRendered<T>> for DomNodeFragment {
+    fn from(val: ListRendered<T>) -> Self {
+        val.comment.into()
     }
 }
 

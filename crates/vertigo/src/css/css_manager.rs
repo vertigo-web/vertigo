@@ -13,15 +13,17 @@ use super::{
     transform_css::transform_css,
 };
 
+type InsertFn = dyn Fn(&str, &str);
+
 struct CssManagerInner {
-    insert_css: Box<dyn Fn(&str, &str)>,
+    insert_css: Box<InsertFn>,
     next_id: NextId,
     ids_static: HashMapMut<&'static str, u64>,
     ids_dynamic: HashMapMut<String, u64>,
 }
 
 impl CssManagerInner {
-    pub fn new(insert_css: Box<dyn Fn(&str, &str)>) -> CssManagerInner {
+    pub fn new(insert_css: Box<InsertFn>) -> CssManagerInner {
         CssManagerInner {
             insert_css,
             next_id: NextId::new(),

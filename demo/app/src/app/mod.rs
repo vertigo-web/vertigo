@@ -3,13 +3,13 @@ mod counters;
 mod game_of_life;
 mod github_explorer;
 mod input;
-mod main;
+mod animations;
 mod render;
 mod route;
 mod state;
-pub mod sudoku;
+mod sudoku;
 mod todo;
-mod dropfile;
+mod dropfiles;
 
 pub use render::render;
 pub use state::State;

@@ -16,12 +16,14 @@ css_fn! { css_wrapper, "
 
 #[derive(Clone)]
 pub struct SimpleCounter {
+    /// Description of this counter
     pub label: &'static str,
+    /// Value to be counted
     pub value: Value<u32>,
 }
 
 impl SimpleCounter {
-    pub fn render(self) -> DomElement {
+    pub fn mount(self) -> DomElement {
         let click_up = bind(&self).call(|_, state| {
             state.increment();
         });

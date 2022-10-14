@@ -43,10 +43,6 @@ impl State {
             sum
         }
     }
-
-    pub fn render(&self) -> DomElement {
-        render(self)
-    }
 }
 
 struct Sum {
@@ -54,7 +50,7 @@ struct Sum {
 }
 
 impl Sum {
-    pub fn render(self) -> DomElement {
+    pub fn mount(self) -> DomElement {
         dom! {
             <div>
                 "sum = " {self.sum}
@@ -63,14 +59,20 @@ impl Sum {
     }
 }
 
-pub fn render(state: &State) -> DomElement {
-    dom! {
-        <div>
-            <SimpleCounter label={"counter1 value"} value={&state.counter1} />
-            <SimpleCounter label={"counter2 value"} value={&state.counter2} />
-            <SimpleCounter label={"counter3 value"} value={&state.counter3} />
-            <SimpleCounter label={"counter4 value"} value={&state.counter4} />
-            <Sum sum={&state.sum} />
-        </div>
+pub struct CountersDemo {
+    pub state: State,
+}
+
+impl CountersDemo {
+    pub fn mount(&self) -> DomElement {
+        dom! {
+            <div>
+                <SimpleCounter label="counter1 value" value={&self.state.counter1} />
+                <SimpleCounter label="counter2 value" value={&self.state.counter2} />
+                <SimpleCounter label="counter3 value" value={&self.state.counter3} />
+                <SimpleCounter label="counter4 value" value={&self.state.counter4} />
+                <Sum sum={&self.state.sum} />
+            </div>
+        }
     }
 }

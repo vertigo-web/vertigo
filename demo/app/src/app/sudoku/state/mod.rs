@@ -1,4 +1,4 @@
-use vertigo::{ Value, get_driver, DomElement};
+use vertigo::{Value, get_driver};
 
 use self::{
     number_item::NumberItem,
@@ -51,7 +51,7 @@ pub struct Cell {
     pub show_delete: Value<bool>,
 }
 
-fn creatergid_view(
+fn create_grid_view(
     grid_number: SudokuSquare<SudokuSquare<NumberItem>>,
     grid_possible: SudokuSquare<SudokuSquare<PossibleValues>>,
     grid_possible_last: SudokuSquare<SudokuSquare<PossibleValuesLast>>,
@@ -73,23 +73,19 @@ fn creatergid_view(
 }
 
 #[derive(Clone)]
-pub struct Sudoku {
+pub struct SudokuState {
     pub grid: SudokuSquare<SudokuSquare<Cell>>,
 }
 
-impl Sudoku {
-    pub fn new() -> Sudoku {
+impl SudokuState {
+    pub fn new() -> Self {
         let grid_number = create_grid();
         let grid_possible = create_grid_possible(&grid_number);
         let grid_possible_last = create_grid_possible_last(&grid_number, &grid_possible);
-            
-        Sudoku {
-            grid: creatergid_view(grid_number, grid_possible, grid_possible_last),
-        }
-    }
 
-    pub fn render(&self) -> DomElement {
-        crate::app::sudoku::render::main_render(self)
+        Self {
+            grid: create_grid_view(grid_number, grid_possible, grid_possible_last),
+        }
     }
 
     pub fn clear(&self) {

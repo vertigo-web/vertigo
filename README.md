@@ -18,10 +18,10 @@ Example
 Dependencies:
 
 ```toml
-vertigo = "0.1.0-beta.4"
+vertigo = "0.1.0-beta.5"
 ```
 
-Code:
+Example 1:
 
 ```rust
 use vertigo::{dom, DomElement, Value, bind, start_app};
@@ -50,6 +50,41 @@ pub fn start_application() {
         let count = Value::new(0);
         render(count)
     });
+}
+```
+
+Example 2:
+
+```rust
+use vertigo::{DomElement, Value, dom, css_fn};
+
+pub struct MyMessage {
+    pub message: Value<String>,
+}
+
+impl MyMessage {
+    pub fn mount(self) -> DomElement {
+        dom! {
+            <p>
+                "Message to the world: "
+                { self.message }
+            </p>
+        }
+    }
+}
+
+css_fn! { main_div, "
+    color: darkblue;
+" }
+
+fn render() -> DomElement {
+    let message = Value::new("Hello world!".to_string());
+
+    dom! {
+        <div css={main_div()}>
+            <MyMessage message={message} />
+        </div>
+    }
 }
 ```
 

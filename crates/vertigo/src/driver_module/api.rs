@@ -61,7 +61,7 @@ impl ApiImport {
         ApiImport {
             panic_message,
             fn_dom_access,
-            arguments: Arguments::new(),
+            arguments: Arguments::default(),
         }
     }
 

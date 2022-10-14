@@ -42,6 +42,8 @@ impl FetchMethod {
     }
 }
 
+type Executable = dyn Fn(Pin<Box<dyn Future<Output = ()> + 'static>>);
+
 #[derive(Clone)]
 pub struct DriverInner {
     pub(crate) api: Rc<ApiImport>,
@@ -52,7 +54,7 @@ pub struct DriverInner {
     hashrouter: DriverHashrouter,
     fetch: DriverFetch,
     websocket: DriverWebsocket,
-    spawn_executor: Rc<dyn Fn(Pin<Box<dyn Future<Output = ()> + 'static>>)>,
+    spawn_executor: Rc<Executable>,
     pub(crate) callback_store: Rc<CallbackStore>,
 }
 
