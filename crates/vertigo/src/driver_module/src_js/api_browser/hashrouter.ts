@@ -2,14 +2,32 @@ import { ModuleControllerType } from "../wasm_init";
 import { ExportType } from "../wasm_module";
 
 export class HashRouter {
-    constructor(getWasm: () => ModuleControllerType<ExportType>) {
-        window.addEventListener("hashchange", () => {
-            const params = getWasm().newList();
-            params.push_string(this.get());
-            const ptr = params.saveToBuffer();
+    private getWasm: () => ModuleControllerType<ExportType>;
+    private callback: Map<bigint, () => void>;
 
-            getWasm().exports.hashrouter_hashchange_callback(ptr);
-        }, false);
+    constructor(getWasm: () => ModuleControllerType<ExportType>) {
+        this.getWasm = getWasm;
+        this.callback = new Map();
+    }
+
+    public add = (callback_id: bigint) => {
+        const callback = () => {
+            this.getWasm().wasm_callback(callback_id, this.get());
+        };
+
+        window.addEventListener("hashchange", callback);
+        this.callback.set(callback_id, callback);
+    }
+
+    public remove = (callback_id: bigint) => {
+        const callback = this.callback.get(callback_id);
+        if (callback === undefined) {
+            console.error(`HashRouter - The callback with id is missing = ${callback_id}`);
+            return;
+        }
+
+        this.callback.delete(callback_id);
+        window.removeEventListener('hashchange', callback);
     }
 
     public push = (new_hash: string) => {

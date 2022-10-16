@@ -1,6 +1,8 @@
-use crate::InstantType;
+use std::{rc::Rc, future::Future, pin::Pin, collections::HashMap};
 
-use super::{js_value::{Arguments, js_value_struct::JsValue}, DomAccess};
+use crate::{InstantType, DropResource, struct_mut::ValueMut, transaction, get_driver, FetchResult, FutureBox, FetchMethod};
+
+use super::{js_value::{Arguments, js_value_struct::JsValue}, DomAccess, callbacks::CallbackStore, utils::json::JsonMapBuilder};
 
 enum ConsoleLogLevel {
     Debug,
@@ -42,11 +44,13 @@ impl PanicMessage {
     }
 }
 
+#[derive(Clone)]
 pub struct ApiImport {
     pub panic_message: PanicMessage,
     pub fn_dom_access: fn(ptr: u32, size: u32) -> u32,
 
-    pub arguments: Arguments,
+    pub(crate) arguments: Arguments,
+    pub(crate) callback_store: CallbackStore,
 }
 
 impl ApiImport {
@@ -62,6 +66,7 @@ impl ApiImport {
             panic_message,
             fn_dom_access,
             arguments: Arguments::default(),
+            callback_store: CallbackStore::new(),
         }
     }
 
@@ -131,61 +136,94 @@ impl ApiImport {
             .exec();
     }
 
-    pub fn interval_set(&self, duration: u32, callback_id: u32) -> i32 {
+    pub fn interval_set<F: Fn() + 'static>(&self, duration: u32, callback: F) -> DropResource {
+        let (callback_id, drop_callback) = self.callback_store.register(move |_| {
+            callback();
+            JsValue::Undefined
+        });
+
         let result = self.dom_access()
             .api()
             .get("interval")
             .call("interval_set", vec!(
                 JsValue::U32(duration),
-                JsValue::U32(callback_id),
+                JsValue::U64(callback_id.as_u64()),
             ))
             .fetch();
 
-        if let JsValue::I32(timer_id) = result {
+        let timer_id = if let JsValue::I32(timer_id) = result {
             timer_id
         } else {
-            log::error!("interval_set -> expected u32 -> result={result:?}");
+            log::error!("interval_set -> expected i32 -> result={result:?}");
             0
-        }
+        };
+
+        let api = self.clone();
+
+        DropResource::new(move || {
+            api.dom_access()
+                .api()
+                .get("interval")
+                .call("interval_clear", vec!(
+                    JsValue::I32(timer_id),
+                ))
+                .exec();
+
+            drop_callback.off();
+        })
     }
 
-    pub fn interval_clear(&self, timer_id: i32) {
-        self.dom_access()
-            .api()
-            .get("interval")
-            .call("interval_clear", vec!(
-                JsValue::I32(timer_id),
-            ))
-            .exec();
-    }
+    pub fn timeout_set<F: Fn() + 'static>(&self, duration: u32, callback: F) -> DropResource {
+        let (callback_id, drop_callback) = self.callback_store.register(move |_| {
+            callback();
+            JsValue::Undefined
+        });
 
-    pub fn timeout_set(&self, duration: u32, callback_id: u32) -> i32 {
         let result = self.dom_access()
             .api()
             .get("interval")
             .call("timeout_set", vec!(
                 JsValue::U32(duration),
-                JsValue::U32(callback_id),
+                JsValue::U64(callback_id.as_u64()),
             ))
             .fetch();
 
-        if let JsValue::I32(timer_id) = result {
+        let timer_id = if let JsValue::I32(timer_id) = result {
             timer_id
         } else {
             log::error!("timeout_set -> expected u32 -> result={result:?}");
             0
-        }
+        };
+
+        let api = self.clone();
+
+        DropResource::new(move || {
+            api.dom_access()
+                .api()
+                .get("interval")
+                .call("interval_clear", vec!(
+                    JsValue::I32(timer_id),
+                ))
+                .exec();
+
+            drop_callback.off();
+        })
     }
 
-    #[allow(dead_code)]
-    pub fn timeout_clear(&self, timer_id: i32) {
-        self.dom_access()
-            .api()
-            .get("interval")
-            .call("interval_clear", vec!(
-                JsValue::I32(timer_id),
-            ))
-            .exec();
+    pub fn set_timeout_and_detach<F: Fn() + 'static>(&self, duration: u32, callback: F) {
+        let drop_box: Rc<ValueMut<Option<DropResource>>> = Rc::new(ValueMut::new(None));
+
+        let callback_with_drop = {
+            let drop_box = drop_box.clone();
+
+            move || {
+                callback();
+                drop_box.set(None);
+            }
+        };
+
+        let drop = self.timeout_set(duration, callback_with_drop);
+        drop_box.set(Some(drop));
     }
 
     pub fn instant_now(&self) -> InstantType {
@@ -203,7 +241,7 @@ impl ApiImport {
         }
     }
 
-    pub fn hashrouter_get_hash_location(&self) -> String {
+    pub fn get_hash_location(&self) -> String {
         let result = self.dom_access()
             .api()
             .get("hashRouter")
@@ -218,7 +256,7 @@ impl ApiImport {
         }
     }
 
-    pub fn hashrouter_push_hash_location(&self, new_hash: &str) {
+    pub fn push_hash_location(&self, new_hash: &str) {
         self.dom_access()
             .api()
             .get("hashRouter")
@@ -228,20 +266,101 @@ impl ApiImport {
             .exec();
     }
 
-    pub fn fetch_send_request(
+    pub fn on_hash_route_change<F: Fn(String) + 'static>(&self, callback: F) -> DropResource {
+        let (callback_id, drop_callback) = self.callback_store.register(move |data| {
+            let new_hash = if let JsValue::String(new_hash) = data {
+                new_hash
+            } else {
+                log::error!("on_hash_route_change -> string was expected -> {data:?}");
+                String::from("")
+            };
+
+            transaction(|_| {
+                callback(new_hash);
+            });
+
+            JsValue::Undefined
+        });
+
+        self.dom_access()
+            .api()
+            .get("hashRouter")
+            .call("add", vec!(
+                JsValue::U64(callback_id.as_u64()),
+            ))
+            .exec();
+            
+
+        let api = self.clone();
+
+        DropResource::new(move || {
+            api.dom_access()
+                .api()
+                .get("hashRouter")
+                .call("remove", vec!(
+                    JsValue::U64(callback_id.as_u64()),
+                ))
+                .exec();
+                
+            drop_callback.off();
+        })
+    }
+
+    pub fn fetch(
         &self,
-        request_id: u32,
-        method: String,
+        method: FetchMethod,
         url: String,
-        headers: String,
+        headers: Option<HashMap<String, String>>,
         body: Option<String>,
-    ) {
+    ) -> Pin<Box<dyn Future<Output = FetchResult> + 'static>> {
+        let (sender, receiver) = FutureBox::new();
+
+        let callback_id = self.callback_store.register_once(move |params| {
+            let params = params
+                .convert(|mut params| {
+                    let success = params.get_bool("success")?;
+                    let status = params.get_u32("status")?;
+                    let response = params.get_string("response")?;
+                    params.expect_no_more()?;
+                    Ok((success, status, response))
+                });
+    
+            match params {
+                Ok((success, status, response)) => {
+                    get_driver().transaction(|_| {
+                        let response = match success {
+                            true => Ok((status, response)),
+                            false => Err(response),
+                        };
+                        sender.publish(response);
+                    });
+                },
+                Err(error) => {
+                    log::error!("export_fetch_callback -> params decode error -> {error}");
+                }
+            }
+
+            JsValue::Undefined
+        });
+
+        let headers = {
+            let mut headers_builder = JsonMapBuilder::new();
+
+            if let Some(headers) = headers {
+                for (key, value) in headers.into_iter() {
+                    headers_builder.set_string(&key, &value);
+                }
+            }
+
+            headers_builder.build()
+        };
+
         self.dom_access()
             .api()
             .get("fetch")
             .call("fetch_send_request", vec!(
-                JsValue::U32(request_id),
-                JsValue::String(method),
+                JsValue::U64(callback_id.as_u64()),
+                JsValue::String(method.to_str()),
                 JsValue::String(url),
                 JsValue::String(headers),
                 match body {
@@ -250,35 +369,37 @@ impl ApiImport {
                 },
             ))
             .exec();
+        
+        Box::pin(receiver)
     }
 
-    pub fn websocket_register_callback(&self, host: &str, callback_id: u32) {
+    pub fn websocket_register_callback(&self, host: &str, callback_id: u64) {
         self.dom_access()
             .api()
             .get("websocket")
             .call("websocket_register_callback", vec!(
                 JsValue::String(host.to_string()),
-                JsValue::U32(callback_id)
+                JsValue::U64(callback_id)
             ))
             .exec();
     }
 
-    pub fn websocket_unregister_callback(&self, callback_id: u32) {
+    pub fn websocket_unregister_callback(&self, callback_id: u64) {
         self.dom_access()
             .api()
             .get("websocket")
             .call("websocket_unregister_callback", vec!(
-                JsValue::U32(callback_id)
+                JsValue::U64(callback_id)
             ))
             .exec();
     }
 
-    pub fn websocket_send_message(&self, callback_id: u32, message: &str) {
+    pub fn websocket_send_message(&self, callback_id: u64, message: &str) {
         self.dom_access()
             .api()
             .get("websocket")
             .call("websocket_send_message", vec!(
-                JsValue::U32(callback_id),
+                JsValue::U64(callback_id),
                 JsValue::String(message.to_string())
             ))
             .exec();

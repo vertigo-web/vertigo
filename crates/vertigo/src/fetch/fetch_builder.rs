@@ -1,22 +1,21 @@
-use std::collections::HashMap;
+use std::{collections::HashMap, rc::Rc};
 
 use crate::{
-    driver_module::driver::{FetchMethod, FetchResult},
-    driver_module::{modules::fetch::DriverFetch},
+    driver_module::driver::{FetchMethod, FetchResult}, ApiImport,
 };
 
 /// Builder for simple requests.
 pub struct FetchBuilder {
-    driver_fetch: DriverFetch,
+    api: Rc<ApiImport>,
     url: String,
     headers: Option<HashMap<String, String>>,
     body: Option<String>,
 }
 
 impl FetchBuilder {
-    pub fn new(driver_fetch: DriverFetch, url: String) -> FetchBuilder {
+    pub fn new(api: Rc<ApiImport>, url: String) -> FetchBuilder {
         FetchBuilder {
-            driver_fetch,
+            api,
             url,
             headers: None,
             body: None,
@@ -25,9 +24,9 @@ impl FetchBuilder {
 
     #[must_use]
     pub fn set_headres(self, headers: HashMap<String, String>) -> Self {
-        let FetchBuilder { driver_fetch, url, body, .. } = self;
+        let FetchBuilder { api, url, body, .. } = self;
         FetchBuilder {
-            driver_fetch,
+            api,
             url,
             headers: Some(headers),
             body,
@@ -36,9 +35,9 @@ impl FetchBuilder {
 
     #[must_use]
     pub fn set_body(self, body: String) -> Self {
-        let FetchBuilder { driver_fetch, url, headers, .. } = self;
+        let FetchBuilder { api, url, headers, .. } = self;
         FetchBuilder {
-            driver_fetch,
+            api,
             url,
             headers,
             body: Some(body),
@@ -46,7 +45,7 @@ impl FetchBuilder {
     }
 
     async fn run(self, method: FetchMethod) -> FetchResult {
-        let fut = self.driver_fetch.fetch(method, self.url, self.headers, self.body);
+        let fut = self.api.fetch(method, self.url, self.headers, self.body);
         fut.await
     }
 

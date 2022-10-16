@@ -1,5 +1,3 @@
-use crate::get_driver;
-
 /// Css chunk, represented either as static or dynamic string.
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub enum CssGroup {
@@ -63,9 +61,5 @@ impl Css {
         }
 
         self
-    }
-
-    pub fn convert_to_string(&self) -> String {
-        get_driver().get_class_name(self)
     }
 }

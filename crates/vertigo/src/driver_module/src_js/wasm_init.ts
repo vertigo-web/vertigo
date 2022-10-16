@@ -1,15 +1,17 @@
-import { argumentsDecode, JsValueType, JsValueBuilder, saveToBuffer } from './arguments';
+import { argumentsDecode, JsValueType, saveToBuffer } from './arguments';
 
 export interface BaseExportType {
     alloc: (size: number) => number,
+    free: (pointer: number) => void,
+    wasm_callback: (callback_id: bigint, value_ptr: number) => bigint,   //result => pointer: 32bit, size: 32bit
 };
 
 export interface ModuleControllerType<ExportType extends BaseExportType> {
     exports: ExportType,
     decodeArguments: (ptr: number, size: number) => JsValueType,
-    newList: () => JsValueBuilder,
     getUint8Memory: () => Uint8Array,
-    saveJsValue: (value: JsValueType) => number,
+    wasm_callback: (callback_id: bigint, params: JsValueType) => JsValueType,
+    valueSaveToBuffer: (value: JsValueType) => number,
 }
 
 const fetchModule = async (wasmBinPath: string, imports: Record<string, WebAssembly.ModuleImports>): Promise<WebAssembly.WebAssemblyInstantiatedSource> => {
@@ -56,15 +58,34 @@ export const wasmInit = async <ImportType extends Record<string, Function>, Expo
 
     const decodeArguments = (ptr: number, size: number) => argumentsDecode(getUint8Memory, ptr, size);
 
-    const newList = (): JsValueBuilder => new JsValueBuilder(getUint8Memory, exports.alloc);
+    const valueSaveToBuffer = (value: JsValueType): number => saveToBuffer(getUint8Memory, exports.alloc, value);
 
-    const saveJsValue = (value: JsValueType): number => saveToBuffer(getUint8Memory, exports.alloc, value);
+    const wasm_callback = (callback_id: bigint, value: JsValueType): JsValueType => {
+        const value_ptr = valueSaveToBuffer(value);
+        let result_ptr_and_size = exports.wasm_callback(callback_id, value_ptr);
+
+        if (result_ptr_and_size === 0n) {
+            return undefined;
+        }
+
+        const size = result_ptr_and_size % (2n ** 32n);
+        const ptr = result_ptr_and_size >> 32n;
+
+        if (ptr >= 2n ** 32n) {
+            console.error(`Overflow of a variable with a pointer result_ptr_and_size=${result_ptr_and_size}`);
+        }
+
+        const response = decodeArguments(Number(ptr), Number(size));
+        exports.free(Number(ptr));
+
+        return response;
+    };
 
     return {
         exports,
         decodeArguments,
         getUint8Memory,
-        newList,
-        saveJsValue
+        wasm_callback,
+        valueSaveToBuffer,
     };
 };

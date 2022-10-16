@@ -139,7 +139,7 @@ impl DomElement {
     pub fn css(self, css: CssValue) -> Self {
         match css {
             CssValue::Css(css) => {
-                let class_name = get_driver().get_class_name(&css);
+                let class_name = get_driver().inner.css_manager.get_class_name(&css);
                 self.driver.inner.dom.set_attr(self.id_dom, "class", &class_name);
             },
             CssValue::Computed(css) => {
@@ -147,7 +147,7 @@ impl DomElement {
                 let driver = self.driver.clone();
 
                 self.subscribe(css, move |css| {
-                    let class_name = driver.get_class_name(&css);
+                    let class_name = driver.inner.css_manager.get_class_name(&css);
                     driver.inner.dom.set_attr(id_dom, "class", &class_name);
                 });
             }
@@ -198,13 +198,12 @@ impl DomElement {
     }
 
     pub fn on_click(self, on_click: impl Fn() + 'static) -> Self {
-        let (callback_id, drop) = self.driver.inner.callback_store.register(move |_data| {
+        let (callback_id, drop) = self.driver.inner.api.callback_store.register(move |_data| {
             on_click();
             JsValue::Undefined
         });
 
         let drop_event = DropResource::new({
-            let callback_id = callback_id.clone();
             let driver = self.driver.clone();
             move || {
                 driver.inner.dom.callback_remove(self.id_dom, "mousedown", callback_id);
@@ -219,13 +218,12 @@ impl DomElement {
     }
 
     pub fn on_mouse_enter(self, on_mouse_enter: impl Fn() + 'static) -> Self {
-        let (callback_id, drop) = self.driver.inner.callback_store.register(move |_data| {
+        let (callback_id, drop) = self.driver.inner.api.callback_store.register(move |_data| {
             on_mouse_enter();
             JsValue::Undefined
         });
 
         let drop_event = DropResource::new({
-            let callback_id = callback_id.clone();
             let driver = self.driver.clone();
             move || {
                 driver.inner.dom.callback_remove(self.id_dom, "mouseenter", callback_id);
@@ -240,13 +238,12 @@ impl DomElement {
     }
 
     pub fn on_mouse_leave(self, on_mouse_leave: impl Fn() + 'static) -> Self {
-        let (callback_id, drop) = self.driver.inner.callback_store.register(move |_data| {
+        let (callback_id, drop) = self.driver.inner.api.callback_store.register(move |_data| {
             on_mouse_leave();
             JsValue::Undefined
         });
 
         let drop_event = DropResource::new({
-            let callback_id = callback_id.clone();
             let driver = self.driver.clone();
             move || {
                 driver.inner.dom.callback_remove(self.id_dom, "mouseleave", callback_id);
@@ -261,7 +258,7 @@ impl DomElement {
     }
 
     pub fn on_input(self, on_input: impl Fn(String) + 'static) -> Self {
-        let (callback_id, drop) = self.driver.inner.callback_store.register(move |data| {
+        let (callback_id, drop) = self.driver.inner.api.callback_store.register(move |data| {
             if let JsValue::String(text) = data {
                 on_input(text);
             } else {
@@ -272,7 +269,6 @@ impl DomElement {
         });
 
         let drop_event = DropResource::new({
-            let callback_id = callback_id.clone();
             let driver = self.driver.clone();
             move || {
                 driver.inner.dom.callback_remove(self.id_dom, "input", callback_id);
@@ -287,7 +283,7 @@ impl DomElement {
     }
 
     pub fn on_key_down(self, on_key_down: impl Fn(KeyDownEvent) -> bool + 'static) -> Self {
-        let (callback_id, drop) = self.driver.inner.callback_store.register(move |data| {
+        let (callback_id, drop) = self.driver.inner.api.callback_store.register(move |data| {
             match get_key_down_event(data) {
                 Ok(event) => {
                     let prevent_default = on_key_down(event);
@@ -305,7 +301,6 @@ impl DomElement {
         });
 
         let drop_event = DropResource::new({
-            let callback_id = callback_id.clone();
             let driver = self.driver.clone();
             move || {
                 driver.inner.dom.callback_remove(self.id_dom, "keydown", callback_id);
@@ -320,17 +315,16 @@ impl DomElement {
     }
 
     pub fn on_dropfile(self, on_dropfile: impl Fn(DropFileEvent) + 'static) -> Self {
-        let (callback_id, drop) = self.driver.inner.callback_store.register(move |data| {
+        let (callback_id, drop) = self.driver.inner.api.callback_store.register(move |data| {
             let params = data
-                .convert(|mut params| {
+                .convert(|params| {
 
-                    let files = params.get_list("files", |mut item| {
+                    let files = params.map("drop file", |mut item| {
                         let name = item.get_string("name")?;
                         let data = item.get_buffer("data")?;
 
                         Ok(DropFileItem::new(name, data))
                     })?;
-                    params.expect_no_more()?;
 
                     Ok(DropFileEvent::new(files))
                 });
@@ -348,7 +342,6 @@ impl DomElement {
         });
 
         let drop_event = DropResource::new({
-            let callback_id = callback_id.clone();
             let driver = self.driver.clone();
             move || {
                 driver.inner.dom.callback_remove(self.id_dom, "drop", callback_id);
@@ -363,7 +356,7 @@ impl DomElement {
     }
 
     pub fn hook_key_down(self, on_hook_key_down: impl Fn(KeyDownEvent) -> bool + 'static) -> Self {
-        let (callback_id, drop) = self.driver.inner.callback_store.register(move |data| {
+        let (callback_id, drop) = self.driver.inner.api.callback_store.register(move |data| {
             match get_key_down_event(data) {
                 Ok(event) => {
                     let prevent_default = on_hook_key_down(event);
@@ -381,7 +374,6 @@ impl DomElement {
         });
 
         let drop_event = DropResource::new({
-            let callback_id = callback_id.clone();
             let driver = self.driver.clone();
             move || {
                 driver.inner.dom.callback_remove(self.id_dom, "hook_keydown", callback_id);

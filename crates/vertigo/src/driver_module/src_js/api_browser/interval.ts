@@ -8,10 +8,10 @@ export class Interval {
         this.getWasm = getWasm;
     }
 
-    public interval_set = (duration: number, callback_id: number): number => {
+    public interval_set = (duration: number, callback_id: bigint): number => {
         const timer_id = setInterval(() => {
-            this.getWasm().exports.interval_run_callback(callback_id);
-        }, Number(duration));
+            this.getWasm().wasm_callback(callback_id, undefined);
+        }, duration);
 
         return timer_id;
     }
@@ -20,9 +20,9 @@ export class Interval {
         clearInterval(timer_id);
     }
 
-    timeout_set = (duration: number, callback_id: number): number => {
+    timeout_set = (duration: number, callback_id: bigint): number => {
         const timeout_id = setTimeout(() => {
-            this.getWasm().exports.timeout_run_callback(callback_id);
+            this.getWasm().wasm_callback(callback_id, undefined);
         }, duration);
 
         return timeout_id;

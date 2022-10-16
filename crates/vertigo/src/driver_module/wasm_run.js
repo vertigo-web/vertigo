@@ -309,72 +309,15 @@ const saveToBufferItem = (value, cursor) => {
     return assertNever();
 };
 const saveToBuffer = (getUint8Memory, alloc, value) => {
+    if (value === undefined) {
+        return 0;
+    }
     const size = getSize(value);
     const ptr = alloc(size);
     const cursor = new BufferCursor(getUint8Memory, ptr, size);
     saveToBufferItem(value, cursor);
     return ptr;
 };
-class JsValueBuilder {
-    getUint8Memory;
-    alloc;
-    params;
-    constructor(getUint8Memory, alloc) {
-        this.getUint8Memory = getUint8Memory;
-        this.alloc = alloc;
-        this.params = [];
-    }
-    push_string(value) {
-        this.params.push(value);
-    }
-    push_buffer(buf) {
-        this.params.push(buf);
-    }
-    push_u32(value) {
-        this.params.push({
-            type: 'u32',
-            value
-        });
-    }
-    push_i32(value) {
-        this.params.push({
-            type: 'i32',
-            value
-        });
-    }
-    push_u64(value) {
-        this.params.push({
-            type: 'u64',
-            value
-        });
-    }
-    push_i64(value) {
-        this.params.push({
-            type: 'i64',
-            value
-        });
-    }
-    push_null() {
-        this.params.push(null);
-    }
-    push_bool(value) {
-        this.params.push(value);
-    }
-    push_list(build) {
-        const sub_params = new JsValueBuilder(this.getUint8Memory, this.alloc);
-        build(sub_params);
-        this.params.push(sub_params.params);
-    }
-    saveToBuffer() {
-        return saveToBuffer(this.getUint8Memory, this.alloc, this.params);
-    }
-    saveJsValue(value) {
-        return saveToBuffer(this.getUint8Memory, this.alloc, value);
-    }
-    debug() {
-        console.info('debug budowania listy', this.params);
-    }
-}
 const convertFromJsValue = (value) => {
     if (value === true) {
         return true;
@@ -453,7 +396,7 @@ const fetchModule = async (wasmBinPath, imports) => {
             return module;
         }
         catch (err) {
-            console.warn("`WebAssembly.instantiateStreaming` failed because your server does not serve wasm with `application/wasm` MIME type. Falling back to `WebAssembly.instantiate` which is slower. Original error:\n", err);
+            console.warn("`WebAssembly.instantiateStreaming` failed. This could happen if your server does not serve wasm with `application/wasm` MIME type, but check the original error too. Falling back to `WebAssembly.instantiate` which is slower. Original error:\n", err);
         }
     }
     console.info('fetchModule by WebAssembly.instantiate');
@@ -480,14 +423,28 @@ const wasmInit = async (wasmBinPath, imports) => {
     //@ts-expect-error
     const exports = module_instance.instance.exports;
     const decodeArguments = (ptr, size) => argumentsDecode(getUint8Memory, ptr, size);
-    const newList = () => new JsValueBuilder(getUint8Memory, exports.alloc);
-    const saveJsValue = (value) => saveToBuffer(getUint8Memory, exports.alloc, value);
+    const valueSaveToBuffer = (value) => saveToBuffer(getUint8Memory, exports.alloc, value);
+    const wasm_callback = (callback_id, value) => {
+        const value_ptr = valueSaveToBuffer(value);
+        let result_ptr_and_size = exports.wasm_callback(callback_id, value_ptr);
+        if (result_ptr_and_size === 0n) {
+            return undefined;
+        }
+        const size = result_ptr_and_size % (2n ** 32n);
+        const ptr = result_ptr_and_size >> 32n;
+        if (ptr >= 2n ** 32n) {
+            console.error(`Overflow of a variable with a pointer result_ptr_and_size=${result_ptr_and_size}`);
+        }
+        const response = decodeArguments(Number(ptr), Number(size));
+        exports.free(Number(ptr));
+        return response;
+    };
     return {
         exports,
         decodeArguments,
         getUint8Memory,
-        newList,
-        saveJsValue
+        wasm_callback,
+        valueSaveToBuffer,
     };
 };
 
@@ -529,8 +486,8 @@ class Interval {
     }
     interval_set = (duration, callback_id) => {
         const timer_id = setInterval(() => {
-            this.getWasm().exports.interval_run_callback(callback_id);
-        }, Number(duration));
+            this.getWasm().wasm_callback(callback_id, undefined);
+        }, duration);
         return timer_id;
     };
     interval_clear = (timer_id) => {
@@ -538,7 +495,7 @@ class Interval {
     };
     timeout_set = (duration, callback_id) => {
         const timeout_id = setTimeout(() => {
-            this.getWasm().exports.timeout_run_callback(callback_id);
+            this.getWasm().wasm_callback(callback_id, undefined);
         }, duration);
         return timeout_id;
     };
@@ -548,14 +505,28 @@ class Interval {
 }
 
 class HashRouter {
+    getWasm;
+    callback;
     constructor(getWasm) {
-        window.addEventListener("hashchange", () => {
-            const params = getWasm().newList();
-            params.push_string(this.get());
-            const ptr = params.saveToBuffer();
-            getWasm().exports.hashrouter_hashchange_callback(ptr);
-        }, false);
+        this.getWasm = getWasm;
+        this.callback = new Map();
     }
+    add = (callback_id) => {
+        const callback = () => {
+            this.getWasm().wasm_callback(callback_id, this.get());
+        };
+        window.addEventListener("hashchange", callback);
+        this.callback.set(callback_id, callback);
+    };
+    remove = (callback_id) => {
+        const callback = this.callback.get(callback_id);
+        if (callback === undefined) {
+            console.error(`HashRouter - The callback with id is missing = ${callback_id}`);
+            return;
+        }
+        this.callback.delete(callback_id);
+        window.removeEventListener('hashchange', callback);
+    };
     push = (new_hash) => {
         location.hash = new_hash;
     };
@@ -569,7 +540,7 @@ class Fetch {
     constructor(getWasm) {
         this.getWasm = getWasm;
     }
-    fetch_send_request = (request_id, method, url, headers, body) => {
+    fetch_send_request = (callback_id, method, url, headers, body) => {
         const wasm = this.getWasm();
         const headers_record = JSON.parse(headers);
         fetch(url, {
@@ -579,35 +550,29 @@ class Fetch {
         })
             .then((response) => response.text()
             .then((responseText) => {
-            const new_params = this.getWasm().newList();
-            new_params.push_u32(request_id); //request_id
-            new_params.push_bool(true); //ok
-            new_params.push_u32(response.status); //http code
-            new_params.push_string(responseText); //body
-            let params_id = new_params.saveToBuffer();
-            wasm.exports.fetch_callback(params_id);
+            wasm.wasm_callback(callback_id, [
+                true,
+                { type: 'u32', value: response.status },
+                responseText //body
+            ]);
         })
             .catch((err) => {
             console.error('fetch error (2)', err);
             const responseMessage = new String(err).toString();
-            const new_params = this.getWasm().newList();
-            new_params.push_u32(request_id); //request_id
-            new_params.push_bool(false); //ok
-            new_params.push_u32(response.status); //http code
-            new_params.push_string(responseMessage); //body
-            let params_id = new_params.saveToBuffer();
-            wasm.exports.fetch_callback(params_id);
+            wasm.wasm_callback(callback_id, [
+                false,
+                { type: 'u32', value: response.status },
+                responseMessage //body
+            ]);
         }))
             .catch((err) => {
             console.error('fetch error (1)', err);
             const responseMessage = new String(err).toString();
-            const new_params = this.getWasm().newList();
-            new_params.push_u32(request_id); //request_id
-            new_params.push_bool(false); //ok
-            new_params.push_u32(0); //http code
-            new_params.push_string(responseMessage); //body
-            let params_id = new_params.saveToBuffer();
-            wasm.exports.fetch_callback(params_id);
+            wasm.wasm_callback(callback_id, [
+                false,
+                { type: 'u32', value: 0 },
+                responseMessage //body
+            ]);
         });
     };
 }
@@ -853,20 +818,16 @@ class DriverWebsocket {
             }
             if (message.type === 'socket') {
                 this.socket.set(callback_id, message.socket);
-                wasm.exports.websocket_callback_socket(callback_id);
+                wasm.wasm_callback(callback_id, true);
                 return;
             }
             if (message.type === 'message') {
-                const new_params = wasm.newList();
-                new_params.push_u32(callback_id);
-                new_params.push_string(message.message);
-                const new_params_id = new_params.saveToBuffer();
-                wasm.exports.websocket_callback_message(new_params_id);
+                wasm.wasm_callback(callback_id, message.message);
                 return;
             }
             if (message.type === 'close') {
-                wasm.exports.websocket_callback_close(callback_id);
                 this.socket.delete(callback_id);
+                wasm.wasm_callback(callback_id, false);
                 return;
             }
             return assertNeverMessage(message);
@@ -1065,40 +1026,25 @@ class DriverDom {
         style.appendChild(content);
         document.head.appendChild(style);
     }
-    export_dom_callback(callback_id, value_ptr) {
-        let result_ptr_and_size = this.getWasm().exports.export_dom_callback(callback_id, value_ptr);
-        if (result_ptr_and_size === 0n) {
-            return undefined;
-        }
-        const size = result_ptr_and_size % (2n ** 32n);
-        const ptr = result_ptr_and_size >> 32n;
-        if (ptr >= 2n ** 32n) {
-            console.error(`Overflow of a variable with a pointer result_ptr_and_size=${result_ptr_and_size}`);
-        }
-        const response = this.getWasm().decodeArguments(Number(ptr), Number(size));
-        this.getWasm().exports.free(Number(ptr));
-        return response;
-    }
     callback_mousedown(event, callback_id) {
         event.preventDefault();
-        this.export_dom_callback(callback_id, 0);
+        this.getWasm().wasm_callback(callback_id, undefined);
     }
     callback_input(event, callback_id) {
         const target = event.target;
         if (target instanceof HTMLInputElement || target instanceof HTMLTextAreaElement) {
-            const params = this.getWasm().saveJsValue(target.value);
-            this.export_dom_callback(callback_id, params);
+            this.getWasm().wasm_callback(callback_id, target.value);
             return;
         }
         console.warn('event input ignore', target);
     }
     callback_mouseenter(_event, callback_id) {
         // event.preventDefault();
-        this.export_dom_callback(callback_id, 0);
+        this.getWasm().wasm_callback(callback_id, undefined);
     }
     callback_mouseleave(_event, callback_id) {
         // event.preventDefault();
-        this.export_dom_callback(callback_id, 0);
+        this.getWasm().wasm_callback(callback_id, undefined);
     }
     callback_drop(event, callback_id) {
         event.preventDefault();
@@ -1130,17 +1076,14 @@ class DriverDom {
                 }
                 if (files.length) {
                     Promise.all(files).then((files) => {
-                        const params = this.getWasm().newList();
-                        params.push_list((params_files) => {
-                            for (const file of files) {
-                                params_files.push_list((params_details) => {
-                                    params_details.push_string(file.name);
-                                    params_details.push_buffer(file.data);
-                                });
-                            }
-                        });
-                        const params_ptr = params.saveToBuffer();
-                        this.export_dom_callback(callback_id, params_ptr);
+                        const params = [];
+                        for (const file of files) {
+                            params.push([
+                                file.name,
+                                file.data,
+                            ]);
+                        }
+                        this.getWasm().wasm_callback(callback_id, params);
                     }).catch((error) => {
                         console.error('callback_drop -> promise.all -> ', error);
                     });
@@ -1156,15 +1099,14 @@ class DriverDom {
     }
     callback_keydown(event, callback_id) {
         if (event instanceof KeyboardEvent) {
-            const new_params = this.getWasm().newList();
-            new_params.push_string(event.key);
-            new_params.push_string(event.code);
-            new_params.push_bool(event.altKey);
-            new_params.push_bool(event.ctrlKey);
-            new_params.push_bool(event.shiftKey);
-            new_params.push_bool(event.metaKey);
-            const params_ptr = new_params.saveToBuffer();
-            const result = this.export_dom_callback(callback_id, params_ptr);
+            const result = this.getWasm().wasm_callback(callback_id, [
+                event.key,
+                event.code,
+                event.altKey,
+                event.ctrlKey,
+                event.shiftKey,
+                event.metaKey
+            ]);
             if (result === true) {
                 event.preventDefault();
                 event.stopPropagation();
@@ -1539,7 +1481,7 @@ class WasmModule {
                             }
                             wsk = newWsk;
                         }
-                        return getWasm().newList().saveJsValue(wsk.toValue());
+                        return getWasm().valueSaveToBuffer(wsk.toValue());
                     }
                     console.error('dom_access - wrong parameters', args);
                     return 0;

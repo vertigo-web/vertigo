@@ -1,6 +1,6 @@
-use std::collections::HashMap;
+use std::{collections::HashMap, rc::Rc};
 
-use crate::{driver_module::modules::fetch::DriverFetch, FetchBuilder};
+use crate::{FetchBuilder, ApiImport};
 
 use super::resource::Resource;
 
@@ -37,7 +37,7 @@ pub trait ListRequestTrait: Sized {
 pub enum RequestBuilder {
     ErrorInput(String),
     Data {
-        driver_fetch: DriverFetch,
+        api: Rc<ApiImport>,
         url: String,
         headers: Option<HashMap<String, String>>,
         body: Option<String>,
@@ -45,9 +45,9 @@ pub enum RequestBuilder {
 }
 
 impl RequestBuilder {
-    pub fn new(driver_fetch: &DriverFetch, url: impl Into<String>) -> RequestBuilder {
+    pub fn new(api: &Rc<ApiImport>, url: impl Into<String>) -> RequestBuilder {
         RequestBuilder::Data {
-            driver_fetch: driver_fetch.clone(),
+            api: api.clone(),
             url: url.into(),
             headers: None,
             body: None,
@@ -58,9 +58,9 @@ impl RequestBuilder {
     pub fn body(self, body: String) -> RequestBuilder {
         match self {
             RequestBuilder::ErrorInput(message) => RequestBuilder::ErrorInput(message),
-            RequestBuilder::Data { driver_fetch, url, headers, .. } =>
+            RequestBuilder::Data { api: driver_fetch, url, headers, .. } =>
                 RequestBuilder::Data {
-                    driver_fetch,
+                    api: driver_fetch,
                     url,
                     headers,
                     body: Some(body),
@@ -79,15 +79,15 @@ impl RequestBuilder {
         let name: String = name.into();
         let value: String = value.into();
 
-        if let RequestBuilder::Data { headers, driver_fetch, url, body} = self {
+        if let RequestBuilder::Data { headers, api: driver_fetch, url, body} = self {
             if let Some(mut headers) = headers {
                 headers.insert(name, value);
-                return RequestBuilder::Data { headers: Some(headers), driver_fetch, url, body };
+                return RequestBuilder::Data { headers: Some(headers), api: driver_fetch, url, body };
             }
 
             let mut new_headers = HashMap::new();
             new_headers.insert(name, value);
-            return RequestBuilder::Data { headers: Some(new_headers), driver_fetch, url, body };
+            return RequestBuilder::Data { headers: Some(new_headers), api: driver_fetch, url, body };
         }
 
         self
@@ -107,8 +107,8 @@ impl RequestBuilder {
     pub fn headers(self, headers: HashMap<String, String>) -> RequestBuilder {
         match self {
             RequestBuilder::ErrorInput(message) => RequestBuilder::ErrorInput(message),
-            RequestBuilder::Data { driver_fetch, url, body, .. } => RequestBuilder::Data {
-                driver_fetch,
+            RequestBuilder::Data { api: driver_fetch, url, body, .. } => RequestBuilder::Data {
+                api: driver_fetch,
                 url,
                 headers: Some(headers),
                 body,
@@ -119,7 +119,7 @@ impl RequestBuilder {
     async fn call(self, method: Method) -> RequestResponse {
         let (driver_fetch, url, headers, body) = match self {
             RequestBuilder::ErrorInput(message) => return RequestResponse::new(None, Err(message)),
-            RequestBuilder::Data { driver_fetch, url, headers, body } => (driver_fetch, url, headers, body),
+            RequestBuilder::Data { api: driver_fetch, url, headers, body } => (driver_fetch, url, headers, body),
         };
 
         let builder = FetchBuilder::new(driver_fetch, url.clone());

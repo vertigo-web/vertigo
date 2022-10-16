@@ -423,6 +423,10 @@ export const saveToBuffer = (
     alloc: (size: number) => number,
     value: JsValueType,
 ): number => {
+    if (value === undefined) {
+        return 0;
+    }
+
     const size = getSize(value);
     const ptr = alloc(size);
 
@@ -431,79 +435,6 @@ export const saveToBuffer = (
 
     return ptr;
 };
-
-export class JsValueBuilder {
-    private readonly params: Array<JsValueType>;
-
-    constructor(
-        private readonly getUint8Memory: () => Uint8Array,
-        private readonly alloc: (size: number) => number,
-    ) {
-        this.params = [];
-    }
-
-    public push_string(value: string) {
-        this.params.push(value);
-    }
-
-    public push_buffer(buf: Uint8Array) {
-        this.params.push(buf);
-    }
-
-    public push_u32(value: number) {
-        this.params.push({
-            type: 'u32',
-            value
-        });
-    }
-
-    public push_i32(value: number) {
-        this.params.push({
-            type: 'i32',
-            value
-        });
-    }
-
-    public push_u64(value: bigint) {
-        this.params.push({
-            type: 'u64',
-            value
-        });
-    }
-
-    public push_i64(value: bigint) {
-        this.params.push({
-            type: 'i64',
-            value
-        });
-    }
-
-    public push_null() {
-        this.params.push(null);
-    }
-
-    public push_bool(value: boolean) {
-        this.params.push(value);
-    }
-
-    public push_list(build: (list: JsValueBuilder) => void) {
-        const sub_params = new JsValueBuilder(this.getUint8Memory, this.alloc);
-        build(sub_params);
-        this.params.push(sub_params.params);
-    }
-
-    public saveToBuffer(): number {
-        return saveToBuffer(this.getUint8Memory, this.alloc, this.params);
-    }
-
-    public saveJsValue(value: JsValueType): number {
-        return saveToBuffer(this.getUint8Memory, this.alloc, value);
-    }
-
-    public debug() {
-        console.info('debug budowania listy', this.params);
-    }
-}
 
 export const convertFromJsValue = (value: JsValueType): unknown => {
     if (value === true) {

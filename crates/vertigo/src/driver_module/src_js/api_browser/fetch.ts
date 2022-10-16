@@ -9,7 +9,7 @@ export class Fetch {
     }
 
     public fetch_send_request = (
-        request_id: number,
+        callback_id: bigint,
         method: string,
         url: string,
         headers: string,
@@ -27,41 +27,32 @@ export class Fetch {
             .then((response) =>
                 response.text()
                     .then((responseText) => {
-                        const new_params = this.getWasm().newList();
-                        new_params.push_u32(request_id);            //request_id
-                        new_params.push_bool(true);                 //ok
-                        new_params.push_u32(response.status);       //http code
-                        new_params.push_string(responseText);       //body
-                        let params_id = new_params.saveToBuffer();
-
-                        wasm.exports.fetch_callback(params_id);
+                        wasm.wasm_callback(callback_id, [
+                            true,                                       //ok
+                            { type: 'u32', value: response.status },    //http code
+                            responseText                                //body
+                        ]);
                     })
                     .catch((err) => {
                         console.error('fetch error (2)', err);
                         const responseMessage = new String(err).toString();
 
-                        const new_params = this.getWasm().newList();
-                        new_params.push_u32(request_id);            //request_id
-                        new_params.push_bool(false);                //ok
-                        new_params.push_u32(response.status);       //http code
-                        new_params.push_string(responseMessage);    //body
-                        let params_id = new_params.saveToBuffer();
-
-                        wasm.exports.fetch_callback(params_id);
+                        wasm.wasm_callback(callback_id, [
+                            false,                                      //ok
+                            { type: 'u32', value: response.status },    //http code
+                            responseMessage                             //body
+                        ]);
                     })
             )
             .catch((err) => {
                 console.error('fetch error (1)', err);
                 const responseMessage = new String(err).toString();
 
-                const new_params = this.getWasm().newList();
-                new_params.push_u32(request_id);                    //request_id
-                new_params.push_bool(false);                        //ok
-                new_params.push_u32(0);                             //http code
-                new_params.push_string(responseMessage);            //body
-                let params_id = new_params.saveToBuffer();
-
-                wasm.exports.fetch_callback(params_id);
+                wasm.wasm_callback(callback_id, [
+                    false,                                      //ok
+                    { type: 'u32', value: 0 },                  //http code
+                    responseMessage                             //body
+                ]);
             })
         ;
     }

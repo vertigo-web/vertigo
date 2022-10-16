@@ -4,15 +4,15 @@ use std::pin::Pin;
 use std::rc::Rc;
 use std::task::{Context, RawWaker, RawWakerVTable, Waker};
 
-use crate::driver_module::modules::interval::DriverInterval;
+use crate::ApiImport;
 use crate::struct_mut::ValueMut;
 
 #[inline]
-pub fn spawn_local<F>(interval: DriverInterval, future: F)
+pub fn spawn_local<F>(api: Rc<ApiImport>, future: F)
 where
     F: Future<Output = ()> + 'static,
 {
-    Task::spawn(interval, Box::pin(future));
+    Task::spawn(api, Box::pin(future));
 }
 
 struct Inner {
@@ -22,14 +22,14 @@ struct Inner {
 
 pub(crate) struct Task {
     inner: ValueMut<Option<Inner>>,
-    interval: DriverInterval,
+    api: Rc<ApiImport>
 }
 
 impl Task {
-    pub(crate) fn spawn(interval: DriverInterval, future: Pin<Box<dyn Future<Output = ()>>>) {
+    pub(crate) fn spawn(api: Rc<ApiImport>, future: Pin<Box<dyn Future<Output = ()>>>) {
         let this = Rc::new(Self {
             inner: ValueMut::new(None),
-            interval,
+            api,
         });
 
         let waker = unsafe { Waker::from_raw(Task::into_raw_waker(Rc::clone(&this))) };
@@ -42,7 +42,7 @@ impl Task {
     fn wake_by_ref(this: &Rc<Self>) {
         let this_clone = this.clone();
 
-        this.interval.set_timeout_and_detach(0, move |_| {
+        this.api.set_timeout_and_detach(0, move || {
             this_clone.run();
         });
     }
