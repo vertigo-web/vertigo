@@ -172,7 +172,7 @@ impl DomDebugFragment {
                     .collect::<Vec<_>>()
                     .join("");
                 let callbacks = node.callbacks.iter()
-                    .map(|(k, v)| format!(" {}={}", k, v.to_u64()))
+                    .map(|(k, v)| format!(" {}={}", k, v.as_u64()))
                     .collect::<Vec<_>>()
                     .join("");
                 format!("<{}{}{}>{}</{}>", node.name, attrs, callbacks, children, node.name)

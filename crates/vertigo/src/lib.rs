@@ -265,44 +265,9 @@ pub fn free(pointer: u32) {
 // Callbacks gateways
 
 #[no_mangle]
-pub fn interval_run_callback(callback_id: u32) {
-    get_driver_state("interval_run_callback", |state| state.driver.export_interval_run_callback(callback_id));
-}
-
-#[no_mangle]
-pub fn timeout_run_callback(callback_id: u32) {
-    get_driver_state("timeout_run_callback", |state| state.driver.export_timeout_run_callback(callback_id));
-}
-
-#[no_mangle]
-pub fn hashrouter_hashchange_callback(list_id: u32) {
-    get_driver_state("hashrouter_hashchange_callback", |state| state.driver.export_hashrouter_hashchange_callback(list_id));
-}
-
-#[no_mangle]
-pub fn fetch_callback(params_id: u32) {
-    get_driver_state("fetch_callback", |state| state.driver.export_fetch_callback(params_id));
-}
-
-#[no_mangle]
-pub fn websocket_callback_socket(callback_id: u32) {
-    get_driver_state("websocket_callback_socket", |state| state.driver.export_websocket_callback_socket(callback_id));
-}
-
-#[no_mangle]
-pub fn websocket_callback_message(callback_id: u32) {
-    get_driver_state("websocket_callback_message", |state| state.driver.export_websocket_callback_message(callback_id));
-}
-
-#[no_mangle]
-pub fn websocket_callback_close(callback_id: u32) {
-    get_driver_state("websocket_callback_close", |state| state.driver.export_websocket_callback_close(callback_id));
-}
-
-#[no_mangle]
-pub fn export_dom_callback(callback_id: u64, value_ptr: u32) -> u64 {
+pub fn wasm_callback(callback_id: u64, value_ptr: u32) -> u64 {
     get_driver_state("export_dom_callback", |state| {
-        let (ptr, size) = state.driver.export_dom_callback(callback_id, value_ptr);
+        let (ptr, size) = state.driver.wasm_callback(callback_id, value_ptr);
 
         let ptr = ptr as u64;
         let size = size as u64;

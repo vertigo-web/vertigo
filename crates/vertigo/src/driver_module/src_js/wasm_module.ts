@@ -14,18 +14,8 @@ export type ImportType = {
 export type ExportType = {
     alloc: (size: number) => number,
     free: (pointer: number) => void,
+    wasm_callback: (callback_id: bigint, value_ptr: number) => bigint,  //result => pointer: 32bit, size: 32bit
     start_application: () => void,
-    export_dom_callback: (callback_id: bigint, value_ptr: number) => bigint,  //result => pointer: 32bit, size: 32bit
-
-    //call to rust
-    interval_run_callback: (callback_id: number) => void,
-    timeout_run_callback: (callback_id: number) => void,
-    hashrouter_hashchange_callback: (listId: number) => void,
-    fetch_callback: (listId: number) => void
-
-    websocket_callback_socket: (callback_id: number) => void;
-    websocket_callback_message: (callback_id: number) => void;
-    websocket_callback_close: (callback_id: number) => void;
 }
 
 export class WasmModule {
@@ -82,7 +72,7 @@ export class WasmModule {
                             wsk = newWsk;
                         }
                 
-                        return getWasm().newList().saveJsValue(wsk.toValue());
+                        return getWasm().valueSaveToBuffer(wsk.toValue());
                     }
 
                     console.error('dom_access - wrong parameters', args);

@@ -1,4 +1,3 @@
-import { JsValueType } from "../../arguments";
 import { ModuleControllerType } from "../../wasm_init";
 import { ExportType } from "../../wasm_module";
 import { MapNodes } from "./map_nodes";
@@ -200,38 +199,16 @@ export class DriverDom {
         document.head.appendChild(style);
     }
 
-    private export_dom_callback(callback_id: bigint, value_ptr: number): JsValueType {
-        let result_ptr_and_size = this.getWasm().exports.export_dom_callback(callback_id, value_ptr);
-
-        if (result_ptr_and_size === 0n) {
-            return undefined;
-        }
-
-        const size = result_ptr_and_size % (2n ** 32n);
-        const ptr = result_ptr_and_size >> 32n;
-
-        if (ptr >= 2n ** 32n) {
-            console.error(`Overflow of a variable with a pointer result_ptr_and_size=${result_ptr_and_size}`);
-        }
-
-        const response = this.getWasm().decodeArguments(Number(ptr), Number(size));
-
-        this.getWasm().exports.free(Number(ptr));
-
-        return response;
-    }
-
     private callback_mousedown(event: Event, callback_id: bigint) {
         event.preventDefault();
-        this.export_dom_callback(callback_id, 0);
+        this.getWasm().wasm_callback(callback_id, undefined);
     }
 
     private callback_input(event: Event, callback_id: bigint) {
         const target = event.target;
 
         if (target instanceof HTMLInputElement || target instanceof HTMLTextAreaElement) {
-            const params = this.getWasm().saveJsValue(target.value);
-            this.export_dom_callback(callback_id, params);
+            this.getWasm().wasm_callback(callback_id, target.value);
             return;
         }
 
@@ -240,12 +217,12 @@ export class DriverDom {
 
     private callback_mouseenter(_event: Event, callback_id: bigint) {
         // event.preventDefault();
-        this.export_dom_callback(callback_id, 0);
+        this.getWasm().wasm_callback(callback_id, undefined);
     }
 
     private callback_mouseleave(_event: Event, callback_id: bigint) {
         // event.preventDefault();
-        this.export_dom_callback(callback_id, 0);
+        this.getWasm().wasm_callback(callback_id, undefined);
     }
 
     private callback_drop(event: Event, callback_id: bigint) {
@@ -281,19 +258,16 @@ export class DriverDom {
 
                 if (files.length) {
                     Promise.all(files).then((files) => {
-                        const params = this.getWasm().newList();
+                        const params = [];
 
-                        params.push_list((params_files) => {
-                            for (const file of files) {
-                                params_files.push_list((params_details) => {
-                                    params_details.push_string(file.name);
-                                    params_details.push_buffer(file.data);
-                                });
-                            }
-                        });
+                        for (const file of files) {
+                            params.push([
+                                file.name,
+                                file.data,
+                            ]);
+                        }
 
-                        const params_ptr = params.saveToBuffer();
-                        this.export_dom_callback(callback_id, params_ptr);
+                        this.getWasm().wasm_callback(callback_id, params);
                     }).catch((error) => {
                         console.error('callback_drop -> promise.all -> ', error);
                     });
@@ -308,16 +282,14 @@ export class DriverDom {
 
     private callback_keydown(event: Event, callback_id: bigint) {
         if (event instanceof KeyboardEvent) {
-            const new_params = this.getWasm().newList();
-            new_params.push_string(event.key);
-            new_params.push_string(event.code);
-            new_params.push_bool(event.altKey);
-            new_params.push_bool(event.ctrlKey);
-            new_params.push_bool(event.shiftKey);
-            new_params.push_bool(event.metaKey);
-            const params_ptr = new_params.saveToBuffer();
-
-            const result = this.export_dom_callback(callback_id, params_ptr);
+            const result = this.getWasm().wasm_callback(callback_id, [
+                event.key,
+                event.code,
+                event.altKey,
+                event.ctrlKey,
+                event.shiftKey,
+                event.metaKey
+            ]);
 
             if (result === true) {
                 event.preventDefault();

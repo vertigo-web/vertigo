@@ -8,7 +8,7 @@ use crate::{
     WebsocketMessageDriver,
     Dependencies, DropResource, FutureBox,
     FetchBuilder, Instant, RequestBuilder, WebsocketMessage, WebsocketConnection,
-    get_driver, css::css_manager::CssManager, Css, Context,
+    get_driver, css::css_manager::CssManager, Context,
 };
 
 use crate::{
@@ -18,14 +18,11 @@ use crate::{
 };
 use crate::driver_module::modules::{
     dom::DriverDom,
-    fetch::DriverFetch,
-    hashrouter::DriverHashrouter,
-    interval::DriverInterval,
     websocket::DriverWebsocket,
 };
 
 use super::DomAccess;
-use super::callbacks::{CallbackStore, CallbackId};
+use super::callbacks::{CallbackId};
 
 #[derive(Debug)]
 pub enum FetchMethod {
@@ -34,11 +31,11 @@ pub enum FetchMethod {
 }
 
 impl FetchMethod {
-    pub fn to_string(&self) -> &str {
+    pub fn to_str(&self) -> String {
         match self {
             Self::GET => "GET",
             Self::POST => "POST",
-        }
+        }.into()
     }
 }
 
@@ -48,32 +45,25 @@ type Executable = dyn Fn(Pin<Box<dyn Future<Output = ()> + 'static>>);
 pub struct DriverInner {
     pub(crate) api: Rc<ApiImport>,
     pub(crate) dependencies: Dependencies,
-    css_manager: CssManager,
+    pub(crate) css_manager: CssManager,
     pub(crate) dom: Rc<DriverDom>,
-    interval: DriverInterval,
-    hashrouter: DriverHashrouter,
-    fetch: DriverFetch,
     websocket: DriverWebsocket,
     spawn_executor: Rc<Executable>,
-    pub(crate) callback_store: Rc<CallbackStore>,
 }
 
 impl DriverInner {
     pub fn new(api: Rc<ApiImport>) -> Self {
         let dependencies = Dependencies::default();
-        let interval = DriverInterval::new(&api);
 
         let spawn_executor = {
-            let driver_interval = interval.clone();
+            let api = api.clone();
 
             Rc::new(move |fut: Pin<Box<dyn Future<Output = ()> + 'static>>| {
-                spawn_local(driver_interval.clone(), fut);
+                spawn_local(api.clone(), fut);
             })
         };
 
         let dom = Rc::new(DriverDom::new(&api));
-        let hashrouter = DriverHashrouter::new(&api);
-        let driver_fetch = DriverFetch::new(&api);
         let websocket = DriverWebsocket::new(&api);
 
         let css_manager = {
@@ -96,12 +86,8 @@ impl DriverInner {
             dependencies,
             css_manager,
             dom,
-            interval,
-            hashrouter,
-            fetch: driver_fetch,
             websocket,
             spawn_executor,
-            callback_store: Rc::new(CallbackStore::new()),
         }
     }
 
@@ -143,7 +129,7 @@ impl Driver {
     /// Create new FetchBuilder.
     #[must_use]
     pub fn fetch(&self, url: impl Into<String>) -> FetchBuilder {
-        FetchBuilder::new(self.inner.fetch.clone(), url.into())
+        FetchBuilder::new(self.inner.api.clone(), url.into())
     }
 
     /// Gets a cookie by name
@@ -158,26 +144,24 @@ impl Driver {
 
     /// Retrieves the hash part of location URL from client (browser)
     pub fn get_hash_location(&self) -> String {
-        self.inner.hashrouter.get_hash_location()
+        self.inner.api.get_hash_location()
     }
 
     /// Sets the hash part of location URL from client (browser)
     pub fn push_hash_location(&self, path: String) {
-        self.inner.hashrouter.push_hash_location(path);
+        self.inner.api.push_hash_location(&path);
     }
 
     /// Set event handler upon hash location change
     #[must_use]
-    pub fn on_hash_route_change(&self, on_change: Box<dyn Fn(&String)>) -> DropResource {
-        self.inner.hashrouter.on_hash_route_change(on_change)
+    pub fn on_hash_route_change(&self, on_change: Box<dyn Fn(String)>) -> DropResource {
+        self.inner.api.on_hash_route_change(on_change)
     }
 
     /// Make `func` fire every `time` seconds.
     #[must_use]
     pub fn set_interval(&self, time: u32, func: impl Fn() + 'static) -> DropResource {
-        self.inner.interval.set_interval(time, move |_| {
-            func();
-        })
+        self.inner.api.interval_set(time, func)
     }
 
     /// Gets current value of monotonic clock.
@@ -188,12 +172,12 @@ impl Driver {
     /// Create new RequestBuilder (more complex version of [fetch](struct.Driver.html#method.fetch))
     #[must_use]
     pub fn request(&self, url: impl Into<String>) -> RequestBuilder {
-        RequestBuilder::new(&self.inner.fetch, url)
+        RequestBuilder::new(&self.inner.api, url)
     }
 
     pub fn sleep(&self, time: u32) -> FutureBox<()> {
         let (sender, future) = FutureBox::new();
-        self.inner.interval.set_timeout_and_detach(time, move |_| {
+        self.inner.api.set_timeout_and_detach(time, move || {
             sender.publish(());
         });
 
@@ -204,13 +188,14 @@ impl Driver {
     #[must_use]
     pub fn websocket(&self, host: impl Into<String>, callback: Box<dyn Fn(WebsocketMessage)>) -> DropResource {
         let host: String = host.into();
+        let api = self.inner.api.clone();
 
         self.inner.websocket.websocket_start(
             host,
             Box::new(move |message: WebsocketMessageDriver| {
                 let message = match message {
                     WebsocketMessageDriver::Connection { callback_id } => {
-                        let connection = WebsocketConnection::new(callback_id);
+                        let connection = WebsocketConnection::new(api.clone(), callback_id);
                         WebsocketMessage::Connection(connection)
                     }
                     WebsocketMessageDriver::Message(message) => WebsocketMessage::Message(message),
@@ -220,10 +205,6 @@ impl Driver {
                 callback(message);
             }),
         )
-    }
-
-    pub fn websocket_send_message(&self, callback_id: u32, message: String) {
-        self.inner.websocket.websocket_send_message(callback_id, message);
     }
 
     /// Spawn a future - thus allowing to fire async functions in, for example, event handler. Handy when fetching resources from internet.
@@ -239,10 +220,6 @@ impl Driver {
         self.inner.dependencies.transaction(func);
     }
 
-    pub (crate) fn get_class_name(&self, css: &Css) -> String {
-        self.inner.css_manager.get_class_name(css)
-    }
-
     pub fn dom_access(&self) -> DomAccess {
         self.inner.api.dom_access()
     }
@@ -250,93 +227,8 @@ impl Driver {
     pub(crate) fn init_env(&self) {
         init_env(self.inner.api.clone());
     }
-
-    pub(crate) fn export_interval_run_callback(&self, callback_id: u32) {
-        self.inner.interval.export_interval_run_callback(callback_id);
-    }
-
-    pub(crate) fn export_timeout_run_callback(&self, callback_id: u32) {
-        self.inner.interval.export_timeout_run_callback(callback_id);
-    }
-
-    pub(crate) fn export_hashrouter_hashchange_callback(&self, ptr: u32) {
-        let params = self.inner.api.arguments.get_by_ptr(ptr);
-
-        let new_hash = params
-            .convert::<String, _>(|mut params| {
-                let first = params.get_string("first")?;
-                params.expect_no_more()?;
-                Ok(first)
-            })
-            .unwrap_or_else(|error| {
-                log::error!("export_hashrouter_hashchange_callback -> params decode error -> {error}");
-                String::from("")
-            });
-
-        get_driver().transaction(|_|{
-            self.inner.hashrouter.export_hashrouter_hashchange_callback(new_hash);
-        });
-    }
-
-    pub(crate) fn export_fetch_callback(&self, ptr: u32) {
-        let params = self.inner.api.arguments.get_by_ptr(ptr);
-
-        let params = params
-            .convert(|mut params| {
-                let request_id = params.get_u32("request_id")?;
-                let success = params.get_bool("success")?;
-                let status = params.get_u32("status")?;
-                let response = params.get_string("response")?;
-                params.expect_no_more()?;
-                Ok((request_id, success, status, response))
-            });
-
-        match params {
-            Ok((request_id, success, status, response)) => {
-                get_driver().transaction(|_|{
-                    self.inner.fetch.export_fetch_callback(request_id, success, status, response);
-                });
-            },
-            Err(error) => {
-                log::error!("export_fetch_callback -> params decode error -> {error}");
-            }
-        }
-    }
-
-    pub(crate) fn export_websocket_callback_socket(&self, callback_id: u32) {
-        self.inner.websocket.export_websocket_callback_socket(callback_id);
-    }
-
-    pub(crate) fn export_websocket_callback_message(&self, ptr: u32) {
-        let params = self.inner.api.arguments.get_by_ptr(ptr);
-
-        let params = params
-            .convert(|mut params| {
-                let callback_id = params.get_u32("callback_id")?;
-                let response = params.get_string("message")?;
-                params.expect_no_more()?;
-                Ok((callback_id, response))
-            });
-
-        match params {
-            Ok((callback_id, response)) => {
-                get_driver().transaction(|_|{
-                    self.inner.websocket.export_websocket_callback_message(callback_id, response);
-                });
-            },
-            Err(error) => {
-                log::error!("export_websocket_callback_message -> params decode error -> {error}");
-            }
-        }
-    }
-
-    pub(crate) fn export_websocket_callback_close(&self, callback_id: u32) {
-        get_driver().transaction(|_| {
-            self.inner.websocket.export_websocket_callback_close(callback_id);
-        });
-    }
-
-    pub(crate) fn export_dom_callback(&self, callback_id: u64, value_ptr: u32) -> (u32, u32) {
+    
+    pub(crate) fn wasm_callback(&self, callback_id: u64, value_ptr: u32) -> (u32, u32) {
         let value = self.inner.api.arguments.get_by_ptr(value_ptr);
         let callback_id = CallbackId::from_u64(callback_id);
 
@@ -344,7 +236,7 @@ impl Driver {
         let mut result = JsValue::Undefined;
 
         driver.transaction(|_| {
-            result = self.inner.callback_store.call(callback_id, value);
+            result = self.inner.api.callback_store.call(callback_id, value);
         });
 
         if result == JsValue::Undefined {

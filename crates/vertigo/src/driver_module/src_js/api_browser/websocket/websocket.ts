@@ -10,8 +10,8 @@ const assertNeverMessage = (data: never): never => {
 
 export class DriverWebsocket {
     private getWasm: () => ModuleControllerType<ExportType>;
-    private readonly controllerList: Map<number, SocketConnectionController>;
-    private readonly socket: Map<number, SocketConnection>;
+    private readonly controllerList: Map<bigint, SocketConnectionController>;
+    private readonly socket: Map<bigint, SocketConnection>;
 
     constructor(getWasm: () => ModuleControllerType<ExportType>) {
         this.getWasm = getWasm;
@@ -21,7 +21,7 @@ export class DriverWebsocket {
 
     public websocket_register_callback = (
         host: string,
-        callback_id: number,
+        callback_id: bigint,
     ) => {
         const wasm = this.getWasm();
 
@@ -37,23 +37,18 @@ export class DriverWebsocket {
                     
                 if (message.type === 'socket') {
                     this.socket.set(callback_id, message.socket);
-                    wasm.exports.websocket_callback_socket(callback_id);
+                    wasm.wasm_callback(callback_id, true);
                     return;
                 }
         
                 if (message.type === 'message') {
-                    const new_params = wasm.newList();
-                    new_params.push_u32(callback_id);
-                    new_params.push_string(message.message);
-                    const new_params_id = new_params.saveToBuffer();
-
-                    wasm.exports.websocket_callback_message(new_params_id);
+                    wasm.wasm_callback(callback_id, message.message);
                     return;
                 }
 
                 if (message.type === 'close') {
-                    wasm.exports.websocket_callback_close(callback_id);
                     this.socket.delete(callback_id);
+                    wasm.wasm_callback(callback_id, false);
                     return;
                 }
 
@@ -64,7 +59,7 @@ export class DriverWebsocket {
         this.controllerList.set(callback_id, controller);
     }
 
-    public websocket_unregister_callback = (callback_id: number) => {
+    public websocket_unregister_callback = (callback_id: bigint) => {
         const controller = this.controllerList.get(callback_id);
 
         if (controller === undefined) {
@@ -77,7 +72,7 @@ export class DriverWebsocket {
     }
 
     public websocket_send_message = (
-        callback_id: number,
+        callback_id: bigint,
         message: string,
     ) => {
         const socket = this.socket.get(callback_id);

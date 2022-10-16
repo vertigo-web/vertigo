@@ -139,13 +139,13 @@ impl DriverDomCommand {
                 out.set_string("type", "callback_add");
                 out.set_u64("id", id.to_u64());
                 out.set_string("event_name", event_name.as_str());
-                out.set_u64("callback_id", callback_id.to_u64());
+                out.set_u64("callback_id", callback_id.as_u64());
             },
             Self::CallbackRemove { id, event_name, callback_id } => {
                 out.set_string("type", "callback_remove");
                 out.set_u64("id", id.to_u64());
                 out.set_string("event_name", event_name.as_str());
-                out.set_u64("callback_id", callback_id.to_u64());
+                out.set_u64("callback_id", callback_id.as_u64());
             }
         }
 

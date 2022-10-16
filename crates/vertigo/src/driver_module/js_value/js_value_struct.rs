@@ -254,6 +254,18 @@ impl JsValue {
         }
     }
 
+    pub fn to_decodelist(self) -> Result<JsValueListDecoder, String> {
+        match self {
+            JsValue::List(list) => {
+                let decoder = JsValueListDecoder::new(list);
+                Ok(decoder)
+            },
+            _ => {
+                Err(String::from("convert => ParamItem::Vec expected"))
+            }
+        }
+    }
+
     pub fn convert<T, F: FnOnce(JsValueListDecoder) -> Result<T, String>>(self, convert: F) -> Result<T, String> {
         match self {
             JsValue::List(list) => {
@@ -351,45 +363,37 @@ impl JsValueListDecoder {
         }
     }
 
-    pub fn get_list<
+    pub fn map<
         R,
         F: Fn(JsValueListDecoder) -> Result<R, String>,
     >(
-        &mut self,
+        self,
         label: &'static str,
         conver: F
     ) -> Result<Vec<R>, String> {
-        if let Some(value) = self.data.pop_front() {
-            match value.try_get_list() {
-                Ok(list) => {
-                    let mut result = Vec::new();
+            let mut result = Vec::new();
 
-                    for (index, item) in list.into_iter().enumerate() {
-                        match item.try_get_list() {
-                            Ok(sublist) => {
-                                let decoder = JsValueListDecoder::new(sublist);
-                                match conver(decoder) {
-                                    Ok(value) => {
-                                        result.push(value);
-                                    },
-                                    Err(error) => {
-                                        return Err(format!("{label} -> index:{index} -> {error}"));
-                                    }
-                                }
-                            },
-                            Err(error) => {
-                                return Err(format!("{label} -> index:{index} -> {error}"));
-                            }
-                        }
+            for (index, sublist) in self.data.into_iter().enumerate() {
+                let decoder = sublist.to_decodelist();
+
+                let decoder = match decoder {
+                    Ok(decoder) => decoder,
+                    Err(error) => {
+                        return Err(format!("{label} -> index:{index} -> {error}"));
                     }
+                };
 
-                    Ok(result)
-                },
-                Err(error) => Err(format!("{label} -> {error}")),
+                match conver(decoder) {
+                    Ok(value) => {
+                        result.push(value);
+                    },
+                    Err(error) => {
+                        return Err(format!("{label} -> index:{index} -> {error}"));
+                    }
+                }
             }
-        } else {
-            Err(format!("{label} -> has no more params"))
-        }
+
+            Ok(result)
     }
 
     pub fn expect_no_more(self) -> Result<(), String> {

@@ -1,8 +1,8 @@
 use std::rc::Rc;
 
-use crate::{struct_mut::HashMapMut, JsValue, DropResource};
+use crate::{struct_mut::{HashMapMut, ValueMut}, JsValue, DropResource};
 
-#[derive(PartialEq, Eq, Hash, Clone, Debug)]
+#[derive(PartialEq, Eq, Hash, Clone, Debug, Copy)]
 pub struct CallbackId(u64);
 
 fn get_unique_id() -> u64 {
@@ -17,7 +17,7 @@ impl CallbackId {
         CallbackId(get_unique_id())
     }
 
-    pub fn to_u64(&self) -> u64 {
+    pub fn as_u64(&self) -> u64 {
         self.0
     }
 
@@ -28,6 +28,7 @@ impl CallbackId {
 
 type CallBackFn = dyn Fn(JsValue) -> JsValue + 'static;
 
+#[derive(Clone)]
 pub struct CallbackStore {
     data: Rc<HashMapMut<CallbackId, Rc<CallBackFn>>>,
 }
@@ -43,10 +44,27 @@ impl CallbackStore {
         let callback = Rc::new(callback);
         let id = CallbackId::new();
 
-        self.data.insert(id.clone(), callback);
+        self.data.insert(id, callback);
 
         let drop = DropResource::new({
-            let id = id.clone();
+            let data = self.data.clone();
+            move || {
+                data.remove(&id);
+            }
+        });
+
+        (id, drop)
+    }
+
+    pub fn register_with_id<C: Fn(CallbackId, JsValue) -> JsValue + 'static>(&self, callback: C) -> (CallbackId, DropResource) {
+        let id = CallbackId::new();
+        let callback = Rc::new(callback);
+
+        self.data.insert(id, Rc::new(move |data| {
+            callback(id, data)
+        }));
+
+        let drop = DropResource::new({
             let data = self.data.clone();
             move || {
                 data.remove(&id);
@@ -68,5 +86,23 @@ impl CallbackStore {
                 JsValue::Undefined
             }
         }
+    }
+
+    pub fn register_once<C: Fn(JsValue) -> JsValue + 'static>(&self, callback: C) -> CallbackId {
+        let drop_value = Rc::new(ValueMut::new(None));
+
+        let (callback_id, drop) = self.register({
+            let drop_value = drop_value.clone();
+
+            move |node| {
+                let result = callback(node);
+                drop_value.set(None);
+                result
+            }
+        });
+
+        drop_value.set(Some(drop));
+
+        callback_id
     }
 }

@@ -113,9 +113,9 @@ impl<T: Clone + ToString + From<String> + PartialEq + 'static> HashRouter<T> {
             let route = route_value.clone();
             let block_subscrition = block_subscrition.clone();
 
-            Box::new(move |url: &String| {
+            Box::new(move |url: String| {
                 block_subscrition.set(true);
-                route.set_value_and_compare(T::from(url.clone()));
+                route.set_value_and_compare(T::from(url));
                 block_subscrition.set(false);
             })
         });
