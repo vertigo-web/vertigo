@@ -68,3 +68,9 @@ impl<T: ToString + Clone + PartialEq + 'static> EmbedDom for Value<T> {
         self.to_computed().embed()
     }
 }
+
+impl<T: ToString + Clone + PartialEq + 'static> EmbedDom for &Value<T> {
+    fn embed(self) -> DomNodeFragment {
+        self.to_computed().embed()
+    }
+}

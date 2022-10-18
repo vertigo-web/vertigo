@@ -1,4 +1,21 @@
 <!-- markdownlint-configure-file { "no-duplicate-heading": { "siblings_only": true } } -->
+<!-- markdownlint-disable-next-line first-line-h1 -->
+## 0.1.0-beta.5 - 2022-10-18
+
+### Added
+
+* Components with "props"!
+* `DomElement::from_parts` for unit-testing purposes
+
+### Changed
+
+* Improved refresh algorithm (internal)
+* Simplified context system (internal)
+* Refactored callbacks mechanism (internal)
+
+### Removed
+
+* `RefCell`
 
 ## 0.1.0-beta.4 - 2022-10-02
 
