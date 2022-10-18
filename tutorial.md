@@ -1,23 +1,24 @@
 # Vertigo Tutorial
 
 <!-- markdownlint-disable-next-line no-emphasis-as-heading -->
-*Up to date with version 0.1.0-beta.3*
+*Up to date with version 0.1.0-beta.5*
 
 <!-- markdownlint-disable-next-line heading-increment -->
 ### Table of contents
 
+<!-- markdownlint-disable link-fragments -->
+
 1. [Prepare your system](#1-Prepare-your-system)
 2. [Generate project](#2-Generate-project)
 3. [First run](#3-First-run)
-4. [Render](#4-Render)
-5. [State](#5-State)
-6. [Add new value](#6-Add-new-value)
-7. [Set value](#7-Set-value)
-8. [New component](#8-New-component)
-9. [Add state to component](#9-Add-state-to-component)
-10. [Input element](#10-Input-element)
-11. [Computed value](#11-Computed-value)
-12. [Parametrized styles](#12-Parametrized-styles)
+4. [Render](#4-Initial-code-description)
+5. [Add new value](#5-Add-new-value)
+6. [Set value](#6-Set-value)
+7. [New component](#7-New-component)
+8. [Add state to component](#8-Add-state-to-a-component)
+9. [Input element](#9-Input-element)
+10. [Computed value](#10-Computed-value)
+11. [Parametrized styles](#11-Parametrized-styles)
 
 ## 1. Prepare your system
 
@@ -56,76 +57,87 @@ Install `binaryen` package in your linux distribution (f. ex. `apt-get install b
 
 After the task `watch` is completed you can point your browser to `http://127.0.0.1:3000/`[^bind] to see the "Hello World" message.
 
-## 4. Render
+## 4. Initial code description
 
 Open `/src/render.rs` file.
 
 ```rust
-use vertigo::{DomElement, dom, css_fn};
-
-use super::state::State;
+use vertigo::{start_app, DomElement, Value, dom, css_fn};
 
 css_fn! { main_div, "
     color: darkblue;
 " }
 
-pub fn render(state: &State) -> DomElement {
+fn app() -> DomElement {
+    let message = Value::new("Hello world!".to_string());
+
     dom! {
         <div css={main_div()}>
             "Message to the world: "
-            <text computed={state.message.to_computed()} />
+            { message }
         </div>
     }
 }
+
+#[no_mangle]
+pub fn start_application() {
+    start_app(app);
+}
 ```
 
-This is the main (and the only for now) function that renders something. It transforms `State` into `DomElement`.
+This is the main entry point for the application. It creates a vary simple state (a string message) and transforms it into a `DomElement`.
 
 Vertigo app mainly consists of three parts[^simplification]:
 
 - *Dependency graph* - which holds the current state of app and triggers its leaf clients upon some change,
 - *DOM elements* - that can be deps graph's clients and know how to update itself on the page,
-- *HTML macro* - which provides a convenient way to create VDOM elements.
+- *HTML/CSS macros* - which provides a convenient way to create VDOM elements.
 
 If we want to be a little more detailed in this description, then it would be:
 
-- Dependency graph holds values, computed values (computeds) and clients (render functions).
-- Upon changing some value all dependent computeds get computed, and all dependent clients get rendered.
-- Render function (a component) takes a computed state provided by the graph and returns a rendered element (`DomElement`).
+- Dependency graph holds values, computed values (computeds) and clients (mount/render functions).
+- Upon changing some value all dependent computeds get computed, and all dependent clients get updated.
+- Mount (or render) function takes a computed state provided by the graph and returns a rendered element (`DomElement`).
 - Upon any change in state, DOM is also updated if necessary.
-- Components can provide the DOM with functions that get fired on events like `on_click`, which may modify the state, thus triggering necessary computing once again.
+- Mount functions can provide the DOM with functions that get fired on events like `on_click`, which may modify the state, thus triggering necessary computing once again.
+- Coupled state and mount function is called component.
 
 Now let's breakdown the code line by line:
 
 ```rust
-use vertigo::{DomElement, dom, css_fn};
+use vertigo::{start_app, DomElement, Value, dom, css_fn};
 ```
 
-Here we import `DomElement` struct that will define output of our render function (a reactive component).
+Here we import `start_app` function which initializes vertigo env, and creates a root node.
+
 We also import:
 
-- `dom!` macro to use HTML tags to define the shape of the resultant element, and
+- `DomElement` - a struct that will define output of our mount function (a reactive component),
+- `Value` - a reactive box for values,
+- `dom!` - a macro to use HTML tags to define the shape of the resultant element, and
 - `css_fn!` macro that helps define styles for DOM nodes using CSS syntax.
 
 ```rust
-use super::state::State;
-```
-
-The component will be rendered using this `State` struct as the input value.
-
-```rust
-    css_fn! { main_div, "
-        color: darkblue;
-    " }
+css_fn! { main_div, "
+    color: darkblue;
+" }
 ```
 
 Using `css_fn!` macro we define here a function named `main_div` which returns styles[^styles] defined by `color: darkblue` body.
 
 ```rust
-    pub fn render(state: &State) -> DomElement {
+fn app() -> DomElement {
 ```
 
-Here we define the render function itself.
+This is our main "render" function, but in fact this is a "mount" function (fired only once because updates are
+performed through dependency graph). Tt just return definition of a reactive DOM in the form of `DomElement` instance.
+
+```rust
+    let message = Value::new("Hello world!".to_string());
+```
+
+Here we create a very simple state which only hold a String value. This is performed inside the mount function,
+which means the state will be created from scratch every time our component gets mounted.
 
 ```rust
     dom! {
@@ -146,11 +158,11 @@ Here we define a DOM node using `div` tag, and assign it style using the css fun
 Next, in the `div` we insert a text node. Strings in `dom!` macro must always be double-quoted. This assures us we won't miss a space between the text and the next DOM element.
 
 ```rust
-            <text computed={state.message.to_computed()} />
+            { message }
 ```
 
-Here we're inserting some value from the state. The `message` field in the state is of type `Value`.
-It is a read/write box that has a `to_computed()` method which transforms the value into a read-only observable for rendering.
+Here we're inserting some value from the state. The `message` field in the state is of type `Value<String>`
+which can be directly embedded into `dom!` macro without any transformations.
 
 ```rust
         </div>
@@ -158,73 +170,45 @@ It is a read/write box that has a `to_computed()` method which transforms the va
 
 The `div` tag must be of course closed as in regular HTML.
 
-## 5. State
-
-Take a look at the state of the app in file `src/state.rs`. First let's see what is in the struct:
-
-```rust
-pub struct State {
-    pub message: Value<String>,
-}
-```
-
-I our state we have one `Value` with a string inside. The state and all types wrapped in `Value` are required to implement `PartialEq` so the dependency graph knows that values are changing.
-
-To create a reactive component (`DomElement`) we first create it's state and then use the render function.
-
-```rust
-impl State {
-    pub fn component() -> DomElement {
-        let state = State {
-            message: Value::new("Hello world".to_string()),
-        };
-
-        app::render(state)
-    }
-}
-```
-
-To see how all these are connected, see `src/lib.rs`:
-
 ```rust
 #[no_mangle]
 pub fn start_application() {
-    start_app(state::State::component);
+    start_app(app);
 }
 ```
 
-## 6. Add new value
+Then the root function of our app is passed to `start_app` function which is fired during `start_application`
+which acts as a hardcoded gateway from JavaScript world (hence the `#[no_mangle]` attribute)
 
-For starters let's add a new boolean value to the state and use it to render the component conditionally. Add
+## 5. Add new value
 
-```rust
-    pub strong: Value<bool>,
-```
-
-to State and
+For starters let's add a new boolean value to the state and use it to render the component conditionally.
+Add a boolean value next to the message value, and use it to conditionally render message in different way:
 
 ```rust
-    strong: Value::new(true)
+    let message = Value::new("Hello world!".to_string());
+    let strong = Value::new(true);
 ```
 
 to `State::component()` method. Then in render function you can use this value:
 
 ```rust
 pub fn render(state: &State) -> DomElement {
-    let message = state.message.clone();
+    let message = Value::new("Hello world!".to_string());
+    let strong = Value::new(true);
 
-    let message_element = state.strong.render_value(move |strong|
+    let message_element = strong.render_value(move |strong|
         if strong {
-            dom! { <strong><text computed={message.to_computed()}/></strong> }
+            dom! { <strong>{&message}</strong> }
         } else {
-            dom! { <span><text computed={message.to_computed()}/></span> }
+            dom! { <span>{&message}</span> }
         }
     );
 
     dom! {
         <div css={main_div()}>
             "Message to the world: "
-            {message_element}
+            { message_element }
         </div>
     }
 }
@@ -232,19 +216,18 @@ pub fn render(state: &State) -> DomElement {
 
 In the browser the message should be now in bold.
 
-## 7. Set value
+## 6. Set value
 
-Let's do some reactivity already. Import `vertigo::bind`, add switch closure to our render function and use it in `dom!` macro:
+Let's do some reactivity already. Import `vertigo::bind`, add switch closure and use it in `dom!` macro:
 
 ```rust
-    let switch = bind(&state.strong).call(|ctx, strong|
+    let switch = bind(&strong).call(|ctx, strong|
         strong.set(
             !strong.get(ctx)
         )
     );
 
-
-    html! {
+    dom! {
         <div css={main_div()}>
             "Message to the world: "
             {message_element}
@@ -253,80 +236,25 @@ Let's do some reactivity already. Import `vertigo::bind`, add switch closure to 
     }
 ```
 
-To create an event handler in a handy way, vertigo introduces a "binding" mechanism. This reminds a `.bind()` function from JavaScript world, but the reason is different.
-Binding a value automatically creates a clone of the value that can be used upon firing the event (that is, upon invoking `call()` method).
-Happily enough, everything wrapped in a `Value<T>` have a shallow cloning implemented.
-The `call()` method also provides `Context` which allows you to read the bound value in a responsive way (using `get(ctx)`[^subscription] method on a `Value`).
+To create an event handler in a handy way, vertigo introduces a "binding" mechanism.
+This reminds a `.bind()` function from JavaScript world, but the reason is different.
+Binding a value automatically creates a clone of the value that can be used upon firing the event
+(that is, upon invoking `call()` method).
+Happily enough, everything wrapped in a `Value<T>` have a shallow cloning implemented[^clone].
+The `call()` method also provides `Context` which allows you to read the values in a responsive way
+(using `get(ctx)`[^subscription] method on a `Value`).
 
-## 8. New component
+## 7. New component
 
 No app should be written as one big render function. Here how we can add a component to our app. Create file `src/list.rs`:
 
 ```rust
 use vertigo::{DomElement, dom};
 
-pub fn render() -> DomElement {
-    dom! {
-        <div>
-            <p>"My list"</p>
-            <ol>
-                <li>"Item 1"</li>
-                <li>"Item 2"</li>
-            </ol>
-        </div>
-    }
-}
-```
+pub struct List { }
 
-Add to `/src/lib.rs`:
-
-```rust
-mod list;
-```
-
-And use it in main component in `src/render.rs`:
-
-```rust
-use crate::list;
-```
-
-(...)
-
-```rust
-    dom! {
-        <div css={main_div()}>
-            "Message to the world: "
-            {message_element}
-            <button on_click={switch}>"Switch"</button>
-            {list::render()}
-        </div>
-    }
-```
-
-## 9. Add state to component
-
-For now our component just shows a static list which is not a usual way of rendering lists.
-To go dynamic, add a struct to `src/list.rs`, which will be our sub-state for the component, and make the render function a method of this sub-state.
-
-```rust
-use vertigo::{Value, DomElement, dom};
-
-#[derive(Clone)]
-pub struct State {
-    items: Value<Vec<String>>,
-}
-
-impl State {
-    pub fn new() -> Self {
-        State {
-            items: Value::new(vec![
-                "Item 1".to_string(),
-                "Item 2".to_string(),
-            ]),
-        }
-    }
-
-    pub fn render(&self) -> DomElement {
+impl List {
+    pub fn mount(self) -> DomElement {
         dom! {
             <div>
                 <p>"My list"</p>
@@ -337,40 +265,92 @@ impl State {
             </div>
         }
     }
-
 }
 ```
 
-As you can see the method now takes self as a state definition, but do not use it yet.
-Meanwhile add this sub-state into our main state in `src/state.rs`:
+Add to `/src/lib.rs`:
 
 ```rust
-use crate::list;
+mod list;
+use list::List;
+```
 
-#[derive(Clone)]
-pub struct State {
-    pub message: Value<String>,
-    pub strong: Value<bool>,
-    pub list: list::State,
-}
+And use it in main `app()` function:
 
-impl State {
-    pub fn component() -> DomElement {
-        let state = State {
-            message: Value::new("Hello world".to_string()),
-            strong: Value::new(true),
-            list: list::State::new(),
-        };
+```rust
+```
 
-        render(&state)
+(...)
+
+```rust
+    dom! {
+        <div css={main_div()}>
+            "Message to the world: "
+            {message_element}
+            <button on_click={switch}>"Switch"</button>
+            <List />
+        </div>
+    }
+```
+
+## 8. Add state to a component
+
+For now our component just shows a static list which is not the usual way of rendering lists.
+To go dynamic, add state `elements` to the `mount` function and use it during rendering:
+
+```rust
+use vertigo::{DomElement, dom, Value};
+
+pub struct List { }
+
+impl List {
+    pub fn mount(self) -> DomElement {
+        let items = vec![
+            "Item1".to_string(),
+            "Item2".to_string(),
+        ];
+
+        let state = Value::new(items);
+
+        let elements = state.render_list(
+            |item| item.clone(),
+            |item| dom! { <li>{item}</li> },
+        );
+
+        dom! {
+            <div>
+                <p>"My list"</p>
+                <ol>
+                    { elements }
+                </ol>
+            </div>
+        }
     }
 }
 ```
 
-Now we can use our sub-state to render our component dynamically. Back in `src/list.rs` modify `render` method this way:
+We can create state this way, because this function is fired upon mounting, not everything something changes.
+
+> The render function uses `render_list()` method on `Value<Vec<_>>` from state to render a list of `<li>` elements.
+>
+> The list can then be inserted directly as a list of children in `dom!` macro.
+> The method takes two closures as parameters. First should return a key unique across all items,
+> while the latter should return with the rendered item itself.
+>
+> Note the `render_list()` method works only if inner type of `Value` implements `IntoIterator`.
+
+If we want to provide the state for a component from the upstream, then we can move the state to the struct `List` itself,
+then the state can be passed to our component as a property:
 
 ```rust
-    pub fn render(&self) -> DomElement {
+use vertigo::{DomElement, dom, Value};
+
+pub struct List {
+    pub items: Value<Vec<String>>,
+}
+
+impl List {
+    pub fn mount(self) -> DomElement {
         let elements = self.items.render_list(
             |item| item.clone(),
             |item| dom! { <li>{item}</li> },
@@ -385,28 +365,41 @@ Now we can use our sub-state to render our component dynamically. Back in `src/l
             </div>
         }
     }
+}
 ```
 
-The render function uses `render_list()` method on `Value<Vec<_>>` from state to render a list of `<li>` elements. The list can then be inserted directly as a list of children in `dom!` macro.
-Note the `render_list()` method works only if inner type of `Value` implements `IntoIterator`.
-The method takes two closures as parameters. First should return a key unique across all items, while the latter should return with the rendered item itself.
-
-At last update main render function to use render method from our sub-state (importing list module is now not required).
+As you can see the method takes self as a parameter. This is similar to `props` in React.
+To make it work we need to move creation of the state to our main app and provide it to the `List` component:
 
 ```rust
-    let list_state = &state.list;
+fn app() -> DomElement {
+    let message = Value::new("Hello world!".to_string());
+    let strong = Value::new(true);
 
+    let my_items = Value::new(
+        vec![
+            "Item1".to_string(),
+            "Item2".to_string(),
+        ]
+    );
+
+    // (...)
+```
+
+and add it as a property:
+
+```rust
     dom! {
         <div css={main_div()}>
             "Message to the world: "
             {message_element}
             <button on_click={switch}>"Switch"</button>
-            {state.list.render()}
+            <List items={my_items}/>
         </div>
     }
 ```
 
-## 10. Input element
+## 9. Input element
 
 Our component cries out for adding more items. To implement this we need to:
 
@@ -418,34 +411,24 @@ Our component cries out for adding more items. To implement this we need to:
 So the whole `src/list.rs` will look like this:
 
 ```rust
-use vertigo::{Value, DomElement, dom, bind, bind2};
+use vertigo::{DomElement, dom, Value, bind, bind2};
 
-#[derive(Clone)]
-pub struct State {
-    items: Value<Vec<String>>,
-    new_item: Value<String>,
+pub struct List {
+    pub items: Value<Vec<String>>,
 }
 
-impl State {
-    pub fn new() -> Self {
-        State {
-            items: Value::new(vec![
-                "Item 1".to_string(),
-                "Item 2".to_string(),
-            ]),
-            new_item: Value::new(String::default()),
-        }
-    }
+impl List {
+    pub fn mount(self) -> DomElement {
+        let new_item = Value::<String>::default();
 
-    pub fn render(&self) -> DomElement {
-        let add = bind2(&self.items, &self.new_item).call(|ctx, items, new_item| {
+        let add = bind2(&self.items, &new_item).call(|ctx, items, new_item| {
             let mut items_vec = items.get(ctx).to_vec();
             items_vec.push(new_item.get(ctx));
             items.set(items_vec);
             new_item.set("".to_string());
         });
 
-        let change = bind(&self.new_item).call_param(|_ctx, new_item, new_value| {
+        let change = bind(&new_item).call_param(|_ctx, new_item, new_value| {
             new_item.set(new_value);
         });
 
@@ -460,7 +443,7 @@ impl State {
                 <ol>
                     { elements }
                 </ol>
-                <input value={self.new_item.to_computed()} on_input={change} />
+                <input value={new_item.to_computed()} on_input={change} />
                 <button on_click={add}>"Add"</button>
             </div>
         }
@@ -468,62 +451,36 @@ impl State {
 }
 ```
 
-We've added 2 event handlers in our render function.
+We've added 2 event handlers in our mount function.
 
 To create **add** handler `bind2` helper is used.
 This is similar as `bind` but allows to use 2 parameters during the call. There are also helpers for 3 and 4 parameters.
 
 For input **change** event, the `call_param` method is used to create a handler that takes value from the DOM during the call (`new_value` parameter). The type of the value is specialized after applying it in `dom!` macro.
 
-## 11. Computed value
+## 10. Computed value
 
-It is possible to have a value that is automatically computed. Let's show the amount of items in the list. First import `Computed` from `vertigo` and add a computed type to the list's state:
-
-```rust
-#[derive(Clone)]
-pub struct State {
-    items: Value<Vec<String>>,
-    new_item: Value<String>,
-    count: Computed<usize>,
-}
-```
-
-Then we need to reorganize a little how we create an instance of the state:
+It is possible to have a value that is automatically computed. Let's show the amount of items in the list. First import `Computed` from `vertigo` and add to the mount function just after creating items list:
 
 ```rust
-    pub fn new() -> Self {
-        let items = Value::new(vec![
-            "Item 1".to_string(),
-            "Item 2".to_string(),
-        ]);
-
-        let count = {
-            let items = items.clone();
-            Computed::from(move |ctx| items.get(ctx).len())
-        };
-
-        State {
-            items,
-            new_item: Value::new(String::default()),
-            count,
-        }
-    }
+        let count = self.items.map(|items| items.len());
 ```
 
-First we need to create the list of items, then we will create the `Computed` using its `from` method which accepts a function that calculates the value. We need to clone "the access"[^clone] to the list first to be able to move it into the closure. As it was stated earlier, firing `.get(ctx)` creates a dependency in the driver's graph, so every client reading this computed will get a new value from every time the list has changed.
-
-Now we can use this computed in render function:
+And use it in `dom!` macro:
 
 ```rust
-    dom! {
-        <div>
-            <p>"My list (" { &state.count } ")"</p>
-            (...)
+        dom! {
+            <div>
+                <p>"My list (" {count} ")"</p>
+        // (...)
 ```
 
-## 12. Parametrized styles
+Map on a value creates a reactive computed value. It gets updated every time the original value is changed.
 
-As a bonus feature, we'll delve in the styles. First we'll make the list to change font color for every other row. Remember to import `css_fn` from vertigo.
+## 11. Parametrized styles
+
+As a bonus feature, we'll delve into styles. First we'll make the list to change font color for every other row.
+Remember to import `css_fn` from vertigo. In `list.rs` file add:
 
 ```rust
 css_fn! { alternate_rows, "
@@ -593,6 +550,6 @@ For any more complex scenarios please refer to the examples in the [demo](/demo/
 
 [^styles]: Styles are being attached to document's `HEAD` as classes with unique auto-generated names. These names are then used in HTML tags. This way you can use such CSS functions multiple times to different HTML tags and they'll all use the same class.
 
-[^subscription]: `get()` method creates a subscription in dependency graph so the render function is now dependent on the value, and will be fired everytime the value changes. This is similar to how the MobX library works in React world.
-
 [^clone]: Every `Value` and `Computed` wraps it's inner value in an `Rc` so cloning does not clone the content. It just creates another pointer - a handler to access the value.
+
+[^subscription]: `get()` method creates a subscription in dependency graph so the render function is now dependent on the value, and will be fired everytime the value changes. This is similar to how the MobX library works in React world.

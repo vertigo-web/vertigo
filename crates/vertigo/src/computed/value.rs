@@ -63,12 +63,6 @@ impl<T> Clone for Value<T> {
     }
 }
 
-impl<T> PartialEq for Value<T> {
-    fn eq(&self, other: &Self) -> bool {
-        self.inner.id == other.inner.id
-    }
-}
-
 impl<T: Clone + 'static> Value<T> {
     pub fn new(value: T) -> Value<T> {
         let deps = get_driver().inner.dependencies.clone();
@@ -83,7 +77,8 @@ impl<T: Clone + 'static> Value<T> {
         }
     }
 
-    /// Create a value that is connected to a generator, where `value` parameter is a starting value, and `create` function takes care of updating it.
+    /// Create a value that is connected to a generator, where `value` parameter is a starting value,
+    /// and `create` function takes care of updating it.
     ///
     /// See [game of life](../src/vertigo_demo/app/game_of_life/mod.rs.html#54) example.
     pub fn with_connect<F>(value: T, create: F) -> Computed<T>
