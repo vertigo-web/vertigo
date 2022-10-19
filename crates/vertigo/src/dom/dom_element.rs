@@ -1,4 +1,3 @@
-use std::rc::Rc;
 use crate::{
     driver_module::{driver::Driver, DomAccess},
     dom::{
@@ -52,12 +51,12 @@ impl From<Computed<Css>> for CssValue {
 
 #[derive(Clone)]
 pub struct DomElementRef {
-    api: Rc<ApiImport>,
+    api: ApiImport,
     id: DomId,
 }
 
 impl DomElementRef {
-    pub fn new(api: Rc<ApiImport>, id: DomId) -> DomElementRef {
+    pub fn new(api: ApiImport, id: DomId) -> DomElementRef {
         DomElementRef {
             api,
             id,

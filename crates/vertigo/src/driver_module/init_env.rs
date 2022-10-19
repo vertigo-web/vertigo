@@ -1,4 +1,4 @@
-use std::{panic, rc::Rc};
+use std::panic;
 use log::{Level, Log, Metadata, Record};
 use crate::{ApiImport};
 
@@ -6,7 +6,7 @@ use std::sync::{Once};
 
 static SET_HOOK: Once = Once::new();
 
-pub fn init_env(api: Rc<ApiImport>) {
+pub fn init_env(api: ApiImport) {
     SET_HOOK.call_once(|| {
         let panic_message = api.panic_message;
         init_logger(api);
@@ -61,7 +61,7 @@ impl Style {
 }
 
 struct WasmLogger {
-    api: Rc<ApiImport>,
+    api: ApiImport,
     config: Config,
     style: Style,
 }
@@ -119,7 +119,7 @@ impl Log for WasmLogger {
     fn flush(&self) {}
 }
 
-fn init_logger(api: Rc<ApiImport>) {
+fn init_logger(api: ApiImport) {
     let config = Config::default();
     let max_level = config.level;
     let wl = WasmLogger {

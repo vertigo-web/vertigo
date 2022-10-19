@@ -114,7 +114,7 @@ pub use driver_module::{
     api::ApiImport,
     driver::{Driver, FetchResult, FetchMethod},
     js_value::js_value_struct::JsValue,
-    modules::dom::DriverDomCommand,
+    dom_command::DriverDomCommand,
 };
 pub use fetch::{
     fetch_builder::FetchBuilder,
@@ -130,7 +130,7 @@ pub use html_macro::{
 pub use instant::{
     Instant, InstantType
 };
-pub use websocket::{WebsocketConnection, WebsocketMessageDriver, WebsocketMessage};
+pub use websocket::{WebsocketConnection, WebsocketMessage};
 
 
 #[cfg(feature = "serde_request")]

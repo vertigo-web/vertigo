@@ -1,4 +1,4 @@
-use std::{collections::HashMap, rc::Rc};
+use std::collections::HashMap;
 
 use crate::{FetchBuilder, ApiImport};
 
@@ -37,7 +37,7 @@ pub trait ListRequestTrait: Sized {
 pub enum RequestBuilder {
     ErrorInput(String),
     Data {
-        api: Rc<ApiImport>,
+        api: ApiImport,
         url: String,
         headers: Option<HashMap<String, String>>,
         body: Option<String>,
@@ -45,7 +45,7 @@ pub enum RequestBuilder {
 }
 
 impl RequestBuilder {
-    pub fn new(api: &Rc<ApiImport>, url: impl Into<String>) -> RequestBuilder {
+    pub fn new(api: &ApiImport, url: impl Into<String>) -> RequestBuilder {
         RequestBuilder::Data {
             api: api.clone(),
             url: url.into(),

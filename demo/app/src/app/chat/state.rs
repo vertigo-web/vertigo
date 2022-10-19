@@ -25,7 +25,7 @@ impl ChatState {
 
             get_driver().websocket(
                 "ws://127.0.0.1:3000/ws",
-                Box::new(move |message| match message {
+                move |message| match message {
                     WebsocketMessage::Connection(connection) => {
                         connect.set(Some(connection));
                         log::info!("socket demo - connect ...");
@@ -39,7 +39,7 @@ impl ChatState {
                         connect.set(None);
                         log::info!("socket demo - close ...");
                     }
-                }),
+                },
             )
         };
 

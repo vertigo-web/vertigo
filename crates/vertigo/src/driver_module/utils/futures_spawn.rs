@@ -8,7 +8,7 @@ use crate::ApiImport;
 use crate::struct_mut::ValueMut;
 
 #[inline]
-pub fn spawn_local<F>(api: Rc<ApiImport>, future: F)
+pub fn spawn_local<F>(api: ApiImport, future: F)
 where
     F: Future<Output = ()> + 'static,
 {
@@ -22,11 +22,11 @@ struct Inner {
 
 pub(crate) struct Task {
     inner: ValueMut<Option<Inner>>,
-    api: Rc<ApiImport>
+    api: ApiImport
 }
 
 impl Task {
-    pub(crate) fn spawn(api: Rc<ApiImport>, future: Pin<Box<dyn Future<Output = ()>>>) {
+    pub(crate) fn spawn(api: ApiImport, future: Pin<Box<dyn Future<Output = ()>>>) {
         let this = Rc::new(Self {
             inner: ValueMut::new(None),
             api,
