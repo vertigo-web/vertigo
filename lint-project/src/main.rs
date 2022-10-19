@@ -25,7 +25,7 @@ fn visit_dirs(result: &mut Vec<String>, dir: &Path) {
         }
         return;
     }
-    
+
     if dir.is_file() {
         if dir.starts_with("./.git") ||
             dir.starts_with("./target") ||
@@ -130,7 +130,7 @@ fn main() {
     let mut result = Vec::new();
 
     visit_dirs(&mut result, Path::new("."));
- 
+
     let mut errors_counter = 0;
 
     for file_path in result {

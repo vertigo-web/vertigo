@@ -63,6 +63,12 @@ impl<T> Clone for Value<T> {
     }
 }
 
+impl<T: PartialEq> PartialEq for Value<T> {
+    fn eq(&self, other: &Self) -> bool {
+        self.inner.id.eq(&other.inner.id)
+    }
+}
+
 impl<T: Clone + 'static> Value<T> {
     pub fn new(value: T) -> Value<T> {
         let deps = get_driver().inner.dependencies.clone();

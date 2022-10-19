@@ -134,7 +134,7 @@ pub use websocket::{WebsocketConnection, WebsocketMessage};
 
 
 #[cfg(feature = "serde_request")]
-/// Implements [SingleRequestTrait] using serde (needs `serde_request` feature).
+/// Implements [ListRequestTrait] using serde (needs `serde_request` feature).
 pub use vertigo_macro::SerdeListRequest;
 
 #[cfg(feature = "serde_request")]
@@ -142,7 +142,7 @@ pub use vertigo_macro::SerdeListRequest;
 pub use vertigo_macro::SerdeRequest;
 
 #[cfg(feature = "serde_request")]
-/// Implements [ListRequestTrait] using serde (needs `serde_request` feature).
+/// Implements [SingleRequestTrait] using serde (needs `serde_request` feature).
 pub use vertigo_macro::SerdeSingleRequest;
 
 #[cfg(feature = "serde_request")]
