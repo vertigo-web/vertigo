@@ -8,25 +8,27 @@ Features
 * **Real DOM** - No intermediate Virtual DOM mechanism is necessary
 * **HTML/CSS macros** - Allows to construct Real DOM nodes using HTML and CSS
 
-See [Changelog](/CHANGES.md) for recent features.
+See [Changelog](https://github.com/vertigo-web/vertigo/blob/master/CHANGES.md) for recent features.
 
-Go to **[TUTORIAL](/tutorial.md)** if you want to try.
+Go to **[TUTORIAL](https://github.com/vertigo-web/vertigo/blob/master/tutorial.md)** if you want to try.
 
-Example
+Examples
 --------------
 
 Dependencies:
 
 ```toml
-vertigo = "0.1.0-beta.5"
+vertigo = "0.1"
 ```
 
 Example 1:
 
 ```rust
-use vertigo::{dom, DomElement, Value, bind, start_app};
+use vertigo::{bind, dom, DomElement, start_app, Value};
 
-pub fn render(count: Value<i32>) -> DomElement {
+pub fn app() -> DomElement {
+    let count = Value::new(0);
+
     let increment = bind(&count).call(|context, count| {
         count.set(count.get(context) + 1);
     });
@@ -46,17 +48,14 @@ pub fn render(count: Value<i32>) -> DomElement {
 
 #[no_mangle]
 pub fn start_application() {
-    start_app(|| -> DomElement {
-        let count = Value::new(0);
-        render(count)
-    });
+    start_app(app);
 }
 ```
 
 Example 2:
 
 ```rust
-use vertigo::{DomElement, Value, dom, css_fn};
+use vertigo::{css_fn, dom, DomElement, start_app, Value};
 
 pub struct MyMessage {
     pub message: Value<String>,
@@ -77,7 +76,7 @@ css_fn! { main_div, "
     color: darkblue;
 " }
 
-fn render() -> DomElement {
+fn app() -> DomElement {
     let message = Value::new("Hello world!".to_string());
 
     dom! {
@@ -86,14 +85,19 @@ fn render() -> DomElement {
         </div>
     }
 }
+
+#[no_mangle]
+pub fn start_application() {
+    start_app(app);
+}
 ```
 
-Take a look at **[More examples here](/examples)**.
+Take a look at **[More examples here](https://github.com/vertigo-web/vertigo/tree/master/examples)**.
 
 Demo App - installation and usage
 --------------
 
-Make sure you're using nigthly version of rust:
+Make sure you're using nightly version of rust:
 
 * `rustup default nightly`
 
