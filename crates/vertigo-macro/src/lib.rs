@@ -1,14 +1,19 @@
+#![feature(proc_macro_span)]
+
 #[macro_use]
 extern crate pest_derive;
 #[macro_use]
 extern crate proc_macro_error;
 
+
+mod logs;
 mod css_parser;
 mod serde_request;
 mod html_parser;
+mod build;
 
 use html_parser::dom_inner;
-use proc_macro::TokenStream;
+use proc_macro::{TokenStream, Span};
 use proc_macro2::{TokenStream as TokenStream2};
 
 use crate::{
@@ -18,6 +23,7 @@ use crate::{
 #[proc_macro]
 #[proc_macro_error]
 pub fn dom(input: TokenStream) -> TokenStream {
+    crate::build::build_static();
     dom_inner(input)
 }
 
@@ -32,6 +38,7 @@ pub fn dom_debug(input: TokenStream) -> TokenStream {
 #[proc_macro]
 #[proc_macro_error]
 pub fn css_block(input: TokenStream) -> TokenStream {
+    crate::build::build_static();
     let (css_str, _) = generate_css_string(input);
     let result = quote! { #css_str };
     result.into()
@@ -40,6 +47,7 @@ pub fn css_block(input: TokenStream) -> TokenStream {
 #[proc_macro]
 #[proc_macro_error]
 pub fn css(input: TokenStream) -> TokenStream {
+    crate::build::build_static();
     let (css_str, is_dynamic) = generate_css_string(input);
     let result = if is_dynamic {
         quote! { vertigo::Css::string(#css_str) }
@@ -74,4 +82,22 @@ pub fn serde_request_macro_derive(input: TokenStream) -> TokenStream {
         #list
     };
     result.into()
+}
+
+#[proc_macro]
+#[proc_macro_error]
+pub fn include_static(input: TokenStream) -> TokenStream {
+    let path = input.to_string();
+    let file_path = Span::call_site().source_file().path();
+
+    match build::include_static(file_path, path) {
+        Ok(hash) => {
+            quote! { #hash }.into()
+        },
+        Err(message) => {
+            emit_error!(Span::call_site(), "{}", message);
+            let empty = "";
+            quote! { #empty }.into()
+        }
+    }
 }

@@ -1,4 +1,4 @@
-use vertigo::{Computed, Value, DomElement, dom};
+use vertigo::{Computed, Value, DomElement, dom, include_static, css};
 
 mod simple_counter;
 use simple_counter::SimpleCounter;
@@ -65,6 +65,15 @@ pub struct CountersDemo {
 
 impl CountersDemo {
     pub fn mount(&self) -> DomElement {
+        let path = include_static!("./counter.webp");
+
+        let center_css = css!{"
+            border: 1px solid black;
+            padding: 1px;
+            margin: 0 auto;
+            display: block;
+        "};
+
         dom! {
             <div>
                 <SimpleCounter label="counter1 value" value={&self.state.counter1} />
@@ -72,6 +81,7 @@ impl CountersDemo {
                 <SimpleCounter label="counter3 value" value={&self.state.counter3} />
                 <SimpleCounter label="counter4 value" value={&self.state.counter4} />
                 <Sum sum={&self.state.sum} />
+                <img css={center_css} src={path} />
             </div>
         }
     }

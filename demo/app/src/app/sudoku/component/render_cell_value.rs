@@ -1,22 +1,6 @@
-use vertigo::{css, css_fn, Css, bind, dom, DomElement};
+use vertigo::{css, css_fn, bind, dom, DomElement};
 
 use crate::app::sudoku::state::{number_item::SudokuValue, Cell};
-
-use super::config::Config;
-
-fn css_item_number_wrapper() -> Css {
-    let config = Config::new();
-    css!(
-        "
-        position: relative;
-        text-align: center;
-        font-size: 30px;
-        color: blue;
-        height: {config.item_width_size}px;
-        line-height: {config.item_width_size}px;
-    "
-    )
-}
 
 css_fn! { css_delete, "
     position: absolute;
@@ -34,7 +18,7 @@ css_fn! { css_delete, "
     justify-content: center;
 " }
 
-pub fn render_cell_value(value: SudokuValue, cell: &Cell) -> DomElement {
+pub fn render_cell_value(item_height_size: u32, value: SudokuValue, cell: &Cell) -> DomElement {
     let cell = cell.clone();
 
     let delete_component = cell.show_delete.render_value_option({
@@ -57,8 +41,17 @@ pub fn render_cell_value(value: SudokuValue, cell: &Cell) -> DomElement {
         }
     });
 
+    let css_item = css!("
+        position: relative;
+        text-align: center;
+        font-size: 30px;
+        color: blue;
+        height: {item_height_size}px;
+        line-height: {item_height_size}px;
+    ");
+
     dom! {
-        <div css={css_item_number_wrapper()}>
+        <div css={css_item}>
             { value.as_u16() }
             {delete_component}
         </div>
