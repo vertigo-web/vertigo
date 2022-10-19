@@ -1,20 +1,16 @@
 use std::collections::HashSet;
 
 use vertigo::{css, Css, DomElement, dom, Computed, bind2, bind3};
-
 use crate::app::sudoku::state::{number_item::SudokuValue, Cell};
 
-use super::config::Config;
-
-fn css_item_only_one() -> Css {
-    let config = Config::new();
+fn css_item_only_one(cell_width: u32) -> Css {
     css!(
         "
         display: flex;
         align-items: center;
         justify-content: center;
-        width: {config.item_width}px;
-        height: {config.item_width}px;
+        width: {cell_width}px;
+        height: {cell_width}px;
         background-color: #00ff00;
         font-size: 30px;
         color: blue;
@@ -23,27 +19,11 @@ fn css_item_only_one() -> Css {
     )
 }
 
-fn css_wrapper_one() -> Css {
-    let config = Config::new();
+fn css_wrapper_one(cell_width: u32) -> Css {
     css!(
         "
-        width: {config.item_width}px;
-        height: {config.item_width}px;
-    "
-    )
-}
-
-fn css_wrapper() -> Css {
-    let config = Config::new();
-    css!(
-        "
-        width: {config.item_width}px;
-        height: {config.item_width}px;
-
-        display: grid;
-        grid-template-columns: 1fr 1fr 1fr;
-        grid-template-rows: 1fr 1fr 1fr;
-        flex-shrink: 0;
+        width: {cell_width}px;
+        height: {cell_width}px;
     "
     )
 }
@@ -63,7 +43,7 @@ fn css_item(should_show: bool) -> Css {
     )
 }
 
-fn view_one_possible(cell: &Cell) -> DomElement {
+fn view_one_possible(cell_width: u32, cell: &Cell) -> DomElement {
     let cell = cell.clone();
 
     let render = cell.possible.render_value({
@@ -78,7 +58,7 @@ fn view_one_possible(cell: &Cell) -> DomElement {
                     });
 
                 wrapper.add_child(dom! {
-                    <div css={css_item_only_one()} on_click={on_set}>
+                    <div css={css_item_only_one(cell_width)} on_click={on_set}>
                         { number.as_u16() }
                     </div>
                 });
@@ -89,29 +69,39 @@ fn view_one_possible(cell: &Cell) -> DomElement {
     });
 
     dom! {
-        <div css={css_wrapper_one()}>
+        <div css={css_wrapper_one(cell_width)}>
             {render}
         </div>
     }
 }
 
-fn view_last_value(cell: &Cell, possible_last_value: SudokuValue) -> DomElement {
+fn view_last_value(cell_width: u32, cell: &Cell, possible_last_value: SudokuValue) -> DomElement {
     let on_set = bind2(cell, &possible_last_value)
         .call(|_, cell, possible_last_value| {
             cell.number.value.set(Some(*possible_last_value));
         });
 
     dom! {
-        <div css={css_wrapper_one()}>
-            <div css={css_item_only_one()} on_click={on_set}>
+        <div css={css_wrapper_one(cell_width)}>
+            <div css={css_item_only_one(cell_width)} on_click={on_set}>
                 { possible_last_value.as_u16() }"."
             </div>
         </div>
     }
 }
 
-fn view_default(cell: &Cell, possible: HashSet<SudokuValue>) -> DomElement {
-    let wrapper = dom! { <div css={css_wrapper()} /> };
+fn view_default(cell_width: u32, cell: &Cell, possible: HashSet<SudokuValue>) -> DomElement {
+    let css_wrapper = css!("
+        width: {cell_width}px;
+        height: {cell_width}px;
+
+        display: grid;
+        grid-template-columns: 1fr 1fr 1fr;
+        grid-template-rows: 1fr 1fr 1fr;
+        flex-shrink: 0;
+    ");
+
+    let wrapper = dom! { <div css={css_wrapper} /> };
 
     for number in SudokuValue::variants().into_iter() {
         let should_show = possible.contains(&number);
@@ -146,7 +136,7 @@ enum CellView {
     Default(HashSet<SudokuValue>)
 }
 
-pub fn render_cell_possible(cell: &Cell) -> DomElement {
+pub fn render_cell_possible(cell_width: u32, cell: &Cell) -> DomElement {
     let cell = cell.clone();
 
     let view = Computed::from({
@@ -172,9 +162,9 @@ pub fn render_cell_possible(cell: &Cell) -> DomElement {
 
     let render = view.render_value(move |view| {
         match view {
-            CellView::One => view_one_possible(&cell),
-            CellView::LastPossible(last) => view_last_value(&cell, last),
-            CellView::Default(possible) => view_default(&cell, possible),
+            CellView::One => view_one_possible(cell_width, &cell),
+            CellView::LastPossible(last) => view_last_value(cell_width, &cell, last),
+            CellView::Default(possible) => view_default(cell_width, &cell, possible),
         }
     });
 

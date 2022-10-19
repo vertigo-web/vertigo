@@ -31,37 +31,17 @@ args = [
 
 # Demo tasks
 
-[tasks.opt_try]
-ignore_errors = true
-script = [
-    "wasm-opt -Os --strip-debug -o ./demo/build/vertigo_demo.wasm ${CARGO_MAKE_CRATE_TARGET_DIRECTORY}/wasm32-unknown-unknown/release/vertigo_demo.wasm",
-]
-
-[tasks.opt_catch.condition]
-files_not_exist = ["./demo/build/vertigo_demo.wasm"]
-[tasks.opt_catch]
-script = [
-    "echo \" \\033[31m You do not have a command \"wasm-opt\" in your system  \\033[0m \" >&2",
-    "echo \" \\033[31m You need to install Binaryen: https://github.com/WebAssembly/binaryen \\033[0m \" >&2",
-    "cp ${CARGO_MAKE_CRATE_TARGET_DIRECTORY}/wasm32-unknown-unknown/release/vertigo_demo.wasm ./demo/build/vertigo_demo.wasm",
-]
-
-
 [tasks.demo-build]
-dependencies = [ "wasm32-target", "demo-clean" ]
+dependencies = ["wasm32-target"]
 script = [
-    "mkdir -p demo/build",
-    "cargo build -p vertigo-demo --release --target wasm32-unknown-unknown",
-    "cp ${CARGO_MAKE_CRATE_TARGET_DIRECTORY}/wasm32-unknown-unknown/release/wasm_run.js ./demo/build/wasm_run.js",
-    "cargo make opt_try",
-    "cargo make opt_catch",
-    "cp ./demo/app/index.html ./demo/build",
+    "static_path=demo/build cargo build -p vertigo-demo --target wasm32-unknown-unknown --release",
+    "static_path=demo/build cargo build -p vertigo-demo --target wasm32-unknown-unknown",
 ]
 
 [tasks.demo-serve-old]
 install_crate = { crate_name = "basic-http-server", binary = "basic-http-server", test_arg = ["--version"] }
 command = "basic-http-server"
-args = [ "--addr", "127.0.0.1:3000", "./build" ]
+args = [ "--addr", "127.0.0.1:3000", "./demo/build" ]
 
 [tasks.demo-serve]
 command = "cargo"
@@ -77,42 +57,19 @@ dependencies = [
 command = "cargo"
 args = [ "watch", "--watch", "./demo/app", "--watch", "crates", "--delay", "0.5", "-x", "make demo-start" ]
 
-[tasks.demo-clean]
-script = [
-    "rm -Rf demo/build"
-]
-
 # Examples tasks
-
-[env]
-EXAMPLES = "counter router trafficlights"
-
-# Run without arguments to build all examples; provide example name to build only this particular example
 [tasks.examples-build]
 dependencies = [ "wasm32-target" ]
-script = '''
-    NAME=${@}
-    if [ "$NAME" = "" ]; then
-        for name in ${EXAMPLES}; do
-            cargo make examples-build ${name}
-        done
-    else
-        mkdir -p examples/build/${NAME}
-        cargo build -p vertigo-example-${NAME} --release --target wasm32-unknown-unknown
-        cp ${CARGO_MAKE_CRATE_TARGET_DIRECTORY}/wasm32-unknown-unknown/release/wasm_run.js ./examples/build/${NAME}/wasm_run.js
-        # wasm-pack build examples/${NAME} --no-typescript --target web --out-dir ../build/${NAME} --out-name app --release
-        wasm-opt -Os --strip-debug -o ./examples/build/${NAME}/vertigo_example_${NAME}.wasm ${CARGO_MAKE_CRATE_TARGET_DIRECTORY}/wasm32-unknown-unknown/release/vertigo_example_${NAME}.wasm
-        # cargo make opt_try
-        # cargo make opt_catch
-        # cp ./demo/app/index.html ./demo/build
-        cp examples/${NAME}/index.html examples/build/${NAME}
-    fi
-'''
+script = [
+    'static_path=examples/build/counter cargo build -p vertigo-example-counter --target wasm32-unknown-unknown --release',
+    'static_path=examples/build/counter cargo build -p vertigo-example-counter --target wasm32-unknown-unknown',
 
-[tasks.examples-clean]
-command = "rm"
-args = [ "-rf", "examples/build" ]
+    'static_path=examples/build/router cargo build -p vertigo-example-router --target wasm32-unknown-unknown --release',
+    'static_path=examples/build/router cargo build -p vertigo-example-router --target wasm32-unknown-unknown',
 
+    'static_path=examples/build/trafficlights cargo build -p vertigo-example-trafficlights --target wasm32-unknown-unknown --release',
+    'static_path=examples/build/trafficlights cargo build -p vertigo-example-trafficlights --target wasm32-unknown-unknown',
+]
 
 # Dependencies
 
@@ -142,7 +99,7 @@ args = [ "-p", "typescript", "tsc",
 [tasks.build-js]
 dependencies = [ "build-js-run-ts" ]
 script = [
-    "npx rollup crates/vertigo/src/driver_module/src_js_build/index.js --file crates/vertigo/src/driver_module/wasm_run.js",
+    "npx rollup crates/vertigo/src/driver_module/src_js_build/index.js --file crates/vertigo-macro/src/wasm_run.js",
     "rm -rf crates/vertigo/src/driver_module/src_js_build",
 ]
 

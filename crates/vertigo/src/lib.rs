@@ -132,6 +132,7 @@ pub use instant::{
 };
 pub use websocket::{WebsocketConnection, WebsocketMessage};
 
+pub use vertigo_macro::include_static;
 
 #[cfg(feature = "serde_request")]
 /// Implements [ListRequestTrait] using serde (needs `serde_request` feature).

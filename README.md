@@ -55,7 +55,7 @@ pub fn start_application() {
 Example 2:
 
 ```rust
-use vertigo::{css_fn, dom, DomElement, start_app, Value};
+use vertigo::{css, dom, DomElement, start_app, Value};
 
 pub struct MyMessage {
     pub message: Value<String>,
@@ -72,15 +72,15 @@ impl MyMessage {
     }
 }
 
-css_fn! { main_div, "
-    color: darkblue;
-" }
-
 fn app() -> DomElement {
     let message = Value::new("Hello world!".to_string());
 
+    let wrapper_css = css!("
+        color: darkblue;
+    ");
+
     dom! {
-        <div css={main_div()}>
+        <div css={wrapper_css}>
             <MyMessage message={message} />
         </div>
     }
