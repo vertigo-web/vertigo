@@ -1,5 +1,6 @@
 pub mod driver;
-pub mod modules;
+mod dom;
+pub mod dom_command;
 pub mod utils;
 pub mod api;
 mod api_dom_access; 

@@ -1,12 +1,4 @@
-use std::rc::Rc;
 use crate::{ApiImport, driver_module::callbacks::CallbackId};
-
-#[derive(Debug)]
-pub enum WebsocketMessageDriver {
-    Message(String),
-    Connection { callback_id: CallbackId },
-    Close,
-}
 
 /// Websocket message type on which a websocket handler operates.
 pub enum WebsocketMessage {
@@ -18,7 +10,7 @@ pub enum WebsocketMessage {
 /// Represents websocket connection.
 #[derive(Clone)]
 pub struct WebsocketConnection {
-    api: Rc<ApiImport>,
+    api: ApiImport,
     callback_id: CallbackId,
 }
 
@@ -29,7 +21,7 @@ impl PartialEq for WebsocketConnection {
 }
 
 impl WebsocketConnection {
-    pub fn new(api: Rc<ApiImport>, callback_id: CallbackId) -> WebsocketConnection {
+    pub fn new(api: ApiImport, callback_id: CallbackId) -> WebsocketConnection {
         WebsocketConnection { api, callback_id }
     }
 

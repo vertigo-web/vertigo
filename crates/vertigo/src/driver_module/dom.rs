@@ -1,16 +1,15 @@
 use std::cell::Cell;
-use std::rc::Rc;
 
 use crate::DomId;
 use crate::struct_mut::VecMut;
 
 use crate::driver_module::api::ApiImport;
 use crate::driver_module::callbacks::CallbackId;
-use super::driver_dom_command::{DriverDomCommand, sort_commands};
+use super::dom_command::{DriverDomCommand, sort_commands};
 
 
 pub struct DriverDom {
-    api: Rc<ApiImport>,
+    api: ApiImport,
     commands: VecMut<DriverDomCommand>,
 
     // For testing/debuging purposes
@@ -19,7 +18,7 @@ pub struct DriverDom {
 }
 
 impl DriverDom {
-    pub fn new(api: &Rc<ApiImport>) -> DriverDom {
+    pub fn new(api: &ApiImport) -> DriverDom {
 
         let driver_browser = DriverDom {
             api: api.clone(),

@@ -1,4 +1,4 @@
-use std::{collections::HashMap, rc::Rc};
+use std::collections::HashMap;
 
 use crate::{
     driver_module::driver::{FetchMethod, FetchResult}, ApiImport,
@@ -6,14 +6,14 @@ use crate::{
 
 /// Builder for simple requests.
 pub struct FetchBuilder {
-    api: Rc<ApiImport>,
+    api: ApiImport,
     url: String,
     headers: Option<HashMap<String, String>>,
     body: Option<String>,
 }
 
 impl FetchBuilder {
-    pub fn new(api: Rc<ApiImport>, url: String) -> FetchBuilder {
+    pub fn new(api: ApiImport, url: String) -> FetchBuilder {
         FetchBuilder {
             api,
             url,

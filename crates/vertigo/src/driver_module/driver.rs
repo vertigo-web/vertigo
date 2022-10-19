@@ -5,9 +5,8 @@ use std::{
 };
 use crate::JsValue;
 use crate::{
-    WebsocketMessageDriver,
     Dependencies, DropResource, FutureBox,
-    FetchBuilder, Instant, RequestBuilder, WebsocketMessage, WebsocketConnection,
+    FetchBuilder, Instant, RequestBuilder, WebsocketMessage,
     get_driver, css::css_manager::CssManager, Context,
 };
 
@@ -16,10 +15,7 @@ use crate::{
     driver_module::utils::futures_spawn::spawn_local,
     driver_module::init_env::init_env
 };
-use crate::driver_module::modules::{
-    dom::DriverDom,
-    websocket::DriverWebsocket,
-};
+use crate::driver_module::dom::DriverDom;
 
 use super::DomAccess;
 use super::callbacks::{CallbackId};
@@ -43,16 +39,15 @@ type Executable = dyn Fn(Pin<Box<dyn Future<Output = ()> + 'static>>);
 
 #[derive(Clone)]
 pub struct DriverInner {
-    pub(crate) api: Rc<ApiImport>,
+    pub(crate) api: ApiImport,
     pub(crate) dependencies: Dependencies,
     pub(crate) css_manager: CssManager,
     pub(crate) dom: Rc<DriverDom>,
-    websocket: DriverWebsocket,
     spawn_executor: Rc<Executable>,
 }
 
 impl DriverInner {
-    pub fn new(api: Rc<ApiImport>) -> Self {
+    pub fn new(api: ApiImport) -> Self {
         let dependencies = Dependencies::default();
 
         let spawn_executor = {
@@ -64,8 +59,6 @@ impl DriverInner {
         };
 
         let dom = Rc::new(DriverDom::new(&api));
-        let websocket = DriverWebsocket::new(&api);
-
         let css_manager = {
             let driver_dom = dom.clone();
             CssManager::new(move |selector: &str, value: &str| {
@@ -86,7 +79,6 @@ impl DriverInner {
             dependencies,
             css_manager,
             dom,
-            websocket,
             spawn_executor,
         }
     }
@@ -117,7 +109,7 @@ pub struct Driver {
 impl Driver {
     #[allow(clippy::new_ret_no_self)]
     pub fn new(api: ApiImport) -> Driver {
-        let driver = Rc::new(DriverInner::new(Rc::new(api)));
+        let driver = Rc::new(DriverInner::new(api));
 
         Driver {
             inner: driver,
@@ -186,25 +178,8 @@ impl Driver {
 
     /// Initiate a websocket connection. Provided callback should handle a single [WebsocketMessage].
     #[must_use]
-    pub fn websocket(&self, host: impl Into<String>, callback: Box<dyn Fn(WebsocketMessage)>) -> DropResource {
-        let host: String = host.into();
-        let api = self.inner.api.clone();
-
-        self.inner.websocket.websocket_start(
-            host,
-            Box::new(move |message: WebsocketMessageDriver| {
-                let message = match message {
-                    WebsocketMessageDriver::Connection { callback_id } => {
-                        let connection = WebsocketConnection::new(api.clone(), callback_id);
-                        WebsocketMessage::Connection(connection)
-                    }
-                    WebsocketMessageDriver::Message(message) => WebsocketMessage::Message(message),
-                    WebsocketMessageDriver::Close => WebsocketMessage::Close,
-                };
-
-                callback(message);
-            }),
-        )
+    pub fn websocket<F: Fn(WebsocketMessage) + 'static>(&self, host: impl Into<String>, callback: F) -> DropResource {
+        self.inner.api.websocket(host, callback)
     }
 
     /// Spawn a future - thus allowing to fire async functions in, for example, event handler. Handy when fetching resources from internet.

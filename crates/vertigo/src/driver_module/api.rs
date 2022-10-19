@@ -1,6 +1,6 @@
 use std::{rc::Rc, future::Future, pin::Pin, collections::HashMap};
 
-use crate::{InstantType, DropResource, struct_mut::ValueMut, transaction, get_driver, FetchResult, FutureBox, FetchMethod};
+use crate::{InstantType, DropResource, struct_mut::ValueMut, transaction, get_driver, FetchResult, FutureBox, FetchMethod, WebsocketMessage, WebsocketConnection};
 
 use super::{js_value::{Arguments, js_value_struct::JsValue}, DomAccess, callbacks::CallbackStore, utils::json::JsonMapBuilder};
 
@@ -373,7 +373,47 @@ impl ApiImport {
         Box::pin(receiver)
     }
 
-    pub fn websocket_register_callback(&self, host: &str, callback_id: u64) {
+    #[must_use]
+    pub fn websocket<F: Fn(WebsocketMessage) + 'static>(&self, host: impl Into<String>, callback: F) -> DropResource {
+        let host: String = host.into();
+
+        let api = self.clone();
+
+        let (callback_id, drop_callback) = self.callback_store.register_with_id(move |callback_id, data| {
+            if let JsValue::True = data {
+                let connection = WebsocketConnection::new(api.clone(), callback_id);
+                let connection = WebsocketMessage::Connection(connection);
+                callback(connection);
+                return JsValue::Undefined;
+            }
+
+            if let JsValue::String(message) = data {
+                callback(WebsocketMessage::Message(message));
+                return JsValue::Undefined;
+            }
+
+            if let JsValue::False = data {
+                callback(WebsocketMessage::Close);
+                return JsValue::Undefined;
+            }
+
+            log::error!("websocket - unsupported message type received");
+            JsValue::Undefined
+        });
+
+        self.websocket_register_callback(host.as_str(), callback_id.as_u64());
+
+        DropResource::new({
+            let api = self.clone();
+
+            move || {
+                api.websocket_unregister_callback(callback_id.as_u64());
+                drop_callback.off();
+            }
+        })
+    }
+
+    fn websocket_register_callback(&self, host: &str, callback_id: u64) {
         self.dom_access()
             .api()
             .get("websocket")
@@ -384,7 +424,7 @@ impl ApiImport {
             .exec();
     }
 
-    pub fn websocket_unregister_callback(&self, callback_id: u64) {
+    fn websocket_unregister_callback(&self, callback_id: u64) {
         self.dom_access()
             .api()
             .get("websocket")
@@ -422,5 +462,6 @@ impl ApiImport {
             self.fn_dom_access
         )
     }
+
 }
 

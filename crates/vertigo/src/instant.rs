@@ -1,5 +1,3 @@
-use std::rc::Rc;
-
 use crate::{ApiImport};
 
 /// Duration in seconds, returned from [Instant] methods.
@@ -8,12 +6,12 @@ pub type InstantType = u64;
 /// Monotonically non-decreasing clock using a driver, similar to [std::time::Instant].
 #[derive(Clone)]
 pub struct Instant {
-    api: Rc<ApiImport>,
+    api: ApiImport,
     pub instant: InstantType,
 }
 
 impl Instant {
-    pub fn now(api: Rc<ApiImport>) -> Self {
+    pub fn now(api: ApiImport) -> Self {
         Self {
             instant: api.instant_now(),
             api,
