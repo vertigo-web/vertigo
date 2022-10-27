@@ -77,6 +77,17 @@ jobs:
         with:
           command: test
           args: --all-features
+      - name: vertigo-cli
+        run: |
+          cargo build --release -p vertigo-cli
+          rustup default nightly-2022-09-27
+          mkdir ../vertigo-cli-test
+          mv target/release/vertigo-cli ../vertigo-cli-test
+          cd ../vertigo-cli-test
+          ./vertigo-cli new some_app
+          cd some_app
+          ../vertigo-cli build
+          ls -1 build
 
   nightly-clippy-demo-server:
     name: Nightly clippy demo server (amd64)
