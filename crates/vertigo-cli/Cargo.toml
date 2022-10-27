@@ -1,0 +1,15 @@
+[package]
+name = "vertigo-cli"
+version = "0.2.0-alpha"
+authors = ["Grzegorz Szeliga <szeligagrzegorz@gmail.com>", "Michał Pokrywka <wolfmoon@o2.pl>"]
+description = "Reactive Real-DOM library for Rust - packaging tool"
+edition = "2021"
+license = "MIT OR Apache-2.0"
+
+[dependencies]
+cargo = "0.66"
+clap = { version = "4.0", features = ["derive"] }
+hex = "0.4.3"
+include_dir = "0.7"
+serde = { version = "1.0", features = ["derive"] }
+sha2 = "0.10.6"

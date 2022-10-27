@@ -1,6 +1,7 @@
 [workspace]
 members = [
     "crates/vertigo",
+    "crates/vertigo-cli",
     "crates/vertigo-macro",
 
     "demo/app",

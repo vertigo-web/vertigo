@@ -34,8 +34,7 @@ args = [
 [tasks.demo-build]
 dependencies = ["wasm32-target"]
 script = [
-    "static_path=demo/build cargo build -p vertigo-demo --target wasm32-unknown-unknown --release",
-    "static_path=demo/build cargo build -p vertigo-demo --target wasm32-unknown-unknown",
+    'cargo run --release --bin vertigo-cli -- build vertigo-demo --dest-dir=demo/build'
 ]
 
 [tasks.demo-serve-old]
@@ -61,14 +60,9 @@ args = [ "watch", "--watch", "./demo/app", "--watch", "crates", "--delay", "0.5"
 [tasks.examples-build]
 dependencies = [ "wasm32-target" ]
 script = [
-    'static_path=examples/build/counter cargo build -p vertigo-example-counter --target wasm32-unknown-unknown --release',
-    'static_path=examples/build/counter cargo build -p vertigo-example-counter --target wasm32-unknown-unknown',
-
-    'static_path=examples/build/router cargo build -p vertigo-example-router --target wasm32-unknown-unknown --release',
-    'static_path=examples/build/router cargo build -p vertigo-example-router --target wasm32-unknown-unknown',
-
-    'static_path=examples/build/trafficlights cargo build -p vertigo-example-trafficlights --target wasm32-unknown-unknown --release',
-    'static_path=examples/build/trafficlights cargo build -p vertigo-example-trafficlights --target wasm32-unknown-unknown',
+    'cargo run --release --bin vertigo-cli -- build vertigo-example-counter --dest-dir=examples/build/counter',
+    'cargo run --release --bin vertigo-cli -- build vertigo-example-router --dest-dir=examples/build/router',
+    'cargo run --release --bin vertigo-cli -- build vertigo-example-trafficlights --dest-dir=examples/build/trafficlights',
 ]
 
 # Dependencies
@@ -99,7 +93,7 @@ args = [ "-p", "typescript", "tsc",
 [tasks.build-js]
 dependencies = [ "build-js-run-ts" ]
 script = [
-    "npx rollup crates/vertigo/src/driver_module/src_js_build/index.js --file crates/vertigo-macro/src/wasm_run.js",
+    "npx rollup crates/vertigo/src/driver_module/src_js_build/index.js --file crates/vertigo/src/driver_module/wasm_run.js",
     "rm -rf crates/vertigo/src/driver_module/src_js_build",
 ]
 

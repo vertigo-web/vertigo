@@ -1,6 +1,6 @@
 [package]
 name = "vertigo"
-version = "0.1.0"
+version = "0.2.0-alpha"
 authors = ["Grzegorz Szeliga <szeligagrzegorz@gmail.com>", "Michał Pokrywka <wolfmoon@o2.pl>"]
 description = "Reactive Real-DOM library for Rust"
 readme = "README.md"
@@ -18,7 +18,7 @@ serde_request = [ "serde_json" ]
 [dependencies]
 log = { version = "0.4.14", features=["std"] }
 serde_json = { version = "1.0", optional = true }
-vertigo-macro = { path = "../../crates/vertigo-macro", version="0.1.0" }
+vertigo-macro = { path = "../../crates/vertigo-macro", version="0.2.0-alpha" }
 
 [dev-dependencies]
 serde = { version = "1.0", features = ["derive"] }

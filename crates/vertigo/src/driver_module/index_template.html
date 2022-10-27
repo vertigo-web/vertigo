@@ -1,0 +1,24 @@
+<!DOCTYPE html>
+<html>
+    <head>
+        <meta charset="utf-8"/>
+        <style type="text/css">
+            * {
+                box-sizing: border-box;
+            }
+            html, body {
+                width: 100%;
+                height: 100%;
+                margin: 0;
+                padding: 0;
+                border: 0;
+            }
+        </style>
+        <script type="module">
+            import { runModule } from "{wasm_run_path}";
+            runModule("{wasm_lib_path}");
+        </script>
+    </head>
+    <body>
+    </body>
+</html>

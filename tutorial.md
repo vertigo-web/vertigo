@@ -1,7 +1,7 @@
 # Vertigo Tutorial
 
 <!-- markdownlint-disable-next-line no-emphasis-as-heading -->
-*Up to date with version 0.1.0-beta.5*
+*Up to date with version 0.2.0-alpha*
 
 <!-- markdownlint-disable-next-line heading-increment -->
 ### Table of contents

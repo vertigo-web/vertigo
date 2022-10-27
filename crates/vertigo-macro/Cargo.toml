@@ -1,8 +1,8 @@
 [package]
 name = "vertigo-macro"
-version = "0.1.0"
+version = "0.2.0-alpha"
 authors = ["Grzegorz Szeliga <szeligagrzegorz@gmail.com>", "Michał Pokrywka <wolfmoon@o2.pl>"]
-description = "Reactive Real-DOM library for Rust - macros for html and fetch"
+description = "Reactive Real-DOM library for Rust - macros"
 edition = "2021"
 license = "MIT OR Apache-2.0"
 
@@ -18,9 +18,5 @@ proc-macro-error = "1.0.4"
 syn = { version = "1.0.60", features=["full"] }
 itertools = "0.10.0"
 syn-rsx = "0.8.0"
-lazy_static = "1.4.0"
-serde_json = { version = "1.0" }
-serde = { version = "1.0", features = ["derive"] }
-envy = "0.4.2"
 sha2 = "0.10.6"
 hex = "0.4.3"

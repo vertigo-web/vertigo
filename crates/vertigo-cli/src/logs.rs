@@ -1,11 +1,9 @@
-use proc_macro::{Span};
-
 pub fn log_ok(message: impl Into<String>) {
     let message = message.into();
-    println!("ok: {message}");
+    println!("vertigo: {message}");
 }
 
 pub fn log_error(message: impl Into<String>) {
     let message = message.into();
-    emit_warning!(Span::call_site(), "{}", message);
+    eprintln!("vertigo: error: {message}");
 }
