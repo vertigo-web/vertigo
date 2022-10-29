@@ -141,10 +141,10 @@ pub fn transform_css_animation_value(css: &str, next_id: &NextId) -> (String, Op
         let id = next_id.get_next_id();
         let selector = get_selector(&id);
 
-        let keyframe_name = format!("@keyframes {}", selector);
+        let keyframe_name = format!("@keyframes {selector}");
         let keyframe_content = central_word;
 
-        let new_css = format!("{} {} {}", start_word, selector, end_word);
+        let new_css = format!("{start_word} {selector} {end_word}");
 
         return (new_css, Some((keyframe_name, keyframe_content.into())));
     }
@@ -156,7 +156,7 @@ pub fn transform_css_selector_value(row: &str, parent_selector: &str) -> Option<
     let brackets = find_brackets(row);
 
     if let Some((start_word, central_word, _end_word)) = brackets {
-        let new_selector = format!("{}{}", parent_selector, start_word);
+        let new_selector = format!("{parent_selector}{start_word}");
         return Some((new_selector, central_word.into()));
     }
 
@@ -192,7 +192,7 @@ pub fn transform_css(css: &str, next_id: &NextId) -> (u64, Vec<(String, String)>
                         value
                     };
 
-                    css_out.push(format!("{}: {}", name, value_parsed));
+                    css_out.push(format!("{name}: {value_parsed}"));
                 }
                 None => {
                     css_out.push(row.into());

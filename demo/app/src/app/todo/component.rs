@@ -16,7 +16,7 @@ impl Todo {
                     View::Post { id } => todo_post_render(&state, id),
                     View::User { email } => {
                         let view = state.view.clone();
-                        let messag: String = format!("user = {}", email);
+                        let messag: String = format!("user = {email}");
 
                         let on_click = move || {
                             view.set(View::Main);
@@ -128,7 +128,7 @@ fn todo_post_render(state: &TodoState, post_id: u32) -> DomElement {
 }
 
 fn render_message(post_id: u32) -> DomElement {
-    let message = format!("post_id = {}", post_id);
+    let message = format!("post_id = {post_id}");
 
     dom! {
         <div>

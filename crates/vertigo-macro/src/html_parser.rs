@@ -54,7 +54,12 @@ fn convert_to_component(node: Node) -> TokenStream2 {
             let span = attr_node.name_span().unwrap();
             if let (Some(key), Some(value)) = (attr_node.name, attr_node.value) {
                 let value = strip_brackets(value);
-                Some(quote! { #key: vertigo::clone_if_ref(#value), })
+                
+                if value.to_string().starts_with('&') {
+                    Some(quote! { #key: (#value).clone().into(), })
+                } else {
+                    Some(quote! { #key: (#value).into(), })
+                }
             } else {
                 emit_error!(span, "Expected key=value attribute");
                 None

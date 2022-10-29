@@ -34,7 +34,7 @@ async fn main() {
             service_method_routing::get(ServeDir::new("demo/build")).handle_error(|error: std::io::Error| {
                 (
                     StatusCode::INTERNAL_SERVER_ERROR,
-                    format!("Unhandled internal error: {}", error),
+                    format!("Unhandled internal error: {error}"),
                 )
             })
         })
@@ -67,7 +67,7 @@ async fn websocket(stream: WebSocket, state: AppState) {
         Ok(()) => {}
         Err(err) => match err {
             SocketError::AxumError(err) => {
-                println!("Client disconnected -> {}", err);
+                println!("Client disconnected -> {err}");
             }
 
             SocketError::ClientClose => {

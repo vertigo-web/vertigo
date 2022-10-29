@@ -45,7 +45,7 @@ impl GitHubExplorer {
                     _ => match state.data.get(&repo_shown).get(context) {
                         Resource::Loading => "Loading...".to_string(),
                         Resource::Ready(branch) => branch.as_ref().commit.sha.clone(),
-                        Resource::Error(err) => format!("Error: {}", err),
+                        Resource::Error(err) => format!("Error: {err}"),
                     },
                 }
             }

@@ -115,7 +115,7 @@ impl CssParser {
             value_strs.push(value_str);
         }
 
-        format!("{}: {};", ident_str, value_strs.join(" ").replace("} px", "}px"))
+        format!("{ident_str}: {};", value_strs.join(" ").replace("} px", "}px"))
     }
 
     fn generate_animation_rule(&mut self, pair: Pair<Rule>) -> String {
@@ -140,11 +140,11 @@ impl CssParser {
                                 })
                                 .collect::<Vec<_>>()
                                 .join("\n");
-                            format!("{} {{{{ {} }}}}", step, frame_rules)
+                            format!("{step} {{{{ {frame_rules} }}}}")
                         })
                         .collect::<Vec<_>>()
                         .join("\n");
-                    format!("{{{{ {} }}}}", frames_strs)
+                    format!("{{{{ {frames_strs} }}}}")
                 }
                 _ => {
                     emit_warning!(self.call_site, "CSS: unhandler value in generate_unknown_rule: {:?}", value);
@@ -173,7 +173,7 @@ impl CssParser {
         }
 
         if let Some(sub_selector) = sub_selector {
-            format!("{} {{{{ {} }}}};", sub_selector, value_strs.join("\n"))
+            format!("{sub_selector} {{{{ {} }}}};", value_strs.join("\n"))
         } else {
             emit_warning!(self.call_site, "CSS: Generated empty sub-rule");
             "".to_string()
@@ -210,7 +210,7 @@ impl ParamsEnumerator {
             key
         };
 
-        format!("{{{}}}", key)
+        format!("{{{key}}}")
     }
 
     fn into_hashmap(self) -> HashMap<String, String> {
@@ -232,6 +232,6 @@ fn get_string(input: TokenStream) -> String {
             Lit::Str(lit_str) => lit_str.value(),
             _ => panic!("Unsupported input type"),
         },
-        Err(e) => panic!("Error parsing input: {}", e),
+        Err(e) => panic!("Error parsing input: {e}"),
     }
 }

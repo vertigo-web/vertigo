@@ -61,7 +61,7 @@ impl MemoryBlock {
             }
 
         } else {
-            panic!("Buffer overflow size={} offset={} new_data={}", self.size, offset, data_len);
+            panic!("Buffer overflow size={} offset={offset} new_data={data_len}", self.size);
         }
     }
 

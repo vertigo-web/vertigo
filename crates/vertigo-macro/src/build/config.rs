@@ -20,7 +20,7 @@ impl EnvConfigIn {
 
     pub fn get_path_to_static(&self, path: impl Into<String>) -> String {
         let path = path.into();
-        format!("{}/{}", self.get_public(), path)
+        format!("{}/{path}", self.get_public())
     }
 
     pub fn new_path_in_static_make(&self, path: &[&str]) -> WasmPath {

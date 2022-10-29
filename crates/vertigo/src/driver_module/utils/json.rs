@@ -78,14 +78,14 @@ impl JsonMapBuilder {
         let mut records: Vec<String> = Vec::new();
 
         for (key, value) in self.data.into_iter() {
-            records.push(format!("\"{}\":{}", key, value));
+            records.push(format!("\"{key}\":{value}"));
         }
 
         records.sort();
 
         let content = records.as_slice().join(",");
 
-        format!("{{{}}}", content)
+        format!("{{{content}}}")
     }
 }
 
