@@ -35,7 +35,7 @@ impl Item {
     pub fn new(repo_name: &str) -> Item {
         log::info!("Creating for {}", repo_name);
 
-        let url = format!("https://api.github.com/repos/{}/branches/master", repo_name);
+        let url = format!("https://api.github.com/repos/{repo_name}/branches/master");
 
         let branch = LazyCache::new(10 * 60 * 60 * 1000, move || {
             let url = url.clone();

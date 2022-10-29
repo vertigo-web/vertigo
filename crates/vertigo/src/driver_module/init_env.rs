@@ -49,11 +49,11 @@ impl Style {
     fn new() -> Style {
         let base = String::from("color: white; padding: 0 3px; background:");
         Style {
-            lvl_trace: format!("{} gray;", base),
-            lvl_debug: format!("{} blue;", base),
-            lvl_info: format!("{} green;", base),
-            lvl_warn: format!("{} orange;", base),
-            lvl_error: format!("{} darkred;", base),
+            lvl_trace: format!("{base} gray;"),
+            lvl_debug: format!("{base} blue;"),
+            lvl_info: format!("{base} green;"),
+            lvl_warn: format!("{base} orange;"),
+            lvl_error: format!("{base} darkred;"),
             tgt: String::from("font-weight: bold; color: inherit"),
             args: String::from("background: inherit; color: inherit"),
         }

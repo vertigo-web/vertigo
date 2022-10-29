@@ -1,8 +1,6 @@
 mod dom;
-mod clone_if_ref;
 
 pub use dom::EmbedDom;
-pub use clone_if_ref::clone_if_ref;
 
 /// Allows to define a Css styles factory function for virtual DOM.
 ///

@@ -4,7 +4,7 @@ use crate::{
     dom_value::{render_value, render_value_option},
     dom_list::{render_list, ListRendered},
     dom::{dom_comment_create::DomCommentCreate, dom_node::DomNodeFragment},
-    DomElement
+    DomElement, Value
 };
 use std::hash::Hash;
 
@@ -132,5 +132,22 @@ impl<
             inner.into_iter().collect::<Vec<_>>()
         });
         render_list(list, get_key, render)
+    }
+}
+
+impl<T: Clone + 'static> From<T> for Computed<T> {
+    fn from(value: T) -> Self {
+        Value::new(value).to_computed()
+    }
+}
+
+impl<T: Clone + 'static> From<&T> for Computed<T> {
+    fn from(value: &T) -> Self {
+        Value::new(value.clone()).to_computed()
+    }
+}
+impl From<&str> for Computed<String> {
+    fn from(value: &str) -> Self {
+        Value::new(value.to_string()).to_computed()
     }
 }
