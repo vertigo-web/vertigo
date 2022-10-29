@@ -1,5 +1,6 @@
 use std::collections::HashSet;
 
+use clone_macro::clone;
 use vertigo::{css, Css, DomElement, dom, Computed, bind2, bind3};
 use crate::app::sudoku::state::{number_item::SudokuValue, Cell};
 
@@ -75,11 +76,58 @@ fn view_one_possible(cell_width: u32, cell: &Cell) -> DomElement {
     }
 }
 
+macro_rules! enclose {
+    ( ($( $x:ident ),*) $y:expr ) => {
+        {
+            $(let $x = $x.clone();)*
+            $y
+        }
+    };
+}
+
 fn view_last_value(cell_width: u32, cell: &Cell, possible_last_value: SudokuValue) -> DomElement {
-    let on_set = bind2(cell, &possible_last_value)
-        .call(|_, cell, possible_last_value| {
-            cell.number.value.set(Some(*possible_last_value));
-        });
+
+    //TODO - moze uda się takie makro zmajstrować
+    // let fff = bind!(|cell, possible_last_value| {
+    //     cell.number.value.set(Some(possible_last_value));
+    // })
+    /*
+        bind(|| {
+
+        })
+
+        bind_ctx(|| {
+
+        })
+
+        bind_async(async || {
+
+        })
+
+        bind_async_ctx(async || {
+
+        })
+
+        jak rozwiązać kwestię częściowego wiązania
+    */
+
+    let on_set = enclose! { (cell, possible_last_value) move || {
+        cell.number.value.set(Some(possible_last_value));
+    }};
+
+    // let on_set = bind2(cell, &possible_last_value)
+    //     .call(|_, cell, possible_last_value| {
+    //         cell.number.value.set(Some(*possible_last_value));
+    //     });
+
+    // let on_set = || bind!(|cell, possible_last_value| {
+    //     cell.number.value.set(Some(*possible_last_value));
+    // })};
+
+    // let on_set = bind2(cell, &possible_last_value)
+    //     .call(|_, cell, possible_last_value| {
+    //         cell.number.value.set(Some(*possible_last_value));
+    //     });
 
     dom! {
         <div css={css_wrapper_one(cell_width)}>
@@ -112,12 +160,18 @@ fn view_default(cell_width: u32, cell: &Cell, possible: HashSet<SudokuValue>) ->
             "".into()
         };
 
-        let on_click = bind3(cell, &should_show, &number)
-            .call(|_, cell, should_show, number| {
-                if *should_show {
-                    cell.number.value.set(Some(*number));
-                }
-            });
+        let on_click = enclose! { (cell, should_show, number) move || {
+            if should_show {
+                cell.number.value.set(Some(number));
+            }
+        }};
+
+        // let on_click = bind3(cell, &should_show, &number)
+        //     .call(|_, cell, should_show, number| {
+        //         if *should_show {
+        //             cell.number.value.set(Some(*number));
+        //         }
+        //     });
 
         wrapper.add_child(dom! {
             <div css={css_item(should_show)} on_click={on_click}>

@@ -79,6 +79,7 @@
 
 #![deny(rust_2018_idioms)]
 #![feature(try_trait_v2)] // https://github.com/rust-lang/rust/issues/84277
+#![feature(associated_type_defaults)]
 
 mod bind;
 mod computed;
