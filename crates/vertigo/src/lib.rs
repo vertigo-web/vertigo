@@ -125,7 +125,7 @@ pub use fetch::{
 };
 pub use future_box::{FutureBoxSend, FutureBox};
 pub use html_macro::{
-    EmbedDom, clone_if_ref
+    EmbedDom
 };
 pub use instant::{
     Instant, InstantType

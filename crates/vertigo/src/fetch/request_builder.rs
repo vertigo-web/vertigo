@@ -71,7 +71,7 @@ impl RequestBuilder {
     #[must_use]
     pub fn bearer_auth(self, token: impl Into<String>) -> RequestBuilder {
         let token: String = token.into();
-        self.set_header("Authorization", format!("Bearer {}", token))
+        self.set_header("Authorization", format!("Bearer {token}"))
     }
 
     #[must_use]
@@ -202,7 +202,7 @@ impl RequestResponse {
                 let body = RequestResponseBody::new(body);
                 match convert(status, body) {
                     Some(result) => result,
-                    None => Resource::Error(format!("Unhandled response code {}", status)),
+                    None => Resource::Error(format!("Unhandled response code {status}")),
                 }
             }
             Err(err) => Resource::Error(err),
@@ -227,8 +227,8 @@ impl RequestResponse {
 
     pub fn into_error_message<T>(self) -> Resource<T> {
         let body = match self.data {
-            Ok((code, body)) => format!("API error {}: {}", code, body),
-            Err(body) => format!("Network error: {}", body),
+            Ok((code, body)) => format!("API error {code}: {body}"),
+            Err(body) => format!("Network error: {body}"),
         };
 
         Resource::Error(body)

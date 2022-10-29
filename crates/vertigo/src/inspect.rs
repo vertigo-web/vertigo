@@ -62,7 +62,7 @@ impl DomDebugFragment {
                 DriverDomCommand::SetAttr { id, name, value } => {
                     if let Some(node) = map.get_mut(&id) {
                         if name == "class" {
-                            if let Some(new_styles) = css.get(&format!(".{}", value)) {
+                            if let Some(new_styles) = css.get(&format!(".{value}")) {
                                 let mut styles = String::new();
                                 if let Some(old_styles) = node.attrs.get("style") {
                                     styles.push_str(old_styles);
@@ -118,11 +118,11 @@ impl DomDebugFragment {
                     }
                 },
                 DriverDomCommand::InsertCss { selector, value } => {
-                    println!("InsertCss {} {}", selector, value);
+                    println!("InsertCss {selector} {value}");
                     css.insert(selector, value);
                 },
                 DriverDomCommand::CreateComment { id, value } => {
-                    map.insert(id, DomDebugNode::from_text(id, format!("<!-- {} -->", value)));
+                    map.insert(id, DomDebugNode::from_text(id, format!("<!-- {value} -->")));
                 }
                 DriverDomCommand::CallbackAdd { id, event_name, callback_id } => {
                     map.entry(id).and_modify(|node| { node.callbacks.insert(event_name, callback_id); });
@@ -168,14 +168,14 @@ impl DomDebugFragment {
                     .collect::<Vec<_>>()
                     .join("");
                 let attrs = node.attrs.iter()
-                    .map(|(k,v)| format!(" {}='{}'", k, v))
+                    .map(|(k,v)| format!(" {k}='{v}'"))
                     .collect::<Vec<_>>()
                     .join("");
                 let callbacks = node.callbacks.iter()
-                    .map(|(k, v)| format!(" {}={}", k, v.as_u64()))
+                    .map(|(k, v)| format!(" {k}={}", v.as_u64()))
                     .collect::<Vec<_>>()
                     .join("");
-                format!("<{}{}{}>{}</{}>", node.name, attrs, callbacks, children, node.name)
+                format!("<{}{attrs}{callbacks}>{children}</{}>", node.name, node.name)
             }
         } else {
             String::default()

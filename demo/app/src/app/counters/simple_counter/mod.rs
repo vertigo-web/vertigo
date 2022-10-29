@@ -1,4 +1,4 @@
-use vertigo::{Value, transaction};
+use vertigo::{Value, transaction, Computed};
 use vertigo::{css_fn, css_fn_push, bind, DomElement, dom};
 
 css_fn! { css_box, "
@@ -17,7 +17,7 @@ css_fn! { css_wrapper, "
 #[derive(Clone)]
 pub struct SimpleCounter {
     /// Description of this counter
-    pub label: &'static str,
+    pub label: Computed<String>,
     /// Value to be counted
     pub value: Value<u32>,
 }
