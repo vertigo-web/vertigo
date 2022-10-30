@@ -135,6 +135,12 @@ impl<
     }
 }
 
+impl<T: Clone + 'static> From<Value<T>> for Computed<T> {
+    fn from(val: Value<T>) -> Self {
+        val.to_computed()
+    }
+}
+
 impl<T: Clone + 'static> From<T> for Computed<T> {
     fn from(value: T) -> Self {
         Value::new(value).to_computed()
@@ -146,6 +152,7 @@ impl<T: Clone + 'static> From<&T> for Computed<T> {
         Value::new(value.clone()).to_computed()
     }
 }
+
 impl From<&str> for Computed<String> {
     fn from(value: &str) -> Self {
         Value::new(value.to_string()).to_computed()
