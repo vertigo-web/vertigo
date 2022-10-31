@@ -29,12 +29,16 @@ use vertigo::{bind, dom, DomElement, start_app, Value};
 pub fn app() -> DomElement {
     let count = Value::new(0);
 
-    let increment = bind(&count).call(|context, count| {
-        count.set(count.get(context) + 1);
+    let increment = bind!(|count| {
+        count.change(|value| {
+            *value += 1;
+        });
     });
 
-    let decrement = bind(&count).call(|context, count| {
-        count.set(count.get(context) - 1);
+    let decrement = bind!(|count| {
+        count.change(|value| {
+            *value -= 1;
+        });
     });
 
     dom! {

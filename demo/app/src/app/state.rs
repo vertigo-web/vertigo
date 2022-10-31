@@ -40,6 +40,5 @@ impl State {
 
     pub fn navigate_to(&self, route: Route) {
         self.route.set(route);
-        //log::info!("conn = {}", self.root.all_connections_len());
     }
 }

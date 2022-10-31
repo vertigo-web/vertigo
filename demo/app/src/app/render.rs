@@ -1,4 +1,4 @@
-use vertigo::{css, css_fn, Css, KeyDownEvent, DomElement, dom, Computed, bind2};
+use vertigo::{css, css_fn, Css, KeyDownEvent, DomElement, dom, Computed, bind};
 use crate::app;
 
 use super::{
@@ -39,7 +39,7 @@ fn css_menu_item(active: bool) -> Css {
 }
 
 fn navigate_to(state: &app::State, route: Route) -> impl Fn() {
-    bind2(state, &route).call(|_, state, route| {
+    bind!(|state, route| {
         state.navigate_to(route.clone())
     })
 }

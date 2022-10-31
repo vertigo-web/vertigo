@@ -24,11 +24,13 @@ pub struct SimpleCounter {
 
 impl SimpleCounter {
     pub fn mount(self) -> DomElement {
-        let click_up = bind(&self).call(|_, state| {
+        let state = &self;
+
+        let click_up = bind!(|state| {
             state.increment();
         });
 
-        let click_down = bind(&self).call(|_, state| {
+        let click_down = bind!(|state| {
             state.decrement();
         });
 
