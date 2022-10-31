@@ -226,7 +226,7 @@ pub fn get_driver() -> Driver {
 }
 
 /// Do bunch of operations without triggering anything in between.
-pub fn transaction<F: FnOnce(&Context)>(f: F) {
+pub fn transaction<R, F: FnOnce(&Context) -> R>(f: F) -> R {
     get_driver().transaction(f)
 }
 

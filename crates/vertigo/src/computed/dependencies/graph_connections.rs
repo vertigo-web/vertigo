@@ -146,6 +146,7 @@ impl GraphConnectionsInner {
         }
     }
 
+    #[cfg(test)]
     fn all_connections_len(&self) -> u64 {
         self.parent_client.all_connections_len()
     }
@@ -194,6 +195,7 @@ impl GraphConnections {
         self.inner.change(|state| state.get_all_deps(edges))
     }
 
+    #[cfg(test)]
     pub(crate) fn all_connections_len(&self) -> u64 {
         self.inner.map(|state| state.all_connections_len())
     }

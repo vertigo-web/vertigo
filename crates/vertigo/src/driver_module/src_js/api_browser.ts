@@ -23,4 +23,10 @@ export class ApiBrowser {
         this.websocket = new DriverWebsocket(getWasm);
         this.dom = new DriverDom(getWasm);
     }
+
+    public getRandom = (min: number, max: number): number => {
+        const range = max - min + 1;
+        let result = Math.floor(Math.random() * range);
+        return min + result;
+    }
 }
