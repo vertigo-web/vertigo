@@ -36,6 +36,7 @@ impl Graph {
         self.connections.get_all_deps(edges)
     }
 
+    #[cfg(test)]
     pub fn all_connections_len(&self) -> u64 {
         self.connections.all_connections_len()
     }

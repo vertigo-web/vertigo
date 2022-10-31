@@ -118,7 +118,7 @@ impl<T: Clone + 'static> GraphValueInner<T> {
 
         let graph_value = GraphValueData::new(&deps, is_computed_type, get_value);
 
-        deps.refresh_token_add(GraphValueRefresh::new(graph_value.clone()));
+        deps.graph.refresh.refresh_token_add(GraphValueRefresh::new(graph_value.clone()));
 
         GraphValueInner {
             inner: graph_value,
@@ -128,7 +128,7 @@ impl<T: Clone + 'static> GraphValueInner<T> {
 
 impl<T: Clone> Drop for GraphValueInner<T> {
     fn drop(&mut self) {
-        self.inner.deps.refresh_token_drop(self.inner.id);
+        self.inner.deps.graph.refresh.refresh_token_drop(self.inner.id);
         self.inner.deps.graph.remove_client(self.inner.id);
     }
 }

@@ -1,10 +1,8 @@
 use std::{
-    rc::Rc,
+    rc::Rc, collections::BTreeSet,
 };
 
-use crate::{
-    computed::{GraphId, GraphValueRefresh}, DropResource, Context,
-};
+use crate::Context;
 
 use super::graph_id::GraphIdKind;
 
@@ -33,7 +31,7 @@ use {
 /// - Components can provide the DOM with functions that get fired on events like [on_click](struct.DomElement.html#structfield.on_click), which may modify the state, thus triggering necessary computing once again.
 pub struct Dependencies {
     pub(crate) graph: Rc<Graph>,
-    transaction_state: Rc<TransactionState>,
+    pub(crate) transaction_state: Rc<TransactionState>,
 }
 
 impl Clone for Dependencies {
@@ -59,28 +57,25 @@ impl Default for Dependencies {
 }
 
 impl Dependencies {
-    pub fn on_before_transaction(&self, callback: impl Fn() + 'static) {
-        self.transaction_state.on_before_transaction(callback);
-    }
-
-    pub fn on_after_transaction(&self, callback: impl Fn() + 'static) {
-        self.transaction_state.on_after_transaction(callback);
-    }
-
-    pub fn transaction<F: FnOnce(&Context)>(&self, func: F) {
-        let success = self.transaction_state.up();
-
-        if !success {
-            return;
-        }
+    pub fn transaction<R, F: FnOnce(&Context) -> R>(&self, func: F) -> R {
+        self.transaction_state.up();
 
         let context = Context::new();
-        func(&context);
+        let result = func(&context);
         let _ = context;
 
         let edges_values = self.transaction_state.down();
 
-        if let Some(edges_values) = edges_values {
+        if let Some(set_func_list) = edges_values {
+
+            let mut edges_values = BTreeSet::new();
+
+            for set_func in set_func_list.into_iter() {
+                if let Some(id) = set_func() {
+                    edges_values.insert(id);
+                }
+            }
+
             let mut edges_client = Vec::new();
 
             for id in self.graph.get_all_deps(edges_values) {
@@ -103,29 +98,7 @@ impl Dependencies {
 
             self.transaction_state.move_to_idle();
         }
-    }
 
-    pub(crate) fn trigger_change(&self, parent_id: GraphId) {
-        self.transaction_state.add_edge_to_refresh(parent_id);
-    }
-
-    pub(crate) fn refresh_token_add(&self, graph_value: GraphValueRefresh) {
-        self.graph.refresh.refresh_token_add(graph_value);
-    }
-
-    pub(crate) fn refresh_token_drop(&self, id: GraphId) {
-        self.graph.refresh.refresh_token_drop(id);
-    }
-
-    pub fn all_connections_len(&self) -> u64 {
-        self.graph.all_connections_len()
-    }
-
-    pub fn external_connections_register_connect(&self, id: GraphId, connect: Rc<dyn Fn() -> DropResource>) {
-        self.graph.external_connections.register_connect(id, connect);
-    }
-
-    pub fn external_connections_unregister_connect(&self, id: GraphId) {
-        self.graph.external_connections.unregister_connect(id);
+        result
     }
 }

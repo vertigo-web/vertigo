@@ -1281,6 +1281,11 @@ class ApiBrowser {
         this.websocket = new DriverWebsocket(getWasm);
         this.dom = new DriverDom(getWasm);
     }
+    getRandom = (min, max) => {
+        const range = max - min + 1;
+        let result = Math.floor(Math.random() * range);
+        return min + result;
+    };
 }
 
 class JsNode {
