@@ -50,15 +50,17 @@ impl App {
     }
 
     pub fn mount(self) -> DomElement {
-        let navigate_to_page1 = bind(&self).call(|_, state| {
+        let state = self;
+
+        let navigate_to_page1 = bind!(|state| {
             state.navigate_to(Route::Page1);
         });
 
-        let navigate_to_page2 = bind(&self).call(|_, state| {
+        let navigate_to_page2 = bind!(|state| {
             state.navigate_to(Route::Page2);
         });
 
-        let child = self.route.route.render_value(|value| {
+        let child = state.route.route.render_value(|value| {
             match value {
                 Route::Page1 => dom! { <div>"Page 1"</div> },
                 Route::Page2 => dom! { <div>"Page 2"</div> },

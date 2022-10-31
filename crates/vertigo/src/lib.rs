@@ -13,12 +13,16 @@
 //! use vertigo::{dom, DomElement, Value, bind, start_app};
 //!
 //! pub fn render(count: Value<i32>) -> DomElement {
-//!     let increment = bind(&count).call(|context, count| {
-//!         count.set(count.get(context) + 1);
+//!     let increment = bind!(|count| {
+//!         count.change(|value| {
+//!             *value += 1;
+//!         });
 //!     });
-//!
-//!     let decrement = bind(&count).call(|context, count| {
-//!         count.set(count.get(context) - 1);
+//!     
+//!     let decrement = bind!(|count| {
+//!         count.change(|value| {
+//!             *value -= 1;
+//!         });
 //!     });
 //!
 //!     dom! {
@@ -80,7 +84,6 @@
 #![deny(rust_2018_idioms)]
 #![feature(try_trait_v2)] // https://github.com/rust-lang/rust/issues/84277
 
-mod bind;
 mod computed;
 mod css;
 mod dom_list;
@@ -95,7 +98,6 @@ mod instant;
 pub mod router;
 mod websocket;
 
-pub use bind::{bind, bind2, bind3, bind4, Bind1, Bind2, Bind3, Bind4};
 pub use computed::{
     AutoMap, Client, Computed, context::Context, Dependencies, DropResource, GraphId, struct_mut, Value
 };
@@ -132,6 +134,8 @@ pub use instant::{
 };
 pub use websocket::{WebsocketConnection, WebsocketMessage};
 
+/// Allows to create an event handler based on provided arguments
+pub use vertigo_macro::bind;
 
 #[cfg(feature = "serde_request")]
 /// Implements [ListRequestTrait] using serde (needs `serde_request` feature).

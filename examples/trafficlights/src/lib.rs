@@ -17,12 +17,14 @@ pub fn app() -> DomElement {
     let yellow_on = state.map(|state| state == LightState::Yellow || state == LightState::RedYellow);
     let green_on = state.map(|state| state == LightState::Green);
 
-    let next = bind(&state).call(|ctx, state|
-        state.set(match state.get(ctx) {
-            LightState::Red => LightState::RedYellow,
-            LightState::RedYellow => LightState::Green,
-            LightState::Green => LightState::Yellow,
-            LightState::Yellow => LightState::Red,
+    let next = bind!(|state|
+        state.change(|value| {
+            *value = match value {
+                LightState::Red => LightState::RedYellow,
+                LightState::RedYellow => LightState::Green,
+                LightState::Green => LightState::Yellow,
+                LightState::Yellow => LightState::Red,
+            };
         })
     );
 

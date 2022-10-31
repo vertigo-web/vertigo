@@ -6,6 +6,7 @@ extern crate proc_macro_error;
 mod css_parser;
 mod serde_request;
 mod html_parser;
+mod bind;
 
 use html_parser::dom_inner;
 use proc_macro::TokenStream;
@@ -14,6 +15,7 @@ use proc_macro2::{TokenStream as TokenStream2};
 use crate::{
     css_parser::generate_css_string,
 };
+use bind::bind_macro_fn;
 
 #[proc_macro]
 #[proc_macro_error]
@@ -74,4 +76,10 @@ pub fn serde_request_macro_derive(input: TokenStream) -> TokenStream {
         #list
     };
     result.into()
+}
+
+#[proc_macro]
+#[proc_macro_error]
+pub fn bind(input: TokenStream) -> TokenStream {
+    bind_macro_fn(input)
 }

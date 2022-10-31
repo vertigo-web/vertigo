@@ -1,7 +1,6 @@
 use std::collections::HashSet;
 
-use vertigo::{css, Css, DomElement, dom, Computed, bind2, bind3};
-
+use vertigo::{css, Css, DomElement, dom, Computed, bind};
 use crate::app::sudoku::state::{number_item::SudokuValue, Cell};
 
 use super::config::Config;
@@ -72,10 +71,9 @@ fn view_one_possible(cell: &Cell) -> DomElement {
             let wrapper = dom! { <div /> };
 
             for number in possible.iter() {
-                let on_set = bind2(&cell, number)
-                    .call(|_, cell, number| {
-                        cell.number.value.set(Some(*number));
-                    });
+                let on_set = bind!(|cell, number| {
+                    cell.number.value.set(Some(number));
+                });
 
                 wrapper.add_child(dom! {
                     <div css={css_item_only_one()} on_click={on_set}>
@@ -96,10 +94,9 @@ fn view_one_possible(cell: &Cell) -> DomElement {
 }
 
 fn view_last_value(cell: &Cell, possible_last_value: SudokuValue) -> DomElement {
-    let on_set = bind2(cell, &possible_last_value)
-        .call(|_, cell, possible_last_value| {
-            cell.number.value.set(Some(*possible_last_value));
-        });
+    let on_set = bind!(|cell, possible_last_value| {
+        cell.number.value.set(Some(possible_last_value));
+    });
 
     dom! {
         <div css={css_wrapper_one()}>
@@ -122,12 +119,11 @@ fn view_default(cell: &Cell, possible: HashSet<SudokuValue>) -> DomElement {
             "".into()
         };
 
-        let on_click = bind3(cell, &should_show, &number)
-            .call(|_, cell, should_show, number| {
-                if *should_show {
-                    cell.number.value.set(Some(*number));
-                }
-            });
+        let on_click = bind!(|cell, should_show, number| {
+            if should_show {
+                cell.number.value.set(Some(number));
+            }
+        });
 
         wrapper.add_child(dom! {
             <div css={css_item(should_show)} on_click={on_click}>

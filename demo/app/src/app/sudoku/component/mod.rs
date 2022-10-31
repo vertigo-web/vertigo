@@ -105,19 +105,19 @@ fn render_cell(item: &Cell) -> DomElement {
 }
 
 fn examples_render(sudoku: &SudokuState) -> DomElement {
-    let clear = bind(sudoku).call(|_, sudoku| {
+    let clear = bind!(|sudoku| {
         sudoku.clear();
     });
 
-    let example1 = bind(sudoku).call(|_, sudoku| {
+    let example1 = bind!(|sudoku| {
         sudoku.example1();
     });
 
-    let example2 = bind(sudoku).call(|_, sudoku| {
+    let example2 = bind!(|sudoku| {
         sudoku.example2();
     });
 
-    let example3 = bind(sudoku).call(|_, sudoku| {
+    let example3 = bind!(|sudoku| {
         sudoku.example3();
     });
 
