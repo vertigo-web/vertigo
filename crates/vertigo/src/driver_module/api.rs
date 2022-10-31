@@ -463,5 +463,21 @@ impl ApiImport {
         )
     }
 
+    pub fn get_random(&self, min: u32, max: u32) -> u32 {
+        let result = self.dom_access()
+            .api()
+            .call("getRandom", vec!(
+                JsValue::U32(min),
+                JsValue::U32(max)
+            ))
+            .fetch();
+
+        if let JsValue::I32(result) = result {
+            result as u32
+        } else {
+            self.panic_message.show(format!("api.get_random -> incorrect result {result:?}"));
+            min
+        }
+    }
 }
 

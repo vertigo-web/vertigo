@@ -74,6 +74,7 @@ impl GraphOneToMany {
         GraphEdgeIter::new(edge)
     }
 
+    #[cfg(test)]
     pub fn all_connections_len(&self) -> u64 {
         let mut count: u64 = 0;
 

@@ -154,7 +154,7 @@ fn test_subscription() {
 fn test_computed_cache() {
     let root = get_driver().inner.dependencies.clone();
 
-    assert_eq!(root.all_connections_len(), 0);
+    assert_eq!(root.graph.all_connections_len(), 0);
 
     {
         //a
@@ -207,15 +207,15 @@ fn test_computed_cache() {
         assert_eq!(c.get(), (6, 3));
         assert_eq!(d.get(), (true, 2));
 
-        assert_eq!(root.all_connections_len(), 5);
+        assert_eq!(root.graph.all_connections_len(), 5);
 
         c.off();
         d.off();
 
-        assert_eq!(root.all_connections_len(), 0);
+        assert_eq!(root.graph.all_connections_len(), 0);
     }
 
-    assert_eq!(root.all_connections_len(), 0);
+    assert_eq!(root.graph.all_connections_len(), 0);
 }
 
 #[test]
@@ -275,7 +275,7 @@ fn test_computed_new_value() {
 
     d.off();
     e.off();
-    assert_eq!(root.all_connections_len(), 0);
+    assert_eq!(root.graph.all_connections_len(), 0);
 }
 
 
@@ -307,7 +307,7 @@ fn test_computed_new_value2() {
     assert_eq!(d.get(), (13, 5));
 
     d.off();
-    assert_eq!(root.all_connections_len(), 0);
+    assert_eq!(root.graph.all_connections_len(), 0);
 }
 
 #[test]
@@ -356,16 +356,16 @@ fn test_computed_switch_subscription() {
         })
     };
 
-    assert_eq!(root.all_connections_len(), 0);
+    assert_eq!(root.graph.all_connections_len(), 0);
     let mut sum = SubscribeValueVer::new(sum);
-    assert_eq!(root.all_connections_len(), 3);
+    assert_eq!(root.graph.all_connections_len(), 3);
 
     assert_eq!(sum.get(), (0, 1));
-    assert_eq!(root.all_connections_len(), 3);
+    assert_eq!(root.graph.all_connections_len(), 3);
 
     a.set(1);
     assert_eq!(sum.get(), (1, 2));
-    assert_eq!(root.all_connections_len(), 3);
+    assert_eq!(root.graph.all_connections_len(), 3);
 
     b.set(1);
     assert_eq!(sum.get(), (1, 2));
@@ -377,15 +377,15 @@ fn test_computed_switch_subscription() {
     c.set(0);
     assert_eq!(sum.get(), (0, 3));
 
-    assert_eq!(root.all_connections_len(), 3);
+    assert_eq!(root.graph.all_connections_len(), 3);
     switch.set(Switch::Ver2);
-    assert_eq!(root.all_connections_len(), 4);
+    assert_eq!(root.graph.all_connections_len(), 4);
 
     assert_eq!(sum.get(), (0, 3)); //no rerender
 
     a.set(1);
 
-    assert_eq!(root.all_connections_len(), 4);
+    assert_eq!(root.graph.all_connections_len(), 4);
 
     assert_eq!(sum.get(), (1, 4));
     b.set(1);
@@ -401,7 +401,7 @@ fn test_computed_switch_subscription() {
     switch.set(Switch::Ver3);
     assert_eq!(sum.get(), (0, 7)); //no rerender
 
-    assert_eq!(root.all_connections_len(), 5);
+    assert_eq!(root.graph.all_connections_len(), 5);
 
     a.set(1);
     assert_eq!(sum.get(), (1, 8));
@@ -419,14 +419,14 @@ fn test_computed_switch_subscription() {
     assert_eq!(sum.get(), (0, 11));
 
     sum.off();
-    assert_eq!(root.all_connections_len(), 0);
+    assert_eq!(root.graph.all_connections_len(), 0);
 }
 
 
 #[test]
 fn test_transaction() {
     let root = get_driver().inner.dependencies.clone();
-    assert_eq!(root.all_connections_len(), 0);
+    assert_eq!(root.graph.all_connections_len(), 0);
 
     let val1 = Value::new(1);
     let val2 = Value::new(2);
@@ -451,17 +451,22 @@ fn test_transaction() {
     root.transaction(|context| {
         assert_eq!(val2sub.get(), (446, 2));
         val1.set(222);
-        assert_eq!(val1.get(context), 222);
+        assert_eq!(val1.get(context), 444);
         assert_eq!(val2sub.get(), (446, 2));
         val2.set(333);
-        assert_eq!(val2.get(context), 333);
+        assert_eq!(val2.get(context), 2);
         assert_eq!(val2sub.get(), (446, 2));
+    });
+
+    root.transaction(|context| {
+        assert_eq!(val1.get(context), 222);
+        assert_eq!(val2.get(context), 333);
     });
 
     assert_eq!(val2sub.get(), (555, 3));
 
     val2sub.off();
-    assert_eq!(root.all_connections_len(), 0);
+    assert_eq!(root.graph.all_connections_len(), 0);
 
 }
 

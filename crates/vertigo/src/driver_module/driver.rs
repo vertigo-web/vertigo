@@ -66,7 +66,7 @@ impl DriverInner {
             })
         };
 
-        dependencies.on_after_transaction({
+        dependencies.transaction_state.hooks.on_after_transaction({
             let dom = dom.clone();
 
             move || {
@@ -167,6 +167,7 @@ impl Driver {
         RequestBuilder::new(&self.inner.api, url)
     }
 
+    #[must_use]
     pub fn sleep(&self, time: u32) -> FutureBox<()> {
         let (sender, future) = FutureBox::new();
         self.inner.api.set_timeout_and_detach(time, move || {
@@ -174,6 +175,23 @@ impl Driver {
         });
 
         future
+    }
+
+    pub fn get_random(&self, min: u32, max: u32) -> u32 {
+        self.inner.api.get_random(min, max)
+    }
+
+    pub fn get_random_from<K: Clone>(&self, list: &[K]) -> Option<K> {
+        let len = list.len();
+
+        if len < 1 {
+            return None;
+        }
+
+        let max_index = len - 1;
+
+        let index = self.get_random(0, max_index as u32);
+        Some(list[index as usize].clone())
     }
 
     /// Initiate a websocket connection. Provided callback should handle a single [WebsocketMessage].
@@ -191,12 +209,17 @@ impl Driver {
 
     /// Fire provided function in a way that all changes in [dependency graph](struct.Dependencies.html) made by this function
     /// will trigger only one run of updates, just like the changes were done all at once.
-    pub fn transaction<F: FnOnce(&Context)>(&self, func: F) {
-        self.inner.dependencies.transaction(func);
+    pub fn transaction<R, F: FnOnce(&Context) -> R>(&self, func: F) -> R {
+        self.inner.dependencies.transaction(func)
     }
 
     pub fn dom_access(&self) -> DomAccess {
         self.inner.api.dom_access()
+    }
+
+    ///Function added for diagnostic purposes. It allows you to check whether a block with a transaction is missing somewhere.
+    pub fn on_after_transaction(&self, callback: impl Fn() + 'static) {
+        self.inner.dependencies.transaction_state.hooks.on_after_transaction(callback);
     }
 
     pub(crate) fn init_env(&self) {

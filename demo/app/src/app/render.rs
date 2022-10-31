@@ -118,8 +118,12 @@ pub fn render(state: app::State) -> DomElement {
         false
     };
 
+    let css_wrapper = css!("
+        padding: 5px;
+    ");
+
     dom! {
-        <div on_key_down={on_keydown}>
+        <div on_key_down={on_keydown} css={css_wrapper}>
             { header }
             { content }
         </div>

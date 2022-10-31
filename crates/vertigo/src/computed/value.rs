@@ -21,7 +21,7 @@ struct ValueInner<T> {
 
 impl<T> Drop for ValueInner<T> {
     fn drop(&mut self) {
-        self.deps.external_connections_unregister_connect(self.id);
+        self.deps.graph.external_connections.unregister_connect(self.id);
     }
 }
 
@@ -106,7 +106,7 @@ impl<T: Clone + 'static> Value<T> {
 
         let computed = value.to_computed();
 
-        deps.external_connections_register_connect(id, Rc::new(move || {
+        deps.graph.external_connections.register_connect(id, Rc::new(move || {
             create(&value)
         }));
 
@@ -115,14 +115,30 @@ impl<T: Clone + 'static> Value<T> {
 
     pub fn set(&self, value: T) {
         self.inner.deps.transaction(|_| {
-            self.inner.value.set(value);
-            self.inner.deps.trigger_change(self.inner.id);
+            let set_value = {
+                let id = self.inner.id;
+                let inner = self.inner.clone();
+                move || {
+                    inner.value.set(value);
+                    Some(id)
+                }
+            };
+
+            self.inner.deps.transaction_state.add_edge_to_refresh(set_value);
         });
     }
 
     pub fn get(&self, context: &Context) -> T {
         context.add_parent(self.inner.id);
         self.inner.value.get()
+    }
+
+    pub fn change(&self, change_fn: impl FnOnce(&mut T)) {
+        self.inner.deps.transaction(|ctx| {
+            let mut value = self.get(ctx);
+            change_fn(&mut value);
+            self.set(value);
+        });
     }
 
     pub fn map<K: Clone + 'static, F: 'static + Fn(T) -> K>(&self, fun: F) -> Computed<K> {
@@ -154,10 +170,22 @@ impl<T: Clone + 'static> Value<T> {
 impl<T: Clone + PartialEq + 'static> Value<T> {
     pub fn set_value_and_compare(&self, value: T) {
         self.inner.deps.transaction(|_| {
-            let need_update = self.inner.value.set_and_check(value);
-            if need_update {
-                self.inner.deps.trigger_change(self.inner.id);
-            }
+
+            let set_value = {
+                let id = self.inner.id;
+                let inner = self.inner.clone();
+                move || {
+
+                    let need_update = inner.value.set_and_check(value);
+                    if need_update {
+                        Some(id)
+                    } else {
+                        None
+                    }
+                }
+            };
+
+            self.inner.deps.transaction_state.add_edge_to_refresh(set_value);
         });
     }
 }
