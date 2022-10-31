@@ -1,4 +1,4 @@
-use vertigo::{css, Css, bind, DomElement, dom, Resource, bind2};
+use vertigo::{css, Css, bind, DomElement, dom, Resource};
 
 use super::state::{TodoState, View};
 
@@ -15,12 +15,12 @@ impl Todo {
                     View::Main => todo_main_render(&state),
                     View::Post { id } => todo_post_render(&state, id),
                     View::User { email } => {
-                        let view = state.view.clone();
                         let messag: String = format!("user = {email}");
 
-                        let on_click = move || {
+                        let view = &state.view;
+                        let on_click = bind!(|view| {
                             view.set(View::Main);
-                        };
+                        });
 
                         dom!{
                             <div>
@@ -107,7 +107,7 @@ fn todo_post_render(state: &TodoState, post_id: u32) -> DomElement {
 
     let view = state.view.clone();
 
-    let on_click = bind(&view).call(|_, view| {
+    let on_click = bind!(|view| {
         view.set(View::Main);
     });
 
@@ -158,10 +158,9 @@ fn render_comments(state: &TodoState, post_id: u32) -> DomElement {
                 };
 
                 for comment in list.as_ref() {
-                    let on_click_author = bind2(&view, &comment.email)
-                        .call(|_, view, email| {
-                            view.set(View::User { email: email.clone() });
-                        });
+                    let on_click_author = bind!(|view, comment| {
+                        view.set(View::User { email: comment.email.clone() });
+                    });
 
                     let css_author = css_comment_author().extend(css_hover_item());
 

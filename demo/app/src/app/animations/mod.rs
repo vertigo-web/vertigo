@@ -68,9 +68,11 @@ impl Animations {
             }
         );
 
-        let on_click_progress = bind(&state).spawn(|context, state| async move {
-            state.start_animation().await;
-            context
+        let on_click_progress = bind!(|state| {
+            let state = state.clone();
+            get_driver().spawn(async move {
+                state.start_animation().await;
+            });
         });
 
         let on_mouse_enter = || {

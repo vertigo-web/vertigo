@@ -23,19 +23,16 @@ impl DropFiles {
             }
         );
 
-        let on_dropfile = bind(&state)
-            .call_param(|context, state, event: DropFileEvent| {
-                let mut current = state.list.get(context);
-
+        let on_dropfile = bind!(|state, event: DropFileEvent| {
+            state.list.change(|current| {
                 for file in event.items.into_iter() {
                     let message = format_line(&file);
                     log::info!("{message}");
 
                     current.push(file);
                 }
-
-                state.list.set(current);
             });
+        });
 
         dom! {
             <div css={css_drop()} on_dropfile={on_dropfile}>
