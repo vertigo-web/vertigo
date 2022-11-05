@@ -10,12 +10,12 @@ impl GitHubExplorer {
     pub fn mount(&self) -> DomElement {
         let state = &self.state;
 
-        let on_input_callback = bind!(|state, new_value: String| {
+        let on_input_callback = bind!(state, |new_value: String| {
             log::info!(" new value {}", new_value);
             state.repo_input.set(new_value);
         });
 
-        let on_show = bind!(|state| {
+        let on_show = bind!(state, || {
             transaction(|ctx| {
                 let value = state.repo_input.get(ctx);
                 log::info!(" new value {}", value);

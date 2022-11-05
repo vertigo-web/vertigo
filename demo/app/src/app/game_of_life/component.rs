@@ -58,7 +58,7 @@ impl GameOfLife {
             }
         });
 
-        let on_input = bind!(|state, new_value: String| {
+        let on_input = bind!(state, |new_value: String| {
             state.new_delay.set(new_value.parse().unwrap_or_default());
         });
 
@@ -114,7 +114,7 @@ impl GameOfLife {
 
         let css_computed = cell.map(css_cell);
 
-        let on_click_callback = bind!(|cell| {
+        let on_click_callback = bind!(cell, || {
             cell.change(|value| {
                 *value = !*value;
             });

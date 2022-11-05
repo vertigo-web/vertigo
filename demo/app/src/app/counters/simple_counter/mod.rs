@@ -26,11 +26,11 @@ impl SimpleCounter {
     pub fn mount(self) -> DomElement {
         let state = &self;
 
-        let click_up = bind!(|state| {
+        let click_up = bind!(state, || {
             state.increment();
         });
 
-        let click_down = bind!(|state| {
+        let click_down = bind!(state, || {
             state.decrement();
         });
 

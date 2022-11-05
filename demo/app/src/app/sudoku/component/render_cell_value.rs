@@ -42,7 +42,7 @@ pub fn render_cell_value(value: SudokuValue, cell: &Cell) -> DomElement {
         move |show_delete| {
             match show_delete {
                 true => {
-                    let on_click = bind!(|cell| {
+                    let on_click = bind!(cell, || {
                         cell.number.value.set(None);
                     });
 

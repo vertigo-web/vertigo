@@ -10,19 +10,19 @@ impl MyInput {
 
         let value = &self.value;
     
-        let on_set1 = bind!(|value| {
+        let on_set1 = bind!(value, || {
             value.set("value 1".into());
         });
 
-        let on_set2 = bind!(|value| {
+        let on_set2 = bind!(value, || {
             value.set("value 2".into());
         });
 
-        let on_set3 = bind!(|value, new_value: String| {
+        let on_set3 = bind!(value, |new_value: String| {
             value.set(new_value);
         });
 
-        let on_set4 = bind!(|value, new_value: String| {
+        let on_set4 = bind!(value, |new_value: String| {
             value.set(new_value);
         });
 

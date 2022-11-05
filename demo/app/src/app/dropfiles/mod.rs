@@ -23,7 +23,7 @@ impl DropFiles {
             }
         );
 
-        let on_dropfile = bind!(|state, event: DropFileEvent| {
+        let on_dropfile = bind!(state, |event: DropFileEvent| {
             state.list.change(|current| {
                 for file in event.items.into_iter() {
                     let message = format_line(&file);
