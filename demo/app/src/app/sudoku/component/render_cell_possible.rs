@@ -52,7 +52,7 @@ fn view_one_possible(cell_width: u32, cell: &Cell) -> DomElement {
             let wrapper = dom! { <div /> };
 
             for number in possible.iter() {
-                let on_set = bind!(|cell, number| {
+                let on_set = bind!(cell, number, || {
                     cell.number.value.set(Some(number));
                 });
 
@@ -75,7 +75,7 @@ fn view_one_possible(cell_width: u32, cell: &Cell) -> DomElement {
 }
 
 fn view_last_value(cell_width: u32, cell: &Cell, possible_last_value: SudokuValue) -> DomElement {
-    let on_set = bind!(|cell, possible_last_value| {
+    let on_set = bind!(cell, possible_last_value, || {
         cell.number.value.set(Some(possible_last_value));
     });
 
@@ -110,7 +110,7 @@ fn view_default(cell_width: u32, cell: &Cell, possible: HashSet<SudokuValue>) ->
             "".into()
         };
 
-        let on_click = bind!(|cell, should_show, number| {
+        let on_click = bind!(cell, should_show, number, || {
             if should_show {
                 cell.number.value.set(Some(number));
             }

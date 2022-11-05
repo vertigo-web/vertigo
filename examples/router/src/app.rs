@@ -52,11 +52,11 @@ impl App {
     pub fn mount(self) -> DomElement {
         let state = self;
 
-        let navigate_to_page1 = bind!(|state| {
+        let navigate_to_page1 = bind!(state, || {
             state.navigate_to(Route::Page1);
         });
 
-        let navigate_to_page2 = bind!(|state| {
+        let navigate_to_page2 = bind!(state, || {
             state.navigate_to(Route::Page2);
         });
 

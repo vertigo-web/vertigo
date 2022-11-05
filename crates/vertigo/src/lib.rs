@@ -13,13 +13,13 @@
 //! use vertigo::{dom, DomElement, Value, bind, start_app};
 //!
 //! pub fn render(count: Value<i32>) -> DomElement {
-//!     let increment = bind!(|count| {
+//!     let increment = bind!(count, || {
 //!         count.change(|value| {
 //!             *value += 1;
 //!         });
 //!     });
 //!     
-//!     let decrement = bind!(|count| {
+//!     let decrement = bind!(count, || {
 //!         count.change(|value| {
 //!             *value -= 1;
 //!         });
