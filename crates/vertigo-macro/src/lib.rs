@@ -20,7 +20,7 @@ use proc_macro2::{TokenStream as TokenStream2};
 use crate::{
     css_parser::generate_css_string,
 };
-use bind::bind_macro_fn;
+use bind::{bind_macro_fn, bind_spawn_fn, bind_rc_fn};
 
 #[proc_macro]
 #[proc_macro_error]
@@ -86,6 +86,19 @@ pub fn serde_request_macro_derive(input: TokenStream) -> TokenStream {
     result.into()
 }
 
+fn convert_to_tokens(input: Result<TokenStream, String>) -> TokenStream {
+    match input {
+        Ok(body) => {
+            body
+        },
+        Err(message) => {
+            emit_error!(Span::call_site(), "{}", message);
+            let empty = "";
+            quote! { #empty }.into()
+        }
+    } 
+}
+
 #[proc_macro]
 #[proc_macro_error]
 pub fn include_static(input: TokenStream) -> TokenStream {
@@ -108,5 +121,17 @@ pub fn include_static(input: TokenStream) -> TokenStream {
 #[proc_macro]
 #[proc_macro_error]
 pub fn bind(input: TokenStream) -> TokenStream {
-    bind_macro_fn(input)
+    convert_to_tokens(bind_macro_fn(input))
+}
+
+#[proc_macro]
+#[proc_macro_error]
+pub fn bind_spawn(input: TokenStream) -> TokenStream {
+    convert_to_tokens(bind_spawn_fn(input))
+}
+
+#[proc_macro]
+#[proc_macro_error]
+pub fn bind_rc(input: TokenStream) -> TokenStream {
+    convert_to_tokens(bind_rc_fn(input))
 }

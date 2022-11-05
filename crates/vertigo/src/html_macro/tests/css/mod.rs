@@ -5,6 +5,7 @@ mod colors;
 mod pseudoselectors;
 mod unknown;
 mod utils;
+mod bind;
 
 use utils::*;
 
