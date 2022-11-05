@@ -1,6 +1,6 @@
 use serde::{Deserialize, Serialize};
 use std::{cmp::PartialEq, rc::Rc};
-use vertigo::{AutoMap, Resource, SerdeSingleRequest, Value, LazyCache, get_driver, Context};
+use vertigo::{AutoMap, Resource, SerdeSingleRequest, Value, LazyCache, get_driver, Context, bind};
 
 #[derive(Debug, Serialize, Deserialize, PartialEq, Eq, Clone, Default)]
 pub struct Commit {
@@ -38,9 +38,7 @@ impl Item {
         let url = format!("https://api.github.com/repos/{repo_name}/branches/master");
 
         let branch = LazyCache::new(10 * 60 * 60 * 1000, move || {
-            let url = url.clone();
-
-            async move {
+            bind!(url, async move {
                 get_driver().request(url).get().await.into(|status, body| {
                     if status == 200 {
                         return Some(body.into::<Branch>());
@@ -48,7 +46,7 @@ impl Item {
 
                     None
                 })
-            }
+            })
         });
 
         Item { branch }
