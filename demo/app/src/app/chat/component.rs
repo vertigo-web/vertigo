@@ -54,15 +54,15 @@ pub fn render_input_text(state: &ChatState) -> DomElement {
     let state = state.clone();
     let text_value = state.input_text.to_computed();
 
-    let on_input = bind!(|state, new_text: String| {
+    let on_input = bind!(state, |new_text: String| {
         state.input_text.set(new_text);
     });
 
-    let submit = bind!(|state| {
+    let submit = bind!(state, || {
         state.submit();
     });
 
-    let on_key_down = bind!(|state, key: KeyDownEvent| {
+    let on_key_down = bind!(state, |key: KeyDownEvent| {
         if key.code == "Enter" {
             state.submit();
             return true;

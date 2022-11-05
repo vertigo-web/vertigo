@@ -9,13 +9,13 @@ impl App {
     pub fn mount(self) -> DomElement {
         let state = self;
 
-        let increment = bind!(|state| {
+        let increment = bind!(state, || {
             state.count.change(|value| {
                 *value += 1;
             });
         });
 
-        let decrement = bind!(|state| {
+        let decrement = bind!(state, || {
             state.count.change(|value| {
                 *value -= 1;
             });

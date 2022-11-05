@@ -18,7 +18,7 @@ impl Todo {
                         let messag: String = format!("user = {email}");
 
                         let view = &state.view;
-                        let on_click = bind!(|view| {
+                        let on_click = bind!(view, || {
                             view.set(View::Main);
                         });
 
@@ -107,7 +107,7 @@ fn todo_post_render(state: &TodoState, post_id: u32) -> DomElement {
 
     let view = state.view.clone();
 
-    let on_click = bind!(|view| {
+    let on_click = bind!(view, || {
         view.set(View::Main);
     });
 
@@ -158,7 +158,7 @@ fn render_comments(state: &TodoState, post_id: u32) -> DomElement {
                 };
 
                 for comment in list.as_ref() {
-                    let on_click_author = bind!(|view, comment| {
+                    let on_click_author = bind!(view, comment, || {
                         view.set(View::User { email: comment.email.clone() });
                     });
 

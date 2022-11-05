@@ -39,7 +39,7 @@ fn css_menu_item(active: bool) -> Css {
 }
 
 fn navigate_to(state: &app::State, route: Route) -> impl Fn() {
-    bind!(|state, route| {
+    bind!(state, route, || {
         state.navigate_to(route.clone())
     })
 }
