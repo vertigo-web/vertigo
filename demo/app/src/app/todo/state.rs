@@ -1,5 +1,5 @@
 use serde::{Deserialize, Serialize};
-use vertigo::{AutoMap, LazyCache, SerdeRequest, Value, get_driver};
+use vertigo::{AutoMap, LazyCache, SerdeRequest, Value, get_driver, bind};
 
 #[derive(PartialEq, Eq, Clone)]
 pub enum View {
@@ -37,7 +37,7 @@ impl TodoState {
     pub fn new() -> TodoState {
         let view = Value::new(View::Main);
 
-        let posts = LazyCache::new(10 * 60 * 60 * 1000, move || async move {
+        let posts = LazyCache::new(10 * 60 * 60 * 1000, || async move {
             let request = get_driver().request("https://jsonplaceholder.typicode.com/posts").get();
 
             request.await.into(|status, body| {
@@ -51,9 +51,7 @@ impl TodoState {
 
         let comments = AutoMap::new({
             move |post_id: &u32| -> LazyCache<Vec<CommentModel>> {
-                let post_id = *post_id;
-
-                LazyCache::new(10 * 60 * 60 * 1000, move || async move {
+                LazyCache::new(10 * 60 * 60 * 1000, bind!(post_id, || async move {
                     let request = get_driver()
                         .request(format!(
                             "https://jsonplaceholder.typicode.com/posts/{}/comments",
@@ -68,7 +66,7 @@ impl TodoState {
                             None
                         }
                     })
-                })
+                }))
             }
         });
 

@@ -142,6 +142,12 @@ pub use vertigo_macro::include_static;
 /// Allows to create an event handler based on provided arguments
 pub use vertigo_macro::bind;
 
+/// Allows to create an event handler based on provided arguments which is wrapped in Rc
+pub use vertigo_macro::bind_rc;
+
+/// Allows to create an event handler based on provided arguments which launches an asynchronous action
+pub use vertigo_macro::bind_spawn;
+
 #[cfg(feature = "serde_request")]
 /// Implements [ListRequestTrait] using serde (needs `serde_request` feature).
 pub use vertigo_macro::SerdeListRequest;
@@ -249,7 +255,10 @@ fn get_driver_state<R: Default, F: FnOnce(&DriverConstruct) -> R>(label: &'stati
     match DRIVER_BROWSER.try_with(once) {
         Ok(value) => value,
         Err(_) => {
-            println!("error access {label}");
+            if label != "free" {
+                println!("error access {label}");
+            }
+
             R::default()
         }
     }

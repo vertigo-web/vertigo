@@ -1,6 +1,6 @@
 use std::rc::Rc;
 
-use vertigo::{css_fn, css_fn_push, Value, bind, get_driver, struct_mut::ValueMut, DomElement, dom};
+use vertigo::{css_fn, css_fn_push, Value, get_driver, struct_mut::ValueMut, DomElement, dom, bind_spawn};
 
 mod spinner;
 use spinner::spinner;
@@ -68,13 +68,10 @@ impl Animations {
             }
         );
 
-        let on_click_progress = bind!(state, || {
-            let state = state.clone();
-            get_driver().spawn(async move {
-                state.start_animation().await;
-            });
+        let on_click_progress = bind_spawn!(state, async move {
+            state.start_animation().await;
         });
-
+    
         let on_mouse_enter = || {
             log::info!("mouse enter");
         };
