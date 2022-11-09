@@ -1,6 +1,4 @@
-use std::{
-    rc::Rc, collections::BTreeSet,
-};
+use std::rc::Rc;
 
 use crate::Context;
 
@@ -66,38 +64,33 @@ impl Dependencies {
 
         let edges_values = self.transaction_state.down();
 
-        if let Some(set_func_list) = edges_values {
+        let Some(manager) = edges_values else {
+            return result;
+        };
 
-            let mut edges_values = BTreeSet::new();
+        let edges_values = manager.exec_set();
 
-            for set_func in set_func_list.into_iter() {
-                if let Some(id) = set_func() {
-                    edges_values.insert(id);
+        let mut edges_client = Vec::new();
+
+        for id in self.graph.get_all_deps(edges_values) {
+            match id.get_type() {
+                GraphIdKind::Value => {
+                    unreachable!();
+                },
+                GraphIdKind::Computed => {
+                    self.graph.refresh.clear_cache(&id);
+                },
+                GraphIdKind::Client => {
+                    edges_client.push(id);
                 }
             }
-
-            let mut edges_client = Vec::new();
-
-            for id in self.graph.get_all_deps(edges_values) {
-                match id.get_type() {
-                    GraphIdKind::Value => {
-                        unreachable!();
-                    },
-                    GraphIdKind::Computed => {
-                        self.graph.refresh.clear_cache(&id);
-                    },
-                    GraphIdKind::Client => {
-                        edges_client.push(id);
-                    }
-                }
-            }
-
-            for id in edges_client {
-                self.graph.refresh.refresh(&id);
-            }
-
-            self.transaction_state.move_to_idle();
         }
+
+        for id in edges_client {
+            self.graph.refresh.refresh(&id);
+        }
+
+        self.transaction_state.move_to_idle();
 
         result
     }
