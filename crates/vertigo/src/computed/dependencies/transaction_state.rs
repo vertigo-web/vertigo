@@ -1,15 +1,55 @@
+use std::collections::BTreeSet;
+
 use crate::{computed::graph_id::GraphId, struct_mut::ValueMut};
 
 use super::hook::Hooks;
 
-type SetValue = Box<dyn FnOnce() -> Option<GraphId> + 'static>;
+pub struct SetValueManager {
+    ids: BTreeSet<GraphId>,
+    set_func: Vec<Box<dyn FnOnce() -> Option<GraphId> + 'static>>,
+}
+
+impl SetValueManager {
+    pub fn new() -> Self {
+        Self {
+            set_func: Vec::new(),
+            ids: BTreeSet::new(),
+        }
+    }
+
+    pub fn add(&mut self, id: GraphId, set_func: impl FnOnce() -> bool + 'static) {
+        self.set_func.push(Box::new(move || {
+            match set_func() {
+                true => Some(id),
+                false => None,
+            }
+        }));
+        self.ids.insert(id);
+    }
+
+    pub fn exec_set(self) -> BTreeSet<GraphId> {
+        let mut result = BTreeSet::new();
+
+        for set_func in self.set_func.into_iter() {
+            if let Some(id) = set_func() {
+                result.insert(id);
+            }
+        }
+
+        result
+    }
+
+    pub fn is_in(&self, id: GraphId) -> bool {
+        self.ids.contains(&id)
+    }
+}
 
 enum State {
     Idle,
     Modification {
         //Modifying the first layer
         level: u16,               //current transacion level
-        set_func_list: Vec<SetValue>,
+        manager: SetValueManager,
     },
     Refreshing,
 }
@@ -41,12 +81,12 @@ impl TransactionState {
                 State::Idle => {
                     State::Modification {
                         level: 1,
-                        set_func_list: Vec::new(),
+                        manager: SetValueManager::new(),
                     }
                 }
-                State::Modification { mut level, set_func_list } => {
+                State::Modification { mut level, manager } => {
                     level += 1;
-                    State::Modification { level, set_func_list }
+                    State::Modification { level, manager }
                 }
                 State::Refreshing => {
                     panic!("You cannot change the source value while the dependency graph is being refreshed");
@@ -55,22 +95,22 @@ impl TransactionState {
         })
     }
 
-    pub fn down(&self) -> Option<Vec<SetValue>> {
-        self.state.move_to(|state| -> (State, Option<Vec<SetValue>>) {
+    pub fn down(&self) -> Option<SetValueManager> {
+        self.state.move_to(|state| -> (State, Option<SetValueManager>) {
             match state {
                 State::Idle => {
                     log::error!("You cannot call 'down' for a state 'TransactionState::Idle'");
 
                     (State::Idle, None)
                 }
-                State::Modification { mut level, set_func_list } => {
+                State::Modification { mut level, manager } => {
                     level -= 1;
 
                     if level == 0 {
-                        return (State::Refreshing, Some(set_func_list));
+                        return (State::Refreshing, Some(manager));
                     }
 
-                    (State::Modification { level, set_func_list }, None)
+                    (State::Modification { level, manager }, None)
                 }
                 State::Refreshing => {
                     log::error!("You cannot change the source value while the dependency graph is being refreshed");
@@ -90,9 +130,9 @@ impl TransactionState {
                     log::error!("you cannot go from 'TransactionState::Idle' to 'TransactionState::Idle'");
                     State::Idle
                 }
-                State::Modification { level, set_func_list } => {
+                State::Modification { level, manager } => {
                     log::error!("you cannot go from 'TransactionState::Modification' to 'TransactionState::Idle'");
-                    State::Modification { level, set_func_list }
+                    State::Modification { level, manager }
                 }
                 State::Refreshing => {
                     hooks.fire_end();
@@ -102,15 +142,24 @@ impl TransactionState {
         });
     }
 
-    pub fn add_edge_to_refresh(&self, set_func: impl FnOnce() -> Option<GraphId> + 'static) {
+    pub fn add_edge_to_refresh(&self, id: GraphId, set_func: impl FnOnce() -> bool + 'static) {
         self.state.change(move |mut state| {
             match &mut state {
-                State::Modification { set_func_list, .. } => {
-                    set_func_list.push(Box::new(set_func));
+                State::Modification { manager, .. } => {
+                    manager.add(id, set_func);
                 }
                 _ => {
                     log::error!("You can only call the trigger if you are in a transaction block");
                 }
+            }
+        })
+    }
+
+    pub fn is_in_queue_to_refresh(&self, id: GraphId) -> bool {
+        self.state.map(move |state| {
+            match state {
+                State::Modification { manager, .. } => manager.is_in(id),
+                _ => false,
             }
         })
     }
