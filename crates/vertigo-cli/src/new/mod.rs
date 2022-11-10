@@ -18,7 +18,7 @@ pub fn run(opts: NewOpts) -> Result<(), i32> {
 
     let target_path = Path::new(&opts.dest_dir).join(&opts.package_name);
 
-    // Check if dirr is empty or non-existent
+    // Check if dir is empty or non-existent
     if let Ok(mut dir) = target_path.read_dir() {
         if dir.next().is_some() {
             log_error(&format!("Destination dir ({}) is not empty", target_path.to_string_lossy()));

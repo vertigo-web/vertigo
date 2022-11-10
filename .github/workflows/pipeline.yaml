@@ -82,11 +82,13 @@ jobs:
           cargo build --release -p vertigo-cli
           rustup default nightly-2022-09-27
           mkdir ../vertigo-cli-test
-          mv target/release/vertigo-cli ../vertigo-cli-test
+          mv target/release/vertigo ../vertigo-cli-test
           cd ../vertigo-cli-test
-          ./vertigo-cli new some_app
+          ./vertigo new some_app
           cd some_app
-          ../vertigo-cli build
+          sed "s/vertigo = .*/vertigo = { path = \"..\/..\/vertigo\/crates\/vertigo\" }/" Cargo.toml > Cargo.toml.new
+          mv Cargo.toml.new Cargo.toml
+          ../vertigo build
           ls -1 build
 
   nightly-clippy-demo-server:

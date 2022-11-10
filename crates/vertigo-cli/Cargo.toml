@@ -3,8 +3,13 @@ name = "vertigo-cli"
 version = "0.2.0-alpha"
 authors = ["Grzegorz Szeliga <szeligagrzegorz@gmail.com>", "Michał Pokrywka <wolfmoon@o2.pl>"]
 description = "Reactive Real-DOM library for Rust - packaging tool"
-edition = "2021"
+categories = ["command-line-utilities", "development-tools", "development-tools::build-utils", "wasm", "web-programming"]
 license = "MIT OR Apache-2.0"
+edition = "2021"
+
+[[bin]]
+name = "vertigo"
+path = "src/main.rs"
 
 [dependencies]
 cargo = "0.66"

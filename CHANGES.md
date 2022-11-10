@@ -1,5 +1,24 @@
 <!-- markdownlint-configure-file { "no-duplicate-heading": { "siblings_only": true } } -->
 <!-- markdownlint-disable-next-line first-line-h1 -->
+## Unreleased
+
+### Added
+
+* `vertigo-cli` packaging tool with commands `new` and `build`
+* A warning in JS console if developer tried to get a value already set to be changed during transaction
+
+## 0.1.1 - 2022-11-10
+
+### Added
+
+* `bind!`, `bind_rc!`, `bind_spawn!` macros
+* `driver.get_random()`
+* `impl From<Value> for Computed`
+
+### Removed
+
+* BREAKING: Removed `bind`, `bind2`, ... functions
+
 ## 0.1.0 - 2022-10-20
 
 ### Changed

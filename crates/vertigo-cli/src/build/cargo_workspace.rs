@@ -3,14 +3,11 @@ use cargo::{Config, CargoResult};
 use cargo::core::{Workspace, TargetKind, Verbosity};
 use std::env::current_dir;
 
-use crate::logs::{log_ok, log_error};
-
-pub fn get_workspace(config_opt: &mut CargoResult::<Config>) -> Option<Workspace<'_>> {
+pub fn get_workspace(config_opt: &mut CargoResult::<Config>) -> Result<Workspace<'_>, String> {
     let config = match config_opt {
         CargoResult::Ok(config) => config,
         CargoResult::Err(err) => {
-            log_error(format!("Can't load cargo config: {}", err));
-            return None
+            return Err(format!("Can't load cargo config: {}", err))
         }
     };
 
@@ -19,40 +16,37 @@ pub fn get_workspace(config_opt: &mut CargoResult::<Config>) -> Option<Workspace
     let cwd = match current_dir() {
         Ok(cwd) => cwd,
         Err(err) => {
-            log_error(&format!("Can't get current working dir: {}", err));
-            return None
+            return Err(format!("Can't get current working dir: {}", err))
         }
     };
 
     match Workspace::new(&cwd.join("Cargo.toml"), config) {
-        CargoResult::Ok(ws) => Some(ws),
+        CargoResult::Ok(ws) => Ok(ws),
         CargoResult::Err(err) => {
-            log_error(format!("Can't infer package name: {}", err));
-            None
+            Err(format!("Can't load workspace: {}", err))
         }
     }
 }
 
-pub fn infer_package_name() -> Option<String> {
-    get_workspace(&mut Config::default()).and_then(|ws| {
-        for member in ws.default_members() {
-            if let Some(lib) = member.library() {
-                match lib.kind() {
-                    TargetKind::Lib(lib_types) => {
-                        for lib_type in lib_types {
-                            match lib_type {
-                                CrateType::Cdylib => {
-                                    log_ok(format!("Inferred package name = {}", member.name()));
-                                    return Some(member.name().to_string())
-                                }
-                                _ => continue
+pub fn infer_package_name() -> Result<String, String> {
+    let mut cfg = Config::default();
+    let ws = get_workspace(&mut cfg)?;
+    for member in ws.default_members() {
+        if let Some(lib) = member.library() {
+            match lib.kind() {
+                TargetKind::Lib(lib_types) => {
+                    for lib_type in lib_types {
+                        match lib_type {
+                            CrateType::Cdylib => {
+                                return Ok(member.name().to_string())
                             }
+                            _ => continue
                         }
                     }
-                    _ => continue
                 }
+                _ => continue
             }
         }
-        None
-    })
+    }
+    Err("Can't find cdylib package in workspace".to_string())
 }

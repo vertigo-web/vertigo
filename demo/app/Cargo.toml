@@ -1,6 +1,6 @@
 [package]
 name = "vertigo-demo"
-version = "0.1.0"
+version = "0.2.0-alpha"
 authors = ["Grzegorz Szeliga <szeligagrzegorz@gmail.com>", "Michał Pokrywka <wolfmoon@o2.pl>"]
 edition = "2021"
 
