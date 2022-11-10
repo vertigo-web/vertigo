@@ -13,7 +13,14 @@ pub fn run_cargo_build(package_name: &str) -> Result<PathBuf, String> {
     log_ok(format!("Building {package_name}"));
 
     let mut config_opt = Config::default();
-    let workspace = get_workspace(&mut config_opt).unwrap(); // FIXME
+    let workspace = match get_workspace(&mut config_opt) {
+        Ok(ws) => ws,
+        Err(err) => {
+            let msg = format!("Build failed: {}", err);
+            log_error(&msg);
+            return Err(msg);
+        }
+    };
 
     let mut options = ops::CompileOptions::new(workspace.config(), CompileMode::Build).unwrap();
     options.spec = ops::Packages::from_flags(false, vec![], vec![package_name.to_string()]).unwrap();

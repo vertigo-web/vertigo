@@ -93,7 +93,7 @@ fn convert_to_tokens(input: Result<TokenStream, String>) -> TokenStream {
             let empty = "";
             quote! { #empty }.into()
         }
-    } 
+    }
 }
 
 #[proc_macro]

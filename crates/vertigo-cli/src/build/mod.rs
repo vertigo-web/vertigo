@@ -11,12 +11,20 @@ use wasm_path::WasmPath;
 
 pub use build_opts::BuildOpts;
 
+use crate::logs::{log_ok, log_error};
+
 pub fn run(opts: BuildOpts) -> Result<(), i32> {
     let package_name = match opts.package_name.as_deref() {
         Some(name) => name.to_string(),
         None => match infer_package_name() {
-            Some(name) => name,
-            None => return Err(-1),
+            Ok(name) => {
+                log_ok(format!("Inferred package name = {}", name));
+                name
+            },
+            Err(err) => {
+                log_error(err);
+                return Err(-1)
+            },
         },
     };
 
@@ -28,6 +36,7 @@ pub fn run(opts: BuildOpts) -> Result<(), i32> {
     dest_dir.create_dir_all();
 
     // Delete rlibs to re-generate static files
+
     find_target::find_package_rlib_in_target(&package_name).remove_file();
 
     // Run build
@@ -56,7 +65,7 @@ pub fn run(opts: BuildOpts) -> Result<(), i32> {
     // Optimize .wasm
 
     let wasm_path_hash = if wasm_opt::run_wasm_opt(&wasm_path_target, &wasm_path) {
-        // success
+        // optimized
         let wasm_path_hash = wasm_path.save_with_hash(wasm_path.read().as_slice());
         wasm_path.remove_file();
         wasm_path_hash
