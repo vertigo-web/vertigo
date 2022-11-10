@@ -1,7 +1,7 @@
 # Vertigo Tutorial
 
 <!-- markdownlint-disable-next-line no-emphasis-as-heading -->
-*Up to date with version 0.1.0-beta.5*
+*Up to date with version 0.1.1*
 
 <!-- markdownlint-disable-next-line heading-increment -->
 ### Table of contents
@@ -11,11 +11,11 @@
 1. [Prepare your system](#1-Prepare-your-system)
 2. [Generate project](#2-Generate-project)
 3. [First run](#3-First-run)
-4. [Render](#4-Initial-code-description)
+4. [Initial code description](#4-Initial-code-description)
 5. [Add new value](#5-Add-new-value)
 6. [Set value](#6-Set-value)
 7. [New component](#7-New-component)
-8. [Add state to component](#8-Add-state-to-a-component)
+8. [Add state to component](#8-Add-state-to-component)
 9. [Input element](#9-Input-element)
 10. [Computed value](#10-Computed-value)
 11. [Parametrized styles](#11-Parametrized-styles)
@@ -218,13 +218,11 @@ In the browser the message should be now in bold.
 
 ## 6. Set value
 
-Let's do some reactivity already. Import `vertigo::bind`, add switch closure and use it in `dom!` macro:
+Let's do some reactivity already. Import `vertigo::bind`, add switch event and use it in `dom!` macro:
 
 ```rust
-    let switch = bind(&strong).call(|ctx, strong|
-        strong.set(
-            !strong.get(ctx)
-        )
+    let switch = bind!(strong, ||
+        strong.change(|val| { *val = !*val; })
     );
 
     dom! {
@@ -236,13 +234,10 @@ Let's do some reactivity already. Import `vertigo::bind`, add switch closure and
     }
 ```
 
-To create an event handler in a handy way, vertigo introduces a "binding" mechanism.
+To create an event handler in a handy way, vertigo introduces a "bind!" macro.
 This reminds a `.bind()` function from JavaScript world, but the reason is different.
-Binding a value automatically creates a clone of the value that can be used upon firing the event
-(that is, upon invoking `call()` method).
+Binding a value automatically creates a clone of the value that can be used upon firing the event.
 Happily enough, everything wrapped in a `Value<T>` have a shallow cloning implemented[^clone].
-The `call()` method also provides `Context` which allows you to read the values in a responsive way
-(using `get(ctx)`[^subscription] method on a `Value`).
 
 ## 7. New component
 
@@ -278,11 +273,6 @@ use list::List;
 And use it in main `app()` function:
 
 ```rust
-```
-
-(...)
-
-```rust
     dom! {
         <div css={main_div()}>
             "Message to the world: "
@@ -293,7 +283,7 @@ And use it in main `app()` function:
     }
 ```
 
-## 8. Add state to a component
+## 8. Add state to component
 
 For now our component just shows a static list which is not the usual way of rendering lists.
 To go dynamic, add state `elements` to the `mount` function and use it during rendering:
@@ -411,7 +401,7 @@ Our component cries out for adding more items. To implement this we need to:
 So the whole `src/list.rs` will look like this:
 
 ```rust
-use vertigo::{DomElement, dom, Value, bind, bind2};
+use vertigo::{DomElement, dom, Value, bind, transaction};
 
 pub struct List {
     pub items: Value<Vec<String>>,
@@ -421,14 +411,14 @@ impl List {
     pub fn mount(self) -> DomElement {
         let new_item = Value::<String>::default();
 
-        let add = bind2(&self.items, &new_item).call(|ctx, items, new_item| {
-            let mut items_vec = items.get(ctx).to_vec();
-            items_vec.push(new_item.get(ctx));
-            items.set(items_vec);
-            new_item.set("".to_string());
+        let add = bind!(items, new_item, || {
+            transaction(|ctx| {
+                items.change(|items| items.push(new_item.get(ctx)));
+                new_item.set("".to_string());
+            });
         });
 
-        let change = bind(&new_item).call_param(|_ctx, new_item, new_value| {
+        let change = bind!(new_item, |new_value| {
             new_item.set(new_value);
         });
 
@@ -453,10 +443,13 @@ impl List {
 
 We've added 2 event handlers in our mount function.
 
-To create **add** handler `bind2` helper is used.
-This is similar as `bind` but allows to use 2 parameters during the call. There are also helpers for 3 and 4 parameters.
+To create **add** handler, a `transaction` function is used. It allows to do more modifications in one run, and also allows to use more values at the same time.
 
-For input **change** event, the `call_param` method is used to create a handler that takes value from the DOM during the call (`new_value` parameter). The type of the value is specialized after applying it in `dom!` macro.
+> Keep in mind though, that values are kept the same during transaction, and only changed during next graph recalculation.
+>
+> Transaction provides `Context` which allows you to unwrap `Value` for the time of transaction and use it as a regular variable (`get(ctx)`[^subscription] method on a `Value`).
+
+For input **change** event, we are getting `new_value` in the closure. This is a value passed from DOM when executing event handler. The type of the value is specialized after applying it in `dom!` macro.
 
 ## 10. Computed value
 

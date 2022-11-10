@@ -10,7 +10,7 @@ mod bind;
 
 use html_parser::dom_inner;
 use proc_macro::TokenStream;
-use proc_macro2::{TokenStream as TokenStream2};
+use proc_macro2::{TokenStream as TokenStream2, Span};
 
 use crate::{
     css_parser::generate_css_string,
@@ -88,7 +88,7 @@ fn convert_to_tokens(input: Result<TokenStream, String>) -> TokenStream {
             let empty = "";
             quote! { #empty }.into()
         }
-    } 
+    }
 }
 
 #[proc_macro]

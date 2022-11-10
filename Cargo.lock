@@ -1084,7 +1084,7 @@ checksum = "49874b5167b65d7193b8aba1567f5c7d93d001cafc34600cee003eda787e483f"
 
 [[package]]
 name = "vertigo"
-version = "0.1.0"
+version = "0.1.1"
 dependencies = [
  "log",
  "serde",
@@ -1094,7 +1094,7 @@ dependencies = [
 
 [[package]]
 name = "vertigo-demo"
-version = "0.1.0"
+version = "0.1.1"
 dependencies = [
  "log",
  "serde",
@@ -1113,14 +1113,14 @@ dependencies = [
 
 [[package]]
 name = "vertigo-example-counter"
-version = "0.1.0"
+version = "0.1.1"
 dependencies = [
  "vertigo",
 ]
 
 [[package]]
 name = "vertigo-example-router"
-version = "0.1.0"
+version = "0.1.1"
 dependencies = [
  "log",
  "vertigo",
@@ -1128,14 +1128,14 @@ dependencies = [
 
 [[package]]
 name = "vertigo-example-trafficlights"
-version = "0.1.0"
+version = "0.1.1"
 dependencies = [
  "vertigo",
 ]
 
 [[package]]
 name = "vertigo-macro"
-version = "0.1.0"
+version = "0.1.1"
 dependencies = [
  "itertools",
  "pest",

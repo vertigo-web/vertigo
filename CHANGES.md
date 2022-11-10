@@ -1,5 +1,17 @@
 <!-- markdownlint-configure-file { "no-duplicate-heading": { "siblings_only": true } } -->
 <!-- markdownlint-disable-next-line first-line-h1 -->
+## 0.1.1 - 2022-11-10
+
+### Added
+
+* `bind!`, `bind_rc!`, `bind_spawn!` macros
+* `driver.get_random()`
+* `impl From<Value> for Computed`
+
+### Removed
+
+* BREAKING: Removed `bind`, `bind2`, ... functions
+
 ## 0.1.0 - 2022-10-20
 
 ### Changed
@@ -53,7 +65,7 @@
 
 ### Changed
 
-* Improved initiation of spawn executor
+* Improved initiation of spawn executorsrc/list.rs
 * Improvements in Graph
 * RC-structures, BoxRefCell removed
 
