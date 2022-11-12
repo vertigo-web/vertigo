@@ -121,26 +121,19 @@ impl GraphConnectionsInner {
         }
     }
 
-    pub(crate) fn get_all_deps(&self, edges: BTreeSet<GraphId>) -> BTreeSet<GraphId> {
+    pub(crate) fn get_all_deps(&self, id: GraphId) -> BTreeSet<GraphId> {
         let mut result = BTreeSet::new();
-        let mut to_traverse: Vec<GraphId> = edges.into_iter().collect();
+        let mut to_traverse: Vec<GraphId> = vec!(id);
 
         loop {
-            let next_to_traverse = to_traverse.pop();
+            let Some(next) = to_traverse.pop() else {
+                return result;
+            };
 
-            match next_to_traverse {
-                Some(next) => {
-                    let list = self.parent_client.get_relation(next);
-
-                    for item in list {
-                        let is_added = result.insert(item);
-                        if is_added {
-                            to_traverse.push(item);
-                        }
-                    }
-                }
-                None => {
-                    return result;
+            for item in self.parent_client.get_relation(next) {
+                let is_added = result.insert(item);
+                if is_added {
+                    to_traverse.push(item);
                 }
             }
         }
@@ -191,8 +184,8 @@ impl GraphConnections {
         })
     }
 
-    pub(crate) fn get_all_deps(&self, edges: BTreeSet<GraphId>) -> BTreeSet<GraphId> {
-        self.inner.change(|state| state.get_all_deps(edges))
+    pub(crate) fn get_all_deps(&self, id: GraphId) -> BTreeSet<GraphId> {
+        self.inner.change(|state| state.get_all_deps(id))
     }
 
     #[cfg(test)]

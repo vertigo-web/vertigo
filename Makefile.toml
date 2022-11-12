@@ -34,7 +34,7 @@ args = [
 [tasks.demo-build]
 dependencies = ["wasm32-target"]
 script = [
-    'cargo run --release --bin vertigo-cli -- build vertigo-demo --dest-dir=demo/build'
+    'cargo run --release --bin vertigo -- build vertigo-demo --dest-dir=demo/build'
 ]
 
 [tasks.demo-serve-old]
@@ -60,9 +60,9 @@ args = [ "watch", "--watch", "./demo/app", "--watch", "crates", "--delay", "0.5"
 [tasks.examples-build]
 dependencies = [ "wasm32-target" ]
 script = [
-    'cargo run --release --bin vertigo-cli -- build vertigo-example-counter --dest-dir=examples/build/counter',
-    'cargo run --release --bin vertigo-cli -- build vertigo-example-router --dest-dir=examples/build/router',
-    'cargo run --release --bin vertigo-cli -- build vertigo-example-trafficlights --dest-dir=examples/build/trafficlights',
+    'cargo run --release --bin vertigo -- build vertigo-example-counter --dest-dir=examples/build/counter',
+    'cargo run --release --bin vertigo -- build vertigo-example-router --dest-dir=examples/build/router',
+    'cargo run --release --bin vertigo -- build vertigo-example-trafficlights --dest-dir=examples/build/trafficlights',
 ]
 
 # Dependencies

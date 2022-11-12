@@ -32,15 +32,6 @@ impl Graph {
         self.set_parent_for_client(client_id, parents);
     }
 
-    pub(crate) fn get_all_deps(&self, edges: BTreeSet<GraphId>) -> BTreeSet<GraphId> {
-        self.connections.get_all_deps(edges)
-    }
-
-    #[cfg(test)]
-    pub fn all_connections_len(&self) -> u64 {
-        self.connections.all_connections_len()
-    }
-
     pub(crate) fn set_parent_for_client(&self, client_id: GraphId, parents_list: BTreeSet<GraphId>) {
         let edge_list = self.connections.set_parent_for_client(client_id, parents_list);
 
