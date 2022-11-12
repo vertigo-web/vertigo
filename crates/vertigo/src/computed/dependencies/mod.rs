@@ -1,6 +1,6 @@
-use std::rc::Rc;
+use std::{rc::Rc, collections::BTreeSet};
 
-use crate::Context;
+use crate::{Context, GraphId};
 
 use super::graph_id::GraphIdKind;
 
@@ -64,15 +64,23 @@ impl Dependencies {
 
         let edges_values = self.transaction_state.down();
 
-        let Some(manager) = edges_values else {
+        let Some(client_ids) = edges_values else {
             return result;
         };
 
-        let edges_values = manager.exec_set();
+        for id in client_ids {
+            self.graph.refresh.refresh(&id);
+        }
 
-        let mut edges_client = Vec::new();
+        self.transaction_state.move_to_idle();
 
-        for id in self.graph.get_all_deps(edges_values) {
+        result
+    }
+
+    pub(crate) fn report_set(&self, value_id: GraphId) {
+        let mut client = BTreeSet::new();
+
+        for id in self.graph.connections.get_all_deps(value_id) {
             match id.get_type() {
                 GraphIdKind::Value => {
                     unreachable!();
@@ -81,17 +89,11 @@ impl Dependencies {
                     self.graph.refresh.clear_cache(&id);
                 },
                 GraphIdKind::Client => {
-                    edges_client.push(id);
+                    client.insert(id);
                 }
             }
         }
 
-        for id in edges_client {
-            self.graph.refresh.refresh(&id);
-        }
-
-        self.transaction_state.move_to_idle();
-
-        result
+        self.transaction_state.add_clients_to_refresh(client);
     }
 }

@@ -115,23 +115,12 @@ impl<T: Clone + 'static> Value<T> {
 
     pub fn set(&self, value: T) {
         self.inner.deps.transaction(|_| {
-            let set_value = {
-                let inner = self.inner.clone();
-                move || {
-                    inner.value.set(value);
-                    true
-                }
-            };
-
-            self.inner.deps.transaction_state.add_edge_to_refresh(self.inner.id, set_value);
+            self.inner.value.set(value);
+            self.inner.deps.report_set(self.inner.id);
         });
     }
 
     pub fn get(&self, context: &Context) -> T {
-        if self.inner.deps.transaction_state.is_in_queue_to_refresh(self.id()) {
-            log::error!("You read a value which has not yet been saved because the transaction has not been completed");
-        }
-
         context.add_parent(self.inner.id);
         self.inner.value.get()
     }
@@ -173,15 +162,10 @@ impl<T: Clone + 'static> Value<T> {
 impl<T: Clone + PartialEq + 'static> Value<T> {
     pub fn set_value_and_compare(&self, value: T) {
         self.inner.deps.transaction(|_| {
-
-            let set_value = {
-                let inner = self.inner.clone();
-                move || {
-                    inner.value.set_and_check(value)
-                }
-            };
-
-            self.inner.deps.transaction_state.add_edge_to_refresh(self.inner.id, set_value);
+            let need_refresh = self.inner.value.set_and_check(value);
+            if need_refresh {
+                self.inner.deps.report_set(self.inner.id);
+            }
         });
     }
 }
