@@ -17,8 +17,7 @@ use crate::{
 };
 use crate::driver_module::dom::DriverDom;
 
-use super::DomAccess;
-use super::callbacks::{CallbackId};
+use super::api::{DomAccess, CallbackId};
 
 #[derive(Debug)]
 pub enum FetchMethod {

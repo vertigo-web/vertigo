@@ -115,7 +115,7 @@ pub use dom_list::ListRendered;
 pub use driver_module::{
     api::ApiImport,
     driver::{Driver, FetchResult, FetchMethod},
-    js_value::js_value_struct::JsValue,
+    js_value::JsValue,
     dom_command::DriverDomCommand,
 };
 pub use fetch::{

@@ -1,6 +1,5 @@
 use std::rc::Rc;
-
-use crate::{struct_mut::{HashMapMut, ValueMut}, JsValue, DropResource};
+use crate::{struct_mut::{HashMapMut, ValueMut}, DropResource, JsValue};
 
 #[derive(PartialEq, Eq, Hash, Clone, Debug, Copy)]
 pub struct CallbackId(u64);

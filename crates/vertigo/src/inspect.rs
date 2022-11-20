@@ -2,7 +2,8 @@
 
 use std::collections::HashMap;
 
-use crate::{get_driver, DomId, driver_module::callbacks::CallbackId, DriverDomCommand};
+use crate::{get_driver, DomId, DriverDomCommand};
+use crate::driver_module::api::CallbackId;
 
 /// Make driver start gathering DOM commands into separate log
 pub fn log_start() {

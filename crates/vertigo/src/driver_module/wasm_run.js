@@ -1083,7 +1083,7 @@ class DriverDom {
                                 file.data,
                             ]);
                         }
-                        this.getWasm().wasm_callback(callback_id, params);
+                        this.getWasm().wasm_callback(callback_id, [params]);
                     }).catch((error) => {
                         console.error('callback_drop -> promise.all -> ', error);
                     });

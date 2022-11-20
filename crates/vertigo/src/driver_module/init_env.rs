@@ -1,8 +1,9 @@
 use std::panic;
 use log::{Level, Log, Metadata, Record};
-use crate::{ApiImport};
 
 use std::sync::{Once};
+
+use crate::ApiImport;
 
 static SET_HOOK: Once = Once::new();
 

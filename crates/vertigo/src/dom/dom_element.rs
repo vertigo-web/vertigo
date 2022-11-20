@@ -1,9 +1,10 @@
 use crate::{
-    driver_module::{driver::Driver, DomAccess},
+    driver_module::{driver::Driver, api::DomAccess},
     dom::{
         dom_node::DomNode,
         dom_id::DomId,
-    }, get_driver, Css, Client, Computed, struct_mut::VecMut, ApiImport, DropResource, JsValue, DropFileItem,
+    }, get_driver, Css, Client, Computed, struct_mut::VecMut, ApiImport, DropResource, DropFileItem,
+    JsValue,
 };
 
 use super::{types::{KeyDownEvent, DropFileEvent}, dom_node::{DomNodeFragment}};
@@ -64,7 +65,7 @@ impl DomElementRef {
     }
 
     pub fn dom_access(&self) -> DomAccess {
-        self.api.dom_access().element(self.id.to_u64())
+        self.api.dom_access().element(self.id)
     }
 }
 
@@ -315,18 +316,18 @@ impl DomElement {
 
     pub fn on_dropfile(self, on_dropfile: impl Fn(DropFileEvent) + 'static) -> Self {
         let (callback_id, drop) = self.driver.inner.api.callback_store.register(move |data| {
-            let params = data
-                .convert(|params| {
-
-                    let files = params.map("drop file", |mut item| {
+            let params = data.convert(|mut params| {
+                let files = params.get_vec("drop file", |item| {
+                    item.convert(|mut item| {
                         let name = item.get_string("name")?;
                         let data = item.get_buffer("data")?;
 
                         Ok(DropFileItem::new(name, data))
-                    })?;
+                    })
+                })?;
 
-                    Ok(DropFileEvent::new(files))
-                });
+                Ok(DropFileEvent::new(files))
+            });
 
             match params {
                 Ok(params) => {

@@ -4,8 +4,7 @@ use crate::DomId;
 use crate::struct_mut::VecMut;
 
 use crate::driver_module::api::ApiImport;
-use crate::driver_module::callbacks::CallbackId;
-use super::dom_command::{DriverDomCommand, sort_commands};
+use super::{dom_command::{DriverDomCommand, sort_commands}, api::CallbackId};
 
 
 pub struct DriverDom {

@@ -1,8 +1,28 @@
 use std::{rc::Rc, future::Future, pin::Pin, collections::HashMap};
 
-use crate::{InstantType, DropResource, struct_mut::ValueMut, transaction, get_driver, FetchResult, FutureBox, FetchMethod, WebsocketMessage, WebsocketConnection};
+use crate::{
+    InstantType,
+    DropResource,
+    struct_mut::ValueMut,
+    transaction,
+    get_driver,
+    FetchResult,
+    FutureBox,
+    FetchMethod,
+    WebsocketMessage,
+    WebsocketConnection,
+    driver_module::{
+        js_value::JsValue,
+        utils::json::JsonMapBuilder
+    }
+};
 
-use super::{js_value::{Arguments, js_value_struct::JsValue}, DomAccess, callbacks::CallbackStore, utils::json::JsonMapBuilder};
+use super::{
+    panic_message::PanicMessage,
+    api_dom_access::DomAccess,
+    arguments::Arguments,
+    callbacks::CallbackStore
+};
 
 enum ConsoleLogLevel {
     Debug,
@@ -21,26 +41,6 @@ impl ConsoleLogLevel {
             Self::Warn => "warn",
             Self::Error => "error",
         }
-    }
-}
-
-#[derive(Clone, Copy)]
-pub struct PanicMessage {
-    panic_message: fn(ptr: u32, size: u32),
-}
-
-impl PanicMessage {
-    pub fn new(panic_message: fn(ptr: u32, size: u32)) -> PanicMessage {
-        PanicMessage {
-            panic_message
-        }
-    }
-
-    pub fn show(&self, message: impl Into<String>) {
-        let message = message.into();
-        let ptr = message.as_ptr() as u32;
-        let len = message.len() as u32;
-        (self.panic_message)(ptr, len);
     }
 }
 
