@@ -48,9 +48,6 @@ impl DomDebugFragment {
 
         for cmd in cmds {
             match cmd {
-                DriverDomCommand::MountNode { id } => {
-                    map.entry(id).and_modify(|node| node.parent_id = DomId::root());
-                },
                 DriverDomCommand::CreateNode { id, name } => {
                     map.insert(id, DomDebugNode::from_name(id, name));
                 }
