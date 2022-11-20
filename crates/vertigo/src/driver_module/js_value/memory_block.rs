@@ -1,6 +1,8 @@
 use std::alloc::{alloc, Layout};
 use std::mem;
 
+use super::memory_block_write::MemoryBlockWrite;
+
 fn alloc_memory(size: usize) -> (*mut u8, Layout) {
 
     let align = mem::align_of::<usize>();
@@ -40,6 +42,14 @@ impl MemoryBlock {
             layout,
             size,
         }
+    }
+
+    pub fn from_slice(data: &[u8]) -> MemoryBlock {
+        let size = data.len() as u32;
+        let block = MemoryBlock::new(size);
+        let mut block = MemoryBlockWrite::new(block);
+        block.write(data);
+        block.get_block()
     }
 
     pub fn get_ptr_and_size(&self) -> (u32, u32) {

@@ -1,6 +1,7 @@
 use crate::DomId;
 use crate::driver_module::utils::json::JsonMapBuilder;
-use crate::driver_module::callbacks::CallbackId;
+
+use super::api::CallbackId;
 
 #[derive(Clone, Debug)]
 pub enum DriverDomCommand {

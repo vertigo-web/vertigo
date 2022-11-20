@@ -1,10 +1,11 @@
-use super::{js_value::js_value_builder::JsValueBuilder, js_value::{Arguments, js_value_struct::JsValue}, api::PanicMessage};
+use crate::{JsValue, DomId};
+use super::{panic_message::PanicMessage, arguments::Arguments};
 
 pub struct DomAccess {
     panic_message: PanicMessage,
     arguments: Arguments,
     fn_dom_access: fn(ptr: u32, size: u32) -> u32,
-    builder: JsValueBuilder,
+    builder: Vec<JsValue>,
 }
 
 impl DomAccess {
@@ -14,89 +15,85 @@ impl DomAccess {
             panic_message,
             fn_dom_access,
             arguments,
-            builder: JsValueBuilder::new(),
+            builder: Vec::new(),
         }
     }
 
     #[must_use]
     pub fn api(mut self) -> Self {
-        let value = JsValueBuilder::new()
-            .str("api")
-            .get();
+        self.builder.push(JsValue::List(vec!(
+            JsValue::str("api")
+        )));
 
-        self.builder.value_push(value);
         self
     }
 
     #[must_use]
-    pub fn element(mut self, dom_id: u64) -> Self {
-        let value = JsValueBuilder::new()
-            .str("root")
-            .u64(dom_id)
-            .get();
+    pub fn element(mut self, dom_id: DomId) -> Self {
+        self.builder.push(JsValue::List(vec!(
+            JsValue::str("root"),
+            JsValue::U64(dom_id.to_u64())
+        )));
 
-        self.builder.value_push(value);
         self
     }
 
     #[must_use]
     pub fn root(mut self, name: impl Into<String>) -> Self {
-        let value = JsValueBuilder::new()
-            .str("root")
-            .string(name)
-            .get();
+        self.builder.push(JsValue::List(vec!(
+            JsValue::str("root"),
+            JsValue::str(name)
+        )));
 
-        self.builder.value_push(value);
         self
     }
 
     #[must_use]
     pub fn get(mut self, name: impl Into<String>) -> Self {
-        let value = JsValueBuilder::new()
-            .str("get")
-            .string(name)
-            .get();
+        self.builder.push(JsValue::List(vec!(
+            JsValue::str("get"),
+            JsValue::str(name)
+        )));
 
-        self.builder.value_push(value);
         self
     }
 
     #[must_use]
     pub fn set(mut self, name: impl Into<String>, value: JsValue) -> Self {
-        let value = JsValueBuilder::new()
-            .str("set")
-            .string(name)
-            .value(value)
-            .get();
+        self.builder.push(JsValue::List(vec!(
+            JsValue::str("set"),
+            JsValue::str(name),
+            value
+        )));
 
-        self.builder.value_push(value);
         self
     }
 
     #[must_use]
     pub fn call(mut self, name: impl Into<String>, params: Vec<JsValue>) -> Self {
-        let value = JsValueBuilder::new()
-            .str("call")
-            .string(name)
-            .extend(params);
+        let mut value_params = vec!(
+            JsValue::str("call"),
+            JsValue::str(name),
+        );
 
-        self.builder.value_push(value.get());
+        value_params.extend(params.into_iter());
+
+        self.builder.push(JsValue::List(value_params));
         self
     }
 
     #[must_use]
     pub fn get_props(mut self, props: &[&str]) -> Self {
-        let value = JsValueBuilder::new()
-            .str("get_props")
-            .list(|mut list| {
-                for prop in props {
-                    list.str_push(prop);
-                }
+        let mut new_params = vec!(
+            JsValue::str("get_props"),
+        );
 
-                list
-            });
+        new_params.extend(props
+            .iter()
+            .map(|item| JsValue::String(item.to_string()))
+        );
 
-        self.builder.value_push(value.get());
+        self.builder.push(JsValue::List(new_params));
         self
     }
 
@@ -115,7 +112,7 @@ impl DomAccess {
 
     #[must_use]
     pub fn fetch(self) -> JsValue {
-        let memory = self.builder.build();
+        let memory = JsValue::List(self.builder).to_snapshot();
         let (ptr, size) = memory.get_ptr_and_size();
 
         let result_ptr = (self.fn_dom_access)(ptr, size);

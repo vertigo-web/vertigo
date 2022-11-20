@@ -1,4 +1,5 @@
-use crate::{ApiImport, driver_module::callbacks::CallbackId};
+use crate::ApiImport;
+use crate::driver_module::api::CallbackId;
 
 /// Websocket message type on which a websocket handler operates.
 pub enum WebsocketMessage {
