@@ -5,9 +5,6 @@ use super::api::CallbackId;
 
 #[derive(Clone, Debug)]
 pub enum DriverDomCommand {
-    MountNode {
-        id: DomId,
-    },
     CreateNode {
         id: DomId,
         name: &'static str,
@@ -73,10 +70,6 @@ impl DriverDomCommand {
         let mut out = JsonMapBuilder::new();
 
         match self {
-            Self::MountNode { id } => {
-                out.set_string("type", "mount_node");
-                out.set_u64("id", id.to_u64());
-            }
             Self::CreateNode { id, name } => {
                 out.set_string("type", "create_node");
                 out.set_u64("id", id.to_u64());

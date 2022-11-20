@@ -31,8 +31,7 @@ export class WasmModule {
         this.wasm.exports.start_application();
     }
 
-    public static async create(wasmBinPath: string): Promise<WasmModule> {
-
+    public static async create(root: HTMLElement, wasmBinPath: string): Promise<WasmModule> {
         let wasmModule: ModuleControllerType<ExportType> | null = null;
 
         const getWasm = (): ModuleControllerType<ExportType> => {
@@ -41,9 +40,9 @@ export class WasmModule {
             }
 
             return wasmModule;
-        }
+        };
 
-        const apiBrowser = new ApiBrowser(getWasm);
+        const apiBrowser = new ApiBrowser(root, getWasm);
 
         //@ts-expect-error
         window.$vertigoApi = apiBrowser;

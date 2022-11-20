@@ -920,15 +920,20 @@ const assertNeverCommand = (data) => {
     throw Error('unknown command');
 };
 class DriverDom {
+    root;
     getWasm;
     nodes;
     texts;
     callbacks;
-    constructor(getWasm) {
+    initBeforeFirstUpdate;
+    constructor(root, getWasm) {
+        this.root = root;
         this.getWasm = getWasm;
         this.nodes = new MapNodes();
         this.texts = new MapNodes();
         this.callbacks = new Map();
+        this.initBeforeFirstUpdate = false;
+        this.nodes.set(1n, root);
         document.addEventListener('dragover', (ev) => {
             // console.log('File(s) in drop zone');
             ev.preventDefault();
@@ -942,15 +947,15 @@ class DriverDom {
         }
         console.info('debug nodes', result);
     }
-    mount_node(root_id) {
-        this.nodes.get("append_to_body", root_id, (root) => {
-            document.body.appendChild(root);
-        });
-    }
     create_node(id, name) {
-        const node = createElement(name);
-        node.setAttribute('data-id', id.toString());
-        this.nodes.set(id, node);
+        if (id === 1n) {
+            console.error("The root HTMLElement is already created");
+        }
+        else {
+            const node = createElement(name);
+            node.setAttribute('data-id', id.toString());
+            this.nodes.set(id, node);
+        }
     }
     set_attribute(id, name, value) {
         this.nodes.get("set_attribute", id, (node) => {
@@ -1170,7 +1175,22 @@ class DriverDom {
             });
         }
     }
+    clearRootContent = () => {
+        while (true) {
+            const first = this.root.firstChild;
+            if (first === null) {
+                return;
+            }
+            else {
+                first.remove();
+            }
+        }
+    };
     dom_bulk_update = (value) => {
+        if (this.initBeforeFirstUpdate === false) {
+            this.initBeforeFirstUpdate = true;
+            this.clearRootContent();
+        }
         const setFocus = new Set();
         try {
             const commands = JSON.parse(value);
@@ -1213,10 +1233,6 @@ class DriverDom {
         }
         if (command.type === 'insert_before') {
             this.insert_before(BigInt(command.parent), BigInt(command.child), command.ref_id === null ? null : BigInt(command.ref_id));
-            return;
-        }
-        if (command.type === 'mount_node') {
-            this.mount_node(BigInt(command.id));
             return;
         }
         if (command.type === 'create_node') {
@@ -1273,13 +1289,13 @@ class ApiBrowser {
     fetch;
     websocket;
     dom;
-    constructor(getWasm) {
+    constructor(root, getWasm) {
         this.cookie = new Cookies();
         this.interval = new Interval(getWasm);
         this.hashRouter = new HashRouter(getWasm);
         this.fetch = new Fetch(getWasm);
         this.websocket = new DriverWebsocket(getWasm);
-        this.dom = new DriverDom(getWasm);
+        this.dom = new DriverDom(root, getWasm);
     }
     getRandom = (min, max) => {
         const range = max - min + 1;
@@ -1455,7 +1471,7 @@ class WasmModule {
     start_application() {
         this.wasm.exports.start_application();
     }
-    static async create(wasmBinPath) {
+    static async create(root, wasmBinPath) {
         let wasmModule = null;
         const getWasm = () => {
             if (wasmModule === null) {
@@ -1463,7 +1479,7 @@ class WasmModule {
             }
             return wasmModule;
         };
-        const apiBrowser = new ApiBrowser(getWasm);
+        const apiBrowser = new ApiBrowser(root, getWasm);
         //@ts-expect-error
         window.$vertigoApi = apiBrowser;
         wasmModule = await wasmInit(wasmBinPath, {
@@ -1497,9 +1513,9 @@ class WasmModule {
     }
 }
 
-const runModule = async (wasmBinPath) => {
+const runModule = async (root, wasmBinPath) => {
     console.info(`Wasm module: "${wasmBinPath}" -> start`);
-    const wasmModule = await WasmModule.create(wasmBinPath);
+    const wasmModule = await WasmModule.create(root, wasmBinPath);
     console.info(`Wasm module: "${wasmBinPath}" -> initialized`);
     wasmModule.start_application();
     console.info(`Wasm module: "${wasmBinPath}" -> launched start_application function`);

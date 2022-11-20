@@ -16,9 +16,6 @@ const createElement = (name: string): Element => {
 }
 
 type CommandType = {
-    type: 'mount_node'
-    id: number,
-} | {
     type: 'create_node',
     id: number,
     name: string,
@@ -75,16 +72,22 @@ const assertNeverCommand = (data: never): never => {
 };
 
 export class DriverDom {
+    private root: HTMLElement;
     private readonly getWasm: () => ModuleControllerType<ExportType>;
     public readonly nodes: MapNodes<bigint, Element | Comment>;
     public readonly texts: MapNodes<bigint, Text>;
     private callbacks: Map<bigint, (data: Event) => void>;
+    private initBeforeFirstUpdate: boolean;
 
-    public constructor(getWasm: () => ModuleControllerType<ExportType>) {
+    public constructor(root: HTMLElement, getWasm: () => ModuleControllerType<ExportType>) {
+        this.root = root;
         this.getWasm = getWasm;
         this.nodes = new MapNodes();
         this.texts = new MapNodes();
         this.callbacks = new Map();
+        this.initBeforeFirstUpdate = false;
+
+        this.nodes.set(1n, root);
 
         document.addEventListener('dragover', (ev): void => {
             // console.log('File(s) in drop zone');
@@ -101,16 +104,14 @@ export class DriverDom {
         console.info('debug nodes', result);
     }
 
-    private mount_node(root_id: bigint) {
-        this.nodes.get("append_to_body", root_id, (root) => {
-            document.body.appendChild(root);
-        });
-    }
-
     private create_node(id: bigint, name: string) {
-        const node = createElement(name);
-        node.setAttribute('data-id', id.toString());
-        this.nodes.set(id, node);
+        if (id === 1n) {
+            console.error("The root HTMLElement is already created");
+        } else {
+            const node = createElement(name);
+            node.setAttribute('data-id', id.toString());
+            this.nodes.set(id, node);
+        }
     }
 
     private set_attribute(id: bigint, name: string, value: string) {
@@ -369,8 +370,24 @@ export class DriverDom {
         }
     }
 
+    private clearRootContent = () => {
+        while (true) {
+            const first = this.root.firstChild;
+
+            if (first === null) {
+                return;
+            } else {
+                first.remove();
+            }
+        }
+    }
 
     public dom_bulk_update = (value: string) => {
+        if (this.initBeforeFirstUpdate === false) {
+            this.initBeforeFirstUpdate = true;
+            this.clearRootContent();
+        }
+
         const setFocus: Set<number> = new Set();
 
         try {
@@ -416,11 +433,6 @@ export class DriverDom {
 
         if (command.type === 'insert_before') {
             this.insert_before(BigInt(command.parent), BigInt(command.child), command.ref_id === null ? null : BigInt(command.ref_id));
-            return;
-        }
-
-        if (command.type === 'mount_node') {
-            this.mount_node(BigInt(command.id));
             return;
         }
 

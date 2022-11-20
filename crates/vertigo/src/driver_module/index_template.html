@@ -14,11 +14,28 @@
                 border: 0;
             }
         </style>
-        <script type="module">
-            import { runModule } from "{wasm_run_path}";
-            runModule("{wasm_lib_path}");
-        </script>
     </head>
     <body>
+        <div
+            data-vertigo-run-wasm="{wasm_lib_path}"
+            data-vertigo-run-js="{wasm_run_path}"
+        >
+            <!-- space for the rendered application -->
+        </div>
+
+        <script>
+            const list = document.querySelectorAll('*[data-vertigo-run-wasm]');
+
+            for (const node of list) {
+                const wasm = node.getAttribute('data-vertigo-run-wasm');
+                const js = node.getAttribute('data-vertigo-run-js');
+
+                if (typeof wasm === 'string' && typeof js === 'string') {
+                    import(js).then((js_module) => {
+                        js_module.runModule(node, wasm);
+                    })
+                }
+            }
+        </script>
     </body>
 </html>

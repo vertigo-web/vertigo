@@ -18,28 +18,12 @@ pub struct DriverDom {
 
 impl DriverDom {
     pub fn new(api: &ApiImport) -> DriverDom {
-
-        let driver_browser = DriverDom {
+        DriverDom {
             api: api.clone(),
             commands: VecMut::new(),
             log_enabled: Cell::new(false),
             log_vec: VecMut::new(),
-        };
-
-        let root_id = DomId::root();
-
-        driver_browser.create_node(root_id, "div");
-        driver_browser.mount_node(root_id);
-
-        driver_browser
-    }
-
-    fn mount_node(&self, id: DomId) {
-        let command = DriverDomCommand::MountNode { id };
-        if self.log_enabled.get() {
-            self.log_vec.push(command.clone());
         }
-        self.commands.push(command);
     }
 
     fn add_command(&self, command: DriverDomCommand) {
