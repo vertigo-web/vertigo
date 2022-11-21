@@ -2,6 +2,7 @@ pub mod build_opts;
 mod cargo_build;
 mod wasm_opt;
 mod find_target;
+//TODO: To be eventually moved to separate 'commons' lib
 mod wasm_path;
 mod cargo_workspace;
 

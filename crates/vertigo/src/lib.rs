@@ -116,6 +116,7 @@ pub use driver_module::{
     api::ApiImport,
     driver::{Driver, FetchResult, FetchMethod},
     js_value::JsValue,
+    js_value::MemoryBlock,
     dom_command::DriverDomCommand,
 };
 pub use fetch::{

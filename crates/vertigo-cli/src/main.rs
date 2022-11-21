@@ -22,6 +22,10 @@ enum Command {
 }
 
 fn main() -> Result<(), i32> {
+    env_logger::Builder::new()
+        .filter(None, log::LevelFilter::Info)
+        .init();
+
     let cli = Cli::parse();
     match cli.command {
         Command::Build(opts) => {

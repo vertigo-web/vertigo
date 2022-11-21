@@ -8,7 +8,7 @@ pub struct BuildOpts {
     pub package_name: Option<String>,
     #[arg(long, default_value_t = {"./build".to_string()})]
     pub dest_dir: String,
-    #[arg(long, default_value_t = {"./".to_string()})]
+    #[arg(long, default_value_t = {".".to_string()})]
     pub public_path: String,
 }
 
