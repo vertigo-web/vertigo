@@ -21,3 +21,6 @@ sha2 = "0.10.6"
 wasmtime = "2.0.2"
 log = "0.4.17"
 env_logger = "0.9.3"
+html_query_parser = "0.3.1"
+async-recursion = "1.0.0"
+tokio = { version = "1", features = ["full"] }

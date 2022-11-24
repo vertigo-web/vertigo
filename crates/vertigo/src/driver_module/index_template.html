@@ -31,7 +31,7 @@
                 const js = node.getAttribute('data-vertigo-run-js');
 
                 if (typeof wasm === 'string' && typeof js === 'string') {
-                    import(js).then((js_module) => {
+                    import(js).then(function(js_module) {
                         js_module.runModule(node, wasm);
                     })
                 }

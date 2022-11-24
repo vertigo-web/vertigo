@@ -56,6 +56,17 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "8da52d66c7071e2e3fa2a1e5c6d088fec47b593032b254f5e980de8ea54454d6"
 
 [[package]]
+name = "async-recursion"
+version = "1.0.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "2cda8f4bcc10624c4e85bc66b3f452cca98cfa5ca002dc83a16aad2367641bea"
+dependencies = [
+ "proc-macro2",
+ "quote",
+ "syn",
+]
+
+[[package]]
 name = "async-trait"
 version = "0.1.58"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -1042,6 +1053,12 @@ checksum = "747309b4b440c06d57b0b25f2aee03ee9b5e5397d288c60e21fc709bb98a7408"
 dependencies = [
  "winapi",
 ]
+
+[[package]]
+name = "html_query_parser"
+version = "0.3.1"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "5c3e45ceb23d8cbba15bba47ffd867dc3dafea3d9c490ff7aff12559bf777a05"
 
 [[package]]
 name = "http"
@@ -2551,14 +2568,17 @@ dependencies = [
 name = "vertigo-cli"
 version = "0.2.0-alpha"
 dependencies = [
+ "async-recursion",
  "cargo",
  "clap 4.0.18",
  "env_logger",
  "hex 0.4.3",
+ "html_query_parser",
  "include_dir",
  "log",
  "serde",
  "sha2 0.10.6",
+ "tokio",
  "wasmtime",
 ]
 
