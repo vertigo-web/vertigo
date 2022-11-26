@@ -42,7 +42,7 @@ pub fn run(opts: BuildOpts) -> Result<(), i32> {
 
     // Run build
 
-    let target_path = match cargo_build::run_cargo_build(&package_name) {
+    let target_path = match cargo_build::run_cargo_build(&package_name, &opts.public_path) {
         Ok(path) => path,
         Err(_) => return Err(-2),
     };

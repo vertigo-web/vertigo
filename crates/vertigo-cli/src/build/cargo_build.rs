@@ -9,8 +9,10 @@ use super::cargo_workspace::get_workspace;
 const TARGET: &str = "wasm32-unknown-unknown";
 const MODE: &str = "release";
 
-pub fn run_cargo_build(package_name: &str) -> Result<PathBuf, String> {
+pub fn run_cargo_build(package_name: &str, public_path: &str) -> Result<PathBuf, String> {
     log_ok(format!("Building {package_name}"));
+
+    std::env::set_var("VERTIGO_PUBLIC_PATH", public_path);
 
     let mut config_opt = Config::default();
     let workspace = match get_workspace(&mut config_opt) {

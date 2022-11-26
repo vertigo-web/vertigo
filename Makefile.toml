@@ -34,8 +34,15 @@ args = [
 [tasks.demo-build]
 dependencies = ["wasm32-target"]
 script = [
-    'cargo run --bin vertigo -- build vertigo-demo --dest-dir=demo/build'
+    'cargo run --bin vertigo -- build vertigo-demo --dest-dir=demo_build --public-path=/build'
 ]
+
+[tasks.new-serve-demo]
+script = [
+    "pwd",
+    "cargo run --bin vertigo -- serve --dest-dir=demo_build --public-path=/build",
+]
+
 
 [tasks.demo-serve-old]
 install_crate = { crate_name = "basic-http-server", binary = "basic-http-server", test_arg = ["--version"] }
@@ -99,3 +106,4 @@ script = [
 
 [tasks.lint]
 script = "cargo run --bin lint-project"
+
