@@ -17,6 +17,10 @@ pub fn include_static(mut file_path: PathBuf, file: String) -> Result<String, St
     if cfg!(debug_assertions) {
         Ok(String::default())
     } else {
+        let Ok(public_path) = std::env::var("VERTIGO_PUBLIC_PATH") else {
+            return Err(r#"The environment variable "VERTIGO_PUBLIC_PATH" is missing"#.to_string());
+        };
+
         let file_name = file_path.file_name();
         let file_static_target = {
             let mut target_path = WasmPath::new(
@@ -35,6 +39,8 @@ pub fn include_static(mut file_path: PathBuf, file: String) -> Result<String, St
 
         let file_path_content = file_path.read();
         let hash = file_static_target.save_with_hash(file_path_content.as_slice());
-        Ok(hash)
+        let http_path = format!("{public_path}/{hash}");
+
+        Ok(http_path)
     }
 }
