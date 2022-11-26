@@ -34,6 +34,8 @@
                     import(js).then(function(js_module) {
                         js_module.runModule(node, wasm);
                     })
+                } else {
+                    console.error('Run error', node);
                 }
             }
         </script>

@@ -91,7 +91,6 @@ impl JsValue {
         decode_js_value_inner(&mut buffor)
     }
 
-    #[allow(dead_code)]
     pub fn bool(value: bool) -> JsValue {
         if value {
             JsValue::True
@@ -100,7 +99,6 @@ impl JsValue {
         }
     }
 
-    #[allow(dead_code)]
     pub fn string_option(value: Option<String>) -> JsValue {
         match value {
             Some(body) => JsValue::String(body),

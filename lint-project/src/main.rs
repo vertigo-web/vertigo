@@ -6,6 +6,9 @@ use std::fs::{self, read_to_string};
 use std::path::Path;
 use colored::*;
 
+const EXTENSIONS_IGNORED: [&str; 6] = ["webp", "jpeg", "jpg", "png", "git", "wasm"];
+const IGNORE_NAME: [&str; 1] = [".DS_Store"];
+
 fn log_ok(message: impl Into<String>) {
     let message = message.into().green();
     println!("{message}");
@@ -33,13 +36,33 @@ fn visit_dirs(result: &mut Vec<String>, dir: &Path) {
             dir.starts_with("./demo/build") ||
             dir.starts_with("./.vscode") {
             //ignore
-        } else {
-            if let Some(dir) = dir.to_str() {
-                result.push(dir.into());
-            } else {
-                log_error("Error with conversion of characters to utf8");
-                return;
+            return;
+        }
+
+        if let Some(ext) = dir.extension() {
+            let ext_str = ext.to_str().unwrap();
+
+            for pattern_ext in EXTENSIONS_IGNORED {
+                if pattern_ext.trim() == ext_str.trim() {
+                    return;
+                }
             }
+        }
+
+        if let Some(name) = dir.file_name() {
+            let name_str = name.to_str().unwrap();
+            
+            for pattern_ext in IGNORE_NAME {
+                if pattern_ext.trim() == name_str.trim() {
+                    return;
+                }
+            }
+        }
+
+        if let Some(dir) = dir.to_str() {
+            result.push(dir.into());
+        } else {
+            log_error("Error with conversion of characters to utf8");
         }
         return;
     }

@@ -4,16 +4,15 @@ use std::net::SocketAddr;
 
 use axum::{
     extract::{
-        ws::{WebSocket, WebSocketUpgrade},
-        Extension,
+        ws::{
+            WebSocket, WebSocketUpgrade
+        },
+        State,
     },
-    http::StatusCode,
-    response::IntoResponse,
+    response::{IntoResponse, Html},
     routing::get,
-    routing::service_method_routing,
-    AddExtensionLayer, Router,
+    Router,
 };
-use tower_http::services::ServeDir;
 
 mod app_state;
 mod connection;
@@ -21,26 +20,22 @@ mod connection;
 use app_state::AppState;
 use connection::{Connection, ConnectionStream, SocketError};
 
+async fn index() -> Html<String> {
+    Html("demo - api index".to_string())
+}
+
 #[tokio::main]
 async fn main() {
-    println!("Server start on 127.0.0.1:3000 ...");
+    println!("Server start on 127.0.0.1:3333 ...");
 
     let app_state = AppState::new();
 
     let app = Router::new()
+        .route("/", get(index))
         .route("/ws", get(websocket_handler))
-        .fallback({
-            use axum::error_handling::HandleErrorExt;
-            service_method_routing::get(ServeDir::new("demo/build")).handle_error(|error: std::io::Error| {
-                (
-                    StatusCode::INTERNAL_SERVER_ERROR,
-                    format!("Unhandled internal error: {error}"),
-                )
-            })
-        })
-        .layer(AddExtensionLayer::new(app_state));
+        .with_state(app_state);
 
-    let addr = SocketAddr::from(([127, 0, 0, 1], 3000));
+    let addr = SocketAddr::from(([127, 0, 0, 1], 3333));
 
     match axum::Server::bind(&addr).serve(app.into_make_service()).await {
         Ok(()) => {
@@ -52,7 +47,7 @@ async fn main() {
     }
 }
 
-async fn websocket_handler(ws: WebSocketUpgrade, Extension(state): Extension<AppState>) -> impl IntoResponse {
+async fn websocket_handler(ws: WebSocketUpgrade, State(state): State<AppState>) -> impl IntoResponse {
     ws.on_upgrade(|socket| websocket(socket, state))
 }
 

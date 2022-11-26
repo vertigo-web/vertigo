@@ -1,12 +1,11 @@
-use crate::logs::{log_ok, log_error};
 use super::wasm_path::WasmPath;
 
 pub fn run_wasm_opt(from: &WasmPath, to: &WasmPath) -> bool {
-    log_ok(format!(
+    log::info!(
         r#"Running "wasm-opt -Os --strip-debug -o {} {}""#,
         to.as_string(),
         from.as_string()
-    ));
+    );
 
     let wasm_opt_status = std::process::Command::new("wasm-opt")
         .args([
@@ -20,15 +19,15 @@ pub fn run_wasm_opt(from: &WasmPath, to: &WasmPath) -> bool {
 
     match wasm_opt_status {
         Ok(status) if status.success() => {
-            log_ok("WASM optimized");
+            log::info!("WASM optimized");
             true
         },
         Ok(_) => {
-            log_error("WASM optimization failed");
+            log::error!("WASM optimization failed");
             false
         },
         Err(error) => {
-            let message = format!(r#"
+            log::error!(r#"
 
 
                 Error running wasm-opt: {error}
@@ -39,7 +38,6 @@ pub fn run_wasm_opt(from: &WasmPath, to: &WasmPath) -> bool {
 
 
             "#);
-            log_error(message);
 
             false
         }

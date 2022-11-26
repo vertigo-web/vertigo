@@ -7,15 +7,9 @@ script = [
     "cargo test -p vertigo --all-features"
 ]
 
-[tasks.vertigo-test-single]
-script = [
-    "cargo test -p vertigo --all-features -- --test-threads=1"
-]
-
 # Run clippy for wasm32 target
 
 [tasks.clippy-wasm32]
-dependencies = [ "wasm32-target" ]
 command = "cargo"
 args = [
     "clippy",
@@ -32,26 +26,22 @@ args = [
 # Demo tasks
 
 [tasks.demo-build]
-dependencies = ["wasm32-target"]
 script = [
     'cargo run --bin vertigo -- build vertigo-demo --dest-dir=demo_build --public-path=/build'
 ]
 
-[tasks.new-serve-demo]
+[tasks.demo-serve-api]
 script = [
-    "pwd",
-    "cargo run --bin vertigo -- serve --dest-dir=demo_build --public-path=/build",
+    "cargo run --bin vertigo-demo-server"
 ]
 
-
-[tasks.demo-serve-old]
-install_crate = { crate_name = "basic-http-server", binary = "basic-http-server", test_arg = ["--version"] }
-command = "basic-http-server"
-args = [ "--addr", "127.0.0.1:3000", "./demo/build" ]
+[tasks.demo-serve-http]
+script = [
+    "cargo run --bin vertigo -- serve --dest-dir=demo_build",
+]
 
 [tasks.demo-serve]
-command = "cargo"
-args = [ "run", "--bin", "vertigo-demo-server" ]
+run_task = { name = ["demo-serve-api", "demo-serve-http"], parallel = true }
 
 [tasks.demo-start]
 dependencies = [
@@ -65,22 +55,11 @@ args = [ "watch", "--watch", "./demo/app", "--watch", "crates", "--delay", "0.5"
 
 # Examples tasks
 [tasks.examples-build]
-dependencies = [ "wasm32-target" ]
 script = [
     'cargo run --bin vertigo -- build vertigo-example-counter --dest-dir=examples/build/counter',
     'cargo run --bin vertigo -- build vertigo-example-router --dest-dir=examples/build/router',
     'cargo run --bin vertigo -- build vertigo-example-trafficlights --dest-dir=examples/build/trafficlights',
 ]
-
-# Dependencies
-
-[tasks.wasm32-target]
-install_script = '''
-    if [ "$(rustup target list | grep wasm32-unknown-unknown | grep installed)" = "" ];
-    then
-        rustup target add wasm32-unknown-unknown;
-    fi
-'''
 
 # JavaScript dev builds
 

@@ -14,7 +14,6 @@ enum ParsingRowState {
 // "rule { subrule1 { sub-subrule1; sub-subrule2 } }" -> ["rule { subrule1 { sub-subrule1; sub-subrule2 } }"]
 //
 pub fn css_split_rows(css: &str) -> Vec<&str> {
-    log::info!("css_split_rows: {css}");
     let mut out: Vec<&str> = Vec::new();
 
     let mut state = ParsingRowState::Left;

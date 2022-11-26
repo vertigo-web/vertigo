@@ -12,18 +12,16 @@ use wasm_path::WasmPath;
 
 pub use build_opts::BuildOpts;
 
-use crate::logs::{log_ok, log_error};
-
 pub fn run(opts: BuildOpts) -> Result<(), i32> {
     let package_name = match opts.package_name.as_deref() {
         Some(name) => name.to_string(),
         None => match infer_package_name() {
             Ok(name) => {
-                log_ok(format!("Inferred package name = {}", name));
+                log::info!("Inferred package name = {}", name);
                 name
             },
             Err(err) => {
-                log_error(err);
+                log::error!("{}", err);
                 return Err(-1)
             },
         },
