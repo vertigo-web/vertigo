@@ -14,12 +14,10 @@ impl MemoryBlockRead {
         }
     }
 
-    #[allow(dead_code)]
     pub fn debug(&self) {
         log::info!("MemoryBlockRead DEBUG = {:02X?}", self.block);
     }
 
-    #[allow(dead_code)]
     pub fn debug_show_rest(&self) {
         let rest = &self.block[self.offset as usize..];
         log::info!("MemoryBlockRead DEBUG REST = {:02X?}", rest);

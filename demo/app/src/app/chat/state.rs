@@ -24,7 +24,7 @@ impl ChatState {
             let messages = messages.clone();
 
             get_driver().websocket(
-                "ws://127.0.0.1:3000/ws",
+                "ws://127.0.0.1:3333/ws",
                 move |message| match message {
                     WebsocketMessage::Connection(connection) => {
                         connect.set(Some(connection));

@@ -1,11 +1,12 @@
 mod build;
 mod new;
-mod logs;
+mod serve;
 
 use clap::{Parser, Subcommand};
 
 use build::BuildOpts;
 use new::NewOpts;
+use serve::ServeOpts;
 
 #[derive(Parser)]
 #[command(author, version, about, long_about = None)]
@@ -19,11 +20,14 @@ struct Cli {
 enum Command {
     New(NewOpts),
     Build(BuildOpts),
+    Serve(ServeOpts),
 }
 
-fn main() -> Result<(), i32> {
+#[tokio::main]
+pub async fn main() -> Result<(), i32> {
     env_logger::Builder::new()
         .filter(None, log::LevelFilter::Info)
+        .filter(Some("cargo::core::compiler"), log::LevelFilter::Off)
         .init();
 
     let cli = Cli::parse();
@@ -33,6 +37,9 @@ fn main() -> Result<(), i32> {
         }
         Command::New(opts) => {
             new::run(opts)
+        }
+        Command::Serve(opts) => {
+            serve::run(opts).await
         }
     }
 }
