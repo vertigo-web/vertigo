@@ -67,7 +67,7 @@ impl CountersDemo {
     pub fn mount(&self) -> DomElement {
         let path = include_static!("./counter.webp");
 
-        let center_css = css!{"
+        let center_css = css!("
             border: 1px solid black;
             padding: 1px;
             margin: 0 auto;
@@ -80,9 +80,9 @@ impl CountersDemo {
             :hover {
                 transform: scale(1.1);
             }
-        "};
+        ");
 
-        let center_css2 = css!{"
+        let center_css2 = css!("
             border: 1px solid black;
             padding: 1px;
             margin: 0 auto;
@@ -96,8 +96,8 @@ impl CountersDemo {
                 transform: scale(1.5);
                 box-shadow: 54px 54px 14px rgba(0, 0, 0, 0.3), 58px 58px 14px rgba(0, 0, 0, 0.2), 62px 62px 14px rgba(0, 0, 0, 0.1);
             }
-        "};
-    
+        ");
+
         dom! {
             <div>
                 <SimpleCounter label="counter1 value" value={&self.state.counter1} />

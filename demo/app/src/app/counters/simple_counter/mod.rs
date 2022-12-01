@@ -1,18 +1,5 @@
 use vertigo::{Value, transaction, Computed};
-use vertigo::{css_fn, css_fn_push, bind, DomElement, dom};
-
-css_fn! { css_box, "
-    margin: 5px;
-" }
-
-css_fn_push! { css_button, css_box, "
-    cursor: pointer;
-" }
-
-css_fn! { css_wrapper, "
-    border: 1px solid black;
-    margin: 5px 0;
-" }
+use vertigo::{bind, css, DomElement, dom};
 
 #[derive(Clone)]
 pub struct SimpleCounter {
@@ -34,8 +21,21 @@ impl SimpleCounter {
             state.decrement();
         });
 
+        let css_wrapper = css!("
+            border: 1px solid black;
+            margin: 5px 0;
+        ");
+
+        let css_box = || css!("
+            margin: 5px;
+        ");
+
+        let css_button = || css_box().push_str("
+            cursor: pointer;
+        ");
+
         dom! {
-            <div css={css_wrapper()}>
+            <div css={css_wrapper}>
                 <div css={css_box()}>
                     {self.label} " = " {self.value}
                 </div>

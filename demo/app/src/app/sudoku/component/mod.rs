@@ -14,9 +14,9 @@ impl Sudoku {
         let view1 = examples_render(&self.state);
         let view2 = main_render(&self.state);
 
-        let wrapper_css = css!{"
+        let wrapper_css = css!("
             display: flex;
-        "};
+        ");
 
         dom! {
             <div css={wrapper_css}>

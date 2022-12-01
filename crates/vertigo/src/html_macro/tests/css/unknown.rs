@@ -1,26 +1,22 @@
-use crate::Css;
-
-use crate::{css, css_fn};
+use crate::{css, Css};
 
 use super::utils::*;
 
-// Make crate available by its name for css_fn macro
+// Make crate available by its name for css macro
 use crate as vertigo;
 
 #[test]
-fn unknown_rule() {
-    css_fn! { unknown, "
+fn test_unknown_rule() {
+    let value = css!("
         unknown-rule-one: somevalue;
         unknown-rule-two: \"quotedvalue\";
-    " }
-
-    let value = unknown();
+    ");
 
     assert_eq!(get_s(&value), "unknown-rule-one: somevalue;\nunknown-rule-two: \"quotedvalue\";")
 }
 
 #[test]
-fn unknown_rule_expression() {
+fn test_unknown_rule_expression() {
     fn css_factory(color: &str, back_color: &str) -> Css {
         css!("
             some-color-rule: { color };

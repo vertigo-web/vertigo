@@ -1,22 +1,6 @@
-use vertigo::{css, css_fn, bind, dom, DomElement};
+use vertigo::{css, bind, dom, DomElement};
 
 use crate::app::sudoku::state::{number_item::SudokuValue, Cell};
-
-css_fn! { css_delete, "
-    position: absolute;
-    top: 3px;
-    right: 3px;
-    width: 20px;
-    height: 20px;
-    background-color: #ff000030;
-    cursor: pointer;
-    font-size: 12px;
-    line-height: 12px;
-
-    display: flex;
-    align-items: center;
-    justify-content: center;
-" }
 
 pub fn render_cell_value(item_height_size: u32, value: SudokuValue, cell: &Cell) -> DomElement {
     let cell = cell.clone();
@@ -30,8 +14,24 @@ pub fn render_cell_value(item_height_size: u32, value: SudokuValue, cell: &Cell)
                         cell.number.value.set(None);
                     });
 
+                    let css_delete = css!("
+                        position: absolute;
+                        top: 3px;
+                        right: 3px;
+                        width: 20px;
+                        height: 20px;
+                        background-color: #ff000030;
+                        cursor: pointer;
+                        font-size: 12px;
+                        line-height: 12px;
+
+                        display: flex;
+                        align-items: center;
+                        justify-content: center;
+                    ");
+
                     Some(dom! {
-                        <div css={css_delete()} on_click={on_click}>
+                        <div css={css_delete} on_click={on_click}>
                             "X"
                         </div>
                     })

@@ -62,17 +62,17 @@ After the task `watch` is completed you can point your browser to `http://127.0.
 Open `/src/render.rs` file.
 
 ```rust
-use vertigo::{start_app, DomElement, Value, dom, css_fn};
-
-css_fn! { main_div, "
-    color: darkblue;
-" }
+use vertigo::{start_app, DomElement, Value, dom, css};
 
 fn app() -> DomElement {
     let message = Value::new("Hello world!".to_string());
 
+    let main_div = css!("
+        color: darkblue;
+    ");
+
     dom! {
-        <div css={main_div()}>
+            <div css={main_div}>
             "Message to the world: "
             { message }
         </div>
@@ -105,7 +105,7 @@ If we want to be a little more detailed in this description, then it would be:
 Now let's breakdown the code line by line:
 
 ```rust
-use vertigo::{start_app, DomElement, Value, dom, css_fn};
+use vertigo::{start_app, DomElement, Value, dom, css};
 ```
 
 Here we import `start_app` function which initializes vertigo env, and creates a root node.
@@ -115,15 +115,7 @@ We also import:
 - `DomElement` - a struct that will define output of our mount function (a reactive component),
 - `Value` - a reactive box for values,
 - `dom!` - a macro to use HTML tags to define the shape of the resultant element, and
-- `css_fn!` macro that helps define styles for DOM nodes using CSS syntax.
-
-```rust
-css_fn! { main_div, "
-    color: darkblue;
-" }
-```
-
-Using `css_fn!` macro we define here a function named `main_div` which returns styles[^styles] defined by `color: darkblue` body.
+- `css!` macro that defines styles for DOM nodes using CSS syntax.
 
 ```rust
 fn app() -> DomElement {
@@ -138,6 +130,14 @@ performed through dependency graph). Tt just return definition of a reactive DOM
 
 Here we create a very simple state which only hold a String value. This is performed inside the mount function,
 which means the state will be created from scratch every time our component gets mounted.
+
+```rust
+let main_div = css!("
+    color: darkblue;
+");
+```
+
+Using `css!` macro we define here styles[^styles] with `color: darkblue` body ready to use in `dom!` macro.
 
 ```rust
     dom! {
@@ -226,7 +226,7 @@ Let's do some reactivity already. Import `vertigo::bind`, add switch event and u
     );
 
     dom! {
-        <div css={main_div()}>
+        <div css={main_div}>
             "Message to the world: "
             {message_element}
             <button on_click={switch}>"Switch"</button>
@@ -274,7 +274,7 @@ And use it in main `app()` function:
 
 ```rust
     dom! {
-        <div css={main_div()}>
+        <div css={main_div}>
             "Message to the world: "
             {message_element}
             <button on_click={switch}>"Switch"</button>
@@ -380,7 +380,7 @@ and add it as a property:
 
 ```rust
     dom! {
-        <div css={main_div()}>
+        <div css={main_div}>
             "Message to the world: "
             {message_element}
             <button on_click={switch}>"Switch"</button>
@@ -465,7 +465,7 @@ And use it in `dom!` macro:
         dom! {
             <div>
                 <p>"My list (" {count} ")"</p>
-        // (...)
+            // (...)
 ```
 
 Map on a value creates a reactive computed value. It gets updated every time the original value is changed.
@@ -473,19 +473,19 @@ Map on a value creates a reactive computed value. It gets updated every time the
 ## 11. Parametrized styles
 
 As a bonus feature, we'll delve into styles. First we'll make the list to change font color for every other row.
-Remember to import `css_fn` from vertigo. In `list.rs` file add:
+Remember to import `css` from vertigo. In `list.rs` file add:
 
 ```rust
-css_fn! { alternate_rows, "
-    color: black;
+        let alternate_rows = || css!("
+            color: black;
 
-    :nth-child(odd) {
-        color: blue;
-    };
-" }
+            :nth-child(odd) {
+                color: blue;
+            };
+        ");
 ```
 
-And use these styles in `dom!` macro:
+We've created "css factory" (that is a closure) because we're using this style in every iteration here:
 
 ```rust
         let elements = self.items.render_list(
@@ -496,21 +496,22 @@ And use these styles in `dom!` macro:
         );
 ```
 
-Now we want to have particular items emphasized by different background. Let's say all items ending with an exclamation mark. To create a parameterized css function we need to drop usage of the `css_fn` macro, and create the function ourselves. So instead of `css_fn` we need to import the `css` macro and the `Css` type, which *vertigo* uses to define a group of css rules.
+Now we want to have particular items emphasized by different background. Let's say all items ending with an exclamation mark.
+To create a parameterized css function we just need add parameter to our factory:
 
 ```rust
-fn alternate_rows(excl: bool) -> Css {
-    let bg_color = if excl { "yellow" } else { "inherit" };
+        let alternate_rows = |excl: bool| {
+            let bg_color = if excl { "yellow" } else { "inherit" };
 
-    css!("
-        color: black;
-        background: { bg_color };
+            css!("
+                color: black;
+                background: { bg_color };
 
-        :nth-child(odd) {
-            color: blue;
+                :nth-child(odd) {
+                    color: blue;
+                };
+            ")
         };
-    ")
-}
 ```
 
 And here's the usage in render:

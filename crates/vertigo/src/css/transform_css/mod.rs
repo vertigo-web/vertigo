@@ -1,138 +1,10 @@
 use super::{get_selector::get_selector, next_id::NextId};
 
+mod splits;
+use splits::{css_split_rows, css_row_split_to_pair, find_brackets};
+
 #[cfg(test)]
 mod tests;
-
-fn css_row_split_to_pair(row: &str) -> Option<(&str, String)> {
-    let chunks: Vec<&str> = row.split(':').collect();
-
-    if chunks.len() < 2 {
-        return None;
-    }
-
-    let key = chunks[0].trim();
-    let attr: String = chunks[1..].join(":").trim().into();
-
-    Some((key, attr))
-}
-
-#[cfg(test)]
-pub fn css_split_rows_pair(css: &str) -> Vec<(&str, String)> {
-    let mut out = Vec::new();
-
-    for row in css_split_rows(css) {
-        let pair = css_row_split_to_pair(row);
-
-        if let Some(pair) = pair {
-            out.push(pair);
-        } else {
-            log::error!("Problem with parsing this css line: {}", row);
-        }
-    }
-
-    out
-}
-
-#[derive(Eq, PartialEq, Debug)]
-enum ParsingRowState {
-    Left,
-    Right,
-    RightBracketOpen(u16),
-}
-
-pub fn css_split_rows(css: &str) -> Vec<&str> {
-    let mut out: Vec<&str> = Vec::new();
-
-    let mut state = ParsingRowState::Left;
-    let mut start = 0;
-
-    for (index, char) in css.char_indices() {
-        if char == '{' {
-            if state == ParsingRowState::Right {
-                state = ParsingRowState::RightBracketOpen(1);
-            } else if let ParsingRowState::RightBracketOpen(counter) = &mut state {
-                *counter += 1;
-            } else {
-                panic!("unsupported use case");
-            }
-        }
-
-        if char == '}' {
-            let should_clouse = if let ParsingRowState::RightBracketOpen(counter) = &mut state {
-                if *counter > 1 {
-                    *counter -= 1;
-                    false
-                } else {
-                    true
-                }
-            } else {
-                panic!("unsupported use case");
-            };
-
-            if should_clouse {
-                state = ParsingRowState::Right;
-            }
-        }
-
-        if char == ':' && state == ParsingRowState::Left {
-            state = ParsingRowState::Right;
-        }
-
-        if char == ';' && state == ParsingRowState::Right {
-            out.push(css[start..index].trim());
-            start = index + 1;
-            state = ParsingRowState::Left;
-        }
-    }
-
-    out.push(css[start..css.len()].trim());
-
-    out.into_iter()
-        .filter(|item| item.trim() != "")
-        .collect()
-}
-
-pub fn find_brackets(line: &str) -> Option<(&str, &str, &str)> {
-    let mut start: Option<usize> = None;
-    let mut end: Option<usize> = None;
-
-    let chars: Vec<char> = line.chars().collect();
-
-    for (index, char) in chars.iter().enumerate() {
-        if *char == '{' {
-            start = Some(index);
-            break;
-        }
-    }
-
-    for (index, char) in chars.iter().enumerate().rev() {
-        if *char == '}' {
-            end = Some(index);
-            break;
-        }
-    }
-
-    if let (Some(start), Some(end)) = (start, end) {
-        let start_word = &line[0..start];
-        let central_word = &line[start + 1..end];
-        let end_word = &line[end + 1..];
-        return Some((start_word.trim(), central_word.trim(), end_word.trim()));
-    }
-
-    None
-}
-
-#[test]
-fn test_find_brackets() {
-    let css = "";
-    assert_eq!(find_brackets(css), None);
-    let css = "1.0s infinite ease-in-out";
-    assert_eq!(find_brackets(css), None);
-    let css = "1.0s infinite ease-in-out { dsd }";
-    assert_eq!(find_brackets(css), Some(("1.0s infinite ease-in-out", "dsd", "")));
-    let css = "1.0s infinite ease-in-out { dsd } fff";
-    assert_eq!(find_brackets(css), Some(("1.0s infinite ease-in-out", "dsd", "fff")));
-}
 
 pub fn transform_css_animation_value(css: &str, next_id: &NextId) -> (String, Option<(String, String)>) {
     let brackets = find_brackets(css);
@@ -141,10 +13,10 @@ pub fn transform_css_animation_value(css: &str, next_id: &NextId) -> (String, Op
         let id = next_id.get_next_id();
         let selector = get_selector(&id);
 
-        let keyframe_name = format!("@keyframes {selector}");
+        let keyframe_name = ["@keyframes ", &selector].concat();
         let keyframe_content = central_word;
 
-        let new_css = format!("{start_word} {selector} {end_word}");
+        let new_css = [start_word, &selector, end_word].join(" ");
 
         return (new_css, Some((keyframe_name, keyframe_content.into())));
     }
@@ -155,32 +27,91 @@ pub fn transform_css_animation_value(css: &str, next_id: &NextId) -> (String, Op
 pub fn transform_css_selector_value(row: &str, parent_selector: &str) -> Option<(String, String)> {
     let brackets = find_brackets(row);
 
-    if let Some((start_word, central_word, _end_word)) = brackets {
-        let new_selector = format!("{parent_selector}{start_word}");
-        return Some((new_selector, central_word.into()));
+    if let Some((pseudo_selector, rules, trash)) = brackets {
+        if !trash.trim().is_empty() {
+            log::error!("Unexpected input after pseudo-selector rule set, missing semicolon?");
+        }
+        let new_selector = [parent_selector, pseudo_selector].concat();
+        return Some((new_selector, rules.into()));
     }
 
     None
 }
 
+pub fn transform_css_media_query(row: &str, parent_selector: &str, css_documents: &mut Vec<(String, String)>) {
+    let brackets = find_brackets(row);
+
+    if let Some((query, rules_input, trash)) = brackets {
+        if !trash.trim().is_empty() {
+            log::error!("Unexpected input after media query, missing semicolon?");
+        }
+
+        // Collected rules
+        let mut regular_rules = vec![];
+        // Collected sets of rules inside pseudo-selectors
+        let mut rules_in_pseudo = vec![];
+
+        for row in css_split_rows(rules_input) {
+            if row.starts_with(':') {
+                // Pseudo selectors inside media query, collect it into separate vector
+                let extra_rule = transform_css_selector_value(row, parent_selector);
+
+                if let Some(extra_rule) = extra_rule {
+                    rules_in_pseudo.push([&extra_rule.0, " { ", &extra_rule.1, " }"].concat());
+                }
+            } else {
+                // Regular rule in media query
+                // TODO: Handle animation here
+                regular_rules.push(row);
+            }
+        }
+
+        if !regular_rules.is_empty() || !rules_in_pseudo.is_empty() {
+            let mut media_content = "".to_string();
+            // Insert regular rules first
+            if !regular_rules.is_empty() {
+                // selector { rules; }
+                media_content.push_str(parent_selector);
+                media_content.push_str(" { ");
+                media_content.push_str(&regular_rules.join(";"));
+                media_content.push_str(" }");
+            }
+            // Add sets of rules in pseudo selectors
+            for set in &rules_in_pseudo {
+                if !media_content.is_empty() {
+                    media_content.push('\n');
+                }
+                media_content.push_str(set);
+            }
+            css_documents.push((query.into(), media_content));
+        }
+    }
+}
+
 pub fn transform_css(css: &str, next_id: &NextId) -> (u64, Vec<(String, String)>) {
     let class_id = next_id.get_next_id();
-    let selector = format!(".{}", get_selector(&class_id));
+    let selector = [".", &get_selector(&class_id)].concat();
 
     let mut css_out: Vec<String> = Vec::new();
     let mut css_documents: Vec<(String, String)> = Vec::new();
 
     for row in css_split_rows(css) {
         if row.starts_with(':') {
+            // It's a pseudo-selector
             let extra_rule = transform_css_selector_value(row, &selector);
 
             if let Some(extra_rule) = extra_rule {
                 css_documents.push(extra_rule);
             }
+        } else if row.starts_with("@media") {
+            // It's a set of rules inside media query
+            transform_css_media_query(row, &selector, &mut css_documents);
         } else {
+            // Single rule
             match css_row_split_to_pair(row) {
                 Some((name, value)) => {
                     let value_parsed = if name.trim() == "animation" {
+                        // Animation rule
                         let (value_parsed, extra_animation) = transform_css_animation_value(&value, next_id);
 
                         if let Some(extra_animation) = extra_animation {
@@ -189,10 +120,11 @@ pub fn transform_css(css: &str, next_id: &NextId) -> (u64, Vec<(String, String)>
 
                         value_parsed
                     } else {
+                        // Regular rule
                         value
                     };
 
-                    css_out.push(format!("{name}: {value_parsed}"));
+                    css_out.push([name, ": ", &value_parsed].concat());
                 }
                 None => {
                     css_out.push(row.into());

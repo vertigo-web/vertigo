@@ -64,7 +64,7 @@ impl CssParser {
                 }
             }
             Err(e) => {
-                emit_error!(call_site, "HTML Parsing fatal error: {}", e);
+                emit_error!(call_site, "CSS Parsing fatal error: {}", e);
                 (quote! {}, false)
             }
         }
@@ -79,6 +79,10 @@ impl CssParser {
             }
             Rule::animation_rule => {
                 let child = self.generate_animation_rule(pair);
+                children.push(child);
+            }
+            Rule::media_rules => {
+                let child = self.generate_media_rules(pair);
                 children.push(child);
             }
             Rule::sub_rule => {
@@ -147,7 +151,7 @@ impl CssParser {
                     format!("{{{{ {frames_strs} }}}}")
                 }
                 _ => {
-                    emit_warning!(self.call_site, "CSS: unhandler value in generate_unknown_rule: {:?}", value);
+                    emit_warning!(self.call_site, "CSS: unhandled value in generate_animation_rule: {:?}", value);
                     "".to_string()
                 }
             };
@@ -155,6 +159,31 @@ impl CssParser {
         }
 
         format!("animation: {};", value_strs.join(" "))
+    }
+
+    fn generate_media_rules(&mut self, pair: Pair<Rule>) -> String {
+        let pairs = pair.into_inner();
+
+        // let mut sub_selector = None;
+        let mut query = None;
+        let mut value_strs = Vec::new();
+
+        for pair in pairs {
+            match pair.as_rule() {
+                Rule::media_query => query = Some(pair.as_str().to_string()),
+                // Rule::sub_selector => sub_selector = Some(pair.as_str()),
+                _ => {
+                    value_strs.extend(self.generate_rule(pair));
+                }
+            };
+        }
+
+        if let Some(query) = query {
+            format!("@media {query} {{{{ {} }}}};", value_strs.join(" "))
+        } else {
+            emit_warning!(self.call_site, "CSS: Generated empty media query");
+            "".to_string()
+        }
     }
 
     fn generate_sub_rule(&mut self, pair: Pair<Rule>) -> String {

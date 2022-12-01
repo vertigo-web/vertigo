@@ -6,6 +6,11 @@
 
 * `vertigo-cli` packaging tool with commands `new` and `build`
 * A warning in JS console if developer tried to get a value already set to be changed during transaction
+* `@media` queries support in CSS
+
+### Removed
+
+* `css_fn!` and `css_fn_push!` macro (not very useful, problems with error reporting in proper place)
 
 ## 0.1.1 - 2022-11-10
 

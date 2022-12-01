@@ -1,61 +1,55 @@
-use crate::{css, css_fn};
+use crate::css;
 
 use super::utils::*;
 
-// Make crate available by its name for css_fn macro
+// Make crate available by its name for css macro
 use crate as vertigo;
 
 #[test]
-fn hover_css() {
-    css_fn! { css_factory, "
+fn test_hover() {
+    let value = css!("
         color: red;
         :hover {
             color: white;
             background-color: blue;
         };
         background-color: black;
-    " };
-
-    let value = css_factory();
+    ");
 
     assert_eq!(get_s(&value), "color: red;\n:hover { color: white;\nbackground-color: blue; };\nbackground-color: black;")
 }
 
 #[test]
-fn hover_with_params_css() {
+fn test_hover_with_params() {
     let param_inner = "blue";
     let param_outer = "black";
-    let css_factory = || css! { "
+    let value = css!("
         color: red;
         :hover {
             color: white;
             background-color: {param_inner};
         };
         background-color: {param_outer};
-    " };
-
-    let value = css_factory();
+    ");
 
     assert_eq!(get_d(&value), "color: red;\n:hover { color: white;\nbackground-color: blue; };\nbackground-color: black;")
 }
 
 #[test]
-fn last_of_type_css() {
-    css_fn! { css_factory, "
+fn test_last_of_type() {
+    let value = css!("
         color: red;
         :nth-last-of-type(2) {
             background-color: blue;
         };
-    " };
-
-    let value = css_factory();
+    ");
 
     assert_eq!(get_s(&value), "color: red;\n:nth-last-of-type(2) { background-color: blue; };")
 }
 
 #[test]
-fn doubled() {
-    css_fn! { css_factory, "
+fn test_doubled() {
+    let value = css!("
         width: 40px;
 
         :focus {
@@ -65,9 +59,7 @@ fn doubled() {
         :focus::first-letter {
             color: crimson;
         };
-    " };
-
-    let value = css_factory();
+    ");
 
     assert_eq!(get_s(&value), "width: 40px;\n:focus { color: red; };\n:focus::first-letter { color: crimson; };")
 }
