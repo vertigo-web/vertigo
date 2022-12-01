@@ -1,7 +1,5 @@
-
-
 #[test]
-fn aaaa() {
+fn test_bind() {
     use crate as vertigo;
     use crate::{bind_spawn, bind_rc, bind};
 

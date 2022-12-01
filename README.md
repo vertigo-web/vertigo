@@ -18,7 +18,7 @@ Examples
 Dependencies:
 
 ```toml
-vertigo = "0.1"
+vertigo = "0.2"
 ```
 
 Example 1:

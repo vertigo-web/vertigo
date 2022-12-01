@@ -1,4 +1,4 @@
-use vertigo::{DropFileItem, Value, DropFileEvent, css_fn, bind, dom, DomElement};
+use vertigo::{DropFileItem, Value, DropFileEvent, bind, css, dom, DomElement};
 
 pub struct DropFiles { }
 
@@ -34,8 +34,13 @@ impl DropFiles {
             });
         });
 
+        let css_drop = css!("
+            height: 400px;
+            background-color: green;
+        ");
+
         dom! {
-            <div css={css_drop()} on_dropfile={on_dropfile}>
+            <div css={css_drop} on_dropfile={on_dropfile}>
                 <div>
                     "drop file"
                 </div>
@@ -52,8 +57,3 @@ fn format_line(file: &DropFileItem) -> String {
     let size = file.data.len();
     format!("file name={file_name} size={size}")
 }
-
-css_fn! {css_drop, "
-    height: 400px;
-    background-color: green;
-"}

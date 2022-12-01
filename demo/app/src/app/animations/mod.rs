@@ -1,6 +1,6 @@
 use std::rc::Rc;
 
-use vertigo::{css_fn, css_fn_push, Value, get_driver, struct_mut::ValueMut, DomElement, dom, bind_spawn};
+use vertigo::{Value, get_driver, struct_mut::ValueMut, DomElement, dom, bind_spawn, css};
 
 mod spinner;
 use spinner::spinner;
@@ -40,17 +40,6 @@ impl State {
     }
 }
 
-css_fn! { css_bg, "
-    border: 1px solid black;
-    padding: 10px;
-    background-color: #e0e0e0;
-    margin-bottom: 10px;
-" }
-
-css_fn_push! { css_button, css_bg, "
-    cursor: pointer;
-" }
-
 pub struct Animations { }
 
 impl Animations {
@@ -71,7 +60,7 @@ impl Animations {
         let on_click_progress = bind_spawn!(state, async move {
             state.start_animation().await;
         });
-    
+
         let on_mouse_enter = || {
             log::info!("mouse enter");
         };
@@ -80,9 +69,16 @@ impl Animations {
             log::info!("mouse leave");
         };
 
+        let css_bg = css!("
+            border: 1px solid black;
+            padding: 10px;
+            background-color: #e0e0e0;
+            margin-bottom: 10px;
+        ");
+
         dom! {
             <div>
-                <div css={css_bg()} on_mouse_enter={on_mouse_enter} on_mouse_leave={on_mouse_leave}>
+                <div css={css_bg} on_mouse_enter={on_mouse_enter} on_mouse_leave={on_mouse_leave}>
                     { spinner() }
                 </div>
 

@@ -1,5 +1,5 @@
 use std::rc::Rc;
-use vertigo::{css, css_fn, Css, Value, bind, DomElement, dom, transaction};
+use vertigo::{css, Value, bind, DomElement, dom, transaction};
 
 pub use super::State;
 
@@ -10,9 +10,15 @@ pub struct GameOfLife {
 impl GameOfLife {
     pub fn mount(&self) -> DomElement {
         let matrix = &self.state.matrix;
+        let css_wrapper = css!("
+            border: 1px solid black;
+            padding: 10px;
+            margin: 10px;
+            background-color: #e0e0e0;
+        ");
 
         dom! {
-            <div css={css_wrapper()}>
+            <div css={css_wrapper}>
                 { Self::render_header(&self.state) }
                 <br/>
                 <a href="https://www.youtube.com/watch?v=C2vgICfQawE" target="_blank">
@@ -62,8 +68,18 @@ impl GameOfLife {
             state.new_delay.set(new_value.parse().unwrap_or_default());
         });
 
+        let flex_menu = css!("
+            display: flex;
+            gap: 40px;
+            margin-bottom: 5px;
+        ");
+
+        let css_button = || css!("
+            cursor: pointer;
+        ");
+
         dom! {
-            <div css={flex_menu()}>
+            <div css={flex_menu}>
                 <div>
                     "Game of life"
                 </div>
@@ -99,8 +115,14 @@ impl GameOfLife {
     }
 
     fn render_row(matrix: &[Value<bool>]) -> DomElement {
+        let css_row = css!("
+            display: flex;
+            flex-direction: row;
+            height: 10px;
+        ");
+
         let wrapper = dom! {
-            <div css={css_row()} />
+            <div css={css_row} />
         };
 
         for item in matrix.iter() {
@@ -111,6 +133,15 @@ impl GameOfLife {
     }
 
     fn render_cell(cell: &Value<bool>) -> DomElement {
+        let css_cell = |is_active: bool| {
+            let color = if is_active { "black" } else { "white" };
+            css!("
+                width: 10px;
+                height: 10px;
+                cursor: pointer;
+                background-color: { color };
+            ")
+        };
 
         let css_computed = cell.map(css_cell);
 
@@ -125,38 +156,3 @@ impl GameOfLife {
         }
     }
 }
-
-css_fn! { css_wrapper, "
-    border: 1px solid black;
-    padding: 10px;
-    margin: 10px;
-    background-color: #e0e0e0;
-" }
-
-css_fn! { css_row, "
-    display: flex;
-    flex-direction: row;
-    height: 10px;
-" }
-
-fn css_cell(is_active: bool) -> Css {
-    let color = if is_active { "black" } else { "white" };
-    css!(
-        "
-        width: 10px;
-        height: 10px;
-        cursor: pointer;
-        background-color: { color };
-    "
-    )
-}
-
-css_fn! { css_button, "
-    cursor: pointer;
-" }
-
-css_fn! { flex_menu, "
-    display: flex;
-    gap: 40px;
-    margin-bottom: 5px;
-" }

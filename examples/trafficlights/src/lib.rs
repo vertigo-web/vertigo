@@ -1,4 +1,4 @@
-use vertigo::{start_app, bind, css_fn, DomElement, dom, Value};
+use vertigo::{start_app, css, bind, DomElement, dom, Value};
 
 mod light;
 use light::Light;
@@ -28,28 +28,29 @@ pub fn app() -> DomElement {
         })
     );
 
+    let backplate = css!("
+        width: 130px;
+        background-color: black;
+        display: flex;
+        flex-direction: column;
+    ");
+
+    let button = css!("
+        margin: 20px;
+    ");
+
+
     dom! {
         <div>
-            <div css={backplate()}>
+            <div css={backplate}>
                 <Light light_color="#ff0000" dark_color="#440000" on={red_on} />
                 <Light light_color="#ffff00" dark_color="#444400" on={yellow_on} />
                 <Light light_color="#00ff00" dark_color="#004400" on={green_on} />
             </div>
-            <button css={button()} on_click={next}>"Next"</button>
+            <button css={button} on_click={next}>"Next"</button>
         </div>
     }
 }
-
-css_fn! { backplate, "
-    width: 130px;
-    background-color: black;
-    display: flex;
-    flex-direction: column;
-" }
-
-css_fn! { button, "
-    margin: 20px;
-" }
 
 #[no_mangle]
 pub fn start_application() {

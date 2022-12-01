@@ -18,7 +18,7 @@
 //!             *value += 1;
 //!         });
 //!     });
-//!     
+//!
 //!     let decrement = bind!(count, || {
 //!         count.change(|value| {
 //!             *value -= 1;
@@ -46,7 +46,7 @@
 //! ## Example 2
 //!
 //! ```rust
-//! use vertigo::{DomElement, Value, dom, css_fn};
+//! use vertigo::{css, DomElement, Value, dom};
 //!
 //! pub struct MyMessage {
 //!     pub message: Value<String>,
@@ -63,15 +63,15 @@
 //!     }
 //! }
 //!
-//! css_fn! { main_div, "
-//!     color: darkblue;
-//! " }
-//!
 //! fn render() -> DomElement {
 //!     let message = Value::new("Hello world!".to_string());
 //!
+//!     let main_div = css!("
+//!         color: darkblue;
+//!     ");
+//!
 //!     dom! {
-//!         <div css={main_div()}>
+//!         <div css={main_div}>
 //!             <MyMessage message={message} />
 //!         </div>
 //!     }
@@ -189,27 +189,23 @@ pub use vertigo_macro::dom_debug;
 /// Allows to create Css styles for virtual DOM.
 ///
 /// ```rust
-/// use vertigo::{Css, css};
+/// use vertigo::css;
 ///
-/// fn green_on_red() -> Css {
-///     css! { "
-///         color: green;
-///         background-color: red;
-///     " }
-/// }
+/// let green_on_red = css!("
+///     color: green;
+///     background-color: red;
+/// ");
 /// ```
 pub use vertigo_macro::css;
 
 /// Constructs a CSS block that can be manually pushed into existing Css styles instance.
 ///
 /// ```rust
-/// use vertigo::{css_fn, css_block};
+/// use vertigo::{css, css_block};
 ///
-/// css_fn! { green, "
+/// let mut green_style = css!("
 ///     color: green;
-/// " }
-///
-/// let mut green_style = green();
+/// ");
 ///
 /// green_style.push_str(
 ///     css_block! { "

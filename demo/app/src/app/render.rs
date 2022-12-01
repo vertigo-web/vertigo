@@ -1,4 +1,4 @@
-use vertigo::{css, css_fn, Css, KeyDownEvent, DomElement, dom, Computed, bind};
+use vertigo::{css, Css, KeyDownEvent, DomElement, dom, Computed, bind};
 use crate::app;
 
 use super::{
@@ -14,11 +14,11 @@ use super::{
     todo::Todo,
 };
 
-css_fn! { css_menu, "
-    list-style-type: none;
-    margin: 10px;
-    padding: 0;
-" }
+fn navigate_to(state: &app::State, route: Route) -> impl Fn() {
+    bind!(state, route, || {
+        state.navigate_to(route.clone())
+    })
+}
 
 fn css_menu_item(active: bool) -> Css {
     let bg_color = if active { "lightblue" } else { "lightgreen" };
@@ -36,12 +36,6 @@ fn css_menu_item(active: bool) -> Css {
         }
     "
     )
-}
-
-fn navigate_to(state: &app::State, route: Route) -> impl Fn() {
-    bind!(state, route, || {
-        state.navigate_to(route.clone())
-    })
 }
 
 fn render_menu_item(state: &app::State, current_page: Computed<Route>, menu_item: Route) -> DomElement {
@@ -77,9 +71,15 @@ fn render_header(state: &app::State) -> DomElement {
         false
     };
 
+    let css_menu = css!("
+        list-style-type: none;
+        margin: 10px;
+        padding: 0;
+    ");
+
     dom! {
         <div hook_key_down={hook_key_down}>
-            <ul css={css_menu()}>
+            <ul css={css_menu}>
                 { render_menu_item(state, state.route.route.clone(), Route::Counters) }
                 { render_menu_item(state, state.route.route.clone(), Route::Animations) }
                 { render_menu_item(state, state.route.route.clone(), Route::Sudoku) }

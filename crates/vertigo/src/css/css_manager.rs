@@ -89,6 +89,13 @@ impl CssManager {
                 CssGroup::CssDynamic { value } => {
                     out.push(self.get_dynamic(value));
                 }
+                CssGroup::CssMedia { query, rules } => {
+                    out.push("@media".to_string());
+                    out.push(query.clone());
+                    for rule in rules {
+                        out.push(self.get_dynamic(rule));
+                    }
+                }
             }
         }
 

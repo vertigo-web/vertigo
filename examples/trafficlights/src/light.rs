@@ -7,14 +7,14 @@ pub struct Light<'a> {
 }
 
 pub fn light(color: &str) -> Css {
-    css! {"
+    css!("
         display: inline-block;
         background-color: {color};
         border-radius: 50%;
         width: 100px;
         height: 100px;
         margin: 15px;
-    "}
+    ")
 }
 
 impl<'a> Light<'a> {

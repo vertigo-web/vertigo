@@ -17,7 +17,7 @@ simple_rule = _{
     // align-self 	Specifies the alignment for selected items inside a flexible container
     // all 	Resets all properties (except unicode-bidi and direction)
     // animation 	A shorthand property for all the animation-* properties
-    animation_rule
+    animation_rule |
     // animation-delay 	Specifies a delay for the start of an animation
     // animation-direction 	Specifies whether an animation should be played forwards, backwards or in alternate cycles
     // animation-duration 	Specifies how long an animation should take to complete one cycle
@@ -184,7 +184,7 @@ simple_rule = _{
     // mask-type 	Specifies whether a mask element is used as a luminance or an alpha mask
     // max-height 	Sets the maximum height of an element
     // max-width 	Sets the maximum width of an element
-    // @media 	Sets the style rules for different media types/devices/sizes
+    media_rules              // Sets the style rules for different media types/devices/sizes
     // min-height 	Sets the minimum height of an element
     // min-width 	Sets the minimum width of an element
     // mix-blend-mode 	Specifies how an element's content should blend with its direct parent background
@@ -335,6 +335,14 @@ animation_rule = {
         // fallback
         animation_params_fallback
     ) ~ frames? ~ semicolon
+}
+
+media_rules = {
+    "@media" ~ media_query ~ brace_left ~ rule* ~ brace_right ~ semicolon
+}
+
+media_query = {
+    (!brace_left ~ ANY)*
 }
 
 name = { ASCII_ALPHA_LOWER+ }
