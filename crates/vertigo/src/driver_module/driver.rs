@@ -143,6 +143,11 @@ impl Driver {
         self.inner.api.push_hash_location(&path);
     }
 
+    /// Go back in client's (browser's) history
+    pub fn history_back(&self) {
+        self.inner.api.history_back();
+    }
+
     /// Set event handler upon hash location change
     #[must_use]
     pub fn on_hash_route_change(&self, on_change: Box<dyn Fn(String)>) -> DropResource {
@@ -224,7 +229,7 @@ impl Driver {
     pub(crate) fn init_env(&self) {
         init_env(self.inner.api.clone());
     }
-    
+
     pub(crate) fn wasm_callback(&self, callback_id: u64, value_ptr: u32) -> (u32, u32) {
         let value = self.inner.api.arguments.get_by_ptr(value_ptr);
         let callback_id = CallbackId::from_u64(callback_id);

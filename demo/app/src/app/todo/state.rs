@@ -53,10 +53,7 @@ impl TodoState {
             move |post_id: &u32| -> LazyCache<Vec<CommentModel>> {
                 LazyCache::new(10 * 60 * 60 * 1000, bind!(post_id, || async move {
                     let request = get_driver()
-                        .request(format!(
-                            "https://jsonplaceholder.typicode.com/posts/{}/comments",
-                            post_id
-                        ))
+                        .request(format!("https://jsonplaceholder.typicode.com/posts/{post_id}/comments"))
                         .get();
 
                     request.await.into(|status, body| {

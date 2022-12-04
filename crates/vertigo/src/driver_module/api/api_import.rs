@@ -266,6 +266,14 @@ impl ApiImport {
             .exec();
     }
 
+    pub fn history_back(&self) {
+        self.dom_access()
+            .root("window")
+            .get("history")
+            .call("back", Vec::new())
+            .exec();
+    }
+
     pub fn on_hash_route_change<F: Fn(String) + 'static>(&self, callback: F) -> DropResource {
         let (callback_id, drop_callback) = self.callback_store.register(move |data| {
             let new_hash = if let JsValue::String(new_hash) = data {
@@ -289,7 +297,6 @@ impl ApiImport {
                 JsValue::U64(callback_id.as_u64()),
             ))
             .exec();
-            
 
         let api = self.clone();
 
@@ -301,7 +308,7 @@ impl ApiImport {
                     JsValue::U64(callback_id.as_u64()),
                 ))
                 .exec();
-                
+
             drop_callback.off();
         })
     }
@@ -324,7 +331,7 @@ impl ApiImport {
                     params.expect_no_more()?;
                     Ok((success, status, response))
                 });
-    
+
             match params {
                 Ok((success, status, response)) => {
                     get_driver().transaction(|_| {
@@ -369,7 +376,7 @@ impl ApiImport {
                 },
             ))
             .exec();
-        
+
         Box::pin(receiver)
     }
 
