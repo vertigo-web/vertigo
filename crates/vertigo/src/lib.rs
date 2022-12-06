@@ -215,6 +215,8 @@ pub use vertigo_macro::css;
 /// ```
 pub use vertigo_macro::css_block;
 
+pub mod html_entities;
+
 /// Starting point of the app.
 pub fn start_app(get_component: impl FnOnce() -> DomElement) {
     get_driver_state("start_app", |state| {

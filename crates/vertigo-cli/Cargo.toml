@@ -10,6 +10,11 @@ edition = "2021"
 [[bin]]
 name = "vertigo"
 path = "src/main.rs"
+doc = false
+
+[lib]
+name = "vertigo_cli"
+path = "src/main.rs"
 
 [dependencies]
 cargo = "0.66"
