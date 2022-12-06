@@ -6,3 +6,4 @@ pub mod dom_comment_create;
 pub mod dom_element;
 pub mod dom_text;
 pub mod types;
+mod dom_element_class;

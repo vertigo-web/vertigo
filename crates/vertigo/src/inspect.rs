@@ -67,6 +67,8 @@ impl DomDebugFragment {
                                 }
                                 styles.push_str(new_styles);
                                 node.attrs.insert("style", styles);
+                            } else {
+                                node.attrs.insert(name, value);
                             }
                         } else {
                             node.attrs.insert(name, value);
