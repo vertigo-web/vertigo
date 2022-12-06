@@ -7,7 +7,9 @@ use crate::{
     JsValue,
 };
 
-use super::{types::{KeyDownEvent, DropFileEvent}, dom_node::{DomNodeFragment}};
+use super::types::{KeyDownEvent, DropFileEvent};
+use super::dom_node::DomNodeFragment;
+use super::dom_element_class::DomElementClassMerge;
 use crate::struct_mut::VecDequeMut;
 
 pub enum AttrValue<T: Into<String> + Clone + PartialEq + 'static> {
@@ -82,22 +84,26 @@ pub struct DomElement {
     child_node: VecDequeMut<DomNode>,
     subscriptions: VecMut<Client>,
     drop: VecMut<DropResource>,
+    class_manager: DomElementClassMerge,
 }
 
 impl DomElement {
     pub fn new(name: &'static str) -> Self {
-        let node_id = DomId::default();
+        let id_dom = DomId::default();
 
         let driver = get_driver();
 
-        driver.inner.dom.create_node(node_id, name);
+        driver.inner.dom.create_node(id_dom, name);
+
+        let class_manager = DomElementClassMerge::new(driver.clone(), id_dom);
 
         Self {
             driver,
-            id_dom: node_id,
+            id_dom,
             child_node: VecDequeMut::new(),
             subscriptions: VecMut::new(),
             drop: VecMut::new(),
+            class_manager,
         }
     }
 
@@ -119,15 +125,17 @@ impl DomElement {
         DomElementRef::new(self.driver.inner.api.clone(), self.id_dom)
     }
 
-    pub fn create_with_id(id: DomId) -> Self {
+    pub fn create_with_id(id_dom: DomId) -> Self {
         let driver = get_driver();
+        let class_manager = DomElementClassMerge::new(driver.clone(), id_dom);
 
         Self {
             driver,
-            id_dom: id,
+            id_dom,
             child_node: VecDequeMut::new(),
             subscriptions: VecMut::new(),
             drop: VecMut::new(),
+            class_manager,
         }
     }
 
@@ -140,15 +148,15 @@ impl DomElement {
         match css {
             CssValue::Css(css) => {
                 let class_name = get_driver().inner.css_manager.get_class_name(&css);
-                self.driver.inner.dom.set_attr(self.id_dom, "class", &class_name);
+                self.class_manager.set_css(class_name);
             },
             CssValue::Computed(css) => {
-                let id_dom = self.id_dom;
                 let driver = self.driver.clone();
+                let class_manager = self.class_manager.clone();
 
                 self.subscribe(css, move |css| {
                     let class_name = driver.inner.css_manager.get_class_name(&css);
-                    driver.inner.dom.set_attr(id_dom, "class", &class_name);
+                    class_manager.set_css(class_name);
                 });
             }
         }
@@ -158,17 +166,25 @@ impl DomElement {
     pub fn attr<T: Into<String> + Clone + PartialEq + 'static>(self, name: &'static str, value: AttrValue<T>) -> Self {
         match value {
             AttrValue::String(value) => {
-                let id_dom = self.id_dom;
                 let value: String = value.into();
-                self.driver.inner.dom.set_attr(id_dom, name, &value);
+                if name == "class" {
+                    self.class_manager.set_attribute(value);
+                } else {
+                    self.driver.inner.dom.set_attr(self.id_dom, name, &value);
+                }
             },
             AttrValue::Computed(computed) => {
                 let id_dom = self.id_dom;
                 let driver = self.driver.clone();
+                let class_manager = self.class_manager.clone();
 
                 self.subscribe(computed, move |value| {
                     let value: String = value.into();
-                    driver.inner.dom.set_attr(id_dom, name, &value);
+                    if name == "class" {
+                        class_manager.set_attribute(value);
+                    } else {
+                        driver.inner.dom.set_attr(id_dom, name, &value);
+                    }
                 });
 
             }
