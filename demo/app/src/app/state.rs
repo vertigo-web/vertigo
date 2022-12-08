@@ -1,5 +1,5 @@
 use vertigo::DomElement;
-use vertigo::router::HashRouter;
+use vertigo::router::Router;
 
 use super::counters;
 use super::game_of_life;
@@ -16,29 +16,22 @@ pub struct State {
     pub github_explorer: github_explorer::State,
     pub game_of_life: game_of_life::State,
 
-    pub route: HashRouter<Route>,
+    pub route: Router<Route>,
 }
 
 impl State {
-    pub fn component() -> DomElement {
-        let game_of_life = game_of_life::State::new();
-
-        let route = HashRouter::new();
-
-        let state = State {
+    pub fn new() -> Self {
+        State {
             counters: counters::State::new(),
             sudoku: SudokuState::new(),
             input: MyInput::default(),
             github_explorer: github_explorer::State::new(),
-            game_of_life,
-
-            route,
-        };
-
-        super::render(state)
+            game_of_life: game_of_life::State::new(),
+            route: Router::new_history_router(),
+        }
     }
 
-    pub fn navigate_to(&self, route: Route) {
-        self.route.set(route);
+    pub fn render(&self) -> DomElement {
+        super::render(self)
     }
 }

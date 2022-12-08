@@ -6,5 +6,7 @@ mod app;
 
 #[no_mangle]
 pub fn start_application() {
-    start_app(app::State::component);
+    let state = app::State::new();
+    let view = state.render();
+    start_app(state, view);
 }

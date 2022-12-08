@@ -1,5 +1,5 @@
 use serde::{Deserialize, Serialize};
-use vertigo::{AutoMap, LazyCache, SerdeRequest, Value, get_driver, bind};
+use vertigo::{AutoMap, LazyCache, SerdeRequest, Value, RequestBuilder};
 
 #[derive(PartialEq, Eq, Clone)]
 pub enum View {
@@ -28,8 +28,7 @@ pub struct CommentModel {
 #[derive(Clone)]
 pub struct TodoState {
     pub view: Value<View>,
-    // Resources
-    pub posts: LazyCache<Vec<PostModel>>, //Vec<<>>
+    pub posts: LazyCache<Vec<PostModel>>,
     pub comments: AutoMap<u32, LazyCache<Vec<CommentModel>>>,
 }
 
@@ -37,33 +36,27 @@ impl TodoState {
     pub fn new() -> TodoState {
         let view = Value::new(View::Main);
 
-        let posts = LazyCache::new(10 * 60 * 60 * 1000, || async move {
-            let request = get_driver().request("https://jsonplaceholder.typicode.com/posts").get();
-
-            request.await.into(|status, body| {
+        let posts = RequestBuilder::get("https://jsonplaceholder.typicode.com/posts")
+            .ttl_minutes(10)
+            .lazy_cache(|status, body| {
                 if status == 200 {
                     Some(body.into_vec::<PostModel>())
                 } else {
                     None
                 }
-            })
-        });
+            });
 
         let comments = AutoMap::new({
             move |post_id: &u32| -> LazyCache<Vec<CommentModel>> {
-                LazyCache::new(10 * 60 * 60 * 1000, bind!(post_id, || async move {
-                    let request = get_driver()
-                        .request(format!("https://jsonplaceholder.typicode.com/posts/{post_id}/comments"))
-                        .get();
-
-                    request.await.into(|status, body| {
+                RequestBuilder::get(format!("https://jsonplaceholder.typicode.com/posts/{post_id}/comments"))
+                    .ttl_minutes(10)
+                    .lazy_cache(|status, body| {
                         if status == 200 {
                             Some(body.into_vec::<CommentModel>())
                         } else {
                             None
                         }
                     })
-                }))
             }
         });
 

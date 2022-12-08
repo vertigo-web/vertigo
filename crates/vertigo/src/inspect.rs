@@ -243,6 +243,6 @@ mod tests {
             <div on_click={callback}>"something"</div>
         };
         let html = DomDebugFragment::from_log().to_pseudo_html();
-        assert_eq!(html, "<div mousedown=2>something</div>");
+        assert_eq!(html, "<div click=2>something</div>");
     }
 }

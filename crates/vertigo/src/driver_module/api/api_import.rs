@@ -191,7 +191,7 @@ impl ApiImport {
         let timer_id = if let JsValue::I32(timer_id) = result {
             timer_id
         } else {
-            log::error!("timeout_set -> expected u32 -> result={result:?}");
+            log::error!("timeout_set -> expected i32 -> result={result:?}");
             0
         };
 
@@ -241,6 +241,18 @@ impl ApiImport {
         }
     }
 
+    pub fn history_back(&self) {
+        self.dom_access()
+            .root("window")
+            .get("history")
+            .call("back", Vec::new())
+            .exec();
+    }
+
+    ///////////////////////////////////////////////////////////////////////////////////
+    //hash router
+    ///////////////////////////////////////////////////////////////////////////////////
+
     pub fn get_hash_location(&self) -> String {
         let result = self.dom_access()
             .api()
@@ -266,15 +278,7 @@ impl ApiImport {
             .exec();
     }
 
-    pub fn history_back(&self) {
-        self.dom_access()
-            .root("window")
-            .get("history")
-            .call("back", Vec::new())
-            .exec();
-    }
-
-    pub fn on_hash_route_change<F: Fn(String) + 'static>(&self, callback: F) -> DropResource {
+    pub fn on_hash_change<F: Fn(String) + 'static>(&self, callback: F) -> DropResource {
         let (callback_id, drop_callback) = self.callback_store.register(move |data| {
             let new_hash = if let JsValue::String(new_hash) = data {
                 new_hash
@@ -312,6 +316,78 @@ impl ApiImport {
             drop_callback.off();
         })
     }
+
+    ///////////////////////////////////////////////////////////////////////////////////
+    //history router
+    ///////////////////////////////////////////////////////////////////////////////////
+
+
+    pub fn get_history_location(&self) -> String {
+        let result = self.dom_access()
+            .api()
+            .get("historyLocation")
+            .call("get", Vec::new())
+            .fetch();
+
+        if let JsValue::String(value) = result {
+            value
+        } else {
+            log::error!("historyLocation -> params decode error -> result={result:?}");
+            String::from("")
+        }
+    }
+
+    pub fn push_history_location(&self, new_hash: &str) {
+        self.dom_access()
+            .api()
+            .get("historyLocation")
+            .call("push", vec!(
+                JsValue::str(new_hash)
+            ))
+            .exec();
+    }
+
+    pub fn on_history_change<F: Fn(String) + 'static>(&self, callback: F) -> DropResource {
+        let (callback_id, drop_callback) = self.callback_store.register(move |data| {
+            let new_hash = if let JsValue::String(new_hash) = data {
+                new_hash
+            } else {
+                log::error!("on_history_change -> string was expected -> {data:?}");
+                String::from("")
+            };
+
+            transaction(|_| {
+                callback(new_hash);
+            });
+
+            JsValue::Undefined
+        });
+
+        self.dom_access()
+            .api()
+            .get("historyLocation")
+            .call("add", vec!(
+                JsValue::U64(callback_id.as_u64()),
+            ))
+            .exec();
+
+        let api = self.clone();
+
+        DropResource::new(move || {
+            api.dom_access()
+                .api()
+                .get("historyLocation")
+                .call("remove", vec!(
+                    JsValue::U64(callback_id.as_u64()),
+                ))
+                .exec();
+
+            drop_callback.off();
+        })
+    }
+
+    ///////////////////////////////////////////////////////////////////////////////////
+    ///////////////////////////////////////////////////////////////////////////////////
 
     pub fn fetch(
         &self,
@@ -486,5 +562,24 @@ impl ApiImport {
             min
         }
     }
+
+    pub fn is_browser(&self) -> bool {
+        let result = self.dom_access()
+            .api()
+            .call("isBrowser", Vec::new())
+            .fetch();
+        
+        if let JsValue::True = result {
+            return true;
+        }
+
+        if let JsValue::False = result {
+            return false;
+        }
+
+        log::error!("logical value expected");
+        false
+    }
+
 }
 

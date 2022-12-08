@@ -26,9 +26,7 @@ Example 1:
 ```rust
 use vertigo::{bind, dom, DomElement, start_app, Value};
 
-pub fn app() -> DomElement {
-    let count = Value::new(0);
-
+pub fn app(count: &Value) -> DomElement {
     let increment = bind!(count, || {
         count.change(|value| {
             *value += 1;
@@ -52,7 +50,9 @@ pub fn app() -> DomElement {
 
 #[no_mangle]
 pub fn start_application() {
-    start_app(app);
+    let count = Value::new(0);
+    let view = app(&count);
+    start_app(count, view);
 }
 ```
 
@@ -76,9 +76,7 @@ impl MyMessage {
     }
 }
 
-fn app() -> DomElement {
-    let message = Value::new("Hello world!".to_string());
-
+fn app(message: &Value) -> DomElement {
     let wrapper_css = css!("
         color: darkblue;
     ");
@@ -92,7 +90,9 @@ fn app() -> DomElement {
 
 #[no_mangle]
 pub fn start_application() {
-    start_app(app);
+    let message = Value::new("Hello world!".to_string());
+    let view = app(&message);
+    start_app(message, &view);
 }
 ```
 

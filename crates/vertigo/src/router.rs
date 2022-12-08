@@ -11,13 +11,13 @@ struct HashSubscriptions {
 }
 
 #[derive(Clone)]
-pub struct HashRouter<T: Clone + ToString + From<String> + PartialEq + 'static> {
+pub struct Router<T: Clone + ToString + From<String> + PartialEq + 'static> {
     route_value: Value<T>,
     pub route: Computed<T>,
     _subscriptions: Rc<HashSubscriptions>,
 }
 
-impl<T: Clone + ToString + From<String> + PartialEq + 'static> PartialEq for HashRouter<T> {
+impl<T: Clone + ToString + From<String> + PartialEq + 'static> PartialEq for Router<T> {
     fn eq(&self, other: &Self) -> bool {
         self.route_value.id() == other.route_value.id()
     }
@@ -27,7 +27,7 @@ impl<T: Clone + ToString + From<String> + PartialEq + 'static> PartialEq for Has
 ///
 /// ```rust
 /// use vertigo::{dom, Computed, Value, DomElement};
-/// use vertigo::router::HashRouter;
+/// use vertigo::router::Router;
 ///
 /// #[derive(Clone, PartialEq, Debug)]
 /// pub enum Route {
@@ -64,12 +64,12 @@ impl<T: Clone + ToString + From<String> + PartialEq + 'static> PartialEq for Has
 ///
 /// #[derive(Clone)]
 /// pub struct State {
-///     route: HashRouter<Route>,
+///     route: Router<Route>,
 /// }
 ///
 /// impl State {
 ///     pub fn component() -> DomElement {
-///         let route = HashRouter::new();
+///         let route = Router::new_hash_router();
 ///
 ///         let state = State {
 ///             route,
@@ -87,13 +87,23 @@ impl<T: Clone + ToString + From<String> + PartialEq + 'static> PartialEq for Has
 ///     }
 /// }
 /// ```
-impl<T: Clone + ToString + From<String> + PartialEq + 'static> HashRouter<T> {
-    /// Create new HashRouter which sets route value upon hash change in browser bar.
+impl<T: Clone + ToString + From<String> + PartialEq + 'static> Router<T> {    
+    /// Create new Router which sets route value upon hash change in browser bar.
     /// If callback is provided then it is fired instead.
-    #[allow(clippy::new_without_default)]
-    pub fn new() -> Self {
+    pub fn new_hash_router() -> Router<T> {
+        Self::new(false)
+    }
+
+    pub fn new_history_router() -> Router<T> {
+        Self::new(true)
+    }
+
+    fn new(use_history_api: bool) -> Self {
         let driver = get_driver();
-        let route_value: Value<T> = Value::new(T::from(driver.get_hash_location()));
+        let route_value: Value<T> = match use_history_api {
+            false => Value::new(T::from(driver.inner.api.get_hash_location())),
+            true => Value::new(T::from(driver.inner.api.get_history_location())),
+        };
 
         let block_subscrition = Rc::new(ValueMut::new(true));
 
@@ -105,11 +115,14 @@ impl<T: Clone + ToString + From<String> + PartialEq + 'static> HashRouter<T> {
                     return;
                 }
 
-                driver.push_hash_location(route.to_string());
+                match use_history_api {
+                    false => driver.inner.api.push_hash_location(&route.to_string()),
+                    true => driver.inner.api.push_history_location(&route.to_string()),
+                };
             }
         });
 
-        let receiver = driver.on_hash_route_change({
+        let callback = {
             let route = route_value.clone();
             let block_subscrition = block_subscrition.clone();
 
@@ -118,7 +131,12 @@ impl<T: Clone + ToString + From<String> + PartialEq + 'static> HashRouter<T> {
                 route.set_value_and_compare(T::from(url));
                 block_subscrition.set(false);
             })
-        });
+        };
+
+        let receiver = match use_history_api {
+            false => driver.inner.api.on_hash_change(callback),
+            true => driver.inner.api.on_history_change(callback),
+        };
 
         block_subscrition.set(false);
 

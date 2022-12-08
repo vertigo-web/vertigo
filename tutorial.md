@@ -64,9 +64,7 @@ Open `/src/render.rs` file.
 ```rust
 use vertigo::{start_app, DomElement, Value, dom, css};
 
-fn app() -> DomElement {
-    let message = Value::new("Hello world!".to_string());
-
+fn app(message: &Value) -> DomElement {
     let main_div = css!("
         color: darkblue;
     ");
@@ -81,7 +79,9 @@ fn app() -> DomElement {
 
 #[no_mangle]
 pub fn start_application() {
-    start_app(app);
+    let message = Value::new("Hello world!".to_string());
+    let view = app(&message);
+    start_app(message, view);
 }
 ```
 
@@ -173,7 +173,7 @@ The `div` tag must be of course closed as in regular HTML.
 ```rust
 #[no_mangle]
 pub fn start_application() {
-    start_app(app);
+    start_app(message, view);
 }
 ```
 

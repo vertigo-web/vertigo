@@ -84,6 +84,21 @@ impl<'a> Match<'a> {
         Err(())
     }
 
+    pub fn u32(&self) -> Result<(Self, u32), ()> {
+        let list = self.list;
+
+        let Some((JsValue::U32(value), rest)) = list.split_first() else {
+            return Err(());
+        };
+
+        Ok((
+            Self {
+                list: rest
+            },
+            *value
+        ))
+    }
+
     pub fn u64(&self) -> Result<(Self, u64), ()> {
         let list = self.list;
 
@@ -112,6 +127,34 @@ impl<'a> Match<'a> {
             },
             value.clone()
         ))
+    }
+
+    pub fn option_string(&self) -> Result<(Self, Option<String>), ()> {
+        let list = self.list;
+
+        let Some((first, rest)) = list.split_first() else {
+            return Err(());
+        };
+
+        if let JsValue::String(value) = first {
+            return Ok((
+                Self {
+                    list: rest
+                },
+                Some(value.clone())
+            ));
+        }
+
+        if let JsValue::Null = first {
+            return Ok((
+                Self {
+                    list: rest
+                },
+                None
+            ));
+        }
+
+        Err(())
     }
 
     pub fn test_list(&self, list_pattern: &[&str]) -> Result<Self, ()> {
@@ -170,6 +213,12 @@ impl<'a> Match<'a> {
         } else {
             Err(())
         }
+    }
+
+    #[allow(dead_code)]
+    pub fn debug(&self) {
+        println!("{:#?}", self.list);
+        todo!()
     }
 }
 

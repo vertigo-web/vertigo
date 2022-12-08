@@ -4,15 +4,14 @@ mod light;
 use light::Light;
 
 #[derive(Clone, PartialEq)]
-enum LightState {
+pub enum LightState {
     Red,
     RedYellow,
     Green,
     Yellow,
 }
 
-pub fn app() -> DomElement {
-    let state = Value::new(LightState::Red);
+pub fn app(state: &Value<LightState>) -> DomElement {
     let red_on = state.map(|state| state == LightState::Red || state == LightState::RedYellow);
     let yellow_on = state.map(|state| state == LightState::Yellow || state == LightState::RedYellow);
     let green_on = state.map(|state| state == LightState::Green);
@@ -54,5 +53,7 @@ pub fn app() -> DomElement {
 
 #[no_mangle]
 pub fn start_application() {
-    start_app(app);
+    let state = Value::new(LightState::Red);
+    let view = app(&state);
+    start_app(state, view);
 }

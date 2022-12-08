@@ -12,7 +12,7 @@
 //! ```rust
 //! use vertigo::{dom, DomElement, Value, bind, start_app};
 //!
-//! pub fn render(count: Value<i32>) -> DomElement {
+//! pub fn render(count: &Value<i32>) -> DomElement {
 //!     let increment = bind!(count, || {
 //!         count.change(|value| {
 //!             *value += 1;
@@ -36,10 +36,9 @@
 //!
 //! #[no_mangle]
 //! pub fn start_application() {
-//!     start_app(|| -> DomElement {
-//!         let count = Value::new(0);
-//!         render(count)
-//!     });
+//!     let count = Value::new(0);
+//!     let view = render(&count);
+//!     start_app(count, view);
 //! }
 //! ```
 //!
@@ -98,6 +97,8 @@ mod instant;
 pub mod router;
 mod websocket;
 
+use std::any::Any;
+
 pub use computed::{
     AutoMap, Client, Computed, context::Context, Dependencies, DropResource, GraphId, struct_mut, Value
 };
@@ -112,6 +113,7 @@ pub use dom::{
     types::{KeyDownEvent, DropFileEvent, DropFileItem},
 };
 pub use dom_list::ListRendered;
+use driver_module::{init_env::init_env, api::CallbackId};
 pub use driver_module::{
     api::ApiImport,
     driver::{Driver, FetchResult, FetchMethod},
@@ -123,7 +125,7 @@ pub use fetch::{
     fetch_builder::FetchBuilder,
     lazy_cache::{self, LazyCache},
     pinboxfut::PinBoxFuture,
-    request_builder::{ListRequestTrait, RequestBuilder, RequestResponse, SingleRequestTrait},
+    request_builder::{ListRequestTrait, RequestResponse, SingleRequestTrait, RequestBuilder},
     resource::Resource,
 };
 pub use future_box::{FutureBoxSend, FutureBox};
@@ -218,14 +220,13 @@ pub use vertigo_macro::css_block;
 pub mod html_entities;
 
 /// Starting point of the app.
-pub fn start_app(get_component: impl FnOnce() -> DomElement) {
+pub fn start_app(app_state: impl Any + 'static, view: DomElement) {
     get_driver_state("start_app", |state| {
-        state.driver.init_env();
-        let app = get_component();
+        init_env(state.driver.inner.api.clone());
 
         let root = DomElement::create_with_id(DomId::root());
-        root.add_child(app);
-        state.set_root(root);
+        root.add_child(view);
+        state.set_root(Box::new(app_state), root);
 
         get_driver().inner.dom.flush_dom_changes();
     });
@@ -284,7 +285,23 @@ pub fn free(pointer: u32) {
 #[no_mangle]
 pub fn wasm_callback(callback_id: u64, value_ptr: u32) -> u64 {
     get_driver_state("export_dom_callback", |state| {
-        let (ptr, size) = state.driver.wasm_callback(callback_id, value_ptr);
+
+        let value = state.driver.inner.api.arguments.get_by_ptr(value_ptr);
+        let callback_id = CallbackId::from_u64(callback_id);
+
+        let mut result = JsValue::Undefined;
+
+        state.driver.transaction(|_| {
+            result = state.driver.inner.api.callback_store.call(callback_id, value);
+        });
+
+        if result == JsValue::Undefined {
+            return 0;
+        }
+
+        let memory_block = result.to_snapshot();
+        let (ptr, size) = memory_block.get_ptr_and_size();
+        state.driver.inner.api.arguments.set(memory_block);
 
         let ptr = ptr as u64;
         let size = size as u64;

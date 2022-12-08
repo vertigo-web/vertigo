@@ -45,17 +45,6 @@ impl AllElements {
         inst
     }
 
-    fn remove_from_parent(&mut self, child_id: u64) {
-        let Some(parent) = self.parent.get(&child_id) else {
-            return;
-        };
-
-        let Some(Node::Element(parent_node)) = self.all.get_mut(&parent) else {
-            unreachable!();
-        };
-
-        parent_node.children.remove(child_id);
-    }
     fn create_node(&mut self, id: u64, name: impl Into<String>) {
         let element = Node::Element(Element::new(name));
         self.all.insert(id, element);
@@ -71,11 +60,6 @@ impl AllElements {
         self.create_text(id, value);
     }
 
-    fn remove_text(&mut self, id: u64) {
-        self.remove_from_parent(id);
-        self.all.remove(&id);
-    }
-
     fn set_attr(&mut self, id: u64, name: impl Into<String>, value: impl Into<String>) {
         let Some(Node::Element(element)) = self.all.get_mut(&id) else {
             unreachable!();
@@ -84,20 +68,34 @@ impl AllElements {
         element.attr.set(name, value);
     }
 
-    fn remove_node(&mut self, id: u64) {
-        self.remove_from_parent(id);
-        self.all.remove(&id);
+    fn remove_from_parent(&mut self, child_id: u64) {
+        let Some(parent_id) = self.parent.get(&child_id) else {
+            return;
+        };
+
+        let Some(Node::Element(parent_node)) = self.all.get_mut(parent_id) else {
+            return;
+        };
+
+        parent_node.children.remove(child_id);
     }
 
-    fn insert_before(&mut self, parent: u64, ref_id: Option<u64>, child: u64) {
-        self.remove_from_parent(child);
-        self.parent.insert(child, parent);
+    fn remove(&mut self, child_id: u64) {
+        self.remove_from_parent(child_id);
+        self.parent.remove(&child_id);
 
-        let Some(Node::Element(element)) = self.all.get_mut(&parent) else {
+        self.all.remove(&child_id);
+    }
+
+    fn insert_before(&mut self, parent_id: u64, ref_id: Option<u64>, child_id: u64) {
+        self.remove_from_parent(child_id);
+        self.parent.insert(child_id, parent_id);
+
+        let Some(Node::Element(parent_node)) = self.all.get_mut(&parent_id) else {
             unreachable!();
         };
 
-        element.children.insert_before(ref_id, child);
+        parent_node.children.insert_before(ref_id, child_id);
     }
 
     fn insert_css(&mut self, selector: String, value: String) {
@@ -109,13 +107,9 @@ impl AllElements {
         self.all.insert(id, element);
     }
 
-    fn remove_comment(&mut self, id: u64) {
-        self.remove_from_parent(id);
-        self.all.remove(&id);
-    }
-
-
     pub fn feed(&mut self, commands: Vec<DomCommand>) {
+
+
         for node in commands {
             match node {
                 DomCommand::CallbackAdd { .. } => {
@@ -134,13 +128,13 @@ impl AllElements {
                     self.update_text(id, value);
                 }
                 DomCommand::RemoveText { id } => {
-                    self.remove_text(id);
+                    self.remove(id);
                 }
                 DomCommand::SetAttr { id, name, value } => {
                     self.set_attr(id, name, value);
                 }
                 DomCommand::RemoveNode { id, } => {
-                    self.remove_node(id);
+                    self.remove(id);
                 }
                 DomCommand::InsertBefore { parent, ref_id, child } => {
                     self.insert_before(parent, ref_id, child)
@@ -152,7 +146,7 @@ impl AllElements {
                     self.create_comment(id, value);
                 }
                 DomCommand::RemoveComment { id } => {
-                    self.remove_comment(id);
+                    self.remove(id);
                 }
             }
         }
@@ -363,7 +357,7 @@ mod tests {
             {"selector":".autocss_2:hover","type":"insert_css","value":"text-decoration: underline;"},
             {"selector":".autocss_2","type":"insert_css","value":"display: inline; width: 60px; padding: 5px 10px; margin: 5px; cursor: pointer; background-color: lightgreen"},
             {"id":4,"name":"class","type":"set_attr","value":"autocss_2"},
-            {"callback_id":3,"event_name":"mousedown","id":4,"type":"callback_add"},
+            {"callback_id":3,"event_name":"click","id":4,"type":"callback_add"},
             {"id":5,"type":"create_text","value":"Counters"},
             {"child":5,"parent":4,"ref_id":null,"type":"insert_before"},
             {"child":4,"parent":3,"ref_id":null,"type":"insert_before"},
@@ -371,49 +365,49 @@ mod tests {
             {"selector":".autocss_3:hover","type":"insert_css","value":"text-decoration: underline;"},
             {"selector":".autocss_3","type":"insert_css","value":"display: inline; width: 60px; padding: 5px 10px; margin: 5px; cursor: pointer; background-color: lightblue"},
             {"id":6,"name":"class","type":"set_attr","value":"autocss_3"},
-            {"callback_id":4,"event_name":"mousedown","id":6,"type":"callback_add"},
+            {"callback_id":4,"event_name":"click","id":6,"type":"callback_add"},
             {"id":7,"type":"create_text","value":"Animations"},
             {"child":7,"parent":6,"ref_id":null,"type":"insert_before"},
             {"child":6,"parent":3,"ref_id":null,"type":"insert_before"},
             {"id":8,"name":"li","type":"create_node"},
             {"id":8,"name":"class","type":"set_attr","value":"autocss_2"},
-            {"callback_id":5,"event_name":"mousedown","id":8,"type":"callback_add"},
+            {"callback_id":5,"event_name":"click","id":8,"type":"callback_add"},
             {"id":9,"type":"create_text","value":"Sudoku"},
             {"child":9,"parent":8,"ref_id":null,"type":"insert_before"},
             {"child":8,"parent":3,"ref_id":null,"type":"insert_before"},
             {"id":10,"name":"li","type":"create_node"},
             {"id":10,"name":"class","type":"set_attr","value":"autocss_2"},
-            {"callback_id":6,"event_name":"mousedown","id":10,"type":"callback_add"},
+            {"callback_id":6,"event_name":"click","id":10,"type":"callback_add"},
             {"id":11,"type":"create_text","value":"Input"},
             {"child":11,"parent":10,"ref_id":null,"type":"insert_before"},
             {"child":10,"parent":3,"ref_id":null,"type":"insert_before"},
             {"id":12,"name":"li","type":"create_node"},
             {"id":12,"name":"class","type":"set_attr","value":"autocss_2"},
-            {"callback_id":7,"event_name":"mousedown","id":12,"type":"callback_add"},
+            {"callback_id":7,"event_name":"click","id":12,"type":"callback_add"},
             {"id":13,"type":"create_text","value":"Github Explorer"},
             {"child":13,"parent":12,"ref_id":null,"type":"insert_before"},
             {"child":12,"parent":3,"ref_id":null,"type":"insert_before"},
             {"id":14,"name":"li","type":"create_node"},
             {"id":14,"name":"class","type":"set_attr","value":"autocss_2"},
-            {"callback_id":8,"event_name":"mousedown","id":14,"type":"callback_add"},
+            {"callback_id":8,"event_name":"click","id":14,"type":"callback_add"},
             {"id":15,"type":"create_text","value":"Game Of Life"},
             {"child":15,"parent":14,"ref_id":null,"type":"insert_before"},
             {"child":14,"parent":3,"ref_id":null,"type":"insert_before"},
             {"id":16,"name":"li","type":"create_node"},
             {"id":16,"name":"class","type":"set_attr","value":"autocss_2"},
-            {"callback_id":9,"event_name":"mousedown","id":16,"type":"callback_add"},
+            {"callback_id":9,"event_name":"click","id":16,"type":"callback_add"},
             {"id":17,"type":"create_text","value":"Chat"},
             {"child":17,"parent":16,"ref_id":null,"type":"insert_before"},
             {"child":16,"parent":3,"ref_id":null,"type":"insert_before"},
             {"id":18,"name":"li","type":"create_node"},
             {"id":18,"name":"class","type":"set_attr","value":"autocss_2"},
-            {"callback_id":10,"event_name":"mousedown","id":18,"type":"callback_add"},
+            {"callback_id":10,"event_name":"click","id":18,"type":"callback_add"},
             {"id":19,"type":"create_text","value":"Todo"},
             {"child":19,"parent":18,"ref_id":null,"type":"insert_before"},
             {"child":18,"parent":3,"ref_id":null,"type":"insert_before"},
             {"id":20,"name":"li","type":"create_node"},
             {"id":20,"name":"class","type":"set_attr","value":"autocss_2"},
-            {"callback_id":11,"event_name":"mousedown","id":20,"type":"callback_add"},
+            {"callback_id":11,"event_name":"click","id":20,"type":"callback_add"},
             {"id":21,"type":"create_text","value":"Drop File"},
             {"child":21,"parent":20,"ref_id":null,"type":"insert_before"},
             {"child":20,"parent":3,"ref_id":null,"type":"insert_before"},
@@ -440,7 +434,7 @@ mod tests {
             {"child":27,"parent":26,"ref_id":null,"type":"insert_before"},
             {"child":26,"parent":25,"ref_id":null,"type":"insert_before"},
             {"id":28,"name":"button","type":"create_node"},
-            {"callback_id":15,"event_name":"mousedown","id":28,"type":"callback_add"},
+            {"callback_id":15,"event_name":"click","id":28,"type":"callback_add"},
             {"id":29,"name":"span","type":"create_node"},
             {"id":30,"type":"create_text","value":"start the progress bar"},
             {"child":30,"parent":29,"ref_id":null,"type":"insert_before"},

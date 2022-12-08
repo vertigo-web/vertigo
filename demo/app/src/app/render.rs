@@ -1,4 +1,4 @@
-use vertigo::{css, Css, KeyDownEvent, DomElement, dom, Computed, bind};
+use vertigo::{css, Css, KeyDownEvent, DomElement, dom, Computed};
 use crate::app;
 
 use super::{
@@ -13,12 +13,6 @@ use super::{
     chat::Chat,
     todo::Todo,
 };
-
-fn navigate_to(state: &app::State, route: Route) -> impl Fn() {
-    bind!(state, route, || {
-        state.navigate_to(route.clone())
-    })
-}
 
 fn css_menu_item(active: bool) -> Css {
     let bg_color = if active { "lightblue" } else { "lightgreen" };
@@ -38,7 +32,7 @@ fn css_menu_item(active: bool) -> Css {
     )
 }
 
-fn render_menu_item(state: &app::State, current_page: Computed<Route>, menu_item: Route) -> DomElement {
+fn render_menu_item(current_page: Computed<Route>, menu_item: Route) -> DomElement {
     let css = current_page.map({
         let menu_item = menu_item.clone();
         move |current_page| {
@@ -47,12 +41,12 @@ fn render_menu_item(state: &app::State, current_page: Computed<Route>, menu_item
     });
 
     dom! {
-        <li
+        <a
             css={css}
-            on_click={navigate_to(state, menu_item.clone())}
+            href={menu_item.to_string()}
         >
             { menu_item.label() }
-        </li>
+        </a>
     }
 }
 
@@ -80,21 +74,23 @@ fn render_header(state: &app::State) -> DomElement {
     dom! {
         <div hook_key_down={hook_key_down}>
             <ul css={css_menu}>
-                { render_menu_item(state, state.route.route.clone(), Route::Counters) }
-                { render_menu_item(state, state.route.route.clone(), Route::Animations) }
-                { render_menu_item(state, state.route.route.clone(), Route::Sudoku) }
-                { render_menu_item(state, state.route.route.clone(), Route::Input) }
-                { render_menu_item(state, state.route.route.clone(), Route::GithubExplorer) }
-                { render_menu_item(state, state.route.route.clone(), Route::GameOfLife) }
-                { render_menu_item(state, state.route.route.clone(), Route::Chat) }
-                { render_menu_item(state, state.route.route.clone(), Route::Todo) }
-                { render_menu_item(state, state.route.route.clone(), Route::DropFile) }
+                { render_menu_item(state.route.route.clone(), Route::Counters) }
+                { render_menu_item(state.route.route.clone(), Route::Animations) }
+                { render_menu_item(state.route.route.clone(), Route::Sudoku) }
+                { render_menu_item(state.route.route.clone(), Route::Input) }
+                { render_menu_item(state.route.route.clone(), Route::GithubExplorer) }
+                { render_menu_item(state.route.route.clone(), Route::GameOfLife) }
+                { render_menu_item(state.route.route.clone(), Route::Chat) }
+                { render_menu_item(state.route.route.clone(), Route::Todo) }
+                { render_menu_item(state.route.route.clone(), Route::DropFile) }
             </ul>
         </div>
     }
 }
 
-pub fn render(state: app::State) -> DomElement {
+pub fn render(state: &app::State) -> DomElement {
+    let state = state.clone();
+
     let header = render_header(&state);
 
     let content = state.route.route.render_value(

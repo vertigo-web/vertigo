@@ -4,9 +4,10 @@ pub(crate) fn impl_single_request_trait_macro(ast: &syn::DeriveInput) -> TokenSt
     let name = &ast.ident;
     let gen = quote! {
         impl vertigo::SingleRequestTrait for #name {
-            fn into_string(self) -> Result<String, String> {
+            fn into_string(self) -> String {
                 vertigo::serde_json::to_string(&self)
                     .map_err(|err| format!("error serializing {}", err))
+                    .unwrap()
             }
 
             fn from_string(data: &str) -> Result<Self, String> {
@@ -22,9 +23,10 @@ pub(crate) fn impl_list_request_trait_macro(ast: &syn::DeriveInput) -> TokenStre
     let name = &ast.ident;
     let gen = quote! {
         impl vertigo::ListRequestTrait for #name {
-            fn list_into_string(vec: Vec<Self>) -> Result<String, String> {
+            fn list_into_string(vec: Vec<Self>) -> String {
                 vertigo::serde_json::to_string::<Vec<Self>>(&vec)
                     .map_err(|err| format!("error serializing list {}", err))
+                    .unwrap()
             }
 
             fn list_from_string(data: &str) -> Result<Vec<Self>, String> {
