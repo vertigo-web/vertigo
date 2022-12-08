@@ -1,15 +1,14 @@
 use std::fmt::Debug;
-use std::future::Future;
 use std::rc::Rc;
 
 use crate::computed::context::Context;
-use crate::{get_driver, Computed};
+use crate::{get_driver, Computed, transaction};
 use crate::{
-    Instant, InstantType, Resource,
+    Instant, Resource,
     computed::Value, struct_mut::ValueMut,
 };
 
-use crate::fetch::pinboxfut::PinBoxFuture;
+use super::request_builder::{RequestBuilder, RequestResponseBody};
 
 fn get_unique_id() -> u64 {
     use std::sync::atomic::{AtomicU64, Ordering};
@@ -17,35 +16,58 @@ fn get_unique_id() -> u64 {
     COUNTER.fetch_add(1, Ordering::Relaxed)
 }
 
-/// Value that [LazyCache] holds.
-struct CachedValue<T> {
-    id: u64,
-    value: Value<Resource<Rc<T>>>,
-    updated_at: ValueMut<Instant>,
-    set: ValueMut<bool>,
+enum ApiResponse<T> {
+    Notinit,
+    Data {
+        value: Resource<Rc<T>>,
+        expiry: Option<Instant>,
+    }
 }
 
-impl<T: 'static> CachedValue<T> {
-    fn get_value(&self, context: &Context) -> Resource<Rc<T>> {
-        self.value.get(context)
-    }
-
-    pub fn set_value(&self, value: Resource<T>) {
-        self.value.set(value.map(|value| Rc::new(value)));
-        let current_updated_at = self.updated_at.get();
-        self.updated_at.set(current_updated_at.refresh());
-        // self.updated_at.change((), |val, _| *val = val.refresh());
-        if !self.is_set() {
-            self.set.set(true);
+impl<T> ApiResponse<T> {
+    pub fn new(value: Resource<Rc<T>>, expiry: Option<Instant>) -> Self {
+        Self::Data {
+            value,
+            expiry
         }
     }
 
-    fn age(&self) -> InstantType {
-        self.updated_at.get().seconds_elapsed()
+    pub fn new_loading() -> Self {
+        ApiResponse::Data { value: Resource::Loading, expiry: None }
     }
 
-    fn is_set(&self) -> bool {
-        self.set.get()
+    pub fn get_value(&self) -> Resource<Rc<T>> {
+        match self {
+            Self::Notinit => Resource::Loading,
+            Self::Data { value, expiry: _ } => value.clone()
+        }
+    }
+
+    pub fn needs_update(&self) -> bool {
+        match self {
+            ApiResponse::Notinit => true,
+            ApiResponse::Data { value: _, expiry } => {
+                let Some(expiry) = expiry else {
+                    return false;
+                };
+
+                expiry.is_expire()
+            }
+        }
+    }
+}
+
+impl<T> Clone for ApiResponse<T> {
+    fn clone(&self) -> Self {
+        match self {
+            ApiResponse::Notinit => ApiResponse::Notinit,
+            ApiResponse::Data { value, expiry } => {
+                ApiResponse::Data {
+                    value: value.clone(),
+                    expiry: expiry.clone(),
+                }        
+            }
+        }
     }
 }
 
@@ -53,7 +75,7 @@ impl<T: 'static> CachedValue<T> {
 /// after defined amount of time.
 ///
 /// ```rust
-/// use vertigo::{get_driver, Computed, LazyCache, SerdeRequest, Resource};
+/// use vertigo::{Computed, LazyCache, RequestBuilder, SerdeRequest, Resource};
 /// use serde::{Serialize, Deserialize};
 ///
 /// #[derive(Serialize, Deserialize, SerdeRequest, PartialEq, Clone)]
@@ -68,21 +90,15 @@ impl<T: 'static> CachedValue<T> {
 ///
 /// impl TodoState {
 ///     pub fn new() -> Self {
-///         let posts = LazyCache::new(300, move || {
-///             let request = get_driver()
-///                 .request("https://some.api/posts")
-///                 .get();
-///
-///             async move {
-///                 request.await.into(|status, body| {
-///                     if status == 200 {
-///                         Some(body.into_vec::<Model>())
-///                     } else {
-///                         None
-///                     }
-///                 })
-///             }
-///         });
+///         let posts = RequestBuilder::get("https://some.api/posts")
+///             .ttl_seconds(300)
+///             .lazy_cache(|status, body| {
+///                 if status == 200 {
+///                     Some(body.into_vec::<Model>())
+///                 } else {
+///                     None
+///                 }
+///             });
 ///
 ///         TodoState {
 ///             posts
@@ -93,16 +109,16 @@ impl<T: 'static> CachedValue<T> {
 ///
 /// See ["todo" example](../src/vertigo_demo/app/todo/mod.rs.html) in vertigo-demo package for more.
 pub struct LazyCache<T: 'static> {
-    res: Rc<CachedValue<T>>,
-    max_age: InstantType,
-    loader: Rc<dyn Fn() -> PinBoxFuture<Resource<T>>>,
+    id: u64,
+    value: Value<ApiResponse<T>>,
     queued: Rc<ValueMut<bool>>,
+    request: Rc<RequestBuilder>,
+    map_response: Rc<dyn Fn(u32, RequestResponseBody) -> Option<Resource<T>>>,
 }
 
 impl<T: 'static> Debug for LazyCache<T> {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         f.debug_struct ("LazyCache")
-            .field("max_age", &self.max_age)
             .field("queued", &self.queued)
             .finish()
     }
@@ -111,75 +127,91 @@ impl<T: 'static> Debug for LazyCache<T> {
 impl<T> Clone for LazyCache<T> {
     fn clone(&self) -> Self {
         LazyCache {
-            res: self.res.clone(),
-            max_age: self.max_age,
-            loader: self.loader.clone(),
+            id: self.id,
+            value: self.value.clone(),
             queued: self.queued.clone(),
+            request: self.request.clone(),
+            map_response: self.map_response.clone(),
         }
-    }
-}
-
-impl<T> PartialEq for LazyCache<T> {
-    fn eq(&self, other: &Self) -> bool {
-        self.res.id == other.res.id
     }
 }
 
 impl<T> LazyCache<T> {
-    pub fn new<Fut: Future<Output = Resource<T>> + 'static, F: Fn() -> Fut + 'static>(max_age: InstantType, loader: F) -> Self {
-        let loader_rc: Rc<dyn Fn() -> PinBoxFuture<Resource<T>>> = Rc::new(move || -> PinBoxFuture<Resource<T>> {
-            Box::pin(loader())
-        });
-
+    pub fn new(
+        request: RequestBuilder,
+        map_response: impl Fn(u32, RequestResponseBody) -> Option<Resource<T>> + 'static
+    ) -> Self {
         Self {
-            res: Rc::new(CachedValue {
-                id: get_unique_id(),
-                value: Value::new(Resource::Loading),
-                updated_at: ValueMut::new(get_driver().now()),
-                set: ValueMut::new(false),
-            }),
-            max_age,
-            loader: loader_rc,
+            id: get_unique_id(),
+            value: Value::new(ApiResponse::Notinit),
             queued: Rc::new(ValueMut::new(false)),
+            request: Rc::new(request),
+            map_response: Rc::new(map_response),
         }
     }
 
     pub fn get(&self, context: &Context) -> Resource<Rc<T>> {
-        if self.needs_update() {
-            self.force_update(true)
+        let api_response = self.value.get(context);
+
+        //TODO - Add casch handling
+        // let map_response = self.map_response.clone();
+
+        // // if get_driver().is_cache_avaible() {
+        // //     let fut = (self.loader)();
+        // //     //pool the future only once
+        // // }
+
+        if !self.queued.get() && api_response.needs_update() {
+            self.force_update_spawn(true);
         }
-        self.res.get_value(context)
+
+        api_response.get_value()
     }
 
     pub fn force_update(&self, with_loading: bool) {
-        let loader = self.loader.clone();
-        let res = self.res.clone();
-        let queued = self.queued.clone();
-        queued.set(true);
+        if !self.queued.get() {
+            self.force_update_spawn(with_loading);
+        }
+    }
 
-        get_driver().spawn(async move {
-            if with_loading {
-                res.set_value(Resource::Loading);
+    fn force_update_spawn(&self, with_loading: bool) {
+        get_driver().spawn({
+            let queued = self.queued.clone();
+            let value = self.value.clone();
+            let request = self.request.clone();
+            let map_response = self.map_response.clone();
+
+            async move {
+                if queued.get() {
+                    return;
+                }
+
+                queued.set(true);   //set lock
+
+                let api_response = transaction(|context| {
+                    value.get(context)
+                });
+                
+                if api_response.needs_update() {
+                    //update value
+
+                    if with_loading {
+                        value.set(ApiResponse::new_loading());
+                    }
+
+                    let ttl = request.get_ttl();
+                    let map_response = &(*map_response);
+                    let new_value = request.call().await.into(map_response);
+
+                    let expiry = ttl.map(|ttl| get_driver().now().add_duration(ttl));
+                    
+                    let new_value = new_value.map(Rc::new);
+                    value.set(ApiResponse::new(new_value, expiry));
+                }
+
+                queued.set(false);
             }
-            res.set_value(loader().await);
-            queued.set(false);
-        })
-    }
-
-    pub fn needs_update(&self) -> bool {
-        if self.is_loading_queued() {
-            return false;
-        }
-
-        if !self.res.is_set() {
-            return true;
-        }
-
-        self.res.age() >= self.max_age
-    }
-
-    fn is_loading_queued(&self) -> bool {
-        self.queued.get()
+        });
     }
 
     pub fn to_computed(&self) -> Computed<Resource<Rc<T>>> {
@@ -189,5 +221,11 @@ impl<T> LazyCache<T> {
                 state.get(context)
             }
         })
+    }
+}
+
+impl<T> PartialEq for LazyCache<T> {
+    fn eq(&self, other: &Self) -> bool {
+        self.id == other.id
     }
 }

@@ -1,7 +1,10 @@
+use std::any::Any;
+
 use crate::{ApiImport, Driver, DomElement, struct_mut::ValueMut};
 
 pub struct DriverConstruct {
     pub driver: Driver,
+    state: ValueMut<Option<Box<dyn Any>>>,
     subscription: ValueMut<Option<DomElement>>,
 }
 
@@ -11,11 +14,13 @@ impl DriverConstruct {
 
         DriverConstruct {
             driver,
+            state: ValueMut::new(None),
             subscription: ValueMut::new(None),
         }
     }
 
-    pub fn set_root(&self, root: DomElement) {
+    pub fn set_root(&self, state: Box<dyn Any>, root: DomElement) {
+        self.state.set(Some(state));
         self.subscription.set(Some(root));
     }
 }

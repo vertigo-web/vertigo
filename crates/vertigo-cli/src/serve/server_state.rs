@@ -1,10 +1,11 @@
-use crate::serve::html::{DomCommand, HtmlResponse};
+use crate::serve::html::HtmlResponse;
 use crate::serve::request_state::RequestState;
 use crate::serve::spawn::SpawnOwner;
 use crate::serve::wasm::{Message, WasmInstance};
 use axum::response::Html;
 
 use axum::http::StatusCode;
+use tokio::sync::mpsc::error::TryRecvError;
 use wasmtime::{
     Engine,
     Module,
@@ -37,13 +38,11 @@ impl ServerState {
 
         let request = RequestState {
             url: url.to_string(),
-            count: 0,
-            name: "name ...".to_string(),
         };
 
         let mut inst = WasmInstance::new(sender.clone(), &self.engine, &self.module, request);
 
-        inst.call_function("start_application", ());
+        inst.call_start_application();
 
         let spawn_resource = SpawnOwner::new({
             let sender = sender.clone();
@@ -54,32 +53,41 @@ impl ServerState {
             }
         });
 
-        let mut html_response = HtmlResponse::new();
+        let mut html_response = HtmlResponse::new(sender.clone(), &self.mount_path, inst);
 
-        while let Some(message) = receiver.recv().await {
+        loop {
+            let message = receiver.try_recv();
+            
             match message {
-                Message::TimeoutAndSendResponse => {
-                    log::info!("timeout");
+                Ok(message) => {
+                    if let Some(response) = html_response.process_message(message) {
+                        return response;
+                    };
+                    continue;
+                },
+                Err(TryRecvError::Empty) => {
+                    //continue this iteration
+                },
+                Err(TryRecvError::Disconnected) => {
+                    //send response to browser
                     break;
                 }
-                Message::DomUpdate(update) => {
-                    let commands = serde_json::from_str::<Vec<DomCommand>>(update.as_str()).unwrap();
-                    html_response.feed(commands);
-                }
-                Message::Panic(message) => {
-                    let message = message.unwrap_or_else(|| "panic message decoding problem".to_string());
-                    return (StatusCode::INTERNAL_SERVER_ERROR, Html(message));
-                }
-                //TODO - callback from api
             }
 
             if html_response.waiting_request() == 0 {
+                //send response to browser
                 break;
+            } else {
+                if let Some(message) = receiver.recv().await {
+                    if let Some(response) = html_response.process_message(message) {
+                        return response;
+                    };
+                }
             }
         }
 
         spawn_resource.off();
-        (StatusCode::OK, Html(html_response.result(self.mount_path.index.as_slice())))
+        html_response.build_response()
     }
 }
 

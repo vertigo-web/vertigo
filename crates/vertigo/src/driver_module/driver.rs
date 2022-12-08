@@ -3,21 +3,20 @@ use std::{
     pin::Pin,
     rc::Rc,
 };
-use crate::JsValue;
+use crate::fetch::request_builder::RequestBuilder;
 use crate::{
     Dependencies, DropResource, FutureBox,
-    FetchBuilder, Instant, RequestBuilder, WebsocketMessage,
-    get_driver, css::css_manager::CssManager, Context,
+    FetchBuilder, Instant, WebsocketMessage,
+    css::css_manager::CssManager, Context,
 };
 
 use crate::{
     driver_module::api::ApiImport,
     driver_module::utils::futures_spawn::spawn_local,
-    driver_module::init_env::init_env
 };
 use crate::driver_module::dom::DriverDom;
 
-use super::api::{DomAccess, CallbackId};
+use super::api::DomAccess;
 
 #[derive(Debug)]
 pub enum FetchMethod {
@@ -120,7 +119,7 @@ impl Driver {
     /// Create new FetchBuilder.
     #[must_use]
     pub fn fetch(&self, url: impl Into<String>) -> FetchBuilder {
-        FetchBuilder::new(self.inner.api.clone(), url.into())
+        FetchBuilder::new(url.into())
     }
 
     /// Gets a cookie by name
@@ -133,25 +132,9 @@ impl Driver {
         self.inner.api.cookie_set(cname, cvalue, expires_in)
     }
 
-    /// Retrieves the hash part of location URL from client (browser)
-    pub fn get_hash_location(&self) -> String {
-        self.inner.api.get_hash_location()
-    }
-
-    /// Sets the hash part of location URL from client (browser)
-    pub fn push_hash_location(&self, path: String) {
-        self.inner.api.push_hash_location(&path);
-    }
-
     /// Go back in client's (browser's) history
     pub fn history_back(&self) {
         self.inner.api.history_back();
-    }
-
-    /// Set event handler upon hash location change
-    #[must_use]
-    pub fn on_hash_route_change(&self, on_change: Box<dyn Fn(String)>) -> DropResource {
-        self.inner.api.on_hash_route_change(on_change)
     }
 
     /// Make `func` fire every `time` seconds.
@@ -165,12 +148,18 @@ impl Driver {
         Instant::now(self.inner.api.clone())
     }
 
-    /// Create new RequestBuilder (more complex version of [fetch](struct.Driver.html#method.fetch))
+    /// Create new RequestBuilder for GETs (more complex version of [fetch](struct.Driver.html#method.fetch))
     #[must_use]
-    pub fn request(&self, url: impl Into<String>) -> RequestBuilder {
-        RequestBuilder::new(&self.inner.api, url)
+    pub fn request_get(&self, url: impl Into<String>) -> RequestBuilder {
+        RequestBuilder::get(url)
     }
 
+    /// Create new RequestBuilder for POSTs (more complex version of [fetch](struct.Driver.html#method.fetch))
+    #[must_use]
+    pub fn request_post(&self, url: impl Into<String>) -> RequestBuilder {
+        RequestBuilder::post(url)
+    }
+    
     #[must_use]
     pub fn sleep(&self, time: u32) -> FutureBox<()> {
         let (sender, future) = FutureBox::new();
@@ -226,30 +215,12 @@ impl Driver {
         self.inner.dependencies.transaction_state.hooks.on_after_transaction(callback);
     }
 
-    pub(crate) fn init_env(&self) {
-        init_env(self.inner.api.clone());
+    pub fn is_browser(&self) -> bool {
+        self.inner.api.is_browser()
     }
 
-    pub(crate) fn wasm_callback(&self, callback_id: u64, value_ptr: u32) -> (u32, u32) {
-        let value = self.inner.api.arguments.get_by_ptr(value_ptr);
-        let callback_id = CallbackId::from_u64(callback_id);
-
-        let driver = get_driver();
-        let mut result = JsValue::Undefined;
-
-        driver.transaction(|_| {
-            result = self.inner.api.callback_store.call(callback_id, value);
-        });
-
-        if result == JsValue::Undefined {
-            return (0, 0);
-        }
-
-        let memory_block = result.to_snapshot();
-        let (ptr, size) = memory_block.get_ptr_and_size();
-        self.inner.api.arguments.set(memory_block);
-
-        (ptr, size)
+    pub fn is_server(&self) -> bool {
+        !self.is_browser()
     }
 
 }

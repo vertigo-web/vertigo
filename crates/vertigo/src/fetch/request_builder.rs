@@ -1,11 +1,10 @@
 use std::collections::HashMap;
-
-use crate::{FetchBuilder, ApiImport};
-
+use crate::{FetchBuilder, LazyCache};
+use std::time::Duration;
 use super::resource::Resource;
 
-#[derive(Debug)]
-enum Method {
+#[derive(Clone, Debug)]
+pub enum Method {
     Get,
     Post,
 }
@@ -21,135 +20,133 @@ impl Method {
 
 /// Ensures that this type is serializable and deserializable so can be used for defining a resource.
 pub trait SingleRequestTrait: Sized {
-    fn into_string(self) -> Result<String, String>;
+    fn into_string(self) -> String;
     fn from_string(data: &str) -> Result<Self, String>;
 }
 
 /// Ensures that vector of objects of this type is serializable and deserializable so can be used for defining a resource.
 pub trait ListRequestTrait: Sized {
-    fn list_into_string(vec: Vec<Self>) -> Result<String, String>;
+    //TODO - To consider whether this returned string will cause problems in the case of ill-defined structures. Perhaps it is worth replacing the serde with something smaller ?
+    fn list_into_string(vec: Vec<Self>) -> String;
+    //TODO - To consider whether this returned string will cause problems in the case of ill-defined structures. Perhaps it is worth replacing the serde with something smaller ?
     fn list_from_string(data: &str) -> Result<Vec<Self>, String>;
 }
 
 /// Builder for typed requests (more complex version of [FetchBuilder](struct.FetchBuilder.html)).
 ///
 /// Unlike in the FetchBuilder, here request and response data is a type implementing [SingleRequestTrait] or [ListRequestTrait].
-pub enum RequestBuilder {
-    ErrorInput(String),
-    Data {
-        api: ApiImport,
-        url: String,
-        headers: Option<HashMap<String, String>>,
-        body: Option<String>,
-    },
+#[derive(Clone)]
+pub struct RequestBuilder {
+    method: Method,
+    url: String,
+    headers: HashMap<String, String>,
+    body: Option<String>,
+    ttl: Option<Duration>,
 }
 
 impl RequestBuilder {
-    pub fn new(api: &ApiImport, url: impl Into<String>) -> RequestBuilder {
-        RequestBuilder::Data {
-            api: api.clone(),
+    pub fn new(method: Method, url: impl Into<String>) -> Self {
+        Self {
+            method,
             url: url.into(),
-            headers: None,
+            headers: HashMap::new(),
             body: None,
+            ttl: None,
         }
     }
 
-    #[must_use]
-    pub fn body(self, body: String) -> RequestBuilder {
-        match self {
-            RequestBuilder::ErrorInput(message) => RequestBuilder::ErrorInput(message),
-            RequestBuilder::Data { api: driver_fetch, url, headers, .. } =>
-                RequestBuilder::Data {
-                    api: driver_fetch,
-                    url,
-                    headers,
-                    body: Some(body),
-                },
-        }
+    pub fn get(url: impl Into<String>) -> Self {
+        Self::new(Method::Get, url)
+    }
+
+    pub fn post(url: impl Into<String>) -> Self {
+        Self::new(Method::Post, url)
     }
 
     #[must_use]
-    pub fn bearer_auth(self, token: impl Into<String>) -> RequestBuilder {
+    pub fn body(mut self, body: String) -> Self {
+        self.body = Some(body);
+        self
+    }
+
+    #[must_use]
+    pub fn bearer_auth(self, token: impl Into<String>) -> Self {
         let token: String = token.into();
         self.set_header("Authorization", format!("Bearer {token}"))
     }
 
     #[must_use]
-    pub fn set_header(self, name: impl Into<String>, value: impl Into<String>) -> RequestBuilder {
+    pub fn set_header(mut self, name: impl Into<String>, value: impl Into<String>) -> Self {
         let name: String = name.into();
         let value: String = value.into();
-
-        if let RequestBuilder::Data { headers, api: driver_fetch, url, body} = self {
-            if let Some(mut headers) = headers {
-                headers.insert(name, value);
-                return RequestBuilder::Data { headers: Some(headers), api: driver_fetch, url, body };
-            }
-
-            let mut new_headers = HashMap::new();
-            new_headers.insert(name, value);
-            return RequestBuilder::Data { headers: Some(new_headers), api: driver_fetch, url, body };
-        }
-
+        self.headers.insert(name, value);
         self
     }
 
     #[must_use]
-    pub fn body_json(self, body: impl SingleRequestTrait) -> RequestBuilder {
-        let body_string: Result<String, String> = body.into_string();
-
-        match body_string {
-            Ok(body) => self.body(body).set_header("Content-Type", "application/json"),
-            Err(message) => RequestBuilder::ErrorInput(message),
-        }
+    pub fn body_json(self, body: impl SingleRequestTrait) -> Self {
+        let body: String = body.into_string();
+        self.body(body).set_header("Content-Type", "application/json")
     }
 
     #[must_use]
-    pub fn headers(self, headers: HashMap<String, String>) -> RequestBuilder {
-        match self {
-            RequestBuilder::ErrorInput(message) => RequestBuilder::ErrorInput(message),
-            RequestBuilder::Data { api: driver_fetch, url, body, .. } => RequestBuilder::Data {
-                api: driver_fetch,
-                url,
-                headers: Some(headers),
-                body,
-            },
-        }
+    pub fn headers(mut self, headers: HashMap<String, String>) -> Self {
+        self.headers = headers;
+        self
     }
 
-    async fn call(self, method: Method) -> RequestResponse {
-        let (driver_fetch, url, headers, body) = match self {
-            RequestBuilder::ErrorInput(message) => return RequestResponse::new(None, Err(message)),
-            RequestBuilder::Data { api: driver_fetch, url, headers, body } => (driver_fetch, url, headers, body),
-        };
+    pub fn ttl_seconds(mut self, seconds: u64) -> Self {
+        self.ttl = Some(Duration::from_secs(seconds));
+        self
+    }
 
-        let builder = FetchBuilder::new(driver_fetch, url.clone());
+    pub fn ttl_minutes(mut self, minutes: u64) -> Self {
+        self.ttl = Some(Duration::from_secs(minutes * 60));
+        self
+    }
+
+    pub fn ttl_hours(mut self, hours: u64) -> Self {
+        self.ttl = Some(Duration::from_secs(hours * 60 * 60));
+        self
+    }
+
+    pub fn ttl_days(mut self, days: u64) -> Self {
+        self.ttl = Some(Duration::from_secs(days * 24 * 60 * 60));
+        self
+    }
+
+    pub fn get_ttl(&self) -> Option<Duration> {
+        self.ttl
+    }
+
+    pub async fn call(&self) -> RequestResponse {
+        let Self { method, url, headers, body, ttl: _ } = self;
+
+        let builder = FetchBuilder::new(url.clone());
 
         let builder = match body {
             None => builder,
-            Some(body) => builder.set_body(body),
+            Some(body) => builder.set_body(body.clone()),
         };
 
-        let builder = match headers {
-            Some(headers) => builder.set_headres(headers),
-            None => builder,
-        };
+        let builder = builder.set_headres(headers.clone());
 
         let result = match method {
             Method::Get => builder.get().await,
             Method::Post => builder.post().await,
         };
 
-        RequestResponse::new(Some((method, url)), result)
+        RequestResponse::new(method.clone(), url.clone(), result)
     }
 
-    pub async fn get(self) -> RequestResponse {
-        self.call(Method::Get).await
-    }
-
-    pub async fn post(self) -> RequestResponse {
-        self.call(Method::Post).await
+    pub fn lazy_cache<T>(
+        self,
+        map_response: impl Fn(u32, RequestResponseBody) -> Option<Resource<T>> + 'static
+    ) -> LazyCache<T> {
+        LazyCache::new(self, map_response)
     }
 }
+
 
 #[derive(Debug)]
 pub struct RequestResponseBody {
@@ -179,13 +176,14 @@ impl RequestResponseBody {
 /// Result from request made using [RequestBuilder].
 #[derive(Debug)]
 pub struct RequestResponse {
-    request_details: Option<(Method, String)>,
+    method: Method,
+    url: String,
     data: Result<(u32, String), String>,
 }
 
 impl RequestResponse {
-    fn new(request_details: Option<(Method, String)>, data: Result<(u32, String), String>) -> RequestResponse {
-        RequestResponse { request_details, data }
+    fn new(method: Method, url: String, data: Result<(u32, String), String>) -> RequestResponse {
+        RequestResponse { method, url, data }
     }
 
     pub fn status(&self) -> Option<u32> {
@@ -209,11 +207,7 @@ impl RequestResponse {
         };
 
         if let Resource::Error(err) = &result {
-            if let Some((method, url)) = self.request_details {
-                log::error!("Error fetching {} {}: {}", method.get_str(), url, err);
-            } else {
-                log::error!("Error fetching {}", err);
-            }
+            log::error!("Error fetching {} {}: {}", self.method.get_str(), self.url, err);
         }
 
         result

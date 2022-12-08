@@ -5,6 +5,7 @@ mod html_response;
 mod replace_html;
 mod element;
 mod element_children;
+mod send_request;
 
 pub use dom_command::DomCommand;
 pub use html_response::HtmlResponse;

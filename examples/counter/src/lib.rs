@@ -6,8 +6,8 @@ pub struct App {
 }
 
 impl App {
-    pub fn mount(self) -> DomElement {
-        let state = self;
+    pub fn mount(&self) -> DomElement {
+        let state = self.clone();
 
         let increment = bind!(state, || {
             state.count.change(|value| {
@@ -33,5 +33,7 @@ impl App {
 
 #[no_mangle]
 pub fn start_application() {
-    start_app(|| App::default().mount());
+    let state = App::default();
+    let view = state.mount();
+    start_app(state, view);
 }

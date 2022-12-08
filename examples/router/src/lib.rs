@@ -5,5 +5,7 @@ mod app;
 
 #[no_mangle]
 pub fn start_application() {
-    start_app(|| app::App::new().mount());
+    let state = app::App::new();
+    let view = state.render();
+    start_app(state, view);
 }

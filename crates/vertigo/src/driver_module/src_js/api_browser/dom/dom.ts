@@ -1,5 +1,6 @@
 import { ModuleControllerType } from "../../wasm_init";
 import { ExportType } from "../../wasm_module";
+import { HistoryLocation } from "../historyLocation";
 import { MapNodes } from "./map_nodes";
 
 interface FileItemType {
@@ -73,21 +74,23 @@ const assertNeverCommand = (data: never): never => {
 
 export class DriverDom {
     private root: HTMLElement;
+    private historyLocation: HistoryLocation;
     private readonly getWasm: () => ModuleControllerType<ExportType>;
-    public readonly nodes: MapNodes<bigint, Element | Comment>;
-    public readonly texts: MapNodes<bigint, Text>;
+    public readonly nodes: MapNodes<number, Element | Comment>;
+    public readonly texts: MapNodes<number, Text>;
     private callbacks: Map<bigint, (data: Event) => void>;
     private initBeforeFirstUpdate: boolean;
 
-    public constructor(root: HTMLElement, getWasm: () => ModuleControllerType<ExportType>) {
+    public constructor(root: HTMLElement, historyLocation: HistoryLocation, getWasm: () => ModuleControllerType<ExportType>) {
         this.root = root;
+        this.historyLocation = historyLocation;
         this.getWasm = getWasm;
         this.nodes = new MapNodes();
         this.texts = new MapNodes();
         this.callbacks = new Map();
         this.initBeforeFirstUpdate = false;
 
-        this.nodes.set(1n, root);
+        this.nodes.set(1, root);
 
         document.addEventListener('dragover', (ev): void => {
             // console.log('File(s) in drop zone');
@@ -98,23 +101,40 @@ export class DriverDom {
     public debugNodes(...ids: Array<number>) {
         const result: Record<number, unknown> = {};
         for (const id of ids) {
-            const value = this.nodes.getItem(BigInt(id));
+            const value = this.nodes.getItem(id);
             result[id] = value;
         }
         console.info('debug nodes', result);
     }
 
-    private create_node(id: bigint, name: string) {
-        if (id === 1n) {
+    private create_node(id: number, name: string) {
+        if (id === 1) {
             console.error("The root HTMLElement is already created");
         } else {
             const node = createElement(name);
             node.setAttribute('data-id', id.toString());
             this.nodes.set(id, node);
+
+            if (name.toLowerCase().trim() === 'a') {
+                node.addEventListener('click', (e) => {
+                    let href = node.getAttribute('href');
+                    if (href === null) {
+                        return;
+                    }
+
+                    if (href.startsWith('http://') || href.startsWith('https://') || href.startsWith('//')) {
+                        return;
+                    }
+
+                    e.preventDefault();
+                    this.historyLocation.push(href);
+                    window.scrollTo(0, 0);
+                })
+            }
         }
     }
 
-    private set_attribute(id: bigint, name: string, value: string) {
+    private set_attribute(id: number, name: string, value: string) {
         this.nodes.get("set_attribute", id, (node) => {
             if (node instanceof Element) {
                 node.setAttribute(name, value);
@@ -137,30 +157,30 @@ export class DriverDom {
         });
     }
 
-    private remove_node(id: bigint) {
+    private remove_node(id: number) {
         this.nodes.delete("remove_node", id, (node) => {
             node.remove();
         });
     }
 
-    private create_text(id: bigint, value: string) {
+    private create_text(id: number, value: string) {
         const text = document.createTextNode(value);
         this.texts.set(id, text);
     }
 
-    private remove_text(id: bigint) {
+    private remove_text(id: number) {
         this.texts.delete("remove_node", id, (text) => {
             text.remove();
         });
     }
 
-    private update_text(id: bigint, value: string) {
+    private update_text(id: number, value: string) {
         this.texts.get("set_attribute", id, (text) => {
             text.textContent = value;
         });
     }
 
-    private get_node(label: string, id: bigint, callback: (node: Element | Comment | Text) => void) {
+    private get_node(label: string, id: number, callback: (node: Element | Comment | Text) => void) {
         const node = this.nodes.getItem(id);
         if (node !== undefined) {
             callback(node);
@@ -177,7 +197,7 @@ export class DriverDom {
         return;
     }
 
-    private insert_before(parent: bigint, child: bigint, ref_id: bigint | null | undefined) {
+    private insert_before(parent: number, child: number, ref_id: number | null | undefined) {
         this.nodes.get("insert_before", parent, (parentNode) => {
             this.get_node("insert_before child", child, (childNode) => {
 
@@ -200,7 +220,7 @@ export class DriverDom {
         document.head.appendChild(style);
     }
 
-    private callback_mousedown(event: Event, callback_id: bigint) {
+    private callback_click(event: Event, callback_id: bigint) {
         event.preventDefault();
         this.getWasm().wasm_callback(callback_id, undefined);
     }
@@ -303,10 +323,10 @@ export class DriverDom {
         console.warn('keydown ignore', event);
     }
 
-    private callback_add(id: bigint, event_name: string, callback_id: bigint) {
-        let callback = (event: Event) => {
-            if (event_name === 'mousedown') {
-                return this.callback_mousedown(event, callback_id);
+    private callback_add(id: number, event_name: string, callback_id: bigint) {
+        const callback = (event: Event) => {
+            if (event_name === 'click') {
+                return this.callback_click(event, callback_id);
             }
 
             if (event_name === 'input') {
@@ -352,7 +372,7 @@ export class DriverDom {
         }
     }
 
-    private callback_remove(id: bigint, event_name: string, callback_id: bigint) {
+    private callback_remove(id: number, event_name: string, callback_id: bigint) {
         const callback = this.callbacks.get(callback_id);
         this.callbacks.delete(callback_id);
 
@@ -413,7 +433,7 @@ export class DriverDom {
         if (setFocus.size > 0) {
             setTimeout(() => {
                 for (const id of setFocus) {
-                    this.nodes.get(`set focus ${id}`, BigInt(id), (node) => {
+                    this.nodes.get(`set focus ${id}`, id, (node) => {
                         if (node instanceof HTMLElement) {
                             node.focus();
                         } else {
@@ -427,37 +447,37 @@ export class DriverDom {
 
     private bulk_update_command(command: CommandType) {
         if (command.type === 'remove_node') {
-            this.remove_node(BigInt(command.id));
+            this.remove_node(command.id);
             return;
         }
 
         if (command.type === 'insert_before') {
-            this.insert_before(BigInt(command.parent), BigInt(command.child), command.ref_id === null ? null : BigInt(command.ref_id));
+            this.insert_before(command.parent, command.child, command.ref_id === null ? null : command.ref_id);
             return;
         }
 
         if (command.type === 'create_node') {
-            this.create_node(BigInt(command.id), command.name);
+            this.create_node(command.id, command.name);
             return;
         }
 
         if (command.type === 'create_text') {
-            this.create_text(BigInt(command.id), command.value);
+            this.create_text(command.id, command.value);
             return;
         }
 
         if (command.type === 'update_text') {
-            this.update_text(BigInt(command.id), command.value);
+            this.update_text(command.id, command.value);
             return;
         }
 
         if (command.type === 'set_attr') {
-            this.set_attribute(BigInt(command.id), command.name, command.value);
+            this.set_attribute(command.id, command.name, command.value);
             return;
         }
 
         if (command.type === 'remove_text') {
-            this.remove_text(BigInt(command.id));
+            this.remove_text(command.id);
             return;
         }
 
@@ -468,24 +488,24 @@ export class DriverDom {
 
         if (command.type === 'create_comment') {
             const comment = document.createComment(command.value);
-            this.nodes.set(BigInt(command.id), comment);
+            this.nodes.set(command.id, comment);
             return;
         }
 
         if (command.type === 'remove_comment') {
-            this.nodes.delete("remove_comment", BigInt(command.id), (comment) => {
+            this.nodes.delete("remove_comment", command.id, (comment) => {
                 comment.remove();
             });
             return;
         }
 
         if (command.type === 'callback_add') {
-            this.callback_add(BigInt(command.id), command.event_name, BigInt(command.callback_id));
+            this.callback_add(command.id, command.event_name, BigInt(command.callback_id));
             return;
         }
 
         if (command.type === 'callback_remove') {
-            this.callback_remove(BigInt(command.id), command.event_name, BigInt(command.callback_id));
+            this.callback_remove(command.id, command.event_name, BigInt(command.callback_id));
             return;
         }
 

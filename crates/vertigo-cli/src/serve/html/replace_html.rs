@@ -6,7 +6,7 @@ fn process_node(node: &Node, test_node: &impl Fn(&str, &HashMap<String, String>)
         Node::Element { name, attrs, children } => {
             if test_node(name.trim(), attrs) {
                 let list_attrs = attrs
-                    .into_iter()
+                    .iter()
                     .map(|(key, value)| (key.as_str(), value.as_str()))
                     .collect::<Vec<_>>();
 

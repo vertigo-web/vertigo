@@ -77,10 +77,10 @@ fn trim_node(node: Node) -> Node {
                 .filter_map(|(key, value)| {
                     let key = key.trim();
 
-                    if key != "" {
-                        Some((key,value.trim()))
-                    } else {
+                    if key.is_empty() {
                         None
+                    } else {
+                        Some((key,value.trim()))
                     }
                 })
                 .collect::<Vec<_>>();

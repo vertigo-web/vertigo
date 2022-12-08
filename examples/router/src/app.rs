@@ -1,4 +1,4 @@
-use vertigo::router::HashRouter;
+use vertigo::router::Router;
 use vertigo::{bind, dom, DomElement};
 
 #[derive(Clone, PartialEq, Eq, Debug)]
@@ -37,19 +37,19 @@ impl From<String> for Route {
 
 #[derive(Clone)]
 pub struct App {
-    pub route: HashRouter<Route>,
+    pub route: Router<Route>,
 }
 
 impl App {
     pub fn new() -> Self {
-        let route = HashRouter::new();
+        let route = Router::new_hash_router();
 
         Self {
             route,
         }
     }
 
-    pub fn mount(self) -> DomElement {
+    pub fn render(&self) -> DomElement {
         let state = self;
 
         let navigate_to_page1 = bind!(state, || {

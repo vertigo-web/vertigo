@@ -222,12 +222,12 @@ impl DomElement {
         let drop_event = DropResource::new({
             let driver = self.driver.clone();
             move || {
-                driver.inner.dom.callback_remove(self.id_dom, "mousedown", callback_id);
+                driver.inner.dom.callback_remove(self.id_dom, "click", callback_id);
                 drop.off();
             }
         });
 
-        self.driver.inner.dom.callback_add(self.id_dom, "mousedown", callback_id);
+        self.driver.inner.dom.callback_add(self.id_dom, "click", callback_id);
         self.drop.push(drop_event);
 
         self

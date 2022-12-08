@@ -4,14 +4,14 @@ import { MapNodes } from "./api_browser/dom/map_nodes";
 
 export class JsNode {
     private api: ApiBrowser;
-    private nodes: MapNodes<bigint, Element | Comment>;
-    private texts: MapNodes<bigint, Text>;
+    private nodes: MapNodes<number, Element | Comment>;
+    private texts: MapNodes<number, Text>;
     private wsk: unknown;
 
     public constructor(
         api: ApiBrowser,
-        nodes: MapNodes<bigint, Element | Comment>,
-        texts: MapNodes<bigint, Text>,
+        nodes: MapNodes<number, Element | Comment>,
+        texts: MapNodes<number, Text>,
         wsk: unknown
     ) {
         this.api = api;
@@ -103,13 +103,13 @@ export class JsNode {
         if (Guard.isNumber(firstName) && rest.length === 0) {
             const domId = firstName.value;
 
-            const node = this.nodes.getItem(BigInt(domId));
+            const node = this.nodes.getItem(domId);
 
             if (node !== undefined) {
                 return new JsNode(this.api, this.nodes, this.texts, node);
             }
 
-            const text = this.texts.getItem(BigInt(domId));
+            const text = this.texts.getItem(domId);
 
             if (text !== undefined) {
                 return new JsNode(this.api, this.nodes, this.texts, text);
