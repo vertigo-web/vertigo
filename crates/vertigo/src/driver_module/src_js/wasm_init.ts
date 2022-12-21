@@ -1,4 +1,4 @@
-import { argumentsDecode, JsValueType, saveToBuffer } from './arguments';
+import { jsValueDecode, JsValueType, saveToBuffer } from './jsvalue';
 
 export interface BaseExportType {
     alloc: (size: number) => number,
@@ -56,7 +56,7 @@ export const wasmInit = async <ImportType extends Record<string, Function>, Expo
     //@ts-expect-error
     const exports: ExportType = module_instance.instance.exports;
 
-    const decodeArguments = (ptr: number, size: number) => argumentsDecode(getUint8Memory, ptr, size);
+    const decodeArguments = (ptr: number, size: number) => jsValueDecode(getUint8Memory, ptr, size);
 
     const valueSaveToBuffer = (value: JsValueType): number => saveToBuffer(getUint8Memory, exports.alloc, value);
 

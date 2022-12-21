@@ -1,5 +1,6 @@
 import { ApiBrowser } from "./api_browser";
-import { convertFromJsValue, convertToJsValue, Guard, JsValueType } from "./arguments";
+import { convertFromJsValue, convertToJsValue, JsValueType } from "./jsvalue";
+import { GuardJsValue } from './guard';
 import { MapNodes } from "./api_browser/dom/map_nodes";
 
 export class JsNode {
@@ -87,7 +88,7 @@ export class JsNode {
     nextRoot(path: Array<JsValueType>, args: Array<JsValueType>): JsNode | null {
         const [firstName, ...rest] = args;
 
-        if (Guard.isString(firstName) && rest.length === 0) {
+        if (GuardJsValue.isString(firstName) && rest.length === 0) {
             if (firstName === 'window') {
                 return new JsNode(this.api, this.nodes, this.texts, window);
             }
@@ -100,7 +101,7 @@ export class JsNode {
             return null;
         }
         
-        if (Guard.isNumber(firstName) && rest.length === 0) {
+        if (GuardJsValue.isNumber(firstName) && rest.length === 0) {
             const domId = firstName.value;
 
             const node = this.nodes.getItem(domId);
@@ -126,7 +127,7 @@ export class JsNode {
     nextGet(path: Array<JsValueType>, args: Array<JsValueType>): JsNode | null {
         const [property, ...getArgs] = args;
 
-        if (Guard.isString(property) && getArgs.length === 0) {
+        if (GuardJsValue.isString(property) && getArgs.length === 0) {
             return this.getByProperty(path, property);
         }
 
@@ -137,7 +138,7 @@ export class JsNode {
     nextSet(path: Array<JsValueType>, args: Array<JsValueType>): JsNode | null {
         const [property, value, ...setArgs] = args;
 
-        if (Guard.isString(property) && setArgs.length === 0) {
+        if (GuardJsValue.isString(property) && setArgs.length === 0) {
             try {
                 //@ts-expect-error
                 this.wsk[property] = convertFromJsValue(value);
@@ -159,7 +160,7 @@ export class JsNode {
     nextCall(path: Array<JsValueType>, args: Array<JsValueType>): JsNode | null {
         const [property, ...callArgs] = args;
         
-        if (Guard.isString(property)) {
+        if (GuardJsValue.isString(property)) {
             try {
                 let paramsJs = callArgs.map(convertFromJsValue);
                 //@ts-expect-error
@@ -183,7 +184,7 @@ export class JsNode {
         const result: Record<string, JsValueType> = {};
 
         for (const property of args) {
-            if (Guard.isString(property)) {
+            if (GuardJsValue.isString(property)) {
                 const value = this.getByProperty(path, property);
                 if (value === null) {
                     return null;

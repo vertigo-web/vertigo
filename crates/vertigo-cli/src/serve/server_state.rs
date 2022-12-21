@@ -78,7 +78,8 @@ impl ServerState {
                 //send response to browser
                 break;
             } else {
-                if let Some(message) = receiver.recv().await {
+                let message = receiver.recv().await;
+                if let Some(message) = message {
                     if let Some(response) = html_response.process_message(message) {
                         return response;
                     };

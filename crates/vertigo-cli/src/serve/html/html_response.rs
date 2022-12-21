@@ -18,10 +18,7 @@ enum FetchStatus {
 
 impl FetchStatus {
     fn is_requested(&self) -> bool {
-        match self {
-            Self::Requested { .. } => true,
-            _ => false,
-        }
+        matches!(self, Self::Requested { .. })
     }
 }
 

@@ -7,9 +7,9 @@ pub struct MemoryBlockRead {
 }
 
 impl MemoryBlockRead {
-    pub fn new(buffor: MemoryBlock) -> MemoryBlockRead {
+    pub fn new(buffer: MemoryBlock) -> MemoryBlockRead {
         MemoryBlockRead {
-            block: buffor.convert_to_vec(),
+            block: buffer.convert_to_vec(),
             offset: 0,
         }
     }
@@ -77,6 +77,22 @@ impl MemoryBlockRead {
 
         self.offset += 8;
         u64::from_be_bytes(bytes)
+    }
+
+    pub fn get_f64(&mut self) -> f64 {
+        let bytes: [u8; 8] = [
+            self.block[self.offset as usize],
+            self.block[self.offset as usize + 1],
+            self.block[self.offset as usize + 2],
+            self.block[self.offset as usize + 3],
+            self.block[self.offset as usize + 4],
+            self.block[self.offset as usize + 5],
+            self.block[self.offset as usize + 6],
+            self.block[self.offset as usize + 7],
+        ];
+
+        self.offset += 8;
+        f64::from_be_bytes(bytes)
     }
 
     pub fn get_i64(&mut self) -> i64 {

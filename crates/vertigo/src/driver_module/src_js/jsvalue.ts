@@ -1,129 +1,7 @@
-///https://javascript.info/arraybuffer-binary-arrays#dataview
-
-const decoder = new TextDecoder("utf-8");
-const encoder = new TextEncoder();
-
-class BufferCursor {
-    private dataView: DataView;
-    private pointer: number = 0;
-
-    constructor(
-        private getUint8Memory: () => Uint8Array,
-        private ptr: number,
-        private size: number,
-    ) {
-        this.getUint8Memory()[3] = 56;
-        this.dataView = new DataView(
-            this.getUint8Memory().buffer,
-            this.ptr,
-            this.size
-        );
-    }
-
-    public getByte(): number {
-        const value = this.dataView.getUint8(this.pointer);
-        this.pointer += 1;
-        return value;
-    }
-
-    public setByte(byte: number) {
-        this.dataView.setUint8(this.pointer, byte);
-        this.pointer += 1;
-    }
-
-    public getU16(): number {
-        const value = this.dataView.getUint16(this.pointer);
-        this.pointer += 2;
-        return value;
-    }
-
-    public setU16(value: number) {
-        this.dataView.setUint16(this.pointer, value);
-        this.pointer += 2;
-    }
-
-    public getU32(): number {
-        const value = this.dataView.getUint32(this.pointer);
-        this.pointer += 4;
-        return value;
-    }
-
-    public setU32(value: number) {
-        this.dataView.setUint32(this.pointer, value);
-        this.pointer += 4;
-    }
-
-    public getI32(): number {
-        const value = this.dataView.getInt32(this.pointer);
-        this.pointer += 4;
-        return value;
-    }
-
-    public setI32(value: number) {
-        this.dataView.setInt32(this.pointer, value);
-        this.pointer += 4;
-    }
-
-    public getU64(): bigint {
-        const value = this.dataView.getBigUint64(this.pointer);
-        this.pointer += 8;
-        return value;
-    }
-
-    public setU64(value: bigint) {
-        this.dataView.setBigUint64(this.pointer, value);
-        this.pointer += 8;
-    }
-
-    public getI64(): bigint {
-        const value = this.dataView.getBigInt64(this.pointer);
-        this.pointer += 8;
-        return value;
-    }
-
-    public setI64(value: bigint) {
-        this.dataView.setBigInt64(this.pointer, value);
-        this.pointer += 8;
-    }
-
-    public getBuffer(): Uint8Array {
-        const size = this.getU32();
-        const result = this
-            .getUint8Memory()
-            .subarray(
-                this.ptr + this.pointer,
-                this.ptr + this.pointer + size
-            );
-
-        this.pointer += size;
-        return result;
-    }
-
-    public setBuffer(buffer: Uint8Array) {
-        const size = buffer.length;
-        this.setU32(size);
-
-        const subbugger = this
-            .getUint8Memory()
-            .subarray(
-                this.ptr + this.pointer,
-                this.ptr + this.pointer + size
-            );
-
-        subbugger.set(buffer);
-
-        this.pointer += size;
-    }
-
-    public getString(): string {
-        return decoder.decode(this.getBuffer());
-    }
-
-    public setString(value: string) {
-        const buffer = encoder.encode(value);
-        this.setBuffer(buffer);
-    }
-}
+import { assertNever } from "./assert_never";
+import { BufferCursor, getStringSize } from "./buffer_cursor";
+import { GuardJsValue } from "./guard";
+import { jsJsonDecodeItem, jsJsonGetSize, JsJsonType, saveJsJsonToBufferItem } from "./jsjson";
 
 export type JsValueType
     = { type: 'u32', value: number, }
@@ -136,7 +14,8 @@ export type JsValueType
     | string
     | Array<JsValueType>
     | Uint8Array
-    | { type: 'object', value: JsValueMapType };
+    | { type: 'object', value: JsValueMapType }
+    | { type: 'json', value: JsJsonType };
 
 interface JsValueMapType {
     [key: string]: JsValueType
@@ -148,7 +27,7 @@ interface JsValueMapType {
 // export interface JsonArray extends Array<AnyJson> {}
 
 
-const argumentsDecodeItem = (cursor: BufferCursor): JsValueType => {
+const jsValueDecodeItem = (cursor: BufferCursor): JsValueType => {
     const typeParam = cursor.getByte();
 
     if (typeParam === 1) {
@@ -209,7 +88,7 @@ const argumentsDecodeItem = (cursor: BufferCursor): JsValueType => {
         const listSize = cursor.getU16();
 
         for (let i=0; i<listSize; i++) {
-            out.push(argumentsDecodeItem(cursor))
+            out.push(jsValueDecodeItem(cursor))
         }
 
         return out;
@@ -222,7 +101,7 @@ const argumentsDecodeItem = (cursor: BufferCursor): JsValueType => {
 
         for (let i=0; i<listSize; i++) {
             const key = cursor.getString();
-            const value = argumentsDecodeItem(cursor);
+            const value = jsValueDecodeItem(cursor);
             out[key] = value;
         }
 
@@ -232,52 +111,27 @@ const argumentsDecodeItem = (cursor: BufferCursor): JsValueType => {
         };
     }
 
+    if (typeParam === 13) {
+        const json = jsJsonDecodeItem(cursor);
+
+        return {
+            type: 'json',
+            value: json
+        };
+    }
+
     console.error('typeParam', typeParam);
     throw Error('Nieprawidłowe odgałęzienie');
 };
 
-export const argumentsDecode = (getUint8Memory: () => Uint8Array, ptr: number, size: number): JsValueType => {
+export const jsValueDecode = (getUint8Memory: () => Uint8Array, ptr: number, size: number): JsValueType => {
     try {
         const cursor = new BufferCursor(getUint8Memory, ptr, size);
-        return argumentsDecodeItem(cursor);
+        return jsValueDecodeItem(cursor);
     } catch (err) {
         console.error(err);
         return [];
     }
-};
-
-export namespace Guard {
-    export const isString = (value: JsValueType): value is string => {
-        return typeof value === 'string';
-    }
-
-    export const isStringOrNull = (value: JsValueType): value is string | null => {
-        return value === null || typeof value === 'string';
-    }
-
-    export const isNumber = (value: JsValueType): value is { type: 'u32', value: number } | { type: 'i32', value: number } => {
-        if (typeof value === 'object' && value !== null && 'type' in value) {
-            return value.type === 'i32' || value.type === 'u32'
-        }
-
-        return false;
-    }
-
-    export const isBigInt = (value: JsValueType): value is { type: 'u64', value: bigint } | { type: 'i64', value: bigint } => {
-        if (typeof value === 'object' && value !== null && 'type' in value) {
-            return value.type === 'i64' || value.type === 'u64'
-        }
-
-        return false;
-    }
-}
-
-const assertNever = (_value: never) => {
-    throw Error("assert never");
-}
-
-const getStringSize = (value: string): number => {
-    return new TextEncoder().encode(value).length;
 };
 
 const getSize = (value: JsValueType): number => {
@@ -290,7 +144,7 @@ const getSize = (value: JsValueType): number => {
         return 1;
     }
 
-    if (Guard.isString(value)) {
+    if (GuardJsValue.isString(value)) {
         return 1 + 4 + getStringSize(value);
     }
 
@@ -327,6 +181,10 @@ const getSize = (value: JsValueType): number => {
         return sum;
     }
 
+    if (value.type === 'json') {
+        return 1 + jsJsonGetSize(value.value);
+    }
+
     return assertNever(value);
 };
 
@@ -357,7 +215,7 @@ const saveToBufferItem = (value: JsValueType, cursor: BufferCursor) => {
         return;
     }
 
-    if (Guard.isString(value)) {
+    if (GuardJsValue.isString(value)) {
         cursor.setByte(10);
         cursor.setString(value);
         return;
@@ -415,6 +273,11 @@ const saveToBufferItem = (value: JsValueType, cursor: BufferCursor) => {
         return;
     }
 
+    if (value.type === 'json') {
+        saveJsJsonToBufferItem(value.value, cursor);
+        return;
+    }
+
     return assertNever(value);
 };
 
@@ -457,7 +320,7 @@ export const convertFromJsValue = (value: JsValueType): unknown => {
         return value;
     }
 
-    if (Guard.isString(value)) {
+    if (GuardJsValue.isString(value)) {
         return value;
     }
 
@@ -487,6 +350,10 @@ export const convertFromJsValue = (value: JsValueType): unknown => {
         }
 
         return result;
+    }
+
+    if (value.type === 'json') {
+        return value.value;
     }
 
     return assertNever(value);
