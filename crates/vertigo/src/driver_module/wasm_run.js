@@ -1,3 +1,7 @@
+const assertNever = (_value) => {
+    throw Error("assert never");
+};
+
 ///https://javascript.info/arraybuffer-binary-arrays#dataview
 const decoder = new TextDecoder("utf-8");
 const encoder = new TextEncoder();
@@ -11,7 +15,6 @@ class BufferCursor {
         this.getUint8Memory = getUint8Memory;
         this.ptr = ptr;
         this.size = size;
-        this.getUint8Memory()[3] = 56;
         this.dataView = new DataView(this.getUint8Memory().buffer, this.ptr, this.size);
     }
     getByte() {
@@ -68,6 +71,15 @@ class BufferCursor {
         this.dataView.setBigInt64(this.pointer, value);
         this.pointer += 8;
     }
+    getF64() {
+        const value = this.dataView.getFloat64(this.pointer);
+        this.pointer += 8;
+        return value;
+    }
+    setF64(value) {
+        this.dataView.setFloat64(this.pointer, value);
+        this.pointer += 8;
+    }
     getBuffer() {
         const size = this.getU32();
         const result = this
@@ -79,10 +91,10 @@ class BufferCursor {
     setBuffer(buffer) {
         const size = buffer.length;
         this.setU32(size);
-        const subbugger = this
+        const subbuffer = this
             .getUint8Memory()
             .subarray(this.ptr + this.pointer, this.ptr + this.pointer + size);
-        subbugger.set(buffer);
+        subbuffer.set(buffer);
         this.pointer += size;
     }
     getString() {
@@ -93,11 +105,144 @@ class BufferCursor {
         this.setBuffer(buffer);
     }
 }
+const getStringSize = (value) => {
+    return new TextEncoder().encode(value).length;
+};
+
+var GuardJsValue;
+(function (GuardJsValue) {
+    GuardJsValue.isString = (value) => {
+        return typeof value === 'string';
+    };
+    GuardJsValue.isStringOrNull = (value) => {
+        return value === null || typeof value === 'string';
+    };
+    GuardJsValue.isNumber = (value) => {
+        if (typeof value === 'object' && value !== null && 'type' in value) {
+            return value.type === 'i32' || value.type === 'u32';
+        }
+        return false;
+    };
+    GuardJsValue.isBigInt = (value) => {
+        if (typeof value === 'object' && value !== null && 'type' in value) {
+            return value.type === 'i64' || value.type === 'u64';
+        }
+        return false;
+    };
+})(GuardJsValue || (GuardJsValue = {}));
+
+const jsJsonGetSize = (value) => {
+    if (typeof value === 'boolean') {
+        return 1;
+    }
+    if (value === null) {
+        return 1;
+    }
+    if (typeof value === 'string') {
+        return 1 + 4 + getStringSize(value);
+    }
+    if (Array.isArray(value)) {
+        let sum = 1 + 2;
+        for (const item of value) {
+            sum += jsJsonGetSize(item);
+        }
+        return sum;
+    }
+    if (typeof value === 'number') {
+        return 9; //1 + 8
+    }
+    //object
+    let sum = 1 + 2;
+    for (const [key, propertyValue] of Object.entries(value)) {
+        sum += getStringSize(key);
+        sum += jsJsonGetSize(propertyValue);
+    }
+    return sum;
+};
+const jsJsonDecodeItem = (cursor) => {
+    const typeParam = cursor.getByte();
+    if (typeParam === 1) {
+        return true;
+    }
+    if (typeParam === 2) {
+        return false;
+    }
+    if (typeParam === 3) {
+        return null;
+    }
+    if (typeParam === 4) {
+        return cursor.getString();
+    }
+    if (typeParam === 5) {
+        return cursor.getF64();
+    }
+    if (typeParam === 6) {
+        const out = [];
+        const listSize = cursor.getU16();
+        for (let i = 0; i < listSize; i++) {
+            out.push(jsJsonDecodeItem(cursor));
+        }
+        return out;
+    }
+    //object
+    const out = {};
+    const listSize = cursor.getU16();
+    for (let i = 0; i < listSize; i++) {
+        const key = cursor.getString();
+        const value = jsJsonDecodeItem(cursor);
+        out[key] = value;
+    }
+    return out;
+};
+const saveJsJsonToBufferItem = (value, cursor) => {
+    if (value === true) {
+        cursor.setByte(1);
+        return;
+    }
+    if (value === false) {
+        cursor.setByte(2);
+        return;
+    }
+    if (value === null) {
+        cursor.setByte(3);
+        return;
+    }
+    if (typeof value === 'string') {
+        cursor.setByte(4);
+        cursor.setString(value);
+        return;
+    }
+    if (typeof value === 'number') {
+        cursor.setByte(5);
+        cursor.setF64(value);
+        return;
+    }
+    if (Array.isArray(value)) {
+        cursor.setByte(6);
+        cursor.setU16(value.length);
+        for (const item of value) {
+            saveJsJsonToBufferItem(item, cursor);
+        }
+        return;
+    }
+    //object
+    const list = [];
+    for (const [key, propertyValue] of Object.entries(value)) {
+        list.push([key, propertyValue]);
+    }
+    cursor.setByte(7);
+    cursor.setU16(list.length);
+    for (const [key, propertyValue] of list) {
+        cursor.setString(key);
+        saveJsJsonToBufferItem(propertyValue, cursor);
+    }
+};
+
 //https://github.com/unsplash/unsplash-js/pull/174
 // export type AnyJson = boolean | number | string | null | JsonArray | JsonMap;
 // export interface JsonMap { [key: string]: AnyJson }
 // export interface JsonArray extends Array<AnyJson> {}
-const argumentsDecodeItem = (cursor) => {
+const jsValueDecodeItem = (cursor) => {
     const typeParam = cursor.getByte();
     if (typeParam === 1) {
         return {
@@ -145,7 +290,7 @@ const argumentsDecodeItem = (cursor) => {
         const out = [];
         const listSize = cursor.getU16();
         for (let i = 0; i < listSize; i++) {
-            out.push(argumentsDecodeItem(cursor));
+            out.push(jsValueDecodeItem(cursor));
         }
         return out;
     }
@@ -154,7 +299,7 @@ const argumentsDecodeItem = (cursor) => {
         const listSize = cursor.getU16();
         for (let i = 0; i < listSize; i++) {
             const key = cursor.getString();
-            const value = argumentsDecodeItem(cursor);
+            const value = jsValueDecodeItem(cursor);
             out[key] = value;
         }
         return {
@@ -162,45 +307,25 @@ const argumentsDecodeItem = (cursor) => {
             value: out
         };
     }
+    if (typeParam === 13) {
+        const json = jsJsonDecodeItem(cursor);
+        return {
+            type: 'json',
+            value: json
+        };
+    }
     console.error('typeParam', typeParam);
     throw Error('Nieprawidłowe odgałęzienie');
 };
-const argumentsDecode = (getUint8Memory, ptr, size) => {
+const jsValueDecode = (getUint8Memory, ptr, size) => {
     try {
         const cursor = new BufferCursor(getUint8Memory, ptr, size);
-        return argumentsDecodeItem(cursor);
+        return jsValueDecodeItem(cursor);
     }
     catch (err) {
         console.error(err);
         return [];
     }
-};
-var Guard;
-(function (Guard) {
-    Guard.isString = (value) => {
-        return typeof value === 'string';
-    };
-    Guard.isStringOrNull = (value) => {
-        return value === null || typeof value === 'string';
-    };
-    Guard.isNumber = (value) => {
-        if (typeof value === 'object' && value !== null && 'type' in value) {
-            return value.type === 'i32' || value.type === 'u32';
-        }
-        return false;
-    };
-    Guard.isBigInt = (value) => {
-        if (typeof value === 'object' && value !== null && 'type' in value) {
-            return value.type === 'i64' || value.type === 'u64';
-        }
-        return false;
-    };
-})(Guard || (Guard = {}));
-const assertNever = (_value) => {
-    throw Error("assert never");
-};
-const getStringSize = (value) => {
-    return new TextEncoder().encode(value).length;
 };
 const getSize = (value) => {
     if (value === true ||
@@ -209,7 +334,7 @@ const getSize = (value) => {
         value === undefined) {
         return 1;
     }
-    if (Guard.isString(value)) {
+    if (GuardJsValue.isString(value)) {
         return 1 + 4 + getStringSize(value);
     }
     if (Array.isArray(value)) {
@@ -236,6 +361,9 @@ const getSize = (value) => {
         }
         return sum;
     }
+    if (value.type === 'json') {
+        return 1 + jsJsonGetSize(value.value);
+    }
     return assertNever();
 };
 const saveToBufferItem = (value, cursor) => {
@@ -260,7 +388,7 @@ const saveToBufferItem = (value, cursor) => {
         cursor.setBuffer(value);
         return;
     }
-    if (Guard.isString(value)) {
+    if (GuardJsValue.isString(value)) {
         cursor.setByte(10);
         cursor.setString(value);
         return;
@@ -306,6 +434,10 @@ const saveToBufferItem = (value, cursor) => {
         }
         return;
     }
+    if (value.type === 'json') {
+        saveJsJsonToBufferItem(value.value, cursor);
+        return;
+    }
     return assertNever();
 };
 const saveToBuffer = (getUint8Memory, alloc, value) => {
@@ -334,7 +466,7 @@ const convertFromJsValue = (value) => {
     if (value instanceof Uint8Array) {
         return value;
     }
-    if (Guard.isString(value)) {
+    if (GuardJsValue.isString(value)) {
         return value;
     }
     if (Array.isArray(value)) {
@@ -356,6 +488,9 @@ const convertFromJsValue = (value) => {
             result[key] = convertFromJsValue(propertyValue);
         }
         return result;
+    }
+    if (value.type === 'json') {
+        return value.value;
     }
     return assertNever();
 };
@@ -422,7 +557,7 @@ const wasmInit = async (wasmBinPath, imports) => {
     };
     //@ts-expect-error
     const exports = module_instance.instance.exports;
-    const decodeArguments = (ptr, size) => argumentsDecode(getUint8Memory, ptr, size);
+    const decodeArguments = (ptr, size) => jsValueDecode(getUint8Memory, ptr, size);
     const valueSaveToBuffer = (value) => saveToBuffer(getUint8Memory, exports.alloc, value);
     const wasm_callback = (callback_id, value) => {
         const value_ptr = valueSaveToBuffer(value);
@@ -1423,7 +1558,7 @@ class JsNode {
     }
     nextRoot(path, args) {
         const [firstName, ...rest] = args;
-        if (Guard.isString(firstName) && rest.length === 0) {
+        if (GuardJsValue.isString(firstName) && rest.length === 0) {
             if (firstName === 'window') {
                 return new JsNode(this.api, this.nodes, this.texts, window);
             }
@@ -1433,7 +1568,7 @@ class JsNode {
             console.error(`JsNode.nextRoot: Global name not found -> ${firstName}`, { path, args });
             return null;
         }
-        if (Guard.isNumber(firstName) && rest.length === 0) {
+        if (GuardJsValue.isNumber(firstName) && rest.length === 0) {
             const domId = firstName.value;
             const node = this.nodes.getItem(domId);
             if (node !== undefined) {
@@ -1451,7 +1586,7 @@ class JsNode {
     }
     nextGet(path, args) {
         const [property, ...getArgs] = args;
-        if (Guard.isString(property) && getArgs.length === 0) {
+        if (GuardJsValue.isString(property) && getArgs.length === 0) {
             return this.getByProperty(path, property);
         }
         console.error('JsNode.nextGet - wrong parameters', { path, args });
@@ -1459,7 +1594,7 @@ class JsNode {
     }
     nextSet(path, args) {
         const [property, value, ...setArgs] = args;
-        if (Guard.isString(property) && setArgs.length === 0) {
+        if (GuardJsValue.isString(property) && setArgs.length === 0) {
             try {
                 //@ts-expect-error
                 this.wsk[property] = convertFromJsValue(value);
@@ -1479,7 +1614,7 @@ class JsNode {
     }
     nextCall(path, args) {
         const [property, ...callArgs] = args;
-        if (Guard.isString(property)) {
+        if (GuardJsValue.isString(property)) {
             try {
                 let paramsJs = callArgs.map(convertFromJsValue);
                 //@ts-expect-error
@@ -1501,7 +1636,7 @@ class JsNode {
     nextGetProps(path, args) {
         const result = {};
         for (const property of args) {
-            if (Guard.isString(property)) {
+            if (GuardJsValue.isString(property)) {
                 const value = this.getByProperty(path, property);
                 if (value === null) {
                     return null;

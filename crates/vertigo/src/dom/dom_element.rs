@@ -422,15 +422,13 @@ fn get_key_down_event(data: JsValue) -> Result<KeyDownEvent, String> {
         let meta_key = params.get_bool("metaKey")?;
         params.expect_no_more()?;
 
-        Ok((key, code, alt_key, ctrl_key, shift_key, meta_key))
-    }).map(|(key, code, alt_key, ctrl_key, shift_key, meta_key)| {
-        KeyDownEvent {
+        Ok(KeyDownEvent {
             key,
             code,
             alt_key,
             ctrl_key,
             shift_key,
             meta_key,
-        }
+        })
     })
 }

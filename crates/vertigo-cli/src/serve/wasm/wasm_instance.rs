@@ -36,7 +36,7 @@ pub enum Message {
     },
 }
 
-#[derive(Debug, PartialEq, Eq)]
+#[derive(Debug, Eq)]
 pub struct FetchRequest {
     pub method: String,
     pub url: String,
@@ -44,6 +44,14 @@ pub struct FetchRequest {
     pub body: Option<String>,
 }
 
+impl PartialEq for  FetchRequest {
+    fn eq(&self, other: &Self) -> bool {
+        self.method == other.method &&
+        self.url == other.url &&
+        self.headers == other.headers  &&
+        self.body == other.body
+    }
+}
 impl Hash for FetchRequest {
     fn hash<H: std::hash::Hasher>(&self, state: &mut H) {
         self.method.hash(state);

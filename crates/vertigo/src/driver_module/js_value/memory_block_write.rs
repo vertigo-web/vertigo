@@ -51,5 +51,10 @@ impl MemoryBlockWrite {
         let bytes: [u8; 2] = value.to_be_bytes();
         self.write(&bytes);
     }
+
+    pub fn write_f64(&mut self, value: f64) {
+        let bytes: [u8; 8] = value.to_be_bytes();
+        self.write(&bytes);
+    }
 }
 
