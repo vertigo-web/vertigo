@@ -6,7 +6,7 @@ extern crate pest_derive;
 extern crate proc_macro_error;
 
 mod css_parser;
-mod serde_request;
+mod js_json_derive;
 mod html_parser;
 mod bind;
 mod include_static;
@@ -15,7 +15,6 @@ mod wasm_path;
 
 use html_parser::dom_inner;
 use proc_macro::{TokenStream, Span};
-use proc_macro2::{TokenStream as TokenStream2};
 
 use crate::{
     css_parser::generate_css_string,
@@ -56,31 +55,21 @@ pub fn css(input: TokenStream) -> TokenStream {
     result.into()
 }
 
-#[proc_macro_derive(SerdeSingleRequest)]
+#[proc_macro_derive(JsJsonDerive)]
 #[proc_macro_error]
-pub fn serde_single_request_macro_derive(input: TokenStream) -> TokenStream {
+pub fn AutoJsJson(input: TokenStream) -> TokenStream {
     let ast = syn::parse(input).unwrap();
-    serde_request::impl_single_request_trait_macro(&ast)
-}
 
-#[proc_macro_derive(SerdeListRequest)]
-#[proc_macro_error]
-pub fn serde_list_request_macro_derive(input: TokenStream) -> TokenStream {
-    let ast = syn::parse(input).unwrap();
-    serde_request::impl_list_request_trait_macro(&ast)
-}
-
-#[proc_macro_derive(SerdeRequest)]
-#[proc_macro_error]
-pub fn serde_request_macro_derive(input: TokenStream) -> TokenStream {
-    let ast = syn::parse(input).unwrap();
-    let single: TokenStream2 = serde_request::impl_single_request_trait_macro(&ast).into();
-    let list: TokenStream2 = serde_request::impl_list_request_trait_macro(&ast).into();
-    let result = quote! {
-        #single
-        #list
-    };
-    result.into()
+    match js_json_derive::impl_js_json_derive(&ast) {
+        Ok(result) => {
+            result
+        },
+        Err(message) => {
+            emit_error!(Span::call_site(), "{}", message);
+            let empty = "";
+            quote! { #empty }.into()
+        }
+    }
 }
 
 fn convert_to_tokens(input: Result<TokenStream, String>) -> TokenStream {

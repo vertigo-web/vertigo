@@ -14,7 +14,7 @@ use crate::{
     driver_module::{
         js_value::JsValue,
         utils::json::JsonMapBuilder
-    }
+    }, JsJson
 };
 
 use super::{
@@ -394,7 +394,7 @@ impl ApiImport {
         method: FetchMethod,
         url: String,
         headers: Option<HashMap<String, String>>,
-        body: Option<String>,
+        body: Option<JsJson>,
     ) -> Pin<Box<dyn Future<Output = FetchResult> + 'static>> {
         let (sender, receiver) = FutureBox::new();
 
@@ -403,7 +403,7 @@ impl ApiImport {
                 .convert(|mut params| {
                     let success = params.get_bool("success")?;
                     let status = params.get_u32("status")?;
-                    let response = params.get_string("response")?;
+                    let response = params.get_json("response")?;
                     params.expect_no_more()?;
                     Ok((success, status, response))
                 });
@@ -413,7 +413,7 @@ impl ApiImport {
                     get_driver().transaction(|_| {
                         let response = match success {
                             true => Ok((status, response)),
-                            false => Err(response),
+                            false => Err(format!("{response:#?}")),
                         };
                         sender.publish(response);
                     });
@@ -447,7 +447,7 @@ impl ApiImport {
                 JsValue::String(url),
                 JsValue::String(headers),
                 match body {
-                    Some(body) => JsValue::String(body),
+                    Some(body) => JsValue::Json(body),
                     None => JsValue::Null,
                 },
             ))

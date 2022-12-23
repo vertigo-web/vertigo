@@ -75,7 +75,7 @@ impl JsValueConst {
     }
 }
 
-#[derive(Debug, PartialEq)]
+#[derive(Debug, PartialEq, Clone)]
 pub enum JsValue {
     U32(u32),
     I32(i32),
@@ -121,7 +121,7 @@ impl JsValue {
     }
 
     fn get_string_size(value: &str) -> u32 {
-        PARAM_TYPE + STRING_SIZE + value.as_bytes().len() as u32
+        value.as_bytes().len() as u32
     }
 
     fn get_size(&self) -> u32 {
@@ -137,7 +137,7 @@ impl JsValue {
             Self::Undefined => PARAM_TYPE,
 
             Self::Vec(value) => PARAM_TYPE + VEC_SIZE + value.len() as u32,
-            Self::String(value) => JsValue::get_string_size(value),
+            Self::String(value) => PARAM_TYPE + STRING_SIZE + JsValue::get_string_size(value),
             Self::List(items) => {
                 let mut sum = PARAM_TYPE + LIST_COUNT;
 
@@ -151,7 +151,7 @@ impl JsValue {
                 let mut sum = PARAM_TYPE + OBJECT_COUNT;
 
                 for (key, value) in map {
-                    sum += Self::get_string_size(key);
+                    sum += STRING_SIZE + Self::get_string_size(key);
                     sum += value.get_size();
                 }
 
@@ -238,7 +238,7 @@ impl JsValue {
     }
 
 
-    pub fn name(&self) -> &'static str {
+    pub fn typename(&self) -> &'static str {
         match self {
             Self::U32(..) => "u32",
             Self::I32(..) => "i32",
@@ -290,7 +290,7 @@ fn decode_js_value_inner(buffer: &mut MemoryBlockRead) -> Result<JsValue, String
     let type_param = buffer.get_byte();
 
     let Some(type_param) = JsValueConst::from_byte(type_param) else {
-        return Err(format!("Unknown data type prefix {type_param}"));
+        return Err(format!("JsValue: Unknown data type prefix {type_param}"));
     };
 
     let result = match type_param {

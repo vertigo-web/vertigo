@@ -104,6 +104,9 @@ class BufferCursor {
         const buffer = encoder.encode(value);
         this.setBuffer(buffer);
     }
+    getSavedSize() {
+        return this.pointer;
+    }
 }
 const getStringSize = (value) => {
     return new TextEncoder().encode(value).length;
@@ -154,7 +157,7 @@ const jsJsonGetSize = (value) => {
     //object
     let sum = 1 + 2;
     for (const [key, propertyValue] of Object.entries(value)) {
-        sum += getStringSize(key);
+        sum += 4 + getStringSize(key);
         sum += jsJsonGetSize(propertyValue);
     }
     return sum;
@@ -356,7 +359,7 @@ const getSize = (value) => {
     if (value.type === 'object') {
         let sum = 1 + 2;
         for (const [key, propertyValue] of Object.entries(value.value)) {
-            sum += getStringSize(key);
+            sum += 4 + getStringSize(key);
             sum += getSize(propertyValue);
         }
         return sum;
@@ -435,6 +438,7 @@ const saveToBufferItem = (value, cursor) => {
         return;
     }
     if (value.type === 'json') {
+        cursor.setByte(13);
         saveJsJsonToBufferItem(value.value, cursor);
         return;
     }
@@ -448,6 +452,13 @@ const saveToBuffer = (getUint8Memory, alloc, value) => {
     const ptr = alloc(size);
     const cursor = new BufferCursor(getUint8Memory, ptr, size);
     saveToBufferItem(value, cursor);
+    if (size !== cursor.getSavedSize()) {
+        console.error({
+            size,
+            savedSize: cursor.getSavedSize(),
+        });
+        throw Error('Mismatch between calculated and recorded size');
+    }
     return ptr;
 };
 const convertFromJsValue = (value) => {
@@ -685,10 +696,14 @@ class Fetch {
         })
             .then((response) => response.text()
             .then((responseText) => {
+            const responseJson = JSON.parse(responseText);
             wasm.wasm_callback(callback_id, [
                 true,
                 { type: 'u32', value: response.status },
-                responseText //body
+                {
+                    type: 'json',
+                    value: responseJson
+                }
             ]);
         })
             .catch((err) => {
@@ -697,7 +712,12 @@ class Fetch {
             wasm.wasm_callback(callback_id, [
                 false,
                 { type: 'u32', value: response.status },
-                responseMessage //body
+                {
+                    type: 'json',
+                    value: {
+                        error_message: responseMessage
+                    }
+                }
             ]);
         }))
             .catch((err) => {
@@ -706,7 +726,12 @@ class Fetch {
             wasm.wasm_callback(callback_id, [
                 false,
                 { type: 'u32', value: 0 },
-                responseMessage //body
+                {
+                    type: 'json',
+                    value: {
+                        error_message: responseMessage
+                    }
+                }
             ]);
         });
     };

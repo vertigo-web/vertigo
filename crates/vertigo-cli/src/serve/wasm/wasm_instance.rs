@@ -6,7 +6,7 @@ use super::get_now;
 use super::js_value_match::{Match};
 use crate::serve::request_state::RequestState;
 
-use crate::serve::js_value::JsValue;
+use crate::serve::js_value::{JsValue, JsJson};
 use crate::serve::wasm::data_context::DataContext;
 use wasmtime::{
     Engine,
@@ -68,7 +68,7 @@ impl Hash for FetchRequest {
 pub struct FetchResponse {
     pub success: bool,
     pub status: u32,
-    pub body: String,
+    pub body: JsJson,
 }
 
 fn match_history_router(arg: &JsValue) -> Result<(), ()> {
@@ -364,7 +364,7 @@ impl WasmInstance {
         let params = JsValue::List(vec!(
             JsValue::bool(response.success),
             JsValue::U32(response.status),
-            JsValue::String(response.body)
+            JsValue::Json(response.body)
         ));
 
         let result = self.wasm_callback(callback_id, params);

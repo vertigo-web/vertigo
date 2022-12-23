@@ -1,5 +1,7 @@
 use std::collections::HashMap;
 
+//TODO - remove this structure, start using JsJson
+
 #[derive(Default)]
 pub struct JsonMapBuilder {
     data: HashMap<String, String>,

@@ -1,14 +1,14 @@
 use std::collections::HashMap;
 
 use crate::{
-    driver_module::driver::{FetchMethod, FetchResult}, get_driver,
+    driver_module::driver::{FetchMethod, FetchResult}, get_driver, JsJson,
 };
 
 /// Builder for simple requests.
 pub struct FetchBuilder {
     url: String,
     headers: Option<HashMap<String, String>>,
-    body: Option<String>,
+    body: Option<JsJson>,
 }
 
 impl FetchBuilder {
@@ -31,7 +31,7 @@ impl FetchBuilder {
     }
 
     #[must_use]
-    pub fn set_body(self, body: String) -> Self {
+    pub fn set_body(self, body: JsJson) -> Self {
         let FetchBuilder { url, headers, .. } = self;
         FetchBuilder {
             url,

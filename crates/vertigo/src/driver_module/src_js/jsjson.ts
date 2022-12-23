@@ -44,7 +44,7 @@ export const jsJsonGetSize = (value: JsJsonType): number => {
     let sum = 1 + 2;
 
     for (const [key, propertyValue] of Object.entries(value)) {
-        sum += getStringSize(key);
+        sum += 4 + getStringSize(key);
         sum += jsJsonGetSize(propertyValue);
     }
 

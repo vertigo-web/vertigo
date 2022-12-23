@@ -27,10 +27,15 @@ export class Fetch {
             .then((response) =>
                 response.text()
                     .then((responseText) => {
+                        const responseJson = JSON.parse(responseText);
+
                         wasm.wasm_callback(callback_id, [
                             true,                                       //ok
                             { type: 'u32', value: response.status },    //http code
-                            responseText                                //body
+                            {                                           //body
+                                type: 'json',
+                                value: responseJson
+                            }
                         ]);
                     })
                     .catch((err) => {
@@ -40,7 +45,12 @@ export class Fetch {
                         wasm.wasm_callback(callback_id, [
                             false,                                      //ok
                             { type: 'u32', value: response.status },    //http code
-                            responseMessage                             //body
+                            {                                           //body
+                                type: 'json',
+                                value: {
+                                    error_message: responseMessage
+                                }
+                            }
                         ]);
                     })
             )
@@ -51,7 +61,12 @@ export class Fetch {
                 wasm.wasm_callback(callback_id, [
                     false,                                      //ok
                     { type: 'u32', value: 0 },                  //http code
-                    responseMessage                             //body
+                    {                                           //body
+                        type: 'json',
+                        value: {
+                            error_message: responseMessage
+                        }
+                    }
                 ]);
             })
         ;
