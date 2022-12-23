@@ -79,6 +79,8 @@ args = [ "-p", "typescript", "tsc",
 [tasks.build-js]
 dependencies = [ "build-js-run-ts" ]
 script = [
+    "rm -Rf crates/vertigo-cli/src/serve/js_value",
+    "cp -R crates/vertigo/src/driver_module/js_value crates/vertigo-cli/src/serve/js_value",
     "npx rollup crates/vertigo/src/driver_module/src_js_build/index.js --file crates/vertigo/src/driver_module/wasm_run.js",
     "rm -rf crates/vertigo/src/driver_module/src_js_build",
 ]

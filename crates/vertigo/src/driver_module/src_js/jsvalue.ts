@@ -174,7 +174,7 @@ const getSize = (value: JsValueType): number => {
         let sum = 1 + 2;
 
         for (const [key, propertyValue] of Object.entries(value.value)) {
-            sum += getStringSize(key);
+            sum += 4 + getStringSize(key);
             sum += getSize(propertyValue);
         }
 
@@ -274,6 +274,7 @@ const saveToBufferItem = (value: JsValueType, cursor: BufferCursor) => {
     }
 
     if (value.type === 'json') {
+        cursor.setByte(13);
         saveJsJsonToBufferItem(value.value, cursor);
         return;
     }
@@ -295,6 +296,15 @@ export const saveToBuffer = (
 
     const cursor = new BufferCursor(getUint8Memory, ptr, size);
     saveToBufferItem(value, cursor);
+
+    if (size !== cursor.getSavedSize()) {
+        console.error({
+            size,
+            savedSize: cursor.getSavedSize(),
+        });
+
+        throw Error('Mismatch between calculated and recorded size');
+    }
 
     return ptr;
 };

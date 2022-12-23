@@ -1,26 +1,26 @@
-use serde::{Deserialize, Serialize};
 use std::{cmp::PartialEq, rc::Rc};
-use vertigo::{AutoMap, Resource, SerdeSingleRequest, Value, LazyCache, Context, RequestBuilder};
+use vertigo::{AutoMap, Resource, Value, LazyCache, Context, RequestBuilder};
+use vertigo::AutoJsJson;
 
-#[derive(Debug, Serialize, Deserialize, PartialEq, Eq, Clone, Default)]
+#[derive(Debug, AutoJsJson, PartialEq, Eq, Clone, Default)]
 pub struct Commit {
     pub sha: String,
     pub commit: CommitDetails,
 }
 
-#[derive(Debug, Serialize, Deserialize, PartialEq, Eq, Clone, Default)]
+#[derive(Debug, AutoJsJson, PartialEq, Eq, Clone, Default)]
 pub struct CommitDetails {
     pub author: Signature,
     pub committer: Signature,
 }
 
-#[derive(Debug, Serialize, Deserialize, PartialEq, Eq, Clone, Default)]
+#[derive(Debug, AutoJsJson, PartialEq, Eq, Clone, Default)]
 pub struct Signature {
     pub name: String,
     pub email: String,
 }
 
-#[derive(Debug, Serialize, Deserialize, SerdeSingleRequest, PartialEq, Eq, Clone, Default)]
+#[derive(Debug, AutoJsJson, PartialEq, Eq, Clone, Default)]
 pub struct Branch {
     pub name: String,
     pub commit: Commit,

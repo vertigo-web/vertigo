@@ -133,6 +133,10 @@ export class BufferCursor {
         const buffer = encoder.encode(value);
         this.setBuffer(buffer);
     }
+
+    public getSavedSize(): number {
+        return this.pointer;
+    }
 }
 
 export const getStringSize = (value: string): number => {

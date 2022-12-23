@@ -3,6 +3,7 @@ use std::{
     pin::Pin,
     rc::Rc,
 };
+use crate::JsJson;
 use crate::fetch::request_builder::RequestBuilder;
 use crate::{
     Dependencies, DropResource, FutureBox,
@@ -89,7 +90,7 @@ impl DriverInner {
 /// Variants:
 /// - `Ok(status_code, response)` if request succeded,
 /// - `Err(response)` if request failed (because ofnetwork error for example).
-pub type FetchResult = Result<(u32, String), String>;
+pub type FetchResult = Result<(u32, JsJson), String>;
 
 /// Main connection to vertigo facilities - dependencies and rendering client (the browser).
 ///

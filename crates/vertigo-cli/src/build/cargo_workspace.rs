@@ -7,7 +7,7 @@ pub fn get_workspace(config_opt: &mut CargoResult::<Config>) -> Result<Workspace
     let config = match config_opt {
         CargoResult::Ok(config) => config,
         CargoResult::Err(err) => {
-            return Err(format!("Can't load cargo config: {}", err))
+            return Err(format!("Can't load cargo config: {err}"))
         }
     };
 
@@ -16,14 +16,14 @@ pub fn get_workspace(config_opt: &mut CargoResult::<Config>) -> Result<Workspace
     let cwd = match current_dir() {
         Ok(cwd) => cwd,
         Err(err) => {
-            return Err(format!("Can't get current working dir: {}", err))
+            return Err(format!("Can't get current working dir: {err}"))
         }
     };
 
     match Workspace::new(&cwd.join("Cargo.toml"), config) {
         CargoResult::Ok(ws) => Ok(ws),
         CargoResult::Err(err) => {
-            Err(format!("Can't load workspace: {}", err))
+            Err(format!("Can't load workspace: {err}"))
         }
     }
 }

@@ -13,8 +13,7 @@ use crate::{
     WebsocketConnection,
     driver_module::{
         js_value::JsValue,
-        utils::json::JsonMapBuilder
-    }
+    }, JsJson, JsJsonObjectBuilder
 };
 
 use super::{
@@ -394,7 +393,7 @@ impl ApiImport {
         method: FetchMethod,
         url: String,
         headers: Option<HashMap<String, String>>,
-        body: Option<String>,
+        body: Option<JsJson>,
     ) -> Pin<Box<dyn Future<Output = FetchResult> + 'static>> {
         let (sender, receiver) = FutureBox::new();
 
@@ -403,7 +402,7 @@ impl ApiImport {
                 .convert(|mut params| {
                     let success = params.get_bool("success")?;
                     let status = params.get_u32("status")?;
-                    let response = params.get_string("response")?;
+                    let response = params.get_json("response")?;
                     params.expect_no_more()?;
                     Ok((success, status, response))
                 });
@@ -413,7 +412,7 @@ impl ApiImport {
                     get_driver().transaction(|_| {
                         let response = match success {
                             true => Ok((status, response)),
-                            false => Err(response),
+                            false => Err(format!("{response:#?}")),
                         };
                         sender.publish(response);
                     });
@@ -427,15 +426,15 @@ impl ApiImport {
         });
 
         let headers = {
-            let mut headers_builder = JsonMapBuilder::new();
+            let mut headers_builder = JsJsonObjectBuilder::default();
 
             if let Some(headers) = headers {
                 for (key, value) in headers.into_iter() {
-                    headers_builder.set_string(&key, &value);
+                    headers_builder = headers_builder.insert(key, value);
                 }
             }
 
-            headers_builder.build()
+            headers_builder.get()
         };
 
         self.dom_access()
@@ -445,9 +444,9 @@ impl ApiImport {
                 JsValue::U64(callback_id.as_u64()),
                 JsValue::String(method.to_str()),
                 JsValue::String(url),
-                JsValue::String(headers),
+                JsValue::Json(headers),
                 match body {
-                    Some(body) => JsValue::String(body),
+                    Some(body) => JsValue::Json(body),
                     None => JsValue::Null,
                 },
             ))
@@ -528,12 +527,12 @@ impl ApiImport {
             .exec();
     }
 
-    pub fn dom_bulk_update(&self, value: &str) {
+    pub fn dom_bulk_update(&self, value: JsJson) {
         self.dom_access()
             .api()
             .get("dom")
             .call("dom_bulk_update", vec!(
-                JsValue::str(value)
+                JsValue::Json(value)
             ))
             .exec();
     }

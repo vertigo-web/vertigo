@@ -5,7 +5,7 @@ use html_query_parser::{Node, Htmlifiable};
 use tokio::sync::mpsc::UnboundedSender;
 use crate::serve::{wasm::{Message, WasmInstance, FetchRequest, FetchResponse}, mount_path::MountPathConfig, js_value::JsValue};
 
-use super::{DomCommand, element::AllElements, replace_html, send_request::send_request};
+use super::{DomCommand, element::AllElements, replace_html, send_request::send_request, dom_command::dom_command_from_js_json};
 
 enum FetchStatus {
     Requested {
@@ -80,8 +80,15 @@ impl HtmlResponse {
                 Some(self.build_response())
             }
             Message::DomUpdate(update) => {
-                let commands = serde_json::from_str::<Vec<DomCommand>>(update.as_str()).unwrap();
-                self.feed(commands);
+                match dom_command_from_js_json(update) {
+                    Ok(commands) => {
+                        self.feed(commands);
+                    }
+                    Err(message) => {
+                        log::error!("DomUpdate: {message}");
+                    }
+                }
+                
                 None
             }
             Message::Panic(message) => {
