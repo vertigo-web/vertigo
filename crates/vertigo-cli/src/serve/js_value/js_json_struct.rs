@@ -4,6 +4,7 @@ use super::{
     memory_block_write::MemoryBlockWrite,
     memory_block_read::MemoryBlockRead
 };
+use super::serialize::{JsJsonContext, JsJsonDeserialize, JsJsonSerialize};
 
 const PARAM_TYPE: u32 = 1;
 const STRING_SIZE: u32 = 4;
@@ -50,7 +51,17 @@ impl JsJsonConst {
 
 //https://www.json.org/json-en.html
 
-#[derive(Debug, PartialEq)]
+/*
+    https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/Number#number_encoding
+
+    The JavaScript Number type is a double-precision 64-bit binary format IEEE 754 value, like double in Java or C#. This means it can represent fractional values, but there are some limits to the stored number's magnitude and precision. Very briefly, an IEEE 754 double-precision number uses 64 bits to represent 3 parts:
+
+    1 bit for the sign (positive or negative)
+    11 bits for the exponent (-1022 to 1023)
+    52 bits for the mantissa (representing a number between 0 and 1)
+*/
+
+#[derive(Debug, PartialEq, Clone)]
 pub enum JsJson {
     True,
     False,
@@ -68,7 +79,7 @@ impl JsJson {
             Self::False => PARAM_TYPE,
             Self::Null => PARAM_TYPE,
 
-            Self::String(value) => Self::get_string_size(value),
+            Self::String(value) => PARAM_TYPE + STRING_SIZE + Self::get_string_size(value),
             Self::Number(..) => PARAM_TYPE + 8,
             Self::List(items) => {
                 let mut sum = PARAM_TYPE + LIST_COUNT;
@@ -83,7 +94,7 @@ impl JsJson {
                 let mut sum = PARAM_TYPE + OBJECT_COUNT;
 
                 for (key, value) in map {
-                    sum += Self::get_string_size(key);
+                    sum += STRING_SIZE + Self::get_string_size(key);
                     sum += value.get_size();
                 }
 
@@ -93,7 +104,7 @@ impl JsJson {
     }
 
     fn get_string_size(value: &str) -> u32 {
-        PARAM_TYPE + STRING_SIZE + value.as_bytes().len() as u32
+        value.as_bytes().len() as u32
     }
 
     pub fn write_to(&self, buff: &mut MemoryBlockWrite) {
@@ -108,6 +119,7 @@ impl JsJson {
                 buff.write_u8(JsJsonConst::Null.as_byte());
             }
             Self::String(value) => {
+                buff.write_u8(JsJsonConst::String.as_byte());
                 write_string_to(value.as_str(), buff);
             }
             Self::Number(value) => {
@@ -133,11 +145,53 @@ impl JsJson {
             }
         }
     }
+
+    pub fn typename(&self) -> &'static str {
+        match self {
+            Self::True => "bool",
+            Self::False => "bool",
+            Self::Null => "null",
+            Self::String(..) => "string",
+            Self::Number(..) => "number",
+            Self::List(..) => "list",
+            Self::Object(..) => "object",
+        }
+    }
+
+    pub fn get_hashmap(self, context: &JsJsonContext) -> Result<HashMap<String, JsJson>, JsJsonContext> {
+        let object = match self {
+            JsJson::Object(object) => object,
+            other => {
+                let message = ["object expected, received ", other.typename()].concat();
+                return Err(context.add(message));
+            }
+        };
+
+        Ok(object)
+    }
+
+    pub fn get_property<T: JsJsonDeserialize>(&mut self, context: &JsJsonContext, param: &'static str) -> Result<T, JsJsonContext> {
+        let object = match self {
+            JsJson::Object(object) => object,
+            other => {
+                let message = ["object expected, received ", other.typename()].concat();
+                return Err(context.add(message));
+            }
+        };
+
+        let context = context.add(["field: '", param, "'"].concat());
+
+        let item = object.remove(param).ok_or_else(|| {
+            context.add("missing field")
+        })?;
+
+        T::from_json(context, item)
+    }
+
 }
 
 fn write_string_to(value: &str, buff: &mut MemoryBlockWrite) {
     // TODO: impl From<JsJsonConst> for u8, and accept 'impl Into<u8>` in write_u8 to get rid of reapeting .as_byte()
-    buff.write_u8(JsJsonConst::String.as_byte());
     let data = value.as_bytes();
     buff.write_u32(data.len() as u32);
     buff.write(data);
@@ -147,7 +201,7 @@ pub fn decode_js_json_inner(buffer: &mut MemoryBlockRead) -> Result<JsJson, Stri
     let type_param = buffer.get_byte();
 
     let Some(type_param) = JsJsonConst::from_byte(type_param) else {
-        return Err(format!("Unknown data type prefix {type_param}"));
+        return Err(format!("JsJson: Unknown data type prefix {type_param}"));
     };
 
     let result = match type_param {
@@ -180,13 +234,10 @@ pub fn decode_js_json_inner(buffer: &mut MemoryBlockRead) -> Result<JsJson, Stri
             let object_size = buffer.get_u16();
 
             for _ in 0..object_size {
-                let prop_name = decode_js_json_inner(buffer)?;
-                let JsJson::String(prop_name) = prop_name else {
-                    return Err("string expected".into());
-                };
+                let str_len = buffer.get_u32();
+                let prop_name = buffer.get_string(str_len)?;
 
                 let prop_value = decode_js_json_inner(buffer)?;
-
                 props.insert(prop_name, prop_value);
             }
 
@@ -195,4 +246,22 @@ pub fn decode_js_json_inner(buffer: &mut MemoryBlockRead) -> Result<JsJson, Stri
     };
 
     Ok(result)
+}
+
+#[derive(Default)]
+pub struct JsJsonObjectBuilder {
+    data: HashMap<String, JsJson>
+}
+
+impl JsJsonObjectBuilder {
+    pub fn insert(mut self, name: impl ToString, value: impl JsJsonSerialize) -> Self {
+        let name = name.to_string();
+        let value = value.to_json();
+        self.data.insert(name, value);
+        self
+    }
+
+    pub fn get(self) -> JsJson {
+        JsJson::Object(self.data)
+    }
 }

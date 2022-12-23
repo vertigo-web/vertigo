@@ -75,10 +75,9 @@ impl<T> Clone for ApiResponse<T> {
 /// after defined amount of time.
 ///
 /// ```rust
-/// use vertigo::{Computed, LazyCache, RequestBuilder, SerdeRequest, Resource};
-/// use serde::{Serialize, Deserialize};
+/// use vertigo::{Computed, LazyCache, RequestBuilder, AutoJsJson, Resource};
 ///
-/// #[derive(Serialize, Deserialize, SerdeRequest, PartialEq, Clone)]
+/// #[derive(AutoJsJson, PartialEq, Clone)]
 /// pub struct Model {
 ///     id: i32,
 ///     name: String,
@@ -94,7 +93,7 @@ impl<T> Clone for ApiResponse<T> {
 ///             .ttl_seconds(300)
 ///             .lazy_cache(|status, body| {
 ///                 if status == 200 {
-///                     Some(body.into_vec::<Model>())
+///                     Some(body.into::<Vec<Model>>())
 ///                 } else {
 ///                     None
 ///                 }

@@ -17,7 +17,7 @@ pub fn run_cargo_build(package_name: &str, public_path: &str) -> Result<PathBuf,
     let workspace = match get_workspace(&mut config_opt) {
         Ok(ws) => ws,
         Err(err) => {
-            let msg = format!("Build failed: {}", err);
+            let msg = format!("Build failed: {err}");
             log::error!("{}", &msg);
             return Err(msg);
         }

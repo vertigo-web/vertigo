@@ -1,7 +1,8 @@
 use std::collections::HashMap;
-use crate::{FetchBuilder, LazyCache};
+use crate::{FetchBuilder, LazyCache, JsJson};
 use std::time::Duration;
 use super::resource::Resource;
+use crate::{from_json, JsJsonSerialize, JsJsonDeserialize};
 
 #[derive(Clone, Debug)]
 pub enum Method {
@@ -18,20 +19,6 @@ impl Method {
     }
 }
 
-/// Ensures that this type is serializable and deserializable so can be used for defining a resource.
-pub trait SingleRequestTrait: Sized {
-    fn into_string(self) -> String;
-    fn from_string(data: &str) -> Result<Self, String>;
-}
-
-/// Ensures that vector of objects of this type is serializable and deserializable so can be used for defining a resource.
-pub trait ListRequestTrait: Sized {
-    //TODO - To consider whether this returned string will cause problems in the case of ill-defined structures. Perhaps it is worth replacing the serde with something smaller ?
-    fn list_into_string(vec: Vec<Self>) -> String;
-    //TODO - To consider whether this returned string will cause problems in the case of ill-defined structures. Perhaps it is worth replacing the serde with something smaller ?
-    fn list_from_string(data: &str) -> Result<Vec<Self>, String>;
-}
-
 /// Builder for typed requests (more complex version of [FetchBuilder](struct.FetchBuilder.html)).
 ///
 /// Unlike in the FetchBuilder, here request and response data is a type implementing [SingleRequestTrait] or [ListRequestTrait].
@@ -40,7 +27,7 @@ pub struct RequestBuilder {
     method: Method,
     url: String,
     headers: HashMap<String, String>,
-    body: Option<String>,
+    body: Option<JsJson>,
     ttl: Option<Duration>,
 }
 
@@ -64,7 +51,8 @@ impl RequestBuilder {
     }
 
     #[must_use]
-    pub fn body(mut self, body: String) -> Self {
+    pub fn body(mut self, body: impl JsJsonSerialize) -> Self {
+        let body = body.to_json();
         self.body = Some(body);
         self
     }
@@ -84,8 +72,7 @@ impl RequestBuilder {
     }
 
     #[must_use]
-    pub fn body_json(self, body: impl SingleRequestTrait) -> Self {
-        let body: String = body.into_string();
+    pub fn body_json(self, body: impl JsJsonSerialize) -> Self {
         self.body(body).set_header("Content-Type", "application/json")
     }
 
@@ -150,23 +137,16 @@ impl RequestBuilder {
 
 #[derive(Debug)]
 pub struct RequestResponseBody {
-    body: String,
+    body: JsJson,
 }
 
 impl RequestResponseBody {
-    fn new(body: String) -> RequestResponseBody {
+    fn new(body: JsJson) -> RequestResponseBody {
         RequestResponseBody { body }
     }
 
-    pub fn into<T: SingleRequestTrait>(self) -> Resource<T> {
-        match T::from_string(self.body.as_str()) {
-            Ok(data) => Resource::Ready(data),
-            Err(err) => Resource::Error(err),
-        }
-    }
-
-    pub fn into_vec<T: ListRequestTrait>(self) -> Resource<Vec<T>> {
-        match T::list_from_string(self.body.as_str()) {
+    pub fn into<T: JsJsonDeserialize>(self) -> Resource<T> {
+        match from_json::<T>(self.body) {
             Ok(data) => Resource::Ready(data),
             Err(err) => Resource::Error(err),
         }
@@ -178,11 +158,11 @@ impl RequestResponseBody {
 pub struct RequestResponse {
     method: Method,
     url: String,
-    data: Result<(u32, String), String>,
+    data: Result<(u32, JsJson), String>,
 }
 
 impl RequestResponse {
-    fn new(method: Method, url: String, data: Result<(u32, String), String>) -> RequestResponse {
+    fn new(method: Method, url: String, data: Result<(u32, JsJson), String>) -> RequestResponse {
         RequestResponse { method, url, data }
     }
 
@@ -213,7 +193,7 @@ impl RequestResponse {
         result
     }
 
-    pub fn into_data<T: SingleRequestTrait>(self) -> Resource<T> {
+    pub fn into_data<T: JsJsonDeserialize>(self) -> Resource<T> {
         self.into(|_, response_body| {
             Some(response_body.into::<T>())
         })
@@ -221,7 +201,7 @@ impl RequestResponse {
 
     pub fn into_error_message<T>(self) -> Resource<T> {
         let body = match self.data {
-            Ok((code, body)) => format!("API error {code}: {body}"),
+            Ok((code, body)) => format!("API error {code}: {body:#?}"),
             Err(body) => format!("Network error: {body}"),
         };
 

@@ -1,5 +1,7 @@
 use std::collections::VecDeque;
 
+use super::js_json_struct::JsJson;
+
 use super::js_value_struct::JsValue;
 
 
@@ -22,7 +24,7 @@ impl JsValueListDecoder {
         match value {
             JsValue::Vec(buffer) => Ok(buffer),
             item => {
-                let name = item.name();
+                let name = item.typename();
                 Err(format!("{label} -> buffer expected, received {name}"))
             }
         }
@@ -36,7 +38,7 @@ impl JsValueListDecoder {
         match value {
             JsValue::U64(value) => Ok(value),
             item => {
-                let name = item.name();
+                let name = item.typename();
                 Err(format!("{label} -> u64 expected, received {name}"))
             }
         }
@@ -51,7 +53,7 @@ impl JsValueListDecoder {
             JsValue::U64(value) => Ok(Some(value)),
             JsValue::Null => Ok(None),
             item => {
-                let name = item.name();
+                let name = item.typename();
                 Err(format!("{label} -> Option<u64> expected, received {name}"))
             }
         }
@@ -65,7 +67,7 @@ impl JsValueListDecoder {
         match value {
             JsValue::String(value) => Ok(value),
             item => {
-                let name = item.name();
+                let name = item.typename();
                 Err(format!("{label} -> String expected, received {name}"))
             }
         }
@@ -79,8 +81,22 @@ impl JsValueListDecoder {
         match value {
             JsValue::U32(value) => Ok(value),
             item => {
-                let name = item.name();
+                let name = item.typename();
                 Err(format!("{label} -> u32 expected, received {name}"))
+            }
+        }
+    }
+
+    pub fn get_json(&mut self, label: &'static str) -> Result<JsJson, String> {
+        let Some(value) = self.data.pop_front() else {
+            return Err(format!("{label} -> has no more params"));
+        };
+
+        match value {
+            JsValue::Json(value) => Ok(value),
+            item => {
+                let name = item.typename();
+                Err(format!("{label} -> json expected, received {name}"))
             }
         }
     }
@@ -94,7 +110,7 @@ impl JsValueListDecoder {
             JsValue::True => Ok(true),
             JsValue::False => Ok(false),
             item => {
-                let name = item.name();
+                let name = item.typename();
                 Err(format!("{label} -> bool expected, received {name}"))
             }
         }
@@ -115,7 +131,7 @@ impl JsValueListDecoder {
             let inner_list = match value {
                 JsValue::List(list) => list,
                 item => {
-                    let name = item.name();
+                    let name = item.typename();
                     return Err(format!("{label} -> list expected, received {name}"));
                 }
             };

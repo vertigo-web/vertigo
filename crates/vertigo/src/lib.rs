@@ -117,15 +117,24 @@ use driver_module::{init_env::init_env, api::CallbackId};
 pub use driver_module::{
     api::ApiImport,
     driver::{Driver, FetchResult, FetchMethod},
-    js_value::JsValue,
-    js_value::MemoryBlock,
+    js_value::{
+        MemoryBlock,
+        JsValue,
+        JsJson,
+        JsJsonSerialize,
+        JsJsonDeserialize,
+        JsJsonContext,
+        JsJsonObjectBuilder,
+        from_json,
+        to_json
+    },
     dom_command::DriverDomCommand,
 };
 pub use fetch::{
     fetch_builder::FetchBuilder,
     lazy_cache::{self, LazyCache},
     pinboxfut::PinBoxFuture,
-    request_builder::{ListRequestTrait, RequestResponse, SingleRequestTrait, RequestBuilder},
+    request_builder::{RequestResponse, RequestBuilder},
     resource::Resource,
 };
 pub use future_box::{FutureBoxSend, FutureBox};
@@ -151,20 +160,7 @@ pub use vertigo_macro::bind_rc;
 /// Allows to create an event handler based on provided arguments which launches an asynchronous action
 pub use vertigo_macro::bind_spawn;
 
-#[cfg(feature = "serde_request")]
-/// Implements [ListRequestTrait] using serde (needs `serde_request` feature).
-pub use vertigo_macro::SerdeListRequest;
-
-#[cfg(feature = "serde_request")]
-/// Implements both [SingleRequestTrait] and [ListRequestTrait] using serde (needs `serde_request` feature).
-pub use vertigo_macro::SerdeRequest;
-
-#[cfg(feature = "serde_request")]
-/// Implements [SingleRequestTrait] using serde (needs `serde_request` feature).
-pub use vertigo_macro::SerdeSingleRequest;
-
-#[cfg(feature = "serde_request")]
-pub use serde_json;
+pub use vertigo_macro::AutoJsJson;
 
 // Export log module which can be used in vertigo plugins
 pub use log;

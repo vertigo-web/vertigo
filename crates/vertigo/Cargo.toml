@@ -12,13 +12,6 @@ categories = ["asynchronous", "gui", "wasm", "web-programming"]
 license = "MIT OR Apache-2.0"
 edition = "2021"
 
-[features]
-serde_request = [ "serde_json" ]
-
 [dependencies]
 log = { version = "0.4.14", features=["std"] }
-serde_json = { version = "1.0", optional = true }
 vertigo-macro = { path = "../../crates/vertigo-macro", version="0.2.0-alpha" }
-
-[dev-dependencies]
-serde = { version = "1.0", features = ["derive"] }

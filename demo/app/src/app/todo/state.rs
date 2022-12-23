@@ -1,5 +1,5 @@
-use serde::{Deserialize, Serialize};
-use vertigo::{AutoMap, LazyCache, SerdeRequest, Value, RequestBuilder};
+use vertigo::{AutoMap, LazyCache, Value, RequestBuilder};
+use vertigo::AutoJsJson;
 
 #[derive(PartialEq, Eq, Clone)]
 pub enum View {
@@ -8,7 +8,7 @@ pub enum View {
     User { email: String },
 }
 
-#[derive(PartialEq, Eq, Serialize, Deserialize, SerdeRequest, Debug, Clone)]
+#[derive(PartialEq, Eq, AutoJsJson, Debug, Clone)]
 pub struct PostModel {
     pub id: u32,
     pub title: String,
@@ -16,7 +16,7 @@ pub struct PostModel {
     // pub userId: u32,
 }
 
-#[derive(PartialEq, Eq, Serialize, Deserialize, SerdeRequest, Debug, Clone, PartialOrd)]
+#[derive(PartialEq, Eq, AutoJsJson, Debug, Clone, PartialOrd)]
 pub struct CommentModel {
     pub id: u32,
     pub body: String,
@@ -40,7 +40,7 @@ impl TodoState {
             .ttl_minutes(10)
             .lazy_cache(|status, body| {
                 if status == 200 {
-                    Some(body.into_vec::<PostModel>())
+                    Some(body.into::<Vec<PostModel>>())
                 } else {
                     None
                 }
@@ -52,7 +52,7 @@ impl TodoState {
                     .ttl_minutes(10)
                     .lazy_cache(|status, body| {
                         if status == 200 {
-                            Some(body.into_vec::<CommentModel>())
+                            Some(body.into::<Vec<CommentModel>>())
                         } else {
                             None
                         }

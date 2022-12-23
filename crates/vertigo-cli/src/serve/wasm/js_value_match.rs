@@ -1,6 +1,6 @@
 #![allow(clippy::from_over_into)]
 
-use crate::serve::js_value::JsValue;
+use crate::serve::js_value::{JsValue, JsJson};
 
 
 #[cfg(test)]
@@ -118,6 +118,21 @@ impl<'a> Match<'a> {
         let list = self.list;
 
         let Some((JsValue::String(value), rest)) = list.split_first() else {
+            return Err(());
+        };
+
+        Ok((
+            Self {
+                list: rest
+            },
+            value.clone()
+        ))
+    }
+
+    pub fn json(&self) -> Result<(Self, JsJson), ()> {
+        let list = self.list;
+
+        let Some((JsValue::Json(value), rest)) = list.split_first() else {
             return Err(());
         };
 

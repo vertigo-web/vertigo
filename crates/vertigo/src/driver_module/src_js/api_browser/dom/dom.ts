@@ -402,7 +402,7 @@ export class DriverDom {
         }
     }
 
-    public dom_bulk_update = (value: string) => {
+    public dom_bulk_update = (commands: Array<CommandType>) => {
         if (this.initBeforeFirstUpdate === false) {
             this.initBeforeFirstUpdate = true;
             this.clearRootContent();
@@ -410,24 +410,16 @@ export class DriverDom {
 
         const setFocus: Set<number> = new Set();
 
-        try {
-            const commands: Array<CommandType> = JSON.parse(value);
-
-            for (const command of commands) {
-                try {
-                    this.bulk_update_command(command);
-                } catch (error) {
-                    console.error('bulk_update - item', error, command);
-                }
-
-                if (command.type === 'set_attr' && command.name.toLocaleLowerCase() === 'autofocus') {
-                    setFocus.add(command.id);
-                }
+        for (const command of commands) {
+            try {
+                this.bulk_update_command(command);
+            } catch (error) {
+                console.error('bulk_update - item', error, command);
             }
-        } catch (error) {
-            console.warn('buil_update - check in: https://jsonformatter.curiousconcept.com/')
-            console.warn('bulk_update - param', value);
-            console.error('bulk_update - incorrectly json data', error);
+
+            if (command.type === 'set_attr' && command.name.toLocaleLowerCase() === 'autofocus') {
+                setFocus.add(command.id);
+            }
         }
 
         if (setFocus.size > 0) {

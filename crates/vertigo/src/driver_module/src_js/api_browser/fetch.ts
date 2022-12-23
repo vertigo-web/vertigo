@@ -12,25 +12,28 @@ export class Fetch {
         callback_id: bigint,
         method: string,
         url: string,
-        headers: string,
-        body: string | null,
+        headers: Record<string, string>,
+        body: unknown,
     ) => {
         const wasm = this.getWasm();
 
-        const headers_record: Record<string, string> = JSON.parse(headers);
-
         fetch(url, {
             method,
-            body,
-            headers: Object.keys(headers_record).length === 0 ? undefined : headers_record,
+            headers,
+            body: body === null ? undefined : JSON.stringify(body),
         })
             .then((response) =>
                 response.text()
                     .then((responseText) => {
+                        const responseJson = JSON.parse(responseText);
+
                         wasm.wasm_callback(callback_id, [
                             true,                                       //ok
                             { type: 'u32', value: response.status },    //http code
-                            responseText                                //body
+                            {                                           //body
+                                type: 'json',
+                                value: responseJson
+                            }
                         ]);
                     })
                     .catch((err) => {
@@ -40,7 +43,12 @@ export class Fetch {
                         wasm.wasm_callback(callback_id, [
                             false,                                      //ok
                             { type: 'u32', value: response.status },    //http code
-                            responseMessage                             //body
+                            {                                           //body
+                                type: 'json',
+                                value: {
+                                    error_message: responseMessage
+                                }
+                            }
                         ]);
                     })
             )
@@ -51,7 +59,12 @@ export class Fetch {
                 wasm.wasm_callback(callback_id, [
                     false,                                      //ok
                     { type: 'u32', value: 0 },                  //http code
-                    responseMessage                             //body
+                    {                                           //body
+                        type: 'json',
+                        value: {
+                            error_message: responseMessage
+                        }
+                    }
                 ]);
             })
         ;
