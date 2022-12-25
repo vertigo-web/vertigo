@@ -15,3 +15,4 @@ pub use js_json_struct::JsJson;
 mod tests;
 
 pub use serialize::{JsJsonContext, JsJsonSerialize, JsJsonDeserialize, from_json, to_json};
+pub use js_json_struct::JsJsonObjectBuilder;

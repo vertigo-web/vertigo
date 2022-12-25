@@ -1,6 +1,6 @@
 use std::cell::Cell;
 
-use crate::DomId;
+use crate::{DomId, JsJson};
 use crate::struct_mut::VecMut;
 
 use crate::driver_module::api::ApiImport;
@@ -94,7 +94,7 @@ impl DriverDom {
         let state = self.commands.take();
 
         if !state.is_empty() {
-            let mut out = Vec::<String>::new();
+            let mut out = Vec::<JsJson>::new();
 
             let state = sort_commands(state);
 
@@ -102,8 +102,8 @@ impl DriverDom {
                 out.push(command.into_string());
             }
 
-            let command_str = format!("[{}]", out.join(","));
-            self.api.dom_bulk_update(command_str.as_str());
+            let out = JsJson::List(out);
+            self.api.dom_bulk_update(out);
         }
     }
 

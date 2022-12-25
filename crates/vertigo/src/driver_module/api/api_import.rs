@@ -13,8 +13,7 @@ use crate::{
     WebsocketConnection,
     driver_module::{
         js_value::JsValue,
-        utils::json::JsonMapBuilder
-    }, JsJson
+    }, JsJson, JsJsonObjectBuilder
 };
 
 use super::{
@@ -427,15 +426,15 @@ impl ApiImport {
         });
 
         let headers = {
-            let mut headers_builder = JsonMapBuilder::new();
+            let mut headers_builder = JsJsonObjectBuilder::default();
 
             if let Some(headers) = headers {
                 for (key, value) in headers.into_iter() {
-                    headers_builder.set_string(&key, &value);
+                    headers_builder = headers_builder.insert(key, value);
                 }
             }
 
-            headers_builder.build()
+            headers_builder.get()
         };
 
         self.dom_access()
@@ -445,7 +444,7 @@ impl ApiImport {
                 JsValue::U64(callback_id.as_u64()),
                 JsValue::String(method.to_str()),
                 JsValue::String(url),
-                JsValue::String(headers),
+                JsValue::Json(headers),
                 match body {
                     Some(body) => JsValue::Json(body),
                     None => JsValue::Null,
@@ -528,12 +527,12 @@ impl ApiImport {
             .exec();
     }
 
-    pub fn dom_bulk_update(&self, value: &str) {
+    pub fn dom_bulk_update(&self, value: JsJson) {
         self.dom_access()
             .api()
             .get("dom")
             .call("dom_bulk_update", vec!(
-                JsValue::str(value)
+                JsValue::Json(value)
             ))
             .exec();
     }

@@ -151,6 +151,12 @@ impl JsJsonDeserialize for i32 {
     }
 }
 
+impl JsJsonSerialize for &str {
+    fn to_json(self) -> JsJson {
+        JsJson::String(self.into())
+    }
+}
+
 impl<T: JsJsonSerialize> JsJsonSerialize for Vec<T> {
     fn to_json(self) -> JsJson {
         let mut list = Vec::new();
@@ -177,6 +183,53 @@ impl<T: JsJsonDeserialize> JsJsonDeserialize for Vec<T> {
         }
 
         Ok(list)
+    }
+}
+
+impl<T: JsJsonSerialize> JsJsonSerialize for Option<T> {
+    fn to_json(self) -> JsJson {
+        match self {
+            Some(value) => value.to_json(),
+            None => JsJson::Null,
+        }
+    }
+}
+
+impl<T: JsJsonDeserialize> JsJsonDeserialize for Option<T> {
+    fn from_json(context: JsJsonContext, json: JsJson) -> Result<Self, JsJsonContext> {
+        if let JsJson::Null = json {
+            return Ok(None);
+        }
+
+        Ok(Some(T::from_json(context, json)?))
+    }
+}
+
+impl<T: JsJsonSerialize> JsJsonSerialize for HashMap<String, T> {
+    fn to_json(self) -> JsJson {
+        let mut result = HashMap::new();
+
+        for (key, item) in self {
+            result.insert(key, item.to_json());
+        }
+
+        JsJson::Object(result)
+    }
+}
+
+impl<T: JsJsonDeserialize> JsJsonDeserialize for HashMap<String, T> {
+    fn from_json(context: JsJsonContext, json: JsJson) -> Result<Self, JsJsonContext> {
+        let map = json.get_hashmap(&context)?;
+
+        let mut result = HashMap::new();
+
+        for (key, item) in map {
+            let context = context.add(["field: '", key.as_str(), "'"].concat());
+            let value = T::from_json(context, item)?;
+            result.insert(key, value);
+        }
+
+        Ok(result)
     }
 }
 

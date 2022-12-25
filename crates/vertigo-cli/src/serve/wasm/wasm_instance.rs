@@ -1,12 +1,11 @@
 use std::sync::Arc;
 use std::collections::HashMap;
 use std::hash::Hash;
-use serde::{Serialize, Deserialize};
 use super::get_now;
 use super::js_value_match::{Match};
 use crate::serve::request_state::RequestState;
 
-use crate::serve::js_value::{JsValue, JsJson};
+use crate::serve::js_value::{JsValue, JsJson, from_json};
 use crate::serve::wasm::data_context::DataContext;
 use wasmtime::{
     Engine,
@@ -21,7 +20,7 @@ use tokio::sync::mpsc::UnboundedSender;
 #[derive(Debug)]
 pub enum Message {
     TimeoutAndSendResponse,
-    DomUpdate(String),
+    DomUpdate(JsJson),
     Panic(Option<String>),
     SetTimeoutZero {
         callback_id: u64
@@ -98,14 +97,14 @@ fn match_history_router_callback(arg: &JsValue) -> Result<(), ()> {
     Ok(())
 }
 
-fn match_dom_bulk_update(arg: &JsValue) -> Result<String, ()> {
+fn match_dom_bulk_update(arg: &JsValue) -> Result<JsJson, ()> {
     let matcher = Match::new(arg)?;
     let matcher = matcher.test_list(&["api"])?;
     let matcher = matcher.test_list(&["get", "dom"])?;
-    let (matcher, data) = matcher.test_list_with_fn(|matcher: Match| -> Result<String, ()> {
+    let (matcher, data) = matcher.test_list_with_fn(|matcher: Match| -> Result<JsJson, ()> {
         let matcher = matcher.str("call")?;
         let matcher = matcher.str("dom_bulk_update")?;
-        let (matcher, data) = matcher.string()?;
+        let (matcher, data) = matcher.json()?;
         matcher.end()?;
     
         Ok(data)
@@ -191,9 +190,6 @@ fn match_interval(arg: &JsValue) -> Result<CallWebsocketResult, ()> {
     Ok(result)
 }
 
-#[derive(Serialize, Deserialize)]
-struct Headers(HashMap<String, String>);
-
 fn match_fetch(arg: &JsValue) -> Result<(u64, FetchRequest), ()> {
     let matcher = Match::new(arg)?;
 
@@ -207,11 +203,13 @@ fn match_fetch(arg: &JsValue) -> Result<(u64, FetchRequest), ()> {
         let (matcher, callback_id) = matcher.u64()?;
         let (matcher, method) = matcher.string()?;
         let (matcher, url) = matcher.string()?;
-        let (matcher, headers) = matcher.string()?;
+        let (matcher, headers) = matcher.json()?;
         let (matcher, body) = matcher.option_string()?;
         matcher.end()?;
 
-        let Headers(headers) = serde_json::from_str::<Headers>(headers.as_str()).unwrap();
+        let headers = from_json::<HashMap<String, String>>(headers).map_err(|error| {
+            log::error!("error decode headers: {error}");
+        })?;
 
         Ok((callback_id, FetchRequest {
             method,

@@ -688,11 +688,10 @@ class Fetch {
     }
     fetch_send_request = (callback_id, method, url, headers, body) => {
         const wasm = this.getWasm();
-        const headers_record = JSON.parse(headers);
         fetch(url, {
             method,
             body,
-            headers: Object.keys(headers_record).length === 0 ? undefined : headers_record,
+            headers,
         })
             .then((response) => response.text()
             .then((responseText) => {
@@ -1362,30 +1361,22 @@ class DriverDom {
             }
         }
     };
-    dom_bulk_update = (value) => {
+    dom_bulk_update = (commands) => {
         if (this.initBeforeFirstUpdate === false) {
             this.initBeforeFirstUpdate = true;
             this.clearRootContent();
         }
         const setFocus = new Set();
-        try {
-            const commands = JSON.parse(value);
-            for (const command of commands) {
-                try {
-                    this.bulk_update_command(command);
-                }
-                catch (error) {
-                    console.error('bulk_update - item', error, command);
-                }
-                if (command.type === 'set_attr' && command.name.toLocaleLowerCase() === 'autofocus') {
-                    setFocus.add(command.id);
-                }
+        for (const command of commands) {
+            try {
+                this.bulk_update_command(command);
             }
-        }
-        catch (error) {
-            console.warn('buil_update - check in: https://jsonformatter.curiousconcept.com/');
-            console.warn('bulk_update - param', value);
-            console.error('bulk_update - incorrectly json data', error);
+            catch (error) {
+                console.error('bulk_update - item', error, command);
+            }
+            if (command.type === 'set_attr' && command.name.toLocaleLowerCase() === 'autofocus') {
+                setFocus.add(command.id);
+            }
         }
         if (setFocus.size > 0) {
             setTimeout(() => {

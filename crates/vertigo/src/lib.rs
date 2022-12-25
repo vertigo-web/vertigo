@@ -124,6 +124,7 @@ pub use driver_module::{
         JsJsonSerialize,
         JsJsonDeserialize,
         JsJsonContext,
+        JsJsonObjectBuilder,
         from_json,
         to_json
     },

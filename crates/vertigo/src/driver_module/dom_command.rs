@@ -1,5 +1,4 @@
-use crate::DomId;
-use crate::driver_module::utils::json::JsonMapBuilder;
+use crate::{DomId, JsJson, JsJsonObjectBuilder};
 
 use super::api::CallbackId;
 
@@ -66,84 +65,96 @@ impl DriverDomCommand {
         )
     }
 
-    pub fn into_string(self) -> String {
-        let mut out = JsonMapBuilder::new();
-
+    pub fn into_string(self) -> JsJson {
         match self {
             Self::CreateNode { id, name } => {
-                out.set_string("type", "create_node");
-                out.set_u64("id", id.to_u64());
-                out.set_string("name", name);
+                JsJsonObjectBuilder::default()
+                    .insert("type", "create_node")
+                    .insert("id", id.to_u64())
+                    .insert("name", name)
+                    .get()
             }
             Self::CreateText { id, value } => {
-                out.set_string("type", "create_text");
-                out.set_u64("id", id.to_u64());
-                out.set_string("value", value.as_str());
+                JsJsonObjectBuilder::default()
+                    .insert("type", "create_text")
+                    .insert("id", id.to_u64())
+                    .insert("value", value)
+                    .get()
             }
             Self::UpdateText { id, value } => {
-                out.set_string("type", "update_text");
-                out.set_u64("id", id.to_u64());
-                out.set_string("value", value.as_str());
+                JsJsonObjectBuilder::default()
+                    .insert("type", "update_text")
+                    .insert("id", id.to_u64())
+                    .insert("value", value)
+                    .get()
             }
             Self::SetAttr { id, name, value } => {
-                out.set_string("type", "set_attr");
-                out.set_u64("id", id.to_u64());
-                out.set_string("name", name);
-                out.set_string("value", value.as_str());
+                JsJsonObjectBuilder::default()
+                    .insert("type", "set_attr")
+                    .insert("id", id.to_u64())
+                    .insert("name", name)
+                    .insert("value", value)
+                    .get()
             }
             Self::RemoveNode { id } => {
-                out.set_string("type", "remove_node");
-                out.set_u64("id", id.to_u64());
+                JsJsonObjectBuilder::default()
+                    .insert("type", "remove_node")
+                    .insert("id", id.to_u64())
+                    .get()
             }
             Self::RemoveText { id } => {
-                out.set_string("type", "remove_text");
-                out.set_u64("id", id.to_u64());
+                JsJsonObjectBuilder::default()
+                    .insert("type", "remove_text")
+                    .insert("id", id.to_u64())
+                    .get()
             }
 
             Self::CreateComment { id, value } => {
-                out.set_string("type", "create_comment");
-                out.set_u64("id", id.to_u64());
-                out.set_string("value", value.as_str());
+                JsJsonObjectBuilder::default()
+                    .insert("type", "create_comment")
+                    .insert("id", id.to_u64())
+                    .insert("value", value)
+                    .get()
             },
             Self::RemoveComment { id } => {
-                out.set_string("type", "remove_comment");
-                out.set_u64("id", id.to_u64());
+                JsJsonObjectBuilder::default()
+                    .insert("type", "remove_comment")
+                    .insert("id", id.to_u64())
+                    .get()
             },
 
             Self::InsertBefore { parent, child, ref_id } => {
-                out.set_string("type", "insert_before");
-                out.set_u64("parent", parent.to_u64());
-                out.set_u64("child", child.to_u64());
-
-                match ref_id {
-                    Some(ref_id) => {
-                        out.set_u64("ref_id", ref_id.to_u64());
-                    }
-                    None => {
-                        out.set_null("ref_id");
-                    }
-                }
+                JsJsonObjectBuilder::default()
+                    .insert("type", "insert_before")
+                    .insert("parent", parent.to_u64())
+                    .insert("child", child.to_u64())
+                    .insert("ref_id", ref_id.map(|value| value.to_u64()))
+                    .get()
             }
             Self::InsertCss { selector, value } => {
-                out.set_string("type", "insert_css");
-                out.set_string("selector", selector.as_str());
-                out.set_string("value", value.as_str());
+                JsJsonObjectBuilder::default()
+                    .insert("type", "insert_css")
+                    .insert("selector", selector)
+                    .insert("value", value)
+                    .get()
             },
             Self::CallbackAdd { id, event_name, callback_id } => {
-                out.set_string("type", "callback_add");
-                out.set_u64("id", id.to_u64());
-                out.set_string("event_name", event_name.as_str());
-                out.set_u64("callback_id", callback_id.as_u64());
+                JsJsonObjectBuilder::default()
+                    .insert("type", "callback_add")
+                    .insert("id", id.to_u64())
+                    .insert("event_name", event_name)
+                    .insert("callback_id", callback_id.as_u64())
+                    .get()
             },
             Self::CallbackRemove { id, event_name, callback_id } => {
-                out.set_string("type", "callback_remove");
-                out.set_u64("id", id.to_u64());
-                out.set_string("event_name", event_name.as_str());
-                out.set_u64("callback_id", callback_id.as_u64());
+                JsJsonObjectBuilder::default()
+                    .insert("type", "callback_remove")
+                    .insert("id", id.to_u64())
+                    .insert("event_name", event_name)
+                    .insert("callback_id", callback_id.as_u64())
+                    .get()
             }
         }
-
-        out.build()
     }
 }
 

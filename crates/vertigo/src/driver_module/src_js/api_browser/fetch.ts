@@ -12,17 +12,15 @@ export class Fetch {
         callback_id: bigint,
         method: string,
         url: string,
-        headers: string,
+        headers: Record<string, string>,
         body: string | null,
     ) => {
         const wasm = this.getWasm();
 
-        const headers_record: Record<string, string> = JSON.parse(headers);
-
         fetch(url, {
             method,
             body,
-            headers: Object.keys(headers_record).length === 0 ? undefined : headers_record,
+            headers,
         })
             .then((response) =>
                 response.text()

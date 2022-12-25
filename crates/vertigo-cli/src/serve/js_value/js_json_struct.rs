@@ -4,7 +4,7 @@ use super::{
     memory_block_write::MemoryBlockWrite,
     memory_block_read::MemoryBlockRead
 };
-use super::serialize::{JsJsonContext, JsJsonDeserialize};
+use super::serialize::{JsJsonContext, JsJsonDeserialize, JsJsonSerialize};
 
 const PARAM_TYPE: u32 = 1;
 const STRING_SIZE: u32 = 4;
@@ -158,7 +158,19 @@ impl JsJson {
         }
     }
 
-    pub fn get_property<T: JsJsonDeserialize>(&mut self, context: &JsJsonContext, param: &'static str) -> Result<T, JsJsonContext> {    
+    pub fn get_hashmap(self, context: &JsJsonContext) -> Result<HashMap<String, JsJson>, JsJsonContext> {
+        let object = match self {
+            JsJson::Object(object) => object,
+            other => {
+                let message = ["object expected, received ", other.typename()].concat();
+                return Err(context.add(message));
+            }
+        };
+
+        Ok(object)
+    }
+
+    pub fn get_property<T: JsJsonDeserialize>(&mut self, context: &JsJsonContext, param: &'static str) -> Result<T, JsJsonContext> {
         let object = match self {
             JsJson::Object(object) => object,
             other => {
@@ -234,4 +246,22 @@ pub fn decode_js_json_inner(buffer: &mut MemoryBlockRead) -> Result<JsJson, Stri
     };
 
     Ok(result)
+}
+
+#[derive(Default)]
+pub struct JsJsonObjectBuilder {
+    data: HashMap<String, JsJson>
+}
+
+impl JsJsonObjectBuilder {
+    pub fn insert(mut self, name: impl ToString, value: impl JsJsonSerialize) -> Self {
+        let name = name.to_string();
+        let value = value.to_json();
+        self.data.insert(name, value);
+        self
+    }
+
+    pub fn get(self) -> JsJson {
+        JsJson::Object(self.data)
+    }
 }
