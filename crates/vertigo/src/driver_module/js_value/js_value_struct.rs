@@ -53,9 +53,11 @@ impl JsValueConst {
             _  => None,
         }
     }
+}
 
-    fn as_byte(&self) -> u8 {
-        match self {
+impl From<JsValueConst> for u8 {
+    fn from(value: JsValueConst) -> Self {
+        match value {
             JsValueConst::U32 => 1,
             JsValueConst::I32 => 2,
             JsValueConst::U64 => 3,
@@ -166,46 +168,47 @@ impl JsValue {
     fn write_to(&self, buff: &mut MemoryBlockWrite) {
         match self {
             Self::U32(value) => {
-                buff.write_u8(JsValueConst::U32.as_byte());
+                buff.write_u8(JsValueConst::U32);
                 buff.write_u32(*value);
             },
             Self::I32(value) => {
-                buff.write_u8(JsValueConst::I32.as_byte());
+                buff.write_u8(JsValueConst::I32);
                 buff.write_i32(*value);
             },
             Self::U64(value) => {
-                buff.write_u8(JsValueConst::U64.as_byte());
+                buff.write_u8(JsValueConst::U64);
                 buff.write_u64(*value);
             },
             Self::I64(value) => {
-                buff.write_u8(JsValueConst::I64.as_byte());
+                buff.write_u8(JsValueConst::I64);
                 buff.write_i64(*value);
             },
 
             Self::True => {
-                buff.write_u8(JsValueConst::True.as_byte());
+                buff.write_u8(JsValueConst::True);
             },
             Self::False => {
-                buff.write_u8(JsValueConst::False.as_byte());
+                buff.write_u8(JsValueConst::False);
             },
             Self::Null => {
-                buff.write_u8(JsValueConst::Null.as_byte());
+                buff.write_u8(JsValueConst::Null);
             },
             Self::Undefined => {
-                buff.write_u8(JsValueConst::Undefined.as_byte());
+                buff.write_u8(JsValueConst::Undefined);
             },
 
             Self::Vec(inner_buff) => {
-                buff.write_u8(JsValueConst::Vec.as_byte());
+                buff.write_u8(JsValueConst::Vec);
                 let data = inner_buff.as_slice();
                 buff.write_u32(data.len() as u32);
                 buff.write(inner_buff.as_slice());
             },
             Self::String(value) => {
+                buff.write_u8(JsValueConst::String);
                 write_string_to(value.as_str(), buff);
             },        
             Self::List(list) => {
-                buff.write_u8(JsValueConst::List.as_byte());
+                buff.write_u8(JsValueConst::List);
                 buff.write_u16(list.len() as u16);
         
                 for param in list {
@@ -213,7 +216,7 @@ impl JsValue {
                 }
             },
             Self::Object(map) => {
-                buff.write_u8(JsValueConst::Object.as_byte());
+                buff.write_u8(JsValueConst::Object);
                 buff.write_u16(map.len() as u16);
 
                 for (key, value) in map {
@@ -222,7 +225,7 @@ impl JsValue {
                 }
             }
             Self::Json(json) => {
-                buff.write_u8(JsValueConst::Json.as_byte());
+                buff.write_u8(JsValueConst::Json);
                 json.write_to(buff);
             }
         }
@@ -278,8 +281,6 @@ impl Default for JsValue {
 
 
 fn write_string_to(value: &str, buff: &mut MemoryBlockWrite) {
-    // TODO: impl From<JsValueConst> for u8, and accept 'impl Into<u8>` in write_u8 to get rid of reapeting .as_byte()
-    buff.write_u8(JsValueConst::String.as_byte());
     let data = value.as_bytes();
     buff.write_u32(data.len() as u32);
     buff.write(data);

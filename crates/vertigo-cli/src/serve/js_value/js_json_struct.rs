@@ -35,9 +35,11 @@ impl JsJsonConst {
             _  => None,
         }
     }
+}
 
-    fn as_byte(&self) -> u8 {
-        match self {
+impl From<JsJsonConst> for u8 {
+    fn from(value: JsJsonConst) -> Self {
+        match value {
             JsJsonConst::True => 1,
             JsJsonConst::False => 2,
             JsJsonConst::Null => 3,
@@ -110,24 +112,24 @@ impl JsJson {
     pub fn write_to(&self, buff: &mut MemoryBlockWrite) {
         match self {
             Self::True => {
-                buff.write_u8(JsJsonConst::True.as_byte());
+                buff.write_u8(JsJsonConst::True);
             }
             Self::False => {
-                buff.write_u8(JsJsonConst::False.as_byte());
+                buff.write_u8(JsJsonConst::False);
             }
             Self::Null => {
-                buff.write_u8(JsJsonConst::Null.as_byte());
+                buff.write_u8(JsJsonConst::Null);
             }
             Self::String(value) => {
-                buff.write_u8(JsJsonConst::String.as_byte());
+                buff.write_u8(JsJsonConst::String);
                 write_string_to(value.as_str(), buff);
             }
             Self::Number(value) => {
-                buff.write_u8(JsJsonConst::Number.as_byte());
+                buff.write_u8(JsJsonConst::Number);
                 buff.write_f64(*value);
             }
             Self::List(list) => {
-                buff.write_u8(JsJsonConst::List.as_byte());
+                buff.write_u8(JsJsonConst::List);
                 buff.write_u16(list.len() as u16);
         
                 for param in list {
@@ -135,7 +137,7 @@ impl JsJson {
                 }
             }
             Self::Object(map) => {
-                buff.write_u8(JsJsonConst::Object.as_byte());
+                buff.write_u8(JsJsonConst::Object);
                 buff.write_u16(map.len() as u16);
 
                 for (key, value) in map {
@@ -191,7 +193,6 @@ impl JsJson {
 }
 
 fn write_string_to(value: &str, buff: &mut MemoryBlockWrite) {
-    // TODO: impl From<JsJsonConst> for u8, and accept 'impl Into<u8>` in write_u8 to get rid of reapeting .as_byte()
     let data = value.as_bytes();
     buff.write_u32(data.len() as u32);
     buff.write(data);
