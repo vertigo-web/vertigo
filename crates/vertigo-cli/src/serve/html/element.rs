@@ -1,7 +1,6 @@
 use std::collections::HashMap;
-use html_query_parser::Node as ParserNode;
 
-use super::{ordered_map::OrderedMap, element_children::ElementChildren, DomCommand};
+use super::{ordered_map::OrderedMap, element_children::ElementChildren, DomCommand, HtmlNode, html_element::HtmlElement};
 
 pub enum Node {
     Element(Element),
@@ -152,49 +151,32 @@ impl AllElements {
         }
     }
 
-    fn get_response_one_elements(&self, node_id: u64, with_id: bool) -> ParserNode {
+    fn get_response_one_elements(&self, node_id: u64, with_id: bool) -> HtmlNode {
         let Some(node) = self.all.get(&node_id) else {
             unreachable!();
         };
 
         match node {
             Node::Element(node) => {
-                let attr = node.attr.get_iter();
+                let mut attr = node.attr.clone();
 
-                let basic_attr = attr
-                    .iter()
-                    .map(|(key, value)| (key.as_str(), value.as_str()))
-                    .collect::<Vec<_>>();
-                
                 if with_id {
-                    let node_id_str = node_id.to_string();
-
-                    let mut attr = vec!(("data-id", node_id_str.as_str()));
-                    attr.extend(basic_attr);
-
-                    return ParserNode::new_element(
-                        node.name.as_str(),
-                        attr,
-                        self.get_response_elements(node, with_id)
-                    );
+                    attr.set("data-id", node_id.to_string());
                 }
-                
-                ParserNode::new_element(
-                    node.name.as_str(),
-                    basic_attr,
-                    self.get_response_elements(node, with_id)
-                )
+
+                let children = self.get_response_elements(node, with_id);
+                HtmlElement::from(node.name.clone(), attr, children).into()
             },
             Node::Text(text) => {
-                ParserNode::Text(text.clone())
+                HtmlNode::Text(text.clone())
             },
             Node::Comment(comment) => {
-                ParserNode::Comment(comment.clone())
+                HtmlNode::Comment(comment.clone())
             },
         }
     }
 
-    fn get_response_elements(&self, element: &Element, with_id: bool) -> Vec<ParserNode> {
+    fn get_response_elements(&self, element: &Element, with_id: bool) -> Vec<HtmlNode> {
         let mut result = Vec::new();
 
         for child_id in element.children.childs() {
@@ -204,23 +186,23 @@ impl AllElements {
         result
     }
 
-    fn get_css(&self) -> Vec<ParserNode> {
+    fn get_css(&self) -> Vec<HtmlNode> {
         let mut result = Vec::new();
 
         for (prop, value) in self.css.get_iter() {
             let content = [prop.as_str(), " { ", value.as_str(), " }"].concat();
 
-            result.push(ParserNode::Element {
-                name: "style".to_string(),
-                attrs: HashMap::new(),
-                children: vec!(ParserNode::Text(content))
-            })
+            result.push(
+                HtmlElement::new("style")
+                    .child(HtmlNode::Text(content))
+                    .into()
+            );
         }
 
         result
     }
 
-    pub fn get_response_nodes(&self, with_id: bool) -> Vec<ParserNode> {
+    pub fn get_response_nodes(&self, with_id: bool) -> Vec<HtmlNode> {
         let Some(Node::Element(root)) = self.all.get(&1) else {
             unreachable!();
         };
@@ -231,10 +213,11 @@ impl AllElements {
     }
 
     #[cfg(test)]
-    pub fn get_response(&self, with_id: bool) -> String {
-        let nodes = self.get_response_nodes(with_id);
-        use html_query_parser::Htmlifiable;
-        nodes.html()
+    pub fn get_response(&self, with_id: bool) -> super::HtmlDocument {
+        let elements = self.get_response_nodes(with_id);
+        super::HtmlDocument {
+            elements
+        }
     }
 }
 
@@ -276,16 +259,16 @@ mod tests {
         let mut all = AllElements::new();
 
         create_and_add(&mut all, 1, 2, "div");
-        assert_eq!(all.get_response(true), r#"<div data-id="2"></div>"#);
+        assert_eq!(all.get_response(true).convert_to_string(false), r#"<!DOCTYPE html><div data-id="2"></div>"#);
 
         create_and_add(&mut all, 1, 3, "div");
-        assert_eq!(all.get_response(true), r#"<div data-id="2"></div><div data-id="3"></div>"#);
+        assert_eq!(all.get_response(true).convert_to_string(false), r#"<!DOCTYPE html><div data-id="2"></div><div data-id="3"></div>"#);
 
         create_and_add(&mut all, 3, 4, "span");
-        assert_eq!(all.get_response(true), r#"<div data-id="2"></div><div data-id="3"><span data-id="4"></span></div>"#);
+        assert_eq!(all.get_response(true).convert_to_string(false), r#"<!DOCTYPE html><div data-id="2"></div><div data-id="3"><span data-id="4"></span></div>"#);
 
         add_to_parent(&mut all, 2, 4);
-        assert_eq!(all.get_response(true), r#"<div data-id="2"><span data-id="4"></span></div><div data-id="3"></div>"#);
+        assert_eq!(all.get_response(true).convert_to_string(false), r#"<!DOCTYPE html><div data-id="2"><span data-id="4"></span></div><div data-id="3"></div>"#);
     }
 
 
@@ -338,14 +321,13 @@ mod tests {
         let mut all = AllElements::new();
         all.feed(commands);
 
-        let result = all.get_response(true);
+        let result = all.get_response(true).convert_to_string(false);
 
-        assert_eq!(result, r#"<div data-id="23"><div data-id="2"><ul data-id="3"><li data-id="4"></li><li data-id="6"></li><li data-id="8"></li><li data-id="10"></li><li data-id="12"></li><li data-id="14"></li><li data-id="16"></li><li data-id="18"></li><li data-id="20"></li></ul></div><div data-id="25"><div data-id="26"><div data-id="27"></div></div><button data-id="28"><span data-id="29"></span><span data-id="31"></span></button></div><!--value element--></div>"#);
+        assert_eq!(result, r#"<!DOCTYPE html><div data-id="23"><div data-id="2"><ul data-id="3"><li data-id="4"></li><li data-id="6"></li><li data-id="8"></li><li data-id="10"></li><li data-id="12"></li><li data-id="14"></li><li data-id="16"></li><li data-id="18"></li><li data-id="20"></li></ul></div><div data-id="25"><div data-id="26"><div data-id="27"></div></div><button data-id="28"><span data-id="29"></span><span data-id="31"></span></button></div></div>"#);
     }
 
 
     #[test]
-    #[ignore = "need to add attribute sorting in the generated html"]   //TODO - fix this sorting
     fn test_deserialize() {
         let commands_str = r#"[
             {"id":2,"name":"div","type":"create_node"},
@@ -452,8 +434,8 @@ mod tests {
         let mut all = AllElements::new();
         all.feed(commands);
 
-        let result = all.get_response(true);
-
-        assert_eq!(result, r#"<style>.autocss_1 { list-style-type: none; margin: 10px; padding: 0 }</style><style>.autocss_2:hover { text-decoration: underline; }</style><style>.autocss_2 { display: inline; width: 60px; padding: 5px 10px; margin: 5px; cursor: pointer; background-color: lightgreen }</style><style>.autocss_3:hover { text-decoration: underline; }</style><style>.autocss_3 { display: inline; width: 60px; padding: 5px 10px; margin: 5px; cursor: pointer; background-color: lightblue }</style><style>.autocss_4 { padding: 5px }</style><style>.autocss_5 { border: 1px solid black; padding: 10px; background-color: #e0e0e0; margin-bottom: 10px }</style><style>@keyframes autocss_7 { 0% { -webkit-transform: scale(0);\ntransform: scale(0); }\n100% { -webkit-transform: scale(1.0);\ntransform: scale(1.0);\nopacity: 0; } }</style><style>.autocss_6 { width: 40px; height: 40px; background-color: #d26913; border-radius: 100%; animation: 1.0s infinite ease-in-out autocss_7  }</style><div class="autocss_4" data-id="23"><div data-id="2"><ul data-id="3" class="autocss_1"><li data-id="4" class="autocss_2">Counters</li><li data-id="6" class="autocss_3">Animations</li><li data-id="8" class="autocss_2">Sudoku</li><li data-id="10" class="autocss_2">Input</li><li data-id="12" class="autocss_2">Github Explorer</li><li data-id="14" class="autocss_2">Game Of Life</li><li data-id="16" class="autocss_2">Chat</li><li data-id="18" class="autocss_2">Todo</li><li data-id="20" class="autocss_2">Drop File</li></ul></div><div data-id="25"><div data-id="26" class="autocss_5"><div data-id="27" class="autocss_6"></div></div><button data-id="28"><span data-id="29">start the progress bar</span><span data-id="31"><!--list element--></span></button></div><!--value element--></div>"#);
+        let result = all.get_response(true).convert_to_string(false);
+    
+        assert_eq!(result, r#"<!DOCTYPE html><style>.autocss_1 { list-style-type: none; margin: 10px; padding: 0 }</style><style>.autocss_2:hover { text-decoration: underline; }</style><style>.autocss_2 { display: inline; width: 60px; padding: 5px 10px; margin: 5px; cursor: pointer; background-color: lightgreen }</style><style>.autocss_3:hover { text-decoration: underline; }</style><style>.autocss_3 { display: inline; width: 60px; padding: 5px 10px; margin: 5px; cursor: pointer; background-color: lightblue }</style><style>.autocss_4 { padding: 5px }</style><style>.autocss_5 { border: 1px solid black; padding: 10px; background-color: #e0e0e0; margin-bottom: 10px }</style><style>@keyframes autocss_7 { 0% { -webkit-transform: scale(0);\ntransform: scale(0); }\n100% { -webkit-transform: scale(1.0);\ntransform: scale(1.0);\nopacity: 0; } }</style><style>.autocss_6 { width: 40px; height: 40px; background-color: #d26913; border-radius: 100%; animation: 1.0s infinite ease-in-out autocss_7  }</style><div class="autocss_4" data-id="23"><div data-id="2"><ul class="autocss_1" data-id="3"><li class="autocss_2" data-id="4">Counters</li><li class="autocss_3" data-id="6">Animations</li><li class="autocss_2" data-id="8">Sudoku</li><li class="autocss_2" data-id="10">Input</li><li class="autocss_2" data-id="12">Github Explorer</li><li class="autocss_2" data-id="14">Game Of Life</li><li class="autocss_2" data-id="16">Chat</li><li class="autocss_2" data-id="18">Todo</li><li class="autocss_2" data-id="20">Drop File</li></ul></div><div data-id="25"><div class="autocss_5" data-id="26"><div class="autocss_6" data-id="27"></div></div><button data-id="28"><span data-id="29">start the progress bar</span><span data-id="31"></span></button></div></div>"#);
     }
 }

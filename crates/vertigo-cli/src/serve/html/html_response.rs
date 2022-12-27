@@ -1,11 +1,30 @@
 use std::{collections::HashMap, sync::Arc};
 
 use axum::{http::StatusCode, response::Html};
-use html_query_parser::{Node, Htmlifiable};
 use tokio::sync::mpsc::UnboundedSender;
-use crate::serve::{wasm::{Message, WasmInstance, FetchRequest, FetchResponse}, mount_path::MountPathConfig, js_value::JsValue};
+use crate::serve::{
+    wasm::{
+        Message,
+        WasmInstance,
+        FetchRequest,
+        FetchResponse
+    },
+    mount_path::MountPathConfig,
+    js_value::JsValue
+};
 
-use super::{DomCommand, element::AllElements, replace_html, send_request::send_request, dom_command::dom_command_from_js_json};
+use super::{
+    DomCommand,
+    element::AllElements,
+    replace_html,
+    send_request::send_request,
+    dom_command::dom_command_from_js_json,
+    html_element::{
+        HtmlElement,
+        HtmlDocument
+    },
+    HtmlNode
+};
 
 enum FetchStatus {
     Requested {
@@ -45,16 +64,16 @@ impl HtmlResponse {
         self.all_elements.feed(commands);
     }
 
-    pub fn result(&self) -> String {
-        let index = self.mount_path.index.as_slice();
+    pub fn result(&self) -> HtmlDocument {
+        let index = self.mount_path.index.as_ref();
 
         let content = self.all_elements.get_response_nodes(false);
 
-        let get_content = move || -> Vec<Node> {
+        let get_content = move || -> Vec<HtmlNode> {
             content.clone()
         };
 
-        replace_html(index, &test_node, &get_content).html()
+        replace_html(index, &test_node, &get_content)
     }
 
     pub fn waiting_request(&self) -> u32 {
@@ -70,7 +89,7 @@ impl HtmlResponse {
     }
 
     pub fn build_response(&self) -> (StatusCode, Html<String>) {
-        (StatusCode::OK, Html(self.result()))
+        (StatusCode::OK, Html(self.result().convert_to_string(true)))
     }
 
     pub fn process_message(&mut self, message: Message) -> Option<(StatusCode, Html<String>)> {
@@ -165,6 +184,6 @@ impl HtmlResponse {
 
 }
 
-fn test_node(_: &str, attrs: &HashMap<String, String>) -> bool {
-    attrs.contains_key("data-vertigo-run-wasm")
+fn test_node(node: &HtmlElement) -> bool {
+    node.attr.contains_key("data-vertigo-run-wasm")
 }

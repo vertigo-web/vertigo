@@ -23,7 +23,8 @@ impl MemoryBlockWrite {
         self.offset += data.len() as u32;
     }
 
-    pub fn write_u8(&mut self, value: u8) {
+    pub fn write_u8(&mut self, value: impl Into<u8>) {
+        let value = value.into();
         self.write(&[value]);
     }
 

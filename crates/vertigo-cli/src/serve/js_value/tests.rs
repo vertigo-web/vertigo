@@ -9,7 +9,9 @@ fn json_json_string() {
 
     let block = data1.to_snapshot();
 
-    let data2 = JsValue::from_block(block).unwrap();
+    let Ok(data2) = JsValue::from_block(block) else {
+        unreachable!();
+    };
 
     assert_eq!(data1, data2);
 }
@@ -36,7 +38,9 @@ fn json_json_list() {
 
     let block = data1.to_snapshot();
 
-    let data2 = JsValue::from_block(block).unwrap();
+    let Ok(data2) = JsValue::from_block(block) else {
+        unreachable!();
+    };
 
     assert_eq!(data1, data2);
 }

@@ -28,14 +28,6 @@ fn test_bind() {
     });
 
     on_click3();
-
-
-    // error - TODO
-    // let on_click3: std::rc::Rc<dyn Fn() -> i32> = bind_rc!(state, || -> i32 {
-    //     state + 100
-    // });
-
-    // assert_eq!(on_click3(), 102);
 }
 
 

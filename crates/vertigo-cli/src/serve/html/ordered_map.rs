@@ -1,5 +1,6 @@
 use std::collections::HashMap;
 
+#[derive(Clone)]
 pub struct OrderedMap {
     order: Vec<String>,
     data: HashMap<String, String>,
@@ -32,6 +33,14 @@ impl OrderedMap {
         } else {
             self.order.push(name);
         }
+    }
+
+    pub fn get(&self, name: &str) -> Option<&String> {
+        self.data.get(name)
+    }
+
+    pub fn contains_key(&self, name: &str) -> bool {
+        self.data.contains_key(name)
     }
 
     pub fn get_iter(&self) -> Vec<(String, String)> {

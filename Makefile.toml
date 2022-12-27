@@ -27,7 +27,7 @@ args = [
 
 [tasks.demo-build]
 script = [
-    'cargo run --bin vertigo -- build vertigo-demo --dest-dir=demo_build --public-path=/build'
+    'cargo run --bin vertigo -- build vertigo-demo --dest-dir=demo_build'
 ]
 
 [tasks.demo-serve-api]

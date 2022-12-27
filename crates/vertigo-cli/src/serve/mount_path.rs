@@ -1,7 +1,8 @@
 #![allow(clippy::question_mark)]
 use std::sync::Arc;
 use std::path::Path;
-use html_query_parser::Node;
+
+use super::html::{parse_html, HtmlNode, HtmlDocument};
 
 
 #[derive(Clone)]
@@ -11,7 +12,7 @@ pub struct MountPathConfig {
     //for filesystem
     dest_dir: String,               //TODO - use Path structure
     //index after parsing
-    pub index: Arc<Vec<Node>>,
+    pub index: Arc<HtmlDocument>,
     //path to wasm-file
     pub wasm_path: String,
 }
@@ -20,8 +21,8 @@ impl MountPathConfig {
     pub fn new(dest_dir: String) -> Result<MountPathConfig, i32> {
 
         let index = parse_index(&dest_dir)?;
-
-        let Some(wasm_path) = find_wasm(&index) else {
+    
+        let Some(wasm_path) = find_wasm_node_list(index.elements.as_ref()) else {
             log::error!("Problem with finding the path to the wasm file");
             return Err(-1);
         };
@@ -54,7 +55,7 @@ impl MountPathConfig {
 }
 
 
-fn parse_index(dest_dir: &str) -> Result<Arc<Vec<Node>>, i32> {
+fn parse_index(dest_dir: &str) -> Result<Arc<HtmlDocument>, i32> {
     let index_path = Path::new(dest_dir).join("index.html");
     let index_html = match std::fs::read_to_string(&index_path) {
         Ok(data) => data,
@@ -64,53 +65,24 @@ fn parse_index(dest_dir: &str) -> Result<Arc<Vec<Node>>, i32> {
         }
     };
 
-    let document = html_query_parser::parse(&index_html);
-    Ok(Arc::new(trim_list(document)))
+    let document = parse_html(&index_html);
+
+    Ok(Arc::new(document))
 }
 
-fn trim_node(node: Node) -> Node {
-    match node {
-        Node::Element { name, attrs, children } => {
-            let name = name.trim();
-            let attrs = attrs
-                .iter()
-                .filter_map(|(key, value)| {
-                    let key = key.trim();
-
-                    if key.is_empty() {
-                        None
-                    } else {
-                        Some((key,value.trim()))
-                    }
-                })
-                .collect::<Vec<_>>();
-            
-            Node::new_element(name, attrs, trim_list(children))
-        },
-        rest => rest,
-    }
-}
-
-fn trim_list(list: Vec<Node>) -> Vec<Node> {
-    list
-        .into_iter()
-        .map(trim_node)
-        .collect::<Vec<_>>()
-}
-
-fn find_wasm_node(node: &Node) -> Option<String> {
-    if let Node::Element { attrs, children, .. } = node {
-        if let Some(path) = attrs.get("data-vertigo-run-wasm") {
+fn find_wasm_node(node: &HtmlNode) -> Option<String> {
+    if let HtmlNode::Element(element) = node {
+        if let Some(path) = element.attr.get("data-vertigo-run-wasm") {
             return Some(path.clone());
         }
 
-        return find_wasm_nodes(children);
+        return find_wasm_node_list(&element.children);
     }
 
     None
 }
 
-fn find_wasm_nodes(nodes: &[Node]) -> Option<String> {
+fn find_wasm_node_list(nodes: &[HtmlNode]) -> Option<String> {
     for node in nodes.iter() {
         if let Some(path) = find_wasm_node(node) {
             return Some(path);
@@ -118,10 +90,6 @@ fn find_wasm_nodes(nodes: &[Node]) -> Option<String> {
     }
 
     None
-}
-
-pub fn find_wasm(nodes: &Arc<Vec<Node>>) -> Option<String> {
-    find_wasm_nodes(nodes.as_slice())
 }
 
 fn replace_prefix(public_path: &str, dest_dir: &str, path: &str) -> Result<String, i32> {

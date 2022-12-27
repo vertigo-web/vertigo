@@ -280,7 +280,9 @@ fn aaaa() {
     };
 
     let ccc = bbb.clone().to_json();
-    let ddd = from_json::<Post>(ccc).unwrap();
+    let Ok(ddd) = from_json::<Post>(ccc) else {
+        unreachable!();
+    };
     assert_eq!(bbb, ddd);
 }
 
@@ -301,7 +303,9 @@ fn test_vec() {
 
     let ddd = ccc.clone().to_json();
 
-    let eee = from_json::<Vec<Post>>(ddd).unwrap();
+    let Ok(eee) = from_json::<Vec<Post>>(ddd) else {
+        unreachable!();
+    };
 
     assert_eq!(ccc, eee);
 }
