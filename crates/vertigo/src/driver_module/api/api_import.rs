@@ -13,7 +13,7 @@ use crate::{
     WebsocketConnection,
     driver_module::{
         js_value::JsValue,
-    }, JsJson, JsJsonObjectBuilder
+    }, JsJson, JsJsonObjectBuilder, fetch::request_builder::RequestBody
 };
 
 use super::{
@@ -393,7 +393,7 @@ impl ApiImport {
         method: FetchMethod,
         url: String,
         headers: Option<HashMap<String, String>>,
-        body: Option<JsJson>,
+        body: Option<RequestBody>,
     ) -> Pin<Box<dyn Future<Output = FetchResult> + 'static>> {
         let (sender, receiver) = FutureBox::new();
 
@@ -402,9 +402,23 @@ impl ApiImport {
                 .convert(|mut params| {
                     let success = params.get_bool("success")?;
                     let status = params.get_u32("status")?;
-                    let response = params.get_json("response")?;
+                    let response = params.get_any("response")?;
                     params.expect_no_more()?;
-                    Ok((success, status, response))
+
+                    if let JsValue::Json(json) = response {
+                        return Ok((success, status, RequestBody::Json(json)));
+                    }
+
+                    if let JsValue::String(text) = response {
+                        return Ok((success, status, RequestBody::Text(text)));
+                    }
+
+                    if let JsValue::Vec(buffer) = response {
+                        return Ok((success, status, RequestBody::Binary(buffer)));
+                    }
+
+                    let name = response.typename();
+                    Err(format!("Expected json or string or vec<u8>, received={name}"))
                 });
 
             match params {
@@ -446,8 +460,10 @@ impl ApiImport {
                 JsValue::String(url),
                 JsValue::Json(headers),
                 match body {
-                    Some(body) => JsValue::Json(body),
-                    None => JsValue::Null,
+                    Some(RequestBody::Text(body)) => JsValue::String(body),
+                    Some(RequestBody::Json(json)) => JsValue::Json(json),
+                    Some(RequestBody::Binary(bin)) => JsValue::Vec(bin),
+                    None => JsValue::Undefined,
                 },
             ))
             .exec();

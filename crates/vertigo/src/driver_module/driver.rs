@@ -3,11 +3,10 @@ use std::{
     pin::Pin,
     rc::Rc,
 };
-use crate::JsJson;
-use crate::fetch::request_builder::RequestBuilder;
+use crate::fetch::request_builder::{RequestBuilder, RequestBody};
 use crate::{
     Dependencies, DropResource, FutureBox,
-    FetchBuilder, Instant, WebsocketMessage,
+    Instant, WebsocketMessage,
     css::css_manager::CssManager, Context,
 };
 
@@ -19,7 +18,7 @@ use crate::driver_module::dom::DriverDom;
 
 use super::api::DomAccess;
 
-#[derive(Debug)]
+#[derive(Debug, Clone, Copy)]
 pub enum FetchMethod {
     GET,
     POST,
@@ -90,7 +89,7 @@ impl DriverInner {
 /// Variants:
 /// - `Ok(status_code, response)` if request succeded,
 /// - `Err(response)` if request failed (because ofnetwork error for example).
-pub type FetchResult = Result<(u32, JsJson), String>;
+pub type FetchResult = Result<(u32, RequestBody), String>;
 
 /// Main connection to vertigo facilities - dependencies and rendering client (the browser).
 ///
@@ -117,12 +116,6 @@ impl Driver {
 }
 
 impl Driver {
-    /// Create new FetchBuilder.
-    #[must_use]
-    pub fn fetch(&self, url: impl Into<String>) -> FetchBuilder {
-        FetchBuilder::new(url.into())
-    }
-
     /// Gets a cookie by name
     pub fn cookie_get(&self, cname: &str) -> String {
         self.inner.api.cookie_get(cname)

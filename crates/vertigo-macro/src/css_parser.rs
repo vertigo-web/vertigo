@@ -133,7 +133,6 @@ impl CssParser {
                 Rule::frames => {
                     let frames_strs = value
                         .into_inner()
-                        .into_iter()
                         .map(|frame| {
                             let mut frame_children = frame.into_inner();
                             let step = frame_children.next().unwrap().as_str();
