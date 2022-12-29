@@ -1,20 +1,31 @@
 use std::collections::HashMap;
-use crate::{FetchBuilder, LazyCache, JsJson};
+use crate::{LazyCache, JsJson, get_driver, FetchMethod};
 use std::time::Duration;
 use super::resource::Resource;
 use crate::{from_json, JsJsonSerialize, JsJsonDeserialize};
 
-#[derive(Clone, Debug)]
-pub enum Method {
-    Get,
-    Post,
+#[derive(Debug, Clone)]
+pub enum RequestBody {
+    Text(String),
+    Json(JsJson),
+    Binary(Vec<u8>),
 }
 
-impl Method {
-    fn get_str(&self) -> &str {
+impl RequestBody {
+    pub fn into<T: JsJsonDeserialize>(self) -> Resource<T> {
         match self {
-            Method::Get => "get",
-            &Method::Post => "post",
+            RequestBody::Json(json) => {
+                match from_json::<T>(json) {
+                    Ok(data) => Resource::Ready(data),
+                    Err(err) => Resource::Error(err),
+                }
+            },
+            RequestBody::Text(_) => {
+                Resource::Error("FetchBody.into() - expected json, received text".to_string())
+            },
+            RequestBody::Binary(_) => {
+                Resource::Error("FetchBody.into() - expected json, received binary".to_string())
+            }
         }
     }
 }
@@ -24,15 +35,15 @@ impl Method {
 /// Unlike in the FetchBuilder, here request and response data is a type implementing [SingleRequestTrait] or [ListRequestTrait].
 #[derive(Clone)]
 pub struct RequestBuilder {
-    method: Method,
+    method: FetchMethod,
     url: String,
     headers: HashMap<String, String>,
-    body: Option<JsJson>,
+    body: Option<RequestBody>,
     ttl: Option<Duration>,
 }
 
 impl RequestBuilder {
-    pub fn new(method: Method, url: impl Into<String>) -> Self {
+    pub fn new(method: FetchMethod, url: impl Into<String>) -> Self {
         Self {
             method,
             url: url.into(),
@@ -42,17 +53,18 @@ impl RequestBuilder {
         }
     }
 
+    #[must_use]
     pub fn get(url: impl Into<String>) -> Self {
-        Self::new(Method::Get, url)
-    }
-
-    pub fn post(url: impl Into<String>) -> Self {
-        Self::new(Method::Post, url)
+        Self::new(FetchMethod::GET, url)
     }
 
     #[must_use]
-    pub fn body(mut self, body: impl JsJsonSerialize) -> Self {
-        let body = body.to_json();
+    pub fn post(url: impl Into<String>) -> Self {
+        Self::new(FetchMethod::POST, url)
+    }
+
+    #[must_use]
+    pub fn body(mut self, body: RequestBody) -> Self {
         self.body = Some(body);
         self
     }
@@ -73,7 +85,8 @@ impl RequestBuilder {
 
     #[must_use]
     pub fn body_json(self, body: impl JsJsonSerialize) -> Self {
-        self.body(body).set_header("Content-Type", "application/json")
+        let body = body.to_json();
+        self.body(RequestBody::Json(body))
     }
 
     #[must_use]
@@ -82,26 +95,31 @@ impl RequestBuilder {
         self
     }
 
+    #[must_use]
     pub fn ttl_seconds(mut self, seconds: u64) -> Self {
         self.ttl = Some(Duration::from_secs(seconds));
         self
     }
 
+    #[must_use]
     pub fn ttl_minutes(mut self, minutes: u64) -> Self {
         self.ttl = Some(Duration::from_secs(minutes * 60));
         self
     }
 
+    #[must_use]
     pub fn ttl_hours(mut self, hours: u64) -> Self {
         self.ttl = Some(Duration::from_secs(hours * 60 * 60));
         self
     }
 
+    #[must_use]
     pub fn ttl_days(mut self, days: u64) -> Self {
         self.ttl = Some(Duration::from_secs(days * 24 * 60 * 60));
         self
     }
 
+    #[must_use]
     pub fn get_ttl(&self) -> Option<Duration> {
         self.ttl
     }
@@ -109,60 +127,35 @@ impl RequestBuilder {
     pub async fn call(&self) -> RequestResponse {
         let Self { method, url, headers, body, ttl: _ } = self;
 
-        let builder = FetchBuilder::new(url.clone());
+        let result = get_driver().inner.api.fetch(
+            *method,
+            url.clone(),
+            Some(headers.clone()),
+            body.clone()
+        ).await;
 
-        let builder = match body {
-            None => builder,
-            Some(body) => builder.set_body(body.clone()),
-        };
-
-        let builder = builder.set_headres(headers.clone());
-
-        let result = match method {
-            Method::Get => builder.get().await,
-            Method::Post => builder.post().await,
-        };
-
-        RequestResponse::new(method.clone(), url.clone(), result)
+        RequestResponse::new(*method, url.clone(), result)
     }
 
+    #[must_use]
     pub fn lazy_cache<T>(
         self,
-        map_response: impl Fn(u32, RequestResponseBody) -> Option<Resource<T>> + 'static
+        map_response: impl Fn(u32, RequestBody) -> Option<Resource<T>> + 'static
     ) -> LazyCache<T> {
         LazyCache::new(self, map_response)
-    }
-}
-
-
-#[derive(Debug)]
-pub struct RequestResponseBody {
-    body: JsJson,
-}
-
-impl RequestResponseBody {
-    fn new(body: JsJson) -> RequestResponseBody {
-        RequestResponseBody { body }
-    }
-
-    pub fn into<T: JsJsonDeserialize>(self) -> Resource<T> {
-        match from_json::<T>(self.body) {
-            Ok(data) => Resource::Ready(data),
-            Err(err) => Resource::Error(err),
-        }
     }
 }
 
 /// Result from request made using [RequestBuilder].
 #[derive(Debug)]
 pub struct RequestResponse {
-    method: Method,
+    method: FetchMethod,
     url: String,
-    data: Result<(u32, JsJson), String>,
+    data: Result<(u32, RequestBody), String>,
 }
 
 impl RequestResponse {
-    fn new(method: Method, url: String, data: Result<(u32, JsJson), String>) -> RequestResponse {
+    fn new(method: FetchMethod, url: String, data: Result<(u32, RequestBody), String>) -> RequestResponse {
         RequestResponse { method, url, data }
     }
 
@@ -174,10 +167,9 @@ impl RequestResponse {
         None
     }
 
-    pub fn into<T>(self, convert: impl Fn(u32, RequestResponseBody) -> Option<Resource<T>>) -> Resource<T> {
+    pub fn into<T>(self, convert: impl Fn(u32, RequestBody) -> Option<Resource<T>>) -> Resource<T> {
         let result = match self.data {
             Ok((status, body)) => {
-                let body = RequestResponseBody::new(body);
                 match convert(status, body) {
                     Some(result) => result,
                     None => Resource::Error(format!("Unhandled response code {status}")),
@@ -187,7 +179,7 @@ impl RequestResponse {
         };
 
         if let Resource::Error(err) = &result {
-            log::error!("Error fetching {} {}: {}", self.method.get_str(), self.url, err);
+            log::error!("Error fetching {} {}: {}", self.method.to_str(), self.url, err);
         }
 
         result

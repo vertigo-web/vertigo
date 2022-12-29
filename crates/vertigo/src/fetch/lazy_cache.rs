@@ -8,7 +8,7 @@ use crate::{
     computed::Value, struct_mut::ValueMut,
 };
 
-use super::request_builder::{RequestBuilder, RequestResponseBody};
+use super::request_builder::{RequestBuilder, RequestBody};
 
 fn get_unique_id() -> u64 {
     use std::sync::atomic::{AtomicU64, Ordering};
@@ -112,7 +112,7 @@ pub struct LazyCache<T: 'static> {
     value: Value<ApiResponse<T>>,
     queued: Rc<ValueMut<bool>>,
     request: Rc<RequestBuilder>,
-    map_response: Rc<dyn Fn(u32, RequestResponseBody) -> Option<Resource<T>>>,
+    map_response: Rc<dyn Fn(u32, RequestBody) -> Option<Resource<T>>>,
 }
 
 impl<T: 'static> Debug for LazyCache<T> {
@@ -138,7 +138,7 @@ impl<T> Clone for LazyCache<T> {
 impl<T> LazyCache<T> {
     pub fn new(
         request: RequestBuilder,
-        map_response: impl Fn(u32, RequestResponseBody) -> Option<Resource<T>> + 'static
+        map_response: impl Fn(u32, RequestBody) -> Option<Resource<T>> + 'static
     ) -> Self {
         Self {
             id: get_unique_id(),

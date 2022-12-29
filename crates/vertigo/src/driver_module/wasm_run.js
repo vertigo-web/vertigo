@@ -681,58 +681,135 @@ class HashRouter {
     }
 }
 
+const getTypeResponse = (contentType) => {
+    if (contentType === null) {
+        console.error('Missing header content-type');
+        return 'bin';
+    }
+    const [type] = contentType.split(";");
+    if (type === undefined) {
+        console.error('Missing value for content-type');
+        return 'bin';
+    }
+    const typeClear = type.toLowerCase().trim();
+    if (typeClear === 'application/json') {
+        return 'json';
+    }
+    if (typeClear === 'text/plain') {
+        return 'text';
+    }
+    console.error(`No match found for content-type=${contentType}`);
+    return 'bin';
+};
+const catchError = async (wasm, callback_id, response, callbackSuccess) => {
+    try {
+        await callbackSuccess(response);
+    }
+    catch (error) {
+        console.error('fetch error (2) - json', error);
+        const responseMessage = new String(error).toString();
+        wasm.wasm_callback(callback_id, [
+            false,
+            { type: 'u32', value: response.status },
+            responseMessage //body (string)
+        ]);
+    }
+};
+const getHeadersAndBody = (headersRecord, body) => {
+    const headers = new Headers(headersRecord);
+    if (body === undefined) {
+        return [
+            headers,
+            undefined
+        ];
+    }
+    if (typeof body === 'string') {
+        if (headers.has('content-type') === false) {
+            headers.set('content-type', 'text/plain; charset=utf-8');
+        }
+        return [
+            headers,
+            body
+        ];
+    }
+    if (body instanceof Uint8Array) {
+        return [
+            headers,
+            body
+        ];
+    }
+    //JsJsonType
+    if (headers.has('content-type') === false) {
+        headers.set('content-type', 'application/json; charset=utf-8');
+    }
+    return [
+        headers,
+        JSON.stringify(body),
+    ];
+};
 class Fetch {
     getWasm;
     constructor(getWasm) {
         this.getWasm = getWasm;
     }
     fetch_send_request = (callback_id, method, url, headers, body) => {
+        this.fetch_send_request_inner(callback_id, method, url, headers, body);
+    };
+    fetch_send_request_inner = async (callback_id, method, url, headers, body) => {
         const wasm = this.getWasm();
-        fetch(url, {
-            method,
-            headers,
-            body: body === null ? undefined : JSON.stringify(body),
-        })
-            .then((response) => response.text()
-            .then((responseText) => {
-            const responseJson = JSON.parse(responseText);
-            wasm.wasm_callback(callback_id, [
-                true,
-                { type: 'u32', value: response.status },
-                {
-                    type: 'json',
-                    value: responseJson
-                }
-            ]);
-        })
-            .catch((err) => {
-            console.error('fetch error (2)', err);
-            const responseMessage = new String(err).toString();
-            wasm.wasm_callback(callback_id, [
-                false,
-                { type: 'u32', value: response.status },
-                {
-                    type: 'json',
-                    value: {
-                        error_message: responseMessage
-                    }
-                }
-            ]);
-        }))
-            .catch((err) => {
+        const [fetchHeaders, fetchBody] = getHeadersAndBody(headers, body);
+        try {
+            const response = await fetch(url, {
+                method,
+                headers: fetchHeaders,
+                body: fetchBody,
+            });
+            const contentType = response.headers.get('content-type');
+            const responseType = getTypeResponse(contentType);
+            if (responseType === 'json') {
+                catchError(wasm, callback_id, response, async (response) => {
+                    const json = await response.json();
+                    wasm.wasm_callback(callback_id, [
+                        true,
+                        { type: 'u32', value: response.status },
+                        {
+                            type: 'json',
+                            value: json
+                        }
+                    ]);
+                });
+                return;
+            }
+            if (responseType === 'text') {
+                catchError(wasm, callback_id, response, async (response) => {
+                    const text = await response.text();
+                    wasm.wasm_callback(callback_id, [
+                        true,
+                        { type: 'u32', value: response.status },
+                        text //body (text)
+                    ]);
+                });
+                return;
+            }
+            catchError(wasm, callback_id, response, async (response) => {
+                const text = await response.arrayBuffer();
+                const textUunt8Array = new Uint8Array(text);
+                wasm.wasm_callback(callback_id, [
+                    true,
+                    { type: 'u32', value: response.status },
+                    textUunt8Array //body (text)
+                ]);
+            });
+        }
+        catch (err) {
             console.error('fetch error (1)', err);
             const responseMessage = new String(err).toString();
             wasm.wasm_callback(callback_id, [
                 false,
                 { type: 'u32', value: 0 },
-                {
-                    type: 'json',
-                    value: {
-                        error_message: responseMessage
-                    }
-                }
+                responseMessage //body (string)
             ]);
-        });
+        }
     };
 }
 

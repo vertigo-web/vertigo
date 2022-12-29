@@ -50,7 +50,6 @@ impl GraphConnectionsInner {
 
                 if child.is_empty() {
                     self.client_parent.get_relation(parent)
-                        .into_iter()
                         .map(|parent_next| UpdateConnection::Remove { parent: parent_next, client: parent })
                         .collect()
                 } else {

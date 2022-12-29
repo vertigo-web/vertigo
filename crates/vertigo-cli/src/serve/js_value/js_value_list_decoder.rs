@@ -87,6 +87,14 @@ impl JsValueListDecoder {
         }
     }
 
+    pub fn get_any(&mut self, label: &'static str) -> Result<JsValue, String> {
+        let Some(value) = self.data.pop_front() else {
+            return Err(format!("{label} -> has no more params"));
+        };
+
+        Ok(value)
+    }
+
     pub fn get_json(&mut self, label: &'static str) -> Result<JsJson, String> {
         let Some(value) = self.data.pop_front() else {
             return Err(format!("{label} -> has no more params"));

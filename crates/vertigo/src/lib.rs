@@ -131,10 +131,9 @@ pub use driver_module::{
     dom_command::DriverDomCommand,
 };
 pub use fetch::{
-    fetch_builder::FetchBuilder,
     lazy_cache::{self, LazyCache},
     pinboxfut::PinBoxFuture,
-    request_builder::{RequestResponse, RequestBuilder},
+    request_builder::{RequestResponse, RequestBuilder, RequestBody},
     resource::Resource,
 };
 pub use future_box::{FutureBoxSend, FutureBox};
