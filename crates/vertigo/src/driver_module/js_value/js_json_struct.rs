@@ -1,4 +1,5 @@
 use std::collections::HashMap;
+use std::hash::Hash;
 
 use super::{
     memory_block_write::MemoryBlockWrite,
@@ -63,7 +64,7 @@ impl From<JsJsonConst> for u8 {
     52 bits for the mantissa (representing a number between 0 and 1)
 */
 
-#[derive(Debug, PartialEq, Clone)]
+#[derive(Debug, Clone)]
 pub enum JsJson {
     True,
     False,
@@ -72,6 +73,61 @@ pub enum JsJson {
     Number(f64),
     List(Vec<JsJson>),
     Object(HashMap<String, JsJson>),
+}
+
+impl Eq for JsJson {}
+
+impl PartialEq for JsJson {
+    fn eq(&self, other: &Self) -> bool {
+        match (self, other) {
+            (Self::True, Self::True) => true,
+            (Self::False, Self::False) => true,
+            (Self::Null, Self::Null) => true,
+            (Self::String(value1), Self::String(value2)) => value1 == value2,
+            (Self::Number(value1), Self::Number(value2)) => value1.to_bits() == value2.to_bits(),
+            (Self::List(value1), Self::List(value2)) => value1 == value2,
+            (Self::Object(value1), Self::Object(value2)) => value1 == value2,
+            _ => false
+        }
+    }
+}
+
+impl Hash for JsJson {
+    fn hash<H: std::hash::Hasher>(&self, state: &mut H) {
+        match self {
+            Self::True => {
+                state.write_u8(JsJsonConst::True.into());
+            }
+            Self::False => {
+                state.write_u8(JsJsonConst::False.into());
+            }
+            Self::Null => {
+                state.write_u8(JsJsonConst::Null.into());
+            }
+            Self::String(value) => {
+                state.write_u8(JsJsonConst::String.into());
+                state.write(value.as_bytes());
+            }
+            Self::Number(value) => {
+                state.write_u8(JsJsonConst::Number.into());
+                let value_bits = value.to_bits();
+                state.write_u64(value_bits);
+            }
+            Self::List(list) => {
+                state.write_u8(JsJsonConst::List.into());
+                for item in list {
+                    item.hash(state);
+                }
+            }
+            Self::Object(map) => {
+                state.write_u8(JsJsonConst::Object.into());
+                for (name, value) in map {
+                    name.hash(state);
+                    value.hash(state);
+                }
+            }
+        }
+    }
 }
 
 impl JsJson {

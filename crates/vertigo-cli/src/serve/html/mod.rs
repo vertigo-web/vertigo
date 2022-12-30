@@ -14,3 +14,4 @@ pub use html_response::HtmlResponse;
 pub use replace_html::replace_html;
 pub use parse_html::parse_html;
 pub use html_element::{HtmlDocument, HtmlNode};
+pub use send_request::RequestBody;

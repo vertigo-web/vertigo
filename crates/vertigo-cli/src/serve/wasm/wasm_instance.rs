@@ -3,6 +3,7 @@ use std::collections::HashMap;
 use std::hash::Hash;
 use super::get_now;
 use super::js_value_match::{Match};
+use crate::serve::html::RequestBody;
 use crate::serve::request_state::RequestState;
 
 use crate::serve::js_value::{JsValue, JsJson, from_json};
@@ -40,7 +41,7 @@ pub struct FetchRequest {
     pub method: String,
     pub url: String,
     pub headers: HashMap<String, String>,
-    pub body: Option<String>,
+    pub body: Option<RequestBody>,
 }
 
 impl PartialEq for  FetchRequest {
@@ -63,11 +64,33 @@ impl Hash for FetchRequest {
     }
 }
 
+fn convert_value_to_body(body: JsValue) -> Result<Option<RequestBody>, String> {
+    match body {
+        JsValue::Json(json) => Ok(Some(RequestBody::Json(json))),
+        JsValue::String(text) => Ok(Some(RequestBody::Text(text))),
+        JsValue::Vec(buffer) => Ok(Some(RequestBody::Binary(buffer))),
+        JsValue::Undefined => Ok(None),
+        other => {
+            let typename = other.typename();
+            let message = format!("expected JsValue::Json or JsValue::Text or JsValue::Binary, received JsValue::{typename}");
+            Err(message)
+        }
+    }
+}
+
+fn convert_body_to_value(body: RequestBody) -> JsValue {
+    match body {
+        RequestBody::Json(json) => JsValue::Json(json),
+        RequestBody::Text(text) => JsValue::String(text),
+        RequestBody::Binary(buffer) => JsValue::Vec(buffer),
+    }
+}
+
 #[derive(Clone, Debug)]
 pub struct FetchResponse {
     pub success: bool,
     pub status: u32,
-    pub body: JsJson,
+    pub body: RequestBody,
 }
 
 fn match_history_router(arg: &JsValue) -> Result<(), ()> {
@@ -204,11 +227,15 @@ fn match_fetch(arg: &JsValue) -> Result<(u64, FetchRequest), ()> {
         let (matcher, method) = matcher.string()?;
         let (matcher, url) = matcher.string()?;
         let (matcher, headers) = matcher.json()?;
-        let (matcher, body) = matcher.option_string()?;
+        let (matcher, body) = matcher.get_any()?;
         matcher.end()?;
 
         let headers = from_json::<HashMap<String, String>>(headers).map_err(|error| {
             log::error!("error decode headers: {error}");
+        })?;
+
+        let body = convert_value_to_body(body).map_err(|error| {
+            log::error!("error decode body: {error}");
         })?;
 
         Ok((callback_id, FetchRequest {
@@ -362,7 +389,7 @@ impl WasmInstance {
         let params = JsValue::List(vec!(
             JsValue::bool(response.success),
             JsValue::U32(response.status),
-            JsValue::Json(response.body)
+            convert_body_to_value(response.body),
         ));
 
         let result = self.wasm_callback(callback_id, params);
