@@ -505,6 +505,7 @@ const convertFromJsValue = (value) => {
     }
     return assertNever();
 };
+//throws an exception when it fails to convert to JsValue
 const convertToJsValue = (value) => {
     if (typeof value === 'string') {
         return value;
@@ -530,8 +531,60 @@ const convertToJsValue = (value) => {
             value
         };
     }
-    console.error('convertToJsValue', value);
-    throw Error('TODO');
+    if (value instanceof Uint8Array) {
+        return value;
+    }
+    if (typeof value === 'object') {
+        try {
+            const json = convertToJsJson(value);
+            return {
+                type: 'json',
+                value: json
+            };
+        }
+        catch (_error) {
+        }
+        const result = {};
+        for (const [propName, propValue] of Object.entries(value)) {
+            result[propName] = convertToJsValue(propValue);
+        }
+        return {
+            type: 'object',
+            value: result
+        };
+    }
+    if (Array.isArray(value)) {
+        try {
+            const list = value.map(convertToJsJson);
+            return {
+                type: 'json',
+                value: list
+            };
+        }
+        catch (_error) {
+            return value.map(convertToJsValue);
+        }
+    }
+    console.warn('convertToJsValue', value);
+    throw Error('It is not possible to convert this data to JsValue');
+};
+//throws an exception when it fails to convert to JsJson
+const convertToJsJson = (value) => {
+    if (typeof value === 'boolean' || value === null || typeof value === 'number' || typeof value === 'string') {
+        return value;
+    }
+    if (Array.isArray(value)) {
+        return value.map(convertToJsJson);
+    }
+    if (typeof value === 'object') {
+        const result = {};
+        for (const [propName, propValue] of Object.entries(value)) {
+            result[propName] = convertToJsJson(propValue);
+        }
+        return result;
+    }
+    console.warn('convertToJsJson', value);
+    throw Error('It is not possible to convert this data to JsJson');
 };
 
 const fetchModule = async (wasmBinPath, imports) => {
