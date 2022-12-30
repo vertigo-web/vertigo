@@ -369,6 +369,7 @@ export const convertFromJsValue = (value: JsValueType): unknown => {
     return assertNever(value);
 };
 
+//throws an exception when it fails to convert to JsValue
 export const convertToJsValue = (value: unknown): JsValueType => {
     if (typeof value === 'string') {
         return value;
@@ -399,6 +400,69 @@ export const convertToJsValue = (value: unknown): JsValueType => {
         };
     }
 
-    console.error('convertToJsValue', value);
-    throw Error('TODO');
+    if (value instanceof Uint8Array) {
+        return value;
+    }
+
+    if (typeof value === 'object') {
+        try {
+            const json = convertToJsJson(value);
+            return {
+                type: 'json',
+                value: json
+            };
+        } catch (_error) {
+        }
+
+        const result: Record<string, JsValueType> = {};
+
+        for (const [propName, propValue] of Object.entries(value)) {
+            result[propName] = convertToJsValue(propValue);
+        }
+
+        return {
+            type: 'object',
+            value: result
+        };
+    }
+
+    if (Array.isArray(value)) {
+        try {
+            const list = value.map(convertToJsJson);
+            return {
+                type: 'json',
+                value: list
+            };
+        } catch (_error) {
+            return value.map(convertToJsValue);
+        }
+    }
+
+    console.warn('convertToJsValue', value);
+    throw Error('It is not possible to convert this data to JsValue');
 };
+
+//throws an exception when it fails to convert to JsJson
+export const convertToJsJson = (value: unknown): JsJsonType => {
+    if (typeof value === 'boolean' || value === null || typeof value === 'number' || typeof value === 'string') {
+        return value;
+    }
+
+    if (Array.isArray(value)) {
+        return value.map(convertToJsJson);
+    }
+
+    if (typeof value === 'object') {
+        const result: Record<string, JsJsonType> = {};
+
+        for (const [propName, propValue] of Object.entries(value)) {
+            result[propName] = convertToJsJson(propValue);
+        }
+
+        return result;
+    }
+
+    console.warn('convertToJsJson', value);
+    throw Error('It is not possible to convert this data to JsJson');
+};
+
