@@ -160,6 +160,7 @@ pub use vertigo_macro::bind_rc;
 pub use vertigo_macro::bind_spawn;
 
 pub use vertigo_macro::AutoJsJson;
+pub use vertigo_macro::component;
 
 // Export log module which can be used in vertigo plugins
 pub use log;

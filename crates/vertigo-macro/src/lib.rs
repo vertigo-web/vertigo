@@ -15,6 +15,7 @@ mod wasm_path;
 
 use html_parser::dom_inner;
 use proc_macro::{TokenStream, Span};
+use syn::Visibility;
 
 use crate::{
     css_parser::generate_css_string,
@@ -120,4 +121,66 @@ pub fn bind_spawn(input: TokenStream) -> TokenStream {
 #[proc_macro_error]
 pub fn bind_rc(input: TokenStream) -> TokenStream {
     convert_to_tokens(bind_rc_fn(input))
+}
+
+#[proc_macro_attribute]
+pub fn component(_attr: TokenStream, input: TokenStream) -> TokenStream {
+    let ast = syn::parse_macro_input!(input as syn::ItemFn);
+
+    //function name
+    let name = &ast.sig.ident;
+
+    let mut struct_fields = Vec::new();
+
+    for aaa in ast.sig.inputs.iter() {
+        struct_fields.push(quote!{
+            pub #aaa
+        })
+    }
+
+    let body = ast.block;
+
+    let mut param_names = Vec::new();
+    for param in &ast.sig.inputs {
+        if let syn::FnArg::Typed(pat_type) = param {
+            if let syn::Pat::Ident(ident) = &*pat_type.pat {
+                let param_name = ident.ident.clone();
+
+                param_names.push(quote! {
+                    let #param_name = self.#param_name;
+                })
+            }
+        }
+    }
+
+    let visibility = &ast.vis;
+    
+    let visibility2 = match visibility {
+        Visibility::Public(_) => {
+            quote! {
+                pub
+            }
+        }
+        _ => {
+            quote! {}
+        }
+    };
+
+    let result = quote! {
+        #visibility2 struct #name {
+            #(#struct_fields,)*
+        }
+
+        impl #name {
+            pub fn mount(self) -> DomElement {
+                #(#param_names)*
+
+                #body
+            }
+        }
+    };
+
+    // println!("{:#?}", result.to_string());
+
+    result.into()
 }
