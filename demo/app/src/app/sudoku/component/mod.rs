@@ -1,33 +1,26 @@
-use vertigo::{css, bind, DomElement, dom};
+use vertigo::{css, bind, DomElement, dom, component};
 
 use super::state::{sudoku_square::SudokuSquare, tree_box::TreeBoxIndex, Cell, SudokuState};
 
 pub mod render_cell_possible;
 pub mod render_cell_value;
 
-pub struct Sudoku {
-    pub state: SudokuState,
-}
+#[component]
+pub fn Sudoku(state: SudokuState) -> DomElement {
+    let wrapper_css = css!("
+        display: flex;
+    ");
 
-impl Sudoku {
-    pub fn mount(&self) -> DomElement {
-        let view1 = examples_render(&self.state);
-        let view2 = main_render(&self.state);
-
-        let wrapper_css = css!("
-            display: flex;
-        ");
-
-        dom! {
-            <div css={wrapper_css}>
-                { view1 }
-                { view2 }
-            </div>
-        }
+    dom! {
+        <div css={wrapper_css}>
+            <ExamplesRender sudoku={&state} />
+            <MainRender sudoku={state} />
+        </div>
     }
 }
 
-pub fn main_render(sudoku: &SudokuState) -> DomElement {
+#[component]
+pub fn MainRender(sudoku: SudokuState) -> DomElement {
     let (group_width, group_height, view1) = render_group(sudoku.grid.get_from(TreeBoxIndex::First , TreeBoxIndex::First ));
     let (_, _, view2) = render_group(sudoku.grid.get_from(TreeBoxIndex::First , TreeBoxIndex::Middle));
     let (_, _, view3) = render_group(sudoku.grid.get_from(TreeBoxIndex::First , TreeBoxIndex::Last  ));
@@ -162,7 +155,8 @@ fn render_cell(item: &Cell) -> (u32, u32, DomElement) {
     (cell_width, cell_height, dom)
 }
 
-fn examples_render(sudoku: &SudokuState) -> DomElement {
+#[component]
+fn ExamplesRender(sudoku: SudokuState) -> DomElement {
     let clear = bind!(sudoku, || {
         sudoku.clear();
     });

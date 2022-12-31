@@ -1,4 +1,4 @@
-use vertigo::{Computed, Value, DomElement, dom, include_static, css};
+use vertigo::{Computed, Value, DomElement, dom, include_static, css, component};
 
 mod simple_counter;
 use simple_counter::SimpleCounter;
@@ -45,69 +45,61 @@ impl State {
     }
 }
 
-struct Sum {
-    sum: Computed<u32>,
-}
 
-impl Sum {
-    pub fn mount(self) -> DomElement {
-        dom! {
-            <div>
-                "sum = " {self.sum}
-            </div>
-        }
+
+#[component]
+fn Sum(sum: Computed<u32>) -> DomElement {
+    dom! {
+        <div>
+            "sum = " {sum}
+        </div>
     }
 }
 
-pub struct CountersDemo {
-    pub state: State,
-}
+#[component]
+pub fn CountersDemo(state: State) -> DomElement {
+    let path = include_static!("./counter.webp");
 
-impl CountersDemo {
-    pub fn mount(&self) -> DomElement {
-        let path = include_static!("./counter.webp");
+    let center_css = css!("
+        border: 1px solid black;
+        padding: 1px;
+        margin: 0 auto;
+        display: block;
 
-        let center_css = css!("
-            border: 1px solid black;
-            padding: 1px;
-            margin: 0 auto;
-            display: block;
+        cursor: pointer;
+        box-shadow: 4px 4px 4px #444, 8px 8px 4px #666, 12px 12px 4px #888;
 
-            cursor: pointer;
-            box-shadow: 4px 4px 4px #444, 8px 8px 4px #666, 12px 12px 4px #888;
-
-            transition: all .2s ease-in-out;
-            :hover {
-                transform: scale(1.1);
-            }
-        ");
-
-        let center_css2 = css!("
-            border: 1px solid black;
-            padding: 1px;
-            margin: 0 auto;
-            display: block;
-
-            cursor: pointer;
-
-            box-shadow: 4px 4px 4px rgba(0, 0, 0, 0.5), 8px 8px 4px rgba(0, 0, 0, 0.4), 12px 12px 4px rgba(0, 0, 0, 0.3);
-            transition: all .2s ease-in-out;
-            :hover {
-                transform: scale(1.5);
-                box-shadow: 54px 54px 14px rgba(0, 0, 0, 0.3), 58px 58px 14px rgba(0, 0, 0, 0.2), 62px 62px 14px rgba(0, 0, 0, 0.1);
-            }
-        ");
-
-        dom! {
-            <div>
-                <SimpleCounter label="counter1 value" value={&self.state.counter1} />
-                <SimpleCounter label="counter2 value" value={&self.state.counter2} />
-                <SimpleCounter label="counter3 value" value={&self.state.counter3} />
-                <SimpleCounter label="counter4 value" value={&self.state.counter4} />
-                <Sum sum={&self.state.sum} />
-                <img css={center_css} src={path} />
-                <img css={center_css2} src={path} />
-            </div>
+        transition: all .2s ease-in-out;
+        :hover {
+            transform: scale(1.1);
         }
+    ");
+
+    let center_css2 = css!("
+        border: 1px solid black;
+        padding: 1px;
+        margin: 0 auto;
+        display: block;
+
+        cursor: pointer;
+
+        box-shadow: 4px 4px 4px rgba(0, 0, 0, 0.5), 8px 8px 4px rgba(0, 0, 0, 0.4), 12px 12px 4px rgba(0, 0, 0, 0.3);
+        transition: all .2s ease-in-out;
+        :hover {
+            transform: scale(1.5);
+            box-shadow: 54px 54px 14px rgba(0, 0, 0, 0.3), 58px 58px 14px rgba(0, 0, 0, 0.2), 62px 62px 14px rgba(0, 0, 0, 0.1);
+        }
+    ");
+
+    dom! {
+        <div>
+            <SimpleCounter label="counter1 value" value={&state.counter1} />
+            <SimpleCounter label="counter2 value" value={&state.counter2} />
+            <SimpleCounter label="counter3 value" value={&state.counter3} />
+            <SimpleCounter label="counter4 value" value={&state.counter4} />
+            <Sum sum={&state.sum} />
+            <img css={center_css} src={path} />
+            <img css={center_css2} src={path} />
+        </div>
     }
 }
