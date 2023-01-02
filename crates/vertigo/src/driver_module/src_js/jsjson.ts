@@ -56,7 +56,7 @@ export const jsJsonDecodeItem = (cursor: BufferCursor): JsJsonType => {
 
     if (typeParam === 1) {
         return true;
-    }    
+    }
 
     if (typeParam === 2) {
         return false;
@@ -76,7 +76,7 @@ export const jsJsonDecodeItem = (cursor: BufferCursor): JsJsonType => {
 
     if (typeParam === 6) {
         const out: Array<JsJsonType> = [];
-        
+
         const listSize = cursor.getU16();
 
         for (let i=0; i<listSize; i++) {

@@ -93,6 +93,14 @@ pub struct FetchResponse {
     pub body: RequestBody,
 }
 
+fn match_cookie_command(arg: &JsValue) -> Result<(), ()> {
+    let matcher = Match::new(arg)?;
+    let matcher = matcher.test_list(&["api"])?;
+    let _ = matcher.test_list(&["get", "cookie"])?;
+
+    Ok(())
+}
+
 fn match_history_router(arg: &JsValue) -> Result<(), ()> {
     let matcher = Match::new(arg)?;
     let matcher = matcher.test_list(&["api"])?;
@@ -112,7 +120,7 @@ fn match_history_router_callback(arg: &JsValue) -> Result<(), ()> {
         let matcher = matcher.str("add")?;
         let (matcher, callback_id) = matcher.u64()?;
         matcher.end()?;
-    
+
         Ok(callback_id)
     })?;
     matcher.end()?;
@@ -129,7 +137,7 @@ fn match_dom_bulk_update(arg: &JsValue) -> Result<JsJson, ()> {
         let matcher = matcher.str("dom_bulk_update")?;
         let (matcher, data) = matcher.json()?;
         matcher.end()?;
-    
+
         Ok(data)
     })?;
     matcher.end()?;
@@ -256,7 +264,7 @@ pub struct WasmInstance {
     store: Store<RequestState>,
 }
 
-impl WasmInstance {    
+impl WasmInstance {
     pub fn new(sender: UnboundedSender<Message>, engine: &Engine, module: &Module, request: RequestState) -> Self {
         let url = request.url.clone();
         let mut store = Store::new(engine, request);
@@ -281,6 +289,11 @@ impl WasmInstance {
                     let mut data_context = DataContext::from_caller(caller);
 
                     let value = data_context.get_value(ptr, offset);
+
+                    // Ignore cookie operations
+                    if let Ok(()) = match_cookie_command(&value) {
+                        return 0;
+                    }
 
                     //get history router location
                     if let Ok(()) = match_history_router(&value) {

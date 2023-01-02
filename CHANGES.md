@@ -4,15 +4,20 @@
 
 ### Added
 
-* `vertigo-cli` packaging tool with commands `new` and `build`
+* `vertigo-cli` packaging tool with commands `new`, `build` and `serve`
+* Server-side rendering built in `vertigo-cli`
+* `JsJson` data structure to communicate with JS world without string serialization,
+* `AutoJsJson` macro for creating `JsJson` from structures and structures from `Jsjson`
 * A warning in JS console if developer tried to get a value already set to be changed during transaction
 * `@media` queries support in CSS
+* `Driver::cookie_set_json` and `Driver::cookie_get_json` for storing `JsJson`-enabled structures in a cookie
 * `Driver::history_back()` method invoking `history.back()` on window
 * `html_entities` to ease insertion of uncommon letters and symbols in `dom!` macro
 
 ### Removed
 
 * `css_fn!` and `css_fn_push!` macro (not very useful, problems with error reporting in proper place)
+* `serde` dependency
 
 ## 0.1.1 - 2022-11-10
 

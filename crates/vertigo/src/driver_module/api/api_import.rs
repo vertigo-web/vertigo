@@ -123,6 +123,23 @@ impl ApiImport {
         }
     }
 
+    pub fn cookie_get_json(&self, cname: &str) -> JsJson {
+        let result = self.dom_access()
+            .api()
+            .get("cookie")
+            .call("get_json", vec!(
+                JsValue::str(cname)
+            ))
+            .fetch();
+
+        if let JsValue::Json(value) = result {
+            value
+        } else {
+            log::error!("cookie_get_json -> params decode error -> result={result:?}");
+            JsJson::Null
+        }
+    }
+
     pub fn cookie_set(&self, cname: &str, cvalue: &str, expires_in: u64) {
         self.dom_access()
             .api()
@@ -130,6 +147,18 @@ impl ApiImport {
             .call("set", vec!(
                 JsValue::str(cname),
                 JsValue::str(cvalue),
+                JsValue::U64(expires_in)
+            ))
+            .exec();
+    }
+
+    pub fn cookie_set_json(&self, cname: &str, cvalue: JsJson, expires_in: u64) {
+        self.dom_access()
+            .api()
+            .get("cookie")
+            .call("set_json", vec!(
+                JsValue::str(cname),
+                JsValue::Json(cvalue),
                 JsValue::U64(expires_in)
             ))
             .exec();

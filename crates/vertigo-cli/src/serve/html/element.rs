@@ -222,7 +222,7 @@ impl AllElements {
 }
 
 
-#[cfg(test)] 
+#[cfg(test)]
 mod tests {
     use super::{AllElements, DomCommand};
 
@@ -233,8 +233,8 @@ mod tests {
 
             let commands = vec!(
                 DomCommand::CreateNode {
-                    id: id,
-                    name: name,
+                    id,
+                    name,
                 },
                 DomCommand::InsertBefore {
                     parent: parent_id,
@@ -248,7 +248,7 @@ mod tests {
         fn add_to_parent(all: &mut AllElements, parent: u64, child: u64) {
             let commands = vec!(
                 DomCommand::InsertBefore {
-                    parent: parent,
+                    parent,
                     child,
                     ref_id: None
                 },
@@ -435,7 +435,7 @@ mod tests {
         all.feed(commands);
 
         let result = all.get_response(true).convert_to_string(false);
-    
+
         assert_eq!(result, r#"<!DOCTYPE html><style>.autocss_1 { list-style-type: none; margin: 10px; padding: 0 }</style><style>.autocss_2:hover { text-decoration: underline; }</style><style>.autocss_2 { display: inline; width: 60px; padding: 5px 10px; margin: 5px; cursor: pointer; background-color: lightgreen }</style><style>.autocss_3:hover { text-decoration: underline; }</style><style>.autocss_3 { display: inline; width: 60px; padding: 5px 10px; margin: 5px; cursor: pointer; background-color: lightblue }</style><style>.autocss_4 { padding: 5px }</style><style>.autocss_5 { border: 1px solid black; padding: 10px; background-color: #e0e0e0; margin-bottom: 10px }</style><style>@keyframes autocss_7 { 0% { -webkit-transform: scale(0);\ntransform: scale(0); }\n100% { -webkit-transform: scale(1.0);\ntransform: scale(1.0);\nopacity: 0; } }</style><style>.autocss_6 { width: 40px; height: 40px; background-color: #d26913; border-radius: 100%; animation: 1.0s infinite ease-in-out autocss_7  }</style><div class="autocss_4" data-id="23"><div data-id="2"><ul class="autocss_1" data-id="3"><li class="autocss_2" data-id="4">Counters</li><li class="autocss_3" data-id="6">Animations</li><li class="autocss_2" data-id="8">Sudoku</li><li class="autocss_2" data-id="10">Input</li><li class="autocss_2" data-id="12">Github Explorer</li><li class="autocss_2" data-id="14">Game Of Life</li><li class="autocss_2" data-id="16">Chat</li><li class="autocss_2" data-id="18">Todo</li><li class="autocss_2" data-id="20">Drop File</li></ul></div><div data-id="25"><div class="autocss_5" data-id="26"><div class="autocss_6" data-id="27"></div></div><button data-id="28"><span data-id="29">start the progress bar</span><span data-id="31"></span></button></div></div>"#);
     }
 }

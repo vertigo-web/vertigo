@@ -669,12 +669,27 @@ class Cookies {
         }
         return '';
     };
+    get_json = (cname) => {
+        let cvalue_str = this.get(cname);
+        try {
+            let cookie_value = JSON.parse(cvalue_str);
+            return cookie_value;
+        }
+        catch (e) {
+            console.error("Error deserializing cookie", e);
+            return null;
+        }
+    };
     set = (cname, cvalue, expires_in) => {
         const cvalueEncoded = cvalue == null ? "" : encodeURIComponent(cvalue);
         const d = new Date();
         d.setTime(d.getTime() + (Number(expires_in) * 1000));
         let expires = "expires=" + d.toUTCString();
         document.cookie = `${cname}=${cvalueEncoded};${expires};path=/;samesite=strict"`;
+    };
+    set_json = (cname, cvalue, expires_in) => {
+        let cvalue_str = JSON.stringify(cvalue);
+        this.set(cname, cvalue_str, expires_in);
     };
 }
 

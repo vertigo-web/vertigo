@@ -145,7 +145,7 @@ impl JsJson {
                 for param in items {
                     sum += param.get_size();
                 }
-        
+
                 sum
             }
             Self::Object(map) => {
@@ -187,7 +187,7 @@ impl JsJson {
             Self::List(list) => {
                 buff.write_u8(JsJsonConst::List);
                 buff.write_u16(list.len() as u16);
-        
+
                 for param in list {
                     param.write_to(buff);
                 }
@@ -278,12 +278,12 @@ pub fn decode_js_json_inner(buffer: &mut MemoryBlockRead) -> Result<JsJson, Stri
             let mut param_list = Vec::new();
 
             let list_size = buffer.get_u16();
-    
+
             for _ in 0..list_size {
                 let param = decode_js_json_inner(buffer)?;
                 param_list.push(param);
             }
-    
+
             JsJson::List(param_list)
         },
         JsJsonConst::Object => {

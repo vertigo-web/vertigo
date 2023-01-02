@@ -1,8 +1,12 @@
 use std::collections::HashMap;
-use crate::{LazyCache, JsJson, get_driver, FetchMethod};
 use std::time::Duration;
+
+use crate::{
+    get_driver, FetchMethod, LazyCache, JsJson,
+    from_json, JsJsonSerialize, JsJsonDeserialize,
+};
+
 use super::resource::Resource;
-use crate::{from_json, JsJsonSerialize, JsJsonDeserialize};
 
 #[derive(Debug, Clone)]
 pub enum RequestBody {
