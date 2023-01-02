@@ -6,7 +6,7 @@ use std::{
 use crate::fetch::request_builder::{RequestBuilder, RequestBody};
 use crate::{
     Dependencies, DropResource, FutureBox,
-    Instant, WebsocketMessage,
+    Instant, WebsocketMessage, JsJson,
     css::css_manager::CssManager, Context,
 };
 
@@ -121,9 +121,19 @@ impl Driver {
         self.inner.api.cookie_get(cname)
     }
 
+    /// Gets a JsJson cookie by name
+    pub fn cookie_get_json(&self, cname: &str) -> JsJson {
+        self.inner.api.cookie_get_json(cname)
+    }
+
     /// Sets a cookie under provided name
     pub fn cookie_set(&self, cname: &str, cvalue: &str, expires_in: u64) {
         self.inner.api.cookie_set(cname, cvalue, expires_in)
+    }
+
+    /// Sets a cookie under provided name
+    pub fn cookie_set_json(&self, cname: &str, cvalue: JsJson, expires_in: u64) {
+        self.inner.api.cookie_set_json(cname, cvalue, expires_in)
     }
 
     /// Go back in client's (browser's) history
@@ -153,7 +163,7 @@ impl Driver {
     pub fn request_post(&self, url: impl Into<String>) -> RequestBuilder {
         RequestBuilder::post(url)
     }
-    
+
     #[must_use]
     pub fn sleep(&self, time: u32) -> FutureBox<()> {
         let (sender, future) = FutureBox::new();

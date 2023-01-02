@@ -7,6 +7,7 @@ Features
 * **Reactive dependencies** - A graph of values and clients (micro-subscriptions) that can automatically compute what to refresh after one value change
 * **Real DOM** - No intermediate Virtual DOM mechanism is necessary
 * **HTML/CSS macros** - Allows to construct Real DOM nodes using HTML and CSS
+* **Server-side rendering** - Out of the box when using `vertigo-cli`
 
 See [Changelog](https://github.com/vertigo-web/vertigo/blob/master/CHANGES.md) for recent features.
 

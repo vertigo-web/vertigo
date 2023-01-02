@@ -1,3 +1,5 @@
+import { JsJsonType } from "../jsjson";
+
 export class Cookies {
     public get = (cname: string): string => {
         for (const cookie of document.cookie.split(';')) {
@@ -26,6 +28,18 @@ export class Cookies {
         return '';
     }
 
+    public get_json = (cname: string): JsJsonType => {
+        let cvalue_str = this.get(cname);
+
+        try {
+            let cookie_value = JSON.parse(cvalue_str);
+            return cookie_value;
+        } catch(e) {
+            console.error!("Error deserializing cookie", e);
+            return null;
+        }
+    }
+
     public set = (
         cname: string,
         cvalue: string,
@@ -38,5 +52,15 @@ export class Cookies {
         let expires = "expires="+ d.toUTCString();
 
         document.cookie = `${cname}=${cvalueEncoded};${expires};path=/;samesite=strict"`;
+    }
+
+    public set_json = (
+        cname: string,
+        cvalue: JsJsonType,
+        expires_in: bigint,
+    ) => {
+        let cvalue_str = JSON.stringify(cvalue);
+
+        this.set(cname, cvalue_str, expires_in);
     }
 }
