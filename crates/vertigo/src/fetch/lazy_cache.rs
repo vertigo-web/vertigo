@@ -152,28 +152,21 @@ impl<T> LazyCache<T> {
     pub fn get(&self, context: &Context) -> Resource<Rc<T>> {
         let api_response = self.value.get(context);
 
-        //TODO - Add casch handling
-        // let map_response = self.map_response.clone();
-
-        // // if get_driver().is_cache_avaible() {
-        // //     let fut = (self.loader)();
-        // //     //pool the future only once
-        // // }
-
         if !self.queued.get() && api_response.needs_update() {
-            self.force_update_spawn(true);
+            self.force_update(false);
         }
 
         api_response.get_value()
     }
 
     pub fn force_update(&self, with_loading: bool) {
-        if !self.queued.get() {
-            self.force_update_spawn(with_loading);
+        if self.queued.get() {
+            return;
         }
-    }
 
-    fn force_update_spawn(&self, with_loading: bool) {
+        self.queued.set(true);   //set lock
+        get_driver().inner.api.on_fetch_start.trigger(());
+
         get_driver().spawn({
             let queued = self.queued.clone();
             let value = self.value.clone();
@@ -181,19 +174,16 @@ impl<T> LazyCache<T> {
             let map_response = self.map_response.clone();
 
             async move {
-                if queued.get() {
+                if !queued.get() {
+                    log::error!("force_update_spawn: queued.get() in spawn -> expected false");
                     return;
                 }
-
-                queued.set(true);   //set lock
-
+        
                 let api_response = transaction(|context| {
                     value.get(context)
                 });
                 
-                if api_response.needs_update() {
-                    //update value
-
+                if api_response.needs_update() {        
                     if with_loading {
                         value.set(ApiResponse::new_loading());
                     }
@@ -209,6 +199,7 @@ impl<T> LazyCache<T> {
                 }
 
                 queued.set(false);
+                get_driver().inner.api.on_fetch_stop.trigger(());
             }
         });
     }

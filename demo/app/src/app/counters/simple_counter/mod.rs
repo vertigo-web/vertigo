@@ -25,7 +25,12 @@ pub fn SimpleCounter(label: Computed<String>, value: Value<u32>) -> DomElement {
     ");
 
     let css_button = || css_box().push_str("
+        display: block;
         cursor: pointer;
+    ");
+
+    let css_wrapper_buttons = css!("
+        display: flex;
     ");
 
     dom! {
@@ -33,8 +38,10 @@ pub fn SimpleCounter(label: Computed<String>, value: Value<u32>) -> DomElement {
             <div css={css_box()}>
                 {label} " = " {value}
             </div>
-            <button css={css_button()} on_click={click_up}>"up"</button>
-            <button css={css_button()} on_click={click_down}>"down"</button>
+            <div css={css_wrapper_buttons}>
+                <button css={css_button()} on_click={click_up}>"up"</button>
+                <button css={css_button()} on_click={click_down}>"down"</button>
+            </div>
         </div>
     }
 }

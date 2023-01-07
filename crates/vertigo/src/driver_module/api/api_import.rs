@@ -12,7 +12,7 @@ use crate::{
     WebsocketMessage,
     WebsocketConnection,
     driver_module::{
-        js_value::JsValue,
+        js_value::JsValue, event_emmiter::EventEmmiter,
     }, JsJson, JsJsonObjectBuilder, fetch::request_builder::RequestBody
 };
 
@@ -50,6 +50,9 @@ pub struct ApiImport {
 
     pub(crate) arguments: Arguments,
     pub(crate) callback_store: CallbackStore,
+
+    pub on_fetch_start: EventEmmiter<()>,
+    pub on_fetch_stop: EventEmmiter<()>,
 }
 
 impl ApiImport {
@@ -57,7 +60,6 @@ impl ApiImport {
     pub fn new(
         panic_message: fn(ptr: u32, size: u32),
         fn_dom_access: fn(ptr: u32, size: u32) -> u32,
-
     ) -> ApiImport {
         let panic_message = PanicMessage::new(panic_message);
 
@@ -66,6 +68,8 @@ impl ApiImport {
             fn_dom_access,
             arguments: Arguments::default(),
             callback_store: CallbackStore::new(),
+            on_fetch_start: EventEmmiter::default(),
+            on_fetch_stop: EventEmmiter::default(),
         }
     }
 
@@ -426,6 +430,10 @@ impl ApiImport {
     ) -> Pin<Box<dyn Future<Output = FetchResult> + 'static>> {
         let (sender, receiver) = FutureBox::new();
 
+        self.on_fetch_start.trigger(());
+
+        let on_fetch_stop = self.on_fetch_stop.clone();
+
         let callback_id = self.callback_store.register_once(move |params| {
             let params = params
                 .convert(|mut params| {
@@ -458,10 +466,12 @@ impl ApiImport {
                             false => Err(format!("{response:#?}")),
                         };
                         sender.publish(response);
+                        on_fetch_stop.trigger(());
                     });
                 },
                 Err(error) => {
                     log::error!("export_fetch_callback -> params decode error -> {error}");
+                    on_fetch_stop.trigger(());
                 }
             }
 

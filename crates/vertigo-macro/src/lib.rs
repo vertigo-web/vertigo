@@ -180,7 +180,5 @@ pub fn component(_attr: TokenStream, input: TokenStream) -> TokenStream {
         }
     };
 
-    // println!("{:#?}", result.to_string());
-
     result.into()
 }

@@ -53,7 +53,7 @@ pub enum DriverDomCommand {
         id: DomId,
         event_name: String,
         callback_id: CallbackId,
-    }
+    },
 }
 
 impl DriverDomCommand {
@@ -153,7 +153,7 @@ impl DriverDomCommand {
                     .insert("event_name", event_name)
                     .insert("callback_id", callback_id.as_u64())
                     .get()
-            }
+            },
         }
     }
 }

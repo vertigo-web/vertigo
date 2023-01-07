@@ -96,8 +96,10 @@ pub mod inspect;
 mod instant;
 pub mod router;
 mod websocket;
+mod external_api;
 
 use std::any::Any;
+use computed::struct_mut::ValueMut;
 
 pub use computed::{
     AutoMap, Client, Computed, context::Context, Dependencies, DropResource, GraphId, struct_mut, Value
@@ -215,16 +217,55 @@ pub use vertigo_macro::css_block;
 
 pub mod html_entities;
 
+
+pub struct DriverConstruct {
+    driver: Driver,
+    state: ValueMut<Option<Box<dyn Any>>>,
+    subscription: ValueMut<Option<DomElement>>,
+}
+
+impl DriverConstruct {
+    fn new() -> DriverConstruct {
+        let driver = Driver::default();
+
+        DriverConstruct {
+            driver,
+            state: ValueMut::new(None),
+            subscription: ValueMut::new(None),
+        }
+    }
+
+    fn set_root(&self, state: Box<dyn Any>, root: DomElement) {
+        self.state.set(Some(state));
+        self.subscription.set(Some(root));
+    }
+}
+
+thread_local! {
+    static DRIVER_BROWSER: DriverConstruct = DriverConstruct::new();
+}
+
 /// Starting point of the app.
 pub fn start_app(app_state: impl Any + 'static, view: DomElement) {
     get_driver_state("start_app", |state| {
         init_env(state.driver.inner.api.clone());
+        state.driver.inner.api.on_fetch_start.trigger(());
 
         let root = DomElement::create_with_id(DomId::root());
         root.add_child(view);
         state.set_root(Box::new(app_state), root);
 
+        state.driver.inner.api.on_fetch_stop.trigger(());
         get_driver().inner.dom.flush_dom_changes();
+    });
+}
+
+pub fn start_app_fn<S: Any + 'static>(init_app: impl FnOnce() -> (S, DomElement)) {
+    get_driver_state("start_app", |state| {
+        init_env(state.driver.inner.api.clone());
+
+        let (state, dom) = init_app();
+        start_app(state, dom);
     });
 }
 
@@ -243,9 +284,6 @@ pub fn transaction<R, F: FnOnce(&Context) -> R>(f: F) -> R {
 //------------------------------------------------------------------------------------------------------------------
 // Internals below
 //------------------------------------------------------------------------------------------------------------------
-
-mod external_api;
-use external_api::{DRIVER_BROWSER, DriverConstruct};
 
 fn get_driver_state<R: Default, F: FnOnce(&DriverConstruct) -> R>(label: &'static str, once: F) -> R {
     match DRIVER_BROWSER.try_with(once) {
