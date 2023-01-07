@@ -18,12 +18,11 @@ fn css_menu_item(active: bool) -> Css {
     let bg_color = if active { "lightblue" } else { "lightgreen" };
     css!(
         "
-        display: inline;
-        width: 60px;
+        display: inline-block;
         padding: 5px 10px;
-        margin: 5px;
         cursor: pointer;
         background-color: {bg_color};
+        line-height: 30px;
 
         :hover {
             text-decoration: underline;
@@ -66,14 +65,14 @@ fn render_header(state: &app::State) -> DomElement {
     };
 
     let css_menu = css!("
-        list-style-type: none;
+        display: flex;
         margin: 10px;
         padding: 0;
     ");
 
     dom! {
         <div hook_key_down={hook_key_down}>
-            <ul css={css_menu}>
+            <div css={css_menu}>
                 { render_menu_item(state.route.route.clone(), Route::Counters) }
                 { render_menu_item(state.route.route.clone(), Route::Animations) }
                 { render_menu_item(state.route.route.clone(), Route::Sudoku) }
@@ -83,7 +82,7 @@ fn render_header(state: &app::State) -> DomElement {
                 { render_menu_item(state.route.route.clone(), Route::Chat) }
                 { render_menu_item(state.route.route.clone(), Route::Todo) }
                 { render_menu_item(state.route.route.clone(), Route::DropFile) }
-            </ul>
+            </div>
         </div>
     }
 }

@@ -1,23 +1,25 @@
-use crate::struct_mut::VecMut;
+use crate::{driver_module::event_emmiter::EventEmmiter, DropResource};
 
+#[derive(Clone)]
 pub struct Hooks {
-    callback_after_transaction: VecMut<Box<dyn Fn() + 'static>>,
+    callback_after_transaction: EventEmmiter<()>,
 }
 
 impl Hooks {
     pub fn new() -> Hooks {
         Hooks {
-            callback_after_transaction: VecMut::new(),
+            callback_after_transaction: EventEmmiter::default(),
         }
     }
 
-    pub(crate) fn on_after_transaction(&self, callback: impl Fn() + 'static) {
-        self.callback_after_transaction.push(Box::new(callback));
+    #[must_use]
+    pub(crate) fn on_after_transaction(&self, callback: impl Fn() + 'static) -> DropResource {
+        self.callback_after_transaction.add(move |_| {
+            callback();
+        })
     }
 
     pub fn fire_end(&self) {
-        self.callback_after_transaction.for_each(|callback| {
-            (callback)();
-        });
+        self.callback_after_transaction.trigger(());
     }
 }

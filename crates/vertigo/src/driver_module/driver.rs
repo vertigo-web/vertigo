@@ -42,11 +42,19 @@ pub struct DriverInner {
     pub(crate) css_manager: CssManager,
     pub(crate) dom: Rc<DriverDom>,
     spawn_executor: Rc<Executable>,
+    _subscribe: Rc<DropResource>,
 }
 
 impl DriverInner {
-    pub fn new(api: ApiImport) -> Self {
+    pub fn new() -> Self {
         let dependencies = Dependencies::default();
+
+        use crate::external_api::api::safe_wrappers::{safe_panic_message, safe_dom_access};
+
+        let api = ApiImport::new(
+            safe_panic_message,
+            safe_dom_access,
+        );
 
         let spawn_executor = {
             let api = api.clone();
@@ -64,7 +72,7 @@ impl DriverInner {
             })
         };
 
-        dependencies.transaction_state.hooks.on_after_transaction({
+        let subscribe = dependencies.transaction_state.hooks.on_after_transaction({
             let dom = dom.clone();
 
             move || {
@@ -78,6 +86,7 @@ impl DriverInner {
             css_manager,
             dom,
             spawn_executor,
+            _subscribe: Rc::new(subscribe),
         }
     }
 
@@ -104,10 +113,9 @@ pub struct Driver {
     pub(crate) inner: Rc<DriverInner>,
 }
 
-impl Driver {
-    #[allow(clippy::new_ret_no_self)]
-    pub fn new(api: ApiImport) -> Driver {
-        let driver = Rc::new(DriverInner::new(api));
+impl Default for Driver {
+    fn default() -> Self {
+        let driver = Rc::new(DriverInner::new());
 
         Driver {
             inner: driver,
@@ -215,8 +223,8 @@ impl Driver {
     }
 
     ///Function added for diagnostic purposes. It allows you to check whether a block with a transaction is missing somewhere.
-    pub fn on_after_transaction(&self, callback: impl Fn() + 'static) {
-        self.inner.dependencies.transaction_state.hooks.on_after_transaction(callback);
+    pub fn on_after_transaction(&self, callback: impl Fn() + 'static) -> DropResource {
+        self.inner.dependencies.transaction_state.hooks.on_after_transaction(callback)
     }
 
     pub fn is_browser(&self) -> bool {

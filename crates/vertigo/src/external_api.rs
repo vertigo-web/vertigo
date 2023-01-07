@@ -1,32 +1,5 @@
-use std::any::Any;
-
-use crate::{ApiImport, Driver, DomElement, struct_mut::ValueMut};
-
-pub struct DriverConstruct {
-    pub driver: Driver,
-    state: ValueMut<Option<Box<dyn Any>>>,
-    subscription: ValueMut<Option<DomElement>>,
-}
-
-impl DriverConstruct {
-    pub fn new(api: ApiImport) -> DriverConstruct {
-        let driver = Driver::new(api);
-
-        DriverConstruct {
-            driver,
-            state: ValueMut::new(None),
-            subscription: ValueMut::new(None),
-        }
-    }
-
-    pub fn set_root(&self, state: Box<dyn Any>, root: DomElement) {
-        self.state.set(Some(state));
-        self.subscription.set(Some(root));
-    }
-}
-
 #[cfg(all(not(test), target_arch = "wasm32", target_os = "unknown"))]
-mod api {
+pub mod api {
     mod inner {
         #[link(wasm_import_module = "mod")]
         extern "C" {
@@ -53,7 +26,7 @@ mod api {
 }
 
 #[cfg(any(test, not(target_arch = "wasm32"), not(target_os = "unknown")))]
-mod api {
+pub mod api {
     pub mod safe_wrappers {
         pub fn safe_panic_message(_ptr: u32, _size: u32) {
         }
@@ -62,16 +35,4 @@ mod api {
             0
         }
     }
-}
-
-
-thread_local! {
-    pub static DRIVER_BROWSER: DriverConstruct = DriverConstruct::new({
-        use api::safe_wrappers::*;
-
-        ApiImport::new(
-            safe_panic_message,
-            safe_dom_access,
-        )
-    });
 }
