@@ -1,4 +1,4 @@
-use std::{collections::HashMap, sync::Arc};
+use std::{collections::{HashMap, VecDeque}, sync::Arc};
 
 use axum::{http::StatusCode, response::Html};
 use tokio::sync::mpsc::UnboundedSender;
@@ -16,14 +16,12 @@ use crate::serve::{
 use super::{
     DomCommand,
     element::AllElements,
-    replace_html,
     send_request::send_request,
     dom_command::dom_command_from_js_json,
     html_element::{
         HtmlElement,
         HtmlDocument
     },
-    HtmlNode
 };
 
 enum FetchStatus {
@@ -64,18 +62,6 @@ impl HtmlResponse {
         self.all_elements.feed(commands);
     }
 
-    pub fn result(&self) -> HtmlDocument {
-        let index = self.mount_path.index.as_ref();
-
-        let content = self.all_elements.get_response_nodes(false);
-
-        let get_content = move || -> Vec<HtmlNode> {
-            content.clone()
-        };
-
-        replace_html(index, &test_node, &get_content)
-    }
-
     pub fn waiting_request(&self) -> u32 {
         let mut count = 0;
 
@@ -89,7 +75,48 @@ impl HtmlResponse {
     }
 
     pub fn build_response(&self) -> (StatusCode, Html<String>) {
-        (StatusCode::OK, Html(self.result().convert_to_string(true)))
+        let (mut root_html, css) = self.all_elements.get_response(false);
+
+        let css = css.into_iter().collect::<VecDeque<_>>();
+
+        let root_ok = if let Some(element) = root_html.get_element() {
+            element.name == "html"
+        } else {
+            false
+        };
+
+        if !root_ok {
+            let message = "root: the html element was expected".into();
+            return (StatusCode::INTERNAL_SERVER_ERROR, Html(message));
+        }
+
+        let is_exist_head = root_html.modify(&[("head", 0)], move |_head| {});
+
+        if !is_exist_head {
+            let message = "The 'head' element was expected in the response".into();
+            return (StatusCode::INTERNAL_SERVER_ERROR, Html(message));
+        }
+
+        let script = HtmlElement::new("script")
+            .attr("type", "module")
+            .attr("data-vertigo-run-wasm", &self.mount_path.wasm_path)
+            .attr("src", &self.mount_path.run_js);
+
+        let success = root_html.modify(&[("body", 0)], move |body| {
+            for css_node in css.into_iter().rev() {
+                body.add_first_child(css_node);
+            }
+
+            body.add_last_child(script);
+        });
+
+        if success {
+            let document = HtmlDocument::new(root_html);
+            (StatusCode::OK, Html(document.convert_to_string(true)))
+        } else {
+            let message = "The 'body' element was expected in the response".into();
+            (StatusCode::INTERNAL_SERVER_ERROR, Html(message))
+        }
     }
 
     pub fn process_message(&mut self, message: Message) -> Option<(StatusCode, Html<String>)> {
@@ -182,8 +209,4 @@ impl HtmlResponse {
         }
     }
 
-}
-
-fn test_node(node: &HtmlElement) -> bool {
-    node.attr.contains_key("data-vertigo-run-wasm")
 }

@@ -1,65 +1,110 @@
-export 
-class MapNodes<K, V> {
-    private data: Map<K, V>;
+type NodeType = Element | Comment | Text;
+export class MapNodes {
+    private data: Map<number, NodeType>;
 
     constructor() {
         this.data = new Map();
     }
 
-    public set(key: K, value: V) {
-        this.data.set(key, value);
+    public get_root_html(): Element {
+        return document.documentElement;
     }
 
-    public getItem(key: K): V | undefined {
-        return this.data.get(key);
+    public get_root_head(): Element {
+        return document.head;
     }
 
-    public mustGetItem(key: K): V {
-        const item = this.data.get(key);
+    public get_root_body(): Element {
+        return document.body;
+    }
+
+    public set(id: number, value: NodeType) {
+        if (id === 1 || id === 2 || id === 3) {
+            //ignore
+        } else {
+            this.data.set(id, value);
+        }
+    }
+
+    public get_any_option(id: number): NodeType | undefined {
+        if (id === 1) {
+            return this.get_root_html();
+        }
+
+        if (id === 2) {
+            return this.get_root_head();
+        }
+
+        if (id === 3) {
+            return this.get_root_body();
+        }
+        
+        return this.data.get(id);
+    }
+
+    public get_any(label: string, id: number): NodeType {
+        const item = this.get_any_option(id);
 
         if (item === undefined) {
-            throw Error(`item not found=${key}`);
+            throw Error(`${label} -> item not found=${id}`);
         }
 
         return item;
     }
 
-    public get(label: string, key: K, callback: (value: V) => void) {
-        const item = this.data.get(key);
+    public get(label: string, id: number): NodeType {
+        const item = this.get_any_option(id);
 
         if (item === undefined) {
-            console.error(`${label}->get: Item id not found = ${key}`);
+            throw new Error(`${label}->get: Item id not found = ${id}`);
+        }
+        return item;
+    }
+
+    public get_node_element(label: string, id: number): HTMLElement {
+        const node = this.get(label, id);
+        if (node instanceof HTMLElement) {
+            return node;
         } else {
-            callback(item);
+            throw Error(`Expected id=${id} as HTMLElement`);
         }
     }
 
-    public get2(label: string, key1: K, key2: K, callback: (node1: V, node2: V) => void) {
-        const node1 = this.data.get(key1);
-        const node2 = this.data.get(key2);
-
-        if (node1 === undefined) {
-            console.error(`${label}->get: Item id not found = ${key1}`);
-            return;
+    public get_node(label: string, id: number): Element {
+        const node = this.get(label, id);
+        if (node instanceof Element) {
+            return node;
+        } else {
+            throw Error(`Expected id=${id} as Element`);
         }
-
-        if (node2 === undefined) {
-            console.error(`${label}->get: Item id not found = ${key2}`);
-            return;
-        }
-
-        callback(node1, node2);
     }
 
-    public delete(label: string, key: K, callback: (value: V) => void) {
-        const item = this.data.get(key);
-        this.data.delete(key);
+    public get_text(label: string, id: number): Text {
+        const node = this.get(label, id);
+        if (node instanceof Text) {
+            return node;
+        } else {
+            throw Error(`Expected id=${id} as Text`);
+        }
+    }
+
+    public get_comment(label: string, id: number): Comment {
+        const node = this.get(label, id);
+        if (node instanceof Comment) {
+            return node;
+        } else {
+            throw Error(`Expected id=${id} as Comment`);
+        }
+    }
+
+    public delete(label: string, id: number): NodeType {
+        const item = this.get_any_option(id);
+        this.data.delete(id);
 
         if (item === undefined) {
-            console.error(`${label}->delete: Item id not found = ${key}`);
-        } else {
-            this.data.delete(key);
-            callback(item);
-        }
+            throw new Error(`${label}->delete: Item id not found = ${id}`);
+        }        
+        
+        return item;
     }
 }

@@ -801,6 +801,9 @@ const getHeadersAndBody = (headersRecord, body) => {
         ];
     }
     if (body instanceof Uint8Array) {
+        if (headers.has('content-type') === false) {
+            headers.set('content-type', 'application/octet-stream');
+        }
         return [
             headers,
             body
@@ -1163,51 +1166,90 @@ class MapNodes {
     constructor() {
         this.data = new Map();
     }
-    set(key, value) {
-        this.data.set(key, value);
+    get_root_html() {
+        return document.documentElement;
     }
-    getItem(key) {
-        return this.data.get(key);
+    get_root_head() {
+        return document.head;
     }
-    mustGetItem(key) {
-        const item = this.data.get(key);
+    get_root_body() {
+        return document.body;
+    }
+    set(id, value) {
+        if (id === 1 || id === 2 || id === 3) ;
+        else {
+            this.data.set(id, value);
+        }
+    }
+    get_any_option(id) {
+        if (id === 1) {
+            return this.get_root_html();
+        }
+        if (id === 2) {
+            return this.get_root_head();
+        }
+        if (id === 3) {
+            return this.get_root_body();
+        }
+        return this.data.get(id);
+    }
+    get_any(label, id) {
+        const item = this.get_any_option(id);
         if (item === undefined) {
-            throw Error(`item not found=${key}`);
+            throw Error(`${label} -> item not found=${id}`);
         }
         return item;
     }
-    get(label, key, callback) {
-        const item = this.data.get(key);
+    get(label, id) {
+        const item = this.get_any_option(id);
         if (item === undefined) {
-            console.error(`${label}->get: Item id not found = ${key}`);
+            throw new Error(`${label}->get: Item id not found = ${id}`);
+        }
+        return item;
+    }
+    get_node_element(label, id) {
+        const node = this.get(label, id);
+        if (node instanceof HTMLElement) {
+            return node;
         }
         else {
-            callback(item);
+            throw Error(`Expected id=${id} as HTMLElement`);
         }
     }
-    get2(label, key1, key2, callback) {
-        const node1 = this.data.get(key1);
-        const node2 = this.data.get(key2);
-        if (node1 === undefined) {
-            console.error(`${label}->get: Item id not found = ${key1}`);
-            return;
-        }
-        if (node2 === undefined) {
-            console.error(`${label}->get: Item id not found = ${key2}`);
-            return;
-        }
-        callback(node1, node2);
-    }
-    delete(label, key, callback) {
-        const item = this.data.get(key);
-        this.data.delete(key);
-        if (item === undefined) {
-            console.error(`${label}->delete: Item id not found = ${key}`);
+    get_node(label, id) {
+        const node = this.get(label, id);
+        if (node instanceof Element) {
+            return node;
         }
         else {
-            this.data.delete(key);
-            callback(item);
+            throw Error(`Expected id=${id} as Element`);
         }
+    }
+    get_text(label, id) {
+        const node = this.get(label, id);
+        if (node instanceof Text) {
+            return node;
+        }
+        else {
+            throw Error(`Expected id=${id} as Text`);
+        }
+    }
+    get_comment(label, id) {
+        const node = this.get(label, id);
+        if (node instanceof Comment) {
+            return node;
+        }
+        else {
+            throw Error(`Expected id=${id} as Comment`);
+        }
+    }
+    delete(label, id) {
+        const item = this.get_any_option(id);
+        this.data.delete(id);
+        if (item === undefined) {
+            throw new Error(`${label}->delete: Item id not found = ${id}`);
+        }
+        return item;
     }
 }
 
@@ -1224,22 +1266,17 @@ const assertNeverCommand = (data) => {
     throw Error('unknown command');
 };
 class DriverDom {
-    root;
     historyLocation;
     getWasm;
     nodes;
-    texts;
     callbacks;
     initBeforeFirstUpdate;
-    constructor(root, historyLocation, getWasm) {
-        this.root = root;
+    constructor(historyLocation, getWasm) {
         this.historyLocation = historyLocation;
         this.getWasm = getWasm;
         this.nodes = new MapNodes();
-        this.texts = new MapNodes();
         this.callbacks = new Map();
         this.initBeforeFirstUpdate = false;
-        this.nodes.set(1, root);
         document.addEventListener('dragover', (ev) => {
             // console.log('File(s) in drop zone');
             ev.preventDefault();
@@ -1248,108 +1285,77 @@ class DriverDom {
     debugNodes(...ids) {
         const result = {};
         for (const id of ids) {
-            const value = this.nodes.getItem(id);
+            const value = this.nodes.get_any_option(id);
             result[id] = value;
         }
         console.info('debug nodes', result);
     }
     create_node(id, name) {
-        if (id === 1) {
-            console.error("The root HTMLElement is already created");
-        }
-        else {
-            const node = createElement(name);
-            node.setAttribute('data-id', id.toString());
-            this.nodes.set(id, node);
-            if (name.toLowerCase().trim() === 'a') {
-                node.addEventListener('click', (e) => {
-                    let href = node.getAttribute('href');
-                    if (href === null) {
-                        return;
-                    }
-                    if (href.startsWith('http://') || href.startsWith('https://') || href.startsWith('//')) {
-                        return;
-                    }
-                    e.preventDefault();
-                    this.historyLocation.push(href);
-                    window.scrollTo(0, 0);
-                });
-            }
+        const node = createElement(name);
+        node.setAttribute('data-id', id.toString());
+        this.nodes.set(id, node);
+        if (name.toLowerCase().trim() === 'a') {
+            node.addEventListener('click', (e) => {
+                let href = node.getAttribute('href');
+                if (href === null) {
+                    return;
+                }
+                if (href.startsWith('http://') || href.startsWith('https://') || href.startsWith('//')) {
+                    return;
+                }
+                e.preventDefault();
+                this.historyLocation.push(href);
+                window.scrollTo(0, 0);
+            });
         }
     }
     set_attribute(id, name, value) {
-        this.nodes.get("set_attribute", id, (node) => {
-            if (node instanceof Element) {
-                node.setAttribute(name, value);
-                if (name == "value") {
-                    if (node instanceof HTMLInputElement) {
-                        node.value = value;
-                        return;
-                    }
-                    if (node instanceof HTMLTextAreaElement) {
-                        node.value = value;
-                        node.defaultValue = value;
-                        return;
-                    }
-                }
+        const node = this.nodes.get_node("set_attribute", id);
+        node.setAttribute(name, value);
+        if (name == "value") {
+            if (node instanceof HTMLInputElement) {
+                node.value = value;
+                return;
             }
-            else {
-                console.error("set_attribute error");
+            if (node instanceof HTMLTextAreaElement) {
+                node.value = value;
+                node.defaultValue = value;
+                return;
             }
-        });
+        }
     }
     remove_node(id) {
-        this.nodes.delete("remove_node", id, (node) => {
-            node.remove();
-        });
+        const node = this.nodes.delete("remove_node", id);
+        node.remove();
     }
     create_text(id, value) {
         const text = document.createTextNode(value);
-        this.texts.set(id, text);
+        this.nodes.set(id, text);
     }
     remove_text(id) {
-        this.texts.delete("remove_node", id, (text) => {
-            text.remove();
-        });
+        const text = this.nodes.delete("remove_node", id);
+        text.remove();
     }
     update_text(id, value) {
-        this.texts.get("set_attribute", id, (text) => {
-            text.textContent = value;
-        });
-    }
-    get_node(label, id, callback) {
-        const node = this.nodes.getItem(id);
-        if (node !== undefined) {
-            callback(node);
-            return;
-        }
-        const text = this.texts.getItem(id);
-        if (text !== undefined) {
-            callback(text);
-            return;
-        }
-        console.error(`${label}->get_node: Item id not found = ${id}`);
-        return;
+        const text = this.nodes.get_text("set_attribute", id);
+        text.textContent = value;
     }
     insert_before(parent, child, ref_id) {
-        this.nodes.get("insert_before", parent, (parentNode) => {
-            this.get_node("insert_before child", child, (childNode) => {
-                if (ref_id === null || ref_id === undefined) {
-                    parentNode.insertBefore(childNode, null);
-                }
-                else {
-                    this.get_node('insert_before ref', ref_id, (ref_node) => {
-                        parentNode.insertBefore(childNode, ref_node);
-                    });
-                }
-            });
-        });
+        const parentNode = this.nodes.get("insert_before", parent);
+        const childNode = this.nodes.get_any("insert_before child", child);
+        if (ref_id === null || ref_id === undefined) {
+            parentNode.insertBefore(childNode, null);
+        }
+        else {
+            const ref_node = this.nodes.get_any('insert_before ref', ref_id);
+            parentNode.insertBefore(childNode, ref_node);
+        }
     }
     insert_css(selector, value) {
         const style = document.createElement('style');
         const content = document.createTextNode(`${selector} { ${value} }`);
         style.appendChild(content);
-        document.head.appendChild(style);
+        this.nodes.get_root_head().appendChild(style);
     }
     callback_click(event, callback_id) {
         event.preventDefault();
@@ -1474,9 +1480,8 @@ class DriverDom {
             document.addEventListener('keydown', callback, false);
         }
         else {
-            this.nodes.get('callback_add', id, (node) => {
-                node.addEventListener(event_name, callback, false);
-            });
+            const node = this.nodes.get('callback_add', id);
+            node.addEventListener(event_name, callback, false);
         }
     }
     callback_remove(id, event_name, callback_id) {
@@ -1490,14 +1495,13 @@ class DriverDom {
             document.removeEventListener('keydown', callback);
         }
         else {
-            this.nodes.get('callback_remove', id, (node) => {
-                node.removeEventListener(event_name, callback);
-            });
+            const node = this.nodes.get('callback_remove', id);
+            node.removeEventListener(event_name, callback);
         }
     }
-    clearRootContent = () => {
+    clearRootElement = (element) => {
         while (true) {
-            const first = this.root.firstChild;
+            const first = element.firstChild;
             if (first === null) {
                 return;
             }
@@ -1505,6 +1509,10 @@ class DriverDom {
                 first.remove();
             }
         }
+    };
+    clearRootContent = () => {
+        this.clearRootElement(this.nodes.get_root_head());
+        this.clearRootElement(this.nodes.get_root_body());
     };
     dom_bulk_update = (commands) => {
         if (this.initBeforeFirstUpdate === false) {
@@ -1526,14 +1534,8 @@ class DriverDom {
         if (setFocus.size > 0) {
             setTimeout(() => {
                 for (const id of setFocus) {
-                    this.nodes.get(`set focus ${id}`, id, (node) => {
-                        if (node instanceof HTMLElement) {
-                            node.focus();
-                        }
-                        else {
-                            console.error('setfocus: HTMLElement expected');
-                        }
-                    });
+                    const node = this.nodes.get_node_element(`set focus ${id}`, id);
+                    node.focus();
                 }
             }, 0);
         }
@@ -1577,9 +1579,8 @@ class DriverDom {
             return;
         }
         if (command.type === 'remove_comment') {
-            this.nodes.delete("remove_comment", command.id, (comment) => {
-                comment.remove();
-            });
+            const comment = this.nodes.delete("remove_comment", command.id);
+            comment.remove();
             return;
         }
         if (command.type === 'callback_add') {
@@ -1635,14 +1636,14 @@ class ApiBrowser {
     fetch;
     websocket;
     dom;
-    constructor(root, getWasm) {
+    constructor(getWasm) {
         this.cookie = new Cookies();
         this.interval = new Interval(getWasm);
         this.hashRouter = new HashRouter(getWasm);
         this.historyLocation = new HistoryLocation(getWasm);
         this.fetch = new Fetch(getWasm);
         this.websocket = new DriverWebsocket(getWasm);
-        this.dom = new DriverDom(root, this.historyLocation, getWasm);
+        this.dom = new DriverDom(this.historyLocation, getWasm);
     }
     getRandom = (min, max) => {
         const range = max - min + 1;
@@ -1657,19 +1658,17 @@ class ApiBrowser {
 class JsNode {
     api;
     nodes;
-    texts;
     wsk;
-    constructor(api, nodes, texts, wsk) {
+    constructor(api, nodes, wsk) {
         this.api = api;
         this.nodes = nodes;
-        this.texts = texts;
         this.wsk = wsk;
     }
     getByProperty(path, property) {
         try {
             //@ts-expect-error
             const nextCurrentPointer = this.wsk[property];
-            return new JsNode(this.api, this.nodes, this.texts, nextCurrentPointer);
+            return new JsNode(this.api, this.nodes, nextCurrentPointer);
         }
         catch (error) {
             console.error('A problem with get', {
@@ -1712,7 +1711,7 @@ class JsNode {
     }
     nextApi(path, args) {
         if (args.length === 0) {
-            return new JsNode(this.api, this.nodes, this.texts, this.api);
+            return new JsNode(this.api, this.nodes, this.api);
         }
         console.error('nextApi: wrong parameter', { path, args });
         return null;
@@ -1721,23 +1720,19 @@ class JsNode {
         const [firstName, ...rest] = args;
         if (GuardJsValue.isString(firstName) && rest.length === 0) {
             if (firstName === 'window') {
-                return new JsNode(this.api, this.nodes, this.texts, window);
+                return new JsNode(this.api, this.nodes, window);
             }
             if (firstName === 'document') {
-                return new JsNode(this.api, this.nodes, this.texts, document);
+                return new JsNode(this.api, this.nodes, document);
             }
             console.error(`JsNode.nextRoot: Global name not found -> ${firstName}`, { path, args });
             return null;
         }
         if (GuardJsValue.isNumber(firstName) && rest.length === 0) {
             const domId = firstName.value;
-            const node = this.nodes.getItem(domId);
+            const node = this.nodes.get_any_option(domId);
             if (node !== undefined) {
-                return new JsNode(this.api, this.nodes, this.texts, node);
-            }
-            const text = this.texts.getItem(domId);
-            if (text !== undefined) {
-                return new JsNode(this.api, this.nodes, this.texts, text);
+                return new JsNode(this.api, this.nodes, node);
             }
             console.error(`JsNode.nextRoot: No node with id=${domId}`, { path, args });
             return null;
@@ -1759,7 +1754,7 @@ class JsNode {
             try {
                 //@ts-expect-error
                 this.wsk[property] = convertFromJsValue(value);
-                return new JsNode(this.api, this.nodes, this.texts, undefined);
+                return new JsNode(this.api, this.nodes, undefined);
             }
             catch (error) {
                 console.error('A problem with set', {
@@ -1780,7 +1775,7 @@ class JsNode {
                 let paramsJs = callArgs.map(convertFromJsValue);
                 //@ts-expect-error
                 const result = this.wsk[property](...paramsJs);
-                return new JsNode(this.api, this.nodes, this.texts, result);
+                return new JsNode(this.api, this.nodes, result);
             }
             catch (error) {
                 console.error('A problem with call', {
@@ -1809,7 +1804,7 @@ class JsNode {
                 return null;
             }
         }
-        return new JsNode(this.api, this.nodes, this.texts, result);
+        return new JsNode(this.api, this.nodes, result);
     }
 }
 
@@ -1821,7 +1816,7 @@ class WasmModule {
     start_application() {
         this.wasm.exports.start_application();
     }
-    static async create(root, wasmBinPath) {
+    static async create(wasmBinPath) {
         let wasmModule = null;
         const getWasm = () => {
             if (wasmModule === null) {
@@ -1829,7 +1824,7 @@ class WasmModule {
             }
             return wasmModule;
         };
-        const apiBrowser = new ApiBrowser(root, getWasm);
+        const apiBrowser = new ApiBrowser(getWasm);
         //@ts-expect-error
         window.$vertigoApi = apiBrowser;
         wasmModule = await wasmInit(wasmBinPath, {
@@ -1844,7 +1839,7 @@ class WasmModule {
                     let args = getWasm().decodeArguments(ptr, size);
                     if (Array.isArray(args)) {
                         const path = args;
-                        let wsk = new JsNode(apiBrowser, apiBrowser.dom.nodes, apiBrowser.dom.texts, null);
+                        let wsk = new JsNode(apiBrowser, apiBrowser.dom.nodes, null);
                         for (const pathItem of path) {
                             const newWsk = wsk.next(path, pathItem);
                             if (newWsk === null) {
@@ -1863,12 +1858,35 @@ class WasmModule {
     }
 }
 
-const runModule = async (root, wasmBinPath) => {
-    console.info(`Wasm module: "${wasmBinPath}" -> start`);
-    const wasmModule = await WasmModule.create(root, wasmBinPath);
-    console.info(`Wasm module: "${wasmBinPath}" -> initialized`);
+const moduleRun = new Set();
+const runModule = async (wasm) => {
+    if (moduleRun.has(wasm)) {
+        //ok, module is run
+        return;
+    }
+    if (moduleRun.size > 0) {
+        console.error('Only one wasm module can be run', { moduleRun, wasm });
+        return;
+    }
+    moduleRun.add(wasm);
+    console.info(`Wasm module: "${wasm}" -> start`);
+    const wasmModule = await WasmModule.create(wasm);
+    console.info(`Wasm module: "${wasm}" -> initialized`);
     wasmModule.start_application();
-    console.info(`Wasm module: "${wasmBinPath}" -> launched start_application function`);
+    console.info(`Wasm module: "${wasm}" -> launched start_application function`);
 };
-
-export { runModule };
+const findAndRunModule = async () => {
+    document.querySelectorAll('*[data-vertigo-run-wasm]').forEach((node) => {
+        const wasm = node.getAttribute('data-vertigo-run-wasm');
+        if (typeof wasm === 'string') {
+            runModule(wasm);
+        }
+        else {
+            console.error('Run error', node);
+        }
+    });
+};
+(() => {
+    window.addEventListener('load', findAndRunModule);
+    setTimeout(findAndRunModule, 3000);
+})();

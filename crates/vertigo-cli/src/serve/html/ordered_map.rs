@@ -35,14 +35,6 @@ impl OrderedMap {
         }
     }
 
-    pub fn get(&self, name: &str) -> Option<&String> {
-        self.data.get(name)
-    }
-
-    pub fn contains_key(&self, name: &str) -> bool {
-        self.data.contains_key(name)
-    }
-
     pub fn get_iter(&self) -> Vec<(String, String)> {
         let mut result = Vec::new();
 

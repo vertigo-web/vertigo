@@ -1,3 +1,5 @@
+use std::collections::VecDeque;
+
 use super::ordered_map::OrderedMap;
 
 #[derive(Clone, Copy)]
@@ -33,10 +35,16 @@ impl Ident {
 }
 
 pub struct HtmlDocument {
-    pub elements: Vec<HtmlNode>,
+    pub root: HtmlNode,
 }
 
 impl HtmlDocument {
+    pub fn new(root: HtmlNode) -> HtmlDocument {
+        HtmlDocument {
+            root
+        }
+    }
+
     pub fn convert_to_string(self, format: bool) -> String {
 
         let mut result = vec!("<!DOCTYPE html>".to_owned());
@@ -45,9 +53,7 @@ impl HtmlDocument {
             false => Ident::empty(),
         };
 
-        for node in self.elements {
-            html_node_to_string(&mut result, root_ident, node);
-        }
+        html_node_to_string(&mut result, root_ident, self.root);
 
         match format {
             true => result.join("\n"),
@@ -111,7 +117,7 @@ fn last_text_get(last_text: &mut Option<Vec<String>>) -> Option<String> {
 }
 
 
-fn get_render_child_mode(element: Vec<HtmlNode>) -> ChildMode {
+fn get_render_child_mode(element: VecDeque<HtmlNode>) -> ChildMode {
     let mut result: Vec<HtmlNode> = Vec::new();
     let mut last_text: Option<Vec<String>> = None;
 
@@ -257,6 +263,26 @@ pub enum HtmlNode {
     Comment(String),
 }
 
+impl HtmlNode {
+    pub fn modify(&mut self, path: &[(&str, usize)], callback: impl FnOnce(&mut HtmlElement)) -> bool {
+        match self {
+            Self::Element(element) => {
+                element.modify(path, callback)
+            },
+            _ => false,
+        }
+    }
+
+    pub fn get_element(&mut self) -> Option<&mut HtmlElement> {
+        match self {
+            Self::Element(element) => {
+                Some(element)
+            },
+            _ => None,
+        }
+    }
+}
+
 impl From<HtmlElement> for HtmlNode {
     fn from(value: HtmlElement) -> Self {
         HtmlNode::Element(value)
@@ -267,7 +293,7 @@ impl From<HtmlElement> for HtmlNode {
 pub struct HtmlElement {
     pub name: String,
     pub attr: OrderedMap,
-    pub children: Vec<HtmlNode>,
+    pub children: VecDeque<HtmlNode>,
 }
 
 impl HtmlElement {
@@ -277,20 +303,60 @@ impl HtmlElement {
         HtmlElement {
             name,
             attr: OrderedMap::new(),
-            children: Vec::new(),
+            children: VecDeque::new(),
         }
     }
 
-    pub fn child(mut self, child: HtmlNode) -> Self {
-        self.children.push(child);
+    pub fn attr(mut self, name: &'static str, value: impl Into<String>) -> Self {
+        self.attr.set(name, value);
         self
     }
 
-    pub fn from(name: impl Into<String>, attr: OrderedMap, children: Vec<HtmlNode>) -> Self {
+    pub fn add_first_child(&mut self, child: HtmlNode) {
+        self.children.push_front(child);
+    }
+
+    pub fn add_last_child(&mut self, child: impl Into<HtmlNode>) {
+        let child = child.into();
+        self.children.push_back(child);
+    }
+
+    pub fn child(mut self, child: HtmlNode) -> Self {
+        self.children.push_back(child);
+        self
+    }
+
+    pub fn from(name: impl Into<String>, attr: OrderedMap, children: VecDeque<HtmlNode>) -> Self {
         HtmlElement {
             name: name.into(),
             attr,
             children
         }
     }
+
+    fn modify(&mut self, path: &[(&str, usize)], callback: impl FnOnce(&mut HtmlElement)) -> bool {
+        if path.is_empty() {
+            callback(self);
+            return true;
+        }
+
+        if let Some(((tag_name, index), rest_path)) = path.split_first() {
+            let mut current: usize = 0;
+
+            for node in self.children.iter_mut() {
+                if let Some(element) = node.get_element() {
+                    if element.name.as_str() == *tag_name {
+                        if &current == index {
+                            return element.modify(rest_path, callback);
+                        }
+                        current += 1;
+                    }
+                }
+            }
+        }
+
+        false
+    }
+
+    // pub fn 
 }

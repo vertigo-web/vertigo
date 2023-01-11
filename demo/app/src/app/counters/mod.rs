@@ -9,7 +9,7 @@ pub struct State {
     counter2: Value<u32>,
     counter3: Value<u32>,
     counter4: Value<u32>,
-    sum: Computed<u32>,
+    pub sum: Computed<u32>,
 }
 
 impl State {

@@ -5,19 +5,16 @@ import { MapNodes } from "./api_browser/dom/map_nodes";
 
 export class JsNode {
     private api: ApiBrowser;
-    private nodes: MapNodes<number, Element | Comment>;
-    private texts: MapNodes<number, Text>;
+    private nodes: MapNodes;
     private wsk: unknown;
 
     public constructor(
         api: ApiBrowser,
-        nodes: MapNodes<number, Element | Comment>,
-        texts: MapNodes<number, Text>,
+        nodes: MapNodes,
         wsk: unknown
     ) {
         this.api = api;
         this.nodes = nodes;
-        this.texts = texts;
         this.wsk = wsk;
     }
 
@@ -25,7 +22,7 @@ export class JsNode {
         try {
             //@ts-expect-error
             const nextCurrentPointer = this.wsk[property];
-            return new JsNode(this.api, this.nodes, this.texts, nextCurrentPointer);
+            return new JsNode(this.api, this.nodes, nextCurrentPointer);
         } catch (error) {
             console.error('A problem with get', {
                 path,
@@ -78,7 +75,7 @@ export class JsNode {
 
     nextApi(path: Array<JsValueType>, args: Array<JsValueType>): JsNode | null {
         if (args.length === 0) {
-            return new JsNode(this.api, this.nodes, this.texts, this.api);
+            return new JsNode(this.api, this.nodes, this.api);
         }
 
         console.error('nextApi: wrong parameter', {path, args});
@@ -90,11 +87,11 @@ export class JsNode {
 
         if (GuardJsValue.isString(firstName) && rest.length === 0) {
             if (firstName === 'window') {
-                return new JsNode(this.api, this.nodes, this.texts, window);
+                return new JsNode(this.api, this.nodes, window);
             }
 
             if (firstName === 'document') {
-                return new JsNode(this.api, this.nodes, this.texts, document);
+                return new JsNode(this.api, this.nodes, document);
             }
 
             console.error(`JsNode.nextRoot: Global name not found -> ${firstName}`, {path, args});
@@ -104,16 +101,10 @@ export class JsNode {
         if (GuardJsValue.isNumber(firstName) && rest.length === 0) {
             const domId = firstName.value;
 
-            const node = this.nodes.getItem(domId);
+            const node = this.nodes.get_any_option(domId);
 
             if (node !== undefined) {
-                return new JsNode(this.api, this.nodes, this.texts, node);
-            }
-
-            const text = this.texts.getItem(domId);
-
-            if (text !== undefined) {
-                return new JsNode(this.api, this.nodes, this.texts, text);
+                return new JsNode(this.api, this.nodes, node);
             }
 
             console.error(`JsNode.nextRoot: No node with id=${domId}`, {path, args});
@@ -142,7 +133,7 @@ export class JsNode {
             try {
                 //@ts-expect-error
                 this.wsk[property] = convertFromJsValue(value);
-                return new JsNode(this.api, this.nodes, this.texts, undefined);
+                return new JsNode(this.api, this.nodes, undefined);
             } catch (error) {
                 console.error('A problem with set', {
                     path,
@@ -165,7 +156,7 @@ export class JsNode {
                 let paramsJs = callArgs.map(convertFromJsValue);
                 //@ts-expect-error
                 const result = this.wsk[property](...paramsJs);
-                return new JsNode(this.api, this.nodes, this.texts, result);
+                return new JsNode(this.api, this.nodes, result);
             } catch (error) {
                 console.error('A problem with call', {
                     path,
@@ -197,6 +188,6 @@ export class JsNode {
             }
         }
 
-        return new JsNode(this.api, this.nodes, this.texts, result);
+        return new JsNode(this.api, this.nodes, result);
     }
 }

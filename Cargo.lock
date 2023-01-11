@@ -1142,12 +1142,6 @@ dependencies = [
 ]
 
 [[package]]
-name = "html_query_parser"
-version = "0.3.1"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "5c3e45ceb23d8cbba15bba47ffd867dc3dafea3d9c490ff7aff12559bf777a05"
-
-[[package]]
 name = "http"
 version = "0.2.8"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -2777,7 +2771,6 @@ dependencies = [
  "clap 4.0.18",
  "env_logger 0.10.0",
  "hex 0.4.3",
- "html_query_parser",
  "include_dir",
  "log",
  "reqwest",

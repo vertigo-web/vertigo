@@ -73,24 +73,18 @@ const assertNeverCommand = (data: never): never => {
 };
 
 export class DriverDom {
-    private root: HTMLElement;
     private historyLocation: HistoryLocation;
     private readonly getWasm: () => ModuleControllerType<ExportType>;
-    public readonly nodes: MapNodes<number, Element | Comment>;
-    public readonly texts: MapNodes<number, Text>;
+    public readonly nodes: MapNodes;
     private callbacks: Map<bigint, (data: Event) => void>;
     private initBeforeFirstUpdate: boolean;
 
-    public constructor(root: HTMLElement, historyLocation: HistoryLocation, getWasm: () => ModuleControllerType<ExportType>) {
-        this.root = root;
+    public constructor(historyLocation: HistoryLocation, getWasm: () => ModuleControllerType<ExportType>) {
         this.historyLocation = historyLocation;
         this.getWasm = getWasm;
         this.nodes = new MapNodes();
-        this.texts = new MapNodes();
         this.callbacks = new Map();
         this.initBeforeFirstUpdate = false;
-
-        this.nodes.set(1, root);
 
         document.addEventListener('dragover', (ev): void => {
             // console.log('File(s) in drop zone');
@@ -101,115 +95,83 @@ export class DriverDom {
     public debugNodes(...ids: Array<number>) {
         const result: Record<number, unknown> = {};
         for (const id of ids) {
-            const value = this.nodes.getItem(id);
+            const value = this.nodes.get_any_option(id);
             result[id] = value;
         }
         console.info('debug nodes', result);
     }
 
     private create_node(id: number, name: string) {
-        if (id === 1) {
-            console.error("The root HTMLElement is already created");
-        } else {
-            const node = createElement(name);
-            node.setAttribute('data-id', id.toString());
-            this.nodes.set(id, node);
+        const node = createElement(name);
+        node.setAttribute('data-id', id.toString());
+        this.nodes.set(id, node);
 
-            if (name.toLowerCase().trim() === 'a') {
-                node.addEventListener('click', (e) => {
-                    let href = node.getAttribute('href');
-                    if (href === null) {
-                        return;
-                    }
+        if (name.toLowerCase().trim() === 'a') {
+            node.addEventListener('click', (e) => {
+                let href = node.getAttribute('href');
+                if (href === null) {
+                    return;
+                }
 
-                    if (href.startsWith('http://') || href.startsWith('https://') || href.startsWith('//')) {
-                        return;
-                    }
+                if (href.startsWith('http://') || href.startsWith('https://') || href.startsWith('//')) {
+                    return;
+                }
 
-                    e.preventDefault();
-                    this.historyLocation.push(href);
-                    window.scrollTo(0, 0);
-                })
-            }
+                e.preventDefault();
+                this.historyLocation.push(href);
+                window.scrollTo(0, 0);
+            })
         }
     }
 
     private set_attribute(id: number, name: string, value: string) {
-        this.nodes.get("set_attribute", id, (node) => {
-            if (node instanceof Element) {
-                node.setAttribute(name, value);
+        const node = this.nodes.get_node("set_attribute", id);
+        node.setAttribute(name, value);
 
-                if (name == "value") {
-                    if (node instanceof HTMLInputElement) {
-                        node.value = value;
-                        return;
-                    }
-
-                    if (node instanceof HTMLTextAreaElement) {
-                        node.value = value;
-                        node.defaultValue = value;
-                        return;
-                    }
-                }
-            } else {
-                console.error("set_attribute error");
+        if (name == "value") {
+            if (node instanceof HTMLInputElement) {
+                node.value = value;
+                return;
             }
-        });
+
+            if (node instanceof HTMLTextAreaElement) {
+                node.value = value;
+                node.defaultValue = value;
+                return;
+            }
+        }
     }
 
     private remove_node(id: number) {
-        this.nodes.delete("remove_node", id, (node) => {
-            node.remove();
-        });
+        const node = this.nodes.delete("remove_node", id);
+        node.remove();
     }
 
     private create_text(id: number, value: string) {
         const text = document.createTextNode(value);
-        this.texts.set(id, text);
+        this.nodes.set(id, text);
     }
 
     private remove_text(id: number) {
-        this.texts.delete("remove_node", id, (text) => {
-            text.remove();
-        });
+        const text = this.nodes.delete("remove_node", id);
+        text.remove();
     }
 
     private update_text(id: number, value: string) {
-        this.texts.get("set_attribute", id, (text) => {
-            text.textContent = value;
-        });
-    }
-
-    private get_node(label: string, id: number, callback: (node: Element | Comment | Text) => void) {
-        const node = this.nodes.getItem(id);
-        if (node !== undefined) {
-            callback(node);
-            return;
-        }
-        const text = this.texts.getItem(id);
-
-        if (text !== undefined) {
-            callback(text);
-            return;
-        }
-
-        console.error(`${label}->get_node: Item id not found = ${id}`);
-        return;
+        const text = this.nodes.get_text("set_attribute", id);
+        text.textContent = value;
     }
 
     private insert_before(parent: number, child: number, ref_id: number | null | undefined) {
-        this.nodes.get("insert_before", parent, (parentNode) => {
-            this.get_node("insert_before child", child, (childNode) => {
+        const parentNode = this.nodes.get("insert_before", parent);
+        const childNode = this.nodes.get_any("insert_before child", child);
 
-                if (ref_id === null || ref_id === undefined) {
-                    parentNode.insertBefore(childNode, null);
-                } else {
-                    this.get_node('insert_before ref', ref_id, (ref_node) => {
-                        parentNode.insertBefore(childNode, ref_node);
-                    });
-                }
-            });
-        });
+        if (ref_id === null || ref_id === undefined) {
+            parentNode.insertBefore(childNode, null);
+        } else {
+            const ref_node = this.nodes.get_any('insert_before ref', ref_id);
+            parentNode.insertBefore(childNode, ref_node);
+        }
     }
 
     private insert_css(selector: string, value: string) {
@@ -217,7 +179,7 @@ export class DriverDom {
         const content = document.createTextNode(`${selector} { ${value} }`);
         style.appendChild(content);
 
-        document.head.appendChild(style);
+        this.nodes.get_root_head().appendChild(style);
     }
 
     private callback_click(event: Event, callback_id: bigint) {
@@ -366,9 +328,8 @@ export class DriverDom {
         if (event_name === 'hook_keydown') {
             document.addEventListener('keydown', callback, false);
         } else {
-            this.nodes.get('callback_add', id, (node) => {
-                node.addEventListener(event_name, callback, false);
-            });
+            const node = this.nodes.get('callback_add', id);
+            node.addEventListener(event_name, callback, false);
         }
     }
 
@@ -384,15 +345,14 @@ export class DriverDom {
         if (event_name === 'hook_keydown') {
             document.removeEventListener('keydown', callback);
         } else {
-            this.nodes.get('callback_remove', id, (node) => {
-                node.removeEventListener(event_name, callback);
-            });
+            const node = this.nodes.get('callback_remove', id);
+            node.removeEventListener(event_name, callback);
         }
     }
 
-    private clearRootContent = () => {
+    private clearRootElement = (element: Element) => {
         while (true) {
-            const first = this.root.firstChild;
+            const first = element.firstChild;
 
             if (first === null) {
                 return;
@@ -400,6 +360,11 @@ export class DriverDom {
                 first.remove();
             }
         }
+    };
+
+    private clearRootContent = () => {
+        this.clearRootElement(this.nodes.get_root_head());
+        this.clearRootElement(this.nodes.get_root_body());
     }
 
     public dom_bulk_update = (commands: Array<CommandType>) => {
@@ -425,13 +390,8 @@ export class DriverDom {
         if (setFocus.size > 0) {
             setTimeout(() => {
                 for (const id of setFocus) {
-                    this.nodes.get(`set focus ${id}`, id, (node) => {
-                        if (node instanceof HTMLElement) {
-                            node.focus();
-                        } else {
-                            console.error('setfocus: HTMLElement expected');
-                        }
-                    });
+                    const node = this.nodes.get_node_element(`set focus ${id}`, id);
+                    node.focus();
                 }
             }, 0);
         }
@@ -485,9 +445,8 @@ export class DriverDom {
         }
 
         if (command.type === 'remove_comment') {
-            this.nodes.delete("remove_comment", command.id, (comment) => {
-                comment.remove();
-            });
+            const comment = this.nodes.delete("remove_comment", command.id);
+            comment.remove();
             return;
         }
 

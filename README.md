@@ -41,11 +41,17 @@ pub fn app(count: &Value) -> DomElement {
     });
 
     dom! {
-        <div>
-            <p>"Counter: " { count }</p>
-            <button on_click={decrement}>"-"</button>
-            <button on_click={increment}>"+"</button>
-        </div>
+        <html>
+            <head>
+                <title></title>
+                <meta charset="utf-8"/>
+            </head>
+            <body>
+                <p>"Counter: " { count }</p>
+                <button on_click={decrement}>"-"</button>
+                <button on_click={increment}>"+"</button>
+            </body>
+        </html>
     }
 }
 
@@ -83,9 +89,17 @@ fn app(message: &Value) -> DomElement {
     ");
 
     dom! {
-        <div css={wrapper_css}>
-            <MyMessage message={message} />
-        </div>
+        <html>
+            <head>
+                <title></title>
+                <meta charset="utf-8"/>
+            </head>
+            <body>
+                <div css={wrapper_css}>
+                    <MyMessage message={message} />
+                </div>
+            </body>
+        </html>
     }
 }
 

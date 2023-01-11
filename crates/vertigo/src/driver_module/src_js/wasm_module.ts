@@ -31,7 +31,7 @@ export class WasmModule {
         this.wasm.exports.start_application();
     }
 
-    public static async create(root: HTMLElement, wasmBinPath: string): Promise<WasmModule> {
+    public static async create(wasmBinPath: string): Promise<WasmModule> {
         let wasmModule: ModuleControllerType<ExportType> | null = null;
 
         const getWasm = (): ModuleControllerType<ExportType> => {
@@ -42,7 +42,7 @@ export class WasmModule {
             return wasmModule;
         };
 
-        const apiBrowser = new ApiBrowser(root, getWasm);
+        const apiBrowser = new ApiBrowser(getWasm);
 
         //@ts-expect-error
         window.$vertigoApi = apiBrowser;
@@ -59,7 +59,7 @@ export class WasmModule {
                     let args = getWasm().decodeArguments(ptr, size);
                     if (Array.isArray(args)) {
                         const path = args;
-                        let wsk = new JsNode(apiBrowser, apiBrowser.dom.nodes, apiBrowser.dom.texts, null);
+                        let wsk = new JsNode(apiBrowser, apiBrowser.dom.nodes, null);
 
                         for (const pathItem of path) {
                             const newWsk = wsk.next(path, pathItem);

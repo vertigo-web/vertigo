@@ -89,7 +89,7 @@ pub struct DomElement {
 
 impl DomElement {
     pub fn new(name: &'static str) -> Self {
-        let id_dom = DomId::default();
+        let id_dom = DomId::from_name(name);
 
         let driver = get_driver();
 
@@ -123,20 +123,6 @@ impl DomElement {
 
     pub fn get_ref(&self) -> DomElementRef {
         DomElementRef::new(self.driver.inner.api.clone(), self.id_dom)
-    }
-
-    pub fn create_with_id(id_dom: DomId) -> Self {
-        let driver = get_driver();
-        let class_manager = DomElementClassMerge::new(driver.clone(), id_dom);
-
-        Self {
-            driver,
-            id_dom,
-            child_node: VecDequeMut::new(),
-            subscriptions: VecMut::new(),
-            drop: VecMut::new(),
-            class_manager,
-        }
     }
 
     fn subscribe<T: Clone + PartialEq + 'static>(&self, value: Computed<T>, call: impl Fn(T) + 'static) {

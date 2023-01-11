@@ -1,4 +1,4 @@
-use std::collections::HashMap;
+use std::collections::{HashMap, VecDeque};
 
 use super::{ordered_map::OrderedMap, element_children::ElementChildren, DomCommand, HtmlNode, html_element::HtmlElement};
 
@@ -34,14 +34,11 @@ pub struct AllElements {
 
 impl AllElements {
     pub fn new() -> AllElements {
-        let mut inst = Self {
+        Self {
             parent: HashMap::new(),
             all: HashMap::new(),
             css: OrderedMap::new(),
-        };
-
-        inst.create_node(1, "div");
-        inst
+        }
     }
 
     fn create_node(&mut self, id: u64, name: impl Into<String>) {
@@ -176,11 +173,11 @@ impl AllElements {
         }
     }
 
-    fn get_response_elements(&self, element: &Element, with_id: bool) -> Vec<HtmlNode> {
-        let mut result = Vec::new();
+    fn get_response_elements(&self, element: &Element, with_id: bool) -> VecDeque<HtmlNode> {
+        let mut result = VecDeque::new();
 
         for child_id in element.children.childs() {
-            result.push(self.get_response_one_elements(child_id, with_id));
+            result.push_back(self.get_response_one_elements(child_id, with_id));
         }
 
         result
@@ -202,25 +199,19 @@ impl AllElements {
         result
     }
 
-    pub fn get_response_nodes(&self, with_id: bool) -> Vec<HtmlNode> {
-        let Some(Node::Element(root)) = self.all.get(&1) else {
-            unreachable!();
-        };
-
-        let mut css = self.get_css();
-        css.extend(self.get_response_elements(root, with_id).into_iter());
-        css
+    //root and Vec<css>
+    pub fn get_response(&self, with_id: bool) -> (HtmlNode, Vec<HtmlNode>) {
+        let root_html = self.get_response_one_elements(1, with_id);
+        let css = self.get_css();
+        (root_html, css)
     }
 
     #[cfg(test)]
-    pub fn get_response(&self, with_id: bool) -> super::HtmlDocument {
-        let elements = self.get_response_nodes(with_id);
-        super::HtmlDocument {
-            elements
-        }
+    pub fn get_response_document(&self, with_id: bool) -> (super::HtmlDocument, Vec<HtmlNode>) {
+        let (root, css) = self.get_response(with_id);
+        (super::HtmlDocument::new(root), css)
     }
 }
-
 
 #[cfg(test)]
 mod tests {
@@ -228,21 +219,31 @@ mod tests {
 
     #[test]
     fn test_html() {
-        fn create_and_add(all: &mut AllElements, parent_id: u64, id: u64, name: impl Into<String>) {
+        fn create_element(all: &mut AllElements, id: u64, name: impl Into<String>) {
             let name = name.into();
 
             let commands = vec!(
                 DomCommand::CreateNode {
                     id,
                     name,
-                },
+                }
+            );
+            all.feed(commands);
+        }
+
+        fn insert_before(all: &mut AllElements, parent_id: u64, id: u64, ref_id: Option<u64>) {
+            all.feed(vec!(
                 DomCommand::InsertBefore {
                     parent: parent_id,
                     child: id,
-                    ref_id: None
+                    ref_id
                 },
-            );
-            all.feed(commands);
+            ))
+        }
+
+        fn create_and_add(all: &mut AllElements, parent_id: u64, id: u64, name: impl Into<String>) {
+            create_element(all, id, name);
+            insert_before(all, parent_id, id, None);
         }
 
         fn add_to_parent(all: &mut AllElements, parent: u64, child: u64) {
@@ -258,23 +259,34 @@ mod tests {
 
         let mut all = AllElements::new();
 
+        create_element(&mut all, 1, "div");
         create_and_add(&mut all, 1, 2, "div");
-        assert_eq!(all.get_response(true).convert_to_string(false), r#"<!DOCTYPE html><div data-id="2"></div>"#);
+        let (document, _) = all.get_response_document(true);
+        assert_eq!(document.convert_to_string(false), r#"<!DOCTYPE html><div data-id="1"><div data-id="2"></div></div>"#);
 
         create_and_add(&mut all, 1, 3, "div");
-        assert_eq!(all.get_response(true).convert_to_string(false), r#"<!DOCTYPE html><div data-id="2"></div><div data-id="3"></div>"#);
+        let (document, _) = all.get_response_document(true);
+        assert_eq!(document.convert_to_string(false), r#"<!DOCTYPE html><div data-id="1"><div data-id="2"></div><div data-id="3"></div></div>"#);
 
         create_and_add(&mut all, 3, 4, "span");
-        assert_eq!(all.get_response(true).convert_to_string(false), r#"<!DOCTYPE html><div data-id="2"></div><div data-id="3"><span data-id="4"></span></div>"#);
+        let (document, _) = all.get_response_document(true);
+        assert_eq!(document.convert_to_string(false), r#"<!DOCTYPE html><div data-id="1"><div data-id="2"></div><div data-id="3"><span data-id="4"></span></div></div>"#);
 
         add_to_parent(&mut all, 2, 4);
-        assert_eq!(all.get_response(true).convert_to_string(false), r#"<!DOCTYPE html><div data-id="2"><span data-id="4"></span></div><div data-id="3"></div>"#);
+        let (document, _) = all.get_response_document(true);
+        assert_eq!(document.convert_to_string(false), r#"<!DOCTYPE html><div data-id="1"><div data-id="2"><span data-id="4"></span></div><div data-id="3"></div></div>"#);
+
+        create_element(&mut all, 5, "br");
+        insert_before(&mut all, 1, 5, Some(2));
+        let (document, _) = all.get_response_document(true);
+        assert_eq!(document.convert_to_string(false), r#"<!DOCTYPE html><div data-id="1"><br data-id="5" /><div data-id="2"><span data-id="4"></span></div><div data-id="3"></div></div>"#);
     }
 
 
     #[test]
     fn test_children() {
         let commands_str = r#"[
+            {"id":1,"name":"div","type":"create_node"},
             {"id":2,"name":"div","type":"create_node"},
             {"id":3,"name":"ul","type":"create_node"},
             {"id":4,"name":"li","type":"create_node"},
@@ -321,15 +333,17 @@ mod tests {
         let mut all = AllElements::new();
         all.feed(commands);
 
-        let result = all.get_response(true).convert_to_string(false);
+        let (document, _) = all.get_response_document(true);
+        let result = document.convert_to_string(false);
 
-        assert_eq!(result, r#"<!DOCTYPE html><div data-id="23"><div data-id="2"><ul data-id="3"><li data-id="4"></li><li data-id="6"></li><li data-id="8"></li><li data-id="10"></li><li data-id="12"></li><li data-id="14"></li><li data-id="16"></li><li data-id="18"></li><li data-id="20"></li></ul></div><div data-id="25"><div data-id="26"><div data-id="27"></div></div><button data-id="28"><span data-id="29"></span><span data-id="31"></span></button></div></div>"#);
+        assert_eq!(result, r#"<!DOCTYPE html><div data-id="1"><div data-id="23"><div data-id="2"><ul data-id="3"><li data-id="4"></li><li data-id="6"></li><li data-id="8"></li><li data-id="10"></li><li data-id="12"></li><li data-id="14"></li><li data-id="16"></li><li data-id="18"></li><li data-id="20"></li></ul></div><div data-id="25"><div data-id="26"><div data-id="27"></div></div><button data-id="28"><span data-id="29"></span><span data-id="31"></span></button></div></div></div>"#);
     }
 
 
     #[test]
     fn test_deserialize() {
         let commands_str = r#"[
+            {"id":1,"name":"div","type":"create_node"},
             {"id":2,"name":"div","type":"create_node"},
             {"callback_id":2,"event_name":"hook_keydown","id":2,"type":"callback_add"},
             {"id":3,"name":"ul","type":"create_node"},
@@ -434,8 +448,12 @@ mod tests {
         let mut all = AllElements::new();
         all.feed(commands);
 
-        let result = all.get_response(true).convert_to_string(false);
+        let (document, _css) = all.get_response_document(true);
+        let result = document.convert_to_string(false);
 
-        assert_eq!(result, r#"<!DOCTYPE html><style>.autocss_1 { list-style-type: none; margin: 10px; padding: 0 }</style><style>.autocss_2:hover { text-decoration: underline; }</style><style>.autocss_2 { display: inline; width: 60px; padding: 5px 10px; margin: 5px; cursor: pointer; background-color: lightgreen }</style><style>.autocss_3:hover { text-decoration: underline; }</style><style>.autocss_3 { display: inline; width: 60px; padding: 5px 10px; margin: 5px; cursor: pointer; background-color: lightblue }</style><style>.autocss_4 { padding: 5px }</style><style>.autocss_5 { border: 1px solid black; padding: 10px; background-color: #e0e0e0; margin-bottom: 10px }</style><style>@keyframes autocss_7 { 0% { -webkit-transform: scale(0);\ntransform: scale(0); }\n100% { -webkit-transform: scale(1.0);\ntransform: scale(1.0);\nopacity: 0; } }</style><style>.autocss_6 { width: 40px; height: 40px; background-color: #d26913; border-radius: 100%; animation: 1.0s infinite ease-in-out autocss_7  }</style><div class="autocss_4" data-id="23"><div data-id="2"><ul class="autocss_1" data-id="3"><li class="autocss_2" data-id="4">Counters</li><li class="autocss_3" data-id="6">Animations</li><li class="autocss_2" data-id="8">Sudoku</li><li class="autocss_2" data-id="10">Input</li><li class="autocss_2" data-id="12">Github Explorer</li><li class="autocss_2" data-id="14">Game Of Life</li><li class="autocss_2" data-id="16">Chat</li><li class="autocss_2" data-id="18">Todo</li><li class="autocss_2" data-id="20">Drop File</li></ul></div><div data-id="25"><div class="autocss_5" data-id="26"><div class="autocss_6" data-id="27"></div></div><button data-id="28"><span data-id="29">start the progress bar</span><span data-id="31"></span></button></div></div>"#);
+        // <style>.autocss_1 { list-style-type: none; margin: 10px; padding: 0 }</style><style>.autocss_2:hover { text-decoration: underline; }</style><style>.autocss_2 { display: inline; width: 60px; padding: 5px 10px; margin: 5px; cursor: pointer; background-color: lightgreen }</style><style>.autocss_3:hover { text-decoration: underline; }</style><style>.autocss_3 { display: inline; width: 60px; padding: 5px 10px; margin: 5px; cursor: pointer; background-color: lightblue }</style><style>.autocss_4 { padding: 5px }</style><style>.autocss_5 { border: 1px solid black; padding: 10px; background-color: #e0e0e0; margin-bottom: 10px }</style><style>@keyframes autocss_7 { 0% { -webkit-transform: scale(0);\ntransform: scale(0); }\n100% { -webkit-transform: scale(1.0);\ntransform: scale(1.0);\nopacity: 0; } }</style><style>.autocss_6 { width: 40px; height: 40px; background-color: #d26913; border-radius: 100%; animation: 1.0s infinite ease-in-out autocss_7  }</style><div class="autocss_4" data-id="23">
+        
+        assert_eq!(result, r#"<!DOCTYPE html><div data-id="1"><div class="autocss_4" data-id="23"><div data-id="2"><ul class="autocss_1" data-id="3"><li class="autocss_2" data-id="4">Counters</li><li class="autocss_3" data-id="6">Animations</li><li class="autocss_2" data-id="8">Sudoku</li><li class="autocss_2" data-id="10">Input</li><li class="autocss_2" data-id="12">Github Explorer</li><li class="autocss_2" data-id="14">Game Of Life</li><li class="autocss_2" data-id="16">Chat</li><li class="autocss_2" data-id="18">Todo</li><li class="autocss_2" data-id="20">Drop File</li></ul></div><div data-id="25"><div class="autocss_5" data-id="26"><div class="autocss_6" data-id="27"></div></div><button data-id="28"><span data-id="29">start the progress bar</span><span data-id="31"></span></button></div></div></div>"#);
     }
 }
+

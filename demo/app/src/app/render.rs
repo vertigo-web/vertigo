@@ -87,12 +87,41 @@ fn render_header(state: &app::State) -> DomElement {
     }
 }
 
+fn title_value(state: app::State) -> Computed<String> {
+    let sum = state.counters.sum.clone();
+    let input_value = state.input.value.clone();
+
+    Computed::from(move |context| {
+        let route = state.route.route.get(context);
+
+        match route {
+            Route::Animations => "Animations".into(),
+            Route::Counters => {
+                let sum = sum.get(context);
+                format!("Counter = {sum}")
+            },
+            Route::Sudoku => "Sudoku".into(),
+            Route::Input => {
+                let input_value = input_value.get(context);
+                format!("Inpput => {input_value}")
+            },
+            Route::GithubExplorer => "GithubExplorer".into(),
+            Route::GameOfLife => "GameOfLife".into(),
+            Route::Chat => "Chat".into(),
+            Route::Todo => "Todo".into(),
+            Route::DropFile => "DropFile".into(),
+            Route::NotFound => "NotFound".into(),
+        }
+    })
+}
+
 pub fn render(state: &app::State) -> DomElement {
     let state = state.clone();
 
     let header = render_header(&state);
 
-    let content = state.route.route.render_value(
+    let content = state.route.route.render_value({
+        let state = state.clone();
         move |route| {
            match route {
                 Route::Animations => dom! { <Animations /> },
@@ -107,7 +136,7 @@ pub fn render(state: &app::State) -> DomElement {
                 Route::NotFound => dom! { <div>"Page Not Found"</div> },
             }
         }
-    );
+    });
 
     let on_keydown = |_event: KeyDownEvent| -> bool {
         false
@@ -117,10 +146,32 @@ pub fn render(state: &app::State) -> DomElement {
         padding: 5px;
     ");
 
+    let title_value = title_value(state);
+
     dom! {
-        <div on_key_down={on_keydown} css={css_wrapper}>
-            { header }
-            { content }
-        </div>
+        <html>
+            <head>
+                <meta charset="utf-8"/>
+                <title>{ title_value }</title>
+                <style type="text/css">"
+                    * {
+                        box-sizing: border-box;
+                    }
+                    html, body {
+                        width: 100%;
+                        height: 100%;
+                        margin: 0;
+                        padding: 0;
+                        border: 0;
+                    }
+                "</style>
+            </head>
+            <body>
+                <div on_key_down={on_keydown} css={css_wrapper}>
+                    { header }
+                    { content }
+                </div>
+            </body>
+        </html>
     }
 }

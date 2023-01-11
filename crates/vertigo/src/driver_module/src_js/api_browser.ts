@@ -17,14 +17,14 @@ export class ApiBrowser {
     public readonly websocket: DriverWebsocket;
     public readonly dom: DriverDom;
 
-    constructor(root: HTMLElement, getWasm: () => ModuleControllerType<ExportType>) {
+    constructor(getWasm: () => ModuleControllerType<ExportType>) {
         this.cookie = new Cookies();
         this.interval = new Interval(getWasm);
         this.hashRouter = new HashRouter(getWasm);
         this.historyLocation = new HistoryLocation(getWasm);
         this.fetch = new Fetch(getWasm);
         this.websocket = new DriverWebsocket(getWasm);
-        this.dom = new DriverDom(root, this.historyLocation, getWasm);
+        this.dom = new DriverDom(this.historyLocation, getWasm);
     }
 
     public getRandom = (min: number, max: number): number => {
