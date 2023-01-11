@@ -1,8 +1,7 @@
 #![allow(clippy::question_mark)]
-use std::sync::Arc;
 use std::path::Path;
 
-use super::html::{parse_html, HtmlNode, HtmlDocument};
+use crate::models::IndexModel;
 
 
 #[derive(Clone)]
@@ -10,9 +9,9 @@ pub struct MountPathConfig {
     //for http
     public_path: String,
     //for filesystem
-    dest_dir: String,               //TODO - use Path structure
+    dest_dir: String,
     //index after parsing
-    pub index: Arc<HtmlDocument>,
+    pub run_js: String,
     //path to wasm-file
     pub wasm_path: String,
 }
@@ -20,23 +19,18 @@ pub struct MountPathConfig {
 impl MountPathConfig {
     pub fn new(dest_dir: String) -> Result<MountPathConfig, i32> {
 
-        let index = parse_index(&dest_dir)?;
-    
-        let Some(wasm_path) = find_wasm_node_list(index.elements.as_ref()) else {
-            log::error!("Problem with finding the path to the wasm file");
-            return Err(-1);
-        };
-
-        let Some(public_path) = get_base_dir(&wasm_path) else {
+        let index_model = read_index(&dest_dir)?;
+        
+        let Some(public_path) = get_base_dir(&index_model.wasm) else {
             log::error!("Problem with finding the http base path");
             return Err(-1);
         };
 
         Ok(MountPathConfig {
-            public_path,
             dest_dir,
-            index,
-            wasm_path,
+            public_path,
+            run_js: index_model.run_js,
+            wasm_path: index_model.wasm,
         })
     }
 
@@ -54,9 +48,8 @@ impl MountPathConfig {
     }
 }
 
-
-fn parse_index(dest_dir: &str) -> Result<Arc<HtmlDocument>, i32> {
-    let index_path = Path::new(dest_dir).join("index.html");
+fn read_index(dest_dir: &str) -> Result<IndexModel, i32> {
+    let index_path = Path::new(dest_dir).join("index.json");
     let index_html = match std::fs::read_to_string(&index_path) {
         Ok(data) => data,
         Err(err) => {
@@ -65,31 +58,8 @@ fn parse_index(dest_dir: &str) -> Result<Arc<HtmlDocument>, i32> {
         }
     };
 
-    let document = parse_html(&index_html);
-
-    Ok(Arc::new(document))
-}
-
-fn find_wasm_node(node: &HtmlNode) -> Option<String> {
-    if let HtmlNode::Element(element) = node {
-        if let Some(path) = element.attr.get("data-vertigo-run-wasm") {
-            return Some(path.clone());
-        }
-
-        return find_wasm_node_list(&element.children);
-    }
-
-    None
-}
-
-fn find_wasm_node_list(nodes: &[HtmlNode]) -> Option<String> {
-    for node in nodes.iter() {
-        if let Some(path) = find_wasm_node(node) {
-            return Some(path);
-        }
-    }
-
-    None
+    let model = serde_json::from_str::<IndexModel>(&index_html).unwrap();
+    Ok(model)
 }
 
 fn replace_prefix(public_path: &str, dest_dir: &str, path: &str) -> Result<String, i32> {

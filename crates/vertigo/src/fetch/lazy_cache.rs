@@ -10,6 +10,8 @@ use crate::{
 
 use super::request_builder::{RequestBuilder, RequestBody};
 
+type MapResponse<T> = Option<Result<T, String>>;
+
 fn get_unique_id() -> u64 {
     use std::sync::atomic::{AtomicU64, Ordering};
     static COUNTER: AtomicU64 = AtomicU64::new(1);
@@ -112,7 +114,7 @@ pub struct LazyCache<T: 'static> {
     value: Value<ApiResponse<T>>,
     queued: Rc<ValueMut<bool>>,
     request: Rc<RequestBuilder>,
-    map_response: Rc<dyn Fn(u32, RequestBody) -> Option<Resource<T>>>,
+    map_response: Rc<dyn Fn(u32, RequestBody) -> MapResponse<T>>,
 }
 
 impl<T: 'static> Debug for LazyCache<T> {
@@ -138,7 +140,7 @@ impl<T> Clone for LazyCache<T> {
 impl<T> LazyCache<T> {
     pub fn new(
         request: RequestBuilder,
-        map_response: impl Fn(u32, RequestBody) -> Option<Resource<T>> + 'static
+        map_response: impl Fn(u32, RequestBody) -> MapResponse<T> + 'static
     ) -> Self {
         Self {
             id: get_unique_id(),
@@ -194,7 +196,15 @@ impl<T> LazyCache<T> {
 
                     let expiry = ttl.map(|ttl| get_driver().now().add_duration(ttl));
                     
-                    let new_value = new_value.map(Rc::new);
+                    let new_value = match new_value {
+                        Ok(value) => {
+                            Resource::Ready(Rc::new(value))
+                        },
+                        Err(message) => {
+                            Resource::Error(message)
+                        }
+                    };
+
                     value.set(ApiResponse::new(new_value, expiry));
                 }
 

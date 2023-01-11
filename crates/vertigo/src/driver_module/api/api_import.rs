@@ -55,12 +55,13 @@ pub struct ApiImport {
     pub on_fetch_stop: EventEmmiter<()>,
 }
 
-impl ApiImport {
+impl Default for ApiImport {
+    fn default() -> Self {
+        use crate::external_api::api::safe_wrappers::{
+            safe_panic_message as panic_message,
+            safe_dom_access as fn_dom_access
+        };
 
-    pub fn new(
-        panic_message: fn(ptr: u32, size: u32),
-        fn_dom_access: fn(ptr: u32, size: u32) -> u32,
-    ) -> ApiImport {
         let panic_message = PanicMessage::new(panic_message);
 
         ApiImport {
@@ -72,7 +73,10 @@ impl ApiImport {
             on_fetch_stop: EventEmmiter::default(),
         }
     }
+}
 
+
+impl ApiImport {
     pub fn show_panic_message(&self, message: String) {
         self.panic_message.show(message);
     }

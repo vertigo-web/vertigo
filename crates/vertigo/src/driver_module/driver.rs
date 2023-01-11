@@ -49,12 +49,7 @@ impl DriverInner {
     pub fn new() -> Self {
         let dependencies = Dependencies::default();
 
-        use crate::external_api::api::safe_wrappers::{safe_panic_message, safe_dom_access};
-
-        let api = ApiImport::new(
-            safe_panic_message,
-            safe_dom_access,
-        );
+        let api = ApiImport::default();
 
         let spawn_executor = {
             let api = api.clone();

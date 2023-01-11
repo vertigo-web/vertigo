@@ -1,6 +1,7 @@
 mod build;
 mod new;
 mod serve;
+mod models;
 
 use clap::{Parser, Subcommand};
 

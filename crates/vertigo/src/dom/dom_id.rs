@@ -1,6 +1,8 @@
 use std::hash::Hash;
-const ROOT_ID: u64 = 1;
-const START_ID: u64 = 2;
+const HTML_ID: u64 = 1;
+const HEAD_ID: u64 = 2;
+const BODY_ID: u64 = 3;
+const START_ID: u64 = 4;
 
 fn get_unique_id() -> u64 {
     use std::sync::atomic::{AtomicU64, Ordering};
@@ -18,8 +20,19 @@ impl Default for DomId {
 }
 
 impl DomId {
-    pub fn root() -> DomId {
-        DomId(ROOT_ID)
+    pub fn from_name(name: &'static str) -> DomId {
+        let new_id = match name {
+            "html" => HTML_ID,
+            "head" => HEAD_ID,
+            "body" => BODY_ID,
+            _ => get_unique_id()
+        };
+
+        DomId(new_id)
+    }
+
+    pub fn root_id() -> DomId {
+        DomId(HTML_ID)
     }
 
     pub fn from_u64(id: u64) -> DomId {

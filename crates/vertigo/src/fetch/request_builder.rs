@@ -6,8 +6,6 @@ use crate::{
     from_json, JsJsonSerialize, JsJsonDeserialize,
 };
 
-use super::resource::Resource;
-
 #[derive(Debug, Clone)]
 pub enum RequestBody {
     Text(String),
@@ -16,19 +14,19 @@ pub enum RequestBody {
 }
 
 impl RequestBody {
-    pub fn into<T: JsJsonDeserialize>(self) -> Resource<T> {
+    pub fn into<T: JsJsonDeserialize>(self) -> Result<T, String> {
         match self {
             RequestBody::Json(json) => {
                 match from_json::<T>(json) {
-                    Ok(data) => Resource::Ready(data),
-                    Err(err) => Resource::Error(err),
+                    Ok(data) => Ok(data),
+                    Err(err) => Err(err),
                 }
             },
             RequestBody::Text(_) => {
-                Resource::Error("FetchBody.into() - expected json, received text".to_string())
+                Err("FetchBody.into() - expected json, received text".to_string())
             },
             RequestBody::Binary(_) => {
-                Resource::Error("FetchBody.into() - expected json, received binary".to_string())
+                Err("FetchBody.into() - expected json, received binary".to_string())
             }
         }
     }
@@ -144,7 +142,7 @@ impl RequestBuilder {
     #[must_use]
     pub fn lazy_cache<T>(
         self,
-        map_response: impl Fn(u32, RequestBody) -> Option<Resource<T>> + 'static
+        map_response: impl Fn(u32, RequestBody) -> Option<Result<T, String>> + 'static
     ) -> LazyCache<T> {
         LazyCache::new(self, map_response)
     }
@@ -171,36 +169,36 @@ impl RequestResponse {
         None
     }
 
-    pub fn into<T>(self, convert: impl Fn(u32, RequestBody) -> Option<Resource<T>>) -> Resource<T> {
+    pub fn into<T>(self, convert: impl Fn(u32, RequestBody) -> Option<Result<T, String>>) -> Result<T, String> {
         let result = match self.data {
             Ok((status, body)) => {
                 match convert(status, body) {
                     Some(result) => result,
-                    None => Resource::Error(format!("Unhandled response code {status}")),
+                    None => Err(format!("Unhandled response code {status}")),
                 }
             }
-            Err(err) => Resource::Error(err),
+            Err(err) => Err(err),
         };
 
-        if let Resource::Error(err) = &result {
+        if let Err(err) = &result {
             log::error!("Error fetching {} {}: {}", self.method.to_str(), self.url, err);
         }
 
         result
     }
 
-    pub fn into_data<T: JsJsonDeserialize>(self) -> Resource<T> {
+    pub fn into_data<T: JsJsonDeserialize>(self) -> Result<T, String> {
         self.into(|_, response_body| {
             Some(response_body.into::<T>())
         })
     }
 
-    pub fn into_error_message<T>(self) -> Resource<T> {
+    pub fn into_error_message<T>(self) -> Result<T, String> {
         let body = match self.data {
             Ok((code, body)) => format!("API error {code}: {body:#?}"),
             Err(body) => format!("Network error: {body}"),
         };
 
-        Resource::Error(body)
+        Err(body)
     }
 }

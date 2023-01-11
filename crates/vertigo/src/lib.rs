@@ -251,9 +251,7 @@ pub fn start_app(app_state: impl Any + 'static, view: DomElement) {
         init_env(state.driver.inner.api.clone());
         state.driver.inner.api.on_fetch_start.trigger(());
 
-        let root = DomElement::create_with_id(DomId::root());
-        root.add_child(view);
-        state.set_root(Box::new(app_state), root);
+        state.set_root(Box::new(app_state), view);
 
         state.driver.inner.api.on_fetch_stop.trigger(());
         get_driver().inner.dom.flush_dom_changes();

@@ -135,7 +135,7 @@ impl DomDebugFragment {
 
         // Try to return real root node
         let root_node = if let Some(root_node) = map.iter()
-            .find(|(_, child)| child.parent_id == DomId::root())
+            .find(|(_, child)| child.parent_id == DomId::root_id())
             .map(|(id, _)| id)
             .cloned()
         {

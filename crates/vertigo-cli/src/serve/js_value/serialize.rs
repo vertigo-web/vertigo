@@ -151,6 +151,28 @@ impl JsJsonDeserialize for i32 {
     }
 }
 
+impl JsJsonSerialize for bool {
+    fn to_json(self) -> JsJson {
+        match self {
+            false => JsJson::False,
+            true => JsJson::True,
+        }
+    }
+}
+
+impl JsJsonDeserialize for bool {
+    fn from_json(context: JsJsonContext, json: JsJson) -> Result<Self, JsJsonContext> {
+        match json {
+            JsJson::False => Ok(false),
+            JsJson::True => Ok(true),
+            other => {
+                let message = ["bool expected, received", other.typename()].concat();
+                Err(context.add(message))
+            }
+        }
+    }
+}
+
 impl JsJsonSerialize for &str {
     fn to_json(self) -> JsJson {
         JsJson::String(self.into())
