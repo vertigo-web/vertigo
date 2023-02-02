@@ -372,7 +372,7 @@ impl WasmInstance {
         Results: wasmtime::WasmResults
     >(&mut self, name: &'static str, params: Params) -> Result<Results, String> {
         let start_application = {
-            self.instance.get_typed_func::<Params, Results, _>(&mut self.store, name).unwrap()
+            self.instance.get_typed_func::<Params, Results>(&mut self.store, name).unwrap()
         };
 
         start_application.call(&mut self.store, params).map_err(|error| {
