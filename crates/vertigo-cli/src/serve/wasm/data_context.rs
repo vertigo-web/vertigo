@@ -120,7 +120,7 @@ impl<'a> DataContext<'a> {
         };
 
         let mut context = self.get_context();
-        let alloc = alloc_inner.typed::<u32, u32, _>(&mut context).unwrap();
+        let alloc = alloc_inner.typed::<u32, u32>(&mut context).unwrap();
 
         alloc.call(&mut context, size as u32).unwrap() as usize
     }
