@@ -2,6 +2,8 @@ mod build;
 mod new;
 mod serve;
 mod models;
+mod check_env;
+mod command;
 
 use clap::{Parser, Subcommand};
 
@@ -30,6 +32,8 @@ pub async fn main() -> Result<(), i32> {
         .filter(None, log::LevelFilter::Info)
         .filter(Some("cargo::core::compiler"), log::LevelFilter::Off)
         .init();
+
+    let _ = check_env::check_env()?;
 
     let cli = Cli::parse();
     match cli.command {
