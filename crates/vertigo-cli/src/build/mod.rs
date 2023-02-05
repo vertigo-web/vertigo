@@ -11,6 +11,7 @@ use std::path::PathBuf;
 use wasm_path::WasmPath;
 
 pub use build_opts::BuildOpts;
+use crate::check_env;
 use crate::models::IndexModel;
 
 pub fn run(opts: BuildOpts) -> Result<(), i32> {
@@ -27,6 +28,8 @@ pub fn run(opts: BuildOpts) -> Result<(), i32> {
             },
         },
     };
+
+    check_env::check_env()?;
 
     let dest_dir = WasmPath::new(PathBuf::from(&opts.dest_dir));
 
