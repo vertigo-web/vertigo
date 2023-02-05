@@ -33,8 +33,6 @@ pub async fn main() -> Result<(), i32> {
         .filter(Some("cargo::core::compiler"), log::LevelFilter::Off)
         .init();
 
-    let _ = check_env::check_env()?;
-
     let cli = Cli::parse();
     match cli.command {
         Command::Build(opts) => {
