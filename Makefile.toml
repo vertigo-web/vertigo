@@ -1,7 +1,6 @@
 [config]
 default_to_workspace = false
 
-
 [tasks.vertigo-test]
 script = [
     "cargo test -p vertigo --all-features"
@@ -36,12 +35,12 @@ script = [
 ]
 
 [tasks.demo-serve-http]
-script = [
-    "cargo run --bin vertigo -- serve --dest-dir=demo_build",
-]
+command = "cargo"
+args = ["run", "--bin", "vertigo", "--", "serve", "--dest-dir=demo_build"]
 
 [tasks.demo-serve]
-run_task = { name = ["demo-serve-api", "demo-serve-http"], parallel = true }
+command = "cargo"
+args = ["run", "--bin", "vertigo", "--", "run-parallel", "cargo make demo-serve-api", "cargo make demo-serve-http"]
 
 [tasks.demo-start]
 dependencies = [

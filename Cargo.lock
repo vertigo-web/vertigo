@@ -2774,6 +2774,7 @@ dependencies = [
  "cargo",
  "clap",
  "env_logger 0.10.0",
+ "futures",
  "hex 0.4.3",
  "include_dir",
  "log",

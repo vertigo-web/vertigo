@@ -4,11 +4,13 @@ mod serve;
 mod models;
 mod check_env;
 mod command;
+mod run_parallel;
 
 use clap::{Parser, Subcommand};
 
 use build::BuildOpts;
 use new::NewOpts;
+use run_parallel::RunParallelOpts;
 use serve::ServeOpts;
 
 #[derive(Parser)]
@@ -24,6 +26,7 @@ enum Command {
     New(NewOpts),
     Build(BuildOpts),
     Serve(ServeOpts),
+    RunParallel(RunParallelOpts),
 }
 
 #[tokio::main]
@@ -33,7 +36,7 @@ pub async fn main() -> Result<(), i32> {
         .filter(Some("cargo::core::compiler"), log::LevelFilter::Off)
         .init();
 
-    let _ = check_env::check_env()?;
+    let _ = check_env::check_env().await?;
 
     let cli = Cli::parse();
     match cli.command {
@@ -45,6 +48,9 @@ pub async fn main() -> Result<(), i32> {
         }
         Command::Serve(opts) => {
             serve::run(opts).await
+        }
+        Command::RunParallel(opts) => {
+            run_parallel::run_parallel(opts).await
         }
     }
 }
