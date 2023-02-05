@@ -285,6 +285,11 @@ export class DriverDom {
         console.warn('keydown ignore', event);
     }
 
+    private callback_load(event: Event, callback_id: bigint) {
+        event.preventDefault();
+        this.getWasm().wasm_callback(callback_id, undefined);
+    }
+
     private callback_add(id: number, event_name: string, callback_id: bigint) {
         const callback = (event: Event) => {
             if (event_name === 'click') {
@@ -313,6 +318,10 @@ export class DriverDom {
 
             if (event_name === 'drop') {
                 return this.callback_drop(event, callback_id);
+            }
+
+            if (event_name === 'load') {
+                return this.callback_load(event, callback_id);
             }
 
             console.error(`No support for the event ${event_name}`);

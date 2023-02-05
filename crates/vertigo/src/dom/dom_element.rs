@@ -389,6 +389,25 @@ impl DomElement {
         self
     }
 
+    pub fn on_load(self, on_load: impl Fn() + 'static) -> Self {
+        let (callback_id, drop) = self.driver.inner.api.callback_store.register(move |_data| {
+            on_load();
+            JsValue::Undefined
+        });
+
+        let drop_event = DropResource::new({
+            let driver = self.driver.clone();
+            move || {
+                driver.inner.dom.callback_remove(self.id_dom, "load", callback_id);
+                drop.off();
+            }
+        });
+
+        self.driver.inner.dom.callback_add(self.id_dom, "load", callback_id);
+        self.drop.push(drop_event);
+
+        self
+    }
 }
 
 impl Drop for DomElement {

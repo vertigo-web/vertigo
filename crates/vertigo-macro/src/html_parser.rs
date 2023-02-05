@@ -141,6 +141,10 @@ fn convert_node(node: Node) -> Result<TokenStream2, ()> {
             out_attr.push(quote!{
                 .hook_key_down(#value)
             })
+        } else if name == "on_load" {
+            out_attr.push(quote!{
+                .on_load(#value)
+            })
         } else if name == "css" {
             out_attr.push(quote!{
                 .css(#value.into())
