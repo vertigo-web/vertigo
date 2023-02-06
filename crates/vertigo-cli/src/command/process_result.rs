@@ -4,15 +4,15 @@ use super::{CommandError, CommandLog};
 
 pub struct ProcessResult {
     command: CommandLog,
-    stderr: ChildStderr,
-    stdout: ChildStdout,
+    stderr: Option<ChildStderr>,
+    stdout: Option<ChildStdout>,
 }
 
 impl ProcessResult {
     pub fn new(
         command: CommandLog,
-        stderr: ChildStderr,
-        stdout: ChildStdout,
+        stderr: Option<ChildStderr>,
+        stdout: Option<ChildStdout>,
     ) -> Self {
         ProcessResult {
             command,
@@ -21,7 +21,7 @@ impl ProcessResult {
         }
     }
 
-    pub fn split(self) -> (ChildStdout, ChildStderr) {
+    pub fn split(self) -> (Option<ChildStdout>, Option<ChildStderr>) {
         (self.stdout, self.stderr)
     }
 
@@ -40,22 +40,40 @@ impl ProcessResult {
         }
     }
 
-    pub async fn output_with_err(mut self) -> Result<(String, String), CommandError> {
+    pub async fn output_with_err(self) -> Result<(String, String), CommandError> {
         use tokio::io::AsyncReadExt;
 
-        let mut stdout = String::new();
-        match self.stdout.read_to_string(&mut stdout).await {
-            Ok(_) => {},
-            Err(error) => {
-                return Err(self.command.error(format!("Problem with reading stdout: {error:?}")));
+        let stdout = match self.stdout {
+            Some(mut stdout) => {
+                let mut result = String::new();
+
+                match stdout.read_to_string(&mut result).await {
+                    Ok(_) => {},
+                    Err(error) => {
+                        return Err(self.command.error(format!("Problem with reading stdout: {error:?}")));
+                    }
+                };
+
+                result
+            },
+            None => {
+                String::new()
             }
         };
 
-        let mut stderr = String::new();
-        match self.stderr.read_to_string(&mut stderr).await  {
-            Ok(_) => {},
-            Err(error) => {
-                return Err(self.command.error(format!("Problem with reading stderr: {error:?}")));
+        let stderr = match self.stderr {
+            Some(mut stderr) => {
+                let mut result = String::new();
+                match stderr.read_to_string(&mut result).await  {
+                    Ok(_) => {},
+                    Err(error) => {
+                        return Err(self.command.error(format!("Problem with reading stderr: {error:?}")));
+                    }
+                };
+                result
+            },
+            None => {
+                String::new()
             }
         };
 

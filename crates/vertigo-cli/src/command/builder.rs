@@ -136,6 +136,7 @@ impl CommandBuilder {
 
         let (process, response) = self.start_process()?;
         let (stdout, _) = response.split();
+        let stdout = stdout.unwrap();
 
         let mut new_command = CommandBuilder::new(params);
         new_command.keep_process.push(process);
@@ -191,29 +192,35 @@ impl CommandBuilder {
             }
         }
     
-        match self.stdout {
+        let stdout_pipe = match self.stdout {
             Stdout::Display => {
                 command.stdout(Stdio::inherit());
+                false
             },
             Stdout::Piped => {
                 command.stdout(Stdio::piped());
+                true
             },
             Stdout::File(file) => {
                 command.stdout(file);
+                false
             }
-        }
+        };
 
-        match self.stderr {
+        let stderr_pipe = match self.stderr {
             Stdout::Display => {
                 command.stderr(Stdio::inherit());
+                false
             },
             Stdout::Piped => {
                 command.stderr(Stdio::piped());
+                true
             },
             Stdout::File(file) => {
                 command.stderr(file);
+                false
             }
-        }
+        };
 
         let mut child = command.spawn().map_err({
             let command_str = command_log.clone();
@@ -227,12 +234,25 @@ impl CommandBuilder {
 
         log::info!("\n$ {log}");
 
-        let Some(stderr) = child.stderr.take() else {
-            return Err(command_log.error(format!("Problem with getting stderr")));
+        let stderr = match stderr_pipe {
+            true => {
+                let Some(stderr) = child.stderr.take() else {
+                    return Err(command_log.error(format!("Problem with getting stderr")));
+                };
+
+                Some(stderr)
+            },
+            false => None,
         };
 
-        let Some(stdout) = child.stdout.take() else {
-            return Err(command_log.error(format!("Problem with getting stdout")));
+        let stdout = match stdout_pipe {
+            true => {
+                let Some(stdout) = child.stdout.take() else {
+                    return Err(command_log.error(format!("Problem with getting stdout")));
+                };
+                Some(stdout)
+            },
+            false => None,
         };
 
         Ok((

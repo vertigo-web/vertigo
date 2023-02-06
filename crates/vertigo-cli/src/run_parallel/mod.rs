@@ -1,8 +1,7 @@
 use clap::Args;
 
-use crate::command::CommandBuilder;
-use tokio::sync::mpsc::unbounded_channel;
-use std::thread::spawn;
+use crate::command::{CommandBuilder, CommandError};
+use tokio::sync::mpsc::{unbounded_channel};
 
 #[derive(Args, Debug)]
 pub struct RunParallelOpts {
@@ -11,36 +10,77 @@ pub struct RunParallelOpts {
 
 pub async fn run_parallel(options: RunParallelOpts) -> Result<(), i32> {
 
+    loop {
+        let aa = run_parallel_iteration(&options).await;
+
+        println!("end iteration status={aa:#?}");
+        tokio::time::sleep(std::time::Duration::from_secs(10)).await;
+    }
+}
+
+pub async fn run_parallel_iteration(options: &RunParallelOpts) -> Result<(), CommandError> {
+    // let list = CommandBuilder::new("ls -al")
+    //     .piped("gzip")?
+    //     .output_to_file("ls.gzip").await?;
+
+    // // for line in list.lines() {
+    // //     println!("line = {line}");
+    // // }
+
+    // let d = CommandBuilder::new("cargo run --bin vertigo-demo-server")
+        // .run().await?;
+    let (pr, _) = CommandBuilder::new("cargo make demo-serve-api")
+        .spawn()?;
+
+    let aaa = pr.status().await?;
+
+    let ggg = aaa.map(|status| {
+        status.code()
+    });
+
+    println!("aaa = {aaa:#?}");
+    println!("bbb = {ggg:#?}");
+    todo!();
+
+    // println!("");
+    // println!("");
+
+    // println!("list ===> {list:?}");
+
+
+    println!("uruchamiam nową iterację 1: {options:?}");
+    log::info!("uruchamiam nową iterację 2: {options:?}");
+
+    let (sender, mut receiver) = unbounded_channel::<()>();
+
     let mut childs = Vec::new();
 
-    let (sender, receiver) = unbounded_channel::<()>();
+    for command in options.command.iter() {
+        println!("command child parallel => {command}");
 
-    for command in options.command {
-        match CommandBuilder::new(command).run_child() {
-            Ok(child) => {
-                childs.push(child);
-            },
-            Err(err) => {
-                sender.send(()).unwrap();
-            }
-        }
-    }
+        let owner = CommandBuilder::new(command).run_child()?;
 
-    // spawn(|| {
+        let done = owner.when_done();
+        tokio::spawn({
+            let sender = sender.clone();
 
-    // });
-
-    for child in childs {
-        // let child = child.clone();
-
-        spawn({
-            let receiver = sender.subscribe();
-            move || {
+            async move {
+                done.done().await;
+                let _ = sender.send(());
             }
         });
+    
+        childs.push(owner);
     }
 
-    println!("options {options:#?}");
+    println!("oczekuję na zakończenie któregokolwiek procesu");
 
-    todo!()
+    let _ = receiver.recv().await;
+
+    for child in childs {
+        child.off();
+    }
+
+    Ok(())
 }
+

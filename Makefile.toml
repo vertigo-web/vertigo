@@ -42,6 +42,8 @@ args = ["run", "--bin", "vertigo", "--", "serve", "--dest-dir=demo_build"]
 command = "cargo"
 args = ["run", "--bin", "vertigo", "--", "run-parallel", "cargo make demo-serve-api", "cargo make demo-serve-http"]
 
+#cargo run --bin vertigo -- run-parallel "cargo make demo-serve-api" "cargo make demo-serve-http"
+
 [tasks.demo-start]
 dependencies = [
     "demo-build",
