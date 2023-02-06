@@ -22,11 +22,16 @@ impl App {
         });
 
         dom! {
-            <div>
-                <p>"Counter: " { state.count }</p>
-                <button on_click={decrement}>"-"</button>
-                <button on_click={increment}>"+"</button>
-            </div>
+            <html>
+                <head />
+                <body>
+                    <div>
+                        <p>"Counter: " { state.count }</p>
+                        <button on_click={decrement}>"-"</button>
+                        <button on_click={increment}>"+"</button>
+                    </div>
+                </body>
+            </html>
         }
     }
 }

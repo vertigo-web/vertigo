@@ -40,14 +40,19 @@ pub fn app(state: &Value<LightState>) -> DomElement {
 
 
     dom! {
-        <div>
-            <div css={backplate}>
-                <Light light_color="#ff0000" dark_color="#440000" on={red_on} />
-                <Light light_color="#ffff00" dark_color="#444400" on={yellow_on} />
-                <Light light_color="#00ff00" dark_color="#004400" on={green_on} />
-            </div>
-            <button css={button} on_click={next}>"Next"</button>
-        </div>
+        <html>
+            <head />
+            <body>
+                <div>
+                    <div css={backplate}>
+                        <Light light_color="#ff0000" dark_color="#440000" on={red_on} />
+                        <Light light_color="#ffff00" dark_color="#444400" on={yellow_on} />
+                        <Light light_color="#00ff00" dark_color="#004400" on={green_on} />
+                    </div>
+                    <button css={button} on_click={next}>"Next"</button>
+                </div>
+            </body>
+        </html>
     }
 }
 

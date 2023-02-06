@@ -15,7 +15,7 @@ impl Client {
         R: 'static,
         T: Clone + PartialEq + 'static,
         F: Fn(T) -> R + 'static,
-    {   
+    {
         let prev_value = ValueMut::new(None);
 
         let resource_box = ValueMut::new(None);

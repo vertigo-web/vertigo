@@ -12,7 +12,7 @@ impl Route {
     pub fn new(path: &str) -> Route {
         match path {
             "" | "/" | "/page1" => Self::Page1,
-            "page2" => Self::Page2,
+            "/page2" => Self::Page2,
             _ => Self::NotFound,
         }
     }
@@ -21,8 +21,8 @@ impl Route {
 impl ToString for Route {
     fn to_string(&self) -> String {
         match self {
-            Self::Page1 => "",
-            Self::Page2 => "page2",
+            Self::Page1 => "/page1",
+            Self::Page2 => "/page2",
             Self::NotFound => "",
         }
         .to_string()
@@ -42,7 +42,7 @@ pub struct App {
 
 impl App {
     pub fn new() -> Self {
-        let route = Router::new_hash_router();
+        let route = Router::new_history_router();
 
         Self {
             route,
@@ -56,10 +56,6 @@ impl App {
             state.navigate_to(Route::Page1);
         });
 
-        let navigate_to_page2 = bind!(state, || {
-            state.navigate_to(Route::Page2);
-        });
-
         let child = state.route.route.render_value(|value| {
             match value {
                 Route::Page1 => dom! { <div>"Page 1"</div> },
@@ -69,14 +65,19 @@ impl App {
         });
 
         dom! {
-            <div>
-                <div>
-                    "My Page"
-                    <button on_click={navigate_to_page1}>"Page 1"</button>
-                    <button on_click={navigate_to_page2}>"Page 2"</button>
-                </div>
-                {child}
-            </div>
+            <html>
+                <head />
+                <body>
+                    <div>
+                        <div>
+                            "My Page"
+                            <button on_click={navigate_to_page1}>"Page 1"</button>
+                            <a href={Route::Page2.to_string()}>"Page 2"</a>
+                        </div>
+                        {child}
+                    </div>
+                </body>
+            </html>
         }
     }
 
