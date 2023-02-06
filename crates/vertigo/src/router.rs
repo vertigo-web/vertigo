@@ -1,17 +1,17 @@
 use std::rc::Rc;
 
 use crate::{
-    computed::{Client, Value, DropResource, context::Context},
-    struct_mut::ValueMut, get_driver, Computed,
+    computed::{Value, DropResource, context::Context},
+    get_driver, Computed,
 };
 
 struct HashSubscriptions {
-    _sender: Client,
     _receiver: DropResource,
 }
 
 #[derive(Clone)]
 pub struct Router<T: Clone + ToString + From<String> + PartialEq + 'static> {
+    use_history_api: bool,
     route_value: Value<T>,
     pub route: Computed<T>,
     _subscriptions: Rc<HashSubscriptions>,
@@ -40,7 +40,7 @@ impl<T: Clone + ToString + From<String> + PartialEq + 'static> PartialEq for Rou
 ///     pub fn new(path: &str) -> Route {
 ///         match path {
 ///             "" | "/" | "/page1" => Self::Page1,
-///             "page2" => Self::Page2,
+///             "/page2" => Self::Page2,
 ///             _ => Self::NotFound,
 ///         }
 ///     }
@@ -49,9 +49,9 @@ impl<T: Clone + ToString + From<String> + PartialEq + 'static> PartialEq for Rou
 /// impl ToString for Route {
 ///     fn to_string(&self) -> String {
 ///         match self {
-///             Self::Page1 => "",
-///             Self::Page2 => "page2",
-///             Self::NotFound => "",
+///             Self::Page1 => "/",
+///             Self::Page2 => "/page2",
+///             Self::NotFound => "/404",
 ///         }.to_string()
 ///     }
 /// }
@@ -87,7 +87,7 @@ impl<T: Clone + ToString + From<String> + PartialEq + 'static> PartialEq for Rou
 ///     }
 /// }
 /// ```
-impl<T: Clone + ToString + From<String> + PartialEq + 'static> Router<T> {    
+impl<T: Clone + ToString + From<String> + PartialEq + 'static> Router<T> {
     /// Create new Router which sets route value upon hash change in browser bar.
     /// If callback is provided then it is fired instead.
     pub fn new_hash_router() -> Router<T> {
@@ -105,32 +105,12 @@ impl<T: Clone + ToString + From<String> + PartialEq + 'static> Router<T> {
             true => Value::new(T::from(driver.inner.api.get_history_location())),
         };
 
-        let block_subscrition = Rc::new(ValueMut::new(true));
-
-        let sender = route_value.to_computed().subscribe({
-            let driver = driver.clone();
-            let block_subscrition = block_subscrition.clone();
-            move |route| {
-                if block_subscrition.get() {
-                    return;
-                }
-
-                match use_history_api {
-                    false => driver.inner.api.push_hash_location(&route.to_string()),
-                    true => driver.inner.api.push_history_location(&route.to_string()),
-                };
-            }
-        });
-
         let callback = {
             let route = route_value.clone();
-            let block_subscrition = block_subscrition.clone();
 
-            Box::new(move |url: String| {
-                block_subscrition.set(true);
+            move |url: String| {
                 route.set_value_and_compare(T::from(url));
-                block_subscrition.set(false);
-            })
+            }
         };
 
         let receiver = match use_history_api {
@@ -138,22 +118,24 @@ impl<T: Clone + ToString + From<String> + PartialEq + 'static> Router<T> {
             true => driver.inner.api.on_history_change(callback),
         };
 
-        block_subscrition.set(false);
-
         let route = route_value.to_computed();
 
         Self {
+            use_history_api,
             route_value,
             route,
             _subscriptions: Rc::new(HashSubscriptions {
-                _sender: sender,
                 _receiver: receiver
             })
         }
     }
 
-    pub fn set(&self, value: T) {
-        self.route_value.set_value_and_compare(value);
+    pub fn set(&self, route: T) {
+        let driver = get_driver();
+        match self.use_history_api {
+            false => driver.inner.api.push_hash_location(&route.to_string()),
+            true => driver.inner.api.push_history_location(&route.to_string()),
+        };
     }
 
     pub fn get(&self, context: &Context) -> T {

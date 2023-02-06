@@ -42,10 +42,7 @@ pub fn app(count: &Value) -> DomElement {
 
     dom! {
         <html>
-            <head>
-                <title></title>
-                <meta charset="utf-8"/>
-            </head>
+            <head/>
             <body>
                 <p>"Counter: " { count }</p>
                 <button on_click={decrement}>"-"</button>
@@ -90,10 +87,7 @@ fn app(message: &Value) -> DomElement {
 
     dom! {
         <html>
-            <head>
-                <title></title>
-                <meta charset="utf-8"/>
-            </head>
+            <head/>
             <body>
                 <div css={wrapper_css}>
                     <MyMessage message={message} />
@@ -122,13 +116,13 @@ Make sure you're using nightly version of rust:
 
 Install cargo-make that takes care of all other dependencies:
 
-* `cargo install cargo-make`
+* `cargo install cargo-make vertigo`
 
 Build and run project using:
 
 * `cargo make demo-start`
 
-Eventually terminal will let you know that app is available under `http://localhost:3000/`
+Eventually terminal will let you know that app is available under `http://localhost:4444/`
 
 If you want to play around with the code, you can make cargo to watch for your changes:
 
@@ -140,7 +134,8 @@ To compile all examples run:
 
 * `cargo make examples-build`
 
-This will build examples in `examples/build` directory. Now point your browser to `index.html` file of a particular example.
+This will build examples in `examples/build` directory.
+Run `vertigo serve --dest-dir examples/build/counter` (or other example) and point your browser to `localhost:4444`.
 
 A community, soon to grow
 --------------

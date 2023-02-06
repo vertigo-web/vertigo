@@ -150,7 +150,11 @@ impl AllElements {
 
     fn get_response_one_elements(&self, node_id: u64, with_id: bool) -> HtmlNode {
         let Some(node) = self.all.get(&node_id) else {
-            unreachable!();
+            if node_id == 1 {
+                panic!("Can't find root <html> element");
+            } else {
+                unreachable!();
+            }
         };
 
         match node {
