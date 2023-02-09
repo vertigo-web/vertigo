@@ -93,6 +93,14 @@ pub struct FetchResponse {
     pub body: RequestBody,
 }
 
+fn match_is_browser(arg: &JsValue) -> Result<(), ()> {
+    let matcher = Match::new(arg)?;
+    let matcher = matcher.test_list(&["api"])?;
+    let _ = matcher.test_list(&["call", "isBrowser"])?;
+
+    Ok(())
+}
+
 fn match_cookie_command(arg: &JsValue) -> Result<(), ()> {
     let matcher = Match::new(arg)?;
     let matcher = matcher.test_list(&["api"])?;
@@ -347,6 +355,11 @@ impl WasmInstance {
                     if let Ok((callback_id, request)) = match_fetch(&value) {
                         sender.send(Message::FetchRequest { callback_id, request }).unwrap();
                         return 0;
+                    }
+
+                    if let Ok(()) = match_is_browser(&value) {
+                        let result = JsValue::bool(false);
+                        return data_context.save_value(result);
                     }
 
                     log::error!("unsupported message: {value:#?}");
