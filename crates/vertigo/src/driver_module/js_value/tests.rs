@@ -16,22 +16,26 @@ fn json_json_string() {
     assert_eq!(data1, data2);
 }
 
-
 #[test]
 fn json_json_list() {
+    #[cfg(feature = "rust_decimal")]
+    let real = rust_decimal_macros::dec!(12.3);
+    #[cfg(not(feature = "rust_decimal"))]
+    let real = 12.3;
+
     let data1 = JsValue::Json(JsJson::List(vec!(
         JsJson::String("aaaa".into()),
         JsJson::String("bbbb".into()),
         JsJson::True,
         JsJson::Null,
-        JsJson::Number(12.3),
+        JsJson::Real(real),
         JsJson::List(vec!(
             JsJson::String("cccc".into()),
             JsJson::String("dddd".into()),
             JsJson::Null,
         )),
         JsJson::Object(HashMap::from([
-            ("aaa".to_string(), JsJson::Number(2.0)),
+            ("aaa".to_string(), JsJson::Real(real)),
             ("bbb".to_string(), JsJson::String(String::from("ccc")))
         ]))
     )));
@@ -44,5 +48,3 @@ fn json_json_list() {
 
     assert_eq!(data1, data2);
 }
-
-

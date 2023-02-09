@@ -14,6 +14,7 @@
 * `Driver::history_back()` method invoking `history.back()` on window
 * `html_entities` to ease insertion of uncommon letters and symbols in `dom!` macro
 * `on_load` event
+* `decimal` feature
 
 ### Removed
 

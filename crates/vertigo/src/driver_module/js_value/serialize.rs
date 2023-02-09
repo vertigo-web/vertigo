@@ -1,6 +1,9 @@
 use std::collections::HashMap;
 use std::rc::Rc;
 
+#[cfg(feature = "rust_decimal")]
+use rust_decimal::{Decimal, prelude::ToPrimitive};
+
 use super::js_json_struct::JsJson;
 
 struct JsJsonContextInner {
@@ -81,14 +84,14 @@ impl JsJsonDeserialize for String {
 
 impl JsJsonSerialize for u64 {
     fn to_json(self) -> JsJson {
-        JsJson::Number(self as f64)
+        JsJson::Integer(self as i64)
     }
 }
 
 impl JsJsonDeserialize for u64 {
     fn from_json(context: JsJsonContext, json: JsJson) -> Result<Self, JsJsonContext> {
         match json {
-            JsJson::Number(value) => Ok(value as u64),
+            JsJson::Integer(value) => Ok(value as u64),
             other => {
                 let message = ["number(u64) expected, received", other.typename()].concat();
                 Err(context.add(message))
@@ -99,14 +102,14 @@ impl JsJsonDeserialize for u64 {
 
 impl JsJsonSerialize for i64 {
     fn to_json(self) -> JsJson {
-        JsJson::Number(self as f64)
+        JsJson::Integer(self)
     }
 }
 
 impl JsJsonDeserialize for i64 {
     fn from_json(context: JsJsonContext, json: JsJson) -> Result<Self, JsJsonContext> {
         match json {
-            JsJson::Number(value) => Ok(value as i64),
+            JsJson::Integer(value) => Ok(value as i64),
             other => {
                 let message = ["number(i64) expected, received", other.typename()].concat();
                 Err(context.add(message))
@@ -117,14 +120,14 @@ impl JsJsonDeserialize for i64 {
 
 impl JsJsonSerialize for u32 {
     fn to_json(self) -> JsJson {
-        JsJson::Number(self as f64)
+        JsJson::Integer(self as i64)
     }
 }
 
 impl JsJsonDeserialize for u32 {
     fn from_json(context: JsJsonContext, json: JsJson) -> Result<Self, JsJsonContext> {
         match json {
-            JsJson::Number(value) => Ok(value as u32),
+            JsJson::Integer(value) => Ok(value as u32),
             other => {
                 let message = ["number(u32) expected, received", other.typename()].concat();
                 Err(context.add(message))
@@ -135,16 +138,67 @@ impl JsJsonDeserialize for u32 {
 
 impl JsJsonSerialize for i32 {
     fn to_json(self) -> JsJson {
-        JsJson::Number(self as f64)
+        JsJson::Integer(self as i64)
     }
 }
 
 impl JsJsonDeserialize for i32 {
     fn from_json(context: JsJsonContext, json: JsJson) -> Result<Self, JsJsonContext> {
         match json {
-            JsJson::Number(value) => Ok(value as i32),
+            JsJson::Integer(value) => Ok(value as i32),
             other => {
                 let message = ["number(i32) expected, received", other.typename()].concat();
+                Err(context.add(message))
+            }
+        }
+    }
+}
+
+impl JsJsonSerialize for f32 {
+    fn to_json(self) -> JsJson {
+        #[cfg(feature = "rust_decimal")]
+        let ret = JsJson::Real(Decimal::try_from(self).unwrap_or_default());
+        #[cfg(not(feature = "rust_decimal"))]
+        let ret = JsJson::Real(self as f64);
+        ret
+    }
+}
+
+impl JsJsonDeserialize for f32 {
+    fn from_json(context: JsJsonContext, json: JsJson) -> Result<Self, JsJsonContext> {
+        match json {
+            JsJson::Integer(value) => Ok(value as f32),
+            JsJson::Real(value) => {
+                #[cfg(feature = "rust_decimal")]
+                let ret = value.to_f64().unwrap_or_default() as f32;
+                #[cfg(not(feature = "rust_decimal"))]
+                let ret = value as f32;
+                Ok(ret)
+            },
+            other => {
+                let message = ["number(i32) expected, received", other.typename()].concat();
+                Err(context.add(message))
+            }
+        }
+    }
+}
+
+#[cfg(feature = "rust_decimal")]
+impl JsJsonSerialize for Decimal {
+    fn to_json(self) -> JsJson {
+        JsJson::Real(Decimal::try_from(self).unwrap_or_default())
+    }
+}
+
+#[cfg(feature = "rust_decimal")]
+impl JsJsonDeserialize for Decimal {
+    fn from_json(context: JsJsonContext, json: JsJson) -> Result<Self, JsJsonContext> {
+        match json {
+            JsJson::Real(value) => {
+                Ok(value)
+            },
+            other => {
+                let message = ["Real(Decimal) expected, received", other.typename()].concat();
                 Err(context.add(message))
             }
         }

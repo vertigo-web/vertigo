@@ -146,7 +146,7 @@ impl JsValue {
                 for param in items {
                     sum += param.get_size();
                 }
-        
+
                 sum
             },
             Self::Object(map) => {
@@ -206,11 +206,11 @@ impl JsValue {
             Self::String(value) => {
                 buff.write_u8(JsValueConst::String);
                 write_string_to(value.as_str(), buff);
-            },        
+            },
             Self::List(list) => {
                 buff.write_u8(JsValueConst::List);
                 buff.write_u16(list.len() as u16);
-        
+
                 for param in list {
                     param.write_to(buff);
                 }
@@ -263,7 +263,7 @@ impl JsValue {
         match self {
             JsValue::List(list) => {
                 let decoder = JsValueListDecoder::new(list);
-                convert(decoder)        
+                convert(decoder)
             },
             _ => {
                 Err(String::from("convert => ParamItem::Vec expected"))
@@ -309,7 +309,7 @@ fn decode_js_value_inner(buffer: &mut MemoryBlockRead) -> Result<JsValue, String
         },
         JsValueConst::I64 => {
             let value = buffer.get_i64();
-            JsValue::I64(value)    
+            JsValue::I64(value)
         },
         JsValueConst::True => JsValue::True,
         JsValueConst::False => JsValue::False,
@@ -329,12 +329,12 @@ fn decode_js_value_inner(buffer: &mut MemoryBlockRead) -> Result<JsValue, String
             let mut param_list = Vec::new();
 
             let list_size = buffer.get_u16();
-    
+
             for _ in 0..list_size {
                 let param = decode_js_value_inner(buffer)?;
                 param_list.push(param);
             }
-    
+
             JsValue::List(param_list)
         },
         JsValueConst::Object => {

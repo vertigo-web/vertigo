@@ -12,13 +12,19 @@ const STRING_SIZE: u32 = 4;
 const LIST_COUNT: u32 = 2;
 const OBJECT_COUNT: u32 = 2;
 
+#[cfg(feature = "rust_decimal")]
+const REAL_SIZE: u32 = 16;
+#[cfg(not(feature = "rust_decimal"))]
+const REAL_SIZE: u32 = 8;
+
 enum JsJsonConst {
     True,
     False,
     Null,
 
     String,
-    Number,
+    Integer,
+    Real,
     List,
     Object,
 }
@@ -30,9 +36,10 @@ impl JsJsonConst {
             2  => Some(JsJsonConst::False),
             3  => Some(JsJsonConst::Null),
             4  => Some(JsJsonConst::String),
-            5  => Some(JsJsonConst::Number),
-            6  => Some(JsJsonConst::List),
-            7  => Some(JsJsonConst::Object),
+            5  => Some(JsJsonConst::Integer),
+            6  => Some(JsJsonConst::Real),
+            7  => Some(JsJsonConst::List),
+            8  => Some(JsJsonConst::Object),
             _  => None,
         }
     }
@@ -45,9 +52,10 @@ impl From<JsJsonConst> for u8 {
             JsJsonConst::False => 2,
             JsJsonConst::Null => 3,
             JsJsonConst::String => 4,
-            JsJsonConst::Number => 5,
-            JsJsonConst::List => 6,
-            JsJsonConst::Object => 7,
+            JsJsonConst::Integer => 5,
+            JsJsonConst::Real => 6,
+            JsJsonConst::List => 7,
+            JsJsonConst::Object => 8,
         }
     }
 }
@@ -64,13 +72,19 @@ impl From<JsJsonConst> for u8 {
     52 bits for the mantissa (representing a number between 0 and 1)
 */
 
+#[cfg(feature = "rust_decimal")]
+type Real = rust_decimal::Decimal;
+#[cfg(not(feature = "rust_decimal"))]
+type Real = f64;
+
 #[derive(Debug, Clone)]
 pub enum JsJson {
     True,
     False,
     Null,
     String(String),
-    Number(f64),
+    Integer(i64),
+    Real(Real),
     List(Vec<JsJson>),
     Object(HashMap<String, JsJson>),
 }
@@ -84,7 +98,14 @@ impl PartialEq for JsJson {
             (Self::False, Self::False) => true,
             (Self::Null, Self::Null) => true,
             (Self::String(value1), Self::String(value2)) => value1 == value2,
-            (Self::Number(value1), Self::Number(value2)) => value1.to_bits() == value2.to_bits(),
+            (Self::Integer(value1), Self::Integer(value2)) => value1 == value2,
+            (Self::Real(value1), Self::Real(value2)) => {
+                #[cfg(feature = "rust_decimal")]
+                let ret = value1 == value2;
+                #[cfg(not(feature = "rust_decimal"))]
+                let ret = value1.to_bits() == value2.to_bits();
+                ret
+            },
             (Self::List(value1), Self::List(value2)) => value1 == value2,
             (Self::Object(value1), Self::Object(value2)) => value1 == value2,
             _ => false
@@ -108,10 +129,19 @@ impl Hash for JsJson {
                 state.write_u8(JsJsonConst::String.into());
                 state.write(value.as_bytes());
             }
-            Self::Number(value) => {
-                state.write_u8(JsJsonConst::Number.into());
-                let value_bits = value.to_bits();
-                state.write_u64(value_bits);
+            Self::Integer(value) => {
+                state.write_u8(JsJsonConst::Integer.into());
+                state.write_i64(*value);
+            }
+            Self::Real(value) => {
+                state.write_u8(JsJsonConst::Real.into());
+                #[cfg(feature = "rust_decimal")]
+                value.hash(state);
+                #[cfg(not(feature = "rust_decimal"))]
+                {
+                    let value_bits = value.to_bits();
+                    state.write_u64(value_bits);
+                }
             }
             Self::List(list) => {
                 state.write_u8(JsJsonConst::List.into());
@@ -138,7 +168,8 @@ impl JsJson {
             Self::Null => PARAM_TYPE,
 
             Self::String(value) => PARAM_TYPE + STRING_SIZE + Self::get_string_size(value),
-            Self::Number(..) => PARAM_TYPE + 8,
+            Self::Integer(..) => PARAM_TYPE + 8,
+            Self::Real(..) => PARAM_TYPE + REAL_SIZE,
             Self::List(items) => {
                 let mut sum = PARAM_TYPE + LIST_COUNT;
 
@@ -180,8 +211,15 @@ impl JsJson {
                 buff.write_u8(JsJsonConst::String);
                 write_string_to(value.as_str(), buff);
             }
-            Self::Number(value) => {
-                buff.write_u8(JsJsonConst::Number);
+            Self::Integer(value) => {
+                buff.write_u8(JsJsonConst::Integer);
+                buff.write_i64(*value);
+            }
+            Self::Real(value) => {
+                buff.write_u8(JsJsonConst::Real);
+                #[cfg(feature = "rust_decimal")]
+                buff.write(&value.serialize());
+                #[cfg(not(feature = "rust_decimal"))]
                 buff.write_f64(*value);
             }
             Self::List(list) => {
@@ -210,7 +248,8 @@ impl JsJson {
             Self::False => "bool",
             Self::Null => "null",
             Self::String(..) => "string",
-            Self::Number(..) => "number",
+            Self::Integer(..) => "integer",
+            Self::Real(..) => "real",
             Self::List(..) => "list",
             Self::Object(..) => "object",
         }
@@ -270,9 +309,16 @@ pub fn decode_js_json_inner(buffer: &mut MemoryBlockRead) -> Result<JsJson, Stri
             let param = buffer.get_string(str_len)?;
             JsJson::String(param)
         }
-        JsJsonConst::Number => {
+        JsJsonConst::Integer => {
+            let value = buffer.get_i64();
+            JsJson::Integer(value)
+        }
+        JsJsonConst::Real => {
+            #[cfg(feature = "rust_decimal")]
+            let value = rust_decimal::Decimal::deserialize(buffer.get_vec(16).try_into().unwrap());
+            #[cfg(not(feature = "rust_decimal"))]
             let value = buffer.get_f64();
-            JsJson::Number(value)
+            JsJson::Real(value)
         }
         JsJsonConst::List => {
             let mut param_list = Vec::new();

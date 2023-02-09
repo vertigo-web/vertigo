@@ -38,6 +38,9 @@ jobs:
       - uses: actions-rs/cargo@v1
         with:
           command: test
+      - uses: actions-rs/cargo@v1
+        with:
+          command: test
           args: --all-features
 
   fixed-nightly-clippy:
@@ -54,8 +57,13 @@ jobs:
       - uses: actions-rs/clippy-check@v1
         with:
           token: ${{ secrets.GITHUB_TOKEN }}
-          args: -p vertigo -p vertigo-macro --all-features --target wasm32-unknown-unknown -- -Dwarnings
+          args: -p vertigo -p vertigo-macro --target wasm32-unknown-unknown -- -Dwarnings
           name: Vertigo Clippy Output
+      - uses: actions-rs/clippy-check@v1
+        with:
+          token: ${{ secrets.GITHUB_TOKEN }}
+          args: -p vertigo -p vertigo-macro --all-features --target wasm32-unknown-unknown -- -Dwarnings
+          name: Vertigo Clippy Output (w/features)
       - uses: actions-rs/clippy-check@v1
         with:
           token: ${{ secrets.GITHUB_TOKEN }}
