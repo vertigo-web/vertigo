@@ -23,6 +23,12 @@ impl From<&'static str> for AttrValue<&'static str> {
     }
 }
 
+impl From<&String> for AttrValue<String> {
+    fn from(value: &String) -> Self {
+        AttrValue::String(value.clone())
+    }
+}
+
 impl From<String> for AttrValue<String> {
     fn from(value: String) -> Self {
         AttrValue::String(value)
@@ -107,20 +113,6 @@ impl DomElement {
         }
     }
 
-    pub fn from_parts<T: Into<String> + Clone + PartialEq>(name: &'static str, attrs: Vec<(&'static str, AttrValue<T>)>, children: Vec<DomNode>) -> Self {
-        let mut dom_element = Self::new(name);
-
-        for (attr_name, attr_value) in attrs {
-            dom_element = dom_element.attr(attr_name, attr_value);
-        }
-
-        for child_node in children {
-            dom_element = dom_element.child(child_node);
-        }
-
-        dom_element
-    }
-
     pub fn get_ref(&self) -> DomElementRef {
         DomElementRef::new(self.driver.inner.api.clone(), self.id_dom)
     }
@@ -149,7 +141,9 @@ impl DomElement {
         self
     }
 
-    pub fn attr<T: Into<String> + Clone + PartialEq + 'static>(self, name: &'static str, value: AttrValue<T>) -> Self {
+    pub fn attr<T: Into<String> + Clone + PartialEq + 'static>(self, name: &'static str, value: impl Into<AttrValue<T>>) -> Self {
+        let value = value.into();
+
         match value {
             AttrValue::String(value) => {
                 let value: String = value.into();

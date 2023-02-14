@@ -151,7 +151,7 @@ fn convert_node(node: Node) -> Result<TokenStream2, ()> {
             })
         } else {
             out_attr.push(quote!{
-                .attr(#name, #value.into())
+                .attr(#name, #value)
             })
         }
     }

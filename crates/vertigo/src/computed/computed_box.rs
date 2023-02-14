@@ -3,7 +3,7 @@ use crate::{
     computed::{Client, GraphValue, graph_id::GraphId},
     dom_value::{render_value, render_value_option},
     dom_list::{render_list, ListRendered},
-    dom::{dom_comment_create::DomCommentCreate, dom_node::DomNodeFragment},
+    dom::{dom_comment_create::DomFragment, dom_node::DomNodeFragment},
     DomElement, Value
 };
 use std::hash::Hash;
@@ -108,11 +108,11 @@ impl<T: 'static + PartialEq + Clone> Computed<T> {
 }
 
 impl<T: 'static + PartialEq + Clone> Computed<T> {
-    pub fn render_value<R: Into<DomNodeFragment>>(&self, render: impl Fn(T) -> R + 'static) -> DomCommentCreate {
+    pub fn render_value<R: Into<DomNodeFragment>>(&self, render: impl Fn(T) -> R + 'static) -> DomFragment {
         render_value(self.clone(), render)
     }
 
-    pub fn render_value_option<R: Into<DomNodeFragment>>(&self, render: impl Fn(T) -> Option<R> + 'static) -> DomCommentCreate {
+    pub fn render_value_option<R: Into<DomNodeFragment>>(&self, render: impl Fn(T) -> Option<R> + 'static) -> DomFragment {
         render_value_option(self.clone(), render)
     }
 }

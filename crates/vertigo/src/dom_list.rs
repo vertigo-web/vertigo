@@ -1,7 +1,7 @@
 use std::collections::{VecDeque, HashMap};
 use std::hash::Hash;
 use std::rc::Rc;
-use crate::dom::dom_comment_create::DomCommentCreate;
+use crate::dom::dom_comment_create::DomFragment;
 use crate::dom::dom_element::DomElementRef;
 use crate::dom::dom_node::DomNodeFragment;
 use crate::struct_mut::ValueMut;
@@ -9,7 +9,7 @@ use crate::dom::dom_id::DomId;
 use crate::{Computed, get_driver, DomComment, EmbedDom, DomElement};
 
 pub struct ListRendered<T: Clone> {
-    comment: DomCommentCreate,
+    comment: DomFragment,
     pub refs: Computed<Vec<(T, DomElementRef)>>,
 }
 
@@ -91,7 +91,7 @@ pub fn render_list<
 
     comment.add_subscription(client);
 
-    let comment = DomCommentCreate::new(comment_id, move |parent_id| {
+    let comment = DomFragment::new(comment_id, move |parent_id| {
         parent.set(Some(parent_id));
 
         let driver = get_driver();

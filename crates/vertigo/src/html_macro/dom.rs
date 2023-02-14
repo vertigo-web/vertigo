@@ -1,6 +1,6 @@
 use crate::{
     dom::dom_node::{DomNode, DomNodeFragment},
-    Computed, DomText, DomElement, DomComment, DomCommentCreate, Value,
+    Computed, DomText, DomElement, DomComment, DomFragment, Value,
 };
 
 pub trait EmbedDom {
@@ -19,9 +19,9 @@ impl EmbedDom for DomComment {
     }
 }
 
-impl EmbedDom for DomCommentCreate {
+impl EmbedDom for DomFragment {
     fn embed(self) -> DomNodeFragment {
-        DomNodeFragment::CommentCreate { node: self }
+        DomNodeFragment::Fragment { node: self }
     }
 }
 

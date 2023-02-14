@@ -1,4 +1,4 @@
-use crate::dom::dom_comment_create::DomCommentCreate;
+use crate::dom::dom_comment_create::DomFragment;
 use crate::dom::dom_node::DomNodeFragment;
 use crate::struct_mut::{ValueMut};
 use crate::{Computed, get_driver, DomComment, DomNode};
@@ -6,11 +6,11 @@ use crate::{Computed, get_driver, DomComment, DomNode};
 pub fn render_value_option<T: Clone + PartialEq + 'static, R: Into<DomNodeFragment>>(
     computed: Computed<T>,
     render: impl Fn(T) -> Option<R> + 'static
-) -> DomCommentCreate {
+) -> DomFragment {
     let comment = DomComment::new("value element");
     let comment_id = comment.id_dom();
 
-    DomCommentCreate::new(comment_id, move |parent_id| {
+    DomFragment::new(comment_id, move |parent_id| {
         let driver = get_driver();
 
         driver.inner.dom.insert_before(parent_id, comment_id, None);
@@ -37,7 +37,7 @@ pub fn render_value_option<T: Clone + PartialEq + 'static, R: Into<DomNodeFragme
 pub fn render_value<T: Clone + PartialEq + 'static, R: Into<DomNodeFragment>>(
     computed: Computed<T>,
     render: impl Fn(T) -> R + 'static
-) -> DomCommentCreate {
+) -> DomFragment {
     render_value_option(computed, move |value| -> Option<R> {
         Some(render(value))
     })
