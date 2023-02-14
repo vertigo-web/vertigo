@@ -4,7 +4,7 @@ use std::{
 };
 use std::hash::Hash;
 use crate::{DomElement, get_driver};
-use crate::dom::dom_comment_create::DomCommentCreate;
+use crate::dom::dom_comment_create::DomFragment;
 use crate::dom::dom_node::DomNodeFragment;
 use crate::dom_list::ListRendered;
 use crate::{
@@ -171,11 +171,11 @@ impl<T: Clone + PartialEq + 'static> Value<T> {
 }
 
 impl<T: Clone + PartialEq + 'static> Value<T> {
-    pub fn render_value<R: Into<DomNodeFragment>>(&self, render: impl Fn(T) -> R + 'static) -> DomCommentCreate {
+    pub fn render_value<R: Into<DomNodeFragment>>(&self, render: impl Fn(T) -> R + 'static) -> DomFragment {
         self.to_computed().render_value(render)
     }
 
-    pub fn render_value_option<R: Into<DomNodeFragment>>(&self, render: impl Fn(T) -> Option<R> + 'static) -> DomCommentCreate {
+    pub fn render_value_option<R: Into<DomNodeFragment>>(&self, render: impl Fn(T) -> Option<R> + 'static) -> DomFragment {
         self.to_computed().render_value_option(render)
     }
 }

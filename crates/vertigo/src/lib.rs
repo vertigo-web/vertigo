@@ -104,13 +104,15 @@ use computed::struct_mut::ValueMut;
 pub use computed::{
     AutoMap, Client, Computed, context::Context, Dependencies, DropResource, GraphId, struct_mut, Value
 };
+
+pub(crate) use dom::dom_comment::DomComment;
+
 pub use dom::{
     css::{Css, CssGroup},
     dom_id::DomId,
-    dom_comment::DomComment,
-    dom_comment_create::DomCommentCreate,
+    dom_comment_create::DomFragment,
     dom_element::DomElement,
-    dom_node::{DomNode, DomNodeFragment},
+    dom_node::DomNode,
     dom_text::DomText,
     types::{KeyDownEvent, DropFileEvent, DropFileItem},
 };

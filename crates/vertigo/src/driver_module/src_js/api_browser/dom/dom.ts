@@ -103,7 +103,6 @@ export class DriverDom {
 
     private create_node(id: number, name: string) {
         const node = createElement(name);
-        node.setAttribute('data-id', id.toString());
         this.nodes.set(id, node);
 
         if (name.toLowerCase().trim() === 'a') {

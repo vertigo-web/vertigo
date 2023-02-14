@@ -1292,7 +1292,6 @@ class DriverDom {
     }
     create_node(id, name) {
         const node = createElement(name);
-        node.setAttribute('data-id', id.toString());
         this.nodes.set(id, node);
         if (name.toLowerCase().trim() === 'a') {
             node.addEventListener('click', (e) => {

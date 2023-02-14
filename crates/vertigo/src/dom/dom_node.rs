@@ -1,7 +1,7 @@
 use crate::{dom::{
     dom_element::DomElement,
     dom_text::DomText,
-}, DomCommentCreate, EmbedDom};
+}, DomFragment, EmbedDom};
 
 use super::{dom_id::DomId, dom_comment::DomComment};
 
@@ -59,7 +59,7 @@ pub enum DomNodeFragment {
     Node { node: DomElement },
     Text { node: DomText },
     Comment { node: DomComment },
-    CommentCreate { node: DomCommentCreate },
+    Fragment { node: DomFragment },
 }
 
 impl DomNodeFragment {
@@ -68,7 +68,7 @@ impl DomNodeFragment {
             Self::Node { node } => DomNode::Node { node },
             Self::Text { node } => DomNode::Text { node },
             Self::Comment { node } => DomNode::Comment { node },
-            Self::CommentCreate { node } => DomNode::Comment {
+            Self::Fragment { node } => DomNode::Comment {
                 node: node.mount(parent_id)
             }
         }
@@ -79,7 +79,7 @@ impl DomNodeFragment {
             Self::Node { node } => node.id_dom(),
             Self::Text { node } => node.id_dom(),
             Self::Comment { node } => node.id_dom(),
-            Self::CommentCreate { node } => node.id(),
+            Self::Fragment { node } => node.id(),
         }
     }
 }
@@ -102,9 +102,9 @@ impl From<DomComment> for DomNodeFragment {
     }
 }
 
-impl From<DomCommentCreate> for DomNodeFragment {
-    fn from(node: DomCommentCreate) -> Self {
-        DomNodeFragment::CommentCreate { node }
+impl From<DomFragment> for DomNodeFragment {
+    fn from(node: DomFragment) -> Self {
+        DomNodeFragment::Fragment { node }
     }
 }
 

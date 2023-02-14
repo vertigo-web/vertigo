@@ -1,12 +1,12 @@
 use super::dom_id::DomId;
 use super::dom_comment::DomComment;
 
-pub struct DomCommentCreate {
+pub struct DomFragment {
     id: DomId,
     create: Box<dyn FnOnce(DomId) -> DomComment>,
 }
 
-impl DomCommentCreate {
+impl DomFragment {
     pub fn new<F: FnOnce(DomId) -> DomComment + 'static>(id: DomId, create: F) -> Self {
         Self {
             id,

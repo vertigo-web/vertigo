@@ -1,4 +1,4 @@
-use vertigo::{KeyDownEvent, bind, dom, DomElement, DomCommentCreate};
+use vertigo::{KeyDownEvent, bind, dom, DomElement, DomFragment};
 
 use super::state::ChatState;
 
@@ -32,7 +32,7 @@ impl Chat {
     }
 }
 
-fn render_status(state: &ChatState) -> DomCommentCreate {
+fn render_status(state: &ChatState) -> DomFragment {
     state.connect.render_value(
         |is_connect| {
             let message = match is_connect.is_some() {
