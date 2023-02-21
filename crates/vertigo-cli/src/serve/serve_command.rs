@@ -4,7 +4,7 @@ use clap::Args;
 use crate::serve::mount_path::MountPathConfig;
 use crate::serve::server_state::ServerState;
 
-use axum::{response::Html, Router, http::{Uri, StatusCode}, extract::{State}};
+use axum::{response::Html, Router, http::{Uri, StatusCode}, extract::{State, RawQuery}};
 use axum_extra::routing::SpaRouter;
 
 #[derive(Args, Debug)]
@@ -27,17 +27,25 @@ pub async fn run(opts: ServeOpts) -> Result<(), i32> {
         state.mount_path.fs_root()
     );
 
-    async fn handler(uri: Uri, State(state): State<ServerState>) -> (StatusCode, Html<String>) {
+    async fn handler(url: Uri, RawQuery(query): RawQuery, State(state): State<ServerState>) -> (StatusCode, Html<String>) {
         let now = Instant::now();
-        let path = uri.path();
-        log::debug!("Incoming request: {path}");
-        let (status, response) = state.request(path).await;
+        let uri = {
+            let url = url.path();
+
+            match query {
+                Some(query) => format!("{url}?{query}"),
+                None => url.to_string(),
+            }
+        };
+
+        log::debug!("Incoming request: {uri}");
+        let (status, response) = state.request(&uri).await;
 
         let time = now.elapsed();
         if time > Duration::from_secs(1) {
-            log::warn!("Response for request: {status} {}ms {path}", time.as_millis());
+            log::warn!("Response for request: {status} {}ms {url}", time.as_millis());
         } else {
-            log::info!("Response for request: {status} {}ms {path}", time.as_millis());
+            log::info!("Response for request: {status} {}ms {url}", time.as_millis());
         }
 
         (status, response)

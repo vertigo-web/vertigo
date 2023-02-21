@@ -121,12 +121,8 @@ impl CommandRun {
     fn set_stdin(command: &mut Command, out: Option<ChildStdout>, get_default_stdio: Option<fn() -> Stdio>) {
         if let Some(out) = out {
             command.stdin(out);
-            return;
-        }
-
-        if let Some(out_default) = get_default_stdio {
+        } else if let Some(out_default) = get_default_stdio {
             command.stdin(out_default());
-            return;
         }
     }
 
@@ -135,7 +131,7 @@ impl CommandRun {
         let (command_str, mut command, stdin) = self.create_command();
         println!("{command_str}");
 
-        Self::set_stdin(&mut command, stdin, Some(|| Stdio::inherit()));
+        Self::set_stdin(&mut command, stdin, Some(Stdio::inherit));
         command.stderr(Stdio::inherit());
         command.stdout(Stdio::inherit());
 
@@ -162,7 +158,7 @@ impl CommandRun {
         let (command_str, mut command, stdin) = self.create_command();
         println!("spawn: {command_str}");
 
-        Self::set_stdin(&mut command, stdin, Some(|| Stdio::null()));
+        Self::set_stdin(&mut command, stdin, Some(Stdio::null));
         command.stderr(Stdio::null());
         command.stdout(Stdio::null());
 
@@ -174,7 +170,7 @@ impl CommandRun {
         let (command_str, mut command, stdin) = self.create_command();
         println!("spawn: {command_str}");
 
-        Self::set_stdin(&mut command, stdin, Some(|| Stdio::null()));
+        Self::set_stdin(&mut command, stdin, Some(Stdio::null));
         command.stderr(Stdio::null());
         command.stdout(Stdio::piped());
 
@@ -191,7 +187,7 @@ impl CommandRun {
         let (command_str, mut command, stdin) = self.create_command();
         println!("{command_str}");
 
-        Self::set_stdin(&mut command, stdin, Some(|| Stdio::null()));
+        Self::set_stdin(&mut command, stdin, Some(Stdio::null));
         command.stderr(Stdio::inherit());
 
         use std::fs::File;
