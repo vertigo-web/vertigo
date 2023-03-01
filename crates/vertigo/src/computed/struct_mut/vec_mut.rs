@@ -40,5 +40,5 @@ impl<V> VecMut<V> {
 
     pub fn into_inner(self) -> Vec<V> {
         self.data.into_inner()
-    } 
+    }
 }

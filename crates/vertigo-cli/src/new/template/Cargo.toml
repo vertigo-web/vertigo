@@ -9,4 +9,4 @@ edition = "2021"
 crate-type = ["cdylib", "rlib"]
 
 [dependencies]
-vertigo = "0.2"
+vertigo = "0.2-alpha"

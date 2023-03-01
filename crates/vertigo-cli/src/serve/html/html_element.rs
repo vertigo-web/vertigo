@@ -131,7 +131,7 @@ fn get_render_child_mode(element: VecDeque<HtmlNode>) -> ChildMode {
                 if let Some(text) = last_text_get(&mut last_text) {
                     result.push(HtmlNode::Text(text));
                 }
-    
+
                 result.push(element);
             }
         };
@@ -168,7 +168,7 @@ fn is_self_closing(element: &HtmlElement) -> bool {
         "img",
         "input",
         "link",
-        "meta", 
+        "meta",
         "param",
         "source",
         "track",
@@ -357,6 +357,4 @@ impl HtmlElement {
 
         false
     }
-
-    // pub fn 
 }

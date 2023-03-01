@@ -1,10 +1,10 @@
 <!-- markdownlint-configure-file { "no-duplicate-heading": { "siblings_only": true } } -->
 <!-- markdownlint-disable-next-line first-line-h1 -->
-## Unreleased
+## 0.2.0-alpha
 
 ### Added
 
-* `vertigo-cli` packaging tool with commands `new`, `build` and `serve`
+* `vertigo-cli` packaging tool with commands `new`, `build`, `watch` and `serve`
 * Server-side rendering built in `vertigo-cli`
 * `JsJson` data structure to communicate with JS world without string serialization,
 * `AutoJsJson` macro for creating `JsJson` from structures and structures from `Jsjson`
@@ -14,6 +14,10 @@
 * `Driver::history_back()` method invoking `history.back()` on window
 * `html_entities` to ease insertion of uncommon letters and symbols in `dom!` macro
 * `on_load` event
+
+### Changed
+
+* Renamed DomCommentCreate to DomFragment
 
 ### Removed
 

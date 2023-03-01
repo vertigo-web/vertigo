@@ -1,7 +1,11 @@
 use std::{sync::Arc, collections::{HashMap, VecDeque}};
-use crate::serve::{wasm::{FetchRequest, FetchResponse}, js_value::JsJson};
 use reqwest::Response;
 use serde_json::{Value, Number, Map};
+
+use crate::serve::{
+    wasm::{FetchRequest, FetchResponse},
+    js_value::JsJson
+};
 
 #[derive(Debug, Clone, PartialEq, Eq, Hash)]
 pub enum RequestBody {
@@ -170,7 +174,7 @@ fn get_response_type(response: &Response) -> ResponseType {
             if chunk_content_type == "application/json" {
                 return ResponseType::Json;
             }
-        
+
             if chunk_content_type == "text/plain" {
                 return ResponseType::Text;
             }

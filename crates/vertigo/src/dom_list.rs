@@ -1,11 +1,14 @@
 use std::collections::{VecDeque, HashMap};
 use std::hash::Hash;
 use std::rc::Rc;
-use crate::dom::dom_comment_create::DomFragment;
-use crate::dom::dom_element::DomElementRef;
-use crate::dom::dom_node::DomNodeFragment;
+
+use crate::dom::{
+    dom_element::DomElementRef,
+    dom_fragment::DomFragment,
+    dom_id::DomId,
+    dom_node::DomNodeFragment,
+};
 use crate::struct_mut::ValueMut;
-use crate::dom::dom_id::DomId;
 use crate::{Computed, get_driver, DomComment, EmbedDom, DomElement};
 
 pub struct ListRendered<T: Clone> {

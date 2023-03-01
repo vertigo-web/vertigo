@@ -20,7 +20,7 @@ impl MountPathConfig {
     pub fn new(dest_dir: String) -> Result<MountPathConfig, i32> {
 
         let index_model = read_index(&dest_dir)?;
-        
+
         let Some(public_path) = get_base_dir(&index_model.wasm) else {
             log::error!("Problem with finding the http base path");
             return Err(-1);
@@ -89,7 +89,7 @@ fn get_base_dir(path: &str) -> Option<String> {
 
 
 
-#[cfg(test)] 
+#[cfg(test)]
 mod tests {
     use super::replace_prefix;
     use super::get_base_dir;
@@ -141,4 +141,3 @@ mod tests {
 
     }
 }
-

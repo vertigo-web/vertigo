@@ -1,11 +1,10 @@
 use std::fmt::Debug;
 use std::rc::Rc;
 
-use crate::computed::context::Context;
-use crate::{get_driver, Computed, transaction};
 use crate::{
-    Instant, Resource,
-    computed::Value, struct_mut::ValueMut,
+    computed::{context::Context, Value},
+    struct_mut::ValueMut,
+    Instant, Resource, get_driver, Computed, transaction,
 };
 
 use super::request_builder::{RequestBuilder, RequestBody};
@@ -67,7 +66,7 @@ impl<T> Clone for ApiResponse<T> {
                 ApiResponse::Data {
                     value: value.clone(),
                     expiry: expiry.clone(),
-                }        
+                }
             }
         }
     }
@@ -180,12 +179,12 @@ impl<T> LazyCache<T> {
                     log::error!("force_update_spawn: queued.get() in spawn -> expected false");
                     return;
                 }
-        
+
                 let api_response = transaction(|context| {
                     value.get(context)
                 });
-                
-                if api_response.needs_update() {        
+
+                if api_response.needs_update() {
                     if with_loading {
                         value.set(ApiResponse::new_loading());
                     }
@@ -195,7 +194,7 @@ impl<T> LazyCache<T> {
                     let new_value = request.call().await.into(map_response);
 
                     let expiry = ttl.map(|ttl| get_driver().now().add_duration(ttl));
-                    
+
                     let new_value = match new_value {
                         Ok(value) => {
                             Resource::Ready(Rc::new(value))

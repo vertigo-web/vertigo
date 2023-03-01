@@ -59,7 +59,7 @@ impl<T: Default + Send + Sync + Unpin + Clone + PartialEq + 'static> Stream for 
                 }
             }));
         }
-        
+
         let value = self.rx.borrow().clone();
 
         if let Some(last_emit_value) = &self.last_emit_value {

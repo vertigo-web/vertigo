@@ -1,4 +1,4 @@
-use super::{memory_block::MemoryBlock};
+use super::memory_block::MemoryBlock;
 
 #[derive(Debug)]
 pub struct MemoryBlockRead {

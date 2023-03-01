@@ -1,6 +1,4 @@
-use std::{
-    rc::Rc,
-};
+use std::rc::Rc;
 
 use crate::{
     dom::css::{Css, CssGroup},

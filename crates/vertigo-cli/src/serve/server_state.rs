@@ -1,15 +1,15 @@
+use axum::http::StatusCode;
+use tokio::sync::mpsc::{error::TryRecvError, unbounded_channel};
+use wasmtime::{
+    Engine,
+    Module,
+};
+
 use crate::serve::html::HtmlResponse;
 use crate::serve::request_state::RequestState;
 use crate::serve::spawn::SpawnOwner;
 use crate::serve::wasm::{Message, WasmInstance};
 
-use axum::http::StatusCode;
-use tokio::sync::mpsc::error::TryRecvError;
-use wasmtime::{
-    Engine,
-    Module,
-};
-use tokio::sync::mpsc::{unbounded_channel};
 use super::mount_path::MountPathConfig;
 
 #[derive(Clone)]
@@ -58,7 +58,7 @@ impl ServerState {
 
         loop {
             let message = receiver.try_recv();
-            
+
             match message {
                 Ok(message) => {
                     if let Some(response) = html_response.process_message(message) {
