@@ -203,13 +203,21 @@ impl DomDebugNode {
     }
 }
 
+
+
+
 #[cfg(test)]
 mod tests {
     use crate::{self as vertigo, dom, css};
     use super::{log_start, DomDebugFragment};
 
+    use std::sync::Mutex;
+    static SEMAPHORE: Mutex<()> = Mutex::new(());
+
     #[test]
     fn pseudo_html_list() {
+        let _lock = SEMAPHORE.lock().unwrap();
+
         log_start();
         let _el = dom! {
             <div>
@@ -226,6 +234,8 @@ mod tests {
 
     #[test]
     fn pseudo_html_css() {
+        let _lock = SEMAPHORE.lock().unwrap();
+
         let green = css!( "color: green;" );
         log_start();
         let _el = dom! {
@@ -237,6 +247,8 @@ mod tests {
 
     #[test]
     fn pseudo_html_callback() {
+        let _lock = SEMAPHORE.lock().unwrap();
+
         let callback = || ();
         log_start();
         let _el = dom! {

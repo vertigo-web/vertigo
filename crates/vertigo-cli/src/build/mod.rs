@@ -6,7 +6,7 @@ mod find_target;
 mod wasm_path;
 mod cargo_workspace;
 
-use cargo_workspace::infer_package_name;
+pub use cargo_workspace::{infer_package_name, find_package_path};
 use std::path::PathBuf;
 use wasm_path::WasmPath;
 

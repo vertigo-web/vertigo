@@ -1,0 +1,22 @@
+use std::future::Future;
+use tokio::task::{self, JoinHandle};
+
+pub struct SpawnOwner {
+    handler: JoinHandle<()>,
+}
+
+impl SpawnOwner {
+    pub fn new(future: impl Future<Output = ()> + Send + 'static) -> SpawnOwner {
+        SpawnOwner {
+            handler: task::spawn(future),
+        }
+    }
+
+    pub fn off(self) {}
+}
+
+impl Drop for SpawnOwner {
+    fn drop(&mut self) {
+        self.handler.abort();
+    }
+}

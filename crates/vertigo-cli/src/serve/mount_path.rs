@@ -4,7 +4,7 @@ use std::path::Path;
 use crate::models::IndexModel;
 
 
-#[derive(Clone)]
+#[derive(Clone, Debug)]
 pub struct MountPathConfig {
     //for http
     public_path: String,

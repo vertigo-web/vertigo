@@ -3,7 +3,7 @@ use std::path::PathBuf;
 
 use super::wasm_path::WasmPath;
 
-#[derive(Args)]
+#[derive(Args, Debug, Clone)]
 pub struct BuildOpts {
     pub package_name: Option<String>,
     #[arg(long, default_value_t = {"./build".to_string()})]

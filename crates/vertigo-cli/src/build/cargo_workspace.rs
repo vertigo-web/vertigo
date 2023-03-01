@@ -2,6 +2,7 @@ use cargo::core::compiler::CrateType;
 use cargo::{Config, CargoResult};
 use cargo::core::{Workspace, TargetKind, Verbosity};
 use std::env::current_dir;
+use std::path::PathBuf;
 
 pub fn get_workspace(config_opt: &mut CargoResult::<Config>) -> Result<Workspace<'_>, String> {
     let config = match config_opt {
@@ -50,3 +51,20 @@ pub fn infer_package_name() -> Result<String, String> {
     }
     Err("Can't find cdylib package in workspace".to_string())
 }
+
+pub fn find_package_path(package_name: &str) -> Option<PathBuf> {
+    let mut cfg = Config::default();
+    let ws = get_workspace(&mut cfg).unwrap();
+
+    for member in ws.default_members() {
+        if member.name().as_str() == package_name {
+            let member = member.clone();
+
+            let parent = member.manifest_path().parent().unwrap();
+            return Some(parent.to_path_buf());
+        }
+    }
+
+    None
+}
+

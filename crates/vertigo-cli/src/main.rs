@@ -4,12 +4,14 @@ mod serve;
 mod models;
 mod check_env;
 mod command;
-
+mod watch;
+mod spawn;
 use clap::{Parser, Subcommand};
 
 use build::BuildOpts;
 use new::NewOpts;
 use serve::ServeOpts;
+use watch::WatchOpts;
 
 #[derive(Parser)]
 #[command(author, version, about, long_about = None)]
@@ -24,6 +26,7 @@ enum Command {
     New(NewOpts),
     Build(BuildOpts),
     Serve(ServeOpts),
+    Watch(WatchOpts),
 }
 
 #[tokio::main]
@@ -43,6 +46,9 @@ pub async fn main() -> Result<(), i32> {
         }
         Command::Serve(opts) => {
             serve::run(opts).await
+        }
+        Command::Watch(opts) => {
+            watch::run(opts).await
         }
     }
 }

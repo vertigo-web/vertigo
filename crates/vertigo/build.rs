@@ -12,6 +12,9 @@ fn main() {
 
     fs::create_dir_all(&dir).unwrap();
 
+    let error = fs::remove_dir_all(dir.join("included"));
+    println!("remove_dir_all => {error:?}");
+
     // Subdirectory for files included in dom macro invocations
     fs::create_dir_all(dir.join("included")).unwrap();
 

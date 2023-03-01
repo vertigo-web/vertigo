@@ -25,40 +25,39 @@ args = [
 
 # Demo tasks
 
-[tasks.demo-build]
-script = [
-    'cargo run --bin vertigo -- build vertigo-demo --dest-dir=demo_build'
-]
-
 [tasks.demo-serve-api]
 script = [
     "cargo run --bin vertigo-demo-server"
 ]
 
-[tasks.demo-serve-http]
+[tasks.demo-watch]
 script = [
-    "cargo run --bin vertigo -- serve --dest-dir=demo_build",
+    'cargo run --bin vertigo -- watch vertigo-demo --dest-dir=demo_build'
 ]
-
-[tasks.demo-serve]
-run_task = { name = ["demo-serve-api", "demo-serve-http"], parallel = true }
 
 [tasks.demo-start]
-dependencies = [
-    "demo-build",
-    "demo-serve"
+script = [
+    "cargo run --bin vertigo -- build vertigo-demo --dest-dir=demo_build",
+    "cargo run --bin vertigo -- serve --dest-dir=demo_build"
 ]
 
-[tasks.demo-watch]
-command = "cargo"
-args = [ "watch", "--watch", "./demo/app", "--watch", "crates", "--delay", "0.5", "-x", "make demo-start" ]
+[tasks.demo]
+run_task = { name = ["demo-serve-api", "demo-watch"], parallel = true }
 
 # Examples tasks
-[tasks.examples-build]
+[tasks.examples-counter]
 script = [
-    'cargo run --bin vertigo -- build vertigo-example-counter --dest-dir=examples/build/counter',
-    'cargo run --bin vertigo -- build vertigo-example-router --dest-dir=examples/build/router',
-    'cargo run --bin vertigo -- build vertigo-example-trafficlights --dest-dir=examples/build/trafficlights',
+    'cargo run --bin vertigo -- watch vertigo-example-counter --dest-dir=examples/build/counter',
+]
+
+[tasks.examples-router]
+script = [
+    'cargo run --bin vertigo -- watch vertigo-example-router --dest-dir=examples/build/router',
+]
+
+[tasks.examples-trafficlights]
+script = [
+    'cargo run --bin vertigo -- watch vertigo-example-trafficlights --dest-dir=examples/build/trafficlights',
 ]
 
 # JavaScript dev builds
