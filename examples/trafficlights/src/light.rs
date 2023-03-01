@@ -1,10 +1,4 @@
-use vertigo::{DomElement, dom, css, Css, Computed};
-
-pub struct Light<'a> {
-    pub light_color: &'a str,
-    pub dark_color: &'a str,
-    pub on: Computed<bool>,
-}
+use vertigo::{DomElement, dom, css, Css, Computed, component};
 
 pub fn light(color: &str) -> Css {
     css!("
@@ -17,23 +11,19 @@ pub fn light(color: &str) -> Css {
     ")
 }
 
-impl<'a> Light<'a> {
-    pub fn mount(&self) -> DomElement {
-        let light_color = self.light_color.to_string();
-        let dark_color = self.dark_color.to_string();
+#[component]
+pub fn Light(light_color: &'static str, dark_color: &'static str, on: Computed<bool>,) -> DomElement {
+    let css = on.map(move |on| {
+        let color = if on {
+            light_color
+        } else {
+            dark_color
+        };
 
-        let css = self.on.map(move |on| {
-            let color = if on {
-                light_color.clone()
-            } else {
-                dark_color.clone()
-            };
+        light(&color)
+    });
 
-            light(&color)
-        });
-
-        dom! {
-            <div css={css} />
-        }
+    dom! {
+        <div css={css} />
     }
 }

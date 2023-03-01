@@ -27,8 +27,12 @@ sha2 = "0.10.6"
 wasmtime = "5.0.0"
 log = "0.4.17"
 env_logger = "0.10.0"
-# async-recursion = "1.0.0"
 tokio = { version = "1.25.0", features = ["full"] }
+tokio-stream = "0.1.12"
 axum = "0.6.4"
 axum-extra = { version="0.4.2", features = ["spa"] }
 reqwest = "0.11.14"
+notify = "5.1.0"
+poem = { version = "1.3.55", features = ["sse"] }
+futures-util = "0.3.26"
+futures = "0.3.26"

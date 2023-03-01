@@ -63,20 +63,15 @@ pub fn start_application() {
 Example 2:
 
 ```rust
-use vertigo::{css, dom, DomElement, start_app, Value};
+use vertigo::{css, dom, DomElement, start_app, Value, component};
 
-pub struct MyMessage {
-    pub message: Value<String>,
-}
-
-impl MyMessage {
-    pub fn mount(self) -> DomElement {
-        dom! {
-            <p>
-                "Message to the world: "
-                { self.message }
-            </p>
-        }
+#[component]
+fn MyMessage(message: Value<String>) -> DomElement {
+    dom! {
+        <p>
+            "Message to the world: "
+            { self.message }
+        </p>
     }
 }
 
@@ -128,14 +123,12 @@ If you want to play around with the code, you can make cargo to watch for your c
 
 * `cargo make demo-watch`
 
-Keep in mind that you still need to refresh page in the browser after project recompiles.
+The browser will automatically refresh after the project has been recompiled.
 
-To compile all examples run:
+--------------
 
-* `cargo make examples-build`
-
-This will build examples in `examples/build` directory.
-Run `vertigo serve --dest-dir examples/build/counter` (or other example) and point your browser to `localhost:4444`.
+To run the examples in watch mode (they will run on localhost:4444):
+`cargo make examples-counter` or `cargo make examples-router` or `cargo make examples-trafficlights`
 
 A community, soon to grow
 --------------

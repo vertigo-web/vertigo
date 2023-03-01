@@ -1,6 +1,6 @@
 use std::{collections::{HashMap, VecDeque}, sync::Arc};
 
-use axum::{http::StatusCode, response::Html};
+use axum::{http::StatusCode};
 use tokio::sync::mpsc::UnboundedSender;
 use crate::serve::{
     wasm::{
@@ -74,7 +74,7 @@ impl HtmlResponse {
         count
     }
 
-    pub fn build_response(&self) -> (StatusCode, Html<String>) {
+    pub fn build_response(&self) -> (StatusCode, String) {
         let (mut root_html, css) = self.all_elements.get_response(false);
 
         let css = css.into_iter().collect::<VecDeque<_>>();
@@ -87,14 +87,14 @@ impl HtmlResponse {
 
         if !root_ok {
             let message = "root: the html element was expected".into();
-            return (StatusCode::INTERNAL_SERVER_ERROR, Html(message));
+            return (StatusCode::INTERNAL_SERVER_ERROR, message);
         }
 
         let is_exist_head = root_html.modify(&[("head", 0)], move |_head| {});
 
         if !is_exist_head {
             let message = "The 'head' element was expected in the response".into();
-            return (StatusCode::INTERNAL_SERVER_ERROR, Html(message));
+            return (StatusCode::INTERNAL_SERVER_ERROR, message);
         }
 
         let script = HtmlElement::new("script")
@@ -112,14 +112,14 @@ impl HtmlResponse {
 
         if success {
             let document = HtmlDocument::new(root_html);
-            (StatusCode::OK, Html(document.convert_to_string(true)))
+            (StatusCode::OK, document.convert_to_string(true))
         } else {
             let message = "The 'body' element was expected in the response".into();
-            (StatusCode::INTERNAL_SERVER_ERROR, Html(message))
+            (StatusCode::INTERNAL_SERVER_ERROR, message)
         }
     }
 
-    pub fn process_message(&mut self, message: Message) -> Option<(StatusCode, Html<String>)> {
+    pub fn process_message(&mut self, message: Message) -> Option<(StatusCode, String)> {
         match message {
             Message::TimeoutAndSendResponse => {
                 log::info!("timeout");
@@ -139,7 +139,7 @@ impl HtmlResponse {
             }
             Message::Panic(message) => {
                 let message = message.unwrap_or_else(|| "panic message decoding problem".to_string());
-                Some((StatusCode::INTERNAL_SERVER_ERROR, Html(message)))
+                Some((StatusCode::INTERNAL_SERVER_ERROR, message))
             }
             Message::SetTimeoutZero { callback_id } => {
                 let result = self.inst.wasm_callback(callback_id, JsValue::Undefined);

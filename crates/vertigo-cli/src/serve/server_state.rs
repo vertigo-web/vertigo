@@ -2,7 +2,6 @@ use crate::serve::html::HtmlResponse;
 use crate::serve::request_state::RequestState;
 use crate::serve::spawn::SpawnOwner;
 use crate::serve::wasm::{Message, WasmInstance};
-use axum::response::Html;
 
 use axum::http::StatusCode;
 use tokio::sync::mpsc::error::TryRecvError;
@@ -18,10 +17,11 @@ pub struct ServerState {
     engine: Engine,
     module: Module,
     pub mount_path: MountPathConfig,
+    pub port_watch: Option<u16>,
 }
 
 impl ServerState {
-    pub fn new(mount_path: MountPathConfig) -> Result<Self, i32> {
+    pub fn new(mount_path: MountPathConfig, port_watch: Option<u16>) -> Result<Self, i32> {
         let engine = Engine::default();
 
         let module = build_module_wasm(&engine, &mount_path)?;
@@ -30,10 +30,11 @@ impl ServerState {
             engine,
             module,
             mount_path,
+            port_watch,
         })
     }
 
-    pub async fn request(&self, url: &str) -> (StatusCode, Html<String>) {
+    pub async fn request(&self, url: &str) -> (StatusCode, String) {
         let (sender, mut receiver) = unbounded_channel::<Message>();
 
         let request = RequestState {
