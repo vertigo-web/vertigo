@@ -6,7 +6,7 @@ pub async fn is_http_server_listening(port: u16) -> bool {
     match TcpStream::connect(("127.0.0.1", port)).await {
         Ok(mut stream) => {
             // Send a HEAD request to the HTTP server
-            if let Err(_) = stream.write_all(b"HEAD / HTTP/1.0\r\n\r\n").await {
+            if stream.write_all(b"HEAD / HTTP/1.0\r\n\r\n").await.is_err() {
                 return false;
             }
             // Wait for a response

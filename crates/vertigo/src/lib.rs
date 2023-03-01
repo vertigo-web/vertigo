@@ -110,7 +110,7 @@ pub(crate) use dom::dom_comment::DomComment;
 pub use dom::{
     css::{Css, CssGroup},
     dom_id::DomId,
-    dom_comment_create::DomFragment,
+    dom_fragment::DomFragment,
     dom_element::DomElement,
     dom_node::DomNode,
     dom_text::DomText,

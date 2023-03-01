@@ -19,7 +19,7 @@ Examples
 Dependencies:
 
 ```toml
-vertigo = "0.2"
+vertigo = "0.2.0-alpha"
 ```
 
 Example 1:

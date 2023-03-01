@@ -1,9 +1,7 @@
 use std::collections::VecDeque;
 
 use super::js_json_struct::JsJson;
-
 use super::js_value_struct::JsValue;
-
 
 pub struct JsValueListDecoder {
     data: VecDeque<JsValue>,
@@ -168,4 +166,3 @@ impl JsValueListDecoder {
         }
     }
 }
-

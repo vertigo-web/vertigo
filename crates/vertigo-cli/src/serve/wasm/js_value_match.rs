@@ -2,7 +2,6 @@
 
 use crate::serve::js_value::{JsValue, JsJson};
 
-
 #[cfg(test)]
 mod tests {
     use crate::serve::js_value::JsValue;
@@ -58,7 +57,7 @@ impl<'a> Match<'a> {
                 list: list.as_slice(),
             });
         }
-        
+
         Err(())
     }
 

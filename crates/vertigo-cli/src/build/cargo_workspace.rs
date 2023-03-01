@@ -1,6 +1,5 @@
-use cargo::core::compiler::CrateType;
 use cargo::{Config, CargoResult};
-use cargo::core::{Workspace, TargetKind, Verbosity};
+use cargo::core::{compiler::CrateType, Workspace, TargetKind, Verbosity};
 use std::env::current_dir;
 use std::path::PathBuf;
 

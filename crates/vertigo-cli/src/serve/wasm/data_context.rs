@@ -1,15 +1,15 @@
-use crate::serve::request_state::RequestState;
-
-use crate::serve::js_value::{JsValue, MemoryBlock};
 use wasmtime::{
-    Store,
+    AsContextMut,
     Caller,
-    Instance,
     Extern,
+    Instance,
     Memory,
+    Store,
     StoreContextMut,
 };
-use wasmtime::AsContextMut;
+
+use crate::serve::request_state::RequestState;
+use crate::serve::js_value::{JsValue, MemoryBlock};
 
 pub enum DataContext<'a> {
     Caller {
@@ -60,7 +60,7 @@ impl<'a> DataContext<'a> {
             }
         }
     }
-    
+
     pub fn get_value(&mut self, ptr: u32, offset: u32) -> JsValue {
         let memory = self.get_memory();
         let context = self.get_context();
@@ -69,9 +69,9 @@ impl<'a> DataContext<'a> {
 
         let ptr = ptr as usize;
         let offset = offset as usize;
-    
+
         let slice = &buff[ptr..(ptr+offset)];
-    
+
         let block = MemoryBlock::from_slice(slice);
         match JsValue::from_block(block) {
             Ok(value) => value,
@@ -86,22 +86,22 @@ impl<'a> DataContext<'a> {
         let memory = self.get_memory();
         let context = self.get_context();
         let buff = memory.data(&context);
-        
+
         let ptr = ptr as usize;
         let offset = offset as usize;
-    
+
         let slice = &buff[ptr..(ptr+offset)];
-        
+
         let slice_vec = Vec::from(slice);
-    
+
         let Ok(result) = String::from_utf8(slice_vec) else {
             log::error!("panic message decoding problem");
             return None;
         };
-    
+
         Some(result)
     }
-    
+
     fn alloc(&mut self, size: usize) -> usize {
         let alloc_inner = match self {
             Self::Caller { caller, .. } => {

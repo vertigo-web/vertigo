@@ -3,7 +3,7 @@ use crate::{
     computed::{Client, GraphValue, graph_id::GraphId},
     dom_value::{render_value, render_value_option},
     dom_list::{render_list, ListRendered},
-    dom::{dom_comment_create::DomFragment, dom_node::DomNodeFragment},
+    dom::{dom_fragment::DomFragment, dom_node::DomNodeFragment},
     DomElement, Value
 };
 use std::hash::Hash;

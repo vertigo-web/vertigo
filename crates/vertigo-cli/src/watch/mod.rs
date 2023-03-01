@@ -1,9 +1,11 @@
-use std::sync::Arc;
+use clap::Args;
 use notify::RecursiveMode;
+use poem::http::Method;
 use poem::middleware::Cors;
 use poem::{Route, get, Server, listener::TcpListener, EndpointExt};
-use tokio::sync::{Notify};
+use tokio::sync::Notify;
 use tokio::time::sleep;
+use std::sync::Arc;
 use std::time::Duration;
 
 use crate::build::BuildOpts;
@@ -11,13 +13,10 @@ use crate::build::{infer_package_name, find_package_path};
 use crate::serve::ServeOpts;
 use crate::spawn::SpawnOwner;
 use crate::watch::sse::handler_sse;
-use poem::http::{Method};
 
 mod sse;
 mod is_http_server_listening;
 use is_http_server_listening::is_http_server_listening;
-
-use clap::Args;
 
 #[derive(Args, Debug, Clone)]
 pub struct WatchOpts {
@@ -47,8 +46,8 @@ impl WatchOpts {
         ServeOpts {
             dest_dir: self.dest_dir.clone(),
             host: self.host.clone(),
-            port: self.port.clone(),
-            port_watch: Some(self.port_watch.clone()),
+            port: self.port,
+            port_watch: Some(self.port_watch),
         }
     }
 }
@@ -81,7 +80,7 @@ pub async fn run(opts: WatchOpts) -> Result<(), i32> {
 
     let path = find_package_path(&package_name);
     log::info!("path ==> {path:?}");
-    
+
     let Some(path) = path else {
         log::error!("package not found ==> {:?}", opts.package_name);
         return Err(-1);
@@ -120,7 +119,7 @@ pub async fn run(opts: WatchOpts) -> Result<(), i32> {
         let cors_middleware = Cors::new()
             .allow_methods(vec![Method::GET, Method::POST])
             .max_age(3600);
-        
+
         let app = Route::new()
             .at("/events", get(handler_sse))
             .with(cors_middleware)
@@ -172,7 +171,7 @@ pub async fn run(opts: WatchOpts) -> Result<(), i32> {
                 version += 1;
                 notify_build.notified().await;
                 spawn.off();
-        
+
             },
             Err(code) => {
                 log::error!("build run faild, exit code={code}");
@@ -186,4 +185,3 @@ pub async fn run(opts: WatchOpts) -> Result<(), i32> {
         }
     }
 }
-

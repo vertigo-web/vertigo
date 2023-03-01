@@ -129,7 +129,7 @@ impl DomElement {
         self
     }
 
-    pub fn attr(self, name: &'static str, value: impl Into<AttrValue>) -> Self {
+    pub fn add_attr(&self, name: &'static str, value: impl Into<AttrValue>) {
         let value = value.into();
 
         match value {
@@ -155,7 +155,17 @@ impl DomElement {
 
             }
         };
+    }
 
+    pub fn attr(self, name: &'static str, value: impl Into<AttrValue>) -> Self {
+        self.add_attr(name, value);
+        self
+    }
+
+    pub fn attrs<T: Into<AttrValue>>(self, attrs: Vec<(&'static str, T)>) -> Self {
+        for (name, value) in attrs.into_iter() {
+            self.add_attr(name, value)
+        }
         self
     }
 
@@ -176,6 +186,13 @@ impl DomElement {
 
     pub fn child(self, child_node: impl Into<DomNodeFragment>) -> Self {
         self.add_child(child_node);
+        self
+    }
+
+    pub fn children<C: Into<DomNodeFragment>>(self, children: Vec<C>) -> Self {
+        for child_node in children.into_iter() {
+            self.add_child(child_node)
+        }
         self
     }
 

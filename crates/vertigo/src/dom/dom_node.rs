@@ -1,7 +1,10 @@
-use crate::{dom::{
-    dom_element::DomElement,
-    dom_text::DomText,
-}, DomFragment, EmbedDom};
+use crate::{
+    dom::{
+        dom_element::DomElement,
+        dom_text::DomText,
+    },
+    DomFragment, EmbedDom
+};
 
 use super::{dom_id::DomId, dom_comment::DomComment};
 

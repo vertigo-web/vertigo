@@ -1,5 +1,8 @@
 #![allow(dead_code)]
-use std::{process::{exit, Output, Command, Stdio, ChildStdout}, collections::{HashMap}};
+use std::{
+    collections::HashMap,
+    process::{exit, Output, Command, Stdio, ChildStdout},
+};
 
 pub struct CommandRun {
     bin: String,
@@ -106,7 +109,7 @@ impl CommandRun {
             //ok
         } else {
             let status = output.status;
-    
+
             let status = format!("$ status = {status:?}");
             log::error!("$ status = {status:?}\n");
 

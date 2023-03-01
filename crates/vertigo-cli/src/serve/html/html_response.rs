@@ -1,7 +1,7 @@
+use axum::http::StatusCode;
 use std::{collections::{HashMap, VecDeque}, sync::Arc};
-
-use axum::{http::StatusCode};
 use tokio::sync::mpsc::UnboundedSender;
+
 use crate::serve::{
     wasm::{
         Message,
@@ -134,7 +134,7 @@ impl HtmlResponse {
                         log::error!("DomUpdate: {message}");
                     }
                 }
-                
+
                 None
             }
             Message::Panic(message) => {
@@ -165,7 +165,7 @@ impl HtmlResponse {
 
                         async move {
                             let response = send_request(request.clone()).await;
-                            
+
                             sender.send(Message::FetchResponse {
                                 request,
                                 response
@@ -203,7 +203,7 @@ impl HtmlResponse {
                 };
 
                 self.fetch.insert(request, new_state);
-    
+
                 None
             },
         }

@@ -1,13 +1,13 @@
-use std::{time::{Instant, Duration}, sync::Arc};
-
-use clap::Args;
-use tokio::sync::{OnceCell, RwLock};
-use crate::serve::mount_path::MountPathConfig;
-use crate::serve::server_state::ServerState;
-
-use axum::{Router, http::{Uri}, extract::{State, RawQuery}};
+use axum::{Router, http::Uri, extract::{State, RawQuery}};
 use axum_extra::routing::SpaRouter;
 use axum::response::Response;
+use clap::Args;
+use std::{time::{Instant, Duration}, sync::Arc};
+use tokio::sync::{OnceCell, RwLock};
+
+
+use crate::serve::mount_path::MountPathConfig;
+use crate::serve::server_state::ServerState;
 
 static STATE: OnceCell<Arc<RwLock<Arc<ServerState>>>> = OnceCell::const_new();
 
@@ -103,12 +103,12 @@ async fn handler(url: Uri, RawQuery(query): RawQuery, State(state): State<Arc<Rw
 fn add_watch_script(response: String, port_watch: u16) -> String {
     let watch = include_str!("./watch.js");
 
-    let start = format!("start_watch('http://127.0.0.1:{}/events');", port_watch);
+    let start = format!("start_watch('http://127.0.0.1:{port_watch}/events');");
 
     let chunks = vec!(
         "<script>".to_string(),
         watch.to_string(),
-        start.to_string(),
+        start,
         "</script>".to_string()
     );
 

@@ -77,7 +77,7 @@ impl ElementChildren {
                 first_child
             } else {
                 assert_eq!(self.childs.len(), 0);
-    
+
                 self.first_child = Some(child);
                 self.childs.insert(child, ChildrenNode {
                     left: child,
@@ -105,7 +105,7 @@ impl ElementChildren {
             self.first_child = None;
             return;
         }
-        
+
         let Some(node_right) = self.childs.get_mut(&node.right) else {
             unreachable!();
         };
@@ -125,7 +125,7 @@ impl ElementChildren {
 }
 
 
-#[cfg(test)] 
+#[cfg(test)]
 mod tests {
     use super::ElementChildren;
 
@@ -180,7 +180,7 @@ mod tests {
 
         assert_eq!(children.first_child, Some(35));
         assert_eq!(children.childs(), vec!(35, 36, 44));
-        
+
         children.remove(35);
 
         assert_eq!(children.first_child, Some(36));

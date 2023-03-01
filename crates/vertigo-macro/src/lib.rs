@@ -154,7 +154,7 @@ pub fn component(_attr: TokenStream, input: TokenStream) -> TokenStream {
     }
 
     let visibility = &ast.vis;
-    
+
     let visibility2 = match visibility {
         Visibility::Public(_) => {
             quote! {

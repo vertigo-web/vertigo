@@ -1,4 +1,5 @@
 use std::hash::Hash;
+
 const HTML_ID: u64 = 1;
 const HEAD_ID: u64 = 2;
 const BODY_ID: u64 = 3;

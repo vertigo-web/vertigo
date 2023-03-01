@@ -1,7 +1,11 @@
-use crate::dom::dom_comment_create::DomFragment;
-use crate::dom::dom_node::DomNodeFragment;
-use crate::struct_mut::{ValueMut};
-use crate::{Computed, get_driver, DomComment, DomNode};
+use crate::{
+    dom::{
+        dom_fragment::DomFragment,
+        dom_node::DomNodeFragment,
+    },
+    struct_mut::ValueMut,
+    Computed, get_driver, DomComment, DomNode,
+};
 
 pub fn render_value_option<T: Clone + PartialEq + 'static, R: Into<DomNodeFragment>>(
     computed: Computed<T>,
