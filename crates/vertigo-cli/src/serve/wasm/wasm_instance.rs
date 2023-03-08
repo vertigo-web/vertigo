@@ -372,7 +372,14 @@ impl WasmInstance {
             import_panic_message.into(),
             import_dom_access.into()
         ];
-        let instance = Instance::new(&mut store, module, &imports).unwrap();
+        let instance = Instance::new(&mut store, module, &imports);
+
+        let instance = match instance {
+            Ok(instance) => instance,
+            Err(error) => {
+                panic!("Instance::new error={error}");
+            }
+        };
 
         WasmInstance {
             instance,
