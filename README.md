@@ -1,4 +1,8 @@
-# Vertigo - reactive webassembly
+[![Crates.io](https://img.shields.io/crates/d/vertigo.svg)](https://crates.io/crates/vertigo)
+[![Crates.io](https://img.shields.io/crates/v/vertigo.svg)](https://crates.io/crates/vertigo)
+[![Released API docs](https://docs.rs/vertigo/badge.svg)](https://docs.rs/vertigo)
+
+Vertigo - reactive webassembly
 
 ## Features
 
