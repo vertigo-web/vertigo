@@ -10,6 +10,8 @@ pub struct BuildOpts {
     pub dest_dir: String,
     #[arg(long, default_value_t = {"/build".to_string()})]
     pub public_path: String,
+    #[arg(short, long)]
+    pub disable_wasm_opt: bool,
 }
 
 impl BuildOpts {

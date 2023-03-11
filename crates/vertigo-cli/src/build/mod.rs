@@ -67,7 +67,7 @@ pub fn run(opts: BuildOpts) -> Result<(), i32> {
 
     // Optimize .wasm
 
-    let wasm_path_hash = if wasm_opt::run_wasm_opt(&wasm_path_target, &wasm_path) {
+    let wasm_path_hash = if !opts.disable_wasm_opt && wasm_opt::run_wasm_opt(&wasm_path_target, &wasm_path) {
         // optimized
         let wasm_path_hash = wasm_path.save_with_hash(wasm_path.read().as_slice());
         wasm_path.remove_file();
