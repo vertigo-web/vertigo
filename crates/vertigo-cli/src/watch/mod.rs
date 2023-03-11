@@ -32,6 +32,8 @@ pub struct WatchOpts {
     pub port: u16,
     #[arg(long, default_value_t = {5555})]
     pub port_watch: u16,
+    #[arg(short, long)]
+    pub disable_wasm_opt: bool,
 }
 
 impl WatchOpts {
@@ -40,6 +42,7 @@ impl WatchOpts {
             package_name: self.package_name.clone(),
             dest_dir: self.dest_dir.clone(),
             public_path: self.public_path.clone(),
+            disable_wasm_opt: self.disable_wasm_opt,
         }
     }
 
