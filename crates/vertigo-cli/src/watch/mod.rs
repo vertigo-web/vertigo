@@ -86,14 +86,31 @@ pub async fn run(opts: WatchOpts) -> Result<(), i32> {
         return Err(-1);
     };
 
+    let excludes = [
+        path.join("target"),
+        path.join(opts.dest_dir.clone()),
+    ];
+
     let notify_build = Arc::new(Notify::new());
 
-    let watch_result = notify::recommended_watcher({
+    let watch_result = notify::RecommendedWatcher::new({
         let notify_build = notify_build.clone();
 
-        move |res| {
+        move |res: Result<notify::Event, _>| {
             match res {
                 Ok(event) => {
+                    // log::info!("NOTIFY!");
+                    if event.paths.iter().all(|path| {
+                        for exclude_path in &excludes {
+                            if path.starts_with(exclude_path) {
+                                log::info!("Ignoring path {}", path.display());
+                                return true
+                            }
+                        }
+                        false
+                    }) {
+                        return
+                    }
                     log::info!("event: {:?}", event);
                     notify_build.notify_one();
                 }
@@ -102,7 +119,7 @@ pub async fn run(opts: WatchOpts) -> Result<(), i32> {
                 }
             }
         }
-    });
+    }, notify::Config::default().with_poll_interval(std::time::Duration::from_millis(200)));
 
     let mut watcher = match watch_result {
         Ok(watcher) => watcher,
@@ -151,7 +168,9 @@ pub async fn run(opts: WatchOpts) -> Result<(), i32> {
 
                     async move {
                         log::info!("serve run ...");
-                        let _ = crate::serve::run(opts.to_serve_opts()).await;
+                        if let Err(errno) = crate::serve::run(opts.to_serve_opts()).await {
+                            panic!("Error {errno} running server")
+                        }
                     }
                 });
 
@@ -174,7 +193,7 @@ pub async fn run(opts: WatchOpts) -> Result<(), i32> {
 
             },
             Err(code) => {
-                log::error!("build run faild, exit code={code}");
+                log::error!("build run failed, exit code={code}");
 
                 let Ok(()) = tx.send(Status::Errors) else {
                     unreachable!();
