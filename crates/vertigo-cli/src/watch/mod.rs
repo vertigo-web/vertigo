@@ -7,6 +7,7 @@ use tokio::sync::Notify;
 use tokio::time::sleep;
 use std::sync::Arc;
 use std::time::Duration;
+use tokio::sync::watch::Sender;
 
 use crate::build::BuildOpts;
 use crate::build::{infer_package_name, find_package_path};
@@ -131,6 +132,7 @@ pub async fn run(opts: WatchOpts) -> Result<(), i32> {
 
 
     let (tx, rx) = tokio::sync::watch::channel(Status::default());
+    let tx = Arc::new(tx);
 
     tokio::spawn({
         let cors_middleware = Cors::new()
@@ -151,45 +153,58 @@ pub async fn run(opts: WatchOpts) -> Result<(), i32> {
 
     use notify::Watcher;
     watcher.watch(&path, RecursiveMode::Recursive).unwrap();
-    let mut version = 1;
+    let mut version = 0;
 
     loop {
+        version += 1;
+
         let Ok(()) = tx.send(Status::Building) else {
             unreachable!();
         };
 
         log::info!("build run ...");
+
+        let spawn = build_and_watch(version, tx.clone(), &opts);
+        notify_build.notified().await;
+        spawn.off();
+    }
+}
+
+
+fn build_and_watch(version: u32, tx: Arc<Sender<Status>>, opts: &WatchOpts) -> SpawnOwner {
+    let opts = opts.clone();
+
+    SpawnOwner::new(async move {
+        sleep(Duration::from_millis(200)).await;
+
         match crate::build::run(opts.to_build_opts()) {
             Ok(()) => {
                 log::info!("build run ok");
 
-                let spawn = SpawnOwner::new({
-                    let opts = opts.clone();
-
-                    async move {
-                        log::info!("serve run ...");
-                        if let Err(errno) = crate::serve::run(opts.to_serve_opts()).await {
-                            panic!("Error {errno} running server")
+                let check_spawn = SpawnOwner::new(async move {
+                    loop {
+                        let is_open = is_http_server_listening(opts.port).await;
+                        if is_open {
+                            break;
                         }
+    
+                        sleep(Duration::from_millis(100)).await;
                     }
+    
+                    let Ok(()) = tx.send(Status::Version(version)) else {
+                        unreachable!();
+                    };
+
                 });
 
-                loop {
-                    let is_open = is_http_server_listening(opts.port).await;
-                    if is_open {
-                        break;
-                    }
+                let opts = opts.clone();
 
-                    sleep(Duration::from_millis(200)).await;
+                log::info!("serve run ...");
+                if let Err(errno) = crate::serve::run(opts.to_serve_opts()).await {
+                    panic!("Error {errno} running server")
                 }
 
-                let Ok(()) = tx.send(Status::Version(version)) else {
-                    unreachable!();
-                };
-
-                version += 1;
-                notify_build.notified().await;
-                spawn.off();
+                check_spawn.off();
 
             },
             Err(code) => {
@@ -198,9 +213,7 @@ pub async fn run(opts: WatchOpts) -> Result<(), i32> {
                 let Ok(()) = tx.send(Status::Errors) else {
                     unreachable!();
                 };
-
-                notify_build.notified().await;
             }
-        }
-    }
+        };
+    })
 }
