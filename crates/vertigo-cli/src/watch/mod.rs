@@ -190,10 +190,10 @@ fn build_and_watch(version: u32, tx: Arc<Sender<Status>>, opts: &WatchOpts) -> S
                         if is_open {
                             break;
                         }
-    
+
                         sleep(Duration::from_millis(100)).await;
                     }
-    
+
                     let Ok(()) = tx.send(Status::Version(version)) else {
                         unreachable!();
                     };
