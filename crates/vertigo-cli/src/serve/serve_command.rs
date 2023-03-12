@@ -1,6 +1,10 @@
-use axum::{Router, http::Uri, extract::{State, RawQuery}};
+use axum::{
+    extract::{State, RawQuery},
+    http::{StatusCode, Uri},
+    response::Response,
+    Router,
+};
 use axum_extra::routing::SpaRouter;
-use axum::response::Response;
 use clap::Args;
 use std::{time::{Instant, Duration}, sync::Arc};
 use tokio::sync::{OnceCell, RwLock};
@@ -78,7 +82,7 @@ async fn handler(url: Uri, RawQuery(query): RawQuery, State(state): State<Arc<Rw
     };
 
     log::debug!("Incoming request: {uri}");
-    let (status, response) = state.request(&uri).await;
+    let (status, mut response) = state.request(&uri).await;
 
     let time = now.elapsed();
     if time > Duration::from_secs(1) {
@@ -87,11 +91,11 @@ async fn handler(url: Uri, RawQuery(query): RawQuery, State(state): State<Arc<Rw
         log::info!("Response for request: {status} {}ms {url}", time.as_millis());
     }
 
-    let response = if let Some(port_watch) = state.port_watch {
-        add_watch_script(response, port_watch)
-    } else {
-        response
-    };
+    if status == StatusCode::OK {
+        if let Some(port_watch) = state.port_watch {
+            response = add_watch_script(response, port_watch);
+        }
+    }
 
     Response::builder()
         .status(status)

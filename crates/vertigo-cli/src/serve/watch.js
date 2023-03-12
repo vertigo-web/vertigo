@@ -1,7 +1,7 @@
 //@ts-check
 
 /**
- * @param {string} url 
+ * @param {string} url
  */
 function start_watch(url) {
     /** @type string | null */
@@ -9,7 +9,7 @@ function start_watch(url) {
 
     /** @type HTMLElement | null */
     let building_message = null;
-    
+
     /** @param {string} message  */
     function processMessage(message) {
         console.info(`Watch message: ${message}`);
@@ -63,7 +63,7 @@ function start_watch(url) {
 
 /**
  * @param {string} name
- * @param {Array<[string, string]>} chunks 
+ * @param {Array<[string, string]>} chunks
  * @returns {HTMLElement}
  */
 function createElement(name, chunks) {
@@ -107,7 +107,7 @@ function buildInProgressMessage() {
 
     div.appendChild(inner);
     inner.appendChild(text);
-    
+
     return div;
 }
 
@@ -143,6 +143,6 @@ function buildErrorsMessage() {
 
     div.appendChild(inner);
     inner.appendChild(text);
-    
+
     return div;
 }
