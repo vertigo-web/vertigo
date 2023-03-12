@@ -12,30 +12,18 @@ use super::dom_node::DomNodeFragment;
 use super::dom_element_class::DomElementClassMerge;
 use crate::struct_mut::VecDequeMut;
 
-pub enum AttrValue<T: Into<String> + Clone + PartialEq + 'static> {
-    String(T),
-    Computed(Computed<T>)
+pub enum AttrValue {
+    String(String),
+    Computed(Computed<String>)
 }
 
-impl From<&'static str> for AttrValue<&'static str> {
-    fn from(value: &'static str) -> Self {
-        AttrValue::String(value)
+impl<K: ToString> From<K> for AttrValue {
+    fn from(value: K) -> Self {
+        AttrValue::String(value.to_string())
     }
 }
 
-impl From<&String> for AttrValue<String> {
-    fn from(value: &String) -> Self {
-        AttrValue::String(value.clone())
-    }
-}
-
-impl From<String> for AttrValue<String> {
-    fn from(value: String) -> Self {
-        AttrValue::String(value)
-    }
-}
-
-impl From<Computed<String>> for AttrValue<String> {
+impl From<Computed<String>> for AttrValue {
     fn from(value: Computed<String>) -> Self {
         AttrValue::Computed(value)
     }
@@ -141,12 +129,11 @@ impl DomElement {
         self
     }
 
-    pub fn attr<T: Into<String> + Clone + PartialEq + 'static>(self, name: &'static str, value: impl Into<AttrValue<T>>) -> Self {
+    pub fn attr(self, name: &'static str, value: impl Into<AttrValue>) -> Self {
         let value = value.into();
 
         match value {
             AttrValue::String(value) => {
-                let value: String = value.into();
                 if name == "class" {
                     self.class_manager.set_attribute(value);
                 } else {
@@ -159,7 +146,6 @@ impl DomElement {
                 let class_manager = self.class_manager.clone();
 
                 self.subscribe(computed, move |value| {
-                    let value: String = value.into();
                     if name == "class" {
                         class_manager.set_attribute(value);
                     } else {
