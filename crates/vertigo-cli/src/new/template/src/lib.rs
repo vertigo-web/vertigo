@@ -1,17 +1,18 @@
 use vertigo::{start_app, DomElement, dom, Value};
 
-fn app(state: &Value<u32>) -> DomElement {
+fn app() -> DomElement {
+    let message = Value::new("world");
     dom! {
-        <div>"Hello world"</div>
+        <html>
+            <head />
+            <body>
+                <div>"Hello " {message}</div>
+            </body>
+        </html>
     }
-}
-
-fn render() -> DomElement {
-    let state = Value::new(0);
-    app(&state)
 }
 
 #[no_mangle]
 pub fn start_application() {
-    start_app(render);
+    start_app(app);
 }

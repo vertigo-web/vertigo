@@ -1,8 +1,6 @@
-Vertigo - reactive webassembly
-===================
+# Vertigo - reactive webassembly
 
-Features
---------------
+## Features
 
 * **Reactive dependencies** - A graph of values and clients (micro-subscriptions) that can automatically compute what to refresh after one value change
 * **Real DOM** - No intermediate Virtual DOM mechanism is necessary
@@ -13,8 +11,13 @@ See [Changelog](https://github.com/vertigo-web/vertigo/blob/master/CHANGES.md) f
 
 Go to **[TUTORIAL](https://github.com/vertigo-web/vertigo/blob/master/tutorial.md)** if you want to try.
 
-Examples
---------------
+## Installation
+
+```sh
+cargo install vertigo --version 0.2.0-alpha
+```
+
+## Examples
 
 Dependencies:
 
@@ -25,9 +28,11 @@ vertigo = "0.2.0-alpha"
 Example 1:
 
 ```rust
-use vertigo::{bind, dom, DomElement, start_app, Value};
+use vertigo::{dom, DomElement, Value, bind, start_app};
 
-pub fn app(count: &Value) -> DomElement {
+pub fn app() -> DomElement {
+    let count = Value::new(0);
+
     let increment = bind!(count, || {
         count.change(|value| {
             *value += 1;
@@ -44,42 +49,41 @@ pub fn app(count: &Value) -> DomElement {
         <html>
             <head/>
             <body>
-                <p>"Counter: " { count }</p>
-                <button on_click={decrement}>"-"</button>
-                <button on_click={increment}>"+"</button>
+                <div>
+                    <p>"Counter: " { count }</p>
+                    <button on_click={decrement}>"-"</button>
+                    <button on_click={increment}>"+"</button>
+                </div>
             </body>
         </html>
     }
 }
 
-fn render() -> DomElement {
-    let count = Value::new(0);
-    app(&count)
-}
-
 #[no_mangle]
 pub fn start_application() {
-    start_app(render);
+    start_app(app);
 }
 ```
 
 Example 2:
 
 ```rust
-use vertigo::{css, dom, DomElement, start_app, Value, component};
+use vertigo::{css, component, DomElement, Value, dom, start_app};
 
 #[component]
-fn MyMessage(message: Value<String>) -> DomElement {
+pub fn MyMessage(message: Value<String>) -> DomElement {
     dom! {
         <p>
             "Message to the world: "
-            { self.message }
+            { message }
         </p>
     }
 }
 
-fn app(message: &Value) -> DomElement {
-    let wrapper_css = css!("
+fn app() -> DomElement {
+    let message = Value::new("Hello world!".to_string());
+
+    let main_div = css!("
         color: darkblue;
     ");
 
@@ -87,7 +91,7 @@ fn app(message: &Value) -> DomElement {
         <html>
             <head/>
             <body>
-                <div css={wrapper_css}>
+                <div css={main_div}>
                     <MyMessage message={message} />
                 </div>
             </body>
@@ -95,29 +99,29 @@ fn app(message: &Value) -> DomElement {
     }
 }
 
-fn render() -> DomElement {
-    let message = Value::new("Hello world!".to_string());
-    app(&message)
-}
-
 #[no_mangle]
 pub fn start_application() {
-    start_app(render);
+    start_app(app);
 }
 ```
 
 Take a look at **[More examples here](https://github.com/vertigo-web/vertigo/tree/master/examples)**.
 
-Demo App - installation and usage
---------------
+## Demo App
+
+### Prepare
 
 Make sure you're using nightly version of rust:
 
 * `rustup default nightly`
 
-Install cargo-make that takes care of all other dependencies:
+Install cargo-make and vertigo-cli:
 
 * `cargo install cargo-make vertigo`
+
+(Before stable version is released, append `--version 0.2.0-alpha` to install command)
+
+### Run
 
 Build and run project using:
 
@@ -131,12 +135,15 @@ If you want to play around with the code, you can make cargo to watch for your c
 
 The browser will automatically refresh after the project has been recompiled.
 
+If you want to use "chat" in demo you need to first run websocket server in separate terminal with command:
+
+* `cargo make demo-serve-api`
+
 --------------
 
 To run the examples in watch mode (they will run on localhost:4444):
 `cargo make examples-counter` or `cargo make examples-router` or `cargo make examples-trafficlights`
 
-A community, soon to grow
---------------
+## A community, soon to grow
 
 * Discord server: <https://discord.gg/HAXtTeFrAf>

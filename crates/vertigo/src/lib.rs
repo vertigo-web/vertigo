@@ -12,7 +12,9 @@
 //! ```rust
 //! use vertigo::{dom, DomElement, Value, bind, start_app};
 //!
-//! pub fn render(count: &Value<i32>) -> DomElement {
+//! pub fn app() -> DomElement {
+//!     let count = Value::new(0);
+//!
 //!     let increment = bind!(count, || {
 //!         count.change(|value| {
 //!             *value += 1;
@@ -26,43 +28,41 @@
 //!     });
 //!
 //!     dom! {
-//!         <div>
-//!             <p>"Counter: " { count }</p>
-//!             <button on_click={decrement}>"-"</button>
-//!             <button on_click={increment}>"+"</button>
-//!         </div>
+//!         <html>
+//!             <head/>
+//!             <body>
+//!                 <div>
+//!                     <p>"Counter: " { count }</p>
+//!                     <button on_click={decrement}>"-"</button>
+//!                     <button on_click={increment}>"+"</button>
+//!                 </div>
+//!             </body>
+//!         </html>
 //!     }
 //! }
 //!
 //! #[no_mangle]
 //! pub fn start_application() {
-//!     let count = Value::new(0);
-//!     let view = render(&count);
-//!     start_app(view);
+//!     start_app(app);
 //! }
 //! ```
 //!
 //! ## Example 2
 //!
 //! ```rust
-//! use vertigo::{css, DomElement, Value, dom};
+//! use vertigo::{css, component, DomElement, Value, dom, start_app};
 //!
-//! pub struct MyMessage {
-//!     pub message: Value<String>,
-//! }
-//!
-//! impl MyMessage {
-//!     pub fn mount(self) -> DomElement {
-//!         dom! {
-//!             <p>
-//!                 "Message to the world: "
-//!                 { self.message }
-//!             </p>
-//!         }
+//! #[component]
+//! pub fn MyMessage(message: Value<String>) -> DomElement {
+//!     dom! {
+//!         <p>
+//!             "Message to the world: "
+//!             { message }
+//!         </p>
 //!     }
 //! }
 //!
-//! fn render() -> DomElement {
+//! fn app() -> DomElement {
 //!     let message = Value::new("Hello world!".to_string());
 //!
 //!     let main_div = css!("
@@ -70,10 +70,20 @@
 //!     ");
 //!
 //!     dom! {
-//!         <div css={main_div}>
-//!             <MyMessage message={message} />
-//!         </div>
+//!         <html>
+//!             <head/>
+//!             <body>
+//!                 <div css={main_div}>
+//!                     <MyMessage message={message} />
+//!                 </div>
+//!             </body>
+//!         </html>
 //!     }
+//! }
+//!
+//! #[no_mangle]
+//! pub fn start_application() {
+//!     start_app(app);
 //! }
 //! ```
 //!
