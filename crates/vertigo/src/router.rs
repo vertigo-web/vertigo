@@ -1,26 +1,13 @@
-use std::rc::Rc;
-
 use crate::{
-    computed::{Value, DropResource, context::Context},
-    get_driver, Computed,
+    computed::Value,
+    get_driver,
+    Computed,
 };
 
-struct HashSubscriptions {
-    _receiver: DropResource,
-}
-
-#[derive(Clone)]
+#[derive(Clone, PartialEq)]
 pub struct Router<T: Clone + ToString + From<String> + PartialEq + 'static> {
     use_history_api: bool,
-    route_value: Value<T>,
     pub route: Computed<T>,
-    _subscriptions: Rc<HashSubscriptions>,
-}
-
-impl<T: Clone + ToString + From<String> + PartialEq + 'static> PartialEq for Router<T> {
-    fn eq(&self, other: &Self) -> bool {
-        self.route_value.id() == other.route_value.id()
-    }
 }
 
 /// Router based on hash part of current location.
@@ -100,33 +87,27 @@ impl<T: Clone + ToString + From<String> + PartialEq + 'static> Router<T> {
 
     fn new(use_history_api: bool) -> Self {
         let driver = get_driver();
-        let route_value: Value<T> = match use_history_api {
-            false => Value::new(T::from(driver.inner.api.get_hash_location())),
-            true => Value::new(T::from(driver.inner.api.get_history_location())),
+
+        let init_value = match use_history_api {
+            false => T::from(driver.inner.api.get_hash_location()),
+            true => T::from(driver.inner.api.get_history_location()),
         };
 
-        let callback = {
-            let route = route_value.clone();
+        let route = Value::with_connect(init_value, move |value| {
+            let value = value.clone();
+            let callback = move |url: String| {
+                value.set_value_and_compare(T::from(url));
+            };
 
-            move |url: String| {
-                route.set_value_and_compare(T::from(url));
+            match use_history_api {
+                false => driver.inner.api.on_hash_change(callback),
+                true => driver.inner.api.on_history_change(callback),
             }
-        };
-
-        let receiver = match use_history_api {
-            false => driver.inner.api.on_hash_change(callback),
-            true => driver.inner.api.on_history_change(callback),
-        };
-
-        let route = route_value.to_computed();
+        });
 
         Self {
             use_history_api,
-            route_value,
             route,
-            _subscriptions: Rc::new(HashSubscriptions {
-                _receiver: receiver
-            })
         }
     }
 
@@ -136,9 +117,5 @@ impl<T: Clone + ToString + From<String> + PartialEq + 'static> Router<T> {
             false => driver.inner.api.push_hash_location(&route.to_string()),
             true => driver.inner.api.push_history_location(&route.to_string()),
         };
-    }
-
-    pub fn get(&self, context: &Context) -> T {
-        self.route_value.get(context)
     }
 }
