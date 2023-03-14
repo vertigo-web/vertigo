@@ -19,7 +19,8 @@ args = [
     "-p", "vertigo-macro",
     "-p", "vertigo-demo",
     "-p", "vertigo-example-counter",
-    "-p", "vertigo-example-router"
+    "-p", "vertigo-example-router",
+    "-p", "vertigo-example-trafficlights"
 ]
 
 

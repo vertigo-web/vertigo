@@ -1,6 +1,6 @@
 <!-- markdownlint-configure-file { "no-duplicate-heading": { "siblings_only": true } } -->
 <!-- markdownlint-disable-next-line first-line-h1 -->
-## 0.2.0-alpha
+## 0.2.0-alpha - 2023-03-15
 
 ### Added
 
@@ -18,10 +18,11 @@
 ### Changed
 
 * Renamed DomCommentCreate to DomFragment
+* `start_app` doesn't require state
 
 ### Removed
 
-* `css_fn!` and `css_fn_push!` macro (not very useful, problems with error reporting in proper place)
+* `css_fn!` and `css_fn_push!` macros (not very useful, problems with error reporting in proper place)
 * `serde` dependency
 
 ## 0.1.1 - 2022-11-10

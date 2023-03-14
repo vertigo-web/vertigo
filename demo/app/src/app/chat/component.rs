@@ -37,7 +37,7 @@ fn render_status(state: &ChatState) -> DomFragment {
         |is_connect| {
             let message = match is_connect.is_some() {
                 true => "Connection active",
-                false => "disconnect",
+                false => "disconnected",
             };
 
             dom! {
