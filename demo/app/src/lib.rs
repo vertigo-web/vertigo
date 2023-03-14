@@ -1,13 +1,14 @@
 #![deny(rust_2018_idioms)]
 
-use vertigo::start_app_fn;
+use vertigo::{start_app, DomElement};
 mod app;
+
+fn render() -> DomElement {
+    let state = app::State::new();
+    state.render()
+}
 
 #[no_mangle]
 pub fn start_application() {
-    start_app_fn(|| {
-        let state = app::State::new();
-        let view = state.render();
-        (state, view)
-    });
+    start_app(render);
 }

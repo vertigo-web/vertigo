@@ -77,11 +77,14 @@ fn app(message: &Value) -> DomElement {
     }
 }
 
+fn render() -> DomElement {
+    let message = Value::new("Hello world!".to_string());
+    app(&message)
+}
+
 #[no_mangle]
 pub fn start_application() {
-    let message = Value::new("Hello world!".to_string());
-    let view = app(&message);
-    start_app(message, view);
+    start_app(render);
 }
 ```
 

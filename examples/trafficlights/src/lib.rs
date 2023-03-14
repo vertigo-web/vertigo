@@ -56,9 +56,12 @@ pub fn app(state: &Value<LightState>) -> DomElement {
     }
 }
 
+fn render() -> DomElement {
+    let state = Value::new(LightState::Red);
+    app(&state)
+}
+
 #[no_mangle]
 pub fn start_application() {
-    let state = Value::new(LightState::Red);
-    let view = app(&state);
-    start_app(state, view);
+    start_app(render);
 }

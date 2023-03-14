@@ -20,7 +20,7 @@ pub fn Light(light_color: &'static str, dark_color: &'static str, on: Computed<b
             dark_color
         };
 
-        light(&color)
+        light(color)
     });
 
     dom! {
