@@ -52,11 +52,14 @@ pub fn app(count: &Value) -> DomElement {
     }
 }
 
+fn render() -> DomElement {
+    let count = Value::new(0);
+    app(&count)
+}
+
 #[no_mangle]
 pub fn start_application() {
-    let count = Value::new(0);
-    let view = app(&count);
-    start_app(count, view);
+    start_app(render);
 }
 ```
 
@@ -92,11 +95,14 @@ fn app(message: &Value) -> DomElement {
     }
 }
 
+fn render() -> DomElement {
+    let message = Value::new("Hello world!".to_string());
+    app(&message)
+}
+
 #[no_mangle]
 pub fn start_application() {
-    let message = Value::new("Hello world!".to_string());
-    let view = app(&message);
-    start_app(message, &view);
+    start_app(render);
 }
 ```
 

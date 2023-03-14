@@ -6,9 +6,12 @@ fn app(state: &Value<u32>) -> DomElement {
     }
 }
 
+fn render() -> DomElement {
+    let state = Value::new(0);
+    app(&state)
+}
+
 #[no_mangle]
 pub fn start_application() {
-    let state = Value::new(0);
-    let view = app(&state);
-    start_app(state, view);
+    start_app(render);
 }

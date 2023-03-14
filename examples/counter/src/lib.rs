@@ -28,13 +28,15 @@ fn App(count: Value<i32>) -> DomElement {
     }
 }
 
-#[no_mangle]
-pub fn start_application() {
+fn render() -> DomElement {
     let count = Value::new(0);
 
-    let view = dom! {
+    dom! {
         <App count={&count} />
-    };
+    }
+}
 
-    start_app(count, view);
+#[no_mangle]
+pub fn start_application() {
+    start_app(render);
 }

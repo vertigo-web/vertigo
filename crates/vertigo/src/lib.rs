@@ -38,7 +38,7 @@
 //! pub fn start_application() {
 //!     let count = Value::new(0);
 //!     let view = render(&count);
-//!     start_app(count, view);
+//!     start_app(view);
 //! }
 //! ```
 //!
@@ -98,7 +98,6 @@ pub mod router;
 mod websocket;
 mod external_api;
 
-use std::any::Any;
 use computed::struct_mut::ValueMut;
 
 pub use computed::{
@@ -222,7 +221,6 @@ pub mod html_entities;
 
 pub struct DriverConstruct {
     driver: Driver,
-    state: ValueMut<Option<Box<dyn Any>>>,
     subscription: ValueMut<Option<DomElement>>,
 }
 
@@ -232,14 +230,12 @@ impl DriverConstruct {
 
         DriverConstruct {
             driver,
-            state: ValueMut::new(None),
             subscription: ValueMut::new(None),
         }
     }
 
-    fn set_root(&self, state: Box<dyn Any>, root: DomElement) {
-        self.state.set(Some(state));
-        self.subscription.set(Some(root));
+    fn set_root(&self, root_view: DomElement) {
+        self.subscription.set(Some(root_view));
     }
 }
 
@@ -248,24 +244,24 @@ thread_local! {
 }
 
 /// Starting point of the app.
-pub fn start_app(app_state: impl Any + 'static, view: DomElement) {
+fn start_app_inner(root_view: DomElement) {
     get_driver_state("start_app", |state| {
         init_env(state.driver.inner.api.clone());
         state.driver.inner.api.on_fetch_start.trigger(());
 
-        state.set_root(Box::new(app_state), view);
+        state.set_root(root_view);
 
         state.driver.inner.api.on_fetch_stop.trigger(());
         get_driver().inner.dom.flush_dom_changes();
     });
 }
 
-pub fn start_app_fn<S: Any + 'static>(init_app: impl FnOnce() -> (S, DomElement)) {
+pub fn start_app(init_app: fn() -> DomElement) {
     get_driver_state("start_app", |state| {
         init_env(state.driver.inner.api.clone());
 
-        let (state, dom) = init_app();
-        start_app(state, dom);
+        let dom = init_app();
+        start_app_inner(dom);
     });
 }
 
