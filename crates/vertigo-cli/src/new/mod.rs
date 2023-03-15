@@ -36,8 +36,15 @@ pub fn run(opts: NewOpts) -> Result<(), i32> {
         return Err(-3)
     };
 
-    // Replace package name in original Cargo.toml
-    let cargo_toml = TEMPLATE.get_file("Cargo.toml").unwrap();
+    // Remove Cargo.toml_
+    // (cargo packaging does not permit adding second Cargo.toml file)
+    if let Err(err) = fs::remove_file(target_path.join("Cargo.toml_")) {
+        log::error!("Can't rename to Cargo.toml_ to Cargo.toml: {}", err);
+        return Err(-4)
+    };
+
+    // Save Cargo.toml with replaced package name
+    let cargo_toml = TEMPLATE.get_file("Cargo.toml_").unwrap();
     let cargo_toml_content = cargo_toml.contents_utf8().unwrap();
 
     if let Err(err) = fs::write(target_path.join("Cargo.toml"), cargo_toml_content.replace("my_app", &opts.package_name)) {
