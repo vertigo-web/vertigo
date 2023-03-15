@@ -2,7 +2,7 @@
 [![Crates.io](https://img.shields.io/crates/v/vertigo.svg)](https://crates.io/crates/vertigo)
 [![Released API docs](https://docs.rs/vertigo/badge.svg)](https://docs.rs/vertigo)
 
-Vertigo - reactive webassembly
+# Vertigo - reactive webassembly
 
 ## Features
 
