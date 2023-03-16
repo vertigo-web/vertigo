@@ -10,8 +10,9 @@
 //! ## Example 1
 //!
 //! ```rust
-//! use vertigo::{dom, DomElement, Value, bind, start_app};
+//! use vertigo::{dom, DomElement, Value, bind, main};
 //!
+//! #[main]
 //! pub fn app() -> DomElement {
 //!     let count = Value::new(0);
 //!
@@ -40,17 +41,12 @@
 //!         </html>
 //!     }
 //! }
-//!
-//! #[no_mangle]
-//! pub fn start_application() {
-//!     start_app(app);
-//! }
 //! ```
 //!
 //! ## Example 2
 //!
 //! ```rust
-//! use vertigo::{css, component, DomElement, Value, dom, start_app};
+//! use vertigo::{css, component, DomElement, Value, dom, main};
 //!
 //! #[component]
 //! pub fn MyMessage(message: Value<String>) -> DomElement {
@@ -62,6 +58,7 @@
 //!     }
 //! }
 //!
+//! #[main]
 //! fn app() -> DomElement {
 //!     let message = Value::new("Hello world!".to_string());
 //!
@@ -79,11 +76,6 @@
 //!             </body>
 //!         </html>
 //!     }
-//! }
-//!
-//! #[no_mangle]
-//! pub fn start_application() {
-//!     start_app(app);
 //! }
 //! ```
 //!
@@ -174,6 +166,7 @@ pub use vertigo_macro::bind_spawn;
 
 pub use vertigo_macro::AutoJsJson;
 pub use vertigo_macro::component;
+pub use vertigo_macro::main;
 
 // Export log module which can be used in vertigo plugins
 pub use log;

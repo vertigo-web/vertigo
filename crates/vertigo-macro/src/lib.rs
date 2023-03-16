@@ -124,6 +124,27 @@ pub fn bind_rc(input: TokenStream) -> TokenStream {
 }
 
 #[proc_macro_attribute]
+pub fn main(_attr: TokenStream, input: TokenStream) -> TokenStream {
+    let input2 = input.clone();
+
+    let ast = syn::parse_macro_input!(input as syn::ItemFn);
+
+    //function name
+    let name = &ast.sig.ident;
+
+    let input: proc_macro2::TokenStream = input2.into();
+
+    quote! {
+        #input
+
+        #[no_mangle]
+        pub fn vertigo_entry_function() {
+            vertigo::start_app(#name);
+        }
+    }.into()
+}
+
+#[proc_macro_attribute]
 pub fn component(_attr: TokenStream, input: TokenStream) -> TokenStream {
     let ast = syn::parse_macro_input!(input as syn::ItemFn);
 
