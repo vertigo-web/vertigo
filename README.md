@@ -32,8 +32,9 @@ vertigo = "0.2.0-alpha"
 Example 1:
 
 ```rust
-use vertigo::{dom, DomElement, Value, bind, start_app};
+use vertigo::{dom, DomElement, Value, bind, main};
 
+#[main]
 pub fn app() -> DomElement {
     let count = Value::new(0);
 
@@ -62,17 +63,12 @@ pub fn app() -> DomElement {
         </html>
     }
 }
-
-#[no_mangle]
-pub fn start_application() {
-    start_app(app);
-}
 ```
 
 Example 2:
 
 ```rust
-use vertigo::{css, component, DomElement, Value, dom, start_app};
+use vertigo::{css, component, DomElement, Value, dom, main};
 
 #[component]
 pub fn MyMessage(message: Value<String>) -> DomElement {
@@ -84,6 +80,7 @@ pub fn MyMessage(message: Value<String>) -> DomElement {
     }
 }
 
+#[main]
 fn app() -> DomElement {
     let message = Value::new("Hello world!".to_string());
 
@@ -101,11 +98,6 @@ fn app() -> DomElement {
             </body>
         </html>
     }
-}
-
-#[no_mangle]
-pub fn start_application() {
-    start_app(app);
 }
 ```
 

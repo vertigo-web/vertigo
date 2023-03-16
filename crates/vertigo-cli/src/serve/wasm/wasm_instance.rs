@@ -387,17 +387,17 @@ impl WasmInstance {
         Params: wasmtime::WasmParams,
         Results: wasmtime::WasmResults
     >(&mut self, name: &'static str, params: Params) -> Result<Results, String> {
-        let start_application = {
+        let vertigo_entry_function = {
             self.instance.get_typed_func::<Params, Results>(&mut self.store, name).unwrap()
         };
 
-        start_application.call(&mut self.store, params).map_err(|error| {
+        vertigo_entry_function.call(&mut self.store, params).map_err(|error| {
             format!("{error}")
         })
     }
 
-    pub fn call_start_application(&mut self) {
-        self.call_function::<(), ()>("start_application", ()).unwrap();
+    pub fn call_vertigo_entry_function(&mut self) {
+        self.call_function::<(), ()>("vertigo_entry_function", ()).unwrap();
     }
 
     pub fn wasm_callback(&mut self, callback_id: u64, params: JsValue) -> JsValue {

@@ -1,4 +1,4 @@
-use vertigo::{start_app, css, bind, DomElement, dom, Value};
+use vertigo::{main, css, bind, DomElement, dom, Value};
 
 mod light;
 use light::Light;
@@ -56,12 +56,8 @@ pub fn app(state: &Value<LightState>) -> DomElement {
     }
 }
 
+#[main]
 fn render() -> DomElement {
     let state = Value::new(LightState::Red);
     app(&state)
-}
-
-#[no_mangle]
-pub fn start_application() {
-    start_app(render);
 }

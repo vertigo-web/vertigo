@@ -18,8 +18,8 @@ const runModule = async (wasm: string) => {
     console.info(`Wasm module: "${wasm}" -> start`);
     const wasmModule = await WasmModule.create(wasm);
     console.info(`Wasm module: "${wasm}" -> initialized`);
-    wasmModule.start_application();
-    console.info(`Wasm module: "${wasm}" -> launched start_application function`);
+    wasmModule.vertigo_entry_function();
+    console.info(`Wasm module: "${wasm}" -> launched vertigo_entry_function`);
 };
 
 const findAndRunModule = async () => {

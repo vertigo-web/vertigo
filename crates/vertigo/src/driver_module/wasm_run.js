@@ -1819,8 +1819,8 @@ class WasmModule {
     constructor(wasm) {
         this.wasm = wasm;
     }
-    start_application() {
-        this.wasm.exports.start_application();
+    vertigo_entry_function() {
+        this.wasm.exports.vertigo_entry_function();
     }
     static async create(wasmBinPath) {
         let wasmModule = null;
@@ -1878,8 +1878,8 @@ const runModule = async (wasm) => {
     console.info(`Wasm module: "${wasm}" -> start`);
     const wasmModule = await WasmModule.create(wasm);
     console.info(`Wasm module: "${wasm}" -> initialized`);
-    wasmModule.start_application();
-    console.info(`Wasm module: "${wasm}" -> launched start_application function`);
+    wasmModule.vertigo_entry_function();
+    console.info(`Wasm module: "${wasm}" -> launched vertigo_entry_function function`);
 };
 const findAndRunModule = async () => {
     document.querySelectorAll('*[data-vertigo-run-wasm]').forEach((node) => {

@@ -1,5 +1,6 @@
-use vertigo::{start_app, DomElement, dom, Value};
+use vertigo::{main, DomElement, dom, Value};
 
+#[main]
 fn app() -> DomElement {
     let message = Value::new("world");
     dom! {
@@ -10,9 +11,4 @@ fn app() -> DomElement {
             </body>
         </html>
     }
-}
-
-#[no_mangle]
-pub fn start_application() {
-    start_app(app);
 }

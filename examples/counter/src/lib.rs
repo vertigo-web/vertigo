@@ -1,4 +1,4 @@
-use vertigo::{start_app, Value, bind, DomElement, dom, component};
+use vertigo::{main, Value, bind, DomElement, dom, component};
 
 #[component]
 fn App(count: Value<i32>) -> DomElement {
@@ -28,15 +28,11 @@ fn App(count: Value<i32>) -> DomElement {
     }
 }
 
+#[main]
 fn render() -> DomElement {
     let count = Value::new(0);
 
     dom! {
         <App count={&count} />
     }
-}
-
-#[no_mangle]
-pub fn start_application() {
-    start_app(render);
 }

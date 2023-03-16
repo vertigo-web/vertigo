@@ -15,7 +15,7 @@ export type ExportType = {
     alloc: (size: number) => number,
     free: (pointer: number) => void,
     wasm_callback: (callback_id: bigint, value_ptr: number) => bigint,  //result => pointer: 32bit, size: 32bit
-    start_application: () => void,
+    vertigo_entry_function: () => void,
 }
 
 export class WasmModule {
@@ -27,8 +27,8 @@ export class WasmModule {
         this.wasm = wasm;
     }
 
-    public start_application() {
-        this.wasm.exports.start_application();
+    public vertigo_entry_function() {
+        this.wasm.exports.vertigo_entry_function();
     }
 
     public static async create(wasmBinPath: string): Promise<WasmModule> {

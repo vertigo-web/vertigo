@@ -71,8 +71,9 @@ After seeing message `Listening on 127.0.0.1:4444` you can point your browser to
 Open `/src/lib.rs` file.
 
 ```rust
-use vertigo::{start_app, DomElement, dom, Value};
+use vertigo::{main, DomElement, dom, Value};
 
+#[main]
 fn app() -> DomElement {
     let message = Value::new("world");
     dom! {
@@ -83,11 +84,6 @@ fn app() -> DomElement {
             </body>
         </html>
     }
-}
-
-#[no_mangle]
-pub fn start_application() {
-    start_app(app);
 }
 ```
 
@@ -167,7 +163,7 @@ Next we're inserting a value from the state. The state is of type `Value<String>
 
 ```rust
 #[no_mangle]
-pub fn start_application() {
+pub fn vertigo_entry_function() {
     start_app(app);
 }
 ```

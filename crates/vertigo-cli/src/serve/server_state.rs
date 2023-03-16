@@ -43,7 +43,7 @@ impl ServerState {
 
         let mut inst = WasmInstance::new(sender.clone(), &self.engine, &self.module, request);
 
-        inst.call_start_application();
+        inst.call_vertigo_entry_function();
 
         let spawn_resource = SpawnOwner::new({
             let sender = sender.clone();
