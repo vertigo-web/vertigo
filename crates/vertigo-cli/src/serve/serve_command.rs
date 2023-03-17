@@ -4,11 +4,10 @@ use axum::{
     response::Response,
     Router,
 };
-use axum_extra::routing::SpaRouter;
 use clap::Args;
 use std::{time::{Instant, Duration}, sync::Arc};
 use tokio::sync::{OnceCell, RwLock};
-
+use tower_http::services::ServeDir;
 
 use crate::serve::mount_path::MountPathConfig;
 use crate::serve::server_state::ServerState;
@@ -41,15 +40,15 @@ pub async fn run(opts: ServeOpts) -> Result<(), i32> {
         }
     }).await;
 
-    let spa = SpaRouter::new(
-        state.mount_path.http_root().as_str(),
+    let serve_mount_path = state.mount_path.http_root();
+    let serve_dir = ServeDir::new(
         state.mount_path.fs_root()
     );
 
     *(ref_state.write().await) = state;
 
     let app = Router::new()
-        .merge(spa)
+        .nest_service(&serve_mount_path, serve_dir)
         .fallback(handler)
         .with_state(ref_state.clone());
 

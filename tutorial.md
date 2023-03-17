@@ -87,7 +87,7 @@ fn app() -> DomElement {
 }
 ```
 
-This is the main entry point for the application. It creates a very simple state (a string message) and defines a function that transforms this state into a `DomElement`.
+This is the main entry point for the application. It creates a very simple state (a string message) and transforms this state into a `DomElement`.
 
 Let's outline a little bigger picture now.
 
@@ -101,32 +101,36 @@ If we want to be a little more detailed in this description, then it would be:
 
 - Dependency graph holds values, computed values (computeds) and clients (mount functions).
 - Upon changing some value all dependent computeds get computed, and all dependent clients get updated.
-- Mount function takes a computed state provided by the graph and returns a "render definition" (`DomElement`). It is important to remember that `DomElement` is not a product of render process. It is a **definition of a render process**.
+- Mount function takes a computed state provided by the graph and returns a "render definition" (`DomElement`).
+It is important to remember that `DomElement` is not a product of render process. It is a **definition of a render process**.
 - Upon any change in state, DOM is also updated if necessary.
-- Mount functions can provide the DOM with functions that get fired on events like `on_click`, which may modify the state, thus triggering necessary computing once again.
+- Mount functions can provide the DOM with functions that get fired on events like `on_click`,
+which may modify the state, thus triggering necessary computing once again.
 - Coupled state and mount function is called component.
 - Components (connected with themselves in a parent-child hierarchy) make a reactive website.
 
 Now let's breakdown the code line by line:
 
 ```rust
-use vertigo::{start_app, DomElement, dom, Value};
+use vertigo::{main, DomElement, dom, Value};
 ```
 
-Here we import `start_app` function which initializes vertigo env, creates a root of state, and invokes first rendering.
+Here we import:
 
-We also import:
-
+- `main` - Marks an entry point of the app
 - `DomElement` - a struct that will define output of our mount function (a reactive component),
 - `dom!` - a macro to use HTML tags to define the shape of the resultant element, and
 - `Value` - a reactive box for values,
 
 ```rust
+#[main]
 fn app() -> DomElement {
 ```
 
 This is our main "render" function, but in fact it is a mount function (fired only once because updates are
 performed through dependency graph). It returns a definition of a reactive DOM in the form of `DomElement` instance.
+
+It is decorated with `main` macro which wraps the function in a gateway from JavaScript world.
 
 ```rust
     let message = Value::new("world!".to_string());
@@ -160,18 +164,6 @@ Next, in the `div` we insert a text node. Strings in `dom!` macro must always be
 
 Next we're inserting a value from the state. The state is of type `Value<String>` which can be directly embedded into
 `dom!` macro without any transformations.
-
-```rust
-#[no_mangle]
-pub fn vertigo_entry_function() {
-    start_app(app);
-}
-```
-
-This is a function that needs to be in every vertigo project. It acts as a hardcoded gateway from JavaScript world
-(hence the `#[no_mangle]` attribute which prevents the compiler from changing its name).
-
-Then the root component (`app`) is passed to `start_app` function what finally makes the running website.
 
 ## 5. Add new value
 
@@ -546,7 +538,7 @@ For any more complex scenarios please refer to [examples](/examples) and [demo](
 
 [^traitaliases]: https://github.com/rust-lang/rust/issues/41517
 
-[^install]: Until vertigo 0.2 hits creates you can clone vertigo repo and isntall CLI tool from inside the repo dir with command `cargo install --path ./crates/vertigo-cli`
+[^install]: Until newest vertigo version hits crates you can clone vertigo repo and install CLI tool from inside the repo dir with command `cargo install --path ./crates/vertigo-cli`
 
 [^simplification]: This is a shameful simplification but enough for a tutorial - the correct description will be able to be found in future, more robust documentation.
 
