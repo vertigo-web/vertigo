@@ -33,7 +33,8 @@ enum Command {
 pub async fn main() -> Result<(), i32> {
     env_logger::Builder::new()
         .filter(None, log::LevelFilter::Info)
-        .filter(Some("cargo::core::compiler"), log::LevelFilter::Off)
+        .filter(Some("cargo::core::compiler"), log::LevelFilter::Warn)
+        .filter(Some("cranelift_codegen::context"), log::LevelFilter::Warn)
         .init();
 
     let cli = Cli::parse();

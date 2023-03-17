@@ -1,8 +1,14 @@
-[![Crates.io](https://img.shields.io/crates/d/vertigo.svg)](https://crates.io/crates/vertigo)
-[![Crates.io](https://img.shields.io/crates/v/vertigo.svg)](https://crates.io/crates/vertigo)
-[![Released API docs](https://docs.rs/vertigo/badge.svg)](https://docs.rs/vertigo)
+# Vertigo
 
-# Vertigo - reactive webassembly
+A reactive Real-DOM library with SSR for Rust
+
+[![crates.io](https://img.shields.io/crates/v/vertigo)](https://crates.io/crates/vertigo)
+[![Documentation](https://docs.rs/vertigo/badge.svg)](https://docs.rs/vertigo)
+![MIT or Apache 2.0 licensed](https://img.shields.io/crates/l/vertigo.svg)
+[![Dependency Status](https://deps.rs/crate/vertigo/0.2.0-alpha/status.svg)](https://deps.rs/crate/vertigo/0.2.0-alpha)
+[![CI](https://github.com/vertigo-web/vertigo/actions/workflows/pipeline.yaml/badge.svg)](https://github.com/vertigo-web/vertigo/actions/workflows/pipeline.yaml)
+[![downloads](https://img.shields.io/crates/d/vertigo.svg)](https://crates.io/crates/vertigo)
+
 
 ## Features
 
@@ -14,12 +20,6 @@
 See [Changelog](https://github.com/vertigo-web/vertigo/blob/master/CHANGES.md) for recent features.
 
 Go to **[TUTORIAL](https://github.com/vertigo-web/vertigo/blob/master/tutorial.md)** if you want to try.
-
-## Installation
-
-```sh
-cargo install vertigo --version 0.2.0-alpha
-```
 
 ## Examples
 
@@ -102,6 +102,16 @@ fn app() -> DomElement {
 ```
 
 Take a look at **[More examples here](https://github.com/vertigo-web/vertigo/tree/master/examples)**.
+
+## Installation of `vertigo-cli` tool
+
+To ease process or development use
+[vertigo-cli](https://github.com/vertigo-web/vertigo/blob/master/crates/vertigo-cli) tool
+that allows to _build_, _serve_ and _watch_ your project.
+
+```sh
+cargo install vertigo-cli --version 0.2.0-alpha
+```
 
 ## Demo App
 
