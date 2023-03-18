@@ -271,7 +271,7 @@ pub fn start_app(init_app: fn() -> DomElement) {
 /// Getter for Driver singleton.
 pub fn get_driver() -> Driver {
     DRIVER_BROWSER.with(|state| {
-        state.driver.clone()
+        state.driver
     })
 }
 

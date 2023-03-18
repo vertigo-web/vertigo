@@ -35,19 +35,18 @@ impl FetchMethod {
 
 type Executable = dyn Fn(Pin<Box<dyn Future<Output = ()> + 'static>>);
 
-#[derive(Clone)]
 pub struct DriverInner {
     pub(crate) api: ApiImport,
-    pub(crate) dependencies: Dependencies,
+    pub(crate) dependencies: &'static Dependencies,
     pub(crate) css_manager: CssManager,
-    pub(crate) dom: Rc<DriverDom>,
+    pub(crate) dom: &'static DriverDom,
     spawn_executor: Rc<Executable>,
-    _subscribe: Rc<DropResource>,
+    _subscribe: DropResource,
 }
 
 impl DriverInner {
-    pub fn new() -> Self {
-        let dependencies = Dependencies::default();
+    pub fn new() -> &'static Self {
+        let dependencies: &'static Dependencies = Box::leak(Box::default());
 
         let api = ApiImport::default();
 
@@ -59,30 +58,26 @@ impl DriverInner {
             })
         };
 
-        let dom = Rc::new(DriverDom::new(&api));
+        let dom = DriverDom::new(&api);
         let css_manager = {
-            let driver_dom = dom.clone();
+            let driver_dom = dom;
             CssManager::new(move |selector: &str, value: &str| {
                 driver_dom.insert_css(selector, value);
             })
         };
 
-        let subscribe = dependencies.transaction_state.hooks.on_after_transaction({
-            let dom = dom.clone();
-
-            move || {
-                dom.flush_dom_changes();
-            }
+        let subscribe = dependencies.transaction_state.hooks.on_after_transaction(move || {
+            dom.flush_dom_changes();
         });
 
-        DriverInner {
+        Box::leak(Box::new(DriverInner {
             api,
             dependencies,
             css_manager,
             dom,
             spawn_executor,
-            _subscribe: Rc::new(subscribe),
-        }
+            _subscribe: subscribe,
+        }))
     }
 
 }
@@ -103,14 +98,14 @@ pub type FetchResult = Result<(u32, RequestBody), String>;
 /// which is used to create a Driver.
 ///
 /// Additionally driver struct wraps [Dependencies] object.
-#[derive(Clone)]
+#[derive(Clone, Copy)]
 pub struct Driver {
-    pub(crate) inner: Rc<DriverInner>,
+    pub(crate) inner: &'static DriverInner,
 }
 
 impl Default for Driver {
     fn default() -> Self {
-        let driver = Rc::new(DriverInner::new());
+        let driver = DriverInner::new();
 
         Driver {
             inner: driver,

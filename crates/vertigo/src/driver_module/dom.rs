@@ -1,5 +1,4 @@
 use std::cell::Cell;
-use std::rc::Rc;
 
 use crate::{DomId, JsJson, DropResource};
 use crate::struct_mut::{VecMut, ValueMut};
@@ -61,14 +60,14 @@ struct Commands {
 }
 
 impl Commands {
-    pub fn new(api: &ApiImport) -> Self {
-        Commands {
+    pub fn new(api: &ApiImport) -> &'static Self {
+        Box::leak(Box::new(Commands {
             state: ValueMut::new(StateInitiation::new()),
             api: api.clone(),
             commands: VecMut::new(),
             log_enabled: Cell::new(false),
             log_vec: VecMut::new(),
-        }
+        }))
     }
 
     fn log_start(&self) {
@@ -133,34 +132,32 @@ impl Commands {
 }
 
 pub struct DriverDom {
-    commands: Rc<Commands>,
+    commands: &'static Commands,
     _sub1: DropResource,
     _sub2: DropResource,
 }
 
 impl DriverDom {
-    pub fn new(api: &ApiImport) -> DriverDom {
-        let commands = Rc::new(Commands::new(api));
+    pub fn new(api: &ApiImport) -> &'static DriverDom {
+        let commands = Commands::new(api);
         
         let sub1 = api.on_fetch_start.add({
-            let commands = commands.clone();
             move |_| {
                 commands.fetch_up();
             }
         });
 
         let sub2 = api.on_fetch_stop.add({
-            let commands = commands.clone();
             move |_| {
                 commands.fetch_down();
             }
         });
 
-        DriverDom {
+        Box::leak(Box::new(DriverDom {
             commands,
             _sub1: sub1,
             _sub2: sub2,
-        }
+        }))
     }
 
     pub fn create_node(&self, id: DomId, name: &'static str) {
