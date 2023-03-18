@@ -16,7 +16,7 @@ use super::context::Context;
 struct ValueInner<T> {
     id: GraphId,
     value: ValueMut<T>,
-    deps: Dependencies,
+    deps: &'static Dependencies,
 }
 
 impl<T> Drop for ValueInner<T> {
@@ -71,7 +71,7 @@ impl<T: PartialEq> PartialEq for Value<T> {
 
 impl<T: Clone + 'static> Value<T> {
     pub fn new(value: T) -> Value<T> {
-        let deps = get_driver().inner.dependencies.clone();
+        let deps = get_driver().inner.dependencies;
         Value {
             inner: Rc::new(
                 ValueInner {
@@ -91,7 +91,7 @@ impl<T: Clone + 'static> Value<T> {
     where
         F: Fn(&Value<T>) -> DropResource + 'static,
     {
-        let deps = get_driver().inner.dependencies.clone();
+        let deps = get_driver().inner.dependencies;
         let id = GraphId::new_value();
 
         let value = Value {
@@ -99,7 +99,7 @@ impl<T: Clone + 'static> Value<T> {
                 ValueInner {
                     id,
                     value: ValueMut::new(value),
-                    deps: deps.clone(),
+                    deps,
                 },
             )
         };
@@ -154,8 +154,8 @@ impl<T: Clone + 'static> Value<T> {
         self.inner.id
     }
 
-    pub fn deps(&self) -> Dependencies {
-        self.inner.deps.clone()
+    pub fn deps(&self) -> &'static Dependencies {
+        self.inner.deps
     }
 }
 

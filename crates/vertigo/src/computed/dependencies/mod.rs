@@ -1,4 +1,4 @@
-use std::{rc::Rc, collections::BTreeSet};
+use std::{collections::BTreeSet};
 
 use crate::{Context, GraphId};
 
@@ -28,28 +28,15 @@ use {
 /// - Upon change in VDOM the real DOM is also updated.
 /// - Components can provide the DOM with functions that get fired on events like [on_click](struct.DomElement.html#structfield.on_click), which may modify the state, thus triggering necessary computing once again.
 pub struct Dependencies {
-    pub(crate) graph: Rc<Graph>,
-    pub(crate) transaction_state: Rc<TransactionState>,
-}
-
-impl Clone for Dependencies {
-    fn clone(&self) -> Self {
-        Dependencies {
-            graph: self.graph.clone(),
-            transaction_state: self.transaction_state.clone(),
-        }
-    }
+    pub(crate) graph: Graph,
+    pub(crate) transaction_state: TransactionState,
 }
 
 impl Default for Dependencies {
     fn default() -> Self {
         Self {
-            graph: Rc::new(
-                Graph::new(),
-            ),
-            transaction_state: Rc::new(
-                TransactionState::new()
-            ),
+            graph: Graph::new(),
+            transaction_state: TransactionState::new(),
         }
     }
 }

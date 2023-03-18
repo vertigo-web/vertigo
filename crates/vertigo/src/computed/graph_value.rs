@@ -11,7 +11,7 @@ use crate::{
 };
 
 struct GraphValueData<T> {
-    deps: Dependencies,
+    deps: &'static Dependencies,
     id: GraphId,
     get_value: Box<dyn Fn(&Context) -> T>,
     state: ValueMut<Option<T>>,
@@ -19,7 +19,7 @@ struct GraphValueData<T> {
 
 impl<T: Clone> GraphValueData<T> {
     pub fn new<F: Fn(&Context) -> T + 'static>(
-        deps: &Dependencies,
+        deps: &'static Dependencies,
         is_computed_type: bool,
         get_value: F,
     ) -> Rc<GraphValueData<T>> {
@@ -30,7 +30,7 @@ impl<T: Clone> GraphValueData<T> {
 
         Rc::new(
             GraphValueData {
-                deps: deps.clone(),
+                deps,
                 id,
                 get_value: Box::new(get_value),
                 state: ValueMut::new(None),
@@ -114,9 +114,9 @@ struct GraphValueInner<T: Clone> {
 
 impl<T: Clone + 'static> GraphValueInner<T> {
     fn new<F: Fn(&Context) -> T + 'static>(is_computed_type: bool, get_value: F) -> GraphValueInner<T> {
-        let deps = get_driver().inner.dependencies.clone();
+        let deps = get_driver().inner.dependencies;
 
-        let graph_value = GraphValueData::new(&deps, is_computed_type, get_value);
+        let graph_value = GraphValueData::new(deps, is_computed_type, get_value);
 
         deps.graph.refresh.refresh_token_add(GraphValueRefresh::new(graph_value.clone()));
 

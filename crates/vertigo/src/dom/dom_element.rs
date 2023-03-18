@@ -89,7 +89,7 @@ impl DomElement {
 
         driver.inner.dom.create_node(id_dom, name);
 
-        let class_manager = DomElementClassMerge::new(driver.clone(), id_dom);
+        let class_manager = DomElementClassMerge::new(driver, id_dom);
 
         Self {
             driver,
@@ -117,7 +117,7 @@ impl DomElement {
                 self.class_manager.set_css(class_name);
             },
             CssValue::Computed(css) => {
-                let driver = self.driver.clone();
+                let driver = self.driver;
                 let class_manager = self.class_manager.clone();
 
                 self.subscribe(css, move |css| {
@@ -142,7 +142,7 @@ impl DomElement {
             },
             AttrValue::Computed(computed) => {
                 let id_dom = self.id_dom;
-                let driver = self.driver.clone();
+                let driver = self.driver;
                 let class_manager = self.class_manager.clone();
 
                 self.subscribe(computed, move |value| {
@@ -202,12 +202,9 @@ impl DomElement {
             JsValue::Undefined
         });
 
-        let drop_event = DropResource::new({
-            let driver = self.driver.clone();
-            move || {
-                driver.inner.dom.callback_remove(self.id_dom, "click", callback_id);
-                drop.off();
-            }
+        let drop_event = DropResource::new(move || {
+            self.driver.inner.dom.callback_remove(self.id_dom, "click", callback_id);
+            drop.off();
         });
 
         self.driver.inner.dom.callback_add(self.id_dom, "click", callback_id);
@@ -222,12 +219,9 @@ impl DomElement {
             JsValue::Undefined
         });
 
-        let drop_event = DropResource::new({
-            let driver = self.driver.clone();
-            move || {
-                driver.inner.dom.callback_remove(self.id_dom, "mouseenter", callback_id);
-                drop.off();
-            }
+        let drop_event = DropResource::new(move || {
+            self.driver.inner.dom.callback_remove(self.id_dom, "mouseenter", callback_id);
+            drop.off();
         });
 
         self.driver.inner.dom.callback_add(self.id_dom, "mouseenter", callback_id);
@@ -242,12 +236,9 @@ impl DomElement {
             JsValue::Undefined
         });
 
-        let drop_event = DropResource::new({
-            let driver = self.driver.clone();
-            move || {
-                driver.inner.dom.callback_remove(self.id_dom, "mouseleave", callback_id);
-                drop.off();
-            }
+        let drop_event = DropResource::new(move || {
+            self.driver.inner.dom.callback_remove(self.id_dom, "mouseleave", callback_id);
+            drop.off();
         });
 
         self.driver.inner.dom.callback_add(self.id_dom, "mouseleave", callback_id);
@@ -267,12 +258,9 @@ impl DomElement {
             JsValue::Undefined
         });
 
-        let drop_event = DropResource::new({
-            let driver = self.driver.clone();
-            move || {
-                driver.inner.dom.callback_remove(self.id_dom, "input", callback_id);
-                drop.off();
-            }
+        let drop_event = DropResource::new(move || {
+            self.driver.inner.dom.callback_remove(self.id_dom, "input", callback_id);
+            drop.off();
         });
 
         self.driver.inner.dom.callback_add(self.id_dom, "input", callback_id);
@@ -299,12 +287,9 @@ impl DomElement {
             }
         });
 
-        let drop_event = DropResource::new({
-            let driver = self.driver.clone();
-            move || {
-                driver.inner.dom.callback_remove(self.id_dom, "keydown", callback_id);
-                drop.off();
-            }
+        let drop_event = DropResource::new(move || {
+            self.driver.inner.dom.callback_remove(self.id_dom, "keydown", callback_id);
+            drop.off();
         });
 
         self.driver.inner.dom.callback_add(self.id_dom, "keydown", callback_id);
@@ -340,12 +325,9 @@ impl DomElement {
             JsValue::Undefined
         });
 
-        let drop_event = DropResource::new({
-            let driver = self.driver.clone();
-            move || {
-                driver.inner.dom.callback_remove(self.id_dom, "drop", callback_id);
-                drop.off();
-            }
+        let drop_event = DropResource::new(move || {
+            self.driver.inner.dom.callback_remove(self.id_dom, "drop", callback_id);
+            drop.off();
         });
 
         self.driver.inner.dom.callback_add(self.id_dom, "drop", callback_id);
@@ -372,12 +354,9 @@ impl DomElement {
             }
         });
 
-        let drop_event = DropResource::new({
-            let driver = self.driver.clone();
-            move || {
-                driver.inner.dom.callback_remove(self.id_dom, "hook_keydown", callback_id);
-                drop.off();
-            }
+        let drop_event = DropResource::new(move || {
+            self.driver.inner.dom.callback_remove(self.id_dom, "hook_keydown", callback_id);
+            drop.off();
         });
 
         self.driver.inner.dom.callback_add(self.id_dom, "hook_keydown", callback_id);
@@ -393,7 +372,7 @@ impl DomElement {
         });
 
         let drop_event = DropResource::new({
-            let driver = self.driver.clone();
+            let driver = self.driver;
             move || {
                 driver.inner.dom.callback_remove(self.id_dom, "load", callback_id);
                 drop.off();
