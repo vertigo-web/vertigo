@@ -2,6 +2,7 @@
 
 use std::collections::HashMap;
 
+use crate::driver_module::StaticString;
 use crate::{get_driver, DomId, DriverDomCommand};
 use crate::driver_module::api::CallbackId;
 
@@ -28,8 +29,8 @@ pub struct DomDebugFragment {
 pub struct DomDebugNode {
     pub id: DomId,
     pub parent_id: DomId,
-    pub name: &'static str,
-    pub attrs: HashMap<&'static str, String>,
+    pub name: StaticString,
+    pub attrs: HashMap<StaticString, String>,
     pub callbacks: HashMap<String, CallbackId>,
     pub children: Vec<DomId>,
     pub text: Option<String>,
@@ -59,14 +60,14 @@ impl DomDebugFragment {
                 }
                 DriverDomCommand::SetAttr { id, name, value } => {
                     if let Some(node) = map.get_mut(&id) {
-                        if name == "class" {
+                        if name == "class".into() {
                             if let Some(new_styles) = css.get(&format!(".{value}")) {
                                 let mut styles = String::new();
-                                if let Some(old_styles) = node.attrs.get("style") {
+                                if let Some(old_styles) = node.attrs.get(&("style".into())) {
                                     styles.push_str(old_styles);
                                 }
                                 styles.push_str(new_styles);
-                                node.attrs.insert("style", styles);
+                                node.attrs.insert("style".into(), styles);
                             } else {
                                 node.attrs.insert(name, value);
                             }
@@ -175,7 +176,7 @@ impl DomDebugFragment {
                     .map(|(k, v)| format!(" {k}={}", v.as_u64()))
                     .collect::<Vec<_>>()
                     .join("");
-                format!("<{}{attrs}{callbacks}>{children}</{}>", node.name, node.name)
+                format!("<{}{attrs}{callbacks}>{children}</{}>", node.name.as_str(), node.name.as_str())
             }
         } else {
             String::default()
@@ -184,7 +185,7 @@ impl DomDebugFragment {
 }
 
 impl DomDebugNode {
-    pub fn from_name(id: DomId, name: &'static str) -> Self {
+    pub fn from_name(id: DomId, name: StaticString) -> Self {
         Self {
             id,
             parent_id: DomId::from_u64(0),

@@ -105,14 +105,14 @@ fn todo_main_render(state: &TodoState) -> DomElement {
 fn todo_post_render(state: &TodoState, post_id: u32) -> DomElement {
     let state = state.clone();
 
-    let view = state.view.clone();
+    let message = render_message(post_id);
+    let comments_out = render_comments(&state, post_id);
+
+    let view = state.view;
 
     let on_click = bind!(view, || {
         view.set(View::Main);
     });
-
-    let message = render_message(post_id);
-    let comments_out = render_comments(&state, post_id);
 
     dom! {
         <div>
