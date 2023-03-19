@@ -21,7 +21,7 @@ impl Default for DomId {
 }
 
 impl DomId {
-    pub fn from_name(name: &'static str) -> DomId {
+    pub fn from_name(name: &str) -> DomId {
         let new_id = match name {
             "html" => HTML_ID,
             "head" => HEAD_ID,

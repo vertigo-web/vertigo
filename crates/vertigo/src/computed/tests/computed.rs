@@ -152,7 +152,7 @@ fn test_subscription() {
 
 #[test]
 fn test_computed_cache() {
-    let root = get_driver().inner.dependencies.clone();
+    let root = get_driver().inner.dependencies;
 
     assert_eq!(root.graph.connections.all_connections_len(), 0);
 
@@ -230,7 +230,7 @@ fn test_computed_new_value() {
 
     #![allow(clippy::many_single_char_names)]
 
-    let root = get_driver().inner.dependencies.clone();
+    let root = get_driver().inner.dependencies;
 
     let a = Value::new(0);
     let b = Value::new(0);
@@ -283,7 +283,7 @@ fn test_computed_new_value() {
 fn test_computed_new_value2() {
     #![allow(clippy::many_single_char_names)]
 
-    let root = get_driver().inner.dependencies.clone();
+    let root = get_driver().inner.dependencies;
 
     let a = Value::new(0);
     let b = Value::new(0);
@@ -321,7 +321,7 @@ fn test_computed_switch_subscription() {
 
     //a, b, c
 
-    let root = get_driver().inner.dependencies.clone();
+    let root = get_driver().inner.dependencies;
 
     let switch = Value::new(Switch::Ver1);
     let a = Value::new(0);
@@ -425,7 +425,7 @@ fn test_computed_switch_subscription() {
 
 #[test]
 fn test_transaction() {
-    let root = get_driver().inner.dependencies.clone();
+    let root = get_driver().inner.dependencies;
     assert_eq!(root.graph.connections.all_connections_len(), 0);
 
     let val1 = Value::new(1);

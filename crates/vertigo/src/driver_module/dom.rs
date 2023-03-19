@@ -4,6 +4,7 @@ use crate::{DomId, JsJson, DropResource};
 use crate::struct_mut::{VecMut, ValueMut};
 
 use crate::driver_module::api::ApiImport;
+use super::StaticString;
 use super::{dom_command::{DriverDomCommand, sort_commands}, api::CallbackId};
 
 #[derive(PartialEq)]
@@ -160,8 +161,8 @@ impl DriverDom {
         }))
     }
 
-    pub fn create_node(&self, id: DomId, name: &'static str) {
-        self.commands.add_command(DriverDomCommand::CreateNode { id, name });
+    pub fn create_node(&self, id: DomId, name: impl Into<StaticString>) {
+        self.commands.add_command(DriverDomCommand::CreateNode { id, name: name.into() });
     }
 
     pub fn create_text(&self, id: DomId, value: &str) {
@@ -178,10 +179,10 @@ impl DriverDom {
         });
     }
 
-    pub fn set_attr(&self, id: DomId, name: &'static str, value: &str) {
+    pub fn set_attr(&self, id: DomId, name: impl Into<StaticString>, value: &str) {
         self.commands.add_command(DriverDomCommand::SetAttr {
             id,
-            name,
+            name: name.into(),
             value: value.into(),
         });
     }

@@ -1,10 +1,10 @@
 use crate::{
-    driver_module::{driver::Driver, api::DomAccess},
+    driver_module::{driver::Driver, api::DomAccess, StaticString},
     dom::{
         dom_node::DomNode,
         dom_id::DomId,
     }, get_driver, Css, Client, Computed, struct_mut::VecMut, ApiImport, DropResource, DropFileItem,
-    JsValue,
+    JsValue, DomText,
 };
 
 use super::types::{KeyDownEvent, DropFileEvent};
@@ -82,8 +82,9 @@ pub struct DomElement {
 }
 
 impl DomElement {
-    pub fn new(name: &'static str) -> Self {
-        let id_dom = DomId::from_name(name);
+    pub fn new(name: impl Into<StaticString>) -> Self {
+        let name = name.into();
+        let id_dom = DomId::from_name(name.as_str());
 
         let driver = get_driver();
 
@@ -129,12 +130,13 @@ impl DomElement {
         self
     }
 
-    pub fn add_attr(&self, name: &'static str, value: impl Into<AttrValue>) {
+    pub fn add_attr(&self, name: impl Into<StaticString>, value: impl Into<AttrValue>) {
+        let name = name.into();
         let value = value.into();
 
         match value {
             AttrValue::String(value) => {
-                if name == "class" {
+                if name.as_str() == "class" {
                     self.class_manager.set_attribute(value);
                 } else {
                     self.driver.inner.dom.set_attr(self.id_dom, name, &value);
@@ -146,10 +148,10 @@ impl DomElement {
                 let class_manager = self.class_manager.clone();
 
                 self.subscribe(computed, move |value| {
-                    if name == "class" {
+                    if name.as_str() == "class" {
                         class_manager.set_attribute(value);
                     } else {
-                        driver.inner.dom.set_attr(id_dom, name, &value);
+                        driver.inner.dom.set_attr(id_dom, name.clone(), &value);
                     }
                 });
 
@@ -157,12 +159,12 @@ impl DomElement {
         };
     }
 
-    pub fn attr(self, name: &'static str, value: impl Into<AttrValue>) -> Self {
+    pub fn attr(self, name: impl Into<StaticString>, value: impl Into<AttrValue>) -> Self {
         self.add_attr(name, value);
         self
     }
 
-    pub fn attrs<T: Into<AttrValue>>(self, attrs: Vec<(&'static str, T)>) -> Self {
+    pub fn attrs<T: Into<AttrValue>>(self, attrs: Vec<(impl Into<StaticString>, T)>) -> Self {
         for (name, value) in attrs.into_iter() {
             self.add_attr(name, value)
         }
@@ -186,6 +188,16 @@ impl DomElement {
 
     pub fn child(self, child_node: impl Into<DomNodeFragment>) -> Self {
         self.add_child(child_node);
+        self
+    }
+
+    pub fn add_child_text(&self, text: impl Into<String>) {
+        let text = text.into();
+        self.add_child(DomNodeFragment::Text { node: DomText::new(text) });
+    }
+
+    pub fn child_text(self, text: impl Into<String>) -> Self {
+        self.add_child_text(text);
         self
     }
 

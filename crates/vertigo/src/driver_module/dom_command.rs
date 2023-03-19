@@ -1,12 +1,12 @@
 use crate::{DomId, JsJson, JsJsonObjectBuilder};
 
-use super::api::CallbackId;
+use super::{api::CallbackId, StaticString};
 
 #[derive(Clone, Debug)]
 pub enum DriverDomCommand {
     CreateNode {
         id: DomId,
-        name: &'static str,
+        name: StaticString,
     },
     CreateText {
         id: DomId,
@@ -18,7 +18,7 @@ pub enum DriverDomCommand {
     },
     SetAttr {
         id: DomId,
-        name: &'static str,
+        name: StaticString,
         value: String,
     },
     RemoveNode {
@@ -71,7 +71,7 @@ impl DriverDomCommand {
                 JsJsonObjectBuilder::default()
                     .insert("type", "create_node")
                     .insert("id", id.to_u64())
-                    .insert("name", name)
+                    .insert("name", name.as_str())
                     .get()
             }
             Self::CreateText { id, value } => {
@@ -92,7 +92,7 @@ impl DriverDomCommand {
                 JsJsonObjectBuilder::default()
                     .insert("type", "set_attr")
                     .insert("id", id.to_u64())
-                    .insert("name", name)
+                    .insert("name", name.as_str())
                     .insert("value", value)
                     .get()
             }
