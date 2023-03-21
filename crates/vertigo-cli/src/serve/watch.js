@@ -37,7 +37,7 @@ function start_watch(url) {
     }
 
     /**
-     * @param {() => HTMLElement} createDomMessage 
+     * @param {() => HTMLElement} createDomMessage
      */
     function showBuilding(createDomMessage) {
         if (building_message !== null) {
@@ -130,19 +130,34 @@ function buildErrorsMessage() {
 
     const inner = createElement('div', [
         ['width', '300px'],
-        ['height', '100px'],
         ['line-height', '50px'],
         ['background-color', 'white'],
         ['text-align', 'center'],
         ['color', 'red'],
         ['border', '1px solid red'],
         ['padding', '0 20px'],
+        ['display', 'flex'],
+        ['flex-direction', 'column'],
     ]);
 
-    const text = document.createTextNode('Compilation failed. More details can be found in the console.');
+    const messageDiv = document.createElement('div');
+    const messageText = document.createTextNode('Compilation failed. More details can be found in the console.');
+    messageDiv.appendChild(messageText);
 
+    const escDiv = createElement('div', [
+        ['align-self', 'end'],
+        ['cursor', 'pointer'],
+    ]);
+    const escText = document.createTextNode('[X]');
+    escDiv.appendChild(escText);
+    escDiv.addEventListener('click', () => {
+        while(div.firstChild) div.removeChild(div.firstChild);
+        div.setAttribute('style', '{ display: none }')
+    });
+
+    inner.appendChild(escDiv);
+    inner.appendChild(messageDiv);
     div.appendChild(inner);
-    inner.appendChild(text);
 
     return div;
 }
