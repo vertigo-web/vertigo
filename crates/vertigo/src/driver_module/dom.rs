@@ -1,7 +1,8 @@
 use std::cell::Cell;
+use std::rc::Rc;
 
 use crate::{DomId, JsJson, DropResource};
-use crate::struct_mut::{VecMut, ValueMut};
+use crate::struct_mut::{VecMut, ValueMut, HashMapMut};
 
 use crate::driver_module::api::ApiImport;
 use super::StaticString;
@@ -132,10 +133,13 @@ impl Commands {
     }
 }
 
+type Callback = Rc<dyn Fn(DomId) + 'static>;
+
 pub struct DriverDom {
     commands: &'static Commands,
     _sub1: DropResource,
     _sub2: DropResource,
+    node_parent_callback: Rc<HashMapMut<DomId, Callback>>,
 }
 
 impl DriverDom {
@@ -158,6 +162,7 @@ impl DriverDom {
             commands,
             _sub1: sub1,
             _sub2: sub2,
+            node_parent_callback: Rc::new(HashMapMut::new()),
         }))
     }
 
@@ -197,6 +202,10 @@ impl DriverDom {
 
     pub fn insert_before(&self, parent: DomId, child: DomId, ref_id: Option<DomId>) {
         self.commands.add_command(DriverDomCommand::InsertBefore { parent, child, ref_id });
+
+        if let Some(callback) = self.node_parent_callback.get(&child) {
+            callback(parent);
+        }
     }
 
     pub fn insert_css(&self, selector: &str, value: &str) {
@@ -206,10 +215,10 @@ impl DriverDom {
         });
     }
 
-    pub fn create_comment(&self, id: DomId, value: String) {
+    pub fn create_comment(&self, id: DomId, value: impl Into<String>) {
         self.commands.add_command(DriverDomCommand::CreateComment {
             id,
-            value,
+            value: value.into(),
         })
     }
 
@@ -243,5 +252,15 @@ impl DriverDom {
 
     pub fn flush_dom_changes(&self) {
         self.commands.flush_dom_changes();
+    }
+
+    pub fn node_parent(&self, node_id: DomId, callback: impl Fn(DomId) + 'static) -> DropResource {
+        self.node_parent_callback.insert(node_id, Rc::new(callback));
+
+        let node_parent_callback = self.node_parent_callback.clone();
+
+        DropResource::new(move || {
+            node_parent_callback.remove(&node_id);
+        })
     }
 }

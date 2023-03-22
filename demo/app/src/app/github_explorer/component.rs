@@ -1,4 +1,4 @@
-use vertigo::{css, Resource, bind, DomElement, dom, Computed, DomFragment, transaction};
+use vertigo::{css, Resource, bind, DomElement, dom, Computed, DomComment, transaction};
 
 use super::State;
 
@@ -51,7 +51,7 @@ impl GitHubExplorer {
         }
     }
 
-    fn render_commit(&self) -> DomFragment {
+    fn render_commit(&self) -> DomComment {
         let commit_message = Computed::from({
             let state = self.state.clone();
 

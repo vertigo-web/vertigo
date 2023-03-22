@@ -2,41 +2,38 @@ use std::collections::{VecDeque, HashMap};
 use std::hash::Hash;
 use std::rc::Rc;
 
-use crate::dom::{
-    dom_element::DomElementRef,
-    dom_fragment::DomFragment,
-    dom_id::DomId,
-    dom_node::DomNodeFragment,
-};
+use crate::dom::dom_id::DomId;
 use crate::struct_mut::ValueMut;
-use crate::{Computed, get_driver, DomComment, EmbedDom, DomElement};
+use crate::{Computed, get_driver, DomComment, DomElement};
 
-pub struct ListRendered<T: Clone> {
-    comment: DomFragment,
-    pub refs: Computed<Vec<(T, DomElementRef)>>,
-}
+//TODO - Check out other options for reading refs
 
-impl<T: Clone> EmbedDom for ListRendered<T> {
-    fn embed(self) -> DomNodeFragment {
-        self.comment.into()
-    }
-}
+// pub struct ListRendered<T: Clone> {
+//     comment: DomFragment,
+//     pub refs: Computed<Vec<(T, DomElementRef)>>,
+// }
 
-impl<T: Clone> From<ListRendered<T>> for DomNodeFragment {
-    fn from(val: ListRendered<T>) -> Self {
-        val.comment.into()
-    }
-}
+// impl<T: Clone> EmbedDom for ListRendered<T> {
+//     fn embed(self) -> DomNodeFragment {
+//         self.comment.into()
+//     }
+// }
 
-fn get_refs<T: Clone>(list: &VecDeque<(T, DomElement)>) -> Vec<(T, DomElementRef)> {
-    let mut result = Vec::new();
+// impl<T: Clone> From<ListRendered<T>> for DomNodeFragment {
+//     fn from(val: ListRendered<T>) -> Self {
+//         val.comment.into()
+//     }
+// }
 
-    for (item, element) in list {
-        result.push((item.clone(), element.get_ref()));
-    }
+// fn get_refs<T: Clone>(list: &VecDeque<(T, DomElement)>) -> Vec<(T, DomElementRef)> {
+//     let mut result = Vec::new();
 
-    result
-}
+//     for (item, element) in list {
+//         result.push((item.clone(), element.get_ref()));
+//     }
+
+//     result
+// }
 
 pub fn render_list<
     T: PartialEq + Clone + 'static,
@@ -45,83 +42,50 @@ pub fn render_list<
     computed: Computed<Vec<T>>,
     get_key: impl Fn(&T) -> K + 'static,
     render: impl Fn(&T) -> DomElement + 'static,
-) -> ListRendered<T> {
+) -> DomComment {
 
-    let comment = DomComment::new("list element");
-    let comment_id = comment.id_dom();
+    let get_key = Rc::new(get_key);
+    let render = Rc::new(render);
 
-    let parent: Rc<ValueMut<Option<DomId>>> = Rc::new(ValueMut::new(None));
-    let current_list: Rc<ValueMut<VecDeque<(T, DomElement)>>> = Rc::new(ValueMut::new(VecDeque::new()));
+    DomComment::new_marker("list element", move |parent_id, comment_id| {
+        let current_list: Rc<ValueMut<VecDeque<(T, DomElement)>>> = Rc::new(ValueMut::new(VecDeque::new()));
 
-    let list_refs = computed.map({
-        let current_list = current_list.clone();
-        let parent = parent.clone();
+        computed.clone().subscribe({
+            let get_key = get_key.clone();
+            let render = render.clone();
 
-        let get_key = Rc::new(get_key);
-        let render = Rc::new(render);
+            move |new_list| {
+                let new_list = VecDeque::from_iter(new_list.into_iter());
+                current_list.change({
 
-        move |new_list| {
-            let new_list = VecDeque::from_iter(new_list.into_iter());
-            current_list.change({
+                    let get_key = get_key.clone();
+                    let render = render.clone();
 
-                let get_key = get_key.clone();
-                let render = render.clone();
-                let parent = parent.clone();
+                    move |current| {
+                        let current_list = std::mem::take(current);
 
-                move |current| {
-                    let current_list = std::mem::take(current);
+                        let new_order = reorder_nodes(
+                            parent_id,
+                            comment_id,
+                            current_list,
+                            new_list,
+                            get_key.clone(),
+                            render,
+                        );
 
-                    let new_order = reorder_nodes(
-                        parent,
-                        comment_id,
-                        current_list,
-                        new_list,
-                        get_key.clone(),
-                        render,
-                    );
-
-
-                    let list_refs = get_refs(&new_order);
-                    *current = new_order;
-
-                    list_refs
-                }
-            })
-        }
-    });
-
-    let client = list_refs.clone().subscribe(|_| {});
-
-    comment.add_subscription(client);
-
-    let comment = DomFragment::new(comment_id, move |parent_id| {
-        parent.set(Some(parent_id));
-
-        let driver = get_driver();
-        let mut prev_item = comment_id;
-
-        current_list.change(|current_list| {
-            for (_, item) in current_list.iter().rev() {
-                let node_id = item.id_dom();
-                driver.inner.dom.insert_before(parent_id, node_id, Some(prev_item));
-                prev_item = node_id;
+                        *current = new_order;
+                    }
+                })
             }
-        });
-
-        comment
-    });
-
-    ListRendered {
-        comment,
-        refs: list_refs
-    }
+        })
+    })
 }
 
 fn reorder_nodes<
     T: PartialEq,
     K: Eq + Hash,
 >(
-    parent: Rc<ValueMut<Option<DomId>>>,
+    parent_id: DomId,
     comment_id: DomId,
     mut real_child: VecDeque<(T, DomElement)>,
     mut new_child: VecDeque<T>,
@@ -133,7 +97,7 @@ fn reorder_nodes<
 
     let last_before: DomId = find_first_dom(&pairs_bottom).unwrap_or(comment_id);
     let mut pairs_middle = get_pairs_middle(
-        parent,
+        parent_id,
         last_before,
         real_child,
         new_child,
@@ -227,7 +191,7 @@ fn get_pairs_middle<
     T: PartialEq,
     K: Eq + Hash,
 >(
-    parent: Rc<ValueMut<Option<DomId>>>,
+    parent_id: DomId,
     last_before: DomId,
     real_child: VecDeque<(T, DomElement)>,
     new_child: VecDeque<T>,
@@ -245,17 +209,13 @@ fn get_pairs_middle<
     let driver = get_driver();
     let mut last_before = last_before;
 
-    let parent_id = parent.get();
-
     for item in new_child.into_iter().rev() {
 
         let node = real_node.get_or_create(&item);
         let node_id = node.id_dom();
         pairs_middle.push_front((item, node));
 
-        if let Some(parent_id) = parent_id {
-            driver.inner.dom.insert_before(parent_id, node_id, Some(last_before));
-        }
+        driver.inner.dom.insert_before(parent_id, node_id, Some(last_before));
         last_before = node_id;
     }
 

@@ -8,7 +8,6 @@ use crate::{
 };
 
 use super::types::{KeyDownEvent, DropFileEvent};
-use super::dom_node::DomNodeFragment;
 use super::dom_element_class::DomElementClassMerge;
 use crate::struct_mut::VecDequeMut;
 
@@ -175,25 +174,23 @@ impl DomElement {
         self.id_dom
     }
 
-    pub fn add_child(&self, child_node: impl Into<DomNodeFragment>) {
-        let parent_id = self.id_dom;
+    pub fn add_child(&self, child_node: impl Into<DomNode>) {
         let child_node = child_node.into();
 
-        let child_id = child_node.id();
+        let child_id = child_node.id_dom();
         self.driver.inner.dom.insert_before(self.id_dom, child_id, None);
 
-        let child_node = child_node.convert_to_node(parent_id);
         self.child_node.push(child_node);
     }
 
-    pub fn child(self, child_node: impl Into<DomNodeFragment>) -> Self {
+    pub fn child(self, child_node: impl Into<DomNode>) -> Self {
         self.add_child(child_node);
         self
     }
 
     pub fn add_child_text(&self, text: impl Into<String>) {
         let text = text.into();
-        self.add_child(DomNodeFragment::Text { node: DomText::new(text) });
+        self.add_child(DomNode::Text { node: DomText::new(text) });
     }
 
     pub fn child_text(self, text: impl Into<String>) -> Self {
@@ -201,7 +198,7 @@ impl DomElement {
         self
     }
 
-    pub fn children<C: Into<DomNodeFragment>>(self, children: Vec<C>) -> Self {
+    pub fn children<C: Into<DomNode>>(self, children: Vec<C>) -> Self {
         for child_node in children.into_iter() {
             self.add_child(child_node)
         }
