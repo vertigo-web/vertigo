@@ -106,18 +106,15 @@ pub use computed::{
     AutoMap, Client, Computed, context::Context, Dependencies, DropResource, GraphId, struct_mut, Value
 };
 
-pub(crate) use dom::dom_comment::DomComment;
-
 pub use dom::{
     css::{Css, CssGroup},
     dom_id::DomId,
-    dom_fragment::DomFragment,
     dom_element::DomElement,
     dom_node::DomNode,
     dom_text::DomText,
+    dom_comment::DomComment,
     types::{KeyDownEvent, DropFileEvent, DropFileItem},
 };
-pub use dom_list::ListRendered;
 use driver_module::{init_env::init_env, api::CallbackId};
 pub use driver_module::{
     api::ApiImport,

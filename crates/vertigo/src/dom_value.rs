@@ -1,47 +1,40 @@
+use std::rc::Rc;
 use crate::{
-    dom::{
-        dom_fragment::DomFragment,
-        dom_node::DomNodeFragment,
-    },
     struct_mut::ValueMut,
     Computed, get_driver, DomComment, DomNode,
 };
 
-pub fn render_value_option<T: Clone + PartialEq + 'static, R: Into<DomNodeFragment>>(
+pub fn render_value_option<T: Clone + PartialEq + 'static, R: Into<DomNode>>(
     computed: Computed<T>,
     render: impl Fn(T) -> Option<R> + 'static
-) -> DomFragment {
-    let comment = DomComment::new("value element");
-    let comment_id = comment.id_dom();
+) -> DomComment {
+    let render = Rc::new(render);
 
-    DomFragment::new(comment_id, move |parent_id| {
-        let driver = get_driver();
-
-        driver.inner.dom.insert_before(parent_id, comment_id, None);
+    DomComment::new_marker("value element", move |parent_id, comment_id| {
         let current_node: ValueMut<Option<DomNode>> = ValueMut::new(None);
 
-        let client = computed.subscribe(move |value| {
+        computed.clone().subscribe({
+            let render = render.clone();
 
-            let new_element = render(value).map(|item| {
-                let new_element: DomNodeFragment = item.into();
-                driver.inner.dom.insert_before(parent_id, new_element.id(), Some(comment_id));
-                new_element.convert_to_node(parent_id)
-            });
+            move |value| {
+                let new_element = render(value).map(|item| {
+                    let new_element: DomNode = item.into();
+                    get_driver().inner.dom.insert_before(parent_id, new_element.id_dom(), Some(comment_id));
+                    new_element
+                });
 
-            current_node.change(|current| {
-                *current = new_element;
-            });
-        });
-
-        comment.add_subscription(client);
-        comment
+                current_node.change(|current| {
+                    *current = new_element;
+                });
+            }
+        })
     })
 }
 
-pub fn render_value<T: Clone + PartialEq + 'static, R: Into<DomNodeFragment>>(
+pub fn render_value<T: Clone + PartialEq + 'static, R: Into<DomNode>>(
     computed: Computed<T>,
     render: impl Fn(T) -> R + 'static
-) -> DomFragment {
+) -> DomComment {
     render_value_option(computed, move |value| -> Option<R> {
         Some(render(value))
     })

@@ -2,9 +2,9 @@ use std::{cmp::PartialEq};
 use crate::{
     computed::{Client, GraphValue, graph_id::GraphId},
     dom_value::{render_value, render_value_option},
-    dom_list::{render_list, ListRendered},
-    dom::{dom_fragment::DomFragment, dom_node::DomNodeFragment},
-    DomElement, Value
+    dom_list::{render_list},
+    dom::dom_comment::DomComment,
+    DomElement, Value, DomNode
 };
 use std::hash::Hash;
 
@@ -108,11 +108,11 @@ impl<T: 'static + PartialEq + Clone> Computed<T> {
 }
 
 impl<T: 'static + PartialEq + Clone> Computed<T> {
-    pub fn render_value<R: Into<DomNodeFragment>>(&self, render: impl Fn(T) -> R + 'static) -> DomFragment {
+    pub fn render_value<R: Into<DomNode>>(&self, render: impl Fn(T) -> R + 'static) -> DomComment {
         render_value(self.clone(), render)
     }
 
-    pub fn render_value_option<R: Into<DomNodeFragment>>(&self, render: impl Fn(T) -> Option<R> + 'static) -> DomFragment {
+    pub fn render_value_option<R: Into<DomNode>>(&self, render: impl Fn(T) -> Option<R> + 'static) -> DomComment {
         render_value_option(self.clone(), render)
     }
 }
@@ -127,7 +127,7 @@ impl<
         &self,
         get_key: impl Fn(&T) -> K + 'static,
         render: impl Fn(&T) -> DomElement + 'static,
-    ) -> ListRendered<T> {
+    ) -> DomComment {
         let list = self.map(|inner| {
             inner.into_iter().collect::<Vec<_>>()
         });

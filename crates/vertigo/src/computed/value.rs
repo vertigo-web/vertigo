@@ -3,11 +3,10 @@ use std::{
     rc::Rc,
 };
 use std::hash::Hash;
+use crate::DomNode;
+use crate::dom::dom_comment::DomComment;
 use crate::{
     computed::{Computed, Dependencies, GraphId}, struct_mut::ValueMut, DropResource,
-    dom::dom_fragment::DomFragment,
-    dom::dom_node::DomNodeFragment,
-    dom_list::ListRendered,
     DomElement, get_driver,
 };
 
@@ -171,11 +170,11 @@ impl<T: Clone + PartialEq + 'static> Value<T> {
 }
 
 impl<T: Clone + PartialEq + 'static> Value<T> {
-    pub fn render_value<R: Into<DomNodeFragment>>(&self, render: impl Fn(T) -> R + 'static) -> DomFragment {
+    pub fn render_value<R: Into<DomNode>>(&self, render: impl Fn(T) -> R + 'static) -> DomComment {
         self.to_computed().render_value(render)
     }
 
-    pub fn render_value_option<R: Into<DomNodeFragment>>(&self, render: impl Fn(T) -> Option<R> + 'static) -> DomFragment {
+    pub fn render_value_option<R: Into<DomNode>>(&self, render: impl Fn(T) -> Option<R> + 'static) -> DomComment {
         self.to_computed().render_value_option(render)
     }
 }
@@ -190,7 +189,7 @@ impl<
         &self,
         get_key: impl Fn(&T) -> K + 'static,
         render: impl Fn(&T) -> DomElement + 'static,
-    ) -> ListRendered<T> {
+    ) -> DomComment {
         self.to_computed().render_list(get_key, render)
     }
 }
