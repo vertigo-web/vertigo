@@ -20,8 +20,10 @@ pub fn spinner() -> DomElement {
         };
     ");
 
+    let title = "wrapper";
+
     dom! {
-        <div css={spinner_css}>
+        <div css={spinner_css} {title}>
         </div>
     }
 }
