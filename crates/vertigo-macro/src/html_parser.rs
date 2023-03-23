@@ -83,6 +83,16 @@ fn convert_child_to_component(node: Node) -> TokenStream2 {
     }
 }
 
+fn check_ident(name: &str) -> bool {
+    for char in name.chars() {
+        if !char.is_ascii_alphanumeric() {
+            return false;
+        }
+    }
+
+    true
+}
+
 fn convert_node(node: Node) -> Result<TokenStream2, ()> {
     assert_eq!(node.node_type, NodeType::Element);
     let node_name = node.name_as_string().unwrap();
@@ -106,13 +116,7 @@ fn convert_node(node: Node) -> Result<TokenStream2, ()> {
     let mut out_attr = Vec::new();
     let mut out_child = Vec::new();
 
-    for attr_item in node.attributes {
-        assert_eq!(attr_item.node_type, NodeType::Attribute);
-
-        let name = attr_item.name_as_string().unwrap();
-        let value = attr_item.value.unwrap();
-
-        let value = strip_brackets(value);
+    let mut push_attr = |name: String, value: TokenStream2| {
         if name == "on_click" {
             out_attr.push(quote!{
                 .on_click(#value)
@@ -153,6 +157,28 @@ fn convert_node(node: Node) -> Result<TokenStream2, ()> {
             out_attr.push(quote!{
                 .attr(#name, #value)
             })
+        }
+    };
+
+    for attr_item in node.attributes {
+        if attr_item.node_type == NodeType::Block {
+            let value = strip_brackets(attr_item.value.unwrap());
+            let name = value.to_string();
+
+            if !check_ident(name.as_str()) {
+                return Err(());
+            }
+
+            push_attr(name, value);
+
+        } else if attr_item.node_type == NodeType::Attribute {
+            let name = attr_item.name_as_string().unwrap();
+            let value = attr_item.value.unwrap();
+            let value = strip_brackets(value);
+            push_attr(name, value);
+
+        } else {
+            return Err(());
         }
     }
 
