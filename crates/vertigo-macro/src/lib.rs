@@ -193,7 +193,7 @@ pub fn component(_attr: TokenStream, input: TokenStream) -> TokenStream {
         }
 
         impl #name {
-            pub fn mount(self) -> DomElement {
+            pub fn mount(self) -> vertigo::DomElement {
                 #(#param_names)*
 
                 #body

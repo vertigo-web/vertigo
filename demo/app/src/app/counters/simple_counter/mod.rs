@@ -1,8 +1,8 @@
 use vertigo::{Value, transaction, Computed, component};
-use vertigo::{bind, css, DomElement, dom};
+use vertigo::{bind, css, dom};
 
 #[component]
-pub fn SimpleCounter(label: Computed<String>, value: Value<u32>) -> DomElement {
+pub fn SimpleCounter(label: Computed<String>, value: Value<u32>) {
     let click_up = bind!(value, || {
         transaction(|context|{
             value.set(value.get(context) + 1);
