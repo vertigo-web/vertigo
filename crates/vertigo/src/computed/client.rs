@@ -1,3 +1,5 @@
+use std::rc::Rc;
+
 use crate::{
     computed::{Computed, GraphId, GraphValue},
     struct_mut::ValueMut,
@@ -6,7 +8,7 @@ use crate::{
 use super::context::Context;
 
 pub struct Client {
-    graph_value: GraphValue<()>,
+    graph_value: Rc<GraphValue<()>>,
 }
 
 impl Client {

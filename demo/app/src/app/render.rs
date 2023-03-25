@@ -89,7 +89,7 @@ fn render_header(state: &app::State) -> DomElement {
 
 fn title_value(state: app::State) -> Computed<String> {
     let sum = state.counters.sum.clone();
-    let input_value = state.input.value.clone();
+    let input_value = state.input.clone();
 
     Computed::from(move |context| {
         let route = state.route.route.get(context);
@@ -127,7 +127,7 @@ pub fn render(state: &app::State) -> DomElement {
                 Route::Animations => dom! { <Animations /> },
                 Route::Counters => dom!{ <CountersDemo state={&state.counters} /> },
                 Route::Sudoku => dom! { <Sudoku state={&state.sudoku} /> },
-                Route::Input => dom! { <MyInput value={&state.input.value} /> },
+                Route::Input => dom! { <MyInput value={&state.input} /> },
                 Route::GithubExplorer => dom! { <GitHubExplorer state={&state.github_explorer} /> },
                 Route::GameOfLife { .. } => dom! { <GameOfLife state={&state.game_of_life} /> },
                 Route::Chat => dom! { <Chat /> },

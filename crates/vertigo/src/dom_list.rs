@@ -50,7 +50,7 @@ pub fn render_list<
     DomComment::new_marker("list element", move |parent_id, comment_id| {
         let current_list: Rc<ValueMut<VecDeque<(T, DomElement)>>> = Rc::new(ValueMut::new(VecDeque::new()));
 
-        computed.clone().subscribe({
+        Some(computed.clone().subscribe({
             let get_key = get_key.clone();
             let render = render.clone();
 
@@ -77,7 +77,7 @@ pub fn render_list<
                     }
                 })
             }
-        })
+        }))
     })
 }
 
