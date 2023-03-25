@@ -1,4 +1,4 @@
-use vertigo::{Computed, Value, DomElement, dom, include_static, css, component};
+use vertigo::{Computed, Value, dom, include_static, css, component};
 
 mod simple_counter;
 use simple_counter::SimpleCounter;
@@ -48,7 +48,7 @@ impl State {
 
 
 #[component]
-fn Sum(sum: Computed<u32>) -> DomElement {
+fn Sum(sum: Computed<u32>) {
     dom! {
         <div>
             "sum = " {sum}
@@ -57,7 +57,7 @@ fn Sum(sum: Computed<u32>) -> DomElement {
 }
 
 #[component]
-pub fn CountersDemo(state: State) -> DomElement {
+pub fn CountersDemo(state: State) {
     let path = include_static!("./counter.webp");
 
     let center_css = css!("

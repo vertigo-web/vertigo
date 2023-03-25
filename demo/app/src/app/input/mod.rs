@@ -1,7 +1,7 @@
-use vertigo::{css, Value, bind, dom, DomElement, component};
+use vertigo::{css, Value, bind, dom, component};
 
 #[component]
-pub fn MyInput(value: Value<String>) -> DomElement {
+pub fn MyInput(value: Value<String>) {
     let mouse_in = || {
         log::info!("enter");
     };
@@ -33,7 +33,7 @@ pub fn MyInput(value: Value<String>) -> DomElement {
 }
 
 #[component]
-fn TextArea(value: Value<String>) -> DomElement {
+fn TextArea(value: Value<String>) {
     let on_input = bind!(value, |new_value: String| {
         value.set(new_value);
     });
@@ -52,7 +52,7 @@ fn TextArea(value: Value<String>) -> DomElement {
 }
 
 #[component]
-fn Input(value: Value<String>) -> DomElement {
+fn Input(value: Value<String>) {
     let css = css!("
         margin-left: 10px;
     ");
@@ -67,7 +67,7 @@ fn Input(value: Value<String>) -> DomElement {
 }
 
 #[component]
-fn ButtonSet(value: Value<String>, value_to_set: String) -> DomElement {
+fn ButtonSet(value: Value<String>, value_to_set: String) {
     let css = css!("
         margin: 0 10px;
         cursor: pointer;

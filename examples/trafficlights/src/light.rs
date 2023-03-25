@@ -1,4 +1,4 @@
-use vertigo::{DomElement, dom, css, Css, Computed, component};
+use vertigo::{dom, css, Css, Computed, component};
 
 pub fn light(color: &str) -> Css {
     css!("
@@ -12,7 +12,7 @@ pub fn light(color: &str) -> Css {
 }
 
 #[component]
-pub fn Light(light_color: &'static str, dark_color: &'static str, on: Computed<bool>,) -> DomElement {
+pub fn Light(light_color: &'static str, dark_color: &'static str, on: Computed<bool>,) {
     let css = on.map(move |on| {
         let color = if on {
             light_color

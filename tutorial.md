@@ -2,7 +2,7 @@
 <!-- markdownlint-disable no-inline-html -->
 
 <!-- markdownlint-disable-next-line no-emphasis-as-heading -->
-*Up to date with version 0.2.0-alpha*
+*Up to date with version 0.2.0*
 
 <!-- markdownlint-disable-next-line heading-increment -->
 ### Table of contents
@@ -43,7 +43,7 @@ for other instructions.
 
 Finally, let's install a command line tool which allows to create, build, serve and watch vertigo projects.
 
-- `cargo install vertigo-cli`[^install]
+- `cargo install vertigo-cli`
 
 ## 2. Generate project
 
@@ -236,10 +236,10 @@ There is also a `<button>` added in the `dom!` macro firing the event upon click
 No app should be written as one big function. Here is how we can add a component to our app. Create file `src/list.rs`:
 
 ```rust
-use vertigo::{component, DomElement, dom};
+use vertigo::{component, dom};
 
 #[component]
-pub fn List() -> DomElement {
+pub fn List() {
     dom! {
         <div>
             <p>"My list"</p>
@@ -285,10 +285,10 @@ For now our component just shows a static list which is not the usual way of ren
 To go dynamic, add state `elements` to the `List` function and use it during rendering:
 
 ```rust
-use vertigo::{component, DomElement, dom, Value};
+use vertigo::{component, dom, Value};
 
 #[component]
-pub fn List() -> DomElement {
+pub fn List() {
     let items = vec![
         "Item1".to_string(),
         "Item2".to_string(),
@@ -327,7 +327,7 @@ to the `List` function, then the state can be passed to our component as a prope
 
 ```rust
 #[component]
-pub fn List(items: Value<Vec<String>>) -> DomElement {
+pub fn List(items: Value<Vec<String>>) {
     let elements = items.render_list(
         |item| item.clone(),
         |item| dom! { <li>{item}</li> },
@@ -389,10 +389,10 @@ Our component cries out for adding more items. To implement this we need to:
 So the whole `src/list.rs` will look like this:
 
 ```rust
-use vertigo::{bind, component, DomElement, dom, transaction, Value};
+use vertigo::{bind, component, dom, transaction, Value};
 
 #[component]
-pub fn List(items: Value<Vec<String>>) -> DomElement {
+pub fn List(items: Value<Vec<String>>) {
     let new_item = Value::<String>::default();
 
     let add = bind!(items, new_item, || {
@@ -537,8 +537,6 @@ Complete code for this tutorial should be found [here](https://github.com/vertig
 For any more complex scenarios please refer to [examples](/examples) and [demo](/demo/src/app) package.
 
 [^traitaliases]: https://github.com/rust-lang/rust/issues/41517
-
-[^install]: Until newest vertigo version hits crates you can clone vertigo repo and install CLI tool from inside the repo dir with command `cargo install --path ./crates/vertigo-cli`
 
 [^simplification]: This is a shameful simplification but enough for a tutorial - the correct description will be able to be found in future, more robust documentation.
 

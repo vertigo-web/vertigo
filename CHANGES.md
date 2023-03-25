@@ -1,11 +1,21 @@
 <!-- markdownlint-configure-file { "no-duplicate-heading": { "siblings_only": true } } -->
 
 <!-- markdownlint-disable-next-line first-line-h1 -->
-## Unreleased
+## 0.2.0 - 2023-03-25
 
 ### Added
 
 * `main` macro that wraps a function returning `DomElement` into an app starting entry point
+
+### Changed
+
+* `dom!` macro can now return a list of elements, not only one
+* In `dom!` macro, name of attribute can be omitted if variable name is the same (`on_clich={on_click}` can be shortened to `{on_click}` )
+* vertigo-cli: Error message popup can now be dismissed
+
+### Removed
+
+* `DomFragment`
 
 ## 0.2.0-alpha - 2023-03-15
 

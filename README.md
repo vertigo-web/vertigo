@@ -5,7 +5,7 @@ A reactive Real-DOM library with SSR for Rust
 [![crates.io](https://img.shields.io/crates/v/vertigo)](https://crates.io/crates/vertigo)
 [![Documentation](https://docs.rs/vertigo/badge.svg)](https://docs.rs/vertigo)
 ![MIT or Apache 2.0 licensed](https://img.shields.io/crates/l/vertigo.svg)
-[![Dependency Status](https://deps.rs/crate/vertigo/0.2.0-alpha/status.svg)](https://deps.rs/crate/vertigo/0.2.0-alpha)
+[![Dependency Status](https://deps.rs/crate/vertigo/0.2.0/status.svg)](https://deps.rs/crate/vertigo/0.2.0)
 [![CI](https://github.com/vertigo-web/vertigo/actions/workflows/pipeline.yaml/badge.svg)](https://github.com/vertigo-web/vertigo/actions/workflows/pipeline.yaml)
 [![downloads](https://img.shields.io/crates/d/vertigo.svg)](https://crates.io/crates/vertigo)
 
@@ -26,7 +26,7 @@ Go to **[TUTORIAL](https://github.com/vertigo-web/vertigo/blob/master/tutorial.m
 Dependencies:
 
 ```toml
-vertigo = "0.2.0-alpha"
+vertigo = "0.2"
 ```
 
 Example 1:
@@ -71,7 +71,7 @@ Example 2:
 use vertigo::{css, component, DomElement, Value, dom, main};
 
 #[component]
-pub fn MyMessage(message: Value<String>) -> DomElement {
+pub fn MyMessage(message: Value<String>) {
     dom! {
         <p>
             "Message to the world: "
@@ -110,7 +110,7 @@ To ease process or development use
 that allows to _build_, _serve_ and _watch_ your project.
 
 ```sh
-cargo install vertigo-cli --version 0.2.0-alpha
+cargo install --force vertigo-cli
 ```
 
 ## Demo App
@@ -123,9 +123,7 @@ Make sure you're using nightly version of rust:
 
 Install cargo-make and vertigo-cli:
 
-* `cargo install cargo-make vertigo`
-
-(Before stable version is released, append `--version 0.2.0-alpha` to install command)
+* `cargo install cargo-make vertigo-cli`
 
 ### Run
 
