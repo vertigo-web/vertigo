@@ -1,7 +1,9 @@
-use crate::{computed::{graph_id::GraphId, graph_value::GraphValueRefresh}, struct_mut::BTreeMapMut};
+use std::rc::Rc;
+
+use crate::{computed::graph_id::GraphId, struct_mut::BTreeMapMut};
 
 pub struct Refresh {
-    refresh: BTreeMapMut<GraphId, GraphValueRefresh>, // Reference to GraphValue for refreshing if necessary
+    refresh: BTreeMapMut<GraphId, Rc<dyn Fn(bool) + 'static>>, // Reference to GraphValue for refreshing if necessary
 }
 
 impl Refresh {
@@ -11,9 +13,8 @@ impl Refresh {
         }
     }
 
-    pub fn refresh_token_add(&self, graph_value_refresh: GraphValueRefresh) {
-        let id = graph_value_refresh.id();
-        let prev_refresh = self.refresh.insert(id, graph_value_refresh);
+    pub fn refresh_token_add(&self, id: GraphId, graph_value_refresh: impl Fn(bool) + 'static) {
+        let prev_refresh = self.refresh.insert(id, Rc::new(graph_value_refresh));
 
         if prev_refresh.is_none() {
             //Correct transition
@@ -27,7 +28,7 @@ impl Refresh {
         self.refresh.remove(&id);
     }
 
-    fn get(&self, id: &GraphId) -> Option<GraphValueRefresh> {
+    fn get(&self, id: &GraphId) -> Option<Rc<dyn Fn(bool)>> {
         if let Some(item) = self.refresh.get_and_clone(id) {
             return Some(item);
         }
@@ -36,16 +37,14 @@ impl Refresh {
     }
 
     pub(crate) fn refresh(&self, id: &GraphId) {
-        if let Some(item) = self.get(id) {
-            item.refresh();
-        } else {
+        if let Some(refresh) = self.get(id) {
+            refresh(true);
         }
     }
 
     pub(crate) fn clear_cache(&self, id: &GraphId) {
-        if let Some(item) = self.get(id) {
-            item.clear_cache();
-        } else {
+        if let Some(refresh) = self.get(id) {
+            refresh(false);
         }
     }
 }

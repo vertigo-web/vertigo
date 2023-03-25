@@ -1,4 +1,4 @@
-use crate::{Driver, struct_mut::{VecMut, ValueMut}, get_driver, Client, DropResource};
+use crate::{Driver, struct_mut::{VecMut, ValueMut}, get_driver, Client, DropResource, DomElement};
 use super::dom_id::DomId;
 
 /// A Real DOM representative - comment kind
@@ -25,7 +25,7 @@ impl DomComment {
         }
     }
 
-    pub fn new_marker<F: Fn(DomId, DomId) -> Client + 'static>(comment_value: &'static str, mount: F) -> DomComment {
+    pub fn new_marker<F: Fn(DomId, DomId) -> Option<Client> + 'static>(comment_value: &'static str, mount: F) -> DomComment {
         let driver = get_driver();
         let id_comment = DomId::default();
 
@@ -36,7 +36,7 @@ impl DomComment {
                 let client = mount(parent_id, id_comment);
 
                 current_client.change(|current| {
-                    *current = Some(client);
+                    *current = client;
                 });
             }
         };
@@ -65,6 +65,23 @@ impl DomComment {
 
     pub fn add_subscription(&self, client: Client) {
         self.subscriptions.push(client);
+    }
+
+    pub fn dom_fragment(mut list: Vec<DomElement>) -> DomComment {
+        list.reverse();
+
+        Self::new_marker("list dom node", move |parent_id, comment_id| {
+            let mut prev_node = comment_id;
+            let driver = get_driver();
+
+            for node in list.iter() {
+                let node_id = node.id_dom();
+                driver.inner.dom.insert_before(parent_id, node_id, Some(prev_node));
+                prev_node = node_id;
+            }
+
+            None
+        })
     }
 }
 

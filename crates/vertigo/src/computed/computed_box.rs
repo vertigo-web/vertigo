@@ -1,4 +1,4 @@
-use std::{cmp::PartialEq};
+use std::{cmp::PartialEq, rc::Rc};
 use crate::{
     computed::{Client, GraphValue, graph_id::GraphId},
     dom_value::{render_value, render_value_option},
@@ -53,7 +53,7 @@ use super::context::Context;
 ///
 /// ```
 pub struct Computed<T: Clone> {
-    inner: GraphValue<T>,
+    inner: Rc<GraphValue<T>>,
 }
 
 impl<T: Clone + 'static> Clone for Computed<T> {

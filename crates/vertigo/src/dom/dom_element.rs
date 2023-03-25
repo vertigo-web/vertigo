@@ -4,7 +4,7 @@ use crate::{
         dom_node::DomNode,
         dom_id::DomId,
     }, get_driver, Css, Client, Computed, struct_mut::VecMut, ApiImport, DropResource, DropFileItem,
-    JsValue, DomText,
+    JsValue, DomText, Value,
 };
 
 use super::types::{KeyDownEvent, DropFileEvent};
@@ -13,7 +13,8 @@ use crate::struct_mut::VecDequeMut;
 
 pub enum AttrValue {
     String(String),
-    Computed(Computed<String>)
+    Computed(Computed<String>),
+    Value(Value<String>)
 }
 
 impl<K: ToString> From<K> for AttrValue {
@@ -25,6 +26,18 @@ impl<K: ToString> From<K> for AttrValue {
 impl From<Computed<String>> for AttrValue {
     fn from(value: Computed<String>) -> Self {
         AttrValue::Computed(value)
+    }
+}
+
+impl From<Value<String>> for AttrValue {
+    fn from(value: Value<String>) -> Self {
+        AttrValue::Value(value)
+    }
+}
+
+impl From<&Value<String>> for AttrValue {
+    fn from(value: &Value<String>) -> Self {
+        AttrValue::Value(value.clone())
     }
 }
 
@@ -153,7 +166,19 @@ impl DomElement {
                         driver.inner.dom.set_attr(id_dom, name.clone(), &value);
                     }
                 });
+            },
+            AttrValue::Value(value) => {
+                let id_dom = self.id_dom;
+                let driver = self.driver;
+                let class_manager = self.class_manager.clone();
 
+                self.subscribe(value.to_computed(), move |value| {
+                    if name.as_str() == "class" {
+                        class_manager.set_attribute(value);
+                    } else {
+                        driver.inner.dom.set_attr(id_dom, name.clone(), &value);
+                    }
+                });
             }
         };
     }
