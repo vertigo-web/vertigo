@@ -76,6 +76,15 @@ impl Animations {
             margin-bottom: 10px;
         ");
 
+        let fragment = dom! {
+            <span>
+                "start the progress bar"
+            </span>
+            <span>
+                { list }
+            </span>
+        };
+
         dom! {
             <div>
                 <div css={css_bg} on_mouse_enter={on_mouse_enter} on_mouse_leave={on_mouse_leave}>
@@ -83,12 +92,7 @@ impl Animations {
                 </div>
 
                 <button on_click={on_click_progress}>
-                    <span>
-                        "start the progress bar"
-                    </span>
-                    <span>
-                        { list }
-                    </span>
+                    {fragment}
                 </button>
             </div>
         }

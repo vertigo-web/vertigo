@@ -85,7 +85,9 @@ fn convert_child_to_component(node: Node) -> TokenStream2 {
 
 fn check_ident(name: &str) -> bool {
     for char in name.chars() {
-        if !char.is_ascii_alphanumeric() {
+        if char.is_ascii_alphanumeric() || char == '_' {
+            //ok
+        } else {
             return false;
         }
     }
@@ -231,23 +233,30 @@ fn convert_node(node: Node) -> Result<TokenStream2, ()> {
 }
 
 pub fn dom_inner(input: TokenStream) -> TokenStream {
-    let mut nodes = parse(input).unwrap();
+    let nodes = parse(input).unwrap();
 
-    let nodes_len = nodes.len();
-    let last = nodes.pop();
+    let mut modes_dom = Vec::new();
 
-    if !nodes.is_empty() {
-        panic!("exactly one node was expected - received = {nodes_len}");
-    }
-
-    if let Some(last) = last {
-        return match convert_node(last) {
-            Ok(result) => result.into(),
-            _ => {
-                quote! {}.into()
-            }
+    for node in nodes {
+        let Ok(node) = convert_node(node) else {
+            return quote! {}.into();
         };
+
+        modes_dom.push(node);
     }
 
-    panic!("exactly one node was expected - received = {nodes_len}");
+    if modes_dom.len() == 1 {
+        let last = modes_dom.pop().unwrap();
+        return last.into();
+    }
+
+    if modes_dom.is_empty() {
+        panic!("node / nodes expected");
+    }
+
+    quote! {
+        vertigo::DomComment::dom_fragment(vec!(
+            #(#modes_dom,)*
+        ))
+    }.into()
 }

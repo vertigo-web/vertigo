@@ -1,41 +1,59 @@
-use std::{
-    rc::Rc,
-};
+use std::rc::Rc;
 
 use crate::{
     computed::{
-        Dependencies, GraphId
+        Dependencies,
+        GraphId
     },
     struct_mut::ValueMut,
-    get_driver, Context,
+    get_driver,
+    Context,
 };
 
-struct GraphValueData<T> {
+pub struct GraphValue<T> {
     deps: &'static Dependencies,
     id: GraphId,
     get_value: Box<dyn Fn(&Context) -> T>,
     state: ValueMut<Option<T>>,
 }
 
-impl<T: Clone> GraphValueData<T> {
+impl<T: Clone + 'static> GraphValue<T> {
     pub fn new<F: Fn(&Context) -> T + 'static>(
-        deps: &'static Dependencies,
         is_computed_type: bool,
         get_value: F,
-    ) -> Rc<GraphValueData<T>> {
+    ) -> Rc<GraphValue<T>> {
         let id = match is_computed_type {
             true => GraphId::new_computed(),
             false => GraphId::new_client(),
         };
 
-        Rc::new(
-            GraphValueData {
+        let deps = get_driver().inner.dependencies;
+
+        let graph_value = Rc::new(
+            GraphValue {
                 deps,
                 id,
                 get_value: Box::new(get_value),
                 state: ValueMut::new(None),
             }
-        )
+        );
+
+        let weak_value = Rc::downgrade(&graph_value);
+
+        deps.graph.refresh.refresh_token_add(graph_value.id, move |kind: bool| {
+            if let Some(weak_value) = weak_value.upgrade() {
+                match kind {
+                    false => {                          //false - computed (clear_cache)
+                        weak_value.state.set(None);
+                    },
+                    true => {                           //true - client (refresh)
+                        weak_value.refresh();
+                    }
+                }
+            }
+        });
+
+        graph_value
     }
 
     fn calculate_new_value(&self) -> T {
@@ -59,22 +77,6 @@ impl<T: Clone> GraphValueData<T> {
 
         self.calculate_new_value()
     }
-}
-
-trait GraphValueControl {
-    fn id(&self) -> GraphId;
-    fn clear_cache(&self);          //for Computed
-    fn refresh(&self);              //for Client
-}
-
-impl<T: Clone> GraphValueControl for GraphValueData<T> {
-    fn id(&self) -> GraphId {
-        self.id
-    }
-
-    fn clear_cache(&self) {
-        self.state.set(None);
-    }
 
     fn refresh(&self) {
         let is_some = self.state.map(|item| item.is_some());
@@ -83,83 +85,15 @@ impl<T: Clone> GraphValueControl for GraphValueData<T> {
             self.calculate_new_value();
         }
     }
-}
-
-#[derive(Clone)]
-pub struct GraphValueRefresh { // add type ?
-    control: Rc<dyn GraphValueControl>,
-}
-
-impl GraphValueRefresh {
-    fn new(control: Rc<dyn GraphValueControl>) -> GraphValueRefresh {
-        GraphValueRefresh { control }
-    }
-
-    pub fn id(&self) -> GraphId {
-        self.control.id()
-    }
-
-    pub fn clear_cache(&self) {
-        self.control.clear_cache();
-    }
-
-    pub fn refresh(&self) {
-        self.control.refresh()
-    }
-}
-
-struct GraphValueInner<T: Clone> {
-    inner: Rc<GraphValueData<T>>,
-}
-
-impl<T: Clone + 'static> GraphValueInner<T> {
-    fn new<F: Fn(&Context) -> T + 'static>(is_computed_type: bool, get_value: F) -> GraphValueInner<T> {
-        let deps = get_driver().inner.dependencies;
-
-        let graph_value = GraphValueData::new(deps, is_computed_type, get_value);
-
-        deps.graph.refresh.refresh_token_add(GraphValueRefresh::new(graph_value.clone()));
-
-        GraphValueInner {
-            inner: graph_value,
-        }
-    }
-}
-
-impl<T: Clone> Drop for GraphValueInner<T> {
-    fn drop(&mut self) {
-        self.inner.deps.graph.refresh.refresh_token_drop(self.inner.id);
-        self.inner.deps.graph.remove_client(self.inner.id);
-    }
-}
-
-pub struct GraphValue<T: Clone> {
-    inner: Rc<GraphValueInner<T>>,
-}
-
-impl<T: Clone + 'static> GraphValue<T> {
-    pub fn new<F: Fn(&Context) -> T + 'static>(is_computed_type: bool, get_value: F) -> GraphValue<T> {
-        GraphValue {
-            inner: Rc::new(
-                GraphValueInner::new(is_computed_type, get_value)
-            )
-        }
-    }
-
-    pub fn get_value(&self, context: &Context) -> T {
-        self.inner.inner.get_value(context)
-    }
 
     pub(crate) fn id(&self) -> GraphId {
-        self.inner.inner.id
+        self.id
     }
 }
 
-impl<T: Clone> Clone for GraphValue<T> {
-    fn clone(&self) -> Self {
-        GraphValue {
-            inner: self.inner.clone(),
-        }
+impl<T> Drop for GraphValue<T> {
+    fn drop(&mut self) {
+        self.deps.graph.refresh.refresh_token_drop(self.id);
+        self.deps.graph.remove_client(self.id);
     }
 }
-
