@@ -1,4 +1,4 @@
-use vertigo::{css, Css, bind, DomElement, dom, Resource, DomNode};
+use vertigo::{css, Css, bind, dom, Resource, DomNode, dom_element};
 
 use super::state::{TodoState, View};
 
@@ -53,7 +53,9 @@ fn todo_main_render(state: &TodoState) -> DomNode {
 
         match posts {
             Resource::Ready(posts) => {
-                let result = DomElement::new("div");
+                let result = dom_element! {
+                    <div />
+                };
 
                 for post in posts.as_ref() {
                     let on_click = {
@@ -145,15 +147,15 @@ fn render_comments(state: &TodoState, post_id: u32) -> DomNode {
 
         match value {
             Resource::Ready(list) => {
-                let result = DomElement::new("div");
-
-                result.add_child(dom! {
-                    <div css={css_comment_wrapper()}>
-                        <strong>
-                            "Comments:"
-                        </strong>
+                let result = dom_element! {
+                    <div>
+                        <div css={css_comment_wrapper()}>
+                            <strong>
+                                "Comments:"
+                            </strong>
+                        </div>
                     </div>
-                });
+                };
 
                 for comment in list.as_ref() {
                     let on_click_author = bind!(view, comment, || {

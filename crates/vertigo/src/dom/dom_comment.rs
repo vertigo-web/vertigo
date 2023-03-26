@@ -1,4 +1,4 @@
-use crate::{Driver, struct_mut::{VecMut, ValueMut}, get_driver, Client, DropResource, DomElement};
+use crate::{Driver, struct_mut::{VecMut, ValueMut}, get_driver, Client, DropResource, DomNode};
 use super::dom_id::DomId;
 
 /// A Real DOM representative - comment kind
@@ -67,7 +67,7 @@ impl DomComment {
         self.subscriptions.push(client);
     }
 
-    pub fn dom_fragment(mut list: Vec<DomElement>) -> DomComment {
+    pub fn dom_fragment(mut list: Vec<DomNode>) -> DomComment {
         list.reverse();
 
         Self::new_marker("list dom node", move |parent_id, comment_id| {

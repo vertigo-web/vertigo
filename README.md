@@ -32,10 +32,10 @@ vertigo = "0.2"
 Example 1:
 
 ```rust
-use vertigo::{dom, DomElement, Value, bind, main};
+use vertigo::{dom, DomNode, Value, bind, main};
 
 #[main]
-pub fn app() -> DomElement {
+pub fn app() -> DomNode {
     let count = Value::new(0);
 
     let increment = bind!(count, || {

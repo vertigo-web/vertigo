@@ -18,12 +18,16 @@ pub fn MyInput(value: Value<String>) {
         padding: 10px;
     ");
 
+    let fragment_components = dom! {
+        <ButtonSet value={&value} value_to_set={"set 1"} />
+        <ButtonSet value={&value} value_to_set={"set 2"} />
+    };
+
     dom! {
         <div css={wrapper} on_mouse_enter={mouse_in} on_mouse_leave={mouse_out}>
             "This is input"
             <Input value={&value} />
-            <ButtonSet value={&value} value_to_set={"set 1"} />
-            <ButtonSet value={&value} value_to_set={"set 2"} />
+            { fragment_components }
             <TextArea value={value} />
             <div>
                 "count = " {count}

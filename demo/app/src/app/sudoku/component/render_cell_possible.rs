@@ -1,6 +1,6 @@
 use std::collections::HashSet;
 
-use vertigo::{css, Css, dom, Computed, bind, DomNode, DomElement};
+use vertigo::{css, Css, dom, Computed, bind, DomNode, dom_element};
 use crate::app::sudoku::state::{number_item::SudokuValue, Cell};
 
 fn css_item_only_one(cell_width: u32) -> Css {
@@ -49,7 +49,9 @@ fn view_one_possible(cell_width: u32, cell: &Cell) -> DomNode {
     let render = cell.possible.render_value({
         let cell = cell.clone();
         move |possible| {
-            let wrapper = DomElement::new("div");
+            let wrapper = dom_element! {
+                <div />
+            };
 
             for number in possible.iter() {
                 let on_set = bind!(cell, number, || {
@@ -99,7 +101,9 @@ fn view_default(cell_width: u32, cell: &Cell, possible: HashSet<SudokuValue>) ->
         flex-shrink: 0;
     ");
 
-    let wrapper = DomElement::new("div").css(css_wrapper);
+    let wrapper = dom_element! {
+        <div css={css_wrapper} />
+    };
 
     for number in SudokuValue::variants().into_iter() {
         let should_show = possible.contains(&number);

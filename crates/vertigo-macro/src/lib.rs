@@ -13,7 +13,7 @@ mod include_static;
 
 mod wasm_path;
 
-use html_parser::dom_inner;
+use html_parser::{dom_inner, dom_element_inner};
 use proc_macro::{TokenStream, Span};
 use syn::{Visibility, __private::ToTokens};
 
@@ -26,6 +26,12 @@ use bind::{bind_macro_fn, bind_spawn_fn, bind_rc_fn};
 #[proc_macro_error]
 pub fn dom(input: TokenStream) -> TokenStream {
     dom_inner(input)
+}
+
+#[proc_macro]
+#[proc_macro_error]
+pub fn dom_element(input: TokenStream) -> TokenStream {
+    dom_element_inner(input)
 }
 
 #[proc_macro]
