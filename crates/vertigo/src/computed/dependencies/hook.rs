@@ -1,14 +1,14 @@
-use crate::{driver_module::event_emmiter::EventEmmiter, DropResource};
+use crate::{driver_module::event_emitter::EventEmitter, DropResource};
 
 #[derive(Clone)]
 pub struct Hooks {
-    callback_after_transaction: EventEmmiter<()>,
+    callback_after_transaction: EventEmitter<()>,
 }
 
 impl Hooks {
     pub fn new() -> Hooks {
         Hooks {
-            callback_after_transaction: EventEmmiter::default(),
+            callback_after_transaction: EventEmitter::default(),
         }
     }
 

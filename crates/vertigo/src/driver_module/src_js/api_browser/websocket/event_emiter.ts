@@ -1,5 +1,5 @@
 
-export class EventEmmiter<T> {
+export class EventEmitter<T> {
     private events: Set<(param: T) => void>;
 
     constructor() {

@@ -532,7 +532,7 @@ And here's the usage in rendering:
 
 ## Further reading
 
-Complete code for this tutorial should be found [here](https://github.com/vertigo-web/vertigo-app-template/tree/tutorial).
+Complete code for this tutorial should be found [here](https://github.com/vertigo-web/vertigo-tutorial/tree/master).
 
 For any more complex scenarios please refer to [examples](/examples) and [demo](/demo/src/app) package.
 

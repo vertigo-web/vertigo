@@ -5,7 +5,7 @@ pub mod utils;
 pub mod api;
 pub mod init_env;
 pub mod js_value;
-pub mod event_emmiter;
+pub mod event_emitter;
 mod string;
 
 pub use string::StaticString;

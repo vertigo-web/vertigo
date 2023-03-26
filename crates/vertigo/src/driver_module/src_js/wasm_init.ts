@@ -39,15 +39,15 @@ export const wasmInit = async <ImportType extends Record<string, Function>, Expo
 ): Promise<ModuleControllerType<ExportType>> => {
     const module_instance = await fetchModule(wasmBinPath, imports);
 
-    let cachegetUint8Memory: Uint8Array = new Uint8Array(1);
+    let cacheGetUint8Memory: Uint8Array = new Uint8Array(1);
 
     const getUint8Memory = () => {
         if (module_instance.instance.exports.memory instanceof WebAssembly.Memory) {
-            if (cachegetUint8Memory.buffer !== module_instance.instance.exports.memory.buffer) {
+            if (cacheGetUint8Memory.buffer !== module_instance.instance.exports.memory.buffer) {
                 console.info('getUint8Memory: reallocate the Uint8Array for a new size', module_instance.instance.exports.memory.buffer.byteLength);
-                cachegetUint8Memory = new Uint8Array(module_instance.instance.exports.memory.buffer);
+                cacheGetUint8Memory = new Uint8Array(module_instance.instance.exports.memory.buffer);
             }
-            return cachegetUint8Memory;
+            return cacheGetUint8Memory;
         } else {
             throw Error('Missing memory');
         }

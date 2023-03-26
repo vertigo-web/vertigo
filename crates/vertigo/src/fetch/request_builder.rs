@@ -32,9 +32,7 @@ impl RequestBody {
     }
 }
 
-/// Builder for typed requests (more complex version of [FetchBuilder](struct.FetchBuilder.html)).
-///
-/// Unlike in the FetchBuilder, here request and response data is a type implementing [SingleRequestTrait] or [ListRequestTrait].
+/// Builder for typed requests.
 #[derive(Clone)]
 pub struct RequestBuilder {
     method: FetchMethod,

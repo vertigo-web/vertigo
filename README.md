@@ -9,7 +9,6 @@ A reactive Real-DOM library with SSR for Rust
 [![CI](https://github.com/vertigo-web/vertigo/actions/workflows/pipeline.yaml/badge.svg)](https://github.com/vertigo-web/vertigo/actions/workflows/pipeline.yaml)
 [![downloads](https://img.shields.io/crates/d/vertigo.svg)](https://crates.io/crates/vertigo)
 
-
 ## Features
 
 * **Reactive dependencies** - A graph of values and clients (micro-subscriptions) that can automatically compute what to refresh after one value change
@@ -68,7 +67,7 @@ pub fn app() -> DomNode {
 Example 2:
 
 ```rust
-use vertigo::{css, component, DomElement, Value, dom, main};
+use vertigo::{css, component, DomNode, Value, dom, main};
 
 #[component]
 pub fn MyMessage(message: Value<String>) {

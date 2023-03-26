@@ -11,7 +11,7 @@ pub enum CssGroup {
     }
 }
 
-/// CSS styles definition for Virtual DOM.
+/// CSS styles definition for usable in DOM.
 ///
 /// Consists of a vector of css chunks which can be extended.
 ///
