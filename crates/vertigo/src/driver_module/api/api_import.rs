@@ -12,7 +12,7 @@ use crate::{
     WebsocketMessage,
     WebsocketConnection,
     driver_module::{
-        js_value::JsValue, event_emmiter::EventEmmiter,
+        js_value::JsValue, event_emitter::EventEmitter,
     }, JsJson, JsJsonObjectBuilder, fetch::request_builder::RequestBody
 };
 
@@ -51,8 +51,8 @@ pub struct ApiImport {
     pub(crate) arguments: Arguments,
     pub(crate) callback_store: CallbackStore,
 
-    pub on_fetch_start: EventEmmiter<()>,
-    pub on_fetch_stop: EventEmmiter<()>,
+    pub on_fetch_start: EventEmitter<()>,
+    pub on_fetch_stop: EventEmitter<()>,
 }
 
 impl Default for ApiImport {
@@ -69,8 +69,8 @@ impl Default for ApiImport {
             fn_dom_access,
             arguments: Arguments::default(),
             callback_store: CallbackStore::new(),
-            on_fetch_start: EventEmmiter::default(),
-            on_fetch_stop: EventEmmiter::default(),
+            on_fetch_start: EventEmitter::default(),
+            on_fetch_stop: EventEmitter::default(),
         }
     }
 }

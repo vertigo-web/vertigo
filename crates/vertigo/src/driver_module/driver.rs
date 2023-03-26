@@ -83,21 +83,14 @@ impl DriverInner {
 }
 
 
-/// Result from request made using [FetchBuilder].
+/// Result from request made using [RequestBuilder].
 ///
 /// Variants:
-/// - `Ok(status_code, response)` if request succeded,
-/// - `Err(response)` if request failed (because ofnetwork error for example).
+/// - `Ok(status_code, response)` if request succeeded,
+/// - `Err(response)` if request failed (because of network error for example).
 pub type FetchResult = Result<(u32, RequestBody), String>;
 
 /// Main connection to vertigo facilities - dependencies and rendering client (the browser).
-///
-/// This is in fact only a box for inner generic driver.
-/// This way a web developer don't need to worry about the specific driver used,
-/// though usually it is the [BrowserDriver](../vertigo_browserdriver/struct.DriverBrowser.html)
-/// which is used to create a Driver.
-///
-/// Additionally driver struct wraps [Dependencies] object.
 #[derive(Clone, Copy)]
 pub struct Driver {
     pub(crate) inner: &'static DriverInner,

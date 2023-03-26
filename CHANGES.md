@@ -1,6 +1,12 @@
 <!-- markdownlint-configure-file { "no-duplicate-heading": { "siblings_only": true } } -->
 
 <!-- markdownlint-disable-next-line first-line-h1 -->
+## Unreleased
+
+### Added
+
+* `dom_element!` macro which returns `DomElement` struct, while `dom!` macro returns `DomNode`
+
 ## 0.2.0 - 2023-03-25
 
 ### Added

@@ -1,4 +1,4 @@
-import { EventEmmiter } from "./event_emiter";
+import { EventEmitter } from "./event_emiter";
 import { PromiseBoxRace } from "./promise";
 
 const timeout = async (timeout: number): Promise<void> => {
@@ -42,7 +42,7 @@ class LogContext {
     public formatLog = (message: string): string => `Socket ${this.host} ==> ${message}`;
 }
 export class SocketConnection {
-    private readonly eventMessage: EventEmmiter<string>;
+    private readonly eventMessage: EventEmitter<string>;
     public readonly close: () => void;
     public readonly send: (message: string) => void;
 
@@ -50,7 +50,7 @@ export class SocketConnection {
         close: () => void,
         send: (message: string) => void,
     ) {
-        this.eventMessage = new EventEmmiter();
+        this.eventMessage = new EventEmitter();
         this.close = close;
         this.send = send;
     }

@@ -91,10 +91,10 @@ class BufferCursor {
     setBuffer(buffer) {
         const size = buffer.length;
         this.setU32(size);
-        const subbuffer = this
+        const sub_buffer = this
             .getUint8Memory()
             .subarray(this.ptr + this.pointer, this.ptr + this.pointer + size);
-        subbuffer.set(buffer);
+        sub_buffer.set(buffer);
         this.pointer += size;
     }
     getString() {
@@ -318,7 +318,7 @@ const jsValueDecodeItem = (cursor) => {
         };
     }
     console.error('typeParam', typeParam);
-    throw Error('Nieprawidłowe odgałęzienie');
+    throw Error('Invalid branch');
 };
 const jsValueDecode = (getUint8Memory, ptr, size) => {
     try {
@@ -606,14 +606,14 @@ const fetchModule = async (wasmBinPath, imports) => {
 };
 const wasmInit = async (wasmBinPath, imports) => {
     const module_instance = await fetchModule(wasmBinPath, imports);
-    let cachegetUint8Memory = new Uint8Array(1);
+    let cacheGetUint8Memory = new Uint8Array(1);
     const getUint8Memory = () => {
         if (module_instance.instance.exports.memory instanceof WebAssembly.Memory) {
-            if (cachegetUint8Memory.buffer !== module_instance.instance.exports.memory.buffer) {
+            if (cacheGetUint8Memory.buffer !== module_instance.instance.exports.memory.buffer) {
                 console.info('getUint8Memory: reallocate the Uint8Array for a new size', module_instance.instance.exports.memory.buffer.byteLength);
-                cachegetUint8Memory = new Uint8Array(module_instance.instance.exports.memory.buffer);
+                cacheGetUint8Memory = new Uint8Array(module_instance.instance.exports.memory.buffer);
             }
-            return cachegetUint8Memory;
+            return cacheGetUint8Memory;
         }
         else {
             throw Error('Missing memory');
@@ -864,11 +864,11 @@ class Fetch {
             }
             catchError(wasm, callback_id, response, async (response) => {
                 const text = await response.arrayBuffer();
-                const textUunt8Array = new Uint8Array(text);
+                const textUint8Array = new Uint8Array(text);
                 wasm.wasm_callback(callback_id, [
                     true,
                     { type: 'u32', value: response.status },
-                    textUunt8Array //body (text)
+                    textUint8Array //body (text)
                 ]);
             });
         }
@@ -884,7 +884,7 @@ class Fetch {
     };
 }
 
-class EventEmmiter {
+class EventEmitter {
     events;
     constructor() {
         this.events = new Set();
@@ -988,7 +988,7 @@ class SocketConnection {
     close;
     send;
     constructor(close, send) {
-        this.eventMessage = new EventEmmiter();
+        this.eventMessage = new EventEmitter();
         this.close = close;
         this.send = send;
     }

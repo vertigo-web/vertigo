@@ -72,7 +72,7 @@ impl<T> Clone for ApiResponse<T> {
     }
 }
 
-/// A structure similar to Value but supports Loading/Error states and automatic refresh
+/// A structure similar to [Value] but supports Loading/Error states and automatic refresh
 /// after defined amount of time.
 ///
 /// ```rust
@@ -107,7 +107,7 @@ impl<T> Clone for ApiResponse<T> {
 /// }
 /// ```
 ///
-/// See ["todo" example](../src/vertigo_demo/app/todo/mod.rs.html) in vertigo-demo package for more.
+/// See ["todo" example](../src/vertigo_demo/app/todo/state.rs.html) in vertigo-demo package for more.
 pub struct LazyCache<T: 'static> {
     id: u64,
     value: Value<ApiResponse<T>>,
