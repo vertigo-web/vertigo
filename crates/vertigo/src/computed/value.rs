@@ -7,7 +7,7 @@ use crate::DomNode;
 use crate::dom::dom_comment::DomComment;
 use crate::{
     computed::{Computed, Dependencies, GraphId}, struct_mut::ValueMut, DropResource,
-    DomElement, get_driver,
+    get_driver,
 };
 
 use super::context::Context;
@@ -170,11 +170,11 @@ impl<T: Clone + PartialEq + 'static> Value<T> {
 }
 
 impl<T: Clone + PartialEq + 'static> Value<T> {
-    pub fn render_value<R: Into<DomNode>>(&self, render: impl Fn(T) -> R + 'static) -> DomComment {
+    pub fn render_value(&self, render: impl Fn(T) -> DomNode + 'static) -> DomNode {
         self.to_computed().render_value(render)
     }
 
-    pub fn render_value_option<R: Into<DomNode>>(&self, render: impl Fn(T) -> Option<R> + 'static) -> DomComment {
+    pub fn render_value_option(&self, render: impl Fn(T) -> Option<DomNode> + 'static) -> DomComment {
         self.to_computed().render_value_option(render)
     }
 }
@@ -188,7 +188,7 @@ impl<
     >(
         &self,
         get_key: impl Fn(&T) -> K + 'static,
-        render: impl Fn(&T) -> DomElement + 'static,
+        render: impl Fn(&T) -> DomNode + 'static,
     ) -> DomComment {
         self.to_computed().render_list(get_key, render)
     }

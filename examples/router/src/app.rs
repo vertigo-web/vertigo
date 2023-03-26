@@ -1,5 +1,5 @@
 use vertigo::router::Router;
-use vertigo::{bind, dom, DomElement};
+use vertigo::{bind, dom, DomNode};
 
 #[derive(Clone, PartialEq, Eq, Debug)]
 pub enum Route {
@@ -49,7 +49,7 @@ impl App {
         }
     }
 
-    pub fn render(&self) -> DomElement {
+    pub fn render(&self) -> DomNode {
         let state = self;
 
         let navigate_to_page1 = bind!(state, || {

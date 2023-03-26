@@ -71,10 +71,10 @@ After seeing message `Listening on 127.0.0.1:4444` you can point your browser to
 Open `/src/lib.rs` file.
 
 ```rust
-use vertigo::{main, DomElement, dom, Value};
+use vertigo::{main, DomNode, dom, Value};
 
 #[main]
-fn app() -> DomElement {
+fn app() -> DomNode {
     let message = Value::new("world");
     dom! {
         <html>

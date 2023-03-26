@@ -4,7 +4,7 @@ use crate::{
     dom_value::{render_value, render_value_option},
     dom_list::{render_list},
     dom::dom_comment::DomComment,
-    DomElement, Value, DomNode
+    Value, DomNode
 };
 use std::hash::Hash;
 
@@ -108,11 +108,11 @@ impl<T: 'static + PartialEq + Clone> Computed<T> {
 }
 
 impl<T: 'static + PartialEq + Clone> Computed<T> {
-    pub fn render_value<R: Into<DomNode>>(&self, render: impl Fn(T) -> R + 'static) -> DomComment {
-        render_value(self.clone(), render)
+    pub fn render_value(&self, render: impl Fn(T) -> DomNode + 'static) -> DomNode {
+        render_value(self.clone(), render).into()
     }
 
-    pub fn render_value_option<R: Into<DomNode>>(&self, render: impl Fn(T) -> Option<R> + 'static) -> DomComment {
+    pub fn render_value_option(&self, render: impl Fn(T) -> Option<DomNode> + 'static) -> DomComment {
         render_value_option(self.clone(), render)
     }
 }
@@ -126,7 +126,7 @@ impl<
     >(
         &self,
         get_key: impl Fn(&T) -> K + 'static,
-        render: impl Fn(&T) -> DomElement + 'static,
+        render: impl Fn(&T) -> DomNode + 'static,
     ) -> DomComment {
         let list = self.map(|inner| {
             inner.into_iter().collect::<Vec<_>>()

@@ -1,5 +1,5 @@
 use std::rc::Rc;
-use vertigo::{css, Value, bind, DomElement, dom, transaction};
+use vertigo::{css, Value, bind, DomNode, dom, transaction, DomElement};
 
 pub use super::State;
 
@@ -8,7 +8,7 @@ pub struct GameOfLife {
 }
 
 impl GameOfLife {
-    pub fn mount(&self) -> DomElement {
+    pub fn mount(&self) -> DomNode {
         let matrix = &self.state.matrix;
         let css_wrapper = css!("
             border: 1px solid black;
@@ -31,7 +31,7 @@ impl GameOfLife {
         }
     }
 
-    fn render_header(state: &State) -> DomElement {
+    fn render_header(state: &State) -> DomNode {
         let year = state.year.map(|item| {
             item.to_string()
         });
@@ -88,7 +88,7 @@ impl GameOfLife {
                 </div>
                 <div>
                     <button css={css_button()} on_click={on_toggle_timer}>
-                        <text computed={button_label} />
+                        {button_label}
                     </button>
                     <button css={css_button()} on_click={state.randomize()}>"Random"</button>
                 </div>
@@ -121,9 +121,7 @@ impl GameOfLife {
             height: 10px;
         ");
 
-        let wrapper = dom! {
-            <div css={css_row} />
-        };
+        let wrapper = DomElement::new("div").css(css_row);
 
         for item in matrix.iter() {
             wrapper.add_child(Self::render_cell(item));
@@ -132,7 +130,7 @@ impl GameOfLife {
         wrapper
     }
 
-    fn render_cell(cell: &Value<bool>) -> DomElement {
+    fn render_cell(cell: &Value<bool>) -> DomNode {
         let css_cell = |is_active: bool| {
             let color = if is_active { "black" } else { "white" };
             css!("

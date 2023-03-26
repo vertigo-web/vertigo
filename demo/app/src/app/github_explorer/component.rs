@@ -1,4 +1,4 @@
-use vertigo::{css, Resource, bind, DomElement, dom, Computed, DomComment, transaction};
+use vertigo::{css, Resource, bind, dom, Computed, transaction, DomNode};
 
 use super::State;
 
@@ -7,7 +7,7 @@ pub struct GitHubExplorer {
 }
 
 impl GitHubExplorer {
-    pub fn mount(&self) -> DomElement {
+    pub fn mount(&self) -> DomNode {
         let state = &self.state;
 
         let on_input_callback = bind!(state, |new_value: String| {
@@ -51,7 +51,7 @@ impl GitHubExplorer {
         }
     }
 
-    fn render_commit(&self) -> DomComment {
+    fn render_commit(&self) -> DomNode {
         let commit_message = Computed::from({
             let state = self.state.clone();
 

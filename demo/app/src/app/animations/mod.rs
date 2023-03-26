@@ -1,6 +1,6 @@
 use std::rc::Rc;
 
-use vertigo::{Value, get_driver, struct_mut::ValueMut, DomElement, dom, bind_spawn, css};
+use vertigo::{Value, get_driver, struct_mut::ValueMut, dom, bind_spawn, css, DomNode};
 
 mod spinner;
 use spinner::spinner;
@@ -43,7 +43,7 @@ impl State {
 pub struct Animations { }
 
 impl Animations {
-    pub fn mount(&self) -> DomElement {
+    pub fn mount(&self) -> DomNode {
         let state = State::new();
 
         let ids = state.progress.map(|progress| {

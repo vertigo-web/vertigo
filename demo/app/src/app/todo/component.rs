@@ -1,16 +1,16 @@
-use vertigo::{css, Css, bind, DomElement, dom, Resource};
+use vertigo::{css, Css, bind, DomElement, dom, Resource, DomNode};
 
 use super::state::{TodoState, View};
 
 pub struct Todo { }
 
 impl Todo {
-    pub fn mount(&self) -> DomElement {
+    pub fn mount(&self) -> DomNode {
         let state = TodoState::new();
 
         let render = state.view.render_value({
             let state = state.clone();
-            move |view|{
+            move |view| -> DomNode {
                 match view {
                     View::Main => todo_main_render(&state),
                     View::Post { id } => todo_post_render(&state, id),
@@ -45,17 +45,15 @@ impl Todo {
     }
 }
 
-fn todo_main_render(state: &TodoState) -> DomElement {
+fn todo_main_render(state: &TodoState) -> DomNode {
     let state = state.clone();
 
-    let posts = state.posts.to_computed().render_value(move |posts| {
+    let posts = state.posts.to_computed().render_value(move |posts| -> DomNode {
         let todo_state = state.clone();
 
         match posts {
             Resource::Ready(posts) => {
-                let result = dom! {
-                    <div />
-                };
+                let result = DomElement::new("div");
 
                 for post in posts.as_ref() {
                     let on_click = {
@@ -75,7 +73,7 @@ fn todo_main_render(state: &TodoState) -> DomElement {
                     });
                 }
 
-                result
+                result.into()
             },
             Resource::Error(message) => {
                 dom! {
@@ -102,7 +100,7 @@ fn todo_main_render(state: &TodoState) -> DomElement {
     }
 }
 
-fn todo_post_render(state: &TodoState, post_id: u32) -> DomElement {
+fn todo_post_render(state: &TodoState, post_id: u32) -> DomNode {
     let state = state.clone();
 
     let message = render_message(post_id);
@@ -127,7 +125,7 @@ fn todo_post_render(state: &TodoState, post_id: u32) -> DomElement {
     }
 }
 
-fn render_message(post_id: u32) -> DomElement {
+fn render_message(post_id: u32) -> DomNode {
     let message = format!("post_id = {post_id}");
 
     dom! {
@@ -137,7 +135,7 @@ fn render_message(post_id: u32) -> DomElement {
     }
 }
 
-fn render_comments(state: &TodoState, post_id: u32) -> DomElement {
+fn render_comments(state: &TodoState, post_id: u32) -> DomNode {
     let view = state.view.clone();
 
     let comments = state.comments.get(&post_id);
@@ -147,15 +145,15 @@ fn render_comments(state: &TodoState, post_id: u32) -> DomElement {
 
         match value {
             Resource::Ready(list) => {
-                let result = dom! {
-                    <div>
-                        <div css={css_comment_wrapper()}>
-                            <strong>
-                                "Comments:"
-                            </strong>
-                        </div>
+                let result = DomElement::new("div");
+
+                result.add_child(dom! {
+                    <div css={css_comment_wrapper()}>
+                        <strong>
+                            "Comments:"
+                        </strong>
                     </div>
-                };
+                });
 
                 for comment in list.as_ref() {
                     let on_click_author = bind!(view, comment, || {
@@ -176,7 +174,7 @@ fn render_comments(state: &TodoState, post_id: u32) -> DomElement {
                     });
                 }
 
-                result
+                result.into()
             },
             Resource::Error(message) => {
                 dom! {

@@ -1,4 +1,4 @@
-use vertigo::DomElement;
+use vertigo::DomNode;
 use vertigo::Value;
 use vertigo::router::Router;
 
@@ -31,7 +31,7 @@ impl State {
         }
     }
 
-    pub fn render(&self) -> DomElement {
+    pub fn render(&self) -> DomNode {
         super::render(self)
     }
 }

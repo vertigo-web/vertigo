@@ -1,4 +1,4 @@
-use vertigo::{css, Css, KeyDownEvent, DomElement, dom, Computed};
+use vertigo::{css, Css, KeyDownEvent, dom, Computed, DomNode};
 use crate::app;
 
 use super::{
@@ -31,7 +31,7 @@ fn css_menu_item(active: bool) -> Css {
     )
 }
 
-fn render_menu_item(current_page: Computed<Route>, menu_item: Route) -> DomElement {
+fn render_menu_item(current_page: Computed<Route>, menu_item: Route) -> DomNode {
     let css = current_page.map({
         let menu_item = menu_item.clone();
         move |current_page| {
@@ -49,7 +49,7 @@ fn render_menu_item(current_page: Computed<Route>, menu_item: Route) -> DomEleme
     }
 }
 
-fn render_header(state: &app::State) -> DomElement {
+fn render_header(state: &app::State) -> DomNode {
     let hook_key_down = |event: KeyDownEvent| {
         if event.code == "ArrowRight" {
             log::info!("right");
@@ -115,13 +115,14 @@ fn title_value(state: app::State) -> Computed<String> {
     })
 }
 
-pub fn render(state: &app::State) -> DomElement {
+pub fn render(state: &app::State) -> DomNode {
     let state = state.clone();
 
     let header = render_header(&state);
 
     let content = state.route.route.render_value({
         let state = state.clone();
+
         move |route| {
            match route {
                 Route::Animations => dom! { <Animations /> },

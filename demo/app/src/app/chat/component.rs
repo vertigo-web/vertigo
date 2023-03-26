@@ -1,11 +1,11 @@
-use vertigo::{KeyDownEvent, bind, dom, DomElement, DomComment};
+use vertigo::{KeyDownEvent, bind, dom, DomNode};
 
 use super::state::ChatState;
 
 pub struct Chat { }
 
 impl Chat {
-    pub fn mount(&self) -> DomElement {
+    pub fn mount(&self) -> DomNode {
         let state = ChatState::new();
 
         let input_view = render_input_text(&state);
@@ -32,7 +32,7 @@ impl Chat {
     }
 }
 
-fn render_status(state: &ChatState) -> DomComment {
+fn render_status(state: &ChatState) -> DomNode {
     state.connect.render_value(
         |is_connect| {
             let message = match is_connect.is_some() {
@@ -50,7 +50,7 @@ fn render_status(state: &ChatState) -> DomComment {
 }
 
 
-pub fn render_input_text(state: &ChatState) -> DomElement {
+pub fn render_input_text(state: &ChatState) -> DomNode {
     let state = state.clone();
     let text_value = state.input_text.to_computed();
 

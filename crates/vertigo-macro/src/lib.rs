@@ -15,7 +15,7 @@ mod wasm_path;
 
 use html_parser::dom_inner;
 use proc_macro::{TokenStream, Span};
-use syn::Visibility;
+use syn::{Visibility, __private::ToTokens};
 
 use crate::{
     css_parser::generate_css_string,
@@ -145,11 +145,21 @@ pub fn main(_attr: TokenStream, input: TokenStream) -> TokenStream {
 }
 
 #[proc_macro_attribute]
+#[proc_macro_error]
 pub fn component(_attr: TokenStream, input: TokenStream) -> TokenStream {
     let ast = syn::parse_macro_input!(input as syn::ItemFn);
 
     //function name
     let name = &ast.sig.ident;
+
+    if ast.sig.output.to_token_stream().to_string() != "" {
+        emit_error!(
+            Span::call_site(),
+            "{} => \"{}\"", "remove the information about the returned type. A component always returns DomNode",
+            ast.sig.output.to_token_stream().to_string()
+        );
+        return quote! { }.into();
+    }
 
     let mut struct_fields = Vec::new();
 
@@ -193,10 +203,10 @@ pub fn component(_attr: TokenStream, input: TokenStream) -> TokenStream {
         }
 
         impl #name {
-            pub fn mount(self) -> vertigo::DomElement {
+            pub fn mount(self) -> vertigo::DomNode {
                 #(#param_names)*
 
-                #body
+                (#body).into()
             }
         }
     };

@@ -1,6 +1,6 @@
 use std::collections::HashSet;
 
-use vertigo::{css, Css, DomElement, dom, Computed, bind};
+use vertigo::{css, Css, dom, Computed, bind, DomNode, DomElement};
 use crate::app::sudoku::state::{number_item::SudokuValue, Cell};
 
 fn css_item_only_one(cell_width: u32) -> Css {
@@ -43,13 +43,13 @@ fn css_item(should_show: bool) -> Css {
     )
 }
 
-fn view_one_possible(cell_width: u32, cell: &Cell) -> DomElement {
+fn view_one_possible(cell_width: u32, cell: &Cell) -> DomNode {
     let cell = cell.clone();
 
     let render = cell.possible.render_value({
         let cell = cell.clone();
         move |possible| {
-            let wrapper = dom! { <div /> };
+            let wrapper = DomElement::new("div");
 
             for number in possible.iter() {
                 let on_set = bind!(cell, number, || {
@@ -63,7 +63,7 @@ fn view_one_possible(cell_width: u32, cell: &Cell) -> DomElement {
                 });
             }
 
-            wrapper
+            wrapper.into()
         }
     });
 
@@ -74,7 +74,7 @@ fn view_one_possible(cell_width: u32, cell: &Cell) -> DomElement {
     }
 }
 
-fn view_last_value(cell_width: u32, cell: &Cell, possible_last_value: SudokuValue) -> DomElement {
+fn view_last_value(cell_width: u32, cell: &Cell, possible_last_value: SudokuValue) -> DomNode {
     let on_set = bind!(cell, possible_last_value, || {
         cell.number.value.set(Some(possible_last_value));
     });
@@ -88,7 +88,7 @@ fn view_last_value(cell_width: u32, cell: &Cell, possible_last_value: SudokuValu
     }
 }
 
-fn view_default(cell_width: u32, cell: &Cell, possible: HashSet<SudokuValue>) -> DomElement {
+fn view_default(cell_width: u32, cell: &Cell, possible: HashSet<SudokuValue>) -> DomNode {
     let css_wrapper = css!("
         width: {cell_width}px;
         height: {cell_width}px;
@@ -99,7 +99,7 @@ fn view_default(cell_width: u32, cell: &Cell, possible: HashSet<SudokuValue>) ->
         flex-shrink: 0;
     ");
 
-    let wrapper = dom! { <div css={css_wrapper} /> };
+    let wrapper = DomElement::new("div").css(css_wrapper);
 
     for number in SudokuValue::variants().into_iter() {
         let should_show = possible.contains(&number);
@@ -123,7 +123,7 @@ fn view_default(cell_width: u32, cell: &Cell, possible: HashSet<SudokuValue>) ->
         });
     }
 
-    wrapper
+    wrapper.into()
 }
 
 #[derive(Clone, PartialEq, Eq)]
@@ -133,7 +133,7 @@ enum CellView {
     Default(HashSet<SudokuValue>)
 }
 
-pub fn render_cell_possible(cell_width: u32, cell: &Cell) -> DomElement {
+pub fn render_cell_possible(cell_width: u32, cell: &Cell) -> DomNode {
     let cell = cell.clone();
 
     let view = Computed::from({

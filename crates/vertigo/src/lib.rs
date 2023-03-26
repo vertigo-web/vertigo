@@ -10,10 +10,10 @@
 //! ## Example 1
 //!
 //! ```rust
-//! use vertigo::{dom, DomElement, Value, bind, main};
+//! use vertigo::{dom, DomNode, Value, bind, main};
 //!
 //! #[main]
-//! pub fn app() -> DomElement {
+//! pub fn app() -> DomNode {
 //!     let count = Value::new(0);
 //!
 //!     let increment = bind!(count, || {
@@ -46,10 +46,10 @@
 //! ## Example 2
 //!
 //! ```rust
-//! use vertigo::{css, component, DomElement, Value, dom, main};
+//! use vertigo::{css, component, DomNode, Value, dom, main};
 //!
 //! #[component]
-//! pub fn MyMessage(message: Value<String>) -> DomElement {
+//! pub fn MyMessage(message: Value<String>) {
 //!     dom! {
 //!         <p>
 //!             "Message to the world: "
@@ -59,7 +59,7 @@
 //! }
 //!
 //! #[main]
-//! fn app() -> DomElement {
+//! fn app() -> DomNode {
 //!     let message = Value::new("Hello world!".to_string());
 //!
 //!     let main_div = css!("
@@ -221,7 +221,7 @@ pub mod html_entities;
 
 pub struct DriverConstruct {
     driver: Driver,
-    subscription: ValueMut<Option<DomElement>>,
+    subscription: ValueMut<Option<DomNode>>,
 }
 
 impl DriverConstruct {
@@ -234,7 +234,7 @@ impl DriverConstruct {
         }
     }
 
-    fn set_root(&self, root_view: DomElement) {
+    fn set_root(&self, root_view: DomNode) {
         self.subscription.set(Some(root_view));
     }
 }
@@ -244,7 +244,7 @@ thread_local! {
 }
 
 /// Starting point of the app.
-fn start_app_inner(root_view: DomElement) {
+fn start_app_inner(root_view: DomNode) {
     get_driver_state("start_app", |state| {
         init_env(state.driver.inner.api.clone());
         state.driver.inner.api.on_fetch_start.trigger(());
@@ -256,7 +256,7 @@ fn start_app_inner(root_view: DomElement) {
     });
 }
 
-pub fn start_app(init_app: fn() -> DomElement) {
+pub fn start_app(init_app: fn() -> DomNode) {
     get_driver_state("start_app", |state| {
         init_env(state.driver.inner.api.clone());
 

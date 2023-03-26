@@ -1,23 +1,7 @@
 use syn::{Expr, __private::ToTokens};
 use syn_rsx::{parse, Node, NodeType};
 use proc_macro::{TokenStream};
-use proc_macro2::{TokenStream as TokenStream2, Span};
-
-fn find_attribute(span: Span, attributes: &[Node], attribute: &'static str) -> Result<Expr, ()> {
-    for attr_item in attributes {
-        assert_eq!(attr_item.node_type, NodeType::Attribute);
-
-        let name = attr_item.name_as_string().unwrap();
-        let value = attr_item.value.clone().unwrap();
-
-        if name == attribute {
-            return Ok(value);
-        }
-    }
-
-    emit_error!(span, format!("Expected attribute '{attribute}'"));
-    Err(())
-}
+use proc_macro2::{TokenStream as TokenStream2}; //, Span};
 
 /// Strips expression from excessive brackets (only once)
 fn strip_brackets(expr: Expr) -> TokenStream2 {
@@ -100,17 +84,6 @@ fn convert_node(node: Node) -> Result<TokenStream2, ()> {
     let node_name = node.name_as_string().unwrap();
     // let span = node.name_span().unwrap();
 
-    if node_name == "text" {
-        let span = node.name_span().unwrap();
-
-        let computed = find_attribute(span, &node.attributes, "computed")?;
-        let computed = strip_brackets(computed);
-
-        return Ok(quote!{
-            vertigo::DomText::new_computed(#computed)
-        });
-    }
-
     if is_component_name(&node_name) {
         return Ok(convert_to_component(node))
     }
@@ -153,7 +126,7 @@ fn convert_node(node: Node) -> Result<TokenStream2, ()> {
             })
         } else if name == "css" {
             out_attr.push(quote!{
-                .css(#value.into())
+                .css(#value)
             })
         } else {
             out_attr.push(quote!{
@@ -247,7 +220,10 @@ pub fn dom_inner(input: TokenStream) -> TokenStream {
 
     if modes_dom.len() == 1 {
         let last = modes_dom.pop().unwrap();
-        return last.into();
+
+        return quote! {
+            vertigo::DomNode::from(#last)
+        }.into();
     }
 
     if modes_dom.is_empty() {
@@ -255,8 +231,8 @@ pub fn dom_inner(input: TokenStream) -> TokenStream {
     }
 
     quote! {
-        vertigo::DomComment::dom_fragment(vec!(
+        vertigo::DomNode::from(vertigo::DomComment::dom_fragment(vec!(
             #(#modes_dom,)*
-        ))
+        )))
     }.into()
 }

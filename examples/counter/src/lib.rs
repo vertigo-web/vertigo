@@ -1,7 +1,7 @@
-use vertigo::{main, Value, bind, DomElement, dom, component};
+use vertigo::{main, Value, bind, DomNode, dom, component};
 
 #[component]
-fn App(count: Value<i32>) -> DomElement {
+fn App(count: Value<i32>) {
     let increment = bind!(count, || {
         count.change(|value| {
             *value += 1;
@@ -29,7 +29,7 @@ fn App(count: Value<i32>) -> DomElement {
 }
 
 #[main]
-fn render() -> DomElement {
+fn render() -> DomNode {
     let count = Value::new(0);
 
     dom! {
