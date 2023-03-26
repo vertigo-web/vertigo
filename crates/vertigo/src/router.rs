@@ -13,7 +13,7 @@ pub struct Router<T: Clone + ToString + From<String> + PartialEq + 'static> {
 /// Router based on hash part of current location.
 ///
 /// ```rust
-/// use vertigo::{dom, Computed, Value, DomElement};
+/// use vertigo::{dom, Computed, Value, DomNode};
 /// use vertigo::router::Router;
 ///
 /// #[derive(Clone, PartialEq, Debug)]
@@ -55,7 +55,7 @@ pub struct Router<T: Clone + ToString + From<String> + PartialEq + 'static> {
 /// }
 ///
 /// impl State {
-///     pub fn component() -> DomElement {
+///     pub fn component() -> DomNode {
 ///         let route = Router::new_hash_router();
 ///
 ///         let state = State {
@@ -66,7 +66,7 @@ pub struct Router<T: Clone + ToString + From<String> + PartialEq + 'static> {
 ///     }
 /// }
 ///
-/// fn render(state: State) -> DomElement {
+/// fn render(state: State) -> DomNode {
 ///     dom! {
 ///         <div>
 ///             "..."

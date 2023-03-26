@@ -1,6 +1,6 @@
-use vertigo::{css, DomElement, dom};
+use vertigo::{css, DomNode, dom};
 
-pub fn spinner() -> DomElement {
+pub fn spinner() -> DomNode {
     let spinner_css = css!("
         width: 40px;
         height: 40px;

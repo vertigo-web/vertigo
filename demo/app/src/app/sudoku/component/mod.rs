@@ -1,4 +1,4 @@
-use vertigo::{css, bind, DomElement, dom, component};
+use vertigo::{css, bind, dom, component, DomNode};
 
 use super::state::{sudoku_square::SudokuSquare, tree_box::TreeBoxIndex, Cell, SudokuState};
 
@@ -6,7 +6,7 @@ pub mod render_cell_possible;
 pub mod render_cell_value;
 
 #[component]
-pub fn Sudoku(state: SudokuState) -> DomElement {
+pub fn Sudoku(state: SudokuState) {
     let wrapper_css = css!("
         display: flex;
     ");
@@ -20,7 +20,7 @@ pub fn Sudoku(state: SudokuState) -> DomElement {
 }
 
 #[component]
-pub fn MainRender(sudoku: SudokuState) -> DomElement {
+pub fn MainRender(sudoku: SudokuState) {
     let (group_width, group_height, view1) = render_group(sudoku.grid.get_from(TreeBoxIndex::First , TreeBoxIndex::First ));
     let (_, _, view2) = render_group(sudoku.grid.get_from(TreeBoxIndex::First , TreeBoxIndex::Middle));
     let (_, _, view3) = render_group(sudoku.grid.get_from(TreeBoxIndex::First , TreeBoxIndex::Last  ));
@@ -71,7 +71,7 @@ pub fn MainRender(sudoku: SudokuState) -> DomElement {
     }
 }
 
-fn render_group(group: &SudokuSquare<Cell>) -> (u32, u32, DomElement) {
+fn render_group(group: &SudokuSquare<Cell>) -> (u32, u32, DomNode) {
     let (cell_width, cell_height, view1) = render_cell(group.get_from(TreeBoxIndex::First , TreeBoxIndex::First ));
     let (_, _, view2) = render_cell(group.get_from(TreeBoxIndex::First , TreeBoxIndex::Middle));
     let (_, _, view3) = render_cell(group.get_from(TreeBoxIndex::First , TreeBoxIndex::Last  ));
@@ -117,7 +117,7 @@ fn render_group(group: &SudokuSquare<Cell>) -> (u32, u32, DomElement) {
     (width, height, group)
 }
 
-fn render_cell(item: &Cell) -> (u32, u32, DomElement) {
+fn render_cell(item: &Cell) -> (u32, u32, DomNode) {
     let item = item.clone();
 
     let small_item_width = 24;
@@ -156,7 +156,7 @@ fn render_cell(item: &Cell) -> (u32, u32, DomElement) {
 }
 
 #[component]
-fn ExamplesRender(sudoku: SudokuState) -> DomElement {
+fn ExamplesRender(sudoku: SudokuState) {
     let clear = bind!(sudoku, || {
         sudoku.clear();
     });

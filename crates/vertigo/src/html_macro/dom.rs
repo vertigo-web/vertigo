@@ -41,13 +41,11 @@ impl<T: ToString> EmbedDom for T {
 
 impl<T: ToString + Clone + PartialEq + 'static> EmbedDom for &Computed<T> {
     fn embed(self) -> DomNode {
-        let comment_create = self.render_value(|val|
+        self.render_value(|val|
             DomNode::Text {
                 node: DomText::new(val.to_string())
             }
-        );
-
-        comment_create.into()
+        )
     }
 }
 

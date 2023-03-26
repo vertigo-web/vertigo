@@ -81,7 +81,7 @@ pub fn MyMessage(message: Value<String>) {
 }
 
 #[main]
-fn app() -> DomElement {
+fn app() -> DomNode {
     let message = Value::new("Hello world!".to_string());
 
     let main_div = css!("

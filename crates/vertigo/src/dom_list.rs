@@ -4,7 +4,7 @@ use std::rc::Rc;
 
 use crate::dom::dom_id::DomId;
 use crate::struct_mut::ValueMut;
-use crate::{Computed, get_driver, DomComment, DomElement};
+use crate::{Computed, get_driver, DomComment, DomNode};
 
 //TODO - Check out other options for reading refs
 
@@ -41,14 +41,14 @@ pub fn render_list<
 >(
     computed: Computed<Vec<T>>,
     get_key: impl Fn(&T) -> K + 'static,
-    render: impl Fn(&T) -> DomElement + 'static,
+    render: impl Fn(&T) -> DomNode + 'static,
 ) -> DomComment {
 
     let get_key = Rc::new(get_key);
     let render = Rc::new(render);
 
     DomComment::new_marker("list element", move |parent_id, comment_id| {
-        let current_list: Rc<ValueMut<VecDeque<(T, DomElement)>>> = Rc::new(ValueMut::new(VecDeque::new()));
+        let current_list: Rc<ValueMut<VecDeque<(T, DomNode)>>> = Rc::new(ValueMut::new(VecDeque::new()));
 
         Some(computed.clone().subscribe({
             let get_key = get_key.clone();
@@ -87,11 +87,11 @@ fn reorder_nodes<
 >(
     parent_id: DomId,
     comment_id: DomId,
-    mut real_child: VecDeque<(T, DomElement)>,
+    mut real_child: VecDeque<(T, DomNode)>,
     mut new_child: VecDeque<T>,
     get_key: Rc<dyn Fn(&T) -> K + 'static>,
-    render: Rc<dyn Fn(&T) -> DomElement + 'static>,
-) -> VecDeque<(T, DomElement)> {
+    render: Rc<dyn Fn(&T) -> DomNode + 'static>,
+) -> VecDeque<(T, DomNode)> {
     let pairs_top = get_pairs_top(&mut real_child, &mut new_child);
     let mut pairs_bottom = get_pairs_bottom(&mut real_child, &mut new_child);
 
@@ -111,7 +111,7 @@ fn reorder_nodes<
     pairs
 }
 
-fn find_first_dom<T>(list: &VecDeque<(T, DomElement)>) -> Option<DomId> {
+fn find_first_dom<T>(list: &VecDeque<(T, DomNode)>) -> Option<DomId> {
     if let Some((_, first)) = list.get(0) {
         return Some(first.id_dom());
     }
@@ -121,9 +121,9 @@ fn find_first_dom<T>(list: &VecDeque<(T, DomElement)>) -> Option<DomId> {
 
 // Try to match starting from top
 fn get_pairs_top<T: PartialEq>(
-    current: &mut VecDeque<(T, DomElement)>,
+    current: &mut VecDeque<(T, DomNode)>,
     new_child: &mut VecDeque<T>,
-) -> VecDeque<(T, DomElement)> {
+) -> VecDeque<(T, DomNode)> {
     let mut pairs_top = VecDeque::new();
 
     loop {
@@ -155,9 +155,9 @@ fn get_pairs_top<T: PartialEq>(
 
 // Try to match starting from bottom
 fn get_pairs_bottom<T: PartialEq>(
-    current: &mut VecDeque<(T, DomElement)>,
+    current: &mut VecDeque<(T, DomNode)>,
     new_child: &mut VecDeque<T>,
-) -> VecDeque<(T, DomElement)> {
+) -> VecDeque<(T, DomNode)> {
     let mut pairs_bottom = VecDeque::new();
 
     loop {
@@ -193,12 +193,12 @@ fn get_pairs_middle<
 >(
     parent_id: DomId,
     last_before: DomId,
-    real_child: VecDeque<(T, DomElement)>,
+    real_child: VecDeque<(T, DomNode)>,
     new_child: VecDeque<T>,
     get_key: Rc<dyn Fn(&T) -> K + 'static>,
-    render: Rc<dyn Fn(&T) -> DomElement + 'static>,
-) -> VecDeque<(T, DomElement)> {
-    let mut pairs_middle: VecDeque<(T, DomElement)> = VecDeque::new();
+    render: Rc<dyn Fn(&T) -> DomNode + 'static>,
+) -> VecDeque<(T, DomNode)> {
+    let mut pairs_middle: VecDeque<(T, DomNode)> = VecDeque::new();
 
     let mut real_node: CacheNode<K, T> = CacheNode::new(get_key, render);
 
@@ -228,14 +228,14 @@ struct CacheNode<
     T,
 > {
     get_key: Rc<dyn Fn(&T) -> K + 'static>,
-    create_new: Rc<dyn Fn(&T) -> DomElement + 'static>,
-    data: HashMap<K, VecDeque<DomElement>>,
+    create_new: Rc<dyn Fn(&T) -> DomNode + 'static>,
+    data: HashMap<K, VecDeque<DomNode>>,
 }
 
 impl<K: Eq + Hash, T> CacheNode<K, T> {
     pub fn new(
         get_key: Rc<dyn Fn(&T) -> K + 'static>,
-        create_new: Rc<dyn Fn(&T) -> DomElement + 'static>,
+        create_new: Rc<dyn Fn(&T) -> DomNode + 'static>,
     ) -> CacheNode<K, T> {
         CacheNode {
             get_key,
@@ -244,13 +244,13 @@ impl<K: Eq + Hash, T> CacheNode<K, T> {
         }
     }
 
-    pub fn insert(&mut self, item: &T, element: DomElement) {
+    pub fn insert(&mut self, item: &T, element: DomNode) {
         let key = (self.get_key)(item);
         let item = self.data.entry(key).or_insert_with(VecDeque::new);
         item.push_back(element);
     }
 
-    pub fn get_or_create(&mut self, item: &T) -> DomElement {
+    pub fn get_or_create(&mut self, item: &T) -> DomNode {
         let key = (self.get_key)(item);
         let element = self.data.entry(key).or_insert_with(VecDeque::new).pop_front();
 

@@ -1,4 +1,4 @@
-use vertigo::{main, css, bind, DomElement, dom, Value};
+use vertigo::{main, css, bind, DomNode, dom, Value};
 
 mod light;
 use light::Light;
@@ -11,7 +11,7 @@ pub enum LightState {
     Yellow,
 }
 
-pub fn app(state: &Value<LightState>) -> DomElement {
+pub fn app(state: &Value<LightState>) -> DomNode {
     let red_on = state.map(|state| state == LightState::Red || state == LightState::RedYellow);
     let yellow_on = state.map(|state| state == LightState::Yellow || state == LightState::RedYellow);
     let green_on = state.map(|state| state == LightState::Green);
@@ -57,7 +57,7 @@ pub fn app(state: &Value<LightState>) -> DomElement {
 }
 
 #[main]
-fn render() -> DomElement {
+fn render() -> DomNode {
     let state = Value::new(LightState::Red);
     app(&state)
 }

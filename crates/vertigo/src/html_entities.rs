@@ -2,9 +2,9 @@
 //! Constants of unicode signs labeled with HTML entities names
 //!
 //! ```rust
-//! use vertigo::{dom, DomElement, html_entities::*};
+//! use vertigo::{dom, DomNode, html_entities::*};
 //!
-//! fn render() -> DomElement {
+//! fn render() -> DomNode {
 //!    dom! {
 //!       <div>{larr} " Back"</div>
 //!    }

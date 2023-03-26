@@ -1,8 +1,8 @@
-use vertigo::{css, bind, dom, DomElement};
+use vertigo::{css, bind, dom, DomNode};
 
 use crate::app::sudoku::state::{number_item::SudokuValue, Cell};
 
-pub fn render_cell_value(item_height_size: u32, value: SudokuValue, cell: &Cell) -> DomElement {
+pub fn render_cell_value(item_height_size: u32, value: SudokuValue, cell: &Cell) -> DomNode {
     let cell = cell.clone();
 
     let delete_component = cell.show_delete.render_value_option({

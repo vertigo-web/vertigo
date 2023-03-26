@@ -123,7 +123,9 @@ impl DomElement {
         self.subscriptions.push(client);
     }
 
-    pub fn css(self, css: CssValue) -> Self {
+    pub fn css(self, css: impl Into<CssValue>) -> Self {
+        let css = css.into();
+
         match css {
             CssValue::Css(css) => {
                 let class_name = get_driver().inner.css_manager.get_class_name(&css);
