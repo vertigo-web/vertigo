@@ -183,6 +183,7 @@ pub use log;
 /// };
 /// ```
 pub use vertigo_macro::dom;
+pub use vertigo_macro::dom_element;
 
 /// Version of `dom!` macro that additionally emits compiler warning with generated code.
 pub use vertigo_macro::dom_debug;

@@ -1,7 +1,7 @@
 use syn::{Expr, __private::ToTokens};
 use syn_rsx::{parse, Node, NodeType};
 use proc_macro::{TokenStream};
-use proc_macro2::{TokenStream as TokenStream2}; //, Span};
+use proc_macro2::{TokenStream as TokenStream2, Span};
 
 /// Strips expression from excessive brackets (only once)
 fn strip_brackets(expr: Expr) -> TokenStream2 {
@@ -79,7 +79,7 @@ fn check_ident(name: &str) -> bool {
     true
 }
 
-fn convert_node(node: Node) -> Result<TokenStream2, ()> {
+fn convert_node(node: Node, convert_to_dom_node: bool) -> Result<TokenStream2, ()> {
     assert_eq!(node.node_type, NodeType::Element);
     let node_name = node.name_as_string().unwrap();
     // let span = node.name_span().unwrap();
@@ -169,7 +169,7 @@ fn convert_node(node: Node) -> Result<TokenStream2, ()> {
                     out_child.push(convert_child_to_component(child))
                 }
                 _ => {
-                    let node_ready = convert_node(child)?;
+                    let node_ready = convert_node(child, false)?;
 
                     out_child.push(quote! {
                         .child(#node_ready)
@@ -198,11 +198,21 @@ fn convert_node(node: Node) -> Result<TokenStream2, ()> {
         }
     }
 
-    Ok(quote! {
-        vertigo::DomElement::new(#node_name)
-        #(#out_attr)*
-        #(#out_child)*
-    })
+    if convert_to_dom_node {
+        Ok(quote! {
+            vertigo::DomNode::from(
+                vertigo::DomElement::new(#node_name)
+                #(#out_attr)*
+                #(#out_child)*
+            )
+        })
+    } else {
+        Ok(quote! {
+            vertigo::DomElement::new(#node_name)
+            #(#out_attr)*
+            #(#out_child)*
+        })
+    }
 }
 
 pub fn dom_inner(input: TokenStream) -> TokenStream {
@@ -211,7 +221,7 @@ pub fn dom_inner(input: TokenStream) -> TokenStream {
     let mut modes_dom = Vec::new();
 
     for node in nodes {
-        let Ok(node) = convert_node(node) else {
+        let Ok(node) = convert_node(node, true) else {
             return quote! {}.into();
         };
 
@@ -235,4 +245,31 @@ pub fn dom_inner(input: TokenStream) -> TokenStream {
             #(#modes_dom,)*
         )))
     }.into()
+}
+
+
+pub fn dom_element_inner(input: TokenStream) -> TokenStream {
+    let nodes = parse(input).unwrap();
+
+    let mut modes_dom = Vec::new();
+
+    for node in nodes {
+        let Ok(node) = convert_node(node, false) else {
+            return quote! {}.into();
+        };
+
+        modes_dom.push(node);
+    }
+
+    if modes_dom.len() == 1 {
+        let last = modes_dom.pop().unwrap();
+
+        return quote! {
+            #last
+        }.into();
+    }
+
+    emit_error!(Span::call_site(), "This macro supports only one DomElement as root".to_string());
+    quote!{}.into()
+
 }

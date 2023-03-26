@@ -1,5 +1,5 @@
 use std::rc::Rc;
-use vertigo::{css, Value, bind, DomNode, dom, transaction, DomElement};
+use vertigo::{css, Value, bind, DomNode, dom, transaction, DomElement, dom_element};
 
 pub use super::State;
 
@@ -105,7 +105,9 @@ impl GameOfLife {
     }
 
     fn render_matrix(matrix: &Rc<Vec<Vec<Value<bool>>>>) -> DomElement {
-        let out = DomElement::new("div");
+        let out = dom_element! {
+            <div />
+        };
 
         for item in matrix.iter() {
             out.add_child(Self::render_row(item));
@@ -121,7 +123,9 @@ impl GameOfLife {
             height: 10px;
         ");
 
-        let wrapper = DomElement::new("div").css(css_row);
+        let wrapper = dom_element! {
+            <div css={css_row} />
+        };
 
         for item in matrix.iter() {
             wrapper.add_child(Self::render_cell(item));

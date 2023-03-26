@@ -7,7 +7,7 @@ use crate::{
 pub fn render_value_option<T: Clone + PartialEq + 'static>(
     computed: Computed<T>,
     render: impl Fn(T) -> Option<DomNode> + 'static
-) -> DomComment {
+) -> DomNode {
     let render = Rc::new(render);
 
     DomComment::new_marker("value element", move |parent_id, comment_id| {
@@ -27,13 +27,13 @@ pub fn render_value_option<T: Clone + PartialEq + 'static>(
                 });
             }
         }))
-    })
+    }).into()
 }
 
 pub fn render_value<T: Clone + PartialEq + 'static>(
     computed: Computed<T>,
     render: impl Fn(T) -> DomNode + 'static
-) -> DomComment {
+) -> DomNode {
     render_value_option(computed, move |value| -> Option<DomNode> {
         Some(render(value))
     })

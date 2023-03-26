@@ -174,7 +174,7 @@ impl<T: Clone + PartialEq + 'static> Value<T> {
         self.to_computed().render_value(render)
     }
 
-    pub fn render_value_option(&self, render: impl Fn(T) -> Option<DomNode> + 'static) -> DomComment {
+    pub fn render_value_option(&self, render: impl Fn(T) -> Option<DomNode> + 'static) -> DomNode {
         self.to_computed().render_value_option(render)
     }
 }
