@@ -40,7 +40,7 @@ fn convert_to_component(node: Node) -> TokenStream2 {
                 let value = strip_brackets(value);
 
                 if value.to_string().starts_with('&') {
-                    Some(quote! { #key: (#value).clone().into(), })
+                    Some(quote! { #key: (#value).clone(), })
                 } else {
                     Some(quote! { #key: (#value).into(), })
                 }
