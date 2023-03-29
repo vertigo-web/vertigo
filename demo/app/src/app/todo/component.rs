@@ -1,4 +1,6 @@
-use vertigo::{css, Css, bind, dom, Resource, DomNode, dom_element};
+use vertigo::{css, Css, bind, dom, Resource, DomNode, dom_element, Value};
+
+use crate::app::todo::Select;
 
 use super::state::{TodoState, View};
 
@@ -114,6 +116,21 @@ fn todo_post_render(state: &TodoState, post_id: u32) -> DomNode {
         view.set(View::Main);
     });
 
+    let authors = state.comments.get(&post_id)
+        .to_computed()
+        .map(|comments_res| {
+            match comments_res {
+                Resource::Ready(comments) => {
+                    comments.iter()
+                        .map(|comment| comment.email.clone())
+                        .collect()
+                }
+                _ => vec![]
+            }
+        });
+
+    let selected_author = Value::default();
+
     dom! {
         <div>
             { message }
@@ -121,6 +138,8 @@ fn todo_post_render(state: &TodoState, post_id: u32) -> DomNode {
                 "go to post list"
             </div>
             <hr />
+            "Select author: " <Select value={selected_author.clone()} options={authors} />
+            "Selected author: " {selected_author}
             <hr />
             { comments_out }
         </div>

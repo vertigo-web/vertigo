@@ -1,4 +1,3 @@
-
 export class EventEmitter<T> {
     private events: Set<(param: T) => void>;
 

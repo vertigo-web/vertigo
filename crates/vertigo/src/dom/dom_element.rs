@@ -305,6 +305,28 @@ impl DomElement {
         self
     }
 
+    pub fn on_change(self, on_change: impl Fn(String) + 'static) -> Self {
+        let (callback_id, drop) = self.driver.inner.api.callback_store.register(move |data| {
+            if let JsValue::String(text) = data {
+                on_change(text);
+            } else {
+                log::error!("Invalid data: on_change: {data:?}");
+            }
+
+            JsValue::Undefined
+        });
+
+        let drop_event = DropResource::new(move || {
+            self.driver.inner.dom.callback_remove(self.id_dom, "change", callback_id);
+            drop.off();
+        });
+
+        self.driver.inner.dom.callback_add(self.id_dom, "change", callback_id);
+        self.drop.push(drop_event);
+
+        self
+    }
+
     pub fn on_key_down(self, on_key_down: impl Fn(KeyDownEvent) -> bool + 'static) -> Self {
         let (callback_id, drop) = self.driver.inner.api.callback_store.register(move |data| {
             match get_key_down_event(data) {

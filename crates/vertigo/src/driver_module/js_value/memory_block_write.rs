@@ -58,4 +58,3 @@ impl MemoryBlockWrite {
         self.write(&bytes);
     }
 }
-

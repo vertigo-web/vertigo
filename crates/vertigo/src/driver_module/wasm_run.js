@@ -1117,7 +1117,7 @@ class DriverWebsocket {
     }
     websocket_register_callback = (host, callback_id) => {
         const wasm = this.getWasm();
-        let controller = SocketConnection.startSocket(host, 5000, //timeout connection 
+        let controller = SocketConnection.startSocket(host, 5000, //timeout connection
         3000, //timeout reconnection
         (message) => {
             if (this.controllerList.has(callback_id) === false) {
@@ -1368,6 +1368,14 @@ class DriverDom {
         }
         console.warn('event input ignore', target);
     }
+    callback_change(event, callback_id) {
+        const target = event.target;
+        if (target instanceof HTMLInputElement || target instanceof HTMLTextAreaElement || target instanceof HTMLSelectElement) {
+            this.getWasm().wasm_callback(callback_id, target.value);
+            return;
+        }
+        console.warn('event input ignore', target);
+    }
     callback_mouseenter(_event, callback_id) {
         // event.preventDefault();
         this.getWasm().wasm_callback(callback_id, undefined);
@@ -1456,6 +1464,9 @@ class DriverDom {
             }
             if (event_name === 'input') {
                 return this.callback_input(event, callback_id);
+            }
+            if (event_name === 'change') {
+                return this.callback_change(event, callback_id);
             }
             if (event_name === 'mouseenter') {
                 return this.callback_mouseenter(event, callback_id);
@@ -1879,7 +1890,7 @@ const runModule = async (wasm) => {
     const wasmModule = await WasmModule.create(wasm);
     console.info(`Wasm module: "${wasm}" -> initialized`);
     wasmModule.vertigo_entry_function();
-    console.info(`Wasm module: "${wasm}" -> launched vertigo_entry_function function`);
+    console.info(`Wasm module: "${wasm}" -> launched vertigo_entry_function`);
 };
 const findAndRunModule = async () => {
     document.querySelectorAll('*[data-vertigo-run-wasm]').forEach((node) => {

@@ -35,7 +35,7 @@ const jsValueDecodeItem = (cursor: BufferCursor): JsValueType => {
             type: 'u32',
             value: cursor.getU32()
         };
-    }    
+    }
 
     if (typeParam === 2) {
         return {
@@ -84,7 +84,7 @@ const jsValueDecodeItem = (cursor: BufferCursor): JsValueType => {
 
     if (typeParam === 11) {
         const out: Array<JsValueType> = [];
-        
+
         const listSize = cursor.getU16();
 
         for (let i=0; i<listSize; i++) {
@@ -121,7 +121,7 @@ const jsValueDecodeItem = (cursor: BufferCursor): JsValueType => {
     }
 
     console.error('typeParam', typeParam);
-    throw Error('Nieprawidłowe odgałęzienie');
+    throw Error('Invalid branch');
 };
 
 export const jsValueDecode = (getUint8Memory: () => Uint8Array, ptr: number, size: number): JsValueType => {
@@ -390,7 +390,7 @@ export const convertToJsValue = (value: unknown): JsValueType => {
         return {
             type: 'i64',
             value: BigInt(value)
-        };    
+        };
     }
 
     if (typeof value === 'bigint') {
@@ -465,4 +465,3 @@ export const convertToJsJson = (value: unknown): JsJsonType => {
     console.warn('convertToJsJson', value);
     throw Error('It is not possible to convert this data to JsJson');
 };
-

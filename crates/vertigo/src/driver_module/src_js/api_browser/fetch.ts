@@ -130,7 +130,7 @@ export class Fetch {
 
             const contentType = response.headers.get('content-type');
             const responseType = getTypeResponse(contentType);
-        
+
             if (responseType === 'json') {
                 catchError(wasm, callback_id, response, async (response) => {
                     const json = await response.json();
@@ -162,12 +162,12 @@ export class Fetch {
 
             catchError(wasm, callback_id, response, async (response) => {
                 const text = await response.arrayBuffer();
-                const textUunt8Array = new Uint8Array(text);
+                const textUint8Array = new Uint8Array(text);
 
                 wasm.wasm_callback(callback_id, [
                     true,                                       //ok
                     { type: 'u32', value: response.status },    //http code
-                    textUunt8Array                              //body (text)
+                    textUint8Array                              //body (text)
                 ]);
             });
         } catch (err) {

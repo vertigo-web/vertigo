@@ -113,14 +113,14 @@ export class BufferCursor {
         const size = buffer.length;
         this.setU32(size);
 
-        const subbuffer = this
+        const sub_buffer = this
             .getUint8Memory()
             .subarray(
                 this.ptr + this.pointer,
                 this.ptr + this.pointer + size
             );
 
-        subbuffer.set(buffer);
+        sub_buffer.set(buffer);
 
         this.pointer += size;
     }

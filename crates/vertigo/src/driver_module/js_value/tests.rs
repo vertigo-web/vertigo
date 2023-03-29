@@ -1,7 +1,7 @@
 use std::collections::HashMap;
+
 use super::js_value_struct::JsValue;
 use super::js_json_struct::JsJson;
-
 
 #[test]
 fn json_json_string() {
@@ -15,7 +15,6 @@ fn json_json_string() {
 
     assert_eq!(data1, data2);
 }
-
 
 #[test]
 fn json_json_list() {
@@ -44,5 +43,3 @@ fn json_json_list() {
 
     assert_eq!(data1, data2);
 }
-
-
