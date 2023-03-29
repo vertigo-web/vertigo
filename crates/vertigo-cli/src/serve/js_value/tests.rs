@@ -16,7 +16,6 @@ fn json_json_string() {
     assert_eq!(data1, data2);
 }
 
-
 #[test]
 fn json_json_list() {
     let data1 = JsValue::Json(JsJson::List(vec!(

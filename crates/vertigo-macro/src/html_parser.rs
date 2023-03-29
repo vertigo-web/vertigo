@@ -108,6 +108,10 @@ fn convert_node(node: Node, convert_to_dom_node: bool) -> Result<TokenStream2, (
             out_attr.push(quote!{
                 .on_input(#value)
             })
+        } else if name == "on_change" {
+            out_attr.push(quote!{
+                .on_change(#value)
+            })
         } else if name == "on_key_down" {
             out_attr.push(quote!{
                 .on_key_down(#value)

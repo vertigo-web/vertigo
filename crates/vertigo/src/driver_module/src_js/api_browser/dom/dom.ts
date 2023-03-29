@@ -197,6 +197,17 @@ export class DriverDom {
         console.warn('event input ignore', target);
     }
 
+    private callback_change(event: Event, callback_id: bigint) {
+        const target = event.target;
+
+        if (target instanceof HTMLInputElement || target instanceof HTMLTextAreaElement || target instanceof HTMLSelectElement) {
+            this.getWasm().wasm_callback(callback_id, target.value);
+            return;
+        }
+
+        console.warn('event input ignore', target);
+    }
+
     private callback_mouseenter(_event: Event, callback_id: bigint) {
         // event.preventDefault();
         this.getWasm().wasm_callback(callback_id, undefined);
@@ -297,6 +308,10 @@ export class DriverDom {
 
             if (event_name === 'input') {
                 return this.callback_input(event, callback_id);
+            }
+
+            if (event_name === 'change') {
+                return this.callback_change(event, callback_id);
             }
 
             if (event_name === 'mouseenter') {

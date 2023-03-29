@@ -67,10 +67,10 @@ export class WasmModule {
                             if (newWsk === null) {
                                 return 0;
                             }
-                
+
                             wsk = newWsk;
                         }
-                
+
                         return getWasm().valueSaveToBuffer(wsk.toValue());
                     }
 

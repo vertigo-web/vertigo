@@ -27,20 +27,20 @@ export class DriverWebsocket {
 
         let controller = SocketConnection.startSocket(
             host,
-            5000,                   //timeout connection 
+            5000,                   //timeout connection
             3000,                   //timeout reconnection
             (message) => {
 
                 if (this.controllerList.has(callback_id) === false) {
                     return;
                 }
-                    
+
                 if (message.type === 'socket') {
                     this.socket.set(callback_id, message.socket);
                     wasm.wasm_callback(callback_id, true);
                     return;
                 }
-        
+
                 if (message.type === 'message') {
                     wasm.wasm_callback(callback_id, message.message);
                     return;

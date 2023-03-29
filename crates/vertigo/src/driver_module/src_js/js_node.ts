@@ -150,7 +150,7 @@ export class JsNode {
 
     nextCall(path: Array<JsValueType>, args: Array<JsValueType>): JsNode | null {
         const [property, ...callArgs] = args;
-        
+
         if (GuardJsValue.isString(property)) {
             try {
                 let paramsJs = callArgs.map(convertFromJsValue);

@@ -87,7 +87,7 @@ fn split_params_and_body_function(tokens: &[TokenTree]) -> Result<TokensParamsBo
         })
         .filter(|item| !item.is_empty())
         .collect::<Vec<_>>();
-    
+
     let body = {
         let mut occurred_bracket = false;
         let mut body = Vec::new();

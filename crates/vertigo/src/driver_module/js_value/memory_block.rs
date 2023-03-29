@@ -98,6 +98,6 @@ impl Drop for MemoryBlock {
 }
 
 /*
-Inne sposoby alokacji i dealokacji:
+Other methods of alloc and de-alloc:
 https://www.hellorust.com/demos/sha1/index.html
 */

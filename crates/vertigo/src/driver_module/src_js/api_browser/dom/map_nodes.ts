@@ -38,7 +38,7 @@ export class MapNodes {
         if (id === 3) {
             return this.get_root_body();
         }
-        
+
         return this.data.get(id);
     }
 
@@ -103,8 +103,8 @@ export class MapNodes {
 
         if (item === undefined) {
             throw new Error(`${label}->delete: Item id not found = ${id}`);
-        }        
-        
+        }
+
         return item;
     }
 }

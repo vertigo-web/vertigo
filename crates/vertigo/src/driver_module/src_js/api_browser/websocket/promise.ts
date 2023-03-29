@@ -1,4 +1,3 @@
-
 type ResolveFn<T> = (data: T) => void;
 type RejectFn = (err: unknown) => void;
 
