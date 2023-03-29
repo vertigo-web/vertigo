@@ -3,7 +3,6 @@ use crate::{
     computed::{Client, GraphValue, graph_id::GraphId},
     dom_value::{render_value, render_value_option},
     dom_list::{render_list},
-    dom::dom_comment::DomComment,
     Value, DomNode
 };
 use std::hash::Hash;
@@ -127,7 +126,7 @@ impl<
         &self,
         get_key: impl Fn(&T) -> K + 'static,
         render: impl Fn(&T) -> DomNode + 'static,
-    ) -> DomComment {
+    ) -> DomNode {
         let list = self.map(|inner| {
             inner.into_iter().collect::<Vec<_>>()
         });
