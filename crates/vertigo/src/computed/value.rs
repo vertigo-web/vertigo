@@ -4,7 +4,6 @@ use std::{
 };
 use std::hash::Hash;
 use crate::DomNode;
-use crate::dom::dom_comment::DomComment;
 use crate::{
     computed::{Computed, Dependencies, GraphId}, struct_mut::ValueMut, DropResource,
     get_driver,
@@ -189,7 +188,7 @@ impl<
         &self,
         get_key: impl Fn(&T) -> K + 'static,
         render: impl Fn(&T) -> DomNode + 'static,
-    ) -> DomComment {
+    ) -> DomNode {
         self.to_computed().render_list(get_key, render)
     }
 }

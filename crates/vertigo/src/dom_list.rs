@@ -42,7 +42,7 @@ pub fn render_list<
     computed: Computed<Vec<T>>,
     get_key: impl Fn(&T) -> K + 'static,
     render: impl Fn(&T) -> DomNode + 'static,
-) -> DomComment {
+) -> DomNode {
 
     let get_key = Rc::new(get_key);
     let render = Rc::new(render);
@@ -78,7 +78,7 @@ pub fn render_list<
                 })
             }
         }))
-    })
+    }).into()
 }
 
 fn reorder_nodes<
