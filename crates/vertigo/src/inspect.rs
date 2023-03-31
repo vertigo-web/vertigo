@@ -76,6 +76,15 @@ impl DomDebugFragment {
                         }
                     }
                 },
+                DriverDomCommand::RemoveAttr { id, name } => {
+                    if let Some(node) = map.get_mut(&id) {
+                        if name == "class".into() {
+                            // TODO
+                        } else {
+                            node.attrs.remove(&name);
+                        }
+                    }
+                },
                 DriverDomCommand::RemoveNode { id } |
                 DriverDomCommand::RemoveText { id } |
                 DriverDomCommand::RemoveComment { id } => {

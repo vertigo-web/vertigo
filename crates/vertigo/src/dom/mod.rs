@@ -1,3 +1,4 @@
+pub mod attr_value;
 pub mod css;
 pub mod dom_node;
 pub mod dom_id;

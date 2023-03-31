@@ -119,14 +119,13 @@ fn todo_post_render(state: &TodoState, post_id: u32) -> DomNode {
     let authors = state.comments.get(&post_id)
         .to_computed()
         .map(|comments_res| {
-            match comments_res {
-                Resource::Ready(comments) => {
-                    comments.iter()
-                        .map(|comment| comment.email.clone())
-                        .collect()
+            let mut options = vec!["".to_string()];
+            if let Resource::Ready(comments) = comments_res {
+                for comment in comments.iter() {
+                    options.push(comment.email.clone());
                 }
-                _ => vec![]
             }
+            options
         });
 
     let selected_author = Value::default();

@@ -34,6 +34,10 @@ type CommandType = {
     name: string,
     value: string
 } | {
+    type: 'remove_attr',
+    id: number,
+    name: string
+} | {
     type: 'remove_node',
     id: number,
 } | {
@@ -136,6 +140,24 @@ export class DriverDom {
             if (node instanceof HTMLTextAreaElement) {
                 node.value = value;
                 node.defaultValue = value;
+                return;
+            }
+        }
+    }
+
+    private remove_attribute(id: number, name: string) {
+        const node = this.nodes.get_node("remove_attribute", id);
+        node.removeAttribute(name);
+
+        if (name == "value") {
+            if (node instanceof HTMLInputElement) {
+                node.value = "";
+                return;
+            }
+
+            if (node instanceof HTMLTextAreaElement) {
+                node.value = "";
+                node.defaultValue = "";
                 return;
             }
         }
@@ -448,6 +470,11 @@ export class DriverDom {
 
         if (command.type === 'set_attr') {
             this.set_attribute(command.id, command.name, command.value);
+            return;
+        }
+
+        if (command.type === 'remove_attr') {
+            this.remove_attribute(command.id, command.name);
             return;
         }
 

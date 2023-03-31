@@ -1323,6 +1323,21 @@ class DriverDom {
             }
         }
     }
+    remove_attribute(id, name) {
+        const node = this.nodes.get_node("remove_attribute", id);
+        node.removeAttribute(name);
+        if (name == "value") {
+            if (node instanceof HTMLInputElement) {
+                node.value = "";
+                return;
+            }
+            if (node instanceof HTMLTextAreaElement) {
+                node.value = "";
+                node.defaultValue = "";
+                return;
+            }
+        }
+    }
     remove_node(id) {
         const node = this.nodes.delete("remove_node", id);
         node.remove();
@@ -1580,6 +1595,10 @@ class DriverDom {
         }
         if (command.type === 'set_attr') {
             this.set_attribute(command.id, command.name, command.value);
+            return;
+        }
+        if (command.type === 'remove_attr') {
+            this.remove_attribute(command.id, command.name);
             return;
         }
         if (command.type === 'remove_text') {
