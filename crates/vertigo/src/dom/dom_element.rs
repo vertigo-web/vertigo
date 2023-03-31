@@ -1,62 +1,15 @@
 use crate::{
     driver_module::{driver::Driver, api::DomAccess, StaticString},
-    dom::{
-        dom_node::DomNode,
-        dom_id::DomId,
-    }, get_driver, Css, Client, Computed, struct_mut::VecMut, ApiImport, DropResource, DropFileItem,
-    JsValue, DomText, Value,
+    dom::{dom_node::DomNode, dom_id::DomId},
+    get_driver, Client, Computed, struct_mut::VecMut, ApiImport, DropResource, DropFileItem,
+    JsValue, DomText,
 };
 
-use super::types::{KeyDownEvent, DropFileEvent};
-use super::dom_element_class::DomElementClassMerge;
 use crate::struct_mut::VecDequeMut;
 
-pub enum AttrValue {
-    String(String),
-    Computed(Computed<String>),
-    Value(Value<String>)
-}
-
-impl<K: ToString> From<K> for AttrValue {
-    fn from(value: K) -> Self {
-        AttrValue::String(value.to_string())
-    }
-}
-
-impl From<Computed<String>> for AttrValue {
-    fn from(value: Computed<String>) -> Self {
-        AttrValue::Computed(value)
-    }
-}
-
-impl From<Value<String>> for AttrValue {
-    fn from(value: Value<String>) -> Self {
-        AttrValue::Value(value)
-    }
-}
-
-impl From<&Value<String>> for AttrValue {
-    fn from(value: &Value<String>) -> Self {
-        AttrValue::Value(value.clone())
-    }
-}
-
-pub enum CssValue {
-    Css(Css),
-    Computed(Computed<Css>),
-}
-
-impl From<Css> for CssValue {
-    fn from(value: Css) -> Self {
-        CssValue::Css(value)
-    }
-}
-
-impl From<Computed<Css>> for CssValue {
-    fn from(value: Computed<Css>) -> Self {
-        CssValue::Computed(value)
-    }
-}
+use super::attr_value::{AttrValue, CssAttrValue};
+use super::types::{KeyDownEvent, DropFileEvent};
+use super::dom_element_class::DomElementClassMerge;
 
 #[derive(Clone)]
 pub struct DomElementRef {
@@ -123,15 +76,15 @@ impl DomElement {
         self.subscriptions.push(client);
     }
 
-    pub fn css(self, css: impl Into<CssValue>) -> Self {
+    pub fn css(self, css: impl Into<CssAttrValue>) -> Self {
         let css = css.into();
 
         match css {
-            CssValue::Css(css) => {
+            CssAttrValue::Css(css) => {
                 let class_name = get_driver().inner.css_manager.get_class_name(&css);
                 self.class_manager.set_css(class_name);
             },
-            CssValue::Computed(css) => {
+            CssAttrValue::Computed(css) => {
                 let driver = self.driver;
                 let class_manager = self.class_manager.clone();
 
@@ -169,6 +122,25 @@ impl DomElement {
                     }
                 });
             },
+            AttrValue::ComputedOpt(computed) => {
+                let id_dom = self.id_dom;
+                let driver = self.driver;
+                let class_manager = self.class_manager.clone();
+
+                self.subscribe(computed, move |value| {
+                    if let Some(value) = value {
+                        if name.as_str() == "class" {
+                            class_manager.set_attribute(value);
+                        } else {
+                            driver.inner.dom.set_attr(id_dom, name.clone(), &value);
+                        }
+                    } else if name.as_str() == "class" {
+                        class_manager.remove_attribute();
+                    } else {
+                        driver.inner.dom.remove_attr(id_dom, name.clone());
+                    }
+                });
+            },
             AttrValue::Value(value) => {
                 let id_dom = self.id_dom;
                 let driver = self.driver;
@@ -179,6 +151,25 @@ impl DomElement {
                         class_manager.set_attribute(value);
                     } else {
                         driver.inner.dom.set_attr(id_dom, name.clone(), &value);
+                    }
+                });
+            }
+            AttrValue::ValueOpt(value) => {
+                let id_dom = self.id_dom;
+                let driver = self.driver;
+                let class_manager = self.class_manager.clone();
+
+                self.subscribe(value.to_computed(), move |value| {
+                    if let Some(value) = value {
+                        if name.as_str() == "class" {
+                            class_manager.set_attribute(value);
+                        } else {
+                            driver.inner.dom.set_attr(id_dom, name.clone(), &value);
+                        }
+                    } else if name.as_str() == "class" {
+                        class_manager.remove_attribute();
+                    } else {
+                        driver.inner.dom.remove_attr(id_dom, name.clone());
                     }
                 });
             }

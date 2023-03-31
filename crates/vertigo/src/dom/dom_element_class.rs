@@ -67,6 +67,13 @@ impl DomElementClassMerge {
         });
     }
 
+    pub fn remove_attribute(&self) {
+        self.inner.change(|state| {
+            state.attr_name = None;
+            state.refresh_dom();
+        });
+    }
+
     pub fn set_css(&self, new_value: String) {
         self.inner.change(|state| {
             state.css_name = Some(new_value);

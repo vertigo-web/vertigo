@@ -33,9 +33,9 @@ impl StateInitiation {
         }
     }
 
-    /// 
+    ///
     /// Returns true if we have gone to zero while decreasing
-    /// 
+    ///
     pub fn down(&mut self) -> bool {
         let send_commands = if let Self::Waiting { counter } = self {
             *counter -= 1;
@@ -145,7 +145,7 @@ pub struct DriverDom {
 impl DriverDom {
     pub fn new(api: &ApiImport) -> &'static DriverDom {
         let commands = Commands::new(api);
-        
+
         let sub1 = api.on_fetch_start.add({
             move |_| {
                 commands.fetch_up();
@@ -189,6 +189,13 @@ impl DriverDom {
             id,
             name: name.into(),
             value: value.into(),
+        });
+    }
+
+    pub fn remove_attr(&self, id: DomId, name: impl Into<StaticString>) {
+        self.commands.add_command(DriverDomCommand::RemoveAttr {
+            id,
+            name: name.into(),
         });
     }
 

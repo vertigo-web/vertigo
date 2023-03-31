@@ -21,6 +21,10 @@ pub enum DriverDomCommand {
         name: StaticString,
         value: String,
     },
+    RemoveAttr {
+        id: DomId,
+        name: StaticString,
+    },
     RemoveNode {
         id: DomId,
     },
@@ -94,6 +98,13 @@ impl DriverDomCommand {
                     .insert("id", id.to_u64())
                     .insert("name", name.as_str())
                     .insert("value", value)
+                    .get()
+            }
+            Self::RemoveAttr { id, name } => {
+                JsJsonObjectBuilder::default()
+                    .insert("type", "remove_attr")
+                    .insert("id", id.to_u64())
+                    .insert("name", name.as_str())
                     .get()
             }
             Self::RemoveNode { id } => {
