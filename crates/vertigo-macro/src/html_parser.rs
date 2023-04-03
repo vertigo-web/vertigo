@@ -132,6 +132,10 @@ fn convert_node(node: Node, convert_to_dom_node: bool) -> Result<TokenStream2, (
             out_attr.push(quote!{
                 .css(#value)
             })
+        } else if name == "vertigo-suspense" {
+            out_attr.push(quote!{
+                .suspense(Some(#value))
+            })
         } else {
             out_attr.push(quote!{
                 .attr(#name, #value)

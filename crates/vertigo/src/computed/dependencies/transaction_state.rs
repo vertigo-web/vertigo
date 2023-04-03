@@ -2,8 +2,7 @@ use std::collections::BTreeSet;
 
 use crate::{computed::graph_id::GraphId, struct_mut::ValueMut};
 
-use super::hook::Hooks;
-
+#[derive(PartialEq)]
 enum State {
     Idle,
     Modification {
@@ -22,19 +21,17 @@ impl Default for State {
 
 pub struct TransactionState {
     state: ValueMut<State>,
-    pub(crate) hooks: Hooks,
 }
 
 impl TransactionState {
     pub fn new() -> TransactionState {
         TransactionState {
             state: ValueMut::new(State::Idle),
-            hooks: Hooks::new(),
         }
     }
 
     pub fn up(&self) {
-        let TransactionState { state, hooks: _ } = self;
+        let TransactionState { state } = self;
 
         state.move_to_void(move |state| {
             match state {
@@ -82,7 +79,7 @@ impl TransactionState {
     }
 
     pub fn move_to_idle(&self) {
-        let TransactionState { state, hooks } = self;
+        let TransactionState { state } = self;
 
         state.move_to_void(move |state| {
             match state {
@@ -95,7 +92,6 @@ impl TransactionState {
                     State::Modification { level, client_ids }
                 }
                 State::Refreshing => {
-                    hooks.fire_end();
                     State::Idle
                 }
             }

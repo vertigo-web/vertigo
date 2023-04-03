@@ -1,5 +1,6 @@
 pub mod driver;
 mod dom;
+mod dom_suspense;
 pub mod dom_command;
 pub mod utils;
 pub mod api;
