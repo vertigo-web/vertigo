@@ -66,7 +66,7 @@ impl DriverInner {
             })
         };
 
-        let subscribe = dependencies.transaction_state.hooks.on_after_transaction(move || {
+        let subscribe = dependencies.hooks.on_after_transaction(move || {
             dom.flush_dom_changes();
         });
 
@@ -207,7 +207,7 @@ impl Driver {
 
     ///Function added for diagnostic purposes. It allows you to check whether a block with a transaction is missing somewhere.
     pub fn on_after_transaction(&self, callback: impl Fn() + 'static) -> DropResource {
-        self.inner.dependencies.transaction_state.hooks.on_after_transaction(callback)
+        self.inner.dependencies.hooks.on_after_transaction(callback)
     }
 
     pub fn is_browser(&self) -> bool {

@@ -91,6 +91,7 @@ fn todo_main_render(state: &TodoState) -> DomNode {
                 dom! {
                     <div>
                         "loading ..."
+                        <vertigo-suspense />
                     </div>
                 }
             }
@@ -209,6 +210,7 @@ fn render_comments(state: &TodoState, post_id: u32) -> DomNode {
                     <div css={css_comment_wrapper()}>
                         <strong>
                             "Loading ..."
+                            <vertigo-suspense />
                         </strong>
                     </div>
                 }

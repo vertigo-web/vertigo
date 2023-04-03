@@ -2,6 +2,8 @@ use std::{collections::BTreeSet};
 
 use crate::{Context, GraphId};
 
+use self::hook::Hooks;
+
 use super::graph_id::GraphIdKind;
 
 
@@ -29,7 +31,8 @@ use {
 /// - Components can provide the DOM with functions that get fired on events like [on_click](struct.DomElement.html#structfield.on_click), which may modify the state, thus triggering necessary computing once again.
 pub struct Dependencies {
     pub(crate) graph: Graph,
-    pub(crate) transaction_state: TransactionState,
+    transaction_state: TransactionState,
+    pub(crate) hooks: Hooks,
 }
 
 impl Default for Dependencies {
@@ -37,6 +40,7 @@ impl Default for Dependencies {
         Self {
             graph: Graph::new(),
             transaction_state: TransactionState::new(),
+            hooks: Hooks::new(),
         }
     }
 }
@@ -60,6 +64,7 @@ impl Dependencies {
         }
 
         self.transaction_state.move_to_idle();
+        self.hooks.fire_end();
 
         result
     }

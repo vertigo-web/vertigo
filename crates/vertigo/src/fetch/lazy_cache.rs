@@ -4,7 +4,7 @@ use std::rc::Rc;
 use crate::{
     computed::{context::Context, Value},
     struct_mut::ValueMut,
-    Instant, Resource, get_driver, Computed, transaction,
+    Instant, Resource, get_driver, Computed, transaction, DomNode,
 };
 
 use super::request_builder::{RequestBuilder, RequestBody};
@@ -168,48 +168,44 @@ impl<T> LazyCache<T> {
         self.queued.set(true);   //set lock
         get_driver().inner.api.on_fetch_start.trigger(());
 
-        get_driver().spawn({
-            let queued = self.queued.clone();
-            let value = self.value.clone();
-            let request = self.request.clone();
-            let map_response = self.map_response.clone();
+        let self_clone = self.clone();
 
-            async move {
-                if !queued.get() {
-                    log::error!("force_update_spawn: queued.get() in spawn -> expected false");
-                    return;
-                }
-
-                let api_response = transaction(|context| {
-                    value.get(context)
-                });
-
-                if api_response.needs_update() {
-                    if with_loading {
-                        value.set(ApiResponse::new_loading());
-                    }
-
-                    let ttl = request.get_ttl();
-                    let map_response = &(*map_response);
-                    let new_value = request.call().await.into(map_response);
-
-                    let expiry = ttl.map(|ttl| get_driver().now().add_duration(ttl));
-
-                    let new_value = match new_value {
-                        Ok(value) => {
-                            Resource::Ready(Rc::new(value))
-                        },
-                        Err(message) => {
-                            Resource::Error(message)
-                        }
-                    };
-
-                    value.set(ApiResponse::new(new_value, expiry));
-                }
-
-                queued.set(false);
-                get_driver().inner.api.on_fetch_stop.trigger(());
+        get_driver().spawn(async move {
+            if !self_clone.queued.get() {
+                log::error!("force_update_spawn: queued.get() in spawn -> expected false");
+                return;
             }
+
+            let api_response = transaction(|context| {
+                self_clone.value.get(context)
+            });
+
+            if api_response.needs_update() {
+                if with_loading {
+                    self_clone.value.set(ApiResponse::new_loading());
+                }
+
+                let new_value = self_clone.request.call().await.into(self_clone.map_response.as_ref());
+
+                let new_value = match new_value {
+                    Ok(value) => {
+                        Resource::Ready(Rc::new(value))
+                    },
+                    Err(message) => {
+                        Resource::Error(message)
+                    }
+                };
+
+                let expiry = self_clone
+                    .request
+                    .get_ttl()
+                    .map(|ttl| get_driver().now().add_duration(ttl));
+
+                self_clone.value.set(ApiResponse::new(new_value, expiry));
+            }
+
+            self_clone.queued.set(false);
+            get_driver().inner.api.on_fetch_stop.trigger(());
         });
     }
 
@@ -226,5 +222,34 @@ impl<T> LazyCache<T> {
 impl<T> PartialEq for LazyCache<T> {
     fn eq(&self, other: &Self) -> bool {
         self.id == other.id
+    }
+}
+
+impl<T: PartialEq> LazyCache<T> {
+    pub fn render(&self, render: impl Fn(Rc<T>) -> DomNode + 'static) -> DomNode {
+        self.to_computed().render_value(move |value| {
+            match value {
+                Resource::Ready(value) => {
+                    render(value)
+                },
+                Resource::Loading => {
+                    use crate as vertigo;
+
+                    vertigo::dom! {
+                        <vertigo-suspense />
+                    }
+                },
+                Resource::Error(error) => {
+                    use crate as vertigo;
+                        
+                    vertigo::dom! {
+                        <div>
+                            "error = "
+                            {error}
+                        </div>
+                    }
+                }
+            }
+        })
     }
 }

@@ -395,28 +395,29 @@ export class DriverDom {
         }
     }
 
-    private clearRootElement = (element: Element) => {
-        while (true) {
-            const first = element.firstChild;
-
-            if (first === null) {
-                return;
-            } else {
-                first.remove();
-            }
-        }
+    private get_node_to_clear = (element: Element): Array<ChildNode> => {
+        const list: Array<ChildNode> = [];
+        element.childNodes.forEach((item: ChildNode) => {
+            list.push(item);
+        });
+        return list;
     };
 
-    private clearRootContent = () => {
-        this.clearRootElement(this.nodes.get_root_head());
-        this.clearRootElement(this.nodes.get_root_body());
+    private get_to_clear = (): [Array<ChildNode>, Array<ChildNode>] => {
+        if (this.initBeforeFirstUpdate === true) {
+            return [[], []];
+        }
+
+        this.initBeforeFirstUpdate = true;
+
+        return [
+            this.get_node_to_clear(this.nodes.get_root_head()),
+            this.get_node_to_clear(this.nodes.get_root_body())
+        ];
     }
 
     public dom_bulk_update = (commands: Array<CommandType>) => {
-        if (this.initBeforeFirstUpdate === false) {
-            this.initBeforeFirstUpdate = true;
-            this.clearRootContent();
-        }
+        const [node_head, node_body] = this.get_to_clear();
 
         const setFocus: Set<number> = new Set();
 
@@ -439,6 +440,14 @@ export class DriverDom {
                     node.focus();
                 }
             }, 0);
+        }
+
+        for (const node of node_body) {
+            node.remove();
+        }
+        
+        for (const node of node_head) {
+            node.remove();
         }
     }
 

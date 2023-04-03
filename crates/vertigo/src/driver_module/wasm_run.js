@@ -1531,26 +1531,25 @@ class DriverDom {
             node.removeEventListener(event_name, callback);
         }
     }
-    clearRootElement = (element) => {
-        while (true) {
-            const first = element.firstChild;
-            if (first === null) {
-                return;
-            }
-            else {
-                first.remove();
-            }
-        }
+    get_node_to_clear = (element) => {
+        const list = [];
+        element.childNodes.forEach((item) => {
+            list.push(item);
+        });
+        return list;
     };
-    clearRootContent = () => {
-        this.clearRootElement(this.nodes.get_root_head());
-        this.clearRootElement(this.nodes.get_root_body());
+    get_to_clear = () => {
+        if (this.initBeforeFirstUpdate === true) {
+            return [[], []];
+        }
+        this.initBeforeFirstUpdate = true;
+        return [
+            this.get_node_to_clear(this.nodes.get_root_head()),
+            this.get_node_to_clear(this.nodes.get_root_body())
+        ];
     };
     dom_bulk_update = (commands) => {
-        if (this.initBeforeFirstUpdate === false) {
-            this.initBeforeFirstUpdate = true;
-            this.clearRootContent();
-        }
+        const [node_head, node_body] = this.get_to_clear();
         const setFocus = new Set();
         for (const command of commands) {
             try {
@@ -1570,6 +1569,12 @@ class DriverDom {
                     node.focus();
                 }
             }, 0);
+        }
+        for (const node of node_body) {
+            node.remove();
+        }
+        for (const node of node_head) {
+            node.remove();
         }
     };
     bulk_update_command(command) {

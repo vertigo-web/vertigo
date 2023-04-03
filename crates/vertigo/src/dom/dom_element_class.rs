@@ -1,12 +1,14 @@
 use std::rc::Rc;
 
-use crate::{DomId, Driver, struct_mut::ValueMut};
+use crate::{DomId, Driver, struct_mut::ValueMut, DropResource, Css, get_driver};
 
 struct DomElementClassMergeInner {
     driver: Driver,
     id_dom: DomId,
-    css_name: Option<String>,
+    css_name: Option<Css>,
     attr_name: Option<String>,
+    _suspense_drop: Option<DropResource>,
+    suspense_css: Option<Css>,
     command_last_sent: Option<String>,
 }
 
@@ -17,18 +19,33 @@ impl DomElementClassMergeInner {
             id_dom,
             css_name: None,
             attr_name: None,
+            _suspense_drop: None,
+            suspense_css: None,
             command_last_sent: None,
         }
     }
 
     fn get_new_command(&self) -> Option<String> {
-        match (&self.attr_name, &self.css_name) {
-            (None, None) => None,
-            (Some(attr), None) => Some(attr.clone()),
-            (None, Some(css)) => Some(css.clone()),
-            (Some(attr), Some(css)) => {
-                Some([attr, " ", css].join(""))
-            }
+        let mut result = Vec::new();
+
+        if let Some(attr) = &self.attr_name {
+            result.push(attr.clone());
+        }
+
+        if let Some(css) = &self.css_name {
+            let css = get_driver().inner.css_manager.get_class_name(css);
+            result.push(css);
+        }
+
+        if let Some(suspense_css) = &self.suspense_css {
+            let suspense_css = get_driver().inner.css_manager.get_class_name(suspense_css);
+            result.push(suspense_css);
+        }
+
+        if result.is_empty() {
+            None
+        } else {
+            Some(result.join(" "))
         }
     }
 
@@ -74,10 +91,44 @@ impl DomElementClassMerge {
         });
     }
 
-    pub fn set_css(&self, new_value: String) {
+    pub fn set_css(&self, new_value: Css) {
         self.inner.change(|state| {
             state.css_name = Some(new_value);
             state.refresh_dom();
+        });
+    }
+
+    pub fn set_suspense_attr(&self, callback: Option<fn(bool) -> Css>) {
+        let new_callback = match callback {
+            Some(callback) => {
+                let self_clone = self.clone();
+
+                Some(move |is_loading: bool| {
+                    let css = callback(is_loading);
+
+                    self_clone.inner.change(|state| {
+                        state.suspense_css = Some(css);
+                        state.refresh_dom();
+                    });
+                })
+            },
+            None => None,
+        };
+
+        self.inner.change(|state| {
+
+            let driver = get_driver();
+
+            let drop = match new_callback {
+                Some(callback) => {
+                    Some(driver.inner.dom.dom_suspense.set_layer_callback(state.id_dom, callback))
+                }
+                None => {
+                    None
+                }
+            };
+
+            state._suspense_drop = drop;
         });
     }
 }

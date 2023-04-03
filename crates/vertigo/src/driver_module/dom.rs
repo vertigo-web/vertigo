@@ -6,6 +6,7 @@ use crate::struct_mut::{VecMut, ValueMut, HashMapMut};
 
 use crate::driver_module::api::ApiImport;
 use super::StaticString;
+use super::dom_suspense::DomSuspense;
 use super::{dom_command::{DriverDomCommand, sort_commands}, api::CallbackId};
 
 #[derive(PartialEq)]
@@ -140,6 +141,7 @@ pub struct DriverDom {
     _sub1: DropResource,
     _sub2: DropResource,
     node_parent_callback: Rc<HashMapMut<DomId, Callback>>,
+    pub dom_suspense: &'static DomSuspense,
 }
 
 impl DriverDom {
@@ -163,11 +165,18 @@ impl DriverDom {
             _sub1: sub1,
             _sub2: sub2,
             node_parent_callback: Rc::new(HashMapMut::new()),
+            dom_suspense: DomSuspense::new(),
         }))
     }
 
     pub fn create_node(&self, id: DomId, name: impl Into<StaticString>) {
-        self.commands.add_command(DriverDomCommand::CreateNode { id, name: name.into() });
+        let name = name.into();
+
+        if name.as_str() == "vertigo-suspense" {
+            self.dom_suspense.set_node_suspense(id);
+        }
+
+        self.commands.add_command(DriverDomCommand::CreateNode { id, name });
     }
 
     pub fn create_text(&self, id: DomId, value: &str) {
@@ -185,9 +194,11 @@ impl DriverDom {
     }
 
     pub fn set_attr(&self, id: DomId, name: impl Into<StaticString>, value: &str) {
+        let name = name.into();
+
         self.commands.add_command(DriverDomCommand::SetAttr {
             id,
-            name: name.into(),
+            name,
             value: value.into(),
         });
     }
@@ -201,10 +212,12 @@ impl DriverDom {
 
     pub fn remove_text(&self, id: DomId) {
         self.commands.add_command(DriverDomCommand::RemoveText { id });
+        self.dom_suspense.remove(id);
     }
 
     pub fn remove_node(&self, id: DomId) {
         self.commands.add_command(DriverDomCommand::RemoveNode { id });
+        self.dom_suspense.remove(id);
     }
 
     pub fn insert_before(&self, parent: DomId, child: DomId, ref_id: Option<DomId>) {
@@ -213,6 +226,8 @@ impl DriverDom {
         if let Some(callback) = self.node_parent_callback.get(&child) {
             callback(parent);
         }
+
+        self.dom_suspense.set_parent(child, parent);
     }
 
     pub fn insert_css(&self, selector: &str, value: &str) {
@@ -231,6 +246,7 @@ impl DriverDom {
 
     pub fn remove_comment(&self, id: DomId) {
         self.commands.add_command(DriverDomCommand::RemoveComment { id });
+        self.dom_suspense.remove(id);
     }
 
     pub fn callback_add(&self, id: DomId, event_name: impl Into<String>, callback_id: CallbackId) {

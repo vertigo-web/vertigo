@@ -2,7 +2,7 @@ use crate::{
     driver_module::{driver::Driver, api::DomAccess, StaticString},
     dom::{dom_node::DomNode, dom_id::DomId},
     get_driver, Client, Computed, struct_mut::VecMut, ApiImport, DropResource, DropFileItem,
-    JsValue, DomText,
+    JsValue, DomText, Css,
 };
 
 use crate::struct_mut::VecDequeMut;
@@ -33,6 +33,31 @@ impl DomElementRef {
 impl PartialEq for DomElementRef {
     fn eq(&self, other: &Self) -> bool {
         self.id == other.id
+    }
+}
+
+fn set_attr_value(id: DomId, class_manager: &DomElementClassMerge, name: StaticString, value: Option<String>) {
+    if name.as_str() == "class" {
+        match value {
+            Some(value) => {
+                class_manager.set_attribute(value);
+            },
+            None => {
+                class_manager.remove_attribute();
+            }
+        }
+        return;
+    }
+
+    let driver = get_driver();
+
+    match value {
+        Some(value) => {
+            driver.inner.dom.set_attr(id, name, &value);
+        },
+        None => {
+            driver.inner.dom.remove_attr(id, name);
+        }
     }
 }
 
@@ -81,19 +106,21 @@ impl DomElement {
 
         match css {
             CssAttrValue::Css(css) => {
-                let class_name = get_driver().inner.css_manager.get_class_name(&css);
-                self.class_manager.set_css(class_name);
+                self.class_manager.set_css(css);
             },
             CssAttrValue::Computed(css) => {
-                let driver = self.driver;
                 let class_manager = self.class_manager.clone();
 
                 self.subscribe(css, move |css| {
-                    let class_name = driver.inner.css_manager.get_class_name(&css);
-                    class_manager.set_css(class_name);
+                    class_manager.set_css(css);
                 });
             }
         }
+        self
+    }
+
+    pub fn suspense(self, callback: Option<fn(bool) -> Css>) -> Self {
+        self.class_manager.set_suspense_attr(callback);
         self
     }
 
@@ -103,74 +130,38 @@ impl DomElement {
 
         match value {
             AttrValue::String(value) => {
-                if name.as_str() == "class" {
-                    self.class_manager.set_attribute(value);
-                } else {
-                    self.driver.inner.dom.set_attr(self.id_dom, name, &value);
-                }
+                set_attr_value(self.id_dom, &self.class_manager, name, Some(value));
             },
             AttrValue::Computed(computed) => {
                 let id_dom = self.id_dom;
-                let driver = self.driver;
                 let class_manager = self.class_manager.clone();
 
                 self.subscribe(computed, move |value| {
-                    if name.as_str() == "class" {
-                        class_manager.set_attribute(value);
-                    } else {
-                        driver.inner.dom.set_attr(id_dom, name.clone(), &value);
-                    }
+                    set_attr_value(id_dom, &class_manager, name.clone(), Some(value));
                 });
             },
             AttrValue::ComputedOpt(computed) => {
                 let id_dom = self.id_dom;
-                let driver = self.driver;
                 let class_manager = self.class_manager.clone();
 
                 self.subscribe(computed, move |value| {
-                    if let Some(value) = value {
-                        if name.as_str() == "class" {
-                            class_manager.set_attribute(value);
-                        } else {
-                            driver.inner.dom.set_attr(id_dom, name.clone(), &value);
-                        }
-                    } else if name.as_str() == "class" {
-                        class_manager.remove_attribute();
-                    } else {
-                        driver.inner.dom.remove_attr(id_dom, name.clone());
-                    }
+                    set_attr_value(id_dom, &class_manager, name.clone(), value);
                 });
             },
             AttrValue::Value(value) => {
                 let id_dom = self.id_dom;
-                let driver = self.driver;
                 let class_manager = self.class_manager.clone();
 
                 self.subscribe(value.to_computed(), move |value| {
-                    if name.as_str() == "class" {
-                        class_manager.set_attribute(value);
-                    } else {
-                        driver.inner.dom.set_attr(id_dom, name.clone(), &value);
-                    }
+                    set_attr_value(id_dom, &class_manager, name.clone(), Some(value));
                 });
             }
             AttrValue::ValueOpt(value) => {
                 let id_dom = self.id_dom;
-                let driver = self.driver;
                 let class_manager = self.class_manager.clone();
 
                 self.subscribe(value.to_computed(), move |value| {
-                    if let Some(value) = value {
-                        if name.as_str() == "class" {
-                            class_manager.set_attribute(value);
-                        } else {
-                            driver.inner.dom.set_attr(id_dom, name.clone(), &value);
-                        }
-                    } else if name.as_str() == "class" {
-                        class_manager.remove_attribute();
-                    } else {
-                        driver.inner.dom.remove_attr(id_dom, name.clone());
-                    }
+                    set_attr_value(id_dom, &class_manager, name.clone(), value);
                 });
             }
         };
@@ -306,6 +297,9 @@ impl DomElement {
 
             JsValue::Undefined
         });
+
+        //TODO - try to encapsulate the following code in a method like:
+        // mount_callback("change", callback_id, drop)
 
         let drop_event = DropResource::new(move || {
             self.driver.inner.dom.callback_remove(self.id_dom, "change", callback_id);

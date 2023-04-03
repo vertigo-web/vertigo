@@ -12,3 +12,5 @@ pub use vec_mut::VecMut;
 pub use vec_deque_mut::VecDequeMut;
 pub use value_mut::ValueMut;
 pub use btree_map_mut::BTreeMapMut;
+pub use inner_value::InnerValue;
+
