@@ -1,6 +1,6 @@
 use std::rc::Rc;
 
-use crate::{DomId, Driver, struct_mut::ValueMut, DropResource, Css, get_driver};
+use crate::{DomId, Driver, struct_mut::ValueMut, DropResource, Css, get_driver, driver_module::StaticString};
 
 struct DomElementClassMergeInner {
     driver: Driver,
@@ -99,36 +99,54 @@ impl DomElementClassMerge {
     }
 
     pub fn set_suspense_attr(&self, callback: Option<fn(bool) -> Css>) {
-        let new_callback = match callback {
-            Some(callback) => {
+        self.inner.change(|state| {
+            let Some(callback) = callback else {
+                state._suspense_drop = None;
+                return;
+            };
+    
+            let drop = get_driver().inner.dom.dom_suspense.set_layer_callback(state.id_dom, {
                 let self_clone = self.clone();
 
-                Some(move |is_loading: bool| {
+                move |is_loading: bool| {
                     let css = callback(is_loading);
 
                     self_clone.inner.change(|state| {
                         state.suspense_css = Some(css);
                         state.refresh_dom();
                     });
-                })
-            },
-            None => None,
-        };
-
-        self.inner.change(|state| {
-
-            let driver = get_driver();
-
-            let drop = match new_callback {
-                Some(callback) => {
-                    Some(driver.inner.dom.dom_suspense.set_layer_callback(state.id_dom, callback))
                 }
-                None => {
-                    None
-                }
-            };
+            });
 
-            state._suspense_drop = drop;
+            state._suspense_drop = Some(drop);
         });
     }
+
+
+    pub fn set_attr_value(&self, name: StaticString, value: Option<String>) {
+        if name.as_str() == "class" {
+            match value {
+                Some(value) => {
+                    self.set_attribute(value);
+                },
+                None => {
+                    self.remove_attribute();
+                }
+            }
+            return;
+        }
+
+        let driver = get_driver();
+        let id = self.inner.map(|state| state.id_dom);
+    
+        match value {
+            Some(value) => {
+                driver.inner.dom.set_attr(id, name, &value);
+            },
+            None => {
+                driver.inner.dom.remove_attr(id, name);
+            }
+        }
+    }
+
 }

@@ -122,6 +122,22 @@ fn match_history_router(arg: &JsValue) -> Result<(), ()> {
     Ok(())
 }
 
+fn match_get_env(arg: &JsValue) -> Result<String, ()> {
+    let matcher = Match::new(arg)?;
+    let matcher = matcher.test_list(&["api"])?;
+    let (matcher, name) = matcher.test_list_with_fn(|matcher: Match| -> Result<String, ()> {
+        let matcher = matcher.str("call")?;
+        let matcher = matcher.str("get_env")?;
+        let (matcher, name) = matcher.string()?;
+        matcher.end()?;
+
+        Ok(name)
+    })?;
+    matcher.end()?;
+
+    Ok(name)
+}
+
 fn match_history_router_callback(arg: &JsValue) -> Result<(), ()> {
     let matcher = Match::new(arg)?;
     let matcher = matcher.test_list(&["api"])?;
@@ -278,7 +294,7 @@ pub struct WasmInstance {
 impl WasmInstance {
     pub fn new(sender: UnboundedSender<Message>, engine: &Engine, module: &Module, request: RequestState) -> Self {
         let url = request.url.clone();
-        let mut store = Store::new(engine, request);
+        let mut store = Store::new(engine, request.clone());
 
         let import_panic_message = Func::wrap(&mut store, {
             let sender = sender.clone();
@@ -296,7 +312,7 @@ impl WasmInstance {
         let import_dom_access = {
             Func::wrap(
                 &mut store,
-                move |caller: Caller<'_, RequestState>, ptr: u32, offset: u32| -> u32 {
+            move |caller: Caller<'_, RequestState>, ptr: u32, offset: u32| -> u32 {
                     let mut data_context = DataContext::from_caller(caller);
 
                     let value = data_context.get_value(ptr, offset);
@@ -309,6 +325,16 @@ impl WasmInstance {
                     //get history router location
                     if let Ok(()) = match_history_router(&value) {
                         let result = JsValue::str(url.clone());
+                        return data_context.save_value(result);
+                    }
+
+                    if let Ok(env_name) = match_get_env(&value) {
+                        let env_value = request.env(env_name);
+                        
+                        let result = match env_value {
+                            Some(value) => JsValue::String(value),
+                            None => JsValue::Null,
+                        };
                         return data_context.save_value(result);
                     }
 

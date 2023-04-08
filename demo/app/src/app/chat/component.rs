@@ -1,34 +1,31 @@
-use vertigo::{KeyDownEvent, bind, dom, DomNode};
+use vertigo::{KeyDownEvent, bind, dom, DomNode, component};
 
 use super::state::ChatState;
 
-pub struct Chat { }
+#[component]
+pub fn Chat(ws_chat: String) {
+    let state = ChatState::new(ws_chat);
 
-impl Chat {
-    pub fn mount(&self) -> DomNode {
-        let state = ChatState::new();
+    let input_view = render_input_text(&state);
+    let status_view = render_status(&state);
 
-        let input_view = render_input_text(&state);
-        let status_view = render_status(&state);
-
-        let list = state.messages.render_list(
-            |item| item.clone(),
-            |message| {
-                dom! {
-                    <div>
-                        { message.clone() }
-                    </div>
-                }
+    let list = state.messages.render_list(
+        |item| item.clone(),
+        |message| {
+            dom! {
+                <div>
+                    { message.clone() }
+                </div>
             }
-        );
-
-        dom! {
-            <div>
-                { status_view }
-                { list }
-                { input_view }
-            </div>
         }
+    );
+
+    dom! {
+        <div>
+            { status_view }
+            { list }
+            { input_view }
+        </div>
     }
 }
 

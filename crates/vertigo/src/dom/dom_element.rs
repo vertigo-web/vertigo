@@ -1,7 +1,11 @@
+use std::{rc::Rc};
+
+use vertigo_macro::bind;
+
 use crate::{
     driver_module::{driver::Driver, api::DomAccess, StaticString},
     dom::{dom_node::DomNode, dom_id::DomId},
-    get_driver, Client, Computed, struct_mut::VecMut, ApiImport, DropResource, DropFileItem,
+    get_driver, Computed, struct_mut::{VecMut, ValueMut}, ApiImport, DropResource, DropFileItem,
     JsValue, DomText, Css,
 };
 
@@ -36,27 +40,108 @@ impl PartialEq for DomElementRef {
     }
 }
 
-fn set_attr_value(id: DomId, class_manager: &DomElementClassMerge, name: StaticString, value: Option<String>) {
-    if name.as_str() == "class" {
-        match value {
-            Some(value) => {
-                class_manager.set_attribute(value);
-            },
-            None => {
-                class_manager.remove_attribute();
+pub enum Callback<R> {
+    Basic(Rc<dyn Fn() -> R + 'static>),
+    Rc(Rc<dyn Fn() -> R + 'static>),
+    Computed(Computed<Rc<dyn Fn() -> R + 'static>>),
+}
+
+impl<R, F: Fn() -> R + 'static> From<F> for Callback<R> {
+    fn from(value: F) -> Self {
+        Callback::Basic(Rc::new(value))
+    }
+}
+
+impl<R> From<Rc<dyn Fn() -> R + 'static>> for Callback<R> {
+    fn from(value: Rc<dyn Fn() -> R + 'static>) -> Self {
+        Callback::Rc(value)
+    }
+}
+
+impl<R> From<Computed<Rc<dyn Fn() -> R + 'static>>> for Callback<R> {
+    fn from(value: Computed<Rc<dyn Fn() -> R + 'static>>) -> Self {
+        Callback::Computed(value)
+    }
+}
+
+impl<R: 'static> Callback<R> {
+    pub fn subscribe(self) -> (Rc<dyn Fn() -> R + 'static>, Option<DropResource>) {
+        match self {
+            Self::Basic(func) => (func, None),
+            Self::Rc(func) => (func, None),
+            Self::Computed(computed) => {
+
+                let current = Rc::new(ValueMut::new(None));
+                
+                let drop = computed.subscribe_all(bind!(current, |new_fn| {
+                    current.set(Some(new_fn));
+                }));
+
+                let callback = Rc::new(move || -> R {
+                    let callback = current.get();
+
+                    let Some(callback) = callback else {
+                        unreachable!();
+                    };
+
+                    callback()
+                });
+
+                (callback, Some(drop))
             }
         }
-        return;
     }
+}
 
-    let driver = get_driver();
+pub enum Callback1<T, R> {
+    Basic(Rc<dyn Fn(T) -> R + 'static>),
+    Rc(Rc<dyn Fn(T) -> R + 'static>),
+    Computed(Computed<Rc<dyn Fn(T) -> R + 'static>>),
+}
 
-    match value {
-        Some(value) => {
-            driver.inner.dom.set_attr(id, name, &value);
-        },
-        None => {
-            driver.inner.dom.remove_attr(id, name);
+impl<T, R, F: Fn(T) -> R + 'static> From<F> for Callback1<T, R> {
+    fn from(value: F) -> Self {
+        Callback1::Basic(Rc::new(value))
+    }
+}
+
+impl<T, R> From<Rc<dyn Fn(T) -> R + 'static>> for Callback1<T, R> {
+    fn from(value: Rc<dyn Fn(T) -> R + 'static>) -> Self {
+        Callback1::Rc(value)
+    }
+}
+
+impl<T, R> From<Computed<Rc<dyn Fn(T) -> R + 'static>>> for Callback1<T, R> {
+    fn from(value: Computed<Rc<dyn Fn(T) -> R + 'static>>) -> Self {
+        Callback1::Computed(value)
+    }
+}
+
+impl<T: 'static, R: 'static> Callback1<T, R> {
+    pub fn subscribe(self) -> (Rc<dyn Fn(T) -> R + 'static>, Option<DropResource>) {
+        match self {
+            Self::Basic(func) => (func, None),
+            Self::Rc(func) => (func, None),
+            Self::Computed(computed) => {
+
+                let current = Rc::new(ValueMut::new(None));
+                
+                let drop = computed.subscribe_all(bind!(current, |new_fn| {
+                    current.set(Some(new_fn));
+                }));
+
+                let callback = Rc::new(move |param: T| -> R {
+                    let callback = current.get();
+
+                    let Some(callback) = callback else {
+                        unreachable!();
+                    };
+
+                    callback(param)
+                });
+
+                (callback, Some(drop))
+            }
         }
     }
 }
@@ -66,8 +151,7 @@ pub struct DomElement {
     driver: Driver,
     id_dom: DomId,
     child_node: VecDequeMut<DomNode>,
-    subscriptions: VecMut<Client>,
-    drop: VecMut<DropResource>,
+    subscriptions: VecMut<DropResource>,
     class_manager: DomElementClassMerge,
 }
 
@@ -87,7 +171,6 @@ impl DomElement {
             id_dom,
             child_node: VecDequeMut::new(),
             subscriptions: VecMut::new(),
-            drop: VecMut::new(),
             class_manager,
         }
     }
@@ -130,38 +213,34 @@ impl DomElement {
 
         match value {
             AttrValue::String(value) => {
-                set_attr_value(self.id_dom, &self.class_manager, name, Some(value));
+                self.class_manager.set_attr_value(name, Some(value));
             },
             AttrValue::Computed(computed) => {
-                let id_dom = self.id_dom;
                 let class_manager = self.class_manager.clone();
 
                 self.subscribe(computed, move |value| {
-                    set_attr_value(id_dom, &class_manager, name.clone(), Some(value));
+                    class_manager.set_attr_value(name.clone(), Some(value));
                 });
             },
             AttrValue::ComputedOpt(computed) => {
-                let id_dom = self.id_dom;
                 let class_manager = self.class_manager.clone();
 
                 self.subscribe(computed, move |value| {
-                    set_attr_value(id_dom, &class_manager, name.clone(), value);
+                    class_manager.set_attr_value(name.clone(), value);
                 });
             },
             AttrValue::Value(value) => {
-                let id_dom = self.id_dom;
                 let class_manager = self.class_manager.clone();
 
                 self.subscribe(value.to_computed(), move |value| {
-                    set_attr_value(id_dom, &class_manager, name.clone(), Some(value));
+                    class_manager.set_attr_value(name.clone(), Some(value));
                 });
             }
             AttrValue::ValueOpt(value) => {
-                let id_dom = self.id_dom;
                 let class_manager = self.class_manager.clone();
 
                 self.subscribe(value.to_computed(), move |value| {
-                    set_attr_value(id_dom, &class_manager, name.clone(), value);
+                    class_manager.set_attr_value(name.clone(), value);
                 });
             }
         };
@@ -214,59 +293,68 @@ impl DomElement {
         self
     }
 
-    pub fn on_click(self, on_click: impl Fn() + 'static) -> Self {
-        let (callback_id, drop) = self.driver.inner.api.callback_store.register(move |_data| {
+    fn add_event_listener(self, name: &'static str, callback: impl Fn(JsValue) -> JsValue + 'static) -> Self {
+        let (callback_id, drop) = self.driver.inner.api.callback_store.register(callback);
+
+        let drop_event = DropResource::new(move || {
+            self.driver.inner.dom.callback_remove(self.id_dom, name, callback_id);
+            drop.off();
+        });
+
+        self.driver.inner.dom.callback_add(self.id_dom, name, callback_id);
+        self.subscriptions.push(drop_event);
+        self
+    }
+
+    fn install_callback(&self, callback: impl Into<Callback<()>>) -> Rc<dyn Fn() + 'static> {
+        let callback: Callback<()> = callback.into();
+        let (callback, drop) = callback.subscribe();
+        if let Some(drop) = drop {
+            self.subscriptions.push(drop);
+        }
+        callback
+    }
+
+    fn install_callback1<T: 'static, R: 'static>(&self, callback: impl Into<Callback1<T, R>>) -> Rc<dyn Fn(T) -> R + 'static> {
+        let callback: Callback1<T, R> = callback.into();
+        let (callback, drop) = callback.subscribe();
+        if let Some(drop) = drop {
+            self.subscriptions.push(drop);
+        }
+        callback
+    }
+
+    pub fn on_click(self, on_click: impl Into<Callback<()>>) -> Self {
+        let on_click = self.install_callback(on_click);
+
+        self.add_event_listener("click", move |_data| {
             on_click();
             JsValue::Undefined
-        });
-
-        let drop_event = DropResource::new(move || {
-            self.driver.inner.dom.callback_remove(self.id_dom, "click", callback_id);
-            drop.off();
-        });
-
-        self.driver.inner.dom.callback_add(self.id_dom, "click", callback_id);
-        self.drop.push(drop_event);
-
-        self
+        })
     }
 
-    pub fn on_mouse_enter(self, on_mouse_enter: impl Fn() + 'static) -> Self {
-        let (callback_id, drop) = self.driver.inner.api.callback_store.register(move |_data| {
+    pub fn on_mouse_enter(self, on_mouse_enter: impl Into<Callback<()>>) -> Self {
+        let on_mouse_enter = self.install_callback(on_mouse_enter);
+
+        self.add_event_listener("mouseenter", move |_data| {
             on_mouse_enter();
             JsValue::Undefined
-        });
-
-        let drop_event = DropResource::new(move || {
-            self.driver.inner.dom.callback_remove(self.id_dom, "mouseenter", callback_id);
-            drop.off();
-        });
-
-        self.driver.inner.dom.callback_add(self.id_dom, "mouseenter", callback_id);
-        self.drop.push(drop_event);
-
-        self
+        })
     }
 
-    pub fn on_mouse_leave(self, on_mouse_leave: impl Fn() + 'static) -> Self {
-        let (callback_id, drop) = self.driver.inner.api.callback_store.register(move |_data| {
+    pub fn on_mouse_leave(self, on_mouse_leave: impl Into<Callback<()>>) -> Self {
+        let on_mouse_leave = self.install_callback(on_mouse_leave);
+
+        self.add_event_listener("mouseleave", move |_data| {
             on_mouse_leave();
             JsValue::Undefined
-        });
-
-        let drop_event = DropResource::new(move || {
-            self.driver.inner.dom.callback_remove(self.id_dom, "mouseleave", callback_id);
-            drop.off();
-        });
-
-        self.driver.inner.dom.callback_add(self.id_dom, "mouseleave", callback_id);
-        self.drop.push(drop_event);
-
-        self
+        })
     }
 
-    pub fn on_input(self, on_input: impl Fn(String) + 'static) -> Self {
-        let (callback_id, drop) = self.driver.inner.api.callback_store.register(move |data| {
+    pub fn on_input(self, on_input: impl Into<Callback1<String, ()>>) -> Self {
+        let on_input = self.install_callback1(on_input);
+
+        self.add_event_listener("input", move |data| {
             if let JsValue::String(text) = data {
                 on_input(text);
             } else {
@@ -274,21 +362,13 @@ impl DomElement {
             }
 
             JsValue::Undefined
-        });
-
-        let drop_event = DropResource::new(move || {
-            self.driver.inner.dom.callback_remove(self.id_dom, "input", callback_id);
-            drop.off();
-        });
-
-        self.driver.inner.dom.callback_add(self.id_dom, "input", callback_id);
-        self.drop.push(drop_event);
-
-        self
+        })
     }
 
-    pub fn on_change(self, on_change: impl Fn(String) + 'static) -> Self {
-        let (callback_id, drop) = self.driver.inner.api.callback_store.register(move |data| {
+    pub fn on_change(self, on_change: impl Into<Callback1<String, ()>>) -> Self {
+        let on_change = self.install_callback1(on_change);
+
+        self.add_event_listener("change", move |data| {
             if let JsValue::String(text) = data {
                 on_change(text);
             } else {
@@ -296,24 +376,13 @@ impl DomElement {
             }
 
             JsValue::Undefined
-        });
-
-        //TODO - try to encapsulate the following code in a method like:
-        // mount_callback("change", callback_id, drop)
-
-        let drop_event = DropResource::new(move || {
-            self.driver.inner.dom.callback_remove(self.id_dom, "change", callback_id);
-            drop.off();
-        });
-
-        self.driver.inner.dom.callback_add(self.id_dom, "change", callback_id);
-        self.drop.push(drop_event);
-
-        self
+        })
     }
 
-    pub fn on_key_down(self, on_key_down: impl Fn(KeyDownEvent) -> bool + 'static) -> Self {
-        let (callback_id, drop) = self.driver.inner.api.callback_store.register(move |data| {
+    pub fn on_key_down(self, on_key_down: impl Into<Callback1<KeyDownEvent, bool>>) -> Self {
+        let on_key_down = self.install_callback1(on_key_down);
+
+        self.add_event_listener("keydown", move |data| {
             match get_key_down_event(data) {
                 Ok(event) => {
                     let prevent_default = on_key_down(event);
@@ -328,21 +397,13 @@ impl DomElement {
                     JsValue::False
                 }
             }
-        });
-
-        let drop_event = DropResource::new(move || {
-            self.driver.inner.dom.callback_remove(self.id_dom, "keydown", callback_id);
-            drop.off();
-        });
-
-        self.driver.inner.dom.callback_add(self.id_dom, "keydown", callback_id);
-        self.drop.push(drop_event);
-
-        self
+        })
     }
 
-    pub fn on_dropfile(self, on_dropfile: impl Fn(DropFileEvent) + 'static) -> Self {
-        let (callback_id, drop) = self.driver.inner.api.callback_store.register(move |data| {
+    pub fn on_dropfile(self, on_dropfile: impl Into<Callback1<DropFileEvent, ()>>) -> Self {
+        let on_dropfile = self.install_callback1(on_dropfile);
+
+        self.add_event_listener("drop", move |data| {
             let params = data.convert(|mut params| {
                 let files = params.get_vec("drop file", |item| {
                     item.convert(|mut item| {
@@ -366,21 +427,13 @@ impl DomElement {
             };
 
             JsValue::Undefined
-        });
-
-        let drop_event = DropResource::new(move || {
-            self.driver.inner.dom.callback_remove(self.id_dom, "drop", callback_id);
-            drop.off();
-        });
-
-        self.driver.inner.dom.callback_add(self.id_dom, "drop", callback_id);
-        self.drop.push(drop_event);
-
-        self
+        })
     }
 
-    pub fn hook_key_down(self, on_hook_key_down: impl Fn(KeyDownEvent) -> bool + 'static) -> Self {
-        let (callback_id, drop) = self.driver.inner.api.callback_store.register(move |data| {
+    pub fn hook_key_down(self, on_hook_key_down: impl Into<Callback1<KeyDownEvent, bool>>) -> Self {
+        let on_hook_key_down = self.install_callback1(on_hook_key_down);
+
+        self.add_event_listener("hook_keydown", move |data| {
             match get_key_down_event(data) {
                 Ok(event) => {
                     let prevent_default = on_hook_key_down(event);
@@ -395,37 +448,16 @@ impl DomElement {
                     JsValue::False
                 }
             }
-        });
-
-        let drop_event = DropResource::new(move || {
-            self.driver.inner.dom.callback_remove(self.id_dom, "hook_keydown", callback_id);
-            drop.off();
-        });
-
-        self.driver.inner.dom.callback_add(self.id_dom, "hook_keydown", callback_id);
-        self.drop.push(drop_event);
-
-        self
+        })
     }
 
-    pub fn on_load(self, on_load: impl Fn() + 'static) -> Self {
-        let (callback_id, drop) = self.driver.inner.api.callback_store.register(move |_data| {
+    pub fn on_load(self, on_load: impl Into<Callback<()>>) -> Self {
+        let on_load = self.install_callback(on_load);
+
+        self.add_event_listener("load", move |_data| {
             on_load();
             JsValue::Undefined
-        });
-
-        let drop_event = DropResource::new({
-            let driver = self.driver;
-            move || {
-                driver.inner.dom.callback_remove(self.id_dom, "load", callback_id);
-                drop.off();
-            }
-        });
-
-        self.driver.inner.dom.callback_add(self.id_dom, "load", callback_id);
-        self.drop.push(drop_event);
-
-        self
+        })
     }
 }
 

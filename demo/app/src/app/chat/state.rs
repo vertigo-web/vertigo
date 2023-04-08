@@ -14,7 +14,7 @@ pub struct ChatState {
 }
 
 impl ChatState {
-    pub fn new() -> ChatState {
+    pub fn new(ws_chat: String) -> ChatState {
         let connect = Value::new(None);
         let messages = Value::new(Vec::new());
         let input_text = Value::new(String::from(""));
@@ -24,7 +24,7 @@ impl ChatState {
             let messages = messages.clone();
 
             get_driver().websocket(
-                "ws://127.0.0.1:3333/ws",
+                ws_chat,
                 move |message| match message {
                     WebsocketMessage::Connection(connection) => {
                         connect.set(Some(connection));

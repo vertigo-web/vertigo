@@ -6,6 +6,8 @@ mod check_env;
 mod command;
 mod watch;
 mod spawn;
+mod utils;
+
 use clap::{Parser, Subcommand};
 
 use build::BuildOpts;
@@ -46,7 +48,7 @@ pub async fn main() -> Result<(), i32> {
             new::run(opts)
         }
         Command::Serve(opts) => {
-            serve::run(opts).await
+            serve::run(opts, None).await
         }
         Command::Watch(opts) => {
             watch::run(opts).await

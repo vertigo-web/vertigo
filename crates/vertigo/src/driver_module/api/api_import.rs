@@ -639,5 +639,23 @@ impl ApiImport {
         false
     }
 
+    pub fn get_env(&self, name: String) -> Option<String> {
+        let result = self.dom_access()
+            .api()
+            .call("get_env", vec!(JsValue::String(name)))
+            .fetch();
+        
+        if let JsValue::Null = result {
+            return None;
+        }
+
+        if let JsValue::String(value) = result {
+            return Some(value);
+        }
+
+        log::error!("get_env: string or null was expected");
+        None
+    }
+
 }
 

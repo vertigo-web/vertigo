@@ -1694,6 +1694,9 @@ class ApiBrowser {
     isBrowser = () => {
         return true;
     };
+    get_env = (name) => {
+        return document.documentElement.getAttribute(`data-env-${name}`);
+    };
 }
 
 class JsNode {

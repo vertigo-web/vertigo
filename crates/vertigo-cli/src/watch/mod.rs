@@ -13,6 +13,7 @@ use crate::build::BuildOpts;
 use crate::build::{infer_package_name, find_package_path};
 use crate::serve::ServeOpts;
 use crate::spawn::SpawnOwner;
+use crate::utils::parse_key_val;
 use crate::watch::sse::handler_sse;
 
 mod sse;
@@ -34,6 +35,14 @@ pub struct WatchOpts {
     pub port_watch: u16,
     #[arg(short, long)]
     pub disable_wasm_opt: bool,
+
+    /// sets up proxy: --proxy /path=http://domain.com/path
+    #[arg(long, value_parser = parse_key_val::<String, String>)]
+    pub proxy: Vec<(String, String)>,
+
+    /// Setting the parameters --env api=http://domain.com/api --env api2=http://domain.com/api2
+    #[arg(long, value_parser = parse_key_val::<String, String>)]
+    pub env: Vec<(String, String)>,
 }
 
 impl WatchOpts {
@@ -46,13 +55,17 @@ impl WatchOpts {
         }
     }
 
-    pub fn to_serve_opts(&self) -> ServeOpts {
-        ServeOpts {
-            dest_dir: self.dest_dir.clone(),
-            host: self.host.clone(),
-            port: self.port,
-            port_watch: Some(self.port_watch),
-        }
+    pub fn to_serve_opts(&self) -> (ServeOpts, u16) {
+        (
+            ServeOpts {
+                dest_dir: self.dest_dir.clone(),
+                host: self.host.clone(),
+                port: self.port,
+                proxy: self.proxy.clone(),
+                env: self.env.clone(),
+            },
+            self.port_watch
+        )
     }
 }
 
@@ -66,6 +79,8 @@ pub enum Status {
 
 
 pub async fn run(opts: WatchOpts) -> Result<(), i32> {
+    log::info!("watch params => {opts:#?}");
+
     let package_name = match opts.package_name.as_deref() {
         Some(name) => name.to_string(),
         None => match infer_package_name() {
@@ -203,7 +218,9 @@ fn build_and_watch(version: u32, tx: Arc<Sender<Status>>, opts: &WatchOpts) -> S
                 let opts = opts.clone();
 
                 log::info!("serve run ...");
-                if let Err(errno) = crate::serve::run(opts.to_serve_opts()).await {
+                let (serve_params, port_watch) = opts.to_serve_opts();
+
+                if let Err(errno) = crate::serve::run(serve_params, Some(port_watch)).await {
                     panic!("Error {errno} running server")
                 }
 

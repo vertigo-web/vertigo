@@ -6,7 +6,7 @@ use std::{
 
 use crate::{struct_mut::HashMapMut};
 
-type CreateType<K, V> = Box<dyn Fn(&K) -> V>;
+type CreateType<K, V> = Box<dyn Fn(&AutoMap<K, V>, &K) -> V>;
 
 fn get_unique_id() -> u64 {
     use std::sync::atomic::{AtomicU64, Ordering};
@@ -22,7 +22,7 @@ fn get_unique_id() -> u64 {
 /// ```rust
 /// use vertigo::AutoMap;
 ///
-/// let my_map = AutoMap::<i32, i32>::new(|x| x*2);
+/// let my_map = AutoMap::<i32, i32>::new(|_, x| x*2);
 /// assert_eq!(my_map.get(&5), 10);
 /// ```
 #[derive(Clone)]
@@ -46,7 +46,7 @@ impl<K, V> PartialEq for AutoMap<K, V> {
 }
 
 impl<K: Eq + Hash + Clone, V: Clone> AutoMap<K, V> {
-    pub fn new<C: Fn(&K) -> V + 'static>(create: C) -> AutoMap<K, V> {
+    pub fn new<C: Fn(&AutoMap<K, V>, &K) -> V + 'static>(create: C) -> AutoMap<K, V> {
         AutoMap {
             id: get_unique_id(),
             create: Rc::new(Box::new(create)),
@@ -63,7 +63,7 @@ impl<K: Eq + Hash + Clone, V: Clone> AutoMap<K, V> {
 
         let new_item = {
             let create = &self.create;
-            create(key)
+            create(self, key)
         };
 
         self.values.insert(key.clone(), new_item.clone());

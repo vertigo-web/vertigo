@@ -36,4 +36,8 @@ export class ApiBrowser {
     public isBrowser = (): boolean => {
         return true;
     }
+
+    public get_env = (name: string): string | null => {
+        return document.documentElement.getAttribute(`data-env-${name}`);
+    }
 }
