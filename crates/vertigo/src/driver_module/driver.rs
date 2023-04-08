@@ -218,5 +218,9 @@ impl Driver {
         !self.is_browser()
     }
 
+    pub fn env(&self, name: impl Into<String>) -> Option<String> {
+        let name = name.into();
+        self.inner.api.get_env(name)
+    }
 }
 

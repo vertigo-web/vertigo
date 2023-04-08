@@ -1,4 +1,4 @@
-use crate::{computed::Computed, struct_mut::ValueMut};
+use crate::{computed::Computed, struct_mut::ValueMut, DropResource};
 use std::rc::Rc;
 
 struct SubscribeValueVerInner<T> {
@@ -17,10 +17,8 @@ impl<T> SubscribeValueVerInner<T> {
     }
 }
 
-use crate::computed::Client;
-
 pub struct SubscribeValueVer<T> {
-    client: Option<Client>,
+    client: Option<DropResource>,
     value: Rc<SubscribeValueVerInner<T>>,
 }
 

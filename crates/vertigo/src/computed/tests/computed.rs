@@ -1,6 +1,6 @@
 use std::rc::Rc;
 
-use crate::{Client, transaction, get_driver};
+use crate::{transaction, get_driver};
 use crate::computed::{Computed, Value, DropResource};
 
 use crate::computed::tests::box_value_version::SubscribeValueVer;
@@ -551,7 +551,7 @@ fn test_set_value_and_compare() {
 
     let value_com = value_com.map(|item| item);
 
-    fn build(value: &Computed<i32>) -> (Rc<ValueMut<i32>>, Client) {
+    fn build(value: &Computed<i32>) -> (Rc<ValueMut<i32>>, DropResource) {
 
         let boxik = Rc::new(ValueMut::new(0));
 

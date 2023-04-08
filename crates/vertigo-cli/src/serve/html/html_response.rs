@@ -21,7 +21,7 @@ use super::{
     html_element::{
         HtmlElement,
         HtmlDocument
-    },
+    }, HtmlNode,
 };
 
 enum FetchStatus {
@@ -45,16 +45,18 @@ pub struct HtmlResponse {
     inst: WasmInstance,
     all_elements: AllElements,
     fetch: HashMap<Arc<FetchRequest>, FetchStatus>,
+    env: HashMap<String, String>
 }
 
 impl HtmlResponse {
-    pub fn new(sender: UnboundedSender<Message>, mount_path: &MountPathConfig, inst: WasmInstance) -> Self {
+    pub fn new(sender: UnboundedSender<Message>, mount_path: &MountPathConfig, inst: WasmInstance, env: HashMap<String, String>) -> Self {
         Self {
             sender,
             mount_path: mount_path.clone(),
             inst,
             all_elements: AllElements::new(),
             fetch: HashMap::new(),
+            env,
         }
     }
 
@@ -79,15 +81,16 @@ impl HtmlResponse {
 
         let css = css.into_iter().collect::<VecDeque<_>>();
 
-        let root_ok = if let Some(element) = root_html.get_element() {
-            element.name == "html"
-        } else {
-            false
-        };
+        if let HtmlNode::Element(html) = &mut root_html {
+            if html.name != "html" {
+                return (StatusCode::INTERNAL_SERVER_ERROR, "root: the html element was expected".into());
+            }
 
-        if !root_ok {
-            let message = "root: the html element was expected".into();
-            return (StatusCode::INTERNAL_SERVER_ERROR, message);
+            for (env_name, env_value) in &self.env {
+                html.add_attr(format!("data-env-{env_name}"), env_value);
+            }    
+        } else {
+            return (StatusCode::INTERNAL_SERVER_ERROR, "root: the html element was expected".into());
         }
 
         let is_exist_head = root_html.modify(&[("head", 0)], move |_head| {});

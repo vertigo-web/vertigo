@@ -104,13 +104,13 @@ mod external_api;
 use computed::struct_mut::ValueMut;
 
 pub use computed::{
-    AutoMap, Client, Computed, context::Context, Dependencies, DropResource, GraphId, struct_mut, Value
+    AutoMap, Computed, context::Context, Dependencies, DropResource, GraphId, struct_mut, Value
 };
 
 pub use dom::{
     css::{Css, CssGroup},
     dom_id::DomId,
-    dom_element::DomElement,
+    dom_element::{DomElement, Callback, Callback1},
     dom_node::DomNode,
     dom_text::DomText,
     dom_comment::DomComment,

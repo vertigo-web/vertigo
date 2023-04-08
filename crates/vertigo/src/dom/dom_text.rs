@@ -1,6 +1,6 @@
 use crate::{
     driver_module::driver::Driver,
-    dom::dom_id::DomId, get_driver, Client, struct_mut::VecMut, Computed, Value,
+    dom::dom_id::DomId, get_driver, DropResource, struct_mut::VecMut, Computed, Value,
 };
 
 pub trait ToComputed<T: Clone> {
@@ -36,7 +36,7 @@ impl<T: Clone + 'static> ToComputed<T> for &Value<T> {
 pub struct DomText {
     driver: Driver,
     id_dom: DomId,
-    subscriptions: VecMut<Client>,
+    subscriptions: VecMut<DropResource>,
 }
 
 impl DomText {

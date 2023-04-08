@@ -47,7 +47,7 @@ impl TodoState {
             });
 
         let comments = AutoMap::new({
-            move |post_id: &u32| -> LazyCache<Vec<CommentModel>> {
+            move |_, post_id: &u32| -> LazyCache<Vec<CommentModel>> {
                 RequestBuilder::get(format!("https://jsonplaceholder.typicode.com/posts/{post_id}/comments"))
                     .ttl_minutes(10)
                     .lazy_cache(|status, body| {

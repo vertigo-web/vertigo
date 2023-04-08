@@ -67,7 +67,7 @@ impl State {
         State {
             repo_input: Value::default(),
             repo_shown: Value::default(),
-            data: AutoMap::new(move |repo_name: &String| Item::new(repo_name)),
+            data: AutoMap::new(move |_, repo_name: &String| Item::new(repo_name)),
         }
     }
 }

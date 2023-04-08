@@ -1,12 +1,11 @@
-use crate::{Driver, struct_mut::{VecMut, ValueMut}, get_driver, Client, DropResource, DomNode};
+use crate::{Driver, struct_mut::{VecMut, ValueMut}, get_driver, DropResource, DomNode};
 use super::dom_id::DomId;
 
 /// A Real DOM representative - comment kind
 pub struct DomComment {
     driver: Driver,
     pub id_dom: DomId,
-    subscriptions: VecMut<Client>,
-    _drop_list: VecMut<DropResource>,
+    subscriptions: VecMut<DropResource>,
 }
 
 impl DomComment {
@@ -21,16 +20,15 @@ impl DomComment {
             driver,
             id_dom,
             subscriptions: VecMut::new(),
-            _drop_list: VecMut::new(),
         }
     }
 
-    pub fn new_marker<F: Fn(DomId, DomId) -> Option<Client> + 'static>(comment_value: &'static str, mount: F) -> DomComment {
+    pub fn new_marker<F: Fn(DomId, DomId) -> Option<DropResource> + 'static>(comment_value: &'static str, mount: F) -> DomComment {
         let driver = get_driver();
         let id_comment = DomId::default();
 
         let when_mount = {
-            let current_client: ValueMut<Option<Client>> = ValueMut::new(None);
+            let current_client: ValueMut<Option<DropResource>> = ValueMut::new(None);
 
             move |parent_id| {
                 let client = mount(parent_id, id_comment);
@@ -46,8 +44,7 @@ impl DomComment {
 
         let subscriptions = VecMut::new();
 
-        let drop_list = VecMut::new();
-        drop_list.push(drop_callback);
+        subscriptions.push(drop_callback);
 
         driver.inner.dom.create_comment(id_comment, comment_value);
 
@@ -55,7 +52,6 @@ impl DomComment {
             driver,
             id_dom: id_comment,
             subscriptions,
-            _drop_list: drop_list
         }
     }
 
@@ -63,7 +59,7 @@ impl DomComment {
         self.id_dom
     }
 
-    pub fn add_subscription(&self, client: Client) {
+    pub fn add_subscription(&self, client: DropResource) {
         self.subscriptions.push(client);
     }
 

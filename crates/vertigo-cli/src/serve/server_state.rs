@@ -1,3 +1,6 @@
+use std::collections::HashMap;
+use std::sync::Arc;
+
 use axum::http::StatusCode;
 use tokio::sync::mpsc::{error::TryRecvError, unbounded_channel};
 use wasmtime::{
@@ -11,6 +14,7 @@ use crate::serve::spawn::SpawnOwner;
 use crate::serve::wasm::{Message, WasmInstance};
 
 use super::mount_path::MountPathConfig;
+use reqwest::Client;
 
 #[derive(Clone)]
 pub struct ServerState {
@@ -18,19 +22,26 @@ pub struct ServerState {
     module: Module,
     pub mount_path: MountPathConfig,
     pub port_watch: Option<u16>,
+    pub env: HashMap<String, String>,
+    pub client: Arc<Client>,
 }
 
 impl ServerState {
-    pub fn new(mount_path: MountPathConfig, port_watch: Option<u16>) -> Result<Self, i32> {
+    pub fn new(mount_path: MountPathConfig, port_watch: Option<u16>, env: Vec<(String, String)>) -> Result<Self, i32> {
         let engine = Engine::default();
 
         let module = build_module_wasm(&engine, &mount_path)?;
+
+        let env = env.into_iter().collect::<HashMap<_, _>>();
+        let client = Arc::new(reqwest::Client::new());
 
         Ok(Self {
             engine,
             module,
             mount_path,
             port_watch,
+            env,
+            client
         })
     }
 
@@ -39,6 +50,7 @@ impl ServerState {
 
         let request = RequestState {
             url: url.to_string(),
+            env: self.env.clone(),
         };
 
         let mut inst = WasmInstance::new(sender.clone(), &self.engine, &self.module, request);
@@ -54,7 +66,7 @@ impl ServerState {
             }
         });
 
-        let mut html_response = HtmlResponse::new(sender.clone(), &self.mount_path, inst);
+        let mut html_response = HtmlResponse::new(sender.clone(), &self.mount_path, inst, self.env.clone());
 
         loop {
             let message = receiver.try_recv();

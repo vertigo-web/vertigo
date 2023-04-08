@@ -1,9 +1,9 @@
 use std::{cmp::PartialEq, rc::Rc};
 use crate::{
-    computed::{Client, GraphValue, graph_id::GraphId},
+    computed::{GraphValue, graph_id::GraphId},
     dom_value::{render_value, render_value_option},
     dom_list::{render_list},
-    Value, DomNode
+    Value, DomNode, DropResource, struct_mut::ValueMut
 };
 use std::hash::Hash;
 
@@ -101,8 +101,50 @@ impl<T: Clone + 'static> Computed<T> {
 }
 
 impl<T: 'static + PartialEq + Clone> Computed<T> {
-    pub fn subscribe<R: 'static, F: Fn(T) -> R + 'static>(self, call: F) -> Client {
-        Client::new(self, call)
+    pub fn subscribe<R: 'static, F: Fn(T) -> R + 'static>(self, call: F) -> DropResource {
+        let prev_value = ValueMut::new(None);
+
+        let resource_box = ValueMut::new(None);
+
+        let graph_value = GraphValue::new(false, move |context| {
+            let value = self.get(context);
+
+            let should_update = prev_value.set_and_check(Some(value.clone()));
+
+            if should_update {
+                let resource = call(value);
+                resource_box.change(move |inner| {
+                    *inner = Some(resource);
+                });
+            }
+        });
+
+        let context = Context::new();
+        graph_value.get_value(&context);
+        let _ = context;
+
+        DropResource::from_struct(graph_value)
+    }
+}
+
+impl<T: 'static + Clone> Computed<T> {
+    pub fn subscribe_all<R: 'static, F: Fn(T) -> R + 'static>(self, call: F) -> DropResource {
+        let resource_box = ValueMut::new(None);
+
+        let graph_value = GraphValue::new(false, move |context| {
+            let value = self.get(context);
+
+            let resource = call(value);
+            resource_box.change(move |inner| {
+                *inner = Some(resource);
+            });
+        });
+
+        let context = Context::new();
+        graph_value.get_value(&context);
+        let _ = context;
+
+        DropResource::from_struct(graph_value)
     }
 }
 

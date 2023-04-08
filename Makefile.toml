@@ -33,13 +33,13 @@ script = [
 
 [tasks.demo-watch]
 script = [
-    'cargo run --bin vertigo -- watch vertigo-demo --dest-dir=demo_build'
+    'cargo run --bin vertigo -- watch vertigo-demo --dest-dir=demo_build --env ws_chat=ws://127.0.0.1:3333/ws'
 ]
 
 [tasks.demo-start]
 script = [
     "cargo run --bin vertigo -- build vertigo-demo --dest-dir=demo_build",
-    "cargo run --bin vertigo -- serve --dest-dir=demo_build"
+    "cargo run --bin vertigo -- serve --dest-dir=demo_build --env ws_chat=ws://127.0.0.1:3333/ws"
 ]
 
 [tasks.demo]

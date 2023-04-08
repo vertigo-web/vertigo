@@ -1,13 +1,18 @@
+use std::any::Any;
+
 /// A struct used by [driver](struct.Driver.html) to tidy things up on javascript side after a rust object goes out of scope.
-pub struct DropResource {
-    drop_fun: Option<Box<dyn FnOnce()>>,
+pub enum DropResource {
+    Fun(Option<Box<dyn FnOnce()>>),
+    Struct(Box<dyn Any>),
 }
 
 impl DropResource {
     pub fn new<F: FnOnce() + 'static>(drop_fun: F) -> DropResource {
-        DropResource {
-            drop_fun: Some(Box::new(drop_fun)),
-        }
+        DropResource::Fun(Some(Box::new(drop_fun)))
+    }
+
+    pub fn from_struct(inst: impl Any) -> DropResource {
+        DropResource::Struct(Box::new(inst))
     }
 
     pub fn off(self) {}
@@ -15,9 +20,16 @@ impl DropResource {
 
 impl Drop for DropResource {
     fn drop(&mut self) {
-        let drop_fun = std::mem::replace(&mut self.drop_fun, None);
-        if let Some(drop_fun) = drop_fun {
-            drop_fun();
+        match self {
+            Self::Fun(inner) => {
+                let drop_fun = std::mem::take(inner);
+
+                if let Some(drop_fun) = drop_fun {
+                    drop_fun();
+                }
+            },
+            Self::Struct(_) => {
+            }
         }
     }
 }

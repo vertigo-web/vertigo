@@ -53,7 +53,7 @@ fn read_index(dest_dir: &str) -> Result<IndexModel, i32> {
     let index_html = match std::fs::read_to_string(&index_path) {
         Ok(data) => data,
         Err(err) => {
-            log::error!("File read error: file={index_path:?}, error={err}");
+            log::error!("File read error: file={index_path:?}, error={err}, dest_dir={dest_dir}");
             return Err(-1);
         }
     };

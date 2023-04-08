@@ -307,9 +307,13 @@ impl HtmlElement {
         }
     }
 
-    pub fn attr(mut self, name: &'static str, value: impl Into<String>) -> Self {
+    pub fn attr(mut self, name: impl Into<String>, value: impl Into<String>) -> Self {
         self.attr.set(name, value);
         self
+    }
+
+    pub fn add_attr(&mut self, name: impl Into<String>, value: impl Into<String>) {
+        self.attr.set(name, value);
     }
 
     pub fn add_first_child(&mut self, child: HtmlNode) {
