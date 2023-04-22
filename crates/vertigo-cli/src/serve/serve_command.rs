@@ -1,10 +1,12 @@
 use axum::{
-    extract::{State, RawQuery},
+    extract::{State, RawQuery, Json},
     http::{StatusCode, Uri},
+    http::{header::HeaderMap},
     response::Response,
-    Router, body::BoxBody, routing::get,
+    Router, body::BoxBody, routing::{get},
 };
 use clap::Args;
+use serde_json::Value;
 use std::{time::{Instant, Duration}, sync::Arc};
 use tokio::sync::{OnceCell, RwLock};
 use tower_http::services::ServeDir;
@@ -119,6 +121,47 @@ async fn get_response(target_url: String) -> Response<BoxBody> {
     response
 }
 
+async fn post_response(target_url: String, headers: HeaderMap, body: Value) -> Response<BoxBody> {
+    let client = reqwest::Client::new();
+    let body = serde_json::to_vec(&body).unwrap();
+    let response = match client.post(target_url.clone())
+        .headers(headers)
+        .body(body).send().await {
+        Ok(response) => response,
+        Err(error) => {
+            let message = format!("Error fetching from url={target_url} error={error}");
+
+            let mut response = message.into_response();
+            *response.status_mut() = StatusCode::INTERNAL_SERVER_ERROR;
+
+            return response;
+        }
+    };
+
+    let headers = response.headers().clone();
+    let status = response.status();
+    let body = match response.bytes().await {
+        Ok(body) => body.to_vec(),
+        Err(error) => {
+            let message = format!("Error fetching body from url={target_url} error={error}");
+
+            let mut response = message.into_response();
+            *response.status_mut() = StatusCode::INTERNAL_SERVER_ERROR;
+
+            return response;
+
+        }
+    };
+
+    use axum::response::IntoResponse;
+    let mut response: Response<BoxBody> = body.into_response();
+
+    *response.headers_mut() = headers;
+    *response.status_mut() = status;
+
+    response
+}
+
 fn install_proxy(
     app: Router<Arc<RwLock<Arc<ServerState>>>>,
     path: String,
@@ -127,14 +170,28 @@ fn install_proxy(
 ) -> Router<Arc<RwLock<Arc<ServerState>>>> {
     let router = Router::new().fallback(get ({
         let path = path.clone();
+        let target = target.clone();
 
         move |url: Uri| {
             async move {
                 let from_url = format!("{path}{url}");
                 let target_url = format!("{target}{url}");
-                log::info!("proxy {from_url} -> {target_url}");
+                log::info!("proxy get {from_url} -> {target_url}");
 
                 get_response(target_url).await
+            }
+        }
+    }).post({
+        let path = path.clone();
+
+        move |url: Uri, headers: HeaderMap, body: Json<Value>| {
+            async move {
+                let from_url = format!("{path}{url}");
+                let target_url = format!("{target}{url}");
+                let Json(body) = body;
+                log::info!("proxy post {from_url} -> {target_url}");
+
+                post_response(target_url, headers, body).await
             }
         }
     })).with_state(ref_state.clone());
