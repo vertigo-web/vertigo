@@ -31,6 +31,8 @@ pub fn run_cargo_build(package_name: &str, public_path: &str) -> Result<PathBuf,
     options.build_config.message_format = MessageFormat::Human;
     options.build_config.keep_going = true;
 
+    println!("options: {options:#?}");
+
     match ops::compile(&workspace, &options) {
         Ok(_success) => {
             log::info!("WASM built successfully");

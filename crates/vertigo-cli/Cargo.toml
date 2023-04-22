@@ -17,7 +17,7 @@ name = "vertigo_cli"
 path = "src/main.rs"
 
 [dependencies]
-cargo = "0.69"
+cargo = "0.70.0"
 clap = { version = "4.0", features = ["derive"] }
 hex = "0.4"
 include_dir = "0.7"
