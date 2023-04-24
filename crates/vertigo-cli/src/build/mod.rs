@@ -29,7 +29,7 @@ pub fn run(opts: BuildOpts) -> Result<(), i32> {
         },
     };
 
-    // check_env::check_env()?;
+    check_env::check_env()?;
 
     let dest_dir = WasmPath::new(PathBuf::from(&opts.dest_dir));
 
