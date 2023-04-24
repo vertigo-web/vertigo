@@ -1,7 +1,7 @@
 FROM rustlang/rust:nightly-buster-slim as builder
 # FROM rust:1.68 as builder
 WORKDIR /build
-RUN echo "aaa2"
+RUN echo "aaa3"
 RUN pwd
 COPY . .
 RUN apt-get update
@@ -22,6 +22,8 @@ RUN rustup component list --installed
 # RUN rustup component add --toolchain nightly rust-std
 
 #RUN cargo install vertigo-cli
+
+RUN rustup target list
 
 RUN cargo install --git https://github.com/vertigo-web/vertigo --branch cli vertigo-cli 
 
