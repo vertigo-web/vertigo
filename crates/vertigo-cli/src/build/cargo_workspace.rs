@@ -20,7 +20,7 @@ pub fn get_workspace(config_opt: &mut CargoResult::<Config>) -> Result<Workspace
         }
     };
 
-    log::info!("workspace - set current_dir");
+    log::info!("workspace - set current_dir ==> {cwd:#?}");
 
     match Workspace::new(&cwd.join("Cargo.toml"), config) {
         CargoResult::Ok(ws) => Ok(ws),

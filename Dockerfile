@@ -1,7 +1,7 @@
 FROM rustlang/rust:nightly-buster-slim as builder
 # FROM rust:1.68 as builder
 WORKDIR /build
-RUN echo "aaa1"
+RUN echo "aaa2"
 RUN pwd
 COPY . .
 RUN apt-get update
