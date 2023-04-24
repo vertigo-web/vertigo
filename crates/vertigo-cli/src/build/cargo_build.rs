@@ -23,6 +23,8 @@ pub fn run_cargo_build(package_name: &str, public_path: &str) -> Result<PathBuf,
         }
     };
 
+    println!("workspace: {:#?}", workspace.config());
+
     let mut options = ops::CompileOptions::new(workspace.config(), CompileMode::Build).unwrap();
     options.spec = ops::Packages::from_flags(false, vec![], vec![package_name.to_string()]).unwrap();
     let target = CompileTarget::new(TARGET).unwrap();
