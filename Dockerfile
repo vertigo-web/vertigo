@@ -1,5 +1,8 @@
 FROM rustlang/rust:nightly-buster-slim as builder
 # FROM rust:1.68 as builder
+WORKDIR /build
+RUN echo "aaa1"
+RUN pwd
 COPY . .
 RUN apt-get update
 RUN apt-get install -y binaryen
@@ -7,6 +10,9 @@ RUN apt-get install libssl-dev pkgconf make -y
 # RUN rustup default nightly
 # RUN rustup update nightly 
 RUN rustup target add wasm32-unknown-unknown
+
+RUN rustup component list --installed
+
 
 # RUN rustup show
 # RUN rustup toolchain remove nightly-x86_64-unknown-linux-gnu
