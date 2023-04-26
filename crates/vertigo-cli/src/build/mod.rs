@@ -6,7 +6,6 @@ mod find_target;
 mod wasm_path;
 mod cargo_workspace;
 
-pub use cargo_workspace::{infer_package_name, find_package_path};
 use std::path::PathBuf;
 use wasm_path::WasmPath;
 
@@ -14,16 +13,24 @@ pub use build_opts::BuildOpts;
 use crate::check_env;
 use crate::models::IndexModel;
 
+pub use cargo_workspace::{get_workspace, Workspace};
+
 pub fn run(opts: BuildOpts) -> Result<(), i32> {
+    let ws = get_workspace().expect("Can't read workspace");
+
+    run_with_ws(opts, &ws)
+}
+
+pub fn run_with_ws(opts: BuildOpts, ws: &Workspace) -> Result<(), i32> {
     let package_name = match opts.package_name.as_deref() {
         Some(name) => name.to_string(),
-        None => match infer_package_name() {
-            Ok(name) => {
+        None => match ws.infer_package_name() {
+            Some(name) => {
                 log::info!("Inferred package name = {}", name);
                 name
             },
-            Err(err) => {
-                log::error!("{}", err);
+            None => {
+                log::error!("Can't find vertigo project in {} (no cdylib member)", ws.get_root_dir());
                 return Err(-1)
             },
         },
@@ -44,7 +51,7 @@ pub fn run(opts: BuildOpts) -> Result<(), i32> {
 
     // Run build
 
-    let target_path = match cargo_build::run_cargo_build(&package_name, &opts.public_path) {
+    let target_path = match cargo_build::run_cargo_build(&package_name, &opts.public_path, ws) {
         Ok(path) => path,
         Err(_) => return Err(-2),
     };

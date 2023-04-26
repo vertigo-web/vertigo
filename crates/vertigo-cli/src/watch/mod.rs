@@ -9,8 +9,7 @@ use std::sync::Arc;
 use std::time::Duration;
 use tokio::sync::watch::Sender;
 
-use crate::build::BuildOpts;
-use crate::build::{infer_package_name, find_package_path};
+use crate::build::{BuildOpts, get_workspace, Workspace};
 use crate::serve::ServeOpts;
 use crate::spawn::SpawnOwner;
 use crate::utils::parse_key_val;
@@ -78,18 +77,21 @@ pub enum Status {
 }
 
 
-pub async fn run(opts: WatchOpts) -> Result<(), i32> {
+pub async fn run(mut opts: WatchOpts) -> Result<(), i32> {
     log::info!("watch params => {opts:#?}");
+
+    let ws = get_workspace().expect("Can't read workspace");
 
     let package_name = match opts.package_name.as_deref() {
         Some(name) => name.to_string(),
-        None => match infer_package_name() {
-            Ok(name) => {
+        None => match ws.infer_package_name() {
+            Some(name) => {
                 log::info!("Inferred package name = {}", name);
+                opts.package_name = Some(name.clone());
                 name
             },
-            Err(err) => {
-                log::error!("{}", err);
+            None => {
+                log::error!("Can't find vertigo project in {} (no cdylib member)", ws.get_root_dir());
                 return Err(-1)
             },
         },
@@ -97,7 +99,7 @@ pub async fn run(opts: WatchOpts) -> Result<(), i32> {
 
     log::info!("package_name ==> {package_name:?}");
 
-    let path = find_package_path(&package_name);
+    let path = ws.find_package_path(&package_name);
     log::info!("path ==> {path:?}");
 
     let Some(path) = path else {
@@ -182,20 +184,20 @@ pub async fn run(opts: WatchOpts) -> Result<(), i32> {
 
         log::info!("build run ...");
 
-        let spawn = build_and_watch(version, tx.clone(), &opts);
+        let spawn = build_and_watch(version, tx.clone(), &opts, &ws);
         notify_build.notified().await;
         spawn.off();
     }
 }
 
 
-fn build_and_watch(version: u32, tx: Arc<Sender<Status>>, opts: &WatchOpts) -> SpawnOwner {
+fn build_and_watch(version: u32, tx: Arc<Sender<Status>>, opts: &WatchOpts, ws: &Workspace) -> SpawnOwner {
     let opts = opts.clone();
-
+    let ws = ws.clone();
     SpawnOwner::new(async move {
         sleep(Duration::from_millis(200)).await;
 
-        match crate::build::run(opts.to_build_opts()) {
+        match crate::build::run_with_ws(opts.to_build_opts(), &ws) {
             Ok(()) => {
                 log::info!("build run ok");
 
