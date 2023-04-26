@@ -1,11 +1,18 @@
 <!-- markdownlint-configure-file { "no-duplicate-heading": { "siblings_only": true } } -->
 
 <!-- markdownlint-disable-next-line first-line-h1 -->
-## Unreleased
+## 0.3.0 - 2023-05-01
 
 ### Added
 
-* `dom_element!` macro which returns `DomElement` struct, while `dom!` macro returns `DomNode`
+* **Breaking:** `dom_element!` macro which returns `DomElement` struct, while `dom!` macro returns `DomNode` now
+* Suspense mechanism
+* `on_change` event to `<select>`/`<input>`/`<textarea>`
+* Env variables passed to application
+
+### Removed
+
+* vertigo-cli: `Cargo` as lib dependency
 
 ## 0.2.0 - 2023-03-25
 

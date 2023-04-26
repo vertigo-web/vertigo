@@ -1,7 +1,7 @@
 #![allow(dead_code)]
 use std::{
     collections::HashMap,
-    process::{exit, Output, Command, Stdio, ChildStdout},
+    process::{exit, Output, Command, Stdio, ChildStdout, ExitStatus},
 };
 
 pub struct CommandRun {
@@ -142,8 +142,7 @@ impl CommandRun {
         Self::show_status(error_allowed, &out);
     }
 
-    #[must_use]
-    pub fn output(self) -> String {
+    pub fn output_with_status(self) -> (Result<ExitStatus, std::io::Error>, String) {
         let error_allowed = self.error_allowed;
         let (command_str, mut command, stdin) = self.create_command();
         println!("{command_str}");
@@ -154,7 +153,16 @@ impl CommandRun {
         let out = command.output().unwrap();
         Self::show_status(error_allowed, &out);
 
-        Self::convert_to_string(out.stdout)
+        (
+            command.status(),
+            Self::convert_to_string(out.stdout)
+        )
+    }
+
+    #[must_use]
+    pub fn output(self) -> String {
+        let (_, output) = self.output_with_status();
+        output
     }
 
     pub fn spawn(self) {

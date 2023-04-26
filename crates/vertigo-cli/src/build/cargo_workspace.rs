@@ -42,7 +42,12 @@ impl Workspace {
     pub fn find_package_path(&self, package_name: &str) -> Option<PathBuf> {
         self.packages.iter()
             .find(|package| package.name == package_name)
-            .map(|package| package.manifest_path.clone().into())
+            .map(|package| {
+                package.manifest_path.clone().into()
+            })
+            .and_then(|path: PathBuf|
+                path.parent().map(|p| p.to_path_buf())
+            )
     }
 
     pub fn get_target_dir(&self) -> PathBuf {
