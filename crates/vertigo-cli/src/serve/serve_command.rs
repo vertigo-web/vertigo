@@ -194,7 +194,7 @@ fn install_proxy(
                 post_response(target_url, headers, body).await
             }
         }
-    })).with_state(ref_state.clone());
+    })).with_state(ref_state);
 
     app.nest_service(path.as_str(), router)
 }

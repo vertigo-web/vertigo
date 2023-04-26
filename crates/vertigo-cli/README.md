@@ -5,7 +5,7 @@ A packaging tool and server for vertigo library
 [![crates.io](https://img.shields.io/crates/v/vertigo-cli)](https://crates.io/crates/vertigo-cli)
 [![Documentation](https://docs.rs/vertigo-cli/badge.svg)](https://docs.rs/vertigo-cli)
 ![MIT or Apache 2.0 licensed](https://img.shields.io/crates/l/vertigo-cli.svg)
-[![Dependency Status](https://deps.rs/crate/vertigo-cli/0.2.0/status.svg)](https://deps.rs/crate/vertigo-cli/0.2.0s)
+[![Dependency Status](https://deps.rs/crate/vertigo-cli/0.3.0/status.svg)](https://deps.rs/crate/vertigo-cli/0.3.0s)
 [![downloads](https://img.shields.io/crates/d/vertigo-cli.svg)](https://crates.io/crates/vertigo-cli)
 
 This package provides `vertigo` binary that allows to _create_, _build_, _serve_ and _watch_ vertigo-based projects.

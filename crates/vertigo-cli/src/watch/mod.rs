@@ -120,11 +120,9 @@ pub async fn run(mut opts: WatchOpts) -> Result<(), i32> {
         move |res: Result<notify::Event, _>| {
             match res {
                 Ok(event) => {
-                    // log::info!("NOTIFY!");
                     if event.paths.iter().all(|path| {
                         for exclude_path in &excludes {
                             if path.starts_with(exclude_path) {
-                                log::info!("Ignoring path {}", path.display());
                                 return true
                             }
                         }
