@@ -10,7 +10,7 @@ const MODE: &str = "release";
 pub fn run_cargo_build(package_name: &str, public_path: &str, ws: &Workspace) -> Result<PathBuf, String> {
     log::info!("Building {package_name}");
 
-    let (res, output) = CommandRun::new("cargo")
+    let (status, output) = CommandRun::new("cargo")
         .add_param("build")
         .add_param(["--", MODE].concat())
         .add_param("--target")
@@ -21,14 +21,9 @@ pub fn run_cargo_build(package_name: &str, public_path: &str, ws: &Workspace) ->
         .error_allowed(true)
         .output_with_status();
 
-    match res {
-        Ok(status) => {
-            if status.success() {
-                Ok(ws.get_target_dir().join(TARGET).join(MODE))
-            } else {
-                Err(output)
-            }
-        },
-        Err(err) => Err(err.to_string())
+    if status.success() {
+        Ok(ws.get_target_dir().join(TARGET).join(MODE))
+    } else {
+        Err(output)
     }
 }

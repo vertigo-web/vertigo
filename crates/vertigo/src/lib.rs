@@ -1,6 +1,6 @@
 //! Vertigo is a library for building reactive web components.
 //!
-//! It mainly consists of three parts:
+//! It mainly consists of four parts:
 //!
 //! * **Reactive dependencies** - A graph of values and clients (micro-subscriptions)
 //!   that can automatically compute what to refresh after one or more value change(s)

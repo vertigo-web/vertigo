@@ -1,7 +1,6 @@
 use crate::command::CommandRun;
 
 fn is_target_instaled() -> bool {
-
     let target_list = CommandRun::new("rustup target list").output();
 
     let list = target_list.as_str().lines();
@@ -15,13 +14,6 @@ fn is_target_instaled() -> bool {
 }
 
 pub fn check_env() -> Result<(), i32> {
-    /*
-    if [ "$(rustup target list | grep wasm32-unknown-unknown | grep installed)" = "" ];
-    then
-        rustup target add wasm32-unknown-unknown;
-    fi
-    */
-
     if is_target_instaled() {
         return Ok(());
     }
