@@ -91,11 +91,12 @@ This is the main entry point for the application. It creates a very simple state
 
 Let's outline a little bigger picture now.
 
-Vertigo app mainly consists of three parts[^simplification]:
+Vertigo app mainly consists of four parts[^simplification]:
 
 - *Dependency graph* - which holds the current state of app and triggers its leaf clients upon some change,
 - *DOM elements* - that can be deps graph's clients and know how to update itself on the page,
 - *HTML/CSS macros* - which provides a convenient way to create DOM elements.
+- *Server-side rendering* - Out of the box when using `vertigo-cli`
 
 If we want to be a little more detailed in this description, then it would be:
 
@@ -108,6 +109,8 @@ It is important to remember that `DomElement` is not a product of render process
 which may modify the state, thus triggering necessary computing once again.
 - Coupled state and mount function is called component.
 - Components (connected with themselves in a parent-child hierarchy) make a reactive website.
+- HTML can be prepared server-side when using `vertigo serve` (or `watch`) command,
+this speeds-up page loads and allows web crawlers to properly index your website.
 
 Now let's breakdown the code line by line:
 

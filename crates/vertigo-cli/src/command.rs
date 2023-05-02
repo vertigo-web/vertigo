@@ -142,7 +142,7 @@ impl CommandRun {
         Self::show_status(error_allowed, &out);
     }
 
-    pub fn output_with_status(self) -> (Result<ExitStatus, std::io::Error>, String) {
+    pub fn output_with_status(self) -> (ExitStatus, String) {
         let error_allowed = self.error_allowed;
         let (command_str, mut command, stdin) = self.create_command();
         println!("{command_str}");
@@ -154,7 +154,7 @@ impl CommandRun {
         Self::show_status(error_allowed, &out);
 
         (
-            command.status(),
+            out.status,
             Self::convert_to_string(out.stdout)
         )
     }

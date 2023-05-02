@@ -75,7 +75,7 @@ pub async fn run(opts: ServeOpts, port_watch: Option<u16>) -> Result<(), i32> {
         return Err(-1);
     };
 
-    log::info!("Listening on {}", addr);
+    log::info!("Listening on http://{}", addr);
     axum::Server::bind(&addr)
         .serve(app.into_make_service())
         .await

@@ -29,13 +29,11 @@ pub fn run_wasm_opt(from: &WasmPath, to: &WasmPath) -> bool {
         Err(error) => {
             log::error!(r#"
 
-
-                Error running wasm-opt: {error}
+                WARNING: Can't perform wasm-opt: {error}
                 Your WASM package will be left unoptimized.
 
                 HINT: If you don't have "wasm-opt" command in your system,
                 install Binaryen package: https://github.com/WebAssembly/binaryen
-
 
             "#);
 
