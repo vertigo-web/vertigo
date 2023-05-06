@@ -42,19 +42,18 @@ impl PartialEq for DomElementRef {
 
 pub enum Callback<R> {
     Basic(Rc<dyn Fn() -> R + 'static>),
-    Rc(Rc<dyn Fn() -> R + 'static>),
     Computed(Computed<Rc<dyn Fn() -> R + 'static>>),
+}
+
+impl<R> From<Rc<dyn Fn() -> R + 'static>> for Callback<R> {
+    fn from(value: Rc<dyn Fn() -> R + 'static>) -> Self {
+        Callback::Basic(value)
+    }
 }
 
 impl<R, F: Fn() -> R + 'static> From<F> for Callback<R> {
     fn from(value: F) -> Self {
         Callback::Basic(Rc::new(value))
-    }
-}
-
-impl<R> From<Rc<dyn Fn() -> R + 'static>> for Callback<R> {
-    fn from(value: Rc<dyn Fn() -> R + 'static>) -> Self {
-        Callback::Rc(value)
     }
 }
 
@@ -68,7 +67,6 @@ impl<R: 'static> Callback<R> {
     pub fn subscribe(self) -> (Rc<dyn Fn() -> R + 'static>, Option<DropResource>) {
         match self {
             Self::Basic(func) => (func, None),
-            Self::Rc(func) => (func, None),
             Self::Computed(computed) => {
 
                 let current = Rc::new(ValueMut::new(None));

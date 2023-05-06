@@ -1,6 +1,6 @@
 use std::{collections::HashSet, rc::Rc};
 
-use vertigo::{css, Css, dom, Computed, bind, DomNode, dom_element};
+use vertigo::{css, Css, dom, Computed, bind, DomNode, dom_element, bind_rc};
 use crate::app::sudoku::state::{number_item::SudokuValue, Cell};
 
 fn css_item_only_one(cell_width: u32) -> Css {
@@ -120,11 +120,11 @@ fn view_default(cell_width: u32, cell: &Cell, possible: HashSet<SudokuValue>) ->
             "".into()
         };
 
-        let on_click: Rc<dyn Fn()> = Rc::new(bind!(cell, should_show, number, || {
+        let on_click = bind_rc!(cell, should_show, number, || {
             if should_show {
                 cell.number.value.set(Some(number));
             }
-        }));
+        });
 
         wrapper.add_child(dom! {
             <div css={css_item(should_show)} on_click={on_click}>

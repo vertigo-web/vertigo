@@ -116,7 +116,7 @@ export class DriverDom {
                     return;
                 }
 
-                if (href.startsWith('http://') || href.startsWith('https://') || href.startsWith('//')) {
+                if (href.startsWith('#') || href.startsWith('http://') || href.startsWith('https://') || href.startsWith('//')) {
                     return;
                 }
 
