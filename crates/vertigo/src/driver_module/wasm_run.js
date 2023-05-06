@@ -724,25 +724,27 @@ class HashRouter {
     constructor(getWasm) {
         this.getWasm = getWasm;
         this.callback = new Map();
+        window.addEventListener("hashchange", this.trigger);
     }
+    trigger = () => {
+        for (const callback of Array.from(this.callback.values())) {
+            callback();
+        }
+    };
     add = (callback_id) => {
-        const callback = () => {
+        this.callback.set(callback_id, () => {
             this.getWasm().wasm_callback(callback_id, this.get());
-        };
-        window.addEventListener("hashchange", callback);
-        this.callback.set(callback_id, callback);
+        });
     };
     remove = (callback_id) => {
-        const callback = this.callback.get(callback_id);
-        if (callback === undefined) {
-            console.error(`HashRouter - The callback with id is missing = ${callback_id}`);
-            return;
-        }
         this.callback.delete(callback_id);
-        window.removeEventListener('hashchange', callback);
     };
     push = (new_hash) => {
+        if (this.get() === new_hash) {
+            return;
+        }
         location.hash = new_hash;
+        this.trigger();
     };
     get() {
         return decodeURIComponent(location.hash.substr(1));
@@ -1299,7 +1301,7 @@ class DriverDom {
                 if (href === null) {
                     return;
                 }
-                if (href.startsWith('http://') || href.startsWith('https://') || href.startsWith('//')) {
+                if (href.startsWith('#') || href.startsWith('http://') || href.startsWith('https://') || href.startsWith('//')) {
                     return;
                 }
                 e.preventDefault();
