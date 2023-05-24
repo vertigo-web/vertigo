@@ -39,7 +39,9 @@ fn convert_to_component(node: Node) -> TokenStream2 {
             if let (Some(key), Some(value)) = (attr_node.name, attr_node.value) {
                 let value = strip_brackets(value);
 
-                if value.to_string().starts_with('&') {
+                if value.to_string() == "{}" {
+                    Some(quote! { #key: Default::default(), })
+                } else if value.to_string().starts_with('&') {
                     Some(quote! { #key: (#value).clone(), })
                 } else {
                     Some(quote! { #key: (#value).into(), })
