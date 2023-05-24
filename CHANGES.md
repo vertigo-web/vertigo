@@ -3,6 +3,10 @@
 <!-- markdownlint-disable-next-line first-line-h1 -->
 ## Unreleased
 
+### Added
+
+* In `dom!` macro, allow default value for an attribute by passing empty `{}`
+
 ### Fixed
 
 * vertigo-cli: Fixed un-captured outputs of commands run during build

@@ -70,7 +70,7 @@ impl<R: 'static> Callback<R> {
             Self::Computed(computed) => {
 
                 let current = Rc::new(ValueMut::new(None));
-                
+
                 let drop = computed.subscribe_all(bind!(current, |new_fn| {
                     current.set(Some(new_fn));
                 }));
@@ -123,7 +123,7 @@ impl<T: 'static, R: 'static> Callback1<T, R> {
             Self::Computed(computed) => {
 
                 let current = Rc::new(ValueMut::new(None));
-                
+
                 let drop = computed.subscribe_all(bind!(current, |new_fn| {
                     current.set(Some(new_fn));
                 }));
