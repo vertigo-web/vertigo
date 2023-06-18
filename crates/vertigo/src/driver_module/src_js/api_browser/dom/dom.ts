@@ -230,6 +230,11 @@ export class DriverDom {
         console.warn('event input ignore', target);
     }
 
+    private callback_blur(event: Event, callback_id: bigint) {
+        event.preventDefault();
+        this.getWasm().wasm_callback(callback_id, undefined);
+    }
+
     private callback_mouseenter(_event: Event, callback_id: bigint) {
         // event.preventDefault();
         this.getWasm().wasm_callback(callback_id, undefined);
@@ -334,6 +339,10 @@ export class DriverDom {
 
             if (event_name === 'change') {
                 return this.callback_change(event, callback_id);
+            }
+
+            if (event_name === 'blur') {
+                return this.callback_blur(event, callback_id);
             }
 
             if (event_name === 'mouseenter') {

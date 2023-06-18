@@ -377,6 +377,15 @@ impl DomElement {
         })
     }
 
+    pub fn on_blur(self, on_blur: impl Into<Callback<()>>) -> Self {
+        let on_blur = self.install_callback(on_blur);
+
+        self.add_event_listener("blur", move |_data| {
+            on_blur();
+            JsValue::Undefined
+        })
+    }
+
     pub fn on_key_down(self, on_key_down: impl Into<Callback1<KeyDownEvent, bool>>) -> Self {
         let on_key_down = self.install_callback1(on_key_down);
 
