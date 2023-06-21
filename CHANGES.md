@@ -5,6 +5,7 @@
 
 ### Added
 
+* `computed_tuple!` macro
 * `on_blur` event
 
 ## 0.3.1 - 2023-05-25
