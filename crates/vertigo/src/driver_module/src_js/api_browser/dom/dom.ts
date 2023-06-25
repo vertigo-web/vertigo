@@ -230,18 +230,27 @@ export class DriverDom {
         console.warn('event input ignore', target);
     }
 
-    private callback_blur(event: Event, callback_id: bigint) {
-        event.preventDefault();
+    private callback_blur(_event: Event, callback_id: bigint) {
         this.getWasm().wasm_callback(callback_id, undefined);
     }
 
+    private callback_mousedown(event: Event, callback_id: bigint) {
+        if (this.getWasm().wasm_callback(callback_id, undefined)) {
+            event.preventDefault()
+        }
+    }
+
+    private callback_mouseup(event: Event, callback_id: bigint) {
+        if (this.getWasm().wasm_callback(callback_id, undefined)) {
+            event.preventDefault()
+        }
+    }
+
     private callback_mouseenter(_event: Event, callback_id: bigint) {
-        // event.preventDefault();
         this.getWasm().wasm_callback(callback_id, undefined);
     }
 
     private callback_mouseleave(_event: Event, callback_id: bigint) {
-        // event.preventDefault();
         this.getWasm().wasm_callback(callback_id, undefined);
     }
 
@@ -343,6 +352,14 @@ export class DriverDom {
 
             if (event_name === 'blur') {
                 return this.callback_blur(event, callback_id);
+            }
+
+            if (event_name === 'mousedown') {
+                return this.callback_mousedown(event, callback_id);
+            }
+
+            if (event_name === 'mouseup') {
+                return this.callback_mouseup(event, callback_id);
             }
 
             if (event_name === 'mouseenter') {
