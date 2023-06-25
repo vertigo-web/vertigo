@@ -98,6 +98,14 @@ fn convert_node(node: Node, convert_to_dom_node: bool) -> Result<TokenStream2, (
             out_attr.push(quote!{
                 .on_click(#value)
             })
+        } else if name == "on_mouse_down" {
+            out_attr.push(quote!{
+                .on_mouse_down(#value)
+            })
+        } else if name == "on_mouse_up" {
+            out_attr.push(quote!{
+                .on_mouse_up(#value)
+            })
         } else if name == "on_mouse_enter" {
             out_attr.push(quote!{
                 .on_mouse_enter(#value)

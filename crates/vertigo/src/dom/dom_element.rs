@@ -304,8 +304,8 @@ impl DomElement {
         self
     }
 
-    fn install_callback(&self, callback: impl Into<Callback<()>>) -> Rc<dyn Fn() + 'static> {
-        let callback: Callback<()> = callback.into();
+    fn install_callback<R: 'static>(&self, callback: impl Into<Callback<R>>) -> Rc<dyn Fn() -> R + 'static> {
+        let callback: Callback<R> = callback.into();
         let (callback, drop) = callback.subscribe();
         if let Some(drop) = drop {
             self.subscriptions.push(drop);
@@ -328,6 +328,30 @@ impl DomElement {
         self.add_event_listener("click", move |_data| {
             on_click();
             JsValue::Undefined
+        })
+    }
+
+    pub fn on_mouse_down(self, on_mouse_down: impl Into<Callback<bool>>) -> Self {
+        let on_mouse_down = self.install_callback(on_mouse_down);
+
+        self.add_event_listener("mousedown", move |_data| {
+            if on_mouse_down() {
+                JsValue::True
+            } else {
+                JsValue::False
+            }
+        })
+    }
+
+    pub fn on_mouse_up(self, on_mouse_up: impl Into<Callback<bool>>) -> Self {
+        let on_mouse_up = self.install_callback(on_mouse_up);
+
+        self.add_event_listener("mouseup", move |_data| {
+            if on_mouse_up() {
+                JsValue::True
+            } else {
+                JsValue::False
+            }
         })
     }
 
