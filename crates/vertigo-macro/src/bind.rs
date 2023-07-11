@@ -239,7 +239,7 @@ pub fn bind_rc_fn(input: TokenStream) -> Result<TokenStream, String> {
 
     let types = {
         let mut types_macro: Vec<TokenStream2> = Vec::new();
-        
+
         for type_item in func_params.into_iter() {
             let type_item = get_type(type_item)?;
 
@@ -254,7 +254,7 @@ pub fn bind_rc_fn(input: TokenStream) -> Result<TokenStream, String> {
 
     Ok(quote!{
         {
-            let func: std::rc::Rc::<dyn Fn(#(#types,)*)> = std::rc::Rc::new(vertigo::bind!(#(#bind_params,)* #body));
+            let func: std::rc::Rc::<dyn Fn(#(#types,)*) -> _> = std::rc::Rc::new(vertigo::bind!(#(#bind_params,)* #body));
             func
         }
     }.into())

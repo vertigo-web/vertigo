@@ -5,7 +5,7 @@ use std::{
 use std::hash::Hash;
 use crate::DomNode;
 use crate::{
-    computed::{Computed, Dependencies, GraphId}, struct_mut::ValueMut, DropResource,
+    computed::{Computed, ToComputed, Dependencies, GraphId}, struct_mut::ValueMut, DropResource,
     get_driver,
 };
 
@@ -140,6 +140,14 @@ impl<T: Clone + 'static> Value<T> {
         })
     }
 
+    pub fn id(&self) -> GraphId {
+        self.inner.id
+    }
+
+    pub fn deps(&self) -> &'static Dependencies {
+        self.inner.deps
+    }
+
     pub fn to_computed(&self) -> Computed<T> {
         let self_clone = self.clone();
 
@@ -147,13 +155,17 @@ impl<T: Clone + 'static> Value<T> {
             self_clone.get(context)
         })
     }
+}
 
-    pub fn id(&self) -> GraphId {
-        self.inner.id
+impl<T: Clone + 'static> ToComputed<T> for Value<T> {
+    fn to_computed(&self) -> Computed<T> {
+        self.to_computed()
     }
+}
 
-    pub fn deps(&self) -> &'static Dependencies {
-        self.inner.deps
+impl<T: Clone + 'static> ToComputed<T> for &Value<T> {
+    fn to_computed(&self) -> Computed<T> {
+        (*self).to_computed()
     }
 }
 

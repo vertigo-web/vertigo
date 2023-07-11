@@ -1,36 +1,8 @@
 use crate::{
+    computed::ToComputed,
     driver_module::driver::Driver,
-    dom::dom_id::DomId, get_driver, DropResource, struct_mut::VecMut, Computed, Value,
+    dom::dom_id::DomId, get_driver, DropResource, struct_mut::VecMut,
 };
-
-pub trait ToComputed<T: Clone> {
-    fn to_computed_param(&self) -> Computed<T>;
-}
-
-impl<T: Clone + 'static> ToComputed<T> for Computed<T> {
-    fn to_computed_param(&self) -> Computed<T> {
-        self.clone()
-    }
-}
-
-impl<T: Clone + 'static> ToComputed<T> for &Computed<T> {
-    fn to_computed_param(&self) -> Computed<T> {
-        (*self).clone()
-    }
-}
-
-impl<T: Clone + 'static> ToComputed<T> for Value<T> {
-    fn to_computed_param(&self) -> Computed<T> {
-        self.to_computed()
-    }
-}
-
-impl<T: Clone + 'static> ToComputed<T> for &Value<T> {
-    fn to_computed_param(&self) -> Computed<T> {
-        self.to_computed()
-    }
-}
-
 
 /// A Real DOM representative - text kind
 pub struct DomText {
@@ -59,7 +31,7 @@ impl DomText {
         let id_dom = text_node.id_dom;
         let driver = get_driver();
 
-        let computed = computed.to_computed_param();
+        let computed = computed.to_computed();
         let client = computed.subscribe(move |value| {
             let value: String = value.into();
             driver.inner.dom.update_text(id_dom, &value);

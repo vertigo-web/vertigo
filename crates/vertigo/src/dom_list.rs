@@ -55,7 +55,7 @@ pub fn render_list<
             let render = render.clone();
 
             move |new_list| {
-                let new_list = VecDeque::from_iter(new_list.into_iter());
+                let new_list = VecDeque::from_iter(new_list);
                 current_list.change({
 
                     let get_key = get_key.clone();

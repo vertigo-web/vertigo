@@ -1,4 +1,7 @@
 use core::ops::{ControlFlow, FromResidual, Try};
+use std::rc::Rc;
+
+use crate::{ToComputed, Computed};
 
 /// The state of the resource.
 #[derive(Clone, Debug)]
@@ -78,5 +81,22 @@ impl<T: PartialEq> PartialEq for Resource<T> {
             (Resource::Ready(val1), Resource::Ready(val2)) => val1.eq(val2),
             _ => false,
         }
+    }
+}
+
+impl<T: Clone + 'static> ToComputed<Resource<Rc<T>>> for Resource<T> {
+    fn to_computed(&self) -> crate::Computed<Resource<Rc<T>>> {
+        Computed::from({
+            let myself = self.clone();
+            move |_| myself.clone().map(|item| Rc::new(item))
+        })
+    }
+}
+
+impl<T: Clone + 'static> ToComputed<Resource<Rc<T>>> for Computed<Resource<T>> {
+    fn to_computed(&self) -> crate::Computed<Resource<Rc<T>>> {
+        self.map(|res|
+            res.map(|item| Rc::new(item))
+        )
     }
 }

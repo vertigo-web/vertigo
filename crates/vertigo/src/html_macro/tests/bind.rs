@@ -29,5 +29,3 @@ fn test_bind() {
 
     on_click3();
 }
-
-

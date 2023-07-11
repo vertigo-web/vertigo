@@ -76,7 +76,7 @@ impl DomAccess {
             JsValue::str(name),
         );
 
-        value_params.extend(params.into_iter());
+        value_params.extend(params);
 
         self.builder.push(JsValue::List(value_params));
         self

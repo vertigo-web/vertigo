@@ -104,7 +104,7 @@ mod external_api;
 use computed::struct_mut::ValueMut;
 
 pub use computed::{
-    AutoMap, Computed, context::Context, Dependencies, DropResource, GraphId, struct_mut, Value
+    AutoMap, Computed, ToComputed, context::Context, Dependencies, DropResource, GraphId, struct_mut, Value
 };
 
 pub use dom::{
@@ -140,12 +140,8 @@ pub use fetch::{
     resource::Resource,
 };
 pub use future_box::{FutureBoxSend, FutureBox};
-pub use html_macro::{
-    EmbedDom
-};
-pub use instant::{
-    Instant, InstantType
-};
+pub use html_macro::EmbedDom;
+pub use instant::{Instant, InstantType};
 pub use websocket::{WebsocketConnection, WebsocketMessage};
 
 /// Allows to include a static file
@@ -286,6 +282,10 @@ pub fn get_driver() -> Driver {
 /// Do bunch of operations on dependency graph without triggering anything in between.
 pub fn transaction<R, F: FnOnce(&Context) -> R>(f: F) -> R {
     get_driver().transaction(f)
+}
+
+pub mod prelude {
+    pub use crate::{bind, css, dom, DomNode, ToComputed, Value, Computed, Css};
 }
 
 //------------------------------------------------------------------------------------------------------------------

@@ -12,11 +12,11 @@ pub mod context;
 mod tests;
 
 pub use auto_map::AutoMap;
-pub use computed_box::Computed;
+pub use computed_box::{Computed, ToComputed};
 pub use dependencies::Dependencies;
 pub use graph_id::GraphId;
-pub use graph_value::{GraphValue};
-pub use value::{Value};
+pub use graph_value::GraphValue;
+pub use value::Value;
 pub use drop_resource::DropResource;
 
 /// Allows to create `Computed<T1, T2, ...>` out of `Value<T1>`, `Value<T2>`, ...
