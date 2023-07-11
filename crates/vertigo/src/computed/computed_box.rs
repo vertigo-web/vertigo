@@ -2,7 +2,7 @@ use std::{cmp::PartialEq, rc::Rc};
 use crate::{
     computed::{GraphValue, graph_id::GraphId},
     dom_value::{render_value, render_value_option},
-    dom_list::{render_list},
+    dom_list::render_list,
     Value, DomNode, DropResource, struct_mut::ValueMut
 };
 use std::hash::Hash;
@@ -197,5 +197,21 @@ impl<T: Clone + 'static> From<&T> for Computed<T> {
 impl From<&str> for Computed<String> {
     fn from(value: &str) -> Self {
         Value::new(value.to_string()).to_computed()
+    }
+}
+
+pub trait ToComputed<T: Clone> {
+    fn to_computed(&self) -> Computed<T>;
+}
+
+impl<T: Clone + 'static> ToComputed<T> for Computed<T> {
+    fn to_computed(&self) -> Computed<T> {
+        self.clone()
+    }
+}
+
+impl<T: Clone + 'static> ToComputed<T> for &Computed<T> {
+    fn to_computed(&self) -> Computed<T> {
+        (*self).clone()
     }
 }

@@ -4,7 +4,7 @@ use std::{
     rc::Rc,
 };
 
-use crate::{struct_mut::HashMapMut};
+use crate::struct_mut::HashMapMut;
 
 type CreateType<K, V> = Box<dyn Fn(&AutoMap<K, V>, &K) -> V>;
 

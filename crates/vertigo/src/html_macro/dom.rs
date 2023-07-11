@@ -1,5 +1,5 @@
 use crate::{
-    dom::dom_node::{DomNode},
+    dom::dom_node::DomNode,
     Computed, DomText, DomElement, DomComment, Value,
 };
 

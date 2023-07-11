@@ -102,7 +102,7 @@ impl TransactionState {
         self.state.change(move |mut state| {
             match &mut state {
                 State::Modification { client_ids, .. } => {
-                    client_ids.extend(client.into_iter());
+                    client_ids.extend(client);
                 }
                 _ => {
                     log::error!("You can only call the trigger if you are in a transaction block");

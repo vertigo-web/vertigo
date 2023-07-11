@@ -4,7 +4,7 @@ use crate::{transaction, get_driver};
 use crate::computed::{Computed, Value, DropResource};
 
 use crate::computed::tests::box_value_version::SubscribeValueVer;
-use crate::struct_mut::{ValueMut};
+use crate::struct_mut::ValueMut;
 
 #[test]
 fn basic() {

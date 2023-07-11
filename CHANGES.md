@@ -1,12 +1,13 @@
 <!-- markdownlint-configure-file { "no-duplicate-heading": { "siblings_only": true } } -->
 
 <!-- markdownlint-disable-next-line first-line-h1 -->
-## 0.3.2 - Unreleased
+## 0.3.2 - 2023-07-17
 
 ### Added
 
 * `computed_tuple!` macro
 * `on_blur`, `on_mouse_down`, `on_mouse_up` event
+* `ToComputed` trait
 
 ## 0.3.1 - 2023-05-25
 

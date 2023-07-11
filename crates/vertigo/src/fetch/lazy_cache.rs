@@ -4,7 +4,7 @@ use std::rc::Rc;
 use crate::{
     computed::{context::Context, Value},
     struct_mut::ValueMut,
-    Instant, Resource, get_driver, Computed, transaction, DomNode,
+    Instant, Resource, get_driver, Computed, transaction, DomNode, ToComputed,
 };
 
 use super::request_builder::{RequestBuilder, RequestBody};
@@ -219,13 +219,19 @@ impl<T> LazyCache<T> {
     }
 }
 
+impl<T: Clone> ToComputed<Resource<Rc<T>>> for LazyCache<T> {
+    fn to_computed(&self) -> Computed<Resource<Rc<T>>> {
+        self.to_computed()
+    }
+}
+
 impl<T> PartialEq for LazyCache<T> {
     fn eq(&self, other: &Self) -> bool {
         self.id == other.id
     }
 }
 
-impl<T: PartialEq> LazyCache<T> {
+impl<T: PartialEq + Clone> LazyCache<T> {
     pub fn render(&self, render: impl Fn(Rc<T>) -> DomNode + 'static) -> DomNode {
         self.to_computed().render_value(move |value| {
             match value {
@@ -241,7 +247,7 @@ impl<T: PartialEq> LazyCache<T> {
                 },
                 Resource::Error(error) => {
                     use crate as vertigo;
-                        
+
                     vertigo::dom! {
                         <div>
                             "error = "

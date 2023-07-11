@@ -1,4 +1,4 @@
-use std::{collections::{BTreeSet, BTreeMap}};
+use std::collections::{BTreeSet, BTreeMap};
 use crate::{GraphId, struct_mut::ValueMut};
 use super::graph_one_to_many::GraphOneToMany;
 
@@ -64,7 +64,7 @@ impl GraphConnectionsInner {
         let mut new_list = Vec::new();
 
         for command in command_list {
-            new_list.extend(self.exec_command(command).into_iter());
+            new_list.extend(self.exec_command(command));
         }
 
         new_list

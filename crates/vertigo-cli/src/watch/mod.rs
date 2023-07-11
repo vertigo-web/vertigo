@@ -176,8 +176,9 @@ pub async fn run(mut opts: WatchOpts) -> Result<(), i32> {
     loop {
         version += 1;
 
-        let Ok(()) = tx.send(Status::Building) else {
-            unreachable!();
+        if let Err(err) = tx.send(Status::Building) {
+            log::error!("Can't contact the browser: {err} (Other watch process already running?)");
+            return Err(-2);
         };
 
         log::info!("build run ...");

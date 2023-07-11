@@ -181,7 +181,7 @@ pub fn sort_commands(list: Vec<DriverDomCommand>) -> Vec<DriverDomCommand> {
         }
     }
 
-    dom.extend(events.into_iter());
+    dom.extend(events);
 
     dom
 }
