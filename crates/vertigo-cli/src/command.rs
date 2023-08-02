@@ -71,7 +71,7 @@ impl CommandRun {
 
         out.push(self.bin.clone());
 
-        out.extend(self.params.clone().into_iter());
+        out.extend(self.params.clone());
 
         out.join(" ")
     }

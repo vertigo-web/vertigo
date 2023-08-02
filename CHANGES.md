@@ -1,6 +1,16 @@
 <!-- markdownlint-configure-file { "no-duplicate-heading": { "siblings_only": true } } -->
 
 <!-- markdownlint-disable-next-line first-line-h1 -->
+## Unreleased
+
+### Added
+
+* `LazyCache::forget`
+
+### Fixed
+
+* `LazyCache::force_update` really forces the update even if value not expired
+
 ## 0.3.2 - 2023-07-17
 
 ### Added

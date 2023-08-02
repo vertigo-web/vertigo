@@ -246,13 +246,13 @@ impl<K: Eq + Hash, T> CacheNode<K, T> {
 
     pub fn insert(&mut self, item: &T, element: DomNode) {
         let key = (self.get_key)(item);
-        let item = self.data.entry(key).or_insert_with(VecDeque::new);
+        let item = self.data.entry(key).or_default();
         item.push_back(element);
     }
 
     pub fn get_or_create(&mut self, item: &T) -> DomNode {
         let key = (self.get_key)(item);
-        let element = self.data.entry(key).or_insert_with(VecDeque::new).pop_front();
+        let element = self.data.entry(key).or_default().pop_front();
 
         let CacheNode { create_new, .. } = self;
 
