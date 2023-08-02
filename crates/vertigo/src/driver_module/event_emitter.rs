@@ -25,7 +25,6 @@ impl<T: Clone + Send + Sync> EventEmitter<T> {
 
         DropResource::new({
             let list = self.list.clone();
-            let id = id;
             move || {
                 list.remove(&id);
             }

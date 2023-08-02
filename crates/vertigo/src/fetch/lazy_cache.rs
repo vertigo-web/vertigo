@@ -18,7 +18,7 @@ fn get_unique_id() -> u64 {
 }
 
 enum ApiResponse<T> {
-    Notinit,
+    Uninitialized,
     Data {
         value: Resource<Rc<T>>,
         expiry: Option<Instant>,
@@ -39,14 +39,14 @@ impl<T> ApiResponse<T> {
 
     pub fn get_value(&self) -> Resource<Rc<T>> {
         match self {
-            Self::Notinit => Resource::Loading,
+            Self::Uninitialized => Resource::Loading,
             Self::Data { value, expiry: _ } => value.clone()
         }
     }
 
     pub fn needs_update(&self) -> bool {
         match self {
-            ApiResponse::Notinit => true,
+            ApiResponse::Uninitialized => true,
             ApiResponse::Data { value: _, expiry } => {
                 let Some(expiry) = expiry else {
                     return false;
@@ -61,7 +61,7 @@ impl<T> ApiResponse<T> {
 impl<T> Clone for ApiResponse<T> {
     fn clone(&self) -> Self {
         match self {
-            ApiResponse::Notinit => ApiResponse::Notinit,
+            ApiResponse::Uninitialized => ApiResponse::Uninitialized,
             ApiResponse::Data { value, expiry } => {
                 ApiResponse::Data {
                     value: value.clone(),
@@ -143,24 +143,36 @@ impl<T> LazyCache<T> {
     ) -> Self {
         Self {
             id: get_unique_id(),
-            value: Value::new(ApiResponse::Notinit),
+            value: Value::new(ApiResponse::Uninitialized),
             queued: Rc::new(ValueMut::new(false)),
             request: Rc::new(request),
             map_response: Rc::new(map_response),
         }
     }
 
+    /// Get value (update if needed)
     pub fn get(&self, context: &Context) -> Resource<Rc<T>> {
         let api_response = self.value.get(context);
 
         if !self.queued.get() && api_response.needs_update() {
-            self.force_update(false);
+            self.update(false, false);
         }
 
         api_response.get_value()
     }
 
+    /// Delete value so it will refresh on next access
+    pub fn forget(&self) {
+        self.value.set(ApiResponse::Uninitialized);
+    }
+
+    /// Force refresh the value now
     pub fn force_update(&self, with_loading: bool) {
+        self.update(with_loading, true)
+    }
+
+    /// Update the value if expired
+    pub fn update(&self, with_loading: bool, force: bool) {
         if self.queued.get() {
             return;
         }
@@ -180,7 +192,7 @@ impl<T> LazyCache<T> {
                 self_clone.value.get(context)
             });
 
-            if api_response.needs_update() {
+            if force || api_response.needs_update() {
                 if with_loading {
                     self_clone.value.set(ApiResponse::new_loading());
                 }

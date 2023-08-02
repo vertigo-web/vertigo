@@ -25,21 +25,21 @@ impl DomConnection {
 
     fn node_remove(&mut self, node_id: DomId) {
         let parent_id = self.parent.remove(&node_id);
-    
+
         if let Some(parent_id) = parent_id {
             self.child.remove(&parent_id);
         }
     }
-    
+
     fn node_insert(&mut self, node_id: DomId, parent_id: DomId) {
         self.parent.insert(node_id, parent_id);
-                
+
         self.child
             .entry(parent_id)
-            .or_insert_with(BTreeSet::new)
+            .or_default()
             .insert(node_id);
     }
-    
+
     pub fn get_parent(&self, node_id: DomId) -> Option<DomId> {
         self.parent.get(&node_id).cloned()
     }

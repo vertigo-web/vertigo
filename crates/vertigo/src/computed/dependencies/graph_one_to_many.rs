@@ -1,4 +1,4 @@
-use std::{collections::{BTreeSet, BTreeMap}};
+use std::collections::{BTreeSet, BTreeMap};
 use crate::GraphId;
 
 pub struct GraphEdgeIter<'a> {
@@ -51,7 +51,7 @@ impl GraphOneToMany {
     pub fn add(&mut self, left_id: GraphId, right_id: GraphId) {
         self.data
             .entry(left_id)
-            .or_insert_with(BTreeSet::new)
+            .or_default()
             .insert(right_id);
     }
 

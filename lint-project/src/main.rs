@@ -51,7 +51,7 @@ fn visit_dirs(result: &mut Vec<String>, dir: &Path) {
 
         if let Some(name) = dir.file_name() {
             let name_str = name.to_str().unwrap();
-            
+
             for pattern_ext in IGNORE_NAME {
                 if pattern_ext.trim() == name_str.trim() {
                     return;
@@ -71,7 +71,7 @@ fn visit_dirs(result: &mut Vec<String>, dir: &Path) {
 }
 
 fn test_file(errors_counter: &mut u64, file_path: &String, content: String) {
-    if let Some(char) = content.chars().rev().next() {
+    if let Some(char) = content.chars().next_back() {
         if char == '\n' {
             //ok
         } else {
