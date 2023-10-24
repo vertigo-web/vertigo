@@ -145,7 +145,7 @@ const jsJsonGetSize = (value) => {
         return 1 + 4 + getStringSize(value);
     }
     if (Array.isArray(value)) {
-        let sum = 1 + 2;
+        let sum = 1 + 4;
         for (const item of value) {
             sum += jsJsonGetSize(item);
         }
@@ -181,7 +181,7 @@ const jsJsonDecodeItem = (cursor) => {
     }
     if (typeParam === 6) {
         const out = [];
-        const listSize = cursor.getU16();
+        const listSize = cursor.getU32();
         for (let i = 0; i < listSize; i++) {
             out.push(jsJsonDecodeItem(cursor));
         }
@@ -222,7 +222,7 @@ const saveJsJsonToBufferItem = (value, cursor) => {
     }
     if (Array.isArray(value)) {
         cursor.setByte(6);
-        cursor.setU16(value.length);
+        cursor.setU32(value.length);
         for (const item of value) {
             saveJsJsonToBufferItem(item, cursor);
         }
@@ -291,7 +291,7 @@ const jsValueDecodeItem = (cursor) => {
     }
     if (typeParam === 11) {
         const out = [];
-        const listSize = cursor.getU16();
+        const listSize = cursor.getU32();
         for (let i = 0; i < listSize; i++) {
             out.push(jsValueDecodeItem(cursor));
         }
@@ -341,7 +341,7 @@ const getSize = (value) => {
         return 1 + 4 + getStringSize(value);
     }
     if (Array.isArray(value)) {
-        let sum = 1 + 2;
+        let sum = 1 + 4;
         for (const item of value) {
             sum += getSize(item);
         }
@@ -398,7 +398,7 @@ const saveToBufferItem = (value, cursor) => {
     }
     if (Array.isArray(value)) {
         cursor.setByte(11);
-        cursor.setU16(value.length);
+        cursor.setU32(value.length);
         for (const item of value) {
             saveToBufferItem(item, cursor);
         }

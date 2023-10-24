@@ -85,7 +85,7 @@ const jsValueDecodeItem = (cursor: BufferCursor): JsValueType => {
     if (typeParam === 11) {
         const out: Array<JsValueType> = [];
 
-        const listSize = cursor.getU16();
+        const listSize = cursor.getU32();
 
         for (let i=0; i<listSize; i++) {
             out.push(jsValueDecodeItem(cursor))
@@ -149,7 +149,7 @@ const getSize = (value: JsValueType): number => {
     }
 
     if (Array.isArray(value)) {
-        let sum = 1 + 2;
+        let sum = 1 + 4;
 
         for (const item of value) {
             sum += getSize(item);
@@ -223,7 +223,7 @@ const saveToBufferItem = (value: JsValueType, cursor: BufferCursor) => {
 
     if (Array.isArray(value)) {
         cursor.setByte(11);
-        cursor.setU16(value.length);
+        cursor.setU32(value.length);
 
         for (const item of value) {
             saveToBufferItem(item, cursor);

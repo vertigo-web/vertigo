@@ -9,7 +9,7 @@ use super::serialize::{JsJsonContext, JsJsonDeserialize, JsJsonSerialize};
 
 const PARAM_TYPE: u32 = 1;
 const STRING_SIZE: u32 = 4;
-const LIST_COUNT: u32 = 2;
+const LIST_COUNT: u32 = 4;
 const OBJECT_COUNT: u32 = 2;
 
 enum JsJsonConst {
@@ -186,7 +186,7 @@ impl JsJson {
             }
             Self::List(list) => {
                 buff.write_u8(JsJsonConst::List);
-                buff.write_u16(list.len() as u16);
+                buff.write_u32(list.len() as u32);
 
                 for param in list {
                     param.write_to(buff);
@@ -277,7 +277,7 @@ pub fn decode_js_json_inner(buffer: &mut MemoryBlockRead) -> Result<JsJson, Stri
         JsJsonConst::List => {
             let mut param_list = Vec::new();
 
-            let list_size = buffer.get_u16();
+            let list_size = buffer.get_u32();
 
             for _ in 0..list_size {
                 let param = decode_js_json_inner(buffer)?;
