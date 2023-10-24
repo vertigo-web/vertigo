@@ -97,7 +97,7 @@ export class JsNode {
             console.error(`JsNode.nextRoot: Global name not found -> ${firstName}`, {path, args});
             return null;
         }
-        
+
         if (GuardJsValue.isNumber(firstName) && rest.length === 0) {
             const domId = firstName.value;
 

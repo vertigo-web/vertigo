@@ -27,7 +27,7 @@ export const jsJsonGetSize = (value: JsJsonType): number => {
     }
 
     if (Array.isArray(value)) {
-        let sum = 1 + 2;
+        let sum = 1 + 4;
 
         for (const item of value) {
             sum += jsJsonGetSize(item);
@@ -77,7 +77,7 @@ export const jsJsonDecodeItem = (cursor: BufferCursor): JsJsonType => {
     if (typeParam === 6) {
         const out: Array<JsJsonType> = [];
 
-        const listSize = cursor.getU16();
+        const listSize = cursor.getU32();
 
         for (let i=0; i<listSize; i++) {
             out.push(jsJsonDecodeItem(cursor))
@@ -130,7 +130,7 @@ export const saveJsJsonToBufferItem = (value: JsJsonType, cursor: BufferCursor) 
 
     if (Array.isArray(value)) {
         cursor.setByte(6);
-        cursor.setU16(value.length);
+        cursor.setU32(value.length);
 
         for (const item of value) {
             saveJsJsonToBufferItem(item, cursor);
