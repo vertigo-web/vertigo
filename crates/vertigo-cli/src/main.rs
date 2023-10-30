@@ -1,19 +1,20 @@
-mod build;
-mod new;
-mod serve;
+pub mod build;
+pub mod new;
+pub mod serve;
+pub mod watch;
+
 mod models;
 mod check_env;
 mod command;
-mod watch;
 mod spawn;
 mod utils;
 
 use clap::{Parser, Subcommand};
 
-use build::BuildOpts;
-use new::NewOpts;
-use serve::ServeOpts;
-use watch::WatchOpts;
+pub use build::BuildOpts;
+pub use new::NewOpts;
+pub use serve::ServeOpts;
+pub use watch::WatchOpts;
 
 #[derive(Parser)]
 #[command(author, version, about, long_about = None)]

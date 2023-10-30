@@ -11,8 +11,12 @@ members = [
     "examples/router",
     "examples/trafficlights",
 
+    "tests",
+    "tests/basic",
+
     "lint-project"
 ]
+resolver = "2"
 
 [profile.release]
 lto = true
