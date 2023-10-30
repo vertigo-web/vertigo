@@ -112,7 +112,7 @@ fn reorder_nodes<
 }
 
 fn find_first_dom<T>(list: &VecDeque<(T, DomNode)>) -> Option<DomId> {
-    if let Some((_, first)) = list.get(0) {
+    if let Some((_, first)) = list.front() {
         return Some(first.id_dom());
     }
 

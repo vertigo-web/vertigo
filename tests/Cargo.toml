@@ -1,0 +1,15 @@
+[package]
+name = "fantoccini-tests"
+version = "0.1.0"
+authors = ["Michał Pokrywka <wolfmoon@o2.pl>"]
+edition = "2021"
+publish = false
+
+[dev-dependencies]
+fantoccini = "0.19"
+vertigo-cli = { path = "../crates/vertigo-cli" }
+tokio = "1"
+
+[[test]]
+name = "basic"
+path = "basic/tests.rs"
