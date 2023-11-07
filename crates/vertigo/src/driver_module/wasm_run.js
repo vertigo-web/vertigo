@@ -1879,8 +1879,8 @@ class WasmModule {
     constructor(wasm) {
         this.wasm = wasm;
     }
-    vertigo_entry_function() {
-        this.wasm.exports.vertigo_entry_function();
+    vertigo_entry_function(major, minor) {
+        this.wasm.exports.vertigo_entry_function(major, minor);
     }
     static async create(wasmBinPath) {
         let wasmModule = null;
@@ -1924,6 +1924,9 @@ class WasmModule {
     }
 }
 
+// vertigo-cli compatibility version, change together with package version.
+const VERTIGO_COMPAT_VERSION_MAJOR = 0;
+const VERTIGO_COMPAT_VERSION_MINOR = 4;
 const moduleRun = new Set();
 const runModule = async (wasm) => {
     if (moduleRun.has(wasm)) {
@@ -1938,8 +1941,8 @@ const runModule = async (wasm) => {
     console.info(`Wasm module: "${wasm}" -> start`);
     const wasmModule = await WasmModule.create(wasm);
     console.info(`Wasm module: "${wasm}" -> initialized`);
-    wasmModule.vertigo_entry_function();
-    console.info(`Wasm module: "${wasm}" -> launched vertigo_entry_function`);
+    wasmModule.vertigo_entry_function(VERTIGO_COMPAT_VERSION_MAJOR, VERTIGO_COMPAT_VERSION_MINOR);
+    console.info(`Wasm module: "${wasm}" -> launched vertigo_entry_function with version ${VERTIGO_COMPAT_VERSION_MAJOR}.${VERTIGO_COMPAT_VERSION_MINOR}`);
 };
 const findAndRunModule = async () => {
     document.querySelectorAll('*[data-vertigo-run-wasm]').forEach((node) => {

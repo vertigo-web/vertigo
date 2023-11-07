@@ -225,7 +225,6 @@ pub use vertigo_macro::css_block;
 
 pub mod html_entities;
 
-
 pub struct DriverConstruct {
     driver: Driver,
     subscription: ValueMut<Option<DomNode>>,

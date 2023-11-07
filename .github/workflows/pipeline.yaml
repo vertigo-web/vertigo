@@ -40,6 +40,8 @@ jobs:
         with:
           command: test
           args: --all-features
+      - name: Check versions
+        run: tests/check_versions.sh
 
   fixed-nightly-clippy:
     name: Fixed Nightly clippy (wasm32)

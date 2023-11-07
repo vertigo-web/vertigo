@@ -1,15 +1,17 @@
 <!-- markdownlint-configure-file { "no-duplicate-heading": { "siblings_only": true } } -->
 
 <!-- markdownlint-disable-next-line first-line-h1 -->
-## Unreleased
+## 0.4.0 - 2023-11-08
 
 ### Added
 
 * `LazyCache::forget`
+* Check for vertigo/vertigo-cli major.minor versions mismatch. Error is printed on CLI and JavaScript console.
 
 ### Fixed
 
 * `LazyCache::force_update` really forces the update even if value not expired
+* `JsJson` and `JsValue`` list size as u32 - fixes large DOM updates
 
 ## 0.3.2 - 2023-07-17
 

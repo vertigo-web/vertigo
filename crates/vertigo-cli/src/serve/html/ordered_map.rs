@@ -23,8 +23,8 @@ impl OrderedMap {
         if self.data.contains_key(&name) {
             let mut order = self.order
                 .iter()
+                .filter(|&item_name| item_name != &name)
                 .cloned()
-                .filter(|item_name| item_name != &name)
                 .collect::<Vec<_>>();
 
             order.push(name);
