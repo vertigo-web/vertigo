@@ -87,4 +87,3 @@ script = [
 
 [tasks.lint]
 script = "cargo run --bin lint-project"
-

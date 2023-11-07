@@ -19,7 +19,7 @@ use crate::serve::{
 };
 
 use super::get_now;
-use super::js_value_match::{Match};
+use super::js_value_match::Match;
 
 #[derive(Debug)]
 pub enum Message {
@@ -330,7 +330,7 @@ impl WasmInstance {
 
                     if let Ok(env_name) = match_get_env(&value) {
                         let env_value = request.env(env_name);
-                        
+
                         let result = match env_value {
                             Some(value) => JsValue::String(value),
                             None => JsValue::Null,
@@ -423,7 +423,10 @@ impl WasmInstance {
     }
 
     pub fn call_vertigo_entry_function(&mut self) {
-        self.call_function::<(), ()>("vertigo_entry_function", ()).unwrap();
+        self.call_function::<(u32, u32), ()>(
+            "vertigo_entry_function",
+            (super::VERTIGO_VERSION_MAJOR, super::VERTIGO_VERSION_MINOR),
+        ).unwrap();
     }
 
     pub fn wasm_callback(&mut self, callback_id: u64, params: JsValue) -> JsValue {

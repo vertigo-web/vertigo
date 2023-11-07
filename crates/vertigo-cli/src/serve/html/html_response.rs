@@ -88,7 +88,7 @@ impl HtmlResponse {
 
             for (env_name, env_value) in &self.env {
                 html.add_attr(format!("data-env-{env_name}"), env_value);
-            }    
+            }
         } else {
             return (StatusCode::INTERNAL_SERVER_ERROR, "root: the html element was expected".into());
         }

@@ -1,5 +1,9 @@
 import { WasmModule } from "./wasm_module";
 
+// vertigo-cli compatibility version, change together with package version.
+const VERTIGO_COMPAT_VERSION_MAJOR = 0;
+const VERTIGO_COMPAT_VERSION_MINOR = 4;
+
 const moduleRun: Set<string> = new Set();
 
 const runModule = async (wasm: string) => {
@@ -18,8 +22,8 @@ const runModule = async (wasm: string) => {
     console.info(`Wasm module: "${wasm}" -> start`);
     const wasmModule = await WasmModule.create(wasm);
     console.info(`Wasm module: "${wasm}" -> initialized`);
-    wasmModule.vertigo_entry_function();
-    console.info(`Wasm module: "${wasm}" -> launched vertigo_entry_function`);
+    wasmModule.vertigo_entry_function(VERTIGO_COMPAT_VERSION_MAJOR, VERTIGO_COMPAT_VERSION_MINOR);
+    console.info(`Wasm module: "${wasm}" -> launched vertigo_entry_function with version ${VERTIGO_COMPAT_VERSION_MAJOR}.${VERTIGO_COMPAT_VERSION_MINOR}`);
 };
 
 const findAndRunModule = async () => {

@@ -1,5 +1,5 @@
 use std::task::Poll;
-use futures::{stream::{Stream, StreamExt}};
+use futures::stream::{Stream, StreamExt};
 use poem::{
     handler,
     web::{sse::{Event, SSE}, Data},

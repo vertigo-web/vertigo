@@ -17,9 +17,7 @@ use html_parser::{dom_inner, dom_element_inner};
 use proc_macro::{TokenStream, Span};
 use syn::{Visibility, __private::ToTokens};
 
-use crate::{
-    css_parser::generate_css_string,
-};
+use crate::css_parser::generate_css_string;
 use bind::{bind_macro_fn, bind_spawn_fn, bind_rc_fn};
 
 #[proc_macro]
@@ -140,12 +138,22 @@ pub fn main(_attr: TokenStream, input: TokenStream) -> TokenStream {
 
     let input: proc_macro2::TokenStream = input2.into();
 
+    const VERTIGO_VERSION_MAJOR: u32 = pkg_version::pkg_version_major!();
+    const VERTIGO_VERSION_MINOR: u32 = pkg_version::pkg_version_minor!();
+
     quote! {
         #input
 
         #[no_mangle]
-        pub fn vertigo_entry_function() {
+        pub fn vertigo_entry_function(version: (u32, u32)) {
             vertigo::start_app(#name);
+            if true || version.0 != #VERTIGO_VERSION_MAJOR || version.1 != #VERTIGO_VERSION_MINOR {
+                vertigo::log::error!(
+                    "Vertigo version mismatch, server {}.{} != client {}.{}",
+                    version.0, version.1,
+                    #VERTIGO_VERSION_MAJOR, #VERTIGO_VERSION_MINOR
+                );
+            }
         }
     }.into()
 }
