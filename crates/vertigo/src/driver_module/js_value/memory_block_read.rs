@@ -6,6 +6,7 @@ pub struct MemoryBlockRead {
     offset: u32,
 }
 
+#[allow(dead_code)]
 impl MemoryBlockRead {
     pub fn new(buffer: MemoryBlock) -> MemoryBlockRead {
         MemoryBlockRead {

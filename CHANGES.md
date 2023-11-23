@@ -1,6 +1,12 @@
 <!-- markdownlint-configure-file { "no-duplicate-heading": { "siblings_only": true } } -->
 
 <!-- markdownlint-disable-next-line first-line-h1 -->
+## 0.4.1 - Unreleased
+
+### Fixed
+
+* Version matching always failed due to `if true` XD
+
 ## 0.4.0 - 2023-11-08
 
 ### Added

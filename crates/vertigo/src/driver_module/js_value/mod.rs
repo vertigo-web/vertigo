@@ -1,4 +1,3 @@
-#![allow(dead_code)]
 mod memory_block_write;
 mod memory_block_read;
 mod memory_block;

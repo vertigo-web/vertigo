@@ -147,7 +147,7 @@ pub fn main(_attr: TokenStream, input: TokenStream) -> TokenStream {
         #[no_mangle]
         pub fn vertigo_entry_function(version: (u32, u32)) {
             vertigo::start_app(#name);
-            if true || version.0 != #VERTIGO_VERSION_MAJOR || version.1 != #VERTIGO_VERSION_MINOR {
+            if version.0 != #VERTIGO_VERSION_MAJOR || version.1 != #VERTIGO_VERSION_MINOR {
                 vertigo::log::error!(
                     "Vertigo version mismatch, server {}.{} != client {}.{}",
                     version.0, version.1,

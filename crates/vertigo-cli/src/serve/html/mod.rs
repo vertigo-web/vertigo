@@ -9,5 +9,5 @@ mod html_element;
 
 pub use dom_command::DomCommand;
 pub use html_response::HtmlResponse;
-pub use html_element::{HtmlDocument, HtmlNode};
+pub use html_element::HtmlNode;
 pub use send_request::RequestBody;
