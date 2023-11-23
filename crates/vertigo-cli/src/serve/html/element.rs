@@ -214,9 +214,9 @@ impl AllElements {
     }
 
     #[cfg(test)]
-    pub fn get_response_document(&self, with_id: bool) -> (super::HtmlDocument, Vec<HtmlNode>) {
+    pub fn get_response_document(&self, with_id: bool) -> (super::html_element::HtmlDocument, Vec<HtmlNode>) {
         let (root, css) = self.get_response(with_id);
-        (super::HtmlDocument::new(root), css)
+        (super::html_element::HtmlDocument::new(root), css)
     }
 }
 
