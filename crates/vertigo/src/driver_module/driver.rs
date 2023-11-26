@@ -205,11 +205,22 @@ impl Driver {
         self.inner.api.dom_access()
     }
 
-    ///Function added for diagnostic purposes. It allows you to check whether a block with a transaction is missing somewhere.
+    /// Function added for diagnostic purposes. It allows you to check whether a block with a transaction is missing somewhere.
     pub fn on_after_transaction(&self, callback: impl Fn() + 'static) -> DropResource {
         self.inner.dependencies.hooks.on_after_transaction(callback)
     }
 
+    /// Return true if the code is executed client-side (in the browser).
+    ///
+    /// ```rust
+    /// use vertigo::{dom, get_driver};
+    ///
+    /// let component = if get_driver().is_browser() {
+    ///     dom! { <div>"My dynamic component"</div> }
+    /// } else {
+    ///     dom! { <div>"Loading... (if not loaded check if JavaScript is enabled)"</div> }
+    /// };
+    /// ```
     pub fn is_browser(&self) -> bool {
         self.inner.api.is_browser()
     }

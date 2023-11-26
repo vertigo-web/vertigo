@@ -35,11 +35,11 @@ pub struct WatchOpts {
     #[arg(short, long)]
     pub disable_wasm_opt: bool,
 
-    /// sets up proxy: --proxy /path=http://domain.com/path
+    /// sets up proxy: `--proxy /path=http://domain.com/path`
     #[arg(long, value_parser = parse_key_val::<String, String>)]
     pub proxy: Vec<(String, String)>,
 
-    /// Setting the parameters --env api=http://domain.com/api --env api2=http://domain.com/api2
+    /// Setting the parameters `--env api=http://domain.com/api --env api2=http://domain.com/api2`
     #[arg(long, value_parser = parse_key_val::<String, String>)]
     pub env: Vec<(String, String)>,
 }

@@ -82,6 +82,18 @@
 //!
 //! To get started you may consider looking at the
 //! [Tutorial](https://github.com/vertigo-web/vertigo/blob/master/tutorial.md).
+//!
+//! Short-links to most commonly used things:
+//!
+//! * [dom!] - Build [DomNode] using RSX (HTML-like) syntax
+//! * [css!] - Build [Css] using CSS-like syntax
+//! * [component] - Wrap function to be used as component in RSX
+//! * [main] - Wrap function to be vertigo entry-point
+//! * [get_driver] - Access browser facilities
+//! * [bind!] - Auto-clone variables before use
+//! * [Value] - Read-write reactive value
+//! * [Computed] - Read-only (computed) reactive value
+//! * [router::Router] - Hash or history routing
 
 #![deny(rust_2018_idioms)]
 #![feature(try_trait_v2)] // https://github.com/rust-lang/rust/issues/84277
@@ -108,9 +120,10 @@ pub use computed::{
 };
 
 pub use dom::{
+    callback::{Callback, Callback1},
     css::{Css, CssGroup},
     dom_id::DomId,
-    dom_element::{DomElement, Callback, Callback1},
+    dom_element::DomElement,
     dom_node::DomNode,
     dom_text::DomText,
     dom_comment::DomComment,
@@ -150,6 +163,25 @@ pub use websocket::{WebsocketConnection, WebsocketMessage};
 pub use vertigo_macro::include_static;
 
 /// Allows to create an event handler based on provided arguments
+///
+/// ```rust
+/// use vertigo::{bind, dom, Value,};
+///
+/// let count = Value::new(0);
+///
+/// let increment = bind!(count, || {
+///     count.change(|value| {
+///         *value += 1;
+///     });
+/// });
+///
+/// dom! {
+///     <div>
+///         <p>"Counter: " { count }</p>
+///         <button on_click={increment}>"+"</button>
+///     </div>
+/// };
+/// ```
 pub use vertigo_macro::bind;
 
 /// Allows to create an event handler based on provided arguments which is wrapped in Rc
@@ -158,12 +190,72 @@ pub use vertigo_macro::bind_rc;
 /// Allows to create an event handler based on provided arguments which launches an asynchronous action
 pub use vertigo_macro::bind_spawn;
 
+/// Macro for creating `JsJson` from structures and structures from `JsJson`.
+///
+/// Used for fetching and sending objects over the network.
+///
+/// ```rust
+/// #[derive(vertigo::AutoJsJson)]
+/// pub struct Post {
+///     pub id: i64,
+///     pub name: String,
+///     pub visible: bool,
+/// }
+///
+/// let post = Post {
+///     id: 1,
+///     name: "Hello".to_string(),
+///     visible: true
+/// };
+///
+/// let js_json = vertigo::to_json(post);
+///
+/// let post2 = vertigo::from_json::<Post>(js_json);
+/// ```
 pub use vertigo_macro::AutoJsJson;
 
 /// Macro which transforms a provided function into a component that can be used in [dom!] macro
+///
+/// ```rust
+/// use vertigo::component;
+/// use vertigo::prelude::*;
+///
+/// #[component]
+/// pub fn Header(name: Value<String>) {
+///     dom! {
+///         <div>"Hello" {name}</div>
+///     }
+/// }
+///
+/// let name = Value::new("world".to_string());
+///
+/// dom! {
+///     <div>
+///        <Header name={name} />
+///     </div>
+/// };
+/// ```
 pub use vertigo_macro::component;
 
 /// Marco that marks an entry point of the app
+///
+/// Note: Html, head and body tags are required by vertigo to properly take over the DOM
+///
+/// ```rust
+/// use vertigo::prelude::*;
+///
+/// #[vertigo::main]
+/// fn app() -> DomNode {
+///     dom! {
+///         <html>
+///             <head/>
+///             <body>
+///                 <div>"Hello world"</div>
+///             </body>
+///         </html>
+///     }
+/// }
+/// ```
 pub use vertigo_macro::main;
 
 // Export log module which can be used in vertigo plugins
@@ -261,7 +353,7 @@ fn start_app_inner(root_view: DomNode) {
     });
 }
 
-/// Starting point of the app (used by [main] macro)
+/// Starting point of the app (used by [main] macro, which is preferred)
 pub fn start_app(init_app: fn() -> DomNode) {
     get_driver_state("start_app", |state| {
         init_env(state.driver.inner.api.clone());
@@ -272,6 +364,12 @@ pub fn start_app(init_app: fn() -> DomNode) {
 }
 
 /// Getter for [Driver] singleton.
+///
+/// ```rust
+/// use vertigo::get_driver;
+///
+/// let number = get_driver().get_random(1, 10);
+/// ```
 pub fn get_driver() -> Driver {
     DRIVER_BROWSER.with(|state| {
         state.driver
