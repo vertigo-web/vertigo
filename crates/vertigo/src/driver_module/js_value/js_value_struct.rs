@@ -77,6 +77,7 @@ impl From<JsValueConst> for u8 {
     }
 }
 
+/// Represents a JavaScript value that can be passed to a JS function.
 #[derive(Debug, PartialEq, Clone)]
 pub enum JsValue {
     U32(u32),

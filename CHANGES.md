@@ -17,7 +17,7 @@
 ### Fixed
 
 * `LazyCache::force_update` really forces the update even if value not expired
-* `JsJson` and `JsValue`` list size as u32 - fixes large DOM updates
+* `JsJson` and `JsValue` list size as u32 - fixes large DOM updates
 
 ## 0.3.2 - 2023-07-17
 

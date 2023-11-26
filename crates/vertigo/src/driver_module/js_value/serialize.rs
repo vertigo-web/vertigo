@@ -279,12 +279,14 @@ impl JsJsonDeserialize for Post {
     }
 }
 
+/// Deserialize from JsJson to T
 pub fn from_json<T: JsJsonDeserialize>(json: JsJson) -> Result<T, String> {
     let context = JsJsonContext::new("root");
     let result = T::from_json(context, json);
     result.map_err(|context| context.convert_to_string())
 }
 
+/// Serialize T to JsJson
 pub fn to_json<T: JsJsonSerialize>(value: T) -> JsJson {
     value.to_json()
 }

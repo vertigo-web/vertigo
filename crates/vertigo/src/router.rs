@@ -4,12 +4,6 @@ use crate::{
     Computed,
 };
 
-#[derive(Clone, PartialEq)]
-pub struct Router<T: Clone + ToString + From<String> + PartialEq + 'static> {
-    use_history_api: bool,
-    pub route: Computed<T>,
-}
-
 /// Router based on hash part of current location.
 ///
 /// ```rust
@@ -56,7 +50,7 @@ pub struct Router<T: Clone + ToString + From<String> + PartialEq + 'static> {
 ///
 /// impl State {
 ///     pub fn component() -> DomNode {
-///         let route = Router::new_hash_router();
+///         let route = Router::new_history_router();
 ///
 ///         let state = State {
 ///             route,
@@ -74,6 +68,12 @@ pub struct Router<T: Clone + ToString + From<String> + PartialEq + 'static> {
 ///     }
 /// }
 /// ```
+#[derive(Clone, PartialEq)]
+pub struct Router<T: Clone + ToString + From<String> + PartialEq + 'static> {
+    use_history_api: bool,
+    pub route: Computed<T>,
+}
+
 impl<T: Clone + ToString + From<String> + PartialEq + 'static> Router<T> {
     /// Create new Router which sets route value upon hash change in browser bar.
     /// If callback is provided then it is fired instead.
@@ -81,6 +81,7 @@ impl<T: Clone + ToString + From<String> + PartialEq + 'static> Router<T> {
         Self::new(false)
     }
 
+    /// Create new Router which sets route value upon url change (works with browser history)
     pub fn new_history_router() -> Router<T> {
         Self::new(true)
     }

@@ -3,6 +3,7 @@ use std::{
     rc::Rc,
 };
 use std::hash::Hash;
+
 use crate::DomNode;
 use crate::{
     computed::{Computed, ToComputed, Dependencies, GraphId}, struct_mut::ValueMut, DropResource,
@@ -181,10 +182,56 @@ impl<T: Clone + PartialEq + 'static> Value<T> {
 }
 
 impl<T: Clone + PartialEq + 'static> Value<T> {
+    /// Render value (reactively transforms `T` into `DomNode`)
+    ///
+    /// See [computed_tuple](macro.computed_tuple.html) if you want to render multiple values in a handy way.
+    ///
+    /// ```rust
+    /// use vertigo::{dom, Value};
+    ///
+    /// let my_value = Value::new(5);
+    ///
+    /// let element = my_value.render_value(|bare_value| dom! { <div>{bare_value}</div> });
+    ///
+    /// dom! {
+    ///     <div>
+    ///         {element}
+    ///     </div>
+    /// };
+    /// ```
+    ///
     pub fn render_value(&self, render: impl Fn(T) -> DomNode + 'static) -> DomNode {
         self.to_computed().render_value(render)
     }
 
+    /// Render optional value (reactively transforms `Option<T>` into `Option<DomNode>`)
+    ///
+    /// See [computed_tuple](macro.computed_tuple.html) if you want to render multiple values in a handy way.
+    ///
+    /// ```rust
+    /// use vertigo::{dom, Value};
+    ///
+    /// let value1 = Value::new(Some(5));
+    /// let value2 = Value::new(None::<i32>);
+    ///
+    /// let element1 = value1.render_value_option(|bare_value|
+    ///     bare_value.map(|value| dom! { <div>{value}</div> })
+    /// );
+    /// let element2 = value2.render_value_option(|bare_value|
+    ///     match bare_value {
+    ///         Some(value) => Some(dom! { <div>{value}</div> }),
+    ///         None => Some(dom! { <div>"default"</div> }),
+    ///     }
+    /// );
+    ///
+    /// dom! {
+    ///     <div>
+    ///         {element1}
+    ///         {element2}
+    ///     </div>
+    /// };
+    /// ```
+    ///
     pub fn render_value_option(&self, render: impl Fn(T) -> Option<DomNode> + 'static) -> DomNode {
         self.to_computed().render_value_option(render)
     }
@@ -194,6 +241,29 @@ impl<
     T: PartialEq + Clone + 'static,
     L: IntoIterator<Item=T> + Clone + PartialEq + 'static
 > Value<L> {
+    /// Render iterable value (reactively transforms `Iterator<T>` into Node with list of rendered elements )
+    ///
+    /// ```rust
+    /// use vertigo::{dom, Value};
+    ///
+    /// let my_list = Value::new(vec![
+    ///     (1, "one"),
+    ///     (2, "two"),
+    ///     (3, "three"),
+    /// ]);
+    ///
+    /// let elements = my_list.render_list(
+    ///     |el| el.0,
+    ///     |el| dom! { <div>{el.1}</div> }
+    /// );
+    ///
+    /// dom! {
+    ///     <div>
+    ///         {elements}
+    ///     </div>
+    /// };
+    /// ```
+    ///
     pub fn render_list<
         K: Eq + Hash,
     >(

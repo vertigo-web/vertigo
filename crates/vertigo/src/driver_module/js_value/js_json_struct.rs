@@ -64,6 +64,7 @@ impl From<JsJsonConst> for u8 {
     52 bits for the mantissa (representing a number between 0 and 1)
 */
 
+/// JSON object serialized to travel between JS-WASM boundary.
 #[derive(Debug, Clone)]
 pub enum JsJson {
     True,
