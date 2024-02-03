@@ -2,6 +2,7 @@ use itertools::Itertools;
 use pest::{iterators::Pair, Parser};
 use proc_macro::TokenStream;
 use proc_macro2::{Span, TokenStream as TokenStream2};
+use quote::quote;
 use std::collections::HashMap;
 use syn::{parse_str, Expr, ExprLit, Ident, Lit};
 

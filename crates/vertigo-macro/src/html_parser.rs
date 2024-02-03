@@ -1,5 +1,6 @@
 use proc_macro::TokenStream;
 use proc_macro2::{Span, TokenStream as TokenStream2};
+use quote::quote;
 use syn::{Expr, __private::ToTokens};
 use syn_rsx::{parse, Node, NodeType};
 

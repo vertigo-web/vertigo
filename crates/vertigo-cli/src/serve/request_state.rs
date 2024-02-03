@@ -9,9 +9,7 @@ pub struct RequestState {
 impl RequestState {
     pub fn env(&self, name: impl Into<String>) -> Option<String> {
         let name = name.into();
-        let Some(value) = self.env.get(&name) else {
-            return None;
-        };
+        let value = self.env.get(&name)?;
 
         Some(value.clone())
     }

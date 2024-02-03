@@ -1,4 +1,5 @@
 use proc_macro::TokenStream;
+use quote::quote;
 use syn::Data;
 
 pub(crate) fn impl_js_json_derive(ast: &syn::DeriveInput) -> Result<TokenStream, String> {
