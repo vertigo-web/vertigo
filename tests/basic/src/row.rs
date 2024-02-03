@@ -1,7 +1,7 @@
-use vertigo::{dom, component};
+use vertigo::{component, dom};
 
 #[component]
-pub fn Row<'a>(id: String, label: String) {
+pub fn Row<'a>(id: &'a str, label: &'a str) {
     dom! {
         <div id={id}>{label}</div>
     }

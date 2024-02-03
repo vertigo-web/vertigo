@@ -5,20 +5,23 @@ extern crate pest_derive;
 #[macro_use]
 extern crate proc_macro_error;
 
-mod css_parser;
-mod js_json_derive;
-mod html_parser;
 mod bind;
+mod component;
+mod css_parser;
+mod html_parser;
 mod include_static;
+mod js_json_derive;
 
 mod wasm_path;
 
-use html_parser::{dom_inner, dom_element_inner};
-use proc_macro::{TokenStream, Span};
-use syn::{Visibility, __private::ToTokens};
+use proc_macro::{Span, TokenStream};
 
-use crate::css_parser::generate_css_string;
-use bind::{bind_macro_fn, bind_spawn_fn, bind_rc_fn};
+use crate::{
+    bind::{bind_macro_fn, bind_rc_fn, bind_spawn_fn},
+    component::component_inner,
+    css_parser::generate_css_string,
+    html_parser::{dom_element_inner, dom_inner},
+};
 
 #[proc_macro]
 #[proc_macro_error]
@@ -66,9 +69,7 @@ pub fn auto_js_json(input: TokenStream) -> TokenStream {
     let ast = syn::parse(input).unwrap();
 
     match js_json_derive::impl_js_json_derive(&ast) {
-        Ok(result) => {
-            result
-        },
+        Ok(result) => result,
         Err(message) => {
             emit_error!(Span::call_site(), "{}", message);
             let empty = "";
@@ -79,9 +80,7 @@ pub fn auto_js_json(input: TokenStream) -> TokenStream {
 
 fn convert_to_tokens(input: Result<TokenStream, String>) -> TokenStream {
     match input {
-        Ok(body) => {
-            body
-        },
+        Ok(body) => body,
         Err(message) => {
             emit_error!(Span::call_site(), "{}", message);
             let empty = "";
@@ -97,9 +96,7 @@ pub fn include_static(input: TokenStream) -> TokenStream {
     let file_path = Span::call_site().source_file().path();
 
     match include_static::include_static(file_path, path) {
-        Ok(hash) => {
-            quote! { #hash }.into()
-        },
+        Ok(hash) => quote! { #hash }.into(),
         Err(message) => {
             emit_error!(Span::call_site(), "{}", message);
             let empty = "";
@@ -107,7 +104,6 @@ pub fn include_static(input: TokenStream) -> TokenStream {
         }
     }
 }
-
 
 #[proc_macro]
 #[proc_macro_error]
@@ -155,75 +151,12 @@ pub fn main(_attr: TokenStream, input: TokenStream) -> TokenStream {
                 );
             }
         }
-    }.into()
+    }
+    .into()
 }
 
 #[proc_macro_attribute]
 #[proc_macro_error]
 pub fn component(_attr: TokenStream, input: TokenStream) -> TokenStream {
-    let ast = syn::parse_macro_input!(input as syn::ItemFn);
-
-    //function name
-    let name = &ast.sig.ident;
-
-    if ast.sig.output.to_token_stream().to_string() != "" {
-        emit_error!(
-            Span::call_site(),
-            "{} => \"{}\"", "remove the information about the returned type. A component always returns DomNode",
-            ast.sig.output.to_token_stream().to_string()
-        );
-        return quote! { }.into();
-    }
-
-    let mut struct_fields = Vec::new();
-
-    for aaa in ast.sig.inputs.iter() {
-        struct_fields.push(quote!{
-            pub #aaa
-        })
-    }
-
-    let body = ast.block;
-
-    let mut param_names = Vec::new();
-    for param in &ast.sig.inputs {
-        if let syn::FnArg::Typed(pat_type) = param {
-            if let syn::Pat::Ident(ident) = &*pat_type.pat {
-                let param_name = ident.ident.clone();
-
-                param_names.push(quote! {
-                    let #param_name = self.#param_name;
-                })
-            }
-        }
-    }
-
-    let visibility = &ast.vis;
-
-    let visibility2 = match visibility {
-        Visibility::Public(_) => {
-            quote! {
-                pub
-            }
-        }
-        _ => {
-            quote! {}
-        }
-    };
-
-    let result = quote! {
-        #visibility2 struct #name {
-            #(#struct_fields,)*
-        }
-
-        impl #name {
-            pub fn mount(self) -> vertigo::DomNode {
-                #(#param_names)*
-
-                (#body).into()
-            }
-        }
-    };
-
-    result.into()
+    component_inner(input)
 }

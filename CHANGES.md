@@ -1,6 +1,12 @@
 <!-- markdownlint-configure-file { "no-duplicate-heading": { "siblings_only": true } } -->
 
 <!-- markdownlint-disable-next-line first-line-h1 -->
+## Unreleased
+
+### Fixed
+
+* Lifetimes and generics in `#[component]` macro
+
 ## 0.4.1 - 2023-12-02
 
 ### Fixed
