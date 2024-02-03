@@ -3,6 +3,7 @@ use std::collections::VecDeque;
 use proc_macro::{TokenStream, TokenTree, Span};
 use proc_macro2::TokenStream as TokenStream2;
 use proc_macro2::Ident as Ident2;
+use quote::quote;
 use syn::__private::quote::format_ident;
 
 fn is_char(token: &TokenTree, char: char) -> bool {

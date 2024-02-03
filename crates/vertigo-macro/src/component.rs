@@ -1,4 +1,5 @@
 use proc_macro::{Span, TokenStream};
+use quote::quote;
 use syn::{Visibility, __private::ToTokens};
 
 pub fn component_inner(input: TokenStream) -> TokenStream {

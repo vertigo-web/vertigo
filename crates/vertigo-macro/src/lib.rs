@@ -11,10 +11,10 @@ mod css_parser;
 mod html_parser;
 mod include_static;
 mod js_json_derive;
-
 mod wasm_path;
 
 use proc_macro::{Span, TokenStream};
+use quote::quote;
 
 use crate::{
     bind::{bind_macro_fn, bind_rc_fn, bind_spawn_fn},

@@ -214,12 +214,12 @@ fn html_node_to_string(result: &mut Vec<String>, ident: Ident, node: HtmlNode) {
                     }
 
                     //close tag
-                    let line = vec!(
+                    let line = [
                         ident_str,
                         "</".into(),
                         escape(element.name),
                         ">".into()
-                    );
+                    ];
 
                     result.push(line.concat());
                 },

@@ -14,5 +14,4 @@ pub use js_json_struct::JsJson;
 #[cfg(test)]
 mod tests;
 
-pub use serialize::{JsJsonContext, JsJsonSerialize, JsJsonDeserialize, from_json, to_json};
-pub use js_json_struct::JsJsonObjectBuilder;
+pub use serialize::{JsJsonContext, JsJsonDeserialize, from_json};

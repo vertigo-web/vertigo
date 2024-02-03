@@ -1,9 +1,9 @@
 use axum::{
     extract::{State, RawQuery, Json},
     http::{StatusCode, Uri},
-    http::{header::HeaderMap},
+    http::header::HeaderMap,
     response::Response,
-    Router, body::BoxBody, routing::{get},
+    Router, body::BoxBody, routing::get,
 };
 use clap::Args;
 use serde_json::Value;
@@ -241,12 +241,12 @@ fn add_watch_script(response: String, port_watch: u16) -> String {
 
     let start = format!("start_watch('http://127.0.0.1:{port_watch}/events');");
 
-    let chunks = vec!(
+    let chunks = [
         "<script>".to_string(),
         watch.to_string(),
         start,
         "</script>".to_string()
-    );
+    ];
 
     let script = chunks.join("\n");
 
