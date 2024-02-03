@@ -1,7 +1,7 @@
+use proc_macro::TokenStream;
+use proc_macro2::{Span, TokenStream as TokenStream2};
 use syn::{Expr, __private::ToTokens};
 use syn_rsx::{parse, Node, NodeType};
-use proc_macro::{TokenStream};
-use proc_macro2::{TokenStream as TokenStream2, Span};
 
 /// Strips expression from excessive brackets (only once)
 fn strip_brackets(expr: Expr) -> TokenStream2 {
@@ -28,12 +28,17 @@ fn strip_brackets(expr: Expr) -> TokenStream2 {
 
 /// Tags starting with uppercase letter are considered components
 fn is_component_name(name: &str) -> bool {
-    name.chars().next().map(char::is_uppercase).unwrap_or_default()
+    name.chars()
+        .next()
+        .map(char::is_uppercase)
+        .unwrap_or_default()
 }
 
 fn convert_to_component(node: Node) -> TokenStream2 {
     let component = node.name;
-    let attributes = node.attributes.into_iter()
+    let attributes = node
+        .attributes
+        .into_iter()
         .filter_map(|attr_node| {
             let span = attr_node.name_span().unwrap();
             if let (Some(key), Some(value)) = (attr_node.name, attr_node.value) {
@@ -87,7 +92,7 @@ fn convert_node(node: Node, convert_to_dom_node: bool) -> Result<TokenStream2, (
     // let span = node.name_span().unwrap();
 
     if is_component_name(&node_name) {
-        return Ok(convert_to_component(node))
+        return Ok(convert_to_component(node));
     }
 
     let mut out_attr = Vec::new();
@@ -95,63 +100,63 @@ fn convert_node(node: Node, convert_to_dom_node: bool) -> Result<TokenStream2, (
 
     let mut push_attr = |name: String, value: TokenStream2| {
         if name == "on_click" {
-            out_attr.push(quote!{
+            out_attr.push(quote! {
                 .on_click(#value)
             })
         } else if name == "on_mouse_down" {
-            out_attr.push(quote!{
+            out_attr.push(quote! {
                 .on_mouse_down(#value)
             })
         } else if name == "on_mouse_up" {
-            out_attr.push(quote!{
+            out_attr.push(quote! {
                 .on_mouse_up(#value)
             })
         } else if name == "on_mouse_enter" {
-            out_attr.push(quote!{
+            out_attr.push(quote! {
                 .on_mouse_enter(#value)
             })
         } else if name == "on_mouse_leave" {
-            out_attr.push(quote!{
+            out_attr.push(quote! {
                 .on_mouse_leave(#value)
             })
         } else if name == "on_input" {
-            out_attr.push(quote!{
+            out_attr.push(quote! {
                 .on_input(#value)
             })
         } else if name == "on_change" {
-            out_attr.push(quote!{
+            out_attr.push(quote! {
                 .on_change(#value)
             })
         } else if name == "on_blur" {
-            out_attr.push(quote!{
+            out_attr.push(quote! {
                 .on_blur(#value)
             })
         } else if name == "on_key_down" {
-            out_attr.push(quote!{
+            out_attr.push(quote! {
                 .on_key_down(#value)
             })
         } else if name == "on_dropfile" {
-            out_attr.push(quote!{
+            out_attr.push(quote! {
                 .on_dropfile(#value)
             })
         } else if name == "hook_key_down" {
-            out_attr.push(quote!{
+            out_attr.push(quote! {
                 .hook_key_down(#value)
             })
         } else if name == "on_load" {
-            out_attr.push(quote!{
+            out_attr.push(quote! {
                 .on_load(#value)
             })
         } else if name == "css" {
-            out_attr.push(quote!{
+            out_attr.push(quote! {
                 .css(#value)
             })
         } else if name == "vertigo-suspense" {
-            out_attr.push(quote!{
+            out_attr.push(quote! {
                 .suspense(Some(#value))
             })
         } else {
-            out_attr.push(quote!{
+            out_attr.push(quote! {
                 .attr(#name, #value)
             })
         }
@@ -167,13 +172,11 @@ fn convert_node(node: Node, convert_to_dom_node: bool) -> Result<TokenStream2, (
             }
 
             push_attr(name, value);
-
         } else if attr_item.node_type == NodeType::Attribute {
             let name = attr_item.name_as_string().unwrap();
             let value = attr_item.value.unwrap();
             let value = strip_brackets(value);
             push_attr(name, value);
-
         } else {
             return Err(());
         }
@@ -211,7 +214,7 @@ fn convert_node(node: Node, convert_to_dom_node: bool) -> Result<TokenStream2, (
             match span {
                 Some(span) => {
                     emit_error!(span, "no support for the node".to_string());
-                },
+                }
                 None => {
                     panic!("the span element was expected");
                 }
@@ -255,7 +258,8 @@ pub fn dom_inner(input: TokenStream) -> TokenStream {
 
         return quote! {
             vertigo::DomNode::from(#last)
-        }.into();
+        }
+        .into();
     }
 
     if modes_dom.is_empty() {
@@ -266,9 +270,9 @@ pub fn dom_inner(input: TokenStream) -> TokenStream {
         vertigo::DomNode::from(vertigo::DomComment::dom_fragment(vec!(
             #(#modes_dom,)*
         )))
-    }.into()
+    }
+    .into()
 }
-
 
 pub fn dom_element_inner(input: TokenStream) -> TokenStream {
     let nodes = parse(input).unwrap();
@@ -288,10 +292,13 @@ pub fn dom_element_inner(input: TokenStream) -> TokenStream {
 
         return quote! {
             #last
-        }.into();
+        }
+        .into();
     }
 
-    emit_error!(Span::call_site(), "This macro supports only one DomElement as root".to_string());
-    quote!{}.into()
-
+    emit_error!(
+        Span::call_site(),
+        "This macro supports only one DomElement as root".to_string()
+    );
+    quote! {}.into()
 }

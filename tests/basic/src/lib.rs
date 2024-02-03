@@ -50,7 +50,7 @@ pub fn app(state: AppState) -> DomNode {
                 |row| row.0.clone(),
                 |(key, label)|
                     dom! {
-                        <Row id={key.clone()} label={label.clone()} />
+                        <Row id={&key} label={&label} />
                     }
             ),
         Mode::Div4 =>
@@ -60,7 +60,7 @@ pub fn app(state: AppState) -> DomNode {
                     dom! {
                         <div>
                             <div>"Row"</div><div>"Label"</div>
-                            <Row id={key.clone()} label={label.clone()} />
+                            <Row id={&key} label={&label} />
                         </div>
                     }
             ),

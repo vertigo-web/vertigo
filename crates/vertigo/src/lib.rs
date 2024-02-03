@@ -100,18 +100,20 @@
 
 mod computed;
 mod css;
+mod dom;
 mod dom_list;
 mod dom_value;
-mod dom;
 mod driver_module;
+mod external_api;
 mod fetch;
 mod future_box;
 mod html_macro;
 pub mod inspect;
 mod instant;
 pub mod router;
+#[cfg(test)]
+mod tests;
 mod websocket;
-mod external_api;
 
 use computed::struct_mut::ValueMut;
 
