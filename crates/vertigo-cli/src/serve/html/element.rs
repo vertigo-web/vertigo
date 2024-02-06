@@ -32,7 +32,7 @@ impl Element {
 pub struct AllElements {
     parent: HashMap<u64, u64>,
     all: HashMap<u64, Node>,
-    css: OrderedMap,
+    css: Vec<(String, String)>,
 }
 
 impl AllElements {
@@ -40,7 +40,7 @@ impl AllElements {
         Self {
             parent: HashMap::new(),
             all: HashMap::new(),
-            css: OrderedMap::new(),
+            css: Vec::new(),
         }
     }
 
@@ -98,7 +98,7 @@ impl AllElements {
     }
 
     fn insert_css(&mut self, selector: String, value: String) {
-        self.css.set(selector, value);
+        self.css.push((selector, value));
     }
 
     fn create_comment(&mut self, id: u64, value: String) {
@@ -107,15 +107,13 @@ impl AllElements {
     }
 
     pub fn feed(&mut self, commands: Vec<DomCommand>) {
-
-
         for node in commands {
             match node {
                 DomCommand::CallbackAdd { .. } => {
-                    //ignore
+                    // ignored on server-side
                 }
                 DomCommand::CallbackRemove { .. } => {
-                    //ignore
+                    // ignored on server-side
                 }
                 DomCommand::CreateNode { id, name } => {
                     self.create_node(id, name);
@@ -193,7 +191,7 @@ impl AllElements {
     fn get_css(&self) -> Vec<HtmlNode> {
         let mut result = Vec::new();
 
-        for (prop, value) in self.css.get_iter() {
+        for (prop, value) in self.css.iter() {
             let content = [prop.as_str(), " { ", value.as_str(), " }"].concat();
 
             result.push(
