@@ -626,7 +626,7 @@ impl ApiImport {
             .api()
             .call("isBrowser", Vec::new())
             .fetch();
-        
+
         if let JsValue::True = result {
             return true;
         }
@@ -644,7 +644,7 @@ impl ApiImport {
             .api()
             .call("get_env", vec!(JsValue::String(name)))
             .fetch();
-        
+
         if let JsValue::Null = result {
             return None;
         }
