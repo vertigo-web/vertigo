@@ -93,9 +93,9 @@ impl HtmlResponse {
             return (StatusCode::INTERNAL_SERVER_ERROR, "root: the html element was expected".into());
         }
 
-        let is_exist_head = root_html.modify(&[("head", 0)], move |_head| {});
+        let head_exists = root_html.modify(&[("head", 0)], move |_head| {});
 
-        if !is_exist_head {
+        if !head_exists {
             let message = "The 'head' element was expected in the response".into();
             return (StatusCode::INTERNAL_SERVER_ERROR, message);
         }

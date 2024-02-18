@@ -1,4 +1,5 @@
-use std::collections::VecDeque;
+use html_escape::encode_safe;
+use std::{borrow::Cow, collections::VecDeque};
 
 use super::ordered_map::OrderedMap;
 
@@ -62,39 +63,12 @@ impl HtmlDocument {
     }
 }
 
-fn escape(text: String) -> String {
-    let mut result = Vec::<char>::with_capacity(text.len());
-
-    for char in text.chars() {
-        match char {
-            '<' => {
-                result.extend("&lt;".chars());
-            },
-            '>' => {
-                result.extend("&gt;".chars());
-            },
-            '"' => {
-                result.extend("&quot;".chars());
-            },
-            '\'' => {
-                result.extend("&apos;".chars());
-            },
-            '&' => {
-                result.extend("&amp;".chars());
-            },
-            other => {
-                result.push(other);
-            }
-        }
-    }
-
-    result.into_iter().collect::<String>()
-}
-
-fn attribute_to_string(line: &mut Vec<String>, attr: OrderedMap) {
+fn attributes_to_string(attr: OrderedMap) -> String {
+    let mut line = Vec::new();
     for (name, value) in attr.get_iter() {
-        line.push(format!(" {}=\"{}\"", escape(name), escape(value)));
+        line.push(format!(" {}=\"{}\"", encode_safe(&name), encode_safe(&value)));
     }
+    line.concat()
 }
 
 enum ChildMode {
@@ -183,13 +157,18 @@ fn html_node_to_string(result: &mut Vec<String>, ident: Ident, node: HtmlNode) {
 
     match node {
         HtmlNode::Element(element) => {
-            if is_self_closing(&element) {
-                let mut line = Vec::new();
-                line.push(ident_str);
-                line.push("<".into());
-                line.push(escape(element.name));
-                attribute_to_string(&mut line, element.attr);
-                line.push(" />".into());
+            let is_self_closing = is_self_closing(&element);
+            let el_name = encode_safe(&element.name);
+            let attrs = attributes_to_string(element.attr);
+
+            if is_self_closing {
+                let line = [
+                    &ident_str,
+                    "<",
+                    &el_name,
+                    &attrs,
+                    " />",
+                ];
 
                 result.push(line.concat());
                 return;
@@ -197,14 +176,14 @@ fn html_node_to_string(result: &mut Vec<String>, ident: Ident, node: HtmlNode) {
 
             match get_render_child_mode(element.children) {
                 ChildMode::Child(children) => {
-
                     //open tag
-                    let mut line = Vec::new();
-                    line.push(ident_str.clone());
-                    line.push("<".into());
-                    line.push(escape(element.name.clone()));
-                    attribute_to_string(&mut line, element.attr);
-                    line.push(">".into());
+                    let line = [
+                        &ident_str,
+                        "<",
+                        &el_name,
+                        &attrs,
+                        ">",
+                    ];
 
                     result.push(line.concat());
 
@@ -215,43 +194,47 @@ fn html_node_to_string(result: &mut Vec<String>, ident: Ident, node: HtmlNode) {
 
                     //close tag
                     let line = [
-                        ident_str,
-                        "</".into(),
-                        escape(element.name),
-                        ">".into()
+                        &ident_str,
+                        "</",
+                        &el_name,
+                        ">"
                     ];
 
                     result.push(line.concat());
                 },
                 ChildMode::Text(text) => {
-                    //open tag
-                    let mut line = Vec::new();
-                    line.push(ident_str);
-                    line.push("<".into());
-                    line.push(escape(element.name.clone()));
-                    attribute_to_string(&mut line, element.attr);
-                    line.push(">".into());
-
-                    if element.name.to_lowercase() == "script" {
-                        line.push(text);
+                    let escaped_text = if ["script", "style"].contains(&element.name.to_lowercase().as_str()) {
+                        Cow::from(text)
                     } else {
-                        line.push(escape(text));
-                    }
+                        encode_safe(&text)
+                    };
 
-                    //close tag
-                    line.push("</".into());
-                    line.push(escape(element.name));
-                    line.push(">".into());
+                    let line = [
+                        //open tag
+                        &ident_str,
+                        "<",
+                        &el_name,
+                        &attrs,
+                        ">",
+
+                        // content
+                        &escaped_text,
+
+                        //close tag
+                        "</",
+                        &el_name,
+                        ">",
+                    ];
 
                     result.push(line.concat());
                 }
             }
         },
         HtmlNode::Text(text) => {
-            result.push(format!("{ident_str}{}", escape(text)));
+            result.push(format!("{ident_str}{}", encode_safe(&text)));
         },
         HtmlNode::Comment(comment) => {
-            result.push(format!("{ident_str}<!--{}-->", escape(comment)));
+            result.push(format!("{ident_str}<!--{}-->", encode_safe(&comment)));
         }
     }
 }

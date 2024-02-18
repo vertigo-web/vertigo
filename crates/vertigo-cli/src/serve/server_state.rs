@@ -1,5 +1,4 @@
 use std::collections::HashMap;
-use std::sync::Arc;
 
 use axum::http::StatusCode;
 use tokio::sync::mpsc::{error::TryRecvError, unbounded_channel};
@@ -14,7 +13,6 @@ use crate::serve::spawn::SpawnOwner;
 use crate::serve::wasm::{Message, WasmInstance};
 
 use super::mount_path::MountPathConfig;
-use reqwest::Client;
 
 #[derive(Clone)]
 pub struct ServerState {
@@ -23,7 +21,6 @@ pub struct ServerState {
     pub mount_path: MountPathConfig,
     pub port_watch: Option<u16>,
     pub env: HashMap<String, String>,
-    pub client: Arc<Client>,
 }
 
 impl ServerState {
@@ -33,7 +30,6 @@ impl ServerState {
         let module = build_module_wasm(&engine, &mount_path)?;
 
         let env = env.into_iter().collect::<HashMap<_, _>>();
-        let client = Arc::new(reqwest::Client::new());
 
         Ok(Self {
             engine,
@@ -41,7 +37,6 @@ impl ServerState {
             mount_path,
             port_watch,
             env,
-            client
         })
     }
 
