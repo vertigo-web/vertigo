@@ -1,12 +1,18 @@
 <!-- markdownlint-configure-file { "no-duplicate-heading": { "siblings_only": true } } -->
 
 <!-- markdownlint-disable-next-line first-line-h1 -->
+## 0.4.3 - Unreleased
+
+### Fixed
+
+* vertigo-cli: Don't html-escape styles embedded during SSR
+
 ## 0.4.2 - 2024-02-06
 
 ### Fixed
 
 * Lifetimes and generics in `#[component]` macro
-* Media queries in SSR
+* vertigo-cli: Media queries in SSR
 
 ## 0.4.1 - 2023-12-02
 
