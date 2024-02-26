@@ -1,3 +1,5 @@
+use std::fmt::Display;
+
 use vertigo::router::Router;
 use vertigo::{bind, dom, DomNode};
 
@@ -18,14 +20,14 @@ impl Route {
     }
 }
 
-impl ToString for Route {
-    fn to_string(&self) -> String {
-        match self {
+impl Display for Route {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        let str = match self {
             Self::Page1 => "/page1",
             Self::Page2 => "/page2",
             Self::NotFound => "",
-        }
-        .to_string()
+        };
+        f.write_str(str)
     }
 }
 

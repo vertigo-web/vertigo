@@ -1,11 +1,12 @@
-use std::{cmp::PartialEq, rc::Rc};
+use std::hash::Hash;
+use std::rc::Rc;
+
 use crate::{
     computed::{GraphValue, graph_id::GraphId},
     dom_value::{render_value, render_value_option},
     dom_list::render_list,
     Value, DomNode, DropResource, struct_mut::ValueMut
 };
-use std::hash::Hash;
 
 use super::context::Context;
 
