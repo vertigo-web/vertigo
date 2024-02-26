@@ -1,3 +1,5 @@
+use std::fmt::Display;
+
 #[derive(PartialEq, Eq, Debug, Clone)]
 pub enum Route {
     Counters,
@@ -56,9 +58,9 @@ impl From<String> for Route {
     }
 }
 
-impl ToString for Route {
-    fn to_string(&self) -> String {
-        match self {
+impl Display for Route {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        let str = match self {
             Self::Counters => "/counters",
             Self::Animations => "/animations",
             Self::Sudoku => "/sudoku",
@@ -69,7 +71,7 @@ impl ToString for Route {
             Self::Todo => "/todo",
             Self::DropFile => "/drop-file",
             Self::NotFound => "/not-found",
-        }
-        .to_string()
+        };
+        f.write_str(str)
     }
 }

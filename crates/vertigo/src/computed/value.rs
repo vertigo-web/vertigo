@@ -1,8 +1,5 @@
-use std::{
-    cmp::PartialEq,
-    rc::Rc,
-};
 use std::hash::Hash;
+use std::rc::Rc;
 
 use crate::DomNode;
 use crate::{
