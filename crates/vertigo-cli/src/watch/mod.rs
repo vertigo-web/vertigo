@@ -3,6 +3,7 @@ use notify::RecursiveMode;
 use poem::http::Method;
 use poem::middleware::Cors;
 use poem::{Route, get, Server, listener::TcpListener, EndpointExt};
+use tokio_retry::{Retry, strategy::FibonacciBackoff};
 use tokio::sync::Notify;
 use tokio::time::sleep;
 use std::sync::Arc;
@@ -201,14 +202,10 @@ fn build_and_watch(version: u32, tx: Arc<Sender<Status>>, opts: &WatchOpts, ws: 
                 log::info!("build run ok");
 
                 let check_spawn = SpawnOwner::new(async move {
-                    loop {
-                        let is_open = is_http_server_listening(opts.port).await;
-                        if is_open {
-                            break;
-                        }
-
-                        sleep(Duration::from_millis(100)).await;
-                    }
+                    let _ = Retry::spawn(
+                        FibonacciBackoff::from_millis(100).max_delay(Duration::from_secs(4)),
+                        || is_http_server_listening(opts.port)
+                    ).await;
 
                     let Ok(()) = tx.send(Status::Version(version)) else {
                         unreachable!();
