@@ -7,9 +7,13 @@ mod app;
 fn render() -> DomNode {
     let Some(ws_chat) = get_driver().env("ws_chat") else {
         return dom! {
-            <div>
-                "The ws_chat variable env is missing"
-            </div>
+            <html>
+                <body>
+                    <div>
+                        "The ws_chat variable env is missing"
+                    </div>
+                </body>
+            </html>
         }
     };
 
