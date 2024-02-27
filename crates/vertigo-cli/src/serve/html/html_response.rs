@@ -100,8 +100,7 @@ impl HtmlResponse {
         let head_exists = root_html.modify(&[("head", 0)], move |_head| {});
 
         if !head_exists {
-            let message = "Missing <head> element".into();
-            return (StatusCode::INTERNAL_SERVER_ERROR, message);
+            log::info!("Missing <head> element");
         }
 
         let script = HtmlElement::new("script")
