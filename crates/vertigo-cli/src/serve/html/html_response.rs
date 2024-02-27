@@ -83,20 +83,24 @@ impl HtmlResponse {
 
         if let HtmlNode::Element(html) = &mut root_html {
             if html.name != "html" {
-                return (StatusCode::INTERNAL_SERVER_ERROR, "root: the html element was expected".into());
+                // Not really possible
+                return (
+                    StatusCode::INTERNAL_SERVER_ERROR,
+                    format!("Missing <html> element, found {} instead", html.name)
+                );
             }
 
             for (env_name, env_value) in &self.env {
                 html.add_attr(format!("data-env-{env_name}"), env_value);
             }
         } else {
-            return (StatusCode::INTERNAL_SERVER_ERROR, "root: the html element was expected".into());
+            return (StatusCode::INTERNAL_SERVER_ERROR, "Missing <html> element".into());
         }
 
         let head_exists = root_html.modify(&[("head", 0)], move |_head| {});
 
         if !head_exists {
-            let message = "The 'head' element was expected in the response".into();
+            let message = "Missing <head> element".into();
             return (StatusCode::INTERNAL_SERVER_ERROR, message);
         }
 
@@ -117,7 +121,7 @@ impl HtmlResponse {
             let document = HtmlDocument::new(root_html);
             (StatusCode::OK, document.convert_to_string(true))
         } else {
-            let message = "The 'body' element was expected in the response".into();
+            let message = "Missing <body> element".into();
             (StatusCode::INTERNAL_SERVER_ERROR, message)
         }
     }

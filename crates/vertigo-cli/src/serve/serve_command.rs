@@ -223,10 +223,16 @@ async fn handler(url: Uri, RawQuery(query): RawQuery, State(state): State<Arc<Rw
         log::info!("Response for request: {status} {}ms {url}", time.as_millis());
     }
 
-    if status == StatusCode::OK {
-        if let Some(port_watch) = state.port_watch {
-            response = add_watch_script(response, port_watch);
-        }
+    match status {
+        StatusCode::OK => {
+            if let Some(port_watch) = state.port_watch {
+                response = add_watch_script(response, port_watch);
+            }
+        },
+        status => {
+            log::error!("WASM status: {status}");
+            log::error!("WASM response: {response}");
+        },
     }
 
     Response::builder()
