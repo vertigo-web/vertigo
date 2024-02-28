@@ -8,6 +8,7 @@
 * vertigo-cli: Don't html-escape styles embedded during SSR
 * vertigo-cli: Don't panic when missing root html element
 * vertigo-cli: Allow missing "head" element
+* Removed panics/unwraps from `dom!` macro
 
 ## 0.4.2 - 2024-02-06
 
