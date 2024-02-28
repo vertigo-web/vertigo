@@ -2,9 +2,15 @@
 default_to_workspace = false
 
 
-[tasks.vertigo-test]
+[tasks.unit-tests]
 script = [
     "cargo test -p vertigo --all-features"
+]
+
+# NOTE: WebDriver on localhost:9515 needs to be running
+[tasks.automated-tests]
+script = [
+    "cargo test --package fantoccini-tests -- --ignored"
 ]
 
 # Run clippy for wasm32 target
