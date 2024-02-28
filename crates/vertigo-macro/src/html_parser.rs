@@ -41,7 +41,7 @@ fn convert_to_component(node: Node) -> TokenStream2 {
         .attributes
         .into_iter()
         .filter_map(|attr_node| {
-            let span = attr_node.name_span().unwrap();
+            let span = get_span(&attr_node);
             if let (Some(key), Some(value)) = (attr_node.name, attr_node.value) {
                 let value = strip_brackets(value);
 
@@ -87,13 +87,21 @@ fn check_ident(name: &str) -> bool {
     true
 }
 
-fn convert_node(node: Node, convert_to_dom_node: bool) -> Result<TokenStream2, ()> {
-    assert_eq!(node.node_type, NodeType::Element);
-    let node_name = node.name_as_string().unwrap();
-    // let span = node.name_span().unwrap();
+fn convert_node(node: Node, convert_to_dom_node: bool) -> TokenStream2 {
+    let parent_span = get_span(&node);
+
+    if node.node_type == NodeType::Fragment {
+        emit_error!(parent_span, "Fragments not supported");
+    }
+
+    if node.node_type != NodeType::Element {
+        emit_error!(parent_span, "Expected Element");
+    }
+
+    let node_name = node.name_as_string().unwrap_or_default();
 
     if is_component_name(&node_name) {
-        return Ok(convert_to_component(node));
+        return convert_to_component(node);
     }
 
     let mut out_attr = Vec::new();
@@ -164,98 +172,105 @@ fn convert_node(node: Node, convert_to_dom_node: bool) -> Result<TokenStream2, (
     };
 
     for attr_item in node.attributes {
+        let span = attr_item.name_span().unwrap_or(parent_span);
         if attr_item.node_type == NodeType::Block {
-            let value = strip_brackets(attr_item.value.unwrap());
+            let Some(value) = extract_value(attr_item, parent_span) else {
+                continue;
+            };
             let name = value.to_string();
 
             if !check_ident(name.as_str()) {
-                return Err(());
+                emit_error!(span, "Invalid ident_name");
+            } else {
+                push_attr(name, value);
             }
-
-            push_attr(name, value);
         } else if attr_item.node_type == NodeType::Attribute {
-            let name = attr_item.name_as_string().unwrap();
-            let value = attr_item.value.unwrap();
-            let value = strip_brackets(value);
+            let Some(name) = attr_item.name_as_string() else {
+                emit_error!(span, "Missing attribute name");
+                continue;
+            };
+            let Some(value) = extract_value(attr_item, parent_span) else {
+                continue;
+            };
             push_attr(name, value);
         } else {
-            return Err(());
+            emit_error!(span, "Invalid attribute type");
         }
     }
 
     for child in node.children {
-        if child.node_type == NodeType::Text {
-            let child_value = child.value.unwrap();
-            out_child.push(quote! {
-                .child(vertigo::DomText::new(#child_value))
-            });
-        } else if child.node_type == NodeType::Element {
-            match child.name_as_string() {
+        match &child.node_type {
+            NodeType::Text => {
+                let Some(child_value) = extract_value(child, parent_span) else {
+                    continue;
+                };
+                out_child.push(quote! {
+                    .child(vertigo::DomText::new(#child_value))
+                });
+            }
+            NodeType::Element => match child.name_as_string() {
                 Some(tag_name) if is_component_name(&tag_name) => {
                     out_child.push(convert_child_to_component(child))
                 }
                 _ => {
-                    let node_ready = convert_node(child, false)?;
+                    let node_ready = convert_node(child, false);
 
                     out_child.push(quote! {
                         .child(#node_ready)
                     });
                 }
-            }
-        } else if child.node_type == NodeType::Block {
-            let block = child.value.unwrap();
-            let block = strip_brackets(block);
+            },
+            NodeType::Block => {
+                let Some(block) = extract_value(child, parent_span) else {
+                    continue;
+                };
 
-            out_child.push(quote! {
-                .child(vertigo::EmbedDom::embed(#block))
-            });
-        } else {
-            let span = child.name_span();
-
-            match span {
-                Some(span) => {
-                    emit_error!(span, "no support for the node".to_string());
-                }
-                None => {
-                    panic!("the span element was expected");
-                }
+                out_child.push(quote! {
+                    .child(vertigo::EmbedDom::embed(#block))
+                });
             }
-            return Err(());
+            node_type => {
+                emit_error!(
+                    child.name_span().unwrap_or(parent_span),
+                    "Unsupported {} node as a child",
+                    node_type
+                );
+            }
         }
     }
 
     if convert_to_dom_node {
-        Ok(quote! {
+        quote! {
             vertigo::DomNode::from(
                 vertigo::DomElement::new(#node_name)
                 #(#out_attr)*
                 #(#out_child)*
             )
-        })
+        }
     } else {
-        Ok(quote! {
+        quote! {
             vertigo::DomElement::new(#node_name)
             #(#out_attr)*
             #(#out_child)*
-        })
+        }
     }
 }
 
 pub fn dom_inner(input: TokenStream) -> TokenStream {
-    let nodes = parse(input).unwrap();
+    let nodes = match parse(input) {
+        Ok(nodes) => nodes,
+        Err(err) => return err.to_compile_error().into(),
+    };
 
-    let mut modes_dom = Vec::new();
+    let mut dom_nodes = Vec::new();
 
     for node in nodes {
-        let Ok(node) = convert_node(node, true) else {
-            return quote! {}.into();
-        };
-
-        modes_dom.push(node);
+        let tokens = convert_node(node, true);
+        dom_nodes.push(tokens);
     }
 
-    if modes_dom.len() == 1 {
-        let last = modes_dom.pop().unwrap();
+    if dom_nodes.len() == 1 {
+        let last = dom_nodes.pop().unwrap();
 
         return quote! {
             vertigo::DomNode::from(#last)
@@ -263,43 +278,53 @@ pub fn dom_inner(input: TokenStream) -> TokenStream {
         .into();
     }
 
-    if modes_dom.is_empty() {
-        panic!("node / nodes expected");
+    if dom_nodes.is_empty() {
+        emit_error!(Span::call_site(), "Empty input");
     }
 
     quote! {
         vertigo::DomNode::from(vertigo::DomComment::dom_fragment(vec!(
-            #(#modes_dom,)*
+            #(#dom_nodes,)*
         )))
     }
     .into()
 }
 
 pub fn dom_element_inner(input: TokenStream) -> TokenStream {
-    let nodes = parse(input).unwrap();
+    let nodes = match parse(input) {
+        Ok(nodes) => nodes,
+        Err(err) => return err.to_compile_error().into(),
+    };
 
     let mut modes_dom = Vec::new();
 
     for node in nodes {
-        let Ok(node) = convert_node(node, false) else {
-            return quote! {}.into();
-        };
-
+        let node = convert_node(node, false);
         modes_dom.push(node);
     }
 
-    if modes_dom.len() == 1 {
-        let last = modes_dom.pop().unwrap();
-
-        return quote! {
-            #last
-        }
-        .into();
+    if modes_dom.len() != 1 {
+        emit_error!(
+            Span::call_site(),
+            "This macro supports only one DomElement as root".to_string()
+        );
+        return TokenStream::default();
     }
 
-    emit_error!(
-        Span::call_site(),
-        "This macro supports only one DomElement as root".to_string()
-    );
-    quote! {}.into()
+    modes_dom.pop().unwrap_or_default().into()
+}
+
+fn extract_value(node: Node, fallback_span: Span) -> Option<TokenStream2> {
+    match node.value {
+        Some(value) => Some(strip_brackets(value)),
+        None => {
+            let span = node.name_span().unwrap_or(fallback_span);
+            emit_error!(span, "Missing attribute value");
+            None
+        }
+    }
+}
+
+fn get_span(node: &Node) -> Span {
+    node.name_span().unwrap_or_else(Span::call_site)
 }

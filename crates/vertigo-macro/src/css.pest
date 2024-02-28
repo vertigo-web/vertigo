@@ -1,7 +1,7 @@
+//! CSS Parser
+
 // https://www.w3.org/TR/css-syntax-3/
-//
-// CSS
-//
+
 css_block = _{ SOI ~ rule* ~ EOI }
 
 rule = _{ comment | simple_rule | unknown_rule | sub_rule }
