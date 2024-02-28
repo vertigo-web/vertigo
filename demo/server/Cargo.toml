@@ -4,6 +4,6 @@ version = "0.1.0"
 edition = "2021"
 
 [dependencies]
-futures = "0.3.26"
-axum = { version = "0.6.4", features = ["ws"] }
-tokio = { version = "1.25.0", features = ["full"] }
+futures = "0.3.30"
+axum = { version = "0.6.20", features = ["ws"] }
+tokio = { version = "1.36.0", features = ["full"] }
