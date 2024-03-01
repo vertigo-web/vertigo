@@ -1,6 +1,6 @@
 #![allow(clippy::from_over_into)]
 
-use crate::serve::js_value::{JsValue, JsJson};
+use crate::serve::js_value::{JsJson, JsValue};
 
 #[cfg(test)]
 mod tests {
@@ -62,9 +62,7 @@ impl<'a> Match<'a> {
     }
 
     pub fn from_slice(list: &'a [JsValue]) -> Match<'a> {
-        Match {
-            list,
-        }
+        Match { list }
     }
 
     pub fn str(&self, pattern: &str) -> Result<Self, ()> {
@@ -75,9 +73,7 @@ impl<'a> Match<'a> {
         };
 
         if pattern == value {
-            return Ok(Self {
-                list: rest
-            });
+            return Ok(Self { list: rest });
         }
 
         Err(())
@@ -90,12 +86,7 @@ impl<'a> Match<'a> {
             return Err(());
         };
 
-        Ok((
-            Self {
-                list: rest
-            },
-            *value
-        ))
+        Ok((Self { list: rest }, *value))
     }
 
     pub fn u64(&self) -> Result<(Self, u64), ()> {
@@ -105,12 +96,7 @@ impl<'a> Match<'a> {
             return Err(());
         };
 
-        Ok((
-            Self {
-                list: rest
-            },
-            *value
-        ))
+        Ok((Self { list: rest }, *value))
     }
 
     pub fn string(&self) -> Result<(Self, String), ()> {
@@ -120,12 +106,7 @@ impl<'a> Match<'a> {
             return Err(());
         };
 
-        Ok((
-            Self {
-                list: rest
-            },
-            value.clone()
-        ))
+        Ok((Self { list: rest }, value.clone()))
     }
 
     pub fn json(&self) -> Result<(Self, JsJson), ()> {
@@ -135,12 +116,7 @@ impl<'a> Match<'a> {
             return Err(());
         };
 
-        Ok((
-            Self {
-                list: rest
-            },
-            value.clone()
-        ))
+        Ok((Self { list: rest }, value.clone()))
     }
 
     pub fn get_any(&self) -> Result<(Self, JsValue), ()> {
@@ -150,12 +126,7 @@ impl<'a> Match<'a> {
             return Err(());
         };
 
-        Ok((
-            Self {
-                list: rest
-            },
-            value.clone()
-        ))
+        Ok((Self { list: rest }, value.clone()))
     }
 
     #[allow(dead_code)]
@@ -167,21 +138,11 @@ impl<'a> Match<'a> {
         };
 
         if let JsValue::String(value) = first {
-            return Ok((
-                Self {
-                    list: rest
-                },
-                Some(value.clone())
-            ));
+            return Ok((Self { list: rest }, Some(value.clone())));
         }
 
         if let JsValue::Null = first {
-            return Ok((
-                Self {
-                    list: rest
-                },
-                None
-            ));
+            return Ok((Self { list: rest }, None));
         }
 
         Err(())
@@ -212,21 +173,20 @@ impl<'a> Match<'a> {
             }
         }
 
-        Ok(Self {
-            list: rest,
-        })
+        Ok(Self { list: rest })
     }
 
-    pub fn test_list_with_fn<K>(&self, test_fn: impl Fn(Match<'a>) -> Result<K, ()>) -> Result<(Self, K), ()> {
+    pub fn test_list_with_fn<K>(
+        &self,
+        test_fn: impl Fn(Match<'a>) -> Result<K, ()>,
+    ) -> Result<(Self, K), ()> {
         let Match { list: inner_list } = self;
 
         let Some((JsValue::List(first_inner_list), rest)) = inner_list.split_first() else {
             return Err(());
         };
 
-        let new_self = Self {
-            list: rest,
-        };
+        let new_self = Self { list: rest };
 
         if let Ok(result_test) = test_fn(Match::from_slice(first_inner_list.as_slice())) {
             return Ok((new_self, result_test));
@@ -269,8 +229,7 @@ fn basic() {
         .list(&["api"])
         .list(&["get", "hashRouter"])
         .list(&["call", "get"])
-        .convert_to_value()
-    ;
+        .convert_to_value();
 
     assert_eq!(match_hashrouter(&pattern_get_hashrouter), Ok(()));
 
@@ -278,30 +237,25 @@ fn basic() {
         .list(&["api"])
         .list(&["get", "hashRouter"])
         .list(&["call", "get", "dddd"])
-        .convert_to_value()
-    ;
+        .convert_to_value();
 
     assert_eq!(match_hashrouter(&pattern_get_hashrouter), Err(()));
 
     let pattern_get_hashrouter = JsList::new()
         .list(&["api"])
         .list(&["get", "hashRouter"])
-        .convert_to_value()
-    ;
+        .convert_to_value();
 
     assert_eq!(match_hashrouter(&pattern_get_hashrouter), Err(()));
-
 
     let pattern_get_hashrouter = JsList::new()
         .list(&["api"])
         .list(&["get", "hashRouter"])
         .list(&["call", "get"])
         .list(&["aaaa"])
-        .convert_to_value()
-    ;
+        .convert_to_value();
 
     assert_eq!(match_hashrouter(&pattern_get_hashrouter), Err(()));
-
 }
 
 #[test]
@@ -311,7 +265,13 @@ fn test_param() {
     let pattern_add_hashrouter = JsList::new()
         .list(&["api"])
         .list(&["get", "hashRouter"])
-        .add(JsList::new().str("call").str("add").u64(1).convert_to_value())
+        .add(
+            JsList::new()
+                .str("call")
+                .str("add")
+                .u64(1)
+                .convert_to_value(),
+        )
         .convert_to_value();
 
     fn match_call_add(matcher: Match) -> Result<u64, ()> {

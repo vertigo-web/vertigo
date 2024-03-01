@@ -1,13 +1,8 @@
 pub mod build;
+mod commons;
 pub mod new;
 pub mod serve;
 pub mod watch;
-
-mod models;
-mod check_env;
-mod command;
-mod spawn;
-mod utils;
 
 use clap::{Parser, Subcommand};
 
@@ -42,17 +37,9 @@ pub async fn main() -> Result<(), i32> {
 
     let cli = Cli::parse();
     match cli.command {
-        Command::Build(opts) => {
-            build::run(opts)
-        }
-        Command::New(opts) => {
-            new::run(opts)
-        }
-        Command::Serve(opts) => {
-            serve::run(opts, None).await
-        }
-        Command::Watch(opts) => {
-            watch::run(opts).await
-        }
+        Command::Build(opts) => build::run(opts),
+        Command::New(opts) => new::run(opts),
+        Command::Serve(opts) => serve::run(opts, None).await,
+        Command::Watch(opts) => watch::run(opts).await,
     }
 }

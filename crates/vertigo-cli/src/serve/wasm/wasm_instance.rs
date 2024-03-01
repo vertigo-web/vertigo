@@ -1,20 +1,13 @@
-use std::sync::Arc;
 use std::collections::HashMap;
 use std::hash::Hash;
-use wasmtime::{
-    Caller,
-    Engine,
-    Func,
-    Instance,
-    Module,
-    Store,
-};
+use std::sync::Arc;
 use tokio::sync::mpsc::UnboundedSender;
+use wasmtime::{Caller, Engine, Func, Instance, Module, Store};
 
 use crate::serve::{
     html::RequestBody,
+    js_value::{from_json, JsJson, JsValue},
     request_state::RequestState,
-    js_value::{JsValue, JsJson, from_json},
     wasm::data_context::DataContext,
 };
 
@@ -27,7 +20,7 @@ pub enum Message {
     DomUpdate(JsJson),
     Panic(Option<String>),
     SetTimeoutZero {
-        callback_id: u64
+        callback_id: u64,
     },
     FetchRequest {
         callback_id: u64,
@@ -35,7 +28,7 @@ pub enum Message {
     },
     FetchResponse {
         request: Arc<FetchRequest>,
-        response: FetchResponse
+        response: FetchResponse,
     },
 }
 
@@ -47,12 +40,12 @@ pub struct FetchRequest {
     pub body: Option<RequestBody>,
 }
 
-impl PartialEq for  FetchRequest {
+impl PartialEq for FetchRequest {
     fn eq(&self, other: &Self) -> bool {
-        self.method == other.method &&
-        self.url == other.url &&
-        self.headers == other.headers  &&
-        self.body == other.body
+        self.method == other.method
+            && self.url == other.url
+            && self.headers == other.headers
+            && self.body == other.body
     }
 }
 impl Hash for FetchRequest {
@@ -177,18 +170,18 @@ fn match_log(arg: &JsValue) -> Result<(String, String), ()> {
 
     let matcher = matcher.test_list(&["root", "window"])?;
     let matcher = matcher.test_list(&["get", "console"])?;
-    let (matcher, (log_type, log_message)) = matcher.test_list_with_fn(|matcher: Match| -> Result<(String, String), ()> {
+    let (matcher, (log_type, log_message)) =
+        matcher.test_list_with_fn(|matcher: Match| -> Result<(String, String), ()> {
+            let matcher = matcher.str("call")?;
+            let (matcher, log_type) = matcher.string()?;
+            let (matcher, log_message) = matcher.string()?;
+            let (matcher, _) = matcher.string()?;
+            let (matcher, _) = matcher.string()?;
+            let (matcher, _) = matcher.string()?;
+            matcher.end()?;
 
-        let matcher = matcher.str("call")?;
-        let (matcher, log_type) = matcher.string()?;
-        let (matcher, log_message) = matcher.string()?;
-        let (matcher, _) = matcher.string()?;
-        let (matcher, _) = matcher.string()?;
-        let (matcher, _) = matcher.string()?;
-        matcher.end()?;
-
-        Ok((log_type, log_message))
-    })?;
+            Ok((log_type, log_message))
+        })?;
 
     matcher.end()?;
 
@@ -217,10 +210,7 @@ fn match_websocket(arg: &JsValue) -> Result<(), ()> {
 }
 
 enum CallWebsocketResult {
-    TimeoutSet {
-        time: u32,
-        callback_id: u64,
-    },
+    TimeoutSet { time: u32, callback_id: u64 },
     NoResult,
 }
 
@@ -231,7 +221,6 @@ fn match_interval(arg: &JsValue) -> Result<CallWebsocketResult, ()> {
     let matcher = matcher.test_list(&["get", "interval"])?;
 
     let (matcher, result) = matcher.test_list_with_fn(|matcher| {
-
         let matcher = matcher.str("call")?;
         if let Ok(matcher) = matcher.str("timeout_set") {
             let (matcher, time) = matcher.u32()?;
@@ -255,7 +244,6 @@ fn match_fetch(arg: &JsValue) -> Result<(u64, FetchRequest), ()> {
     let matcher = matcher.test_list(&["get", "fetch"])?;
 
     let (matcher, result) = matcher.test_list_with_fn(|matcher| {
-
         let matcher = matcher.str("call")?;
         let matcher = matcher.str("fetch_send_request")?;
         let (matcher, callback_id) = matcher.u64()?;
@@ -273,12 +261,15 @@ fn match_fetch(arg: &JsValue) -> Result<(u64, FetchRequest), ()> {
             log::error!("error decode body: {error}");
         })?;
 
-        Ok((callback_id, FetchRequest {
-            method,
-            url,
-            headers,
-            body,
-        }))
+        Ok((
+            callback_id,
+            FetchRequest {
+                method,
+                url,
+                headers,
+                body,
+            },
+        ))
     })?;
 
     matcher.end()?;
@@ -292,7 +283,12 @@ pub struct WasmInstance {
 }
 
 impl WasmInstance {
-    pub fn new(sender: UnboundedSender<Message>, engine: &Engine, module: &Module, request: RequestState) -> Self {
+    pub fn new(
+        sender: UnboundedSender<Message>,
+        engine: &Engine,
+        module: &Module,
+        request: RequestState,
+    ) -> Self {
         let url = request.url.clone();
         let mut store = Store::new(engine, request.clone());
 
@@ -312,7 +308,7 @@ impl WasmInstance {
         let import_dom_access = {
             Func::wrap(
                 &mut store,
-            move |caller: Caller<'_, RequestState>, ptr: u32, offset: u32| -> u32 {
+                move |caller: Caller<'_, RequestState>, ptr: u32, offset: u32| -> u32 {
                     let mut data_context = DataContext::from_caller(caller);
 
                     let value = data_context.get_value(ptr, offset);
@@ -365,12 +361,14 @@ impl WasmInstance {
                         match result {
                             CallWebsocketResult::TimeoutSet { time, callback_id } => {
                                 if time == 0 {
-                                    sender.send(Message::SetTimeoutZero { callback_id }).unwrap();
+                                    sender
+                                        .send(Message::SetTimeoutZero { callback_id })
+                                        .unwrap();
                                 }
 
                                 let result = JsValue::I32(0); // fake timerId
                                 return data_context.save_value(result);
-                            },
+                            }
                             CallWebsocketResult::NoResult => {
                                 return 0;
                             }
@@ -382,7 +380,12 @@ impl WasmInstance {
                     }
 
                     if let Ok((callback_id, request)) = match_fetch(&value) {
-                        sender.send(Message::FetchRequest { callback_id, request }).unwrap();
+                        sender
+                            .send(Message::FetchRequest {
+                                callback_id,
+                                request,
+                            })
+                            .unwrap();
                         return 0;
                     }
 
@@ -393,47 +396,47 @@ impl WasmInstance {
 
                     log::error!("unsupported message: {value:#?}");
                     0
-                }
+                },
             )
         };
 
-        let imports = [
-            import_panic_message.into(),
-            import_dom_access.into()
-        ];
+        let imports = [import_panic_message.into(), import_dom_access.into()];
         let instance = Instance::new(&mut store, module, &imports).unwrap();
 
-        WasmInstance {
-            instance,
-            store
-        }
+        WasmInstance { instance, store }
     }
 
-    fn call_function<
-        Params: wasmtime::WasmParams,
-        Results: wasmtime::WasmResults
-    >(&mut self, name: &'static str, params: Params) -> Result<Results, String> {
+    fn call_function<Params: wasmtime::WasmParams, Results: wasmtime::WasmResults>(
+        &mut self,
+        name: &'static str,
+        params: Params,
+    ) -> Result<Results, String> {
         let vertigo_entry_function = {
-            self.instance.get_typed_func::<Params, Results>(&mut self.store, name).unwrap()
+            self.instance
+                .get_typed_func::<Params, Results>(&mut self.store, name)
+                .unwrap()
         };
 
-        vertigo_entry_function.call(&mut self.store, params).map_err(|error| {
-            format!("{error}")
-        })
+        vertigo_entry_function
+            .call(&mut self.store, params)
+            .map_err(|error| format!("{error}"))
     }
 
     pub fn call_vertigo_entry_function(&mut self) {
         self.call_function::<(u32, u32), ()>(
             "vertigo_entry_function",
             (super::VERTIGO_VERSION_MAJOR, super::VERTIGO_VERSION_MINOR),
-        ).unwrap();
+        )
+        .unwrap();
     }
 
     pub fn wasm_callback(&mut self, callback_id: u64, params: JsValue) -> JsValue {
         let mut data_context = DataContext::from_store(&mut self.store, self.instance);
         let params_ptr = data_context.save_value(params);
 
-        let result = self.call_function::<(u64, u32), u64>("wasm_callback", (callback_id, params_ptr)).unwrap();
+        let result = self
+            .call_function::<(u64, u32), u64>("wasm_callback", (callback_id, params_ptr))
+            .unwrap();
 
         if result == 0 {
             JsValue::Undefined
@@ -444,14 +447,13 @@ impl WasmInstance {
     }
 
     pub fn send_fetch_response(&mut self, callback_id: u64, response: FetchResponse) {
-        let params = JsValue::List(vec!(
+        let params = JsValue::List(vec![
             JsValue::bool(response.success),
             JsValue::U32(response.status),
             convert_body_to_value(response.body),
-        ));
+        ]);
 
         let result = self.wasm_callback(callback_id, params);
         assert_eq!(result, JsValue::Undefined);
     }
 }
-

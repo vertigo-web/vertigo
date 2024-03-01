@@ -18,8 +18,8 @@ impl JsJsonContext {
         Self {
             inner: Rc::new(JsJsonContextInner {
                 parent: None,
-                current: current.into()
-            })
+                current: current.into(),
+            }),
         }
     }
 
@@ -27,8 +27,8 @@ impl JsJsonContext {
         Self {
             inner: Rc::new(JsJsonContextInner {
                 parent: Some(self.inner.clone()),
-                current: child.to_string()
-            })
+                current: child.to_string(),
+            }),
         }
     }
 
@@ -40,11 +40,7 @@ impl JsJsonContext {
             path.push(current.current.clone());
 
             let Some(parent) = current.parent.clone() else {
-                return path
-                    .into_iter()
-                    .rev()
-                    .collect::<Vec<_>>()
-                    .join(" -> ");
+                return path.into_iter().rev().collect::<Vec<_>>().join(" -> ");
             };
 
             current = parent;
@@ -56,10 +52,12 @@ pub trait JsJsonSerialize {
     fn to_json(self) -> JsJson;
 }
 
-pub trait JsJsonDeserialize where Self: Sized {
+pub trait JsJsonDeserialize
+where
+    Self: Sized,
+{
     fn from_json(context: JsJsonContext, json: JsJson) -> Result<Self, JsJsonContext>;
 }
-
 
 impl JsJsonSerialize for String {
     fn to_json(self) -> JsJson {
@@ -289,16 +287,18 @@ pub fn to_json<T: JsJsonSerialize>(value: T) -> JsJson {
     value.to_json()
 }
 
-
 #[test]
 fn aaaa() {
     let aaa = JsJson::String("aaa".into());
     let aaa_post = from_json::<Post>(aaa);
-    assert_eq!(aaa_post, Err(String::from("root -> object expected, received string")));
+    assert_eq!(
+        aaa_post,
+        Err(String::from("root -> object expected, received string"))
+    );
 
     let bbb = Post {
         name: "dsada".into(),
-        age: 33
+        age: 33,
     };
 
     let ccc = bbb.clone().to_json();
@@ -310,18 +310,17 @@ fn aaaa() {
 
 #[test]
 fn test_vec() {
-
     let aaa = Post {
         name: "aaa".into(),
-        age: 11
+        age: 11,
     };
 
     let bbb = Post {
         name: "bbb".into(),
-        age: 22
+        age: 22,
     };
 
-    let ccc = vec!(aaa, bbb);
+    let ccc = vec![aaa, bbb];
 
     let ddd = ccc.clone().to_json();
 

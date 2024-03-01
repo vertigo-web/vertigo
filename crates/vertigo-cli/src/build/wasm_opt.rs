@@ -13,7 +13,7 @@ pub fn run_wasm_opt(from: &WasmPath, to: &WasmPath) -> bool {
             "--strip-debug",
             "-o",
             to.as_string().as_str(),
-            from.as_string().as_str()
+            from.as_string().as_str(),
         ])
         .status();
 
@@ -21,13 +21,14 @@ pub fn run_wasm_opt(from: &WasmPath, to: &WasmPath) -> bool {
         Ok(status) if status.success() => {
             log::info!("WASM optimized");
             true
-        },
+        }
         Ok(_) => {
             log::error!("WASM optimization failed");
             false
-        },
+        }
         Err(error) => {
-            log::error!(r#"
+            log::error!(
+                r#"
 
                 WARNING: Can't perform wasm-opt: {error}
                 Your WASM package will be left unoptimized.
@@ -35,7 +36,8 @@ pub fn run_wasm_opt(from: &WasmPath, to: &WasmPath) -> bool {
                 HINT: If you don't have "wasm-opt" command in your system,
                 install Binaryen package: https://github.com/WebAssembly/binaryen
 
-            "#);
+            "#
+            );
 
             false
         }

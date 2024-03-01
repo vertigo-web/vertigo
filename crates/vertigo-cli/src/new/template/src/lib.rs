@@ -1,4 +1,4 @@
-use vertigo::{main, DomNode, dom, Value};
+use vertigo::{dom, main, DomNode, Value};
 
 #[main]
 fn app() -> DomNode {

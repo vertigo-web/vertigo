@@ -4,7 +4,6 @@ use std::mem;
 use super::memory_block_write::MemoryBlockWrite;
 
 fn alloc_memory(size: usize) -> (*mut u8, Layout) {
-
     let align = mem::align_of::<usize>();
 
     if let Ok(layout) = Layout::from_size_align(size, align) {
@@ -37,11 +36,7 @@ impl MemoryBlock {
     pub fn new(size: u32) -> MemoryBlock {
         let (ptr, layout) = alloc_memory(size as usize);
 
-        MemoryBlock {
-            ptr,
-            layout,
-            size,
-        }
+        MemoryBlock { ptr, layout, size }
     }
 
     pub fn from_slice(data: &[u8]) -> MemoryBlock {
@@ -69,9 +64,11 @@ impl MemoryBlock {
             unsafe {
                 std::ptr::copy(data.as_ptr(), dest, data_len as usize);
             }
-
         } else {
-            panic!("Buffer overflow size={} offset={offset} new_data={data_len}", self.size);
+            panic!(
+                "Buffer overflow size={} offset={offset} new_data={data_len}",
+                self.size
+            );
         }
     }
 
@@ -81,15 +78,13 @@ impl MemoryBlock {
 
         std::mem::forget(self);
 
-        unsafe {
-            Vec::<u8>::from_raw_parts(ptr, size, size)
-        }
+        unsafe { Vec::<u8>::from_raw_parts(ptr, size, size) }
     }
 }
 
 impl Drop for MemoryBlock {
     fn drop(&mut self) {
-        use std::alloc::{dealloc};
+        use std::alloc::dealloc;
 
         unsafe {
             dealloc(self.ptr, self.layout);

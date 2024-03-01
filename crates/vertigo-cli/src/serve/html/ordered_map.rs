@@ -21,7 +21,8 @@ impl OrderedMap {
         self.data.insert(name.clone(), value);
 
         if self.data.contains_key(&name) {
-            let mut order = self.order
+            let mut order = self
+                .order
                 .iter()
                 .filter(|&item_name| item_name != &name)
                 .cloned()
@@ -59,7 +60,8 @@ mod tests {
         list.set("cc_k", "cc_v");
 
         assert_eq!(
-            list.get_iter(), vec!(
+            list.get_iter(),
+            vec!(
                 ("aa_k".to_string(), "aa_v".to_string()),
                 ("bb_k".to_string(), "bb_v".to_string()),
                 ("cc_k".to_string(), "cc_v".to_string()),
@@ -72,7 +74,8 @@ mod tests {
         list.set("cc_k", "cc_v");
         list.set("bb_k", "bbbbb_v");
         assert_eq!(
-            list.get_iter(), vec!(
+            list.get_iter(),
+            vec!(
                 ("aa_k".to_string(), "aa_v".to_string()),
                 ("cc_k".to_string(), "cc_v".to_string()),
                 ("bb_k".to_string(), "bbbbb_v".to_string()),

@@ -1,32 +1,30 @@
-use std::task::Poll;
 use futures::stream::{Stream, StreamExt};
 use poem::{
     handler,
-    web::{sse::{Event, SSE}, Data},
+    web::{
+        sse::{Event, SSE},
+        Data,
+    },
 };
+use std::task::Poll;
 use tokio::sync::watch::Receiver;
 
-use crate::spawn::SpawnOwner;
+use crate::commons::spawn::SpawnOwner;
 
 use super::Status;
 
 #[handler]
-pub fn handler_sse(
-    state: Data<&Receiver<Status>>,
-) -> SSE {
+pub fn handler_sse(state: Data<&Receiver<Status>>) -> SSE {
     let Data(state) = state;
 
-    let stream = MyStream::new(state.clone()).map(|item| {
-        match item {
-            Status::Building => Event::message("Building"),
-            Status::Errors => Event::message("Errors"),
-            Status::Version(version) => Event::message(format!("Version = {version}")),
-        }
+    let stream = MyStream::new(state.clone()).map(|item| match item {
+        Status::Building => Event::message("Building"),
+        Status::Errors => Event::message("Errors"),
+        Status::Version(version) => Event::message(format!("Version = {version}")),
     });
 
     SSE::new(stream)
 }
-
 
 struct MyStream<T: Default + Send + Sync + Unpin + Clone + PartialEq + 'static> {
     rx: Receiver<T>,
@@ -47,7 +45,10 @@ impl<T: Default + Send + Sync + Unpin + Clone + PartialEq + 'static> MyStream<T>
 impl<T: Default + Send + Sync + Unpin + Clone + PartialEq + 'static> Stream for MyStream<T> {
     type Item = T;
 
-    fn poll_next(mut self: std::pin::Pin<&mut Self>, cx: &mut std::task::Context<'_>) -> Poll<Option<Self::Item>> {
+    fn poll_next(
+        mut self: std::pin::Pin<&mut Self>,
+        cx: &mut std::task::Context<'_>,
+    ) -> Poll<Option<Self::Item>> {
         if self.spawn.is_none() {
             let waker = cx.waker().clone();
             let mut rx = self.rx.clone();
@@ -72,4 +73,3 @@ impl<T: Default + Send + Sync + Unpin + Clone + PartialEq + 'static> Stream for 
         Poll::Ready(Some(value))
     }
 }
-

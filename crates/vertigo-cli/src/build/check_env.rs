@@ -1,4 +1,4 @@
-use crate::command::CommandRun;
+use crate::commons::command::CommandRun;
 
 fn is_target_instaled() -> bool {
     let target_list = CommandRun::new("rustup target list").output();

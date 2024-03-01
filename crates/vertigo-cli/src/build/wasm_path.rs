@@ -1,6 +1,6 @@
 use base64::{engine::general_purpose::URL_SAFE_NO_PAD, Engine as _};
 use crc::{Crc, CRC_64_ECMA_182};
-use std::{path::PathBuf, io::ErrorKind};
+use std::{io::ErrorKind, path::PathBuf};
 
 #[derive(Debug)]
 pub struct WasmPath {
@@ -9,9 +9,7 @@ pub struct WasmPath {
 
 impl WasmPath {
     pub fn new(path: PathBuf) -> Self {
-        Self {
-            path
-        }
+        Self { path }
     }
 
     pub fn as_string(&self) -> String {
@@ -19,15 +17,27 @@ impl WasmPath {
     }
 
     pub fn file_stem(&self) -> String {
-        self.path.file_stem().unwrap().to_string_lossy().into_owned()
+        self.path
+            .file_stem()
+            .unwrap()
+            .to_string_lossy()
+            .into_owned()
     }
 
     pub fn file_name(&self) -> String {
-        self.path.file_name().unwrap().to_string_lossy().into_owned()
+        self.path
+            .file_name()
+            .unwrap()
+            .to_string_lossy()
+            .into_owned()
     }
 
     pub fn file_extension(&self) -> String {
-        self.path.extension().unwrap().to_string_lossy().into_owned()
+        self.path
+            .extension()
+            .unwrap()
+            .to_string_lossy()
+            .into_owned()
     }
 
     pub fn save(&self, content: &[u8]) {
@@ -61,7 +71,7 @@ impl WasmPath {
 
     pub fn remove_dir_all(&self) {
         match std::fs::remove_dir_all(&self.path) {
-            Ok(()) => {},
+            Ok(()) => {}
             Err(error) => {
                 let kind = error.kind();
                 if kind == ErrorKind::NotFound {
@@ -75,7 +85,7 @@ impl WasmPath {
 
     pub fn create_dir_all(&self) {
         match std::fs::create_dir_all(&self.path) {
-            Ok(()) => {},
+            Ok(()) => {}
             Err(error) => {
                 println!("directory building error, error={error}");
             }

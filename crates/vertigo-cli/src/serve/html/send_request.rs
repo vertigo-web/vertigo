@@ -1,10 +1,13 @@
-use std::{sync::Arc, collections::{HashMap, VecDeque}};
 use reqwest::Response;
-use serde_json::{Value, Number, Map};
+use serde_json::{Map, Number, Value};
+use std::{
+    collections::{HashMap, VecDeque},
+    sync::Arc,
+};
 
 use crate::serve::{
+    js_value::JsJson,
     wasm::{FetchRequest, FetchResponse},
-    js_value::JsJson
 };
 
 #[derive(Debug, Clone, PartialEq, Eq, Hash)]
@@ -36,13 +39,8 @@ fn convert_to_jsjson(value: Value) -> JsJson {
         }
         Value::String(value) => JsJson::String(value),
         Value::Array(list) => {
-            JsJson::List(
-                list
-                    .into_iter()
-                    .map(convert_to_jsjson)
-                    .collect::<Vec<_>>()
-            )
-        },
+            JsJson::List(list.into_iter().map(convert_to_jsjson).collect::<Vec<_>>())
+        }
         Value::Object(object) => {
             let mut result = HashMap::new();
 
@@ -60,15 +58,10 @@ fn convert_to_jsvalue(value: JsJson) -> Value {
         JsJson::True => Value::Bool(true),
         JsJson::False => Value::Bool(false),
         JsJson::Null => Value::Null,
-        JsJson::Number(value) => {
-            Value::Number(Number::from_f64(value).unwrap())
-        },
+        JsJson::Number(value) => Value::Number(Number::from_f64(value).unwrap()),
         JsJson::String(value) => Value::String(value),
         JsJson::List(list) => {
-            let list = list
-                .into_iter()
-                .map(convert_to_jsvalue)
-                .collect::<Vec<_>>();
+            let list = list.into_iter().map(convert_to_jsvalue).collect::<Vec<_>>();
             Value::Array(list)
         }
         JsJson::Object(object) => {
@@ -85,20 +78,16 @@ fn convert_to_jsvalue(value: JsJson) -> Value {
 
 pub async fn send_request(request_params: Arc<FetchRequest>) -> FetchResponse {
     match send_request_inner(request_params).await {
-        Some((status, body)) => {
-            FetchResponse {
-                success: true,
-                status,
-                body,
-            }
+        Some((status, body)) => FetchResponse {
+            success: true,
+            status,
+            body,
         },
-        None => {
-            FetchResponse {
-                success: false,
-                status: 0,
-                body: RequestBody::Text(String::from("")),
-            }
-        }
+        None => FetchResponse {
+            success: false,
+            status: 0,
+            body: RequestBody::Text(String::from("")),
+        },
     }
 }
 
@@ -108,11 +97,12 @@ enum BodyToSend {
     Vec(Vec<u8>),
 }
 
-fn get_headers_and_body(mut headers: HashMap<String, String>, body: &Option<RequestBody>) -> (HashMap<String, String>, BodyToSend) {
+fn get_headers_and_body(
+    mut headers: HashMap<String, String>,
+    body: &Option<RequestBody>,
+) -> (HashMap<String, String>, BodyToSend) {
     match body.clone() {
-        None => {
-            (headers, BodyToSend::None)
-        }
+        None => (headers, BodyToSend::None),
         Some(RequestBody::Text(text)) => {
             if !headers.contains_key("content-type") {
                 headers.insert("content-type".into(), "text/plain; charset=utf-8".into());
@@ -120,12 +110,13 @@ fn get_headers_and_body(mut headers: HashMap<String, String>, body: &Option<Requ
 
             (headers, BodyToSend::String(text))
         }
-        Some(RequestBody::Binary(buffer)) => {
-            (headers, BodyToSend::Vec(buffer))
-        }
+        Some(RequestBody::Binary(buffer)) => (headers, BodyToSend::Vec(buffer)),
         Some(RequestBody::Json(json)) => {
             if !headers.contains_key("content-type") {
-                headers.insert("content-type".into(), "application/json; charset=utf-8".into());
+                headers.insert(
+                    "content-type".into(),
+                    "application/json; charset=utf-8".into(),
+                );
             }
 
             let value = convert_to_jsvalue(json);
@@ -137,7 +128,8 @@ fn get_headers_and_body(mut headers: HashMap<String, String>, body: &Option<Requ
 }
 
 fn clear_headers(headers: &HashMap<String, String>) -> HashMap<String, String> {
-    headers.iter()
+    headers
+        .iter()
         .map(|(key, value)| {
             let key = key.to_lowercase().trim().to_string();
             (key, value.to_string())
@@ -148,7 +140,7 @@ fn clear_headers(headers: &HashMap<String, String>) -> HashMap<String, String> {
 enum ResponseType {
     Json,
     Text,
-    Bin
+    Bin,
 }
 
 fn get_response_type(response: &Response) -> ResponseType {
@@ -180,10 +172,8 @@ fn get_response_type(response: &Response) -> ResponseType {
             }
 
             ResponseType::Bin
-        },
-        None => {
-            ResponseType::Bin
         }
+        None => ResponseType::Bin,
     }
 }
 
@@ -206,13 +196,13 @@ async fn send_request_inner(request_params: Arc<FetchRequest>) -> Option<(u32, R
     }
 
     match body {
-        BodyToSend::None => {},
+        BodyToSend::None => {}
         BodyToSend::String(body) => {
             request = request.body(body);
-        },
+        }
         BodyToSend::Vec(buffer) => {
             request = request.body(buffer);
-        },
+        }
     }
 
     let response = match request.send().await {
@@ -243,21 +233,16 @@ async fn send_request_inner(request_params: Arc<FetchRequest>) -> Option<(u32, R
 
             Some((status, RequestBody::Text(body)))
         }
-        ResponseType::Json => {
-            match serde_json::from_slice::<Value>(buffer.as_slice()) {
-                Ok(json) => {
-                    let json = convert_to_jsjson(json);
-                    Some((status, RequestBody::Json(json)))
-                },
-                Err(error) => {
-                    log::error!("response decoding json problem error={error}");
-                    None
-                }
+        ResponseType::Json => match serde_json::from_slice::<Value>(buffer.as_slice()) {
+            Ok(json) => {
+                let json = convert_to_jsjson(json);
+                Some((status, RequestBody::Json(json)))
             }
-        }
-        ResponseType::Bin => {
-            Some((status, RequestBody::Binary(buffer)))
-        }
+            Err(error) => {
+                log::error!("response decoding json problem error={error}");
+                None
+            }
+        },
+        ResponseType::Bin => Some((status, RequestBody::Binary(buffer))),
     }
 }
-
