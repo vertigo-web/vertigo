@@ -1,11 +1,9 @@
 use std::rc::Rc;
 
-use crate::{
-    dom::css::{Css, CssGroup},
-    struct_mut::HashMapMut,
-};
+use crate::struct_mut::HashMapMut;
 
 use super::{
+    css_structs::{Css, CssGroup},
     get_selector::get_selector,
     next_id::NextId,
     transform_css::transform_css,

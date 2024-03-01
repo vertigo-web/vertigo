@@ -13,7 +13,7 @@ impl<V> Default for VecMut<V> {
 impl<V> VecMut<V> {
     pub fn new() -> VecMut<V> {
         VecMut {
-            data: InnerValue::new(Vec::new())
+            data: InnerValue::new(Vec::new()),
         }
     }
 

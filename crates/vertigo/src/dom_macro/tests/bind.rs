@@ -1,7 +1,7 @@
 #[test]
 fn test_bind() {
     use crate as vertigo;
-    use crate::{bind_spawn, bind_rc, bind};
+    use crate::{bind, bind_rc, bind_spawn};
 
     let state = 2;
 
@@ -11,15 +11,11 @@ fn test_bind() {
 
     on_click_progress();
 
-    let on_click = bind!(state, || -> i32 {
-        state + 100
-    });
+    let on_click = bind!(state, || -> i32 { state + 100 });
 
     assert_eq!(on_click(), 102);
 
-    let on_click2 = bind!(state, || -> i32 {
-        state + 100
-    });
+    let on_click2 = bind!(state, || -> i32 { state + 100 });
 
     assert_eq!(on_click2(), 102);
 

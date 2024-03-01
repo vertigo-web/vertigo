@@ -1,5 +1,8 @@
+use crate::{
+    struct_mut::{HashMapMut, ValueMut},
+    DropResource, JsValue,
+};
 use std::rc::Rc;
-use crate::{struct_mut::{HashMapMut, ValueMut}, DropResource, JsValue};
 
 #[derive(PartialEq, Eq, Hash, Clone, Debug, Copy)]
 pub struct CallbackId(u64);
@@ -39,7 +42,10 @@ impl CallbackStore {
         }
     }
 
-    pub fn register<C: Fn(JsValue) -> JsValue + 'static>(&self, callback: C) -> (CallbackId, DropResource) {
+    pub fn register<C: Fn(JsValue) -> JsValue + 'static>(
+        &self,
+        callback: C,
+    ) -> (CallbackId, DropResource) {
         let callback = Rc::new(callback);
         let id = CallbackId::new();
 
@@ -55,13 +61,15 @@ impl CallbackStore {
         (id, drop)
     }
 
-    pub fn register_with_id<C: Fn(CallbackId, JsValue) -> JsValue + 'static>(&self, callback: C) -> (CallbackId, DropResource) {
+    pub fn register_with_id<C: Fn(CallbackId, JsValue) -> JsValue + 'static>(
+        &self,
+        callback: C,
+    ) -> (CallbackId, DropResource) {
         let id = CallbackId::new();
         let callback = Rc::new(callback);
 
-        self.data.insert(id, Rc::new(move |data| {
-            callback(id, data)
-        }));
+        self.data
+            .insert(id, Rc::new(move |data| callback(id, data)));
 
         let drop = DropResource::new({
             let data = self.data.clone();
@@ -77,9 +85,7 @@ impl CallbackStore {
         let callback = self.data.get(&callback_id);
 
         match callback {
-            Some(callback) => {
-                callback(value)
-            },
+            Some(callback) => callback(value),
             None => {
                 log::error!("callback id not found = {callback_id:?}");
                 JsValue::Undefined

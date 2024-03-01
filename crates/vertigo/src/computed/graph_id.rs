@@ -12,24 +12,15 @@ pub struct GraphId(GraphIdKind, u64);
 
 impl GraphId {
     pub fn new_value() -> GraphId {
-        GraphId(
-            GraphIdKind::Value,
-            GraphId::get_unique_id(),
-        )
+        GraphId(GraphIdKind::Value, GraphId::get_unique_id())
     }
 
     pub fn new_computed() -> GraphId {
-        GraphId(
-            GraphIdKind::Computed,
-            GraphId::get_unique_id(),
-        )
+        GraphId(GraphIdKind::Computed, GraphId::get_unique_id())
     }
 
     pub fn new_client() -> GraphId {
-        GraphId(
-            GraphIdKind::Client,
-            GraphId::get_unique_id(),
-        )
+        GraphId(GraphIdKind::Client, GraphId::get_unique_id())
     }
 
     pub fn id(&self) -> u64 {

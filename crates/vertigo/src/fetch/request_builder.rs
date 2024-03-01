@@ -2,8 +2,7 @@ use std::collections::HashMap;
 use std::time::Duration;
 
 use crate::{
-    get_driver, FetchMethod, LazyCache, JsJson,
-    from_json, JsJsonSerialize, JsJsonDeserialize,
+    from_json, get_driver, FetchMethod, JsJson, JsJsonDeserialize, JsJsonSerialize, LazyCache,
 };
 
 #[derive(Debug, Clone)]
@@ -16,15 +15,13 @@ pub enum RequestBody {
 impl RequestBody {
     pub fn into<T: JsJsonDeserialize>(self) -> Result<T, String> {
         match self {
-            RequestBody::Json(json) => {
-                match from_json::<T>(json) {
-                    Ok(data) => Ok(data),
-                    Err(err) => Err(err),
-                }
+            RequestBody::Json(json) => match from_json::<T>(json) {
+                Ok(data) => Ok(data),
+                Err(err) => Err(err),
             },
             RequestBody::Text(_) => {
                 Err("FetchBody.into() - expected json, received text".to_string())
-            },
+            }
             RequestBody::Binary(_) => {
                 Err("FetchBody.into() - expected json, received binary".to_string())
             }
@@ -125,14 +122,19 @@ impl RequestBuilder {
     }
 
     pub async fn call(&self) -> RequestResponse {
-        let Self { method, url, headers, body, ttl: _ } = self;
+        let Self {
+            method,
+            url,
+            headers,
+            body,
+            ttl: _,
+        } = self;
 
-        let result = get_driver().inner.api.fetch(
-            *method,
-            url.clone(),
-            Some(headers.clone()),
-            body.clone()
-        ).await;
+        let result = get_driver()
+            .inner
+            .api
+            .fetch(*method, url.clone(), Some(headers.clone()), body.clone())
+            .await;
 
         RequestResponse::new(*method, url.clone(), result)
     }
@@ -140,7 +142,7 @@ impl RequestBuilder {
     #[must_use]
     pub fn lazy_cache<T>(
         self,
-        map_response: impl Fn(u32, RequestBody) -> Option<Result<T, String>> + 'static
+        map_response: impl Fn(u32, RequestBody) -> Option<Result<T, String>> + 'static,
     ) -> LazyCache<T> {
         LazyCache::new(self, map_response)
     }
@@ -155,7 +157,11 @@ pub struct RequestResponse {
 }
 
 impl RequestResponse {
-    fn new(method: FetchMethod, url: String, data: Result<(u32, RequestBody), String>) -> RequestResponse {
+    fn new(
+        method: FetchMethod,
+        url: String,
+        data: Result<(u32, RequestBody), String>,
+    ) -> RequestResponse {
         RequestResponse { method, url, data }
     }
 
@@ -167,28 +173,32 @@ impl RequestResponse {
         None
     }
 
-    pub fn into<T>(self, convert: impl Fn(u32, RequestBody) -> Option<Result<T, String>>) -> Result<T, String> {
+    pub fn into<T>(
+        self,
+        convert: impl Fn(u32, RequestBody) -> Option<Result<T, String>>,
+    ) -> Result<T, String> {
         let result = match self.data {
-            Ok((status, body)) => {
-                match convert(status, body) {
-                    Some(result) => result,
-                    None => Err(format!("Unhandled response code {status}")),
-                }
-            }
+            Ok((status, body)) => match convert(status, body) {
+                Some(result) => result,
+                None => Err(format!("Unhandled response code {status}")),
+            },
             Err(err) => Err(err),
         };
 
         if let Err(err) = &result {
-            log::error!("Error fetching {} {}: {}", self.method.to_str(), self.url, err);
+            log::error!(
+                "Error fetching {} {}: {}",
+                self.method.to_str(),
+                self.url,
+                err
+            );
         }
 
         result
     }
 
     pub fn into_data<T: JsJsonDeserialize>(self) -> Result<T, String> {
-        self.into(|_, response_body| {
-            Some(response_body.into::<T>())
-        })
+        self.into(|_, response_body| Some(response_body.into::<T>()))
     }
 
     pub fn into_error_message<T>(self) -> Result<T, String> {

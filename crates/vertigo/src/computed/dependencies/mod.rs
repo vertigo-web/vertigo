@@ -1,28 +1,22 @@
-use std::{collections::BTreeSet};
+use std::collections::BTreeSet;
 
 use crate::{Context, GraphId};
 
-use self::hook::Hooks;
-
 use super::graph_id::GraphIdKind;
-
 
 mod external_connections;
 mod graph;
+mod graph_connections;
+mod graph_one_to_many;
 pub mod hook;
 mod refresh;
 mod transaction_state;
-mod graph_connections;
-mod graph_one_to_many;
 
-use {
-    graph::Graph,
-    transaction_state::TransactionState,
-};
+use {graph::Graph, hook::Hooks, transaction_state::TransactionState};
 
 /// A graph of values and clients that can automatically compute what to refresh after one value change.
 ///
-/// A [Driver](struct.Driver.html) object wrapps dependency graph, so you do not need to use this under normal circumstances.
+/// A [Driver](struct.Driver.html) object wraps dependency graph, so you do not need to use this under normal circumstances.
 ///
 /// - Dependency graph holds values, computed values ([computeds](struct.Computed.html)) and clients (render functions).
 /// - Upon changing some value all dependent computeds get computed, and all dependent clients get rendered.
@@ -76,10 +70,10 @@ impl Dependencies {
             match id.get_type() {
                 GraphIdKind::Value => {
                     unreachable!();
-                },
+                }
                 GraphIdKind::Computed => {
                     self.graph.refresh.clear_cache(&id);
-                },
+                }
                 GraphIdKind::Client => {
                     client.insert(id);
                 }

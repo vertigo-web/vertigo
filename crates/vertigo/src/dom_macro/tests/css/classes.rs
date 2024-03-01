@@ -1,13 +1,14 @@
-use crate::{css, dom, inspect::{log_start, DomDebugFragment}};
+use crate::{
+    css, dom,
+    inspect::{log_start, DomDebugFragment},
+};
 
 // Make crate available by its name for css macro
 use crate as vertigo;
 
 #[test]
 fn test_explicit_class_attribute() {
-    let red_css = css!("
-        color: red;
-    ");
+    let red_css = css!("color: red;");
 
     log_start();
 

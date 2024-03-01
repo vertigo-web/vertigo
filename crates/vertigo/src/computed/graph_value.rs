@@ -1,11 +1,6 @@
 use std::rc::Rc;
 
-use crate::{
-    computed::GraphId,
-    struct_mut::ValueMut,
-    get_driver,
-    Context,
-};
+use crate::{computed::GraphId, get_driver, struct_mut::ValueMut, Context};
 
 pub struct GraphValue<T> {
     id: GraphId,
@@ -23,28 +18,33 @@ impl<T: Clone + 'static> GraphValue<T> {
             false => GraphId::new_client(),
         };
 
-        let graph_value = Rc::new(
-            GraphValue {
-                id,
-                get_value: Box::new(get_value),
-                state: ValueMut::new(None),
-            }
-        );
+        let graph_value = Rc::new(GraphValue {
+            id,
+            get_value: Box::new(get_value),
+            state: ValueMut::new(None),
+        });
 
         let weak_value = Rc::downgrade(&graph_value);
 
-        get_driver().inner.dependencies.graph.refresh.refresh_token_add(graph_value.id, move |kind: bool| {
-            if let Some(weak_value) = weak_value.upgrade() {
-                match kind {
-                    false => {                          //false - computed (clear_cache)
-                        weak_value.state.set(None);
-                    },
-                    true => {                           //true - client (refresh)
-                        weak_value.refresh();
+        get_driver()
+            .inner
+            .dependencies
+            .graph
+            .refresh
+            .refresh_token_add(graph_value.id, move |kind: bool| {
+                if let Some(weak_value) = weak_value.upgrade() {
+                    match kind {
+                        false => {
+                            //false - computed (clear_cache)
+                            weak_value.state.set(None);
+                        }
+                        true => {
+                            //true - client (refresh)
+                            weak_value.refresh();
+                        }
                     }
                 }
-            }
-        });
+            });
 
         graph_value
     }
@@ -52,7 +52,11 @@ impl<T: Clone + 'static> GraphValue<T> {
     fn calculate_new_value(&self) -> T {
         let context = Context::new();
         let new_value = (self.get_value)(&context);
-        get_driver().inner.dependencies.graph.push_context(self.id, context);
+        get_driver()
+            .inner
+            .dependencies
+            .graph
+            .push_context(self.id, context);
 
         self.state.set(Some(new_value.clone()));
 

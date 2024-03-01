@@ -1,5 +1,5 @@
-use std::time::Duration;
 use crate::ApiImport;
+use std::time::Duration;
 
 /// Duration in seconds, returned from [Instant] methods.
 pub type InstantType = u64;

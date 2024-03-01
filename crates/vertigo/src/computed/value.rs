@@ -3,8 +3,10 @@ use std::rc::Rc;
 
 use crate::DomNode;
 use crate::{
-    computed::{Computed, ToComputed, Dependencies, GraphId}, struct_mut::ValueMut, DropResource,
+    computed::{Computed, Dependencies, GraphId, ToComputed},
     get_driver,
+    struct_mut::ValueMut,
+    DropResource,
 };
 
 use super::context::Context;
@@ -17,7 +19,10 @@ struct ValueInner<T> {
 
 impl<T> Drop for ValueInner<T> {
     fn drop(&mut self) {
-        self.deps.graph.external_connections.unregister_connect(self.id);
+        self.deps
+            .graph
+            .external_connections
+            .unregister_connect(self.id);
     }
 }
 
@@ -69,13 +74,11 @@ impl<T: Clone + 'static> Value<T> {
     pub fn new(value: T) -> Value<T> {
         let deps = get_driver().inner.dependencies;
         Value {
-            inner: Rc::new(
-                ValueInner {
-                    id: GraphId::new_value(),
-                    value: ValueMut::new(value),
-                    deps,
-                }
-            )
+            inner: Rc::new(ValueInner {
+                id: GraphId::new_value(),
+                value: ValueMut::new(value),
+                deps,
+            }),
         }
     }
 
@@ -91,20 +94,18 @@ impl<T: Clone + 'static> Value<T> {
         let id = GraphId::new_value();
 
         let value = Value {
-            inner: Rc::new(
-                ValueInner {
-                    id,
-                    value: ValueMut::new(value),
-                    deps,
-                },
-            )
+            inner: Rc::new(ValueInner {
+                id,
+                value: ValueMut::new(value),
+                deps,
+            }),
         };
 
         let computed = value.to_computed();
 
-        deps.graph.external_connections.register_connect(id, Rc::new(move || {
-            create(&value)
-        }));
+        deps.graph
+            .external_connections
+            .register_connect(id, Rc::new(move || create(&value)));
 
         computed
     }
@@ -132,9 +133,7 @@ impl<T: Clone + 'static> Value<T> {
     pub fn map<K: Clone + 'static, F: 'static + Fn(T) -> K>(&self, fun: F) -> Computed<K> {
         Computed::from({
             let computed = self.clone();
-            move |context| {
-                fun(computed.get(context))
-            }
+            move |context| fun(computed.get(context))
         })
     }
 
@@ -149,9 +148,7 @@ impl<T: Clone + 'static> Value<T> {
     pub fn to_computed(&self) -> Computed<T> {
         let self_clone = self.clone();
 
-        Computed::from(move |context| {
-            self_clone.get(context)
-        })
+        Computed::from(move |context| self_clone.get(context))
     }
 }
 
@@ -234,10 +231,9 @@ impl<T: Clone + PartialEq + 'static> Value<T> {
     }
 }
 
-impl<
-    T: PartialEq + Clone + 'static,
-    L: IntoIterator<Item=T> + Clone + PartialEq + 'static
-> Value<L> {
+impl<T: PartialEq + Clone + 'static, L: IntoIterator<Item = T> + Clone + PartialEq + 'static>
+    Value<L>
+{
     /// Render iterable value (reactively transforms `Iterator<T>` into Node with list of rendered elements )
     ///
     /// ```rust
@@ -261,9 +257,7 @@ impl<
     /// };
     /// ```
     ///
-    pub fn render_list<
-        K: Eq + Hash,
-    >(
+    pub fn render_list<K: Eq + Hash>(
         &self,
         get_key: impl Fn(&T) -> K + 'static,
         render: impl Fn(&T) -> DomNode + 'static,

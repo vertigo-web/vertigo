@@ -1,8 +1,5 @@
 use std::fmt::Debug;
-use std::{
-    hash::Hash,
-    rc::Rc,
-};
+use std::{hash::Hash, rc::Rc};
 
 use crate::struct_mut::HashMapMut;
 
@@ -34,8 +31,7 @@ pub struct AutoMap<K, V> {
 
 impl<K, V> Debug for AutoMap<K, V> {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-        f.debug_struct ("AutoMap")
-            .finish()
+        f.debug_struct("AutoMap").finish()
     }
 }
 

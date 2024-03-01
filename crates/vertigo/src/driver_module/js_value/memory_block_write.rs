@@ -8,10 +8,7 @@ pub struct MemoryBlockWrite {
 
 impl MemoryBlockWrite {
     pub fn new(block: MemoryBlock) -> MemoryBlockWrite {
-        MemoryBlockWrite {
-            block,
-            offset: 0,
-        }
+        MemoryBlockWrite { block, offset: 0 }
     }
 
     pub fn get_block(self) -> MemoryBlock {

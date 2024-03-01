@@ -1,6 +1,6 @@
+use super::inner_value::InnerValue;
 use std::collections::HashMap;
 use std::hash::Hash;
-use super::inner_value::InnerValue;
 
 pub struct HashMapMut<K, V> {
     data: InnerValue<HashMap<K, V>>,
@@ -102,6 +102,4 @@ impl<K: Eq + Hash, V: PartialEq> HashMapMut<K, V> {
         state.insert(key, value);
         is_change
     }
-
 }
-

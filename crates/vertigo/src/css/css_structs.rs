@@ -5,10 +5,7 @@ pub enum CssGroup {
     CssStatic { value: &'static str },
     // string in this case, is a key to hashmap with the class name
     CssDynamic { value: String },
-    CssMedia {
-        query: String,
-        rules: Vec<String>,
-    }
+    CssMedia { query: String, rules: Vec<String> },
 }
 
 /// CSS styles definition for usable in DOM.

@@ -27,9 +27,8 @@ impl Drop for DropResource {
                 if let Some(drop_fun) = drop_fun {
                     drop_fun();
                 }
-            },
-            Self::Struct(_) => {
             }
+            Self::Struct(_) => {}
         }
     }
 }

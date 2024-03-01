@@ -1,9 +1,6 @@
-use crate::dom::{
-    dom_element::DomElement,
-    dom_text::DomText,
-};
+use crate::dom::{dom_element::DomElement, dom_text::DomText};
 
-use super::{dom_id::DomId, dom_comment::DomComment};
+use super::{dom_comment::DomComment, dom_id::DomId};
 
 /// A Real DOM representative
 pub enum DomNode {
@@ -50,6 +47,8 @@ impl From<DomComment> for DomNode {
 
 impl<T: Into<String>> From<T> for DomNode {
     fn from(text: T) -> Self {
-        DomNode::Text { node: DomText::new(text) }
+        DomNode::Text {
+            node: DomText::new(text),
+        }
     }
 }

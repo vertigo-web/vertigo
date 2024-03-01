@@ -1,10 +1,9 @@
-use std::fs;
 use std::env;
+use std::fs;
 use std::path::PathBuf;
 
 fn main() {
-    let dir = PathBuf::from(env::var("OUT_DIR").unwrap())
-        .join("../../../static");
+    let dir = PathBuf::from(env::var("OUT_DIR").unwrap()).join("../../../static");
 
     // Invokes build script again if these changed:
     println!("cargo:rerun-if-changed=src/driver_module/wasm_run.js");

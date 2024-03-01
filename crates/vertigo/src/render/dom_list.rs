@@ -1,10 +1,10 @@
-use std::collections::{VecDeque, HashMap};
+use std::collections::{HashMap, VecDeque};
 use std::hash::Hash;
 use std::rc::Rc;
 
 use crate::dom::dom_id::DomId;
 use crate::struct_mut::ValueMut;
-use crate::{Computed, get_driver, DomComment, DomNode};
+use crate::{get_driver, Computed, DomComment, DomNode};
 
 //TODO - Check out other options for reading refs
 
@@ -35,20 +35,17 @@ use crate::{Computed, get_driver, DomComment, DomNode};
 //     result
 // }
 
-pub fn render_list<
-    T: PartialEq + Clone + 'static,
-    K: Eq + Hash,
->(
+pub fn render_list<T: PartialEq + Clone + 'static, K: Eq + Hash>(
     computed: Computed<Vec<T>>,
     get_key: impl Fn(&T) -> K + 'static,
     render: impl Fn(&T) -> DomNode + 'static,
 ) -> DomNode {
-
     let get_key = Rc::new(get_key);
     let render = Rc::new(render);
 
     DomComment::new_marker("list element", move |parent_id, comment_id| {
-        let current_list: Rc<ValueMut<VecDeque<(T, DomNode)>>> = Rc::new(ValueMut::new(VecDeque::new()));
+        let current_list: Rc<ValueMut<VecDeque<(T, DomNode)>>> =
+            Rc::new(ValueMut::new(VecDeque::new()));
 
         Some(computed.clone().subscribe({
             let get_key = get_key.clone();
@@ -57,7 +54,6 @@ pub fn render_list<
             move |new_list| {
                 let new_list = VecDeque::from_iter(new_list);
                 current_list.change({
-
                     let get_key = get_key.clone();
                     let render = render.clone();
 
@@ -78,13 +74,11 @@ pub fn render_list<
                 })
             }
         }))
-    }).into()
+    })
+    .into()
 }
 
-fn reorder_nodes<
-    T: PartialEq,
-    K: Eq + Hash,
->(
+fn reorder_nodes<T: PartialEq, K: Eq + Hash>(
     parent_id: DomId,
     comment_id: DomId,
     mut real_child: VecDeque<(T, DomNode)>,
@@ -102,7 +96,7 @@ fn reorder_nodes<
         real_child,
         new_child,
         get_key,
-        render
+        render,
     );
 
     let mut pairs = pairs_top;
@@ -187,10 +181,7 @@ fn get_pairs_bottom<T: PartialEq>(
     }
 }
 
-fn get_pairs_middle<
-    T: PartialEq,
-    K: Eq + Hash,
->(
+fn get_pairs_middle<T: PartialEq, K: Eq + Hash>(
     parent_id: DomId,
     last_before: DomId,
     real_child: VecDeque<(T, DomNode)>,
@@ -210,23 +201,21 @@ fn get_pairs_middle<
     let mut last_before = last_before;
 
     for item in new_child.into_iter().rev() {
-
         let node = real_node.get_or_create(&item);
         let node_id = node.id_dom();
         pairs_middle.push_front((item, node));
 
-        driver.inner.dom.insert_before(parent_id, node_id, Some(last_before));
+        driver
+            .inner
+            .dom
+            .insert_before(parent_id, node_id, Some(last_before));
         last_before = node_id;
     }
 
     pairs_middle
 }
 
-
-struct CacheNode<
-    K: Eq + Hash,
-    T,
-> {
+struct CacheNode<K: Eq + Hash, T> {
     get_key: Rc<dyn Fn(&T) -> K + 'static>,
     create_new: Rc<dyn Fn(&T) -> DomNode + 'static>,
     data: HashMap<K, VecDeque<DomNode>>,

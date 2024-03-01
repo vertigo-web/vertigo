@@ -1,10 +1,10 @@
 use std::rc::Rc;
 
-use crate::{driver_module::js_value::MemoryBlock, JsValue, struct_mut::HashMapMut};
+use crate::{driver_module::js_value::MemoryBlock, struct_mut::HashMapMut, JsValue};
 
 #[derive(Clone, Default)]
 pub struct Arguments {
-    blocks: Rc<HashMapMut<u32, MemoryBlock>>
+    blocks: Rc<HashMapMut<u32, MemoryBlock>>,
 }
 
 impl Arguments {
@@ -49,4 +49,3 @@ impl Arguments {
         self.blocks.insert(ptr, memory_block);
     }
 }
-

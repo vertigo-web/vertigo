@@ -1,12 +1,15 @@
 use super::{get_selector::get_selector, next_id::NextId};
 
 mod splits;
-use splits::{css_split_rows, css_row_split_to_pair, find_brackets};
+use splits::{css_row_split_to_pair, css_split_rows, find_brackets};
 
 #[cfg(test)]
 mod tests;
 
-pub fn transform_css_animation_value(css: &str, next_id: &NextId) -> (String, Option<(String, String)>) {
+pub fn transform_css_animation_value(
+    css: &str,
+    next_id: &NextId,
+) -> (String, Option<(String, String)>) {
     let brackets = find_brackets(css);
 
     if let Some((start_word, central_word, end_word)) = brackets {
@@ -29,7 +32,7 @@ pub fn transform_css_selector_value(row: &str, parent_selector: &str) -> Option<
 
     if let Some((pseudo_selector, rules, trash)) = brackets {
         if !trash.trim().is_empty() {
-            log::error!("Unexpected input after pseudo-selector rule set, missing semicolon?");
+            log::error!("Unexpected input after pseudo-selector rule set, missing semi-colon?");
         }
         let new_selector = [parent_selector, pseudo_selector].concat();
         return Some((new_selector, rules.into()));
@@ -38,7 +41,11 @@ pub fn transform_css_selector_value(row: &str, parent_selector: &str) -> Option<
     None
 }
 
-pub fn transform_css_media_query(row: &str, parent_selector: &str, css_documents: &mut Vec<(String, String)>) {
+pub fn transform_css_media_query(
+    row: &str,
+    parent_selector: &str,
+    css_documents: &mut Vec<(String, String)>,
+) {
     let brackets = find_brackets(row);
 
     if let Some((query, rules_input, trash)) = brackets {
@@ -112,7 +119,8 @@ pub fn transform_css(css: &str, next_id: &NextId) -> (u64, Vec<(String, String)>
                 Some((name, value)) => {
                     let value_parsed = if name.trim() == "animation" {
                         // Animation rule
-                        let (value_parsed, extra_animation) = transform_css_animation_value(&value, next_id);
+                        let (value_parsed, extra_animation) =
+                            transform_css_animation_value(&value, next_id);
 
                         if let Some(extra_animation) = extra_animation {
                             css_documents.push(extra_animation);

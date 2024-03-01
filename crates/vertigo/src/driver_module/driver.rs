@@ -1,20 +1,12 @@
-use std::{
-    future::Future,
-    pin::Pin,
-    rc::Rc,
-};
-use crate::fetch::request_builder::{RequestBuilder, RequestBody};
+use crate::fetch::request_builder::{RequestBody, RequestBuilder};
 use crate::{
-    Dependencies, DropResource, FutureBox,
-    Instant, WebsocketMessage, JsJson,
-    css::css_manager::CssManager, Context,
+    css::css_manager::CssManager, Context, Dependencies, DropResource, FutureBox, Instant, JsJson,
+    WebsocketMessage,
 };
+use std::{future::Future, pin::Pin, rc::Rc};
 
-use crate::{
-    driver_module::api::ApiImport,
-    driver_module::utils::futures_spawn::spawn_local,
-};
 use crate::driver_module::dom::DriverDom;
+use crate::{driver_module::api::ApiImport, driver_module::utils::futures_spawn::spawn_local};
 
 use super::api::DomAccess;
 
@@ -29,7 +21,8 @@ impl FetchMethod {
         match self {
             Self::GET => "GET",
             Self::POST => "POST",
-        }.into()
+        }
+        .into()
     }
 }
 
@@ -79,9 +72,7 @@ impl DriverInner {
             _subscribe: subscribe,
         }))
     }
-
 }
-
 
 /// Result from request made using [RequestBuilder].
 ///
@@ -100,9 +91,7 @@ impl Default for Driver {
     fn default() -> Self {
         let driver = DriverInner::new();
 
-        Driver {
-            inner: driver,
-        }
+        Driver { inner: driver }
     }
 }
 
@@ -184,7 +173,11 @@ impl Driver {
 
     /// Initiate a websocket connection. Provided callback should handle a single [WebsocketMessage].
     #[must_use]
-    pub fn websocket<F: Fn(WebsocketMessage) + 'static>(&self, host: impl Into<String>, callback: F) -> DropResource {
+    pub fn websocket<F: Fn(WebsocketMessage) + 'static>(
+        &self,
+        host: impl Into<String>,
+        callback: F,
+    ) -> DropResource {
         self.inner.api.websocket(host, callback)
     }
 
@@ -234,4 +227,3 @@ impl Driver {
         self.inner.api.get_env(name)
     }
 }
-

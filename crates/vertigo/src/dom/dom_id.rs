@@ -26,7 +26,7 @@ impl DomId {
             "html" => HTML_ID,
             "head" => HEAD_ID,
             "body" => BODY_ID,
-            _ => get_unique_id()
+            _ => get_unique_id(),
         };
 
         DomId(new_id)

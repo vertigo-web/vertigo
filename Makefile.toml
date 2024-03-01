@@ -13,6 +13,9 @@ script = [
     "cargo test --package fantoccini-tests -- --ignored"
 ]
 
+[tasks.all-tests]
+dependencies = [ "unit-tests", "automated-tests" ]
+
 # Run clippy for wasm32 target
 
 [tasks.clippy-wasm32]

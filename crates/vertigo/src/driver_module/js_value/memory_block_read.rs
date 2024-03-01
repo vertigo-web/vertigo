@@ -37,7 +37,7 @@ impl MemoryBlockRead {
     pub fn get_u16(&mut self) -> u16 {
         let bytes: [u8; 2] = [
             self.block[self.offset as usize],
-            self.block[self.offset as usize + 1]
+            self.block[self.offset as usize + 1],
         ];
 
         self.offset += 2;
@@ -118,9 +118,7 @@ impl MemoryBlockRead {
 
     pub fn get_string(&mut self, len: u32) -> Result<String, String> {
         let vec = self.get_vec(len);
-        String::from_utf8(vec).map_err(|_| {
-            String::from("String decoding error")
-        })
+        String::from_utf8(vec).map_err(|_| String::from("String decoding error"))
     }
 
     pub fn get_vec(&mut self, len: u32) -> Vec<u8> {
@@ -132,5 +130,4 @@ impl MemoryBlockRead {
 
         slice.to_vec()
     }
-
 }

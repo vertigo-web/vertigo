@@ -1,2 +1,2 @@
-#[allow(clippy::type_complexity)]
 pub mod futures_spawn;
+pub mod static_string;

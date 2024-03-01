@@ -101,15 +101,13 @@
 mod computed;
 mod css;
 mod dom;
-mod dom_list;
-mod dom_value;
+mod dom_macro;
 mod driver_module;
-mod external_api;
 mod fetch;
 mod future_box;
-mod html_macro;
 pub mod inspect;
 mod instant;
+mod render;
 pub mod router;
 #[cfg(test)]
 mod tests;
@@ -118,44 +116,38 @@ mod websocket;
 use computed::struct_mut::ValueMut;
 
 pub use computed::{
-    AutoMap, Computed, ToComputed, context::Context, Dependencies, DropResource, GraphId, struct_mut, Value
+    context::Context, struct_mut, AutoMap, Computed, Dependencies, DropResource, GraphId,
+    ToComputed, Value,
 };
+
+pub use css::css_structs::{Css, CssGroup};
 
 pub use dom::{
     callback::{Callback, Callback1},
-    css::{Css, CssGroup},
-    dom_id::DomId,
+    dom_comment::DomComment,
     dom_element::DomElement,
+    dom_id::DomId,
     dom_node::DomNode,
     dom_text::DomText,
-    dom_comment::DomComment,
-    types::{KeyDownEvent, DropFileEvent, DropFileItem},
+    types::{DropFileEvent, DropFileItem, KeyDownEvent},
 };
-use driver_module::{init_env::init_env, api::CallbackId};
+pub use dom_macro::EmbedDom;
 pub use driver_module::{
     api::ApiImport,
-    driver::{Driver, FetchResult, FetchMethod},
-    js_value::{
-        MemoryBlock,
-        JsValue,
-        JsJson,
-        JsJsonSerialize,
-        JsJsonDeserialize,
-        JsJsonContext,
-        JsJsonObjectBuilder,
-        from_json,
-        to_json
-    },
     dom_command::DriverDomCommand,
+    driver::{Driver, FetchMethod, FetchResult},
+    js_value::{
+        from_json, to_json, JsJson, JsJsonContext, JsJsonDeserialize, JsJsonObjectBuilder,
+        JsJsonSerialize, JsValue, MemoryBlock,
+    },
 };
+use driver_module::{api::CallbackId, init_env::init_env};
 pub use fetch::{
     lazy_cache::{self, LazyCache},
-    pinboxfut::PinBoxFuture,
-    request_builder::{RequestResponse, RequestBuilder, RequestBody},
+    request_builder::{RequestBody, RequestBuilder, RequestResponse},
     resource::Resource,
 };
-pub use future_box::{FutureBoxSend, FutureBox};
-pub use html_macro::EmbedDom;
+pub use future_box::{FutureBox, FutureBoxSend};
 pub use instant::{Instant, InstantType};
 pub use websocket::{WebsocketConnection, WebsocketMessage};
 
@@ -373,9 +365,7 @@ pub fn start_app(init_app: fn() -> DomNode) {
 /// let number = get_driver().get_random(1, 10);
 /// ```
 pub fn get_driver() -> Driver {
-    DRIVER_BROWSER.with(|state| {
-        state.driver
-    })
+    DRIVER_BROWSER.with(|state| state.driver)
 }
 
 /// Do bunch of operations on dependency graph without triggering anything in between.
@@ -384,14 +374,17 @@ pub fn transaction<R, F: FnOnce(&Context) -> R>(f: F) -> R {
 }
 
 pub mod prelude {
-    pub use crate::{bind, css, dom, DomNode, ToComputed, Value, Computed, Css};
+    pub use crate::{bind, css, dom, Computed, Css, DomNode, ToComputed, Value};
 }
 
 //------------------------------------------------------------------------------------------------------------------
 // Internals below
 //------------------------------------------------------------------------------------------------------------------
 
-fn get_driver_state<R: Default, F: FnOnce(&DriverConstruct) -> R>(label: &'static str, once: F) -> R {
+fn get_driver_state<R: Default, F: FnOnce(&DriverConstruct) -> R>(
+    label: &'static str,
+    once: F,
+) -> R {
     match DRIVER_BROWSER.try_with(once) {
         Ok(value) => value,
         Err(_) => {
@@ -425,14 +418,18 @@ pub fn free(pointer: u32) {
 #[no_mangle]
 pub fn wasm_callback(callback_id: u64, value_ptr: u32) -> u64 {
     get_driver_state("export_dom_callback", |state| {
-
         let value = state.driver.inner.api.arguments.get_by_ptr(value_ptr);
         let callback_id = CallbackId::from_u64(callback_id);
 
         let mut result = JsValue::Undefined;
 
         state.driver.transaction(|_| {
-            result = state.driver.inner.api.callback_store.call(callback_id, value);
+            result = state
+                .driver
+                .inner
+                .api
+                .callback_store
+                .call(callback_id, value);
         });
 
         if result == JsValue::Undefined {

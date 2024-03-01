@@ -1,7 +1,4 @@
-use crate::computed::{
-    Computed, Value,
-    tests::box_value_version::SubscribeValueVer,
-};
+use crate::computed::{tests::box_value_version::SubscribeValueVer, Computed, Value};
 
 struct AppState {
     value1: Value<i32>,

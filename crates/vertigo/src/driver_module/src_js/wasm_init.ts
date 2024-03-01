@@ -44,7 +44,6 @@ export const wasmInit = async <ImportType extends Record<string, Function>, Expo
     const getUint8Memory = () => {
         if (module_instance.instance.exports.memory instanceof WebAssembly.Memory) {
             if (cacheGetUint8Memory.buffer !== module_instance.instance.exports.memory.buffer) {
-                console.info('getUint8Memory: reallocate the Uint8Array for a new size', module_instance.instance.exports.memory.buffer.byteLength);
                 cacheGetUint8Memory = new Uint8Array(module_instance.instance.exports.memory.buffer);
             }
             return cacheGetUint8Memory;

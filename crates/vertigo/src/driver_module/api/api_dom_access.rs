@@ -1,5 +1,5 @@
-use crate::{JsValue, DomId};
-use super::{panic_message::PanicMessage, arguments::Arguments};
+use super::{arguments::Arguments, panic_message::PanicMessage};
+use crate::{DomId, JsValue};
 
 pub struct DomAccess {
     panic_message: PanicMessage,
@@ -10,7 +10,11 @@ pub struct DomAccess {
 
 impl DomAccess {
     #[must_use]
-    pub fn new(panic_message: PanicMessage, arguments: Arguments, fn_dom_access: fn(ptr: u32, size: u32) -> u32) -> DomAccess {
+    pub fn new(
+        panic_message: PanicMessage,
+        arguments: Arguments,
+        fn_dom_access: fn(ptr: u32, size: u32) -> u32,
+    ) -> DomAccess {
         DomAccess {
             panic_message,
             fn_dom_access,
@@ -21,60 +25,53 @@ impl DomAccess {
 
     #[must_use]
     pub fn api(mut self) -> Self {
-        self.builder.push(JsValue::List(vec!(
-            JsValue::str("api")
-        )));
+        self.builder.push(JsValue::List(vec![JsValue::str("api")]));
 
         self
     }
 
     #[must_use]
     pub fn element(mut self, dom_id: DomId) -> Self {
-        self.builder.push(JsValue::List(vec!(
+        self.builder.push(JsValue::List(vec![
             JsValue::str("root"),
-            JsValue::U64(dom_id.to_u64())
-        )));
+            JsValue::U64(dom_id.to_u64()),
+        ]));
 
         self
     }
 
     #[must_use]
     pub fn root(mut self, name: impl Into<String>) -> Self {
-        self.builder.push(JsValue::List(vec!(
+        self.builder.push(JsValue::List(vec![
             JsValue::str("root"),
-            JsValue::str(name)
-        )));
+            JsValue::str(name),
+        ]));
 
         self
     }
 
     #[must_use]
     pub fn get(mut self, name: impl Into<String>) -> Self {
-        self.builder.push(JsValue::List(vec!(
-            JsValue::str("get"),
-            JsValue::str(name)
-        )));
+        self.builder
+            .push(JsValue::List(vec![JsValue::str("get"), JsValue::str(name)]));
 
         self
     }
 
     #[must_use]
     pub fn set(mut self, name: impl Into<String>, value: JsValue) -> Self {
-        self.builder.push(JsValue::List(vec!(
+        self.builder.push(JsValue::List(vec![
             JsValue::str("set"),
             JsValue::str(name),
-            value
-        )));
+            value,
+        ]));
 
         self
     }
 
     #[must_use]
     pub fn call(mut self, name: impl Into<String>, params: Vec<JsValue>) -> Self {
-        let mut value_params = vec!(
-            JsValue::str("call"),
-            JsValue::str(name),
-        );
+        let mut value_params = vec![JsValue::str("call"), JsValue::str(name)];
 
         value_params.extend(params);
 
@@ -84,14 +81,9 @@ impl DomAccess {
 
     #[must_use]
     pub fn get_props(mut self, props: &[&str]) -> Self {
-        let mut new_params = vec!(
-            JsValue::str("get_props"),
-        );
+        let mut new_params = vec![JsValue::str("get_props")];
 
-        new_params.extend(props
-            .iter()
-            .map(|item| JsValue::String(item.to_string()))
-        );
+        new_params.extend(props.iter().map(|item| JsValue::String(item.to_string())));
 
         self.builder.push(JsValue::List(new_params));
         self

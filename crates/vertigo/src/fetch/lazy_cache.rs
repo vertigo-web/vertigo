@@ -3,11 +3,12 @@ use std::rc::Rc;
 
 use crate::{
     computed::{context::Context, Value},
+    get_driver,
     struct_mut::ValueMut,
-    Instant, Resource, get_driver, Computed, transaction, DomNode, ToComputed,
+    transaction, Computed, DomNode, Instant, Resource, ToComputed,
 };
 
-use super::request_builder::{RequestBuilder, RequestBody};
+use super::request_builder::{RequestBody, RequestBuilder};
 
 type MapResponse<T> = Option<Result<T, String>>;
 
@@ -22,25 +23,25 @@ enum ApiResponse<T> {
     Data {
         value: Resource<Rc<T>>,
         expiry: Option<Instant>,
-    }
+    },
 }
 
 impl<T> ApiResponse<T> {
     pub fn new(value: Resource<Rc<T>>, expiry: Option<Instant>) -> Self {
-        Self::Data {
-            value,
-            expiry
-        }
+        Self::Data { value, expiry }
     }
 
     pub fn new_loading() -> Self {
-        ApiResponse::Data { value: Resource::Loading, expiry: None }
+        ApiResponse::Data {
+            value: Resource::Loading,
+            expiry: None,
+        }
     }
 
     pub fn get_value(&self) -> Resource<Rc<T>> {
         match self {
             Self::Uninitialized => Resource::Loading,
-            Self::Data { value, expiry: _ } => value.clone()
+            Self::Data { value, expiry: _ } => value.clone(),
         }
     }
 
@@ -62,12 +63,10 @@ impl<T> Clone for ApiResponse<T> {
     fn clone(&self) -> Self {
         match self {
             ApiResponse::Uninitialized => ApiResponse::Uninitialized,
-            ApiResponse::Data { value, expiry } => {
-                ApiResponse::Data {
-                    value: value.clone(),
-                    expiry: expiry.clone(),
-                }
-            }
+            ApiResponse::Data { value, expiry } => ApiResponse::Data {
+                value: value.clone(),
+                expiry: expiry.clone(),
+            },
         }
     }
 }
@@ -118,7 +117,7 @@ pub struct LazyCache<T: 'static> {
 
 impl<T: 'static> Debug for LazyCache<T> {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-        f.debug_struct ("LazyCache")
+        f.debug_struct("LazyCache")
             .field("queued", &self.queued)
             .finish()
     }
@@ -139,7 +138,7 @@ impl<T> Clone for LazyCache<T> {
 impl<T> LazyCache<T> {
     pub fn new(
         request: RequestBuilder,
-        map_response: impl Fn(u32, RequestBody) -> MapResponse<T> + 'static
+        map_response: impl Fn(u32, RequestBody) -> MapResponse<T> + 'static,
     ) -> Self {
         Self {
             id: get_unique_id(),
@@ -177,7 +176,7 @@ impl<T> LazyCache<T> {
             return;
         }
 
-        self.queued.set(true);   //set lock
+        self.queued.set(true); //set lock
         get_driver().inner.api.on_fetch_start.trigger(());
 
         let self_clone = self.clone();
@@ -188,24 +187,22 @@ impl<T> LazyCache<T> {
                 return;
             }
 
-            let api_response = transaction(|context| {
-                self_clone.value.get(context)
-            });
+            let api_response = transaction(|context| self_clone.value.get(context));
 
             if force || api_response.needs_update() {
                 if with_loading {
                     self_clone.value.set(ApiResponse::new_loading());
                 }
 
-                let new_value = self_clone.request.call().await.into(self_clone.map_response.as_ref());
+                let new_value = self_clone
+                    .request
+                    .call()
+                    .await
+                    .into(self_clone.map_response.as_ref());
 
                 let new_value = match new_value {
-                    Ok(value) => {
-                        Resource::Ready(Rc::new(value))
-                    },
-                    Err(message) => {
-                        Resource::Error(message)
-                    }
+                    Ok(value) => Resource::Ready(Rc::new(value)),
+                    Err(message) => Resource::Error(message),
                 };
 
                 let expiry = self_clone
@@ -224,9 +221,7 @@ impl<T> LazyCache<T> {
     pub fn to_computed(&self) -> Computed<Resource<Rc<T>>> {
         Computed::from({
             let state = self.clone();
-            move |context| {
-                state.get(context)
-            }
+            move |context| state.get(context)
         })
     }
 }
@@ -245,27 +240,23 @@ impl<T> PartialEq for LazyCache<T> {
 
 impl<T: PartialEq + Clone> LazyCache<T> {
     pub fn render(&self, render: impl Fn(Rc<T>) -> DomNode + 'static) -> DomNode {
-        self.to_computed().render_value(move |value| {
-            match value {
-                Resource::Ready(value) => {
-                    render(value)
-                },
-                Resource::Loading => {
-                    use crate as vertigo;
+        self.to_computed().render_value(move |value| match value {
+            Resource::Ready(value) => render(value),
+            Resource::Loading => {
+                use crate as vertigo;
 
-                    vertigo::dom! {
-                        <vertigo-suspense />
-                    }
-                },
-                Resource::Error(error) => {
-                    use crate as vertigo;
+                vertigo::dom! {
+                    <vertigo-suspense />
+                }
+            }
+            Resource::Error(error) => {
+                use crate as vertigo;
 
-                    vertigo::dom! {
-                        <div>
-                            "error = "
-                            {error}
-                        </div>
-                    }
+                vertigo::dom! {
+                    <div>
+                        "error = "
+                        {error}
+                    </div>
                 }
             }
         })

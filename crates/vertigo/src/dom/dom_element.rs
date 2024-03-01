@@ -1,10 +1,11 @@
 use std::rc::Rc;
 
 use crate::{
+    dom::{dom_id::DomId, dom_node::DomNode},
     driver_module::{driver::Driver, StaticString},
-    dom::{dom_node::DomNode, dom_id::DomId},
-    get_driver, Computed, struct_mut::VecMut, DropResource, DropFileItem,
-    JsValue, DomText, Css,
+    get_driver,
+    struct_mut::VecMut,
+    Computed, Css, DomText, DropFileItem, DropResource, JsValue,
 };
 
 use crate::struct_mut::VecDequeMut;
@@ -12,9 +13,9 @@ use crate::struct_mut::VecDequeMut;
 use super::{
     attr_value::{AttrValue, CssAttrValue},
     callback::{Callback, Callback1},
-    types::{KeyDownEvent, DropFileEvent},
     dom_element_class::DomElementClassMerge,
     dom_element_ref::DomElementRef,
+    types::{DropFileEvent, KeyDownEvent},
 };
 
 /// A Real DOM representative - element kind
@@ -50,7 +51,11 @@ impl DomElement {
         DomElementRef::new(self.driver.inner.api.clone(), self.id_dom)
     }
 
-    fn subscribe<T: Clone + PartialEq + 'static>(&self, value: Computed<T>, call: impl Fn(T) + 'static) {
+    fn subscribe<T: Clone + PartialEq + 'static>(
+        &self,
+        value: Computed<T>,
+        call: impl Fn(T) + 'static,
+    ) {
         let client = value.subscribe(call);
         self.subscriptions.push(client);
     }
@@ -61,7 +66,7 @@ impl DomElement {
         match css {
             CssAttrValue::Css(css) => {
                 self.class_manager.set_css(css);
-            },
+            }
             CssAttrValue::Computed(css) => {
                 let class_manager = self.class_manager.clone();
 
@@ -85,21 +90,21 @@ impl DomElement {
         match value {
             AttrValue::String(value) => {
                 self.class_manager.set_attr_value(name, Some(value));
-            },
+            }
             AttrValue::Computed(computed) => {
                 let class_manager = self.class_manager.clone();
 
                 self.subscribe(computed, move |value| {
                     class_manager.set_attr_value(name.clone(), Some(value));
                 });
-            },
+            }
             AttrValue::ComputedOpt(computed) => {
                 let class_manager = self.class_manager.clone();
 
                 self.subscribe(computed, move |value| {
                     class_manager.set_attr_value(name.clone(), value);
                 });
-            },
+            }
             AttrValue::Value(value) => {
                 let class_manager = self.class_manager.clone();
 
@@ -137,7 +142,10 @@ impl DomElement {
         let child_node = child_node.into();
 
         let child_id = child_node.id_dom();
-        self.driver.inner.dom.insert_before(self.id_dom, child_id, None);
+        self.driver
+            .inner
+            .dom
+            .insert_before(self.id_dom, child_id, None);
 
         self.child_node.push(child_node);
     }
@@ -149,7 +157,9 @@ impl DomElement {
 
     pub fn add_child_text(&self, text: impl Into<String>) {
         let text = text.into();
-        self.add_child(DomNode::Text { node: DomText::new(text) });
+        self.add_child(DomNode::Text {
+            node: DomText::new(text),
+        });
     }
 
     pub fn child_text(self, text: impl Into<String>) -> Self {
@@ -164,20 +174,33 @@ impl DomElement {
         self
     }
 
-    fn add_event_listener(self, name: &'static str, callback: impl Fn(JsValue) -> JsValue + 'static) -> Self {
+    fn add_event_listener(
+        self,
+        name: &'static str,
+        callback: impl Fn(JsValue) -> JsValue + 'static,
+    ) -> Self {
         let (callback_id, drop) = self.driver.inner.api.callback_store.register(callback);
 
         let drop_event = DropResource::new(move || {
-            self.driver.inner.dom.callback_remove(self.id_dom, name, callback_id);
+            self.driver
+                .inner
+                .dom
+                .callback_remove(self.id_dom, name, callback_id);
             drop.off();
         });
 
-        self.driver.inner.dom.callback_add(self.id_dom, name, callback_id);
+        self.driver
+            .inner
+            .dom
+            .callback_add(self.id_dom, name, callback_id);
         self.subscriptions.push(drop_event);
         self
     }
 
-    fn install_callback<R: 'static>(&self, callback: impl Into<Callback<R>>) -> Rc<dyn Fn() -> R + 'static> {
+    fn install_callback<R: 'static>(
+        &self,
+        callback: impl Into<Callback<R>>,
+    ) -> Rc<dyn Fn() -> R + 'static> {
         let callback: Callback<R> = callback.into();
         let (callback, drop) = callback.subscribe();
         if let Some(drop) = drop {
@@ -186,7 +209,10 @@ impl DomElement {
         callback
     }
 
-    fn install_callback1<T: 'static, R: 'static>(&self, callback: impl Into<Callback1<T, R>>) -> Rc<dyn Fn(T) -> R + 'static> {
+    fn install_callback1<T: 'static, R: 'static>(
+        &self,
+        callback: impl Into<Callback1<T, R>>,
+    ) -> Rc<dyn Fn(T) -> R + 'static> {
         let callback: Callback1<T, R> = callback.into();
         let (callback, drop) = callback.subscribe();
         if let Some(drop) = drop {
@@ -286,20 +312,18 @@ impl DomElement {
     pub fn on_key_down(self, on_key_down: impl Into<Callback1<KeyDownEvent, bool>>) -> Self {
         let on_key_down = self.install_callback1(on_key_down);
 
-        self.add_event_listener("keydown", move |data| {
-            match get_key_down_event(data) {
-                Ok(event) => {
-                    let prevent_default = on_key_down(event);
+        self.add_event_listener("keydown", move |data| match get_key_down_event(data) {
+            Ok(event) => {
+                let prevent_default = on_key_down(event);
 
-                    match prevent_default {
-                        true => JsValue::True,
-                        false => JsValue::False,
-                    }
-                },
-                Err(error) => {
-                    log::error!("export_websocket_callback_message -> params decode error -> {error}");
-                    JsValue::False
+                match prevent_default {
+                    true => JsValue::True,
+                    false => JsValue::False,
                 }
+            }
+            Err(error) => {
+                log::error!("export_websocket_callback_message -> params decode error -> {error}");
+                JsValue::False
             }
         })
     }
@@ -324,7 +348,7 @@ impl DomElement {
             match params {
                 Ok(params) => {
                     on_dropfile(params);
-                },
+                }
                 Err(error) => {
                     log::error!("on_dropfile -> params decode error -> {error}");
                 }
@@ -337,20 +361,18 @@ impl DomElement {
     pub fn hook_key_down(self, on_hook_key_down: impl Into<Callback1<KeyDownEvent, bool>>) -> Self {
         let on_hook_key_down = self.install_callback1(on_hook_key_down);
 
-        self.add_event_listener("hook_keydown", move |data| {
-            match get_key_down_event(data) {
-                Ok(event) => {
-                    let prevent_default = on_hook_key_down(event);
+        self.add_event_listener("hook_keydown", move |data| match get_key_down_event(data) {
+            Ok(event) => {
+                let prevent_default = on_hook_key_down(event);
 
-                    match prevent_default {
-                        true => JsValue::True,
-                        false => JsValue::False,
-                    }
-                },
-                Err(error) => {
-                    log::error!("export_websocket_callback_message -> params decode error -> {error}");
-                    JsValue::False
+                match prevent_default {
+                    true => JsValue::True,
+                    false => JsValue::False,
                 }
+            }
+            Err(error) => {
+                log::error!("export_websocket_callback_message -> params decode error -> {error}");
+                JsValue::False
             }
         })
     }
@@ -370,7 +392,6 @@ impl Drop for DomElement {
         self.driver.inner.dom.remove_node(self.id_dom);
     }
 }
-
 
 fn get_key_down_event(data: JsValue) -> Result<KeyDownEvent, String> {
     data.convert(|mut params| {

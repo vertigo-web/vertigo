@@ -1,12 +1,12 @@
 mod auto_map;
 mod computed_box;
+pub mod context;
 mod dependencies;
+mod drop_resource;
 mod graph_id;
 mod graph_value;
-mod value;
 pub mod struct_mut;
-mod drop_resource;
-pub mod context;
+mod value;
 
 #[cfg(test)]
 mod tests;
@@ -14,10 +14,10 @@ mod tests;
 pub use auto_map::AutoMap;
 pub use computed_box::{Computed, ToComputed};
 pub use dependencies::Dependencies;
+pub use drop_resource::DropResource;
 pub use graph_id::GraphId;
 pub use graph_value::GraphValue;
 pub use value::Value;
-pub use drop_resource::DropResource;
 
 /// Allows to create `Computed<T1, T2, ...>` out of `Value<T1>`, `Value<T2>`, ...
 ///

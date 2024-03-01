@@ -1,11 +1,8 @@
 use std::collections::HashMap;
 use std::hash::Hash;
 
-use super::{
-    memory_block_write::MemoryBlockWrite,
-    memory_block_read::MemoryBlockRead
-};
 use super::serialize::{JsJsonContext, JsJsonDeserialize, JsJsonSerialize};
+use super::{memory_block_read::MemoryBlockRead, memory_block_write::MemoryBlockWrite};
 
 const PARAM_TYPE: u32 = 1;
 const STRING_SIZE: u32 = 4;
@@ -26,14 +23,14 @@ enum JsJsonConst {
 impl JsJsonConst {
     fn from_byte(byte: u8) -> Option<JsJsonConst> {
         match byte {
-            1  => Some(JsJsonConst::True),
-            2  => Some(JsJsonConst::False),
-            3  => Some(JsJsonConst::Null),
-            4  => Some(JsJsonConst::String),
-            5  => Some(JsJsonConst::Number),
-            6  => Some(JsJsonConst::List),
-            7  => Some(JsJsonConst::Object),
-            _  => None,
+            1 => Some(JsJsonConst::True),
+            2 => Some(JsJsonConst::False),
+            3 => Some(JsJsonConst::Null),
+            4 => Some(JsJsonConst::String),
+            5 => Some(JsJsonConst::Number),
+            6 => Some(JsJsonConst::List),
+            7 => Some(JsJsonConst::Object),
+            _ => None,
         }
     }
 }
@@ -88,7 +85,7 @@ impl PartialEq for JsJson {
             (Self::Number(value1), Self::Number(value2)) => value1.to_bits() == value2.to_bits(),
             (Self::List(value1), Self::List(value2)) => value1 == value2,
             (Self::Object(value1), Self::Object(value2)) => value1 == value2,
-            _ => false
+            _ => false,
         }
     }
 }
@@ -217,7 +214,10 @@ impl JsJson {
         }
     }
 
-    pub fn get_hashmap(self, context: &JsJsonContext) -> Result<HashMap<String, JsJson>, JsJsonContext> {
+    pub fn get_hashmap(
+        self,
+        context: &JsJsonContext,
+    ) -> Result<HashMap<String, JsJson>, JsJsonContext> {
         let object = match self {
             JsJson::Object(object) => object,
             other => {
@@ -229,7 +229,11 @@ impl JsJson {
         Ok(object)
     }
 
-    pub fn get_property<T: JsJsonDeserialize>(&mut self, context: &JsJsonContext, param: &'static str) -> Result<T, JsJsonContext> {
+    pub fn get_property<T: JsJsonDeserialize>(
+        &mut self,
+        context: &JsJsonContext,
+        param: &'static str,
+    ) -> Result<T, JsJsonContext> {
         let object = match self {
             JsJson::Object(object) => object,
             other => {
@@ -240,13 +244,12 @@ impl JsJson {
 
         let context = context.add(["field: '", param, "'"].concat());
 
-        let item = object.remove(param).ok_or_else(|| {
-            context.add("missing field")
-        })?;
+        let item = object
+            .remove(param)
+            .ok_or_else(|| context.add("missing field"))?;
 
         T::from_json(context, item)
     }
-
 }
 
 fn write_string_to(value: &str, buff: &mut MemoryBlockWrite) {
@@ -286,7 +289,7 @@ pub fn decode_js_json_inner(buffer: &mut MemoryBlockRead) -> Result<JsJson, Stri
             }
 
             JsJson::List(param_list)
-        },
+        }
         JsJsonConst::Object => {
             let mut props = HashMap::new();
             let object_size = buffer.get_u16();
@@ -308,7 +311,7 @@ pub fn decode_js_json_inner(buffer: &mut MemoryBlockRead) -> Result<JsJson, Stri
 
 #[derive(Default)]
 pub struct JsJsonObjectBuilder {
-    data: HashMap<String, JsJson>
+    data: HashMap<String, JsJson>,
 }
 
 impl JsJsonObjectBuilder {

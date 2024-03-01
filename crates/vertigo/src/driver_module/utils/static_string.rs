@@ -1,9 +1,8 @@
-use std::borrow::{Cow, Borrow};
+use std::borrow::{Borrow, Cow};
 use std::fmt::Display;
 
-
 #[derive(Clone, Debug, PartialEq, Eq, Hash)]
-pub struct StaticString (pub Cow<'static, str>);
+pub struct StaticString(pub Cow<'static, str>);
 
 impl StaticString {
     pub fn as_str(&self) -> &str {
@@ -39,12 +38,8 @@ impl Default for StaticString {
 impl Display for StaticString {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         match &self.0 {
-            Cow::Borrowed(data) => {
-                f.write_str(data)
-            },
-            Cow::Owned(data) => {
-                f.write_str(data)
-            }
+            Cow::Borrowed(data) => f.write_str(data),
+            Cow::Owned(data) => f.write_str(data),
         }
     }
 }

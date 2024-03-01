@@ -1,8 +1,6 @@
-use crate::{
-    dom::dom_node::DomNode,
-    Computed, DomText, DomElement, DomComment, Value,
-};
+use crate::{dom::dom_node::DomNode, Computed, DomComment, DomElement, DomText, Value};
 
+/// Can be embedded into [dom!](crate::dom!) macro
 pub trait EmbedDom {
     fn embed(self) -> DomNode;
 }
@@ -34,18 +32,16 @@ impl EmbedDom for DomNode {
 impl<T: ToString> EmbedDom for T {
     fn embed(self) -> DomNode {
         DomNode::Text {
-            node: DomText::new(self.to_string())
+            node: DomText::new(self.to_string()),
         }
     }
 }
 
 impl<T: ToString + Clone + PartialEq + 'static> EmbedDom for &Computed<T> {
     fn embed(self) -> DomNode {
-        self.render_value(|val|
-            DomNode::Text {
-                node: DomText::new(val.to_string())
-            }
-        )
+        self.render_value(|val| DomNode::Text {
+            node: DomText::new(val.to_string()),
+        })
     }
 }
 
