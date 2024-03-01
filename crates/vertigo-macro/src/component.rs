@@ -2,7 +2,7 @@ use proc_macro::{Span, TokenStream};
 use quote::quote;
 use syn::{Visibility, __private::ToTokens};
 
-pub fn component_inner(input: TokenStream) -> TokenStream {
+pub(crate) fn component_inner(input: TokenStream) -> TokenStream {
     let ast = syn::parse_macro_input!(input as syn::ItemFn);
 
     // Function name

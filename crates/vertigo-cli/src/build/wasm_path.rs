@@ -1,4 +1,5 @@
-use sha2::{Sha256, Digest};
+use base64::{engine::general_purpose::URL_SAFE_NO_PAD, Engine as _};
+use crc::{Crc, CRC_64_ECMA_182};
 use std::{path::PathBuf, io::ErrorKind};
 
 #[derive(Debug)]
@@ -92,17 +93,19 @@ impl WasmPath {
     }
 }
 
-pub fn get_hash(data: &[u8]) -> String {
-    // create a Sha256 object
-    let mut hasher = Sha256::new();
-    hasher.update(data);
-    let result = hasher.finalize();
+const CRC: Crc<u64> = Crc::<u64>::new(&CRC_64_ECMA_182);
 
-    hex::encode(&result[..])
+pub fn get_hash(data: &[u8]) -> String {
+    let mut hasher = CRC.digest();
+    hasher.update(data);
+    URL_SAFE_NO_PAD.encode(hasher.finalize().to_be_bytes())
 }
 
 #[test]
 fn test_hash() {
-    let ddd = get_hash("vertigo".as_bytes());
-    assert_eq!(ddd, "e5a559c8ce04fb73d98cfc83e140713600c1134ac676d0b4debcc9838c09e2d7");
+    let ddd1 = get_hash("vertigo1".as_bytes());
+    let ddd2 = get_hash("vertigo1".as_bytes());
+    let ddd3 = get_hash("vertigo2".as_bytes());
+    assert_eq!(ddd1, ddd2);
+    assert_ne!(ddd2, ddd3);
 }

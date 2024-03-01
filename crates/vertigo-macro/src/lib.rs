@@ -11,16 +11,19 @@ mod css_parser;
 mod html_parser;
 mod include_static;
 mod js_json_derive;
+mod main_wrap;
 mod wasm_path;
 
 use proc_macro::{Span, TokenStream};
 use quote::quote;
 
 use crate::{
-    bind::{bind_macro_fn, bind_rc_fn, bind_spawn_fn},
+    bind::{bind_inner, bind_rc_inner, bind_spawn_inner},
     component::component_inner,
     css_parser::generate_css_string,
     html_parser::{dom_element_inner, dom_inner},
+    include_static::include_static_inner,
+    main_wrap::main_wrap,
 };
 
 #[proc_macro]
@@ -78,6 +81,41 @@ pub fn auto_js_json(input: TokenStream) -> TokenStream {
     }
 }
 
+#[proc_macro]
+#[proc_macro_error]
+pub fn include_static(input: TokenStream) -> TokenStream {
+    include_static_inner(input)
+}
+
+#[proc_macro]
+#[proc_macro_error]
+pub fn bind(input: TokenStream) -> TokenStream {
+    convert_to_tokens(bind_inner(input))
+}
+
+#[proc_macro]
+#[proc_macro_error]
+pub fn bind_spawn(input: TokenStream) -> TokenStream {
+    convert_to_tokens(bind_spawn_inner(input))
+}
+
+#[proc_macro]
+#[proc_macro_error]
+pub fn bind_rc(input: TokenStream) -> TokenStream {
+    convert_to_tokens(bind_rc_inner(input))
+}
+
+#[proc_macro_attribute]
+pub fn main(_attr: TokenStream, input: TokenStream) -> TokenStream {
+    main_wrap(input)
+}
+
+#[proc_macro_attribute]
+#[proc_macro_error]
+pub fn component(_attr: TokenStream, input: TokenStream) -> TokenStream {
+    component_inner(input)
+}
+
 fn convert_to_tokens(input: Result<TokenStream, String>) -> TokenStream {
     match input {
         Ok(body) => body,
@@ -87,76 +125,4 @@ fn convert_to_tokens(input: Result<TokenStream, String>) -> TokenStream {
             quote! { #empty }.into()
         }
     }
-}
-
-#[proc_macro]
-#[proc_macro_error]
-pub fn include_static(input: TokenStream) -> TokenStream {
-    let path = input.to_string();
-    let file_path = Span::call_site().source_file().path();
-
-    match include_static::include_static(file_path, path) {
-        Ok(hash) => quote! { #hash }.into(),
-        Err(message) => {
-            emit_error!(Span::call_site(), "{}", message);
-            let empty = "";
-            quote! { #empty }.into()
-        }
-    }
-}
-
-#[proc_macro]
-#[proc_macro_error]
-pub fn bind(input: TokenStream) -> TokenStream {
-    convert_to_tokens(bind_macro_fn(input))
-}
-
-#[proc_macro]
-#[proc_macro_error]
-pub fn bind_spawn(input: TokenStream) -> TokenStream {
-    convert_to_tokens(bind_spawn_fn(input))
-}
-
-#[proc_macro]
-#[proc_macro_error]
-pub fn bind_rc(input: TokenStream) -> TokenStream {
-    convert_to_tokens(bind_rc_fn(input))
-}
-
-#[proc_macro_attribute]
-pub fn main(_attr: TokenStream, input: TokenStream) -> TokenStream {
-    let input2 = input.clone();
-
-    let ast = syn::parse_macro_input!(input as syn::ItemFn);
-
-    //function name
-    let name = &ast.sig.ident;
-
-    let input: proc_macro2::TokenStream = input2.into();
-
-    const VERTIGO_VERSION_MAJOR: u32 = pkg_version::pkg_version_major!();
-    const VERTIGO_VERSION_MINOR: u32 = pkg_version::pkg_version_minor!();
-
-    quote! {
-        #input
-
-        #[no_mangle]
-        pub fn vertigo_entry_function(version: (u32, u32)) {
-            vertigo::start_app(#name);
-            if version.0 != #VERTIGO_VERSION_MAJOR || version.1 != #VERTIGO_VERSION_MINOR {
-                vertigo::log::error!(
-                    "Vertigo version mismatch, server {}.{} != client {}.{}",
-                    version.0, version.1,
-                    #VERTIGO_VERSION_MAJOR, #VERTIGO_VERSION_MINOR
-                );
-            }
-        }
-    }
-    .into()
-}
-
-#[proc_macro_attribute]
-#[proc_macro_error]
-pub fn component(_attr: TokenStream, input: TokenStream) -> TokenStream {
-    component_inner(input)
 }

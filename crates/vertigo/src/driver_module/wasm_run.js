@@ -1926,7 +1926,7 @@ class WasmModule {
 
 // vertigo-cli compatibility version, change together with package version.
 const VERTIGO_COMPAT_VERSION_MAJOR = 0;
-const VERTIGO_COMPAT_VERSION_MINOR = 4;
+const VERTIGO_COMPAT_VERSION_MINOR = 5;
 const moduleRun = new Set();
 const runModule = async (wasm) => {
     if (moduleRun.has(wasm)) {

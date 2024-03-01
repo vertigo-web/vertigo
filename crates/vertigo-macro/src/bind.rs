@@ -1,10 +1,121 @@
 use std::collections::VecDeque;
 
-use proc_macro::{TokenStream, TokenTree, Span};
-use proc_macro2::TokenStream as TokenStream2;
+use proc_macro::{Span, TokenStream, TokenTree};
 use proc_macro2::Ident as Ident2;
+use proc_macro2::TokenStream as TokenStream2;
 use quote::quote;
 use syn::__private::quote::format_ident;
+
+pub(crate) fn bind_inner(input: TokenStream) -> Result<TokenStream, String> {
+    let tokens = input.into_iter().collect::<Vec<_>>();
+
+    let TokensParamsBody {
+        bind_params,
+        func_params: _,
+        body,
+    } = split_params_and_body(tokens.as_slice())?;
+
+    let mut clone_stm = Vec::<TokenStream2>::new();
+    let first_pipe = is_first_pipe_char(body.as_slice());
+    let body: TokenStream2 = body.iter().cloned().collect::<TokenStream>().into();
+
+    for item in bind_params {
+        let Some(name_param) = find_param_name(item) else {
+            return Ok(quote! {""}.into());
+        };
+
+        clone_stm.push(quote! {
+            let #name_param = #name_param.clone();
+        });
+    }
+
+    let bind_result = if first_pipe {
+        quote! {
+            {
+                #(#clone_stm)*
+
+                move #body
+            }
+        }
+    } else {
+        quote! {
+            {
+                #(#clone_stm)*
+
+                #body
+            }
+        }
+    };
+
+    Ok(bind_result.into())
+}
+
+pub(crate) fn bind_spawn_inner(input: TokenStream) -> Result<TokenStream, String> {
+    let tokens = input.into_iter().collect::<Vec<_>>();
+
+    let TokensParamsBody {
+        bind_params,
+        func_params: _,
+        body,
+    } = split_params_and_body(tokens.as_slice())?;
+
+    let bind_params: Vec<TokenStream2> = bind_params
+        .into_iter()
+        .map(convert_tokens_to_stream)
+        .collect::<Vec<_>>();
+
+    let body: TokenStream2 = convert_tokens_to_stream(body.as_slice());
+
+    Ok(quote! {
+        {
+            vertigo::bind!(#(#bind_params,)* || {
+                vertigo::get_driver().spawn(vertigo::bind!(#(#bind_params,)* #body));
+            })
+        }
+    }
+    .into())
+}
+
+pub(crate) fn bind_rc_inner(input: TokenStream) -> Result<TokenStream, String> {
+    let tokens = input.into_iter().collect::<Vec<_>>();
+
+    let TokensParamsBody {
+        bind_params,
+        func_params,
+        body,
+    } = split_params_and_body(tokens.as_slice())?;
+
+    let bind_params: Vec<TokenStream2> = bind_params
+        .into_iter()
+        .map(convert_tokens_to_stream)
+        .collect::<Vec<_>>();
+
+    let Some(func_params) = func_params else {
+        return Err("The macro can only take functions".to_string());
+    };
+
+    let types = {
+        let mut types_macro: Vec<TokenStream2> = Vec::new();
+
+        for type_item in func_params.into_iter() {
+            let type_item = get_type(type_item)?;
+
+            let type_item = convert_tokens_to_stream(type_item);
+            types_macro.push(type_item);
+        }
+
+        types_macro
+    };
+
+    let body: TokenStream2 = convert_tokens_to_stream(body.as_slice());
+
+    Ok(quote!{
+        {
+            let func: std::rc::Rc::<dyn Fn(#(#types,)*) -> _> = std::rc::Rc::new(vertigo::bind!(#(#bind_params,)* #body));
+            func
+        }
+    }.into())
+}
 
 fn is_char(token: &TokenTree, char: char) -> bool {
     if let TokenTree::Punct(inner) = token {
@@ -20,13 +131,19 @@ fn find_param_name(params: &[TokenTree]) -> Option<Ident2> {
             return if let TokenTree::Ident(value) = &first {
                 Some(format_ident!("{}", value.to_string()))
             } else {
-                emit_error!(Span::call_site(), "Can't find variable name, expected ident (1)");
+                emit_error!(
+                    Span::call_site(),
+                    "Can't find variable name, expected ident (1)"
+                );
                 None
             };
         }
     }
 
-    emit_error!(Span::call_site(), "Can't find variable name, expected ident (2)");
+    emit_error!(
+        Span::call_site(),
+        "Can't find variable name, expected ident (2)"
+    );
     None
 }
 
@@ -62,9 +179,7 @@ fn is_bracket_contain(tokens: &[TokenTree]) -> bool {
 
 fn split_params_and_body_function(tokens: &[TokenTree]) -> Result<TokensParamsBody, String> {
     let mut chunks = tokens
-        .split(|token| {
-            is_char(token, '|')
-        })
+        .split(|token| is_char(token, '|'))
         .collect::<VecDeque<_>>();
 
     if chunks.len() != 3 {
@@ -74,18 +189,14 @@ fn split_params_and_body_function(tokens: &[TokenTree]) -> Result<TokensParamsBo
     let bind_params = chunks
         .pop_front()
         .unwrap()
-        .split(|token| {
-            is_char(token, ',')
-        })
+        .split(|token| is_char(token, ','))
         .filter(|item| !item.is_empty())
         .collect::<Vec<_>>();
 
     let func_params = chunks
         .pop_front()
         .unwrap()
-        .split(|token| {
-            is_char(token, ',')
-        })
+        .split(|token| is_char(token, ','))
         .filter(|item| !item.is_empty())
         .collect::<Vec<_>>();
 
@@ -114,9 +225,7 @@ fn split_params_and_body_function(tokens: &[TokenTree]) -> Result<TokensParamsBo
 
 fn split_params_and_body_block(tokens: &[TokenTree]) -> Result<TokensParamsBody, String> {
     let mut chunks = tokens
-        .split(|token| {
-            is_char(token, ',')
-        })
+        .split(|token| is_char(token, ','))
         .collect::<Vec<_>>();
 
     let body = chunks.pop().unwrap().to_vec();
@@ -138,81 +247,13 @@ fn split_params_and_body(tokens: &[TokenTree]) -> Result<TokensParamsBody, Strin
     }
 }
 
-pub fn bind_macro_fn(input: TokenStream) -> Result<TokenStream, String> {
-    let tokens = input.into_iter().collect::<Vec<_>>();
-
-    let TokensParamsBody { bind_params, func_params: _, body } = split_params_and_body(tokens.as_slice())?;
-
-    let mut clone_stm = Vec::<TokenStream2>::new();
-    let first_pipe = is_first_pipe_char(body.as_slice());
-    let body: TokenStream2 = body.iter().cloned().collect::<TokenStream>().into();
-
-    for item in bind_params {
-        let Some(name_param) = find_param_name(item) else {
-            return Ok(quote! {""}.into());
-        };
-
-        clone_stm.push(quote!{
-            let #name_param = #name_param.clone();
-        });
-    }
-
-    let bind_result = if first_pipe {
-        quote! {
-            {
-                #(#clone_stm)*
-
-                move #body
-            }
-        }
-    } else {
-        quote! {
-            {
-                #(#clone_stm)*
-
-                #body
-            }
-        }
-    };
-
-    Ok(bind_result.into())
-
-}
-
 fn convert_tokens_to_stream(tokens: &[TokenTree]) -> TokenStream2 {
-    tokens
-        .iter()
-        .cloned()
-        .collect::<TokenStream>()
-        .into()
-}
-
-pub fn bind_spawn_fn(input: TokenStream) -> Result<TokenStream, String> {
-    let tokens = input.into_iter().collect::<Vec<_>>();
-
-    let TokensParamsBody { bind_params, func_params: _, body } = split_params_and_body(tokens.as_slice())?;
-
-    let bind_params: Vec<TokenStream2> = bind_params
-        .into_iter()
-        .map(convert_tokens_to_stream)
-        .collect::<Vec<_>>();
-
-    let body: TokenStream2 = convert_tokens_to_stream(body.as_slice());
-
-    Ok(quote! {
-        {
-            vertigo::bind!(#(#bind_params,)* || {
-                vertigo::get_driver().spawn(vertigo::bind!(#(#bind_params,)* #body));
-            })
-        }
-    }.into())
+    tokens.iter().cloned().collect::<TokenStream>().into()
 }
 
 fn get_type(tokens: &[TokenTree]) -> Result<&[TokenTree], String> {
     let mut tokens = tokens
-        .split(|token| {
-            is_char(token, ':')
-        })
+        .split(|token| is_char(token, ':'))
         .collect::<VecDeque<_>>();
 
     if tokens.len() != 2 {
@@ -223,40 +264,4 @@ fn get_type(tokens: &[TokenTree]) -> Result<&[TokenTree], String> {
     let type_tokens = tokens.pop_front().unwrap();
 
     Ok(type_tokens)
-}
-
-pub fn bind_rc_fn(input: TokenStream) -> Result<TokenStream, String> {
-    let tokens = input.into_iter().collect::<Vec<_>>();
-
-    let TokensParamsBody { bind_params, func_params, body } = split_params_and_body(tokens.as_slice())?;
-    let bind_params: Vec<TokenStream2> = bind_params
-        .into_iter()
-        .map(convert_tokens_to_stream)
-        .collect::<Vec<_>>();
-
-    let Some(func_params) = func_params else {
-        return Err("The macro can only take functions".to_string());
-    };
-
-    let types = {
-        let mut types_macro: Vec<TokenStream2> = Vec::new();
-
-        for type_item in func_params.into_iter() {
-            let type_item = get_type(type_item)?;
-
-            let type_item = convert_tokens_to_stream(type_item);
-            types_macro.push(type_item);
-        }
-
-        types_macro
-    };
-
-    let body: TokenStream2 = convert_tokens_to_stream(body.as_slice());
-
-    Ok(quote!{
-        {
-            let func: std::rc::Rc::<dyn Fn(#(#types,)*) -> _> = std::rc::Rc::new(vertigo::bind!(#(#bind_params,)* #body));
-            func
-        }
-    }.into())
 }

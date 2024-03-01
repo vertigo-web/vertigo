@@ -6,7 +6,9 @@ pub(crate) fn impl_js_json_derive(ast: &syn::DeriveInput) -> Result<TokenStream,
     let structure_name = &ast.ident;
 
     let Data::Struct(ref data) = ast.data else {
-        return Err(String::from("This macro can only be used for the structure"));
+        return Err(String::from(
+            "This macro can only be used for the structure",
+        ));
     };
 
     let mut field_list = Vec::new();
@@ -24,11 +26,11 @@ pub(crate) fn impl_js_json_derive(ast: &syn::DeriveInput) -> Result<TokenStream,
 
     for field_name in field_list {
         let field_name_string = field_name.to_string();
-        list_to_json.push(quote!{
+        list_to_json.push(quote! {
             (#field_name_string.to_string(), self.#field_name.to_json()),
         });
 
-        list_from_json.push(quote!{
+        list_from_json.push(quote! {
             #field_name: json.get_property(&context, #field_name_string)?,
         })
     }
@@ -41,7 +43,7 @@ pub(crate) fn impl_js_json_derive(ast: &syn::DeriveInput) -> Result<TokenStream,
                 ]))
             }
         }
-        
+
         impl vertigo::JsJsonDeserialize for #structure_name {
             fn from_json(context: vertigo::JsJsonContext, mut json: vertigo::JsJson) -> Result<Self, vertigo::JsJsonContext> {
                 Ok(Self {

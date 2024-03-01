@@ -1,16 +1,15 @@
-use sha2::{Sha256, Digest};
-use std::{path::PathBuf, /*io::ErrorKind*/};
+use base64::{engine::general_purpose::URL_SAFE_NO_PAD, Engine as _};
+use crc::{Crc, CRC_64_ECMA_182};
+use std::path::PathBuf;
 
 #[derive(Debug)]
-pub struct WasmPath {
+pub(crate) struct WasmPath {
     path: PathBuf,
 }
 
 impl WasmPath {
     pub fn new(path: PathBuf) -> Self {
-        Self {
-            path
-        }
+        Self { path }
     }
 
     pub fn as_string(&self) -> String {
@@ -18,15 +17,27 @@ impl WasmPath {
     }
 
     pub fn file_stem(&self) -> String {
-        self.path.file_stem().unwrap().to_string_lossy().into_owned()
+        self.path
+            .file_stem()
+            .unwrap()
+            .to_string_lossy()
+            .into_owned()
     }
 
     pub fn file_name(&self) -> String {
-        self.path.file_name().unwrap().to_string_lossy().into_owned()
+        self.path
+            .file_name()
+            .unwrap()
+            .to_string_lossy()
+            .into_owned()
     }
 
     pub fn file_extension(&self) -> String {
-        self.path.extension().unwrap().to_string_lossy().into_owned()
+        self.path
+            .extension()
+            .unwrap()
+            .to_string_lossy()
+            .into_owned()
     }
 
     pub fn save(&self, content: &[u8]) {
@@ -65,17 +76,19 @@ impl WasmPath {
     }
 }
 
-pub fn get_hash(data: &[u8]) -> String {
-    // create a Sha256 object
-    let mut hasher = Sha256::new();
-    hasher.update(data);
-    let result = hasher.finalize();
+const CRC: Crc<u64> = Crc::<u64>::new(&CRC_64_ECMA_182);
 
-    hex::encode(&result[..])
+pub fn get_hash(data: &[u8]) -> String {
+    let mut hasher = CRC.digest();
+    hasher.update(data);
+    URL_SAFE_NO_PAD.encode(hasher.finalize().to_be_bytes())
 }
 
 #[test]
 fn test_hash() {
-    let ddd = get_hash("vertigo".as_bytes());
-    assert_eq!(ddd, "e5a559c8ce04fb73d98cfc83e140713600c1134ac676d0b4debcc9838c09e2d7");
+    let ddd1 = get_hash("vertigo1".as_bytes());
+    let ddd2 = get_hash("vertigo1".as_bytes());
+    let ddd3 = get_hash("vertigo2".as_bytes());
+    assert_eq!(ddd1, ddd2);
+    assert_ne!(ddd2, ddd3);
 }

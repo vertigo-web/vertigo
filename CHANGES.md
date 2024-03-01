@@ -1,6 +1,12 @@
 <!-- markdownlint-configure-file { "no-duplicate-heading": { "siblings_only": true } } -->
 
 <!-- markdownlint-disable-next-line first-line-h1 -->
+## 0.5.0 - Unreleased
+
+### Changed
+
+* Hashing of bundled files shortened from SHA256 to CRC64/Base64 to have file names shorter
+
 ## 0.4.3 - 2024-02-28
 
 ### Fixed
