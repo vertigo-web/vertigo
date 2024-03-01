@@ -1,11 +1,10 @@
 //TODO: To be eventually moved to separate 'commons' lib
-mod js_value;
-mod serve_command;
 mod html;
-mod server_state;
+mod js_value;
 mod mount_path;
 mod request_state;
-mod spawn;
+mod serve_command;
+mod server_state;
 mod wasm;
 
 pub use serve_command::run;

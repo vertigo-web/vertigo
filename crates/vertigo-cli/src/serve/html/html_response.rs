@@ -1,36 +1,27 @@
 use axum::http::StatusCode;
-use std::{collections::{HashMap, VecDeque}, sync::Arc};
+use std::{
+    collections::{HashMap, VecDeque},
+    sync::Arc,
+};
 use tokio::sync::mpsc::UnboundedSender;
 
 use crate::serve::{
-    wasm::{
-        Message,
-        WasmInstance,
-        FetchRequest,
-        FetchResponse
-    },
+    js_value::JsValue,
     mount_path::MountPathConfig,
-    js_value::JsValue
+    wasm::{FetchRequest, FetchResponse, Message, WasmInstance},
 };
 
 use super::{
-    DomCommand,
-    element::AllElements,
-    send_request::send_request,
     dom_command::dom_command_from_js_json,
-    html_element::{
-        HtmlElement,
-        HtmlDocument
-    }, HtmlNode,
+    element::AllElements,
+    html_element::{HtmlDocument, HtmlElement},
+    send_request::send_request,
+    DomCommand, HtmlNode,
 };
 
 enum FetchStatus {
-    Requested {
-        callbacks: Vec<u64>,
-    },
-    Response {
-        response: FetchResponse,
-    }
+    Requested { callbacks: Vec<u64> },
+    Response { response: FetchResponse },
 }
 
 impl FetchStatus {
@@ -45,11 +36,16 @@ pub struct HtmlResponse {
     inst: WasmInstance,
     all_elements: AllElements,
     fetch: HashMap<Arc<FetchRequest>, FetchStatus>,
-    env: HashMap<String, String>
+    env: HashMap<String, String>,
 }
 
 impl HtmlResponse {
-    pub fn new(sender: UnboundedSender<Message>, mount_path: &MountPathConfig, inst: WasmInstance, env: HashMap<String, String>) -> Self {
+    pub fn new(
+        sender: UnboundedSender<Message>,
+        mount_path: &MountPathConfig,
+        inst: WasmInstance,
+        env: HashMap<String, String>,
+    ) -> Self {
         Self {
             sender,
             mount_path: mount_path.clone(),
@@ -86,7 +82,7 @@ impl HtmlResponse {
                 // Not really possible
                 return (
                     StatusCode::INTERNAL_SERVER_ERROR,
-                    format!("Missing <html> element, found {} instead", html.name)
+                    format!("Missing <html> element, found {} instead", html.name),
                 );
             }
 
@@ -94,7 +90,10 @@ impl HtmlResponse {
                 html.add_attr(format!("data-env-{env_name}"), env_value);
             }
         } else {
-            return (StatusCode::INTERNAL_SERVER_ERROR, "Missing <html> element".into());
+            return (
+                StatusCode::INTERNAL_SERVER_ERROR,
+                "Missing <html> element".into(),
+            );
         }
 
         let head_exists = root_html.modify(&[("head", 0)], move |_head| {});
@@ -144,22 +143,26 @@ impl HtmlResponse {
                 None
             }
             Message::Panic(message) => {
-                let message = message.unwrap_or_else(|| "panic message decoding problem".to_string());
+                let message =
+                    message.unwrap_or_else(|| "panic message decoding problem".to_string());
                 Some((StatusCode::INTERNAL_SERVER_ERROR, message))
             }
             Message::SetTimeoutZero { callback_id } => {
                 let result = self.inst.wasm_callback(callback_id, JsValue::Undefined);
                 assert_eq!(result, JsValue::Undefined);
                 None
-            },
-            Message::FetchRequest { callback_id, request } => {
+            }
+            Message::FetchRequest {
+                callback_id,
+                request,
+            } => {
                 let request = Arc::new(request);
 
                 if let Some(value) = self.fetch.get_mut(&request) {
                     match value {
                         FetchStatus::Requested { callbacks } => {
                             callbacks.push(callback_id);
-                        },
+                        }
                         FetchStatus::Response { response } => {
                             self.inst.send_fetch_response(callback_id, response.clone());
                         }
@@ -172,47 +175,44 @@ impl HtmlResponse {
                         async move {
                             let response = send_request(request.clone()).await;
 
-                            sender.send(Message::FetchResponse {
-                                request,
-                                response
-                            }).unwrap();
+                            sender
+                                .send(Message::FetchResponse { request, response })
+                                .unwrap();
                         }
                     });
 
-                    self.fetch.insert(request, FetchStatus::Requested {
-                        callbacks: vec!(callback_id),
-                    });
+                    self.fetch.insert(
+                        request,
+                        FetchStatus::Requested {
+                            callbacks: vec![callback_id],
+                        },
+                    );
                 }
                 None
-            },
+            }
 
             Message::FetchResponse { request, response } => {
                 let state = self.fetch.remove(&request);
 
                 let new_state = match state {
-                    Some(state) => {
-                        match state {
-                            FetchStatus::Requested { callbacks } => {
-                                for callback_id in callbacks {
-                                    self.inst.send_fetch_response(callback_id, response.clone());
-                                }
-                                FetchStatus::Response { response }
-                            },
-                            FetchStatus::Response { .. } => {
-                                unreachable!();
+                    Some(state) => match state {
+                        FetchStatus::Requested { callbacks } => {
+                            for callback_id in callbacks {
+                                self.inst.send_fetch_response(callback_id, response.clone());
                             }
+                            FetchStatus::Response { response }
+                        }
+                        FetchStatus::Response { .. } => {
+                            unreachable!();
                         }
                     },
-                    None => {
-                        FetchStatus::Response { response }
-                    }
+                    None => FetchStatus::Response { response },
                 };
 
                 self.fetch.insert(request, new_state);
 
                 None
-            },
+            }
         }
     }
-
 }

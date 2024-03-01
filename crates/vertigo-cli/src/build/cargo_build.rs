@@ -1,13 +1,17 @@
 use std::path::PathBuf;
 
-use crate::command::CommandRun;
+use crate::commons::command::CommandRun;
 
 use super::Workspace;
 
 const TARGET: &str = "wasm32-unknown-unknown";
 const MODE: &str = "release";
 
-pub fn run_cargo_build(package_name: &str, public_path: &str, ws: &Workspace) -> Result<PathBuf, String> {
+pub fn run_cargo_build(
+    package_name: &str,
+    public_path: &str,
+    ws: &Workspace,
+) -> Result<PathBuf, String> {
     log::info!("Building {package_name}");
 
     let (status, output) = CommandRun::new("cargo")

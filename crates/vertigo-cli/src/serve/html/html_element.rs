@@ -10,27 +10,23 @@ struct Ident {
 
 impl Ident {
     fn new() -> Ident {
-        Ident {
-            value: Some(0),
-        }
+        Ident { value: Some(0) }
     }
 
     fn empty() -> Ident {
-        Ident {
-            value: None,
-        }
+        Ident { value: None }
     }
 
     fn get(&self) -> String {
         match self.value {
             Some(ident) => " ".repeat(ident),
-            None => String::new()
+            None => String::new(),
         }
     }
 
     fn add(&self, up_value: usize) -> Self {
         Self {
-            value: self.value.map(|value| value + up_value)
+            value: self.value.map(|value| value + up_value),
         }
     }
 }
@@ -41,14 +37,11 @@ pub struct HtmlDocument {
 
 impl HtmlDocument {
     pub fn new(root: HtmlNode) -> HtmlDocument {
-        HtmlDocument {
-            root
-        }
+        HtmlDocument { root }
     }
 
     pub fn convert_to_string(self, format: bool) -> String {
-
-        let mut result = vec!("<!DOCTYPE html>".to_owned());
+        let mut result = vec!["<!DOCTYPE html>".to_owned()];
         let root_ident = match format {
             true => Ident::new(),
             false => Ident::empty(),
@@ -58,7 +51,7 @@ impl HtmlDocument {
 
         match format {
             true => result.join("\n"),
-            false => result.concat()
+            false => result.concat(),
         }
     }
 }
@@ -66,7 +59,11 @@ impl HtmlDocument {
 fn attributes_to_string(attr: OrderedMap) -> String {
     let mut line = Vec::new();
     for (name, value) in attr.get_iter() {
-        line.push(format!(" {}=\"{}\"", encode_safe(&name), encode_safe(&value)));
+        line.push(format!(
+            " {}=\"{}\"",
+            encode_safe(&name),
+            encode_safe(&value)
+        ));
     }
     line.concat()
 }
@@ -82,14 +79,13 @@ fn last_text_add(last_text: &mut Option<Vec<String>>, text: String) {
         return;
     }
 
-    *last_text = Some(vec!(text));
+    *last_text = Some(vec![text]);
 }
 
 fn last_text_get(last_text: &mut Option<Vec<String>>) -> Option<String> {
     let prev = std::mem::take(last_text);
     prev.map(|inner| inner.concat())
 }
-
 
 fn get_render_child_mode(element: VecDeque<HtmlNode>) -> ChildMode {
     let mut result: Vec<HtmlNode> = Vec::new();
@@ -99,8 +95,8 @@ fn get_render_child_mode(element: VecDeque<HtmlNode>) -> ChildMode {
         match child {
             HtmlNode::Text(child_text) => {
                 last_text_add(&mut last_text, child_text);
-            },
-            HtmlNode::Comment(_) => {},
+            }
+            HtmlNode::Comment(_) => {}
             element => {
                 if let Some(text) = last_text_get(&mut last_text) {
                     result.push(HtmlNode::Text(text));
@@ -118,7 +114,7 @@ fn get_render_child_mode(element: VecDeque<HtmlNode>) -> ChildMode {
     let last = result.pop();
 
     let Some(last) = last else {
-        return ChildMode::Child(vec!());
+        return ChildMode::Child(vec![]);
     };
 
     if result.is_empty() {
@@ -133,20 +129,8 @@ fn get_render_child_mode(element: VecDeque<HtmlNode>) -> ChildMode {
 
 fn is_self_closing(element: &HtmlElement) -> bool {
     let tags = [
-        "area",
-        "base",
-        "br",
-        "col",
-        "embed",
-        "hr",
-        "img",
-        "input",
-        "link",
-        "meta",
-        "param",
-        "source",
-        "track",
-        "wbr"
+        "area", "base", "br", "col", "embed", "hr", "img", "input", "link", "meta", "param",
+        "source", "track", "wbr",
     ];
 
     tags.contains(&element.name.as_str())
@@ -162,13 +146,7 @@ fn html_node_to_string(result: &mut Vec<String>, ident: Ident, node: HtmlNode) {
             let attrs = attributes_to_string(element.attr);
 
             if is_self_closing {
-                let line = [
-                    &ident_str,
-                    "<",
-                    &el_name,
-                    &attrs,
-                    " />",
-                ];
+                let line = [&ident_str, "<", &el_name, &attrs, " />"];
 
                 result.push(line.concat());
                 return;
@@ -177,13 +155,7 @@ fn html_node_to_string(result: &mut Vec<String>, ident: Ident, node: HtmlNode) {
             match get_render_child_mode(element.children) {
                 ChildMode::Child(children) => {
                     //open tag
-                    let line = [
-                        &ident_str,
-                        "<",
-                        &el_name,
-                        &attrs,
-                        ">",
-                    ];
+                    let line = [&ident_str, "<", &el_name, &attrs, ">"];
 
                     result.push(line.concat());
 
@@ -193,21 +165,17 @@ fn html_node_to_string(result: &mut Vec<String>, ident: Ident, node: HtmlNode) {
                     }
 
                     //close tag
-                    let line = [
-                        &ident_str,
-                        "</",
-                        &el_name,
-                        ">"
-                    ];
+                    let line = [&ident_str, "</", &el_name, ">"];
 
                     result.push(line.concat());
-                },
+                }
                 ChildMode::Text(text) => {
-                    let escaped_text = if ["script", "style"].contains(&element.name.to_lowercase().as_str()) {
-                        Cow::from(text)
-                    } else {
-                        encode_safe(&text)
-                    };
+                    let escaped_text =
+                        if ["script", "style"].contains(&element.name.to_lowercase().as_str()) {
+                            Cow::from(text)
+                        } else {
+                            encode_safe(&text)
+                        };
 
                     let line = [
                         //open tag
@@ -216,10 +184,8 @@ fn html_node_to_string(result: &mut Vec<String>, ident: Ident, node: HtmlNode) {
                         &el_name,
                         &attrs,
                         ">",
-
                         // content
                         &escaped_text,
-
                         //close tag
                         "</",
                         &el_name,
@@ -229,10 +195,10 @@ fn html_node_to_string(result: &mut Vec<String>, ident: Ident, node: HtmlNode) {
                     result.push(line.concat());
                 }
             }
-        },
+        }
         HtmlNode::Text(text) => {
             result.push(format!("{ident_str}{}", encode_safe(&text)));
-        },
+        }
         HtmlNode::Comment(comment) => {
             result.push(format!("{ident_str}<!--{}-->", encode_safe(&comment)));
         }
@@ -247,20 +213,20 @@ pub enum HtmlNode {
 }
 
 impl HtmlNode {
-    pub fn modify(&mut self, path: &[(&str, usize)], callback: impl FnOnce(&mut HtmlElement)) -> bool {
+    pub fn modify(
+        &mut self,
+        path: &[(&str, usize)],
+        callback: impl FnOnce(&mut HtmlElement),
+    ) -> bool {
         match self {
-            Self::Element(element) => {
-                element.modify(path, callback)
-            },
+            Self::Element(element) => element.modify(path, callback),
             _ => false,
         }
     }
 
     pub fn get_element(&mut self) -> Option<&mut HtmlElement> {
         match self {
-            Self::Element(element) => {
-                Some(element)
-            },
+            Self::Element(element) => Some(element),
             _ => None,
         }
     }
@@ -317,7 +283,7 @@ impl HtmlElement {
         HtmlElement {
             name: name.into(),
             attr,
-            children
+            children,
         }
     }
 

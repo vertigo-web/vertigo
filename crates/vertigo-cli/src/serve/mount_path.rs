@@ -1,8 +1,7 @@
 #![allow(clippy::question_mark)]
 use std::path::Path;
 
-use crate::models::IndexModel;
-
+use crate::commons::models::IndexModel;
 
 #[derive(Clone, Debug)]
 pub struct MountPathConfig {
@@ -18,7 +17,6 @@ pub struct MountPathConfig {
 
 impl MountPathConfig {
     pub fn new(dest_dir: String) -> Result<MountPathConfig, i32> {
-
         let index_model = read_index(&dest_dir)?;
 
         let Some(public_path) = get_base_dir(&index_model.wasm) else {
@@ -64,13 +62,14 @@ fn read_index(dest_dir: &str) -> Result<IndexModel, i32> {
 
 fn replace_prefix(public_path: &str, dest_dir: &str, path: &str) -> Result<String, i32> {
     let Some(rest) = path.strip_prefix(public_path) else {
-        log::error!("Incorrect path http: path={path} (public_path={public_path}, dest_dir={dest_dir})");
+        log::error!(
+            "Incorrect path http: path={path} (public_path={public_path}, dest_dir={dest_dir})"
+        );
         return Err(-1);
     };
 
     Ok(format!("{dest_dir}{rest}"))
 }
-
 
 fn get_base_dir(path: &str) -> Option<String> {
     let mut chunks: Vec<&str> = path.split('/').collect();
@@ -87,12 +86,10 @@ fn get_base_dir(path: &str) -> Option<String> {
     Some(chunks.join("/"))
 }
 
-
-
 #[cfg(test)]
 mod tests {
-    use super::replace_prefix;
     use super::get_base_dir;
+    use super::replace_prefix;
 
     #[test]
     fn test_replace_prefix() {
@@ -138,6 +135,5 @@ mod tests {
             get_base_dir("dsadas/ddd/vertigo_demo.b64f38e19fe1e36419c23ca9fe2cb26b6c9f2f75dc61b078ec7b7b5aca0430db.wasm"),
             Some("dsadas/ddd".to_string())
         );
-
     }
 }

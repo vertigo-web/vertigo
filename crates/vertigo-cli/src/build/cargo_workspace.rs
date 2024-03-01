@@ -1,7 +1,7 @@
-use std::path::PathBuf;
 use serde::Deserialize;
+use std::path::PathBuf;
 
-use crate::command::CommandRun;
+use crate::commons::command::CommandRun;
 
 #[derive(Clone, Debug, Deserialize)]
 pub struct Workspace {
@@ -27,12 +27,13 @@ pub struct Target {
 impl Workspace {
     pub fn infer_package_name(&self) -> Option<String> {
         for member_id in &self.workspace_members {
-            if let Some(package) = self.packages
+            if let Some(package) = self
+                .packages
                 .iter()
                 .find(|package| &package.id == member_id)
             {
                 if package.is_cdylib() {
-                    return Some(package.name.clone())
+                    return Some(package.name.clone());
                 }
             }
         }
@@ -40,14 +41,11 @@ impl Workspace {
     }
 
     pub fn find_package_path(&self, package_name: &str) -> Option<PathBuf> {
-        self.packages.iter()
+        self.packages
+            .iter()
             .find(|package| package.name == package_name)
-            .map(|package| {
-                package.manifest_path.clone().into()
-            })
-            .and_then(|path: PathBuf|
-                path.parent().map(|p| p.to_path_buf())
-            )
+            .map(|package| package.manifest_path.clone().into())
+            .and_then(|path: PathBuf| path.parent().map(|p| p.to_path_buf()))
     }
 
     pub fn get_target_dir(&self) -> PathBuf {
@@ -61,11 +59,9 @@ impl Workspace {
 
 impl Package {
     pub fn is_cdylib(&self) -> bool {
-        self.targets.iter()
-            .any(|target|
-                target.kind.iter()
-                    .any(|kind| kind == "cdylib")
-            )
+        self.targets
+            .iter()
+            .any(|target| target.kind.iter().any(|kind| kind == "cdylib"))
     }
 }
 
@@ -78,11 +74,10 @@ pub fn get_workspace() -> Result<Workspace, String> {
     match serde_json::from_str::<Workspace>(&metadata) {
         Ok(mut ws) => {
             // Retain only local packages to keep object thin
-            ws.packages.retain(|package| ws.workspace_members.contains(&package.id));
+            ws.packages
+                .retain(|package| ws.workspace_members.contains(&package.id));
             Ok(ws)
-        },
-        Err(err) => {
-            Err(format!("Can't load workspace: {err}"))
         }
+        Err(err) => Err(format!("Can't load workspace: {err}")),
     }
 }

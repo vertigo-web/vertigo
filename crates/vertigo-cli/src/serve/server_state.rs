@@ -1,18 +1,16 @@
-use std::collections::HashMap;
-
 use axum::http::StatusCode;
+use std::collections::HashMap;
 use tokio::sync::mpsc::{error::TryRecvError, unbounded_channel};
-use wasmtime::{
-    Engine,
-    Module,
+use wasmtime::{Engine, Module};
+
+use crate::commons::spawn::SpawnOwner;
+
+use super::{
+    html::HtmlResponse,
+    mount_path::MountPathConfig,
+    request_state::RequestState,
+    wasm::{Message, WasmInstance},
 };
-
-use crate::serve::html::HtmlResponse;
-use crate::serve::request_state::RequestState;
-use crate::serve::spawn::SpawnOwner;
-use crate::serve::wasm::{Message, WasmInstance};
-
-use super::mount_path::MountPathConfig;
 
 #[derive(Clone)]
 pub struct ServerState {
@@ -24,7 +22,11 @@ pub struct ServerState {
 }
 
 impl ServerState {
-    pub fn new(mount_path: MountPathConfig, port_watch: Option<u16>, env: Vec<(String, String)>) -> Result<Self, i32> {
+    pub fn new(
+        mount_path: MountPathConfig,
+        port_watch: Option<u16>,
+        env: Vec<(String, String)>,
+    ) -> Result<Self, i32> {
         let engine = Engine::default();
 
         let module = build_module_wasm(&engine, &mount_path)?;
@@ -61,7 +63,8 @@ impl ServerState {
             }
         });
 
-        let mut html_response = HtmlResponse::new(sender.clone(), &self.mount_path, inst, self.env.clone());
+        let mut html_response =
+            HtmlResponse::new(sender.clone(), &self.mount_path, inst, self.env.clone());
 
         loop {
             let message = receiver.try_recv();
@@ -72,10 +75,10 @@ impl ServerState {
                         return response;
                     };
                     continue;
-                },
+                }
                 Err(TryRecvError::Empty) => {
                     //continue this iteration
-                },
+                }
                 Err(TryRecvError::Disconnected) => {
                     //send response to browser
                     break;

@@ -57,10 +57,13 @@ impl ElementChildren {
         };
         node_left.right = node_id;
 
-        self.childs.insert(node_id, ChildrenNode {
-            left: node_left_id,
-            right: node_right_id,
-        });
+        self.childs.insert(
+            node_id,
+            ChildrenNode {
+                left: node_left_id,
+                right: node_right_id,
+            },
+        );
     }
 
     pub fn insert_before(&mut self, ref_id: Option<u64>, child: u64) {
@@ -79,10 +82,13 @@ impl ElementChildren {
                 assert_eq!(self.childs.len(), 0);
 
                 self.first_child = Some(child);
-                self.childs.insert(child, ChildrenNode {
-                    left: child,
-                    right: child,
-                });
+                self.childs.insert(
+                    child,
+                    ChildrenNode {
+                        left: child,
+                        right: child,
+                    },
+                );
                 return;
             }
         };
@@ -123,7 +129,6 @@ impl ElementChildren {
         }
     }
 }
-
 
 #[cfg(test)]
 mod tests {

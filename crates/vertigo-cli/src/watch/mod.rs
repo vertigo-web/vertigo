@@ -2,22 +2,22 @@ use clap::Args;
 use notify::RecursiveMode;
 use poem::http::Method;
 use poem::middleware::Cors;
-use poem::{Route, get, Server, listener::TcpListener, EndpointExt};
-use tokio_retry::{Retry, strategy::FibonacciBackoff};
-use tokio::sync::Notify;
-use tokio::time::sleep;
+use poem::{get, listener::TcpListener, EndpointExt, Route, Server};
 use std::sync::Arc;
 use std::time::Duration;
 use tokio::sync::watch::Sender;
+use tokio::sync::Notify;
+use tokio::time::sleep;
+use tokio_retry::{strategy::FibonacciBackoff, Retry};
 
-use crate::build::{BuildOpts, get_workspace, Workspace};
+use crate::build::{get_workspace, BuildOpts, Workspace};
+use crate::commons::{parse_key_val, spawn::SpawnOwner};
 use crate::serve::ServeOpts;
-use crate::spawn::SpawnOwner;
-use crate::utils::parse_key_val;
 use crate::watch::sse::handler_sse;
 
-mod sse;
 mod is_http_server_listening;
+mod sse;
+
 use is_http_server_listening::is_http_server_listening;
 
 #[derive(Args, Debug, Clone)]
@@ -64,7 +64,7 @@ impl WatchOpts {
                 proxy: self.proxy.clone(),
                 env: self.env.clone(),
             },
-            self.port_watch
+            self.port_watch,
         )
     }
 }
@@ -76,7 +76,6 @@ pub enum Status {
     Version(u32),
     Errors,
 }
-
 
 pub async fn run(mut opts: WatchOpts) -> Result<(), i32> {
     log::info!("watch params => {opts:#?}");
@@ -90,11 +89,14 @@ pub async fn run(mut opts: WatchOpts) -> Result<(), i32> {
                 log::info!("Inferred package name = {}", name);
                 opts.package_name = Some(name.clone());
                 name
-            },
+            }
             None => {
-                log::error!("Can't find vertigo project in {} (no cdylib member)", ws.get_root_dir());
-                return Err(-1)
-            },
+                log::error!(
+                    "Can't find vertigo project in {} (no cdylib member)",
+                    ws.get_root_dir()
+                );
+                return Err(-1);
+            }
         },
     };
 
@@ -108,28 +110,25 @@ pub async fn run(mut opts: WatchOpts) -> Result<(), i32> {
         return Err(-1);
     };
 
-    let excludes = [
-        path.join("target"),
-        path.join(opts.dest_dir.clone()),
-    ];
+    let excludes = [path.join("target"), path.join(opts.dest_dir.clone())];
 
     let notify_build = Arc::new(Notify::new());
 
-    let watch_result = notify::RecommendedWatcher::new({
-        let notify_build = notify_build.clone();
+    let watch_result = notify::RecommendedWatcher::new(
+        {
+            let notify_build = notify_build.clone();
 
-        move |res: Result<notify::Event, _>| {
-            match res {
+            move |res: Result<notify::Event, _>| match res {
                 Ok(event) => {
                     if event.paths.iter().all(|path| {
                         for exclude_path in &excludes {
                             if path.starts_with(exclude_path) {
-                                return true
+                                return true;
                             }
                         }
                         false
                     }) {
-                        return
+                        return;
                     }
                     log::info!("event: {:?}", event);
                     notify_build.notify_one();
@@ -138,8 +137,9 @@ pub async fn run(mut opts: WatchOpts) -> Result<(), i32> {
                     log::error!("watch error: {:?}", e);
                 }
             }
-        }
-    }, notify::Config::default().with_poll_interval(std::time::Duration::from_millis(200)));
+        },
+        notify::Config::default().with_poll_interval(std::time::Duration::from_millis(200)),
+    );
 
     let mut watcher = match watch_result {
         Ok(watcher) => watcher,
@@ -148,7 +148,6 @@ pub async fn run(mut opts: WatchOpts) -> Result<(), i32> {
             return Err(-1);
         }
     };
-
 
     let (tx, rx) = tokio::sync::watch::channel(Status::default());
     let tx = Arc::new(tx);
@@ -190,8 +189,12 @@ pub async fn run(mut opts: WatchOpts) -> Result<(), i32> {
     }
 }
 
-
-fn build_and_watch(version: u32, tx: Arc<Sender<Status>>, opts: &WatchOpts, ws: &Workspace) -> SpawnOwner {
+fn build_and_watch(
+    version: u32,
+    tx: Arc<Sender<Status>>,
+    opts: &WatchOpts,
+    ws: &Workspace,
+) -> SpawnOwner {
     let opts = opts.clone();
     let ws = ws.clone();
     SpawnOwner::new(async move {
@@ -204,13 +207,13 @@ fn build_and_watch(version: u32, tx: Arc<Sender<Status>>, opts: &WatchOpts, ws: 
                 let check_spawn = SpawnOwner::new(async move {
                     let _ = Retry::spawn(
                         FibonacciBackoff::from_millis(100).max_delay(Duration::from_secs(4)),
-                        || is_http_server_listening(opts.port)
-                    ).await;
+                        || is_http_server_listening(opts.port),
+                    )
+                    .await;
 
                     let Ok(()) = tx.send(Status::Version(version)) else {
                         unreachable!();
                     };
-
                 });
 
                 let opts = opts.clone();
@@ -223,8 +226,7 @@ fn build_and_watch(version: u32, tx: Arc<Sender<Status>>, opts: &WatchOpts, ws: 
                 }
 
                 check_spawn.off();
-
-            },
+            }
             Err(code) => {
                 log::error!("build run failed, exit code={code}");
 

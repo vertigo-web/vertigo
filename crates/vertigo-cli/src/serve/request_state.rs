@@ -14,4 +14,3 @@ impl RequestState {
         Some(value.clone())
     }
 }
-

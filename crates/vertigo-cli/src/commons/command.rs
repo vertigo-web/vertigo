@@ -1,7 +1,6 @@
-#![allow(dead_code)]
 use std::{
     collections::HashMap,
-    process::{exit, Output, Command, Stdio, ChildStdout, ExitStatus},
+    process::{exit, ChildStdout, Command, ExitStatus, Output, Stdio},
 };
 
 pub struct CommandRun {
@@ -47,6 +46,7 @@ impl CommandRun {
     }
 
     #[must_use]
+    #[allow(dead_code)]
     pub fn current_dir(mut self, current: impl Into<String>) -> Self {
         let current = current.into();
         self.current_dir = Some(current);
@@ -121,7 +121,11 @@ impl CommandRun {
         }
     }
 
-    fn set_stdin(command: &mut Command, out: Option<ChildStdout>, get_default_stdio: Option<fn() -> Stdio>) {
+    fn set_stdin(
+        command: &mut Command,
+        out: Option<ChildStdout>,
+        get_default_stdio: Option<fn() -> Stdio>,
+    ) {
         if let Some(out) = out {
             command.stdin(out);
         } else if let Some(out_default) = get_default_stdio {
@@ -153,10 +157,7 @@ impl CommandRun {
         let out = command.output().unwrap();
         Self::show_status(error_allowed, &out);
 
-        (
-            out.status,
-            Self::convert_to_string(out.stdout)
-        )
+        (out.status, Self::convert_to_string(out.stdout))
     }
 
     #[must_use]
@@ -165,6 +166,7 @@ impl CommandRun {
         output
     }
 
+    #[allow(dead_code)]
     pub fn spawn(self) {
         let (command_str, mut command, stdin) = self.create_command();
         println!("spawn: {command_str}");
@@ -177,6 +179,7 @@ impl CommandRun {
     }
 
     #[must_use]
+    #[allow(dead_code)]
     pub fn piped(self, params: impl Into<String>) -> Self {
         let (command_str, mut command, stdin) = self.create_command();
         println!("spawn: {command_str}");
@@ -193,6 +196,7 @@ impl CommandRun {
         new_command
     }
 
+    #[allow(dead_code)]
     pub fn output_to_file(self, path: impl Into<String>) {
         let error_allowed = self.error_allowed;
         let (command_str, mut command, stdin) = self.create_command();
@@ -209,5 +213,4 @@ impl CommandRun {
         let out = command.output().unwrap();
         Self::show_status(error_allowed, &out);
     }
-
 }
