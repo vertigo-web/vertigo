@@ -4,6 +4,64 @@ use quote::quote;
 use syn::{Expr, __private::ToTokens};
 use syn_rsx::{parse, Node, NodeType};
 
+pub(crate) fn dom_inner(input: TokenStream) -> TokenStream {
+    let nodes = match parse(input) {
+        Ok(nodes) => nodes,
+        Err(err) => return err.to_compile_error().into(),
+    };
+
+    let mut dom_nodes = Vec::new();
+
+    for node in nodes {
+        let tokens = convert_node(node, true);
+        dom_nodes.push(tokens);
+    }
+
+    if dom_nodes.len() == 1 {
+        let last = dom_nodes.pop().unwrap();
+
+        return quote! {
+            vertigo::DomNode::from(#last)
+        }
+        .into();
+    }
+
+    if dom_nodes.is_empty() {
+        emit_error!(Span::call_site(), "Empty input");
+    }
+
+    quote! {
+        vertigo::DomNode::from(vertigo::DomComment::dom_fragment(vec!(
+            #(#dom_nodes,)*
+        )))
+    }
+    .into()
+}
+
+pub(crate) fn dom_element_inner(input: TokenStream) -> TokenStream {
+    let nodes = match parse(input) {
+        Ok(nodes) => nodes,
+        Err(err) => return err.to_compile_error().into(),
+    };
+
+    let mut modes_dom = Vec::new();
+
+    for node in nodes {
+        let node = convert_node(node, false);
+        modes_dom.push(node);
+    }
+
+    if modes_dom.len() != 1 {
+        emit_error!(
+            Span::call_site(),
+            "This macro supports only one DomElement as root".to_string()
+        );
+        return TokenStream::default();
+    }
+
+    modes_dom.pop().unwrap_or_default().into()
+}
+
 /// Strips expression from excessive brackets (only once)
 fn strip_brackets(expr: Expr) -> TokenStream2 {
     let expr_block = if let Expr::Block(expr) = expr.clone() {
@@ -254,64 +312,6 @@ fn convert_node(node: Node, convert_to_dom_node: bool) -> TokenStream2 {
             #(#out_child)*
         }
     }
-}
-
-pub fn dom_inner(input: TokenStream) -> TokenStream {
-    let nodes = match parse(input) {
-        Ok(nodes) => nodes,
-        Err(err) => return err.to_compile_error().into(),
-    };
-
-    let mut dom_nodes = Vec::new();
-
-    for node in nodes {
-        let tokens = convert_node(node, true);
-        dom_nodes.push(tokens);
-    }
-
-    if dom_nodes.len() == 1 {
-        let last = dom_nodes.pop().unwrap();
-
-        return quote! {
-            vertigo::DomNode::from(#last)
-        }
-        .into();
-    }
-
-    if dom_nodes.is_empty() {
-        emit_error!(Span::call_site(), "Empty input");
-    }
-
-    quote! {
-        vertigo::DomNode::from(vertigo::DomComment::dom_fragment(vec!(
-            #(#dom_nodes,)*
-        )))
-    }
-    .into()
-}
-
-pub fn dom_element_inner(input: TokenStream) -> TokenStream {
-    let nodes = match parse(input) {
-        Ok(nodes) => nodes,
-        Err(err) => return err.to_compile_error().into(),
-    };
-
-    let mut modes_dom = Vec::new();
-
-    for node in nodes {
-        let node = convert_node(node, false);
-        modes_dom.push(node);
-    }
-
-    if modes_dom.len() != 1 {
-        emit_error!(
-            Span::call_site(),
-            "This macro supports only one DomElement as root".to_string()
-        );
-        return TokenStream::default();
-    }
-
-    modes_dom.pop().unwrap_or_default().into()
 }
 
 fn extract_value(node: Node, fallback_span: Span) -> Option<TokenStream2> {
