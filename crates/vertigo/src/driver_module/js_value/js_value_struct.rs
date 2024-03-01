@@ -1,14 +1,11 @@
-use std::collections::HashMap;
 use super::{
-    memory_block_write::MemoryBlockWrite,
-    memory_block_read::MemoryBlockRead,
+    js_json_struct::{decode_js_json_inner, JsJson},
+    js_value_list_decoder::JsValueListDecoder,
     memory_block::MemoryBlock,
-    js_json_struct::{
-        JsJson,
-        decode_js_json_inner
-    },
-    js_value_list_decoder::JsValueListDecoder
+    memory_block_read::MemoryBlockRead,
+    memory_block_write::MemoryBlockWrite,
 };
+use std::collections::HashMap;
 
 const PARAM_TYPE: u32 = 1;
 const STRING_SIZE: u32 = 4;
@@ -37,20 +34,20 @@ enum JsValueConst {
 impl JsValueConst {
     fn from_byte(byte: u8) -> Option<JsValueConst> {
         match byte {
-            1  => Some(JsValueConst::U32),
-            2  => Some(JsValueConst::I32),
-            3  => Some(JsValueConst::U64),
-            4  => Some(JsValueConst::I64),
-            5  => Some(JsValueConst::True),
-            6  => Some(JsValueConst::False),
-            7  => Some(JsValueConst::Null),
-            8  => Some(JsValueConst::Undefined),
-            9  => Some(JsValueConst::Vec),
+            1 => Some(JsValueConst::U32),
+            2 => Some(JsValueConst::I32),
+            3 => Some(JsValueConst::U64),
+            4 => Some(JsValueConst::I64),
+            5 => Some(JsValueConst::True),
+            6 => Some(JsValueConst::False),
+            7 => Some(JsValueConst::Null),
+            8 => Some(JsValueConst::Undefined),
+            9 => Some(JsValueConst::Vec),
             10 => Some(JsValueConst::String),
             11 => Some(JsValueConst::List),
             12 => Some(JsValueConst::Object),
             13 => Some(JsValueConst::Json),
-            _  => None,
+            _ => None,
         }
     }
 }
@@ -90,12 +87,12 @@ pub enum JsValue {
     Null,
     Undefined,
 
-    Vec(Vec<u8>),               //type, length of the sequence of bytes, sequence of bytes
-    String(String),             //type, length of the sequence of bytes, sequence of bytes
-    List(Vec<JsValue>),         //type, length
+    Vec(Vec<u8>),       //type, length of the sequence of bytes, sequence of bytes
+    String(String),     //type, length of the sequence of bytes, sequence of bytes
+    List(Vec<JsValue>), //type, length
     Object(HashMap<String, JsValue>),
 
-    Json(JsJson)
+    Json(JsJson),
 }
 
 impl JsValue {
@@ -149,7 +146,7 @@ impl JsValue {
                 }
 
                 sum
-            },
+            }
             Self::Object(map) => {
                 let mut sum = PARAM_TYPE + OBJECT_COUNT;
 
@@ -159,10 +156,8 @@ impl JsValue {
                 }
 
                 sum
-            },
-            Self::Json(json) => {
-                PARAM_TYPE + json.get_size()
             }
+            Self::Json(json) => PARAM_TYPE + json.get_size(),
         }
     }
 
@@ -171,43 +166,43 @@ impl JsValue {
             Self::U32(value) => {
                 buff.write_u8(JsValueConst::U32);
                 buff.write_u32(*value);
-            },
+            }
             Self::I32(value) => {
                 buff.write_u8(JsValueConst::I32);
                 buff.write_i32(*value);
-            },
+            }
             Self::U64(value) => {
                 buff.write_u8(JsValueConst::U64);
                 buff.write_u64(*value);
-            },
+            }
             Self::I64(value) => {
                 buff.write_u8(JsValueConst::I64);
                 buff.write_i64(*value);
-            },
+            }
 
             Self::True => {
                 buff.write_u8(JsValueConst::True);
-            },
+            }
             Self::False => {
                 buff.write_u8(JsValueConst::False);
-            },
+            }
             Self::Null => {
                 buff.write_u8(JsValueConst::Null);
-            },
+            }
             Self::Undefined => {
                 buff.write_u8(JsValueConst::Undefined);
-            },
+            }
 
             Self::Vec(inner_buff) => {
                 buff.write_u8(JsValueConst::Vec);
                 let data = inner_buff.as_slice();
                 buff.write_u32(data.len() as u32);
                 buff.write(inner_buff.as_slice());
-            },
+            }
             Self::String(value) => {
                 buff.write_u8(JsValueConst::String);
                 write_string_to(value.as_str(), buff);
-            },
+            }
             Self::List(list) => {
                 buff.write_u8(JsValueConst::List);
                 buff.write_u32(list.len() as u32);
@@ -215,7 +210,7 @@ impl JsValue {
                 for param in list {
                     param.write_to(buff);
                 }
-            },
+            }
             Self::Object(map) => {
                 buff.write_u8(JsValueConst::Object);
                 buff.write_u16(map.len() as u16);
@@ -241,7 +236,6 @@ impl JsValue {
         buff.get_block()
     }
 
-
     pub fn typename(&self) -> &'static str {
         match self {
             Self::U32(..) => "u32",
@@ -260,18 +254,18 @@ impl JsValue {
         }
     }
 
-    pub fn convert<T, F: FnOnce(JsValueListDecoder) -> Result<T, String>>(self, convert: F) -> Result<T, String> {
+    pub fn convert<T, F: FnOnce(JsValueListDecoder) -> Result<T, String>>(
+        self,
+        convert: F,
+    ) -> Result<T, String> {
         match self {
             JsValue::List(list) => {
                 let decoder = JsValueListDecoder::new(list);
                 convert(decoder)
-            },
-            _ => {
-                Err(String::from("convert => ParamItem::Vec expected"))
             }
+            _ => Err(String::from("convert => ParamItem::Vec expected")),
         }
     }
-
 }
 
 impl Default for JsValue {
@@ -280,13 +274,11 @@ impl Default for JsValue {
     }
 }
 
-
 fn write_string_to(value: &str, buff: &mut MemoryBlockWrite) {
     let data = value.as_bytes();
     buff.write_u32(data.len() as u32);
     buff.write(data);
 }
-
 
 fn decode_js_value_inner(buffer: &mut MemoryBlockRead) -> Result<JsValue, String> {
     let type_param = buffer.get_byte();
@@ -299,19 +291,19 @@ fn decode_js_value_inner(buffer: &mut MemoryBlockRead) -> Result<JsValue, String
         JsValueConst::U32 => {
             let value = buffer.get_u32();
             JsValue::U32(value)
-        },
+        }
         JsValueConst::I32 => {
             let value = buffer.get_i32();
             JsValue::I32(value)
-        },
+        }
         JsValueConst::U64 => {
             let value = buffer.get_u64();
             JsValue::U64(value)
-        },
+        }
         JsValueConst::I64 => {
             let value = buffer.get_i64();
             JsValue::I64(value)
-        },
+        }
         JsValueConst::True => JsValue::True,
         JsValueConst::False => JsValue::False,
         JsValueConst::Null => JsValue::Null,
@@ -320,12 +312,12 @@ fn decode_js_value_inner(buffer: &mut MemoryBlockRead) -> Result<JsValue, String
             let len = buffer.get_u32();
             let param = buffer.get_vec(len);
             JsValue::Vec(param)
-        },
+        }
         JsValueConst::String => {
             let str_len = buffer.get_u32();
             let param = buffer.get_string(str_len)?;
             JsValue::String(param)
-        },
+        }
         JsValueConst::List => {
             let mut param_list = Vec::new();
 
@@ -337,7 +329,7 @@ fn decode_js_value_inner(buffer: &mut MemoryBlockRead) -> Result<JsValue, String
             }
 
             JsValue::List(param_list)
-        },
+        }
         JsValueConst::Object => {
             let mut props = HashMap::new();
             let object_size = buffer.get_u16();
@@ -354,7 +346,7 @@ fn decode_js_value_inner(buffer: &mut MemoryBlockRead) -> Result<JsValue, String
             }
 
             JsValue::Object(props)
-        },
+        }
         JsValueConst::Json => {
             let json = decode_js_json_inner(buffer)?;
             JsValue::Json(json)

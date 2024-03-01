@@ -1,5 +1,9 @@
-use crate::{Driver, struct_mut::{VecMut, ValueMut}, get_driver, DropResource, DomNode};
 use super::dom_id::DomId;
+use crate::{
+    get_driver,
+    struct_mut::{ValueMut, VecMut},
+    DomNode, Driver, DropResource,
+};
 
 /// A Real DOM representative - comment kind
 pub struct DomComment {
@@ -23,7 +27,10 @@ impl DomComment {
         }
     }
 
-    pub fn new_marker<F: Fn(DomId, DomId) -> Option<DropResource> + 'static>(comment_value: &'static str, mount: F) -> DomComment {
+    pub fn new_marker<F: Fn(DomId, DomId) -> Option<DropResource> + 'static>(
+        comment_value: &'static str,
+        mount: F,
+    ) -> DomComment {
         let driver = get_driver();
         let id_comment = DomId::default();
 
@@ -40,7 +47,6 @@ impl DomComment {
         };
 
         let drop_callback = driver.inner.dom.node_parent(id_comment, when_mount);
-
 
         let subscriptions = VecMut::new();
 
@@ -72,7 +78,10 @@ impl DomComment {
 
             for node in list.iter() {
                 let node_id = node.id_dom();
-                driver.inner.dom.insert_before(parent_id, node_id, Some(prev_node));
+                driver
+                    .inner
+                    .dom
+                    .insert_before(parent_id, node_id, Some(prev_node));
                 prev_node = node_id;
             }
 

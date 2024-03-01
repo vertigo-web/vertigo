@@ -1,12 +1,11 @@
-pub mod driver;
-mod dom;
-mod dom_suspense;
-pub mod dom_command;
-pub mod utils;
 pub mod api;
+mod dom;
+pub mod dom_command;
+mod dom_suspense;
+pub mod driver;
+pub mod event_emitter;
 pub mod init_env;
 pub mod js_value;
-pub mod event_emitter;
-mod string;
+pub mod utils;
 
-pub use string::StaticString;
+pub use utils::static_string::StaticString;

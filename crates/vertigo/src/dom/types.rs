@@ -1,4 +1,3 @@
-
 //https://docs.rs/web-sys/0.3.50/web_sys/struct.KeyboardEvent.html
 
 use std::rc::Rc;
@@ -42,8 +41,6 @@ pub struct DropFileEvent {
 
 impl DropFileEvent {
     pub fn new(items: Vec<DropFileItem>) -> DropFileEvent {
-        DropFileEvent {
-            items
-        }
+        DropFileEvent { items }
     }
 }

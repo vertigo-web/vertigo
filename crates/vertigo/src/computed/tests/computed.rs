@@ -1,7 +1,7 @@
 use std::rc::Rc;
 
-use crate::{transaction, get_driver};
-use crate::computed::{Computed, Value, DropResource};
+use crate::computed::{Computed, DropResource, Value};
+use crate::{get_driver, transaction};
 
 use crate::computed::tests::box_value_version::SubscribeValueVer;
 use crate::struct_mut::ValueMut;
@@ -53,12 +53,10 @@ fn basic2() {
         a + b
     });
 
-    let suma2 = sum.map(|value: i32| -> i32 {
-        2 * (value)
-    });
+    let sum2 = sum.map(|value: i32| -> i32 { 2 * (value) });
 
     let mut sum_box1 = SubscribeValueVer::new(sum);
-    let mut sum_box2 = SubscribeValueVer::new(suma2);
+    let mut sum_box2 = SubscribeValueVer::new(sum2);
 
     assert_eq!(sum_box1.get(), (9, 1));
     assert_eq!(sum_box2.get(), (18, 1));
@@ -84,7 +82,7 @@ fn basic2() {
 
 #[test]
 fn pointers() {
-    //konwertowanie do wskaźnika
+    // pointer conversion
 
     fn foo1() -> i32 {
         0
@@ -278,7 +276,6 @@ fn test_computed_new_value() {
     assert_eq!(root.graph.connections.all_connections_len(), 0);
 }
 
-
 #[test]
 fn test_computed_new_value2() {
     #![allow(clippy::many_single_char_names)]
@@ -338,9 +335,7 @@ fn test_computed_switch_subscription() {
             let switch_value = switch.get(context);
 
             match switch_value {
-                Switch::Ver1 => {
-                    a.get(context)
-                }
+                Switch::Ver1 => a.get(context),
                 Switch::Ver2 => {
                     let a_value = a.get(context);
                     let b_value = b.get(context);
@@ -422,7 +417,6 @@ fn test_computed_switch_subscription() {
     assert_eq!(root.graph.connections.all_connections_len(), 0);
 }
 
-
 #[test]
 fn test_transaction() {
     let root = get_driver().inner.dependencies;
@@ -435,9 +429,7 @@ fn test_transaction() {
         let val1 = val1.clone();
         let val2 = val2.clone();
 
-        move |context| {
-            val1.get(context) + val2.get(context)
-        }
+        move |context| val1.get(context) + val2.get(context)
     });
 
     let mut val2sub = SubscribeValueVer::new(val3);
@@ -467,9 +459,7 @@ fn test_transaction() {
 
     val2sub.off();
     assert_eq!(root.graph.connections.all_connections_len(), 0);
-
 }
-
 
 #[test]
 #[allow(clippy::bool_assert_comparison)]
@@ -483,7 +473,6 @@ fn test_connect() {
             is_subscribe.set(true);
 
             DropResource::new({
-
                 let is_subscribe = is_subscribe.clone();
                 move || {
                     is_subscribe.set(false);
@@ -508,7 +497,6 @@ fn test_connect() {
     drop(client);
 
     assert_eq!(is_subscribe.get(), false);
-
 
     let client = value.subscribe({
         move |val| {
@@ -552,70 +540,58 @@ fn test_set_value_and_compare() {
     let value_com = value_com.map(|item| item);
 
     fn build(value: &Computed<i32>) -> (Rc<ValueMut<i32>>, DropResource) {
-
-        let boxik = Rc::new(ValueMut::new(0));
+        let boxy = Rc::new(ValueMut::new(0));
 
         let router = Computed::from({
             let value = value.clone();
 
-            move |context| {
-                value.get(context)
-            }
+            move |context| value.get(context)
         });
 
-        let router = Computed::from(move |context| {
-            router.get(context)
-        });
+        let router = Computed::from(move |context| router.get(context));
 
-        let router = router.map(|item| {
-            item
-        });
+        let router = router.map(|item| item);
 
-        let router = router.map(|item| {
-            item
-        });
+        let router = router.map(|item| item);
 
-        let router = router.map(|item| {
-            item
-        });
+        let router = router.map(|item| item);
 
         let client = router.subscribe({
-            let boxik = boxik.clone();
+            let boxy = boxy.clone();
             move |sub_value| {
                 println!("callback");
-                boxik.set(sub_value);
+                boxy.set(sub_value);
             }
         });
 
-        (boxik, client)
+        (boxy, client)
     }
 
-    let (boxik, client) = build(&value_com);
-    let (boxik2, client2) = build(&value_com);
-    let (boxik3, client3) = build(&value_com);
+    let (boxy, client) = build(&value_com);
+    let (boxy2, client2) = build(&value_com);
+    let (boxy3, client3) = build(&value_com);
 
-    assert_eq!(boxik.get(), 2);
+    assert_eq!(boxy.get(), 2);
 
     value.set(3);
-    assert_eq!(boxik.get(), 3);
+    assert_eq!(boxy.get(), 3);
 
     value.set_value_and_compare(4);
-    assert_eq!(boxik.get(), 4);
+    assert_eq!(boxy.get(), 4);
     value.set_value_and_compare(4);
-    assert_eq!(boxik.get(), 4);
+    assert_eq!(boxy.get(), 4);
 
     value.set_value_and_compare(5);
-    assert_eq!(boxik.get(), 5);
+    assert_eq!(boxy.get(), 5);
     value.set_value_and_compare(5);
-    assert_eq!(boxik.get(), 5);
+    assert_eq!(boxy.get(), 5);
 
     value.set(6);
-    assert_eq!(boxik.get(), 6);
-    assert_eq!(boxik2.get(), 6);
-    assert_eq!(boxik3.get(), 6);
+    assert_eq!(boxy.get(), 6);
+    assert_eq!(boxy2.get(), 6);
+    assert_eq!(boxy3.get(), 6);
 
     drop(client);
     drop(client2);
     drop(client3);
-
 }

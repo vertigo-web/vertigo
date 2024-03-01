@@ -1,6 +1,6 @@
-use std::collections::{BTreeSet, BTreeMap};
-use crate::DomId;
 use super::dom_connection::DomConnection;
+use crate::DomId;
+use std::collections::{BTreeMap, BTreeSet};
 
 pub struct NodePaths {
     paths: BTreeMap<DomId, BTreeSet<DomId>>,
@@ -37,7 +37,8 @@ impl NodePaths {
     }
 
     pub fn insert(&mut self, dom_connection: &DomConnection, node_id: DomId) {
-        self.paths.insert(node_id, calculate_path(dom_connection, node_id));
+        self.paths
+            .insert(node_id, calculate_path(dom_connection, node_id));
         self.all_nodes = calculate_all_nodes(&self.paths);
     }
 
@@ -45,7 +46,6 @@ impl NodePaths {
         self.all_nodes.contains(node_id)
     }
 }
-
 
 fn calculate_path(dom_connection: &DomConnection, suspense_id: DomId) -> BTreeSet<DomId> {
     let mut path = BTreeSet::new();

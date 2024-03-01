@@ -1,7 +1,6 @@
 use crate::{
-    computed::ToComputed,
-    driver_module::driver::Driver,
-    dom::dom_id::DomId, get_driver, DropResource, struct_mut::VecMut,
+    computed::ToComputed, dom::dom_id::DomId, driver_module::driver::Driver, get_driver,
+    struct_mut::VecMut, DropResource,
 };
 
 /// A Real DOM representative - text kind
@@ -26,7 +25,9 @@ impl DomText {
         }
     }
 
-    pub fn new_computed<T: Into<String> + Clone + PartialEq + 'static>(computed: impl ToComputed<T>) -> Self {
+    pub fn new_computed<T: Into<String> + Clone + PartialEq + 'static>(
+        computed: impl ToComputed<T>,
+    ) -> Self {
         let text_node = DomText::new(String::new());
         let id_dom = text_node.id_dom;
         let driver = get_driver();

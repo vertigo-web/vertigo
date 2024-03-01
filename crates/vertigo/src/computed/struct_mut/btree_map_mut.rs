@@ -1,6 +1,5 @@
-use std::{collections::BTreeMap};
 use super::inner_value::InnerValue;
-
+use std::collections::BTreeMap;
 
 pub struct BTreeMapMut<K: Ord, V> {
     data: InnerValue<BTreeMap<K, V>>,
@@ -70,7 +69,6 @@ impl<K: Ord, V> BTreeMapMut<K, V> {
 
         None
     }
-
 }
 
 impl<K: Ord, V: Clone> BTreeMapMut<K, V> {
@@ -79,4 +77,3 @@ impl<K: Ord, V: Clone> BTreeMapMut<K, V> {
         state.get(key).cloned()
     }
 }
-

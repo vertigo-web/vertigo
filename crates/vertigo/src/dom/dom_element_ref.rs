@@ -1,4 +1,4 @@
-use crate::{driver_module::api::DomAccess, dom::dom_id::DomId, ApiImport};
+use crate::{dom::dom_id::DomId, driver_module::api::DomAccess, ApiImport};
 
 #[derive(Clone)]
 pub struct DomElementRef {
@@ -8,10 +8,7 @@ pub struct DomElementRef {
 
 impl DomElementRef {
     pub fn new(api: ApiImport, id: DomId) -> DomElementRef {
-        DomElementRef {
-            api,
-            id,
-        }
+        DomElementRef { api, id }
     }
 
     pub fn dom_access(&self) -> DomAccess {

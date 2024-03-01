@@ -1,8 +1,4 @@
-use crate::{
-    computed::Value,
-    get_driver,
-    Computed,
-};
+use crate::{computed::Value, get_driver, Computed};
 
 /// Router based on hash part of current location.
 ///

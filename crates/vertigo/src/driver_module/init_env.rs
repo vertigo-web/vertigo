@@ -1,7 +1,7 @@
-use std::panic;
 use log::{Level, Log, Metadata, Record};
+use std::panic;
 
-use std::sync::{Once};
+use std::sync::Once;
 
 use crate::ApiImport;
 
@@ -18,7 +18,6 @@ pub fn init_env(api: ApiImport) {
         }));
     });
 }
-
 
 /// Specify what to be logged
 pub struct Config {
@@ -99,19 +98,21 @@ impl Log for WasmLogger {
 
             match record.level() {
                 Level::Trace => {
-                    self.api.console_debug_4(&s, &style.lvl_trace, tgt_style, args_style);
-                },
-                Level::Debug => {
-                    self.api.console_log_4(&s, &style.lvl_debug, tgt_style, args_style)
-                },
-                Level::Info => {
-                    self.api.console_info_4(&s, &style.lvl_info, tgt_style, args_style)
+                    self.api
+                        .console_debug_4(&s, &style.lvl_trace, tgt_style, args_style);
                 }
-                Level::Warn => {
-                    self.api.console_warn_4(&s, &style.lvl_warn, tgt_style, args_style)
-                }
+                Level::Debug => self
+                    .api
+                    .console_log_4(&s, &style.lvl_debug, tgt_style, args_style),
+                Level::Info => self
+                    .api
+                    .console_info_4(&s, &style.lvl_info, tgt_style, args_style),
+                Level::Warn => self
+                    .api
+                    .console_warn_4(&s, &style.lvl_warn, tgt_style, args_style),
                 Level::Error => {
-                    self.api.console_error_4(&s, &style.lvl_error, tgt_style, args_style)
+                    self.api
+                        .console_error_4(&s, &style.lvl_error, tgt_style, args_style)
                 }
             }
         }
@@ -134,6 +135,6 @@ fn init_logger(api: ApiImport) {
         Err(e) => {
             let message = e.to_string();
             api.show_panic_message(message);
-        },
+        }
     }
 }

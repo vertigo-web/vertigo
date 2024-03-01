@@ -21,13 +21,20 @@ fn test_transform_css_animation_value() {
     assert_eq!(next_id.current(), 1);
     assert_eq!(css_parsed, "1.0s infinite ease-in-out autocss_1 ");
 
-    assert_eq!(css_document, Some(("@keyframes autocss_1".into(), "0% {
+    assert_eq!(
+        css_document,
+        Some((
+            "@keyframes autocss_1".into(),
+            "0% {
             transform: scale(0);
         }
         100% {
             transform: scale(1.0);
             opacity: 0;
-        }".into())));
+        }"
+            .into()
+        ))
+    );
 }
 
 #[test]

@@ -6,7 +6,6 @@ pub struct VecDequeMut<V> {
     data: InnerValue<VecDeque<V>>,
 }
 
-
 impl<V> Default for VecDequeMut<V> {
     fn default() -> Self {
         Self::new()
@@ -16,7 +15,7 @@ impl<V> Default for VecDequeMut<V> {
 impl<V> VecDequeMut<V> {
     pub fn new() -> VecDequeMut<V> {
         VecDequeMut {
-            data: InnerValue::new(VecDeque::new())
+            data: InnerValue::new(VecDeque::new()),
         }
     }
 
@@ -61,4 +60,3 @@ impl<V> VecDequeMut<V> {
         callback(value);
     }
 }
-

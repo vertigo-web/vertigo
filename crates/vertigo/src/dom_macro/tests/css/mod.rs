@@ -1,8 +1,8 @@
 mod animation;
+mod classes;
 mod colors;
 mod comments;
-mod classes;
-mod pseudoselectors;
 mod media;
+mod pseudoselectors;
 mod unknown;
 mod utils;

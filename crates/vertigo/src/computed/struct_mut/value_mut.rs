@@ -8,7 +8,7 @@ pub struct ValueMut<T> {
 impl<T> ValueMut<T> {
     pub fn new(value: T) -> ValueMut<T> {
         ValueMut {
-            value: InnerValue::new(value)
+            value: InnerValue::new(value),
         }
     }
 

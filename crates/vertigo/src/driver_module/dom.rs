@@ -1,27 +1,26 @@
 use std::cell::Cell;
 use std::rc::Rc;
 
-use crate::{DomId, JsJson, DropResource};
-use crate::struct_mut::{VecMut, ValueMut, HashMapMut};
+use crate::struct_mut::{HashMapMut, ValueMut, VecMut};
+use crate::{DomId, DropResource, JsJson};
 
-use crate::driver_module::api::ApiImport;
-use super::StaticString;
 use super::dom_suspense::DomSuspense;
-use super::{dom_command::{DriverDomCommand, sort_commands}, api::CallbackId};
+use super::StaticString;
+use super::{
+    api::CallbackId,
+    dom_command::{sort_commands, DriverDomCommand},
+};
+use crate::driver_module::api::ApiImport;
 
 #[derive(PartialEq)]
 enum StateInitiation {
-    Waiting {
-        counter: u32,
-    },
+    Waiting { counter: u32 },
     Ready,
 }
 
 impl StateInitiation {
     pub fn new() -> Self {
-        StateInitiation::Waiting {
-            counter: 0
-        }
+        StateInitiation::Waiting { counter: 0 }
     }
 
     pub fn is_ready(&self) -> bool {
@@ -124,9 +123,7 @@ impl Commands {
     }
 
     fn fetch_down(&self) {
-        let send_commands = self.state.change(|state| {
-            state.down()
-        });
+        let send_commands = self.state.change(|state| state.down());
 
         if send_commands {
             self.flush_dom_changes_inner();
@@ -176,7 +173,8 @@ impl DriverDom {
             self.dom_suspense.set_node_suspense(id);
         }
 
-        self.commands.add_command(DriverDomCommand::CreateNode { id, name });
+        self.commands
+            .add_command(DriverDomCommand::CreateNode { id, name });
     }
 
     pub fn create_text(&self, id: DomId, value: &str) {
@@ -211,17 +209,23 @@ impl DriverDom {
     }
 
     pub fn remove_text(&self, id: DomId) {
-        self.commands.add_command(DriverDomCommand::RemoveText { id });
+        self.commands
+            .add_command(DriverDomCommand::RemoveText { id });
         self.dom_suspense.remove(id);
     }
 
     pub fn remove_node(&self, id: DomId) {
-        self.commands.add_command(DriverDomCommand::RemoveNode { id });
+        self.commands
+            .add_command(DriverDomCommand::RemoveNode { id });
         self.dom_suspense.remove(id);
     }
 
     pub fn insert_before(&self, parent: DomId, child: DomId, ref_id: Option<DomId>) {
-        self.commands.add_command(DriverDomCommand::InsertBefore { parent, child, ref_id });
+        self.commands.add_command(DriverDomCommand::InsertBefore {
+            parent,
+            child,
+            ref_id,
+        });
 
         if let Some(callback) = self.node_parent_callback.get(&child) {
             callback(parent);
@@ -245,7 +249,8 @@ impl DriverDom {
     }
 
     pub fn remove_comment(&self, id: DomId) {
-        self.commands.add_command(DriverDomCommand::RemoveComment { id });
+        self.commands
+            .add_command(DriverDomCommand::RemoveComment { id });
         self.dom_suspense.remove(id);
     }
 
@@ -253,15 +258,20 @@ impl DriverDom {
         self.commands.add_command(DriverDomCommand::CallbackAdd {
             id,
             event_name: event_name.into(),
-            callback_id
+            callback_id,
         });
     }
 
-    pub fn callback_remove(&self, id: DomId, event_name: impl Into<String>, callback_id: CallbackId) {
+    pub fn callback_remove(
+        &self,
+        id: DomId,
+        event_name: impl Into<String>,
+        callback_id: CallbackId,
+    ) {
         self.commands.add_command(DriverDomCommand::CallbackRemove {
             id,
             event_name: event_name.into(),
-            callback_id
+            callback_id,
         });
     }
 

@@ -1,6 +1,8 @@
 use std::rc::Rc;
 
-use crate::{DomId, Driver, struct_mut::ValueMut, DropResource, Css, get_driver, driver_module::StaticString};
+use crate::{
+    driver_module::StaticString, get_driver, struct_mut::ValueMut, Css, DomId, Driver, DropResource,
+};
 
 struct DomElementClassMergeInner {
     driver: Driver,
@@ -57,10 +59,13 @@ impl DomElementClassMergeInner {
 
             let new_command = match new_command {
                 Some(new_command) => new_command,
-                None => "".to_string()
+                None => "".to_string(),
             };
 
-            self.driver.inner.dom.set_attr(self.id_dom, "class", &new_command);
+            self.driver
+                .inner
+                .dom
+                .set_attr(self.id_dom, "class", &new_command);
         }
     }
 }
@@ -73,7 +78,9 @@ pub struct DomElementClassMerge {
 impl DomElementClassMerge {
     pub fn new(driver: Driver, id_dom: DomId) -> Self {
         Self {
-            inner: Rc::new(ValueMut::new(DomElementClassMergeInner::new(driver, id_dom)))
+            inner: Rc::new(ValueMut::new(DomElementClassMergeInner::new(
+                driver, id_dom,
+            ))),
         }
     }
 
@@ -104,31 +111,34 @@ impl DomElementClassMerge {
                 state._suspense_drop = None;
                 return;
             };
-    
-            let drop = get_driver().inner.dom.dom_suspense.set_layer_callback(state.id_dom, {
-                let self_clone = self.clone();
 
-                move |is_loading: bool| {
-                    let css = callback(is_loading);
+            let drop = get_driver()
+                .inner
+                .dom
+                .dom_suspense
+                .set_layer_callback(state.id_dom, {
+                    let self_clone = self.clone();
 
-                    self_clone.inner.change(|state| {
-                        state.suspense_css = Some(css);
-                        state.refresh_dom();
-                    });
-                }
-            });
+                    move |is_loading: bool| {
+                        let css = callback(is_loading);
+
+                        self_clone.inner.change(|state| {
+                            state.suspense_css = Some(css);
+                            state.refresh_dom();
+                        });
+                    }
+                });
 
             state._suspense_drop = Some(drop);
         });
     }
-
 
     pub fn set_attr_value(&self, name: StaticString, value: Option<String>) {
         if name.as_str() == "class" {
             match value {
                 Some(value) => {
                     self.set_attribute(value);
-                },
+                }
                 None => {
                     self.remove_attribute();
                 }
@@ -138,15 +148,14 @@ impl DomElementClassMerge {
 
         let driver = get_driver();
         let id = self.inner.map(|state| state.id_dom);
-    
+
         match value {
             Some(value) => {
                 driver.inner.dom.set_attr(id, name, &value);
-            },
+            }
             None => {
                 driver.inner.dom.remove_attr(id, name);
             }
         }
     }
-
 }

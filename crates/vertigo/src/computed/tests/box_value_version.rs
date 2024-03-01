@@ -8,12 +8,10 @@ struct SubscribeValueVerInner<T> {
 
 impl<T> SubscribeValueVerInner<T> {
     pub fn new() -> Rc<SubscribeValueVerInner<T>> {
-        Rc::new(
-            SubscribeValueVerInner {
-                version: ValueMut::new(0),
-                value: ValueMut::new(None),
-            }
-        )
+        Rc::new(SubscribeValueVerInner {
+            version: ValueMut::new(0),
+            value: ValueMut::new(None),
+        })
     }
 }
 

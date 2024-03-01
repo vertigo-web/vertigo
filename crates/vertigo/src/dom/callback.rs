@@ -2,7 +2,7 @@ use std::rc::Rc;
 
 use vertigo_macro::bind;
 
-use crate::{Computed, struct_mut::ValueMut, DropResource};
+use crate::{struct_mut::ValueMut, Computed, DropResource};
 
 pub enum Callback<R> {
     Basic(Rc<dyn Fn() -> R + 'static>),
@@ -32,7 +32,6 @@ impl<R: 'static> Callback<R> {
         match self {
             Self::Basic(func) => (func, None),
             Self::Computed(computed) => {
-
                 let current = Rc::new(ValueMut::new(None));
 
                 let drop = computed.subscribe_all(bind!(current, |new_fn| {
@@ -85,7 +84,6 @@ impl<T: 'static, R: 'static> Callback1<T, R> {
             Self::Basic(func) => (func, None),
             Self::Rc(func) => (func, None),
             Self::Computed(computed) => {
-
                 let current = Rc::new(ValueMut::new(None));
 
                 let drop = computed.subscribe_all(bind!(current, |new_fn| {

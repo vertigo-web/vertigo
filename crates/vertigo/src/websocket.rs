@@ -1,5 +1,5 @@
-use crate::ApiImport;
 use crate::driver_module::api::CallbackId;
+use crate::ApiImport;
 
 /// Websocket message type on which a websocket handler operates.
 pub enum WebsocketMessage {
@@ -29,6 +29,7 @@ impl WebsocketConnection {
     pub fn send(&self, message: impl Into<String>) {
         let message = message.into();
 
-        self.api.websocket_send_message(self.callback_id.as_u64(), message.as_str());
+        self.api
+            .websocket_send_message(self.callback_id.as_u64(), message.as_str());
     }
 }

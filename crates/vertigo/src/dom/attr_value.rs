@@ -1,4 +1,4 @@
-use crate::{Css, Computed, Value};
+use crate::{Computed, Css, Value};
 
 pub enum AttrValue {
     String(String),

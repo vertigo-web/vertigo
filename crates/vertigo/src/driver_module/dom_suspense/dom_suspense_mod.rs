@@ -11,8 +11,8 @@ struct LayerCallback {
 
 struct DomSuspenseState {
     dom_connection: DomConnection,
-    suspense: NodePaths,                //<vertigo-suspense />, node ID -> the node and all its ancestors
-    layer: NodePaths,                   //layer ID -> full path
+    suspense: NodePaths, //<vertigo-suspense />, node ID -> the node and all its ancestors
+    layer: NodePaths,    //layer ID -> full path
     layer_callback: BTreeMap<DomId, LayerCallback>,
 }
 
@@ -105,7 +105,7 @@ pub struct DomSuspense {
 impl DomSuspense {
     pub fn new() -> &'static DomSuspense {
         Box::leak(Box::new(Self {
-            inner: InnerValue::new(DomSuspenseState::new())
+            inner: InnerValue::new(DomSuspenseState::new()),
         }))
     }
 
@@ -126,7 +126,11 @@ impl DomSuspense {
 
     //Set up a subscription that provides information about whether a layer should be shown or hidden
     //This function will be used in DomElement when the vertigo-suspense attribute is set
-    pub fn set_layer_callback(&'static self, node_id: DomId, callback: impl Fn(bool) + 'static) -> DropResource {
+    pub fn set_layer_callback(
+        &'static self,
+        node_id: DomId,
+        callback: impl Fn(bool) + 'static,
+    ) -> DropResource {
         self.inner.get_mut().set_layer_callback(node_id, callback);
 
         DropResource::new(move || {

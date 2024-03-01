@@ -1,5 +1,8 @@
+use crate::{
+    struct_mut::{BTreeMapMut, CounterMut},
+    DropResource,
+};
 use std::rc::Rc;
-use crate::{struct_mut::{CounterMut, BTreeMapMut}, DropResource};
 
 #[derive(Clone)]
 pub struct EventEmitter<T: Clone + 'static> {
@@ -35,9 +38,7 @@ impl<T: Clone + Send + Sync> EventEmitter<T> {
         let callback_list = self.list.map(|state| {
             state
                 .iter()
-                .map(|(_, callback)| {
-                    callback.clone()
-                })
+                .map(|(_, callback)| callback.clone())
                 .collect::<Vec<_>>()
         });
 

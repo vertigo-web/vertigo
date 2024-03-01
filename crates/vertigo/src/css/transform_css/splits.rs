@@ -60,9 +60,7 @@ pub fn css_split_rows(css: &str) -> Vec<&str> {
 
     out.push(css[start..css.len()].trim());
 
-    out.into_iter()
-        .filter(|item| item.trim() != "")
-        .collect()
+    out.into_iter().filter(|item| item.trim() != "").collect()
 }
 
 // Split rule into key and value
@@ -113,7 +111,7 @@ pub fn find_brackets(line: &str) -> Option<(&str, &str, &str)> {
 
 #[cfg(test)]
 mod tests {
-    use super::{css_split_rows, css_row_split_to_pair, find_brackets};
+    use super::{css_row_split_to_pair, css_split_rows, find_brackets};
 
     #[test]
     fn test_css_split_rows_simple() {
@@ -165,15 +163,21 @@ mod tests {
 
         assert_eq!(rows.len(), 2);
 
-        assert_eq!(rows[0], ":hover {
+        assert_eq!(
+            rows[0],
+            ":hover {
             transform: scale(1.2);
-        }");
+        }"
+        );
 
-        assert_eq!(rows[1], "@media screen and (min-width: 600px) {
+        assert_eq!(
+            rows[1],
+            "@media screen and (min-width: 600px) {
             :hover {
                 transform: scale(1.5);
             }
-        }");
+        }"
+        );
     }
 
     #[test]
@@ -206,25 +210,34 @@ mod tests {
         assert_eq!(rows.len(), 4);
         assert_eq!(rows[0], "color: black");
 
-        assert_eq!(rows[1], ":hover {
+        assert_eq!(
+            rows[1],
+            ":hover {
             color: white;
-        }");
+        }"
+        );
 
-        assert_eq!(rows[2], "@media screen and (min-width: 600px) {
+        assert_eq!(
+            rows[2],
+            "@media screen and (min-width: 600px) {
             color: red;
 
             :hover {
                 green: green;
             }
-        }");
+        }"
+        );
 
-        assert_eq!(rows[3], "@media screen and (min-width: 1200px) {
+        assert_eq!(
+            rows[3],
+            "@media screen and (min-width: 1200px) {
             color: blue;
 
             :hover {
                 green: cyan;
             }
-        }");
+        }"
+        );
     }
 
     fn css_split_rows_pair(css: &str) -> Vec<(&str, String)> {
@@ -247,17 +260,11 @@ mod tests {
     fn test_css_split_rows1() {
         let css = "cursor: pointer;";
 
-        assert_eq!(
-            css_split_rows(css),
-            vec!("cursor: pointer")
-        );
+        assert_eq!(css_split_rows(css), vec!("cursor: pointer"));
 
         let rows_pairs = css_split_rows_pair(css);
 
-        assert_eq!(
-            rows_pairs,
-            vec!(("cursor", "pointer".into()),)
-        );
+        assert_eq!(rows_pairs, vec!(("cursor", "pointer".into()),));
     }
 
     #[test]
@@ -320,11 +327,20 @@ mod tests {
         let css = "1.0s infinite ease-in-out";
         assert_eq!(find_brackets(css), None);
         let css = "1.0s infinite ease-in-out { dsd }";
-        assert_eq!(find_brackets(css), Some(("1.0s infinite ease-in-out", "dsd", "")));
+        assert_eq!(
+            find_brackets(css),
+            Some(("1.0s infinite ease-in-out", "dsd", ""))
+        );
         let css = "1.0s infinite ease-in-out { dsd } fff";
-        assert_eq!(find_brackets(css), Some(("1.0s infinite ease-in-out", "dsd", "fff")));
+        assert_eq!(
+            find_brackets(css),
+            Some(("1.0s infinite ease-in-out", "dsd", "fff"))
+        );
 
         let css = "@media screen { color: white }";
-        assert_eq!(find_brackets(css), Some(("@media screen", "color: white", "")));
+        assert_eq!(
+            find_brackets(css),
+            Some(("@media screen", "color: white", ""))
+        );
     }
 }

@@ -6,8 +6,8 @@ use crate::{computed::graph_id::GraphId, struct_mut::ValueMut};
 enum State {
     Idle,
     Modification {
-        //Modifying the first layer
-        level: u16,               //current transacion level
+        // Modifying the first layer
+        level: u16, // current transaction level
         client_ids: BTreeSet<GraphId>,
     },
     Refreshing,
@@ -99,14 +99,12 @@ impl TransactionState {
     }
 
     pub fn add_clients_to_refresh(&self, client: BTreeSet<GraphId>) {
-        self.state.change(move |mut state| {
-            match &mut state {
-                State::Modification { client_ids, .. } => {
-                    client_ids.extend(client);
-                }
-                _ => {
-                    log::error!("You can only call the trigger if you are in a transaction block");
-                }
+        self.state.change(move |mut state| match &mut state {
+            State::Modification { client_ids, .. } => {
+                client_ids.extend(client);
+            }
+            _ => {
+                log::error!("You can only call the trigger if you are in a transaction block");
             }
         })
     }

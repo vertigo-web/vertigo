@@ -2,10 +2,10 @@ use std::hash::Hash;
 use std::rc::Rc;
 
 use crate::{
-    computed::{GraphValue, graph_id::GraphId},
-    dom_value::{render_value, render_value_option},
-    dom_list::render_list,
-    Value, DomNode, DropResource, struct_mut::ValueMut
+    computed::{graph_id::GraphId, GraphValue},
+    render::{render_list, render_value, render_value_option},
+    struct_mut::ValueMut,
+    DomNode, DropResource, Value,
 };
 
 use super::context::Context;
@@ -73,9 +73,7 @@ impl<T: Clone + 'static> PartialEq for Computed<T> {
 impl<T: Clone + 'static> Computed<T> {
     pub fn from<F: Fn(&Context) -> T + 'static>(get_value: F) -> Computed<T> {
         Computed {
-            inner: GraphValue::new(true, move |context| {
-                get_value(context)
-            })
+            inner: GraphValue::new(true, move |context| get_value(context)),
         }
     }
 
@@ -90,9 +88,7 @@ impl<T: Clone + 'static> Computed<T> {
     pub fn map<K: Clone + 'static, F: 'static + Fn(T) -> K>(&self, fun: F) -> Computed<K> {
         Computed::from({
             let computed = self.clone();
-            move |context| {
-                fun(computed.get(context))
-            }
+            move |context| fun(computed.get(context))
         })
     }
 
@@ -159,20 +155,15 @@ impl<T: 'static + PartialEq + Clone> Computed<T> {
     }
 }
 
-impl<
-    T: PartialEq + Clone + 'static,
-    L: IntoIterator<Item=T> + Clone + PartialEq + 'static
-> Computed<L> {
-    pub fn render_list<
-        K: Eq + Hash,
-    >(
+impl<T: PartialEq + Clone + 'static, L: IntoIterator<Item = T> + Clone + PartialEq + 'static>
+    Computed<L>
+{
+    pub fn render_list<K: Eq + Hash>(
         &self,
         get_key: impl Fn(&T) -> K + 'static,
         render: impl Fn(&T) -> DomNode + 'static,
     ) -> DomNode {
-        let list = self.map(|inner| {
-            inner.into_iter().collect::<Vec<_>>()
-        });
+        let list = self.map(|inner| inner.into_iter().collect::<Vec<_>>());
         render_list(list, get_key, render)
     }
 }

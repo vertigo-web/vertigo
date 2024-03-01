@@ -1,9 +1,9 @@
-use std::collections::BTreeSet;
-use crate::Context;
-use crate::computed::graph_id::{GraphId, GraphIdKind};
 use super::external_connections::ExternalConnections;
 use super::graph_connections::GraphConnections;
 use super::refresh::Refresh;
+use crate::computed::graph_id::{GraphId, GraphIdKind};
+use crate::Context;
+use std::collections::BTreeSet;
 
 pub struct Graph {
     pub(crate) refresh: Refresh,
@@ -32,20 +32,26 @@ impl Graph {
         self.set_parent_for_client(client_id, parents);
     }
 
-    pub(crate) fn set_parent_for_client(&self, client_id: GraphId, parents_list: BTreeSet<GraphId>) {
-        let edge_list = self.connections.set_parent_for_client(client_id, parents_list);
+    pub(crate) fn set_parent_for_client(
+        &self,
+        client_id: GraphId,
+        parents_list: BTreeSet<GraphId>,
+    ) {
+        let edge_list = self
+            .connections
+            .set_parent_for_client(client_id, parents_list);
 
         for (id, active) in edge_list {
             match id.get_type() {
                 GraphIdKind::Value => {
                     self.external_connections.set_connection(id, active);
-                },
+                }
                 GraphIdKind::Computed => {
                     if active {
                     } else {
                         self.refresh.clear_cache(&id);
                     }
-                },
+                }
                 GraphIdKind::Client => {
                     if active {
                     } else {
@@ -55,5 +61,4 @@ impl Graph {
             }
         }
     }
-
 }

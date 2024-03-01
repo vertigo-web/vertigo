@@ -2,13 +2,14 @@ use std::collections::BTreeSet;
 
 use crate::{struct_mut::VecMut, GraphId};
 
-pub struct Context {             //In transaction
-    parent_ids: VecMut<GraphId>
+pub struct Context {
+    //In transaction
+    parent_ids: VecMut<GraphId>,
 }
 impl Context {
     pub(crate) fn new() -> Context {
         Context {
-            parent_ids: VecMut::new()
+            parent_ids: VecMut::new(),
         }
     }
 

@@ -77,7 +77,10 @@ fn test_doubled() {
         selectors,
         vec!(
             (".autocss_1:focus".into(), "color: red;".into()),
-            (".autocss_1:focus::first-letter".into(), "color: crimson;".into()),
+            (
+                ".autocss_1:focus::first-letter".into(),
+                "color: crimson;".into()
+            ),
             (".autocss_1".into(), "width: 40px".into())
         )
     );

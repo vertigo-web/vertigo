@@ -4,8 +4,8 @@ use std::pin::Pin;
 use std::rc::Rc;
 use std::task::{Context, RawWaker, RawWakerVTable, Waker};
 
-use crate::ApiImport;
 use crate::struct_mut::ValueMut;
+use crate::ApiImport;
 
 #[inline]
 pub fn spawn_local<F>(api: ApiImport, future: F)
@@ -22,7 +22,7 @@ struct Inner {
 
 pub(crate) struct Task {
     inner: ValueMut<Option<Inner>>,
-    api: ApiImport
+    api: ApiImport,
 }
 
 impl Task {

@@ -122,40 +122,37 @@ impl JsValueListDecoder {
         }
     }
 
-    pub fn get_vec<
-        R,
-        F: Fn(JsValue) -> Result<R, String>,
-    >(
+    pub fn get_vec<R, F: Fn(JsValue) -> Result<R, String>>(
         &mut self,
         label: &'static str,
-        conver: F
+        convert: F,
     ) -> Result<Vec<R>, String> {
-            let Some(value) = self.data.pop_front() else {
-                return Err(format!("{label} -> has no more params"));
-            };
+        let Some(value) = self.data.pop_front() else {
+            return Err(format!("{label} -> has no more params"));
+        };
 
-            let inner_list = match value {
-                JsValue::List(list) => list,
-                item => {
-                    let name = item.typename();
-                    return Err(format!("{label} -> list expected, received {name}"));
+        let inner_list = match value {
+            JsValue::List(list) => list,
+            item => {
+                let name = item.typename();
+                return Err(format!("{label} -> list expected, received {name}"));
+            }
+        };
+
+        let mut result = Vec::new();
+
+        for (index, item) in inner_list.into_iter().enumerate() {
+            match convert(item) {
+                Ok(value) => {
+                    result.push(value);
                 }
-            };
-
-            let mut result = Vec::new();
-
-            for (index, item) in inner_list.into_iter().enumerate() {
-                match conver(item) {
-                    Ok(value) => {
-                        result.push(value);
-                    },
-                    Err(error) => {
-                        return Err(format!("{label} -> index:{index} -> {error}"));
-                    }
+                Err(error) => {
+                    return Err(format!("{label} -> index:{index} -> {error}"));
                 }
             }
+        }
 
-            Ok(result)
+        Ok(result)
     }
 
     pub fn expect_no_more(self) -> Result<(), String> {
