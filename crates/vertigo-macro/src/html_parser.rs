@@ -87,7 +87,10 @@ fn strip_brackets(expr: Expr) -> TokenStream2 {
 
 /// Tags starting with uppercase letter are considered components
 fn is_component_name(name: &str) -> bool {
-    name.chars()
+    name.split("::")
+        .last()
+        .unwrap_or_default()
+        .chars()
         .next()
         .map(char::is_uppercase)
         .unwrap_or_default()

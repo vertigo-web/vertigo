@@ -7,6 +7,10 @@
 
 * Hashing of bundled files shortened from SHA256 to CRC64/Base64 to have file names shorter
 
+### Fixed
+
+* Component embedding using non-local name (f. ex. `<my_module::MyComponent />`)
+
 ## 0.4.3 - 2024-02-28
 
 ### Fixed

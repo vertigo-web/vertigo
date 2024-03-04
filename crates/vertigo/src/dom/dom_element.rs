@@ -174,6 +174,11 @@ impl DomElement {
         self
     }
 
+    #[cfg(test)]
+    pub fn get_children(&self) -> &VecDequeMut<DomNode> {
+        &self.child_node
+    }
+
     fn add_event_listener(
         self,
         name: &'static str,
