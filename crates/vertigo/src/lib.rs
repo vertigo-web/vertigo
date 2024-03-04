@@ -211,7 +211,6 @@ pub use vertigo_macro::AutoJsJson;
 /// Macro which transforms a provided function into a component that can be used in [dom!] macro
 ///
 /// ```rust
-/// use vertigo::component;
 /// use vertigo::prelude::*;
 ///
 /// #[component]
@@ -374,7 +373,7 @@ pub fn transaction<R, F: FnOnce(&Context) -> R>(f: F) -> R {
 }
 
 pub mod prelude {
-    pub use crate::{bind, css, dom, Computed, Css, DomNode, ToComputed, Value};
+    pub use crate::{bind, component, css, dom, Computed, Css, DomNode, ToComputed, Value};
 }
 
 //------------------------------------------------------------------------------------------------------------------
