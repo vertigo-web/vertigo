@@ -10,6 +10,7 @@
 ### Fixed
 
 * Component embedding using non-local name (f. ex. `<my_module::MyComponent />`)
+* vertigo-cli: Watch script now attached inside body tag
 
 ## 0.4.3 - 2024-02-28
 

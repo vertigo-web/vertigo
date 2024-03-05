@@ -268,13 +268,19 @@ fn add_watch_script(response: String, port_watch: u16) -> String {
     let start = format!("start_watch('http://127.0.0.1:{port_watch}/events');");
 
     let chunks = [
-        "<script>".to_string(),
-        watch.to_string(),
-        start,
-        "</script>".to_string(),
+        &response,
+        "<script>",
+        watch,
+        &start,
+        "</script>",
+        "\n</body>",
     ];
 
-    let script = chunks.join("\n");
-
-    format!("{response}\n{script}")
+    // Usually body tag is in the response, but better be prepared
+    if response.contains("</body>") {
+        let script = chunks[1..6].join("\n");
+        response.replace("</body>", &script)
+    } else {
+        chunks[0..5].join("\n")
+    }
 }

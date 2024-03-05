@@ -1,4 +1,4 @@
-use html_escape::encode_safe;
+use html_escape::{encode_safe, encode_quoted_attribute};
 use std::{borrow::Cow, collections::VecDeque};
 
 use super::ordered_map::OrderedMap;
@@ -62,7 +62,7 @@ fn attributes_to_string(attr: OrderedMap) -> String {
         line.push(format!(
             " {}=\"{}\"",
             encode_safe(&name),
-            encode_safe(&value)
+            encode_quoted_attribute(&value)
         ));
     }
     line.concat()
