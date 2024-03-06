@@ -1,6 +1,6 @@
 use proc_macro::TokenStream;
 use quote::quote;
-use syn::Data;
+use syn::{ext::IdentExt, Data};
 
 pub(crate) fn impl_js_json_derive(ast: &syn::DeriveInput) -> Result<TokenStream, String> {
     let structure_name = &ast.ident;
@@ -25,13 +25,13 @@ pub(crate) fn impl_js_json_derive(ast: &syn::DeriveInput) -> Result<TokenStream,
     let mut list_from_json = Vec::new();
 
     for field_name in field_list {
-        let field_name_string = field_name.to_string();
+        let field_unraw = field_name.unraw().to_string();
         list_to_json.push(quote! {
-            (#field_name_string.to_string(), self.#field_name.to_json()),
+            (#field_unraw.to_string(), self.#field_name.to_json()),
         });
 
         list_from_json.push(quote! {
-            #field_name: json.get_property(&context, #field_name_string)?,
+            #field_name: json.get_property(&context, #field_unraw)?,
         })
     }
 
