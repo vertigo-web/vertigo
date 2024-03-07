@@ -103,19 +103,35 @@ fn convert_to_component(node: Node) -> TokenStream2 {
         .into_iter()
         .filter_map(|attr_node| {
             let span = get_span(&attr_node);
-            if let (Some(key), Some(value)) = (attr_node.name, attr_node.value) {
-                let value = strip_brackets(value);
+            match (attr_node.name, attr_node.value) {
+                (Some(key), Some(value)) => {
+                    let value = strip_brackets(value);
 
-                if value.to_string() == "{}" {
-                    Some(quote! { #key: Default::default(), })
-                } else if value.to_string().starts_with('&') {
-                    Some(quote! { #key: (#value).clone(), })
-                } else {
-                    Some(quote! { #key: (#value).into(), })
+                    if value.to_string() == "{}" || value.to_string() == "Default :: default()" {
+                        Some(quote! { #key: Default::default(), })
+                    } else if value.to_string().starts_with('&') {
+                        Some(quote! { #key: (#value).clone(), })
+                    } else {
+                        Some(quote! { #key: (#value).into(), })
+                    }
+                },
+                (None, Some(value)) => {
+                    // Try to use attribute value as key if no key provided
+                    let value = strip_brackets(value);
+                    if value.to_string() == "{}" || value.to_string() == "Default :: default()" {
+                        emit_error!(span, "Expected key={} attribute - can't omit attribute name when providing default value");
+                        None
+                    } else if value.to_string().starts_with('&') {
+                        let key = value.clone().into_iter().skip(1).collect::<TokenStream2>();
+                        Some(quote! { #key: (#value).clone(), })
+                    } else {
+                        Some(quote! { #value: (#value).into(), })
+                    }
                 }
-            } else {
-                emit_error!(span, "Expected key=value attribute");
-                None
+                _ => {
+                    emit_error!(span, "Expected key=value attribute");
+                    None
+                }
             }
         })
         .collect::<Vec<_>>();

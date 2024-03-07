@@ -3,6 +3,10 @@
 <!-- markdownlint-disable-next-line first-line-h1 -->
 ## 0.5.0 - Unreleased
 
+### Added
+
+* Components now accept value without attribute name if the names matches (`color={color}` → `{color}`)
+
 ### Changed
 
 * Hashing of bundled files shortened from SHA256 to CRC64/Base64 to have file names shorter
