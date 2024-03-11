@@ -26,6 +26,7 @@ pub(crate) fn main_wrap(input: TokenStream) -> TokenStream {
                     #VERTIGO_VERSION_MAJOR, #VERTIGO_VERSION_MINOR
                 );
             }
+            vertigo::get_driver().try_get_plain();
         }
     }
     .into()

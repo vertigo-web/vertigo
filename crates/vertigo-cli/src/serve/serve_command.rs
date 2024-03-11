@@ -225,62 +225,24 @@ async fn handler(
     };
 
     log::debug!("Incoming request: {uri}");
-    let (status, mut response) = state.request(&uri).await;
+    let mut response_state = state.request(&uri).await;
 
     let time = now.elapsed();
-    if time > Duration::from_secs(1) {
-        log::warn!(
-            "Response for request: {status} {}ms {url}",
-            time.as_millis()
-        );
-    } else {
-        log::info!(
-            "Response for request: {status} {}ms {url}",
-            time.as_millis()
-        );
+    log::log!(
+        if time > Duration::from_secs(1) { log::Level::Warn } else { log::Level::Info },
+        "Response for request: {} {}ms {url}",
+        response_state.status,
+        time.as_millis()
+    );
+
+    if let Some(port_watch) = state.port_watch {
+        response_state.add_watch_script(port_watch);
     }
 
-    match status {
-        StatusCode::OK => {
-            if let Some(port_watch) = state.port_watch {
-                response = add_watch_script(response, port_watch);
-            }
-        }
-        status => {
-            log::error!("WASM status: {status}");
-            log::error!("WASM response: {response}");
-        }
+    if !response_state.status.is_success() {
+        log::error!("WASM status: {}", response_state.status);
+        log::error!("WASM response: {}", response_state.body);
     }
 
-    Response::builder()
-        .status(status)
-        .header(
-            "cache-control",
-            "private, no-cache, no-store, must-revalidate, max-age=0",
-        )
-        .body(response)
-        .unwrap()
-}
-
-fn add_watch_script(response: String, port_watch: u16) -> String {
-    let watch = include_str!("./watch.js");
-
-    let start = format!("start_watch('http://127.0.0.1:{port_watch}/events');");
-
-    let chunks = [
-        &response,
-        "<script>",
-        watch,
-        &start,
-        "</script>",
-        "\n</body>",
-    ];
-
-    // Usually body tag is in the response, but better be prepared
-    if response.contains("</body>") {
-        let script = chunks[1..6].join("\n");
-        response.replace("</body>", &script)
-    } else {
-        chunks[0..5].join("\n")
-    }
+    response_state.into()
 }

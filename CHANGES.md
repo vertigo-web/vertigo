@@ -5,6 +5,7 @@
 
 ### Added
 
+* `Driver::plains` method to allow responding with plaintext pages
 * Components now accept value without attribute name if the names matches (`color={color}` → `{color}`)
 
 ### Changed

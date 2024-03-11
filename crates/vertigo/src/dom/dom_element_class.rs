@@ -55,7 +55,7 @@ impl DomElementClassMergeInner {
         let new_command = self.get_new_command();
 
         if self.command_last_sent != new_command {
-            self.command_last_sent = new_command.clone();
+            self.command_last_sent.clone_from(&new_command);
 
             let new_command = match new_command {
                 Some(new_command) => new_command,
