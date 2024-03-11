@@ -1,4 +1,3 @@
-use axum::http::StatusCode;
 use std::{
     collections::{HashMap, VecDeque},
     sync::Arc,
@@ -8,6 +7,7 @@ use tokio::sync::mpsc::UnboundedSender;
 use crate::serve::{
     js_value::JsValue,
     mount_path::MountPathConfig,
+    response_state::ResponseState,
     wasm::{FetchRequest, FetchResponse, Message, WasmInstance},
 };
 
@@ -72,7 +72,7 @@ impl HtmlResponse {
         count
     }
 
-    pub fn build_response(&self) -> (StatusCode, String) {
+    pub fn build_response(&self) -> ResponseState {
         let (mut root_html, css) = self.all_elements.get_response(false);
 
         let css = css.into_iter().collect::<VecDeque<_>>();
@@ -80,8 +80,7 @@ impl HtmlResponse {
         if let HtmlNode::Element(html) = &mut root_html {
             if html.name != "html" {
                 // Not really possible
-                return (
-                    StatusCode::INTERNAL_SERVER_ERROR,
+                return ResponseState::internal_error(
                     format!("Missing <html> element, found {} instead", html.name),
                 );
             }
@@ -90,10 +89,7 @@ impl HtmlResponse {
                 html.add_attr(format!("data-env-{env_name}"), env_value);
             }
         } else {
-            return (
-                StatusCode::INTERNAL_SERVER_ERROR,
-                "Missing <html> element".into(),
-            );
+            return ResponseState::internal_error("Missing <html> element");
         }
 
         let head_exists = root_html.modify(&[("head", 0)], move |_head| {});
@@ -117,14 +113,13 @@ impl HtmlResponse {
 
         if success {
             let document = HtmlDocument::new(root_html);
-            (StatusCode::OK, document.convert_to_string(true))
+            ResponseState::html(document.convert_to_string(true))
         } else {
-            let message = "Missing <body> element".into();
-            (StatusCode::INTERNAL_SERVER_ERROR, message)
+            ResponseState::internal_error("Missing <body> element")
         }
     }
 
-    pub fn process_message(&mut self, message: Message) -> Option<(StatusCode, String)> {
+    pub fn process_message(&mut self, message: Message) -> Option<ResponseState> {
         match message {
             Message::TimeoutAndSendResponse => {
                 log::info!("timeout");
@@ -145,7 +140,7 @@ impl HtmlResponse {
             Message::Panic(message) => {
                 let message =
                     message.unwrap_or_else(|| "panic message decoding problem".to_string());
-                Some((StatusCode::INTERNAL_SERVER_ERROR, message))
+                Some(ResponseState::internal_error(message))
             }
             Message::SetTimeoutZero { callback_id } => {
                 let result = self.inst.wasm_callback(callback_id, JsValue::Undefined);
@@ -213,6 +208,8 @@ impl HtmlResponse {
 
                 None
             }
+
+            Message::PlainResponse(body) => Some(ResponseState::plain(body)),
         }
     }
 }

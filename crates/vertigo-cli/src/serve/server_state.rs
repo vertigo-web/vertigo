@@ -1,4 +1,3 @@
-use axum::http::StatusCode;
 use std::collections::HashMap;
 use tokio::sync::mpsc::{error::TryRecvError, unbounded_channel};
 use wasmtime::{Engine, Module};
@@ -6,10 +5,7 @@ use wasmtime::{Engine, Module};
 use crate::commons::spawn::SpawnOwner;
 
 use super::{
-    html::HtmlResponse,
-    mount_path::MountPathConfig,
-    request_state::RequestState,
-    wasm::{Message, WasmInstance},
+    html::HtmlResponse, mount_path::MountPathConfig, request_state::RequestState, response_state::ResponseState, wasm::{Message, WasmInstance}
 };
 
 #[derive(Clone)]
@@ -42,7 +38,7 @@ impl ServerState {
         })
     }
 
-    pub async fn request(&self, url: &str) -> (StatusCode, String) {
+    pub async fn request(&self, url: &str) -> ResponseState {
         let (sender, mut receiver) = unbounded_channel::<Message>();
 
         let request = RequestState {

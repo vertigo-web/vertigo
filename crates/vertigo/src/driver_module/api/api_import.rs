@@ -654,4 +654,16 @@ impl ApiImport {
         log::error!("get_env: string or null was expected");
         None
     }
+
+    /// Synthetic command to respond with plain text, not DOM
+    pub fn plain_response(&self, body: String) {
+        if self.is_browser() {
+            return
+        }
+
+        self
+            .dom_access()
+            .synthetic("plain_response", JsValue::String(body))
+            .exec();
+    }
 }

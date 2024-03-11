@@ -17,6 +17,14 @@ fn render() -> DomNode {
         }
     };
 
+    get_driver().plains(|url| {
+        if url == "/robots.txt" {
+            Some("User-Agent: *\nDisallow: /search".to_string())
+        } else {
+            None
+        }
+    });
+
     let state = app::State::new(ws_chat);
     state.render()
 }

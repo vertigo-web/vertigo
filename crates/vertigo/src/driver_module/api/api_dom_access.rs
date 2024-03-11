@@ -79,6 +79,15 @@ impl DomAccess {
         self
     }
 
+    /// Synthetic command that is not meant to be passed to the browser.
+    /// It can be used to communicate between WASM and driver implementation, for example SSR
+    #[must_use]
+    pub fn synthetic(mut self, name: impl Into<String>, params: JsValue) -> Self {
+        self.builder.push(JsValue::List(vec![JsValue::str(name)]));
+        self.builder.push(params);
+        self
+    }
+
     #[must_use]
     pub fn get_props(mut self, props: &[&str]) -> Self {
         let mut new_params = vec![JsValue::str("get_props")];

@@ -1,5 +1,3 @@
-#![allow(clippy::from_over_into)]
-
 use crate::serve::js_value::{JsJson, JsValue};
 
 #[cfg(test)]
