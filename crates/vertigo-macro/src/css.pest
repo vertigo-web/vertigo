@@ -8,8 +8,9 @@ rule = _{ comment | simple_rule | unknown_rule | sub_rule }
 
 comment = _{ comment_start ~ (!comment_end ~ ANY)* ~ comment_end }
 
-sub_rule = { sub_selector ~ brace_left ~ rule+ ~ brace_right ~ semicolon? }
-sub_selector = { colon ~ (!brace_left~ ANY)+ }
+sub_rule = { (sub_selector | sub_selector_ref)? ~ sub_selector_ref* ~ brace_left ~ rule+ ~ brace_right ~ semicolon? }
+sub_selector = { colon ~ (!(colon | bracket_left | brace_left) ~ (double_colon | ANY))+ }
+sub_selector_ref = { bracket_left ~ (!(colon | bracket_left | brace_left) ~ ANY)+ }
 
 simple_rule = _{
     // align-content 	Specifies the alignment between the lines inside a flexible container when the items do not use all available space
@@ -296,7 +297,8 @@ expression = { brace_left ~ /*PUSH("$"*) ~*/ expression_value ~ /*POP ~*/ brace_
 expression_value = { (!(/*PEEK ~*/ brace_right) ~ ANY)* }
 
 dot = _{ "." }
-colon = _{ ":" }
+colon = _{ ":" ~ !(colon) }
+double_colon = _{ "::" }
 semicolon = _{ ";" }
 comma = _{ "," }
 singlequote = _{ "'" }
@@ -306,6 +308,8 @@ quote = _{ singlequote | doublequote }
 hash = { "#" }
 brace_left = _{ "{" }
 brace_right = _{ "}" }
+bracket_left = { "[" }
+bracket_right = { "]" }
 comment_start = _{ "/*" }
 comment_end = _{ "*/" }
 

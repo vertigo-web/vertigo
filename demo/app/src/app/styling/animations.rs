@@ -1,9 +1,8 @@
 use std::rc::Rc;
 
-use vertigo::{Value, get_driver, struct_mut::ValueMut, dom, bind_spawn, css, DomNode};
+use vertigo::{bind_spawn, css, dom, get_driver, struct_mut::ValueMut, DomNode, Value};
 
-mod spinner;
-use spinner::spinner;
+use super::spinner::Spinner;
 
 #[derive(Clone)]
 pub struct State {
@@ -40,21 +39,23 @@ impl State {
     }
 }
 
-pub struct Animations { }
+pub struct Animations {}
 
 impl Animations {
     pub fn mount(&self) -> DomNode {
         let state = State::new();
 
-        let ids = state.progress.map(|progress| {
-            (0..progress).collect::<Vec<_>>()
-        });
+        let ids = state
+            .progress
+            .map(|progress| (0..progress).collect::<Vec<_>>());
 
         let list = ids.render_list(
             |id| *id,
-            |_id| dom!{
-                <span>"."</span>
-            }
+            |_id| {
+                dom! {
+                    <span>"."</span>
+                }
+            },
         );
 
         let on_click_progress = bind_spawn!(state, async move {
@@ -69,12 +70,12 @@ impl Animations {
             log::info!("mouse leave");
         };
 
-        let css_bg = css!("
+        let css_bg = css! {"
             border: 1px solid black;
             padding: 10px;
             background-color: #e0e0e0;
             margin-bottom: 10px;
-        ");
+        "};
 
         let fragment = dom! {
             <span>
@@ -87,8 +88,8 @@ impl Animations {
 
         dom! {
             <div>
-                <div css={css_bg} on_mouse_enter={on_mouse_enter} on_mouse_leave={on_mouse_leave}>
-                    { spinner() }
+                <div css={css_bg} {on_mouse_enter} {on_mouse_leave}>
+                    <Spinner />
                 </div>
 
                 <button on_click={on_click_progress}>

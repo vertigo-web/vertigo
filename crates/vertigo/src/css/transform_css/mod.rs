@@ -103,8 +103,8 @@ pub fn transform_css(css: &str, next_id: &NextId) -> (u64, Vec<(String, String)>
     let mut css_documents: Vec<(String, String)> = Vec::new();
 
     for row in css_split_rows(css) {
-        if row.starts_with(':') {
-            // It's a pseudo-selector
+        if row.starts_with([':', '[']) {
+            // It's a pseudo-selector or references Css
             let extra_rule = transform_css_selector_value(row, &selector);
 
             if let Some(extra_rule) = extra_rule {

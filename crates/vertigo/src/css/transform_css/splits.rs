@@ -1,8 +1,8 @@
 #[derive(Eq, PartialEq, Debug)]
-enum ParsingRowState {
+enum RowSideState {
     Left,
     Right,
-    RightBracketOpen(u16),
+    BracketsOpened(u16),
 }
 
 // Splits rules into Vec
@@ -16,14 +16,24 @@ enum ParsingRowState {
 pub fn css_split_rows(css: &str) -> Vec<&str> {
     let mut out: Vec<&str> = Vec::new();
 
-    let mut state = ParsingRowState::Left;
+    let mut row_side = RowSideState::Left;
+    let mut in_squares = false;
     let mut start = 0;
 
     for (index, char) in css.char_indices() {
+        if in_squares {
+            if char == ']' {
+                in_squares = false;
+                if row_side == RowSideState::Left {
+                    row_side = RowSideState::Right;
+                }
+            }
+            continue;
+        }
         if char == '{' {
-            if state == ParsingRowState::Right {
-                state = ParsingRowState::RightBracketOpen(1);
-            } else if let ParsingRowState::RightBracketOpen(counter) = &mut state {
+            if row_side == RowSideState::Right {
+                row_side = RowSideState::BracketsOpened(1);
+            } else if let RowSideState::BracketsOpened(counter) = &mut row_side {
                 *counter += 1;
             } else {
                 panic!("unsupported use case");
@@ -31,7 +41,7 @@ pub fn css_split_rows(css: &str) -> Vec<&str> {
         }
 
         if char == '}' {
-            let should_close = if let ParsingRowState::RightBracketOpen(counter) = &mut state {
+            let should_close = if let RowSideState::BracketsOpened(counter) = &mut row_side {
                 if *counter > 1 {
                     *counter -= 1;
                     false
@@ -43,18 +53,22 @@ pub fn css_split_rows(css: &str) -> Vec<&str> {
             };
 
             if should_close {
-                state = ParsingRowState::Right;
+                row_side = RowSideState::Right;
             }
         }
 
-        if char == ':' && state == ParsingRowState::Left {
-            state = ParsingRowState::Right;
+        if char == ':' && row_side == RowSideState::Left {
+            row_side = RowSideState::Right;
         }
 
-        if char == ';' && state == ParsingRowState::Right {
+        if char == ';' && row_side == RowSideState::Right {
             out.push(css[start..index].trim());
             start = index + 1;
-            state = ParsingRowState::Left;
+            row_side = RowSideState::Left;
+        }
+
+        if char == '[' && row_side != RowSideState::Right {
+            in_squares = true;
         }
     }
 
@@ -64,8 +78,6 @@ pub fn css_split_rows(css: &str) -> Vec<&str> {
 }
 
 // Split rule into key and value
-//
-//
 pub fn css_row_split_to_pair(row: &str) -> Option<(&str, String)> {
     let chunks: Vec<&str> = row.split(':').collect();
 
@@ -342,5 +354,18 @@ mod tests {
             find_brackets(css),
             Some(("@media screen", "color: white", ""))
         );
+    }
+
+    #[test]
+    fn test_square_brackets() {
+        let css = "color: red;
+
+        [something] { color: white; }
+        ";
+
+        assert_eq!(
+            css_split_rows(css),
+            vec!["color: red", "[something] { color: white; }",]
+        )
     }
 }
