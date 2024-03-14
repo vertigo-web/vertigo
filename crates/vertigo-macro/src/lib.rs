@@ -49,19 +49,28 @@ pub fn dom_debug(input: TokenStream) -> TokenStream {
 #[proc_macro]
 #[proc_macro_error]
 pub fn css_block(input: TokenStream) -> TokenStream {
-    let (css_str, _) = generate_css_string(input);
-    let result = quote! { #css_str };
+    let (css_str, _, refs) = generate_css_string(input);
+    let result = quote! {{
+        #refs
+        #css_str
+    }};
     result.into()
 }
 
 #[proc_macro]
 #[proc_macro_error]
 pub fn css(input: TokenStream) -> TokenStream {
-    let (css_str, is_dynamic) = generate_css_string(input);
+    let (css_str, is_dynamic, refs) = generate_css_string(input);
+
     let result = if is_dynamic {
-        quote! { vertigo::Css::string(#css_str) }
+        quote! {{
+            #refs
+            vertigo::Css::string(#css_str)
+        }}
     } else {
-        quote! { vertigo::Css::str(#css_str) }
+        quote! {
+            vertigo::Css::str(#css_str)
+        }
     };
     result.into()
 }

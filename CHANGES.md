@@ -6,6 +6,7 @@
 ### Added
 
 * `Driver::plains` method to allow responding with plaintext pages
+* In `css!` macro there is now possibility to reference a class created by another `css!` using `[]` brackets
 * Components now accept value without attribute name if the names matches (`color={color}` → `{color}`)
 
 ### Changed

@@ -3,7 +3,7 @@ use std::fmt::Display;
 #[derive(PartialEq, Eq, Debug, Clone)]
 pub enum Route {
     Counters,
-    Animations,
+    Styling,
     Sudoku,
     Input,
     GithubExplorer,
@@ -24,7 +24,7 @@ impl Route {
     pub fn new(path: &str) -> Route {
         match path {
             "" | "/" | "/counters" => Self::Counters,
-            "/animations" => Self::Animations,
+            "/styling" => Self::Styling,
             "/sudoku" => Self::Sudoku,
             "/input" => Self::Input,
             "/github_explorer" => Self::GithubExplorer,
@@ -39,7 +39,7 @@ impl Route {
     pub fn label(&self) -> &'static str {
         match self {
             Self::Counters => "Counters",
-            Self::Animations => "Animations",
+            Self::Styling => "Styling",
             Self::Sudoku => "Sudoku",
             Self::Input => "Input",
             Self::GithubExplorer => "Github Explorer",
@@ -62,7 +62,7 @@ impl Display for Route {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         let str = match self {
             Self::Counters => "/counters",
-            Self::Animations => "/animations",
+            Self::Styling => "/styling",
             Self::Sudoku => "/sudoku",
             Self::Input => "/input",
             Self::GithubExplorer => "/github_explorer",

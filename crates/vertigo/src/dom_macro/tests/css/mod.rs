@@ -4,5 +4,6 @@ mod colors;
 mod comments;
 mod media;
 mod pseudoselectors;
+mod refs;
 mod unknown;
 mod utils;

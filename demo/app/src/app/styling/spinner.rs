@@ -1,7 +1,8 @@
-use vertigo::{css, DomNode, dom};
+use vertigo::{component, css, dom};
 
-pub fn spinner() -> DomNode {
-    let spinner_css = css!("
+#[component]
+pub fn Spinner() {
+    let spinner_css = css! {"
         width: 40px;
         height: 40px;
         background-color: #d26913;
@@ -18,12 +19,11 @@ pub fn spinner() -> DomNode {
                 opacity: 0;
             }
         };
-    ");
+    "};
 
     let title = "wrapper";
 
     dom! {
-        <div css={spinner_css} {title}>
-        </div>
+        <div css={spinner_css} {title} />
     }
 }

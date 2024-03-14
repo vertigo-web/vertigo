@@ -1,7 +1,7 @@
-use crate::fetch::request_builder::{RequestBody, RequestBuilder};
 use crate::{
-    css::css_manager::CssManager, Context, Dependencies, DropResource, FutureBox, Instant, JsJson,
-    WebsocketMessage,
+    css::css_manager::CssManager,
+    fetch::request_builder::{RequestBody, RequestBuilder},
+    Context, Css, Dependencies, DropResource, FutureBox, Instant, JsJson, WebsocketMessage,
 };
 use std::cell::RefCell;
 use std::{future::Future, pin::Pin, rc::Rc};
@@ -267,5 +267,12 @@ impl Driver {
         } else {
             log::info!("Browser mode, not invoking try_get_plain");
         }
+    }
+
+    /// Adds this CSS to manager producing a class name, which is returned
+    /// 
+    /// There shouldn't be need to use it manually. It's used by `css!` macro.
+    pub fn class_name_for(&mut self, css: &Css) -> String {
+        self.inner.css_manager.get_class_name(css)
     }
 }
