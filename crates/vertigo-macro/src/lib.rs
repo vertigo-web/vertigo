@@ -10,7 +10,7 @@ mod component;
 mod css_parser;
 mod html_parser;
 mod include_static;
-mod js_json_derive;
+mod jsjson;
 mod main_wrap;
 mod wasm_path;
 
@@ -80,7 +80,7 @@ pub fn css(input: TokenStream) -> TokenStream {
 pub fn auto_js_json(input: TokenStream) -> TokenStream {
     let ast = syn::parse(input).unwrap();
 
-    match js_json_derive::impl_js_json_derive(&ast) {
+    match jsjson::impl_js_json_derive(&ast) {
         Ok(result) => result,
         Err(message) => {
             emit_error!(Span::call_site(), "{}", message);

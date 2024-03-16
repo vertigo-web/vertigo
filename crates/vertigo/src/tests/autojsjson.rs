@@ -1,8 +1,8 @@
 use crate::{self as vertigo, JsJsonContext};
-use crate::{AutoJsJson, JsJsonSerialize};
+use crate::{AutoJsJson, JsJsonDeserialize, JsJsonSerialize};
 
 #[test]
-fn raw_field_name() {
+fn test_raw_field_name() {
     #[derive(AutoJsJson)]
     pub struct Test {
         pub r#type: String,
@@ -23,4 +23,104 @@ fn raw_field_name() {
 
     assert!(hash_map.contains_key("type"));
     assert!(hash_map.contains_key("name"));
+}
+
+#[test]
+fn test_simple_enum() {
+    #[derive(AutoJsJson, Clone, Debug, PartialEq)]
+    pub enum Side {
+        Left,
+        Right,
+    }
+
+    let left = Side::Left;
+    let right = Side::Right;
+
+    let left_js = left.clone().to_json();
+    let right_js = right.clone().to_json();
+
+    let again_left = Side::from_json(JsJsonContext::new(""), left_js).unwrap_or_else(|_| panic!());
+    let again_right =
+        Side::from_json(JsJsonContext::new(""), right_js).unwrap_or_else(|_| panic!());
+
+    assert_eq!(again_left, left);
+    assert_eq!(again_right, right);
+}
+
+#[test]
+fn test_compound_enum() {
+    #[derive(AutoJsJson, Clone, Debug, PartialEq)]
+    pub enum TestType {
+        Somestring(String),
+        Point { x: u32, y: String },
+        Tuple(String, u32),
+        Number(u32),
+        EmptyTuple(),
+        EmptyStruct{},
+        Nothing
+    }
+
+    let somestring = TestType::Somestring("asdf".to_string());
+    let point = TestType::Point { x: 10, y: "raz".to_string() };
+    let tuple = TestType::Tuple ( "raz".to_string(), 10 );
+    let number = TestType::Number(50);
+    let nothing = TestType::Nothing;
+
+    let somestring_json = somestring.clone().to_json();
+    let point_json = point.clone().to_json();
+    let tuple_json = tuple.clone().to_json();
+    let number_json = number.clone().to_json();
+    let nothing_json = nothing.clone().to_json();
+
+    use vertigo::JsJsonDeserialize;
+
+    let again_somestring = TestType::from_json(JsJsonContext::new(""), somestring_json).unwrap_or_else(|err| panic!("1. {}", err.convert_to_string()));
+    let again_point = TestType::from_json(JsJsonContext::new(""), point_json).unwrap_or_else(|err| panic!("2. {}", err.convert_to_string()));
+    let again_tuple = TestType::from_json(JsJsonContext::new(""), tuple_json).unwrap_or_else(|err| panic!("3. {}", err.convert_to_string()));
+    let again_number = TestType::from_json(JsJsonContext::new(""), number_json).unwrap_or_else(|err| panic!("4. {}", err.convert_to_string()));
+    let again_nothing = TestType::from_json(JsJsonContext::new(""), nothing_json).unwrap_or_else(|err| panic!("4. {}", err.convert_to_string()));
+
+    assert_eq!(somestring, again_somestring);
+    assert_eq!(point, again_point);
+    assert_eq!(tuple, again_tuple);
+    assert_eq!(number, again_number);
+    assert_eq!(nothing, again_nothing);
+}
+
+#[test]
+fn test_newtype() {
+    #[derive(AutoJsJson, Clone, Debug, PartialEq)]
+    pub struct MyNumber(pub i32);
+    #[derive(AutoJsJson, Clone, Debug, PartialEq)]
+    pub struct MyString(pub String);
+
+    let my_number = MyNumber(3);
+    let my_string = MyString("test".to_string());
+
+    let my_number_js = my_number.clone().to_json();
+    let my_string_js = my_string.clone().to_json();
+
+    use vertigo::JsJsonDeserialize;
+
+    let again_my_number = MyNumber::from_json(JsJsonContext::new(""), my_number_js).unwrap_or_else(|_| panic!());
+    let again_my_string = MyString::from_json(JsJsonContext::new(""), my_string_js).unwrap_or_else(|_| panic!());
+
+    assert_eq!(again_my_number, my_number);
+    assert_eq!(my_string, again_my_string);
+}
+
+#[test]
+fn test_newtype_tuple() {
+    #[derive(AutoJsJson, Clone, Debug, PartialEq)]
+    pub struct MyType(pub i32, String);
+
+    let my_type = MyType(3, "test".to_string());
+
+    let my_type_js = my_type.clone().to_json();
+
+    use vertigo::JsJsonDeserialize;
+
+    let again_my_type = MyType::from_json(JsJsonContext::new(""), my_type_js).unwrap_or_else(|_| panic!());
+
+    assert_eq!(again_my_type, my_type);
 }
