@@ -188,6 +188,8 @@ pub use vertigo_macro::bind_spawn;
 ///
 /// Used for fetching and sending objects over the network.
 ///
+/// Enums representation is compatible with serde's "external tagging" which is the default.
+///
 /// ```rust
 /// #[derive(vertigo::AutoJsJson)]
 /// pub struct Post {

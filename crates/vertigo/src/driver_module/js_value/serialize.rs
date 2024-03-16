@@ -70,7 +70,7 @@ impl JsJsonDeserialize for String {
         match json {
             JsJson::String(value) => Ok(value),
             other => {
-                let message = ["string expected, received", other.typename()].concat();
+                let message = ["string expected, received ", other.typename()].concat();
                 Err(context.add(message))
             }
         }
@@ -88,7 +88,7 @@ impl JsJsonDeserialize for u64 {
         match json {
             JsJson::Number(value) => Ok(value as u64),
             other => {
-                let message = ["number(u64) expected, received", other.typename()].concat();
+                let message = ["number(u64) expected, received ", other.typename()].concat();
                 Err(context.add(message))
             }
         }
@@ -106,7 +106,7 @@ impl JsJsonDeserialize for i64 {
         match json {
             JsJson::Number(value) => Ok(value as i64),
             other => {
-                let message = ["number(i64) expected, received", other.typename()].concat();
+                let message = ["number(i64) expected, received ", other.typename()].concat();
                 Err(context.add(message))
             }
         }
@@ -124,7 +124,7 @@ impl JsJsonDeserialize for u32 {
         match json {
             JsJson::Number(value) => Ok(value as u32),
             other => {
-                let message = ["number(u32) expected, received", other.typename()].concat();
+                let message = ["number(u32) expected, received ", other.typename()].concat();
                 Err(context.add(message))
             }
         }
@@ -142,7 +142,7 @@ impl JsJsonDeserialize for i32 {
         match json {
             JsJson::Number(value) => Ok(value as i32),
             other => {
-                let message = ["number(i32) expected, received", other.typename()].concat();
+                let message = ["number(i32) expected, received ", other.typename()].concat();
                 Err(context.add(message))
             }
         }
@@ -164,7 +164,7 @@ impl JsJsonDeserialize for bool {
             JsJson::False => Ok(false),
             JsJson::True => Ok(true),
             other => {
-                let message = ["bool expected, received", other.typename()].concat();
+                let message = ["bool expected, received ", other.typename()].concat();
                 Err(context.add(message))
             }
         }
@@ -194,7 +194,7 @@ impl<T: JsJsonDeserialize> JsJsonDeserialize for Vec<T> {
         let mut list = Vec::new();
 
         let JsJson::List(inner) = json else {
-            let message = ["List expected, received", json.typename()].concat();
+            let message = ["List expected, received ", json.typename()].concat();
             return Err(context.add(message));
         };
 

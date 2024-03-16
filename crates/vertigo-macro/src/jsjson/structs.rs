@@ -1,21 +1,13 @@
 use proc_macro::TokenStream;
 use quote::quote;
-use syn::{ext::IdentExt, Data};
+use syn::{ext::IdentExt, DataStruct, Ident};
 
-pub(crate) fn impl_js_json_derive(ast: &syn::DeriveInput) -> Result<TokenStream, String> {
-    let structure_name = &ast.ident;
-
-    let Data::Struct(ref data) = ast.data else {
-        return Err(String::from(
-            "This macro can only be used for the structure",
-        ));
-    };
-
+pub(super) fn impl_js_json_struct(name: &Ident, data: &DataStruct) -> Result<TokenStream, String> {
     let mut field_list = Vec::new();
 
-    for field in data.fields.iter() {
+    for field in &data.fields {
         let Some(field_name) = &field.ident else {
-            return Err(String::from("Problem with specifying the field name"));
+            return super::newtypes::impl_js_json_newtype(name, data);
         };
 
         field_list.push(field_name);
@@ -36,7 +28,7 @@ pub(crate) fn impl_js_json_derive(ast: &syn::DeriveInput) -> Result<TokenStream,
     }
 
     let result = quote! {
-        impl vertigo::JsJsonSerialize for #structure_name {
+        impl vertigo::JsJsonSerialize for #name {
             fn to_json(self) -> vertigo::JsJson {
                 vertigo::JsJson::Object(::std::collections::HashMap::from([
                     #(#list_to_json)*
@@ -44,7 +36,7 @@ pub(crate) fn impl_js_json_derive(ast: &syn::DeriveInput) -> Result<TokenStream,
             }
         }
 
-        impl vertigo::JsJsonDeserialize for #structure_name {
+        impl vertigo::JsJsonDeserialize for #name {
             fn from_json(context: vertigo::JsJsonContext, mut json: vertigo::JsJson) -> Result<Self, vertigo::JsJsonContext> {
                 Ok(Self {
                     #(#list_from_json)*
