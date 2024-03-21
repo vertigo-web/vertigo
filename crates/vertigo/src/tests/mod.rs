@@ -2,4 +2,6 @@
 // for example tests of macros.
 
 mod autojsjson;
-mod component;
+mod bind;
+mod css;
+mod dom;

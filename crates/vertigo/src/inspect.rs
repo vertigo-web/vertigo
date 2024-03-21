@@ -148,6 +148,7 @@ impl DomDebugFragment {
                     event_name,
                     callback_id,
                 } => {
+                    println!("CallbackAdd {}- {}", callback_id.as_u64(), event_name);
                     map.entry(id).and_modify(|node| {
                         node.callbacks.insert(event_name, callback_id);
                     });
@@ -254,7 +255,7 @@ impl DomDebugNode {
 #[cfg(test)]
 mod tests {
     use super::{log_start, DomDebugFragment};
-    use crate::{self as vertigo, css, dom};
+    use crate::{self as vertigo, css, dom, driver_module::api::CallbackId};
 
     use std::sync::Mutex;
     static SEMAPHORE: Mutex<()> = Mutex::new(());
@@ -262,6 +263,7 @@ mod tests {
     #[test]
     fn pseudo_html_list() {
         let _lock = SEMAPHORE.lock().unwrap();
+        CallbackId::reset();
 
         log_start();
         let _el = dom! {
@@ -283,6 +285,7 @@ mod tests {
     #[test]
     fn pseudo_html_css() {
         let _lock = SEMAPHORE.lock().unwrap();
+        CallbackId::reset();
 
         let green = css!("color: green;");
         log_start();
@@ -296,6 +299,7 @@ mod tests {
     #[test]
     fn pseudo_html_callback() {
         let _lock = SEMAPHORE.lock().unwrap();
+        CallbackId::reset();
 
         let callback = || ();
         log_start();
@@ -303,6 +307,6 @@ mod tests {
             <div on_click={callback}>"something"</div>
         };
         let html = DomDebugFragment::from_log().to_pseudo_html();
-        assert_eq!(html, "<div click=2>something</div>");
+        assert_eq!(html, "<div click=1>something</div>");
     }
 }
