@@ -1,22 +1,22 @@
+use std::rc::Rc;
+use std::sync::atomic::{AtomicU64, Ordering};
+
 use crate::{
     struct_mut::{HashMapMut, ValueMut},
     DropResource, JsValue,
 };
-use std::rc::Rc;
 
 #[derive(PartialEq, Eq, Hash, Clone, Debug, Copy)]
 pub struct CallbackId(u64);
 
-fn get_unique_id() -> u64 {
-    use std::sync::atomic::{AtomicU64, Ordering};
-    static COUNTER: AtomicU64 = AtomicU64::new(1);
-    COUNTER.fetch_add(1, Ordering::Relaxed)
-}
+static COUNTER: AtomicU64 = AtomicU64::new(1);
 
 impl CallbackId {
     #[allow(clippy::new_without_default)]
     pub fn new() -> CallbackId {
-        CallbackId(get_unique_id())
+        CallbackId(
+            COUNTER.fetch_add(1, Ordering::Relaxed)
+        )
     }
 
     pub fn as_u64(&self) -> u64 {
@@ -25,6 +25,11 @@ impl CallbackId {
 
     pub fn from_u64(id: u64) -> Self {
         Self(id)
+    }
+
+    #[cfg(test)]
+    pub fn reset() {
+        COUNTER.store(1, Ordering::Relaxed)
     }
 }
 
