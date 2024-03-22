@@ -159,7 +159,7 @@ pub use vertigo_macro::include_static;
 /// Allows to create an event handler based on provided arguments
 ///
 /// ```rust
-/// use vertigo::{bind, dom, Value,};
+/// use vertigo::{bind, dom, Value};
 ///
 /// let count = Value::new(0);
 ///

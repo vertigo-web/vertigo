@@ -8,6 +8,7 @@
 * `Driver::plains` method to allow responding with plaintext pages
 * In `css!` macro there is now possibility to reference a class created by another `css!` using `[]` brackets
 * Enums nad newtypes support in `AutoJsJson`
+* `bind!` macro now accepts namespaced variables, f. ex. `bind!(state.value, || value + 100)`
 * Components now accept value without attribute name if the names matches (`color={color}` → `{color}`)
 
 ### Changed

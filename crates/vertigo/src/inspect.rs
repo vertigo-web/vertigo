@@ -148,7 +148,6 @@ impl DomDebugFragment {
                     event_name,
                     callback_id,
                 } => {
-                    println!("CallbackAdd {}- {}", callback_id.as_u64(), event_name);
                     map.entry(id).and_modify(|node| {
                         node.callbacks.insert(event_name, callback_id);
                     });

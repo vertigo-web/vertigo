@@ -1,3 +1,4 @@
+use std::collections::HashSet;
 use std::collections::VecDeque;
 
 use proc_macro::{Span, TokenStream, TokenTree};
@@ -19,13 +20,21 @@ pub(crate) fn bind_inner(input: TokenStream) -> Result<TokenStream, String> {
     let first_pipe = is_first_pipe_char(body.as_slice());
     let body: TokenStream2 = body.iter().cloned().collect::<TokenStream>().into();
 
+    let mut idents_seen = HashSet::new();
+
     for item in bind_params {
-        let Some(name_param) = find_param_name(item) else {
+        let Some(param_name) = find_param_name(item) else {
             return Ok(quote! {""}.into());
         };
 
+        if !idents_seen.insert(param_name.clone()) {
+            emit_error!(item.last().unwrap().span(), "Conflicting variable name: {}", param_name);
+        }
+
+        let item_expr: TokenStream2 = item.iter().cloned().collect::<TokenStream>().into();
+
         clone_stm.push(quote! {
-            let #name_param = #name_param.clone();
+            let #param_name = #item_expr.clone();
         });
     }
 
@@ -126,25 +135,23 @@ fn is_char(token: &TokenTree, char: char) -> bool {
 }
 
 fn find_param_name(params: &[TokenTree]) -> Option<Ident2> {
-    if params.len() == 1 {
-        if let Some(first) = params.first() {
-            return if let TokenTree::Ident(value) = &first {
-                Some(format_ident!("{}", value.to_string()))
-            } else {
-                emit_error!(
-                    Span::call_site(),
-                    "Can't find variable name, expected ident (1)"
-                );
-                None
-            };
+    if let Some(last) = params.last() {
+        if let TokenTree::Ident(value) = &last {
+            Some(format_ident!("{}", value.to_string()))
+        } else {
+            emit_error!(
+                Span::call_site(),
+                "Can't find variable name, expected ident (1)"
+            );
+            None
         }
+    } else {
+        emit_error!(
+            Span::call_site(),
+            "Can't find variable name, expected ident (2)"
+        );
+        None
     }
-
-    emit_error!(
-        Span::call_site(),
-        "Can't find variable name, expected ident (2)"
-    );
-    None
 }
 
 fn is_first_pipe_char(list: &[TokenTree]) -> bool {
@@ -165,7 +172,7 @@ struct TokensParamsBody<'a> {
     body: Vec<TokenTree>,
 }
 
-fn is_bracket_contain(tokens: &[TokenTree]) -> bool {
+fn contains_bracket(tokens: &[TokenTree]) -> bool {
     for token in tokens {
         if let TokenTree::Punct(inner) = token {
             if inner.as_char() == '|' {
@@ -238,7 +245,7 @@ fn split_params_and_body_block(tokens: &[TokenTree]) -> Result<TokensParamsBody,
 }
 
 fn split_params_and_body(tokens: &[TokenTree]) -> Result<TokensParamsBody, String> {
-    let bracket_contain = is_bracket_contain(tokens);
+    let bracket_contain = contains_bracket(tokens);
 
     if bracket_contain {
         split_params_and_body_function(tokens)
