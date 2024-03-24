@@ -3,9 +3,9 @@ use std::{
     sync::Arc,
 };
 use tokio::sync::mpsc::UnboundedSender;
+use vertigo::JsValue;
 
 use crate::serve::{
-    js_value::JsValue,
     mount_path::MountPathConfig,
     response_state::ResponseState,
     wasm::{FetchRequest, FetchResponse, Message, WasmInstance},
@@ -13,10 +13,10 @@ use crate::serve::{
 
 use super::{
     dom_command::dom_command_from_js_json,
+    DomCommand, HtmlNode,
     element::AllElements,
     html_element::{HtmlDocument, HtmlElement},
     send_request::send_request,
-    DomCommand, HtmlNode,
 };
 
 enum FetchStatus {

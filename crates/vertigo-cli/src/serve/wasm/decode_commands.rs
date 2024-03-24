@@ -1,9 +1,7 @@
 use std::collections::HashMap;
+use vertigo::{from_json, JsJson, JsValue};
 
-use crate::serve::{
-    html::RequestBody,
-    js_value::{from_json, JsJson, JsValue},
-};
+use crate::serve::html::RequestBody;
 
 use super::{get_now::get_now, js_value_match::Match, message::CallWebsocketResult, FetchRequest};
 

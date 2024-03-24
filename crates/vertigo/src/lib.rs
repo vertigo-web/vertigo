@@ -400,6 +400,7 @@ fn get_driver_state<R: Default, F: FnOnce(&DriverConstruct) -> R>(
 
 // Methods for memory allocation
 
+#[cfg(all(target_arch = "wasm32", target_os = "unknown"))]
 #[no_mangle]
 pub fn alloc(size: u32) -> u32 {
     get_driver_state("alloc", |state| {
@@ -407,6 +408,7 @@ pub fn alloc(size: u32) -> u32 {
     })
 }
 
+#[cfg(all(target_arch = "wasm32", target_os = "unknown"))]
 #[no_mangle]
 pub fn free(pointer: u32) {
     get_driver_state("free", |state| {
