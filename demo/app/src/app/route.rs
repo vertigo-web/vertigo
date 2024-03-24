@@ -11,6 +11,7 @@ pub enum Route {
     Chat,
     Todo,
     DropFile,
+    JsApiAccess,
     NotFound,
 }
 
@@ -32,6 +33,7 @@ impl Route {
             "/chat" => Self::Chat,
             "/todo" => Self::Todo,
             "/drop-file" => Self::DropFile,
+            "/js-api-access" => Self::JsApiAccess,
             _ => Self::NotFound,
         }
     }
@@ -47,6 +49,7 @@ impl Route {
             Self::Chat => "Chat",
             Self::Todo => "Todo",
             Self::DropFile => "Drop File",
+            Self::JsApiAccess => "JS Api Access",
             Self::NotFound => "Not Found",
         }
     }
@@ -70,6 +73,7 @@ impl Display for Route {
             Self::Chat => "/chat",
             Self::Todo => "/todo",
             Self::DropFile => "/drop-file",
+            Self::JsApiAccess => "/js-api-access",
             Self::NotFound => "/not-found",
         };
         f.write_str(str)

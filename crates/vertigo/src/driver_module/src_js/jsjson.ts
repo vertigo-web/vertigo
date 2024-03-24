@@ -1,5 +1,16 @@
 import { BufferCursor, getStringSize } from "./buffer_cursor";
 
+const JsJsonConst = {
+    True: 1,
+    False: 2,
+    Null: 3,
+
+    String: 4,
+    Number: 5,
+    List: 6,
+    Object: 7,
+} as const;
+
 export type JsJsonType
     = boolean
     | null
@@ -54,27 +65,27 @@ export const jsJsonGetSize = (value: JsJsonType): number => {
 export const jsJsonDecodeItem = (cursor: BufferCursor): JsJsonType => {
     const typeParam = cursor.getByte();
 
-    if (typeParam === 1) {
+    if (typeParam === JsJsonConst.True) {
         return true;
     }
 
-    if (typeParam === 2) {
+    if (typeParam === JsJsonConst.False) {
         return false;
     }
 
-    if (typeParam === 3) {
+    if (typeParam === JsJsonConst.Null) {
         return null;
     }
 
-    if (typeParam === 4) {
+    if (typeParam === JsJsonConst.String) {
         return cursor.getString();
     }
 
-    if (typeParam === 5) {
+    if (typeParam === JsJsonConst.Number) {
         return cursor.getF64();
     }
 
-    if (typeParam === 6) {
+    if (typeParam === JsJsonConst.List) {
         const out: Array<JsJsonType> = [];
 
         const listSize = cursor.getU32();
@@ -102,34 +113,34 @@ export const jsJsonDecodeItem = (cursor: BufferCursor): JsJsonType => {
 
 export const saveJsJsonToBufferItem = (value: JsJsonType, cursor: BufferCursor) => {
     if (value === true) {
-        cursor.setByte(1);
+        cursor.setByte(JsJsonConst.True);
         return;
     }
 
     if (value === false) {
-        cursor.setByte(2);
+        cursor.setByte(JsJsonConst.False);
         return;
     }
 
     if (value === null) {
-        cursor.setByte(3);
+        cursor.setByte(JsJsonConst.Null);
         return;
     }
 
     if (typeof value === 'string') {
-        cursor.setByte(4);
+        cursor.setByte(JsJsonConst.String);
         cursor.setString(value);
         return;
     }
 
     if (typeof value === 'number') {
-        cursor.setByte(5);
+        cursor.setByte(JsJsonConst.Number);
         cursor.setF64(value);
         return;
     }
 
     if (Array.isArray(value)) {
-        cursor.setByte(6);
+        cursor.setByte(JsJsonConst.List);
         cursor.setU32(value.length);
 
         for (const item of value) {
@@ -146,7 +157,7 @@ export const saveJsJsonToBufferItem = (value: JsJsonType, cursor: BufferCursor) 
         list.push([key, propertyValue]);
     }
 
-    cursor.setByte(7);
+    cursor.setByte(JsJsonConst.Object);
     cursor.setU16(list.length);
 
     for (const [key, propertyValue] of list) {

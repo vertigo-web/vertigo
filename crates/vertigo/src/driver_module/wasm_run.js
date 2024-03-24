@@ -122,18 +122,27 @@ var GuardJsValue;
     };
     GuardJsValue.isNumber = (value) => {
         if (typeof value === 'object' && value !== null && 'type' in value) {
-            return value.type === 'i32' || value.type === 'u32';
+            return value.type === JsValueConst.I32 || value.type === JsValueConst.U32;
         }
         return false;
     };
     GuardJsValue.isBigInt = (value) => {
         if (typeof value === 'object' && value !== null && 'type' in value) {
-            return value.type === 'i64' || value.type === 'u64';
+            return value.type === JsValueConst.I64 || value.type === JsValueConst.U64;
         }
         return false;
     };
 })(GuardJsValue || (GuardJsValue = {}));
 
+const JsJsonConst = {
+    True: 1,
+    False: 2,
+    Null: 3,
+    String: 4,
+    Number: 5,
+    List: 6,
+    Object: 7,
+};
 const jsJsonGetSize = (value) => {
     if (typeof value === 'boolean') {
         return 1;
@@ -164,22 +173,22 @@ const jsJsonGetSize = (value) => {
 };
 const jsJsonDecodeItem = (cursor) => {
     const typeParam = cursor.getByte();
-    if (typeParam === 1) {
+    if (typeParam === JsJsonConst.True) {
         return true;
     }
-    if (typeParam === 2) {
+    if (typeParam === JsJsonConst.False) {
         return false;
     }
-    if (typeParam === 3) {
+    if (typeParam === JsJsonConst.Null) {
         return null;
     }
-    if (typeParam === 4) {
+    if (typeParam === JsJsonConst.String) {
         return cursor.getString();
     }
-    if (typeParam === 5) {
+    if (typeParam === JsJsonConst.Number) {
         return cursor.getF64();
     }
-    if (typeParam === 6) {
+    if (typeParam === JsJsonConst.List) {
         const out = [];
         const listSize = cursor.getU32();
         for (let i = 0; i < listSize; i++) {
@@ -199,29 +208,29 @@ const jsJsonDecodeItem = (cursor) => {
 };
 const saveJsJsonToBufferItem = (value, cursor) => {
     if (value === true) {
-        cursor.setByte(1);
+        cursor.setByte(JsJsonConst.True);
         return;
     }
     if (value === false) {
-        cursor.setByte(2);
+        cursor.setByte(JsJsonConst.False);
         return;
     }
     if (value === null) {
-        cursor.setByte(3);
+        cursor.setByte(JsJsonConst.Null);
         return;
     }
     if (typeof value === 'string') {
-        cursor.setByte(4);
+        cursor.setByte(JsJsonConst.String);
         cursor.setString(value);
         return;
     }
     if (typeof value === 'number') {
-        cursor.setByte(5);
+        cursor.setByte(JsJsonConst.Number);
         cursor.setF64(value);
         return;
     }
     if (Array.isArray(value)) {
-        cursor.setByte(6);
+        cursor.setByte(JsJsonConst.List);
         cursor.setU32(value.length);
         for (const item of value) {
             saveJsJsonToBufferItem(item, cursor);
@@ -233,7 +242,7 @@ const saveJsJsonToBufferItem = (value, cursor) => {
     for (const [key, propertyValue] of Object.entries(value)) {
         list.push([key, propertyValue]);
     }
-    cursor.setByte(7);
+    cursor.setByte(JsJsonConst.Object);
     cursor.setU16(list.length);
     for (const [key, propertyValue] of list) {
         cursor.setString(key);
@@ -241,55 +250,77 @@ const saveJsJsonToBufferItem = (value, cursor) => {
     }
 };
 
+const JsValueConst = {
+    U32: 1,
+    I32: 2,
+    U64: 3,
+    I64: 4,
+    F64: 5,
+    True: 6,
+    False: 7,
+    Null: 8,
+    Undefined: 9,
+    Vec: 10,
+    String: 11,
+    List: 12,
+    Object: 13,
+    Json: 14,
+};
 //https://github.com/unsplash/unsplash-js/pull/174
 // export type AnyJson = boolean | number | string | null | JsonArray | JsonMap;
 // export interface JsonMap { [key: string]: AnyJson }
 // export interface JsonArray extends Array<AnyJson> {}
 const jsValueDecodeItem = (cursor) => {
     const typeParam = cursor.getByte();
-    if (typeParam === 1) {
+    if (typeParam === JsValueConst.U32) {
         return {
-            type: 'u32',
+            type: JsValueConst.U32,
             value: cursor.getU32()
         };
     }
-    if (typeParam === 2) {
+    if (typeParam === JsValueConst.I32) {
         return {
-            type: 'u32',
+            type: JsValueConst.I32,
             value: cursor.getI32()
         };
     }
-    if (typeParam === 3) {
+    if (typeParam === JsValueConst.U64) {
         return {
-            type: 'u64',
+            type: JsValueConst.U64,
             value: cursor.getU64()
         };
     }
-    if (typeParam === 4) {
+    if (typeParam === JsValueConst.I64) {
         return {
-            type: 'i64',
+            type: JsValueConst.I64,
             value: cursor.getI64()
         };
     }
-    if (typeParam === 5) {
+    if (typeParam === JsValueConst.F64) {
+        return {
+            type: JsValueConst.F64,
+            value: cursor.getF64()
+        };
+    }
+    if (typeParam === JsValueConst.True) {
         return true;
     }
-    if (typeParam === 6) {
+    if (typeParam === JsValueConst.False) {
         return false;
     }
-    if (typeParam === 7) {
+    if (typeParam === JsValueConst.Null) {
         return null;
     }
-    if (typeParam === 8) {
+    if (typeParam === JsValueConst.Undefined) {
         return undefined;
     }
-    if (typeParam === 9) {
+    if (typeParam === JsValueConst.Vec) {
         return cursor.getBuffer();
     }
-    if (typeParam === 10) {
+    if (typeParam === JsValueConst.String) {
         return cursor.getString();
     }
-    if (typeParam === 11) {
+    if (typeParam === JsValueConst.List) {
         const out = [];
         const listSize = cursor.getU32();
         for (let i = 0; i < listSize; i++) {
@@ -297,7 +328,7 @@ const jsValueDecodeItem = (cursor) => {
         }
         return out;
     }
-    if (typeParam === 12) {
+    if (typeParam === JsValueConst.Object) {
         const out = {};
         const listSize = cursor.getU16();
         for (let i = 0; i < listSize; i++) {
@@ -306,14 +337,14 @@ const jsValueDecodeItem = (cursor) => {
             out[key] = value;
         }
         return {
-            type: 'object',
+            type: JsValueConst.Object,
             value: out
         };
     }
-    if (typeParam === 13) {
+    if (typeParam === JsValueConst.Json) {
         const json = jsJsonDecodeItem(cursor);
         return {
-            type: 'json',
+            type: JsValueConst.Json,
             value: json
         };
     }
@@ -350,13 +381,13 @@ const getSize = (value) => {
     if (value instanceof Uint8Array) {
         return 1 + 4 + value.length;
     }
-    if (value.type === 'i32' || value.type === 'u32') {
-        return 5; //1 + 4
+    if (value.type === JsValueConst.I32 || value.type === JsValueConst.U32) {
+        return 5; // 1 + 4
     }
-    if (value.type === 'i64' || value.type === 'u64') {
-        return 9; //1 + 8
+    if (value.type === JsValueConst.I64 || value.type === JsValueConst.U64 || value.type == JsValueConst.F64) {
+        return 9; // 1 + 8
     }
-    if (value.type === 'object') {
+    if (value.type === JsValueConst.Object) {
         let sum = 1 + 2;
         for (const [key, propertyValue] of Object.entries(value.value)) {
             sum += 4 + getStringSize(key);
@@ -364,72 +395,77 @@ const getSize = (value) => {
         }
         return sum;
     }
-    if (value.type === 'json') {
+    if (value.type === JsValueConst.Json) {
         return 1 + jsJsonGetSize(value.value);
     }
     return assertNever();
 };
 const saveToBufferItem = (value, cursor) => {
     if (value === true) {
-        cursor.setByte(5);
+        cursor.setByte(JsValueConst.True);
         return;
     }
     if (value === false) {
-        cursor.setByte(6);
+        cursor.setByte(JsValueConst.False);
         return;
     }
     if (value === null) {
-        cursor.setByte(7);
+        cursor.setByte(JsValueConst.Null);
         return;
     }
     if (value === undefined) {
-        cursor.setByte(8);
+        cursor.setByte(JsValueConst.Undefined);
         return;
     }
     if (value instanceof Uint8Array) {
-        cursor.setByte(9);
+        cursor.setByte(JsValueConst.Vec);
         cursor.setBuffer(value);
         return;
     }
     if (GuardJsValue.isString(value)) {
-        cursor.setByte(10);
+        cursor.setByte(JsValueConst.String);
         cursor.setString(value);
         return;
     }
     if (Array.isArray(value)) {
-        cursor.setByte(11);
+        cursor.setByte(JsValueConst.List);
         cursor.setU32(value.length);
         for (const item of value) {
             saveToBufferItem(item, cursor);
         }
         return;
     }
-    if (value.type === 'u32') {
-        cursor.setByte(1);
+    if (value.type === JsValueConst.U32) {
+        cursor.setByte(JsValueConst.U32);
         cursor.setU32(value.value);
         return;
     }
-    if (value.type === 'i32') {
-        cursor.setByte(2);
+    if (value.type === JsValueConst.I32) {
+        cursor.setByte(JsValueConst.I32);
         cursor.setI32(value.value);
         return;
     }
-    if (value.type === 'u64') {
-        cursor.setByte(3);
+    if (value.type === JsValueConst.U64) {
+        cursor.setByte(JsValueConst.U64);
         cursor.setU64(value.value);
         return;
     }
-    if (value.type === 'i64') {
-        cursor.setByte(4);
+    if (value.type === JsValueConst.I64) {
+        cursor.setByte(JsValueConst.I64);
         cursor.setI64(value.value);
         return;
     }
-    if (value.type === 'object') {
+    if (value.type === JsValueConst.F64) {
+        cursor.setByte(JsValueConst.F64);
+        cursor.setF64(value.value);
+        return;
+    }
+    if (value.type === JsValueConst.Object) {
         const list = [];
         for (const [key, propertyValue] of Object.entries(value.value)) {
             list.push([key, propertyValue]);
         }
-        cursor.setByte(12);
+        cursor.setByte(JsValueConst.Object);
         cursor.setU16(list.length);
         for (const [key, propertyValue] of list) {
             cursor.setString(key);
@@ -437,8 +473,8 @@ const saveToBufferItem = (value, cursor) => {
         }
         return;
     }
-    if (value.type === 'json') {
-        cursor.setByte(13);
+    if (value.type === JsValueConst.Json) {
+        cursor.setByte(JsValueConst.Json);
         saveJsJsonToBufferItem(value.value, cursor);
         return;
     }
@@ -487,20 +523,20 @@ const convertFromJsValue = (value) => {
         }
         return newList;
     }
-    if (value.type === 'u32' || value.type === 'i32') {
+    if (value.type === JsValueConst.U32 || value.type === JsValueConst.I32) {
         return value.value;
     }
-    if (value.type === 'u64' || value.type === 'i64') {
+    if (value.type === JsValueConst.U64 || value.type === JsValueConst.I64 || value.type === JsValueConst.F64) {
         return value.value;
     }
-    if (value.type === 'object') {
+    if (value.type === JsValueConst.Object) {
         const result = {};
         for (const [key, propertyValue] of Object.entries(value.value)) {
             result[key] = convertFromJsValue(propertyValue);
         }
         return result;
     }
-    if (value.type === 'json') {
+    if (value.type === JsValueConst.Json) {
         return value.value;
     }
     return assertNever();
@@ -514,20 +550,30 @@ const convertToJsValue = (value) => {
         return value;
     }
     if (typeof value === 'number') {
-        if (-(2 ** 31) <= value && value < 2 ** 31) {
+        if (value === (value | 0)) {
+            // is integer
+            if (-(2 ** 31) <= value && value < 2 ** 31) {
+                return {
+                    type: JsValueConst.I32,
+                    value
+                };
+            }
             return {
-                type: 'i32',
-                value
+                type: JsValueConst.I64,
+                value: BigInt(value)
             };
         }
-        return {
-            type: 'i64',
-            value: BigInt(value)
-        };
+        else {
+            // is float
+            return {
+                type: JsValueConst.F64,
+                value: value,
+            };
+        }
     }
     if (typeof value === 'bigint') {
         return {
-            type: 'i64',
+            type: JsValueConst.I64,
             value
         };
     }
@@ -538,7 +584,7 @@ const convertToJsValue = (value) => {
         try {
             const json = convertToJsJson(value);
             return {
-                type: 'json',
+                type: JsValueConst.Json,
                 value: json
             };
         }
@@ -549,7 +595,7 @@ const convertToJsValue = (value) => {
             result[propName] = convertToJsValue(propValue);
         }
         return {
-            type: 'object',
+            type: JsValueConst.Object,
             value: result
         };
     }
@@ -557,7 +603,7 @@ const convertToJsValue = (value) => {
         try {
             const list = value.map(convertToJsJson);
             return {
-                type: 'json',
+                type: JsValueConst.Json,
                 value: list
             };
         }
@@ -779,7 +825,7 @@ const catchError = async (wasm, callback_id, response, callbackSuccess) => {
         const responseMessage = new String(error).toString();
         wasm.wasm_callback(callback_id, [
             false,
-            { type: 'u32', value: response.status },
+            { type: JsValueConst.U32, value: response.status },
             responseMessage //body (string)
         ]);
     }
@@ -843,9 +889,9 @@ class Fetch {
                     const json = await response.json();
                     wasm.wasm_callback(callback_id, [
                         true,
-                        { type: 'u32', value: response.status },
+                        { type: JsValueConst.U32, value: response.status },
                         {
-                            type: 'json',
+                            type: JsValueConst.Json,
                             value: json
                         }
                     ]);
@@ -857,7 +903,7 @@ class Fetch {
                     const text = await response.text();
                     wasm.wasm_callback(callback_id, [
                         true,
-                        { type: 'u32', value: response.status },
+                        { type: JsValueConst.U32, value: response.status },
                         text //body (text)
                     ]);
                 });
@@ -868,7 +914,7 @@ class Fetch {
                 const textUint8Array = new Uint8Array(text);
                 wasm.wasm_callback(callback_id, [
                     true,
-                    { type: 'u32', value: response.status },
+                    { type: JsValueConst.U32, value: response.status },
                     textUint8Array //body (text)
                 ]);
             });
@@ -878,7 +924,7 @@ class Fetch {
             const responseMessage = new String(err).toString();
             wasm.wasm_callback(callback_id, [
                 false,
-                { type: 'u32', value: 0 },
+                { type: JsValueConst.U32, value: 0 },
                 responseMessage //body (string)
             ]);
         }
