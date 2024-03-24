@@ -1,4 +1,4 @@
-import { JsValueType } from "./jsvalue";
+import { JsValueType, JsValueConst } from "./jsvalue";
 
 export namespace GuardJsValue {
     export const isString = (value: JsValueType): value is string => {
@@ -9,17 +9,17 @@ export namespace GuardJsValue {
         return value === null || typeof value === 'string';
     }
 
-    export const isNumber = (value: JsValueType): value is { type: 'u32', value: number } | { type: 'i32', value: number } => {
+    export const isNumber = (value: JsValueType): value is { type: typeof JsValueConst.U32, value: number } | { type: typeof JsValueConst.I32, value: number } => {
         if (typeof value === 'object' && value !== null && 'type' in value) {
-            return value.type === 'i32' || value.type === 'u32'
+            return value.type === JsValueConst.I32 || value.type === JsValueConst.U32
         }
 
         return false;
     }
 
-    export const isBigInt = (value: JsValueType): value is { type: 'u64', value: bigint } | { type: 'i64', value: bigint } => {
+    export const isBigInt = (value: JsValueType): value is { type: typeof JsValueConst.U64, value: bigint } | { type: typeof JsValueConst.I64, value: bigint } => {
         if (typeof value === 'object' && value !== null && 'type' in value) {
-            return value.type === 'i64' || value.type === 'u64'
+            return value.type === JsValueConst.I64 || value.type === JsValueConst.U64
         }
 
         return false;

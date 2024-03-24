@@ -4,6 +4,7 @@ mod dropfiles;
 mod game_of_life;
 mod github_explorer;
 mod input;
+mod js_api_access;
 mod render;
 mod route;
 mod state;

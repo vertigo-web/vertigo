@@ -9,6 +9,7 @@ use super::{
     game_of_life::GameOfLife,
     github_explorer::GitHubExplorer,
     input::MyInput,
+    js_api_access::JsApiAccess,
     route::Route,
     styling::Styling,
     sudoku::Sudoku,
@@ -81,6 +82,7 @@ fn render_header(state: &app::State) -> DomNode {
                 { render_menu_item(state.route.route.clone(), Route::Chat) }
                 { render_menu_item(state.route.route.clone(), Route::Todo) }
                 { render_menu_item(state.route.route.clone(), Route::DropFile) }
+                { render_menu_item(state.route.route.clone(), Route::JsApiAccess) }
             </div>
         </div>
     }
@@ -94,7 +96,6 @@ fn title_value(state: app::State) -> Computed<String> {
         let route = state.route.route.get(context);
 
         match route {
-            Route::Styling => "Styling".into(),
             Route::Counters => {
                 let sum = sum.get(context);
                 format!("Counter = {sum}")
@@ -104,12 +105,7 @@ fn title_value(state: app::State) -> Computed<String> {
                 let input_value = input_value.get(context);
                 format!("Input => {input_value}")
             }
-            Route::GithubExplorer => "GithubExplorer".into(),
-            Route::GameOfLife => "GameOfLife".into(),
-            Route::Chat => "Chat".into(),
-            Route::Todo => "Todo".into(),
-            Route::DropFile => "DropFile".into(),
-            Route::NotFound => "NotFound".into(),
+            _ => route.label().to_string(),
         }
     })
 }
@@ -132,6 +128,7 @@ pub fn render(state: &app::State) -> DomNode {
             Route::Chat => dom! { <Chat ws_chat={&state.ws_chat}/> },
             Route::Todo => dom! { <Todo /> },
             Route::DropFile => dom! { <DropFiles /> },
+            Route::JsApiAccess => dom! { <JsApiAccess /> },
             Route::NotFound => dom! { <div>"Page Not Found"</div> },
         }
     });

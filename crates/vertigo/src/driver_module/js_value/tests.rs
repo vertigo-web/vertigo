@@ -17,6 +17,21 @@ fn json_json_string() {
 }
 
 #[test]
+fn json_json_float() {
+    let data1 = JsValue::F64(3.15);
+
+    let block = data1.to_snapshot();
+
+    let Ok(data2) = JsValue::from_block(block) else {
+        unreachable!();
+    };
+
+    assert_eq!(data2, data1);
+
+    assert_eq!(data2, JsValue::F64(3.15));
+}
+
+#[test]
 fn json_json_list() {
     let data1 = JsValue::Json(JsJson::List(vec![
         JsJson::String("aaaa".into()),

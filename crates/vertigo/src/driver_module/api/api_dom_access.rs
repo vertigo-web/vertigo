@@ -111,7 +111,6 @@ impl DomAccess {
         }
     }
 
-    #[must_use]
     pub fn fetch(self) -> JsValue {
         let memory = JsValue::List(self.builder).to_snapshot();
         let (ptr, size) = memory.get_ptr_and_size();

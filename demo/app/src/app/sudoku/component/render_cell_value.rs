@@ -11,7 +11,7 @@ pub fn render_cell_value(item_height_size: u32, value: SudokuValue, cell: &Cell)
             match show_delete {
                 true => {
                     let on_click = bind!(cell, || {
-                        cell.number.value.set(None);
+                        cell.number.set(None);
                     });
 
                     let css_delete = css!("

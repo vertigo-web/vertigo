@@ -55,7 +55,7 @@ fn view_one_possible(cell_width: u32, cell: &Cell) -> DomNode {
 
             for number in possible.iter() {
                 let on_set = bind!(cell, number, || {
-                    cell.number.value.set(Some(number));
+                    cell.number.set(Some(number));
                 });
 
                 wrapper.add_child(dom! {
@@ -83,7 +83,7 @@ fn view_last_value(cell_width: u32, cell: &Cell, possible_last_value: SudokuValu
 
     let on_set = Computed::from(bind!(cell, possible_last_value, |_context| -> Rc<dyn Fn() + 'static> {
         Rc::new(bind!(cell, possible_last_value, || {
-            cell.number.value.set(Some(possible_last_value));
+            cell.number.set(Some(possible_last_value));
         }))
     }));
 
@@ -122,7 +122,7 @@ fn view_default(cell_width: u32, cell: &Cell, possible: HashSet<SudokuValue>) ->
 
         let on_click = bind_rc!(cell, should_show, number, || {
             if should_show {
-                cell.number.value.set(Some(number));
+                cell.number.set(Some(number));
             }
         });
 

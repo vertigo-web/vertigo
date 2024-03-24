@@ -1,3 +1,5 @@
+use std::collections::HashMap;
+
 use super::{
     js_json_struct::{decode_js_json_inner, JsJson},
     js_value_list_decoder::JsValueListDecoder,
@@ -5,7 +7,6 @@ use super::{
     memory_block_read::MemoryBlockRead,
     memory_block_write::MemoryBlockWrite,
 };
-use std::collections::HashMap;
 
 const PARAM_TYPE: u32 = 1;
 const STRING_SIZE: u32 = 4;
@@ -14,21 +15,22 @@ const LIST_COUNT: u32 = 4;
 const OBJECT_COUNT: u32 = 2;
 
 enum JsValueConst {
-    U32,
-    I32,
-    U64,
-    I64,
+    U32 = 1,
+    I32 = 2,
+    U64 = 3,
+    I64 = 4,
+    F64 = 5,
 
-    True,
-    False,
-    Null,
-    Undefined,
+    True = 6,
+    False = 7,
+    Null = 8,
+    Undefined = 9,
 
-    Vec,
-    String,
-    List,
-    Object,
-    Json,
+    Vec = 10,
+    String = 11,
+    List = 12,
+    Object = 13,
+    Json = 14,
 }
 
 impl JsValueConst {
@@ -38,15 +40,16 @@ impl JsValueConst {
             2 => Some(JsValueConst::I32),
             3 => Some(JsValueConst::U64),
             4 => Some(JsValueConst::I64),
-            5 => Some(JsValueConst::True),
-            6 => Some(JsValueConst::False),
-            7 => Some(JsValueConst::Null),
-            8 => Some(JsValueConst::Undefined),
-            9 => Some(JsValueConst::Vec),
-            10 => Some(JsValueConst::String),
-            11 => Some(JsValueConst::List),
-            12 => Some(JsValueConst::Object),
-            13 => Some(JsValueConst::Json),
+            5 => Some(JsValueConst::F64),
+            6 => Some(JsValueConst::True),
+            7 => Some(JsValueConst::False),
+            8 => Some(JsValueConst::Null),
+            9 => Some(JsValueConst::Undefined),
+            10 => Some(JsValueConst::Vec),
+            11 => Some(JsValueConst::String),
+            12 => Some(JsValueConst::List),
+            13 => Some(JsValueConst::Object),
+            14 => Some(JsValueConst::Json),
             _ => None,
         }
     }
@@ -54,23 +57,7 @@ impl JsValueConst {
 
 impl From<JsValueConst> for u8 {
     fn from(value: JsValueConst) -> Self {
-        match value {
-            JsValueConst::U32 => 1,
-            JsValueConst::I32 => 2,
-            JsValueConst::U64 => 3,
-            JsValueConst::I64 => 4,
-
-            JsValueConst::True => 5,
-            JsValueConst::False => 6,
-            JsValueConst::Null => 7,
-            JsValueConst::Undefined => 8,
-
-            JsValueConst::Vec => 9,
-            JsValueConst::String => 10,
-            JsValueConst::List => 11,
-            JsValueConst::Object => 12,
-            JsValueConst::Json => 13,
-        }
+        value as u8
     }
 }
 
@@ -81,15 +68,16 @@ pub enum JsValue {
     I32(i32),
     U64(u64),
     I64(i64),
+    F64(f64),
 
     True,
     False,
     Null,
     Undefined,
 
-    Vec(Vec<u8>),       //type, length of the sequence of bytes, sequence of bytes
-    String(String),     //type, length of the sequence of bytes, sequence of bytes
-    List(Vec<JsValue>), //type, length
+    Vec(Vec<u8>),       // type, length, sequence of bytes
+    String(String),     // type, length, sequence of chars
+    List(Vec<JsValue>), // type, length
     Object(HashMap<String, JsValue>),
 
     Json(JsJson),
@@ -126,10 +114,11 @@ impl JsValue {
 
     fn get_size(&self) -> u32 {
         match self {
-            Self::U32(..) => PARAM_TYPE + 4,
-            Self::I32(..) => PARAM_TYPE + 4,
-            Self::U64(..) => PARAM_TYPE + 8,
-            Self::I64(..) => PARAM_TYPE + 8,
+            Self::U32(_) => PARAM_TYPE + 4,
+            Self::I32(_) => PARAM_TYPE + 4,
+            Self::U64(_) => PARAM_TYPE + 8,
+            Self::I64(_) => PARAM_TYPE + 8,
+            Self::F64(_) => PARAM_TYPE + 8,
 
             Self::True => PARAM_TYPE,
             Self::False => PARAM_TYPE,
@@ -178,6 +167,10 @@ impl JsValue {
             Self::I64(value) => {
                 buff.write_u8(JsValueConst::I64);
                 buff.write_i64(*value);
+            }
+            Self::F64(value)=> {
+                buff.write_u8(JsValueConst::F64);
+                buff.write_f64(*value);
             }
 
             Self::True => {
@@ -238,19 +231,20 @@ impl JsValue {
 
     pub fn typename(&self) -> &'static str {
         match self {
-            Self::U32(..) => "u32",
-            Self::I32(..) => "i32",
-            Self::U64(..) => "u64",
-            Self::I64(..) => "i64",
+            Self::U32(_) => "u32",
+            Self::I32(_) => "i32",
+            Self::U64(_) => "u64",
+            Self::I64(_) => "i64",
+            Self::F64(_) => "f64",
             Self::True => "true",
             Self::False => "false",
             Self::Null => "null",
             Self::Undefined => "undefined",
-            Self::Vec(..) => "vec",
-            Self::String(..) => "string",
-            Self::List(..) => "list",
-            Self::Object(..) => "object",
-            Self::Json(..) => "json",
+            Self::Vec(_) => "vec",
+            Self::String(_) => "string",
+            Self::List(_) => "list",
+            Self::Object(_) => "object",
+            Self::Json(_) => "json",
         }
     }
 
@@ -304,6 +298,10 @@ fn decode_js_value_inner(buffer: &mut MemoryBlockRead) -> Result<JsValue, String
             let value = buffer.get_i64();
             JsValue::I64(value)
         }
+        JsValueConst::F64 => {
+            let value = buffer.get_f64();
+            JsValue::F64(value)
+        }
         JsValueConst::True => JsValue::True,
         JsValueConst::False => JsValue::False,
         JsValueConst::Null => JsValue::Null,
@@ -355,3 +353,84 @@ fn decode_js_value_inner(buffer: &mut MemoryBlockRead) -> Result<JsValue, String
 
     Ok(result)
 }
+
+macro_rules! impl_from {
+    ($from:ty, $to:ty, $js_type:ident) => {
+        impl From<$from> for JsValue {
+            fn from(value: $from) -> Self {
+                Self::$js_type(value as $to)
+            }
+        }
+    };
+}
+
+impl_from!(i8, i32, I32);
+impl_from!(i16, i32, I32);
+impl_from!(i32, i32, I32);
+impl_from!(i64, i64, I64);
+impl_from!(isize, i64, I64);
+
+impl_from!(u8, u32, U32);
+impl_from!(u16, u32, U32);
+impl_from!(u32, u32, U32);
+impl_from!(u64, u64, U64);
+impl_from!(usize, u64, U64);
+
+impl_from!(f64, f64, F64);
+
+impl From<&str> for JsValue {
+    fn from(value: &str) -> Self {
+        Self::str(value)
+    }
+}
+
+impl From<String> for JsValue {
+    fn from(value: String) -> Self {
+        Self::String(value)
+    }
+}
+
+impl From<bool> for JsValue {
+    fn from(value: bool) -> Self {
+        if value {
+            Self::True
+        } else {
+            Self::False
+        }
+    }
+}
+
+impl From<HashMap<String, JsValue>> for JsValue {
+    fn from(value: HashMap<String, JsValue>) -> Self {
+        Self::Object(value)
+    }
+}
+
+impl FromIterator<(String, JsValue)> for JsValue {
+    fn from_iter<T: IntoIterator<Item = (String, JsValue)>>(iter: T) -> Self {
+        let hash_map = HashMap::from_iter(iter);
+        JsValue::Object(hash_map)
+    }
+}
+
+impl From<Vec<(String, JsValue)>> for JsValue {
+    fn from(value: Vec<(String, JsValue)>) -> Self {
+        JsValue::from_iter(value)
+    }
+}
+
+impl<'a> FromIterator<(&'a str, JsValue)> for JsValue {
+    fn from_iter<T: IntoIterator<Item = (&'a str, JsValue)>>(iter: T) -> Self {
+        let iter = iter.into_iter()
+            .map(|(k, v)| (k.to_string(), v));
+        let hash_map = HashMap::from_iter(iter);
+        JsValue::Object(hash_map)
+    }
+}
+
+impl From<Vec<(&str, JsValue)>> for JsValue {
+    fn from(value: Vec<(&str, JsValue)>) -> Self {
+        JsValue::from_iter(value)
+    }
+}
+

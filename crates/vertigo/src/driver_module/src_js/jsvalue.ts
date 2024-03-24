@@ -3,19 +3,39 @@ import { BufferCursor, getStringSize } from "./buffer_cursor";
 import { GuardJsValue } from "./guard";
 import { jsJsonDecodeItem, jsJsonGetSize, JsJsonType, saveJsJsonToBufferItem } from "./jsjson";
 
+export const JsValueConst = {
+    U32: 1,
+    I32: 2,
+    U64: 3,
+    I64: 4,
+    F64: 5,
+
+    True: 6,
+    False: 7,
+    Null: 8,
+    Undefined: 9,
+
+    Vec: 10,
+    String: 11,
+    List: 12,
+    Object: 13,
+    Json: 14,
+} as const;
+
 export type JsValueType
-    = { type: 'u32', value: number, }
-    | { type: 'i32', value: number, }
-    | { type: 'u64', value: bigint, }
-    | { type: 'i64', value: bigint, }
+    = { type: typeof JsValueConst.U32, value: number, }
+    | { type: typeof JsValueConst.I32, value: number, }
+    | { type: typeof JsValueConst.U64, value: bigint, }
+    | { type: typeof JsValueConst.I64, value: bigint, }
+    | { type: typeof JsValueConst.F64, value: number, }
     | boolean
     | null
     | undefined
     | string
     | Array<JsValueType>
     | Uint8Array
-    | { type: 'object', value: JsValueMapType }
-    | { type: 'json', value: JsJsonType };
+    | { type: typeof JsValueConst.Object, value: JsValueMapType }
+    | { type: typeof JsValueConst.Json, value: JsJsonType };
 
 interface JsValueMapType {
     [key: string]: JsValueType
@@ -30,59 +50,66 @@ interface JsValueMapType {
 const jsValueDecodeItem = (cursor: BufferCursor): JsValueType => {
     const typeParam = cursor.getByte();
 
-    if (typeParam === 1) {
+    if (typeParam === JsValueConst.U32) {
         return {
-            type: 'u32',
+            type: JsValueConst.U32,
             value: cursor.getU32()
         };
     }
 
-    if (typeParam === 2) {
+    if (typeParam === JsValueConst.I32) {
         return {
-            type: 'u32',
+            type: JsValueConst.I32,
             value: cursor.getI32()
         };
     }
 
-    if (typeParam === 3) {
+    if (typeParam === JsValueConst.U64) {
         return {
-            type: 'u64',
+            type: JsValueConst.U64,
             value: cursor.getU64()
         };
     }
 
-    if (typeParam === 4) {
+    if (typeParam === JsValueConst.I64) {
         return {
-            type: 'i64',
+            type: JsValueConst.I64,
             value: cursor.getI64()
         };
     }
 
-    if (typeParam === 5) {
+    if (typeParam === JsValueConst.F64) {
+        return {
+            type: JsValueConst.F64,
+            value: cursor.getF64()
+        };
+    }
+
+    if (typeParam === JsValueConst.True) {
         return true;
     }
 
-    if (typeParam === 6) {
+    if (typeParam === JsValueConst.False) {
         return false;
     }
 
-    if (typeParam === 7) {
+    if (typeParam === JsValueConst.Null) {
         return null;
     }
 
-    if (typeParam === 8) {
+    if (typeParam === JsValueConst.Undefined) {
         return undefined;
     }
 
-    if (typeParam === 9) {
+    if (typeParam === JsValueConst.Vec) {
         return cursor.getBuffer();
     }
 
-    if (typeParam === 10) {
+    if (typeParam === JsValueConst.String) {
         return cursor.getString();
     }
 
-    if (typeParam === 11) {
+    if (typeParam === JsValueConst.List) {
         const out: Array<JsValueType> = [];
 
         const listSize = cursor.getU32();
@@ -94,7 +121,7 @@ const jsValueDecodeItem = (cursor: BufferCursor): JsValueType => {
         return out;
     }
 
-    if (typeParam === 12) {
+    if (typeParam === JsValueConst.Object) {
         const out: Record<string, JsValueType> = {};
 
         const listSize = cursor.getU16();
@@ -106,16 +133,16 @@ const jsValueDecodeItem = (cursor: BufferCursor): JsValueType => {
         }
 
         return {
-            type:'object',
+            type: JsValueConst.Object,
             value: out
         };
     }
 
-    if (typeParam === 13) {
+    if (typeParam === JsValueConst.Json) {
         const json = jsJsonDecodeItem(cursor);
 
         return {
-            type: 'json',
+            type: JsValueConst.Json,
             value: json
         };
     }
@@ -162,15 +189,15 @@ const getSize = (value: JsValueType): number => {
         return 1 + 4 + value.length;
     }
 
-    if (value.type === 'i32' || value.type === 'u32') {
-        return 5;   //1 + 4
+    if (value.type === JsValueConst.I32 || value.type === JsValueConst.U32) {
+        return 5;   // 1 + 4
     }
 
-    if (value.type === 'i64' || value.type === 'u64') {
-        return 9;   //1 + 8
+    if (value.type === JsValueConst.I64 || value.type === JsValueConst.U64 || value.type == JsValueConst.F64) {
+        return 9;   // 1 + 8
     }
 
-    if (value.type === 'object') {
+    if (value.type === JsValueConst.Object) {
         let sum = 1 + 2;
 
         for (const [key, propertyValue] of Object.entries(value.value)) {
@@ -181,7 +208,7 @@ const getSize = (value: JsValueType): number => {
         return sum;
     }
 
-    if (value.type === 'json') {
+    if (value.type === JsValueConst.Json) {
         return 1 + jsJsonGetSize(value.value);
     }
 
@@ -190,39 +217,39 @@ const getSize = (value: JsValueType): number => {
 
 const saveToBufferItem = (value: JsValueType, cursor: BufferCursor) => {
     if (value === true) {
-        cursor.setByte(5);
+        cursor.setByte(JsValueConst.True);
         return;
     }
 
     if (value === false) {
-        cursor.setByte(6);
+        cursor.setByte(JsValueConst.False);
         return;
     }
 
     if (value === null) {
-        cursor.setByte(7);
+        cursor.setByte(JsValueConst.Null);
         return;
     }
 
     if (value === undefined) {
-        cursor.setByte(8);
+        cursor.setByte(JsValueConst.Undefined);
         return;
     }
 
     if (value instanceof Uint8Array) {
-        cursor.setByte(9);
+        cursor.setByte(JsValueConst.Vec);
         cursor.setBuffer(value);
         return;
     }
 
     if (GuardJsValue.isString(value)) {
-        cursor.setByte(10);
+        cursor.setByte(JsValueConst.String);
         cursor.setString(value);
         return;
     }
 
     if (Array.isArray(value)) {
-        cursor.setByte(11);
+        cursor.setByte(JsValueConst.List);
         cursor.setU32(value.length);
 
         for (const item of value) {
@@ -232,38 +259,44 @@ const saveToBufferItem = (value: JsValueType, cursor: BufferCursor) => {
         return;
     }
 
-    if (value.type === 'u32') {
-        cursor.setByte(1);
+    if (value.type === JsValueConst.U32) {
+        cursor.setByte(JsValueConst.U32);
         cursor.setU32(value.value);
         return;
     }
 
-    if (value.type === 'i32') {
-        cursor.setByte(2);
+    if (value.type === JsValueConst.I32) {
+        cursor.setByte(JsValueConst.I32);
         cursor.setI32(value.value);
         return;
     }
 
-    if (value.type === 'u64') {
-        cursor.setByte(3);
+    if (value.type === JsValueConst.U64) {
+        cursor.setByte(JsValueConst.U64);
         cursor.setU64(value.value);
         return;
     }
 
-    if (value.type === 'i64') {
-        cursor.setByte(4);
+    if (value.type === JsValueConst.I64) {
+        cursor.setByte(JsValueConst.I64);
         cursor.setI64(value.value);
         return;
     }
 
-    if (value.type === 'object') {
+    if (value.type === JsValueConst.F64) {
+        cursor.setByte(JsValueConst.F64);
+        cursor.setF64(value.value);
+        return;
+    }
+
+    if (value.type === JsValueConst.Object) {
         const list: Array<[string, JsValueType]> = [];
 
         for (const [key, propertyValue] of Object.entries(value.value)) {
             list.push([key, propertyValue]);
         }
 
-        cursor.setByte(12);
+        cursor.setByte(JsValueConst.Object);
         cursor.setU16(list.length);
 
         for (const [key, propertyValue] of list) {
@@ -273,8 +306,8 @@ const saveToBufferItem = (value: JsValueType, cursor: BufferCursor) => {
         return;
     }
 
-    if (value.type === 'json') {
-        cursor.setByte(13);
+    if (value.type === JsValueConst.Json) {
+        cursor.setByte(JsValueConst.Json);
         saveJsJsonToBufferItem(value.value, cursor);
         return;
     }
@@ -344,15 +377,15 @@ export const convertFromJsValue = (value: JsValueType): unknown => {
         return newList;
     }
 
-    if (value.type === 'u32' || value.type === 'i32') {
+    if (value.type === JsValueConst.U32 || value.type === JsValueConst.I32) {
         return value.value;
     }
 
-    if (value.type === 'u64' || value.type === 'i64') {
+    if (value.type === JsValueConst.U64 || value.type === JsValueConst.I64 || value.type === JsValueConst.F64) {
         return value.value;
     }
 
-    if (value.type === 'object') {
+    if (value.type === JsValueConst.Object) {
         const result: Record<string, unknown> = {};
 
         for (const [key, propertyValue] of Object.entries(value.value)) {
@@ -362,7 +395,7 @@ export const convertFromJsValue = (value: JsValueType): unknown => {
         return result;
     }
 
-    if (value.type === 'json') {
+    if (value.type === JsValueConst.Json) {
         return value.value;
     }
 
@@ -380,22 +413,31 @@ export const convertToJsValue = (value: unknown): JsValueType => {
     }
 
     if (typeof value === 'number') {
-        if (-(2**31) <= value && value < 2**31) {
-            return {
-                type: 'i32',
-                value
-            };
-        }
+        if (value === (value | 0)) {
+            // is integer
+            if (-(2 ** 31) <= value && value < 2 ** 31) {
+                return {
+                    type: JsValueConst.I32,
+                    value
+                };
+            }
 
-        return {
-            type: 'i64',
-            value: BigInt(value)
-        };
+            return {
+                type: JsValueConst.I64,
+                value: BigInt(value)
+            };
+        } else {
+            // is float
+            return {
+                type: JsValueConst.F64,
+                value: value,
+            }
+        }
     }
 
     if (typeof value === 'bigint') {
         return {
-            type: 'i64',
+            type: JsValueConst.I64,
             value
         };
     }
@@ -408,7 +450,7 @@ export const convertToJsValue = (value: unknown): JsValueType => {
         try {
             const json = convertToJsJson(value);
             return {
-                type: 'json',
+                type: JsValueConst.Json,
                 value: json
             };
         } catch (_error) {
@@ -421,7 +463,7 @@ export const convertToJsValue = (value: unknown): JsValueType => {
         }
 
         return {
-            type: 'object',
+            type: JsValueConst.Object,
             value: result
         };
     }
@@ -430,7 +472,7 @@ export const convertToJsValue = (value: unknown): JsValueType => {
         try {
             const list = value.map(convertToJsJson);
             return {
-                type: 'json',
+                type: JsValueConst.Json,
                 value: list
             };
         } catch (_error) {
