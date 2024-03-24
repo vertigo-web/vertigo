@@ -1,7 +1,5 @@
 use vertigo::Value;
 
-use super::tree_box::TreeBoxIndex;
-
 #[derive(Copy, Clone, PartialEq, Eq, Hash, Debug)]
 pub enum SudokuValue {
     Value1,
@@ -45,31 +43,31 @@ impl SudokuValue {
     }
 }
 
-// pub type NumberItem = Value<Option<SudokuValue>>;
+pub type NumberItem = Value<Option<SudokuValue>>;
 
-#[derive(Clone)]
-pub struct NumberItem {
-    pub x0: TreeBoxIndex,
-    pub y0: TreeBoxIndex,
-    pub x1: TreeBoxIndex,
-    pub y1: TreeBoxIndex,
-    pub value: Value<Option<SudokuValue>>,
-}
+// #[derive(Clone)]
+// pub struct NumberItem {
+//     pub x0: TreeBoxIndex,
+//     pub y0: TreeBoxIndex,
+//     pub x1: TreeBoxIndex,
+//     pub y1: TreeBoxIndex,
+//     pub value: Value<Option<SudokuValue>>,
+// }
 
-impl NumberItem {
-    pub fn new(
-        x0: TreeBoxIndex,
-        y0: TreeBoxIndex,
-        x1: TreeBoxIndex,
-        y1: TreeBoxIndex,
-        value: Option<SudokuValue>,
-    ) -> NumberItem {
-        NumberItem {
-            x0,
-            y0,
-            x1,
-            y1,
-            value: Value::new(value),
-        }
-    }
-}
+// impl NumberItem {
+//     pub fn new(
+//         x0: TreeBoxIndex,
+//         y0: TreeBoxIndex,
+//         x1: TreeBoxIndex,
+//         y1: TreeBoxIndex,
+//         value: Option<SudokuValue>,
+//     ) -> NumberItem {
+//         NumberItem {
+//             x0,
+//             y0,
+//             x1,
+//             y1,
+//             value: Value::new(value),
+//         }
+//     }
+// }

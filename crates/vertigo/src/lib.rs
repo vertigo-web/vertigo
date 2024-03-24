@@ -232,6 +232,42 @@ pub use vertigo_macro::AutoJsJson;
 /// ```
 pub use vertigo_macro::component;
 
+/// Macro that allows to call methods on JavaScript `window` object
+///
+/// Example 1:
+///
+/// ```rust
+/// use vertigo::window;
+///
+/// let max_y = window!("scrollMaxY");
+/// window!("scrollTo()", 0, max_y);
+/// ```
+///
+/// Example 2:
+///
+/// ```rust
+/// use vertigo::window;
+///
+/// window!("scrollTo()",
+///    vec![
+///       ("top", 100000.into()),
+///       ("behavior", "smooth".into()),
+///    ]
+/// );
+/// ```
+pub use vertigo_macro::window;
+
+/// Macro that allows to call methods on JavaScript `document` object
+///
+/// Example:
+///
+/// ```rust
+/// use vertigo::document;
+///
+/// let referrer = document!("referrer");
+/// ```
+pub use vertigo_macro::document;
+
 /// Marco that marks an entry point of the app
 ///
 /// Note: Html, head and body tags are required by vertigo to properly take over the DOM

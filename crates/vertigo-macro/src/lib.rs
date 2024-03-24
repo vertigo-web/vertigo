@@ -5,6 +5,7 @@ extern crate pest_derive;
 #[macro_use]
 extern crate proc_macro_error;
 
+mod api_access;
 mod bind;
 mod component;
 mod css_parser;
@@ -18,6 +19,7 @@ use proc_macro::{Span, TokenStream};
 use quote::quote;
 
 use crate::{
+    api_access::api_access_inner,
     bind::{bind_inner, bind_rc_inner, bind_spawn_inner},
     component::component_inner,
     css_parser::generate_css_string,
@@ -123,6 +125,18 @@ pub fn main(_attr: TokenStream, input: TokenStream) -> TokenStream {
 #[proc_macro_error]
 pub fn component(_attr: TokenStream, input: TokenStream) -> TokenStream {
     component_inner(input)
+}
+
+#[proc_macro]
+#[proc_macro_error]
+pub fn window(input: TokenStream) -> TokenStream {
+    api_access_inner("window", input)
+}
+
+#[proc_macro]
+#[proc_macro_error]
+pub fn document(input: TokenStream) -> TokenStream {
+    api_access_inner("document", input)
 }
 
 fn convert_to_tokens(input: Result<TokenStream, String>) -> TokenStream {

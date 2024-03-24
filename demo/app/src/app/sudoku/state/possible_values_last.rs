@@ -35,7 +35,7 @@ where
         for (check_x0, check_x1) in iterate_by() {
             let cell = select_from_grid(check_x0, check_x1);
 
-            let input_value = cell.input.value.get(context);
+            let input_value = cell.input.get(context);
 
             if input_value.is_none() && cell.possible.get(context).contains(possible_value) {
                 count += 1;
