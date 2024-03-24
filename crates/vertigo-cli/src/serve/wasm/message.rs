@@ -1,6 +1,7 @@
 use std::{collections::HashMap, hash::Hash, sync::Arc};
+use vertigo::JsJson;
 
-use crate::serve::{html::RequestBody, js_value::JsJson};
+use crate::serve::html::RequestBody;
 
 #[derive(Debug)]
 pub enum Message {

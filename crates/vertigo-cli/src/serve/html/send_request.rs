@@ -4,11 +4,9 @@ use std::{
     collections::{HashMap, VecDeque},
     sync::Arc,
 };
+use vertigo::JsJson;
 
-use crate::serve::{
-    js_value::JsJson,
-    wasm::{FetchRequest, FetchResponse},
-};
+use crate::serve::wasm::{FetchRequest, FetchResponse};
 
 #[derive(Debug, Clone, PartialEq, Eq, Hash)]
 pub enum RequestBody {
