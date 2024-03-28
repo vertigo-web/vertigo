@@ -1,4 +1,4 @@
-use vertigo::{bind, component, css, document, dom, dom_element, window, JsValue, Value};
+use vertigo::{bind, component, css, document, dom, window, JsValue, Value};
 
 #[derive(Default, PartialEq)]
 pub struct State {
@@ -12,10 +12,8 @@ pub fn JsApiAccess() {
     let container_css = css!{"
     "};
 
-    let items = dom_element!{ <ol /> }
-        .children(
-            (1..201).map(|i| dom! { <li>"List item" {i}</li> }).collect()
-        );
+    let items = (1..201)
+        .map(|i| dom! { <li>"List item" {i}</li> });
 
     let to_bottom = || {
         let max_y = window!("scrollMaxY");
@@ -53,7 +51,7 @@ pub fn JsApiAccess() {
                 <button on_click={ask}>"Ask"</button>
                 " Answer: " {state.answer}
             </p>
-            {items}
+            <ol>{..items}</ol>
             <button on_click={|| { window!("scrollTo()", 0, 0); }}>"to top"</button>
         </div>
     }
