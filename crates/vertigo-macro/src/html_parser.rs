@@ -1,7 +1,7 @@
 use proc_macro::TokenStream;
 use proc_macro2::{Span, TokenStream as TokenStream2};
-use quote::quote;
-use syn::{Expr, __private::ToTokens};
+use quote::{quote, ToTokens};
+use syn::Expr;
 use syn_rsx::{parse, Node, NodeType};
 
 pub(crate) fn dom_inner(input: TokenStream) -> TokenStream {
@@ -301,10 +301,22 @@ fn convert_node(node: Node, convert_to_dom_node: bool) -> TokenStream2 {
                 let Some(block) = extract_value(child, parent_span) else {
                     continue;
                 };
-
-                out_child.push(quote! {
-                    .child(vertigo::EmbedDom::embed(#block))
-                });
+                let block_str = block.to_string();
+                if block_str.starts_with("..") {
+                    let value: TokenStream2 = block.into_iter().skip(2).collect();
+                    out_child.push(quote! {
+                        .children(
+                            #value
+                                .into_iter()
+                                .map(|item| vertigo::EmbedDom::embed(item))
+                                .collect::<Vec<_>>()
+                        )
+                    });
+                } else {
+                    out_child.push(quote! {
+                        .child(vertigo::EmbedDom::embed(#block))
+                    });
+                }
             }
             node_type => {
                 emit_error!(
