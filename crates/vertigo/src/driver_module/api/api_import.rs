@@ -264,12 +264,18 @@ impl ApiImport {
             .call("now", vec![])
             .fetch();
 
-        if let JsValue::I64(time) = result {
-            time as u64 as InstantType
-        } else {
-            self.panic_message
-                .show(format!("api.instant_now -> incorrect result {result:?}"));
-            0_u64
+        match result {
+            JsValue::I64(time) => {
+                time as u64 as InstantType
+            }
+            JsValue::F64(time) => {
+                time as u64 as InstantType
+            }
+            _ => {
+                self.panic_message
+                    .show(format!("api.instant_now -> incorrect result {result:?}"));
+                0_u64
+            }
         }
     }
 

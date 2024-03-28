@@ -1,7 +1,5 @@
 use serde::{Deserialize, Serialize};
-
-use crate::serve::js_value::JsJson;
-use crate::serve::js_value::{from_json, JsJsonContext, JsJsonDeserialize};
+use vertigo::{from_json, JsJson, JsJsonContext, JsJsonDeserialize};
 
 #[derive(Clone, Debug, Serialize, Deserialize, PartialEq)]
 #[serde(tag = "type")]

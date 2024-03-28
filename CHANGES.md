@@ -5,6 +5,7 @@
 
 ### Added
 
+* `window!` and `document!` macro to allow invoking simple JavaScript commands
 * `Driver::plains` method to allow responding with plaintext pages
 * In `css!` macro there is now possibility to reference a class created by another `css!` using `[]` brackets
 * Enums nad newtypes support in `AutoJsJson`

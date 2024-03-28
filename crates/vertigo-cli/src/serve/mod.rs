@@ -1,6 +1,4 @@
-//TODO: To be eventually moved to separate 'commons' lib
 mod html;
-mod js_value;
 mod mount_path;
 mod request_state;
 mod response_state;

@@ -1,8 +1,8 @@
-use crate::serve::js_value::{JsJson, JsValue};
+use vertigo::{JsJson, JsValue};
 
 #[cfg(test)]
 mod tests {
-    use crate::serve::js_value::JsValue;
+    use vertigo::JsValue;
 
     #[derive(PartialEq)]
     pub struct JsList(Vec<JsValue>);

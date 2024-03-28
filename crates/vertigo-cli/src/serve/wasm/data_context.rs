@@ -1,9 +1,7 @@
+use vertigo::{MemoryBlock, JsValue};
 use wasmtime::{AsContextMut, Caller, Extern, Instance, Memory, Store, StoreContextMut};
 
-use crate::serve::{
-    js_value::{JsValue, MemoryBlock},
-    request_state::RequestState,
-};
+use crate::serve::request_state::RequestState;
 
 pub enum DataContext<'a> {
     Caller {

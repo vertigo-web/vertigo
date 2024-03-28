@@ -1,7 +1,8 @@
 use tokio::sync::mpsc::UnboundedSender;
+use vertigo::JsValue;
 use wasmtime::{Caller, Engine, Func, Instance, Module, Store};
 
-use crate::serve::{js_value::JsValue, request_state::RequestState};
+use crate::serve::request_state::RequestState;
 
 use super::{
     data_context::DataContext,

@@ -10,14 +10,14 @@ const LIST_COUNT: u32 = 4;
 const OBJECT_COUNT: u32 = 2;
 
 enum JsJsonConst {
-    True,
-    False,
-    Null,
+    True = 1,
+    False = 2,
+    Null = 3,
 
-    String,
-    Number,
-    List,
-    Object,
+    String = 4,
+    Number = 5,
+    List = 6,
+    Object = 7,
 }
 
 impl JsJsonConst {
@@ -37,15 +37,7 @@ impl JsJsonConst {
 
 impl From<JsJsonConst> for u8 {
     fn from(value: JsJsonConst) -> Self {
-        match value {
-            JsJsonConst::True => 1,
-            JsJsonConst::False => 2,
-            JsJsonConst::Null => 3,
-            JsJsonConst::String => 4,
-            JsJsonConst::Number => 5,
-            JsJsonConst::List => 6,
-            JsJsonConst::Object => 7,
-        }
+        value as u8
     }
 }
 
@@ -54,7 +46,9 @@ impl From<JsJsonConst> for u8 {
 /*
     https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/Number#number_encoding
 
-    The JavaScript Number type is a double-precision 64-bit binary format IEEE 754 value, like double in Java or C#. This means it can represent fractional values, but there are some limits to the stored number's magnitude and precision. Very briefly, an IEEE 754 double-precision number uses 64 bits to represent 3 parts:
+    The JavaScript Number type is a double-precision 64-bit binary format IEEE 754 value, like double in Java or C#.
+    This means it can represent fractional values, but there are some limits to the stored number's magnitude
+    and precision. Very briefly, an IEEE 754 double-precision number uses 64 bits to represent 3 parts:
 
     1 bit for the sign (positive or negative)
     11 bits for the exponent (-1022 to 1023)

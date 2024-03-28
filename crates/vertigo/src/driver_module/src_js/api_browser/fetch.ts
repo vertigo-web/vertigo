@@ -1,4 +1,5 @@
 import { JsJsonType } from "../jsjson";
+import { JsValueConst } from "../jsvalue";
 import { ModuleControllerType } from "../wasm_init";
 import { ExportType } from "../wasm_module";
 
@@ -43,7 +44,7 @@ const catchError = async (
 
         wasm.wasm_callback(callback_id, [
             false,                                      //ok
-            { type: 'u32', value: response.status },    //http code
+            { type: JsValueConst.U32, value: response.status },    //http code
             responseMessage                             //body (string)
         ]);
     }
@@ -137,9 +138,9 @@ export class Fetch {
 
                     wasm.wasm_callback(callback_id, [
                         true,                                       //ok
-                        { type: 'u32', value: response.status },    //http code
+                        { type: JsValueConst.U32, value: response.status },    //http code
                         {                                           //body (json)
-                            type: 'json',
+                            type: JsValueConst.Json,
                             value: json
                         }
                     ]);
@@ -153,7 +154,7 @@ export class Fetch {
 
                     wasm.wasm_callback(callback_id, [
                         true,                                       //ok
-                        { type: 'u32', value: response.status },    //http code
+                        { type: JsValueConst.U32, value: response.status },    //http code
                         text                                        //body (text)
                     ]);
                 });
@@ -166,7 +167,7 @@ export class Fetch {
 
                 wasm.wasm_callback(callback_id, [
                     true,                                       //ok
-                    { type: 'u32', value: response.status },    //http code
+                    { type: JsValueConst.U32, value: response.status },    //http code
                     textUint8Array                              //body (text)
                 ]);
             });
@@ -176,7 +177,7 @@ export class Fetch {
 
             wasm.wasm_callback(callback_id, [
                 false,                                      //ok
-                { type: 'u32', value: 0 },                  //http code
+                { type: JsValueConst.U32, value: 0 },                  //http code
                 responseMessage                             //body (string)
             ]);
         }

@@ -127,7 +127,7 @@ fn render_cell(item: &Cell) -> (u32, u32, DomNode) {
     let cell_width = 2 * border + 3 * small_item_width;
     let cell_height = 2 * border + 3 * small_item_height;
 
-    let value_view = item.number.value.render_value({
+    let value_view = item.number.render_value({
         let item = item.clone();
         move |value| {
             if let Some(value) = value {

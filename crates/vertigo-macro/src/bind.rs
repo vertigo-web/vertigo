@@ -1,13 +1,15 @@
 use std::collections::HashSet;
 use std::collections::VecDeque;
 
-use proc_macro::{Span, TokenStream, TokenTree};
-use proc_macro2::Ident as Ident2;
+use proc_macro::{Span, TokenStream};
+use proc_macro2::Ident;
 use proc_macro2::TokenStream as TokenStream2;
+use proc_macro2::TokenTree;
 use quote::quote;
 use syn::__private::quote::format_ident;
 
 pub(crate) fn bind_inner(input: TokenStream) -> Result<TokenStream, String> {
+    let input: TokenStream2 = input.into();
     let tokens = input.into_iter().collect::<Vec<_>>();
 
     let TokensParamsBody {
@@ -18,7 +20,7 @@ pub(crate) fn bind_inner(input: TokenStream) -> Result<TokenStream, String> {
 
     let mut clone_stm = Vec::<TokenStream2>::new();
     let first_pipe = is_first_pipe_char(body.as_slice());
-    let body: TokenStream2 = body.iter().cloned().collect::<TokenStream>().into();
+    let body = body.iter().cloned().collect::<TokenStream2>();
 
     let mut idents_seen = HashSet::new();
 
@@ -31,7 +33,7 @@ pub(crate) fn bind_inner(input: TokenStream) -> Result<TokenStream, String> {
             emit_error!(item.last().unwrap().span(), "Conflicting variable name: {}", param_name);
         }
 
-        let item_expr: TokenStream2 = item.iter().cloned().collect::<TokenStream>().into();
+        let item_expr = item.iter().cloned().collect::<TokenStream2>();
 
         clone_stm.push(quote! {
             let #param_name = #item_expr.clone();
@@ -60,6 +62,7 @@ pub(crate) fn bind_inner(input: TokenStream) -> Result<TokenStream, String> {
 }
 
 pub(crate) fn bind_spawn_inner(input: TokenStream) -> Result<TokenStream, String> {
+    let input: TokenStream2 = input.into();
     let tokens = input.into_iter().collect::<Vec<_>>();
 
     let TokensParamsBody {
@@ -86,6 +89,7 @@ pub(crate) fn bind_spawn_inner(input: TokenStream) -> Result<TokenStream, String
 }
 
 pub(crate) fn bind_rc_inner(input: TokenStream) -> Result<TokenStream, String> {
+    let input: TokenStream2 = input.into();
     let tokens = input.into_iter().collect::<Vec<_>>();
 
     let TokensParamsBody {
@@ -134,7 +138,7 @@ fn is_char(token: &TokenTree, char: char) -> bool {
     }
 }
 
-fn find_param_name(params: &[TokenTree]) -> Option<Ident2> {
+fn find_param_name(params: &[TokenTree]) -> Option<Ident> {
     if let Some(last) = params.last() {
         if let TokenTree::Ident(value) = &last {
             Some(format_ident!("{}", value.to_string()))
@@ -255,7 +259,7 @@ fn split_params_and_body(tokens: &[TokenTree]) -> Result<TokensParamsBody, Strin
 }
 
 fn convert_tokens_to_stream(tokens: &[TokenTree]) -> TokenStream2 {
-    tokens.iter().cloned().collect::<TokenStream>().into()
+    tokens.iter().cloned().collect::<TokenStream2>()
 }
 
 fn get_type(tokens: &[TokenTree]) -> Result<&[TokenTree], String> {

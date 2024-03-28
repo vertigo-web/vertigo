@@ -104,19 +104,36 @@ async fn basic() {
     let start = std::time::Instant::now();
 
     // click "Generate"
-    c.find(Locator::Id("generate")).await.expect("div4: find generate button failed")
-        .click().await.expect("div4: click generate failed");
+    {
+        c.find(Locator::Id("generate")).await.expect("div4: find generate button failed")
+            .click().await.expect("div4: click generate failed");
 
-    let click_time = start.elapsed();
+        let click_time = start.elapsed();
 
-    println!("div4: Generate took {} ms", click_time.as_millis());
+        println!("div4: Generate took {} ms", click_time.as_millis());
 
-    c.find(Locator::Id("row-9999")).await.expect("div4: find row-9999 failed");
+        c.find(Locator::Id("row-9999")).await.expect("div4: find row-9999 failed");
 
-    let row999_time = start.elapsed();
+        let row999_time = start.elapsed();
 
-    println!("div4: Row 9999 found {} ms after click", row999_time.as_millis());
+        println!("div4: Row 9999 found {} ms after click", row999_time.as_millis());
+    }
 
+    // click "Generate" again
+    {
+        c.find(Locator::Id("generate")).await.expect("div4: find generate button failed")
+            .click().await.expect("div4-2: click generate failed");
+
+        let click_time = start.elapsed();
+
+        println!("div4-2: Generate took {} ms", click_time.as_millis());
+
+        c.find(Locator::Id("row-9999")).await.expect("div4-2: find row-9999 failed");
+
+        let row999_time = start.elapsed();
+
+        println!("div4-2: Row 9999 found {} ms after click", row999_time.as_millis());
+    }
 
     println!("Closing browser");
 

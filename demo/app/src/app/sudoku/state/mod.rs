@@ -15,9 +15,9 @@ pub mod sudoku_square;
 pub mod tree_box;
 
 fn create_grid() -> SudokuSquare<SudokuSquare<NumberItem>> {
-    SudokuSquare::create_with_iterator(move |level0x, level0y| {
-        SudokuSquare::create_with_iterator(move |level1x, level1y| {
-            NumberItem::new(level0x, level0y, level1x, level1y, None)
+    SudokuSquare::create_with_iterator(move |_level0x, _level0y| {
+        SudokuSquare::create_with_iterator(move |_level1x, _level1y| {
+            NumberItem::new(None)
         })
     })
 }
@@ -96,7 +96,7 @@ impl SudokuState {
                 for y0 in TreeBoxIndex::variants() {
                     for x1 in TreeBoxIndex::variants() {
                         for y1 in TreeBoxIndex::variants() {
-                            self.grid.get_from(x0, y0).get_from(x1, y1).number.value.set(None);
+                            self.grid.get_from(x0, y0).get_from(x1, y1).number.set(None);
                         }
                     }
                 }
