@@ -1,9 +1,11 @@
 use proc_macro::{Span, TokenStream};
-use quote::quote;
-use syn::{Visibility, __private::ToTokens};
+use quote::{quote, ToTokens};
+use syn::Visibility;
 
 pub(crate) fn component_inner(input: TokenStream) -> TokenStream {
     let ast = syn::parse_macro_input!(input as syn::ItemFn);
+
+    let attrs = &ast.attrs;
 
     // Function name
     let name = &ast.sig.ident;
@@ -58,6 +60,7 @@ pub(crate) fn component_inner(input: TokenStream) -> TokenStream {
     };
 
     let result = quote! {
+        #(#attrs)*
         #visibility2 struct #name #impl_generics #where_clause {
             #(#struct_fields,)*
         }

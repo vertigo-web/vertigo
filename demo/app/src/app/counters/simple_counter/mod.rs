@@ -2,6 +2,7 @@ use vertigo::{Value, transaction, Computed, component};
 use vertigo::{bind, css, dom};
 
 #[component]
+/// Shows counter with label
 pub fn SimpleCounter(label: Computed<String>, value: Value<u32>) {
     let click_up = bind!(value, || {
         transaction(|context|{

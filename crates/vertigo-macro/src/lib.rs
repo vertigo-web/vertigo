@@ -123,7 +123,7 @@ pub fn main(_attr: TokenStream, input: TokenStream) -> TokenStream {
 
 #[proc_macro_attribute]
 #[proc_macro_error]
-pub fn component(_attr: TokenStream, input: TokenStream) -> TokenStream {
+pub fn component(_attrs: TokenStream, input: TokenStream) -> TokenStream {
     component_inner(input)
 }
 
