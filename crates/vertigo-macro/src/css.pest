@@ -274,7 +274,7 @@ unknown_rule = {
 }
 
 rule_ident = { (ASCII_ALPHA_LOWER | "@" | "-" ) ~ (ASCII_ALPHA_LOWER | "-")+ }
-value = _{ (simple_value)+ | url_value }
+value = _{ url_value | (simple_value)+ }
 simple_value = _{ expression | color_value | unquoted_value | quoted_value }
 
 unquoted_value = { (!semicolon ~ ANY)+ }
@@ -290,7 +290,7 @@ hsla_value = _{ "hsl(" ~ ASCII_DIGIT ~ comma ~ (ASCII_DIGIT ~ percent ~ comma){2
 
 transparency_value = _{ zero_to_one }
 
-url_value = _{ "url(" ~ (expression | quoted_value) ~ ")" }
+url_value = { "url(" ~ (expression | quoted_value) ~ ")" }
 
 // { } and {$ $} expressions
 expression = { brace_left ~ /*PUSH("$"*) ~*/ expression_value ~ /*POP ~*/ brace_right }

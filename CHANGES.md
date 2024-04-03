@@ -22,6 +22,7 @@
 * Component embedding using non-local name (f. ex. `<my_module::MyComponent />`)
 * Raw field name support in AutoJsJson derive macro
 * `component!` macro copying attributes to struct (and doc-strings)
+* `css!` macro resolving expressions in `url`
 * vertigo-cli: Watch script now attached inside body tag
 
 ## 0.4.3 - 2024-02-28

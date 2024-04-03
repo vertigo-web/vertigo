@@ -46,6 +46,7 @@ impl<T> Drop for ValueInner<T> {
 /// });
 /// ```
 ///
+#[derive(Clone)]
 pub struct Value<T> {
     inner: Rc<ValueInner<T>>,
 }
@@ -53,14 +54,6 @@ pub struct Value<T> {
 impl<T: Clone + Default + 'static> Default for Value<T> {
     fn default() -> Self {
         Self::new(Default::default())
-    }
-}
-
-impl<T> Clone for Value<T> {
-    fn clone(&self) -> Self {
-        Value {
-            inner: self.inner.clone(),
-        }
     }
 }
 

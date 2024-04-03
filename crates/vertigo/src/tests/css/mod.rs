@@ -2,6 +2,7 @@ mod animation;
 mod classes;
 mod colors;
 mod comments;
+mod expressions;
 mod media;
 mod pseudoselectors;
 mod refs;
