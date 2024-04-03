@@ -120,6 +120,21 @@ impl CssParser {
                 Rule::expression => self
                     .params
                     .insert(value.into_inner().next().unwrap().as_str().to_string()),
+                Rule::url_value => {
+                    // url_value -> expression/quoted_value
+                    let inner = value.clone().into_inner().next().unwrap();
+                    match inner.as_rule() {
+                        Rule::expression => {
+                            // expression -> expression_value
+                            let expr_value = inner.into_inner().next().unwrap().as_str().to_string();
+                            format!("url('{}')", self.params.insert(expr_value))
+                        },
+                        _ => {
+                            // quoted_value
+                            value.as_str().to_string()
+                        }
+                    }
+                }
                 _ => {
                     emit_warning!(
                         self.call_site,
