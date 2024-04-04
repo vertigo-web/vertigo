@@ -19,7 +19,7 @@ path = "src/main.rs"
 [dependencies]
 axum = { version = "0.6.20", features = ["macros"] }
 axum-extra = "0.8.0"
-base64 = "0.21"
+base64 = "0.22"
 clap = { version = "4.0", features = ["derive"] }
 crc = "3.0"
 env_logger = "0.11"
@@ -37,5 +37,5 @@ tokio = { version = "1.25", features = ["full"] }
 tokio-stream = "0.1"
 tower-http = { version = "0.4", features = ["fs"] }
 tokio-retry = "0.3"
-wasmtime = "14.0"
+wasmtime = "19.0"
 vertigo = { path = "../vertigo" }
