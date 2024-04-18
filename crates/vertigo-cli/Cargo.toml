@@ -6,6 +6,7 @@ description = "Reactive Real-DOM library with SSR for Rust - packaging/serving t
 categories = ["command-line-utilities", "development-tools", "development-tools::build-utils", "wasm", "web-programming"]
 license = "MIT OR Apache-2.0"
 edition = "2021"
+repository = "https://github.com/vertigo-web/vertigo/"
 
 [[bin]]
 name = "vertigo"
