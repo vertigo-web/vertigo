@@ -1,4 +1,4 @@
-use std::collections::HashMap;
+use std::collections::{BTreeMap, HashMap};
 use std::rc::Rc;
 
 use super::js_json_struct::JsJson;
@@ -242,6 +242,34 @@ impl<T: JsJsonDeserialize> JsJsonDeserialize for HashMap<String, T> {
         let map = json.get_hashmap(&context)?;
 
         let mut result = HashMap::new();
+
+        for (key, item) in map {
+            let context = context.add(["field: '", key.as_str(), "'"].concat());
+            let value = T::from_json(context, item)?;
+            result.insert(key, value);
+        }
+
+        Ok(result)
+    }
+}
+
+impl<T: JsJsonSerialize> JsJsonSerialize for BTreeMap<String, T> {
+    fn to_json(self) -> JsJson {
+        let mut result = HashMap::new();
+
+        for (key, item) in self {
+            result.insert(key, item.to_json());
+        }
+
+        JsJson::Object(result)
+    }
+}
+
+impl<T: JsJsonDeserialize> JsJsonDeserialize for BTreeMap<String, T> {
+    fn from_json(context: JsJsonContext, json: JsJson) -> Result<Self, JsJsonContext> {
+        let map = json.get_hashmap(&context)?;
+
+        let mut result = BTreeMap::new();
 
         for (key, item) in map {
             let context = context.add(["field: '", key.as_str(), "'"].concat());
