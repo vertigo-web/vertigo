@@ -13,5 +13,6 @@ license = "MIT OR Apache-2.0"
 edition = "2021"
 
 [dependencies]
-log = { version = "0.4", features=["std"] }
+chrono = { version = "0.4", default-features = false, features = ["std"], optional = true }
+log = { version = "0.4", features = ["std"] }
 vertigo-macro = { path = "../../crates/vertigo-macro", version = "0.5.0" }

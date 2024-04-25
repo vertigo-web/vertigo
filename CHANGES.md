@@ -1,6 +1,12 @@
 <!-- markdownlint-configure-file { "no-duplicate-heading": { "siblings_only": true } } -->
 
 <!-- markdownlint-disable-next-line first-line-h1 -->
+## Unreleased
+
+### Added
+
+* `BTreeMap` and `chrono::DateTime<Utc>` support in `AutoJsJson`
+
 ## 0.5.0 - 2024-04-05
 
 ### Added
