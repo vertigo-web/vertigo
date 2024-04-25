@@ -281,27 +281,23 @@ impl<T: JsJsonDeserialize> JsJsonDeserialize for BTreeMap<String, T> {
     }
 }
 
-#[derive(Debug, PartialEq, Clone)]
-struct Post {
-    name: String,
-    age: u64,
-}
-
-impl JsJsonSerialize for Post {
+#[cfg(feature = "chrono")]
+impl JsJsonSerialize for chrono::DateTime<chrono::Utc> {
     fn to_json(self) -> JsJson {
-        JsJson::Object(HashMap::from([
-            ("name".to_string(), self.name.to_json()),
-            ("age".to_string(), self.age.to_json()),
-        ]))
+        self.to_rfc3339().to_json()
     }
 }
 
-impl JsJsonDeserialize for Post {
-    fn from_json(context: JsJsonContext, mut json: JsJson) -> Result<Self, JsJsonContext> {
-        Ok(Self {
-            name: json.get_property(&context, "name")?,
-            age: json.get_property(&context, "age")?,
-        })
+#[cfg(feature = "chrono")]
+impl JsJsonDeserialize for chrono::DateTime<chrono::Utc> {
+    fn from_json(context: JsJsonContext, json: JsJson) -> Result<Self, JsJsonContext> {
+        let datetime_str = String::from_json(context.clone(), json)?;
+        chrono::DateTime::parse_from_rfc3339(&datetime_str)
+            .map_err(|err| {
+                let message = ["DateTime parsing failed: ", &err.to_string()].concat();
+                context.add(message)
+            })
+            .map(|dt| dt.to_utc())
     }
 }
 
@@ -317,46 +313,75 @@ pub fn to_json<T: JsJsonSerialize>(value: T) -> JsJson {
     value.to_json()
 }
 
-#[test]
-fn aaaa() {
-    let aaa = JsJson::String("aaa".into());
-    let aaa_post = from_json::<Post>(aaa);
-    assert_eq!(
-        aaa_post,
-        Err(String::from("root -> object expected, received string"))
-    );
+#[cfg(test)]
+mod tests {
+    use super::*;
 
-    let bbb = Post {
-        name: "dsada".into(),
-        age: 33,
-    };
+    #[derive(Debug, PartialEq, Clone)]
+    struct Post {
+        name: String,
+        age: u64,
+    }
 
-    let ccc = bbb.clone().to_json();
-    let Ok(ddd) = from_json::<Post>(ccc) else {
-        unreachable!();
-    };
-    assert_eq!(bbb, ddd);
-}
+    impl JsJsonSerialize for Post {
+        fn to_json(self) -> JsJson {
+            JsJson::Object(HashMap::from([
+                ("name".to_string(), self.name.to_json()),
+                ("age".to_string(), self.age.to_json()),
+            ]))
+        }
+    }
 
-#[test]
-fn test_vec() {
-    let aaa = Post {
-        name: "aaa".into(),
-        age: 11,
-    };
+    impl JsJsonDeserialize for Post {
+        fn from_json(context: JsJsonContext, mut json: JsJson) -> Result<Self, JsJsonContext> {
+            Ok(Self {
+                name: json.get_property(&context, "name")?,
+                age: json.get_property(&context, "age")?,
+            })
+        }
+    }
 
-    let bbb = Post {
-        name: "bbb".into(),
-        age: 22,
-    };
+    #[test]
+    fn aaaa() {
+        let aaa = JsJson::String("aaa".into());
+        let aaa_post = from_json::<Post>(aaa);
+        assert_eq!(
+            aaa_post,
+            Err(String::from("root -> object expected, received string"))
+        );
 
-    let ccc = vec![aaa, bbb];
+        let bbb = Post {
+            name: "dsada".into(),
+            age: 33,
+        };
 
-    let ddd = ccc.clone().to_json();
+        let ccc = bbb.clone().to_json();
+        let Ok(ddd) = from_json::<Post>(ccc) else {
+            unreachable!();
+        };
+        assert_eq!(bbb, ddd);
+    }
 
-    let Ok(eee) = from_json::<Vec<Post>>(ddd) else {
-        unreachable!();
-    };
+    #[test]
+    fn test_vec() {
+        let aaa = Post {
+            name: "aaa".into(),
+            age: 11,
+        };
 
-    assert_eq!(ccc, eee);
+        let bbb = Post {
+            name: "bbb".into(),
+            age: 22,
+        };
+
+        let ccc = vec![aaa, bbb];
+
+        let ddd = ccc.clone().to_json();
+
+        let Ok(eee) = from_json::<Vec<Post>>(ddd) else {
+            unreachable!();
+        };
+
+        assert_eq!(ccc, eee);
+    }
 }
