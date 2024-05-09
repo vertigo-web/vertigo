@@ -6,6 +6,7 @@
 ### Added
 
 * `BTreeMap` and `chrono::DateTime<Utc>` support in `AutoJsJson`
+* All http methods in `FetchMethod`
 
 ## 0.5.0 - 2024-04-05
 
