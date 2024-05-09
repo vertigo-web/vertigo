@@ -14,14 +14,28 @@ use super::api::DomAccess;
 #[derive(Debug, Clone, Copy)]
 pub enum FetchMethod {
     GET,
+    HEAD,
     POST,
+    PUT,
+    DELETE,
+    CONNECT,
+    OPTIONS,
+    TRACE,
+    PATCH,
 }
 
 impl FetchMethod {
     pub fn to_str(&self) -> String {
         match self {
             Self::GET => "GET",
+            Self::HEAD => "HEAD",
             Self::POST => "POST",
+            Self::PUT => "PUT",
+            Self::DELETE => "DELETE",
+            Self::CONNECT => "CONNECT",
+            Self::OPTIONS => "OPTIONS",
+            Self::TRACE => "TRACE",
+            Self::PATCH => "PATCH",
         }
         .into()
     }
