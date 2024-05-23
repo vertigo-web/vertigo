@@ -7,6 +7,11 @@
 
 * `BTreeMap` and `chrono::DateTime<Utc>` support in `AutoJsJson`
 * All http methods in `FetchMethod`
+* `history_replace` method in `Driver`
+
+### Fixed
+
+* Missing hash part in history router
 
 ## 0.5.0 - 2024-04-05
 

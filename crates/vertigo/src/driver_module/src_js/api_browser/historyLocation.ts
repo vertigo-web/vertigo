@@ -36,7 +36,16 @@ export class HistoryLocation {
         this.trigger();
     }
 
+    public replace = (url: string) => {
+        if (this.get() === url) {
+            return;
+        }
+
+        window.history.replaceState(null, '', url);
+        this.trigger();
+    }
+
     public get(): string {
-        return window.location.pathname + window.location.search;
+        return window.location.pathname + window.location.search + window.location.hash;
     }
 }
