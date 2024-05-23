@@ -288,7 +288,7 @@ impl ApiImport {
     }
 
     ///////////////////////////////////////////////////////////////////////////////////
-    //hash router
+    // hash router
     ///////////////////////////////////////////////////////////////////////////////////
 
     pub fn get_hash_location(&self) -> String {
@@ -351,7 +351,7 @@ impl ApiImport {
     }
 
     ///////////////////////////////////////////////////////////////////////////////////
-    //history router
+    // history router
     ///////////////////////////////////////////////////////////////////////////////////
 
     pub fn get_history_location(&self) -> String {
@@ -370,25 +370,33 @@ impl ApiImport {
         }
     }
 
-    pub fn push_history_location(&self, new_hash: &str) {
+    pub fn push_history_location(&self, new_path: &str) {
         self.dom_access()
             .api()
             .get("historyLocation")
-            .call("push", vec![JsValue::str(new_hash)])
+            .call("push", vec![JsValue::str(new_path)])
+            .exec();
+    }
+
+    pub fn replace_history_location(&self, new_hash: &str) {
+        self.dom_access()
+            .api()
+            .get("historyLocation")
+            .call("replace", vec![JsValue::str(new_hash)])
             .exec();
     }
 
     pub fn on_history_change<F: Fn(String) + 'static>(&self, callback: F) -> DropResource {
         let (callback_id, drop_callback) = self.callback_store.register(move |data| {
-            let new_hash = if let JsValue::String(new_hash) = data {
-                new_hash
+            let new_path = if let JsValue::String(new_path) = data {
+                new_path
             } else {
                 log::error!("on_history_change -> string was expected -> {data:?}");
                 String::from("")
             };
 
             transaction(|_| {
-                callback(new_hash);
+                callback(new_path);
             });
 
             JsValue::Undefined

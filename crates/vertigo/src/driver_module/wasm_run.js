@@ -1731,8 +1731,15 @@ class HistoryLocation {
         window.history.pushState(null, '', url);
         this.trigger();
     };
+    replace = (url) => {
+        if (this.get() === url) {
+            return;
+        }
+        window.history.replaceState(null, '', url);
+        this.trigger();
+    };
     get() {
-        return window.location.pathname + window.location.search;
+        return window.location.pathname + window.location.search + window.location.hash;
     }
 }
 

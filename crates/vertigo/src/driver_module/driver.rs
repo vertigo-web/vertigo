@@ -139,6 +139,11 @@ impl Driver {
         self.inner.api.history_back();
     }
 
+    /// Replace current location
+    pub fn history_replace(&self, new_url: &str) {
+        self.inner.api.replace_history_location(new_url)
+    }
+
     /// Make `func` fire every `time` seconds.
     #[must_use]
     pub fn set_interval(&self, time: u32, func: impl Fn() + 'static) -> DropResource {
@@ -284,7 +289,7 @@ impl Driver {
     }
 
     /// Adds this CSS to manager producing a class name, which is returned
-    /// 
+    ///
     /// There shouldn't be need to use it manually. It's used by `css!` macro.
     pub fn class_name_for(&mut self, css: &Css) -> String {
         self.inner.css_manager.get_class_name(css)
