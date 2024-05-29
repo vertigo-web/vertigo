@@ -12,6 +12,7 @@
 ### Fixed
 
 * Missing hash part in history router
+* vertigo-cli: Missing `Cache-Control` header for statics
 
 ## 0.5.0 - 2024-04-05
 

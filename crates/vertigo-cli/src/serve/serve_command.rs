@@ -1,13 +1,13 @@
 use axum::{
     body::BoxBody,
     extract::{Json, RawQuery, State},
-    http::header::HeaderMap,
-    http::{StatusCode, Uri},
+    http::{header::HeaderMap, HeaderValue, StatusCode, Uri},
     response::Response,
     routing::get,
     Router,
 };
 use clap::Args;
+use reqwest::header;
 use serde_json::Value;
 use std::{
     sync::Arc,
@@ -62,11 +62,13 @@ pub async fn run(opts: ServeOpts, port_watch: Option<u16>) -> Result<(), i32> {
         .await;
 
     let serve_mount_path = state.mount_path.http_root();
+
     let serve_dir = ServeDir::new(state.mount_path.fs_root());
 
     *(ref_state.write().await) = state;
 
-    let mut app = Router::new().nest_service(&serve_mount_path, serve_dir);
+    let mut app = Router::new().nest_service(&serve_mount_path, serve_dir)
+        .layer(axum::middleware::map_response(set_cache_header));
 
     for (path, target) in proxy {
         app = install_proxy(app, path, target, ref_state.clone());
@@ -245,4 +247,12 @@ async fn handler(
     }
 
     response_state.into()
+}
+
+async fn set_cache_header<B: Send>(mut response: Response<B>) -> Response<B> {
+    response.headers_mut().insert(
+        header::CACHE_CONTROL,
+        HeaderValue::from_static("public, max-age=86400"),
+    );
+   response
 }
