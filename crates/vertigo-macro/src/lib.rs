@@ -77,7 +77,7 @@ pub fn css(input: TokenStream) -> TokenStream {
     result.into()
 }
 
-#[proc_macro_derive(AutoJsJson)]
+#[proc_macro_derive(AutoJsJson, attributes(js_json))]
 #[proc_macro_error]
 pub fn auto_js_json(input: TokenStream) -> TokenStream {
     let ast = syn::parse(input).unwrap();

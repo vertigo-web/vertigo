@@ -6,6 +6,7 @@
 ### Added
 
 * `BTreeMap` and `chrono::DateTime<Utc>` support in `AutoJsJson`
+* `#[js_json(default = "None")]` attribute to `AutoJsJson`
 * All http methods in `FetchMethod`
 * `history_replace` method in `Driver`
 

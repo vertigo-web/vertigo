@@ -124,3 +124,27 @@ fn test_newtype_tuple() {
 
     assert_eq!(again_my_type, my_type);
 }
+
+#[test]
+fn test_optional_field() {
+    #[derive(Default, AutoJsJson)]
+    pub struct Test {
+        pub first_name: String,
+        #[js_json(default = None)]
+        pub second_name: Option<String>,
+    }
+
+    let test = Test {
+        first_name: "Greg".to_string(),
+        second_name: None,
+    };
+
+    let mut test_js = test.to_json();
+    let ctx = JsJsonContext::new("");
+    let _: Result<Option<String>, _> = test_js.get_property::<Option<String>>(&ctx, "second_name");
+
+    let text_out = Test::from_json(JsJsonContext::new(""), test_js).unwrap_or_else(|_| panic!());
+
+    assert_eq!(text_out.first_name.as_str(), "Greg");
+    assert_eq!(text_out.second_name, None);
+}

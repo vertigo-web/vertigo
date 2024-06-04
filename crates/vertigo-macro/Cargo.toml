@@ -11,6 +11,7 @@ name = "vertigo_macro"
 proc-macro = true
 
 [dependencies]
+bae = "0.1"
 base64 = "0.21"
 crc = "3.0"
 itertools = "0.12"
