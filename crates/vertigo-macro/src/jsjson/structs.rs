@@ -1,6 +1,12 @@
+use bae::FromAttributes;
 use proc_macro::TokenStream;
 use quote::quote;
 use syn::{ext::IdentExt, DataStruct, Ident};
+
+#[derive(Default, Debug, FromAttributes)]
+pub struct JsJson {
+    default: Option<syn::Expr>,
+}
 
 pub(super) fn impl_js_json_struct(name: &Ident, data: &DataStruct) -> Result<TokenStream, String> {
     let mut field_list = Vec::new();
@@ -10,20 +16,32 @@ pub(super) fn impl_js_json_struct(name: &Ident, data: &DataStruct) -> Result<Tok
             return super::newtypes::impl_js_json_newtype(name, data);
         };
 
-        field_list.push(field_name);
+        let attrs = &field.attrs;
+
+        field_list.push((field_name, attrs));
     }
 
     let mut list_to_json = Vec::new();
     let mut list_from_json = Vec::new();
 
-    for field_name in field_list {
+    for (field_name, attrs) in field_list {
         let field_unraw = field_name.unraw().to_string();
+        let attrs = JsJson::try_from_attributes(attrs).unwrap().unwrap_or_default();
+
         list_to_json.push(quote! {
             (#field_unraw.to_string(), self.#field_name.to_json()),
         });
 
+        let unpack_expr = if let Some(default_expr) = attrs.default {
+            quote! {
+                .unwrap_or_else(|_| #default_expr)
+            }
+        } else {
+            quote! { ? }
+        };
+
         list_from_json.push(quote! {
-            #field_name: json.get_property(&context, #field_unraw)?,
+            #field_name: json.get_property(&context, #field_unraw)#unpack_expr,
         })
     }
 
