@@ -1,4 +1,4 @@
-mod auto_map;
+pub mod auto_map;
 mod computed_box;
 pub mod context;
 mod dependencies;
@@ -11,7 +11,6 @@ mod value;
 #[cfg(test)]
 mod tests;
 
-pub use auto_map::AutoMap;
 pub use computed_box::{Computed, ToComputed};
 pub use dependencies::Dependencies;
 pub use drop_resource::DropResource;

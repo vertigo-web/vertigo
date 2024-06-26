@@ -15,13 +15,12 @@ pub fn render_value_option<T: Clone + PartialEq + 'static>(
             let render = render.clone();
 
             move |value| {
-                let new_element = render(value).map(|new_element| {
+                let new_element = render(value).inspect(|new_element| {
                     get_driver().inner.dom.insert_before(
                         parent_id,
                         new_element.id_dom(),
                         Some(comment_id),
                     );
-                    new_element
                 });
 
                 current_node.change(|current| {

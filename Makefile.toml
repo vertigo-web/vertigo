@@ -10,7 +10,7 @@ script = [
 # NOTE: WebDriver on localhost:9515 needs to be running
 [tasks.automated-tests]
 script = [
-    "cargo test --package fantoccini-tests -- --ignored"
+    "cargo test --package fantoccini-tests -- --test-threads=1 --ignored"
 ]
 
 [tasks.all-tests]

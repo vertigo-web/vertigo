@@ -116,8 +116,9 @@ mod websocket;
 use computed::struct_mut::ValueMut;
 
 pub use computed::{
-    context::Context, struct_mut, AutoMap, Computed, Dependencies, DropResource, GraphId,
-    ToComputed, Value,
+    auto_map::{AutoMap, ReactiveAutoMap},
+    context::Context,
+    struct_mut, Computed, Dependencies, DropResource, GraphId, ToComputed, Value,
 };
 
 pub use css::css_structs::{Css, CssGroup};

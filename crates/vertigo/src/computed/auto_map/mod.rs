@@ -3,6 +3,9 @@ use std::{hash::Hash, rc::Rc};
 
 use crate::struct_mut::HashMapMut;
 
+mod reactive_auto_map;
+pub use reactive_auto_map::ReactiveAutoMap;
+
 type CreateType<K, V> = Box<dyn Fn(&AutoMap<K, V>, &K) -> V>;
 
 fn get_unique_id() -> u64 {
@@ -42,10 +45,18 @@ impl<K, V> PartialEq for AutoMap<K, V> {
 }
 
 impl<K: Eq + Hash + Clone, V: Clone> AutoMap<K, V> {
-    pub fn new<C: Fn(&AutoMap<K, V>, &K) -> V + 'static>(create: C) -> AutoMap<K, V> {
-        AutoMap {
+    pub fn new<C: Fn(&Self, &K) -> V + 'static>(create: C) -> Self {
+        Self {
             id: get_unique_id(),
             create: Rc::new(Box::new(create)),
+            values: Rc::new(HashMapMut::new()),
+        }
+    }
+
+    pub fn new_from_rc(create: Rc<CreateType<K, V>>) -> Self {
+        Self {
+            id: get_unique_id(),
+            create,
             values: Rc::new(HashMapMut::new()),
         }
     }
