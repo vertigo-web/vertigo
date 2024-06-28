@@ -1,7 +1,10 @@
-use vertigo::{main, DomNode, dom, Value, bind};
+use vertigo::{bind, dom, get_driver, main, DomNode, Value};
 
 mod row;
 use row::Row;
+
+mod reactive_auto_map;
+use reactive_auto_map::ReactiveAutoMapTest;
 
 #[derive(Clone, Copy, PartialEq)]
 pub enum Mode {
@@ -66,25 +69,33 @@ pub fn app(state: AppState) -> DomNode {
             ),
     });
 
+    let dynamic = if get_driver().is_browser() {
+        dom! { <hr id="dynamic-content" /> }
+    } else {
+        dom! { <hr /> }
+    };
+
     dom! {
         <html>
             <head />
             <body>
                 <div>
                     <div>
-                        <button id="generate" on_click={create_rows}>"Generate"</button>
-                        <button id="clear" on_click={clear_rows}>"Clear"</button>
+                        <button id="basictest-generate" on_click={create_rows}>"Generate"</button>
+                        <button id="basictest-clear" on_click={clear_rows}>"Clear"</button>
                     </div>
                     <div>
                         "Modes: "
-                        <button id="mode_div" on_click={change_mode(Mode::Div)}>{Mode::Div}</button>
-                        <button id="mode_div4" on_click={change_mode(Mode::Div4)}>{Mode::Div4}</button>
+                        <button id="basictest-mode_div" on_click={change_mode(Mode::Div)}>{Mode::Div}</button>
+                        <button id="basictest-mode_div4" on_click={change_mode(Mode::Div4)}>{Mode::Div4}</button>
                         "Currently: " {&mode}
                     </div>
-                    <div id="row-container">
+                    <div id="basictest-row-container">
                         {rows_rendered}
                     </div>
+                    <ReactiveAutoMapTest />
                 </div>
+                {dynamic}
             </body>
         </html>
     }

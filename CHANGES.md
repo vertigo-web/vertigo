@@ -9,6 +9,7 @@
 * `#[js_json(default = "None")]` attribute to `AutoJsJson`
 * All http methods in `FetchMethod`
 * `history_replace` method in `Driver`
+* `ReactiveAutoMap` which is an `AutoMap` wrapped in a `Value`
 
 ### Fixed
 
