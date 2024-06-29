@@ -3,6 +3,7 @@ use notify::RecursiveMode;
 use poem::http::Method;
 use poem::middleware::Cors;
 use poem::{get, listener::TcpListener, EndpointExt, Route, Server};
+use std::path::Path;
 use std::sync::Arc;
 use std::time::Duration;
 use tokio::sync::watch::Sender;
@@ -43,6 +44,10 @@ pub struct WatchOpts {
     /// Setting the parameters `--env api=http://domain.com/api --env api2=http://domain.com/api2`
     #[arg(long, value_parser = parse_key_val::<String, String>)]
     pub env: Vec<(String, String)>,
+
+    /// Add more directories to be watched for code changes
+    #[arg(long)]
+    pub add_watch_path: Vec<String>,
 }
 
 impl WatchOpts {
@@ -171,6 +176,13 @@ pub async fn run(mut opts: WatchOpts) -> Result<(), i32> {
 
     use notify::Watcher;
     watcher.watch(&path, RecursiveMode::Recursive).unwrap();
+
+    for watch_path in &opts.add_watch_path {
+        log::info!("Adding `{watch_path}` to watched directories");
+        watcher
+            .watch(Path::new(watch_path), RecursiveMode::Recursive)
+            .expect("Error adding watch dir");
+    }
     let mut version = 0;
 
     loop {
