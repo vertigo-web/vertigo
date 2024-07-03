@@ -1,10 +1,11 @@
 <!-- markdownlint-configure-file { "no-duplicate-heading": { "siblings_only": true } } -->
 
 <!-- markdownlint-disable-next-line first-line-h1 -->
-## Unreleased
+## 0.6.0 Unreleased
 
 ### Added
 
+* `Reactive` trait that allows generic components to be more flexible with props
 * `BTreeMap` and `chrono::DateTime<Utc>` support in `AutoJsJson`
 * `#[js_json(default = "None")]` attribute to `AutoJsJson`
 * All http methods in `FetchMethod`

@@ -1,9 +1,9 @@
-use crate::{computed::Value, get_driver, Computed};
+use crate::{computed::Value, get_driver, Computed, DomNode, EmbedDom, Reactive, ToComputed};
 
 /// Router based on hash part of current location.
 ///
 /// ```rust
-/// use vertigo::{dom, Computed, Value, DomNode};
+/// use vertigo::{dom, Computed, Reactive, Value, DomNode};
 /// use vertigo::router::Router;
 ///
 /// #[derive(Clone, PartialEq, Debug)]
@@ -114,5 +114,39 @@ impl<T: Clone + ToString + From<String> + PartialEq + 'static> Router<T> {
             false => driver.inner.api.push_hash_location(&route.to_string()),
             true => driver.inner.api.push_history_location(&route.to_string()),
         };
+    }
+
+    fn change(&self, change_fn: impl FnOnce(&mut T)) {
+        get_driver().inner.dependencies.transaction(|ctx| {
+            let mut value = self.get(ctx);
+            change_fn(&mut value);
+            self.set(value);
+        });
+    }
+}
+
+impl<T: Clone + PartialEq + ToString + From<String>> Reactive<T> for Router<T> {
+    fn set(&self, value: T) {
+        Router::set(self, value)
+    }
+
+    fn get(&self, context: &crate::Context) -> T {
+        self.route.get(context)
+    }
+
+    fn change(&self, change_fn: impl FnOnce(&mut T)) {
+        Router::change(self, change_fn)
+    }
+}
+
+impl<T: Clone + PartialEq + ToString + From<String>> ToComputed<T> for Router<T> {
+    fn to_computed(&self) -> Computed<T> {
+        self.route.to_computed()
+    }
+}
+
+impl<T: Clone + PartialEq + ToString + From<String>> EmbedDom for Router<T> {
+    fn embed(self) -> DomNode {
+        self.route.embed()
     }
 }

@@ -64,7 +64,7 @@ impl<T: PartialEq> PartialEq for Value<T> {
 }
 
 impl<T: Clone + 'static> Value<T> {
-    pub fn new(value: T) -> Value<T> {
+    pub fn new(value: T) -> Self {
         let deps = get_driver().inner.dependencies;
         Value {
             inner: Rc::new(ValueInner {

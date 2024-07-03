@@ -116,7 +116,7 @@ mod websocket;
 use computed::struct_mut::ValueMut;
 
 pub use computed::{
-    context::Context, struct_mut, AutoMap, Computed, Dependencies, DropResource, GraphId,
+    context::Context, struct_mut, AutoMap, Computed, Dependencies, DropResource, GraphId, Reactive,
     ToComputed, Value,
 };
 
