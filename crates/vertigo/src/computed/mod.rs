@@ -5,6 +5,7 @@ mod dependencies;
 mod drop_resource;
 mod graph_id;
 mod graph_value;
+mod reactive;
 pub mod struct_mut;
 mod value;
 
@@ -17,6 +18,7 @@ pub use dependencies::Dependencies;
 pub use drop_resource::DropResource;
 pub use graph_id::GraphId;
 pub use graph_value::GraphValue;
+pub use reactive::Reactive;
 pub use value::Value;
 
 /// Allows to create `Computed<T1, T2, ...>` out of `Value<T1>`, `Value<T2>`, ...
