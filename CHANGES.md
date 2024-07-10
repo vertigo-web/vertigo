@@ -8,6 +8,7 @@
 * `Reactive` trait that allows generic components to be more flexible with props
 * `BTreeMap` and `chrono::DateTime<Utc>` support in `AutoJsJson`
 * `#[js_json(default = "None")]` attribute to `AutoJsJson`
+* `JsJson` implementation for unit type `()`
 * All http methods in `FetchMethod`
 * `history_replace` method in `Driver`
 * vertigo-cli: `add-watch-path` to `watch` command
