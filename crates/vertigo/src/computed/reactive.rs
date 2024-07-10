@@ -60,13 +60,10 @@ use crate::{Context, Value};
 ///     inner: Value::new("".to_string())
 /// };
 ///
-/// // Specialize Print component
-/// type PrintL = Print::<Lisper>;
-///
 /// // Use reactive object in generic component
 /// let _ = dom! {
 ///     <div>
-///         <PrintL saying={lisper.clone()} />
+///         <Print saying={&lisper} />
 ///     </div>
 /// };
 ///

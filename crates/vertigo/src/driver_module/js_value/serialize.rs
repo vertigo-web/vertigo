@@ -171,6 +171,25 @@ impl JsJsonDeserialize for bool {
     }
 }
 
+impl JsJsonSerialize for () {
+    fn to_json(self) -> JsJson {
+        JsJson::Object(HashMap::default())
+    }
+}
+
+impl JsJsonDeserialize for () {
+    fn from_json(context: JsJsonContext, json: JsJson) -> Result<Self, JsJsonContext> {
+        let map = json.get_hashmap(&context)?;
+
+        if !map.is_empty() {
+            let message = "Empty {} expected, inner content received".to_string();
+            return Err(context.add(message))
+        }
+
+        Ok(())
+    }
+}
+
 impl JsJsonSerialize for &str {
     fn to_json(self) -> JsJson {
         JsJson::String(self.into())
@@ -383,5 +402,18 @@ mod tests {
         };
 
         assert_eq!(ccc, eee);
+    }
+
+    #[test]
+    fn test_unit() {
+        let unit = JsJson::Object(HashMap::default());
+
+        let Ok(()) = from_json::<()>(unit.clone()) else {
+            unreachable!();
+        };
+
+        let unit2 = to_json(());
+
+        assert_eq!(unit2, unit)
     }
 }
