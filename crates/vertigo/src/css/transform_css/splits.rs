@@ -17,26 +17,17 @@ pub fn css_split_rows(css: &str) -> Vec<&str> {
     let mut out: Vec<&str> = Vec::new();
 
     let mut row_side = RowSideState::Left;
-    let mut in_squares = false;
     let mut start = 0;
 
     for (index, char) in css.char_indices() {
-        if in_squares {
-            if char == ']' {
-                in_squares = false;
-                if row_side == RowSideState::Left {
-                    row_side = RowSideState::Right;
-                }
-            }
-            continue;
-        }
         if char == '{' {
             if row_side == RowSideState::Right {
                 row_side = RowSideState::BracketsOpened(1);
             } else if let RowSideState::BracketsOpened(counter) = &mut row_side {
                 *counter += 1;
             } else {
-                panic!("unsupported use case");
+                log::info!("css input: {css}");
+                panic!("unsupported use case at opening bracket");
             }
         }
 
@@ -49,7 +40,8 @@ pub fn css_split_rows(css: &str) -> Vec<&str> {
                     true
                 }
             } else {
-                panic!("unsupported use case");
+                log::info!("css input: {css}");
+                panic!("unsupported use case at closing bracket");
             };
 
             if should_close {
@@ -57,7 +49,7 @@ pub fn css_split_rows(css: &str) -> Vec<&str> {
             }
         }
 
-        if char == ':' && row_side == RowSideState::Left {
+        if (char == ':' || char == '.') && row_side == RowSideState::Left {
             row_side = RowSideState::Right;
         }
 
@@ -65,10 +57,6 @@ pub fn css_split_rows(css: &str) -> Vec<&str> {
             out.push(css[start..index].trim());
             start = index + 1;
             row_side = RowSideState::Left;
-        }
-
-        if char == '[' && row_side != RowSideState::Right {
-            in_squares = true;
         }
     }
 
@@ -358,14 +346,19 @@ mod tests {
 
     #[test]
     fn test_square_brackets() {
-        let css = "color: red;
+        let css1 = ".autocss_1 { color: white; }";
+        assert_eq!(css_split_rows(css1), vec![".autocss_1 { color: white; }",]);
 
-        [something] { color: white; }
+        let css2 = ":hover .autocss_2 { visibility: visible; }";
+        assert_eq!(css_split_rows(css2), vec![":hover .autocss_2 { visibility: visible; }",]);
+
+        let css3 = "color: red;
+            .autocss_3 { color: white; }
         ";
 
         assert_eq!(
-            css_split_rows(css),
-            vec!["color: red", "[something] { color: white; }",]
-        )
+            css_split_rows(css3),
+            vec!["color: red", ".autocss_3 { color: white; }",]
+        );
     }
 }
