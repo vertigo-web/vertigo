@@ -1,7 +1,7 @@
 <!-- markdownlint-configure-file { "no-duplicate-heading": { "siblings_only": true } } -->
 
 <!-- markdownlint-disable-next-line first-line-h1 -->
-## 0.6.0 Unreleased
+## 0.6.0 - 2024-08-02
 
 ### Added
 
@@ -11,7 +11,9 @@
 * `JsJson` implementation for unit type `()`
 * All http methods in `FetchMethod`
 * `history_replace` method in `Driver`
-* vertigo-cli: `add-watch-path` to `watch` command
+* Minification of `wasm_run.js`
+* vertigo-cli: `--add-watch-path` to `watch` command
+* vertigo-cli: `--wasm-run-source-map` to `build` and `watch` command
 
 ### Fixed
 

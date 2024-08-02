@@ -12,7 +12,7 @@ pub fn init_env(api: ApiImport) {
         let panic_message = api.panic_message;
         init_logger(api);
 
-        panic::set_hook(Box::new(move |info: &panic::PanicInfo<'_>| {
+        panic::set_hook(Box::new(move |info: &panic::PanicHookInfo<'_>| {
             let message = info.to_string();
             panic_message.show(message);
         }));

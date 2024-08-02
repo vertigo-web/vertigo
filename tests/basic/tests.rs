@@ -1,5 +1,5 @@
 use fantoccini::{ClientBuilder, Locator};
-use vertigo_cli::{build, BuildOpts, serve, ServeOpts};
+use vertigo_cli::{build, serve, BuildOpts, CommonOpts, ServeOpts};
 
 #[tokio::test]
 #[ignore]
@@ -9,10 +9,15 @@ async fn basic() {
 
     // Build basic test site
     let opts = BuildOpts {
-        package_name: Some("vertigo-test-basic".to_string()),
-        dest_dir: "./build".to_string(),
-        public_path: "/build".to_string(),
-        disable_wasm_opt: false,
+        common: CommonOpts {
+            dest_dir: "./build".to_string(),
+        },
+        inner: build::BuildOptsInner {
+            package_name: Some("vertigo-test-basic".to_string()),
+            public_path: "/build".to_string(),
+            disable_wasm_opt: false,
+            wasm_run_source_map: true,
+        },
     };
 
     println!("Running site build");
@@ -29,11 +34,15 @@ async fn basic() {
     let handle = tokio::runtime::Handle::current();
     std::thread::spawn(move || {
         let opts = ServeOpts {
-            dest_dir: "./build".to_string(),
-            host: "127.0.0.1".into(),
-            port: 5555,
-            proxy: vec![],
-            env: vec![],
+            common: CommonOpts {
+                dest_dir: "./build".to_string(),
+            },
+            inner: serve::ServeOptsInner {
+                host: "127.0.0.1".into(),
+                port: 5555,
+                proxy: vec![],
+                env: vec![],
+            },
         };
 
         handle.block_on(async {

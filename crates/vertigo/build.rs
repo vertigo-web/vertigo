@@ -1,13 +1,9 @@
 use std::env;
 use std::fs;
-use std::path::PathBuf;
+use std::path::{Path, PathBuf};
 
 fn main() {
     let dir = PathBuf::from(env::var("OUT_DIR").unwrap()).join("../../../static");
-
-    // Invokes build script again if these changed:
-    println!("cargo:rerun-if-changed=src/driver_module/wasm_run.js");
-    println!("cargo:rerun-if-changed={}", dir.to_string_lossy());
 
     fs::create_dir_all(&dir).unwrap();
 
@@ -17,11 +13,35 @@ fn main() {
     // Subdirectory for files included in dom macro invocations
     fs::create_dir_all(dir.join("included")).unwrap();
 
-    let wasm_run_path = dir.join("wasm_run.js");
-    let wasm_run_content = include_str!("src/driver_module/wasm_run.js");
+    // Invokes build script again if these changed:
+    println!("cargo:rerun-if-changed={}", dir.to_string_lossy());
 
-    fs::write(&wasm_run_path, wasm_run_content.as_bytes())
-        .unwrap_or_else(|_| panic!("Couldn't write to {}!", wasm_run_path.to_string_lossy()));
+    println!("cargo:rerun-if-changed=src/driver_module/wasm_run.js");
+    println!("cargo:rerun-if-changed=src/driver_module/wasm_run.js.map");
 
-    println!("Saved {}", wasm_run_path.to_string_lossy());
+    bundle_file(
+        "src/driver_module/wasm_run.js",
+        include_str!("src/driver_module/wasm_run.js"),
+        &dir,
+        "wasm_run.js",
+    );
+
+    bundle_file(
+        "src/driver_module/wasm_run.js.map",
+        include_str!("src/driver_module/wasm_run.js.map"),
+        &dir,
+        "wasm_run.js.map",
+    );
+}
+
+fn bundle_file(in_path: &str, content: &str, out_dir: &Path, file_name: &str) {
+    // Invokes build script again if this file changed
+    println!("cargo:rerun-if-changed={in_path}");
+
+    let out_path = out_dir.join(file_name);
+
+    fs::write(&out_path, content.as_bytes())
+        .unwrap_or_else(|_| panic!("Couldn't write to {}!", out_path.to_string_lossy()));
+
+    println!("Bundled {}", out_path.to_string_lossy());
 }

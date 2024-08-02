@@ -1,6 +1,8 @@
-Cargo.lock
-/target
+.vscode
 /build
 /demo_build
 /examples/build
-.vscode
+/node_modules
+/package-lock.json
+/target
+Cargo.lock
