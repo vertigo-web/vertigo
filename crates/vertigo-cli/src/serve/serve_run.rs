@@ -6,7 +6,6 @@ use axum::{
     routing::get,
     Router,
 };
-use clap::Args;
 use reqwest::header;
 use serde_json::Value;
 use std::{
@@ -16,41 +15,24 @@ use std::{
 use tokio::sync::{OnceCell, RwLock};
 use tower_http::services::ServeDir;
 
-use crate::serve::server_state::ServerState;
-use crate::{commons::parse_key_val, serve::mount_path::MountPathConfig};
+use crate::serve::{server_state::ServerState, ServeOptsInner};
+use crate::serve::mount_path::MountPathConfig;
+
+use super::ServeOpts;
 
 static STATE: OnceCell<Arc<RwLock<Arc<ServerState>>>> = OnceCell::const_new();
-
-#[derive(Args, Debug)]
-pub struct ServeOpts {
-    #[arg(long, default_value_t = {"./build".to_string()})]
-    pub dest_dir: String,
-    #[arg(long, default_value_t = {"127.0.0.1".into()})]
-    pub host: String,
-    #[arg(long, default_value_t = {4444})]
-    pub port: u16,
-
-    /// sets up proxy: `--proxy /path=http://domain.com/path`
-    #[arg(long, value_parser = parse_key_val::<String, String>)]
-    pub proxy: Vec<(String, String)>,
-
-    /// Setting the parameters `--env api=http://domain.com/api --env api2=http://domain.com/api2`
-    #[arg(long, value_parser = parse_key_val::<String, String>)]
-    pub env: Vec<(String, String)>,
-}
 
 pub async fn run(opts: ServeOpts, port_watch: Option<u16>) -> Result<(), i32> {
     log::info!("serve params => {opts:#?}");
 
-    let ServeOpts {
+    let ServeOptsInner {
         host,
         port,
-        dest_dir,
         proxy,
         env,
-    } = opts;
+    } = opts.inner;
 
-    let mount_path = MountPathConfig::new(dest_dir)?;
+    let mount_path = MountPathConfig::new(opts.common.dest_dir)?;
     let state = Arc::new(ServerState::new(mount_path, port_watch, env)?);
 
     let ref_state = STATE

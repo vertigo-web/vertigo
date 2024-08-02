@@ -42,12 +42,12 @@ script = [
 
 [tasks.demo-watch]
 script = [
-    'cargo run --bin vertigo -- watch vertigo-demo --dest-dir=demo_build --env ws_chat=ws://127.0.0.1:3333/ws'
+    'cargo run --bin vertigo -- watch vertigo-demo --dest-dir=demo_build --wasm-run-source-map --env ws_chat=ws://127.0.0.1:3333/ws'
 ]
 
 [tasks.demo-start]
 script = [
-    "cargo run --bin vertigo -- build vertigo-demo --dest-dir=demo_build",
+    "cargo run --bin vertigo -- build vertigo-demo --dest-dir=demo_build --wasm-run-source-map",
     "cargo run --bin vertigo -- serve --dest-dir=demo_build --env ws_chat=ws://127.0.0.1:3333/ws"
 ]
 
@@ -70,27 +70,12 @@ script = [
     'cargo run --bin vertigo -- watch vertigo-example-trafficlights --dest-dir=examples/build/trafficlights',
 ]
 
-# JavaScript dev builds
-
-[tasks.internal-run-ts]
-private = true
-command = "npx"
-args = [ "-p", "typescript", "tsc",
-    "--strict",
-    "--noUnusedLocals", "--noUnusedParameters", "--noUncheckedIndexedAccess",
-    "--noEmitOnError",
-    "--lib", "es6,dom,esnext",
-    "--target", "esnext",
-    "--module", "es6",
-    "--outDir", "crates/vertigo/src/driver_module/src_js_build",
-    "crates/vertigo/src/driver_module/src_js/index.ts",
-]
+# JavaScript dev build
 
 [tasks.build-js]
-dependencies = [ "internal-run-ts" ]
 script = [
-    "npx rollup crates/vertigo/src/driver_module/src_js_build/index.js --file crates/vertigo/src/driver_module/wasm_run.js",
-    "rm -rf crates/vertigo/src/driver_module/src_js_build",
+    "npm install",
+    "npx rollup -c",
 ]
 
 [tasks.lint]

@@ -8,7 +8,7 @@ export class Interval {
         this.getWasm = getWasm;
     }
 
-    public interval_set = (duration: number, callback_id: bigint): number => {
+    public interval_set = (duration: number, callback_id: bigint): ReturnType<typeof setTimeout> => {
         const timer_id = setInterval(() => {
             this.getWasm().wasm_callback(callback_id, undefined);
         }, duration);
@@ -20,7 +20,7 @@ export class Interval {
         clearInterval(timer_id);
     }
 
-    timeout_set = (duration: number, callback_id: bigint): number => {
+    timeout_set = (duration: number, callback_id: bigint): ReturnType<typeof setTimeout> => {
         const timeout_id = setTimeout(() => {
             this.getWasm().wasm_callback(callback_id, undefined);
         }, duration);

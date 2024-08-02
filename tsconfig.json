@@ -1,18 +1,19 @@
 {
+    "compileOnSave": false,
     "compilerOptions": {
-        "target": "esnext",
-        "module": "es6",
+        "target": "es2020",
+        "moduleResolution": "node",
         "strict": true,
-        "jsx": "react",
-        "lib": ["dom", "es6", "esnext"],
-        "downlevelIteration": true,
         "noUnusedLocals": true,
         "noUnusedParameters": true,
         "noUncheckedIndexedAccess": true,
         "allowSyntheticDefaultImports": true,
-        "esModuleInterop": true,
+        "sourceMap": true,
+        "importHelpers": true,
+        "skipLibCheck": true,
+        "resolveJsonModule": true,
         "forceConsistentCasingInFileNames": true,
-        "baseUrl": ".",
-        "noEmit": true
+        "noEmit": true,
+        "noEmitOnError": true,
     }
 }

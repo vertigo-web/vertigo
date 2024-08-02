@@ -7,6 +7,7 @@ pub mod watch;
 use clap::{Parser, Subcommand};
 
 pub use build::BuildOpts;
+pub use commons::models::CommonOpts;
 pub use new::NewOpts;
 pub use serve::ServeOpts;
 pub use watch::WatchOpts;
