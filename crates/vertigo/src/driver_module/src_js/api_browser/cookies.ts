@@ -31,13 +31,15 @@ export class Cookies {
     public get_json = (cname: string): JsJsonType => {
         let cvalue_str = this.get(cname);
 
-        try {
-            let cookie_value = JSON.parse(cvalue_str);
-            return cookie_value;
-        } catch(e) {
-            console.error!("Error deserializing cookie", e);
-            return null;
+        if (cvalue_str.length !== 0) {
+            try {
+                let cookie_value = JSON.parse(cvalue_str);
+                return cookie_value;
+            } catch (e) {
+                console.error!("Error deserializing cookie", e);
+            }
         }
+        return null
     }
 
     public set = (
