@@ -5,7 +5,7 @@ import { ExportType } from "../wasm_module";
 
 const getTypeResponse = (contentType: string | null): 'json' | 'text' | 'bin' => {
     if (contentType === null) {
-        console.error('Missing header content-type');
+        console.info('Missing header content-type');
         return 'bin';
     }
 

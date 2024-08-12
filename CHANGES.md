@@ -1,6 +1,12 @@
 <!-- markdownlint-configure-file { "no-duplicate-heading": { "siblings_only": true } } -->
 
 <!-- markdownlint-disable-next-line first-line-h1 -->
+## Unreleased
+
+### Changed
+
+* Hush excessive logging when no Content-Type or cookie provided
+
 ## 0.6.0 - 2024-08-02
 
 ### Added
