@@ -133,7 +133,7 @@ impl ApiImport {
 
             if result != JsValue::Null {
                 if let JsValue::Json(value) = result {
-                    return value
+                    return value;
                 }
                 log::error!("cookie_get_json -> params decode error -> result={result:?}");
             }
@@ -264,6 +264,10 @@ impl ApiImport {
     }
 
     pub fn instant_now(&self) -> InstantType {
+        self.utc_now() as InstantType
+    }
+
+    pub fn utc_now(&self) -> i64 {
         let result = self
             .dom_access()
             .root("window")
@@ -272,17 +276,32 @@ impl ApiImport {
             .fetch();
 
         match result {
-            JsValue::I64(time) => {
-                time as u64 as InstantType
-            }
-            JsValue::F64(time) => {
-                time as u64 as InstantType
-            }
+            JsValue::I64(time) => time,
+            JsValue::F64(time) => time as i64,
             _ => {
                 self.panic_message
-                    .show(format!("api.instant_now -> incorrect result {result:?}"));
-                0_u64
+                    .show(format!("api.utc_now -> incorrect result {result:?}"));
+                0_i64
             }
+        }
+    }
+
+    pub fn timezone_offset(&self) -> i32 {
+        let result = self
+            .dom_access()
+            .api()
+            .call("getTimezoneOffset", vec![])
+            .fetch();
+
+        if let JsValue::I32(result) = result {
+            // Return in seconds to be compatible with chrono
+            // Opposite as JS returns the offset backwards
+            result * -60
+        } else {
+            self.panic_message.show(format!(
+                "api.timezone_offset -> incorrect result {result:?}"
+            ));
+            0
         }
     }
 
@@ -679,11 +698,10 @@ impl ApiImport {
     /// Synthetic command to respond with plain text, not DOM
     pub fn plain_response(&self, body: String) {
         if self.is_browser() {
-            return
+            return;
         }
 
-        self
-            .dom_access()
+        self.dom_access()
             .synthetic("plain_response", JsValue::String(body))
             .exec();
     }

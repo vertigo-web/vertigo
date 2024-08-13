@@ -40,4 +40,8 @@ export class ApiBrowser {
     public get_env = (name: string): string | null => {
         return document.documentElement.getAttribute(`data-env-${name}`);
     }
+
+    public getTimezoneOffset = (): number => {
+        return new Date().getTimezoneOffset()
+    }
 }

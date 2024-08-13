@@ -155,6 +155,18 @@ impl Driver {
         Instant::now(self.inner.api.clone())
     }
 
+    /// Gets current UTC timestamp
+    pub fn utc_now(&self) -> i64 {
+        self.inner.api.utc_now()
+    }
+
+    /// Gets browsers time zone offset in seconds
+    ///
+    /// Compatible with chrono's `FixedOffset::east_opt` method.
+    pub fn timezone_offset(&self) -> i32 {
+        self.inner.api.timezone_offset()
+    }
+
     /// Create new RequestBuilder for GETs (more complex version of [fetch](struct.Driver.html#method.fetch))
     #[must_use]
     pub fn request_get(&self, url: impl Into<String>) -> RequestBuilder {
