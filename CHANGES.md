@@ -3,6 +3,11 @@
 <!-- markdownlint-disable-next-line first-line-h1 -->
 ## Unreleased
 
+### Added
+
+* `Driver::utc_now` (Gets current UTC timestamp)
+* `Driver::timezone_offset` (Gets browsers time zone offset in seconds)
+
 ### Changed
 
 * Hush excessive logging when no Content-Type or cookie provided
