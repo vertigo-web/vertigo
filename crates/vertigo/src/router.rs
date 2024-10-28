@@ -1,6 +1,6 @@
 use crate::{computed::Value, get_driver, Computed, DomNode, EmbedDom, Reactive, ToComputed};
 
-/// Router based on hash part of current location.
+/// Router based on path or hash part of current location.
 ///
 /// ```rust
 /// use vertigo::{dom, Computed, Reactive, Value, DomNode};
@@ -148,5 +148,11 @@ impl<T: Clone + PartialEq + ToString + From<String>> ToComputed<T> for Router<T>
 impl<T: Clone + PartialEq + ToString + From<String>> EmbedDom for Router<T> {
     fn embed(self) -> DomNode {
         self.route.embed()
+    }
+}
+
+impl<T: Clone + PartialEq + ToString + From<String>> Default for Router<T> {
+    fn default() -> Self {
+        Router::new(true)
     }
 }
