@@ -5,7 +5,7 @@ use crate::{
     computed::{context::Context, Value},
     get_driver,
     struct_mut::ValueMut,
-    transaction, Computed, DomNode, Instant, Resource, ToComputed,
+    transaction, Computed, DomNode, Instant, JsJsonDeserialize, Resource, ToComputed,
 };
 
 use super::request_builder::{RequestBody, RequestBuilder};
@@ -260,5 +260,35 @@ impl<T: PartialEq + Clone> LazyCache<T> {
                 }
             }
         })
+    }
+}
+
+impl<T: JsJsonDeserialize> LazyCache<T> {
+    /// Helper to easily create a lazy cache of Vec<T> deserialized from provided URL base and route
+    ///
+    /// ```rust
+    /// use vertigo::{Computed, LazyCache, RequestBuilder, AutoJsJson, Resource};
+    ///
+    /// #[derive(AutoJsJson, PartialEq, Clone)]
+    /// pub struct Model {
+    ///     id: i32,
+    ///     name: String,
+    /// }
+    ///
+    /// let posts = LazyCache::<Vec<Model>>::new_resource("https://some.api", "/posts", 60);
+    /// ```
+    pub fn new_resource(api: &str, path: &str, ttl: u64) -> Self {
+        let url = [api, path].concat();
+
+        LazyCache::new(
+            get_driver().request_get(url).ttl_seconds(ttl),
+            |status, body| {
+                if status == 200 {
+                    Some(body.into::<T>())
+                } else {
+                    None
+                }
+            },
+        )
     }
 }
