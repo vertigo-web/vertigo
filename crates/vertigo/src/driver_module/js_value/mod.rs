@@ -5,6 +5,8 @@ mod memory_block;
 mod memory_block_read;
 mod memory_block_write;
 mod serialize;
+#[cfg(feature = "chrono")]
+mod serialize_chrono;
 
 pub use js_json_struct::JsJson;
 pub use js_value_struct::JsValue;

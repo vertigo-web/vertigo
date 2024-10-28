@@ -21,7 +21,7 @@ impl<'a> GraphEdgeIter<'a> {
     }
 }
 
-impl<'a> Iterator for GraphEdgeIter<'a> {
+impl Iterator for GraphEdgeIter<'_> {
     type Item = GraphId;
 
     fn next(&mut self) -> Option<Self::Item> {

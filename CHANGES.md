@@ -7,6 +7,7 @@
 
 * `Driver::utc_now` (Gets current UTC timestamp)
 * `Driver::timezone_offset` (Gets browsers time zone offset in seconds)
+* `chrono::NaiveDate` support in `AutoJsJson`
 
 ### Changed
 
