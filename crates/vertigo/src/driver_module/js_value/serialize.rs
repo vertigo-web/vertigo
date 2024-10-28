@@ -300,26 +300,6 @@ impl<T: JsJsonDeserialize> JsJsonDeserialize for BTreeMap<String, T> {
     }
 }
 
-#[cfg(feature = "chrono")]
-impl JsJsonSerialize for chrono::DateTime<chrono::Utc> {
-    fn to_json(self) -> JsJson {
-        self.to_rfc3339().to_json()
-    }
-}
-
-#[cfg(feature = "chrono")]
-impl JsJsonDeserialize for chrono::DateTime<chrono::Utc> {
-    fn from_json(context: JsJsonContext, json: JsJson) -> Result<Self, JsJsonContext> {
-        let datetime_str = String::from_json(context.clone(), json)?;
-        chrono::DateTime::parse_from_rfc3339(&datetime_str)
-            .map_err(|err| {
-                let message = ["DateTime parsing failed: ", &err.to_string()].concat();
-                context.add(message)
-            })
-            .map(|dt| dt.to_utc())
-    }
-}
-
 /// Deserialize from JsJson to T
 pub fn from_json<T: JsJsonDeserialize>(json: JsJson) -> Result<T, String> {
     let context = JsJsonContext::new("root");
