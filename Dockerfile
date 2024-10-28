@@ -1,4 +1,4 @@
-FROM rustlang/rust:nightly-slim as build
+FROM rustlang/rust:nightly-slim AS build
 
 RUN apt-get update && apt-get install -y cmake pkg-config libssl-dev
 
