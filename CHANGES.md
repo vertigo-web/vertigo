@@ -9,6 +9,7 @@
 * `Driver::timezone_offset` (Gets browsers time zone offset in seconds)
 * `chrono::NaiveDate` support in `AutoJsJson`
 * `LazyCache::<T>::new_resource()` helper
+* `ToComputed` impls for primitive types
 
 ### Changed
 

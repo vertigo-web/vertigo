@@ -109,7 +109,7 @@ impl JsValue {
     }
 
     fn get_string_size(value: &str) -> u32 {
-        value.as_bytes().len() as u32
+        value.len() as u32
     }
 
     fn get_size(&self) -> u32 {

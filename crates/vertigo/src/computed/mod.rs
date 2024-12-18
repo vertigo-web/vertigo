@@ -7,18 +7,20 @@ mod graph_id;
 mod graph_value;
 mod reactive;
 pub mod struct_mut;
+mod to_computed;
 mod value;
 
 #[cfg(test)]
 mod tests;
 
 pub use auto_map::AutoMap;
-pub use computed_box::{Computed, ToComputed};
+pub use computed_box::Computed;
 pub use dependencies::Dependencies;
 pub use drop_resource::DropResource;
 pub use graph_id::GraphId;
 pub use graph_value::GraphValue;
 pub use reactive::Reactive;
+pub use to_computed::ToComputed;
 pub use value::Value;
 
 /// Allows to create `Computed<T1, T2, ...>` out of `Value<T1>`, `Value<T2>`, ...
