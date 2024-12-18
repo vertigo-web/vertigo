@@ -154,7 +154,7 @@ impl JsJson {
     }
 
     fn get_string_size(value: &str) -> u32 {
-        value.as_bytes().len() as u32
+        value.len() as u32
     }
 
     pub fn write_to(&self, buff: &mut MemoryBlockWrite) {

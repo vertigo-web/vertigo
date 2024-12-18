@@ -191,19 +191,3 @@ impl From<&str> for Computed<String> {
         Value::new(value.to_string()).to_computed()
     }
 }
-
-pub trait ToComputed<T: Clone> {
-    fn to_computed(&self) -> Computed<T>;
-}
-
-impl<T: Clone + 'static> ToComputed<T> for Computed<T> {
-    fn to_computed(&self) -> Computed<T> {
-        self.clone()
-    }
-}
-
-impl<T: Clone + 'static> ToComputed<T> for &Computed<T> {
-    fn to_computed(&self) -> Computed<T> {
-        (*self).clone()
-    }
-}
