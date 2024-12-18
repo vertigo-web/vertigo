@@ -1,5 +1,5 @@
 #[test]
-fn test_lifetimes() {
+fn test_if_lifetimes_allowed() {
     use crate::{self as vertigo, component, dom, DomNode};
 
     #[component]
@@ -71,4 +71,25 @@ fn test_namespaces() {
         }
         _ => panic!("Expected DomNode::Node"),
     }
+}
+
+#[test]
+fn test_if_docstrings_allowed() {
+    use crate::{self as vertigo, component, dom, DomNode};
+
+    #[component]
+    fn Hello<'a>(
+        /// Name of the person you want to greet
+        name: &'a str,
+    ) {
+        dom! {
+            <span>"Hello " {name}</span>
+        }
+    }
+
+    let ret = dom! {
+        <p><Hello name={"world"} /></p>
+    };
+
+    assert!(matches!(ret, DomNode::Node { node: _ }));
 }

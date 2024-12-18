@@ -1,6 +1,6 @@
 use proc_macro::{Span, TokenStream};
 use quote::{quote, ToTokens};
-use syn::Visibility;
+use syn::{FnArg, Visibility};
 
 pub(crate) fn component_inner(input: TokenStream) -> TokenStream {
     let ast = syn::parse_macro_input!(input as syn::ItemFn);
@@ -25,10 +25,16 @@ pub(crate) fn component_inner(input: TokenStream) -> TokenStream {
 
     let mut struct_fields = Vec::new();
 
-    for field in ast.sig.inputs.iter() {
-        struct_fields.push(quote! {
-            pub #field
-        })
+    for field in ast.sig.inputs.clone().into_iter() {
+        match field {
+            FnArg::Receiver(_) => unreachable!(),
+            FnArg::Typed(mut pat_type) => {
+                let attrs = pat_type.attrs.drain(..);
+                struct_fields.push(quote! {
+                    #(#attrs)* pub #pat_type
+                })
+            }
+        }
     }
 
     let body = ast.block;
