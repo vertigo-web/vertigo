@@ -15,6 +15,10 @@
 
 * Hush excessive logging when no Content-Type or cookie provided
 
+### Fixed
+
+* Docstrings and other attributes in `component!` macro
+
 ## 0.6.0 - 2024-08-02
 
 ### Added
