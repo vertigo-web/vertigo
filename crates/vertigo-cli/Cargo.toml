@@ -1,6 +1,6 @@
 [package]
 name = "vertigo-cli"
-version = "0.6.0"
+version = "0.6.1"
 authors = ["Grzegorz Szeliga <szeligagrzegorz@gmail.com>", "Michał Pokrywka <wolfmoon@o2.pl>"]
 description = "Reactive Real-DOM library with SSR for Rust - packaging/serving tool"
 categories = ["command-line-utilities", "development-tools", "development-tools::build-utils", "wasm", "web-programming"]
@@ -39,4 +39,4 @@ tokio-stream = "0.1"
 tower-http = { version = "0.4", features = ["fs"] }
 tokio-retry = "0.3"
 wasmtime = "19.0"
-vertigo = { path = "../vertigo", version = "0.6.0" }
+vertigo = { path = "../vertigo", version = "0.6.1" }
