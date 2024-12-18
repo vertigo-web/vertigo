@@ -3,8 +3,7 @@ use crate::{self as vertigo, DomNode};
 
 #[test]
 fn children_from_iter() {
-    let list = (0..10)
-        .map(|i| dom! { <li>{i}</li> });
+    let list = (0..10).map(|i| dom! { <li>{i}</li> });
 
     let node = dom! {
         <ul>
@@ -34,4 +33,23 @@ fn children_from_iter_inline() {
     };
 
     assert_eq!(node.get_children().len(), 11);
+}
+
+#[test]
+fn iter_option() {
+    let some_label = Some("Label".to_string());
+    let none_label = Option::<String>::None;
+
+    let node = dom! {
+        <div>
+            {..some_label}
+            {..none_label}
+        </div>
+    };
+
+    let DomNode::Node { node } = node else {
+        panic!("Expected DomNode::Node")
+    };
+
+    assert_eq!(node.get_children().len(), 1);
 }

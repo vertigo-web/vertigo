@@ -294,6 +294,8 @@ pub use log;
 
 /// Allows to create [DomNode] using HTML tags.
 ///
+/// Simple DOM with a param embedded:
+///
 /// ```rust
 /// use vertigo::dom;
 ///
@@ -306,6 +308,24 @@ pub use log;
 ///     </div>
 /// };
 /// ```
+///
+/// Mapping and embedding an `Option`:
+///
+/// ```rust
+/// use vertigo::dom;
+///
+/// let name = "John";
+/// let occupation = Some("Lumberjack");
+///
+/// dom! {
+///     <div>
+///         <h3>"Hello " {name} "!"</h3>
+///         {..occupation.map(|occupation| dom! { <p>"Occupation: " {occupation}</p> })}
+///     </div>
+/// };
+/// ```
+///
+/// Note the spread operator which utilizes the fact that `Option` is iterable in Rust.
 pub use vertigo_macro::dom;
 
 /// Allows to create [DomElement] using HTML tags.
