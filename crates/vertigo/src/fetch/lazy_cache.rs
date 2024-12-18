@@ -264,7 +264,7 @@ impl<T: PartialEq + Clone> LazyCache<T> {
 }
 
 impl<T: JsJsonDeserialize> LazyCache<T> {
-    /// Helper to easily create a lazy cache of Vec<T> deserialized from provided URL base and route
+    /// Helper to easily create a lazy cache of `Vec<T>` deserialized from provided URL base and route
     ///
     /// ```rust
     /// use vertigo::{Computed, LazyCache, RequestBuilder, AutoJsJson, Resource};
