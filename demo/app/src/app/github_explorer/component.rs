@@ -1,9 +1,9 @@
-use vertigo::{css, Resource, bind, dom, Computed, transaction, DomNode};
+use vertigo::{bind, css, dom, transaction, Computed, DomNode, Resource};
 
 use super::State;
 
 pub struct GitHubExplorer {
-    pub state: State
+    pub state: State,
 }
 
 impl GitHubExplorer {
@@ -23,27 +23,27 @@ impl GitHubExplorer {
             });
         });
 
-        let wrapper = css!("
+        let wrapper = css! {"
             border: 1px solid black;
             margin: 20px 0;
             padding: 10px;
-        ");
+        "};
 
-        let input_css = css!("
+        let input_css = css! {"
             margin-left: 10px;
-        ");
+        "};
 
-        let button_css = || css!("
+        let button_css = css! {"
             margin: 0 10px;
             cursor: pointer;
-        ");
+        "};
 
         dom! {
             <div css={wrapper}>
                 "Enter author/repo tuple: "
                 <input css={input_css} value={state.repo_input.to_computed()} on_input={on_input_callback} />
-                <button css={button_css()} on_click={on_show}>"Fetch"</button>
-                <div css={button_css()}>
+                <button css={&button_css} on_click={on_show}>"Fetch"</button>
+                <div css={button_css}>
                     <text computed={&state.repo_shown} />
                 </div>
                 { self.render_commit() }
@@ -69,13 +69,13 @@ impl GitHubExplorer {
         });
 
         commit_message.render_value(|message| {
-            let text_css = css!("
+            let text_css = css! {"
                 width: 600px;
                 height: 300px;
                 border: 1px solid black;
                 padding: 5px;
                 margin: 10px;
-            ");
+            "};
 
             dom! {
                 <div css={text_css}>

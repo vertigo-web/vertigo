@@ -72,3 +72,9 @@ impl From<Computed<Css>> for CssAttrValue {
         CssAttrValue::Computed(value)
     }
 }
+
+impl From<&Css> for CssAttrValue {
+    fn from(value: &Css) -> Self {
+        CssAttrValue::Css(value.clone())
+    }
+}

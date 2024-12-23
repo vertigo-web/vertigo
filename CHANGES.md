@@ -1,6 +1,12 @@
 <!-- markdownlint-configure-file { "no-duplicate-heading": { "siblings_only": true } } -->
 
 <!-- markdownlint-disable-next-line first-line-h1 -->
+## Unreleased
+
+### Added
+
+* `css` attribute in `dom!` macro now accepts `&Css` (referenced) for convenience
+
 ## 0.6.1 - 2024-12-18
 
 ### Added
