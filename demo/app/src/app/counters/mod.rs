@@ -1,4 +1,4 @@
-use vertigo::{Computed, Value, dom, include_static, css, component};
+use vertigo::{component, css, dom, include_static, Computed, Value};
 
 mod simple_counter;
 use simple_counter::SimpleCounter;
@@ -40,12 +40,10 @@ impl State {
             counter2,
             counter3,
             counter4,
-            sum
+            sum,
         }
     }
 }
-
-
 
 #[component]
 fn Sum(sum: Computed<u32>) {
@@ -60,31 +58,27 @@ fn Sum(sum: Computed<u32>) {
 pub fn CountersDemo(state: State) {
     let path = include_static!("./counter.webp");
 
-    let center_css = css!("
+    let center_base = css! {"
         border: 1px solid black;
         padding: 1px;
         margin: 0 auto;
         display: block;
 
         cursor: pointer;
-        box-shadow: 4px 4px 4px #444, 8px 8px 4px #666, 12px 12px 4px #888;
 
         transition: all .2s ease-in-out;
+    "};
+
+    let center_css = center_base.clone().extend(css! {"
+        box-shadow: 4px 4px 4px #444, 8px 8px 4px #666, 12px 12px 4px #888;
+
         :hover {
             transform: scale(1.1);
         }
-    ");
+    "});
 
-    let center_css2 = css!("
-        border: 1px solid black;
-        padding: 1px;
-        margin: 0 auto;
-        display: block;
-
-        cursor: pointer;
-
+    let center_css2 = center_base.push_str("
         box-shadow: 4px 4px 4px rgba(0, 0, 0, 0.5), 8px 8px 4px rgba(0, 0, 0, 0.4), 12px 12px 4px rgba(0, 0, 0, 0.3);
-        transition: all .2s ease-in-out;
         :hover {
             transform: scale(1.5);
             box-shadow: 54px 54px 14px rgba(0, 0, 0, 0.3), 58px 58px 14px rgba(0, 0, 0, 0.2), 62px 62px 14px rgba(0, 0, 0, 0.1);

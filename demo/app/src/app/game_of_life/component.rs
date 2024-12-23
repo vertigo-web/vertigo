@@ -1,21 +1,21 @@
 use std::rc::Rc;
-use vertigo::{css, Value, bind, DomNode, dom, transaction, DomElement, dom_element};
+use vertigo::{bind, css, dom, dom_element, transaction, DomElement, DomNode, Value};
 
 pub use super::State;
 
 pub struct GameOfLife {
-    pub state: State
+    pub state: State,
 }
 
 impl GameOfLife {
     pub fn mount(&self) -> DomNode {
         let matrix = &self.state.matrix;
-        let css_wrapper = css!("
+        let css_wrapper = css! {"
             border: 1px solid black;
             padding: 10px;
             margin: 10px;
             background-color: #e0e0e0;
-        ");
+        "};
 
         dom! {
             <div css={css_wrapper}>
@@ -32,15 +32,9 @@ impl GameOfLife {
     }
 
     fn render_header(state: &State) -> DomNode {
-        let year = state.year.map(|item| {
-            item.to_string()
-        });
-        let delay = state.delay.map(|item| {
-            item.to_string()
-        });
-        let new_delay = state.new_delay.map(|item| {
-            item.to_string()
-        });
+        let year = state.year.map(|item| item.to_string());
+        let delay = state.delay.map(|item| item.to_string());
+        let new_delay = state.new_delay.map(|item| item.to_string());
 
         let on_toggle_timer = {
             let state = state.clone();
@@ -68,15 +62,15 @@ impl GameOfLife {
             state.new_delay.set(new_value.parse().unwrap_or_default());
         });
 
-        let flex_menu = css!("
+        let flex_menu = css! {"
             display: flex;
             gap: 40px;
             margin-bottom: 5px;
-        ");
+        "};
 
-        let css_button = || css!("
+        let css_button = css! {"
             cursor: pointer;
-        ");
+        "};
 
         dom! {
             <div css={flex_menu}>
@@ -87,10 +81,10 @@ impl GameOfLife {
                     "Year = " { year }
                 </div>
                 <div>
-                    <button css={css_button()} on_click={on_toggle_timer}>
+                    <button css={&css_button} on_click={on_toggle_timer}>
                         {button_label}
                     </button>
-                    <button css={css_button()} on_click={state.randomize()}>"Random"</button>
+                    <button css={&css_button} on_click={state.randomize()}>"Random"</button>
                 </div>
                 <div>
                     <div>
@@ -98,7 +92,7 @@ impl GameOfLife {
                     </div>
                     "Set delay: "
                     <input value={new_delay} on_input={on_input} />
-                    " " <button css={css_button()} on_click={state.accept_new_delay()}>"Set"</button>
+                    " " <button css={css_button} on_click={state.accept_new_delay()}>"Set"</button>
                 </div>
             </div>
         }
@@ -117,11 +111,11 @@ impl GameOfLife {
     }
 
     fn render_row(matrix: &[Value<bool>]) -> DomElement {
-        let css_row = css!("
+        let css_row = css! {"
             display: flex;
             flex-direction: row;
             height: 10px;
-        ");
+        "};
 
         let wrapper = dom_element! {
             <div css={css_row} />
@@ -137,12 +131,12 @@ impl GameOfLife {
     fn render_cell(cell: &Value<bool>) -> DomNode {
         let css_cell = |is_active: bool| {
             let color = if is_active { "black" } else { "white" };
-            css!("
+            css! {"
                 width: 10px;
                 height: 10px;
                 cursor: pointer;
                 background-color: { color };
-            ")
+            "}
         };
 
         let css_computed = cell.map(css_cell);
