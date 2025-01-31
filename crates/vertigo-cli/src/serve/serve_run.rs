@@ -234,7 +234,7 @@ async fn handler(
 async fn set_cache_header<B: Send>(mut response: Response<B>) -> Response<B> {
     response.headers_mut().insert(
         header::CACHE_CONTROL,
-        HeaderValue::from_static("public, max-age=86400"),
+        HeaderValue::from_static("public, max-age=31536000"),
     );
    response
 }
