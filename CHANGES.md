@@ -7,6 +7,10 @@
 
 * `css` attribute in `dom!` macro now accepts `&Css` (referenced) for convenience
 
+### Changed
+
+* vertigo-cli: Increased statics max-age in Cache-Control header to 1 year to match Google's Lighthouse recommendations
+
 ## 0.6.1 - 2024-12-18
 
 ### Added

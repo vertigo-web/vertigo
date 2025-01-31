@@ -124,7 +124,7 @@ pub fn render(state: &app::State) -> DomNode {
             Route::Sudoku => dom! { <Sudoku state={&state.sudoku} /> },
             Route::Input => dom! { <MyInput value={&state.input} /> },
             Route::GithubExplorer => dom! { <GitHubExplorer state={&state.github_explorer} /> },
-            Route::GameOfLife { .. } => dom! { <GameOfLife state={&state.game_of_life} /> },
+            Route::GameOfLife => dom! { <GameOfLife state={&state.game_of_life} /> },
             Route::Chat => dom! { <Chat ws_chat={&state.ws_chat}/> },
             Route::Todo => dom! { <Todo /> },
             Route::DropFile => dom! { <DropFiles /> },
