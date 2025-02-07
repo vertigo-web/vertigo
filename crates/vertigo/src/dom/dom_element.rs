@@ -235,6 +235,15 @@ impl DomElement {
         })
     }
 
+    pub fn on_submit(self, on_submit: impl Into<Callback<()>>) -> Self {
+        let on_submit = self.install_callback(on_submit);
+
+        self.add_event_listener("submit", move |_data| {
+            on_submit();
+            JsValue::Undefined
+        })
+    }
+
     pub fn on_mouse_down(self, on_mouse_down: impl Into<Callback<bool>>) -> Self {
         let on_mouse_down = self.install_callback(on_mouse_down);
 

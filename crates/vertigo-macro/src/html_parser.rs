@@ -189,6 +189,10 @@ fn convert_node(node: Node, convert_to_dom_node: bool) -> TokenStream2 {
             out_attr.push(quote! {
                 .on_click(#value)
             })
+        } else if node_name == "form" && name == "on_submit" {
+            out_attr.push(quote! {
+                .on_submit(#value)
+            })
         } else if name == "on_mouse_down" {
             out_attr.push(quote! {
                 .on_mouse_down(#value)

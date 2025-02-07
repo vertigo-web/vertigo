@@ -208,6 +208,11 @@ export class DriverDom {
         this.getWasm().wasm_callback(callback_id, undefined);
     }
 
+    private callback_submit(event: Event, callback_id: bigint) {
+        event.preventDefault();
+        this.getWasm().wasm_callback(callback_id, undefined);
+    }
+
     private callback_input(event: Event, callback_id: bigint) {
         const target = event.target;
 
@@ -342,6 +347,10 @@ export class DriverDom {
                 return this.callback_click(event, callback_id);
             }
 
+            if (event_name === 'submit') {
+                return this.callback_submit(event, callback_id);
+            }
+
             if (event_name === 'input') {
                 return this.callback_input(event, callback_id);
             }
@@ -471,7 +480,7 @@ export class DriverDom {
         for (const node of node_body) {
             node.remove();
         }
-        
+
         for (const node of node_head) {
             node.remove();
         }
