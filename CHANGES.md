@@ -6,6 +6,7 @@
 ### Added
 
 * `css` attribute in `dom!` macro now accepts `&Css` (referenced) for convenience
+* `on_submit` in `<form>`
 
 ### Changed
 
