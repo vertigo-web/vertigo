@@ -3,6 +3,7 @@ use poem::http::Method;
 use poem::middleware::Cors;
 use poem::{get, listener::TcpListener, EndpointExt, Route, Server};
 use std::path::Path;
+use std::process::exit;
 use std::sync::Arc;
 use std::time::Duration;
 use tokio::sync::watch::Sender;
@@ -11,7 +12,7 @@ use tokio::time::sleep;
 use tokio_retry::{strategy::FibonacciBackoff, Retry};
 
 use crate::build::{get_workspace, Workspace};
-use crate::commons::spawn::SpawnOwner;
+use crate::commons::{spawn::SpawnOwner, ErrorCode};
 use crate::watch::sse::handler_sse;
 
 use super::is_http_server_listening::is_http_server_listening;
@@ -25,10 +26,16 @@ pub enum Status {
     Errors,
 }
 
-pub async fn run(mut opts: WatchOpts) -> Result<(), i32> {
+pub async fn run(mut opts: WatchOpts) -> Result<(), ErrorCode> {
     log::info!("watch params => {opts:#?}");
 
-    let ws = get_workspace().expect("Can't read workspace");
+    let ws = match get_workspace() {
+        Ok(ws) => ws,
+        Err(err) => {
+            log::error!("Can't read workspace");
+            return Err(err);
+        }
+    };
 
     let package_name = match opts.build.package_name.as_deref() {
         Some(name) => name.to_string(),
@@ -43,7 +50,7 @@ pub async fn run(mut opts: WatchOpts) -> Result<(), i32> {
                     "Can't find vertigo project in {} (no cdylib member)",
                     ws.get_root_dir()
                 );
-                return Err(-1);
+                return Err(ErrorCode::CantFindCdylibMember);
             }
         },
     };
@@ -55,7 +62,7 @@ pub async fn run(mut opts: WatchOpts) -> Result<(), i32> {
 
     let Some(path) = path else {
         log::error!("package not found ==> {:?}", opts.build.package_name);
-        return Err(-1);
+        return Err(ErrorCode::PackageNameNotFound);
     };
 
     let excludes = [path.join("target"), path.join(opts.common.dest_dir.clone())];
@@ -93,7 +100,7 @@ pub async fn run(mut opts: WatchOpts) -> Result<(), i32> {
         Ok(watcher) => watcher,
         Err(error) => {
             log::error!("error watcher => {error}");
-            return Err(-1);
+            return Err(ErrorCode::WatcherError);
         }
     };
 
@@ -121,10 +128,15 @@ pub async fn run(mut opts: WatchOpts) -> Result<(), i32> {
     watcher.watch(&path, RecursiveMode::Recursive).unwrap();
 
     for watch_path in &opts.add_watch_path {
-        log::info!("Adding `{watch_path}` to watched directories");
-        watcher
-            .watch(Path::new(watch_path), RecursiveMode::Recursive)
-            .expect("Error adding watch dir");
+        match watcher.watch(Path::new(watch_path), RecursiveMode::Recursive) {
+            Ok(()) => {
+                log::info!("Added `{watch_path}` to watched directories");
+            }
+            Err(err) => {
+                log::error!("Error adding watch dir `{watch_path}`: {err}");
+                return Err(ErrorCode::CantAddWatchDir);
+            }
+        }
     }
     let mut version = 0;
 
@@ -133,7 +145,7 @@ pub async fn run(mut opts: WatchOpts) -> Result<(), i32> {
 
         if let Err(err) = tx.send(Status::Building) {
             log::error!("Can't contact the browser: {err} (Other watch process already running?)");
-            return Err(-2);
+            return Err(ErrorCode::OtherProcessAlreadyRunning);
         };
 
         log::info!("build run ...");
@@ -155,9 +167,9 @@ fn build_and_watch(
     SpawnOwner::new(async move {
         sleep(Duration::from_millis(200)).await;
 
-        match crate::build::run_with_ws(opts.to_build_opts(), &ws) {
+        match crate::build::run_with_ws(opts.to_build_opts(), &ws, true) {
             Ok(()) => {
-                log::info!("build run ok");
+                log::info!("Build successful.");
 
                 let check_spawn = SpawnOwner::new(async move {
                     let _ = Retry::spawn(
@@ -167,26 +179,27 @@ fn build_and_watch(
                     .await;
 
                     let Ok(()) = tx.send(Status::Version(version)) else {
-                        unreachable!();
+                        exit(ErrorCode::WatchPipeBroken as i32)
                     };
                 });
 
                 let opts = opts.clone();
 
-                log::info!("serve run ...");
+                log::info!("Spawning serve command...");
                 let (serve_params, port_watch) = opts.to_serve_opts();
 
-                if let Err(errno) = crate::serve::run(serve_params, Some(port_watch)).await {
-                    panic!("Error {errno} running server")
+                if let Err(error_code) = crate::serve::run(serve_params, Some(port_watch)).await {
+                    log::error!("Error {} while running server", error_code as i32);
+                    exit(error_code as i32)
                 }
 
                 check_spawn.off();
             }
-            Err(code) => {
-                log::error!("build run failed, exit code={code}");
+            Err(_) => {
+                log::error!("Build run failed. Waiting for changes...");
 
                 let Ok(()) = tx.send(Status::Errors) else {
-                    unreachable!();
+                    exit(ErrorCode::WatchPipeBroken as i32)
                 };
             }
         };

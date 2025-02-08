@@ -2,6 +2,8 @@ use clap::Args;
 use include_dir::{include_dir, Dir};
 use std::{fs, path::Path};
 
+use crate::commons::ErrorCode;
+
 static TEMPLATE: Dir = include_dir!("$CARGO_MANIFEST_DIR/src/new/template");
 
 #[derive(Args)]
@@ -11,7 +13,7 @@ pub struct NewOpts {
     pub dest_dir: String,
 }
 
-pub fn run(opts: NewOpts) -> Result<(), i32> {
+pub fn run(opts: NewOpts) -> Result<(), ErrorCode> {
     log::info!("Creating {}", opts.package_name);
 
     let target_path = Path::new(&opts.dest_dir).join(&opts.package_name);
@@ -23,7 +25,7 @@ pub fn run(opts: NewOpts) -> Result<(), i32> {
                 "Destination dir ({}) is not empty",
                 target_path.to_string_lossy()
             );
-            return Err(-1);
+            return Err(ErrorCode::NewProjectDirNotEmpty);
         }
     }
 
@@ -34,7 +36,7 @@ pub fn run(opts: NewOpts) -> Result<(), i32> {
             target_path.to_string_lossy(),
             err
         );
-        return Err(-2);
+        return Err(ErrorCode::NewProjectCantCreateDir);
     };
 
     // Paste files into it
@@ -44,14 +46,14 @@ pub fn run(opts: NewOpts) -> Result<(), i32> {
             target_path.to_string_lossy(),
             err
         );
-        return Err(-3);
+        return Err(ErrorCode::NewProjectCantUnpackStub);
     };
 
     // Remove Cargo.toml_
     // (cargo packaging does not permit adding second Cargo.toml file)
     if let Err(err) = fs::remove_file(target_path.join("Cargo.toml_")) {
         log::error!("Can't rename to Cargo.toml_ to Cargo.toml: {}", err);
-        return Err(-4);
+        return Err(ErrorCode::NewProjectCanCreateCargoToml);
     };
 
     // Save Cargo.toml with replaced package name
@@ -63,7 +65,7 @@ pub fn run(opts: NewOpts) -> Result<(), i32> {
         cargo_toml_content.replace("my_app", &opts.package_name),
     ) {
         log::error!("Can't write to Cargo.toml: {}", err);
-        return Err(-4);
+        return Err(ErrorCode::NewProjectCanWriteToCargoToml);
     };
 
     Ok(())

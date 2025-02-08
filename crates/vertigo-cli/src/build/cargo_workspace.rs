@@ -1,7 +1,7 @@
 use serde::Deserialize;
 use std::path::PathBuf;
 
-use crate::commons::command::CommandRun;
+use crate::commons::{command::CommandRun, ErrorCode};
 
 #[derive(Clone, Debug, Deserialize)]
 pub struct Workspace {
@@ -65,11 +65,12 @@ impl Package {
     }
 }
 
-pub fn get_workspace() -> Result<Workspace, String> {
+pub fn get_workspace() -> Result<Workspace, ErrorCode> {
     let metadata = CommandRun::new("cargo")
         .add_param("metadata")
         .add_param("--format-version=1")
-        .output();
+        .set_error_code(ErrorCode::CantOpenWorkspace)
+        .output()?;
 
     match serde_json::from_str::<Workspace>(&metadata) {
         Ok(mut ws) => {
@@ -78,6 +79,9 @@ pub fn get_workspace() -> Result<Workspace, String> {
                 .retain(|package| ws.workspace_members.contains(&package.id));
             Ok(ws)
         }
-        Err(err) => Err(format!("Can't load workspace: {err}")),
+        Err(err) => {
+            log::error!("Can't parse workspace: {err}");
+            Err(ErrorCode::CantParseWorkspace)
+        }
     }
 }

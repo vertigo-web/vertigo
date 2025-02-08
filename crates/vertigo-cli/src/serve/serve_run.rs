@@ -15,14 +15,17 @@ use std::{
 use tokio::sync::{OnceCell, RwLock};
 use tower_http::services::ServeDir;
 
-use crate::serve::{server_state::ServerState, ServeOptsInner};
 use crate::serve::mount_path::MountPathConfig;
+use crate::{
+    commons::ErrorCode,
+    serve::{server_state::ServerState, ServeOptsInner},
+};
 
 use super::ServeOpts;
 
 static STATE: OnceCell<Arc<RwLock<Arc<ServerState>>>> = OnceCell::const_new();
 
-pub async fn run(opts: ServeOpts, port_watch: Option<u16>) -> Result<(), i32> {
+pub async fn run(opts: ServeOpts, port_watch: Option<u16>) -> Result<(), ErrorCode> {
     log::info!("serve params => {opts:#?}");
 
     let ServeOptsInner {
@@ -49,7 +52,8 @@ pub async fn run(opts: ServeOpts, port_watch: Option<u16>) -> Result<(), i32> {
 
     *(ref_state.write().await) = state;
 
-    let mut app = Router::new().nest_service(&serve_mount_path, serve_dir)
+    let mut app = Router::new()
+        .nest_service(&serve_mount_path, serve_dir)
         .layer(axum::middleware::map_response(set_cache_header));
 
     for (path, target) in proxy {
@@ -60,7 +64,7 @@ pub async fn run(opts: ServeOpts, port_watch: Option<u16>) -> Result<(), i32> {
 
     let Ok(addr) = format!("{host}:{port}").parse() else {
         log::error!("Incorrect listening address");
-        return Err(-1);
+        return Err(ErrorCode::ServeCantOpenPort);
     };
 
     log::info!("Listening on http://{}", addr);
@@ -213,7 +217,11 @@ async fn handler(
 
     let time = now.elapsed();
     log::log!(
-        if time > Duration::from_secs(1) { log::Level::Warn } else { log::Level::Info },
+        if time > Duration::from_secs(1) {
+            log::Level::Warn
+        } else {
+            log::Level::Info
+        },
         "Response for request: {} {}ms {url}",
         response_state.status,
         time.as_millis()
@@ -236,5 +244,5 @@ async fn set_cache_header<B: Send>(mut response: Response<B>) -> Response<B> {
         header::CACHE_CONTROL,
         HeaderValue::from_static("public, max-age=31536000"),
     );
-   response
+    response
 }

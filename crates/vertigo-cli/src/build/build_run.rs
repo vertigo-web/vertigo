@@ -1,24 +1,30 @@
 use std::path::PathBuf;
 
-use crate::commons::models::IndexModel;
+use crate::commons::{models::IndexModel, ErrorCode};
 
 use super::{
     build_opts::BuildOpts,
     cargo_build::run_cargo_build,
     cargo_workspace::{get_workspace, Workspace},
-    wasm_opt::run_wasm_opt,
-    wasm_path::WasmPath,
     check_env::check_env,
     find_target::{find_package_rlib_in_target, find_wasm_in_target},
+    wasm_opt::run_wasm_opt,
+    wasm_path::WasmPath,
 };
 
-pub fn run(opts: BuildOpts) -> Result<(), i32> {
-    let ws = get_workspace().expect("Can't read workspace");
+pub fn run(opts: BuildOpts) -> Result<(), ErrorCode> {
+    let ws = match get_workspace() {
+        Ok(ws) => ws,
+        Err(err) => {
+            log::error!("Can't read workspace");
+            return Err(err);
+        }
+    };
 
-    run_with_ws(opts, &ws)
+    run_with_ws(opts, &ws, false)
 }
 
-pub fn run_with_ws(opts: BuildOpts, ws: &Workspace) -> Result<(), i32> {
+pub fn run_with_ws(opts: BuildOpts, ws: &Workspace, allow_error: bool) -> Result<(), ErrorCode> {
     let package_name = match opts.inner.package_name.as_deref() {
         Some(name) => name.to_string(),
         None => match ws.infer_package_name() {
@@ -31,7 +37,7 @@ pub fn run_with_ws(opts: BuildOpts, ws: &Workspace) -> Result<(), i32> {
                     "Can't find vertigo project in {} (no cdylib member)",
                     ws.get_root_dir()
                 );
-                return Err(-1);
+                return Err(ErrorCode::CantFindCdylibMember);
             }
         },
     };
@@ -51,30 +57,42 @@ pub fn run_with_ws(opts: BuildOpts, ws: &Workspace) -> Result<(), i32> {
 
     // Run build
 
-    let target_path = match run_cargo_build(&package_name, &opts.inner.public_path, ws) {
-        Ok(path) => path,
-        Err(_) => return Err(-2),
-    };
+    let target_path =
+        match run_cargo_build(&package_name, &opts.inner.public_path, ws, allow_error)? {
+            Ok(path) => path,
+            Err(_) => return Err(ErrorCode::BuildFailed),
+        };
 
     // Get wasm_run.js and index.template.html from vertigo build
 
     let vertigo_statics_dir = target_path.join("static");
 
-    let run_script_content = std::fs::read(vertigo_statics_dir.join("wasm_run.js"))
-        .expect("No wasm_run in statics directory");
+    let run_script_content = match std::fs::read(vertigo_statics_dir.join("wasm_run.js")) {
+        Ok(content) => content,
+        Err(err) => {
+            log::error!("Can't read wasm_run from statics directory: {err}");
+            return Err(ErrorCode::CantReadWasmRunFromStatics);
+        }
+    };
 
     let run_script_hash_name = opts
         .new_path_in_static_make(&["wasm_run.js"])
         .save_with_hash(&run_script_content);
 
     if opts.inner.wasm_run_source_map {
-        let run_script_sourcemap_content = std::fs::read_to_string(vertigo_statics_dir.join("wasm_run.js.map"))
-            .expect("No wasm_run sourcemap in statics directory")
-            // Replace original script filename in sourcemap with the hashed one
-            .replace("wasm_run.js", &run_script_hash_name);
+        let run_script_sourcemap_content =
+            match std::fs::read_to_string(vertigo_statics_dir.join("wasm_run.js.map")) {
+                Ok(content) => {
+                    // Replace original script filename in sourcemap with the hashed one
+                    content.replace("wasm_run.js", &run_script_hash_name)
+                }
+                Err(err) => {
+                    log::error!("Can't read wasm_run sourcemap from statics directory: {err}");
+                    return Err(ErrorCode::CantReadWasmRunSourcemapFromStatics);
+                }
+            };
 
-        opts
-            .new_path_in_static_make(&["wasm_run.js.map"])
+        opts.new_path_in_static_make(&["wasm_run.js.map"])
             .save(&run_script_sourcemap_content.into_bytes());
     }
 

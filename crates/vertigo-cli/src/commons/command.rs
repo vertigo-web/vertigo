@@ -1,15 +1,18 @@
 use std::{
     collections::HashMap,
-    process::{exit, ChildStdout, Command, ExitStatus, Output, Stdio},
+    fs::File,
+    process::{Child, ChildStdout, Command, ExitStatus, Output, Stdio},
 };
+
+use crate::commons::ErrorCode;
 
 pub struct CommandRun {
     bin: String,
     params: Vec<String>,
-    error_allowed: bool,
+    error_code: Option<ErrorCode>,
     current_dir: Option<String>,
     env: HashMap<String, String>,
-    stdin: Option<ChildStdout>,
+    child: Option<Child>,
 }
 
 impl CommandRun {
@@ -19,16 +22,16 @@ impl CommandRun {
 
         let mut params = params_str.split_whitespace();
 
-        let bin = params.next().unwrap().to_string();
+        let bin = params.next().unwrap_or_default().to_string();
         let params = params.map(|item| item.to_string()).collect::<Vec<_>>();
 
         CommandRun {
             bin,
             params,
-            error_allowed: false,
+            error_code: None,
             current_dir: None,
             env: HashMap::new(),
-            stdin: None,
+            child: None,
         }
     }
 
@@ -53,8 +56,13 @@ impl CommandRun {
         self
     }
 
-    pub fn error_allowed(mut self, flag: bool) -> Self {
-        self.error_allowed = flag;
+    pub fn set_error_code(mut self, error_code: ErrorCode) -> Self {
+        self.error_code = Some(error_code);
+        self
+    }
+
+    pub fn allow_error(mut self) -> Self {
+        self.error_code = None;
         self
     }
 
@@ -82,10 +90,10 @@ impl CommandRun {
     // }
 
     fn convert_to_string(data: Vec<u8>) -> String {
-        String::from_utf8(data).unwrap()
+        String::from_utf8(data).expect("Error encoding utf-8")
     }
 
-    fn create_command(self) -> (String, Command, Option<ChildStdout>) {
+    fn create_command(self) -> (String, Command, Option<Child>) {
         let command_str = format!("$ {}", self.log());
         // let command_color = log_message::green(command_str);
         let command_str = format!("\n{command_str}");
@@ -101,22 +109,19 @@ impl CommandRun {
             command.env(name, value);
         }
 
-        (command_str, command, self.stdin)
+        (command_str, command, self.child)
     }
 
-    fn show_status(error_allowed: bool, output: &Output) {
+    fn intercept_status(error_code: Option<ErrorCode>, output: &Output) -> Result<(), ErrorCode> {
         if output.status.success() {
-            //ok
+            Ok(())
         } else {
-            let status = output.status;
+            log::error!("Subcommand finished with {}", output.status);
 
-            let status = format!("$ status = {status:?}");
-            log::error!("$ status = {status:?}\n");
-
-            if error_allowed {
-                //ok
+            if let Some(error_code) = error_code {
+                Err(error_code)
             } else {
-                exit(1);
+                Ok(())
             }
         }
     }
@@ -133,84 +138,120 @@ impl CommandRun {
         }
     }
 
-    pub fn run(self) {
-        let error_allowed = self.error_allowed;
-        let (command_str, mut command, stdin) = self.create_command();
+    pub fn run(self) -> Result<(), ErrorCode> {
+        let error_code = self.error_code;
+        let (command_str, mut command, mut child) = self.create_command();
         println!("{command_str}");
 
-        Self::set_stdin(&mut command, stdin, Some(Stdio::inherit));
+        if let Some(child) = child.as_mut() {
+            Self::set_stdin(&mut command, child.stdout.take(), Some(Stdio::inherit));
+        }
         command.stderr(Stdio::inherit());
         command.stdout(Stdio::inherit());
 
         let out = command.output().unwrap();
-        Self::show_status(error_allowed, &out);
+
+        if let Some(child) = child.as_mut() {
+            if child.wait().is_err() {
+                return Err(ErrorCode::CouldntWaitForChildProcess);
+            }
+        }
+
+        Self::intercept_status(error_code, &out)?;
+
+        Ok(())
     }
 
-    pub fn output_with_status(self) -> (ExitStatus, String) {
-        let error_allowed = self.error_allowed;
-        let (command_str, mut command, stdin) = self.create_command();
+    pub fn output_with_status(self) -> Result<(ExitStatus, String), ErrorCode> {
+        let error_code = self.error_code;
+        let (command_str, mut command, mut child) = self.create_command();
         println!("{command_str}");
 
-        Self::set_stdin(&mut command, stdin, None);
+        if let Some(child) = child.as_mut() {
+            Self::set_stdin(&mut command, child.stdout.take(), None);
+        };
         command.stderr(Stdio::inherit());
 
         let out = command.output().unwrap();
-        Self::show_status(error_allowed, &out);
+        Self::intercept_status(error_code, &out)?;
 
-        (out.status, Self::convert_to_string(out.stdout))
+        if let Some(child) = child.as_mut() {
+            if child.wait().is_err() {
+                return Err(ErrorCode::CouldntWaitForChildProcess);
+            }
+        }
+
+        Ok((out.status, Self::convert_to_string(out.stdout)))
     }
 
-    #[must_use]
-    pub fn output(self) -> String {
-        let (_, output) = self.output_with_status();
-        output
+    pub fn output(self) -> Result<String, ErrorCode> {
+        self.output_with_status().map(|(_, output)| output)
     }
 
     #[allow(dead_code)]
-    pub fn spawn(self) {
-        let (command_str, mut command, stdin) = self.create_command();
+    pub fn spawn(self) -> (Child, Option<Child>) {
+        let (command_str, mut command, mut child) = self.create_command();
         println!("spawn: {command_str}");
 
-        Self::set_stdin(&mut command, stdin, Some(Stdio::null));
+        if let Some(child) = child.as_mut() {
+            Self::set_stdin(&mut command, child.stdout.take(), Some(Stdio::null));
+        }
         command.stderr(Stdio::null());
         command.stdout(Stdio::null());
 
-        command.spawn().unwrap();
+        (command.spawn().unwrap(), child)
     }
 
-    #[must_use]
     #[allow(dead_code)]
-    pub fn piped(self, params: impl Into<String>) -> Self {
-        let (command_str, mut command, stdin) = self.create_command();
+    pub fn piped(self, params: impl Into<String>) -> Result<Self, ErrorCode> {
+        let (command_str, mut command, mut child) = self.create_command();
         println!("spawn: {command_str}");
 
-        Self::set_stdin(&mut command, stdin, Some(Stdio::null));
+        if let Some(child) = child.as_mut() {
+            Self::set_stdin(&mut command, child.stdout.take(), Some(Stdio::null));
+        }
         command.stderr(Stdio::null());
         command.stdout(Stdio::piped());
 
-        let child = command.spawn().unwrap();
+        let child = match command.spawn() {
+            Ok(child) => child,
+            Err(err) => {
+                log::error!("Can't spawn child process: {err}");
+                return Err(ErrorCode::CantSpawnChildProcess);
+            }
+        };
 
         let mut new_command = CommandRun::new(params);
-        let stdout = child.stdout.unwrap();
-        new_command.stdin = Some(stdout);
-        new_command
+        new_command.child = Some(child);
+        Ok(new_command)
     }
 
     #[allow(dead_code)]
-    pub fn output_to_file(self, path: impl Into<String>) {
-        let error_allowed = self.error_allowed;
-        let (command_str, mut command, stdin) = self.create_command();
+    pub fn output_to_file(self, path: impl Into<String>) -> Result<(), ErrorCode> {
+        let error_code = self.error_code;
+        let (command_str, mut command, child) = self.create_command();
         println!("{command_str}");
 
-        Self::set_stdin(&mut command, stdin, Some(Stdio::null));
+        if let Some(child) = child {
+            Self::set_stdin(&mut command, child.stdout, Some(Stdio::null));
+        }
         command.stderr(Stdio::inherit());
 
-        use std::fs::File;
         let path = path.into();
-        let file = File::create(path).unwrap();
+
+        let file = match File::create(path.clone()) {
+            Ok(file) => file,
+            Err(err) => {
+                log::error!("Can't write to file {path}: {err}");
+                return Err(ErrorCode::CantWriteToFile);
+            }
+        };
+
         command.stdout(file);
 
         let out = command.output().unwrap();
-        Self::show_status(error_allowed, &out);
+        Self::intercept_status(error_code, &out)?;
+
+        Ok(())
     }
 }
