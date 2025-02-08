@@ -1,23 +1,26 @@
-use crate::commons::command::CommandRun;
+use crate::commons::{command::CommandRun, ErrorCode};
 
-fn is_target_instaled() -> bool {
-    let target_list = CommandRun::new("rustup target list").output();
+fn is_target_instaled() -> Result<bool, ErrorCode> {
+    let target_list = CommandRun::new("rustup target list")
+        .set_error_code(ErrorCode::BuildPrerequisitesFailed)
+        .output()?;
 
     let list = target_list.as_str().lines();
     for line in list {
         if line.contains("wasm32-unknown-unknown") {
-            return line.contains("installed");
+            return Ok(line.contains("installed"));
         }
     }
 
-    false
+    Ok(false)
 }
 
-pub fn check_env() -> Result<(), i32> {
-    if is_target_instaled() {
+pub fn check_env() -> Result<(), ErrorCode> {
+    if is_target_instaled()? {
         return Ok(());
     }
 
-    CommandRun::new("rustup target add wasm32-unknown-unknown").run();
-    Ok(())
+    CommandRun::new("rustup target add wasm32-unknown-unknown")
+        .set_error_code(ErrorCode::BuildPrerequisitesFailed)
+        .run()
 }

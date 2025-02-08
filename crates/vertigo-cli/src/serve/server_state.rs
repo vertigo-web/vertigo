@@ -2,10 +2,14 @@ use std::collections::HashMap;
 use tokio::sync::mpsc::{error::TryRecvError, unbounded_channel};
 use wasmtime::{Engine, Module};
 
-use crate::commons::spawn::SpawnOwner;
+use crate::commons::{spawn::SpawnOwner, ErrorCode};
 
 use super::{
-    html::HtmlResponse, mount_path::MountPathConfig, request_state::RequestState, response_state::ResponseState, wasm::{Message, WasmInstance}
+    html::HtmlResponse,
+    mount_path::MountPathConfig,
+    request_state::RequestState,
+    response_state::ResponseState,
+    wasm::{Message, WasmInstance},
 };
 
 #[derive(Clone)]
@@ -22,7 +26,7 @@ impl ServerState {
         mount_path: MountPathConfig,
         port_watch: Option<u16>,
         env: Vec<(String, String)>,
-    ) -> Result<Self, i32> {
+    ) -> Result<Self, ErrorCode> {
         let engine = Engine::default();
 
         let module = build_module_wasm(&engine, &mount_path)?;
@@ -99,7 +103,7 @@ impl ServerState {
     }
 }
 
-fn build_module_wasm(engine: &Engine, mount_path: &MountPathConfig) -> Result<Module, i32> {
+fn build_module_wasm(engine: &Engine, mount_path: &MountPathConfig) -> Result<Module, ErrorCode> {
     let full_wasm_path = mount_path.translate_to_fs(&mount_path.wasm_path)?;
 
     log::info!("full_wasm_path = {full_wasm_path}");
@@ -108,7 +112,7 @@ fn build_module_wasm(engine: &Engine, mount_path: &MountPathConfig) -> Result<Mo
         Ok(wasm_content) => wasm_content,
         Err(error) => {
             log::error!("Problem reading the path: wasm_path={full_wasm_path}, error={error}");
-            return Err(-1);
+            return Err(ErrorCode::ServeWasmReadFailed);
         }
     };
 
@@ -116,7 +120,7 @@ fn build_module_wasm(engine: &Engine, mount_path: &MountPathConfig) -> Result<Mo
         Ok(module) => module,
         Err(err) => {
             log::error!("Wasm compilation error: error={err}");
-            return Err(-1);
+            return Err(ErrorCode::ServeWasmCompileFailed);
         }
     };
 

@@ -1,7 +1,7 @@
 #![allow(clippy::question_mark)]
 use std::path::Path;
 
-use crate::commons::models::IndexModel;
+use crate::commons::{models::IndexModel, ErrorCode};
 
 #[derive(Clone, Debug)]
 pub struct MountPathConfig {
@@ -16,12 +16,12 @@ pub struct MountPathConfig {
 }
 
 impl MountPathConfig {
-    pub fn new(dest_dir: String) -> Result<MountPathConfig, i32> {
+    pub fn new(dest_dir: String) -> Result<MountPathConfig, ErrorCode> {
         let index_model = read_index(&dest_dir)?;
 
         let Some(public_path) = get_base_dir(&index_model.wasm) else {
             log::error!("Problem with finding the http base path");
-            return Err(-1);
+            return Err(ErrorCode::ServeCantFindHttpBasePath);
         };
 
         Ok(MountPathConfig {
@@ -40,19 +40,20 @@ impl MountPathConfig {
         self.dest_dir.clone()
     }
 
-    pub fn translate_to_fs(&self, http_path: impl Into<String>) -> Result<String, i32> {
+    pub fn translate_to_fs(&self, http_path: impl Into<String>) -> Result<String, ErrorCode> {
         let http_path = http_path.into();
         replace_prefix(&self.public_path, &self.dest_dir, &http_path)
+            .map_err(|()| ErrorCode::ServePathToUrlTranslationFailed)
     }
 }
 
-fn read_index(dest_dir: &str) -> Result<IndexModel, i32> {
+fn read_index(dest_dir: &str) -> Result<IndexModel, ErrorCode> {
     let index_path = Path::new(dest_dir).join("index.json");
     let index_html = match std::fs::read_to_string(&index_path) {
         Ok(data) => data,
         Err(err) => {
             log::error!("File read error: file={index_path:?}, error={err}, dest_dir={dest_dir}");
-            return Err(-1);
+            return Err(ErrorCode::ServeCantReadIndexFile);
         }
     };
 
@@ -60,12 +61,12 @@ fn read_index(dest_dir: &str) -> Result<IndexModel, i32> {
     Ok(model)
 }
 
-fn replace_prefix(public_path: &str, dest_dir: &str, path: &str) -> Result<String, i32> {
+fn replace_prefix(public_path: &str, dest_dir: &str, path: &str) -> Result<String, ()> {
     let Some(rest) = path.strip_prefix(public_path) else {
         log::error!(
             "Incorrect path http: path={path} (public_path={public_path}, dest_dir={dest_dir})"
         );
-        return Err(-1);
+        return Err(());
     };
 
     Ok(format!("{dest_dir}{rest}"))
@@ -100,7 +101,7 @@ mod tests {
 
         assert_eq!(
             replace_prefix("/aaaa", "demo_build", "/build/vertigo_demo.33.wasm"),
-            Err(-1)
+            Err(())
         );
     }
 
