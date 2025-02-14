@@ -24,7 +24,7 @@ pub struct DomDebugFragment {
     pub root_node: Option<DomId>,
 }
 
-/// Part of `DomDebugFragment` representing single node in DOM
+/// Part of [DomDebugFragment] representing single node in DOM
 #[derive(Clone, Debug, Default)]
 pub struct DomDebugNode {
     pub id: DomId,
@@ -37,7 +37,7 @@ pub struct DomDebugNode {
 }
 
 impl DomDebugFragment {
-    /// Creates debug fragment directly from driver log. Log should be started by `sta
+    /// Creates debug fragment directly from driver log. Log should be started by [log_start].
     pub fn from_log() -> Self {
         Self::from_cmds(log_take())
     }
@@ -187,7 +187,7 @@ impl DomDebugFragment {
         }
     }
 
-    /// Construct a pseudo-html string from DomDebugFragment.
+    /// Construct a pseudo-html string from [DomDebugFragment].
     ///
     /// May render only part of the fragment if nodes are not connected to one root element.
     pub fn to_pseudo_html(&self) -> String {

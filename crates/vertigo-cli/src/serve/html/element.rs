@@ -60,11 +60,25 @@ impl AllElements {
     }
 
     fn set_attr(&mut self, id: u64, name: impl Into<String>, value: impl Into<String>) {
-        let Some(Node::Element(element)) = self.all.get_mut(&id) else {
-            unreachable!();
-        };
+        if let Some(Node::Element(element)) = self.all.get_mut(&id) {
+            element.attr.set(name, value)
+        } else {
+            log::error!(
+                "Tried to set attr `{}` for non-existent element `{id}`",
+                name.into()
+            );
+        }
+    }
 
-        element.attr.set(name, value);
+    fn remove_attr(&mut self, id: u64, name: impl AsRef<str>) {
+        if let Some(Node::Element(element)) = self.all.get_mut(&id) {
+            element.attr.remove(name)
+        } else {
+            log::error!(
+                "Tried to remove non-existent attr `{}` from element `{id}`",
+                name.as_ref()
+            );
+        }
     }
 
     fn remove_from_parent(&mut self, child_id: u64) {
@@ -90,11 +104,11 @@ impl AllElements {
         self.remove_from_parent(child_id);
         self.parent.insert(child_id, parent_id);
 
-        let Some(Node::Element(parent_node)) = self.all.get_mut(&parent_id) else {
-            unreachable!();
-        };
-
-        parent_node.children.insert_before(ref_id, child_id);
+        if let Some(Node::Element(parent_node)) = self.all.get_mut(&parent_id) {
+            parent_node.children.insert_before(ref_id, child_id)
+        } else {
+            log::error!("Can't find parent `{parent_id}` for inserting child `{child_id}`");
+        }
     }
 
     fn insert_css(&mut self, selector: String, value: String) {
@@ -129,6 +143,9 @@ impl AllElements {
                 }
                 DomCommand::SetAttr { id, name, value } => {
                     self.set_attr(id, name, value);
+                }
+                DomCommand::RemoveAttr { id, name } => {
+                    self.remove_attr(id, name);
                 }
                 DomCommand::RemoveNode { id } => {
                     self.remove(id);

@@ -16,6 +16,8 @@ pub enum DomCommand {
         name: String,
         value: String,
     },
+    #[serde(rename = "remove_attr")]
+    RemoveAttr { id: u64, name: String },
     #[serde(rename = "remove_node")]
     RemoveNode { id: u64 },
     #[serde(rename = "remove_text")]
@@ -68,6 +70,10 @@ impl JsJsonDeserialize for DomCommand {
                 name: json.get_property(&context, "name")?,
                 value: json.get_property(&context, "value")?,
             },
+            "remove_attr" => Self::RemoveAttr {
+                id: json.get_property(&context, "id")?,
+                name: json.get_property(&context, "name")?,
+            },
             "remove_node" => Self::RemoveNode {
                 id: json.get_property(&context, "id")?,
             },
@@ -100,8 +106,10 @@ impl JsJsonDeserialize for DomCommand {
                 event_name: json.get_property(&context, "event_name")?,
                 callback_id: json.get_property(&context, "callback_id")?,
             },
-            _ => {
-                unreachable!();
+            unknown => {
+                let err_msg = format!("Unknown command `{unknown}`");
+                log::error!("{}", err_msg);
+                return Err(context.add(err_msg));
             }
         };
 
