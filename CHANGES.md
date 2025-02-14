@@ -13,6 +13,10 @@
 * vertigo-cli: Increased statics max-age in Cache-Control header to 1 year to match Google's Lighthouse recommendations
 * vertigo-cli: Improved error messages when building and watching
 
+### Fixed
+
+* vertigo-cli: Missing `remove_attr` command in server-side rendering
+
 ## 0.6.1 - 2024-12-18
 
 ### Added

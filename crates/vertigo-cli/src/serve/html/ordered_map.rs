@@ -36,6 +36,12 @@ impl OrderedMap {
         }
     }
 
+    pub fn remove(&mut self, name: impl AsRef<str>) {
+        if self.data.remove(name.as_ref()).is_some() {
+            self.order.retain(|key| key != name.as_ref());
+        }
+    }
+
     pub fn get_iter(&self) -> Vec<(String, String)> {
         let mut result = Vec::new();
 
@@ -78,6 +84,16 @@ mod tests {
             vec!(
                 ("aa_k".to_string(), "aa_v".to_string()),
                 ("cc_k".to_string(), "cc_v".to_string()),
+                ("bb_k".to_string(), "bbbbb_v".to_string()),
+            )
+        );
+
+        list.remove("cc_k");
+
+        assert_eq!(
+            list.get_iter(),
+            vec!(
+                ("aa_k".to_string(), "aa_v".to_string()),
                 ("bb_k".to_string(), "bbbbb_v".to_string()),
             )
         );

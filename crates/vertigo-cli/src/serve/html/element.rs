@@ -67,6 +67,14 @@ impl AllElements {
         element.attr.set(name, value);
     }
 
+    fn remove_attr(&mut self, id: u64, name: impl AsRef<str>) {
+        let Some(Node::Element(element)) = self.all.get_mut(&id) else {
+            unreachable!();
+        };
+
+        element.attr.remove(name);
+    }
+
     fn remove_from_parent(&mut self, child_id: u64) {
         let Some(parent_id) = self.parent.get(&child_id) else {
             return;
@@ -129,6 +137,9 @@ impl AllElements {
                 }
                 DomCommand::SetAttr { id, name, value } => {
                     self.set_attr(id, name, value);
+                }
+                DomCommand::RemoveAttr { id, name } => {
+                    self.remove_attr(id, name);
                 }
                 DomCommand::RemoveNode { id } => {
                     self.remove(id);
