@@ -15,7 +15,10 @@
 
 ### Fixed
 
+* Intercept inserting mutiple html/head/body tags in DOM [#297]
 * vertigo-cli: Missing `remove_attr` command in server-side rendering
+
+[#297]: https://github.com/vertigo-web/vertigo/issues/297
 
 ## 0.6.1 - 2024-12-18
 
