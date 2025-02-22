@@ -67,13 +67,17 @@ pub async fn run(opts: ServeOpts, port_watch: Option<u16>) -> Result<(), ErrorCo
         return Err(ErrorCode::ServeCantOpenPort);
     };
 
-    log::info!("Listening on http://{}", addr);
-    axum::Server::bind(&addr)
+    let ret = axum::Server::bind(&addr)
         .serve(app.into_make_service())
-        .await
-        .unwrap();
+        .await;
 
-    Ok(())
+    if let Err(err) = ret {
+        log::error!("Can't bind/serve on {addr}: {err}");
+        Err(ErrorCode::ServeCantOpenPort)
+    } else {
+        log::info!("Listening on http://{}", addr);
+        Ok(())
+    }
 }
 
 async fn get_response(target_url: String) -> Response<BoxBody> {
@@ -114,7 +118,15 @@ async fn get_response(target_url: String) -> Response<BoxBody> {
 
 async fn post_response(target_url: String, headers: HeaderMap, body: Value) -> Response<BoxBody> {
     let client = reqwest::Client::new();
-    let body = serde_json::to_vec(&body).unwrap();
+
+    let Ok(body) = serde_json::to_vec(&body)
+        .inspect_err(|err| log::error!("Error serializing request body: {err}"))
+    else {
+        let mut resp = Response::default();
+        *resp.status_mut() = StatusCode::from_u16(600).unwrap_or_default();
+        return resp;
+    };
+
     let response = match client
         .post(target_url.clone())
         .headers(headers)

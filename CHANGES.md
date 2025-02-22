@@ -16,9 +16,11 @@
 ### Fixed
 
 * Intercept inserting mutiple html/head/body tags in DOM [#297]
+* Removed `unreachable!()` and `unwrap()` from `serve` runtime [#321]
 * vertigo-cli: Missing `remove_attr` command in server-side rendering
 
 [#297]: https://github.com/vertigo-web/vertigo/issues/297
+[#321]: https://github.com/vertigo-web/vertigo/issues/321
 
 ## 0.6.1 - 2024-12-18
 

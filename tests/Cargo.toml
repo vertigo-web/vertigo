@@ -6,7 +6,7 @@ edition = "2021"
 publish = false
 
 [dev-dependencies]
-fantoccini = "0.19"
+fantoccini = "0.21"
 vertigo-cli = { path = "../crates/vertigo-cli" }
 tokio = "1"
 

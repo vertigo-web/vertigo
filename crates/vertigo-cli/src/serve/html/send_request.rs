@@ -1,4 +1,4 @@
-use reqwest::Response;
+use reqwest::{Method, Response};
 use serde_json::{Map, Number, Value};
 use std::{
     collections::{HashMap, VecDeque},
@@ -33,7 +33,8 @@ fn convert_to_jsjson(value: Value) -> JsJson {
                 return JsJson::Number(value as f64);
             }
 
-            unreachable!();
+            log::error!("Unreachable in convert_to_jsjson, value: {value}");
+            JsJson::Number(0.0)
         }
         Value::String(value) => JsJson::String(value),
         Value::Array(list) => {
@@ -56,7 +57,13 @@ fn convert_to_jsvalue(value: JsJson) -> Value {
         JsJson::True => Value::Bool(true),
         JsJson::False => Value::Bool(false),
         JsJson::Null => Value::Null,
-        JsJson::Number(value) => Value::Number(Number::from_f64(value).unwrap()),
+        JsJson::Number(value) => Value::Number(
+            Number::from_f64(value)
+                .unwrap_or_else(|| {
+                    log::error!("Invalid float in convert_to_jsvalue: {value}");
+                    Number::from_f64(0.0).unwrap()
+                })
+        ),
         JsJson::String(value) => Value::String(value),
         JsJson::List(list) => {
             let list = list.into_iter().map(convert_to_jsvalue).collect::<Vec<_>>();
@@ -118,7 +125,9 @@ fn get_headers_and_body(
             }
 
             let value = convert_to_jsvalue(json);
-            let json_str = serde_json::to_string(&value).unwrap();
+            let json_str = serde_json::to_string(&value)
+                .inspect_err(|err| log::error!("Error serializing body: {err}"))
+                .unwrap_or_default();
 
             (headers, BodyToSend::String(json_str))
         }
@@ -178,12 +187,12 @@ fn get_response_type(response: &Response) -> ResponseType {
 async fn send_request_inner(request_params: Arc<FetchRequest>) -> Option<(u32, RequestBody)> {
     let client = reqwest::Client::new();
 
-    let mut request = match request_params.method.trim().to_lowercase().as_str() {
-        "get" => client.get(&request_params.url),
-        "post" => client.post(&request_params.url),
-        _ => {
-            unreachable!();
-        }
+    let mut request = {
+        let method = request_params.method.trim().to_lowercase();
+        let Ok(method) = Method::from_bytes(method.as_bytes()) else {
+            return None
+        };
+        client.request(method, &request_params.url)
     };
 
     let headers = clear_headers(&request_params.headers);
