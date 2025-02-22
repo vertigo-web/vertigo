@@ -1,4 +1,5 @@
 use fantoccini::{ClientBuilder, Locator};
+use std::time::Duration;
 use vertigo_cli::{build, serve, BuildOpts, CommonOpts, ServeOpts};
 
 #[tokio::test]
@@ -73,7 +74,9 @@ async fn basic() {
 
         assert_eq!(url.as_ref(), "http://127.0.0.1:5555/");
 
-    println!("Find and click button");
+    println!("Wait for DOM regeneration by WASM");
+
+    tokio::time::sleep(Duration::from_secs(2)).await;
 
     println!("Find row numer 2");
 

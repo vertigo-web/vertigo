@@ -1,4 +1,4 @@
-use vertigo::{MemoryBlock, JsValue};
+use vertigo::{JsValue, MemoryBlock};
 use wasmtime::{AsContextMut, Caller, Extern, Instance, Memory, Store, StoreContextMut};
 
 use crate::serve::request_state::RequestState;
@@ -32,7 +32,7 @@ impl<'a> DataContext<'a> {
         match self {
             Self::Caller { caller } => {
                 let Some(Extern::Memory(memory)) = caller.get_export("memory") else {
-                    unreachable!()
+                    unreachable!("get_memory failed (caller)")
                 };
 
                 memory
@@ -40,7 +40,7 @@ impl<'a> DataContext<'a> {
             Self::Store { instance, store } => {
                 let context = store.as_context_mut();
                 let Some(Extern::Memory(memory)) = instance.get_export(context, "memory") else {
-                    unreachable!();
+                    unreachable!("get_memory failed (store)")
                 };
 
                 memory
@@ -93,7 +93,8 @@ impl<'a> DataContext<'a> {
         let alloc_inner = match self {
             Self::Caller { caller, .. } => {
                 let Some(Extern::Func(alloc_inner)) = caller.get_export("alloc") else {
-                    unreachable!();
+                    log::error!("Alloc failed (caller)");
+                    return 0;
                 };
                 alloc_inner
             }
@@ -101,7 +102,8 @@ impl<'a> DataContext<'a> {
                 store, instance, ..
             } => {
                 let Some(Extern::Func(alloc_inner)) = instance.get_export(store, "alloc") else {
-                    unreachable!();
+                    log::error!("Alloc failed (store)");
+                    return 0;
                 };
 
                 alloc_inner
@@ -109,9 +111,16 @@ impl<'a> DataContext<'a> {
         };
 
         let mut context = self.get_context();
-        let alloc = alloc_inner.typed::<u32, u32>(&mut context).unwrap();
+        let Ok(alloc) = alloc_inner
+            .typed::<u32, u32>(&mut context)
+            .inspect_err(|err| log::error!("Alloc failed (2): {err}"))
+        else {
+            return 0;
+        };
 
-        alloc.call(&mut context, size as u32).unwrap() as usize
+        alloc.call(&mut context, size as u32)
+            .inspect_err(|err| log::error!("Alloc failed (3): {err}"))
+            .unwrap_or(0) as usize
     }
 
     pub fn save_value(&mut self, value: JsValue) -> u32 {

@@ -192,7 +192,7 @@ impl AllElements {
     fn get_response_elements(&self, element: &Element, with_id: bool) -> VecDeque<HtmlNode> {
         let mut result = VecDeque::new();
 
-        for child_id in element.children.childs() {
+        for child_id in element.children.get_all() {
             result.push_back(self.get_response_one_elements(child_id, with_id));
         }
 

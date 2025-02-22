@@ -33,9 +33,9 @@ impl WasmInstance {
                 let mut data_context = DataContext::from_caller(caller);
 
                 let message = data_context.get_string_from(ptr, offset);
-                log::error!("panic: {message:?}");
+                log::error!("wasm panic: {message:?}");
 
-                sender.send(Message::Panic(message)).unwrap();
+                sender.send(Message::Panic(message)).unwrap_or_default();
             }
         });
 
@@ -54,7 +54,10 @@ impl WasmInstance {
 
                     // Intercept plain response
                     if let Ok(body) = match_plain_response(&value) {
-                        sender.send(Message::PlainResponse(body)).unwrap();
+                        sender
+                            .send(Message::PlainResponse(body))
+                            .inspect_err(|err| log::error!("Error sending plain body: {err}"))
+                            .unwrap_or_default();
                         return 0;
                     }
 
@@ -80,7 +83,10 @@ impl WasmInstance {
                     }
 
                     if let Ok(data) = match_dom_bulk_update(&value) {
-                        sender.send(Message::DomUpdate(data)).unwrap();
+                        sender
+                            .send(Message::DomUpdate(data))
+                            .inspect_err(|err| log::error!("Error sending DomUpdate: {err}"))
+                            .unwrap_or_default();
                         return 0;
                     }
 
@@ -103,7 +109,10 @@ impl WasmInstance {
                                 if time == 0 {
                                     sender
                                         .send(Message::SetTimeoutZero { callback_id })
-                                        .unwrap();
+                                        .inspect_err(|err| {
+                                            log::error!("Error sending SetTimeoutZero: {err}")
+                                        })
+                                        .unwrap_or_default();
                                 }
 
                                 let result = JsValue::I32(0); // fake timerId
@@ -125,7 +134,8 @@ impl WasmInstance {
                                 callback_id,
                                 request,
                             })
-                            .unwrap();
+                            .inspect_err(|err| log::error!("Error sending FetchRequest: {err}"))
+                            .unwrap_or_default();
                         return 0;
                     }
 
@@ -154,7 +164,10 @@ impl WasmInstance {
         let vertigo_entry_function = {
             self.instance
                 .get_typed_func::<Params, Results>(&mut self.store, name)
-                .unwrap()
+                .map_err(|err| {
+                    log::error!("Error calling function: {err}");
+                    err.to_string()
+                })?
         };
 
         vertigo_entry_function
@@ -167,7 +180,8 @@ impl WasmInstance {
             "vertigo_entry_function",
             (super::VERTIGO_VERSION_MAJOR, super::VERTIGO_VERSION_MINOR),
         )
-        .unwrap();
+        .inspect_err(|err| log::error!("Error calling entry function: {err}"))
+        .unwrap_or_default();
     }
 
     pub fn wasm_callback(&mut self, callback_id: u64, params: JsValue) -> JsValue {
@@ -176,7 +190,8 @@ impl WasmInstance {
 
         let result = self
             .call_function::<(u64, u32), u64>("wasm_callback", (callback_id, params_ptr))
-            .unwrap();
+            .inspect_err(|err| log::error!("Error calling callback: {err}"))
+            .unwrap_or_default();
 
         if result == 0 {
             JsValue::Undefined

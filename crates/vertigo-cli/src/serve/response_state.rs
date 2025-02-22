@@ -91,6 +91,7 @@ impl From<ResponseState> for axum::response::Response<String> {
                 "content-type", value.content_type.to_string()
             )
             .body(value.body)
-            .unwrap()
+            .inspect_err(|err| log::error!("Error reading response: {err}"))
+            .unwrap_or_default()
     }
 }

@@ -13,10 +13,10 @@ use crate::serve::{
 
 use super::{
     dom_command::dom_command_from_js_json,
-    DomCommand, HtmlNode,
     element::AllElements,
     html_element::{HtmlDocument, HtmlElement},
     send_request::send_request,
+    DomCommand, HtmlNode,
 };
 
 enum FetchStatus {
@@ -80,9 +80,10 @@ impl HtmlResponse {
         if let HtmlNode::Element(html) = &mut root_html {
             if html.name != "html" {
                 // Not really possible
-                return ResponseState::internal_error(
-                    format!("Missing <html> element, found {} instead", html.name),
-                );
+                return ResponseState::internal_error(format!(
+                    "Missing <html> element, found {} instead",
+                    html.name
+                ));
             }
 
             for (env_name, env_value) in &self.env {
@@ -172,7 +173,10 @@ impl HtmlResponse {
 
                             sender
                                 .send(Message::FetchResponse { request, response })
-                                .unwrap();
+                                .inspect_err(|err| {
+                                    log::error!("Error sending fetch response: {err}")
+                                })
+                                .unwrap_or_default()
                         }
                     });
 
@@ -198,7 +202,8 @@ impl HtmlResponse {
                             FetchStatus::Response { response }
                         }
                         FetchStatus::Response { .. } => {
-                            unreachable!();
+                            log::error!("Unreachable in process_message");
+                            return None;
                         }
                     },
                     None => FetchStatus::Response { response },
