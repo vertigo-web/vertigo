@@ -3,6 +3,5 @@
 /demo_build
 /examples/build
 /node_modules
-/package-lock.json
 /target
 Cargo.lock
