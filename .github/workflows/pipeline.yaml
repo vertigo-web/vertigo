@@ -44,6 +44,11 @@ jobs:
           args: --all-features
       - name: Check versions
         run: tests/check_versions.sh
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+      - name: Check if JS is up to date
+        run: tests/check_js_is_fresh.sh
 
   fixed-nightly-clippy:
     name: Fixed Nightly clippy (wasm32)
