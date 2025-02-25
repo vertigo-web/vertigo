@@ -6,6 +6,7 @@ mod app;
 #[main]
 fn render() -> DomNode {
     let Some(ws_chat) = get_driver().env("ws_chat") else {
+        get_driver().set_status(500);
         return dom! {
             <html>
                 <body>

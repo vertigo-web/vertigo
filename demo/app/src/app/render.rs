@@ -1,4 +1,4 @@
-use vertigo::{css, dom, Computed, Css, DomNode, KeyDownEvent};
+use vertigo::{css, Computed, Css, dom, DomNode, get_driver, include_static, KeyDownEvent};
 
 use crate::app;
 
@@ -129,7 +129,10 @@ pub fn render(state: &app::State) -> DomNode {
             Route::Todo => dom! { <Todo /> },
             Route::DropFile => dom! { <DropFiles /> },
             Route::JsApiAccess => dom! { <JsApiAccess /> },
-            Route::NotFound => dom! { <div>"Page Not Found"</div> },
+            Route::NotFound => {
+                get_driver().set_status(404);
+                dom! { <div>"Page Not Found"</div> }
+            },
         }
     });
 
@@ -146,6 +149,7 @@ pub fn render(state: &app::State) -> DomNode {
             <head>
                 <meta charset="utf-8"/>
                 <title>{ title_value }</title>
+                <link rel="icon" href={include_static!("styling/favicon.png")} />
                 <style type="text/css">"
                     * {
                         box-sizing: border-box;

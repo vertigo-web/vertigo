@@ -20,6 +20,7 @@ pub enum Message {
         response: FetchResponse,
     },
     PlainResponse(String),
+    SetStatus(u16),
 }
 
 #[derive(Debug, Eq)]

@@ -3,7 +3,7 @@ use axum::http::StatusCode;
 #[derive(PartialEq)]
 pub enum ContentType {
     Plain,
-    Html
+    Html,
 }
 
 impl std::fmt::Display for ContentType {
@@ -25,17 +25,17 @@ impl ResponseState {
     pub const HTML: &'static str = "text/html; charset=utf-8";
     pub const PLAIN: &'static str = "text/plain";
 
-    pub fn html(body: impl Into<String>) -> Self {
+    pub fn html(status: StatusCode, body: impl Into<String>) -> Self {
         Self {
-            status: StatusCode::OK,
+            status,
             content_type: ContentType::Html,
             body: body.into(),
         }
     }
 
-    pub fn plain(body: impl Into<String>) -> Self {
+    pub fn plain(status: StatusCode, body: impl Into<String>) -> Self {
         Self {
-            status: StatusCode::OK,
+            status,
             content_type: ContentType::Plain,
             body: body.into(),
         }
@@ -87,9 +87,7 @@ impl From<ResponseState> for axum::response::Response<String> {
                 "cache-control",
                 "private, no-cache, no-store, must-revalidate, max-age=0",
             )
-            .header(
-                "content-type", value.content_type.to_string()
-            )
+            .header("content-type", value.content_type.to_string())
             .body(value.body)
             .inspect_err(|err| log::error!("Error reading response: {err}"))
             .unwrap_or_default()
