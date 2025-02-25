@@ -218,3 +218,12 @@ pub fn match_fetch(arg: &JsValue) -> Result<(u64, FetchRequest), ()> {
 
     Ok(result)
 }
+
+pub fn match_is_set_status(arg: &JsValue) -> Result<u16, ()> {
+    let matcher = Match::new(arg)?;
+    let matcher = matcher.test_list(&["set_status"])?;
+    let (matcher, status) = matcher.u32()?;
+    matcher.end()?;
+
+    Ok(status as u16)
+}

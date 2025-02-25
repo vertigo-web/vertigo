@@ -144,6 +144,14 @@ impl WasmInstance {
                         return data_context.save_value(result);
                     }
 
+                    if let Ok(status) = match_is_set_status(&value) {
+                        sender
+                            .send(Message::SetStatus(status))
+                            .inspect_err(|err| log::error!("Error setting status code: {err}"))
+                            .unwrap_or_default();
+                        return 0;
+                    }
+
                     log::error!("unsupported message: {value:#?}");
                     0
                 },

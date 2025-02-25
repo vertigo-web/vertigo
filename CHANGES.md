@@ -1,10 +1,11 @@
 <!-- markdownlint-configure-file { "no-duplicate-heading": { "siblings_only": true } } -->
 
 <!-- markdownlint-disable-next-line first-line-h1 -->
-## Unreleased
+## 0.6.2 - 2024-02-27
 
 ### Added
 
+* `Driver::set_status` method to allow responding with custom HTTP status code during SSR [#316]
 * `css` attribute in `dom!` macro now accepts `&Css` (referenced) for convenience
 * `on_submit` in `<form>`
 
@@ -15,7 +16,7 @@
 
 ### Fixed
 
-* Intercept inserting mutiple html/head/body tags in DOM [#297]
+* Intercept inserting multiple html/head/body tags in DOM [#297]
 * Removed `unreachable!()` and `unwrap()` from `serve` runtime [#321]
 * vertigo-cli: Missing `remove_attr` command in server-side rendering
 
@@ -157,7 +158,7 @@
 ### Changed
 
 * `dom!` macro can now return a list of elements, not only one
-* In `dom!` macro, name of attribute can be omitted if variable name is the same (`on_clich={on_click}` can be shortened to `{on_click}` )
+* In `dom!` macro, name of attribute can be omitted if variable name is the same (`on_click={on_click}` can be shortened to `{on_click}` )
 * vertigo-cli: Error message popup can now be dismissed
 
 ### Removed
@@ -171,7 +172,7 @@
 * `vertigo-cli` packaging tool with commands `new`, `build`, `watch` and `serve`
 * Server-side rendering built in `vertigo-cli`
 * `JsJson` data structure to communicate with JS world without string serialization,
-* `AutoJsJson` macro for creating `JsJson` from structures and structures from `Jsjson`
+* `AutoJsJson` macro for creating `JsJson` from structures and structures from `JsJson`
 * A warning in JS console if developer tried to get a value already set to be changed during transaction
 * `@media` queries support in CSS
 * `Driver::cookie_set_json` and `Driver::cookie_get_json` for storing `JsJson`-enabled structures in a cookie

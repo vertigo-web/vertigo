@@ -243,7 +243,7 @@ async fn handler(
         response_state.add_watch_script(port_watch);
     }
 
-    if !response_state.status.is_success() {
+    if response_state.status.is_server_error() {
         log::error!("WASM status: {}", response_state.status);
         log::error!("WASM response: {}", response_state.body);
     }

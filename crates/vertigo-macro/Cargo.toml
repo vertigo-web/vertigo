@@ -1,6 +1,6 @@
 [package]
 name = "vertigo-macro"
-version = "0.6.1"
+version = "0.6.2"
 authors = ["Grzegorz Szeliga <szeligagrzegorz@gmail.com>", "Michał Pokrywka <wolfmoon@o2.pl>"]
 description = "Reactive Real-DOM library with SSR for Rust - macros"
 edition = "2021"

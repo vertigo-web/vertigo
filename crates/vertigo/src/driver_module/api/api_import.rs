@@ -705,4 +705,15 @@ impl ApiImport {
             .synthetic("plain_response", JsValue::String(body))
             .exec();
     }
+
+    /// Synthetic command to respond with custom status code from SSR
+    pub fn set_status(&self, status: u16) {
+        if self.is_browser() {
+            return;
+        }
+
+        self.dom_access()
+            .synthetic("set_status", JsValue::U32(status as u32))
+            .exec();
+    }
 }

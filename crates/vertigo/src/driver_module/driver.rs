@@ -278,8 +278,8 @@ impl Driver {
     /// });
     /// ```
     pub fn plains(&mut self, callback: impl Fn(&str) -> Option<String> + 'static) {
-        let mut mur_plains = self.inner._plains_handler.borrow_mut();
-        *mur_plains = Some(Rc::new(callback));
+        let mut mut_plains = self.inner._plains_handler.borrow_mut();
+        *mut_plains = Some(Rc::new(callback));
     }
 
     pub fn try_get_plain(&self) {
@@ -297,6 +297,19 @@ impl Driver {
             }
         } else {
             log::info!("Browser mode, not invoking try_get_plain");
+        }
+    }
+
+    /// Allow to set custom HTTP status code during SSR
+    ///
+    /// ```rust
+    /// use vertigo::get_driver;
+    ///
+    /// get_driver().set_status(404)
+    /// ```
+    pub fn set_status(&self, status: u16) {
+        if self.is_server() {
+            self.inner.api.set_status(status);
         }
     }
 

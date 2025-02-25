@@ -1,3 +1,4 @@
+use axum::http::StatusCode;
 use std::{
     collections::{HashMap, VecDeque},
     sync::Arc,
@@ -37,6 +38,7 @@ pub struct HtmlResponse {
     all_elements: AllElements,
     fetch: HashMap<Arc<FetchRequest>, FetchStatus>,
     env: HashMap<String, String>,
+    status: StatusCode,
 }
 
 impl HtmlResponse {
@@ -53,6 +55,7 @@ impl HtmlResponse {
             all_elements: AllElements::new(),
             fetch: HashMap::new(),
             env,
+            status: StatusCode::default(),
         }
     }
 
@@ -114,7 +117,7 @@ impl HtmlResponse {
 
         if success {
             let document = HtmlDocument::new(root_html);
-            ResponseState::html(document.convert_to_string(true))
+            ResponseState::html(self.status, document.convert_to_string(true))
         } else {
             ResponseState::internal_error("Missing <body> element")
         }
@@ -214,7 +217,15 @@ impl HtmlResponse {
                 None
             }
 
-            Message::PlainResponse(body) => Some(ResponseState::plain(body)),
+            Message::PlainResponse(body) => Some(ResponseState::plain(self.status, body)),
+
+            Message::SetStatus(status) => {
+                match StatusCode::from_u16(status) {
+                    Ok(status) => self.status = status,
+                    Err(err) => log::error!("Invalid status code reqeusted: {err}"),
+                }
+                None
+            }
         }
     }
 }
