@@ -188,7 +188,7 @@ async fn send_request_inner(request_params: Arc<FetchRequest>) -> Option<(u32, R
     let client = reqwest::Client::new();
 
     let mut request = {
-        let method = request_params.method.trim().to_lowercase();
+        let method = request_params.method.trim().to_uppercase();
         let Ok(method) = Method::from_bytes(method.as_bytes()) else {
             return None
         };
