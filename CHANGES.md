@@ -1,6 +1,12 @@
 <!-- markdownlint-configure-file { "no-duplicate-heading": { "siblings_only": true } } -->
 
 <!-- markdownlint-disable-next-line first-line-h1 -->
+## 0.6.3 - 2024-03-01
+
+### Fixed
+
+* Invalid lowercase http methods in requests from inside SSR
+
 ## 0.6.2 - 2024-02-27
 
 ### Added

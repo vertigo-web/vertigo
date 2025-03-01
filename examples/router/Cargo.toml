@@ -1,6 +1,6 @@
 [package]
 name = "vertigo-example-router"
-version = "0.6.2"
+version = "0.6.3"
 authors = ["Grzegorz Szeliga <szeligagrzegorz@gmail.com>", "Michał Pokrywka <wolfmoon@o2.pl>"]
 edition = "2021"
 
@@ -9,4 +9,4 @@ crate-type = ["cdylib", "rlib"]
 
 [dependencies]
 log = "0.4.14"
-vertigo = { path = "../../crates/vertigo", version = "0.6.2" }
+vertigo = { path = "../../crates/vertigo", version = "0.6.3" }
