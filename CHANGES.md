@@ -1,6 +1,12 @@
 <!-- markdownlint-configure-file { "no-duplicate-heading": { "siblings_only": true } } -->
 
 <!-- markdownlint-disable-next-line first-line-h1 -->
+## Unreleased
+
+### Fixed
+
+* `DomDebugFragment::to_pseudo_html` now renders all deterministically using BtreeMap so it can be used in unit tests
+
 ## 0.6.3 - 2024-03-01
 
 ### Fixed
