@@ -1,7 +1,7 @@
 use std::borrow::{Borrow, Cow};
 use std::fmt::Display;
 
-#[derive(Clone, Debug, PartialEq, Eq, Hash)]
+#[derive(Clone, Debug, PartialEq, Eq, Hash, PartialOrd, Ord)]
 pub struct StaticString(pub Cow<'static, str>);
 
 impl StaticString {

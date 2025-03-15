@@ -20,5 +20,5 @@ fn test_explicit_class_attribute() {
 
     let el_str = js_log.to_pseudo_html();
 
-    assert_eq!(el_str, r#"<div class='dark_bg autocss_1'></div>"#);
+    assert_eq!(el_str, r#"<div class='dark_bg autocss_1' />"#);
 }
