@@ -4,7 +4,7 @@ default_to_workspace = false
 
 [tasks.unit-tests]
 script = [
-    "cargo test -p vertigo --all-features"
+    "cargo test --all-features"
 ]
 
 # NOTE: WebDriver on localhost:9515 needs to be running
@@ -13,8 +13,24 @@ script = [
     "cargo test --package fantoccini-tests -- --ignored"
 ]
 
+[tasks.ci]
+script = [
+    "cargo clippy -p vertigo -p vertigo-macro --all-features --tests --target wasm32-unknown-unknown -- -Dwarnings",
+    "cargo clippy -p vertigo-demo -p vertigo-example-counter -p vertigo-example-router -p vertigo-example-trafficlights --all-features --tests --target wasm32-unknown-unknown -- -Dwarnings",
+    "cargo test --all-features",
+    "tests/check_versions.sh",
+    "tests/check_js_is_fresh.sh",
+    "tests/check_vertigo_new.sh",
+]
+
 [tasks.all-tests]
 dependencies = [ "unit-tests", "automated-tests" ]
+
+[tasks.clean-build]
+dependencies = [ "clean" ]
+script = [
+    "rm -rf build"
+]
 
 # Run clippy for wasm32 target
 

@@ -1,8 +1,11 @@
 use proc_macro::TokenStream;
 use proc_macro2::{Span, TokenStream as TokenStream2};
-use quote::{quote, ToTokens};
-use syn::Expr;
-use syn_rsx::{parse, Node, NodeType};
+use quote::{quote, ToTokens, TokenStreamExt};
+use rstml::{
+    node::{KVAttributeValue, KeyedAttribute, KeyedAttributeValue, Node, NodeAttribute, NodeBlock},
+    parse,
+};
+use syn::{spanned::Spanned, Expr, ExprBlock, ExprLit, Stmt};
 
 pub(crate) fn dom_inner(input: TokenStream) -> TokenStream {
     let nodes = match parse(input) {
@@ -13,7 +16,7 @@ pub(crate) fn dom_inner(input: TokenStream) -> TokenStream {
     let mut dom_nodes = Vec::new();
 
     for node in nodes {
-        let tokens = convert_node(node, true);
+        let tokens = convert_node(&node, true);
         dom_nodes.push(tokens);
     }
 
@@ -47,7 +50,7 @@ pub(crate) fn dom_element_inner(input: TokenStream) -> TokenStream {
     let mut modes_dom = Vec::new();
 
     for node in nodes {
-        let node = convert_node(node, false);
+        let node = convert_node(&node, false);
         modes_dom.push(node);
     }
 
@@ -62,75 +65,61 @@ pub(crate) fn dom_element_inner(input: TokenStream) -> TokenStream {
     modes_dom.pop().unwrap_or_default().into()
 }
 
-/// Strips expression from excessive brackets (only once)
-fn strip_brackets(expr: Expr) -> TokenStream2 {
-    let expr_block = if let Expr::Block(expr) = expr.clone() {
-        let mut stmts = expr.block.stmts;
-
-        let first = stmts.pop();
-
-        if stmts.is_empty() {
-            first.map(|first| first.to_token_stream())
-        } else {
-            None
+fn convert_to_component(node: &Node) -> TokenStream2 {
+    let element = match node {
+        Node::Element(el) => el,
+        _ => {
+            emit_error!(node.span(), "Can't convert to component");
+            return quote! {};
         }
-    } else {
-        None
     };
-
-    if let Some(expr_block) = expr_block {
-        return expr_block;
-    }
-
-    expr.to_token_stream()
-}
-
-/// Tags starting with uppercase letter are considered components
-fn is_component_name(name: &str) -> bool {
-    name.split("::")
-        .last()
-        .unwrap_or_default()
-        .chars()
-        .next()
-        .map(char::is_uppercase)
-        .unwrap_or_default()
-}
-
-fn convert_to_component(node: Node) -> TokenStream2 {
-    let component = node.name;
-    let attributes = node
-        .attributes
-        .into_iter()
+    let component = element.name();
+    let attributes = element
+        .attributes()
+        .iter()
         .filter_map(|attr_node| {
-            let span = get_span(&attr_node);
-            match (attr_node.name, attr_node.value) {
-                (Some(key), Some(value)) => {
-                    let value = strip_brackets(value);
+            let span = attr_node.span();
+            match attr_node {
+                // Key-value attribute
+                NodeAttribute::Attribute(KeyedAttribute { key, possible_value }) => {
+                    let matches = take_block_or_literal_expr(possible_value);
 
-                    if value.to_string() == "{}" || value.to_string() == "Default :: default()" {
-                        Some(quote! { #key: Default::default(), })
-                    } else if value.to_string().starts_with('&') {
-                        Some(quote! { #key: (#value).clone(), })
-                    } else {
-                        Some(quote! { #key: (#value).into(), })
+                    match matches {
+                        (Some(value), None) => {
+                            if value.block.stmts.is_empty() || value.block.stmts[0].to_token_stream().to_string() == "Default :: default()" {
+                                Some(quote! { #key: Default::default(), })
+                            } else if let Some(Stmt::Expr(Expr::Reference(inner), _)) = value.block.stmts.last() {
+                                let value = &inner.expr;
+                                Some(quote! { #key: #value.clone(), })
+                            } else {
+                                Some(quote! { #key: #value.into(), })
+                            }
+                        }
+                        (None, Some(lit)) => {
+                            Some(quote! { #key: #lit.into(), })
+                        }
+                        _ => {
+                            None
+                        }
                     }
                 },
-                (None, Some(value)) => {
-                    // Try to use attribute value as key if no key provided
-                    let value = strip_brackets(value);
-                    if value.to_string() == "{}" || value.to_string() == "Default :: default()" {
-                        emit_error!(span, "Expected key={} attribute - can't omit attribute name when providing default value");
-                        None
-                    } else if value.to_string().starts_with('&') {
-                        let key = value.clone().into_iter().skip(1).collect::<TokenStream2>();
-                        Some(quote! { #key: (#value).clone(), })
+                // Try to use attribute value as key if no key provided
+                NodeAttribute::Block(block) => {
+                    if let NodeBlock::ValidBlock(block) = block {
+                        if block.stmts.is_empty() {
+                            emit_error!(span, "Expected key={} attribute - can't omit attribute name when providing default value");
+                            None
+                        } else if let Some(Stmt::Expr(Expr::Reference(inner), _)) = block.stmts.last() {
+                            let value = &inner.expr;
+                            Some(quote! { #value: {#value}.clone(), })
+                        } else {
+                            let key = block.stmts.last();
+                            Some(quote! { #key: #block.into(), })
+                        }
                     } else {
-                        Some(quote! { #value: (#value).into(), })
+                        emit_error!(span, "Expected key=value attribute");
+                        None
                     }
-                }
-                _ => {
-                    emit_error!(span, "Expected key=value attribute");
-                    None
                 }
             }
         })
@@ -145,37 +134,22 @@ fn convert_to_component(node: Node) -> TokenStream2 {
     }
 }
 
-fn convert_child_to_component(node: Node) -> TokenStream2 {
-    let cmp_stream = convert_to_component(node);
-    quote! {
-        .child(#cmp_stream)
-    }
-}
+fn convert_node(node: &Node, convert_to_dom_node: bool) -> TokenStream2 {
+    let parent_span = node.span();
 
-fn check_ident(name: &str) -> bool {
-    for char in name.chars() {
-        if char.is_ascii_alphanumeric() || char == '_' {
-            //ok
-        } else {
-            return false;
+    let element = match node {
+        Node::Fragment(_) => {
+            emit_error!(parent_span, "Fragments not supported");
+            return TokenStream2::new();
         }
-    }
+        Node::Element(element) => element,
+        _ => {
+            emit_error!(parent_span, "Expected Element");
+            return TokenStream2::new();
+        }
+    };
 
-    true
-}
-
-fn convert_node(node: Node, convert_to_dom_node: bool) -> TokenStream2 {
-    let parent_span = get_span(&node);
-
-    if node.node_type == NodeType::Fragment {
-        emit_error!(parent_span, "Fragments not supported");
-    }
-
-    if node.node_type != NodeType::Element {
-        emit_error!(parent_span, "Expected Element");
-    }
-
-    let node_name = node.name_as_string().unwrap_or_default();
+    let node_name = element.name().to_string();
 
     if is_component_name(&node_name) {
         return convert_to_component(node);
@@ -252,82 +226,139 @@ fn convert_node(node: Node, convert_to_dom_node: bool) -> TokenStream2 {
         }
     };
 
-    for attr_item in node.attributes {
-        let span = attr_item.name_span().unwrap_or(parent_span);
-        if attr_item.node_type == NodeType::Block {
-            let Some(value) = extract_value(attr_item, parent_span) else {
-                continue;
-            };
-            let name = value.to_string();
-
-            if !check_ident(name.as_str()) {
-                emit_error!(span, "Invalid ident_name");
-            } else {
-                push_attr(name, value);
+    for attr_item in element.attributes() {
+        let span = attr_item.span();
+        match attr_item {
+            // Key-value attribute
+            NodeAttribute::Attribute(KeyedAttribute {
+                key,
+                possible_value,
+            }) => {
+                let matches = take_block_or_literal_expr(possible_value);
+                match matches {
+                    (Some(value), None) => {
+                        if value.block.stmts.is_empty()
+                            || value.block.stmts[0].to_token_stream().to_string()
+                                == "Default :: default()"
+                        {
+                            push_attr(
+                                key.to_string(),
+                                quote! { vertigo::dom::attr_value::AttrValue::String(String::new()) },
+                            )
+                        } else if value.block.stmts.len() == 1 {
+                            let value = value.block.stmts.first().unwrap();
+                            push_attr(key.to_string(), value.to_token_stream())
+                        } else {
+                            push_attr(key.to_string(), value.to_token_stream())
+                        }
+                    }
+                    (None, Some(lit)) => push_attr(key.to_string(), lit.to_token_stream()),
+                    _ => (),
+                }
             }
-        } else if attr_item.node_type == NodeType::Attribute {
-            let Some(name) = attr_item.name_as_string() else {
-                emit_error!(span, "Missing attribute name");
-                continue;
-            };
-            let Some(value) = extract_value(attr_item, parent_span) else {
-                continue;
-            };
-            push_attr(name, value);
-        } else {
-            emit_error!(span, "Invalid attribute type");
+            // Try to use attribute value as key if no key provided
+            NodeAttribute::Block(block) => {
+                if let NodeBlock::ValidBlock(block) = block {
+                    if block.stmts.is_empty() {
+                        emit_error!(span, "Expected key={} attribute - can't omit attribute name when providing default value");
+                    } else if let Some(Stmt::Expr(Expr::Reference(inner), _)) = block.stmts.last() {
+                        let value = &inner.expr;
+                        push_attr(value.to_token_stream().to_string(), value.to_token_stream())
+                    } else if block.stmts.len() == 1 {
+                        let value = block.stmts.last();
+                        push_attr(value.to_token_stream().to_string(), value.to_token_stream())
+                    } else {
+                        let key = block.stmts.last();
+                        push_attr(key.to_token_stream().to_string(), block.to_token_stream())
+                    }
+                } else {
+                    emit_error!(span, "Expected key=value attribute");
+                    continue;
+                }
+            }
         }
     }
 
-    for child in node.children {
-        match &child.node_type {
-            NodeType::Text => {
-                let Some(child_value) = extract_value(child, parent_span) else {
-                    continue;
-                };
-                out_child.push(quote! {
-                    .child(vertigo::DomText::new(#child_value))
-                });
-            }
-            NodeType::Element => match child.name_as_string() {
-                Some(tag_name) if is_component_name(&tag_name) => {
-                    out_child.push(convert_child_to_component(child))
+    if let Some(children) = node.children() {
+        for child in children {
+            match child {
+                Node::Text(txt) => {
+                    out_child.push(quote! {
+                        .child(vertigo::DomText::new(#txt))
+                    });
                 }
-                _ => {
-                    let node_ready = convert_node(child, false);
+                Node::Element(element) => {
+                    let tag_name = element.name().to_string();
+                    if is_component_name(&tag_name) {
+                        out_child.push(convert_child_to_component(child))
+                    } else {
+                        let node_ready = convert_node(child, false);
 
-                    out_child.push(quote! {
-                        .child(#node_ready)
-                    });
+                        out_child.push(quote! {
+                            .child(#node_ready)
+                        });
+                    }
                 }
-            },
-            NodeType::Block => {
-                let Some(block) = extract_value(child, parent_span) else {
-                    continue;
-                };
-                let block_str = block.to_string();
-                if block_str.starts_with("..") {
-                    let value: TokenStream2 = block.into_iter().skip(2).collect();
-                    out_child.push(quote! {
-                        .children(
-                            #value
-                                .into_iter()
-                                .map(|item| vertigo::EmbedDom::embed(item))
-                                .collect::<Vec<_>>()
-                        )
-                    });
-                } else {
-                    out_child.push(quote! {
-                        .child(vertigo::EmbedDom::embed(#block))
-                    });
+                Node::Block(block) => {
+                    match block {
+                        NodeBlock::ValidBlock(block) => {
+                            match block.stmts.len() {
+                                0 => emit_warning!(block.span(), "Missing expression"),
+                                n => {
+                                    // First detect if there is a spread operator used at the end of the block
+                                    // which is basically a Range without start
+                                    let value = block.stmts.last();
+                                    let mut block = block.clone();
+                                    let mut spread_statement = None;
+
+                                    if let Some(Stmt::Expr(Expr::Range(range), _)) = value {
+                                        if range.start.is_none() {
+                                            if let Some(value) = &range.end {
+                                                // Remove the statement with spread operator and prepare modified one
+                                                block.stmts.pop();
+                                                spread_statement = Some(quote! {
+                                                    #value
+                                                        .into_iter()
+                                                        .map(|item| vertigo::EmbedDom::embed(item))
+                                                        .collect::<Vec<_>>()
+                                                });
+                                            }
+                                        }
+                                    }
+
+                                    // Prepare new block based on if spread operator was used
+                                    let new_block = if let Some(spread_statement) = spread_statement
+                                    {
+                                        let mut new_block = quote! {};
+                                        for stmt in block.stmts {
+                                            new_block.append_all(stmt.to_token_stream());
+                                        }
+                                        new_block.append_all(spread_statement);
+
+                                        quote! { .children({ #new_block }) }
+                                    } else if n == 1 {
+                                        let stmt = block.stmts.first().unwrap();
+                                        quote! { .child(vertigo::EmbedDom::embed(#stmt)) }
+                                    } else {
+                                        quote! { .child(vertigo::EmbedDom::embed(#block)) }
+                                    };
+
+                                    out_child.push(new_block)
+                                }
+                            }
+                        }
+                        NodeBlock::Invalid(invalid) => {
+                            emit_error!(invalid.span(), "Invalid block");
+                        }
+                    }
                 }
-            }
-            node_type => {
-                emit_error!(
-                    child.name_span().unwrap_or(parent_span),
-                    "Unsupported {} node as a child",
-                    node_type
-                );
+                node => {
+                    emit_error!(
+                        node.span(),
+                        "Unsupported node type {} as a child",
+                        node.r#type()
+                    );
+                }
             }
         }
     }
@@ -349,17 +380,54 @@ fn convert_node(node: Node, convert_to_dom_node: bool) -> TokenStream2 {
     }
 }
 
-fn extract_value(node: Node, fallback_span: Span) -> Option<TokenStream2> {
-    match node.value {
-        Some(value) => Some(strip_brackets(value)),
-        None => {
-            let span = node.name_span().unwrap_or(fallback_span);
-            emit_error!(span, "Missing attribute value");
-            None
+/// Out of attribute value takes ExprBlock or ExprLit and ignores everything else
+fn take_block_or_literal_expr(
+    expr: &KeyedAttributeValue,
+) -> (Option<&ExprBlock>, Option<&ExprLit>) {
+    match expr {
+        KeyedAttributeValue::Binding(_fn_binding) => {
+            emit_error!(expr.span(), "Invalid attr - binding");
+            (None, None)
+        }
+        KeyedAttributeValue::Value(attribute_value_expr) => match &attribute_value_expr.value {
+            KVAttributeValue::Expr(expr) => {
+                match expr {
+                    Expr::Block(block) => (Some(block), None),
+                    Expr::Lit(lit) => (None, Some(lit)),
+                    // TODO: Possibly others needs to be supported,
+                    // so this function should in fact return Option<Expr> in future.
+                    _ => {
+                        emit_error!(expr.span(), "Invalid attr - invalid block type {:?}", expr);
+                        (None, None)
+                    }
+                }
+            }
+            KVAttributeValue::InvalidBraced(invalid) => {
+                emit_error!(invalid.span(), "Invalid attr - invalid braces");
+                (None, None)
+            }
+        },
+        KeyedAttributeValue::None => {
+            emit_error!(expr.span(), "Invalid attr - none");
+            (None, None)
         }
     }
 }
 
-fn get_span(node: &Node) -> Span {
-    node.name_span().unwrap_or_else(Span::call_site)
+/// Tags starting with uppercase letter are considered components
+fn is_component_name(name: &str) -> bool {
+    name.split("::")
+        .last()
+        .unwrap_or_default()
+        .chars()
+        .next()
+        .map(char::is_uppercase)
+        .unwrap_or_default()
+}
+
+fn convert_child_to_component(node: &Node) -> TokenStream2 {
+    let cmp_stream = convert_to_component(node);
+    quote! {
+        .child(#cmp_stream)
+    }
 }
