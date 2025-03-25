@@ -19,10 +19,12 @@ impl Todo {
                     View::User { email } => {
                         let messag: String = format!("user = {email}");
 
-                        let view = &state.view;
-                        let on_click = bind!(view, || {
-                            view.set(View::Main);
-                        });
+                        let state = state.clone();
+                        
+                        // let view = state.view;
+                        let on_click = use || {
+                            state.view.set(View::Main);
+                        };
 
                         dom!{
                             <div>

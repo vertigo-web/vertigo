@@ -1,4 +1,6 @@
 #![deny(rust_2018_idioms)]
+#![feature(ergonomic_clones)]
+#![allow(incomplete_features)]
 
 use vertigo::{main, DomNode, get_driver, dom};
 mod app;
