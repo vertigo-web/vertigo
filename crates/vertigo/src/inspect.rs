@@ -137,7 +137,6 @@ impl DomDebugFragment {
                     }
                 }
                 DriverDomCommand::InsertCss { selector, value } => {
-                    println!("InsertCss {selector} {value}");
                     css.insert(selector, value);
                 }
                 DriverDomCommand::CreateComment { id, value } => {

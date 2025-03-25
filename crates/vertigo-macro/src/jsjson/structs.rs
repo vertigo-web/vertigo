@@ -1,10 +1,11 @@
-use bae::FromAttributes;
+use darling::FromAttributes;
 use proc_macro::TokenStream;
 use quote::quote;
 use syn::{ext::IdentExt, DataStruct, Ident};
 
 #[derive(Default, Debug, FromAttributes)]
-pub struct JsJson {
+#[darling(attributes(js_json), forward_attrs(allow, doc, cfg))]
+pub struct JsJsonOpts {
     default: Option<syn::Expr>,
 }
 
@@ -26,7 +27,7 @@ pub(super) fn impl_js_json_struct(name: &Ident, data: &DataStruct) -> Result<Tok
 
     for (field_name, attrs) in field_list {
         let field_unraw = field_name.unraw().to_string();
-        let attrs = JsJson::try_from_attributes(attrs).unwrap().unwrap_or_default();
+        let attrs = JsJsonOpts::from_attributes(attrs).unwrap();
 
         list_to_json.push(quote! {
             (#field_unraw.to_string(), self.#field_name.to_json()),

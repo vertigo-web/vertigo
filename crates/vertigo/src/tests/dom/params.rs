@@ -64,3 +64,26 @@ fn component_params_with_default_values() {
         </div>
     };
 }
+
+#[test]
+fn component_params_with_blocks() {
+    let param_1 = 1;
+    let param_2 = 2;
+
+    let _ = dom! {
+        <div>
+            <MyComponent
+                param_1={
+                    let mut x = param_1 + param_2;
+                    x += 1;
+                    x
+                }
+                {
+                    let mut param_2 = param_1 + param_2;
+                    param_2 += 1;
+                    &param_2
+                }
+            />
+        </div>
+    };
+}

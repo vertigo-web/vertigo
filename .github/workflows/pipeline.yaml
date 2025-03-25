@@ -6,8 +6,45 @@ on:
 
 jobs:
 
-  nightly-clippy:
-    name: Nightly clippy (wasm32)
+  fixed-nightly:
+    name: Fixed Nightly clippy && tests
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v2
+      - uses: actions-rs/toolchain@v1
+        with:
+          toolchain: nightly-2025-03-29
+          target: wasm32-unknown-unknown
+          components: clippy
+          override: true
+      - uses: actions-rs/clippy-check@v1
+        with:
+          token: ${{ secrets.GITHUB_TOKEN }}
+          args: -p vertigo -p vertigo-macro --all-features --tests --target wasm32-unknown-unknown -- -Dwarnings
+          name: Vertigo Clippy Output
+      - uses: actions-rs/clippy-check@v1
+        with:
+          token: ${{ secrets.GITHUB_TOKEN }}
+          args: -p vertigo-demo -p vertigo-example-counter -p vertigo-example-router -p vertigo-example-trafficlights --all-features --tests --target wasm32-unknown-unknown -- -Dwarnings
+          name: Demo/Examples Clippy Output
+      - uses: actions-rs/cargo@v1
+        with:
+          command: test
+          args: --all-features
+      - name: Check versions
+        run: tests/check_versions.sh
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+      - name: Check if JS is up to date
+        run: tests/check_js_is_fresh.sh
+      - name: vertigo new some_app
+        run: |
+          rustup default nightly-2025-03-29
+          tests/check_vertigo_new.sh          
+
+  nightly:
+    name: Nightly clippy && tests
     runs-on: ubuntu-latest
     continue-on-error: true
     steps:
@@ -21,87 +58,19 @@ jobs:
       - uses: actions-rs/clippy-check@v1
         with:
           token: ${{ secrets.GITHUB_TOKEN }}
-          args: -p vertigo -p vertigo-macro --all-features --target wasm32-unknown-unknown -- -Dwarnings
+          args: -p vertigo -p vertigo-macro --all-features --tests --target wasm32-unknown-unknown -- -Dwarnings
           name: Vertigo Clippy Output
       - uses: actions-rs/clippy-check@v1
         with:
           token: ${{ secrets.GITHUB_TOKEN }}
-          args: -p vertigo-demo -p vertigo-example-counter -p vertigo-example-router -p vertigo-example-trafficlights --all-features --target wasm32-unknown-unknown -- -Dwarnings
+          args: -p vertigo-demo -p vertigo-example-counter -p vertigo-example-router -p vertigo-example-trafficlights --all-features --tests --target wasm32-unknown-unknown -- -Dwarnings
           name: Demo/Examples Clippy Output
-
-  nightly-tests:
-    name: Nightly tests
-    runs-on: ubuntu-latest
-    steps:
-      - uses: actions/checkout@v2
-      - uses: actions-rs/toolchain@v1
-        with:
-          toolchain: nightly
-          override: true
       - uses: actions-rs/cargo@v1
         with:
           command: test
           args: --all-features
-      - name: Check versions
-        run: tests/check_versions.sh
-      - uses: actions/setup-node@v4
-        with:
-          node-version: 20
-      - name: Check if JS is up to date
-        run: tests/check_js_is_fresh.sh
 
-  fixed-nightly-clippy:
-    name: Fixed Nightly clippy (wasm32)
-    runs-on: ubuntu-latest
-    steps:
-      - uses: actions/checkout@v2
-      - uses: actions-rs/toolchain@v1
-        with:
-          toolchain: nightly-2024-07-01
-          target: wasm32-unknown-unknown
-          components: clippy
-          override: true
-      - uses: actions-rs/clippy-check@v1
-        with:
-          token: ${{ secrets.GITHUB_TOKEN }}
-          args: -p vertigo -p vertigo-macro --all-features --target wasm32-unknown-unknown -- -Dwarnings
-          name: Vertigo Clippy Output
-      - uses: actions-rs/clippy-check@v1
-        with:
-          token: ${{ secrets.GITHUB_TOKEN }}
-          args: -p vertigo-demo -p vertigo-example-counter -p vertigo-example-router -p vertigo-example-trafficlights --all-features --target wasm32-unknown-unknown -- -Dwarnings
-          name: Demo/Examples Clippy Output
-
-  fixed-nightly-tests:
-    name: Fixed Nightly tests (wasm32)
-    runs-on: ubuntu-latest
-    steps:
-      - uses: actions/checkout@v2
-      - uses: actions-rs/toolchain@v1
-        with:
-          toolchain: nightly-2024-07-01
-          target: wasm32-unknown-unknown
-          components: clippy
-          override: true
-      - uses: actions-rs/cargo@v1
-        with:
-          command: test
-          args: --all-features
-      - name: vertigo-cli
-        run: |
-          cargo build --release -p vertigo-cli
-          rustup default nightly-2024-07-01
-          mkdir ../vertigo-cli-test
-          mv target/release/vertigo ../vertigo-cli-test
-          cd ../vertigo-cli-test
-          ./vertigo new some_app
-          cd some_app
-          sed "s/vertigo = .*/vertigo = { path = \"..\/..\/vertigo\/crates\/vertigo\" }/" Cargo.toml > Cargo.toml.new
-          mv Cargo.toml.new Cargo.toml
-          ../vertigo build
-          ls -1 build
-
-  nightly-clippy-demo-server:
+  nightly-demo-server:
     name: Nightly clippy demo server (amd64)
     runs-on: ubuntu-latest
     steps:

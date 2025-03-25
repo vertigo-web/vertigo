@@ -16,6 +16,9 @@ members = [
 
     "lint-project"
 ]
+exclude = [
+    "build/vertigo-clit-test/some_app"
+]
 resolver = "2"
 
 [profile.release]
