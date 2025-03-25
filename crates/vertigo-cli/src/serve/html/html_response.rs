@@ -15,7 +15,7 @@ use crate::serve::{
 use super::{
     dom_command::dom_command_from_js_json,
     element::AllElements,
-    html_element::{HtmlDocument, HtmlElement},
+    html_element::HtmlElement,
     send_request::send_request,
     DomCommand, HtmlNode,
 };
@@ -116,8 +116,7 @@ impl HtmlResponse {
         });
 
         if success {
-            let document = HtmlDocument::new(root_html);
-            ResponseState::html(self.status, document.convert_to_string(true))
+            ResponseState::html(self.status, root_html.convert_to_string(true))
         } else {
             ResponseState::internal_error("Missing <body> element")
         }

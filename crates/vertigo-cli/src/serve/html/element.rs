@@ -1,7 +1,7 @@
-use std::collections::{HashMap, VecDeque};
+use std::collections::{BTreeMap, HashMap, VecDeque};
 
 use super::{
-    element_children::ElementChildren, html_element::HtmlElement, ordered_map::OrderedMap,
+    element_children::ElementChildren, html_element::HtmlElement,
     DomCommand, HtmlNode,
 };
 
@@ -13,7 +13,7 @@ pub enum Node {
 
 pub struct Element {
     name: String,
-    attr: OrderedMap,
+    attr: BTreeMap<String, String>,
     children: ElementChildren,
 }
 
@@ -23,7 +23,7 @@ impl Element {
 
         Element {
             name,
-            attr: OrderedMap::new(),
+            attr: BTreeMap::new(),
             children: ElementChildren::new(),
         }
     }
@@ -61,7 +61,7 @@ impl AllElements {
 
     fn set_attr(&mut self, id: u64, name: impl Into<String>, value: impl Into<String>) {
         if let Some(Node::Element(element)) = self.all.get_mut(&id) {
-            element.attr.set(name, value)
+            element.attr.insert(name.into(), value.into());
         } else {
             log::error!(
                 "Tried to set attr `{}` for non-existent element `{id}`",
@@ -72,7 +72,7 @@ impl AllElements {
 
     fn remove_attr(&mut self, id: u64, name: impl AsRef<str>) {
         if let Some(Node::Element(element)) = self.all.get_mut(&id) {
-            element.attr.remove(name)
+            element.attr.remove(name.as_ref());
         } else {
             log::error!(
                 "Tried to remove non-existent attr `{}` from element `{id}`",
@@ -178,7 +178,7 @@ impl AllElements {
                 let mut attr = node.attr.clone();
 
                 if with_id {
-                    attr.set("data-id", node_id.to_string());
+                    attr.insert("data-id".into(), node_id.to_string());
                 }
 
                 let children = self.get_response_elements(node, with_id);
@@ -226,9 +226,9 @@ impl AllElements {
     pub fn get_response_document(
         &self,
         with_id: bool,
-    ) -> (super::html_element::HtmlDocument, Vec<HtmlNode>) {
+    ) -> (HtmlNode, Vec<HtmlNode>) {
         let (root, css) = self.get_response(with_id);
-        (super::html_element::HtmlDocument::new(root), css)
+        (root, css)
     }
 }
 
