@@ -1,6 +1,16 @@
 <!-- markdownlint-configure-file { "no-duplicate-heading": { "siblings_only": true } } -->
 
 <!-- markdownlint-disable-next-line first-line-h1 -->
+
+
+## Unreleased
+
+### Changed
+
+* Replaced `OrderedMap` with `BtreeMap` [#322]
+
+[#322]: https://github.com/vertigo-web/vertigo/issues/322
+
 ## 0.6.4 - 2025-03-26
 
 ### Fixed
