@@ -1,19 +1,22 @@
 <!-- markdownlint-configure-file { "no-duplicate-heading": { "siblings_only": true } } -->
 
 <!-- markdownlint-disable-next-line first-line-h1 -->
-## Unreleased
+## 0.6.4 - 2025-03-26
 
 ### Fixed
 
+* vertigo-cli: `watch` now keeps watching even if browser lands directly on non-200 page [#329]
 * `DomDebugFragment::to_pseudo_html` now renders all deterministically using BtreeMap so it can be used in unit tests
 
-## 0.6.3 - 2024-03-01
+[#329]: https://github.com/vertigo-web/vertigo/issues/329
+
+## 0.6.3 - 2025-03-01
 
 ### Fixed
 
 * Invalid lowercase http methods in requests from inside SSR
 
-## 0.6.2 - 2024-02-27
+## 0.6.2 - 2025-02-27
 
 ### Added
 

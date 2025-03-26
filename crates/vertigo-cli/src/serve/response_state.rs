@@ -54,7 +54,7 @@ impl ResponseState {
     }
 
     pub fn add_watch_script(&mut self, port_watch: u16) {
-        if self.status.is_success() && self.is_html() {
+        if self.is_html() {
             let watch = include_str!("./watch.js");
 
             let start = format!("start_watch('http://127.0.0.1:{port_watch}/events');");
