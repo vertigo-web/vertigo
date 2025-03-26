@@ -1,6 +1,6 @@
 [package]
 name = "vertigo-example-trafficlights"
-version = "0.6.3"
+version = "0.6.4"
 authors = ["Grzegorz Szeliga <szeligagrzegorz@gmail.com>", "Michał Pokrywka <wolfmoon@o2.pl>"]
 edition = "2021"
 
