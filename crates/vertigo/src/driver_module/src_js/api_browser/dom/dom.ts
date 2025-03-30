@@ -81,14 +81,12 @@ export class DriverDom {
     private readonly getWasm: () => ModuleControllerType<ExportType>;
     public readonly nodes: MapNodes;
     private callbacks: Map<bigint, (data: Event) => void>;
-    private initBeforeFirstUpdate: boolean;
 
     public constructor(historyLocation: HistoryLocation, getWasm: () => ModuleControllerType<ExportType>) {
         this.historyLocation = historyLocation;
         this.getWasm = getWasm;
         this.nodes = new MapNodes();
         this.callbacks = new Map();
-        this.initBeforeFirstUpdate = false;
 
         document.addEventListener('dragover', (ev): void => {
             // console.log('File(s) in drop zone');
@@ -181,26 +179,6 @@ export class DriverDom {
     private update_text(id: number, value: string) {
         const text = this.nodes.get_text("set_attribute", id);
         text.textContent = value;
-    }
-
-    private insert_before(parent: number, child: number, ref_id: number | null | undefined) {
-        const parentNode = this.nodes.get("insert_before", parent);
-        const childNode = this.nodes.get_any("insert_before child", child);
-
-        if (ref_id === null || ref_id === undefined) {
-            parentNode.insertBefore(childNode, null);
-        } else {
-            const ref_node = this.nodes.get_any('insert_before ref', ref_id);
-            parentNode.insertBefore(childNode, ref_node);
-        }
-    }
-
-    private insert_css(selector: string, value: string) {
-        const style = document.createElement('style');
-        const content = document.createTextNode(`${selector} { ${value} }`);
-        style.appendChild(content);
-
-        this.nodes.get_root_head().appendChild(style);
     }
 
     private callback_click(event: Event, callback_id: bigint) {
@@ -430,30 +408,7 @@ export class DriverDom {
         }
     }
 
-    private get_node_to_clear = (element: Element): Array<ChildNode> => {
-        const list: Array<ChildNode> = [];
-        element.childNodes.forEach((item: ChildNode) => {
-            list.push(item);
-        });
-        return list;
-    };
-
-    private get_to_clear = (): [Array<ChildNode>, Array<ChildNode>] => {
-        if (this.initBeforeFirstUpdate === true) {
-            return [[], []];
-        }
-
-        this.initBeforeFirstUpdate = true;
-
-        return [
-            this.get_node_to_clear(this.nodes.get_root_head()),
-            this.get_node_to_clear(this.nodes.get_root_body())
-        ];
-    }
-
     public dom_bulk_update = (commands: Array<CommandType>) => {
-        const [node_head, node_body] = this.get_to_clear();
-
         const setFocus: Set<number> = new Set();
 
         for (const command of commands) {
@@ -477,13 +432,7 @@ export class DriverDom {
             }, 0);
         }
 
-        for (const node of node_body) {
-            node.remove();
-        }
-
-        for (const node of node_head) {
-            node.remove();
-        }
+        this.nodes.removeInitNodes();
     }
 
     private bulk_update_command(command: CommandType) {
@@ -493,7 +442,7 @@ export class DriverDom {
         }
 
         if (command.type === 'insert_before') {
-            this.insert_before(command.parent, command.child, command.ref_id === null ? null : command.ref_id);
+            this.nodes.insert_before(command.parent, command.child, command.ref_id === null ? null : command.ref_id);
             return;
         }
 
@@ -528,7 +477,7 @@ export class DriverDom {
         }
 
         if (command.type === 'insert_css') {
-            this.insert_css(command.selector, command.value);
+            this.nodes.insert_css(command.selector, command.value);
             return;
         }
 

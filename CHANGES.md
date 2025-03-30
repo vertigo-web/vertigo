@@ -7,9 +7,11 @@
 
 * Moved from `rsx` to `rstml`, `syn` 1.0 to 2.0 [#331]
 * Replaced `OrderedMap` with `BtreeMap` [#322]
+* Css classes in single `<style>` element [#328]
 
 [#331]: https://github.com/vertigo-web/vertigo/issues/331
 [#322]: https://github.com/vertigo-web/vertigo/issues/322
+[#328]: https://github.com/vertigo-web/vertigo/issues/328
 
 ## 0.6.4 - 2025-03-26
 
