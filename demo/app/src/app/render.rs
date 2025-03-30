@@ -66,7 +66,6 @@ fn render_header(state: &app::State) -> DomNode {
 
     let css_menu = css!{"
         display: flex;
-        margin: 10px;
         padding: 0;
     "};
 

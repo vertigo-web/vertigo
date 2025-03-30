@@ -1,20 +1,30 @@
 type NodeType = Element | Comment | Text;
 export class MapNodes {
     private data: Map<number, NodeType>;
+    private initNodes: Array<ChildNode> | null;
+    private style: HTMLStyleElement;
 
     constructor() {
         this.data = new Map();
+
+        this.initNodes = [
+            ...this.get_root_head().childNodes,
+            ...this.get_root_body().childNodes,
+        ];
+
+        this.style = document.createElement('style');
+        this.get_root_head().appendChild(this.style);
     }
 
-    public get_root_html(): Element {
+    private get_root_html(): Element {
         return document.documentElement;
     }
 
-    public get_root_head(): Element {
+    private get_root_head(): Element {
         return document.head;
     }
 
-    public get_root_body(): Element {
+    private get_root_body(): Element {
         return document.body;
     }
 
@@ -106,5 +116,40 @@ export class MapNodes {
         }
 
         return item;
+    }
+
+    public insert_css(selector: string, value: string) {
+        const content = document.createTextNode(`\n${selector} { ${value} }`);
+        this.style.appendChild(content);
+    }
+
+    public removeInitNodes() {
+        const initNodes = this.initNodes;
+        this.initNodes = null;
+
+        if (initNodes === null) {
+            return;
+        }
+
+        for (const node of initNodes) {
+            node.remove();
+        }
+    }
+
+    public insert_before(parent: number, child: number, ref_id: number | null | undefined) {
+        const parentNode = this.get("insert_before", parent);
+        const childNode = this.get_any("insert_before child", child);
+
+        if (ref_id === null || ref_id === undefined) {
+            parentNode.insertBefore(childNode, null);
+        } else {
+            const ref_node = this.get_any('insert_before ref', ref_id);
+            parentNode.insertBefore(childNode, ref_node);
+        }
+
+        if (parentNode === this.get_root_head()) {
+            //we make sure that the automatically generated styles are always the last element of the head
+            this.get_root_head().appendChild(this.style);
+        }
     }
 }
