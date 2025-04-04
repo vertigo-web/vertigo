@@ -2,10 +2,21 @@ use proc_macro::TokenStream;
 use proc_macro2::{Span, TokenStream as TokenStream2};
 use quote::{quote, ToTokens, TokenStreamExt};
 use rstml::{
-    node::{KVAttributeValue, KeyedAttribute, KeyedAttributeValue, Node, NodeAttribute, NodeBlock},
+    node::{
+        KVAttributeValue, KeyedAttribute, KeyedAttributeValue, Node, NodeAttribute, NodeBlock,
+        NodeName,
+    },
     parse,
 };
-use syn::{spanned::Spanned, Expr, ExprBlock, ExprLit, Stmt};
+use std::collections::BTreeMap;
+use syn::{spanned::Spanned, Expr, ExprBlock, ExprLit, Ident, Stmt};
+
+use crate::component::get_group_attrs_method_name;
+
+const HTML_ATTR_FORMAT_ERROR: &str =
+    "in html node. Expected key=\"value\", key={value}, key={}, {value} or {..value} attribute.";
+const COMPONENT_ATTR_FORMAT_ERROR: &str =
+    "in component. Expected key=\"value\", key={value}, key={}, group:key=\"value\", group:key={value or, {value} attribute.";
 
 pub(crate) fn dom_inner(input: TokenStream) -> TokenStream {
     let nodes = match parse(input) {
@@ -73,7 +84,10 @@ fn convert_to_component(node: &Node) -> TokenStream2 {
             return quote! {};
         }
     };
-    let component = element.name();
+    let constructor_name = element.name();
+
+    let mut grouped_attrs = BTreeMap::<String, BTreeMap<String, KeyedAttributeValue>>::new();
+
     let attributes = element
         .attributes()
         .iter()
@@ -81,35 +95,117 @@ fn convert_to_component(node: &Node) -> TokenStream2 {
             let span = attr_node.span();
             match attr_node {
                 // Key-value attribute
-                NodeAttribute::Attribute(KeyedAttribute { key, possible_value }) => {
-                    let matches = take_block_or_literal_expr(possible_value);
-
-                    match matches {
-                        (Some(value), None) => {
-                            if value.block.stmts.is_empty() || value.block.stmts[0].to_token_stream().to_string() == "Default :: default()" {
-                                Some(quote! { #key: Default::default(), })
-                            } else if let Some(Stmt::Expr(Expr::Reference(inner), _)) = value.block.stmts.last() {
-                                let value = &inner.expr;
-                                Some(quote! { #key: #value.clone(), })
-                            } else {
-                                Some(quote! { #key: #value.into(), })
+                NodeAttribute::Attribute(KeyedAttribute {
+                    key,
+                    possible_value,
+                }) => {
+                    match key {
+                        // Regular attribute name
+                        NodeName::Path(key) => {
+                            let matches = take_block_or_literal_expr(
+                                possible_value,
+                                COMPONENT_ATTR_FORMAT_ERROR,
+                            );
+                            match matches {
+                                (Some(value), None) => {
+                                    if value.block.stmts.is_empty()
+                                        || value.block.stmts[0].to_token_stream().to_string()
+                                            == "Default :: default()"
+                                    {
+                                        Some(quote! { #key: Default::default(), })
+                                    } else if let Some(Stmt::Expr(Expr::Reference(inner), _)) =
+                                        value.block.stmts.last()
+                                    {
+                                        let value = &inner.expr;
+                                        Some(quote! { #key: #value.clone(), })
+                                    } else {
+                                        Some(quote! { #key: #value.into(), })
+                                    }
+                                }
+                                (None, Some(lit)) => Some(quote! { #key: #lit.into(), }),
+                                _ => None,
                             }
                         }
-                        (None, Some(lit)) => {
-                            Some(quote! { #key: #lit.into(), })
+                        // Attribute name prefixed by group name and colon
+                        NodeName::Punctuated(p) => {
+                            let mut i = p.pairs();
+                            let group = i.next();
+                            if p.len() > 1
+                                && group
+                                    .filter(|pair| {
+                                        pair.punct().filter(|p| p.as_char() == ':').is_some()
+                                    })
+                                    .is_some()
+                            {
+                                // Strip colon grooup name
+                                let group = group.map(|p| *p.value());
+                                // Convert whole punctuated to string without spacing
+                                let key_str = p.to_token_stream().to_string().replace(' ', "");
+                                let key = key_str
+                                    .trim_start_matches(&format!("{}:", group.to_token_stream()))
+                                    .to_string();
+                                match group {
+                                    Some(group) => {
+                                        let group_entry =
+                                            grouped_attrs.entry(group.to_string()).or_default();
+                                        group_entry.insert(key, possible_value.clone());
+                                    }
+                                    _ => {
+                                        emit_error!(
+                                            key.span(),
+                                            "Invalid punctuated attribute key {}",
+                                            COMPONENT_ATTR_FORMAT_ERROR
+                                        );
+                                    }
+                                }
+                                None
+                            } else {
+                                // No colon, add regular attribute
+                                let key = p.to_token_stream();
+                                let matches = take_block_or_literal_expr(
+                                    possible_value,
+                                    COMPONENT_ATTR_FORMAT_ERROR,
+                                );
+                                match matches {
+                                    (Some(value), None) => {
+                                        if value.block.stmts.is_empty()
+                                            || value.block.stmts[0].to_token_stream().to_string()
+                                                == "Default :: default()"
+                                        {
+                                            Some(quote! { #key: Default::default(), })
+                                        } else if let Some(Stmt::Expr(Expr::Reference(inner), _)) =
+                                            value.block.stmts.last()
+                                        {
+                                            let value = &inner.expr;
+                                            Some(quote! { #key: #value.clone(), })
+                                        } else {
+                                            Some(quote! { #key: #value.into(), })
+                                        }
+                                    }
+                                    (None, Some(lit)) => Some(quote! { #key: #lit.into(), }),
+                                    _ => None,
+                                }
+                            }
                         }
                         _ => {
+                            emit_error!(
+                                key.span(),
+                                "Invalid attribute key {}",
+                                COMPONENT_ATTR_FORMAT_ERROR
+                            );
                             None
                         }
                     }
-                },
+                }
                 // Try to use attribute value as key if no key provided
                 NodeAttribute::Block(block) => {
                     if let NodeBlock::ValidBlock(block) = block {
                         if block.stmts.is_empty() {
-                            emit_error!(span, "Expected key={} attribute - can't omit attribute name when providing default value");
+                            emit_error!(span, "Empty block {}", COMPONENT_ATTR_FORMAT_ERROR);
                             None
-                        } else if let Some(Stmt::Expr(Expr::Reference(inner), _)) = block.stmts.last() {
+                        } else if let Some(Stmt::Expr(Expr::Reference(inner), _)) =
+                            block.stmts.last()
+                        {
                             let value = &inner.expr;
                             Some(quote! { #value: {#value}.clone(), })
                         } else {
@@ -117,18 +213,98 @@ fn convert_to_component(node: &Node) -> TokenStream2 {
                             Some(quote! { #key: #block.into(), })
                         }
                     } else {
-                        emit_error!(span, "Expected key=value attribute");
+                        emit_error!(span, "Invalid block {}", COMPONENT_ATTR_FORMAT_ERROR);
                         None
                     }
                 }
             }
         })
         .collect::<Vec<_>>();
+
+    let mut grouped_attrs_stream = quote! {};
+
+    for (group, attrs) in grouped_attrs {
+        let group = Ident::new(&group, constructor_name.span());
+        let group_method = get_group_attrs_method_name(&group);
+        let mut attrs_stream = Vec::new();
+        for (key, possible_value) in attrs {
+            let matches = take_block_or_literal_expr(&possible_value, COMPONENT_ATTR_FORMAT_ERROR);
+            let key_value_pair = match matches {
+                (Some(value), None) => {
+                    if value.block.stmts.is_empty()
+                        || value.block.stmts[0].to_token_stream().to_string()
+                            == "Default :: default()"
+                    {
+                        Some(quote! { #key.into(), vertigo::AttrGroupValue::AttrValue("".into()) })
+                    } else {
+                        let value = if let Some(Stmt::Expr(Expr::Reference(inner), _)) =
+                            value.block.stmts.last()
+                        {
+                            inner.expr.to_token_stream()
+                        } else if value.block.stmts.len() == 1 {
+                            value.block.stmts.last().unwrap().to_token_stream()
+                        } else {
+                            value.to_token_stream()
+                        };
+                        let value = match key.as_str() {
+                            "css" => quote! { vertigo::AttrGroupValue::css(#value) },
+                            "hook_key_down" => {
+                                quote! { vertigo::AttrGroupValue::hook_key_down(#value) }
+                            }
+                            "on_blur" => quote! { vertigo::AttrGroupValue::on_blur(#value) },
+                            "on_change" => quote! { vertigo::AttrGroupValue::on_change(#value) },
+                            "on_click" => quote! { vertigo::AttrGroupValue::on_click(#value) },
+                            "on_dropfile" => {
+                                quote! { vertigo::AttrGroupValue::on_dropfile(#value) }
+                            }
+                            "on_input" => quote! { vertigo::AttrGroupValue::on_input(#value) },
+                            "on_key_down" => {
+                                quote! { vertigo::AttrGroupValue::on_key_down(#value) }
+                            }
+                            "on_load" => quote! { vertigo::AttrGroupValue::on_load(#value) },
+                            "on_mouse_down" => {
+                                quote! { vertigo::AttrGroupValue::on_mouse_down(#value) }
+                            }
+                            "on_mouse_enter" => {
+                                quote! { vertigo::AttrGroupValue::on_mouse_enter(#value) }
+                            }
+                            "on_mouse_leave" => {
+                                quote! { vertigo::AttrGroupValue::on_mouse_leave(#value) }
+                            }
+                            "on_mouse_up" => {
+                                quote! { vertigo::AttrGroupValue::on_mouse_up(#value) }
+                            }
+                            "on_submit" | "form" => {
+                                quote! { vertigo::AttrGroupValue::on_submit(#value) }
+                            }
+                            "vertigo-suspense" => {
+                                quote! { vertigo::AttrGroupValue::suspense(#value) }
+                            }
+                            _ => quote! { {#value}.into() },
+                        };
+                        Some(quote! { .#group_method(#key.into(), #value) })
+                    }
+                }
+                (None, Some(lit)) => Some(quote! { .#group_method(#key.into(), #lit.into()) }),
+                _ => None,
+            };
+
+            attrs_stream.push(key_value_pair);
+        }
+        quote! {
+            #(#attrs_stream)*
+        }
+        .to_tokens(&mut grouped_attrs_stream);
+    }
+
     quote! {
         {
-            let cmp = #component {
+            let cmp = #constructor_name {
                 #(#attributes)*
             };
+            let cmp = cmp.into_component()
+                #grouped_attrs_stream
+            ;
             cmp.mount()
         }
     }
@@ -156,74 +332,37 @@ fn convert_node(node: &Node, convert_to_dom_node: bool) -> TokenStream2 {
     }
 
     let mut out_attr = Vec::new();
+    let mut out_spread_attrs = Vec::new();
     let mut out_child = Vec::new();
 
     let mut push_attr = |name: String, value: TokenStream2| {
-        if name == "on_click" {
-            out_attr.push(quote! {
-                .on_click(#value)
-            })
-        } else if node_name == "form" && name == "on_submit" {
-            out_attr.push(quote! {
-                .on_submit(#value)
-            })
-        } else if name == "on_mouse_down" {
-            out_attr.push(quote! {
-                .on_mouse_down(#value)
-            })
-        } else if name == "on_mouse_up" {
-            out_attr.push(quote! {
-                .on_mouse_up(#value)
-            })
-        } else if name == "on_mouse_enter" {
-            out_attr.push(quote! {
-                .on_mouse_enter(#value)
-            })
-        } else if name == "on_mouse_leave" {
-            out_attr.push(quote! {
-                .on_mouse_leave(#value)
-            })
-        } else if name == "on_input" {
-            out_attr.push(quote! {
-                .on_input(#value)
-            })
-        } else if name == "on_change" {
-            out_attr.push(quote! {
-                .on_change(#value)
-            })
-        } else if name == "on_blur" {
-            out_attr.push(quote! {
-                .on_blur(#value)
-            })
-        } else if name == "on_key_down" {
-            out_attr.push(quote! {
-                .on_key_down(#value)
-            })
-        } else if name == "on_dropfile" {
-            out_attr.push(quote! {
-                .on_dropfile(#value)
-            })
-        } else if name == "hook_key_down" {
-            out_attr.push(quote! {
-                .hook_key_down(#value)
-            })
-        } else if name == "on_load" {
-            out_attr.push(quote! {
-                .on_load(#value)
-            })
-        } else if name == "css" {
-            out_attr.push(quote! {
-                .css(#value)
-            })
-        } else if name == "vertigo-suspense" {
-            out_attr.push(quote! {
-                .suspense(Some(#value))
-            })
-        } else {
-            out_attr.push(quote! {
-                .attr(#name, #value)
-            })
-        }
+        let method_str = match name.as_str() {
+            "css" | "hook_key_down" | "on_blur" | "on_change" | "on_click" | "on_dropfile"
+            | "on_input" | "on_key_down" | "on_load" | "on_mouse_down" | "on_mouse_enter"
+            | "on_mouse_leave" | "on_mouse_up" | "on_submit" => &name,
+
+            "form" => "on_submit",
+
+            "vertigo-suspense" => {
+                out_attr.push(quote! {
+                    .suspense(Some(#value))
+                });
+                return;
+            }
+
+            _ => {
+                out_attr.push(quote! {
+                    .attr(#name, #value)
+                });
+                return;
+            }
+        };
+
+        let method = Ident::new(method_str, value.span());
+
+        out_attr.push(quote! {
+            .#method(#value)
+        });
     };
 
     for attr_item in element.attributes() {
@@ -234,7 +373,7 @@ fn convert_node(node: &Node, convert_to_dom_node: bool) -> TokenStream2 {
                 key,
                 possible_value,
             }) => {
-                let matches = take_block_or_literal_expr(possible_value);
+                let matches = take_block_or_literal_expr(possible_value, HTML_ATTR_FORMAT_ERROR);
                 match matches {
                     (Some(value), None) => {
                         if value.block.stmts.is_empty()
@@ -259,20 +398,63 @@ fn convert_node(node: &Node, convert_to_dom_node: bool) -> TokenStream2 {
             // Try to use attribute value as key if no key provided
             NodeAttribute::Block(block) => {
                 if let NodeBlock::ValidBlock(block) = block {
-                    if block.stmts.is_empty() {
-                        emit_error!(span, "Expected key={} attribute - can't omit attribute name when providing default value");
-                    } else if let Some(Stmt::Expr(Expr::Reference(inner), _)) = block.stmts.last() {
-                        let value = &inner.expr;
-                        push_attr(value.to_token_stream().to_string(), value.to_token_stream())
-                    } else if block.stmts.len() == 1 {
-                        let value = block.stmts.last();
-                        push_attr(value.to_token_stream().to_string(), value.to_token_stream())
-                    } else {
-                        let key = block.stmts.last();
-                        push_attr(key.to_token_stream().to_string(), block.to_token_stream())
+                    match block.stmts.len() {
+                        0 => emit_error!(span, "Empty block {}", HTML_ATTR_FORMAT_ERROR),
+                        n => {
+                            // First detect if there is a spread operator used at the end of the block
+                            // which is basically a Range without start
+                            let value = block.stmts.last();
+
+                            if let Some(Stmt::Expr(Expr::Range(range), _)) = value {
+                                if range.start.is_none() {
+                                    if let Some(value) = &range.end {
+                                        let mut block = block.clone();
+                                        // Remove the statement with spread operator and prepare modified one
+                                        block.stmts.pop();
+
+                                        // Prepare new block based on if spread operator was used
+                                        let mut new_block = quote! {};
+                                        for stmt in block.stmts {
+                                            new_block.append_all(stmt.to_token_stream());
+                                        }
+                                        new_block.append_all(quote! {
+                                            #value
+                                        });
+
+                                        out_spread_attrs.push(quote! {
+                                            .add_attr_group({
+                                                #new_block
+                                            })
+                                        });
+                                        continue;
+                                    }
+                                }
+                            }
+
+                            if let Some(Stmt::Expr(Expr::Reference(inner), _)) = block.stmts.last()
+                            {
+                                let value = &inner.expr;
+                                push_attr(
+                                    value.to_token_stream().to_string(),
+                                    value.to_token_stream(),
+                                )
+                            } else if n == 1 {
+                                let value = block.stmts.last();
+                                push_attr(
+                                    value.to_token_stream().to_string(),
+                                    value.to_token_stream(),
+                                )
+                            } else {
+                                let key = block.stmts.last();
+                                push_attr(
+                                    key.to_token_stream().to_string(),
+                                    block.to_token_stream(),
+                                )
+                            }
+                        }
                     }
                 } else {
-                    emit_error!(span, "Expected key=value attribute");
+                    emit_error!(span, "Invalid block {}", HTML_ATTR_FORMAT_ERROR);
                     continue;
                 }
             }
@@ -363,30 +545,32 @@ fn convert_node(node: &Node, convert_to_dom_node: bool) -> TokenStream2 {
         }
     }
 
+    let dom_element = quote! {
+        vertigo::DomElement::new(#node_name)
+        #(#out_attr)*
+        #(#out_spread_attrs)*
+        #(#out_child)*
+    };
+
     if convert_to_dom_node {
         quote! {
             vertigo::DomNode::from(
-                vertigo::DomElement::new(#node_name)
-                #(#out_attr)*
-                #(#out_child)*
+                #dom_element
             )
         }
     } else {
-        quote! {
-            vertigo::DomElement::new(#node_name)
-            #(#out_attr)*
-            #(#out_child)*
-        }
+        dom_element
     }
 }
 
 /// Out of attribute value takes ExprBlock or ExprLit and ignores everything else
-fn take_block_or_literal_expr(
-    expr: &KeyedAttributeValue,
-) -> (Option<&ExprBlock>, Option<&ExprLit>) {
+fn take_block_or_literal_expr<'a>(
+    expr: &'a KeyedAttributeValue,
+    msg: &str,
+) -> (Option<&'a ExprBlock>, Option<&'a ExprLit>) {
     match expr {
         KeyedAttributeValue::Binding(_fn_binding) => {
-            emit_error!(expr.span(), "Invalid attribute binding");
+            emit_error!(expr.span(), "Invalid attribute binding {}", msg);
             (None, None)
         }
         KeyedAttributeValue::Value(attribute_value_expr) => match &attribute_value_expr.value {
@@ -397,18 +581,18 @@ fn take_block_or_literal_expr(
                     // TODO: Possibly others needs to be supported,
                     // so this function should in fact return Option<Expr> in future.
                     _ => {
-                        emit_error!(expr.span(), "Invalid attribute");
+                        emit_error!(expr.span(), "Invalid attribute {}", msg);
                         (None, None)
                     }
                 }
             }
             KVAttributeValue::InvalidBraced(invalid) => {
-                emit_error!(invalid.span(), "Invalid attribute braces");
+                emit_error!(invalid.span(), "Invalid attribute braces {}", msg);
                 (None, None)
             }
         },
         KeyedAttributeValue::None => {
-            emit_error!(expr.span(), "Missing attribute value");
+            emit_error!(expr.span(), "Missing attribute value {}", msg);
             (None, None)
         }
     }

@@ -3,6 +3,12 @@
 <!-- markdownlint-disable-next-line first-line-h1 -->
 ## Unreleased
 
+### Added
+
+* Dynamic/optional attributes, attributes grouping, attributes spreading [#317]
+
+[#317]: https://github.com/vertigo-web/vertigo/issues/317
+
 ### Changed
 
 * Moved from `rsx` to `rstml`, `syn` 1.0 to 2.0 [#331]

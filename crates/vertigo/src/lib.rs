@@ -131,7 +131,7 @@ pub use dom::{
     dom_text::DomText,
     types::{DropFileEvent, DropFileItem, KeyDownEvent},
 };
-pub use dom_macro::EmbedDom;
+pub use dom_macro::{AttrGroup, AttrGroupValue, EmbedDom};
 pub use driver_module::{
     api::ApiImport,
     dom_command::DriverDomCommand,

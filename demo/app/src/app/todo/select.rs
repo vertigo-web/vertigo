@@ -21,6 +21,8 @@ impl<T> Select<T>
 where
     T: Clone + From<String> + PartialEq + ToString + 'static
 {
+    pub fn into_component(self) -> Self { self }
+
     pub fn mount(&self) -> DomNode {
         let Self { value, options } = self;
         let on_change = bind!(value, |new_value: String| {

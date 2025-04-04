@@ -85,7 +85,6 @@ pub async fn run(mut opts: WatchOpts) -> Result<(), ErrorCode> {
                     }) {
                         return;
                     }
-                    log::info!("event: {:?}", event);
                     notify_build.notify_one();
                 }
                 Err(e) => {

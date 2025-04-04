@@ -7,6 +7,9 @@ use crate::driver_module::StaticString;
 use crate::{get_driver, DomId, DriverDomCommand};
 
 /// Make driver start gathering DOM commands into separate log
+///
+/// In tests it also locks callback id generator to have persistent output in multi-threaded testing.
+/// Remember to use `log_take` or `from_log` to release the lock or tests will stuck.
 pub fn log_start() {
     get_driver().inner.dom.log_start()
 }
@@ -274,10 +277,7 @@ fn unpack_styles(node: &mut DomDebugNode, css: &BTreeMap<String, String>, value:
 #[cfg(test)]
 mod tests {
     use super::{log_start, DomDebugFragment};
-    use crate::{self as vertigo, css, dom, driver_module::api::CallbackId};
-
-    use std::sync::Mutex;
-    static SEMAPHORE: Mutex<()> = Mutex::new(());
+    use crate::{self as vertigo, css, dom};
 
     #[test]
     fn pseudo_html_list() {
@@ -300,9 +300,6 @@ mod tests {
 
     #[test]
     fn pseudo_html_css() {
-        let _lock = SEMAPHORE.lock().unwrap();
-        CallbackId::reset();
-
         let green = css!("color: green;");
         log_start();
         let _el = dom! {
@@ -314,9 +311,6 @@ mod tests {
 
     #[test]
     fn pseudo_html_callback() {
-        let _lock = SEMAPHORE.lock().unwrap();
-        CallbackId::reset();
-
         let callback = || ();
         log_start();
         let _el = dom! {
@@ -328,9 +322,6 @@ mod tests {
 
     #[test]
     fn pseudo_html_attrs_order() {
-        let _lock = SEMAPHORE.lock().unwrap();
-        CallbackId::reset();
-
         log_start();
         let _el = dom! {
             <img id="one" alt="two" title="three" src="four.png" />
@@ -344,9 +335,6 @@ mod tests {
 
     #[test]
     fn pseudo_html_css_unwrap() {
-        let _lock = SEMAPHORE.lock().unwrap();
-        CallbackId::reset();
-
         let css1 = css!("color: red;");
         let css2 = css!("background: green;");
 
@@ -363,9 +351,6 @@ mod tests {
 
     #[test]
     fn pseudo_html_css_unwrap_with_custom_class_names() {
-        let _lock = SEMAPHORE.lock().unwrap();
-        CallbackId::reset();
-
         let css1 = css!("color: red;");
         let css2 = css!("background: green;");
 

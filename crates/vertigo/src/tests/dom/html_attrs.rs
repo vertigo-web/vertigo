@@ -1,3 +1,4 @@
+use crate::inspect::{log_start, log_take};
 use crate as vertigo;
 use crate::dom;
 
@@ -5,18 +6,26 @@ use crate::dom;
 fn button_on_click() {
     let handler = || ();
 
+    log_start();
+
     let _ = dom! {
         <button on_click={handler} />
     };
+
+    log_take();
 }
 
 #[test]
 fn form_on_submit() {
     let handler = || ();
 
+    log_start();
+
     let _ = dom! {
         <form on_submit={handler} />
     };
+
+    log_take();
 }
 
 #[test]
