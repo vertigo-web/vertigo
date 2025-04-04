@@ -10,7 +10,7 @@ use crate::{Context, Value};
 /// Example:
 ///
 /// ```rust
-/// use vertigo::{component, EmbedDom, Computed, Context, dom, DomNode, Reactive, Value, transaction};
+/// use vertigo::{component, EmbedDom, Context, dom, DomNode, Reactive, Value, transaction};
 ///
 /// // Define reactive object with `Value` wrapped
 /// #[derive(Clone, PartialEq)]

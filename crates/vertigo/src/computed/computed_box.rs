@@ -15,7 +15,7 @@ use super::context::Context;
 /// ## Computed directly from Value
 ///
 /// ```rust
-/// use vertigo::{Computed, Value, transaction};
+/// use vertigo::{Value, transaction};
 ///
 /// let value = Value::new(5);
 ///

@@ -31,7 +31,7 @@ impl<T> Drop for ValueInner<T> {
 /// Can be read or written.
 ///
 /// ```rust
-/// use vertigo::{Computed, Value, transaction};
+/// use vertigo::{Value, transaction};
 ///
 /// let value = Value::new(5);
 ///

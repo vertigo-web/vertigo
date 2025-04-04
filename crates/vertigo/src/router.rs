@@ -3,8 +3,7 @@ use crate::{computed::Value, get_driver, Computed, DomNode, EmbedDom, Reactive, 
 /// Router based on path or hash part of current location.
 ///
 /// ```rust
-/// use vertigo::{dom, Computed, Reactive, Value, DomNode};
-/// use vertigo::router::Router;
+/// use vertigo::{dom, DomNode, router::Router};
 ///
 /// #[derive(Clone, PartialEq, Debug)]
 /// pub enum Route {

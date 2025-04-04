@@ -13,6 +13,12 @@
 [#322]: https://github.com/vertigo-web/vertigo/issues/322
 [#328]: https://github.com/vertigo-web/vertigo/issues/328
 
+### Fixed
+
+* `DomDebugFragment::from_cmds()` fails to debug styles when custom classes used [#335]
+
+[#335]: https://github.com/vertigo-web/vertigo/issues/335
+
 ## 0.6.4 - 2025-03-26
 
 ### Fixed
