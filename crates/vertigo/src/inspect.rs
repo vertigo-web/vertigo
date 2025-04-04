@@ -1,6 +1,6 @@
 //! Methods for debugging or testing vertigo components by recreating HTML-like string from dom commands
 
-use std::collections::BTreeMap;
+use std::collections::{BTreeMap, BTreeSet};
 
 use crate::driver_module::api::CallbackId;
 use crate::driver_module::StaticString;
@@ -61,16 +61,7 @@ impl DomDebugFragment {
                 DriverDomCommand::SetAttr { id, name, value } => {
                     if let Some(node) = map.get_mut(&id) {
                         if name == "class".into() {
-                            if let Some(new_styles) = css.get(&format!(".{value}")) {
-                                let mut styles = String::new();
-                                if let Some(old_styles) = node.attrs.get(&("style".into())) {
-                                    styles.push_str(old_styles);
-                                }
-                                styles.push_str(new_styles);
-                                node.attrs.insert("style".into(), styles);
-                            } else {
-                                node.attrs.insert(name, value);
-                            }
+                            unpack_styles(node, &css, value);
                         } else {
                             node.attrs.insert(name, value);
                         }
@@ -220,10 +211,7 @@ impl DomDebugFragment {
                     .join("");
 
                 if children.is_empty() {
-                    format!(
-                        "<{}{attrs}{callbacks} />",
-                        node.name.as_str()
-                    )
+                    format!("<{}{attrs}{callbacks} />", node.name.as_str())
                 } else {
                     format!(
                         "<{}{attrs}{callbacks}>{children}</{}>",
@@ -255,6 +243,31 @@ impl DomDebugNode {
             text: Some(text),
             ..Default::default()
         }
+    }
+}
+
+fn unpack_styles(node: &mut DomDebugNode, css: &BTreeMap<String, String>, value: String) {
+    let mut custom_classes = vec![];
+    let mut new_styles = BTreeSet::new();
+    if let Some(old_styles) = node.attrs.get(&("style".into())) {
+        new_styles.insert(old_styles.clone());
+    }
+    // For each class_name try to unpack it into styles using gathered `css` definitions
+    for class_name in value.split(' ') {
+        if let Some(styles_from_autocss) = css.get(&format!(".{class_name}")) {
+            new_styles.insert(styles_from_autocss.clone());
+        } else {
+            custom_classes.push(class_name);
+        }
+    }
+    if !custom_classes.is_empty() {
+        node.attrs.insert("class".into(), custom_classes.join(" "));
+    }
+    if !new_styles.is_empty() {
+        node.attrs.insert(
+            "style".into(),
+            new_styles.into_iter().collect::<Vec<_>>().join("; "),
+        );
     }
 }
 
@@ -323,6 +336,47 @@ mod tests {
             <img id="one" alt="two" title="three" src="four.png" />
         };
         let html = DomDebugFragment::from_log().to_pseudo_html();
-        assert_eq!(html, "<img alt='two' id='one' src='four.png' title='three' />");
+        assert_eq!(
+            html,
+            "<img alt='two' id='one' src='four.png' title='three' />"
+        );
+    }
+
+    #[test]
+    fn pseudo_html_css_unwrap() {
+        let _lock = SEMAPHORE.lock().unwrap();
+        CallbackId::reset();
+
+        let css1 = css!("color: red;");
+        let css2 = css!("background: green;");
+
+        log_start();
+        let _el = dom! {
+            <div id="one" css={css1} css={css2} />
+        };
+        let html = DomDebugFragment::from_log().to_pseudo_html();
+        assert_eq!(
+            html,
+            "<div id='one' style='background: green; color: red' />"
+        );
+    }
+
+    #[test]
+    fn pseudo_html_css_unwrap_with_custom_class_names() {
+        let _lock = SEMAPHORE.lock().unwrap();
+        CallbackId::reset();
+
+        let css1 = css!("color: red;");
+        let css2 = css!("background: green;");
+
+        log_start();
+        let _el = dom! {
+            <div id="one" css={css1} class="foo bar" css={css2} />
+        };
+        let html = DomDebugFragment::from_log().to_pseudo_html();
+        assert_eq!(
+            html,
+            "<div class='foo bar' id='one' style='background: green; color: red' />"
+        );
     }
 }

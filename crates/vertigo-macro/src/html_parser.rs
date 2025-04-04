@@ -386,7 +386,7 @@ fn take_block_or_literal_expr(
 ) -> (Option<&ExprBlock>, Option<&ExprLit>) {
     match expr {
         KeyedAttributeValue::Binding(_fn_binding) => {
-            emit_error!(expr.span(), "Invalid attr - binding");
+            emit_error!(expr.span(), "Invalid attribute binding");
             (None, None)
         }
         KeyedAttributeValue::Value(attribute_value_expr) => match &attribute_value_expr.value {
@@ -397,18 +397,18 @@ fn take_block_or_literal_expr(
                     // TODO: Possibly others needs to be supported,
                     // so this function should in fact return Option<Expr> in future.
                     _ => {
-                        emit_error!(expr.span(), "Invalid attr - invalid block type {:?}", expr);
+                        emit_error!(expr.span(), "Invalid attribute");
                         (None, None)
                     }
                 }
             }
             KVAttributeValue::InvalidBraced(invalid) => {
-                emit_error!(invalid.span(), "Invalid attr - invalid braces");
+                emit_error!(invalid.span(), "Invalid attribute braces");
                 (None, None)
             }
         },
         KeyedAttributeValue::None => {
-            emit_error!(expr.span(), "Invalid attr - none");
+            emit_error!(expr.span(), "Missing attribute value");
             (None, None)
         }
     }
