@@ -8,6 +8,8 @@ pub struct DropFilesState {
 }
 
 impl DropFiles {
+    pub fn into_component(self) -> Self { self }
+
     pub fn mount(&self) -> DomNode {
         let state = DropFilesState::default();
 

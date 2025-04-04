@@ -139,6 +139,9 @@ pub struct DriverDom {
     _sub2: DropResource,
     node_parent_callback: Rc<HashMapMut<DomId, Callback>>,
     pub dom_suspense: &'static DomSuspense,
+
+    #[cfg(test)]
+    _callback_id_lock: Cell<Option<std::sync::MutexGuard<'static, ()>>>,
 }
 
 impl DriverDom {
@@ -163,6 +166,9 @@ impl DriverDom {
             _sub2: sub2,
             node_parent_callback: Rc::new(HashMapMut::new()),
             dom_suspense: DomSuspense::new(),
+
+            #[cfg(test)]
+            _callback_id_lock: Cell::new(None),
         }))
     }
 
@@ -276,11 +282,21 @@ impl DriverDom {
     }
 
     pub fn log_start(&self) {
+        #[cfg(test)]
+        {
+            let lock = SEMAPHORE.lock().unwrap();
+            CallbackId::reset();
+            self._callback_id_lock.set(Some(lock));
+        };
+
         self.commands.log_start();
     }
 
     pub fn log_take(&self) -> Vec<DriverDomCommand> {
-        self.commands.log_take()
+        let log = self.commands.log_take();
+        #[cfg(test)]
+        self._callback_id_lock.set(None);
+        log
     }
 
     pub fn flush_dom_changes(&self) {
@@ -297,3 +313,7 @@ impl DriverDom {
         })
     }
 }
+
+#[cfg(test)]
+/// Use in tests to block callback id generation in simultaneous async tests
+static SEMAPHORE: std::sync::Mutex<()> = std::sync::Mutex::new(());

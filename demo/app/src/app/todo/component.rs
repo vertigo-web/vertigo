@@ -7,6 +7,8 @@ use super::state::{TodoState, View};
 pub struct Todo { }
 
 impl Todo {
+    pub fn into_component(self) -> Self { self }
+
     pub fn mount(&self) -> DomNode {
         let state = TodoState::new();
 

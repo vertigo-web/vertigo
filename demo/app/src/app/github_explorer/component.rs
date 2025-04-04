@@ -7,6 +7,8 @@ pub struct GitHubExplorer {
 }
 
 impl GitHubExplorer {
+    pub fn into_component(self) -> Self { self }
+
     pub fn mount(&self) -> DomNode {
         let state = &self.state;
 

@@ -1,3 +1,3 @@
 mod dom;
 
-pub use dom::EmbedDom;
+pub use dom::{AttrGroup, AttrGroupValue, EmbedDom};

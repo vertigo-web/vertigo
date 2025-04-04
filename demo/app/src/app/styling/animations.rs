@@ -42,6 +42,8 @@ impl State {
 pub struct Animations {}
 
 impl Animations {
+    pub fn into_component(self) -> Self { self }
+
     pub fn mount(&self) -> DomNode {
         let state = State::new();
 

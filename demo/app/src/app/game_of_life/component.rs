@@ -8,6 +8,8 @@ pub struct GameOfLife {
 }
 
 impl GameOfLife {
+    pub fn into_component(self) -> Self { self }
+
     pub fn mount(&self) -> DomNode {
         let matrix = &self.state.matrix;
         let css_wrapper = css! {"
