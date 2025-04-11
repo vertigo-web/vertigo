@@ -8,7 +8,7 @@ pub fn render_value_option<T: Clone + PartialEq + 'static>(
 ) -> DomNode {
     let render = Rc::new(render);
 
-    DomComment::new_marker("value element", move |parent_id, comment_id| {
+    DomComment::new_marker("v", move |parent_id, comment_id| {
         let current_node: ValueMut<Option<DomNode>> = ValueMut::new(None);
 
         Some(computed.clone().subscribe({

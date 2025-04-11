@@ -5,7 +5,7 @@ use crate::{
     driver_module::{driver::Driver, StaticString},
     get_driver,
     struct_mut::VecMut,
-    AttrGroup, AttrGroupValue, Computed, Css, DomText, DropFileItem, DropResource, JsValue,
+    AttrGroupValue, Computed, Css, DomText, DropFileItem, DropResource, JsValue,
 };
 
 use crate::struct_mut::VecDequeMut;
@@ -86,8 +86,11 @@ impl DomElement {
         };
     }
 
-    pub fn add_attr_group(mut self, values: AttrGroup) -> Self {
-        for (key, value) in values {
+    pub fn add_attr_group(
+        mut self,
+        values: impl IntoIterator<Item = (String, AttrGroupValue)>,
+    ) -> Self {
+        for (key, value) in values.into_iter() {
             self = self.add_attr_group_item(key, value);
         }
         self

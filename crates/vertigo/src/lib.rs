@@ -123,6 +123,7 @@ pub use computed::{
 pub use css::css_structs::{Css, CssGroup};
 
 pub use dom::{
+    attr_value::{AttrValue, CssAttrValue},
     callback::{Callback, Callback1},
     dom_comment::DomComment,
     dom_element::DomElement,
