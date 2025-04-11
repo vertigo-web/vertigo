@@ -1,9 +1,6 @@
 use std::collections::{BTreeMap, HashMap, VecDeque};
 
-use super::{
-    element_children::ElementChildren, html_element::HtmlElement,
-    DomCommand, HtmlNode,
-};
+use super::{element_children::ElementChildren, html_element::HtmlElement, DomCommand, HtmlNode};
 
 pub enum Node {
     Element(Element),
@@ -223,10 +220,7 @@ impl AllElements {
     }
 
     #[cfg(test)]
-    pub fn get_response_document(
-        &self,
-        with_id: bool,
-    ) -> (HtmlNode, Vec<HtmlNode>) {
+    pub fn get_response_document(&self, with_id: bool) -> (HtmlNode, Vec<HtmlNode>) {
         let (root, css) = self.get_response(with_id);
         (root, css)
     }
@@ -332,7 +326,7 @@ mod tests {
             {"id":20,"name":"li","type":"create_node"},
             {"child":20,"parent":3,"ref_id":null,"type":"insert_before"},
             {"child":3,"parent":2,"ref_id":null,"type":"insert_before"},
-            {"id":22,"type":"create_comment","value":"value element"},
+            {"id":22,"type":"create_comment","value":"v"},
             {"id":23,"name":"div","type":"create_node"},
             {"child":2,"parent":23,"ref_id":null,"type":"insert_before"},
             {"child":22,"parent":23,"ref_id":null,"type":"insert_before"},
@@ -434,7 +428,7 @@ mod tests {
             {"child":21,"parent":20,"ref_id":null,"type":"insert_before"},
             {"child":20,"parent":3,"ref_id":null,"type":"insert_before"},
             {"child":3,"parent":2,"ref_id":null,"type":"insert_before"},
-            {"id":22,"type":"create_comment","value":"value element"},
+            {"id":22,"type":"create_comment","value":"v"},
             {"id":23,"name":"div","type":"create_node"},
             {"callback_id":12,"event_name":"keydown","id":23,"type":"callback_add"},
             {"selector":".autocss_4","type":"insert_css","value":"padding: 5px"},
