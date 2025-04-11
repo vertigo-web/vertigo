@@ -1,5 +1,7 @@
 use crate::{
-    self as vertigo, component, css, dom, inspect::{log_start, DomDebugFragment}, AttrGroup,
+    self as vertigo, component, css, dom,
+    inspect::{log_start, DomDebugFragment},
+    AttrGroup, Computed, EmbedDom,
 };
 
 #[test]
@@ -95,6 +97,33 @@ fn test_css_attrs_grouping_and_spreading() {
 }
 
 #[test]
+fn test_css_extending() {
+    use vertigo::{component, css, dom, AttrGroup, Value};
+
+    #[component]
+    fn MyInput(value: Value<String>, inner: AttrGroup) {
+        let css = css!("color: red; background-color: green;");
+        dom! { <input value={value} {css} {..inner} /> }
+    }
+
+    let my_value = Value::new("Test".to_string());
+    let my_css = css! {"color: yellow; font-size: 15px;"};
+
+    log_start();
+
+    let _el = dom! {
+        <MyInput value={my_value} inner:id="test-id" inner:css={my_css} />
+    };
+
+    let el_str = DomDebugFragment::from_log().to_pseudo_html();
+
+    assert_eq!(
+        el_str,
+        "<input id='test-id' style='color: red; background-color: green; color: yellow; font-size: 15px' value='Test' />"
+    );
+}
+
+#[test]
 fn test_on_events_grouping_and_spreading() {
     use crate::{self as vertigo, component, css, dom};
 
@@ -130,4 +159,94 @@ fn test_on_events_grouping_and_spreading() {
     let el_str = DomDebugFragment::from_log().to_pseudo_html();
 
     assert_eq!(el_str, "<input name='world' style='color: red' blur=2 change=3 click=4 drop=5 hook_keydown=1 input=6 keydown=7 load=8 mousedown=9 mouseenter=10 mouseleave=11 mouseup=12 submit=13 />");
+}
+
+#[test]
+fn test_stringifyable_group_attrs() {
+    #[component]
+    fn Hello<'a>(name: &'a str, opt: AttrGroup) {
+        let label = opt
+            .get("label")
+            .map(|l| l.to_string_or_empty())
+            .unwrap_or_else(|| Computed::from(|_| "Hello".to_string()));
+
+        dom! {
+            <div>
+                <span>
+                    {label} " " {name}
+                </span>
+            </div>
+        }
+    }
+
+    log_start();
+
+    let _el1 = dom! {
+        <Hello
+            name="world"
+        />
+    };
+
+    let el1_str = DomDebugFragment::from_log().to_pseudo_html();
+
+    assert_eq!(el1_str, "<div><span>Hello<!-- v --> world</span></div>");
+
+    log_start();
+
+    let _el2 = dom! {
+        <Hello
+            name="world"
+            opt:label={"Good bye"}
+        />
+    };
+
+    let el2_str = DomDebugFragment::from_log().to_pseudo_html();
+
+    assert_eq!(el2_str, "<div><span>Good bye<!-- v --> world</span></div>");
+}
+
+#[test]
+fn test_embeddable_group_attrs() {
+    #[component]
+    fn Hello<'a>(name: &'a str, mut opt: AttrGroup) {
+        let label = opt
+            .get("label")
+            .map(EmbedDom::embed)
+            .unwrap_or("Hello".embed());
+
+        let id = opt.remove_entry("id");
+
+        dom! {
+            <div {..id}>
+                <span>
+                    {label} " " {name}
+                </span>
+            </div>
+        }
+    }
+
+    log_start();
+
+    let _el1 = dom! {
+        <Hello
+            name="world"
+        />
+    };
+
+    let el1_str = DomDebugFragment::from_log().to_pseudo_html();
+
+    assert_eq!(el1_str, "<div><span>Hello world</span></div>");
+
+    log_start();
+
+    let _el2 = dom! {
+        <Hello
+            name="world"
+            opt:label="Good bye"
+        />
+    };
+
+    let el2_str = DomDebugFragment::from_log().to_pseudo_html();
+
+    assert_eq!(el2_str, "<div><span>Good bye<!-- v --> world</span></div>");
 }

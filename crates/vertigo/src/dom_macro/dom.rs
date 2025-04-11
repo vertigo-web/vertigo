@@ -61,6 +61,26 @@ impl AttrGroupValue {
     pub fn suspense(callback: fn(bool) -> Css) -> Self {
         Self::Suspense(callback)
     }
+
+    /// Extract Computed<String> from this AttrGroupValue if possible.
+    ///
+    /// Otherwise (for css and event handlers variants) this gives constant empty string.
+    /// For displaying in HTML it's better to use `.embed()` method (which uses this one internally).
+    pub fn to_string_or_empty(&self) -> Computed<String> {
+        match self {
+            Self::AttrValue(AttrValue::String(val)) => {
+                let val = val.clone();
+                Computed::from(move |_| val.clone())
+            }
+            Self::AttrValue(AttrValue::Computed(val)) => val.clone(),
+            Self::AttrValue(AttrValue::ComputedOpt(val)) => val.map(|val| val.unwrap_or_default()),
+            Self::AttrValue(AttrValue::Value(val)) => val.to_computed(),
+            Self::AttrValue(AttrValue::ValueOpt(val)) => {
+                val.to_computed().map(|val| val.unwrap_or_default())
+            }
+            _ => Computed::from(|_| "".to_string()),
+        }
+    }
 }
 
 impl<T: Into<AttrValue>> From<T> for AttrGroupValue {
@@ -72,6 +92,18 @@ impl<T: Into<AttrValue>> From<T> for AttrGroupValue {
 impl From<Css> for AttrGroupValue {
     fn from(value: Css) -> Self {
         Self::Css(value)
+    }
+}
+
+impl EmbedDom for AttrGroupValue {
+    fn embed(self) -> DomNode {
+        self.to_string_or_empty().embed()
+    }
+}
+
+impl EmbedDom for &AttrGroupValue {
+    fn embed(self) -> DomNode {
+        self.to_string_or_empty().embed()
     }
 }
 
