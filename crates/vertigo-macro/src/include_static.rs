@@ -6,7 +6,7 @@ use super::wasm_path::WasmPath;
 
 pub(crate) fn include_static_inner(input: TokenStream) -> TokenStream {
     let path = input.to_string();
-    let file_path = Span::call_site().source_file().path();
+    let file_path = Span::call_site().file().into();
 
     match bundle_file(file_path, path) {
         Ok(hash) => quote! { #hash }.into(),

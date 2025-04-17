@@ -1,8 +1,5 @@
 use axum::http::StatusCode;
-use std::{
-    collections::{HashMap, VecDeque},
-    sync::Arc,
-};
+use std::{collections::HashMap, sync::Arc};
 use tokio::sync::mpsc::UnboundedSender;
 use vertigo::JsValue;
 
@@ -13,11 +10,8 @@ use crate::serve::{
 };
 
 use super::{
-    dom_command::dom_command_from_js_json,
-    element::AllElements,
-    html_element::HtmlElement,
-    send_request::send_request,
-    DomCommand, HtmlNode,
+    dom_command::dom_command_from_js_json, element::AllElements, html_element::HtmlElement,
+    send_request::send_request, DomCommand, HtmlNode,
 };
 
 enum FetchStatus {
@@ -78,8 +72,6 @@ impl HtmlResponse {
     pub fn build_response(&self) -> ResponseState {
         let (mut root_html, css) = self.all_elements.get_response(false);
 
-        let css = css.into_iter().collect::<VecDeque<_>>();
-
         if let HtmlNode::Element(html) = &mut root_html {
             if html.name != "html" {
                 // Not really possible
@@ -96,7 +88,9 @@ impl HtmlResponse {
             return ResponseState::internal_error("Missing <html> element");
         }
 
-        let head_exists = root_html.modify(&[("head", 0)], move |_head| {});
+        let head_exists = root_html.modify(&[("head", 0)], move |head| {
+            head.add_child(css);
+        });
 
         if !head_exists {
             log::info!("Missing <head> element");
@@ -107,15 +101,11 @@ impl HtmlResponse {
             .attr("data-vertigo-run-wasm", &self.mount_path.wasm_path)
             .attr("src", &self.mount_path.run_js);
 
-        let success = root_html.modify(&[("body", 0)], move |body| {
-            for css_node in css.into_iter().rev() {
-                body.add_first_child(css_node);
-            }
-
-            body.add_last_child(script);
+        let body_exists = root_html.modify(&[("body", 0)], move |body| {
+            body.add_child(script);
         });
 
-        if success {
+        if body_exists {
             ResponseState::html(self.status, root_html.convert_to_string(true))
         } else {
             ResponseState::internal_error("Missing <body> element")
