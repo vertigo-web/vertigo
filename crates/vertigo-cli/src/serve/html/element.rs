@@ -196,31 +196,27 @@ impl AllElements {
         result
     }
 
-    fn get_css(&self) -> Vec<HtmlNode> {
-        let mut result = Vec::new();
+    fn get_css(&self) -> HtmlNode {
+        let mut style = HtmlElement::new("style");
 
         for (prop, value) in self.css.iter() {
-            let content = [prop.as_str(), " { ", value.as_str(), " }"].concat();
+            let content = [prop.as_str(), " { ", value.as_str(), " }\n"].concat();
 
-            result.push(
-                HtmlElement::new("style")
-                    .child(HtmlNode::Text(content))
-                    .into(),
-            );
+            style.add_child(HtmlNode::Text(content));
         }
 
-        result
+        style.into()
     }
 
-    //root and Vec<css>
-    pub fn get_response(&self, with_id: bool) -> (HtmlNode, Vec<HtmlNode>) {
+    // Root and css
+    pub fn get_response(&self, with_id: bool) -> (HtmlNode, HtmlNode) {
         let root_html = self.get_response_one_elements(1, with_id);
         let css = self.get_css();
         (root_html, css)
     }
 
     #[cfg(test)]
-    pub fn get_response_document(&self, with_id: bool) -> (HtmlNode, Vec<HtmlNode>) {
+    pub fn get_response_document(&self, with_id: bool) -> (HtmlNode, HtmlNode) {
         let (root, css) = self.get_response(with_id);
         (root, css)
     }

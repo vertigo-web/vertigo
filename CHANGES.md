@@ -22,8 +22,10 @@
 ### Fixed
 
 * `DomDebugFragment::from_cmds()` fails to debug styles when custom classes used [#335]
+* vertigo-cli: Prevent reformatting HTML in `<pre>` during SSR [#342]
 
 [#335]: https://github.com/vertigo-web/vertigo/issues/335
+[#342]: https://github.com/vertigo-web/vertigo/issues/342
 
 ## 0.6.4 - 2025-03-26
 

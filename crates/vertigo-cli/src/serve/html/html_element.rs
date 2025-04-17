@@ -28,15 +28,12 @@ impl HtmlElement {
         self.attr.insert(name.into(), value.into());
     }
 
-    pub fn add_first_child(&mut self, child: HtmlNode) {
-        self.children.push_front(child);
-    }
-
-    pub fn add_last_child(&mut self, child: impl Into<HtmlNode>) {
+    pub fn add_child(&mut self, child: impl Into<HtmlNode>) {
         let child = child.into();
         self.children.push_back(child);
     }
 
+    #[cfg(test)]
     pub fn child(mut self, child: HtmlNode) -> Self {
         self.children.push_back(child);
         self

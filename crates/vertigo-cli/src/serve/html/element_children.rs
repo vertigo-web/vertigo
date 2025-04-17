@@ -25,23 +25,23 @@ impl ElementChildren {
 
         let mut result = Vec::new();
 
-        let Some(mut wsk_id) = self.first_child else {
+        let Some(mut id_ptr) = self.first_child else {
             log::error!("Unreachable in ElementChildren::get_all (1)");
             return Vec::new();
         };
 
         for _ in 0..self.children.len() {
-            let Some(node) = self.children.get(&wsk_id) else {
+            let Some(node) = self.children.get(&id_ptr) else {
                 log::error!("Unreachable in ElementChildren::get_all (2)");
                 return result;
             };
 
-            result.push(wsk_id);
-            wsk_id = node.right;
+            result.push(id_ptr);
+            id_ptr = node.right;
         }
 
-        //We expect to turn a full circle
-        assert_eq!(Some(wsk_id), self.first_child);
+        // We expect to turn a full circle
+        assert_eq!(Some(id_ptr), self.first_child);
 
         result
     }
