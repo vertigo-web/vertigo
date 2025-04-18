@@ -6,7 +6,7 @@ COPY . /vertigo-src
 
 WORKDIR /vertigo-src
 
-RUN cargo build --release -p vertigo-cli
+RUN RUSTFLAGS="-C lto=fat -C embed-bitcode=yes -Zdylib-lto" cargo build --release -p vertigo-cli
 
 FROM debian:stable-slim
 

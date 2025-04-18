@@ -10,3 +10,7 @@ crate-type = ["cdylib", "rlib"]
 
 [dependencies]
 vertigo = "0.6"
+
+[profile.release]
+lto = true
+opt-level = 'z'
