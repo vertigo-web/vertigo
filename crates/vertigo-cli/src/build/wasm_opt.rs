@@ -1,25 +1,24 @@
+use std::{fs, process::Command};
+
 use super::wasm_path::WasmPath;
 
 pub fn run_wasm_opt(from: &WasmPath, to: &WasmPath) -> bool {
-    log::info!(
-        r#"Running "wasm-opt -Os --strip-debug -o {} {}""#,
-        to.as_string(),
-        from.as_string()
-    );
+    let from_str = from.as_string();
+    let to_str = to.as_string();
 
-    let wasm_opt_status = std::process::Command::new("wasm-opt")
-        .args([
-            "-Os",
-            "--strip-debug",
-            "-o",
-            to.as_string().as_str(),
-            from.as_string().as_str(),
-        ])
-        .status();
+    let mut wasm_opt_command = Command::new("wasm-opt");
+    wasm_opt_command.args(["-Os", "--strip-debug", "-o", &to_str, &from_str]);
+
+    log::info!("Running: {:?}", wasm_opt_command);
+
+    let wasm_opt_status = wasm_opt_command.status();
 
     match wasm_opt_status {
         Ok(status) if status.success() => {
-            log::info!("WASM optimized");
+            let in_size = size(&from_str);
+            let out_size = size(&to_str);
+            let percent = 100 * out_size / in_size;
+            log::info!("WASM optimized: {in_size}K -> {out_size}K ({percent}%)");
             true
         }
         Ok(_) => {
@@ -42,4 +41,10 @@ pub fn run_wasm_opt(from: &WasmPath, to: &WasmPath) -> bool {
             false
         }
     }
+}
+
+fn size(path: &str) -> u64 {
+    fs::metadata(path)
+        .map(|md| md.len() / 1_024)
+        .unwrap_or_default()
 }
