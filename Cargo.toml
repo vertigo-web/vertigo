@@ -22,10 +22,6 @@ exclude = [
 resolver = "2"
 
 [profile.release]
-lto = true
-
-#for speed
-opt-level = 's'
-
-#for size
-#opt-level = 'z'
+lto = "thin"
+opt-level = 'z'
+incremental = true
