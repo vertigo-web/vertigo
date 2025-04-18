@@ -1,3 +1,4 @@
+set -x
 cargo build --release -p vertigo-cli
 mkdir -p build/vertigo-cli-test
 cp target/release/vertigo build/vertigo-cli-test/
