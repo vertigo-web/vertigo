@@ -16,7 +16,7 @@ use crate::component::get_group_attrs_method_name;
 const HTML_ATTR_FORMAT_ERROR: &str =
     "in html node. Expected key=\"value\", key={value}, key={}, {value} or {..value} attribute.";
 const COMPONENT_ATTR_FORMAT_ERROR: &str =
-    "in component. Expected key=\"value\", key={value}, key={}, group:key=\"value\", group:key={value or, {value} attribute.";
+    "in component. Expected key=\"value\", key={value}, key={}, group:key=\"value\", group:key={value} or {value} attribute.";
 
 pub(crate) fn dom_inner(input: TokenStream) -> TokenStream {
     let nodes = match parse(input) {

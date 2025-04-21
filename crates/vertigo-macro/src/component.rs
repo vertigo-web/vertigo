@@ -147,7 +147,9 @@ pub(crate) fn component_inner(_attrs: TokenStream, input: TokenStream) -> TokenS
 
 pub fn get_component_name<T: ToTokens + Spanned>(constructor_name: &T) -> Ident {
     Ident::new(
-        &format!("{}Component__", constructor_name.to_token_stream()),
+        // Create a name which should not conflict with anything.
+        // Underscore prefix makes it not appear in autocompletion.
+        &format!("__{}Component", constructor_name.to_token_stream()),
         constructor_name.span(),
     )
 }

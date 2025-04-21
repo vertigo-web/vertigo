@@ -111,7 +111,12 @@ pub fn transform_css(css: &str, next_id: &NextId) -> (u64, Vec<(String, String)>
                 css_documents.push(extra_rule);
             }
         } else if row.starts_with("@media") {
-            // It's a set of rules inside media query
+            // It's a set of rules inside media query.
+            // Flush regular ones first as order matters here (media queries don't modify specificity)
+            if !css_out.is_empty() {
+                css_documents.push((selector.clone(), css_out.join("; ")));
+                css_out.clear();
+            }
             transform_css_media_query(row, &selector, &mut css_documents);
         } else {
             // Single rule
@@ -141,9 +146,11 @@ pub fn transform_css(css: &str, next_id: &NextId) -> (u64, Vec<(String, String)>
         }
     }
 
-    let css_out: String = css_out.join("; ");
-
-    css_documents.push((selector, css_out));
+    // Flush all remaining regular rules
+    if !css_out.is_empty() {
+        let css_out: String = css_out.join("; ");
+        css_documents.push((selector, css_out));
+    }
 
     (class_id, css_documents)
 }
