@@ -69,31 +69,28 @@ pub async fn run(mut opts: WatchOpts) -> Result<(), ErrorCode> {
 
     let notify_build = Arc::new(Notify::new());
 
-    let watch_result = notify::RecommendedWatcher::new(
-        {
-            let notify_build = notify_build.clone();
+    let watch_result = notify::recommended_watcher({
+        let notify_build = notify_build.clone();
 
-            move |res: Result<notify::Event, _>| match res {
-                Ok(event) => {
-                    if event.paths.iter().all(|path| {
-                        for exclude_path in &excludes {
-                            if path.starts_with(exclude_path) {
-                                return true;
-                            }
+        move |res: Result<notify::Event, _>| match res {
+            Ok(event) => {
+                if event.paths.iter().all(|path| {
+                    for exclude_path in &excludes {
+                        if path.starts_with(exclude_path) {
+                            return true;
                         }
-                        false
-                    }) {
-                        return;
                     }
-                    notify_build.notify_one();
+                    false
+                }) {
+                    return;
                 }
-                Err(e) => {
-                    log::error!("watch error: {:?}", e);
-                }
+                notify_build.notify_one();
             }
-        },
-        notify::Config::default().with_poll_interval(std::time::Duration::from_millis(200)),
-    );
+            Err(e) => {
+                log::error!("watch error: {:?}", e);
+            }
+        }
+    });
 
     let mut watcher = match watch_result {
         Ok(watcher) => watcher,
@@ -147,7 +144,9 @@ pub async fn run(mut opts: WatchOpts) -> Result<(), ErrorCode> {
             return Err(ErrorCode::OtherProcessAlreadyRunning);
         };
 
-        log::info!("build run ...");
+        sleep(Duration::from_millis(200)).await;
+
+        log::info!("Build run...");
 
         let spawn = build_and_watch(version, tx.clone(), &opts, &ws);
         notify_build.notified().await;
@@ -164,8 +163,6 @@ fn build_and_watch(
     let opts = opts.clone();
     let ws = ws.clone();
     SpawnOwner::new(async move {
-        sleep(Duration::from_millis(200)).await;
-
         match crate::build::run_with_ws(opts.to_build_opts(), &ws, true) {
             Ok(()) => {
                 log::info!("Build successful.");

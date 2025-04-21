@@ -23,6 +23,7 @@
 
 * `DomDebugFragment::from_cmds()` fails to debug styles when custom classes used [#335]
 * vertigo-cli: Prevent reformatting HTML in `<pre>` during SSR [#342]
+* vertigo-cli: Keep original order of CSS rules around media-queries
 
 [#335]: https://github.com/vertigo-web/vertigo/issues/335
 [#342]: https://github.com/vertigo-web/vertigo/issues/342

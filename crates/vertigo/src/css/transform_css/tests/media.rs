@@ -21,11 +21,11 @@ fn test_media() {
     assert_eq!(
         selectors,
         vec!(
+            (".autocss_1".into(), "color: red".into()),
             (
                 "@media screen and (min-width: 400px)".into(),
                 ".autocss_1 { color: green }".into()
             ),
-            (".autocss_1".into(), "color: red".into())
         )
     );
 }
@@ -54,6 +54,7 @@ fn test_doubled() {
     assert_eq!(
         selectors,
         vec!(
+            (".autocss_1".into(), "width: 40px".into()),
             (
                 "@media screen and (min-width: 400px)".into(),
                 ".autocss_1 { width: 60px }".into()
@@ -62,7 +63,6 @@ fn test_doubled() {
                 "@media screen and (min-width: 800px)".into(),
                 ".autocss_1 { width: 80px }".into()
             ),
-            (".autocss_1".into(), "width: 40px".into())
         )
     );
 }
@@ -140,23 +140,23 @@ fn test_media_and_pseudo_2() {
     assert_eq!(id, 1);
     assert_eq!(next_id.current(), 1);
 
+    assert_eq!(selectors[0], (".autocss_1".into(), "width: 40px".into()));
     assert_eq!(
-        selectors[0],
+        selectors[1],
         ("@media screen and (min-width: 400px)".into(), ".autocss_1 { width: 60px }\n.autocss_1:hover { color: red; }\n.autocss_1:focus::first-letter { color: crimson; }".into())
     );
     assert_eq!(
-        selectors[1],
+        selectors[2],
         (
             "@media screen and (min-width: 800px)".into(),
             ".autocss_1 { width: 80px }".into()
         ),
     );
     assert_eq!(
-        selectors[2],
+        selectors[3],
         (
             "@media screen and (max-width: 900px)".into(),
             ".autocss_1:focus { color: magenta; }".into()
         ),
     );
-    assert_eq!(selectors[3], (".autocss_1".into(), "width: 40px".into()));
 }
