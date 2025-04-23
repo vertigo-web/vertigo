@@ -2,7 +2,7 @@ import { WasmModule } from "./wasm_module";
 
 // vertigo-cli compatibility version, change together with package version.
 const VERTIGO_COMPAT_VERSION_MAJOR = 0;
-const VERTIGO_COMPAT_VERSION_MINOR = 6;
+const VERTIGO_COMPAT_VERSION_MINOR = 7;
 
 const moduleRun: Set<string> = new Set();
 
