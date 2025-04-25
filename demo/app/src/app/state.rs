@@ -10,7 +10,7 @@ use super::sudoku::SudokuState;
 
 #[derive(Clone)]
 pub struct State {
-    pub ws_chat: String,
+    pub ws_chat: Option<String>,
     pub counters: counters::State,
     pub sudoku: SudokuState,
     pub input: Value<String>,
@@ -21,7 +21,7 @@ pub struct State {
 }
 
 impl State {
-    pub fn new(ws_chat: String) -> Self {
+    pub fn new(ws_chat: Option<String>) -> Self {
         State {
             ws_chat,
             counters: counters::State::new(),

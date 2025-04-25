@@ -75,7 +75,7 @@ pub async fn run(opts: ServeOpts, port_watch: Option<u16>) -> Result<(), ErrorCo
         log::error!("Can't bind/serve on {addr}: {err}");
         Err(ErrorCode::ServeCantOpenPort)
     } else {
-        log::info!("Listening on http://{}", addr);
+        log::info!("Listening on http://{addr}");
         Ok(())
     }
 }

@@ -25,7 +25,7 @@ impl MemoryBlockRead {
 
     pub fn debug_show_rest(&self) {
         let rest = &self.block[self.offset as usize..];
-        log::info!("MemoryBlockRead DEBUG REST = {:02X?}", rest);
+        log::info!("MemoryBlockRead DEBUG REST = {rest:02X?}");
     }
 
     pub fn get_byte(&mut self) -> u8 {

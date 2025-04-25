@@ -31,7 +31,7 @@ impl ChatState {
                         log::info!("socket demo - connect ...");
                     }
                     WebsocketMessage::Message(message) => {
-                        log::info!("socket demo - new message {}", message);
+                        log::info!("socket demo - new message {message}");
 
                         Self::add_message(&messages, message);
                     }

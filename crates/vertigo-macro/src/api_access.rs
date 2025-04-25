@@ -38,7 +38,7 @@ pub(crate) fn api_access_inner(root: &str, input: TokenStream) -> TokenStream {
                                 proc_macro_error::Level::Error,
                                 "Properties don't accept arguments, missing () in func name?"
                             )
-                                .span_suggestion(first_param_span, "hint", format!("Try `{}()`", param_str))
+                                .span_suggestion(first_param_span, "hint", format!("Try `{param_str}()`"))
                                 .emit()
                         }
 

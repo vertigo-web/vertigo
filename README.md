@@ -128,19 +128,11 @@ Install cargo-make and vertigo-cli:
 
 Build and run project using:
 
-* `cargo make demo-start`
+* `cargo make demo`
 
 Eventually terminal will let you know that app is available under `http://localhost:4444/`
 
-If you want to play around with the code, you can make cargo to watch for your changes:
-
-* `cargo make demo-watch`
-
-The browser will automatically refresh after the project has been recompiled.
-
-If you want to use "chat" in demo you need to first run websocket server in separate terminal with command:
-
-* `cargo make demo-serve-api`
+You can play around with the code. It should automatically recompile and the browser tab should be informed to refresh.
 
 --------------
 

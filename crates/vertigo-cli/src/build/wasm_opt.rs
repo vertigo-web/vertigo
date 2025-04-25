@@ -9,7 +9,7 @@ pub fn run_wasm_opt(from: &WasmPath, to: &WasmPath) -> bool {
     let mut wasm_opt_command = Command::new("wasm-opt");
     wasm_opt_command.args(["-Os", "--strip-debug", "-o", &to_str, &from_str]);
 
-    log::info!("Running: {:?}", wasm_opt_command);
+    log::info!("Running: {wasm_opt_command:?}");
 
     let wasm_opt_status = wasm_opt_command.status();
 

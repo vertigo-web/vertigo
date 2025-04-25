@@ -108,7 +108,7 @@ impl JsJsonDeserialize for DomCommand {
             },
             unknown => {
                 let err_msg = format!("Unknown command `{unknown}`");
-                log::error!("{}", err_msg);
+                log::error!("{err_msg}");
                 return Err(context.add(err_msg));
             }
         };

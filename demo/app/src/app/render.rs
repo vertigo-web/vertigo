@@ -124,7 +124,11 @@ pub fn render(state: &app::State) -> DomNode {
             Route::Input => dom! { <MyInput value={&state.input} /> },
             Route::GithubExplorer => dom! { <GitHubExplorer state={&state.github_explorer} /> },
             Route::GameOfLife => dom! { <GameOfLife state={&state.game_of_life} /> },
-            Route::Chat => dom! { <Chat ws_chat={&state.ws_chat}/> },
+            Route::Chat => if let Some(ws_chat) = &state.ws_chat {
+                dom! { <Chat {ws_chat}/> }
+            } else {
+                Chat::turn_off_message()
+            },
             Route::Todo => dom! { <Todo /> },
             Route::DropFile => dom! { <DropFiles /> },
             Route::JsApiAccess => dom! { <JsApiAccess /> },

@@ -35,12 +35,9 @@ impl<T: Clone + Send + Sync> EventEmitter<T> {
     }
 
     pub fn trigger(&self, value: T) {
-        let callback_list = self.list.map(|state| {
-            state
-                .iter()
-                .map(|(_, callback)| callback.clone())
-                .collect::<Vec<_>>()
-        });
+        let callback_list = self
+            .list
+            .map(|state| state.values().cloned().collect::<Vec<_>>());
 
         for callback in callback_list {
             callback(value.clone());

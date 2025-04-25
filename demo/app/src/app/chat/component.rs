@@ -29,6 +29,18 @@ pub fn Chat(ws_chat: String) {
     }
 }
 
+impl Chat {
+    pub fn turn_off_message() -> DomNode {
+        dom! {
+            <div>
+                <p>"Chat is turned off."</p>
+                <p>"To use websocket chat, please run your demo on your own. After cloning the vertigo repository, run:"</p>
+                <p><pre>"cargo make demo"</pre></p>
+            </div>
+        }
+    }
+}
+
 fn render_status(state: &ChatState) -> DomNode {
     state.connect.render_value(
         |is_connect| {

@@ -17,13 +17,13 @@ pub fn JsApiAccess() {
 
     let to_bottom = || {
         let max_y = window!("scrollMaxY");
-        vertigo::log::info!("max_y = {:?}", max_y);
+        vertigo::log::info!("max_y = {max_y:?}");
         window!("scrollTo()", 0, max_y);
     };
 
     let down_smooth = || {
         let max_y = window!("scrollMaxY");
-        vertigo::log::info!("max_y = {:?}", max_y);
+        vertigo::log::info!("max_y = {max_y:?}");
         window!("scrollTo()",
             vec![
                 ("top", 100000.into()),

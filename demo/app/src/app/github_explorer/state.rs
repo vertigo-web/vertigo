@@ -33,7 +33,7 @@ pub struct Item {
 
 impl Item {
     pub fn new(repo_name: &str) -> Item {
-        log::info!("Creating for {}", repo_name);
+        log::info!("Creating for {repo_name}");
 
         let url = format!("https://api.github.com/repos/{repo_name}/branches/master");
         let branch = RequestBuilder::get(url)
