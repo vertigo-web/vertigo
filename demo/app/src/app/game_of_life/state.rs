@@ -60,7 +60,7 @@ impl State {
             let matrix = self.matrix.clone();
             let state = self.clone();
 
-            log::info!("Setting timer for {} ms", delay);
+            log::info!("Setting timer for {delay} ms");
 
             let timer = get_driver().set_interval(delay, {
                 move || {

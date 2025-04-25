@@ -52,7 +52,7 @@ pub fn run(opts: NewOpts) -> Result<(), ErrorCode> {
     // Remove Cargo.toml_
     // (cargo packaging does not permit adding second Cargo.toml file)
     if let Err(err) = fs::remove_file(target_path.join("Cargo.toml_")) {
-        log::error!("Can't rename to Cargo.toml_ to Cargo.toml: {}", err);
+        log::error!("Can't rename to Cargo.toml_ to Cargo.toml: {err}");
         return Err(ErrorCode::NewProjectCanCreateCargoToml);
     };
 
@@ -64,7 +64,7 @@ pub fn run(opts: NewOpts) -> Result<(), ErrorCode> {
         target_path.join("Cargo.toml"),
         cargo_toml_content.replace("my_app", &opts.package_name),
     ) {
-        log::error!("Can't write to Cargo.toml: {}", err);
+        log::error!("Can't write to Cargo.toml: {err}");
         return Err(ErrorCode::NewProjectCanWriteToCargoToml);
     };
 

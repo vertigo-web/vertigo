@@ -29,7 +29,7 @@ pub fn run_with_ws(opts: BuildOpts, ws: &Workspace, allow_error: bool) -> Result
         Some(name) => name.to_string(),
         None => match ws.infer_package_name() {
             Some(name) => {
-                log::info!("Inferred package name = {}", name);
+                log::info!("Inferred package name = {name}");
                 name
             }
             None => {

@@ -1,21 +1,14 @@
 #![deny(rust_2018_idioms)]
 
-use vertigo::{main, DomNode, get_driver, dom};
+use vertigo::{main, DomNode, get_driver};
 mod app;
 
 #[main]
 fn render() -> DomNode {
-    let Some(ws_chat) = get_driver().env("ws_chat") else {
-        get_driver().set_status(500);
-        return dom! {
-            <html>
-                <body>
-                    <div>
-                        "The ws_chat variable env is missing"
-                    </div>
-                </body>
-            </html>
-        }
+    let ws_chat = get_driver().env("ws_chat");
+    let ws_chat = match ws_chat.as_deref() {
+        Some("off") => None,
+        _ => ws_chat,
     };
 
     get_driver().plains(|url| {

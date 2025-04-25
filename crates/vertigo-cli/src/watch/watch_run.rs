@@ -41,7 +41,7 @@ pub async fn run(mut opts: WatchOpts) -> Result<(), ErrorCode> {
         Some(name) => name.to_string(),
         None => match ws.infer_package_name() {
             Some(name) => {
-                log::info!("Inferred package name = {}", name);
+                log::info!("Inferred package name = {name}");
                 opts.build.package_name = Some(name.clone());
                 name
             }
@@ -86,8 +86,8 @@ pub async fn run(mut opts: WatchOpts) -> Result<(), ErrorCode> {
                 }
                 notify_build.notify_one();
             }
-            Err(e) => {
-                log::error!("watch error: {:?}", e);
+            Err(err) => {
+                log::error!("watch error: {err:?}");
             }
         }
     });

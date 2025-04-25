@@ -249,7 +249,7 @@ mod tests {
             if let Some(pair) = pair {
                 out.push(pair);
             } else {
-                log::error!("Problem with parsing this css line: {}", row);
+                log::error!("Problem with parsing this css line: {row}");
             }
         }
 

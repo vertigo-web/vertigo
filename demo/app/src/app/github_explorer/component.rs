@@ -13,14 +13,14 @@ impl GitHubExplorer {
         let state = &self.state;
 
         let on_input_callback = bind!(state, |new_value: String| {
-            log::info!(" new value {}", new_value);
+            log::info!(" new value {new_value}");
             state.repo_input.set(new_value);
         });
 
         let on_show = bind!(state, || {
             transaction(|ctx| {
                 let value = state.repo_input.get(ctx);
-                log::info!(" new value {}", value);
+                log::info!(" new value {value}");
                 state.repo_shown.set(value);
             });
         });
