@@ -1,5 +1,7 @@
 use std::fmt::Display;
 
+use vertigo::get_driver;
+
 #[derive(PartialEq, Eq, Debug, Clone)]
 pub enum Route {
     Counters,
@@ -76,6 +78,6 @@ impl Display for Route {
             Self::JsApiAccess => "/js-api-access",
             Self::NotFound => "/not-found",
         };
-        f.write_str(str)
+        f.write_str(&get_driver().route_to_public(str))
     }
 }

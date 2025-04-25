@@ -92,7 +92,7 @@ pub fn CountersDemo(state: State) {
             <SimpleCounter label="counter3 value" value={&state.counter3} />
             <SimpleCounter label="counter4 value" value={&state.counter4} />
             <Sum sum={&state.sum} />
-            <img css={center_css} src={path} />
+            <img css={center_css} src={&path} />
             <img css={center_css2} src={path} />
         </div>
     }

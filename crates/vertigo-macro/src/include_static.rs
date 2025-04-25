@@ -9,7 +9,7 @@ pub(crate) fn include_static_inner(input: TokenStream) -> TokenStream {
     let file_path = Span::call_site().file().into();
 
     match bundle_file(file_path, path) {
-        Ok(hash) => quote! { #hash }.into(),
+        Ok(hash) => quote! { vertigo::get_driver().public_build_path(#hash) }.into(),
         Err(message) => {
             emit_error!(Span::call_site(), "{}", message);
             let empty = "";
@@ -55,7 +55,7 @@ fn bundle_file(mut file_path: PathBuf, file: String) -> Result<String, String> {
         let file_path_content = file_path.read();
         let hash = file_static_target.save_with_hash(file_path_content.as_slice());
 
-        // Final public path
+        // Final public path in the build (can be later mangled by dynamic path dispatch though)
         let Ok(public_path) = std::env::var("VERTIGO_PUBLIC_PATH") else {
             return Err(r#"The environment variable "VERTIGO_PUBLIC_PATH" is missing"#.to_string());
         };

@@ -1,5 +1,6 @@
 use clap::Args;
-use std::path::PathBuf;
+use vertigo::VERTIGO_PUBLIC_BUILD_PATH_PLACEHOLDER;
+use std::path::{Path, PathBuf};
 
 use crate::commons::models::CommonOpts;
 
@@ -16,8 +17,9 @@ pub struct BuildOpts {
 #[derive(Args, Debug, Clone)]
 pub struct BuildOptsInner {
     pub package_name: Option<String>,
-    #[arg(long, default_value_t = {"/build".to_string()})]
-    pub public_path: String,
+    /// Hard-code public path so the build can be used statically
+    #[arg(long)]
+    pub public_path: Option<String>,
     #[arg(short, long)]
     pub disable_wasm_opt: bool,
     #[arg(long)]
@@ -25,9 +27,17 @@ pub struct BuildOptsInner {
 }
 
 impl BuildOpts {
+    pub fn get_public_path(&self) -> String {
+        // Use predefined public_path or use VERTIGO_PUBLIC_BUILD_PATH_PLACEHOLDER to keep public path dynamic.
+        self.inner.public_path.clone().unwrap_or(VERTIGO_PUBLIC_BUILD_PATH_PLACEHOLDER.to_string())
+    }
+
     pub fn public_path_to(&self, path: impl Into<String>) -> String {
-        let path = path.into();
-        format!("{}/{path}", self.inner.public_path)
+        let public_path_str = self.get_public_path();
+        let public_path = Path::new(&public_path_str);
+        let path_str = path.into();
+        let path = Path::new(&path_str);
+        public_path.join(path).to_string_lossy().into_owned()
     }
 
     pub fn new_path_in_static_make(&self, path: &[&str]) -> WasmPath {

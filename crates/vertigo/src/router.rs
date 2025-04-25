@@ -2,8 +2,11 @@ use crate::{computed::Value, get_driver, Computed, DomNode, EmbedDom, Reactive, 
 
 /// Router based on path or hash part of current location.
 ///
+/// Not: If you want your app to support dynamic mount point, you use method [Driver::route_to_public]
+/// which will always prefix your route with mount point.
+///
 /// ```rust
-/// use vertigo::{dom, DomNode, router::Router};
+/// use vertigo::{dom, DomNode, get_driver, router::Router};
 ///
 /// #[derive(Clone, PartialEq, Debug)]
 /// pub enum Route {
@@ -22,13 +25,14 @@ use crate::{computed::Value, get_driver, Computed, DomNode, EmbedDom, Reactive, 
 ///     }
 /// }
 ///
-/// impl ToString for Route {
-///     fn to_string(&self) -> String {
-///         match self {
+/// impl std::fmt::Display for Route {
+///     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+///         let str = match self {
 ///             Self::Page1 => "/",
 ///             Self::Page2 => "/page2",
 ///             Self::NotFound => "/404",
-///         }.to_string()
+///         };
+///         f.write_str(&get_driver().route_to_public(str))
 ///     }
 /// }
 ///

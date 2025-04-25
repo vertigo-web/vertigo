@@ -6,8 +6,10 @@
 ### Added
 
 * Dynamic/optional attributes, attributes grouping, attributes spreading [#317]
+* vertigo-cli: `--mount-point` parameter for `serve` command, which allow to embed app in f. ex. `example.com/mount/point` endpoint [#346]
 
 [#317]: https://github.com/vertigo-web/vertigo/issues/317
+[#346]: https://github.com/vertigo-web/vertigo/issues/346
 
 ### Changed
 

@@ -32,11 +32,12 @@ pub async fn run(opts: ServeOpts, port_watch: Option<u16>) -> Result<(), ErrorCo
         host,
         port,
         proxy,
+        mount_point,
         env,
     } = opts.inner;
 
-    let mount_path = MountPathConfig::new(opts.common.dest_dir)?;
-    let state = Arc::new(ServerState::new(mount_path, port_watch, env)?);
+    let mount_config = MountPathConfig::new(mount_point, opts.common.dest_dir)?;
+    let state = Arc::new(ServerState::new(mount_config, port_watch, env)?);
 
     let ref_state = STATE
         .get_or_init({
@@ -46,9 +47,8 @@ pub async fn run(opts: ServeOpts, port_watch: Option<u16>) -> Result<(), ErrorCo
         })
         .await;
 
-    let serve_mount_path = state.mount_path.http_root();
-
-    let serve_dir = ServeDir::new(state.mount_path.fs_root());
+    let serve_mount_path = state.mount_config.dest_http_root();
+    let serve_dir = ServeDir::new(state.mount_config.dest_dir());
 
     *(ref_state.write().await) = state;
 
@@ -216,11 +216,16 @@ async fn handler(
 
     let now = Instant::now();
     let uri = {
-        let url = url.path();
+        // Strip mount point to get local url
+        let local_url = if state.mount_config.mount_point() != "/" {
+            url.path().trim_start_matches(state.mount_config.mount_point())
+        } else {
+            url.path()
+        };
 
         match query {
-            Some(query) => format!("{url}?{query}"),
-            None => url.to_string(),
+            Some(query) => format!("{local_url}?{query}"),
+            None => local_url.to_string(),
         }
     };
 

@@ -1,49 +1,65 @@
 #![allow(clippy::question_mark)]
 use std::path::Path;
+use vertigo::VERTIGO_PUBLIC_BUILD_PATH_PLACEHOLDER;
 
 use crate::commons::{models::IndexModel, ErrorCode};
 
 #[derive(Clone, Debug)]
 pub struct MountPathConfig {
-    //for http
-    public_path: String,
-    //for filesystem
+    // for http
+    mount_point: String,
+    // for filesystem
     dest_dir: String,
-    //index after parsing
-    pub run_js: String,
-    //path to wasm-file
-    pub wasm_path: String,
+    // index.json after parsing
+    run_js: String,
+    // path to wasm-file
+    wasm_path: String,
 }
 
 impl MountPathConfig {
-    pub fn new(dest_dir: String) -> Result<MountPathConfig, ErrorCode> {
+    pub fn new(public_mount_point: String, dest_dir: String) -> Result<MountPathConfig, ErrorCode> {
         let index_model = read_index(&dest_dir)?;
-
-        let Some(public_path) = get_base_dir(&index_model.wasm) else {
-            log::error!("Problem with finding the http base path");
-            return Err(ErrorCode::ServeCantFindHttpBasePath);
-        };
 
         Ok(MountPathConfig {
             dest_dir,
-            public_path,
+            mount_point: public_mount_point,
             run_js: index_model.run_js,
             wasm_path: index_model.wasm,
         })
     }
 
-    pub fn http_root(&self) -> String {
-        self.public_path.clone()
+    pub fn mount_point(&self) -> &str {
+        self.mount_point.as_str()
     }
 
-    pub fn fs_root(&self) -> String {
-        self.dest_dir.clone()
+    pub fn dest_dir(&self) -> &str {
+        self.dest_dir.as_str()
     }
 
-    pub fn translate_to_fs(&self, http_path: impl Into<String>) -> Result<String, ErrorCode> {
+    pub fn dest_http_root(&self) -> String {
+        Path::new(&self.mount_point).join(&self.dest_dir).to_string_lossy().into_owned()
+    }
+
+    pub fn get_wasm_http_path(&self) -> String {
+        self.translate_to_http(&self.wasm_path)
+    }
+
+    pub fn get_run_js_http_path(&self) -> String {
+        self.translate_to_http(&self.run_js)
+    }
+
+    pub fn get_wasm_http_fs_path(&self) -> String {
+        self.translate_to_fs(&self.wasm_path)
+    }
+
+    fn translate_to_http(&self, fs_path: impl Into<String>) -> String {
+        let fs_path = fs_path.into();
+        fs_path.replace(VERTIGO_PUBLIC_BUILD_PATH_PLACEHOLDER, &self.dest_http_root())
+    }
+
+    fn translate_to_fs(&self, http_path: impl Into<String>) -> String {
         let http_path = http_path.into();
-        replace_prefix(&self.public_path, &self.dest_dir, &http_path)
-            .map_err(|()| ErrorCode::ServePathToUrlTranslationFailed)
+        replace_prefix(&self.dest_dir, &http_path)
     }
 }
 
@@ -61,80 +77,37 @@ fn read_index(dest_dir: &str) -> Result<IndexModel, ErrorCode> {
     Ok(model)
 }
 
-fn replace_prefix(public_path: &str, dest_dir: &str, path: &str) -> Result<String, ()> {
-    let Some(rest) = path.strip_prefix(public_path) else {
-        log::error!(
-            "Incorrect path http: path={path} (public_path={public_path}, dest_dir={dest_dir})"
-        );
-        return Err(());
-    };
-
-    Ok(format!("{dest_dir}{rest}"))
-}
-
-fn get_base_dir(path: &str) -> Option<String> {
-    let mut chunks: Vec<&str> = path.split('/').collect();
-    let last = chunks.pop();
-
-    if last.is_none() {
-        return None;
+fn replace_prefix(dest_dir: &str, path: &str) -> String {
+    if path.starts_with(VERTIGO_PUBLIC_BUILD_PATH_PLACEHOLDER) {
+        // Dynamic path resolution
+        path.replace(VERTIGO_PUBLIC_BUILD_PATH_PLACEHOLDER, dest_dir)
+    } else {
+        // Static path resolution
+        path.to_string()
     }
-
-    if chunks.is_empty() {
-        return None;
-    }
-
-    Some(chunks.join("/"))
 }
 
 #[cfg(test)]
 mod tests {
-    use super::get_base_dir;
+    use vertigo::VERTIGO_PUBLIC_BUILD_PATH_PLACEHOLDER;
+
     use super::replace_prefix;
 
     #[test]
     fn test_replace_prefix() {
         assert_eq!(
-            replace_prefix("/build", "demo_build", "/build/vertigo_demo.33.wasm"),
-            Ok("demo_build/vertigo_demo.33.wasm".to_string())
+            replace_prefix("demo_build", "build/vertigo_demo.33.wasm"),
+            "build/vertigo_demo.33.wasm".to_string()
         );
 
         assert_eq!(
-            replace_prefix("/aaaa", "demo_build", "/build/vertigo_demo.33.wasm"),
-            Err(())
-        );
-    }
-
-    #[test]
-    fn test_get_base_dir() {
-        assert_eq!(
-            get_base_dir("/build/vertigo_demo.b64f38e19fe1e36419c23ca9fe2cb26b6c9f2f75dc61b078ec7b7b5aca0430db.wasm"),
-            Some("/build".to_string())
+            replace_prefix("demo_build", "build/vertigo_demo.33.wasm"),
+            "build/vertigo_demo.33.wasm".to_string()
         );
 
         assert_eq!(
-            get_base_dir("/vertigo_demo.b64f38e19fe1e36419c23ca9fe2cb26b6c9f2f75dc61b078ec7b7b5aca0430db.wasm"),
-            Some("".to_string())
-        );
-
-        assert_eq!(
-            get_base_dir("vertigo_demo.b64f38e19fe1e36419c23ca9fe2cb26b6c9f2f75dc61b078ec7b7b5aca0430db.wasm"),
-            None
-        );
-
-        assert_eq!(
-            get_base_dir("//vertigo_demo.b64f38e19fe1e36419c23ca9fe2cb26b6c9f2f75dc61b078ec7b7b5aca0430db.wasm"),
-            Some("/".to_string())
-        );
-
-        assert_eq!(
-            get_base_dir("/ddd/vertigo_demo.b64f38e19fe1e36419c23ca9fe2cb26b6c9f2f75dc61b078ec7b7b5aca0430db.wasm"),
-            Some("/ddd".to_string())
-        );
-
-        assert_eq!(
-            get_base_dir("dsadas/ddd/vertigo_demo.b64f38e19fe1e36419c23ca9fe2cb26b6c9f2f75dc61b078ec7b7b5aca0430db.wasm"),
-            Some("dsadas/ddd".to_string())
+            replace_prefix("demo_build", &format!("{VERTIGO_PUBLIC_BUILD_PATH_PLACEHOLDER}/vertigo_demo.33.wasm")),
+            "demo_build/vertigo_demo.33.wasm".to_string()
         );
     }
 }

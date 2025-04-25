@@ -16,27 +16,27 @@ use super::{
 pub struct ServerState {
     engine: Engine,
     module: Module,
-    pub mount_path: MountPathConfig,
+    pub mount_config: MountPathConfig,
     pub port_watch: Option<u16>,
     pub env: HashMap<String, String>,
 }
 
 impl ServerState {
     pub fn new(
-        mount_path: MountPathConfig,
+        mount_config: MountPathConfig,
         port_watch: Option<u16>,
         env: Vec<(String, String)>,
     ) -> Result<Self, ErrorCode> {
         let engine = Engine::default();
 
-        let module = build_module_wasm(&engine, &mount_path)?;
+        let module = build_module_wasm(&engine, &mount_config)?;
 
         let env = env.into_iter().collect::<HashMap<_, _>>();
 
         Ok(Self {
             engine,
             module,
-            mount_path,
+            mount_config,
             port_watch,
             env,
         })
@@ -64,7 +64,7 @@ impl ServerState {
         });
 
         let mut html_response =
-            HtmlResponse::new(sender.clone(), &self.mount_path, inst, self.env.clone());
+            HtmlResponse::new(sender.clone(), &self.mount_config, inst, self.env.clone());
 
         loop {
             let message = receiver.try_recv();
@@ -104,7 +104,7 @@ impl ServerState {
 }
 
 fn build_module_wasm(engine: &Engine, mount_path: &MountPathConfig) -> Result<Module, ErrorCode> {
-    let full_wasm_path = mount_path.translate_to_fs(&mount_path.wasm_path)?;
+    let full_wasm_path = mount_path.get_wasm_http_fs_path();
 
     log::info!("full_wasm_path = {full_wasm_path}");
 

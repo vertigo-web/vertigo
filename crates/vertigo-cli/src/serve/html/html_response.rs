@@ -1,7 +1,7 @@
 use axum::http::StatusCode;
 use std::{collections::HashMap, sync::Arc};
 use tokio::sync::mpsc::UnboundedSender;
-use vertigo::JsValue;
+use vertigo::{JsValue, VERTIGO_MOUNT_POINT_PLACEHOLDER, VERTIGO_PUBLIC_BUILD_PATH_PLACEHOLDER};
 
 use crate::serve::{
     mount_path::MountPathConfig,
@@ -81,9 +81,14 @@ impl HtmlResponse {
                 ));
             }
 
+            // Add custom env parameters
             for (env_name, env_value) in &self.env {
                 html.add_attr(format!("data-env-{env_name}"), env_value);
             }
+
+            // Add dynamic values for public path
+            html.add_attr("data-env-vertigo-mount-point", self.mount_path.mount_point());
+            html.add_attr("data-env-vertigo-public-path", self.mount_path.dest_http_root());
         } else {
             return ResponseState::internal_error("Missing <html> element");
         }
@@ -98,15 +103,24 @@ impl HtmlResponse {
 
         let script = HtmlElement::new("script")
             .attr("type", "module")
-            .attr("data-vertigo-run-wasm", &self.mount_path.wasm_path)
-            .attr("src", &self.mount_path.run_js);
+            .attr("data-vertigo-run-wasm", self.mount_path.get_wasm_http_path())
+            .attr("src", self.mount_path.get_run_js_http_path());
 
         let body_exists = root_html.modify(&[("body", 0)], move |body| {
             body.add_child(script);
         });
 
         if body_exists {
-            ResponseState::html(self.status, root_html.convert_to_string(true))
+            let mut body = root_html.convert_to_string(true)
+                .replace(VERTIGO_PUBLIC_BUILD_PATH_PLACEHOLDER, &self.mount_path.dest_http_root());
+
+            if self.mount_path.mount_point() != "/" {
+                body = body.replace(VERTIGO_MOUNT_POINT_PLACEHOLDER, self.mount_path.mount_point());
+            } else {
+                body = body.replace(VERTIGO_MOUNT_POINT_PLACEHOLDER, "");
+            }
+
+            ResponseState::html(self.status, body)
         } else {
             ResponseState::internal_error("Missing <body> element")
         }
@@ -211,7 +225,7 @@ impl HtmlResponse {
             Message::SetStatus(status) => {
                 match StatusCode::from_u16(status) {
                     Ok(status) => self.status = status,
-                    Err(err) => log::error!("Invalid status code reqeusted: {err}"),
+                    Err(err) => log::error!("Invalid status code requested: {err}"),
                 }
                 None
             }

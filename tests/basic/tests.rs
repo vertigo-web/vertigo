@@ -15,7 +15,7 @@ async fn basic() {
         },
         inner: build::BuildOptsInner {
             package_name: Some("vertigo-test-basic".to_string()),
-            public_path: "/build".to_string(),
+            public_path: Some("/build".to_string()),
             disable_wasm_opt: false,
             wasm_run_source_map: true,
         },
@@ -41,6 +41,7 @@ async fn basic() {
             inner: serve::ServeOptsInner {
                 host: "127.0.0.1".into(),
                 port: 5555,
+                mount_point: "/".to_string(),
                 proxy: vec![],
                 env: vec![],
             },

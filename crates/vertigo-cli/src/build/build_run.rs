@@ -58,7 +58,7 @@ pub fn run_with_ws(opts: BuildOpts, ws: &Workspace, allow_error: bool) -> Result
     // Run build
 
     let target_path =
-        match run_cargo_build(&package_name, &opts.inner.public_path, ws, allow_error)? {
+        match run_cargo_build(&package_name, &opts.get_public_path(), ws, allow_error)? {
             Ok(path) => path,
             Err(_) => return Err(ErrorCode::BuildFailed),
         };

@@ -11,6 +11,12 @@ use crate::{driver_module::api::ApiImport, driver_module::utils::futures_spawn::
 
 use super::api::DomAccess;
 
+/// Placeholder where to put public build path at runtime (default /build)
+pub const VERTIGO_PUBLIC_BUILD_PATH_PLACEHOLDER: &str = "%%VERTIGO_PUBLIC_BUILD_PATH%%";
+
+/// Placeholder where to put public mount point at runtime (default /)
+pub const VERTIGO_MOUNT_POINT_PLACEHOLDER: &str = "%%VERTIGO_MOUNT_POINT%%";
+
 #[derive(Debug, Clone, Copy)]
 pub enum FetchMethod {
     GET,
@@ -260,6 +266,43 @@ impl Driver {
     pub fn env(&self, name: impl Into<String>) -> Option<String> {
         let name = name.into();
         self.inner.api.get_env(name)
+    }
+
+    pub fn public_build_path(&self, path: impl Into<String>) -> String {
+        let path = path.into();
+        if self.is_browser() {
+            // In the browser use env variable attached during SSR
+            if let Some(public_path) = self.env("vertigo-public-path") {
+                path.replace(VERTIGO_PUBLIC_BUILD_PATH_PLACEHOLDER, &public_path)
+            } else {
+                // Fallback to default dest_dir
+                path.replace(VERTIGO_PUBLIC_BUILD_PATH_PLACEHOLDER, "/build")
+            }
+        } else {
+            // On the server, leave it, it will be replaced during SSR
+            path
+        }
+    }
+
+    pub fn route_to_public(&self, path: impl Into<String>) -> String {
+        let path = path.into();
+        if self.is_browser() {
+            // In the browser use env variable attached during SSR
+            let mount_point = self.env("vertigo-mount-point").unwrap_or_else(|| "/".to_string());
+            if mount_point != "/" {
+                [mount_point, path].concat()
+            } else {
+                path
+            }
+        } else {
+            // On the server, prepend it with mount point token
+            [VERTIGO_MOUNT_POINT_PLACEHOLDER, &path].concat()
+        }
+    }
+
+    pub fn route_from_public(&self, path: impl Into<String>) -> String {
+        let path: String = path.into();
+        self.inner.api.route_from_public(path)
     }
 
     /// Register handler that intercepts defined urls and generates plaintext responses during SSR.
