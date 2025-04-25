@@ -389,7 +389,7 @@ impl ApiImport {
             .fetch();
 
         if let JsValue::String(value) = result {
-            value
+            self.route_from_public(value)
         } else {
             log::error!("historyLocation -> params decode error -> result={result:?}");
             String::from("")
@@ -413,16 +413,17 @@ impl ApiImport {
     }
 
     pub fn on_history_change<F: Fn(String) + 'static>(&self, callback: F) -> DropResource {
+        let myself = self.clone();
         let (callback_id, drop_callback) = self.callback_store.register(move |data| {
-            let new_path = if let JsValue::String(new_path) = data {
-                new_path
+            let new_local_path = if let JsValue::String(new_path) = data {
+                myself.route_from_public(new_path.clone())
             } else {
-                log::error!("on_history_change -> string was expected -> {data:?}");
+                    log::error!("on_history_change -> string was expected -> {data:?}");
                 String::from("")
             };
 
             transaction(|_| {
-                callback(new_path);
+                callback(new_local_path);
             });
 
             JsValue::Undefined
@@ -693,6 +694,22 @@ impl ApiImport {
 
         log::error!("get_env: string or null was expected");
         None
+    }
+
+    pub fn route_from_public(&self, path: impl Into<String>) -> String {
+        let path: String = path.into();
+        if self.is_browser() {
+            // In the browser use env variable attached during SSR
+            let mount_point = self.get_env("vertigo-mount-point".to_string()).unwrap_or_else(|| "/".to_string());
+            if mount_point != "/" {
+                path.trim_start_matches(&mount_point).to_string()
+            } else {
+                path
+            }
+        } else {
+            // On the server no need to do anything
+            path
+        }
     }
 
     /// Synthetic command to respond with plain text, not DOM

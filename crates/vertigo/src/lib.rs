@@ -439,6 +439,8 @@ pub mod prelude {
 // Internals below
 //------------------------------------------------------------------------------------------------------------------
 
+pub use driver_module::driver::{VERTIGO_MOUNT_POINT_PLACEHOLDER, VERTIGO_PUBLIC_BUILD_PATH_PLACEHOLDER};
+
 fn get_driver_state<R: Default, F: FnOnce(&DriverConstruct) -> R>(
     label: &'static str,
     once: F,

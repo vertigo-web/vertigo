@@ -9,6 +9,7 @@ pub struct IndexModel {
 
 #[derive(Args, Debug, Clone)]
 pub struct CommonOpts {
+    /// Directory with wasm_run.js and compiled .wasm file. Should be the same during build and serve.
     #[arg(long, default_value_t = {"./build".to_string()})]
     pub dest_dir: String,
 }

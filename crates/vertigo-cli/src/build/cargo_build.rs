@@ -9,7 +9,7 @@ const MODE: &str = "release";
 
 pub fn run_cargo_build(
     package_name: &str,
-    public_path: &str,
+    vertigo_public_path: &str,
     ws: &Workspace,
     allow_error: bool,
 ) -> Result<Result<PathBuf, String>, ErrorCode> {
@@ -22,7 +22,7 @@ pub fn run_cargo_build(
         .add_param(TARGET)
         .add_param("--package")
         .add_param(package_name)
-        .env("VERTIGO_PUBLIC_PATH", public_path);
+        .env("VERTIGO_PUBLIC_PATH", vertigo_public_path);
 
     if allow_error {
         command = command.allow_error();
