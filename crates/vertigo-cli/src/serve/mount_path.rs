@@ -33,11 +33,16 @@ impl MountPathConfig {
     }
 
     pub fn dest_dir(&self) -> &str {
-        self.dest_dir.as_str()
+        self.dest_dir.trim_start_matches("./")
     }
 
     pub fn dest_http_root(&self) -> String {
-        Path::new(&self.mount_point).join(&self.dest_dir).to_string_lossy().into_owned()
+        Path::new(&self.mount_point)
+            .join(self.dest_dir())
+            .components()
+            .as_path()
+            .to_string_lossy()
+            .into_owned()
     }
 
     pub fn get_wasm_http_path(&self) -> String {
@@ -54,7 +59,10 @@ impl MountPathConfig {
 
     fn translate_to_http(&self, fs_path: impl Into<String>) -> String {
         let fs_path = fs_path.into();
-        fs_path.replace(VERTIGO_PUBLIC_BUILD_PATH_PLACEHOLDER, &self.dest_http_root())
+        fs_path.replace(
+            VERTIGO_PUBLIC_BUILD_PATH_PLACEHOLDER,
+            &self.dest_http_root(),
+        )
     }
 
     fn translate_to_fs(&self, http_path: impl Into<String>) -> String {
@@ -106,7 +114,10 @@ mod tests {
         );
 
         assert_eq!(
-            replace_prefix("demo_build", &format!("{VERTIGO_PUBLIC_BUILD_PATH_PLACEHOLDER}/vertigo_demo.33.wasm")),
+            replace_prefix(
+                "demo_build",
+                &format!("{VERTIGO_PUBLIC_BUILD_PATH_PLACEHOLDER}/vertigo_demo.33.wasm")
+            ),
             "demo_build/vertigo_demo.33.wasm".to_string()
         );
     }
