@@ -1,3 +1,5 @@
+use std::clone::UseCloned;
+
 use vertigo::{AutoMap, LazyCache, Value, RequestBuilder};
 use vertigo::AutoJsJson;
 
@@ -6,6 +8,9 @@ pub enum View {
     Main,
     Post { id: u32 },
     User { email: String },
+}
+
+impl UseCloned for View {
 }
 
 #[derive(PartialEq, Eq, AutoJsJson, Debug, Clone)]
@@ -30,6 +35,8 @@ pub struct TodoState {
     pub view: Value<View>,
     pub posts: LazyCache<Vec<PostModel>>,
     pub comments: AutoMap<u32, LazyCache<Vec<CommentModel>>>,
+}
+impl UseCloned for TodoState {
 }
 
 impl TodoState {
