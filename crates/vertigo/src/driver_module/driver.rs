@@ -77,9 +77,7 @@ impl DriverInner {
         let dom = DriverDom::new(&api);
         let css_manager = {
             let driver_dom = dom;
-            CssManager::new(move |selector: &str, value: &str| {
-                driver_dom.insert_css(selector, value);
-            })
+            CssManager::new(move |selector, value| driver_dom.insert_css(selector, value))
         };
 
         let subscribe = dependencies.hooks.on_after_transaction(move || {
@@ -370,5 +368,12 @@ impl Driver {
     /// There shouldn't be need to use it manually. It's used by `css!` macro.
     pub fn class_name_for(&mut self, css: &Css) -> String {
         self.inner.css_manager.get_class_name(css)
+    }
+
+    /// Register css bundle
+    ///
+    /// There shouldn't be need to use it manually. It's used by `main!` macro.
+    pub fn register_bundle(&self, bundle: impl Into<String>) {
+        self.inner.css_manager.register_bundle(bundle.into())
     }
 }

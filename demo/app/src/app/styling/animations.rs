@@ -1,6 +1,6 @@
 use std::rc::Rc;
 
-use vertigo::{bind_spawn, css, dom, get_driver, struct_mut::ValueMut, DomNode, Value};
+use vertigo::{bind_spawn, component, css, dom, get_driver, struct_mut::ValueMut, Value};
 
 use super::spinner::Spinner;
 
@@ -39,65 +39,58 @@ impl State {
     }
 }
 
-pub struct Animations {}
+#[component]
+pub fn Animations() {
+    let state = State::new();
 
-impl Animations {
-    pub fn into_component(self) -> Self { self }
+    let ids = state
+        .progress
+        .map(|progress| (0..progress).collect::<Vec<_>>());
 
-    pub fn mount(&self) -> DomNode {
-        let state = State::new();
+    let list = ids.render_list(
+        |id| *id,
+        |_id| {
+            dom! {
+                <span>"."</span>
+            }
+        },
+    );
 
-        let ids = state
-            .progress
-            .map(|progress| (0..progress).collect::<Vec<_>>());
+    let on_click_progress = bind_spawn!(state, |_| async move {
+        state.start_animation().await;
+    });
 
-        let list = ids.render_list(
-            |id| *id,
-            |_id| {
-                dom! {
-                    <span>"."</span>
-                }
-            },
-        );
+    let on_mouse_enter = || {
+        log::info!("mouse enter");
+    };
 
-        let on_click_progress = bind_spawn!(state, |_| async move {
-            state.start_animation().await;
-        });
+    let on_mouse_leave = || {
+        log::info!("mouse leave");
+    };
 
-        let on_mouse_enter = || {
-            log::info!("mouse enter");
-        };
+    let css_bg = css! {"
+        border: 1px solid black;
+        margin-bottom: 10px;
+    "};
 
-        let on_mouse_leave = || {
-            log::info!("mouse leave");
-        };
+    let fragment = dom! {
+        <span>
+            "start the progress bar"
+        </span>
+        <span>
+            { list }
+        </span>
+    };
 
-        let css_bg = css! {"
-            border: 1px solid black;
-            padding: 10px;
-            background-color: #e0e0e0;
-            margin-bottom: 10px;
-        "};
-
-        let fragment = dom! {
-            <span>
-                "start the progress bar"
-            </span>
-            <span>
-                { list }
-            </span>
-        };
-
-        dom! {
-            <div>
-                <div css={css_bg} {on_mouse_enter} {on_mouse_leave}>
-                    <Spinner />
-                </div>
-
-                <button on_click={on_click_progress}>
-                    {fragment}
-                </button>
+    dom! {
+        <div>
+            <div css={css_bg} {on_mouse_enter} {on_mouse_leave}>
+                "Spinner: " <Spinner />
             </div>
-        }
+
+            <button on_click={on_click_progress}>
+                {fragment}
+            </button>
+        </div>
     }
 }

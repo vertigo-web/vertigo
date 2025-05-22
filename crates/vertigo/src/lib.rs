@@ -120,7 +120,10 @@ pub use computed::{
     ToComputed, Value,
 };
 
-pub use css::css_structs::{Css, CssGroup};
+pub use css::{
+    css_structs::{Css, CssGroup},
+    tailwind_class::TwClass,
+};
 
 pub use dom::{
     attr_value::{AttrValue, CssAttrValue},
@@ -156,6 +159,24 @@ pub use websocket::{WebsocketConnection, WebsocketMessage};
 ///
 /// This will place the file along with the rest of generated files. The macro returns a public path to the file with it's hash in name.
 pub use vertigo_macro::include_static;
+
+/// Allows to trace additional tailwind class names.
+///
+/// To use tailwind class name outside of literal class attribute value, wrap it with `tw!` macro, so it gets traced by tailwind bundler.
+///
+/// ```rust
+/// use vertigo::{dom, tw};
+///
+/// let my_class = tw!("flex");
+///
+/// dom! {
+///     <div class={my_class}>
+///         <p>"One"</p>
+///         <p>"Two"</p>
+///     </div>
+/// };
+/// ```
+pub use vertigo_macro::tw;
 
 /// Allows to conveniently clone values into closure.
 ///

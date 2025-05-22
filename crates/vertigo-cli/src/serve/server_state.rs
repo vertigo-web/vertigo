@@ -104,7 +104,7 @@ impl ServerState {
 }
 
 fn build_module_wasm(engine: &Engine, mount_path: &MountPathConfig) -> Result<Module, ErrorCode> {
-    let full_wasm_path = mount_path.get_wasm_http_fs_path();
+    let full_wasm_path = mount_path.get_wasm_fs_path();
 
     log::info!("full_wasm_path = {full_wasm_path}");
 
