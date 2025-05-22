@@ -118,9 +118,16 @@ export class MapNodes {
         return item;
     }
 
-    public insert_css(selector: string, value: string) {
-        const content = document.createTextNode(`\n${selector} { ${value} }`);
-        this.style.appendChild(content);
+    public insert_css(selector: string | null, value: string) {
+        if (selector !== null) {
+            // Add autocss styles
+            const content = document.createTextNode(`\n${selector} { ${value} }`);
+            this.style.appendChild(content);
+        } else {
+            // Add bundle (i.e. a tailwind bundle)
+            const content = document.createTextNode(`\n${value}`);
+            this.style.appendChild(content);
+        }
     }
 
     public removeInitNodes() {

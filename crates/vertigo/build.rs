@@ -3,12 +3,18 @@ use std::fs;
 use std::path::{Path, PathBuf};
 
 fn main() {
-    let dir = PathBuf::from(env::var("OUT_DIR").unwrap()).join("../../../static");
+    let target_dir = PathBuf::from(env::var("OUT_DIR").unwrap()).join("../../..");
+
+    eprintln!("removing {}", target_dir.join("classes.txt").to_string_lossy());
+    let _ = fs::remove_file(target_dir.join("tailwind_classes.txt"));
+
+    let dir = target_dir.join("static");
 
     fs::create_dir_all(&dir).unwrap();
 
-    let error = fs::remove_dir_all(dir.join("included"));
-    println!("remove_dir_all => {error:?}");
+    if let Err(error) = fs::remove_dir_all(dir.join("included")) {
+        eprintln!("remove_dir_all => {error:?}");
+    }
 
     // Subdirectory for files included in dom macro invocations
     fs::create_dir_all(dir.join("included")).unwrap();
