@@ -139,5 +139,20 @@ pub fn run_with_ws(opts: BuildOpts, ws: &Workspace, allow_error: bool) -> Result
         });
     }
 
+    // Generate tailwind bundle
+
+    let tailwind_classes_filename = target_path.join("tailwind_classes.txt");
+    log::info!("Generating tailwind bundle from {}", tailwind_classes_filename.to_string_lossy());
+    if let Ok(tailwind_classes) = std::fs::read_to_string(tailwind_classes_filename) {
+        let mut tailwind = tailwind_css::TailwindBuilder::default();
+        for tailwind_classes_row in tailwind_classes.lines() {
+            log::info!("Adding tailwind line: {tailwind_classes_row}");
+            let inline = tailwind.trace(tailwind_classes_row.trim_matches('"'), false);
+            log::info!("output = {inline:?}");
+        }
+        opts.new_path_in_static_make(&["tailwind.css"])
+            .save(tailwind.bundle().unwrap().as_bytes());
+    }
+
     Ok(())
 }

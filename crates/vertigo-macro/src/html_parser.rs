@@ -11,7 +11,7 @@ use rstml::{
 use std::collections::BTreeMap;
 use syn::{spanned::Spanned, Expr, ExprBlock, ExprLit, Ident, Stmt};
 
-use crate::component::get_group_attrs_method_name;
+use crate::{component::get_group_attrs_method_name, trace_tailwind::add_to_tailwind};
 
 const HTML_ATTR_FORMAT_ERROR: &str =
     "in html node. Expected key=\"value\", key={value}, key={}, {value} or {..value} attribute.";
@@ -336,6 +336,15 @@ fn convert_node(node: &Node, convert_to_dom_node: bool) -> TokenStream2 {
     let mut out_child = Vec::new();
 
     let mut push_attr = |name: String, value: TokenStream2| {
+        // Store used class name for tailwind bundler
+        if name.as_str() == "class" {
+            let output = add_to_tailwind(value);
+            out_attr.push(quote! {
+                .attr("class", #output)
+            });
+            return
+        }
+
         let method_str = match name.as_str() {
             "css" | "hook_key_down" | "on_blur" | "on_change" | "on_click" | "on_dropfile"
             | "on_input" | "on_key_down" | "on_load" | "on_mouse_down" | "on_mouse_enter"

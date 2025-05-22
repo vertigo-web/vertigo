@@ -13,6 +13,7 @@ mod html_parser;
 mod include_static;
 mod jsjson;
 mod main_wrap;
+mod trace_tailwind;
 mod wasm_path;
 
 use proc_macro::{Span, TokenStream};
@@ -26,6 +27,7 @@ use crate::{
     html_parser::{dom_element_inner, dom_inner},
     include_static::include_static_inner,
     main_wrap::main_wrap,
+    trace_tailwind::trace_tailwind,
 };
 
 #[proc_macro]
@@ -90,6 +92,12 @@ pub fn auto_js_json(input: TokenStream) -> TokenStream {
             quote! { #empty }.into()
         }
     }
+}
+
+#[proc_macro]
+#[proc_macro_error]
+pub fn tw(input: TokenStream) -> TokenStream {
+    trace_tailwind(input)
 }
 
 #[proc_macro]

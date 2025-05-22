@@ -1,6 +1,6 @@
 use std::rc::Rc;
 
-use vertigo::{bind_spawn, css, dom, get_driver, struct_mut::ValueMut, DomNode, Value};
+use vertigo::{bind_spawn, css, dom, get_driver, struct_mut::ValueMut, tw, DomNode, Value};
 
 use super::spinner::Spinner;
 
@@ -74,8 +74,6 @@ impl Animations {
 
         let css_bg = css! {"
             border: 1px solid black;
-            padding: 10px;
-            background-color: #e0e0e0;
             margin-bottom: 10px;
         "};
 
@@ -88,10 +86,14 @@ impl Animations {
             </span>
         };
 
+        let mut my_class = tw!("py-10 bg-green-500");
+
+        my_class += tw!("flex text-red-400");
+
         dom! {
             <div>
-                <div css={css_bg} {on_mouse_enter} {on_mouse_leave}>
-                    <Spinner />
+                <div class={my_class} css={css_bg} {on_mouse_enter} {on_mouse_leave}>
+                    "Spinner: " <Spinner />
                 </div>
 
                 <button on_click={on_click_progress}>

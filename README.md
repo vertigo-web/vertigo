@@ -25,7 +25,7 @@ Go to **[TUTORIAL](https://github.com/vertigo-web/vertigo/blob/master/tutorial.m
 Dependencies:
 
 ```toml
-vertigo = "0.6"
+vertigo = "0.7"
 ```
 
 Example 1:

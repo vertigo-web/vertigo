@@ -356,12 +356,12 @@ mod tests {
 
         log_start();
         let _el = dom! {
-            <div id="one" css={css1} class="foo bar" css={css2} />
+            <div id="one" css={css1} class="m-10 py-5" css={css2} />
         };
         let html = DomDebugFragment::from_log().to_pseudo_html();
         assert_eq!(
             html,
-            "<div class='foo bar' id='one' style='background: green; color: red' />"
+            "<div class='m-10 py-5' id='one' style='background: green; color: red' />"
         );
     }
 }
