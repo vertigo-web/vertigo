@@ -13,12 +13,12 @@ fn test_explicit_class_attribute() {
     log_start();
 
     let _el = dom! {
-        <div class="dark_bg" css={red_css} />
+        <div class="flex" css={red_css} />
     };
 
     let js_log = DomDebugFragment::from_log();
 
     let el_str = js_log.to_pseudo_html();
 
-    assert_eq!(el_str, r#"<div class='dark_bg' style='color: red' />"#);
+    assert_eq!(el_str, r#"<div class='display-flex' style='color: red' />"#);
 }
