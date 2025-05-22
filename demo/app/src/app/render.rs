@@ -1,19 +1,11 @@
-use vertigo::{css, Computed, Css, dom, DomNode, get_driver, include_static, KeyDownEvent};
+use vertigo::{css, dom, get_driver, include_static, Computed, Css, DomNode, KeyDownEvent};
 
 use crate::app;
 
 use super::{
-    chat::Chat,
-    counters::CountersDemo,
-    dropfiles::DropFiles,
-    game_of_life::GameOfLife,
-    github_explorer::GitHubExplorer,
-    input::MyInput,
-    js_api_access::JsApiAccess,
-    route::Route,
-    styling::Styling,
-    sudoku::Sudoku,
-    todo::Todo,
+    chat::Chat, counters::CountersDemo, dropfiles::DropFiles, game_of_life::GameOfLife,
+    github_explorer::GitHubExplorer, input::MyInput, js_api_access::JsApiAccess, route::Route,
+    styling::Styling, sudoku::Sudoku, todo::Todo,
 };
 
 fn css_menu_item(active: bool) -> Css {
@@ -64,7 +56,7 @@ fn render_header(state: &app::State) -> DomNode {
         false
     };
 
-    let css_menu = css!{"
+    let css_menu = css! {"
         display: flex;
         padding: 0;
     "};
@@ -124,24 +116,26 @@ pub fn render(state: &app::State) -> DomNode {
             Route::Input => dom! { <MyInput value={&state.input} /> },
             Route::GithubExplorer => dom! { <GitHubExplorer state={&state.github_explorer} /> },
             Route::GameOfLife => dom! { <GameOfLife state={&state.game_of_life} /> },
-            Route::Chat => if let Some(ws_chat) = &state.ws_chat {
-                dom! { <Chat {ws_chat}/> }
-            } else {
-                Chat::turn_off_message()
-            },
+            Route::Chat => {
+                if let Some(ws_chat) = &state.ws_chat {
+                    dom! { <Chat {ws_chat}/> }
+                } else {
+                    Chat::turn_off_message()
+                }
+            }
             Route::Todo => dom! { <Todo /> },
             Route::DropFile => dom! { <DropFiles /> },
             Route::JsApiAccess => dom! { <JsApiAccess /> },
             Route::NotFound => {
                 get_driver().set_status(404);
                 dom! { <div>"Page Not Found"</div> }
-            },
+            }
         }
     });
 
     let on_keydown = |_event: KeyDownEvent| -> bool { false };
 
-    let css_wrapper = css!{"
+    let css_wrapper = css! {"
         padding: 5px;
     "};
 

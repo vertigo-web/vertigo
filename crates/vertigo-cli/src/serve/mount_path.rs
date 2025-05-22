@@ -53,7 +53,7 @@ impl MountPathConfig {
         self.translate_to_http(&self.run_js)
     }
 
-    pub fn get_wasm_http_fs_path(&self) -> String {
+    pub fn get_wasm_fs_path(&self) -> String {
         self.translate_to_fs(&self.wasm_path)
     }
 

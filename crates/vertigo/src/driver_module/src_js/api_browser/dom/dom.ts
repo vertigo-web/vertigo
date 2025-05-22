@@ -51,7 +51,7 @@ type CommandType = {
     ref_id: number | null,
 } | {
     type: 'insert_css',
-    selector: string,
+    selector: string | null,
     value: string
 } | {
     type: 'create_comment',

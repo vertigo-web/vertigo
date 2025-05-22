@@ -29,7 +29,7 @@ impl Element {
 pub struct AllElements {
     parent: HashMap<u64, u64>,
     all: HashMap<u64, Node>,
-    css: Vec<(String, String)>,
+    css: Vec<(Option<String>, String)>,
 }
 
 impl AllElements {
@@ -108,7 +108,7 @@ impl AllElements {
         }
     }
 
-    fn insert_css(&mut self, selector: String, value: String) {
+    fn insert_css(&mut self, selector: Option<String>, value: String) {
         self.css.push((selector, value));
     }
 
@@ -200,7 +200,13 @@ impl AllElements {
         let mut style = HtmlElement::new("style");
 
         for (prop, value) in self.css.iter() {
-            let content = [prop.as_str(), " { ", value.as_str(), " }\n"].concat();
+            let content = if let Some(prop) = prop {
+                // Autocss rule
+                [prop.as_str(), " { ", value.as_str(), " }\n"].concat()
+            } else {
+                // Bundle (i.e. a tailwind bundle)
+                value.clone()
+            };
 
             style.add_child(HtmlNode::Text(content));
         }

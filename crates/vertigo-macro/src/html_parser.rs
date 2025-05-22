@@ -11,7 +11,7 @@ use rstml::{
 use std::collections::BTreeMap;
 use syn::{spanned::Spanned, Expr, ExprBlock, ExprLit, Ident, Stmt};
 
-use crate::component::get_group_attrs_method_name;
+use crate::{component::get_group_attrs_method_name, trace_tailwind::add_to_tailwind};
 
 const HTML_ATTR_FORMAT_ERROR: &str =
     "in html node. Expected key=\"value\", key={value}, key={}, {value} or {..value} attribute.";
@@ -335,7 +335,21 @@ fn convert_node(node: &Node, convert_to_dom_node: bool) -> TokenStream2 {
     let mut out_spread_attrs = Vec::new();
     let mut out_child = Vec::new();
 
+    let mut class_values = Vec::new();
+
     let mut push_attr = |name: String, value: TokenStream2| {
+        // Store used class name for tailwind bundler
+        if name.as_str() == "tw" {
+            let output = add_to_tailwind(value);
+            class_values.push(quote! { vertigo::TwClass::from(#output).to_class_value() });
+            return;
+        }
+
+        if name.as_str() == "class" {
+            class_values.push(quote! { #value.to_string() });
+            return;
+        }
+
         let method_str = match name.as_str() {
             "css" | "hook_key_down" | "on_blur" | "on_change" | "on_click" | "on_dropfile"
             | "on_input" | "on_key_down" | "on_load" | "on_mouse_down" | "on_mouse_enter"
@@ -459,6 +473,19 @@ fn convert_node(node: &Node, convert_to_dom_node: bool) -> TokenStream2 {
                 }
             }
         }
+    }
+
+    // Generate code glueing class= values with tw= values
+    if !class_values.is_empty() {
+        let mut output = quote! {};
+        for class_value in class_values {
+            output.append_all(quote! { #class_value, });
+        }
+        out_attr.push(quote! {
+            .attr("class", {
+                [#output].join(" ")
+            })
+        });
     }
 
     if let Some(children) = node.children() {
