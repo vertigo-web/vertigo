@@ -240,11 +240,9 @@ impl DriverDom {
         self.dom_suspense.set_parent(child, parent);
     }
 
-    pub fn insert_css(&self, selector: &str, value: &str) {
-        self.commands.add_command(DriverDomCommand::InsertCss {
-            selector: selector.into(),
-            value: value.into(),
-        });
+    pub fn insert_css(&self, selector: Option<String>, value: String) {
+        self.commands
+            .add_command(DriverDomCommand::InsertCss { selector, value });
     }
 
     pub fn create_comment(&self, id: DomId, value: impl Into<String>) {

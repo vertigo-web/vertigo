@@ -2,45 +2,56 @@ use serde::{Deserialize, Serialize};
 use vertigo::{from_json, JsJson, JsJsonContext, JsJsonDeserialize};
 
 #[derive(Clone, Debug, Serialize, Deserialize, PartialEq)]
-#[serde(tag = "type")]
+#[serde(tag = "type", rename_all = "snake_case")]
 pub enum DomCommand {
-    #[serde(rename = "create_node")]
-    CreateNode { id: u64, name: String },
-    #[serde(rename = "create_text")]
-    CreateText { id: u64, value: String },
-    #[serde(rename = "update_text")]
-    UpdateText { id: u64, value: String },
-    #[serde(rename = "set_attr")]
+    CreateNode {
+        id: u64,
+        name: String,
+    },
+    CreateText {
+        id: u64,
+        value: String,
+    },
+    UpdateText {
+        id: u64,
+        value: String,
+    },
     SetAttr {
         id: u64,
         name: String,
         value: String,
     },
-    #[serde(rename = "remove_attr")]
-    RemoveAttr { id: u64, name: String },
-    #[serde(rename = "remove_node")]
-    RemoveNode { id: u64 },
-    #[serde(rename = "remove_text")]
-    RemoveText { id: u64 },
-    #[serde(rename = "insert_before")]
+    RemoveAttr {
+        id: u64,
+        name: String,
+    },
+    RemoveNode {
+        id: u64,
+    },
+    RemoveText {
+        id: u64,
+    },
     InsertBefore {
         parent: u64,
         child: u64,
         ref_id: Option<u64>,
     },
-    #[serde(rename = "insert_css")]
-    InsertCss { selector: String, value: String },
-    #[serde(rename = "create_comment")]
-    CreateComment { id: u64, value: String },
-    #[serde(rename = "remove_comment")]
-    RemoveComment { id: u64 },
-    #[serde(rename = "callback_add")]
+    InsertCss {
+        selector: Option<String>,
+        value: String,
+    },
+    CreateComment {
+        id: u64,
+        value: String,
+    },
+    RemoveComment {
+        id: u64,
+    },
     CallbackAdd {
         id: u64,
         event_name: String,
         callback_id: u64,
     },
-    #[serde(rename = "callback_remove")]
     CallbackRemove {
         id: u64,
         event_name: String,
