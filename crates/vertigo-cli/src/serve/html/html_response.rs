@@ -95,6 +95,15 @@ impl HtmlResponse {
 
         let head_exists = root_html.modify(&[("head", 0)], move |head| {
             head.add_child(css);
+
+            if let Some(tailwind_http_path) = self.mount_path.get_tailwind_http_path() {
+                head.add_child(
+                    HtmlElement::new("link")
+                        .attr("rel", "stylesheet")
+                        .attr("href", tailwind_http_path)
+                        .attr("type", "text/css")
+                );
+            }
         });
 
         if !head_exists {

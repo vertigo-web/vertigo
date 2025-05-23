@@ -5,6 +5,7 @@ use serde::{Deserialize, Serialize};
 pub struct IndexModel {
     pub run_js: String,
     pub wasm: String,
+    pub tailwind: Option<String>,
 }
 
 #[derive(Args, Debug, Clone)]

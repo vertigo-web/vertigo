@@ -100,6 +100,7 @@ pub fn run_with_ws(opts: BuildOpts, ws: &Workspace, allow_error: bool) -> Result
 
     let wasm_path_target = find_wasm_in_target(&package_name);
     let wasm_path = opts.new_path_in_static_from(&wasm_path_target);
+    let tailwind_path = opts.new_path_in_static_from(&WasmPath::new(PathBuf::from("tailwind.css")));
 
     // Optimize .wasm
 
@@ -115,11 +116,28 @@ pub fn run_with_ws(opts: BuildOpts, ws: &Workspace, allow_error: bool) -> Result
             wasm_path.save_with_hash(wasm_content.as_slice())
         };
 
+    // Generate tailwind bundle
+
+    let tailwind_classes_filename = target_path.join("tailwind_classes.txt");
+    log::info!("Generating tailwind bundle from {}", tailwind_classes_filename.to_string_lossy());
+    let tailwind_hash = if let Ok(tailwind_classes) = std::fs::read_to_string(tailwind_classes_filename) {
+        let mut tailwind = tailwind_css::TailwindBuilder::default();
+        for tailwind_classes_row in tailwind_classes.lines() {
+            log::info!("Adding tailwind line: {tailwind_classes_row}");
+            let inline = tailwind.trace(tailwind_classes_row.trim_matches('"'), false);
+            log::info!("output = {inline:?}");
+        }
+        Some(tailwind_path.save_with_hash(tailwind.bundle().unwrap().as_bytes()))
+    } else {
+        None
+    };
+
     // Generate index.json in destination
 
     let index = IndexModel {
         run_js: opts.public_path_to(run_script_hash_name),
         wasm: opts.public_path_to(wasm_path_hash),
+        tailwind: tailwind_hash.map(|tailwind_hash| opts.public_path_to(tailwind_hash)),
     };
 
     let index_content = serde_json::to_string_pretty(&index).unwrap();
@@ -137,21 +155,6 @@ pub fn run_with_ws(opts: BuildOpts, ws: &Workspace, allow_error: bool) -> Result
                 dest_file_path.save(&content);
             }
         });
-    }
-
-    // Generate tailwind bundle
-
-    let tailwind_classes_filename = target_path.join("tailwind_classes.txt");
-    log::info!("Generating tailwind bundle from {}", tailwind_classes_filename.to_string_lossy());
-    if let Ok(tailwind_classes) = std::fs::read_to_string(tailwind_classes_filename) {
-        let mut tailwind = tailwind_css::TailwindBuilder::default();
-        for tailwind_classes_row in tailwind_classes.lines() {
-            log::info!("Adding tailwind line: {tailwind_classes_row}");
-            let inline = tailwind.trace(tailwind_classes_row.trim_matches('"'), false);
-            log::info!("output = {inline:?}");
-        }
-        opts.new_path_in_static_make(&["tailwind.css"])
-            .save(tailwind.bundle().unwrap().as_bytes());
     }
 
     Ok(())

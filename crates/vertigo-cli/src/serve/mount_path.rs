@@ -14,6 +14,8 @@ pub struct MountPathConfig {
     run_js: String,
     // path to wasm-file
     wasm_path: String,
+    // path to tailwind-file
+    tailwind_path: Option<String>,
 }
 
 impl MountPathConfig {
@@ -25,6 +27,7 @@ impl MountPathConfig {
             mount_point: public_mount_point,
             run_js: index_model.run_js,
             wasm_path: index_model.wasm,
+            tailwind_path: index_model.tailwind,
         })
     }
 
@@ -53,8 +56,12 @@ impl MountPathConfig {
         self.translate_to_http(&self.run_js)
     }
 
-    pub fn get_wasm_http_fs_path(&self) -> String {
+    pub fn get_wasm_fs_path(&self) -> String {
         self.translate_to_fs(&self.wasm_path)
+    }
+
+    pub fn get_tailwind_http_path(&self) -> Option<String> {
+        self.tailwind_path.as_ref().map(|tailwind_path| self.translate_to_http(tailwind_path))
     }
 
     fn translate_to_http(&self, fs_path: impl Into<String>) -> String {

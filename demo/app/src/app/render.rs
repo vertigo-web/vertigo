@@ -165,7 +165,6 @@ pub fn render(state: &app::State) -> DomNode {
                         border: 0;
                     }
                 "</style>
-                <link rel="stylesheet" href="build/tailwind.css" type="text/css" />
             </head>
             <body>
                 <div on_key_down={on_keydown} css={css_wrapper}>
