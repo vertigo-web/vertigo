@@ -5,3 +5,7 @@
 /node_modules
 /target
 Cargo.lock
+
+**/*.swp
+!**/lib.rs.swp
+**/*.rs.bk
