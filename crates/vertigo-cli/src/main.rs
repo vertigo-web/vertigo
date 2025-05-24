@@ -10,6 +10,7 @@ use clap::{Parser, Subcommand};
 
 pub use build::BuildOpts;
 pub use commons::models::CommonOpts;
+use env_logger::Builder;
 pub use new::NewOpts;
 pub use serve::ServeOpts;
 pub use watch::WatchOpts;
@@ -32,10 +33,11 @@ enum Command {
 
 #[tokio::main]
 pub async fn main() -> Result<(), i32> {
-    env_logger::Builder::new()
-        .filter(None, log::LevelFilter::Info)
-        .filter(Some("cargo::core::compiler"), log::LevelFilter::Warn)
-        .filter(Some("cranelift_codegen::context"), log::LevelFilter::Warn)
+    Builder::new()
+        .parse_env("RUST_LOG")
+        // .filter(Some("cargo::core::compiler"), log::LevelFilter::Warn)
+        .filter(Some("cranelift_codegen"), log::LevelFilter::Warn)
+        .filter(Some("wasmtime_cranelift::compiler"), log::LevelFilter::Warn)
         .init();
 
     let cli = Cli::parse();
