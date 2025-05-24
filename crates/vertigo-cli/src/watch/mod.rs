@@ -1,3 +1,4 @@
+mod ignore_agent;
 mod is_http_server_listening;
 mod sse;
 mod watch_opts;

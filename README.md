@@ -5,7 +5,7 @@ A reactive Real-DOM library with SSR for Rust
 [![crates.io](https://img.shields.io/crates/v/vertigo)](https://crates.io/crates/vertigo)
 [![Documentation](https://docs.rs/vertigo/badge.svg)](https://docs.rs/vertigo)
 ![MIT or Apache 2.0 licensed](https://img.shields.io/crates/l/vertigo.svg)
-[![Dependency Status](https://deps.rs/crate/vertigo/0.6.4/status.svg)](https://deps.rs/crate/vertigo/0.6.4)
+[![Dependency Status](https://deps.rs/crate/vertigo/0.7.0/status.svg)](https://deps.rs/crate/vertigo/0.7.0)
 [![CI](https://github.com/vertigo-web/vertigo/actions/workflows/pipeline.yaml/badge.svg)](https://github.com/vertigo-web/vertigo/actions/workflows/pipeline.yaml)
 [![downloads](https://img.shields.io/crates/d/vertigo.svg)](https://crates.io/crates/vertigo)
 
@@ -25,7 +25,7 @@ Go to **[TUTORIAL](https://github.com/vertigo-web/vertigo/blob/master/tutorial.m
 Dependencies:
 
 ```toml
-vertigo = "0.6"
+vertigo = "0.7"
 ```
 
 Example 1:

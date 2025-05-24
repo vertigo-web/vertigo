@@ -13,6 +13,7 @@ use tokio_retry::{strategy::FibonacciBackoff, Retry};
 
 use crate::build::{get_workspace, Workspace};
 use crate::commons::{spawn::SpawnOwner, ErrorCode};
+use crate::watch::ignore_agent::IgnoreAgents;
 use crate::watch::sse::handler_sse;
 
 use super::is_http_server_listening::is_http_server_listening;
@@ -57,28 +58,36 @@ pub async fn run(mut opts: WatchOpts) -> Result<(), ErrorCode> {
 
     log::info!("package_name ==> {package_name:?}");
 
-    let path = ws.find_package_path(&package_name);
-    log::info!("path ==> {path:?}");
+    let root = ws.find_package_path(&package_name);
+    log::info!("path ==> {root:?}");
 
-    let Some(path) = path else {
+    let Some(root) = root else {
         log::error!("package not found ==> {:?}", opts.build.package_name);
         return Err(ErrorCode::PackageNameNotFound);
     };
 
-    let excludes = [path.join("target"), path.join(opts.common.dest_dir.clone())];
+    let excludes = [root.join("target"), root.join(opts.common.dest_dir.clone())];
 
     let notify_build = Arc::new(Notify::new());
 
     let watch_result = notify::recommended_watcher({
         let notify_build = notify_build.clone();
 
+        // Generate one Gitignore instance per every watched directory
+        let ignore_agents = IgnoreAgents::new(&ws.get_root_dir().into(), &opts);
+
         move |res: Result<notify::Event, _>| match res {
             Ok(event) => {
                 if event.paths.iter().all(|path| {
+                    // Check against hardcoded excludes
                     for exclude_path in &excludes {
                         if path.starts_with(exclude_path) {
                             return true;
                         }
+                    }
+                    // Check against ignore lists and custom excludes
+                    if ignore_agents.should_be_ignored(path) {
+                        return true;
                     }
                     false
                 }) {
@@ -121,7 +130,7 @@ pub async fn run(mut opts: WatchOpts) -> Result<(), ErrorCode> {
     });
 
     use notify::Watcher;
-    watcher.watch(&path, RecursiveMode::Recursive).unwrap();
+    watcher.watch(&root, RecursiveMode::Recursive).unwrap();
 
     for watch_path in &opts.add_watch_path {
         match watcher.watch(Path::new(watch_path), RecursiveMode::Recursive) {
