@@ -1,6 +1,6 @@
 use proc_macro::TokenStream;
 use quote::{quote, ToTokens};
-use syn::{spanned::Spanned, FnArg, Ident, Pat, Visibility};
+use syn::{spanned::Spanned, FnArg, Ident, Pat};
 
 pub(crate) fn component_inner(_attrs: TokenStream, input: TokenStream) -> TokenStream {
     let ast = syn::parse_macro_input!(input as syn::ItemFn);
@@ -94,26 +94,15 @@ pub(crate) fn component_inner(_attrs: TokenStream, input: TokenStream) -> TokenS
 
     let visibility = &ast.vis;
 
-    let visibility2 = match visibility {
-        Visibility::Public(_) => {
-            quote! {
-                pub
-            }
-        }
-        _ => {
-            quote! {}
-        }
-    };
-
     let component_name = get_component_name(&name);
 
     let result = quote! {
         #(#fn_attrs)*
-        #visibility2 struct #name #impl_generics #where_clause {
+        #visibility struct #name #impl_generics #where_clause {
             #(#struct_fields,)*
         }
 
-        #visibility2 struct #component_name #impl_generics #where_clause {
+        #visibility struct #component_name #impl_generics #where_clause {
             #(#struct_fields,)*
             #(#group_fields,)*
         }

@@ -8,6 +8,10 @@
 * vertigo-cli: `--watch-ignore-lists` parameter to ignore irrelevant files during watch (defaults to .gitignore) [#351]
 * vertigo-cli: `--global-ignores` to add custom wildcards to ignore during watch [#351]
 
+### Fixed
+
+* Visibility in `component` macro [#357]
+
 ## 0.7.0 - 2025-05-03
 
 ### Added
