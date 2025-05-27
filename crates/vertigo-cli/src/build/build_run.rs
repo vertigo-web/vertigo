@@ -7,7 +7,7 @@ use super::{
     cargo_build::run_cargo_build,
     cargo_workspace::{get_workspace, Workspace},
     check_env::check_env,
-    find_target::{find_package_rlib_in_target, find_wasm_in_target},
+    find_target::{find_package_rlib_in_target, find_wasm_in_target, profile_name},
     wasm_opt::run_wasm_opt,
     wasm_path::WasmPath,
 };
@@ -44,6 +44,9 @@ pub fn run_with_ws(opts: BuildOpts, ws: &Workspace, allow_error: bool) -> Result
 
     check_env()?;
 
+    let release = opts.inner.release_mode.unwrap_or(true);
+    let profile = profile_name(release);
+
     let dest_dir = WasmPath::new(PathBuf::from(&opts.common.dest_dir));
 
     // Clean destination
@@ -53,15 +56,20 @@ pub fn run_with_ws(opts: BuildOpts, ws: &Workspace, allow_error: bool) -> Result
 
     // Delete rlibs to re-generate static files
 
-    find_package_rlib_in_target(&package_name).remove_file();
+    find_package_rlib_in_target(&package_name, profile).remove_file();
 
     // Run build
 
-    let target_path =
-        match run_cargo_build(&package_name, &opts.get_public_path(), ws, allow_error)? {
-            Ok(path) => path,
-            Err(_) => return Err(ErrorCode::BuildFailed),
-        };
+    let target_path = match run_cargo_build(
+        &package_name,
+        &opts.get_public_path(),
+        ws,
+        allow_error,
+        release,
+    )? {
+        Ok(path) => path,
+        Err(_) => return Err(ErrorCode::BuildFailed),
+    };
 
     // Get wasm_run.js and index.template.html from vertigo build
 
@@ -98,13 +106,13 @@ pub fn run_with_ws(opts: BuildOpts, ws: &Workspace, allow_error: bool) -> Result
 
     // Copy .wasm to destination
 
-    let wasm_path_target = find_wasm_in_target(&package_name);
+    let wasm_path_target = find_wasm_in_target(&package_name, profile);
     let wasm_path = opts.new_path_in_static_from(&wasm_path_target);
 
     // Optimize .wasm
 
     let wasm_path_hash =
-        if !opts.inner.disable_wasm_opt && run_wasm_opt(&wasm_path_target, &wasm_path) {
+        if opts.inner.wasm_opt.unwrap_or(true) && run_wasm_opt(&wasm_path_target, &wasm_path) {
             // optimized
             let wasm_path_hash = wasm_path.save_with_hash(wasm_path.read().as_slice());
             wasm_path.remove_file();

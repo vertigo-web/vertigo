@@ -1,10 +1,11 @@
 <!-- markdownlint-configure-file { "no-duplicate-heading": { "siblings_only": true } } -->
 
 <!-- markdownlint-disable-next-line first-line-h1 -->
-## Unreleased
+## 0.7.1 - 2025-05-29
 
 ### Added
 
+* vertigo-cli: `--release-mode` and `--wasm-opt` parameters for `build` and `watch` commands [#358]
 * vertigo-cli: `--watch-ignore-lists` parameter to ignore irrelevant files during watch (defaults to .gitignore) [#351]
 * vertigo-cli: `--global-ignores` to add custom wildcards to ignore during watch [#351]
 

@@ -2,6 +2,8 @@ use proc_macro::{Span, TokenStream};
 use quote::quote;
 use std::path::PathBuf;
 
+use crate::get_target_dir::get_target_wasm_dir_with;
+
 use super::wasm_path::WasmPath;
 
 pub(crate) fn include_static_inner(input: TokenStream) -> TokenStream {
@@ -32,25 +34,10 @@ fn bundle_file(mut file_path: PathBuf, file: String) -> Result<String, String> {
         return Err(format!("File does not exist: {}", file_path.as_string()));
     }
 
-    if cfg!(debug_assertions) {
-        // Don't produce assets if not in build mode
-        Ok(String::default())
-    } else {
+    if std::env::var("VERTIGO_BUNDLE").is_ok() {
         // Intermediate directory
         let file_name = file_path.file_name();
-        let file_static_target = {
-            let mut target_path = WasmPath::new(PathBuf::from(
-                std::env::var("CARGO_TARGET_DIR").unwrap_or_else(|_| {
-                    format!(
-                        "target/{}/release",
-                        std::env::var("TARGET")
-                            .unwrap_or_else(|_| "wasm32-unknown-unknown".to_string())
-                    )
-                }),
-            ));
-            target_path.push(&["static", "included", file_name.as_str()]);
-            target_path
-        };
+        let file_static_target = get_target_wasm_dir_with(&["static", "included", &file_name]);
 
         let file_path_content = file_path.read();
         let hash = file_static_target.save_with_hash(file_path_content.as_slice());
@@ -63,5 +50,8 @@ fn bundle_file(mut file_path: PathBuf, file: String) -> Result<String, String> {
         let http_path = format!("{public_path}/{hash}");
 
         Ok(http_path)
+    } else {
+        // Don't produce assets if not in build mode
+        Ok(String::default())
     }
 }

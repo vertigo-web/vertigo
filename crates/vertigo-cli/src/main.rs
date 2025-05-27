@@ -1,5 +1,6 @@
 use clap::{Parser, Subcommand};
 use env_logger::Builder;
+use log::LevelFilter;
 use std::process::exit;
 
 pub mod build;
@@ -33,9 +34,10 @@ enum Command {
 #[tokio::main]
 pub async fn main() -> Result<(), i32> {
     Builder::new()
+        .filter_level(LevelFilter::Info)
         .parse_env("RUST_LOG")
-        .filter(Some("cranelift_codegen"), log::LevelFilter::Warn)
-        .filter(Some("wasmtime_cranelift::compiler"), log::LevelFilter::Warn)
+        .filter(Some("cranelift_codegen"), LevelFilter::Warn)
+        .filter(Some("wasmtime_cranelift::compiler"), LevelFilter::Warn)
         .init();
 
     let cli = Cli::parse();

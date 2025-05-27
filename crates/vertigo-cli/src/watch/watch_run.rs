@@ -66,6 +66,14 @@ pub async fn run(mut opts: WatchOpts) -> Result<(), ErrorCode> {
         return Err(ErrorCode::PackageNameNotFound);
     };
 
+    // If optimization params not provided, default to false
+    if opts.build.release_mode.is_none() {
+        opts.build.release_mode = Some(false);
+    }
+    if opts.build.wasm_opt.is_none() {
+        opts.build.wasm_opt = Some(false);
+    }
+
     let excludes = [root.join("target"), root.join(opts.common.dest_dir.clone())];
 
     let notify_build = Arc::new(Notify::new());
