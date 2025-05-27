@@ -2,6 +2,8 @@ use base64::{engine::general_purpose::URL_SAFE_NO_PAD, Engine as _};
 use crc::{Crc, CRC_64_ECMA_182};
 use std::{io::ErrorKind, path::PathBuf};
 
+use crate::commons::ErrorCode;
+
 #[derive(Debug)]
 pub struct WasmPath {
     path: PathBuf,
@@ -62,7 +64,10 @@ impl WasmPath {
     }
 
     pub fn read(&self) -> Vec<u8> {
-        std::fs::read(&self.path).unwrap()
+        std::fs::read(&self.path).unwrap_or_else(|err| {
+            log::error!("Can't read {}: {err}", self.path.to_string_lossy());
+            std::process::exit(ErrorCode::BuildFailed as i32);
+        })
     }
 
     pub fn push(&mut self, name: impl Into<String>) {

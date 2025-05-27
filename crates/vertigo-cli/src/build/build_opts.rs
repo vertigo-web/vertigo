@@ -20,8 +20,18 @@ pub struct BuildOptsInner {
     /// Hard-code public path so the build can be used statically
     #[arg(long)]
     pub public_path: Option<String>,
+    /// Whether to perform WASM optimization with wasm-opt command
+    ///
+    /// This defaults to false (no optimization) for `watch` command
+    /// and to true (optimization) for `build` command
     #[arg(short, long)]
-    pub disable_wasm_opt: bool,
+    pub wasm_opt: Option<bool>,
+    /// Whether to build WASM using release profile
+    ///
+    /// This defaults to false (debug profile) for `watch` command
+    /// and to true (release profile) for `build` command
+    #[arg(short, long)]
+    pub release_mode: Option<bool>,
     #[arg(long)]
     pub wasm_run_source_map: bool,
 }

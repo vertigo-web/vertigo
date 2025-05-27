@@ -9,6 +9,7 @@ mod api_access;
 mod bind;
 mod component;
 mod css_parser;
+mod get_target_dir;
 mod html_parser;
 mod include_static;
 mod jsjson;

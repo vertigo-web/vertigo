@@ -16,7 +16,8 @@ async fn basic() {
         inner: build::BuildOptsInner {
             package_name: Some("vertigo-test-basic".to_string()),
             public_path: Some("/build".to_string()),
-            disable_wasm_opt: false,
+            wasm_opt: Some(true),
+            release_mode: Some(true),
             wasm_run_source_map: true,
         },
     };
