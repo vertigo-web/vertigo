@@ -1,6 +1,12 @@
 <!-- markdownlint-configure-file { "no-duplicate-heading": { "siblings_only": true } } -->
 
 <!-- markdownlint-disable-next-line first-line-h1 -->
+## Unreleased
+
+### Fixed
+
+* Browser warning about missing source map [#361]
+
 ## 0.7.1 - 2025-05-29
 
 ### Added

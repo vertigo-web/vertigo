@@ -75,13 +75,17 @@ pub fn run_with_ws(opts: BuildOpts, ws: &Workspace, allow_error: bool) -> Result
 
     let vertigo_statics_dir = target_path.join("static");
 
-    let run_script_content = match std::fs::read(vertigo_statics_dir.join("wasm_run.js")) {
+    let mut run_script_content = match std::fs::read(vertigo_statics_dir.join("wasm_run.js")) {
         Ok(content) => content,
         Err(err) => {
             log::error!("Can't read wasm_run from statics directory: {err}");
             return Err(ErrorCode::CantReadWasmRunFromStatics);
         }
     };
+
+    if !opts.inner.wasm_run_source_map {
+        erase_last_two_lines(&mut run_script_content);
+    }
 
     let run_script_hash_name = opts
         .new_path_in_static_make(&["wasm_run.js"])
@@ -148,4 +152,22 @@ pub fn run_with_ws(opts: BuildOpts, ws: &Workspace, allow_error: bool) -> Result
     }
 
     Ok(())
+}
+
+fn erase_last_two_lines(content: &mut Vec<u8>) {
+    // Find the positions of the last two newline characters
+    let mut last_newline_pos = None;
+    let mut second_last_newline_pos = None;
+
+    for (i, &byte) in content.iter().enumerate() {
+        if byte == b'\n' {
+            second_last_newline_pos = last_newline_pos; // Update second last
+            last_newline_pos = Some(i); // Update last
+        }
+    }
+
+    // Truncate the Vec<u8> to the position of the second last newline
+    if let Some(second_last) = second_last_newline_pos {
+        content.truncate(second_last);
+    }
 }
