@@ -6,9 +6,9 @@ use crate::commons::parse_key_val;
 #[derive(Args, Clone, Debug)]
 pub struct ServeOpts {
     #[clap(flatten)]
-    pub common: CommonOpts,
-    #[clap(flatten)]
     pub inner: ServeOptsInner,
+    #[clap(flatten)]
+    pub common: CommonOpts,
 }
 
 #[derive(Args, Clone, Debug)]

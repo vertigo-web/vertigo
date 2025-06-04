@@ -12,6 +12,7 @@ async fn basic() {
     let opts = BuildOpts {
         common: CommonOpts {
             dest_dir: "./build".to_string(),
+            log_local_time: None,
         },
         inner: build::BuildOptsInner {
             package_name: Some("vertigo-test-basic".to_string()),
@@ -38,6 +39,7 @@ async fn basic() {
         let opts = ServeOpts {
             common: CommonOpts {
                 dest_dir: "./build".to_string(),
+                log_local_time: None,
             },
             inner: serve::ServeOptsInner {
                 host: "127.0.0.1".into(),
