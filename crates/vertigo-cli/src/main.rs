@@ -1,6 +1,4 @@
 use clap::{Parser, Subcommand};
-use env_logger::Builder;
-use log::LevelFilter;
 use std::process::exit;
 
 pub mod build;
@@ -14,6 +12,8 @@ pub use commons::models::CommonOpts;
 pub use new::NewOpts;
 pub use serve::ServeOpts;
 pub use watch::WatchOpts;
+
+use commons::logging::setup_logging;
 
 #[derive(Parser)]
 #[command(author, version, about, long_about = None)]
@@ -33,14 +33,9 @@ enum Command {
 
 #[tokio::main]
 pub async fn main() -> Result<(), i32> {
-    Builder::new()
-        .filter_level(LevelFilter::Info)
-        .parse_env("RUST_LOG")
-        .filter(Some("cranelift_codegen"), LevelFilter::Warn)
-        .filter(Some("wasmtime_cranelift::compiler"), LevelFilter::Warn)
-        .init();
-
     let cli = Cli::parse();
+
+    setup_logging(&cli.command);
 
     let ret = match cli.command {
         Command::Build(opts) => build::run(opts),

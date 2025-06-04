@@ -9,9 +9,9 @@ use super::wasm_path::WasmPath;
 #[derive(Args, Debug, Clone)]
 pub struct BuildOpts {
     #[clap(flatten)]
-    pub common: CommonOpts,
-    #[clap(flatten)]
     pub inner: BuildOptsInner,
+    #[clap(flatten)]
+    pub common: CommonOpts,
 }
 
 #[derive(Args, Debug, Clone)]

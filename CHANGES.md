@@ -7,6 +7,10 @@
 
 * Browser warning about missing source map [#361]
 
+### Changed
+
+* vertigo-cli: `watch` command now logs local time, can be changed using `--log-local-time` parameter [#354]
+
 ## 0.7.1 - 2025-05-29
 
 ### Added

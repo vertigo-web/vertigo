@@ -7,12 +7,6 @@ use crate::ServeOpts;
 
 #[derive(Args, Debug, Clone)]
 pub struct WatchOpts {
-    #[clap(flatten)]
-    pub common: CommonOpts,
-    #[clap(flatten)]
-    pub build: BuildOptsInner,
-    #[clap(flatten)]
-    pub serve: ServeOptsInner,
 
     #[arg(long, default_value_t = {5555})]
     pub port_watch: u16,
@@ -28,6 +22,15 @@ pub struct WatchOpts {
     /// Additional globs to ignore in every watch path (space-separated, .gitignore format)
     #[arg(long, default_value_t = {"**/*.swp **/*.swx **/*.rs.bk".to_string()}, hide_short_help(true))]
     pub global_ignores: String,
+
+    #[clap(flatten)]
+    pub serve: ServeOptsInner,
+
+    #[clap(flatten)]
+    pub build: BuildOptsInner,
+
+    #[clap(flatten)]
+    pub common: CommonOpts,
 }
 
 impl WatchOpts {
