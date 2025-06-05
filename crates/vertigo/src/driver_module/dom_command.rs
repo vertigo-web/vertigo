@@ -37,7 +37,7 @@ pub enum DriverDomCommand {
         ref_id: Option<DomId>,
     },
     InsertCss {
-        selector: String,
+        selector: Option<String>,
         value: String,
     },
 
