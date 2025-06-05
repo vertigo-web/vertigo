@@ -2,44 +2,7 @@ import { assertNever } from "./assert_never";
 import { BufferCursor, getStringSize } from "./buffer_cursor";
 import { GuardJsValue } from "./guard";
 import { jsJsonDecodeItem, jsJsonGetSize, JsJsonType, saveJsJsonToBufferItem } from "./jsjson";
-
-export const JsValueConst = {
-    U32: 1,
-    I32: 2,
-    U64: 3,
-    I64: 4,
-    F64: 5,
-
-    True: 6,
-    False: 7,
-    Null: 8,
-    Undefined: 9,
-
-    Vec: 10,
-    String: 11,
-    List: 12,
-    Object: 13,
-    Json: 14,
-} as const;
-
-export type JsValueType
-    = { type: typeof JsValueConst.U32, value: number, }
-    | { type: typeof JsValueConst.I32, value: number, }
-    | { type: typeof JsValueConst.U64, value: bigint, }
-    | { type: typeof JsValueConst.I64, value: bigint, }
-    | { type: typeof JsValueConst.F64, value: number, }
-    | boolean
-    | null
-    | undefined
-    | string
-    | Array<JsValueType>
-    | Uint8Array
-    | { type: typeof JsValueConst.Object, value: JsValueMapType }
-    | { type: typeof JsValueConst.Json, value: JsJsonType };
-
-interface JsValueMapType {
-    [key: string]: JsValueType
-}
+import { JsValueType, JsValueConst } from "./jsvalue_types";
 
 //https://github.com/unsplash/unsplash-js/pull/174
 // export type AnyJson = boolean | number | string | null | JsonArray | JsonMap;

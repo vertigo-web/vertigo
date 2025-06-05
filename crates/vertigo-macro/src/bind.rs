@@ -30,7 +30,11 @@ pub(crate) fn bind_inner(input: TokenStream) -> Result<TokenStream, String> {
         };
 
         if !idents_seen.insert(param_name.clone()) {
-            emit_error!(item.last().unwrap().span(), "Conflicting variable name: {}", param_name);
+            emit_error!(
+                item.last().unwrap().span(),
+                "Conflicting variable name: {}",
+                param_name
+            );
         }
 
         let item_expr = item.iter().cloned().collect::<TokenStream2>();
@@ -188,7 +192,7 @@ fn contains_bracket(tokens: &[TokenTree]) -> bool {
     false
 }
 
-fn split_params_and_body_function(tokens: &[TokenTree]) -> Result<TokensParamsBody, String> {
+fn split_params_and_body_function(tokens: &[TokenTree]) -> Result<TokensParamsBody<'_>, String> {
     let mut chunks = tokens
         .split(|token| is_char(token, '|'))
         .collect::<VecDeque<_>>();
@@ -234,7 +238,7 @@ fn split_params_and_body_function(tokens: &[TokenTree]) -> Result<TokensParamsBo
     })
 }
 
-fn split_params_and_body_block(tokens: &[TokenTree]) -> Result<TokensParamsBody, String> {
+fn split_params_and_body_block(tokens: &[TokenTree]) -> Result<TokensParamsBody<'_>, String> {
     let mut chunks = tokens
         .split(|token| is_char(token, ','))
         .collect::<Vec<_>>();
@@ -248,7 +252,7 @@ fn split_params_and_body_block(tokens: &[TokenTree]) -> Result<TokensParamsBody,
     })
 }
 
-fn split_params_and_body(tokens: &[TokenTree]) -> Result<TokensParamsBody, String> {
+fn split_params_and_body(tokens: &[TokenTree]) -> Result<TokensParamsBody<'_>, String> {
     let bracket_contain = contains_bracket(tokens);
 
     if bracket_contain {

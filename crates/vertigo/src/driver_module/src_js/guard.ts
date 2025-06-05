@@ -1,4 +1,4 @@
-import { JsValueType, JsValueConst } from "./jsvalue";
+import { JsValueType, JsValueConst } from "./jsvalue_types";
 
 export namespace GuardJsValue {
     export const isString = (value: JsValueType): value is string => {

@@ -1,5 +1,6 @@
 import { ApiBrowser } from "./api_browser";
-import { convertFromJsValue, convertToJsValue, JsValueType } from "./jsvalue";
+import { convertFromJsValue, convertToJsValue } from "./jsvalue";
+import { JsValueType } from "./jsvalue_types";
 import { GuardJsValue } from './guard';
 import { MapNodes } from "./api_browser/dom/map_nodes";
 
