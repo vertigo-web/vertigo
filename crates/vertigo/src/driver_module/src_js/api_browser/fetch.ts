@@ -1,5 +1,5 @@
 import { JsJsonType } from "../jsjson";
-import { JsValueConst } from "../jsvalue";
+import { JsValueConst } from "../jsvalue_types";
 import { ModuleControllerType } from "../wasm_init";
 import { ExportType } from "../wasm_module";
 

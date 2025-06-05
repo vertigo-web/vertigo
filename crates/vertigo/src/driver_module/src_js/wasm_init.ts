@@ -1,4 +1,5 @@
-import { jsValueDecode, JsValueType, saveToBuffer } from './jsvalue';
+import { jsValueDecode, saveToBuffer } from './jsvalue';
+import { JsValueType } from './jsvalue_types';
 
 export interface BaseExportType {
     alloc: (size: number) => number,
