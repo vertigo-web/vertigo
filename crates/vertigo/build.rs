@@ -5,8 +5,7 @@ use std::path::{Path, PathBuf};
 fn main() {
     let target_dir = PathBuf::from(env::var("OUT_DIR").unwrap()).join("../../..");
 
-    eprintln!("removing {}", target_dir.join("classes.txt").to_string_lossy());
-    let _ = fs::remove_file(target_dir.join("tailwind_classes.txt"));
+    let _ = fs::remove_dir_all(target_dir.join("tailwind"));
 
     let dir = target_dir.join("static");
 

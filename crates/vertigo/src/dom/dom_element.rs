@@ -98,7 +98,7 @@ impl DomElement {
 
     pub fn add_attr_group_item(self, key: String, value: AttrGroupValue) -> Self {
         match (key.as_str(), value) {
-            ("css", AttrGroupValue::Css(css)) => self.css(css), // tu on_click i inne warianty
+            ("css", AttrGroupValue::Css(css)) => self.css(css),
             ("hook_key_down", AttrGroupValue::HookKeyDown(on_hook_key_down)) => {
                 self.hook_key_down(on_hook_key_down)
             }
