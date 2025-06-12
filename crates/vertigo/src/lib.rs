@@ -162,7 +162,7 @@ pub use vertigo_macro::include_static;
 
 /// Allows to trace additional tailwind class names.
 ///
-/// To use tailwind class name outside of literal class attribute value, wrap it with `tw!` macro, so it gets traced by tailwind bundler.
+/// To use tailwind class name outside of literal tw attribute value, wrap it with `tw!` macro, so it gets traced by tailwind bundler.
 ///
 /// ```rust
 /// use vertigo::{dom, tw};
@@ -170,7 +170,7 @@ pub use vertigo_macro::include_static;
 /// let my_class = tw!("flex");
 ///
 /// dom! {
-///     <div class={my_class}>
+///     <div tw={my_class}>
 ///         <p>"One"</p>
 ///         <p>"Two"</p>
 ///     </div>
@@ -460,7 +460,9 @@ pub mod prelude {
 // Internals below
 //------------------------------------------------------------------------------------------------------------------
 
-pub use driver_module::driver::{VERTIGO_MOUNT_POINT_PLACEHOLDER, VERTIGO_PUBLIC_BUILD_PATH_PLACEHOLDER};
+pub use driver_module::driver::{
+    VERTIGO_MOUNT_POINT_PLACEHOLDER, VERTIGO_PUBLIC_BUILD_PATH_PLACEHOLDER,
+};
 
 fn get_driver_state<R: Default, F: FnOnce(&DriverConstruct) -> R>(
     label: &'static str,
