@@ -12,6 +12,7 @@ pub fn run_cargo_build(
     ws: &Workspace,
     allow_error: bool,
     release: bool,
+    external_tailwind: bool,
 ) -> Result<Result<PathBuf, String>, ErrorCode> {
     log::info!("Building {package_name}");
 
@@ -31,6 +32,10 @@ pub fn run_cargo_build(
         .env("VERTIGO_PUBLIC_PATH", vertigo_public_path)
         // Tell macros that we're bundling so it will produce artifacts
         .env("VERTIGO_BUNDLE", "true");
+
+    if external_tailwind {
+        command = command.env("VERTIGO_EXT_TAILWIND", "true");
+    }
 
     if allow_error {
         command = command.allow_error();
