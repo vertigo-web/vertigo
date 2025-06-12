@@ -11,6 +11,7 @@ pub fn Tailwind() {
             <div class="some-external-class" tw={my_class}>
                 "Some tailwind-styled elements"
             </div>
+            <div tw="bg-blue-400 w-full md:w-30 sm:w-20">"Tailwind CSS 4 test"</div>
         </div>
     }
 }

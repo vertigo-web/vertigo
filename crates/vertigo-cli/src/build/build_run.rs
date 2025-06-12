@@ -46,6 +46,7 @@ pub fn run_with_ws(opts: BuildOpts, ws: &Workspace, allow_error: bool) -> Result
 
     let release = opts.inner.release_mode.unwrap_or(true);
     let profile = profile_name(release);
+    let external_tailwind = opts.inner.external_tailwind;
 
     let dest_dir = WasmPath::new(PathBuf::from(&opts.common.dest_dir));
 
@@ -66,6 +67,7 @@ pub fn run_with_ws(opts: BuildOpts, ws: &Workspace, allow_error: bool) -> Result
         ws,
         allow_error,
         release,
+        external_tailwind,
     )? {
         Ok(path) => path,
         Err(_) => return Err(ErrorCode::BuildFailed),

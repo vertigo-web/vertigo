@@ -44,7 +44,7 @@ pub async fn main() -> Result<(), i32> {
         Command::Watch(opts) => watch::run(opts).await,
     };
 
-    // Tokio doesn't proparate error codes to shell, so do it manually
+    // Tokio doesn't propagate error codes to shell, so do it manually
     if let Err(err) = ret {
         exit(err as i32);
     }

@@ -5,6 +5,7 @@
 
 ### Added
 
+* Tailwind support (internal rust-only, and external node-based) [#353]
 * `js!` macro which allows to evaluate simple JavaScript expressions. [#372]
 
 ### Changed
@@ -21,6 +22,7 @@
 
 * `window!` and `document!` macros (replaced by `js!`).
 
+[#353]: https://github.com/vertigo-web/vertigo/issues/353
 [#368]: https://github.com/vertigo-web/vertigo/issues/368
 [#372]: https://github.com/vertigo-web/vertigo/issues/372
 
