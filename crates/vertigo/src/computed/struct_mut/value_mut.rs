@@ -51,10 +51,13 @@ impl<T: Clone> ValueMut<T> {
 }
 
 impl<T: PartialEq> ValueMut<T> {
-    pub fn set_and_check(&self, value: T) -> bool {
+    pub fn set_if_changed(&self, value: T) -> bool {
         let state = self.value.get_mut();
-        let is_change = *state != value;
-        *state = value;
-        is_change
+        if *state != value {
+            *state = value;
+            true
+        } else {
+            false
+        }
     }
 }

@@ -103,7 +103,10 @@ impl<T: Clone + 'static> Value<T> {
         computed
     }
 
-    pub fn set(&self, value: T) {
+    /// Allows to set a new value if T doesn't implement PartialEq.
+    ///
+    /// This will always trigger a graph change even if the value == old value.
+    pub fn set_force(&self, value: T) {
         self.inner.deps.transaction(|_| {
             self.inner.value.set(value);
             self.inner.deps.report_set(self.inner.id);
@@ -113,14 +116,6 @@ impl<T: Clone + 'static> Value<T> {
     pub fn get(&self, context: &Context) -> T {
         context.add_parent(self.inner.id);
         self.inner.value.get()
-    }
-
-    pub fn change(&self, change_fn: impl FnOnce(&mut T)) {
-        self.inner.deps.transaction(|ctx| {
-            let mut value = self.get(ctx);
-            change_fn(&mut value);
-            self.set(value);
-        });
     }
 
     pub fn map<K: Clone + 'static, F: 'static + Fn(T) -> K>(&self, fun: F) -> Computed<K> {
@@ -158,9 +153,17 @@ impl<T: Clone + 'static> ToComputed<T> for &Value<T> {
 }
 
 impl<T: Clone + PartialEq + 'static> Value<T> {
-    pub fn set_value_and_compare(&self, value: T) {
+    pub fn change(&self, change_fn: impl FnOnce(&mut T)) {
+        self.inner.deps.transaction(|ctx| {
+            let mut value = self.get(ctx);
+            change_fn(&mut value);
+            self.set(value);
+        });
+    }
+
+    pub fn set(&self, value: T) {
         self.inner.deps.transaction(|_| {
-            let need_refresh = self.inner.value.set_and_check(value);
+            let need_refresh = self.inner.value.set_if_changed(value);
             if need_refresh {
                 self.inner.deps.report_set(self.inner.id);
             }

@@ -309,7 +309,7 @@ fn test_computed_new_value2() {
 
 #[test]
 fn test_computed_switch_subscription() {
-    #[derive(Clone)]
+    #[derive(Clone, PartialEq)]
     enum Switch {
         Ver1,
         Ver2,
@@ -532,7 +532,7 @@ fn test_without_subscription() {
 }
 
 #[test]
-fn test_set_value_and_compare() {
+fn test_set_if_changed() {
     let value = Value::new(2);
 
     let value_com = value.to_computed();
@@ -573,20 +573,20 @@ fn test_set_value_and_compare() {
 
     assert_eq!(boxy.get(), 2);
 
-    value.set(3);
+    value.set_force(3);
     assert_eq!(boxy.get(), 3);
 
-    value.set_value_and_compare(4);
+    value.set(4);
     assert_eq!(boxy.get(), 4);
-    value.set_value_and_compare(4);
+    value.set(4);
     assert_eq!(boxy.get(), 4);
 
-    value.set_value_and_compare(5);
+    value.set(5);
     assert_eq!(boxy.get(), 5);
-    value.set_value_and_compare(5);
+    value.set(5);
     assert_eq!(boxy.get(), 5);
 
-    value.set(6);
+    value.set_force(6);
     assert_eq!(boxy.get(), 6);
     assert_eq!(boxy2.get(), 6);
     assert_eq!(boxy3.get(), 6);

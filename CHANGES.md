@@ -1,6 +1,18 @@
 <!-- markdownlint-configure-file { "no-duplicate-heading": { "siblings_only": true } } -->
 
 <!-- markdownlint-disable-next-line first-line-h1 -->
+## Unreleased
+
+### Changed
+
+* `Value::set` now doesn't trigger graph update if new value is the same as the old one. [#368]
+
+  This means, `T` should now implement `PartialEq`.
+  `Value::set_force` was introduced for `T` which doesn't implement `PartialEq`
+  but this method always updates graph just as the old `set` method.
+
+[#368]: https://github.com/vertigo-web/vertigo/issues/368
+
 ## 0.7.2 - 2025-06-10
 
 ### Fixed
@@ -10,6 +22,9 @@
 ### Changed
 
 * vertigo-cli: `watch` command now logs local time, can be changed using `--log-local-time` parameter [#354]
+
+[#361]: https://github.com/vertigo-web/vertigo/issues/361
+[#354]: https://github.com/vertigo-web/vertigo/issues/354
 
 ## 0.7.1 - 2025-05-29
 
@@ -23,6 +38,9 @@
 
 * Visibility in `component` macro [#357]
 
+[#358]: https://github.com/vertigo-web/vertigo/issues/358
+[#351]: https://github.com/vertigo-web/vertigo/issues/351
+
 ## 0.7.0 - 2025-05-03
 
 ### Added
@@ -30,18 +48,11 @@
 * Dynamic/optional attributes, attributes grouping, attributes spreading [#317]
 * vertigo-cli: `--mount-point` parameter for `serve` command, which allow to embed app in f. ex. `example.com/mount/point` endpoint [#346]
 
-[#317]: https://github.com/vertigo-web/vertigo/issues/317
-[#346]: https://github.com/vertigo-web/vertigo/issues/346
-
 ### Changed
 
 * Moved from `rsx` to `rstml`, `syn` 1.0 to 2.0 [#331]
 * Replaced `OrderedMap` with `BtreeMap` [#322]
 * Css classes in single `<style>` element [#328]
-
-[#331]: https://github.com/vertigo-web/vertigo/issues/331
-[#322]: https://github.com/vertigo-web/vertigo/issues/322
-[#328]: https://github.com/vertigo-web/vertigo/issues/328
 
 ### Fixed
 
@@ -49,6 +60,11 @@
 * vertigo-cli: Prevent reformatting HTML in `<pre>` during SSR [#342]
 * vertigo-cli: Keep original order of CSS rules around media-queries
 
+[#317]: https://github.com/vertigo-web/vertigo/issues/317
+[#346]: https://github.com/vertigo-web/vertigo/issues/346
+[#331]: https://github.com/vertigo-web/vertigo/issues/331
+[#322]: https://github.com/vertigo-web/vertigo/issues/322
+[#328]: https://github.com/vertigo-web/vertigo/issues/328
 [#335]: https://github.com/vertigo-web/vertigo/issues/335
 [#342]: https://github.com/vertigo-web/vertigo/issues/342
 
