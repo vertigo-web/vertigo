@@ -5,7 +5,7 @@ use crate::{
     computed::{context::Context, Value},
     get_driver,
     struct_mut::ValueMut,
-    transaction, Computed, DomNode, Instant, JsJsonDeserialize, Resource, ToComputed,
+    transaction, Computed, DomNode, Instant, JsJsonDeserialize, Resource,
 };
 
 use super::request_builder::{RequestBody, RequestBuilder};
@@ -18,6 +18,7 @@ fn get_unique_id() -> u64 {
     COUNTER.fetch_add(1, Ordering::Relaxed)
 }
 
+#[derive(PartialEq)]
 enum ApiResponse<T> {
     Uninitialized,
     Data {
@@ -148,7 +149,9 @@ impl<T> LazyCache<T> {
             map_response: Rc::new(map_response),
         }
     }
+}
 
+impl<T: PartialEq> LazyCache<T> {
     /// Get value (update if needed)
     pub fn get(&self, context: &Context) -> Resource<Rc<T>> {
         let api_response = self.value.get(context);
@@ -223,12 +226,6 @@ impl<T> LazyCache<T> {
             let state = self.clone();
             move |context| state.get(context)
         })
-    }
-}
-
-impl<T: Clone> ToComputed<Resource<Rc<T>>> for LazyCache<T> {
-    fn to_computed(&self) -> Computed<Resource<Rc<T>>> {
-        self.to_computed()
     }
 }
 

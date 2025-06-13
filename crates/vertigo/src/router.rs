@@ -96,7 +96,7 @@ impl<T: Clone + ToString + From<String> + PartialEq + 'static> Router<T> {
         let route = Value::with_connect(init_value, move |value| {
             let value = value.clone();
             let callback = move |url: String| {
-                value.set_value_and_compare(T::from(url));
+                value.set(T::from(url));
             };
 
             match use_history_api {
