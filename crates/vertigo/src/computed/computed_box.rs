@@ -106,7 +106,7 @@ impl<T: 'static + PartialEq + Clone> Computed<T> {
         let graph_value = GraphValue::new(false, move |context| {
             let value = self.get(context);
 
-            let should_update = prev_value.set_and_check(Some(value.clone()));
+            let should_update = prev_value.set_if_changed(Some(value.clone()));
 
             if should_update {
                 let resource = call(value);

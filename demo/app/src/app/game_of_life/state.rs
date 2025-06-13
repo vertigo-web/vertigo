@@ -1,12 +1,12 @@
 use std::rc::Rc;
-use vertigo::{Value, get_driver, DropResource, transaction};
+use vertigo::{get_driver, transaction, DropResource, Value};
 
 use super::next_generation::next_generation;
 
 #[derive(Clone)]
 pub struct State {
     pub matrix: Rc<Vec<Vec<Value<bool>>>>,
-    pub timer: Value<Option<Rc<DropResource>>>,             //???
+    pub timer: Value<Option<Rc<DropResource>>>,
     pub delay: Value<u32>,
     pub new_delay: Value<u32>,
     pub year: Value<u32>,
@@ -33,7 +33,7 @@ impl State {
         }
     }
 
-    pub fn randomize(&self)-> impl Fn() {
+    pub fn randomize(&self) -> impl Fn() {
         let matrix = self.matrix.clone();
 
         move || {
@@ -73,7 +73,7 @@ impl State {
                 }
             });
 
-            self.timer.set(Some(Rc::new(timer)));
+            self.timer.set_force(Some(Rc::new(timer)));
         })
     }
 

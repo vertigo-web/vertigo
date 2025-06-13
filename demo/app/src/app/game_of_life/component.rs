@@ -8,7 +8,9 @@ pub struct GameOfLife {
 }
 
 impl GameOfLife {
-    pub fn into_component(self) -> Self { self }
+    pub fn into_component(self) -> Self {
+        self
+    }
 
     pub fn mount(&self) -> DomNode {
         let matrix = &self.state.matrix;
@@ -45,7 +47,7 @@ impl GameOfLife {
                     let timer = state.timer.get(context);
 
                     if timer.is_some() {
-                        state.timer.set(None);
+                        state.timer.set_force(None);
                     } else {
                         state.start_timer();
                     }
