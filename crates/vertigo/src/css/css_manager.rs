@@ -1,6 +1,6 @@
 use std::rc::Rc;
 
-use crate::struct_mut::HashMapMut;
+use crate::struct_mut::{HashMapMut, InnerValue};
 
 use super::{
     css_structs::{Css, CssGroup},
@@ -9,13 +9,14 @@ use super::{
     transform_css::transform_css,
 };
 
-type InsertFn = dyn Fn(&str, &str);
+type InsertFn = dyn Fn(Option<String>, String);
 
 struct CssManagerInner {
     insert_css: Box<InsertFn>,
     next_id: NextId,
     ids_static: HashMapMut<&'static str, u64>,
     ids_dynamic: HashMapMut<String, u64>,
+    bundle: InnerValue<String>,
 }
 
 impl CssManagerInner {
@@ -25,6 +26,7 @@ impl CssManagerInner {
             next_id: NextId::new(),
             ids_static: HashMapMut::new(),
             ids_dynamic: HashMapMut::new(),
+            bundle: InnerValue::new("".to_string()),
         }
     }
 
@@ -32,10 +34,15 @@ impl CssManagerInner {
         let (class_id, css_selectors) = transform_css(css, &self.next_id);
 
         for (selector, selector_data) in css_selectors {
-            (self.insert_css)(&selector, &selector_data);
+            (self.insert_css)(Some(selector), selector_data);
         }
 
         class_id
+    }
+
+    pub fn register_bundle(&self, bundle: String) {
+        *self.bundle.get_mut() = bundle.clone();
+        (self.insert_css)(None, bundle)
     }
 }
 
@@ -45,7 +52,10 @@ pub struct CssManager {
 }
 
 impl CssManager {
-    pub fn new(insert_css: impl Fn(&str, &str) + 'static) -> CssManager {
+    /// Create CssManager with css callback
+    ///
+    /// Callback accepts selector -> styles for autocss styling and None -> styles for bundles (i.e. a tailwind bundle)
+    pub fn new(insert_css: impl Fn(Option<String>, String) + 'static) -> CssManager {
         CssManager {
             inner: Rc::new(CssManagerInner::new(Box::new(insert_css))),
         }
@@ -96,5 +106,9 @@ impl CssManager {
         }
 
         out.join(" ")
+    }
+
+    pub fn register_bundle(&self, bundle: String) {
+        self.inner.register_bundle(bundle);
     }
 }
