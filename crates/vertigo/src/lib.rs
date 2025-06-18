@@ -109,6 +109,7 @@ pub mod inspect;
 mod instant;
 mod render;
 pub mod router;
+mod store;
 #[cfg(test)]
 mod tests;
 mod websocket;
