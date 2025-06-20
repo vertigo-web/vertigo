@@ -21,5 +21,6 @@ pkg-version = "1"
 proc-macro-error = "1.0"
 proc-macro2 = "1.0"
 quote = "1.0"
-syn = { version = "2.0", features=["full"] }
 rstml = "0.12"
+syn = { version = "2.0", features=["full"] }
+tailwind-css = "0.13"
