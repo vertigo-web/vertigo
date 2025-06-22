@@ -44,7 +44,6 @@ impl<T: Default> ValueMut<T> {
 
 impl<T: Clone> ValueMut<T> {
     pub fn get(&self) -> T {
-        // let state = self.value.borrow();
         let state = self.value.get();
         (*state).clone()
     }

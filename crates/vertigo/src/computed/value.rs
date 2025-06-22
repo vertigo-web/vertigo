@@ -78,7 +78,7 @@ impl<T: Clone + 'static> Value<T> {
     /// Create a value that is connected to a generator, where `value` parameter is a starting value,
     /// and `create` function takes care of updating it.
     ///
-    /// See [game of life](../src/vertigo_demo/app/game_of_life/mod.rs.html#54) example.
+    /// See [Router implementation](../src/vertigo/router.rs.html#97) for example example.
     pub fn with_connect<F>(value: T, create: F) -> Computed<T>
     where
         F: Fn(&Value<T>) -> DropResource + 'static,
@@ -103,9 +103,9 @@ impl<T: Clone + 'static> Value<T> {
         computed
     }
 
-    /// Allows to set a new value if T doesn't implement PartialEq.
+    /// Allows to set a new value if `T` doesn't implement [PartialEq].
     ///
-    /// This will always trigger a graph change even if the value == old value.
+    /// This will always trigger a graph change even if the value stays the same.
     pub fn set_force(&self, value: T) {
         self.inner.deps.transaction(|_| {
             self.inner.value.set(value);
@@ -113,15 +113,22 @@ impl<T: Clone + 'static> Value<T> {
         });
     }
 
+    /// Get the value.
+    ///
+    /// Use this in callbacks. You can get [Context] object using [transaction](crate::transaction) function.
+    /// During rendering you should directly embed the `Value` in [dom!](crate::dom) or use [.render_value()](Value::render_value) method.
+    ///
+    /// Returned `T` is cloned - it's not reactive.
     pub fn get(&self, context: &Context) -> T {
         context.add_parent(self.inner.id);
         self.inner.value.get()
     }
 
+    /// Reactively convert `Value` into [Computed] with provided transformation function applied.
     pub fn map<K: Clone + 'static, F: 'static + Fn(T) -> K>(&self, fun: F) -> Computed<K> {
         Computed::from({
-            let computed = self.clone();
-            move |context| fun(computed.get(context))
+            let myself = self.clone();
+            move |context| fun(myself.get(context))
         })
     }
 
@@ -133,10 +140,11 @@ impl<T: Clone + 'static> Value<T> {
         self.inner.deps
     }
 
+    /// Reactively convert the `Value`` into [Computed] without any mapping.
     pub fn to_computed(&self) -> Computed<T> {
-        let self_clone = self.clone();
+        let myself = self.clone();
 
-        Computed::from(move |context| self_clone.get(context))
+        Computed::from(move |context| myself.get(context))
     }
 }
 
@@ -169,9 +177,7 @@ impl<T: Clone + PartialEq + 'static> Value<T> {
             }
         });
     }
-}
 
-impl<T: Clone + PartialEq + 'static> Value<T> {
     /// Render value (reactively transforms `T` into `DomNode`)
     ///
     /// See [computed_tuple](macro.computed_tuple.html) if you want to render multiple values in a handy way.

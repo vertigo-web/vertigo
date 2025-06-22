@@ -2,7 +2,8 @@ use crate::{computed::Value, get_driver, Computed, DomNode, EmbedDom, Reactive, 
 
 /// Router based on path or hash part of current location.
 ///
-/// Not: If you want your app to support dynamic mount point, you use method [Driver::route_to_public]
+/// Note: If you want your app to support dynamic mount point,
+/// you should use method [Driver::route_to_public](crate::Driver::route_to_public)
 /// which will always prefix your route with mount point.
 ///
 /// ```rust
