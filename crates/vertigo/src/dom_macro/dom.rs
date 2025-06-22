@@ -10,6 +10,29 @@ use crate::{
 ///
 /// Be careful when using dynamic attributes, key-value type compatibility is checked
 /// in runtime (errors logged into JS console) or ignored for `AttrValue` variant.
+///
+/// ```rust
+/// use vertigo::{bind, component, dom, AttrGroup, Value};
+///
+/// #[component]
+/// pub fn Input(value: Value<String>, input: AttrGroup) {
+///     let on_input = bind!(value, |new_value: String| {
+///         value.set(new_value);
+///     });
+///
+///     dom! {
+///         <input {value} {on_input} {..input} />
+///     }
+/// }
+///
+/// let value = Value::new("world".to_string());
+///
+/// dom! {
+///     <div>
+///        <Input {value} input:name="hello_value" input:id="my_input_1" />
+///     </div>
+/// };
+/// ```
 pub type AttrGroup = BTreeMap<String, AttrGroupValue>;
 
 pub enum AttrGroupValue {
@@ -62,7 +85,7 @@ impl AttrGroupValue {
         Self::Suspense(callback)
     }
 
-    /// Extract Computed<String> from this AttrGroupValue if possible.
+    /// Extract [`Computed<String>`] from this [AttrGroupValue] if possible.
     ///
     /// Otherwise (for css and event handlers variants) this gives constant empty string.
     /// For displaying in HTML it's better to use `.embed()` method (which uses this one internally).

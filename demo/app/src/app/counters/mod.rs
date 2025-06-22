@@ -5,11 +5,11 @@ use simple_counter::SimpleCounter;
 
 #[derive(Clone)]
 pub struct State {
-    counter1: Value<u32>,
-    counter2: Value<u32>,
-    counter3: Value<u32>,
-    counter4: Value<u32>,
-    pub sum: Computed<u32>,
+    counter1: Value<i32>,
+    counter2: Value<i32>,
+    counter3: Value<i32>,
+    counter4: Value<i32>,
+    pub sum: Computed<i32>,
 }
 
 impl State {
@@ -46,7 +46,7 @@ impl State {
 }
 
 #[component]
-fn Sum(sum: Computed<u32>) {
+fn Sum(sum: Computed<i32>) {
     dom! {
         <div>
             "sum = " {sum}

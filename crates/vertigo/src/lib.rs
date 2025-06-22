@@ -85,7 +85,7 @@
 //!
 //! Short-links to most commonly used things:
 //!
-//! * [dom!] - Build [DomNode] using RSX (HTML-like) syntax
+//! * [dom!] - Build [DomNode] using RSX/rstml (HTML-like) syntax
 //! * [css!] - Build [Css] using CSS-like syntax
 //! * [component] - Wrap function to be used as component in RSX
 //! * [main] - Wrap function to be vertigo entry-point
@@ -157,7 +157,7 @@ pub use websocket::{WebsocketConnection, WebsocketMessage};
 /// This will place the file along with the rest of generated files. The macro returns a public path to the file with it's hash in name.
 pub use vertigo_macro::include_static;
 
-/// Allows to create an event handler based on provided arguments
+/// Allows to conveniently clone values into closure.
 ///
 /// ```rust
 /// use vertigo::{bind, dom, Value};
@@ -176,6 +176,23 @@ pub use vertigo_macro::include_static;
 ///         <button on_click={increment}>"+"</button>
 ///     </div>
 /// };
+/// ```
+///
+/// Binding complex names results in last part being accessible inside:
+///
+/// ```rust
+/// use vertigo::bind;
+///
+/// struct Point {
+///     pub x: i32,
+///     pub y: i32,
+/// }
+///
+/// let point = Point { x: 1, y: 2 };
+///
+/// let callback = bind!(point.x, point.y, || {
+///     println!("Point: ({x}, {y})");
+/// });
 /// ```
 pub use vertigo_macro::bind;
 
@@ -231,9 +248,37 @@ pub use vertigo_macro::AutoJsJson;
 ///     </div>
 /// };
 /// ```
+///
+/// ```rust
+/// use vertigo::{bind, component, dom, AttrGroup, Value};
+///
+/// #[component]
+/// pub fn Input<'a>(label: &'a str, value: Value<String>, input: AttrGroup) {
+///     let on_input = bind!(value, |new_value: String| {
+///         value.set(new_value);
+///     });
+///
+///     dom! {
+///         <div>
+///             {label}
+///             <input {value} {on_input} {..input} />
+///         </div>
+///     }
+/// }
+///
+/// let value = Value::new("world".to_string());
+///
+/// dom! {
+///     <div>
+///        <Input label="Hello" {value} input:name="hello_value" />
+///     </div>
+/// };
+/// ```
+///
+/// Note: [AttrGroup] allows to dynamically pass arguments to some child node.
 pub use vertigo_macro::component;
 
-/// Macro that allows to call methods on JavaScript `window` object
+/// Macro that allows to get properties and call methods on JavaScript `window` object.
 ///
 /// Example 1:
 ///
@@ -258,7 +303,7 @@ pub use vertigo_macro::component;
 /// ```
 pub use vertigo_macro::window;
 
-/// Macro that allows to call methods on JavaScript `document` object
+/// Macro that allows to get properties and call methods on JavaScript `document` object.
 ///
 /// Example:
 ///
@@ -272,6 +317,8 @@ pub use vertigo_macro::document;
 /// Marco that marks an entry point of the app
 ///
 /// Note: Html, head and body tags are required by vertigo to properly take over the DOM
+///
+/// Note 2: When using external tailwind, make sure the source `tailwind.css` file is in the same directory as usage of this macro.
 ///
 /// ```rust
 /// use vertigo::prelude::*;
@@ -293,7 +340,7 @@ pub use vertigo_macro::main;
 // Export log module which can be used in vertigo plugins
 pub use log;
 
-/// Allows to create [DomNode] using HTML tags.
+/// Allows to create [DomNode] using RSX/rstml (HTML-like) syntax.
 ///
 /// Simple DOM with a param embedded:
 ///
@@ -341,13 +388,41 @@ pub use vertigo_macro::dom_debug;
 /// Allows to create [Css] styles for usage in [dom!] macro.
 ///
 /// ```rust
-/// use vertigo::css;
+/// use vertigo::{css, dom};
 ///
 /// let green_on_red = css!("
 ///     color: green;
 ///     background-color: red;
 /// ");
+///
+/// dom! {
+///    <div css={green_on_red}>"Tomato stem"</div>
+/// };
 /// ```
+///
+/// ```rust
+/// use vertigo::{css, Css, dom};
+///
+/// fn css_menu_item(active: bool) -> Css {
+///     let bg_color = if active { "lightblue" } else { "lightgreen" };
+///
+///     css! {"
+///         cursor: pointer;
+///         background-color: {bg_color};
+///
+///         :hover {
+///             text-decoration: underline;
+///         }
+///     "}
+/// }
+///
+/// dom! {
+///     <a css={css_menu_item(true)}>"Active item"</a>
+///     <a css={css_menu_item(false)}>"Inactive item"</a>
+/// };
+/// ```
+///
+/// See [tooltip demo](https://github.com/vertigo-web/vertigo/blob/master/demo/app/src/app/styling/tooltip.rs) for more complex example.
 pub use vertigo_macro::css;
 
 /// Constructs a CSS block that can be manually pushed into existing [Css] styles instance.
@@ -439,7 +514,9 @@ pub mod prelude {
 // Internals below
 //------------------------------------------------------------------------------------------------------------------
 
-pub use driver_module::driver::{VERTIGO_MOUNT_POINT_PLACEHOLDER, VERTIGO_PUBLIC_BUILD_PATH_PLACEHOLDER};
+pub use driver_module::driver::{
+    VERTIGO_MOUNT_POINT_PLACEHOLDER, VERTIGO_PUBLIC_BUILD_PATH_PLACEHOLDER,
+};
 
 fn get_driver_state<R: Default, F: FnOnce(&DriverConstruct) -> R>(
     label: &'static str,

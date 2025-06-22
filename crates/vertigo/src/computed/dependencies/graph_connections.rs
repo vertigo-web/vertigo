@@ -67,7 +67,7 @@ impl GraphConnectionsInner {
         new_list
     }
 
-    ///The function receives new parents. Calculates the updates that should be applied to the graph
+    /// The function receives new parents. Calculates the updates that should be applied to the graph
     fn get_update_commands(
         &self,
         client_id: GraphId,

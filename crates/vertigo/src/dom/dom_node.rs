@@ -2,7 +2,9 @@ use crate::dom::{dom_element::DomElement, dom_text::DomText};
 
 use super::{dom_comment::DomComment, dom_id::DomId};
 
-/// A Real DOM representative
+/// A Real DOM representative.
+///
+/// It is used to generate DOM changing commands. To create `DomNode` tree conveniently use [dom!](crate::dom) macro.
 pub enum DomNode {
     Node { node: DomElement },
     Text { node: DomText },
