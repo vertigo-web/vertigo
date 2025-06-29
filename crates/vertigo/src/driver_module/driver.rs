@@ -235,7 +235,7 @@ impl Driver {
         self.inner.dependencies.transaction(func)
     }
 
-    /// Allows to access different objects in the browser. This is used by [window!](crate::window) and [document](crate::document) macros.
+    /// Allows to access different objects in the browser (See [js!](crate::js) macro for convenient use).
     pub fn dom_access(&self) -> DomAccess {
         self.inner.api.dom_access()
     }

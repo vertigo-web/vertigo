@@ -1,4 +1,7 @@
-use vertigo::{bind, component, css, document, dom, window, JsValue, Value};
+use vertigo::{bind, component, css, dom, js, JsValue, Value};
+
+mod clipboard;
+use clipboard::Clipboard;
 
 #[derive(Default, PartialEq)]
 pub struct State {
@@ -9,31 +12,32 @@ pub struct State {
 pub fn JsApiAccess() {
     let state = State::default();
 
-    let container_css = css!{"
+    let container_css = css! {"
     "};
 
-    let items = (1..201)
-        .map(|i| dom! { <li>"List item" {i}</li> });
+    let items = (1..201).map(|i| dom! { <li>"List item" {i}</li> });
 
     let to_bottom = |_| {
-        let max_y = window!("scrollMaxY");
+        let max_y = js! { window.scrollMaxY };
         vertigo::log::info!("max_y = {max_y:?}");
-        window!("scrollTo()", 0, max_y);
+        js! { window.scrollTo(0, max_y) };
     };
 
     let down_smooth = |_| {
-        let max_y = window!("scrollMaxY");
+        let max_y = js! { window.scrollMaxY };
         vertigo::log::info!("max_y = {max_y:?}");
-        window!("scrollTo()",
-            vec![
-                ("top", 100000.into()),
-                ("behavior", "smooth".into()),
-            ]
-        );
+        js! {
+            window.scrollTo(
+                vec![
+                    ("top", 100000.into()),
+                    ("behavior", "smooth".into()),
+                ]
+            )
+        };
     };
 
     let ask = bind!(state.answer, |_| {
-        let js_answer = window!("prompt()", "How are you?");
+        let js_answer = js! { window.prompt("How are you?") };
         if let JsValue::String(js_answer) = js_answer {
             answer.set(js_answer)
         }
@@ -44,15 +48,17 @@ pub fn JsApiAccess() {
             <p>
                 <button on_click={to_bottom}>"scroll to bottom (FF)"</button>
                 <button on_click={down_smooth}>"scroll down smoothly"</button>
-                <button on_click={|_| { window!("alert()", document!("URL")); }}>"URL"</button>
-                <button on_click={|_| { window!("alert()", document!("referrer")); }}>"Referrer"</button>
+                <button on_click={|_| { js! { window.alert(js! { document.URL }) }; }}>"URL"</button>
+                <button on_click={|_| { js! { window.alert(js! { document.referrer }) }; }}>"Referrer"</button>
             </p>
             <p>
                 <button on_click={ask}>"Ask"</button>
                 " Answer: " {state.answer}
             </p>
             <ol>{..items}</ol>
-            <button on_click={|_| { window!("scrollTo()", 0, 0); }}>"to top"</button>
+            <button on_click={|_| { js! { window.scrollTo(0, 0) }; }}>"to top"</button>
+            <hr />
+            <Clipboard />
         </div>
     }
 }
