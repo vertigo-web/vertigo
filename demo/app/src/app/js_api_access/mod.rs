@@ -1,5 +1,8 @@
 use vertigo::{bind, component, css, document, dom, window, JsValue, Value};
 
+mod clipboard;
+use clipboard::Clipboard;
+
 #[derive(Default, PartialEq)]
 pub struct State {
     answer: Value<String>,
@@ -53,6 +56,8 @@ pub fn JsApiAccess() {
             </p>
             <ol>{..items}</ol>
             <button on_click={|| { window!("scrollTo()", 0, 0); }}>"to top"</button>
+            <hr />
+            <Clipboard />
         </div>
     }
 }

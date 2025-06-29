@@ -314,6 +314,9 @@ pub use vertigo_macro::window;
 /// ```
 pub use vertigo_macro::document;
 
+/// TODO
+pub use vertigo_macro::js;
+
 /// Marco that marks an entry point of the app
 ///
 /// Note: Html, head and body tags are required by vertigo to properly take over the DOM

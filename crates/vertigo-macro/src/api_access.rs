@@ -3,7 +3,7 @@ use proc_macro2::TokenStream as TokenStream2;
 use quote::quote;
 use syn::{spanned::Spanned, Expr, Lit};
 
-pub(crate) fn api_access_inner(root: &str, input: TokenStream) -> TokenStream {
+pub(crate) fn api_access(input: TokenStream) -> TokenStream {
     let input: TokenStream2 = input.into();
 
     use syn::parse::Parser;
@@ -16,40 +16,26 @@ pub(crate) fn api_access_inner(root: &str, input: TokenStream) -> TokenStream {
     let first_param_span = first_param.span();
 
     let inner = match first_param {
-        Expr::Lit(expr_lit) => {
-            match expr_lit.lit {
-                Lit::Str(param_lit) => {
-                    let param_repr = param_lit.token().to_string();
-                    let param_str = param_repr.trim_matches('"');
-                    if let Some(func_name) = param_str.strip_suffix("()") {
-                        // Function call
-                        let mut args = vec![];
-
-                        for arg in param_iter {
-                            args.push(quote! { vertigo::JsValue::from(#arg) })
-                        }
-
-                        quote! { .call(#func_name, vec![ #(#args,)* ]) }
-                    } else {
-                        // Property get
-                        if let Some(arg) = param_iter.next() {
-                            diagnostic!(
-                                arg.span(),
-                                proc_macro_error::Level::Error,
-                                "Properties don't accept arguments, missing () in func name?"
-                            )
-                                .span_suggestion(first_param_span, "hint", format!("Try `{param_str}()`"))
-                                .emit()
-                        }
-
-                        quote! { .get(#param_str) }
-                    }
-                }
-                _ => {
-                    emit_error!(expr_lit.span(), "Expected literal string as first parameter (property or function name) (1)");
-                    quote! {}
-                }
-            }
+        // something.method(arg)
+        Expr::MethodCall(expr_method_call) => {
+            emit_call_site_warning!("\n
+            attrs: {:#?}
+            receiver: {:#?}
+            dot_token: {:#?}
+            method: {:#?}
+            turbofish: {:#?}
+            paren_token: {:#?}
+            args: {:#?}
+            ",
+            expr_method_call.attrs,
+            expr_method_call.receiver,
+            expr_method_call.dot_token,
+            expr_method_call.method,
+            expr_method_call.turbofish,
+            expr_method_call.paren_token,
+            expr_method_call.args
+            );
+            quote! {}
         }
         _ => {
             emit_error!(first_param_span, "Expected literal string as first parameter (property or function name) (2)");
@@ -60,7 +46,7 @@ pub(crate) fn api_access_inner(root: &str, input: TokenStream) -> TokenStream {
     quote! {
         vertigo::get_driver()
             .dom_access()
-            .root(#root)
+            // .root(#root)
             #inner
             .fetch()
     }.into()
