@@ -1,67 +1,87 @@
 use proc_macro::TokenStream;
-use proc_macro2::TokenStream as TokenStream2;
 use quote::quote;
-use syn::{spanned::Spanned, Expr, Lit};
+use syn::{parse_macro_input, spanned::Spanned, Expr};
 
-pub(crate) fn api_access_inner(root: &str, input: TokenStream) -> TokenStream {
-    let input: TokenStream2 = input.into();
+pub(crate) fn api_access(input: TokenStream) -> TokenStream {
+    let input = parse_macro_input!(input as Expr);
 
-    use syn::parse::Parser;
-    let data = syn::punctuated::Punctuated::<syn::Expr, syn::Token![,]>::parse_terminated
-        .parse2(input)
-        .unwrap();
+    // Generate the output code
+    let output = generate_calls(&input);
 
-    let mut param_iter = data.into_iter();
-    let first_param = param_iter.next().unwrap();
-    let first_param_span = first_param.span();
+    TokenStream::from(quote! {
+        vertigo::get_driver()
+            .dom_access()
+            #output
+            .fetch()
+    })
+}
 
-    let inner = match first_param {
-        Expr::Lit(expr_lit) => {
-            match expr_lit.lit {
-                Lit::Str(param_lit) => {
-                    let param_repr = param_lit.token().to_string();
-                    let param_str = param_repr.trim_matches('"');
-                    if let Some(func_name) = param_str.strip_suffix("()") {
-                        // Function call
-                        let mut args = vec![];
+fn generate_calls(expr: &Expr) -> proc_macro2::TokenStream {
+    match expr {
+        Expr::MethodCall(method_call) => {
+            // Handle the last method call
+            let receiver = &method_call.receiver;
+            let method = &method_call.method;
+            let args = &method_call.args.iter().collect::<Vec<_>>();
 
-                        for arg in param_iter {
-                            args.push(quote! { vertigo::JsValue::from(#arg) })
-                        }
+            // Generate the call for the current method
+            let mut calls = quote! {
+                .call(stringify!(#method), vec![#((#args).into()),*])
+            };
 
-                        quote! { .call(#func_name, vec![ #(#args,)* ]) }
-                    } else {
-                        // Property get
-                        if let Some(arg) = param_iter.next() {
-                            diagnostic!(
-                                arg.span(),
-                                proc_macro_error::Level::Error,
-                                "Properties don't accept arguments, missing () in func name?"
-                            )
-                                .span_suggestion(first_param_span, "hint", format!("Try `{param_str}()`"))
-                                .emit()
-                        }
-
-                        quote! { .get(#param_str) }
-                    }
+            // If the receiver is another method call, property, or path, generate calls recursively
+            match &**receiver {
+                Expr::MethodCall(_) => {
+                    // Handle intermediate method call
+                    let inner_calls = generate_calls(receiver);
+                    calls = quote! {
+                        #inner_calls #calls
+                    };
+                }
+                Expr::Field(field) => {
+                    // Handle intermediate property (after another property: root.property1.property2.method())
+                    let field_name = &field.member;
+                    let inner_calls = generate_calls(&field.base);
+                    calls = quote! {
+                        #inner_calls.get(stringify!(#field_name)) #calls
+                    };
+                }
+                Expr::Path(path) => {
+                    // Handle root directly before a method ( root.method() )
+                    calls = quote! {
+                        .root(stringify!(#path)) #calls
+                    };
                 }
                 _ => {
-                    emit_error!(expr_lit.span(), "Expected literal string as first parameter (property or function name) (1)");
-                    quote! {}
+                    emit_error!(receiver.span(), "Unsupported receiver: {:?}", receiver);
                 }
+            }
+
+            quote! {
+                #calls
+            }
+        }
+        Expr::Field(field) => {
+            // Handle property after root ( root.property.method() )
+            let field_name = &field.member;
+            let calls = generate_calls(&field.base);
+            quote! {
+                 #calls .get(stringify!(#field_name))
+            }
+        }
+        Expr::Path(path) => {
+            // Handle root before a property ( root.property.method() )
+            quote! {
+                .root(stringify!(#path))
             }
         }
         _ => {
-            emit_error!(first_param_span, "Expected literal string as first parameter (property or function name) (2)");
+            emit_error!(
+                expr.span(),
+                "Expected an expression resulting in a method call, got {:?}",
+                expr
+            );
             quote! {}
         }
-    };
-
-    quote! {
-        vertigo::get_driver()
-            .dom_access()
-            .root(#root)
-            #inner
-            .fetch()
-    }.into()
+    }
 }

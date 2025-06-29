@@ -3,6 +3,10 @@
 <!-- markdownlint-disable-next-line first-line-h1 -->
 ## Unreleased
 
+### Added
+
+* `js!` macro which allows to evaluate simple JavaScript expressions. [#372]
+
 ### Changed
 
 * `Value::set` now doesn't trigger graph update if new value is the same as the old one. [#368]
@@ -13,7 +17,12 @@
 
 * `on_click` attribute now provides `ClickEvent` to allow preventing default or stopping propagation.
 
+### Removed
+
+* `window!` and `document!` macros (replaced by `js!`).
+
 [#368]: https://github.com/vertigo-web/vertigo/issues/368
+[#372]: https://github.com/vertigo-web/vertigo/issues/372
 
 ## 0.7.2 - 2025-06-10
 

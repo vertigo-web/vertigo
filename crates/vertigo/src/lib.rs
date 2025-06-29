@@ -278,41 +278,38 @@ pub use vertigo_macro::AutoJsJson;
 /// Note: [AttrGroup] allows to dynamically pass arguments to some child node.
 pub use vertigo_macro::component;
 
-/// Macro that allows to get properties and call methods on JavaScript `window` object.
+/// Macro that allows to evaluate simple JavaScript expressions.
 ///
 /// Example 1:
 ///
 /// ```rust
-/// use vertigo::window;
+/// use vertigo::js;
 ///
-/// let max_y = window!("scrollMaxY");
-/// window!("scrollTo()", 0, max_y);
+/// let referrer = js!{ document.referrer };
 /// ```
 ///
 /// Example 2:
 ///
 /// ```rust
-/// use vertigo::window;
-///
-/// window!("scrollTo()",
-///    vec![
-///       ("top", 100000.into()),
-///       ("behavior", "smooth".into()),
-///    ]
-/// );
+/// # use vertigo::js;
+/// let max_y = js!{ window.scrollMaxY };
+/// js! {window.scrollTo(0, max_y) };
 /// ```
-pub use vertigo_macro::window;
-
-/// Macro that allows to get properties and call methods on JavaScript `document` object.
 ///
-/// Example:
+/// Passing an object as an argument is a little more complicated, but possible:
 ///
 /// ```rust
-/// use vertigo::document;
-///
-/// let referrer = document!("referrer");
+/// # use vertigo::js;
+/// js! {
+///     window.scrollTo(
+///         vec![
+///             ("top", 100000.into()),
+///             ("behavior", "smooth".into()),
+///         ]
+///     )
+/// };
 /// ```
-pub use vertigo_macro::document;
+pub use vertigo_macro::js;
 
 /// Marco that marks an entry point of the app
 ///
