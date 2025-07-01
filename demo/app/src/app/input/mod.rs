@@ -77,7 +77,7 @@ fn ButtonSet(value: Value<String>, value_to_set: String) {
         cursor: pointer;
     ");
 
-    let on_click = bind!(value, value_to_set, || {
+    let on_click = bind!(value, value_to_set, |_| {
         value.set(value_to_set.clone());
     });
 

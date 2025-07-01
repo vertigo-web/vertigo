@@ -54,7 +54,7 @@ impl App {
     pub fn render(&self) -> DomNode {
         let state = self;
 
-        let navigate_to_page1 = bind!(state, || {
+        let navigate_to_page1 = bind!(state, |_| {
             state.navigate_to(Route::Page1);
         });
 

@@ -180,7 +180,7 @@ fn test_computed_cache() {
             Computed::from(move |context| -> bool {
                 let c_value = c.get(context);
 
-                c_value % 2 == 0
+                c_value.is_multiple_of(2)
             })
         };
 

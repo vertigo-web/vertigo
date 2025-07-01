@@ -60,7 +60,7 @@ impl Animations {
             },
         );
 
-        let on_click_progress = bind_spawn!(state, async move {
+        let on_click_progress = bind_spawn!(state, |_| async move {
             state.start_animation().await;
         });
 

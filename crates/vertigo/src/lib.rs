@@ -17,13 +17,13 @@
 //! pub fn app() -> DomNode {
 //!     let count = Value::new(0);
 //!
-//!     let increment = bind!(count, || {
+//!     let increment = bind!(count, |_| {
 //!         count.change(|value| {
 //!             *value += 1;
 //!         });
 //!     });
 //!
-//!     let decrement = bind!(count, || {
+//!     let decrement = bind!(count, |_| {
 //!         count.change(|value| {
 //!             *value -= 1;
 //!         });
@@ -130,7 +130,7 @@ pub use dom::{
     dom_id::DomId,
     dom_node::DomNode,
     dom_text::DomText,
-    types::{DropFileEvent, DropFileItem, KeyDownEvent},
+    types::{ClickEvent, DropFileEvent, DropFileItem, KeyDownEvent},
 };
 pub use dom_macro::{AttrGroup, AttrGroupValue, EmbedDom};
 pub use driver_module::{
@@ -164,7 +164,7 @@ pub use vertigo_macro::include_static;
 ///
 /// let count = Value::new(0);
 ///
-/// let increment = bind!(count, || {
+/// let increment = bind!(count, |_| {
 ///     count.change(|value| {
 ///         *value += 1;
 ///     });

@@ -1,7 +1,7 @@
 use std::rc::Rc;
 
 use crate::{
-    dom::{dom_id::DomId, dom_node::DomNode},
+    dom::{dom_id::DomId, dom_node::DomNode, types::ClickEvent},
     driver_module::{driver::Driver, StaticString},
     get_driver,
     struct_mut::VecMut,
@@ -259,12 +259,13 @@ impl DomElement {
         })
     }
 
-    pub fn on_click(self, on_click: impl Into<Callback<()>>) -> Self {
-        let on_click = self.install_callback(on_click);
+    pub fn on_click(self, on_click: impl Into<Callback1<ClickEvent, ()>>) -> Self {
+        let on_click = self.install_callback1(on_click);
 
         self.add_event_listener("click", move |_data| {
-            on_click();
-            JsValue::Undefined
+            let click_event = ClickEvent::default();
+            on_click(click_event.clone());
+            JsValue::from(click_event)
         })
     }
 

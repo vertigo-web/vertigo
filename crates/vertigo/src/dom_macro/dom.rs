@@ -1,7 +1,7 @@
 use std::collections::BTreeMap;
 
 use crate::{
-    dom::{attr_value::AttrValue, dom_node::DomNode},
+    dom::{attr_value::AttrValue, dom_node::DomNode, types::ClickEvent},
     Callback, Callback1, Computed, Css, DomComment, DomElement, DomText, DropFileEvent,
     KeyDownEvent, Value,
 };
@@ -41,7 +41,7 @@ pub enum AttrGroupValue {
     HookKeyDown(Callback1<KeyDownEvent, bool>),
     OnBlur(Callback<()>),
     OnChange(Callback1<String, ()>),
-    OnClick(Callback<()>),
+    OnClick(Callback1<ClickEvent, ()>),
     OnDropfile(Callback1<DropFileEvent, ()>),
     OnInput(Callback1<String, ()>),
     OnKeyDown(Callback1<KeyDownEvent, bool>),
@@ -70,7 +70,7 @@ impl AttrGroupValue {
     group_value_constructor!(hook_key_down, Callback1<KeyDownEvent, bool>, HookKeyDown);
     group_value_constructor!(on_blur, Callback<()>, OnBlur);
     group_value_constructor!(on_change, Callback1<String, ()>, OnChange);
-    group_value_constructor!(on_click, Callback<()>, OnClick);
+    group_value_constructor!(on_click, Callback1<ClickEvent, ()>, OnClick);
     group_value_constructor!(on_dropfile, Callback1<DropFileEvent, ()>, OnDropfile);
     group_value_constructor!(on_input, Callback1<String, ()>, OnInput);
     group_value_constructor!(on_key_down, Callback1<KeyDownEvent, bool>, OnKeyDown);

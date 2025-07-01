@@ -22,7 +22,7 @@ impl Todo {
                         let messag: String = format!("user = {email}");
 
                         let view = &state.view;
-                        let on_click = bind!(view, || {
+                        let on_click = bind!(view, |_| {
                             view.set(View::Main);
                         });
 
@@ -66,7 +66,7 @@ fn todo_main_render(state: &TodoState) -> DomNode {
                         let view = todo_state.view.clone();
                         let id = post.id;
 
-                        move || {
+                        move |_| {
                             view.set(View::Post { id });
                         }
                     };
@@ -115,7 +115,7 @@ fn todo_post_render(state: &TodoState, post_id: u32) -> DomNode {
 
     let view = state.view;
 
-    let on_click = bind!(view, || {
+    let on_click = bind!(view, |_| {
         view.set(View::Main);
     });
 
@@ -179,7 +179,7 @@ fn render_comments(state: &TodoState, post_id: u32) -> DomNode {
                 };
 
                 for comment in list.as_ref() {
-                    let on_click_author = bind!(view, comment, || {
+                    let on_click_author = bind!(view, comment, |_| {
                         view.set(View::User { email: comment.email.clone() });
                     });
 

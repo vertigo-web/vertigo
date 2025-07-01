@@ -1,3 +1,4 @@
+import { isJsObject } from "../../jsvalue_types";
 import { ModuleControllerType } from "../../wasm_init";
 import { ExportType } from "../../wasm_module";
 import { HistoryLocation } from "../historyLocation";
@@ -183,7 +184,19 @@ export class DriverDom {
 
     private callback_click(event: Event, callback_id: bigint) {
         event.preventDefault();
-        this.getWasm().wasm_callback(callback_id, undefined);
+        let click_event = this.getWasm().wasm_callback(callback_id, undefined);
+
+        if (isJsObject(click_event)) {
+            let value = click_event.value;
+            if (value !== null) {
+                if (value['stop_propagation'] === true) {
+                    event.stopPropagation();
+                }
+                if (value['prevent_default'] === true) {
+                    event.preventDefault();
+                }
+            }
+        }
     }
 
     private callback_submit(event: Event, callback_id: bigint) {
