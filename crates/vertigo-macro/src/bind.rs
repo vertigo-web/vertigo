@@ -71,8 +71,8 @@ pub(crate) fn bind_spawn_inner(input: TokenStream) -> Result<TokenStream, String
 
     let TokensParamsBody {
         bind_params,
-        func_params: _,
-        body,
+        func_params,
+        mut body,
     } = split_params_and_body(tokens.as_slice())?;
 
     let bind_params: Vec<TokenStream2> = bind_params
@@ -80,12 +80,38 @@ pub(crate) fn bind_spawn_inner(input: TokenStream) -> Result<TokenStream, String
         .map(convert_tokens_to_stream)
         .collect::<Vec<_>>();
 
-    let body: TokenStream2 = convert_tokens_to_stream(body.as_slice());
+    let func_params: Vec<TokenStream2> = func_params
+        .unwrap_or_default()
+        .into_iter()
+        .map(convert_tokens_to_stream)
+        .collect::<Vec<_>>();
+
+    // Remove possible parameters from body
+    let mut start_from = 0;
+    let mut pipes = 0;
+    for (i, token) in body.clone().into_iter().enumerate() {
+        if let TokenTree::Punct(punct) = token {
+            if punct.as_char() == '{' { break }
+            if punct.as_char() == '|' {
+                pipes += 1;
+            }
+            if pipes >= 2 {
+                start_from = i + 1;
+                break;
+            }
+        }
+    }
+
+    if start_from > 0 {
+        body = body.splice(start_from.., []).collect();
+    }
+
+    let inner_body: TokenStream2 = TokenStream2::from_iter(body);
 
     Ok(quote! {
         {
-            vertigo::bind!(#(#bind_params,)* || {
-                vertigo::get_driver().spawn(vertigo::bind!(#(#bind_params,)* #body));
+            vertigo::bind!(#(#bind_params,)* |#(#func_params,)*| {
+                vertigo::get_driver().spawn(vertigo::bind!(#(#bind_params,)* #inner_body));
             })
         }
     }

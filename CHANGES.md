@@ -11,6 +11,8 @@
   `Value::set_force` was introduced for `T` which doesn't implement `PartialEq`
   but this method always updates graph just as the old `set` method.
 
+* `on_click` attribute now provides `ClickEvent` to allow preventing default or stopping propagation.
+
 [#368]: https://github.com/vertigo-web/vertigo/issues/368
 
 ## 0.7.2 - 2025-06-10

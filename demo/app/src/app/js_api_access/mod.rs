@@ -15,13 +15,13 @@ pub fn JsApiAccess() {
     let items = (1..201)
         .map(|i| dom! { <li>"List item" {i}</li> });
 
-    let to_bottom = || {
+    let to_bottom = |_| {
         let max_y = window!("scrollMaxY");
         vertigo::log::info!("max_y = {max_y:?}");
         window!("scrollTo()", 0, max_y);
     };
 
-    let down_smooth = || {
+    let down_smooth = |_| {
         let max_y = window!("scrollMaxY");
         vertigo::log::info!("max_y = {max_y:?}");
         window!("scrollTo()",
@@ -32,7 +32,7 @@ pub fn JsApiAccess() {
         );
     };
 
-    let ask = bind!(state.answer, || {
+    let ask = bind!(state.answer, |_| {
         let js_answer = window!("prompt()", "How are you?");
         if let JsValue::String(js_answer) = js_answer {
             answer.set(js_answer)
@@ -44,15 +44,15 @@ pub fn JsApiAccess() {
             <p>
                 <button on_click={to_bottom}>"scroll to bottom (FF)"</button>
                 <button on_click={down_smooth}>"scroll down smoothly"</button>
-                <button on_click={|| { window!("alert()", document!("URL")); }}>"URL"</button>
-                <button on_click={|| { window!("alert()", document!("referrer")); }}>"Referrer"</button>
+                <button on_click={|_| { window!("alert()", document!("URL")); }}>"URL"</button>
+                <button on_click={|_| { window!("alert()", document!("referrer")); }}>"Referrer"</button>
             </p>
             <p>
                 <button on_click={ask}>"Ask"</button>
                 " Answer: " {state.answer}
             </p>
             <ol>{..items}</ol>
-            <button on_click={|| { window!("scrollTo()", 0, 0); }}>"to top"</button>
+            <button on_click={|_| { window!("scrollTo()", 0, 0); }}>"to top"</button>
         </div>
     }
 }

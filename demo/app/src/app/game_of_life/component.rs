@@ -42,7 +42,7 @@ impl GameOfLife {
 
         let on_toggle_timer = {
             let state = state.clone();
-            move || {
+            move |_| {
                 transaction(|context| {
                     let timer = state.timer.get(context);
 
@@ -145,7 +145,7 @@ impl GameOfLife {
 
         let css_computed = cell.map(css_cell);
 
-        let on_click_callback = bind!(cell, || {
+        let on_click_callback = bind!(cell, |_| {
             cell.change(|value| {
                 *value = !*value;
             });

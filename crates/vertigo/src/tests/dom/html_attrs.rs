@@ -4,7 +4,7 @@ use crate::dom;
 
 #[test]
 fn button_on_click() {
-    let handler = || ();
+    let handler = |_| ();
 
     log_start();
 

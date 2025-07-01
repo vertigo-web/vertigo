@@ -16,7 +16,7 @@ pub fn app(state: &Value<LightState>) -> DomNode {
     let yellow_on = state.map(|state| state == LightState::Yellow || state == LightState::RedYellow);
     let green_on = state.map(|state| state == LightState::Green);
 
-    let next = bind!(state, ||
+    let next = bind!(state, |_|
         state.change(|value| {
             *value = match value {
                 LightState::Red => LightState::RedYellow,

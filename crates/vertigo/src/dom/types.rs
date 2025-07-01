@@ -2,8 +2,42 @@
 
 use std::rc::Rc;
 
+use crate::{struct_mut::ValueMut, JsValue};
+
 /// Structure passed as a parameter to callback on on_key_down event.
-#[derive(Debug, Clone)]
+#[derive(Clone, Debug, Default)]
+pub struct ClickEvent {
+    inner: Rc<ValueMut<ClickEventInner>>,
+}
+
+#[derive(Clone, Debug, Default)]
+pub struct ClickEventInner {
+    stop_propagation: bool,
+    prevent_default: bool,
+}
+
+impl ClickEvent {
+    pub fn stop_propagation(&self) {
+        self.inner.change(|inner| inner.stop_propagation = true);
+    }
+
+    pub fn prevent_default(&self) {
+        self.inner.change(|inner| inner.prevent_default = true);
+    }
+}
+
+impl From<ClickEvent> for JsValue {
+    fn from(val: ClickEvent) -> JsValue {
+        let inner = val.inner.get();
+        JsValue::Object([
+            ("stop_propagation".to_string(), JsValue::from(inner.stop_propagation)),
+            ("prevent_default".to_string(), JsValue::from(inner.prevent_default)),
+        ].into_iter().collect())
+    }
+}
+
+/// Structure passed as a parameter to callback on on_key_down event.
+#[derive(Clone, Debug)]
 pub struct KeyDownEvent {
     pub key: String,
     pub code: String,
@@ -19,7 +53,7 @@ impl std::fmt::Display for KeyDownEvent {
     }
 }
 
-#[derive(Debug, Clone, PartialEq, Eq)]
+#[derive(Clone, Debug, PartialEq, Eq)]
 pub struct DropFileItem {
     pub name: String,
     pub data: Rc<Vec<u8>>,
@@ -34,7 +68,7 @@ impl DropFileItem {
     }
 }
 
-#[derive(Debug, Clone)]
+#[derive(Clone, Debug)]
 pub struct DropFileEvent {
     pub items: Vec<DropFileItem>,
 }

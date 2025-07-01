@@ -2,13 +2,13 @@ use vertigo::{main, Value, bind, DomNode, dom, component};
 
 #[component]
 fn App(count: Value<i32>) {
-    let increment = bind!(count, || {
+    let increment = bind!(count, |_| {
         count.change(|value| {
             *value += 1;
         });
     });
 
-    let decrement = bind!(count, || {
+    let decrement = bind!(count, |_| {
         count.change(|value| {
             *value -= 1;
         });

@@ -17,7 +17,7 @@ impl GitHubExplorer {
             state.repo_input.set(new_value);
         });
 
-        let on_show = bind!(state, || {
+        let on_show = bind!(state, |_| {
             transaction(|ctx| {
                 let value = state.repo_input.get(ctx);
                 log::info!(" new value {value}");

@@ -25,6 +25,14 @@ impl<T> ValueMut<T> {
     }
 }
 
+impl<T: Default> Default for ValueMut<T> {
+    fn default() -> Self {
+        Self {
+            value: InnerValue::new(Default::default())
+        }
+    }
+}
+
 impl<T: Default> ValueMut<T> {
     pub fn move_to<R>(&self, change: impl Fn(T) -> (T, R)) -> R {
         let state = self.value.get_mut();

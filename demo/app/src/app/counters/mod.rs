@@ -1,4 +1,4 @@
-use vertigo::{component, css, dom, include_static, Computed, Value};
+use vertigo::{component, css, dom, include_static, ClickEvent, Computed, Value};
 
 mod simple_counter;
 use simple_counter::SimpleCounter;
@@ -85,6 +85,13 @@ pub fn CountersDemo(state: State) {
         }
     ");
 
+    let outer_click_css = css!{"
+        border: solid 1px black;
+        width: 200px;
+        margin: 5px;
+        padding: 5px;
+    "};
+
     dom! {
         <div>
             <SimpleCounter label="counter1 value" value={&state.counter1} />
@@ -94,6 +101,16 @@ pub fn CountersDemo(state: State) {
             <Sum sum={&state.sum} />
             <img css={center_css} src={&path} />
             <img css={center_css2} src={path} />
+            <div>
+                "Stop propagation test:"
+                <div css={outer_click_css} on_click={|_| log::info!("Outer")}>
+                    "outer click"<br/>
+                    <button on_click={|evt: ClickEvent| {
+                        evt.stop_propagation();
+                        log::info!("Inner");
+                    }}>"Inner click"</button>
+                </div>
+            </div>
         </div>
     }
 }

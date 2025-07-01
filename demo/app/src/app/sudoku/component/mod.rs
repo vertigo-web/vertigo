@@ -183,19 +183,19 @@ fn render_cell(item: &Cell) -> (u32, u32, DomNode) {
 
 #[component]
 fn ExamplesRender(sudoku: SudokuState) {
-    let clear = bind!(sudoku, || {
+    let clear = bind!(sudoku, |_| {
         sudoku.clear();
     });
 
-    let example1 = bind!(sudoku, || {
+    let example1 = bind!(sudoku, |_| {
         sudoku.example1();
     });
 
-    let example2 = bind!(sudoku, || {
+    let example2 = bind!(sudoku, |_| {
         sudoku.example2();
     });
 
-    let example3 = bind!(sudoku, || {
+    let example3 = bind!(sudoku, |_| {
         sudoku.example3();
     });
 

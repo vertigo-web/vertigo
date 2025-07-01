@@ -67,7 +67,7 @@ pub fn render_input_text(state: &ChatState) -> DomNode {
         state.input_text.set(new_text);
     });
 
-    let submit = bind!(state, || {
+    let submit = bind!(state, |_| {
         state.submit();
     });
 

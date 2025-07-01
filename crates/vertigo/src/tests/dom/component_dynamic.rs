@@ -142,7 +142,7 @@ fn test_on_events_grouping_and_spreading() {
             inner:hook_key_down={|_| true}
             inner:on_blur={|| ()}
             inner:on_change={|_| ()}
-            inner:on_click={|| ()}
+            inner:on_click={|_| ()}
             inner:on_dropfile={|_| ()}
             inner:on_input={|_| ()}
             inner:on_key_down={|_| true}

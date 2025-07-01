@@ -27,7 +27,7 @@ pub struct AppState {
 pub fn app(state: AppState) -> DomNode {
     let AppState { rows, mode } = state;
 
-    let create_rows = bind!(rows, || {
+    let create_rows = bind!(rows, |_| {
         let new_rows = (1..10_001)
             .map(|i| {
                 let i_str = i.to_string();
@@ -41,8 +41,8 @@ pub fn app(state: AppState) -> DomNode {
         rows.set(new_rows);
     });
 
-    let change_mode = |new_mode: Mode| bind!(mode, || mode.set(new_mode));
-    let clear_rows = bind!(rows, || rows.set(vec![]));
+    let change_mode = |new_mode: Mode| bind!(mode, |_| mode.set(new_mode));
+    let clear_rows = bind!(rows, |_| rows.set(vec![]));
 
     let rows_rendered = mode.render_value(move |mode| match mode {
         Mode::Div =>

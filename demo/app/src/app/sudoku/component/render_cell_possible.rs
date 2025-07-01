@@ -1,6 +1,6 @@
 use std::{collections::HashSet, rc::Rc};
 
-use vertigo::{css, Css, dom, Computed, bind, DomNode, dom_element, bind_rc};
+use vertigo::{bind, bind_rc, css, dom, dom_element, ClickEvent, Computed, Css, DomNode};
 use crate::app::sudoku::state::{number_item::SudokuValue, Cell};
 
 fn css_item_only_one(cell_width: u32) -> Css {
@@ -54,7 +54,7 @@ fn view_one_possible(cell_width: u32, cell: &Cell) -> DomNode {
             };
 
             for number in possible.iter() {
-                let on_set = bind!(cell, number, || {
+                let on_set = bind!(cell, number, |_| {
                     cell.number.set(Some(number));
                 });
 
@@ -81,8 +81,8 @@ fn view_last_value(cell_width: u32, cell: &Cell, possible_last_value: SudokuValu
     //     cell.number.value.set(Some(possible_last_value));
     // });
 
-    let on_set = Computed::from(bind!(cell, possible_last_value, |_context| -> Rc<dyn Fn() + 'static> {
-        Rc::new(bind!(cell, possible_last_value, || {
+    let on_set = Computed::from(bind!(cell, possible_last_value, |_context| -> Rc<dyn Fn(ClickEvent) + 'static> {
+        Rc::new(bind!(cell, possible_last_value, |_| {
             cell.number.set(Some(possible_last_value));
         }))
     }));
@@ -120,7 +120,7 @@ fn view_default(cell_width: u32, cell: &Cell, possible: HashSet<SudokuValue>) ->
             "".into()
         };
 
-        let on_click = bind_rc!(cell, should_show, number, || {
+        let on_click = bind_rc!(cell, should_show, number, |_: ClickEvent| {
             if should_show {
                 cell.number.set(Some(number));
             }

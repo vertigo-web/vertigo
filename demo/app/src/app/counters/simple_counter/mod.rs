@@ -4,13 +4,13 @@ use vertigo::{component, transaction, Computed, Value};
 #[component]
 /// Shows counter with label
 pub fn SimpleCounter(label: Computed<String>, value: Value<i32>) {
-    let click_up = bind!(value, || {
+    let click_up = bind!(value, |_| {
         transaction(|context| {
             value.set(value.get(context) + 1);
         });
     });
 
-    let click_down = bind!(value, || {
+    let click_down = bind!(value, |_| {
         transaction(|context| {
             value.set(value.get(context) - 1);
         });

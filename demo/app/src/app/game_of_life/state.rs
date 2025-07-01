@@ -1,5 +1,5 @@
 use std::rc::Rc;
-use vertigo::{get_driver, transaction, DropResource, Value};
+use vertigo::{get_driver, transaction, ClickEvent, DropResource, Value};
 
 use super::next_generation::next_generation;
 
@@ -33,16 +33,16 @@ impl State {
         }
     }
 
-    pub fn randomize(&self) -> impl Fn() {
+    pub fn randomize(&self) -> impl Fn(ClickEvent) {
         let matrix = self.matrix.clone();
 
-        move || {
+        move |_| {
             log::info!("random ...");
 
             transaction(|_| {
                 for (y, row) in matrix.iter().enumerate() {
                     for (x, cell) in row.iter().enumerate() {
-                        let new_value: bool = (y * 2 + (x + 4)) % 2 == 0;
+                        let new_value: bool = (y * 2 + (x + 4)).is_multiple_of(2);
                         cell.set(new_value);
 
                         if x as u16 == Self::X_LEN / 2 && y as u16 == Self::Y_LEN / 2 {
@@ -77,10 +77,10 @@ impl State {
         })
     }
 
-    pub fn accept_new_delay(&self) -> impl Fn() {
+    pub fn accept_new_delay(&self) -> impl Fn(ClickEvent) {
         let state = self.clone();
 
-        move || {
+        move |_| {
             transaction(|context| {
                 state.delay.set(state.new_delay.get(context));
 

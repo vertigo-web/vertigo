@@ -311,7 +311,7 @@ mod tests {
 
     #[test]
     fn pseudo_html_callback() {
-        let callback = || ();
+        let callback = |_| ();
         log_start();
         let _el = dom! {
             <div on_click={callback}>"something"</div>
