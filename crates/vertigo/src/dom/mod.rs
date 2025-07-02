@@ -7,4 +7,4 @@ pub mod dom_element_ref;
 pub mod dom_id;
 pub mod dom_node;
 pub mod dom_text;
-pub mod types;
+pub mod events;
