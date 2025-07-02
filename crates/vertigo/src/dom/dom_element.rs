@@ -1,7 +1,7 @@
 use std::rc::Rc;
 
 use crate::{
-    dom::{dom_id::DomId, dom_node::DomNode, types::ClickEvent},
+    dom::{dom_id::DomId, dom_node::DomNode, events::ClickEvent},
     driver_module::{driver::Driver, StaticString},
     get_driver,
     struct_mut::VecMut,
@@ -15,7 +15,7 @@ use super::{
     callback::{Callback, Callback1},
     dom_element_class::DomElementClassMerge,
     dom_element_ref::DomElementRef,
-    types::{DropFileEvent, KeyDownEvent},
+    events::{DropFileEvent, KeyDownEvent},
 };
 
 /// A Real DOM representative - element kind

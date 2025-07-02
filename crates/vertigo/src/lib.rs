@@ -130,7 +130,7 @@ pub use dom::{
     dom_id::DomId,
     dom_node::DomNode,
     dom_text::DomText,
-    types::{ClickEvent, DropFileEvent, DropFileItem, KeyDownEvent},
+    events::{ClickEvent, DropFileEvent, DropFileItem, KeyDownEvent},
 };
 pub use dom_macro::{AttrGroup, AttrGroupValue, EmbedDom};
 pub use driver_module::{

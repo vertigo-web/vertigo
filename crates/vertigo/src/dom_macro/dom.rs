@@ -1,7 +1,7 @@
 use std::collections::BTreeMap;
 
 use crate::{
-    dom::{attr_value::AttrValue, dom_node::DomNode, types::ClickEvent},
+    dom::{attr_value::AttrValue, dom_node::DomNode, events::ClickEvent},
     Callback, Callback1, Computed, Css, DomComment, DomElement, DomText, DropFileEvent,
     KeyDownEvent, Value,
 };
