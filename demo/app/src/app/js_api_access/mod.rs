@@ -24,8 +24,6 @@ pub fn JsApiAccess() {
     };
 
     let down_smooth = |_| {
-        let max_y = js! { window.scrollMaxY };
-        vertigo::log::info!("max_y = {max_y:?}");
         js! {
             window.scrollTo(
                 vec![

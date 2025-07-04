@@ -35,6 +35,9 @@ pub(crate) fn api_access(input: TokenStream) -> TokenStream {
         Expr::Path(path) => {
             base = base_from_attrs(&path.attrs);
         }
+        Expr::Group(group) => {
+            base = base_from_attrs(&group.attrs);
+        }
         _ => {
             emit_warning!(input.span(), "Unsupported base {:?}", input)
         }
@@ -152,10 +155,14 @@ fn generate_calls(expr: &Expr, have_base: bool) -> proc_macro2::TokenStream {
                 .call(stringify!(#func), vec![#((#args).into()),*])
             }
         }
+        Expr::Group(group) => {
+            let code = generate_calls(&group.expr, have_base);
+            quote! { #code }
+        }
         _ => {
             emit_error!(
                 expr.span(),
-                "Expected an expression resulting in a field, call or method call, got {:?}",
+                "Expected an expression resulting in a field, call or method call, got {:#?}",
                 expr
             );
             quote! {}

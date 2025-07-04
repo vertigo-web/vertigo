@@ -130,6 +130,7 @@ pub use dom::{
     callback::{Callback, Callback1},
     dom_comment::DomComment,
     dom_element::DomElement,
+    dom_element_ref::DomElementRef,
     dom_id::DomId,
     dom_node::DomNode,
     dom_text::DomText,
@@ -330,7 +331,17 @@ pub use vertigo_macro::component;
 ///     )
 /// };
 /// ```
-pub use vertigo_macro::js;
+#[macro_export]
+macro_rules! js {
+    // Convert `#ref_node.anything` into `#[ref_node] anything` which can be handled by js_inner macro.
+    ( #$ident:ident.$expr:expr ) => {
+        $crate::js_inner! { #[$ident] $expr }
+    };
+    // Otherwise be transparent.
+    ( $expr:expr ) => { $crate::js_inner! { $expr } };
+}
+
+pub use vertigo_macro::js_inner;
 
 /// Marco that marks an entry point of the app
 ///

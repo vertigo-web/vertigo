@@ -139,7 +139,7 @@ pub fn component(attrs: TokenStream, input: TokenStream) -> TokenStream {
 
 #[proc_macro]
 #[proc_macro_error]
-pub fn js(input: TokenStream) -> TokenStream {
+pub fn js_inner(input: TokenStream) -> TokenStream {
     api_access(input)
 }
 

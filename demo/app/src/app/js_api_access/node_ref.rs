@@ -11,8 +11,22 @@ pub fn NodeRef() {
     let input_ref = input.get_ref();
 
     let focus = move |_| {
-        js! { #[input_ref] focus() };
+        js! { #input_ref.focus() };
     };
+
+    if false {
+        // window
+        js! { window };
+
+        // call()
+        js! { call() };
+
+        // coś.method()
+        js! { coś.method() };
+
+        // root().method().property
+        js! { root().method().property };
+    }
 
     dom! {
         <div tw="flex gap-1">
@@ -23,16 +37,4 @@ pub fn NodeRef() {
     }
 }
 
-
-    // window
-    // js! { window };
-
-    // call()
-    // js! { call() };
-
-    // coś.method()
-    // js! { coś.method() };
-
-    // root().method().property
-    // js! { root().method().property };
 
