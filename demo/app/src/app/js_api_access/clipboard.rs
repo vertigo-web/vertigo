@@ -1,5 +1,7 @@
 use vertigo::{bind, component, dom, js, transaction, Value};
 
+use super::inp_css;
+
 #[component]
 pub fn Clipboard() {
     let text_to_copy = Value::new("Text to copy".to_string());
@@ -20,9 +22,9 @@ pub fn Clipboard() {
     };
 
     dom! {
-        <div>
+        <div tw="flex gap-1">
             <p>"Text to copy: "</p>
-            <input id="my_id" value={text_to_copy} {on_change} />
+            <input css={inp_css()} id="my_id" value={text_to_copy} {on_change} />
             <button on_click={copy}>"Copy to clipboard"</button>
             <button on_click={focus}>"Focus"</button>
         </div>

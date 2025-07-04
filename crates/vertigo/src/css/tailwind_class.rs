@@ -5,7 +5,7 @@ use std::{
 
 use crate::AttrValue;
 
-/// This represents a tailwind class. Use [tw!] macro to create one.
+/// This represents a tailwind class. Use [tw!](crate::tw!) macro to create one.
 pub struct TwClass<'a>(Cow<'a, str>);
 
 impl<'a> TwClass<'a> {

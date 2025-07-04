@@ -1,5 +1,8 @@
 use crate::{dom::dom_id::DomId, driver_module::api::DomAccess, ApiImport};
 
+/// A reference to [DomElement](crate::DomElement).
+///
+/// Use [DomElement::get_ref](crate::DomElement::get_ref) to obtain. See [js!](crate::js!) macro for an example.
 #[derive(Clone)]
 pub struct DomElementRef {
     api: ApiImport,

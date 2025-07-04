@@ -18,6 +18,10 @@
 
 * `on_click` attribute now provides `ClickEvent` to allow preventing default or stopping propagation.
 
+### Fixed
+
+* `DomElement::get_ref()` [#375]
+
 ### Removed
 
 * `window!` and `document!` macros (replaced by `js!`).
@@ -25,6 +29,7 @@
 [#353]: https://github.com/vertigo-web/vertigo/issues/353
 [#368]: https://github.com/vertigo-web/vertigo/issues/368
 [#372]: https://github.com/vertigo-web/vertigo/issues/372
+[#375]: https://github.com/vertigo-web/vertigo/issues/375
 
 ## 0.7.2 - 2025-06-10
 

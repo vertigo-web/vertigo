@@ -1,8 +1,8 @@
-import { isJsObject } from "../../jsvalue_types";
-import { ModuleControllerType } from "../../wasm_init";
 import { ExportType } from "../../wasm_module";
+import { GuardJsValue } from "../../guard";
 import { HistoryLocation } from "../historyLocation";
 import { MapNodes } from "./map_nodes";
+import { ModuleControllerType } from "../../wasm_init";
 
 interface FileItemType {
     name: string,
@@ -186,7 +186,7 @@ export class DriverDom {
         event.preventDefault();
         let click_event = this.getWasm().wasm_callback(callback_id, undefined);
 
-        if (isJsObject(click_event)) {
+        if (GuardJsValue.isJsObject(click_event)) {
             let value = click_event.value;
             if (value !== null) {
                 if (value['stop_propagation'] === true) {
