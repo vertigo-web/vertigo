@@ -37,12 +37,3 @@ export type JsValueType
 export interface JsValueMapType {
     [key: string]: JsValueType
 }
-
-export function isJsObject(value: JsValueType): value is { type: typeof JsValueConst.Object, value: JsValueMapType } {
-    return (
-        value !== null &&
-        typeof value === 'object' &&
-        'type' in value &&
-        value.type === JsValueConst.Object
-    );
-}

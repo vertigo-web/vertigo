@@ -1,4 +1,4 @@
-import { JsValueType, JsValueConst } from "./jsvalue_types";
+import { JsValueType, JsValueConst, JsValueMapType } from "./jsvalue_types";
 
 export namespace GuardJsValue {
     export const isString = (value: JsValueType): value is string => {
@@ -23,5 +23,14 @@ export namespace GuardJsValue {
         }
 
         return false;
+    }
+
+    export const isJsObject = (value: JsValueType): value is { type: typeof JsValueConst.Object, value: JsValueMapType } => {
+        return (
+            value !== null &&
+            typeof value === 'object' &&
+            'type' in value &&
+            value.type === JsValueConst.Object
+        );
     }
 }

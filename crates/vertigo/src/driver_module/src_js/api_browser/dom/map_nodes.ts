@@ -1,6 +1,6 @@
 type NodeType = Element | Comment | Text;
 export class MapNodes {
-    private data: Map<number, NodeType>;
+    /*private*/ data: Map<number, NodeType>;
     private initNodes: Array<ChildNode> | null;
     private style: HTMLStyleElement;
 

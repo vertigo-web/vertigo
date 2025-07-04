@@ -99,8 +99,8 @@ export class JsNode {
             return null;
         }
 
-        if (GuardJsValue.isNumber(firstName) && rest.length === 0) {
-            const domId = firstName.value;
+        if ((GuardJsValue.isNumber(firstName) || GuardJsValue.isBigInt(firstName)) && rest.length === 0) {
+            const domId = Number(firstName.value);
 
             const node = this.nodes.get_any_option(domId);
 
