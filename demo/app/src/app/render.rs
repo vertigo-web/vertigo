@@ -147,18 +147,6 @@ pub fn render(state: &app::State) -> DomNode {
                 <meta charset="utf-8"/>
                 <title>{ title_value }</title>
                 <link rel="icon" href={include_static!("styling/favicon.png")} />
-                <style type="text/css">"
-                    * {
-                        box-sizing: border-box;
-                    }
-                    html, body {
-                        width: 100%;
-                        height: 100%;
-                        margin: 0;
-                        padding: 0;
-                        border: 0;
-                    }
-                "</style>
             </head>
             <body>
                 <div on_key_down={on_keydown} css={css_wrapper}>

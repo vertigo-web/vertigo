@@ -1,7 +1,10 @@
-use vertigo::{bind, component, css, dom, js, JsValue, Value};
+use vertigo::{bind, component, css, dom, js, Css, JsValue, Value};
 
 mod clipboard;
 use clipboard::Clipboard;
+
+mod node_ref;
+use node_ref::NodeRef;
 
 #[derive(Default, PartialEq)]
 pub struct State {
@@ -12,9 +15,6 @@ pub struct State {
 pub fn JsApiAccess() {
     let state = State::default();
 
-    let container_css = css! {"
-    "};
-
     let items = (1..201).map(|i| dom! { <li>"List item" {i}</li> });
 
     let to_bottom = |_| {
@@ -24,8 +24,6 @@ pub fn JsApiAccess() {
     };
 
     let down_smooth = |_| {
-        let max_y = js! { window.scrollMaxY };
-        vertigo::log::info!("max_y = {max_y:?}");
         js! {
             window.scrollTo(
                 vec![
@@ -44,8 +42,11 @@ pub fn JsApiAccess() {
     });
 
     dom! {
-        <div css={container_css}>
-            <p>
+        <div tw="flex flex-col gap-2 p-2">
+            <Clipboard />
+            <NodeRef />
+            <hr />
+            <p tw="flex gap-3">
                 <button on_click={to_bottom}>"scroll to bottom (FF)"</button>
                 <button on_click={down_smooth}>"scroll down smoothly"</button>
                 <button on_click={|_| { js! { window.alert(js! { document.URL }) }; }}>"URL"</button>
@@ -57,8 +58,13 @@ pub fn JsApiAccess() {
             </p>
             <ol>{..items}</ol>
             <button on_click={|_| { js! { window.scrollTo(0, 0) }; }}>"to top"</button>
-            <hr />
-            <Clipboard />
         </div>
     }
+}
+
+fn inp_css() -> Css {
+    css! {"
+        border: 1px solid black;
+        padding: 3px;
+    "}
 }

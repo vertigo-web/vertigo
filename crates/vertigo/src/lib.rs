@@ -130,6 +130,7 @@ pub use dom::{
     callback::{Callback, Callback1},
     dom_comment::DomComment,
     dom_element::DomElement,
+    dom_element_ref::DomElementRef,
     dom_id::DomId,
     dom_node::DomNode,
     dom_text::DomText,
@@ -299,7 +300,7 @@ pub use vertigo_macro::AutoJsJson;
 /// Note: [AttrGroup] allows to dynamically pass arguments to some child node.
 pub use vertigo_macro::component;
 
-/// Macro that allows to evaluate simple JavaScript expressions.
+/// Macro that allows to evaluate pseudo-JavaScript expressions.
 ///
 /// Example 1:
 ///
@@ -314,7 +315,17 @@ pub use vertigo_macro::component;
 /// ```rust
 /// # use vertigo::js;
 /// let max_y = js!{ window.scrollMaxY };
-/// js! {window.scrollTo(0, max_y) };
+/// js! { window.scrollTo(0, max_y) };
+/// ```
+///
+/// Can be used with [DomElementRef]:
+///
+/// ```rust
+/// use vertigo::{js, dom_element};
+///
+/// let node = dom_element! { <input /> };
+/// let node_ref = node.get_ref();
+/// js! { #node_ref.focus() };
 /// ```
 ///
 /// Passing an object as an argument is a little more complicated, but possible:
@@ -330,7 +341,20 @@ pub use vertigo_macro::component;
 ///     )
 /// };
 /// ```
-pub use vertigo_macro::js;
+#[macro_export]
+macro_rules! js {
+    // Convert `#ref_node.anything` into `#[ref_node] anything` which can be handled by js_inner macro.
+    ( #$ident:ident.$expr:expr ) => {
+        $crate::js_inner! { #[$ident] $expr }
+    };
+    // Otherwise be transparent.
+    ( $expr:expr ) => {
+        $crate::js_inner! { $expr }
+    };
+}
+
+/// Used internally by [js!] macro.
+pub use vertigo_macro::js_inner;
 
 /// Marco that marks an entry point of the app
 ///

@@ -5,7 +5,7 @@ extern crate pest_derive;
 #[macro_use]
 extern crate proc_macro_error;
 
-mod api_access;
+mod js_expression;
 mod bind;
 mod component;
 mod css_parser;
@@ -21,7 +21,7 @@ use proc_macro::{Span, TokenStream};
 use quote::quote;
 
 use crate::{
-    api_access::api_access,
+    js_expression::js_expression,
     bind::{bind_inner, bind_rc_inner, bind_spawn_inner},
     component::component_inner,
     css_parser::generate_css_string,
@@ -139,8 +139,8 @@ pub fn component(attrs: TokenStream, input: TokenStream) -> TokenStream {
 
 #[proc_macro]
 #[proc_macro_error]
-pub fn js(input: TokenStream) -> TokenStream {
-    api_access(input)
+pub fn js_inner(input: TokenStream) -> TokenStream {
+    js_expression(input)
 }
 
 fn convert_to_tokens(input: Result<TokenStream, String>) -> TokenStream {
