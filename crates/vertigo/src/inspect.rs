@@ -49,6 +49,7 @@ impl DomDebugFragment {
     pub fn from_cmds(cmds: Vec<DriverDomCommand>) -> Self {
         let mut map = BTreeMap::<DomId, DomDebugNode>::new();
         let mut css = BTreeMap::<String, String>::new();
+        let mut classes_seen = BTreeSet::new();
 
         for cmd in cmds {
             match cmd {
@@ -64,7 +65,7 @@ impl DomDebugFragment {
                 DriverDomCommand::SetAttr { id, name, value } => {
                     if let Some(node) = map.get_mut(&id) {
                         if name == "class".into() {
-                            unpack_styles(node, &css, value);
+                            unpack_styles(node, &css, &mut classes_seen, value);
                         } else {
                             node.attrs.insert(name, value);
                         }
@@ -131,7 +132,9 @@ impl DomDebugFragment {
                     }
                 }
                 DriverDomCommand::InsertCss { selector, value } => {
-                    css.insert(selector, value);
+                    if let Some(selector) = selector {
+                        css.insert(selector, value);
+                    }
                 }
                 DriverDomCommand::CreateComment { id, value } => {
                     map.insert(id, DomDebugNode::from_text(id, format!("<!-- {value} -->")));
@@ -249,7 +252,12 @@ impl DomDebugNode {
     }
 }
 
-fn unpack_styles(node: &mut DomDebugNode, css: &BTreeMap<String, String>, value: String) {
+fn unpack_styles(
+    node: &mut DomDebugNode,
+    css: &BTreeMap<String, String>,
+    classes_seen: &mut BTreeSet<String>,
+    value: String,
+) {
     let mut custom_classes = vec![];
     let mut new_styles = BTreeSet::new();
     if let Some(old_styles) = node.attrs.get(&("style".into())) {
@@ -257,10 +265,13 @@ fn unpack_styles(node: &mut DomDebugNode, css: &BTreeMap<String, String>, value:
     }
     // For each class_name try to unpack it into styles using gathered `css` definitions
     for class_name in value.split(' ') {
-        if let Some(styles_from_autocss) = css.get(&format!(".{class_name}")) {
-            new_styles.insert(styles_from_autocss.clone());
-        } else {
-            custom_classes.push(class_name);
+        if !classes_seen.contains(class_name) {
+            if let Some(styles_from_autocss) = css.get(&format!(".{class_name}")) {
+                new_styles.insert(styles_from_autocss.clone());
+            } else {
+                custom_classes.push(class_name);
+            }
+            classes_seen.insert(class_name.to_string());
         }
     }
     if !custom_classes.is_empty() {
@@ -356,12 +367,13 @@ mod tests {
 
         log_start();
         let _el = dom! {
-            <div id="one" css={css1} class="foo bar" css={css2} />
+            <div id="one" css={css1} class="m-10 py-5" css={css2} />
         };
+
         let html = DomDebugFragment::from_log().to_pseudo_html();
         assert_eq!(
             html,
-            "<div class='foo bar' id='one' style='background: green; color: red' />"
+            "<div class='m-10 py-5' id='one' style='background: green; color: red' />"
         );
     }
 }
