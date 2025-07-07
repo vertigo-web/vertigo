@@ -1,11 +1,11 @@
 use std::path::PathBuf;
 
-use crate::wasm_path::WasmPath;
+use crate::{utils::build_profile, wasm_path::WasmPath};
 
 pub fn get_target_dir_str() -> String {
     // Can't use any dynamic variables here, as proc-macro package is built for host machine type
     // even if the the final outcome is built for wasm32.
-    format!("target/wasm32-unknown-unknown/{}", env!("VERTIGO_PROFILE"))
+    format!("target/wasm32-unknown-unknown/{}", build_profile())
 }
 
 pub fn get_target_dir() -> PathBuf {

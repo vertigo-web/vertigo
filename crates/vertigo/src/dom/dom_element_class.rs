@@ -7,11 +7,12 @@ use crate::{
 struct DomElementClassMergeInner {
     driver: Driver,
     id_dom: DomId,
-    css_name: Option<Css>,
+    css_name: Option<(Css, Option<String>)>,
     attr_name: Option<String>,
     _suspense_drop: Option<DropResource>,
     suspense_css: Option<Css>,
-    command_last_sent: Option<String>,
+    // Class name (autocss_X) and optional class_name_hint
+    command_last_sent: Option<(String, Option<String>)>,
 }
 
 impl DomElementClassMergeInner {
@@ -27,16 +28,18 @@ impl DomElementClassMergeInner {
         }
     }
 
-    fn get_new_command(&self) -> Option<String> {
+    fn get_new_command(&self) -> Option<(String, Option<String>)> {
         let mut result = Vec::new();
+        let mut class_name_hint = None;
 
         if let Some(attr) = &self.attr_name {
             result.push(attr.clone());
         }
 
-        if let Some(css) = &self.css_name {
+        if let Some((css, debug_class_name)) = &self.css_name {
             let css = get_driver().inner.css_manager.get_class_name(css);
             result.push(css);
+            class_name_hint = debug_class_name.clone();
         }
 
         if let Some(suspense_css) = &self.suspense_css {
@@ -47,7 +50,7 @@ impl DomElementClassMergeInner {
         if result.is_empty() {
             None
         } else {
-            Some(result.join(" "))
+            Some((result.join(" "), class_name_hint))
         }
     }
 
@@ -57,15 +60,22 @@ impl DomElementClassMergeInner {
         if self.command_last_sent != new_command {
             self.command_last_sent.clone_from(&new_command);
 
-            let new_command = match new_command {
-                Some(new_command) => new_command,
-                None => "".to_string(),
+            let (new_command, class_name_hint) = match new_command {
+                Some(new_command) => (new_command.0, new_command.1),
+                None => ("".to_string(), None),
             };
 
             self.driver
                 .inner
                 .dom
                 .set_attr(self.id_dom, "class", &new_command);
+
+            if let Some(class_name_hint) = class_name_hint {
+                self.driver
+                    .inner
+                    .dom
+                    .set_attr(self.id_dom, "v-css", &class_name_hint);
+            }
         }
     }
 }
@@ -98,9 +108,9 @@ impl DomElementClassMerge {
         });
     }
 
-    pub fn set_css(&self, new_value: Css) {
+    pub fn set_css(&self, new_value: Css, debug_class_name: Option<String>) {
         self.inner.change(|state| {
-            state.css_name = Some(new_value);
+            state.css_name = Some((new_value, debug_class_name));
             state.refresh_dom();
         });
     }

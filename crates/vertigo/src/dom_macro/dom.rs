@@ -37,7 +37,10 @@ pub type AttrGroup = BTreeMap<String, AttrGroupValue>;
 
 pub enum AttrGroupValue {
     AttrValue(AttrValue),
-    Css(Css),
+    Css {
+        css: Css,
+        class_name: Option<String>,
+    },
     HookKeyDown(Callback1<KeyDownEvent, bool>),
     OnBlur(Callback<()>),
     OnChange(Callback1<String, ()>),
@@ -63,8 +66,11 @@ macro_rules! group_value_constructor {
 }
 
 impl AttrGroupValue {
-    pub fn css(css: impl Into<Css>) -> Self {
-        Self::Css(css.into())
+    pub fn css(css: impl Into<Css>, class_name: Option<String>) -> Self {
+        Self::Css {
+            css: css.into(),
+            class_name,
+        }
     }
 
     group_value_constructor!(hook_key_down, Callback1<KeyDownEvent, bool>, HookKeyDown);
@@ -112,11 +118,11 @@ impl<T: Into<AttrValue>> From<T> for AttrGroupValue {
     }
 }
 
-impl From<Css> for AttrGroupValue {
-    fn from(value: Css) -> Self {
-        Self::Css(value)
-    }
-}
+// impl From<Css> for AttrGroupValue {
+//     fn from(value: Css) -> Self {
+//         Self::Css(value)
+//     }
+// }
 
 impl EmbedDom for AttrGroupValue {
     fn embed(self) -> DomNode {

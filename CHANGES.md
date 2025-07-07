@@ -7,6 +7,7 @@
 
 * Tailwind support (internal rust-only, and external node-based) [#353]
 * `js!` macro which allows to evaluate simple JavaScript expressions. [#372]
+* Added `v-css` and `v-component` attributes in rendered DOM to help debugging (added only in debug mode) [#367]
 
 ### Changed
 
@@ -27,6 +28,7 @@
 * `window!` and `document!` macros (replaced by `js!`).
 
 [#353]: https://github.com/vertigo-web/vertigo/issues/353
+[#367]: https://github.com/vertigo-web/vertigo/issues/367
 [#368]: https://github.com/vertigo-web/vertigo/issues/368
 [#372]: https://github.com/vertigo-web/vertigo/issues/372
 [#375]: https://github.com/vertigo-web/vertigo/issues/375

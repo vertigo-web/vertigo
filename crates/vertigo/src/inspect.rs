@@ -317,7 +317,10 @@ mod tests {
             <div css={green}>"something"</div>
         };
         let html = DomDebugFragment::from_log().to_pseudo_html();
-        assert_eq!(html, "<div style='color: green'>something</div>");
+        assert_eq!(
+            html,
+            "<div style='color: green' v-css='green'>something</div>"
+        );
     }
 
     #[test]
@@ -356,7 +359,7 @@ mod tests {
         let html = DomDebugFragment::from_log().to_pseudo_html();
         assert_eq!(
             html,
-            "<div id='one' style='background: green; color: red' />"
+            "<div id='one' style='background: green; color: red' v-css='css2' />"
         );
     }
 
@@ -373,7 +376,7 @@ mod tests {
         let html = DomDebugFragment::from_log().to_pseudo_html();
         assert_eq!(
             html,
-            "<div class='m-10 py-5' id='one' style='background: green; color: red' />"
+            "<div class='m-10 py-5' id='one' style='background: green; color: red' v-css='css2' />"
         );
     }
 }

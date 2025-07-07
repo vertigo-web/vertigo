@@ -106,7 +106,10 @@ fn test_mutable_parameter() {
     let _el1 = dom! { <Hello {&prefix} name="John" surname={&&mut "Johnson".to_string()} /> };
     let el1_str = DomDebugFragment::from_log().to_pseudo_html();
 
-    assert_eq!(el1_str, "<span>Hello Mr. Jack Jackson</span>");
+    assert_eq!(
+        el1_str,
+        "<span v-component='Hello'>Hello Mr. Jack Jackson</span>"
+    );
 }
 
 #[test]
