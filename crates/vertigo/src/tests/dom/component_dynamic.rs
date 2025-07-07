@@ -32,7 +32,7 @@ fn test_attr_values_grouping_and_spreading() {
 
     assert_eq!(
         el_str,
-        "<div alt='4' id='my_id'><span style='color: red'>Hello world</span></div>"
+        "<div alt='4' id='my_id' v-component='Hello'><span style='color: red'>Hello world</span></div>"
     );
 }
 
@@ -59,7 +59,10 @@ fn test_empty_attrs_grouping() {
 
     let el_str = DomDebugFragment::from_log().to_pseudo_html();
 
-    assert_eq!(el_str, "<div><span>Hello world</span></div>");
+    assert_eq!(
+        el_str,
+        "<div v-component='Hello'><span>Hello world</span></div>"
+    );
 }
 
 #[test]
@@ -92,7 +95,7 @@ fn test_css_attrs_grouping_and_spreading() {
 
     assert_eq!(
         el_str,
-        "<div style='color: red'><span style='color: green'>Hello world</span></div>"
+        "<div style='color: red' v-component='Hello' v-css='red_css'><span style='color: green' v-css='green_css'>Hello world</span></div>"
     );
 }
 
@@ -119,7 +122,7 @@ fn test_css_extending() {
 
     assert_eq!(
         el_str,
-        "<input id='test-id' style='color: red; background-color: green; color: yellow; font-size: 15px' value='Test' />"
+        "<input id='test-id' style='color: red; background-color: green; color: yellow; font-size: 15px' v-component='MyInput' v-css='my_css' value='Test' />"
     );
 }
 
@@ -158,7 +161,7 @@ fn test_on_events_grouping_and_spreading() {
 
     let el_str = DomDebugFragment::from_log().to_pseudo_html();
 
-    assert_eq!(el_str, "<input name='world' style='color: red' blur=2 change=3 click=4 drop=5 hook_keydown=1 input=6 keydown=7 load=8 mousedown=9 mouseenter=10 mouseleave=11 mouseup=12 submit=13 />");
+    assert_eq!(el_str, "<input name='world' style='color: red' v-component='Everything' blur=2 change=3 click=4 drop=5 hook_keydown=1 input=6 keydown=7 load=8 mousedown=9 mouseenter=10 mouseleave=11 mouseup=12 submit=13 />");
 }
 
 #[test]
@@ -189,7 +192,10 @@ fn test_stringifyable_group_attrs() {
 
     let el1_str = DomDebugFragment::from_log().to_pseudo_html();
 
-    assert_eq!(el1_str, "<div><span>Hello<!-- v --> world</span></div>");
+    assert_eq!(
+        el1_str,
+        "<div v-component='Hello'><span>Hello<!-- v --> world</span></div>"
+    );
 
     log_start();
 
@@ -202,7 +208,10 @@ fn test_stringifyable_group_attrs() {
 
     let el2_str = DomDebugFragment::from_log().to_pseudo_html();
 
-    assert_eq!(el2_str, "<div><span>Good bye<!-- v --> world</span></div>");
+    assert_eq!(
+        el2_str,
+        "<div v-component='Hello'><span>Good bye<!-- v --> world</span></div>"
+    );
 }
 
 #[test]
@@ -235,7 +244,10 @@ fn test_embeddable_group_attrs() {
 
     let el1_str = DomDebugFragment::from_log().to_pseudo_html();
 
-    assert_eq!(el1_str, "<div><span>Hello world</span></div>");
+    assert_eq!(
+        el1_str,
+        "<div v-component='Hello'><span>Hello world</span></div>"
+    );
 
     log_start();
 
@@ -248,5 +260,8 @@ fn test_embeddable_group_attrs() {
 
     let el2_str = DomDebugFragment::from_log().to_pseudo_html();
 
-    assert_eq!(el2_str, "<div><span>Good bye<!-- v --> world</span></div>");
+    assert_eq!(
+        el2_str,
+        "<div v-component='Hello'><span>Good bye<!-- v --> world</span></div>"
+    );
 }

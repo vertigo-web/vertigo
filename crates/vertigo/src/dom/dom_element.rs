@@ -98,7 +98,7 @@ impl DomElement {
 
     pub fn add_attr_group_item(self, key: String, value: AttrGroupValue) -> Self {
         match (key.as_str(), value) {
-            ("css", AttrGroupValue::Css(css)) => self.css(css),
+            ("css", AttrGroupValue::Css { css, class_name }) => self.css(css, class_name),
             ("hook_key_down", AttrGroupValue::HookKeyDown(on_hook_key_down)) => {
                 self.hook_key_down(on_hook_key_down)
             }
@@ -186,18 +186,18 @@ impl DomElement {
         self
     }
 
-    pub fn css(self, css: impl Into<CssAttrValue>) -> Self {
+    pub fn css(self, css: impl Into<CssAttrValue>, debug_class_name: Option<String>) -> Self {
         let css = css.into();
 
         match css {
             CssAttrValue::Css(css) => {
-                self.class_manager.set_css(css);
+                self.class_manager.set_css(css, debug_class_name);
             }
             CssAttrValue::Computed(css) => {
                 let class_manager = self.class_manager.clone();
 
                 self.subscribe(css, move |css| {
-                    class_manager.set_css(css);
+                    class_manager.set_css(css, debug_class_name.clone());
                 });
             }
         }

@@ -5,28 +5,29 @@ extern crate pest_derive;
 #[macro_use]
 extern crate proc_macro_error;
 
-mod js_expression;
 mod bind;
 mod component;
 mod css_parser;
 mod get_target_dir;
 mod html_parser;
 mod include_static;
+mod js_expression;
 mod jsjson;
 mod main_wrap;
 mod trace_tailwind;
+mod utils;
 mod wasm_path;
 
 use proc_macro::{Span, TokenStream};
 use quote::quote;
 
 use crate::{
-    js_expression::js_expression,
     bind::{bind_inner, bind_rc_inner, bind_spawn_inner},
     component::component_inner,
     css_parser::generate_css_string,
     html_parser::{dom_element_inner, dom_inner},
     include_static::include_static_inner,
+    js_expression::js_expression,
     main_wrap::main_wrap,
     trace_tailwind::trace_tailwind,
 };

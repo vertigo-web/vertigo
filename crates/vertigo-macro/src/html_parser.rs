@@ -11,7 +11,9 @@ use rstml::{
 use std::collections::BTreeMap;
 use syn::{spanned::Spanned, Expr, ExprBlock, ExprLit, Ident, Stmt};
 
-use crate::{component::get_group_attrs_method_name, trace_tailwind::add_to_tailwind};
+use crate::{
+    component::get_group_attrs_method_name, trace_tailwind::add_to_tailwind, utils::release_build,
+};
 
 const HTML_ATTR_FORMAT_ERROR: &str =
     "in html node. Expected key=\"value\", key={value}, key={}, {value} or {..value} attribute.";
@@ -85,6 +87,7 @@ fn convert_to_component(node: &Node) -> TokenStream2 {
         }
     };
     let constructor_name = element.name();
+    let component_name_string = constructor_name.to_string();
 
     let mut grouped_attrs = BTreeMap::<String, BTreeMap<String, KeyedAttributeValue>>::new();
 
@@ -137,7 +140,7 @@ fn convert_to_component(node: &Node) -> TokenStream2 {
                                     })
                                     .is_some()
                             {
-                                // Strip colon grooup name
+                                // Strip colon group name
                                 let group = group.map(|p| *p.value());
                                 // Convert whole punctuated to string without spacing
                                 let key_str = p.to_token_stream().to_string().replace(' ', "");
@@ -247,7 +250,12 @@ fn convert_to_component(node: &Node) -> TokenStream2 {
                             value.to_token_stream()
                         };
                         let value = match key.as_str() {
-                            "css" => quote! { vertigo::AttrGroupValue::css(#value) },
+                            "css" => {
+                                let debug_class_name = generate_debug_class_name(&value);
+                                quote! {
+                                    vertigo::AttrGroupValue::css(#value, #debug_class_name)
+                                }
+                            }
                             "hook_key_down" => {
                                 quote! { vertigo::AttrGroupValue::hook_key_down(#value) }
                             }
@@ -297,6 +305,19 @@ fn convert_to_component(node: &Node) -> TokenStream2 {
         .to_tokens(&mut grouped_attrs_stream);
     }
 
+    let debug_info = if release_build() {
+        quote! {}
+    } else {
+        quote! {
+            match &cmp {
+                vertigo::DomNode::Node { node } => {
+                    node.add_attr("v-component", #component_name_string);
+                }
+                _ => {}
+            };
+        }
+    };
+
     quote! {
         {
             let cmp = #constructor_name {
@@ -305,7 +326,9 @@ fn convert_to_component(node: &Node) -> TokenStream2 {
             let cmp = cmp.into_component()
                 #grouped_attrs_stream
             ;
-            cmp.mount()
+            let cmp = cmp.mount();
+            #debug_info
+            cmp
         }
     }
 }
@@ -351,11 +374,19 @@ fn convert_node(node: &Node, convert_to_dom_node: bool) -> TokenStream2 {
         }
 
         let method_str = match name.as_str() {
-            "css" | "hook_key_down" | "on_blur" | "on_change" | "on_click" | "on_dropfile"
-            | "on_input" | "on_key_down" | "on_load" | "on_mouse_down" | "on_mouse_enter"
-            | "on_mouse_leave" | "on_mouse_up" | "on_submit" => &name,
+            "hook_key_down" | "on_blur" | "on_change" | "on_click" | "on_dropfile" | "on_input"
+            | "on_key_down" | "on_load" | "on_mouse_down" | "on_mouse_enter" | "on_mouse_leave"
+            | "on_mouse_up" | "on_submit" => &name,
 
             "form" => "on_submit",
+
+            "css" => {
+                let class_name = generate_debug_class_name(&value);
+                out_attr.push(quote! {
+                    .css(#value, #class_name)
+                });
+                return;
+            }
 
             "vertigo-suspense" => {
                 out_attr.push(quote! {
@@ -640,5 +671,19 @@ fn convert_child_to_component(node: &Node) -> TokenStream2 {
     let cmp_stream = convert_to_component(node);
     quote! {
         .child(#cmp_stream)
+    }
+}
+
+fn generate_debug_class_name(value: &TokenStream2) -> TokenStream2 {
+    if release_build() {
+        quote! { None }
+    } else {
+        let debug_class_name = value
+            .to_string()
+            .chars()
+            .filter(|c| !c.is_whitespace())
+            .collect::<String>();
+
+        quote! { Some(#debug_class_name.to_string()) }
     }
 }
