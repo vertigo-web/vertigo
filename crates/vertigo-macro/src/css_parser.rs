@@ -265,7 +265,7 @@ impl Default for ParamsEnumerator {
         Self {
             seq: Box::new(
                 (0..2)
-                    .map(|_| (b'a'..=b'z'))
+                    .map(|_| b'a'..=b'z')
                     .multi_cartesian_product()
                     .map(|letters| String::from_utf8(letters).unwrap()),
             ),

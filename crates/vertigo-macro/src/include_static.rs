@@ -14,8 +14,7 @@ pub(crate) fn include_static_inner(input: TokenStream) -> TokenStream {
         Ok(hash) => quote! { vertigo::get_driver().public_build_path(#hash) }.into(),
         Err(message) => {
             emit_error!(Span::call_site(), "{}", message);
-            let empty = "";
-            quote! { #empty }.into()
+            quote! { "".to_string() }.into()
         }
     }
 }
