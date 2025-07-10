@@ -118,12 +118,6 @@ impl<T: Into<AttrValue>> From<T> for AttrGroupValue {
     }
 }
 
-// impl From<Css> for AttrGroupValue {
-//     fn from(value: Css) -> Self {
-//         Self::Css(value)
-//     }
-// }
-
 impl EmbedDom for AttrGroupValue {
     fn embed(self) -> DomNode {
         self.to_string_or_empty().embed()

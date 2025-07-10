@@ -383,7 +383,7 @@ fn convert_node(node: &Node, convert_to_dom_node: bool) -> TokenStream2 {
             "css" => {
                 let class_name = generate_debug_class_name(&value);
                 out_attr.push(quote! {
-                    .css(#value, #class_name)
+                    .css_with_class_name(#value, #class_name)
                 });
                 return;
             }
