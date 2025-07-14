@@ -33,6 +33,7 @@ impl GitHubExplorer {
 
         let input_css = css! {"
             margin-left: 10px;
+            border: black 1px solid;
         "};
 
         let button_css = css! {"

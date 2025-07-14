@@ -1,4 +1,4 @@
-use vertigo::{KeyDownEvent, bind, dom, DomNode, component};
+use vertigo::{bind, component, css, dom, DomNode, KeyDownEvent};
 
 use super::state::ChatState;
 
@@ -63,6 +63,10 @@ pub fn render_input_text(state: &ChatState) -> DomNode {
     let state = state.clone();
     let text_value = state.input_text.to_computed();
 
+    let input_css = css! {"
+        border: black 1px solid;
+    "};
+
     let on_input = bind!(state, |new_text: String| {
         state.input_text.set(new_text);
     });
@@ -83,7 +87,7 @@ pub fn render_input_text(state: &ChatState) -> DomNode {
         <div>
             <hr/>
             <div>
-                <input type="text" value={text_value} on_input={on_input} on_key_down={on_key_down}/>
+                <input type="text" value={text_value} css={input_css} on_input={on_input} on_key_down={on_key_down}/>
                 <button on_click={submit}>"Send"</button>
             </div>
         </div>

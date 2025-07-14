@@ -9,7 +9,7 @@ edition = "2021"
 crate-type = ["cdylib", "rlib"]
 
 [dependencies]
-vertigo = "0.7"
+vertigo = "0.8"
 
 [profile.release]
 lto = true

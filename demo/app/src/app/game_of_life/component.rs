@@ -72,8 +72,13 @@ impl GameOfLife {
             margin-bottom: 5px;
         "};
 
-        let css_button = css! {"
+        let button_css = css! {"
             cursor: pointer;
+            border: black 1px solid;
+        "};
+
+        let input_css = css! {"
+            border: black 1px solid;
         "};
 
         dom! {
@@ -85,18 +90,18 @@ impl GameOfLife {
                     "Year = " { year }
                 </div>
                 <div>
-                    <button css={&css_button} on_click={on_toggle_timer}>
+                    <button css={&button_css} on_click={on_toggle_timer}>
                         {button_label}
                     </button>
-                    <button css={&css_button} on_click={state.randomize()}>"Random"</button>
+                    <button css={&button_css} on_click={state.randomize()}>"Random"</button>
                 </div>
                 <div>
                     <div>
                         "delay = " {delay}
                     </div>
                     "Set delay: "
-                    <input value={new_delay} on_input={on_input} />
-                    " " <button css={css_button} on_click={state.accept_new_delay()}>"Set"</button>
+                    <input value={new_delay} css={input_css} on_input={on_input} />
+                    " " <button css={button_css} on_click={state.accept_new_delay()}>"Set"</button>
                 </div>
             </div>
         }
