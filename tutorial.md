@@ -2,7 +2,7 @@
 <!-- markdownlint-disable no-inline-html -->
 
 <!-- markdownlint-disable-next-line no-emphasis-as-heading -->
-*Up to date with version 0.7.2*
+*Up to date with version 0.8.0*
 
 <!-- markdownlint-disable-next-line heading-increment -->
 ### Table of contents
@@ -214,7 +214,7 @@ If the `message` cannot be moved because it is used later, then it should be clo
 Let's do some reactivity already. Import `vertigo::bind` and add switch event just before the `dom!` macro:
 
 ```rust
-    let switch = bind!(strong, ||
+    let switch = bind!(strong, |_|
         strong.change(|val| { *val = !*val; })
     );
 
@@ -399,7 +399,7 @@ use vertigo::{bind, component, dom, transaction, Value};
 pub fn List(items: Value<Vec<String>>) {
     let new_item = Value::<String>::default();
 
-    let add = bind!(items, new_item, || {
+    let add = bind!(items, new_item, |_| {
         transaction(|ctx| {
             items.change(|items| items.push(new_item.get(ctx)));
             new_item.set("".to_string());

@@ -5,7 +5,7 @@ A reactive Real-DOM library with SSR for Rust
 [![crates.io](https://img.shields.io/crates/v/vertigo)](https://crates.io/crates/vertigo)
 [![Documentation](https://docs.rs/vertigo/badge.svg)](https://docs.rs/vertigo)
 ![MIT or Apache 2.0 licensed](https://img.shields.io/crates/l/vertigo.svg)
-[![Dependency Status](https://deps.rs/crate/vertigo/0.7.2/status.svg)](https://deps.rs/crate/vertigo/0.7.2)
+[![Dependency Status](https://deps.rs/crate/vertigo/0.8.0/status.svg)](https://deps.rs/crate/vertigo/0.8.0)
 [![CI](https://github.com/vertigo-web/vertigo/actions/workflows/pipeline.yaml/badge.svg)](https://github.com/vertigo-web/vertigo/actions/workflows/pipeline.yaml)
 [![downloads](https://img.shields.io/crates/d/vertigo.svg)](https://crates.io/crates/vertigo)
 
@@ -20,12 +20,14 @@ See [Changelog](https://github.com/vertigo-web/vertigo/blob/master/CHANGES.md) f
 
 Go to **[TUTORIAL](https://github.com/vertigo-web/vertigo/blob/master/tutorial.md)** if you want to try.
 
+For more information go to vertigo home website **[vertigo.znoj.pl](https://vertigo.znoj.pl/)**.
+
 ## Examples
 
 Dependencies:
 
 ```toml
-vertigo = "0.7"
+vertigo = "0.8"
 ```
 
 Example 1:
@@ -37,13 +39,13 @@ use vertigo::{dom, DomNode, Value, bind, main};
 pub fn app() -> DomNode {
     let count = Value::new(0);
 
-    let increment = bind!(count, || {
+    let increment = bind!(count, |_| {
         count.change(|value| {
             *value += 1;
         });
     });
 
-    let decrement = bind!(count, || {
+    let decrement = bind!(count, |_| {
         count.change(|value| {
             *value -= 1;
         });
@@ -132,7 +134,12 @@ Build and run project using:
 
 Eventually terminal will let you know that app is available under `http://localhost:4444/`
 
-You can play around with the code. It should automatically recompile and the browser tab should be informed to refresh.
+If you want to play around with the demo code, run:
+
+* `cargo make demo-watch`
+
+It should automatically recompile upon changes and the browser tab should be informed to refresh.
+Note that this compiles the code in debug mode so the WASM is not optimized.
 
 --------------
 
