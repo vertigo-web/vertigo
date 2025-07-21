@@ -5,7 +5,7 @@ use crate::{
     computed::{context::Context, Value},
     get_driver,
     struct_mut::ValueMut,
-    transaction, Computed, DomNode, Instant, JsJsonDeserialize, Resource,
+    transaction, Computed, DomNode, Instant, JsJsonDeserialize, Resource, ToComputed,
 };
 
 use super::request_builder::{RequestBody, RequestBuilder};
@@ -220,12 +220,20 @@ impl<T: PartialEq> LazyCache<T> {
             get_driver().inner.api.on_fetch_stop.trigger(());
         });
     }
+}
 
-    pub fn to_computed(&self) -> Computed<Resource<Rc<T>>> {
+impl<T: Clone + PartialEq> ToComputed<Resource<Rc<T>>> for LazyCache<T> {
+    fn to_computed(&self) -> Computed<Resource<Rc<T>>> {
         Computed::from({
             let state = self.clone();
             move |context| state.get(context)
         })
+    }
+}
+
+impl<T: Clone+ PartialEq> LazyCache<T> {
+    pub fn to_computed(&self) -> Computed<Resource<Rc<T>>> {
+        <Self as ToComputed<Resource<Rc<T>>>>::to_computed(self)
     }
 }
 

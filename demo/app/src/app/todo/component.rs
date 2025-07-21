@@ -1,4 +1,4 @@
-use vertigo::{css, Css, bind, dom, Resource, DomNode, dom_element, Value};
+use vertigo::{bind, css, dom, dom_element, Css, DomNode, Resource, Value};
 
 use crate::app::todo::Select;
 
