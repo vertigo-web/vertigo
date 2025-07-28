@@ -1,11 +1,11 @@
 use std::rc::Rc;
 
 use crate::{
-    dom::{dom_id::DomId, dom_node::DomNode, events::ClickEvent},
+    dom::{callback::SuspenseCallback, dom_id::DomId, dom_node::DomNode, events::ClickEvent},
     driver_module::{driver::Driver, StaticString},
     get_driver,
     struct_mut::VecMut,
-    AttrGroupValue, Computed, Css, DomText, DropFileItem, DropResource, JsValue,
+    AttrGroupValue, Computed, DomText, DropFileItem, DropResource, JsValue,
 };
 
 use crate::struct_mut::VecDequeMut;
@@ -59,28 +59,28 @@ impl DomElement {
                 let class_manager = self.class_manager.clone();
 
                 self.subscribe(computed, move |value| {
-                    class_manager.set_attr_value(name.clone(), Some(value));
+                    class_manager.set_attr_value(name.clone(), Some(Rc::new(value)));
                 });
             }
             AttrValue::ComputedOpt(computed) => {
                 let class_manager = self.class_manager.clone();
 
                 self.subscribe(computed, move |value| {
-                    class_manager.set_attr_value(name.clone(), value);
+                    class_manager.set_attr_value(name.clone(), value.map(Rc::new));
                 });
             }
             AttrValue::Value(value) => {
                 let class_manager = self.class_manager.clone();
 
                 self.subscribe(value.to_computed(), move |value| {
-                    class_manager.set_attr_value(name.clone(), Some(value));
+                    class_manager.set_attr_value(name.clone(), Some(Rc::new(value)));
                 });
             }
             AttrValue::ValueOpt(value) => {
                 let class_manager = self.class_manager.clone();
 
                 self.subscribe(value.to_computed(), move |value| {
-                    class_manager.set_attr_value(name.clone(), value);
+                    class_manager.set_attr_value(name.clone(), value.map(Rc::new));
                 });
             }
         };
@@ -88,10 +88,10 @@ impl DomElement {
 
     pub fn add_attr_group(
         mut self,
-        values: impl IntoIterator<Item = (String, AttrGroupValue)>,
+        values: impl IntoIterator<Item = (impl Into<String>, impl Into<AttrGroupValue>)>,
     ) -> Self {
         for (key, value) in values.into_iter() {
-            self = self.add_attr_group_item(key, value);
+            self = self.add_attr_group_item(key.into(), value.into());
         }
         self
     }
@@ -102,35 +102,35 @@ impl DomElement {
                 self.css_with_class_name(css, class_name)
             }
             ("hook_key_down", AttrGroupValue::HookKeyDown(on_hook_key_down)) => {
-                self.hook_key_down(on_hook_key_down)
+                self.hook_key_down_rc(on_hook_key_down)
             }
-            ("on_blur", AttrGroupValue::OnBlur(on_blur)) => self.on_blur(on_blur),
-            ("on_change", AttrGroupValue::OnChange(on_change)) => self.on_change(on_change),
-            ("on_click", AttrGroupValue::OnClick(on_click)) => self.on_click(on_click),
+            ("on_blur", AttrGroupValue::OnBlur(on_blur)) => self.on_blur_rc(on_blur),
+            ("on_change", AttrGroupValue::OnChange(on_change)) => self.on_change_rc(on_change),
+            ("on_click", AttrGroupValue::OnClick(on_click)) => self.on_click_rc(on_click),
             ("on_dropfile", AttrGroupValue::OnDropfile(on_dropfile)) => {
-                self.on_dropfile(on_dropfile)
+                self.on_dropfile_rc(on_dropfile)
             }
-            ("on_input", AttrGroupValue::OnInput(on_input)) => self.on_input(on_input),
+            ("on_input", AttrGroupValue::OnInput(on_input)) => self.on_input_rc(on_input),
             ("on_key_down", AttrGroupValue::OnKeyDown(on_key_down)) => {
-                self.on_key_down(on_key_down)
+                self.on_key_down_rc(on_key_down)
             }
-            ("on_load", AttrGroupValue::OnLoad(on_load)) => self.on_load(on_load),
+            ("on_load", AttrGroupValue::OnLoad(on_load)) => self.on_load_rc(on_load),
             ("on_mouse_down", AttrGroupValue::OnMouseDown(on_mouse_down)) => {
-                self.on_mouse_down(on_mouse_down)
+                self.on_mouse_down_rc(on_mouse_down)
             }
             ("on_mouse_enter", AttrGroupValue::OnMouseEnter(on_mouse_enter)) => {
-                self.on_mouse_enter(on_mouse_enter)
+                self.on_mouse_enter_rc(on_mouse_enter)
             }
             ("on_mouse_leave", AttrGroupValue::OnMouseLeave(on_mouse_leave)) => {
-                self.on_mouse_leave(on_mouse_leave)
+                self.on_mouse_leave_rc(on_mouse_leave)
             }
             ("on_mouse_up", AttrGroupValue::OnMouseUp(on_mouse_up)) => {
-                self.on_mouse_up(on_mouse_up)
+                self.on_mouse_up_rc(on_mouse_up)
             }
             ("on_submit", AttrGroupValue::OnSubmit(on_submit))
-            | ("form", AttrGroupValue::OnSubmit(on_submit)) => self.on_submit(on_submit),
+            | ("form", AttrGroupValue::OnSubmit(on_submit)) => self.on_submit_rc(on_submit),
             ("vertigo-suspense", AttrGroupValue::Suspense(callback)) => {
-                self.suspense(Some(callback))
+                self.suspense_rc(Some(callback))
             }
             (_, AttrGroupValue::AttrValue(value)) => self.attr(key, value),
             (_, _) => {
@@ -224,6 +224,10 @@ impl DomElement {
     }
 
     pub fn hook_key_down(self, on_hook_key_down: impl Into<Callback1<KeyDownEvent, bool>>) -> Self {
+        self.hook_key_down_rc(Rc::new(on_hook_key_down.into()))
+    }
+
+    pub fn hook_key_down_rc(self, on_hook_key_down: Rc<Callback1<KeyDownEvent, bool>>) -> Self {
         let on_hook_key_down = self.install_callback1(on_hook_key_down);
 
         self.add_event_listener("hook_keydown", move |data| match get_key_down_event(data) {
@@ -247,6 +251,10 @@ impl DomElement {
     }
 
     pub fn on_blur(self, on_blur: impl Into<Callback<()>>) -> Self {
+        self.on_blur_rc(Rc::new(on_blur.into()))
+    }
+
+    pub fn on_blur_rc(self, on_blur: Rc<Callback<()>>) -> Self {
         let on_blur = self.install_callback(on_blur);
 
         self.add_event_listener("blur", move |_data| {
@@ -256,6 +264,10 @@ impl DomElement {
     }
 
     pub fn on_change(self, on_change: impl Into<Callback1<String, ()>>) -> Self {
+        self.on_change_rc(Rc::new(on_change.into()))
+    }
+
+    pub fn on_change_rc(self, on_change: Rc<Callback1<String, ()>>) -> Self {
         let on_change = self.install_callback1(on_change);
 
         self.add_event_listener("change", move |data| {
@@ -270,6 +282,10 @@ impl DomElement {
     }
 
     pub fn on_click(self, on_click: impl Into<Callback1<ClickEvent, ()>>) -> Self {
+        self.on_click_rc(Rc::new(on_click.into()))
+    }
+
+    pub fn on_click_rc(self, on_click: Rc<Callback1<ClickEvent, ()>>) -> Self {
         let on_click = self.install_callback1(on_click);
 
         self.add_event_listener("click", move |_data| {
@@ -280,6 +296,10 @@ impl DomElement {
     }
 
     pub fn on_dropfile(self, on_dropfile: impl Into<Callback1<DropFileEvent, ()>>) -> Self {
+        self.on_dropfile_rc(Rc::new(on_dropfile.into()))
+    }
+
+    pub fn on_dropfile_rc(self, on_dropfile: Rc<Callback1<DropFileEvent, ()>>) -> Self {
         let on_dropfile = self.install_callback1(on_dropfile);
 
         self.add_event_listener("drop", move |data| {
@@ -310,6 +330,10 @@ impl DomElement {
     }
 
     pub fn on_input(self, on_input: impl Into<Callback1<String, ()>>) -> Self {
+        self.on_input_rc(Rc::new(on_input.into()))
+    }
+
+    pub fn on_input_rc(self, on_input: Rc<Callback1<String, ()>>) -> Self {
         let on_input = self.install_callback1(on_input);
 
         self.add_event_listener("input", move |data| {
@@ -324,6 +348,10 @@ impl DomElement {
     }
 
     pub fn on_key_down(self, on_key_down: impl Into<Callback1<KeyDownEvent, bool>>) -> Self {
+        self.on_key_down_rc(Rc::new(on_key_down.into()))
+    }
+
+    pub fn on_key_down_rc(self, on_key_down: Rc<Callback1<KeyDownEvent, bool>>) -> Self {
         let on_key_down = self.install_callback1(on_key_down);
 
         self.add_event_listener("keydown", move |data| match get_key_down_event(data) {
@@ -343,6 +371,10 @@ impl DomElement {
     }
 
     pub fn on_load(self, on_load: impl Into<Callback<()>>) -> Self {
+        self.on_load_rc(Rc::new(on_load.into()))
+    }
+
+    pub fn on_load_rc(self, on_load: Rc<Callback<()>>) -> Self {
         let on_load = self.install_callback(on_load);
 
         self.add_event_listener("load", move |_data| {
@@ -352,6 +384,10 @@ impl DomElement {
     }
 
     pub fn on_mouse_down(self, on_mouse_down: impl Into<Callback<bool>>) -> Self {
+        self.on_mouse_down_rc(Rc::new(on_mouse_down.into()))
+    }
+
+    pub fn on_mouse_down_rc(self, on_mouse_down: Rc<Callback<bool>>) -> Self {
         let on_mouse_down = self.install_callback(on_mouse_down);
 
         self.add_event_listener("mousedown", move |_data| {
@@ -364,6 +400,10 @@ impl DomElement {
     }
 
     pub fn on_mouse_enter(self, on_mouse_enter: impl Into<Callback<()>>) -> Self {
+        self.on_mouse_enter_rc(Rc::new(on_mouse_enter.into()))
+    }
+
+    pub fn on_mouse_enter_rc(self, on_mouse_enter: Rc<Callback<()>>) -> Self {
         let on_mouse_enter = self.install_callback(on_mouse_enter);
 
         self.add_event_listener("mouseenter", move |_data| {
@@ -373,6 +413,10 @@ impl DomElement {
     }
 
     pub fn on_mouse_leave(self, on_mouse_leave: impl Into<Callback<()>>) -> Self {
+        self.on_mouse_leave_rc(Rc::new(on_mouse_leave.into()))
+    }
+
+    pub fn on_mouse_leave_rc(self, on_mouse_leave: Rc<Callback<()>>) -> Self {
         let on_mouse_leave = self.install_callback(on_mouse_leave);
 
         self.add_event_listener("mouseleave", move |_data| {
@@ -382,6 +426,10 @@ impl DomElement {
     }
 
     pub fn on_mouse_up(self, on_mouse_up: impl Into<Callback<bool>>) -> Self {
+        self.on_mouse_up_rc(Rc::new(on_mouse_up.into()))
+    }
+
+    pub fn on_mouse_up_rc(self, on_mouse_up: Rc<Callback<bool>>) -> Self {
         let on_mouse_up = self.install_callback(on_mouse_up);
 
         self.add_event_listener("mouseup", move |_data| {
@@ -394,6 +442,10 @@ impl DomElement {
     }
 
     pub fn on_submit(self, on_submit: impl Into<Callback<()>>) -> Self {
+        self.on_submit_rc(Rc::new(on_submit.into()))
+    }
+
+    pub fn on_submit_rc(self, on_submit: Rc<Callback<()>>) -> Self {
         let on_submit = self.install_callback(on_submit);
 
         self.add_event_listener("submit", move |_data| {
@@ -402,7 +454,11 @@ impl DomElement {
         })
     }
 
-    pub fn suspense(self, callback: Option<fn(bool) -> Css>) -> Self {
+    pub fn suspense(self, callback: Option<SuspenseCallback>) -> Self {
+        self.suspense_rc(callback.map(Rc::new))
+    }
+
+    pub fn suspense_rc(self, callback: Option<Rc<SuspenseCallback>>) -> Self {
         self.class_manager.set_suspense_attr(callback);
         self
     }
@@ -441,9 +497,8 @@ impl DomElement {
 
     fn install_callback<R: 'static>(
         &self,
-        callback: impl Into<Callback<R>>,
+        callback: Rc<Callback<R>>,
     ) -> Rc<dyn Fn() -> R + 'static> {
-        let callback: Callback<R> = callback.into();
         let (callback, drop) = callback.subscribe();
         if let Some(drop) = drop {
             self.subscriptions.push(drop);
@@ -453,9 +508,8 @@ impl DomElement {
 
     fn install_callback1<T: 'static, R: 'static>(
         &self,
-        callback: impl Into<Callback1<T, R>>,
+        callback: Rc<Callback1<T, R>>,
     ) -> Rc<dyn Fn(T) -> R + 'static> {
-        let callback: Callback1<T, R> = callback.into();
         let (callback, drop) = callback.subscribe();
         if let Some(drop) = drop {
             self.subscriptions.push(drop);

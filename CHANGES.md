@@ -7,6 +7,10 @@
 
 * Restored `ToComputed<Resource<Rc<T>>>` implementation for `LazyCache<T>`.
 
+### Changed
+
+* `AttrGroup` now holds Rc's to callbacks so it now implements `Clone`.
+
 ## 0.8.0 - 2025-07-15
 
 ### Added

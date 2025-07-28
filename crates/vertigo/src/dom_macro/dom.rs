@@ -1,7 +1,9 @@
-use std::collections::BTreeMap;
+use std::{collections::BTreeMap, rc::Rc};
 
 use crate::{
-    dom::{attr_value::AttrValue, dom_node::DomNode, events::ClickEvent},
+    dom::{
+        attr_value::AttrValue, callback::SuspenseCallback, dom_node::DomNode, events::ClickEvent,
+    },
     Callback, Callback1, Computed, Css, DomComment, DomElement, DomText, DropFileEvent,
     KeyDownEvent, Value,
 };
@@ -35,32 +37,39 @@ use crate::{
 /// ```
 pub type AttrGroup = BTreeMap<String, AttrGroupValue>;
 
+#[derive(Clone)]
 pub enum AttrGroupValue {
     AttrValue(AttrValue),
     Css {
         css: Css,
         class_name: Option<String>,
     },
-    HookKeyDown(Callback1<KeyDownEvent, bool>),
-    OnBlur(Callback<()>),
-    OnChange(Callback1<String, ()>),
-    OnClick(Callback1<ClickEvent, ()>),
-    OnDropfile(Callback1<DropFileEvent, ()>),
-    OnInput(Callback1<String, ()>),
-    OnKeyDown(Callback1<KeyDownEvent, bool>),
-    OnLoad(Callback<()>),
-    OnMouseDown(Callback<bool>),
-    OnMouseEnter(Callback<()>),
-    OnMouseLeave(Callback<()>),
-    OnMouseUp(Callback<bool>),
-    OnSubmit(Callback<()>),
-    Suspense(fn(bool) -> Css),
+    HookKeyDown(Rc<Callback1<KeyDownEvent, bool>>),
+    OnBlur(Rc<Callback<()>>),
+    OnChange(Rc<Callback1<String, ()>>),
+    OnClick(Rc<Callback1<ClickEvent, ()>>),
+    OnDropfile(Rc<Callback1<DropFileEvent, ()>>),
+    OnInput(Rc<Callback1<String, ()>>),
+    OnKeyDown(Rc<Callback1<KeyDownEvent, bool>>),
+    OnLoad(Rc<Callback<()>>),
+    OnMouseDown(Rc<Callback<bool>>),
+    OnMouseEnter(Rc<Callback<()>>),
+    OnMouseLeave(Rc<Callback<()>>),
+    OnMouseUp(Rc<Callback<bool>>),
+    OnSubmit(Rc<Callback<()>>),
+    Suspense(Rc<SuspenseCallback>),
+}
+
+impl From<&Self> for AttrGroupValue {
+    fn from(value: &Self) -> Self {
+        value.to_owned()
+    }
 }
 
 macro_rules! group_value_constructor {
     ($function:ident, $cb_type:ty, $variant:ident) => {
         pub fn $function(callback: impl Into<$cb_type>) -> Self {
-            Self::$variant(callback.into())
+            Self::$variant(Rc::new(callback.into()))
         }
     };
 }
@@ -87,8 +96,8 @@ impl AttrGroupValue {
     group_value_constructor!(on_mouse_up, Callback<bool>, OnMouseUp);
     group_value_constructor!(on_submit, Callback<()>, OnSubmit);
 
-    pub fn suspense(callback: fn(bool) -> Css) -> Self {
-        Self::Suspense(callback)
+    pub fn suspense(callback: SuspenseCallback) -> Self {
+        Self::Suspense(Rc::new(callback))
     }
 
     /// Extract [`Computed<String>`] from this [AttrGroupValue] if possible.
@@ -99,7 +108,7 @@ impl AttrGroupValue {
         match self {
             Self::AttrValue(AttrValue::String(val)) => {
                 let val = val.clone();
-                Computed::from(move |_| val.clone())
+                Computed::from(move |_| val.to_string())
             }
             Self::AttrValue(AttrValue::Computed(val)) => val.clone(),
             Self::AttrValue(AttrValue::ComputedOpt(val)) => val.map(|val| val.unwrap_or_default()),

@@ -1,7 +1,10 @@
+use std::rc::Rc;
+
 use crate::{Computed, Css, Value};
 
+#[derive(Clone)]
 pub enum AttrValue {
-    String(String),
+    String(Rc<String>),
     Computed(Computed<String>),
     ComputedOpt(Computed<Option<String>>),
     Value(Value<String>),
@@ -10,7 +13,7 @@ pub enum AttrValue {
 
 impl<K: ToString> From<K> for AttrValue {
     fn from(value: K) -> Self {
-        AttrValue::String(value.to_string())
+        AttrValue::String(Rc::new(value.to_string()))
     }
 }
 

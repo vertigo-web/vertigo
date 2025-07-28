@@ -2,7 +2,7 @@ use std::rc::Rc;
 
 use vertigo_macro::bind;
 
-use crate::{struct_mut::ValueMut, Computed, DropResource};
+use crate::{struct_mut::ValueMut, Computed, Css, DropResource};
 
 pub enum Callback<R> {
     Basic(Rc<dyn Fn() -> R + 'static>),
@@ -28,13 +28,13 @@ impl<R> From<Computed<Rc<dyn Fn() -> R + 'static>>> for Callback<R> {
 }
 
 impl<R: 'static> Callback<R> {
-    pub fn subscribe(self) -> (Rc<dyn Fn() -> R + 'static>, Option<DropResource>) {
+    pub fn subscribe(&self) -> (Rc<dyn Fn() -> R + 'static>, Option<DropResource>) {
         match self {
-            Self::Basic(func) => (func, None),
+            Self::Basic(func) => (func.clone(), None),
             Self::Computed(computed) => {
                 let current = Rc::new(ValueMut::new(None));
 
-                let drop = computed.subscribe_all(bind!(current, |new_fn| {
+                let drop = computed.clone().subscribe_all(bind!(current, |new_fn| {
                     current.set(Some(new_fn));
                 }));
 
@@ -79,14 +79,14 @@ impl<T, R> From<Computed<Rc<dyn Fn(T) -> R + 'static>>> for Callback1<T, R> {
 }
 
 impl<T: 'static, R: 'static> Callback1<T, R> {
-    pub fn subscribe(self) -> (Rc<dyn Fn(T) -> R + 'static>, Option<DropResource>) {
+    pub fn subscribe(&self) -> (Rc<dyn Fn(T) -> R + 'static>, Option<DropResource>) {
         match self {
-            Self::Basic(func) => (func, None),
-            Self::Rc(func) => (func, None),
+            Self::Basic(func) => (func.clone(), None),
+            Self::Rc(func) => (func.clone(), None),
             Self::Computed(computed) => {
                 let current = Rc::new(ValueMut::new(None));
 
-                let drop = computed.subscribe_all(bind!(current, |new_fn| {
+                let drop = computed.clone().subscribe_all(bind!(current, |new_fn| {
                     current.set(Some(new_fn));
                 }));
 
@@ -105,3 +105,5 @@ impl<T: 'static, R: 'static> Callback1<T, R> {
         }
     }
 }
+
+pub type SuspenseCallback = fn(bool) -> Css;

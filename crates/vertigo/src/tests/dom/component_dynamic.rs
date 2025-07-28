@@ -254,6 +254,7 @@ fn test_embeddable_group_attrs() {
     let _el2 = dom! {
         <Hello
             name="world"
+            opt:id="my_div"
             opt:label="Good bye"
         />
     };
@@ -262,6 +263,35 @@ fn test_embeddable_group_attrs() {
 
     assert_eq!(
         el2_str,
-        "<div v-component='Hello'><span>Good bye<!-- v --> world</span></div>"
+        "<div id='my_div' v-component='Hello'><span>Good bye<!-- v --> world</span></div>"
+    );
+}
+
+#[test]
+fn test_embeddable_group_attrs_cloned() {
+    #[component]
+    fn Hello(opt: AttrGroup) {
+        let id = opt.get_key_value("id");
+
+        dom! {
+            <div {..id}>
+                <span />
+            </div>
+        }
+    }
+
+    log_start();
+
+    let _el2 = dom! {
+        <Hello
+            opt:id="my_div"
+        />
+    };
+
+    let el2_str = DomDebugFragment::from_log().to_pseudo_html();
+
+    assert_eq!(
+        el2_str,
+        "<div id='my_div' v-component='Hello'><span /></div>"
     );
 }

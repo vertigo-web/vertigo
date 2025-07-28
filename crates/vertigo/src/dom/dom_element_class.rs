@@ -1,14 +1,15 @@
 use std::rc::Rc;
 
 use crate::{
-    driver_module::StaticString, get_driver, struct_mut::ValueMut, Css, DomId, Driver, DropResource,
+    dom::callback::SuspenseCallback, driver_module::StaticString, get_driver, struct_mut::ValueMut,
+    Css, DomId, Driver, DropResource,
 };
 
 struct DomElementClassMergeInner {
     driver: Driver,
     id_dom: DomId,
     css_name: Option<(Css, Option<String>)>,
-    attr_name: Option<String>,
+    attr_name: Option<Rc<String>>,
     _suspense_drop: Option<DropResource>,
     suspense_css: Option<Css>,
     // Class name (autocss_X) and optional class_name_hint
@@ -33,7 +34,7 @@ impl DomElementClassMergeInner {
         let mut class_name_hint = None;
 
         if let Some(attr) = &self.attr_name {
-            result.push(attr.clone());
+            result.push(attr.to_string());
         }
 
         if let Some((css, debug_class_name)) = &self.css_name {
@@ -94,7 +95,7 @@ impl DomElementClassMerge {
         }
     }
 
-    pub fn set_attribute(&self, new_value: String) {
+    pub fn set_attribute(&self, new_value: Rc<String>) {
         self.inner.change(|state| {
             state.attr_name = Some(new_value);
             state.refresh_dom();
@@ -115,7 +116,7 @@ impl DomElementClassMerge {
         });
     }
 
-    pub fn set_suspense_attr(&self, callback: Option<fn(bool) -> Css>) {
+    pub fn set_suspense_attr(&self, callback: Option<Rc<SuspenseCallback>>) {
         self.inner.change(|state| {
             let Some(callback) = callback else {
                 state._suspense_drop = None;
@@ -143,7 +144,7 @@ impl DomElementClassMerge {
         });
     }
 
-    pub fn set_attr_value(&self, name: StaticString, value: Option<String>) {
+    pub fn set_attr_value(&self, name: StaticString, value: Option<Rc<String>>) {
         if name.as_str() == "class" {
             match value {
                 Some(value) => {
