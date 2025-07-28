@@ -427,7 +427,7 @@ fn convert_node(node: &Node, convert_to_dom_node: bool) -> TokenStream2 {
                         {
                             push_attr(
                                 key.to_string(),
-                                quote! { vertigo::dom::attr_value::AttrValue::String(String::new()) },
+                                quote! { vertigo::dom::attr_value::AttrValue::String(Default::default()) },
                             )
                         } else if value.block.stmts.len() == 1 {
                             let value = value.block.stmts.first().unwrap();
