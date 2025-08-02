@@ -72,14 +72,14 @@ const getHeadersAndBody = (headersRecord: Record<string, string>, body: undefine
     }
 
 
-    if (body instanceof Uint8Array) {
+    if (body instanceof Uint8Array && body.buffer instanceof ArrayBuffer) {
         if (headers.has('content-type') === false) {
             headers.set('content-type', 'application/octet-stream');
         }
 
         return [
             headers,
-            body
+            body.buffer
         ];
     }
 

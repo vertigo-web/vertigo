@@ -2,7 +2,7 @@
 <!-- markdownlint-disable no-inline-html -->
 
 <!-- markdownlint-disable-next-line no-emphasis-as-heading -->
-*Up to date with version 0.8.0*
+*Up to date with version 0.8.1*
 
 <!-- markdownlint-disable-next-line heading-increment -->
 ### Table of contents
@@ -353,7 +353,7 @@ To make it work we need to move creation of the state to our main app and provid
 
 ```rust
 fn app() -> DomNode {
-    let message = Value::new("Hello world!".to_string());
+    let message = Value::new("world!".to_string());
     let strong = Value::new(true);
 
     let my_items = Value::new(
