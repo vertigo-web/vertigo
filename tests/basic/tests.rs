@@ -48,6 +48,7 @@ async fn basic() {
                 mount_point: "/".to_string(),
                 proxy: vec![],
                 env: vec![],
+                wasm_preload: true,
             },
         };
 

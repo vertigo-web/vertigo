@@ -14,10 +14,16 @@ pub struct MountPathConfig {
     run_js: String,
     // path to wasm-file
     wasm_path: String,
+    // wether to preload was script using <link rel="preload">
+    pub wasm_preload: bool,
 }
 
 impl MountPathConfig {
-    pub fn new(public_mount_point: String, dest_dir: String) -> Result<MountPathConfig, ErrorCode> {
+    pub fn new(
+        public_mount_point: String,
+        dest_dir: String,
+        wasm_preload: bool,
+    ) -> Result<MountPathConfig, ErrorCode> {
         let index_model = read_index(&dest_dir)?;
 
         Ok(MountPathConfig {
@@ -25,6 +31,7 @@ impl MountPathConfig {
             mount_point: public_mount_point,
             run_js: index_model.run_js,
             wasm_path: index_model.wasm,
+            wasm_preload,
         })
     }
 
