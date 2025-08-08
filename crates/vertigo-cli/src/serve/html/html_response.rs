@@ -94,6 +94,14 @@ impl HtmlResponse {
         }
 
         let head_exists = root_html.modify(&[("head", 0)], move |head| {
+            if self.mount_path.wasm_preload {
+                let script_preconnect = HtmlElement::new("link")
+                    .attr("rel", "preload")
+                    .attr("href", self.mount_path.get_wasm_http_path())
+                    .attr("as", "script");
+
+                head.add_child(script_preconnect);
+            }
             head.add_child(css);
         });
 

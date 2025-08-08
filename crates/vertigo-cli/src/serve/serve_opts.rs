@@ -31,4 +31,8 @@ pub struct ServeOptsInner {
     /// Setting the parameters `--env api=http://domain.com/api --env api2=http://domain.com/api2`
     #[arg(long, value_parser = parse_key_val::<String, String>)]
     pub env: Vec<(String, String)>,
+
+    /// Whether to add <link rel="preload"> tag to <head> to make the browser load WASM earlier
+    #[arg(long, default_value_t = {false})]
+    pub wasm_preload: bool,
 }
