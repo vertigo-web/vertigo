@@ -1,6 +1,13 @@
 <!-- markdownlint-configure-file { "no-duplicate-heading": { "siblings_only": true } } -->
 
 <!-- markdownlint-disable-next-line first-line-h1 -->
+
+## Unreleased
+
+### Added
+
+* vertigo-cli: `--wasm-preload` parameter for `serve` command, which makes the browser start loading wasm script earlier.
+
 ## 0.8.1 - 2025-08-02
 
 ### Fixed

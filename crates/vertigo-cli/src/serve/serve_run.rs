@@ -34,9 +34,10 @@ pub async fn run(opts: ServeOpts, port_watch: Option<u16>) -> Result<(), ErrorCo
         proxy,
         mount_point,
         env,
+        wasm_preload,
     } = opts.inner;
 
-    let mount_config = MountPathConfig::new(mount_point, opts.common.dest_dir)?;
+    let mount_config = MountPathConfig::new(mount_point, opts.common.dest_dir, wasm_preload)?;
     let state = Arc::new(ServerState::new(mount_config, port_watch, env)?);
 
     let ref_state = STATE
@@ -218,7 +219,8 @@ async fn handler(
     let uri = {
         // Strip mount point to get local url
         let local_url = if state.mount_config.mount_point() != "/" {
-            url.path().trim_start_matches(state.mount_config.mount_point())
+            url.path()
+                .trim_start_matches(state.mount_config.mount_point())
         } else {
             url.path()
         };
