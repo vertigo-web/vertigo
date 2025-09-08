@@ -1,3 +1,5 @@
+use std::ops::{Add, AddAssign};
+
 /// Css chunk, represented either as static or dynamic string.
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub enum CssGroup {
@@ -55,6 +57,7 @@ impl Css {
         self.groups.push(CssGroup::CssDynamic { value })
     }
 
+    /// Extend current Css returning new one.
     #[must_use]
     pub fn extend(mut self, new_css: Self) -> Self {
         for item in new_css.groups {
@@ -62,5 +65,62 @@ impl Css {
         }
 
         self
+    }
+
+    /// Extend current Css with other Css in-place.
+    pub fn extend_inplace(&mut self, new_css: Self) {
+        for item in new_css.groups {
+            self.groups.push(item);
+        }
+    }
+}
+
+impl Add for Css {
+    type Output = Self;
+
+    fn add(self, rhs: Self) -> Self::Output {
+        self.extend(rhs)
+    }
+}
+
+impl Add for &Css {
+    type Output = Css;
+
+    fn add(self, rhs: Self) -> Self::Output {
+        self.clone().extend(rhs.clone())
+    }
+}
+
+impl Add<&Self> for Css {
+    type Output = Self;
+
+    fn add(self, rhs: &Self) -> Self::Output {
+        self.extend(rhs.clone())
+    }
+}
+
+impl Add<Css> for &Css {
+    type Output = Css;
+
+    fn add(self, rhs: Css) -> Self::Output {
+        self.clone().extend(rhs)
+    }
+}
+
+impl AddAssign for Css {
+    fn add_assign(&mut self, other: Self) {
+        self.extend_inplace(other);
+    }
+}
+
+impl AddAssign<&Self> for Css {
+    fn add_assign(&mut self, other: &Self) {
+        self.extend_inplace(other.clone());
+    }
+}
+
+impl AddAssign<&Css> for &mut Css {
+    fn add_assign(&mut self, other: &Css) {
+        self.extend_inplace(other.clone());
     }
 }

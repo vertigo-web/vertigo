@@ -69,13 +69,13 @@ pub fn CountersDemo(state: State) {
         transition: all .2s ease-in-out;
     "};
 
-    let center_css = center_base.clone().extend(css! {"
+    let center_css = center_base.clone() + css! {"
         box-shadow: 4px 4px 4px #444, 8px 8px 4px #666, 12px 12px 4px #888;
 
         :hover {
             transform: scale(1.1);
         }
-    "});
+    "};
 
     let center_css2 = center_base.push_str("
         box-shadow: 4px 4px 4px rgba(0, 0, 0, 0.5), 8px 8px 4px rgba(0, 0, 0, 0.4), 12px 12px 4px rgba(0, 0, 0, 0.3);
