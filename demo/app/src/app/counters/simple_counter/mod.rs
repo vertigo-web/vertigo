@@ -25,10 +25,10 @@ pub fn SimpleCounter(label: Computed<String>, value: Value<i32>) {
         margin: 5px;
     "};
 
-    let css_button = css_box.clone().extend(css! {"
+    let css_button = css_box.clone() + css! {"
         display: block;
         cursor: pointer;
-    "});
+    "};
 
     let css_wrapper_buttons = css! {"
         display: flex;

@@ -183,7 +183,7 @@ fn render_comments(state: &TodoState, post_id: u32) -> DomNode {
                         view.set(View::User { email: comment.email.clone() });
                     });
 
-                    let css_author = css_comment_author().extend(css_hover_item());
+                    let css_author = css_comment_author() + css_hover_item();
 
                     result.add_child(dom! {
                         <div css={css_comment_wrapper()}>

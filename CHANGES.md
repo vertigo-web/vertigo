@@ -1,11 +1,11 @@
 <!-- markdownlint-configure-file { "no-duplicate-heading": { "siblings_only": true } } -->
 
 <!-- markdownlint-disable-next-line first-line-h1 -->
-
 ## Unreleased
 
 ### Added
 
+* Implemented `Add` and `AddAssign` for `Css` to easy add multiple css'es to element (`<div css={css1 + css2} />`)
 * vertigo-cli: `--wasm-preload` parameter for `serve` command, which makes the browser start loading wasm script earlier.
 
 ## 0.8.1 - 2025-08-02
