@@ -1,4 +1,4 @@
-#[derive(Clone, Copy)]
+#[derive(Clone, Copy, Debug)]
 #[repr(i32)]
 pub enum ErrorCode {
     CantOpenWorkspace = 1,

@@ -2,6 +2,8 @@ use fantoccini::{ClientBuilder, Locator};
 use std::time::Duration;
 use vertigo_cli::{build, serve, BuildOpts, CommonOpts, ServeOpts};
 
+const PORT: u16 = 5555;
+
 #[tokio::test]
 #[ignore]
 async fn basic() {
@@ -16,7 +18,7 @@ async fn basic() {
         },
         inner: build::BuildOptsInner {
             package_name: Some("vertigo-test-basic".to_string()),
-            public_path: Some("/build".to_string()),
+            public_path: None,
             wasm_opt: Some(true),
             release_mode: Some(true),
             wasm_run_source_map: true,
@@ -44,7 +46,7 @@ async fn basic() {
             },
             inner: serve::ServeOptsInner {
                 host: "127.0.0.1".into(),
-                port: 5555,
+                port: PORT,
                 mount_point: "/".to_string(),
                 proxy: vec![],
                 env: vec![],
@@ -54,7 +56,15 @@ async fn basic() {
 
         handle.block_on(async {
             tokio::select! {
-                _ = serve::run(opts, None) => { 1 }
+                ret = serve::run(opts, None) => {
+                    match ret {
+                        Ok(()) => 1,
+                        Err(err) => {
+                            println!("Can't spawn vertigo-cli: {err:?}");
+                            1
+                        }
+                    }
+                }
                 _ = receiver => { 2 }
             }
         });
@@ -72,13 +82,15 @@ async fn basic() {
 
     println!("Opening site");
 
-    c.goto("http://127.0.0.1:5555/")
+    let site_url = format!("http://127.0.0.1:{PORT}/");
+
+    c.goto(&site_url)
         .await.expect("goto failed");
 
     let url = c.current_url()
         .await.expect("current_url failed");
 
-        assert_eq!(url.as_ref(), "http://127.0.0.1:5555/");
+    assert_eq!(url.as_ref(), site_url);
 
     println!("Wait for DOM regeneration by WASM");
 

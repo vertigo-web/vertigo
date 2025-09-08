@@ -2,8 +2,9 @@ use std::collections::BTreeSet;
 
 use crate::{computed::graph_id::GraphId, struct_mut::ValueMut};
 
-#[derive(PartialEq)]
+#[derive(Default, PartialEq)]
 enum State {
+    #[default]
     Idle,
     Modification {
         // Modifying the first layer
@@ -11,12 +12,6 @@ enum State {
         client_ids: BTreeSet<GraphId>,
     },
     Refreshing,
-}
-
-impl Default for State {
-    fn default() -> Self {
-        Self::Idle
-    }
 }
 
 pub struct TransactionState {

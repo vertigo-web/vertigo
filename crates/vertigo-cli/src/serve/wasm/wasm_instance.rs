@@ -139,9 +139,8 @@ impl WasmInstance {
                         return 0;
                     }
 
-                    if let Ok(()) = match_is_browser(&value) {
-                        let result = JsValue::bool(false);
-                        return data_context.save_value(result);
+                    if match_is_browser(&value).is_ok() {
+                        return data_context.save_value(JsValue::False);
                     }
 
                     if let Ok(status) = match_is_set_status(&value) {

@@ -2,8 +2,9 @@ use std::fmt::Display;
 
 use vertigo::get_driver;
 
-#[derive(PartialEq, Eq, Debug, Clone)]
+#[derive(Clone, Debug, Default, Eq, PartialEq)]
 pub enum Route {
+    #[default]
     Counters,
     Styling,
     Sudoku,
@@ -15,12 +16,6 @@ pub enum Route {
     DropFile,
     JsApiAccess,
     NotFound,
-}
-
-impl Default for Route {
-    fn default() -> Self {
-        Self::Counters
-    }
 }
 
 impl Route {
