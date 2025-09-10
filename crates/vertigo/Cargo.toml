@@ -1,6 +1,6 @@
 [package]
 name = "vertigo"
-version = "0.8.1"
+version = "0.8.2"
 authors = ["Grzegorz Szeliga <szeligagrzegorz@gmail.com>", "Michał Pokrywka <wolfmoon@o2.pl>"]
 description = "Reactive Real-DOM library with SSR for Rust"
 readme = "README.md"
@@ -15,4 +15,4 @@ edition = "2021"
 [dependencies]
 chrono = { version = ">=0.4.20", default-features = false, features = ["std"], optional = true }
 log = { version = "0.4", features = ["std"] }
-vertigo-macro = { path = "../../crates/vertigo-macro", version = "0.8.1" }
+vertigo-macro = { path = "../../crates/vertigo-macro", version = "0.8.2" }
