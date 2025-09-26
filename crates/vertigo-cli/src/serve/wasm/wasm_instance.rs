@@ -1,8 +1,9 @@
+use std::process::exit;
 use tokio::sync::mpsc::UnboundedSender;
 use vertigo::JsValue;
 use wasmtime::{Caller, Engine, Func, Instance, Module, Store};
 
-use crate::serve::request_state::RequestState;
+use crate::{commons::ErrorCode, serve::request_state::RequestState};
 
 use super::{
     data_context::DataContext,
@@ -157,8 +158,26 @@ impl WasmInstance {
             )
         };
 
-        let imports = [import_panic_message.into(), import_dom_access.into()];
-        let instance = Instance::new(&mut store, module, &imports).unwrap();
+        let mut imports = [import_dom_access.into(), import_panic_message.into()];
+        let instance = match Instance::new(&mut store, module, &imports) {
+            Ok(instance) => instance,
+            Err(err) => {
+                // Workaround for rust/wasmtime mangling with functions order.
+                // Upon error try with panic/dom_access reversed before giving up.
+                imports.reverse();
+                match Instance::new(&mut store, module, &imports) {
+                    Ok(instance) => {
+                        log::warn!("WASM instantiation types order problem - update rust or soon it will stop working");
+                        instance
+                    }
+                    Err(err2) => {
+                        log::error!("WASM instantiation error (1): {err:?}");
+                        log::error!("WASM instantiation error (2): {err2:?}");
+                        exit(ErrorCode::ServeWasmInstanceFailed as i32)
+                    }
+                }
+            }
+        };
 
         WasmInstance { instance, store }
     }

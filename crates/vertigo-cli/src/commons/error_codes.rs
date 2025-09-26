@@ -28,4 +28,5 @@ pub enum ErrorCode {
     ServeCantOpenPort = 24,
     ServeWasmReadFailed = 25,
     ServeWasmCompileFailed = 26,
+    ServeWasmInstanceFailed = 27,
 }
