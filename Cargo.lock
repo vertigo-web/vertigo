@@ -3446,7 +3446,7 @@ checksum = "0b928f33d975fc6ad9f86c8f283853ad26bdd5b10b7f1542aa2fa15e2289105a"
 
 [[package]]
 name = "vertigo"
-version = "0.8.2"
+version = "0.8.3"
 dependencies = [
  "chrono",
  "log",
@@ -3455,7 +3455,7 @@ dependencies = [
 
 [[package]]
 name = "vertigo-cli"
-version = "0.8.2"
+version = "0.8.3"
 dependencies = [
  "axum",
  "axum-extra",
@@ -3485,7 +3485,7 @@ dependencies = [
 
 [[package]]
 name = "vertigo-demo"
-version = "0.8.2"
+version = "0.8.3"
 dependencies = [
  "log",
  "vertigo",
@@ -3502,28 +3502,28 @@ dependencies = [
 
 [[package]]
 name = "vertigo-example-counter"
-version = "0.8.2"
+version = "0.8.3"
 dependencies = [
  "vertigo",
 ]
 
 [[package]]
 name = "vertigo-example-router"
-version = "0.8.2"
+version = "0.8.3"
 dependencies = [
  "vertigo",
 ]
 
 [[package]]
 name = "vertigo-example-trafficlights"
-version = "0.8.2"
+version = "0.8.3"
 dependencies = [
  "vertigo",
 ]
 
 [[package]]
 name = "vertigo-macro"
-version = "0.8.2"
+version = "0.8.3"
 dependencies = [
  "base64 0.22.1",
  "crc",
