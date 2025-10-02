@@ -49,7 +49,7 @@ impl DomDebugFragment {
     pub fn from_cmds(cmds: Vec<DriverDomCommand>) -> Self {
         let mut map = BTreeMap::<DomId, DomDebugNode>::new();
         let mut css = BTreeMap::<String, String>::new();
-        let mut classes_seen = BTreeSet::new();
+        let mut classes_seen_map = BTreeMap::new();
 
         for cmd in cmds {
             match cmd {
@@ -65,7 +65,7 @@ impl DomDebugFragment {
                 DriverDomCommand::SetAttr { id, name, value } => {
                     if let Some(node) = map.get_mut(&id) {
                         if name == "class".into() {
-                            unpack_styles(node, &css, &mut classes_seen, value);
+                            unpack_styles(node, &css, &mut classes_seen_map, value);
                         } else {
                             node.attrs.insert(name, value);
                         }
@@ -255,7 +255,7 @@ impl DomDebugNode {
 fn unpack_styles(
     node: &mut DomDebugNode,
     css: &BTreeMap<String, String>,
-    classes_seen: &mut BTreeSet<String>,
+    classes_seen_map: &mut BTreeMap<DomId, BTreeSet<String>>,
     value: String,
 ) {
     let mut custom_classes = vec![];
@@ -263,6 +263,7 @@ fn unpack_styles(
     if let Some(old_styles) = node.attrs.get(&("style".into())) {
         new_styles.insert(old_styles.clone());
     }
+    let classes_seen = classes_seen_map.entry(node.id).or_default();
     // For each class_name try to unpack it into styles using gathered `css` definitions
     for class_name in value.split(' ') {
         if !classes_seen.contains(class_name) {
@@ -377,6 +378,25 @@ mod tests {
         assert_eq!(
             html,
             "<div class='m-10 py-5' id='one' style='background: green; color: red' v-css='css2' />"
+        );
+    }
+
+    #[test]
+    fn pseudo_html_css_in_two_elements() {
+        let css1 = css!("color: red;");
+
+        log_start();
+        let _el = dom! {
+            <div>
+                <div id="one" css={&css1} />
+                <div id="two" css={&css1} />
+            </div>
+        };
+
+        let html = DomDebugFragment::from_log().to_pseudo_html();
+        assert_eq!(
+            html,
+            "<div><div id='one' style='color: red' v-css='&css1' /><div id='two' style='color: red' v-css='&css1' /></div>"
         );
     }
 }
