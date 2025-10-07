@@ -6,6 +6,7 @@
 ### Fixed
 
 * vertigo-cli: Workaround for WASM instantiation on different rust versions.
+* vertigo-cli: Parse but ignore router changes during SSR.
 
 ## 0.8.2 - 2025-09-10
 

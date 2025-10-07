@@ -62,6 +62,23 @@ pub fn match_history_router(arg: &JsValue) -> Result<(), ()> {
     Ok(())
 }
 
+pub fn match_history_router_push(arg: &JsValue) -> Result<String, ()> {
+    let matcher = Match::new(arg)?;
+    let matcher = matcher.test_list(&["api"])?;
+    let matcher = matcher.test_list(&["get", "historyLocation"])?;
+    let (matcher, url) = matcher.test_list_with_fn(|matcher: Match| -> Result<String, ()> {
+        let matcher = matcher.str("call")?;
+        let matcher = matcher.str("push")?;
+        let (matcher, url) = matcher.string()?;
+        matcher.end()?;
+
+        Ok(url)
+    })?;
+    matcher.end()?;
+
+    Ok(url)
+}
+
 pub fn match_get_env(arg: &JsValue) -> Result<String, ()> {
     let matcher = Match::new(arg)?;
     let matcher = matcher.test_list(&["api"])?;
