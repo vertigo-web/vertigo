@@ -345,8 +345,6 @@ impl Driver {
                 }
                 Err(err) => log::error!("Error invoking plains: {err}"),
             }
-        } else {
-            log::info!("Browser mode, not invoking try_get_plain");
         }
     }
 

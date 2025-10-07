@@ -62,7 +62,7 @@ impl WasmInstance {
                         return 0;
                     }
 
-                    //get history router location
+                    // get history router location
                     if let Ok(()) = match_history_router(&value) {
                         let result = JsValue::str(url.clone());
                         return data_context.save_value(result);
@@ -149,6 +149,12 @@ impl WasmInstance {
                             .send(Message::SetStatus(status))
                             .inspect_err(|err| log::error!("Error setting status code: {err}"))
                             .unwrap_or_default();
+                        return 0;
+                    }
+
+                    // push history router location
+                    if let Ok(_url) = match_history_router_push(&value) {
+                        // Ignore in SSR
                         return 0;
                     }
 
