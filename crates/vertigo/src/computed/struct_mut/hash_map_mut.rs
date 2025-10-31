@@ -77,7 +77,22 @@ impl<K: Eq + Hash, V> HashMapMut<K, V> {
     }
 }
 
-impl<K: Eq + Hash, V: Clone> HashMapMut<K, V> {
+impl<K: Eq + Hash + Clone, V: Clone + Default> HashMapMut<K, V> {
+    pub fn get_or_default(&self, key: &K) -> V {
+
+        let value = self.get(key);
+
+        if let Some(value) = value {
+            return value;
+        }
+
+        let new_item = V::default();
+        self.insert(key.clone(), new_item.clone());
+        new_item
+    }
+}
+
+impl<K: Eq + Hash + Clone, V: Clone> HashMapMut<K, V> {
     pub fn get_all_values(&self) -> Vec<V> {
         let state = self.data.get();
 
@@ -93,6 +108,17 @@ impl<K: Eq + Hash, V: Clone> HashMapMut<K, V> {
     pub fn get(&self, key: &K) -> Option<V> {
         let state = self.data.get();
         state.get(key).map(|value| (*value).clone())
+    }
+
+    pub fn get_or_create(&self, key: &K, create: impl FnOnce() -> V) -> V {
+        let state = self.data.get();
+        if let Some(value) = state.get(key) {
+            return value.clone();
+        }
+    
+        let new_item = create();
+        self.insert(key.clone(), new_item.clone());
+        new_item
     }
 }
 

@@ -1,12 +1,21 @@
 <!-- markdownlint-configure-file { "no-duplicate-heading": { "siblings_only": true } } -->
 
 <!-- markdownlint-disable-next-line first-line-h1 -->
+## Unreleased
+
+### Added
+
+* `#[store]` macro which wraps a function to be used as a store generator
+
+### Fixed
+
+* vertigo-cli: Parse but ignore router changes during SSR.
+
 ## 0.8.3 - 2025-09-29
 
 ### Fixed
 
 * vertigo-cli: Workaround for WASM instantiation on different rust versions.
-* vertigo-cli: Parse but ignore router changes during SSR.
 
 ## 0.8.2 - 2025-09-10
 

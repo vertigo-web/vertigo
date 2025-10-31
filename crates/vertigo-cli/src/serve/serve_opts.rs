@@ -32,7 +32,7 @@ pub struct ServeOptsInner {
     #[arg(long, value_parser = parse_key_val::<String, String>)]
     pub env: Vec<(String, String)>,
 
-    /// Whether to add <link rel="preload"> tag to <head> to make the browser load WASM earlier
+    /// Whether to add `<link rel="preload">` tag to `<head>` to make the browser load WASM earlier
     #[arg(long, default_value_t = {false})]
     pub wasm_preload: bool,
 }
