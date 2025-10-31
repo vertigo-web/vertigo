@@ -85,15 +85,16 @@
 //!
 //! Short-links to most commonly used things:
 //!
-//! * [dom!] - Build [DomNode] using RSX/rstml (HTML-like) syntax
-//! * [css!] - Build [Css] using CSS-like syntax
-//! * [component] - Wrap function to be used as component in RSX
-//! * [main] - Wrap function to be vertigo entry-point
-//! * [get_driver] - Access browser facilities
-//! * [bind!] - Auto-clone variables before use
+//! * [dom!] - Builds [DomNode] using RSX/rstml (HTML-like) syntax
+//! * [css!] - Builds [Css] using CSS-like syntax
+//! * [component] - Wraps function to be used as component in RSX
+//! * [main] - Wraps function to be vertigo entry-point
+//! * [get_driver] - Access to browser facilities
+//! * [bind!] - Auto-clones variables before use
 //! * [Value] - Read-write reactive value
 //! * [Computed] - Read-only (computed) reactive value
 //! * [router::Router] - Hash or history routing
+//! * [store] - Wraps function to be used as a store generator
 
 #![deny(rust_2018_idioms)]
 #![feature(try_trait_v2)] // https://github.com/rust-lang/rust/issues/84277
@@ -483,6 +484,35 @@ pub use vertigo_macro::css;
 /// );
 /// ```
 pub use vertigo_macro::css_block;
+
+/// Wraps a function generating a resource out of parameters, and creates a store.
+///
+/// Accessing the store from different locations uses always the same store
+/// as data is kept using [LocalKey](std::thread::LocalKey).
+///
+/// ```rust
+/// use vertigo::{AutoJsJson, LazyCache, RequestBuilder, store};
+///
+/// #[derive(AutoJsJson)]
+/// struct CommentModel {
+///     id: i32,
+///     name: String,
+/// }
+///
+/// #[store]
+/// fn get_post(post_id: &String) -> LazyCache<Vec<CommentModel>> {
+///     RequestBuilder
+///         ::get(format!("https://jsonplaceholder.typicode.com/posts/{post_id}/comments"))
+///         .ttl_minutes(10)
+///         .lazy_cache(|status, body| {
+///             if status == 200 {
+///                 Some(body.into::<Vec<CommentModel>>())
+///             } else {
+///                 None
+///             }
+///         })
+/// }
+pub use vertigo_macro::store;
 
 pub mod html_entities;
 

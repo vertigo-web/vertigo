@@ -1,6 +1,6 @@
 use vertigo::{css, dom, get_driver, include_static, Computed, Css, DomNode, KeyDownEvent};
 
-use crate::app;
+use crate::app::{self, counters::state_counters};
 
 use super::{
     chat::Chat, counters::CountersDemo, dropfiles::DropFiles, game_of_life::GameOfLife,
@@ -80,7 +80,7 @@ fn render_header(state: &app::State) -> DomNode {
 }
 
 fn title_value(state: app::State) -> Computed<String> {
-    let sum = state.counters.sum.clone();
+    let sum = state_counters().sum.clone();
     let input_value = state.input.clone();
 
     Computed::from(move |context| {
@@ -111,10 +111,10 @@ pub fn render(state: &app::State) -> DomNode {
 
         move |route| match route {
             Route::Styling => dom! { <Styling /> },
-            Route::Counters => dom! { <CountersDemo state={&state.counters} /> },
+            Route::Counters => dom! { <CountersDemo /> },
             Route::Sudoku => dom! { <Sudoku state={&state.sudoku} /> },
             Route::Input => dom! { <MyInput value={&state.input} /> },
-            Route::GithubExplorer => dom! { <GitHubExplorer state={&state.github_explorer} /> },
+            Route::GithubExplorer => dom! { <GitHubExplorer /> },
             Route::GameOfLife => dom! { <GameOfLife state={&state.game_of_life} /> },
             Route::Chat => {
                 if let Some(ws_chat) = &state.ws_chat {

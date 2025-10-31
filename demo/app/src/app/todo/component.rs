@@ -1,8 +1,11 @@
 use vertigo::{bind, css, dom, dom_element, Css, DomNode, Resource, Value};
 
-use crate::app::todo::Select;
+use crate::app::todo::{
+    Select,
+    state::{state_todo_comments, state_todo_posts, state_todo_view}
+};
 
-use super::state::{TodoState, View};
+use super::state::View;
 
 pub struct Todo { }
 
@@ -10,21 +13,17 @@ impl Todo {
     pub fn into_component(self) -> Self { self }
 
     pub fn mount(&self) -> DomNode {
-        let state = TodoState::new();
-
-        let render = state.view.render_value({
-            let state = state.clone();
+        let render = state_todo_view().render_value({
             move |view| -> DomNode {
                 match view {
-                    View::Main => todo_main_render(&state),
-                    View::Post { id } => todo_post_render(&state, id),
+                    View::Main => todo_main_render(),
+                    View::Post { id } => todo_post_render(id),
                     View::User { email } => {
                         let messag: String = format!("user = {email}");
 
-                        let view = &state.view;
-                        let on_click = bind!(view, |_| {
-                            view.set(View::Main);
-                        });
+                        let on_click = |_| {
+                            state_todo_view().set(View::Main);
+                        };
 
                         dom!{
                             <div>
@@ -49,12 +48,8 @@ impl Todo {
     }
 }
 
-fn todo_main_render(state: &TodoState) -> DomNode {
-    let state = state.clone();
-
-    let posts = state.posts.to_computed().render_value(move |posts| -> DomNode {
-        let todo_state = state.clone();
-
+fn todo_main_render() -> DomNode {
+    let posts = state_todo_posts().to_computed().render_value(move |posts| -> DomNode {
         match posts {
             Resource::Ready(posts) => {
                 let result = dom_element! {
@@ -63,7 +58,7 @@ fn todo_main_render(state: &TodoState) -> DomNode {
 
                 for post in posts.as_ref() {
                     let on_click = {
-                        let view = todo_state.view.clone();
+                        let view = state_todo_view();
                         let id = post.id;
 
                         move |_| {
@@ -107,19 +102,11 @@ fn todo_main_render(state: &TodoState) -> DomNode {
     }
 }
 
-fn todo_post_render(state: &TodoState, post_id: u32) -> DomNode {
-    let state = state.clone();
-
+fn todo_post_render(post_id: u32) -> DomNode {
     let message = render_message(post_id);
-    let comments_out = render_comments(&state, post_id);
+    let comments_out = render_comments(post_id);
 
-    let view = state.view;
-
-    let on_click = bind!(view, |_| {
-        view.set(View::Main);
-    });
-
-    let authors = state.comments.get(&post_id)
+    let authors = state_todo_comments(post_id)
         .to_computed()
         .map(|comments_res| {
             let mut options = vec!["".to_string()];
@@ -136,7 +123,12 @@ fn todo_post_render(state: &TodoState, post_id: u32) -> DomNode {
     dom! {
         <div>
             { message }
-            <div css={css_hover_item()} on_click={on_click}>
+            <div
+                css={css_hover_item()}
+                on_click={|_| {
+                    state_todo_view().set(View::Main);
+                }}
+            >
                 "go to post list"
             </div>
             <hr />
@@ -158,13 +150,10 @@ fn render_message(post_id: u32) -> DomNode {
     }
 }
 
-fn render_comments(state: &TodoState, post_id: u32) -> DomNode {
-    let view = state.view.clone();
-
-    let comments = state.comments.get(&post_id);
+fn render_comments(post_id: u32) -> DomNode {
+    let comments = state_todo_comments(post_id);
 
     let comments_component = comments.to_computed().render_value(move |value| {
-        let view = view.clone();
 
         match value {
             Resource::Ready(list) => {
@@ -179,8 +168,8 @@ fn render_comments(state: &TodoState, post_id: u32) -> DomNode {
                 };
 
                 for comment in list.as_ref() {
-                    let on_click_author = bind!(view, comment, |_| {
-                        view.set(View::User { email: comment.email.clone() });
+                    let on_click_author = bind!(comment, |_| {
+                        state_todo_view().set(View::User { email: comment.email.clone() });
                     });
 
                     let css_author = css_comment_author() + css_hover_item();

@@ -14,6 +14,7 @@ mod include_static;
 mod js_expression;
 mod jsjson;
 mod main_wrap;
+mod store;
 mod trace_tailwind;
 mod utils;
 mod wasm_path;
@@ -29,6 +30,7 @@ use crate::{
     include_static::include_static_inner,
     js_expression::js_expression,
     main_wrap::main_wrap,
+    store::store_inner,
     trace_tailwind::trace_tailwind,
 };
 
@@ -153,4 +155,9 @@ fn convert_to_tokens(input: Result<TokenStream, String>) -> TokenStream {
             quote! { #empty }.into()
         }
     }
+}
+
+#[proc_macro_attribute]
+pub fn store(attr: TokenStream, item: TokenStream) -> TokenStream {
+    store_inner(attr.into(), item.into()).into()
 }

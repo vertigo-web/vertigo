@@ -1,4 +1,4 @@
-use vertigo::{AutoMap, LazyCache, Value, RequestBuilder};
+use vertigo::{LazyCache, RequestBuilder, Value, store};
 use vertigo::AutoJsJson;
 
 #[derive(PartialEq, Eq, Clone)]
@@ -25,45 +25,33 @@ pub struct CommentModel {
     // pub postId: u32,
 }
 
-#[derive(Clone)]
-pub struct TodoState {
-    pub view: Value<View>,
-    pub posts: LazyCache<Vec<PostModel>>,
-    pub comments: AutoMap<u32, LazyCache<Vec<CommentModel>>>,
+#[store]
+pub fn state_todo_view() -> Value<View> {
+    Value::new(View::Main)
 }
 
-impl TodoState {
-    pub fn new() -> TodoState {
-        let view = Value::new(View::Main);
-
-        let posts = RequestBuilder::get("https://jsonplaceholder.typicode.com/posts")
-            .ttl_minutes(10)
-            .lazy_cache(|status, body| {
-                if status == 200 {
-                    Some(body.into::<Vec<PostModel>>())
-                } else {
-                    None
-                }
-            });
-
-        let comments = AutoMap::new({
-            move |_, post_id: &u32| -> LazyCache<Vec<CommentModel>> {
-                RequestBuilder::get(format!("https://jsonplaceholder.typicode.com/posts/{post_id}/comments"))
-                    .ttl_minutes(10)
-                    .lazy_cache(|status, body| {
-                        if status == 200 {
-                            Some(body.into::<Vec<CommentModel>>())
-                        } else {
-                            None
-                        }
-                    })
+#[store]
+pub fn state_todo_posts() -> LazyCache<Vec<PostModel>> {
+    RequestBuilder::get("https://jsonplaceholder.typicode.com/posts")
+        .ttl_minutes(10)
+        .lazy_cache(|status, body| {
+            if status == 200 {
+                Some(body.into::<Vec<PostModel>>())
+            } else {
+                None
             }
-        });
+        })
+}
 
-        TodoState {
-            view,
-            posts,
-            comments,
-        }
-    }
+#[store]
+pub fn state_todo_comments(post_id: u32) -> LazyCache<Vec<CommentModel>> {
+    RequestBuilder::get(format!("https://jsonplaceholder.typicode.com/posts/{post_id}/comments"))
+        .ttl_minutes(10)
+        .lazy_cache(|status, body| {
+            if status == 200 {
+                Some(body.into::<Vec<CommentModel>>())
+            } else {
+                None
+            }
+        })
 }
