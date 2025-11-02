@@ -58,6 +58,7 @@ pub struct FetchResponse {
     pub body: RequestBody,
 }
 
+#[derive(Debug, PartialEq)]
 pub enum CallWebsocketResult {
     TimeoutSet { time: u32, callback_id: u64 },
     NoResult,
