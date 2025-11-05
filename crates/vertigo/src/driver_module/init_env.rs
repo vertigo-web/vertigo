@@ -3,18 +3,17 @@ use std::panic;
 
 use std::sync::Once;
 
-use crate::ApiImport;
+use crate::driver_module::api::{api_import, api_panic_message};
 
 static SET_HOOK: Once = Once::new();
 
-pub fn init_env(api: ApiImport) {
+pub fn init_env() {
     SET_HOOK.call_once(|| {
-        let panic_message = api.panic_message;
-        init_logger(api);
+        init_logger();
 
         panic::set_hook(Box::new(move |info: &panic::PanicHookInfo<'_>| {
             let message = info.to_string();
-            panic_message.show(message);
+            api_panic_message().show(message);
         }));
     });
 }
@@ -61,7 +60,6 @@ impl Style {
 }
 
 struct WasmLogger {
-    api: ApiImport,
     config: Config,
     style: Style,
 }
@@ -98,22 +96,12 @@ impl Log for WasmLogger {
 
             match record.level() {
                 Level::Trace => {
-                    self.api
-                        .console_debug_4(&s, &style.lvl_trace, tgt_style, args_style);
+                    api_import().console_debug_4(&s, &style.lvl_trace, tgt_style, args_style);
                 }
-                Level::Debug => self
-                    .api
-                    .console_log_4(&s, &style.lvl_debug, tgt_style, args_style),
-                Level::Info => self
-                    .api
-                    .console_info_4(&s, &style.lvl_info, tgt_style, args_style),
-                Level::Warn => self
-                    .api
-                    .console_warn_4(&s, &style.lvl_warn, tgt_style, args_style),
-                Level::Error => {
-                    self.api
-                        .console_error_4(&s, &style.lvl_error, tgt_style, args_style)
-                }
+                Level::Debug => api_import().console_log_4(&s, &style.lvl_debug, tgt_style, args_style),
+                Level::Info => api_import().console_info_4(&s, &style.lvl_info, tgt_style, args_style),
+                Level::Warn => api_import().console_warn_4(&s, &style.lvl_warn, tgt_style, args_style),
+                Level::Error => api_import().console_error_4(&s, &style.lvl_error, tgt_style, args_style)
             }
         }
     }
@@ -121,11 +109,10 @@ impl Log for WasmLogger {
     fn flush(&self) {}
 }
 
-fn init_logger(api: ApiImport) {
+fn init_logger() {
     let config = Config::default();
     let max_level = config.level;
     let wl = WasmLogger {
-        api: api.clone(),
         config,
         style: Style::new(),
     };
@@ -134,7 +121,7 @@ fn init_logger(api: ApiImport) {
         Ok(_) => log::set_max_level(max_level.to_level_filter()),
         Err(e) => {
             let message = e.to_string();
-            api.show_panic_message(message);
+            api_panic_message().show(message);
         }
     }
 }

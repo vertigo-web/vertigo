@@ -73,8 +73,8 @@ script = [
 
 [tasks.demo-serve]
 script = [
-    "cargo run --bin vertigo --release -- build vertigo-demo --dest-dir=demo_build --wasm-run-source-map",
-    "cargo run --bin vertigo --release -- serve --dest-dir=demo_build --env ws_chat=ws://127.0.0.1:3333/ws"
+    "cargo run --bin vertigo -- build vertigo-demo --dest-dir=demo_build --wasm-run-source-map",
+    "cargo run --bin vertigo -- serve --dest-dir=demo_build --env ws_chat=ws://127.0.0.1:3333/ws"
 ]
 
 [tasks.demo]

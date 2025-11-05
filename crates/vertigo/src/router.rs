@@ -1,4 +1,4 @@
-use crate::{computed::Value, get_driver, Computed, DomNode, EmbedDom, Reactive, ToComputed};
+use crate::{Computed, DomNode, EmbedDom, Reactive, ToComputed, computed::Value, driver_module::api::api_import, get_driver};
 
 /// Router based on path or hash part of current location.
 ///
@@ -87,11 +87,9 @@ impl<T: Clone + ToString + From<String> + PartialEq + 'static> Router<T> {
     }
 
     fn new(use_history_api: bool) -> Self {
-        let driver = get_driver();
-
         let init_value = match use_history_api {
-            false => T::from(driver.inner.api.get_hash_location()),
-            true => T::from(driver.inner.api.get_history_location()),
+            false => T::from(api_import().get_hash_location()),
+            true => T::from(api_import().get_history_location()),
         };
 
         let route = Value::with_connect(init_value, move |value| {
@@ -101,8 +99,8 @@ impl<T: Clone + ToString + From<String> + PartialEq + 'static> Router<T> {
             };
 
             match use_history_api {
-                false => driver.inner.api.on_hash_change(callback),
-                true => driver.inner.api.on_history_change(callback),
+                false => api_import().on_hash_change(callback),
+                true => api_import().on_history_change(callback),
             }
         });
 
@@ -113,10 +111,9 @@ impl<T: Clone + ToString + From<String> + PartialEq + 'static> Router<T> {
     }
 
     pub fn set(&self, route: T) {
-        let driver = get_driver();
         match self.use_history_api {
-            false => driver.inner.api.push_hash_location(&route.to_string()),
-            true => driver.inner.api.push_history_location(&route.to_string()),
+            false => api_import().push_hash_location(&route.to_string()),
+            true => api_import().push_history_location(&route.to_string()),
         };
     }
 

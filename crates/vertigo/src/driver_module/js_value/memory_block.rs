@@ -47,10 +47,18 @@ impl MemoryBlock {
         block.get_block()
     }
 
+    pub fn get_ptr_long(&self) -> u64 {
+        let ptr = self.ptr as u64;
+        let size = self.size as u64;
+        (ptr << 32) + size
+    }
+
+    #[deprecated]
     pub fn get_ptr_and_size(&self) -> (u32, u32) {
         (self.ptr as u32, self.size)
     }
 
+    #[deprecated]
     pub fn get_ptr(&self) -> u32 {
         self.ptr as u32
     }

@@ -2,10 +2,7 @@ use std::fmt::Debug;
 use std::rc::Rc;
 
 use crate::{
-    computed::{context::Context, Value},
-    get_driver,
-    struct_mut::ValueMut,
-    transaction, Computed, DomNode, Instant, JsJsonDeserialize, Resource, ToComputed,
+    Computed, DomNode, Instant, JsJsonDeserialize, Resource, ToComputed, computed::{Value, context::Context}, driver_module::api::api_fetch_event, get_driver, struct_mut::ValueMut, transaction
 };
 
 use super::request_builder::{RequestBody, RequestBuilder};
@@ -180,7 +177,7 @@ impl<T: PartialEq> LazyCache<T> {
         }
 
         self.queued.set(true); //set lock
-        get_driver().inner.api.on_fetch_start.trigger(());
+        api_fetch_event().on_fetch_start.trigger(());
 
         let self_clone = self.clone();
 
@@ -217,7 +214,7 @@ impl<T: PartialEq> LazyCache<T> {
             }
 
             self_clone.queued.set(false);
-            get_driver().inner.api.on_fetch_stop.trigger(());
+            api_fetch_event().on_fetch_stop.trigger(());
         });
     }
 }

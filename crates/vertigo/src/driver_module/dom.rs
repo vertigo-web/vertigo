@@ -10,7 +10,7 @@ use super::{
     api::CallbackId,
     dom_command::{sort_commands, DriverDomCommand},
 };
-use crate::driver_module::api::ApiImport;
+use crate::driver_module::api::{api_fetch_event, api_import};
 
 #[derive(PartialEq)]
 enum StateInitiation {
@@ -54,7 +54,6 @@ impl StateInitiation {
 
 struct Commands {
     state: ValueMut<StateInitiation>,
-    api: ApiImport,
     commands: VecMut<DriverDomCommand>,
     // For testing/debuging purposes
     log_enabled: Cell<bool>,
@@ -62,10 +61,9 @@ struct Commands {
 }
 
 impl Commands {
-    pub fn new(api: &ApiImport) -> &'static Self {
+    pub fn new() -> &'static Self {
         Box::leak(Box::new(Commands {
             state: ValueMut::new(StateInitiation::new()),
-            api: api.clone(),
             commands: VecMut::new(),
             log_enabled: Cell::new(false),
             log_vec: VecMut::new(),
@@ -104,7 +102,7 @@ impl Commands {
             }
 
             let out = JsJson::List(out);
-            self.api.dom_bulk_update(out);
+            api_import().dom_bulk_update(out);
         }
     }
 
@@ -145,16 +143,16 @@ pub struct DriverDom {
 }
 
 impl DriverDom {
-    pub fn new(api: &ApiImport) -> &'static DriverDom {
-        let commands = Commands::new(api);
+    pub fn new() -> &'static DriverDom {
+        let commands = Commands::new();
 
-        let sub1 = api.on_fetch_start.add({
+        let sub1 = api_fetch_event().on_fetch_start.add({
             move |_| {
                 commands.fetch_up();
             }
         });
 
-        let sub2 = api.on_fetch_stop.add({
+        let sub2 = api_fetch_event().on_fetch_stop.add({
             move |_| {
                 commands.fetch_down();
             }

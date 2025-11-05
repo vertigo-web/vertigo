@@ -41,7 +41,7 @@ pub struct CallbackStore {
 }
 
 impl CallbackStore {
-    pub fn new() -> CallbackStore {
+    fn new() -> CallbackStore {
         CallbackStore {
             data: Rc::new(HashMapMut::new()),
         }
@@ -115,4 +115,11 @@ impl CallbackStore {
 
         callback_id
     }
+}
+
+use vertigo_macro::store;
+
+#[store]
+pub fn api_callbacks() -> CallbackStore {
+    CallbackStore::new()
 }

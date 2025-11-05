@@ -1,24 +1,14 @@
-use super::{arguments::Arguments, panic_message::PanicMessage};
-use crate::{DomId, JsValue};
+use crate::{DomId, JsValue, driver_module::api::{arguments::api_arguments, panic_message::api_panic_message}};
 
 pub struct DomAccess {
-    panic_message: PanicMessage,
-    arguments: Arguments,
-    fn_dom_access: fn(ptr: u32, size: u32) -> u32,
     builder: Vec<JsValue>,
 }
 
 impl DomAccess {
     #[must_use]
     pub fn new(
-        panic_message: PanicMessage,
-        arguments: Arguments,
-        fn_dom_access: fn(ptr: u32, size: u32) -> u32,
     ) -> DomAccess {
         DomAccess {
-            panic_message,
-            fn_dom_access,
-            arguments,
             builder: Vec::new(),
         }
     }
@@ -99,23 +89,24 @@ impl DomAccess {
     }
 
     pub fn exec(self) {
-        let panic_message = self.panic_message;
-
         let result = self.fetch();
 
         if let JsValue::Undefined = result {
             //ok
         } else {
             let message = format!("Expected undefined dump={result:?}");
-            panic_message.show(message);
+            api_panic_message().show(message);
         }
     }
 
     pub fn fetch(self) -> JsValue {
-        let memory = JsValue::List(self.builder).to_snapshot();
-        let (ptr, size) = memory.get_ptr_and_size();
 
-        let result_ptr = (self.fn_dom_access)(ptr, size);
-        self.arguments.get_by_ptr(result_ptr)
+        use super::external_api::api::safe_wrappers::safe_dom_access;
+
+        let arguments_ptr_long = JsValue::List(self.builder).to_ptr_long();
+        // let (ptr, size) = memory.get_ptr_and_size();
+
+        let result_long_ptr = safe_dom_access(arguments_ptr_long);
+        api_arguments().get_by_long_ptr(result_long_ptr)
     }
 }

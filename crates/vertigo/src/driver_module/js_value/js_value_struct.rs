@@ -1,5 +1,7 @@
 use std::collections::HashMap;
 
+use crate::driver_module::api::api_arguments;
+
 use super::{
     js_json_struct::{decode_js_json_inner, JsJson},
     js_value_list_decoder::JsValueListDecoder,
@@ -220,13 +222,29 @@ impl JsValue {
         }
     }
 
-    pub fn to_snapshot(&self) -> MemoryBlock {
+    pub fn to_block(&self) -> MemoryBlock {
         let buff_size = self.get_size();
         let block = MemoryBlock::new(buff_size);
 
         let mut buff = MemoryBlockWrite::new(block);
         self.write_to(&mut buff);
         buff.get_block()
+    }
+
+    pub fn to_ptr_long(&self) -> u64 {
+        if self == &JsValue::Undefined {
+            return 0;
+        }
+
+        let buff_size = self.get_size();
+        let block = MemoryBlock::new(buff_size);
+
+        let mut buff = MemoryBlockWrite::new(block);
+        self.write_to(&mut buff);
+        let memory_block = buff.get_block();
+        let ptr_long = memory_block.get_ptr_long();
+        api_arguments().set(memory_block);
+        ptr_long
     }
 
     pub fn typename(&self) -> &'static str {

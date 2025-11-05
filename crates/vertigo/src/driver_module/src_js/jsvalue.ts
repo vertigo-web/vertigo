@@ -278,6 +278,8 @@ const saveToBufferItem = (value: JsValueType, cursor: BufferCursor) => {
     return assertNever(value);
 };
 
+
+//TODO - do skasowania
 export const saveToBuffer = (
     getUint8Memory: () => Uint8Array,
     alloc: (size: number) => number,
@@ -303,6 +305,33 @@ export const saveToBuffer = (
     }
 
     return ptr;
+};
+
+export const saveToBufferLongPtr = (
+    getUint8Memory: () => Uint8Array,
+    alloc: (size: number) => number,
+    value: JsValueType,
+): bigint => {
+    if (value === undefined) {
+        return 0n;
+    }
+
+    const size = getSize(value);
+    const ptr = alloc(size);
+
+    const cursor = new BufferCursor(getUint8Memory, ptr, size);
+    saveToBufferItem(value, cursor);
+
+    if (size !== cursor.getSavedSize()) {
+        console.error({
+            size,
+            savedSize: cursor.getSavedSize(),
+        });
+
+        throw Error('Mismatch between calculated and recorded size');
+    }
+
+    return (BigInt(ptr) << 32n) + BigInt(size);
 };
 
 export const convertFromJsValue = (value: JsValueType): unknown => {
