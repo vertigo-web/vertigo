@@ -33,33 +33,36 @@ vertigo = "0.8"
 Example 1:
 
 ```rust
-use vertigo::{dom, DomNode, Value, bind, main};
+use vertigo::{dom, DomNode, Value, store, main};
+
+#[store]
+fn state_count() -> Value<u32> {
+    Value::new(0)
+}
 
 #[main]
 pub fn app() -> DomNode {
-    let count = Value::new(0);
-
-    let increment = bind!(count, |_| {
-        count.change(|value| {
-            *value += 1;
-        });
-    });
-
-    let decrement = bind!(count, |_| {
-        count.change(|value| {
-            *value -= 1;
-        });
-    });
-
     dom! {
         <html>
             <head/>
             <body>
-                <div>
-                    <p>"Counter: " { count }</p>
-                    <button on_click={decrement}>"-"</button>
-                    <button on_click={increment}>"+"</button>
-                </div>
+                <p>"Counter: " { state_count().get() }</p>
+                <button
+                    on_click={|| {
+                        let current = state_count();
+                        current.set(current.get() - 1);
+                    }}
+                >
+                    "-"
+                </button>
+                <button
+                    on_click={|| {
+                        let current = state_count();
+                        current.set(current.get() + 1);
+                    }}
+                >
+                    "+"
+                </button>
             </body>
         </html>
     }
