@@ -114,6 +114,8 @@ pub mod router;
 mod tests;
 mod websocket;
 
+use std::rc::Rc;
+
 use computed::struct_mut::ValueMut;
 
 pub use computed::{
@@ -536,30 +538,27 @@ impl DriverConstruct {
     }
 }
 
-thread_local! {
-    static DRIVER_BROWSER: DriverConstruct = DriverConstruct::new();
-}
+extern crate self as vertigo;
 
-fn start_app_inner(root_view: DomNode) {
-    get_driver_state("start_app", |state| {
-        init_env(state.driver.inner.api.clone());
-        state.driver.inner.api.on_fetch_start.trigger(());
-
-        state.set_root(root_view);
-
-        state.driver.inner.api.on_fetch_stop.trigger(());
-        get_driver().inner.dom.flush_dom_changes();
-    });
+#[store]
+fn get_driver_browser() -> Rc<DriverConstruct> {
+    Rc::new(DriverConstruct::new())
 }
 
 /// Starting point of the app (used by [main] macro, which is preferred)
 pub fn start_app(init_app: fn() -> DomNode) {
-    get_driver_state("start_app", |state| {
-        init_env(state.driver.inner.api.clone());
+    let state = get_driver_browser();
 
-        let dom = init_app();
-        start_app_inner(dom);
-    });
+    init_env(state.driver.inner.api.clone());
+
+    let root_view = init_app();
+
+    state.driver.inner.api.on_fetch_start.trigger(());
+
+    state.set_root(root_view);
+
+    state.driver.inner.api.on_fetch_stop.trigger(());
+    get_driver().inner.dom.flush_dom_changes();
 }
 
 /// Getter for [Driver] singleton.
@@ -570,7 +569,7 @@ pub fn start_app(init_app: fn() -> DomNode) {
 /// let number = get_driver().get_random(1, 10);
 /// ```
 pub fn get_driver() -> Driver {
-    DRIVER_BROWSER.with(|state| state.driver)
+    get_driver_browser().driver
 }
 
 /// Do bunch of operations on dependency graph without triggering anything in between.
@@ -590,70 +589,49 @@ pub use driver_module::driver::{
     VERTIGO_MOUNT_POINT_PLACEHOLDER, VERTIGO_PUBLIC_BUILD_PATH_PLACEHOLDER,
 };
 
-fn get_driver_state<R: Default, F: FnOnce(&DriverConstruct) -> R>(
-    label: &'static str,
-    once: F,
-) -> R {
-    match DRIVER_BROWSER.try_with(once) {
-        Ok(value) => value,
-        Err(_) => {
-            if label != "free" {
-                println!("error access {label}");
-            }
-
-            R::default()
-        }
-    }
-}
-
 // Methods for memory allocation
 
 #[cfg(all(target_arch = "wasm32", target_os = "unknown"))]
 #[no_mangle]
 pub fn alloc(size: u32) -> u32 {
-    get_driver_state("alloc", |state| {
-        state.driver.inner.api.arguments.alloc(size)
-    })
+    get_driver().inner.api.arguments.alloc(size)
 }
 
 #[cfg(all(target_arch = "wasm32", target_os = "unknown"))]
 #[no_mangle]
 pub fn free(pointer: u32) {
-    get_driver_state("free", |state| {
-        state.driver.inner.api.arguments.free(pointer);
-    })
+    get_driver().inner.api.arguments.free(pointer);
 }
 
 // Callbacks gateways
 
 #[no_mangle]
 pub fn wasm_callback(callback_id: u64, value_ptr: u32) -> u64 {
-    get_driver_state("export_dom_callback", |state| {
-        let value = state.driver.inner.api.arguments.get_by_ptr(value_ptr);
-        let callback_id = CallbackId::from_u64(callback_id);
+    let driver = get_driver();
 
-        let mut result = JsValue::Undefined;
+    let value = driver.inner.api.arguments.get_by_ptr(value_ptr);
+    let callback_id = CallbackId::from_u64(callback_id);
 
-        state.driver.transaction(|_| {
-            result = state
-                .driver
-                .inner
-                .api
-                .callback_store
-                .call(callback_id, value);
-        });
+    let mut result = JsValue::Undefined;
 
-        if result == JsValue::Undefined {
-            return 0;
-        }
+    driver.transaction(|_| {
+        result = driver
+            .inner
+            .api
+            .callback_store
+            .call(callback_id, value);
+    });
 
-        let memory_block = result.to_snapshot();
-        let (ptr, size) = memory_block.get_ptr_and_size();
-        state.driver.inner.api.arguments.set(memory_block);
+    if result == JsValue::Undefined {
+        return 0;
+    }
 
-        let ptr = ptr as u64;
-        let size = size as u64;
+    let memory_block = result.to_snapshot();
+    let (ptr, size) = memory_block.get_ptr_and_size();
+    driver.inner.api.arguments.set(memory_block);
 
-        (ptr << 32) + size
-    })
+    let ptr = ptr as u64;
+    let size = size as u64;
+
+    (ptr << 32) + size
 }
