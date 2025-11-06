@@ -4,15 +4,15 @@ use std::pin::Pin;
 use std::rc::Rc;
 use std::task::{Context, RawWaker, RawWakerVTable, Waker};
 
+use crate::driver_module::api::api_import;
 use crate::struct_mut::ValueMut;
-use crate::ApiImport;
 
 #[inline]
-pub fn spawn_local<F>(api: ApiImport, future: F)
+pub fn spawn_local<F>(future: F)
 where
     F: Future<Output = ()> + 'static,
 {
-    Task::spawn(api, Box::pin(future));
+    Task::spawn(Box::pin(future));
 }
 
 struct Inner {
@@ -22,14 +22,12 @@ struct Inner {
 
 pub(crate) struct Task {
     inner: ValueMut<Option<Inner>>,
-    api: ApiImport,
 }
 
 impl Task {
-    pub(crate) fn spawn(api: ApiImport, future: Pin<Box<dyn Future<Output = ()>>>) {
+    pub(crate) fn spawn(future: Pin<Box<dyn Future<Output = ()>>>) {
         let this = Rc::new(Self {
             inner: ValueMut::new(None),
-            api,
         });
 
         let waker = unsafe { Waker::from_raw(Task::into_raw_waker(Rc::clone(&this))) };
@@ -42,7 +40,7 @@ impl Task {
     fn wake_by_ref(this: &Rc<Self>) {
         let this_clone = this.clone();
 
-        this.api.set_timeout_and_detach(0, move || {
+        api_import().set_timeout_and_detach(0, move || {
             this_clone.run();
         });
     }

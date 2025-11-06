@@ -108,8 +108,10 @@ mod fetch;
 mod future_box;
 pub mod inspect;
 mod instant;
+mod long_ptr;
 mod render;
 pub mod router;
+
 #[cfg(test)]
 mod tests;
 mod websocket;
@@ -157,6 +159,7 @@ pub use fetch::{
 };
 pub use future_box::{FutureBox, FutureBoxSend};
 pub use instant::{Instant, InstantType};
+pub use long_ptr::LongPtr;
 pub use websocket::{WebsocketConnection, WebsocketMessage};
 
 /// Allows to include a static file
@@ -549,15 +552,15 @@ fn get_driver_browser() -> Rc<DriverConstruct> {
 pub fn start_app(init_app: fn() -> DomNode) {
     let state = get_driver_browser();
 
-    init_env(state.driver.inner.api.clone());
+    init_env();
 
     let root_view = init_app();
 
-    state.driver.inner.api.on_fetch_start.trigger(());
+    api_fetch_event().on_fetch_start.trigger(());
 
     state.set_root(root_view);
 
-    state.driver.inner.api.on_fetch_stop.trigger(());
+    api_fetch_event().on_fetch_stop.trigger(());
     get_driver().inner.dom.flush_dom_changes();
 }
 
@@ -589,49 +592,36 @@ pub use driver_module::driver::{
     VERTIGO_MOUNT_POINT_PLACEHOLDER, VERTIGO_PUBLIC_BUILD_PATH_PLACEHOLDER,
 };
 
+use crate::driver_module::api::{api_arguments, api_callbacks, api_fetch_event};
+
 // Methods for memory allocation
 
 #[cfg(all(target_arch = "wasm32", target_os = "unknown"))]
 #[no_mangle]
 pub fn alloc(size: u32) -> u32 {
-    get_driver().inner.api.arguments.alloc(size)
+    api_arguments().alloc(size)
 }
 
 #[cfg(all(target_arch = "wasm32", target_os = "unknown"))]
 #[no_mangle]
 pub fn free(pointer: u32) {
-    get_driver().inner.api.arguments.free(pointer);
+    api_arguments().free(pointer);
 }
 
 // Callbacks gateways
 
 #[no_mangle]
-pub fn wasm_callback(callback_id: u64, value_ptr: u32) -> u64 {
-    let driver = get_driver();
+pub fn wasm_callback(callback_id: u64, value_long_ptr: u64) -> u64 {
+    let value_long_ptr = LongPtr::from(value_long_ptr);
 
-    let value = driver.inner.api.arguments.get_by_ptr(value_ptr);
+    let value = api_arguments().get_by_long_ptr(value_long_ptr);
     let callback_id = CallbackId::from_u64(callback_id);
 
     let mut result = JsValue::Undefined;
 
-    driver.transaction(|_| {
-        result = driver
-            .inner
-            .api
-            .callback_store
-            .call(callback_id, value);
+    get_driver().transaction(|_| {
+        result = api_callbacks().call(callback_id, value);
     });
 
-    if result == JsValue::Undefined {
-        return 0;
-    }
-
-    let memory_block = result.to_snapshot();
-    let (ptr, size) = memory_block.get_ptr_and_size();
-    driver.inner.api.arguments.set(memory_block);
-
-    let ptr = ptr as u64;
-    let size = size as u64;
-
-    (ptr << 32) + size
+    result.to_ptr_long().get_long_ptr()
 }

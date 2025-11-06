@@ -1,7 +1,10 @@
 use std::{collections::HashMap, future::Future, pin::Pin, rc::Rc};
 
 use crate::{
-    driver_module::{event_emitter::EventEmitter, js_value::JsValue},
+    driver_module::{
+        api::{api_fetch_event, callbacks::api_callbacks, panic_message::api_panic_message},
+        js_value::JsValue,
+    },
     fetch::request_builder::RequestBody,
     get_driver,
     struct_mut::ValueMut,
@@ -9,10 +12,7 @@ use crate::{
     JsJsonObjectBuilder, WebsocketConnection, WebsocketMessage,
 };
 
-use super::{
-    api_dom_access::DomAccess, arguments::Arguments, callbacks::CallbackStore,
-    panic_message::PanicMessage,
-};
+use super::api_dom_access::DomAccess;
 
 enum ConsoleLogLevel {
     Debug,
@@ -34,44 +34,12 @@ impl ConsoleLogLevel {
     }
 }
 
-#[derive(Clone)]
-pub struct ApiImport {
-    pub panic_message: PanicMessage,
-    pub fn_dom_access: fn(ptr: u32, size: u32) -> u32,
-
-    pub(crate) arguments: Arguments,
-    pub(crate) callback_store: CallbackStore,
-
-    pub on_fetch_start: EventEmitter<()>,
-    pub on_fetch_stop: EventEmitter<()>,
-}
-
-impl Default for ApiImport {
-    fn default() -> Self {
-        use super::external_api::api::safe_wrappers::{
-            safe_dom_access as fn_dom_access, safe_panic_message as panic_message,
-        };
-
-        let panic_message = PanicMessage::new(panic_message);
-
-        ApiImport {
-            panic_message,
-            fn_dom_access,
-            arguments: Arguments::default(),
-            callback_store: CallbackStore::new(),
-            on_fetch_start: EventEmitter::default(),
-            on_fetch_stop: EventEmitter::default(),
-        }
-    }
-}
+#[derive(Clone, Default)]
+pub struct ApiImport {}
 
 impl ApiImport {
-    pub fn show_panic_message(&self, message: String) {
-        self.panic_message.show(message);
-    }
-
     fn console_4(&self, kind: ConsoleLogLevel, arg1: &str, arg2: &str, arg3: &str, arg4: &str) {
-        self.dom_access()
+        DomAccess::default()
             .root("window")
             .get("console")
             .call(
@@ -107,8 +75,7 @@ impl ApiImport {
     }
 
     pub fn cookie_get(&self, cname: &str) -> String {
-        let result = self
-            .dom_access()
+        let result = DomAccess::default()
             .api()
             .get("cookie")
             .call("get", vec![JsValue::str(cname)])
@@ -124,8 +91,7 @@ impl ApiImport {
 
     pub fn cookie_get_json(&self, cname: &str) -> JsJson {
         if self.is_browser() {
-            let result = self
-                .dom_access()
+            let result = DomAccess::default()
                 .api()
                 .get("cookie")
                 .call("get_json", vec![JsValue::str(cname)])
@@ -143,7 +109,7 @@ impl ApiImport {
 
     pub fn cookie_set(&self, cname: &str, cvalue: &str, expires_in: u64) {
         if self.is_browser() {
-            self.dom_access()
+            DomAccess::default()
                 .api()
                 .get("cookie")
                 .call(
@@ -161,7 +127,7 @@ impl ApiImport {
     }
 
     pub fn cookie_set_json(&self, cname: &str, cvalue: JsJson, expires_in: u64) {
-        self.dom_access()
+        DomAccess::default()
             .api()
             .get("cookie")
             .call(
@@ -176,13 +142,12 @@ impl ApiImport {
     }
 
     pub fn interval_set<F: Fn() + 'static>(&self, duration: u32, callback: F) -> DropResource {
-        let (callback_id, drop_callback) = self.callback_store.register(move |_| {
+        let (callback_id, drop_callback) = api_callbacks().register(move |_| {
             callback();
             JsValue::Undefined
         });
 
-        let result = self
-            .dom_access()
+        let result = DomAccess::default()
             .api()
             .get("interval")
             .call(
@@ -198,10 +163,8 @@ impl ApiImport {
             0
         };
 
-        let api = self.clone();
-
         DropResource::new(move || {
-            api.dom_access()
+            DomAccess::default()
                 .api()
                 .get("interval")
                 .call("interval_clear", vec![JsValue::I32(timer_id)])
@@ -212,13 +175,12 @@ impl ApiImport {
     }
 
     pub fn timeout_set<F: Fn() + 'static>(&self, duration: u32, callback: F) -> DropResource {
-        let (callback_id, drop_callback) = self.callback_store.register(move |_| {
+        let (callback_id, drop_callback) = api_callbacks().register(move |_| {
             callback();
             JsValue::Undefined
         });
 
-        let result = self
-            .dom_access()
+        let result = DomAccess::default()
             .api()
             .get("interval")
             .call(
@@ -234,10 +196,8 @@ impl ApiImport {
             0
         };
 
-        let api = self.clone();
-
         DropResource::new(move || {
-            api.dom_access()
+            DomAccess::default()
                 .api()
                 .get("interval")
                 .call("interval_clear", vec![JsValue::I32(timer_id)])
@@ -268,8 +228,7 @@ impl ApiImport {
     }
 
     pub fn utc_now(&self) -> i64 {
-        let result = self
-            .dom_access()
+        let result = DomAccess::default()
             .root("window")
             .get("Date")
             .call("now", vec![])
@@ -279,16 +238,14 @@ impl ApiImport {
             JsValue::I64(time) => time,
             JsValue::F64(time) => time as i64,
             _ => {
-                self.panic_message
-                    .show(format!("api.utc_now -> incorrect result {result:?}"));
+                api_panic_message().show(format!("api.utc_now -> incorrect result {result:?}"));
                 0_i64
             }
         }
     }
 
     pub fn timezone_offset(&self) -> i32 {
-        let result = self
-            .dom_access()
+        let result = DomAccess::default()
             .api()
             .call("getTimezoneOffset", vec![])
             .fetch();
@@ -298,7 +255,7 @@ impl ApiImport {
             // Opposite as JS returns the offset backwards
             result * -60
         } else {
-            self.panic_message.show(format!(
+            api_panic_message().show(format!(
                 "api.timezone_offset -> incorrect result {result:?}"
             ));
             0
@@ -306,7 +263,7 @@ impl ApiImport {
     }
 
     pub fn history_back(&self) {
-        self.dom_access()
+        DomAccess::default()
             .root("window")
             .get("history")
             .call("back", Vec::new())
@@ -318,8 +275,7 @@ impl ApiImport {
     ///////////////////////////////////////////////////////////////////////////////////
 
     pub fn get_hash_location(&self) -> String {
-        let result = self
-            .dom_access()
+        let result = DomAccess::default()
             .api()
             .get("hashRouter")
             .call("get", Vec::new())
@@ -334,7 +290,7 @@ impl ApiImport {
     }
 
     pub fn push_hash_location(&self, new_hash: &str) {
-        self.dom_access()
+        DomAccess::default()
             .api()
             .get("hashRouter")
             .call("push", vec![JsValue::str(new_hash)])
@@ -342,7 +298,7 @@ impl ApiImport {
     }
 
     pub fn on_hash_change<F: Fn(String) + 'static>(&self, callback: F) -> DropResource {
-        let (callback_id, drop_callback) = self.callback_store.register(move |data| {
+        let (callback_id, drop_callback) = api_callbacks().register(move |data| {
             let new_hash = if let JsValue::String(new_hash) = data {
                 new_hash
             } else {
@@ -357,16 +313,14 @@ impl ApiImport {
             JsValue::Undefined
         });
 
-        self.dom_access()
+        DomAccess::default()
             .api()
             .get("hashRouter")
             .call("add", vec![JsValue::U64(callback_id.as_u64())])
             .exec();
 
-        let api = self.clone();
-
         DropResource::new(move || {
-            api.dom_access()
+            DomAccess::default()
                 .api()
                 .get("hashRouter")
                 .call("remove", vec![JsValue::U64(callback_id.as_u64())])
@@ -381,8 +335,7 @@ impl ApiImport {
     ///////////////////////////////////////////////////////////////////////////////////
 
     pub fn get_history_location(&self) -> String {
-        let result = self
-            .dom_access()
+        let result = DomAccess::default()
             .api()
             .get("historyLocation")
             .call("get", Vec::new())
@@ -397,7 +350,7 @@ impl ApiImport {
     }
 
     pub fn push_history_location(&self, new_path: &str) {
-        self.dom_access()
+        DomAccess::default()
             .api()
             .get("historyLocation")
             .call("push", vec![JsValue::str(new_path)])
@@ -405,7 +358,7 @@ impl ApiImport {
     }
 
     pub fn replace_history_location(&self, new_hash: &str) {
-        self.dom_access()
+        DomAccess::default()
             .api()
             .get("historyLocation")
             .call("replace", vec![JsValue::str(new_hash)])
@@ -414,11 +367,11 @@ impl ApiImport {
 
     pub fn on_history_change<F: Fn(String) + 'static>(&self, callback: F) -> DropResource {
         let myself = self.clone();
-        let (callback_id, drop_callback) = self.callback_store.register(move |data| {
+        let (callback_id, drop_callback) = api_callbacks().register(move |data| {
             let new_local_path = if let JsValue::String(new_path) = data {
                 myself.route_from_public(new_path.clone())
             } else {
-                    log::error!("on_history_change -> string was expected -> {data:?}");
+                log::error!("on_history_change -> string was expected -> {data:?}");
                 String::from("")
             };
 
@@ -429,16 +382,14 @@ impl ApiImport {
             JsValue::Undefined
         });
 
-        self.dom_access()
+        DomAccess::default()
             .api()
             .get("historyLocation")
             .call("add", vec![JsValue::U64(callback_id.as_u64())])
             .exec();
 
-        let api = self.clone();
-
         DropResource::new(move || {
-            api.dom_access()
+            DomAccess::default()
                 .api()
                 .get("historyLocation")
                 .call("remove", vec![JsValue::U64(callback_id.as_u64())])
@@ -460,11 +411,11 @@ impl ApiImport {
     ) -> Pin<Box<dyn Future<Output = FetchResult> + 'static>> {
         let (sender, receiver) = FutureBox::new();
 
-        self.on_fetch_start.trigger(());
+        api_fetch_event().on_fetch_start.trigger(());
 
-        let on_fetch_stop = self.on_fetch_stop.clone();
+        // let on_fetch_stop = self.on_fetch_stop.clone();
 
-        let callback_id = self.callback_store.register_once(move |params| {
+        let callback_id = api_callbacks().register_once(move |params| {
             let params = params.convert(|mut params| {
                 let success = params.get_bool("success")?;
                 let status = params.get_u32("status")?;
@@ -497,12 +448,12 @@ impl ApiImport {
                             false => Err(format!("{response:#?}")),
                         };
                         sender.publish(response);
-                        on_fetch_stop.trigger(());
+                        api_fetch_event().on_fetch_stop.trigger(());
                     });
                 }
                 Err(error) => {
                     log::error!("export_fetch_callback -> params decode error -> {error}");
-                    on_fetch_stop.trigger(());
+                    api_fetch_event().on_fetch_stop.trigger(());
                 }
             }
 
@@ -521,7 +472,7 @@ impl ApiImport {
             headers_builder.get()
         };
 
-        self.dom_access()
+        DomAccess::default()
             .api()
             .get("fetch")
             .call(
@@ -555,28 +506,27 @@ impl ApiImport {
         let api = self.clone();
 
         let (callback_id, drop_callback) =
-            self.callback_store
-                .register_with_id(move |callback_id, data| {
-                    if let JsValue::True = data {
-                        let connection = WebsocketConnection::new(api.clone(), callback_id);
-                        let connection = WebsocketMessage::Connection(connection);
-                        callback(connection);
-                        return JsValue::Undefined;
-                    }
+            api_callbacks().register_with_id(move |callback_id, data| {
+                if let JsValue::True = data {
+                    let connection = WebsocketConnection::new(api.clone(), callback_id);
+                    let connection = WebsocketMessage::Connection(connection);
+                    callback(connection);
+                    return JsValue::Undefined;
+                }
 
-                    if let JsValue::String(message) = data {
-                        callback(WebsocketMessage::Message(message));
-                        return JsValue::Undefined;
-                    }
+                if let JsValue::String(message) = data {
+                    callback(WebsocketMessage::Message(message));
+                    return JsValue::Undefined;
+                }
 
-                    if let JsValue::False = data {
-                        callback(WebsocketMessage::Close);
-                        return JsValue::Undefined;
-                    }
+                if let JsValue::False = data {
+                    callback(WebsocketMessage::Close);
+                    return JsValue::Undefined;
+                }
 
-                    log::error!("websocket - unsupported message type received");
-                    JsValue::Undefined
-                });
+                log::error!("websocket - unsupported message type received");
+                JsValue::Undefined
+            });
 
         self.websocket_register_callback(host.as_str(), callback_id.as_u64());
 
@@ -591,7 +541,7 @@ impl ApiImport {
     }
 
     fn websocket_register_callback(&self, host: &str, callback_id: u64) {
-        self.dom_access()
+        DomAccess::default()
             .api()
             .get("websocket")
             .call(
@@ -602,7 +552,7 @@ impl ApiImport {
     }
 
     fn websocket_unregister_callback(&self, callback_id: u64) {
-        self.dom_access()
+        DomAccess::default()
             .api()
             .get("websocket")
             .call(
@@ -613,7 +563,7 @@ impl ApiImport {
     }
 
     pub fn websocket_send_message(&self, callback_id: u64, message: &str) {
-        self.dom_access()
+        DomAccess::default()
             .api()
             .get("websocket")
             .call(
@@ -627,24 +577,15 @@ impl ApiImport {
     }
 
     pub fn dom_bulk_update(&self, value: JsJson) {
-        self.dom_access()
+        DomAccess::default()
             .api()
             .get("dom")
             .call("dom_bulk_update", vec![JsValue::Json(value)])
             .exec();
     }
 
-    pub fn dom_access(&self) -> DomAccess {
-        DomAccess::new(
-            self.panic_message,
-            self.arguments.clone(),
-            self.fn_dom_access,
-        )
-    }
-
     pub fn get_random(&self, min: u32, max: u32) -> u32 {
-        let result = self
-            .dom_access()
+        let result = DomAccess::default()
             .api()
             .call("getRandom", vec![JsValue::U32(min), JsValue::U32(max)])
             .fetch();
@@ -652,15 +593,13 @@ impl ApiImport {
         if let JsValue::I32(result) = result {
             result as u32
         } else {
-            self.panic_message
-                .show(format!("api.get_random -> incorrect result {result:?}"));
+            api_panic_message().show(format!("api.get_random -> incorrect result {result:?}"));
             min
         }
     }
 
     pub fn is_browser(&self) -> bool {
-        let result = self
-            .dom_access()
+        let result = DomAccess::default()
             .api()
             .call("isBrowser", Vec::new())
             .fetch();
@@ -678,8 +617,7 @@ impl ApiImport {
     }
 
     pub fn get_env(&self, name: String) -> Option<String> {
-        let result = self
-            .dom_access()
+        let result = DomAccess::default()
             .api()
             .call("get_env", vec![JsValue::String(name)])
             .fetch();
@@ -700,7 +638,9 @@ impl ApiImport {
         let path: String = path.into();
         if self.is_browser() {
             // In the browser use env variable attached during SSR
-            let mount_point = self.get_env("vertigo-mount-point".to_string()).unwrap_or_else(|| "/".to_string());
+            let mount_point = self
+                .get_env("vertigo-mount-point".to_string())
+                .unwrap_or_else(|| "/".to_string());
             if mount_point != "/" {
                 path.trim_start_matches(&mount_point).to_string()
             } else {
@@ -718,7 +658,7 @@ impl ApiImport {
             return;
         }
 
-        self.dom_access()
+        DomAccess::default()
             .synthetic("plain_response", JsValue::String(body))
             .exec();
     }
@@ -729,8 +669,15 @@ impl ApiImport {
             return;
         }
 
-        self.dom_access()
+        DomAccess::default()
             .synthetic("set_status", JsValue::U32(status as u32))
             .exec();
     }
+}
+
+use vertigo_macro::store;
+
+#[store]
+pub fn api_import() -> ApiImport {
+    ApiImport::default()
 }

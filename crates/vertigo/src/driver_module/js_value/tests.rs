@@ -7,7 +7,7 @@ use super::js_value_struct::JsValue;
 fn json_json_string() {
     let data1 = JsValue::Json(JsJson::String("test string".into()));
 
-    let block = data1.to_snapshot();
+    let block = data1.to_block();
 
     let Ok(data2) = JsValue::from_block(block) else {
         unreachable!();
@@ -20,7 +20,7 @@ fn json_json_string() {
 fn json_json_float() {
     let data1 = JsValue::F64(3.15);
 
-    let block = data1.to_snapshot();
+    let block = data1.to_block();
 
     let Ok(data2) = JsValue::from_block(block) else {
         unreachable!();
@@ -50,7 +50,7 @@ fn json_json_list() {
         ])),
     ]));
 
-    let block = data1.to_snapshot();
+    let block = data1.to_block();
 
     let Ok(data2) = JsValue::from_block(block) else {
         unreachable!();

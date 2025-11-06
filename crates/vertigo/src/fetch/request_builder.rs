@@ -2,7 +2,8 @@ use std::collections::HashMap;
 use std::time::Duration;
 
 use crate::{
-    from_json, get_driver, FetchMethod, JsJson, JsJsonDeserialize, JsJsonSerialize, LazyCache,
+    driver_module::api::api_import, from_json, FetchMethod, JsJson, JsJsonDeserialize,
+    JsJsonSerialize, LazyCache,
 };
 
 #[derive(Debug, Clone)]
@@ -130,9 +131,7 @@ impl RequestBuilder {
             ttl: _,
         } = self;
 
-        let result = get_driver()
-            .inner
-            .api
+        let result = api_import()
             .fetch(*method, url.clone(), Some(headers.clone()), body.clone())
             .await;
 

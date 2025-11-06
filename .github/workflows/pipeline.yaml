@@ -13,7 +13,7 @@ jobs:
       - uses: actions/checkout@v2
       - uses: actions-rs/toolchain@v1
         with:
-          toolchain: nightly-2025-04-16
+          toolchain: nightly-2025-08-02
           target: wasm32-unknown-unknown
           components: clippy, rustfmt
           override: true
@@ -30,7 +30,7 @@ jobs:
           echo "${{ steps.changed-files.outputs.all_changed_files }}" | tr ' ' '\n' | grep "\.rs$" || true
 
           # Run rustfmt on the changed .rs files
-          echo "${{ steps.changed-files.outputs.all_changed_files }}" | tr ' ' '\n' | grep "\.rs$" | xargs rustfmt --check
+          echo "${{ steps.changed-files.outputs.all_changed_files }}" | tr ' ' '\n' | grep "\.rs$" | xargs rustfmt --check --edition 2021
 
       # Clippy checks
       - uses: actions-rs/clippy-check@v1
@@ -60,7 +60,7 @@ jobs:
         run: tests/check_js_is_fresh.sh
       - name: vertigo new some_app
         run: |
-          rustup default nightly-2025-04-16
+          rustup default nightly-2025-08-02
           tests/check_vertigo_new.sh
 
   nightly:

@@ -1,4 +1,4 @@
-use vertigo::{JsValue, MemoryBlock};
+use vertigo::{JsValue, LongPtr, MemoryBlock};
 use wasmtime::{AsContextMut, Caller, Extern, Instance, Memory, Store, StoreContextMut};
 
 use crate::serve::request_state::RequestState;
@@ -48,7 +48,9 @@ impl<'a> DataContext<'a> {
         }
     }
 
-    pub fn get_value(&mut self, ptr: u32, offset: u32) -> JsValue {
+    pub fn get_value_long_ptr(&mut self, long_ptr: LongPtr) -> JsValue {
+        let (ptr, offset) = long_ptr.into_parts();
+
         let memory = self.get_memory();
         let context = self.get_context();
 
@@ -89,7 +91,7 @@ impl<'a> DataContext<'a> {
         Some(result)
     }
 
-    fn alloc(&mut self, size: usize) -> usize {
+    fn alloc(&mut self, size: u32) -> u32 {
         let alloc_inner = match self {
             Self::Caller { caller, .. } => {
                 let Some(Extern::Func(alloc_inner)) = caller.get_export("alloc") else {
@@ -118,19 +120,20 @@ impl<'a> DataContext<'a> {
             return 0;
         };
 
-        alloc.call(&mut context, size as u32)
+        alloc
+            .call(&mut context, size)
             .inspect_err(|err| log::error!("Alloc failed (3): {err}"))
-            .unwrap_or(0) as usize
+            .unwrap_or(0)
     }
 
-    pub fn save_value(&mut self, value: JsValue) -> u32 {
+    pub fn save_value(&mut self, value: JsValue) -> LongPtr {
         if let JsValue::Undefined = value {
-            return 0;
+            return LongPtr::from(0);
         }
 
-        let block = value.to_snapshot();
+        let block = value.to_block();
         let block = block.convert_to_vec();
-        let size = block.len();
+        let size = block.len() as u32;
 
         let ptr = self.alloc(size);
 
@@ -138,8 +141,9 @@ impl<'a> DataContext<'a> {
         let context = self.get_context();
         let buff = memory.data_mut(context);
 
-        buff[ptr..(ptr + size)].clone_from_slice(block.as_slice());
+        let range = (ptr as usize)..(ptr as usize + size as usize);
+        buff[range].clone_from_slice(block.as_slice());
 
-        ptr as u32
+        LongPtr::new(ptr, size)
     }
 }
