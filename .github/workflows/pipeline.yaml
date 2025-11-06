@@ -15,8 +15,24 @@ jobs:
         with:
           toolchain: nightly-2025-04-16
           target: wasm32-unknown-unknown
-          components: clippy
+          components: clippy, rustfmt
           override: true
+
+      # Check formatting of modified files
+      - name: Get changed files
+        id: changed-files
+        uses: tj-actions/changed-files@v47
+
+      - name: Check formatting on last modified files
+        if: steps.changed-files.outputs.all_changed_files != ''
+        run: |
+          echo "Found changed Rust files:"
+          echo "${{ steps.changed-files.outputs.all_changed_files }}" | tr ' ' '\n' | grep "\.rs$" || true
+
+          # Run rustfmt on the changed .rs files
+          echo "${{ steps.changed-files.outputs.all_changed_files }}" | tr ' ' '\n' | grep "\.rs$" | xargs rustfmt --check
+
+      # Clippy checks
       - uses: actions-rs/clippy-check@v1
         with:
           token: ${{ secrets.GITHUB_TOKEN }}
@@ -27,10 +43,14 @@ jobs:
           token: ${{ secrets.GITHUB_TOKEN }}
           args: -p vertigo-demo -p vertigo-example-counter -p vertigo-example-router -p vertigo-example-trafficlights --all-features --tests --target wasm32-unknown-unknown -- -Dwarnings
           name: Demo/Examples Clippy Output
+
+      # Unit tests
       - uses: actions-rs/cargo@v1
         with:
           command: test
           args: --all-features
+
+      # Various check scripts
       - name: Check versions
         run: tests/check_versions.sh
       - uses: actions/setup-node@v4
