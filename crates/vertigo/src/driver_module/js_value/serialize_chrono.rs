@@ -30,10 +30,9 @@ impl JsJsonSerialize for chrono::NaiveDate {
 impl JsJsonDeserialize for chrono::NaiveDate {
     fn from_json(context: JsJsonContext, json: JsJson) -> Result<Self, JsJsonContext> {
         let datetime_str = String::from_json(context.clone(), json)?;
-        chrono::NaiveDate::parse_from_str(&datetime_str, NAIVE_DATE_FORMAT)
-            .map_err(|err| {
-                let message = ["DateTime parsing failed: ", &err.to_string()].concat();
-                context.add(message)
-            })
+        chrono::NaiveDate::parse_from_str(&datetime_str, NAIVE_DATE_FORMAT).map_err(|err| {
+            let message = ["DateTime parsing failed: ", &err.to_string()].concat();
+            context.add(message)
+        })
     }
 }

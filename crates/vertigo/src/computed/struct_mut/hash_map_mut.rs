@@ -79,7 +79,6 @@ impl<K: Eq + Hash, V> HashMapMut<K, V> {
 
 impl<K: Eq + Hash + Clone, V: Clone + Default> HashMapMut<K, V> {
     pub fn get_or_default(&self, key: &K) -> V {
-
         let value = self.get(key);
 
         if let Some(value) = value {
@@ -115,7 +114,7 @@ impl<K: Eq + Hash + Clone, V: Clone> HashMapMut<K, V> {
         if let Some(value) = state.get(key) {
             return value.clone();
         }
-    
+
         let new_item = create();
         self.insert(key.clone(), new_item.clone());
         new_item

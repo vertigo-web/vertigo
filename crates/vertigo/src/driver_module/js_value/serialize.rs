@@ -183,7 +183,7 @@ impl JsJsonDeserialize for () {
 
         if !map.is_empty() {
             let message = "Empty {} expected, inner content received".to_string();
-            return Err(context.add(message))
+            return Err(context.add(message));
         }
 
         Ok(())

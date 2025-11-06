@@ -1,11 +1,11 @@
-use crate::{tests::js_macro::api_mock::ApiMock};
+use crate::tests::js_macro::api_mock::ApiMock;
 
 mod api_mock;
 
 #[test]
 fn test_method_call() {
-    use api_mock as vertigo;
     use crate::js;
+    use api_mock as vertigo;
 
     let pos: i32 = 100;
 
@@ -20,14 +20,14 @@ fn test_method_call() {
                 .root("window")
                 .call("scrollTo", [I32(100)])
                 .fetch()
-        "#
+        "#,
     );
 }
 
 #[test]
 fn test_property() {
-    use api_mock as vertigo;
     use crate::js;
+    use api_mock as vertigo;
 
     let result = js! {
         window.referrer
@@ -40,14 +40,14 @@ fn test_property() {
                 .root("window")
                 .get("referrer")
                 .fetch()
-        "#
+        "#,
     );
 }
 
 #[test]
 fn test_complex_receiver() {
-    use api_mock as vertigo;
     use crate::js;
+    use api_mock as vertigo;
 
     let node = "node_mock";
 
@@ -64,7 +64,7 @@ fn test_complex_receiver() {
                 .get("firstChild")
                 .call("appendChild", [String("node_mock")])
                 .fetch()
-        "#
+        "#,
     );
 }
 
@@ -85,14 +85,14 @@ fn test_ref() {
                 .get("firstChild")
                 .call("focus", [])
                 .fetch()
-        "#
+        "#,
     );
 }
 
 #[test]
 fn test_many_arguments() {
-    use api_mock as vertigo;
     use crate::js;
+    use api_mock as vertigo;
 
     let x = 5;
     let foo: &str = "foo";

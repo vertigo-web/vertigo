@@ -1,5 +1,5 @@
-use vertigo::{LazyCache, RequestBuilder, Value, store};
 use vertigo::AutoJsJson;
+use vertigo::{store, LazyCache, RequestBuilder, Value};
 
 #[derive(PartialEq, Eq, Clone)]
 pub enum View {
@@ -45,13 +45,15 @@ pub fn state_todo_posts() -> LazyCache<Vec<PostModel>> {
 
 #[store]
 pub fn state_todo_comments(post_id: u32) -> LazyCache<Vec<CommentModel>> {
-    RequestBuilder::get(format!("https://jsonplaceholder.typicode.com/posts/{post_id}/comments"))
-        .ttl_minutes(10)
-        .lazy_cache(|status, body| {
-            if status == 200 {
-                Some(body.into::<Vec<CommentModel>>())
-            } else {
-                None
-            }
-        })
+    RequestBuilder::get(format!(
+        "https://jsonplaceholder.typicode.com/posts/{post_id}/comments"
+    ))
+    .ttl_minutes(10)
+    .lazy_cache(|status, body| {
+        if status == 200 {
+            Some(body.into::<Vec<CommentModel>>())
+        } else {
+            None
+        }
+    })
 }

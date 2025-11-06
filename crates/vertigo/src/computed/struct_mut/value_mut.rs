@@ -28,7 +28,7 @@ impl<T> ValueMut<T> {
 impl<T: Default> Default for ValueMut<T> {
     fn default() -> Self {
         Self {
-            value: InnerValue::new(Default::default())
+            value: InnerValue::new(Default::default()),
         }
     }
 }

@@ -9,7 +9,9 @@ impl<T: Clone> SudokuSquare<T> {
         SudokuSquare { data }
     }
 
-    pub fn create_with_iterator<F: Fn(TreeBoxIndex, TreeBoxIndex) -> T>(create: F) -> SudokuSquare<T> {
+    pub fn create_with_iterator<F: Fn(TreeBoxIndex, TreeBoxIndex) -> T>(
+        create: F,
+    ) -> SudokuSquare<T> {
         SudokuSquare::new(ThreeBox::create_with_iterator(|level0x| {
             ThreeBox::create_with_iterator(|level0y| create(level0x, level0y))
         }))

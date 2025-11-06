@@ -1,4 +1,4 @@
-use vertigo::{css, bind, dom, DomNode};
+use vertigo::{bind, css, dom, DomNode};
 
 use crate::app::sudoku::state::{number_item::SudokuValue, Cell};
 
@@ -7,14 +7,14 @@ pub fn render_cell_value(item_height_size: u32, value: SudokuValue, cell: &Cell)
 
     let delete_component = cell.show_delete.render_value_option({
         let cell = cell.clone();
-        move |show_delete| {
-            match show_delete {
-                true => {
-                    let on_click = bind!(cell, |_| {
-                        cell.number.set(None);
-                    });
+        move |show_delete| match show_delete {
+            true => {
+                let on_click = bind!(cell, |_| {
+                    cell.number.set(None);
+                });
 
-                    let css_delete = css!("
+                let css_delete = css!(
+                    "
                         position: absolute;
                         top: 3px;
                         right: 3px;
@@ -28,27 +28,29 @@ pub fn render_cell_value(item_height_size: u32, value: SudokuValue, cell: &Cell)
                         display: flex;
                         align-items: center;
                         justify-content: center;
-                    ");
+                    "
+                );
 
-                    Some(dom! {
-                        <div css={css_delete} on_click={on_click}>
-                            "X"
-                        </div>
-                    })
-                },
-                false => None,
+                Some(dom! {
+                    <div css={css_delete} on_click={on_click}>
+                        "X"
+                    </div>
+                })
             }
+            false => None,
         }
     });
 
-    let css_item = css!("
+    let css_item = css!(
+        "
         position: relative;
         text-align: center;
         font-size: 30px;
         color: blue;
         height: {item_height_size}px;
         line-height: {item_height_size}px;
-    ");
+    "
+    );
 
     dom! {
         <div css={css_item}>

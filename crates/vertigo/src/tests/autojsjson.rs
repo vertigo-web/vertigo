@@ -56,13 +56,16 @@ fn test_compound_enum() {
         Tuple(String, u32),
         Number(u32),
         EmptyTuple(),
-        EmptyStruct{},
-        Nothing
+        EmptyStruct {},
+        Nothing,
     }
 
     let somestring = TestType::Somestring("asdf".to_string());
-    let point = TestType::Point { x: 10, y: "raz".to_string() };
-    let tuple = TestType::Tuple ( "raz".to_string(), 10 );
+    let point = TestType::Point {
+        x: 10,
+        y: "raz".to_string(),
+    };
+    let tuple = TestType::Tuple("raz".to_string(), 10);
     let number = TestType::Number(50);
     let nothing = TestType::Nothing;
 
@@ -74,11 +77,16 @@ fn test_compound_enum() {
 
     use vertigo::JsJsonDeserialize;
 
-    let again_somestring = TestType::from_json(JsJsonContext::new(""), somestring_json).unwrap_or_else(|err| panic!("1. {}", err.convert_to_string()));
-    let again_point = TestType::from_json(JsJsonContext::new(""), point_json).unwrap_or_else(|err| panic!("2. {}", err.convert_to_string()));
-    let again_tuple = TestType::from_json(JsJsonContext::new(""), tuple_json).unwrap_or_else(|err| panic!("3. {}", err.convert_to_string()));
-    let again_number = TestType::from_json(JsJsonContext::new(""), number_json).unwrap_or_else(|err| panic!("4. {}", err.convert_to_string()));
-    let again_nothing = TestType::from_json(JsJsonContext::new(""), nothing_json).unwrap_or_else(|err| panic!("4. {}", err.convert_to_string()));
+    let again_somestring = TestType::from_json(JsJsonContext::new(""), somestring_json)
+        .unwrap_or_else(|err| panic!("1. {}", err.convert_to_string()));
+    let again_point = TestType::from_json(JsJsonContext::new(""), point_json)
+        .unwrap_or_else(|err| panic!("2. {}", err.convert_to_string()));
+    let again_tuple = TestType::from_json(JsJsonContext::new(""), tuple_json)
+        .unwrap_or_else(|err| panic!("3. {}", err.convert_to_string()));
+    let again_number = TestType::from_json(JsJsonContext::new(""), number_json)
+        .unwrap_or_else(|err| panic!("4. {}", err.convert_to_string()));
+    let again_nothing = TestType::from_json(JsJsonContext::new(""), nothing_json)
+        .unwrap_or_else(|err| panic!("4. {}", err.convert_to_string()));
 
     assert_eq!(somestring, again_somestring);
     assert_eq!(point, again_point);
@@ -102,8 +110,10 @@ fn test_newtype() {
 
     use vertigo::JsJsonDeserialize;
 
-    let again_my_number = MyNumber::from_json(JsJsonContext::new(""), my_number_js).unwrap_or_else(|_| panic!());
-    let again_my_string = MyString::from_json(JsJsonContext::new(""), my_string_js).unwrap_or_else(|_| panic!());
+    let again_my_number =
+        MyNumber::from_json(JsJsonContext::new(""), my_number_js).unwrap_or_else(|_| panic!());
+    let again_my_string =
+        MyString::from_json(JsJsonContext::new(""), my_string_js).unwrap_or_else(|_| panic!());
 
     assert_eq!(again_my_number, my_number);
     assert_eq!(my_string, again_my_string);
@@ -120,7 +130,8 @@ fn test_newtype_tuple() {
 
     use vertigo::JsJsonDeserialize;
 
-    let again_my_type = MyType::from_json(JsJsonContext::new(""), my_type_js).unwrap_or_else(|_| panic!());
+    let again_my_type =
+        MyType::from_json(JsJsonContext::new(""), my_type_js).unwrap_or_else(|_| panic!());
 
     assert_eq!(again_my_type, my_type);
 }

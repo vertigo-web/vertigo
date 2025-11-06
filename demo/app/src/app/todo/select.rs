@@ -1,6 +1,9 @@
-use vertigo::{bind, dom, DomNode, Value, Computed};
+use vertigo::{bind, dom, Computed, DomNode, Value};
 
-fn is_selected<T: PartialEq + Clone + 'static>(value: &Value<T>, option_value: &T) -> Computed<Option<String>> {
+fn is_selected<T: PartialEq + Clone + 'static>(
+    value: &Value<T>,
+    option_value: &T,
+) -> Computed<Option<String>> {
     let option_value = option_value.clone();
 
     value.to_computed().map(move |current| {
@@ -19,9 +22,11 @@ pub struct Select<T: Clone> {
 
 impl<T> Select<T>
 where
-    T: Clone + From<String> + PartialEq + ToString + 'static
+    T: Clone + From<String> + PartialEq + ToString + 'static,
 {
-    pub fn into_component(self) -> Self { self }
+    pub fn into_component(self) -> Self {
+        self
+    }
 
     pub fn mount(&self) -> DomNode {
         let Self { value, options } = self;
@@ -29,15 +34,18 @@ where
             value.set(new_value.into());
         });
 
-        let list = bind!(value, options.render_list(
-            |item| item.to_string(),
-            move |item| {
-                let text_item = item.to_string();
-                let selected = is_selected(&value, item);
+        let list = bind!(
+            value,
+            options.render_list(
+                |item| item.to_string(),
+                move |item| {
+                    let text_item = item.to_string();
+                    let selected = is_selected(&value, item);
 
-                dom! { <option value={&text_item} {selected}>{text_item}</option> }
-            }
-        ));
+                    dom! { <option value={&text_item} {selected}>{text_item}</option> }
+                }
+            )
+        );
 
         dom! {
             <select {on_change}>

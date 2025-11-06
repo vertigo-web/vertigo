@@ -1,4 +1,4 @@
-use vertigo::{css, component, dom};
+use vertigo::{component, css, dom};
 
 #[component]
 pub fn TooltipDemo() {

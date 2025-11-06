@@ -32,7 +32,7 @@ fn test_bind_namespaced_params() {
     use crate::{bind, bind_rc, bind_spawn};
 
     pub struct State {
-        pub value: i32
+        pub value: i32,
     }
 
     let state = State { value: 2 };
@@ -57,4 +57,3 @@ fn test_bind_namespaced_params() {
 
     on_click3();
 }
-

@@ -1,6 +1,6 @@
-use std::{cmp::PartialEq};
-use vertigo::{LazyCache, RequestBuilder, Value, store};
+use std::cmp::PartialEq;
 use vertigo::AutoJsJson;
+use vertigo::{store, LazyCache, RequestBuilder, Value};
 
 #[derive(Debug, AutoJsJson, PartialEq, Eq, Clone, Default)]
 pub struct Commit {
@@ -51,5 +51,3 @@ pub fn state_github_repo_input() -> Value<String> {
 pub fn state_github_repo_shown() -> Value<String> {
     Value::default()
 }
-
-

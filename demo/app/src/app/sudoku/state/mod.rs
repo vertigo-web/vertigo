@@ -1,4 +1,4 @@
-use vertigo::{Value, get_driver};
+use vertigo::{get_driver, Value};
 
 use self::{
     number_item::NumberItem,
@@ -16,9 +16,7 @@ pub mod tree_box;
 
 fn create_grid() -> SudokuSquare<SudokuSquare<NumberItem>> {
     SudokuSquare::create_with_iterator(move |_level0x, _level0y| {
-        SudokuSquare::create_with_iterator(move |_level1x, _level1y| {
-            NumberItem::new(None)
-        })
+        SudokuSquare::create_with_iterator(move |_level1x, _level1y| NumberItem::new(None))
     })
 }
 
@@ -38,7 +36,14 @@ fn create_grid_possible_last(
 ) -> SudokuSquare<SudokuSquare<PossibleValuesLast>> {
     SudokuSquare::create_with_iterator(|level0x, level0y| {
         SudokuSquare::create_with_iterator(|level1x, level1y| {
-            possible_values_last(grid_number, grid_possible, level0x, level0y, level1x, level1y)
+            possible_values_last(
+                grid_number,
+                grid_possible,
+                level0x,
+                level0y,
+                level1x,
+                level1y,
+            )
         })
     })
 }
@@ -58,9 +63,15 @@ fn create_grid_view(
 ) -> SudokuSquare<SudokuSquare<Cell>> {
     SudokuSquare::create_with_iterator(|level0x, level0y| {
         SudokuSquare::create_with_iterator(|level1x, level1y| {
-            let number = grid_number.get_from(level0x, level0y).get_from(level1x, level1y);
-            let possible = grid_possible.get_from(level0x, level0y).get_from(level1x, level1y);
-            let possible_last = grid_possible_last.get_from(level0x, level0y).get_from(level1x, level1y);
+            let number = grid_number
+                .get_from(level0x, level0y)
+                .get_from(level1x, level1y);
+            let possible = grid_possible
+                .get_from(level0x, level0y)
+                .get_from(level1x, level1y);
+            let possible_last = grid_possible_last
+                .get_from(level0x, level0y)
+                .get_from(level1x, level1y);
 
             Cell {
                 number: number.clone(),

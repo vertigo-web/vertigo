@@ -1,7 +1,7 @@
 use std::{collections::HashSet, rc::Rc};
 
-use vertigo::{bind, bind_rc, css, dom, dom_element, ClickEvent, Computed, Css, DomNode};
 use crate::app::sudoku::state::{number_item::SudokuValue, Cell};
+use vertigo::{bind, bind_rc, css, dom, dom_element, ClickEvent, Computed, Css, DomNode};
 
 fn css_item_only_one(cell_width: u32) -> Css {
     css!(
@@ -81,7 +81,9 @@ fn view_last_value(cell_width: u32, cell: &Cell, possible_last_value: SudokuValu
     //     cell.number.value.set(Some(possible_last_value));
     // });
 
-    let on_set = Computed::from(bind!(cell, possible_last_value, |_context| -> Rc<dyn Fn(ClickEvent) + 'static> {
+    let on_set = Computed::from(bind!(cell, possible_last_value, |_context| -> Rc<
+        dyn Fn(ClickEvent) + 'static,
+    > {
         Rc::new(bind!(cell, possible_last_value, |_| {
             cell.number.set(Some(possible_last_value));
         }))
@@ -97,7 +99,8 @@ fn view_last_value(cell_width: u32, cell: &Cell, possible_last_value: SudokuValu
 }
 
 fn view_default(cell_width: u32, cell: &Cell, possible: HashSet<SudokuValue>) -> DomNode {
-    let css_wrapper = css!("
+    let css_wrapper = css!(
+        "
         width: {cell_width}px;
         height: {cell_width}px;
 
@@ -105,7 +108,8 @@ fn view_default(cell_width: u32, cell: &Cell, possible: HashSet<SudokuValue>) ->
         grid-template-columns: 1fr 1fr 1fr;
         grid-template-rows: 1fr 1fr 1fr;
         flex-shrink: 0;
-    ");
+    "
+    );
 
     let wrapper = dom_element! {
         <div css={css_wrapper} />
@@ -140,7 +144,7 @@ fn view_default(cell_width: u32, cell: &Cell, possible: HashSet<SudokuValue>) ->
 enum CellView {
     One,
     LastPossible(SudokuValue),
-    Default(HashSet<SudokuValue>)
+    Default(HashSet<SudokuValue>),
 }
 
 pub fn render_cell_possible(cell_width: u32, cell: &Cell) -> DomNode {
@@ -167,12 +171,10 @@ pub fn render_cell_possible(cell_width: u32, cell: &Cell) -> DomNode {
         }
     });
 
-    let render = view.render_value(move |view| {
-        match view {
-            CellView::One => view_one_possible(cell_width, &cell),
-            CellView::LastPossible(last) => view_last_value(cell_width, &cell, last),
-            CellView::Default(possible) => view_default(cell_width, &cell, possible),
-        }
+    let render = view.render_value(move |view| match view {
+        CellView::One => view_one_possible(cell_width, &cell),
+        CellView::LastPossible(last) => view_last_value(cell_width, &cell, last),
+        CellView::Default(possible) => view_default(cell_width, &cell, possible),
     });
 
     dom! {

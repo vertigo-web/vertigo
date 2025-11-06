@@ -1,13 +1,15 @@
 use vertigo::{css, dom, transaction, Computed, DomNode, Resource};
 
-use crate::app::github_explorer::state::{state_github_branch_name, state_github_repo_input, state_github_repo_shown};
+use crate::app::github_explorer::state::{
+    state_github_branch_name, state_github_repo_input, state_github_repo_shown,
+};
 
-
-pub struct GitHubExplorer {
-}
+pub struct GitHubExplorer {}
 
 impl GitHubExplorer {
-    pub fn into_component(self) -> Self { self }
+    pub fn into_component(self) -> Self {
+        self
+    }
 
     pub fn mount(&self) -> DomNode {
         let on_input_callback = |new_value: String| {

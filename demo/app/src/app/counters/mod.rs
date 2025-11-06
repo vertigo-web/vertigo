@@ -1,4 +1,4 @@
-use vertigo::{ClickEvent, Computed, Value, component, css, dom, include_static, store};
+use vertigo::{component, css, dom, include_static, store, ClickEvent, Computed, Value};
 
 mod simple_counter;
 use simple_counter::SimpleCounter;
@@ -46,8 +46,8 @@ impl State {
 }
 
 #[store]
-pub fn state_counters() -> State {   
-    State::new() 
+pub fn state_counters() -> State {
+    State::new()
 }
 
 #[component]
@@ -76,7 +76,8 @@ pub fn CountersDemo() {
         transition: all .2s ease-in-out;
     "};
 
-    let center_css = center_base.clone() + css! {"
+    let center_css = center_base.clone()
+        + css! {"
         box-shadow: 4px 4px 4px #444, 8px 8px 4px #666, 12px 12px 4px #888;
 
         :hover {
@@ -92,7 +93,7 @@ pub fn CountersDemo() {
         }
     ");
 
-    let outer_click_css = css!{"
+    let outer_click_css = css! {"
         border: solid 1px black;
         width: 200px;
         margin: 5px;
