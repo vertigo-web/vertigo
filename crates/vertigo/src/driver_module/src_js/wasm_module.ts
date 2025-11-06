@@ -12,9 +12,9 @@ export type ImportType = {
 }
 
 export type ExportType = {
-    alloc: (size: number) => number,
-    free: (pointer: number) => void,
-    wasm_callback: (callback_id: bigint, value_ptr: bigint) => bigint,
+    vertigo_export_alloc_block: (size: number) => bigint,
+    vertigo_export_free_block: (pointer: bigint) => void,
+    vertigo_export_wasm_callback: (callback_id: bigint, value_ptr: bigint) => bigint,
     vertigo_entry_function: (major: number, minor: number) => void,
 }
 
