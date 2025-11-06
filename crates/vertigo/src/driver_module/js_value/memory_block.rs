@@ -54,16 +54,6 @@ impl MemoryBlock {
         LongPtr::new(ptr, self.size)
     }
 
-    // #[deprecated]                                    //TODO - do skasowania
-    pub fn get_ptr_and_size(&self) -> (u32, u32) {
-        (self.ptr as u32, self.size)
-    }
-
-    // #[deprecated]                                    //TODO - do skasowania
-    pub fn get_ptr(&self) -> u32 {
-        self.ptr as u32
-    }
-
     pub fn write(&self, offset: u32, data: &[u8]) {
         let data_len = data.len() as u32;
 

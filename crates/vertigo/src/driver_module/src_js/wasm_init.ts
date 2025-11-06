@@ -1,10 +1,10 @@
-import { jsValueDecode, saveToBuffer, saveToBufferLongPtr } from './jsvalue';
+import { jsValueDecode, saveToBufferLongPtr } from './jsvalue';
 import { JsValueType } from './jsvalue_types';
 
 export interface BaseExportType {
-    alloc: (size: number) => number,
-    free: (pointer: number) => void,
-    wasm_callback: (callback_id: bigint, value_ptr: bigint) => bigint,   //result => pointer: 32bit, size: 32bit
+    vertigo_export_alloc_block: (size: number) => bigint,
+    vertigo_export_free_block: (pointer: bigint) => void,
+    vertigo_export_wasm_callback: (callback_id: bigint, value_ptr: bigint) => bigint,   //result => pointer: 32bit, size: 32bit
 };
 
 export interface ModuleControllerType<ExportType extends BaseExportType> {
@@ -12,7 +12,6 @@ export interface ModuleControllerType<ExportType extends BaseExportType> {
     decodeArgumentsLong: (long_ptr: bigint) => JsValueType,
     getUint8Memory: () => Uint8Array,
     wasm_callback: (callback_id: bigint, params: JsValueType) => JsValueType,
-    valueSaveToBuffer: (value: JsValueType) => number,
     valueSaveToBufferLong: (value: JsValueType) => bigint,
 }
 
@@ -62,21 +61,17 @@ export const wasmInit = async <ImportType extends Record<string, Function>, Expo
             return undefined;
         }
 
-        const size = Number(long_ptr % (2n ** 32n));
-        const ptr = Number(long_ptr >> 32n);
-
-        const response = jsValueDecode(getUint8Memory, ptr, size);
-        exports.free(Number(ptr));
+        const response = jsValueDecode(getUint8Memory, long_ptr);
+        exports.vertigo_export_free_block(long_ptr);
 
         return response;
     };
 
-    const valueSaveToBuffer = (value: JsValueType): number => saveToBuffer(getUint8Memory, exports.alloc, value);
-    const valueSaveToBufferLong = (value: JsValueType): bigint => saveToBufferLongPtr(getUint8Memory, exports.alloc, value);
+    const valueSaveToBufferLong = (value: JsValueType): bigint => saveToBufferLongPtr(getUint8Memory, exports.vertigo_export_alloc_block, value);
 
     const wasm_callback = (callback_id: bigint, value: JsValueType): JsValueType => {
         const value_ptr = valueSaveToBufferLong(value);
-        let result_long_ptr = exports.wasm_callback(callback_id, value_ptr);
+        let result_long_ptr = exports.vertigo_export_wasm_callback(callback_id, value_ptr);
         return decodeArgumentsLong(result_long_ptr);
     };
 
@@ -85,7 +80,6 @@ export const wasmInit = async <ImportType extends Record<string, Function>, Expo
         decodeArgumentsLong,
         getUint8Memory,
         wasm_callback,
-        valueSaveToBuffer,
         valueSaveToBufferLong,
     };
 };

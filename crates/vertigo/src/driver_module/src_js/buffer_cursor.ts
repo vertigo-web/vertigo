@@ -6,12 +6,16 @@ const encoder = new TextEncoder();
 export class BufferCursor {
     private dataView: DataView;
     private pointer: number = 0;
+    private ptr: number;
+    private size: number;
 
     constructor(
         private getUint8Memory: () => Uint8Array,
-        private ptr: number,
-        private size: number,
+        long_ptr: bigint,
     ) {
+        this.ptr = Number(long_ptr >> 32n);
+        this.size = Number(long_ptr % (2n ** 32n));
+
         this.dataView = new DataView(
             this.getUint8Memory().buffer,
             this.ptr,

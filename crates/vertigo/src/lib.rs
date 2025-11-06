@@ -596,22 +596,23 @@ use crate::driver_module::api::{api_arguments, api_callbacks, api_fetch_event};
 
 // Methods for memory allocation
 
-#[cfg(all(target_arch = "wasm32", target_os = "unknown"))]
+#[doc(hidden)]
 #[no_mangle]
-pub fn alloc(size: u32) -> u32 {
-    api_arguments().alloc(size)
+pub fn vertigo_export_alloc_block(size: u32) -> u64 {
+    api_arguments().alloc(size).get_long_ptr()
 }
 
-#[cfg(all(target_arch = "wasm32", target_os = "unknown"))]
+#[doc(hidden)]
 #[no_mangle]
-pub fn free(pointer: u32) {
-    api_arguments().free(pointer);
+pub fn vertigo_export_free_block(long_ptr: u64) {
+    let long_ptr = LongPtr::from(long_ptr);
+    api_arguments().free(long_ptr);
 }
 
 // Callbacks gateways
 
 #[no_mangle]
-pub fn wasm_callback(callback_id: u64, value_long_ptr: u64) -> u64 {
+pub fn vertigo_export_wasm_callback(callback_id: u64, value_long_ptr: u64) -> u64 {
     let value_long_ptr = LongPtr::from(value_long_ptr);
 
     let value = api_arguments().get_by_long_ptr(value_long_ptr);

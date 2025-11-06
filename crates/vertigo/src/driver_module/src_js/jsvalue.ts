@@ -114,9 +114,9 @@ const jsValueDecodeItem = (cursor: BufferCursor): JsValueType => {
     throw Error('Invalid branch');
 };
 
-export const jsValueDecode = (getUint8Memory: () => Uint8Array, ptr: number, size: number): JsValueType => {
+export const jsValueDecode = (getUint8Memory: () => Uint8Array, long_ptr: bigint): JsValueType => {
     try {
-        const cursor = new BufferCursor(getUint8Memory, ptr, size);
+        const cursor = new BufferCursor(getUint8Memory, long_ptr);
         return jsValueDecodeItem(cursor);
     } catch (err) {
         console.error(err);
@@ -279,37 +279,9 @@ const saveToBufferItem = (value: JsValueType, cursor: BufferCursor) => {
 };
 
 
-//TODO - do skasowania
-export const saveToBuffer = (
-    getUint8Memory: () => Uint8Array,
-    alloc: (size: number) => number,
-    value: JsValueType,
-): number => {
-    if (value === undefined) {
-        return 0;
-    }
-
-    const size = getSize(value);
-    const ptr = alloc(size);
-
-    const cursor = new BufferCursor(getUint8Memory, ptr, size);
-    saveToBufferItem(value, cursor);
-
-    if (size !== cursor.getSavedSize()) {
-        console.error({
-            size,
-            savedSize: cursor.getSavedSize(),
-        });
-
-        throw Error('Mismatch between calculated and recorded size');
-    }
-
-    return ptr;
-};
-
 export const saveToBufferLongPtr = (
     getUint8Memory: () => Uint8Array,
-    alloc: (size: number) => number,
+    alloc: (size: number) => bigint,
     value: JsValueType,
 ): bigint => {
     if (value === undefined) {
@@ -317,9 +289,9 @@ export const saveToBufferLongPtr = (
     }
 
     const size = getSize(value);
-    const ptr = alloc(size);
+    const long_ptr = alloc(size);
 
-    const cursor = new BufferCursor(getUint8Memory, ptr, size);
+    const cursor = new BufferCursor(getUint8Memory, long_ptr);
     saveToBufferItem(value, cursor);
 
     if (size !== cursor.getSavedSize()) {
@@ -331,7 +303,7 @@ export const saveToBufferLongPtr = (
         throw Error('Mismatch between calculated and recorded size');
     }
 
-    return (BigInt(ptr) << 32n) + BigInt(size);
+    return long_ptr;
 };
 
 export const convertFromJsValue = (value: JsValueType): unknown => {

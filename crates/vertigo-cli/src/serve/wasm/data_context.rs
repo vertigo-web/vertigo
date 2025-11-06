@@ -91,21 +91,23 @@ impl<'a> DataContext<'a> {
         Some(result)
     }
 
-    fn alloc(&mut self, size: u32) -> u32 {
+    fn alloc(&mut self, size: u32) -> LongPtr {
         let alloc_inner = match self {
             Self::Caller { caller, .. } => {
-                let Some(Extern::Func(alloc_inner)) = caller.get_export("alloc") else {
-                    log::error!("Alloc failed (caller)");
-                    return 0;
+                let Some(Extern::Func(alloc_inner)) =
+                    caller.get_export("vertigo_export_alloc_block")
+                else {
+                    panic!("Alloc failed (caller)");
                 };
                 alloc_inner
             }
             Self::Store {
                 store, instance, ..
             } => {
-                let Some(Extern::Func(alloc_inner)) = instance.get_export(store, "alloc") else {
-                    log::error!("Alloc failed (store)");
-                    return 0;
+                let Some(Extern::Func(alloc_inner)) =
+                    instance.get_export(store, "vertigo_export_alloc_block")
+                else {
+                    panic!("Alloc failed (store)");
                 };
 
                 alloc_inner
@@ -114,16 +116,18 @@ impl<'a> DataContext<'a> {
 
         let mut context = self.get_context();
         let Ok(alloc) = alloc_inner
-            .typed::<u32, u32>(&mut context)
+            .typed::<u32, u64>(&mut context)
             .inspect_err(|err| log::error!("Alloc failed (2): {err}"))
         else {
-            return 0;
+            panic!("Alloc fail (2.1)");
         };
 
-        alloc
-            .call(&mut context, size)
-            .inspect_err(|err| log::error!("Alloc failed (3): {err}"))
-            .unwrap_or(0)
+        match alloc.call(&mut context, size) {
+            Ok(result) => LongPtr::from(result),
+            Err(message) => {
+                panic!("Alloc failed (3): {}", message);
+            }
+        }
     }
 
     pub fn save_value(&mut self, value: JsValue) -> LongPtr {
@@ -140,6 +144,8 @@ impl<'a> DataContext<'a> {
         let memory = self.get_memory();
         let context = self.get_context();
         let buff = memory.data_mut(context);
+
+        let (ptr, size) = ptr.into_parts();
 
         let range = (ptr as usize)..(ptr as usize + size as usize);
         buff[range].clone_from_slice(block.as_slice());

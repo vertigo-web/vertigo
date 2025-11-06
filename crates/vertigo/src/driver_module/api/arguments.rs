@@ -4,7 +4,7 @@ use crate::{driver_module::js_value::MemoryBlock, struct_mut::HashMapMut, JsValu
 
 #[derive(Clone)]
 pub struct Arguments {
-    blocks: Rc<HashMapMut<u32, MemoryBlock>>, //TODO - u64 niech będzie
+    blocks: Rc<HashMapMut<LongPtr, MemoryBlock>>,
 }
 
 impl Arguments {
@@ -14,18 +14,22 @@ impl Arguments {
         }
     }
 
-    pub fn alloc(&self, size: u32) -> u32 {
+    pub fn alloc(&self, size: u32) -> LongPtr {
         let block = MemoryBlock::new(size);
-        let ptr = block.get_ptr();
-        self.blocks.insert(ptr, block);
-        ptr
+        let long_ptr = block.get_ptr_long();
+
+        self.blocks.insert(long_ptr, block);
+        long_ptr
     }
 
-    pub fn free(&self, pointer: u32) {
+    pub fn free(&self, pointer: LongPtr) {
         let block = self.blocks.remove(&pointer);
 
         if block.is_none() {
-            log::error!("Failed to release memory block at address: {pointer}");
+            log::error!(
+                "Failed to release memory block at address: {}",
+                pointer.get_long_ptr()
+            );
         }
     }
 
@@ -34,9 +38,7 @@ impl Arguments {
             return JsValue::Undefined;
         }
 
-        let (ptr, _) = long_ptr.into_parts();
-
-        let param = self.blocks.remove(&ptr);
+        let param = self.blocks.remove(&long_ptr);
 
         if let Some(param) = param {
             match JsValue::from_block(param) {
@@ -46,12 +48,15 @@ impl Arguments {
                 }
             }
         } else {
-            panic!("get_by_ptr - not found MemoryBlock ptr={ptr}");
+            panic!(
+                "get_by_ptr - not found MemoryBlock ptr={}",
+                long_ptr.get_long_ptr()
+            );
         }
     }
 
     pub fn set(&self, memory_block: MemoryBlock) {
-        let ptr = memory_block.get_ptr();
+        let ptr = memory_block.get_ptr_long();
         self.blocks.insert(ptr, memory_block);
     }
 }

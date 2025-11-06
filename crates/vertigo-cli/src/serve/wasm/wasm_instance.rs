@@ -226,7 +226,7 @@ impl WasmInstance {
 
         let result = self
             .call_function::<(u64, u64), u64>(
-                "wasm_callback",
+                "vertigo_export_wasm_callback",
                 (callback_id, params_ptr.get_long_ptr()),
             )
             .inspect_err(|err| log::error!("Error calling callback: {err}"))
