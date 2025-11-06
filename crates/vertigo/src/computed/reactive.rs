@@ -81,7 +81,7 @@ pub trait Reactive<T>: PartialEq {
 
 impl<T> Reactive<T> for Value<T>
 where
-    T: Clone + PartialEq + 'static
+    T: Clone + PartialEq + 'static,
 {
     fn set(&self, value: T) {
         Value::set(self, value)

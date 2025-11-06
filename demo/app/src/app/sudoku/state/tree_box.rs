@@ -7,7 +7,11 @@ pub enum TreeBoxIndex {
 
 impl TreeBoxIndex {
     pub fn variants() -> Vec<TreeBoxIndex> {
-        vec![TreeBoxIndex::First, TreeBoxIndex::Middle, TreeBoxIndex::Last]
+        vec![
+            TreeBoxIndex::First,
+            TreeBoxIndex::Middle,
+            TreeBoxIndex::Last,
+        ]
     }
 }
 
@@ -20,7 +24,11 @@ pub struct ThreeBox<T: Clone> {
 
 impl<T: Clone> ThreeBox<T> {
     pub fn new(data0: T, data1: T, data2: T) -> ThreeBox<T> {
-        ThreeBox { data0, data1, data2 }
+        ThreeBox {
+            data0,
+            data1,
+            data2,
+        }
     }
 
     pub fn create_with_iterator<F: Fn(TreeBoxIndex) -> T>(create: F) -> ThreeBox<T> {

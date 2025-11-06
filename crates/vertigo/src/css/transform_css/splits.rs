@@ -350,7 +350,10 @@ mod tests {
         assert_eq!(css_split_rows(css1), vec![".autocss_1 { color: white; }",]);
 
         let css2 = ":hover .autocss_2 { visibility: visible; }";
-        assert_eq!(css_split_rows(css2), vec![":hover .autocss_2 { visibility: visible; }",]);
+        assert_eq!(
+            css_split_rows(css2),
+            vec![":hover .autocss_2 { visibility: visible; }",]
+        );
 
         let css3 = "color: red;
             .autocss_3 { color: white; }

@@ -1,6 +1,6 @@
-use vertigo::{DropFileItem, Value, DropFileEvent, bind, css, dom, DomNode};
+use vertigo::{bind, css, dom, DomNode, DropFileEvent, DropFileItem, Value};
 
-pub struct DropFiles { }
+pub struct DropFiles {}
 
 #[derive(Clone, Default)]
 pub struct DropFilesState {
@@ -8,7 +8,9 @@ pub struct DropFilesState {
 }
 
 impl DropFiles {
-    pub fn into_component(self) -> Self { self }
+    pub fn into_component(self) -> Self {
+        self
+    }
 
     pub fn mount(&self) -> DomNode {
         let state = DropFilesState::default();
@@ -22,7 +24,7 @@ impl DropFiles {
                         { message }
                     </div>
                 }
-            }
+            },
         );
 
         let on_dropfile = bind!(state, |event: DropFileEvent| {
@@ -36,10 +38,12 @@ impl DropFiles {
             });
         });
 
-        let css_drop = css!("
+        let css_drop = css!(
+            "
             height: 400px;
             background-color: green;
-        ");
+        "
+        );
 
         dom! {
             <div css={css_drop} on_dropfile={on_dropfile}>

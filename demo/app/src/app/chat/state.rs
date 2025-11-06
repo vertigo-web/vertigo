@@ -1,7 +1,6 @@
 use std::rc::Rc;
 use vertigo::{
-    DropResource, Value, WebsocketConnection, WebsocketMessage,
-    get_driver, transaction,
+    get_driver, transaction, DropResource, Value, WebsocketConnection, WebsocketMessage,
 };
 
 #[derive(Clone)]
@@ -23,24 +22,21 @@ impl ChatState {
             let connect = connect.clone();
             let messages = messages.clone();
 
-            get_driver().websocket(
-                ws_chat,
-                move |message| match message {
-                    WebsocketMessage::Connection(connection) => {
-                        connect.set(Some(connection));
-                        log::info!("socket demo - connect ...");
-                    }
-                    WebsocketMessage::Message(message) => {
-                        log::info!("socket demo - new message {message}");
+            get_driver().websocket(ws_chat, move |message| match message {
+                WebsocketMessage::Connection(connection) => {
+                    connect.set(Some(connection));
+                    log::info!("socket demo - connect ...");
+                }
+                WebsocketMessage::Message(message) => {
+                    log::info!("socket demo - new message {message}");
 
-                        Self::add_message(&messages, message);
-                    }
-                    WebsocketMessage::Close => {
-                        connect.set(None);
-                        log::info!("socket demo - close ...");
-                    }
-                },
-            )
+                    Self::add_message(&messages, message);
+                }
+                WebsocketMessage::Close => {
+                    connect.set(None);
+                    log::info!("socket demo - close ...");
+                }
+            })
         };
 
         ChatState {

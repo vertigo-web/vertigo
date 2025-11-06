@@ -17,7 +17,7 @@ pub fn Chat(ws_chat: String) {
                     { message.clone() }
                 </div>
             }
-        }
+        },
     );
 
     dom! {
@@ -42,22 +42,19 @@ impl Chat {
 }
 
 fn render_status(state: &ChatState) -> DomNode {
-    state.connect.render_value(
-        |is_connect| {
-            let message = match is_connect.is_some() {
-                true => "Connection active",
-                false => "disconnected",
-            };
+    state.connect.render_value(|is_connect| {
+        let message = match is_connect.is_some() {
+            true => "Connection active",
+            false => "disconnected",
+        };
 
-            dom! {
-                <div>
-                    { message }
-                </div>
-            }
+        dom! {
+            <div>
+                { message }
+            </div>
         }
-    )
+    })
 }
-
 
 pub fn render_input_text(state: &ChatState) -> DomNode {
     let state = state.clone();

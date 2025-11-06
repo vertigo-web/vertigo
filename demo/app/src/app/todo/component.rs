@@ -1,16 +1,18 @@
 use vertigo::{bind, css, dom, dom_element, Css, DomNode, Resource, Value};
 
 use crate::app::todo::{
+    state::{state_todo_comments, state_todo_posts, state_todo_view},
     Select,
-    state::{state_todo_comments, state_todo_posts, state_todo_view}
 };
 
 use super::state::View;
 
-pub struct Todo { }
+pub struct Todo {}
 
 impl Todo {
-    pub fn into_component(self) -> Self { self }
+    pub fn into_component(self) -> Self {
+        self
+    }
 
     pub fn mount(&self) -> DomNode {
         let render = state_todo_view().render_value({
@@ -25,7 +27,7 @@ impl Todo {
                             state_todo_view().set(View::Main);
                         };
 
-                        dom!{
+                        dom! {
                             <div>
                                 <div>
                                     { messag }
@@ -49,51 +51,53 @@ impl Todo {
 }
 
 fn todo_main_render() -> DomNode {
-    let posts = state_todo_posts().to_computed().render_value(move |posts| -> DomNode {
-        match posts {
-            Resource::Ready(posts) => {
-                let result = dom_element! {
-                    <div />
-                };
-
-                for post in posts.as_ref() {
-                    let on_click = {
-                        let view = state_todo_view();
-                        let id = post.id;
-
-                        move |_| {
-                            view.set(View::Post { id });
-                        }
+    let posts = state_todo_posts()
+        .to_computed()
+        .render_value(move |posts| -> DomNode {
+            match posts {
+                Resource::Ready(posts) => {
+                    let result = dom_element! {
+                        <div />
                     };
 
-                    result.add_child(dom! {
-                        <div on_click={on_click} css={css_hover_item()}>
-                            "post = "
-                            { post.title.clone() }
-                        </div>
-                    });
-                }
+                    for post in posts.as_ref() {
+                        let on_click = {
+                            let view = state_todo_view();
+                            let id = post.id;
 
-                result.into()
-            },
-            Resource::Error(message) => {
-                dom! {
-                    <div>
-                        "Error loading posts "
-                        { message }
-                    </div>
+                            move |_| {
+                                view.set(View::Post { id });
+                            }
+                        };
+
+                        result.add_child(dom! {
+                            <div on_click={on_click} css={css_hover_item()}>
+                                "post = "
+                                { post.title.clone() }
+                            </div>
+                        });
+                    }
+
+                    result.into()
                 }
-            },
-            Resource::Loading => {
-                dom! {
-                    <div>
-                        "loading ..."
-                        <vertigo-suspense />
-                    </div>
+                Resource::Error(message) => {
+                    dom! {
+                        <div>
+                            "Error loading posts "
+                            { message }
+                        </div>
+                    }
+                }
+                Resource::Loading => {
+                    dom! {
+                        <div>
+                            "loading ..."
+                            <vertigo-suspense />
+                        </div>
+                    }
                 }
             }
-        }
-    });
+        });
 
     dom! {
         <div>
@@ -153,9 +157,9 @@ fn render_message(post_id: u32) -> DomNode {
 fn render_comments(post_id: u32) -> DomNode {
     let comments = state_todo_comments(post_id);
 
-    let comments_component = comments.to_computed().render_value(move |value| {
-
-        match value {
+    let comments_component = comments
+        .to_computed()
+        .render_value(move |value| match value {
             Resource::Ready(list) => {
                 let result = dom_element! {
                     <div>
@@ -169,7 +173,9 @@ fn render_comments(post_id: u32) -> DomNode {
 
                 for comment in list.as_ref() {
                     let on_click_author = bind!(comment, |_| {
-                        state_todo_view().set(View::User { email: comment.email.clone() });
+                        state_todo_view().set(View::User {
+                            email: comment.email.clone(),
+                        });
                     });
 
                     let css_author = css_comment_author() + css_hover_item();
@@ -187,7 +193,7 @@ fn render_comments(post_id: u32) -> DomNode {
                 }
 
                 result.into()
-            },
+            }
             Resource::Error(message) => {
                 dom! {
                     <div>
@@ -195,7 +201,7 @@ fn render_comments(post_id: u32) -> DomNode {
                         { message }
                     </div>
                 }
-            },
+            }
             Resource::Loading => {
                 dom! {
                     <div css={css_comment_wrapper()}>
@@ -206,8 +212,7 @@ fn render_comments(post_id: u32) -> DomNode {
                     </div>
                 }
             }
-        }
-    });
+        });
 
     dom! {
         <div>
@@ -217,30 +222,38 @@ fn render_comments(post_id: u32) -> DomNode {
 }
 
 fn css_hover_item() -> Css {
-    css!("
+    css!(
+        "
         cursor: pointer;
         :hover {
             background-color: #e0e0e0;
         }
-    ")
+    "
+    )
 }
 
 fn css_comment_wrapper() -> Css {
-    css!("
+    css!(
+        "
         border: 1px solid black;
         padding: 5px;
         margin: 5px;
-    ")
+    "
+    )
 }
 
 fn css_comment_author() -> Css {
-    css!("
+    css!(
+        "
         font-weight: bold;
         margin-right: 5px;
-    ")
+    "
+    )
 }
 
 fn css_comment_body() -> Css {
-    css!("
-    ")
+    css!(
+        "
+    "
+    )
 }

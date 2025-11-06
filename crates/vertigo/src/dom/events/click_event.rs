@@ -27,9 +27,19 @@ impl ClickEvent {
 impl From<ClickEvent> for JsValue {
     fn from(val: ClickEvent) -> JsValue {
         let inner = val.inner.get();
-        JsValue::Object([
-            ("stop_propagation".to_string(), JsValue::from(inner.stop_propagation)),
-            ("prevent_default".to_string(), JsValue::from(inner.prevent_default)),
-        ].into_iter().collect())
+        JsValue::Object(
+            [
+                (
+                    "stop_propagation".to_string(),
+                    JsValue::from(inner.stop_propagation),
+                ),
+                (
+                    "prevent_default".to_string(),
+                    JsValue::from(inner.prevent_default),
+                ),
+            ]
+            .into_iter()
+            .collect(),
+        )
     }
 }
