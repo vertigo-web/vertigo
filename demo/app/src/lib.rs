@@ -1,6 +1,6 @@
 #![deny(rust_2018_idioms)]
 
-use vertigo::{main, DomNode, get_driver};
+use vertigo::{get_driver, main, DomNode};
 mod app;
 
 #[main]

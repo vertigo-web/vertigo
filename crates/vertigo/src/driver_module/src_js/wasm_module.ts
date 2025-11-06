@@ -6,15 +6,15 @@ import { JsNode } from './js_node';
 //BigInt -> u64 or i64
 
 export type ImportType = {
-    panic_message: (ptr: number, length: number) => void,
+    panic_message: (long_ptr: bigint) => void,
     //call from rust
-    dom_access: (ptr: number, size: number) => number,
+    dom_access: (long_ptr: bigint) => bigint,
 }
 
 export type ExportType = {
     alloc: (size: number) => number,
     free: (pointer: number) => void,
-    wasm_callback: (callback_id: bigint, value_ptr: number) => bigint,  //result => pointer: 32bit, size: 32bit
+    wasm_callback: (callback_id: bigint, value_ptr: bigint) => bigint,
     vertigo_entry_function: (major: number, minor: number) => void,
 }
 
@@ -49,14 +49,18 @@ export class WasmModule {
 
         wasmModule = await wasmInit<ImportType, ExportType>(wasmBinPath, {
             mod: {
-                panic_message: (ptr: number, size: number) => {
+                panic_message: (long_ptr: bigint) => {
+
+                    const size = Number(long_ptr % (2n ** 32n));
+                    const ptr = Number(long_ptr >> 32n);
+
                     const decoder = new TextDecoder("utf-8");
                     const m = getWasm().getUint8Memory().subarray(ptr, ptr + size);
                     const message = decoder.decode(m);
                     console.error('PANIC', message);
                 },
-                dom_access: (ptr: number, size: number): number => {
-                    let args = getWasm().decodeArguments(ptr, size);
+                dom_access: (long_ptr: bigint): bigint => {
+                    let args = getWasm().decodeArgumentsLong(long_ptr);
                     if (Array.isArray(args)) {
                         const path = args;
                         let wsk = new JsNode(apiBrowser, apiBrowser.dom.nodes, null);
@@ -65,17 +69,17 @@ export class WasmModule {
                             const newWsk = wsk.next(path, pathItem);
 
                             if (newWsk === null) {
-                                return 0;
+                                return 0n;
                             }
 
                             wsk = newWsk;
                         }
 
-                        return getWasm().valueSaveToBuffer(wsk.toValue());
+                        return getWasm().valueSaveToBufferLong(wsk.toValue());
                     }
 
                     console.error('dom_access - wrong parameters', args);
-                    return 0;
+                    return 0n;
                 },
             }
         });

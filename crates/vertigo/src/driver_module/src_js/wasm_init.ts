@@ -1,18 +1,19 @@
-import { jsValueDecode, saveToBuffer } from './jsvalue';
+import { jsValueDecode, saveToBuffer, saveToBufferLongPtr } from './jsvalue';
 import { JsValueType } from './jsvalue_types';
 
 export interface BaseExportType {
     alloc: (size: number) => number,
     free: (pointer: number) => void,
-    wasm_callback: (callback_id: bigint, value_ptr: number) => bigint,   //result => pointer: 32bit, size: 32bit
+    wasm_callback: (callback_id: bigint, value_ptr: bigint) => bigint,   //result => pointer: 32bit, size: 32bit
 };
 
 export interface ModuleControllerType<ExportType extends BaseExportType> {
     exports: ExportType,
-    decodeArguments: (ptr: number, size: number) => JsValueType,
+    decodeArgumentsLong: (long_ptr: bigint) => JsValueType,
     getUint8Memory: () => Uint8Array,
     wasm_callback: (callback_id: bigint, params: JsValueType) => JsValueType,
     valueSaveToBuffer: (value: JsValueType) => number,
+    valueSaveToBufferLong: (value: JsValueType) => bigint,
 }
 
 const fetchModule = async (wasmBinPath: string, imports: Record<string, WebAssembly.ModuleImports>): Promise<WebAssembly.WebAssemblyInstantiatedSource> => {
@@ -56,36 +57,35 @@ export const wasmInit = async <ImportType extends Record<string, Function>, Expo
     //@ts-expect-error
     const exports: ExportType = module_instance.instance.exports;
 
-    const decodeArguments = (ptr: number, size: number) => jsValueDecode(getUint8Memory, ptr, size);
-
-    const valueSaveToBuffer = (value: JsValueType): number => saveToBuffer(getUint8Memory, exports.alloc, value);
-
-    const wasm_callback = (callback_id: bigint, value: JsValueType): JsValueType => {
-        const value_ptr = valueSaveToBuffer(value);
-        let result_ptr_and_size = exports.wasm_callback(callback_id, value_ptr);
-
-        if (result_ptr_and_size === 0n) {
+    const decodeArgumentsLong = (long_ptr: bigint): JsValueType => {
+        if (long_ptr === 0n) {
             return undefined;
         }
 
-        const size = result_ptr_and_size % (2n ** 32n);
-        const ptr = result_ptr_and_size >> 32n;
+        const size = Number(long_ptr % (2n ** 32n));
+        const ptr = Number(long_ptr >> 32n);
 
-        if (ptr >= 2n ** 32n) {
-            console.error(`Overflow of a variable with a pointer result_ptr_and_size=${result_ptr_and_size}`);
-        }
-
-        const response = decodeArguments(Number(ptr), Number(size));
+        const response = jsValueDecode(getUint8Memory, ptr, size);
         exports.free(Number(ptr));
 
         return response;
     };
 
+    const valueSaveToBuffer = (value: JsValueType): number => saveToBuffer(getUint8Memory, exports.alloc, value);
+    const valueSaveToBufferLong = (value: JsValueType): bigint => saveToBufferLongPtr(getUint8Memory, exports.alloc, value);
+
+    const wasm_callback = (callback_id: bigint, value: JsValueType): JsValueType => {
+        const value_ptr = valueSaveToBufferLong(value);
+        let result_long_ptr = exports.wasm_callback(callback_id, value_ptr);
+        return decodeArgumentsLong(result_long_ptr);
+    };
+
     return {
         exports,
-        decodeArguments,
+        decodeArgumentsLong,
         getUint8Memory,
         wasm_callback,
         valueSaveToBuffer,
+        valueSaveToBufferLong,
     };
 };

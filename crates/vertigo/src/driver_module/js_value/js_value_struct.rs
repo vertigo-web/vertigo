@@ -1,5 +1,7 @@
 use std::collections::HashMap;
 
+use crate::{driver_module::api::api_arguments, LongPtr};
+
 use super::{
     js_json_struct::{decode_js_json_inner, JsJson},
     js_value_list_decoder::JsValueListDecoder,
@@ -168,7 +170,7 @@ impl JsValue {
                 buff.write_u8(JsValueConst::I64);
                 buff.write_i64(*value);
             }
-            Self::F64(value)=> {
+            Self::F64(value) => {
                 buff.write_u8(JsValueConst::F64);
                 buff.write_f64(*value);
             }
@@ -220,13 +222,29 @@ impl JsValue {
         }
     }
 
-    pub fn to_snapshot(&self) -> MemoryBlock {
+    pub fn to_block(&self) -> MemoryBlock {
         let buff_size = self.get_size();
         let block = MemoryBlock::new(buff_size);
 
         let mut buff = MemoryBlockWrite::new(block);
         self.write_to(&mut buff);
         buff.get_block()
+    }
+
+    pub fn to_ptr_long(&self) -> LongPtr {
+        if self == &JsValue::Undefined {
+            return LongPtr::from(0);
+        }
+
+        let buff_size = self.get_size();
+        let block = MemoryBlock::new(buff_size);
+
+        let mut buff = MemoryBlockWrite::new(block);
+        self.write_to(&mut buff);
+        let memory_block = buff.get_block();
+        let ptr_long = memory_block.get_ptr_long();
+        api_arguments().set(memory_block);
+        ptr_long
     }
 
     pub fn typename(&self) -> &'static str {
@@ -421,8 +439,7 @@ impl From<Vec<(String, JsValue)>> for JsValue {
 
 impl<'a> FromIterator<(&'a str, JsValue)> for JsValue {
     fn from_iter<T: IntoIterator<Item = (&'a str, JsValue)>>(iter: T) -> Self {
-        let iter = iter.into_iter()
-            .map(|(k, v)| (k.to_string(), v));
+        let iter = iter.into_iter().map(|(k, v)| (k.to_string(), v));
         let hash_map = HashMap::from_iter(iter);
         JsValue::Object(hash_map)
     }
@@ -433,4 +450,3 @@ impl From<Vec<(&str, JsValue)>> for JsValue {
         JsValue::from_iter(value)
     }
 }
-

@@ -1,6 +1,6 @@
 use std::process::exit;
 use tokio::sync::mpsc::UnboundedSender;
-use vertigo::JsValue;
+use vertigo::{JsValue, LongPtr};
 use wasmtime::{Caller, Engine, Func, Instance, Module, Store};
 
 use crate::{commons::ErrorCode, serve::request_state::RequestState};
@@ -30,8 +30,11 @@ impl WasmInstance {
         let import_panic_message = Func::wrap(&mut store, {
             let sender = sender.clone();
 
-            move |caller: Caller<'_, RequestState>, ptr: u32, offset: u32| {
+            move |caller: Caller<'_, RequestState>, long_ptr: u64| {
                 let mut data_context = DataContext::from_caller(caller);
+
+                let ptr = (long_ptr >> 32) as u32;
+                let offset = long_ptr as u32;
 
                 let message = data_context.get_string_from(ptr, offset);
                 log::error!("wasm panic: {message:?}");
@@ -43,10 +46,11 @@ impl WasmInstance {
         let import_dom_access = {
             Func::wrap(
                 &mut store,
-                move |caller: Caller<'_, RequestState>, ptr: u32, offset: u32| -> u32 {
+                move |caller: Caller<'_, RequestState>, long_ptr: u64| -> u64 {
+                    let long_ptr = LongPtr::from(long_ptr);
                     let mut data_context = DataContext::from_caller(caller);
 
-                    let value = data_context.get_value(ptr, offset);
+                    let value = data_context.get_value_long_ptr(long_ptr);
 
                     // Ignore cookie operations
                     if let Ok(()) = match_cookie_command(&value) {
@@ -65,7 +69,7 @@ impl WasmInstance {
                     // get history router location
                     if let Ok(()) = match_history_router(&value) {
                         let result = JsValue::str(url.clone());
-                        return data_context.save_value(result);
+                        return data_context.save_value(result).get_long_ptr();
                     }
 
                     if let Ok(env_name) = match_get_env(&value) {
@@ -75,7 +79,7 @@ impl WasmInstance {
                             Some(value) => JsValue::String(value),
                             None => JsValue::Null,
                         };
-                        return data_context.save_value(result);
+                        return data_context.save_value(result).get_long_ptr();
                     }
 
                     //adding callback for hashrouter
@@ -101,7 +105,7 @@ impl WasmInstance {
                     }
 
                     if let Ok(current_time) = match_date_now(&value) {
-                        return data_context.save_value(current_time);
+                        return data_context.save_value(current_time).get_long_ptr();
                     }
 
                     if let Ok(result) = match_interval(&value) {
@@ -117,7 +121,7 @@ impl WasmInstance {
                                 }
 
                                 let result = JsValue::I32(0); // fake timerId
-                                return data_context.save_value(result);
+                                return data_context.save_value(result).get_long_ptr();
                             }
                             CallWebsocketResult::NoResult => {
                                 return 0;
@@ -141,7 +145,7 @@ impl WasmInstance {
                     }
 
                     if match_is_browser(&value).is_ok() {
-                        return data_context.save_value(JsValue::False);
+                        return data_context.save_value(JsValue::False).get_long_ptr();
                     }
 
                     if let Ok(status) = match_is_set_status(&value) {
@@ -221,7 +225,10 @@ impl WasmInstance {
         let params_ptr = data_context.save_value(params);
 
         let result = self
-            .call_function::<(u64, u32), u64>("wasm_callback", (callback_id, params_ptr))
+            .call_function::<(u64, u64), u64>(
+                "wasm_callback",
+                (callback_id, params_ptr.get_long_ptr()),
+            )
             .inspect_err(|err| log::error!("Error calling callback: {err}"))
             .unwrap_or_default();
 

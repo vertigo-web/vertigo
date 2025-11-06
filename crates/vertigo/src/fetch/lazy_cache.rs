@@ -3,6 +3,7 @@ use std::rc::Rc;
 
 use crate::{
     computed::{context::Context, Value},
+    driver_module::api::api_fetch_event,
     get_driver,
     struct_mut::ValueMut,
     transaction, Computed, DomNode, Instant, JsJsonDeserialize, Resource, ToComputed,
@@ -180,7 +181,7 @@ impl<T: PartialEq> LazyCache<T> {
         }
 
         self.queued.set(true); //set lock
-        get_driver().inner.api.on_fetch_start.trigger(());
+        api_fetch_event().on_fetch_start.trigger(());
 
         let self_clone = self.clone();
 
@@ -217,7 +218,7 @@ impl<T: PartialEq> LazyCache<T> {
             }
 
             self_clone.queued.set(false);
-            get_driver().inner.api.on_fetch_stop.trigger(());
+            api_fetch_event().on_fetch_stop.trigger(());
         });
     }
 }
@@ -231,7 +232,7 @@ impl<T: Clone + PartialEq> ToComputed<Resource<Rc<T>>> for LazyCache<T> {
     }
 }
 
-impl<T: Clone+ PartialEq> LazyCache<T> {
+impl<T: Clone + PartialEq> LazyCache<T> {
     pub fn to_computed(&self) -> Computed<Resource<Rc<T>>> {
         <Self as ToComputed<Resource<Rc<T>>>>::to_computed(self)
     }

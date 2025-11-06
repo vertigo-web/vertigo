@@ -14,9 +14,7 @@ static COUNTER: AtomicU64 = AtomicU64::new(1);
 impl CallbackId {
     #[allow(clippy::new_without_default)]
     pub fn new() -> CallbackId {
-        CallbackId(
-            COUNTER.fetch_add(1, Ordering::Relaxed)
-        )
+        CallbackId(COUNTER.fetch_add(1, Ordering::Relaxed))
     }
 
     pub fn as_u64(&self) -> u64 {
@@ -41,7 +39,7 @@ pub struct CallbackStore {
 }
 
 impl CallbackStore {
-    pub fn new() -> CallbackStore {
+    fn new() -> CallbackStore {
         CallbackStore {
             data: Rc::new(HashMapMut::new()),
         }
@@ -115,4 +113,11 @@ impl CallbackStore {
 
         callback_id
     }
+}
+
+use vertigo_macro::store;
+
+#[store]
+pub fn api_callbacks() -> CallbackStore {
+    CallbackStore::new()
 }

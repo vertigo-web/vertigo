@@ -2,7 +2,7 @@ use std::rc::Rc;
 
 use crate::{
     dom::{callback::SuspenseCallback, dom_id::DomId, dom_node::DomNode, events::ClickEvent},
-    driver_module::{driver::Driver, StaticString},
+    driver_module::{api::api_callbacks, driver::Driver, StaticString},
     get_driver,
     struct_mut::VecMut,
     AttrGroupValue, Computed, DomText, DropFileItem, DropResource, JsValue,
@@ -215,7 +215,7 @@ impl DomElement {
     }
 
     pub fn get_ref(&self) -> DomElementRef {
-        DomElementRef::new(self.driver.inner.api.clone(), self.id_dom)
+        DomElementRef::new(self.id_dom)
     }
 
     #[cfg(test)]
@@ -477,7 +477,7 @@ impl DomElement {
         name: &'static str,
         callback: impl Fn(JsValue) -> JsValue + 'static,
     ) -> Self {
-        let (callback_id, drop) = self.driver.inner.api.callback_store.register(callback);
+        let (callback_id, drop) = api_callbacks().register(callback);
 
         let drop_event = DropResource::new(move || {
             self.driver

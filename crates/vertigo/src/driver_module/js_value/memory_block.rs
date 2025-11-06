@@ -1,6 +1,8 @@
 use std::alloc::{alloc, Layout};
 use std::mem;
 
+use crate::LongPtr;
+
 use super::memory_block_write::MemoryBlockWrite;
 
 fn alloc_memory(size: usize) -> (*mut u8, Layout) {
@@ -47,10 +49,17 @@ impl MemoryBlock {
         block.get_block()
     }
 
+    pub fn get_ptr_long(&self) -> LongPtr {
+        let ptr = self.ptr as u32;
+        LongPtr::new(ptr, self.size)
+    }
+
+    // #[deprecated]                                    //TODO - do skasowania
     pub fn get_ptr_and_size(&self) -> (u32, u32) {
         (self.ptr as u32, self.size)
     }
 
+    // #[deprecated]                                    //TODO - do skasowania
     pub fn get_ptr(&self) -> u32 {
         self.ptr as u32
     }
