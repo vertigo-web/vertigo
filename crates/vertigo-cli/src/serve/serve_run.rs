@@ -20,6 +20,7 @@ use crate::{
     commons::ErrorCode,
     serve::{server_state::ServerState, ServeOptsInner},
 };
+use axum::body::Body;
 
 use super::ServeOpts;
 
@@ -212,7 +213,7 @@ async fn handler(
     url: Uri,
     RawQuery(query): RawQuery,
     State(state): State<Arc<RwLock<Arc<ServerState>>>>,
-) -> Response<String> {
+) -> Response<Body> {
     let state = state.read().await.clone();
 
     let now = Instant::now();
@@ -252,7 +253,15 @@ async fn handler(
 
     if response_state.status.is_server_error() {
         log::error!("WASM status: {}", response_state.status);
-        log::error!("WASM response: {}", response_state.body);
+
+        match String::from_utf8(response_state.body.clone()) {
+            Ok(messagee) => {
+                log::error!("WASM response: text={}", messagee);
+            }
+            Err(_) => {
+                log::error!("WASM response: bytes={:#?}", response_state.body);
+            }
+        }
     }
 
     response_state.into()

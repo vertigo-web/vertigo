@@ -43,15 +43,6 @@ pub fn match_cookie_command(arg: &JsValue) -> Result<(), ()> {
     Ok(())
 }
 
-pub fn match_plain_response(arg: &JsValue) -> Result<String, ()> {
-    let matcher = Match::new(arg)?;
-    let matcher = matcher.test_list(&["plain_response"])?;
-    let (matcher, body) = matcher.string()?;
-    matcher.end()?;
-
-    Ok(body)
-}
-
 pub fn match_history_router(arg: &JsValue) -> Result<(), ()> {
     let matcher = Match::new(arg)?;
     let matcher = matcher.test_list(&["api"])?;
@@ -318,18 +309,6 @@ mod tests {
             JsValue::List(vec![JsValue::from("get"), JsValue::from("cookie")]),
         ]);
         assert_eq!(match_cookie_command(&value), Ok(()));
-    }
-
-    #[test]
-    fn test_match_plain_response() {
-        let value = JsValue::List(vec![
-            JsValue::List(vec![JsValue::from("plain_response")]),
-            JsValue::from("test response"),
-        ]);
-        assert_eq!(
-            match_plain_response(&value),
-            Ok("test response".to_string())
-        );
     }
 
     #[test]

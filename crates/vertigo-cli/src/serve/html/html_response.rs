@@ -87,8 +87,14 @@ impl HtmlResponse {
             }
 
             // Add dynamic values for public path
-            html.add_attr("data-env-vertigo-mount-point", self.mount_path.mount_point());
-            html.add_attr("data-env-vertigo-public-path", self.mount_path.dest_http_root());
+            html.add_attr(
+                "data-env-vertigo-mount-point",
+                self.mount_path.mount_point(),
+            );
+            html.add_attr(
+                "data-env-vertigo-public-path",
+                self.mount_path.dest_http_root(),
+            );
         } else {
             return ResponseState::internal_error("Missing <html> element");
         }
@@ -111,7 +117,10 @@ impl HtmlResponse {
 
         let script = HtmlElement::new("script")
             .attr("type", "module")
-            .attr("data-vertigo-run-wasm", self.mount_path.get_wasm_http_path())
+            .attr(
+                "data-vertigo-run-wasm",
+                self.mount_path.get_wasm_http_path(),
+            )
             .attr("src", self.mount_path.get_run_js_http_path());
 
         let body_exists = root_html.modify(&[("body", 0)], move |body| {
@@ -119,11 +128,16 @@ impl HtmlResponse {
         });
 
         if body_exists {
-            let mut body = root_html.convert_to_string(true)
-                .replace(VERTIGO_PUBLIC_BUILD_PATH_PLACEHOLDER, &self.mount_path.dest_http_root());
+            let mut body = root_html.convert_to_string(true).replace(
+                VERTIGO_PUBLIC_BUILD_PATH_PLACEHOLDER,
+                &self.mount_path.dest_http_root(),
+            );
 
             if self.mount_path.mount_point() != "/" {
-                body = body.replace(VERTIGO_MOUNT_POINT_PLACEHOLDER, self.mount_path.mount_point());
+                body = body.replace(
+                    VERTIGO_MOUNT_POINT_PLACEHOLDER,
+                    self.mount_path.mount_point(),
+                );
             } else {
                 body = body.replace(VERTIGO_MOUNT_POINT_PLACEHOLDER, "");
             }
@@ -227,8 +241,6 @@ impl HtmlResponse {
 
                 None
             }
-
-            Message::PlainResponse(body) => Some(ResponseState::plain(self.status, body)),
 
             Message::SetStatus(status) => {
                 match StatusCode::from_u16(status) {

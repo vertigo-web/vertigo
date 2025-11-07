@@ -49,6 +49,10 @@ impl<'a> DataContext<'a> {
     }
 
     pub fn get_value_long_ptr(&mut self, long_ptr: LongPtr) -> JsValue {
+        if long_ptr.is_undefined() {
+            return JsValue::Undefined;
+        }
+
         let (ptr, offset) = long_ptr.into_parts();
 
         let memory = self.get_memory();

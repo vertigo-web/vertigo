@@ -19,7 +19,6 @@ pub enum Message {
         request: Arc<FetchRequest>,
         response: FetchResponse,
     },
-    PlainResponse(String),
     SetStatus(u16),
 }
 

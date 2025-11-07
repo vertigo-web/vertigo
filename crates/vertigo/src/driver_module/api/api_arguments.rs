@@ -59,6 +59,11 @@ impl Arguments {
         let ptr = memory_block.get_ptr_long();
         self.blocks.insert(ptr, memory_block);
     }
+
+    #[allow(unused)]
+    pub fn dump(&self, ptr: LongPtr) -> Option<Vec<u8>> {
+        self.blocks.get_and_map(&ptr, |block| block.dump())
+    }
 }
 
 use vertigo_macro::store;

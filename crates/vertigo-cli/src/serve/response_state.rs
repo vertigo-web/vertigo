@@ -1,24 +1,25 @@
+use axum::body::Body;
 use axum::http::StatusCode;
+use std::collections::HashMap;
 
-#[derive(PartialEq)]
-pub enum ContentType {
-    Plain,
-    Html,
+fn content_type(content_type: &str) -> HashMap<String, String> {
+    let mut headers = HashMap::new();
+    headers.insert("content-type".into(), content_type.into());
+    headers
 }
 
-impl std::fmt::Display for ContentType {
-    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-        match *self {
-            Self::Html => f.write_str("text/html; charset=utf-8"),
-            Self::Plain => f.write_str("text/plain"),
-        }
-    }
+fn content_type_html() -> HashMap<String, String> {
+    content_type("text/html; charset=utf-8")
+}
+
+fn content_type_plain() -> HashMap<String, String> {
+    content_type("text/plain")
 }
 
 pub struct ResponseState {
     pub status: StatusCode,
-    pub content_type: ContentType,
-    pub body: String,
+    pub headers: HashMap<String, String>,
+    pub body: Vec<u8>,
 }
 
 impl ResponseState {
@@ -28,67 +29,49 @@ impl ResponseState {
     pub fn html(status: StatusCode, body: impl Into<String>) -> Self {
         Self {
             status,
-            content_type: ContentType::Html,
-            body: body.into(),
+            headers: content_type_html(),
+            body: body.into().into_bytes(),
         }
     }
 
     pub fn plain(status: StatusCode, body: impl Into<String>) -> Self {
         Self {
             status,
-            content_type: ContentType::Plain,
-            body: body.into(),
+            headers: content_type_plain(),
+            body: body.into().into_bytes(),
         }
     }
 
     pub fn internal_error(body: impl Into<String>) -> Self {
         Self {
             status: StatusCode::INTERNAL_SERVER_ERROR,
-            content_type: ContentType::Plain,
-            body: body.into(),
+            headers: content_type_plain(),
+            body: body.into().into_bytes(),
         }
-    }
-
-    pub fn is_html(&self) -> bool {
-        self.content_type == ContentType::Html
     }
 
     pub fn add_watch_script(&mut self, port_watch: u16) {
-        if self.is_html() {
-            let watch = include_str!("./watch.js");
+        let watch = include_str!("./watch.js");
 
-            let start = format!("start_watch('http://127.0.0.1:{port_watch}/events');");
+        let start = format!("start_watch('http://127.0.0.1:{port_watch}/events');");
 
-            let chunks = [
-                &self.body,
-                "<script>",
-                watch,
-                &start,
-                "</script>",
-                "\n</body>",
-            ];
+        let chunks = ["<script>", watch, &start, "</script>"];
 
-            // Usually body tag is in the response, but better be prepared
-            if self.body.contains("</body>") {
-                let script = chunks[1..6].join("\n");
-                self.body = self.body.replace("</body>", &script);
-            } else {
-                self.body = chunks[0..5].join("\n");
-            }
-        }
+        let script = chunks.join("\n").into_bytes();
+        self.body.extend(script);
     }
 }
 
-impl From<ResponseState> for axum::response::Response<String> {
+impl From<ResponseState> for axum::response::Response<Body> {
     fn from(value: ResponseState) -> Self {
-        axum::response::Response::builder()
-            .status(value.status)
-            .header(
-                "cache-control",
-                "private, no-cache, no-store, must-revalidate, max-age=0",
-            )
-            .header("content-type", value.content_type.to_string())
-            .body(value.body)
+        let mut builder = axum::response::Response::builder().status(value.status);
+
+        for (name, value) in value.headers {
+            builder = builder.header(name, value);
+        }
+
+        builder
+            .body(Body::from(value.body))
             .inspect_err(|err| log::error!("Error reading response: {err}"))
             .unwrap_or_default()
     }

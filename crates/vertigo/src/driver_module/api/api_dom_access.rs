@@ -1,5 +1,5 @@
 use crate::{
-    driver_module::api::{arguments::api_arguments, panic_message::api_panic_message},
+    driver_module::api::{api_arguments::api_arguments, panic_message::api_panic_message},
     DomId, JsValue,
 };
 
