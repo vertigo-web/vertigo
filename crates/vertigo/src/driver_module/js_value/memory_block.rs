@@ -1,3 +1,4 @@
+#![allow(clippy::uninit_vec)]
 use std::alloc::{alloc, Layout};
 use std::mem;
 
@@ -78,6 +79,18 @@ impl MemoryBlock {
         std::mem::forget(self);
 
         unsafe { Vec::<u8>::from_raw_parts(ptr, size, size) }
+    }
+
+    pub fn dump(&self) -> Vec<u8> {
+        let size = self.size as usize;
+        let mut vec = Vec::<u8>::with_capacity(size);
+
+        unsafe {
+            std::ptr::copy_nonoverlapping(self.ptr, vec.as_mut_ptr(), size);
+            vec.set_len(size);
+        }
+
+        vec
     }
 }
 
