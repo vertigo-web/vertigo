@@ -1,9 +1,13 @@
-use std::process::exit;
+use reqwest::StatusCode;
+use std::{collections::HashMap, process::exit};
 use tokio::sync::mpsc::UnboundedSender;
 use vertigo::{JsValue, LongPtr};
 use wasmtime::{Caller, Engine, Func, Instance, Module, Store};
 
-use crate::{commons::ErrorCode, serve::request_state::RequestState};
+use crate::{
+    commons::ErrorCode,
+    serve::{request_state::RequestState, response_state::ResponseState},
+};
 
 use super::{
     data_context::DataContext,
@@ -32,9 +36,8 @@ impl WasmInstance {
 
             move |caller: Caller<'_, RequestState>, long_ptr: u64| {
                 let mut data_context = DataContext::from_caller(caller);
-
-                let ptr = (long_ptr >> 32) as u32;
-                let offset = long_ptr as u32;
+                let long_ptr = LongPtr::from(long_ptr);
+                let (ptr, offset) = long_ptr.into_parts();
 
                 let message = data_context.get_string_from(ptr, offset);
                 log::error!("wasm panic: {message:?}");
@@ -54,15 +57,6 @@ impl WasmInstance {
 
                     // Ignore cookie operations
                     if let Ok(()) = match_cookie_command(&value) {
-                        return 0;
-                    }
-
-                    // Intercept plain response
-                    if let Ok(body) = match_plain_response(&value) {
-                        sender
-                            .send(Message::PlainResponse(body))
-                            .inspect_err(|err| log::error!("Error sending plain body: {err}"))
-                            .unwrap_or_default();
                         return 0;
                     }
 
@@ -238,6 +232,77 @@ impl WasmInstance {
             //TODO - to implement
             todo!()
         }
+    }
+
+    pub fn handle_url(&mut self, url: &str) -> Option<ResponseState> {
+        let url = JsValue::String(url.to_string());
+
+        let params_ptr = {
+            let mut data_context = DataContext::from_store(&mut self.store, self.instance);
+            let params_ptr = data_context.save_value(url);
+            params_ptr
+        };
+
+        let result = self
+            .call_function::<u64, u64>("vertigo_export_handle_url", params_ptr.get_long_ptr())
+            .inspect_err(|err| log::error!("Error calling callback: {err}"))
+            .unwrap_or_default();
+
+        let result = {
+            let mut data_context = DataContext::from_store(&mut self.store, self.instance);
+            let result = data_context.get_value_long_ptr(LongPtr::from(result));
+            result
+        };
+
+        self.decode_response_state(result)
+    }
+
+    fn decode_response_state(&self, value: JsValue) -> Option<ResponseState> {
+        if value == JsValue::Undefined {
+            return None;
+        }
+
+        let JsValue::List(mut list) = value else {
+            panic!("decode_response_state deecode error");
+        };
+
+        let Some(JsValue::Vec(body)) = list.pop() else {
+            panic!("decode_response_state deecode error");
+        };
+
+        let Some(JsValue::Object(headers_value)) = list.pop() else {
+            panic!("decode_response_state deecode error");
+        };
+
+        let Some(JsValue::U32(status)) = list.pop() else {
+            panic!("decode_response_state deecode error");
+        };
+
+        if !list.is_empty() {
+            panic!("decode_response_state deecode error");
+        }
+
+        let mut headers = HashMap::<String, String>::new();
+
+        for (name, value) in headers_value {
+            let JsValue::String(value) = value else {
+                panic!("decode_response_state deecode error");
+            };
+            headers.insert(name, value);
+        }
+        let status = match StatusCode::from_u16(status as u16) {
+            Ok(status) => status,
+            Err(error) => {
+                let error = format!("Incorrect status code: {}", error);
+                return Some(ResponseState::internal_error(error));
+            }
+        };
+
+        Some(ResponseState {
+            status,
+            headers,
+            body,
+        })
     }
 
     pub fn send_fetch_response(&mut self, callback_id: u64, response: FetchResponse) {

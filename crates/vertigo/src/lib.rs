@@ -564,6 +564,20 @@ pub fn start_app(init_app: fn() -> DomNode) {
     get_driver().inner.dom.flush_dom_changes();
 }
 
+#[doc(hidden)]
+#[no_mangle]
+pub fn vertigo_export_handle_url(url_ptr: u64) -> u64 {
+    let url_ptr = LongPtr::from(url_ptr);
+    let url = api_arguments().get_by_long_ptr(url_ptr);
+
+    let JsValue::String(url) = url else {
+        panic!("string expected");
+    };
+
+    let response = api_server_handler().handler(&url);
+    response.to_ptr_long().get_long_ptr()
+}
+
 /// Getter for [Driver] singleton.
 ///
 /// ```rust
@@ -592,7 +606,9 @@ pub use driver_module::driver::{
     VERTIGO_MOUNT_POINT_PLACEHOLDER, VERTIGO_PUBLIC_BUILD_PATH_PLACEHOLDER,
 };
 
-use crate::driver_module::api::{api_arguments, api_callbacks, api_fetch_event};
+use crate::driver_module::api::{
+    api_arguments, api_callbacks, api_fetch_event, api_server_handler,
+};
 
 // Methods for memory allocation
 
@@ -611,6 +627,7 @@ pub fn vertigo_export_free_block(long_ptr: u64) {
 
 // Callbacks gateways
 
+#[doc(hidden)]
 #[no_mangle]
 pub fn vertigo_export_wasm_callback(callback_id: u64, value_long_ptr: u64) -> u64 {
     let value_long_ptr = LongPtr::from(value_long_ptr);

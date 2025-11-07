@@ -652,17 +652,6 @@ impl ApiImport {
         }
     }
 
-    /// Synthetic command to respond with plain text, not DOM
-    pub fn plain_response(&self, body: String) {
-        if self.is_browser() {
-            return;
-        }
-
-        DomAccess::default()
-            .synthetic("plain_response", JsValue::String(body))
-            .exec();
-    }
-
     /// Synthetic command to respond with custom status code from SSR
     pub fn set_status(&self, status: u16) {
         if self.is_browser() {

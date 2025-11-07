@@ -1,10 +1,9 @@
 use crate::{
     css::css_manager::CssManager,
-    driver_module::api::api_import,
+    driver_module::api::{api_import, api_server_handler},
     fetch::request_builder::{RequestBody, RequestBuilder},
     Context, Css, Dependencies, DropResource, FutureBox, Instant, JsJson, WebsocketMessage,
 };
-use std::cell::RefCell;
 use std::{future::Future, pin::Pin, rc::Rc};
 
 use crate::driver_module::dom::DriverDom;
@@ -49,7 +48,6 @@ impl FetchMethod {
 }
 
 type Executable = dyn Fn(Pin<Box<dyn Future<Output = ()> + 'static>>);
-type PlainHandler = dyn Fn(&str) -> Option<String>;
 
 pub struct DriverInner {
     pub(crate) dependencies: &'static Dependencies,
@@ -57,7 +55,6 @@ pub struct DriverInner {
     pub(crate) dom: &'static DriverDom,
     spawn_executor: Rc<Executable>,
     _subscribe: DropResource,
-    _plains_handler: RefCell<Option<Rc<PlainHandler>>>,
 }
 
 impl DriverInner {
@@ -86,7 +83,6 @@ impl DriverInner {
             dom,
             spawn_executor,
             _subscribe: subscribe,
-            _plains_handler: RefCell::new(None),
         }))
     }
 }
@@ -320,27 +316,8 @@ impl Driver {
     ///    }
     /// });
     /// ```
-    pub fn plains(&mut self, callback: impl Fn(&str) -> Option<String> + 'static) {
-        let mut mut_plains = self.inner._plains_handler.borrow_mut();
-        *mut_plains = Some(Rc::new(callback));
-    }
-
-    /// Try to intercept urls for generating plaintext responses during SSR (used internally by [main!](crate::main) macro).
-    /// See [Driver::plains()] method.
-    pub fn try_get_plain(&self) {
-        if self.is_server() {
-            let url = api_import().get_history_location();
-            match self.inner._plains_handler.try_borrow() {
-                Ok(callback_ref) => {
-                    if let Some(callback) = callback_ref.as_deref() {
-                        if let Some(body) = callback(&url) {
-                            api_import().plain_response(body)
-                        }
-                    }
-                }
-                Err(err) => log::error!("Error invoking plains: {err}"),
-            }
-        }
+    pub fn plains(&self, callback: impl Fn(&str) -> Option<String> + 'static) {
+        api_server_handler().plains(callback);
     }
 
     /// Allow to set custom HTTP status code during SSR

@@ -52,7 +52,15 @@ impl ServerState {
 
         let mut inst = WasmInstance::new(sender.clone(), &self.engine, &self.module, request);
 
+        // -- !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
+        //TODO - ultimately, do not call call_vertigo_entry_function if something is returned by handle_url
+        // -- !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
+
         inst.call_vertigo_entry_function();
+
+        if let Some(result) = inst.handle_url(url) {
+            return result;
+        }
 
         let spawn_resource = SpawnOwner::new({
             let sender = sender.clone();
