@@ -79,6 +79,18 @@ impl MemoryBlock {
 
         unsafe { Vec::<u8>::from_raw_parts(ptr, size, size) }
     }
+
+    pub fn dump(&self) -> Vec<u8> {
+        let size = self.size as usize;
+        let mut vec = Vec::<u8>::with_capacity(size);
+
+        unsafe {
+            vec.set_len(size);
+            std::ptr::copy_nonoverlapping(self.ptr, vec.as_mut_ptr(), size);
+        }
+
+        vec
+    }
 }
 
 impl Drop for MemoryBlock {

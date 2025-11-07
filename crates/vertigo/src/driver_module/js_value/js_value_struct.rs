@@ -1,6 +1,6 @@
 use std::collections::HashMap;
 
-use crate::{driver_module::api::api_arguments, LongPtr};
+use crate::{LongPtr, driver_module::{api::api_arguments}};
 
 use super::{
     js_json_struct::{decode_js_json_inner, JsJson},
@@ -10,12 +10,14 @@ use super::{
     memory_block_write::MemoryBlockWrite,
 };
 
+
 const PARAM_TYPE: u32 = 1;
 const STRING_SIZE: u32 = 4;
 const VEC_SIZE: u32 = 4;
 const LIST_COUNT: u32 = 4;
 const OBJECT_COUNT: u32 = 2;
 
+#[derive(Debug)]
 enum JsValueConst {
     U32 = 1,
     I32 = 2,
@@ -351,10 +353,8 @@ fn decode_js_value_inner(buffer: &mut MemoryBlockRead) -> Result<JsValue, String
             let object_size = buffer.get_u16();
 
             for _ in 0..object_size {
-                let prop_name = decode_js_value_inner(buffer)?;
-                let JsValue::String(prop_name) = prop_name else {
-                    return Err("string expected".into());
-                };
+                let str_len = buffer.get_u32();
+                let prop_name = buffer.get_string(str_len)?;
 
                 let prop_value = decode_js_value_inner(buffer)?;
 
@@ -449,4 +449,37 @@ impl From<Vec<(&str, JsValue)>> for JsValue {
     fn from(value: Vec<(&str, JsValue)>) -> Self {
         JsValue::from_iter(value)
     }
+}
+
+
+#[test]
+fn test_serialize_deserialize_object() {
+    let mut map = HashMap::<String, JsValue>::new();
+    map.insert("a".into(), JsValue::String("b".into()));
+
+    let data = JsValue::Object(map);
+
+    let block = data.clone().to_block();
+    
+    let new_value = JsValue::from_block(block).unwrap();
+
+    assert_eq!(data, new_value);
+}
+
+#[test]
+fn test_serialize_deserialize() {
+    let mut map = HashMap::<String, JsValue>::new();
+    map.insert("content-type".into(), JsValue::String("text/plain".into()));
+
+    let data = JsValue::List(vec!(
+        JsValue::U32(200),
+        JsValue::Object(map),
+        JsValue::Vec("ab".to_string().into_bytes())
+    ));
+
+    let block = data.clone().to_block();
+    
+    let new_value = JsValue::from_block(block).unwrap();
+
+    assert_eq!(data, new_value);
 }
