@@ -1,8 +1,7 @@
 use std::rc::Rc;
 
 use crate::{
-    dom::callback::SuspenseCallback, driver_module::StaticString, get_driver, struct_mut::ValueMut,
-    Css, DomId, Driver, DropResource,
+    driver_module::StaticString, get_driver, struct_mut::ValueMut, Css, DomId, Driver, DropResource,
 };
 
 struct DomElementClassMergeInner {
@@ -113,34 +112,6 @@ impl DomElementClassMerge {
         self.inner.change(|state| {
             state.css_name = Some((new_value, debug_class_name));
             state.refresh_dom();
-        });
-    }
-
-    pub fn set_suspense_attr(&self, callback: Option<Rc<SuspenseCallback>>) {
-        self.inner.change(|state| {
-            let Some(callback) = callback else {
-                state._suspense_drop = None;
-                return;
-            };
-
-            let drop = get_driver()
-                .inner
-                .dom
-                .dom_suspense
-                .set_layer_callback(state.id_dom, {
-                    let self_clone = self.clone();
-
-                    move |is_loading: bool| {
-                        let css = callback(is_loading);
-
-                        self_clone.inner.change(|state| {
-                            state.suspense_css = Some(css);
-                            state.refresh_dom();
-                        });
-                    }
-                });
-
-            state._suspense_drop = Some(drop);
         });
     }
 

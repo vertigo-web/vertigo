@@ -1,6 +1,6 @@
 use crate::LongPtr;
 
-use super::external_api::api::safe_wrappers::safe_panic_message as panic_message;
+use crate::external_api::safe_wrappers::safe_panic_message;
 
 #[derive(Clone, Copy)]
 pub struct PanicMessage {}
@@ -15,7 +15,7 @@ impl PanicMessage {
         let ptr = message.as_ptr() as u32;
         let offser = message.len() as u32;
 
-        panic_message(LongPtr::new(ptr, offser));
+        safe_panic_message(LongPtr::new(ptr, offser));
     }
 }
 

@@ -1,31 +1,5 @@
-use std::collections::HashMap;
-use vertigo::{from_json, JsJson, JsValue};
-
-use crate::serve::html::RequestBody;
-
-use super::{get_now::get_now, js_value_match::Match, message::CallWebsocketResult, FetchRequest};
-
-pub fn convert_value_to_body(body: JsValue) -> Result<Option<RequestBody>, String> {
-    match body {
-        JsValue::Json(json) => Ok(Some(RequestBody::Json(json))),
-        JsValue::String(text) => Ok(Some(RequestBody::Text(text))),
-        JsValue::Vec(buffer) => Ok(Some(RequestBody::Binary(buffer))),
-        JsValue::Undefined => Ok(None),
-        other => {
-            let typename = other.typename();
-            let message = format!("expected JsValue::Json or JsValue::Text or JsValue::Binary, received JsValue::{typename}");
-            Err(message)
-        }
-    }
-}
-
-pub fn convert_body_to_value(body: RequestBody) -> JsValue {
-    match body {
-        RequestBody::Json(json) => JsValue::Json(json),
-        RequestBody::Text(text) => JsValue::String(text),
-        RequestBody::Binary(buffer) => JsValue::Vec(buffer),
-    }
-}
+use super::{get_now::get_now, js_value_match::Match, message::CallWebsocketResult};
+use vertigo::{from_json, JsJson, JsValue, SsrFetchRequest};
 
 pub fn match_is_browser(arg: &JsValue) -> Result<(), ()> {
     let matcher = Match::new(arg)?;
@@ -187,7 +161,7 @@ pub fn match_interval(arg: &JsValue) -> Result<CallWebsocketResult, ()> {
     Ok(result)
 }
 
-pub fn match_fetch(arg: &JsValue) -> Result<(u64, FetchRequest), ()> {
+pub fn match_fetch(arg: &JsValue) -> Result<(u64, SsrFetchRequest), ()> {
     let matcher = Match::new(arg)?;
 
     let matcher = matcher.test_list(&["api"])?;
@@ -197,29 +171,12 @@ pub fn match_fetch(arg: &JsValue) -> Result<(u64, FetchRequest), ()> {
         let matcher = matcher.str("call")?;
         let matcher = matcher.str("fetch_send_request")?;
         let (matcher, callback_id) = matcher.u64()?;
-        let (matcher, method) = matcher.string()?;
-        let (matcher, url) = matcher.string()?;
-        let (matcher, headers) = matcher.json()?;
-        let (matcher, body) = matcher.get_any()?;
+        let (matcher, request) = matcher.json()?;
         matcher.end()?;
 
-        let headers = from_json::<HashMap<String, String>>(headers).map_err(|error| {
-            log::error!("error decode headers: {error}");
-        })?;
+        let request = from_json::<SsrFetchRequest>(request).unwrap(); //TODO - lepiej to obsłuzyc
 
-        let body = convert_value_to_body(body).map_err(|error| {
-            log::error!("error decode body: {error}");
-        })?;
-
-        Ok((
-            callback_id,
-            FetchRequest {
-                method,
-                url,
-                headers,
-                body,
-            },
-        ))
+        Ok((callback_id, request))
     })?;
 
     matcher.end()?;
@@ -238,54 +195,9 @@ pub fn match_is_set_status(arg: &JsValue) -> Result<u16, ()> {
 
 #[cfg(test)]
 mod tests {
-    use std::collections::HashMap;
-    use vertigo::{JsJson, JsValue};
+    use vertigo::{JsJson, JsJsonNumber, JsValue};
 
     use super::*;
-
-    #[test]
-    fn test_convert_body_roundtrip() {
-        // Json
-        let json_val = json_obj(vec![("a", json_num(1.0))]);
-        let js_value_json = JsValue::Json(json_val.clone());
-        let body_json = convert_value_to_body(js_value_json.clone())
-            .unwrap()
-            .unwrap();
-        assert_eq!(body_json, RequestBody::Json(json_val));
-        assert_eq!(convert_body_to_value(body_json), js_value_json);
-
-        // Text
-        let js_value_text = JsValue::String("hello".to_string());
-        let body_text = convert_value_to_body(js_value_text.clone())
-            .unwrap()
-            .unwrap();
-        assert_eq!(body_text, RequestBody::Text("hello".to_string()));
-        assert_eq!(convert_body_to_value(body_text), js_value_text);
-
-        // Binary
-        let js_value_bin = JsValue::Vec(vec![1, 2, 3]);
-        let body_bin = convert_value_to_body(js_value_bin.clone())
-            .unwrap()
-            .unwrap();
-        assert_eq!(body_bin, RequestBody::Binary(vec![1, 2, 3]));
-        assert_eq!(convert_body_to_value(body_bin), js_value_bin);
-
-        // Undefined
-        let js_value_undef = JsValue::Undefined;
-        let body_none = convert_value_to_body(js_value_undef).unwrap();
-        assert!(body_none.is_none());
-    }
-
-    #[test]
-    fn test_convert_value_to_body_invalid() {
-        let value_invalid = JsValue::True;
-        let result = convert_value_to_body(value_invalid);
-        assert!(result.is_err());
-        assert_eq!(
-            result.unwrap_err(),
-            "expected JsValue::Json or JsValue::Text or JsValue::Binary, received JsValue::true"
-        );
-    }
 
     #[test]
     fn test_match_is_browser() {
@@ -452,77 +364,6 @@ mod tests {
     }
 
     #[test]
-    fn test_match_fetch() {
-        let headers_json = json_obj(vec![("Content-Type", json_str("application/json"))]);
-        let body_json = json_obj(vec![("data", json_str("test"))]);
-
-        let value = JsValue::List(vec![
-            JsValue::List(vec![JsValue::from("api")]),
-            JsValue::List(vec![JsValue::from("get"), JsValue::from("fetch")]),
-            JsValue::List(vec![
-                JsValue::from("call"),
-                JsValue::from("fetch_send_request"),
-                JsValue::U64(123),                    // callback_id
-                JsValue::from("POST"),                // method
-                JsValue::from("https://example.com"), // url
-                JsValue::Json(headers_json.clone()),  // headers
-                JsValue::Json(body_json.clone()),     // body
-            ]),
-        ]);
-
-        let expected_headers: HashMap<String, String> = HashMap::from_iter(vec![(
-            "Content-Type".to_string(),
-            "application/json".to_string(),
-        )]);
-
-        let expected_request = FetchRequest {
-            method: "POST".to_string(),
-            url: "https://example.com".to_string(),
-            headers: expected_headers,
-            body: Some(RequestBody::Json(body_json)),
-        };
-
-        let result = match_fetch(&value);
-        assert!(result.is_ok());
-        let (callback_id, request) = result.unwrap();
-
-        assert_eq!(callback_id, 123);
-        assert_eq!(request, expected_request);
-    }
-
-    #[test]
-    fn test_match_fetch_no_body() {
-        let headers_json = json_obj(vec![]);
-        let value = JsValue::List(vec![
-            JsValue::List(vec![JsValue::from("api")]),
-            JsValue::List(vec![JsValue::from("get"), JsValue::from("fetch")]),
-            JsValue::List(vec![
-                JsValue::from("call"),
-                JsValue::from("fetch_send_request"),
-                JsValue::U64(124),                        // callback_id
-                JsValue::from("GET"),                     // method
-                JsValue::from("https://example.com/get"), // url
-                JsValue::Json(headers_json.clone()),      // headers
-                JsValue::Undefined,                       // body
-            ]),
-        ]);
-
-        let expected_request = FetchRequest {
-            method: "GET".to_string(),
-            url: "https://example.com/get".to_string(),
-            headers: HashMap::new(),
-            body: None,
-        };
-
-        let result = match_fetch(&value);
-        assert!(result.is_ok());
-        let (callback_id, request) = result.unwrap();
-
-        assert_eq!(callback_id, 124);
-        assert_eq!(request, expected_request);
-    }
-
-    #[test]
     fn test_match_is_set_status() {
         let value = JsValue::List(vec![
             JsValue::List(vec![JsValue::from("set_status")]),
@@ -543,6 +384,6 @@ mod tests {
     }
 
     fn json_num(val: f64) -> JsJson {
-        JsJson::Number(val)
+        JsJson::Number(JsJsonNumber(val))
     }
 }

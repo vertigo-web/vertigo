@@ -1,7 +1,7 @@
 use std::rc::Rc;
 
 use crate::{
-    dom::{callback::SuspenseCallback, dom_id::DomId, dom_node::DomNode, events::ClickEvent},
+    dom::{dom_id::DomId, dom_node::DomNode, events::ClickEvent},
     driver_module::{api::api_callbacks, driver::Driver, StaticString},
     get_driver,
     struct_mut::VecMut,
@@ -129,9 +129,6 @@ impl DomElement {
             }
             ("on_submit", AttrGroupValue::OnSubmit(on_submit))
             | ("form", AttrGroupValue::OnSubmit(on_submit)) => self.on_submit_rc(on_submit),
-            ("vertigo-suspense", AttrGroupValue::Suspense(callback)) => {
-                self.suspense_rc(Some(callback))
-            }
             (_, AttrGroupValue::AttrValue(value)) => self.attr(key, value),
             (_, _) => {
                 crate::log::error!("Invalid attribute type for key {key}");
@@ -452,15 +449,6 @@ impl DomElement {
             on_submit();
             JsValue::Undefined
         })
-    }
-
-    pub fn suspense(self, callback: Option<SuspenseCallback>) -> Self {
-        self.suspense_rc(callback.map(Rc::new))
-    }
-
-    pub fn suspense_rc(self, callback: Option<Rc<SuspenseCallback>>) -> Self {
-        self.class_manager.set_suspense_attr(callback);
-        self
     }
 
     fn subscribe<T: Clone + PartialEq + 'static>(

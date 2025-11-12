@@ -44,7 +44,7 @@ pub(super) fn impl_js_json_enum(name: &Ident, data: &DataEnum) -> Result<TokenSt
                     // Encode
                     variant_encodes.push(quote! {
                         Self::#variant_ident(value) => {
-                            vertigo::JsJson::Object(::std::collections::HashMap::from([
+                            vertigo::JsJson::Object(::std::collections::BTreeMap::from([
                                 (
                                     #variant_name.to_string(),
                                     value.to_json(),
@@ -70,7 +70,7 @@ pub(super) fn impl_js_json_enum(name: &Ident, data: &DataEnum) -> Result<TokenSt
 
                     variant_encodes.push(quote! {
                         Self::#variant_ident(#(#field_idents,)*) => {
-                            vertigo::JsJson::Object(::std::collections::HashMap::from([
+                            vertigo::JsJson::Object(::std::collections::BTreeMap::from([
                                 (
                                     #variant_name.to_string(),
                                     vertigo::JsJson::List(vec![
@@ -130,10 +130,10 @@ pub(super) fn impl_js_json_enum(name: &Ident, data: &DataEnum) -> Result<TokenSt
 
                 variant_encodes.push(quote! {
                     Self::#variant_ident {#(#field_idents,)*} => {
-                        vertigo::JsJson::Object(::std::collections::HashMap::from([
+                        vertigo::JsJson::Object(::std::collections::BTreeMap::from([
                             (
                                 #variant_name.to_string(),
-                                vertigo::JsJson::Object(::std::collections::HashMap::from([
+                                vertigo::JsJson::Object(::std::collections::BTreeMap::from([
                                     #(#field_encodes)*
                                 ]))
                             ),

@@ -285,9 +285,6 @@ fn convert_to_component(node: &Node) -> TokenStream2 {
                             "on_submit" | "form" => {
                                 quote! { vertigo::AttrGroupValue::on_submit(#value) }
                             }
-                            "vertigo-suspense" => {
-                                quote! { vertigo::AttrGroupValue::suspense(#value) }
-                            }
                             _ => quote! { {#value}.into() },
                         };
                         Some(quote! { .#group_method(#key.into(), #value) })
@@ -384,13 +381,6 @@ fn convert_node(node: &Node, convert_to_dom_node: bool) -> TokenStream2 {
                 let class_name = generate_debug_class_name(&value);
                 out_attr.push(quote! {
                     .css_with_class_name(#value, #class_name)
-                });
-                return;
-            }
-
-            "vertigo-suspense" => {
-                out_attr.push(quote! {
-                    .suspense(Some(#value))
                 });
                 return;
             }

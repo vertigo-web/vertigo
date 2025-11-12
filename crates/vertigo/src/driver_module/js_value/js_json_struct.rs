@@ -1,5 +1,9 @@
-use std::collections::HashMap;
-use std::hash::Hash;
+use std::cmp::Ordering;
+use std::collections::BTreeMap;
+use std::hash::{Hash, Hasher};
+
+use crate::driver_module::js_value::vec_to_string::{string_to_vec, vec_to_string};
+use crate::MemoryBlock;
 
 use super::serialize::{JsJsonContext, JsJsonDeserialize, JsJsonSerialize};
 use super::{memory_block_read::MemoryBlockRead, memory_block_write::MemoryBlockWrite};
@@ -55,70 +59,58 @@ impl From<JsJsonConst> for u8 {
     52 bits for the mantissa (representing a number between 0 and 1)
 */
 
-/// JSON object serialized to travel between JS-WASM boundary.
 #[derive(Debug, Clone)]
+pub struct JsJsonNumber(pub f64);
+
+impl PartialEq for JsJsonNumber {
+    fn eq(&self, other: &Self) -> bool {
+        self.0.to_bits() == other.0.to_bits()
+    }
+}
+
+impl Eq for JsJsonNumber {}
+
+impl PartialOrd for JsJsonNumber {
+    fn partial_cmp(&self, other: &Self) -> Option<Ordering> {
+        Some(self.cmp(other))
+    }
+}
+
+impl Ord for JsJsonNumber {
+    fn cmp(&self, other: &Self) -> Ordering {
+        self.0
+            .partial_cmp(&other.0)
+            .unwrap_or_else(|| self.0.to_bits().cmp(&other.0.to_bits()))
+    }
+}
+
+impl Hash for JsJsonNumber {
+    fn hash<H: Hasher>(&self, state: &mut H) {
+        self.0.to_bits().hash(state);
+    }
+}
+
+/// JSON object serialized to travel between JS-WASM boundary.
+#[derive(Debug, Clone, PartialEq, Eq, PartialOrd, Ord, Hash)]
 pub enum JsJson {
     True,
     False,
     Null,
     String(String),
-    Number(f64),
+    Number(JsJsonNumber),
     List(Vec<JsJson>),
-    Object(HashMap<String, JsJson>),
+    Object(BTreeMap<String, JsJson>),
 }
 
-impl Eq for JsJson {}
-
-impl PartialEq for JsJson {
-    fn eq(&self, other: &Self) -> bool {
-        match (self, other) {
-            (Self::True, Self::True) => true,
-            (Self::False, Self::False) => true,
-            (Self::Null, Self::Null) => true,
-            (Self::String(value1), Self::String(value2)) => value1 == value2,
-            (Self::Number(value1), Self::Number(value2)) => value1.to_bits() == value2.to_bits(),
-            (Self::List(value1), Self::List(value2)) => value1 == value2,
-            (Self::Object(value1), Self::Object(value2)) => value1 == value2,
-            _ => false,
-        }
+impl JsJsonDeserialize for JsJson {
+    fn from_json(_context: JsJsonContext, json: JsJson) -> Result<Self, JsJsonContext> {
+        Ok(json)
     }
 }
 
-impl Hash for JsJson {
-    fn hash<H: std::hash::Hasher>(&self, state: &mut H) {
-        match self {
-            Self::True => {
-                state.write_u8(JsJsonConst::True.into());
-            }
-            Self::False => {
-                state.write_u8(JsJsonConst::False.into());
-            }
-            Self::Null => {
-                state.write_u8(JsJsonConst::Null.into());
-            }
-            Self::String(value) => {
-                state.write_u8(JsJsonConst::String.into());
-                state.write(value.as_bytes());
-            }
-            Self::Number(value) => {
-                state.write_u8(JsJsonConst::Number.into());
-                let value_bits = value.to_bits();
-                state.write_u64(value_bits);
-            }
-            Self::List(list) => {
-                state.write_u8(JsJsonConst::List.into());
-                for item in list {
-                    item.hash(state);
-                }
-            }
-            Self::Object(map) => {
-                state.write_u8(JsJsonConst::Object.into());
-                for (name, value) in map {
-                    name.hash(state);
-                    value.hash(state);
-                }
-            }
-        }
+impl JsJsonSerialize for JsJson {
+    fn to_json(self) -> JsJson {
+        self
     }
 }
 
@@ -172,7 +164,7 @@ impl JsJson {
                 buff.write_u8(JsJsonConst::String);
                 write_string_to(value.as_str(), buff);
             }
-            Self::Number(value) => {
+            Self::Number(JsJsonNumber(value)) => {
                 buff.write_u8(JsJsonConst::Number);
                 buff.write_f64(*value);
             }
@@ -211,7 +203,7 @@ impl JsJson {
     pub fn get_hashmap(
         self,
         context: &JsJsonContext,
-    ) -> Result<HashMap<String, JsJson>, JsJsonContext> {
+    ) -> Result<BTreeMap<String, JsJson>, JsJsonContext> {
         let object = match self {
             JsJson::Object(object) => object,
             other => {
@@ -270,7 +262,7 @@ pub fn decode_js_json_inner(buffer: &mut MemoryBlockRead) -> Result<JsJson, Stri
         }
         JsJsonConst::Number => {
             let value = buffer.get_f64();
-            JsJson::Number(value)
+            JsJson::Number(JsJsonNumber(value))
         }
         JsJsonConst::List => {
             let mut param_list = Vec::new();
@@ -285,7 +277,7 @@ pub fn decode_js_json_inner(buffer: &mut MemoryBlockRead) -> Result<JsJson, Stri
             JsJson::List(param_list)
         }
         JsJsonConst::Object => {
-            let mut props = HashMap::new();
+            let mut props = BTreeMap::new();
             let object_size = buffer.get_u16();
 
             for _ in 0..object_size {
@@ -305,7 +297,7 @@ pub fn decode_js_json_inner(buffer: &mut MemoryBlockRead) -> Result<JsJson, Stri
 
 #[derive(Default)]
 pub struct JsJsonObjectBuilder {
-    data: HashMap<String, JsJson>,
+    data: BTreeMap<String, JsJson>,
 }
 
 impl JsJsonObjectBuilder {
@@ -319,4 +311,42 @@ impl JsJsonObjectBuilder {
     pub fn get(self) -> JsJson {
         JsJson::Object(self.data)
     }
+}
+
+impl JsJson {
+    pub fn convert_to_string(&self) -> String {
+        let size = self.get_size();
+        let block = MemoryBlock::new(size);
+        let mut block = MemoryBlockWrite::new(block);
+        self.write_to(&mut block);
+
+        let block_bytes = block.get_block().convert_to_vec();
+        vec_to_string(&block_bytes)
+    }
+
+    pub fn from_string(data: &str) -> Result<JsJson, String> {
+        let fff = string_to_vec(data)?;
+
+        let block = MemoryBlock::from_slice(&fff);
+        let mut block = MemoryBlockRead::new(block);
+
+        let json = decode_js_json_inner(&mut block)?;
+        Ok(json)
+    }
+}
+
+#[test]
+fn test_serialize_deserialize() {
+    let json = JsJson::List(vec![
+        JsJson::String("aaa".to_string()),
+        JsJson::String("bbb".to_string()),
+        JsJson::Null,
+        JsJson::True,
+    ]);
+
+    let rrr = json.convert_to_string();
+
+    let json2 = JsJson::from_string(&rrr).unwrap();
+
+    assert_eq!(json, json2);
 }

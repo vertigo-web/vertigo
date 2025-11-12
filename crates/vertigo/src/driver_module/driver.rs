@@ -1,3 +1,5 @@
+use vertigo_macro::AutoJsJson;
+
 use crate::{
     css::css_manager::CssManager,
     driver_module::api::{api_import, api_server_handler},
@@ -17,7 +19,7 @@ pub const VERTIGO_PUBLIC_BUILD_PATH_PLACEHOLDER: &str = "%%VERTIGO_PUBLIC_BUILD_
 /// Placeholder where to put public mount point at runtime (default /)
 pub const VERTIGO_MOUNT_POINT_PLACEHOLDER: &str = "%%VERTIGO_MOUNT_POINT%%";
 
-#[derive(Debug, Clone, Copy)]
+#[derive(AutoJsJson, Debug, Clone, Copy, Hash, PartialEq, Eq, PartialOrd, Ord)]
 pub enum FetchMethod {
     GET,
     HEAD,

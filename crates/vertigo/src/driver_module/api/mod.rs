@@ -10,13 +10,14 @@ pub use api_arguments::api_arguments;
 mod callbacks;
 pub use callbacks::{api_callbacks, CallbackId};
 
-mod external_api;
-
 mod panic_message;
 pub use panic_message::api_panic_message;
 
-mod api_fetch_event;
-pub use api_fetch_event::api_fetch_event;
-
 mod server_handler;
 pub use server_handler::api_server_handler;
+
+mod api_fetch_cache;
+pub use api_fetch_cache::api_fetch_cache;
+
+mod api_browser_command;
+pub use api_browser_command::api_browser_command;

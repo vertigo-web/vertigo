@@ -117,16 +117,6 @@ impl<'a> Match<'a> {
         Ok((Self { list: rest }, value.clone()))
     }
 
-    pub fn get_any(&self) -> Result<(Self, JsValue), ()> {
-        let list = self.list;
-
-        let Some((value, rest)) = list.split_first() else {
-            return Err(());
-        };
-
-        Ok((Self { list: rest }, value.clone()))
-    }
-
     #[allow(dead_code)]
     pub fn option_string(&self) -> Result<(Self, Option<String>), ()> {
         let list = self.list;

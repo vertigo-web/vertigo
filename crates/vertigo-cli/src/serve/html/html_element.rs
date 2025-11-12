@@ -1,5 +1,5 @@
-use std::collections::{BTreeMap, VecDeque};
 use super::HtmlNode;
+use std::collections::{BTreeMap, VecDeque};
 
 #[derive(Clone)]
 pub struct HtmlElement {
@@ -39,7 +39,11 @@ impl HtmlElement {
         self
     }
 
-    pub fn from(name: impl Into<String>, attr: BTreeMap<String, String>, children: VecDeque<HtmlNode>) -> Self {
+    pub fn from(
+        name: impl Into<String>,
+        attr: BTreeMap<String, String>,
+        children: VecDeque<HtmlNode>,
+    ) -> Self {
         HtmlElement {
             name: name.into(),
             attr,
@@ -47,7 +51,11 @@ impl HtmlElement {
         }
     }
 
-    pub(super) fn modify(&mut self, path: &[(&str, usize)], callback: impl FnOnce(&mut HtmlElement)) -> bool {
+    pub(super) fn modify(
+        &mut self,
+        path: &[(&str, usize)],
+        callback: impl FnOnce(&mut HtmlElement),
+    ) -> bool {
         if path.is_empty() {
             callback(self);
             return true;

@@ -1,7 +1,6 @@
 pub mod api;
 mod dom;
 pub mod dom_command;
-mod dom_suspense;
 pub mod driver;
 pub mod event_emitter;
 pub mod init_env;

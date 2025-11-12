@@ -2,7 +2,7 @@ use std::rc::Rc;
 
 use vertigo_macro::bind;
 
-use crate::{struct_mut::ValueMut, Computed, Css, DropResource};
+use crate::{struct_mut::ValueMut, Computed, DropResource};
 
 pub enum Callback<R> {
     Basic(Rc<dyn Fn() -> R + 'static>),
@@ -105,5 +105,3 @@ impl<T: 'static, R: 'static> Callback1<T, R> {
         }
     }
 }
-
-pub type SuspenseCallback = fn(bool) -> Css;
