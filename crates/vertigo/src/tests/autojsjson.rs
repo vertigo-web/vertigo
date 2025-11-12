@@ -1,4 +1,4 @@
-use crate::{self as vertigo, JsJsonContext};
+use crate::{self as vertigo, JsJson, JsJsonContext};
 use crate::{AutoJsJson, JsJsonDeserialize, JsJsonSerialize};
 
 #[test]
@@ -159,3 +159,34 @@ fn test_optional_field() {
     assert_eq!(text_out.first_name.as_str(), "Greg");
     assert_eq!(text_out.second_name, None);
 }
+
+#[test]
+fn test_serializa_and_deserialize_to_js_json() {
+    #[derive(AutoJsJson, Clone, PartialEq, Eq, Debug)]
+    pub struct Test {
+        pub r#type: String,
+        pub name: String,
+        pub data: JsJson,
+    }
+
+    let test = Test {
+        r#type: "one".to_string(),
+        name: "two".to_string(),
+        data: JsJson::String("test test".into()),
+    };
+
+    let test_js = test.clone().to_json();
+    let ctx = JsJsonContext::new("");
+    let hash_map = match test_js.clone().get_hashmap(&ctx) {
+        Ok(map) => map,
+        Err(_err) => panic!("Error unwrapping hash_map"),
+    };
+
+    assert!(hash_map.contains_key("type"));
+    assert!(hash_map.contains_key("name"));
+
+    let restored = Test::from_json(JsJsonContext::new(""), test_js).unwrap();
+
+    assert_eq!(test, restored);
+}
+

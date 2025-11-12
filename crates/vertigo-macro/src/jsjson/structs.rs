@@ -49,7 +49,7 @@ pub(super) fn impl_js_json_struct(name: &Ident, data: &DataStruct) -> Result<Tok
     let result = quote! {
         impl vertigo::JsJsonSerialize for #name {
             fn to_json(self) -> vertigo::JsJson {
-                vertigo::JsJson::Object(::std::collections::HashMap::from([
+                vertigo::JsJson::Object(::std::collections::BTreeMap::from([
                     #(#list_to_json)*
                 ]))
             }

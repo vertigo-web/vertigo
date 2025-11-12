@@ -1,14 +1,18 @@
 use std::collections::{BTreeMap, HashMap};
 use std::rc::Rc;
 
+use crate::driver_module::js_value::MapItem;
+use crate::driver_module::js_value::js_json_struct::JsJsonNumber;
+
 use super::js_json_struct::JsJson;
 
+#[derive(Debug)]
 struct JsJsonContextInner {
     parent: Option<Rc<JsJsonContextInner>>,
     current: String,
 }
 
-#[derive(Clone)]
+#[derive(Clone, Debug)]
 pub struct JsJsonContext {
     inner: Rc<JsJsonContextInner>,
 }
@@ -79,14 +83,14 @@ impl JsJsonDeserialize for String {
 
 impl JsJsonSerialize for u64 {
     fn to_json(self) -> JsJson {
-        JsJson::Number(self as f64)
+        JsJson::Number(JsJsonNumber(self as f64))
     }
 }
 
 impl JsJsonDeserialize for u64 {
     fn from_json(context: JsJsonContext, json: JsJson) -> Result<Self, JsJsonContext> {
         match json {
-            JsJson::Number(value) => Ok(value as u64),
+            JsJson::Number(JsJsonNumber(value)) => Ok(value as u64),
             other => {
                 let message = ["number(u64) expected, received ", other.typename()].concat();
                 Err(context.add(message))
@@ -97,14 +101,14 @@ impl JsJsonDeserialize for u64 {
 
 impl JsJsonSerialize for i64 {
     fn to_json(self) -> JsJson {
-        JsJson::Number(self as f64)
+        JsJson::Number(JsJsonNumber(self as f64))
     }
 }
 
 impl JsJsonDeserialize for i64 {
     fn from_json(context: JsJsonContext, json: JsJson) -> Result<Self, JsJsonContext> {
         match json {
-            JsJson::Number(value) => Ok(value as i64),
+            JsJson::Number(JsJsonNumber(value)) => Ok(value as i64),
             other => {
                 let message = ["number(i64) expected, received ", other.typename()].concat();
                 Err(context.add(message))
@@ -115,14 +119,14 @@ impl JsJsonDeserialize for i64 {
 
 impl JsJsonSerialize for u32 {
     fn to_json(self) -> JsJson {
-        JsJson::Number(self as f64)
+        JsJson::Number(JsJsonNumber(self as f64))
     }
 }
 
 impl JsJsonDeserialize for u32 {
     fn from_json(context: JsJsonContext, json: JsJson) -> Result<Self, JsJsonContext> {
         match json {
-            JsJson::Number(value) => Ok(value as u32),
+            JsJson::Number(JsJsonNumber(value)) => Ok(value as u32),
             other => {
                 let message = ["number(u32) expected, received ", other.typename()].concat();
                 Err(context.add(message))
@@ -133,14 +137,14 @@ impl JsJsonDeserialize for u32 {
 
 impl JsJsonSerialize for i32 {
     fn to_json(self) -> JsJson {
-        JsJson::Number(self as f64)
+        JsJson::Number(JsJsonNumber(self as f64))
     }
 }
 
 impl JsJsonDeserialize for i32 {
     fn from_json(context: JsJsonContext, json: JsJson) -> Result<Self, JsJsonContext> {
         match json {
-            JsJson::Number(value) => Ok(value as i32),
+            JsJson::Number(JsJsonNumber(value)) => Ok(value as i32),
             other => {
                 let message = ["number(i32) expected, received ", other.typename()].concat();
                 Err(context.add(message))
@@ -173,7 +177,7 @@ impl JsJsonDeserialize for bool {
 
 impl JsJsonSerialize for () {
     fn to_json(self) -> JsJson {
-        JsJson::Object(HashMap::default())
+        JsJson::Object(BTreeMap::default())
     }
 }
 
@@ -246,7 +250,7 @@ impl<T: JsJsonDeserialize> JsJsonDeserialize for Option<T> {
 
 impl<T: JsJsonSerialize> JsJsonSerialize for HashMap<String, T> {
     fn to_json(self) -> JsJson {
-        let mut result = HashMap::new();
+        let mut result = BTreeMap::new();
 
         for (key, item) in self {
             result.insert(key, item.to_json());
@@ -272,28 +276,41 @@ impl<T: JsJsonDeserialize> JsJsonDeserialize for HashMap<String, T> {
     }
 }
 
-impl<T: JsJsonSerialize> JsJsonSerialize for BTreeMap<String, T> {
+impl<K: JsJsonSerialize + JsJsonDeserialize, T: JsJsonSerialize + JsJsonDeserialize> JsJsonSerialize for BTreeMap<K, T> {
     fn to_json(self) -> JsJson {
-        let mut result = HashMap::new();
+        let mut result = Vec::<JsJson>::new();
 
         for (key, item) in self {
-            result.insert(key, item.to_json());
+            result.push(MapItem {
+                key,
+                value: item,
+            }.to_json());
         }
 
-        JsJson::Object(result)
+        JsJson::List(result)
     }
 }
 
-impl<T: JsJsonDeserialize> JsJsonDeserialize for BTreeMap<String, T> {
+impl<K: JsJsonSerialize + JsJsonDeserialize + Ord, T: JsJsonSerialize + JsJsonDeserialize> JsJsonDeserialize for BTreeMap<K, T> {
     fn from_json(context: JsJsonContext, json: JsJson) -> Result<Self, JsJsonContext> {
-        let map = json.get_hashmap(&context)?;
+
+        let JsJson::List(list) = json else {
+            let message = ["list expected, received ", json.typename()].concat();
+            return Err(context.add(message));
+        };
 
         let mut result = BTreeMap::new();
 
-        for (key, item) in map {
-            let context = context.add(["field: '", key.as_str(), "'"].concat());
-            let value = T::from_json(context, item)?;
-            result.insert(key, value);
+        for (index, item) in list.into_iter().enumerate() {
+            let item = from_json
+                ::<MapItem<K, T>>(item)
+                .map_err(|err| context.add(format!("index={index} error={err}")))?;
+
+            let exist = result.insert(item.key, item.value);
+
+            if exist.is_some() {
+                return Err(context.add("Duplicate key"));
+            }
         }
 
         Ok(result)
@@ -324,7 +341,7 @@ mod tests {
 
     impl JsJsonSerialize for Post {
         fn to_json(self) -> JsJson {
-            JsJson::Object(HashMap::from([
+            JsJson::Object(BTreeMap::from([
                 ("name".to_string(), self.name.to_json()),
                 ("age".to_string(), self.age.to_json()),
             ]))
@@ -386,7 +403,7 @@ mod tests {
 
     #[test]
     fn test_unit() {
-        let unit = JsJson::Object(HashMap::default());
+        let unit = JsJson::Object(BTreeMap::default());
 
         let Ok(()) = from_json::<()>(unit.clone()) else {
             unreachable!();
@@ -395,5 +412,23 @@ mod tests {
         let unit2 = to_json(());
 
         assert_eq!(unit2, unit)
+    }
+
+    #[test]
+    fn test_serialize_to_string() {
+
+        let data: Vec<u8> = b"Hello, world!".to_vec();
+
+        // kodowanie do tekstu
+        let encoded = data.iter().map(|b| format!("{:02x}", b)).collect::<String>();
+        println!("Hex: {}", encoded);
+
+        // dekodowanie z tekstu
+        let decoded = (0..encoded.len())
+            .step_by(2)
+            .map(|i| u8::from_str_radix(&encoded[i..i + 2], 16).unwrap())
+            .collect::<Vec<u8>>();
+
+        println!("Oryginał: {}", String::from_utf8_lossy(&decoded));
     }
 }

@@ -1,31 +1,5 @@
-use std::collections::HashMap;
-use vertigo::{from_json, JsJson, JsValue};
-
-use crate::serve::html::RequestBody;
-
-use super::{get_now::get_now, js_value_match::Match, message::CallWebsocketResult, FetchRequest};
-
-pub fn convert_value_to_body(body: JsValue) -> Result<Option<RequestBody>, String> {
-    match body {
-        JsValue::Json(json) => Ok(Some(RequestBody::Json(json))),
-        JsValue::String(text) => Ok(Some(RequestBody::Text(text))),
-        JsValue::Vec(buffer) => Ok(Some(RequestBody::Binary(buffer))),
-        JsValue::Undefined => Ok(None),
-        other => {
-            let typename = other.typename();
-            let message = format!("expected JsValue::Json or JsValue::Text or JsValue::Binary, received JsValue::{typename}");
-            Err(message)
-        }
-    }
-}
-
-pub fn convert_body_to_value(body: RequestBody) -> JsValue {
-    match body {
-        RequestBody::Json(json) => JsValue::Json(json),
-        RequestBody::Text(text) => JsValue::String(text),
-        RequestBody::Binary(buffer) => JsValue::Vec(buffer),
-    }
-}
+use vertigo::{JsJson, JsValue, SsrFetchRequest, from_json};
+use super::{get_now::get_now, js_value_match::Match, message::CallWebsocketResult};
 
 pub fn match_is_browser(arg: &JsValue) -> Result<(), ()> {
     let matcher = Match::new(arg)?;
@@ -187,7 +161,7 @@ pub fn match_interval(arg: &JsValue) -> Result<CallWebsocketResult, ()> {
     Ok(result)
 }
 
-pub fn match_fetch(arg: &JsValue) -> Result<(u64, FetchRequest), ()> {
+pub fn match_fetch(arg: &JsValue) -> Result<(u64, SsrFetchRequest), ()> {
     let matcher = Match::new(arg)?;
 
     let matcher = matcher.test_list(&["api"])?;
@@ -197,28 +171,14 @@ pub fn match_fetch(arg: &JsValue) -> Result<(u64, FetchRequest), ()> {
         let matcher = matcher.str("call")?;
         let matcher = matcher.str("fetch_send_request")?;
         let (matcher, callback_id) = matcher.u64()?;
-        let (matcher, method) = matcher.string()?;
-        let (matcher, url) = matcher.string()?;
-        let (matcher, headers) = matcher.json()?;
-        let (matcher, body) = matcher.get_any()?;
+        let (matcher, request) = matcher.json()?;
         matcher.end()?;
 
-        let headers = from_json::<HashMap<String, String>>(headers).map_err(|error| {
-            log::error!("error decode headers: {error}");
-        })?;
-
-        let body = convert_value_to_body(body).map_err(|error| {
-            log::error!("error decode body: {error}");
-        })?;
+        let request = from_json::<SsrFetchRequest>(request).unwrap();           //TODO - lepiej to obsłuzyc
 
         Ok((
             callback_id,
-            FetchRequest {
-                method,
-                url,
-                headers,
-                body,
-            },
+            request,
         ))
     })?;
 
@@ -238,54 +198,10 @@ pub fn match_is_set_status(arg: &JsValue) -> Result<u16, ()> {
 
 #[cfg(test)]
 mod tests {
-    use std::collections::HashMap;
-    use vertigo::{JsJson, JsValue};
+    use std::collections::{BTreeMap};
+    use vertigo::{FetchMethod, JsJson, JsJsonNumber, JsValue, SsrFetchRequest, SsrFetchRequestBody};
 
     use super::*;
-
-    #[test]
-    fn test_convert_body_roundtrip() {
-        // Json
-        let json_val = json_obj(vec![("a", json_num(1.0))]);
-        let js_value_json = JsValue::Json(json_val.clone());
-        let body_json = convert_value_to_body(js_value_json.clone())
-            .unwrap()
-            .unwrap();
-        assert_eq!(body_json, RequestBody::Json(json_val));
-        assert_eq!(convert_body_to_value(body_json), js_value_json);
-
-        // Text
-        let js_value_text = JsValue::String("hello".to_string());
-        let body_text = convert_value_to_body(js_value_text.clone())
-            .unwrap()
-            .unwrap();
-        assert_eq!(body_text, RequestBody::Text("hello".to_string()));
-        assert_eq!(convert_body_to_value(body_text), js_value_text);
-
-        // Binary
-        let js_value_bin = JsValue::Vec(vec![1, 2, 3]);
-        let body_bin = convert_value_to_body(js_value_bin.clone())
-            .unwrap()
-            .unwrap();
-        assert_eq!(body_bin, RequestBody::Binary(vec![1, 2, 3]));
-        assert_eq!(convert_body_to_value(body_bin), js_value_bin);
-
-        // Undefined
-        let js_value_undef = JsValue::Undefined;
-        let body_none = convert_value_to_body(js_value_undef).unwrap();
-        assert!(body_none.is_none());
-    }
-
-    #[test]
-    fn test_convert_value_to_body_invalid() {
-        let value_invalid = JsValue::True;
-        let result = convert_value_to_body(value_invalid);
-        assert!(result.is_err());
-        assert_eq!(
-            result.unwrap_err(),
-            "expected JsValue::Json or JsValue::Text or JsValue::Binary, received JsValue::true"
-        );
-    }
 
     #[test]
     fn test_match_is_browser() {
@@ -470,16 +386,18 @@ mod tests {
             ]),
         ]);
 
-        let expected_headers: HashMap<String, String> = HashMap::from_iter(vec![(
+        let expected_headers: BTreeMap<String, String> = BTreeMap::from_iter(vec![(
             "Content-Type".to_string(),
             "application/json".to_string(),
         )]);
 
-        let expected_request = FetchRequest {
-            method: "POST".to_string(),
+        let expected_request = SsrFetchRequest {
+            method: FetchMethod::POST, //"POST".to_string(),
             url: "https://example.com".to_string(),
             headers: expected_headers,
-            body: Some(RequestBody::Json(body_json)),
+            body: SsrFetchRequestBody::Data {
+                data: body_json
+            },
         };
 
         let result = match_fetch(&value);
@@ -507,11 +425,11 @@ mod tests {
             ]),
         ]);
 
-        let expected_request = FetchRequest {
-            method: "GET".to_string(),
+        let expected_request = SsrFetchRequest {
+            method: FetchMethod::GET,
             url: "https://example.com/get".to_string(),
-            headers: HashMap::new(),
-            body: None,
+            headers: BTreeMap::new(),
+            body: SsrFetchRequestBody::None,
         };
 
         let result = match_fetch(&value);
@@ -543,6 +461,6 @@ mod tests {
     }
 
     fn json_num(val: f64) -> JsJson {
-        JsJson::Number(val)
+        JsJson::Number(JsJsonNumber(val))
     }
 }

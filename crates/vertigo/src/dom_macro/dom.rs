@@ -2,7 +2,7 @@ use std::{collections::BTreeMap, rc::Rc};
 
 use crate::{
     dom::{
-        attr_value::AttrValue, callback::SuspenseCallback, dom_node::DomNode, events::ClickEvent,
+        attr_value::AttrValue, dom_node::DomNode, events::ClickEvent,
     },
     Callback, Callback1, Computed, Css, DomComment, DomElement, DomText, DropFileEvent,
     KeyDownEvent, Value,
@@ -57,7 +57,6 @@ pub enum AttrGroupValue {
     OnMouseLeave(Rc<Callback<()>>),
     OnMouseUp(Rc<Callback<bool>>),
     OnSubmit(Rc<Callback<()>>),
-    Suspense(Rc<SuspenseCallback>),
 }
 
 impl From<&Self> for AttrGroupValue {
@@ -95,10 +94,6 @@ impl AttrGroupValue {
     group_value_constructor!(on_mouse_leave, Callback<()>, OnMouseLeave);
     group_value_constructor!(on_mouse_up, Callback<bool>, OnMouseUp);
     group_value_constructor!(on_submit, Callback<()>, OnSubmit);
-
-    pub fn suspense(callback: SuspenseCallback) -> Self {
-        Self::Suspense(Rc::new(callback))
-    }
 
     /// Extract [`Computed<String>`] from this [AttrGroupValue] if possible.
     ///

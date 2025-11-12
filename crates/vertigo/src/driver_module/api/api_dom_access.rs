@@ -96,7 +96,7 @@ impl DomAccess {
     }
 
     pub fn fetch(self) -> JsValue {
-        use super::external_api::api::safe_wrappers::safe_dom_access;
+        use crate::external_api::safe_wrappers::safe_dom_access;
 
         let arguments_ptr_long = JsValue::List(self.builder).to_ptr_long();
 

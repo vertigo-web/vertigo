@@ -1,4 +1,6 @@
-use std::collections::HashMap;
+use std::collections::{BTreeMap};
+
+use crate::driver_module::js_value::js_json_struct::JsJsonNumber;
 
 use super::js_json_struct::JsJson;
 use super::js_value_struct::JsValue;
@@ -38,14 +40,14 @@ fn json_json_list() {
         JsJson::String("bbbb".into()),
         JsJson::True,
         JsJson::Null,
-        JsJson::Number(12.3),
+        JsJson::Number(JsJsonNumber(12.3)),
         JsJson::List(vec![
             JsJson::String("cccc".into()),
             JsJson::String("dddd".into()),
             JsJson::Null,
         ]),
-        JsJson::Object(HashMap::from([
-            ("aaa".to_string(), JsJson::Number(2.0)),
+        JsJson::Object(BTreeMap::from([
+            ("aaa".to_string(), JsJson::Number(JsJsonNumber(2.0))),
             ("bbb".to_string(), JsJson::String(String::from("ccc"))),
         ])),
     ]));

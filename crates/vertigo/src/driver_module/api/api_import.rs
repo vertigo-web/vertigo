@@ -1,15 +1,10 @@
-use std::{collections::HashMap, future::Future, pin::Pin, rc::Rc};
+use std::{future::Future, pin::Pin, rc::Rc};
 
 use crate::{
-    driver_module::{
-        api::{api_fetch_event, callbacks::api_callbacks, panic_message::api_panic_message},
+    DropResource, FutureBox, InstantType, JsJson, JsJsonContext, JsJsonDeserialize, JsJsonSerialize, SsrFetchRequest, SsrFetchResponse, WebsocketConnection, WebsocketMessage, driver_module::{
+        api::{callbacks::api_callbacks, panic_message::api_panic_message},
         js_value::JsValue,
-    },
-    fetch::request_builder::RequestBody,
-    get_driver,
-    struct_mut::ValueMut,
-    transaction, DropResource, FetchMethod, FetchResult, FutureBox, InstantType, JsJson,
-    JsJsonObjectBuilder, WebsocketConnection, WebsocketMessage,
+    }, get_driver, struct_mut::ValueMut, transaction
 };
 
 use super::api_dom_access::DomAccess;
@@ -402,75 +397,34 @@ impl ApiImport {
     ///////////////////////////////////////////////////////////////////////////////////
     ///////////////////////////////////////////////////////////////////////////////////
 
-    pub fn fetch(
-        &self,
-        method: FetchMethod,
-        url: String,
-        headers: Option<HashMap<String, String>>,
-        body: Option<RequestBody>,
-    ) -> Pin<Box<dyn Future<Output = FetchResult> + 'static>> {
-        let (sender, receiver) = FutureBox::new();
-
-        api_fetch_event().on_fetch_start.trigger(());
-
-        // let on_fetch_stop = self.on_fetch_stop.clone();
+    pub fn fetch(&self, request: SsrFetchRequest) -> Pin<Box<dyn Future<Output = SsrFetchResponse> + 'static>> {
+        let (sender, receiver) = FutureBox::<SsrFetchResponse>::new();
 
         let callback_id = api_callbacks().register_once(move |params| {
-            let params = params.convert(|mut params| {
-                let success = params.get_bool("success")?;
-                let status = params.get_u32("status")?;
-                let response = params.get_any("response")?;
-                params.expect_no_more()?;
 
-                if let JsValue::Json(json) = response {
-                    return Ok((success, status, RequestBody::Json(json)));
-                }
+            let JsValue::Json(params) = params else {
+                log::error!("Expected json");
+                return JsValue::Undefined;
+            };
 
-                if let JsValue::String(text) = response {
-                    return Ok((success, status, RequestBody::Text(text)));
-                }
+            let response = SsrFetchResponse
+                ::from_json(JsJsonContext::new("'"), params)
+                .map_err(|error| error.convert_to_string());
 
-                if let JsValue::Vec(buffer) = response {
-                    return Ok((success, status, RequestBody::Binary(buffer)));
-                }
 
-                let name = response.typename();
-                Err(format!(
-                    "Expected json or string or vec<u8>, received={name}"
-                ))
-            });
-
-            match params {
-                Ok((success, status, response)) => {
+            match response {
+                Ok(response) => {
                     get_driver().transaction(|_| {
-                        let response = match success {
-                            true => Ok((status, response)),
-                            false => Err(format!("{response:#?}")),
-                        };
                         sender.publish(response);
-                        api_fetch_event().on_fetch_stop.trigger(());
                     });
                 }
                 Err(error) => {
                     log::error!("export_fetch_callback -> params decode error -> {error}");
-                    api_fetch_event().on_fetch_stop.trigger(());
                 }
             }
 
             JsValue::Undefined
         });
-
-        let headers = {
-            let mut headers_builder = JsJsonObjectBuilder::default();
-
-            if let Some(headers) = headers {
-                for (key, value) in headers.into_iter() {
-                    headers_builder = headers_builder.insert(key, value);
-                }
-            }
-
-            headers_builder.get()
-        };
 
         DomAccess::default()
             .api()
@@ -479,15 +433,7 @@ impl ApiImport {
                 "fetch_send_request",
                 vec![
                     JsValue::U64(callback_id.as_u64()),
-                    JsValue::String(method.to_str()),
-                    JsValue::String(url),
-                    JsValue::Json(headers),
-                    match body {
-                        Some(RequestBody::Text(body)) => JsValue::String(body),
-                        Some(RequestBody::Json(json)) => JsValue::Json(json),
-                        Some(RequestBody::Binary(bin)) => JsValue::Vec(bin),
-                        None => JsValue::Undefined,
-                    },
+                    JsValue::Json(request.to_json()),
                 ],
             )
             .exec();

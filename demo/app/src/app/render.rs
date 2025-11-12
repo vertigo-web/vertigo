@@ -152,32 +152,9 @@ pub fn render(state: &app::State) -> DomNode {
                 <div on_key_down={on_keydown} css={css_wrapper}>
                     { header }
 
-                    <div vertigo-suspense={get_css_loading}>
-                        "Loading ..."
-                    </div>
-
-                    <div vertigo-suspense={get_css_content}>
-                        { content }
-                    </div>
-
+                    { content }
                 </div>
             </body>
         </html>
-    }
-}
-
-fn get_css_loading(is_loading: bool) -> Css {
-    if is_loading {
-        css!("display: block;")
-    } else {
-        css!("display: none;")
-    }
-}
-
-fn get_css_content(is_loading: bool) -> Css {
-    if is_loading {
-        css!("display: none;")
-    } else {
-        css!("display: block;")
     }
 }

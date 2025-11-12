@@ -128,7 +128,7 @@ fn test_css_extending() {
 
 #[test]
 fn test_on_events_grouping_and_spreading() {
-    use crate::{self as vertigo, component, css, dom};
+    use crate::{self as vertigo, component, dom};
 
     #[component]
     fn Everything<'a>(name: &'a str, inner: AttrGroup) {
@@ -155,7 +155,6 @@ fn test_on_events_grouping_and_spreading() {
             inner:on_mouse_leave={|| ()}
             inner:on_mouse_up={|| true}
             inner:on_submit={|| ()}
-            inner:vertigo-suspense={|_| css!{"color: red;"}}
         />
     };
 

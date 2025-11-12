@@ -2,11 +2,7 @@ use std::fmt::Debug;
 use std::rc::Rc;
 
 use crate::{
-    computed::{context::Context, Value},
-    driver_module::api::api_fetch_event,
-    get_driver,
-    struct_mut::ValueMut,
-    transaction, Computed, DomNode, Instant, JsJsonDeserialize, Resource, ToComputed,
+    Computed, DomNode, Instant, JsJsonDeserialize, RequestResponse, Resource, ToComputed, computed::{Value, context::Context}, driver_module::api::api_fetch_cache, get_driver, struct_mut::ValueMut, transaction
 };
 
 use super::request_builder::{RequestBody, RequestBuilder};
@@ -142,12 +138,42 @@ impl<T> LazyCache<T> {
         request: RequestBuilder,
         map_response: impl Fn(u32, RequestBody) -> MapResponse<T> + 'static,
     ) -> Self {
+
+        let map_response = Rc::new(map_response);
+
+        let init_value: ApiResponse<T> = {
+            let request = request.clone();
+            let map_response = map_response.clone();
+
+            let ttl = request.get_ttl();
+
+            let ssr_request = request.to_request();
+            if let Some(response) = api_fetch_cache().get_response(&ssr_request) {
+
+                
+                let response = RequestResponse::new(ssr_request, response);
+
+                let new_value = response.into(map_response.as_ref());
+
+                let new_value = match new_value {
+                    Ok(value) => Resource::Ready(Rc::new(value)),
+                    Err(message) => Resource::Error(message),
+                };
+
+                let expiry = ttl.map(|ttl| get_driver().now().add_duration(ttl));
+
+                ApiResponse::new(new_value, expiry)
+            } else {
+                ApiResponse::Uninitialized
+            }
+        };
+
         Self {
             id: get_unique_id(),
-            value: Value::new(ApiResponse::Uninitialized),
+            value: Value::new(init_value),
             queued: Rc::new(ValueMut::new(false)),
             request: Rc::new(request),
-            map_response: Rc::new(map_response),
+            map_response,
         }
     }
 }
@@ -181,7 +207,6 @@ impl<T: PartialEq> LazyCache<T> {
         }
 
         self.queued.set(true); //set lock
-        api_fetch_event().on_fetch_start.trigger(());
 
         let self_clone = self.clone();
 
@@ -200,6 +225,8 @@ impl<T: PartialEq> LazyCache<T> {
 
                 let new_value = self_clone
                     .request
+                    .as_ref()
+                    .clone()
                     .call()
                     .await
                     .into(self_clone.map_response.as_ref());
@@ -218,7 +245,6 @@ impl<T: PartialEq> LazyCache<T> {
             }
 
             self_clone.queued.set(false);
-            api_fetch_event().on_fetch_stop.trigger(());
         });
     }
 }
@@ -252,7 +278,9 @@ impl<T: PartialEq + Clone> LazyCache<T> {
                 use crate as vertigo;
 
                 vertigo::dom! {
-                    <vertigo-suspense />
+                    <div>
+                        "Loading ..."
+                    </div>
                 }
             }
             Resource::Error(error) => {

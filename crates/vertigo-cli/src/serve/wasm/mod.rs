@@ -5,7 +5,7 @@ mod js_value_match;
 mod message;
 mod wasm_instance;
 
-pub use message::{FetchRequest, FetchResponse, Message};
+pub use message::{Message};
 pub use wasm_instance::WasmInstance;
 
 const VERTIGO_VERSION_MAJOR: u32 = pkg_version::pkg_version_major!();

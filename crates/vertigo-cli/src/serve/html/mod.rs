@@ -10,5 +10,8 @@ mod send_request;
 pub use dom_command::DomCommand;
 pub use html_node::HtmlNode;
 pub use html_response::HtmlResponse;
-pub use send_request::RequestBody;
 
+mod html_build_response;
+
+mod fetch_cache;
+pub use fetch_cache::FetchCache;

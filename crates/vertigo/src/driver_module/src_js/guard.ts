@@ -1,3 +1,4 @@
+import { JsJsonType } from "./jsjson";
 import { JsValueType, JsValueConst, JsValueMapType } from "./jsvalue_types";
 
 export namespace GuardJsValue {
@@ -31,6 +32,15 @@ export namespace GuardJsValue {
             typeof value === 'object' &&
             'type' in value &&
             value.type === JsValueConst.Object
+        );
+    }
+
+    export const isJson = (value: JsValueType): value is { type: typeof JsValueConst.Json, value: JsJsonType } => {
+        return (
+            value !== null &&
+            typeof value === 'object' &&
+            'type' in value &&
+            value.type === JsValueConst.Json
         );
     }
 }

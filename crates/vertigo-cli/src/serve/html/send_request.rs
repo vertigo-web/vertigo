@@ -1,19 +1,9 @@
-use reqwest::{Method, Response};
+use reqwest::{Method};
 use serde_json::{Map, Number, Value};
 use std::{
-    collections::{HashMap, VecDeque},
-    sync::Arc,
+    collections::{BTreeMap},
 };
-use vertigo::JsJson;
-
-use crate::serve::wasm::{FetchRequest, FetchResponse};
-
-#[derive(Debug, Clone, PartialEq, Eq, Hash)]
-pub enum RequestBody {
-    Text(String),
-    Json(JsJson),
-    Binary(Vec<u8>),
-}
+use vertigo::{JsJson, JsJsonNumber, SsrFetchRequest, SsrFetchRequestBody, SsrFetchResponse};
 
 fn convert_to_jsjson(value: Value) -> JsJson {
     match value {
@@ -22,26 +12,26 @@ fn convert_to_jsjson(value: Value) -> JsJson {
         Value::Null => JsJson::Null,
         Value::Number(value) => {
             if let Some(value) = value.as_f64() {
-                return JsJson::Number(value);
+                return JsJson::Number(JsJsonNumber(value));
             }
 
             if let Some(value) = value.as_i64() {
-                return JsJson::Number(value as f64);
+                return JsJson::Number(JsJsonNumber(value as f64));
             }
 
             if let Some(value) = value.as_u64() {
-                return JsJson::Number(value as f64);
+                return JsJson::Number(JsJsonNumber(value as f64));
             }
 
             log::error!("Unreachable in convert_to_jsjson, value: {value}");
-            JsJson::Number(0.0)
+            JsJson::Number(JsJsonNumber(0.0))
         }
         Value::String(value) => JsJson::String(value),
         Value::Array(list) => {
             JsJson::List(list.into_iter().map(convert_to_jsjson).collect::<Vec<_>>())
         }
         Value::Object(object) => {
-            let mut result = HashMap::new();
+            let mut result = BTreeMap::new();
 
             for (prop_name, prop_value) in object {
                 result.insert(prop_name, convert_to_jsjson(prop_value));
@@ -57,7 +47,7 @@ fn convert_to_jsvalue(value: JsJson) -> Value {
         JsJson::True => Value::Bool(true),
         JsJson::False => Value::Bool(false),
         JsJson::Null => Value::Null,
-        JsJson::Number(value) => Value::Number(
+        JsJson::Number(JsJsonNumber(value)) => Value::Number(
             Number::from_f64(value)
                 .unwrap_or_else(|| {
                     log::error!("Invalid float in convert_to_jsvalue: {value}");
@@ -81,42 +71,22 @@ fn convert_to_jsvalue(value: JsJson) -> Value {
     }
 }
 
-pub async fn send_request(request_params: Arc<FetchRequest>) -> FetchResponse {
-    match send_request_inner(request_params).await {
-        Some((status, body)) => FetchResponse {
-            success: true,
-            status,
-            body,
-        },
-        None => FetchResponse {
-            success: false,
-            status: 0,
-            body: RequestBody::Text(String::from("")),
-        },
-    }
+pub async fn send_request(request_params: SsrFetchRequest) -> SsrFetchResponse {
+    send_request_inner(request_params).await
 }
 
 enum BodyToSend {
     None,
     String(String),
-    Vec(Vec<u8>),
 }
 
 fn get_headers_and_body(
-    mut headers: HashMap<String, String>,
-    body: &Option<RequestBody>,
-) -> (HashMap<String, String>, BodyToSend) {
+    mut headers: BTreeMap<String, String>,
+    body: &SsrFetchRequestBody,
+) -> (BTreeMap<String, String>, BodyToSend) {
     match body.clone() {
-        None => (headers, BodyToSend::None),
-        Some(RequestBody::Text(text)) => {
-            if !headers.contains_key("content-type") {
-                headers.insert("content-type".into(), "text/plain; charset=utf-8".into());
-            }
-
-            (headers, BodyToSend::String(text))
-        }
-        Some(RequestBody::Binary(buffer)) => (headers, BodyToSend::Vec(buffer)),
-        Some(RequestBody::Json(json)) => {
+        SsrFetchRequestBody::None => (headers, BodyToSend::None),
+        SsrFetchRequestBody::Data { data } => {
             if !headers.contains_key("content-type") {
                 headers.insert(
                     "content-type".into(),
@@ -124,7 +94,7 @@ fn get_headers_and_body(
                 );
             }
 
-            let value = convert_to_jsvalue(json);
+            let value = convert_to_jsvalue(data);
             let json_str = serde_json::to_string(&value)
                 .inspect_err(|err| log::error!("Error serializing body: {err}"))
                 .unwrap_or_default();
@@ -134,64 +104,27 @@ fn get_headers_and_body(
     }
 }
 
-fn clear_headers(headers: &HashMap<String, String>) -> HashMap<String, String> {
+fn clear_headers(headers: &BTreeMap<String, String>) -> BTreeMap<String, String> {
     headers
         .iter()
         .map(|(key, value)| {
             let key = key.to_lowercase().trim().to_string();
             (key, value.to_string())
         })
-        .collect::<HashMap<_, _>>()
+        .collect::<BTreeMap<_, _>>()
 }
 
-enum ResponseType {
-    Json,
-    Text,
-    Bin,
-}
-
-fn get_response_type(response: &Response) -> ResponseType {
-    let content_type = response.headers().get("content-type");
-
-    let Some(content_type) = content_type else {
-        return ResponseType::Bin;
-    };
-
-    let content_type = match content_type.to_str() {
-        Ok(content_type) => content_type.to_string(),
-        Err(_) => {
-            return ResponseType::Bin;
-        }
-    };
-
-    let mut chunks = content_type.split(';').collect::<VecDeque<_>>();
-
-    match chunks.pop_front() {
-        Some(chunk_content_type) => {
-            let chunk_content_type = chunk_content_type.trim().to_lowercase();
-
-            if chunk_content_type == "application/json" {
-                return ResponseType::Json;
-            }
-
-            if chunk_content_type == "text/plain" {
-                return ResponseType::Text;
-            }
-
-            ResponseType::Bin
-        }
-        None => ResponseType::Bin,
-    }
-}
-
-async fn send_request_inner(request_params: Arc<FetchRequest>) -> Option<(u32, RequestBody)> {
+async fn send_request_inner(request_params: SsrFetchRequest) -> SsrFetchResponse {
     let client = reqwest::Client::new();
 
     let mut request = {
-        let method = request_params.method.trim().to_uppercase();
+        let method = request_params.method.to_str().trim().to_uppercase();
         let Ok(method) = Method::from_bytes(method.as_bytes()) else {
-            return None
+            return SsrFetchResponse::Err {
+                message: "send_request_inner - InvalidMethod".into()
+            };
         };
+
         client.request(method, &request_params.url)
     };
 
@@ -207,49 +140,42 @@ async fn send_request_inner(request_params: Arc<FetchRequest>) -> Option<(u32, R
         BodyToSend::String(body) => {
             request = request.body(body);
         }
-        BodyToSend::Vec(buffer) => {
-            request = request.body(buffer);
-        }
     }
 
     let response = match request.send().await {
         Ok(response) => response,
         Err(error) => {
-            log::error!("Error send: {error}");
-            return None;
+            return SsrFetchResponse::Err {
+                message: format!("Error send: {error}"),
+            };
         }
     };
 
     let status = response.status().as_u16() as u32;
-    let response_type = get_response_type(&response);
 
     let buffer = match response.bytes().await {
         Ok(response) => response.to_vec(),
         Err(error) => {
-            log::error!("data fetching error: {error}");
-            return None;
+            return SsrFetchResponse::Err {
+                message: format!("data fetching error: {error}"),
+            };
         }
     };
 
-    match response_type {
-        ResponseType::Text => {
-            let Ok(body) = String::from_utf8(buffer) else {
-                log::error!("response decoding problem");
-                return None;
-            };
+    match serde_json::from_slice::<Value>(buffer.as_slice()) {
+        Ok(json) => {
+            let json = convert_to_jsjson(json);
 
-            Some((status, RequestBody::Text(body)))
+            return SsrFetchResponse::Ok {
+                status,
+                response: json
+            };
+            // Some((status, RequestBody::Json(json)))
         }
-        ResponseType::Json => match serde_json::from_slice::<Value>(buffer.as_slice()) {
-            Ok(json) => {
-                let json = convert_to_jsjson(json);
-                Some((status, RequestBody::Json(json)))
-            }
-            Err(error) => {
-                log::error!("response decoding json problem error={error}");
-                None
-            }
-        },
-        ResponseType::Bin => Some((status, RequestBody::Binary(buffer))),
+        Err(error) => {
+            return SsrFetchResponse::Err {
+                message: format!("response decoding json problem error={error}")
+            };
+        }
     }
 }

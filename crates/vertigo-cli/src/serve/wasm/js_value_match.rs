@@ -117,6 +117,7 @@ impl<'a> Match<'a> {
         Ok((Self { list: rest }, value.clone()))
     }
 
+    #[allow(dead_code)]
     pub fn get_any(&self) -> Result<(Self, JsValue), ()> {
         let list = self.list;
 

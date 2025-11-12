@@ -108,9 +108,10 @@ mod fetch;
 mod future_box;
 pub mod inspect;
 mod instant;
-mod long_ptr;
 mod render;
 pub mod router;
+mod dev;
+
 
 #[cfg(test)]
 mod tests;
@@ -147,7 +148,7 @@ pub use driver_module::{
     dom_command::DriverDomCommand,
     driver::{Driver, FetchMethod, FetchResult},
     js_value::{
-        from_json, to_json, JsJson, JsJsonContext, JsJsonDeserialize, JsJsonObjectBuilder,
+        from_json, to_json, JsJson, JsJsonNumber, JsJsonContext, JsJsonDeserialize, JsJsonObjectBuilder,
         JsJsonSerialize, JsValue, MemoryBlock,
     },
 };
@@ -159,8 +160,9 @@ pub use fetch::{
 };
 pub use future_box::{FutureBox, FutureBoxSend};
 pub use instant::{Instant, InstantType};
-pub use long_ptr::LongPtr;
 pub use websocket::{WebsocketConnection, WebsocketMessage};
+
+pub use dev::{LongPtr, SsrFetchRequest, SsrFetchResponse, SsrFetchCache, SsrFetchRequestBody, BrowserCommand};
 
 /// Allows to include a static file
 ///
@@ -550,17 +552,14 @@ fn get_driver_browser() -> Rc<DriverConstruct> {
 
 /// Starting point of the app (used by [main] macro, which is preferred)
 pub fn start_app(init_app: fn() -> DomNode) {
-    let state = get_driver_browser();
-
     init_env();
+
+    api_fetch_cache().init_cache();
 
     let root_view = init_app();
 
-    api_fetch_event().on_fetch_start.trigger(());
+    get_driver_browser().set_root(root_view);
 
-    state.set_root(root_view);
-
-    api_fetch_event().on_fetch_stop.trigger(());
     get_driver().inner.dom.flush_dom_changes();
 }
 
@@ -607,7 +606,7 @@ pub use driver_module::driver::{
 };
 
 use crate::driver_module::api::{
-    api_arguments, api_callbacks, api_fetch_event, api_server_handler,
+    api_arguments, api_callbacks, api_fetch_cache, api_server_handler
 };
 
 // Methods for memory allocation
@@ -643,3 +642,44 @@ pub fn vertigo_export_wasm_callback(callback_id: u64, value_long_ptr: u64) -> u6
 
     result.to_ptr_long().get_long_ptr()
 }
+
+#[cfg(all(not(test), target_arch = "wasm32", target_os = "unknown"))]
+pub mod external_api {
+    mod inner {
+        #[link(wasm_import_module = "mod")]
+        extern "C" {
+            pub fn panic_message(long_ptr: u64);
+            pub fn dom_access(long_ptr: u64) -> u64;
+        }
+    }
+
+    pub mod safe_wrappers {
+        use super::inner::*;
+        use crate::LongPtr;
+
+        pub fn safe_panic_message(long_ptr: LongPtr) {
+            let long_ptr = long_ptr.get_long_ptr();
+            unsafe { panic_message(long_ptr) }
+        }
+
+        pub fn safe_dom_access(long_ptr: LongPtr) -> LongPtr {
+            let long_ptr = long_ptr.get_long_ptr();
+            let result = unsafe { dom_access(long_ptr) };
+            LongPtr::from(result)
+        }
+    }
+}
+
+#[cfg(any(test, not(target_arch = "wasm32"), not(target_os = "unknown")))]
+pub mod external_api {
+    pub mod safe_wrappers {
+        use crate::LongPtr;
+
+        pub fn safe_panic_message(_long_ptr: LongPtr) {}
+
+        pub fn safe_dom_access(_long_ptr: LongPtr) -> LongPtr {
+            LongPtr::from(0)
+        }
+    }
+}
+

@@ -1,36 +1,23 @@
 use axum::http::StatusCode;
-use std::{collections::HashMap, sync::Arc};
+use std::{collections::{HashMap}, sync::Arc};
 use tokio::sync::mpsc::UnboundedSender;
-use vertigo::{JsValue, VERTIGO_MOUNT_POINT_PLACEHOLDER, VERTIGO_PUBLIC_BUILD_PATH_PLACEHOLDER};
-
+use vertigo::{JsValue};
+use parking_lot::RwLock;
 use crate::serve::{
-    mount_path::MountPathConfig,
-    response_state::ResponseState,
-    wasm::{FetchRequest, FetchResponse, Message, WasmInstance},
+    html::{fetch_cache::FetchCache, html_build_response::build_response}, mount_path::MountPathConfig, response_state::ResponseState, wasm::{Message, WasmInstance}
 };
 
 use super::{
-    dom_command::dom_command_from_js_json, element::AllElements, html_element::HtmlElement,
-    send_request::send_request, DomCommand, HtmlNode,
+    dom_command::dom_command_from_js_json, element::AllElements,
+    send_request::send_request, DomCommand,
 };
-
-enum FetchStatus {
-    Requested { callbacks: Vec<u64> },
-    Response { response: FetchResponse },
-}
-
-impl FetchStatus {
-    fn is_requested(&self) -> bool {
-        matches!(self, Self::Requested { .. })
-    }
-}
 
 pub struct HtmlResponse {
     sender: UnboundedSender<Message>,
     mount_path: MountPathConfig,
     inst: WasmInstance,
     all_elements: AllElements,
-    fetch: HashMap<Arc<FetchRequest>, FetchStatus>,
+    fetch: Arc<RwLock<FetchCache>>,
     env: HashMap<String, String>,
     status: StatusCode,
 }
@@ -41,13 +28,14 @@ impl HtmlResponse {
         mount_path: &MountPathConfig,
         inst: WasmInstance,
         env: HashMap<String, String>,
+        fetch: Arc<RwLock<FetchCache>>,
     ) -> Self {
         Self {
             sender,
             mount_path: mount_path.clone(),
             inst,
             all_elements: AllElements::new(),
-            fetch: HashMap::new(),
+            fetch,
             env,
             status: StatusCode::default(),
         }
@@ -57,95 +45,19 @@ impl HtmlResponse {
         self.all_elements.feed(commands);
     }
 
-    pub fn waiting_request(&self) -> u32 {
-        let mut count = 0;
-
-        for (_, state) in self.fetch.iter() {
-            if state.is_requested() {
-                count += 1;
-            }
-        }
-
-        count
+    pub fn waiting_request(&self) -> bool {
+        let guard = self.fetch.read();
+        guard.fetch_waiting.len() > 0
     }
 
     pub fn build_response(&self) -> ResponseState {
-        let (mut root_html, css) = self.all_elements.get_response(false);
-
-        if let HtmlNode::Element(html) = &mut root_html {
-            if html.name != "html" {
-                // Not really possible
-                return ResponseState::internal_error(format!(
-                    "Missing <html> element, found {} instead",
-                    html.name
-                ));
-            }
-
-            // Add custom env parameters
-            for (env_name, env_value) in &self.env {
-                html.add_attr(format!("data-env-{env_name}"), env_value);
-            }
-
-            // Add dynamic values for public path
-            html.add_attr(
-                "data-env-vertigo-mount-point",
-                self.mount_path.mount_point(),
-            );
-            html.add_attr(
-                "data-env-vertigo-public-path",
-                self.mount_path.dest_http_root(),
-            );
-        } else {
-            return ResponseState::internal_error("Missing <html> element");
-        }
-
-        let head_exists = root_html.modify(&[("head", 0)], move |head| {
-            if self.mount_path.wasm_preload {
-                let script_preconnect = HtmlElement::new("link")
-                    .attr("rel", "preload")
-                    .attr("href", self.mount_path.get_wasm_http_path())
-                    .attr("as", "script");
-
-                head.add_child(script_preconnect);
-            }
-            head.add_child(css);
-        });
-
-        if !head_exists {
-            log::info!("Missing <head> element");
-        }
-
-        let script = HtmlElement::new("script")
-            .attr("type", "module")
-            .attr(
-                "data-vertigo-run-wasm",
-                self.mount_path.get_wasm_http_path(),
-            )
-            .attr("src", self.mount_path.get_run_js_http_path());
-
-        let body_exists = root_html.modify(&[("body", 0)], move |body| {
-            body.add_child(script);
-        });
-
-        if body_exists {
-            let mut body = root_html.convert_to_string(true).replace(
-                VERTIGO_PUBLIC_BUILD_PATH_PLACEHOLDER,
-                &self.mount_path.dest_http_root(),
-            );
-
-            if self.mount_path.mount_point() != "/" {
-                body = body.replace(
-                    VERTIGO_MOUNT_POINT_PLACEHOLDER,
-                    self.mount_path.mount_point(),
-                );
-            } else {
-                body = body.replace(VERTIGO_MOUNT_POINT_PLACEHOLDER, "");
-            }
-
-            ResponseState::html(self.status, body)
-        } else {
-            ResponseState::internal_error("Missing <body> element")
-        }
+        build_response(
+            &self.all_elements,
+            &self.env,
+            &self.mount_path,
+            self.status,
+            &self.fetch,
+        )
     }
 
     pub fn process_message(&mut self, message: Message) -> Option<ResponseState> {
@@ -177,20 +89,18 @@ impl HtmlResponse {
                 None
             }
             Message::FetchRequest {
-                callback_id,
                 request,
+                callback_id,
             } => {
-                let request = Arc::new(request);
+                let mut guard = self.fetch.write();
 
-                if let Some(value) = self.fetch.get_mut(&request) {
-                    match value {
-                        FetchStatus::Requested { callbacks } => {
-                            callbacks.push(callback_id);
-                        }
-                        FetchStatus::Response { response } => {
-                            self.inst.send_fetch_response(callback_id, response.clone());
-                        }
-                    }
+                if let Some ( response ) = guard.fetch_cache.get(&request) {
+                    self.inst.send_fetch_response(callback_id, response.clone());
+                    return None;
+                }
+
+                if let Some(callbacks) = guard.fetch_waiting.get_mut(&request) {
+                    callbacks.push(callback_id);
                 } else {
                     tokio::spawn({
                         let request = request.clone();
@@ -208,36 +118,30 @@ impl HtmlResponse {
                         }
                     });
 
-                    self.fetch.insert(
+                    guard.fetch_waiting.insert(
                         request,
-                        FetchStatus::Requested {
-                            callbacks: vec![callback_id],
-                        },
+                        vec![callback_id],
                     );
                 }
                 None
             }
 
             Message::FetchResponse { request, response } => {
-                let state = self.fetch.remove(&request);
+                let mut guard = self.fetch.write();
 
-                let new_state = match state {
-                    Some(state) => match state {
-                        FetchStatus::Requested { callbacks } => {
-                            for callback_id in callbacks {
-                                self.inst.send_fetch_response(callback_id, response.clone());
-                            }
-                            FetchStatus::Response { response }
-                        }
-                        FetchStatus::Response { .. } => {
-                            log::error!("Unreachable in process_message");
-                            return None;
-                        }
-                    },
-                    None => FetchStatus::Response { response },
+                let exist = guard.fetch_cache.insert(request.clone(), response.clone());
+                assert_eq!(exist.is_none(), true);
+
+                let callback_list = guard.fetch_waiting.remove(&request);
+
+                let Some(callback_list) = callback_list else {
+                    unreachable!();
                 };
 
-                self.fetch.insert(request, new_state);
+
+                for callback_id in callback_list {
+                    self.inst.send_fetch_response(callback_id, response.clone());
+                }
 
                 None
             }

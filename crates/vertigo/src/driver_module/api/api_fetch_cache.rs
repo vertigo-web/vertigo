@@ -1,0 +1,38 @@
+use std::rc::Rc;
+
+use vertigo_macro::store;
+
+use crate::{SsrFetchCache, SsrFetchRequest, SsrFetchResponse, driver_module::api::api_browser_command, struct_mut::ValueMut};
+
+
+
+#[store]
+pub fn api_fetch_cache() -> Rc<FetchCache> {
+
+    Rc::new(FetchCache {
+        cache: ValueMut::new(Rc::new(SsrFetchCache::empty())),
+    })
+}
+
+
+pub struct FetchCache {
+    cache: ValueMut<Rc<SsrFetchCache>>,
+}
+
+impl FetchCache {
+    pub fn init_cache(&self) {
+
+        let cache = api_browser_command().fetch_cache_get();
+        self.cache.set(Rc::new(cache));
+
+        log::info!("FetchCache init");
+    }
+
+    pub fn get_response(&self, request: &SsrFetchRequest) -> Option<SsrFetchResponse> {
+        let cache = self.cache.get();
+        cache.get(request).map(|item| item.clone())
+    }
+}
+
+
+
