@@ -1,59 +1,17 @@
 use std::cell::Cell;
 use std::rc::Rc;
 
-use crate::struct_mut::{HashMapMut, ValueMut, VecMut};
+use crate::struct_mut::{HashMapMut, VecMut};
 use crate::{DomId, DropResource, JsJson};
 
-use super::dom_suspense::DomSuspense;
 use super::StaticString;
 use super::{
     api::CallbackId,
     dom_command::{sort_commands, DriverDomCommand},
 };
-use crate::driver_module::api::{api_fetch_event, api_import};
-
-#[derive(PartialEq)]
-enum StateInitiation {
-    Waiting { counter: u32 },
-    Ready,
-}
-
-impl StateInitiation {
-    pub fn new() -> Self {
-        StateInitiation::Waiting { counter: 0 }
-    }
-
-    pub fn is_ready(&self) -> bool {
-        &Self::Ready == self
-    }
-
-    pub fn up(&mut self) {
-        if let Self::Waiting { counter } = self {
-            *counter += 1;
-        }
-    }
-
-    ///
-    /// Returns true if we have gone to zero while decreasing
-    ///
-    pub fn down(&mut self) -> bool {
-        let send_commands = if let Self::Waiting { counter } = self {
-            *counter -= 1;
-            *counter == 0
-        } else {
-            false
-        };
-
-        if send_commands {
-            *self = Self::Ready;
-        }
-
-        send_commands
-    }
-}
+use crate::driver_module::api::api_import;
 
 struct Commands {
-    state: ValueMut<StateInitiation>,
     commands: VecMut<DriverDomCommand>,
     // For testing/debuging purposes
     log_enabled: Cell<bool>,
@@ -63,7 +21,6 @@ struct Commands {
 impl Commands {
     pub fn new() -> &'static Self {
         Box::leak(Box::new(Commands {
-            state: ValueMut::new(StateInitiation::new()),
             commands: VecMut::new(),
             log_enabled: Cell::new(false),
             log_vec: VecMut::new(),
@@ -89,7 +46,7 @@ impl Commands {
         self.commands.push(command);
     }
 
-    fn flush_dom_changes_inner(&self) {
+    fn flush_dom_changes(&self) {
         let state = self.commands.take();
 
         if !state.is_empty() {
@@ -105,38 +62,13 @@ impl Commands {
             api_import().dom_bulk_update(out);
         }
     }
-
-    fn flush_dom_changes(&self) {
-        let is_ready = self.state.map(|state| state.is_ready());
-
-        if is_ready {
-            self.flush_dom_changes_inner();
-        }
-    }
-
-    fn fetch_up(&self) {
-        self.state.change(|state| {
-            state.up();
-        });
-    }
-
-    fn fetch_down(&self) {
-        let send_commands = self.state.change(|state| state.down());
-
-        if send_commands {
-            self.flush_dom_changes_inner();
-        }
-    }
 }
 
 type Callback = Rc<dyn Fn(DomId) + 'static>;
 
 pub struct DriverDom {
     commands: &'static Commands,
-    _sub1: DropResource,
-    _sub2: DropResource,
     node_parent_callback: Rc<HashMapMut<DomId, Callback>>,
-    pub dom_suspense: &'static DomSuspense,
 
     #[cfg(test)]
     _callback_id_lock: Cell<Option<std::sync::MutexGuard<'static, ()>>>,
@@ -146,24 +78,9 @@ impl DriverDom {
     pub fn new() -> &'static DriverDom {
         let commands = Commands::new();
 
-        let sub1 = api_fetch_event().on_fetch_start.add({
-            move |_| {
-                commands.fetch_up();
-            }
-        });
-
-        let sub2 = api_fetch_event().on_fetch_stop.add({
-            move |_| {
-                commands.fetch_down();
-            }
-        });
-
         Box::leak(Box::new(DriverDom {
             commands,
-            _sub1: sub1,
-            _sub2: sub2,
             node_parent_callback: Rc::new(HashMapMut::new()),
-            dom_suspense: DomSuspense::new(),
 
             #[cfg(test)]
             _callback_id_lock: Cell::new(None),
@@ -172,10 +89,6 @@ impl DriverDom {
 
     pub fn create_node(&self, id: DomId, name: impl Into<StaticString>) {
         let name = name.into();
-
-        if name.as_str() == "vertigo-suspense" {
-            self.dom_suspense.set_node_suspense(id);
-        }
 
         self.commands
             .add_command(DriverDomCommand::CreateNode { id, name });
@@ -215,13 +128,11 @@ impl DriverDom {
     pub fn remove_text(&self, id: DomId) {
         self.commands
             .add_command(DriverDomCommand::RemoveText { id });
-        self.dom_suspense.remove(id);
     }
 
     pub fn remove_node(&self, id: DomId) {
         self.commands
             .add_command(DriverDomCommand::RemoveNode { id });
-        self.dom_suspense.remove(id);
     }
 
     pub fn insert_before(&self, parent: DomId, child: DomId, ref_id: Option<DomId>) {
@@ -234,8 +145,6 @@ impl DriverDom {
         if let Some(callback) = self.node_parent_callback.get(&child) {
             callback(parent);
         }
-
-        self.dom_suspense.set_parent(child, parent);
     }
 
     pub fn insert_css(&self, selector: Option<String>, value: String) {
@@ -253,7 +162,6 @@ impl DriverDom {
     pub fn remove_comment(&self, id: DomId) {
         self.commands
             .add_command(DriverDomCommand::RemoveComment { id });
-        self.dom_suspense.remove(id);
     }
 
     pub fn callback_add(&self, id: DomId, event_name: impl Into<String>, callback_id: CallbackId) {

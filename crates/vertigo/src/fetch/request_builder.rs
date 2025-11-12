@@ -1,16 +1,14 @@
-use std::collections::HashMap;
+use std::collections::BTreeMap;
 use std::time::Duration;
 
 use crate::{
-    driver_module::api::api_import, from_json, FetchMethod, JsJson, JsJsonDeserialize,
-    JsJsonSerialize, LazyCache,
+    dev::SsrFetchRequestBody, driver_module::api::api_import, from_json, FetchMethod, JsJson,
+    JsJsonDeserialize, JsJsonSerialize, LazyCache, SsrFetchRequest, SsrFetchResponse,
 };
 
 #[derive(Debug, Clone)]
 pub enum RequestBody {
-    Text(String),
     Json(JsJson),
-    Binary(Vec<u8>),
 }
 
 impl RequestBody {
@@ -20,12 +18,6 @@ impl RequestBody {
                 Ok(data) => Ok(data),
                 Err(err) => Err(err),
             },
-            RequestBody::Text(_) => {
-                Err("FetchBody.into() - expected json, received text".to_string())
-            }
-            RequestBody::Binary(_) => {
-                Err("FetchBody.into() - expected json, received binary".to_string())
-            }
         }
     }
 }
@@ -35,7 +27,7 @@ impl RequestBody {
 pub struct RequestBuilder {
     method: FetchMethod,
     url: String,
-    headers: HashMap<String, String>,
+    headers: BTreeMap<String, String>,
     body: Option<RequestBody>,
     ttl: Option<Duration>,
 }
@@ -45,7 +37,7 @@ impl RequestBuilder {
         Self {
             method,
             url: url.into(),
-            headers: HashMap::new(),
+            headers: BTreeMap::new(),
             body: None,
             ttl: None,
         }
@@ -88,7 +80,7 @@ impl RequestBuilder {
     }
 
     #[must_use]
-    pub fn headers(mut self, headers: HashMap<String, String>) -> Self {
+    pub fn headers(mut self, headers: BTreeMap<String, String>) -> Self {
         self.headers = headers;
         self
     }
@@ -122,20 +114,36 @@ impl RequestBuilder {
         self.ttl
     }
 
-    pub async fn call(&self) -> RequestResponse {
-        let Self {
-            method,
-            url,
+    pub fn to_request(self) -> SsrFetchRequest {
+        let mut headers = self.headers;
+
+        let body = match self.body {
+            None => SsrFetchRequestBody::None,
+            Some(RequestBody::Json(data)) => {
+                if !headers.contains_key("Content-Type") {
+                    headers.insert(
+                        "Content-Type".into(),
+                        "application/json;charset=UTF-8".into(),
+                    );
+                }
+                SsrFetchRequestBody::Data { data }
+            }
+        };
+
+        SsrFetchRequest {
+            method: self.method,
+            url: self.url,
             headers,
             body,
-            ttl: _,
-        } = self;
+        }
+    }
 
-        let result = api_import()
-            .fetch(*method, url.clone(), Some(headers.clone()), body.clone())
-            .await;
+    pub async fn call(self) -> RequestResponse {
+        let request = self.to_request();
 
-        RequestResponse::new(*method, url.clone(), result)
+        let result = api_import().fetch(request.clone()).await;
+
+        RequestResponse::new(request, result)
     }
 
     #[must_use]
@@ -150,23 +158,22 @@ impl RequestBuilder {
 /// Result from request made using [RequestBuilder].
 #[derive(Debug)]
 pub struct RequestResponse {
-    method: FetchMethod,
-    url: String,
-    data: Result<(u32, RequestBody), String>,
+    request: SsrFetchRequest,
+    response: SsrFetchResponse,
 }
 
 impl RequestResponse {
-    fn new(
-        method: FetchMethod,
-        url: String,
-        data: Result<(u32, RequestBody), String>,
-    ) -> RequestResponse {
-        RequestResponse { method, url, data }
+    pub fn new(request: SsrFetchRequest, response: SsrFetchResponse) -> RequestResponse {
+        RequestResponse { request, response }
     }
 
     pub fn status(&self) -> Option<u32> {
-        if let Ok((status, _)) = self.data {
-            return Some(status);
+        if let SsrFetchResponse::Ok {
+            status,
+            response: _,
+        } = &self.response
+        {
+            return Some(*status);
         }
 
         None
@@ -176,19 +183,23 @@ impl RequestResponse {
         self,
         convert: impl Fn(u32, RequestBody) -> Option<Result<T, String>>,
     ) -> Result<T, String> {
-        let result = match self.data {
-            Ok((status, body)) => match convert(status, body) {
-                Some(result) => result,
-                None => Err(format!("Unhandled response code {status}")),
-            },
-            Err(err) => Err(err),
+        let result: Result<T, String> = match self.response {
+            SsrFetchResponse::Ok { status, response } => {
+                let data = convert(status, RequestBody::Json(response));
+
+                match data {
+                    Some(result) => result,
+                    None => Err(format!("Unhandled response code {status}")),
+                }
+            }
+            SsrFetchResponse::Err { message } => Err(message),
         };
 
         if let Err(err) = &result {
             log::error!(
                 "Error fetching {} {}: {}",
-                self.method.to_str(),
-                self.url,
+                self.request.method.to_str(),
+                self.request.url,
                 err
             );
         }
@@ -201,9 +212,11 @@ impl RequestResponse {
     }
 
     pub fn into_error_message<T>(self) -> Result<T, String> {
-        let body = match self.data {
-            Ok((code, body)) => format!("API error {code}: {body:#?}"),
-            Err(body) => format!("Network error: {body}"),
+        let body = match self.response {
+            SsrFetchResponse::Ok { status, response } => {
+                format!("API error {status}: {response:#?}")
+            }
+            SsrFetchResponse::Err { message } => format!("Network error: {message}"),
         };
 
         Err(body)

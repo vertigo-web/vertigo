@@ -3,95 +3,65 @@ import { JsValueConst } from "../jsvalue_types";
 import { ModuleControllerType } from "../wasm_init";
 import { ExportType } from "../wasm_module";
 
-const getTypeResponse = (contentType: string | null): 'json' | 'text' | 'bin' => {
-    if (contentType === null) {
-        console.info('Missing header content-type');
-        return 'bin';
+interface FetchRequestType {
+    method: string,
+    url: string,
+    headers: Array<{ k: string, v: string }>,
+    body: 'None' | {
+        Data: {
+            data: JsJsonType
+        }
     }
-
-    const [type] = contentType.split(";");
-
-    if (type === undefined) {
-        console.error('Missing value for content-type');
-        return 'bin';
-    }
-
-    const typeClear = type.toLowerCase().trim();
-
-    if (typeClear === 'application/json') {
-        return 'json';
-    }
-
-    if (typeClear === 'text/plain') {
-        return 'text';
-    }
-
-    console.error(`No match found for content-type=${contentType}`);
-    return 'bin';
 }
 
-const catchError = async (
-    wasm: ModuleControllerType<ExportType>,
-    callback_id: bigint,
-    response: Response,
-    callbackSuccess: (response: Response) => Promise<void>
-) => {
-    try {
-        await callbackSuccess(response);
-    } catch (error) {
-        console.error('fetch error (2) - json', error);
-        const responseMessage = new String(error).toString();
-
-        wasm.wasm_callback(callback_id, [
-            false,                                      //ok
-            { type: JsValueConst.U32, value: response.status },    //http code
-            responseMessage                             //body (string)
-        ]);
+type FetchResponseType = {
+    Ok: {
+        status: number,
+        response: JsJsonType,
+    }
+} | {
+    Error: {
+        message: string,
     }
 };
 
-const getHeadersAndBody = (headersRecord: Record<string, string>, body: undefined | string | Uint8Array | JsJsonType | undefined): [Headers, string | ArrayBuffer | undefined] => {
-    const headers = new Headers(headersRecord);
+const getHeaders = (headers: Array<{ k: string, v: string }>): Record<string, string> => {
+    const result: Record<string, string> = {};
 
-    if (body === undefined) {
-        return [
-            headers,
-            undefined
-        ]
+    for (const { k, v } of headers) {
+        result[k] = v;
+    }
+    
+    return result;
+};
+
+const getBodyString = (body: FetchRequestType['body']): string | undefined => {
+    if (body === 'None') {
+        return undefined;
     }
 
-    if (typeof body === 'string') {
-        if (headers.has('content-type') === false) {
-            headers.set('content-type', 'text/plain; charset=utf-8');
-        }
+    return JSON.stringify(body.Data.data);
+};
 
-        return [
-            headers,
-            body
-        ];
+const processResponse = async (response: Response): Promise<FetchResponseType> => {
+    const status = response.status;
+
+    try {
+        const json = await response.json();
+
+        return {
+            Ok: {
+                status,
+                response: json
+            }
+        };
+    } catch (error) {
+        return {
+            Error: {
+                message: String(error),
+            }
+        };
     }
-
-
-    if (body instanceof Uint8Array && body.buffer instanceof ArrayBuffer) {
-        if (headers.has('content-type') === false) {
-            headers.set('content-type', 'application/octet-stream');
-        }
-
-        return [
-            headers,
-            body.buffer
-        ];
-    }
-
-    //JsJsonType
-    if (headers.has('content-type') === false) {
-        headers.set('content-type', 'application/json; charset=utf-8');
-    }
-
-    return [
-        headers,
-        JSON.stringify(body),
-    ];
 };
 
 export class Fetch {
@@ -103,83 +73,47 @@ export class Fetch {
 
     public fetch_send_request = (
         callback_id: bigint,
-        method: string,
-        url: string,
-        headers: Record<string, string>,
-        body: string | Uint8Array | JsJsonType | undefined,
+        request: FetchRequestType
     ) => {
-        this.fetch_send_request_inner(callback_id, method, url, headers, body);
+        this.fetch_send_request_inner(callback_id, request);
     }
 
     private fetch_send_request_inner = async (
         callback_id: bigint,
-        method: string,
-        url: string,
-        headers: Record<string, string>,
-        body: string | Uint8Array | JsJsonType | undefined,
+        request: FetchRequestType
     ): Promise<void> => {
         const wasm = this.getWasm();
 
-        const [fetchHeaders, fetchBody] = getHeadersAndBody(headers, body);
+        console.info('fetch request', request);
 
         try {
-            const response = await fetch(url, {
-                method,
-                headers: fetchHeaders,
-                body: fetchBody,
+            const response = await fetch(request.url, {
+                method: request.method,
+                headers: getHeaders(request.headers),
+                body: getBodyString(request.body),
             });
 
-            const contentType = response.headers.get('content-type');
-            const responseType = getTypeResponse(contentType);
+            const response2 = await processResponse(response);
 
-            if (responseType === 'json') {
-                catchError(wasm, callback_id, response, async (response) => {
-                    const json = await response.json();
-
-                    wasm.wasm_callback(callback_id, [
-                        true,                                       //ok
-                        { type: JsValueConst.U32, value: response.status },    //http code
-                        {                                           //body (json)
-                            type: JsValueConst.Json,
-                            value: json
-                        }
-                    ]);
-                });
-                return;
-            }
-
-            if (responseType === 'text') {
-                catchError(wasm, callback_id, response, async (response) => {
-                    const text = await response.text();
-
-                    wasm.wasm_callback(callback_id, [
-                        true,                                       //ok
-                        { type: JsValueConst.U32, value: response.status },    //http code
-                        text                                        //body (text)
-                    ]);
-                });
-                return;
-            }
-
-            catchError(wasm, callback_id, response, async (response) => {
-                const text = await response.arrayBuffer();
-                const textUint8Array = new Uint8Array(text);
-
-                wasm.wasm_callback(callback_id, [
-                    true,                                       //ok
-                    { type: JsValueConst.U32, value: response.status },    //http code
-                    textUint8Array                              //body (text)
-                ]);
+            wasm.wasm_callback(callback_id, {
+                type: JsValueConst.Json,
+                value: response2
             });
+
         } catch (err) {
             console.error('fetch error (1)', err);
             const responseMessage = new String(err).toString();
 
-            wasm.wasm_callback(callback_id, [
-                false,                                      //ok
-                { type: JsValueConst.U32, value: 0 },                  //http code
-                responseMessage                             //body (string)
-            ]);
+            const responseToWasm: FetchResponseType = {
+                'Error': {
+                    message: responseMessage
+                }
+            };
+
+            wasm.wasm_callback(callback_id, {
+                type: JsValueConst.Json,
+                value: responseToWasm
+            });
         }
     }
 }

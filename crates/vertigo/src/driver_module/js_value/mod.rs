@@ -8,7 +8,7 @@ mod serialize;
 #[cfg(feature = "chrono")]
 mod serialize_chrono;
 
-pub use js_json_struct::JsJson;
+pub use js_json_struct::{JsJson, JsJsonNumber};
 pub use js_value_struct::JsValue;
 pub use memory_block::MemoryBlock;
 
@@ -17,3 +17,8 @@ mod tests;
 
 pub use js_json_struct::JsJsonObjectBuilder;
 pub use serialize::{from_json, to_json, JsJsonContext, JsJsonDeserialize, JsJsonSerialize};
+
+mod js_json_map_item;
+pub use js_json_map_item::MapItem;
+
+mod vec_to_string;

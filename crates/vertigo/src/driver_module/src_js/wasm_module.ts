@@ -1,13 +1,16 @@
 import { wasmInit, ModuleControllerType } from './wasm_init';
 import { ApiBrowser as ApiBrowser } from './api_browser';
 import { JsNode } from './js_node';
+import { GuardJsValue } from './guard';
+import { exec_command } from './exec_command/exec_command';
+import { JsValueConst } from './jsvalue_types';
 
 //Number -> u32 or i32
 //BigInt -> u64 or i64
 
 export type ImportType = {
     panic_message: (long_ptr: bigint) => void,
-    //call from rust
+    //call from rust - To be deleted eventually
     dom_access: (long_ptr: bigint) => bigint,
 }
 
@@ -61,6 +64,17 @@ export class WasmModule {
                 },
                 dom_access: (long_ptr: bigint): bigint => {
                     let args = getWasm().decodeArgumentsLong(long_ptr);
+
+                    //new wersion
+                    if (GuardJsValue.isJson(args)) {
+                        const response = exec_command(args);
+                        return getWasm().valueSaveToBufferLong({
+                            type: JsValueConst.Json,
+                            value: response
+                        });
+                    }
+
+                    //old version
                     if (Array.isArray(args)) {
                         const path = args;
                         let wsk = new JsNode(apiBrowser, apiBrowser.dom.nodes, null);
@@ -80,7 +94,7 @@ export class WasmModule {
 
                     console.error('dom_access - wrong parameters', args);
                     return 0n;
-                },
+                }
             }
         });
 

@@ -1,8 +1,13 @@
-use std::collections::HashMap;
+use std::{collections::HashMap, sync::Arc};
 use tokio::sync::mpsc::{error::TryRecvError, unbounded_channel};
+use vertigo::browser_command::{browser_response, BrowserCommand};
+use vertigo::JsJsonSerialize;
 use wasmtime::{Engine, Module};
 
-use crate::commons::{spawn::SpawnOwner, ErrorCode};
+use crate::{
+    commons::{spawn::SpawnOwner, ErrorCode},
+    serve::html::FetchCache,
+};
 
 use super::{
     html::HtmlResponse,
@@ -50,7 +55,23 @@ impl ServerState {
             env: self.env.clone(),
         };
 
-        let mut inst = WasmInstance::new(sender.clone(), &self.engine, &self.module, request);
+        let fetch = FetchCache::new();
+
+        let mut inst = WasmInstance::new(
+            sender.clone(),
+            &self.engine,
+            &self.module,
+            request,
+            Arc::new({
+                move |command| match command {
+                    BrowserCommand::FetchCacheGet => {
+                        let response = browser_response::FetchCacheGet { data: None };
+
+                        return response.to_json();
+                    }
+                }
+            }),
+        );
 
         // -- !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
         //TODO - ultimately, do not call call_vertigo_entry_function if something is returned by handle_url
@@ -71,8 +92,13 @@ impl ServerState {
             }
         });
 
-        let mut html_response =
-            HtmlResponse::new(sender.clone(), &self.mount_config, inst, self.env.clone());
+        let mut html_response = HtmlResponse::new(
+            sender.clone(),
+            &self.mount_config,
+            inst,
+            self.env.clone(),
+            fetch,
+        );
 
         loop {
             let message = receiver.try_recv();
@@ -93,16 +119,16 @@ impl ServerState {
                 }
             }
 
-            if html_response.waiting_request() == 0 {
-                //send response to browser
-                break;
-            } else {
+            if html_response.awaiting_response() {
                 let message = receiver.recv().await;
                 if let Some(message) = message {
                     if let Some(response) = html_response.process_message(message) {
                         return response;
                     };
                 }
+            } else {
+                //send response to browser
+                break;
             }
         }
 

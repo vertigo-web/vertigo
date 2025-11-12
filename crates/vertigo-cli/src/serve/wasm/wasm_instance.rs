@@ -1,7 +1,8 @@
 use reqwest::StatusCode;
-use std::{collections::HashMap, process::exit};
+use std::{collections::HashMap, process::exit, sync::Arc};
 use tokio::sync::mpsc::UnboundedSender;
-use vertigo::{JsValue, LongPtr};
+use vertigo::browser_command::{decode_json, BrowserCommand};
+use vertigo::{JsJson, JsJsonSerialize, JsValue, LongPtr, SsrFetchResponse};
 use wasmtime::{Caller, Engine, Func, Instance, Module, Store};
 
 use crate::{
@@ -13,7 +14,6 @@ use super::{
     data_context::DataContext,
     decode_commands::*,
     message::{CallWebsocketResult, Message},
-    FetchResponse,
 };
 
 pub struct WasmInstance {
@@ -27,6 +27,7 @@ impl WasmInstance {
         engine: &Engine,
         module: &Module,
         request: RequestState,
+        handle_command: Arc<dyn Fn(BrowserCommand) -> JsJson + 'static + Send + Sync>,
     ) -> Self {
         let url = request.url.clone();
         let mut store = Store::new(engine, request.clone());
@@ -54,6 +55,14 @@ impl WasmInstance {
                     let mut data_context = DataContext::from_caller(caller);
 
                     let value = data_context.get_value_long_ptr(long_ptr);
+
+                    if let JsValue::Json(arg) = value {
+                        let result = decode_json::<BrowserCommand>(arg);
+
+                        let result = handle_command(result);
+                        let result = JsValue::Json(result);
+                        return data_context.save_value(result).get_long_ptr();
+                    };
 
                     // Ignore cookie operations
                     if let Ok(()) = match_cookie_command(&value) {
@@ -239,8 +248,7 @@ impl WasmInstance {
 
         let params_ptr = {
             let mut data_context = DataContext::from_store(&mut self.store, self.instance);
-            let params_ptr = data_context.save_value(url);
-            params_ptr
+            data_context.save_value(url)
         };
 
         let result = self
@@ -250,8 +258,7 @@ impl WasmInstance {
 
         let result = {
             let mut data_context = DataContext::from_store(&mut self.store, self.instance);
-            let result = data_context.get_value_long_ptr(LongPtr::from(result));
-            result
+            data_context.get_value_long_ptr(LongPtr::from(result))
         };
 
         self.decode_response_state(result)
@@ -305,14 +312,10 @@ impl WasmInstance {
         })
     }
 
-    pub fn send_fetch_response(&mut self, callback_id: u64, response: FetchResponse) {
-        let params = JsValue::List(vec![
-            JsValue::bool(response.success),
-            JsValue::U32(response.status),
-            convert_body_to_value(response.body),
-        ]);
+    pub fn send_fetch_response(&mut self, callback_id: u64, response: SsrFetchResponse) {
+        let json = response.to_json();
 
-        let result = self.wasm_callback(callback_id, params);
+        let result = self.wasm_callback(callback_id, JsValue::Json(json));
         assert_eq!(result, JsValue::Undefined);
     }
 }
