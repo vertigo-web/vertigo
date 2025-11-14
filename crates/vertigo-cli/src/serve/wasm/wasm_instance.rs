@@ -140,14 +140,6 @@ impl WasmInstance {
                         return data_context.save_value(JsValue::False).get_long_ptr();
                     }
 
-                    if let Ok(status) = match_is_set_status(&value) {
-                        sender
-                            .send(Message::SetStatus(status))
-                            .inspect_err(|err| log::error!("Error setting status code: {err}"))
-                            .unwrap_or_default();
-                        return 0;
-                    }
-
                     // push history router location
                     if let Ok(_url) = match_history_router_push(&value) {
                         // Ignore in SSR

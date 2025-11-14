@@ -15,6 +15,9 @@ pub enum CommandForBrowser {
         request: SsrFetchRequest,
         callback: CallbackId,
     },
+    SetStatus {
+        status: u16,
+    },
 }
 
 pub mod response_browser {

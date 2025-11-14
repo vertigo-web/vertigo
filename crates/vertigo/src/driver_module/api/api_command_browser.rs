@@ -17,11 +17,12 @@ fn exec_command(command: CommandForBrowser) -> JsJson {
     let response = safe_wrappers::safe_dom_access(arg_ptr);
     let response = api_arguments().get_by_long_ptr(response);
 
-    let JsValue::Json(response) = response else {
-        unreachable!();
+    if let JsValue::Json(response) = response {
+        return response;
     };
 
-    response
+    log::error!("expected json, received {:?}", response.typename());
+    JsJson::Null
 }
 
 pub struct CommandForBrowserApi {}
@@ -50,5 +51,9 @@ impl CommandForBrowserApi {
 
     pub fn fetch_exec(&self, request: SsrFetchRequest, callback: CallbackId) {
         exec_command(CommandForBrowser::FetchExec { request, callback });
+    }
+
+    pub fn set_status(&self, status: u16) {
+        exec_command(CommandForBrowser::SetStatus { status });
     }
 }

@@ -153,6 +153,24 @@ impl JsJsonDeserialize for i32 {
     }
 }
 
+impl JsJsonSerialize for u16 {
+    fn to_json(self) -> JsJson {
+        JsJson::Number(JsJsonNumber(self as f64))
+    }
+}
+
+impl JsJsonDeserialize for u16 {
+    fn from_json(context: JsJsonContext, json: JsJson) -> Result<Self, JsJsonContext> {
+        match json {
+            JsJson::Number(JsJsonNumber(value)) => Ok(value as u16),
+            other => {
+                let message = ["number(u32) expected, received ", other.typename()].concat();
+                Err(context.add(message))
+            }
+        }
+    }
+}
+
 impl JsJsonSerialize for bool {
     fn to_json(self) -> JsJson {
         match self {

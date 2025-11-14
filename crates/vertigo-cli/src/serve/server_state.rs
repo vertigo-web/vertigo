@@ -77,6 +77,14 @@ impl ServerState {
 
                         JsJson::Null
                     }
+                    CommandForBrowser::SetStatus { status } => {
+                        sender
+                            .send(Message::SetStatus(status))
+                            .inspect_err(|err| log::error!("Error sending FetchRequest: {err}"))
+                            .unwrap_or_default();
+
+                        JsJson::Null
+                    }
                 }
             }),
         );

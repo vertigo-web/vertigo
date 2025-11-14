@@ -2,7 +2,7 @@ use vertigo_macro::AutoJsJson;
 
 use crate::{
     css::css_manager::CssManager,
-    driver_module::api::{api_import, api_server_handler},
+    driver_module::api::{api_command_browser, api_import, api_server_handler},
     fetch::request_builder::{RequestBody, RequestBuilder},
     Context, Css, Dependencies, DropResource, FutureBox, Instant, JsJson, WebsocketMessage,
 };
@@ -331,7 +331,7 @@ impl Driver {
     /// ```
     pub fn set_status(&self, status: u16) {
         if self.is_server() {
-            api_import().set_status(status);
+            api_command_browser().set_status(status);
         }
     }
 
