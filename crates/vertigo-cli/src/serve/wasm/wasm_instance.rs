@@ -107,10 +107,6 @@ impl WasmInstance {
                         return 0;
                     }
 
-                    if let Ok(current_time) = match_date_now(&value) {
-                        return data_context.save_value(current_time).get_long_ptr();
-                    }
-
                     if let Ok(result) = match_interval(&value) {
                         match result {
                             CallWebsocketResult::TimeoutSet { time, callback } => {
@@ -134,10 +130,6 @@ impl WasmInstance {
 
                     if let Ok(()) = match_websocket(&value) {
                         return 0;
-                    }
-
-                    if match_is_browser(&value).is_ok() {
-                        return data_context.save_value(JsValue::False).get_long_ptr();
                     }
 
                     // push history router location

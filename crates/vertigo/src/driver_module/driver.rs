@@ -1,10 +1,7 @@
 use vertigo_macro::AutoJsJson;
 
 use crate::{
-    css::css_manager::CssManager,
-    driver_module::api::{api_command_browser, api_import, api_server_handler},
-    fetch::request_builder::{RequestBody, RequestBuilder},
-    Context, Css, Dependencies, DropResource, FutureBox, Instant, JsJson, WebsocketMessage,
+    Context, Css, Dependencies, DropResource, FutureBox, Instant, InstantType, JsJson, WebsocketMessage, css::css_manager::CssManager, driver_module::api::{api_command_browser, api_import, api_server_handler}, fetch::request_builder::{RequestBody, RequestBuilder}
 };
 use std::{future::Future, pin::Pin, rc::Rc};
 
@@ -153,8 +150,8 @@ impl Driver {
     }
 
     /// Gets current UTC timestamp
-    pub fn utc_now(&self) -> i64 {
-        api_import().utc_now()
+    pub fn utc_now(&self) -> InstantType {
+        api_command_browser().get_date_now()
     }
 
     /// Gets browsers time zone offset in seconds
@@ -248,7 +245,7 @@ impl Driver {
     /// };
     /// ```
     pub fn is_browser(&self) -> bool {
-        api_import().is_browser()
+        api_command_browser().is_browser()
     }
 
     pub fn is_server(&self) -> bool {

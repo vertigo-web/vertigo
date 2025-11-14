@@ -2,6 +2,7 @@ use std::rc::Rc;
 
 use vertigo_macro::store;
 
+use crate::dev::InstantType;
 use crate::dev::command::{decode_json, response_browser, CommandForBrowser};
 use crate::external_api::safe_wrappers;
 use crate::{driver_module::api::api_arguments, JsJson, JsJsonSerialize, JsValue, SsrFetchCache};
@@ -55,5 +56,17 @@ impl CommandForBrowserApi {
 
     pub fn set_status(&self, status: u16) {
         exec_command(CommandForBrowser::SetStatus { status });
+    }
+
+    pub fn is_browser(&self) -> bool {
+        let response = exec_command(CommandForBrowser::IsBrowser);
+        let response = decode_json::<response_browser::IsBrowser>(response);
+        response.value
+    }
+
+    pub fn get_date_now(&self) -> InstantType {
+        let response = exec_command(CommandForBrowser::GetDateNow);
+        let response = decode_json::<response_browser::GetDateNow>(response);
+        response.value
     }
 }

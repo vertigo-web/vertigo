@@ -158,7 +158,8 @@ pub use fetch::{
     resource::Resource,
 };
 pub use future_box::{FutureBox, FutureBoxSend};
-pub use instant::{Instant, InstantType};
+pub use instant::{Instant};
+pub use dev::InstantType;
 pub use websocket::{WebsocketConnection, WebsocketMessage};
 
 pub use dev::{
