@@ -17,6 +17,15 @@ use super::{
     wasm::{Message, WasmInstance},
 };
 
+use std::time::{Duration, SystemTime, UNIX_EPOCH};
+
+pub fn get_now() -> Duration {
+    let start = SystemTime::now();
+    start
+        .duration_since(UNIX_EPOCH)
+        .expect("Time went backwards")
+}
+
 #[derive(Clone)]
 pub struct ServerState {
     engine: Engine,
@@ -84,6 +93,18 @@ impl ServerState {
                             .unwrap_or_default();
 
                         JsJson::Null
+                    }
+                    CommandForBrowser::IsBrowser => {
+                        let response = response_browser::IsBrowser { value: false };
+
+                        response.to_json()
+                    }
+                    CommandForBrowser::GetDateNow => {
+                        let time = get_now().as_millis();
+
+                        let response = response_browser::GetDateNow { value: time as u64 };
+
+                        response.to_json()
                     }
                 }
             }),
