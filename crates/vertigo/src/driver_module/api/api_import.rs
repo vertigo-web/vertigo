@@ -555,17 +555,6 @@ impl ApiImport {
             path
         }
     }
-
-    /// Synthetic command to respond with custom status code from SSR
-    pub fn set_status(&self, status: u16) {
-        if self.is_browser() {
-            return;
-        }
-
-        DomAccess::default()
-            .synthetic("set_status", JsValue::U32(status as u32))
-            .exec();
-    }
 }
 
 use vertigo_macro::store;

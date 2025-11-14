@@ -164,15 +164,6 @@ pub fn match_interval(arg: &JsValue) -> Result<CallWebsocketResult, ()> {
     Ok(result)
 }
 
-pub fn match_is_set_status(arg: &JsValue) -> Result<u16, ()> {
-    let matcher = Match::new(arg)?;
-    let matcher = matcher.test_list(&["set_status"])?;
-    let (matcher, status) = matcher.u32()?;
-    matcher.end()?;
-
-    Ok(status as u16)
-}
-
 #[cfg(test)]
 mod tests {
     use vertigo::{JsJson, JsValue};
@@ -341,18 +332,6 @@ mod tests {
             match_interval(&value_other),
             Ok(CallWebsocketResult::NoResult)
         );
-    }
-
-    #[test]
-    fn test_match_is_set_status() {
-        let value = JsValue::List(vec![
-            JsValue::List(vec![JsValue::from("set_status")]),
-            JsValue::U32(404),
-        ]);
-        assert_eq!(match_is_set_status(&value), Ok(404u16));
-
-        let invalid_value = JsValue::List(vec![JsValue::from("set_status"), JsValue::from("404")]);
-        assert_eq!(match_is_set_status(&invalid_value), Err(()));
     }
 
     fn json_obj(items: Vec<(&str, JsJson)>) -> JsJson {
