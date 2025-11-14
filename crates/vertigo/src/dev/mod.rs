@@ -10,3 +10,6 @@ pub mod command;
 
 mod callback_id;
 pub use callback_id::CallbackId;
+
+/// Duration in seconds, returned from [Instant] methods.
+pub type InstantType = u64;

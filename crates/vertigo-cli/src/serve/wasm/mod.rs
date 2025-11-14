@@ -1,6 +1,5 @@
 mod data_context;
 mod decode_commands;
-mod get_now;
 mod js_value_match;
 mod message;
 mod wasm_instance;

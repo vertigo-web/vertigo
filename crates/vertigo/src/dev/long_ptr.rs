@@ -1,4 +1,4 @@
-#[derive(PartialEq, Eq, Hash, Clone, Copy)]
+#[derive(PartialEq, Eq, Hash, Clone, Copy, Debug)]
 pub struct LongPtr(u64);
 
 impl LongPtr {

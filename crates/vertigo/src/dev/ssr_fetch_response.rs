@@ -24,7 +24,7 @@ pub enum SsrFetchResponse {
     Err { message: String },
 }
 
-#[derive(AutoJsJson, Debug, Hash, Clone)]
+#[derive(AutoJsJson, Debug, Hash, Clone, Default)]
 pub struct SsrFetchCache {
     pub data: BTreeMap<SsrFetchRequest, SsrFetchResponse>,
 }

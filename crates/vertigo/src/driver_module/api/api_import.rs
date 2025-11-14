@@ -2,11 +2,11 @@ use std::rc::Rc;
 
 use crate::{
     driver_module::{
-        api::{callbacks::api_callbacks, panic_message::api_panic_message},
+        api::{api_command_browser, callbacks::api_callbacks, panic_message::api_panic_message},
         js_value::JsValue,
     },
     struct_mut::ValueMut,
-    transaction, DropResource, InstantType, JsJson, WebsocketConnection, WebsocketMessage,
+    transaction, DropResource, JsJson, WebsocketConnection, WebsocketMessage,
 };
 
 use super::api_dom_access::DomAccess;
@@ -87,7 +87,7 @@ impl ApiImport {
     }
 
     pub fn cookie_get_json(&self, cname: &str) -> JsJson {
-        if self.is_browser() {
+        if api_command_browser().is_browser() {
             let result = DomAccess::default()
                 .api()
                 .get("cookie")
@@ -105,7 +105,7 @@ impl ApiImport {
     }
 
     pub fn cookie_set(&self, cname: &str, cvalue: &str, expires_in: u64) {
-        if self.is_browser() {
+        if api_command_browser().is_browser() {
             DomAccess::default()
                 .api()
                 .get("cookie")
@@ -218,27 +218,6 @@ impl ApiImport {
 
         let drop = self.timeout_set(duration, callback_with_drop);
         drop_box.set(Some(drop));
-    }
-
-    pub fn instant_now(&self) -> InstantType {
-        self.utc_now() as InstantType
-    }
-
-    pub fn utc_now(&self) -> i64 {
-        let result = DomAccess::default()
-            .root("window")
-            .get("Date")
-            .call("now", vec![])
-            .fetch();
-
-        match result {
-            JsValue::I64(time) => time,
-            JsValue::F64(time) => time as i64,
-            _ => {
-                api_panic_message().show(format!("api.utc_now -> incorrect result {result:?}"));
-                0_i64
-            }
-        }
     }
 
     pub fn timezone_offset(&self) -> i32 {
@@ -502,24 +481,6 @@ impl ApiImport {
         }
     }
 
-    pub fn is_browser(&self) -> bool {
-        let result = DomAccess::default()
-            .api()
-            .call("isBrowser", Vec::new())
-            .fetch();
-
-        if let JsValue::True = result {
-            return true;
-        }
-
-        if let JsValue::False = result {
-            return false;
-        }
-
-        log::error!("logical value expected");
-        false
-    }
-
     pub fn get_env(&self, name: String) -> Option<String> {
         let result = DomAccess::default()
             .api()
@@ -540,7 +501,7 @@ impl ApiImport {
 
     pub fn route_from_public(&self, path: impl Into<String>) -> String {
         let path: String = path.into();
-        if self.is_browser() {
+        if api_command_browser().is_browser() {
             // In the browser use env variable attached during SSR
             let mount_point = self
                 .get_env("vertigo-mount-point".to_string())

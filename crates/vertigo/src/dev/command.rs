@@ -18,14 +18,28 @@ pub enum CommandForBrowser {
     SetStatus {
         status: u16,
     },
+    IsBrowser,
+    GetDateNow,
 }
 
 pub mod response_browser {
     use vertigo_macro::AutoJsJson;
 
+    use crate::dev::InstantType;
+
     #[derive(AutoJsJson)]
     pub struct FetchCacheGet {
         pub data: Option<String>,
+    }
+
+    #[derive(AutoJsJson)]
+    pub struct IsBrowser {
+        pub value: bool,
+    }
+
+    #[derive(AutoJsJson)]
+    pub struct GetDateNow {
+        pub value: InstantType,
     }
 }
 

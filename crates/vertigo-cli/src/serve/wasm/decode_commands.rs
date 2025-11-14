@@ -1,13 +1,5 @@
-use super::{get_now::get_now, js_value_match::Match, message::CallWebsocketResult};
+use super::{js_value_match::Match, message::CallWebsocketResult};
 use vertigo::{CallbackId, JsJson, JsValue};
-
-pub fn match_is_browser(arg: &JsValue) -> Result<(), ()> {
-    let matcher = Match::new(arg)?;
-    let matcher = matcher.test_list(&["api"])?;
-    let _ = matcher.test_list(&["call", "isBrowser"])?;
-
-    Ok(())
-}
 
 pub fn match_cookie_command(arg: &JsValue) -> Result<(), ()> {
     let matcher = Match::new(arg)?;
@@ -117,18 +109,6 @@ pub fn match_log(arg: &JsValue) -> Result<(String, String), ()> {
     Ok((log_type, log_message))
 }
 
-pub fn match_date_now(arg: &JsValue) -> Result<JsValue, ()> {
-    let matcher = Match::new(arg)?;
-
-    let matcher = matcher.test_list(&["root", "window"])?;
-    let matcher = matcher.test_list(&["get", "Date"])?;
-    let matcher = matcher.test_list(&["call", "now"])?;
-    matcher.end()?;
-
-    let time = get_now().as_millis();
-    Ok(JsValue::I64(time as i64))
-}
-
 pub fn match_websocket(arg: &JsValue) -> Result<(), ()> {
     let matcher = Match::new(arg)?;
 
@@ -169,21 +149,6 @@ mod tests {
     use vertigo::{JsJson, JsValue};
 
     use super::*;
-
-    #[test]
-    fn test_match_is_browser() {
-        let value = JsValue::List(vec![
-            JsValue::List(vec![JsValue::from("api")]),
-            JsValue::List(vec![JsValue::from("call"), JsValue::from("isBrowser")]),
-        ]);
-        assert_eq!(match_is_browser(&value), Ok(()));
-
-        let invalid_value = JsValue::List(vec![
-            JsValue::List(vec![JsValue::from("api")]),
-            JsValue::List(vec![JsValue::from("call"), JsValue::from("wrong")]),
-        ]);
-        assert_eq!(match_is_browser(&invalid_value), Err(()));
-    }
 
     #[test]
     fn test_match_cookie_command() {
@@ -281,17 +246,6 @@ mod tests {
             match_log(&value),
             Ok(("log".to_string(), "Hello world".to_string()))
         );
-    }
-
-    #[test]
-    fn test_match_date_now() {
-        let value = JsValue::List(vec![
-            JsValue::List(vec![JsValue::from("root"), JsValue::from("window")]),
-            JsValue::List(vec![JsValue::from("get"), JsValue::from("Date")]),
-            JsValue::List(vec![JsValue::from("call"), JsValue::from("now")]),
-        ]);
-        let result = match_date_now(&value);
-        assert!(result.is_ok());
     }
 
     #[test]

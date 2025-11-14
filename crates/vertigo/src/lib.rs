@@ -130,6 +130,7 @@ pub use css::{
     tailwind_class::TwClass,
 };
 
+pub use dev::InstantType;
 pub use dom::{
     attr_value::{AttrValue, CssAttrValue},
     callback::{Callback, Callback1},
@@ -158,7 +159,7 @@ pub use fetch::{
     resource::Resource,
 };
 pub use future_box::{FutureBox, FutureBoxSend};
-pub use instant::{Instant, InstantType};
+pub use instant::Instant;
 pub use websocket::{WebsocketConnection, WebsocketMessage};
 
 pub use dev::{
@@ -691,11 +692,42 @@ pub mod external_api {
 #[cfg(any(test, not(target_arch = "wasm32"), not(target_os = "unknown")))]
 pub mod external_api {
     pub mod safe_wrappers {
-        use crate::LongPtr;
+        use crate::{
+            command::{decode_json, response_browser, CommandForBrowser},
+            driver_module::api::api_arguments,
+            JsJson, JsJsonSerialize, JsValue, LongPtr,
+        };
 
         pub fn safe_panic_message(_long_ptr: LongPtr) {}
 
-        pub fn safe_dom_access(_long_ptr: LongPtr) -> LongPtr {
+        pub fn safe_dom_access(long_ptr: LongPtr) -> LongPtr {
+            let value = api_arguments().get_by_long_ptr(long_ptr);
+
+            if let JsValue::Json(json) = value {
+                let command = decode_json::<CommandForBrowser>(json);
+
+                let response = match command {
+                    CommandForBrowser::FetchCacheGet => {
+                        response_browser::FetchCacheGet { data: None }.to_json()
+                    }
+                    CommandForBrowser::FetchExec {
+                        request: _,
+                        callback: _,
+                    } => JsJson::Null,
+                    CommandForBrowser::SetStatus { status: _ } => JsJson::Null,
+                    CommandForBrowser::IsBrowser => {
+                        let response = response_browser::IsBrowser { value: false };
+                        response.to_json()
+                    }
+                    CommandForBrowser::GetDateNow => {
+                        let response = response_browser::GetDateNow { value: 0 };
+                        response.to_json()
+                    }
+                };
+
+                return JsValue::Json(response).to_ptr_long();
+            }
+
             LongPtr::from(0)
         }
     }

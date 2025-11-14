@@ -8,6 +8,8 @@ import { CallbackId } from "./types";
 
 type ExecType
     = 'FetchCacheGet'
+    | 'IsBrowser'
+    | 'GetDateNow'
     | {
         'FetchExec': {
             callback: CallbackId,
@@ -23,6 +25,18 @@ export const exec_command = (getWasm: () => ModuleControllerType<ExportType>, ar
 
     if (safeArg === 'FetchCacheGet') {
         return fetchCacheGet();
+    }
+
+    if (safeArg === 'IsBrowser') {
+        return {
+            value: true
+        };
+    }
+
+    if (safeArg === 'GetDateNow') {
+        return {
+            value: Date.now(),
+        };
     }
 
     if ('FetchExec' in safeArg) {
