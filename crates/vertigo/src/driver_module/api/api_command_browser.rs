@@ -2,16 +2,17 @@ use std::rc::Rc;
 
 use vertigo_macro::store;
 
-use crate::dev::browser_command::{browser_response, decode_json, BrowserCommand};
+use crate::{CallbackId, SsrFetchRequest};
+use crate::dev::command::{response_browser, decode_json, CommandBrowser};
 use crate::external_api::safe_wrappers;
 use crate::{driver_module::api::api_arguments, JsJson, JsJsonSerialize, JsValue, SsrFetchCache};
 
 #[store]
-pub fn api_browser_command() -> Rc<ApiBrowserCommand> {
-    Rc::new(ApiBrowserCommand {})
+pub fn api_command_browser() -> Rc<ApiCommandBrowser> {
+    Rc::new(ApiCommandBrowser {})
 }
 
-fn exec_command(command: BrowserCommand) -> JsJson {
+fn exec_command(command: CommandBrowser) -> JsJson {
     let arg_ptr = JsValue::Json(command.to_json()).to_ptr_long();
     let response = safe_wrappers::safe_dom_access(arg_ptr);
     let response = api_arguments().get_by_long_ptr(response);
@@ -23,13 +24,13 @@ fn exec_command(command: BrowserCommand) -> JsJson {
     response
 }
 
-pub struct ApiBrowserCommand {}
+pub struct ApiCommandBrowser {}
 
-impl ApiBrowserCommand {
+impl ApiCommandBrowser {
     pub fn fetch_cache_get(&self) -> SsrFetchCache {
-        let response = exec_command(BrowserCommand::FetchCacheGet);
+        let response = exec_command(CommandBrowser::FetchCacheGet);
 
-        let response = decode_json::<browser_response::FetchCacheGet>(response);
+        let response = decode_json::<response_browser::FetchCacheGet>(response);
 
         match response.data {
             Some(data) => {
@@ -46,4 +47,10 @@ impl ApiBrowserCommand {
             None => SsrFetchCache::empty(),
         }
     }
+
+    pub fn fetch_exec(&self, request: SsrFetchRequest, callback: CallbackId) {
+        exec_command(CommandBrowser::FetchExec { request, callback });
+    }
+
+    //...
 }

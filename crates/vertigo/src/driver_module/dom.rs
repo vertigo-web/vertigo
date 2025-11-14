@@ -5,8 +5,8 @@ use crate::struct_mut::{HashMapMut, VecMut};
 use crate::{DomId, DropResource, JsJson};
 
 use super::StaticString;
+use vertigo::dev::CallbackId;
 use super::{
-    api::CallbackId,
     dom_command::{sort_commands, DriverDomCommand},
 };
 use crate::driver_module::api::api_import;

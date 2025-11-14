@@ -1,4 +1,5 @@
 use vertigo::{JsJson, SsrFetchRequest, SsrFetchResponse};
+use vertigo::CallbackId;
 
 #[derive(Debug)]
 pub enum Message {
@@ -6,10 +7,10 @@ pub enum Message {
     DomUpdate(JsJson),
     Panic(Option<String>),
     SetTimeoutZero {
-        callback_id: u64,
+        callback: CallbackId,
     },
     FetchRequest {
-        callback_id: u64,
+        callback: CallbackId,
         request: SsrFetchRequest,
     },
     FetchResponse {
@@ -21,6 +22,6 @@ pub enum Message {
 
 #[derive(Debug, PartialEq)]
 pub enum CallWebsocketResult {
-    TimeoutSet { time: u32, callback_id: u64 },
+    TimeoutSet { time: u32, callback: CallbackId },
     NoResult,
 }

@@ -1,8 +1,8 @@
 use reqwest::StatusCode;
 use std::{collections::HashMap, process::exit, sync::Arc};
 use tokio::sync::mpsc::UnboundedSender;
-use vertigo::browser_command::{decode_json, BrowserCommand};
-use vertigo::{JsJson, JsJsonSerialize, JsValue, LongPtr, SsrFetchResponse};
+use vertigo::command::{decode_json, CommandBrowser};
+use vertigo::{CallbackId, JsJson, JsJsonSerialize, JsValue, LongPtr, SsrFetchResponse};
 use wasmtime::{Caller, Engine, Func, Instance, Module, Store};
 
 use crate::{
@@ -27,7 +27,7 @@ impl WasmInstance {
         engine: &Engine,
         module: &Module,
         request: RequestState,
-        handle_command: Arc<dyn Fn(BrowserCommand) -> JsJson + 'static + Send + Sync>,
+        handle_command: Arc<dyn Fn(CommandBrowser) -> JsJson + 'static + Send + Sync>,
     ) -> Self {
         let url = request.url.clone();
         let mut store = Store::new(engine, request.clone());
@@ -57,7 +57,7 @@ impl WasmInstance {
                     let value = data_context.get_value_long_ptr(long_ptr);
 
                     if let JsValue::Json(arg) = value {
-                        let result = decode_json::<BrowserCommand>(arg);
+                        let result = decode_json::<CommandBrowser>(arg);
 
                         let result = handle_command(result);
                         let result = JsValue::Json(result);
@@ -113,10 +113,10 @@ impl WasmInstance {
 
                     if let Ok(result) = match_interval(&value) {
                         match result {
-                            CallWebsocketResult::TimeoutSet { time, callback_id } => {
+                            CallWebsocketResult::TimeoutSet { time, callback } => {
                                 if time == 0 {
                                     sender
-                                        .send(Message::SetTimeoutZero { callback_id })
+                                        .send(Message::SetTimeoutZero { callback })
                                         .inspect_err(|err| {
                                             log::error!("Error sending SetTimeoutZero: {err}")
                                         })
@@ -133,17 +133,6 @@ impl WasmInstance {
                     }
 
                     if let Ok(()) = match_websocket(&value) {
-                        return 0;
-                    }
-
-                    if let Ok((callback_id, request)) = match_fetch(&value) {
-                        sender
-                            .send(Message::FetchRequest {
-                                callback_id,
-                                request,
-                            })
-                            .inspect_err(|err| log::error!("Error sending FetchRequest: {err}"))
-                            .unwrap_or_default();
                         return 0;
                     }
 
@@ -223,14 +212,14 @@ impl WasmInstance {
         .unwrap_or_default();
     }
 
-    pub fn wasm_callback(&mut self, callback_id: u64, params: JsValue) -> JsValue {
+    pub fn wasm_callback(&mut self, callback: CallbackId, params: JsValue) -> JsValue {
         let mut data_context = DataContext::from_store(&mut self.store, self.instance);
         let params_ptr = data_context.save_value(params);
 
         let result = self
             .call_function::<(u64, u64), u64>(
                 "vertigo_export_wasm_callback",
-                (callback_id, params_ptr.get_long_ptr()),
+                (callback.as_u64(), params_ptr.get_long_ptr()),
             )
             .inspect_err(|err| log::error!("Error calling callback: {err}"))
             .unwrap_or_default();
@@ -312,10 +301,10 @@ impl WasmInstance {
         })
     }
 
-    pub fn send_fetch_response(&mut self, callback_id: u64, response: SsrFetchResponse) {
+    pub fn send_fetch_response(&mut self, callback: CallbackId, response: SsrFetchResponse) {
         let json = response.to_json();
 
-        let result = self.wasm_callback(callback_id, JsValue::Json(json));
+        let result = self.wasm_callback(callback, JsValue::Json(json));
         assert_eq!(result, JsValue::Undefined);
     }
 }

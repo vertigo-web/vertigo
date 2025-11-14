@@ -2,7 +2,7 @@
 
 use std::collections::{BTreeMap, BTreeSet};
 
-use crate::driver_module::api::CallbackId;
+use crate::dev::CallbackId;
 use crate::driver_module::StaticString;
 use crate::{get_driver, DomId, DriverDomCommand};
 

@@ -1,35 +1,8 @@
 use std::rc::Rc;
-use std::sync::atomic::{AtomicU64, Ordering};
 
 use crate::{
-    struct_mut::{HashMapMut, ValueMut},
-    DropResource, JsValue,
+    DropResource, JsValue, dev::CallbackId, struct_mut::{HashMapMut, ValueMut}
 };
-
-#[derive(PartialEq, Eq, Hash, Clone, Debug, Copy)]
-pub struct CallbackId(u64);
-
-static COUNTER: AtomicU64 = AtomicU64::new(1);
-
-impl CallbackId {
-    #[allow(clippy::new_without_default)]
-    pub fn new() -> CallbackId {
-        CallbackId(COUNTER.fetch_add(1, Ordering::Relaxed))
-    }
-
-    pub fn as_u64(&self) -> u64 {
-        self.0
-    }
-
-    pub fn from_u64(id: u64) -> Self {
-        Self(id)
-    }
-
-    #[cfg(test)]
-    pub fn reset() {
-        COUNTER.store(1, Ordering::Relaxed)
-    }
-}
 
 type CallBackFn = dyn Fn(JsValue) -> JsValue + 'static;
 
