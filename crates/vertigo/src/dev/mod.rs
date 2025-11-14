@@ -6,4 +6,7 @@ pub use ssr_fetch_response::{
     SsrFetchCache, SsrFetchRequest, SsrFetchRequestBody, SsrFetchResponse,
 };
 
-pub mod browser_command;
+pub mod command;
+
+mod callback_id;
+pub use callback_id::CallbackId;

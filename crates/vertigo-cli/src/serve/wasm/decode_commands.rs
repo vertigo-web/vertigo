@@ -1,5 +1,5 @@
 use super::{get_now::get_now, js_value_match::Match, message::CallWebsocketResult};
-use vertigo::{from_json, JsJson, JsValue, SsrFetchRequest};
+use vertigo::{CallbackId, JsJson, JsValue};
 
 pub fn match_is_browser(arg: &JsValue) -> Result<(), ()> {
     let matcher = Match::new(arg)?;
@@ -150,33 +150,13 @@ pub fn match_interval(arg: &JsValue) -> Result<CallWebsocketResult, ()> {
             let (matcher, time) = matcher.u32()?;
             let (_, callback_id) = matcher.u64()?;
 
-            return Ok(CallWebsocketResult::TimeoutSet { time, callback_id });
+            return Ok(CallWebsocketResult::TimeoutSet {
+                time,
+                callback: CallbackId::from_u64(callback_id),
+            });
         }
 
         Ok(CallWebsocketResult::NoResult)
-    })?;
-
-    matcher.end()?;
-
-    Ok(result)
-}
-
-pub fn match_fetch(arg: &JsValue) -> Result<(u64, SsrFetchRequest), ()> {
-    let matcher = Match::new(arg)?;
-
-    let matcher = matcher.test_list(&["api"])?;
-    let matcher = matcher.test_list(&["get", "fetch"])?;
-
-    let (matcher, result) = matcher.test_list_with_fn(|matcher| {
-        let matcher = matcher.str("call")?;
-        let matcher = matcher.str("fetch_send_request")?;
-        let (matcher, callback_id) = matcher.u64()?;
-        let (matcher, request) = matcher.json()?;
-        matcher.end()?;
-
-        let request = from_json::<SsrFetchRequest>(request).unwrap(); //TODO - lepiej to obsłuzyc
-
-        Ok((callback_id, request))
     })?;
 
     matcher.end()?;
@@ -195,7 +175,7 @@ pub fn match_is_set_status(arg: &JsValue) -> Result<u16, ()> {
 
 #[cfg(test)]
 mod tests {
-    use vertigo::{JsJson, JsJsonNumber, JsValue};
+    use vertigo::{JsJson, JsValue};
 
     use super::*;
 
@@ -348,7 +328,7 @@ mod tests {
             match_interval(&value_set),
             Ok(CallWebsocketResult::TimeoutSet {
                 time: 1000,
-                callback_id: 99
+                callback: CallbackId::from_u64(99),
             })
         );
 
@@ -381,9 +361,5 @@ mod tests {
 
     fn json_str(val: &str) -> JsJson {
         JsJson::String(val.to_string())
-    }
-
-    fn json_num(val: f64) -> JsJson {
-        JsJson::Number(JsJsonNumber(val))
     }
 }

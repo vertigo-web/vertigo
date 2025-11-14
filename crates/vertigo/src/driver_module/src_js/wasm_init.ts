@@ -1,3 +1,5 @@
+import { GuardJsValue } from './guard';
+import { JsJsonType } from './jsjson';
 import { jsValueDecode, saveToBufferLongPtr } from './jsvalue';
 import { JsValueType } from './jsvalue_types';
 
@@ -5,6 +7,7 @@ export interface BaseExportType {
     vertigo_export_alloc_block: (size: number) => bigint,
     vertigo_export_free_block: (pointer: bigint) => void,
     vertigo_export_wasm_callback: (callback_id: bigint, value_ptr: bigint) => bigint,   //result => pointer: 32bit, size: 32bit
+    vertigo_export_wasm_command: (value_ptr: bigint) => bigint,
 };
 
 export interface ModuleControllerType<ExportType extends BaseExportType> {
@@ -12,6 +15,7 @@ export interface ModuleControllerType<ExportType extends BaseExportType> {
     decodeArgumentsLong: (long_ptr: bigint) => JsValueType,
     getUint8Memory: () => Uint8Array,
     wasm_callback: (callback_id: bigint, params: JsValueType) => JsValueType,
+    wasm_command: (params: JsJsonType) => JsJsonType,
     valueSaveToBufferLong: (value: JsValueType) => bigint,
 }
 
@@ -75,11 +79,28 @@ export const wasmInit = async <ImportType extends Record<string, Function>, Expo
         return decodeArgumentsLong(result_long_ptr);
     };
 
+    const wasm_command = (value: JsJsonType): JsJsonType => {
+        const value_ptr = valueSaveToBufferLong({
+            type: 14,
+            value
+        });
+        let result_long_ptr = exports.vertigo_export_wasm_command(value_ptr);
+        const result = decodeArgumentsLong(result_long_ptr);
+
+        if (GuardJsValue.isJson(result)) {
+            return result.value;
+        }
+
+        throw Error('Json expected');
+    };
+    
+
     return {
         exports,
         decodeArgumentsLong,
         getUint8Memory,
         wasm_callback,
+        wasm_command,
         valueSaveToBufferLong,
     };
 };

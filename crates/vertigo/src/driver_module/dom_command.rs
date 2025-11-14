@@ -1,6 +1,7 @@
 use crate::{DomId, JsJson, JsJsonObjectBuilder};
 
-use super::{api::CallbackId, StaticString};
+use super::StaticString;
+use crate::dev::CallbackId;
 
 #[derive(Clone, Debug)]
 pub enum DriverDomCommand {

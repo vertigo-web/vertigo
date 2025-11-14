@@ -2,7 +2,7 @@ use std::collections::BTreeMap;
 use std::time::Duration;
 
 use crate::{
-    dev::SsrFetchRequestBody, driver_module::api::api_import, from_json, FetchMethod, JsJson,
+    dev::SsrFetchRequestBody, driver_module::api::api_fetch, from_json, FetchMethod, JsJson,
     JsJsonDeserialize, JsJsonSerialize, LazyCache, SsrFetchRequest, SsrFetchResponse,
 };
 
@@ -141,7 +141,7 @@ impl RequestBuilder {
     pub async fn call(self) -> RequestResponse {
         let request = self.to_request();
 
-        let result = api_import().fetch(request.clone()).await;
+        let result = api_fetch().fetch(request.clone()).await;
 
         RequestResponse::new(request, result)
     }
