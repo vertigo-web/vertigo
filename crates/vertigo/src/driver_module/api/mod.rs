@@ -8,7 +8,7 @@ mod api_arguments;
 pub use api_arguments::api_arguments;
 
 mod callbacks;
-pub use callbacks::{api_callbacks, CallbackId};
+pub use callbacks::api_callbacks;
 
 mod panic_message;
 pub use panic_message::api_panic_message;
@@ -19,5 +19,14 @@ pub use server_handler::api_server_handler;
 mod api_fetch_cache;
 pub use api_fetch_cache::api_fetch_cache;
 
-mod api_browser_command;
-pub use api_browser_command::api_browser_command;
+mod api_command_browser;
+pub use api_command_browser::api_command_browser;
+
+mod api_command_wasm;
+pub use api_command_wasm::api_command_wasm;
+
+mod api_fetch;
+pub use api_fetch::api_fetch;
+
+mod utils;
+pub use utils::CallbackStore;

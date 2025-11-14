@@ -1,14 +1,12 @@
-use std::{future::Future, pin::Pin, rc::Rc};
+use std::rc::Rc;
 
 use crate::{
     driver_module::{
         api::{callbacks::api_callbacks, panic_message::api_panic_message},
         js_value::JsValue,
     },
-    get_driver,
     struct_mut::ValueMut,
-    transaction, DropResource, FutureBox, InstantType, JsJson, JsJsonContext, JsJsonDeserialize,
-    JsJsonSerialize, SsrFetchRequest, SsrFetchResponse, WebsocketConnection, WebsocketMessage,
+    transaction, DropResource, InstantType, JsJson, WebsocketConnection, WebsocketMessage,
 };
 
 use super::api_dom_access::DomAccess;
@@ -400,50 +398,6 @@ impl ApiImport {
 
     ///////////////////////////////////////////////////////////////////////////////////
     ///////////////////////////////////////////////////////////////////////////////////
-
-    pub fn fetch(
-        &self,
-        request: SsrFetchRequest,
-    ) -> Pin<Box<dyn Future<Output = SsrFetchResponse> + 'static>> {
-        let (sender, receiver) = FutureBox::<SsrFetchResponse>::new();
-
-        let callback_id = api_callbacks().register_once(move |params| {
-            let JsValue::Json(params) = params else {
-                log::error!("Expected json");
-                return JsValue::Undefined;
-            };
-
-            let response = SsrFetchResponse::from_json(JsJsonContext::new("'"), params)
-                .map_err(|error| error.convert_to_string());
-
-            match response {
-                Ok(response) => {
-                    get_driver().transaction(|_| {
-                        sender.publish(response);
-                    });
-                }
-                Err(error) => {
-                    log::error!("export_fetch_callback -> params decode error -> {error}");
-                }
-            }
-
-            JsValue::Undefined
-        });
-
-        DomAccess::default()
-            .api()
-            .get("fetch")
-            .call(
-                "fetch_send_request",
-                vec![
-                    JsValue::U64(callback_id.as_u64()),
-                    JsValue::Json(request.to_json()),
-                ],
-            )
-            .exec();
-
-        Box::pin(receiver)
-    }
 
     #[must_use]
     pub fn websocket<F: Fn(WebsocketMessage) + 'static>(

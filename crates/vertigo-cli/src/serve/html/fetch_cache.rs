@@ -4,10 +4,10 @@ use std::{
 };
 
 use parking_lot::RwLock;
-use vertigo::{SsrFetchRequest, SsrFetchResponse};
+use vertigo::{CallbackId, SsrFetchRequest, SsrFetchResponse};
 
 pub struct FetchCache {
-    pub fetch_waiting: HashMap<SsrFetchRequest, Vec<u64>>,
+    pub fetch_waiting: HashMap<SsrFetchRequest, Vec<CallbackId>>,
     pub fetch_cache: BTreeMap<SsrFetchRequest, SsrFetchResponse>,
 }
 

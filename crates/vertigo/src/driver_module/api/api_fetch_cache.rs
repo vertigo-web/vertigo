@@ -3,7 +3,7 @@ use std::rc::Rc;
 use vertigo_macro::store;
 
 use crate::{
-    driver_module::api::api_browser_command, struct_mut::ValueMut, SsrFetchCache, SsrFetchRequest,
+    driver_module::api::api_command_browser, struct_mut::ValueMut, SsrFetchCache, SsrFetchRequest,
     SsrFetchResponse,
 };
 
@@ -20,7 +20,7 @@ pub struct FetchCache {
 
 impl FetchCache {
     pub fn init_cache(&self) {
-        let cache = api_browser_command().fetch_cache_get();
+        let cache = api_command_browser().fetch_cache_get();
         self.cache.set(Rc::new(cache));
 
         log::info!("FetchCache init");

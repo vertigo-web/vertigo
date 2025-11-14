@@ -4,12 +4,10 @@ use std::rc::Rc;
 use crate::struct_mut::{HashMapMut, VecMut};
 use crate::{DomId, DropResource, JsJson};
 
+use super::dom_command::{sort_commands, DriverDomCommand};
 use super::StaticString;
-use super::{
-    api::CallbackId,
-    dom_command::{sort_commands, DriverDomCommand},
-};
 use crate::driver_module::api::api_import;
+use vertigo::dev::CallbackId;
 
 struct Commands {
     commands: VecMut<DriverDomCommand>,

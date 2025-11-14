@@ -1,7 +1,7 @@
 use std::{collections::HashMap, sync::Arc};
 use tokio::sync::mpsc::{error::TryRecvError, unbounded_channel};
-use vertigo::browser_command::{browser_response, BrowserCommand};
-use vertigo::JsJsonSerialize;
+use vertigo::command::{response_browser, CommandForBrowser};
+use vertigo::{JsJson, JsJsonSerialize};
 use wasmtime::{Engine, Module};
 
 use crate::{
@@ -63,11 +63,19 @@ impl ServerState {
             &self.module,
             request,
             Arc::new({
-                move |command| match command {
-                    BrowserCommand::FetchCacheGet => {
-                        let response = browser_response::FetchCacheGet { data: None };
+                let sender = sender.clone();
 
-                        return response.to_json();
+                move |command| match command {
+                    CommandForBrowser::FetchCacheGet => {
+                        response_browser::FetchCacheGet { data: None }.to_json()
+                    }
+                    CommandForBrowser::FetchExec { request, callback } => {
+                        sender
+                            .send(Message::FetchRequest { callback, request })
+                            .inspect_err(|err| log::error!("Error sending FetchRequest: {err}"))
+                            .unwrap_or_default();
+
+                        JsJson::Null
                     }
                 }
             }),

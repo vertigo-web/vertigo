@@ -86,24 +86,21 @@ impl HtmlResponse {
                     message.unwrap_or_else(|| "panic message decoding problem".to_string());
                 Some(ResponseState::internal_error(message))
             }
-            Message::SetTimeoutZero { callback_id } => {
-                let result = self.inst.wasm_callback(callback_id, JsValue::Undefined);
+            Message::SetTimeoutZero { callback } => {
+                let result = self.inst.wasm_callback(callback, JsValue::Undefined);
                 assert_eq!(result, JsValue::Undefined);
                 None
             }
-            Message::FetchRequest {
-                request,
-                callback_id,
-            } => {
+            Message::FetchRequest { request, callback } => {
                 let mut guard = self.fetch.write();
 
                 if let Some(response) = guard.fetch_cache.get(&request) {
-                    self.inst.send_fetch_response(callback_id, response.clone());
+                    self.inst.send_fetch_response(callback, response.clone());
                     return None;
                 }
 
                 if let Some(callbacks) = guard.fetch_waiting.get_mut(&request) {
-                    callbacks.push(callback_id);
+                    callbacks.push(callback);
                 } else {
                     tokio::spawn({
                         let request = request.clone();
@@ -121,7 +118,7 @@ impl HtmlResponse {
                         }
                     });
 
-                    guard.fetch_waiting.insert(request, vec![callback_id]);
+                    guard.fetch_waiting.insert(request, vec![callback]);
                 }
                 None
             }

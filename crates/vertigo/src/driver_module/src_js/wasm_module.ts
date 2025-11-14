@@ -17,7 +17,9 @@ export type ImportType = {
 export type ExportType = {
     vertigo_export_alloc_block: (size: number) => bigint,
     vertigo_export_free_block: (pointer: bigint) => void,
+    //TODO - This function is to be removed eventually.
     vertigo_export_wasm_callback: (callback_id: bigint, value_ptr: bigint) => bigint,
+    vertigo_export_wasm_command: (value_ptr: bigint) => bigint,
     vertigo_entry_function: (major: number, minor: number) => void,
 }
 
@@ -67,7 +69,7 @@ export class WasmModule {
 
                     //new wersion
                     if (GuardJsValue.isJson(args)) {
-                        const response = exec_command(args);
+                        const response = exec_command(getWasm, args.value);
                         return getWasm().valueSaveToBufferLong({
                             type: JsValueConst.Json,
                             value: response

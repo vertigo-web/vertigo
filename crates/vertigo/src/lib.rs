@@ -142,6 +142,7 @@ pub use dom::{
     events::{ClickEvent, DropFileEvent, DropFileItem, KeyDownEvent},
 };
 pub use dom_macro::{AttrGroup, AttrGroupValue, EmbedDom};
+use driver_module::init_env::init_env;
 pub use driver_module::{
     api::ApiImport,
     dom_command::DriverDomCommand,
@@ -151,7 +152,6 @@ pub use driver_module::{
         JsJsonObjectBuilder, JsJsonSerialize, JsValue, MemoryBlock,
     },
 };
-use driver_module::{api::CallbackId, init_env::init_env};
 pub use fetch::{
     lazy_cache::{self, LazyCache},
     request_builder::{RequestBody, RequestBuilder, RequestResponse},
@@ -162,7 +162,8 @@ pub use instant::{Instant, InstantType};
 pub use websocket::{WebsocketConnection, WebsocketMessage};
 
 pub use dev::{
-    browser_command, LongPtr, SsrFetchCache, SsrFetchRequest, SsrFetchRequestBody, SsrFetchResponse,
+    command, CallbackId, LongPtr, SsrFetchCache, SsrFetchRequest, SsrFetchRequestBody,
+    SsrFetchResponse,
 };
 
 /// Allows to include a static file
@@ -607,7 +608,7 @@ pub use driver_module::driver::{
 };
 
 use crate::driver_module::api::{
-    api_arguments, api_callbacks, api_fetch_cache, api_server_handler,
+    api_arguments, api_callbacks, api_command_wasm, api_fetch_cache, api_server_handler,
 };
 
 // Methods for memory allocation
@@ -627,6 +628,8 @@ pub fn vertigo_export_free_block(long_ptr: u64) {
 
 // Callbacks gateways
 
+//TODO - This method should ultimately be removed.
+
 #[doc(hidden)]
 #[no_mangle]
 pub fn vertigo_export_wasm_callback(callback_id: u64, value_long_ptr: u64) -> u64 {
@@ -642,6 +645,20 @@ pub fn vertigo_export_wasm_callback(callback_id: u64, value_long_ptr: u64) -> u6
     });
 
     result.to_ptr_long().get_long_ptr()
+}
+
+#[doc(hidden)]
+#[no_mangle]
+pub fn vertigo_export_wasm_command(value_long_ptr: u64) -> u64 {
+    let value_long_ptr = LongPtr::from(value_long_ptr);
+    let value = api_arguments().get_by_long_ptr(value_long_ptr);
+
+    let JsValue::Json(json) = value else {
+        panic!("Expected JsJson, received {}", value.typename());
+    };
+
+    let response = api_command_wasm().command_from_js(json);
+    JsValue::Json(response).to_ptr_long().get_long_ptr()
 }
 
 #[cfg(all(not(test), target_arch = "wasm32", target_os = "unknown"))]
