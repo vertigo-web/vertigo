@@ -1,4 +1,5 @@
 pub mod api;
+pub mod constructor;
 mod dom;
 pub mod dom_command;
 pub mod driver;

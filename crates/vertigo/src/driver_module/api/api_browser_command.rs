@@ -9,7 +9,7 @@ use crate::{driver_module::api::api_arguments, JsJson, JsJsonSerialize, JsValue,
 use crate::{CallbackId, SsrFetchRequest};
 
 #[store]
-pub fn api_command_browser() -> Rc<CommandForBrowserApi> {
+pub fn api_browser_command() -> Rc<CommandForBrowserApi> {
     Rc::new(CommandForBrowserApi {})
 }
 

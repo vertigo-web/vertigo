@@ -19,8 +19,8 @@ pub use server_handler::api_server_handler;
 mod api_fetch_cache;
 pub use api_fetch_cache::api_fetch_cache;
 
-mod api_command_browser;
-pub use api_command_browser::api_command_browser;
+mod api_browser_command;
+pub use api_browser_command::api_browser_command;
 
 mod api_command_wasm;
 pub use api_command_wasm::api_command_wasm;

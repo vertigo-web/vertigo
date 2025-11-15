@@ -1,5 +1,5 @@
 use crate::{
-    driver_module::api::{api_command_browser, CallbackStore},
+    driver_module::api::{api_browser_command, CallbackStore},
     CallbackId, FutureBox, SsrFetchRequest, SsrFetchResponse,
 };
 use std::rc::Rc;
@@ -28,7 +28,7 @@ impl ApiFetch {
             sender.publish(response);
         });
 
-        api_command_browser().fetch_exec(request, callback);
+        api_browser_command().fetch_exec(request, callback);
         let response = receiver.await;
         response
     }
