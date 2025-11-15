@@ -27,7 +27,7 @@ pub mod safe_wrappers {
 #[cfg(any(test, not(target_arch = "wasm32"), not(target_os = "unknown")))]
 pub mod safe_wrappers {
     use crate::{
-        command::{decode_json, response_browser, CommandForBrowser},
+        command::{browser_response, decode_json, CommandForBrowser},
         driver_module::api::api_arguments,
         JsJson, JsJsonSerialize, JsValue, LongPtr,
     };
@@ -38,28 +38,35 @@ pub mod safe_wrappers {
         let value = api_arguments().get_by_long_ptr(long_ptr);
 
         if let JsValue::Json(json) = value {
-            let command = decode_json::<CommandForBrowser>(json);
+            let command_res = decode_json::<CommandForBrowser>(json);
 
-            let response = match command {
-                CommandForBrowser::FetchCacheGet => {
-                    response_browser::FetchCacheGet { data: None }.to_json()
-                }
-                CommandForBrowser::FetchExec {
-                    request: _,
-                    callback: _,
-                } => JsJson::Null,
-                CommandForBrowser::SetStatus { status: _ } => JsJson::Null,
-                CommandForBrowser::IsBrowser => {
-                    let response = response_browser::IsBrowser { value: false };
-                    response.to_json()
-                }
-                CommandForBrowser::GetDateNow => {
-                    let response = response_browser::GetDateNow { value: 0 };
-                    response.to_json()
-                }
-            };
+            match command_res {
+                Ok(command) => {
+                    let response = match command {
+                        CommandForBrowser::FetchCacheGet => {
+                            browser_response::FetchCacheGet { data: None }.to_json()
+                        }
+                        CommandForBrowser::FetchExec {
+                            request: _,
+                            callback: _,
+                        } => JsJson::Null,
+                        CommandForBrowser::SetStatus { status: _ } => JsJson::Null,
+                        CommandForBrowser::IsBrowser => {
+                            let response = browser_response::IsBrowser { value: false };
+                            response.to_json()
+                        }
+                        CommandForBrowser::GetDateNow => {
+                            let response = browser_response::GetDateNow { value: 0 };
+                            response.to_json()
+                        }
+                    };
 
-            return JsValue::Json(response).to_ptr_long();
+                    return JsValue::Json(response).to_ptr_long();
+                }
+                Err(err) => {
+                    log::error!("safe_dom_access -> decode error = {err}");
+                }
+            }
         }
 
         LongPtr::from(0)

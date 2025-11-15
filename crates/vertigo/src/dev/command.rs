@@ -4,8 +4,8 @@ use crate::{
 };
 use vertigo_macro::AutoJsJson;
 
-pub fn decode_json<T: JsJsonDeserialize>(json: JsJson) -> T {
-    T::from_json(JsJsonContext::new(""), json).unwrap()
+pub fn decode_json<T: JsJsonDeserialize>(json: JsJson) -> Result<T, JsJsonContext> {
+    T::from_json(JsJsonContext::new(""), json)
 }
 
 #[derive(AutoJsJson, Debug)]
@@ -22,7 +22,7 @@ pub enum CommandForBrowser {
     GetDateNow,
 }
 
-pub mod response_browser {
+pub mod browser_response {
     use vertigo_macro::AutoJsJson;
 
     use crate::dev::InstantType;
