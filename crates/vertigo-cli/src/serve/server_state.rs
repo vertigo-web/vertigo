@@ -4,7 +4,7 @@ use std::{
     time::{Duration, SystemTime, UNIX_EPOCH},
 };
 use tokio::sync::mpsc::{error::TryRecvError, unbounded_channel};
-use vertigo::command::{response_browser, CommandForBrowser};
+use vertigo::command::{browser_response, CommandForBrowser};
 use vertigo::{JsJson, JsJsonSerialize};
 use wasmtime::{Engine, Module};
 
@@ -78,7 +78,7 @@ impl ServerState {
 
                 move |command| match command {
                     CommandForBrowser::FetchCacheGet => {
-                        response_browser::FetchCacheGet { data: None }.to_json()
+                        browser_response::FetchCacheGet { data: None }.to_json()
                     }
                     CommandForBrowser::FetchExec { request, callback } => {
                         sender
@@ -97,14 +97,14 @@ impl ServerState {
                         JsJson::Null
                     }
                     CommandForBrowser::IsBrowser => {
-                        let response = response_browser::IsBrowser { value: false };
+                        let response = browser_response::IsBrowser { value: false };
 
                         response.to_json()
                     }
                     CommandForBrowser::GetDateNow => {
                         let time = get_now().as_millis();
 
-                        let response = response_browser::GetDateNow { value: time as u64 };
+                        let response = browser_response::GetDateNow { value: time as u64 };
 
                         response.to_json()
                     }

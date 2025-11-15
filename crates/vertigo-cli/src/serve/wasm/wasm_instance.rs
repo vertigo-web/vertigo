@@ -57,11 +57,19 @@ impl WasmInstance {
                     let value = data_context.get_value_long_ptr(long_ptr);
 
                     if let JsValue::Json(arg) = value {
-                        let result = decode_json::<CommandForBrowser>(arg);
+                        let result = decode_json::<CommandForBrowser>(arg)
+                            .map(&*handle_command)
+                            .map(JsValue::Json);
 
-                        let result = handle_command(result);
-                        let result = JsValue::Json(result);
-                        return data_context.save_value(result).get_long_ptr();
+                        match result {
+                            Ok(result) => {
+                                return data_context.save_value(result).get_long_ptr();
+                            }
+                            Err(err) => {
+                                log::error!("import_dom_access -> decode error = {err}");
+                                return 0;
+                            }
+                        }
                     };
 
                     // Ignore cookie operations
@@ -138,7 +146,7 @@ impl WasmInstance {
                         return 0;
                     }
 
-                    log::error!("unsupported message: {value:#?}");
+                    log::error!("import_dom_access -> unsupported message: {value:#?}");
                     0
                 },
             )

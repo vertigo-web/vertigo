@@ -2,7 +2,7 @@ use std::rc::Rc;
 
 use vertigo_macro::store;
 
-use crate::dev::command::{decode_json, response_browser, CommandForBrowser};
+use crate::dev::command::{browser_response, decode_json, CommandForBrowser};
 use crate::dev::InstantType;
 use crate::external_api::safe_wrappers;
 use crate::{driver_module::api::api_arguments, JsJson, JsJsonSerialize, JsValue, SsrFetchCache};
@@ -30,24 +30,33 @@ pub struct CommandForBrowserApi {}
 
 impl CommandForBrowserApi {
     pub fn fetch_cache_get(&self) -> SsrFetchCache {
-        let response = exec_command(CommandForBrowser::FetchCacheGet);
+        let command_result = exec_command(CommandForBrowser::FetchCacheGet);
 
-        let response = decode_json::<response_browser::FetchCacheGet>(response);
-
-        match response.data {
-            Some(data) => {
-                let json = JsJson::from_string(&data);
-
-                match json {
-                    Ok(json) => decode_json::<SsrFetchCache>(json),
-                    Err(message) => {
-                        log::error!("ApiBrowserCommand -> fetch_cache_get -> error = {message}");
-                        SsrFetchCache::empty()
-                    }
-                }
-            }
-            None => SsrFetchCache::empty(),
-        }
+        // Deserialize from WASM-JS bridge
+        decode_json::<browser_response::FetchCacheGet>(command_result)
+            .inspect_err(|err| {
+                log::error!("fetch_cache_get -> decode error = {err}");
+            })
+            .ok()
+            // Response maybe empty
+            .and_then(|response| response.data)
+            // Decode response from string
+            .and_then(|data| {
+                JsJson::from_string(&data)
+                    .inspect_err(|message| {
+                        log::error!("fetch_cache_get -> error = {message}");
+                    })
+                    .ok()
+            })
+            // Deserialize the response itself
+            .and_then(|json| {
+                decode_json::<SsrFetchCache>(json)
+                    .inspect_err(|err| {
+                        log::error!("fetch_cache_get -> decode error = {err}");
+                    })
+                    .ok()
+            })
+            .unwrap_or_else(SsrFetchCache::empty)
     }
 
     pub fn fetch_exec(&self, request: SsrFetchRequest, callback: CallbackId) {
@@ -60,13 +69,25 @@ impl CommandForBrowserApi {
 
     pub fn is_browser(&self) -> bool {
         let response = exec_command(CommandForBrowser::IsBrowser);
-        let response = decode_json::<response_browser::IsBrowser>(response);
-        response.value
+        let response = decode_json::<browser_response::IsBrowser>(response);
+        match response {
+            Ok(response) => response.value,
+            Err(err) => {
+                log::error!("is_browser -> decode error = {err}");
+                false
+            }
+        }
     }
 
     pub fn get_date_now(&self) -> InstantType {
         let response = exec_command(CommandForBrowser::GetDateNow);
-        let response = decode_json::<response_browser::GetDateNow>(response);
-        response.value
+        let response = decode_json::<browser_response::GetDateNow>(response);
+        match response {
+            Ok(response) => response.value,
+            Err(err) => {
+                log::error!("get_date_now -> decode error = {err}");
+                InstantType::default()
+            }
+        }
     }
 }

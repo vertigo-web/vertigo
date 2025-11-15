@@ -9,21 +9,28 @@ use crate::{
 };
 
 #[store]
-pub fn api_command_wasm() -> Rc<ApiCommandWasm> {
-    Rc::new(ApiCommandWasm {})
+pub fn api_command_wasm() -> Rc<CommandWasmApi> {
+    Rc::new(CommandWasmApi {})
 }
 
-pub struct ApiCommandWasm {}
+pub struct CommandWasmApi {}
 
-impl ApiCommandWasm {
-    pub fn command_from_js(self: &Rc<ApiCommandWasm>, json: JsJson) -> JsJson {
-        let response = decode_json::<CommandForWasm>(json);
+impl CommandWasmApi {
+    pub fn command_from_js(self: &Rc<CommandWasmApi>, json: JsJson) -> JsJson {
+        let command = decode_json::<CommandForWasm>(json)
+            .inspect_err(|err| {
+                log::error!("command_from_js -> decode error = {err}");
+            })
+            .ok();
 
-        match response {
-            CommandForWasm::FetchExecResponse { response, callback } => {
-                api_fetch().callbak(callback, response);
-                JsJson::Null
+        if let Some(command) = command {
+            match command {
+                CommandForWasm::FetchExecResponse { response, callback } => {
+                    api_fetch().callbak(callback, response);
+                }
             }
         }
+
+        JsJson::Null
     }
 }

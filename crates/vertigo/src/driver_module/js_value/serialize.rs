@@ -52,6 +52,12 @@ impl JsJsonContext {
     }
 }
 
+impl std::fmt::Display for JsJsonContext {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        f.write_str(&self.convert_to_string())
+    }
+}
+
 pub trait JsJsonSerialize {
     fn to_json(self) -> JsJson;
 }
