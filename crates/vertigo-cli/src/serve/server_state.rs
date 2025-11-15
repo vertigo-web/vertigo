@@ -1,4 +1,8 @@
-use std::{collections::HashMap, sync::Arc};
+use std::{
+    collections::HashMap,
+    sync::Arc,
+    time::{Duration, SystemTime, UNIX_EPOCH},
+};
 use tokio::sync::mpsc::{error::TryRecvError, unbounded_channel};
 use vertigo::command::{response_browser, CommandForBrowser};
 use vertigo::{JsJson, JsJsonSerialize};
@@ -16,8 +20,6 @@ use super::{
     response_state::ResponseState,
     wasm::{Message, WasmInstance},
 };
-
-use std::time::{Duration, SystemTime, UNIX_EPOCH};
 
 pub fn get_now() -> Duration {
     let start = SystemTime::now();

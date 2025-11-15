@@ -1,7 +1,7 @@
 <!-- markdownlint-configure-file { "no-duplicate-heading": { "siblings_only": true } } -->
 
 <!-- markdownlint-disable-next-line first-line-h1 -->
-## Unreleased
+## 0.9.0 - Unreleased
 
 ### Added
 
@@ -10,6 +10,14 @@
 ### Fixed
 
 * vertigo-cli: Parse but ignore router changes during SSR.
+
+### Changed
+
+* Reimplemented communication between WASM and JS
+
+### Removed
+
+* `vertigo-suspense` (not very usable anyway)
 
 ## 0.8.3 - 2025-09-29
 

@@ -2,7 +2,7 @@ use std::rc::Rc;
 
 use crate::{
     driver_module::{
-        api::{api_command_browser, callbacks::api_callbacks, panic_message::api_panic_message},
+        api::{api_browser_command, callbacks::api_callbacks, panic_message::api_panic_message},
         js_value::JsValue,
     },
     struct_mut::ValueMut,
@@ -87,7 +87,7 @@ impl ApiImport {
     }
 
     pub fn cookie_get_json(&self, cname: &str) -> JsJson {
-        if api_command_browser().is_browser() {
+        if api_browser_command().is_browser() {
             let result = DomAccess::default()
                 .api()
                 .get("cookie")
@@ -105,7 +105,7 @@ impl ApiImport {
     }
 
     pub fn cookie_set(&self, cname: &str, cvalue: &str, expires_in: u64) {
-        if api_command_browser().is_browser() {
+        if api_browser_command().is_browser() {
             DomAccess::default()
                 .api()
                 .get("cookie")
@@ -501,7 +501,7 @@ impl ApiImport {
 
     pub fn route_from_public(&self, path: impl Into<String>) -> String {
         let path: String = path.into();
-        if api_command_browser().is_browser() {
+        if api_browser_command().is_browser() {
             // In the browser use env variable attached during SSR
             let mount_point = self
                 .get_env("vertigo-mount-point".to_string())

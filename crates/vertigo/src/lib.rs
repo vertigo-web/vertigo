@@ -116,10 +116,6 @@ pub mod router;
 mod tests;
 mod websocket;
 
-use std::rc::Rc;
-
-use computed::struct_mut::ValueMut;
-
 pub use computed::{
     context::Context, struct_mut, AutoMap, Computed, Dependencies, DropResource, GraphId, Reactive,
     ToComputed, Value,
@@ -143,7 +139,6 @@ pub use dom::{
     events::{ClickEvent, DropFileEvent, DropFileItem, KeyDownEvent},
 };
 pub use dom_macro::{AttrGroup, AttrGroupValue, EmbedDom};
-use driver_module::init_env::init_env;
 pub use driver_module::{
     api::ApiImport,
     dom_command::DriverDomCommand,
@@ -526,32 +521,7 @@ pub use vertigo_macro::store;
 
 pub mod html_entities;
 
-pub struct DriverConstruct {
-    driver: Driver,
-    subscription: ValueMut<Option<DomNode>>,
-}
-
-impl DriverConstruct {
-    fn new() -> DriverConstruct {
-        let driver = Driver::default();
-
-        DriverConstruct {
-            driver,
-            subscription: ValueMut::new(None),
-        }
-    }
-
-    fn set_root(&self, root_view: DomNode) {
-        self.subscription.set(Some(root_view));
-    }
-}
-
 extern crate self as vertigo;
-
-#[store]
-fn get_driver_browser() -> Rc<DriverConstruct> {
-    Rc::new(DriverConstruct::new())
-}
 
 /// Starting point of the app (used by [main] macro, which is preferred)
 pub fn start_app(init_app: fn() -> DomNode) {
@@ -561,7 +531,7 @@ pub fn start_app(init_app: fn() -> DomNode) {
 
     let root_view = init_app();
 
-    get_driver_browser().set_root(root_view);
+    get_browser_driver().set_root(root_view);
 
     get_driver().inner.dom.flush_dom_changes();
 }
@@ -588,7 +558,7 @@ pub fn vertigo_export_handle_url(url_ptr: u64) -> u64 {
 /// let number = get_driver().get_random(1, 10);
 /// ```
 pub fn get_driver() -> Driver {
-    get_driver_browser().driver
+    get_browser_driver().driver
 }
 
 /// Do bunch of operations on dependency graph without triggering anything in between.
@@ -608,8 +578,10 @@ pub use driver_module::driver::{
     VERTIGO_MOUNT_POINT_PLACEHOLDER, VERTIGO_PUBLIC_BUILD_PATH_PLACEHOLDER,
 };
 
-use crate::driver_module::api::{
-    api_arguments, api_callbacks, api_command_wasm, api_fetch_cache, api_server_handler,
+use crate::driver_module::{
+    api::{api_arguments, api_callbacks, api_command_wasm, api_fetch_cache, api_server_handler},
+    constructor::get_browser_driver,
+    init_env::init_env,
 };
 
 // Methods for memory allocation
@@ -662,73 +634,4 @@ pub fn vertigo_export_wasm_command(value_long_ptr: u64) -> u64 {
     JsValue::Json(response).to_ptr_long().get_long_ptr()
 }
 
-#[cfg(all(not(test), target_arch = "wasm32", target_os = "unknown"))]
-pub mod external_api {
-    mod inner {
-        #[link(wasm_import_module = "mod")]
-        extern "C" {
-            pub fn panic_message(long_ptr: u64);
-            pub fn dom_access(long_ptr: u64) -> u64;
-        }
-    }
-
-    pub mod safe_wrappers {
-        use super::inner::*;
-        use crate::LongPtr;
-
-        pub fn safe_panic_message(long_ptr: LongPtr) {
-            let long_ptr = long_ptr.get_long_ptr();
-            unsafe { panic_message(long_ptr) }
-        }
-
-        pub fn safe_dom_access(long_ptr: LongPtr) -> LongPtr {
-            let long_ptr = long_ptr.get_long_ptr();
-            let result = unsafe { dom_access(long_ptr) };
-            LongPtr::from(result)
-        }
-    }
-}
-
-#[cfg(any(test, not(target_arch = "wasm32"), not(target_os = "unknown")))]
-pub mod external_api {
-    pub mod safe_wrappers {
-        use crate::{
-            command::{decode_json, response_browser, CommandForBrowser},
-            driver_module::api::api_arguments,
-            JsJson, JsJsonSerialize, JsValue, LongPtr,
-        };
-
-        pub fn safe_panic_message(_long_ptr: LongPtr) {}
-
-        pub fn safe_dom_access(long_ptr: LongPtr) -> LongPtr {
-            let value = api_arguments().get_by_long_ptr(long_ptr);
-
-            if let JsValue::Json(json) = value {
-                let command = decode_json::<CommandForBrowser>(json);
-
-                let response = match command {
-                    CommandForBrowser::FetchCacheGet => {
-                        response_browser::FetchCacheGet { data: None }.to_json()
-                    }
-                    CommandForBrowser::FetchExec {
-                        request: _,
-                        callback: _,
-                    } => JsJson::Null,
-                    CommandForBrowser::SetStatus { status: _ } => JsJson::Null,
-                    CommandForBrowser::IsBrowser => {
-                        let response = response_browser::IsBrowser { value: false };
-                        response.to_json()
-                    }
-                    CommandForBrowser::GetDateNow => {
-                        let response = response_browser::GetDateNow { value: 0 };
-                        response.to_json()
-                    }
-                };
-
-                return JsValue::Json(response).to_ptr_long();
-            }
-
-            LongPtr::from(0)
-        }
-    }
-}
+pub mod external_api;
