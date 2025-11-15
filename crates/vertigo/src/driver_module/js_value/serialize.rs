@@ -87,95 +87,36 @@ impl JsJsonDeserialize for String {
     }
 }
 
-impl JsJsonSerialize for u64 {
-    fn to_json(self) -> JsJson {
-        JsJson::Number(JsJsonNumber(self as f64))
-    }
-}
-
-impl JsJsonDeserialize for u64 {
-    fn from_json(context: JsJsonContext, json: JsJson) -> Result<Self, JsJsonContext> {
-        match json {
-            JsJson::Number(JsJsonNumber(value)) => Ok(value as u64),
-            other => {
-                let message = ["number(u64) expected, received ", other.typename()].concat();
-                Err(context.add(message))
+macro_rules! impl_js_json_for_number {
+    ($name:ty) => {
+        impl JsJsonSerialize for $name {
+            fn to_json(self) -> JsJson {
+                JsJson::Number(JsJsonNumber(self as f64))
             }
         }
-    }
-}
 
-impl JsJsonSerialize for i64 {
-    fn to_json(self) -> JsJson {
-        JsJson::Number(JsJsonNumber(self as f64))
-    }
-}
-
-impl JsJsonDeserialize for i64 {
-    fn from_json(context: JsJsonContext, json: JsJson) -> Result<Self, JsJsonContext> {
-        match json {
-            JsJson::Number(JsJsonNumber(value)) => Ok(value as i64),
-            other => {
-                let message = ["number(i64) expected, received ", other.typename()].concat();
-                Err(context.add(message))
+        impl JsJsonDeserialize for $name {
+            fn from_json(context: JsJsonContext, json: JsJson) -> Result<Self, JsJsonContext> {
+                match json {
+                    JsJson::Number(JsJsonNumber(value)) => Ok(value as Self),
+                    other => Err(context
+                        .add(["number($name) expected, received ", other.typename()].concat())),
+                }
             }
         }
-    }
+    };
 }
 
-impl JsJsonSerialize for u32 {
-    fn to_json(self) -> JsJson {
-        JsJson::Number(JsJsonNumber(self as f64))
-    }
-}
-
-impl JsJsonDeserialize for u32 {
-    fn from_json(context: JsJsonContext, json: JsJson) -> Result<Self, JsJsonContext> {
-        match json {
-            JsJson::Number(JsJsonNumber(value)) => Ok(value as u32),
-            other => {
-                let message = ["number(u32) expected, received ", other.typename()].concat();
-                Err(context.add(message))
-            }
-        }
-    }
-}
-
-impl JsJsonSerialize for i32 {
-    fn to_json(self) -> JsJson {
-        JsJson::Number(JsJsonNumber(self as f64))
-    }
-}
-
-impl JsJsonDeserialize for i32 {
-    fn from_json(context: JsJsonContext, json: JsJson) -> Result<Self, JsJsonContext> {
-        match json {
-            JsJson::Number(JsJsonNumber(value)) => Ok(value as i32),
-            other => {
-                let message = ["number(i32) expected, received ", other.typename()].concat();
-                Err(context.add(message))
-            }
-        }
-    }
-}
-
-impl JsJsonSerialize for u16 {
-    fn to_json(self) -> JsJson {
-        JsJson::Number(JsJsonNumber(self as f64))
-    }
-}
-
-impl JsJsonDeserialize for u16 {
-    fn from_json(context: JsJsonContext, json: JsJson) -> Result<Self, JsJsonContext> {
-        match json {
-            JsJson::Number(JsJsonNumber(value)) => Ok(value as u16),
-            other => {
-                let message = ["number(u32) expected, received ", other.typename()].concat();
-                Err(context.add(message))
-            }
-        }
-    }
-}
+impl_js_json_for_number!(u8);
+impl_js_json_for_number!(i8);
+impl_js_json_for_number!(u16);
+impl_js_json_for_number!(i16);
+impl_js_json_for_number!(u32);
+impl_js_json_for_number!(i32);
+impl_js_json_for_number!(u64);
+impl_js_json_for_number!(i64);
+impl_js_json_for_number!(usize);
+impl_js_json_for_number!(isize);
 
 impl JsJsonSerialize for bool {
     fn to_json(self) -> JsJson {
