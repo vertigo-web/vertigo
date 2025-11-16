@@ -107,16 +107,20 @@ macro_rules! impl_js_json_for_number {
     };
 }
 
-impl_js_json_for_number!(u8);
 impl_js_json_for_number!(i8);
-impl_js_json_for_number!(u16);
 impl_js_json_for_number!(i16);
-impl_js_json_for_number!(u32);
 impl_js_json_for_number!(i32);
-impl_js_json_for_number!(u64);
 impl_js_json_for_number!(i64);
-impl_js_json_for_number!(usize);
 impl_js_json_for_number!(isize);
+
+impl_js_json_for_number!(u8);
+impl_js_json_for_number!(u16);
+impl_js_json_for_number!(u32);
+impl_js_json_for_number!(u64);
+impl_js_json_for_number!(usize);
+
+impl_js_json_for_number!(f32);
+impl_js_json_for_number!(f64);
 
 impl JsJsonSerialize for bool {
     fn to_json(self) -> JsJson {

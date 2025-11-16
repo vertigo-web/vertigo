@@ -17,47 +17,62 @@ impl<K: ToString> From<K> for AttrValue {
     }
 }
 
-impl From<Computed<String>> for AttrValue {
-    fn from(value: Computed<String>) -> Self {
-        AttrValue::Computed(value)
-    }
+macro_rules! impl_from_computed_for_attrvalue {
+    ($typename:ty, $variant:ident, |$var:ident| $body:expr) => {
+        impl From<$typename> for AttrValue {
+            fn from($var: $typename) -> Self {
+                AttrValue::$variant($body)
+            }
+        }
+    };
+    ($typename: ty, $variant: ident) => {
+        impl_from_computed_for_attrvalue!($typename, $variant, |v| v);
+    };
 }
 
-impl From<Computed<Option<String>>> for AttrValue {
-    fn from(value: Computed<Option<String>>) -> Self {
-        AttrValue::ComputedOpt(value)
-    }
+impl_from_computed_for_attrvalue!(Computed<String>, Computed);
+impl_from_computed_for_attrvalue!(Computed<Option<String>>, ComputedOpt);
+impl_from_computed_for_attrvalue!(&Computed<String>, Computed, |v| v.clone());
+impl_from_computed_for_attrvalue!(&Computed<Option<String>>, ComputedOpt, |v| v.clone());
+
+impl_from_computed_for_attrvalue!(Value<String>, Value);
+impl_from_computed_for_attrvalue!(Value<Option<String>>, ValueOpt);
+impl_from_computed_for_attrvalue!(&Value<String>, Value, |v| v.clone());
+impl_from_computed_for_attrvalue!(&Value<Option<String>>, ValueOpt, |v| v.clone());
+
+macro_rules! impl_stringable_into_computed_for_attrvalue {
+    ($typename:ty) => {
+        impl_from_computed_for_attrvalue!(Computed<$typename>, Computed, |v| v
+            .map(|v| v.to_string()));
+        impl_from_computed_for_attrvalue!(&Computed<$typename>, Computed, |v| v
+            .map(|v| v.to_string()));
+        impl_from_computed_for_attrvalue!(Value<$typename>, Computed, |v| v
+            .to_computed()
+            .map(|v| v.to_string()));
+        impl_from_computed_for_attrvalue!(&Value<$typename>, Computed, |v| v
+            .to_computed()
+            .map(|v| v.to_string()));
+    };
 }
 
-impl From<&Computed<Option<String>>> for AttrValue {
-    fn from(value: &Computed<Option<String>>) -> Self {
-        AttrValue::ComputedOpt(value.clone())
-    }
-}
+impl_stringable_into_computed_for_attrvalue!(i8);
+impl_stringable_into_computed_for_attrvalue!(i16);
+impl_stringable_into_computed_for_attrvalue!(i32);
+impl_stringable_into_computed_for_attrvalue!(i64);
+impl_stringable_into_computed_for_attrvalue!(isize);
 
-impl From<Value<String>> for AttrValue {
-    fn from(value: Value<String>) -> Self {
-        AttrValue::Value(value)
-    }
-}
+impl_stringable_into_computed_for_attrvalue!(u8);
+impl_stringable_into_computed_for_attrvalue!(u16);
+impl_stringable_into_computed_for_attrvalue!(u32);
+impl_stringable_into_computed_for_attrvalue!(u64);
+impl_stringable_into_computed_for_attrvalue!(usize);
 
-impl From<Value<Option<String>>> for AttrValue {
-    fn from(value: Value<Option<String>>) -> Self {
-        AttrValue::ValueOpt(value)
-    }
-}
+impl_stringable_into_computed_for_attrvalue!(f32);
+impl_stringable_into_computed_for_attrvalue!(f64);
 
-impl From<&Value<String>> for AttrValue {
-    fn from(value: &Value<String>) -> Self {
-        AttrValue::Value(value.clone())
-    }
-}
+impl_stringable_into_computed_for_attrvalue!(char);
 
-impl From<&Value<Option<String>>> for AttrValue {
-    fn from(value: &Value<Option<String>>) -> Self {
-        AttrValue::ValueOpt(value.clone())
-    }
-}
+impl_stringable_into_computed_for_attrvalue!(bool);
 
 pub enum CssAttrValue {
     Css(Css),
