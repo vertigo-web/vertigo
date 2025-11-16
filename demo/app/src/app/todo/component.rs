@@ -220,38 +220,29 @@ fn render_comments(post_id: u32) -> DomNode {
 }
 
 fn css_hover_item() -> Css {
-    css!(
-        "
+    css! {"
         cursor: pointer;
         :hover {
             background-color: #e0e0e0;
         }
-    "
-    )
+    "}
 }
 
 fn css_comment_wrapper() -> Css {
-    css!(
-        "
+    css! {"
         border: 1px solid black;
         padding: 5px;
         margin: 5px;
-    "
-    )
+    "}
 }
 
 fn css_comment_author() -> Css {
-    css!(
-        "
+    css! {"
         font-weight: bold;
         margin-right: 5px;
-    "
-    )
+    "}
 }
 
 fn css_comment_body() -> Css {
-    css!(
-        "
-    "
-    )
+    css!("")
 }

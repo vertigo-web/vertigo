@@ -4,8 +4,7 @@ use crate::app::sudoku::state::{number_item::SudokuValue, Cell};
 use vertigo::{bind, bind_rc, css, dom, dom_element, ClickEvent, Computed, Css, DomNode};
 
 fn css_item_only_one(cell_width: u32) -> Css {
-    css!(
-        "
+    css! {"
         display: flex;
         align-items: center;
         justify-content: center;
@@ -15,32 +14,27 @@ fn css_item_only_one(cell_width: u32) -> Css {
         font-size: 30px;
         color: blue;
         cursor: pointer;
-    "
-    )
+    "}
 }
 
 fn css_wrapper_one(cell_width: u32) -> Css {
-    css!(
-        "
+    css! {"
         width: {cell_width}px;
         height: {cell_width}px;
-    "
-    )
+    "}
 }
 
 fn css_item(should_show: bool) -> Css {
     let bg_color = if should_show { "#00ff0030" } else { "inherit" };
     let cursor = if should_show { "pointer" } else { "inherit" };
 
-    css!(
-        "
+    css! {"
         display: flex;
         align-items: center;
         justify-content: center;
         background-color: {bg_color};
         cursor: {cursor};
-    "
-    )
+    "}
 }
 
 fn view_one_possible(cell_width: u32, cell: &Cell) -> DomNode {
@@ -99,8 +93,7 @@ fn view_last_value(cell_width: u32, cell: &Cell, possible_last_value: SudokuValu
 }
 
 fn view_default(cell_width: u32, cell: &Cell, possible: HashSet<SudokuValue>) -> DomNode {
-    let css_wrapper = css!(
-        "
+    let css_wrapper = css! {"
         width: {cell_width}px;
         height: {cell_width}px;
 
@@ -108,8 +101,7 @@ fn view_default(cell_width: u32, cell: &Cell, possible: HashSet<SudokuValue>) ->
         grid-template-columns: 1fr 1fr 1fr;
         grid-template-rows: 1fr 1fr 1fr;
         flex-shrink: 0;
-    "
-    );
+    "};
 
     let wrapper = dom_element! {
         <div css={css_wrapper} />

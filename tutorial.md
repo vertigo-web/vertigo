@@ -464,9 +464,9 @@ Map on a value creates a reactive computed value. It gets updated every time the
 Let's paint our site with a little colors. To style a div import `css`[^styles] from vertigo to `lib.rs` and add
 
 ```rust
-let title_style = css!("
+let title_style = css! {"
     color: darkblue;
-");
+"};
 ```
 
 before `dom!` macro usage. In the macro, change the line with div to:
@@ -481,13 +481,13 @@ Styles can be nested in similar way to SCSS, just without the & sign.
 We'll make the list change font color for every other row (`list.rs` file).
 
 ```rust
-    let alternate_rows = css!("
+    let alternate_rows = css! {"
         color: black;
 
         :nth-child(odd) {
             color: blue;
         };
-    ");
+    "};
 
     let elements = items.render_list(
         |item| item.clone(),
@@ -509,7 +509,7 @@ To create a parameterized css we just need turn our css into a function returnin
     let alternate_rows = |excl: bool| {
         let bg_color = if excl { "yellow" } else { "inherit" };
 
-        css!("
+        css! {"
             color: black;
             background: { bg_color };
 

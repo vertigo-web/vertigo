@@ -13,23 +13,21 @@ pub fn render_cell_value(item_height_size: u32, value: SudokuValue, cell: &Cell)
                     cell.number.set(None);
                 });
 
-                let css_delete = css!(
-                    "
-                        position: absolute;
-                        top: 3px;
-                        right: 3px;
-                        width: 20px;
-                        height: 20px;
-                        background-color: #ff000030;
-                        cursor: pointer;
-                        font-size: 12px;
-                        line-height: 12px;
+                let css_delete = css! {"
+                    position: absolute;
+                    top: 3px;
+                    right: 3px;
+                    width: 20px;
+                    height: 20px;
+                    background-color: #ff000030;
+                    cursor: pointer;
+                    font-size: 12px;
+                    line-height: 12px;
 
-                        display: flex;
-                        align-items: center;
-                        justify-content: center;
-                    "
-                );
+                    display: flex;
+                    align-items: center;
+                    justify-content: center;
+                "};
 
                 Some(dom! {
                     <div css={css_delete} on_click={on_click}>
@@ -41,16 +39,14 @@ pub fn render_cell_value(item_height_size: u32, value: SudokuValue, cell: &Cell)
         }
     });
 
-    let css_item = css!(
-        "
+    let css_item = css! {"
         position: relative;
         text-align: center;
         font-size: 30px;
         color: blue;
         height: {item_height_size}px;
         line-height: {item_height_size}px;
-    "
-    );
+    "};
 
     dom! {
         <div css={css_item}>

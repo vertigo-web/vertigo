@@ -85,15 +85,15 @@ fn pointers() {
     // pointer conversion
 
     fn foo1() -> i32 {
-        0
+        1
     }
 
     fn foo2() -> i32 {
-        0
+        2
     }
 
     fn foo3(_yy: i32) -> i32 {
-        0
+        3
     }
 
     let pointer1: u64 = foo1 as *const () as u64;

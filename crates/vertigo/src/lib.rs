@@ -63,9 +63,9 @@
 //! fn app() -> DomNode {
 //!     let message = Value::new("Hello world!".to_string());
 //!
-//!     let main_div = css!("
+//!     let main_div = css! {"
 //!         color: darkblue;
-//!     ");
+//!     "};
 //!
 //!     dom! {
 //!         <html>
@@ -438,10 +438,10 @@ pub use vertigo_macro::dom_debug;
 /// ```rust
 /// use vertigo::{css, dom};
 ///
-/// let green_on_red = css!("
+/// let green_on_red = css! {"
 ///     color: green;
 ///     background-color: red;
-/// ");
+/// "};
 ///
 /// dom! {
 ///    <div css={green_on_red}>"Tomato stem"</div>
@@ -478,14 +478,14 @@ pub use vertigo_macro::css;
 /// ```rust
 /// use vertigo::{css, css_block};
 ///
-/// let mut green_style = css!("
+/// let mut green_style = css! {"
 ///     color: green;
-/// ");
+/// "};
 ///
 /// green_style.push_str(
-///     css_block! { "
+///     css_block! {"
 ///         font-style: italic;
-///    " }
+///    "}
 /// );
 /// ```
 pub use vertigo_macro::css_block;
