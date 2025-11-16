@@ -6,6 +6,7 @@
 ### Added
 
 * `#[store]` macro which wraps a function to be used as a store generator
+* `AutoJsJson`: Added `rename_all` container attribute, and `rename` field attribute
 
 ### Fixed
 

@@ -302,18 +302,22 @@ fn convert_to_component(node: &Node) -> TokenStream2 {
         .to_tokens(&mut grouped_attrs_stream);
     }
 
-    let debug_info = if release_build() {
-        quote! {}
-    } else {
+    let debug_info = quote! {
+        match &cmp {
+            vertigo::DomNode::Node { node } => {
+                node.add_attr("v-component", #component_name_string);
+            }
+            _ => {}
+        };
+    };
+
+    let effective_debug_info = if release_build() {
         quote! {
             #[cfg(test)]
-            match &cmp {
-                vertigo::DomNode::Node { node } => {
-                    node.add_attr("v-component", #component_name_string);
-                }
-                _ => {}
-            };
+            #debug_info
         }
+    } else {
+        debug_info
     };
 
     quote! {
@@ -325,7 +329,7 @@ fn convert_to_component(node: &Node) -> TokenStream2 {
                 #grouped_attrs_stream
             ;
             let cmp = cmp.mount();
-            #debug_info
+            #effective_debug_info
             cmp
         }
     }
@@ -666,20 +670,24 @@ fn convert_child_to_component(node: &Node) -> TokenStream2 {
 }
 
 fn generate_debug_class_name(value: &TokenStream2) -> TokenStream2 {
-    if release_build() {
-        quote! { None }
-    } else {
-        let debug_class_name = value
-            .to_string()
-            .chars()
-            .filter(|c| !c.is_whitespace())
-            .collect::<String>();
+    let debug_class_name = value
+        .to_string()
+        .chars()
+        .filter(|c| !c.is_whitespace())
+        .collect::<String>();
 
+    let debug_info = quote! {
+        Some(#debug_class_name.to_string())
+    };
+
+    if release_build() {
         quote! {{
             #[cfg(test)]
-            { Some(#debug_class_name.to_string()) }
+            { #debug_info }
             #[cfg(not(test))]
             { None }
         }}
+    } else {
+        debug_info
     }
 }

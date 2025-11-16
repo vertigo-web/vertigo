@@ -1,6 +1,9 @@
+use darling::FromAttributes;
 use proc_macro::TokenStream;
 use quote::quote;
 use syn::{ext::IdentExt, DataEnum, Fields, Ident};
+
+use crate::jsjson::attributes::{ContainerOpts, FieldOpts};
 
 // {
 //   "Somestring": "foobar"
@@ -15,7 +18,11 @@ use syn::{ext::IdentExt, DataEnum, Fields, Ident};
 // }
 //
 // "Nothing"
-pub(super) fn impl_js_json_enum(name: &Ident, data: &DataEnum) -> Result<TokenStream, String> {
+pub(super) fn impl_js_json_enum(
+    name: &Ident,
+    data: &DataEnum,
+    container_opts: ContainerOpts,
+) -> Result<TokenStream, String> {
     // Encoding code for every variant
     let mut variant_encodes = vec![];
 
@@ -26,14 +33,24 @@ pub(super) fn impl_js_json_enum(name: &Ident, data: &DataEnum) -> Result<TokenSt
     let mut variant_object_decodes = vec![];
 
     for variant in &data.variants {
+        let field_opts = FieldOpts::from_attributes(&variant.attrs).unwrap();
         let variant_ident = &variant.ident;
-        let variant_name = &variant.ident.unraw().to_string();
+        let variant_name = variant.ident.unraw().to_string();
+
+        let json_key = match field_opts.rename {
+            Some(json_key) => json_key,
+            None => match container_opts.rename_all {
+                Some(rule) => rule.rename(&variant_name),
+                None => variant_name.clone(),
+            },
+        };
+
         match &variant.fields {
             // Simple variant
             // Enum::Variant <-> "Variant"
             Fields::Unit => {
-                variant_encodes.push(quote! { Self::#variant_ident => #variant_name.to_json(), });
-                variant_string_decodes.push(quote! { #variant_name => Ok(Self::#variant_ident), });
+                variant_encodes.push(quote! { Self::#variant_ident => #json_key.to_json(), });
+                variant_string_decodes.push(quote! { #json_key => Ok(Self::#variant_ident), });
             }
 
             // Compound variant with unnamed field(s) (tuple)
@@ -46,7 +63,7 @@ pub(super) fn impl_js_json_enum(name: &Ident, data: &DataEnum) -> Result<TokenSt
                         Self::#variant_ident(value) => {
                             vertigo::JsJson::Object(::std::collections::BTreeMap::from([
                                 (
-                                    #variant_name.to_string(),
+                                    #json_key.to_string(),
                                     value.to_json(),
                                 ),
                             ]))
@@ -55,7 +72,7 @@ pub(super) fn impl_js_json_enum(name: &Ident, data: &DataEnum) -> Result<TokenSt
 
                     // Decode
                     variant_object_decodes.push(quote! {
-                        if let Some(value) = compound_variant.get_mut(#variant_name) {
+                        if let Some(value) = compound_variant.get_mut(#json_key) {
                             return Ok(Self::#variant_ident(
                                 vertigo::JsJsonDeserialize::from_json(ctx.clone(), value.to_owned())?
                             ))
@@ -72,7 +89,7 @@ pub(super) fn impl_js_json_enum(name: &Ident, data: &DataEnum) -> Result<TokenSt
                         Self::#variant_ident(#(#field_idents,)*) => {
                             vertigo::JsJson::Object(::std::collections::BTreeMap::from([
                                 (
-                                    #variant_name.to_string(),
+                                    #json_key.to_string(),
                                     vertigo::JsJson::List(vec![
                                         #(#field_encodes)*
                                     ])
@@ -86,7 +103,7 @@ pub(super) fn impl_js_json_enum(name: &Ident, data: &DataEnum) -> Result<TokenSt
                     let field_decodes = super::tuple_fields::get_decodes(field_idents);
 
                     variant_object_decodes.push(quote! {
-                        if let Some(value) = compound_variant.get_mut(#variant_name) {
+                        if let Some(value) = compound_variant.get_mut(#json_key) {
                             match value.to_owned() {
                                 vertigo::JsJson::List(fields) => {
                                     if fields.len() != #fields_number {
@@ -132,7 +149,7 @@ pub(super) fn impl_js_json_enum(name: &Ident, data: &DataEnum) -> Result<TokenSt
                     Self::#variant_ident {#(#field_idents,)*} => {
                         vertigo::JsJson::Object(::std::collections::BTreeMap::from([
                             (
-                                #variant_name.to_string(),
+                                #json_key.to_string(),
                                 vertigo::JsJson::Object(::std::collections::BTreeMap::from([
                                     #(#field_encodes)*
                                 ]))
@@ -153,7 +170,7 @@ pub(super) fn impl_js_json_enum(name: &Ident, data: &DataEnum) -> Result<TokenSt
                     .collect::<Vec<_>>();
 
                 variant_object_decodes.push(quote! {
-                    if let Some(value) = compound_variant.get_mut(#variant_name) {
+                    if let Some(value) = compound_variant.get_mut(#json_key) {
                         return Ok(Self::#variant_ident {
                             #(#field_decodes)*
                         })

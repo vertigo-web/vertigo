@@ -3,13 +3,13 @@ use proc_macro::TokenStream;
 use quote::quote;
 use syn::{ext::IdentExt, DataStruct, Ident};
 
-#[derive(Default, Debug, FromAttributes)]
-#[darling(attributes(js_json), forward_attrs(allow, doc, cfg))]
-pub struct JsJsonOpts {
-    default: Option<syn::Expr>,
-}
+use crate::jsjson::attributes::{ContainerOpts, FieldOpts};
 
-pub(super) fn impl_js_json_struct(name: &Ident, data: &DataStruct) -> Result<TokenStream, String> {
+pub(super) fn impl_js_json_struct(
+    name: &Ident,
+    data: &DataStruct,
+    container_opts: ContainerOpts,
+) -> Result<TokenStream, String> {
     let mut field_list = Vec::new();
 
     for field in &data.fields {
@@ -27,13 +27,21 @@ pub(super) fn impl_js_json_struct(name: &Ident, data: &DataStruct) -> Result<Tok
 
     for (field_name, attrs) in field_list {
         let field_unraw = field_name.unraw().to_string();
-        let attrs = JsJsonOpts::from_attributes(attrs).unwrap();
+        let field_opts = FieldOpts::from_attributes(attrs).unwrap();
+
+        let json_key = match field_opts.rename {
+            Some(json_key) => json_key,
+            None => match container_opts.rename_all {
+                Some(rule) => rule.rename(&field_unraw),
+                None => field_unraw.clone(),
+            },
+        };
 
         list_to_json.push(quote! {
-            (#field_unraw.to_string(), self.#field_name.to_json()),
+            (#json_key.to_string(), self.#field_name.to_json()),
         });
 
-        let unpack_expr = if let Some(default_expr) = attrs.default {
+        let unpack_expr = if let Some(default_expr) = field_opts.default {
             quote! {
                 .unwrap_or_else(|_| #default_expr)
             }
@@ -42,7 +50,7 @@ pub(super) fn impl_js_json_struct(name: &Ident, data: &DataStruct) -> Result<Tok
         };
 
         list_from_json.push(quote! {
-            #field_name: json.get_property(&context, #field_unraw)#unpack_expr,
+            #field_name: json.get_property(&context, #json_key)#unpack_expr,
         })
     }
 

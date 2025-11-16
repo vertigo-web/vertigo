@@ -11,9 +11,10 @@ name = "vertigo_macro"
 proc-macro = true
 
 [dependencies]
-darling = "0.21"
 base64 = "0.22"
 crc = "3.0"
+darling = "0.21"
+heck = "0.5"
 itertools = "0.14"
 pest = "2.5"
 pest_derive = "2.1"
