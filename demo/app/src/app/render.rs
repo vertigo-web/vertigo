@@ -10,8 +10,7 @@ use super::{
 
 fn css_menu_item(active: bool) -> Css {
     let bg_color = if active { "lightblue" } else { "lightgreen" };
-    css!(
-        "
+    css! {"
         display: inline-block;
         padding: 5px 10px;
         cursor: pointer;
@@ -21,8 +20,7 @@ fn css_menu_item(active: bool) -> Css {
         :hover {
             text-decoration: underline;
         }
-    "
-    )
+    "}
 }
 
 fn render_menu_item(current_page: Computed<Route>, menu_item: Route) -> DomNode {

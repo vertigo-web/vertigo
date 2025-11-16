@@ -306,6 +306,7 @@ fn convert_to_component(node: &Node) -> TokenStream2 {
         quote! {}
     } else {
         quote! {
+            #[cfg(test)]
             match &cmp {
                 vertigo::DomNode::Node { node } => {
                     node.add_attr("v-component", #component_name_string);
@@ -674,6 +675,11 @@ fn generate_debug_class_name(value: &TokenStream2) -> TokenStream2 {
             .filter(|c| !c.is_whitespace())
             .collect::<String>();
 
-        quote! { Some(#debug_class_name.to_string()) }
+        quote! {{
+            #[cfg(test)]
+            { Some(#debug_class_name.to_string()) }
+            #[cfg(not(test))]
+            { None }
+        }}
     }
 }

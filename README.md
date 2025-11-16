@@ -88,9 +88,9 @@ pub fn MyMessage(message: Value<String>) {
 fn app() -> DomNode {
     let message = Value::new("Hello world!".to_string());
 
-    let main_div = css!("
+    let main_div = css! {"
         color: darkblue;
-    ");
+    "};
 
     dom! {
         <html>

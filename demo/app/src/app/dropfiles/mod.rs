@@ -38,12 +38,10 @@ impl DropFiles {
             });
         });
 
-        let css_drop = css!(
-            "
+        let css_drop = css! {"
             height: 400px;
             background-color: green;
-        "
-        );
+        "};
 
         dom! {
             <div css={css_drop} on_dropfile={on_dropfile}>

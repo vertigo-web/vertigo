@@ -7,10 +7,10 @@ use crate as vertigo;
 
 #[test]
 fn test_unknown_rule() {
-    let value = css!(
-        "unknown-rule-one: somevalue;
-        unknown-rule-two: \"quotedvalue\";"
-    );
+    let value = css! {"
+        unknown-rule-one: somevalue;
+        unknown-rule-two: \"quotedvalue\";
+    "};
 
     assert_eq!(
         get_s(&value),
@@ -21,10 +21,10 @@ fn test_unknown_rule() {
 #[test]
 fn test_unknown_rule_expression() {
     fn css_factory(color: &str, back_color: &str) -> Css {
-        css!(
-            "some-color-rule: { color };
-            background-color: { back_color };"
-        )
+        css! {"
+            some-color-rule: { color };
+            background-color: { back_color };
+        "}
     }
 
     let value = css_factory("red", "#asdf");

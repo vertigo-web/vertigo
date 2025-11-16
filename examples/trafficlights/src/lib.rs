@@ -1,4 +1,4 @@
-use vertigo::{main, css, bind, DomNode, dom, Value};
+use vertigo::{bind, css, dom, main, DomNode, Value};
 
 mod light;
 use light::Light;
@@ -13,31 +13,29 @@ pub enum LightState {
 
 pub fn app(state: &Value<LightState>) -> DomNode {
     let red_on = state.map(|state| state == LightState::Red || state == LightState::RedYellow);
-    let yellow_on = state.map(|state| state == LightState::Yellow || state == LightState::RedYellow);
+    let yellow_on =
+        state.map(|state| state == LightState::Yellow || state == LightState::RedYellow);
     let green_on = state.map(|state| state == LightState::Green);
 
-    let next = bind!(state, |_|
-        state.change(|value| {
-            *value = match value {
-                LightState::Red => LightState::RedYellow,
-                LightState::RedYellow => LightState::Green,
-                LightState::Green => LightState::Yellow,
-                LightState::Yellow => LightState::Red,
-            };
-        })
-    );
+    let next = bind!(state, |_| state.change(|value| {
+        *value = match value {
+            LightState::Red => LightState::RedYellow,
+            LightState::RedYellow => LightState::Green,
+            LightState::Green => LightState::Yellow,
+            LightState::Yellow => LightState::Red,
+        };
+    }));
 
-    let backplate = css!("
+    let backplate = css! {"
         width: 130px;
         background-color: black;
         display: flex;
         flex-direction: column;
-    ");
+    "};
 
-    let button = css!("
+    let button = css! {"
         margin: 20px;
-    ");
-
+    "};
 
     dom! {
         <html>

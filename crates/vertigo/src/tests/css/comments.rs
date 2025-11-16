@@ -20,8 +20,8 @@ fn test_empty2() {
 
 #[test]
 fn test_quite_long() {
-    let value = css!(
-        r#"content:"201C" attr(title) "201D";
+    let value = css! {r#"
+        content:"201C" attr(title) "201D";
         font-family: "Times New Roman", Times, serif;
         /* font-size: 1.2em; */
         text-align:center;
@@ -31,8 +31,8 @@ fn test_quite_long() {
         float:left;
         /* width:7em; */
         /* margin: 0.25em 1em 0.5em 0; */
-        /* padding:1em; */"#
-    );
+        /* padding:1em; */
+    "#};
 
     assert_eq!(get_s(&value), "content: \"201C\" attr(title) \"201D\";\nfont-family: \"Times New Roman\", Times, serif;\ntext-align: center;\nbackground: #333;\ncolor: #fff;\ndisplay: block;\nfloat: left;")
 }
