@@ -1,28 +1,36 @@
 use crate::{self as vertigo, JsJson, JsJsonContext};
 use crate::{AutoJsJson, JsJsonDeserialize, JsJsonSerialize};
 
+mod rename;
+
 #[test]
-fn test_raw_field_name() {
-    #[derive(AutoJsJson)]
-    pub struct Test {
+fn test_serialize_and_deserialize_struct() {
+    #[derive(AutoJsJson, Clone, PartialEq, Eq, Debug)]
+    pub struct TestObj {
         pub r#type: String,
         pub name: String,
+        pub data: JsJson,
     }
 
-    let test = Test {
+    let test_obj = TestObj {
         r#type: "one".to_string(),
         name: "two".to_string(),
+        data: JsJson::String("test test".into()),
     };
 
-    let test_js = test.to_json();
+    let test_obj_json = test_obj.clone().to_json();
     let ctx = JsJsonContext::new("");
-    let hash_map = match test_js.get_hashmap(&ctx) {
+    let hash_map = match test_obj_json.clone().get_hashmap(&ctx) {
         Ok(map) => map,
         Err(_err) => panic!("Error unwrapping hash_map"),
     };
 
     assert!(hash_map.contains_key("type"));
     assert!(hash_map.contains_key("name"));
+
+    let restored_obj = TestObj::from_json(JsJsonContext::new(""), test_obj_json).unwrap();
+
+    assert_eq!(test_obj, restored_obj);
 }
 
 #[test]
@@ -158,34 +166,4 @@ fn test_optional_field() {
 
     assert_eq!(text_out.first_name.as_str(), "Greg");
     assert_eq!(text_out.second_name, None);
-}
-
-#[test]
-fn test_serializa_and_deserialize_to_js_json() {
-    #[derive(AutoJsJson, Clone, PartialEq, Eq, Debug)]
-    pub struct Test {
-        pub r#type: String,
-        pub name: String,
-        pub data: JsJson,
-    }
-
-    let test = Test {
-        r#type: "one".to_string(),
-        name: "two".to_string(),
-        data: JsJson::String("test test".into()),
-    };
-
-    let test_js = test.clone().to_json();
-    let ctx = JsJsonContext::new("");
-    let hash_map = match test_js.clone().get_hashmap(&ctx) {
-        Ok(map) => map,
-        Err(_err) => panic!("Error unwrapping hash_map"),
-    };
-
-    assert!(hash_map.contains_key("type"));
-    assert!(hash_map.contains_key("name"));
-
-    let restored = Test::from_json(JsJsonContext::new(""), test_js).unwrap();
-
-    assert_eq!(test, restored);
 }
