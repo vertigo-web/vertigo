@@ -6,7 +6,8 @@
 ### Added
 
 * `#[store]` macro which wraps a function to be used as a store generator
-* `AutoJsJson`: Added `rename_all` container attribute, and `rename` field attribute
+* `AutoJsJson`: Added `rename_all` container attribute, and `rename` field attribute [#406]
+* `AutoJsJson`: Support for `JsJson` type for dynamic schema [#393]
 
 ### Fixed
 
@@ -19,6 +20,11 @@
 ### Removed
 
 * `vertigo-suspense` (not very usable anyway)
+
+### Internals
+
+* Convenient impls of primitives for JsJson [#418]
+* `v-component` and `v-css` was breaking tests in release mode [#396]
 
 ## 0.8.3 - 2025-09-29
 

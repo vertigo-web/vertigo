@@ -1,3 +1,5 @@
+use std::collections::BTreeMap;
+
 use crate::{self as vertigo, JsJson, JsJsonContext};
 use crate::{AutoJsJson, JsJsonDeserialize, JsJsonSerialize};
 
@@ -10,12 +12,19 @@ fn test_serialize_and_deserialize_struct() {
         pub r#type: String,
         pub name: String,
         pub data: JsJson,
+        pub data_opt1: Option<JsJson>,
+        pub data_opt2: Option<JsJson>,
     }
 
     let test_obj = TestObj {
         r#type: "one".to_string(),
         name: "two".to_string(),
         data: JsJson::String("test test".into()),
+        data_opt1: Some(JsJson::Object(BTreeMap::from([
+            ("three".to_string(), JsJson::String("value3".to_string())),
+            ("four".to_string(), JsJson::String("value4".to_string())),
+        ]))),
+        data_opt2: None,
     };
 
     let test_obj_json = test_obj.clone().to_json();
@@ -25,8 +34,24 @@ fn test_serialize_and_deserialize_struct() {
         Err(_err) => panic!("Error unwrapping hash_map"),
     };
 
-    assert!(hash_map.contains_key("type"));
-    assert!(hash_map.contains_key("name"));
+    assert!(matches!(hash_map.get("type"), Some(JsJson::String(x)) if x == "one"));
+    assert!(matches!(hash_map.get("name"), Some(JsJson::String(x)) if x == "two"));
+    assert!(matches!(hash_map.get("data"), Some(JsJson::String(x)) if x == "test test"));
+
+    assert!(matches!(
+        hash_map.get("data_opt1"),
+        Some(JsJson::Object(map)) if {
+            assert!(matches!(
+                map.get("three"), Some(JsJson::String(x)) if x == "value3"
+            ));
+            assert!(matches!(
+                map.get("four"), Some(JsJson::String(x)) if x == "value4"
+            ));
+            true
+        }
+    ));
+
+    assert!(matches!(hash_map.get("data_opt2"), Some(JsJson::Null)));
 
     let restored_obj = TestObj::from_json(JsJsonContext::new(""), test_obj_json).unwrap();
 

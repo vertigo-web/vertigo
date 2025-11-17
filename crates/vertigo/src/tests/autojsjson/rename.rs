@@ -52,14 +52,8 @@ fn test_simple_enum() {
     let left_js = left.clone().to_json();
     let right_js = right.clone().to_json();
 
-    match left_js {
-        JsJson::String(val) => assert_eq!(val, "TURN_LEFT"),
-        _ => panic!("Invalid type of left_js"),
-    }
-    match right_js {
-        JsJson::String(val) => assert_eq!(val, "TURN_RIGHT"),
-        _ => panic!("Invalid type of right_js"),
-    }
+    assert!(matches!(left_js, JsJson::String(val) if val == "TURN_LEFT"));
+    assert!(matches!(right_js, JsJson::String(val) if val == "TURN_RIGHT"));
 }
 
 #[test]
@@ -113,11 +107,7 @@ fn test_compound_enum() {
     test_obj("empty_tuple_json", &empty_tuple_json, "the empty tuple");
     test_obj("empty_struct_json", &empty_struct_json, "empty-struct");
 
-    println!("nothing = {nothing_json:?}");
-    match &nothing_json {
-        JsJson::String(val) => assert_eq!(val, "nothing-what-so-ever"),
-        _ => panic!("Invalid type of nothing"),
-    }
+    assert!(matches!(&nothing_json, JsJson::String(val) if val == "nothing-what-so-ever"));
 
     let again_somestring = TestType::from_json(JsJsonContext::new(""), somestring_json)
         .unwrap_or_else(|err| panic!("1. {}", err.convert_to_string()));
