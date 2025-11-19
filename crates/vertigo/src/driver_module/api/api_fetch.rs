@@ -33,7 +33,7 @@ impl ApiFetch {
         response
     }
 
-    pub fn callbak(&self, callback: CallbackId, response: SsrFetchResponse) {
+    pub fn callback(&self, callback: CallbackId, response: SsrFetchResponse) {
         self.store.call(callback, response);
     }
 }

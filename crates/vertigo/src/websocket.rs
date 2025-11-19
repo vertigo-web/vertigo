@@ -1,4 +1,4 @@
-use crate::{dev::CallbackId, ApiImport};
+use crate::{dev::CallbackId, driver_module::api::api_browser_command};
 
 /// Websocket message type on which a websocket handler operates.
 pub enum WebsocketMessage {
@@ -8,27 +8,18 @@ pub enum WebsocketMessage {
 }
 
 /// Represents websocket connection.
-#[derive(Clone)]
+#[derive(Clone, PartialEq)]
 pub struct WebsocketConnection {
-    api: ApiImport,
     callback_id: CallbackId,
 }
 
-impl PartialEq for WebsocketConnection {
-    fn eq(&self, other: &Self) -> bool {
-        self.callback_id == other.callback_id
-    }
-}
-
 impl WebsocketConnection {
-    pub fn new(api: ApiImport, callback_id: CallbackId) -> WebsocketConnection {
-        WebsocketConnection { api, callback_id }
+    pub fn new(callback_id: CallbackId) -> WebsocketConnection {
+        WebsocketConnection { callback_id }
     }
 
     pub fn send(&self, message: impl Into<String>) {
         let message = message.into();
-
-        self.api
-            .websocket_send_message(self.callback_id.as_u64(), message.as_str());
+        api_browser_command().websocket_send_message(self.callback_id, &message);
     }
 }
