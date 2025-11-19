@@ -4,6 +4,7 @@ import { JsNode } from './js_node';
 import { GuardJsValue } from './guard';
 import { ExecCommand } from './exec_command/exec_command';
 import { JsValueConst } from './jsvalue_types';
+import { AppLocation } from './exec_command/location/AppLocation';
 
 //Number -> u32 or i32
 //BigInt -> u64 or i64
@@ -47,8 +48,9 @@ export class WasmModule {
             return wasmModule;
         };
 
-        const apiBrowser = new ApiBrowser(getWasm);
-        const execCommand = new ExecCommand(getWasm);
+        const appLocation = new AppLocation(getWasm);
+        const apiBrowser = new ApiBrowser(getWasm, appLocation);
+        const execCommand = new ExecCommand(getWasm, appLocation);
 
         //@ts-expect-error
         window.$vertigoApi = apiBrowser;

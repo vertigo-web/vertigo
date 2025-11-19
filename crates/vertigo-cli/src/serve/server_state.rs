@@ -76,7 +76,7 @@ impl ServerState {
             Arc::new({
                 let sender = sender.clone();
 
-                move |command| match command {
+                move |url: String, command| match command {
                     CommandForBrowser::FetchCacheGet => {
                         browser_response::FetchCacheGet { data: None }.to_json()
                     }
@@ -134,6 +134,19 @@ impl ServerState {
                         JsJson::Null
                     }
                     CommandForBrowser::TimerClear { callback: _ } => JsJson::Null,
+                    CommandForBrowser::LocationCallback {
+                        target: _,
+                        mode: _,
+                        callback: _,
+                    } => JsJson::Null,
+                    CommandForBrowser::LocationSet {
+                        target: _,
+                        mode: _,
+                        value: _,
+                    } => JsJson::Null,
+                    CommandForBrowser::LocationGet { target: _ } => {
+                        browser_response::LocationGet { value: url }.to_json()
+                    }
                 }
             }),
         );

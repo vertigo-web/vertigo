@@ -1,9 +1,9 @@
 import { ModuleControllerType } from "./wasm_init";
 import { ExportType } from "./wasm_module";
 import { Cookies } from "./api_browser/cookies";
-import { HashRouter } from "./api_browser/hashrouter";
+import { HashRouter } from "./exec_command/location/hashrouter";
 import { DriverDom } from "./api_browser/dom/dom";
-import { HistoryLocation } from "./api_browser/historyLocation";
+import { AppLocation } from "./exec_command/location/AppLocation";
 
 /**
  * @deprecated
@@ -11,14 +11,12 @@ import { HistoryLocation } from "./api_browser/historyLocation";
 export class ApiBrowser {
     public readonly cookie: Cookies;
     public readonly hashRouter: HashRouter;
-    public readonly historyLocation: HistoryLocation;
     public readonly dom: DriverDom;
 
-    constructor(getWasm: () => ModuleControllerType<ExportType>) {
+    constructor(getWasm: () => ModuleControllerType<ExportType>, appLocation: AppLocation) {
         this.cookie = new Cookies();
         this.hashRouter = new HashRouter(getWasm);
-        this.historyLocation = new HistoryLocation(getWasm);
-        this.dom = new DriverDom(this.historyLocation, getWasm);
+        this.dom = new DriverDom(appLocation, getWasm);
     }
 
     public getRandom = (min: number, max: number): number => {

@@ -1,8 +1,8 @@
 import { ExportType } from "../../wasm_module";
 import { GuardJsValue } from "../../guard";
-import { HistoryLocation } from "../historyLocation";
 import { MapNodes } from "./map_nodes";
 import { ModuleControllerType } from "../../wasm_init";
+import { AppLocation } from "../../exec_command/location/AppLocation";
 
 interface FileItemType {
     name: string,
@@ -78,13 +78,13 @@ const assertNeverCommand = (data: never): never => {
 };
 
 export class DriverDom {
-    private historyLocation: HistoryLocation;
+    private appLocation: AppLocation;
     private readonly getWasm: () => ModuleControllerType<ExportType>;
     public readonly nodes: MapNodes;
     private callbacks: Map<bigint, (data: Event) => void>;
 
-    public constructor(historyLocation: HistoryLocation, getWasm: () => ModuleControllerType<ExportType>) {
-        this.historyLocation = historyLocation;
+    public constructor(appLocation: AppLocation, getWasm: () => ModuleControllerType<ExportType>) {
+        this.appLocation = appLocation;
         this.getWasm = getWasm;
         this.nodes = new MapNodes();
         this.callbacks = new Map();
@@ -120,7 +120,7 @@ export class DriverDom {
                 }
 
                 e.preventDefault();
-                this.historyLocation.push(href);
+                this.appLocation.set('History', 'Push', href);
                 window.scrollTo(0, 0);
             })
         }
