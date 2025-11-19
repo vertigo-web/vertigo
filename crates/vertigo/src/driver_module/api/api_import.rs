@@ -6,7 +6,7 @@ use crate::{
         js_value::JsValue,
     },
     struct_mut::ValueMut,
-    transaction, DropResource, JsJson, WebsocketConnection, WebsocketMessage,
+    transaction, DropResource, JsJson,
 };
 
 use super::api_dom_access::DomAccess;
@@ -377,87 +377,6 @@ impl ApiImport {
 
     ///////////////////////////////////////////////////////////////////////////////////
     ///////////////////////////////////////////////////////////////////////////////////
-
-    #[must_use]
-    pub fn websocket<F: Fn(WebsocketMessage) + 'static>(
-        &self,
-        host: impl Into<String>,
-        callback: F,
-    ) -> DropResource {
-        let host: String = host.into();
-
-        let api = self.clone();
-
-        let (callback_id, drop_callback) =
-            api_callbacks().register_with_id(move |callback_id, data| {
-                if let JsValue::True = data {
-                    let connection = WebsocketConnection::new(api.clone(), callback_id);
-                    let connection = WebsocketMessage::Connection(connection);
-                    callback(connection);
-                    return JsValue::Undefined;
-                }
-
-                if let JsValue::String(message) = data {
-                    callback(WebsocketMessage::Message(message));
-                    return JsValue::Undefined;
-                }
-
-                if let JsValue::False = data {
-                    callback(WebsocketMessage::Close);
-                    return JsValue::Undefined;
-                }
-
-                log::error!("websocket - unsupported message type received");
-                JsValue::Undefined
-            });
-
-        self.websocket_register_callback(host.as_str(), callback_id.as_u64());
-
-        DropResource::new({
-            let api = self.clone();
-
-            move || {
-                api.websocket_unregister_callback(callback_id.as_u64());
-                drop_callback.off();
-            }
-        })
-    }
-
-    fn websocket_register_callback(&self, host: &str, callback_id: u64) {
-        DomAccess::default()
-            .api()
-            .get("websocket")
-            .call(
-                "websocket_register_callback",
-                vec![JsValue::String(host.to_string()), JsValue::U64(callback_id)],
-            )
-            .exec();
-    }
-
-    fn websocket_unregister_callback(&self, callback_id: u64) {
-        DomAccess::default()
-            .api()
-            .get("websocket")
-            .call(
-                "websocket_unregister_callback",
-                vec![JsValue::U64(callback_id)],
-            )
-            .exec();
-    }
-
-    pub fn websocket_send_message(&self, callback_id: u64, message: &str) {
-        DomAccess::default()
-            .api()
-            .get("websocket")
-            .call(
-                "websocket_send_message",
-                vec![
-                    JsValue::U64(callback_id),
-                    JsValue::String(message.to_string()),
-                ],
-            )
-            .exec();
-    }
 
     pub fn dom_bulk_update(&self, value: JsJson) {
         DomAccess::default()

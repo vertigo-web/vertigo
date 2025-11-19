@@ -1,6 +1,7 @@
 import { JsJsonType } from "../../jsjson";
 import { ModuleControllerType } from "../../wasm_init";
 import { ExportType } from "../../wasm_module";
+import { CallbackId } from "../types";
 
 export interface FetchRequestType {
     method: string,
@@ -66,7 +67,7 @@ const processResponse = async (response: Response): Promise<FetchResponseType> =
 
 export const fetchExec = async (
     getWasm: () => ModuleControllerType<ExportType>,
-    callback_id: bigint,
+    callback_id: CallbackId,
     request: FetchRequestType
 ): Promise<void> => {
     const wasm = getWasm();

@@ -109,15 +109,6 @@ pub fn match_log(arg: &JsValue) -> Result<(String, String), ()> {
     Ok((log_type, log_message))
 }
 
-pub fn match_websocket(arg: &JsValue) -> Result<(), ()> {
-    let matcher = Match::new(arg)?;
-
-    let matcher = matcher.test_list(&["api"])?;
-    let _ = matcher.test_list(&["get", "websocket"])?;
-
-    Ok(())
-}
-
 pub fn match_interval(arg: &JsValue) -> Result<CallWebsocketResult, ()> {
     let matcher = Match::new(arg)?;
 
@@ -246,15 +237,6 @@ mod tests {
             match_log(&value),
             Ok(("log".to_string(), "Hello world".to_string()))
         );
-    }
-
-    #[test]
-    fn test_match_websocket() {
-        let value = JsValue::List(vec![
-            JsValue::List(vec![JsValue::from("api")]),
-            JsValue::List(vec![JsValue::from("get"), JsValue::from("websocket")]),
-        ]);
-        assert_eq!(match_websocket(&value), Ok(()));
     }
 
     #[test]

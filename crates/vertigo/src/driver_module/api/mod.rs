@@ -30,3 +30,6 @@ pub use api_fetch::api_fetch;
 
 mod utils;
 pub use utils::CallbackStore;
+
+mod api_websocket;
+pub use api_websocket::api_websocket;

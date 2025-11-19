@@ -20,6 +20,18 @@ pub enum CommandForBrowser {
     },
     IsBrowser,
     GetDateNow,
+
+    WebsocketRegister {
+        host: String,
+        callback: CallbackId,
+    },
+    WebsocketUnregister {
+        callback: CallbackId,
+    },
+    WebsocketSendMessage {
+        callback: CallbackId,
+        message: String,
+    },
 }
 
 pub mod browser_response {
@@ -44,9 +56,21 @@ pub mod browser_response {
 }
 
 #[derive(AutoJsJson, Debug)]
+pub enum WebsocketMessageFromBrowser {
+    Connected,
+    Message { message: String },
+    Disconnected,
+}
+
+#[derive(AutoJsJson, Debug)]
 pub enum CommandForWasm {
     FetchExecResponse {
         response: SsrFetchResponse,
         callback: CallbackId,
+    },
+
+    Websocket {
+        callback: CallbackId,
+        message: WebsocketMessageFromBrowser,
     },
 }
