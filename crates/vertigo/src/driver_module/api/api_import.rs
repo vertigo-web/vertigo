@@ -1,11 +1,8 @@
-use std::rc::Rc;
-
 use crate::{
     driver_module::{
         api::{api_browser_command, callbacks::api_callbacks, panic_message::api_panic_message},
         js_value::JsValue,
     },
-    struct_mut::ValueMut,
     transaction, DropResource, JsJson,
 };
 
@@ -136,88 +133,6 @@ impl ApiImport {
                 ],
             )
             .exec();
-    }
-
-    pub fn interval_set<F: Fn() + 'static>(&self, duration: u32, callback: F) -> DropResource {
-        let (callback_id, drop_callback) = api_callbacks().register(move |_| {
-            callback();
-            JsValue::Undefined
-        });
-
-        let result = DomAccess::default()
-            .api()
-            .get("interval")
-            .call(
-                "interval_set",
-                vec![JsValue::U32(duration), JsValue::U64(callback_id.as_u64())],
-            )
-            .fetch();
-
-        let timer_id = if let JsValue::I32(timer_id) = result {
-            timer_id
-        } else {
-            log::error!("interval_set -> expected i32 -> result={result:?}");
-            0
-        };
-
-        DropResource::new(move || {
-            DomAccess::default()
-                .api()
-                .get("interval")
-                .call("interval_clear", vec![JsValue::I32(timer_id)])
-                .exec();
-
-            drop_callback.off();
-        })
-    }
-
-    pub fn timeout_set<F: Fn() + 'static>(&self, duration: u32, callback: F) -> DropResource {
-        let (callback_id, drop_callback) = api_callbacks().register(move |_| {
-            callback();
-            JsValue::Undefined
-        });
-
-        let result = DomAccess::default()
-            .api()
-            .get("interval")
-            .call(
-                "timeout_set",
-                vec![JsValue::U32(duration), JsValue::U64(callback_id.as_u64())],
-            )
-            .fetch();
-
-        let timer_id = if let JsValue::I32(timer_id) = result {
-            timer_id
-        } else {
-            log::error!("timeout_set -> expected i32 -> result={result:?}");
-            0
-        };
-
-        DropResource::new(move || {
-            DomAccess::default()
-                .api()
-                .get("interval")
-                .call("interval_clear", vec![JsValue::I32(timer_id)])
-                .exec();
-
-            drop_callback.off();
-        })
-    }
-
-    pub fn set_timeout_and_detach<F: Fn() + 'static>(&self, duration: u32, callback: F) {
-        let drop_box: Rc<ValueMut<Option<DropResource>>> = Rc::new(ValueMut::new(None));
-
-        let callback_with_drop = {
-            let drop_box = drop_box.clone();
-
-            move || {
-                callback();
-                drop_box.set(None);
-            }
-        };
-
-        let drop = self.timeout_set(duration, callback_with_drop);
-        drop_box.set(Some(drop));
     }
 
     pub fn timezone_offset(&self) -> i32 {

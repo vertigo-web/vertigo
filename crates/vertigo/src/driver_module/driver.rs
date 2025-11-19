@@ -2,7 +2,9 @@ use vertigo_macro::AutoJsJson;
 
 use crate::{
     css::css_manager::CssManager,
-    driver_module::api::{api_browser_command, api_import, api_server_handler, api_websocket},
+    driver_module::api::{
+        api_browser_command, api_import, api_server_handler, api_timers, api_websocket,
+    },
     fetch::request_builder::{RequestBody, RequestBuilder},
     Context, Css, Dependencies, DropResource, FutureBox, Instant, InstantType, JsJson,
     WebsocketMessage,
@@ -145,7 +147,7 @@ impl Driver {
     /// Make `func` fire every `time` seconds.
     #[must_use]
     pub fn set_interval(&self, time: u32, func: impl Fn() + 'static) -> DropResource {
-        api_import().interval_set(time, func)
+        api_timers().interval(time, func)
     }
 
     /// Gets current value of monotonic clock.
@@ -180,7 +182,8 @@ impl Driver {
     #[must_use]
     pub fn sleep(&self, time: u32) -> FutureBox<()> {
         let (sender, future) = FutureBox::new();
-        api_import().set_timeout_and_detach(time, move || {
+
+        api_timers().set_timeout_and_detach(time, move || {
             sender.publish(());
         });
 

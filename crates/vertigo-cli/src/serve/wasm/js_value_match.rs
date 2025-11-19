@@ -77,16 +77,6 @@ impl<'a> Match<'a> {
         Err(())
     }
 
-    pub fn u32(&self) -> Result<(Self, u32), ()> {
-        let list = self.list;
-
-        let Some((JsValue::U32(value), rest)) = list.split_first() else {
-            return Err(());
-        };
-
-        Ok((Self { list: rest }, *value))
-    }
-
     pub fn u64(&self) -> Result<(Self, u64), ()> {
         let list = self.list;
 
