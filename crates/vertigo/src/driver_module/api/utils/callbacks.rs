@@ -36,6 +36,23 @@ impl<R: 'static, R2: Default + 'static> CallbackStore<R, R2> {
         (id, drop)
     }
 
+    pub fn register_with_id(&self, callback: impl Fn(CallbackId, R) -> R2 + 'static) -> (CallbackId, DropResource) {
+        let callback = Rc::new(callback);
+        let id = CallbackId::new();
+
+        self.data
+            .insert(id, Rc::new(move |data| callback(id, data)));
+
+        let drop = DropResource::new({
+            let data = self.data.clone();
+            move || {
+                data.remove(&id);
+            }
+        });
+
+        (id, drop)
+    }
+
     pub fn call(&self, callback_id: CallbackId, value: R) -> R2 {
         let callback = self.data.get(&callback_id);
 

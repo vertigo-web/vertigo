@@ -35,26 +35,6 @@ impl CallbackStore {
         (id, drop)
     }
 
-    pub fn register_with_id<C: Fn(CallbackId, JsValue) -> JsValue + 'static>(
-        &self,
-        callback: C,
-    ) -> (CallbackId, DropResource) {
-        let id = CallbackId::new();
-        let callback = Rc::new(callback);
-
-        self.data
-            .insert(id, Rc::new(move |data| callback(id, data)));
-
-        let drop = DropResource::new({
-            let data = self.data.clone();
-            move || {
-                data.remove(&id);
-            }
-        });
-
-        (id, drop)
-    }
-
     pub fn call(&self, callback_id: CallbackId, value: JsValue) -> JsValue {
         let callback = self.data.get(&callback_id);
 

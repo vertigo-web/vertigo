@@ -2,7 +2,7 @@ import { wasmInit, ModuleControllerType } from './wasm_init';
 import { ApiBrowser as ApiBrowser } from './api_browser';
 import { JsNode } from './js_node';
 import { GuardJsValue } from './guard';
-import { exec_command } from './exec_command/exec_command';
+import { ExecCommand } from './exec_command/exec_command';
 import { JsValueConst } from './jsvalue_types';
 
 //Number -> u32 or i32
@@ -48,6 +48,7 @@ export class WasmModule {
         };
 
         const apiBrowser = new ApiBrowser(getWasm);
+        const execCommand = new ExecCommand(getWasm);
 
         //@ts-expect-error
         window.$vertigoApi = apiBrowser;
@@ -69,7 +70,7 @@ export class WasmModule {
 
                     //new wersion
                     if (GuardJsValue.isJson(args)) {
-                        const response = exec_command(getWasm, args.value);
+                        const response = execCommand.exec(args.value);
                         return getWasm().valueSaveToBufferLong({
                             type: JsValueConst.Json,
                             value: response

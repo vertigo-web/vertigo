@@ -108,6 +108,15 @@ impl ServerState {
 
                         response.to_json()
                     }
+                    CommandForBrowser::WebsocketRegister { host: _, callback: _ } => {
+                        JsJson::Null
+                    },
+                    CommandForBrowser::WebsocketUnregister { callback: _ } => {
+                        JsJson::Null
+                    },
+                    CommandForBrowser::WebsocketSendMessage { callback: _, message: _ } => {
+                        JsJson::Null
+                    },
                 }
             }),
         );

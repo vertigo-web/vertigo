@@ -136,10 +136,6 @@ impl WasmInstance {
                         }
                     }
 
-                    if let Ok(()) = match_websocket(&value) {
-                        return 0;
-                    }
-
                     // push history router location
                     if let Ok(_url) = match_history_router_push(&value) {
                         // Ignore in SSR

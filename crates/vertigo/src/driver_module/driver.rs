@@ -1,11 +1,7 @@
 use vertigo_macro::AutoJsJson;
 
 use crate::{
-    css::css_manager::CssManager,
-    driver_module::api::{api_browser_command, api_import, api_server_handler},
-    fetch::request_builder::{RequestBody, RequestBuilder},
-    Context, Css, Dependencies, DropResource, FutureBox, Instant, InstantType, JsJson,
-    WebsocketMessage,
+    Context, Css, Dependencies, DropResource, FutureBox, Instant, InstantType, JsJson, WebsocketMessage, css::css_manager::CssManager, driver_module::api::{api_browser_command, api_import, api_server_handler, api_websocket}, fetch::request_builder::{RequestBody, RequestBuilder}
 };
 use std::{future::Future, pin::Pin, rc::Rc};
 
@@ -211,7 +207,7 @@ impl Driver {
         host: impl Into<String>,
         callback: F,
     ) -> DropResource {
-        api_import().websocket(host, callback)
+        api_websocket().websocket(host, callback)
     }
 
     /// Spawn a future - thus allowing to fire async functions in, for example, event handler. Handy when fetching resources from internet.

@@ -59,6 +59,15 @@ pub mod safe_wrappers {
                             let response = browser_response::GetDateNow { value: 0 };
                             response.to_json()
                         }
+                        CommandForBrowser::WebsocketRegister { host: _, callback: _ } => {
+                            JsJson::Null
+                        },
+                        CommandForBrowser::WebsocketUnregister { callback: _ } => {
+                            JsJson::Null
+                        },
+                        CommandForBrowser::WebsocketSendMessage { callback: _, message: _ } => {
+                            JsJson::Null
+                        },
                     };
 
                     return JsValue::Json(response).to_ptr_long();

@@ -90,4 +90,19 @@ impl CommandForBrowserApi {
             }
         }
     }
+
+    pub fn websocket_register_callback(&self, host: &str, callback: CallbackId) {
+        exec_command(CommandForBrowser::WebsocketRegister { host: host.to_string(), callback });
+    }
+
+    pub fn websocket_unregister_callback(&self, callback: CallbackId) {
+        exec_command(CommandForBrowser::WebsocketUnregister { callback });
+    }
+
+    pub fn websocket_send_message(&self, callback: CallbackId, message: &str) {
+        exec_command(CommandForBrowser::WebsocketSendMessage { callback, message: message.to_string() });
+    }
+
+
+    //....
 }

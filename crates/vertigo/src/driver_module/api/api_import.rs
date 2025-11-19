@@ -6,7 +6,7 @@ use crate::{
         js_value::JsValue,
     },
     struct_mut::ValueMut,
-    transaction, DropResource, JsJson, WebsocketConnection, WebsocketMessage,
+    transaction, DropResource, JsJson,
 };
 
 use super::api_dom_access::DomAccess;
@@ -378,6 +378,7 @@ impl ApiImport {
     ///////////////////////////////////////////////////////////////////////////////////
     ///////////////////////////////////////////////////////////////////////////////////
 
+    /*
     #[must_use]
     pub fn websocket<F: Fn(WebsocketMessage) + 'static>(
         &self,
@@ -458,6 +459,7 @@ impl ApiImport {
             )
             .exec();
     }
+    */
 
     pub fn dom_bulk_update(&self, value: JsJson) {
         DomAccess::default()

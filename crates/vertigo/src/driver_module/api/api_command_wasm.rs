@@ -3,9 +3,7 @@ use std::rc::Rc;
 use vertigo_macro::store;
 
 use crate::{
-    command::{decode_json, CommandForWasm},
-    driver_module::api::api_fetch::api_fetch,
-    JsJson,
+    JsJson, command::{CommandForWasm, decode_json}, driver_module::api::{api_fetch::api_fetch, api_websocket}
 };
 
 #[store]
@@ -26,7 +24,10 @@ impl CommandWasmApi {
         if let Some(command) = command {
             match command {
                 CommandForWasm::FetchExecResponse { response, callback } => {
-                    api_fetch().callbak(callback, response);
+                    api_fetch().callback(callback, response);
+                }
+                CommandForWasm::Websocket { callback, message } => {
+                    api_websocket().callback(callback, message);
                 }
             }
         }
