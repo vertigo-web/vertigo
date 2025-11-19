@@ -12,9 +12,26 @@ type ExecType
     | 'IsBrowser'
     | 'GetDateNow'
     | {
-        'FetchExec': {
+        FetchExec: {
             callback: CallbackId,
             request: FetchRequestType,
+        }
+    }
+    | {
+        WebsocketRegister: {
+            callback: CallbackId,
+            host: string
+        }
+    }
+    | {
+        WebsocketSendMessage: {
+            callback: CallbackId,
+            message: string,
+        }
+    }
+    | {
+        WebsocketUnregister: {
+            callback: CallbackId,
         }
     };
 
@@ -31,6 +48,8 @@ export class ExecCommand {
 
         //@ts-expect-error - //TODO Add safe type checking
         const safeArg: ExecType = arg;
+
+        // console.info('exec arg', safeArg);
 
         if (safeArg === 'FetchCacheGet') {
             return fetchCacheGet();
@@ -50,6 +69,21 @@ export class ExecCommand {
 
         if ('FetchExec' in safeArg) {
             fetchExec(this.getWasm, safeArg.FetchExec.callback, safeArg.FetchExec.request);
+            return null;
+        }
+
+        if ('WebsocketRegister' in safeArg) {
+            this.websocket.websocket_register_callback(safeArg.WebsocketRegister.host, safeArg.WebsocketRegister.callback);
+            return null;
+        }
+
+        if ('WebsocketSendMessage' in safeArg) {
+            this.websocket.websocket_send_message(safeArg.WebsocketSendMessage.callback, safeArg.WebsocketSendMessage.message);
+            return null;
+        }
+
+        if ('WebsocketUnregister' in safeArg) {
+            this.websocket.websocket_unregister_callback(safeArg.WebsocketUnregister.callback);
             return null;
         }
 

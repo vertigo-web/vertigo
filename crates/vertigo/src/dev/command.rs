@@ -58,7 +58,9 @@ pub mod browser_response {
 #[derive(AutoJsJson, Debug)]
 pub enum WebsocketMessageFromBrowser {
     Connected,
-    Message(String),
+    Message {
+        message: String,
+    },
     Disconnected,
 }
 

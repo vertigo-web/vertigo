@@ -1,5 +1,6 @@
 import { ModuleControllerType } from "../../wasm_init";
 import { ExportType } from "../../wasm_module";
+import { CallbackId } from "../types";
 import { SocketConnection, SocketConnectionController } from "./connection";
 
 
@@ -8,10 +9,43 @@ const assertNeverMessage = (data: never): never => {
     throw Error('unknown message');
 };
 
+/*
+pub enum WebsocketMessageFromBrowser {
+    Connected,
+    Message {
+        message: String,
+    },
+    Disconnected,
+}
+
+
+pub enum CommandForWasm {
+    Websocket {
+        callback: CallbackId,
+        message: WebsocketMessageFromBrowser,
+    }
+}
+*/
+
+type CommandType = 'Connected' | 'Disconnected' | {
+    'Message': {
+        message: string,
+    }
+}
+const wasmCallback = (wasm: ModuleControllerType<ExportType>, callbackId: CallbackId, command: CommandType) => {
+    wasm.wasm_command({
+        'Websocket': {
+            callback: callbackId,
+            message: command,
+        }
+    })
+};
+
+
 export class DriverWebsocket {
     private getWasm: () => ModuleControllerType<ExportType>;
-    private readonly controllerList: Map<bigint, SocketConnectionController>;
-    private readonly socket: Map<bigint, SocketConnection>;
+    private readonly controllerList: Map<CallbackId, SocketConnectionController>;
+    private readonly socket: Map<CallbackId, SocketConnection>;
 
     constructor(getWasm: () => ModuleControllerType<ExportType>) {
         this.getWasm = getWasm;
@@ -21,7 +55,7 @@ export class DriverWebsocket {
 
     public websocket_register_callback = (
         host: string,
-        callback_id: bigint,
+        callback_id: CallbackId,
     ) => {
         const wasm = this.getWasm();
 
@@ -37,18 +71,22 @@ export class DriverWebsocket {
 
                 if (message.type === 'socket') {
                     this.socket.set(callback_id, message.socket);
-                    wasm.wasm_callback(callback_id, true);
+                    wasmCallback(wasm, callback_id, 'Connected');
                     return;
                 }
 
                 if (message.type === 'message') {
-                    wasm.wasm_callback(callback_id, message.message);
+                    wasmCallback(wasm, callback_id, {
+                        'Message': {
+                            message: message.message
+                        }
+                    });
                     return;
                 }
 
                 if (message.type === 'close') {
                     this.socket.delete(callback_id);
-                    wasm.wasm_callback(callback_id, false);
+                    wasmCallback(wasm, callback_id, 'Disconnected');
                     return;
                 }
 
@@ -59,7 +97,7 @@ export class DriverWebsocket {
         this.controllerList.set(callback_id, controller);
     }
 
-    public websocket_unregister_callback = (callback_id: bigint) => {
+    public websocket_unregister_callback = (callback_id: CallbackId) => {
         const controller = this.controllerList.get(callback_id);
 
         if (controller === undefined) {
@@ -72,7 +110,7 @@ export class DriverWebsocket {
     }
 
     public websocket_send_message = (
-        callback_id: bigint,
+        callback_id: CallbackId,
         message: string,
     ) => {
         const socket = this.socket.get(callback_id);

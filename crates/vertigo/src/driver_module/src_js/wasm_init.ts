@@ -14,6 +14,9 @@ export interface ModuleControllerType<ExportType extends BaseExportType> {
     exports: ExportType,
     decodeArgumentsLong: (long_ptr: bigint) => JsValueType,
     getUint8Memory: () => Uint8Array,
+    /**
+     * @deprecated - pleas use wasm_command
+     */
     wasm_callback: (callback_id: bigint, params: JsValueType) => JsValueType,
     wasm_command: (params: JsJsonType) => JsJsonType,
     valueSaveToBufferLong: (value: JsValueType) => bigint,

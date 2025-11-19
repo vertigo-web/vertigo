@@ -37,7 +37,7 @@ impl ApiWebsocket {
                     let connection = WebsocketConnection::new(callback_id);
                     callback(WebsocketMessage::Connection(connection));
                 },
-                WebsocketMessageFromBrowser::Message(message) => {
+                WebsocketMessageFromBrowser::Message { message } => {
                     callback(WebsocketMessage::Message(message));
                 },
                 WebsocketMessageFromBrowser::Disconnected => {
