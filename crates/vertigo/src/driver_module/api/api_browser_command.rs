@@ -2,6 +2,7 @@ use std::rc::Rc;
 
 use vertigo_macro::store;
 
+use crate::command::TimerKind;
 use crate::dev::command::{browser_response, decode_json, CommandForBrowser};
 use crate::dev::InstantType;
 use crate::external_api::safe_wrappers;
@@ -106,6 +107,20 @@ impl CommandForBrowserApi {
         exec_command(CommandForBrowser::WebsocketSendMessage {
             callback,
             message: message.to_string(),
+        });
+    }
+
+    pub fn timer_set(&self, callback: CallbackId, duration: u32, kind: TimerKind) {
+        exec_command(CommandForBrowser::TimerSet {
+            callback,
+            duration,
+            kind,
+        });
+    }
+
+    pub fn timer_clear(&self, callback: CallbackId) {
+        exec_command(CommandForBrowser::TimerClear {
+            callback,
         });
     }
 

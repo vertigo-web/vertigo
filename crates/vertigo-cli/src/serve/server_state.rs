@@ -117,6 +117,19 @@ impl ServerState {
                         callback: _,
                         message: _,
                     } => JsJson::Null,
+                    CommandForBrowser::TimerSet { callback, duration, kind: _ } => {
+                        if duration == 0 {
+                            sender
+                                .send(Message::SetTimeoutZero { callback })
+                                .inspect_err(|err| {
+                                    log::error!("Error sending SetTimeoutZero: {err}")
+                                })
+                                .unwrap_or_default();
+                        }
+
+                        JsJson::Null
+                    },
+                    CommandForBrowser::TimerClear { callback: _ } => JsJson::Null,
                 }
             }),
         );

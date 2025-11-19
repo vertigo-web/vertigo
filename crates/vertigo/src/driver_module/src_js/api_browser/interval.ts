@@ -1,34 +1,74 @@
+import { CallbackId } from "../exec_command/types";
 import { ModuleControllerType } from "../wasm_init";
 import { ExportType } from "../wasm_module";
 
+type TimerResourceId = ReturnType<typeof setTimeout>;
+
+interface TimerId {
+    kind: 'Interval' | 'Timeout',
+    timerId: TimerResourceId,
+}
+
 export class Interval {
     private readonly getWasm: () => ModuleControllerType<ExportType>;
+    private readonly data: Map<CallbackId, TimerId>;
 
     constructor(getWasm: () => ModuleControllerType<ExportType>) {
         this.getWasm = getWasm;
+        this.data = new Map();
     }
 
-    public interval_set = (duration: number, callback_id: bigint): ReturnType<typeof setTimeout> => {
-        const timer_id = setInterval(() => {
-            this.getWasm().wasm_callback(callback_id, undefined);
-        }, duration);
+    timerSet = (callback: CallbackId, duration: number, kind: 'Interval' | 'Timeout') => {
+        switch (kind) {
+            case 'Interval': {
+                const timerId = setInterval(() => {
+                    this.getWasm().wasm_command({
+                        'TimerCall': {
+                            callback,
+                        },
+                    })
+                }, duration);
 
-        return timer_id;
+                this.data.set(callback, {
+                    kind: 'Interval',
+                    timerId,
+                });
+                break;
+            }
+            case 'Timeout': {
+                const timerId = setTimeout(() => {
+                    this.getWasm().wasm_command({
+                        'TimerCall': {
+                            callback,
+                        },
+                    })
+                }, duration);
+
+                this.data.set(callback, {
+                    kind: 'Timeout',
+                    timerId,
+                });
+                break;
+            }
+        }
     }
 
-    public interval_clear = (timer_id: number) => {
-        clearInterval(timer_id);
-    }
+    TimerClear = (callback: CallbackId) => {
+        const timerResource = this.data.get(callback);
 
-    timeout_set = (duration: number, callback_id: bigint): ReturnType<typeof setTimeout> => {
-        const timeout_id = setTimeout(() => {
-            this.getWasm().wasm_callback(callback_id, undefined);
-        }, duration);
+        if (timerResource === undefined) {
+            throw Error('panic');
+        }
 
-        return timeout_id;
-    }
-
-    timeout_clear = (timer_id: number): void => {
-        clearTimeout(timer_id);
+        switch (timerResource.kind) {
+            case 'Interval': {
+                clearInterval(timerResource.timerId);
+                break;
+            }
+            case 'Timeout': {
+                clearTimeout(timerResource.timerId);
+                break;
+            }
+        }
     }
 }

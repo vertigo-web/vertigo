@@ -3,9 +3,7 @@ use std::rc::Rc;
 use vertigo_macro::store;
 
 use crate::{
-    command::{decode_json, CommandForWasm},
-    driver_module::api::{api_fetch::api_fetch, api_websocket},
-    JsJson,
+    JsJson, command::{CommandForWasm, decode_json}, driver_module::api::{api_fetch::api_fetch, api_timers, api_websocket}
 };
 
 #[store]
@@ -31,6 +29,9 @@ impl CommandWasmApi {
                 CommandForWasm::Websocket { callback, message } => {
                     api_websocket().callback(callback, message);
                 }
+                CommandForWasm::TimerCall { callback } => {
+                    api_timers().callback_timeout(callback);
+                },
             }
         }
 

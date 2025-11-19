@@ -6,6 +6,7 @@ import { ExportType } from "../wasm_module";
 import { fetchCacheGet } from "./command/fetchCacheGet";
 import { fetchExec, FetchRequestType } from "./command/fetchExec";
 import { CallbackId } from "./types";
+import { Interval } from "../api_browser/interval";
 
 type ExecType
     = 'FetchCacheGet'
@@ -33,15 +34,30 @@ type ExecType
         WebsocketUnregister: {
             callback: CallbackId,
         }
+    }
+    | {
+        TimerSet: {
+            callback: CallbackId,
+            duration: number,
+            kind: 'Interval' | 'Timeout',
+        }
+    }
+    | {
+        TimerClear: {
+            callback: CallbackId,
+        }
     };
 
 
 
 export class ExecCommand {
     private readonly websocket: DriverWebsocket;
+    private readonly interval: Interval;
+    
 
     constructor(private readonly getWasm: () => ModuleControllerType<ExportType>) {
         this.websocket = new DriverWebsocket(getWasm);
+        this.interval = new Interval(getWasm);
     }
 
     exec(arg: JsJsonType): JsJsonType {
@@ -84,6 +100,16 @@ export class ExecCommand {
 
         if ('WebsocketUnregister' in safeArg) {
             this.websocket.websocket_unregister_callback(safeArg.WebsocketUnregister.callback);
+            return null;
+        }
+
+        if ('TimerSet' in safeArg) {
+            this.interval.timerSet(safeArg.TimerSet.callback, safeArg.TimerSet.duration, safeArg.TimerSet.kind);
+            return null;
+        }
+
+        if ('TimerClear' in safeArg) {
+            this.interval.TimerClear(safeArg.TimerClear.callback);
             return null;
         }
 

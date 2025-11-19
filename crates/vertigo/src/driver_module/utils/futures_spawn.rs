@@ -4,7 +4,7 @@ use std::pin::Pin;
 use std::rc::Rc;
 use std::task::{Context, RawWaker, RawWakerVTable, Waker};
 
-use crate::driver_module::api::api_import;
+use crate::driver_module::api::{api_timers};
 use crate::struct_mut::ValueMut;
 
 #[inline]
@@ -40,7 +40,7 @@ impl Task {
     fn wake_by_ref(this: &Rc<Self>) {
         let this_clone = this.clone();
 
-        api_import().set_timeout_and_detach(0, move || {
+        api_timers().set_timeout_and_detach(0, move || {
             this_clone.run();
         });
     }

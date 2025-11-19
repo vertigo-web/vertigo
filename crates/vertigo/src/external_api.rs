@@ -68,6 +68,8 @@ pub mod safe_wrappers {
                             callback: _,
                             message: _,
                         } => JsJson::Null,
+                        CommandForBrowser::TimerSet { callback: _, duration: _, kind: _ } => JsJson::Null,
+                        CommandForBrowser::TimerClear { callback: _ } => JsJson::Null,
                     };
 
                     return JsValue::Json(response).to_ptr_long();
