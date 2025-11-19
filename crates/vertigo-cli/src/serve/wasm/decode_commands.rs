@@ -1,5 +1,5 @@
-use super::{js_value_match::Match, message::CallWebsocketResult};
-use vertigo::{CallbackId, JsJson, JsValue};
+use super::js_value_match::Match;
+use vertigo::{JsJson, JsValue};
 
 pub fn match_cookie_command(arg: &JsValue) -> Result<(), ()> {
     let matcher = Match::new(arg)?;
@@ -109,32 +109,6 @@ pub fn match_log(arg: &JsValue) -> Result<(String, String), ()> {
     Ok((log_type, log_message))
 }
 
-pub fn match_interval(arg: &JsValue) -> Result<CallWebsocketResult, ()> {
-    let matcher = Match::new(arg)?;
-
-    let matcher = matcher.test_list(&["api"])?;
-    let matcher = matcher.test_list(&["get", "interval"])?;
-
-    let (matcher, result) = matcher.test_list_with_fn(|matcher| {
-        let matcher = matcher.str("call")?;
-        if let Ok(matcher) = matcher.str("timeout_set") {
-            let (matcher, time) = matcher.u32()?;
-            let (_, callback_id) = matcher.u64()?;
-
-            return Ok(CallWebsocketResult::TimeoutSet {
-                time,
-                callback: CallbackId::from_u64(callback_id),
-            });
-        }
-
-        Ok(CallWebsocketResult::NoResult)
-    })?;
-
-    matcher.end()?;
-
-    Ok(result)
-}
-
 #[cfg(test)]
 mod tests {
     use vertigo::{JsJson, JsValue};
@@ -236,37 +210,6 @@ mod tests {
         assert_eq!(
             match_log(&value),
             Ok(("log".to_string(), "Hello world".to_string()))
-        );
-    }
-
-    #[test]
-    fn test_match_interval() {
-        let value_set = JsValue::List(vec![
-            JsValue::List(vec![JsValue::from("api")]),
-            JsValue::List(vec![JsValue::from("get"), JsValue::from("interval")]),
-            JsValue::List(vec![
-                JsValue::from("call"),
-                JsValue::from("timeout_set"),
-                JsValue::U32(1000),
-                JsValue::U64(99),
-            ]),
-        ]);
-        assert_eq!(
-            match_interval(&value_set),
-            Ok(CallWebsocketResult::TimeoutSet {
-                time: 1000,
-                callback: CallbackId::from_u64(99),
-            })
-        );
-
-        let value_other = JsValue::List(vec![
-            JsValue::List(vec![JsValue::from("api")]),
-            JsValue::List(vec![JsValue::from("get"), JsValue::from("interval")]),
-            JsValue::List(vec![JsValue::from("call"), JsValue::from("other_call")]),
-        ]);
-        assert_eq!(
-            match_interval(&value_other),
-            Ok(CallWebsocketResult::NoResult)
         );
     }
 

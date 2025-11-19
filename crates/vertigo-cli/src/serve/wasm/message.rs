@@ -19,9 +19,3 @@ pub enum Message {
     },
     SetStatus(u16),
 }
-
-#[derive(Debug, PartialEq)]
-pub enum CallWebsocketResult {
-    TimeoutSet { time: u32, callback: CallbackId },
-    NoResult,
-}

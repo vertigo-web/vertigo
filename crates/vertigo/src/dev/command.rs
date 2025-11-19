@@ -32,6 +32,21 @@ pub enum CommandForBrowser {
         callback: CallbackId,
         message: String,
     },
+
+    TimerSet {
+        callback: CallbackId,
+        duration: u32,
+        kind: TimerKind,
+    },
+    TimerClear {
+        callback: CallbackId,
+    },
+}
+
+#[derive(AutoJsJson, Debug)]
+pub enum TimerKind {
+    Timeout,
+    Interval,
 }
 
 pub mod browser_response {
@@ -72,5 +87,9 @@ pub enum CommandForWasm {
     Websocket {
         callback: CallbackId,
         message: WebsocketMessageFromBrowser,
+    },
+
+    TimerCall {
+        callback: CallbackId,
     },
 }

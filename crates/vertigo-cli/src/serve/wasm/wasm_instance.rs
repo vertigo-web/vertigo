@@ -10,11 +10,7 @@ use crate::{
     serve::{request_state::RequestState, response_state::ResponseState},
 };
 
-use super::{
-    data_context::DataContext,
-    decode_commands::*,
-    message::{CallWebsocketResult, Message},
-};
+use super::{data_context::DataContext, decode_commands::*, message::Message};
 
 pub struct WasmInstance {
     instance: Instance,
@@ -113,27 +109,6 @@ impl WasmInstance {
                             log::info!("{log_message}");
                         }
                         return 0;
-                    }
-
-                    if let Ok(result) = match_interval(&value) {
-                        match result {
-                            CallWebsocketResult::TimeoutSet { time, callback } => {
-                                if time == 0 {
-                                    sender
-                                        .send(Message::SetTimeoutZero { callback })
-                                        .inspect_err(|err| {
-                                            log::error!("Error sending SetTimeoutZero: {err}")
-                                        })
-                                        .unwrap_or_default();
-                                }
-
-                                let result = JsValue::I32(0); // fake timerId
-                                return data_context.save_value(result).get_long_ptr();
-                            }
-                            CallWebsocketResult::NoResult => {
-                                return 0;
-                            }
-                        }
                     }
 
                     // push history router location
