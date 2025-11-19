@@ -36,3 +36,6 @@ pub use api_websocket::api_websocket;
 
 mod api_timers;
 pub use api_timers::api_timers;
+
+mod api_location;
+pub use api_location::api_location;

@@ -2,7 +2,7 @@ use std::rc::Rc;
 
 use vertigo_macro::store;
 
-use crate::command::TimerKind;
+use crate::command::{LocationCallbackMode, LocationSetMode, LocationTarget, TimerKind};
 use crate::dev::command::{browser_response, decode_json, CommandForBrowser};
 use crate::dev::InstantType;
 use crate::external_api::safe_wrappers;
@@ -120,6 +120,40 @@ impl CommandForBrowserApi {
 
     pub fn timer_clear(&self, callback: CallbackId) {
         exec_command(CommandForBrowser::TimerClear { callback });
+    }
+
+    pub fn location_callback(
+        &self,
+        target: LocationTarget,
+        mode: LocationCallbackMode,
+        callback: CallbackId,
+    ) {
+        exec_command(CommandForBrowser::LocationCallback {
+            target,
+            mode,
+            callback,
+        });
+    }
+
+    pub fn location_set(&self, target: LocationTarget, mode: LocationSetMode, value: String) {
+        exec_command(CommandForBrowser::LocationSet {
+            target,
+            mode,
+            value,
+        });
+    }
+
+    pub fn location_get(&self, target: LocationTarget) -> String {
+        let response = exec_command(CommandForBrowser::LocationGet { target });
+
+        let response = decode_json::<browser_response::LocationGet>(response);
+        match response {
+            Ok(response) => response.value,
+            Err(err) => {
+                log::error!("location_get -> decode error = {err}");
+                "".into()
+            }
+        }
     }
 
     //....

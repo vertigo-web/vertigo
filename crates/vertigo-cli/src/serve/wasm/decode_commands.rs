@@ -9,16 +9,6 @@ pub fn match_cookie_command(arg: &JsValue) -> Result<(), ()> {
     Ok(())
 }
 
-pub fn match_history_router(arg: &JsValue) -> Result<(), ()> {
-    let matcher = Match::new(arg)?;
-    let matcher = matcher.test_list(&["api"])?;
-    let matcher = matcher.test_list(&["get", "historyLocation"])?;
-    let matcher = matcher.test_list(&["call", "get"])?;
-    matcher.end()?;
-
-    Ok(())
-}
-
 pub fn match_history_router_push(arg: &JsValue) -> Result<String, ()> {
     let matcher = Match::new(arg)?;
     let matcher = matcher.test_list(&["api"])?;
@@ -50,23 +40,6 @@ pub fn match_get_env(arg: &JsValue) -> Result<String, ()> {
     matcher.end()?;
 
     Ok(name)
-}
-
-pub fn match_history_router_callback(arg: &JsValue) -> Result<(), ()> {
-    let matcher = Match::new(arg)?;
-    let matcher = matcher.test_list(&["api"])?;
-    let matcher = matcher.test_list(&["get", "historyLocation"])?;
-    let (matcher, _) = matcher.test_list_with_fn(|matcher: Match| -> Result<u64, ()> {
-        let matcher = matcher.str("call")?;
-        let matcher = matcher.str("add")?;
-        let (matcher, callback_id) = matcher.u64()?;
-        matcher.end()?;
-
-        Ok(callback_id)
-    })?;
-    matcher.end()?;
-
-    Ok(())
 }
 
 pub fn match_dom_bulk_update(arg: &JsValue) -> Result<JsJson, ()> {
@@ -125,16 +98,6 @@ mod tests {
     }
 
     #[test]
-    fn test_match_history_router() {
-        let value = JsValue::List(vec![
-            JsValue::List(vec![JsValue::from("api")]),
-            JsValue::List(vec![JsValue::from("get"), JsValue::from("historyLocation")]),
-            JsValue::List(vec![JsValue::from("call"), JsValue::from("get")]),
-        ]);
-        assert_eq!(match_history_router(&value), Ok(()));
-    }
-
-    #[test]
     fn test_match_history_router_push() {
         let value = JsValue::List(vec![
             JsValue::List(vec![JsValue::from("api")]),
@@ -162,20 +125,6 @@ mod tests {
             ]),
         ]);
         assert_eq!(match_get_env(&value), Ok("MY_VAR".to_string()));
-    }
-
-    #[test]
-    fn test_match_history_router_callback() {
-        let value = JsValue::List(vec![
-            JsValue::List(vec![JsValue::from("api")]),
-            JsValue::List(vec![JsValue::from("get"), JsValue::from("historyLocation")]),
-            JsValue::List(vec![
-                JsValue::from("call"),
-                JsValue::from("add"),
-                JsValue::U64(12345),
-            ]),
-        ]);
-        assert_eq!(match_history_router_callback(&value), Ok(()));
     }
 
     #[test]

@@ -1,9 +1,9 @@
 use crate::{
     driver_module::{
-        api::{api_browser_command, callbacks::api_callbacks, panic_message::api_panic_message},
+        api::{api_browser_command, panic_message::api_panic_message},
         js_value::JsValue,
     },
-    transaction, DropResource, JsJson,
+    JsJson,
 };
 
 use super::api_dom_access::DomAccess;
@@ -159,135 +159,6 @@ impl ApiImport {
             .get("history")
             .call("back", Vec::new())
             .exec();
-    }
-
-    ///////////////////////////////////////////////////////////////////////////////////
-    // hash router
-    ///////////////////////////////////////////////////////////////////////////////////
-
-    pub fn get_hash_location(&self) -> String {
-        let result = DomAccess::default()
-            .api()
-            .get("hashRouter")
-            .call("get", Vec::new())
-            .fetch();
-
-        if let JsValue::String(value) = result {
-            value
-        } else {
-            log::error!("hashRouter -> params decode error -> result={result:?}");
-            String::from("")
-        }
-    }
-
-    pub fn push_hash_location(&self, new_hash: &str) {
-        DomAccess::default()
-            .api()
-            .get("hashRouter")
-            .call("push", vec![JsValue::str(new_hash)])
-            .exec();
-    }
-
-    pub fn on_hash_change<F: Fn(String) + 'static>(&self, callback: F) -> DropResource {
-        let (callback_id, drop_callback) = api_callbacks().register(move |data| {
-            let new_hash = if let JsValue::String(new_hash) = data {
-                new_hash
-            } else {
-                log::error!("on_hash_route_change -> string was expected -> {data:?}");
-                String::from("")
-            };
-
-            transaction(|_| {
-                callback(new_hash);
-            });
-
-            JsValue::Undefined
-        });
-
-        DomAccess::default()
-            .api()
-            .get("hashRouter")
-            .call("add", vec![JsValue::U64(callback_id.as_u64())])
-            .exec();
-
-        DropResource::new(move || {
-            DomAccess::default()
-                .api()
-                .get("hashRouter")
-                .call("remove", vec![JsValue::U64(callback_id.as_u64())])
-                .exec();
-
-            drop_callback.off();
-        })
-    }
-
-    ///////////////////////////////////////////////////////////////////////////////////
-    // history router
-    ///////////////////////////////////////////////////////////////////////////////////
-
-    pub fn get_history_location(&self) -> String {
-        let result = DomAccess::default()
-            .api()
-            .get("historyLocation")
-            .call("get", Vec::new())
-            .fetch();
-
-        if let JsValue::String(value) = result {
-            self.route_from_public(value)
-        } else {
-            log::error!("historyLocation -> params decode error -> result={result:?}");
-            String::from("")
-        }
-    }
-
-    pub fn push_history_location(&self, new_path: &str) {
-        DomAccess::default()
-            .api()
-            .get("historyLocation")
-            .call("push", vec![JsValue::str(new_path)])
-            .exec();
-    }
-
-    pub fn replace_history_location(&self, new_hash: &str) {
-        DomAccess::default()
-            .api()
-            .get("historyLocation")
-            .call("replace", vec![JsValue::str(new_hash)])
-            .exec();
-    }
-
-    pub fn on_history_change<F: Fn(String) + 'static>(&self, callback: F) -> DropResource {
-        let myself = self.clone();
-        let (callback_id, drop_callback) = api_callbacks().register(move |data| {
-            let new_local_path = if let JsValue::String(new_path) = data {
-                myself.route_from_public(new_path.clone())
-            } else {
-                log::error!("on_history_change -> string was expected -> {data:?}");
-                String::from("")
-            };
-
-            transaction(|_| {
-                callback(new_local_path);
-            });
-
-            JsValue::Undefined
-        });
-
-        DomAccess::default()
-            .api()
-            .get("historyLocation")
-            .call("add", vec![JsValue::U64(callback_id.as_u64())])
-            .exec();
-
-        DropResource::new(move || {
-            DomAccess::default()
-                .api()
-                .get("historyLocation")
-                .call("remove", vec![JsValue::U64(callback_id.as_u64())])
-                .exec();
-
-            drop_callback.off();
-        })
     }
 
     ///////////////////////////////////////////////////////////////////////////////////

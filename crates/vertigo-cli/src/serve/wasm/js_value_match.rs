@@ -17,16 +17,6 @@ mod tests {
             self
         }
 
-        pub fn str(mut self, value: impl Into<String>) -> Self {
-            self.0.push(JsValue::str(value));
-            self
-        }
-
-        pub fn u64(mut self, value: u64) -> Self {
-            self.0.push(JsValue::U64(value));
-            self
-        }
-
         pub fn list(self, list: &[&str]) -> Self {
             let mut result = JsList::new();
 
@@ -75,16 +65,6 @@ impl<'a> Match<'a> {
         }
 
         Err(())
-    }
-
-    pub fn u64(&self) -> Result<(Self, u64), ()> {
-        let list = self.list;
-
-        let Some((JsValue::U64(value), rest)) = list.split_first() else {
-            return Err(());
-        };
-
-        Ok((Self { list: rest }, *value))
     }
 
     pub fn string(&self) -> Result<(Self, String), ()> {
@@ -234,42 +214,4 @@ fn basic() {
         .convert_to_value();
 
     assert_eq!(match_hashrouter(&pattern_get_hashrouter), Err(()));
-}
-
-#[test]
-fn test_param() {
-    use tests::JsList;
-
-    let pattern_add_hashrouter = JsList::new()
-        .list(&["api"])
-        .list(&["get", "hashRouter"])
-        .add(
-            JsList::new()
-                .str("call")
-                .str("add")
-                .u64(1)
-                .convert_to_value(),
-        )
-        .convert_to_value();
-
-    fn match_call_add(matcher: Match) -> Result<u64, ()> {
-        let matcher = matcher.str("call")?;
-        let matcher = matcher.str("add")?;
-        let (matcher, callback_id) = matcher.u64()?;
-        matcher.end()?;
-
-        Ok(callback_id)
-    }
-
-    fn match_hashrouter_add(arg: &JsValue) -> Result<u64, ()> {
-        let matcher = Match::new(arg)?;
-        let matcher = matcher.test_list(&["api"])?;
-        let matcher = matcher.test_list(&["get", "hashRouter"])?;
-        let (matcher, callback_id) = matcher.test_list_with_fn(match_call_add)?;
-        matcher.end()?;
-
-        Ok(callback_id)
-    }
-
-    assert_eq!(match_hashrouter_add(&pattern_add_hashrouter), Ok(1));
 }

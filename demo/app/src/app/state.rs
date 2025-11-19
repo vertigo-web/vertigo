@@ -1,4 +1,5 @@
 use vertigo::router::Router;
+use vertigo::store;
 use vertigo::DomNode;
 use vertigo::Value;
 
@@ -12,8 +13,6 @@ pub struct State {
     pub sudoku: SudokuState,
     pub input: Value<String>,
     pub game_of_life: game_of_life::State,
-
-    pub route: Router<Route>,
 }
 
 impl State {
@@ -23,11 +22,15 @@ impl State {
             sudoku: SudokuState::new(),
             input: Value::default(),
             game_of_life: game_of_life::State::new(),
-            route: Router::new_history_router(),
         }
     }
 
     pub fn render(&self) -> DomNode {
         super::render(self)
     }
+}
+
+#[store]
+pub fn state_route() -> Router<Route> {
+    Router::new_history_router()
 }

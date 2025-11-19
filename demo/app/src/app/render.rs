@@ -1,6 +1,6 @@
 use vertigo::{css, dom, get_driver, include_static, Computed, Css, DomNode, KeyDownEvent};
 
-use crate::app::{self, counters::state_counters};
+use crate::app::{self, counters::state_counters, state::state_route};
 
 use super::{
     chat::Chat, counters::CountersDemo, dropfiles::DropFiles, game_of_life::GameOfLife,
@@ -23,8 +23,8 @@ fn css_menu_item(active: bool) -> Css {
     "}
 }
 
-fn render_menu_item(current_page: Computed<Route>, menu_item: Route) -> DomNode {
-    let css = current_page.map({
+fn render_menu_item(menu_item: Route) -> DomNode {
+    let css = state_route().route.map({
         let menu_item = menu_item.clone();
         move |current_page| css_menu_item(menu_item == current_page)
     });
@@ -39,7 +39,7 @@ fn render_menu_item(current_page: Computed<Route>, menu_item: Route) -> DomNode 
     }
 }
 
-fn render_header(state: &app::State) -> DomNode {
+fn render_header() -> DomNode {
     let hook_key_down = |event: KeyDownEvent| {
         if event.code == "ArrowRight" {
             log::info!("right");
@@ -62,16 +62,16 @@ fn render_header(state: &app::State) -> DomNode {
     dom! {
         <div hook_key_down={hook_key_down}>
             <div css={css_menu}>
-                { render_menu_item(state.route.route.clone(), Route::Counters) }
-                { render_menu_item(state.route.route.clone(), Route::Styling) }
-                { render_menu_item(state.route.route.clone(), Route::Sudoku) }
-                { render_menu_item(state.route.route.clone(), Route::Input) }
-                { render_menu_item(state.route.route.clone(), Route::GithubExplorer) }
-                { render_menu_item(state.route.route.clone(), Route::GameOfLife) }
-                { render_menu_item(state.route.route.clone(), Route::Chat) }
-                { render_menu_item(state.route.route.clone(), Route::Todo) }
-                { render_menu_item(state.route.route.clone(), Route::DropFile) }
-                { render_menu_item(state.route.route.clone(), Route::JsApiAccess) }
+                { render_menu_item(Route::Counters) }
+                { render_menu_item(Route::Styling) }
+                { render_menu_item(Route::Sudoku) }
+                { render_menu_item(Route::Input) }
+                { render_menu_item(Route::GithubExplorer) }
+                { render_menu_item(Route::GameOfLife) }
+                { render_menu_item(Route::Chat) }
+                { render_menu_item(Route::Todo) }
+                { render_menu_item(Route::DropFile) }
+                { render_menu_item(Route::JsApiAccess) }
             </div>
         </div>
     }
@@ -82,7 +82,7 @@ fn title_value(state: app::State) -> Computed<String> {
     let input_value = state.input.clone();
 
     Computed::from(move |context| {
-        let route = state.route.route.get(context);
+        let route = state_route().route.get(context);
 
         match route {
             Route::Counters => {
@@ -102,9 +102,9 @@ fn title_value(state: app::State) -> Computed<String> {
 pub fn render(state: &app::State) -> DomNode {
     let state = state.clone();
 
-    let header = render_header(&state);
+    let header = render_header();
 
-    let content = state.route.route.render_value({
+    let content = state_route().route.render_value({
         let state = state.clone();
 
         move |route| match route {
