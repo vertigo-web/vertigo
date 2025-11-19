@@ -7,6 +7,7 @@ import { fetchCacheGet } from "./command/fetchCacheGet";
 import { fetchExec, FetchRequestType } from "./command/fetchExec";
 import { CallbackId } from "./types";
 import { Interval } from "./command/interval";
+import { AppLocation } from './location/AppLocation';
 
 type ExecType
     = 'FetchCacheGet'
@@ -46,18 +47,37 @@ type ExecType
         TimerClear: {
             callback: CallbackId,
         }
+    }
+    | {
+        LocationGet: {
+            target: 'Hash' | 'History',
+        }
+    }
+    | {
+        LocationCallback: {
+            callback: number,
+            mode: 'Add' | 'Remove',
+            target: 'Hash' | 'History'
+        }
+    }
+    | {
+        LocationSet: {
+            mode: 'Push' | 'Replace',
+            target: 'Hash' | 'History'
+            value: string
+        }
     };
-
-
 
 export class ExecCommand {
     private readonly websocket: DriverWebsocket;
     private readonly interval: Interval;
+    private readonly location: AppLocation;
     
 
-    constructor(private readonly getWasm: () => ModuleControllerType<ExportType>) {
+    constructor(private readonly getWasm: () => ModuleControllerType<ExportType>, location: AppLocation) {
         this.websocket = new DriverWebsocket(getWasm);
         this.interval = new Interval(getWasm);
+        this.location = location;
     }
 
     exec(arg: JsJsonType): JsJsonType {
@@ -110,6 +130,22 @@ export class ExecCommand {
 
         if ('TimerClear' in safeArg) {
             this.interval.timerClear(safeArg.TimerClear.callback);
+            return null;
+        }
+
+        if ('LocationGet' in safeArg) {
+            return {
+                value: this.location.get(safeArg.LocationGet.target)
+            };
+        }
+
+        if ('LocationCallback' in safeArg) {
+            this.location.callback(safeArg.LocationCallback.target, safeArg.LocationCallback.mode, safeArg.LocationCallback.callback);
+            return null;
+        }
+
+        if ('LocationSet' in safeArg) {
+            this.location.set(safeArg.LocationSet.target, safeArg.LocationSet.mode, safeArg.LocationSet.value);
             return null;
         }
 

@@ -1,9 +1,11 @@
 use vertigo_macro::AutoJsJson;
 
 use crate::{
+    command::{LocationSetMode, LocationTarget},
     css::css_manager::CssManager,
     driver_module::api::{
-        api_browser_command, api_import, api_server_handler, api_timers, api_websocket,
+        api_browser_command, api_import, api_location, api_server_handler, api_timers,
+        api_websocket,
     },
     fetch::request_builder::{RequestBody, RequestBuilder},
     Context, Css, Dependencies, DropResource, FutureBox, Instant, InstantType, JsJson,
@@ -141,7 +143,7 @@ impl Driver {
 
     /// Replace current location
     pub fn history_replace(&self, new_url: &str) {
-        api_import().replace_history_location(new_url)
+        api_location().push_location(LocationTarget::History, LocationSetMode::Replace, new_url);
     }
 
     /// Make `func` fire every `time` seconds.

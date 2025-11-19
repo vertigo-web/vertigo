@@ -1,6 +1,8 @@
 use crate::{
-    computed::Value, driver_module::api::api_import, get_driver, Computed, DomNode, EmbedDom,
-    Reactive, ToComputed,
+    command::{LocationSetMode, LocationTarget},
+    computed::Value,
+    driver_module::api::api_location,
+    get_driver, Computed, DomNode, EmbedDom, Reactive, ToComputed,
 };
 
 /// Router based on path or hash part of current location.
@@ -73,7 +75,7 @@ use crate::{
 /// ```
 #[derive(Clone, PartialEq)]
 pub struct Router<T: Clone + ToString + From<String> + PartialEq + 'static> {
-    use_history_api: bool,
+    location_target: LocationTarget,
     pub route: Computed<T>,
 }
 
@@ -90,10 +92,12 @@ impl<T: Clone + ToString + From<String> + PartialEq + 'static> Router<T> {
     }
 
     fn new(use_history_api: bool) -> Self {
-        let init_value = match use_history_api {
-            false => T::from(api_import().get_hash_location()),
-            true => T::from(api_import().get_history_location()),
+        let location_target = match use_history_api {
+            false => LocationTarget::Hash,
+            true => LocationTarget::History,
         };
+
+        let init_value = T::from(api_location().get_location(location_target));
 
         let route = Value::with_connect(init_value, move |value| {
             let value = value.clone();
@@ -101,23 +105,21 @@ impl<T: Clone + ToString + From<String> + PartialEq + 'static> Router<T> {
                 value.set(T::from(url));
             };
 
-            match use_history_api {
-                false => api_import().on_hash_change(callback),
-                true => api_import().on_history_change(callback),
-            }
+            api_location().on_change(location_target, callback)
         });
 
         Self {
-            use_history_api,
+            location_target,
             route,
         }
     }
 
     pub fn set(&self, route: T) {
-        match self.use_history_api {
-            false => api_import().push_hash_location(&route.to_string()),
-            true => api_import().push_history_location(&route.to_string()),
-        };
+        api_location().push_location(
+            self.location_target,
+            LocationSetMode::Push,
+            &route.to_string(),
+        );
     }
 
     fn change(&self, change_fn: impl FnOnce(&mut T)) {

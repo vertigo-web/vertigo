@@ -41,6 +41,38 @@ pub enum CommandForBrowser {
     TimerClear {
         callback: CallbackId,
     },
+
+    LocationCallback {
+        target: LocationTarget,
+        mode: LocationCallbackMode,
+        callback: CallbackId,
+    },
+    LocationSet {
+        target: LocationTarget,
+        mode: LocationSetMode,
+        value: String,
+    },
+    LocationGet {
+        target: LocationTarget,
+    },
+}
+
+#[derive(AutoJsJson, Debug, Clone, Copy, PartialEq)]
+pub enum LocationTarget {
+    Hash,
+    History,
+}
+
+#[derive(AutoJsJson, Debug, Clone, Copy)]
+pub enum LocationCallbackMode {
+    Add,
+    Remove,
+}
+
+#[derive(AutoJsJson, Debug, Clone, Copy)]
+pub enum LocationSetMode {
+    Push,
+    Replace,
 }
 
 #[derive(AutoJsJson, Debug)]
@@ -68,6 +100,11 @@ pub mod browser_response {
     pub struct GetDateNow {
         pub value: InstantType,
     }
+
+    #[derive(AutoJsJson)]
+    pub struct LocationGet {
+        pub value: String,
+    }
 }
 
 #[derive(AutoJsJson, Debug)]
@@ -91,5 +128,10 @@ pub enum CommandForWasm {
 
     TimerCall {
         callback: CallbackId,
+    },
+
+    LocationCall {
+        callback: CallbackId,
+        value: String,
     },
 }

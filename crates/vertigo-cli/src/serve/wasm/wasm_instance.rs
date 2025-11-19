@@ -23,7 +23,7 @@ impl WasmInstance {
         engine: &Engine,
         module: &Module,
         request: RequestState,
-        handle_command: Arc<dyn Fn(CommandForBrowser) -> JsJson + 'static + Send + Sync>,
+        handle_command: Arc<dyn Fn(String, CommandForBrowser) -> JsJson + 'static + Send + Sync>,
     ) -> Self {
         let url = request.url.clone();
         let mut store = Store::new(engine, request.clone());
@@ -54,7 +54,7 @@ impl WasmInstance {
 
                     if let JsValue::Json(arg) = value {
                         let result = decode_json::<CommandForBrowser>(arg)
-                            .map(&*handle_command)
+                            .map(|item| handle_command(url.clone(), item))
                             .map(JsValue::Json);
 
                         match result {
@@ -73,12 +73,6 @@ impl WasmInstance {
                         return 0;
                     }
 
-                    // get history router location
-                    if let Ok(()) = match_history_router(&value) {
-                        let result = JsValue::str(url.clone());
-                        return data_context.save_value(result).get_long_ptr();
-                    }
-
                     if let Ok(env_name) = match_get_env(&value) {
                         let env_value = request.env(env_name);
 
@@ -87,11 +81,6 @@ impl WasmInstance {
                             None => JsValue::Null,
                         };
                         return data_context.save_value(result).get_long_ptr();
-                    }
-
-                    //adding callback for hashrouter
-                    if match_history_router_callback(&value).is_ok() {
-                        return 0;
                     }
 
                     if let Ok(data) = match_dom_bulk_update(&value) {

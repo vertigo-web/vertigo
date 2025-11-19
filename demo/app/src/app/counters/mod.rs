@@ -3,6 +3,8 @@ use vertigo::{component, css, dom, include_static, store, ClickEvent, Computed, 
 mod simple_counter;
 use simple_counter::SimpleCounter;
 
+use crate::app::{route::Route, state::state_route};
+
 #[derive(Clone)]
 pub struct State {
     counter1: Value<i32>,
@@ -118,6 +120,11 @@ pub fn CountersDemo() {
                         log::info!("Inner");
                     }}>"Inner click"</button>
                 </div>
+            </div>
+            <div on_click={|_| {
+                state_route().set(Route::Sudoku);
+            }}>
+                "Go to Sudoku"
             </div>
         </div>
     }

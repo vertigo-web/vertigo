@@ -74,6 +74,19 @@ pub mod safe_wrappers {
                             kind: _,
                         } => JsJson::Null,
                         CommandForBrowser::TimerClear { callback: _ } => JsJson::Null,
+                        CommandForBrowser::LocationCallback {
+                            target: _,
+                            mode: _,
+                            callback: _,
+                        } => JsJson::Null,
+                        CommandForBrowser::LocationSet {
+                            target: _,
+                            mode: _,
+                            value: _,
+                        } => JsJson::Null,
+                        CommandForBrowser::LocationGet { target: _ } => {
+                            browser_response::LocationGet { value: "".into() }.to_json()
+                        }
                     };
 
                     return JsValue::Json(response).to_ptr_long();
