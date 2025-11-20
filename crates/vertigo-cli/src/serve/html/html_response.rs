@@ -8,7 +8,6 @@ use axum::http::StatusCode;
 use parking_lot::RwLock;
 use std::{collections::HashMap, sync::Arc};
 use tokio::sync::mpsc::UnboundedSender;
-use vertigo::JsValue;
 
 use super::{
     dom_command::dom_command_from_js_json, element::AllElements, send_request::send_request,
@@ -87,8 +86,8 @@ impl HtmlResponse {
                 Some(ResponseState::internal_error(message))
             }
             Message::SetTimeoutZero { callback } => {
-                let result = self.inst.wasm_callback(callback, JsValue::Undefined);
-                assert_eq!(result, JsValue::Undefined);
+                self.inst
+                    .wasm_command(vertigo::command::CommandForWasm::TimerCall { callback });
                 None
             }
             Message::FetchRequest { request, callback } => {

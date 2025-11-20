@@ -144,27 +144,6 @@ impl WasmInstance {
         .unwrap_or_default();
     }
 
-    //TODO - this method will be deleted
-    pub fn wasm_callback(&mut self, callback: CallbackId, params: JsValue) -> JsValue {
-        let mut data_context = DataContext::from_store(&mut self.store, self.instance);
-        let params_ptr = data_context.save_value(params);
-
-        let result = self
-            .call_function::<(u64, u64), u64>(
-                "vertigo_export_wasm_callback",
-                (callback.as_u64(), params_ptr.get_long_ptr()),
-            )
-            .inspect_err(|err| log::error!("Error calling callback: {err}"))
-            .unwrap_or_default();
-
-        if result == 0 {
-            JsValue::Undefined
-        } else {
-            //TODO - to implement
-            todo!()
-        }
-    }
-
     pub fn wasm_command(&mut self, command: CommandForWasm) -> JsValue {
         let mut data_context = DataContext::from_store(&mut self.store, self.instance);
         let params_ptr = data_context.save_value(JsValue::Json(command.to_json()));
