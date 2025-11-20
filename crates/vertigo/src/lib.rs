@@ -159,7 +159,7 @@ pub use websocket::{WebsocketConnection, WebsocketMessage};
 
 pub use dev::{
     command, CallbackId, LongPtr, SsrFetchCache, SsrFetchRequest, SsrFetchRequestBody,
-    SsrFetchResponse,
+    SsrFetchResponse, SsrFetchResponseContent,
 };
 
 /// Allows to include a static file

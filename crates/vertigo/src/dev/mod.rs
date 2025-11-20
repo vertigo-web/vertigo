@@ -3,7 +3,7 @@ pub use long_ptr::LongPtr;
 
 mod ssr_fetch_response;
 pub use ssr_fetch_response::{
-    SsrFetchCache, SsrFetchRequest, SsrFetchRequestBody, SsrFetchResponse,
+    SsrFetchCache, SsrFetchRequest, SsrFetchRequestBody, SsrFetchResponse, SsrFetchResponseContent,
 };
 
 pub mod command;

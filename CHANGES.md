@@ -8,7 +8,7 @@
 * `#[store]` macro which wraps a function to be used as a store generator
 * `AutoJsJson`: Added `rename_all` container attribute, and `rename` field attribute [#406]
 * `AutoJsJson`: Support for `JsJson` type for dynamic schema [#393]
-* `SSRFetchCache` - Cache passed in HTML so the browser doesn't need to refetch the data already used during SSR [#413]
+* `SsrFetchCache` - Cache passed in HTML so the browser doesn't need to refetch the data already used during SSR [#413] [#414]
 
 ### Fixed
 
