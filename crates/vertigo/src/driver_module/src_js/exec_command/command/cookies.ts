@@ -1,4 +1,4 @@
-import { JsJsonType } from "../jsjson";
+import { JsJsonType } from "../../jsjson";
 
 export class Cookies {
     public get = (cname: string): string => {
@@ -45,12 +45,12 @@ export class Cookies {
     public set = (
         cname: string,
         cvalue: string,
-        expires_in: bigint,
+        expires_in: number,
     ) => {
         const cvalueEncoded = cvalue == null ? "" : encodeURIComponent(cvalue);
 
         const d = new Date();
-        d.setTime(d.getTime() + (Number(expires_in) * 1000));
+        d.setTime(d.getTime() + (expires_in * 1000));
         let expires = "expires="+ d.toUTCString();
 
         document.cookie = `${cname}=${cvalueEncoded};${expires};path=/;samesite=strict"`;
@@ -59,7 +59,7 @@ export class Cookies {
     public set_json = (
         cname: string,
         cvalue: JsJsonType,
-        expires_in: bigint,
+        expires_in: number,
     ) => {
         let cvalue_str = JSON.stringify(cvalue);
 

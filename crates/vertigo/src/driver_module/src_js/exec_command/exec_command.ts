@@ -8,6 +8,7 @@ import { fetchExec, FetchRequestType } from "./command/fetchExec";
 import { CallbackId } from "./types";
 import { Interval } from "./command/interval";
 import { AppLocation } from './location/AppLocation';
+import { Cookies } from "./command/cookies";
 
 type ExecType
     = 'FetchCacheGet'
@@ -66,18 +67,44 @@ type ExecType
             target: 'Hash' | 'History'
             value: string
         }
+    }
+    | {
+        CookieSet: {
+            name: string,
+            value: string,
+            expires_in: number,
+        }
+    }
+    | {
+        CookieGet: {
+            name: string,
+        }
+    }
+    | {
+        CookieJsonSet: {
+            name: string,
+            value: JsJsonType,
+            expires_in: number,
+        }
+    }
+    | {
+        CookieJsonGet: {
+            name: string,
+        }
     };
 
 export class ExecCommand {
     private readonly websocket: DriverWebsocket;
     private readonly interval: Interval;
     private readonly location: AppLocation;
+    private readonly cookie: Cookies;
     
 
     constructor(private readonly getWasm: () => ModuleControllerType<ExportType>, location: AppLocation) {
         this.websocket = new DriverWebsocket(getWasm);
         this.interval = new Interval(getWasm);
         this.location = location;
+        this.cookie = new Cookies();
     }
 
     exec(arg: JsJsonType): JsJsonType {
@@ -146,6 +173,28 @@ export class ExecCommand {
 
         if ('LocationSet' in safeArg) {
             this.location.set(safeArg.LocationSet.target, safeArg.LocationSet.mode, safeArg.LocationSet.value);
+            return null;
+        }
+
+        if ('CookieGet' in safeArg) {
+            return {
+                value: this.cookie.get(safeArg.CookieGet.name)
+            };
+        }
+
+        if ('CookieSet' in safeArg) {
+            this.cookie.set(safeArg.CookieSet.name, safeArg.CookieSet.value, safeArg.CookieSet.expires_in);
+            return null;
+        }
+
+        if ('CookieJsonGet' in safeArg) {
+            return {
+                value: this.cookie.get_json(safeArg.CookieJsonGet.name)
+            };
+        }
+
+        if ('CookieJsonSet' in safeArg) {
+            this.cookie.set_json(safeArg.CookieJsonSet.name, safeArg.CookieJsonSet.value, safeArg.CookieJsonSet.expires_in);
             return null;
         }
 

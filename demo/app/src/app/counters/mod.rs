@@ -1,4 +1,6 @@
-use vertigo::{component, css, dom, include_static, store, ClickEvent, Computed, Value};
+use vertigo::{
+    component, css, dom, get_driver, include_static, store, ClickEvent, Computed, JsJson, Value,
+};
 
 mod simple_counter;
 use simple_counter::SimpleCounter;
@@ -125,6 +127,33 @@ pub fn CountersDemo() {
                 state_route().set(Route::Sudoku);
             }}>
                 "Go to Sudoku"
+            </div>
+            <div on_click={|_| {
+                get_driver().cookie_set("test", "test value", 100000000);
+            }}>
+                "Set cookie"
+            </div>
+
+            <div on_click={|_| {
+                let value = get_driver().cookie_get("test");
+                log::info!("cookie value {:?}", value);
+            }}>
+                "Get cookie"
+            </div>
+
+            <div on_click={|_| {
+                let list = vec!(JsJson::String("value1".into()), JsJson::String("value2".into()), JsJson::String("value3".into()));
+                let value = JsJson::List(list);
+                get_driver().cookie_set_json("test-json", value, 100000000);
+            }}>
+                "Set json cookie"
+            </div>
+
+            <div on_click={|_| {
+                let value = get_driver().cookie_get_json("test-json");
+                log::info!("cookie value {:?}", value);
+            }}>
+                "Get json cookie"
             </div>
         </div>
     }

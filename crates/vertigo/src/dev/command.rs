@@ -55,6 +55,23 @@ pub enum CommandForBrowser {
     LocationGet {
         target: LocationTarget,
     },
+
+    CookieGet {
+        name: String,
+    },
+    CookieSet {
+        name: String,
+        value: String,
+        expires_in: u64,
+    },
+    CookieJsonGet {
+        name: String,
+    },
+    CookieJsonSet {
+        name: String,
+        value: JsJson,
+        expires_in: u64,
+    },
 }
 
 #[derive(AutoJsJson, Debug, Clone, Copy, PartialEq)]
@@ -84,7 +101,7 @@ pub enum TimerKind {
 pub mod browser_response {
     use vertigo_macro::AutoJsJson;
 
-    use crate::dev::InstantType;
+    use crate::{dev::InstantType, JsJson};
 
     #[derive(AutoJsJson)]
     pub struct FetchCacheGet {
@@ -104,6 +121,16 @@ pub mod browser_response {
     #[derive(AutoJsJson)]
     pub struct LocationGet {
         pub value: String,
+    }
+
+    #[derive(AutoJsJson)]
+    pub struct CookieGet {
+        pub value: String,
+    }
+
+    #[derive(AutoJsJson)]
+    pub struct CookieJsonGet {
+        pub value: JsJson,
     }
 }
 
