@@ -1,6 +1,5 @@
 import { ModuleControllerType } from "./wasm_init";
 import { ExportType } from "./wasm_module";
-import { HashRouter } from "./exec_command/location/hashrouter";
 import { DriverDom } from "./api_browser/dom/dom";
 import { AppLocation } from "./exec_command/location/AppLocation";
 
@@ -8,11 +7,9 @@ import { AppLocation } from "./exec_command/location/AppLocation";
  * @deprecated
  */
 export class ApiBrowser {
-    public readonly hashRouter: HashRouter;
     public readonly dom: DriverDom;
 
     constructor(getWasm: () => ModuleControllerType<ExportType>, appLocation: AppLocation) {
-        this.hashRouter = new HashRouter(getWasm);
         this.dom = new DriverDom(appLocation, getWasm);
     }
 

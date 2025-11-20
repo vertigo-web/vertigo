@@ -3,7 +3,10 @@ use std::panic;
 
 use std::sync::Once;
 
-use crate::driver_module::api::{api_import, api_panic_message};
+use crate::{
+    command::ConsoleLogLevel,
+    driver_module::api::{api_browser_command, api_panic_message},
+};
 
 static SET_HOOK: Once = Once::new();
 
@@ -96,20 +99,42 @@ impl Log for WasmLogger {
 
             match record.level() {
                 Level::Trace => {
-                    api_import().console_debug_4(&s, &style.lvl_trace, tgt_style, args_style);
+                    api_browser_command().console_log(
+                        ConsoleLogLevel::Debug,
+                        &s,
+                        &style.lvl_trace,
+                        tgt_style,
+                        args_style,
+                    );
                 }
-                Level::Debug => {
-                    api_import().console_log_4(&s, &style.lvl_debug, tgt_style, args_style)
-                }
-                Level::Info => {
-                    api_import().console_info_4(&s, &style.lvl_info, tgt_style, args_style)
-                }
-                Level::Warn => {
-                    api_import().console_warn_4(&s, &style.lvl_warn, tgt_style, args_style)
-                }
-                Level::Error => {
-                    api_import().console_error_4(&s, &style.lvl_error, tgt_style, args_style)
-                }
+                Level::Debug => api_browser_command().console_log(
+                    ConsoleLogLevel::Log,
+                    &s,
+                    &style.lvl_debug,
+                    tgt_style,
+                    args_style,
+                ),
+                Level::Info => api_browser_command().console_log(
+                    ConsoleLogLevel::Info,
+                    &s,
+                    &style.lvl_info,
+                    tgt_style,
+                    args_style,
+                ),
+                Level::Warn => api_browser_command().console_log(
+                    ConsoleLogLevel::Warn,
+                    &s,
+                    &style.lvl_warn,
+                    tgt_style,
+                    args_style,
+                ),
+                Level::Error => api_browser_command().console_log(
+                    ConsoleLogLevel::Error,
+                    &s,
+                    &style.lvl_error,
+                    tgt_style,
+                    args_style,
+                ),
             }
         }
     }

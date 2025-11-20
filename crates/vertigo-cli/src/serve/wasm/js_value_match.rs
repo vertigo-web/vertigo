@@ -67,16 +67,6 @@ impl<'a> Match<'a> {
         Err(())
     }
 
-    pub fn string(&self) -> Result<(Self, String), ()> {
-        let list = self.list;
-
-        let Some((JsValue::String(value), rest)) = list.split_first() else {
-            return Err(());
-        };
-
-        Ok((Self { list: rest }, value.clone()))
-    }
-
     pub fn json(&self) -> Result<(Self, JsJson), ()> {
         let list = self.list;
 

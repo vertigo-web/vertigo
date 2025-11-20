@@ -4,7 +4,7 @@ use std::{
     time::{Duration, SystemTime, UNIX_EPOCH},
 };
 use tokio::sync::mpsc::{error::TryRecvError, unbounded_channel};
-use vertigo::command::{browser_response, CommandForBrowser};
+use vertigo::command::{browser_response, CommandForBrowser, ConsoleLogLevel};
 use vertigo::{JsJson, JsJsonSerialize};
 use wasmtime::{Engine, Module};
 
@@ -171,6 +171,21 @@ impl ServerState {
                         let env_value = request.env(name);
 
                         browser_response::GetEnv { value: env_value }.to_json()
+                    }
+                    CommandForBrowser::ConsoleLog {
+                        kind,
+                        message,
+                        arg2: _,
+                        arg3: _,
+                        arg4: _,
+                    } => {
+                        if kind == ConsoleLogLevel::Error {
+                            log::warn!("{message}");
+                        } else {
+                            log::info!("{message}");
+                        }
+
+                        JsJson::Null
                     }
                 }
             }),

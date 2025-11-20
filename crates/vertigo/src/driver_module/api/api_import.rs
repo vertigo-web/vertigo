@@ -8,66 +8,10 @@ use crate::{
 
 use super::api_dom_access::DomAccess;
 
-enum ConsoleLogLevel {
-    Debug,
-    Info,
-    Log,
-    Warn,
-    Error,
-}
-
-impl ConsoleLogLevel {
-    pub fn get_str(&self) -> &'static str {
-        match self {
-            Self::Debug => "debug",
-            Self::Info => "info",
-            Self::Log => "log",
-            Self::Warn => "warn",
-            Self::Error => "error",
-        }
-    }
-}
-
 #[derive(Clone, Default)]
 pub struct ApiImport {}
 
 impl ApiImport {
-    fn console_4(&self, kind: ConsoleLogLevel, arg1: &str, arg2: &str, arg3: &str, arg4: &str) {
-        DomAccess::default()
-            .root("window")
-            .get("console")
-            .call(
-                kind.get_str(),
-                vec![
-                    JsValue::str(arg1),
-                    JsValue::str(arg2),
-                    JsValue::str(arg3),
-                    JsValue::str(arg4),
-                ],
-            )
-            .exec();
-    }
-
-    pub fn console_debug_4(&self, arg1: &str, arg2: &str, arg3: &str, arg4: &str) {
-        self.console_4(ConsoleLogLevel::Debug, arg1, arg2, arg3, arg4)
-    }
-
-    pub fn console_log_4(&self, arg1: &str, arg2: &str, arg3: &str, arg4: &str) {
-        self.console_4(ConsoleLogLevel::Log, arg1, arg2, arg3, arg4)
-    }
-
-    pub fn console_info_4(&self, arg1: &str, arg2: &str, arg3: &str, arg4: &str) {
-        self.console_4(ConsoleLogLevel::Info, arg1, arg2, arg3, arg4)
-    }
-
-    pub fn console_warn_4(&self, arg1: &str, arg2: &str, arg3: &str, arg4: &str) {
-        self.console_4(ConsoleLogLevel::Warn, arg1, arg2, arg3, arg4)
-    }
-
-    pub fn console_error_4(&self, arg1: &str, arg2: &str, arg3: &str, arg4: &str) {
-        self.console_4(ConsoleLogLevel::Error, arg1, arg2, arg3, arg4)
-    }
-
     pub fn timezone_offset(&self) -> i32 {
         let result = DomAccess::default()
             .api()
