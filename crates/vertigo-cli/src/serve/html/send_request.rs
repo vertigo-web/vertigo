@@ -1,7 +1,10 @@
 use reqwest::Method;
 use serde_json::{Map, Number, Value};
 use std::collections::BTreeMap;
-use vertigo::{JsJson, JsJsonNumber, SsrFetchRequest, SsrFetchRequestBody, SsrFetchResponse};
+use vertigo::{
+    JsJson, JsJsonNumber, SsrFetchRequest, SsrFetchRequestBody, SsrFetchResponse,
+    SsrFetchResponseContent,
+};
 
 fn convert_to_jsjson(value: Value) -> JsJson {
     match value {
@@ -150,6 +153,12 @@ async fn send_request_inner(request_params: SsrFetchRequest) -> SsrFetchResponse
 
     let status = response.status().as_u16() as u32;
 
+    let content_type = response
+        .headers()
+        .get("Content-Type")
+        .cloned()
+        .and_then(|v| v.to_str().ok().map(ToString::to_string));
+
     let buffer = match response.bytes().await {
         Ok(response) => response.to_vec(),
         Err(error) => {
@@ -159,17 +168,26 @@ async fn send_request_inner(request_params: SsrFetchRequest) -> SsrFetchResponse
         }
     };
 
-    match serde_json::from_slice::<Value>(buffer.as_slice()) {
-        Ok(json) => {
-            let json = convert_to_jsjson(json);
-
+    match content_type {
+        Some(v) if v.starts_with("text/plain;") => {
+            let text_response = String::from_utf8_lossy(&buffer);
             SsrFetchResponse::Ok {
                 status,
-                response: json,
+                response: SsrFetchResponseContent::Text(text_response.into()),
             }
         }
-        Err(error) => SsrFetchResponse::Err {
-            message: format!("response decoding json problem error={error}"),
+        _ => match serde_json::from_slice::<Value>(buffer.as_slice()) {
+            Ok(json) => {
+                let json = convert_to_jsjson(json);
+
+                SsrFetchResponse::Ok {
+                    status,
+                    response: SsrFetchResponseContent::Json(json),
+                }
+            }
+            Err(error) => SsrFetchResponse::Err {
+                message: format!("response decoding json problem error={error}"),
+            },
         },
     }
 }

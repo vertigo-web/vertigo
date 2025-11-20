@@ -4,6 +4,7 @@ use std::time::Duration;
 use crate::{
     dev::SsrFetchRequestBody, driver_module::api::api_fetch, from_json, FetchMethod, JsJson,
     JsJsonDeserialize, JsJsonSerialize, LazyCache, SsrFetchRequest, SsrFetchResponse,
+    SsrFetchResponseContent,
 };
 
 #[derive(Debug, Clone)]
@@ -185,7 +186,14 @@ impl RequestResponse {
     ) -> Result<T, String> {
         let result: Result<T, String> = match self.response {
             SsrFetchResponse::Ok { status, response } => {
-                let data = convert(status, RequestBody::Json(response));
+                let data = match response {
+                    SsrFetchResponseContent::Json(json_response) => {
+                        convert(status, RequestBody::Json(json_response))
+                    }
+                    SsrFetchResponseContent::Text(_) => {
+                        return Err("Tried to decode text/plain reponse".to_string())
+                    }
+                };
 
                 match data {
                     Some(result) => result,

@@ -20,8 +20,19 @@ pub struct SsrFetchRequest {
 
 #[derive(AutoJsJson, Debug, Hash, Clone)]
 pub enum SsrFetchResponse {
-    Ok { status: u32, response: JsJson },
-    Err { message: String },
+    Ok {
+        status: u32,
+        response: SsrFetchResponseContent,
+    },
+    Err {
+        message: String,
+    },
+}
+
+#[derive(AutoJsJson, Debug, Hash, Clone)]
+pub enum SsrFetchResponseContent {
+    Json(JsJson),
+    Text(String),
 }
 
 #[derive(AutoJsJson, Debug, Hash, Clone, Default)]

@@ -17,7 +17,11 @@ export interface FetchRequestType {
 type FetchResponseType = {
     Ok: {
         status: number,
-        response: JsJsonType,
+        response: {
+            Text: string
+         } | {
+            Json: JsJsonType,
+         }
     }
 } | {
     Error: {
@@ -31,7 +35,7 @@ const getHeaders = (headers: Array<{ k: string, v: string }>): Record<string, st
     for (const { k, v } of headers) {
         result[k] = v;
     }
-    
+
     return result;
 };
 
@@ -45,14 +49,26 @@ const getBodyString = (body: FetchRequestType['body']): string | undefined => {
 
 const processResponse = async (response: Response): Promise<FetchResponseType> => {
     const status = response.status;
+    const contentType = response.headers.get("Content-Type");
 
     try {
-        const json = await response.json();
+        if (contentType?.startsWith('text/plain;')) {
+            return {
+                Ok:  {
+                    status,
+                    response: {
+                        Text: await response.text(),
+                    }
+                }
+            }
+        }
 
         return {
             Ok: {
                 status,
-                response: json
+                response: {
+                    Json: await response.json()
+                }
             }
         };
     } catch (error) {
