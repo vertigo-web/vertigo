@@ -50,6 +50,18 @@ jobs:
           command: test
           args: --all-features
 
+      # Test creating new app
+      - name: Install specific version of binaryen
+        uses: sigoden/install-binary@v1
+        with:
+          repo: WebAssembly/binaryen
+          tag: version_120 # Optional: pin to a specific version
+          name: wasm-opt
+      - name: vertigo new some_app
+        run: |
+          rustup default nightly-2025-08-02
+          tests/check_vertigo_new.sh
+
       # Various check scripts
       - name: Check versions
         run: tests/check_versions.sh
@@ -58,10 +70,6 @@ jobs:
           node-version: 20
       - name: Check if JS is up to date
         run: tests/check_js_is_fresh.sh
-      - name: vertigo new some_app
-        run: |
-          rustup default nightly-2025-08-02
-          tests/check_vertigo_new.sh
 
   nightly:
     name: Nightly clippy && tests
