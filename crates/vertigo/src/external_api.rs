@@ -106,6 +106,9 @@ pub mod safe_wrappers {
                             value: _,
                             expires_in: _,
                         } => JsJson::Null,
+                        CommandForBrowser::GetEnv { name: _ } => {
+                            browser_response::GetEnv { value: None }.to_json()
+                        }
                     };
 
                     return JsValue::Json(response).to_ptr_long();

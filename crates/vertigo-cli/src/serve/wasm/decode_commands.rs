@@ -1,22 +1,6 @@
 use super::js_value_match::Match;
 use vertigo::{JsJson, JsValue};
 
-pub fn match_get_env(arg: &JsValue) -> Result<String, ()> {
-    let matcher = Match::new(arg)?;
-    let matcher = matcher.test_list(&["api"])?;
-    let (matcher, name) = matcher.test_list_with_fn(|matcher: Match| -> Result<String, ()> {
-        let matcher = matcher.str("call")?;
-        let matcher = matcher.str("get_env")?;
-        let (matcher, name) = matcher.string()?;
-        matcher.end()?;
-
-        Ok(name)
-    })?;
-    matcher.end()?;
-
-    Ok(name)
-}
-
 pub fn match_dom_bulk_update(arg: &JsValue) -> Result<JsJson, ()> {
     let matcher = Match::new(arg)?;
     let matcher = matcher.test_list(&["api"])?;
@@ -62,19 +46,6 @@ mod tests {
     use vertigo::{JsJson, JsValue};
 
     use super::*;
-
-    #[test]
-    fn test_match_get_env() {
-        let value = JsValue::List(vec![
-            JsValue::List(vec![JsValue::from("api")]),
-            JsValue::List(vec![
-                JsValue::from("call"),
-                JsValue::from("get_env"),
-                JsValue::from("MY_VAR"),
-            ]),
-        ]);
-        assert_eq!(match_get_env(&value), Ok("MY_VAR".to_string()));
-    }
 
     #[test]
     fn test_match_dom_bulk_update() {

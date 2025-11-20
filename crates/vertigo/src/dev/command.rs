@@ -72,6 +72,10 @@ pub enum CommandForBrowser {
         value: JsJson,
         expires_in: u64,
     },
+
+    GetEnv {
+        name: String,
+    },
 }
 
 #[derive(AutoJsJson, Debug, Clone, Copy, PartialEq)]
@@ -131,6 +135,11 @@ pub mod browser_response {
     #[derive(AutoJsJson)]
     pub struct CookieJsonGet {
         pub value: JsJson,
+    }
+
+    #[derive(AutoJsJson)]
+    pub struct GetEnv {
+        pub value: Option<String>,
     }
 }
 

@@ -23,9 +23,10 @@ impl WasmInstance {
         engine: &Engine,
         module: &Module,
         request: RequestState,
-        handle_command: Arc<dyn Fn(String, CommandForBrowser) -> JsJson + 'static + Send + Sync>,
+        handle_command: Arc<
+            dyn Fn(RequestState, CommandForBrowser) -> JsJson + 'static + Send + Sync,
+        >,
     ) -> Self {
-        let url = request.url.clone();
         let mut store = Store::new(engine, request.clone());
 
         let import_panic_message = Func::wrap(&mut store, {
@@ -54,7 +55,7 @@ impl WasmInstance {
 
                     if let JsValue::Json(arg) = value {
                         let result = decode_json::<CommandForBrowser>(arg)
-                            .map(|item| handle_command(url.clone(), item))
+                            .map(|item| handle_command(request.clone(), item))
                             .map(JsValue::Json);
 
                         match result {
@@ -67,16 +68,6 @@ impl WasmInstance {
                             }
                         }
                     };
-
-                    if let Ok(env_name) = match_get_env(&value) {
-                        let env_value = request.env(env_name);
-
-                        let result = match env_value {
-                            Some(value) => JsValue::String(value),
-                            None => JsValue::Null,
-                        };
-                        return data_context.save_value(result).get_long_ptr();
-                    }
 
                     if let Ok(data) = match_dom_bulk_update(&value) {
                         sender

@@ -91,6 +91,11 @@ type ExecType
         CookieJsonGet: {
             name: string,
         }
+    }
+    | {
+        GetEnv: {
+            name: string
+        }
     };
 
 export class ExecCommand {
@@ -196,6 +201,14 @@ export class ExecCommand {
         if ('CookieJsonSet' in safeArg) {
             this.cookie.set_json(safeArg.CookieJsonSet.name, safeArg.CookieJsonSet.value, safeArg.CookieJsonSet.expires_in);
             return null;
+        }
+
+        if ('GetEnv' in safeArg) {
+            const name = safeArg.GetEnv.name;
+
+            return {
+                value: document.documentElement.getAttribute(`data-env-${name}`)
+            }
         }
 
         console.info('exec_command: Arg', safeArg);
