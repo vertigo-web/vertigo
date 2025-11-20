@@ -197,4 +197,17 @@ impl CommandForBrowserApi {
             }
         }
     }
+
+    pub fn get_env(&self, name: impl Into<String>) -> Option<String> {
+        let response = exec_command(CommandForBrowser::GetEnv { name: name.into() });
+
+        let response = decode_json::<browser_response::GetEnv>(response);
+        match response {
+            Ok(response) => response.value,
+            Err(err) => {
+                log::error!("get_env -> decode error = {err}");
+                None
+            }
+        }
+    }
 }

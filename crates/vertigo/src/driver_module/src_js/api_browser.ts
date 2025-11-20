@@ -22,10 +22,6 @@ export class ApiBrowser {
         return min + result;
     }
 
-    public get_env = (name: string): string | null => {
-        return document.documentElement.getAttribute(`data-env-${name}`);
-    }
-
     public getTimezoneOffset = (): number => {
         return new Date().getTimezoneOffset()
     }

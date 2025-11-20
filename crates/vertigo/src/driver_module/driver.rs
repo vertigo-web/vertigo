@@ -264,7 +264,7 @@ impl Driver {
     /// Get any env variable set upon starting vertigo server.
     pub fn env(&self, name: impl Into<String>) -> Option<String> {
         let name = name.into();
-        api_import().get_env(name)
+        api_browser_command().get_env(name)
     }
 
     /// Get public path to build directory where the browser can access WASM and other build files.

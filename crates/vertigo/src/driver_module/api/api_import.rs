@@ -119,30 +119,12 @@ impl ApiImport {
         }
     }
 
-    pub fn get_env(&self, name: String) -> Option<String> {
-        let result = DomAccess::default()
-            .api()
-            .call("get_env", vec![JsValue::String(name)])
-            .fetch();
-
-        if let JsValue::Null = result {
-            return None;
-        }
-
-        if let JsValue::String(value) = result {
-            return Some(value);
-        }
-
-        log::error!("get_env: string or null was expected");
-        None
-    }
-
     pub fn route_from_public(&self, path: impl Into<String>) -> String {
         let path: String = path.into();
         if api_browser_command().is_browser() {
             // In the browser use env variable attached during SSR
-            let mount_point = self
-                .get_env("vertigo-mount-point".to_string())
+            let mount_point = api_browser_command()
+                .get_env("vertigo-mount-point")
                 .unwrap_or_else(|| "/".to_string());
             if mount_point != "/" {
                 path.trim_start_matches(&mount_point).to_string()
