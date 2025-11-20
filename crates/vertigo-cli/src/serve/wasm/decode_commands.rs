@@ -18,29 +18,6 @@ pub fn match_dom_bulk_update(arg: &JsValue) -> Result<JsJson, ()> {
     Ok(data)
 }
 
-pub fn match_log(arg: &JsValue) -> Result<(String, String), ()> {
-    let matcher = Match::new(arg)?;
-
-    let matcher = matcher.test_list(&["root", "window"])?;
-    let matcher = matcher.test_list(&["get", "console"])?;
-    let (matcher, (log_type, log_message)) =
-        matcher.test_list_with_fn(|matcher: Match| -> Result<(String, String), ()> {
-            let matcher = matcher.str("call")?;
-            let (matcher, log_type) = matcher.string()?;
-            let (matcher, log_message) = matcher.string()?;
-            let (matcher, _) = matcher.string()?;
-            let (matcher, _) = matcher.string()?;
-            let (matcher, _) = matcher.string()?;
-            matcher.end()?;
-
-            Ok((log_type, log_message))
-        })?;
-
-    matcher.end()?;
-
-    Ok((log_type, log_message))
-}
-
 #[cfg(test)]
 mod tests {
     use vertigo::{JsJson, JsValue};
@@ -60,26 +37,6 @@ mod tests {
             ]),
         ]);
         assert_eq!(match_dom_bulk_update(&value), Ok(json_data));
-    }
-
-    #[test]
-    fn test_match_log() {
-        let value = JsValue::List(vec![
-            JsValue::List(vec![JsValue::from("root"), JsValue::from("window")]),
-            JsValue::List(vec![JsValue::from("get"), JsValue::from("console")]),
-            JsValue::List(vec![
-                JsValue::from("call"),
-                JsValue::from("log"),         // log_type
-                JsValue::from("Hello world"), // log_message
-                JsValue::from(""),            // ignored
-                JsValue::from(""),            // ignored
-                JsValue::from(""),            // ignored
-            ]),
-        ]);
-        assert_eq!(
-            match_log(&value),
-            Ok(("log".to_string(), "Hello world".to_string()))
-        );
     }
 
     fn json_obj(items: Vec<(&str, JsJson)>) -> JsJson {

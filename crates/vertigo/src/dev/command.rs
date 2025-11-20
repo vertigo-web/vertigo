@@ -76,6 +76,23 @@ pub enum CommandForBrowser {
     GetEnv {
         name: String,
     },
+
+    ConsoleLog {
+        kind: ConsoleLogLevel,
+        message: String,
+        arg2: String,
+        arg3: String,
+        arg4: String,
+    },
+}
+
+#[derive(AutoJsJson, Debug, PartialEq)]
+pub enum ConsoleLogLevel {
+    Debug,
+    Info,
+    Log,
+    Warn,
+    Error,
 }
 
 #[derive(AutoJsJson, Debug, Clone, Copy, PartialEq)]

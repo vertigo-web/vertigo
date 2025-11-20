@@ -109,6 +109,13 @@ pub mod safe_wrappers {
                         CommandForBrowser::GetEnv { name: _ } => {
                             browser_response::GetEnv { value: None }.to_json()
                         }
+                        CommandForBrowser::ConsoleLog {
+                            kind: _,
+                            message: _,
+                            arg2: _,
+                            arg3: _,
+                            arg4: _,
+                        } => JsJson::Null,
                     };
 
                     return JsValue::Json(response).to_ptr_long();

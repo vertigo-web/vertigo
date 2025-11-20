@@ -77,15 +77,6 @@ impl WasmInstance {
                         return 0;
                     }
 
-                    if let Ok((log_type, log_message)) = match_log(&value) {
-                        if log_type == "error" {
-                            log::warn!("{log_message}");
-                        } else {
-                            log::info!("{log_message}");
-                        }
-                        return 0;
-                    }
-
                     log::error!("import_dom_access -> unsupported message: {value:#?}");
                     0
                 },

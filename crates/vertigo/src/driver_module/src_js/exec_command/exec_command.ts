@@ -96,6 +96,15 @@ type ExecType
         GetEnv: {
             name: string
         }
+    }
+    | {
+        ConsoleLog: {
+            arg2: string, //"color: white; padding: 0 3px; background: green;",
+            arg3: string, //"font-weight: bold; color: inherit",
+            arg4: string, //"background: inherit; color: inherit",
+            kind: 'Debug' | 'Info' | 'Log' | 'Warn' | 'Error',
+            message: string, //"%cINFO%c crates/vertigo/src/driver_module/api/api_fetch_cache.rs:26%c FetchCache ready"
+        }
     };
 
 export class ExecCommand {
@@ -208,6 +217,31 @@ export class ExecCommand {
 
             return {
                 value: document.getElementById('v-metadata')?.getAttribute(`data-env-${name}`) ?? null
+            }
+        }
+
+        if ('ConsoleLog' in safeArg) {
+            switch (safeArg.ConsoleLog.kind) {
+                case 'Info': {
+                    console.info(safeArg.ConsoleLog.message, safeArg.ConsoleLog.arg2, safeArg.ConsoleLog.arg3, safeArg.ConsoleLog.arg4);
+                    return null;
+                }
+                case 'Debug': {
+                    console.debug(safeArg.ConsoleLog.message, safeArg.ConsoleLog.arg2, safeArg.ConsoleLog.arg3, safeArg.ConsoleLog.arg4);
+                    return null;
+                }
+                case 'Error': {
+                    console.error(safeArg.ConsoleLog.message, safeArg.ConsoleLog.arg2, safeArg.ConsoleLog.arg3, safeArg.ConsoleLog.arg4);
+                    return null;
+                }
+                case 'Log': {
+                    console.log(safeArg.ConsoleLog.message, safeArg.ConsoleLog.arg2, safeArg.ConsoleLog.arg3, safeArg.ConsoleLog.arg4);
+                    return null;
+                }
+                case 'Warn': {
+                    console.warn(safeArg.ConsoleLog.message, safeArg.ConsoleLog.arg2, safeArg.ConsoleLog.arg3, safeArg.ConsoleLog.arg4);
+                    return null;
+                }
             }
         }
 

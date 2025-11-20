@@ -2,7 +2,9 @@ use std::rc::Rc;
 
 use vertigo_macro::store;
 
-use crate::command::{LocationCallbackMode, LocationSetMode, LocationTarget, TimerKind};
+use crate::command::{
+    ConsoleLogLevel, LocationCallbackMode, LocationSetMode, LocationTarget, TimerKind,
+};
 use crate::dev::command::{browser_response, decode_json, CommandForBrowser};
 use crate::dev::InstantType;
 use crate::external_api::safe_wrappers;
@@ -209,5 +211,22 @@ impl CommandForBrowserApi {
                 None
             }
         }
+    }
+
+    pub fn console_log(
+        &self,
+        kind: ConsoleLogLevel,
+        message: impl Into<String>,
+        arg2: impl Into<String>,
+        arg3: impl Into<String>,
+        arg4: impl Into<String>,
+    ) {
+        exec_command(CommandForBrowser::ConsoleLog {
+            kind,
+            message: message.into(),
+            arg2: arg2.into(),
+            arg3: arg3.into(),
+            arg4: arg4.into(),
+        });
     }
 }
