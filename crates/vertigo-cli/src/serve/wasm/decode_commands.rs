@@ -1,31 +1,6 @@
 use super::js_value_match::Match;
 use vertigo::{JsJson, JsValue};
 
-pub fn match_cookie_command(arg: &JsValue) -> Result<(), ()> {
-    let matcher = Match::new(arg)?;
-    let matcher = matcher.test_list(&["api"])?;
-    let _ = matcher.test_list(&["get", "cookie"])?;
-
-    Ok(())
-}
-
-pub fn match_history_router_push(arg: &JsValue) -> Result<String, ()> {
-    let matcher = Match::new(arg)?;
-    let matcher = matcher.test_list(&["api"])?;
-    let matcher = matcher.test_list(&["get", "historyLocation"])?;
-    let (matcher, url) = matcher.test_list_with_fn(|matcher: Match| -> Result<String, ()> {
-        let matcher = matcher.str("call")?;
-        let matcher = matcher.str("push")?;
-        let (matcher, url) = matcher.string()?;
-        matcher.end()?;
-
-        Ok(url)
-    })?;
-    matcher.end()?;
-
-    Ok(url)
-}
-
 pub fn match_get_env(arg: &JsValue) -> Result<String, ()> {
     let matcher = Match::new(arg)?;
     let matcher = matcher.test_list(&["api"])?;
@@ -87,32 +62,6 @@ mod tests {
     use vertigo::{JsJson, JsValue};
 
     use super::*;
-
-    #[test]
-    fn test_match_cookie_command() {
-        let value = JsValue::List(vec![
-            JsValue::List(vec![JsValue::from("api")]),
-            JsValue::List(vec![JsValue::from("get"), JsValue::from("cookie")]),
-        ]);
-        assert_eq!(match_cookie_command(&value), Ok(()));
-    }
-
-    #[test]
-    fn test_match_history_router_push() {
-        let value = JsValue::List(vec![
-            JsValue::List(vec![JsValue::from("api")]),
-            JsValue::List(vec![JsValue::from("get"), JsValue::from("historyLocation")]),
-            JsValue::List(vec![
-                JsValue::from("call"),
-                JsValue::from("push"),
-                JsValue::from("/new/url"),
-            ]),
-        ]);
-        assert_eq!(
-            match_history_router_push(&value),
-            Ok("/new/url".to_string())
-        );
-    }
 
     #[test]
     fn test_match_get_env() {

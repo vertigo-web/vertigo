@@ -118,22 +118,22 @@ impl Default for Driver {
 impl Driver {
     /// Gets a cookie by name
     pub fn cookie_get(&self, cname: &str) -> String {
-        api_import().cookie_get(cname)
+        api_browser_command().cookie_get(cname.into())
     }
 
     /// Gets a JsJson cookie by name
     pub fn cookie_get_json(&self, cname: &str) -> JsJson {
-        api_import().cookie_get_json(cname)
+        api_browser_command().cookie_json_get(cname.into())
     }
 
     /// Sets a cookie under provided name
     pub fn cookie_set(&self, cname: &str, cvalue: &str, expires_in: u64) {
-        api_import().cookie_set(cname, cvalue, expires_in)
+        api_browser_command().cookie_set(cname.into(), cvalue.into(), expires_in);
     }
 
     /// Sets a cookie under provided name
     pub fn cookie_set_json(&self, cname: &str, cvalue: JsJson, expires_in: u64) {
-        api_import().cookie_set_json(cname, cvalue, expires_in)
+        api_browser_command().cookie_json_set(cname.into(), cvalue, expires_in);
     }
 
     /// Go back in client's (browser's) history
