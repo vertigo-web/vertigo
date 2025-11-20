@@ -207,7 +207,7 @@ export class ExecCommand {
             const name = safeArg.GetEnv.name;
 
             return {
-                value: document.documentElement.getAttribute(`data-env-${name}`)
+                value: document.getElementById('v-metadata')?.getAttribute(`data-env-${name}`) ?? null
             }
         }
 
