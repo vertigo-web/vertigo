@@ -68,11 +68,6 @@ impl WasmInstance {
                         }
                     };
 
-                    // Ignore cookie operations
-                    if let Ok(()) = match_cookie_command(&value) {
-                        return 0;
-                    }
-
                     if let Ok(env_name) = match_get_env(&value) {
                         let env_value = request.env(env_name);
 
@@ -97,12 +92,6 @@ impl WasmInstance {
                         } else {
                             log::info!("{log_message}");
                         }
-                        return 0;
-                    }
-
-                    // push history router location
-                    if let Ok(_url) = match_history_router_push(&value) {
-                        // Ignore in SSR
                         return 0;
                     }
 

@@ -87,6 +87,25 @@ pub mod safe_wrappers {
                         CommandForBrowser::LocationGet { target: _ } => {
                             browser_response::LocationGet { value: "".into() }.to_json()
                         }
+                        CommandForBrowser::CookieGet { name: _ } => {
+                            browser_response::CookieGet { value: "".into() }.to_json()
+                        }
+                        CommandForBrowser::CookieSet {
+                            name: _,
+                            value: _,
+                            expires_in: _,
+                        } => JsJson::Null,
+                        CommandForBrowser::CookieJsonGet { name: _ } => {
+                            browser_response::CookieJsonGet {
+                                value: JsJson::Null,
+                            }
+                            .to_json()
+                        }
+                        CommandForBrowser::CookieJsonSet {
+                            name: _,
+                            value: _,
+                            expires_in: _,
+                        } => JsJson::Null,
                     };
 
                     return JsValue::Json(response).to_ptr_long();

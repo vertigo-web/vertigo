@@ -156,5 +156,45 @@ impl CommandForBrowserApi {
         }
     }
 
-    //....
+    pub fn cookie_set(&self, name: String, value: String, expires_in: u64) {
+        exec_command(CommandForBrowser::CookieSet {
+            name,
+            value,
+            expires_in,
+        });
+    }
+
+    pub fn cookie_json_set(&self, name: String, value: JsJson, expires_in: u64) {
+        exec_command(CommandForBrowser::CookieJsonSet {
+            name,
+            value,
+            expires_in,
+        });
+    }
+
+    pub fn cookie_get(&self, name: String) -> String {
+        let response = exec_command(CommandForBrowser::CookieGet { name });
+
+        let response = decode_json::<browser_response::CookieGet>(response);
+        match response {
+            Ok(response) => response.value,
+            Err(err) => {
+                log::error!("cookie_get -> decode error = {err}");
+                "".into()
+            }
+        }
+    }
+
+    pub fn cookie_json_get(&self, name: String) -> JsJson {
+        let response = exec_command(CommandForBrowser::CookieJsonGet { name });
+
+        let response = decode_json::<browser_response::CookieJsonGet>(response);
+        match response {
+            Ok(response) => response.value,
+            Err(err) => {
+                log::error!("cookie_get -> decode error = {err}");
+                JsJson::Null
+            }
+        }
+    }
 }
