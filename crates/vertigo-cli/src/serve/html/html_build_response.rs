@@ -21,10 +21,6 @@ pub fn build_response(
 ) -> ResponseState {
     let (mut root_html, css) = all_elements.get_response(false);
 
-    let guard = fetch.read();
-    let fetch_cache = SsrFetchCache::new(&guard.fetch_cache);
-    let fetch_cache = fetch_cache.to_json().convert_to_string();
-
     if let HtmlNode::Element(html) = &mut root_html {
         if html.name != "html" {
             // Not really possible
@@ -33,17 +29,6 @@ pub fn build_response(
                 html.name
             ));
         }
-
-        html.add_attr("data-fetch-cache", fetch_cache);
-
-        // Add custom env parameters
-        for (env_name, env_value) in env {
-            html.add_attr(format!("data-env-{env_name}"), env_value);
-        }
-
-        // Add dynamic values for public path
-        html.add_attr("data-env-vertigo-mount-point", mount_path.mount_point());
-        html.add_attr("data-env-vertigo-public-path", mount_path.dest_http_root());
     } else {
         return ResponseState::internal_error("Missing <html> element");
     }
@@ -64,12 +49,38 @@ pub fn build_response(
         log::info!("Missing <head> element");
     }
 
-    let script = HtmlElement::new("script")
-        .attr("type", "module")
-        .attr("data-vertigo-run-wasm", mount_path.get_wasm_http_path())
-        .attr("src", mount_path.get_run_js_http_path());
-
     let body_exists = root_html.modify(&[("body", 0)], move |body| {
+        // Generate SSR cache
+        let fetch_cache = {
+            let fetch_cache_guard = fetch.read();
+            SsrFetchCache::new(&fetch_cache_guard.fetch_cache)
+                .to_json()
+                .convert_to_string()
+        };
+
+        // Create hidden div
+        let mut data_div = HtmlElement::new("div")
+            .attr("id", "v-metadata")
+            .attr("hidden", "hidden")
+            .attr("style", "display: none")
+            .attr("data-fetch-cache", fetch_cache);
+
+        // Add custom env parameters
+        for (env_name, env_value) in env {
+            data_div.add_attr(format!("data-env-{env_name}"), env_value);
+        }
+
+        // Add dynamic values for public path
+        data_div.add_attr("data-env-vertigo-mount-point", mount_path.mount_point());
+        data_div.add_attr("data-env-vertigo-public-path", mount_path.dest_http_root());
+
+        // WASM script starter
+        let script = HtmlElement::new("script")
+            .attr("type", "module")
+            .attr("data-vertigo-run-wasm", mount_path.get_wasm_http_path())
+            .attr("src", mount_path.get_run_js_http_path());
+
+        body.add_child(data_div);
         body.add_child(script);
     });
 

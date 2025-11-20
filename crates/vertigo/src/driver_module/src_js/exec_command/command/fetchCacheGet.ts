@@ -5,10 +5,9 @@ import { JsJsonType } from "../../jsjson";
 // }
 
 export const fetchCacheGet = (): JsJsonType => {
-    const cache = document.documentElement.getAttribute('data-fetch-cache');
+    const cache = document.getElementById('v-metadata')?.getAttribute('data-fetch-cache') ?? null;
 
     return {
         data: cache
     };
 };
-
