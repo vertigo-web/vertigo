@@ -4,8 +4,7 @@ use crate::{
     command::{LocationSetMode, LocationTarget},
     css::css_manager::CssManager,
     driver_module::api::{
-        api_browser_command, api_import, api_location, api_server_handler, api_timers,
-        api_websocket,
+        api_browser_command, api_location, api_server_handler, api_timers, api_websocket,
     },
     fetch::request_builder::{RequestBody, RequestBuilder},
     Context, Css, Dependencies, DropResource, FutureBox, Instant, InstantType, JsJson,
@@ -138,7 +137,7 @@ impl Driver {
 
     /// Go back in client's (browser's) history
     pub fn history_back(&self) {
-        api_import().history_back();
+        api_browser_command().history_back();
     }
 
     /// Replace current location
@@ -166,7 +165,7 @@ impl Driver {
     ///
     /// Compatible with chrono's `FixedOffset::east_opt` method.
     pub fn timezone_offset(&self) -> i32 {
-        api_import().timezone_offset()
+        api_browser_command().timezone_offset()
     }
 
     /// Create new RequestBuilder for GETs (more complex version of [fetch](struct.Driver.html#method.fetch))
@@ -193,7 +192,7 @@ impl Driver {
     }
 
     pub fn get_random(&self, min: u32, max: u32) -> u32 {
-        api_import().get_random(min, max)
+        api_browser_command().get_random(min, max)
     }
 
     pub fn get_random_from<K: Clone>(&self, list: &[K]) -> Option<K> {
@@ -306,7 +305,21 @@ impl Driver {
     /// Convert path in the url to relative route in the app.
     pub fn route_from_public(&self, path: impl Into<String>) -> String {
         let path: String = path.into();
-        api_import().route_from_public(path)
+
+        if api_browser_command().is_browser() {
+            // In the browser use env variable attached during SSR
+            let mount_point = api_browser_command()
+                .get_env("vertigo-mount-point")
+                .unwrap_or_else(|| "/".to_string());
+            if mount_point != "/" {
+                path.trim_start_matches(&mount_point).to_string()
+            } else {
+                path
+            }
+        } else {
+            // On the server no need to do anything
+            path
+        }
     }
 
     /// Register handler that intercepts defined urls and generates plaintext responses during SSR.

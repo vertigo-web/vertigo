@@ -116,6 +116,13 @@ pub mod safe_wrappers {
                             arg3: _,
                             arg4: _,
                         } => JsJson::Null,
+                        CommandForBrowser::TimezoneOffset => {
+                            browser_response::TimezoneOffset { value: 0 }.to_json()
+                        }
+                        CommandForBrowser::HistoryBack => JsJson::Null,
+                        CommandForBrowser::GetRandom { min, max: _ } => {
+                            browser_response::GetRandom { value: min }.to_json()
+                        }
                     };
 
                     return JsValue::Json(response).to_ptr_long();

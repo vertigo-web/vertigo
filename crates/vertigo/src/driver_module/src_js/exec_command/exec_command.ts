@@ -9,11 +9,14 @@ import { CallbackId } from "./types";
 import { Interval } from "./command/interval";
 import { AppLocation } from './location/AppLocation';
 import { Cookies } from "./command/cookies";
+import { getRandom } from "./command/getRandom";
 
 type ExecType
     = 'FetchCacheGet'
     | 'IsBrowser'
     | 'GetDateNow'
+    | 'TimezoneOffset'
+    | 'HistoryBack'
     | {
         FetchExec: {
             callback: CallbackId,
@@ -105,6 +108,12 @@ type ExecType
             kind: 'Debug' | 'Info' | 'Log' | 'Warn' | 'Error',
             message: string, //"%cINFO%c crates/vertigo/src/driver_module/api/api_fetch_cache.rs:26%c FetchCache ready"
         }
+    }
+    | {
+        GetRandom: {
+            max: number,
+            min: number
+        }
     };
 
 export class ExecCommand {
@@ -142,6 +151,17 @@ export class ExecCommand {
             return {
                 value: Date.now(),
             };
+        }
+
+        if (safeArg === 'TimezoneOffset') {
+            return {
+                value: new Date().getTimezoneOffset()
+            };
+        }
+
+        if (safeArg === 'HistoryBack') {
+            window.history.back();
+            return null;
         }
 
         if ('FetchExec' in safeArg) {
@@ -243,6 +263,12 @@ export class ExecCommand {
                     return null;
                 }
             }
+        }
+
+        if ('GetRandom' in safeArg) {
+            return {
+                value: getRandom(safeArg.GetRandom.min, safeArg.GetRandom.max)
+            };
         }
 
         console.info('exec_command: Arg', safeArg);

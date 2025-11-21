@@ -18,8 +18,4 @@ export class ApiBrowser {
         let result = Math.floor(Math.random() * range);
         return min + result;
     }
-
-    public getTimezoneOffset = (): number => {
-        return new Date().getTimezoneOffset()
-    }
 }

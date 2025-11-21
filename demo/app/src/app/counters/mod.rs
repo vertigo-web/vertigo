@@ -155,6 +155,26 @@ pub fn CountersDemo() {
             }}>
                 "Get json cookie"
             </div>
+
+            <div on_click={|_| {
+                let value = get_driver().timezone_offset() ;
+                log::info!("timezone_offset {:?}", value);
+            }}>
+                "Get timezone_offset"
+            </div>
+
+            <div on_click={|_| {
+                get_driver().history_back();
+            }}>
+                "History back"
+            </div>
+
+            <div on_click={|_| {
+                let random = get_driver().get_random(34, 100);
+                log::info!("random from 34 to 100 {:?}", random);
+            }}>
+                "Get random"
+            </div>
         </div>
     }
 }
