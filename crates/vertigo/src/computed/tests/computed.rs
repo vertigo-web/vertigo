@@ -1,7 +1,7 @@
 use std::rc::Rc;
 
-use crate::computed::{Computed, DropResource, Value};
-use crate::{get_driver, transaction};
+use crate::computed::{get_dependencies, Computed, DropResource, Value};
+use crate::transaction;
 
 use crate::computed::tests::box_value_version::SubscribeValueVer;
 use crate::struct_mut::ValueMut;
@@ -150,7 +150,7 @@ fn test_subscription() {
 
 #[test]
 fn test_computed_cache() {
-    let root = get_driver().inner.dependencies;
+    let root = get_dependencies();
 
     assert_eq!(root.graph.connections.all_connections_len(), 0);
 
@@ -228,7 +228,7 @@ fn test_computed_new_value() {
 
     #![allow(clippy::many_single_char_names)]
 
-    let root = get_driver().inner.dependencies;
+    let root = get_dependencies();
 
     let a = Value::new(0);
     let b = Value::new(0);
@@ -280,7 +280,7 @@ fn test_computed_new_value() {
 fn test_computed_new_value2() {
     #![allow(clippy::many_single_char_names)]
 
-    let root = get_driver().inner.dependencies;
+    let root = get_dependencies();
 
     let a = Value::new(0);
     let b = Value::new(0);
@@ -318,7 +318,7 @@ fn test_computed_switch_subscription() {
 
     //a, b, c
 
-    let root = get_driver().inner.dependencies;
+    let root = get_dependencies();
 
     let switch = Value::new(Switch::Ver1);
     let a = Value::new(0);
@@ -419,7 +419,7 @@ fn test_computed_switch_subscription() {
 
 #[test]
 fn test_transaction() {
-    let root = get_driver().inner.dependencies;
+    let root = get_dependencies();
     assert_eq!(root.graph.connections.all_connections_len(), 0);
 
     let val1 = Value::new(1);

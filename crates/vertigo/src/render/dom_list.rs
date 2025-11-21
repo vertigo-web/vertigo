@@ -3,8 +3,9 @@ use std::hash::Hash;
 use std::rc::Rc;
 
 use crate::dom::dom_id::DomId;
+use crate::driver_module::get_driver_dom;
 use crate::struct_mut::ValueMut;
-use crate::{get_driver, Computed, DomComment, DomNode};
+use crate::{Computed, DomComment, DomNode};
 
 //TODO - Check out other options for reading refs
 
@@ -197,7 +198,6 @@ fn get_pairs_middle<T: PartialEq, K: Eq + Hash>(
         real_node.insert(&id, node);
     }
 
-    let driver = get_driver();
     let mut last_before = last_before;
 
     for item in new_child.into_iter().rev() {
@@ -205,10 +205,7 @@ fn get_pairs_middle<T: PartialEq, K: Eq + Hash>(
         let node_id = node.id_dom();
         pairs_middle.push_front((item, node));
 
-        driver
-            .inner
-            .dom
-            .insert_before(parent_id, node_id, Some(last_before));
+        get_driver_dom().insert_before(parent_id, node_id, Some(last_before));
         last_before = node_id;
     }
 
