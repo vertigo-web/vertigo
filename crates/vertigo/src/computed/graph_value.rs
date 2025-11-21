@@ -1,6 +1,6 @@
 use std::rc::Rc;
 
-use crate::{computed::GraphId, get_driver, struct_mut::ValueMut, Context};
+use crate::{Context, computed::{GraphId, get_dependencies}, struct_mut::ValueMut};
 
 pub struct GraphValue<T> {
     id: GraphId,
@@ -26,9 +26,7 @@ impl<T: Clone + 'static> GraphValue<T> {
 
         let weak_value = Rc::downgrade(&graph_value);
 
-        get_driver()
-            .inner
-            .dependencies
+        get_dependencies()
             .graph
             .refresh
             .refresh_token_add(graph_value.id, move |kind: bool| {
@@ -52,9 +50,7 @@ impl<T: Clone + 'static> GraphValue<T> {
     fn calculate_new_value(&self) -> T {
         let context = Context::new();
         let new_value = (self.get_value)(&context);
-        get_driver()
-            .inner
-            .dependencies
+        get_dependencies()
             .graph
             .push_context(self.id, context);
 
@@ -90,7 +86,7 @@ impl<T: Clone + 'static> GraphValue<T> {
 
 impl<T> Drop for GraphValue<T> {
     fn drop(&mut self) {
-        let deps = get_driver().inner.dependencies;
+        let deps = get_dependencies();
         deps.graph.refresh.refresh_token_drop(self.id);
         deps.graph.remove_client(self.id);
     }

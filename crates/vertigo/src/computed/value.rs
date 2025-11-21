@@ -2,9 +2,9 @@ use std::hash::Hash;
 use std::rc::Rc;
 
 use crate::DomNode;
+use crate::computed::dependencies::get_dependencies;
 use crate::{
-    computed::{Computed, Dependencies, GraphId, ToComputed},
-    get_driver,
+    computed::{Computed, GraphId, ToComputed},
     struct_mut::ValueMut,
     DropResource,
 };
@@ -14,12 +14,11 @@ use super::context::Context;
 struct ValueInner<T> {
     id: GraphId,
     value: ValueMut<T>,
-    deps: &'static Dependencies,
 }
 
 impl<T> Drop for ValueInner<T> {
     fn drop(&mut self) {
-        self.deps
+        get_dependencies()
             .graph
             .external_connections
             .unregister_connect(self.id);
@@ -65,12 +64,10 @@ impl<T: PartialEq> PartialEq for Value<T> {
 
 impl<T: Clone + 'static> Value<T> {
     pub fn new(value: T) -> Self {
-        let deps = get_driver().inner.dependencies;
         Value {
             inner: Rc::new(ValueInner {
                 id: GraphId::new_value(),
                 value: ValueMut::new(value),
-                deps,
             }),
         }
     }
@@ -83,20 +80,18 @@ impl<T: Clone + 'static> Value<T> {
     where
         F: Fn(&Value<T>) -> DropResource + 'static,
     {
-        let deps = get_driver().inner.dependencies;
         let id = GraphId::new_value();
 
         let value = Value {
             inner: Rc::new(ValueInner {
                 id,
                 value: ValueMut::new(value),
-                deps,
             }),
         };
 
         let computed = value.to_computed();
 
-        deps.graph
+        get_dependencies().graph
             .external_connections
             .register_connect(id, Rc::new(move || create(&value)));
 
@@ -107,9 +102,9 @@ impl<T: Clone + 'static> Value<T> {
     ///
     /// This will always trigger a graph change even if the value stays the same.
     pub fn set_force(&self, value: T) {
-        self.inner.deps.transaction(|_| {
+        get_dependencies().transaction(|_| {
             self.inner.value.set(value);
-            self.inner.deps.report_set(self.inner.id);
+            get_dependencies().report_set(self.inner.id);
         });
     }
 
@@ -136,10 +131,6 @@ impl<T: Clone + 'static> Value<T> {
         self.inner.id
     }
 
-    pub fn deps(&self) -> &'static Dependencies {
-        self.inner.deps
-    }
-
     /// Reactively convert the `Value`` into [Computed] without any mapping.
     pub fn to_computed(&self) -> Computed<T> {
         let myself = self.clone();
@@ -162,7 +153,7 @@ impl<T: Clone + 'static> ToComputed<T> for &Value<T> {
 
 impl<T: Clone + PartialEq + 'static> Value<T> {
     pub fn change(&self, change_fn: impl FnOnce(&mut T)) {
-        self.inner.deps.transaction(|ctx| {
+        get_dependencies().transaction(|ctx| {
             let mut value = self.get(ctx);
             change_fn(&mut value);
             self.set(value);
@@ -170,10 +161,10 @@ impl<T: Clone + PartialEq + 'static> Value<T> {
     }
 
     pub fn set(&self, value: T) {
-        self.inner.deps.transaction(|_| {
+        get_dependencies().transaction(|_| {
             let need_refresh = self.inner.value.set_if_changed(value);
             if need_refresh {
-                self.inner.deps.report_set(self.inner.id);
+                get_dependencies().report_set(self.inner.id);
             }
         });
     }

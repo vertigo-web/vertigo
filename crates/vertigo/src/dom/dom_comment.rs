@@ -1,13 +1,10 @@
 use super::dom_id::DomId;
 use crate::{
-    get_driver,
-    struct_mut::{ValueMut, VecMut},
-    DomNode, Driver, DropResource,
+    DomNode, DropResource, driver_module::get_driver_dom, struct_mut::{ValueMut, VecMut}
 };
 
 /// A Real DOM representative - comment kind
 pub struct DomComment {
-    driver: Driver,
     pub id_dom: DomId,
     subscriptions: VecMut<DropResource>,
 }
@@ -15,13 +12,11 @@ pub struct DomComment {
 impl DomComment {
     pub fn new(text: impl Into<String>) -> DomComment {
         let text = text.into();
-        let driver = get_driver();
         let id_dom = DomId::default();
 
-        driver.inner.dom.create_comment(id_dom, text);
+        get_driver_dom().create_comment(id_dom, text);
 
         DomComment {
-            driver,
             id_dom,
             subscriptions: VecMut::new(),
         }
@@ -31,7 +26,6 @@ impl DomComment {
         comment_value: &'static str,
         mount: F,
     ) -> DomComment {
-        let driver = get_driver();
         let id_comment = DomId::default();
 
         let when_mount = {
@@ -46,16 +40,15 @@ impl DomComment {
             }
         };
 
-        let drop_callback = driver.inner.dom.node_parent(id_comment, when_mount);
+        let drop_callback = get_driver_dom().node_parent(id_comment, when_mount);
 
         let subscriptions = VecMut::new();
 
         subscriptions.push(drop_callback);
 
-        driver.inner.dom.create_comment(id_comment, comment_value);
+        get_driver_dom().create_comment(id_comment, comment_value);
 
         DomComment {
-            driver,
             id_dom: id_comment,
             subscriptions,
         }
@@ -74,13 +67,10 @@ impl DomComment {
 
         Self::new_marker("list dom node", move |parent_id, comment_id| {
             let mut prev_node = comment_id;
-            let driver = get_driver();
 
             for node in list.iter() {
                 let node_id = node.id_dom();
-                driver
-                    .inner
-                    .dom
+                get_driver_dom()
                     .insert_before(parent_id, node_id, Some(prev_node));
                 prev_node = node_id;
             }
@@ -92,6 +82,6 @@ impl DomComment {
 
 impl Drop for DomComment {
     fn drop(&mut self) {
-        self.driver.inner.dom.remove_comment(self.id_dom);
+        get_driver_dom().remove_comment(self.id_dom);
     }
 }

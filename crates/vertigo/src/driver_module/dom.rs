@@ -8,6 +8,7 @@ use super::dom_command::{sort_commands, DriverDomCommand};
 use super::StaticString;
 use crate::driver_module::api::api_import;
 use vertigo::dev::CallbackId;
+use vertigo_macro::store;
 
 struct Commands {
     commands: VecMut<DriverDomCommand>,
@@ -17,12 +18,12 @@ struct Commands {
 }
 
 impl Commands {
-    pub fn new() -> &'static Self {
-        Box::leak(Box::new(Commands {
+    pub fn new() -> Self {
+        Commands {
             commands: VecMut::new(),
             log_enabled: Cell::new(false),
             log_vec: VecMut::new(),
-        }))
+        }
     }
 
     fn log_start(&self) {
@@ -64,8 +65,13 @@ impl Commands {
 
 type Callback = Rc<dyn Fn(DomId) + 'static>;
 
+#[store]
+pub fn get_driver_dom() -> Rc<DriverDom> {
+    Rc::new(DriverDom::new())
+}
+
 pub struct DriverDom {
-    commands: &'static Commands,
+    commands: Commands,
     node_parent_callback: Rc<HashMapMut<DomId, Callback>>,
 
     #[cfg(test)]
@@ -73,16 +79,16 @@ pub struct DriverDom {
 }
 
 impl DriverDom {
-    pub fn new() -> &'static DriverDom {
+    fn new() -> DriverDom {
         let commands = Commands::new();
 
-        Box::leak(Box::new(DriverDom {
+        DriverDom {
             commands,
             node_parent_callback: Rc::new(HashMapMut::new()),
 
             #[cfg(test)]
             _callback_id_lock: Cell::new(None),
-        }))
+        }
     }
 
     pub fn create_node(&self, id: DomId, name: impl Into<StaticString>) {

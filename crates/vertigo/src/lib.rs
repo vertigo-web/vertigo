@@ -531,9 +531,9 @@ pub fn start_app(init_app: fn() -> DomNode) {
 
     let root_view = init_app();
 
-    get_browser_driver().set_root(root_view);
+    get_driver().set_root(root_view);
 
-    get_driver().inner.dom.flush_dom_changes();
+    get_driver_dom().flush_dom_changes();
 }
 
 #[doc(hidden)]
@@ -557,9 +557,7 @@ pub fn vertigo_export_handle_url(url_ptr: u64) -> u64 {
 ///
 /// let number = get_driver().get_random(1, 10);
 /// ```
-pub fn get_driver() -> Driver {
-    get_browser_driver().driver
-}
+pub use crate::driver_module::driver::get_driver;
 
 /// Do bunch of operations on dependency graph without triggering anything in between.
 pub fn transaction<R, F: FnOnce(&Context) -> R>(f: F) -> R {
@@ -579,9 +577,7 @@ pub use driver_module::driver::{
 };
 
 use crate::driver_module::{
-    api::{api_arguments, api_callbacks, api_command_wasm, api_fetch_cache, api_server_handler},
-    constructor::get_browser_driver,
-    init_env::init_env,
+    api::{api_arguments, api_callbacks, api_command_wasm, api_fetch_cache, api_server_handler}, get_driver_dom, init_env::init_env
 };
 
 // Methods for memory allocation

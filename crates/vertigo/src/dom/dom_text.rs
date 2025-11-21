@@ -1,11 +1,9 @@
 use crate::{
-    computed::ToComputed, dom::dom_id::DomId, driver_module::driver::Driver, get_driver,
-    struct_mut::VecMut, DropResource,
+    DropResource, computed::ToComputed, dom::dom_id::DomId, driver_module::{get_driver_dom}, struct_mut::VecMut
 };
 
 /// A Real DOM representative - text kind
 pub struct DomText {
-    driver: Driver,
     id_dom: DomId,
     subscriptions: VecMut<DropResource>,
 }
@@ -15,11 +13,9 @@ impl DomText {
         let value = value.into();
         let id = DomId::default();
 
-        let driver = get_driver();
-        driver.inner.dom.create_text(id, &value);
+        get_driver_dom().create_text(id, &value);
 
         DomText {
-            driver,
             id_dom: id,
             subscriptions: VecMut::new(),
         }
@@ -30,12 +26,11 @@ impl DomText {
     ) -> Self {
         let text_node = DomText::new(String::new());
         let id_dom = text_node.id_dom;
-        let driver = get_driver();
 
         let computed = computed.to_computed();
         let client = computed.subscribe(move |value| {
             let value: String = value.into();
-            driver.inner.dom.update_text(id_dom, &value);
+            get_driver_dom().update_text(id_dom, &value);
         });
 
         text_node.subscriptions.push(client);
@@ -49,6 +44,6 @@ impl DomText {
 
 impl Drop for DomText {
     fn drop(&mut self) {
-        self.driver.inner.dom.remove_text(self.id_dom);
+        get_driver_dom().remove_text(self.id_dom);
     }
 }

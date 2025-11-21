@@ -1,11 +1,7 @@
 use std::rc::Rc;
 
 use crate::{
-    dom::{dom_id::DomId, dom_node::DomNode, events::ClickEvent},
-    driver_module::{api::api_callbacks, driver::Driver, StaticString},
-    get_driver,
-    struct_mut::VecMut,
-    AttrGroupValue, Computed, DomText, DropFileItem, DropResource, JsValue,
+    AttrGroupValue, Computed, DomText, DropFileItem, DropResource, JsValue, dom::{dom_id::DomId, dom_node::DomNode, events::ClickEvent}, driver_module::{StaticString, api::api_callbacks, get_driver_dom}, struct_mut::VecMut
 };
 
 use crate::struct_mut::VecDequeMut;
@@ -20,7 +16,6 @@ use super::{
 
 /// A Real DOM representative - element kind
 pub struct DomElement {
-    driver: Driver,
     id_dom: DomId,
     child_node: VecDequeMut<DomNode>,
     subscriptions: VecMut<DropResource>,
@@ -32,14 +27,11 @@ impl DomElement {
         let name = name.into();
         let id_dom = DomId::from_name(name.as_str());
 
-        let driver = get_driver();
+        get_driver_dom().create_node(id_dom, name);
 
-        driver.inner.dom.create_node(id_dom, name);
-
-        let class_manager = DomElementClassMerge::new(driver, id_dom);
+        let class_manager = DomElementClassMerge::new(id_dom);
 
         Self {
-            driver,
             id_dom,
             child_node: VecDequeMut::new(),
             subscriptions: VecMut::new(),
@@ -141,9 +133,7 @@ impl DomElement {
         let child_node = child_node.into();
 
         let child_id = child_node.id_dom();
-        self.driver
-            .inner
-            .dom
+        get_driver_dom()
             .insert_before(self.id_dom, child_id, None);
 
         self.child_node.push(child_node);
@@ -468,16 +458,12 @@ impl DomElement {
         let (callback_id, drop) = api_callbacks().register(callback);
 
         let drop_event = DropResource::new(move || {
-            self.driver
-                .inner
-                .dom
+            get_driver_dom()
                 .callback_remove(self.id_dom, name, callback_id);
             drop.off();
         });
 
-        self.driver
-            .inner
-            .dom
+        get_driver_dom()
             .callback_add(self.id_dom, name, callback_id);
         self.subscriptions.push(drop_event);
         self
@@ -508,7 +494,7 @@ impl DomElement {
 
 impl Drop for DomElement {
     fn drop(&mut self) {
-        self.driver.inner.dom.remove_node(self.id_dom);
+        get_driver_dom().remove_node(self.id_dom);
     }
 }
 

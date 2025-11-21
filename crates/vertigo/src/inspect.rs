@@ -3,20 +3,20 @@
 use std::collections::{BTreeMap, BTreeSet};
 
 use crate::dev::CallbackId;
-use crate::driver_module::StaticString;
-use crate::{get_driver, DomId, DriverDomCommand};
+use crate::driver_module::{StaticString, get_driver_dom};
+use crate::{DomId, DriverDomCommand};
 
 /// Make driver start gathering DOM commands into separate log
 ///
 /// In tests it also locks callback id generator to have persistent output in multi-threaded testing.
 /// Remember to use `log_take` or `from_log` to release the lock or tests will stuck.
 pub fn log_start() {
-    get_driver().inner.dom.log_start()
+    get_driver_dom().log_start()
 }
 
 /// Stop gathering logs, return vector of commands and erase the log
 pub fn log_take() -> Vec<DriverDomCommand> {
-    get_driver().inner.dom.log_take()
+    get_driver_dom().log_take()
 }
 
 /// Fragment of DOM created from DOM commands, debuggable

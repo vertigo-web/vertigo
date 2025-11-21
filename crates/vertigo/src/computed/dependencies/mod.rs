@@ -1,4 +1,6 @@
-use std::collections::BTreeSet;
+use std::{collections::BTreeSet, rc::Rc};
+
+use vertigo_macro::store;
 
 use crate::{Context, GraphId};
 
@@ -29,14 +31,13 @@ pub struct Dependencies {
     pub(crate) hooks: Hooks,
 }
 
-impl Default for Dependencies {
-    fn default() -> Self {
-        Self {
-            graph: Graph::new(),
-            transaction_state: TransactionState::new(),
-            hooks: Hooks::new(),
-        }
-    }
+#[store]
+pub fn get_dependencies() -> Rc<Dependencies> {
+    Rc::new(Dependencies {
+        graph: Graph::new(),
+        transaction_state: TransactionState::new(),
+        hooks: Hooks::new(),
+    })
 }
 
 impl Dependencies {

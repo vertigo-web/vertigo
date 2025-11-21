@@ -2,6 +2,7 @@ mod auto_map;
 mod computed_box;
 pub mod context;
 mod dependencies;
+pub use dependencies::{get_dependencies, Dependencies};
 mod drop_resource;
 mod graph_id;
 mod graph_value;
@@ -15,7 +16,6 @@ mod tests;
 
 pub use auto_map::AutoMap;
 pub use computed_box::Computed;
-pub use dependencies::Dependencies;
 pub use drop_resource::DropResource;
 pub use graph_id::GraphId;
 pub use graph_value::GraphValue;

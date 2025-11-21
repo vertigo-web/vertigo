@@ -1,8 +1,5 @@
 use crate::{
-    command::{LocationSetMode, LocationTarget},
-    computed::Value,
-    driver_module::api::api_location,
-    get_driver, Computed, DomNode, EmbedDom, Reactive, ToComputed,
+    Computed, DomNode, EmbedDom, Reactive, ToComputed, command::{LocationSetMode, LocationTarget}, computed::{Value, get_dependencies}, driver_module::api::api_location
 };
 
 /// Router based on path or hash part of current location.
@@ -123,7 +120,7 @@ impl<T: Clone + ToString + From<String> + PartialEq + 'static> Router<T> {
     }
 
     fn change(&self, change_fn: impl FnOnce(&mut T)) {
-        get_driver().inner.dependencies.transaction(|ctx| {
+        get_dependencies().transaction(|ctx| {
             let mut value = self.get(ctx);
             change_fn(&mut value);
             self.set(value);

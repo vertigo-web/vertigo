@@ -1,11 +1,10 @@
 use std::rc::Rc;
 
 use crate::{
-    driver_module::StaticString, get_driver, struct_mut::ValueMut, Css, DomId, Driver, DropResource,
+    Css, DomId, DropResource, css::get_css_manager, driver_module::{StaticString, get_driver_dom}, struct_mut::ValueMut
 };
 
 struct DomElementClassMergeInner {
-    driver: Driver,
     id_dom: DomId,
     css_name: Option<(Css, Option<String>)>,
     attr_name: Option<Rc<String>>,
@@ -16,9 +15,8 @@ struct DomElementClassMergeInner {
 }
 
 impl DomElementClassMergeInner {
-    fn new(driver: Driver, id_dom: DomId) -> Self {
+    fn new(id_dom: DomId) -> Self {
         Self {
-            driver,
             id_dom,
             css_name: None,
             attr_name: None,
@@ -37,13 +35,13 @@ impl DomElementClassMergeInner {
         }
 
         if let Some((css, debug_class_name)) = &self.css_name {
-            let css = get_driver().inner.css_manager.get_class_name(css);
+            let css = get_css_manager().get_class_name(css);
             result.push(css);
             class_name_hint = debug_class_name.clone();
         }
 
         if let Some(suspense_css) = &self.suspense_css {
-            let suspense_css = get_driver().inner.css_manager.get_class_name(suspense_css);
+            let suspense_css = get_css_manager().get_class_name(suspense_css);
             result.push(suspense_css);
         }
 
@@ -65,15 +63,11 @@ impl DomElementClassMergeInner {
                 None => ("".to_string(), None),
             };
 
-            self.driver
-                .inner
-                .dom
+            get_driver_dom()
                 .set_attr(self.id_dom, "class", &new_command);
 
             if let Some(class_name_hint) = class_name_hint {
-                self.driver
-                    .inner
-                    .dom
+                get_driver_dom()
                     .set_attr(self.id_dom, "v-css", &class_name_hint);
             }
         }
@@ -86,10 +80,10 @@ pub struct DomElementClassMerge {
 }
 
 impl DomElementClassMerge {
-    pub fn new(driver: Driver, id_dom: DomId) -> Self {
+    pub fn new(id_dom: DomId) -> Self {
         Self {
             inner: Rc::new(ValueMut::new(DomElementClassMergeInner::new(
-                driver, id_dom,
+                id_dom,
             ))),
         }
     }
@@ -128,15 +122,14 @@ impl DomElementClassMerge {
             return;
         }
 
-        let driver = get_driver();
         let id = self.inner.map(|state| state.id_dom);
 
         match value {
             Some(value) => {
-                driver.inner.dom.set_attr(id, name, &value);
+                get_driver_dom().set_attr(id, name, &value);
             }
             None => {
-                driver.inner.dom.remove_attr(id, name);
+                get_driver_dom().remove_attr(id, name);
             }
         }
     }
