@@ -12,10 +12,4 @@ export class ApiBrowser {
     constructor(getWasm: () => ModuleControllerType<ExportType>, appLocation: AppLocation) {
         this.dom = new DriverDom(appLocation, getWasm);
     }
-
-    public getRandom = (min: number, max: number): number => {
-        const range = max - min + 1;
-        let result = Math.floor(Math.random() * range);
-        return min + result;
-    }
 }

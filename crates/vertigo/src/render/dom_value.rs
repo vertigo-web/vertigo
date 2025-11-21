@@ -1,6 +1,6 @@
 use std::rc::Rc;
 
-use crate::{get_driver, struct_mut::ValueMut, Computed, DomComment, DomNode};
+use crate::{driver_module::get_driver_dom, struct_mut::ValueMut, Computed, DomComment, DomNode};
 
 pub fn render_value_option<T: Clone + PartialEq + 'static>(
     computed: Computed<T>,
@@ -16,7 +16,7 @@ pub fn render_value_option<T: Clone + PartialEq + 'static>(
 
             move |value| {
                 let new_element = render(value).inspect(|new_element| {
-                    get_driver().inner.dom.insert_before(
+                    get_driver_dom().insert_before(
                         parent_id,
                         new_element.id_dom(),
                         Some(comment_id),

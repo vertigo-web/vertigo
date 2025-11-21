@@ -1,18 +1,19 @@
-use vertigo_macro::AutoJsJson;
+use vertigo_macro::{store, AutoJsJson};
 
 use crate::{
     command::{LocationSetMode, LocationTarget},
-    css::css_manager::CssManager,
-    driver_module::api::{
-        api_browser_command, api_location, api_server_handler, api_timers, api_websocket,
+    computed::get_dependencies,
+    css::get_css_manager,
+    driver_module::{
+        api::{api_browser_command, api_location, api_server_handler, api_timers, api_websocket},
+        dom::get_driver_dom,
     },
     fetch::request_builder::{RequestBody, RequestBuilder},
-    Context, Css, Dependencies, DropResource, FutureBox, Instant, InstantType, JsJson,
-    WebsocketMessage,
+    struct_mut::ValueMut,
+    Context, Css, DomNode, DropResource, FutureBox, Instant, InstantType, JsJson, WebsocketMessage,
 };
 use std::{future::Future, pin::Pin, rc::Rc};
 
-use crate::driver_module::dom::DriverDom;
 use crate::driver_module::utils::futures_spawn::spawn_local;
 
 use super::api::DomAccess;
@@ -55,44 +56,6 @@ impl FetchMethod {
 
 type Executable = dyn Fn(Pin<Box<dyn Future<Output = ()> + 'static>>);
 
-pub struct DriverInner {
-    pub(crate) dependencies: &'static Dependencies,
-    pub(crate) css_manager: CssManager,
-    pub(crate) dom: &'static DriverDom,
-    spawn_executor: Rc<Executable>,
-    _subscribe: DropResource,
-}
-
-impl DriverInner {
-    pub fn new() -> &'static Self {
-        let dependencies: &'static Dependencies = Box::leak(Box::default());
-
-        let spawn_executor = {
-            Rc::new(move |fut: Pin<Box<dyn Future<Output = ()> + 'static>>| {
-                spawn_local(fut);
-            })
-        };
-
-        let dom = DriverDom::new();
-        let css_manager = {
-            let driver_dom = dom;
-            CssManager::new(move |selector, value| driver_dom.insert_css(selector, value))
-        };
-
-        let subscribe = dependencies.hooks.on_after_transaction(move || {
-            dom.flush_dom_changes();
-        });
-
-        Box::leak(Box::new(DriverInner {
-            dependencies,
-            css_manager,
-            dom,
-            spawn_executor,
-            _subscribe: subscribe,
-        }))
-    }
-}
-
 /// Result from request made using [RequestBuilder].
 ///
 /// Variants:
@@ -100,21 +63,37 @@ impl DriverInner {
 /// - `Err(response)` if request failed (because of network error for example).
 pub type FetchResult = Result<(u32, RequestBody), String>;
 
-/// Set of functions to communicate with the browser.
-#[derive(Clone, Copy)]
-pub struct Driver {
-    pub(crate) inner: &'static DriverInner,
+#[store]
+pub fn get_driver() -> Rc<Driver> {
+    let spawn_executor = {
+        Rc::new(move |fut: Pin<Box<dyn Future<Output = ()> + 'static>>| {
+            spawn_local(fut);
+        })
+    };
+
+    let subscribe = get_dependencies().hooks.on_after_transaction(move || {
+        get_driver_dom().flush_dom_changes();
+    });
+
+    Rc::new(Driver {
+        spawn_executor,
+        _subscribe: subscribe,
+        subscription: ValueMut::new(None),
+    })
 }
 
-impl Default for Driver {
-    fn default() -> Self {
-        let driver = DriverInner::new();
-
-        Driver { inner: driver }
-    }
+/// Set of functions to communicate with the browser.
+pub struct Driver {
+    spawn_executor: Rc<Executable>,
+    _subscribe: DropResource,
+    subscription: ValueMut<Option<DomNode>>,
 }
 
 impl Driver {
+    pub(crate) fn set_root(&self, root_view: DomNode) {
+        self.subscription.set(Some(root_view));
+    }
+
     /// Gets a cookie by name
     pub fn cookie_get(&self, cname: &str) -> String {
         api_browser_command().cookie_get(cname.into())
@@ -221,14 +200,14 @@ impl Driver {
     /// Spawn a future - thus allowing to fire async functions in, for example, event handler. Handy when fetching resources from internet.
     pub fn spawn(&self, future: impl Future<Output = ()> + 'static) {
         let future = Box::pin(future);
-        let spawn_executor = self.inner.spawn_executor.clone();
+        let spawn_executor = self.spawn_executor.clone();
         spawn_executor(future);
     }
 
     /// Fire provided function in a way that all changes in [dependency graph](struct.Dependencies.html) made by this function
     /// will trigger only one run of updates, just like the changes were done all at once.
     pub fn transaction<R, F: FnOnce(&Context) -> R>(&self, func: F) -> R {
-        self.inner.dependencies.transaction(func)
+        get_dependencies().transaction(func)
     }
 
     /// Allows to access different objects in the browser (See [js!](crate::js) macro for convenient use).
@@ -238,7 +217,7 @@ impl Driver {
 
     /// Function added for diagnostic purposes. It allows you to check whether a block with a transaction is missing somewhere.
     pub fn on_after_transaction(&self, callback: impl Fn() + 'static) -> DropResource {
-        self.inner.dependencies.hooks.on_after_transaction(callback)
+        get_dependencies().hooks.on_after_transaction(callback)
     }
 
     /// Return true if the code is executed client-side (in the browser).
@@ -357,14 +336,14 @@ impl Driver {
     /// Adds this CSS to manager producing a class name, which is returned
     ///
     /// There shouldn't be need to use it manually. It's used by `css!` macro.
-    pub fn class_name_for(&mut self, css: &Css) -> String {
-        self.inner.css_manager.get_class_name(css)
+    pub fn class_name_for(&self, css: &Css) -> String {
+        get_css_manager().get_class_name(css)
     }
 
     /// Register css bundle
     ///
     /// There shouldn't be need to use it manually. It's used by `main!` macro.
     pub fn register_bundle(&self, bundle: impl Into<String>) {
-        self.inner.css_manager.register_bundle(bundle.into())
+        get_css_manager().register_bundle(bundle.into())
     }
 }
