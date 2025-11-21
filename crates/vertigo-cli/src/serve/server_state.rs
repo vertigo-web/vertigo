@@ -187,6 +187,13 @@ impl ServerState {
 
                         JsJson::Null
                     }
+                    CommandForBrowser::TimezoneOffset => {
+                        browser_response::TimezoneOffset { value: 0 }.to_json()
+                    }
+                    CommandForBrowser::HistoryBack => JsJson::Null,
+                    CommandForBrowser::GetRandom { min, max: _ } => {
+                        browser_response::GetRandom { value: min }.to_json()
+                    }
                 }
             }),
         );

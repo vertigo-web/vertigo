@@ -84,6 +84,13 @@ pub enum CommandForBrowser {
         arg3: String,
         arg4: String,
     },
+
+    TimezoneOffset,
+    HistoryBack,
+    GetRandom {
+        min: u32,
+        max: u32,
+    },
 }
 
 #[derive(AutoJsJson, Debug, PartialEq)]
@@ -157,6 +164,16 @@ pub mod browser_response {
     #[derive(AutoJsJson)]
     pub struct GetEnv {
         pub value: Option<String>,
+    }
+
+    #[derive(AutoJsJson)]
+    pub struct TimezoneOffset {
+        pub value: i32,
+    }
+
+    #[derive(AutoJsJson)]
+    pub struct GetRandom {
+        pub value: u32,
     }
 }
 

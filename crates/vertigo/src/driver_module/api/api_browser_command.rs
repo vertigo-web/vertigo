@@ -229,4 +229,44 @@ impl CommandForBrowserApi {
             arg4: arg4.into(),
         });
     }
+
+    pub fn timezone_offset(&self) -> i32 {
+        let response = exec_command(CommandForBrowser::TimezoneOffset);
+
+        let response = decode_json::<browser_response::TimezoneOffset>(response);
+        match response {
+            Ok(response) => {
+                // Return in seconds to be compatible with chrono
+                // Opposite as JS returns the offset backwards
+                response.value * -60
+            }
+            Err(err) => {
+                log::error!("api.timezone_offset -> incorrect result = {err}");
+
+                0
+            }
+        }
+    }
+
+    pub fn history_back(&self) {
+        exec_command(CommandForBrowser::HistoryBack);
+    }
+
+    pub fn get_random(&self, min: u32, max: u32) -> u32 {
+        let response = exec_command(CommandForBrowser::GetRandom { min, max });
+
+        let response = decode_json::<browser_response::GetRandom>(response);
+        match response {
+            Ok(response) => {
+                // Return in seconds to be compatible with chrono
+                // Opposite as JS returns the offset backwards
+                response.value
+            }
+            Err(err) => {
+                log::error!("get_random -> incorrect result = {err}");
+
+                min
+            }
+        }
+    }
 }
