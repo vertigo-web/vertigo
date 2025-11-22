@@ -1,10 +1,11 @@
+use vertigo::command::DriverDomCommand;
 use vertigo::CallbackId;
-use vertigo::{JsJson, SsrFetchRequest, SsrFetchResponse};
+use vertigo::{SsrFetchRequest, SsrFetchResponse};
 
 #[derive(Debug)]
 pub enum Message {
     TimeoutAndSendResponse,
-    DomUpdate(JsJson),
+    DomUpdate(Vec<DriverDomCommand>),
     Panic(Option<String>),
     SetTimeoutZero {
         callback: CallbackId,

@@ -123,6 +123,7 @@ pub mod safe_wrappers {
                         CommandForBrowser::GetRandom { min, max: _ } => {
                             browser_response::GetRandom { value: min }.to_json()
                         }
+                        CommandForBrowser::DomBulkUpdate { list: _ } => JsJson::Null,
                     };
 
                     return JsValue::Json(response).to_ptr_long();

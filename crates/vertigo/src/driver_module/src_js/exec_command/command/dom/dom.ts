@@ -1,8 +1,8 @@
-import { ExportType } from "../../wasm_module";
-import { GuardJsValue } from "../../guard";
+import { ExportType } from "../../../wasm_module";
+import { GuardJsValue } from "../../../guard";
 import { MapNodes } from "./map_nodes";
-import { ModuleControllerType } from "../../wasm_init";
-import { AppLocation } from "../../exec_command/location/AppLocation";
+import { ModuleControllerType } from "../../../wasm_init";
+import { AppLocation } from "../../location/AppLocation";
 
 interface FileItemType {
     name: string,
@@ -17,59 +17,72 @@ const createElement = (name: string): Element => {
     }
 }
 
-type CommandType = {
-    type: 'create_node',
-    id: number,
-    name: string,
+export type CommandType = {
+    CreateNode: {
+        id: number,
+        name: string,
+    }
 } | {
-    type: 'create_text',
-    id: number,
-    value: string
+    CreateText: {
+        id: number,
+        value: string
+    }
 } | {
-    type: 'update_text',
-    id: number,
-    value: string
+    UpdateText: {
+        id: number,
+        value: string
+    }
 } | {
-    type: 'set_attr',
-    id: number,
-    name: string,
-    value: string
+    SetAttr: {
+        id: number,
+        name: string,
+        value: string
+    }
 } | {
-    type: 'remove_attr',
-    id: number,
-    name: string
+    RemoveAttr: {
+        id: number,
+        name: string
+    }
 } | {
-    type: 'remove_node',
-    id: number,
+    RemoveNode: {
+        id: number,
+    }
 } | {
-    type: 'remove_text',
-    id: number,
+    RemoveText: {
+        id: number,
+    }
 } | {
-    type: 'insert_before',
-    parent: number,
-    child: number,
-    ref_id: number | null,
+    InsertBefore: {
+        parent: number,
+        child: number,
+        ref_id: number | null,
+    }
 } | {
-    type: 'insert_css',
-    selector: string | null,
-    value: string
+    InsertCss: {
+        selector: string | null,
+        value: string
+    }
 } | {
-    type: 'create_comment',
-    id: number,
-    value: string
+    CreateComment: {
+        id: number,
+        value: string
+    }
 } | {
-    type: 'remove_comment',
-    id: number,
+    RemoveComment: {
+        id: number,
+    }
 } | {
-    type: 'callback_add',
-    id: number,
-    event_name: string,
-    callback_id: number,
+    CallbackAdd: {
+        id: number,
+        event_name: string,
+        callback_id: number,
+    }
 } | {
-    type: 'callback_remove',
-    id: number,
-    event_name: string,
-    callback_id: number,
+    CallbackRemove: {
+        id: number,
+        event_name: string,
+        callback_id: number,
+    }
 };
 
 const assertNeverCommand = (data: never): never => {
@@ -430,9 +443,9 @@ export class DriverDom {
             } catch (error) {
                 console.error('bulk_update - item', error, command);
             }
-
-            if (command.type === 'set_attr' && command.name.toLocaleLowerCase() === 'autofocus') {
-                setFocus.add(command.id);
+            
+            if ('SetAttr' in command && command.SetAttr.name.toLocaleLowerCase() === 'autofocus') {
+                setFocus.add(command.SetAttr.id);
             }
         }
 
@@ -449,70 +462,70 @@ export class DriverDom {
     }
 
     private bulk_update_command(command: CommandType) {
-        if (command.type === 'remove_node') {
-            this.remove_node(command.id);
+        if ('RemoveNode' in command) {
+            this.remove_node(command.RemoveNode.id);
             return;
         }
 
-        if (command.type === 'insert_before') {
-            this.nodes.insert_before(command.parent, command.child, command.ref_id === null ? null : command.ref_id);
+        if ('InsertBefore' in command) {
+            this.nodes.insert_before(command.InsertBefore.parent, command.InsertBefore.child, command.InsertBefore.ref_id === null ? null : command.InsertBefore.ref_id);
             return;
         }
 
-        if (command.type === 'create_node') {
-            this.create_node(command.id, command.name);
+        if ('CreateNode' in command) {
+            this.create_node(command.CreateNode.id, command.CreateNode.name);
             return;
         }
 
-        if (command.type === 'create_text') {
-            this.create_text(command.id, command.value);
+        if ('CreateText' in command) {
+            this.create_text(command.CreateText.id, command.CreateText.value);
             return;
         }
 
-        if (command.type === 'update_text') {
-            this.update_text(command.id, command.value);
+        if ('UpdateText' in command) {
+            this.update_text(command.UpdateText.id, command.UpdateText.value);
             return;
         }
 
-        if (command.type === 'set_attr') {
-            this.set_attribute(command.id, command.name, command.value);
+        if ('SetAttr' in command) {
+            this.set_attribute(command.SetAttr.id, command.SetAttr.name, command.SetAttr.value);
             return;
         }
 
-        if (command.type === 'remove_attr') {
-            this.remove_attribute(command.id, command.name);
+        if ('RemoveAttr' in command) {
+            this.remove_attribute(command.RemoveAttr.id, command.RemoveAttr.name);
             return;
         }
 
-        if (command.type === 'remove_text') {
-            this.remove_text(command.id);
+        if ('RemoveText' in command) {
+            this.remove_text(command.RemoveText.id);
             return;
         }
 
-        if (command.type === 'insert_css') {
-            this.nodes.insert_css(command.selector, command.value);
+        if ('InsertCss' in command) {
+            this.nodes.insert_css(command.InsertCss.selector, command.InsertCss.value);
             return;
         }
 
-        if (command.type === 'create_comment') {
-            const comment = document.createComment(command.value);
-            this.nodes.set(command.id, comment);
+        if ('CreateComment' in command) {
+            const comment = document.createComment(command.CreateComment.value);
+            this.nodes.set(command.CreateComment.id, comment);
             return;
         }
 
-        if (command.type === 'remove_comment') {
-            const comment = this.nodes.delete("remove_comment", command.id);
+        if ('RemoveComment' in command) {
+            const comment = this.nodes.delete("remove_comment", command.RemoveComment.id);
             comment.remove();
             return;
         }
 
-        if (command.type === 'callback_add') {
-            this.callback_add(command.id, command.event_name, BigInt(command.callback_id));
+        if ('CallbackAdd' in command) {
+            this.callback_add(command.CallbackAdd.id, command.CallbackAdd.event_name, BigInt(command.CallbackAdd.callback_id));
             return;
         }
 
-        if (command.type === 'callback_remove') {
-            this.callback_remove(command.id, command.event_name, BigInt(command.callback_id));
+        if ('CallbackRemove' in command) {
+            this.callback_remove(command.CallbackRemove.id, command.CallbackRemove.event_name, BigInt(command.CallbackRemove.callback_id));
             return;
         }
 

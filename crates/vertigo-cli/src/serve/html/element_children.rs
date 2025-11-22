@@ -1,13 +1,15 @@
 use std::collections::HashMap;
 
+use vertigo::DomId;
+
 struct ChildrenNode {
-    left: u64,
-    right: u64,
+    left: DomId,
+    right: DomId,
 }
 
 pub struct ElementChildren {
-    first_child: Option<u64>,
-    children: HashMap<u64, ChildrenNode>,
+    first_child: Option<DomId>,
+    children: HashMap<DomId, ChildrenNode>,
 }
 
 impl ElementChildren {
@@ -18,7 +20,7 @@ impl ElementChildren {
         }
     }
 
-    pub fn get_all(&self) -> Vec<u64> {
+    pub fn get_all(&self) -> Vec<DomId> {
         if self.children.is_empty() {
             return Vec::new();
         }
@@ -46,7 +48,7 @@ impl ElementChildren {
         result
     }
 
-    fn insert_on_left(&mut self, node_right_id: u64, node_id: u64) {
+    fn insert_on_left(&mut self, node_right_id: DomId, node_id: DomId) {
         let Some(node_right) = self.children.get_mut(&node_right_id) else {
             log::error!("Unreachable in ElementChildren::insert_on_left (1)");
             return;
@@ -70,7 +72,7 @@ impl ElementChildren {
         );
     }
 
-    pub fn insert_before(&mut self, ref_id: Option<u64>, child: u64) {
+    pub fn insert_before(&mut self, ref_id: Option<DomId>, child: DomId) {
         if ref_id == Some(child) {
             log::error!("ref_id must not be equal to child_id, ref_id={ref_id:?}, child={child:?}");
             return;
@@ -105,7 +107,7 @@ impl ElementChildren {
         }
     }
 
-    pub fn remove(&mut self, node_id: u64) {
+    pub fn remove(&mut self, node_id: DomId) {
         let Some(node) = self.children.remove(&node_id) else {
             return;
         };
@@ -139,6 +141,8 @@ impl ElementChildren {
 
 #[cfg(test)]
 mod tests {
+    use vertigo::DomId;
+
     use super::ElementChildren;
 
     #[test]
@@ -146,101 +150,183 @@ mod tests {
         let mut children = ElementChildren::new();
 
         assert_eq!(children.first_child, None);
-        assert_eq!(children.get_all(), Vec::<u64>::new());
+        assert_eq!(children.get_all(), Vec::<DomId>::new());
 
-        children.insert_before(None, 44);
+        children.insert_before(None, DomId::from_u64(44));
 
-        assert_eq!(children.first_child, Some(44));
-        assert_eq!(children.get_all(), vec!(44));
+        assert_eq!(children.first_child, Some(DomId::from_u64(44)));
+        assert_eq!(children.get_all(), vec!(DomId::from_u64(44)));
 
-        children.insert_before(None, 55);
+        children.insert_before(None, DomId::from_u64(55));
 
-        assert_eq!(children.first_child, Some(44));
-        assert_eq!(children.get_all(), vec!(44, 55));
+        assert_eq!(children.first_child, Some(DomId::from_u64(44)));
+        assert_eq!(
+            children.get_all(),
+            vec!(DomId::from_u64(44), DomId::from_u64(55))
+        );
 
-        children.insert_before(None, 66);
+        children.insert_before(None, DomId::from_u64(66));
 
-        assert_eq!(children.first_child, Some(44));
-        assert_eq!(children.get_all(), vec!(44, 55, 66));
+        assert_eq!(children.first_child, Some(DomId::from_u64(44)));
+        assert_eq!(
+            children.get_all(),
+            vec!(
+                DomId::from_u64(44),
+                DomId::from_u64(55),
+                DomId::from_u64(66)
+            )
+        );
 
-        children.insert_before(Some(44), 33);
+        children.insert_before(Some(DomId::from_u64(44)), DomId::from_u64(33));
 
-        assert_eq!(children.first_child, Some(33));
-        assert_eq!(children.get_all(), vec!(33, 44, 55, 66));
+        assert_eq!(children.first_child, Some(DomId::from_u64(33)));
+        assert_eq!(
+            children.get_all(),
+            vec!(
+                DomId::from_u64(33),
+                DomId::from_u64(44),
+                DomId::from_u64(55),
+                DomId::from_u64(66)
+            )
+        );
 
-        children.insert_before(Some(44), 35);
+        children.insert_before(Some(DomId::from_u64(44)), DomId::from_u64(35));
 
-        assert_eq!(children.first_child, Some(33));
-        assert_eq!(children.get_all(), vec!(33, 35, 44, 55, 66));
+        assert_eq!(children.first_child, Some(DomId::from_u64(33)));
+        assert_eq!(
+            children.get_all(),
+            vec!(
+                DomId::from_u64(33),
+                DomId::from_u64(35),
+                DomId::from_u64(44),
+                DomId::from_u64(55),
+                DomId::from_u64(66)
+            )
+        );
 
-        children.remove(55);
+        children.remove(DomId::from_u64(55));
 
-        assert_eq!(children.first_child, Some(33));
-        assert_eq!(children.get_all(), vec!(33, 35, 44, 66));
+        assert_eq!(children.first_child, Some(DomId::from_u64(33)));
+        assert_eq!(
+            children.get_all(),
+            vec!(
+                DomId::from_u64(33),
+                DomId::from_u64(35),
+                DomId::from_u64(44),
+                DomId::from_u64(66)
+            )
+        );
 
-        children.remove(66);
+        children.remove(DomId::from_u64(66));
 
-        assert_eq!(children.first_child, Some(33));
-        assert_eq!(children.get_all(), vec!(33, 35, 44));
+        assert_eq!(children.first_child, Some(DomId::from_u64(33)));
+        assert_eq!(
+            children.get_all(),
+            vec!(
+                DomId::from_u64(33),
+                DomId::from_u64(35),
+                DomId::from_u64(44)
+            )
+        );
 
-        children.remove(33);
+        children.remove(DomId::from_u64(33));
 
-        assert_eq!(children.first_child, Some(35));
-        assert_eq!(children.get_all(), vec!(35, 44));
+        assert_eq!(children.first_child, Some(DomId::from_u64(35)));
+        assert_eq!(
+            children.get_all(),
+            vec!(DomId::from_u64(35), DomId::from_u64(44))
+        );
 
-        children.insert_before(Some(44), 36);
+        children.insert_before(Some(DomId::from_u64(44)), DomId::from_u64(36));
 
-        assert_eq!(children.first_child, Some(35));
-        assert_eq!(children.get_all(), vec!(35, 36, 44));
+        assert_eq!(children.first_child, Some(DomId::from_u64(35)));
+        assert_eq!(
+            children.get_all(),
+            vec!(
+                DomId::from_u64(35),
+                DomId::from_u64(36),
+                DomId::from_u64(44)
+            )
+        );
 
-        children.remove(35);
+        children.remove(DomId::from_u64(35));
 
-        assert_eq!(children.first_child, Some(36));
-        assert_eq!(children.get_all(), vec!(36, 44));
+        assert_eq!(children.first_child, Some(DomId::from_u64(36)));
+        assert_eq!(
+            children.get_all(),
+            vec!(DomId::from_u64(36), DomId::from_u64(44))
+        );
 
-        children.remove(36);
+        children.remove(DomId::from_u64(36));
 
-        assert_eq!(children.first_child, Some(44));
-        assert_eq!(children.get_all(), vec!(44));
+        assert_eq!(children.first_child, Some(DomId::from_u64(44)));
+        assert_eq!(children.get_all(), vec!(DomId::from_u64(44)));
 
-        children.remove(44);
+        children.remove(DomId::from_u64(44));
 
         assert_eq!(children.first_child, None);
-        assert_eq!(children.get_all(), Vec::<u64>::new());
+        assert_eq!(children.get_all(), Vec::<DomId>::new());
 
-        children.insert_before(None, 9999);
+        children.insert_before(None, DomId::from_u64(9999));
 
-        assert_eq!(children.first_child, Some(9999));
-        assert_eq!(children.get_all(), vec!(9999));
+        assert_eq!(children.first_child, Some(DomId::from_u64(9999)));
+        assert_eq!(children.get_all(), vec!(DomId::from_u64(9999)));
 
-        children.insert_before(None, 9999);
+        children.insert_before(None, DomId::from_u64(9999));
 
-        assert_eq!(children.first_child, Some(9999));
-        assert_eq!(children.get_all(), vec!(9999));
+        assert_eq!(children.first_child, Some(DomId::from_u64(9999)));
+        assert_eq!(children.get_all(), vec!(DomId::from_u64(9999)));
 
-        children.insert_before(Some(9999), 8888);
+        children.insert_before(Some(DomId::from_u64(9999)), DomId::from_u64(8888));
 
-        assert_eq!(children.first_child, Some(8888));
-        assert_eq!(children.get_all(), vec!(8888, 9999));
+        assert_eq!(children.first_child, Some(DomId::from_u64(8888)));
+        assert_eq!(
+            children.get_all(),
+            vec!(DomId::from_u64(8888), DomId::from_u64(9999))
+        );
 
-        children.insert_before(Some(9999), 8888);
+        children.insert_before(Some(DomId::from_u64(9999)), DomId::from_u64(8888));
 
-        assert_eq!(children.first_child, Some(8888));
-        assert_eq!(children.get_all(), vec!(8888, 9999));
+        assert_eq!(children.first_child, Some(DomId::from_u64(8888)));
+        assert_eq!(
+            children.get_all(),
+            vec!(DomId::from_u64(8888), DomId::from_u64(9999))
+        );
 
-        children.insert_before(Some(9999), 8900);
+        children.insert_before(Some(DomId::from_u64(9999)), DomId::from_u64(8900));
 
-        assert_eq!(children.first_child, Some(8888));
-        assert_eq!(children.get_all(), vec!(8888, 8900, 9999));
+        assert_eq!(children.first_child, Some(DomId::from_u64(8888)));
+        assert_eq!(
+            children.get_all(),
+            vec!(
+                DomId::from_u64(8888),
+                DomId::from_u64(8900),
+                DomId::from_u64(9999)
+            )
+        );
 
-        children.insert_before(Some(9999), 8900);
+        children.insert_before(Some(DomId::from_u64(9999)), DomId::from_u64(8900));
 
-        assert_eq!(children.first_child, Some(8888));
-        assert_eq!(children.get_all(), vec!(8888, 8900, 9999));
+        assert_eq!(children.first_child, Some(DomId::from_u64(8888)));
+        assert_eq!(
+            children.get_all(),
+            vec!(
+                DomId::from_u64(8888),
+                DomId::from_u64(8900),
+                DomId::from_u64(9999)
+            )
+        );
 
-        children.insert_before(Some(8900), 9999);
+        children.insert_before(Some(DomId::from_u64(8900)), DomId::from_u64(9999));
 
-        assert_eq!(children.first_child, Some(8888));
-        assert_eq!(children.get_all(), vec!(8888, 9999, 8900));
+        assert_eq!(children.first_child, Some(DomId::from_u64(8888)));
+        assert_eq!(
+            children.get_all(),
+            vec!(
+                DomId::from_u64(8888),
+                DomId::from_u64(9999),
+                DomId::from_u64(8900)
+            )
+        );
     }
 }

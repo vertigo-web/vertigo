@@ -10,7 +10,7 @@ use crate::{
     serve::{request_state::RequestState, response_state::ResponseState},
 };
 
-use super::{data_context::DataContext, decode_commands::*, message::Message};
+use super::{data_context::DataContext, message::Message};
 
 pub struct WasmInstance {
     instance: Instance,
@@ -68,14 +68,6 @@ impl WasmInstance {
                             }
                         }
                     };
-
-                    if let Ok(data) = match_dom_bulk_update(&value) {
-                        sender
-                            .send(Message::DomUpdate(data))
-                            .inspect_err(|err| log::error!("Error sending DomUpdate: {err}"))
-                            .unwrap_or_default();
-                        return 0;
-                    }
 
                     log::error!("import_dom_access -> unsupported message: {value:#?}");
                     0

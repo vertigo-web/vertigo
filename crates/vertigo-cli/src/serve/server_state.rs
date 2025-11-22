@@ -194,6 +194,14 @@ impl ServerState {
                     CommandForBrowser::GetRandom { min, max: _ } => {
                         browser_response::GetRandom { value: min }.to_json()
                     }
+                    CommandForBrowser::DomBulkUpdate { list } => {
+                        sender
+                            .send(Message::DomUpdate(list))
+                            .inspect_err(|err| log::error!("Error sending DomUpdate: {err}"))
+                            .unwrap_or_default();
+
+                        JsJson::Null
+                    }
                 }
             }),
         );

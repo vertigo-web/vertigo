@@ -3,6 +3,8 @@ use std::{
     sync::atomic::{AtomicBool, Ordering},
 };
 
+use vertigo_macro::AutoJsJson;
+
 const HTML_ID: u64 = 1;
 const HEAD_ID: u64 = 2;
 const BODY_ID: u64 = 3;
@@ -19,7 +21,7 @@ static HAD_HTML: AtomicBool = AtomicBool::new(false);
 static HAD_HEAD: AtomicBool = AtomicBool::new(false);
 static HAD_BODY: AtomicBool = AtomicBool::new(false);
 
-#[derive(Copy, Clone, Debug, PartialEq, Eq, Hash, PartialOrd, Ord)]
+#[derive(AutoJsJson, Copy, Clone, Debug, PartialEq, Eq, Hash, PartialOrd, Ord)]
 pub struct DomId(u64);
 
 impl Default for DomId {
