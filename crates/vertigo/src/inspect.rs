@@ -9,20 +9,13 @@ use crate::DomId;
 
 #[cfg(test)]
 mod logs {
-    use std::rc::Rc;
-
-    use crate::command::DriverDomCommand;
     use crate::struct_mut::{ValueMut, VecMut};
-    use crate::CallbackId;
-    use crate::DropResource;
+    use crate::{inspect::DriverDomCommand, DropResource};
+    use std::rc::Rc;
     use vertigo_macro::store;
-
-    /// Use in tests to block callback id generation in simultaneous async tests
-    static SEMAPHORE: std::sync::Mutex<()> = std::sync::Mutex::new(());
 
     struct LogActive {
         _drop_inspect: DropResource,
-        _lock: std::sync::MutexGuard<'static, ()>,
     }
 
     pub struct Inspect {
@@ -32,9 +25,6 @@ mod logs {
 
     impl Inspect {
         pub fn log_start(&self) {
-            let lock = SEMAPHORE.lock().unwrap();
-            CallbackId::reset();
-
             let drop_inspect = {
                 use crate::driver_module::get_driver_dom;
 
@@ -47,7 +37,6 @@ mod logs {
 
             self.log_enabled.set(Some(LogActive {
                 _drop_inspect: drop_inspect,
-                _lock: lock,
             }));
         }
 
