@@ -3,7 +3,8 @@ use std::rc::Rc;
 use vertigo_macro::store;
 
 use crate::command::{
-    ConsoleLogLevel, LocationCallbackMode, LocationSetMode, LocationTarget, TimerKind,
+    ConsoleLogLevel, DriverDomCommand, LocationCallbackMode, LocationSetMode, LocationTarget,
+    TimerKind,
 };
 use crate::dev::command::{browser_response, decode_json, CommandForBrowser};
 use crate::dev::InstantType;
@@ -172,6 +173,10 @@ impl CommandForBrowserApi {
             value,
             expires_in,
         });
+    }
+
+    pub fn dom_bulk_update(&self, list: Vec<DriverDomCommand>) {
+        exec_command(CommandForBrowser::DomBulkUpdate { list });
     }
 
     pub fn cookie_get(&self, name: String) -> String {

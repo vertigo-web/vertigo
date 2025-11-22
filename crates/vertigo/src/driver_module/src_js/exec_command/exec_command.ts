@@ -10,6 +10,7 @@ import { Interval } from "./command/interval";
 import { AppLocation } from './location/AppLocation';
 import { Cookies } from "./command/cookies";
 import { getRandom } from "./command/getRandom";
+import { CommandType, DriverDom } from "./command/dom/dom";
 
 type ExecType
     = 'FetchCacheGet'
@@ -114,19 +115,28 @@ type ExecType
             max: number,
             min: number
         }
+    }
+    | {
+        DomBulkUpdate: {
+            list: Array<CommandType>
+        }
     };
 
 export class ExecCommand {
+    public readonly dom: DriverDom;
     private readonly websocket: DriverWebsocket;
     private readonly interval: Interval;
     private readonly location: AppLocation;
     private readonly cookie: Cookies;
     
 
-    constructor(private readonly getWasm: () => ModuleControllerType<ExportType>, location: AppLocation) {
+    constructor(private readonly getWasm: () => ModuleControllerType<ExportType>) {
+        const appLocation = new AppLocation(getWasm);
+
+        this.dom = new DriverDom(appLocation, getWasm);
         this.websocket = new DriverWebsocket(getWasm);
         this.interval = new Interval(getWasm);
-        this.location = location;
+        this.location = appLocation;
         this.cookie = new Cookies();
     }
 
@@ -269,6 +279,11 @@ export class ExecCommand {
             return {
                 value: getRandom(safeArg.GetRandom.min, safeArg.GetRandom.max)
             };
+        }
+
+        if ('DomBulkUpdate' in safeArg) {
+            this.dom.dom_bulk_update(safeArg.DomBulkUpdate.list);
+            return null;
         }
 
         console.info('exec_command: Arg', safeArg);

@@ -2,7 +2,6 @@ pub mod api;
 mod dom;
 pub use dom::get_driver_dom;
 
-pub mod dom_command;
 pub mod driver;
 pub mod event_emitter;
 pub mod init_env;

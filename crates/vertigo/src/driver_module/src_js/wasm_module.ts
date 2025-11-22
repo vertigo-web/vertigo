@@ -1,10 +1,8 @@
 import { wasmInit, ModuleControllerType } from './wasm_init';
-import { ApiBrowser as ApiBrowser } from './api_browser';
 import { JsNode } from './js_node';
 import { GuardJsValue } from './guard';
 import { ExecCommand } from './exec_command/exec_command';
 import { JsValueConst } from './jsvalue_types';
-import { AppLocation } from './exec_command/location/AppLocation';
 
 //Number -> u32 or i32
 //BigInt -> u64 or i64
@@ -48,12 +46,10 @@ export class WasmModule {
             return wasmModule;
         };
 
-        const appLocation = new AppLocation(getWasm);
-        const apiBrowser = new ApiBrowser(getWasm, appLocation);
-        const execCommand = new ExecCommand(getWasm, appLocation);
+        const execCommand = new ExecCommand(getWasm);
 
         //@ts-expect-error
-        window.$vertigoApi = apiBrowser;
+        window.$vertigoApi = execCommand;
 
         wasmModule = await wasmInit<ImportType, ExportType>(wasmBinPath, {
             mod: {
@@ -82,7 +78,7 @@ export class WasmModule {
                     //old version
                     if (Array.isArray(args)) {
                         const path = args;
-                        let wsk = new JsNode(apiBrowser, apiBrowser.dom.nodes, null);
+                        let wsk = new JsNode(execCommand.dom.nodes, null);
 
                         for (const pathItem of path) {
                             const newWsk = wsk.next(path, pathItem);
