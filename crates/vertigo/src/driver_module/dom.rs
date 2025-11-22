@@ -1,6 +1,6 @@
-use std::cell::Cell;
 use std::rc::Rc;
 
+use crate::driver_module::event_emitter::EventEmitter;
 use crate::struct_mut::{HashMapMut, VecMut};
 use crate::{DomId, DropResource, JsJson};
 
@@ -13,35 +13,24 @@ use vertigo_macro::store;
 struct Commands {
     commands: VecMut<DriverDomCommand>,
     // For testing/debuging purposes
-    log_enabled: Cell<bool>,
-    log_vec: VecMut<DriverDomCommand>,
+    new_command: EventEmitter<DriverDomCommand>,
 }
 
 impl Commands {
     pub fn new() -> Self {
         Commands {
             commands: VecMut::new(),
-            log_enabled: Cell::new(false),
-            log_vec: VecMut::new(),
+            new_command: EventEmitter::default(),
         }
     }
 
-    fn log_start(&self) {
-        if self.log_enabled.replace(true) {
-            println!("log_start: already started");
-        }
-    }
-
-    fn log_take(&self) -> Vec<DriverDomCommand> {
-        self.log_enabled.replace(false);
-        self.log_vec.take()
+    #[allow(dead_code)]
+    fn inspect_command(&self, func: impl Fn(DriverDomCommand) + 'static) -> DropResource {
+        self.new_command.add(func)
     }
 
     fn add_command(&self, command: DriverDomCommand) {
-        if self.log_enabled.get() {
-            self.log_vec.push(command.clone());
-        }
-
+        self.new_command.trigger(&command);
         self.commands.push(command);
     }
 
@@ -73,9 +62,6 @@ pub fn get_driver_dom() -> Rc<DriverDom> {
 pub struct DriverDom {
     commands: Commands,
     node_parent_callback: Rc<HashMapMut<DomId, Callback>>,
-
-    #[cfg(test)]
-    _callback_id_lock: Cell<Option<std::sync::MutexGuard<'static, ()>>>,
 }
 
 impl DriverDom {
@@ -85,10 +71,12 @@ impl DriverDom {
         DriverDom {
             commands,
             node_parent_callback: Rc::new(HashMapMut::new()),
-
-            #[cfg(test)]
-            _callback_id_lock: Cell::new(None),
         }
+    }
+
+    #[allow(dead_code)]
+    pub fn inspect_command(&self, func: impl Fn(DriverDomCommand) + 'static) -> DropResource {
+        self.commands.inspect_command(func)
     }
 
     pub fn create_node(&self, id: DomId, name: impl Into<StaticString>) {
@@ -189,24 +177,6 @@ impl DriverDom {
         });
     }
 
-    pub fn log_start(&self) {
-        #[cfg(test)]
-        {
-            let lock = SEMAPHORE.lock().unwrap();
-            CallbackId::reset();
-            self._callback_id_lock.set(Some(lock));
-        };
-
-        self.commands.log_start();
-    }
-
-    pub fn log_take(&self) -> Vec<DriverDomCommand> {
-        let log = self.commands.log_take();
-        #[cfg(test)]
-        self._callback_id_lock.set(None);
-        log
-    }
-
     pub fn flush_dom_changes(&self) {
         self.commands.flush_dom_changes();
     }
@@ -221,7 +191,3 @@ impl DriverDom {
         })
     }
 }
-
-#[cfg(test)]
-/// Use in tests to block callback id generation in simultaneous async tests
-static SEMAPHORE: std::sync::Mutex<()> = std::sync::Mutex::new(());

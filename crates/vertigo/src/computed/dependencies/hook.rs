@@ -20,6 +20,6 @@ impl Hooks {
     }
 
     pub fn fire_end(&self) {
-        self.callback_after_transaction.trigger(());
+        self.callback_after_transaction.trigger(&());
     }
 }

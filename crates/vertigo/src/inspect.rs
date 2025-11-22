@@ -3,20 +3,82 @@
 use std::collections::{BTreeMap, BTreeSet};
 
 use crate::dev::CallbackId;
-use crate::driver_module::{get_driver_dom, StaticString};
+use crate::driver_module::StaticString;
+
 use crate::{DomId, DriverDomCommand};
+
+#[cfg(test)]
+mod logs {
+    use std::rc::Rc;
+
+    use crate::struct_mut::{ValueMut, VecMut};
+    use crate::CallbackId;
+    use crate::{DriverDomCommand, DropResource};
+    use vertigo_macro::store;
+
+    /// Use in tests to block callback id generation in simultaneous async tests
+    static SEMAPHORE: std::sync::Mutex<()> = std::sync::Mutex::new(());
+
+    struct LogActive {
+        _drop_inspect: DropResource,
+        _lock: std::sync::MutexGuard<'static, ()>,
+    }
+
+    pub struct Inspect {
+        log_enabled: ValueMut<Option<LogActive>>,
+        log_vec: Rc<VecMut<DriverDomCommand>>,
+    }
+
+    impl Inspect {
+        pub fn log_start(&self) {
+            let lock = SEMAPHORE.lock().unwrap();
+            CallbackId::reset();
+
+            let drop_inspect = {
+                use crate::driver_module::get_driver_dom;
+
+                let log_vec = self.log_vec.clone();
+
+                get_driver_dom().inspect_command(move |command| {
+                    log_vec.push(command);
+                })
+            };
+
+            self.log_enabled.set(Some(LogActive {
+                _drop_inspect: drop_inspect,
+                _lock: lock,
+            }));
+        }
+
+        pub fn log_take(&self) -> Vec<DriverDomCommand> {
+            let logs = self.log_vec.take();
+            self.log_enabled.set(None);
+            logs
+        }
+    }
+
+    #[store]
+    pub fn get_inspect() -> Rc<Inspect> {
+        Rc::new(Inspect {
+            log_enabled: ValueMut::new(None),
+            log_vec: Rc::new(VecMut::new()),
+        })
+    }
+}
 
 /// Make driver start gathering DOM commands into separate log
 ///
 /// In tests it also locks callback id generator to have persistent output in multi-threaded testing.
 /// Remember to use `log_take` or `from_log` to release the lock or tests will stuck.
+#[cfg(test)]
 pub fn log_start() {
-    get_driver_dom().log_start()
+    logs::get_inspect().log_start()
 }
 
 /// Stop gathering logs, return vector of commands and erase the log
+#[cfg(test)]
 pub fn log_take() -> Vec<DriverDomCommand> {
-    get_driver_dom().log_take()
+    logs::get_inspect().log_take()
 }
 
 /// Fragment of DOM created from DOM commands, debuggable
@@ -41,6 +103,7 @@ pub struct DomDebugNode {
 
 impl DomDebugFragment {
     /// Creates debug fragment directly from driver log. Log should be started by [log_start].
+    #[cfg(test)]
     pub fn from_log() -> Self {
         Self::from_cmds(log_take())
     }
