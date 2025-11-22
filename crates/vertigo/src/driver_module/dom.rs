@@ -1,12 +1,12 @@
 use std::rc::Rc;
 
+use crate::command::DriverDomCommand;
 use crate::driver_module::event_emitter::EventEmitter;
 use crate::struct_mut::{HashMapMut, VecMut};
-use crate::{DomId, DropResource, JsJson};
+use crate::{DomId, DropResource};
 
-use super::dom_command::{sort_commands, DriverDomCommand};
 use super::StaticString;
-use crate::driver_module::api::api_import;
+use crate::driver_module::api::api_browser_command;
 use vertigo::dev::CallbackId;
 use vertigo_macro::store;
 
@@ -38,18 +38,27 @@ impl Commands {
         let state = self.commands.take();
 
         if !state.is_empty() {
-            let mut out = Vec::<JsJson>::new();
-
-            let state = sort_commands(state);
-
-            for command in state {
-                out.push(command.into_string());
-            }
-
-            let out = JsJson::List(out);
-            api_import().dom_bulk_update(out);
+            let state: Vec<DriverDomCommand> = sort_commands(state);
+            api_browser_command().dom_bulk_update(state);
         }
     }
+}
+
+pub fn sort_commands(list: Vec<DriverDomCommand>) -> Vec<DriverDomCommand> {
+    let mut dom = Vec::new();
+    let mut events = Vec::new();
+
+    for command in list {
+        if command.is_event() {
+            events.push(command);
+        } else {
+            dom.push(command);
+        }
+    }
+
+    dom.extend(events);
+
+    dom
 }
 
 type Callback = Rc<dyn Fn(DomId) + 'static>;

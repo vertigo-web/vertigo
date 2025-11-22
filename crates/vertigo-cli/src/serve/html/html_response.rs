@@ -8,11 +8,9 @@ use axum::http::StatusCode;
 use parking_lot::RwLock;
 use std::{collections::HashMap, sync::Arc};
 use tokio::sync::mpsc::UnboundedSender;
+use vertigo::command::DriverDomCommand;
 
-use super::{
-    dom_command::dom_command_from_js_json, element::AllElements, send_request::send_request,
-    DomCommand,
-};
+use super::{element::AllElements, send_request::send_request};
 
 pub struct HtmlResponse {
     sender: UnboundedSender<Message>,
@@ -43,7 +41,7 @@ impl HtmlResponse {
         }
     }
 
-    pub fn feed(&mut self, commands: Vec<DomCommand>) {
+    pub fn feed(&mut self, commands: Vec<DriverDomCommand>) {
         self.all_elements.feed(commands);
     }
 
@@ -69,14 +67,7 @@ impl HtmlResponse {
                 Some(self.build_response())
             }
             Message::DomUpdate(update) => {
-                match dom_command_from_js_json(update) {
-                    Ok(commands) => {
-                        self.feed(commands);
-                    }
-                    Err(message) => {
-                        log::error!("DomUpdate: {message}");
-                    }
-                }
+                self.feed(update);
 
                 None
             }

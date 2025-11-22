@@ -1,19 +1,20 @@
 //! Methods for debugging or testing vertigo components by recreating HTML-like string from dom commands
 
-use std::collections::{BTreeMap, BTreeSet};
-
+use crate::command::DriverDomCommand;
 use crate::dev::CallbackId;
 use crate::driver_module::StaticString;
+use std::collections::{BTreeMap, BTreeSet};
 
-use crate::{DomId, DriverDomCommand};
+use crate::DomId;
 
 #[cfg(test)]
 mod logs {
     use std::rc::Rc;
 
+    use crate::command::DriverDomCommand;
     use crate::struct_mut::{ValueMut, VecMut};
     use crate::CallbackId;
-    use crate::{DriverDomCommand, DropResource};
+    use crate::DropResource;
     use vertigo_macro::store;
 
     /// Use in tests to block callback id generation in simultaneous async tests

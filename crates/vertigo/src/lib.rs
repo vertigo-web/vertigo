@@ -140,8 +140,6 @@ pub use dom::{
 };
 pub use dom_macro::{AttrGroup, AttrGroupValue, EmbedDom};
 pub use driver_module::{
-    api::ApiImport,
-    dom_command::DriverDomCommand,
     driver::{Driver, FetchMethod, FetchResult},
     js_value::{
         from_json, to_json, JsJson, JsJsonContext, JsJsonDeserialize, JsJsonNumber,

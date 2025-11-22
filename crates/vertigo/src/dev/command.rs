@@ -1,7 +1,8 @@
-use crate::SsrFetchResponse;
+use crate::driver_module::StaticString;
 use crate::{
     dev::callback_id::CallbackId, JsJson, JsJsonContext, JsJsonDeserialize, SsrFetchRequest,
 };
+use crate::{DomId, SsrFetchResponse};
 use vertigo_macro::AutoJsJson;
 
 pub fn decode_json<T: JsJsonDeserialize>(json: JsJson) -> Result<T, JsJsonContext> {
@@ -90,6 +91,10 @@ pub enum CommandForBrowser {
     GetRandom {
         min: u32,
         max: u32,
+    },
+
+    DomBulkUpdate {
+        list: Vec<DriverDomCommand>,
     },
 }
 
@@ -204,4 +209,71 @@ pub enum CommandForWasm {
         callback: CallbackId,
         value: String,
     },
+}
+
+#[derive(AutoJsJson, Clone, Debug)]
+pub enum DriverDomCommand {
+    CreateNode {
+        id: DomId,
+        name: StaticString,
+    },
+    CreateText {
+        id: DomId,
+        value: String,
+    },
+    UpdateText {
+        id: DomId,
+        value: String,
+    },
+    SetAttr {
+        id: DomId,
+        name: StaticString,
+        value: String,
+    },
+    RemoveAttr {
+        id: DomId,
+        name: StaticString,
+    },
+    RemoveNode {
+        id: DomId,
+    },
+    RemoveText {
+        id: DomId,
+    },
+    InsertBefore {
+        parent: DomId,
+        child: DomId,
+        ref_id: Option<DomId>,
+    },
+    InsertCss {
+        selector: Option<String>,
+        value: String,
+    },
+
+    CreateComment {
+        id: DomId,
+        value: String,
+    },
+    RemoveComment {
+        id: DomId,
+    },
+    CallbackAdd {
+        id: DomId,
+        event_name: String,
+        callback_id: CallbackId,
+    },
+    CallbackRemove {
+        id: DomId,
+        event_name: String,
+        callback_id: CallbackId,
+    },
+}
+
+impl DriverDomCommand {
+    pub fn is_event(&self) -> bool {
+        matches!(
+            self,
+            Self::RemoveNode { .. } | Self::RemoveText { .. } | Self::RemoveComment { .. }
+        )
+    }
 }
