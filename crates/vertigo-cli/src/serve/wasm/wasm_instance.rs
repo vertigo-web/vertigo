@@ -1,5 +1,4 @@
-use reqwest::StatusCode;
-use std::{collections::HashMap, process::exit, sync::Arc};
+use std::{process::exit, sync::Arc};
 use tokio::sync::mpsc::UnboundedSender;
 use vertigo::command::{decode_json, CommandForBrowser, CommandForWasm};
 use vertigo::{CallbackId, JsJson, JsJsonSerialize, LongPtr, SsrFetchResponse};
@@ -157,59 +156,16 @@ impl WasmInstance {
             return None;
         }
 
-        let JsJson::List(mut list) = value else {
-            panic!("decode_response_state: not a list");
-        };
+        let response: Result<ResponseState, vertigo::JsJsonContext> =
+            decode_json::<ResponseState>(value);
 
-        let Some(JsJson::List(body)) = list.pop() else {
-            panic!("decode_response_state: no body");
-        };
-
-        let Some(JsJson::Object(headers_value)) = list.pop() else {
-            panic!("decode_response_state no headers");
-        };
-
-        let Some(JsJson::Number(status)) = list.pop() else {
-            panic!("decode_response_state no status");
-        };
-        let status = status.as_f64() as u32;
-
-        if !list.is_empty() {
-            panic!("decode_response_state excess data");
+        if let Ok(response) = response {
+            return Some(response);
         }
 
-        let mut headers = HashMap::<String, String>::new();
+        log::error!("decode_response_state: decode error = {response:#?}");
 
-        for (name, value) in headers_value {
-            let JsJson::String(value) = value else {
-                panic!("decode_response_state: header value not a string");
-            };
-            headers.insert(name, value);
-        }
-        let status = match StatusCode::from_u16(status as u16) {
-            Ok(status) => status,
-            Err(error) => {
-                let error = format!("decode_response_state: incorrect status: {}", error);
-                return Some(ResponseState::internal_error(error));
-            }
-        };
-
-        let body: Vec<u8> = body
-            .into_iter()
-            .map(|item| {
-                if let JsJson::Number(val) = item {
-                    val.as_f64() as u8
-                } else {
-                    panic!("decode_response_state: body byte not a number");
-                }
-            })
-            .collect();
-
-        Some(ResponseState {
-            status,
-            headers,
-            body,
-        })
+        None
     }
 
     pub fn send_fetch_response(&mut self, callback: CallbackId, response: SsrFetchResponse) {
