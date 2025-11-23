@@ -1,6 +1,7 @@
 import { ExportType } from "../../../wasm_module";
 import { MapNodes } from "./map_nodes";
 import { ModuleControllerType } from "../../../wasm_init";
+import { JsJsonType } from "../../../jsjson";
 import { AppLocation } from "../../location/AppLocation";
 
 interface FileItemType {
@@ -116,6 +117,15 @@ export class DriverDom {
         console.info('debug nodes', result);
     }
 
+    private wasm_callback(callback_id: bigint, value: JsJsonType): JsJsonType {
+        return this.getWasm().wasm_command({
+            CallbackCall: {
+                callback_id: Number(callback_id),
+                value: value
+            }
+        });
+    }
+
     private create_node(id: number, name: string) {
         const node = createElement(name);
         this.nodes.set(id, node);
@@ -196,7 +206,7 @@ export class DriverDom {
 
     private callback_click(event: Event, callback_id: bigint) {
         event.preventDefault();
-        let click_event = this.getWasm().wasm_callback(callback_id, undefined);
+        let click_event = this.wasm_callback(callback_id, undefined);
 
         // Check if click_event is an object (JsJson Object type)
         if (click_event !== null && typeof click_event === 'object' && !Array.isArray(click_event)) {
@@ -211,14 +221,14 @@ export class DriverDom {
 
     private callback_submit(event: Event, callback_id: bigint) {
         event.preventDefault();
-        this.getWasm().wasm_callback(callback_id, undefined);
+        this.wasm_callback(callback_id, undefined);
     }
 
     private callback_input(event: Event, callback_id: bigint) {
         const target = event.target;
 
         if (target instanceof HTMLInputElement || target instanceof HTMLTextAreaElement) {
-            this.getWasm().wasm_callback(callback_id, target.value);
+            this.wasm_callback(callback_id, target.value);
             return;
         }
 
@@ -229,7 +239,7 @@ export class DriverDom {
         const target = event.target;
 
         if (target instanceof HTMLInputElement || target instanceof HTMLTextAreaElement || target instanceof HTMLSelectElement) {
-            this.getWasm().wasm_callback(callback_id, target.value);
+            this.wasm_callback(callback_id, target.value);
             return;
         }
 
@@ -237,27 +247,27 @@ export class DriverDom {
     }
 
     private callback_blur(_event: Event, callback_id: bigint) {
-        this.getWasm().wasm_callback(callback_id, undefined);
+        this.wasm_callback(callback_id, undefined);
     }
 
     private callback_mousedown(event: Event, callback_id: bigint) {
-        if (this.getWasm().wasm_callback(callback_id, undefined)) {
+        if (this.wasm_callback(callback_id, undefined)) {
             event.preventDefault()
         }
     }
 
     private callback_mouseup(event: Event, callback_id: bigint) {
-        if (this.getWasm().wasm_callback(callback_id, undefined)) {
+        if (this.wasm_callback(callback_id, undefined)) {
             event.preventDefault()
         }
     }
 
     private callback_mouseenter(_event: Event, callback_id: bigint) {
-        this.getWasm().wasm_callback(callback_id, undefined);
+        this.wasm_callback(callback_id, undefined);
     }
 
     private callback_mouseleave(_event: Event, callback_id: bigint) {
-        this.getWasm().wasm_callback(callback_id, undefined);
+        this.wasm_callback(callback_id, undefined);
     }
 
     private callback_drop(event: Event, callback_id: bigint) {
@@ -304,7 +314,7 @@ export class DriverDom {
                             ]);
                         }
 
-                        this.getWasm().wasm_callback(callback_id, [params]);
+                        this.wasm_callback(callback_id, [params]);
                     }).catch((error) => {
                         console.error('callback_drop -> promise.all -> ', error);
                     });
@@ -319,7 +329,7 @@ export class DriverDom {
 
     private callback_keydown(event: Event, callback_id: bigint) {
         if (event instanceof KeyboardEvent) {
-            const result = this.getWasm().wasm_callback(callback_id, [
+            const result = this.wasm_callback(callback_id, [
                 event.key,
                 event.code,
                 event.altKey,
@@ -341,7 +351,7 @@ export class DriverDom {
 
     private callback_load(event: Event, callback_id: bigint) {
         event.preventDefault();
-        this.getWasm().wasm_callback(callback_id, undefined);
+        this.wasm_callback(callback_id, undefined);
     }
 
     private callback_add(id: number, event_name: string, callback_id: bigint) {

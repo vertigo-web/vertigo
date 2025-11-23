@@ -37,6 +37,10 @@ impl CommandWasmApi {
                 CommandForWasm::LocationCall { callback, value } => {
                     api_location().callback(callback, value);
                 }
+                CommandForWasm::CallbackCall { callback_id, value } => {
+                    use crate::driver_module::api::callbacks::api_callbacks;
+                    return api_callbacks().call(callback_id, value);
+                }
             }
         }
 
