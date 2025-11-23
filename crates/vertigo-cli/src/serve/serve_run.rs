@@ -30,9 +30,16 @@ pub async fn run(opts: ServeOpts, port_watch: Option<u16>) -> Result<(), ErrorCo
         mount_point,
         env,
         wasm_preload,
+        disable_hydration,
     } = opts.inner;
 
-    let mount_config = MountPathConfig::new(mount_point, opts.common.dest_dir, wasm_preload)?;
+    let mount_config = MountPathConfig::new(
+        mount_point,
+        opts.common.dest_dir,
+        wasm_preload,
+        disable_hydration,
+    )?;
+
     ServerState::init(mount_config.clone(), port_watch, env)?;
 
     let serve_mount_path = mount_config.dest_http_root();
