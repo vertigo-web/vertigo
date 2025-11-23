@@ -2,6 +2,11 @@
 set -e
 
 npm install
+
+echo "Running TS tests"
+npm run test:hydration
+
+echo "Checking if JS is up to date"
 npx rollup -v
 npx rollup -c
 

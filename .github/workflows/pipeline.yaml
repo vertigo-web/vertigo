@@ -68,8 +68,8 @@ jobs:
       - uses: actions/setup-node@v4
         with:
           node-version: 20
-      - name: Check if JS is up to date
-        run: tests/check_js_is_fresh.sh
+      - name: JS tests
+        run: tests/js_tests.sh
 
   nightly:
     name: Nightly clippy && tests

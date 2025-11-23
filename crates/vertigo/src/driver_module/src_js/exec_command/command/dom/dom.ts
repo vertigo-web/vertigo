@@ -3,6 +3,8 @@ import { MapNodes } from "./map_nodes";
 import { ModuleControllerType } from "../../../wasm_init";
 import { JsJsonType } from "../../../jsjson";
 import { AppLocation } from "../../location/AppLocation";
+import { hydrate } from "./hydration";
+import { hydrate_link } from "./injects";
 
 interface FileItemType {
     name: string,
@@ -127,24 +129,15 @@ export class DriverDom {
     }
 
     private create_node(id: number, name: string) {
+        if (this.nodes.has(id)) {
+            return;
+        }
+
         const node = createElement(name);
         this.nodes.set(id, node);
 
         if (name.toLowerCase().trim() === 'a') {
-            node.addEventListener('click', (e) => {
-                let href = node.getAttribute('href');
-                if (href === null) {
-                    return;
-                }
-
-                if (href.startsWith('#') || href.startsWith('http://') || href.startsWith('https://') || href.startsWith('//')) {
-                    return;
-                }
-
-                e.preventDefault();
-                this.appLocation.set('History', 'Push', href);
-                window.scrollTo(0, 0);
-            })
+            hydrate_link(node, this.appLocation);
         }
     }
 
@@ -190,6 +183,10 @@ export class DriverDom {
     }
 
     private create_text(id: number, value: string) {
+        if (this.nodes.has(id)) {
+            return;
+        }
+
         const text = document.createTextNode(value);
         this.nodes.set(id, text);
     }
@@ -426,6 +423,12 @@ export class DriverDom {
         }
     }
 
+    private getDisableHydration(): boolean {
+        const metadataDiv = document.getElementById('v-metadata');
+        const value = metadataDiv?.getAttribute('data-env-disable-hydration');
+        return value === 'true';
+    }
+
     private callback_remove(id: number, event_name: string, callback_id: bigint) {
         const callback = this.callbacks.get(callback_id);
         this.callbacks.delete(callback_id);
@@ -444,6 +447,10 @@ export class DriverDom {
     }
 
     public dom_bulk_update = (commands: Array<CommandType>) => {
+        if (this.nodes.hasInitNodes() && !this.getDisableHydration()) {
+            hydrate(commands, this.nodes, this.appLocation);
+        }
+
         const setFocus: Set<number> = new Set();
 
         for (const command of commands) {

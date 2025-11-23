@@ -74,6 +74,16 @@ pub fn build_response(
         data_div.add_attr("data-env-vertigo-mount-point", mount_path.mount_point());
         data_div.add_attr("data-env-vertigo-public-path", mount_path.dest_http_root());
 
+        // Add disable hydration flag
+        data_div.add_attr(
+            "data-env-disable-hydration",
+            if mount_path.disable_hydration {
+                "true"
+            } else {
+                "false"
+            },
+        );
+
         // WASM script starter
         let script = HtmlElement::new("script")
             .attr("type", "module")

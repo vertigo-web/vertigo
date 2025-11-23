@@ -35,4 +35,8 @@ pub struct ServeOptsInner {
     /// Whether to add `<link rel="preload">` tag to `<head>` to make the browser load WASM earlier
     #[arg(long, default_value_t = {false})]
     pub wasm_preload: bool,
+
+    /// Disable hydration on page load (will re-create DOM instead of claiming existing nodes from SSR)
+    #[arg(long, default_value_t = {false})]
+    pub disable_hydration: bool,
 }

@@ -159,4 +159,23 @@ export class MapNodes {
             this.get_root_head().appendChild(this.style);
         }
     }
+
+    public hasInitNodes(): boolean {
+        return this.initNodes !== null;
+    }
+
+    public claimNode(id: number, node: NodeType) {
+        this.data.set(id, node);
+
+        if (this.initNodes) {
+            const index = this.initNodes.indexOf(node as ChildNode);
+            if (index > -1) {
+                this.initNodes.splice(index, 1);
+            }
+        }
+    }
+
+    public has(id: number): boolean {
+        return this.data.has(id);
+    }
 }
