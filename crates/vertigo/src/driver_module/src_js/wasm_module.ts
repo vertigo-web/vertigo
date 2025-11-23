@@ -68,7 +68,7 @@ export class WasmModule {
                         return 0n;
                     }
 
-                    // Decode JsJson directly (no JsValue wrapper)
+                    // Decode JsJson
                     const buffer = new BufferCursor(
                         () => getWasm().getUint8Memory(),
                         long_ptr
@@ -79,7 +79,7 @@ export class WasmModule {
                     // Execute command (now using JsApiCall instead of array-of-arrays)
                     const response = execCommand.exec(args);
 
-                    // Save JsJson response directly (no JsValue wrapper)
+                    // Save JsJson response
                     const responseSize = jsJsonGetSize(response);
                     const responseLongPtr = getWasm().exports.vertigo_export_alloc_block(responseSize);
                     const responseBuffer = new BufferCursor(

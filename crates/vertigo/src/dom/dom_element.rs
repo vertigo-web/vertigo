@@ -292,9 +292,9 @@ impl DomElement {
         let on_dropfile = self.install_callback1(on_dropfile);
 
         self.add_event_listener("drop", move |data| {
-            let params = data.convert(|mut params: JsJsonListDecoder| {
+            let params = data.map_list(|mut params: JsJsonListDecoder| {
                 let files = params.get_vec("drop file", |item: JsJson| {
-                    item.convert(|mut item: JsJsonListDecoder| {
+                    item.map_list(|mut item: JsJsonListDecoder| {
                         let name = item.get_string("name")?;
                         let data = item.get_buffer("data")?;
 
@@ -499,7 +499,7 @@ impl Drop for DomElement {
 }
 
 fn get_key_down_event(data: JsJson) -> Result<KeyDownEvent, String> {
-    data.convert(|mut params: JsJsonListDecoder| {
+    data.map_list(|mut params: JsJsonListDecoder| {
         let key = params.get_string("key")?;
         let code = params.get_string("code")?;
         let alt_key = params.get_bool("altKey")?;

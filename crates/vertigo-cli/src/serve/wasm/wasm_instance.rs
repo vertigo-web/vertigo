@@ -53,7 +53,6 @@ impl WasmInstance {
 
                     let value = data_context.get_value_long_ptr(long_ptr);
 
-                    // JsJson is the value itself, no wrapping like JsValue::Json
                     let result = decode_json::<CommandForBrowser>(value)
                         .map(|item| handle_command(request.clone(), item));
 
@@ -159,11 +158,40 @@ impl WasmInstance {
         }
 
         let JsJson::List(mut list) = value else {
-            panic!("decode_response_state deecode error");
+            panic!("decode_response_state: not a list");
         };
 
         let Some(JsJson::List(body)) = list.pop() else {
-            panic!("decode_response_state deecode error");
+            panic!("decode_response_state: no body");
+        };
+
+        let Some(JsJson::Object(headers_value)) = list.pop() else {
+            panic!("decode_response_state no headers");
+        };
+
+        let Some(JsJson::Number(status)) = list.pop() else {
+            panic!("decode_response_state no status");
+        };
+        let status = status.as_f64() as u32;
+
+        if !list.is_empty() {
+            panic!("decode_response_state excess data");
+        }
+
+        let mut headers = HashMap::<String, String>::new();
+
+        for (name, value) in headers_value {
+            let JsJson::String(value) = value else {
+                panic!("decode_response_state: header value not a string");
+            };
+            headers.insert(name, value);
+        }
+        let status = match StatusCode::from_u16(status as u16) {
+            Ok(status) => status,
+            Err(error) => {
+                let error = format!("decode_response_state: incorrect status: {}", error);
+                return Some(ResponseState::internal_error(error));
+            }
         };
 
         let body: Vec<u8> = body
@@ -172,39 +200,10 @@ impl WasmInstance {
                 if let JsJson::Number(val) = item {
                     val.as_f64() as u8
                 } else {
-                    panic!("decode_response_state deecode error: body byte not a number");
+                    panic!("decode_response_state: body byte not a number");
                 }
             })
             .collect();
-
-        let Some(JsJson::Object(headers_value)) = list.pop() else {
-            panic!("decode_response_state deecode error");
-        };
-
-        let Some(JsJson::Number(status)) = list.pop() else {
-            panic!("decode_response_state deecode error");
-        };
-        let status = status.as_f64() as u32;
-
-        if !list.is_empty() {
-            panic!("decode_response_state deecode error");
-        }
-
-        let mut headers = HashMap::<String, String>::new();
-
-        for (name, value) in headers_value {
-            let JsJson::String(value) = value else {
-                panic!("decode_response_state deecode error");
-            };
-            headers.insert(name, value);
-        }
-        let status = match StatusCode::from_u16(status as u16) {
-            Ok(status) => status,
-            Err(error) => {
-                let error = format!("Incorrect status code: {}", error);
-                return Some(ResponseState::internal_error(error));
-            }
-        };
 
         Some(ResponseState {
             status,

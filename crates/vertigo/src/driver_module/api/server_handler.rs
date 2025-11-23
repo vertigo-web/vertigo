@@ -9,7 +9,7 @@ use crate::{struct_mut::ValueMut, JsJson, JsJsonNumber};
 
 type PlainHandler = dyn Fn(&str) -> Option<String>;
 
-fn convert_to_jsvalue(status: u32, headers: HashMap<String, String>, body: Vec<u8>) -> JsJson {
+fn convert_to_jsjson(status: u32, headers: HashMap<String, String>, body: Vec<u8>) -> JsJson {
     let headers = headers
         .into_iter()
         .map(|(key, value)| (key, JsJson::String(value)))
@@ -48,7 +48,7 @@ impl ServerHandler {
                     let mut headers = HashMap::<String, String>::new();
                     headers.insert("content-type".into(), "text/plain".into());
 
-                    return convert_to_jsvalue(200, headers, response);
+                    return convert_to_jsjson(200, headers, response);
                 }
 
                 JsJson::Null

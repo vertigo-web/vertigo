@@ -139,14 +139,8 @@ impl<'a> DataContext<'a> {
             return LongPtr::from(0);
         }
 
-        use vertigo::MemoryBlockWrite;
-
-        let size = value.get_size();
-        let block = MemoryBlock::new(size);
-        let mut block_write = MemoryBlockWrite::new(block);
-        value.write_to(&mut block_write);
-        let block = block_write.get_block();
-        let block_vec = block.convert_to_vec();
+        let block_vec = value.to_vec();
+        let size = block_vec.len() as u32;
 
         let ptr = self.alloc(size);
 

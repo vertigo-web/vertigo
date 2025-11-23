@@ -1,6 +1,6 @@
 use crate::{
     dev::command::{CommandForBrowser, JsApiCommand},
-    driver_module::api::panic_message::api_panic_message,
+    driver_module::api::{api_browser_command::exec_command, panic_message::api_panic_message},
     DomId, JsJson,
 };
 
@@ -62,8 +62,6 @@ impl DomAccess {
     }
 
     pub fn fetch(self) -> JsJson {
-        use crate::driver_module::api::api_browser_command::exec_command;
-
         let command = CommandForBrowser::JsApiCall {
             commands: self.commands,
         };

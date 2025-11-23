@@ -3,7 +3,7 @@ use std::collections::BTreeMap;
 use std::hash::{Hash, Hasher};
 
 use crate::driver_module::js_value::vec_to_string::{string_to_vec, vec_to_string};
-use crate::MemoryBlock;
+use crate::{JsJsonListDecoder, MemoryBlock};
 
 use super::serialize::{JsJsonContext, JsJsonDeserialize, JsJsonSerialize};
 use super::{memory_block_read::MemoryBlockRead, memory_block_write::MemoryBlockWrite};
@@ -361,13 +361,17 @@ impl JsJsonObjectBuilder {
 
 impl JsJson {
     pub fn convert_to_string(&self) -> String {
+        let block_bytes = self.to_vec();
+        vec_to_string(&block_bytes)
+    }
+
+    pub fn to_vec(&self) -> Vec<u8> {
         let size = self.get_size();
         let block = MemoryBlock::new(size);
         let mut block = MemoryBlockWrite::new(block);
         self.write_to(&mut block);
 
-        let block_bytes = block.get_block().convert_to_vec();
-        vec_to_string(&block_bytes)
+        block.get_block().convert_to_vec()
     }
 
     pub fn from_string(data: &str) -> Result<JsJson, String> {
@@ -380,46 +384,30 @@ impl JsJson {
         Ok(json)
     }
 
-    pub fn convert<
-        T,
-        F: FnOnce(super::js_json_list_decoder::JsJsonListDecoder) -> Result<T, String>,
-    >(
-        self,
-        convert: F,
-    ) -> Result<T, String> {
+    pub fn map_list<T, F>(self, convert: F) -> Result<T, String>
+    where
+        F: FnOnce(JsJsonListDecoder) -> Result<T, String>,
+    {
         match self {
-            JsJson::List(list) => {
-                let decoder = super::js_json_list_decoder::JsJsonListDecoder::new(list);
-                convert(decoder)
-            }
-            _ => Err(String::from("convert => ParamItem::Vec expected")),
+            JsJson::List(list) => convert(JsJsonListDecoder::new(list)),
+            _ => Err("map_list => ParamItem::Vec expected".to_string()),
         }
     }
 }
 
-impl From<i32> for JsJson {
-    fn from(value: i32) -> Self {
-        JsJson::Number(JsJsonNumber(value as f64))
-    }
+macro_rules! impl_from {
+    ($($type:ty),+) => {
+        $(
+            impl From<$type> for JsJson {
+                fn from(value: $type) -> Self {
+                    JsJson::Number(JsJsonNumber(value as f64))
+                }
+            }
+        )+
+    };
 }
 
-impl From<u32> for JsJson {
-    fn from(value: u32) -> Self {
-        JsJson::Number(JsJsonNumber(value as f64))
-    }
-}
-
-impl From<usize> for JsJson {
-    fn from(value: usize) -> Self {
-        JsJson::Number(JsJsonNumber(value as f64))
-    }
-}
-
-impl From<isize> for JsJson {
-    fn from(value: isize) -> Self {
-        JsJson::Number(JsJsonNumber(value as f64))
-    }
-}
+impl_from!(i32, u32, u64, i64, usize, isize, f64);
 
 impl From<&str> for JsJson {
     fn from(value: &str) -> Self {
@@ -440,24 +428,6 @@ impl From<bool> for JsJson {
         } else {
             JsJson::False
         }
-    }
-}
-
-impl From<f64> for JsJson {
-    fn from(value: f64) -> Self {
-        JsJson::Number(JsJsonNumber(value))
-    }
-}
-
-impl From<u64> for JsJson {
-    fn from(value: u64) -> Self {
-        JsJson::Number(JsJsonNumber(value as f64))
-    }
-}
-
-impl From<i64> for JsJson {
-    fn from(value: i64) -> Self {
-        JsJson::Number(JsJsonNumber(value as f64))
     }
 }
 

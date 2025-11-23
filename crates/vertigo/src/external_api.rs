@@ -45,11 +45,6 @@ pub mod safe_wrappers {
                     CommandForBrowser::FetchCacheGet => {
                         browser_response::FetchCacheGet { data: None }.to_json()
                     }
-                    CommandForBrowser::FetchExec {
-                        request: _,
-                        callback: _,
-                    } => JsJson::Null,
-                    CommandForBrowser::SetStatus { status: _ } => JsJson::Null,
                     CommandForBrowser::IsBrowser => {
                         let response = browser_response::IsBrowser { value: false };
                         response.to_json()
@@ -58,72 +53,42 @@ pub mod safe_wrappers {
                         let response = browser_response::GetDateNow { value: 0 };
                         response.to_json()
                     }
-                    CommandForBrowser::WebsocketRegister {
-                        host: _,
-                        callback: _,
-                    } => JsJson::Null,
-                    CommandForBrowser::WebsocketUnregister { callback: _ } => JsJson::Null,
-                    CommandForBrowser::WebsocketSendMessage {
-                        callback: _,
-                        message: _,
-                    } => JsJson::Null,
-                    CommandForBrowser::TimerSet {
-                        callback: _,
-                        duration: _,
-                        kind: _,
-                    } => JsJson::Null,
-                    CommandForBrowser::TimerClear { callback: _ } => JsJson::Null,
-                    CommandForBrowser::LocationCallback {
-                        target: _,
-                        mode: _,
-                        callback: _,
-                    } => JsJson::Null,
-                    CommandForBrowser::LocationSet {
-                        target: _,
-                        mode: _,
-                        value: _,
-                    } => JsJson::Null,
                     CommandForBrowser::LocationGet { target: _ } => {
                         browser_response::LocationGet { value: "".into() }.to_json()
                     }
                     CommandForBrowser::CookieGet { name: _ } => {
                         browser_response::CookieGet { value: "".into() }.to_json()
                     }
-                    CommandForBrowser::CookieSet {
-                        name: _,
-                        value: _,
-                        expires_in: _,
-                    } => JsJson::Null,
                     CommandForBrowser::CookieJsonGet { name: _ } => {
                         browser_response::CookieJsonGet {
                             value: JsJson::Null,
                         }
                         .to_json()
                     }
-                    CommandForBrowser::CookieJsonSet {
-                        name: _,
-                        value: _,
-                        expires_in: _,
-                    } => JsJson::Null,
                     CommandForBrowser::GetEnv { name: _ } => {
                         browser_response::GetEnv { value: None }.to_json()
                     }
-                    CommandForBrowser::ConsoleLog {
-                        kind: _,
-                        message: _,
-                        arg2: _,
-                        arg3: _,
-                        arg4: _,
-                    } => JsJson::Null,
                     CommandForBrowser::TimezoneOffset => {
                         browser_response::TimezoneOffset { value: 0 }.to_json()
                     }
-                    CommandForBrowser::HistoryBack => JsJson::Null,
                     CommandForBrowser::GetRandom { min, max: _ } => {
                         browser_response::GetRandom { value: min }.to_json()
                     }
-                    CommandForBrowser::JsApiCall { commands: _ } => JsJson::Null,
-                    CommandForBrowser::DomBulkUpdate { list: _ } => JsJson::Null,
+                    CommandForBrowser::FetchExec { .. }
+                    | CommandForBrowser::SetStatus { .. }
+                    | CommandForBrowser::WebsocketRegister { .. }
+                    | CommandForBrowser::WebsocketUnregister { .. }
+                    | CommandForBrowser::WebsocketSendMessage { .. }
+                    | CommandForBrowser::TimerSet { .. }
+                    | CommandForBrowser::TimerClear { .. }
+                    | CommandForBrowser::LocationCallback { .. }
+                    | CommandForBrowser::LocationSet { .. }
+                    | CommandForBrowser::CookieSet { .. }
+                    | CommandForBrowser::CookieJsonSet { .. }
+                    | CommandForBrowser::ConsoleLog { .. }
+                    | CommandForBrowser::HistoryBack
+                    | CommandForBrowser::JsApiCall { .. }
+                    | CommandForBrowser::DomBulkUpdate { .. } => JsJson::Null,
                 };
 
                 return response.to_ptr_long();

@@ -60,7 +60,7 @@ export const wasmInit = async <ImportType extends Record<string, Function>, Expo
     const exports: ExportType = module_instance.instance.exports;
 
     const wasm_callback = (callback_id: bigint, value: JsJsonType): JsJsonType => {
-        // Serialize JsJson directly
+        // Serialize JsJson
         const size = jsJsonGetSize(value);
         const value_ptr = exports.vertigo_export_alloc_block(size);
         const buffer = new BufferCursor(getUint8Memory, value_ptr);
@@ -68,7 +68,7 @@ export const wasmInit = async <ImportType extends Record<string, Function>, Expo
 
         let result_long_ptr = exports.vertigo_export_wasm_callback(callback_id, value_ptr);
 
-        // Decode JsJson directly
+        // Decode JsJson
         if (result_long_ptr === 0n) {
             return null;
         }
@@ -81,7 +81,7 @@ export const wasmInit = async <ImportType extends Record<string, Function>, Expo
 
 
     const wasm_command = (value: JsJsonType): JsJsonType => {
-        // Serialize JsJson directly (no JsValue wrapper)
+        // Serialize JsJson
         const size = jsJsonGetSize(value);
         const long_ptr = exports.vertigo_export_alloc_block(size);
         const buffer = new BufferCursor(getUint8Memory, long_ptr);
@@ -89,7 +89,7 @@ export const wasmInit = async <ImportType extends Record<string, Function>, Expo
 
         let result_long_ptr = exports.vertigo_export_wasm_command(long_ptr);
 
-        // Decode JsJson directly (no JsValue wrapper)
+        // Decode JsJson
         if (result_long_ptr === 0n) {
             return null;
         }
