@@ -1,6 +1,6 @@
 use std::rc::Rc;
 
-use crate::{struct_mut::ValueMut, JsValue};
+use crate::{struct_mut::ValueMut, JsJson};
 
 /// Structure passed as a parameter to callback on on_key_down event.
 #[derive(Clone, Debug, Default)]
@@ -24,18 +24,18 @@ impl ClickEvent {
     }
 }
 
-impl From<ClickEvent> for JsValue {
-    fn from(val: ClickEvent) -> JsValue {
+impl From<ClickEvent> for JsJson {
+    fn from(val: ClickEvent) -> JsJson {
         let inner = val.inner.get();
-        JsValue::Object(
+        JsJson::Object(
             [
                 (
                     "stop_propagation".to_string(),
-                    JsValue::from(inner.stop_propagation),
+                    JsJson::from(inner.stop_propagation),
                 ),
                 (
                     "prevent_default".to_string(),
-                    JsValue::from(inner.prevent_default),
+                    JsJson::from(inner.prevent_default),
                 ),
             ]
             .into_iter()

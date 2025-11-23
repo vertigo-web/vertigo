@@ -1,5 +1,4 @@
 import { ExportType } from "../../../wasm_module";
-import { GuardJsValue } from "../../../guard";
 import { MapNodes } from "./map_nodes";
 import { ModuleControllerType } from "../../../wasm_init";
 import { AppLocation } from "../../location/AppLocation";
@@ -199,15 +198,13 @@ export class DriverDom {
         event.preventDefault();
         let click_event = this.getWasm().wasm_callback(callback_id, undefined);
 
-        if (GuardJsValue.isJsObject(click_event)) {
-            let value = click_event.value;
-            if (value !== null) {
-                if (value['stop_propagation'] === true) {
-                    event.stopPropagation();
-                }
-                if (value['prevent_default'] === true) {
-                    event.preventDefault();
-                }
+        // Check if click_event is an object (JsJson Object type)
+        if (click_event !== null && typeof click_event === 'object' && !Array.isArray(click_event)) {
+            if ('stop_propagation' in click_event && click_event['stop_propagation'] === true) {
+                event.stopPropagation();
+            }
+            if ('prevent_default' in click_event && click_event['prevent_default'] === true) {
+                event.preventDefault();
             }
         }
     }
@@ -299,9 +296,11 @@ export class DriverDom {
                         const params = [];
 
                         for (const file of files) {
+                            // Convert Uint8Array to array of numbers for JsJson
+                            const dataArray = Array.from(file.data);
                             params.push([
                                 file.name,
-                                file.data,
+                                dataArray,
                             ]);
                         }
 
@@ -443,7 +442,7 @@ export class DriverDom {
             } catch (error) {
                 console.error('bulk_update - item', error, command);
             }
-            
+
             if ('SetAttr' in command && command.SetAttr.name.toLocaleLowerCase() === 'autofocus') {
                 setFocus.add(command.SetAttr.id);
             }

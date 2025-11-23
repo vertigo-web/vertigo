@@ -48,6 +48,7 @@ fn convert_to_jsvalue(value: JsJson) -> Value {
         JsJson::True => Value::Bool(true),
         JsJson::False => Value::Bool(false),
         JsJson::Null => Value::Null,
+        JsJson::Undefined => Value::Null, // JSON doesn't have undefined, use null
         JsJson::Number(JsJsonNumber(value)) => {
             Value::Number(Number::from_f64(value).unwrap_or_else(|| {
                 log::error!("Invalid float in convert_to_jsvalue: {value}");

@@ -1,8 +1,8 @@
 use std::rc::Rc;
 
-use crate::{dev::CallbackId, struct_mut::HashMapMut, DropResource, JsValue};
+use crate::{dev::CallbackId, struct_mut::HashMapMut, DropResource, JsJson};
 
-type CallBackFn = dyn Fn(JsValue) -> JsValue + 'static;
+type CallBackFn = dyn Fn(JsJson) -> JsJson + 'static;
 
 #[derive(Clone)]
 pub struct CallbackStore {
@@ -16,7 +16,7 @@ impl CallbackStore {
         }
     }
 
-    pub fn register<C: Fn(JsValue) -> JsValue + 'static>(
+    pub fn register<C: Fn(JsJson) -> JsJson + 'static>(
         &self,
         callback: C,
     ) -> (CallbackId, DropResource) {
@@ -35,14 +35,14 @@ impl CallbackStore {
         (id, drop)
     }
 
-    pub fn call(&self, callback_id: CallbackId, value: JsValue) -> JsValue {
+    pub fn call(&self, callback_id: CallbackId, value: JsJson) -> JsJson {
         let callback = self.data.get(&callback_id);
 
         match callback {
             Some(callback) => callback(value),
             None => {
                 log::error!("callback id not found = {callback_id:?}");
-                JsValue::Undefined
+                JsJson::Null
             }
         }
     }

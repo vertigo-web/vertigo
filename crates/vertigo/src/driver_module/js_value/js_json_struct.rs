@@ -17,11 +17,11 @@ enum JsJsonConst {
     True = 1,
     False = 2,
     Null = 3,
-
-    String = 4,
-    Number = 5,
-    List = 6,
-    Object = 7,
+    Undefined = 4,
+    String = 5,
+    Number = 6,
+    List = 7,
+    Object = 8,
 }
 
 impl JsJsonConst {
@@ -30,10 +30,11 @@ impl JsJsonConst {
             1 => Some(JsJsonConst::True),
             2 => Some(JsJsonConst::False),
             3 => Some(JsJsonConst::Null),
-            4 => Some(JsJsonConst::String),
-            5 => Some(JsJsonConst::Number),
-            6 => Some(JsJsonConst::List),
-            7 => Some(JsJsonConst::Object),
+            4 => Some(JsJsonConst::Undefined),
+            5 => Some(JsJsonConst::String),
+            6 => Some(JsJsonConst::Number),
+            7 => Some(JsJsonConst::List),
+            8 => Some(JsJsonConst::Object),
             _ => None,
         }
     }
@@ -90,12 +91,19 @@ impl Hash for JsJsonNumber {
     }
 }
 
+impl JsJsonNumber {
+    pub fn as_f64(&self) -> f64 {
+        self.0
+    }
+}
+
 /// JSON object serialized to travel between JS-WASM boundary.
 #[derive(Debug, Clone, PartialEq, Eq, PartialOrd, Ord, Hash)]
 pub enum JsJson {
     True,
     False,
     Null,
+    Undefined,
     String(String),
     Number(JsJsonNumber),
     List(Vec<JsJson>),
@@ -115,11 +123,44 @@ impl JsJsonSerialize for JsJson {
 }
 
 impl JsJson {
+    pub fn str(value: impl Into<String>) -> JsJson {
+        JsJson::String(value.into())
+    }
+
+    pub fn bool(value: bool) -> JsJson {
+        if value {
+            JsJson::True
+        } else {
+            JsJson::False
+        }
+    }
+
+    pub fn to_ptr_long(&self) -> crate::LongPtr {
+        use crate::driver_module::api::api_arguments;
+        use crate::MemoryBlock;
+
+        let buff_size = self.get_size();
+        let block = MemoryBlock::new(buff_size);
+
+        let mut buff = MemoryBlockWrite::new(block);
+        self.write_to(&mut buff);
+        let memory_block = buff.get_block();
+        let ptr_long = memory_block.get_ptr_long();
+        api_arguments().set(memory_block);
+        ptr_long
+    }
+
+    pub fn from_block(block: MemoryBlock) -> Result<JsJson, std::string::String> {
+        let mut buffer = MemoryBlockRead::new(block);
+        decode_js_json_inner(&mut buffer)
+    }
+
     pub fn get_size(&self) -> u32 {
         match self {
             Self::True => PARAM_TYPE,
             Self::False => PARAM_TYPE,
             Self::Null => PARAM_TYPE,
+            Self::Undefined => PARAM_TYPE,
 
             Self::String(value) => PARAM_TYPE + STRING_SIZE + Self::get_string_size(value),
             Self::Number(..) => PARAM_TYPE + 8,
@@ -160,6 +201,9 @@ impl JsJson {
             Self::Null => {
                 buff.write_u8(JsJsonConst::Null);
             }
+            Self::Undefined => {
+                buff.write_u8(JsJsonConst::Undefined);
+            }
             Self::String(value) => {
                 buff.write_u8(JsJsonConst::String);
                 write_string_to(value.as_str(), buff);
@@ -190,9 +234,10 @@ impl JsJson {
 
     pub fn typename(&self) -> &'static str {
         match self {
-            Self::True => "bool",
-            Self::False => "bool",
+            Self::True => "boolean",
+            Self::False => "boolean",
             Self::Null => "null",
+            Self::Undefined => "undefined",
             Self::String(..) => "string",
             Self::Number(..) => "number",
             Self::List(..) => "list",
@@ -255,6 +300,7 @@ pub fn decode_js_json_inner(buffer: &mut MemoryBlockRead) -> Result<JsJson, Stri
         JsJsonConst::True => JsJson::True,
         JsJsonConst::False => JsJson::False,
         JsJsonConst::Null => JsJson::Null,
+        JsJsonConst::Undefined => JsJson::Undefined,
         JsJsonConst::String => {
             let str_len = buffer.get_u32();
             let param = buffer.get_string(str_len)?;
@@ -333,20 +379,103 @@ impl JsJson {
         let json = decode_js_json_inner(&mut block)?;
         Ok(json)
     }
+
+    pub fn convert<
+        T,
+        F: FnOnce(super::js_json_list_decoder::JsJsonListDecoder) -> Result<T, String>,
+    >(
+        self,
+        convert: F,
+    ) -> Result<T, String> {
+        match self {
+            JsJson::List(list) => {
+                let decoder = super::js_json_list_decoder::JsJsonListDecoder::new(list);
+                convert(decoder)
+            }
+            _ => Err(String::from("convert => ParamItem::Vec expected")),
+        }
+    }
 }
 
-#[test]
-fn test_serialize_deserialize() {
-    let json = JsJson::List(vec![
-        JsJson::String("aaa".to_string()),
-        JsJson::String("bbb".to_string()),
-        JsJson::Null,
-        JsJson::True,
-    ]);
+impl From<i32> for JsJson {
+    fn from(value: i32) -> Self {
+        JsJson::Number(JsJsonNumber(value as f64))
+    }
+}
 
-    let rrr = json.convert_to_string();
+impl From<u32> for JsJson {
+    fn from(value: u32) -> Self {
+        JsJson::Number(JsJsonNumber(value as f64))
+    }
+}
 
-    let json2 = JsJson::from_string(&rrr).unwrap();
+impl From<usize> for JsJson {
+    fn from(value: usize) -> Self {
+        JsJson::Number(JsJsonNumber(value as f64))
+    }
+}
 
-    assert_eq!(json, json2);
+impl From<isize> for JsJson {
+    fn from(value: isize) -> Self {
+        JsJson::Number(JsJsonNumber(value as f64))
+    }
+}
+
+impl From<&str> for JsJson {
+    fn from(value: &str) -> Self {
+        JsJson::String(value.to_string())
+    }
+}
+
+impl From<String> for JsJson {
+    fn from(value: String) -> Self {
+        JsJson::String(value)
+    }
+}
+
+impl From<bool> for JsJson {
+    fn from(value: bool) -> Self {
+        if value {
+            JsJson::True
+        } else {
+            JsJson::False
+        }
+    }
+}
+
+impl From<f64> for JsJson {
+    fn from(value: f64) -> Self {
+        JsJson::Number(JsJsonNumber(value))
+    }
+}
+
+impl From<u64> for JsJson {
+    fn from(value: u64) -> Self {
+        JsJson::Number(JsJsonNumber(value as f64))
+    }
+}
+
+impl From<i64> for JsJson {
+    fn from(value: i64) -> Self {
+        JsJson::Number(JsJsonNumber(value as f64))
+    }
+}
+
+impl From<Vec<u8>> for JsJson {
+    fn from(value: Vec<u8>) -> Self {
+        let list = value
+            .into_iter()
+            .map(|byte| JsJson::Number(JsJsonNumber(byte as f64)))
+            .collect();
+        JsJson::List(list)
+    }
+}
+impl From<Vec<(&str, JsJson)>> for JsJson {
+    fn from(value: Vec<(&str, JsJson)>) -> Self {
+        let mut map = BTreeMap::new();
+        for (key, val) in value {
+            map.insert(key.to_string(), val);
+        }
+        JsJson::Object(map)
+    }
 }

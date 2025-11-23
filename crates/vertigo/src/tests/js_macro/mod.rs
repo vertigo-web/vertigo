@@ -18,7 +18,7 @@ fn test_method_call() {
             vertigo::get_driver()
                 .api_access()
                 .root("window")
-                .call("scrollTo", [I32(100)])
+                .call("scrollTo", [Number(JsJsonNumber(100.0))])
                 .fetch()
         "#,
     );
@@ -107,7 +107,7 @@ fn test_many_arguments() {
             vertigo::get_driver()
                 .api_access()
                 .root("window")
-                .call("aFunctionRichInArguments", [I32(3), I32(-34), String("blablabla"), True, False, F64(34.56), I32(5), I32(-5), String("foo"), String("bar")])
+                .call("aFunctionRichInArguments", [Number(JsJsonNumber(3.0)), Number(JsJsonNumber(-34.0)), String("blablabla"), True, False, Number(JsJsonNumber(34.56)), Number(JsJsonNumber(5.0)), Number(JsJsonNumber(-5.0)), String("foo"), String("bar")])
                 .fetch()
         "#
     );

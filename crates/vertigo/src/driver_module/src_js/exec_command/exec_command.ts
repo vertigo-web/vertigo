@@ -12,6 +12,13 @@ import { Cookies } from "./command/cookies";
 import { getRandom } from "./command/getRandom";
 import { CommandType, DriverDom } from "./command/dom/dom";
 
+type JsApiCommandType =
+    | { Root: { name: string } }
+    | { RootElement: { dom_id: number } }
+    | { Get: { property: string } }
+    | { Set: { property: string, value: JsJsonType } }
+    | { Call: { method: string, args: JsJsonType[] } };
+
 type ExecType
     = 'FetchCacheGet'
     | 'IsBrowser'
@@ -112,8 +119,13 @@ type ExecType
     }
     | {
         GetRandom: {
+            min: number,
             max: number,
-            min: number
+        }
+    }
+    | {
+        JsApiCall: {
+            commands: Array<JsApiCommandType>
         }
     }
     | {
@@ -128,7 +140,7 @@ export class ExecCommand {
     private readonly interval: Interval;
     private readonly location: AppLocation;
     private readonly cookie: Cookies;
-    
+
 
     constructor(private readonly getWasm: () => ModuleControllerType<ExportType>) {
         const appLocation = new AppLocation(getWasm);
@@ -281,6 +293,10 @@ export class ExecCommand {
             };
         }
 
+        if ('JsApiCall' in safeArg) {
+            return this.executeJsApiCall(safeArg.JsApiCall.commands);
+        }
+
         if ('DomBulkUpdate' in safeArg) {
             this.dom.dom_bulk_update(safeArg.DomBulkUpdate.list);
             return null;
@@ -288,5 +304,70 @@ export class ExecCommand {
 
         console.info('exec_command: Arg', safeArg);
         return assertNever(safeArg);
+    }
+
+    private executeJsApiCall(commands: Array<JsApiCommandType>): JsJsonType {
+        let current: any = null;
+
+        for (const command of commands) {
+            if ('Root' in command) {
+                if (command.Root.name === 'window') {
+                    current = window;
+                } else if (command.Root.name === 'document') {
+                    current = document;
+                } else {
+                    console.error(`Unknown root: ${command.Root.name}`);
+                    return null;
+                }
+            } else if ('RootElement' in command) {
+                const domId = command.RootElement.dom_id;
+                const node = this.dom.nodes.get_any_option(domId);
+                if (node === undefined) {
+                    console.error(`Element not found: ${domId}`);
+                    return null;
+                }
+                current = node;
+            } else if ('Get' in command) {
+                if (current === null) {
+                    console.error('Get called on null');
+                    return null;
+                }
+                current = current[command.Get.property];
+            } else if ('Set' in command) {
+                if (current === null) {
+                    console.error('Set called on null');
+                    return null;
+                }
+                current[command.Set.property] = command.Set.value;
+                current = undefined;
+            } else if ('Call' in command) {
+                if (current === null) {
+                    console.error('Call called on null');
+                    return null;
+                }
+                current = current[command.Call.method](...command.Call.args);
+            }
+        }
+
+        // Convert result to JsJson
+        if (current === null || current === undefined) {
+            return null;
+        }
+        if (typeof current === 'boolean') {
+            return current;
+        }
+        if (typeof current === 'string') {
+            return current;
+        }
+        if (typeof current === 'number') {
+            return current;
+        }
+        if (Array.isArray(current)) {
+            return current;
+        }
+        if (typeof current === 'object') {
+            return current;
+        }
+        return null;
     }
 }

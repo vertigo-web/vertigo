@@ -1,4 +1,4 @@
-use crate::JsValue;
+use crate::JsJson;
 
 /// API access mock of vertigo::Driver
 ///
@@ -28,7 +28,7 @@ impl ApiMock {
         self
     }
 
-    pub fn call(mut self, func: &str, args: Vec<JsValue>) -> Self {
+    pub fn call(mut self, func: &str, args: Vec<JsJson>) -> Self {
         self.0.push(format!(".call(\"{func}\", {args:?})"));
         self
     }

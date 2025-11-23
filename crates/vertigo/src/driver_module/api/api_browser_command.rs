@@ -9,7 +9,7 @@ use crate::command::{
 use crate::dev::command::{browser_response, decode_json, CommandForBrowser};
 use crate::dev::InstantType;
 use crate::external_api::safe_wrappers;
-use crate::{driver_module::api::api_arguments, JsJson, JsJsonSerialize, JsValue, SsrFetchCache};
+use crate::{driver_module::api::api_arguments, JsJson, JsJsonSerialize, SsrFetchCache};
 use crate::{CallbackId, SsrFetchRequest};
 
 #[store]
@@ -17,17 +17,10 @@ pub fn api_browser_command() -> Rc<CommandForBrowserApi> {
     Rc::new(CommandForBrowserApi {})
 }
 
-fn exec_command(command: CommandForBrowser) -> JsJson {
-    let arg_ptr = JsValue::Json(command.to_json()).to_ptr_long();
+pub(crate) fn exec_command(command: CommandForBrowser) -> JsJson {
+    let arg_ptr = command.to_json().to_ptr_long();
     let response = safe_wrappers::safe_dom_access(arg_ptr);
-    let response = api_arguments().get_by_long_ptr(response);
-
-    if let JsValue::Json(response) = response {
-        return response;
-    };
-
-    log::error!("expected json, received {:?}", response.typename());
-    JsJson::Null
+    api_arguments().get_by_long_ptr(response)
 }
 
 pub struct CommandForBrowserApi {}

@@ -2,7 +2,7 @@ use reqwest::StatusCode;
 use std::{collections::HashMap, process::exit, sync::Arc};
 use tokio::sync::mpsc::UnboundedSender;
 use vertigo::command::{decode_json, CommandForBrowser, CommandForWasm};
-use vertigo::{CallbackId, JsJson, JsJsonSerialize, JsValue, LongPtr, SsrFetchResponse};
+use vertigo::{CallbackId, JsJson, JsJsonSerialize, LongPtr, SsrFetchResponse};
 use wasmtime::{Caller, Engine, Func, Instance, Module, Store};
 
 use crate::{
@@ -53,24 +53,17 @@ impl WasmInstance {
 
                     let value = data_context.get_value_long_ptr(long_ptr);
 
-                    if let JsValue::Json(arg) = value {
-                        let result = decode_json::<CommandForBrowser>(arg)
-                            .map(|item| handle_command(request.clone(), item))
-                            .map(JsValue::Json);
+                    // JsJson is the value itself, no wrapping like JsValue::Json
+                    let result = decode_json::<CommandForBrowser>(value)
+                        .map(|item| handle_command(request.clone(), item));
 
-                        match result {
-                            Ok(result) => {
-                                return data_context.save_value(result).get_long_ptr();
-                            }
-                            Err(err) => {
-                                log::error!("import_dom_access -> decode error = {err}");
-                                return 0;
-                            }
+                    match result {
+                        Ok(result) => data_context.save_value(result).get_long_ptr(),
+                        Err(err) => {
+                            log::error!("import_dom_access -> decode error = {err}");
+                            0
                         }
-                    };
-
-                    log::error!("import_dom_access -> unsupported message: {value:#?}");
-                    0
+                    }
                 },
             )
         };
@@ -127,20 +120,20 @@ impl WasmInstance {
         .unwrap_or_default();
     }
 
-    pub fn wasm_command(&mut self, command: CommandForWasm) -> JsValue {
+    pub fn wasm_command(&mut self, command: CommandForWasm) -> JsJson {
         let mut data_context = DataContext::from_store(&mut self.store, self.instance);
-        let params_ptr = data_context.save_value(JsValue::Json(command.to_json()));
+        let params_ptr = data_context.save_value(command.to_json());
 
         let _result = self
             .call_function::<u64, u64>("vertigo_export_wasm_command", params_ptr.get_long_ptr())
             .inspect_err(|err| log::error!("Error calling callback: {err}"))
             .unwrap_or_default();
 
-        JsValue::Undefined
+        JsJson::Null
     }
 
     pub fn handle_url(&mut self, url: &str) -> Option<ResponseState> {
-        let url = JsValue::String(url.to_string());
+        let url = JsJson::String(url.to_string());
 
         let params_ptr = {
             let mut data_context = DataContext::from_store(&mut self.store, self.instance);
@@ -160,26 +153,38 @@ impl WasmInstance {
         self.decode_response_state(result)
     }
 
-    fn decode_response_state(&self, value: JsValue) -> Option<ResponseState> {
-        if value == JsValue::Undefined {
+    fn decode_response_state(&self, value: JsJson) -> Option<ResponseState> {
+        if let JsJson::Null = value {
             return None;
         }
 
-        let JsValue::List(mut list) = value else {
+        let JsJson::List(mut list) = value else {
             panic!("decode_response_state deecode error");
         };
 
-        let Some(JsValue::Vec(body)) = list.pop() else {
+        let Some(JsJson::List(body)) = list.pop() else {
             panic!("decode_response_state deecode error");
         };
 
-        let Some(JsValue::Object(headers_value)) = list.pop() else {
+        let body: Vec<u8> = body
+            .into_iter()
+            .map(|item| {
+                if let JsJson::Number(val) = item {
+                    val.as_f64() as u8
+                } else {
+                    panic!("decode_response_state deecode error: body byte not a number");
+                }
+            })
+            .collect();
+
+        let Some(JsJson::Object(headers_value)) = list.pop() else {
             panic!("decode_response_state deecode error");
         };
 
-        let Some(JsValue::U32(status)) = list.pop() else {
+        let Some(JsJson::Number(status)) = list.pop() else {
             panic!("decode_response_state deecode error");
         };
+        let status = status.as_f64() as u32;
 
         if !list.is_empty() {
             panic!("decode_response_state deecode error");
@@ -188,7 +193,7 @@ impl WasmInstance {
         let mut headers = HashMap::<String, String>::new();
 
         for (name, value) in headers_value {
-            let JsValue::String(value) = value else {
+            let JsJson::String(value) = value else {
                 panic!("decode_response_state deecode error");
             };
             headers.insert(name, value);
@@ -210,6 +215,6 @@ impl WasmInstance {
 
     pub fn send_fetch_response(&mut self, callback: CallbackId, response: SsrFetchResponse) {
         let result = self.wasm_command(CommandForWasm::FetchExecResponse { response, callback });
-        assert_eq!(result, JsValue::Undefined);
+        assert_eq!(result, JsJson::Null);
     }
 }
