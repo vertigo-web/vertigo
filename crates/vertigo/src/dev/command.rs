@@ -223,6 +223,11 @@ pub enum CommandForWasm {
         callback: CallbackId,
         value: String,
     },
+
+    CallbackCall {
+        callback_id: CallbackId,
+        value: JsJson,
+    },
 }
 
 #[derive(AutoJsJson, Clone, Debug)]

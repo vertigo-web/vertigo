@@ -4,17 +4,12 @@ import { jsJsonGetSize, jsJsonDecodeItem, saveJsJsonToBufferItem, JsJsonType } f
 export interface BaseExportType {
     vertigo_export_alloc_block: (size: number) => bigint,
     vertigo_export_free_block: (pointer: bigint) => void,
-    vertigo_export_wasm_callback: (callback_id: bigint, value_ptr: bigint) => bigint,
     vertigo_export_wasm_command: (value_ptr: bigint) => bigint,
 };
 
 export interface ModuleControllerType<ExportType extends BaseExportType> {
     exports: ExportType,
     getUint8Memory: () => Uint8Array,
-    /**
-     * @deprecated - please use wasm_command
-     */
-    wasm_callback: (callback_id: bigint, params: JsJsonType) => JsJsonType,
     wasm_command: (params: JsJsonType) => JsJsonType,
 }
 
@@ -59,25 +54,6 @@ export const wasmInit = async <ImportType extends Record<string, Function>, Expo
     //@ts-expect-error
     const exports: ExportType = module_instance.instance.exports;
 
-    const wasm_callback = (callback_id: bigint, value: JsJsonType): JsJsonType => {
-        // Serialize JsJson directly
-        const size = jsJsonGetSize(value);
-        const value_ptr = exports.vertigo_export_alloc_block(size);
-        const buffer = new BufferCursor(getUint8Memory, value_ptr);
-        saveJsJsonToBufferItem(value, buffer);
-
-        let result_long_ptr = exports.vertigo_export_wasm_callback(callback_id, value_ptr);
-
-        // Decode JsJson directly
-        if (result_long_ptr === 0n) {
-            return null;
-        }
-        const resultBuffer = new BufferCursor(getUint8Memory, result_long_ptr);
-        const result = jsJsonDecodeItem(resultBuffer);
-        exports.vertigo_export_free_block(result_long_ptr);
-
-        return result;
-    };
 
 
     const wasm_command = (value: JsJsonType): JsJsonType => {
@@ -104,7 +80,6 @@ export const wasmInit = async <ImportType extends Record<string, Function>, Expo
     return {
         exports,
         getUint8Memory,
-        wasm_callback,
         wasm_command,
     };
 };
