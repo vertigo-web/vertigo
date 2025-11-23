@@ -2,6 +2,8 @@ use axum::body::Body;
 use axum::http::StatusCode;
 use std::collections::HashMap;
 
+use vertigo::AutoJsJson;
+
 fn content_type(content_type: &str) -> HashMap<String, String> {
     let mut headers = HashMap::new();
     headers.insert("content-type".into(), content_type.into());
@@ -16,8 +18,9 @@ fn content_type_plain() -> HashMap<String, String> {
     content_type("text/plain")
 }
 
+#[derive(AutoJsJson, Debug)]
 pub struct ResponseState {
-    pub status: StatusCode,
+    pub status: u16,
     pub headers: HashMap<String, String>,
     pub body: Vec<u8>,
 }
@@ -28,7 +31,7 @@ impl ResponseState {
 
     pub fn html(status: StatusCode, body: impl Into<String>) -> Self {
         Self {
-            status,
+            status: status.as_u16(),
             headers: content_type_html(),
             body: body.into().into_bytes(),
         }
@@ -36,7 +39,7 @@ impl ResponseState {
 
     pub fn plain(status: StatusCode, body: impl Into<String>) -> Self {
         Self {
-            status,
+            status: status.as_u16(),
             headers: content_type_plain(),
             body: body.into().into_bytes(),
         }
@@ -44,7 +47,7 @@ impl ResponseState {
 
     pub fn internal_error(body: impl Into<String>) -> Self {
         Self {
-            status: StatusCode::INTERNAL_SERVER_ERROR,
+            status: StatusCode::INTERNAL_SERVER_ERROR.as_u16(),
             headers: content_type_plain(),
             body: body.into().into_bytes(),
         }
@@ -64,7 +67,9 @@ impl ResponseState {
 
 impl From<ResponseState> for axum::response::Response<Body> {
     fn from(value: ResponseState) -> Self {
-        let mut builder = axum::response::Response::builder().status(value.status);
+        let status =
+            StatusCode::from_u16(value.status).unwrap_or(StatusCode::INTERNAL_SERVER_ERROR);
+        let mut builder = axum::response::Response::builder().status(status);
 
         for (name, value) in value.headers {
             builder = builder.header(name, value);
