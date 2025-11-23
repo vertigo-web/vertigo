@@ -5,6 +5,28 @@ use syn::{ext::IdentExt, DataStruct, Ident};
 
 use crate::jsjson::attributes::{ContainerOpts, FieldOpts};
 
+fn is_vec_u8(ty: &syn::Type) -> bool {
+    if let syn::Type::Path(type_path) = ty {
+        if type_path.path.segments.len() == 1 {
+            let segment = &type_path.path.segments[0];
+            if segment.ident == "Vec" {
+                if let syn::PathArguments::AngleBracketed(args) = &segment.arguments {
+                    if args.args.len() == 1 {
+                        if let syn::GenericArgument::Type(syn::Type::Path(inner_path)) =
+                            &args.args[0]
+                        {
+                            if inner_path.path.is_ident("u8") {
+                                return true;
+                            }
+                        }
+                    }
+                }
+            }
+        }
+    }
+    false
+}
+
 pub(super) fn impl_js_json_struct(
     name: &Ident,
     data: &DataStruct,
@@ -19,13 +41,13 @@ pub(super) fn impl_js_json_struct(
 
         let attrs = &field.attrs;
 
-        field_list.push((field_name, attrs));
+        field_list.push((field_name, attrs, &field.ty));
     }
 
     let mut list_to_json = Vec::new();
     let mut list_from_json = Vec::new();
 
-    for (field_name, attrs) in field_list {
+    for (field_name, attrs, field_ty) in field_list {
         let field_unraw = field_name.unraw().to_string();
         let field_opts = FieldOpts::from_attributes(attrs).unwrap();
 
@@ -37,10 +59,6 @@ pub(super) fn impl_js_json_struct(
             },
         };
 
-        list_to_json.push(quote! {
-            (#json_key.to_string(), self.#field_name.to_json()),
-        });
-
         let unpack_expr = if let Some(default_expr) = field_opts.default {
             quote! {
                 .unwrap_or_else(|_| #default_expr)
@@ -49,9 +67,31 @@ pub(super) fn impl_js_json_struct(
             quote! { ? }
         };
 
-        list_from_json.push(quote! {
-            #field_name: json.get_property(&context, #json_key)#unpack_expr,
-        })
+        if is_vec_u8(field_ty) {
+            list_to_json.push(quote! {
+                (#json_key.to_string(), vertigo::JsJson::Vec(self.#field_name)),
+            });
+
+            list_from_json.push(quote! {
+                #field_name: json.get_property_jsjson(&context, #json_key).and_then(|item| {
+                    match item {
+                        vertigo::JsJson::Vec(v) => Ok(v),
+                        other => {
+                            let message = ["Vec<u8> expected, received ", other.typename()].concat();
+                            Err(context.add(message))
+                        }
+                    }
+                })#unpack_expr,
+            })
+        } else {
+            list_to_json.push(quote! {
+                (#json_key.to_string(), self.#field_name.to_json()),
+            });
+
+            list_from_json.push(quote! {
+                #field_name: json.get_property(&context, #json_key)#unpack_expr,
+            })
+        }
     }
 
     let result = quote! {
