@@ -66,3 +66,16 @@ fn json_json_list() {
 
     assert_eq!(data1, data2);
 }
+
+#[test]
+fn json_json_vec() {
+    let data1 = JsJson::Vec(vec![1, 2, 3, 4, 5]);
+
+    let block = to_block(data1.clone());
+
+    let Ok(data2) = JsJson::from_block(block) else {
+        unreachable!();
+    };
+
+    assert_eq!(data1, data2);
+}

@@ -72,6 +72,13 @@ fn convert_to_serde_value(value: JsJson) -> Value {
 
             Value::Object(map)
         }
+        JsJson::Vec(data) => {
+            let list = data
+                .into_iter()
+                .map(|byte| Value::Number(Number::from(byte)))
+                .collect();
+            Value::Array(list)
+        }
     }
 }
 
