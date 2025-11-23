@@ -576,7 +576,7 @@ pub use driver_module::driver::{
 };
 
 use crate::driver_module::{
-    api::{api_arguments, api_callbacks, api_command_wasm, api_fetch_cache, api_server_handler},
+    api::{api_arguments, api_command_wasm, api_fetch_cache, api_server_handler},
     get_driver_dom,
     init_env::init_env,
 };
@@ -597,25 +597,6 @@ pub fn vertigo_export_free_block(long_ptr: u64) {
 }
 
 // Callbacks gateways
-
-//TODO - This method should ultimately be removed.
-
-#[doc(hidden)]
-#[no_mangle]
-pub fn vertigo_export_wasm_callback(callback_id: u64, value_long_ptr: u64) -> u64 {
-    let value_long_ptr = LongPtr::from(value_long_ptr);
-
-    let value = api_arguments().get_by_long_ptr(value_long_ptr);
-    let callback_id = CallbackId::from_u64(callback_id);
-
-    let mut result = JsJson::Null;
-
-    get_driver().transaction(|_| {
-        result = api_callbacks().call(callback_id, value);
-    });
-
-    result.to_ptr_long().get_long_ptr()
-}
 
 #[doc(hidden)]
 #[no_mangle]
