@@ -9,12 +9,10 @@ const JsJsonConst = {
     Number: 6,
     List: 7,
     Object: 8,
-    // U64: 9,
-    // I64: 10,
-    // Vec: 11,
+    Vec: 9,
 } as const;
 
-export type JsJsonType = boolean | null | undefined | string | number | Array<JsJsonType> | { [key: string]: JsJsonType };
+export type JsJsonType = boolean | null | undefined | string | number | Uint8Array | Array<JsJsonType> | { [key: string]: JsJsonType };
 
 export const jsJsonGetSize = (value: JsJsonType): number => {
     if (value === true || value === false || value === null || value === undefined) {
@@ -27,6 +25,10 @@ export const jsJsonGetSize = (value: JsJsonType): number => {
 
     if (typeof value === 'number') {
         return 1 + 8;
+    }
+
+    if (value instanceof Uint8Array) {
+        return 1 + 4 + value.length;
     }
 
     if (Array.isArray(value)) {
@@ -100,6 +102,10 @@ export const jsJsonDecodeItem = (buffer: BufferCursor): JsJsonType => {
         return obj;
     }
 
+    if (typeId === JsJsonConst.Vec) {
+        return buffer.getBuffer();
+    }
+
     throw new Error(`jsJsonDecodeItem: Unknown type id ${typeId}`);
 };
 
@@ -133,6 +139,12 @@ export const saveJsJsonToBufferItem = (value: JsJsonType, buffer: BufferCursor):
     if (typeof value === 'number') {
         buffer.setByte(JsJsonConst.Number);
         buffer.setF64(value);
+        return;
+    }
+
+    if (value instanceof Uint8Array) {
+        buffer.setByte(JsJsonConst.Vec);
+        buffer.setBuffer(value);
         return;
     }
 

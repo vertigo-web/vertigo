@@ -22,6 +22,7 @@ enum JsJsonConst {
     Number = 6,
     List = 7,
     Object = 8,
+    Vec = 9,
 }
 
 impl JsJsonConst {
@@ -35,6 +36,7 @@ impl JsJsonConst {
             6 => Some(JsJsonConst::Number),
             7 => Some(JsJsonConst::List),
             8 => Some(JsJsonConst::Object),
+            9 => Some(JsJsonConst::Vec),
             _ => None,
         }
     }
@@ -108,6 +110,7 @@ pub enum JsJson {
     Number(JsJsonNumber),
     List(Vec<JsJson>),
     Object(BTreeMap<String, JsJson>),
+    Vec(Vec<u8>),
 }
 
 impl JsJsonDeserialize for JsJson {
@@ -183,6 +186,7 @@ impl JsJson {
 
                 sum
             }
+            Self::Vec(data) => PARAM_TYPE + 4 + data.len() as u32,
         }
     }
 
@@ -229,6 +233,11 @@ impl JsJson {
                     value.write_to(buff);
                 }
             }
+            Self::Vec(data) => {
+                buff.write_u8(JsJsonConst::Vec);
+                buff.write_u32(data.len() as u32);
+                buff.write(data);
+            }
         }
     }
 
@@ -242,6 +251,7 @@ impl JsJson {
             Self::Number(..) => "number",
             Self::List(..) => "list",
             Self::Object(..) => "object",
+            Self::Vec(..) => "vec",
         }
     }
 
@@ -280,6 +290,26 @@ impl JsJson {
             .ok_or_else(|| context.add("missing field"))?;
 
         T::from_json(context, item)
+    }
+
+    pub fn get_property_jsjson(
+        &mut self,
+        context: &JsJsonContext,
+        param: &'static str,
+    ) -> Result<JsJson, JsJsonContext> {
+        let object = match self {
+            JsJson::Object(object) => object,
+            other => {
+                let message = ["object expected, received ", other.typename()].concat();
+                return Err(context.add(message));
+            }
+        };
+
+        let context = context.add(["field: '", param, "'"].concat());
+
+        object
+            .remove(param)
+            .ok_or_else(|| context.add("missing field"))
     }
 }
 
@@ -335,6 +365,11 @@ pub fn decode_js_json_inner(buffer: &mut MemoryBlockRead) -> Result<JsJson, Stri
             }
 
             JsJson::Object(props)
+        }
+        JsJsonConst::Vec => {
+            let len = buffer.get_u32();
+            let data = buffer.get_vec(len);
+            JsJson::Vec(data)
         }
     };
 
@@ -433,11 +468,7 @@ impl From<bool> for JsJson {
 
 impl From<Vec<u8>> for JsJson {
     fn from(value: Vec<u8>) -> Self {
-        let list = value
-            .into_iter()
-            .map(|byte| JsJson::Number(JsJsonNumber(byte as f64)))
-            .collect();
-        JsJson::List(list)
+        JsJson::Vec(value)
     }
 }
 impl From<Vec<(&str, JsJson)>> for JsJson {
