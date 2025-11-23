@@ -53,7 +53,11 @@ impl Connection {
         let message = message.into();
 
         use futures::SinkExt;
-        self.sender.lock().await.send(Message::Text(message)).await?;
+        self.sender
+            .lock()
+            .await
+            .send(Message::Text(message))
+            .await?;
         Ok(())
     }
 
@@ -80,12 +84,18 @@ impl ConnectionStream {
     pub async fn expect_get_text_message(&mut self) -> Result<String, SocketError> {
         use futures::stream::StreamExt;
 
-        let message = self.receiver.next().await.ok_or(SocketError::ClientClose)??;
+        let message = self
+            .receiver
+            .next()
+            .await
+            .ok_or(SocketError::ClientClose)??;
 
         if let Message::Text(message) = message {
             Ok(message)
         } else {
-            self.sender.send("Error user: Text message was expected").await?;
+            self.sender
+                .send("Error user: Text message was expected")
+                .await?;
             Err(SocketError::ClientClose)
         }
     }

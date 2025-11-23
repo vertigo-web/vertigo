@@ -4,6 +4,8 @@ use tokio::sync::Mutex;
 
 use crate::connection::{Connection, SocketError};
 
+use std::sync::OnceLock;
+
 #[derive(Clone)]
 pub struct AppState {
     connections: Arc<Mutex<HashSet<Connection>>>,
@@ -11,7 +13,12 @@ pub struct AppState {
 }
 
 impl AppState {
-    pub fn new() -> AppState {
+    pub fn global() -> AppState {
+        static STATE: OnceLock<AppState> = OnceLock::new();
+        STATE.get_or_init(AppState::new).clone()
+    }
+
+    fn new() -> AppState {
         AppState {
             connections: Arc::new(Mutex::new(HashSet::new())),
             messages: Arc::new(Mutex::new(Vec::new())),
