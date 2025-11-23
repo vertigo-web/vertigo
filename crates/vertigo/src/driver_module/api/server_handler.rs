@@ -1,29 +1,15 @@
-use std::{
-    collections::{BTreeMap, HashMap},
-    rc::Rc,
-};
-
+use crate::{driver_module::js_value::JsJsonSerialize, struct_mut::ValueMut, JsJson};
+use std::{collections::HashMap, rc::Rc};
+use vertigo::AutoJsJson;
 use vertigo_macro::store;
-
-use crate::{struct_mut::ValueMut, JsJson, JsJsonNumber};
 
 type PlainHandler = dyn Fn(&str) -> Option<String>;
 
-fn convert_to_jsjson(status: u32, headers: HashMap<String, String>, body: Vec<u8>) -> JsJson {
-    let headers = headers
-        .into_iter()
-        .map(|(key, value)| (key, JsJson::String(value)))
-        .collect::<BTreeMap<_, _>>();
-
-    JsJson::List(vec![
-        JsJson::Number(JsJsonNumber(status as f64)),
-        JsJson::Object(headers),
-        JsJson::List(
-            body.into_iter()
-                .map(|byte| JsJson::Number(JsJsonNumber(byte as f64)))
-                .collect(),
-        ),
-    ])
+#[derive(AutoJsJson)]
+pub struct ResponseState {
+    pub status: u16,
+    pub headers: HashMap<String, String>,
+    pub body: Vec<u8>,
 }
 
 pub struct ServerHandler {
@@ -48,7 +34,12 @@ impl ServerHandler {
                     let mut headers = HashMap::<String, String>::new();
                     headers.insert("content-type".into(), "text/plain".into());
 
-                    return convert_to_jsjson(200, headers, response);
+                    return ResponseState {
+                        status: 200,
+                        headers,
+                        body: response,
+                    }
+                    .to_json();
                 }
 
                 JsJson::Null

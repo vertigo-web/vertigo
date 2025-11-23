@@ -251,7 +251,10 @@ async fn handler(
         response_state.add_watch_script(port_watch);
     }
 
-    if response_state.status.is_server_error() {
+    if StatusCode::from_u16(response_state.status)
+        .unwrap_or(StatusCode::INTERNAL_SERVER_ERROR)
+        .is_server_error()
+    {
         log::error!("WASM status: {}", response_state.status);
 
         match String::from_utf8(response_state.body.clone()) {
