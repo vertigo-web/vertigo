@@ -1,4 +1,4 @@
-use vertigo::{bind, component, css, dom, js, Css, JsValue, Value};
+use vertigo::{bind, component, css, dom, js, Css, JsJson, Value};
 
 mod clipboard;
 use clipboard::Clipboard;
@@ -36,7 +36,7 @@ pub fn JsApiAccess() {
 
     let ask = bind!(state.answer, |_| {
         let js_answer = js! { window.prompt("How are you?") };
-        if let JsValue::String(js_answer) = js_answer {
+        if let JsJson::String(js_answer) = js_answer {
             answer.set(js_answer)
         }
     });

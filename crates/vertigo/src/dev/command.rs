@@ -93,9 +93,23 @@ pub enum CommandForBrowser {
         max: u32,
     },
 
+    /// Execute JavaScript API calls (for js! macro)
+    JsApiCall {
+        commands: Vec<JsApiCommand>,
+    },
+
     DomBulkUpdate {
         list: Vec<DriverDomCommand>,
     },
+}
+
+#[derive(AutoJsJson, Debug, Clone)]
+pub enum JsApiCommand {
+    Root { name: String },
+    RootElement { dom_id: u64 },
+    Get { property: String },
+    Set { property: String, value: JsJson },
+    Call { method: String, args: Vec<JsJson> },
 }
 
 #[derive(AutoJsJson, Debug, PartialEq)]

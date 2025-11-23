@@ -142,8 +142,9 @@ pub use dom_macro::{AttrGroup, AttrGroupValue, EmbedDom};
 pub use driver_module::{
     driver::{Driver, FetchMethod, FetchResult},
     js_value::{
-        from_json, to_json, JsJson, JsJsonContext, JsJsonDeserialize, JsJsonNumber,
-        JsJsonObjectBuilder, JsJsonSerialize, JsValue, MemoryBlock,
+        from_json, to_json, JsJson, JsJsonContext, JsJsonDeserialize, JsJsonListDecoder,
+        JsJsonNumber, JsJsonObjectBuilder, JsJsonSerialize, MemoryBlock, MemoryBlockRead,
+        MemoryBlockWrite,
     },
 };
 pub use fetch::{
@@ -540,7 +541,7 @@ pub fn vertigo_export_handle_url(url_ptr: u64) -> u64 {
     let url_ptr = LongPtr::from(url_ptr);
     let url = api_arguments().get_by_long_ptr(url_ptr);
 
-    let JsValue::String(url) = url else {
+    let JsJson::String(url) = url else {
         panic!("string expected");
     };
 
@@ -607,7 +608,7 @@ pub fn vertigo_export_wasm_callback(callback_id: u64, value_long_ptr: u64) -> u6
     let value = api_arguments().get_by_long_ptr(value_long_ptr);
     let callback_id = CallbackId::from_u64(callback_id);
 
-    let mut result = JsValue::Undefined;
+    let mut result = JsJson::Null;
 
     get_driver().transaction(|_| {
         result = api_callbacks().call(callback_id, value);
@@ -622,12 +623,8 @@ pub fn vertigo_export_wasm_command(value_long_ptr: u64) -> u64 {
     let value_long_ptr = LongPtr::from(value_long_ptr);
     let value = api_arguments().get_by_long_ptr(value_long_ptr);
 
-    let JsValue::Json(json) = value else {
-        panic!("Expected JsJson, received {}", value.typename());
-    };
-
-    let response = api_command_wasm().command_from_js(json);
-    JsValue::Json(response).to_ptr_long().get_long_ptr()
+    let response = api_command_wasm().command_from_js(value);
+    response.to_ptr_long().get_long_ptr()
 }
 
 pub mod external_api;

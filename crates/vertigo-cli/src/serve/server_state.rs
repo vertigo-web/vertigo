@@ -194,6 +194,7 @@ impl ServerState {
                     CommandForBrowser::GetRandom { min, max: _ } => {
                         browser_response::GetRandom { value: min }.to_json()
                     }
+                    CommandForBrowser::JsApiCall { commands: _ } => JsJson::Null,
                     CommandForBrowser::DomBulkUpdate { list } => {
                         sender
                             .send(Message::DomUpdate(list))

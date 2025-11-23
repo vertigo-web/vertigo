@@ -21,6 +21,7 @@
 ### Removed
 
 * `vertigo-suspense` (not very usable anyway)
+* `JsValue` (replaced with `JsJson`)
 
 ### Internals
 

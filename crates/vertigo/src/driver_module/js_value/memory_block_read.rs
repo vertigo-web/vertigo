@@ -15,10 +15,6 @@ impl MemoryBlockRead {
         }
     }
 
-    pub fn len(&self) -> usize {
-        self.block.len()
-    }
-
     pub fn debug(&self) {
         log::info!("MemoryBlockRead DEBUG = {:02X?}", self.block);
     }

@@ -1,15 +1,14 @@
 import { wasmInit, ModuleControllerType } from './wasm_init';
-import { JsNode } from './js_node';
-import { GuardJsValue } from './guard';
+import { BufferCursor } from './buffer_cursor';
+import { jsJsonDecodeItem, jsJsonGetSize, saveJsJsonToBufferItem } from './jsjson';
 import { ExecCommand } from './exec_command/exec_command';
-import { JsValueConst } from './jsvalue_types';
 
 //Number -> u32 or i32
 //BigInt -> u64 or i64
 
 export type ImportType = {
     panic_message: (long_ptr: bigint) => void,
-    //call from rust - To be deleted eventually
+    //call from rust
     dom_access: (long_ptr: bigint) => bigint,
 }
 
@@ -64,37 +63,32 @@ export class WasmModule {
                     console.error('PANIC', message);
                 },
                 dom_access: (long_ptr: bigint): bigint => {
-                    let args = getWasm().decodeArgumentsLong(long_ptr);
-
-                    //new wersion
-                    if (GuardJsValue.isJson(args)) {
-                        const response = execCommand.exec(args.value);
-                        return getWasm().valueSaveToBufferLong({
-                            type: JsValueConst.Json,
-                            value: response
-                        });
+                    if (long_ptr === 0n) {
+                        console.error('dom_access - null pointer');
+                        return 0n;
                     }
 
-                    //old version
-                    if (Array.isArray(args)) {
-                        const path = args;
-                        let wsk = new JsNode(execCommand.dom.nodes, null);
+                    // Decode JsJson
+                    const buffer = new BufferCursor(
+                        () => getWasm().getUint8Memory(),
+                        long_ptr
+                    );
+                    const args = jsJsonDecodeItem(buffer);
+                    getWasm().exports.vertigo_export_free_block(long_ptr);
 
-                        for (const pathItem of path) {
-                            const newWsk = wsk.next(path, pathItem);
+                    // Execute command (now using JsApiCall instead of array-of-arrays)
+                    const response = execCommand.exec(args);
 
-                            if (newWsk === null) {
-                                return 0n;
-                            }
+                    // Save JsJson response
+                    const responseSize = jsJsonGetSize(response);
+                    const responseLongPtr = getWasm().exports.vertigo_export_alloc_block(responseSize);
+                    const responseBuffer = new BufferCursor(
+                        () => getWasm().getUint8Memory(),
+                        responseLongPtr
+                    );
+                    saveJsJsonToBufferItem(response, responseBuffer);
 
-                            wsk = newWsk;
-                        }
-
-                        return getWasm().valueSaveToBufferLong(wsk.toValue());
-                    }
-
-                    console.error('dom_access - wrong parameters', args);
-                    return 0n;
+                    return responseLongPtr;
                 }
             }
         });

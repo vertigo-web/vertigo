@@ -4,7 +4,7 @@ use crate::{
     dom::{dom_id::DomId, dom_node::DomNode, events::ClickEvent},
     driver_module::{api::api_callbacks, get_driver_dom, StaticString},
     struct_mut::VecMut,
-    AttrGroupValue, Computed, DomText, DropFileItem, DropResource, JsValue,
+    AttrGroupValue, Computed, DomText, DropFileItem, DropResource, JsJson, JsJsonListDecoder,
 };
 
 use crate::struct_mut::VecDequeMut;
@@ -224,13 +224,13 @@ impl DomElement {
                 let prevent_default = on_hook_key_down(event);
 
                 match prevent_default {
-                    true => JsValue::True,
-                    false => JsValue::False,
+                    true => JsJson::True,
+                    false => JsJson::False,
                 }
             }
             Err(error) => {
                 log::error!("export_websocket_callback_message -> params decode error -> {error}");
-                JsValue::False
+                JsJson::False
             }
         })
     }
@@ -248,7 +248,7 @@ impl DomElement {
 
         self.add_event_listener("blur", move |_data| {
             on_blur();
-            JsValue::Undefined
+            JsJson::Null
         })
     }
 
@@ -260,13 +260,13 @@ impl DomElement {
         let on_change = self.install_callback1(on_change);
 
         self.add_event_listener("change", move |data| {
-            if let JsValue::String(text) = data {
+            if let JsJson::String(text) = data {
                 on_change(text);
             } else {
                 log::error!("Invalid data: on_change: {data:?}");
             }
 
-            JsValue::Undefined
+            JsJson::Null
         })
     }
 
@@ -280,7 +280,7 @@ impl DomElement {
         self.add_event_listener("click", move |_data| {
             let click_event = ClickEvent::default();
             on_click(click_event.clone());
-            JsValue::from(click_event)
+            JsJson::from(click_event)
         })
     }
 
@@ -292,9 +292,9 @@ impl DomElement {
         let on_dropfile = self.install_callback1(on_dropfile);
 
         self.add_event_listener("drop", move |data| {
-            let params = data.convert(|mut params| {
-                let files = params.get_vec("drop file", |item| {
-                    item.convert(|mut item| {
+            let params = data.map_list(|mut params: JsJsonListDecoder| {
+                let files = params.get_vec("drop file", |item: JsJson| {
+                    item.map_list(|mut item: JsJsonListDecoder| {
                         let name = item.get_string("name")?;
                         let data = item.get_buffer("data")?;
 
@@ -314,7 +314,7 @@ impl DomElement {
                 }
             };
 
-            JsValue::Undefined
+            JsJson::Null
         })
     }
 
@@ -326,13 +326,13 @@ impl DomElement {
         let on_input = self.install_callback1(on_input);
 
         self.add_event_listener("input", move |data| {
-            if let JsValue::String(text) = data {
+            if let JsJson::String(text) = data {
                 on_input(text);
             } else {
                 log::error!("Invalid data: on_input: {data:?}");
             }
 
-            JsValue::Undefined
+            JsJson::Null
         })
     }
 
@@ -348,13 +348,13 @@ impl DomElement {
                 let prevent_default = on_key_down(event);
 
                 match prevent_default {
-                    true => JsValue::True,
-                    false => JsValue::False,
+                    true => JsJson::True,
+                    false => JsJson::False,
                 }
             }
             Err(error) => {
                 log::error!("export_websocket_callback_message -> params decode error -> {error}");
-                JsValue::False
+                JsJson::False
             }
         })
     }
@@ -368,7 +368,7 @@ impl DomElement {
 
         self.add_event_listener("load", move |_data| {
             on_load();
-            JsValue::Undefined
+            JsJson::Null
         })
     }
 
@@ -381,9 +381,9 @@ impl DomElement {
 
         self.add_event_listener("mousedown", move |_data| {
             if on_mouse_down() {
-                JsValue::True
+                JsJson::True
             } else {
-                JsValue::False
+                JsJson::False
             }
         })
     }
@@ -397,7 +397,7 @@ impl DomElement {
 
         self.add_event_listener("mouseenter", move |_data| {
             on_mouse_enter();
-            JsValue::Undefined
+            JsJson::Null
         })
     }
 
@@ -410,7 +410,7 @@ impl DomElement {
 
         self.add_event_listener("mouseleave", move |_data| {
             on_mouse_leave();
-            JsValue::Undefined
+            JsJson::Null
         })
     }
 
@@ -423,9 +423,9 @@ impl DomElement {
 
         self.add_event_listener("mouseup", move |_data| {
             if on_mouse_up() {
-                JsValue::True
+                JsJson::True
             } else {
-                JsValue::False
+                JsJson::False
             }
         })
     }
@@ -439,7 +439,7 @@ impl DomElement {
 
         self.add_event_listener("submit", move |_data| {
             on_submit();
-            JsValue::Undefined
+            JsJson::Null
         })
     }
 
@@ -455,7 +455,7 @@ impl DomElement {
     fn add_event_listener(
         self,
         name: &'static str,
-        callback: impl Fn(JsValue) -> JsValue + 'static,
+        callback: impl Fn(JsJson) -> JsJson + 'static,
     ) -> Self {
         let (callback_id, drop) = api_callbacks().register(callback);
 
@@ -498,8 +498,8 @@ impl Drop for DomElement {
     }
 }
 
-fn get_key_down_event(data: JsValue) -> Result<KeyDownEvent, String> {
-    data.convert(|mut params| {
+fn get_key_down_event(data: JsJson) -> Result<KeyDownEvent, String> {
+    data.map_list(|mut params: JsJsonListDecoder| {
         let key = params.get_string("key")?;
         let code = params.get_string("code")?;
         let alt_key = params.get_bool("altKey")?;

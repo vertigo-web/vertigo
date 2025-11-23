@@ -43,27 +43,31 @@ fn convert_to_jsjson(value: Value) -> JsJson {
     }
 }
 
-fn convert_to_jsvalue(value: JsJson) -> Value {
+fn convert_to_serde_value(value: JsJson) -> Value {
     match value {
         JsJson::True => Value::Bool(true),
         JsJson::False => Value::Bool(false),
         JsJson::Null => Value::Null,
+        JsJson::Undefined => Value::Null, // JSON doesn't have undefined, use null
         JsJson::Number(JsJsonNumber(value)) => {
             Value::Number(Number::from_f64(value).unwrap_or_else(|| {
-                log::error!("Invalid float in convert_to_jsvalue: {value}");
+                log::error!("Invalid float in convert_to_serde_value: {value}");
                 Number::from_f64(0.0).unwrap()
             }))
         }
         JsJson::String(value) => Value::String(value),
         JsJson::List(list) => {
-            let list = list.into_iter().map(convert_to_jsvalue).collect::<Vec<_>>();
+            let list = list
+                .into_iter()
+                .map(convert_to_serde_value)
+                .collect::<Vec<_>>();
             Value::Array(list)
         }
         JsJson::Object(object) => {
             let mut map = Map::new();
 
             for (prop_name, prop_value) in object {
-                map.insert(prop_name, convert_to_jsvalue(prop_value));
+                map.insert(prop_name, convert_to_serde_value(prop_value));
             }
 
             Value::Object(map)
@@ -94,7 +98,7 @@ fn get_headers_and_body(
                 );
             }
 
-            let value = convert_to_jsvalue(data);
+            let value = convert_to_serde_value(data);
             let json_str = serde_json::to_string(&value)
                 .inspect_err(|err| log::error!("Error serializing body: {err}"))
                 .unwrap_or_default();

@@ -1,15 +1,14 @@
 use std::collections::VecDeque;
 
 use super::js_json_struct::JsJson;
-use super::js_value_struct::JsValue;
 
-pub struct JsValueListDecoder {
-    data: VecDeque<JsValue>,
+pub struct JsJsonListDecoder {
+    data: VecDeque<JsJson>,
 }
 
-impl JsValueListDecoder {
-    pub fn new(data: Vec<JsValue>) -> JsValueListDecoder {
-        JsValueListDecoder {
+impl JsJsonListDecoder {
+    pub fn new(data: Vec<JsJson>) -> JsJsonListDecoder {
+        JsJsonListDecoder {
             data: VecDeque::from(data),
         }
     }
@@ -20,7 +19,20 @@ impl JsValueListDecoder {
         };
 
         match value {
-            JsValue::Vec(buffer) => Ok(buffer),
+            JsJson::List(list) => {
+                let mut out = Vec::with_capacity(list.len());
+                for item in list {
+                    if let JsJson::Number(val) = item {
+                        out.push(val.as_f64() as u8);
+                    } else {
+                        return Err(format!(
+                            "{label} -> buffer (List<Number>) expected, received List<{}>",
+                            item.typename()
+                        ));
+                    }
+                }
+                Ok(out)
+            }
             item => {
                 let name = item.typename();
                 Err(format!("{label} -> buffer expected, received {name}"))
@@ -34,7 +46,7 @@ impl JsValueListDecoder {
         };
 
         match value {
-            JsValue::U64(value) => Ok(value),
+            JsJson::Number(value) => Ok(value.as_f64() as u64),
             item => {
                 let name = item.typename();
                 Err(format!("{label} -> u64 expected, received {name}"))
@@ -48,8 +60,8 @@ impl JsValueListDecoder {
         };
 
         match value {
-            JsValue::U64(value) => Ok(Some(value)),
-            JsValue::Null => Ok(None),
+            JsJson::Number(value) => Ok(Some(value.as_f64() as u64)),
+            JsJson::Null => Ok(None),
             item => {
                 let name = item.typename();
                 Err(format!("{label} -> Option<u64> expected, received {name}"))
@@ -63,7 +75,7 @@ impl JsValueListDecoder {
         };
 
         match value {
-            JsValue::String(value) => Ok(value),
+            JsJson::String(value) => Ok(value),
             item => {
                 let name = item.typename();
                 Err(format!("{label} -> String expected, received {name}"))
@@ -77,7 +89,7 @@ impl JsValueListDecoder {
         };
 
         match value {
-            JsValue::U32(value) => Ok(value),
+            JsJson::Number(value) => Ok(value.as_f64() as u32),
             item => {
                 let name = item.typename();
                 Err(format!("{label} -> u32 expected, received {name}"))
@@ -85,7 +97,7 @@ impl JsValueListDecoder {
         }
     }
 
-    pub fn get_any(&mut self, label: &'static str) -> Result<JsValue, String> {
+    pub fn get_any(&mut self, label: &'static str) -> Result<JsJson, String> {
         let Some(value) = self.data.pop_front() else {
             return Err(format!("{label} -> has no more params"));
         };
@@ -98,13 +110,7 @@ impl JsValueListDecoder {
             return Err(format!("{label} -> has no more params"));
         };
 
-        match value {
-            JsValue::Json(value) => Ok(value),
-            item => {
-                let name = item.typename();
-                Err(format!("{label} -> json expected, received {name}"))
-            }
-        }
+        Ok(value)
     }
 
     pub fn get_bool(&mut self, label: &'static str) -> Result<bool, String> {
@@ -113,8 +119,8 @@ impl JsValueListDecoder {
         };
 
         match value {
-            JsValue::True => Ok(true),
-            JsValue::False => Ok(false),
+            JsJson::True => Ok(true),
+            JsJson::False => Ok(false),
             item => {
                 let name = item.typename();
                 Err(format!("{label} -> bool expected, received {name}"))
@@ -122,7 +128,7 @@ impl JsValueListDecoder {
         }
     }
 
-    pub fn get_vec<R, F: Fn(JsValue) -> Result<R, String>>(
+    pub fn get_vec<R, F: Fn(JsJson) -> Result<R, String>>(
         &mut self,
         label: &'static str,
         convert: F,
@@ -132,7 +138,7 @@ impl JsValueListDecoder {
         };
 
         let inner_list = match value {
-            JsValue::List(list) => list,
+            JsJson::List(list) => list,
             item => {
                 let name = item.typename();
                 return Err(format!("{label} -> list expected, received {name}"));

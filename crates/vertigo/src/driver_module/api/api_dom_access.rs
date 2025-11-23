@@ -1,106 +1,70 @@
 use crate::{
-    driver_module::api::{api_arguments::api_arguments, panic_message::api_panic_message},
-    DomId, JsValue,
+    dev::command::{CommandForBrowser, JsApiCommand},
+    driver_module::api::{api_browser_command::exec_command, panic_message::api_panic_message},
+    DomId, JsJson,
 };
 
 #[derive(Default)]
 pub struct DomAccess {
-    builder: Vec<JsValue>,
+    commands: Vec<JsApiCommand>,
 }
 
 impl DomAccess {
     #[must_use]
-    pub fn api(mut self) -> Self {
-        self.builder.push(JsValue::List(vec![JsValue::str("api")]));
-
-        self
-    }
-
-    #[must_use]
     pub fn element(mut self, dom_id: DomId) -> Self {
-        self.builder.push(JsValue::List(vec![
-            JsValue::str("root"),
-            JsValue::U64(dom_id.to_u64()),
-        ]));
-
+        self.commands.push(JsApiCommand::RootElement {
+            dom_id: dom_id.to_u64(),
+        });
         self
     }
 
     #[must_use]
     pub fn root(mut self, name: impl Into<String>) -> Self {
-        self.builder.push(JsValue::List(vec![
-            JsValue::str("root"),
-            JsValue::str(name),
-        ]));
-
+        self.commands.push(JsApiCommand::Root { name: name.into() });
         self
     }
 
     #[must_use]
     pub fn get(mut self, name: impl Into<String>) -> Self {
-        self.builder
-            .push(JsValue::List(vec![JsValue::str("get"), JsValue::str(name)]));
-
+        self.commands.push(JsApiCommand::Get {
+            property: name.into(),
+        });
         self
     }
 
     #[must_use]
-    pub fn set(mut self, name: impl Into<String>, value: JsValue) -> Self {
-        self.builder.push(JsValue::List(vec![
-            JsValue::str("set"),
-            JsValue::str(name),
+    pub fn set(mut self, name: impl Into<String>, value: JsJson) -> Self {
+        self.commands.push(JsApiCommand::Set {
+            property: name.into(),
             value,
-        ]));
-
+        });
         self
     }
 
     #[must_use]
-    pub fn call(mut self, name: impl Into<String>, params: Vec<JsValue>) -> Self {
-        let mut value_params = vec![JsValue::str("call"), JsValue::str(name)];
-
-        value_params.extend(params);
-
-        self.builder.push(JsValue::List(value_params));
-        self
-    }
-
-    /// Synthetic command that is not meant to be passed to the browser.
-    /// It can be used to communicate between WASM and driver implementation, for example SSR
-    #[must_use]
-    pub fn synthetic(mut self, name: impl Into<String>, params: JsValue) -> Self {
-        self.builder.push(JsValue::List(vec![JsValue::str(name)]));
-        self.builder.push(params);
-        self
-    }
-
-    #[must_use]
-    pub fn get_props(mut self, props: &[&str]) -> Self {
-        let mut new_params = vec![JsValue::str("get_props")];
-
-        new_params.extend(props.iter().map(|item| JsValue::String(item.to_string())));
-
-        self.builder.push(JsValue::List(new_params));
+    pub fn call(mut self, name: impl Into<String>, params: Vec<JsJson>) -> Self {
+        self.commands.push(JsApiCommand::Call {
+            method: name.into(),
+            args: params,
+        });
         self
     }
 
     pub fn exec(self) {
         let result = self.fetch();
 
-        if let JsValue::Undefined = result {
+        if let JsJson::Null = result {
             //ok
         } else {
-            let message = format!("Expected undefined dump={result:?}");
+            let message = format!("Expected null dump={result:?}");
             api_panic_message().show(message);
         }
     }
 
-    pub fn fetch(self) -> JsValue {
-        use crate::external_api::safe_wrappers::safe_dom_access;
-
-        let arguments_ptr_long = JsValue::List(self.builder).to_ptr_long();
-
-        let result_long_ptr = safe_dom_access(arguments_ptr_long);
-        api_arguments().get_by_long_ptr(result_long_ptr)
+    pub fn fetch(self) -> JsJson {
+        let command = CommandForBrowser::JsApiCall {
+            commands: self.commands,
+        };
+        exec_command(command)
     }
 }

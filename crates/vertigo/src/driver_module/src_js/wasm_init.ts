@@ -1,25 +1,21 @@
-import { GuardJsValue } from './guard';
-import { JsJsonType } from './jsjson';
-import { jsValueDecode, saveToBufferLongPtr } from './jsvalue';
-import { JsValueType } from './jsvalue_types';
+import { BufferCursor } from './buffer_cursor';
+import { jsJsonGetSize, jsJsonDecodeItem, saveJsJsonToBufferItem, JsJsonType } from './jsjson';
 
 export interface BaseExportType {
     vertigo_export_alloc_block: (size: number) => bigint,
     vertigo_export_free_block: (pointer: bigint) => void,
-    vertigo_export_wasm_callback: (callback_id: bigint, value_ptr: bigint) => bigint,   //result => pointer: 32bit, size: 32bit
+    vertigo_export_wasm_callback: (callback_id: bigint, value_ptr: bigint) => bigint,
     vertigo_export_wasm_command: (value_ptr: bigint) => bigint,
 };
 
 export interface ModuleControllerType<ExportType extends BaseExportType> {
     exports: ExportType,
-    decodeArgumentsLong: (long_ptr: bigint) => JsValueType,
     getUint8Memory: () => Uint8Array,
     /**
-     * @deprecated - pleas use wasm_command
+     * @deprecated - please use wasm_command
      */
-    wasm_callback: (callback_id: bigint, params: JsValueType) => JsValueType,
+    wasm_callback: (callback_id: bigint, params: JsJsonType) => JsJsonType,
     wasm_command: (params: JsJsonType) => JsJsonType,
-    valueSaveToBufferLong: (value: JsValueType) => bigint,
 }
 
 const fetchModule = async (wasmBinPath: string, imports: Record<string, WebAssembly.ModuleImports>): Promise<WebAssembly.WebAssemblyInstantiatedSource> => {
@@ -63,47 +59,52 @@ export const wasmInit = async <ImportType extends Record<string, Function>, Expo
     //@ts-expect-error
     const exports: ExportType = module_instance.instance.exports;
 
-    const decodeArgumentsLong = (long_ptr: bigint): JsValueType => {
-        if (long_ptr === 0n) {
-            return undefined;
-        }
+    const wasm_callback = (callback_id: bigint, value: JsJsonType): JsJsonType => {
+        // Serialize JsJson
+        const size = jsJsonGetSize(value);
+        const value_ptr = exports.vertigo_export_alloc_block(size);
+        const buffer = new BufferCursor(getUint8Memory, value_ptr);
+        saveJsJsonToBufferItem(value, buffer);
 
-        const response = jsValueDecode(getUint8Memory, long_ptr);
-        exports.vertigo_export_free_block(long_ptr);
-
-        return response;
-    };
-
-    const valueSaveToBufferLong = (value: JsValueType): bigint => saveToBufferLongPtr(getUint8Memory, exports.vertigo_export_alloc_block, value);
-
-    const wasm_callback = (callback_id: bigint, value: JsValueType): JsValueType => {
-        const value_ptr = valueSaveToBufferLong(value);
         let result_long_ptr = exports.vertigo_export_wasm_callback(callback_id, value_ptr);
-        return decodeArgumentsLong(result_long_ptr);
+
+        // Decode JsJson
+        if (result_long_ptr === 0n) {
+            return null;
+        }
+        const resultBuffer = new BufferCursor(getUint8Memory, result_long_ptr);
+        const result = jsJsonDecodeItem(resultBuffer);
+        exports.vertigo_export_free_block(result_long_ptr);
+
+        return result;
     };
+
 
     const wasm_command = (value: JsJsonType): JsJsonType => {
-        const value_ptr = valueSaveToBufferLong({
-            type: 14,
-            value
-        });
-        let result_long_ptr = exports.vertigo_export_wasm_command(value_ptr);
-        const result = decodeArgumentsLong(result_long_ptr);
+        // Serialize JsJson
+        const size = jsJsonGetSize(value);
+        const long_ptr = exports.vertigo_export_alloc_block(size);
+        const buffer = new BufferCursor(getUint8Memory, long_ptr);
+        saveJsJsonToBufferItem(value, buffer);
 
-        if (GuardJsValue.isJson(result)) {
-            return result.value;
+        let result_long_ptr = exports.vertigo_export_wasm_command(long_ptr);
+
+        // Decode JsJson
+        if (result_long_ptr === 0n) {
+            return null;
         }
+        const resultBuffer = new BufferCursor(getUint8Memory, result_long_ptr);
+        const result = jsJsonDecodeItem(resultBuffer);
+        exports.vertigo_export_free_block(result_long_ptr);
 
-        throw Error('Json expected');
+        return result;
     };
-    
+
 
     return {
         exports,
-        decodeArgumentsLong,
         getUint8Memory,
         wasm_callback,
         wasm_command,
-        valueSaveToBufferLong,
     };
 };

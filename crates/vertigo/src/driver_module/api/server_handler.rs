@@ -1,21 +1,28 @@
-use std::{collections::HashMap, rc::Rc};
+use std::{
+    collections::{BTreeMap, HashMap},
+    rc::Rc,
+};
 
 use vertigo_macro::store;
 
-use crate::{struct_mut::ValueMut, JsValue};
+use crate::{struct_mut::ValueMut, JsJson, JsJsonNumber};
 
 type PlainHandler = dyn Fn(&str) -> Option<String>;
 
-fn convert_to_jsvalue(status: u32, headers: HashMap<String, String>, body: Vec<u8>) -> JsValue {
+fn convert_to_jsjson(status: u32, headers: HashMap<String, String>, body: Vec<u8>) -> JsJson {
     let headers = headers
         .into_iter()
-        .map(|(key, value)| (key, JsValue::String(value)))
-        .collect::<HashMap<_, _>>();
+        .map(|(key, value)| (key, JsJson::String(value)))
+        .collect::<BTreeMap<_, _>>();
 
-    JsValue::List(vec![
-        JsValue::U32(status),
-        JsValue::Object(headers),
-        JsValue::Vec(body),
+    JsJson::List(vec![
+        JsJson::Number(JsJsonNumber(status as f64)),
+        JsJson::Object(headers),
+        JsJson::List(
+            body.into_iter()
+                .map(|byte| JsJson::Number(JsJsonNumber(byte as f64)))
+                .collect(),
+        ),
     ])
 }
 
@@ -34,19 +41,19 @@ impl ServerHandler {
         self.plains_handler.set(Some(Rc::new(callback)));
     }
 
-    pub fn handler(&self, url: &str) -> JsValue {
+    pub fn handler(&self, url: &str) -> JsJson {
         self.plains_handler.map(|handler| match handler {
             Some(handler) => {
                 if let Some(response) = handler(url).map(|inner| inner.into_bytes()) {
                     let mut headers = HashMap::<String, String>::new();
                     headers.insert("content-type".into(), "text/plain".into());
 
-                    return convert_to_jsvalue(200, headers, response);
+                    return convert_to_jsjson(200, headers, response);
                 }
 
-                JsValue::Undefined
+                JsJson::Null
             }
-            None => JsValue::Undefined,
+            None => JsJson::Null,
         })
     }
 }

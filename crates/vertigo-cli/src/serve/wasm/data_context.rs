@@ -1,4 +1,4 @@
-use vertigo::{JsValue, LongPtr, MemoryBlock};
+use vertigo::{JsJson, LongPtr, MemoryBlock};
 use wasmtime::{AsContextMut, Caller, Extern, Instance, Memory, Store, StoreContextMut};
 
 use crate::serve::request_state::RequestState;
@@ -48,9 +48,9 @@ impl<'a> DataContext<'a> {
         }
     }
 
-    pub fn get_value_long_ptr(&mut self, long_ptr: LongPtr) -> JsValue {
+    pub fn get_value_long_ptr(&mut self, long_ptr: LongPtr) -> JsJson {
         if long_ptr.is_undefined() {
-            return JsValue::Undefined;
+            return JsJson::Null;
         }
 
         let (ptr, offset) = long_ptr.into_parts();
@@ -66,11 +66,11 @@ impl<'a> DataContext<'a> {
         let slice = &buff[ptr..(ptr + offset)];
 
         let block = MemoryBlock::from_slice(slice);
-        match JsValue::from_block(block) {
+        match JsJson::from_block(block) {
             Ok(value) => value,
             Err(error) => {
-                log::info!("JsValue decoding problem, error={error}");
-                JsValue::Undefined
+                log::info!("JsJson decoding problem, error={error}");
+                JsJson::Null
             }
         }
     }
@@ -134,14 +134,13 @@ impl<'a> DataContext<'a> {
         }
     }
 
-    pub fn save_value(&mut self, value: JsValue) -> LongPtr {
-        if let JsValue::Undefined = value {
+    pub fn save_value(&mut self, value: JsJson) -> LongPtr {
+        if let JsJson::Null = value {
             return LongPtr::from(0);
         }
 
-        let block = value.to_block();
-        let block = block.convert_to_vec();
-        let size = block.len() as u32;
+        let block_vec = value.to_vec();
+        let size = block_vec.len() as u32;
 
         let ptr = self.alloc(size);
 
@@ -152,7 +151,7 @@ impl<'a> DataContext<'a> {
         let (ptr, size) = ptr.into_parts();
 
         let range = (ptr as usize)..(ptr as usize + size as usize);
-        buff[range].clone_from_slice(block.as_slice());
+        buff[range].clone_from_slice(block_vec.as_slice());
 
         LongPtr::new(ptr, size)
     }

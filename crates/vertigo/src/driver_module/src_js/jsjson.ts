@@ -1,167 +1,165 @@
-import { BufferCursor, getStringSize } from "./buffer_cursor";
+import { BufferCursor } from "./buffer_cursor";
 
 const JsJsonConst = {
     True: 1,
     False: 2,
     Null: 3,
-
-    String: 4,
-    Number: 5,
-    List: 6,
-    Object: 7,
+    Undefined: 4,
+    String: 5,
+    Number: 6,
+    List: 7,
+    Object: 8,
+    // U64: 9,
+    // I64: 10,
+    // Vec: 11,
 } as const;
 
-export type JsJsonType
-    = boolean
-    | null
-    | number
-    | string
-    | Array<JsJsonType>
-    | JsJsonMapType;
-
-interface JsJsonMapType {
-    [key: string]: JsJsonType
-}
+export type JsJsonType = boolean | null | undefined | string | number | Array<JsJsonType> | { [key: string]: JsJsonType };
 
 export const jsJsonGetSize = (value: JsJsonType): number => {
-
-    if (typeof value === 'boolean') {
-        return 1;
-    }
-
-    if (value === null) {
+    if (value === true || value === false || value === null || value === undefined) {
         return 1;
     }
 
     if (typeof value === 'string') {
-        return 1 + 4 + getStringSize(value);
+        return 1 + 4 + new TextEncoder().encode(value).length;
+    }
+
+    if (typeof value === 'number') {
+        return 1 + 8;
     }
 
     if (Array.isArray(value)) {
         let sum = 1 + 4;
-
         for (const item of value) {
             sum += jsJsonGetSize(item);
         }
-
         return sum;
     }
 
-    if (typeof value === 'number') {
-        return 9;   //1 + 8
+    if (typeof value === 'object' && value !== null) {
+        let sum = 1 + 2;
+        for (const [key, propertyValue] of Object.entries(value)) {
+            sum += 4 + new TextEncoder().encode(key).length;
+            sum += jsJsonGetSize(propertyValue);
+        }
+        return sum;
     }
 
-    //object
-    let sum = 1 + 2;
-
-    for (const [key, propertyValue] of Object.entries(value)) {
-        sum += 4 + getStringSize(key);
-        sum += jsJsonGetSize(propertyValue);
-    }
-
-    return sum;
+    throw new Error(`jsJsonGetSize: Unknown type ${typeof value}`);
 };
 
-export const jsJsonDecodeItem = (cursor: BufferCursor): JsJsonType => {
-    const typeParam = cursor.getByte();
+export const jsJsonDecodeItem = (buffer: BufferCursor): JsJsonType => {
+    const typeId = buffer.getByte();
 
-    if (typeParam === JsJsonConst.True) {
+    if (typeId === JsJsonConst.True) {
         return true;
     }
 
-    if (typeParam === JsJsonConst.False) {
+    if (typeId === JsJsonConst.False) {
         return false;
     }
 
-    if (typeParam === JsJsonConst.Null) {
+    if (typeId === JsJsonConst.Null) {
         return null;
     }
 
-    if (typeParam === JsJsonConst.String) {
-        return cursor.getString();
+    if (typeId === JsJsonConst.Undefined) {
+        return undefined;
     }
 
-    if (typeParam === JsJsonConst.Number) {
-        return cursor.getF64();
+    if (typeId === JsJsonConst.String) {
+        return buffer.getString();
     }
 
-    if (typeParam === JsJsonConst.List) {
-        const out: Array<JsJsonType> = [];
+    if (typeId === JsJsonConst.Number) {
+        return buffer.getF64();
+    }
 
-        const listSize = cursor.getU32();
+    if (typeId === JsJsonConst.List) {
+        const count = buffer.getU32();
+        const list: Array<JsJsonType> = [];
 
-        for (let i=0; i<listSize; i++) {
-            out.push(jsJsonDecodeItem(cursor))
+        for (let i = 0; i < count; i++) {
+            list.push(jsJsonDecodeItem(buffer));
         }
 
-        return out;
+        return list;
     }
 
-    //object
-    const out: Record<string, JsJsonType> = {};
+    if (typeId === JsJsonConst.Object) {
+        const count = buffer.getU16();
+        const obj: { [key: string]: JsJsonType } = {};
 
-    const listSize = cursor.getU16();
+        for (let i = 0; i < count; i++) {
+            const key = buffer.getString();
+            const value = jsJsonDecodeItem(buffer);
+            obj[key] = value;
+        }
 
-    for (let i=0; i<listSize; i++) {
-        const key = cursor.getString();
-        const value = jsJsonDecodeItem(cursor);
-        out[key] = value;
+        return obj;
     }
 
-    return out;
-}
+    throw new Error(`jsJsonDecodeItem: Unknown type id ${typeId}`);
+};
 
-export const saveJsJsonToBufferItem = (value: JsJsonType, cursor: BufferCursor) => {
+export const saveJsJsonToBufferItem = (value: JsJsonType, buffer: BufferCursor): void => {
     if (value === true) {
-        cursor.setByte(JsJsonConst.True);
+        buffer.setByte(JsJsonConst.True);
         return;
     }
 
     if (value === false) {
-        cursor.setByte(JsJsonConst.False);
+        buffer.setByte(JsJsonConst.False);
         return;
     }
 
     if (value === null) {
-        cursor.setByte(JsJsonConst.Null);
+        buffer.setByte(JsJsonConst.Null);
+        return;
+    }
+
+    if (value === undefined) {
+        buffer.setByte(JsJsonConst.Undefined);
         return;
     }
 
     if (typeof value === 'string') {
-        cursor.setByte(JsJsonConst.String);
-        cursor.setString(value);
+        buffer.setByte(JsJsonConst.String);
+        buffer.setString(value);
         return;
     }
 
     if (typeof value === 'number') {
-        cursor.setByte(JsJsonConst.Number);
-        cursor.setF64(value);
+        buffer.setByte(JsJsonConst.Number);
+        buffer.setF64(value);
         return;
     }
 
     if (Array.isArray(value)) {
-        cursor.setByte(JsJsonConst.List);
-        cursor.setU32(value.length);
+        buffer.setByte(JsJsonConst.List);
+        buffer.setU32(value.length);
 
         for (const item of value) {
-            saveJsJsonToBufferItem(item, cursor);
+            saveJsJsonToBufferItem(item, buffer);
         }
 
         return;
     }
 
-    //object
-    const list: Array<[string, JsJsonType]> = [];
+    if (typeof value === 'object' && value !== null) {
+        const entries = Object.entries(value);
 
-    for (const [key, propertyValue] of Object.entries(value)) {
-        list.push([key, propertyValue]);
+        buffer.setByte(JsJsonConst.Object);
+        buffer.setU16(entries.length);
+
+        for (const [key, propertyValue] of entries) {
+            buffer.setString(key);
+            saveJsJsonToBufferItem(propertyValue, buffer);
+        }
+
+        return;
     }
 
-    cursor.setByte(JsJsonConst.Object);
-    cursor.setU16(list.length);
-
-    for (const [key, propertyValue] of list) {
-        cursor.setString(key);
-        saveJsJsonToBufferItem(propertyValue, cursor);
-    }
+    throw new Error(`saveJsJsonToBufferItem: Unknown type ${typeof value}`);
 };

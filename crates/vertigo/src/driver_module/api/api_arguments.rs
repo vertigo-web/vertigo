@@ -1,6 +1,6 @@
 use std::rc::Rc;
 
-use crate::{driver_module::js_value::MemoryBlock, struct_mut::HashMapMut, JsValue, LongPtr};
+use crate::{driver_module::js_value::MemoryBlock, struct_mut::HashMapMut, JsJson, LongPtr};
 
 #[derive(Clone)]
 pub struct Arguments {
@@ -33,15 +33,15 @@ impl Arguments {
         }
     }
 
-    pub fn get_by_long_ptr(&self, long_ptr: LongPtr) -> JsValue {
+    pub fn get_by_long_ptr(&self, long_ptr: LongPtr) -> JsJson {
         if long_ptr.is_undefined() {
-            return JsValue::Undefined;
+            return JsJson::Null;
         }
 
         let param = self.blocks.remove(&long_ptr);
 
         if let Some(param) = param {
-            match JsValue::from_block(param) {
+            match JsJson::from_block(param) {
                 Ok(value) => value,
                 Err(err) => {
                     panic!("get_by_ptr - error decode: {err}");
