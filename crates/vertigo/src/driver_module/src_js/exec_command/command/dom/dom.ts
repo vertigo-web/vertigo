@@ -445,7 +445,7 @@ export class DriverDom {
 
     public dom_bulk_update = (commands: Array<CommandType>) => {
         if (getEnableHudration()) {
-            hydrate(commands, this.appLocation);
+            hydrate(commands, this.nodes, this.appLocation);
         }
 
         const setFocus: Set<number> = new Set();

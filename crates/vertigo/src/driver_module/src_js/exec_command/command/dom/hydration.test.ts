@@ -89,6 +89,7 @@ const documentMock = {
 
 import { hydrate } from "./hydration";
 import { CommandType } from "./dom";
+import { MapNodes } from "./map_nodes";
 
 // --- TEST RUNNER ---
 function assert(condition: boolean, message: string) {
@@ -140,7 +141,7 @@ function testExtraNodes() {
         { InsertBefore: { parent: 3, child: 11, ref_id: null } }
     ];
 
-    hydrate(commands, mockedApiLocation());
+    hydrate(commands, new MapNodes(), mockedApiLocation());
 
     assert(documentMock.body.childNodes.length === 2, "Extra node removed");
     assert(documentMock.body.childNodes[0] === nodeA, "A is first");
@@ -162,7 +163,7 @@ function testTextMismatch() {
         { InsertBefore: { parent: 3, child: 20, ref_id: null } }
     ];
 
-    hydrate(commands, mockedApiLocation());
+    hydrate(commands, new MapNodes(), mockedApiLocation());
 
     assert(textNode.textContent === "New Text", "Text content updated");
 }
@@ -182,7 +183,7 @@ function testTagMismatch() {
         { InsertBefore: { parent: 3, child: 30, ref_id: null } }
     ];
 
-    hydrate(commands, mockedApiLocation());
+    hydrate(commands, new MapNodes(), mockedApiLocation());
 
     assert(documentMock.body.childNodes.length === 0, "Mismatched node removed");
 }
@@ -204,7 +205,7 @@ function testAttributeMismatch() {
         { InsertBefore: { parent: 3, child: 40, ref_id: null } }
     ];
 
-    hydrate(commands, mockedApiLocation());
+    hydrate(commands, new MapNodes(), mockedApiLocation());
 
     assert(divNode.getAttribute('class') === 'new', "Attributes updated");
 }

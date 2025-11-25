@@ -163,4 +163,8 @@ export class MapNodes {
     public has(id: number): boolean {
         return this.data.has(id);
     }
+
+    public claimNode(id: number, node: NodeType) {
+        this.data.set(id, node);
+    }
 }
