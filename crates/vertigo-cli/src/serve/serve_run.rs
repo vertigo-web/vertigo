@@ -1,6 +1,6 @@
 use axum::{
     body::BoxBody,
-    extract::{Json, RawQuery, State},
+    extract::{Json, RawQuery},
     http::{header::HeaderMap, HeaderValue, StatusCode, Uri},
     response::Response,
     routing::get,
@@ -8,11 +8,7 @@ use axum::{
 };
 use reqwest::header;
 use serde_json::Value;
-use std::{
-    sync::Arc,
-    time::{Duration, Instant},
-};
-use tokio::sync::{OnceCell, RwLock};
+use std::time::{Duration, Instant};
 use tower_http::services::ServeDir;
 
 use crate::serve::mount_path::MountPathConfig;
@@ -23,8 +19,6 @@ use crate::{
 use axum::body::Body;
 
 use super::ServeOpts;
-
-static STATE: OnceCell<Arc<RwLock<Arc<ServerState>>>> = OnceCell::const_new();
 
 pub async fn run(opts: ServeOpts, port_watch: Option<u16>) -> Result<(), ErrorCode> {
     log::info!("serve params => {opts:#?}");
@@ -39,30 +33,20 @@ pub async fn run(opts: ServeOpts, port_watch: Option<u16>) -> Result<(), ErrorCo
     } = opts.inner;
 
     let mount_config = MountPathConfig::new(mount_point, opts.common.dest_dir, wasm_preload)?;
-    let state = Arc::new(ServerState::new(mount_config, port_watch, env)?);
+    ServerState::init(mount_config.clone(), port_watch, env)?;
 
-    let ref_state = STATE
-        .get_or_init({
-            let state = state.clone();
-
-            move || Box::pin(async move { Arc::new(RwLock::new(state)) })
-        })
-        .await;
-
-    let serve_mount_path = state.mount_config.dest_http_root();
-    let serve_dir = ServeDir::new(state.mount_config.dest_dir());
-
-    *(ref_state.write().await) = state;
+    let serve_mount_path = mount_config.dest_http_root();
+    let serve_dir = ServeDir::new(mount_config.dest_dir());
 
     let mut app = Router::new()
         .nest_service(&serve_mount_path, serve_dir)
         .layer(axum::middleware::map_response(set_cache_header));
 
     for (path, target) in proxy {
-        app = install_proxy(app, path, target, ref_state.clone());
+        app = install_proxy(app, path, target);
     }
 
-    let app = app.fallback(handler).with_state(ref_state.clone());
+    let app = app.fallback(handler);
 
     let Ok(addr) = format!("{host}:{port}").parse() else {
         log::error!("Incorrect listening address");
@@ -170,51 +154,40 @@ async fn post_response(target_url: String, headers: HeaderMap, body: Value) -> R
     response
 }
 
-fn install_proxy(
-    app: Router<Arc<RwLock<Arc<ServerState>>>>,
-    path: String,
-    target: String,
-    ref_state: Arc<RwLock<Arc<ServerState>>>,
-) -> Router<Arc<RwLock<Arc<ServerState>>>> {
-    let router = Router::new()
-        .fallback(
-            get({
-                let path = path.clone();
-                let target = target.clone();
+fn install_proxy(app: Router<()>, path: String, target: String) -> Router<()> {
+    let router = Router::new().fallback(
+        get({
+            let path = path.clone();
+            let target = target.clone();
 
-                move |url: Uri| async move {
-                    let from_url = format!("{path}{url}");
-                    let target_url = format!("{target}{url}");
-                    log::info!("proxy get {from_url} -> {target_url}");
+            move |url: Uri| async move {
+                let from_url = format!("{path}{url}");
+                let target_url = format!("{target}{url}");
+                log::info!("proxy get {from_url} -> {target_url}");
 
-                    get_response(target_url).await
-                }
-            })
-            .post({
-                let path = path.clone();
+                get_response(target_url).await
+            }
+        })
+        .post({
+            let path = path.clone();
 
-                move |url: Uri, headers: HeaderMap, body: Json<Value>| async move {
-                    let from_url = format!("{path}{url}");
-                    let target_url = format!("{target}{url}");
-                    let Json(body) = body;
-                    log::info!("proxy post {from_url} -> {target_url}");
+            move |url: Uri, headers: HeaderMap, body: Json<Value>| async move {
+                let from_url = format!("{path}{url}");
+                let target_url = format!("{target}{url}");
+                let Json(body) = body;
+                log::info!("proxy post {from_url} -> {target_url}");
 
-                    post_response(target_url, headers, body).await
-                }
-            }),
-        )
-        .with_state(ref_state);
+                post_response(target_url, headers, body).await
+            }
+        }),
+    );
 
     app.nest_service(path.as_str(), router)
 }
 
 #[axum::debug_handler]
-async fn handler(
-    url: Uri,
-    RawQuery(query): RawQuery,
-    State(state): State<Arc<RwLock<Arc<ServerState>>>>,
-) -> Response<Body> {
-    let state = state.read().await.clone();
+async fn handler(url: Uri, RawQuery(query): RawQuery) -> Response<Body> {
+    let state = ServerState::global();
 
     let now = Instant::now();
     let uri = {

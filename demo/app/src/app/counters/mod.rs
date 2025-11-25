@@ -2,10 +2,12 @@ use vertigo::{
     component, css, dom, get_driver, include_static, store, ClickEvent, Computed, JsJson, Value,
 };
 
+use crate::app::{counters::ssr_test::SsrTest, route::Route, state::state_route};
+
 mod simple_counter;
 use simple_counter::SimpleCounter;
 
-use crate::app::{route::Route, state::state_route};
+mod ssr_test;
 
 #[derive(Clone)]
 pub struct State {
@@ -175,6 +177,8 @@ pub fn CountersDemo() {
             }}>
                 "Get random"
             </div>
+
+            <SsrTest />
         </div>
     }
 }

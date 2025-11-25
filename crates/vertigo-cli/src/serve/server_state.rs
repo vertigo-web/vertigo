@@ -1,3 +1,5 @@
+use parking_lot::RwLock;
+use std::sync::OnceLock;
 use std::{
     collections::HashMap,
     sync::Arc,
@@ -28,6 +30,8 @@ pub fn get_now() -> Duration {
         .expect("Time went backwards")
 }
 
+static STATE: OnceLock<Arc<RwLock<Option<Arc<ServerState>>>>> = OnceLock::new();
+
 #[derive(Clone)]
 pub struct ServerState {
     engine: Engine,
@@ -38,24 +42,41 @@ pub struct ServerState {
 }
 
 impl ServerState {
-    pub fn new(
+    pub fn init(
         mount_config: MountPathConfig,
         port_watch: Option<u16>,
         env: Vec<(String, String)>,
-    ) -> Result<Self, ErrorCode> {
+    ) -> Result<(), ErrorCode> {
         let engine = Engine::default();
 
         let module = build_module_wasm(&engine, &mount_config)?;
 
         let env = env.into_iter().collect::<HashMap<_, _>>();
 
-        Ok(Self {
+        let mutex = STATE.get_or_init(|| Arc::new(RwLock::new(None)));
+
+        let mut guard = mutex.write();
+        *guard = Some(Arc::new(Self {
             engine,
             module,
             mount_config,
             port_watch,
             env,
-        })
+        }));
+
+        Ok(())
+    }
+
+    pub fn global() -> Arc<ServerState> {
+        let mutex = STATE.get_or_init(|| Arc::new(RwLock::new(None)));
+
+        let guard = mutex.read();
+
+        if let Some(state) = &*guard {
+            return state.clone();
+        }
+
+        unreachable!();
     }
 
     pub async fn request(&self, url: &str) -> ResponseState {
