@@ -1,6 +1,7 @@
 import { CommandType } from "./dom";
 import { hydrate_link } from "./injects";
 import { MapNodes } from "./map_nodes";
+import { AppLocation } from "../../location/AppLocation";
 
 interface VirtualNode {
     id: number;
@@ -10,12 +11,8 @@ interface VirtualNode {
     children: Array<number>;
 }
 
-import { AppLocation } from "../../location/AppLocation";
-
-export const hydrate = (commands: Array<CommandType>, nodes: MapNodes, appLocation: AppLocation) => {
+const createVirtualNodes = (commands: Array<CommandType>): Map<number, VirtualNode> => {
     const virtualNodes = new Map<number, VirtualNode>();
-    let depth = 0;
-
     // Helper to get or create a virtual node
     const getVNode = (id: number): VirtualNode => {
         let node = virtualNodes.get(id);
@@ -58,6 +55,14 @@ export const hydrate = (commands: Array<CommandType>, nodes: MapNodes, appLocati
             node.attributes.set(command.SetAttr.name, command.SetAttr.value);
         }
     }
+
+    return virtualNodes;
+};
+
+export const hydrate = (commands: Array<CommandType>, nodes: MapNodes, appLocation: AppLocation) => {
+    const virtualNodes = createVirtualNodes(commands);
+
+    let depth = 0;
 
     // Traverse and Match
     const hydrateNode = (vNodeId: number, realNode: Node) => {
