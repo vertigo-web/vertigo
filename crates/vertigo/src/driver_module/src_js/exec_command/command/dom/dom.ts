@@ -5,7 +5,7 @@ import { JsJsonType } from "../../../jsjson";
 import { AppLocation } from "../../location/AppLocation";
 import { hydrate } from "./hydration";
 import { hydrate_link } from "./injects";
-import { getDisableHydration, getEnableHudration } from "./featureHydration";
+import { getEnableHudration } from "./featureHydration";
 
 interface FileItemType {
     name: string,
@@ -442,8 +442,8 @@ export class DriverDom {
     }
 
     public dom_bulk_update = (commands: Array<CommandType>) => {
-        if (this.nodes.hasInitNodes() && !getDisableHydration()) {
-            hydrate(commands, this.nodes, this.appLocation);
+        if (getEnableHudration()) {
+            hydrate(commands, this.appLocation);
         }
 
         const setFocus: Set<number> = new Set();

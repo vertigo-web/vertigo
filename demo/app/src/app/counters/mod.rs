@@ -116,7 +116,7 @@ pub fn CountersDemo() {
             <img css={center_css} src={&path} />
             <img css={center_css2} src={path} />
             <div>
-                "Stop propagation test:"
+                "Stop propagation testddd 33344:"
                 <div css={outer_click_css} on_click={|_| log::info!("Outer")}>
                     "outer click"<br/>
                     <button on_click={|evt: ClickEvent| {

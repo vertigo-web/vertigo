@@ -88,7 +88,6 @@ const documentMock = {
 // MapNodes constructor uses document, so we must mock before instantiation.
 
 import { hydrate } from "./hydration";
-import { MapNodes } from "./map_nodes";
 import { CommandType } from "./dom";
 
 // --- TEST RUNNER ---
@@ -141,11 +140,8 @@ function testExtraNodes() {
         { InsertBefore: { parent: 3, child: 11, ref_id: null } }
     ];
 
-    const mapNodes = new MapNodes();
-    hydrate(commands, mapNodes, mockedApiLocation());
+    hydrate(commands, mockedApiLocation());
 
-    assert(mapNodes.get_any_option(10) as any === nodeA, "Node A claimed");
-    assert(mapNodes.get_any_option(11) as any === nodeB, "Node B claimed");
     assert(documentMock.body.childNodes.length === 2, "Extra node removed");
     assert(documentMock.body.childNodes[0] === nodeA, "A is first");
     assert(documentMock.body.childNodes[1] === nodeB, "B is second");
@@ -166,11 +162,8 @@ function testTextMismatch() {
         { InsertBefore: { parent: 3, child: 20, ref_id: null } }
     ];
 
-    const mapNodes = new MapNodes();
+    hydrate(commands, mockedApiLocation());
 
-    hydrate(commands, mapNodes, mockedApiLocation());
-
-    assert(mapNodes.get_any_option(20) as any === textNode, "Text node claimed");
     assert(textNode.textContent === "New Text", "Text content updated");
 }
 
@@ -189,11 +182,8 @@ function testTagMismatch() {
         { InsertBefore: { parent: 3, child: 30, ref_id: null } }
     ];
 
-    const mapNodes = new MapNodes();
+    hydrate(commands, mockedApiLocation());
 
-    hydrate(commands, mapNodes, mockedApiLocation());
-
-    assert(mapNodes.get_any_option(30) === undefined, "Node NOT claimed (mismatched tag)");
     assert(documentMock.body.childNodes.length === 0, "Mismatched node removed");
 }
 
@@ -214,11 +204,8 @@ function testAttributeMismatch() {
         { InsertBefore: { parent: 3, child: 40, ref_id: null } }
     ];
 
-    const mapNodes = new MapNodes();
+    hydrate(commands, mockedApiLocation());
 
-    hydrate(commands, mapNodes, mockedApiLocation());
-
-    assert(mapNodes.get_any_option(40) as any === divNode, "Node claimed despite attribute mismatch");
     assert(divNode.getAttribute('class') === 'new', "Attributes updated");
 }
 

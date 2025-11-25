@@ -1,6 +1,5 @@
 import { CommandType } from "./dom";
 import { hydrate_link } from "./injects";
-import { MapNodes } from "./map_nodes";
 import { AppLocation } from "../../location/AppLocation";
 
 interface VirtualNode {
@@ -59,7 +58,7 @@ const createVirtualNodes = (commands: Array<CommandType>): Map<number, VirtualNo
     return virtualNodes;
 };
 
-export const hydrate = (commands: Array<CommandType>, nodes: MapNodes, appLocation: AppLocation) => {
+export const hydrate = (commands: Array<CommandType>, appLocation: AppLocation) => {
     console.info('hydrate ...');
     const virtualNodes = createVirtualNodes(commands);
 
@@ -134,8 +133,6 @@ export const hydrate = (commands: Array<CommandType>, nodes: MapNodes, appLocati
 
                     // Claim it
                     if (candidate instanceof Element || candidate instanceof Comment || candidate instanceof Text) {
-                        nodes.claimNode(childVId, candidate);
-
                         // Run injects
                         if (candidate instanceof Element) {
                             if (candidate.tagName.toLocaleLowerCase() === 'a') {
