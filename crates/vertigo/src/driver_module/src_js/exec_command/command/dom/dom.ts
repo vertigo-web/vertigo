@@ -131,6 +131,7 @@ export class DriverDom {
 
     private create_node(id: number, name: string) {
         if (this.nodes.has(id)) {
+            console.error('create_node - this branch should never occur', id);
             return;
         }
 
@@ -185,6 +186,7 @@ export class DriverDom {
 
     private create_text(id: number, value: string) {
         if (this.nodes.has(id)) {
+            console.error('create_text - this branch should never occur', id);
             return;
         }
 
