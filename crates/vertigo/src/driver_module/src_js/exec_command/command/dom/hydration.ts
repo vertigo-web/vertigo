@@ -60,6 +60,7 @@ const createVirtualNodes = (commands: Array<CommandType>): Map<number, VirtualNo
 };
 
 export const hydrate = (commands: Array<CommandType>, nodes: MapNodes, appLocation: AppLocation) => {
+    console.info('hydrate ...');
     const virtualNodes = createVirtualNodes(commands);
 
     let depth = 0;

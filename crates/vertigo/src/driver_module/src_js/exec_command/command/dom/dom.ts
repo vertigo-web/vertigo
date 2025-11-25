@@ -5,6 +5,7 @@ import { JsJsonType } from "../../../jsjson";
 import { AppLocation } from "../../location/AppLocation";
 import { hydrate } from "./hydration";
 import { hydrate_link } from "./injects";
+import { getDisableHydration, getEnableHudration } from "./featureHydration";
 
 interface FileItemType {
     name: string,
@@ -423,12 +424,6 @@ export class DriverDom {
         }
     }
 
-    private getDisableHydration(): boolean {
-        const metadataDiv = document.getElementById('v-metadata');
-        const value = metadataDiv?.getAttribute('data-env-disable-hydration');
-        return value === 'true';
-    }
-
     private callback_remove(id: number, event_name: string, callback_id: bigint) {
         const callback = this.callbacks.get(callback_id);
         this.callbacks.delete(callback_id);
@@ -447,7 +442,7 @@ export class DriverDom {
     }
 
     public dom_bulk_update = (commands: Array<CommandType>) => {
-        if (this.nodes.hasInitNodes() && !this.getDisableHydration()) {
+        if (this.nodes.hasInitNodes() && !getDisableHydration()) {
             hydrate(commands, this.nodes, this.appLocation);
         }
 
@@ -474,7 +469,9 @@ export class DriverDom {
             }, 0);
         }
 
-        this.nodes.removeInitNodes();
+        if (getEnableHudration() === false) {
+            this.nodes.removeInitNodes();
+        }
     }
 
     private bulk_update_command(command: CommandType) {
