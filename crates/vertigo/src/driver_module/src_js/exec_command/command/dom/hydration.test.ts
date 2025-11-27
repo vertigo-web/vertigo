@@ -29,6 +29,14 @@ class MockNode {
         const idx = this.parentNode.childNodes.indexOf(this);
         return this.parentNode.childNodes[idx + 1] || null;
     }
+    removeChild(child: MockNode) {
+        const idx = this.childNodes.indexOf(child);
+        if (idx > -1) {
+            this.childNodes.splice(idx, 1);
+            child.parentNode = null;
+        }
+        return child;
+    }
 }
 
 class MockElement extends MockNode {
@@ -42,7 +50,7 @@ class MockElement extends MockNode {
     }
     setAttribute(name: string, value: string) { this.attributes.set(name, value); }
     getAttribute(name: string) { return this.attributes.get(name); }
-    addEventListener(_event: string, _callback: (e: any) => void) {}
+    addEventListener(_event: string, _callback: (e: any) => void) { }
 }
 
 class MockText extends MockNode {
@@ -111,7 +119,7 @@ function clearBody() {
 
 function mockedApiLocation() {
     const mockAppLocation = {
-        set: (_a: string, _b: string, _c: string) => {}
+        set: (_a: string, _b: string, _c: string) => { }
     } as any;
     return mockAppLocation;
 }
@@ -135,6 +143,7 @@ function testExtraNodes() {
 
     // VDOM: A (id 10), B (id 11)
     const commands: CommandType[] = [
+        { CreateNode: { id: 3, name: 'BODY' } },
         { CreateNode: { id: 10, name: 'DIV' } },
         { CreateNode: { id: 11, name: 'DIV' } },
         { InsertBefore: { parent: 3, child: 10, ref_id: null } },
@@ -159,6 +168,7 @@ function testTextMismatch() {
 
     // VDOM: "New Text" (id 20)
     const commands: CommandType[] = [
+        { CreateNode: { id: 3, name: 'BODY' } },
         { CreateText: { id: 20, value: "New Text" } },
         { InsertBefore: { parent: 3, child: 20, ref_id: null } }
     ];
@@ -179,6 +189,7 @@ function testTagMismatch() {
 
     // VDOM: <DIV> (id 30)
     const commands: CommandType[] = [
+        { CreateNode: { id: 3, name: 'BODY' } },
         { CreateNode: { id: 30, name: 'DIV' } },
         { InsertBefore: { parent: 3, child: 30, ref_id: null } }
     ];
@@ -200,6 +211,7 @@ function testAttributeMismatch() {
 
     // VDOM: <DIV> (id 40) - Attributes should be checked by hydration
     const commands: CommandType[] = [
+        { CreateNode: { id: 3, name: 'BODY' } },
         { CreateNode: { id: 40, name: 'DIV' } },
         { SetAttr: { id: 40, name: 'class', value: 'new' } },
         { InsertBefore: { parent: 3, child: 40, ref_id: null } }
