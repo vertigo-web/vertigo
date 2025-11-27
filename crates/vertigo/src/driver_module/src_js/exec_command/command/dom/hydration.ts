@@ -70,10 +70,15 @@ const createVirtualNodes = (commands: Array<CommandType>): Map<number, VirtualNo
             const node = virtualNodes.get(command.SetAttr.id);
             if (node && node.kind === 'element') {
                 node.attributes.set(command.SetAttr.name, command.SetAttr.value);
+            } else {
+                console.error(`Hydration: SetAttr failed - node ${command.SetAttr.id} is not an element or does not exist`, command.SetAttr);
             }
         } else if ('InsertBefore' in command) {
             const parent = virtualNodes.get(command.InsertBefore.parent);
-            if (!parent || parent.kind !== 'element') continue;
+            if (!parent || parent.kind !== 'element') {
+                console.error(`Hydration: InsertBefore failed - parent ${command.InsertBefore.parent} is not an element or does not exist`, command.InsertBefore);
+                continue;
+            }
 
             const childId = command.InsertBefore.child;
             const refId = command.InsertBefore.ref_id;
