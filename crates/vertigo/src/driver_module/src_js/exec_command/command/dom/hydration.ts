@@ -3,56 +3,95 @@ import { hydrate_link } from "./injects";
 import { AppLocation } from "../../location/AppLocation";
 import { MapNodes } from "./map_nodes";
 
-interface VirtualNode {
-    id: number;
-    name?: string;
-    value?: string;
-    attributes?: Map<string, string>;
-    children: Array<number>;
+/**
+ * Virtual Element Node - represents a DOM element
+ */
+interface VirtualElement {
+    readonly kind: 'element';
+    readonly id: number;
+    readonly name: string;
+    readonly attributes: Map<string, string>;
+    readonly children: ReadonlyArray<number>;
 }
+
+/**
+ * Virtual Text Node - represents a text node
+ * Text nodes cannot have children in the DOM
+ */
+interface VirtualText {
+    readonly kind: 'text';
+    readonly id: number;
+    readonly value: string;
+}
+
+/**
+ * Virtual Comment Node - represents a comment node
+ * Comment nodes cannot have children in the DOM
+ */
+interface VirtualComment {
+    readonly kind: 'comment';
+    readonly id: number;
+    readonly value: string;
+}
+
+/**
+ * Algebraic Data Type for Virtual Nodes
+ * A virtual node can be one of: Element, Text, or Comment
+ */
+type VirtualNode = VirtualElement | VirtualText | VirtualComment;
 
 const createVirtualNodes = (commands: Array<CommandType>): Map<number, VirtualNode> => {
     const virtualNodes = new Map<number, VirtualNode>();
-    // Helper to get or create a virtual node
-    const getVNode = (id: number): VirtualNode => {
-        let node = virtualNodes.get(id);
-        if (!node) {
-            node = { id, children: [] };
-            virtualNodes.set(id, node);
-        }
-        return node;
-    };
 
-    // Build Virtual Tree from Commands
+    // First pass: Create nodes
     for (const command of commands) {
         if ('CreateNode' in command) {
-            const node = getVNode(command.CreateNode.id);
-            node.name = command.CreateNode.name.toUpperCase();
+            const element: VirtualElement = {
+                kind: 'element',
+                id: command.CreateNode.id,
+                name: command.CreateNode.name.toUpperCase(),
+                attributes: new Map(),
+                children: []
+            };
+            virtualNodes.set(command.CreateNode.id, element);
         } else if ('CreateText' in command) {
-            const node = getVNode(command.CreateText.id);
-            node.value = command.CreateText.value;
+            const text: VirtualText = {
+                kind: 'text',
+                id: command.CreateText.id,
+                value: command.CreateText.value
+            };
+            virtualNodes.set(command.CreateText.id, text);
+        }
+    }
+
+    // Second pass: Set attributes and build tree structure
+    for (const command of commands) {
+        if ('SetAttr' in command) {
+            const node = virtualNodes.get(command.SetAttr.id);
+            if (node && node.kind === 'element') {
+                node.attributes.set(command.SetAttr.name, command.SetAttr.value);
+            }
         } else if ('InsertBefore' in command) {
-            const parent = getVNode(command.InsertBefore.parent);
+            const parent = virtualNodes.get(command.InsertBefore.parent);
+            if (!parent || parent.kind !== 'element') continue;
+
             const childId = command.InsertBefore.child;
             const refId = command.InsertBefore.ref_id;
 
+            // Need to cast to mutable array for manipulation
+            const children = parent.children as Array<number>;
+
             if (refId === null || refId === undefined) {
-                parent.children.push(childId);
+                children.push(childId);
             } else {
-                const index = parent.children.indexOf(refId);
+                const index = children.indexOf(refId);
                 if (index !== -1) {
-                    parent.children.splice(index, 0, childId);
+                    children.splice(index, 0, childId);
                 } else {
                     console.warn(`Hydration: ref_id ${refId} not found in parent ${command.InsertBefore.parent}`);
-                    parent.children.push(childId);
+                    children.push(childId);
                 }
             }
-        } else if ('SetAttr' in command) {
-            const node = getVNode(command.SetAttr.id);
-            if (!node.attributes) {
-                node.attributes = new Map();
-            }
-            node.attributes.set(command.SetAttr.name, command.SetAttr.value);
         }
     }
 
@@ -67,18 +106,18 @@ const normalizeText = (text: string | null | undefined): string => {
 };
 
 /**
- * Checks if an element node matches a virtual node by tag name
+ * Checks if an element node matches a virtual element node by tag name
  */
-const isElementMatch = (candidate: Node, vNode: VirtualNode): boolean => {
+const isElementMatch = (candidate: Node, vNode: VirtualElement): boolean => {
     return candidate.nodeType === Node.ELEMENT_NODE &&
         (candidate as Element).tagName === vNode.name;
 };
 
 /**
- * Checks if a text node matches a virtual node
+ * Checks if a text node matches a virtual text node
  */
-const isTextNodeMatch = (candidate: Node, vNode: VirtualNode): boolean => {
-    return candidate.nodeType === Node.TEXT_NODE && vNode.value !== undefined;
+const isTextNodeMatch = (candidate: Node, _vNode: VirtualText): boolean => {
+    return candidate.nodeType === Node.TEXT_NODE;
 };
 
 /**
@@ -168,22 +207,27 @@ const tryMatchNode = (
     candidate: Node,
     depth: number
 ): boolean => {
-    if (childVNode.name) {
-        // Element node matching
-        if (isElementMatch(candidate, childVNode)) {
-            if (childVNode.attributes) {
+    switch (childVNode.kind) {
+        case 'element':
+            // Element node matching
+            if (isElementMatch(candidate, childVNode)) {
                 syncAttributes(candidate as Element, childVNode.attributes);
+                return true;
             }
-            return true;
-        }
-    } else if (childVNode.value !== undefined) {
-        // Text node matching
-        if (isTextNodeMatch(candidate, childVNode)) {
-            syncTextContent(candidate, childVNode.value);
-            return true;
-        } else {
+            break;
+
+        case 'text':
+            // Text node matching
+            if (isTextNodeMatch(candidate, childVNode)) {
+                syncTextContent(candidate, childVNode.value);
+                return true;
+            }
             console.error(`Hydration ${depth}: Text node mismatch`, childVNode, candidate);
-        }
+            break;
+
+        case 'comment':
+            // Comment node matching - not yet implemented
+            break;
     }
 
     return false;
@@ -225,7 +269,7 @@ const findAndProcessMatch = (
             claimAndInjectNode(candidate, childVId, nodes, appLocation);
 
             // Recurse for element nodes
-            if (childVNode.name) {
+            if (childVNode.kind === 'element') {
                 hydrateNode(childVId, candidate);
             }
 
@@ -247,7 +291,7 @@ const findAndProcessMatch = (
  * Hydrates children of a virtual node against real DOM children
  */
 const hydrateChildren = (
-    vNode: VirtualNode,
+    vNode: VirtualElement,
     realChildren: Array<Node>,
     virtualNodes: Map<number, VirtualNode>,
     depth: number,
@@ -295,6 +339,9 @@ export const hydrate = (commands: Array<CommandType>, nodes: MapNodes, appLocati
     const hydrateNode = (vNodeId: number, realNode: Node): void => {
         const vNode = virtualNodes.get(vNodeId);
         if (!vNode) return;
+
+        // Only element nodes can have children
+        if (vNode.kind !== 'element') return;
 
         const realChildren = Array.from(realNode.childNodes);
 
