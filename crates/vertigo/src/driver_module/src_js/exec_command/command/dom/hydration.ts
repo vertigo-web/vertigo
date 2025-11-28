@@ -1,5 +1,5 @@
 import { CommandType } from "./dom";
-import { hydrate_link } from "./injects";
+import { injects } from "./injects";
 import { MapNodes } from "./map_nodes";
 
 interface VirtualNode {
@@ -138,9 +138,7 @@ class HydrationEngine {
 
             // Run injects
             if (candidate instanceof Element) {
-                if (candidate.tagName.toLocaleLowerCase() === 'a') {
-                    hydrate_link(candidate, this.appLocation);
-                }
+                injects(candidate, this.appLocation);
             }
         }
     }
