@@ -16,7 +16,7 @@ export class AppLocation {
             History: new HistoryLocation(getWasm),
         };
     }
-    
+
     callback = (target: LocationTarget, mode: 'Add' | 'Remove', callbackId: CallbackId) => {
         switch (mode) {
             case 'Add': {
@@ -37,8 +37,8 @@ export class AppLocation {
                 return;
             }
             case 'Replace': {
-                 this.locations[target].replace(newValue);
-                 return;
+                this.locations[target].replace(newValue);
+                return;
             }
         }
     }

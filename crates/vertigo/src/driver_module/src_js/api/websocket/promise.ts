@@ -32,19 +32,19 @@ const createPromiseValue = <T>(): [PromiseResolveReject<T>, Promise<T>] => {
 };
 
 export class PromiseBoxRace<T> {
-    private promiseResolveReject: PromiseResolveReject<T> | null = null;
+    private inner: PromiseResolveReject<T> | null = null;
     readonly promise: Promise<T>;
 
     constructor() {
         const [promiseResolveReject, promise] = createPromiseValue<T>();
 
-        this.promiseResolveReject = promiseResolveReject;
+        this.inner = promiseResolveReject;
         this.promise = promise;
     }
 
     resolve = (value: T) => {
-        const promiseResolveReject = this.promiseResolveReject;
-        this.promiseResolveReject = null;
+        const promiseResolveReject = this.inner;
+        this.inner = null;
 
         if (promiseResolveReject === null) {
             return;
@@ -54,8 +54,8 @@ export class PromiseBoxRace<T> {
     }
 
     reject = (err?: unknown) => {
-        const promiseResolveReject = this.promiseResolveReject;
-        this.promiseResolveReject = null;
+        const promiseResolveReject = this.inner;
+        this.inner = null;
 
         if (promiseResolveReject === null) {
             return;
@@ -65,6 +65,6 @@ export class PromiseBoxRace<T> {
     }
 
     isFulfilled = (): boolean => {
-        return this.promiseResolveReject === null;
+        return this.inner === null;
     }
 }

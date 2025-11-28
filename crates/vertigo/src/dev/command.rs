@@ -78,7 +78,7 @@ pub enum CommandForBrowser {
         name: String,
     },
 
-    ConsoleLog {
+    Log {
         kind: ConsoleLogLevel,
         message: String,
         arg2: String,

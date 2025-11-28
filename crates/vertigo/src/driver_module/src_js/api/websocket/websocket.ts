@@ -15,7 +15,7 @@ type CommandType = 'Connected' | 'Disconnected' | {
     }
 }
 const wasmCallback = (wasm: ModuleControllerType<ExportType>, callbackId: CallbackId, command: CommandType) => {
-    wasm.wasm_command({
+    wasm.wasmCommand({
         'Websocket': {
             callback: callbackId,
             message: command,

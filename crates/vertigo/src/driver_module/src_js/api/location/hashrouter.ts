@@ -3,7 +3,7 @@ import { ExportType } from "../../wasm_module";
 import { CallbackId } from "../types";
 import { LocationCommonType } from "./types";
 
-export class HistoryLocation implements LocationCommonType {
+export class HashRouter implements LocationCommonType {
     private getWasm: () => ModuleControllerType<ExportType>;
     private callback: Map<CallbackId, () => void>;
 
@@ -11,7 +11,7 @@ export class HistoryLocation implements LocationCommonType {
         this.getWasm = getWasm;
         this.callback = new Map();
 
-        window.addEventListener("popstate", this.trigger);
+        window.addEventListener("hashchange", this.trigger);
     }
 
     private trigger = () => {
@@ -22,7 +22,7 @@ export class HistoryLocation implements LocationCommonType {
 
     public add = (callback_id: CallbackId) => {
         this.callback.set(callback_id, () => {
-            this.getWasm().wasm_command({
+            this.getWasm().wasmCommand({
                 LocationCall: {
                     callback: callback_id,
                     value: this.get(),
@@ -35,25 +35,24 @@ export class HistoryLocation implements LocationCommonType {
         this.callback.delete(callback_id);
     }
 
-    public push = (url: string) => {
-        if (this.get() === url) {
+    public push = (new_hash: string) => {
+        if (this.get() === new_hash) {
             return;
         }
 
-        window.history.pushState(null, '', url);
+        location.hash = new_hash;
         this.trigger();
     }
 
-    public replace = (url: string) => {
-        if (this.get() === url) {
+    public replace = (new_hash: string) => {
+        if (this.get() === new_hash) {
             return;
         }
 
-        window.history.replaceState(null, '', url);
-        this.trigger();
+        history.replaceState(null, '', `#${new_hash}`);
     }
 
     public get(): string {
-        return window.location.pathname + window.location.search + window.location.hash;
+        return decodeURIComponent(location.hash.substr(1));
     }
 }
