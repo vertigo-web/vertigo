@@ -8,23 +8,23 @@ export class MapNodes {
         this.data = new Map();
 
         this.initNodes = [
-            ...this.get_root_head().childNodes,
-            ...this.get_root_body().childNodes,
+            ...this.getRootHead().childNodes,
+            ...this.getRootBody().childNodes,
         ];
 
         this.style = document.createElement('style');
-        this.get_root_head().appendChild(this.style);
+        this.getRootHead().appendChild(this.style);
     }
 
-    private get_root_html(): Element {
+    private getRootHtml(): Element {
         return document.documentElement;
     }
 
-    private get_root_head(): Element {
+    private getRootHead(): Element {
         return document.head;
     }
 
-    private get_root_body(): Element {
+    private getRootBody(): Element {
         return document.body;
     }
 
@@ -36,24 +36,24 @@ export class MapNodes {
         }
     }
 
-    public get_any_option(id: number): NodeType | undefined {
+    public getAnyOption(id: number): NodeType | undefined {
         if (id === 1) {
-            return this.get_root_html();
+            return this.getRootHtml();
         }
 
         if (id === 2) {
-            return this.get_root_head();
+            return this.getRootHead();
         }
 
         if (id === 3) {
-            return this.get_root_body();
+            return this.getRootBody();
         }
 
         return this.data.get(id);
     }
 
-    public get_any(label: string, id: number): NodeType {
-        const item = this.get_any_option(id);
+    public getAny(label: string, id: number): NodeType {
+        const item = this.getAnyOption(id);
 
         if (item === undefined) {
             throw Error(`${label} -> item not found=${id}`);
@@ -63,7 +63,7 @@ export class MapNodes {
     }
 
     public get(label: string, id: number): NodeType {
-        const item = this.get_any_option(id);
+        const item = this.getAnyOption(id);
 
         if (item === undefined) {
             throw new Error(`${label}->get: Item id not found = ${id}`);
@@ -71,7 +71,7 @@ export class MapNodes {
         return item;
     }
 
-    public get_node_element(label: string, id: number): HTMLElement {
+    public getNodeElement(label: string, id: number): HTMLElement {
         const node = this.get(label, id);
         if (node instanceof HTMLElement) {
             return node;
@@ -80,7 +80,7 @@ export class MapNodes {
         }
     }
 
-    public get_node(label: string, id: number): Element {
+    public getNode(label: string, id: number): Element {
         const node = this.get(label, id);
         if (node instanceof Element) {
             return node;
@@ -89,7 +89,7 @@ export class MapNodes {
         }
     }
 
-    public get_text(label: string, id: number): Text {
+    public getText(label: string, id: number): Text {
         const node = this.get(label, id);
         if (node instanceof Text) {
             return node;
@@ -98,7 +98,7 @@ export class MapNodes {
         }
     }
 
-    public get_comment(label: string, id: number): Comment {
+    public getComment(label: string, id: number): Comment {
         const node = this.get(label, id);
         if (node instanceof Comment) {
             return node;
@@ -108,7 +108,7 @@ export class MapNodes {
     }
 
     public delete(label: string, id: number): NodeType {
-        const item = this.get_any_option(id);
+        const item = this.getAnyOption(id);
         this.data.delete(id);
 
         if (item === undefined) {
@@ -118,7 +118,7 @@ export class MapNodes {
         return item;
     }
 
-    public insert_css(selector: string | null, value: string) {
+    public insertCss(selector: string | null, value: string) {
         if (selector !== null) {
             // Add autocss styles
             const content = document.createTextNode(`\n${selector} { ${value} }`);
@@ -143,20 +143,20 @@ export class MapNodes {
         }
     }
 
-    public insert_before(parent: number, child: number, ref_id: number | null | undefined) {
+    public insertBefore(parent: number, child: number, ref_id: number | null | undefined) {
         const parentNode = this.get("insert_before", parent);
-        const childNode = this.get_any("insert_before child", child);
+        const childNode = this.getAny("insert_before child", child);
 
         if (ref_id === null || ref_id === undefined) {
             parentNode.insertBefore(childNode, null);
         } else {
-            const ref_node = this.get_any('insert_before ref', ref_id);
+            const ref_node = this.getAny('insert_before ref', ref_id);
             parentNode.insertBefore(childNode, ref_node);
         }
 
-        if (parentNode === this.get_root_head()) {
+        if (parentNode === this.getRootHead()) {
             //we make sure that the automatically generated styles are always the last element of the head
-            this.get_root_head().appendChild(this.style);
+            this.getRootHead().appendChild(this.style);
         }
     }
 

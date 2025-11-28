@@ -3,7 +3,7 @@ import { ExportType } from "../../wasm_module";
 import { CallbackId } from "../types";
 import { LocationCommonType } from "./types";
 
-export class HashRouter implements LocationCommonType {
+export class HistoryLocation implements LocationCommonType {
     private getWasm: () => ModuleControllerType<ExportType>;
     private callback: Map<CallbackId, () => void>;
 
@@ -11,7 +11,7 @@ export class HashRouter implements LocationCommonType {
         this.getWasm = getWasm;
         this.callback = new Map();
 
-        window.addEventListener("hashchange", this.trigger);
+        window.addEventListener("popstate", this.trigger);
     }
 
     private trigger = () => {
@@ -22,7 +22,7 @@ export class HashRouter implements LocationCommonType {
 
     public add = (callback_id: CallbackId) => {
         this.callback.set(callback_id, () => {
-            this.getWasm().wasm_command({
+            this.getWasm().wasmCommand({
                 LocationCall: {
                     callback: callback_id,
                     value: this.get(),
@@ -35,24 +35,25 @@ export class HashRouter implements LocationCommonType {
         this.callback.delete(callback_id);
     }
 
-    public push = (new_hash: string) => {
-        if (this.get() === new_hash) {
+    public push = (url: string) => {
+        if (this.get() === url) {
             return;
         }
 
-        location.hash = new_hash;
+        window.history.pushState(null, '', url);
         this.trigger();
     }
 
-    public replace = (new_hash: string) => {
-        if (this.get() === new_hash) {
+    public replace = (url: string) => {
+        if (this.get() === url) {
             return;
         }
 
-        history.replaceState(null, '', `#${new_hash}`);
+        window.history.replaceState(null, '', url);
+        this.trigger();
     }
 
     public get(): string {
-        return decodeURIComponent(location.hash.substr(1));
+        return window.location.pathname + window.location.search + window.location.hash;
     }
 }

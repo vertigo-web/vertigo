@@ -3,7 +3,7 @@ import typescript from '@rollup/plugin-typescript';
 
 export default [
     {
-        input: 'crates/vertigo/src/driver_module/src_js/exec_command/command/dom/hydration.test.ts',
+        input: 'crates/vertigo/src/driver_module/src_js/api/command/dom/hydration.test.ts',
         output: [
             {
                 sourcemap: true,

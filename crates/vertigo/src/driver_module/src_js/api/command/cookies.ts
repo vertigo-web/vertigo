@@ -28,7 +28,7 @@ export class Cookies {
         return '';
     }
 
-    public get_json = (cname: string): JsJsonType => {
+    public getJson = (cname: string): JsJsonType => {
         let cvalue_str = this.get(cname);
 
         if (cvalue_str.length !== 0) {
@@ -51,12 +51,12 @@ export class Cookies {
 
         const d = new Date();
         d.setTime(d.getTime() + (expires_in * 1000));
-        let expires = "expires="+ d.toUTCString();
+        let expires = "expires=" + d.toUTCString();
 
         document.cookie = `${cname}=${cvalueEncoded};${expires};path=/;samesite=strict"`;
     }
 
-    public set_json = (
+    public setJson = (
         cname: string,
         cvalue: JsJsonType,
         expires_in: number,

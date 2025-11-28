@@ -85,7 +85,7 @@ pub mod safe_wrappers {
                     | CommandForBrowser::LocationSet { .. }
                     | CommandForBrowser::CookieSet { .. }
                     | CommandForBrowser::CookieJsonSet { .. }
-                    | CommandForBrowser::ConsoleLog { .. }
+                    | CommandForBrowser::Log { .. }
                     | CommandForBrowser::HistoryBack
                     | CommandForBrowser::JsApiCall { .. }
                     | CommandForBrowser::DomBulkUpdate { .. } => JsJson::Null,

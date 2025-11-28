@@ -1,11 +1,11 @@
 import { AppLocation } from "../../location/AppLocation";
+import { CallbackManager } from "./callbackManager";
 import { ExportType } from "../../../wasm_module";
 import { getDisableHydration } from "./features";
 import { hydrate } from "./hydration";
 import { injects } from "./injects";
 import { MapNodes } from "./map_nodes";
 import { ModuleControllerType } from "../../../wasm_init";
-import { CallbackManager } from "./callbackManager";
 
 const createElement = (name: string): Element => {
     if (name == "path" || name == "svg") {
@@ -104,7 +104,38 @@ export class DriverDom {
         });
     }
 
-    private create_node(id: number, name: string) {
+    public update = (commands: Array<CommandType>) => {
+        if (this.nodes.hasInitNodes() && !getDisableHydration()) {
+            hydrate(commands, this.nodes, this.appLocation);
+        }
+
+        const setFocus: Set<number> = new Set();
+
+        for (const command of commands) {
+            try {
+                this.runCommand(command);
+            } catch (error) {
+                console.error('bulk_update - item', error, command);
+            }
+
+            if ('SetAttr' in command && command.SetAttr.name.toLocaleLowerCase() === 'autofocus') {
+                setFocus.add(command.SetAttr.id);
+            }
+        }
+
+        if (setFocus.size > 0) {
+            setTimeout(() => {
+                for (const id of setFocus) {
+                    const node = this.nodes.getNodeElement(`set focus ${id}`, id);
+                    node.focus();
+                }
+            }, 0);
+        }
+
+        this.nodes.removeInitNodes();
+    }
+
+    private createNode(id: number, name: string) {
         if (this.nodes.has(id)) {
             return;
         }
@@ -115,8 +146,8 @@ export class DriverDom {
         injects(node, this.appLocation);
     }
 
-    private set_attribute(id: number, name: string, value: string) {
-        const node = this.nodes.get_node("set_attribute", id);
+    private setAttr(id: number, name: string, value: string) {
+        const node = this.nodes.getNode("set_attribute", id);
         node.setAttribute(name, value);
 
         if (name == "value") {
@@ -133,8 +164,8 @@ export class DriverDom {
         }
     }
 
-    private remove_attribute(id: number, name: string) {
-        const node = this.nodes.get_node("remove_attribute", id);
+    private removeAttr(id: number, name: string) {
+        const node = this.nodes.getNode("remove_attribute", id);
         node.removeAttribute(name);
 
         if (name == "value") {
@@ -151,12 +182,12 @@ export class DriverDom {
         }
     }
 
-    private remove_node(id: number) {
+    private removeNode(id: number) {
         const node = this.nodes.delete("remove_node", id);
         node.remove();
     }
 
-    private create_text(id: number, value: string) {
+    private createText(id: number, value: string) {
         if (this.nodes.has(id)) {
             return;
         }
@@ -165,90 +196,59 @@ export class DriverDom {
         this.nodes.set(id, text);
     }
 
-    private remove_text(id: number) {
+    private removeText(id: number) {
         const text = this.nodes.delete("remove_node", id);
         text.remove();
     }
 
-    private update_text(id: number, value: string) {
-        const text = this.nodes.get_text("set_attribute", id);
+    private updateText(id: number, value: string) {
+        const text = this.nodes.getText("set_attribute", id);
         text.textContent = value;
     }
 
-    public dom_bulk_update = (commands: Array<CommandType>) => {
-        if (this.nodes.hasInitNodes() && !getDisableHydration()) {
-            hydrate(commands, this.nodes, this.appLocation);
-        }
-
-        const setFocus: Set<number> = new Set();
-
-        for (const command of commands) {
-            try {
-                this.bulk_update_command(command);
-            } catch (error) {
-                console.error('bulk_update - item', error, command);
-            }
-
-            if ('SetAttr' in command && command.SetAttr.name.toLocaleLowerCase() === 'autofocus') {
-                setFocus.add(command.SetAttr.id);
-            }
-        }
-
-        if (setFocus.size > 0) {
-            setTimeout(() => {
-                for (const id of setFocus) {
-                    const node = this.nodes.get_node_element(`set focus ${id}`, id);
-                    node.focus();
-                }
-            }, 0);
-        }
-
-        this.nodes.removeInitNodes();
-    }
-
-    private bulk_update_command(command: CommandType) {
+    private runCommand(command: CommandType) {
         if ('RemoveNode' in command) {
-            this.remove_node(command.RemoveNode.id);
+            this.removeNode(command.RemoveNode.id);
             return;
         }
 
         if ('InsertBefore' in command) {
-            this.nodes.insert_before(command.InsertBefore.parent, command.InsertBefore.child, command.InsertBefore.ref_id === null ? null : command.InsertBefore.ref_id);
+            this.nodes.insertBefore(command.InsertBefore.parent, command.InsertBefore.child, command.InsertBefore.ref_id === null ? null : command.InsertBefore.ref_id);
             return;
         }
 
         if ('CreateNode' in command) {
-            this.create_node(command.CreateNode.id, command.CreateNode.name);
+            this.createNode(command.CreateNode.id, command.CreateNode.name);
             return;
         }
 
         if ('CreateText' in command) {
-            this.create_text(command.CreateText.id, command.CreateText.value);
+            this.createText(command.CreateText.id, command.CreateText.value);
             return;
         }
 
         if ('UpdateText' in command) {
-            this.update_text(command.UpdateText.id, command.UpdateText.value);
+            this.updateText(command.UpdateText.id, command.UpdateText.value);
             return;
         }
 
         if ('SetAttr' in command) {
-            this.set_attribute(command.SetAttr.id, command.SetAttr.name, command.SetAttr.value);
+            this.setAttr(command.SetAttr.id, command.SetAttr.name, command.SetAttr.value);
             return;
         }
 
         if ('RemoveAttr' in command) {
-            this.remove_attribute(command.RemoveAttr.id, command.RemoveAttr.name);
+            this.removeAttr(command.RemoveAttr.id, command.RemoveAttr.name);
             return;
         }
 
         if ('RemoveText' in command) {
-            this.remove_text(command.RemoveText.id);
+            this.removeText(command.RemoveText.id);
             return;
         }
 
         if ('InsertCss' in command) {
-            this.nodes.insert_css(command.InsertCss.selector, command.InsertCss.value);
+            this.nodes.insertCss(command.InsertCss.selector, command.InsertCss.value);
             return;
         }
 

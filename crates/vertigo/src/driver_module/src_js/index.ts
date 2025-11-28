@@ -22,8 +22,8 @@ const runModule = async (wasm: string) => {
     console.info(`Wasm module: "${wasm}" -> start`);
     const wasmModule = await WasmModule.create(wasm);
     console.info(`Wasm module: "${wasm}" -> initialized`);
-    wasmModule.vertigo_entry_function(VERTIGO_COMPAT_VERSION_MAJOR, VERTIGO_COMPAT_VERSION_MINOR);
-    console.info(`Wasm module: "${wasm}" -> launched vertigo_entry_function with version ${VERTIGO_COMPAT_VERSION_MAJOR}.${VERTIGO_COMPAT_VERSION_MINOR}`);
+    wasmModule.vertigoEntryFunction(VERTIGO_COMPAT_VERSION_MAJOR, VERTIGO_COMPAT_VERSION_MINOR);
+    console.info(`Wasm module: "${wasm}" -> launched vertigoEntryFunction with version ${VERTIGO_COMPAT_VERSION_MAJOR}.${VERTIGO_COMPAT_VERSION_MINOR}`);
 };
 
 const findAndRunModule = async () => {
