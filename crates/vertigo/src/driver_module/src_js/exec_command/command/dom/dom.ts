@@ -1,15 +1,11 @@
+import { AppLocation } from "../../location/AppLocation";
 import { ExportType } from "../../../wasm_module";
+import { getDisableHydration } from "./features";
+import { hydrate } from "./hydration";
+import { injects } from "./injects";
 import { MapNodes } from "./map_nodes";
 import { ModuleControllerType } from "../../../wasm_init";
-import { JsJsonType } from "../../../jsjson";
-import { AppLocation } from "../../location/AppLocation";
-import { hydrate } from "./hydration";
-import { hydrate_link } from "./injects";
-
-interface FileItemType {
-    name: string,
-    data: Uint8Array,
-}
+import { CallbackManager } from "./callbackManager";
 
 const createElement = (name: string): Element => {
     if (name == "path" || name == "svg") {
@@ -94,37 +90,17 @@ const assertNeverCommand = (data: never): never => {
 
 export class DriverDom {
     private appLocation: AppLocation;
-    private readonly getWasm: () => ModuleControllerType<ExportType>;
     public readonly nodes: MapNodes;
-    private callbacks: Map<bigint, (data: Event) => void>;
+    private readonly callbacks: CallbackManager;
 
     public constructor(appLocation: AppLocation, getWasm: () => ModuleControllerType<ExportType>) {
         this.appLocation = appLocation;
-        this.getWasm = getWasm;
         this.nodes = new MapNodes();
-        this.callbacks = new Map();
+        this.callbacks = new CallbackManager(getWasm);
 
         document.addEventListener('dragover', (ev): void => {
             // console.log('File(s) in drop zone');
             ev.preventDefault();
-        });
-    }
-
-    public debugNodes(...ids: Array<number>) {
-        const result: Record<number, unknown> = {};
-        for (const id of ids) {
-            const value = this.nodes.get_any_option(id);
-            result[id] = value;
-        }
-        console.info('debug nodes', result);
-    }
-
-    private wasm_callback(callback_id: bigint, value: JsJsonType): JsJsonType {
-        return this.getWasm().wasm_command({
-            CallbackCall: {
-                callback_id: Number(callback_id),
-                value: value
-            }
         });
     }
 
@@ -136,9 +112,7 @@ export class DriverDom {
         const node = createElement(name);
         this.nodes.set(id, node);
 
-        if (name.toLowerCase().trim() === 'a') {
-            hydrate_link(node, this.appLocation);
-        }
+        injects(node, this.appLocation);
     }
 
     private set_attribute(id: number, name: string, value: string) {
@@ -201,253 +175,8 @@ export class DriverDom {
         text.textContent = value;
     }
 
-    private callback_click(event: Event, callback_id: bigint) {
-        event.preventDefault();
-        let click_event = this.wasm_callback(callback_id, undefined);
-
-        // Check if click_event is an object (JsJson Object type)
-        if (click_event !== null && typeof click_event === 'object' && !Array.isArray(click_event)) {
-            if ('stop_propagation' in click_event && click_event['stop_propagation'] === true) {
-                event.stopPropagation();
-            }
-            if ('prevent_default' in click_event && click_event['prevent_default'] === true) {
-                event.preventDefault();
-            }
-        }
-    }
-
-    private callback_submit(event: Event, callback_id: bigint) {
-        event.preventDefault();
-        this.wasm_callback(callback_id, undefined);
-    }
-
-    private callback_input(event: Event, callback_id: bigint) {
-        const target = event.target;
-
-        if (target instanceof HTMLInputElement || target instanceof HTMLTextAreaElement) {
-            this.wasm_callback(callback_id, target.value);
-            return;
-        }
-
-        console.warn('event input ignore', target);
-    }
-
-    private callback_change(event: Event, callback_id: bigint) {
-        const target = event.target;
-
-        if (target instanceof HTMLInputElement || target instanceof HTMLTextAreaElement || target instanceof HTMLSelectElement) {
-            this.wasm_callback(callback_id, target.value);
-            return;
-        }
-
-        console.warn('event input ignore', target);
-    }
-
-    private callback_blur(_event: Event, callback_id: bigint) {
-        this.wasm_callback(callback_id, undefined);
-    }
-
-    private callback_mousedown(event: Event, callback_id: bigint) {
-        if (this.wasm_callback(callback_id, undefined)) {
-            event.preventDefault()
-        }
-    }
-
-    private callback_mouseup(event: Event, callback_id: bigint) {
-        if (this.wasm_callback(callback_id, undefined)) {
-            event.preventDefault()
-        }
-    }
-
-    private callback_mouseenter(_event: Event, callback_id: bigint) {
-        this.wasm_callback(callback_id, undefined);
-    }
-
-    private callback_mouseleave(_event: Event, callback_id: bigint) {
-        this.wasm_callback(callback_id, undefined);
-    }
-
-    private callback_drop(event: Event, callback_id: bigint) {
-        event.preventDefault();
-
-        if (event instanceof DragEvent) {
-            if (event.dataTransfer === null) {
-                console.error('dom -> drop -> dataTransfer null');
-            } else {
-                const files: Array<Promise<FileItemType>> = [];
-
-                for (let i = 0; i < event.dataTransfer.items.length; i++) {
-                    const item = event.dataTransfer.items[i];
-
-                    if (item === undefined) {
-                        console.error('dom -> drop -> item - undefined');
-                    } else {
-                        const file = item.getAsFile();
-
-                        if (file === null) {
-                            console.error(`dom -> drop -> index:${i} -> It's not a file`);
-                        } else {
-                            files.push(file
-                                .arrayBuffer()
-                                .then((data): FileItemType => ({
-                                    name: file.name,
-                                    data: new Uint8Array(data),
-                                }))
-                            );
-                        }
-                    }
-                }
-
-                if (files.length) {
-                    Promise.all(files).then((files) => {
-                        const params = [];
-
-                        for (const file of files) {
-                            // Convert Uint8Array to array of numbers for JsJson
-                            const dataArray = Array.from(file.data);
-                            params.push([
-                                file.name,
-                                dataArray,
-                            ]);
-                        }
-
-                        this.wasm_callback(callback_id, [params]);
-                    }).catch((error) => {
-                        console.error('callback_drop -> promise.all -> ', error);
-                    });
-                } else {
-                    console.error('No files to send');
-                }
-            }
-        } else {
-            console.warn('event drop ignore', event);
-        }
-    }
-
-    private callback_keydown(event: Event, callback_id: bigint) {
-        if (event instanceof KeyboardEvent) {
-            const result = this.wasm_callback(callback_id, [
-                event.key,
-                event.code,
-                event.altKey,
-                event.ctrlKey,
-                event.shiftKey,
-                event.metaKey
-            ]);
-
-            if (result === true) {
-                event.preventDefault();
-                event.stopPropagation();
-            }
-
-            return;
-        }
-
-        console.warn('keydown ignore', event);
-    }
-
-    private callback_load(event: Event, callback_id: bigint) {
-        event.preventDefault();
-        this.wasm_callback(callback_id, undefined);
-    }
-
-    private callback_add(id: number, event_name: string, callback_id: bigint) {
-        const callback = (event: Event) => {
-            if (event_name === 'click') {
-                return this.callback_click(event, callback_id);
-            }
-
-            if (event_name === 'submit') {
-                return this.callback_submit(event, callback_id);
-            }
-
-            if (event_name === 'input') {
-                return this.callback_input(event, callback_id);
-            }
-
-            if (event_name === 'change') {
-                return this.callback_change(event, callback_id);
-            }
-
-            if (event_name === 'blur') {
-                return this.callback_blur(event, callback_id);
-            }
-
-            if (event_name === 'mousedown') {
-                return this.callback_mousedown(event, callback_id);
-            }
-
-            if (event_name === 'mouseup') {
-                return this.callback_mouseup(event, callback_id);
-            }
-
-            if (event_name === 'mouseenter') {
-                return this.callback_mouseenter(event, callback_id);
-            }
-
-            if (event_name === 'mouseleave') {
-                return this.callback_mouseleave(event, callback_id);
-            }
-
-            if (event_name === 'keydown') {
-                return this.callback_keydown(event, callback_id);
-            }
-
-            if (event_name === 'hook_keydown') {
-                return this.callback_keydown(event, callback_id);
-            }
-
-            if (event_name === 'drop') {
-                return this.callback_drop(event, callback_id);
-            }
-
-            if (event_name === 'load') {
-                return this.callback_load(event, callback_id);
-            }
-
-            console.error(`No support for the event ${event_name}`);
-        };
-
-        if (this.callbacks.has(callback_id)) {
-            console.error(`There was already a callback added with the callback_id=${callback_id}`);
-            return;
-        }
-
-        this.callbacks.set(callback_id, callback);
-
-        if (event_name === 'hook_keydown') {
-            document.addEventListener('keydown', callback, false);
-        } else {
-            const node = this.nodes.get('callback_add', id);
-            node.addEventListener(event_name, callback, false);
-        }
-    }
-
-    private getDisableHydration(): boolean {
-        const metadataDiv = document.getElementById('v-metadata');
-        const value = metadataDiv?.getAttribute('data-env-disable-hydration');
-        return value === 'true';
-    }
-
-    private callback_remove(id: number, event_name: string, callback_id: bigint) {
-        const callback = this.callbacks.get(callback_id);
-        this.callbacks.delete(callback_id);
-
-        if (callback === undefined) {
-            console.error(`The callback is missing with the id=${callback_id}`);
-            return;
-        }
-
-        if (event_name === 'hook_keydown') {
-            document.removeEventListener('keydown', callback);
-        } else {
-            const node = this.nodes.get('callback_remove', id);
-            node.removeEventListener(event_name, callback);
-        }
-    }
-
     public dom_bulk_update = (commands: Array<CommandType>) => {
-        if (this.nodes.hasInitNodes() && !this.getDisableHydration()) {
+        if (this.nodes.hasInitNodes() && !getDisableHydration()) {
             hydrate(commands, this.nodes, this.appLocation);
         }
 
@@ -536,12 +265,12 @@ export class DriverDom {
         }
 
         if ('CallbackAdd' in command) {
-            this.callback_add(command.CallbackAdd.id, command.CallbackAdd.event_name, BigInt(command.CallbackAdd.callback_id));
+            this.callbacks.add(this.nodes, command.CallbackAdd.id, command.CallbackAdd.event_name, BigInt(command.CallbackAdd.callback_id));
             return;
         }
 
         if ('CallbackRemove' in command) {
-            this.callback_remove(command.CallbackRemove.id, command.CallbackRemove.event_name, BigInt(command.CallbackRemove.callback_id));
+            this.callbacks.remove(this.nodes, command.CallbackRemove.id, command.CallbackRemove.event_name, BigInt(command.CallbackRemove.callback_id));
             return;
         }
 
