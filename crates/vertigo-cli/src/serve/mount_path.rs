@@ -14,8 +14,10 @@ pub struct MountPathConfig {
     run_js: String,
     // path to wasm-file
     wasm_path: String,
-    // wether to preload was script using <link rel="preload">
+    // whether to preload wasm script using <link rel="preload">
     pub wasm_preload: bool,
+    // whether to disable hydration
+    pub disable_hydration: bool,
 }
 
 impl MountPathConfig {
@@ -23,6 +25,7 @@ impl MountPathConfig {
         public_mount_point: String,
         dest_dir: String,
         wasm_preload: bool,
+        disable_hydration: bool,
     ) -> Result<MountPathConfig, ErrorCode> {
         let index_model = read_index(&dest_dir)?;
 
@@ -32,6 +35,7 @@ impl MountPathConfig {
             run_js: index_model.run_js,
             wasm_path: index_model.wasm,
             wasm_preload,
+            disable_hydration,
         })
     }
 

@@ -19,18 +19,16 @@ script = [
     "cargo clippy -p vertigo-demo -p vertigo-example-counter -p vertigo-example-router -p vertigo-example-trafficlights --all-features --tests --target wasm32-unknown-unknown -- -Dwarnings",
     "cargo test --all-features",
     "tests/check_versions.sh",
-    "tests/check_js_is_fresh.sh",
+    "tests/js_tests.sh",
     "tests/check_vertigo_new.sh",
 ]
 
 [tasks.all-tests]
-dependencies = [ "unit-tests", "automated-tests" ]
+dependencies = ["unit-tests", "automated-tests"]
 
 [tasks.clean-build]
-dependencies = [ "clean" ]
-script = [
-    "rm -rf build"
-]
+dependencies = ["clean"]
+script = ["rm -rf build"]
 
 # Run clippy for wasm32 target
 
@@ -52,9 +50,7 @@ args = [
 # Demo tasks - debug mode
 
 [tasks.demo-debug-api]
-script = [
-    "cargo run --bin vertigo-demo-server"
-]
+script = ["cargo run --bin vertigo-demo-server"]
 
 [tasks.demo-debug-watch]
 script = [
@@ -67,9 +63,7 @@ run_task = { name = ["demo-debug-api", "demo-debug-watch"], parallel = true }
 # Demo tasks - release mode
 
 [tasks.demo-serve-api]
-script = [
-    "cargo run --bin vertigo-demo-server --release"
-]
+script = ["cargo run --bin vertigo-demo-server --release"]
 
 [tasks.demo-serve]
 script = [
@@ -98,11 +92,11 @@ script = [
 
 # JavaScript dev build
 
+[tasks.test-js]
+script = ["npm install", "npm run test:hydration"]
+
 [tasks.build-js]
-script = [
-    "npm install",
-    "npx rollup -c",
-]
+script = ["npm install", "npx rollup -c"]
 
 [tasks.lint]
 script = "cargo run --bin lint-project"
