@@ -1,7 +1,7 @@
 import { wasmInit, ModuleControllerType } from './wasm_init';
 import { BufferCursor } from './buffer_cursor';
 import { jsJsonDecodeItem, jsJsonGetSize, saveJsJsonToBufferItem } from './jsjson';
-import { ExecCommand } from './exec_command/exec_command';
+import { Api } from './api/api';
 
 //Number -> u32 or i32
 //BigInt -> u64 or i64
@@ -28,7 +28,7 @@ export class WasmModule {
         this.wasm = wasm;
     }
 
-    public vertigo_entry_function(major: number, minor: number) {
+    public vertigoEntryFunction(major: number, minor: number) {
         this.wasm.exports.vertigo_entry_function(major, minor);
     }
 
@@ -43,10 +43,10 @@ export class WasmModule {
             return wasmModule;
         };
 
-        const execCommand = new ExecCommand(getWasm);
+        const vertigo_api = new Api(getWasm);
 
         //@ts-expect-error
-        window.$vertigoApi = execCommand;
+        window.$vertigoApi = vertigo_api;
 
         wasmModule = await wasmInit<ImportType, ExportType>(wasmBinPath, {
             mod: {
@@ -75,7 +75,7 @@ export class WasmModule {
                     getWasm().exports.vertigo_export_free_block(long_ptr);
 
                     // Execute command (now using JsApiCall instead of array-of-arrays)
-                    const response = execCommand.exec(args);
+                    const response = vertigo_api.exec(args);
 
                     // Save JsJson response
                     const responseSize = jsJsonGetSize(response);

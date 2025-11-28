@@ -22,8 +22,6 @@ impl FetchCache {
     pub fn init_cache(&self) {
         let cache = api_browser_command().fetch_cache_get();
         self.cache.set(Rc::new(cache));
-
-        log::info!("FetchCache ready");
     }
 
     pub fn get_response(&self, request: &SsrFetchRequest) -> Option<SsrFetchResponse> {

@@ -193,7 +193,7 @@ impl ServerState {
 
                         browser_response::GetEnv { value: env_value }.to_json()
                     }
-                    CommandForBrowser::ConsoleLog {
+                    CommandForBrowser::Log {
                         kind,
                         message,
                         arg2: _,

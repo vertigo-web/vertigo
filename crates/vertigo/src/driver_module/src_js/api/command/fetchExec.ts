@@ -19,9 +19,9 @@ type FetchResponseType = {
         status: number,
         response: {
             Text: string
-         } | {
+        } | {
             Json: JsJsonType,
-         }
+        }
     }
 } | {
     Error: {
@@ -54,7 +54,7 @@ const processResponse = async (response: Response): Promise<FetchResponseType> =
     try {
         if (contentType?.startsWith('text/plain;')) {
             return {
-                Ok:  {
+                Ok: {
                     status,
                     response: {
                         Text: await response.text(),
@@ -88,8 +88,6 @@ export const fetchExec = async (
 ): Promise<void> => {
     const wasm = getWasm();
 
-    console.info('fetch request', request);
-
     try {
         const response = await fetch(request.url, {
             method: request.method,
@@ -99,7 +97,7 @@ export const fetchExec = async (
 
         const response2 = await processResponse(response);
 
-        wasm.wasm_command({
+        wasm.wasmCommand({
             'FetchExecResponse': {
                 response: response2,
                 callback: Number(callback_id),
@@ -116,7 +114,7 @@ export const fetchExec = async (
             }
         };
 
-        wasm.wasm_command({
+        wasm.wasmCommand({
             'FetchExecResponse': {
                 response: responseToWasm,
                 callback: Number(callback_id),

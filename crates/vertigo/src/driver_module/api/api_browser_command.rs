@@ -219,7 +219,7 @@ impl CommandForBrowserApi {
         arg3: impl Into<String>,
         arg4: impl Into<String>,
     ) {
-        exec_command(CommandForBrowser::ConsoleLog {
+        exec_command(CommandForBrowser::Log {
             kind,
             message: message.into(),
             arg2: arg2.into(),

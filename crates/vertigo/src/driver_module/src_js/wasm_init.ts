@@ -10,7 +10,7 @@ export interface BaseExportType {
 export interface ModuleControllerType<ExportType extends BaseExportType> {
     exports: ExportType,
     getUint8Memory: () => Uint8Array,
-    wasm_command: (params: JsJsonType) => JsJsonType,
+    wasmCommand: (params: JsJsonType) => JsJsonType,
 }
 
 const fetchModule = async (wasmBinPath: string, imports: Record<string, WebAssembly.ModuleImports>): Promise<WebAssembly.WebAssemblyInstantiatedSource> => {
@@ -54,7 +54,7 @@ export const wasmInit = async <ImportType extends Record<string, Function>, Expo
     //@ts-expect-error
     const exports: ExportType = module_instance.instance.exports;
 
-    const wasm_command = (value: JsJsonType): JsJsonType => {
+    const wasmCommand = (value: JsJsonType): JsJsonType => {
         // Serialize JsJson
         const size = jsJsonGetSize(value);
         const long_ptr = exports.vertigo_export_alloc_block(size);
@@ -78,6 +78,6 @@ export const wasmInit = async <ImportType extends Record<string, Function>, Expo
     return {
         exports,
         getUint8Memory,
-        wasm_command,
+        wasmCommand: wasmCommand,
     };
 };

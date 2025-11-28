@@ -20,8 +20,9 @@ export const hydrate = (commands: Array<CommandType>, nodes: MapNodes, appLocati
 class HydrationEngine {
     private nodes: MapNodes;
     private appLocation: AppLocation;
-    private depth: number = -1;
     private virtualNodes: Map<number, VirtualNode>;
+    private depth: number = -1;
+    private claims: number = 0;
 
     constructor(commands: Array<CommandType>, nodes: MapNodes, appLocation: AppLocation) {
         this.nodes = nodes;
@@ -42,7 +43,11 @@ class HydrationEngine {
             this.hydrateNode(2, document.head);
         }
 
-        console.log("Hydration complete");
+        console.log(
+            "Hydration complete,",
+            (this.claims * 100 / this.virtualNodes.size).toFixed(2),
+            " % vnodes matched.",
+        );
     };
 
     // Traverse and Match
@@ -83,6 +88,7 @@ class HydrationEngine {
                 if (isMatch) {
                     this.removeSkippedNodes(realChildren, realIndex, i);
                     this.claimNode(candidate, childVId);
+                    this.claims++;
 
                     // Recurse if element
                     if (childVNode.name) {

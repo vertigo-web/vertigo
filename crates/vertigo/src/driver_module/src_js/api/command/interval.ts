@@ -22,7 +22,7 @@ export class Interval {
         switch (kind) {
             case 'Interval': {
                 const timerId = setInterval(() => {
-                    this.getWasm().wasm_command({
+                    this.getWasm().wasmCommand({
                         'TimerCall': {
                             callback,
                         },
@@ -37,7 +37,7 @@ export class Interval {
             }
             case 'Timeout': {
                 const timerId = setTimeout(() => {
-                    this.getWasm().wasm_command({
+                    this.getWasm().wasmCommand({
                         'TimerCall': {
                             callback,
                         },

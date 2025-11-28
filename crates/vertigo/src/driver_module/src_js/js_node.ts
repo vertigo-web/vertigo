@@ -1,5 +1,5 @@
 import { JsJsonType } from "./jsjson";
-import { MapNodes } from "./exec_command/command/dom/map_nodes";
+import { MapNodes } from "./api/command/dom/map_nodes";
 
 export class JsNode {
     private nodes: MapNodes;
@@ -108,7 +108,7 @@ export class JsNode {
         if (typeof firstName === 'number' && rest.length === 0) {
             const domId = firstName;
 
-            const node = this.nodes.get_any_option(domId);
+            const node = this.nodes.getAnyOption(domId);
 
             if (node !== undefined) {
                 return new JsNode(this.nodes, node);

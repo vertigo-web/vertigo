@@ -42,7 +42,7 @@ class MockElement extends MockNode {
     }
     setAttribute(name: string, value: string) { this.attributes.set(name, value); }
     getAttribute(name: string) { return this.attributes.get(name); }
-    addEventListener(_event: string, _callback: (e: any) => void) {}
+    addEventListener(_event: string, _callback: (e: any) => void) { }
 }
 
 class MockText extends MockNode {
@@ -111,7 +111,7 @@ function clearBody() {
 
 function mockedApiLocation() {
     const mockAppLocation = {
-        set: (_a: string, _b: string, _c: string) => {}
+        set: (_a: string, _b: string, _c: string) => { }
     } as any;
     return mockAppLocation;
 }
@@ -144,8 +144,8 @@ function testExtraNodes() {
     const mapNodes = new MapNodes();
     hydrate(commands, mapNodes, mockedApiLocation());
 
-    assert(mapNodes.get_any_option(10) as any === nodeA, "Node A claimed");
-    assert(mapNodes.get_any_option(11) as any === nodeB, "Node B claimed");
+    assert(mapNodes.getAnyOption(10) as any === nodeA, "Node A claimed");
+    assert(mapNodes.getAnyOption(11) as any === nodeB, "Node B claimed");
     assert(documentMock.body.childNodes.length === 2, "Extra node removed");
     assert(documentMock.body.childNodes[0] === nodeA, "A is first");
     assert(documentMock.body.childNodes[1] === nodeB, "B is second");
@@ -170,7 +170,7 @@ function testTextMismatch() {
 
     hydrate(commands, mapNodes, mockedApiLocation());
 
-    assert(mapNodes.get_any_option(20) as any === textNode, "Text node claimed");
+    assert(mapNodes.getAnyOption(20) as any === textNode, "Text node claimed");
     assert(textNode.textContent === "New Text", "Text content updated");
 }
 
@@ -193,7 +193,7 @@ function testTagMismatch() {
 
     hydrate(commands, mapNodes, mockedApiLocation());
 
-    assert(mapNodes.get_any_option(30) === undefined, "Node NOT claimed (mismatched tag)");
+    assert(mapNodes.getAnyOption(30) === undefined, "Node NOT claimed (mismatched tag)");
     assert(documentMock.body.childNodes.length === 0, "Mismatched node removed");
 }
 
@@ -218,7 +218,7 @@ function testAttributeMismatch() {
 
     hydrate(commands, mapNodes, mockedApiLocation());
 
-    assert(mapNodes.get_any_option(40) as any === divNode, "Node claimed despite attribute mismatch");
+    assert(mapNodes.getAnyOption(40) as any === divNode, "Node claimed despite attribute mismatch");
     assert(divNode.getAttribute('class') === 'new', "Attributes updated");
 }
 

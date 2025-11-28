@@ -109,7 +109,7 @@ type ExecType
         }
     }
     | {
-        ConsoleLog: {
+        Log: {
             arg2: string, //"color: white; padding: 0 3px; background: green;",
             arg3: string, //"font-weight: bold; color: inherit",
             arg4: string, //"background: inherit; color: inherit",
@@ -134,7 +134,7 @@ type ExecType
         }
     };
 
-export class ExecCommand {
+export class Api {
     public readonly dom: DriverDom;
     private readonly websocket: DriverWebsocket;
     private readonly interval: Interval;
@@ -245,12 +245,12 @@ export class ExecCommand {
 
         if ('CookieJsonGet' in safeArg) {
             return {
-                value: this.cookie.get_json(safeArg.CookieJsonGet.name)
+                value: this.cookie.getJson(safeArg.CookieJsonGet.name)
             };
         }
 
         if ('CookieJsonSet' in safeArg) {
-            this.cookie.set_json(safeArg.CookieJsonSet.name, safeArg.CookieJsonSet.value, safeArg.CookieJsonSet.expires_in);
+            this.cookie.setJson(safeArg.CookieJsonSet.name, safeArg.CookieJsonSet.value, safeArg.CookieJsonSet.expires_in);
             return null;
         }
 
@@ -262,26 +262,26 @@ export class ExecCommand {
             }
         }
 
-        if ('ConsoleLog' in safeArg) {
-            switch (safeArg.ConsoleLog.kind) {
+        if ('Log' in safeArg) {
+            switch (safeArg.Log.kind) {
                 case 'Info': {
-                    console.info(safeArg.ConsoleLog.message, safeArg.ConsoleLog.arg2, safeArg.ConsoleLog.arg3, safeArg.ConsoleLog.arg4);
+                    console.info(safeArg.Log.message, safeArg.Log.arg2, safeArg.Log.arg3, safeArg.Log.arg4);
                     return null;
                 }
                 case 'Debug': {
-                    console.debug(safeArg.ConsoleLog.message, safeArg.ConsoleLog.arg2, safeArg.ConsoleLog.arg3, safeArg.ConsoleLog.arg4);
+                    console.debug(safeArg.Log.message, safeArg.Log.arg2, safeArg.Log.arg3, safeArg.Log.arg4);
                     return null;
                 }
                 case 'Error': {
-                    console.error(safeArg.ConsoleLog.message, safeArg.ConsoleLog.arg2, safeArg.ConsoleLog.arg3, safeArg.ConsoleLog.arg4);
+                    console.error(safeArg.Log.message, safeArg.Log.arg2, safeArg.Log.arg3, safeArg.Log.arg4);
                     return null;
                 }
                 case 'Log': {
-                    console.log(safeArg.ConsoleLog.message, safeArg.ConsoleLog.arg2, safeArg.ConsoleLog.arg3, safeArg.ConsoleLog.arg4);
+                    console.log(safeArg.Log.message, safeArg.Log.arg2, safeArg.Log.arg3, safeArg.Log.arg4);
                     return null;
                 }
                 case 'Warn': {
-                    console.warn(safeArg.ConsoleLog.message, safeArg.ConsoleLog.arg2, safeArg.ConsoleLog.arg3, safeArg.ConsoleLog.arg4);
+                    console.warn(safeArg.Log.message, safeArg.Log.arg2, safeArg.Log.arg3, safeArg.Log.arg4);
                     return null;
                 }
             }
@@ -298,7 +298,7 @@ export class ExecCommand {
         }
 
         if ('DomBulkUpdate' in safeArg) {
-            this.dom.dom_bulk_update(safeArg.DomBulkUpdate.list);
+            this.dom.update(safeArg.DomBulkUpdate.list);
             return null;
         }
 
@@ -321,7 +321,7 @@ export class ExecCommand {
                 }
             } else if ('RootElement' in command) {
                 const domId = command.RootElement.dom_id;
-                const node = this.dom.nodes.get_any_option(domId);
+                const node = this.dom.nodes.getAnyOption(domId);
                 if (node === undefined) {
                     console.error(`Element not found: ${domId}`);
                     return null;

@@ -102,8 +102,8 @@ export class CallbackManager {
         }
     }
 
-    private wasm_callback(callback_id: bigint, value: JsJsonType): JsJsonType {
-        return this.getWasm().wasm_command({
+    private wasmCallback(callback_id: bigint, value: JsJsonType): JsJsonType {
+        return this.getWasm().wasmCommand({
             CallbackCall: {
                 callback_id: Number(callback_id),
                 value: value
@@ -113,7 +113,7 @@ export class CallbackManager {
 
     private click(event: Event, callback_id: bigint) {
         event.preventDefault();
-        let click_event = this.wasm_callback(callback_id, undefined);
+        let click_event = this.wasmCallback(callback_id, undefined);
 
         // Check if click_event is an object (JsJson Object type)
         if (click_event !== null && typeof click_event === 'object' && !Array.isArray(click_event)) {
@@ -128,14 +128,14 @@ export class CallbackManager {
 
     private submit(event: Event, callback_id: bigint) {
         event.preventDefault();
-        this.wasm_callback(callback_id, undefined);
+        this.wasmCallback(callback_id, undefined);
     }
 
     private input(event: Event, callback_id: bigint) {
         const target = event.target;
 
         if (target instanceof HTMLInputElement || target instanceof HTMLTextAreaElement) {
-            this.wasm_callback(callback_id, target.value);
+            this.wasmCallback(callback_id, target.value);
             return;
         }
 
@@ -146,7 +146,7 @@ export class CallbackManager {
         const target = event.target;
 
         if (target instanceof HTMLInputElement || target instanceof HTMLTextAreaElement || target instanceof HTMLSelectElement) {
-            this.wasm_callback(callback_id, target.value);
+            this.wasmCallback(callback_id, target.value);
             return;
         }
 
@@ -154,27 +154,27 @@ export class CallbackManager {
     }
 
     private blur(_event: Event, callback_id: bigint) {
-        this.wasm_callback(callback_id, undefined);
+        this.wasmCallback(callback_id, undefined);
     }
 
     private mousedown(event: Event, callback_id: bigint) {
-        if (this.wasm_callback(callback_id, undefined)) {
+        if (this.wasmCallback(callback_id, undefined)) {
             event.preventDefault()
         }
     }
 
     private mouseup(event: Event, callback_id: bigint) {
-        if (this.wasm_callback(callback_id, undefined)) {
+        if (this.wasmCallback(callback_id, undefined)) {
             event.preventDefault()
         }
     }
 
     private mouseenter(_event: Event, callback_id: bigint) {
-        this.wasm_callback(callback_id, undefined);
+        this.wasmCallback(callback_id, undefined);
     }
 
     private mouseleave(_event: Event, callback_id: bigint) {
-        this.wasm_callback(callback_id, undefined);
+        this.wasmCallback(callback_id, undefined);
     }
 
     private drop(event: Event, callback_id: bigint) {
@@ -199,7 +199,7 @@ export class CallbackManager {
                             ]);
                         }
 
-                        this.wasm_callback(callback_id, [params]);
+                        this.wasmCallback(callback_id, [params]);
                     }).catch((error) => {
                         console.error('callback_drop -> promise.all -> ', error);
                     });
@@ -214,7 +214,7 @@ export class CallbackManager {
 
     private keydown(event: Event, callback_id: bigint) {
         if (event instanceof KeyboardEvent) {
-            const result = this.wasm_callback(callback_id, [
+            const result = this.wasmCallback(callback_id, [
                 event.key,
                 event.code,
                 event.altKey,
@@ -236,7 +236,7 @@ export class CallbackManager {
 
     private load(event: Event, callback_id: bigint) {
         event.preventDefault();
-        this.wasm_callback(callback_id, undefined);
+        this.wasmCallback(callback_id, undefined);
     }
 
 }
