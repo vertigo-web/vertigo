@@ -1,10 +1,12 @@
 use std::rc::Rc;
 
-use crate::computed::{get_dependencies, Computed, DropResource, Value};
-use crate::transaction;
-
-use crate::computed::tests::box_value_version::SubscribeValueVer;
-use crate::struct_mut::ValueMut;
+use crate::{
+    computed::{
+        get_dependencies, struct_mut::ValueMut, tests::box_value_version::SubscribeValueVer,
+        Computed, DropResource, Value,
+    },
+    transaction,
+};
 
 #[test]
 fn basic() {

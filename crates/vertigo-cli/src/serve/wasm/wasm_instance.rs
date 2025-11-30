@@ -1,7 +1,12 @@
 use std::{process::exit, sync::Arc};
 use tokio::sync::mpsc::UnboundedSender;
-use vertigo::command::{decode_json, CommandForBrowser, CommandForWasm};
-use vertigo::{CallbackId, JsJson, JsJsonSerialize, LongPtr, SsrFetchResponse};
+use vertigo::{
+    dev::{
+        command::{decode_json, CommandForBrowser, CommandForWasm},
+        CallbackId, LongPtr, SsrFetchResponse,
+    },
+    JsJson, JsJsonSerialize,
+};
 use wasmtime::{Caller, Engine, Func, Instance, Module, Store};
 
 use crate::{

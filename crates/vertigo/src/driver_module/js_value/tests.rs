@@ -1,9 +1,9 @@
 use std::collections::BTreeMap;
 
-use crate::driver_module::js_value::js_json_struct::JsJsonNumber;
-
-use super::js_json_struct::JsJson;
-use crate::{MemoryBlock, MemoryBlockWrite};
+use super::{
+    js_json_struct::{JsJson, JsJsonNumber},
+    MemoryBlock, MemoryBlockWrite,
+};
 
 fn to_block(json: JsJson) -> MemoryBlock {
     let size = json.get_size();

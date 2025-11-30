@@ -1,16 +1,19 @@
 use std::rc::Rc;
-
 use vertigo_macro::store;
 
-use crate::command::{
-    ConsoleLogLevel, DriverDomCommand, LocationCallbackMode, LocationSetMode, LocationTarget,
-    TimerKind,
+use crate::{
+    dev::{
+        command::{
+            browser_response, decode_json, CommandForBrowser, ConsoleLogLevel, DriverDomCommand,
+            LocationCallbackMode, LocationSetMode, LocationTarget, TimerKind,
+        },
+        CallbackId, SsrFetchCache, SsrFetchRequest,
+    },
+    external_api::safe_wrappers,
+    InstantType, JsJson, JsJsonSerialize,
 };
-use crate::dev::command::{browser_response, decode_json, CommandForBrowser};
-use crate::dev::InstantType;
-use crate::external_api::safe_wrappers;
-use crate::{driver_module::api::api_arguments, JsJson, JsJsonSerialize, SsrFetchCache};
-use crate::{CallbackId, SsrFetchRequest};
+
+use super::api_arguments;
 
 #[store]
 pub fn api_browser_command() -> Rc<CommandForBrowserApi> {

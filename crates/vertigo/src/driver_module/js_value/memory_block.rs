@@ -2,7 +2,7 @@
 use std::alloc::{alloc, Layout};
 use std::mem;
 
-use crate::LongPtr;
+use crate::dev::LongPtr;
 
 use super::memory_block_write::MemoryBlockWrite;
 

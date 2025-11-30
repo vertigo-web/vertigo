@@ -1,9 +1,9 @@
-use crate::{
-    driver_module::api::{api_browser_command, CallbackStore},
-    CallbackId, FutureBox, SsrFetchRequest, SsrFetchResponse,
-};
 use std::rc::Rc;
 use vertigo_macro::store;
+
+use crate::dev::{CallbackId, FutureBox, SsrFetchRequest, SsrFetchResponse};
+
+use super::{api_browser_command, CallbackStore};
 
 #[store]
 pub fn api_fetch() -> Rc<ApiFetch> {

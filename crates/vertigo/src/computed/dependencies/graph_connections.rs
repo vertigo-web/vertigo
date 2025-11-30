@@ -1,6 +1,8 @@
-use super::graph_one_to_many::GraphOneToMany;
-use crate::{struct_mut::ValueMut, GraphId};
 use std::collections::{BTreeMap, BTreeSet};
+
+use crate::computed::{graph_id::GraphId, struct_mut::ValueMut};
+
+use super::graph_one_to_many::GraphOneToMany;
 
 enum UpdateConnection {
     Add { parent: GraphId, client: GraphId },

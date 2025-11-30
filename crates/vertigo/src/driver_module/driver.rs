@@ -1,20 +1,21 @@
+use std::{future::Future, pin::Pin, rc::Rc};
 use vertigo_macro::{store, AutoJsJson};
 
 use crate::{
-    command::{LocationSetMode, LocationTarget},
-    computed::get_dependencies,
+    computed::{get_dependencies, struct_mut::ValueMut, DropResource},
     css::get_css_manager,
+    dev::{
+        command::{LocationSetMode, LocationTarget},
+        FutureBox,
+    },
     driver_module::{
         api::{api_browser_command, api_location, api_server_handler, api_timers, api_websocket},
         dom::get_driver_dom,
+        utils::futures_spawn::spawn_local,
     },
     fetch::request_builder::{RequestBody, RequestBuilder},
-    struct_mut::ValueMut,
-    Context, Css, DomNode, DropResource, FutureBox, Instant, InstantType, JsJson, WebsocketMessage,
+    Context, Css, DomNode, Instant, InstantType, JsJson, WebsocketMessage,
 };
-use std::{future::Future, pin::Pin, rc::Rc};
-
-use crate::driver_module::utils::futures_spawn::spawn_local;
 
 use super::api::DomAccess;
 
@@ -63,6 +64,13 @@ type Executable = dyn Fn(Pin<Box<dyn Future<Output = ()> + 'static>>);
 /// - `Err(response)` if request failed (because of network error for example).
 pub type FetchResult = Result<(u32, RequestBody), String>;
 
+/// Getter for [Driver] singleton.
+///
+/// ```rust
+/// use vertigo::get_driver;
+///
+/// let number = get_driver().get_random(1, 10);
+/// ```
 #[store]
 pub fn get_driver() -> Rc<Driver> {
     let spawn_executor = {
@@ -80,6 +88,11 @@ pub fn get_driver() -> Rc<Driver> {
         _subscribe: subscribe,
         subscription: ValueMut::new(None),
     })
+}
+
+/// Do bunch of operations on dependency graph without triggering anything in between.
+pub fn transaction<R, F: FnOnce(&Context) -> R>(f: F) -> R {
+    get_driver().transaction(f)
 }
 
 /// Set of functions to communicate with the browser.

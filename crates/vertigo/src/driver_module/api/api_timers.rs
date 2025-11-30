@@ -1,11 +1,12 @@
-use crate::{
-    command::TimerKind,
-    driver_module::api::{api_browser_command, CallbackStore},
-    struct_mut::ValueMut,
-    CallbackId, DropResource,
-};
 use std::rc::Rc;
 use vertigo_macro::store;
+
+use crate::{
+    computed::{struct_mut::ValueMut, DropResource},
+    dev::{command::TimerKind, CallbackId},
+};
+
+use super::{api_browser_command, CallbackStore};
 
 #[store]
 pub fn api_timers() -> Rc<ApiTimers> {

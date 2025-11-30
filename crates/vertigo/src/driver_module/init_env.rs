@@ -4,7 +4,7 @@ use std::panic;
 use std::sync::Once;
 
 use crate::{
-    command::ConsoleLogLevel,
+    dev::command::ConsoleLogLevel,
     driver_module::api::{api_browser_command, api_panic_message},
 };
 

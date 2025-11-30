@@ -1,6 +1,6 @@
 use clap::Args;
-use vertigo::VERTIGO_PUBLIC_BUILD_PATH_PLACEHOLDER;
 use std::path::{Path, PathBuf};
+use vertigo::dev::VERTIGO_PUBLIC_BUILD_PATH_PLACEHOLDER;
 
 use crate::commons::models::CommonOpts;
 
@@ -44,7 +44,10 @@ pub struct BuildOptsInner {
 impl BuildOpts {
     pub fn get_public_path(&self) -> String {
         // Use predefined public_path or use VERTIGO_PUBLIC_BUILD_PATH_PLACEHOLDER to keep public path dynamic.
-        self.inner.public_path.clone().unwrap_or(VERTIGO_PUBLIC_BUILD_PATH_PLACEHOLDER.to_string())
+        self.inner
+            .public_path
+            .clone()
+            .unwrap_or(VERTIGO_PUBLIC_BUILD_PATH_PLACEHOLDER.to_string())
     }
 
     pub fn public_path_to(&self, path: impl Into<String>) -> String {

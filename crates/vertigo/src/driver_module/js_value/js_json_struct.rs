@@ -1,12 +1,22 @@
-use std::cmp::Ordering;
-use std::collections::BTreeMap;
-use std::hash::{Hash, Hasher};
+use std::{
+    cmp::Ordering,
+    collections::BTreeMap,
+    hash::{Hash, Hasher},
+};
 
-use crate::driver_module::js_value::vec_to_string::{string_to_vec, vec_to_string};
-use crate::{JsJsonListDecoder, MemoryBlock};
+use crate::{
+    dev::{JsJsonListDecoder, LongPtr},
+    driver_module::js_value::{
+        vec_to_string::{string_to_vec, vec_to_string},
+        MemoryBlock,
+    },
+};
 
-use super::serialize::{JsJsonContext, JsJsonDeserialize, JsJsonSerialize};
-use super::{memory_block_read::MemoryBlockRead, memory_block_write::MemoryBlockWrite};
+use super::{
+    memory_block_read::MemoryBlockRead,
+    memory_block_write::MemoryBlockWrite,
+    serialize::{JsJsonContext, JsJsonDeserialize, JsJsonSerialize},
+};
 
 const PARAM_TYPE: u32 = 1;
 const STRING_SIZE: u32 = 4;
@@ -138,9 +148,8 @@ impl JsJson {
         }
     }
 
-    pub fn to_ptr_long(&self) -> crate::LongPtr {
-        use crate::driver_module::api::api_arguments;
-        use crate::MemoryBlock;
+    pub fn to_ptr_long(&self) -> LongPtr {
+        use crate::driver_module::{api::api_arguments, js_value::MemoryBlock};
 
         let buff_size = self.get_size();
         let block = MemoryBlock::new(buff_size);
@@ -374,24 +383,6 @@ pub fn decode_js_json_inner(buffer: &mut MemoryBlockRead) -> Result<JsJson, Stri
     };
 
     Ok(result)
-}
-
-#[derive(Default)]
-pub struct JsJsonObjectBuilder {
-    data: BTreeMap<String, JsJson>,
-}
-
-impl JsJsonObjectBuilder {
-    pub fn insert(mut self, name: impl ToString, value: impl JsJsonSerialize) -> Self {
-        let name = name.to_string();
-        let value = value.to_json();
-        self.data.insert(name, value);
-        self
-    }
-
-    pub fn get(self) -> JsJson {
-        JsJson::Object(self.data)
-    }
 }
 
 impl JsJson {

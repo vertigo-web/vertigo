@@ -1,14 +1,17 @@
 use std::rc::Rc;
+use vertigo_macro::store;
 
-use crate::command::DriverDomCommand;
-use crate::driver_module::event_emitter::EventEmitter;
-use crate::struct_mut::{HashMapMut, VecMut};
-use crate::{DomId, DropResource};
+use crate::{
+    computed::{
+        struct_mut::{HashMapMut, VecMut},
+        DropResource,
+    },
+    dev::{command::DriverDomCommand, CallbackId},
+    driver_module::{api::api_browser_command, event_emitter::EventEmitter},
+    DomId,
+};
 
 use super::StaticString;
-use crate::driver_module::api::api_browser_command;
-use vertigo::dev::CallbackId;
-use vertigo_macro::store;
 
 struct Commands {
     commands: VecMut<DriverDomCommand>,

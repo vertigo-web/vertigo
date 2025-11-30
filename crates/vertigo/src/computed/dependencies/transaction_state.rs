@@ -1,6 +1,6 @@
 use std::collections::BTreeSet;
 
-use crate::{computed::graph_id::GraphId, struct_mut::ValueMut};
+use crate::computed::{graph_id::GraphId, struct_mut::ValueMut};
 
 #[derive(Default, PartialEq)]
 enum State {

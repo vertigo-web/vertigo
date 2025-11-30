@@ -9,8 +9,9 @@ mod inner {
 
 #[cfg(all(not(test), target_arch = "wasm32", target_os = "unknown"))]
 pub mod safe_wrappers {
+    use crate::dev::LongPtr;
+
     use super::inner::*;
-    use crate::LongPtr;
 
     pub fn safe_panic_message(long_ptr: LongPtr) {
         let long_ptr = long_ptr.get_long_ptr();
@@ -27,9 +28,12 @@ pub mod safe_wrappers {
 #[cfg(any(test, not(target_arch = "wasm32"), not(target_os = "unknown")))]
 pub mod safe_wrappers {
     use crate::{
-        command::{browser_response, decode_json, CommandForBrowser},
+        dev::{
+            command::{browser_response, decode_json, CommandForBrowser},
+            LongPtr,
+        },
         driver_module::api::api_arguments,
-        JsJson, JsJsonSerialize, LongPtr,
+        JsJson, JsJsonSerialize,
     };
 
     pub fn safe_panic_message(_long_ptr: LongPtr) {}

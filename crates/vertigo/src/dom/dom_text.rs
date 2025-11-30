@@ -1,7 +1,9 @@
 use crate::{
-    computed::ToComputed, dom::dom_id::DomId, driver_module::get_driver_dom, struct_mut::VecMut,
-    DropResource,
+    computed::{struct_mut::VecMut, DropResource, ToComputed},
+    driver_module::get_driver_dom,
 };
+
+use super::dom_id::DomId;
 
 /// A Real DOM representative - text kind
 pub struct DomText {

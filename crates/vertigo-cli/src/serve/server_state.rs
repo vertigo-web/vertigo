@@ -6,8 +6,10 @@ use std::{
     time::{Duration, SystemTime, UNIX_EPOCH},
 };
 use tokio::sync::mpsc::{error::TryRecvError, unbounded_channel};
-use vertigo::command::{browser_response, CommandForBrowser, ConsoleLogLevel};
-use vertigo::{JsJson, JsJsonSerialize};
+use vertigo::{
+    dev::command::{browser_response, CommandForBrowser, ConsoleLogLevel},
+    JsJson, JsJsonSerialize,
+};
 use wasmtime::{Engine, Module};
 
 use crate::{

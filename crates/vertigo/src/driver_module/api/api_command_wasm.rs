@@ -3,10 +3,11 @@ use std::rc::Rc;
 use vertigo_macro::store;
 
 use crate::{
-    command::{decode_json, CommandForWasm},
-    driver_module::api::{api_fetch::api_fetch, api_location, api_timers, api_websocket},
+    dev::command::{decode_json, CommandForWasm},
     JsJson,
 };
+
+use super::{api_fetch::api_fetch, api_location, api_timers, api_websocket};
 
 #[store]
 pub fn api_command_wasm() -> Rc<CommandWasmApi> {

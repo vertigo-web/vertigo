@@ -1,10 +1,8 @@
 use std::rc::Rc;
 
-use crate::{
-    computed::{get_dependencies, GraphId},
-    struct_mut::ValueMut,
-    Context,
-};
+use crate::Context;
+
+use super::{get_dependencies, struct_mut::ValueMut, GraphId};
 
 pub struct GraphValue<T> {
     id: GraphId,

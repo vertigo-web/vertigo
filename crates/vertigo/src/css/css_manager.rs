@@ -3,8 +3,8 @@ use std::rc::Rc;
 use vertigo_macro::store;
 
 use crate::{
+    computed::struct_mut::{HashMapMut, InnerValue},
     driver_module::get_driver_dom,
-    struct_mut::{HashMapMut, InnerValue},
 };
 
 use super::{

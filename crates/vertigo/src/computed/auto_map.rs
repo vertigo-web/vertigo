@@ -1,7 +1,7 @@
 use std::fmt::Debug;
 use std::{hash::Hash, rc::Rc};
 
-use crate::struct_mut::HashMapMut;
+use crate::computed::struct_mut::HashMapMut;
 
 type CreateType<K, V> = Box<dyn Fn(&AutoMap<K, V>, &K) -> V>;
 

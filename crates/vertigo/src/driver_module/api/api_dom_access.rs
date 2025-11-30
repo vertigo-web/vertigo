@@ -1,8 +1,9 @@
 use crate::{
     dev::command::{CommandForBrowser, JsApiCommand},
-    driver_module::api::{api_browser_command::exec_command, panic_message::api_panic_message},
     DomId, JsJson,
 };
+
+use super::{api_browser_command::exec_command, panic_message::api_panic_message};
 
 #[derive(Default)]
 pub struct DomAccess {

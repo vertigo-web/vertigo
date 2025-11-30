@@ -1,11 +1,12 @@
-use std::future::Future;
-use std::mem::ManuallyDrop;
-use std::pin::Pin;
-use std::rc::Rc;
-use std::task::{Context, RawWaker, RawWakerVTable, Waker};
+use std::{
+    future::Future,
+    mem::ManuallyDrop,
+    pin::Pin,
+    rc::Rc,
+    task::{Context, RawWaker, RawWakerVTable, Waker},
+};
 
-use crate::driver_module::api::api_timers;
-use crate::struct_mut::ValueMut;
+use crate::{computed::struct_mut::ValueMut, driver_module::api::api_timers};
 
 #[inline]
 pub fn spawn_local<F>(future: F)

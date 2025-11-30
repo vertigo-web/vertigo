@@ -1,6 +1,6 @@
 use std::rc::Rc;
 
-use crate::{struct_mut::ValueMut, JsJson};
+use crate::{computed::struct_mut::ValueMut, JsJson};
 
 /// Structure passed as a parameter to callback on on_key_down event.
 #[derive(Clone, Debug, Default)]

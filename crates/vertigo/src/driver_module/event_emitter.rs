@@ -1,8 +1,9 @@
-use crate::{
+use std::rc::Rc;
+
+use crate::computed::{
     struct_mut::{BTreeMapMut, CounterMut},
     DropResource,
 };
-use std::rc::Rc;
 
 #[derive(Clone)]
 pub struct EventEmitter<T: Clone + 'static> {

@@ -101,32 +101,31 @@
 
 mod computed;
 mod css;
-mod dev;
+pub mod dev;
 mod dom;
 mod dom_macro;
 mod driver_module;
+mod exports;
+pub mod external_api;
 mod fetch;
 mod future_box;
-pub mod inspect;
+pub mod html_entities;
 mod instant;
 mod render;
 pub mod router;
-
 #[cfg(test)]
 mod tests;
 mod websocket;
 
-pub use computed::{
-    context::Context, struct_mut, AutoMap, Computed, Dependencies, DropResource, GraphId, Reactive,
-    ToComputed, Value,
-};
+// Exports from vertigo
 
+pub use computed::{
+    context::Context, AutoMap, Computed, Dependencies, DropResource, Reactive, ToComputed, Value,
+};
 pub use css::{
     css_structs::{Css, CssGroup},
     tailwind_class::TwClass,
 };
-
-pub use dev::InstantType;
 pub use dom::{
     attr_value::{AttrValue, CssAttrValue},
     callback::{Callback, Callback1},
@@ -140,26 +139,32 @@ pub use dom::{
 };
 pub use dom_macro::{AttrGroup, AttrGroupValue, EmbedDom};
 pub use driver_module::{
-    driver::{Driver, FetchMethod, FetchResult},
+    driver::{get_driver, transaction, Driver, FetchMethod, FetchResult},
     js_value::{
-        from_json, to_json, JsJson, JsJsonContext, JsJsonDeserialize, JsJsonListDecoder,
-        JsJsonNumber, JsJsonObjectBuilder, JsJsonSerialize, MemoryBlock, MemoryBlockRead,
-        MemoryBlockWrite,
+        from_json, to_json, JsJson, JsJsonContext, JsJsonDeserialize, JsJsonNumber, JsJsonSerialize,
     },
 };
+pub use exports::start_app;
 pub use fetch::{
     lazy_cache::{self, LazyCache},
     request_builder::{RequestBody, RequestBuilder, RequestResponse},
     resource::Resource,
 };
-pub use future_box::{FutureBox, FutureBoxSend};
-pub use instant::Instant;
+pub use instant::{Instant, InstantType};
 pub use websocket::{WebsocketConnection, WebsocketMessage};
 
-pub use dev::{
-    command, CallbackId, LongPtr, SsrFetchCache, SsrFetchRequest, SsrFetchRequestBody,
-    SsrFetchResponse, SsrFetchResponseContent,
-};
+// Commonly used things
+pub mod prelude {
+    pub use crate::{bind, component, css, dom, Computed, Css, DomNode, ToComputed, Value};
+}
+
+// Re-export log module which can be used in vertigo plugins
+pub use log;
+
+// Re-export self for tests and macros used in vertigo crate
+extern crate self as vertigo;
+
+// Below re-exports from vertigo_macro
 
 /// Allows to include a static file
 ///
@@ -384,9 +389,6 @@ pub use vertigo_macro::js_inner;
 /// ```
 pub use vertigo_macro::main;
 
-// Export log module which can be used in vertigo plugins
-pub use log;
-
 /// Allows to create [DomNode] using RSX/rstml (HTML-like) syntax.
 ///
 /// Simple DOM with a param embedded:
@@ -517,95 +519,3 @@ pub use vertigo_macro::css_block;
 ///         })
 /// }
 pub use vertigo_macro::store;
-
-pub mod html_entities;
-
-extern crate self as vertigo;
-
-/// Starting point of the app (used by [main] macro, which is preferred)
-pub fn start_app(init_app: fn() -> DomNode) {
-    init_env();
-
-    api_fetch_cache().init_cache();
-
-    let root_view = init_app();
-
-    get_driver().set_root(root_view);
-
-    get_driver_dom().flush_dom_changes();
-}
-
-#[doc(hidden)]
-#[no_mangle]
-pub fn vertigo_export_handle_url(url_ptr: u64) -> u64 {
-    let url_ptr = LongPtr::from(url_ptr);
-    let url = api_arguments().get_by_long_ptr(url_ptr);
-
-    let JsJson::String(url) = url else {
-        panic!("string expected");
-    };
-
-    let response = api_server_handler().handler(&url);
-    response.to_ptr_long().get_long_ptr()
-}
-
-/// Getter for [Driver] singleton.
-///
-/// ```rust
-/// use vertigo::get_driver;
-///
-/// let number = get_driver().get_random(1, 10);
-/// ```
-pub use crate::driver_module::driver::get_driver;
-
-/// Do bunch of operations on dependency graph without triggering anything in between.
-pub fn transaction<R, F: FnOnce(&Context) -> R>(f: F) -> R {
-    get_driver().transaction(f)
-}
-
-pub mod prelude {
-    pub use crate::{bind, component, css, dom, Computed, Css, DomNode, ToComputed, Value};
-}
-
-//------------------------------------------------------------------------------------------------------------------
-// Internals below
-//------------------------------------------------------------------------------------------------------------------
-
-pub use driver_module::driver::{
-    VERTIGO_MOUNT_POINT_PLACEHOLDER, VERTIGO_PUBLIC_BUILD_PATH_PLACEHOLDER,
-};
-
-use crate::driver_module::{
-    api::{api_arguments, api_command_wasm, api_fetch_cache, api_server_handler},
-    get_driver_dom,
-    init_env::init_env,
-};
-
-// Methods for memory allocation
-
-#[doc(hidden)]
-#[no_mangle]
-pub fn vertigo_export_alloc_block(size: u32) -> u64 {
-    api_arguments().alloc(size).get_long_ptr()
-}
-
-#[doc(hidden)]
-#[no_mangle]
-pub fn vertigo_export_free_block(long_ptr: u64) {
-    let long_ptr = LongPtr::from(long_ptr);
-    api_arguments().free(long_ptr);
-}
-
-// Callbacks gateways
-
-#[doc(hidden)]
-#[no_mangle]
-pub fn vertigo_export_wasm_command(value_long_ptr: u64) -> u64 {
-    let value_long_ptr = LongPtr::from(value_long_ptr);
-    let value = api_arguments().get_by_long_ptr(value_long_ptr);
-
-    let response = api_command_wasm().command_from_js(value);
-    response.to_ptr_long().get_long_ptr()
-}
-
-pub mod external_api;

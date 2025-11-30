@@ -1,6 +1,4 @@
-use crate::LongPtr;
-
-use crate::external_api::safe_wrappers::safe_panic_message;
+use crate::{dev::LongPtr, external_api::safe_wrappers::safe_panic_message};
 
 #[derive(Clone, Copy)]
 pub struct PanicMessage {}

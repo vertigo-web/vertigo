@@ -1,6 +1,6 @@
 use crate as vertigo;
+use crate::dev::inspect::{log_start, log_take};
 use crate::dom;
-use crate::inspect::{log_start, log_take};
 
 #[test]
 fn button_on_click() {
