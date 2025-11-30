@@ -1,15 +1,11 @@
 use std::hash::Hash;
 use std::rc::Rc;
 
-use crate::computed::dependencies::get_dependencies;
-use crate::{
-    computed::{Computed, GraphId, ToComputed},
-    struct_mut::ValueMut,
-    DropResource,
-};
-use crate::{Dependencies, DomNode};
+use crate::{Context, Dependencies, DomNode, ToComputed};
 
-use super::context::Context;
+use super::{
+    dependencies::get_dependencies, struct_mut::ValueMut, Computed, DropResource, GraphId,
+};
 
 struct ValueInner<T> {
     dependencies: Rc<Dependencies>,

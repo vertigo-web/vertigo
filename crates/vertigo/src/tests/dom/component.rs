@@ -1,4 +1,4 @@
-use crate::inspect::{log_start, DomDebugFragment};
+use crate::dev::inspect::{log_start, DomDebugFragment};
 
 #[test]
 fn test_if_lifetimes_allowed() {

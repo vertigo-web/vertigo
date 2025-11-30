@@ -1,6 +1,8 @@
 use std::rc::Rc;
 
-use crate::{driver_module::get_driver_dom, struct_mut::ValueMut, Computed, DomComment, DomNode};
+use crate::{
+    computed::struct_mut::ValueMut, driver_module::get_driver_dom, Computed, DomComment, DomNode,
+};
 
 pub fn render_value_option<T: Clone + PartialEq + 'static>(
     computed: Computed<T>,

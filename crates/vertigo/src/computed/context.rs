@@ -1,6 +1,6 @@
 use std::collections::BTreeSet;
 
-use crate::{struct_mut::VecMut, GraphId};
+use super::{struct_mut::VecMut, GraphId};
 
 pub struct Context {
     //In transaction

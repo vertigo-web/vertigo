@@ -1,5 +1,6 @@
-use crate::{computed::Computed, struct_mut::ValueMut, DropResource};
 use std::rc::Rc;
+
+use crate::computed::{struct_mut::ValueMut, Computed, DropResource};
 
 struct SubscribeValueVerInner<T> {
     version: ValueMut<u32>,

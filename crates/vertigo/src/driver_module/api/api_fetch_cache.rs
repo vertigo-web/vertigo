@@ -1,11 +1,12 @@
 use std::rc::Rc;
-
 use vertigo_macro::store;
 
 use crate::{
-    driver_module::api::api_browser_command, struct_mut::ValueMut, SsrFetchCache, SsrFetchRequest,
-    SsrFetchResponse,
+    computed::struct_mut::ValueMut,
+    dev::{SsrFetchCache, SsrFetchRequest, SsrFetchResponse},
 };
+
+use super::api_browser_command;
 
 #[store]
 pub fn api_fetch_cache() -> Rc<FetchCache> {

@@ -16,7 +16,6 @@ pub use memory_block_write::MemoryBlockWrite;
 #[cfg(test)]
 mod tests;
 
-pub use js_json_struct::JsJsonObjectBuilder;
 pub use serialize::{from_json, to_json, JsJsonContext, JsJsonDeserialize, JsJsonSerialize};
 
 mod js_json_map_item;

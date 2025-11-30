@@ -1,10 +1,15 @@
-use crate::{
-    command::{LocationCallbackMode, LocationSetMode, LocationTarget},
-    driver_module::api::{api_browser_command, CallbackStore},
-    CallbackId, DropResource,
-};
 use std::rc::Rc;
 use vertigo_macro::store;
+
+use crate::{
+    computed::DropResource,
+    dev::{
+        command::{LocationCallbackMode, LocationSetMode, LocationTarget},
+        CallbackId,
+    },
+};
+
+use super::{api_browser_command, CallbackStore};
 
 #[store]
 pub fn api_location() -> Rc<ApiLocation> {

@@ -1,11 +1,13 @@
-use std::collections::{HashMap, VecDeque};
-use std::hash::Hash;
-use std::rc::Rc;
+use std::{
+    collections::{HashMap, VecDeque},
+    hash::Hash,
+    rc::Rc,
+};
 
-use crate::dom::dom_id::DomId;
-use crate::driver_module::get_driver_dom;
-use crate::struct_mut::ValueMut;
-use crate::{Computed, DomComment, DomNode};
+use crate::{
+    computed::struct_mut::ValueMut, dom::dom_id::DomId, driver_module::get_driver_dom, Computed,
+    DomComment, DomNode,
+};
 
 //TODO - Check out other options for reading refs
 

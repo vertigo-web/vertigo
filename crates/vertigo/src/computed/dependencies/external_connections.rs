@@ -1,5 +1,6 @@
-use crate::{computed::graph_id::GraphId, struct_mut::BTreeMapMut, DropResource};
 use std::rc::Rc;
+
+use crate::computed::{struct_mut::BTreeMapMut, DropResource, GraphId};
 
 pub type ConnectType = Rc<dyn Fn() -> DropResource>;
 

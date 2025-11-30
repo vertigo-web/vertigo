@@ -1,6 +1,7 @@
 use crate::{
-    css, dom,
-    inspect::{log_start, DomDebugFragment},
+    css,
+    dev::inspect::{log_start, DomDebugFragment},
+    dom,
 };
 
 // Make crate available by its name for css macro

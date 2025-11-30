@@ -1,4 +1,7 @@
-use vertigo::{JsJson, LongPtr, MemoryBlock};
+use vertigo::{
+    dev::{LongPtr, MemoryBlock},
+    JsJson,
+};
 use wasmtime::{AsContextMut, Caller, Extern, Instance, Memory, Store, StoreContextMut};
 
 use crate::serve::request_state::RequestState;

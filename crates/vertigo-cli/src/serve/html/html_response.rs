@@ -8,7 +8,7 @@ use axum::http::StatusCode;
 use parking_lot::RwLock;
 use std::{collections::HashMap, sync::Arc};
 use tokio::sync::mpsc::UnboundedSender;
-use vertigo::command::DriverDomCommand;
+use vertigo::dev::command::{CommandForWasm, DriverDomCommand};
 
 use super::{element::AllElements, send_request::send_request};
 
@@ -78,7 +78,7 @@ impl HtmlResponse {
             }
             Message::SetTimeoutZero { callback } => {
                 self.inst
-                    .wasm_command(vertigo::command::CommandForWasm::TimerCall { callback });
+                    .wasm_command(CommandForWasm::TimerCall { callback });
                 None
             }
             Message::FetchRequest { request, callback } => {

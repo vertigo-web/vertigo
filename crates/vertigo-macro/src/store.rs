@@ -21,8 +21,8 @@ pub fn store_inner(_attr: TokenStream2, item: TokenStream2) -> TokenStream2 {
         return quote! {
             #vis #sig {
                 thread_local! {
-                    static CACHE: std::rc::Rc<vertigo::struct_mut::HashMapMut<(), #output_type>>
-                        = std::rc::Rc::new(vertigo::struct_mut::HashMapMut::new());
+                    static CACHE: std::rc::Rc<vertigo::dev::HashMapMut<(), #output_type>>
+                        = std::rc::Rc::new(vertigo::dev::HashMapMut::new());
                 }
 
                 CACHE.with(|cache| {
@@ -77,7 +77,7 @@ pub fn store_inner(_attr: TokenStream2, item: TokenStream2) -> TokenStream2 {
         let type_name_prev = format_ident!("Cache{}Type", index);
 
         types.push(quote! {
-            type #type_name_current = std::rc::Rc<vertigo::struct_mut::HashMapMut<#arg_type, #type_name_prev>>;
+            type #type_name_current = std::rc::Rc<vertigo::dev::HashMapMut<#arg_type, #type_name_prev>>;
         });
     }
 
@@ -109,7 +109,7 @@ pub fn store_inner(_attr: TokenStream2, item: TokenStream2) -> TokenStream2 {
             #( #types )*
 
             thread_local! {
-                static CACHE: CacheType = std::rc::Rc::new(vertigo::struct_mut::HashMapMut::new());
+                static CACHE: CacheType = std::rc::Rc::new(vertigo::dev::HashMapMut::new());
             }
 
             CACHE.with(|cache| {
@@ -144,8 +144,8 @@ mod tests {
         let expected = quote! {
             pub fn get_state() -> FakeState {
                 thread_local! {
-                    static CACHE: std::rc::Rc<vertigo::struct_mut::HashMapMut<(), FakeState>>
-                        = std::rc::Rc::new(vertigo::struct_mut::HashMapMut::new());
+                    static CACHE: std::rc::Rc<vertigo::dev::HashMapMut<(), FakeState>>
+                        = std::rc::Rc::new(vertigo::dev::HashMapMut::new());
                 }
 
                 CACHE.with(|cache| {
@@ -185,13 +185,13 @@ mod tests {
                 url: &String
             ) -> LazyCache<Vec<CommentModel>> {
                 type Cache0Type = LazyCache<Vec<CommentModel>>;
-                type Cache1Type = std::rc::Rc<vertigo::struct_mut::HashMapMut<String, Cache0Type>>;
-                type Cache2Type = std::rc::Rc<vertigo::struct_mut::HashMapMut<u32, Cache1Type>>;
-                type Cache3Type = std::rc::Rc<vertigo::struct_mut::HashMapMut<u8, Cache2Type>>;
+                type Cache1Type = std::rc::Rc<vertigo::dev::HashMapMut<String, Cache0Type>>;
+                type Cache2Type = std::rc::Rc<vertigo::dev::HashMapMut<u32, Cache1Type>>;
+                type Cache3Type = std::rc::Rc<vertigo::dev::HashMapMut<u8, Cache2Type>>;
                 type CacheType = Cache3Type;
 
                 thread_local! {
-                    static CACHE: CacheType = std::rc::Rc::new(vertigo::struct_mut::HashMapMut::new());
+                    static CACHE: CacheType = std::rc::Rc::new(vertigo::dev::HashMapMut::new());
                 }
 
                 CACHE.with(|cache| {

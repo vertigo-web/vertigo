@@ -2,8 +2,8 @@ use reqwest::Method;
 use serde_json::{Map, Number, Value};
 use std::collections::BTreeMap;
 use vertigo::{
-    JsJson, JsJsonNumber, SsrFetchRequest, SsrFetchRequestBody, SsrFetchResponse,
-    SsrFetchResponseContent,
+    dev::{SsrFetchRequest, SsrFetchRequestBody, SsrFetchResponse, SsrFetchResponseContent},
+    JsJson, JsJsonNumber,
 };
 
 fn convert_to_jsjson(value: Value) -> JsJson {

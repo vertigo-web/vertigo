@@ -1,18 +1,25 @@
 //! Methods for debugging or testing vertigo components by recreating HTML-like string from dom commands
 
-use crate::command::DriverDomCommand;
-use crate::dev::CallbackId;
-use crate::driver_module::StaticString;
 use std::collections::{BTreeMap, BTreeSet};
 
-use crate::DomId;
+use crate::{
+    dev::{command::DriverDomCommand, CallbackId},
+    driver_module::StaticString,
+    DomId,
+};
 
 #[cfg(test)]
 mod logs {
-    use crate::struct_mut::{ValueMut, VecMut};
-    use crate::{inspect::DriverDomCommand, DropResource};
     use std::rc::Rc;
     use vertigo_macro::store;
+
+    use crate::{
+        computed::{
+            struct_mut::{ValueMut, VecMut},
+            DropResource,
+        },
+        dev::inspect::DriverDomCommand,
+    };
 
     struct LogActive {
         _drop_inspect: DropResource,

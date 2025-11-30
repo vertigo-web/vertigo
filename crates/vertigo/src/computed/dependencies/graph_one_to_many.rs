@@ -1,5 +1,6 @@
-use crate::GraphId;
 use std::collections::{BTreeMap, BTreeSet};
+
+use crate::computed::GraphId;
 
 pub struct GraphEdgeIter<'a> {
     data: Option<&'a BTreeSet<GraphId>>,

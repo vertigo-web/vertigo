@@ -1,9 +1,13 @@
-use super::dom_id::DomId;
 use crate::{
+    computed::{
+        struct_mut::{ValueMut, VecMut},
+        DropResource,
+    },
     driver_module::get_driver_dom,
-    struct_mut::{ValueMut, VecMut},
-    DomNode, DropResource,
+    DomNode,
 };
+
+use super::dom_id::DomId;
 
 /// A Real DOM representative - comment kind
 pub struct DomComment {

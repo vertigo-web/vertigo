@@ -1,6 +1,6 @@
 use crate::{
-    command::{LocationSetMode, LocationTarget},
     computed::{get_dependencies, Value},
+    dev::command::{LocationSetMode, LocationTarget},
     driver_module::api::api_location,
     Computed, DomNode, EmbedDom, Reactive, ToComputed,
 };

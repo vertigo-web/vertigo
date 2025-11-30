@@ -1,6 +1,6 @@
 use std::collections::{BTreeMap, HashMap, VecDeque};
 
-use vertigo::{command::DriverDomCommand, DomId};
+use vertigo::{dev::command::DriverDomCommand, DomId};
 
 use super::{element_children::ElementChildren, html_element::HtmlElement, HtmlNode};
 
@@ -232,7 +232,7 @@ impl AllElements {
 
 #[cfg(test)]
 mod tests {
-    use vertigo::{command::DriverDomCommand, DomId};
+    use vertigo::{dev::command::DriverDomCommand, DomId};
 
     use super::AllElements;
 

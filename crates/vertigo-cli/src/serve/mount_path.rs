@@ -1,6 +1,6 @@
 #![allow(clippy::question_mark)]
 use std::path::Path;
-use vertigo::VERTIGO_PUBLIC_BUILD_PATH_PLACEHOLDER;
+use vertigo::dev::VERTIGO_PUBLIC_BUILD_PATH_PLACEHOLDER;
 
 use crate::commons::{models::IndexModel, ErrorCode};
 
@@ -108,7 +108,7 @@ fn replace_prefix(dest_dir: &str, path: &str) -> String {
 
 #[cfg(test)]
 mod tests {
-    use vertigo::VERTIGO_PUBLIC_BUILD_PATH_PLACEHOLDER;
+    use vertigo::dev::VERTIGO_PUBLIC_BUILD_PATH_PLACEHOLDER;
 
     use super::replace_prefix;
 

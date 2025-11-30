@@ -1,6 +1,9 @@
 use std::time::Duration;
 
-use crate::{dev::InstantType, driver_module::api::api_browser_command};
+use crate::driver_module::api::api_browser_command;
+
+/// Duration in seconds, returned from [Instant] methods.
+pub type InstantType = u64;
 
 /// Monotonically non-decreasing clock using a driver, similar to [std::time::Instant].
 #[derive(Clone)]

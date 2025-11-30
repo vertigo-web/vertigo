@@ -1,7 +1,7 @@
 use crate::{
-    self as vertigo, component, css, dom,
-    inspect::{log_start, DomDebugFragment},
-    AttrGroup, Computed, EmbedDom,
+    self as vertigo, component, css,
+    dev::inspect::{log_start, DomDebugFragment},
+    dom, AttrGroup, Computed, EmbedDom,
 };
 
 #[test]

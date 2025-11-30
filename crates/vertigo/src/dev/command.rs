@@ -1,9 +1,10 @@
-use crate::driver_module::StaticString;
-use crate::{
-    dev::callback_id::CallbackId, JsJson, JsJsonContext, JsJsonDeserialize, SsrFetchRequest,
-};
-use crate::{DomId, SsrFetchResponse};
 use vertigo_macro::AutoJsJson;
+
+use crate::{
+    dev::{callback_id::CallbackId, SsrFetchRequest, SsrFetchResponse},
+    driver_module::StaticString,
+    DomId, JsJson, JsJsonContext, JsJsonDeserialize,
+};
 
 pub fn decode_json<T: JsJsonDeserialize>(json: JsJson) -> Result<T, JsJsonContext> {
     T::from_json(JsJsonContext::new(""), json)
@@ -148,7 +149,7 @@ pub enum TimerKind {
 pub mod browser_response {
     use vertigo_macro::AutoJsJson;
 
-    use crate::{dev::InstantType, JsJson};
+    use crate::{InstantType, JsJson};
 
     #[derive(AutoJsJson)]
     pub struct FetchCacheGet {

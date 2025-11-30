@@ -8,8 +8,8 @@ use crate::serve::{
 use parking_lot::RwLock;
 use reqwest::StatusCode;
 use vertigo::{
-    JsJsonSerialize, SsrFetchCache, VERTIGO_MOUNT_POINT_PLACEHOLDER,
-    VERTIGO_PUBLIC_BUILD_PATH_PLACEHOLDER,
+    dev::{SsrFetchCache, VERTIGO_MOUNT_POINT_PLACEHOLDER, VERTIGO_PUBLIC_BUILD_PATH_PLACEHOLDER},
+    JsJsonSerialize,
 };
 
 pub fn build_response(
