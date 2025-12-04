@@ -54,7 +54,8 @@ impl Route {
 
 impl From<String> for Route {
     fn from(url: String) -> Self {
-        Route::new(url.as_str())
+        let local_url = get_driver().route_from_public(url);
+        Route::new(local_url.as_str())
     }
 }
 

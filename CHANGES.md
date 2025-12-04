@@ -1,6 +1,12 @@
 <!-- markdownlint-configure-file { "no-duplicate-heading": { "siblings_only": true } } -->
 
 <!-- markdownlint-disable-next-line first-line-h1 -->
+## Unreleased
+
+### Fixed
+
+* vertigo-cli: `--mount-point` option fixed (broken by hydration)
+
 ## 0.9.0 - 2025-12-01
 
 ### Added
