@@ -1,7 +1,7 @@
 import { AppLocation } from "../../location/AppLocation";
 import { CallbackManager } from "./callbackManager";
 import { ExportType } from "../../../wasm_module";
-import { getDisableHydration } from "./features";
+import { getDisableHydration } from "../../metadata";
 import { hydrate } from "./hydration";
 import { injects } from "./injects";
 import { MapNodes } from "./map_nodes";

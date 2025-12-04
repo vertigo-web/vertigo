@@ -11,6 +11,7 @@ import { AppLocation } from './location/AppLocation';
 import { Cookies } from "./command/cookies";
 import { getRandom } from "./command/getRandom";
 import { CommandType, DriverDom } from "./command/dom/dom";
+import { getMetaData } from "./metadata";
 
 type JsApiCommandType =
     | { Root: { name: string } }
@@ -258,7 +259,7 @@ export class Api {
             const name = safeArg.GetEnv.name;
 
             return {
-                value: document.getElementById('v-metadata')?.getAttribute(`data-env-${name}`) ?? null
+                value: getMetaData(`data-env-${name}`)
             }
         }
 

@@ -1,3 +1,5 @@
+import { trySaveMetaData } from "../../metadata";
+
 type NodeType = Element | Comment | Text;
 export class MapNodes {
     private data: Map<number, NodeType>;
@@ -139,6 +141,7 @@ export class MapNodes {
         }
 
         for (const node of initNodes) {
+            trySaveMetaData(node);
             node.remove();
         }
     }

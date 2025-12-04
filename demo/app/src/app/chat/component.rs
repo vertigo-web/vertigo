@@ -34,7 +34,7 @@ impl Chat {
         dom! {
             <div>
                 <p>"Chat is turned off."</p>
-                <p>"To use websocket chat, please run your demo on your own. After cloning the vertigo repository, run:"</p>
+                <p>"To use websocket chat, please run the demo on your own. After cloning the vertigo repository, run:"</p>
                 <p><pre>"cargo make demo"</pre></p>
             </div>
         }
