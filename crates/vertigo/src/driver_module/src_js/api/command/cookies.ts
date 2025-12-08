@@ -53,7 +53,7 @@ export class Cookies {
         d.setTime(d.getTime() + (expires_in * 1000));
         let expires = "expires=" + d.toUTCString();
 
-        document.cookie = `${cname}=${cvalueEncoded};${expires};path=/;samesite=strict"`;
+        document.cookie = `${cname}=${cvalueEncoded};${expires};path=/; samesite=Strict`;
     }
 
     public setJson = (
