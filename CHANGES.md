@@ -19,6 +19,7 @@
 
 ### Fixed
 
+* Fixed `Invalid “SameSite“ value for cookie` error
 * vertigo-cli: Parse but ignore router changes and JS expressions during SSR. [#407]
 
 ### Changed
