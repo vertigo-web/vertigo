@@ -50,7 +50,7 @@ impl<T: Clone + 'static> GraphValue<T> {
     }
 
     fn calculate_new_value(&self) -> T {
-        let context = Context::new();
+        let context = Context::computed();
         let new_value = (self.get_value)(&context);
         get_dependencies().graph.push_context(self.id, context);
 
@@ -60,6 +60,12 @@ impl<T: Clone + 'static> GraphValue<T> {
     }
 
     pub fn get_value(&self, context: &Context) -> T {
+        if context.is_transaction() {
+            let new_context = Context::transaction();
+            let new_value = (self.get_value)(&new_context);
+            return new_value;
+        }
+
         context.add_parent(self.id);
 
         let inner_value = self.state.map(|value| value.clone());

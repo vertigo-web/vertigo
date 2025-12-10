@@ -30,6 +30,11 @@ impl GraphId {
     pub fn get_type(&self) -> GraphIdKind {
         self.0
     }
+
+    #[cfg(test)]
+    pub fn new_for_test(kind: GraphIdKind, id: u64) -> GraphId {
+        GraphId(kind, id)
+    }
 }
 
 impl GraphId {
