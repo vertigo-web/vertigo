@@ -43,7 +43,7 @@ impl Dependencies {
     pub fn transaction<R, F: FnOnce(&Context) -> R>(&self, func: F) -> R {
         self.transaction_state.up();
 
-        let context = Context::new();
+        let context = Context::transaction();
         let result = func(&context);
         let _ = context;
 

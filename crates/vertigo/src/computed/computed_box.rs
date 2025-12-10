@@ -110,7 +110,7 @@ impl<T: Clone + 'static> Computed<T> {
             });
         });
 
-        let context = Context::new();
+        let context = Context::computed();
         graph_value.get_value(&context);
         let _ = context;
 
@@ -141,7 +141,7 @@ impl<T: Clone + PartialEq + 'static> Computed<T> {
             }
         });
 
-        let context = Context::new();
+        let context = Context::computed();
         graph_value.get_value(&context);
         let _ = context;
 
