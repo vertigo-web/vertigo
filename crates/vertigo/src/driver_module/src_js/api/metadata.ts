@@ -1,20 +1,32 @@
-interface MetaDataCarrier {
-    vMetadata: Element | undefined;
-}
+export class Metadata {
+    private readonly metadata: HTMLElement;
 
-export const getMetaData = (attr: string): string | null => {
-    const metadata = document.getElementById('v-metadata') ?? (window as unknown as MetaDataCarrier).vMetadata;
-    return metadata?.getAttribute(attr) ?? null;
-}
+    constructor() {
+        const metadata = document.getElementById('v-metadata');
 
-export const getDisableHydration = (): boolean => {
-    const value = getMetaData('data-env-disable-hydration');
-    return value === 'true';
-};
+        if (metadata === null) {
+            throw Error('Expected v-metadata');
+        }
 
-export const trySaveMetaData = (node: ChildNode) => {
-    if (node instanceof Element && node.id === 'v-metadata') {
-        node.removeAttribute('data-fetch-cache');
-        (window as unknown as MetaDataCarrier).vMetadata = node;
+        this.metadata = metadata;
+        metadata.remove();
+        console.info('metadata', metadata);
     }
-};
+
+    private get = (attr: string): string | null => {
+        return this.metadata.getAttribute(attr) ?? null;
+    }
+
+    getEnv(name: string) {
+        return this.get(`data-env-${name}`);
+    }
+
+    getFetchCache() {
+        return this.get('data-fetch-cache') ?? null;
+    }
+
+    getEnabledHydration = (): boolean => {
+        const value = this.get('data-env-disable-hydration');
+        return value !== 'true';
+    }
+}

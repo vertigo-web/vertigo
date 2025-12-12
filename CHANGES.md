@@ -8,6 +8,10 @@
 * vertigo-cli: `--mount-point` option fixed (broken by hydration)
 * Nested `Computed` recomputations [#472]
 
+### Internals
+
+* Optimized SSR metadata handling [#471]
+
 ## 0.9.0 - 2025-12-01
 
 ### Added
