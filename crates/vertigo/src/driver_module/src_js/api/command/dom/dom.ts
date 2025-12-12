@@ -1,11 +1,11 @@
 import { AppLocation } from "../../location/AppLocation";
 import { CallbackManager } from "./callbackManager";
 import { ExportType } from "../../../wasm_module";
-import { getDisableHydration } from "../../metadata";
 import { hydrate } from "./hydration";
 import { injects } from "./injects";
 import { MapNodes } from "./map_nodes";
 import { ModuleControllerType } from "../../../wasm_init";
+import { Metadata } from "../../metadata";
 
 const createElement = (name: string): Element => {
     if (name == "path" || name == "svg") {
@@ -93,7 +93,7 @@ export class DriverDom {
     public readonly nodes: MapNodes;
     private readonly callbacks: CallbackManager;
 
-    public constructor(appLocation: AppLocation, getWasm: () => ModuleControllerType<ExportType>) {
+    public constructor(private readonly metadata: Metadata, appLocation: AppLocation, getWasm: () => ModuleControllerType<ExportType>) {
         this.appLocation = appLocation;
         this.nodes = new MapNodes();
         this.callbacks = new CallbackManager(getWasm);
@@ -105,7 +105,7 @@ export class DriverDom {
     }
 
     public update = (commands: Array<CommandType>) => {
-        if (this.nodes.hasInitNodes() && !getDisableHydration()) {
+        if (this.nodes.hasInitNodes() && this.metadata.getEnabledHydration()) {
             hydrate(commands, this.nodes, this.appLocation);
         }
 

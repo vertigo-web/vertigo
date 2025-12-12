@@ -2,6 +2,7 @@ import { wasmInit, ModuleControllerType } from './wasm_init';
 import { BufferCursor } from './buffer_cursor';
 import { jsJsonDecodeItem, jsJsonGetSize, saveJsJsonToBufferItem } from './jsjson';
 import { Api } from './api/api';
+import { Metadata } from './api/metadata';
 
 //Number -> u32 or i32
 //BigInt -> u64 or i64
@@ -43,7 +44,8 @@ export class WasmModule {
             return wasmModule;
         };
 
-        const vertigo_api = new Api(getWasm);
+        const metadata = new Metadata();
+        const vertigo_api = new Api(metadata, getWasm);
 
         //@ts-expect-error
         window.$vertigoApi = vertigo_api;

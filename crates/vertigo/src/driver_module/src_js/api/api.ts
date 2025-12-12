@@ -11,7 +11,7 @@ import { AppLocation } from './location/AppLocation';
 import { Cookies } from "./command/cookies";
 import { getRandom } from "./command/getRandom";
 import { CommandType, DriverDom } from "./command/dom/dom";
-import { getMetaData } from "./metadata";
+import { Metadata } from "./metadata";
 
 type JsApiCommandType =
     | { Root: { name: string } }
@@ -143,10 +143,10 @@ export class Api {
     private readonly cookie: Cookies;
 
 
-    constructor(private readonly getWasm: () => ModuleControllerType<ExportType>) {
+    constructor(private readonly metadata: Metadata, private readonly getWasm: () => ModuleControllerType<ExportType>) {
         const appLocation = new AppLocation(getWasm);
 
-        this.dom = new DriverDom(appLocation, getWasm);
+        this.dom = new DriverDom(metadata, appLocation, getWasm);
         this.websocket = new DriverWebsocket(getWasm);
         this.interval = new Interval(getWasm);
         this.location = appLocation;
@@ -161,7 +161,7 @@ export class Api {
         // console.info('exec arg', safeArg);
 
         if (safeArg === 'FetchCacheGet') {
-            return fetchCacheGet();
+            return fetchCacheGet(this.metadata);
         }
 
         if (safeArg === 'IsBrowser') {
@@ -259,7 +259,7 @@ export class Api {
             const name = safeArg.GetEnv.name;
 
             return {
-                value: getMetaData(`data-env-${name}`)
+                value: this.metadata.getEnv(name),
             }
         }
 

@@ -1,12 +1,8 @@
 import { JsJsonType } from "../../jsjson";
-import { getMetaData } from "../metadata";
+import { Metadata } from "../metadata";
 
-// interface ResponseType {
-//     data: string | null,
-// }
-
-export const fetchCacheGet = (): JsJsonType => {
-    const cache = getMetaData('data-fetch-cache') ?? null;
+export const fetchCacheGet = (metadata: Metadata): JsJsonType => {
+    const cache = metadata.getFetchCache();
 
     return {
         data: cache

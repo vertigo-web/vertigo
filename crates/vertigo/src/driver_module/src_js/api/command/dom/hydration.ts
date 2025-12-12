@@ -2,7 +2,6 @@ import { AppLocation } from "../../location/AppLocation";
 import { CommandType } from "./dom";
 import { injects } from "./injects";
 import { MapNodes } from "./map_nodes";
-import { trySaveMetaData } from "../../metadata";
 
 interface VirtualNode {
     id: number;
@@ -167,9 +166,7 @@ class HydrationEngine {
         for (let j = realIndex; j < i; j++) {
             const nodeToRemove = realChildren[j];
             if (nodeToRemove) {
-                if (this.depth === 0) {
-                    trySaveMetaData(nodeToRemove);
-                } else if (nodeToRemove.nodeType !== Node.TEXT_NODE) {
+                if (this.depth !== 0 && nodeToRemove.nodeType !== Node.TEXT_NODE) {
                     console.warn(`Hydration ${this.depth}: Removing node`, nodeToRemove);
                 }
                 nodeToRemove.remove();
