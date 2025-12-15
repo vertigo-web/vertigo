@@ -1,12 +1,16 @@
 use darling::FromAttributes;
 use proc_macro::TokenStream;
 use quote::quote;
-use syn::{ext::IdentExt, DataStruct, Ident};
+use std::error::Error;
+use syn::{ext::IdentExt, spanned::Spanned, DataStruct, Ident};
 
 use crate::jsjson::attributes::{ContainerOpts, FieldOpts};
 
 fn is_vec_u8(ty: &syn::Type) -> bool {
-    let vec_u8_type: syn::Type = syn::parse2(quote! { Vec<u8> }).unwrap();
+    let Ok(vec_u8_type) = syn::parse2::<syn::Type>(quote! { Vec<u8> }) else {
+        emit_error!(ty.span(), "Unreachable: Unable to parse Vec<u8>");
+        return false;
+    };
     ty == &vec_u8_type
 }
 
@@ -14,7 +18,7 @@ pub(super) fn impl_js_json_struct(
     name: &Ident,
     data: &DataStruct,
     container_opts: ContainerOpts,
-) -> Result<TokenStream, String> {
+) -> Result<TokenStream, Box<dyn Error>> {
     let mut field_list = Vec::new();
 
     for field in &data.fields {
@@ -32,7 +36,7 @@ pub(super) fn impl_js_json_struct(
 
     for (field_name, attrs, field_ty) in field_list {
         let field_unraw = field_name.unraw().to_string();
-        let field_opts = FieldOpts::from_attributes(attrs).unwrap();
+        let field_opts = FieldOpts::from_attributes(attrs)?;
 
         let json_key = match field_opts.rename {
             Some(json_key) => json_key,

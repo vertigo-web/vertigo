@@ -61,7 +61,7 @@ fn child_from_block() {
             "Children: "
             {
                 let mut iter = (0..10).map(|i| dom! { <li>{i}</li> });
-                iter.next().unwrap()
+                ..iter.next()
             }
         </ul>
     };

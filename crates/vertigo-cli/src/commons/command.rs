@@ -84,13 +84,14 @@ impl CommandRun {
         out.join(" ")
     }
 
-    // pub fn stdin(mut self, stdin: Stdio) -> Self {
-    //     self.stdin = Some(stdin);
-    //     self
-    // }
-
     fn convert_to_string(data: Vec<u8>) -> String {
-        String::from_utf8(data).expect("Error encoding utf-8")
+        match String::from_utf8(data) {
+            Ok(data) => data,
+            Err(err) => {
+                log::error!("Error encoding utf-8: {err}");
+                "".to_string()
+            }
+        }
     }
 
     fn create_command(self) -> (String, Command, Option<Child>) {
@@ -149,7 +150,10 @@ impl CommandRun {
         command.stderr(Stdio::inherit());
         command.stdout(Stdio::inherit());
 
-        let out = command.output().unwrap();
+        let out = command.output().map_err(|err| {
+            log::error!("Can't read child output: {err}");
+            ErrorCode::CantSpawnChildProcess
+        })?;
 
         if let Some(child) = child.as_mut() {
             if child.wait().is_err() {
@@ -172,7 +176,10 @@ impl CommandRun {
         };
         command.stderr(Stdio::inherit());
 
-        let out = command.output().unwrap();
+        let out = command.output().map_err(|err| {
+            log::error!("Can't read child output: {err}");
+            ErrorCode::CantSpawnChildProcess
+        })?;
         Self::intercept_status(error_code, &out)?;
 
         if let Some(child) = child.as_mut() {
@@ -189,7 +196,7 @@ impl CommandRun {
     }
 
     #[allow(dead_code)]
-    pub fn spawn(self) -> (Child, Option<Child>) {
+    pub fn spawn(self) -> Result<(Child, Option<Child>), ErrorCode> {
         let (command_str, mut command, mut child) = self.create_command();
         println!("spawn: {command_str}");
 
@@ -199,7 +206,13 @@ impl CommandRun {
         command.stderr(Stdio::null());
         command.stdout(Stdio::null());
 
-        (command.spawn().unwrap(), child)
+        Ok((
+            command.spawn().map_err(|err| {
+                log::error!("Can't spawn child process: {err}");
+                ErrorCode::CantSpawnChildProcess
+            })?,
+            child,
+        ))
     }
 
     #[allow(dead_code)]
@@ -243,13 +256,16 @@ impl CommandRun {
             Ok(file) => file,
             Err(err) => {
                 log::error!("Can't write to file {path}: {err}");
-                return Err(ErrorCode::CantWriteToFile);
+                return Err(ErrorCode::CantWriteOrRemoveFile);
             }
         };
 
         command.stdout(file);
 
-        let out = command.output().unwrap();
+        let out = command.output().map_err(|err| {
+            log::error!("Can't read output: {err}");
+            ErrorCode::CantSpawnChildProcess
+        })?;
         Self::intercept_status(error_code, &out)?;
 
         Ok(())

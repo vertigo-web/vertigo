@@ -98,6 +98,7 @@
 
 #![deny(rust_2018_idioms)]
 #![feature(try_trait_v2)] // https://github.com/rust-lang/rust/issues/84277
+#![cfg_attr(test, allow(clippy::panic_in_result_fn))]
 
 mod computed;
 mod css;

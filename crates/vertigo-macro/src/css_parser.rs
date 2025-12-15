@@ -3,7 +3,7 @@ use pest::{iterators::Pair, Parser};
 use proc_macro::TokenStream;
 use proc_macro2::{Span, TokenStream as TokenStream2};
 use quote::quote;
-use std::collections::HashMap;
+use std::{collections::HashMap, error::Error};
 use syn::{parse_str, Expr, ExprLit, Ident, Lit};
 
 #[derive(Parser)]
@@ -31,8 +31,10 @@ impl CssParser {
             Ok(pairs) => {
                 let mut parser = Self::new(call_site);
                 for pair in pairs {
-                    // emit_warning!(call_site, "Pair: {:?}", pair);
-                    let new_children = parser.generate_rule(pair);
+                    let Ok(new_children) = parser.generate_rule(pair) else {
+                        emit_error!(call_site, "Error while parsing CSS");
+                        return (quote! {}, false, vec![]);
+                    };
                     parser.children.extend(new_children);
                 }
 
@@ -81,33 +83,33 @@ impl CssParser {
         }
     }
 
-    fn generate_rule(&mut self, pair: Pair<Rule>) -> Vec<String> {
+    fn generate_rule(&mut self, pair: Pair<Rule>) -> Result<Vec<String>, Box<dyn Error>> {
         let mut children = Vec::new();
         match pair.as_rule() {
             Rule::unknown_rule => {
-                let child = self.generate_unknown_rule(pair);
+                let child = self.generate_unknown_rule(pair)?;
                 children.push(child)
             }
             Rule::animation_rule => {
-                let child = self.generate_animation_rule(pair);
+                let child = self.generate_animation_rule(pair)?;
                 children.push(child);
             }
             Rule::media_rules => {
-                let child = self.generate_media_rules(pair);
+                let child = self.generate_media_rules(pair)?;
                 children.push(child);
             }
             Rule::sub_rule => {
-                let child = self.generate_sub_rule(pair);
+                let child = self.generate_sub_rule(pair)?;
                 children.push(child);
             }
             _ => (),
         }
-        children
+        Ok(children)
     }
 
-    fn generate_unknown_rule(&mut self, pair: Pair<Rule>) -> String {
+    fn generate_unknown_rule(&mut self, pair: Pair<Rule>) -> Result<String, Box<dyn Error>> {
         let mut pairs = pair.into_inner();
-        let rule_ident = pairs.next().unwrap();
+        let rule_ident = pairs.next().ok_or("Missing rule identifier")?;
 
         let ident_str = rule_ident.as_str();
         let mut value_strs = Vec::new();
@@ -117,18 +119,28 @@ impl CssParser {
                 Rule::color_value => value.as_str().to_string(),
                 Rule::unquoted_value => value.as_str().to_string(),
                 Rule::quoted_value => value.as_str().to_string(),
-                Rule::expression => self
-                    .params
-                    .insert(value.into_inner().next().unwrap().as_str().to_string()),
+                Rule::expression => self.params.insert(
+                    value
+                        .into_inner()
+                        .next()
+                        .ok_or("Missing expression")?
+                        .as_str()
+                        .to_string(),
+                ),
                 Rule::url_value => {
                     // url_value -> expression/quoted_value
-                    let inner = value.clone().into_inner().next().unwrap();
+                    let inner = value.clone().into_inner().next().ok_or("Missing URL")?;
                     match inner.as_rule() {
                         Rule::expression => {
                             // expression -> expression_value
-                            let expr_value = inner.into_inner().next().unwrap().as_str().to_string();
+                            let expr_value = inner
+                                .into_inner()
+                                .next()
+                                .ok_or("Missing URL value")?
+                                .as_str()
+                                .to_string();
                             format!("url('{}')", self.params.insert(expr_value))
-                        },
+                        }
                         _ => {
                             // quoted_value
                             value.as_str().to_string()
@@ -147,13 +159,13 @@ impl CssParser {
             value_strs.push(value_str);
         }
 
-        format!(
+        Ok(format!(
             "{ident_str}: {};",
             value_strs.join(" ").replace("} px", "}px")
-        )
+        ))
     }
 
-    fn generate_animation_rule(&mut self, pair: Pair<Rule>) -> String {
+    fn generate_animation_rule(&mut self, pair: Pair<Rule>) -> Result<String, Box<dyn Error>> {
         let pairs = pair.into_inner();
 
         let mut value_strs = Vec::new();
@@ -166,17 +178,20 @@ impl CssParser {
                         .into_inner()
                         .map(|frame| {
                             let mut frame_children = frame.into_inner();
-                            let step = frame_children.next().unwrap().as_str();
-                            let frame_rules = frame_children
+                            let step = frame_children
+                                .next()
+                                .ok_or("Missing animation step")?
+                                .as_str();
+                            frame_children
                                 .map(|rule| {
                                     // emit_warning!(call_site, "{:?}", rule);
                                     self.generate_unknown_rule(rule)
                                 })
-                                .collect::<Vec<_>>()
-                                .join("\n");
-                            format!("{step} {{{{ {frame_rules} }}}}")
+                                .collect::<Result<Vec<_>, _>>()
+                                .map(|vec| vec.join("\n"))
+                                .map(|frame_rules| format!("{step} {{{{ {frame_rules} }}}}"))
                         })
-                        .collect::<Vec<_>>()
+                        .collect::<Result<Vec<_>, _>>()?
                         .join("\n");
                     format!("{{{{ {frames_strs} }}}}")
                 }
@@ -192,10 +207,10 @@ impl CssParser {
             value_strs.push(value_str);
         }
 
-        format!("animation: {};", value_strs.join(" "))
+        Ok(format!("animation: {};", value_strs.join(" ")))
     }
 
-    fn generate_media_rules(&mut self, pair: Pair<Rule>) -> String {
+    fn generate_media_rules(&mut self, pair: Pair<Rule>) -> Result<String, Box<dyn Error>> {
         let pairs = pair.into_inner();
 
         // let mut sub_selector = None;
@@ -207,20 +222,23 @@ impl CssParser {
                 Rule::media_query => query = Some(pair.as_str().to_string()),
                 // Rule::sub_selector => sub_selector = Some(pair.as_str()),
                 _ => {
-                    value_strs.extend(self.generate_rule(pair));
+                    value_strs.extend(self.generate_rule(pair)?);
                 }
             };
         }
 
         if let Some(query) = query {
-            format!("@media {query} {{{{ {} }}}};", value_strs.join(" "))
+            Ok(format!(
+                "@media {query} {{{{ {} }}}};",
+                value_strs.join(" ")
+            ))
         } else {
             emit_warning!(self.call_site, "CSS: Generated empty media query");
-            "".to_string()
+            Ok("".to_string())
         }
     }
 
-    fn generate_sub_rule(&mut self, pair: Pair<Rule>) -> String {
+    fn generate_sub_rule(&mut self, pair: Pair<Rule>) -> Result<String, Box<dyn Error>> {
         let pairs = pair.into_inner();
 
         let mut sub_selectors = vec![];
@@ -240,17 +258,20 @@ impl CssParser {
                     sub_selectors.push(pair.as_str());
                 }
                 _ => {
-                    value_strs.extend(self.generate_rule(pair));
+                    value_strs.extend(self.generate_rule(pair)?);
                 }
             };
         }
 
         if !sub_selectors.is_empty() {
             let sub_selectors_str = sub_selectors.join(" ");
-            format!("{sub_selectors_str} {{{{ {} }}}};", value_strs.join("\n"))
+            Ok(format!(
+                "{sub_selectors_str} {{{{ {} }}}};",
+                value_strs.join("\n")
+            ))
         } else {
             emit_warning!(self.call_site, "CSS: Generated empty sub-rule");
-            "".to_string()
+            Ok("".to_string())
         }
     }
 }
@@ -267,7 +288,7 @@ impl Default for ParamsEnumerator {
                 (0..2)
                     .map(|_| b'a'..=b'z')
                     .multi_cartesian_product()
-                    .map(|letters| String::from_utf8(letters).unwrap()),
+                    .map(|letters| String::from_utf8(letters).unwrap_or_default()),
             ),
             params: HashMap::default(),
         }
@@ -279,7 +300,10 @@ impl ParamsEnumerator {
         let key = if let Some(key) = self.params.get(&param) {
             key.clone()
         } else {
-            let key = self.seq.next().unwrap();
+            let Some(key) = self.seq.next() else {
+                emit_call_site_error!("Missing seq in params enumerator");
+                return "".to_string();
+            };
             self.params.insert(param, key.clone());
             key
         };

@@ -11,6 +11,7 @@
 ### Internals
 
 * Optimized SSR metadata handling [#471]
+* vertigo-cli: No unwraps [#470]
 
 ## 0.9.0 - 2025-12-01
 

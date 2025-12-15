@@ -53,7 +53,9 @@ fn test_serialize_and_deserialize_struct() {
 
     assert!(matches!(hash_map.get("data_opt2"), Some(JsJson::Null)));
 
-    let restored_obj = TestObj::from_json(JsJsonContext::new(""), test_obj_json).unwrap();
+    let Ok(restored_obj) = TestObj::from_json(JsJsonContext::new(""), test_obj_json) else {
+        panic!("Error deserializing test_obj");
+    };
 
     assert_eq!(test_obj, restored_obj);
 }

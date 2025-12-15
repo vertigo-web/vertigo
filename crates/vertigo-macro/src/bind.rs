@@ -1,14 +1,13 @@
-use std::collections::HashSet;
-use std::collections::VecDeque;
-
-use proc_macro::{Span, TokenStream};
-use proc_macro2::Ident;
-use proc_macro2::TokenStream as TokenStream2;
-use proc_macro2::TokenTree;
+use proc_macro::TokenStream;
+use proc_macro2::{Ident, Span, TokenStream as TokenStream2, TokenTree};
 use quote::quote;
+use std::{
+    collections::{HashSet, VecDeque},
+    error::Error,
+};
 use syn::__private::quote::format_ident;
 
-pub(crate) fn bind_inner(input: TokenStream) -> Result<TokenStream, String> {
+pub(crate) fn bind_inner(input: TokenStream) -> Option<TokenStream> {
     let input: TokenStream2 = input.into();
     let tokens = input.into_iter().collect::<Vec<_>>();
 
@@ -25,13 +24,13 @@ pub(crate) fn bind_inner(input: TokenStream) -> Result<TokenStream, String> {
     let mut idents_seen = HashSet::new();
 
     for item in bind_params {
-        let Some(param_name) = find_param_name(item) else {
-            return Ok(quote! {""}.into());
-        };
+        let param_name = find_param_name(item)?;
 
         if !idents_seen.insert(param_name.clone()) {
             emit_error!(
-                item.last().unwrap().span(),
+                item.last()
+                    .map(|i| i.span())
+                    .unwrap_or_else(Span::call_site),
                 "Conflicting variable name: {}",
                 param_name
             );
@@ -62,10 +61,10 @@ pub(crate) fn bind_inner(input: TokenStream) -> Result<TokenStream, String> {
         }
     };
 
-    Ok(bind_result.into())
+    Some(bind_result.into())
 }
 
-pub(crate) fn bind_spawn_inner(input: TokenStream) -> Result<TokenStream, String> {
+pub(crate) fn bind_spawn_inner(input: TokenStream) -> Option<TokenStream> {
     let input: TokenStream2 = input.into();
     let tokens = input.into_iter().collect::<Vec<_>>();
 
@@ -91,7 +90,9 @@ pub(crate) fn bind_spawn_inner(input: TokenStream) -> Result<TokenStream, String
     let mut pipes = 0;
     for (i, token) in body.clone().into_iter().enumerate() {
         if let TokenTree::Punct(punct) = token {
-            if punct.as_char() == '{' { break }
+            if punct.as_char() == '{' {
+                break;
+            }
             if punct.as_char() == '|' {
                 pipes += 1;
             }
@@ -108,17 +109,19 @@ pub(crate) fn bind_spawn_inner(input: TokenStream) -> Result<TokenStream, String
 
     let inner_body: TokenStream2 = TokenStream2::from_iter(body);
 
-    Ok(quote! {
-        {
-            vertigo::bind!(#(#bind_params,)* |#(#func_params,)*| {
-                vertigo::get_driver().spawn(vertigo::bind!(#(#bind_params,)* #inner_body));
-            })
+    Some(
+        quote! {
+            {
+                vertigo::bind!(#(#bind_params,)* |#(#func_params,)*| {
+                    vertigo::get_driver().spawn(vertigo::bind!(#(#bind_params,)* #inner_body));
+                })
+            }
         }
-    }
-    .into())
+        .into(),
+    )
 }
 
-pub(crate) fn bind_rc_inner(input: TokenStream) -> Result<TokenStream, String> {
+pub(crate) fn bind_rc_inner(input: TokenStream) -> Option<TokenStream> {
     let input: TokenStream2 = input.into();
     let tokens = input.into_iter().collect::<Vec<_>>();
 
@@ -134,14 +137,24 @@ pub(crate) fn bind_rc_inner(input: TokenStream) -> Result<TokenStream, String> {
         .collect::<Vec<_>>();
 
     let Some(func_params) = func_params else {
-        return Err("The macro can only take functions".to_string());
+        emit_call_site_error!("The macro can only take functions");
+        return None;
     };
 
     let types = {
         let mut types_macro: Vec<TokenStream2> = Vec::new();
 
-        for type_item in func_params.into_iter() {
-            let type_item = get_type(type_item)?;
+        for type_items in func_params.into_iter() {
+            let Ok(type_item) = get_type(type_items) else {
+                emit_error!(
+                    type_items
+                        .first()
+                        .map(|i| i.span())
+                        .unwrap_or_else(Span::call_site),
+                    "The macro can only take functions"
+                );
+                return None;
+            };
 
             let type_item = convert_tokens_to_stream(type_item);
             types_macro.push(type_item);
@@ -152,7 +165,7 @@ pub(crate) fn bind_rc_inner(input: TokenStream) -> Result<TokenStream, String> {
 
     let body: TokenStream2 = convert_tokens_to_stream(body.as_slice());
 
-    Ok(quote!{
+    Some(quote!{
         {
             let func: std::rc::Rc::<dyn Fn(#(#types,)*) -> _> = std::rc::Rc::new(vertigo::bind!(#(#bind_params,)* #body));
             func
@@ -218,25 +231,32 @@ fn contains_bracket(tokens: &[TokenTree]) -> bool {
     false
 }
 
-fn split_params_and_body_function(tokens: &[TokenTree]) -> Result<TokensParamsBody<'_>, String> {
+fn split_params_and_body_function(tokens: &'_ [TokenTree]) -> Option<TokensParamsBody<'_>> {
     let mut chunks = tokens
         .split(|token| is_char(token, '|'))
         .collect::<VecDeque<_>>();
 
-    if chunks.len() != 3 {
-        return Err("Two brackets '|' were expected".to_string());
+    if chunks.len() > 3 {
+        emit_error!(tokens[3].span(), "Too many brackets '|' (2 were expected)");
+        return None;
     }
 
-    let bind_params = chunks
-        .pop_front()
-        .unwrap()
+    let Some(params_chunk) = chunks.pop_front() else {
+        emit_call_site_error!("Two brackets '|' were expected");
+        return None;
+    };
+
+    let bind_params = params_chunk
         .split(|token| is_char(token, ','))
         .filter(|item| !item.is_empty())
         .collect::<Vec<_>>();
 
-    let func_params = chunks
-        .pop_front()
-        .unwrap()
+    let Some(func_params) = chunks.pop_front() else {
+        emit_error!(tokens[0].span(), "Two brackets '|' were expected");
+        return None;
+    };
+
+    let func_params = func_params
         .split(|token| is_char(token, ','))
         .filter(|item| !item.is_empty())
         .collect::<Vec<_>>();
@@ -257,28 +277,31 @@ fn split_params_and_body_function(tokens: &[TokenTree]) -> Result<TokensParamsBo
         body
     };
 
-    Ok(TokensParamsBody {
+    Some(TokensParamsBody {
         bind_params,
         func_params: Some(func_params),
         body,
     })
 }
 
-fn split_params_and_body_block(tokens: &[TokenTree]) -> Result<TokensParamsBody<'_>, String> {
+fn split_params_and_body_block(tokens: &[TokenTree]) -> Option<TokensParamsBody<'_>> {
     let mut chunks = tokens
         .split(|token| is_char(token, ','))
         .collect::<Vec<_>>();
 
-    let body = chunks.pop().unwrap().to_vec();
+    let Some(body) = chunks.pop() else {
+        emit_call_site_error!("Two brackets '|' were expected");
+        return None;
+    };
 
-    Ok(TokensParamsBody {
+    Some(TokensParamsBody {
         bind_params: chunks,
         func_params: None,
-        body,
+        body: body.to_vec(),
     })
 }
 
-fn split_params_and_body(tokens: &[TokenTree]) -> Result<TokensParamsBody<'_>, String> {
+fn split_params_and_body(tokens: &[TokenTree]) -> Option<TokensParamsBody<'_>> {
     let bracket_contain = contains_bracket(tokens);
 
     if bracket_contain {
@@ -292,17 +315,17 @@ fn convert_tokens_to_stream(tokens: &[TokenTree]) -> TokenStream2 {
     tokens.iter().cloned().collect::<TokenStream2>()
 }
 
-fn get_type(tokens: &[TokenTree]) -> Result<&[TokenTree], String> {
+fn get_type(tokens: &[TokenTree]) -> Result<&[TokenTree], Box<dyn Error>> {
     let mut tokens = tokens
         .split(|token| is_char(token, ':'))
         .collect::<VecDeque<_>>();
 
     if tokens.len() != 2 {
-        return Err("type must be specified for all function parameters".to_string());
+        return Err("type must be specified for all function parameters".into());
     }
 
-    let _ = tokens.pop_front().unwrap();
-    let type_tokens = tokens.pop_front().unwrap();
+    let _ = tokens.pop_front().ok_or("unreachable (1)")?;
+    let type_tokens = tokens.pop_front().ok_or("unreachable (2)")?;
 
     Ok(type_tokens)
 }

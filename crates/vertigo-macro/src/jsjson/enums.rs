@@ -1,6 +1,7 @@
 use darling::FromAttributes;
 use proc_macro::TokenStream;
 use quote::quote;
+use std::error::Error;
 use syn::{ext::IdentExt, DataEnum, Fields, Ident};
 
 use crate::jsjson::attributes::{ContainerOpts, FieldOpts};
@@ -22,7 +23,7 @@ pub(super) fn impl_js_json_enum(
     name: &Ident,
     data: &DataEnum,
     container_opts: ContainerOpts,
-) -> Result<TokenStream, String> {
+) -> Result<TokenStream, Box<dyn Error>> {
     // Encoding code for every variant
     let mut variant_encodes = vec![];
 
@@ -33,7 +34,7 @@ pub(super) fn impl_js_json_enum(
     let mut variant_object_decodes = vec![];
 
     for variant in &data.variants {
-        let field_opts = FieldOpts::from_attributes(&variant.attrs).unwrap();
+        let field_opts = FieldOpts::from_attributes(&variant.attrs)?;
         let variant_ident = &variant.ident;
         let variant_name = variant.ident.unraw().to_string();
 

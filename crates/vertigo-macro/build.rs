@@ -7,8 +7,8 @@ fn main() {
 }
 
 fn export_var(name: &str) {
-    let value = &env::var(name).unwrap_or_else(|err|
+    let value = &env::var(name).unwrap_or_else(|err| {
         panic!("Can't read {name} env variable in vertigo-macro build script: {err}")
-    );
+    });
     println!("cargo:rustc-env=VERTIGO_{name}={value}");
 }

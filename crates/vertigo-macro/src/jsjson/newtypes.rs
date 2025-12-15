@@ -1,8 +1,12 @@
 use proc_macro::TokenStream;
 use quote::quote;
+use std::error::Error;
 use syn::{DataStruct, Ident};
 
-pub(super) fn impl_js_json_newtype(name: &Ident, data: &DataStruct) -> Result<TokenStream, String> {
+pub(super) fn impl_js_json_newtype(
+    name: &Ident,
+    data: &DataStruct,
+) -> Result<TokenStream, Box<dyn Error>> {
     let mut encodes = Vec::new();
     let mut decodes = Vec::new();
 

@@ -1,7 +1,10 @@
 [package]
 name = "vertigo-macro"
 version = "0.9.0"
-authors = ["Grzegorz Szeliga <szeligagrzegorz@gmail.com>", "Michał Pokrywka <wolfmoon@o2.pl>"]
+authors = [
+    "Grzegorz Szeliga <szeligagrzegorz@gmail.com>",
+    "Michał Pokrywka <wolfmoon@o2.pl>",
+]
 description = "Reactive Real-DOM library with SSR for Rust - macros"
 edition = "2021"
 license = "MIT OR Apache-2.0"
@@ -23,9 +26,12 @@ proc-macro-error = "1.0"
 proc-macro2 = "1.0"
 quote = "1.0"
 rstml = "0.12"
-syn = { version = "2.0", features=["full"] }
+syn = { version = "2.0", features = ["full"] }
 tailwind-css = "0.13"
 
 [dev-dependencies]
 prettyplease = "0.2.37"
 pretty_assertions = "1.4.1"
+
+[lints]
+workspace = true

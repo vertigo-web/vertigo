@@ -134,7 +134,12 @@ pub async fn run(mut opts: WatchOpts) -> Result<(), ErrorCode> {
     });
 
     use notify::Watcher;
-    watcher.watch(&root, RecursiveMode::Recursive).unwrap();
+    watcher
+        .watch(&root, RecursiveMode::Recursive)
+        .map_err(|err| {
+            log::error!("Can't watch root dir {}: {err}", root.to_string_lossy());
+            ErrorCode::CantAddWatchDir
+        })?;
 
     for watch_path in &opts.add_watch_path {
         match watcher.watch(Path::new(watch_path), RecursiveMode::Recursive) {
