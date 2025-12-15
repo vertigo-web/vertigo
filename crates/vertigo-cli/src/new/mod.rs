@@ -53,12 +53,19 @@ pub fn run(opts: NewOpts) -> Result<(), ErrorCode> {
     // (cargo packaging does not permit adding second Cargo.toml file)
     if let Err(err) = fs::remove_file(target_path.join("Cargo.toml_")) {
         log::error!("Can't rename to Cargo.toml_ to Cargo.toml: {err}");
-        return Err(ErrorCode::NewProjectCanCreateCargoToml);
+        return Err(ErrorCode::NewProjectCantCreateCargoToml);
     };
 
     // Save Cargo.toml with replaced package name
-    let cargo_toml = TEMPLATE.get_file("Cargo.toml_").unwrap();
-    let cargo_toml_content = cargo_toml.contents_utf8().unwrap();
+    let Some(cargo_toml) = TEMPLATE.get_file("Cargo.toml_") else {
+        log::error!("Can't generate Cargo.toml");
+        return Err(ErrorCode::NewProjectCantCreateCargoToml);
+    };
+
+    let Some(cargo_toml_content) = cargo_toml.contents_utf8() else {
+        log::error!("Can't generate Cargo.toml (encoding error)");
+        return Err(ErrorCode::NewProjectCantCreateCargoToml);
+    };
 
     if let Err(err) = fs::write(
         target_path.join("Cargo.toml"),

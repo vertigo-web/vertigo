@@ -19,7 +19,7 @@ mod trace_tailwind;
 mod utils;
 mod wasm_path;
 
-use proc_macro::{Span, TokenStream};
+use proc_macro::TokenStream;
 use quote::quote;
 
 use crate::{
@@ -37,13 +37,13 @@ use crate::{
 #[proc_macro]
 #[proc_macro_error]
 pub fn dom(input: TokenStream) -> TokenStream {
-    dom_inner(input)
+    dom_inner(input).into()
 }
 
 #[proc_macro]
 #[proc_macro_error]
 pub fn dom_element(input: TokenStream) -> TokenStream {
-    dom_element_inner(input)
+    dom_element_inner(input).into()
 }
 
 #[proc_macro]
@@ -51,7 +51,7 @@ pub fn dom_element(input: TokenStream) -> TokenStream {
 pub fn dom_debug(input: TokenStream) -> TokenStream {
     let stream = dom_inner(input);
     emit_warning!("debug: {:?}", stream);
-    stream
+    stream.into()
 }
 
 #[proc_macro]
@@ -86,14 +86,16 @@ pub fn css(input: TokenStream) -> TokenStream {
 #[proc_macro_derive(AutoJsJson, attributes(js_json))]
 #[proc_macro_error]
 pub fn auto_js_json(input: TokenStream) -> TokenStream {
-    let ast = syn::parse(input).unwrap();
+    let Ok(ast) = syn::parse(input) else {
+        emit_call_site_error!("Failed to parse input");
+        return quote! {}.into();
+    };
 
     match jsjson::impl_js_json_derive(&ast) {
         Ok(result) => result,
         Err(message) => {
-            emit_error!(Span::call_site(), "{}", message);
-            let empty = "";
-            quote! { #empty }.into()
+            emit_call_site_error!("{}", message);
+            return quote! {}.into();
         }
     }
 }
@@ -101,7 +103,10 @@ pub fn auto_js_json(input: TokenStream) -> TokenStream {
 #[proc_macro]
 #[proc_macro_error]
 pub fn tw(input: TokenStream) -> TokenStream {
-    trace_tailwind(input)
+    match trace_tailwind(input) {
+        Ok(token_stream) => token_stream,
+        Err(err) => abort_call_site!(err),
+    }
 }
 
 #[proc_macro]
@@ -146,14 +151,10 @@ pub fn js_inner(input: TokenStream) -> TokenStream {
     js_expression(input)
 }
 
-fn convert_to_tokens(input: Result<TokenStream, String>) -> TokenStream {
+fn convert_to_tokens(input: Option<TokenStream>) -> TokenStream {
     match input {
-        Ok(body) => body,
-        Err(message) => {
-            emit_error!(Span::call_site(), "{}", message);
-            let empty = "";
-            quote! { #empty }.into()
-        }
+        Some(body) => body,
+        None => quote! {}.into(),
     }
 }
 

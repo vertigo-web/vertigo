@@ -3,7 +3,11 @@ use quote::{format_ident, quote};
 use syn::{spanned::Spanned, FnArg, Ident, ItemFn, Pat, ReturnType, Type, TypePath};
 
 pub fn store_inner(_attr: TokenStream2, item: TokenStream2) -> TokenStream2 {
-    let input = syn::parse2::<ItemFn>(item).unwrap();
+    let span = item.span();
+    let Ok(input) = syn::parse2::<ItemFn>(item) else {
+        emit_error!(span, "The macro can only take functions");
+        return quote! {};
+    };
 
     let vis = &input.vis;
     let sig = &input.sig;
@@ -127,7 +131,10 @@ mod tests {
     fn pretty_format(output: &TokenStream2) -> String {
         use syn::parse2;
 
-        let syntax_tree: syn::File = parse2(output.clone()).unwrap();
+        let Ok(syntax_tree) = parse2::<syn::File>(output.clone()) else {
+            emit_error!(output.span(), "Failed to parse output");
+            return "".to_string();
+        };
         prettyplease::unparse(&syntax_tree)
     }
 

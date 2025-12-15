@@ -92,8 +92,10 @@ fn read_index(dest_dir: &str) -> Result<IndexModel, ErrorCode> {
         }
     };
 
-    let model = serde_json::from_str::<IndexModel>(&index_html).unwrap();
-    Ok(model)
+    serde_json::from_str::<IndexModel>(&index_html).map_err(|err| {
+        log::error!("File read error 2: file={index_path:?}, error={err}, dest_dir={dest_dir}");
+        ErrorCode::ServeCantReadIndexFile
+    })
 }
 
 fn replace_prefix(dest_dir: &str, path: &str) -> String {

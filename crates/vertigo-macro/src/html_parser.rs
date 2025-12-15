@@ -1,5 +1,5 @@
 use proc_macro::TokenStream;
-use proc_macro2::{Span, TokenStream as TokenStream2};
+use proc_macro2::TokenStream as TokenStream2;
 use quote::{quote, ToTokens, TokenStreamExt};
 use rstml::{
     node::{
@@ -20,10 +20,10 @@ const HTML_ATTR_FORMAT_ERROR: &str =
 const COMPONENT_ATTR_FORMAT_ERROR: &str =
     "in component. Expected key=\"value\", key={value}, key={}, group:key=\"value\", group:key={value} or {value} attribute.";
 
-pub(crate) fn dom_inner(input: TokenStream) -> TokenStream {
+pub(crate) fn dom_inner(input: TokenStream) -> TokenStream2 {
     let nodes = match parse(input) {
         Ok(nodes) => nodes,
-        Err(err) => return err.to_compile_error().into(),
+        Err(err) => return err.to_compile_error(),
     };
 
     let mut dom_nodes = Vec::new();
@@ -33,17 +33,20 @@ pub(crate) fn dom_inner(input: TokenStream) -> TokenStream {
         dom_nodes.push(tokens);
     }
 
+    if dom_nodes.is_empty() {
+        emit_call_site_error!("Empty input");
+        return quote! {};
+    }
+
     if dom_nodes.len() == 1 {
-        let last = dom_nodes.pop().unwrap();
+        let Some(last) = dom_nodes.pop() else {
+            emit_call_site_error!("Empty input");
+            return quote! {};
+        };
 
         return quote! {
             vertigo::DomNode::from(#last)
-        }
-        .into();
-    }
-
-    if dom_nodes.is_empty() {
-        emit_error!(Span::call_site(), "Empty input");
+        };
     }
 
     quote! {
@@ -51,13 +54,12 @@ pub(crate) fn dom_inner(input: TokenStream) -> TokenStream {
             #(#dom_nodes,)*
         )))
     }
-    .into()
 }
 
-pub(crate) fn dom_element_inner(input: TokenStream) -> TokenStream {
+pub(crate) fn dom_element_inner(input: TokenStream) -> TokenStream2 {
     let nodes = match parse(input) {
         Ok(nodes) => nodes,
-        Err(err) => return err.to_compile_error().into(),
+        Err(err) => return err.to_compile_error(),
     };
 
     let mut modes_dom = Vec::new();
@@ -68,14 +70,11 @@ pub(crate) fn dom_element_inner(input: TokenStream) -> TokenStream {
     }
 
     if modes_dom.len() != 1 {
-        emit_error!(
-            Span::call_site(),
-            "This macro supports only one DomElement as root".to_string()
-        );
-        return TokenStream::default();
+        emit_call_site_error!("This macro supports only one DomElement as root");
+        return quote! {};
     }
 
-    modes_dom.pop().unwrap_or_default().into()
+    modes_dom.pop().unwrap_or_default()
 }
 
 fn convert_to_component(node: &Node) -> TokenStream2 {
@@ -245,7 +244,10 @@ fn convert_to_component(node: &Node) -> TokenStream2 {
                         {
                             inner.expr.to_token_stream()
                         } else if value.block.stmts.len() == 1 {
-                            value.block.stmts.last().unwrap().to_token_stream()
+                            let Some(last) = value.block.stmts.last() else {
+                                return quote! {};
+                            };
+                            last.to_token_stream()
                         } else {
                             value.to_token_stream()
                         };
@@ -365,7 +367,14 @@ fn convert_node(node: &Node, convert_to_dom_node: bool) -> TokenStream2 {
     let mut push_attr = |name: String, value: TokenStream2| {
         // Store used class name for tailwind bundler
         if name.as_str() == "tw" {
-            let output = add_to_tailwind(value);
+            let span = value.span();
+            let output = match add_to_tailwind(value) {
+                Ok(output) => output,
+                Err(err) => {
+                    emit_error!(span, err);
+                    return;
+                }
+            };
             class_values.push(quote! { vertigo::TwClass::from(#output).to_class_value() });
             return;
         }
@@ -425,7 +434,10 @@ fn convert_node(node: &Node, convert_to_dom_node: bool) -> TokenStream2 {
                                 quote! { vertigo::dom::attr_value::AttrValue::String(Default::default()) },
                             )
                         } else if value.block.stmts.len() == 1 {
-                            let value = value.block.stmts.first().unwrap();
+                            let Some(value) = value.block.stmts.first() else {
+                                emit_error!(value.block.span(), "Unreachable");
+                                return quote! {};
+                            };
                             push_attr(key.to_string(), value.to_token_stream())
                         } else {
                             push_attr(key.to_string(), value.to_token_stream())
@@ -572,7 +584,10 @@ fn convert_node(node: &Node, convert_to_dom_node: bool) -> TokenStream2 {
 
                                         quote! { .children({ #new_block }) }
                                     } else if n == 1 {
-                                        let stmt = block.stmts.first().unwrap();
+                                        let Some(stmt) = block.stmts.first() else {
+                                            emit_error!(block.span(), "Unreachable");
+                                            return quote! {};
+                                        };
                                         quote! { .child(vertigo::EmbedDom::embed(#stmt)) }
                                     } else {
                                         quote! { .child(vertigo::EmbedDom::embed(#block)) }

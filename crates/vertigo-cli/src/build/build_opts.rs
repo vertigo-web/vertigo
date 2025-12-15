@@ -69,7 +69,10 @@ impl BuildOpts {
     }
 
     pub fn new_path_in_static_from(&self, path: &WasmPath) -> WasmPath {
-        let name_os = path.file_name();
+        let Ok(name_os) = path.file_name() else {
+            log::error!("Can't get file name from path: {}", path.as_string());
+            return self.new_path_in_static_make(&[]);
+        };
         self.new_path_in_static_make(&[name_os.as_str()])
     }
 

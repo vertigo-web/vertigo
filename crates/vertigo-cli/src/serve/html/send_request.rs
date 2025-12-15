@@ -50,10 +50,11 @@ fn convert_to_serde_value(value: JsJson) -> Value {
         JsJson::Null => Value::Null,
         JsJson::Undefined => Value::Null, // JSON doesn't have undefined, use null
         JsJson::Number(JsJsonNumber(value)) => {
-            Value::Number(Number::from_f64(value).unwrap_or_else(|| {
+            let Some(n) = Number::from_f64(value) else {
                 log::error!("Invalid float in convert_to_serde_value: {value}");
-                Number::from_f64(0.0).unwrap()
-            }))
+                return Value::Null;
+            };
+            Value::Number(n)
         }
         JsJson::String(value) => Value::String(value),
         JsJson::List(list) => {

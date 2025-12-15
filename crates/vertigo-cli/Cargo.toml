@@ -1,9 +1,18 @@
 [package]
 name = "vertigo-cli"
 version = "0.9.0"
-authors = ["Grzegorz Szeliga <szeligagrzegorz@gmail.com>", "Michał Pokrywka <wolfmoon@o2.pl>"]
+authors = [
+    "Grzegorz Szeliga <szeligagrzegorz@gmail.com>",
+    "Michał Pokrywka <wolfmoon@o2.pl>",
+]
 description = "Reactive Real-DOM library with SSR for Rust - packaging/serving tool"
-categories = ["command-line-utilities", "development-tools", "development-tools::build-utils", "wasm", "web-programming"]
+categories = [
+    "command-line-utilities",
+    "development-tools",
+    "development-tools::build-utils",
+    "wasm",
+    "web-programming",
+]
 license = "MIT OR Apache-2.0"
 edition = "2021"
 repository = "https://github.com/vertigo-web/vertigo/"
@@ -43,3 +52,6 @@ tokio-retry = "0.3"
 wasmtime = "38.0"
 vertigo = { path = "../vertigo", version = "0.9.0" }
 parking_lot = "0.12.5"
+
+[lints]
+workspace = true

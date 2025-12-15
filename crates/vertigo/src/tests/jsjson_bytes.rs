@@ -7,7 +7,7 @@ struct TestStruct {
 }
 
 #[test]
-fn test_auto_js_json_vec() {
+fn test_auto_js_json_vec() -> Result<(), Box<dyn std::error::Error>> {
     let original = TestStruct {
         data: vec![10, 20, 30, 40],
         name: "test".to_string(),
@@ -19,14 +19,15 @@ fn test_auto_js_json_vec() {
         if let Some(JsJson::Vec(data)) = map.get("data") {
             assert_eq!(data, &vec![10, 20, 30, 40]);
         } else {
-            panic!("Expected JsJson::Vec for 'data' field");
+            return Err("Expected JsJson::Vec for 'data' field".into());
         }
     } else {
-        panic!("Expected JsJson::Object");
+        return Err("Expected JsJson::Object".into());
     }
 
     let context = JsJsonContext::new("test");
-    let deserialized = TestStruct::from_json(context, json).expect("Deserialization failed");
+    let deserialized = TestStruct::from_json(context, json).map_err(|e| e.to_string())?;
 
     assert_eq!(original, deserialized);
+    Ok(())
 }

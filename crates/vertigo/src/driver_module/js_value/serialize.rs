@@ -393,7 +393,11 @@ mod tests {
 
         let decoded = (0..encoded.len())
             .step_by(2)
-            .map(|i| u8::from_str_radix(&encoded[i..i + 2], 16).unwrap())
+            .filter_map(|i| {
+                let decoded_i = u8::from_str_radix(&encoded[i..i + 2], 16);
+                assert!(decoded_i.is_ok());
+                decoded_i.ok()
+            })
             .collect::<Vec<u8>>();
 
         println!("Original: {}", String::from_utf8_lossy(&decoded));

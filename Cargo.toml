@@ -14,14 +14,16 @@ members = [
     "tests",
     "tests/basic",
 
-    "lint-project"
+    "lint-project",
 ]
-exclude = [
-    "build/vertigo-clit-test/some_app"
-]
+exclude = ["build/vertigo-cli-test/some_app"]
 resolver = "2"
 
 [profile.release]
 lto = "thin"
 opt-level = 'z'
 incremental = true
+
+[workspace.lints.clippy]
+unwrap_used = "deny"
+expect_used = "deny"

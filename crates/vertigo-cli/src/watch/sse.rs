@@ -55,7 +55,9 @@ impl<T: Default + Send + Sync + Unpin + Clone + PartialEq + 'static> Stream for 
 
             self.spawn = Some(SpawnOwner::new(async move {
                 loop {
-                    rx.changed().await.unwrap();
+                    if let Err(err) = rx.changed().await {
+                        log::error!("{err}");
+                    };
                     waker.wake_by_ref();
                 }
             }));

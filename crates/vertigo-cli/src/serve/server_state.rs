@@ -27,9 +27,13 @@ use super::{
 
 pub fn get_now() -> Duration {
     let start = SystemTime::now();
-    start
-        .duration_since(UNIX_EPOCH)
-        .expect("Time went backwards")
+    match start.duration_since(UNIX_EPOCH) {
+        Ok(duration) => duration,
+        Err(err) => {
+            log::error!("Time went backwards: {err}");
+            Duration::from_secs(0)
+        }
+    }
 }
 
 static STATE: OnceLock<Arc<RwLock<Option<Arc<ServerState>>>>> = OnceLock::new();
