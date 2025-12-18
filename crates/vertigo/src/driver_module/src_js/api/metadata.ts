@@ -10,7 +10,6 @@ export class Metadata {
 
         this.metadata = metadata;
         metadata.remove();
-        console.info('metadata', metadata);
     }
 
     private get = (attr: string): string | null => {

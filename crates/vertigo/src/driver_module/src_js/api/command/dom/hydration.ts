@@ -54,7 +54,7 @@ class HydrationEngine {
         const vNode = this.virtualNodes.get(vNodeId);
         if (!vNode) return;
 
-        // console.log(`Hydration ${depth}: Hydrate node`, vNode, realNode);
+        // console.log(`Hydration ${this.depth + 1}: Hydrate node`, vNode, realNode);
 
         // Match children
         const realChildren = Array.from(realNode.childNodes);

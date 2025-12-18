@@ -1,6 +1,6 @@
 [package]
 name = "vertigo"
-version = "0.9.0"
+version = "0.9.1"
 authors = [
     "Grzegorz Szeliga <szeligagrzegorz@gmail.com>",
     "Michał Pokrywka <wolfmoon@o2.pl>",
@@ -21,7 +21,7 @@ chrono = { version = ">=0.4.20", default-features = false, features = [
     "std",
 ], optional = true }
 log = { version = "0.4", features = ["std"] }
-vertigo-macro = { path = "../../crates/vertigo-macro", version = "0.9.0" }
+vertigo-macro = { path = "../../crates/vertigo-macro", version = "0.9.1" }
 
 [lints]
 workspace = true

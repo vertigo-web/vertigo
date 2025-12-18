@@ -13,7 +13,6 @@ export class MapNodes {
         ];
 
         this.style = document.createElement('style');
-        this.getRootHead().appendChild(this.style);
     }
 
     private getRootHtml(): Element {
@@ -153,11 +152,10 @@ export class MapNodes {
             const ref_node = this.getAny('insert_before ref', ref_id);
             parentNode.insertBefore(childNode, ref_node);
         }
+    }
 
-        if (parentNode === this.getRootHead()) {
-            //we make sure that the automatically generated styles are always the last element of the head
-            this.getRootHead().appendChild(this.style);
-        }
+    public addStyles() {
+        this.getRootHead().appendChild(this.style);
     }
 
     public hasInitNodes(): boolean {
