@@ -1,11 +1,14 @@
 [package]
 name = "vertigo-example-counter"
-version = "0.9.0"
-authors = ["Grzegorz Szeliga <szeligagrzegorz@gmail.com>", "Michał Pokrywka <wolfmoon@o2.pl>"]
+version = "0.9.1"
+authors = [
+    "Grzegorz Szeliga <szeligagrzegorz@gmail.com>",
+    "Michał Pokrywka <wolfmoon@o2.pl>",
+]
 edition = "2021"
 
 [lib]
 crate-type = ["cdylib", "rlib"]
 
 [dependencies]
-vertigo = { path = "../../crates/vertigo", version = "0.9.0" }
+vertigo = { path = "../../crates/vertigo", version = "0.9.1" }

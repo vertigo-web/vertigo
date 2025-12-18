@@ -2,7 +2,7 @@
 <!-- markdownlint-disable no-inline-html -->
 
 <!-- markdownlint-disable-next-line no-emphasis-as-heading -->
-*Up to date with version 0.9.0*
+*Up to date with version 0.9.1*
 
 <!-- markdownlint-disable-next-line heading-increment -->
 ### Table of contents
@@ -540,7 +540,7 @@ Complete code for this tutorial should be found [here](https://github.com/vertig
 
 For any more complex scenarios please refer to [examples](/examples) and [demo](/demo/src/app) package.
 
-[^traitaliases]: https://github.com/rust-lang/rust/issues/41517
+[^traitaliases]: <https://github.com/rust-lang/rust/issues/41517>
 
 [^simplification]: This is a shameful simplification but enough for a tutorial - the correct description will be able to be found in future, more robust documentation.
 

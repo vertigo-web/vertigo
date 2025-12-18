@@ -133,6 +133,9 @@ export class DriverDom {
         }
 
         this.nodes.removeInitNodes();
+
+        // Make sure that the client-side generated styles are always the last element of the head
+        this.nodes.addStyles();
     }
 
     private createNode(id: number, name: string) {
