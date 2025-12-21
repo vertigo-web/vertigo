@@ -34,3 +34,12 @@ fn test_unknown_rule_expression() {
         "some-color-rule: red;\nbackground-color: #asdf;"
     )
 }
+
+#[test]
+fn animation_rules() {
+    let value = css! {"
+        animation-fill-mode: forwards;
+    "};
+
+    assert_eq!(get_s(&value), "animation-fill-mode: forwards;")
+}

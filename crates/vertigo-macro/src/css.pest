@@ -269,7 +269,7 @@ simple_rule = _{
 }
 
 unknown_rule = {
-    !("animation")
+    !("animation" ~ colon)
     ~ rule_ident ~ colon ~ value ~ semicolon
 }
 

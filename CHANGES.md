@@ -1,6 +1,12 @@
 <!-- markdownlint-configure-file { "no-duplicate-heading": { "siblings_only": true } } -->
 
 <!-- markdownlint-disable-next-line first-line-h1 -->
+## Unreleased
+
+### Fixed
+
+* Fixed parsing `animation-` rules in `css!` macro.
+
 ## 0.9.1 - 2025-12-18
 
 ### Fixed
