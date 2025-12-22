@@ -1,10 +1,12 @@
 #![deny(rust_2018_idioms)]
 
-use vertigo::{get_driver, main, DomNode};
-mod app;
+use vertigo::{get_driver, DomNode};
 
-#[main]
-fn render() -> DomNode {
+mod app;
+use crate::app::{render, State};
+
+#[vertigo::main]
+fn demo() -> DomNode {
     let ws_chat = get_driver().env("ws_chat");
     let ws_chat = match ws_chat.as_deref() {
         Some("off") => None,
@@ -19,6 +21,6 @@ fn render() -> DomNode {
         }
     });
 
-    let state = app::State::new(ws_chat);
-    state.render()
+    let state = State::new(ws_chat);
+    render(&state)
 }

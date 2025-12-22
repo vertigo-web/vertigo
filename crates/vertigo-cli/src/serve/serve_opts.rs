@@ -39,4 +39,10 @@ pub struct ServeOptsInner {
     /// Disable hydration on page load (will re-create DOM instead of claiming existing nodes from SSR)
     #[arg(long, default_value_t = {false})]
     pub disable_hydration: bool,
+
+    /// Number of threads to use for processing requests
+    ///
+    /// (default: number of CPU cores, 2 for watch mode)
+    #[arg(long)]
+    pub threads: Option<usize>,
 }

@@ -1,9 +1,8 @@
 use parking_lot::RwLock;
-use std::sync::OnceLock;
 use std::{
     collections::HashMap,
-    sync::Arc,
-    time::{Duration, SystemTime, UNIX_EPOCH},
+    sync::{Arc, OnceLock},
+    time::{Duration, Instant, SystemTime, UNIX_EPOCH},
 };
 use tokio::sync::mpsc::{error::TryRecvError, unbounded_channel};
 use vertigo::{
@@ -271,12 +270,9 @@ impl ServerState {
                     };
                     continue;
                 }
-                Err(TryRecvError::Empty) => {
-                    //continue this iteration
-                }
+                Err(TryRecvError::Empty) => {} // continue this iteration
                 Err(TryRecvError::Disconnected) => {
-                    //send response to browser
-                    break;
+                    break; // send response to browser
                 }
             }
 
@@ -288,8 +284,7 @@ impl ServerState {
                     };
                 }
             } else {
-                //send response to browser
-                break;
+                break; // send response to browser
             }
         }
 
@@ -311,6 +306,8 @@ fn build_module_wasm(engine: &Engine, mount_path: &MountPathConfig) -> Result<Mo
         }
     };
 
+    let now = Instant::now();
+
     let module = match Module::from_binary(engine, &wasm_content) {
         Ok(module) => module,
         Err(err) => {
@@ -319,5 +316,6 @@ fn build_module_wasm(engine: &Engine, mount_path: &MountPathConfig) -> Result<Mo
         }
     };
 
+    log::info!("WASM module compiled in {} ms.", now.elapsed().as_millis());
     Ok(module)
 }
