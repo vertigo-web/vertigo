@@ -1,14 +1,15 @@
+use actix_web::http::StatusCode;
+use parking_lot::RwLock;
+use std::{collections::HashMap, sync::Arc};
+use tokio::sync::mpsc::UnboundedSender;
+use vertigo::dev::command::{CommandForWasm, DriverDomCommand};
+
 use crate::serve::{
     html::{fetch_cache::FetchCache, html_build_response::build_response},
     mount_path::MountPathConfig,
     response_state::ResponseState,
     wasm::{Message, WasmInstance},
 };
-use axum::http::StatusCode;
-use parking_lot::RwLock;
-use std::{collections::HashMap, sync::Arc};
-use tokio::sync::mpsc::UnboundedSender;
-use vertigo::dev::command::{CommandForWasm, DriverDomCommand};
 
 use super::{element::AllElements, send_request::send_request};
 
@@ -92,7 +93,7 @@ impl HtmlResponse {
                 if let Some(callbacks) = guard.fetch_waiting.get_mut(&request) {
                     callbacks.push(callback);
                 } else {
-                    tokio::spawn({
+                    actix_web::rt::spawn({
                         let request = request.clone();
                         let sender = self.sender.clone();
 

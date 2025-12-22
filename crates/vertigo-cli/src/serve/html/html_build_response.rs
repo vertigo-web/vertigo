@@ -5,8 +5,8 @@ use crate::serve::{
     mount_path::MountPathConfig,
     response_state::ResponseState,
 };
+use actix_web::http::StatusCode;
 use parking_lot::RwLock;
-use reqwest::StatusCode;
 use vertigo::{
     dev::{SsrFetchCache, VERTIGO_MOUNT_POINT_PLACEHOLDER, VERTIGO_PUBLIC_BUILD_PATH_PLACEHOLDER},
     JsJsonSerialize,

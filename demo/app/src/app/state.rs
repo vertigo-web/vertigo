@@ -1,6 +1,5 @@
 use vertigo::router::Router;
 use vertigo::store;
-use vertigo::DomNode;
 use vertigo::Value;
 
 use super::game_of_life;
@@ -23,10 +22,6 @@ impl State {
             input: Value::default(),
             game_of_life: game_of_life::State::new(),
         }
-    }
-
-    pub fn render(&self) -> DomNode {
-        super::render(self)
     }
 }
 

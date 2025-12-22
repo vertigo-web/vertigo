@@ -1,11 +1,5 @@
-use futures::stream::{Stream, StreamExt};
-use poem::{
-    handler,
-    web::{
-        sse::{Event, SSE},
-        Data,
-    },
-};
+use actix_web::{web, HttpResponse, Responder};
+use futures::stream::Stream;
 use std::task::Poll;
 use tokio::sync::watch::Receiver;
 
@@ -13,27 +7,22 @@ use crate::commons::spawn::SpawnOwner;
 
 use super::Status;
 
-#[handler]
-pub fn handler_sse(state: Data<&Receiver<Status>>) -> SSE {
-    let Data(state) = state;
+pub async fn handler_sse(state: web::Data<Receiver<Status>>) -> impl Responder {
+    let stream = MyStream::new(state.get_ref().clone());
 
-    let stream = MyStream::new(state.clone()).map(|item| match item {
-        Status::Building => Event::message("Building"),
-        Status::Errors => Event::message("Errors"),
-        Status::Version(version) => Event::message(format!("Version = {version}")),
-    });
-
-    SSE::new(stream)
+    HttpResponse::Ok()
+        .insert_header(("content-type", "text/event-stream"))
+        .streaming(stream)
 }
 
-struct MyStream<T: Default + Send + Sync + Unpin + Clone + PartialEq + 'static> {
-    rx: Receiver<T>,
-    last_emit_value: Option<T>,
+struct MyStream {
+    rx: Receiver<Status>,
+    last_emit_value: Option<Status>,
     spawn: Option<SpawnOwner>,
 }
 
-impl<T: Default + Send + Sync + Unpin + Clone + PartialEq + 'static> MyStream<T> {
-    pub fn new(rx: Receiver<T>) -> MyStream<T> {
+impl MyStream {
+    pub fn new(rx: Receiver<Status>) -> MyStream {
         MyStream {
             rx,
             last_emit_value: None,
@@ -42,8 +31,8 @@ impl<T: Default + Send + Sync + Unpin + Clone + PartialEq + 'static> MyStream<T>
     }
 }
 
-impl<T: Default + Send + Sync + Unpin + Clone + PartialEq + 'static> Stream for MyStream<T> {
-    type Item = T;
+impl Stream for MyStream {
+    type Item = Result<actix_web::web::Bytes, actix_web::Error>;
 
     fn poll_next(
         mut self: std::pin::Pin<&mut Self>,
@@ -72,6 +61,13 @@ impl<T: Default + Send + Sync + Unpin + Clone + PartialEq + 'static> Stream for 
         }
 
         self.last_emit_value = Some(value.clone());
-        Poll::Ready(Some(value))
+
+        let message = match value {
+            Status::Building => "data: Building\n\n".to_string(),
+            Status::Errors => "data: Errors\n\n".to_string(),
+            Status::Version(version) => format!("data: Version = {version}\n\n"),
+        };
+
+        Poll::Ready(Some(Ok(actix_web::web::Bytes::from(message))))
     }
 }

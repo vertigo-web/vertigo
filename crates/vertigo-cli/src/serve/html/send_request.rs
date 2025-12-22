@@ -1,4 +1,4 @@
-use reqwest::Method;
+use actix_web::http::Method;
 use serde_json::{Map, Number, Value};
 use std::collections::BTreeMap;
 use vertigo::{
@@ -127,7 +127,7 @@ fn clear_headers(headers: &BTreeMap<String, String>) -> BTreeMap<String, String>
 }
 
 async fn send_request_inner(request_params: SsrFetchRequest) -> SsrFetchResponse {
-    let client = reqwest::Client::new();
+    let client = awc::Client::new();
 
     let mut request = {
         let method = request_params.method.to_str().trim().to_uppercase();
@@ -144,17 +144,15 @@ async fn send_request_inner(request_params: SsrFetchRequest) -> SsrFetchResponse
     let (headers, body) = get_headers_and_body(headers, &request_params.body);
 
     for (key, value) in headers {
-        request = request.header(key, value);
+        request = request.append_header((key, value));
     }
 
-    match body {
-        BodyToSend::None => {}
-        BodyToSend::String(body) => {
-            request = request.body(body);
-        }
-    }
+    let response = match body {
+        BodyToSend::None => request.send(),
+        BodyToSend::String(body) => request.send_body(body),
+    };
 
-    let response = match request.send().await {
+    let mut response = match response.await {
         Ok(response) => response,
         Err(error) => {
             return SsrFetchResponse::Err {
@@ -171,7 +169,7 @@ async fn send_request_inner(request_params: SsrFetchRequest) -> SsrFetchResponse
         .cloned()
         .and_then(|v| v.to_str().ok().map(ToString::to_string));
 
-    let buffer = match response.bytes().await {
+    let buffer = match response.body().await {
         Ok(response) => response.to_vec(),
         Err(error) => {
             return SsrFetchResponse::Err {
