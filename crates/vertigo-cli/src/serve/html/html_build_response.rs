@@ -90,8 +90,9 @@ pub fn build_response(
             .attr("data-vertigo-run-wasm", mount_path.get_wasm_http_path())
             .attr("src", mount_path.get_run_js_http_path());
 
-        body.add_child(data_div);
         body.add_child(script);
+
+        body.add_child(data_div);
     });
 
     if body_exists {
