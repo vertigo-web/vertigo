@@ -1,5 +1,4 @@
-use axum::body::Body;
-use axum::http::StatusCode;
+use actix_web::http::StatusCode;
 use std::collections::HashMap;
 
 use vertigo::AutoJsJson;
@@ -65,19 +64,16 @@ impl ResponseState {
     }
 }
 
-impl From<ResponseState> for axum::response::Response<Body> {
+impl From<ResponseState> for actix_web::HttpResponse {
     fn from(value: ResponseState) -> Self {
         let status =
             StatusCode::from_u16(value.status).unwrap_or(StatusCode::INTERNAL_SERVER_ERROR);
-        let mut builder = axum::response::Response::builder().status(status);
+        let mut builder = actix_web::HttpResponse::build(status);
 
         for (name, value) in value.headers {
-            builder = builder.header(name, value);
+            builder.insert_header((name, value));
         }
 
-        builder
-            .body(Body::from(value.body))
-            .inspect_err(|err| log::error!("Error reading response: {err}"))
-            .unwrap_or_default()
+        builder.body(value.body)
     }
 }

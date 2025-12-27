@@ -1,19 +1,23 @@
+use actix_cors::Cors;
+use actix_web::{rt::System, web, App, HttpServer};
 use notify::RecursiveMode;
-use poem::http::Method;
-use poem::middleware::Cors;
-use poem::{get, listener::TcpListener, EndpointExt, Route, Server};
 use std::{path::Path, process::exit, sync::Arc, time::Duration};
-use tokio::sync::{watch::Sender, Notify};
-use tokio::time::sleep;
+use tokio::{
+    sync::{watch::Sender, Notify},
+    time::sleep,
+};
 use tokio_retry::{strategy::FibonacciBackoff, Retry};
 
 use crate::build::{get_workspace, Workspace};
-use crate::commons::{spawn::SpawnOwner, ErrorCode};
-use crate::watch::ignore_agent::IgnoreAgents;
-use crate::watch::sse::handler_sse;
+use crate::commons::{
+    spawn::{term_signal, SpawnOwner},
+    ErrorCode,
+};
 
-use super::is_http_server_listening::is_http_server_listening;
-use super::watch_opts::WatchOpts;
+use super::{
+    ignore_agent::IgnoreAgents, is_http_server_listening::is_http_server_listening,
+    sse::handler_sse, watch_opts::WatchOpts,
+};
 
 #[derive(Clone, Debug, Default, PartialEq)]
 pub enum Status {
@@ -82,6 +86,10 @@ pub async fn run(mut opts: WatchOpts) -> Result<(), ErrorCode> {
 
         move |res: Result<notify::Event, _>| match res {
             Ok(event) => {
+                if let notify::EventKind::Access(_) = event.kind {
+                    return;
+                }
+
                 if event.paths.iter().all(|path| {
                     // Check against hardcoded excludes
                     for exclude_path in &excludes {
@@ -116,22 +124,24 @@ pub async fn run(mut opts: WatchOpts) -> Result<(), ErrorCode> {
     let (tx, rx) = tokio::sync::watch::channel(Status::default());
     let tx = Arc::new(tx);
 
-    tokio::spawn({
-        let cors_middleware = Cors::new()
-            .allow_methods(vec![Method::GET, Method::POST])
-            .max_age(3600);
+    let watch_server = HttpServer::new(move || {
+        App::new()
+            .wrap(Cors::permissive())
+            .service(web::resource("/events").route(web::get().to(handler_sse)))
+            .app_data(web::Data::new(rx.clone()))
+    })
+    .workers(1)
+    .bind("127.0.0.1:5555")
+    .map_err(|err| {
+        log::error!("Watch server bind error: {err}");
+        ErrorCode::WatcherError
+    })?
+    .disable_signals()
+    .run();
 
-        let app = Route::new()
-            .at("/events", get(handler_sse))
-            .with(cors_middleware)
-            .data(rx);
+    let watch_handle = watch_server.handle();
 
-        async move {
-            Server::new(TcpListener::bind("127.0.0.1:5555"))
-                .run(app)
-                .await
-        }
-    });
+    std::thread::spawn(move || System::new().block_on(watch_server));
 
     use notify::Watcher;
     watcher
@@ -167,8 +177,19 @@ pub async fn run(mut opts: WatchOpts) -> Result<(), ErrorCode> {
         log::info!("Build run...");
 
         let spawn = build_and_watch(version, tx.clone(), &opts, &ws);
-        notify_build.notified().await;
-        spawn.off();
+
+        tokio::select! {
+            msg = term_signal() => {
+                log::info!("{msg} received, shutting down");
+                spawn.off();
+                watch_handle.stop(true).await;
+                return Ok(());
+            }
+            _ = notify_build.notified() => {
+                log::info!("Notify build received, shutting down");
+                spawn.off();
+            }
+        }
     }
 }
 
@@ -200,7 +221,11 @@ fn build_and_watch(
                 let opts = opts.clone();
 
                 log::info!("Spawning serve command...");
-                let (serve_params, port_watch) = opts.to_serve_opts();
+                let (mut serve_params, port_watch) = opts.to_serve_opts();
+
+                if serve_params.inner.threads.is_none() {
+                    serve_params.inner.threads = Some(2);
+                }
 
                 if let Err(error_code) = crate::serve::run(serve_params, Some(port_watch)).await {
                     log::error!("Error {} while running server", error_code as i32);

@@ -3,9 +3,18 @@
 <!-- markdownlint-disable-next-line first-line-h1 -->
 ## Unreleased
 
+### Added
+
+* vertigo-cli: `--threads` parameter for `serve` command, which allows to specify number of threads to use for processing requests
+  (defaults to 2 in `watch` mode, and number of CPU cores in `serve` mode)
+
 ### Fixed
 
 * Fixed parsing `animation-` rules in `css!` macro.
+
+### Changed
+
+* vertigo-cli: Migrated to actix-web
 
 ## 0.9.1 - 2025-12-18
 

@@ -1,8 +1,5 @@
-use axum::extract::ws::{Message, WebSocket};
+use actix_ws::{Message, MessageStream, Session};
 use core::hash::Hash;
-use futures::stream::{SplitSink, SplitStream};
-use std::sync::Arc;
-use tokio::sync::Mutex;
 
 fn get_unique_id() -> u64 {
     use std::sync::atomic::{AtomicU64, Ordering};
@@ -10,21 +7,20 @@ fn get_unique_id() -> u64 {
     COUNTER.fetch_add(1, Ordering::Relaxed)
 }
 
+#[derive(Debug, thiserror::Error)]
 pub enum SocketError {
-    AxumError(axum::Error),
+    #[error("Actix error: {0}")]
+    ActixError(#[from] actix_ws::ProtocolError),
+    #[error("Client close")]
     ClientClose,
-}
-
-impl From<axum::Error> for SocketError {
-    fn from(error: axum::Error) -> Self {
-        SocketError::AxumError(error)
-    }
+    #[error("Send error: {0}")]
+    SendError(#[from] actix_ws::Closed),
 }
 
 #[derive(Clone)]
 pub struct Connection {
     id: u64,
-    sender: Arc<Mutex<SplitSink<WebSocket, Message>>>,
+    sender: Session,
 }
 
 impl PartialEq for Connection {
@@ -42,23 +38,17 @@ impl Hash for Connection {
 }
 
 impl Connection {
-    pub fn new(sender: SplitSink<WebSocket, Message>) -> Connection {
+    pub fn new(sender: Session) -> Connection {
         Connection {
             id: get_unique_id(),
-            sender: Arc::new(Mutex::new(sender)),
+            sender,
         }
     }
 
     pub async fn send(&self, message: impl Into<String>) -> Result<(), SocketError> {
         let message = message.into();
-
-        use futures::SinkExt;
-        self.sender
-            .lock()
-            .await
-            .send(Message::Text(message))
-            .await?;
-        Ok(())
+        let mut session = self.sender.clone();
+        session.text(message).await.map_err(SocketError::from)
     }
 
     pub fn get_id(&self) -> u64 {
@@ -68,17 +58,14 @@ impl Connection {
 
 pub struct ConnectionStream {
     sender: Connection,
-    receiver: SplitStream<WebSocket>,
+    receiver: MessageStream,
 }
 
 impl ConnectionStream {
-    pub fn new(stream: WebSocket) -> (Connection, ConnectionStream) {
-        use futures::stream::StreamExt;
+    pub fn new(session: Session, receiver: MessageStream) -> (Connection, Self) {
+        let sender = Connection::new(session);
 
-        let (sender, receiver) = stream.split();
-        let sender = Connection::new(sender);
-
-        (sender.clone(), ConnectionStream { sender, receiver })
+        (sender.clone(), Self { sender, receiver })
     }
 
     pub async fn expect_get_text_message(&mut self) -> Result<String, SocketError> {
@@ -90,13 +77,15 @@ impl ConnectionStream {
             .await
             .ok_or(SocketError::ClientClose)??;
 
-        if let Message::Text(message) = message {
-            Ok(message)
-        } else {
-            self.sender
-                .send("Error user: Text message was expected")
-                .await?;
-            Err(SocketError::ClientClose)
+        match message {
+            Message::Text(text) => Ok(text.to_string()),
+            Message::Close(_) => Err(SocketError::ClientClose),
+            _ => {
+                self.sender
+                    .send("Error user: Text message was expected")
+                    .await?;
+                Err(SocketError::ClientClose)
+            }
         }
     }
 }

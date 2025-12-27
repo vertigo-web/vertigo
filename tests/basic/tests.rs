@@ -52,6 +52,7 @@ async fn basic() {
                 env: vec![],
                 wasm_preload: true,
                 disable_hydration: false,
+                threads: None,
             },
         };
 
