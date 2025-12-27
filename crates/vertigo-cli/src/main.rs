@@ -13,6 +13,9 @@ pub use new::NewOpts;
 pub use serve::ServeOpts;
 pub use watch::WatchOpts;
 
+// For bundling with custom back-end
+pub use serve::vertigo_install;
+
 use commons::logging::setup_logging;
 
 #[derive(Parser)]

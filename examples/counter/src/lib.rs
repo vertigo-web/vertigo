@@ -1,4 +1,4 @@
-use vertigo::{main, Value, bind, DomNode, dom, component};
+use vertigo::{bind, component, dom, main, DomNode, Value};
 
 #[component]
 fn App(count: Value<i32>) {

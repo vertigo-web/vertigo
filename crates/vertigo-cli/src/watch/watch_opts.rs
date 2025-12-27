@@ -7,7 +7,6 @@ use crate::ServeOpts;
 
 #[derive(Args, Debug, Clone)]
 pub struct WatchOpts {
-
     #[arg(long, default_value_t = {5555})]
     pub port_watch: u16,
 

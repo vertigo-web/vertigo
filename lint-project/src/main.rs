@@ -1,10 +1,10 @@
 #![allow(clippy::needless_collect)]
 #![allow(clippy::collapsible_else_if)]
 
+use colored::*;
 use std::env::current_dir;
 use std::fs::{self, read_to_string};
 use std::path::Path;
-use colored::*;
 
 const EXTENSIONS_IGNORED: [&str; 6] = ["webp", "jpeg", "jpg", "png", "git", "wasm"];
 const IGNORE_NAME: [&str; 1] = [".DS_Store"];
@@ -30,11 +30,12 @@ fn visit_dirs(result: &mut Vec<String>, dir: &Path) {
     }
 
     if dir.is_file() {
-        if dir.starts_with("./.git") ||
-            dir.starts_with("./target") ||
-            dir.starts_with("./lint-project") ||
-            dir.starts_with("./demo/build") ||
-            dir.starts_with("./.vscode") {
+        if dir.starts_with("./.git")
+            || dir.starts_with("./target")
+            || dir.starts_with("./lint-project")
+            || dir.starts_with("./demo/build")
+            || dir.starts_with("./.vscode")
+        {
             //ignore
             return;
         }
@@ -120,7 +121,9 @@ fn test_file(errors_counter: &mut u64, file_path: &String, content: String) {
             *errors_counter += 1;
         }
 
-        if file_path.starts_with("./crates/vertigo-macro") || file_path == "./crates/vertigo/build.rs" {
+        if file_path.starts_with("./crates/vertigo-macro")
+            || file_path == "./crates/vertigo/build.rs"
+        {
             //ignore
         } else {
             if text.contains("unwrap(") {
@@ -162,7 +165,7 @@ fn main() {
         match content {
             Ok(content) => {
                 test_file(&mut errors_counter, &file_path, content);
-            },
+            }
             Err(error) => {
                 log_error(format!("Error read file={file_path} error={error}"));
                 return;

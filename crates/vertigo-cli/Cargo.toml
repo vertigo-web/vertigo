@@ -36,6 +36,7 @@ base64 = "0.22"
 chrono = "0.4"
 clap = { version = "4.0", features = ["derive"] }
 crc = "3.0"
+derive_more = "2.1"
 env_logger = "0.11"
 futures = "0.3.26"
 html-escape = "0.2"
@@ -49,6 +50,7 @@ serde = { version = "1.0", features = ["derive", "rc"] }
 serde_json = "1.0"
 tokio = { version = "1.25", features = ["full"] }
 tokio-retry = "0.3"
+walkdir ="2.5"
 wasmtime = "40.0"
 vertigo = { path = "../vertigo", version = "0.9.1" }
 

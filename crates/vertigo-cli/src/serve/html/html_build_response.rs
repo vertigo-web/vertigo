@@ -2,7 +2,7 @@ use std::{collections::HashMap, sync::Arc};
 
 use crate::serve::{
     html::{element::AllElements, fetch_cache::FetchCache, html_element::HtmlElement, HtmlNode},
-    mount_path::MountPathConfig,
+    mount_path::MountConfig,
     response_state::ResponseState,
 };
 use actix_web::http::StatusCode;
@@ -15,7 +15,7 @@ use vertigo::{
 pub fn build_response(
     all_elements: &AllElements,
     env: &HashMap<String, String>,
-    mount_path: &MountPathConfig,
+    mount_path: &MountConfig,
     status: StatusCode,
     fetch: &Arc<RwLock<FetchCache>>,
 ) -> ResponseState {

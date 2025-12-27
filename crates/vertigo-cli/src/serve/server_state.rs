@@ -18,7 +18,7 @@ use crate::{
 
 use super::{
     html::HtmlResponse,
-    mount_path::MountPathConfig,
+    mount_path::MountConfig,
     request_state::RequestState,
     response_state::ResponseState,
     wasm::{Message, WasmInstance},
@@ -35,49 +35,53 @@ pub fn get_now() -> Duration {
     }
 }
 
-static STATE: OnceLock<Arc<RwLock<Option<Arc<ServerState>>>>> = OnceLock::new();
+pub type ServerStateMap = HashMap<String, Arc<ServerState>>;
+
+static STATE: OnceLock<Arc<RwLock<ServerStateMap>>> = OnceLock::new();
 
 #[derive(Clone)]
 pub struct ServerState {
     engine: Engine,
     module: Module,
-    pub mount_config: MountPathConfig,
+    pub mount_config: MountConfig,
     pub port_watch: Option<u16>,
-    pub env: HashMap<String, String>,
 }
 
 impl ServerState {
-    pub fn init(
-        mount_config: MountPathConfig,
+    pub fn init(mount_config: &MountConfig) -> Result<(), ErrorCode> {
+        Self::init_with_watch(mount_config, None)
+    }
+
+    pub fn init_with_watch(
+        mount_config: &MountConfig,
         port_watch: Option<u16>,
-        env: Vec<(String, String)>,
     ) -> Result<(), ErrorCode> {
         let engine = Engine::default();
 
-        let module = build_module_wasm(&engine, &mount_config)?;
+        let module = build_module_wasm(&engine, mount_config)?;
 
-        let env = env.into_iter().collect::<HashMap<_, _>>();
-
-        let mutex = STATE.get_or_init(|| Arc::new(RwLock::new(None)));
+        let mutex = STATE.get_or_init(|| Arc::new(RwLock::new(ServerStateMap::new())));
 
         let mut guard = mutex.write();
-        *guard = Some(Arc::new(Self {
-            engine,
-            module,
-            mount_config,
-            port_watch,
-            env,
-        }));
+        guard.insert(
+            mount_config.mount_point().to_string(),
+            Arc::new(Self {
+                engine,
+                module,
+                mount_config: mount_config.clone(),
+                port_watch,
+            }),
+        );
 
         Ok(())
     }
 
-    pub fn global() -> Arc<ServerState> {
-        let mutex = STATE.get_or_init(|| Arc::new(RwLock::new(None)));
+    pub fn global(mount_point: &str) -> Arc<ServerState> {
+        let mutex = STATE.get_or_init(|| Arc::new(RwLock::new(ServerStateMap::new())));
 
         let guard = mutex.read();
 
-        if let Some(state) = &*guard {
+        if let Some(state) = guard.get(mount_point) {
             return state.clone();
         }
 
@@ -89,7 +93,7 @@ impl ServerState {
 
         let request = RequestState {
             url: url.to_string(),
-            env: self.env.clone(),
+            env: self.mount_config.env.clone(),
         };
 
         let fetch = FetchCache::new();
@@ -256,7 +260,7 @@ impl ServerState {
             sender.clone(),
             &self.mount_config,
             inst,
-            self.env.clone(),
+            self.mount_config.env.clone(),
             fetch,
         );
 
@@ -293,10 +297,10 @@ impl ServerState {
     }
 }
 
-fn build_module_wasm(engine: &Engine, mount_path: &MountPathConfig) -> Result<Module, ErrorCode> {
+fn build_module_wasm(engine: &Engine, mount_path: &MountConfig) -> Result<Module, ErrorCode> {
     let full_wasm_path = mount_path.get_wasm_fs_path();
 
-    log::info!("full_wasm_path = {full_wasm_path}");
+    log::info!("Mounting {} -> {full_wasm_path}", mount_path.mount_point());
 
     let wasm_content = match std::fs::read(&full_wasm_path) {
         Ok(wasm_content) => wasm_content,

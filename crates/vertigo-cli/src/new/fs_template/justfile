@@ -1,0 +1,25 @@
+cleanall:
+    cargo clean
+    rm -rf build
+
+lint:
+    cargo clippy --all --all-targets --all-features -- -D clippy::all
+
+# BE
+
+run-be: build-fe
+    cargo run
+
+build-be:
+    cargo build --release
+
+build: build-fe build-be
+
+# FE
+
+watch-fe:
+    vertigo watch --dest-dir build
+
+build-fe:
+    rm -rf build
+    vertigo build --wasm-run-source-map --dest-dir build

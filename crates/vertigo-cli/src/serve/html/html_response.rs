@@ -6,7 +6,7 @@ use vertigo::dev::command::{CommandForWasm, DriverDomCommand};
 
 use crate::serve::{
     html::{fetch_cache::FetchCache, html_build_response::build_response},
-    mount_path::MountPathConfig,
+    mount_path::MountConfig,
     response_state::ResponseState,
     wasm::{Message, WasmInstance},
 };
@@ -15,20 +15,20 @@ use super::{element::AllElements, send_request::send_request};
 
 pub struct HtmlResponse {
     sender: UnboundedSender<Message>,
-    mount_path: MountPathConfig,
+    mount_path: MountConfig,
     inst: WasmInstance,
     all_elements: AllElements,
     fetch: Arc<RwLock<FetchCache>>,
-    env: HashMap<String, String>,
+    env: Arc<HashMap<String, String>>,
     status: StatusCode,
 }
 
 impl HtmlResponse {
     pub fn new(
         sender: UnboundedSender<Message>,
-        mount_path: &MountPathConfig,
+        mount_path: &MountConfig,
         inst: WasmInstance,
-        env: HashMap<String, String>,
+        env: Arc<HashMap<String, String>>,
         fetch: Arc<RwLock<FetchCache>>,
     ) -> Self {
         Self {
