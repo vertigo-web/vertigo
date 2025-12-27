@@ -46,9 +46,7 @@ impl App {
     pub fn new() -> Self {
         let route = Router::new_history_router();
 
-        Self {
-            route,
-        }
+        Self { route }
     }
 
     pub fn render(&self) -> DomNode {
@@ -58,12 +56,10 @@ impl App {
             state.navigate_to(Route::Page1);
         });
 
-        let child = state.route.route.render_value(|value| {
-            match value {
-                Route::Page1 => dom! { <div>"Page 1"</div> },
-                Route::Page2 => dom! { <div>"Page 2"</div> },
-                Route::NotFound => dom! { <div>"Page Not Found"</div> },
-            }
+        let child = state.route.route.render_value(|value| match value {
+            Route::Page1 => dom! { <div>"Page 1"</div> },
+            Route::Page2 => dom! { <div>"Page 2"</div> },
+            Route::NotFound => dom! { <div>"Page Not Found"</div> },
         });
 
         dom! {

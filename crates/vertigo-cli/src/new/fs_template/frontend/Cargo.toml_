@@ -1,5 +1,5 @@
 [package]
-name = "my_app"
+name = "my_app_fe"
 version = "0.1.0"
 edition = "2021"
 
@@ -10,7 +10,3 @@ crate-type = ["cdylib", "rlib"]
 
 [dependencies]
 vertigo = "0.9"
-
-[profile.release]
-lto = true
-opt-level = 'z'

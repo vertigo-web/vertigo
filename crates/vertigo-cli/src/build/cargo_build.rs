@@ -1,6 +1,9 @@
 use std::path::PathBuf;
 
-use crate::{build::find_target::profile_name, commons::{command::CommandRun, ErrorCode}};
+use crate::{
+    build::find_target::profile_name,
+    commons::{command::CommandRun, ErrorCode},
+};
 
 use super::Workspace;
 

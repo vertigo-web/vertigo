@@ -3598,6 +3598,7 @@ dependencies = [
  "chrono",
  "clap",
  "crc",
+ "derive_more",
  "env_logger",
  "futures",
  "html-escape",
@@ -3612,6 +3613,7 @@ dependencies = [
  "tokio",
  "tokio-retry",
  "vertigo",
+ "walkdir",
  "wasmtime",
 ]
 

@@ -1,0 +1,39 @@
+[config]
+default_to_workspace = false
+
+[tasks.cleanall]
+script = '''
+    cargo clean
+    rm -rf build
+'''
+
+[tasks.lint]
+script = '''
+    cargo clippy --all --all-targets --all-features -- -D clippy::all
+'''
+
+# BE
+
+[tasks.run-be]
+dependencies = ["build-fe"]
+command = "cargo"
+args = ["run"]
+
+[tasks.build-be]
+command = "cargo"
+args = ["build", "--release"]
+
+[tasks.build]
+dependencies = ["build-fe", "build-be"]
+
+# FE
+
+[tasks.watch-fe]
+command = "vertigo"
+args = ["watch", "--dest-dir", "build"]
+
+[tasks.build-fe]
+script = """
+    rm -rf build
+    vertigo build --wasm-run-source-map --dest-dir build
+"""

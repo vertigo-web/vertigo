@@ -1,20 +1,20 @@
-use actix_files::Files;
 use actix_proxy::IntoHttpResponse;
 use actix_web::{
     dev::{ServiceFactory, ServiceRequest},
-    http::StatusCode,
     rt::System,
     web, App, HttpRequest, HttpResponse, HttpServer,
 };
-use std::{num::NonZeroUsize, time::Instant};
+use std::num::NonZeroUsize;
 
 use crate::commons::{
     spawn::{term_signal, ServerOwner},
     ErrorCode,
 };
-use crate::serve::mount_path::MountPathConfig;
+use crate::serve::mount_path::MountConfig;
 
-use super::{server_state::ServerState, ServeOpts, ServeOptsInner};
+use super::{
+    server_state::ServerState, vertigo_install::vertigo_install, ServeOpts, ServeOptsInner,
+};
 
 pub async fn run(opts: ServeOpts, port_watch: Option<u16>) -> Result<(), ErrorCode> {
     log::info!("serve params => {opts:#?}");
@@ -30,25 +30,26 @@ pub async fn run(opts: ServeOpts, port_watch: Option<u16>) -> Result<(), ErrorCo
         threads,
     } = opts.inner;
 
-    let mount_config = MountPathConfig::new(
+    let mount_config = MountConfig::new(
         mount_point,
         opts.common.dest_dir,
+        env,
         wasm_preload,
         disable_hydration,
     )?;
 
-    ServerState::init(mount_config.clone(), port_watch, env)?;
-
-    let serve_mount_path = mount_config.dest_http_root();
+    ServerState::init_with_watch(&mount_config, port_watch)?;
 
     let app = move || {
-        let mut app = App::new().service(Files::new(&serve_mount_path, mount_config.dest_dir()));
+        let mut app = App::new();
 
         for (path, target) in &proxy {
             app = install_proxy(app, path.clone(), target.clone());
         }
 
-        app.default_service(web::to(handler))
+        app.configure(|cfg| {
+            vertigo_install(cfg, &mount_config);
+        })
     };
 
     let addr = format!("{host}:{port}");
@@ -118,64 +119,4 @@ where
             }
         }
     })))
-}
-
-async fn handler(req: HttpRequest) -> HttpResponse {
-    let state = ServerState::global();
-
-    let now = Instant::now();
-    let url = req.uri();
-
-    let uri = {
-        let path = url.path();
-        // Strip mount point to get local url
-        let local_url = if state.mount_config.mount_point() != "/" {
-            path.trim_start_matches(state.mount_config.mount_point())
-        } else {
-            path
-        };
-
-        match url.query() {
-            Some(query) => format!("{local_url}?{query}"),
-            None => local_url.to_string(),
-        }
-    };
-
-    log::debug!("Incoming request: {uri}");
-    let mut response_state = state.request(&uri).await;
-
-    let time = now.elapsed().as_millis();
-    let log_level = if time > 1000 {
-        log::Level::Warn
-    } else {
-        log::Level::Info
-    };
-    log::log!(
-        log_level,
-        "Response for request: {} {time}ms {uri}",
-        response_state.status,
-    );
-
-    if let Some(port_watch) = state.port_watch {
-        response_state.add_watch_script(port_watch);
-    }
-
-    // Checking for error status to log
-    if StatusCode::from_u16(response_state.status)
-        .unwrap_or(StatusCode::INTERNAL_SERVER_ERROR)
-        .is_server_error()
-    {
-        log::error!("WASM status: {}", response_state.status);
-
-        match String::from_utf8(response_state.body.clone()) {
-            Ok(messagee) => {
-                log::error!("WASM response: text={}", messagee);
-            }
-            Err(_) => {
-                log::error!("WASM response: bytes={:#?}", response_state.body);
-            }
-        }
-    }
-
-    response_state.into()
 }

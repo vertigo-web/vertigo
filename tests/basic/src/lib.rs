@@ -1,4 +1,4 @@
-use vertigo::{main, DomNode, dom, Value, bind};
+use vertigo::{bind, dom, main, DomNode, Value};
 
 mod row;
 use row::Row;
@@ -13,7 +13,7 @@ impl std::fmt::Display for Mode {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         match self {
             Self::Div => f.write_str("Div"),
-            Self::Div4 => f.write_str("Div4")
+            Self::Div4 => f.write_str("Div4"),
         }
     }
 }
@@ -45,25 +45,25 @@ pub fn app(state: AppState) -> DomNode {
     let clear_rows = bind!(rows, |_| rows.set(vec![]));
 
     let rows_rendered = mode.render_value(move |mode| match mode {
-        Mode::Div =>
-            rows.render_list(
-                |row| row.0.clone(),
-                |(key, label)|
-                    dom! {
+        Mode::Div => rows.render_list(
+            |row| row.0.clone(),
+            |(key, label)| {
+                dom! {
+                    <Row id={&&key} label={&&label} />
+                }
+            },
+        ),
+        Mode::Div4 => rows.render_list(
+            |row| row.0.clone(),
+            |(key, label)| {
+                dom! {
+                    <div>
+                        <div>"Row"</div><div>"Label"</div>
                         <Row id={&&key} label={&&label} />
-                    }
-            ),
-        Mode::Div4 =>
-            rows.render_list(
-                |row| row.0.clone(),
-                |(key, label)|
-                    dom! {
-                        <div>
-                            <div>"Row"</div><div>"Label"</div>
-                            <Row id={&&key} label={&&label} />
-                        </div>
-                    }
-            ),
+                    </div>
+                }
+            },
+        ),
     });
 
     dom! {

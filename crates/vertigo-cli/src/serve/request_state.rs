@@ -1,9 +1,9 @@
-use std::collections::HashMap;
+use std::{collections::HashMap, sync::Arc};
 
 #[derive(Clone)]
 pub struct RequestState {
     pub url: String,
-    pub env: HashMap<String, String>,
+    pub env: Arc<HashMap<String, String>>,
 }
 
 impl RequestState {

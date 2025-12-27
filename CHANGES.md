@@ -7,6 +7,8 @@
 
 * vertigo-cli: `--threads` parameter for `serve` command, which allows to specify number of threads to use for processing requests
   (defaults to 2 in `watch` mode, and number of CPU cores in `serve` mode)
+* vertigo-cli: Added `vertigo_install` function to allow bundling with custom actix-web back-end
+* vertigo-cli: Added `--template` parameter for `new` command to allow creating fullstack or frontend project
 
 ### Fixed
 

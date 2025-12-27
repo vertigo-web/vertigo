@@ -1,39 +1,94 @@
 #![allow(clippy::question_mark)]
-use std::path::Path;
+use std::{collections::HashMap, path::Path, sync::Arc};
 use vertigo::dev::VERTIGO_PUBLIC_BUILD_PATH_PLACEHOLDER;
 
 use crate::commons::{models::IndexModel, ErrorCode};
 
-#[derive(Clone, Debug)]
-pub struct MountPathConfig {
-    // for http
-    mount_point: String,
-    // for filesystem
-    dest_dir: String,
-    // index.json after parsing
-    run_js: String,
-    // path to wasm-file
-    wasm_path: String,
-    // whether to preload wasm script using <link rel="preload">
+pub struct MountConfigBuilder {
+    pub mount_point: String,
+    pub dest_dir: String,
+    pub env: Vec<(String, String)>,
     pub wasm_preload: bool,
-    // whether to disable hydration
     pub disable_hydration: bool,
 }
 
-impl MountPathConfig {
+impl MountConfigBuilder {
+    pub fn new(mount_point: impl Into<String>, dest_dir: impl Into<String>) -> MountConfigBuilder {
+        MountConfigBuilder {
+            mount_point: mount_point.into(),
+            dest_dir: dest_dir.into(),
+            env: vec![],
+            wasm_preload: false,
+            disable_hydration: false,
+        }
+    }
+
+    pub fn envs(mut self, envs: Vec<(String, String)>) -> Self {
+        self.env = envs;
+        self
+    }
+
+    pub fn env(mut self, key: impl Into<String>, value: impl Into<String>) -> Self {
+        self.env.push((key.into(), value.into()));
+        self
+    }
+
+    pub fn wasm_preload(mut self, wasm_preload: bool) -> Self {
+        self.wasm_preload = wasm_preload;
+        self
+    }
+
+    pub fn disable_hydration(mut self, disable_hydration: bool) -> Self {
+        self.disable_hydration = disable_hydration;
+        self
+    }
+
+    pub fn build(self) -> Result<MountConfig, ErrorCode> {
+        MountConfig::new(
+            self.mount_point,
+            self.dest_dir,
+            self.env,
+            self.wasm_preload,
+            self.disable_hydration,
+        )
+    }
+}
+
+#[derive(Clone, Debug)]
+pub struct MountConfig {
+    /// Mount point in URL
+    mount_point: String,
+    /// Build destination directory (where wasm file and wasm_run.js are stored)
+    dest_dir: String,
+    /// waasm_run.js taken from index.json
+    run_js: String,
+    /// path to wasm-file taken from index.json
+    wasm_path: String,
+    /// Environment variables passed to WASM runtime
+    pub env: Arc<HashMap<String, String>>,
+    /// Whether to preload wasm script using <link rel="preload">
+    pub wasm_preload: bool,
+    /// Whether to disable hydration
+    pub disable_hydration: bool,
+}
+
+impl MountConfig {
     pub fn new(
-        public_mount_point: String,
-        dest_dir: String,
+        public_mount_point: impl Into<String>,
+        dest_dir: impl Into<String>,
+        env: Vec<(String, String)>,
         wasm_preload: bool,
         disable_hydration: bool,
-    ) -> Result<MountPathConfig, ErrorCode> {
+    ) -> Result<MountConfig, ErrorCode> {
+        let dest_dir = dest_dir.into();
         let index_model = read_index(&dest_dir)?;
 
-        Ok(MountPathConfig {
+        Ok(MountConfig {
             dest_dir,
-            mount_point: public_mount_point,
+            mount_point: public_mount_point.into(),
             run_js: index_model.run_js,
             wasm_path: index_model.wasm,
+            env: Arc::new(env.into_iter().collect()),
             wasm_preload,
             disable_hydration,
         })

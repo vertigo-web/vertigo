@@ -1,14 +1,37 @@
 use clap::Args;
+use derive_more::Display;
 use include_dir::{include_dir, Dir};
 use std::{fs, path::Path};
+use walkdir::WalkDir;
 
 use crate::commons::ErrorCode;
 
-static TEMPLATE: Dir = include_dir!("$CARGO_MANIFEST_DIR/src/new/template");
+#[derive(clap::ValueEnum, Clone, Default, Display)]
+pub enum Template {
+    #[display("fullstack")]
+    Fullstack,
+    #[display("frontend")]
+    #[default]
+    Frontend,
+}
+
+impl Template {
+    pub fn get_dir(&self) -> &Dir<'_> {
+        match self {
+            Template::Fullstack => &FS_TEMPLATE,
+            Template::Frontend => &FE_TEMPLATE,
+        }
+    }
+}
+
+static FS_TEMPLATE: Dir = include_dir!("$CARGO_MANIFEST_DIR/src/new/fs_template");
+static FE_TEMPLATE: Dir = include_dir!("$CARGO_MANIFEST_DIR/src/new/fe_template");
 
 #[derive(Args)]
 pub struct NewOpts {
     pub package_name: String,
+    #[arg(short, long, default_value_t = {Template::default()})]
+    pub template: Template,
     #[arg(long, default_value_t = {"./".to_string()})]
     pub dest_dir: String,
 }
@@ -40,7 +63,11 @@ pub fn run(opts: NewOpts) -> Result<(), ErrorCode> {
     };
 
     // Paste files into it
-    if let Err(err) = TEMPLATE.extract(Path::new(&opts.dest_dir).join(&opts.package_name)) {
+    if let Err(err) = opts
+        .template
+        .get_dir()
+        .extract(Path::new(&opts.dest_dir).join(&opts.package_name))
+    {
         log::error!(
             "Can't unpack vertigo stub to {}: {}",
             target_path.to_string_lossy(),
@@ -49,31 +76,46 @@ pub fn run(opts: NewOpts) -> Result<(), ErrorCode> {
         return Err(ErrorCode::NewProjectCantUnpackStub);
     };
 
-    // Remove Cargo.toml_
+    // Process all Cargo.toml_ files recursively
     // (cargo packaging does not permit adding second Cargo.toml file)
-    if let Err(err) = fs::remove_file(target_path.join("Cargo.toml_")) {
-        log::error!("Can't rename to Cargo.toml_ to Cargo.toml: {err}");
-        return Err(ErrorCode::NewProjectCantCreateCargoToml);
-    };
+    process_cargo_toml_files(&target_path, &opts.package_name)?;
 
-    // Save Cargo.toml with replaced package name
-    let Some(cargo_toml) = TEMPLATE.get_file("Cargo.toml_") else {
-        log::error!("Can't generate Cargo.toml");
-        return Err(ErrorCode::NewProjectCantCreateCargoToml);
-    };
+    Ok(())
+}
 
-    let Some(cargo_toml_content) = cargo_toml.contents_utf8() else {
-        log::error!("Can't generate Cargo.toml (encoding error)");
-        return Err(ErrorCode::NewProjectCantCreateCargoToml);
-    };
+/// Find all Cargo.toml_ files, replace "my_app" with package_name, and save as Cargo.toml
+fn process_cargo_toml_files(dir: &Path, package_name: &str) -> Result<(), ErrorCode> {
+    for entry in WalkDir::new(dir).into_iter().filter_map(|e| e.ok()) {
+        if entry.file_name() == "Cargo.toml_" {
+            let path = entry.path();
+            // Read the content
+            let content = match fs::read_to_string(path) {
+                Ok(content) => content,
+                Err(err) => {
+                    log::error!("Can't read {}: {}", path.display(), err);
+                    return Err(ErrorCode::NewProjectCantCreateCargoToml);
+                }
+            };
 
-    if let Err(err) = fs::write(
-        target_path.join("Cargo.toml"),
-        cargo_toml_content.replace("my_app", &opts.package_name),
-    ) {
-        log::error!("Can't write to Cargo.toml: {err}");
-        return Err(ErrorCode::NewProjectCanWriteToCargoToml);
-    };
+            // Replace my_app with package_name
+            let new_content = content.replace("my_app", package_name);
+
+            // Write to Cargo.toml in the same directory
+            if let Some(parent) = path.parent() {
+                let cargo_toml_path = parent.join("Cargo.toml");
+                if let Err(err) = fs::write(&cargo_toml_path, new_content) {
+                    log::error!("Can't write to {}: {}", cargo_toml_path.display(), err);
+                    return Err(ErrorCode::NewProjectCanWriteToCargoToml);
+                }
+            }
+
+            // Remove the original Cargo.toml_ file
+            if let Err(err) = fs::remove_file(path) {
+                log::error!("Can't remove {}: {}", path.display(), err);
+                return Err(ErrorCode::NewProjectCantCreateCargoToml);
+            }
+        }
+    }
 
     Ok(())
 }
