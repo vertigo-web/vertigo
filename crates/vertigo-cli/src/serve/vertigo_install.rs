@@ -24,10 +24,10 @@ use super::vertigo_handler::vertigo_handler;
 /// app.configure(|srvc| vertigo_install(srvc, &mount_config));
 /// ```
 ///
-/// To bootstrap a working project using this method, run:
+/// To bootstrap a project using this method, use fullstack template; run:
 ///
 /// ```sh
-/// vertigo-cli new --fullstack my_project
+/// vertigo-cli new -t fullstack my_project
 /// ```
 ///
 pub fn vertigo_install(cfg: &mut web::ServiceConfig, mount_config: &MountConfig) {
