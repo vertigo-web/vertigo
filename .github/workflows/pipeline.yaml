@@ -4,42 +4,58 @@ on:
   push:
     branches: [master]
 
+env:
+  CARGO_INCREMENTAL: 0
+  CARGO_TERM_COLOR: always
+  RUSTC_WRAPPER: "sccache"
+  RUSTFLAGS: -D warnings
+  SCCACHE_GHA_ENABLED: "true"
+
 jobs:
 
   fixed-nightly:
     name: Fixed Nightly clippy && tests
     runs-on: ubuntu-latest
+    env:
+      SCCACHE_GHA_CACHE_NAME: "fixed-nightly-2025-08-02"
     steps:
-      - uses: actions/checkout@v2
-      - uses: actions-rs/toolchain@v1
+      - name: Checkout
+        uses: actions/checkout@v4
+      - name: Install toolchain
+        uses: actions-rs/toolchain@v1
         with:
           toolchain: nightly-2025-08-02
           target: wasm32-unknown-unknown
           components: clippy, rustfmt
           override: true
+      - name: Install sccache
+        uses: mozilla-actions/sccache-action@v0.0.6
 
+      # Formatting check
       - name: Check formatting
         run: cargo fmt -- --check
 
       # Clippy checks
-      - uses: actions-rs/clippy-check@v1
+      - name: Vertigo Clippy
+        uses: actions-rs/clippy-check@v1
         with:
           token: ${{ secrets.GITHUB_TOKEN }}
-          args: -p vertigo -p vertigo-macro --all-features --tests --target wasm32-unknown-unknown -- -Dwarnings
+          args: -p vertigo -p vertigo-macro --all-features --tests --target wasm32-unknown-unknown --locked
           name: Vertigo Clippy Output
-      - uses: actions-rs/clippy-check@v1
+      - name: Demo/Examples Clippy
+        uses: actions-rs/clippy-check@v1
         with:
           token: ${{ secrets.GITHUB_TOKEN }}
-          args: -p vertigo-demo -p vertigo-example-counter -p vertigo-example-router -p vertigo-example-trafficlights --all-features --tests --target wasm32-unknown-unknown -- -Dwarnings
-          name: Demo/Examples Clippy Output
+          args: -p vertigo-demo -p vertigo-example-counter -p vertigo-example-router -p vertigo-example-trafficlights --all-features --tests --target wasm32-unknown-unknown --locked
+          name: Fixed Nightly Demo/Examples Clippy Output
 
       # Unit tests
       - uses: actions-rs/cargo@v1
         with:
           command: test
-          args: --all-features
+          args: --all-features --locked
 
-      # Test creating new app
+      # Test creating new app from templates
       - name: Install specific version of binaryen
         uses: sigoden/install-binary@v1
         with:
@@ -47,58 +63,82 @@ jobs:
           tag: version_120 # Optional: pin to a specific version
           name: wasm-opt
       - name: vertigo new some_app
-        run: |
-          rustup default nightly-2025-08-02
-          tests/check_vertigo_new.sh
+        run: tests/check_vertigo_new.sh
 
+  js-tests:
+    name: JS tests
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+      - name: Install Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: 20
       # Various check scripts
       - name: Check versions
         run: tests/check_versions.sh
-      - uses: actions/setup-node@v4
-        with:
-          node-version: 20
-      - name: JS tests
+      # Unittests
+      - name: JS unittests
         run: tests/js_tests.sh
 
   nightly:
     name: Nightly clippy && tests
     runs-on: ubuntu-latest
     continue-on-error: true
+    env:
+      SCCACHE_GHA_CACHE_NAME: "nightly"
     steps:
-      - uses: actions/checkout@v2
-      - uses: actions-rs/toolchain@v1
+      - name: Checkout
+        uses: actions/checkout@v4
+      - name: Install toolchain
+        uses: actions-rs/toolchain@v1
         with:
           toolchain: nightly
           target: wasm32-unknown-unknown
           components: clippy
           override: true
+      - name: Install sccache
+        uses: mozilla-actions/sccache-action@v0.0.6
+
+      # Clippy checks
       - uses: actions-rs/clippy-check@v1
         with:
           token: ${{ secrets.GITHUB_TOKEN }}
-          args: -p vertigo -p vertigo-macro --all-features --tests --target wasm32-unknown-unknown -- -Dwarnings
+          args: -p vertigo -p vertigo-macro --all-features --tests --target wasm32-unknown-unknown --locked
           name: Vertigo Clippy Output
       - uses: actions-rs/clippy-check@v1
         with:
           token: ${{ secrets.GITHUB_TOKEN }}
-          args: -p vertigo-demo -p vertigo-example-counter -p vertigo-example-router -p vertigo-example-trafficlights --all-features --tests --target wasm32-unknown-unknown -- -Dwarnings
-          name: Demo/Examples Clippy Output
+          args: -p vertigo-demo -p vertigo-example-counter -p vertigo-example-router -p vertigo-example-trafficlights --all-features --tests --target wasm32-unknown-unknown --locked
+          name: Nightly Demo/Examples Clippy Output
+
+      # Unit tests
       - uses: actions-rs/cargo@v1
         with:
           command: test
-          args: --all-features
+          args: --all-features --locked
 
   nightly-demo-server:
     name: Nightly clippy demo server (amd64)
     runs-on: ubuntu-latest
+    env:
+      SCCACHE_GHA_CACHE_NAME: "nightly"
     steps:
-      - uses: actions/checkout@v2
-      - uses: actions-rs/toolchain@v1
+      - name: Checkout
+        uses: actions/checkout@v4
+      - name: Install toolchain
+        uses: actions-rs/toolchain@v1
         with:
           toolchain: nightly
           components: clippy
           override: true
+      - name: Install sccache
+        uses: mozilla-actions/sccache-action@v0.0.6
+
+      # Clippy checks
       - uses: actions-rs/clippy-check@v1
         with:
           token: ${{ secrets.GITHUB_TOKEN }}
-          args: -p vertigo-demo-server --all-features -- -Dwarnings
-          name: Clippy Output
+          args: -p vertigo-demo-server --all-features --locked
+          name: Demo Server Clippy Output

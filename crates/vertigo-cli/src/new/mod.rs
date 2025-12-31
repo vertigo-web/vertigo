@@ -16,20 +16,17 @@ pub enum Template {
 }
 
 impl Template {
-    pub fn get_dir(&self) -> &Dir<'_> {
+    pub fn get_dir(&self) -> Dir<'_> {
         match self {
-            Template::Fullstack => &FS_TEMPLATE,
-            Template::Frontend => &FE_TEMPLATE,
+            Template::Fullstack => include_dir!("$CARGO_MANIFEST_DIR/src/new/fs_template"),
+            Template::Frontend => include_dir!("$CARGO_MANIFEST_DIR/src/new/fe_template"),
         }
     }
 }
 
-static FS_TEMPLATE: Dir = include_dir!("$CARGO_MANIFEST_DIR/src/new/fs_template");
-static FE_TEMPLATE: Dir = include_dir!("$CARGO_MANIFEST_DIR/src/new/fe_template");
-
 #[derive(Args)]
 pub struct NewOpts {
-    pub package_name: String,
+    pub project_name: String,
     #[arg(short, long, default_value_t = {Template::default()})]
     pub template: Template,
     #[arg(long, default_value_t = {"./".to_string()})]
@@ -37,9 +34,9 @@ pub struct NewOpts {
 }
 
 pub fn run(opts: NewOpts) -> Result<(), ErrorCode> {
-    log::info!("Creating {}", opts.package_name);
+    log::info!("Creating {}", opts.project_name);
 
-    let target_path = Path::new(&opts.dest_dir).join(&opts.package_name);
+    let target_path = Path::new(&opts.dest_dir).join(&opts.project_name);
 
     // Check if dir is empty or non-existent
     if let Ok(mut dir) = target_path.read_dir() {
@@ -66,7 +63,7 @@ pub fn run(opts: NewOpts) -> Result<(), ErrorCode> {
     if let Err(err) = opts
         .template
         .get_dir()
-        .extract(Path::new(&opts.dest_dir).join(&opts.package_name))
+        .extract(Path::new(&opts.dest_dir).join(&opts.project_name))
     {
         log::error!(
             "Can't unpack vertigo stub to {}: {}",
@@ -78,7 +75,7 @@ pub fn run(opts: NewOpts) -> Result<(), ErrorCode> {
 
     // Process all Cargo.toml_ files recursively
     // (cargo packaging does not permit adding second Cargo.toml file)
-    process_cargo_toml_files(&target_path, &opts.package_name)?;
+    process_cargo_toml_files(&target_path, &opts.project_name)?;
 
     Ok(())
 }
