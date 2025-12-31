@@ -1,6 +1,6 @@
 use std::rc::Rc;
 
-use vertigo::{bind_spawn, component, css, dev::ValueMut, dom, get_driver, Value};
+use vertigo::{Value, bind_spawn, component, css, dev::ValueMut, dom, get_driver};
 
 use super::spinner::Spinner;
 

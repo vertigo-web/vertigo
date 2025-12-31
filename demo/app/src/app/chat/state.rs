@@ -1,6 +1,6 @@
 use std::rc::Rc;
 use vertigo::{
-    get_driver, transaction, DropResource, Value, WebsocketConnection, WebsocketMessage,
+    DropResource, Value, WebsocketConnection, WebsocketMessage, get_driver, transaction,
 };
 
 #[derive(Clone)]

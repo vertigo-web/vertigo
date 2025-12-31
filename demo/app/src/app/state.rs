@@ -1,6 +1,6 @@
+use vertigo::Value;
 use vertigo::router::Router;
 use vertigo::store;
-use vertigo::Value;
 
 use super::game_of_life;
 use super::route::Route;

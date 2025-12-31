@@ -1,6 +1,6 @@
-use vertigo::{bind, css, dom, DomNode};
+use vertigo::{DomNode, bind, css, dom};
 
-use crate::app::sudoku::state::{number_item::SudokuValue, Cell};
+use crate::app::sudoku::state::{Cell, number_item::SudokuValue};
 
 pub fn render_cell_value(item_height_size: u32, value: SudokuValue, cell: &Cell) -> DomNode {
     let cell = cell.clone();

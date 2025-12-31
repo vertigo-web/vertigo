@@ -1,4 +1,4 @@
-use actix_web::{http::StatusCode, web, HttpRequest};
+use actix_web::{HttpRequest, http::StatusCode, web};
 use std::time::Instant;
 
 use crate::serve::MountConfig;

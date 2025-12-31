@@ -1,7 +1,7 @@
 use std::{collections::HashSet, rc::Rc};
 
-use crate::app::sudoku::state::{number_item::SudokuValue, Cell};
-use vertigo::{bind, bind_rc, css, dom, dom_element, ClickEvent, Computed, Css, DomNode};
+use crate::app::sudoku::state::{Cell, number_item::SudokuValue};
+use vertigo::{ClickEvent, Computed, Css, DomNode, bind, bind_rc, css, dom, dom_element};
 
 fn css_item_only_one(cell_width: u32) -> Css {
     css! {"

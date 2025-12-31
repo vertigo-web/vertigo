@@ -1,5 +1,5 @@
+use vertigo::{Computed, Value, component, transaction};
 use vertigo::{bind, css, dom};
-use vertigo::{component, transaction, Computed, Value};
 
 #[component]
 /// Shows counter with label

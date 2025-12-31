@@ -1,6 +1,6 @@
 use proc_macro2::TokenStream as TokenStream2;
 use quote::{format_ident, quote};
-use syn::{spanned::Spanned, FnArg, Ident, ItemFn, Pat, ReturnType, Type, TypePath};
+use syn::{FnArg, Ident, ItemFn, Pat, ReturnType, Type, TypePath, spanned::Spanned};
 
 pub fn store_inner(_attr: TokenStream2, item: TokenStream2) -> TokenStream2 {
     let span = item.span();

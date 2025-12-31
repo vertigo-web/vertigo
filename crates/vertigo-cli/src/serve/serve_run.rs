@@ -1,19 +1,20 @@
 use actix_proxy::IntoHttpResponse;
 use actix_web::{
+    App, HttpRequest, HttpResponse, HttpServer,
     dev::{ServiceFactory, ServiceRequest},
     rt::System,
-    web, App, HttpRequest, HttpResponse, HttpServer,
+    web,
 };
 use std::num::NonZeroUsize;
 
 use crate::commons::{
-    spawn::{term_signal, ServerOwner},
     ErrorCode,
+    spawn::{ServerOwner, term_signal},
 };
 use crate::serve::mount_path::MountConfig;
 
 use super::{
-    server_state::ServerState, vertigo_install::vertigo_install, ServeOpts, ServeOptsInner,
+    ServeOpts, ServeOptsInner, server_state::ServerState, vertigo_install::vertigo_install,
 };
 
 pub async fn run(opts: ServeOpts, port_watch: Option<u16>) -> Result<(), ErrorCode> {

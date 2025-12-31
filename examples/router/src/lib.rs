@@ -1,5 +1,5 @@
 #![deny(rust_2018_idioms)]
-use vertigo::{main, DomNode};
+use vertigo::{DomNode, main};
 
 mod app;
 

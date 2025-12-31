@@ -1,6 +1,6 @@
 use vertigo::{
-    dev::{LongPtr, MemoryBlock},
     JsJson,
+    dev::{LongPtr, MemoryBlock},
 };
 use wasmtime::{AsContextMut, Caller, Extern, Instance, Memory, Store, StoreContextMut};
 

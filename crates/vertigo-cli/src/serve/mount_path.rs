@@ -2,7 +2,7 @@
 use std::{collections::HashMap, path::Path, sync::Arc};
 use vertigo::dev::VERTIGO_PUBLIC_BUILD_PATH_PLACEHOLDER;
 
-use crate::commons::{models::IndexModel, ErrorCode};
+use crate::commons::{ErrorCode, models::IndexModel};
 
 pub struct MountConfigBuilder {
     pub mount_point: String,

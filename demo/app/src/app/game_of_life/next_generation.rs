@@ -1,4 +1,4 @@
-use vertigo::{transaction, Value};
+use vertigo::{Value, transaction};
 
 enum Offset {
     Sub,  // -1

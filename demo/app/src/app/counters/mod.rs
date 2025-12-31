@@ -1,5 +1,5 @@
 use vertigo::{
-    component, css, dom, get_driver, include_static, store, ClickEvent, Computed, JsJson, Value,
+    ClickEvent, Computed, JsJson, Value, component, css, dom, get_driver, include_static, store,
 };
 
 use crate::app::{counters::ssr_test::SsrTest, route::Route, state::state_route};

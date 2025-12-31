@@ -1,6 +1,6 @@
 use fantoccini::{ClientBuilder, Locator};
 use std::time::Duration;
-use vertigo_cli::{build, serve, BuildOpts, CommonOpts, ServeOpts};
+use vertigo_cli::{BuildOpts, CommonOpts, ServeOpts, build, serve};
 
 const PORT: u16 = 5555;
 

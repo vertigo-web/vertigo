@@ -1,6 +1,6 @@
 use clap::Args;
 use derive_more::Display;
-use include_dir::{include_dir, Dir};
+use include_dir::{Dir, include_dir};
 use std::{fs, path::Path};
 use walkdir::WalkDir;
 
@@ -39,14 +39,14 @@ pub fn run(opts: NewOpts) -> Result<(), ErrorCode> {
     let target_path = Path::new(&opts.dest_dir).join(&opts.project_name);
 
     // Check if dir is empty or non-existent
-    if let Ok(mut dir) = target_path.read_dir() {
-        if dir.next().is_some() {
-            log::error!(
-                "Destination dir ({}) is not empty",
-                target_path.to_string_lossy()
-            );
-            return Err(ErrorCode::NewProjectDirNotEmpty);
-        }
+    if let Ok(mut dir) = target_path.read_dir()
+        && dir.next().is_some()
+    {
+        log::error!(
+            "Destination dir ({}) is not empty",
+            target_path.to_string_lossy()
+        );
+        return Err(ErrorCode::NewProjectDirNotEmpty);
     }
 
     // Create directory

@@ -1,11 +1,11 @@
 use std::{process::exit, sync::Arc};
 use tokio::sync::mpsc::UnboundedSender;
 use vertigo::{
-    dev::{
-        command::{decode_json, CommandForBrowser, CommandForWasm},
-        CallbackId, LongPtr, SsrFetchResponse,
-    },
     JsJson, JsJsonSerialize,
+    dev::{
+        CallbackId, LongPtr, SsrFetchResponse,
+        command::{CommandForBrowser, CommandForWasm, decode_json},
+    },
 };
 use wasmtime::{Caller, Engine, Func, Instance, Module, Store};
 
@@ -80,7 +80,9 @@ impl WasmInstance {
                 imports.reverse();
                 match Instance::new(&mut store, module, &imports) {
                     Ok(instance) => {
-                        log::warn!("WASM instantiation types order problem - update rust or soon it will stop working");
+                        log::warn!(
+                            "WASM instantiation types order problem - update rust or soon it will stop working"
+                        );
                         instance
                     }
                     Err(err2) => {

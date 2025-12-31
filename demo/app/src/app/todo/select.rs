@@ -1,4 +1,4 @@
-use vertigo::{bind, dom, Computed, DomNode, Value};
+use vertigo::{Computed, DomNode, Value, bind, dom};
 
 fn is_selected<T: PartialEq + Clone + 'static>(
     value: &Value<T>,

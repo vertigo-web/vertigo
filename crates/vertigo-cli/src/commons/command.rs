@@ -155,10 +155,10 @@ impl CommandRun {
             ErrorCode::CantSpawnChildProcess
         })?;
 
-        if let Some(child) = child.as_mut() {
-            if child.wait().is_err() {
-                return Err(ErrorCode::CouldntWaitForChildProcess);
-            }
+        if let Some(child) = child.as_mut()
+            && child.wait().is_err()
+        {
+            return Err(ErrorCode::CouldntWaitForChildProcess);
         }
 
         Self::intercept_status(error_code, &out)?;
@@ -182,10 +182,10 @@ impl CommandRun {
         })?;
         Self::intercept_status(error_code, &out)?;
 
-        if let Some(child) = child.as_mut() {
-            if child.wait().is_err() {
-                return Err(ErrorCode::CouldntWaitForChildProcess);
-            }
+        if let Some(child) = child.as_mut()
+            && child.wait().is_err()
+        {
+            return Err(ErrorCode::CouldntWaitForChildProcess);
         }
 
         Ok((out.status, Self::convert_to_string(out.stdout)))

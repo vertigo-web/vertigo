@@ -1,9 +1,9 @@
-use vertigo::{get_driver, Value};
+use vertigo::{Value, get_driver};
 
 use self::{
     number_item::NumberItem,
-    possible_values::{possible_values, PossibleValues},
-    possible_values_last::{possible_values_last, PossibleValuesLast},
+    possible_values::{PossibleValues, possible_values},
+    possible_values_last::{PossibleValuesLast, possible_values_last},
     sudoku_square::SudokuSquare,
     tree_box::TreeBoxIndex,
 };

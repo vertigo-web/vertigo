@@ -1,5 +1,5 @@
 use vertigo::AutoJsJson;
-use vertigo::{store, LazyCache, RequestBuilder, Value};
+use vertigo::{LazyCache, RequestBuilder, Value, store};
 
 #[derive(PartialEq, Eq, Clone)]
 pub enum View {

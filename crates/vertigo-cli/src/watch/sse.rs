@@ -1,4 +1,4 @@
-use actix_web::{web, HttpResponse, Responder};
+use actix_web::{HttpResponse, Responder, web};
 use futures::stream::Stream;
 use std::task::Poll;
 use tokio::sync::watch::Receiver;
@@ -54,10 +54,10 @@ impl Stream for MyStream {
 
         let value = self.rx.borrow().clone();
 
-        if let Some(last_emit_value) = &self.last_emit_value {
-            if last_emit_value == &value {
-                return Poll::Pending;
-            }
+        if let Some(last_emit_value) = &self.last_emit_value
+            && last_emit_value == &value
+        {
+            return Poll::Pending;
         }
 
         self.last_emit_value = Some(value.clone());

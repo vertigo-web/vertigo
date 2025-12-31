@@ -3,11 +3,7 @@ use std::path::PathBuf;
 use super::wasm_path::WasmPath;
 
 pub fn profile_name(release: bool) -> &'static str {
-    if release {
-        "release"
-    } else {
-        "debug"
-    }
+    if release { "release" } else { "debug" }
 }
 
 pub fn get_target_dir(profile: &str) -> PathBuf {

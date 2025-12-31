@@ -1,7 +1,7 @@
 use std::fmt::Display;
 
 use vertigo::router::Router;
-use vertigo::{bind, dom, DomNode};
+use vertigo::{DomNode, bind, dom};
 
 #[derive(Clone, PartialEq, Eq, Debug)]
 pub enum Route {

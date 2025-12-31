@@ -1,6 +1,6 @@
 use ignore::{
-    gitignore::{Gitignore, GitignoreBuilder},
     Match,
+    gitignore::{Gitignore, GitignoreBuilder},
 };
 use std::path::PathBuf;
 

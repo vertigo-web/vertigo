@@ -1,4 +1,4 @@
-use vertigo::{bind, css, dom, DomNode, DropFileEvent, DropFileItem, Value};
+use vertigo::{DomNode, DropFileEvent, DropFileItem, Value, bind, css, dom};
 
 pub struct DropFiles {}
 

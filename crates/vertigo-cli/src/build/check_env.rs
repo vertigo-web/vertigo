@@ -1,4 +1,4 @@
-use crate::commons::{command::CommandRun, ErrorCode};
+use crate::commons::{ErrorCode, command::CommandRun};
 
 fn is_target_instaled() -> Result<bool, ErrorCode> {
     let target_list = CommandRun::new("rustup target list")

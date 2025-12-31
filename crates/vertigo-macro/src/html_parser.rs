@@ -1,6 +1,6 @@
 use proc_macro::TokenStream;
 use proc_macro2::TokenStream as TokenStream2;
-use quote::{quote, ToTokens, TokenStreamExt};
+use quote::{ToTokens, TokenStreamExt, quote};
 use rstml::{
     node::{
         KVAttributeValue, KeyedAttribute, KeyedAttributeValue, Node, NodeAttribute, NodeBlock,
@@ -9,7 +9,7 @@ use rstml::{
     parse,
 };
 use std::collections::BTreeMap;
-use syn::{spanned::Spanned, Expr, ExprBlock, ExprLit, Ident, Stmt};
+use syn::{Expr, ExprBlock, ExprLit, Ident, Stmt, spanned::Spanned};
 
 use crate::{
     component::get_group_attrs_method_name, trace_tailwind::add_to_tailwind, utils::release_build,
@@ -17,8 +17,7 @@ use crate::{
 
 const HTML_ATTR_FORMAT_ERROR: &str =
     "in html node. Expected key=\"value\", key={value}, key={}, {value} or {..value} attribute.";
-const COMPONENT_ATTR_FORMAT_ERROR: &str =
-    "in component. Expected key=\"value\", key={value}, key={}, group:key=\"value\", group:key={value} or {value} attribute.";
+const COMPONENT_ATTR_FORMAT_ERROR: &str = "in component. Expected key=\"value\", key={value}, key={}, group:key=\"value\", group:key={value} or {value} attribute.";
 
 pub(crate) fn dom_inner(input: TokenStream) -> TokenStream2 {
     let nodes = match parse(input) {
@@ -457,30 +456,29 @@ fn convert_node(node: &Node, convert_to_dom_node: bool) -> TokenStream2 {
                             // which is basically a Range without start
                             let value = block.stmts.last();
 
-                            if let Some(Stmt::Expr(Expr::Range(range), _)) = value {
-                                if range.start.is_none() {
-                                    if let Some(value) = &range.end {
-                                        let mut block = block.clone();
-                                        // Remove the statement with spread operator and prepare modified one
-                                        block.stmts.pop();
+                            if let Some(Stmt::Expr(Expr::Range(range), _)) = value
+                                && range.start.is_none()
+                                && let Some(value) = &range.end
+                            {
+                                let mut block = block.clone();
+                                // Remove the statement with spread operator and prepare modified one
+                                block.stmts.pop();
 
-                                        // Prepare new block based on if spread operator was used
-                                        let mut new_block = quote! {};
-                                        for stmt in block.stmts {
-                                            new_block.append_all(stmt.to_token_stream());
-                                        }
-                                        new_block.append_all(quote! {
-                                            #value
-                                        });
-
-                                        out_spread_attrs.push(quote! {
-                                            .add_attr_group({
-                                                #new_block
-                                            })
-                                        });
-                                        continue;
-                                    }
+                                // Prepare new block based on if spread operator was used
+                                let mut new_block = quote! {};
+                                for stmt in block.stmts {
+                                    new_block.append_all(stmt.to_token_stream());
                                 }
+                                new_block.append_all(quote! {
+                                    #value
+                                });
+
+                                out_spread_attrs.push(quote! {
+                                    .add_attr_group({
+                                        #new_block
+                                    })
+                                });
+                                continue;
                             }
 
                             if let Some(Stmt::Expr(Expr::Reference(inner), _)) = block.stmts.last()
@@ -558,19 +556,18 @@ fn convert_node(node: &Node, convert_to_dom_node: bool) -> TokenStream2 {
                                     let mut block = block.clone();
                                     let mut spread_statement = None;
 
-                                    if let Some(Stmt::Expr(Expr::Range(range), _)) = value {
-                                        if range.start.is_none() {
-                                            if let Some(value) = &range.end {
-                                                // Remove the statement with spread operator and prepare modified one
-                                                block.stmts.pop();
-                                                spread_statement = Some(quote! {
-                                                    #value
-                                                        .into_iter()
-                                                        .map(|item| vertigo::EmbedDom::embed(item))
-                                                        .collect::<Vec<_>>()
-                                                });
-                                            }
-                                        }
+                                    if let Some(Stmt::Expr(Expr::Range(range), _)) = value
+                                        && range.start.is_none()
+                                        && let Some(value) = &range.end
+                                    {
+                                        // Remove the statement with spread operator and prepare modified one
+                                        block.stmts.pop();
+                                        spread_statement = Some(quote! {
+                                            #value
+                                                .into_iter()
+                                                .map(|item| vertigo::EmbedDom::embed(item))
+                                                .collect::<Vec<_>>()
+                                        });
                                     }
 
                                     // Prepare new block based on if spread operator was used

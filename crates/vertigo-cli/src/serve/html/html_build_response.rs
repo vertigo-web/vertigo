@@ -1,15 +1,15 @@
 use std::{collections::HashMap, sync::Arc};
 
 use crate::serve::{
-    html::{element::AllElements, fetch_cache::FetchCache, html_element::HtmlElement, HtmlNode},
+    html::{HtmlNode, element::AllElements, fetch_cache::FetchCache, html_element::HtmlElement},
     mount_path::MountConfig,
     response_state::ResponseState,
 };
 use actix_web::http::StatusCode;
 use parking_lot::RwLock;
 use vertigo::{
-    dev::{SsrFetchCache, VERTIGO_MOUNT_POINT_PLACEHOLDER, VERTIGO_PUBLIC_BUILD_PATH_PLACEHOLDER},
     JsJsonSerialize,
+    dev::{SsrFetchCache, VERTIGO_MOUNT_POINT_PLACEHOLDER, VERTIGO_PUBLIC_BUILD_PATH_PLACEHOLDER},
 };
 
 pub fn build_response(

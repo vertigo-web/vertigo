@@ -1,4 +1,4 @@
-use vertigo::{bind, css, dom, main, DomNode, Value};
+use vertigo::{DomNode, Value, bind, css, dom, main};
 
 mod light;
 use light::Light;

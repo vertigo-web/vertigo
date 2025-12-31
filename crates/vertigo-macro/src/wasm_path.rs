@@ -1,5 +1,5 @@
-use base64::{engine::general_purpose::URL_SAFE_NO_PAD, Engine as _};
-use crc::{Crc, CRC_64_ECMA_182};
+use base64::{Engine as _, engine::general_purpose::URL_SAFE_NO_PAD};
+use crc::{CRC_64_ECMA_182, Crc};
 use std::{error::Error, path::PathBuf};
 
 #[derive(Debug)]
