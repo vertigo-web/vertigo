@@ -1,5 +1,5 @@
 use std::rc::Rc;
-use vertigo::{bind, css, dom, dom_element, transaction, DomElement, DomNode, Value};
+use vertigo::{DomElement, DomNode, Value, bind, css, dom, dom_element};
 
 pub use super::State;
 
@@ -40,21 +40,6 @@ impl GameOfLife {
         let delay = state.delay.map(|item| item.to_string());
         let new_delay = state.new_delay.map(|item| item.to_string());
 
-        let on_toggle_timer = {
-            let state = state.clone();
-            move |_| {
-                transaction(|context| {
-                    let timer = state.timer.get(context);
-
-                    if timer.is_some() {
-                        state.timer.set_force(None);
-                    } else {
-                        state.start_timer();
-                    }
-                });
-            }
-        };
-
         let button_label = state.timer.map(|item| -> &'static str {
             match item.is_some() {
                 true => "Stop",
@@ -90,7 +75,7 @@ impl GameOfLife {
                     "Year = " { year }
                 </div>
                 <div>
-                    <button css={&button_css} on_click={on_toggle_timer}>
+                    <button css={&button_css} on_click={state.on_toggle_timer()}>
                         {button_label}
                     </button>
                     <button css={&button_css} on_click={state.randomize()}>"Random"</button>

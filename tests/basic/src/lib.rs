@@ -1,4 +1,4 @@
-use vertigo::{bind, dom, main, DomNode, Value};
+use vertigo::{DomNode, Value, bind, dom, main};
 
 mod row;
 use row::Row;

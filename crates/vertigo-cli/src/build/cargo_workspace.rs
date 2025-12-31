@@ -1,7 +1,7 @@
 use serde::Deserialize;
 use std::path::PathBuf;
 
-use crate::commons::{command::CommandRun, ErrorCode};
+use crate::commons::{ErrorCode, command::CommandRun};
 
 #[derive(Clone, Debug, Deserialize)]
 pub struct Workspace {
@@ -31,10 +31,9 @@ impl Workspace {
                 .packages
                 .iter()
                 .find(|package| &package.id == member_id)
+                && package.is_cdylib()
             {
-                if package.is_cdylib() {
-                    return Some(package.name.clone());
-                }
+                return Some(package.name.clone());
             }
         }
         None

@@ -1,9 +1,9 @@
 #![deny(rust_2018_idioms)]
 
-use vertigo::{get_driver, DomNode};
+use vertigo::{DomNode, get_driver};
 
 mod app;
-use crate::app::{render, State};
+use crate::app::{State, render};
 
 #[vertigo::main]
 fn demo() -> DomNode {

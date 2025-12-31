@@ -1,4 +1,4 @@
-use vertigo::{css, dom, transaction, Computed, DomNode, Resource};
+use vertigo::{Computed, DomNode, Resource, css, dom, transaction};
 
 use crate::app::github_explorer::state::{
     state_github_branch_name, state_github_repo_input, state_github_repo_shown,

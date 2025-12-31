@@ -1,8 +1,8 @@
 use std::collections::{BTreeMap, HashMap, VecDeque};
 
-use vertigo::{dev::command::DriverDomCommand, DomId};
+use vertigo::{DomId, dev::command::DriverDomCommand};
 
-use super::{element_children::ElementChildren, html_element::HtmlElement, HtmlNode};
+use super::{HtmlNode, element_children::ElementChildren, html_element::HtmlElement};
 
 pub enum Node {
     Element(Element),
@@ -232,7 +232,7 @@ impl AllElements {
 
 #[cfg(test)]
 mod tests {
-    use vertigo::{dev::command::DriverDomCommand, DomId};
+    use vertigo::{DomId, dev::command::DriverDomCommand};
 
     use super::AllElements;
 

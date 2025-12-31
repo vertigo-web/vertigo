@@ -1,10 +1,10 @@
 use itertools::Itertools;
-use pest::{iterators::Pair, Parser};
+use pest::{Parser, iterators::Pair};
 use proc_macro::TokenStream;
 use proc_macro2::{Span, TokenStream as TokenStream2};
 use quote::quote;
 use std::{collections::HashMap, error::Error};
-use syn::{parse_str, Expr, ExprLit, Ident, Lit};
+use syn::{Expr, ExprLit, Ident, Lit, parse_str};
 
 #[derive(Parser)]
 #[grammar = "css.pest"]

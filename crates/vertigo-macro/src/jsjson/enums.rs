@@ -2,7 +2,7 @@ use darling::FromAttributes;
 use proc_macro::TokenStream;
 use quote::quote;
 use std::error::Error;
-use syn::{ext::IdentExt, DataEnum, Fields, Ident};
+use syn::{DataEnum, Fields, Ident, ext::IdentExt};
 
 use crate::jsjson::attributes::{ContainerOpts, FieldOpts};
 

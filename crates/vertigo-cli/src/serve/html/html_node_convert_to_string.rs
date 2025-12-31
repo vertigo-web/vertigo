@@ -1,4 +1,4 @@
-use super::{html_element::HtmlElement, HtmlNode};
+use super::{HtmlNode, html_element::HtmlElement};
 use html_escape::{encode_quoted_attribute, encode_safe};
 use std::collections::VecDeque;
 use std::{borrow::Cow, collections::BTreeMap};
@@ -159,10 +159,10 @@ fn get_render_child_mode(element: VecDeque<HtmlNode>) -> ChildMode {
         return ChildMode::Child(vec![]);
     };
 
-    if result.is_empty() {
-        if let HtmlNode::Text(last) = last {
-            return ChildMode::Text(last);
-        }
+    if result.is_empty()
+        && let HtmlNode::Text(last) = last
+    {
+        return ChildMode::Text(last);
     }
 
     result.push(last);
@@ -223,25 +223,17 @@ impl Format {
     }
 
     fn r_chevron(&self) -> &'static str {
-        if self.is_some() {
-            ">\n"
-        } else {
-            ">"
-        }
+        if self.is_some() { ">\n" } else { ">" }
     }
 
     fn self_closing(&self) -> &'static str {
-        if self.is_some() {
-            " />\n"
-        } else {
-            " />"
-        }
+        if self.is_some() { " />\n" } else { " />" }
     }
 }
 
 #[cfg(test)]
 mod tests {
-    use crate::serve::html::{html_element::HtmlElement, HtmlNode};
+    use crate::serve::html::{HtmlNode, html_element::HtmlElement};
 
     use super::convert_to_string;
 

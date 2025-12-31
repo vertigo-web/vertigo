@@ -1,7 +1,7 @@
 use proc_macro2::TokenStream;
 use quote::quote;
 use syn::spanned::Spanned;
-use syn::{punctuated::Iter, Field, Ident};
+use syn::{Field, Ident, punctuated::Iter};
 
 /// Takes tuple fields and returns (generated fields' names, generated encodes)
 pub(super) fn get_encodes(fields_iter: Iter<'_, Field>) -> (Vec<Ident>, Vec<TokenStream>) {

@@ -1,11 +1,11 @@
 use std::path::PathBuf;
 
-use crate::commons::{models::IndexModel, ErrorCode};
+use crate::commons::{ErrorCode, models::IndexModel};
 
 use super::{
     build_opts::BuildOpts,
     cargo_build::run_cargo_build,
-    cargo_workspace::{get_workspace, Workspace},
+    cargo_workspace::{Workspace, get_workspace},
     check_env::check_env,
     find_target::{find_package_rlib_in_target, find_wasm_in_target, profile_name},
     wasm_opt::run_wasm_opt,

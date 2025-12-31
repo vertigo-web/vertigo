@@ -101,15 +101,15 @@ fn test_file(errors_counter: &mut u64, file_path: &String, content: String) {
         let todo_index1 = text.find("//");
         let todo_index2 = text.find("todo");
 
-        if let (Some(todo_index1), Some(todo_index2)) = (todo_index1, todo_index2) {
-            if todo_index1 < todo_index2 {
-                log_error(format!("file_path={file_path}:{line}"));
-                log_error("The line includes \"// todo\"");
-                log_error(format!("line text: {text}"));
-                println!();
+        if let (Some(todo_index1), Some(todo_index2)) = (todo_index1, todo_index2)
+            && todo_index1 < todo_index2
+        {
+            log_error(format!("file_path={file_path}:{line}"));
+            log_error("The line includes \"// todo\"");
+            log_error(format!("line text: {text}"));
+            println!();
 
-                *errors_counter += 1;
-            }
+            *errors_counter += 1;
         }
 
         if text.contains("todo!") {

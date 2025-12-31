@@ -1,4 +1,4 @@
-use vertigo::{bind, component, css, dom, DomNode, KeyDownEvent};
+use vertigo::{DomNode, KeyDownEvent, bind, component, css, dom};
 
 use super::state::ChatState;
 

@@ -1,5 +1,5 @@
 use std::rc::Rc;
-use vertigo::{get_driver, transaction, ClickEvent, DropResource, Value};
+use vertigo::{ClickEvent, DropResource, Value, get_driver, transaction};
 
 use super::next_generation::next_generation;
 
@@ -33,9 +33,23 @@ impl State {
         }
     }
 
-    pub fn randomize(&self) -> impl Fn(ClickEvent) {
-        let matrix = self.matrix.clone();
+    pub fn on_toggle_timer(&self) -> impl Fn(ClickEvent) + 'static {
+        let state = self.clone();
+        move |_| {
+            transaction(|context| {
+                let timer = state.timer.get(context);
 
+                if timer.is_some() {
+                    state.timer.set_force(None);
+                } else {
+                    state.start_timer();
+                }
+            });
+        }
+    }
+
+    pub fn randomize(&self) -> impl Fn(ClickEvent) + 'static {
+        let matrix = self.matrix.clone();
         move |_| {
             log::info!("random ...");
 
@@ -58,11 +72,11 @@ impl State {
         transaction(|context| {
             let delay = self.delay.get(context);
             let matrix = self.matrix.clone();
-            let state = self.clone();
 
             log::info!("Setting timer for {delay} ms");
 
             let timer = get_driver().set_interval(delay, {
+                let state = self.clone();
                 move || {
                     transaction(|context| {
                         let current = state.year.get(context);
@@ -77,9 +91,8 @@ impl State {
         })
     }
 
-    pub fn accept_new_delay(&self) -> impl Fn(ClickEvent) {
+    pub fn accept_new_delay(&self) -> impl Fn(ClickEvent) + 'static {
         let state = self.clone();
-
         move |_| {
             transaction(|context| {
                 state.delay.set(state.new_delay.get(context));

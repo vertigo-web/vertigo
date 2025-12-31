@@ -65,13 +65,13 @@ impl HtmlElement {
             let mut current: usize = 0;
 
             for node in self.children.iter_mut() {
-                if let Some(element) = node.get_element() {
-                    if element.name.as_str() == *tag_name {
-                        if &current == index {
-                            return element.modify(rest_path, callback);
-                        }
-                        current += 1;
+                if let Some(element) = node.get_element()
+                    && element.name.as_str() == *tag_name
+                {
+                    if &current == index {
+                        return element.modify(rest_path, callback);
                     }
+                    current += 1;
                 }
             }
         }

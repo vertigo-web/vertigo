@@ -14,7 +14,7 @@ categories = [
     "web-programming",
 ]
 license = "MIT OR Apache-2.0"
-edition = "2021"
+edition = "2024"
 repository = "https://github.com/vertigo-web/vertigo/"
 
 [[bin]]

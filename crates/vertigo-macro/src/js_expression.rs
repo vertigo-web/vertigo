@@ -1,7 +1,7 @@
 use proc_macro::TokenStream;
 use proc_macro2::TokenStream as TokenStream2;
 use quote::quote;
-use syn::{parse_macro_input, spanned::Spanned, Expr, Meta};
+use syn::{Expr, Meta, parse_macro_input, spanned::Spanned};
 
 /// Converts pseudo-javascript expression to DomAccess chain.
 pub(crate) fn js_expression(input: TokenStream) -> TokenStream {
@@ -103,7 +103,7 @@ fn extract_base(input: &Expr) -> Option<TokenStream2> {
             Meta::Path(p) => {
                 return Some(quote! {
                     #p
-                })
+                });
             }
             _ => emit_warning!(attr.span(), "Invalid ref, should be #[DomElementRef]"),
         }

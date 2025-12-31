@@ -1,6 +1,6 @@
 use std::cmp::PartialEq;
 use vertigo::AutoJsJson;
-use vertigo::{store, LazyCache, RequestBuilder, Value};
+use vertigo::{LazyCache, RequestBuilder, Value, store};
 
 #[derive(Debug, AutoJsJson, PartialEq, Eq, Clone, Default)]
 pub struct Commit {

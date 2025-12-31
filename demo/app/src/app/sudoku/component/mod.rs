@@ -1,6 +1,6 @@
-use vertigo::{bind, component, css, dom, DomNode};
+use vertigo::{DomNode, bind, component, css, dom};
 
-use super::state::{sudoku_square::SudokuSquare, tree_box::TreeBoxIndex, Cell, SudokuState};
+use super::state::{Cell, SudokuState, sudoku_square::SudokuSquare, tree_box::TreeBoxIndex};
 
 pub mod render_cell_possible;
 pub mod render_cell_value;

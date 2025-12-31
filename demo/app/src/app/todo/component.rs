@@ -1,8 +1,8 @@
-use vertigo::{bind, css, dom, dom_element, Css, DomNode, Resource, Value};
+use vertigo::{Css, DomNode, Resource, Value, bind, css, dom, dom_element};
 
 use crate::app::todo::{
-    state::{state_todo_comments, state_todo_posts, state_todo_view},
     Select,
+    state::{state_todo_comments, state_todo_posts, state_todo_view},
 };
 
 use super::state::View;

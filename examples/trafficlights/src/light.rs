@@ -1,4 +1,4 @@
-use vertigo::{component, css, dom, Computed, Css};
+use vertigo::{Computed, Css, component, css, dom};
 
 pub fn light(color: &str) -> Css {
     css! {"

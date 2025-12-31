@@ -2,8 +2,8 @@ use actix_web::http::Method;
 use serde_json::{Map, Number, Value};
 use std::collections::BTreeMap;
 use vertigo::{
-    dev::{SsrFetchRequest, SsrFetchRequestBody, SsrFetchResponse, SsrFetchResponseContent},
     JsJson, JsJsonNumber,
+    dev::{SsrFetchRequest, SsrFetchRequestBody, SsrFetchResponse, SsrFetchResponseContent},
 };
 
 fn convert_to_jsjson(value: Value) -> JsJson {

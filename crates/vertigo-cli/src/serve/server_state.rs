@@ -6,13 +6,13 @@ use std::{
 };
 use tokio::sync::mpsc::{error::TryRecvError, unbounded_channel};
 use vertigo::{
-    dev::command::{browser_response, CommandForBrowser, ConsoleLogLevel},
     JsJson, JsJsonSerialize,
+    dev::command::{CommandForBrowser, ConsoleLogLevel, browser_response},
 };
 use wasmtime::{Engine, Module};
 
 use crate::{
-    commons::{spawn::SpawnOwner, ErrorCode},
+    commons::{ErrorCode, spawn::SpawnOwner},
     serve::html::FetchCache,
 };
 
@@ -282,11 +282,11 @@ impl ServerState {
 
             if html_response.awaiting_response() {
                 let message = receiver.recv().await;
-                if let Some(message) = message {
-                    if let Some(response) = html_response.process_message(message) {
-                        return response;
-                    };
-                }
+                if let Some(message) = message
+                    && let Some(response) = html_response.process_message(message)
+                {
+                    return response;
+                };
             } else {
                 break; // send response to browser
             }

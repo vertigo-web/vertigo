@@ -1,4 +1,4 @@
-use vertigo::{css, dom, get_driver, include_static, Computed, Css, DomNode, KeyDownEvent};
+use vertigo::{Computed, Css, DomNode, KeyDownEvent, css, dom, get_driver, include_static};
 
 use crate::app::{self, counters::state_counters, state::state_route};
 

@@ -31,9 +31,16 @@ use super::vertigo_handler::vertigo_handler;
 /// ```
 ///
 pub fn vertigo_install(cfg: &mut web::ServiceConfig, mount_config: &MountConfig) {
+    let mount_point = mount_config.mount_point();
+
     cfg.service(Files::new(
         &mount_config.dest_http_root(),
         mount_config.dest_dir(),
-    ))
-    .service(web::scope(mount_config.mount_point()).default_service(vertigo_handler(mount_config)));
+    ));
+
+    if mount_point == "/" {
+        cfg.default_service(vertigo_handler(mount_config));
+    } else {
+        cfg.service(web::scope(mount_point).default_service(vertigo_handler(mount_config)));
+    };
 }

@@ -1,6 +1,6 @@
 #![deny(rust_2018_idioms)]
 
-use actix_web::{rt, web, App, Error, HttpRequest, HttpResponse, HttpServer};
+use actix_web::{App, Error, HttpRequest, HttpResponse, HttpServer, rt, web};
 
 mod app_state;
 mod connection;

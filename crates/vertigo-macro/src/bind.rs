@@ -221,10 +221,10 @@ struct TokensParamsBody<'a> {
 
 fn contains_bracket(tokens: &[TokenTree]) -> bool {
     for token in tokens {
-        if let TokenTree::Punct(inner) = token {
-            if inner.as_char() == '|' {
-                return true;
-            }
+        if let TokenTree::Punct(inner) = token
+            && inner.as_char() == '|'
+        {
+            return true;
         }
     }
 

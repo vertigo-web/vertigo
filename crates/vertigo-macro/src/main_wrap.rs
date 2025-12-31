@@ -21,7 +21,7 @@ pub(crate) fn main_wrap(input: TokenStream) -> TokenStream {
     quote! {
         #input
 
-        #[no_mangle]
+        #[unsafe(no_mangle)]
         pub fn vertigo_entry_function(version: (u32, u32)) {
             #tailwind_bundle_injector
             vertigo::start_app(#function_name);

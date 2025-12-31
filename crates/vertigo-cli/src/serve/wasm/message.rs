@@ -1,4 +1,4 @@
-use vertigo::dev::{command::DriverDomCommand, CallbackId, SsrFetchRequest, SsrFetchResponse};
+use vertigo::dev::{CallbackId, SsrFetchRequest, SsrFetchResponse, command::DriverDomCommand};
 
 #[derive(Debug)]
 pub enum Message {

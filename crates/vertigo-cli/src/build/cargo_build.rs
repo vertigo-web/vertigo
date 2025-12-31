@@ -2,7 +2,7 @@ use std::path::PathBuf;
 
 use crate::{
     build::find_target::profile_name,
-    commons::{command::CommandRun, ErrorCode},
+    commons::{ErrorCode, command::CommandRun},
 };
 
 use super::Workspace;

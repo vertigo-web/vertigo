@@ -1,4 +1,4 @@
-use vertigo::{bind, component, css, dom, js, Css, JsJson, Value};
+use vertigo::{Css, JsJson, Value, bind, component, css, dom, js};
 
 mod clipboard;
 use clipboard::Clipboard;

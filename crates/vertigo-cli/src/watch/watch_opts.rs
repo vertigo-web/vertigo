@@ -1,9 +1,9 @@
 use clap::Args;
 
+use crate::ServeOpts;
 use crate::build::{BuildOpts, BuildOptsInner};
 use crate::commons::models::CommonOpts;
 use crate::serve::ServeOptsInner;
-use crate::ServeOpts;
 
 #[derive(Args, Debug, Clone)]
 pub struct WatchOpts {

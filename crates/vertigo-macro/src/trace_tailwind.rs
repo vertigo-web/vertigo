@@ -1,12 +1,12 @@
 use proc_macro::{Span, TokenStream};
 use proc_macro2::TokenStream as TokenStream2;
-use quote::{quote, ToTokens};
+use quote::{ToTokens, quote};
 use std::error::Error;
 use std::fs::read_to_string;
 use std::io::Write;
 use std::{path::PathBuf, process::Command};
 use syn::spanned::Spanned;
-use syn::{parse2, Expr, Lit};
+use syn::{Expr, Lit, parse2};
 
 use crate::get_target_dir::get_target_dir;
 
@@ -69,38 +69,38 @@ pub(crate) fn add_to_tailwind(classes: TokenStream2) -> Result<TokenStream2, Box
         emit_error!(classes_span, "The macro can only take strings");
         return Ok(quote! {});
     };
-    if let Expr::Lit(expr_lit) = &input {
-        if let Lit::Str(input) = &expr_lit.lit {
-            let input_str = input.to_token_stream().to_string();
-            let input_str = input_str.trim_matches('"');
-            let output = if std::env::var("VERTIGO_EXT_TAILWIND").is_ok() {
-                // External tailwind doesn't modify class names
-                Ok(input_str.to_string())
-            } else {
-                tailwind_css::TailwindBuilder::default().trace(input_str, false)
-            };
+    if let Expr::Lit(expr_lit) = &input
+        && let Lit::Str(input) = &expr_lit.lit
+    {
+        let input_str = input.to_token_stream().to_string();
+        let input_str = input_str.trim_matches('"');
+        let output = if std::env::var("VERTIGO_EXT_TAILWIND").is_ok() {
+            // External tailwind doesn't modify class names
+            Ok(input_str.to_string())
+        } else {
+            tailwind_css::TailwindBuilder::default().trace(input_str, false)
+        };
 
-            match output {
-                Ok(output) => {
-                    // Only collect tailwind classes during build
-                    if std::env::var("VERTIGO_BUNDLE").is_ok() {
-                        let file_path = get_tailwind_classes_file_path()?;
+        match output {
+            Ok(output) => {
+                // Only collect tailwind classes during build
+                if std::env::var("VERTIGO_BUNDLE").is_ok() {
+                    let file_path = get_tailwind_classes_file_path()?;
 
-                        // Open the file in append mode
-                        let mut file = std::fs::OpenOptions::new()
-                            .append(true)
-                            .create(true) // Create the file if it doesn't exist
-                            .open(&file_path)?;
+                    // Open the file in append mode
+                    let mut file = std::fs::OpenOptions::new()
+                        .append(true)
+                        .create(true) // Create the file if it doesn't exist
+                        .open(&file_path)?;
 
-                        // Write the input string to the file
-                        writeln!(file, "{input_str}")?;
-                    }
-                    // Use output in source code
-                    return Ok(quote! { #output });
+                    // Write the input string to the file
+                    writeln!(file, "{input_str}")?;
                 }
-                Err(err) => {
-                    emit_error!(input.span(), "Tailwind: {}", err.kind.to_string());
-                }
+                // Use output in source code
+                return Ok(quote! { #output });
+            }
+            Err(err) => {
+                emit_error!(input.span(), "Tailwind: {}", err.kind.to_string());
             }
         }
     }

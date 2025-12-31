@@ -1,4 +1,4 @@
-use vertigo::{bind, component, dom, js, transaction, Value};
+use vertigo::{Value, bind, component, dom, js, transaction};
 
 use super::inp_css;
 

@@ -1,4 +1,4 @@
-use vertigo::{bind, component, css, dom, Value};
+use vertigo::{Value, bind, component, css, dom};
 
 #[component]
 pub fn MyInput(value: Value<String>) {

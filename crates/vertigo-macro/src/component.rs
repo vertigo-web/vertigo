@@ -1,6 +1,6 @@
 use proc_macro::TokenStream;
-use quote::{quote, ToTokens};
-use syn::{spanned::Spanned, FnArg, Ident, Pat};
+use quote::{ToTokens, quote};
+use syn::{FnArg, Ident, Pat, spanned::Spanned};
 
 pub(crate) fn component_inner(_attrs: TokenStream, input: TokenStream) -> TokenStream {
     let ast = syn::parse_macro_input!(input as syn::ItemFn);
@@ -80,15 +80,15 @@ pub(crate) fn component_inner(_attrs: TokenStream, input: TokenStream) -> TokenS
 
     let mut param_assignments = Vec::new();
     for param in &ast.sig.inputs {
-        if let syn::FnArg::Typed(pat_type) = param {
-            if let syn::Pat::Ident(ident) = &*pat_type.pat {
-                let param_name = ident.ident.clone();
-                let mutability = ident.mutability;
+        if let syn::FnArg::Typed(pat_type) = param
+            && let syn::Pat::Ident(ident) = &*pat_type.pat
+        {
+            let param_name = ident.ident.clone();
+            let mutability = ident.mutability;
 
-                param_assignments.push(quote! {
-                    let #mutability #param_name = self.#param_name;
-                });
-            }
+            param_assignments.push(quote! {
+                let #mutability #param_name = self.#param_name;
+            });
         }
     }
 

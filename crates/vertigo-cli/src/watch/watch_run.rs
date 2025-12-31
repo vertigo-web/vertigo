@@ -1,17 +1,17 @@
 use actix_cors::Cors;
-use actix_web::{rt::System, web, App, HttpServer};
+use actix_web::{App, HttpServer, rt::System, web};
 use notify::RecursiveMode;
 use std::{path::Path, process::exit, sync::Arc, time::Duration};
 use tokio::{
-    sync::{watch::Sender, Notify},
+    sync::{Notify, watch::Sender},
     time::sleep,
 };
-use tokio_retry::{strategy::FibonacciBackoff, Retry};
+use tokio_retry::{Retry, strategy::FibonacciBackoff};
 
-use crate::build::{get_workspace, Workspace};
+use crate::build::{Workspace, get_workspace};
 use crate::commons::{
-    spawn::{term_signal, SpawnOwner},
     ErrorCode,
+    spawn::{SpawnOwner, term_signal},
 };
 
 use super::{
