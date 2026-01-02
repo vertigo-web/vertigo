@@ -5,7 +5,7 @@ use actix_web::{
     rt::System,
     web,
 };
-use std::num::NonZeroUsize;
+use std::{num::NonZeroUsize, time::Duration};
 
 use crate::commons::{
     ErrorCode,
@@ -66,7 +66,12 @@ pub async fn run(opts: ServeOpts, port_watch: Option<u16>) -> Result<(), ErrorCo
                 ErrorCode::ServeCantOpenPort
             })?;
 
-    let server = server.disable_signals().run();
+    let server = server
+        .disable_signals()
+        .client_disconnect_timeout(Duration::from_secs(2))
+        .shutdown_timeout(5)
+        .run();
+
     let handle = server.handle();
     let handle2 = server.handle();
 
