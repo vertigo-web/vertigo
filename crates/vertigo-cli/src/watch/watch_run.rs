@@ -137,6 +137,8 @@ pub async fn run(mut opts: WatchOpts) -> Result<(), ErrorCode> {
         ErrorCode::WatcherError
     })?
     .disable_signals()
+    .client_disconnect_timeout(Duration::from_secs(1))
+    .shutdown_timeout(1)
     .run();
 
     let watch_handle = watch_server.handle();
