@@ -1,6 +1,6 @@
 [package]
 name = "vertigo"
-version = "0.9.1"
+version = "0.10.0"
 authors = [
     "Grzegorz Szeliga <szeligagrzegorz@gmail.com>",
     "Michał Pokrywka <wolfmoon@o2.pl>",
@@ -17,11 +17,14 @@ edition = "2021"
 
 [dependencies]
 base64 = { version = "0.22", default-features = false, features = ["alloc"] }
-chrono = { version = ">=0.4.20", default-features = false, features = [
-    "std",
-], optional = true }
 log = { version = "0.4", features = ["std"] }
-vertigo-macro = { path = "../../crates/vertigo-macro", version = "0.9.1" }
+vertigo-macro = { path = "../../crates/vertigo-macro", version = "0.10.0" }
+
+[dependencies.chrono]
+version = ">=0.4.20"
+default-features = false
+features = ["std"]
+optional = true
 
 [lints]
 workspace = true
