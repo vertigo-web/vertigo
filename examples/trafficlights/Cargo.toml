@@ -1,6 +1,6 @@
 [package]
 name = "vertigo-example-trafficlights"
-version = "0.9.1"
+version = "0.10.0"
 authors = [
     "Grzegorz Szeliga <szeligagrzegorz@gmail.com>",
     "Michał Pokrywka <wolfmoon@o2.pl>",
@@ -11,4 +11,4 @@ edition = "2024"
 crate-type = ["cdylib", "rlib"]
 
 [dependencies]
-vertigo = { path = "../../crates/vertigo", version = "0.9.1" }
+vertigo = { path = "../../crates/vertigo", version = "0.10.0" }
