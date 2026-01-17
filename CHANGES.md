@@ -3,6 +3,10 @@
 <!-- markdownlint-disable-next-line first-line-h1 -->
 ## Unreleased
 
+### Added
+
+* Added `chrono::NaiveDateTime` support to `JsJson`
+
 ### Fixed
 
 * Fixed premature drop in Computed's context
