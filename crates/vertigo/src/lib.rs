@@ -241,24 +241,103 @@ pub use vertigo_macro::bind_spawn;
 ///
 /// Enums representation is compatible with serde's "external tagging" which is the default.
 ///
+/// # Options
+///
+/// ## Container Options
+///
+/// * `rename_all = "..."`: Rename all fields according to the given case convention.
+///   Supported values: `PascalCase`, `camelCase`, `snake_case`, `kebab-case`, `SHOUTY_SNAKE_CASE`, `UPPERCASE`, `lowercase`.
+///
+/// ## Field Options
+///
+/// * `default`: Default value for the field if it is missing in the JSON.
+///   If no value is provided, `Default::default()` is used.
+/// * `rename = "..."`: Rename the field to the given string.
+/// * `stringify`: Serialize the field using `Display` and deserialize using `FromStr`. Useful for foreign structs.
+///
+/// # Example
+///
 /// ```rust
-/// #[derive(vertigo::AutoJsJson)]
+/// use vertigo::AutoJsJson;
+///
+/// #[derive(AutoJsJson)]
+/// #[js_json(rename_all = "camelCase")]
 /// pub struct Post {
 ///     pub id: i64,
 ///     pub name: String,
+///     #[js_json(default)]
 ///     pub visible: bool,
+///     #[js_json(stringify)]
+///     pub status: Status,
+/// }
+///
+/// #[derive(Clone)]
+/// pub enum Status {
+///     Active,
+///     Inactive,
+/// }
+///
+/// impl std::fmt::Display for Status {
+///     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+///         match self {
+///             Status::Active => write!(f, "active"),
+///             Status::Inactive => write!(f, "inactive"),
+///         }
+///     }
+/// }
+///
+/// impl std::str::FromStr for Status {
+///     type Err = String;
+///
+///     fn from_str(s: &str) -> Result<Self, Self::Err> {
+///         match s {
+///             "active" => Ok(Status::Active),
+///             "inactive" => Ok(Status::Inactive),
+///             _ => Err("Invalid status".to_string()),
+///         }
+///     }
 /// }
 ///
 /// let post = Post {
 ///     id: 1,
 ///     name: "Hello".to_string(),
-///     visible: true
+///     visible: true,
+///     status: Status::Active,
 /// };
 ///
 /// let js_json = vertigo::to_json(post);
 ///
 /// let post2 = vertigo::from_json::<Post>(js_json);
 /// ```
+///
+/// # Creating newtypes for foreign types
+///
+/// Option `stringify` can be used for newtypes to serialize them using `Display` and deserialize using `FromStr`.
+///
+/// ```rust
+/// use vertigo::AutoJsJson;
+///
+/// // Let's say we have a type that implements `Display` and `FromStr`
+/// // but doesn't support JsJson serialization
+/// struct ForeignType(i64);
+///
+/// # impl std::fmt::Display for ForeignType {
+/// #     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+/// #         write!(f, "{}", self.0)
+/// #     }
+/// # }
+/// # impl std::str::FromStr for ForeignType {
+/// #     type Err = String;
+/// #
+/// #     fn from_str(s: &str) -> Result<Self, Self::Err> {
+/// #         Ok(ForeignType(s.parse().map_err(|_| "Invalid value".to_string())?))
+/// #     }
+/// # }
+///
+/// // We can use `stringify` option to serialize it
+/// // using `Display` and deserialize using `FromStr`
+/// #[derive(AutoJsJson)]
+/// struct MyType(#[js_json(stringify)] ForeignType);
 pub use vertigo_macro::AutoJsJson;
 
 /// Macro which transforms a provided function into a component that can be used in [dom!] macro

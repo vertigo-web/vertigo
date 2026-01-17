@@ -1,3 +1,4 @@
+use darling::FromAttributes;
 use proc_macro::TokenStream;
 use quote::quote;
 use std::error::Error;
@@ -12,15 +13,44 @@ pub(super) fn impl_js_json_newtype(
 
     // Struct(T) <-> T
     if data.fields.len() == 1 {
-        // Encode
-        encodes.push(quote! {
-            self.0.to_json()
-        });
+        let field = data.fields.iter().next().ok_or("Expected one field")?;
+        let field_opts = crate::jsjson::attributes::FieldOpts::from_attributes(&field.attrs)?;
 
-        // Decode
-        decodes.push(quote! {
-            vertigo::JsJsonDeserialize::from_json(ctx, json).map(Self)
-        });
+        if field_opts.stringify {
+            // Encode
+            encodes.push(quote! {
+                vertigo::JsJson::String(format!("{}", self.0))
+            });
+
+            // Decode
+            decodes.push(quote! {
+                match json {
+                    vertigo::JsJson::String(v) => {
+                        match v.parse() {
+                            Ok(v) => Ok(Self(v)),
+                            Err(e) => {
+                                let message = format!("Error parsing string '{}': {}", v, e);
+                                Err(ctx.add(message))
+                            }
+                        }
+                    },
+                    other => {
+                        let message = ["String expected, received ", other.typename()].concat();
+                        Err(ctx.add(message))
+                    }
+                }
+            });
+        } else {
+            // Encode
+            encodes.push(quote! {
+                self.0.to_json()
+            });
+
+            // Decode
+            decodes.push(quote! {
+                vertigo::JsJsonDeserialize::from_json(ctx, json).map(Self)
+            });
+        }
 
     // Struct(T1, T2...) <-> [T1, T2, ...]
     } else {

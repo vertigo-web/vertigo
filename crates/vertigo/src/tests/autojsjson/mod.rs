@@ -4,6 +4,7 @@ use crate::{self as vertigo, JsJson, JsJsonContext};
 use crate::{AutoJsJson, JsJsonDeserialize, JsJsonSerialize};
 
 mod rename;
+mod stringify;
 
 #[test]
 fn test_serialize_and_deserialize_struct() {
