@@ -115,7 +115,7 @@ impl<T: Clone + 'static> Value<T> {
     ///
     /// Returned `T` is cloned - it's not reactive.
     pub fn get(&self, context: &Context) -> T {
-        context.add_parent(self.inner.id);
+        context.add_parent(self.inner.id, self.inner.clone());
         self.inner.value.get()
     }
 

@@ -1,3 +1,4 @@
+use std::any::Any;
 use std::rc::Rc;
 
 use crate::Context;
@@ -8,6 +9,7 @@ pub struct GraphValue<T> {
     id: GraphId,
     get_value: Box<dyn Fn(&Context) -> T>,
     state: ValueMut<Option<T>>,
+    parents: ValueMut<Vec<Rc<dyn Any>>>,
 }
 
 impl<T: Clone + 'static> GraphValue<T> {
@@ -24,6 +26,7 @@ impl<T: Clone + 'static> GraphValue<T> {
             id,
             get_value: Box::new(get_value),
             state: ValueMut::new(None),
+            parents: ValueMut::new(Vec::new()),
         });
 
         let weak_value = Rc::downgrade(&graph_value);
@@ -52,21 +55,24 @@ impl<T: Clone + 'static> GraphValue<T> {
     fn calculate_new_value(&self) -> T {
         let context = Context::computed();
         let new_value = (self.get_value)(&context);
-        get_dependencies().graph.push_context(self.id, context);
+        let (parent_ids, parent_rcs) = context.get_parents();
+
+        get_dependencies().graph.push_context(self.id, parent_ids);
+        self.parents.set(parent_rcs);
 
         self.state.set(Some(new_value.clone()));
 
         new_value
     }
 
-    pub fn get_value(&self, context: &Context) -> T {
+    pub fn get_value(self: &Rc<Self>, context: &Context) -> T {
         if context.is_transaction() {
             let new_context = Context::transaction();
             let new_value = (self.get_value)(&new_context);
             return new_value;
         }
 
-        context.add_parent(self.id);
+        context.add_parent(self.id, self.clone());
 
         let inner_value = self.state.map(|value| value.clone());
 

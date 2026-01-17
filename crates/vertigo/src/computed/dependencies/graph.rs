@@ -2,7 +2,6 @@ use super::external_connections::ExternalConnections;
 use super::graph_connections::GraphConnections;
 use super::refresh::Refresh;
 use crate::computed::graph_id::{GraphId, GraphIdKind};
-use crate::Context;
 use std::collections::BTreeSet;
 
 pub struct Graph {
@@ -27,8 +26,7 @@ impl Graph {
         self.set_parent_for_client(client_id, BTreeSet::new());
     }
 
-    pub(crate) fn push_context(&self, client_id: GraphId, context: Context) {
-        let parents = context.get_parents();
+    pub(crate) fn push_context(&self, client_id: GraphId, parents: BTreeSet<GraphId>) {
         self.set_parent_for_client(client_id, parents);
     }
 

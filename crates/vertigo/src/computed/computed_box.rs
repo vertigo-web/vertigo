@@ -194,3 +194,34 @@ impl From<&str> for Computed<String> {
         Value::new(value.to_string()).to_computed()
     }
 }
+
+#[test]
+fn drop_computed() {
+    let value = Value::new(3);
+
+    let double = Computed::from({
+        let value = value.clone();
+
+        move |context| {
+            let val = value.to_computed().get(context);
+            val * 2
+        }
+    });
+
+    let double_value = Rc::new(ValueMut::new(6));
+
+    let drop_resource = double.subscribe({
+        let double = double_value.clone();
+
+        move |current| {
+            double.set(current);
+        }
+    });
+
+    assert_eq!(double_value.get(), 6);
+
+    value.set(10);
+    assert_eq!(double_value.get(), 20);
+
+    drop(drop_resource);
+}
