@@ -5,6 +5,7 @@
 
 ### Added
 
+* Added `stringify` field attribute to `AutoJsJson` to allow stringifying non-`JsJson` types (f. ex. foreign types)
 * Added `chrono::NaiveDateTime` support to `JsJson`
 
 ### Fixed

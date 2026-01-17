@@ -46,12 +46,14 @@ pub(super) fn impl_js_json_struct(
             },
         };
 
-        let unpack_expr = if let Some(default_expr) = field_opts.default {
-            quote! {
+        let unpack_expr = match field_opts.default {
+            Some(darling::util::Override::Explicit(default_expr)) => quote! {
                 .unwrap_or_else(|_| #default_expr)
-            }
-        } else {
-            quote! { ? }
+            },
+            Some(darling::util::Override::Inherit) => quote! {
+                .unwrap_or_default()
+            },
+            None => quote! { ? },
         };
 
         if is_vec_u8(field_ty) {
@@ -65,6 +67,30 @@ pub(super) fn impl_js_json_struct(
                         vertigo::JsJson::Vec(v) => Ok(v),
                         other => {
                             let message = ["Vec<u8> expected, received ", other.typename()].concat();
+                            Err(context.add(message))
+                        }
+                    }
+                })#unpack_expr,
+            })
+        } else if field_opts.stringify {
+            list_to_json.push(quote! {
+                (#json_key.to_string(), vertigo::JsJson::String(format!("{}", self.#field_name))),
+            });
+
+            list_from_json.push(quote! {
+                #field_name: json.get_property(&context, #json_key).and_then(|item| {
+                    match item {
+                        vertigo::JsJson::String(v) => {
+                            match v.parse() {
+                                Ok(v) => Ok(v),
+                                Err(e) => {
+                                    let message = format!("Error parsing string '{}': {}", v, e);
+                                    Err(context.add(message))
+                                }
+                            }
+                        },
+                        other => {
+                            let message = ["String expected, received ", other.typename()].concat();
                             Err(context.add(message))
                         }
                     }

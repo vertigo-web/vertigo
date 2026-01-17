@@ -34,16 +34,24 @@ impl RenameAll {
     }
 }
 
+/// Options for the container (struct or enum)
 #[derive(Debug, FromAttributes)]
 #[darling(attributes(js_json))]
 pub struct ContainerOpts {
+    /// Rename all fields according to the given case convention.
     #[darling(default)]
     pub rename_all: Option<RenameAll>,
 }
 
+/// Options for a field
 #[derive(Default, Debug, FromAttributes)]
 #[darling(attributes(js_json), forward_attrs(allow, doc, cfg))]
 pub struct FieldOpts {
-    pub default: Option<syn::Expr>,
+    /// Default value for the field if it is missing in the JSON.
+    pub default: Option<darling::util::Override<syn::Expr>>,
+    /// Rename the field to the given string.
     pub rename: Option<String>,
+    /// Serialize the field using `Display` and deserialize using `FromStr`.
+    #[darling(default)]
+    pub stringify: bool,
 }

@@ -9,7 +9,7 @@ use crate::{
     DomNode, JsJson,
 };
 
-/// Starting point of the app (used by [main] macro, which is preferred)
+/// Starting point of the app (used by [vertigo::main] macro, which is preferred)
 pub fn start_app(init_app: fn() -> DomNode) {
     init_env();
 
