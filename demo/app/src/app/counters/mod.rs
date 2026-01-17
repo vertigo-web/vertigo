@@ -16,6 +16,7 @@ pub struct State {
     counter3: Value<i32>,
     counter4: Value<i32>,
     pub sum: Computed<i32>,
+    pub double: Computed<i32>,
 }
 
 impl State {
@@ -41,12 +42,26 @@ impl State {
             })
         };
 
+        let double = Computed::from({
+            let sum = sum.clone();
+
+            move |context| {
+                let sub_comp = Computed::from({
+                    let sum = sum.clone();
+                    move |context| sum.get(context)
+                });
+
+                sub_comp.get(context) * 2
+            }
+        });
+
         State {
             counter1,
             counter2,
             counter3,
             counter4,
             sum,
+            double,
         }
     }
 }
@@ -113,6 +128,9 @@ pub fn CountersDemo() {
             <SimpleCounter label="counter3 value" value={&state.counter3} />
             <SimpleCounter label="counter4 value" value={&state.counter4} />
             <Sum sum={&state.sum} />
+            <div>
+                { &state.double }
+            </div>
             <img css={center_css} src={&path} />
             <img css={center_css2} src={path} />
             <div>
