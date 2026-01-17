@@ -1,3 +1,4 @@
+mod js_json_context;
 mod js_json_list_decoder;
 mod js_json_struct;
 mod memory_block;
@@ -7,6 +8,7 @@ mod serialize;
 #[cfg(feature = "chrono")]
 mod serialize_chrono;
 
+pub use js_json_context::JsJsonContext;
 pub use js_json_list_decoder::JsJsonListDecoder;
 pub use js_json_struct::{JsJson, JsJsonNumber};
 pub use memory_block::MemoryBlock;
@@ -16,7 +18,7 @@ pub use memory_block_write::MemoryBlockWrite;
 #[cfg(test)]
 mod tests;
 
-pub use serialize::{from_json, to_json, JsJsonContext, JsJsonDeserialize, JsJsonSerialize};
+pub use serialize::{from_json, to_json, JsJsonDeserialize, JsJsonSerialize};
 
 mod js_json_map_item;
 pub use js_json_map_item::MapItem;
