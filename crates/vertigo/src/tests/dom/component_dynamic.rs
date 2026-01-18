@@ -1,7 +1,7 @@
 use crate::{
-    self as vertigo, component, css,
-    dev::inspect::{log_start, DomDebugFragment},
-    dom, AttrGroup, Computed, EmbedDom,
+    self as vertigo, AttrGroup, Computed, EmbedDom, component, css,
+    dev::inspect::{DomDebugFragment, log_start},
+    dom,
 };
 
 #[test]
@@ -101,7 +101,7 @@ fn test_css_attrs_grouping_and_spreading() {
 
 #[test]
 fn test_css_extending() {
-    use vertigo::{component, css, dom, AttrGroup, Value};
+    use vertigo::{AttrGroup, Value, component, css, dom};
 
     #[component]
     fn MyInput(value: Value<String>, inner: AttrGroup) {
@@ -160,7 +160,10 @@ fn test_on_events_grouping_and_spreading() {
 
     let el_str = DomDebugFragment::from_log().to_pseudo_html();
 
-    assert_eq!(el_str, "<input name='world' v-component='Everything' blur=2 change=3 click=4 drop=5 hook_keydown=1 input=6 keydown=7 load=8 mousedown=9 mouseenter=10 mouseleave=11 mouseup=12 submit=13 />");
+    assert_eq!(
+        el_str,
+        "<input name='world' v-component='Everything' blur=2 change=3 click=4 drop=5 hook_keydown=1 input=6 keydown=7 load=8 mousedown=9 mouseenter=10 mouseleave=11 mouseup=12 submit=13 />"
+    );
 }
 
 #[test]

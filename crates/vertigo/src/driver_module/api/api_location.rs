@@ -4,12 +4,12 @@ use vertigo_macro::store;
 use crate::{
     computed::DropResource,
     dev::{
-        command::{LocationCallbackMode, LocationSetMode, LocationTarget},
         CallbackId,
+        command::{LocationCallbackMode, LocationSetMode, LocationTarget},
     },
 };
 
-use super::{api_browser_command, CallbackStore};
+use super::{CallbackStore, api_browser_command};
 
 #[store]
 pub fn api_location() -> Rc<ApiLocation> {

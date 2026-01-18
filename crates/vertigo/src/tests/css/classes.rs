@@ -1,6 +1,6 @@
 use crate::{
     css,
-    dev::inspect::{log_start, DomDebugFragment},
+    dev::inspect::{DomDebugFragment, log_start},
     dom,
 };
 

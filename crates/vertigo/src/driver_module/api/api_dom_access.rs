@@ -1,6 +1,6 @@
 use crate::{
-    dev::command::{CommandForBrowser, JsApiCommand},
     DomId, JsJson,
+    dev::command::{CommandForBrowser, JsApiCommand},
 };
 
 use super::{api_browser_command::exec_command, panic_message::api_panic_message};

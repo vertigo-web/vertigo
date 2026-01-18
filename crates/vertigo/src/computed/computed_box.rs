@@ -2,12 +2,12 @@ use std::hash::Hash;
 use std::rc::Rc;
 
 use crate::{
-    render::{render_list, render_value, render_value_option},
     DomNode,
+    render::{render_list, render_value, render_value_option},
 };
 
 use super::{
-    context::Context, graph_id::GraphId, struct_mut::ValueMut, DropResource, GraphValue, Value,
+    DropResource, GraphValue, Value, context::Context, graph_id::GraphId, struct_mut::ValueMut,
 };
 
 /// A reactive value that is read-only and computed by dependency graph.

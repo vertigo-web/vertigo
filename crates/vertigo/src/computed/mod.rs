@@ -2,7 +2,7 @@ mod auto_map;
 mod computed_box;
 pub mod context;
 mod dependencies;
-pub use dependencies::{get_dependencies, Dependencies};
+pub use dependencies::{Dependencies, get_dependencies};
 mod drop_resource;
 mod graph_id;
 mod graph_value;

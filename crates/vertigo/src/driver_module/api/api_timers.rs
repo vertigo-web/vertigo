@@ -2,11 +2,11 @@ use std::rc::Rc;
 use vertigo_macro::store;
 
 use crate::{
-    computed::{struct_mut::ValueMut, DropResource},
-    dev::{command::TimerKind, CallbackId},
+    computed::{DropResource, struct_mut::ValueMut},
+    dev::{CallbackId, command::TimerKind},
 };
 
-use super::{api_browser_command, CallbackStore};
+use super::{CallbackStore, api_browser_command};
 
 #[store]
 pub fn api_timers() -> Rc<ApiTimers> {

@@ -1,8 +1,8 @@
 use std::rc::Rc;
 
 use crate::computed::{
-    struct_mut::{BTreeMapMut, CounterMut},
     DropResource,
+    struct_mut::{BTreeMapMut, CounterMut},
 };
 
 #[derive(Clone)]

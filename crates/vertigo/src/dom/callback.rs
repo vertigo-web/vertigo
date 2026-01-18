@@ -2,7 +2,7 @@ use std::rc::Rc;
 
 use vertigo_macro::bind;
 
-use crate::computed::{struct_mut::ValueMut, Computed, DropResource};
+use crate::computed::{Computed, DropResource, struct_mut::ValueMut};
 
 pub enum Callback<R> {
     Basic(Rc<dyn Fn() -> R + 'static>),

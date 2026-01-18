@@ -7,8 +7,8 @@ use std::{
 use crate::{
     dev::{JsJsonListDecoder, LongPtr},
     driver_module::js_value::{
-        vec_to_string::{string_to_vec, vec_to_string},
         MemoryBlock,
+        vec_to_string::{string_to_vec, vec_to_string},
     },
 };
 
@@ -142,11 +142,7 @@ impl JsJson {
     }
 
     pub fn bool(value: bool) -> JsJson {
-        if value {
-            JsJson::True
-        } else {
-            JsJson::False
-        }
+        if value { JsJson::True } else { JsJson::False }
     }
 
     pub fn to_ptr_long(&self) -> LongPtr {
@@ -450,11 +446,7 @@ impl From<String> for JsJson {
 
 impl From<bool> for JsJson {
     fn from(value: bool) -> Self {
-        if value {
-            JsJson::True
-        } else {
-            JsJson::False
-        }
+        if value { JsJson::True } else { JsJson::False }
     }
 }
 

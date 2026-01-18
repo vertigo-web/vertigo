@@ -1,8 +1,8 @@
 use std::collections::BTreeMap;
 
 use super::{
-    js_json_struct::{JsJson, JsJsonNumber},
     MemoryBlock, MemoryBlockWrite,
+    js_json_struct::{JsJson, JsJsonNumber},
 };
 
 fn to_block(json: JsJson) -> MemoryBlock {

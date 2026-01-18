@@ -1,4 +1,4 @@
-use crate::{transaction, Computed, Value};
+use crate::{Computed, Value, transaction};
 
 #[test]
 fn test_nested_reactivity() {

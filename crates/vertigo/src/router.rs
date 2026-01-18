@@ -1,8 +1,8 @@
 use crate::{
-    computed::{get_dependencies, Value},
+    Computed, DomNode, EmbedDom, Reactive, ToComputed,
+    computed::{Value, get_dependencies},
     dev::command::{LocationSetMode, LocationTarget},
     driver_module::api::api_location,
-    Computed, DomNode, EmbedDom, Reactive, ToComputed,
 };
 
 /// Router based on path or hash part of current location.

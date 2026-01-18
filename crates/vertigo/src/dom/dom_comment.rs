@@ -1,10 +1,10 @@
 use crate::{
+    DomNode,
     computed::{
-        struct_mut::{ValueMut, VecMut},
         DropResource,
+        struct_mut::{ValueMut, VecMut},
     },
     driver_module::get_driver_dom,
-    DomNode,
 };
 
 use super::dom_id::DomId;

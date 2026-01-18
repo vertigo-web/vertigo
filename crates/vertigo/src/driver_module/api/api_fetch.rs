@@ -3,7 +3,7 @@ use vertigo_macro::store;
 
 use crate::dev::{CallbackId, FutureBox, SsrFetchRequest, SsrFetchResponse};
 
-use super::{api_browser_command, CallbackStore};
+use super::{CallbackStore, api_browser_command};
 
 #[store]
 pub fn api_fetch() -> Rc<ApiFetch> {
@@ -29,8 +29,8 @@ impl ApiFetch {
         });
 
         api_browser_command().fetch_exec(request, callback);
-        let response = receiver.await;
-        response
+
+        receiver.await
     }
 
     pub fn callback(&self, callback: CallbackId, response: SsrFetchResponse) {

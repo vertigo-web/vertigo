@@ -1,5 +1,5 @@
 #![allow(clippy::uninit_vec)]
-use std::alloc::{alloc, Layout};
+use std::alloc::{Layout, alloc};
 use std::mem;
 
 use crate::dev::LongPtr;
@@ -9,17 +9,13 @@ use super::memory_block_write::MemoryBlockWrite;
 fn alloc_memory(size: usize) -> (*mut u8, Layout) {
     let align = mem::align_of::<usize>();
 
-    if let Ok(layout) = Layout::from_size_align(size, align) {
-        unsafe {
-            if layout.size() > 0 {
-                let ptr = alloc(layout);
+    if let Ok(layout) = Layout::from_size_align(size, align)
+        && layout.size() > 0
+    {
+        let ptr = unsafe { alloc(layout) };
 
-                if !ptr.is_null() {
-                    return (ptr, layout);
-                }
-            } else {
-                //return align
-            }
+        if !ptr.is_null() {
+            return (ptr, layout);
         }
     }
 

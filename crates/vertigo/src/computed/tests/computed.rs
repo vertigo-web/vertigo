@@ -2,8 +2,8 @@ use std::rc::Rc;
 
 use crate::{
     computed::{
-        get_dependencies, struct_mut::ValueMut, tests::box_value_version::SubscribeValueVer,
-        Computed, DropResource, Value,
+        Computed, DropResource, Value, get_dependencies, struct_mut::ValueMut,
+        tests::box_value_version::SubscribeValueVer,
     },
     transaction,
 };

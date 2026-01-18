@@ -46,24 +46,24 @@ impl Task {
         });
     }
 
-    unsafe fn into_raw_waker(this: Rc<Self>) -> RawWaker {
-        unsafe fn raw_clone(ptr: *const ()) -> RawWaker {
-            let ptr = ManuallyDrop::new(Rc::from_raw(ptr as *const Task));
+    fn into_raw_waker(this: Rc<Self>) -> RawWaker {
+        fn raw_clone(ptr: *const ()) -> RawWaker {
+            let ptr = ManuallyDrop::new(unsafe { Rc::from_raw(ptr as *const Task) });
             Task::into_raw_waker((*ptr).clone())
         }
 
-        unsafe fn raw_wake(ptr: *const ()) {
-            let ptr = Rc::from_raw(ptr as *const Task);
+        fn raw_wake(ptr: *const ()) {
+            let ptr = unsafe { Rc::from_raw(ptr as *const Task) };
             Task::wake_by_ref(&ptr);
         }
 
-        unsafe fn raw_wake_by_ref(ptr: *const ()) {
-            let ptr = ManuallyDrop::new(Rc::from_raw(ptr as *const Task));
+        fn raw_wake_by_ref(ptr: *const ()) {
+            let ptr = ManuallyDrop::new(unsafe { Rc::from_raw(ptr as *const Task) });
             Task::wake_by_ref(&ptr);
         }
 
-        unsafe fn raw_drop(ptr: *const ()) {
-            drop(Rc::from_raw(ptr as *const Task));
+        fn raw_drop(ptr: *const ()) {
+            drop(unsafe { Rc::from_raw(ptr as *const Task) });
         }
 
         const VTABLE: RawWakerVTable =

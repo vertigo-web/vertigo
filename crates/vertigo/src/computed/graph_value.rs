@@ -3,7 +3,7 @@ use std::rc::Rc;
 
 use crate::Context;
 
-use super::{get_dependencies, struct_mut::ValueMut, GraphId};
+use super::{GraphId, get_dependencies, struct_mut::ValueMut};
 
 pub struct GraphValue<T> {
     id: GraphId,

@@ -121,7 +121,7 @@ mod websocket;
 // Exports from vertigo
 
 pub use computed::{
-    context::Context, AutoMap, Computed, Dependencies, DropResource, Reactive, ToComputed, Value,
+    AutoMap, Computed, Dependencies, DropResource, Reactive, ToComputed, Value, context::Context,
 };
 pub use css::{
     css_structs::{Css, CssGroup},
@@ -140,9 +140,9 @@ pub use dom::{
 };
 pub use dom_macro::{AttrGroup, AttrGroupValue, EmbedDom};
 pub use driver_module::{
-    driver::{get_driver, transaction, Driver, FetchMethod, FetchResult},
+    driver::{Driver, FetchMethod, FetchResult, get_driver, transaction},
     js_value::{
-        from_json, to_json, JsJson, JsJsonContext, JsJsonDeserialize, JsJsonNumber, JsJsonSerialize,
+        JsJson, JsJsonContext, JsJsonDeserialize, JsJsonNumber, JsJsonSerialize, from_json, to_json,
     },
 };
 pub use exports::start_app;
@@ -156,7 +156,7 @@ pub use websocket::{WebsocketConnection, WebsocketMessage};
 
 // Commonly used things
 pub mod prelude {
-    pub use crate::{bind, component, css, dom, Computed, Css, DomNode, ToComputed, Value};
+    pub use crate::{Computed, Css, DomNode, ToComputed, Value, bind, component, css, dom};
 }
 
 // Re-export log module which can be used in vertigo plugins

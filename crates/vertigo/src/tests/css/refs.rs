@@ -1,5 +1,5 @@
 use crate as vertigo;
-use crate::{css, CssGroup};
+use crate::{CssGroup, css};
 
 #[test]
 fn test_ref() {

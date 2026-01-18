@@ -3,8 +3,8 @@ use std::rc::Rc;
 use vertigo_macro::store;
 
 use crate::{
-    dev::command::{decode_json, CommandForWasm},
     JsJson,
+    dev::command::{CommandForWasm, decode_json},
 };
 
 use super::{api_fetch::api_fetch, api_location, api_timers, api_websocket};

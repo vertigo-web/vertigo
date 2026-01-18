@@ -67,9 +67,6 @@ struct WasmLogger {
     style: Style,
 }
 
-unsafe impl Send for WasmLogger {}
-unsafe impl Sync for WasmLogger {}
-
 impl Log for WasmLogger {
     fn enabled(&self, metadata: &Metadata<'_>) -> bool {
         if let Some(ref prefix) = self.config.module_prefix {
