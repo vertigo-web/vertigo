@@ -1,8 +1,8 @@
-use crate::dev::inspect::{log_start, DomDebugFragment};
+use crate::dev::inspect::{DomDebugFragment, log_start};
 
 #[test]
 fn test_if_lifetimes_allowed() {
-    use crate::{self as vertigo, component, dom, DomNode};
+    use crate::{self as vertigo, DomNode, component, dom};
 
     #[component]
     fn Hello<'a>(name: &'a str) {
@@ -22,7 +22,7 @@ fn test_if_lifetimes_allowed() {
 fn test_generics() {
     use std::fmt::Display;
 
-    use crate::{self as vertigo, component, dom, DomNode};
+    use crate::{self as vertigo, DomNode, component, dom};
 
     #[component]
     fn Hello<T: Display>(name: T) {
@@ -40,7 +40,7 @@ fn test_generics() {
 
 #[test]
 fn test_if_docstrings_allowed() {
-    use crate::{self as vertigo, component, dom, DomNode};
+    use crate::{self as vertigo, DomNode, component, dom};
 
     #[component]
     fn Hello<'a>(

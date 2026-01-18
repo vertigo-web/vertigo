@@ -2,15 +2,15 @@ use std::rc::Rc;
 use vertigo_macro::store;
 
 use crate::{
+    InstantType, JsJson, JsJsonSerialize,
     dev::{
-        command::{
-            browser_response, decode_json, CommandForBrowser, ConsoleLogLevel, DriverDomCommand,
-            LocationCallbackMode, LocationSetMode, LocationTarget, TimerKind,
-        },
         CallbackId, SsrFetchCache, SsrFetchRequest,
+        command::{
+            CommandForBrowser, ConsoleLogLevel, DriverDomCommand, LocationCallbackMode,
+            LocationSetMode, LocationTarget, TimerKind, browser_response, decode_json,
+        },
     },
     external_api::safe_wrappers,
-    InstantType, JsJson, JsJsonSerialize,
 };
 
 use super::api_arguments;

@@ -3,12 +3,12 @@ use std::rc::Rc;
 use vertigo_macro::store;
 
 use crate::{
-    computed::DropResource,
-    dev::{command::WebsocketMessageFromBrowser, CallbackId},
     WebsocketConnection, WebsocketMessage,
+    computed::DropResource,
+    dev::{CallbackId, command::WebsocketMessageFromBrowser},
 };
 
-use super::{api_browser_command, CallbackStore};
+use super::{CallbackStore, api_browser_command};
 
 #[store]
 pub fn api_websocket() -> Rc<ApiWebsocket> {

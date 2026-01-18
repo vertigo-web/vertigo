@@ -2,8 +2,8 @@ use std::rc::Rc;
 
 use crate::{
     computed::{
-        struct_mut::{HashMapMut, ValueMut},
         DropResource,
+        struct_mut::{HashMapMut, ValueMut},
     },
     dev::CallbackId,
 };

@@ -2,9 +2,10 @@ use std::collections::BTreeMap;
 use std::time::Duration;
 
 use crate::{
+    FetchMethod, JsJson, JsJsonDeserialize, JsJsonSerialize, LazyCache,
     dev::{SsrFetchRequest, SsrFetchRequestBody, SsrFetchResponse, SsrFetchResponseContent},
     driver_module::api::api_fetch,
-    from_json, FetchMethod, JsJson, JsJsonDeserialize, JsJsonSerialize, LazyCache,
+    from_json,
 };
 
 #[derive(Debug, Clone)]
@@ -191,7 +192,7 @@ impl RequestResponse {
                         convert(status, RequestBody::Json(json_response))
                     }
                     SsrFetchResponseContent::Text(_) => {
-                        return Err("Tried to decode text/plain reponse".to_string())
+                        return Err("Tried to decode text/plain reponse".to_string());
                     }
                 };
 

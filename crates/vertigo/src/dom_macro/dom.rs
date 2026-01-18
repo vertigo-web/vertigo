@@ -1,9 +1,9 @@
 use std::{collections::BTreeMap, rc::Rc};
 
 use crate::{
-    dom::{attr_value::AttrValue, dom_node::DomNode, events::ClickEvent},
     Callback, Callback1, Computed, Css, DomComment, DomElement, DomText, DropFileEvent,
     KeyDownEvent, Value,
+    dom::{attr_value::AttrValue, dom_node::DomNode, events::ClickEvent},
 };
 
 /// Type interpreted as component's dynamic attributes groups

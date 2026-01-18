@@ -1,7 +1,7 @@
 #[cfg(all(not(test), target_arch = "wasm32", target_os = "unknown"))]
 mod inner {
     #[link(wasm_import_module = "mod")]
-    extern "C" {
+    unsafe extern "C" {
         pub fn panic_message(long_ptr: u64);
         pub fn dom_access(long_ptr: u64) -> u64;
     }
@@ -28,12 +28,12 @@ pub mod safe_wrappers {
 #[cfg(any(test, not(target_arch = "wasm32"), not(target_os = "unknown")))]
 pub mod safe_wrappers {
     use crate::{
+        JsJson, JsJsonSerialize,
         dev::{
-            command::{browser_response, decode_json, CommandForBrowser},
             LongPtr,
+            command::{CommandForBrowser, browser_response, decode_json},
         },
         driver_module::api::api_arguments,
-        JsJson, JsJsonSerialize,
     };
 
     pub fn safe_panic_message(_long_ptr: LongPtr) {}

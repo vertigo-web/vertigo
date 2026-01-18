@@ -2,7 +2,7 @@ use std::any::Any;
 use std::collections::BTreeSet;
 use std::rc::Rc;
 
-use super::{struct_mut::VecMut, GraphId};
+use super::{GraphId, struct_mut::VecMut};
 
 pub enum Context {
     Computed {

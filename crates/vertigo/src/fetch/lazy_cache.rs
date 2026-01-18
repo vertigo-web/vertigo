@@ -2,10 +2,10 @@ use std::fmt::Debug;
 use std::rc::Rc;
 
 use crate::{
-    computed::{context::Context, struct_mut::ValueMut, Value},
+    Computed, DomNode, Instant, JsJsonDeserialize, RequestResponse, Resource, ToComputed,
+    computed::{Value, context::Context, struct_mut::ValueMut},
     driver_module::api::api_fetch_cache,
-    get_driver, transaction, Computed, DomNode, Instant, JsJsonDeserialize, RequestResponse,
-    Resource, ToComputed,
+    get_driver, transaction,
 };
 
 use super::request_builder::{RequestBody, RequestBuilder};

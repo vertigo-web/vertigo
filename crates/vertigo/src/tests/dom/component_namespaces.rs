@@ -2,7 +2,7 @@
 /// This test checks if component can be used when not in local scope
 /// (whole name does not start with capital letter)
 fn test_namespaces() {
-    use crate::{self as vertigo, dom, DomNode};
+    use crate::{self as vertigo, DomNode, dom};
 
     mod my_module {
         pub mod inner {
@@ -48,7 +48,7 @@ fn test_pub_super() {
         }
     }
 
-    use crate::{self as vertigo, dom, DomNode};
+    use crate::{self as vertigo, DomNode, dom};
 
     let ret = dom! {
         <p><sub_module::Hello name={"world"} /></p>
@@ -71,7 +71,7 @@ fn test_pub_crate() {
         }
     }
 
-    use crate::{self as vertigo, dom, DomNode};
+    use crate::{self as vertigo, DomNode, dom};
 
     let ret = dom! {
         <p><sub_module::sub_sub_module::Hello name={"world"} /></p>

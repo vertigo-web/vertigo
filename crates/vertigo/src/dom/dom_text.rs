@@ -1,5 +1,5 @@
 use crate::{
-    computed::{struct_mut::VecMut, DropResource, ToComputed},
+    computed::{DropResource, ToComputed, struct_mut::VecMut},
     driver_module::get_driver_dom,
 };
 

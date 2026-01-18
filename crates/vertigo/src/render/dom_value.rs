@@ -1,7 +1,7 @@
 use std::rc::Rc;
 
 use crate::{
-    computed::struct_mut::ValueMut, driver_module::get_driver_dom, Computed, DomComment, DomNode,
+    Computed, DomComment, DomNode, computed::struct_mut::ValueMut, driver_module::get_driver_dom,
 };
 
 pub fn render_value_option<T: Clone + PartialEq + 'static>(

@@ -1,9 +1,9 @@
 use vertigo_macro::AutoJsJson;
 
 use crate::{
-    dev::{callback_id::CallbackId, SsrFetchRequest, SsrFetchResponse},
-    driver_module::StaticString,
     DomId, JsJson, JsJsonContext, JsJsonDeserialize,
+    dev::{SsrFetchRequest, SsrFetchResponse, callback_id::CallbackId},
+    driver_module::StaticString,
 };
 
 pub fn decode_json<T: JsJsonDeserialize>(json: JsJson) -> Result<T, JsJsonContext> {

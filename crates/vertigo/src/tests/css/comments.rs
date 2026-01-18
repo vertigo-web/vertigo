@@ -34,5 +34,8 @@ fn test_quite_long() {
         /* padding:1em; */
     "#};
 
-    assert_eq!(get_s(&value), "content: \"201C\" attr(title) \"201D\";\nfont-family: \"Times New Roman\", Times, serif;\ntext-align: center;\nbackground: #333;\ncolor: #fff;\ndisplay: block;\nfloat: left;")
+    assert_eq!(
+        get_s(&value),
+        "content: \"201C\" attr(title) \"201D\";\nfont-family: \"Times New Roman\", Times, serif;\ntext-align: center;\nbackground: #333;\ncolor: #fff;\ndisplay: block;\nfloat: left;"
+    )
 }

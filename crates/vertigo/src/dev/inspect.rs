@@ -3,9 +3,9 @@
 use std::collections::{BTreeMap, BTreeSet};
 
 use crate::{
-    dev::{command::DriverDomCommand, CallbackId},
-    driver_module::StaticString,
     DomId,
+    dev::{CallbackId, command::DriverDomCommand},
+    driver_module::StaticString,
 };
 
 #[cfg(test)]
@@ -15,8 +15,8 @@ mod logs {
 
     use crate::{
         computed::{
-            struct_mut::{ValueMut, VecMut},
             DropResource,
+            struct_mut::{ValueMut, VecMut},
         },
         dev::inspect::DriverDomCommand,
     };
@@ -348,7 +348,7 @@ fn unpack_styles(
 
 #[cfg(test)]
 mod tests {
-    use super::{log_start, DomDebugFragment};
+    use super::{DomDebugFragment, log_start};
     use crate::{self as vertigo, css, dom};
 
     #[test]

@@ -1,7 +1,7 @@
 use std::{collections::BTreeSet, rc::Rc};
 use vertigo_macro::store;
 
-use crate::{computed::GraphId, Context};
+use crate::{Context, computed::GraphId};
 
 use super::graph_id::GraphIdKind;
 

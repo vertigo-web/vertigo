@@ -1,4 +1,4 @@
-use base64::{engine::general_purpose, Engine};
+use base64::{Engine, engine::general_purpose};
 
 pub fn vec_to_string(data: &[u8]) -> String {
     general_purpose::STANDARD_NO_PAD.encode(data)

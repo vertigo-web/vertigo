@@ -4,7 +4,7 @@ use std::rc::Rc;
 use crate::{Context, Dependencies, DomNode, ToComputed};
 
 use super::{
-    dependencies::get_dependencies, struct_mut::ValueMut, Computed, DropResource, GraphId,
+    Computed, DropResource, GraphId, dependencies::get_dependencies, struct_mut::ValueMut,
 };
 
 struct ValueInner<T> {

@@ -1,4 +1,4 @@
-use crate::{css, Css};
+use crate::{Css, css};
 
 use super::utils::*;
 

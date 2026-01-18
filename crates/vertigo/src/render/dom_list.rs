@@ -5,8 +5,8 @@ use std::{
 };
 
 use crate::{
-    computed::struct_mut::ValueMut, dom::dom_id::DomId, driver_module::get_driver_dom, Computed,
-    DomComment, DomNode,
+    Computed, DomComment, DomNode, computed::struct_mut::ValueMut, dom::dom_id::DomId,
+    driver_module::get_driver_dom,
 };
 
 //TODO - Check out other options for reading refs
