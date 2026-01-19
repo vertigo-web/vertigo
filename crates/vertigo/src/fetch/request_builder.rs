@@ -2,10 +2,10 @@ use std::collections::BTreeMap;
 use std::time::Duration;
 
 use crate::{
-    FetchMethod, JsJson, JsJsonDeserialize, JsJsonSerialize, LazyCache,
+    Computed, Context, FetchMethod, JsJson, JsJsonDeserialize, JsJsonSerialize, LazyCache, Value,
     dev::{SsrFetchRequest, SsrFetchRequestBody, SsrFetchResponse, SsrFetchResponseContent},
     driver_module::api::api_fetch,
-    from_json,
+    from_json, transaction,
 };
 
 #[derive(Debug, Clone)]
@@ -30,16 +30,20 @@ pub struct RequestBuilder {
     method: FetchMethod,
     url: String,
     headers: BTreeMap<String, String>,
+    bearer_auth: Computed<Option<String>>,
     body: Option<RequestBody>,
     ttl: Option<Duration>,
 }
 
 impl RequestBuilder {
     pub fn new(method: FetchMethod, url: impl Into<String>) -> Self {
+        let init_bearer = Value::<Option<String>>::new(None);
+
         Self {
             method,
             url: url.into(),
             headers: BTreeMap::new(),
+            bearer_auth: init_bearer.to_computed(),
             body: None,
             ttl: None,
         }
@@ -61,10 +65,14 @@ impl RequestBuilder {
         self
     }
 
+    pub fn get_bearer_auth(&self) -> Computed<Option<String>> {
+        self.bearer_auth.clone()
+    }
+
     #[must_use]
-    pub fn bearer_auth(self, token: impl Into<String>) -> Self {
-        let token: String = token.into();
-        self.set_header("Authorization", format!("Bearer {token}"))
+    pub fn bearer_auth(mut self, token: impl Into<Computed<Option<String>>>) -> Self {
+        self.bearer_auth = token.into();
+        self
     }
 
     #[must_use]
@@ -116,7 +124,7 @@ impl RequestBuilder {
         self.ttl
     }
 
-    pub fn to_request(self) -> SsrFetchRequest {
+    pub fn to_request(self, token: Option<String>) -> SsrFetchRequest {
         let mut headers = self.headers;
 
         let body = match self.body {
@@ -132,6 +140,10 @@ impl RequestBuilder {
             }
         };
 
+        if let Some(token) = token {
+            headers.insert("Authorization".into(), format!("Bearer {token}"));
+        }
+
         SsrFetchRequest {
             method: self.method,
             url: self.url,
@@ -140,8 +152,16 @@ impl RequestBuilder {
         }
     }
 
+    pub fn to_request_context(self, context: &Context) -> SsrFetchRequest {
+        let token = self.bearer_auth.get(context);
+
+        self.to_request(token)
+    }
+
     pub async fn call(self) -> RequestResponse {
-        let request = self.to_request();
+        let token = transaction(|context| self.get_bearer_auth().get(context));
+
+        let request = self.to_request(token);
 
         let result = api_fetch().fetch(request.clone()).await;
 

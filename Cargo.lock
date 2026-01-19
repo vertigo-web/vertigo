@@ -3575,6 +3575,7 @@ dependencies = [
  "base64",
  "chrono",
  "log",
+ "tokio",
  "vertigo-macro",
 ]
 

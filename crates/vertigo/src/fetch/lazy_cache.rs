@@ -2,9 +2,10 @@ use std::fmt::Debug;
 use std::rc::Rc;
 
 use crate::{
-    Computed, DomNode, Instant, JsJsonDeserialize, RequestResponse, Resource, ToComputed,
+    Computed, DomNode, DropResource, Instant, JsJsonDeserialize, RequestResponse, Resource,
+    ToComputed,
     computed::{Value, context::Context, struct_mut::ValueMut},
-    driver_module::api::api_fetch_cache,
+    driver_module::api::{api_fetch, api_fetch_cache, api_timers},
     get_driver, transaction,
 };
 
@@ -110,7 +111,8 @@ impl<T> Clone for ApiResponse<T> {
 /// See ["todo" example](../src/vertigo_demo/app/todo/state.rs.html) in vertigo-demo package for more.
 pub struct LazyCache<T: 'static> {
     id: u64,
-    value: Value<ApiResponse<T>>,
+    value_write: Value<ApiResponse<T>>,
+    value_read: Computed<ApiResponse<T>>,
     queued: Rc<ValueMut<bool>>,
     request: Rc<RequestBuilder>,
     map_response: Rc<dyn Fn(u32, RequestBody) -> MapResponse<T>>,
@@ -128,7 +130,8 @@ impl<T> Clone for LazyCache<T> {
     fn clone(&self) -> Self {
         LazyCache {
             id: self.id,
-            value: self.value.clone(),
+            value_write: self.value_write.clone(),
+            value_read: self.value_read.clone(),
             queued: self.queued.clone(),
             request: self.request.clone(),
             map_response: self.map_response.clone(),
@@ -149,7 +152,7 @@ impl<T> LazyCache<T> {
 
             let ttl = request.get_ttl();
 
-            let ssr_request = request.to_request();
+            let ssr_request = request.to_request(None);
             if let Some(response) = api_fetch_cache().get_response(&ssr_request) {
                 let response = RequestResponse::new(ssr_request, response);
 
@@ -168,9 +171,39 @@ impl<T> LazyCache<T> {
             }
         };
 
+        let value_write = Value::new(init_value);
+
+        let value_read: Computed<ApiResponse<T>> = {
+            let value_write = value_write.clone();
+            let bearer_auth = request.get_bearer_auth();
+
+            value_write.to_computed().when_connect({
+                let bearer_auth = bearer_auth.clone();
+
+                move || {
+                    let value_write = value_write.clone();
+
+                    let revalidate_trigger = bearer_auth.clone();
+
+                    let drop = revalidate_trigger.subscribe(move |_new_token| {
+                        let value_write = value_write.clone();
+
+                        api_timers().set_timeout_and_detach(0, move || {
+                            value_write.set_force(ApiResponse::Uninitialized);
+                        });
+                    });
+
+                    DropResource::new(move || {
+                        drop.off();
+                    })
+                }
+            })
+        };
+
         Self {
             id: get_unique_id(),
-            value: Value::new(init_value),
+            value_write,
+            value_read,
             queued: Rc::new(ValueMut::new(false)),
             request: Rc::new(request),
             map_response,
@@ -181,7 +214,7 @@ impl<T> LazyCache<T> {
 impl<T: PartialEq> LazyCache<T> {
     /// Get value (update if needed)
     pub fn get(&self, context: &Context) -> Resource<Rc<T>> {
-        let api_response = self.value.get(context);
+        let api_response = self.value_read.get(context);
 
         if !self.queued.get() && api_response.needs_update() {
             self.update(false, false);
@@ -192,7 +225,7 @@ impl<T: PartialEq> LazyCache<T> {
 
     /// Delete value so it will refresh on next access
     pub fn forget(&self) {
-        self.value.set(ApiResponse::Uninitialized);
+        self.value_write.set(ApiResponse::Uninitialized);
     }
 
     /// Force refresh the value now
@@ -216,20 +249,24 @@ impl<T: PartialEq> LazyCache<T> {
                 return;
             }
 
-            let api_response = transaction(|context| self_clone.value.get(context));
+            let api_response = transaction(|context| self_clone.value_read.get(context));
 
             if force || api_response.needs_update() {
                 if with_loading {
-                    self_clone.value.set(ApiResponse::new_loading());
+                    self_clone.value_write.set(ApiResponse::new_loading());
                 }
 
-                let new_value = self_clone
-                    .request
-                    .as_ref()
-                    .clone()
-                    .call()
-                    .await
-                    .into(self_clone.map_response.as_ref());
+                let request = transaction(|context| {
+                    self_clone
+                        .request
+                        .as_ref()
+                        .clone()
+                        .to_request_context(context)
+                });
+
+                let result = api_fetch().fetch(request.clone()).await;
+                let new_value =
+                    RequestResponse::new(request, result).into(self_clone.map_response.as_ref());
 
                 let new_value = match new_value {
                     Ok(value) => Resource::Ready(Rc::new(value)),
@@ -241,7 +278,9 @@ impl<T: PartialEq> LazyCache<T> {
                     .get_ttl()
                     .map(|ttl| get_driver().now().add_duration(ttl));
 
-                self_clone.value.set(ApiResponse::new(new_value, expiry));
+                self_clone
+                    .value_write
+                    .set(ApiResponse::new(new_value, expiry));
             }
 
             self_clone.queued.set(false);
@@ -324,5 +363,234 @@ impl<T: JsJsonDeserialize> LazyCache<T> {
                 }
             },
         )
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use crate::JsJson;
+    use crate::dev::{SsrFetchResponse, SsrFetchResponseContent};
+    use crate::driver_module::api::api_timers;
+
+    #[tokio::test]
+    async fn test_lazy_cache_initial_state() {
+        let cache = RequestBuilder::get("https://test.com/api").lazy_cache(|status, body| {
+            if status == 200 {
+                Some(body.into::<String>())
+            } else {
+                None
+            }
+        });
+
+        transaction(|context| {
+            let result = cache.get(context);
+            assert_eq!(result, Resource::Loading);
+        });
+    }
+
+    #[tokio::test]
+    async fn test_lazy_cache_to_computed() {
+        let cache = RequestBuilder::get("https://test.com/api").lazy_cache(|status, body| {
+            if status == 200 {
+                Some(body.into::<String>())
+            } else {
+                None
+            }
+        });
+
+        let computed = cache.to_computed();
+
+        transaction(|context| {
+            let result = computed.get(context);
+            assert_eq!(result, Resource::Loading);
+        });
+    }
+
+    #[tokio::test]
+    async fn test_lazy_cache_token_revalidation() {
+        let local = tokio::task::LocalSet::new();
+        local
+            .run_until(async {
+                // Mock timers to execute 0ms timeouts in next tick
+                api_timers().set_mock_handler(|duration, callback_id, _kind| {
+                    if duration == 0 {
+                        tokio::task::spawn_local(async move {
+                            api_timers().callback_timeout(callback_id);
+                        });
+                    }
+                });
+
+                let token = Value::new(Some("token1".to_string()));
+
+                let cache = RequestBuilder::get("https://test.com/api")
+                    .bearer_auth(token.to_computed())
+                    .lazy_cache(|status, body| {
+                        if status == 200 {
+                            Some(body.into::<String>())
+                        } else {
+                            None
+                        }
+                    });
+
+                let api = api_fetch();
+                let call_count = Rc::new(crate::dev::ValueMut::new(0));
+
+                {
+                    let call_count = call_count.clone();
+                    api.set_mock_handler(move |request| {
+                        call_count.change(|val| *val += 1);
+                        let auth = request
+                            .headers
+                            .get("Authorization")
+                            .cloned()
+                            .unwrap_or_default();
+                        SsrFetchResponse::Ok {
+                            status: 200,
+                            response: SsrFetchResponseContent::Json(JsJson::String(format!(
+                                "response for {}",
+                                auth
+                            ))),
+                        }
+                    });
+                }
+
+                // 1. Initial access and keep observed
+                let _drop = cache.to_computed().subscribe(|_| {});
+
+                transaction(|context| {
+                    let res = cache.get(context);
+                    assert_eq!(res, Resource::Loading);
+                });
+
+                // Small sleep to let spawned tasks run
+                tokio::task::yield_now().await;
+
+                // 2. Check data
+                transaction(|context| {
+                    let res = cache.get(context);
+                    if let Resource::Ready(val) = res {
+                        assert_eq!(val.as_str(), "response for Bearer token1");
+                    } else {
+                        panic!("Expected Ready, got {:?}", res);
+                    }
+                });
+                // It fetches twice: once in new(), and once when bearer_auth.subscribe triggers initially (which sets Uninitialized)
+                assert_eq!(call_count.get(), 2);
+
+                // 3. Change token
+                transaction(|_| {
+                    token.set(Some("token2".to_string()));
+                });
+
+                // Wait for revalidation
+                tokio::task::yield_now().await;
+                tokio::task::yield_now().await;
+
+                // 4. Check data again
+                transaction(|context| {
+                    let res = cache.get(context);
+                    if let Resource::Ready(val) = res {
+                        assert_eq!(val.as_str(), "response for Bearer token2");
+                    } else {
+                        panic!("Expected Ready after token change, got {:?}", res);
+                    }
+                });
+                assert_eq!(call_count.get(), 3);
+            })
+            .await;
+    }
+
+    #[tokio::test]
+    async fn test_lazy_cache_set_same_computed_token() {
+        let local = tokio::task::LocalSet::new();
+        local
+            .run_until(async {
+                // Mock timers to execute 0ms timeouts in next tick
+                api_timers().set_mock_handler(|duration, callback_id, _kind| {
+                    if duration == 0 {
+                        tokio::task::spawn_local(async move {
+                            api_timers().callback_timeout(callback_id);
+                        });
+                    }
+                });
+
+                let token_val = Value::new(Some("token1".to_string()));
+                let token_computed = token_val.to_computed();
+
+                let rb =
+                    RequestBuilder::get("https://test.com/api").bearer_auth(token_computed.clone());
+
+                let call_count = Rc::new(crate::dev::ValueMut::new(0));
+                {
+                    let call_count = call_count.clone();
+                    api_fetch().set_mock_handler(move |request| {
+                        call_count.change(|val| *val += 1);
+                        let auth = request
+                            .headers
+                            .get("Authorization")
+                            .cloned()
+                            .unwrap_or_default();
+                        SsrFetchResponse::Ok {
+                            status: 200,
+                            response: SsrFetchResponseContent::Json(JsJson::String(format!(
+                                "resp:{}",
+                                auth
+                            ))),
+                        }
+                    });
+                }
+
+                let cache = rb.clone().lazy_cache(|status, body| {
+                    if status == 200 {
+                        Some(body.into::<String>())
+                    } else {
+                        None
+                    }
+                });
+
+                let _drop = cache.to_computed().subscribe(|_| {});
+
+                tokio::task::yield_now().await;
+                tokio::task::yield_now().await;
+
+                transaction(|context| {
+                    let res = cache.get(context);
+                    if let Resource::Ready(val) = res {
+                        assert_eq!(val.as_str(), "resp:Bearer token1");
+                    } else {
+                        panic!("Expected Ready, got {:?}", res);
+                    }
+                });
+                assert_eq!(call_count.get(), 2);
+
+                // Setting SAME token computed again on the request builder
+                let _ = rb.bearer_auth(token_computed.clone());
+
+                tokio::task::yield_now().await;
+                tokio::task::yield_now().await;
+
+                // Should NOT have fetched again yet because token content didn't change and Computed instance is the same
+                assert_eq!(call_count.get(), 2);
+
+                // Change content of the same Computed
+                transaction(|_| {
+                    token_val.set(Some("token2".to_string()));
+                });
+
+                tokio::task::yield_now().await;
+                tokio::task::yield_now().await;
+
+                transaction(|context| {
+                    let res = cache.get(context);
+                    if let Resource::Ready(val) = res {
+                        assert_eq!(val.as_str(), "resp:Bearer token2");
+                    } else {
+                        panic!("Expected Ready after token change, got {:?}", res);
+                    }
+                });
+                assert_eq!(call_count.get(), 3);
+            })
+            .await;
     }
 }

@@ -1,11 +1,12 @@
 use std::any::Any;
 use std::rc::Rc;
 
-use crate::Context;
+use crate::{Context, Dependencies};
 
 use super::{GraphId, get_dependencies, struct_mut::ValueMut};
 
 pub struct GraphValue<T> {
+    deps: Rc<Dependencies>,
     id: GraphId,
     get_value: Box<dyn Fn(&Context) -> T>,
     state: ValueMut<Option<T>>,
@@ -23,6 +24,7 @@ impl<T: Clone + 'static> GraphValue<T> {
         };
 
         let graph_value = Rc::new(GraphValue {
+            deps: get_dependencies(),
             id,
             get_value: Box::new(get_value),
             state: ValueMut::new(None),
@@ -98,8 +100,11 @@ impl<T: Clone + 'static> GraphValue<T> {
 
 impl<T> Drop for GraphValue<T> {
     fn drop(&mut self) {
-        let deps = get_dependencies();
-        deps.graph.refresh.refresh_token_drop(self.id);
-        deps.graph.remove_client(self.id);
+        self.deps.graph.refresh.refresh_token_drop(self.id);
+        self.deps.graph.remove_client(self.id);
+        self.deps
+            .graph
+            .external_connections
+            .unregister_connect(self.id);
     }
 }

@@ -1,25 +1,15 @@
 use std::hash::Hash;
 use std::rc::Rc;
 
-use crate::{Context, Dependencies, DomNode, ToComputed};
+use crate::{Context, DomNode, ToComputed};
 
 use super::{
     Computed, DropResource, GraphId, dependencies::get_dependencies, struct_mut::ValueMut,
 };
 
 struct ValueInner<T> {
-    dependencies: Rc<Dependencies>,
     id: GraphId,
     value: ValueMut<T>,
-}
-
-impl<T> Drop for ValueInner<T> {
-    fn drop(&mut self) {
-        self.dependencies
-            .graph
-            .external_connections
-            .unregister_connect(self.id);
-    }
 }
 
 /// A reactive value. Basic building block of app state.
@@ -63,7 +53,6 @@ impl<T: Clone + 'static> Value<T> {
     pub fn new(value: T) -> Self {
         Value {
             inner: Rc::new(ValueInner {
-                dependencies: get_dependencies(),
                 id: GraphId::new_value(),
                 value: ValueMut::new(value),
             }),
@@ -78,24 +67,11 @@ impl<T: Clone + 'static> Value<T> {
     where
         F: Fn(&Value<T>) -> DropResource + 'static,
     {
-        let id = GraphId::new_value();
-
-        let value = Value {
-            inner: Rc::new(ValueInner {
-                dependencies: get_dependencies(),
-                id,
-                value: ValueMut::new(value),
-            }),
-        };
-
-        let computed = value.to_computed();
-
-        get_dependencies()
-            .graph
-            .external_connections
-            .register_connect(id, Rc::new(move || create(&value)));
-
-        computed
+        let value = Value::new(value);
+        let value_clone = value.clone();
+        value
+            .to_computed()
+            .when_connect(move || create(&value_clone))
     }
 
     /// Allows to set a new value if `T` doesn't implement [PartialEq].
