@@ -7,7 +7,8 @@ use crate::{
 };
 
 use super::{
-    DropResource, GraphValue, Value, context::Context, graph_id::GraphId, struct_mut::ValueMut,
+    DropResource, GraphValue, Value, context::Context, get_dependencies, graph_id::GraphId,
+    struct_mut::ValueMut,
 };
 
 /// A reactive value that is read-only and computed by dependency graph.
@@ -93,6 +94,26 @@ impl<T: Clone + 'static> Computed<T> {
 
     pub fn id(&self) -> GraphId {
         self.inner.id()
+    }
+
+    /// Executes a closure when the `Computed` value starts being observed.
+    ///
+    /// The provided closure should return a [`DropResource`] which will be dropped
+    /// when the value stops being observed. This is especially useful for integrating
+    /// with sources that are not reactive (like external data fetching or socket connections),
+    /// allowing side effects to start only when they are actually needed by the UI.
+    pub fn when_connect<F: Fn() -> DropResource + 'static>(&self, create: F) -> Computed<T> {
+        let new_computed = Computed::from({
+            let parent = self.clone();
+            move |context| parent.get(context)
+        });
+
+        get_dependencies()
+            .graph
+            .external_connections
+            .register_connect(new_computed.id(), Rc::new(create));
+
+        new_computed
     }
 
     /// Do something every time the value inside [Computed] is triggered.
@@ -224,4 +245,71 @@ fn drop_computed() {
     assert_eq!(double_value.get(), 20);
 
     drop(drop_resource);
+}
+
+#[test]
+fn test_when_connect() {
+    let connect_count = Rc::new(ValueMut::new(0));
+    let disconnect_count = Rc::new(ValueMut::new(0));
+
+    let value = Value::new(1);
+    let comp = value.to_computed().when_connect({
+        let connect_count = connect_count.clone();
+        let disconnect_count = disconnect_count.clone();
+        move || {
+            connect_count.change(|v| *v += 1);
+            DropResource::new({
+                let disconnect_count = disconnect_count.clone();
+                move || {
+                    disconnect_count.change(|v| *v += 1);
+                }
+            })
+        }
+    });
+
+    assert_eq!(connect_count.get(), 0);
+    assert_eq!(disconnect_count.get(), 0);
+
+    let drop_resource = comp.subscribe(|_| {});
+
+    assert_eq!(connect_count.get(), 1);
+    assert_eq!(disconnect_count.get(), 0);
+
+    drop(drop_resource);
+
+    assert_eq!(connect_count.get(), 1);
+    assert_eq!(disconnect_count.get(), 1);
+}
+
+#[test]
+fn test_when_connect_multiple() {
+    let connect_count = Rc::new(ValueMut::new(0));
+    let disconnect_count = Rc::new(ValueMut::new(0));
+
+    let value = Value::new(1);
+    let comp = value.to_computed().when_connect({
+        let connect_count = connect_count.clone();
+        let disconnect_count = disconnect_count.clone();
+        move || {
+            connect_count.change(|v| *v += 1);
+            DropResource::new({
+                let disconnect_count = disconnect_count.clone();
+                move || {
+                    disconnect_count.change(|v| *v += 1);
+                }
+            })
+        }
+    });
+
+    let drop1 = comp.clone().subscribe(|_| {});
+    assert_eq!(connect_count.get(), 1);
+
+    let drop2 = comp.subscribe(|_| {});
+    assert_eq!(connect_count.get(), 1);
+
+    drop(drop1);
+    assert_eq!(disconnect_count.get(), 0);
+
+    drop(drop2);
+    assert_eq!(disconnect_count.get(), 1);
 }

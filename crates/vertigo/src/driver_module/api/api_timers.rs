@@ -13,21 +13,41 @@ pub fn api_timers() -> Rc<ApiTimers> {
     ApiTimers::new()
 }
 
+#[cfg(test)]
+type MockTimerHandler = crate::dev::ValueMut<Option<Rc<dyn Fn(u32, CallbackId, TimerKind)>>>;
+
 pub struct ApiTimers {
     timers: CallbackStore<(), ()>,
+    #[cfg(test)]
+    mock_handler: MockTimerHandler,
 }
 
 impl ApiTimers {
     fn new() -> Rc<ApiTimers> {
         Rc::new(ApiTimers {
             timers: CallbackStore::new(),
+            #[cfg(test)]
+            mock_handler: crate::dev::ValueMut::new(None),
         })
+    }
+
+    #[cfg(test)]
+    pub fn set_mock_handler(&self, handler: impl Fn(u32, CallbackId, TimerKind) + 'static) {
+        self.mock_handler.set(Some(Rc::new(handler)));
     }
 
     fn set<F: Fn() + 'static>(&self, duration: u32, callback: F, kind: TimerKind) -> DropResource {
         let (callback_id, drop) = self.timers.register(move |_| {
             callback();
         });
+
+        #[cfg(test)]
+        if let Some(handler) = self.mock_handler.get() {
+            handler(duration, callback_id, kind);
+            return DropResource::new(move || {
+                drop.off();
+            });
+        }
 
         api_browser_command().timer_set(callback_id, duration, kind);
 

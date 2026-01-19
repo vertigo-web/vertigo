@@ -1,7 +1,7 @@
 use super::external_connections::ExternalConnections;
 use super::graph_connections::GraphConnections;
 use super::refresh::Refresh;
-use crate::computed::graph_id::{GraphId, GraphIdKind};
+use crate::computed::graph_id::GraphId;
 use std::collections::BTreeSet;
 
 pub struct Graph {
@@ -40,23 +40,31 @@ impl Graph {
             .set_parent_for_client(client_id, parents_list);
 
         for (id, active) in edge_list {
-            match id.get_type() {
-                GraphIdKind::Value => {
-                    self.external_connections.set_connection(id, active);
-                }
-                GraphIdKind::Computed => {
-                    if active {
-                    } else {
-                        self.refresh.clear_cache(&id);
-                    }
-                }
-                GraphIdKind::Client => {
-                    if active {
-                    } else {
-                        self.refresh.clear_cache(&id);
-                    }
-                }
+            self.external_connections.set_connection(id, active);
+
+            if !active {
+                self.refresh.clear_cache(&id);
             }
+
+            // TODO - Keeping this comment here for a while
+            // match id.get_type() {
+            //     GraphIdKind::Value => {
+            //         self.external_connections.set_connection(id, active);
+            //     }
+            //     GraphIdKind::Computed => {
+            //         self.external_connections.set_connection(id, active);
+            //         if active {
+            //         } else {
+            //             self.refresh.clear_cache(&id);
+            //         }
+            //     }
+            //     GraphIdKind::Client => {
+            //         if active {
+            //         } else {
+            //             self.refresh.clear_cache(&id);
+            //         }
+            //     }
+            // }
         }
     }
 }

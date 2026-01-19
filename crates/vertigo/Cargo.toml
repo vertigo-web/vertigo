@@ -26,5 +26,8 @@ default-features = false
 features = ["std"]
 optional = true
 
+[dev-dependencies]
+tokio = { version = "1", features = ["macros", "rt"] }
+
 [lints]
 workspace = true
