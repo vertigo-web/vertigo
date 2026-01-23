@@ -18,6 +18,12 @@ impl DropResource {
     pub fn off(self) {}
 }
 
+impl PartialEq for DropResource {
+    fn eq(&self, _other: &Self) -> bool {
+        false
+    }
+}
+
 impl Drop for DropResource {
     fn drop(&mut self) {
         match self {

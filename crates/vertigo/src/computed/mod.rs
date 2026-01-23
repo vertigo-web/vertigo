@@ -10,6 +10,7 @@ mod reactive;
 pub mod struct_mut;
 mod to_computed;
 mod value;
+mod value_inner;
 
 #[cfg(test)]
 mod tests;
@@ -21,7 +22,7 @@ pub use graph_id::GraphId;
 pub use graph_value::GraphValue;
 pub use reactive::Reactive;
 pub use to_computed::ToComputed;
-pub use value::Value;
+pub use value::{Value, ValueSynchronize};
 
 /// Allows to create `Computed<T1, T2, ...>` out of `Value<T1>`, `Value<T2>`, ...
 ///

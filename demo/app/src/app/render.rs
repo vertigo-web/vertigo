@@ -4,8 +4,8 @@ use crate::app::{self, counters::state_counters, state::state_route};
 
 use super::{
     chat::Chat, counters::CountersDemo, dropfiles::DropFiles, game_of_life::GameOfLife,
-    github_explorer::GitHubExplorer, input::MyInput, js_api_access::JsApiAccess, route::Route,
-    styling::Styling, sudoku::Sudoku, todo::Todo,
+    github_explorer::GitHubExplorer, input::MyInput, js_api_access::JsApiAccess, list::ListDemo,
+    route::Route, styling::Styling, sudoku::Sudoku, todo::Todo,
 };
 
 fn css_menu_item(active: bool) -> Css {
@@ -72,6 +72,7 @@ fn render_header() -> DomNode {
                 { render_menu_item(Route::Todo) }
                 { render_menu_item(Route::DropFile) }
                 { render_menu_item(Route::JsApiAccess) }
+                { render_menu_item(Route::List) }
             </div>
         </div>
     }
@@ -124,6 +125,7 @@ pub fn render(state: &app::State) -> DomNode {
             Route::Todo => dom! { <Todo /> },
             Route::DropFile => dom! { <DropFiles /> },
             Route::JsApiAccess => dom! { <JsApiAccess /> },
+            Route::List => dom! { <ListDemo /> },
             Route::NotFound => {
                 get_driver().set_status(404);
                 dom! { <div>"Page Not Found"</div> }

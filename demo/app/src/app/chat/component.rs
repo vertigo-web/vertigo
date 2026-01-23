@@ -1,4 +1,4 @@
-use vertigo::{DomNode, KeyDownEvent, bind, component, css, dom};
+use vertigo::{DomNode, KeyDownEvent, bind, component, css, dom, render::render_list};
 
 use super::state::ChatState;
 
@@ -9,7 +9,8 @@ pub fn Chat(ws_chat: String) {
     let input_view = render_input_text(&state);
     let status_view = render_status(&state);
 
-    let list = state.messages.render_list(
+    let list = render_list(
+        &state.messages.to_computed(),
         |item| item.clone(),
         |message| {
             dom! {

@@ -9,42 +9,44 @@ use crate::{
     driver_module::get_driver_dom,
 };
 
-//TODO - Check out other options for reading refs
-
-// pub struct ListRendered<T: Clone> {
-//     comment: DomFragment,
-//     pub refs: Computed<Vec<(T, DomElementRef)>>,
-// }
-
-// impl<T: Clone> EmbedDom for ListRendered<T> {
-//     fn embed(self) -> DomNodeFragment {
-//         self.comment.into()
-//     }
-// }
-
-// impl<T: Clone> From<ListRendered<T>> for DomNodeFragment {
-//     fn from(val: ListRendered<T>) -> Self {
-//         val.comment.into()
-//     }
-// }
-
-// fn get_refs<T: Clone>(list: &VecDeque<(T, DomElement)>) -> Vec<(T, DomElementRef)> {
-//     let mut result = Vec::new();
-
-//     for (item, element) in list {
-//         result.push((item.clone(), element.get_ref()));
-//     }
-
-//     result
-// }
-
-pub fn render_list<T: PartialEq + Clone + 'static, K: Eq + Hash>(
-    computed: Computed<Vec<T>>,
+/// Render iterable value (reactively transforms `Iterator<T>` into Node with list of rendered elements )
+///
+/// ```rust
+/// use vertigo::{dom, Value, render::render_list};
+///
+/// let my_list = Value::new(vec![
+///     (1, "one"),
+///     (2, "two"),
+///     (3, "three"),
+/// ]);
+///
+/// let elements = render_list(
+///     &my_list.to_computed(),
+///     |el| el.0,
+///     |el| dom! { <div>{el.1}</div> }
+/// );
+///
+/// dom! {
+///     <div>
+///         {elements}
+///     </div>
+/// };
+/// ```
+///
+///
+pub fn render_list<
+    T: PartialEq + Clone + 'static,
+    K: Eq + Hash,
+    L: IntoIterator<Item = T> + Clone + PartialEq + 'static,
+>(
+    computed: &Computed<L>,
     get_key: impl Fn(&T) -> K + 'static,
     render: impl Fn(&T) -> DomNode + 'static,
 ) -> DomNode {
     let get_key = Rc::new(get_key);
     let render = Rc::new(render);
+
+    let computed = computed.clone();
 
     DomComment::new_marker("list element", move |parent_id, comment_id| {
         let current_list: Rc<ValueMut<VecDeque<(T, DomNode)>>> =

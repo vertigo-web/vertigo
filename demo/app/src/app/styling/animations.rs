@@ -1,6 +1,8 @@
 use std::rc::Rc;
 
-use vertigo::{Value, bind_spawn, component, css, dev::ValueMut, dom, get_driver};
+use vertigo::{
+    Value, bind_spawn, component, css, dev::ValueMut, dom, get_driver, render::render_list,
+};
 
 use super::spinner::Spinner;
 
@@ -47,7 +49,8 @@ pub fn Animations() {
         .progress
         .map(|progress| (0..progress).collect::<Vec<_>>());
 
-    let list = ids.render_list(
+    let list = render_list(
+        &ids,
         |id| *id,
         |_id| {
             dom! {

@@ -1,9 +1,8 @@
-use std::hash::Hash;
 use std::rc::Rc;
 
 use crate::{
     DomNode,
-    render::{render_list, render_value, render_value_option},
+    render::{render_value, render_value_option},
 };
 
 use super::{
@@ -180,31 +179,19 @@ impl<T: Clone + PartialEq + 'static> Computed<T> {
     }
 }
 
-impl<T: Clone + PartialEq + 'static, L: IntoIterator<Item = T> + Clone + 'static> Computed<L> {
-    /// Render iterable value inside this [Computed]. See [Value::render_list()] for examples.
-    pub fn render_list<K: Eq + Hash>(
-        &self,
-        get_key: impl Fn(&T) -> K + 'static,
-        render: impl Fn(&T) -> DomNode + 'static,
-    ) -> DomNode {
-        let list = self.map(|inner| inner.into_iter().collect::<Vec<_>>());
-        render_list(list, get_key, render)
-    }
-}
-
-impl<T: Clone + 'static> From<Value<T>> for Computed<T> {
+impl<T: Clone + PartialEq + 'static> From<Value<T>> for Computed<T> {
     fn from(val: Value<T>) -> Self {
         val.to_computed()
     }
 }
 
-impl<T: Clone + 'static> From<T> for Computed<T> {
+impl<T: Clone + PartialEq + 'static> From<T> for Computed<T> {
     fn from(value: T) -> Self {
         Value::new(value).to_computed()
     }
 }
 
-impl<T: Clone + 'static> From<&T> for Computed<T> {
+impl<T: Clone + PartialEq + 'static> From<&T> for Computed<T> {
     fn from(value: &T) -> Self {
         Value::new(value.clone()).to_computed()
     }

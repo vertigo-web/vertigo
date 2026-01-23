@@ -7,3 +7,4 @@ mod css;
 mod dom;
 mod js_macro;
 mod jsjson_bytes;
+mod repro_panic;
