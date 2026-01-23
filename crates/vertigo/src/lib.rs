@@ -112,7 +112,7 @@ mod fetch;
 mod future_box;
 pub mod html_entities;
 mod instant;
-mod render;
+pub mod render;
 pub mod router;
 #[cfg(test)]
 mod tests;
@@ -152,6 +152,7 @@ pub use fetch::{
     resource::Resource,
 };
 pub use instant::{Instant, InstantType};
+pub use render::collection::CollectionKey;
 pub use websocket::{WebsocketConnection, WebsocketMessage};
 
 // Commonly used things
@@ -579,7 +580,7 @@ pub use vertigo_macro::css_block;
 /// ```rust
 /// use vertigo::{AutoJsJson, LazyCache, RequestBuilder, store};
 ///
-/// #[derive(AutoJsJson)]
+/// #[derive(AutoJsJson, PartialEq)]
 /// struct CommentModel {
 ///     id: i32,
 ///     name: String,

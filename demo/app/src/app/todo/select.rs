@@ -1,4 +1,4 @@
-use vertigo::{Computed, DomNode, Value, bind, dom};
+use vertigo::{Computed, DomNode, Value, bind, dom, render::render_list};
 
 fn is_selected<T: PartialEq + Clone + 'static>(
     value: &Value<T>,
@@ -15,7 +15,7 @@ fn is_selected<T: PartialEq + Clone + 'static>(
     })
 }
 
-pub struct Select<T: Clone> {
+pub struct Select<T: Clone + PartialEq + 'static> {
     pub value: Value<T>,
     pub options: Computed<Vec<T>>,
 }
@@ -34,17 +34,17 @@ where
             value.set(new_value.into());
         });
 
-        let list = bind!(
-            value,
-            options.render_list(
-                |item| item.to_string(),
-                move |item| {
-                    let text_item = item.to_string();
-                    let selected = is_selected(&value, item);
+        let value = value.clone();
 
-                    dom! { <option value={&text_item} {selected}>{text_item}</option> }
-                }
-            )
+        let list = render_list(
+            options,
+            |item| item.to_string(),
+            move |item| {
+                let text_item = item.to_string();
+                let selected = is_selected(&value, item);
+
+                dom! { <option value={&text_item} {selected}>{text_item}</option> }
+            },
         );
 
         dom! {

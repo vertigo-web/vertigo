@@ -1,4 +1,7 @@
-use crate::dom::{dom_element::DomElement, dom_text::DomText};
+use crate::{
+    DropResource,
+    dom::{dom_element::DomElement, dom_text::DomText},
+};
 
 use super::{dom_comment::DomComment, dom_id::DomId};
 
@@ -25,6 +28,20 @@ impl DomNode {
             Self::Node { node } => node.id_dom(),
             Self::Text { node } => node.id_dom(),
             Self::Comment { node } => node.id_dom(),
+        }
+    }
+
+    pub fn append_drop_resource(&self, resource: DropResource) {
+        match &self {
+            Self::Node { node } => {
+                node.append_drop_resource(resource);
+            }
+            Self::Text { node } => {
+                node.append_drop_resource(resource);
+            }
+            Self::Comment { node } => {
+                node.append_drop_resource(resource);
+            }
         }
     }
 }

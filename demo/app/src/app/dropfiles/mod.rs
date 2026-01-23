@@ -1,4 +1,4 @@
-use vertigo::{DomNode, DropFileEvent, DropFileItem, Value, bind, css, dom};
+use vertigo::{DomNode, DropFileEvent, DropFileItem, Value, bind, css, dom, render::render_list};
 
 pub struct DropFiles {}
 
@@ -15,7 +15,8 @@ impl DropFiles {
     pub fn mount(&self) -> DomNode {
         let state = DropFilesState::default();
 
-        let list_view = state.list.render_list(
+        let list_view = render_list(
+            &state.list.to_computed(),
             |item| item.name.clone(),
             |file| {
                 let message = format_line(file);

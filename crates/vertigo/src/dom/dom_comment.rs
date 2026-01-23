@@ -83,6 +83,10 @@ impl DomComment {
             None
         })
     }
+
+    pub fn append_drop_resource(&self, resource: DropResource) {
+        self.subscriptions.push(resource);
+    }
 }
 
 impl Drop for DomComment {

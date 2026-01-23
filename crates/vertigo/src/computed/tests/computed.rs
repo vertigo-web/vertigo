@@ -575,7 +575,7 @@ fn test_set_if_changed() {
 
     assert_eq!(boxy.get(), 2);
 
-    value.set_force(3);
+    value.set(3);
     assert_eq!(boxy.get(), 3);
 
     value.set(4);
@@ -588,7 +588,7 @@ fn test_set_if_changed() {
     value.set(5);
     assert_eq!(boxy.get(), 5);
 
-    value.set_force(6);
+    value.set(6);
     assert_eq!(boxy.get(), 6);
     assert_eq!(boxy2.get(), 6);
     assert_eq!(boxy3.get(), 6);
