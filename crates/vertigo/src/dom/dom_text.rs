@@ -43,6 +43,10 @@ impl DomText {
     pub fn id_dom(&self) -> DomId {
         self.id_dom
     }
+
+    pub fn append_drop_resource(&self, resource: DropResource) {
+        self.subscriptions.push(resource);
+    }
 }
 
 impl Drop for DomText {

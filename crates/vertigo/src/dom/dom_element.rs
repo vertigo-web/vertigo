@@ -446,6 +446,10 @@ impl DomElement {
         })
     }
 
+    pub fn append_drop_resource(&self, resource: DropResource) {
+        self.subscriptions.push(resource);
+    }
+
     fn subscribe<T: Clone + PartialEq + 'static>(
         &self,
         value: Computed<T>,

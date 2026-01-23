@@ -1,4 +1,4 @@
-use vertigo::{DomNode, Value, bind, dom, main};
+use vertigo::{DomNode, Value, bind, dom, main, render::render_list};
 
 mod row;
 use row::Row;
@@ -45,7 +45,8 @@ pub fn app(state: AppState) -> DomNode {
     let clear_rows = bind!(rows, |_| rows.set(vec![]));
 
     let rows_rendered = mode.render_value(move |mode| match mode {
-        Mode::Div => rows.render_list(
+        Mode::Div => render_list(
+            &rows.to_computed(),
             |row| row.0.clone(),
             |(key, label)| {
                 dom! {
@@ -53,7 +54,8 @@ pub fn app(state: AppState) -> DomNode {
                 }
             },
         ),
-        Mode::Div4 => rows.render_list(
+        Mode::Div4 => render_list(
+            &rows.to_computed(),
             |row| row.0.clone(),
             |(key, label)| {
                 dom! {

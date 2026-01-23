@@ -21,7 +21,7 @@ impl<T: Clone + 'static> Default for EventEmitter<T> {
     }
 }
 
-impl<T: Clone + Send + Sync> EventEmitter<T> {
+impl<T: Clone> EventEmitter<T> {
     pub fn add<F: Fn(T) + 'static>(&self, callback: F) -> DropResource {
         let id = self.counter.get_next();
 
