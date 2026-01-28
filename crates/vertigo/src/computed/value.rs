@@ -1,16 +1,10 @@
-use std::hash::Hash;
 use std::rc::Rc;
 
-use crate::{Context, DomNode, ToComputed};
+use vertigo_macro::bind;
 
-use super::{
-    Computed, DropResource, GraphId, dependencies::get_dependencies, struct_mut::ValueMut,
-};
+use crate::{Context, DomNode, ToComputed, computed::value_inner::ValueInner};
 
-struct ValueInner<T> {
-    id: GraphId,
-    value: ValueMut<T>,
-}
+use super::{Computed, DropResource, GraphId, dependencies::get_dependencies};
 
 /// A reactive value. Basic building block of app state.
 ///
@@ -33,29 +27,38 @@ struct ValueInner<T> {
 /// ```
 ///
 #[derive(Clone)]
-pub struct Value<T> {
+pub struct Value<T: Clone + PartialEq + 'static> {
     inner: Rc<ValueInner<T>>,
 }
 
-impl<T: Clone + Default + 'static> Default for Value<T> {
+impl<T: Clone + PartialEq + Default + 'static> Default for Value<T> {
     fn default() -> Self {
-        Self::new(Default::default())
+        Self::new(T::default())
     }
 }
 
-impl<T: PartialEq> PartialEq for Value<T> {
+impl<T: Clone + PartialEq> PartialEq for Value<T> {
     fn eq(&self, other: &Self) -> bool {
         self.inner.id.eq(&other.inner.id)
     }
 }
 
-impl<T: Clone + 'static> Value<T> {
+impl<T: Clone + PartialEq + 'static> ToComputed<T> for Value<T> {
+    fn to_computed(&self) -> Computed<T> {
+        self.to_computed()
+    }
+}
+
+impl<T: Clone + PartialEq + 'static> ToComputed<T> for &Value<T> {
+    fn to_computed(&self) -> Computed<T> {
+        (*self).to_computed()
+    }
+}
+
+impl<T: Clone + PartialEq + 'static> Value<T> {
     pub fn new(value: T) -> Self {
         Value {
-            inner: Rc::new(ValueInner {
-                id: GraphId::new_value(),
-                value: ValueMut::new(value),
-            }),
+            inner: Rc::new(ValueInner::new(value)),
         }
     }
 
@@ -74,16 +77,6 @@ impl<T: Clone + 'static> Value<T> {
             .when_connect(move || create(&value_clone))
     }
 
-    /// Allows to set a new value if `T` doesn't implement [PartialEq].
-    ///
-    /// This will always trigger a graph change even if the value stays the same.
-    pub fn set_force(&self, value: T) {
-        get_dependencies().transaction(|_| {
-            self.inner.value.set(value);
-            get_dependencies().report_set(self.inner.id);
-        });
-    }
-
     /// Get the value.
     ///
     /// Use this in callbacks. You can get [Context] object using [transaction](crate::transaction) function.
@@ -92,7 +85,7 @@ impl<T: Clone + 'static> Value<T> {
     /// Returned `T` is cloned - it's not reactive.
     pub fn get(&self, context: &Context) -> T {
         context.add_parent(self.inner.id, self.inner.clone());
-        self.inner.value.get()
+        self.inner.get()
     }
 
     /// Reactively convert `Value` into [Computed] with provided transformation function applied.
@@ -113,21 +106,7 @@ impl<T: Clone + 'static> Value<T> {
 
         Computed::from(move |context| myself.get(context))
     }
-}
 
-impl<T: Clone + 'static> ToComputed<T> for Value<T> {
-    fn to_computed(&self) -> Computed<T> {
-        self.to_computed()
-    }
-}
-
-impl<T: Clone + 'static> ToComputed<T> for &Value<T> {
-    fn to_computed(&self) -> Computed<T> {
-        (*self).to_computed()
-    }
-}
-
-impl<T: Clone + PartialEq + 'static> Value<T> {
     pub fn change(&self, change_fn: impl FnOnce(&mut T)) {
         get_dependencies().transaction(|ctx| {
             let mut value = self.get(ctx);
@@ -138,7 +117,7 @@ impl<T: Clone + PartialEq + 'static> Value<T> {
 
     pub fn set(&self, value: T) {
         get_dependencies().transaction(|_| {
-            let need_refresh = self.inner.value.set_if_changed(value);
+            let need_refresh = self.inner.set(value);
             if need_refresh {
                 get_dependencies().report_set(self.inner.id);
             }
@@ -198,39 +177,24 @@ impl<T: Clone + PartialEq + 'static> Value<T> {
     pub fn render_value_option(&self, render: impl Fn(T) -> Option<DomNode> + 'static) -> DomNode {
         self.to_computed().render_value_option(render)
     }
+
+    pub fn add_event(&self, callback: impl Fn(T) + 'static) -> DropResource {
+        self.inner.add_event(callback)
+    }
+
+    pub fn synchronize<R: ValueSynchronize<T> + Clone + 'static>(&self) -> (R, DropResource) {
+        let init_value = self.inner.get();
+        let synchronize_target = R::new(init_value);
+
+        let drop_synchronize = self.add_event(bind!(synchronize_target, |current| {
+            synchronize_target.set(current);
+        }));
+
+        (synchronize_target, drop_synchronize)
+    }
 }
 
-impl<T: PartialEq + Clone + 'static, L: IntoIterator<Item = T> + Clone + PartialEq + 'static>
-    Value<L>
-{
-    /// Render iterable value (reactively transforms `Iterator<T>` into Node with list of rendered elements )
-    ///
-    /// ```rust
-    /// use vertigo::{dom, Value};
-    ///
-    /// let my_list = Value::new(vec![
-    ///     (1, "one"),
-    ///     (2, "two"),
-    ///     (3, "three"),
-    /// ]);
-    ///
-    /// let elements = my_list.render_list(
-    ///     |el| el.0,
-    ///     |el| dom! { <div>{el.1}</div> }
-    /// );
-    ///
-    /// dom! {
-    ///     <div>
-    ///         {elements}
-    ///     </div>
-    /// };
-    /// ```
-    ///
-    pub fn render_list<K: Eq + Hash>(
-        &self,
-        get_key: impl Fn(&T) -> K + 'static,
-        render: impl Fn(&T) -> DomNode + 'static,
-    ) -> DomNode {
-        self.to_computed().render_list(get_key, render)
-    }
+pub trait ValueSynchronize<T: PartialEq + Clone + 'static>: Sized {
+    fn new(value: T) -> Self;
+    fn set(&self, value: T);
 }

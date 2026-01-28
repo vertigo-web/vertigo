@@ -2,10 +2,10 @@ use std::fmt::Debug;
 use std::rc::Rc;
 
 use crate::{
-    Computed, DomNode, DropResource, Instant, JsJsonDeserialize, RequestResponse, Resource,
-    ToComputed,
-    computed::{Value, context::Context, struct_mut::ValueMut},
-    driver_module::api::{api_fetch, api_fetch_cache, api_timers},
+    Computed, DomNode, DropResource, JsJsonDeserialize, RequestResponse, Resource, ToComputed,
+    computed::{ValueSynchronize, context::Context, struct_mut::ValueMut},
+    driver_module::api::{api_fetch, api_fetch_cache},
+    fetch::{api_response::ApiResponse, cache_value::CacheValue},
     get_driver, transaction,
 };
 
@@ -17,60 +17,6 @@ fn get_unique_id() -> u64 {
     use std::sync::atomic::{AtomicU64, Ordering};
     static COUNTER: AtomicU64 = AtomicU64::new(1);
     COUNTER.fetch_add(1, Ordering::Relaxed)
-}
-
-#[derive(PartialEq)]
-enum ApiResponse<T> {
-    Uninitialized,
-    Data {
-        value: Resource<Rc<T>>,
-        expiry: Option<Instant>,
-    },
-}
-
-impl<T> ApiResponse<T> {
-    pub fn new(value: Resource<Rc<T>>, expiry: Option<Instant>) -> Self {
-        Self::Data { value, expiry }
-    }
-
-    pub fn new_loading() -> Self {
-        ApiResponse::Data {
-            value: Resource::Loading,
-            expiry: None,
-        }
-    }
-
-    pub fn get_value(&self) -> Resource<Rc<T>> {
-        match self {
-            Self::Uninitialized => Resource::Loading,
-            Self::Data { value, expiry: _ } => value.clone(),
-        }
-    }
-
-    pub fn needs_update(&self) -> bool {
-        match self {
-            ApiResponse::Uninitialized => true,
-            ApiResponse::Data { value: _, expiry } => {
-                let Some(expiry) = expiry else {
-                    return false;
-                };
-
-                expiry.is_expire()
-            }
-        }
-    }
-}
-
-impl<T> Clone for ApiResponse<T> {
-    fn clone(&self) -> Self {
-        match self {
-            ApiResponse::Uninitialized => ApiResponse::Uninitialized,
-            ApiResponse::Data { value, expiry } => ApiResponse::Data {
-                value: value.clone(),
-                expiry: expiry.clone(),
-            },
-        }
-    }
 }
 
 /// A structure similar to [Value] but supports Loading/Error states and automatic refresh
@@ -109,16 +55,15 @@ impl<T> Clone for ApiResponse<T> {
 /// ```
 ///
 /// See ["todo" example](../src/vertigo_demo/app/todo/state.rs.html) in vertigo-demo package for more.
-pub struct LazyCache<T: 'static> {
+pub struct LazyCache<T: PartialEq + 'static> {
     id: u64,
-    value_write: Value<ApiResponse<T>>,
-    value_read: Computed<ApiResponse<T>>,
+    value: CacheValue<T>,
     queued: Rc<ValueMut<bool>>,
     request: Rc<RequestBuilder>,
     map_response: Rc<dyn Fn(u32, RequestBody) -> MapResponse<T>>,
 }
 
-impl<T: 'static> Debug for LazyCache<T> {
+impl<T: PartialEq + 'static> Debug for LazyCache<T> {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         f.debug_struct("LazyCache")
             .field("queued", &self.queued)
@@ -126,12 +71,11 @@ impl<T: 'static> Debug for LazyCache<T> {
     }
 }
 
-impl<T> Clone for LazyCache<T> {
+impl<T: PartialEq> Clone for LazyCache<T> {
     fn clone(&self) -> Self {
         LazyCache {
             id: self.id,
-            value_write: self.value_write.clone(),
-            value_read: self.value_read.clone(),
+            value: self.value.clone(),
             queued: self.queued.clone(),
             request: self.request.clone(),
             map_response: self.map_response.clone(),
@@ -139,7 +83,7 @@ impl<T> Clone for LazyCache<T> {
     }
 }
 
-impl<T> LazyCache<T> {
+impl<T: PartialEq> LazyCache<T> {
     pub fn new(
         request: RequestBuilder,
         map_response: impl Fn(u32, RequestBody) -> MapResponse<T> + 'static,
@@ -171,39 +115,9 @@ impl<T> LazyCache<T> {
             }
         };
 
-        let value_write = Value::new(init_value);
-
-        let value_read: Computed<ApiResponse<T>> = {
-            let value_write = value_write.clone();
-            let bearer_auth = request.get_bearer_auth();
-
-            value_write.to_computed().when_connect({
-                let bearer_auth = bearer_auth.clone();
-
-                move || {
-                    let value_write = value_write.clone();
-
-                    let revalidate_trigger = bearer_auth.clone();
-
-                    let drop = revalidate_trigger.subscribe(move |_new_token| {
-                        let value_write = value_write.clone();
-
-                        api_timers().set_timeout_and_detach(0, move || {
-                            value_write.set_force(ApiResponse::Uninitialized);
-                        });
-                    });
-
-                    DropResource::new(move || {
-                        drop.off();
-                    })
-                }
-            })
-        };
-
         Self {
             id: get_unique_id(),
-            value_write,
-            value_read,
+            value: CacheValue::new(init_value, request.get_bearer_auth()),
             queued: Rc::new(ValueMut::new(false)),
             request: Rc::new(request),
             map_response,
@@ -214,7 +128,7 @@ impl<T> LazyCache<T> {
 impl<T: PartialEq> LazyCache<T> {
     /// Get value (update if needed)
     pub fn get(&self, context: &Context) -> Resource<Rc<T>> {
-        let api_response = self.value_read.get(context);
+        let api_response = self.value.get(context);
 
         if !self.queued.get() && api_response.needs_update() {
             self.update(false, false);
@@ -225,7 +139,7 @@ impl<T: PartialEq> LazyCache<T> {
 
     /// Delete value so it will refresh on next access
     pub fn forget(&self) {
-        self.value_write.set(ApiResponse::Uninitialized);
+        self.value.set(ApiResponse::Uninitialized);
     }
 
     /// Force refresh the value now
@@ -249,11 +163,11 @@ impl<T: PartialEq> LazyCache<T> {
                 return;
             }
 
-            let api_response = transaction(|context| self_clone.value_read.get(context));
+            let api_response = transaction(|context| self_clone.value.get(context));
 
             if force || api_response.needs_update() {
                 if with_loading {
-                    self_clone.value_write.set(ApiResponse::new_loading());
+                    self_clone.value.set(ApiResponse::new_loading());
                 }
 
                 let request = transaction(|context| {
@@ -278,13 +192,20 @@ impl<T: PartialEq> LazyCache<T> {
                     .get_ttl()
                     .map(|ttl| get_driver().now().add_duration(ttl));
 
-                self_clone
-                    .value_write
-                    .set(ApiResponse::new(new_value, expiry));
+                self_clone.value.set(ApiResponse::new(new_value, expiry));
             }
 
             self_clone.queued.set(false);
         });
+    }
+
+    pub fn synchronize<R: ValueSynchronize<std::rc::Rc<T>> + Clone + 'static>(
+        &self,
+    ) -> (R, DropResource)
+    where
+        T: Default + Clone,
+    {
+        self.value.synchronize()
     }
 }
 
@@ -303,7 +224,7 @@ impl<T: Clone + PartialEq> LazyCache<T> {
     }
 }
 
-impl<T> PartialEq for LazyCache<T> {
+impl<T: PartialEq> PartialEq for LazyCache<T> {
     fn eq(&self, other: &Self) -> bool {
         self.id == other.id
     }
@@ -336,7 +257,7 @@ impl<T: PartialEq + Clone> LazyCache<T> {
     }
 }
 
-impl<T: JsJsonDeserialize> LazyCache<T> {
+impl<T: PartialEq + JsJsonDeserialize> LazyCache<T> {
     /// Helper to easily create a lazy cache of `Vec<T>` deserialized from provided URL base and route
     ///
     /// ```rust
@@ -369,9 +290,9 @@ impl<T: JsJsonDeserialize> LazyCache<T> {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::JsJson;
     use crate::dev::{SsrFetchResponse, SsrFetchResponseContent};
     use crate::driver_module::api::api_timers;
+    use crate::{JsJson, Value};
 
     #[tokio::test]
     async fn test_lazy_cache_initial_state() {

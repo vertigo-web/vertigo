@@ -169,7 +169,7 @@ impl RequestBuilder {
     }
 
     #[must_use]
-    pub fn lazy_cache<T>(
+    pub fn lazy_cache<T: PartialEq>(
         self,
         map_response: impl Fn(u32, RequestBody) -> Option<Result<T, String>> + 'static,
     ) -> LazyCache<T> {

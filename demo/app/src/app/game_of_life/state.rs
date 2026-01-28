@@ -40,7 +40,7 @@ impl State {
                 let timer = state.timer.get(context);
 
                 if timer.is_some() {
-                    state.timer.set_force(None);
+                    state.timer.set(None);
                 } else {
                     state.start_timer();
                 }
@@ -87,7 +87,7 @@ impl State {
                 }
             });
 
-            self.timer.set_force(Some(Rc::new(timer)));
+            self.timer.set(Some(Rc::new(timer)));
         })
     }
 

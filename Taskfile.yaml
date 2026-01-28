@@ -1,0 +1,135 @@
+version: "3"
+
+tasks:
+  default:
+    desc: List available tasks
+    cmds:
+      - task --list
+
+  unit-tests:
+    desc: Unit tests
+    cmds:
+      - cargo test --all-features
+
+  automated-tests:
+    desc: "NOTE: WebDriver on localhost:9515 needs to be running"
+    cmds:
+      - cargo test --package fantoccini-tests -- --ignored
+
+  ci:
+    desc: Ci tests
+    cmds:
+      - cargo clippy -p vertigo -p vertigo-macro --all-features --tests --target wasm32-unknown-unknown -- -Dwarnings
+      - cargo clippy -p vertigo-demo -p vertigo-example-counter -p vertigo-example-router -p vertigo-example-trafficlights --all-features --tests --target wasm32-unknown-unknown -- -Dwarnings
+      - cargo test --all-features
+      - cargo fmt
+      # - tests/check_versions.sh
+      # - tests/js_tests.sh
+      # - tests/check_vertigo_new.sh
+
+  all-tests:
+    desc: All tests
+    deps: [unit-tests, automated-tests]
+
+  clean:
+    desc: Demo clean
+    cmds:
+      - cargo clean
+
+  clean-build:
+    desc: clean
+    cmds:
+      - rm -rf build
+
+  clippy-wasm32:
+    desc: Run clippy for wasm32 target
+    cmds:
+      - cargo clippy --all-features --target wasm32-unknown-unknown -p vertigo -p vertigo-macro -p vertigo-demo -p vertigo-example-counter -p vertigo-example-router -p vertigo-example-trafficlights
+
+  demo-debug-api:
+    desc: Demo tasks - debug mode
+    cmds:
+      - cargo run --bin vertigo-demo-server
+
+  demo-debug-watch:
+    desc: Demo debug watch
+    cmds:
+      - cargo run --bin vertigo -- watch vertigo-demo --dest-dir=demo_build --wasm-run-source-map --env ws_chat=ws://127.0.0.1:3333/ws
+
+  demo-watch:
+    desc: Demo watch
+    deps: [demo-debug-api, demo-debug-watch]
+
+  demo-serve-api:
+    desc: Demo tasks - release mode
+    cmds:
+      - cargo run --bin vertigo-demo-server --release
+
+  demo-serve:
+    desc: Demo serve
+    cmds:
+      - cargo run --bin vertigo --release -- build vertigo-demo --dest-dir=demo_build --wasm-run-source-map
+      - cargo run --bin vertigo --release -- serve --dest-dir=demo_build --env ws_chat=ws://127.0.0.1:3333/ws
+
+  demo:
+    desc: Demo
+    deps: [demo-serve-api, demo-serve]
+
+  examples-counter:
+    desc: Examples tasks
+    cmds:
+      - cargo run --bin vertigo -- watch vertigo-example-counter --dest-dir=examples/build/counter
+
+  examples-router:
+    desc: Examples router
+    cmds:
+      - cargo run --bin vertigo -- watch vertigo-example-router --dest-dir=examples/build/router
+
+  examples-trafficlights:
+    desc: Examples trafficlights
+    cmds:
+      - cargo run --bin vertigo -- watch vertigo-example-trafficlights --dest-dir=examples/build/trafficlights
+
+  js-test:
+    desc: JavaScript dev build
+    cmds:
+      - npm install
+      - npm run test:hydration
+
+  js-build:
+    desc: Js build
+    cmds:
+      - npm install
+      - npx rollup -c
+
+  lint:
+    desc: Lint
+    cmds:
+      - cargo run --bin lint-project
+
+  git-branch-rebase-and-push:
+    desc: Rebase current branch on master, squash to one commit, and force push
+    cmds:
+      - cargo fmt
+      - task ci
+      - |
+          CURRENT_BRANCH=$(git branch --show-current)
+          if [ "$CURRENT_BRANCH" = "master" ]; then
+            echo "Error: You are on the 'master' branch. This task is for feature branches only."
+            exit 1
+          fi
+          git fetch origin master
+          git rebase origin/master
+
+          # Find the first commit of this branch since origin/master
+          FIRST_COMMIT=$(git rev-list --reverse origin/master..HEAD | head -n 1)
+          if [ -z "$FIRST_COMMIT" ]; then
+            echo "No commits to squash."
+            exit 0
+          fi
+
+          # Squash everything into one commit using the first commit's identity
+          git reset --soft origin/master
+          git commit -C "$FIRST_COMMIT"
+
+          git push origin "$CURRENT_BRANCH" --force
