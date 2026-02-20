@@ -6,14 +6,15 @@ use std::{
 use crate::AttrValue;
 
 /// This represents a tailwind class. Use [tw!](crate::tw!) macro to create one.
-pub struct TwClass<'a>(Cow<'a, str>);
+#[derive(Clone)]
+pub struct TwClass(Cow<'static, str>);
 
-impl<'a> TwClass<'a> {
-    pub fn new(value: impl Into<Cow<'a, str>>) -> Self {
+impl TwClass {
+    pub fn new(value: impl Into<Cow<'static, str>>) -> Self {
         Self(value.into())
     }
 
-    pub fn join<'b>(&self, value: &TwClass<'b>) -> Self {
+    pub fn join(&self, value: &TwClass) -> Self {
         let new_str: String = [self.0.as_ref(), value.0.as_ref()].join(" ");
         Self(Cow::Owned(new_str))
     }
@@ -24,19 +25,31 @@ impl<'a> TwClass<'a> {
     }
 }
 
-impl<'a> From<&'static str> for TwClass<'a> {
+impl From<&'static str> for TwClass {
     fn from(value: &'static str) -> Self {
         Self::new(value)
     }
 }
 
-impl<'a> From<TwClass<'a>> for AttrValue {
-    fn from(value: TwClass<'a>) -> Self {
+impl From<crate::Computed<TwClass>> for crate::AttrValue {
+    fn from(value: crate::Computed<TwClass>) -> Self {
+        crate::AttrValue::Computed(value.map(|c| c.to_class_value()))
+    }
+}
+
+impl From<&crate::Computed<TwClass>> for crate::AttrValue {
+    fn from(value: &crate::Computed<TwClass>) -> Self {
+        crate::AttrValue::Computed(value.clone().map(|c| c.to_class_value()))
+    }
+}
+
+impl From<TwClass> for AttrValue {
+    fn from(value: TwClass) -> Self {
         value.0.to_string().into()
     }
 }
 
-impl<'a> Add for TwClass<'a> {
+impl Add for TwClass {
     type Output = Self;
 
     fn add(self, rhs: Self) -> Self::Output {
@@ -44,7 +57,7 @@ impl<'a> Add for TwClass<'a> {
     }
 }
 
-impl<'a> AddAssign for TwClass<'a> {
+impl AddAssign for TwClass {
     fn add_assign(&mut self, other: Self) {
         *self = self.join(&other);
     }

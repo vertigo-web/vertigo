@@ -19,40 +19,11 @@ pub(crate) fn trace_tailwind(input: TokenStream) -> Result<TokenStream, Box<dyn 
 /// Bundle tailwind and return injector
 pub(crate) fn bundle_tailwind() -> TokenStream2 {
     if std::env::var("VERTIGO_BUNDLE").is_ok() {
-        let bundle = if std::env::var("VERTIGO_EXT_TAILWIND").is_ok() {
-            // Use external tailwind
-            match run_external_tailwind() {
-                Ok(output) => output,
-                Err(err) => {
-                    emit_error!(Span::call_site(), "Tailwind: {}", err);
-                    return quote! {};
-                }
-            }
-        } else {
-            // Use internal tailwind
-            match get_tailwind_classes_file_path() {
-                Ok(file_path) => {
-                    if let Ok(tailwind_classes) = std::fs::read_to_string(file_path) {
-                        let mut tailwind_bundler = tailwind_css::TailwindBuilder::default();
-                        for tailwind_classes_row in tailwind_classes.lines() {
-                            let _ = tailwind_bundler
-                                .trace(tailwind_classes_row.trim_matches('"'), false);
-                        }
-                        match tailwind_bundler.bundle() {
-                            Ok(bundle) => bundle,
-                            Err(err) => {
-                                emit_error!(Span::call_site(), "Internal tailwind: {}", err);
-                                return quote! {};
-                            }
-                        }
-                    } else {
-                        return quote! {};
-                    }
-                }
-                Err(err) => {
-                    emit_error!(Span::call_site(), "Tailwind: {}", err);
-                    return quote! {};
-                }
+        let bundle = match run_external_tailwind() {
+            Ok(output) => output,
+            Err(err) => {
+                emit_error!(Span::call_site(), "Tailwind: {}", err);
+                return quote! {};
             }
         };
         quote! {
@@ -70,39 +41,25 @@ pub(crate) fn add_to_tailwind(classes: TokenStream2) -> Result<TokenStream2, Box
         return Ok(quote! {});
     };
     if let Expr::Lit(expr_lit) = &input
-        && let Lit::Str(input) = &expr_lit.lit
+        && let Lit::Str(input_lit) = &expr_lit.lit
     {
-        let input_str = input.to_token_stream().to_string();
+        let input_str = input_lit.to_token_stream().to_string();
         let input_str = input_str.trim_matches('"');
-        let output = if std::env::var("VERTIGO_EXT_TAILWIND").is_ok() {
-            // External tailwind doesn't modify class names
-            Ok(input_str.to_string())
-        } else {
-            tailwind_css::TailwindBuilder::default().trace(input_str, false)
-        };
+        // Only collect tailwind classes during build
+        if std::env::var("VERTIGO_BUNDLE").is_ok() {
+            let file_path = get_tailwind_classes_file_path()?;
 
-        match output {
-            Ok(output) => {
-                // Only collect tailwind classes during build
-                if std::env::var("VERTIGO_BUNDLE").is_ok() {
-                    let file_path = get_tailwind_classes_file_path()?;
+            // Open the file in append mode
+            let mut file = std::fs::OpenOptions::new()
+                .append(true)
+                .create(true) // Create the file if it doesn't exist
+                .open(&file_path)?;
 
-                    // Open the file in append mode
-                    let mut file = std::fs::OpenOptions::new()
-                        .append(true)
-                        .create(true) // Create the file if it doesn't exist
-                        .open(&file_path)?;
-
-                    // Write the input string to the file
-                    writeln!(file, "{input_str}")?;
-                }
-                // Use output in source code
-                return Ok(quote! { #output });
-            }
-            Err(err) => {
-                emit_error!(input.span(), "Tailwind: {}", err.kind.to_string());
-            }
+            // Write the input string to the file
+            writeln!(file, "{input_str}")?;
         }
+        // Use output in source code
+        return Ok(quote! { #input_lit });
     }
     Ok(quote! { #input })
 }
@@ -116,6 +73,76 @@ fn get_tailwind_classes_dir() -> Result<PathBuf, Box<dyn Error>> {
 
 fn get_tailwind_classes_file_path() -> Result<PathBuf, Box<dyn Error>> {
     Ok(get_tailwind_classes_dir()?.join("classes.html"))
+}
+
+fn get_tailwind_binary_path() -> Result<PathBuf, Box<dyn Error>> {
+    let os = std::env::consts::OS;
+    let arch = std::env::consts::ARCH;
+
+    let binary_name = match (os, arch) {
+        ("windows", "x86_64") => "tailwindcss-windows-x64.exe",
+        ("windows", "aarch64") => "tailwindcss-windows-arm64.exe",
+        ("macos", "x86_64") => "tailwindcss-macos-x64",
+        ("macos", "aarch64") => "tailwindcss-macos-arm64",
+        ("linux", "x86_64") => "tailwindcss-linux-x64",
+        ("linux", "aarch64") => "tailwindcss-linux-arm64",
+        _ => {
+            return Err(format!(
+                "Unsupported OS or architecture for standalone Tailwind CLI: {os}-{arch}"
+            )
+            .into());
+        }
+    };
+
+    let tailwind_version =
+        std::env::var("VERTIGO_TAILWIND_VERSION").unwrap_or_else(|_| "v4.2.0".to_string());
+
+    let cache_dir = get_target_dir()
+        .join("tailwind_cli_cache")
+        .join(&tailwind_version);
+    if !cache_dir.exists() {
+        std::fs::create_dir_all(&cache_dir)?;
+    }
+    let filename = if os == "windows" {
+        "tailwindcss.exe"
+    } else {
+        "tailwindcss"
+    };
+    let executable_path = cache_dir.join(filename);
+
+    if !executable_path.exists() {
+        let url = format!(
+            "https://github.com/tailwindlabs/tailwindcss/releases/download/{tailwind_version}/{binary_name}"
+        );
+
+        println!(
+            "Downloading Tailwind CSS CLI from {} to {}",
+            url,
+            executable_path.display()
+        );
+
+        let mut response = reqwest::blocking::get(&url)?;
+        if !response.status().is_success() {
+            return Err(format!(
+                "Failed to download Tailwind CLI: HTTP {}",
+                response.status()
+            )
+            .into());
+        }
+
+        let mut file = std::fs::File::create(&executable_path)?;
+        std::io::copy(&mut response, &mut file)?;
+
+        #[cfg(unix)]
+        {
+            use std::os::unix::fs::PermissionsExt;
+            let mut perms = std::fs::metadata(&executable_path)?.permissions();
+            perms.set_mode(0o755);
+            std::fs::set_permissions(&executable_path, perms)?;
+        }
+    }
+
+    Ok(executable_path)
 }
 
 fn run_external_tailwind() -> Result<String, Box<dyn Error>> {
@@ -147,24 +174,25 @@ fn run_external_tailwind() -> Result<String, Box<dyn Error>> {
             .map_err(|err| format!("Unable to default tailwind input to file: {}", err))?;
     }
 
+    let tailwind_executable = get_tailwind_binary_path()?;
+
+    let tailwind_executable_abs = tailwind_executable
+        .canonicalize()
+        .unwrap_or(tailwind_executable);
+
     // Run tailwind and catch stdout with the bundle
-    let Ok(command) = Command::new("npm")
-        .args([
-            "exec",
-            "-p",
-            "@tailwindcss/cli",
-            "--",
-            "-i",
-            "input.css",
-            "--cwd",
-            &tailwind_dir.to_string_lossy(),
-        ])
+    let command = match Command::new(&tailwind_executable_abs)
+        .args(["-i", "input.css"])
+        .current_dir(&tailwind_dir)
         .output()
-    else {
-        abort_call_site!(
-            "Failed to run external tailwind";
-            help = "Maybe NPM not installed or version is incompatible?"
-        );
+    {
+        Ok(cmd) => cmd,
+        Err(err) => {
+            abort_call_site!(
+                "Failed to run external tailwind: {}", err;
+                help = "Path was: {}", tailwind_executable_abs.display()
+            );
+        }
     };
 
     let output = String::from_utf8_lossy(&command.stdout);
@@ -175,7 +203,6 @@ fn run_external_tailwind() -> Result<String, Box<dyn Error>> {
         let err_output = String::from_utf8_lossy(&command.stderr);
         abort_call_site!(
             "Tailwind run failed: {}", err_output;
-            help = "To install tailwind run `npm install tailwindcss @tailwindcss/cli`.";
             note = "Tailwind output: {}", output;
         );
     }

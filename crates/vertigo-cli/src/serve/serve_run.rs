@@ -17,6 +17,26 @@ use super::{
     ServeOpts, ServeOptsInner, server_state::ServerState, vertigo_install::vertigo_install,
 };
 
+async fn wait_for_port(addr: &str, port: u16) {
+    for i in 0..20 {
+        match std::net::TcpListener::bind(addr) {
+            Ok(listener) => {
+                // Drop the listener to free the port for actix
+                drop(listener);
+                break;
+            }
+            Err(_) => {
+                log::warn!(
+                    "Port {} is still in use, waiting 1s... ({}/20)",
+                    port,
+                    i + 1
+                );
+                tokio::time::sleep(Duration::from_secs(1)).await;
+            }
+        }
+    }
+}
+
 pub async fn run(opts: ServeOpts, port_watch: Option<u16>) -> Result<(), ErrorCode> {
     log::info!("serve params => {opts:#?}");
 
@@ -55,6 +75,8 @@ pub async fn run(opts: ServeOpts, port_watch: Option<u16>) -> Result<(), ErrorCo
 
     let addr = format!("{host}:{port}");
 
+    wait_for_port(&addr, port).await;
+
     let server =
         HttpServer::new(app)
             .workers(threads.unwrap_or_else(|| {
@@ -81,7 +103,7 @@ pub async fn run(opts: ServeOpts, port_watch: Option<u16>) -> Result<(), ErrorCo
         _ = ServerOwner { handle } => {},
         msg = term_signal() => {
             log::info!("{msg} received, shutting down");
-            handle2.stop(true).await;
+            handle2.stop(false).await;
         }
     }
 
