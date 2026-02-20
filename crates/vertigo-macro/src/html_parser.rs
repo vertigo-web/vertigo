@@ -374,12 +374,12 @@ fn convert_node(node: &Node, convert_to_dom_node: bool) -> TokenStream2 {
                     return;
                 }
             };
-            class_values.push(quote! { vertigo::TwClass::from(#output).to_class_value() });
+            class_values.push(quote! { #output });
             return;
         }
 
         if name.as_str() == "class" {
-            class_values.push(quote! { #value.to_string() });
+            class_values.push(quote! { #value });
             return;
         }
 
@@ -430,7 +430,7 @@ fn convert_node(node: &Node, convert_to_dom_node: bool) -> TokenStream2 {
                         {
                             push_attr(
                                 key.to_string(),
-                                quote! { vertigo::dom::attr_value::AttrValue::String(Default::default()) },
+                                quote! { vertigo::AttrValue::String(Default::default()) },
                             )
                         } else if value.block.stmts.len() == 1 {
                             let Some(value) = value.block.stmts.first() else {
@@ -513,15 +513,22 @@ fn convert_node(node: &Node, convert_to_dom_node: bool) -> TokenStream2 {
 
     // Generate code glueing class= values with tw= values
     if !class_values.is_empty() {
-        let mut output = quote! {};
-        for class_value in class_values {
-            output.append_all(quote! { #class_value, });
+        if class_values.len() == 1 {
+            let class_value = &class_values[0];
+            out_attr.push(quote! {
+                .attr("class", #class_value)
+            });
+        } else {
+            let mut output = quote! {};
+            for class_value in class_values {
+                output.append_all(quote! { vertigo::AttrValue::from(#class_value), });
+            }
+            out_attr.push(quote! {
+                .attr("class", vertigo::AttrValue::combine(vec![
+                    #output
+                ]))
+            });
         }
-        out_attr.push(quote! {
-            .attr("class", {
-                [#output].join(" ")
-            })
-        });
     }
 
     if let Some(children) = node.children() {

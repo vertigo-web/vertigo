@@ -21,8 +21,7 @@ async fn basic() {
             public_path: None,
             wasm_opt: Some(true),
             release_mode: Some(true),
-            wasm_run_source_map: true,
-            external_tailwind: false,
+            wasm_run_source_map: false,
         },
     };
 

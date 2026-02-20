@@ -11,6 +11,56 @@ pub enum AttrValue {
     ValueOpt(Value<Option<String>>),
 }
 
+impl AttrValue {
+    pub fn get(&self, ctx: &crate::computed::context::Context) -> Option<Rc<String>> {
+        match self {
+            AttrValue::String(s) => Some(s.clone()),
+            AttrValue::Computed(c) => Some(Rc::new(c.get(ctx))),
+            AttrValue::ComputedOpt(c) => c.get(ctx).map(Rc::new),
+            AttrValue::Value(v) => Some(Rc::new(v.get(ctx))),
+            AttrValue::ValueOpt(v) => v.get(ctx).map(Rc::new),
+        }
+    }
+
+    pub fn combine(classes: Vec<AttrValue>) -> AttrValue {
+        let mut all_static = true;
+        for class in &classes {
+            if !matches!(class, AttrValue::String(_)) {
+                all_static = false;
+                break;
+            }
+        }
+
+        if all_static {
+            let mut result = Vec::new();
+            for class in classes {
+                if let AttrValue::String(s) = class {
+                    let s = s.trim();
+                    if !s.is_empty() {
+                        result.push(s.to_string());
+                    }
+                }
+            }
+            return AttrValue::String(Rc::new(result.join(" ")));
+        }
+
+        let computed = crate::Computed::from(move |ctx| {
+            let mut result = Vec::new();
+            for class in &classes {
+                if let Some(s) = class.get(ctx) {
+                    let s = s.trim();
+                    if !s.is_empty() {
+                        result.push(s.to_string());
+                    }
+                }
+            }
+            result.join(" ")
+        });
+
+        AttrValue::Computed(computed)
+    }
+}
+
 impl<K: ToString> From<K> for AttrValue {
     fn from(value: K) -> Self {
         AttrValue::String(Rc::new(value.to_string()))

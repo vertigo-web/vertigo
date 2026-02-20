@@ -46,7 +46,7 @@ impl Drop for ServerOwner {
     fn drop(&mut self) {
         log::info!("Stopping server...");
         #[allow(clippy::let_underscore_future)]
-        let _ = self.handle.stop(true);
+        let _ = self.handle.stop(false);
     }
 }
 

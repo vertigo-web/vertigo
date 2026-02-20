@@ -23,6 +23,6 @@ fn test_explicit_class_attribute() {
 
     assert_eq!(
         el_str,
-        r#"<div class='flex display-flex' style='color: red' v-css='red_css' />"#
+        r#"<div class='flex' style='color: red' v-css='red_css' />"#
     );
 }
