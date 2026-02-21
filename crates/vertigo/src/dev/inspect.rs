@@ -8,7 +8,6 @@ use crate::{
     driver_module::StaticString,
 };
 
-#[cfg(test)]
 mod logs {
     use std::rc::Rc;
     use vertigo_macro::store;
@@ -67,13 +66,11 @@ mod logs {
 ///
 /// In tests it also locks callback id generator to have persistent output in multi-threaded testing.
 /// Remember to use `log_take` or `from_log` to release the lock or tests will stuck.
-#[cfg(test)]
 pub fn log_start() {
     logs::get_inspect().log_start()
 }
 
 /// Stop gathering logs, return vector of commands and erase the log
-#[cfg(test)]
 pub fn log_take() -> Vec<DriverDomCommand> {
     logs::get_inspect().log_take()
 }
@@ -100,7 +97,6 @@ pub struct DomDebugNode {
 
 impl DomDebugFragment {
     /// Creates debug fragment directly from driver log. Log should be started by [log_start].
-    #[cfg(test)]
     pub fn from_log() -> Self {
         Self::from_cmds(log_take())
     }
