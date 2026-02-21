@@ -60,17 +60,17 @@ pub(crate) fn get_tailwind_binary_path() -> Result<PathBuf, Box<dyn Error>> {
             executable_path.display()
         );
 
-        let mut response = reqwest::blocking::get(&url)?;
-        if !response.status().is_success() {
+        let response = minreq::get(&url).send()?;
+        if response.status_code != 200 {
             return Err(format!(
                 "Failed to download Tailwind CLI: HTTP {}",
-                response.status()
+                response.status_code
             )
             .into());
         }
 
         let mut file = std::fs::File::create(&executable_path)?;
-        std::io::copy(&mut response, &mut file)?;
+        std::io::copy(&mut response.as_bytes(), &mut file)?;
 
         #[cfg(unix)]
         {
