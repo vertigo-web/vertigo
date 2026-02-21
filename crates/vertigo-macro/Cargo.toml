@@ -19,13 +19,13 @@ crc = "3.0"
 darling = "0.23"
 heck = "0.5"
 itertools = "0.14"
+minreq = { version = "2.14", features = ["https-rustls"] }
 pest = "2.5"
 pest_derive = "2.1"
 pkg-version = "1"
 proc-macro-error = "1.0"
 proc-macro2 = "1.0"
 quote = "1.0"
-reqwest = { version = "0.12", features = ["blocking", "rustls-tls"], default-features = false }
 rstml = "0.12"
 syn = { version = "2.0", features = ["full"] }
 
