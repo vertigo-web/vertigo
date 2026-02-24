@@ -24,6 +24,7 @@ pub fn run_cargo_build(
 
     if release {
         command = command.add_param("--release");
+        command = command.add_param("--locked");
     }
 
     command = command

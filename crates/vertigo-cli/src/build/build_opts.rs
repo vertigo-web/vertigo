@@ -30,6 +30,8 @@ pub struct BuildOptsInner {
     ///
     /// This defaults to false (debug profile) for `watch` command
     /// and to true (release profile) for `build` command
+    ///
+    /// Also adds --locked to cargo build command
     #[arg(short, long)]
     pub release_mode: Option<bool>,
     #[arg(long)]
