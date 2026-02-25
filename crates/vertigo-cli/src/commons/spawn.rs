@@ -50,6 +50,7 @@ impl Drop for ServerOwner {
     }
 }
 
+#[cfg(unix)]
 pub async fn term_signal() -> &'static str {
     let Ok(mut sigterm) = signal::unix::signal(signal::unix::SignalKind::terminate()) else {
         log::error!("Can't register signal handler");
@@ -59,5 +60,16 @@ pub async fn term_signal() -> &'static str {
     tokio::select! {
         _ = signal::ctrl_c() => "Ctrl+C",
         _ = sigterm.recv() => "SIGTERM",
+    }
+}
+
+#[cfg(not(unix))]
+pub async fn term_signal() -> &'static str {
+    match signal::ctrl_c().await {
+        Ok(()) => "Ctrl+C",
+        Err(e) => {
+            log::error!("Can't register signal handler: {e}");
+            "Error"
+        }
     }
 }
