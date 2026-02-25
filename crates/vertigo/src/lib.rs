@@ -129,7 +129,6 @@ pub use css::{
 };
 pub use dom::{
     attr_value::{AttrValue, CssAttrValue},
-    callback::{Callback, Callback1},
     dom_comment::DomComment,
     dom_element::DomElement,
     dom_element_ref::DomElementRef,
