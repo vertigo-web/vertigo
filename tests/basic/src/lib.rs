@@ -46,7 +46,7 @@ pub fn app(state: AppState) -> DomNode {
 
     let rows_rendered = mode.render_value(move |mode| match mode {
         Mode::Div => render_list(
-            &rows.to_computed(),
+            &rows,
             |row| row.0.clone(),
             |(key, label)| {
                 dom! {
@@ -55,7 +55,7 @@ pub fn app(state: AppState) -> DomNode {
             },
         ),
         Mode::Div4 => render_list(
-            &rows.to_computed(),
+            &rows,
             |row| row.0.clone(),
             |(key, label)| {
                 dom! {

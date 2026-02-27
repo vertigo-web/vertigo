@@ -10,7 +10,7 @@ pub fn Chat(ws_chat: String) {
     let status_view = render_status(&state);
 
     let list = render_list(
-        &state.messages.to_computed(),
+        &state.messages,
         |item| item.clone(),
         |message| {
             dom! {

@@ -9,4 +9,4 @@ edition = "2024"
 crate-type = ["cdylib", "rlib"]
 
 [dependencies]
-vertigo = "0.10"
+vertigo = "0.11"

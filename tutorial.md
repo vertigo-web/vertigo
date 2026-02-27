@@ -2,7 +2,7 @@
 <!-- markdownlint-disable no-inline-html -->
 
 <!-- markdownlint-disable-next-line no-emphasis-as-heading -->
-*Up to date with version 0.10.1*
+*Up to date with version 0.11*
 
 <!-- markdownlint-disable-next-line heading-increment -->
 ### Table of contents
@@ -289,7 +289,7 @@ For now our component just shows a static list which is not the usual way of ren
 To go dynamic, add state `elements` to the `List` function and use it during rendering:
 
 ```rust
-use vertigo::{component, dom, Value};
+use vertigo::{Value, component, dom, render::render_list};
 
 #[component]
 pub fn List() {
@@ -300,7 +300,8 @@ pub fn List() {
 
     let state = Value::new(items);
 
-    let elements = state.render_list(
+    let elements = render_list(
+        state,
         |item| item.clone(),
         |item| dom! { <li>{item}</li> },
     );
@@ -332,7 +333,8 @@ to the `List` function, then the state can be passed to our component as a prope
 ```rust
 #[component]
 pub fn List(items: Value<Vec<String>>) {
-    let elements = items.render_list(
+    let elements = render_list(
+        items,
         |item| item.clone(),
         |item| dom! { <li>{item}</li> },
     );
@@ -393,7 +395,7 @@ Our component cries out for adding more items. To implement this we need to:
 So the whole `src/list.rs` will look like this:
 
 ```rust
-use vertigo::{bind, component, dom, transaction, Value};
+use vertigo::{Value, bind, component, dom, transaction, render::render_list};
 
 #[component]
 pub fn List(items: Value<Vec<String>>) {
@@ -410,7 +412,8 @@ pub fn List(items: Value<Vec<String>>) {
         new_item.set(new_value);
     });
 
-    let elements = items.render_list(
+    let elements = render_list(
+        items,
         |item| item.clone(),
         |item| dom! { <li>{item}</li> },
     );
@@ -489,7 +492,8 @@ We'll make the list change font color for every other row (`list.rs` file).
         };
     "};
 
-    let elements = items.render_list(
+    let elements = render_list(
+        items,
         |item| item.clone(),
         move |item| dom! {
             <li css={alternate_rows.clone()}>{item}</li>
@@ -536,7 +540,7 @@ And here's the usage in rendering:
 
 ## Further reading
 
-Complete code for this tutorial should be found [here](https://github.com/vertigo-web/vertigo-tutorial/tree/master).
+Complete code for this tutorial should be [found here](https://github.com/vertigo-web/vertigo-tutorial/tree/master).
 
 For any more complex scenarios please refer to [examples](/examples) and [demo](/demo/src/app) package.
 
