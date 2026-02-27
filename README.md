@@ -5,7 +5,7 @@ A reactive Real-DOM library with SSR for Rust
 [![crates.io](https://img.shields.io/crates/v/vertigo)](https://crates.io/crates/vertigo)
 [![Documentation](https://docs.rs/vertigo/badge.svg)](https://docs.rs/vertigo)
 ![MIT or Apache 2.0 licensed](https://img.shields.io/crates/l/vertigo.svg)
-[![Dependency Status](https://deps.rs/crate/vertigo/0.10.1/status.svg)](https://deps.rs/crate/vertigo/0.10.1)
+[![Dependency Status](https://deps.rs/crate/vertigo/0.11.0/status.svg)](https://deps.rs/crate/vertigo/0.11.0)
 [![CI](https://github.com/vertigo-web/vertigo/actions/workflows/pipeline.yaml/badge.svg)](https://github.com/vertigo-web/vertigo/actions/workflows/pipeline.yaml)
 [![downloads](https://img.shields.io/crates/d/vertigo.svg)](https://crates.io/crates/vertigo)
 

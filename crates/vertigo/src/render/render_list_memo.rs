@@ -15,7 +15,7 @@ pub fn render_list_memo<T: crate::render::collection::CollectionKey + 'static>(
     let computed = collection.get();
 
     let result = render_list(
-        &computed,
+        computed,
         |item| item.key.clone(),
         move |item| render(&item.model),
     );
@@ -38,7 +38,7 @@ pub fn render_resource_list_memo<T: crate::render::collection::CollectionKey + '
     let computed = collection.get();
 
     let result = render_list(
-        &computed,
+        computed,
         |item| item.key.clone(),
         move |item| render(&item.model),
     );

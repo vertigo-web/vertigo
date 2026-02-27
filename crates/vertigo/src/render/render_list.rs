@@ -5,7 +5,7 @@ use std::{
 };
 
 use crate::{
-    Computed, DomComment, DomNode, computed::struct_mut::ValueMut, dom::dom_id::DomId,
+    Computed, DomComment, DomNode, ToComputed, computed::struct_mut::ValueMut, dom::dom_id::DomId,
     driver_module::get_driver_dom,
 };
 
@@ -39,14 +39,14 @@ pub fn render_list<
     K: Eq + Hash,
     L: IntoIterator<Item = T> + Clone + PartialEq + 'static,
 >(
-    computed: &Computed<L>,
+    computed: impl ToComputed<L>,
     get_key: impl Fn(&T) -> K + 'static,
     render: impl Fn(&T) -> DomNode + 'static,
 ) -> DomNode {
     let get_key = Rc::new(get_key);
     let render = Rc::new(render);
 
-    let computed = computed.clone();
+    let computed: Computed<L> = computed.to_computed();
 
     DomComment::new_marker("list element", move |parent_id, comment_id| {
         let current_list: Rc<ValueMut<VecDeque<(T, DomNode)>>> =

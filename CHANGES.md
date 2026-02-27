@@ -1,18 +1,22 @@
 <!-- markdownlint-configure-file { "no-duplicate-heading": { "siblings_only": true } } -->
 
 <!-- markdownlint-disable-next-line first-line-h1 -->
-## 0.11.0 - Unreleased
+## 0.11.0 - 2026-02-27
 
 ### Added
 
 * Use `tailwindcss` binary directly (no need for npm)
-* Bearer token as `Computed`
+* Compile-time validation for missing tailwind classes
 * Cloneable `TwClass`
+* Bearer token as `Computed`
+* Fine-grained reactivity when rendering lists
+* vertigo-cli: Support compiling on Windows
 * vertigo-cli: `--locked` parameter for `build` command
 
 ### Changed
 
 * Rust edition 2024
+* Allow for external use of DomFragment log (for writing tests)
 
 ## 0.10.1 - 2026-01-18
 

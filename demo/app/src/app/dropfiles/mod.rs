@@ -16,7 +16,7 @@ impl DropFiles {
         let state = DropFilesState::default();
 
         let list_view = render_list(
-            &state.list.to_computed(),
+            &state.list,
             |item| item.name.clone(),
             |file| {
                 let message = format_line(file);

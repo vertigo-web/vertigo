@@ -7,5 +7,5 @@ edition = "2024"
 
 [dependencies]
 actix-web = "4"
-vertigo = "0.10"
-vertigo-cli = "0.10"
+vertigo = "0.11"
+vertigo-cli = "0.11"
