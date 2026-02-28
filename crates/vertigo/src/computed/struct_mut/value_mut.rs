@@ -25,6 +25,14 @@ impl<T> ValueMut<T> {
     }
 }
 
+impl<T: PartialEq> ValueMut<T> {
+    pub fn new_with_eq(value: T) -> ValueMut<T> {
+        ValueMut {
+            value: InnerValue::new_with_eq(value),
+        }
+    }
+}
+
 impl<T: Default> Default for ValueMut<T> {
     fn default() -> Self {
         Self {
@@ -59,12 +67,11 @@ impl<T: Clone> ValueMut<T> {
 
 impl<T: PartialEq> ValueMut<T> {
     pub fn set_if_changed(&self, value: T) -> bool {
-        let state = self.value.get_mut();
-        if *state != value {
-            *state = value;
-            true
-        } else {
+        if self.value.is_eq(&value) {
             false
+        } else {
+            *self.value.get_mut() = value;
+            true
         }
     }
 }

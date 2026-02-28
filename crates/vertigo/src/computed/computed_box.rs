@@ -144,7 +144,7 @@ impl<T: Clone + PartialEq + 'static> Computed<T> {
     /// Note that the `callback` is fired only if the value *really* changes. This means that even if computation takes place with different source value,
     /// but the resulting value is the same as old one, the `callback` is not fired.
     pub fn subscribe<R: 'static, F: Fn(T) -> R + 'static>(self, callback: F) -> DropResource {
-        let prev_value = ValueMut::new(None);
+        let prev_value = ValueMut::new_with_eq(None);
 
         let resource_box = ValueMut::new(None);
 
