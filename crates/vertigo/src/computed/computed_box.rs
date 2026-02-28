@@ -144,9 +144,18 @@ impl<T: Clone + PartialEq + 'static> Computed<T> {
     /// Note that the `callback` is fired only if the value *really* changes. This means that even if computation takes place with different source value,
     /// but the resulting value is the same as old one, the `callback` is not fired.
     pub fn subscribe<R: 'static, F: Fn(T) -> R + 'static>(self, callback: F) -> DropResource {
-        let prev_value = ValueMut::new(None);
-
         let resource_box = ValueMut::new(None);
+
+        self.subscribe_erased(Box::new(move |value| {
+            let resource = callback(value);
+            resource_box.change(move |inner| {
+                *inner = Some(resource);
+            });
+        }))
+    }
+
+    fn subscribe_erased(self, callback: Box<dyn Fn(T) + 'static>) -> DropResource {
+        let prev_value = ValueMut::new(None);
 
         let graph_value = GraphValue::new(false, move |context| {
             let value = self.get(context);
@@ -154,10 +163,7 @@ impl<T: Clone + PartialEq + 'static> Computed<T> {
             let should_update = prev_value.set_if_changed(Some(value.clone()));
 
             if should_update {
-                let resource = callback(value);
-                resource_box.change(move |inner| {
-                    *inner = Some(resource);
-                });
+                callback(value);
             }
         });
 
