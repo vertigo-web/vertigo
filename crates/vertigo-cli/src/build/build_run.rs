@@ -66,6 +66,7 @@ pub fn run_with_ws(opts: BuildOpts, ws: &Workspace, allow_error: bool) -> Result
         ws,
         allow_error,
         release,
+        &opts.inner.cargo_opts,
     )? {
         Ok(path) => path,
         Err(_) => return Err(ErrorCode::BuildFailed),

@@ -13,18 +13,18 @@ env:
 
 jobs:
 
-  fixed-nightly:
-    name: Fixed Nightly clippy && tests
+  stable:
+    name: Stable clippy && tests
     runs-on: ubuntu-latest
     env:
-      SCCACHE_GHA_CACHE_NAME: "fixed-nightly-2025-08-02"
+      SCCACHE_GHA_CACHE_NAME: "stable"
     steps:
       - name: Checkout
         uses: actions/checkout@v4
       - name: Install toolchain
         uses: actions-rs/toolchain@v1
         with:
-          toolchain: nightly-2025-08-02
+          toolchain: stable
           target: wasm32-unknown-unknown
           components: clippy, rustfmt
           override: true
@@ -41,13 +41,13 @@ jobs:
         with:
           token: ${{ secrets.GITHUB_TOKEN }}
           args: -p vertigo -p vertigo-macro --all-features --tests --target wasm32-unknown-unknown --locked
-          name: Vertigo Clippy Output
+          name: Stable Vertigo Clippy Output
       - name: Demo/Examples Clippy
         uses: actions-rs/clippy-check@v1
         with:
           token: ${{ secrets.GITHUB_TOKEN }}
           args: -p vertigo-demo -p vertigo-example-counter -p vertigo-example-router -p vertigo-example-trafficlights --all-features --tests --target wasm32-unknown-unknown --locked
-          name: Fixed Nightly Demo/Examples Clippy Output
+          name: Stable Demo/Examples Clippy Output
 
       # Unit tests
       - uses: actions-rs/cargo@v1
@@ -106,7 +106,7 @@ jobs:
         with:
           token: ${{ secrets.GITHUB_TOKEN }}
           args: -p vertigo -p vertigo-macro --all-features --tests --target wasm32-unknown-unknown --locked
-          name: Vertigo Clippy Output
+          name: Nightly Vertigo Clippy Output
       - uses: actions-rs/clippy-check@v1
         with:
           token: ${{ secrets.GITHUB_TOKEN }}

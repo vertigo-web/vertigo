@@ -72,7 +72,7 @@ impl GitHubExplorer {
         commit_message.render_value(|message| {
             let text_css = css! {"
                 width: 600px;
-                height: 300px;
+                height: 150px;
                 border: 1px solid black;
                 padding: 5px;
                 margin: 10px;

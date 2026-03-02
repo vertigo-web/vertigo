@@ -19,7 +19,7 @@ fn get_unique_id() -> u64 {
     COUNTER.fetch_add(1, Ordering::Relaxed)
 }
 
-/// A structure similar to [Value] but supports Loading/Error states and automatic refresh
+/// A structure similar to [Value](crate::Value) but supports Loading/Error states and automatic refresh
 /// after defined amount of time.
 ///
 /// ```rust

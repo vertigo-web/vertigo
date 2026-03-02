@@ -147,6 +147,22 @@ pub fn render(state: &app::State) -> DomNode {
                 <meta charset="utf-8"/>
                 <title>{ title_value }</title>
                 <link rel="icon" href={include_static!("styling/favicon.png")} />
+                <style>"
+                    button, input {
+                        padding: 2px 8px;
+                        margin: 2px;
+                        border: 1px solid #333;
+                    }
+                    button {
+                        box-shadow: 0 2px 4px rgba(0, 0, 0, 0.3);
+                    }
+                    input, textarea {
+                        box-shadow: inset 0px 1px 1px rgba(0, 0, 0, 0.2);
+                    }
+                    hr {
+                        margin: 10px 0;
+                    }
+                "</style>
             </head>
             <body>
                 <div on_key_down={on_keydown} css={css_wrapper}>

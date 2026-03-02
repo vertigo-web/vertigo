@@ -1,11 +1,19 @@
 <!-- markdownlint-configure-file { "no-duplicate-heading": { "siblings_only": true } } -->
 
 <!-- markdownlint-disable-next-line first-line-h1 -->
-## 0.11.1 - Unreleased
+## 0.11.1 - 2026-03-03
 
 ### Fixed
 
 * Do not include tailwind output if no `tw` attribute or `tw!` macro is used.
+
+### Changed
+
+* Stabilized `Resource` type (removed nightly `Try` trait) so stable rust can now be used.
+
+### Internals
+
+* Reactored workspace (unified examples and metadata)
 
 ## 0.11.0 - 2026-02-27
 

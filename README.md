@@ -1,20 +1,22 @@
 # Vertigo
 
-A reactive Real-DOM library with SSR for Rust
+A reactive Real-DOM library with SSR for Rust.
 
 [![crates.io](https://img.shields.io/crates/v/vertigo)](https://crates.io/crates/vertigo)
 [![Documentation](https://docs.rs/vertigo/badge.svg)](https://docs.rs/vertigo)
 ![MIT or Apache 2.0 licensed](https://img.shields.io/crates/l/vertigo.svg)
-[![Dependency Status](https://deps.rs/crate/vertigo/0.11.0/status.svg)](https://deps.rs/crate/vertigo/0.11.0)
+[![Dependency Status](https://deps.rs/crate/vertigo/0.11.1/status.svg)](https://deps.rs/crate/vertigo/0.11.1)
 [![CI](https://github.com/vertigo-web/vertigo/actions/workflows/pipeline.yaml/badge.svg)](https://github.com/vertigo-web/vertigo/actions/workflows/pipeline.yaml)
 [![downloads](https://img.shields.io/crates/d/vertigo.svg)](https://crates.io/crates/vertigo)
 
 ## Features
 
-* **Reactive dependencies** - A graph of values and clients (micro-subscriptions) that can automatically compute what to refresh after one value change
+* **Reactive dependencies** - A graph of values and clients (micro-subscriptions) that can automatically compute what to refresh after one value changes
 * **Real DOM** - No intermediate Virtual DOM mechanism is necessary
 * **HTML/CSS macros** - Allows to construct Real DOM nodes using HTML and CSS
-* **Server-side rendering** - Out of the box when using `vertigo-cli`
+* **Tailwind v4** support out of the box
+* **Isomorphic server-side rendering** - The same WASM code is used for both client and server (see: [vertigo-cli](https://https://crates.io/crates/vertigo-cli))
+* **Fullstack** - Can be mounted into actix-web (see: [vertigo-cli](https://https://crates.io/crates/vertigo-cli))
 
 See [Changelog](https://github.com/vertigo-web/vertigo/blob/master/CHANGES.md) for recent features.
 
@@ -27,42 +29,39 @@ For more information go to vertigo home website **[vertigo.znoj.pl](https://vert
 Dependencies:
 
 ```toml
-vertigo = "0.10"
+vertigo = "0.11"
 ```
 
 Example 1:
 
 ```rust
-use vertigo::{dom, DomNode, Value, store, main};
-
-#[store]
-fn state_count() -> Value<u32> {
-    Value::new(0)
-}
+use vertigo::{dom, DomNode, Value, bind, main};
 
 #[main]
 pub fn app() -> DomNode {
+    let count = Value::new(0);
+
+    let increment = bind!(count, |_| {
+        count.change(|value| {
+            *value += 1;
+        });
+    });
+
+    let decrement = bind!(count, |_| {
+        count.change(|value| {
+            *value -= 1;
+        });
+    });
+
     dom! {
         <html>
             <head/>
             <body>
-                <p>"Counter: " { state_count().get() }</p>
-                <button
-                    on_click={|| {
-                        let current = state_count();
-                        current.set(current.get() - 1);
-                    }}
-                >
-                    "-"
-                </button>
-                <button
-                    on_click={|| {
-                        let current = state_count();
-                        current.set(current.get() + 1);
-                    }}
-                >
-                    "+"
-                </button>
+                <div>
+                    <p>"Counter: " { count }</p>
+                    <button on_click={decrement}>"-"</button>
+                    <button on_click={increment}>"+"</button>
+                </div>
             </body>
         </html>
     }
@@ -72,7 +71,7 @@ pub fn app() -> DomNode {
 Example 2:
 
 ```rust
-use vertigo::{css, component, DomNode, Value, dom, main};
+use vertigo::{css, component, DomNode, store, Value, dom, main};
 
 #[component]
 pub fn MyMessage(message: Value<String>) {
@@ -84,10 +83,13 @@ pub fn MyMessage(message: Value<String>) {
     }
 }
 
+#[store]
+fn state_message() -> Value<String> {
+    Value::new("Hello world!".to_string())
+}
+
 #[main]
 fn app() -> DomNode {
-    let message = Value::new("Hello world!".to_string());
-
     let main_div = css! {"
         color: darkblue;
     "};
@@ -97,7 +99,7 @@ fn app() -> DomNode {
             <head/>
             <body>
                 <div css={main_div}>
-                    <MyMessage message={message} />
+                    <MyMessage message={state_message()} />
                 </div>
             </body>
         </html>
@@ -120,10 +122,6 @@ cargo install --force vertigo-cli
 ## Demo App
 
 ### Prepare
-
-Make sure you're using nightly version of rust:
-
-* `rustup default nightly`
 
 Install cargo-make and vertigo-cli:
 

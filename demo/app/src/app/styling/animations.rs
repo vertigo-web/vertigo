@@ -74,6 +74,7 @@ pub fn Animations() {
     let css_bg = css! {"
         border: 1px solid black;
         margin-bottom: 10px;
+        padding: 5px 10px;
     "};
 
     let fragment = dom! {

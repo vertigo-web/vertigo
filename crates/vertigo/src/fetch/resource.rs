@@ -1,4 +1,3 @@
-use core::ops::{ControlFlow, FromResidual, Try};
 use std::rc::Rc;
 
 use crate::{Computed, ToComputed};
@@ -16,30 +15,24 @@ pub enum ResourceError {
     Error(String),
 }
 
-impl<T> Try for Resource<T> {
-    type Output = T;
-    type Residual = ResourceError;
-
-    #[inline]
-    fn from_output(output: Self::Output) -> Self {
-        Resource::Ready(output)
-    }
-
-    #[inline]
-    fn branch(self) -> ControlFlow<ResourceError, Self::Output> {
-        match self {
-            Self::Loading => ControlFlow::Break(ResourceError::Loading),
-            Self::Error(message) => ControlFlow::Break(ResourceError::Error(message)),
-            Self::Ready(value) => ControlFlow::Continue(value),
+impl<T> From<ResourceError> for Resource<T> {
+    fn from(residual: ResourceError) -> Resource<T> {
+        match residual {
+            ResourceError::Error(message) => Resource::Error(message),
+            ResourceError::Loading => Resource::Loading,
         }
     }
 }
 
-impl<T> FromResidual<ResourceError> for Resource<T> {
-    fn from_residual(residual: ResourceError) -> Resource<T> {
-        match residual {
-            ResourceError::Error(message) => Resource::Error(message),
-            ResourceError::Loading => Resource::Loading,
+impl<T> Resource<T> {
+    /// Convert into a `Result` so that `?` can be used inside functions
+    /// returning another `Resource`. Use `resource.into_result()?` instead
+    /// of the previously-required nightly `Try` impl.
+    pub fn into_result(self) -> Result<T, ResourceError> {
+        match self {
+            Resource::Ready(value) => Ok(value),
+            Resource::Loading => Err(ResourceError::Loading),
+            Resource::Error(message) => Err(ResourceError::Error(message)),
         }
     }
 }
