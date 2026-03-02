@@ -28,7 +28,7 @@ Packaging steps performed during _build_ command:
 cargo install --force vertigo-cli
 ```
 
-## Example usage
+## Example usage (pure frontend)
 
 ### Generate new project
 
@@ -52,12 +52,28 @@ vertigo serve --host 0.0.0.0 --port 8000
 ### Watch project
 
 ```sh
-vertigo watch --disable-wasm-opt
+vertigo watch
 ```
 
 [^hashes]: Except hashes for included static files - these are computed by vertigo-macro library
 
-### Error codes returned from `vertigo-cli` commands
+## Mounting in actix (fullstack)
+
+Vertigo-cli provides a simple way to mount vertigo app in actix-web.
+To see an example generate a fullstack project:
+
+```sh
+vertigo new --template fullstack my_blog
+```
+
+And run the backend (builds frontend automatically as a dependency):
+
+```sh
+cd my_blog
+cargo make run-be
+```
+
+## Error codes returned from `vertigo-cli` commands
 
 `1` Cant Open Workspace
 
@@ -79,15 +95,15 @@ vertigo watch --disable-wasm-opt
 
 `10` Cant Read Wasm Run From Statics
 
-`11` Cant Read Wasm Run Sourcemap From Statics
+`11` Cant Read Static File
 
-`12` Cant Write To File
+`12` Cant Write Or Remove File
 
 `13` Cant Spawn Child Process
 
-`14` Couldnt Wait For Child Process
+`14` Couldn't Wait For Child Process
 
-`15` Watch Serve Failed
+`15` *...removed...*
 
 `16` Watch Pipe Broken
 
@@ -111,4 +127,4 @@ vertigo watch --disable-wasm-opt
 
 `26` Serve Wasm Compile Failed
 
-`27` Serve Path To Url Translation Failed
+`27` Serve Wasm Instance Failed

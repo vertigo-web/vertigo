@@ -15,6 +15,7 @@ pub fn run_cargo_build(
     ws: &Workspace,
     allow_error: bool,
     release: bool,
+    cargo_opts: &[String],
 ) -> Result<Result<PathBuf, String>, ErrorCode> {
     log::info!("Building {package_name}");
 
@@ -39,6 +40,10 @@ pub fn run_cargo_build(
         .env("VERTIGO_PUBLIC_PATH", vertigo_public_path)
         // Tell macros that we're bundling so it will produce artifacts
         .env("VERTIGO_BUNDLE", "true");
+
+    for opt in cargo_opts {
+        command = command.add_param(opt);
+    }
 
     if allow_error {
         command = command.allow_error();

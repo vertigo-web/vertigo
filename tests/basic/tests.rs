@@ -22,6 +22,7 @@ async fn basic() {
             wasm_opt: Some(true),
             release_mode: Some(true),
             wasm_run_source_map: false,
+            cargo_opts: vec![],
         },
     };
 

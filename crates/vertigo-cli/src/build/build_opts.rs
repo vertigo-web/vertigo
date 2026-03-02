@@ -36,6 +36,9 @@ pub struct BuildOptsInner {
     pub release_mode: Option<bool>,
     #[arg(long)]
     pub wasm_run_source_map: bool,
+
+    #[arg(last = true)]
+    pub cargo_opts: Vec<String>,
 }
 
 impl BuildOpts {

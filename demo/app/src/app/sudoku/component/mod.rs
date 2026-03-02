@@ -9,6 +9,7 @@ pub mod render_cell_value;
 pub fn Sudoku(state: SudokuState) {
     let wrapper_css = css! {"
         display: flex;
+        margin: 10px;
     "};
 
     dom! {

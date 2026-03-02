@@ -1,24 +1,21 @@
 [package]
 name = "vertigo"
-version = "0.11.0"
-authors = [
-    "Grzegorz Szeliga <szeligagrzegorz@gmail.com>",
-    "Michał Pokrywka <wolfmoon@o2.pl>",
-]
 description = "Reactive Real-DOM library with SSR for Rust"
-readme = "README.md"
-keywords = ["wasm", "web", "isomorphic", "reactive", "javascript"]
-homepage = "https://github.com/vertigo-web/"
-repository = "https://github.com/vertigo-web/vertigo"
 documentation = "https://docs.rs/vertigo/"
 categories = ["asynchronous", "gui", "wasm", "web-programming"]
-license = "MIT OR Apache-2.0"
-edition = "2024"
+repository.workspace = true
+version.workspace = true
+authors.workspace = true
+readme.workspace = true
+keywords.workspace = true
+homepage.workspace = true
+license.workspace = true
+edition.workspace = true
 
 [dependencies]
 base64 = { version = "0.22", default-features = false, features = ["alloc"] }
 log = { version = "0.4", features = ["std"] }
-vertigo-macro = { path = "../../crates/vertigo-macro", version = "0.11.0" }
+vertigo-macro = { workspace = true }
 
 [dependencies.chrono]
 version = ">=0.4.20"

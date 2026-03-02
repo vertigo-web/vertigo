@@ -1,5 +1,3 @@
-#![feature(proc_macro_span)]
-
 #[macro_use]
 extern crate pest_derive;
 #[macro_use]

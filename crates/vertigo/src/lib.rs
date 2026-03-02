@@ -1,103 +1,25 @@
-//! Vertigo is a library for building reactive web components.
+#![doc = include_str!("../README.md")]
+
 //!
-//! It mainly consists of four parts:
+//! # Short-links to most commonly used things
 //!
-//! * **Reactive dependencies** - A graph of values and clients (micro-subscriptions)
-//!   that can automatically compute what to refresh after one or more value change(s)
-//! * **Real DOM** - No intermediate Virtual DOM mechanism is necessary
-//! * **HTML/CSS macros** - Allows to construct Real DOM nodes using HTML and CSS
-//! * **Server-side rendering** - Out of the box when using `vertigo-cli`
-//!
-//! ## Example 1
-//!
-//! ```rust
-//! use vertigo::{dom, DomNode, Value, bind, main};
-//!
-//! #[main]
-//! pub fn app() -> DomNode {
-//!     let count = Value::new(0);
-//!
-//!     let increment = bind!(count, |_| {
-//!         count.change(|value| {
-//!             *value += 1;
-//!         });
-//!     });
-//!
-//!     let decrement = bind!(count, |_| {
-//!         count.change(|value| {
-//!             *value -= 1;
-//!         });
-//!     });
-//!
-//!     dom! {
-//!         <html>
-//!             <head/>
-//!             <body>
-//!                 <div>
-//!                     <p>"Counter: " { count }</p>
-//!                     <button on_click={decrement}>"-"</button>
-//!                     <button on_click={increment}>"+"</button>
-//!                 </div>
-//!             </body>
-//!         </html>
-//!     }
-//! }
-//! ```
-//!
-//! ## Example 2
-//!
-//! ```rust
-//! use vertigo::{css, component, DomNode, Value, dom, main};
-//!
-//! #[component]
-//! pub fn MyMessage(message: Value<String>) {
-//!     dom! {
-//!         <p>
-//!             "Message to the world: "
-//!             { message }
-//!         </p>
-//!     }
-//! }
-//!
-//! #[main]
-//! fn app() -> DomNode {
-//!     let message = Value::new("Hello world!".to_string());
-//!
-//!     let main_div = css! {"
-//!         color: darkblue;
-//!     "};
-//!
-//!     dom! {
-//!         <html>
-//!             <head/>
-//!             <body>
-//!                 <div css={main_div}>
-//!                     <MyMessage message={message} />
-//!                 </div>
-//!             </body>
-//!         </html>
-//!     }
-//! }
-//! ```
-//!
-//! To get started you may consider looking at the
-//! [Tutorial](https://github.com/vertigo-web/vertigo/blob/master/tutorial.md).
-//!
-//! Short-links to most commonly used things:
-//!
-//! * [dom!] - Builds [DomNode] using RSX/rstml (HTML-like) syntax
-//! * [css!] - Builds [Css] using CSS-like syntax
-//! * [component] - Wraps function to be used as component in RSX
-//! * [main] - Wraps function to be vertigo entry-point
-//! * [get_driver] - Access to browser facilities
-//! * [bind!] - Auto-clones variables before use
-//! * [Value] - Read-write reactive value
-//! * [Computed] - Read-only (computed) reactive value
-//! * [router::Router] - Hash or history routing
-//! * [store] - Wraps function to be used as a store generator
+//! * DOM creation
+//!   * [main] - Wraps function to be vertigo entry-point
+//!   * [dom!] - Builds [DomNode] using RSX/rstml (HTML-like) syntax
+//!   * [css!] - Builds [Css] using CSS-like syntax
+//!   * [tw!] - Wraps tailwind class names
+//!   * [component] - Wraps function to be used as component in RSX
+//! * Data storing
+//!   * [Value] - Read-write reactive value
+//!   * [Computed] - Read-only (computed) reactive value
+//!   * [LazyCache] - Lazy cache for fetched resources
+//!   * [store] - Wraps function to be used as a store (singleton) generator
+//! * Others
+//!   * [bind!] - Auto-clones variables before use
+//!   * [get_driver] - Access to browser facilities
+//!   * [router::Router] - Hash or history routing
 
 #![deny(rust_2018_idioms)]
-#![feature(try_trait_v2)] // https://github.com/rust-lang/rust/issues/84277
 #![cfg_attr(test, allow(clippy::panic_in_result_fn))]
 
 mod computed;

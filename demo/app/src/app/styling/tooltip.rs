@@ -8,14 +8,13 @@ pub fn TooltipDemo() {
         background-color: black;
         color: #fff;
         text-align: center;
-        padding: 5px 0;
+        padding: 5px 5px;
         border-radius: 6px;
 
-        /* Position the tooltip text - see examples below! */
+        /* Position the tooltip text */
         position: absolute;
-        z-index: 1;
         top: -5px;
-        left: 105%;
+        left: 10c5%;
     "};
 
     let label_css = css! {"

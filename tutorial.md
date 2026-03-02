@@ -2,7 +2,7 @@
 <!-- markdownlint-disable no-inline-html -->
 
 <!-- markdownlint-disable-next-line no-emphasis-as-heading -->
-*Up to date with version 0.11*
+*Up to date with version 0.11.1*
 
 <!-- markdownlint-disable-next-line heading-increment -->
 ### Table of contents
@@ -23,12 +23,6 @@
 12. [Parametrized styles](#12-Parametrized-styles)
 
 ## 1. Prepare your system
-
-### rust nightly
-
-Vertigo uses trait aliases[^traitaliases] so until it stabilizes we need rust nightly to use vertigo. The easiest way to install rust nightly is to use [rustup](https://rustup.rs/). To install nightly toolchain and switch to it, run:
-
-- `rustup default nightly`
 
 ### wasm-opt
 
@@ -543,8 +537,6 @@ And here's the usage in rendering:
 Complete code for this tutorial should be [found here](https://github.com/vertigo-web/vertigo-tutorial/tree/master).
 
 For any more complex scenarios please refer to [examples](/examples) and [demo](/demo/src/app) package.
-
-[^traitaliases]: <https://github.com/rust-lang/rust/issues/41517>
 
 [^simplification]: This is a shameful simplification but enough for a tutorial - the correct description will be able to be found in future, more robust documentation.
 

@@ -42,6 +42,7 @@ impl DropFiles {
         let css_drop = css! {"
             height: 400px;
             background-color: green;
+            margin: 2px;
         "};
 
         dom! {
