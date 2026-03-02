@@ -172,9 +172,11 @@ extern crate self as vertigo;
 /// This will place the file along with the rest of generated files. The macro returns a public path to the file with it's hash in name.
 pub use vertigo_macro::include_static;
 
-/// Allows to trace additional tailwind class names.
+/// Allows to trace tailwind class names.
 ///
 /// To use tailwind class name outside of literal tw attribute value, wrap it with `tw!` macro, so it gets traced by tailwind bundler.
+///
+/// Note that use of tailwind automatically adds tailwind base css sheet which zeroes various default rules.
 ///
 /// ```rust
 /// use vertigo::{dom, tw};

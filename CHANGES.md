@@ -1,6 +1,12 @@
 <!-- markdownlint-configure-file { "no-duplicate-heading": { "siblings_only": true } } -->
 
 <!-- markdownlint-disable-next-line first-line-h1 -->
+## 0.11.1 - Unreleased
+
+### Fixed
+
+* Do not include tailwind output if no `tw` attribute or `tw!` macro is used.
+
 ## 0.11.0 - 2026-02-27
 
 ### Added
