@@ -14,6 +14,13 @@ pub(crate) fn get_tailwind_classes_file_path() -> Result<PathBuf, Box<dyn Error>
     Ok(get_tailwind_classes_dir()?.join("classes.html"))
 }
 
+pub(crate) fn get_tailwind_classes_file_exists() -> bool {
+    let Ok(path) = get_tailwind_classes_file_path() else {
+        return false;
+    };
+    std::fs::exists(&path).unwrap_or_default()
+}
+
 pub(crate) fn get_tailwind_binary_path() -> Result<PathBuf, Box<dyn Error>> {
     let os = std::env::consts::OS;
     let arch = std::env::consts::ARCH;

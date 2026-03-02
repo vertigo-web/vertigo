@@ -7,12 +7,14 @@ use std::fs::read_to_string;
 use std::io::Write;
 use std::{path::PathBuf, process::Command};
 
-use crate::trace_tailwind::paths::{get_tailwind_binary_path, get_tailwind_classes_dir};
+use crate::trace_tailwind::paths::{
+    get_tailwind_binary_path, get_tailwind_classes_dir, get_tailwind_classes_file_exists,
+};
 use crate::trace_tailwind::validate::validate_tailwind_classes;
 
 /// Bundle tailwind and return injector
 pub(crate) fn bundle_tailwind() -> TokenStream2 {
-    if std::env::var("VERTIGO_BUNDLE").is_ok() {
+    if std::env::var("VERTIGO_BUNDLE").is_ok() && get_tailwind_classes_file_exists() {
         let bundle = match run_external_tailwind() {
             Ok(output) => output,
             Err(err) => {

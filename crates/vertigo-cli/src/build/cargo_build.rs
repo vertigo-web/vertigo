@@ -1,4 +1,4 @@
-use std::path::PathBuf;
+use std::{fs, path::PathBuf};
 
 use crate::{
     build::find_target::profile_name,
@@ -19,6 +19,10 @@ pub fn run_cargo_build(
     log::info!("Building {package_name}");
 
     let profile = profile_name(release);
+
+    let target_dir = ws.get_target_dir().join(TARGET).join(profile);
+
+    let _ = fs::remove_dir_all(target_dir.join("tailwind"));
 
     let mut command = CommandRun::new("cargo").add_param("build");
 
