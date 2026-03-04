@@ -1,4 +1,4 @@
-FROM rustlang/rust:slim AS build
+FROM rust:slim AS build
 
 RUN apt-get update && apt-get install -y cmake pkg-config libssl-dev
 
@@ -6,7 +6,7 @@ COPY . /vertigo-src
 
 WORKDIR /vertigo-src
 
-RUN RUSTFLAGS="-C lto=fat -C embed-bitcode=yes -Zdylib-lto" cargo build --release -p vertigo-cli
+RUN RUSTFLAGS="-C lto=fat -C embed-bitcode=yes" cargo build --release -p vertigo-cli
 
 FROM debian:stable-slim
 
