@@ -15,8 +15,8 @@ A reactive Real-DOM library with SSR for Rust.
 * **Real DOM** - No intermediate Virtual DOM mechanism is necessary
 * **HTML/CSS macros** - Allows to construct Real DOM nodes using HTML and CSS
 * **Tailwind v4** support out of the box
-* **Isomorphic server-side rendering** - The same WASM code is used for both client and server (see: [vertigo-cli](https://https://crates.io/crates/vertigo-cli))
-* **Fullstack** - Can be mounted into actix-web (see: [vertigo-cli](https://https://crates.io/crates/vertigo-cli))
+* **Isomorphic server-side rendering** - The same WASM code is used for both client and server (see: [vertigo-cli](https://crates.io/crates/vertigo-cli))
+* **Fullstack** - Can be mounted into actix-web (see: [vertigo-cli](https://crates.io/crates/vertigo-cli))
 
 See [Changelog](https://github.com/vertigo-web/vertigo/blob/master/CHANGES.md) for recent features.
 
