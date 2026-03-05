@@ -11,8 +11,8 @@ struct ValidatorError {
 impl ValidatorError {
     pub fn from_message(message: String) -> ValidatorError {
         ValidatorError {
+            errors: Vec::new(), //vec![(vec![getter_name], message.clone())],
             message: Some(message),
-            errors: Vec::new(),
         }
     }
 }
@@ -32,7 +32,10 @@ impl ErrorBuilder {
 
     pub fn add<T>(mut self, getter_name: String, result: Result<T, ValidatorError>) -> Self {
         if let Err(err) = result {
-            self.errors.extend(err.errors);
+            for (mut path, message) in err.errors {
+                path.insert(0, getter_name.clone());
+                self.errors.push((path, message));
+            }
 
             if let Some(message) = err.message {
                 self.errors.push((vec![getter_name], message));
@@ -108,6 +111,7 @@ impl FormNode<FormDate1> for FormDate {
             if let (Ok(day), Ok(mounth), Ok(year)) = (day.clone(), mounth.clone(), year.clone()) {
                 if mounth == 2 && day > 29 {
                     return Err(ValidatorError::from_message(
+                        // getter_name.clone(),
                         "Luty nie moze mieć więcej niz 29 dni".into(),
                     ));
                 }
@@ -248,5 +252,73 @@ pub fn FormExample() {
                 "Current email: " { email }
             </div>
         </div>
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn test_simple_date_errors() {
+        let err_day = ValidatorError::from_message("invalid day".into());
+        let err_month = ValidatorError::from_message("invalid month".into());
+
+        // Simulate FormDate failing
+        let date_errors = ErrorBuilder::new()
+            .add("day".into(), Err::<(), _>(err_day))
+            .add("month".into(), Err::<(), _>(err_month))
+            .export();
+
+        assert_eq!(date_errors.errors.len(), 2);
+        assert_eq!(
+            date_errors.errors[0],
+            (vec!["day".to_string()], "invalid day".to_string())
+        );
+        assert_eq!(
+            date_errors.errors[1],
+            (vec!["month".to_string()], "invalid month".to_string())
+        );
+    }
+
+    #[test]
+    fn test_error_propagation() {
+        let err_day = ValidatorError::from_message("invalid day".into());
+        let err_month = ValidatorError::from_message("invalid month".into());
+
+        // Simulate FormDate failing
+        let date_errors = ErrorBuilder::new()
+            .add("day".into(), Err::<(), _>(err_day))
+            .add("month".into(), Err::<(), _>(err_month))
+            .export();
+
+        // Simulate FormModel failing because of birth (FormDate)
+        let model_errors = ErrorBuilder::new()
+            .add("birth".into(), Err::<(), _>(date_errors))
+            .export();
+
+        for (path, msg) in &model_errors.errors {
+            println!("Path: {:?}, Msg: {}", path, msg);
+        }
+
+        // We expect:
+        // ["birth", "day"] from err_day (nested in date_errors)
+        // ["birth", "month"] from err_month (nested in date_errors)
+
+        assert_eq!(model_errors.errors.len(), 2);
+        assert_eq!(
+            model_errors.errors[0],
+            (
+                vec!["birth".to_string(), "day".to_string()],
+                "invalid day".to_string()
+            )
+        );
+        assert_eq!(
+            model_errors.errors[1],
+            (
+                vec!["birth".to_string(), "month".to_string()],
+                "invalid month".to_string()
+            )
+        );
     }
 }
