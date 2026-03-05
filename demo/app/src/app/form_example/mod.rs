@@ -8,6 +8,15 @@ struct ValidatorError {
     errors: Vec<ErrorLine>,
 }
 
+impl ValidatorError {
+    pub fn from_message(message: String) -> ValidatorError {
+        ValidatorError {
+            message: Some(message),
+            errors: Vec::new(),
+        }
+    }
+}
+
 trait FormNode<T: Clone + PartialEq + 'static> {
     fn result(&self, getter_name: impl Into<String>) -> Computed<Result<T, ValidatorError>>;
 }
@@ -21,10 +30,20 @@ impl ErrorBuilder {
         ErrorBuilder { errors: Vec::new() }
     }
 
-    pub fn add<T>(mut self, result: Result<T, ValidatorError>) -> Self {
+    pub fn add<T>(mut self, getter_name: String, result: Result<T, ValidatorError>) -> Self {
         if let Err(err) = result {
             self.errors.extend(err.errors);
+
+            if let Some(message) = err.message {
+                self.errors.push((vec![getter_name], message));
+            }
         }
+
+        self
+    }
+
+    pub fn set_error(mut self, getter_name: String, message: String) -> Self {
+        self.errors.push((vec![getter_name], message));
         self
     }
 
@@ -76,9 +95,10 @@ struct FormDate1 {
 impl FormNode<FormDate1> for FormDate {
     fn result(
         &self,
-        _getter_name: impl Into<String>,
+        getter_name: impl Into<String>,
     ) -> Computed<Result<FormDate1, ValidatorError>> {
         let ggg = self.clone();
+        let getter_name = getter_name.into();
 
         Computed::from(move |context| {
             let day = ggg.day.result("day").get(context);
@@ -86,10 +106,20 @@ impl FormNode<FormDate1> for FormDate {
             let year = ggg.year.result("year").get(context);
 
             if let (Ok(day), Ok(mounth), Ok(year)) = (day.clone(), mounth.clone(), year.clone()) {
+                if mounth == 2 && day > 29 {
+                    return Err(ValidatorError::from_message(
+                        "Luty nie moze mieć więcej niz 29 dni".into(),
+                    ));
+                }
+
                 return Ok(FormDate1 { day, mounth, year });
             }
 
-            let errors = ErrorBuilder::new().add(day).add(mounth).add(year).export();
+            let errors = ErrorBuilder::new()
+                .add(getter_name.clone(), day)
+                .add(getter_name.clone(), mounth)
+                .add(getter_name.clone(), year)
+                .export();
             Err(errors)
         })
     }
