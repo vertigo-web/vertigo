@@ -66,4 +66,8 @@ impl<K: Eq + Hash + Clone, V: Clone> AutoMap<K, V> {
 
         new_item
     }
+
+    pub fn for_each<F: FnMut(&K, &V)>(&self, callback: F) {
+        self.values.for_each(callback);
+    }
 }
