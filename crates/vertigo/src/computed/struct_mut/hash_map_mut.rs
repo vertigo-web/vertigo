@@ -64,6 +64,13 @@ impl<K: Eq + Hash, V> HashMapMut<K, V> {
         state.retain(f)
     }
 
+    pub fn for_each<F: FnMut(&K, &V)>(&self, mut callback: F) {
+        let state = self.data.get();
+        for (key, value) in state.iter() {
+            callback(key, value);
+        }
+    }
+
     pub fn filter_and_map<R>(&self, map: fn(&V) -> Option<R>) -> Vec<R> {
         let state = self.data.get();
         let mut list = Vec::new();
