@@ -3,7 +3,7 @@ use std::{
     ops::{Add, AddAssign},
 };
 
-use crate::AttrValue;
+use crate::{AttrValue, Computed};
 
 /// This represents a tailwind class. Use [tw!](crate::tw!) macro to create one.
 #[derive(Clone, PartialEq, Eq)]
@@ -60,5 +60,57 @@ impl Add for TwClass {
 impl AddAssign for TwClass {
     fn add_assign(&mut self, other: Self) {
         *self = self.join(&other);
+    }
+}
+
+impl Add<TwClass> for Computed<TwClass> {
+    type Output = Computed<TwClass>;
+
+    fn add(self, rhs: TwClass) -> Self::Output {
+        self.map(move |left| left.join(&rhs))
+    }
+}
+
+impl Add<Computed<TwClass>> for Computed<TwClass> {
+    type Output = Computed<TwClass>;
+
+    fn add(self, rhs: Computed<TwClass>) -> Self::Output {
+        Computed::from({
+            let left = self.clone();
+            let right = rhs.clone();
+            move |ctx| left.get(ctx) + right.get(ctx)
+        })
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::TwClass;
+    use crate::{Computed, Value, transaction};
+
+    #[test]
+    fn computed_twclass_add_twclass() {
+        let value = Value::new(TwClass::from("a"));
+        let comp: Computed<TwClass> = value.to_computed();
+        let result = comp + TwClass::from("b");
+
+        transaction(|ctx| {
+            assert_eq!(result.get(ctx).to_class_value(), "a b");
+        });
+    }
+
+    #[test]
+    fn computed_twclass_add_computed_twclass() {
+        let value1 = Value::new(TwClass::from("a"));
+        let value2 = Value::new(TwClass::from("b"));
+
+        let comp1: Computed<TwClass> = value1.to_computed();
+        let comp2: Computed<TwClass> = value2.to_computed();
+
+        let result = comp1 + comp2;
+
+        transaction(|ctx| {
+            assert_eq!(result.get(ctx).to_class_value(), "a b");
+        });
     }
 }

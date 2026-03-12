@@ -1,5 +1,7 @@
 use std::ops::{Add, AddAssign};
 
+use crate::Computed;
+
 /// Css chunk, represented either as static or dynamic string.
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub enum CssGroup {
@@ -122,5 +124,85 @@ impl AddAssign<&Self> for Css {
 impl AddAssign<&Css> for &mut Css {
     fn add_assign(&mut self, other: &Css) {
         self.extend_inplace(other.clone());
+    }
+}
+
+impl Add<Css> for Computed<Css> {
+    type Output = Computed<Css>;
+
+    fn add(self, rhs: Css) -> Self::Output {
+        self.map(move |left| left.extend(rhs.clone()))
+    }
+}
+
+impl Add<Computed<Css>> for Computed<Css> {
+    type Output = Computed<Css>;
+
+    fn add(self, rhs: Computed<Css>) -> Self::Output {
+        Computed::from({
+            let left = self.clone();
+            let right = rhs.clone();
+            move |ctx| left.get(ctx) + right.get(ctx)
+        })
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::{Css, CssGroup};
+    use crate::{Computed, Value, transaction};
+
+    #[test]
+    fn computed_css_add_css() {
+        let base = Css::str("color: red;");
+        let extra = Css::str("background: blue;");
+
+        let value = Value::new(base.clone());
+        let comp: Computed<Css> = value.to_computed();
+        let result = comp + extra.clone();
+
+        transaction(|ctx| {
+            let css = result.get(ctx);
+            assert_eq!(
+                css.groups,
+                vec![
+                    CssGroup::CssStatic {
+                        value: "color: red;"
+                    },
+                    CssGroup::CssStatic {
+                        value: "background: blue;"
+                    }
+                ]
+            );
+        });
+    }
+
+    #[test]
+    fn computed_css_add_computed_css() {
+        let base = Css::str("color: red;");
+        let extra = Css::str("background: blue;");
+
+        let value1 = Value::new(base.clone());
+        let value2 = Value::new(extra.clone());
+
+        let comp1: Computed<Css> = value1.to_computed();
+        let comp2: Computed<Css> = value2.to_computed();
+
+        let result = comp1 + comp2;
+
+        transaction(|ctx| {
+            let css = result.get(ctx);
+            assert_eq!(
+                css.groups,
+                vec![
+                    CssGroup::CssStatic {
+                        value: "color: red;"
+                    },
+                    CssGroup::CssStatic {
+                        value: "background: blue;"
+                    }
+                ]
+            );
+        });
     }
 }
