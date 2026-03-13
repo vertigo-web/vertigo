@@ -9,7 +9,7 @@ use super::{
 };
 
 fn css_menu_item(active: bool) -> Css {
-    let bg_color = if active { "lightblue" } else { "lightgreen" };
+    let bg_color = if active { "var(--menu-active)" } else { "var(--menu-inactive)" };
     css! {"
         display: inline-block;
         padding: 5px 10px;
