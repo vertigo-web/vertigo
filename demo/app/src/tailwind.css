@@ -1,0 +1,11 @@
+@import "tailwindcss";
+@source "./**/*.rs";
+
+:root {
+  --theme-primary: #3b82f6;
+  --theme-secondary: #22c55e;
+  --theme-accent: #f97316;
+  --theme-background: #111827;
+  --menu-active: lightblue;
+  --menu-inactive: lightgreen;
+}

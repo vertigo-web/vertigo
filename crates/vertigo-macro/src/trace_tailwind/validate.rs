@@ -1,5 +1,7 @@
 use crate::trace_tailwind::paths::get_tailwind_classes_file_path;
 use proc_macro_error::emit_error;
+use regex::Regex;
+use std::collections::BTreeSet;
 use std::error::Error;
 
 pub(crate) fn validate_tailwind_classes(bundle: &str) -> Result<(), Box<dyn Error>> {
@@ -9,9 +11,22 @@ pub(crate) fn validate_tailwind_classes(bundle: &str) -> Result<(), Box<dyn Erro
         return Ok(()); // If the file does not exist, there are no classes to validate
     }
 
-    let classes_content = std::fs::read_to_string(&classes_path)?;
+    let defined_vars = extract_defined_variables(bundle);
+    let used_classes = get_all_used_classes(&classes_path)?;
 
-    let mut missing = std::collections::BTreeSet::new();
+    let (missing_classes, missing_vars) =
+        find_missing_elements(bundle, &defined_vars, used_classes);
+
+    emit_validation_errors(missing_classes, missing_vars);
+
+    Ok(())
+}
+
+fn get_all_used_classes(
+    classes_path: &std::path::Path,
+) -> Result<BTreeSet<String>, Box<dyn Error>> {
+    let classes_content = std::fs::read_to_string(classes_path)?;
+    let mut used_classes = BTreeSet::new();
 
     for line in classes_content.lines() {
         let line = line.trim();
@@ -20,18 +35,43 @@ pub(crate) fn validate_tailwind_classes(bundle: &str) -> Result<(), Box<dyn Erro
         }
         for class in line.split_whitespace() {
             let class = class.trim();
-            if class.is_empty() {
-                continue;
-            }
-            if !contains_class(bundle, class) {
-                missing.insert(class.to_string());
+            if !class.is_empty() {
+                used_classes.insert(class.to_string());
             }
         }
     }
 
-    if !missing.is_empty() {
-        let missing_list: Vec<&str> = missing.iter().map(|s| s.as_str()).collect();
-        // Warn the developer that these classes were used but not resolved by Tailwind
+    Ok(used_classes)
+}
+
+fn find_missing_elements(
+    bundle: &str,
+    defined_vars: &BTreeSet<String>,
+    used_classes: BTreeSet<String>,
+) -> (BTreeSet<String>, BTreeSet<String>) {
+    let mut missing_classes = BTreeSet::new();
+    let mut missing_vars = BTreeSet::new();
+
+    for class in used_classes {
+        // Validate class existence - only if it's not a raw var usage
+        if !class.starts_with("var(") && !contains_class(bundle, &class) {
+            missing_classes.insert(class.to_string());
+        }
+
+        // Validate CSS variables
+        for var in extract_used_variables(&class) {
+            if !defined_vars.contains(&var) {
+                missing_vars.insert(var);
+            }
+        }
+    }
+
+    (missing_classes, missing_vars)
+}
+
+fn emit_validation_errors(missing_classes: BTreeSet<String>, missing_vars: BTreeSet<String>) {
+    if !missing_classes.is_empty() {
+        let missing_list: Vec<&str> = missing_classes.iter().map(|s| s.as_str()).collect();
         emit_error!(
             proc_macro::Span::call_site(),
             "The following Tailwind classes were used but not found in the generated CSS: {}",
@@ -39,7 +79,34 @@ pub(crate) fn validate_tailwind_classes(bundle: &str) -> Result<(), Box<dyn Erro
         );
     }
 
-    Ok(())
+    if !missing_vars.is_empty() {
+        let missing_list: Vec<&str> = missing_vars.iter().map(|s| s.as_str()).collect();
+        emit_error!(
+            proc_macro::Span::call_site(),
+            "The following CSS variables were used but are not defined in the CSS bundle: {}",
+            missing_list.join(", ")
+        );
+    }
+}
+
+fn extract_defined_variables(bundle: &str) -> BTreeSet<String> {
+    let mut vars = BTreeSet::new();
+    // Matches --var-name:
+    let re = Regex::new(r"(?m)^\s+(--[a-zA-Z0-9_-]+):").unwrap();
+    for cap in re.captures_iter(bundle) {
+        vars.insert(cap[1].to_string());
+    }
+    vars
+}
+
+pub(crate) fn extract_used_variables(class: &str) -> Vec<String> {
+    let mut vars = Vec::new();
+    // Matches var(--var-name)
+    let re = Regex::new(r"var\((--[a-zA-Z0-9_-]+)\)").unwrap();
+    for cap in re.captures_iter(class) {
+        vars.push(cap[1].to_string());
+    }
+    vars
 }
 
 fn escape_css_name(name: &str) -> String {
@@ -78,4 +145,53 @@ fn contains_class(bundle: &str, class: &str) -> bool {
 
     // Also check for attribute selectors logic or complex variants if needed, but above covers 99%
     false
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn test_extract_defined_variables() {
+        let bundle = r#"
+            :root {
+                --token-text-text_dark: #333;
+                --bg-primary: #fff;
+            }
+            .some-class {
+                color: var(--token-text-text_dark);
+            }
+        "#;
+        let vars = extract_defined_variables(bundle);
+        assert!(vars.contains("--token-text-text_dark"));
+        assert!(vars.contains("--bg-primary"));
+        assert_eq!(vars.len(), 2);
+    }
+
+    #[test]
+    fn test_extract_used_variables() {
+        let class = "text-[var(--token-text-text_dark)]";
+        let vars = extract_used_variables(class);
+        assert_eq!(vars, vec!["--token-text-text_dark"]);
+
+        let class_multiple = "bg-[var(--bg)] shadow-[0_0_10px_var(--shadow)]";
+        let vars_multiple = extract_used_variables(class_multiple);
+        assert_eq!(vars_multiple, vec!["--bg", "--shadow"]);
+    }
+
+    #[test]
+    fn test_validation_logic() {
+        let bundle = r#"
+            :root {
+                --menu-active: #000;
+                --menu-inactivef: #fff;
+            }
+        "#;
+        let defined_vars = extract_defined_variables(bundle);
+        let mut used_classes = BTreeSet::new();
+        used_classes.insert("bg-[var(--menu-inactive)]".to_string());
+
+        let (_, missing_vars) = find_missing_elements(bundle, &defined_vars, used_classes);
+        assert!(missing_vars.contains("--menu-inactive"));
+    }
 }

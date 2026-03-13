@@ -1,7 +1,7 @@
 use proc_macro::TokenStream;
 use proc_macro_error::emit_error;
 use proc_macro2::TokenStream as TokenStream2;
-use quote::{ToTokens, quote};
+use quote::quote;
 use std::error::Error;
 use std::io::Write;
 use syn::spanned::Spanned;
@@ -24,23 +24,36 @@ pub(crate) fn add_to_tailwind(classes: TokenStream2) -> Result<TokenStream2, Box
     if let Expr::Lit(expr_lit) = &input
         && let Lit::Str(input_lit) = &expr_lit.lit
     {
-        let input_str = input_lit.to_token_stream().to_string();
-        let input_str = input_str.trim_matches('"');
-        // Only collect tailwind classes during build
-        if std::env::var("VERTIGO_BUNDLE").is_ok() {
-            let file_path = get_tailwind_classes_file_path()?;
-
-            // Open the file in append mode
-            let mut file = std::fs::OpenOptions::new()
-                .append(true)
-                .create(true) // Create the file if it doesn't exist
-                .open(&file_path)?;
-
-            // Write the input string to the file
-            writeln!(file, "{input_str}")?;
-        }
+        let input_str = input_lit.value();
+        collect_tailwind_classes(&input_str, false)?;
         // Use output in source code
         return Ok(quote! { #input_lit });
     }
     Ok(quote! { #input })
+}
+
+pub(crate) fn collect_tailwind_classes(input_str: &str, is_raw_css: bool) -> Result<(), Box<dyn Error>> {
+    // Only collect tailwind classes during build
+    if std::env::var("VERTIGO_BUNDLE").is_ok() {
+        let file_path = get_tailwind_classes_file_path()?;
+
+        // Open the file in append mode
+        let mut file = std::fs::OpenOptions::new()
+            .append(true)
+            .create(true) // Create the file if it doesn't exist
+            .open(&file_path)?;
+
+        if is_raw_css {
+            // For raw CSS, we only care about variables
+            // Extract var usage and write it in a way that validate.rs can identify as non-class
+            let re = regex::Regex::new(r"var\((--[a-zA-Z0-9_-]+)\)").unwrap();
+            for cap in re.captures_iter(input_str) {
+                writeln!(file, "var({})", &cap[1])?;
+            }
+        } else {
+            // Write the input string to the file
+            writeln!(file, "{input_str}")?;
+        }
+    }
+    Ok(())
 }
