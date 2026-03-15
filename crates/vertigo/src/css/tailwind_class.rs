@@ -6,7 +6,7 @@ use std::{
 use crate::AttrValue;
 
 /// This represents a tailwind class. Use [tw!](crate::tw!) macro to create one.
-#[derive(Clone)]
+#[derive(Clone, PartialEq, Eq)]
 pub struct TwClass(Cow<'static, str>);
 
 impl TwClass {
