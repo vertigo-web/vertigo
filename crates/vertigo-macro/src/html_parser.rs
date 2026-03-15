@@ -12,12 +12,14 @@ use std::collections::BTreeMap;
 use syn::{Expr, ExprBlock, ExprLit, Ident, Stmt, spanned::Spanned};
 
 use crate::{
-    component::get_group_attrs_method_name, trace_tailwind::add_to_tailwind, utils::release_build,
+    component::{get_group_attrs_push_method_name, get_group_attrs_replace_method_name},
+    trace_tailwind::add_to_tailwind,
+    utils::release_build,
 };
 
 const HTML_ATTR_FORMAT_ERROR: &str =
     "in html node. Expected key=\"value\", key={value}, key={}, {value} or {..value} attribute.";
-const COMPONENT_ATTR_FORMAT_ERROR: &str = "in component. Expected key=\"value\", key={value}, key={}, group:key=\"value\", group:key={value} or {value} attribute.";
+const COMPONENT_ATTR_FORMAT_ERROR: &str = "in component. Expected key=\"value\", key={value}, key={}, group:key=\"value\", group:key={value} {value} or {..value} attribute.";
 
 pub(crate) fn dom_inner(input: TokenStream) -> TokenStream2 {
     let nodes = match parse(input) {
@@ -87,7 +89,8 @@ fn convert_to_component(node: &Node) -> TokenStream2 {
     let constructor_name = element.name();
     let component_name_string = constructor_name.to_string();
 
-    let mut grouped_attrs = BTreeMap::<String, BTreeMap<String, KeyedAttributeValue>>::new();
+    let mut groupped_attrs = BTreeMap::<String, BTreeMap<String, KeyedAttributeValue>>::new();
+    let mut spread_attrs = Vec::new();
 
     let attributes = element
         .attributes()
@@ -108,21 +111,54 @@ fn convert_to_component(node: &Node) -> TokenStream2 {
                                 COMPONENT_ATTR_FORMAT_ERROR,
                             );
                             match matches {
-                                (Some(value), None) => {
-                                    if value.block.stmts.is_empty()
-                                        || value.block.stmts[0].to_token_stream().to_string()
-                                            == "Default :: default()"
+                                (Some(value), None) => match value.block.stmts.len() {
+                                    0 => Some(quote! { #key: Default::default(), }),
+                                    1 if value.block.stmts[0].to_token_stream().to_string()
+                                        == "Default :: default()" =>
                                     {
                                         Some(quote! { #key: Default::default(), })
-                                    } else if let Some(Stmt::Expr(Expr::Reference(inner), _)) =
-                                        value.block.stmts.last()
-                                    {
-                                        let value = &inner.expr;
-                                        Some(quote! { #key: #value.clone(), })
-                                    } else {
-                                        Some(quote! { #key: #value.into(), })
                                     }
-                                }
+                                    _ => {
+                                        // First detect if there is a spread operator used at the end of the block
+                                        // which is basically a Range without start
+                                        let inner_value = value.block.stmts.last();
+
+                                        if let Some(Stmt::Expr(Expr::Range(range), _)) = inner_value
+                                            && range.start.is_none()
+                                            && let Some(inmost_value) = &range.end
+                                        {
+                                            let mut block = value.block.clone();
+                                            // Remove the statement with spread operator and prepare modified one
+                                            block.stmts.pop();
+
+                                            // Prepare new block based on if spread operator was used
+                                            let mut new_block = quote! {};
+                                            for stmt in block.stmts {
+                                                new_block.append_all(stmt.to_token_stream());
+                                            }
+                                            new_block.append_all(quote! {
+                                                #inmost_value
+                                            });
+
+                                            let replace_method_name =
+                                                get_group_attrs_replace_method_name(key);
+
+                                            spread_attrs.push(quote! {
+                                                .#replace_method_name({
+                                                    #new_block
+                                                })
+                                            });
+                                            None
+                                        } else if let Some(Stmt::Expr(Expr::Reference(inner), _)) =
+                                            value.block.stmts.last()
+                                        {
+                                            let value = &inner.expr;
+                                            Some(quote! { #key: #value.clone(), })
+                                        } else {
+                                            Some(quote! { #key: #value.into(), })
+                                        }
+                                    }
+                                },
                                 (None, Some(lit)) => Some(quote! { #key: #lit.into(), }),
                                 _ => None,
                             }
@@ -148,7 +184,7 @@ fn convert_to_component(node: &Node) -> TokenStream2 {
                                 match group {
                                     Some(group) => {
                                         let group_entry =
-                                            grouped_attrs.entry(group.to_string()).or_default();
+                                            groupped_attrs.entry(group.to_string()).or_default();
                                         group_entry.insert(key, possible_value.clone());
                                     }
                                     _ => {
@@ -201,17 +237,22 @@ fn convert_to_component(node: &Node) -> TokenStream2 {
                 // Try to use attribute value as key if no key provided
                 NodeAttribute::Block(block) => {
                     if let NodeBlock::ValidBlock(block) = block {
-                        if block.stmts.is_empty() {
-                            emit_error!(span, "Empty block {}", COMPONENT_ATTR_FORMAT_ERROR);
-                            None
-                        } else if let Some(Stmt::Expr(Expr::Reference(inner), _)) =
-                            block.stmts.last()
-                        {
-                            let value = &inner.expr;
-                            Some(quote! { #value: {#value}.clone(), })
-                        } else {
-                            let key = block.stmts.last();
-                            Some(quote! { #key: #block.into(), })
+                        match block.stmts.len() {
+                            0 => {
+                                emit_error!(span, "Empty block {}", COMPONENT_ATTR_FORMAT_ERROR);
+                                None
+                            }
+                            _ => {
+                                if let Some(Stmt::Expr(Expr::Reference(inner), _)) =
+                                    block.stmts.last()
+                                {
+                                    let value = &inner.expr;
+                                    Some(quote! { #value: {#value}.clone(), })
+                                } else {
+                                    let key = block.stmts.last();
+                                    Some(quote! { #key: #block.into(), })
+                                }
+                            }
                         }
                     } else {
                         emit_error!(span, "Invalid block {}", COMPONENT_ATTR_FORMAT_ERROR);
@@ -224,9 +265,9 @@ fn convert_to_component(node: &Node) -> TokenStream2 {
 
     let mut grouped_attrs_stream = quote! {};
 
-    for (group, attrs) in grouped_attrs {
+    for (group, attrs) in groupped_attrs {
         let group = Ident::new(&group, constructor_name.span());
-        let group_method = get_group_attrs_method_name(&group);
+        let group_method = get_group_attrs_push_method_name(&group);
         let mut attrs_stream = Vec::new();
         for (key, possible_value) in attrs {
             let matches = take_block_or_literal_expr(&possible_value, COMPONENT_ATTR_FORMAT_ERROR);
@@ -328,6 +369,7 @@ fn convert_to_component(node: &Node) -> TokenStream2 {
             };
             let cmp = cmp.into_component()
                 #grouped_attrs_stream
+                #(#spread_attrs)*
             ;
             let cmp = cmp.mount();
             #effective_debug_info

@@ -297,3 +297,43 @@ fn test_embeddable_group_attrs_cloned() {
         "<div id='my_div' v-component='Hello'><span /></div>"
     );
 }
+
+#[test]
+fn test_passable_attr_group() {
+    #[component]
+    fn Hello<'a>(name: &'a str, opt: AttrGroup) {
+        dom! {
+            <div {..opt}>
+                <span>"Hello " {name}</span>
+            </div>
+        }
+    }
+
+    #[component]
+    fn HelloWrapper<'a>(name: &'a str, hello: AttrGroup) {
+        dom! {
+            <div>
+                <Hello
+                    {name}
+                    opt={..hello}
+                />
+            </div>
+        }
+    }
+
+    log_start();
+
+    let _el2 = dom! {
+        <HelloWrapper
+            name="world"
+            hello:id="inner_div"
+        />
+    };
+
+    let el2_str = DomDebugFragment::from_log().to_pseudo_html();
+
+    assert_eq!(
+        el2_str,
+        "<div v-component='HelloWrapper'><div id='inner_div' v-component='Hello'><span>Hello world</span></div></div>"
+    );
+}

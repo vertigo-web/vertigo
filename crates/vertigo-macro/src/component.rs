@@ -50,7 +50,9 @@ pub(crate) fn component_inner(_attrs: TokenStream, input: TokenStream) -> TokenS
                     }
                 };
                 let name = entry.ident.clone();
-                let method_name = get_group_attrs_method_name(&name);
+                let push_method_name = get_group_attrs_push_method_name(&name);
+                let replace_method_name = get_group_attrs_replace_method_name(&name);
+
                 if pat_type.ty.to_token_stream().to_string() == "AttrGroup" {
                     group_fields.push(quote! {
                         #(#attrs)* pub #pat_type
@@ -59,8 +61,14 @@ pub(crate) fn component_inner(_attrs: TokenStream, input: TokenStream) -> TokenS
                         #name: Default::default()
                     });
                     group_methods.push(quote! {
-                        pub fn #method_name(mut self, key: String, value: vertigo::AttrGroupValue) -> Self {
+                        #[doc="Push single attribute to AttrGroup"]
+                        pub fn #push_method_name(mut self, key: String, value: vertigo::AttrGroupValue) -> Self {
                             self.#name.insert(key, value);
+                            self
+                        }
+                        #[doc="Replace AttrGroup with new AttrGroup (f. ex. upon spreading into component)"]
+                        pub fn #replace_method_name(mut self, group: vertigo::AttrGroup) -> Self {
+                            self.#name = group;
                             self
                         }
                     });
@@ -143,9 +151,19 @@ pub fn get_component_name<T: ToTokens + Spanned>(constructor_name: &T) -> Ident 
     )
 }
 
-pub fn get_group_attrs_method_name<T: ToTokens + Spanned>(group_name: &T) -> Ident {
+/// Name for method to push single attribute to AttrGroup
+pub fn get_group_attrs_push_method_name<T: ToTokens + Spanned>(group_name: &T) -> Ident {
     Ident::new(
         &format!("group_{}_push", group_name.to_token_stream()),
+        group_name.span(),
+    )
+}
+
+/// Name for method to replace AttrGroup with new AttrGroup
+/// (f. ex. upon spreading into component)
+pub fn get_group_attrs_replace_method_name<T: ToTokens + Spanned>(group_name: &T) -> Ident {
+    Ident::new(
+        &format!("group_{}_replace", group_name.to_token_stream()),
         group_name.span(),
     )
 }
