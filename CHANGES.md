@@ -1,6 +1,13 @@
 <!-- markdownlint-configure-file { "no-duplicate-heading": { "siblings_only": true } } -->
 
 <!-- markdownlint-disable-next-line first-line-h1 -->
+## Unreleased
+
+### Changed
+
+* Allow to pass `AttrGroup` down if one component mounts another inner component [#505]
+* Warn if `tw!` macro or `tw=` attribute is used in `#main` macro body [#510]
+
 ## 0.11.1 - 2026-03-03
 
 ### Fixed
