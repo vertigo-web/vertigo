@@ -40,6 +40,10 @@ impl CssParser {
 
                 let css_output = parser.children.join("\n");
 
+                if let Err(err) = crate::trace_tailwind::collect_tailwind_classes(&css_output, true) {
+                    emit_error!(call_site, "Failed to collect Tailwind classes: {}", err);
+                }
+
                 let params = parser.params.into_hashmap();
 
                 if params.is_empty() {

@@ -3651,6 +3651,7 @@ dependencies = [
  "proc-macro-error",
  "proc-macro2",
  "quote",
+ "regex",
  "rstml",
  "syn 2.0.117",
 ]
