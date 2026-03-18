@@ -111,55 +111,77 @@ fn convert_to_component(node: &Node) -> TokenStream2 {
                                 COMPONENT_ATTR_FORMAT_ERROR,
                             );
                             match matches {
-                                (Some(value), None) => match value.block.stmts.len() {
-                                    0 => Some(quote! { #key: Default::default(), }),
-                                    1 if value.block.stmts[0].to_token_stream().to_string()
-                                        == "Default :: default()" =>
+                                (Some(value), None) => {
+                                    // If attribute is 'tw' then register tailwind classes
+                                    if key.to_token_stream().to_string() == "tw"
+                                        && let Err(err) = add_to_tailwind(value.to_token_stream())
                                     {
-                                        Some(quote! { #key: Default::default(), })
+                                        emit_error!(value.span(), err);
+                                        return None;
                                     }
-                                    _ => {
-                                        // First detect if there is a spread operator used at the end of the block
-                                        // which is basically a Range without start
-                                        let inner_value = value.block.stmts.last();
 
-                                        if let Some(Stmt::Expr(Expr::Range(range), _)) = inner_value
-                                            && range.start.is_none()
-                                            && let Some(inmost_value) = &range.end
+                                    match value.block.stmts.len() {
+                                        0 => Some(quote! { #key: Default::default(), }),
+                                        1 if value.block.stmts[0].to_token_stream().to_string()
+                                            == "Default :: default()" =>
                                         {
-                                            let mut block = value.block.clone();
-                                            // Remove the statement with spread operator and prepare modified one
-                                            block.stmts.pop();
+                                            Some(quote! { #key: Default::default(), })
+                                        }
+                                        _ => {
+                                            // First detect if there is a spread operator used at the end of the block
+                                            // which is basically a Range without start
+                                            let inner_value = value.block.stmts.last();
 
-                                            // Prepare new block based on if spread operator was used
-                                            let mut new_block = quote! {};
-                                            for stmt in block.stmts {
-                                                new_block.append_all(stmt.to_token_stream());
+                                            if let Some(Stmt::Expr(Expr::Range(range), _)) =
+                                                inner_value
+                                                && range.start.is_none()
+                                                && let Some(inmost_value) = &range.end
+                                            {
+                                                let mut block = value.block.clone();
+                                                // Remove the statement with spread operator and prepare modified one
+                                                block.stmts.pop();
+
+                                                // Prepare new block based on if spread operator was used
+                                                let mut new_block = quote! {};
+                                                for stmt in block.stmts {
+                                                    new_block.append_all(stmt.to_token_stream());
+                                                }
+                                                new_block.append_all(quote! {
+                                                    #inmost_value
+                                                });
+
+                                                let replace_method_name =
+                                                    get_group_attrs_replace_method_name(key);
+
+                                                spread_attrs.push(quote! {
+                                                    .#replace_method_name({
+                                                        #new_block
+                                                    })
+                                                });
+                                                None
+                                            } else if let Some(Stmt::Expr(
+                                                Expr::Reference(inner),
+                                                _,
+                                            )) = value.block.stmts.last()
+                                            {
+                                                let value = &inner.expr;
+                                                Some(quote! { #key: #value.clone(), })
+                                            } else {
+                                                Some(quote! { #key: #value.into(), })
                                             }
-                                            new_block.append_all(quote! {
-                                                #inmost_value
-                                            });
-
-                                            let replace_method_name =
-                                                get_group_attrs_replace_method_name(key);
-
-                                            spread_attrs.push(quote! {
-                                                .#replace_method_name({
-                                                    #new_block
-                                                })
-                                            });
-                                            None
-                                        } else if let Some(Stmt::Expr(Expr::Reference(inner), _)) =
-                                            value.block.stmts.last()
-                                        {
-                                            let value = &inner.expr;
-                                            Some(quote! { #key: #value.clone(), })
-                                        } else {
-                                            Some(quote! { #key: #value.into(), })
                                         }
                                     }
-                                },
-                                (None, Some(lit)) => Some(quote! { #key: #lit.into(), }),
+                                }
+                                (None, Some(lit)) => {
+                                    // If attribute is 'tw' then register tailwind classes
+                                    if key.to_token_stream().to_string() == "tw"
+                                        && let Err(err) = add_to_tailwind(lit.to_token_stream())
+                                    {
+                                        emit_error!(lit.span(), err);
+                                        return None;
+                                    }
+                                    Some(quote! { #key: #lit.into(), })
+                                }
                                 _ => None,
                             }
                         }
@@ -181,6 +203,16 @@ fn convert_to_component(node: &Node) -> TokenStream2 {
                                 let key = key_str
                                     .trim_start_matches(&format!("{}:", group.to_token_stream()))
                                     .to_string();
+
+                                // If value name is 'tw' then register tailwind classes
+                                if key == "tw"
+                                    && let Err(err) =
+                                        add_to_tailwind(possible_value.to_token_stream())
+                                {
+                                    emit_error!(possible_value.span(), err);
+                                    return None;
+                                };
+
                                 match group {
                                     Some(group) => {
                                         let group_entry =
