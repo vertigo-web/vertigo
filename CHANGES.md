@@ -8,6 +8,10 @@
 * Allow to pass `AttrGroup` down if one component mounts another inner component [#505]
 * Warn if `tw!` macro or `tw=` attribute is used in `#main` macro body [#510]
 
+### Fixed
+
+* Allow tailwind classes to be used in component `tw` attribute [#516]
+
 ## 0.11.1 - 2026-03-03
 
 ### Fixed

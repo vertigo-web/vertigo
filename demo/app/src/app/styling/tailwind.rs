@@ -1,4 +1,4 @@
-use vertigo::{Computed, Value, bind, component, dom, tw};
+use vertigo::{Computed, TwClass, Value, bind, component, dom, tw};
 
 #[component]
 pub fn Tailwind() {
@@ -36,6 +36,16 @@ pub fn Tailwind() {
                 "Some tailwind-styled elements"
             </div>
             <div tw="bg-blue-400 w-full md:w-30 sm:w-20 p-[10px]">"Tailwind CSS 4 test"</div>
+            <ComponentTakingTw tw="bg-red-400" />
+        </div>
+    }
+}
+
+#[component]
+fn ComponentTakingTw(tw: TwClass) {
+    dom! {
+        <div tw={tw}>
+            "Component Taking Tw"
         </div>
     }
 }
