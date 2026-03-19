@@ -1,6 +1,5 @@
 Cargo.lock
 /target
-/build
 /demo_build
 /examples/build
 .vscode

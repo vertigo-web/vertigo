@@ -73,29 +73,68 @@ pub(super) fn impl_js_json_struct(
                 })#unpack_expr,
             })
         } else if field_opts.stringify {
-            list_to_json.push(quote! {
-                (#json_key.to_string(), vertigo::JsJson::String(format!("{}", self.#field_name))),
-            });
+            let is_option = match field_ty {
+                syn::Type::Path(ty_path) => ty_path
+                    .path
+                    .segments
+                    .last()
+                    .is_some_and(|last| last.ident == "Option"),
+                _ => false,
+            };
 
-            list_from_json.push(quote! {
-                #field_name: json.get_property(&context, #json_key).and_then(|item| {
-                    match item {
-                        vertigo::JsJson::String(v) => {
-                            match v.parse() {
-                                Ok(v) => Ok(v),
-                                Err(e) => {
-                                    let message = format!("Error parsing string '{}': {}", v, e);
-                                    Err(context.add(message))
+            if is_option {
+                list_to_json.push(quote! {
+                    (#json_key.to_string(), match &self.#field_name {
+                        Some(val) => vertigo::JsJson::String(format!("{}", val)),
+                        None => vertigo::JsJson::Null,
+                    }),
+                });
+
+                list_from_json.push(quote! {
+                    #field_name: json.get_property(&context, #json_key).and_then(|item| {
+                        match item {
+                            vertigo::JsJson::String(v) => {
+                                match v.parse() {
+                                    Ok(v) => Ok(Some(v)),
+                                    Err(e) => {
+                                        let message = format!("Error parsing string '{}': {}", v, e);
+                                        Err(context.add(message))
+                                    }
                                 }
+                            },
+                            vertigo::JsJson::Null => Ok(None),
+                            other => {
+                                let message = ["String or null expected, received ", other.typename()].concat();
+                                Err(context.add(message))
                             }
-                        },
-                        other => {
-                            let message = ["String expected, received ", other.typename()].concat();
-                            Err(context.add(message))
                         }
-                    }
-                })#unpack_expr,
-            })
+                    })#unpack_expr,
+                })
+            } else {
+                list_to_json.push(quote! {
+                    (#json_key.to_string(), vertigo::JsJson::String(format!("{}", self.#field_name))),
+                });
+
+                list_from_json.push(quote! {
+                    #field_name: json.get_property(&context, #json_key).and_then(|item| {
+                        match item {
+                            vertigo::JsJson::String(v) => {
+                                match v.parse() {
+                                    Ok(v) => Ok(v),
+                                    Err(e) => {
+                                        let message = format!("Error parsing string '{}': {}", v, e);
+                                        Err(context.add(message))
+                                    }
+                                }
+                            },
+                            other => {
+                                let message = ["String expected, received ", other.typename()].concat();
+                                Err(context.add(message))
+                            }
+                        }
+                    })#unpack_expr,
+                })
+            }
         } else {
             list_to_json.push(quote! {
                 (#json_key.to_string(), self.#field_name.to_json()),

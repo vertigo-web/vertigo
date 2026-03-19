@@ -7,6 +7,7 @@
 
 * Allow to pass `AttrGroup` down if one component mounts another inner component [#505]
 * Warn if `tw!` macro or `tw=` attribute is used in `#main` macro body [#510]
+* In `AutoJsJson` macro the `stringify` attribute now also works for `Option<T>` (where `T` implements `Display` and `FromStr`)
 
 ### Fixed
 

@@ -17,29 +17,68 @@ pub(super) fn impl_js_json_newtype(
         let field_opts = crate::jsjson::attributes::FieldOpts::from_attributes(&field.attrs)?;
 
         if field_opts.stringify {
-            // Encode
-            encodes.push(quote! {
-                vertigo::JsJson::String(format!("{}", self.0))
-            });
+            let is_option = match &field.ty {
+                syn::Type::Path(ty_path) => ty_path
+                    .path
+                    .segments
+                    .last()
+                    .is_some_and(|last| last.ident == "Option"),
+                _ => false,
+            };
 
-            // Decode
-            decodes.push(quote! {
-                match json {
-                    vertigo::JsJson::String(v) => {
-                        match v.parse() {
-                            Ok(v) => Ok(Self(v)),
-                            Err(e) => {
-                                let message = format!("Error parsing string '{}': {}", v, e);
-                                Err(ctx.add(message))
-                            }
-                        }
-                    },
-                    other => {
-                        let message = ["String expected, received ", other.typename()].concat();
-                        Err(ctx.add(message))
+            if is_option {
+                // Encode Option
+                encodes.push(quote! {
+                    match &self.0 {
+                        Some(val) => vertigo::JsJson::String(format!("{}", val)),
+                        None => vertigo::JsJson::Null,
                     }
-                }
-            });
+                });
+
+                // Decode Option
+                decodes.push(quote! {
+                    match json {
+                        vertigo::JsJson::String(v) => {
+                            match v.parse() {
+                                Ok(v) => Ok(Self(Some(v))),
+                                Err(e) => {
+                                    let message = format!("Error parsing string '{}': {}", v, e);
+                                    Err(ctx.add(message))
+                                }
+                            }
+                        },
+                        vertigo::JsJson::Null => Ok(Self(None)),
+                        other => {
+                            let message = ["String or null expected, received ", other.typename()].concat();
+                            Err(ctx.add(message))
+                        }
+                    }
+                });
+            } else {
+                // Encode
+                encodes.push(quote! {
+                    vertigo::JsJson::String(format!("{}", self.0))
+                });
+
+                // Decode
+                decodes.push(quote! {
+                    match json {
+                        vertigo::JsJson::String(v) => {
+                            match v.parse() {
+                                Ok(v) => Ok(Self(v)),
+                                Err(e) => {
+                                    let message = format!("Error parsing string '{}': {}", v, e);
+                                    Err(ctx.add(message))
+                                }
+                            }
+                        },
+                        other => {
+                            let message = ["String expected, received ", other.typename()].concat();
+                            Err(ctx.add(message))
+                        }
+                    }
+                });
+            }
         } else {
             // Encode
             encodes.push(quote! {
