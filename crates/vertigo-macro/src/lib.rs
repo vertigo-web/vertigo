@@ -116,19 +116,19 @@ pub fn include_static(input: TokenStream) -> TokenStream {
 #[proc_macro]
 #[proc_macro_error]
 pub fn bind(input: TokenStream) -> TokenStream {
-    convert_to_tokens(bind_inner(input))
+    convert_to_tokens(bind_inner(input.into()))
 }
 
 #[proc_macro]
 #[proc_macro_error]
 pub fn bind_spawn(input: TokenStream) -> TokenStream {
-    convert_to_tokens(bind_spawn_inner(input))
+    convert_to_tokens(bind_spawn_inner(input.into()))
 }
 
 #[proc_macro]
 #[proc_macro_error]
 pub fn bind_rc(input: TokenStream) -> TokenStream {
-    convert_to_tokens(bind_rc_inner(input))
+    convert_to_tokens(bind_rc_inner(input.into()))
 }
 
 #[proc_macro_attribute]
@@ -149,9 +149,9 @@ pub fn js_inner(input: TokenStream) -> TokenStream {
     js_expression(input)
 }
 
-fn convert_to_tokens(input: Option<TokenStream>) -> TokenStream {
+fn convert_to_tokens(input: Option<proc_macro2::TokenStream>) -> TokenStream {
     match input {
-        Some(body) => body,
+        Some(body) => body.into(),
         None => quote! {}.into(),
     }
 }
