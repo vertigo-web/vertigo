@@ -1,4 +1,3 @@
-use proc_macro::TokenStream;
 use proc_macro2::{Ident, Span, TokenStream as TokenStream2, TokenTree};
 use quote::quote;
 use std::{
@@ -7,8 +6,7 @@ use std::{
 };
 use syn::__private::quote::format_ident;
 
-pub(crate) fn bind_inner(input: TokenStream) -> Option<TokenStream> {
-    let input: TokenStream2 = input.into();
+pub(crate) fn bind_inner(input: TokenStream2) -> Option<TokenStream2> {
     let tokens = input.into_iter().collect::<Vec<_>>();
 
     let TokensParamsBody {
@@ -61,11 +59,10 @@ pub(crate) fn bind_inner(input: TokenStream) -> Option<TokenStream> {
         }
     };
 
-    Some(bind_result.into())
+    Some(bind_result)
 }
 
-pub(crate) fn bind_spawn_inner(input: TokenStream) -> Option<TokenStream> {
-    let input: TokenStream2 = input.into();
+pub(crate) fn bind_spawn_inner(input: TokenStream2) -> Option<TokenStream2> {
     let tokens = input.into_iter().collect::<Vec<_>>();
 
     let TokensParamsBody {
@@ -109,20 +106,16 @@ pub(crate) fn bind_spawn_inner(input: TokenStream) -> Option<TokenStream> {
 
     let inner_body: TokenStream2 = TokenStream2::from_iter(body);
 
-    Some(
-        quote! {
-            {
-                vertigo::bind!(#(#bind_params,)* |#(#func_params,)*| {
-                    vertigo::get_driver().spawn(vertigo::bind!(#(#bind_params,)* #inner_body));
-                })
-            }
+    Some(quote! {
+        {
+            vertigo::bind!(#(#bind_params,)* |#(#func_params,)*| {
+                vertigo::get_driver().spawn(vertigo::bind!(#(#bind_params,)* #inner_body));
+            })
         }
-        .into(),
-    )
+    })
 }
 
-pub(crate) fn bind_rc_inner(input: TokenStream) -> Option<TokenStream> {
-    let input: TokenStream2 = input.into();
+pub(crate) fn bind_rc_inner(input: TokenStream2) -> Option<TokenStream2> {
     let tokens = input.into_iter().collect::<Vec<_>>();
 
     let TokensParamsBody {
@@ -165,12 +158,12 @@ pub(crate) fn bind_rc_inner(input: TokenStream) -> Option<TokenStream> {
 
     let body: TokenStream2 = convert_tokens_to_stream(body.as_slice());
 
-    Some(quote!{
+    Some(quote! {
         {
             let func: std::rc::Rc::<dyn Fn(#(#types,)*) -> _> = std::rc::Rc::new(vertigo::bind!(#(#bind_params,)* #body));
             func
         }
-    }.into())
+    })
 }
 
 fn is_char(token: &TokenTree, char: char) -> bool {
@@ -328,4 +321,187 @@ fn get_type(tokens: &[TokenTree]) -> Result<&[TokenTree], Box<dyn Error>> {
     let type_tokens = tokens.pop_front().ok_or("unreachable (2)")?;
 
     Ok(type_tokens)
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use quote::quote;
+    use std::error::Error;
+
+    fn format_token_stream(tokens: TokenStream2) -> Result<String, Box<dyn Error>> {
+        let file = syn::parse2::<syn::File>(quote! {
+            fn dummy() {
+                #tokens
+            }
+        })?;
+        Ok(prettyplease::unparse(&file))
+    }
+
+    #[test]
+    fn test_is_char() {
+        let punct = TokenTree::Punct(proc_macro2::Punct::new('|', proc_macro2::Spacing::Alone));
+        assert!(is_char(&punct, '|'));
+        assert!(!is_char(&punct, ','));
+        let ident = TokenTree::Ident(proc_macro2::Ident::new("foo", Span::call_site()));
+        assert!(!is_char(&ident, '|'));
+    }
+
+    #[test]
+    fn test_find_param_name() -> Result<(), Box<dyn Error>> {
+        let tokens = vec![TokenTree::Ident(proc_macro2::Ident::new(
+            "foo",
+            Span::call_site(),
+        ))];
+        let name = find_param_name(&tokens).ok_or("find_param_name returned None")?;
+        assert_eq!(name.to_string(), "foo");
+
+        let tokens = vec![
+            TokenTree::Punct(proc_macro2::Punct::new('&', proc_macro2::Spacing::Alone)),
+            TokenTree::Ident(proc_macro2::Ident::new("bar", Span::call_site())),
+        ];
+        let name = find_param_name(&tokens).ok_or("find_param_name returned None")?;
+        assert_eq!(name.to_string(), "bar");
+        Ok(())
+    }
+
+    #[test]
+    fn test_is_first_pipe_char() {
+        let tokens = vec![TokenTree::Punct(proc_macro2::Punct::new(
+            '|',
+            proc_macro2::Spacing::Alone,
+        ))];
+        assert!(is_first_pipe_char(&tokens));
+
+        let tokens = vec![TokenTree::Ident(proc_macro2::Ident::new(
+            "foo",
+            Span::call_site(),
+        ))];
+        assert!(!is_first_pipe_char(&tokens));
+    }
+
+    #[test]
+    fn test_contains_bracket() {
+        let tokens = vec![
+            TokenTree::Ident(proc_macro2::Ident::new("foo", Span::call_site())),
+            TokenTree::Punct(proc_macro2::Punct::new('|', proc_macro2::Spacing::Alone)),
+        ];
+        assert!(contains_bracket(&tokens));
+
+        let tokens = vec![TokenTree::Ident(proc_macro2::Ident::new(
+            "foo",
+            Span::call_site(),
+        ))];
+        assert!(!contains_bracket(&tokens));
+    }
+
+    #[test]
+    fn test_get_type() -> Result<(), Box<dyn Error>> {
+        let tokens = vec![
+            TokenTree::Ident(proc_macro2::Ident::new("val", Span::call_site())),
+            TokenTree::Punct(proc_macro2::Punct::new(':', proc_macro2::Spacing::Alone)),
+            TokenTree::Ident(proc_macro2::Ident::new("String", Span::call_site())),
+        ];
+        let res = get_type(&tokens)?;
+        assert_eq!(res.len(), 1);
+        if let TokenTree::Ident(ident) = &res[0] {
+            assert_eq!(ident.to_string(), "String");
+        } else {
+            return Err("Expected ident".into());
+        }
+        Ok(())
+    }
+
+    #[test]
+    fn test_split_params_and_body_block() -> Result<(), Box<dyn Error>> {
+        let input = quote! { a, b, { body } };
+        let tokens = input.into_iter().collect::<Vec<_>>();
+        let res = split_params_and_body(&tokens).ok_or("split_params_and_body returned None")?;
+        assert_eq!(res.bind_params.len(), 2);
+        assert!(res.func_params.is_none());
+        Ok(())
+    }
+
+    #[test]
+    fn test_split_params_and_body_function() -> Result<(), Box<dyn Error>> {
+        let input = quote! { a, b | c: i32 | { body } };
+        let tokens = input.into_iter().collect::<Vec<_>>();
+        let res = split_params_and_body(&tokens).ok_or("split_params_and_body returned None")?;
+        assert_eq!(res.bind_params.len(), 2);
+        assert_eq!(res.func_params.ok_or("unreachable")?.len(), 1);
+        Ok(())
+    }
+
+    #[test]
+    fn test_bind_inner_simple() -> Result<(), Box<dyn Error>> {
+        let input = quote! { { println!("hello") } };
+        let result = bind_inner(input).ok_or("bind_inner returned None")?;
+        let expected = quote! {
+            {
+                { println!("hello") }
+            }
+        };
+        pretty_assertions::assert_eq!(format_token_stream(result)?, format_token_stream(expected)?);
+        Ok(())
+    }
+
+    #[test]
+    fn test_bind_inner_with_params() -> Result<(), Box<dyn Error>> {
+        let input = quote! { a, b, { println!("hello {} {}", a, b) } };
+        let result = bind_inner(input).ok_or("bind_inner returned None")?;
+        let expected = quote! {
+            {
+                let a = a.clone();
+                let b = b.clone();
+                { println!("hello {} {}", a, b) }
+            }
+        };
+        pretty_assertions::assert_eq!(format_token_stream(result)?, format_token_stream(expected)?);
+        Ok(())
+    }
+
+    #[test]
+    fn test_bind_inner_closure() -> Result<(), Box<dyn Error>> {
+        let input = quote! { a |param| { println!("hello {} {}", a, param) } };
+        let result = bind_inner(input).ok_or("bind_inner returned None")?;
+        let expected = quote! {
+            {
+                let a = a.clone();
+                move |param| { println!("hello {} {}", a, param) }
+            }
+        };
+        pretty_assertions::assert_eq!(format_token_stream(result)?, format_token_stream(expected)?);
+        Ok(())
+    }
+
+    #[test]
+    fn test_bind_spawn_inner() -> Result<(), Box<dyn Error>> {
+        let input = quote! { a, b | | { println!("hello") } };
+        let result = bind_spawn_inner(input).ok_or("bind_spawn_inner returned None")?;
+        let expected = quote! {
+            {
+                vertigo::bind!(a, b, | | {
+                    vertigo::get_driver().spawn(vertigo::bind!(a, b, { println!("hello") }));
+                })
+            }
+        };
+        pretty_assertions::assert_eq!(format_token_stream(result)?, format_token_stream(expected)?);
+        Ok(())
+    }
+
+    #[test]
+    fn test_bind_rc_inner() -> Result<(), Box<dyn Error>> {
+        let input = quote! { a | b: i32 | { println!("hello {} {}", a, b) } };
+        let result = bind_rc_inner(input).ok_or("bind_rc_inner returned None")?;
+        let expected = quote! {
+            {
+                let func: std::rc::Rc::<dyn Fn(i32) -> _> = std::rc::Rc::new(
+                    vertigo::bind!(a, |b: i32| { println!("hello {} {}", a, b) })
+                );
+                func
+            }
+        };
+        pretty_assertions::assert_eq!(format_token_stream(result)?, format_token_stream(expected)?);
+        Ok(())
+    }
 }
