@@ -54,4 +54,7 @@ pub struct FieldOpts {
     /// Serialize the field using `Display` and deserialize using `FromStr`.
     #[darling(default)]
     pub stringify: bool,
+    /// Skip this fiels while serializing/deserializing
+    #[darling(default)]
+    pub skip: bool,
 }

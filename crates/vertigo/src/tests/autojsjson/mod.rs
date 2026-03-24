@@ -4,6 +4,7 @@ use crate::{self as vertigo, JsJson, JsJsonContext};
 use crate::{AutoJsJson, JsJsonDeserialize, JsJsonSerialize};
 
 mod rename;
+mod skip;
 mod stringify;
 
 #[test]

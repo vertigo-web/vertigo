@@ -3,6 +3,10 @@
 <!-- markdownlint-disable-next-line first-line-h1 -->
 ## Unreleased
 
+### Added
+
+* `#[js_json(skip)]` attribute to skip fields in `AutoJsJson` macro
+
 ### Changed
 
 * Allow to pass `AttrGroup` down if one component mounts another inner component [#505]
