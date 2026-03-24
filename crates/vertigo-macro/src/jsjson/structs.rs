@@ -38,6 +38,13 @@ pub(super) fn impl_js_json_struct(
         let field_unraw = field_name.unraw().to_string();
         let field_opts = FieldOpts::from_attributes(attrs)?;
 
+        if field_opts.skip {
+            list_from_json.push(quote! {
+                #field_name: Default::default(),
+            });
+            continue;
+        }
+
         let json_key = match field_opts.rename {
             Some(json_key) => json_key,
             None => match container_opts.rename_all {
