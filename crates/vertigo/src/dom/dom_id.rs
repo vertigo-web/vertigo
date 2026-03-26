@@ -1,7 +1,4 @@
-use std::{
-    hash::Hash,
-    sync::atomic::{AtomicBool, Ordering},
-};
+use std::hash::Hash;
 
 use vertigo_macro::AutoJsJson;
 
@@ -16,11 +13,6 @@ fn get_unique_id() -> u64 {
     COUNTER.fetch_add(1, Ordering::Relaxed)
 }
 
-// Flags to ensure we have only 1 instance of these elements with predefined id
-static HAD_HTML: AtomicBool = AtomicBool::new(false);
-static HAD_HEAD: AtomicBool = AtomicBool::new(false);
-static HAD_BODY: AtomicBool = AtomicBool::new(false);
-
 #[derive(AutoJsJson, Copy, Clone, Debug, PartialEq, Eq, Hash, PartialOrd, Ord)]
 pub struct DomId(u64);
 
@@ -33,9 +25,9 @@ impl Default for DomId {
 impl DomId {
     pub fn from_name(name: &str) -> DomId {
         let new_id = match name {
-            "html" => maybe_static_id("html", &HAD_HTML, HTML_ID),
-            "head" => maybe_static_id("head", &HAD_HEAD, HEAD_ID),
-            "body" => maybe_static_id("body", &HAD_BODY, BODY_ID),
+            "html" => HTML_ID,
+            "head" => HEAD_ID,
+            "body" => BODY_ID,
             _ => get_unique_id(),
         };
 
@@ -58,15 +50,5 @@ impl DomId {
 impl std::fmt::Display for DomId {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         write!(f, "RealDomNodeId={}", self.0)
-    }
-}
-
-fn maybe_static_id(name: &'static str, flag: &'static AtomicBool, static_id: u64) -> u64 {
-    if flag.load(Ordering::Relaxed) {
-        log::error!("Multiple <{name}> elements!");
-        get_unique_id()
-    } else {
-        flag.store(true, Ordering::Relaxed);
-        static_id
     }
 }

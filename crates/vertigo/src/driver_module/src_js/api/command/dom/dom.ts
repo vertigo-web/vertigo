@@ -139,6 +139,11 @@ export class DriverDom {
     }
 
     private createNode(id: number, name: string) {
+        // Root nodes (html/head/body) already exist in the real DOM
+        if (id === 1 || id === 2 || id === 3) {
+            return;
+        }
+
         if (this.nodes.has(id)) {
             return;
         }
@@ -186,6 +191,11 @@ export class DriverDom {
     }
 
     private removeNode(id: number) {
+        // Never remove real document roots
+        if (id === 1 || id === 2 || id === 3) {
+            return;
+        }
+
         const node = this.nodes.delete("remove_node", id);
         node.remove();
     }
@@ -268,12 +278,12 @@ export class DriverDom {
         }
 
         if ('CallbackAdd' in command) {
-            this.callbacks.add(this.nodes, command.CallbackAdd.id, command.CallbackAdd.event_name, BigInt(command.CallbackAdd.callback_id));
+            this.callbacks.add(this.nodes, command.CallbackAdd.id, command.CallbackAdd.event_name, command.CallbackAdd.callback_id);
             return;
         }
 
         if ('CallbackRemove' in command) {
-            this.callbacks.remove(this.nodes, command.CallbackRemove.id, command.CallbackRemove.event_name, BigInt(command.CallbackRemove.callback_id));
+            this.callbacks.remove(this.nodes, command.CallbackRemove.id, command.CallbackRemove.event_name, command.CallbackRemove.callback_id);
             return;
         }
 

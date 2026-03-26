@@ -174,6 +174,11 @@ export class MapNodes {
     }
 
     public has(id: number): boolean {
+        // Root nodes always exist in real DOM
+        if (id === 1 || id === 2 || id === 3) {
+            return true;
+        }
+
         return this.data.has(id);
     }
 }

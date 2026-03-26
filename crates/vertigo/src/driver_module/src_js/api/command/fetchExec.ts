@@ -24,7 +24,7 @@ type FetchResponseType = {
         }
     }
 } | {
-    Error: {
+    Err: {
         message: string,
     }
 };
@@ -73,7 +73,7 @@ const processResponse = async (response: Response): Promise<FetchResponseType> =
         };
     } catch (error) {
         return {
-            Error: {
+            Err: {
                 message: String(error),
             }
         };
@@ -100,7 +100,7 @@ export const fetchExec = async (
         wasm.wasmCommand({
             'FetchExecResponse': {
                 response: response2,
-                callback: Number(callback_id),
+                callback: callback_id,
             }
         });
 
@@ -109,7 +109,7 @@ export const fetchExec = async (
         const responseMessage = new String(err).toString();
 
         const responseToWasm: FetchResponseType = {
-            'Error': {
+            'Err': {
                 message: responseMessage
             }
         };
@@ -117,7 +117,7 @@ export const fetchExec = async (
         wasm.wasmCommand({
             'FetchExecResponse': {
                 response: responseToWasm,
-                callback: Number(callback_id),
+                callback: callback_id,
             }
         });
     }
