@@ -68,7 +68,7 @@ type ExecType
     }
     | {
         LocationCallback: {
-            callback: number,
+            callback: CallbackId,
             mode: 'Add' | 'Remove',
             target: 'Hash' | 'History'
         }

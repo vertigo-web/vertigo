@@ -84,6 +84,11 @@ pub mod prelude {
 // Re-export log module which can be used in vertigo plugins
 pub use log;
 
+/// Spawn a future - thus allowing to fire async functions in, for example, event handler. Handy when fetching resources from internet.
+pub fn spawn(future: impl Future<Output = ()> + 'static) {
+    get_driver().spawn(future)
+}
+
 // Re-export self for tests and macros used in vertigo crate
 extern crate self as vertigo;
 

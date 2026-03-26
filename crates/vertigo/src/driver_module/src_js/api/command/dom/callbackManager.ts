@@ -3,17 +3,18 @@ import { getFiles } from "./dataTransfer";
 import { JsJsonType } from "../../../jsjson";
 import { ModuleControllerType } from "../../../wasm_init";
 import { MapNodes } from "./map_nodes";
+import { CallbackId } from "../../types";
 
 export class CallbackManager {
     private readonly getWasm: () => ModuleControllerType<ExportType>;
-    private callbacks: Map<bigint, (data: Event) => void>;
+    private callbacks: Map<CallbackId, (data: Event) => void>;
 
     public constructor(getWasm: () => ModuleControllerType<ExportType>) {
         this.getWasm = getWasm;
         this.callbacks = new Map();
     }
 
-    public add(nodes: MapNodes, id: number, event_name: string, callback_id: bigint) {
+    public add(nodes: MapNodes, id: number, event_name: string, callback_id: CallbackId) {
         const callback = (event: Event) => {
             if (event_name === 'click') {
                 return this.click(event, callback_id);
@@ -85,7 +86,7 @@ export class CallbackManager {
         }
     }
 
-    public remove(nodes: MapNodes, id: number, event_name: string, callback_id: bigint) {
+    public remove(nodes: MapNodes, id: number, event_name: string, callback_id: CallbackId) {
         const callback = this.callbacks.get(callback_id);
         this.callbacks.delete(callback_id);
 
@@ -102,16 +103,16 @@ export class CallbackManager {
         }
     }
 
-    private wasmCallback(callback_id: bigint, value: JsJsonType): JsJsonType {
+    private wasmCallback(callback_id: CallbackId, value: JsJsonType): JsJsonType {
         return this.getWasm().wasmCommand({
             CallbackCall: {
-                callback_id: Number(callback_id),
+                callback_id,
                 value: value
             }
         });
     }
 
-    private click(event: Event, callback_id: bigint) {
+    private click(event: Event, callback_id: CallbackId) {
         event.preventDefault();
         let click_event = this.wasmCallback(callback_id, undefined);
 
@@ -126,12 +127,12 @@ export class CallbackManager {
         }
     }
 
-    private submit(event: Event, callback_id: bigint) {
+    private submit(event: Event, callback_id: CallbackId) {
         event.preventDefault();
         this.wasmCallback(callback_id, undefined);
     }
 
-    private input(event: Event, callback_id: bigint) {
+    private input(event: Event, callback_id: CallbackId) {
         const target = event.target;
 
         if (target instanceof HTMLInputElement || target instanceof HTMLTextAreaElement) {
@@ -142,7 +143,7 @@ export class CallbackManager {
         console.warn('event input ignore', target);
     }
 
-    private change(event: Event, callback_id: bigint) {
+    private change(event: Event, callback_id: CallbackId) {
         const target = event.target;
 
         if (target instanceof HTMLInputElement || target instanceof HTMLTextAreaElement || target instanceof HTMLSelectElement) {
@@ -153,31 +154,31 @@ export class CallbackManager {
         console.warn('event input ignore', target);
     }
 
-    private blur(_event: Event, callback_id: bigint) {
+    private blur(_event: Event, callback_id: CallbackId) {
         this.wasmCallback(callback_id, undefined);
     }
 
-    private mousedown(event: Event, callback_id: bigint) {
+    private mousedown(event: Event, callback_id: CallbackId) {
         if (this.wasmCallback(callback_id, undefined)) {
             event.preventDefault()
         }
     }
 
-    private mouseup(event: Event, callback_id: bigint) {
+    private mouseup(event: Event, callback_id: CallbackId) {
         if (this.wasmCallback(callback_id, undefined)) {
             event.preventDefault()
         }
     }
 
-    private mouseenter(_event: Event, callback_id: bigint) {
+    private mouseenter(_event: Event, callback_id: CallbackId) {
         this.wasmCallback(callback_id, undefined);
     }
 
-    private mouseleave(_event: Event, callback_id: bigint) {
+    private mouseleave(_event: Event, callback_id: CallbackId) {
         this.wasmCallback(callback_id, undefined);
     }
 
-    private drop(event: Event, callback_id: bigint) {
+    private drop(event: Event, callback_id: CallbackId) {
         event.preventDefault();
 
         if (event instanceof DragEvent) {
@@ -212,7 +213,7 @@ export class CallbackManager {
         }
     }
 
-    private keydown(event: Event, callback_id: bigint) {
+    private keydown(event: Event, callback_id: CallbackId) {
         if (event instanceof KeyboardEvent) {
             const result = this.wasmCallback(callback_id, [
                 event.key,
@@ -234,7 +235,7 @@ export class CallbackManager {
         console.warn('keydown ignore', event);
     }
 
-    private load(event: Event, callback_id: bigint) {
+    private load(event: Event, callback_id: CallbackId) {
         event.preventDefault();
         this.wasmCallback(callback_id, undefined);
     }
