@@ -21,6 +21,20 @@ jobs:
     steps:
       - name: Checkout
         uses: actions/checkout@v4
+      - name: Install sccache
+        uses: mozilla-actions/sccache-action@v0.0.6
+      - name: Cache cargo registry and index
+        uses: actions/cache@v4
+        with:
+          path: |
+            ~/.cargo/registry
+            ~/.cargo/index
+          key: ${{ runner.os }}-cargo-registry-${{ hashFiles('**/Cargo.lock') }}
+      - name: Cache cargo target
+        uses: actions/cache@v4
+        with:
+          path: target
+          key: ${{ runner.os }}-cargo-target-${{ hashFiles('**/Cargo.lock') }}
       - name: Install toolchain
         uses: actions-rs/toolchain@v1
         with:
@@ -28,8 +42,6 @@ jobs:
           target: wasm32-unknown-unknown
           components: clippy, rustfmt
           override: true
-      - name: Install sccache
-        uses: mozilla-actions/sccache-action@v0.0.6
 
       # Formatting check
       - name: Check formatting
@@ -75,6 +87,11 @@ jobs:
         uses: actions/setup-node@v4
         with:
           node-version: 20
+      - name: Cache npm
+        uses: actions/cache@v4
+        with:
+          path: ~/.npm
+          key: ${{ runner.os }}-npm-${{ hashFiles('**/package-lock.json') }}
       # Various check scripts
       - name: Check versions
         run: tests/check_versions.sh
@@ -91,6 +108,20 @@ jobs:
     steps:
       - name: Checkout
         uses: actions/checkout@v4
+      - name: Install sccache
+        uses: mozilla-actions/sccache-action@v0.0.6
+      - name: Cache cargo registry and index
+        uses: actions/cache@v4
+        with:
+          path: |
+            ~/.cargo/registry
+            ~/.cargo/index
+          key: ${{ runner.os }}-cargo-registry-nightly-${{ hashFiles('**/Cargo.lock') }}
+      - name: Cache cargo target
+        uses: actions/cache@v4
+        with:
+          path: target
+          key: ${{ runner.os }}-cargo-target-nightly-${{ hashFiles('**/Cargo.lock') }}
       - name: Install toolchain
         uses: actions-rs/toolchain@v1
         with:
@@ -98,8 +129,7 @@ jobs:
           target: wasm32-unknown-unknown
           components: clippy
           override: true
-      - name: Install sccache
-        uses: mozilla-actions/sccache-action@v0.0.6
+      
 
       # Clippy checks
       - uses: actions-rs/clippy-check@v1
@@ -127,14 +157,27 @@ jobs:
     steps:
       - name: Checkout
         uses: actions/checkout@v4
+      - name: Install sccache
+        uses: mozilla-actions/sccache-action@v0.0.6
+      - name: Cache cargo registry and index
+        uses: actions/cache@v4
+        with:
+          path: |
+            ~/.cargo/registry
+            ~/.cargo/index
+          key: ${{ runner.os }}-cargo-registry-demo-${{ hashFiles('**/Cargo.lock') }}
+      - name: Cache cargo target
+        uses: actions/cache@v4
+        with:
+          path: target
+          key: ${{ runner.os }}-cargo-target-demo-${{ hashFiles('**/Cargo.lock') }}
       - name: Install toolchain
         uses: actions-rs/toolchain@v1
         with:
           toolchain: nightly
           components: clippy
           override: true
-      - name: Install sccache
-        uses: mozilla-actions/sccache-action@v0.0.6
+      
 
       # Clippy checks
       - uses: actions-rs/clippy-check@v1
