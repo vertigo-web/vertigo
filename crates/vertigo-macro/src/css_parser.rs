@@ -183,12 +183,18 @@ impl CssParser {
                                 .ok_or("Missing animation step")?
                                 .as_str();
                             frame_children
-                                .map(|rule| {
-                                    // emit_warning!(call_site, "{:?}", rule);
-                                    self.generate_unknown_rule(rule)
+                                .map(|rule| match rule.as_rule() {
+                                    Rule::unknown_rule => self.generate_unknown_rule(rule),
+                                    Rule::comment => Ok(String::new()),
+                                    _ => Ok(String::new()),
                                 })
                                 .collect::<Result<Vec<_>, _>>()
-                                .map(|vec| vec.join("\n"))
+                                .map(|vec| {
+                                    vec.into_iter()
+                                        .filter(|s| !s.is_empty())
+                                        .collect::<Vec<_>>()
+                                        .join("\n")
+                                })
                                 .map(|frame_rules| format!("{step} {{{{ {frame_rules} }}}}"))
                         })
                         .collect::<Result<Vec<_>, _>>()?

@@ -16,6 +16,7 @@
 ### Fixed
 
 * Allow tailwind classes to be used in component `tw` attribute [#516]
+* CSS parse error of comment in animation frames
 
 ## 0.11.1 - 2026-03-03
 

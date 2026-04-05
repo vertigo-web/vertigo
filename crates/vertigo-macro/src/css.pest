@@ -284,11 +284,11 @@ color_value = { hexa_value | hex_value | rgba_value | rgb_value | hsla_value | h
 hex_value = _{ hash ~ ASCII_HEX_DIGIT{6} }
 hexa_value = _{ hash ~ ASCII_HEX_DIGIT{8} }
 rgb_value = _{ "rgb(" ~ (ASCII_DIGIT ~ comma){2} ~ ASCII_DIGIT ~ ")" }
-rgba_value = _{ "rgb(" ~ (ASCII_DIGIT ~ comma){3} ~ transparency_value ~ ")" }
+rgba_value = _{ "rgba(" ~ (ASCII_DIGIT ~ comma){3} ~ transparency_value ~ ")" }
 hsl_value = _{ "hsl(" ~ ASCII_DIGIT ~ comma ~ ASCII_DIGIT ~ percent ~ comma ~ ASCII_DIGIT ~ percent ~ ")" }
 hsla_value = _{ "hsl(" ~ ASCII_DIGIT ~ comma ~ (ASCII_DIGIT ~ percent ~ comma){2} ~ transparency_value ~ ")" }
 
-transparency_value = _{ zero_to_one }
+transparency_value = _{ "0" | "1" | ("0." ~ ASCII_DIGIT+) | "1.0" }
 
 url_value = { "url(" ~ (expression | quoted_value) ~ ")" }
 
@@ -369,4 +369,4 @@ animation_params_fallback = { (!(brace_left | semicolon) ~ ANY)* }
 frames = { brace_left ~ frame+ ~ brace_right }
 frame = { step ~ brace_left ~ frame_rule+ ~ brace_right }
 step = { ASCII_DIGIT+ ~ percent }
-frame_rule = _{ unknown_rule } // TODO:
+frame_rule = _{ unknown_rule | comment }
