@@ -35,3 +35,28 @@ left: 0px;
 top: 0px; } };"
     )
 }
+
+#[test]
+fn test_animation_with_rgba_and_comments() {
+    let value = css! {"
+        color: red; /* It's good here */
+        animation: 2s ease-out forwards {
+            0% {
+                background-color: rgba(255, 255, 0, 1); /* Parse error here */
+            }
+            20% {
+                background-color: rgba(255, 255, 0, 0.8);
+            }
+            100% {
+                background-color: rgba(255, 255, 0, 0);
+            }
+        };
+    "};
+
+    assert_eq!(
+        get_s(&value),
+        "color: red;\nanimation: 2s ease-out forwards { 0% { background-color: rgba(255, 255, 0, 1); }
+20% { background-color: rgba(255, 255, 0, 0.8); }
+100% { background-color: rgba(255, 255, 0, 0); } };"
+    )
+}
