@@ -350,25 +350,46 @@ export class Api {
             }
         }
 
-        // Convert result to JsJson
-        if (current === null || current === undefined) {
+        // Convert result to JsJson - sanitize host objects (Window, Element, Function, etc.)
+        const isPlainObject = (obj: any): boolean => {
+            if (obj === null) return false;
+            if (typeof obj !== 'object') return false;
+            const proto = Object.getPrototypeOf(obj);
+            return proto === Object.prototype || proto === null;
+        };
+
+        const sanitize = (value: any): JsJsonType => {
+            if (value === null || value === undefined) {
+                return null;
+            }
+            if (typeof value === 'boolean') {
+                return value;
+            }
+            if (typeof value === 'string') {
+                return value;
+            }
+            if (typeof value === 'number') {
+                return value;
+            }
+            if (value instanceof Uint8Array) {
+                return value;
+            }
+            if (Array.isArray(value)) {
+                return value.map((v) => sanitize(v));
+            }
+            if (isPlainObject(value)) {
+                const out: { [k: string]: JsJsonType } = {};
+                for (const k of Object.keys(value)) {
+                    out[k] = sanitize(value[k]);
+                }
+                return out;
+            }
+
+            // Host objects (Window, Element, DOM nodes, functions, class instances, etc.)
+            // are not serializable to JsJson. Return null for safety.
             return null;
-        }
-        if (typeof current === 'boolean') {
-            return current;
-        }
-        if (typeof current === 'string') {
-            return current;
-        }
-        if (typeof current === 'number') {
-            return current;
-        }
-        if (Array.isArray(current)) {
-            return current;
-        }
-        if (typeof current === 'object') {
-            return current;
-        }
-        return null;
+        };
+
+        return sanitize(current);
     }
 }
