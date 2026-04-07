@@ -1,11 +1,13 @@
 <!-- markdownlint-configure-file { "no-duplicate-heading": { "siblings_only": true } } -->
 
 <!-- markdownlint-disable-next-line first-line-h1 -->
-## Unreleased
+## 0.11.2 - 2026-04-07
 
 ### Added
 
 * `#[js_json(skip)]` attribute to skip fields in `AutoJsJson` macro
+* `AutoMap::for_each` method for iterating over key-value pairs
+* Impl `Add` and `AddAssign` for `Computed<Css>` and `Computed<Tw>`
 
 ### Changed
 
