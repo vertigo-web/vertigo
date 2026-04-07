@@ -157,6 +157,9 @@ fn convert_to_tokens(input: Option<proc_macro2::TokenStream>) -> TokenStream {
 }
 
 #[proc_macro_attribute]
+#[proc_macro_error]
 pub fn store(attr: TokenStream, item: TokenStream) -> TokenStream {
-    store_inner(attr.into(), item.into()).into()
+    store_inner(attr.into(), item.into())
+        .unwrap_or_else(|err| err.to_compile_error())
+        .into()
 }

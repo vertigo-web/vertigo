@@ -1,12 +1,11 @@
 use proc_macro2::TokenStream as TokenStream2;
 use quote::{format_ident, quote};
-use syn::{FnArg, Ident, ItemFn, Pat, ReturnType, Type, TypePath, spanned::Spanned};
+use syn::{Error, FnArg, Ident, ItemFn, Pat, Result, ReturnType, Type, TypePath, spanned::Spanned};
 
-pub fn store_inner(_attr: TokenStream2, item: TokenStream2) -> TokenStream2 {
+pub fn store_inner(_attr: TokenStream2, item: TokenStream2) -> Result<TokenStream2> {
     let span = item.span();
     let Ok(input) = syn::parse2::<ItemFn>(item) else {
-        emit_error!(span, "The macro can only take functions");
-        return quote! {};
+        return Err(Error::new(span, "The macro can only take functions"));
     };
 
     let vis = &input.vis;
@@ -17,12 +16,14 @@ pub fn store_inner(_attr: TokenStream2, item: TokenStream2) -> TokenStream2 {
     let output = &sig.output;
 
     let ReturnType::Type(_, output_type) = output else {
-        emit_error!(output.span(), "The function should return something",);
-        return quote! {};
+        return Err(Error::new(
+            output.span(),
+            "The function should return something",
+        ));
     };
 
     if inputs.is_empty() {
-        return quote! {
+        return Ok(quote! {
             #vis #sig {
                 thread_local! {
                     static CACHE: std::rc::Rc<vertigo::dev::HashMapMut<(), #output_type>>
@@ -33,20 +34,18 @@ pub fn store_inner(_attr: TokenStream2, item: TokenStream2) -> TokenStream2 {
                     cache.get_or_create(&(), || #block)
                 })
             }
-        };
+        });
     }
 
     let mut arguments = Vec::<(&Ident, &TypePath)>::new();
 
     for arg in inputs {
         let FnArg::Typed(arg) = arg else {
-            emit_error!(arg.span(), "Unsupported type");
-            return quote! {};
+            return Err(Error::new(arg.span(), "Unsupported type"));
         };
 
         let Pat::Ident(pat) = &*arg.pat else {
-            emit_error!(arg.pat.span(), "Unsupported type");
-            return quote! {};
+            return Err(Error::new(arg.pat.span(), "Unsupported type"));
         };
 
         // Variable identifier
@@ -55,15 +54,13 @@ pub fn store_inner(_attr: TokenStream2, item: TokenStream2) -> TokenStream2 {
         let arg_type: &TypePath = match &*arg.ty {
             Type::Reference(inner) => {
                 let Type::Path(inner) = &*inner.elem else {
-                    emit_error!(arg.ty.span(), "Unsupported type");
-                    return quote! {};
+                    return Err(Error::new(arg.ty.span(), "Unsupported type"));
                 };
                 inner
             }
             Type::Path(inner) => inner,
             _ => {
-                emit_error!(arg.ty.span(), "Unsupported type");
-                return quote! {};
+                return Err(Error::new(arg.ty.span(), "Unsupported type"));
             }
         };
 
@@ -108,7 +105,7 @@ pub fn store_inner(_attr: TokenStream2, item: TokenStream2) -> TokenStream2 {
         }
     }
 
-    quote! {
+    Ok(quote! {
         #vis #sig {
             #( #types )*
 
@@ -121,7 +118,7 @@ pub fn store_inner(_attr: TokenStream2, item: TokenStream2) -> TokenStream2 {
                     #( #call_list )*
             })
         }
-    }
+    })
 }
 
 #[cfg(test)]
@@ -139,14 +136,14 @@ mod tests {
     }
 
     #[test]
-    fn function_without_arguments() {
+    fn function_without_arguments() -> Result<()> {
         let input: TokenStream2 = quote! {
             pub fn get_state() -> FakeState {
                 FakeState {}
             }
         };
 
-        let output = store_inner(quote!(), input.clone());
+        let output = store_inner(quote!(), input.clone())?;
 
         let expected = quote! {
             pub fn get_state() -> FakeState {
@@ -164,10 +161,12 @@ mod tests {
         };
 
         pretty_assertions::assert_eq!(pretty_format(&output), pretty_format(&expected));
+
+        Ok(())
     }
 
     #[test]
-    fn with_arguments() {
+    fn with_arguments() -> Result<()> {
         let input: TokenStream2 = quote! {
             pub fn get_comments(id4: u8, post_id: u32, url: &String) -> LazyCache<Vec<CommentModel>> {
                 vertigo::fetch::RequestBuilder
@@ -183,7 +182,7 @@ mod tests {
             }
         };
 
-        let output = store_inner(quote!(), input.clone());
+        let output = store_inner(quote!(), input.clone())?;
 
         let expected = quote! {
             pub fn get_comments(
@@ -222,5 +221,44 @@ mod tests {
         };
 
         pretty_assertions::assert_eq!(pretty_format(&output), pretty_format(&expected));
+
+        Ok(())
+    }
+
+    #[test]
+    fn no_return_type() -> core::result::Result<(), String> {
+        let input: TokenStream2 = quote! {
+            pub fn my_store() {
+            }
+        };
+
+        let output = store_inner(quote!(), input.clone());
+
+        match output {
+            Ok(_) => Err("Expected an error".into()),
+            Err(err) => {
+                assert_eq!(err.to_string(), "The function should return something");
+                Ok(())
+            }
+        }
+    }
+
+    #[test]
+    fn not_a_function() -> core::result::Result<(), String> {
+        let input: TokenStream2 = quote! {
+            struct MyStruct {
+                field: u32,
+            }
+        };
+
+        let output = store_inner(quote!(), input.clone());
+
+        match output {
+            Ok(_) => Err("Expected an error".into()),
+            Err(err) => {
+                assert_eq!(err.to_string(), "The macro can only take functions");
+                Ok(())
+            }
+        }
     }
 }

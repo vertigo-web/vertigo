@@ -18,6 +18,7 @@
 * Allow tailwind classes to be used in component `tw` attribute [#516]
 * CSS parse error of comment in animation frames #[522]
 * "jsJsonGetSize: Unknown type function" during JS API access [#490]
+* `#[store]` macro panics instead of showing a helpful error message
 
 ## 0.11.1 - 2026-03-03
 
