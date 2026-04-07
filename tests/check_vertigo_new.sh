@@ -5,7 +5,7 @@
 
 set -xe
 
-cargo build --release --bin vertigo
+cargo build --locked --release --bin vertigo
 mkdir -p build/vertigo-cli-test
 cp target/release/vertigo build/vertigo-cli-test/
 cd build/vertigo-cli-test
@@ -30,7 +30,7 @@ sed -i "s/vertigo = .*/vertigo = { path = \"..\/..\/..\/..\/crates\/vertigo\" }/
 sed -i "s/vertigo = .*/vertigo = { path = \"..\/..\/..\/..\/crates\/vertigo\" }/" backend/Cargo.toml
 sed -i "s/vertigo-cli = .*/vertigo-cli = { path = \"..\/..\/..\/..\/crates\/vertigo-cli\" }/" backend/Cargo.toml
 ../vertigo build
-cargo check
+cargo check --locked
 du -sh build/*
 cd ..
 

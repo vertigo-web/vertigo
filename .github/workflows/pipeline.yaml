@@ -129,7 +129,6 @@ jobs:
           target: wasm32-unknown-unknown
           components: clippy
           override: true
-      
 
       # Clippy checks
       - uses: actions-rs/clippy-check@v1

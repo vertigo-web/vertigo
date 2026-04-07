@@ -15,9 +15,9 @@ script = [
 
 [tasks.ci]
 script = [
-    "cargo clippy -p vertigo -p vertigo-macro --all-features --tests --target wasm32-unknown-unknown -- -Dwarnings",
-    "cargo clippy -p vertigo-demo -p vertigo-example-counter -p vertigo-example-router -p vertigo-example-trafficlights --all-features --tests --target wasm32-unknown-unknown -- -Dwarnings",
-    "cargo test --all-features",
+    "cargo clippy --locked -p vertigo -p vertigo-macro --all-features --tests --target wasm32-unknown-unknown -- -Dwarnings",
+    "cargo clippy --locked -p vertigo-demo -p vertigo-example-counter -p vertigo-example-router -p vertigo-example-trafficlights --all-features --tests --target wasm32-unknown-unknown -- -Dwarnings",
+    "cargo test --locked --all-features",
     "tests/check_versions.sh",
     "tests/js_tests.sh",
     "tests/check_vertigo_new.sh",
