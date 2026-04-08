@@ -42,5 +42,8 @@ expect_used = "deny"
 
 [profile.release]
 lto = "thin"
-opt-level = 'z'
+codegen-units = 1
+strip = true
+
+[profile.dev]
 incremental = true

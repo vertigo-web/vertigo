@@ -18,9 +18,11 @@ A reactive Real-DOM library with SSR for Rust.
 * **Isomorphic server-side rendering** - The same WASM code is used for both client and server (see: [vertigo-cli](https://crates.io/crates/vertigo-cli))
 * **Fullstack** - Can be mounted into actix-web (see: [vertigo-cli](https://crates.io/crates/vertigo-cli))
 
-See [Changelog](https://github.com/vertigo-web/vertigo/blob/master/CHANGES.md) for recent features.
+See [Changelog](https://github.com/vertigo-web/vertigo/blob/master/docs/CHANGELOG.md) for recent features.
 
-Go to **[TUTORIAL](https://github.com/vertigo-web/vertigo/blob/master/tutorial.md)** if you want to try.
+Go to **[TUTORIAL](https://github.com/vertigo-web/vertigo/blob/master/docs/tutorial.md)** if you want to try.
+
+Having trouble with `cargo install vertigo-cli`? Check **[BUILDING.md](https://github.com/vertigo-web/vertigo/blob/master/docs/BUILDING.md)**.
 
 For more information go to vertigo home website **[vertigo.znoj.pl](https://vertigo.znoj.pl/)**.
 

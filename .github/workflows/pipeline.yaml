@@ -86,7 +86,7 @@ jobs:
       - name: Install Node.js
         uses: actions/setup-node@v4
         with:
-          node-version: 20
+          node-version: 24
       - name: Cache npm
         uses: actions/cache@v4
         with:
@@ -98,6 +98,10 @@ jobs:
       # Unittests
       - name: JS unittests
         run: tests/js_tests.sh
+
+      # Metadata checks - move to separate job if more such checks are added
+      - name: Check License Year
+        run: ./tests/check_licenses.sh
 
   nightly:
     name: Nightly clippy && tests
@@ -176,7 +180,6 @@ jobs:
           toolchain: nightly
           components: clippy
           override: true
-      
 
       # Clippy checks
       - uses: actions-rs/clippy-check@v1
