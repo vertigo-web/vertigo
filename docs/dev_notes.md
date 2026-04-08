@@ -3,8 +3,8 @@ Some random dev stuff below
 
 Helpful commands
 --------------
-- `cargo doc` - Build build documentation
-- `cargo doc --open` - Open the documentation in the browser
+- `cargo doc --no-deps` - Build build documentation
+- `cargo doc --no-deps --open` - Open the documentation in the browser
 - `cargo update --dry-run` - Checking for updates
 - `rustup target add wasm32-unknown-unknown` - add webassembly
 
