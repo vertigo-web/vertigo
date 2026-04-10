@@ -23,6 +23,11 @@ default-features = false
 features = ["std"]
 optional = true
 
+[dependencies.rust_decimal]
+version = "1"
+default-features = false
+optional = true
+
 [dev-dependencies]
 tokio = { version = "1", features = ["macros", "rt"] }
 

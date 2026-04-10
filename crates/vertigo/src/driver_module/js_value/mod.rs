@@ -7,6 +7,8 @@ mod memory_block_write;
 mod serialize;
 #[cfg(feature = "chrono")]
 mod serialize_chrono;
+#[cfg(feature = "rust_decimal")]
+mod serialize_rust_decimal;
 
 pub use js_json_context::JsJsonContext;
 pub use js_json_list_decoder::JsJsonListDecoder;

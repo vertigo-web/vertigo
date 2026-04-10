@@ -1,6 +1,12 @@
 <!-- markdownlint-configure-file { "no-duplicate-heading": { "siblings_only": true } } -->
 
 <!-- markdownlint-disable-next-line first-line-h1 -->
+## Unreleased
+
+### Added
+
+* `rust_decimal::Decimal` support to `JsJson` (feature `rust_decimal`) [#528]
+
 ## 0.11.2 - 2026-04-07
 
 ### Added
