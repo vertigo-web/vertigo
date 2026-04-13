@@ -41,6 +41,15 @@ pub struct ContainerOpts {
     /// Rename all fields according to the given case convention.
     #[darling(default)]
     pub rename_all: Option<RenameAll>,
+    /// Enables adjacently-tagged enum encoding; the variant name is stored
+    /// under this key in the produced object. Must be used together with
+    /// `content`.
+    #[darling(default)]
+    pub tag: Option<String>,
+    /// The field name for the variant payload in adjacently-tagged mode.
+    /// Must be used together with `tag`.
+    #[darling(default)]
+    pub content: Option<String>,
 }
 
 /// Options for a field

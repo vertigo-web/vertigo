@@ -6,6 +6,7 @@
 ### Added
 
 * `rust_decimal::Decimal` support to `JsJson` (feature `rust_decimal`) [#528]
+* Support for adjacently tagged enums via `#[js_json(tag = "...", content = "...")]` attribute
 
 ## 0.11.2 - 2026-04-07
 
