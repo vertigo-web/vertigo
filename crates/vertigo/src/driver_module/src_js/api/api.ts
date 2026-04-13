@@ -41,7 +41,7 @@ type ExecType
     | {
         WebsocketSendMessage: {
             callback: CallbackId,
-            message: string,
+            message: JsJsonType,
         }
     }
     | {

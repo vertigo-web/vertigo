@@ -3,9 +3,11 @@
 use actix_web::{App, Error, HttpRequest, HttpResponse, HttpServer, rt, web};
 
 mod app_state;
+mod client_message;
 mod connection;
 
 use app_state::AppState;
+use client_message::ClientMessage;
 use connection::{Connection, ConnectionStream, SocketError};
 
 #[actix_web::main]
@@ -47,7 +49,10 @@ async fn websocket_process(
     mut receiver: ConnectionStream,
 ) -> Result<(), SocketError> {
     let id = sender.get_id();
-    sender.send(format!("New connection, id={id}")).await?;
+    let welcome = ClientMessage::Info {
+        message: format!("New connection, id={id}"),
+    };
+    sender.send(welcome.to_json()?).await?;
 
     println!("New connection: {id}");
 

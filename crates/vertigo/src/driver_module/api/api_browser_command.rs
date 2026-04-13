@@ -102,11 +102,8 @@ impl CommandForBrowserApi {
         exec_command(CommandForBrowser::WebsocketUnregister { callback });
     }
 
-    pub fn websocket_send_message(&self, callback: CallbackId, message: &str) {
-        exec_command(CommandForBrowser::WebsocketSendMessage {
-            callback,
-            message: message.to_string(),
-        });
+    pub fn websocket_send_message(&self, callback: CallbackId, message: JsJson) {
+        exec_command(CommandForBrowser::WebsocketSendMessage { callback, message });
     }
 
     pub fn timer_set(&self, callback: CallbackId, duration: u32, kind: TimerKind) {

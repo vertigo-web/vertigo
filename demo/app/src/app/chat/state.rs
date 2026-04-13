@@ -1,7 +1,15 @@
 use std::rc::Rc;
 use vertigo::{
-    DropResource, Value, WebsocketConnection, WebsocketMessage, get_driver, transaction,
+    AutoJsJson, DropResource, JsJson, Value, WebsocketConnection, WebsocketMessage, from_json,
+    get_driver, transaction,
 };
+
+/// Ten sam kształt JSON co `demo/server/src/client_message.rs` (serde externally tagged).
+#[derive(AutoJsJson, Clone, Debug, PartialEq, Eq)]
+enum ClientMessage {
+    Info { message: String },
+    UserMessage { message: String },
+}
 
 #[derive(Clone)]
 pub struct ChatState {
@@ -28,8 +36,6 @@ impl ChatState {
                     log::info!("socket demo - connect ...");
                 }
                 WebsocketMessage::Message(message) => {
-                    log::info!("socket demo - new message {message}");
-
                     Self::add_message(&messages, message);
                 }
                 WebsocketMessage::Close => {
@@ -52,7 +58,7 @@ impl ChatState {
             let connect = self.connect.get(context);
             if let Some(connect) = connect.as_ref() {
                 let text = self.input_text.get(context);
-                connect.send(text);
+                connect.send(ClientMessage::UserMessage { message: text });
                 self.input_text.set(String::from(""));
             } else {
                 log::error!("missing connection");
@@ -60,7 +66,17 @@ impl ChatState {
         });
     }
 
-    fn add_message(messages: &Value<Vec<Rc<String>>>, message: String) {
+    fn add_message(messages: &Value<Vec<Rc<String>>>, message: JsJson) {
+        let text = match from_json::<ClientMessage>(message.clone()) {
+            Ok(parsed) => match parsed {
+                ClientMessage::Info { message } | ClientMessage::UserMessage { message } => message,
+            },
+            Err(_) => match message {
+                JsJson::String(s) => s,
+                other => format!("{other:?}"),
+            },
+        };
+
         transaction(|context| {
             let prev_list: Vec<Rc<String>> = messages.get(context);
             let mut new_list: Vec<Rc<String>> = Vec::new();
@@ -69,7 +85,7 @@ impl ChatState {
                 new_list.push(item.clone());
             }
 
-            new_list.push(Rc::new(message));
+            new_list.push(Rc::new(text));
 
             messages.set(new_list);
         });

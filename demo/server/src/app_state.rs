@@ -2,6 +2,7 @@ use std::collections::HashSet;
 use std::sync::Arc;
 use tokio::sync::RwLock;
 
+use crate::client_message::ClientMessage;
 use crate::connection::{Connection, SocketError};
 
 use std::sync::OnceLock;
@@ -39,10 +40,25 @@ impl AppState {
     }
 
     pub async fn message_from(&self, message: String) -> Result<(), SocketError> {
-        self.add_message(&message).await;
+        let outbound = match serde_json::from_str::<ClientMessage>(&message) {
+            Ok(parsed) => parsed,
+            Err(_) => ClientMessage::UserMessage {
+                message: message.clone(),
+            },
+        };
+
+        let stored = match &outbound {
+            ClientMessage::UserMessage { message } | ClientMessage::Info { message } => {
+                message.as_str()
+            }
+        };
+
+        self.add_message(stored).await;
+
+        let wire = outbound.to_json()?;
 
         for connection in self.connections.read().await.iter() {
-            let _ = connection.send(&message).await;
+            let _ = connection.send(wire.clone()).await;
         }
 
         Ok(())
@@ -52,7 +68,11 @@ impl AppState {
         let all_messages = self.messages.read().await;
 
         for message in all_messages.iter() {
-            socket.send(message).await?;
+            let wire = ClientMessage::UserMessage {
+                message: message.clone(),
+            }
+            .to_json()?;
+            socket.send(wire).await?;
         }
 
         Ok(())

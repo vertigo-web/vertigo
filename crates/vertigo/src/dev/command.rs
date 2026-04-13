@@ -32,7 +32,7 @@ pub enum CommandForBrowser {
     },
     WebsocketSendMessage {
         callback: CallbackId,
-        message: String,
+        message: JsJson,
     },
 
     TimerSet {
@@ -200,7 +200,7 @@ pub mod browser_response {
 #[derive(AutoJsJson, Debug)]
 pub enum WebsocketMessageFromBrowser {
     Connected,
-    Message { message: String },
+    Message { message: JsJson },
     Disconnected,
 }
 
