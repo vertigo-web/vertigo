@@ -15,6 +15,8 @@ pub enum SocketError {
     ClientClose,
     #[error("Send error: {0}")]
     SendError(#[from] actix_ws::Closed),
+    #[error("JSON error: {0}")]
+    Json(#[from] serde_json::Error),
 }
 
 #[derive(Clone)]

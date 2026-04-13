@@ -1,8 +1,21 @@
+import { JsJsonType } from "../../jsjson";
 import { ModuleControllerType } from "../../wasm_init";
 import { ExportType } from "../../wasm_module";
 import { CallbackId } from "../types";
 import { SocketConnection, SocketConnectionController } from "./connection";
 
+const wireStringToJsJson = (raw: string): JsJsonType => {
+    try {
+        return JSON.parse(raw) as JsJsonType;
+    } catch {
+        console.error('Failed to parse websocket message', raw);
+        throw Error(raw);
+    }
+};
+
+const jsJsonToWebSocketWire = (value: JsJsonType): string => {
+    return JSON.stringify(value);
+};
 
 const assertNeverMessage = (data: never): never => {
     console.error(data);
@@ -11,7 +24,7 @@ const assertNeverMessage = (data: never): never => {
 
 type CommandType = 'Connected' | 'Disconnected' | {
     'Message': {
-        message: string,
+        message: JsJsonType,
     }
 }
 const wasmCallback = (wasm: ModuleControllerType<ExportType>, callbackId: CallbackId, command: CommandType) => {
@@ -60,7 +73,7 @@ export class DriverWebsocket {
                 if (message.type === 'message') {
                     wasmCallback(wasm, callback_id, {
                         'Message': {
-                            message: message.message
+                            message: wireStringToJsJson(message.message)
                         }
                     });
                     return;
@@ -93,14 +106,14 @@ export class DriverWebsocket {
 
     public websocket_send_message = (
         callback_id: CallbackId,
-        message: string,
+        message: JsJsonType,
     ) => {
         const socket = this.socket.get(callback_id);
 
         if (socket === undefined) {
             console.error(`Missing socket connection for callback_id=${callback_id}`);
         } else {
-            socket.send(message);
+            socket.send(jsJsonToWebSocketWire(message));
         }
     }
 }
