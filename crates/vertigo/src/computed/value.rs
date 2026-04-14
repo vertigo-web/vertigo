@@ -108,7 +108,14 @@ impl<T: Clone + PartialEq + 'static> Value<T> {
     }
 
     pub fn change(&self, change_fn: impl FnOnce(&mut T)) {
-        get_dependencies().transaction(|ctx| {
+        let deps = get_dependencies();
+        if deps.is_refreshing() {
+            log::error!(
+                "Ignoring Value::change while the dependency graph is refreshing; the change was not applied"
+            );
+            return;
+        }
+        deps.transaction(|ctx| {
             let mut value = self.get(ctx);
             change_fn(&mut value);
             self.set(value);
@@ -116,7 +123,14 @@ impl<T: Clone + PartialEq + 'static> Value<T> {
     }
 
     pub fn set(&self, value: T) {
-        get_dependencies().transaction(|_| {
+        let deps = get_dependencies();
+        if deps.is_refreshing() {
+            log::error!(
+                "Ignoring Value::set while the dependency graph is refreshing (would corrupt scheduling); the write was not applied"
+            );
+            return;
+        }
+        deps.transaction(|_| {
             let need_refresh = self.inner.set(value);
             if need_refresh {
                 get_dependencies().report_set(self.inner.id);

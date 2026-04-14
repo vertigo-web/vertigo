@@ -40,6 +40,10 @@ pub fn get_dependencies() -> Rc<Dependencies> {
 }
 
 impl Dependencies {
+    pub(crate) fn is_refreshing(&self) -> bool {
+        self.transaction_state.is_refreshing()
+    }
+
     pub fn transaction<R, F: FnOnce(&Context) -> R>(&self, func: F) -> R {
         self.transaction_state.up();
 
