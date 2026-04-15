@@ -83,7 +83,7 @@ pub fn render_list<
     .into()
 }
 
-fn reorder_nodes<T: PartialEq, K: Eq + Hash>(
+fn reorder_nodes<T: PartialEq + Clone, K: Eq + Hash>(
     parent_id: DomId,
     comment_id: DomId,
     mut real_child: VecDeque<(T, DomNode)>,
@@ -186,7 +186,7 @@ fn get_pairs_bottom<T: PartialEq>(
     }
 }
 
-fn get_pairs_middle<T: PartialEq, K: Eq + Hash>(
+fn get_pairs_middle<T: PartialEq + Clone, K: Eq + Hash>(
     parent_id: DomId,
     last_before: DomId,
     real_child: VecDeque<(T, DomNode)>,
@@ -219,10 +219,10 @@ fn get_pairs_middle<T: PartialEq, K: Eq + Hash>(
 struct CacheNode<K: Eq + Hash, T> {
     get_key: Rc<dyn Fn(&T) -> K + 'static>,
     create_new: Rc<dyn Fn(&T) -> DomNode + 'static>,
-    data: HashMap<K, VecDeque<DomNode>>,
+    data: HashMap<K, VecDeque<(T, DomNode)>>,
 }
 
-impl<K: Eq + Hash, T> CacheNode<K, T> {
+impl<K: Eq + Hash, T: PartialEq + Clone> CacheNode<K, T> {
     pub fn new(
         get_key: Rc<dyn Fn(&T) -> K + 'static>,
         create_new: Rc<dyn Fn(&T) -> DomNode + 'static>,
@@ -236,8 +236,8 @@ impl<K: Eq + Hash, T> CacheNode<K, T> {
 
     pub fn insert(&mut self, item: &T, element: DomNode) {
         let key = (self.get_key)(item);
-        let item = self.data.entry(key).or_default();
-        item.push_back(element);
+        let queue = self.data.entry(key).or_default();
+        queue.push_back((item.clone(), element));
     }
 
     pub fn get_or_create(&mut self, item: &T) -> DomNode {
@@ -247,8 +247,100 @@ impl<K: Eq + Hash, T> CacheNode<K, T> {
         let CacheNode { create_new, .. } = self;
 
         match element {
-            Some(node) => node,
+            Some((old_item, node)) if old_item == *item => node,
+            Some((_old_item, _node)) => create_new(item),
             None => create_new(item),
         }
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use std::rc::Rc;
+
+    use super::reorder_nodes;
+    use crate::{DomId, DomNode, computed::struct_mut::ValueMut};
+
+    #[derive(Clone, PartialEq, Debug)]
+    struct Item {
+        id: u32,
+        label: String,
+    }
+
+    #[test]
+    fn rerenders_node_when_item_changes_but_key_stays_the_same() {
+        let old_item = Item {
+            id: 1,
+            label: "old".to_string(),
+        };
+        let new_item = Item {
+            id: 1,
+            label: "new".to_string(),
+        };
+
+        let render_calls = Rc::new(ValueMut::new(0usize));
+        let render_calls_for_closure = render_calls.clone();
+
+        let render: Rc<dyn Fn(&Item) -> DomNode> = Rc::new(move |item| {
+            render_calls_for_closure.change(|count| *count += 1);
+            DomNode::from(item.label.clone())
+        });
+
+        let old_node = render(&old_item);
+        render_calls.set(0);
+
+        let result = reorder_nodes(
+            DomId::from_u64(100),
+            DomId::from_u64(101),
+            std::collections::VecDeque::from([(old_item.clone(), old_node)]),
+            std::collections::VecDeque::from([new_item]),
+            Rc::new(|item: &Item| item.id),
+            render,
+        );
+
+        assert_eq!(result.len(), 1);
+        assert_eq!(result[0].0.label, "new");
+        assert_eq!(
+            render_calls.get(),
+            1,
+            "Expected rerender when item changes and key stays the same"
+        );
+    }
+
+    #[test]
+    fn reuses_cached_node_when_item_value_is_unchanged() {
+        let item = Item {
+            id: 1,
+            label: "same".to_string(),
+        };
+
+        let render_calls = Rc::new(ValueMut::new(0usize));
+        let render_calls_for_closure = render_calls.clone();
+
+        let render: Rc<dyn Fn(&Item) -> DomNode> = Rc::new(move |item| {
+            render_calls_for_closure.change(|count| *count += 1);
+            DomNode::from(item.label.clone())
+        });
+
+        let old_node = render(&item);
+        let old_node_id = old_node.id_dom();
+        render_calls.set(0);
+
+        let result = reorder_nodes(
+            DomId::from_u64(200),
+            DomId::from_u64(201),
+            std::collections::VecDeque::from([(item.clone(), old_node)]),
+            std::collections::VecDeque::from([item]),
+            Rc::new(|item: &Item| item.id),
+            render,
+        );
+
+        assert_eq!(result.len(), 1);
+        assert_eq!(render_calls.get(), 0, "Expected cached DomNode reuse");
+        assert_eq!(
+            result[0].1.id_dom(),
+            old_node_id,
+            "Expected to get the same DomNode from cache"
+        );
     }
 }
