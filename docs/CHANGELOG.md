@@ -7,6 +7,14 @@
 
 * `rust_decimal::Decimal` support to `JsJson` (feature `rust_decimal`) [#528]
 
+### Fixed
+
+* Watch script added to non-HTML responses [#532]
+
+### Changed
+
+* websocket: Switch to JsJson for messages
+
 ## 0.11.2 - 2026-04-07
 
 ### Added

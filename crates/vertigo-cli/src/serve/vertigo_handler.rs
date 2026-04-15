@@ -1,7 +1,7 @@
 use actix_web::{HttpRequest, http::StatusCode, web};
 use std::time::Instant;
 
-use crate::serve::MountConfig;
+use crate::serve::{MountConfig, response_state::ResponseState};
 
 use super::server_state::ServerState;
 
@@ -69,7 +69,10 @@ pub fn vertigo_handler(mount_config: &MountConfig) -> actix_web::Route {
                 response_state.status,
             );
 
-            if let Some(port_watch) = state.port_watch {
+            if let Some(port_watch) = state.port_watch
+                && response_state.headers.get("content-type")
+                    == Some(&ResponseState::HTML.to_string())
+            {
                 response_state.add_watch_script(port_watch);
             }
 
