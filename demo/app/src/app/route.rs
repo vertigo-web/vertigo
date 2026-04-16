@@ -16,6 +16,7 @@ pub enum Route {
     DropFile,
     JsApiAccess,
     List,
+    LazyList,
     Svg,
     NotFound,
 }
@@ -34,6 +35,7 @@ impl Route {
             "/drop-file" => Self::DropFile,
             "/js-api-access" => Self::JsApiAccess,
             "/list" => Self::List,
+            "/lazy-list" => Self::LazyList,
             "/svg" => Self::Svg,
             _ => Self::NotFound,
         }
@@ -52,6 +54,7 @@ impl Route {
             Self::DropFile => "Drop File",
             Self::JsApiAccess => "JS Api Access",
             Self::List => "List",
+            Self::LazyList => "Lazy List",
             Self::Svg => "Svg",
             Self::NotFound => "Not Found",
         }
@@ -79,6 +82,7 @@ impl Display for Route {
             Self::DropFile => "/drop-file",
             Self::JsApiAccess => "/js-api-access",
             Self::List => "/list",
+            Self::LazyList => "/lazy-list",
             Self::Svg => "/svg",
             Self::NotFound => "/not-found",
         };

@@ -18,5 +18,22 @@ export default [
             }),
             sourcemaps(),
         ],
+    },
+    {
+        input: 'crates/vertigo/src/driver_module/src_js/api/command/fetchExec.test.ts',
+        output: [
+            {
+                sourcemap: true,
+                file: 'build/fetchExec.test.js',
+                format: 'cjs',
+            }
+        ],
+        plugins: [
+            typescript({
+                sourceMap: true,
+                inlineSources: true,
+            }),
+            sourcemaps(),
+        ],
     }
 ];

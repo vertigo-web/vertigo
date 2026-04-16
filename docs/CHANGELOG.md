@@ -5,6 +5,7 @@
 
 ### Added
 
+* `LazyListCache` for fetched lists (optimized for CRUD operations)
 * `dom!` macro now supports passing children to components
 
 ### Fixed

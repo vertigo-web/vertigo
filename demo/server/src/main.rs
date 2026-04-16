@@ -5,6 +5,7 @@ use actix_web::{App, Error, HttpRequest, HttpResponse, HttpServer, rt, web};
 mod app_state;
 mod client_message;
 mod connection;
+mod items;
 
 use app_state::AppState;
 use client_message::ClientMessage;
@@ -14,10 +15,19 @@ use connection::{Connection, ConnectionStream, SocketError};
 async fn main() -> std::io::Result<()> {
     println!("Server start on 127.0.0.1:3333 ...");
 
-    HttpServer::new(|| {
+    let items_state = items::new_state();
+
+    HttpServer::new(move || {
         App::new()
+            .app_data(items_state.clone())
             .route("/", web::get().to(|| async { "demo - api index" }))
             .route("/ws", web::get().to(websocket_handler))
+            // Lazy list demo
+            .route("/api/items", web::get().to(items::list))
+            .route("/api/items", web::post().to(items::create))
+            .route("/api/items/{id}", web::get().to(items::get_one))
+            .route("/api/items/{id}", web::put().to(items::update))
+            .route("/api/items/{id}", web::delete().to(items::delete))
     })
     .bind(("127.0.0.1", 3333))?
     .run()

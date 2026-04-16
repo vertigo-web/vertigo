@@ -47,6 +47,12 @@ const getBodyString = (body: FetchRequestType['body']): string | undefined => {
     return JSON.stringify(body.Data.data);
 };
 
+// 204/205 carry no body, and any other response with an empty body
+// would crash response.json(). Treat both as Json: null so the caller
+// sees a successful response with the real status code.
+export const parseJsonBody = (bodyText: string): JsJsonType | null =>
+    bodyText.length === 0 ? null : JSON.parse(bodyText);
+
 const processResponse = async (response: Response): Promise<FetchResponseType> => {
     const status = response.status;
     const contentType = response.headers.get("Content-Type");
@@ -63,11 +69,13 @@ const processResponse = async (response: Response): Promise<FetchResponseType> =
             }
         }
 
+        const json = parseJsonBody(await response.text());
+
         return {
             Ok: {
                 status,
                 response: {
-                    Json: await response.json()
+                    Json: json
                 }
             }
         };
