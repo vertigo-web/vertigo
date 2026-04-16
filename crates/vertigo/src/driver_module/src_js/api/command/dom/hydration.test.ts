@@ -121,7 +121,7 @@ function mockedApiLocation() {
 
 // 1. Extra Nodes generated during SSR
 function testExtraNodes() {
-    console.log("\n--- Test 1: Extra Nodes during SSR ---");
+    console.log("\n--- Test hydration 1: Extra Nodes during SSR ---");
     clearBody();
 
     // DOM: A, Extra, B
@@ -153,7 +153,7 @@ function testExtraNodes() {
 
 // 2. Text node has different content
 function testTextMismatch() {
-    console.log("\n--- Test 2: Text Mismatch ---");
+    console.log("\n--- Test hydration 2: Text Mismatch ---");
     clearBody();
 
     // DOM: "Old Text"
@@ -176,7 +176,7 @@ function testTextMismatch() {
 
 // 3. Tag name is different
 function testTagMismatch() {
-    console.log("\n--- Test 3: Tag Name Mismatch ---");
+    console.log("\n--- Test hydration 3: Tag Name Mismatch ---");
     clearBody();
 
     // DOM: <SPAN>
@@ -199,7 +199,7 @@ function testTagMismatch() {
 
 // 4. Element has different attributes
 function testAttributeMismatch() {
-    console.log("\n--- Test 4: Attribute Mismatch ---");
+    console.log("\n--- Test hydration 4: Attribute Mismatch ---");
     clearBody();
 
     // DOM: <DIV class="old">

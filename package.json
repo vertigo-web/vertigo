@@ -1,6 +1,6 @@
 {
   "scripts": {
-    "test:hydration": "rollup -c rollup.test.config.mjs && node build/hydration.test.js"
+    "test": "rollup -c rollup.test.config.mjs && node build/hydration.test.js && node build/fetchExec.test.js"
   },
   "devDependencies": {
     "@rollup/plugin-terser": "^1.0.0",

@@ -13,6 +13,7 @@
 //!   * [Value] - Read-write reactive value
 //!   * [Computed] - Read-only (computed) reactive value
 //!   * [LazyCache] - Lazy cache for fetched resources
+//!   * [LazyListCache] - Lazy cache for fetched lists (optimized for CRUD operations)
 //!   * [store] - Wraps function to be used as a store (singleton) generator
 //! * Others
 //!   * [bind!] - Auto-clones variables before use
@@ -69,6 +70,7 @@ pub use driver_module::{
 pub use exports::start_app;
 pub use fetch::{
     lazy_cache::{self, LazyCache},
+    lazy_list_cache::LazyListCache,
     request_builder::{RequestBody, RequestBuilder, RequestResponse},
     resource::Resource,
 };

@@ -2,7 +2,8 @@ use std::collections::BTreeMap;
 use std::time::Duration;
 
 use crate::{
-    Computed, Context, FetchMethod, JsJson, JsJsonDeserialize, JsJsonSerialize, LazyCache, Value,
+    CollectionKey, Computed, Context, FetchMethod, JsJson, JsJsonDeserialize, JsJsonSerialize,
+    LazyCache, LazyListCache, Value,
     dev::{SsrFetchRequest, SsrFetchRequestBody, SsrFetchResponse, SsrFetchResponseContent},
     driver_module::api::api_fetch,
     from_json, transaction,
@@ -168,12 +169,22 @@ impl RequestBuilder {
         RequestResponse::new(request, result)
     }
 
+    /// Create a `LazyCache` that deserializes `T` from the given URL.
     #[must_use]
     pub fn lazy_cache<T: PartialEq>(
         self,
         map_response: impl Fn(u32, RequestBody) -> Option<Result<T, String>> + 'static,
     ) -> LazyCache<T> {
         LazyCache::new(self, map_response)
+    }
+
+    /// Create a `LazyListCache` that deserializes `Vec<T::Value>` from the given URL.
+    #[must_use]
+    pub fn lazy_list_cache<T: CollectionKey + PartialEq>(
+        self,
+        map_response: impl Fn(u32, RequestBody) -> Option<Result<Vec<T::Value>, String>> + 'static,
+    ) -> LazyListCache<T> {
+        LazyListCache::new(self, map_response)
     }
 }
 

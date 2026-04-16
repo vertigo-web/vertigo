@@ -147,6 +147,41 @@ impl<T: PartialEq> LazyCache<T> {
         self.update(with_loading, true)
     }
 
+    /// Injects an optimistic value into the cache immediately, without waiting for a server response.
+    /// The cache will not auto-refresh until explicitly refreshed via [`force_update`](LazyCache::force_update)
+    /// or TTL expires.
+    ///
+    /// Typical optimistic update workflow:
+    /// 1. Call `set_optimistic(new_state)` — UI updates immediately
+    /// 2. Send the mutation request to the server
+    /// 3. On success, call `force_update(false)` to silently reconcile with real server state
+    /// 4. On failure, call `force_update(true)` to reload with a loading indicator
+    pub fn optimistically_set(&self, value: T) {
+        self.value
+            .set(ApiResponse::new(Resource::Ready(Rc::new(value)), None));
+    }
+
+    /// Mutates the optimistic value in the cache.
+    /// This is useful when the state is large and you want to efficiently update it without replacing the entire object.
+    /// Works only when the current state is `Resource::Ready`.
+    ///
+    /// NOTE: If you have a long list of objects, consider using [`LazyListCache`](crate::fetch::lazy_list_cache::LazyListCache) instead.
+    pub fn optimistically_change(&self, modify: impl FnOnce(&mut T))
+    where
+        T: Clone,
+    {
+        let api_response = transaction(|context| self.value.get(context));
+
+        if let ApiResponse::Data { value, .. } = api_response
+            && let Resource::Ready(current_value) = value
+        {
+            let mut new_value = (*current_value).clone();
+            modify(&mut new_value);
+            self.value
+                .set(ApiResponse::new(Resource::Ready(Rc::new(new_value)), None));
+        }
+    }
+
     /// Update the value if expired
     pub fn update(&self, with_loading: bool, force: bool) {
         if self.queued.get() {
@@ -293,6 +328,80 @@ mod tests {
     use crate::dev::{SsrFetchResponse, SsrFetchResponseContent};
     use crate::driver_module::api::api_timers;
     use crate::{JsJson, Value};
+
+    #[tokio::test]
+    async fn test_lazy_cache_optimistically_set() {
+        let cache = RequestBuilder::get("https://test.com/api").lazy_cache(|status, body| {
+            if status == 200 {
+                Some(body.into::<String>())
+            } else {
+                None
+            }
+        });
+
+        // Before optimistic: Loading
+        transaction(|context| {
+            assert_eq!(cache.get(context), Resource::Loading);
+        });
+
+        // Inject optimistic value
+        cache.optimistically_set("optimistic".to_string());
+
+        // Immediately Ready — no fetch needed
+        transaction(|context| {
+            assert_eq!(
+                cache.get(context),
+                Resource::Ready(Rc::new("optimistic".to_string()))
+            );
+        });
+
+        // Value should persist (expiry: None means no auto-expiry)
+        tokio::task::yield_now().await;
+        transaction(|context| {
+            assert_eq!(
+                cache.get(context),
+                Resource::Ready(Rc::new("optimistic".to_string()))
+            );
+        });
+    }
+
+    #[tokio::test]
+    async fn test_lazy_cache_optimistically_change() {
+        let cache = RequestBuilder::get("https://test.com/api").lazy_cache(|status, body| {
+            if status == 200 {
+                Some(body.into::<Vec<String>>())
+            } else {
+                None
+            }
+        });
+
+        transaction(|context| {
+            assert_eq!(cache.get(context), Resource::Loading);
+        });
+
+        // Initialize with optimistic data
+        cache.optimistically_set(vec!["first".to_string()]);
+
+        transaction(|context| {
+            assert_eq!(
+                cache.get(context),
+                Resource::Ready(Rc::new(vec!["first".to_string()]))
+            );
+        });
+
+        // Change optimistic data
+        cache.optimistically_change(|data| {
+            data.push("second".to_string());
+        });
+
+        // Verify changes are applied immediately
+        transaction(|context| {
+            assert_eq!(
+                cache.get(context),
+                Resource::Ready(Rc::new(vec!["first".to_string(), "second".to_string()]))
+            );
+        });
+    }
 
     #[tokio::test]
     async fn test_lazy_cache_initial_state() {

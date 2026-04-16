@@ -4,7 +4,7 @@ set -e
 npm install
 
 echo "Running TS tests"
-npm run test:hydration
+npm run test
 
 echo "Checking if JS is up to date"
 npx rollup -v
