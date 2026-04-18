@@ -23,6 +23,7 @@
 #![cfg_attr(test, allow(clippy::panic_in_result_fn))]
 
 mod computed;
+mod context;
 mod css;
 pub mod dev;
 mod dom;
@@ -45,6 +46,7 @@ mod websocket;
 pub use computed::{
     AutoMap, Computed, Dependencies, DropResource, Reactive, ToComputed, Value, context::Context,
 };
+pub use context::{ContextGuard, get_context, push_context};
 pub use css::{
     css_structs::{Css, CssGroup},
     tailwind_class::TwClass,

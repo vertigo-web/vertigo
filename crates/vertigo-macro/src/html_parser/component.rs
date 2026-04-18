@@ -55,7 +55,42 @@ pub(super) fn convert_to_component(node: &Node) -> TokenStream2 {
         && !children.is_empty()
     {
         let mut stmts = Vec::new();
-        for child in children {
+        let mut closure_arg = None;
+
+        // Pre-scan: if any child component has no explicit attributes, generate a
+        // zero-arg lazy closure (fn() -> Vec<DomNode>) so children render inside the
+        // parent's mount() — after the parent has pushed its context.
+        let has_no_attr_component = children.iter().any(|child| {
+            if let Node::Element(el) = child {
+                super::commons::is_component_name(&el.name().to_string())
+                    && el.attributes().is_empty()
+                    && el.children.is_empty()
+            } else {
+                false
+            }
+        });
+
+        for (i, child) in children.iter().enumerate() {
+            if i == 0 {
+                let maybe_text = match child {
+                    Node::Text(txt) => Some((txt.value.value(), txt.span())),
+                    Node::RawText(txt) => Some((txt.to_token_stream().to_string(), txt.span())),
+                    _ => None,
+                };
+
+                if let Some((ts, span)) = maybe_text {
+                    let ts_no_spaces = ts.replace(" ", "");
+                    if ts_no_spaces.starts_with('|') && ts_no_spaces.ends_with('|') {
+                        let arg = ts_no_spaces[1..ts_no_spaces.len() - 1].trim();
+                        if !arg.is_empty() {
+                            let arg_ident = syn::Ident::new(arg, span);
+                            closure_arg = Some(arg_ident);
+                            continue;
+                        }
+                    }
+                }
+            }
+
             match child {
                 Node::Text(txt) => {
                     stmts.push(quote! { __children.push(vertigo::EmbedDom::embed(vertigo::DomText::new(#txt))); });
@@ -112,7 +147,23 @@ pub(super) fn convert_to_component(node: &Node) -> TokenStream2 {
             }
         }
 
-        if !stmts.is_empty() {
+        if let Some(arg) = closure_arg {
+            children_stream = quote! {
+                children: |#arg| {
+                    let mut __children = Vec::new();
+                    #(#stmts)*
+                    __children
+                },
+            };
+        } else if has_no_attr_component && !stmts.is_empty() {
+            children_stream = quote! {
+                children: || {
+                    let mut __children = Vec::new();
+                    #(#stmts)*
+                    __children
+                },
+            };
+        } else if !stmts.is_empty() {
             children_stream = quote! {
                 children: {
                     let mut __children = Vec::new();
