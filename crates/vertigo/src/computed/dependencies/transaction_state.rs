@@ -25,6 +25,11 @@ impl TransactionState {
         }
     }
 
+    /// True while the graph is running client/computed refresh (after the outer transaction commits).
+    pub fn is_refreshing(&self) -> bool {
+        self.state.map(|state| matches!(state, State::Refreshing))
+    }
+
     pub fn up(&self) {
         let TransactionState { state } = self;
 
