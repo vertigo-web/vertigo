@@ -20,7 +20,7 @@ exclude = ["build/vertigo-cli-test/some_app"]
 resolver = "2"
 
 [workspace.package]
-version = "0.11.2"
+version = "0.11.3"
 edition = "2024"
 repository = "https://github.com/vertigo-web/vertigo"
 authors = [
@@ -33,8 +33,8 @@ readme = "README.md"
 homepage = "https://vertigo.znoj.pl"
 
 [workspace.dependencies]
-vertigo = { path = "./crates/vertigo", version = "0.11.2" }
-vertigo-macro = { path = "./crates/vertigo-macro", version = "0.11.2" }
+vertigo = { path = "./crates/vertigo", version = "0.11.3" }
+vertigo-macro = { path = "./crates/vertigo-macro", version = "0.11.3" }
 
 [workspace.lints.clippy]
 unwrap_used = "deny"

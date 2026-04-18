@@ -6,6 +6,10 @@ use crate::{
     render::{collection::Collection, render_list},
 };
 
+/// Renders a reactive list from a `Value<Rc<Vec<T::Value>>>`, memoizing each item.
+///
+/// So that only items whose values actually changed are re-rendered. The list
+/// automatically stays in sync with the source value and cleans up when dropped.
 pub fn render_list_memo<T: crate::render::collection::CollectionKey + 'static>(
     value: &Value<Rc<Vec<T::Value>>>,
     render: impl Fn(&Computed<T::Value>) -> DomNode + 'static,
@@ -29,6 +33,11 @@ pub fn render_list_memo<T: crate::render::collection::CollectionKey + 'static>(
     result
 }
 
+/// Renders a reactive list from a `LazyCache<Vec<T::Value>>`, memoizing each item.
+///
+/// So that only items whose values actually changed are re-rendered. Unlike
+/// `render_list_memo`, the source is a lazily-loaded cache (e.g. fetched from a
+/// remote resource), and the list updates whenever the cache is refreshed.
 pub fn render_resource_list_memo<T: crate::render::collection::CollectionKey + 'static>(
     value: &LazyCache<Vec<T::Value>>,
     render: impl Fn(&Computed<T::Value>) -> DomNode + 'static,
