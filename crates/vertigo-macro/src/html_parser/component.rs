@@ -50,6 +50,79 @@ pub(super) fn convert_to_component(node: &Node) -> TokenStream2 {
         })
         .collect::<Vec<_>>();
 
+    let mut children_stream = quote! {};
+    if let Some(children) = node.children()
+        && !children.is_empty()
+    {
+        let mut stmts = Vec::new();
+        for child in children {
+            match child {
+                Node::Text(txt) => {
+                    stmts.push(quote! { __children.push(vertigo::EmbedDom::embed(vertigo::DomText::new(#txt))); });
+                }
+                Node::Element(element) => {
+                    let tag_name = element.name().to_string();
+                    if super::commons::is_component_name(&tag_name) {
+                        let cmp = convert_to_component(child);
+                        stmts.push(quote! { __children.push(vertigo::EmbedDom::embed(#cmp)); });
+                    } else {
+                        let node_ready = super::node::convert_node(child, false);
+                        stmts.push(
+                            quote! { __children.push(vertigo::EmbedDom::embed(#node_ready)); },
+                        );
+                    }
+                }
+                Node::Block(block) => {
+                    if let NodeBlock::ValidBlock(block) = block {
+                        if block.stmts.is_empty() {
+                            emit_warning!(block.span(), "Missing expression");
+                        } else {
+                            let spread_block = extract_spread_block(block, |value| {
+                                quote! {
+                                    #value
+                                }
+                            });
+
+                            if let Some(new_block) = spread_block {
+                                stmts.push(quote! {
+                                    __children.extend(
+                                        #new_block
+                                            .into_iter()
+                                            .map(|item| vertigo::EmbedDom::embed(item))
+                                    );
+                                });
+                            } else {
+                                let value = super::commons::unwrap_block_if_single(block);
+                                stmts.push(
+                                    quote! { __children.push(vertigo::EmbedDom::embed(#value)); },
+                                );
+                            }
+                        }
+                    } else {
+                        emit_error!(block.span(), "Invalid block");
+                    }
+                }
+                node => {
+                    emit_error!(
+                        node.span(),
+                        "Unsupported node type {} as a child",
+                        node.r#type()
+                    );
+                }
+            }
+        }
+
+        if !stmts.is_empty() {
+            children_stream = quote! {
+                children: {
+                    let mut __children = Vec::new();
+                    #(#stmts)*
+                    __children
+                },
+            };
+        }
+    }
+
     let mut grouped_attrs_stream = quote! {};
 
     for (group, attrs) in groupped_attrs {
@@ -78,6 +151,7 @@ pub(super) fn convert_to_component(node: &Node) -> TokenStream2 {
         {
             let cmp = #constructor_name {
                 #(#attributes)*
+                #children_stream
             };
             let cmp = cmp.into_component()
                 #grouped_attrs_stream
