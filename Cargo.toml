@@ -20,7 +20,7 @@ exclude = ["build/vertigo-cli-test/some_app"]
 resolver = "2"
 
 [workspace.package]
-version = "0.11.3"
+version = "0.11.4"
 edition = "2024"
 repository = "https://github.com/vertigo-web/vertigo"
 authors = [
@@ -29,12 +29,11 @@ authors = [
 ]
 license = "MIT OR Apache-2.0"
 keywords = ["wasm", "web", "isomorphic", "reactive", "javascript"]
-readme = "README.md"
 homepage = "https://vertigo.znoj.pl"
 
 [workspace.dependencies]
-vertigo = { path = "./crates/vertigo", version = "0.11.3" }
-vertigo-macro = { path = "./crates/vertigo-macro", version = "0.11.3" }
+vertigo = { path = "./crates/vertigo", version = "0.11.4" }
+vertigo-macro = { path = "./crates/vertigo-macro", version = "0.11.4" }
 
 [workspace.lints.clippy]
 unwrap_used = "deny"
