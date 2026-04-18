@@ -3,6 +3,10 @@
 <!-- markdownlint-disable-next-line first-line-h1 -->
 ## Unreleased
 
+### Added
+
+* `dom!` macro now supports passing children to components
+
 ### Fixed
 
 * Partially fixed SVG tags rendering, for full fix trace [#539]

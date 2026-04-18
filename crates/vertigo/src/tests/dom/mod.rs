@@ -1,3 +1,4 @@
+mod children;
 mod component;
 mod component_dynamic;
 mod component_namespaces;
