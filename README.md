@@ -5,7 +5,7 @@ A reactive Real-DOM library with SSR for Rust.
 [![crates.io](https://img.shields.io/crates/v/vertigo)](https://crates.io/crates/vertigo)
 [![Documentation](https://docs.rs/vertigo/badge.svg)](https://docs.rs/vertigo)
 ![MIT or Apache 2.0 licensed](https://img.shields.io/crates/l/vertigo.svg)
-[![Dependency Status](https://deps.rs/crate/vertigo/0.11.3/status.svg)](https://deps.rs/crate/vertigo/0.11.3)
+[![Dependency Status](https://deps.rs/crate/vertigo/0.11.4/status.svg)](https://deps.rs/crate/vertigo/0.11.4)
 [![CI](https://github.com/vertigo-web/vertigo/actions/workflows/pipeline.yaml/badge.svg)](https://github.com/vertigo-web/vertigo/actions/workflows/pipeline.yaml)
 [![downloads](https://img.shields.io/crates/d/vertigo.svg)](https://crates.io/crates/vertigo)
 
@@ -20,7 +20,7 @@ A reactive Real-DOM library with SSR for Rust.
 
 See [Changelog](https://github.com/vertigo-web/vertigo/blob/master/docs/CHANGELOG.md) for recent features.
 
-Go to **[TUTORIAL](https://github.com/vertigo-web/vertigo/blob/master/docs/tutorial.md)** if you want to try.
+Go to **[TUTORIAL](https://github.com/vertigo-web/vertigo/blob/master/docs/TUTORIAL.md)** if you want to try.
 
 Having trouble with `cargo install vertigo-cli`? Check **[BUILDING.md](https://github.com/vertigo-web/vertigo/blob/master/docs/BUILDING.md)**.
 
