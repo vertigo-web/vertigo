@@ -1,7 +1,7 @@
 <!-- markdownlint-configure-file { "no-duplicate-heading": { "siblings_only": true } } -->
 
 <!-- markdownlint-disable-next-line first-line-h1 -->
-## Unreleased
+## 0.11.3 - 2026-04-18
 
 ### Added
 
@@ -15,7 +15,7 @@
 
 * websocket: Switch to JsJson for messages
 
-## 0.11.2 - 2026-04-07
+## 0.11.3 - 2026-04-07
 
 ### Added
 

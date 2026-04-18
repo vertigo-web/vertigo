@@ -4,6 +4,17 @@ use crate::{
     Computed, DomComment, DomNode, computed::struct_mut::ValueMut, driver_module::get_driver_dom,
 };
 
+/// Render a computed value as a DOM node.
+pub fn render_value<T: Clone + PartialEq + 'static>(
+    computed: Computed<T>,
+    render: impl Fn(T) -> DomNode + 'static,
+) -> DomNode {
+    render_value_option(computed, move |value| -> Option<DomNode> {
+        Some(render(value))
+    })
+}
+
+/// Render a computed value as an optional DOM node.
 pub fn render_value_option<T: Clone + PartialEq + 'static>(
     computed: Computed<T>,
     render: impl Fn(T) -> Option<DomNode> + 'static,
@@ -32,13 +43,4 @@ pub fn render_value_option<T: Clone + PartialEq + 'static>(
         }))
     })
     .into()
-}
-
-pub fn render_value<T: Clone + PartialEq + 'static>(
-    computed: Computed<T>,
-    render: impl Fn(T) -> DomNode + 'static,
-) -> DomNode {
-    render_value_option(computed, move |value| -> Option<DomNode> {
-        Some(render(value))
-    })
 }
