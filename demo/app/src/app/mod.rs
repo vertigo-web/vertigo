@@ -11,6 +11,7 @@ mod route;
 mod state;
 mod styling;
 mod sudoku;
+mod svg;
 mod todo;
 
 pub use render::render;
