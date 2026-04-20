@@ -16,6 +16,7 @@ pub enum Route {
     DropFile,
     JsApiAccess,
     List,
+    Form,
     NotFound,
 }
 
@@ -33,6 +34,7 @@ impl Route {
             "/drop-file" => Self::DropFile,
             "/js-api-access" => Self::JsApiAccess,
             "/list" => Self::List,
+            "/form" => Self::Form,
             _ => Self::NotFound,
         }
     }
@@ -50,6 +52,7 @@ impl Route {
             Self::DropFile => "Drop File",
             Self::JsApiAccess => "JS Api Access",
             Self::List => "List",
+            Self::Form => "Form",
             Self::NotFound => "Not Found",
         }
     }
@@ -76,6 +79,7 @@ impl Display for Route {
             Self::DropFile => "/drop-file",
             Self::JsApiAccess => "/js-api-access",
             Self::List => "/list",
+            Self::Form => "/form",
             Self::NotFound => "/not-found",
         };
         f.write_str(&get_driver().route_to_public(str))
