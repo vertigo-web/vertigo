@@ -5,9 +5,11 @@
 
 set -xe
 
-cargo build --locked --release --bin vertigo
+export MAIN_TARGET_DIR="${PWD}/target"
+
+cargo build --locked --bin vertigo
 mkdir -p build/vertigo-cli-test
-cp target/release/vertigo build/vertigo-cli-test/
+cp target/debug/vertigo build/vertigo-cli-test/
 cd build/vertigo-cli-test
 
 echo "*** Testing frontend template***"
@@ -18,7 +20,8 @@ cd frontend_app
 sed -i "s/vertigo = .*/vertigo = { path = \"..\/..\/..\/crates\/vertigo\" }/" Cargo.toml
 # Intercept workspace detection (fullstack template already got it)
 echo "[workspace]" >> Cargo.toml
-../vertigo build
+ln -s "${MAIN_TARGET_DIR}" target
+../vertigo build --release-mode false --wasm-opt true
 du -sh build/*
 cd ..
 
@@ -29,7 +32,8 @@ cd fullstack_app
 sed -i "s/vertigo = .*/vertigo = { path = \"..\/..\/..\/..\/crates\/vertigo\" }/" frontend/Cargo.toml
 sed -i "s/vertigo = .*/vertigo = { path = \"..\/..\/..\/..\/crates\/vertigo\" }/" backend/Cargo.toml
 sed -i "s/vertigo-cli = .*/vertigo-cli = { path = \"..\/..\/..\/..\/crates\/vertigo-cli\" }/" backend/Cargo.toml
-../vertigo build
+ln -s "${MAIN_TARGET_DIR}" target
+../vertigo build --release-mode false --wasm-opt true
 cargo check --locked
 du -sh build/*
 cd ..
