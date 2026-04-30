@@ -7,6 +7,8 @@ on:
 env:
   CARGO_INCREMENTAL: 0
   CARGO_TERM_COLOR: always
+  CARGO_REGISTRIES_CRATES_IO_PROTOCOL: sparse
+  FORCE_JAVASCRIPT_ACTIONS_TO_NODE24: "true"
   RUSTC_WRAPPER: "sccache"
   RUSTFLAGS: -D warnings
   SCCACHE_GHA_ENABLED: "true"
@@ -14,58 +16,44 @@ env:
 jobs:
 
   stable:
-    name: Stable clippy && tests
+    name: Stable clippy + wasm32 tests
     runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      checks: write        # Required for Clippy Check output
+      pull-requests: write # Required for PR comments
     env:
       SCCACHE_GHA_CACHE_NAME: "stable"
     steps:
-      - name: Checkout
-        uses: actions/checkout@v4
-      - name: Install sccache
-        uses: mozilla-actions/sccache-action@v0.0.6
-      - name: Cache cargo registry and index
-        uses: actions/cache@v4
+      - uses: actions/checkout@v6
+      - uses: mozilla-actions/sccache-action@v0.0.9
+      - uses: Swatinem/rust-cache@v2
         with:
-          path: |
-            ~/.cargo/registry
-            ~/.cargo/index
-          key: ${{ runner.os }}-cargo-registry-${{ hashFiles('**/Cargo.lock') }}
-      - name: Cache cargo target
-        uses: actions/cache@v4
-        with:
-          path: target
-          key: ${{ runner.os }}-cargo-target-${{ hashFiles('**/Cargo.lock') }}
-      - name: Install toolchain
-        uses: actions-rs/toolchain@v1
+          shared-key: "deps-cache-stable"
+          cache-targets: "false" # IMPORTANT: Let sccache handle target artifacts
+      - uses: dtolnay/rust-toolchain@stable
         with:
           toolchain: stable
           target: wasm32-unknown-unknown
           components: clippy, rustfmt
-          override: true
 
       # Formatting check
       - name: Check formatting
         run: cargo fmt -- --check
 
       # Clippy checks
-      - name: Vertigo Clippy
-        uses: actions-rs/clippy-check@v1
+      - name: Clippy (stable)
+        uses: giraffate/clippy-action@v1
         with:
-          token: ${{ secrets.GITHUB_TOKEN }}
-          args: -p vertigo -p vertigo-macro --all-features --tests --target wasm32-unknown-unknown --locked
-          name: Stable Vertigo Clippy Output
-      - name: Demo/Examples Clippy
-        uses: actions-rs/clippy-check@v1
-        with:
-          token: ${{ secrets.GITHUB_TOKEN }}
-          args: -p vertigo-demo -p vertigo-example-counter -p vertigo-example-router -p vertigo-example-trafficlights --all-features --tests --target wasm32-unknown-unknown --locked
-          name: Stable Demo/Examples Clippy Output
+          tool_name: "Clippy (stable)"
+          reporter: github-pr-review
+          filter_mode: added
+          github_token: ${{ secrets.GITHUB_TOKEN }}
+          clippy_flags: -p vertigo -p vertigo-macro -p vertigo-demo -p vertigo-example-counter -p vertigo-example-router -p vertigo-example-trafficlights --all-features --tests --target wasm32-unknown-unknown --locked
 
-      # Unit tests
-      - uses: actions-rs/cargo@v1
-        with:
-          command: test
-          args: --all-features --locked
+      # Unit tests (wasm32)
+      - name: Unit tests
+        run: cargo test -p vertigo -p vertigo-macro -p vertigo-demo -p vertigo-example-counter -p vertigo-example-router -p vertigo-example-trafficlights --all-features --locked
 
       # Test creating new app from templates
       - name: Install specific version of binaryen
@@ -81,14 +69,9 @@ jobs:
     name: JS tests
     runs-on: ubuntu-latest
     steps:
-      - name: Checkout
-        uses: actions/checkout@v4
-      - name: Install Node.js
-        uses: actions/setup-node@v4
-        with:
-          node-version: 24
-      - name: Cache npm
-        uses: actions/cache@v4
+      - uses: actions/checkout@v6
+      - uses: actions/setup-node@v6
+      - uses: actions/cache@v5
         with:
           path: ~/.npm
           key: ${{ runner.os }}-npm-${{ hashFiles('**/package-lock.json') }}
@@ -104,86 +87,71 @@ jobs:
         run: ./tests/check_licenses.sh
 
   nightly:
-    name: Nightly clippy && tests
+    name: Nightly clippy + wasm32 tests
     runs-on: ubuntu-latest
     continue-on-error: true
+    permissions:
+      contents: read
+      checks: write        # Required for Clippy Check output
+      pull-requests: write # Required for PR comments
     env:
       SCCACHE_GHA_CACHE_NAME: "nightly"
     steps:
-      - name: Checkout
-        uses: actions/checkout@v4
-      - name: Install sccache
-        uses: mozilla-actions/sccache-action@v0.0.6
-      - name: Cache cargo registry and index
-        uses: actions/cache@v4
+      - uses: actions/checkout@v6
+      - uses: mozilla-actions/sccache-action@v0.0.9
+      - uses: Swatinem/rust-cache@v2
         with:
-          path: |
-            ~/.cargo/registry
-            ~/.cargo/index
-          key: ${{ runner.os }}-cargo-registry-nightly-${{ hashFiles('**/Cargo.lock') }}
-      - name: Cache cargo target
-        uses: actions/cache@v4
-        with:
-          path: target
-          key: ${{ runner.os }}-cargo-target-nightly-${{ hashFiles('**/Cargo.lock') }}
-      - name: Install toolchain
-        uses: actions-rs/toolchain@v1
+          shared-key: "deps-cache-nightly"
+          cache-targets: "false" # IMPORTANT: Let sccache handle target artifacts
+      - uses: dtolnay/rust-toolchain@stable
         with:
           toolchain: nightly
           target: wasm32-unknown-unknown
           components: clippy
-          override: true
 
       # Clippy checks
-      - uses: actions-rs/clippy-check@v1
+      - uses: giraffate/clippy-action@v1
         with:
-          token: ${{ secrets.GITHUB_TOKEN }}
-          args: -p vertigo -p vertigo-macro --all-features --tests --target wasm32-unknown-unknown --locked
-          name: Nightly Vertigo Clippy Output
-      - uses: actions-rs/clippy-check@v1
-        with:
-          token: ${{ secrets.GITHUB_TOKEN }}
-          args: -p vertigo-demo -p vertigo-example-counter -p vertigo-example-router -p vertigo-example-trafficlights --all-features --tests --target wasm32-unknown-unknown --locked
-          name: Nightly Demo/Examples Clippy Output
+          tool_name: "Clippy (nightly)"
+          reporter: github-pr-review
+          filter_mode: added
+          github_token: ${{ secrets.GITHUB_TOKEN }}
+          clippy_flags: -p vertigo -p vertigo-macro -p vertigo-demo -p vertigo-example-counter -p vertigo-example-router -p vertigo-example-trafficlights --all-features --tests --target wasm32-unknown-unknown --locked
 
-      # Unit tests
-      - uses: actions-rs/cargo@v1
-        with:
-          command: test
-          args: --all-features --locked
+      # Unit tests (wasm32)
+      - name: Unit tests
+        run: cargo test -p vertigo -p vertigo-macro -p vertigo-demo -p vertigo-example-counter -p vertigo-example-router -p vertigo-example-trafficlights --all-features --locked
 
   nightly-demo-server:
-    name: Nightly clippy demo server (amd64)
+    name: Nightly clippy + amd64 tests (vertigo-cli, demo server)
     runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      checks: write        # Required for Clippy Check output
+      pull-requests: write # Required for PR comments
     env:
       SCCACHE_GHA_CACHE_NAME: "nightly"
     steps:
-      - name: Checkout
-        uses: actions/checkout@v4
-      - name: Install sccache
-        uses: mozilla-actions/sccache-action@v0.0.6
-      - name: Cache cargo registry and index
-        uses: actions/cache@v4
+      - uses: actions/checkout@v6
+      - uses: mozilla-actions/sccache-action@v0.0.9
+      - uses: Swatinem/rust-cache@v2
         with:
-          path: |
-            ~/.cargo/registry
-            ~/.cargo/index
-          key: ${{ runner.os }}-cargo-registry-demo-${{ hashFiles('**/Cargo.lock') }}
-      - name: Cache cargo target
-        uses: actions/cache@v4
-        with:
-          path: target
-          key: ${{ runner.os }}-cargo-target-demo-${{ hashFiles('**/Cargo.lock') }}
-      - name: Install toolchain
-        uses: actions-rs/toolchain@v1
+          shared-key: "deps-cache-nightly-demo"
+          cache-targets: "false" # IMPORTANT: Let sccache handle target artifacts
+      - uses: dtolnay/rust-toolchain@stable
         with:
           toolchain: nightly
           components: clippy
-          override: true
 
       # Clippy checks
-      - uses: actions-rs/clippy-check@v1
+      - uses: giraffate/clippy-action@v1
         with:
-          token: ${{ secrets.GITHUB_TOKEN }}
-          args: -p vertigo-demo-server --all-features --locked
-          name: Demo Server Clippy Output
+          tool_name: "CLI/demo server Clippy (nightly)"
+          reporter: github-pr-review
+          filter_mode: added
+          github_token: ${{ secrets.GITHUB_TOKEN }}
+          clippy_flags: -p vertigo-cli -p vertigo-demo-server --all-features --locked
+
+      # Unit tests (amd64)
+      - name: Unit tests
+        run: cargo test -p vertigo-cli -p vertigo-demo-server --all-features --locked
