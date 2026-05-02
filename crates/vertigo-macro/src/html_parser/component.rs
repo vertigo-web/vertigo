@@ -277,13 +277,19 @@ fn punctuated_attribute_to_tokens(
             .trim_start_matches(&format!("{}:", group.to_token_stream()))
             .to_string();
 
-        // If value name is 'tw' then register tailwind classes
-        if key == "tw"
-            && let Err(err) = add_to_tailwind(possible_value.to_token_stream())
-        {
-            emit_error!(possible_value.span(), err);
-            return None;
-        };
+        // If value name is 'tw' and it's a string literal, register tailwind classes.
+        // Block expressions like div:tw={my_tw_class} hold a pre-existing TwClass whose
+        // classes were already registered when tw!() was called — skip bundler tracing.
+        if key == "tw" {
+            let (block, _lit) =
+                take_block_or_literal_expr(possible_value, COMPONENT_ATTR_FORMAT_ERROR);
+            if block.is_none()
+                && let Err(err) = add_to_tailwind(possible_value.to_token_stream())
+            {
+                emit_error!(possible_value.span(), err);
+                return None;
+            }
+        }
 
         match group {
             Some(group) => {
