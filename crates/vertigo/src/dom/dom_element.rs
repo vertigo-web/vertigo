@@ -127,6 +127,7 @@ impl DomElement {
             }
             ("on_submit", AttrGroupValue::OnSubmit(on_submit))
             | ("form", AttrGroupValue::OnSubmit(on_submit)) => self.on_submit_rc(on_submit),
+            ("tw", AttrGroupValue::AttrValue(value)) => self.attr("class", value),
             (_, AttrGroupValue::AttrValue(value)) => self.attr(key, value),
             (_, _) => {
                 crate::log::error!("Invalid attribute type for key {key}");

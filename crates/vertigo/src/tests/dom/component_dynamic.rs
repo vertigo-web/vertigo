@@ -1,7 +1,7 @@
 use crate::{
     self as vertigo, AttrGroup, Computed, EmbedDom, component, css,
     dev::inspect::{DomDebugFragment, log_start},
-    dom,
+    dom, tw,
 };
 
 #[test]
@@ -96,6 +96,40 @@ fn test_css_attrs_grouping_and_spreading() {
     assert_eq!(
         el_str,
         "<div style='color: red' v-component='Hello' v-css='red_css'><span style='color: green' v-css='green_css'>Hello world</span></div>"
+    );
+}
+
+#[test]
+fn test_tw_attrs_grouping_and_spreading() {
+    #[component]
+    fn Hello<'a>(name: &'a str, div: AttrGroup, span: AttrGroup) {
+        dom! {
+            <div {..div}>
+                <span {..span}>
+                    "Hello " {name}
+                </span>
+            </div>
+        }
+    }
+
+    let red_css = tw!("px-3 bg-red-500");
+    let green_css = tw!("py-2 bg-green-500");
+
+    log_start();
+
+    let _el1 = dom! {
+        <Hello
+            name="world"
+            div:tw={red_css.clone()}
+            span:tw={green_css.clone()}
+        />
+    };
+
+    let el_str = DomDebugFragment::from_log().to_pseudo_html();
+
+    assert_eq!(
+        el_str,
+        "<div class='px-3 bg-red-500' v-component='Hello'><span class='py-2 bg-green-500'>Hello world</span></div>"
     );
 }
 
