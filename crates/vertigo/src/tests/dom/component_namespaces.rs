@@ -2,7 +2,8 @@
 /// This test checks if component can be used when not in local scope
 /// (whole name does not start with capital letter)
 fn test_namespaces() {
-    use crate::{self as vertigo, DomNode, dom};
+    use crate::dev::inspect::{DomDebugFragment, log_start};
+    use crate::{self as vertigo, dom};
 
     mod my_module {
         pub mod inner {
@@ -16,23 +17,15 @@ fn test_namespaces() {
         }
     }
 
-    let ret = dom! {
+    log_start();
+    let _el = dom! {
         <my_module::inner::Hello name={"world"} />
     };
-
-    match ret {
-        DomNode::Node { node } => {
-            match node.get_children().pop_back() {
-                // If node has text child, then component "Hello" was embedded correctly
-                Some(child) => match child {
-                    DomNode::Text { node: _ } => {}
-                    _ => panic!("Expected text child"),
-                },
-                _ => panic!("Expected child node"),
-            }
-        }
-        _ => panic!("Expected DomNode::Node"),
-    }
+    let html = DomDebugFragment::from_log().to_pseudo_html();
+    assert_eq!(
+        html,
+        "<span v-component='my_module::inner::Hello'>Hello world</span>"
+    );
 }
 
 #[test]
@@ -48,13 +41,18 @@ fn test_pub_super() {
         }
     }
 
-    use crate::{self as vertigo, DomNode, dom};
+    use crate::dev::inspect::{DomDebugFragment, log_start};
+    use crate::{self as vertigo, dom};
 
-    let ret = dom! {
+    log_start();
+    let _el = dom! {
         <p><sub_module::Hello name={"world"} /></p>
     };
-
-    assert!(matches!(ret, DomNode::Node { node: _ }));
+    let html = DomDebugFragment::from_log().to_pseudo_html();
+    assert_eq!(
+        html,
+        "<p><span v-component='sub_module::Hello'>Hello world</span></p>"
+    );
 }
 
 #[test]
@@ -71,11 +69,16 @@ fn test_pub_crate() {
         }
     }
 
-    use crate::{self as vertigo, DomNode, dom};
+    use crate::dev::inspect::{DomDebugFragment, log_start};
+    use crate::{self as vertigo, dom};
 
-    let ret = dom! {
+    log_start();
+    let _el = dom! {
         <p><sub_module::sub_sub_module::Hello name={"world"} /></p>
     };
-
-    assert!(matches!(ret, DomNode::Node { node: _ }));
+    let html = DomDebugFragment::from_log().to_pseudo_html();
+    assert_eq!(
+        html,
+        "<p><span v-component='sub_module::sub_sub_module::Hello'>Hello world</span></p>"
+    );
 }

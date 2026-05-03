@@ -1,43 +1,45 @@
+use crate::dev::inspect::{DomDebugFragment, log_start};
 use crate::dom;
-use crate::{self as vertigo, DomNode};
+use crate::{self as vertigo};
 
 #[test]
 fn children_from_iter() {
     let list = (0..10).map(|i| dom! { <li>{i}</li> });
 
-    let node = dom! {
+    log_start();
+    let _el = dom! {
         <ul>
             "Children: "
             {..list}
         </ul>
     };
-
-    let DomNode::Node { node } = node else {
-        panic!("Expected DomNode::Node")
-    };
-
-    assert_eq!(node.get_children().len(), 11);
+    let html = DomDebugFragment::from_log().to_pseudo_html();
+    assert_eq!(
+        html,
+        "<ul>Children: <li>0</li><li>1</li><li>2</li><li>3</li><li>4</li><li>5</li><li>6</li><li>7</li><li>8</li><li>9</li></ul>"
+    );
 }
 
 #[test]
 fn children_from_iter_inline() {
-    let node = dom! {
+    log_start();
+    let _el = dom! {
         <ul>
             "Children: "
             {..(0..10).map(|i| dom! { <li>{i}</li> })}
         </ul>
     };
-
-    let DomNode::Node { node } = node else {
-        panic!("Expected DomNode::Node")
-    };
-
-    assert_eq!(node.get_children().len(), 11);
+    let html = DomDebugFragment::from_log().to_pseudo_html();
+    assert_eq!(
+        html,
+        "<ul>Children: <li>0</li><li>1</li><li>2</li><li>3</li><li>4</li><li>5</li><li>6</li><li>7</li><li>8</li><li>9</li></ul>"
+    );
 }
 
 #[test]
 fn children_from_block_with_iter_inline() {
-    let node = dom! {
+    log_start();
+    let _el = dom! {
         <ul>
             "Children: "
             {
@@ -46,17 +48,17 @@ fn children_from_block_with_iter_inline() {
             }
         </ul>
     };
-
-    let DomNode::Node { node } = node else {
-        panic!("Expected DomNode::Node")
-    };
-
-    assert_eq!(node.get_children().len(), 9);
+    let html = DomDebugFragment::from_log().to_pseudo_html();
+    assert_eq!(
+        html,
+        "<ul>Children: <li>2</li><li>3</li><li>4</li><li>5</li><li>6</li><li>7</li><li>8</li><li>9</li></ul>"
+    );
 }
 
 #[test]
 fn child_from_block() {
-    let node = dom! {
+    log_start();
+    let _el = dom! {
         <ul>
             "Children: "
             {
@@ -65,12 +67,8 @@ fn child_from_block() {
             }
         </ul>
     };
-
-    let DomNode::Node { node } = node else {
-        panic!("Expected DomNode::Node")
-    };
-
-    assert_eq!(node.get_children().len(), 2);
+    let html = DomDebugFragment::from_log().to_pseudo_html();
+    assert_eq!(html, "<ul>Children: <li>0</li></ul>");
 }
 
 #[test]
@@ -78,16 +76,13 @@ fn iter_option() {
     let some_label = Some("Label".to_string());
     let none_label = Option::<String>::None;
 
-    let node = dom! {
+    log_start();
+    let _el = dom! {
         <div>
             {..some_label}
             {..none_label}
         </div>
     };
-
-    let DomNode::Node { node } = node else {
-        panic!("Expected DomNode::Node")
-    };
-
-    assert_eq!(node.get_children().len(), 1);
+    let html = DomDebugFragment::from_log().to_pseudo_html();
+    assert_eq!(html, "<div>Label</div>");
 }

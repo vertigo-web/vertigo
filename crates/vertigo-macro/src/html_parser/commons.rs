@@ -149,9 +149,16 @@ pub(super) fn parse_block_of_statements(
         quote! { into() }
     };
 
-    // If the last statement is a reference, use it as the value
-    // Otherwise, try to unwrap single statement block or use the whole block as the value
-    let value = dereferenced.unwrap_or_else(|| unwrap_block_if_single(block));
+    // For multi-statement blocks ending with a reference, keep the whole block so that
+    // preceding statements (e.g. `let mut x = ...; x += 1; &x`) are not lost.
+    // For single-statement reference blocks (e.g. `{&my_var}`), use the inner expression
+    // directly so `.clone()` applies to the value, not to a double-reference.
+    // For non-reference blocks, unwrap single-statement blocks or use the whole block.
+    let value = match &dereferenced {
+        Some(inner) if block.stmts.len() > 1 => block.to_token_stream(),
+        Some(inner) => inner.clone(),
+        None => unwrap_block_if_single(block),
+    };
 
     (key, value, method)
 }
@@ -237,11 +244,21 @@ mod tests {
 
     #[test]
     fn test_parse_block_of_statements_reference_value() {
-        // Reference: key and value are the inner expr; method is clone()
+        // Single-statement reference: inner expr used as value so `.clone()` applies correctly
         let block: Block = syn::parse_quote! { { &my_var } };
         let (key, value, method) = parse_block_of_statements(&block);
         assert_eq!(key.to_string(), "my_var");
         assert_eq!(value.to_string(), "my_var");
+        assert_eq!(method.to_string(), "clone ()");
+    }
+
+    #[test]
+    fn test_parse_block_of_statements_reference_with_preceding_stmts() {
+        // Multi-statement block ending with a reference: whole block preserved as value
+        let block: Block = syn::parse_quote! { { let mut x = 1; x += 1; &x } };
+        let (key, value, method) = parse_block_of_statements(&block);
+        assert_eq!(key.to_string(), "x");
+        assert_eq!(value.to_string(), "{ let mut x = 1 ; x += 1 ; & x }");
         assert_eq!(method.to_string(), "clone ()");
     }
 
