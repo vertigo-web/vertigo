@@ -51,6 +51,7 @@ pub enum AttrGroupValue {
     OnChange(Rc<Callback1<String, ()>>),
     OnClick(Rc<Callback1<ClickEvent, ()>>),
     OnDropfile(Rc<Callback1<DropFileEvent, ()>>),
+    OnChangeFile(Rc<Callback1<DropFileEvent, ()>>),
     OnInput(Rc<Callback1<String, ()>>),
     OnKeyDown(Rc<Callback1<KeyDownEvent, bool>>),
     OnLoad(Rc<Callback<()>>),
@@ -88,6 +89,7 @@ impl AttrGroupValue {
     group_value_constructor!(on_change, Callback1<String, ()>, OnChange);
     group_value_constructor!(on_click, Callback1<ClickEvent, ()>, OnClick);
     group_value_constructor!(on_dropfile, Callback1<DropFileEvent, ()>, OnDropfile);
+    group_value_constructor!(on_change_file, Callback1<DropFileEvent, ()>, OnChangeFile);
     group_value_constructor!(on_input, Callback1<String, ()>, OnInput);
     group_value_constructor!(on_key_down, Callback1<KeyDownEvent, bool>, OnKeyDown);
     group_value_constructor!(on_load, Callback<()>, OnLoad);

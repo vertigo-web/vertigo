@@ -108,6 +108,9 @@ impl DomElement {
             ("on_dropfile", AttrGroupValue::OnDropfile(on_dropfile)) => {
                 self.on_dropfile_rc(on_dropfile)
             }
+            ("on_change_file", AttrGroupValue::OnChangeFile(on_change_file)) => {
+                self.on_change_file_rc(on_change_file)
+            }
             ("on_input", AttrGroupValue::OnInput(on_input)) => self.on_input_rc(on_input),
             ("on_key_down", AttrGroupValue::OnKeyDown(on_key_down)) => {
                 self.on_key_down_rc(on_key_down)
@@ -269,6 +272,40 @@ impl DomElement {
             } else {
                 log::error!("Invalid data: on_change: {data:?}");
             }
+
+            JsJson::Null
+        })
+    }
+
+    pub fn on_change_file(self, on_change_file: impl Into<Callback1<DropFileEvent, ()>>) -> Self {
+        self.on_change_file_rc(Rc::new(on_change_file.into()))
+    }
+
+    pub fn on_change_file_rc(self, on_change_file: Rc<Callback1<DropFileEvent, ()>>) -> Self {
+        let on_change_file = self.install_callback1(on_change_file);
+
+        self.add_event_listener("change_file", move |data| {
+            let params = data.map_list(|mut params: JsJsonListDecoder| {
+                let files = params.get_vec("change file", |item: JsJson| {
+                    item.map_list(|mut item: JsJsonListDecoder| {
+                        let name = item.get_string("name")?;
+                        let data = item.get_buffer("data")?;
+
+                        Ok(DropFileItem::new(name, data))
+                    })
+                })?;
+
+                Ok(DropFileEvent::new(files))
+            });
+
+            match params {
+                Ok(params) => {
+                    on_change_file(params);
+                }
+                Err(error) => {
+                    log::error!("on_change_file -> params decode error -> {error}");
+                }
+            };
 
             JsJson::Null
         })

@@ -7,11 +7,13 @@
 
 * `LazyListCache` for fetched lists (optimized for CRUD operations)
 * `dom!` macro now supports passing children to components
+* `on_change_file` attribute for file inputs
 
 ### Fixed
 
 * Partially fixed SVG tags rendering, for full fix trace [#539]
 * `TwClass` in dynamic attribute (`dyn:tw={my_tw_class}`)
+* `dom!` now correctly handles block of statements with attribute name inferred from variable name in the last statement
 
 ## 0.11.4 - 2026-04-18
 

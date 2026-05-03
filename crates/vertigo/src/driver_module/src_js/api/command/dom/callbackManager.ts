@@ -68,6 +68,10 @@ export class CallbackManager {
                 return this.load(event, callback_id);
             }
 
+            if (event_name === 'change_file') {
+                return this.changeFile(event, callback_id);
+            }
+
             console.error(`No support for the event ${event_name}`);
         };
 
@@ -82,7 +86,8 @@ export class CallbackManager {
             document.addEventListener('keydown', callback, false);
         } else {
             const node = nodes.get('callback_add', id);
-            node.addEventListener(event_name, callback, false);
+            const domEventName = event_name === 'change_file' ? 'change' : event_name;
+            node.addEventListener(domEventName, callback, false);
         }
     }
 
@@ -99,7 +104,8 @@ export class CallbackManager {
             document.removeEventListener('keydown', callback);
         } else {
             const node = nodes.get('callback_remove', id);
-            node.removeEventListener(event_name, callback);
+            const domEventName = event_name === 'change_file' ? 'change' : event_name;
+            node.removeEventListener(domEventName, callback);
         }
     }
 
@@ -152,6 +158,41 @@ export class CallbackManager {
         }
 
         console.warn('event input ignore', target);
+    }
+
+    private changeFile(event: Event, callback_id: CallbackId) {
+        const target = event.target;
+
+        if (target instanceof HTMLInputElement && target.files !== null && target.files.length > 0) {
+            const promises: Array<Promise<{ name: string, data: Uint8Array }>> = [];
+
+            for (let i = 0; i < target.files.length; i++) {
+                const file = target.files[i];
+                if (file !== undefined) {
+                    promises.push(
+                        file.arrayBuffer().then((buf) => ({
+                            name: file.name,
+                            data: new Uint8Array(buf),
+                        }))
+                    );
+                }
+            }
+
+            if (promises.length > 0) {
+                Promise.all(promises).then((files) => {
+                    const params = [];
+                    for (const f of files) {
+                        params.push([f.name, Array.from(f.data)]);
+                    }
+                    this.wasmCallback(callback_id, [params]);
+                }).catch((err) => console.error('changeFile ->', err));
+            }
+
+            target.value = '';
+            return;
+        }
+
+        console.warn('changeFile: not a file input or no files', target);
     }
 
     private blur(_event: Event, callback_id: CallbackId) {
