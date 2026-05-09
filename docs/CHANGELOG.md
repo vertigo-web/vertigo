@@ -8,6 +8,7 @@
 * `LazyListCache` for fetched lists (optimized for CRUD operations)
 * `dom!` macro now supports passing children to components
 * `on_change_file` attribute for file inputs
+* `Driver::request_delete`, `Driver::request_patch`, `Driver::request_put` methods
 
 ### Fixed
 

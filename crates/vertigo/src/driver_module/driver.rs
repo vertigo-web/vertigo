@@ -160,7 +160,9 @@ impl Driver {
         api_browser_command().timezone_offset()
     }
 
-    /// Create new RequestBuilder for GETs (more complex version of [fetch](struct.Driver.html#method.fetch))
+    /// Create new [RequestBuilder] for GETs
+    ///
+    /// This is a more complex version of [fetch](struct.Driver.html#method.fetch)
     #[must_use]
     pub fn request_get(&self, url: impl Into<String>) -> RequestBuilder {
         RequestBuilder::get(url)
@@ -170,6 +172,24 @@ impl Driver {
     #[must_use]
     pub fn request_post(&self, url: impl Into<String>) -> RequestBuilder {
         RequestBuilder::post(url)
+    }
+
+    /// Create new RequestBuilder for PATCHes
+    #[must_use]
+    pub fn request_patch(&self, url: impl Into<String>) -> RequestBuilder {
+        RequestBuilder::patch(url)
+    }
+
+    /// Create new RequestBuilder for PUTs
+    #[must_use]
+    pub fn request_put(&self, url: impl Into<String>) -> RequestBuilder {
+        RequestBuilder::put(url)
+    }
+
+    /// Create new RequestBuilder for DELETEs
+    #[must_use]
+    pub fn request_delete(&self, url: impl Into<String>) -> RequestBuilder {
+        RequestBuilder::delete(url)
     }
 
     #[must_use]
