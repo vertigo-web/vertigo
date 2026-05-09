@@ -1,7 +1,7 @@
 <!-- markdownlint-configure-file { "no-duplicate-heading": { "siblings_only": true } } -->
 
 <!-- markdownlint-disable-next-line first-line-h1 -->
-## Unreleased
+## 0.12.0 - Unreleased
 
 ### Added
 
@@ -9,6 +9,7 @@
 * `dom!` macro now supports passing children to components
 * `on_change_file` attribute for file inputs
 * `on_intersect` attribute with `IntersectionEvent`
+* `Driver::request_delete`, `Driver::request_patch`, `Driver::request_put` methods
 
 ### Fixed
 
