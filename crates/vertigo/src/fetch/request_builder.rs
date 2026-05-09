@@ -61,6 +61,21 @@ impl RequestBuilder {
     }
 
     #[must_use]
+    pub fn put(url: impl Into<String>) -> Self {
+        Self::new(FetchMethod::PUT, url)
+    }
+
+    #[must_use]
+    pub fn patch(url: impl Into<String>) -> Self {
+        Self::new(FetchMethod::PATCH, url)
+    }
+
+    #[must_use]
+    pub fn delete(url: impl Into<String>) -> Self {
+        Self::new(FetchMethod::DELETE, url)
+    }
+
+    #[must_use]
     pub fn body(mut self, body: RequestBody) -> Self {
         self.body = Some(body);
         self

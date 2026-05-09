@@ -32,6 +32,10 @@ cd fullstack_app
 sed -i "s/vertigo = .*/vertigo = { path = \"..\/..\/..\/..\/crates\/vertigo\" }/" frontend/Cargo.toml
 sed -i "s/vertigo = .*/vertigo = { path = \"..\/..\/..\/..\/crates\/vertigo\" }/" backend/Cargo.toml
 sed -i "s/vertigo-cli = .*/vertigo-cli = { path = \"..\/..\/..\/..\/crates\/vertigo-cli\" }/" backend/Cargo.toml
+
+# Remove after https://github.com/dropbox/rust-alloc-no-stdlib/issues/22 fixed
+cargo update -p alloc-no-stdlib@3.0.0 --precise 2.0.4
+
 ln -s "${MAIN_TARGET_DIR}" target
 ../vertigo build --release-mode false --wasm-opt true
 cargo check --locked
