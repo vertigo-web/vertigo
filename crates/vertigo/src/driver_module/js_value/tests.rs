@@ -1,7 +1,7 @@
-use std::collections::BTreeMap;
+use std::{collections::BTreeMap, error::Error};
 
 use super::{
-    MemoryBlock, MemoryBlockWrite,
+    MemoryBlock, MemoryBlockWrite, from_json,
     js_json_struct::{JsJson, JsJsonNumber},
 };
 
@@ -65,6 +65,71 @@ fn json_json_list() {
     };
 
     assert_eq!(data1, data2);
+}
+
+#[test]
+fn btreemap_from_empty_object() -> Result<(), Box<dyn Error>> {
+    // An empty JSON object `{}` is a valid representation of an empty map.
+    let json = JsJson::Object(BTreeMap::new());
+    let result = from_json::<BTreeMap<String, u32>>(json)?;
+    assert!(result.is_empty());
+    Ok(())
+}
+
+#[test]
+fn btreemap_from_empty_list() -> Result<(), Box<dyn Error>> {
+    // An empty list `[]` still deserializes to an empty map.
+    let json = JsJson::List(vec![]);
+    let result = from_json::<BTreeMap<String, u32>>(json)?;
+    assert!(result.is_empty());
+    Ok(())
+}
+
+#[test]
+fn btreemap_from_non_empty_object_string_keys() -> Result<(), Box<dyn Error>> {
+    // serde serializes BTreeMap<String, V> as a plain object `{"key": value}`,
+    // so the object form must deserialize into a map for String keys.
+    let json = JsJson::Object(BTreeMap::from([
+        ("foo".to_string(), JsJson::Number(JsJsonNumber(1.0))),
+        ("bar".to_string(), JsJson::Number(JsJsonNumber(2.0))),
+    ]));
+    let result = from_json::<BTreeMap<String, u32>>(json)?;
+    assert_eq!(result.len(), 2);
+    assert_eq!(result.get("foo"), Some(&1));
+    assert_eq!(result.get("bar"), Some(&2));
+    Ok(())
+}
+
+#[test]
+fn btreemap_from_object_non_string_keys_errors() {
+    // Object form only makes sense for String keys; numeric keys arrive as
+    // strings and must fail gracefully.
+    let json = JsJson::Object(BTreeMap::from([(
+        "1".to_string(),
+        JsJson::Number(JsJsonNumber(10.0)),
+    )]));
+    assert!(from_json::<BTreeMap<u32, u32>>(json).is_err());
+}
+
+#[test]
+fn btreemap_from_list_of_items() -> Result<(), Box<dyn Error>> {
+    // A populated list of `{k, v}` items round-trips into a map.
+    let json = JsJson::List(vec![
+        JsJson::Object(BTreeMap::from([
+            ("k".to_string(), JsJson::String("aaa".into())),
+            ("v".to_string(), JsJson::Number(JsJsonNumber(1.0))),
+        ])),
+        JsJson::Object(BTreeMap::from([
+            ("k".to_string(), JsJson::String("bbb".into())),
+            ("v".to_string(), JsJson::Number(JsJsonNumber(2.0))),
+        ])),
+    ]);
+
+    let result = from_json::<BTreeMap<String, u32>>(json)?;
+    assert_eq!(result.len(), 2);
+    assert_eq!(result.get("aaa"), Some(&1));
+    assert_eq!(result.get("bbb"), Some(&2));
+    Ok(())
 }
 
 #[test]

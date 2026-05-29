@@ -14,6 +14,7 @@
 * Partially fixed SVG tags rendering, for full fix trace [#539]
 * `TwClass` in dynamic attribute (`dyn:tw={my_tw_class}`)
 * `dom!` now correctly handles block of statements with attribute name inferred from variable name in the last statement
+* `BTreeMap` deserialization now accepts objects `{...}` as well.
 
 ## 0.11.4 - 2026-04-18
 

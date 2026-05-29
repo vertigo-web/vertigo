@@ -211,21 +211,41 @@ impl<K: JsJsonSerialize + JsJsonDeserialize + Ord, T: JsJsonSerialize + JsJsonDe
     JsJsonDeserialize for BTreeMap<K, T>
 {
     fn from_json(context: JsJsonContext, json: JsJson) -> Result<Self, JsJsonContext> {
-        let JsJson::List(list) = json else {
-            let message = ["list expected, received ", json.typename()].concat();
-            return Err(context.add(message));
-        };
-
         let mut result = BTreeMap::new();
 
-        for (index, item) in list.into_iter().enumerate() {
-            let item = from_json::<MapItem<K, T>>(item)
-                .map_err(|err| context.add(format!("index={index} error={err}")))?;
+        match json {
+            // Native vertigo form: a list of `{k, v}` items.
+            JsJson::List(list) => {
+                for (index, item) in list.into_iter().enumerate() {
+                    let item = from_json::<MapItem<K, T>>(item)
+                        .map_err(|err| context.add(format!("index={index} error={err}")))?;
 
-            let exist = result.insert(item.key, item.value);
+                    if result.insert(item.key, item.value).is_some() {
+                        return Err(context.add("Duplicate key"));
+                    }
+                }
+            }
+            // Interop form (e.g. produced by serde): a plain object `{"key": value}`.
+            // Synthesize a `{k, v}` MapItem per entry and delegate. Non-String keys
+            // surface a graceful error because the key arrives as a JsJson::String.
+            JsJson::Object(obj) => {
+                for (key, value) in obj {
+                    let synthetic = JsJson::Object(BTreeMap::from([
+                        ("k".to_string(), JsJson::String(key.clone())),
+                        ("v".to_string(), value),
+                    ]));
 
-            if exist.is_some() {
-                return Err(context.add("Duplicate key"));
+                    let item = from_json::<MapItem<K, T>>(synthetic)
+                        .map_err(|err| context.add(format!("key='{key}' error={err}")))?;
+
+                    if result.insert(item.key, item.value).is_some() {
+                        return Err(context.add("Duplicate key"));
+                    }
+                }
+            }
+            other => {
+                let message = ["list or object expected, received ", other.typename()].concat();
+                return Err(context.add(message));
             }
         }
 
