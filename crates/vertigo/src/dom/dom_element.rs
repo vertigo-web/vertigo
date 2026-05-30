@@ -17,7 +17,7 @@ use super::{
     dom_element_ref::DomElementRef,
     dom_id::DomId,
     dom_node::DomNode,
-    events::{ClickEvent, DropFileEvent, KeyDownEvent},
+    events::{ClickEvent, DropFileEvent, IntersectionEvent, KeyDownEvent},
 };
 
 /// A Real DOM representative - element kind
@@ -112,6 +112,9 @@ impl DomElement {
                 self.on_change_file_rc(on_change_file)
             }
             ("on_input", AttrGroupValue::OnInput(on_input)) => self.on_input_rc(on_input),
+            ("on_intersect", AttrGroupValue::OnIntersect(on_intersect)) => {
+                self.on_intersect_rc(on_intersect)
+            }
             ("on_key_down", AttrGroupValue::OnKeyDown(on_key_down)) => {
                 self.on_key_down_rc(on_key_down)
             }
@@ -377,6 +380,31 @@ impl DomElement {
         })
     }
 
+    pub fn on_intersect(self, on_intersect: impl Into<Callback1<IntersectionEvent, ()>>) -> Self {
+        self.on_intersect_rc(Rc::new(on_intersect.into()))
+    }
+
+    /// Observe this element with a browser `IntersectionObserver`. The callback
+    /// fires whenever the element's intersection with the (default) root
+    /// changes, receiving an [IntersectionEvent](crate::IntersectionEvent).
+    /// Dropping the element disconnects the observer.
+    pub fn on_intersect_rc(self, on_intersect: Rc<Callback1<IntersectionEvent, ()>>) -> Self {
+        let on_intersect = self.install_callback1(on_intersect);
+
+        self.add_event_listener("intersect", move |data| {
+            match get_intersection_event(data) {
+                Ok(event) => {
+                    on_intersect(event);
+                }
+                Err(error) => {
+                    log::error!("on_intersect -> params decode error -> {error}");
+                }
+            }
+
+            JsJson::Null
+        })
+    }
+
     pub fn on_key_down(self, on_key_down: impl Into<Callback1<KeyDownEvent, bool>>) -> Self {
         self.on_key_down_rc(Rc::new(on_key_down.into()))
     }
@@ -541,6 +569,25 @@ impl Drop for DomElement {
     fn drop(&mut self) {
         get_driver_dom().remove_node(self.id_dom);
     }
+}
+
+fn get_intersection_event(data: JsJson) -> Result<IntersectionEvent, String> {
+    data.map_list(|mut params: JsJsonListDecoder| {
+        let is_intersecting = params.get_bool("isIntersecting")?;
+        let intersection_ratio = params.get_f64("intersectionRatio")?;
+        let bounding_top = params.get_f64("boundingTop")?;
+        let bounding_bottom = params.get_f64("boundingBottom")?;
+        let bounding_height = params.get_f64("boundingHeight")?;
+        params.expect_no_more()?;
+
+        Ok(IntersectionEvent {
+            is_intersecting,
+            intersection_ratio,
+            bounding_top,
+            bounding_bottom,
+            bounding_height,
+        })
+    })
 }
 
 fn get_key_down_event(data: JsJson) -> Result<KeyDownEvent, String> {
