@@ -69,6 +69,20 @@ impl JsJsonListDecoder {
         }
     }
 
+    pub fn get_f64(&mut self, label: &'static str) -> Result<f64, String> {
+        let Some(value) = self.data.pop_front() else {
+            return Err(format!("{label} -> has no more params"));
+        };
+
+        match value {
+            JsJson::Number(value) => Ok(value.as_f64()),
+            item => {
+                let name = item.typename();
+                Err(format!("{label} -> f64 expected, received {name}"))
+            }
+        }
+    }
+
     pub fn get_string(&mut self, label: &'static str) -> Result<String, String> {
         let Some(value) = self.data.pop_front() else {
             return Err(format!("{label} -> has no more params"));

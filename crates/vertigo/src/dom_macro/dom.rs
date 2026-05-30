@@ -6,7 +6,7 @@ use crate::{
         attr_value::AttrValue,
         callback::{Callback, Callback1},
         dom_node::DomNode,
-        events::ClickEvent,
+        events::{ClickEvent, IntersectionEvent},
     },
 };
 
@@ -53,6 +53,7 @@ pub enum AttrGroupValue {
     OnDropfile(Rc<Callback1<DropFileEvent, ()>>),
     OnChangeFile(Rc<Callback1<DropFileEvent, ()>>),
     OnInput(Rc<Callback1<String, ()>>),
+    OnIntersect(Rc<Callback1<IntersectionEvent, ()>>),
     OnKeyDown(Rc<Callback1<KeyDownEvent, bool>>),
     OnLoad(Rc<Callback<()>>),
     OnMouseDown(Rc<Callback<bool>>),
@@ -91,6 +92,7 @@ impl AttrGroupValue {
     group_value_constructor!(on_dropfile, Callback1<DropFileEvent, ()>, OnDropfile);
     group_value_constructor!(on_change_file, Callback1<DropFileEvent, ()>, OnChangeFile);
     group_value_constructor!(on_input, Callback1<String, ()>, OnInput);
+    group_value_constructor!(on_intersect, Callback1<IntersectionEvent, ()>, OnIntersect);
     group_value_constructor!(on_key_down, Callback1<KeyDownEvent, bool>, OnKeyDown);
     group_value_constructor!(on_load, Callback<()>, OnLoad);
     group_value_constructor!(on_mouse_down, Callback<bool>, OnMouseDown);

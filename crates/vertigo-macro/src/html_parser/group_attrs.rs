@@ -57,6 +57,7 @@ fn attr_to_group_variant(key: impl AsRef<str>, value: TokenStream2) -> TokenStre
         "on_click" => quote! { vertigo::AttrGroupValue::on_click(#value) },
         "on_dropfile" => quote! { vertigo::AttrGroupValue::on_dropfile(#value) },
         "on_input" => quote! { vertigo::AttrGroupValue::on_input(#value) },
+        "on_intersect" => quote! { vertigo::AttrGroupValue::on_intersect(#value) },
         "on_key_down" => quote! { vertigo::AttrGroupValue::on_key_down(#value) },
         "on_load" => quote! { vertigo::AttrGroupValue::on_load(#value) },
         "on_mouse_down" => quote! { vertigo::AttrGroupValue::on_mouse_down(#value) },

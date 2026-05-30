@@ -8,13 +8,21 @@ import { CallbackId } from "../../types";
 export class CallbackManager {
     private readonly getWasm: () => ModuleControllerType<ExportType>;
     private callbacks: Map<CallbackId, (data: Event) => void>;
+    // IntersectionObserver does not use addEventListener, so its observers are
+    // tracked separately (keyed by callback_id) for disconnect on remove.
+    private observers: Map<CallbackId, IntersectionObserver>;
 
     public constructor(getWasm: () => ModuleControllerType<ExportType>) {
         this.getWasm = getWasm;
         this.callbacks = new Map();
+        this.observers = new Map();
     }
 
     public add(nodes: MapNodes, id: number, event_name: string, callback_id: CallbackId) {
+        if (event_name === 'intersect') {
+            return this.intersectAdd(nodes, id, callback_id);
+        }
+
         const callback = (event: Event) => {
             if (event_name === 'click') {
                 return this.click(event, callback_id);
@@ -92,6 +100,10 @@ export class CallbackManager {
     }
 
     public remove(nodes: MapNodes, id: number, event_name: string, callback_id: CallbackId) {
+        if (event_name === 'intersect') {
+            return this.intersectRemove(callback_id);
+        }
+
         const callback = this.callbacks.get(callback_id);
         this.callbacks.delete(callback_id);
 
@@ -116,6 +128,43 @@ export class CallbackManager {
                 value: value
             }
         });
+    }
+
+    private intersectAdd(nodes: MapNodes, id: number, callback_id: CallbackId) {
+        if (this.observers.has(callback_id)) {
+            console.error(`There was already an intersect observer added with the callback_id=${callback_id}`);
+            return;
+        }
+
+        const node = nodes.getNode('callback_add', id);
+
+        const observer = new IntersectionObserver((entries) => {
+            for (const entry of entries) {
+                // Payload order MUST match the Rust decoder get_intersection_event.
+                this.wasmCallback(callback_id, [
+                    entry.isIntersecting,
+                    entry.intersectionRatio,
+                    entry.boundingClientRect.top,
+                    entry.boundingClientRect.bottom,
+                    entry.boundingClientRect.height,
+                ]);
+            }
+        });
+
+        observer.observe(node);
+        this.observers.set(callback_id, observer);
+    }
+
+    private intersectRemove(callback_id: CallbackId) {
+        const observer = this.observers.get(callback_id);
+        this.observers.delete(callback_id);
+
+        if (observer === undefined) {
+            console.error(`The intersect observer is missing with the id=${callback_id}`);
+            return;
+        }
+
+        observer.disconnect();
     }
 
     private click(event: Event, callback_id: CallbackId) {
