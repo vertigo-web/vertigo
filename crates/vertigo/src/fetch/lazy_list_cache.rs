@@ -13,10 +13,18 @@ use crate::{
     transaction,
 };
 
+/// Outcome of parsing a response body: `None` to ignore the response (e.g. wrong
+/// status), `Some(Ok(value))` on success, or `Some(Err(message))` on a parse error.
 pub type MapResponse<V> = Option<Result<V, String>>;
+/// Builds the [`RequestBuilder`] used to fetch a single item identified by `K`.
 pub type ItemRequestCallback<K> = Rc<dyn Fn(&K) -> RequestBuilder>;
+/// Parses an HTTP status and body into a [`MapResponse`] for a value of type `V`.
 pub type MapResponseCallback<V> = Rc<dyn Fn(u32, RequestBody) -> MapResponse<V>>;
+/// A single list element exposed as its own reactive [`Computed`], yielding
+/// `None` when the item is absent or filtered out. See [`LazyListCache::granular`].
 pub type GranularItem<T> = Computed<Option<T>>;
+/// The result of [`LazyListCache::granular`]: a [`Resource`] wrapping the list of
+/// per-item reactive [`GranularItem`]s.
 pub type GranularList<T> = Resource<Rc<Vec<GranularItem<T>>>>;
 
 fn get_unique_id() -> u64 {
@@ -54,8 +62,10 @@ enum ListCacheState {
 /// A lazy cache for lists that stores items in an ordered dict `T::Key -> ListItem<T::Value>`.
 ///
 /// Each item has a reactive `original` (from the server) and an optional `override_val`
-/// (from [`optimistically_set_item`](LazyListCache::optimistically_set_item)).
-/// [`get_by_key`](LazyListCache::get_by_key) returns the override when active, otherwise the original.
+/// (from [`optimistically_set_item`](LazyListCache::optimistically_set_item)). All reads —
+/// [`get`](LazyListCache::get), [`granular`](LazyListCache::granular) and
+/// [`get_by_key`](LazyListCache::get_by_key) — are override-aware: they return the override
+/// when active, otherwise the server-confirmed original.
 ///
 /// `T` is a marker type implementing [`CollectionKey`].
 ///
@@ -182,6 +192,12 @@ impl<T: CollectionKey> PartialEq for LazyListCache<T> {
 }
 
 impl<T: CollectionKey> LazyListCache<T> {
+    /// Create a cache from a list-endpoint `request` and a `map_response` parser.
+    ///
+    /// The cache starts `Uninitialized` and fetches lazily on the first read
+    /// ([`get`](Self::get) / [`get_by_key`](Self::get_by_key) / [`granular`](Self::granular)).
+    /// Usually constructed via [`RequestBuilder::lazy_list_cache`](crate::RequestBuilder::lazy_list_cache);
+    /// add per-item fetching with [`with_item_fetch`](Self::with_item_fetch).
     pub fn new(
         request: RequestBuilder,
         map_response: impl Fn(u32, RequestBody) -> MapResponse<Vec<T::Value>> + 'static,
@@ -260,13 +276,14 @@ impl<T: CollectionKey> LazyListCache<T> {
         });
     }
 
-    /// Get the full list of items in insertion order. Yields each item's `original` value —
-    /// pending overrides from [`optimistically_set_item`](Self::optimistically_set_item) are not
-    /// applied here, so an optimistic *edit* still reads as the server's last-known value. Use
-    /// [`get_by_key`](Self::get_by_key) when you need the override-aware view of a single item.
+    /// Get the full list of items in insertion order, **as the user currently sees it**:
+    /// optimistic overrides are applied.
     ///
-    /// Optimistic *inserts* (placeholders for brand-new items) do appear in the list, since the
-    /// placeholder's `original` is seeded with the optimistic value at insert time.
+    /// For each item, an active optimistic *edit* replaces the value, an optimistic *insert*
+    /// appears, and an optimistic *removal* drops the row from the list entirely (so the deletion
+    /// is reflected immediately, before [`remove_item`](Self::remove_item) confirms it). Items
+    /// without an active override fall back to their server-confirmed `original` — matching
+    /// [`get_by_key`](Self::get_by_key) applied across the whole list.
     pub fn get(&self, context: &Context) -> Resource<Rc<Vec<T::Value>>> {
         let state = self.state.get(context);
 
@@ -281,21 +298,40 @@ impl<T: CollectionKey> LazyListCache<T> {
                 let keys = self.keys.get(context);
                 let list = keys
                     .iter()
-                    .filter_map(|k| self.items.get_and_map(k, |item| item.original.get(context)))
+                    .filter_map(|k| {
+                        self.items
+                            .get_and_map(k, |item| {
+                                match item.override_val.get(context) {
+                                    // Active override: edit/insert -> value, removal -> drop the row.
+                                    Some(override_val) => override_val,
+                                    // No override: fall back to the server-confirmed original.
+                                    None => Some(item.original.get(context)),
+                                }
+                            })
+                            // outer Option: key missing; inner Option: optimistically removed.
+                            .flatten()
+                    })
                     .collect::<Vec<_>>();
                 Resource::Ready(Rc::new(list))
             }
         }
     }
 
-    /// Get the list as individually reactive [`Computed`] items, each yielding `Option<T::Value>`.
+    /// Get the list as individually reactive [`Computed`] items, each yielding `Option<T::Value>`,
+    /// **as the user currently sees it**: optimistic overrides are applied.
     ///
     /// Unlike [`get`](Self::get), which returns the whole list as a single reactive unit, this
     /// method wraps every element in its own [`Computed`]. Subscribers re-evaluate only for the
     /// specific items that changed, making it efficient for large lists with sparse updates.
     ///
+    /// Each item's [`Computed`] reflects optimistic state: an active edit/insert yields the
+    /// override value, and an optimistically *removed* row yields `None` so it disappears from the
+    /// rendered list (mirroring [`get`](Self::get) / [`get_by_key`](Self::get_by_key)).
+    ///
     /// When `filter` is `Some`, each `Computed` applies the predicate and returns `None` for
     /// items that do not pass, allowing the UI to hide or skip them without recomputing the rest.
+    /// The override and the filter compose — a removed row is `None` regardless of the filter, and
+    /// a surviving row is then subject to the predicate.
     pub fn granular<F>(&self, ctx: &Context, filter: Option<F>) -> GranularList<T::Value>
     where
         F: Fn(&T::Value) -> bool + Clone + 'static,
@@ -318,7 +354,15 @@ impl<T: CollectionKey> LazyListCache<T> {
                         let items = items.clone();
                         let filter = filter.clone();
                         Computed::from(move |ctx| {
-                            let item = items.get_and_map(&k, |item| item.original.get(ctx));
+                            let item = items
+                                .get_and_map(&k, |item| match item.override_val.get(ctx) {
+                                    // Active override: edit/insert -> value, removal -> None.
+                                    Some(override_val) => override_val,
+                                    // No override: fall back to the server original.
+                                    None => Some(item.original.get(ctx)),
+                                })
+                                // outer Option: key missing; inner Option: removed / no value.
+                                .flatten();
                             if let Some(filter) = &filter {
                                 item.filter(filter)
                             } else {
@@ -534,11 +578,18 @@ impl<T: CollectionKey> LazyListCache<T> {
         }
     }
 
+    /// Reactively view the whole list as a [`Computed`], backed by [`get`](Self::get) (so it
+    /// reflects the list as the user currently sees it, with optimistic overrides applied).
     pub fn to_computed(&self) -> Computed<Resource<Rc<Vec<T::Value>>>> {
         let state = self.clone();
         Computed::from(move |context| state.get(context))
     }
 
+    /// Render the list, supplying a default `"Loading ..."` / `"error = ..."` view for
+    /// the non-ready [`Resource`] states and delegating the ready case to `render`.
+    ///
+    /// For per-row reactivity, prefer rendering each row from its own [`Computed`] over
+    /// [`get_by_key`](Self::get_by_key) instead.
     pub fn render(&self, render: impl Fn(Rc<Vec<T::Value>>) -> DomNode + 'static) -> DomNode {
         self.to_computed().render_value(move |value| match value {
             Resource::Ready(value) => render(value),
@@ -704,10 +755,10 @@ mod tests {
         })
     }
 
-    // --- get ---
+    // --- get (override-aware whole-list view) ---
 
     #[test]
-    fn test_get_returns_ordered_originals() {
+    fn test_get_returns_ordered_items() {
         let cache = make_cache();
         seed(&cache);
 
@@ -716,12 +767,57 @@ mod tests {
         assert_eq!(list[0].id, 1);
         assert_eq!(list[1].id, 2);
         assert_eq!(list[2].id, 3);
+        assert_eq!(list[1].name, "Two");
     }
 
     #[test]
     fn test_get_returns_loading_before_fetch() {
         let cache = make_cache();
         transaction(|ctx| assert_eq!(cache.get(ctx), Resource::Loading));
+    }
+
+    #[test]
+    fn test_get_applies_optimistic_edit() {
+        let cache = make_cache();
+        seed(&cache);
+
+        cache.optimistically_set_item(Item {
+            id: 2,
+            name: "Two-override".to_string(),
+        });
+
+        let list = get_list(&cache);
+        assert_eq!(list[1].name, "Two-override");
+    }
+
+    #[test]
+    fn test_get_omits_optimistically_removed() {
+        let cache = make_cache();
+        seed(&cache);
+
+        cache.optimistically_remove_item(&2);
+
+        // Row 2 disappears immediately, before remove_item confirms.
+        let list = get_list(&cache);
+        assert_eq!(list.iter().map(|i| i.id).collect::<Vec<_>>(), vec![1, 3]);
+    }
+
+    #[test]
+    fn test_get_includes_optimistic_insert() {
+        let cache = make_cache();
+        seed(&cache);
+
+        cache.optimistically_set_item(Item {
+            id: 42,
+            name: "New".to_string(),
+        });
+
+        let list = get_list(&cache);
+        assert_eq!(
+            list.iter().map(|i| i.id).collect::<Vec<_>>(),
+            vec![1, 2, 3, 42]
+        );
+        assert_eq!(list[3].name, "New");
     }
 
     // --- get_by_key ---
@@ -784,9 +880,12 @@ mod tests {
             name: "Two-override".to_string(),
         });
 
-        // get() still shows the original
-        let list = get_list(&cache);
-        assert_eq!(list[1].name, "Two");
+        // get() shows the override...
+        assert_eq!(get_list(&cache)[1].name, "Two-override");
+
+        // ...but the underlying server-confirmed original is untouched: rolling back restores it.
+        cache.rollback(&2);
+        assert_eq!(get_list(&cache)[1].name, "Two");
     }
 
     #[test]
@@ -920,9 +1019,12 @@ mod tests {
         ]);
         cache.state.set(ListCacheState::Ready);
 
-        // get() shows server originals
+        // get() applies overrides: item 2 keeps its override, while un-overridden rows show the
+        // refreshed server values.
         let list = get_list(&cache);
-        assert_eq!(list[1].name, "Two-v2");
+        assert_eq!(list[0].name, "One-v2");
+        assert_eq!(list[1].name, "Two-override");
+        assert_eq!(list[2].name, "Three-v2");
 
         // get_by_key still shows override
         assert_eq!(
@@ -932,6 +1034,10 @@ mod tests {
                 name: "Two-override".to_string()
             }))
         );
+
+        // Rolling back reveals the refreshed server original underneath.
+        cache.rollback(&2);
+        assert_eq!(get_list(&cache)[1].name, "Two-v2");
     }
 
     // --- create flow (optimistic insert + update_item commit) ---
@@ -1125,33 +1231,160 @@ mod tests {
 
     #[test]
     fn test_optimistic_then_remove_item_reactivity_via_granular() {
-        // Full delete flow: optimistically_remove_item then, post-await, remove_item.
-        // Verify the granular consumer sees the row disappear.
+        // Full delete flow: optimistically_remove_item drops the row immediately; the later
+        // remove_item commit keeps it gone. Verify the granular consumer stays consistent.
         let cache = make_cache();
         seed(&cache);
 
         let computed = {
             let cache = cache.clone();
-            Computed::from(move |ctx| {
-                let granular = cache.granular::<fn(&Item) -> bool>(ctx, None);
-                match granular {
+            Computed::from(
+                move |ctx| match cache.granular::<fn(&Item) -> bool>(ctx, None) {
                     Resource::Ready(items) => items
                         .iter()
                         .filter_map(|item| item.get(ctx).map(|v| v.id))
                         .collect::<Vec<_>>(),
                     _ => Vec::new(),
-                }
-            })
+                },
+            )
         };
 
         assert_eq!(transaction(|ctx| computed.get(ctx)), vec![1, 2, 3]);
 
         cache.optimistically_remove_item(&2);
-        // During optimistic phase, granular still shows the row (granular ignores override_val).
-        assert_eq!(transaction(|ctx| computed.get(ctx)), vec![1, 2, 3]);
+        // Optimistic removal is reflected immediately.
+        assert_eq!(transaction(|ctx| computed.get(ctx)), vec![1, 3]);
 
+        // Committing the deletion keeps the row gone.
         cache.remove_item(&2);
         assert_eq!(transaction(|ctx| computed.get(ctx)), vec![1, 3]);
+    }
+
+    // --- granular (override-aware per-item view) ---
+
+    // Resolve a granular list into (id, name) pairs for the items that are present.
+    fn granular_pairs(cache: &LazyListCache<ItemKey>) -> Vec<(i32, String)> {
+        transaction(|ctx| match cache.granular::<fn(&Item) -> bool>(ctx, None) {
+            Resource::Ready(items) => items
+                .iter()
+                .filter_map(|item| item.get(ctx).map(|v| (v.id, v.name)))
+                .collect::<Vec<_>>(),
+            _ => panic!("expected Ready"),
+        })
+    }
+
+    #[test]
+    fn test_granular_applies_optimistic_edit() {
+        let cache = make_cache();
+        seed(&cache);
+
+        cache.optimistically_set_item(Item {
+            id: 2,
+            name: "Two-override".to_string(),
+        });
+
+        assert_eq!(
+            granular_pairs(&cache),
+            vec![
+                (1, "One".to_string()),
+                (2, "Two-override".to_string()),
+                (3, "Three".to_string()),
+            ]
+        );
+    }
+
+    #[test]
+    fn test_granular_omits_optimistically_removed() {
+        let cache = make_cache();
+        seed(&cache);
+
+        // optimistically_remove_item flips override_val to Some(None) without touching `keys`,
+        // so the removed key is still in the snapshot — the per-item Computed must yield None.
+        cache.optimistically_remove_item(&2);
+
+        assert_eq!(
+            granular_pairs(&cache)
+                .into_iter()
+                .map(|(id, _)| id)
+                .collect::<Vec<_>>(),
+            vec![1, 3]
+        );
+    }
+
+    #[test]
+    fn test_granular_includes_optimistic_insert() {
+        let cache = make_cache();
+        seed(&cache);
+
+        cache.optimistically_set_item(Item {
+            id: 42,
+            name: "New".to_string(),
+        });
+
+        assert_eq!(
+            granular_pairs(&cache)
+                .into_iter()
+                .map(|(id, _)| id)
+                .collect::<Vec<_>>(),
+            vec![1, 2, 3, 42]
+        );
+    }
+
+    #[test]
+    fn test_granular_reactivity_on_remove() {
+        // A subscriber over granular must see the row drop the moment it is
+        // optimistically removed — without waiting for remove_item.
+        let cache = make_cache();
+        seed(&cache);
+
+        let computed = {
+            let cache = cache.clone();
+            Computed::from(
+                move |ctx| match cache.granular::<fn(&Item) -> bool>(ctx, None) {
+                    Resource::Ready(items) => items
+                        .iter()
+                        .filter_map(|item| item.get(ctx).map(|v| v.id))
+                        .collect::<Vec<_>>(),
+                    _ => Vec::new(),
+                },
+            )
+        };
+
+        assert_eq!(transaction(|ctx| computed.get(ctx)), vec![1, 2, 3]);
+
+        cache.optimistically_remove_item(&2);
+        // The optimistic removal is reflected immediately.
+        assert_eq!(transaction(|ctx| computed.get(ctx)), vec![1, 3]);
+
+        // Rolling back restores it.
+        cache.rollback(&2);
+        assert_eq!(transaction(|ctx| computed.get(ctx)), vec![1, 2, 3]);
+    }
+
+    #[test]
+    fn test_granular_filter_composes_with_override() {
+        let cache = make_cache();
+        seed(&cache);
+
+        // Edit id=1 so it would pass a "name starts with O" filter only via the override.
+        cache.optimistically_set_item(Item {
+            id: 1,
+            name: "Other".to_string(),
+        });
+        // Optimistically remove id=3.
+        cache.optimistically_remove_item(&3);
+
+        let filter = |item: &Item| item.name.starts_with('O');
+        let ids = transaction(|ctx| match cache.granular(ctx, Some(filter)) {
+            Resource::Ready(items) => items
+                .iter()
+                .filter_map(|item| item.get(ctx).map(|v| v.id))
+                .collect::<Vec<_>>(),
+            _ => panic!("expected Ready"),
+        });
+
+        // id=1 -> "Other" passes; id=2 -> "Two" fails the filter; id=3 -> removed (None).
+        assert_eq!(ids, vec![1]);
     }
 
     #[test]
