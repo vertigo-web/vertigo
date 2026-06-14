@@ -182,6 +182,17 @@ impl<T: Clone + PartialEq + 'static> Value<T> {
         self.inner.add_event(callback)
     }
 
+    /// Mirror this `Value` into a derived, self-updating structure `R`.
+    ///
+    /// Builds the target with [`R::new`](ValueSynchronize::new) from the current
+    /// value, then subscribes so every later [`set`](Value::set) is forwarded to
+    /// [`R::set`](ValueSynchronize::set). The returned [`DropResource`] owns the
+    /// subscription — synchronization stops as soon as it is dropped.
+    ///
+    /// The most common target is the keyed list collection used by
+    /// [`render_list_memo`](crate::render::render_list_memo), but any type that
+    /// implements [`ValueSynchronize`] can be used (e.g. an index or a sorted
+    /// view). Implement [`ValueSynchronize`] to provide your own target.
     pub fn synchronize<R: ValueSynchronize<T> + Clone + 'static>(&self) -> (R, DropResource) {
         let init_value = self.inner.get();
         let synchronize_target = R::new(init_value);
@@ -194,7 +205,33 @@ impl<T: Clone + PartialEq + 'static> Value<T> {
     }
 }
 
+/// Contract for a type that can be kept in sync with a reactive source via
+/// [`Value::synchronize`] (and [`LazyCache::synchronize`](crate::LazyCache::synchronize)).
+///
+/// A synchronization *target* is constructed from the source's initial value and
+/// then receives every subsequent update. Because `set` takes `&self`, targets
+/// are expected to rely on interior reactivity (e.g. an inner [`Value`]) and to
+/// be cheaply `Clone`able — the update closure captures a clone of the target.
+///
+/// ```rust
+/// use vertigo::{Value, ValueSynchronize};
+///
+/// // A target that simply mirrors the latest value into its own `Value`.
+/// #[derive(Clone)]
+/// struct Mirror(Value<i32>);
+///
+/// impl ValueSynchronize<i32> for Mirror {
+///     fn new(value: i32) -> Self { Mirror(Value::new(value)) }
+///     fn set(&self, value: i32) { self.0.set(value); }
+/// }
+///
+/// let source = Value::new(1);
+/// let (mirror, _drop) = source.synchronize::<Mirror>();
+/// source.set(2); // `mirror` now follows `source`; dropping `_drop` stops it.
+/// ```
 pub trait ValueSynchronize<T: PartialEq + Clone + 'static>: Sized {
+    /// Build the target from the source's current value.
     fn new(value: T) -> Self;
+    /// Apply a subsequent update from the source.
     fn set(&self, value: T);
 }

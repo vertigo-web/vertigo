@@ -19,6 +19,12 @@
 //!   * [bind!] - Auto-clones variables before use
 //!   * [get_driver] - Access to browser facilities
 //!   * [router::Router] - Hash or history routing
+//!
+//! # Guides
+//!
+//! * [guides::value_synchronize_and_collections] - `Value::synchronize`, `ValueSynchronize`,
+//!   `CollectionKey` and the memoized list renderers
+//! * [guides::lazy_list_cache] - `LazyListCache`: optimistic, per-item reactive list cache
 
 #![deny(rust_2018_idioms)]
 #![cfg_attr(test, allow(clippy::panic_in_result_fn))]
@@ -41,10 +47,24 @@ pub mod router;
 mod tests;
 mod websocket;
 
+/// Long-form guides rendered as their own documentation pages.
+///
+/// These modules carry no code; each one embeds a markdown guide from the `docs/`
+/// directory so it gets its own rustdoc page instead of being inlined into the
+/// crate root.
+pub mod guides {
+    #[doc = include_str!("../../../docs/value-synchronize-and-collections.md")]
+    pub mod value_synchronize_and_collections {}
+
+    #[doc = include_str!("../../../docs/lazy-list-cache.md")]
+    pub mod lazy_list_cache {}
+}
+
 // Exports from vertigo
 
 pub use computed::{
-    AutoMap, Computed, Dependencies, DropResource, Reactive, ToComputed, Value, context::Context,
+    AutoMap, Computed, Dependencies, DropResource, Reactive, ToComputed, Value, ValueSynchronize,
+    context::Context,
 };
 pub use css::{
     css_structs::{Css, CssGroup},

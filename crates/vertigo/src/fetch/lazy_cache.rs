@@ -234,6 +234,16 @@ impl<T: PartialEq> LazyCache<T> {
         });
     }
 
+    /// Mirror this cache into a derived, self-updating structure `R`.
+    ///
+    /// Like [`Value::synchronize`](crate::Value::synchronize), but the source is
+    /// a fetched resource: the cache's `Resource<Rc<T>>` is normalized to a
+    /// concrete `Rc<T>` (Loading / Error / Uninitialized become `T::default()`,
+    /// hence the `T: Default` bound) before being pushed into the target.
+    ///
+    /// The target keeps following the cache across refreshes until the returned
+    /// [`DropResource`] is dropped. This is the mechanism behind
+    /// [`render_resource_list_memo`](crate::render::render_resource_list_memo).
     pub fn synchronize<R: ValueSynchronize<std::rc::Rc<T>> + Clone + 'static>(
         &self,
     ) -> (R, DropResource)
