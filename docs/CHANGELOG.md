@@ -17,6 +17,7 @@
 * `TwClass` in dynamic attribute (`dyn:tw={my_tw_class}`)
 * `dom!` now correctly handles block of statements with attribute name inferred from variable name in the last statement
 * `BTreeMap` deserialization now accepts objects `{...}` as well.
+* Treat mixed inline elements as preformatted to preserve whitespace in HTML serialization
 
 ## 0.11.4 - 2026-04-18
 
