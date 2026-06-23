@@ -4,7 +4,10 @@ use std::collections::VecDeque;
 use std::{borrow::Cow, collections::BTreeMap};
 
 enum ChildMode {
-    Child(Vec<HtmlNode>),
+    Child {
+        children: Vec<HtmlNode>,
+        inline: bool,
+    },
     Text(String),
 }
 
@@ -47,9 +50,12 @@ fn html_node_to_string(result: &mut Vec<String>, ident: Format, node: HtmlNode) 
             let r_chevron = ident.r_chevron();
 
             match get_render_child_mode(element.children) {
-                ChildMode::Child(children) => {
-                    // Treat <pre> separately if formatting is enabled
-                    let inner_ident = if ident.is_some() && el_name != "pre" {
+                ChildMode::Child { children, inline } => {
+                    // Treat <pre> and inline (mixed text+element) content as
+                    // preformatted: whitespace is significant, so don't inject
+                    // indentation/newlines around the children.
+                    let preformatted = el_name == "pre" || inline;
+                    let inner_ident = if ident.is_some() && !preformatted {
                         ident.add(2)
                     } else {
                         Format::none()
@@ -64,8 +70,8 @@ fn html_node_to_string(result: &mut Vec<String>, ident: Format, node: HtmlNode) 
                         html_node_to_string(result, inner_ident, child);
                     }
 
-                    // If </pre> then do not ident
-                    if el_name == "pre" {
+                    // If preformatted then do not ident the close tag
+                    if preformatted {
                         ident_str = String::new();
                     }
 
@@ -156,7 +162,10 @@ fn get_render_child_mode(element: VecDeque<HtmlNode>) -> ChildMode {
     let last = result.pop();
 
     let Some(last) = last else {
-        return ChildMode::Child(vec![]);
+        return ChildMode::Child {
+            children: vec![],
+            inline: false,
+        };
     };
 
     if result.is_empty()
@@ -166,7 +175,15 @@ fn get_render_child_mode(element: VecDeque<HtmlNode>) -> ChildMode {
     }
 
     result.push(last);
-    ChildMode::Child(result)
+
+    // Mixed content (a text node interleaved with other children) is an inline
+    // formatting context where whitespace is significant.
+    let inline = result.iter().any(|n| matches!(n, HtmlNode::Text(_)));
+
+    ChildMode::Child {
+        children: result,
+        inline,
+    }
 }
 
 fn last_text_add(last_text: &mut Option<Vec<String>>, text: String) {
@@ -299,6 +316,47 @@ mod tests {
         assert_eq!(
             output,
             "<!DOCTYPE html><div><pre><span>    </span><span>let</span><span> </span><span>x</span><span> </span><span>;</span><span>\n</span></pre><img /></div>"
+        );
+    }
+
+    #[test]
+    fn html_inline_mixed_content_no_extra_whitespace() {
+        // A paragraph mixing text with inline elements must not have whitespace
+        // injected around the inline elements, otherwise the server-rendered
+        // output differs from the dynamic (hydrated) DOM and the page flickers.
+        let div: HtmlNode = HtmlElement::new("div")
+            .child(
+                HtmlElement::new("p")
+                    .child(HtmlNode::Text("a [".into()))
+                    .child(
+                        HtmlElement::new("a")
+                            .attr("href", "https://example.com")
+                            .child(HtmlNode::Text("x".into()))
+                            .into(),
+                    )
+                    .child(HtmlNode::Text("] b".into()))
+                    .into(),
+            )
+            .into();
+
+        let pretty = convert_to_string(div.clone(), true);
+
+        assert_eq!(
+            pretty,
+            "<!DOCTYPE html>
+<div>
+  <p>a [<a href=\"https://example.com\">x</a>] b</p>
+</div>
+"
+        );
+
+        // The inline content of the <p> is byte-identical to the unformatted
+        // render, which is what the dynamic DOM produces.
+        let plain = convert_to_string(div, false);
+
+        assert_eq!(
+            plain,
+            "<!DOCTYPE html><div><p>a [<a href=\"https://example.com\">x</a>] b</p></div>"
         );
     }
 }
