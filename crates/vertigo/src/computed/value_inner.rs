@@ -11,7 +11,7 @@ impl<T: PartialEq + Clone + 'static> ValueInner<T> {
     pub fn new(value: T) -> ValueInner<T> {
         ValueInner {
             id: GraphId::new_value(),
-            value: ValueMut::new(value.clone()),
+            value: ValueMut::new_with_eq(value.clone()),
             events: EventEmitter::default(),
         }
     }
