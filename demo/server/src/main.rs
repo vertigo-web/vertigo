@@ -6,6 +6,7 @@ mod app_state;
 mod client_message;
 mod connection;
 mod items;
+mod ws_collection;
 
 use app_state::AppState;
 use client_message::ClientMessage;
@@ -22,6 +23,7 @@ async fn main() -> std::io::Result<()> {
             .app_data(items_state.clone())
             .route("/", web::get().to(|| async { "demo - api index" }))
             .route("/ws", web::get().to(websocket_handler))
+            .route("/ws-collection", web::get().to(ws_collection::handler))
             // Lazy list demo
             .route("/api/items", web::get().to(items::list))
             .route("/api/items", web::post().to(items::create))

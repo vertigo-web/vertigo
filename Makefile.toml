@@ -54,7 +54,7 @@ script = ["cargo run --bin vertigo-demo-server"]
 
 [tasks.demo-debug-watch]
 script = [
-    'cargo run --bin vertigo -- watch vertigo-demo --dest-dir=demo_build --wasm-run-source-map --env ws_chat=ws://127.0.0.1:3333/ws'
+    'cargo run --bin vertigo -- watch vertigo-demo --dest-dir=demo_build --wasm-run-source-map --env ws_chat=ws://127.0.0.1:3333/ws --env ws_collection=ws://127.0.0.1:3333/ws-collection'
 ]
 
 [tasks.demo-watch]
@@ -68,7 +68,7 @@ script = ["cargo run --bin vertigo-demo-server --release"]
 [tasks.demo-serve]
 script = [
     "cargo run --bin vertigo --release -- build vertigo-demo --dest-dir=demo_build --wasm-run-source-map",
-    "cargo run --bin vertigo --release -- serve --dest-dir=demo_build --env ws_chat=ws://127.0.0.1:3333/ws --proxy /api=http://127.0.0.1:3333/api"
+    "cargo run --bin vertigo --release -- serve --dest-dir=demo_build --env ws_chat=ws://127.0.0.1:3333/ws --env ws_collection=ws://127.0.0.1:3333/ws-collection --proxy /api=http://127.0.0.1:3333/api"
 ]
 
 [tasks.demo]
