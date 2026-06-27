@@ -14,6 +14,7 @@
 //!   * [Computed] - Read-only (computed) reactive value
 //!   * [LazyCache] - Lazy cache for fetched resources
 //!   * [LazyListCache] - Lazy cache for fetched lists (optimized for CRUD operations)
+//!   * [WsCollection] - Reactive collection driven by a server subscription over a WebSocket
 //!   * [store] - Wraps function to be used as a store (singleton) generator
 //! * Others
 //!   * [bind!] - Auto-clones variables before use
@@ -25,6 +26,7 @@
 //! * [guides::value_synchronize_and_collections] - `Value::synchronize`, `ValueSynchronize`,
 //!   `CollectionKey` and the memoized list renderers
 //! * [guides::lazy_list_cache] - `LazyListCache`: optimistic, per-item reactive list cache
+//! * [guides::websocket_collection] - `WsCollection`: server-pushed reactive collections over a WebSocket
 
 #![deny(rust_2018_idioms)]
 #![cfg_attr(test, allow(clippy::panic_in_result_fn))]
@@ -46,6 +48,7 @@ pub mod router;
 #[cfg(test)]
 mod tests;
 mod websocket;
+mod websocket_collection;
 
 /// Long-form guides rendered as their own documentation pages.
 ///
@@ -58,6 +61,9 @@ pub mod guides {
 
     #[doc = include_str!("../../../docs/lazy-list-cache.md")]
     pub mod lazy_list_cache {}
+
+    #[doc = include_str!("../../../docs/websocket-collection.md")]
+    pub mod websocket_collection {}
 }
 
 // Exports from vertigo
@@ -97,6 +103,10 @@ pub use fetch::{
 pub use instant::{Instant, InstantType};
 pub use render::collection::CollectionKey;
 pub use websocket::{WebsocketConnection, WebsocketMessage};
+pub use websocket_collection::{
+    AuthTokenProvider, CollectionWhereValue, IntoCollectionWhereValue, MergeFn, WsCollection,
+    WsMessageKind, WsQuery, WsServerMessageFrom, WsSocket,
+};
 
 // Commonly used things
 pub mod prelude {

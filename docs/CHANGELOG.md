@@ -6,6 +6,7 @@
 ### Added
 
 * `LazyListCache` for fetched lists (optimized for CRUD operations)
+* `WsCollection` - server-pushed reactive collections over a WebSocket
 * `dom!` macro now supports passing children to components
 * `on_change_file` attribute for file inputs
 * `on_intersect` attribute with `IntersectionEvent`
