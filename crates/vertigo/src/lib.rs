@@ -56,13 +56,13 @@ mod websocket_collection;
 /// directory so it gets its own rustdoc page instead of being inlined into the
 /// crate root.
 pub mod guides {
-    #[doc = include_str!("../../../docs/value-synchronize-and-collections.md")]
+    #[doc = include_str!("../docs/value-synchronize-and-collections.md")]
     pub mod value_synchronize_and_collections {}
 
-    #[doc = include_str!("../../../docs/lazy-list-cache.md")]
+    #[doc = include_str!("../docs/lazy-list-cache.md")]
     pub mod lazy_list_cache {}
 
-    #[doc = include_str!("../../../docs/websocket-collection.md")]
+    #[doc = include_str!("../docs/websocket-collection.md")]
     pub mod websocket_collection {}
 }
 

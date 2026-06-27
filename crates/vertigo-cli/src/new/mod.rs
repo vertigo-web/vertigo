@@ -102,7 +102,7 @@ fn process_cargo_toml_files(dir: &Path, package_name: &str) -> Result<(), ErrorC
                 let cargo_toml_path = parent.join("Cargo.toml");
                 if let Err(err) = fs::write(&cargo_toml_path, new_content) {
                     log::error!("Can't write to {}: {}", cargo_toml_path.display(), err);
-                    return Err(ErrorCode::NewProjectCanWriteToCargoToml);
+                    return Err(ErrorCode::NewProjectCantWriteToCargoToml);
                 }
             }
 

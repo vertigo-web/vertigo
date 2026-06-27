@@ -21,7 +21,7 @@ pub enum ErrorCode {
     NewProjectCantCreateDir = 18,
     NewProjectCantUnpackStub = 19,
     NewProjectCantCreateCargoToml = 20,
-    NewProjectCanWriteToCargoToml = 21,
+    NewProjectCantWriteToCargoToml = 21,
 
     ServeCantFindHttpBasePath = 22,
     ServeCantReadIndexFile = 23,

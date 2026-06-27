@@ -295,7 +295,7 @@ pub fn List() {
     let state = Value::new(items);
 
     let elements = render_list(
-        state,
+        &state,
         |item| item.clone(),
         |item| dom! { <li>{item}</li> },
     );
@@ -313,13 +313,15 @@ pub fn List() {
 
 We can create state this way, because this function is fired upon mounting, not every time something changes.
 
-> The render function uses `render_list()` method on `Value<Vec<_>>` from state to render a list of `<li>` elements.
+> The render function uses the `render_list()` function (imported from `vertigo::render`) on the
+> `Value<Vec<_>>` from state to render a list of `<li>` elements.
 >
 > The list can then be inserted directly as a list of children in `dom!` macro.
-> The method takes two closures as parameters. First should return a key unique across all items,
-> while the latter should return with the rendered item itself.
+> The function takes the reactive source as its first argument, followed by two closures.
+> The first closure should return a key unique across all items,
+> while the latter should return the rendered item itself.
 >
-> Note the `render_list()` method works only if inner type of `Value` implements `IntoIterator`.
+> Note that `render_list()` works only if the inner type of `Value` implements `IntoIterator`.
 
 If we want to provide the state for a component from the upstream, then we can take the state as an argument
 to the `List` function, then the state can be passed to our component as a property:
@@ -328,7 +330,7 @@ to the `List` function, then the state can be passed to our component as a prope
 #[component]
 pub fn List(items: Value<Vec<String>>) {
     let elements = render_list(
-        items,
+        &items,
         |item| item.clone(),
         |item| dom! { <li>{item}</li> },
     );
@@ -487,7 +489,7 @@ We'll make the list change font color for every other row (`list.rs` file).
     "};
 
     let elements = render_list(
-        items,
+        &items,
         |item| item.clone(),
         move |item| dom! {
             <li css={alternate_rows.clone()}>{item}</li>
@@ -514,14 +516,15 @@ To create a parameterized css we just need turn our css into a function returnin
             :nth-child(odd) {
                 color: blue;
             };
-        ")
+        "}
     };
 ```
 
 And here's the usage in rendering:
 
 ```rust
-    let elements = items.render_list(
+    let elements = render_list(
+        &items,
         |item| item.clone(),
         move |item| {
             let excl = item.ends_with('!');
