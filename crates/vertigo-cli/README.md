@@ -109,19 +109,19 @@ cargo make run-be
 
 `17` New Project Dir Not Empty
 
-`18` New Project Cant Create Dir
+`18` New Project Can't Create Dir
 
-`19` New Project Cant Unpack Stub
+`19` New Project Can't Unpack Stub
 
-`20` New Project Can Create Cargo Toml
+`20` New Project Can't Create Cargo Toml
 
-`21` New Project Can Write To Cargo Toml
+`21` New Project Can't Write To Cargo Toml
 
-`22` Serve Cant Find Http Base Path
+`22` Serve Can't Find Http Base Path
 
-`23` Serve Cant Read Index File
+`23` Serve Can't Read Index File
 
-`24` Serve Cant Open Port
+`24` Serve Can't Open Port
 
 `25` Serve Wasm Read Failed
 

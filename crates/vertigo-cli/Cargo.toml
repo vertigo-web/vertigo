@@ -47,12 +47,15 @@ log = "0.4"
 notify = "8.2"
 parking_lot = "0.12"
 pkg-version = "1"
+# Pin: cookie 0.16.2 (via actix-web) breaks against time >= 0.3.52
+# Try to remove in next version
+time = "=0.3.51"
 serde = { version = "1.0", features = ["derive", "rc"] }
 serde_json = "1.0"
 tokio = { version = "1.49", features = ["full"] }
 tokio-retry = "0.3"
 walkdir = "2.5"
-wasmtime = "44.0"
+wasmtime = "46.0"
 vertigo = { workspace = true }
 
 [lints]
