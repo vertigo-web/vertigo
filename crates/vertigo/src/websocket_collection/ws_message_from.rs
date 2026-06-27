@@ -53,6 +53,7 @@ pub struct WsMessageData {
     pub query_id: WebsocketQueryId,
     pub kind: WsMessageKind,
     pub message: String,
+    pub code: Option<u16>,
 }
 
 #[derive(Debug, Clone, AutoJsJson, PartialEq)]
@@ -105,7 +106,7 @@ impl WsServerMessageFrom {
 
 #[cfg(test)]
 mod tests {
-    use std::collections::BTreeMap;
+    use std::{collections::BTreeMap, error::Error};
 
     use crate::{JsJson, JsJsonContext, JsJsonDeserialize, JsJsonNumber, to_json};
 
@@ -126,7 +127,7 @@ mod tests {
     }
 
     #[test]
-    fn ws_server_message_init_round_trips() {
+    fn ws_server_message_init_round_trips() -> Result<(), Box<dyn Error>> {
         let msg = WsServerMessageFrom::Init(WsInitData {
             query_id: WebsocketQueryId("q1".into()),
             list: vec![WsInitDataModel {
@@ -135,35 +136,41 @@ mod tests {
             }],
         });
         let json = to_json(msg.clone());
-        let back = crate::from_json::<WsServerMessageFrom>(json).expect("from_json");
+        let back = crate::from_json::<WsServerMessageFrom>(json)?;
         assert_eq!(back, msg);
+
+        Ok(())
     }
 
     #[test]
-    fn ws_server_message_set_round_trips() {
+    fn ws_server_message_set_round_trips() -> Result<(), Box<dyn Error>> {
         let msg = WsServerMessageFrom::Set(WsSetData {
             query_id: WebsocketQueryId("q1".into()),
             model_id: "6".into(),
             model: sample_model_js(),
         });
         let json = to_json(msg.clone());
-        let back = crate::from_json::<WsServerMessageFrom>(json).expect("from_json");
+        let back = crate::from_json::<WsServerMessageFrom>(json)?;
         assert_eq!(back, msg);
+
+        Ok(())
     }
 
     #[test]
-    fn ws_server_message_delete_round_trips() {
+    fn ws_server_message_delete_round_trips() -> Result<(), Box<dyn Error>> {
         let msg = WsServerMessageFrom::Delete(WsDeleteData {
             query_id: WebsocketQueryId("query_0".into()),
             model_id: "7".into(),
         });
         let json = to_json(msg.clone());
-        let back = crate::from_json::<WsServerMessageFrom>(json).expect("from_json");
+        let back = crate::from_json::<WsServerMessageFrom>(json)?;
         assert_eq!(back, msg);
+
+        Ok(())
     }
 
     #[test]
-    fn from_js_json_reports_unknown_variant_by_tag() {
+    fn from_js_json_reports_unknown_variant_by_tag() -> Result<(), Box<dyn Error>> {
         // Simulates server drift (e.g. a new `InitOne` variant) — the parser must report
         // the offending tag in the error so logs are actionable, and must not panic.
         let raw = JsJson::Object(BTreeMap::from([(
@@ -175,15 +182,19 @@ mod tests {
             ])),
         )]));
 
-        let err = WsServerMessageFrom::from_js_json(raw).expect_err("should not decode");
+        let err = WsServerMessageFrom::from_js_json(raw)
+            .err()
+            .ok_or_else(|| "expected error".to_string())?;
         assert!(
             err.contains("`initOne`"),
             "error must name the unknown tag, got: {err}"
         );
+
+        Ok(())
     }
 
     #[test]
-    fn ws_server_message_init_matches_from_json_on_jsjson() {
+    fn ws_server_message_init_matches_from_json_on_jsjson() -> Result<(), Box<dyn Error>> {
         let msg = WsServerMessageFrom::Init(WsInitData {
             query_id: WebsocketQueryId("query_0".into()),
             list: vec![WsInitDataModel {
@@ -192,9 +203,11 @@ mod tests {
             }],
         });
         let json = to_json(msg.clone());
-        let from_public = crate::from_json::<WsServerMessageFrom>(json.clone()).expect("from_json");
-        let from_trait = WsServerMessageFrom::from_json(ctx(), json).expect("from_json trait");
+        let from_public = crate::from_json::<WsServerMessageFrom>(json.clone())?;
+        let from_trait = WsServerMessageFrom::from_json(ctx(), json)?;
         assert_eq!(from_public, msg);
         assert_eq!(from_trait, msg);
+
+        Ok(())
     }
 }

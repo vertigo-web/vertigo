@@ -9,15 +9,17 @@ use super::sudoku::SudokuState;
 #[derive(Clone)]
 pub struct State {
     pub ws_chat: Option<String>,
+    pub ws_collection: Option<String>,
     pub sudoku: SudokuState,
     pub input: Value<String>,
     pub game_of_life: game_of_life::State,
 }
 
 impl State {
-    pub fn new(ws_chat: Option<String>) -> Self {
+    pub fn new(ws_chat: Option<String>, ws_collection: Option<String>) -> Self {
         State {
             ws_chat,
+            ws_collection,
             sudoku: SudokuState::new(),
             input: Value::default(),
             game_of_life: game_of_life::State::new(),

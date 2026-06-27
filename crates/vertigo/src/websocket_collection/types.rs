@@ -352,6 +352,8 @@ fn collection_where_value_to_js_json(value: &CollectionWhereValue) -> JsJson {
 
 #[cfg(test)]
 mod tests {
+    use std::error::Error;
+
     use crate::{JsJson, JsJsonContext, JsJsonNumber, to_json};
 
     use super::*;
@@ -361,7 +363,7 @@ mod tests {
     }
 
     #[test]
-    fn ws_where_clause_serializes_op_column_value() {
+    fn ws_where_clause_serializes_op_column_value() -> Result<(), Box<dyn Error>> {
         let clause = WsWhereClause {
             op: WsWhereOp::Eq,
             column: "category".into(),
@@ -369,15 +371,16 @@ mod tests {
         };
 
         let json = to_json(clause);
-        let map = json.get_hashmap(&ctx()).expect("clause object");
+        let map = json.get_hashmap(&ctx())?;
 
         assert_eq!(map.get("op"), Some(&JsJson::String("Eq".into())));
         assert_eq!(map.get("column"), Some(&JsJson::String("category".into())));
         assert_eq!(map.get("value"), Some(&JsJson::String("alpha".into())));
+        Ok(())
     }
 
     #[test]
-    fn query_to_ws_subscribe_query_preserves_value_kinds() {
+    fn query_to_ws_subscribe_query_preserves_value_kinds() -> Result<(), Box<dyn Error>> {
         let query = WsQuery {
             table: "items".into(),
             logic: WsWhereLogic::And,
@@ -400,20 +403,21 @@ mod tests {
 
         let wire = query.to_ws_subscribe_query();
         let json = to_json(wire);
-        let qmap = json.get_hashmap(&ctx()).expect("query object");
-        let JsJson::List(rows) = qmap.get("where").expect("where array") else {
-            panic!("where must be a list");
+        let qmap = json.get_hashmap(&ctx())?;
+        let JsJson::List(rows) = qmap.get("where").ok_or("where array")? else {
+            return Err("where must be a list".into());
         };
         assert_eq!(rows.len(), 3);
 
-        let row0 = rows[0].clone().get_hashmap(&ctx()).unwrap();
+        let row0 = rows[0].clone().get_hashmap(&ctx())?;
         assert_eq!(row0.get("value"), Some(&JsJson::String("alpha".into())));
 
-        let row1 = rows[1].clone().get_hashmap(&ctx()).unwrap();
+        let row1 = rows[1].clone().get_hashmap(&ctx())?;
         assert_eq!(row1.get("value"), Some(&JsJson::Number(JsJsonNumber(3.5))));
 
-        let row2 = rows[2].clone().get_hashmap(&ctx()).unwrap();
+        let row2 = rows[2].clone().get_hashmap(&ctx())?;
         assert_eq!(row2.get("value"), Some(&JsJson::True));
+        Ok(())
     }
 
     #[test]
@@ -423,69 +427,73 @@ mod tests {
     }
 
     #[test]
-    fn subscribe_query_like_text_column_serializes_logic_and_where() {
+    fn subscribe_query_like_text_column_serializes_logic_and_where() -> Result<(), Box<dyn Error>> {
         let query = WsQuery::and("items").like("label", "Ars");
         let wire = query.to_ws_subscribe_query();
         let json = to_json(wire);
-        let qmap = json.get_hashmap(&ctx()).expect("query object");
+        let qmap = json.get_hashmap(&ctx())?;
         assert_eq!(qmap.get("logic"), Some(&JsJson::String("And".into())));
-        let JsJson::List(rows) = qmap.get("where").expect("where array") else {
-            panic!("where must be a list");
+        let JsJson::List(rows) = qmap.get("where").ok_or("where array")? else {
+            return Err("where must be a list".into());
         };
         assert_eq!(rows.len(), 1);
-        let row = rows[0].clone().get_hashmap(&ctx()).unwrap();
+        let row = rows[0].clone().get_hashmap(&ctx())?;
         assert_eq!(row.get("op"), Some(&JsJson::String("Like".into())));
         assert_eq!(row.get("column"), Some(&JsJson::String("label".into())));
         assert_eq!(row.get("value"), Some(&JsJson::String("Ars".into())));
+        Ok(())
     }
 
     #[test]
-    fn subscribe_query_and_eq_gt_serializes_logic_and_where() {
+    fn subscribe_query_and_eq_gt_serializes_logic_and_where() -> Result<(), Box<dyn Error>> {
         let query = WsQuery::and("items")
             .eq("owner_id", 42i64)
             .gt("amount", 100.0);
         let wire = query.to_ws_subscribe_query();
         let json = to_json(wire);
-        let qmap = json.get_hashmap(&ctx()).expect("query object");
+        let qmap = json.get_hashmap(&ctx())?;
         assert_eq!(qmap.get("logic"), Some(&JsJson::String("And".into())));
-        let JsJson::List(rows) = qmap.get("where").expect("where array") else {
-            panic!("where must be a list");
+        let JsJson::List(rows) = qmap.get("where").ok_or("where array")? else {
+            return Err("where must be a list".into());
         };
         assert_eq!(rows.len(), 2);
-        let row0 = rows[0].clone().get_hashmap(&ctx()).unwrap();
+        let row0 = rows[0].clone().get_hashmap(&ctx())?;
         assert_eq!(row0.get("op"), Some(&JsJson::String("Eq".into())));
         assert_eq!(row0.get("value"), Some(&JsJson::Number(JsJsonNumber(42.0))));
-        let row1 = rows[1].clone().get_hashmap(&ctx()).unwrap();
+        let row1 = rows[1].clone().get_hashmap(&ctx())?;
         assert_eq!(row1.get("op"), Some(&JsJson::String("Gt".into())));
         assert_eq!(
             row1.get("value"),
             Some(&JsJson::Number(JsJsonNumber(100.0)))
         );
+        Ok(())
     }
 
     #[test]
-    fn subscribe_query_lt_serializes_op_and_value() {
+    fn subscribe_query_lt_serializes_op_and_value() -> Result<(), Box<dyn Error>> {
         let query = WsQuery::and("items").lt("amount", 50.0);
         let wire = query.to_ws_subscribe_query();
         let json = to_json(wire);
-        let qmap = json.get_hashmap(&ctx()).expect("query object");
+        let qmap = json.get_hashmap(&ctx())?;
         assert_eq!(qmap.get("logic"), Some(&JsJson::String("And".into())));
-        let JsJson::List(rows) = qmap.get("where").expect("where array") else {
-            panic!("where must be a list");
+        let JsJson::List(rows) = qmap.get("where").ok_or("where array")? else {
+            return Err("where must be a list".into());
         };
         assert_eq!(rows.len(), 1);
-        let row = rows[0].clone().get_hashmap(&ctx()).unwrap();
+        let row = rows[0].clone().get_hashmap(&ctx())?;
         assert_eq!(row.get("op"), Some(&JsJson::String("Lt".into())));
         assert_eq!(row.get("column"), Some(&JsJson::String("amount".into())));
         assert_eq!(row.get("value"), Some(&JsJson::Number(JsJsonNumber(50.0))));
+        Ok(())
     }
 
     #[test]
-    fn subscribe_query_new_or_serializes_logic_or() {
+    fn subscribe_query_new_or_serializes_logic_or() -> Result<(), Box<dyn Error>> {
         let query = WsQuery::or("items").eq("category", "alpha");
         let wire = query.to_ws_subscribe_query();
         let json = to_json(wire);
-        let qmap = json.get_hashmap(&ctx()).expect("query object");
+        let qmap = json.get_hashmap(&ctx())?;
         assert_eq!(qmap.get("logic"), Some(&JsJson::String("Or".into())));
+        Ok(())
     }
 }

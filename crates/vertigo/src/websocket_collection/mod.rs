@@ -24,7 +24,7 @@ use vertigo_macro::bind;
 
 use crate::{
     Computed, DropResource, JsJsonDeserialize, Value, WebsocketConnection, WebsocketMessage,
-    dev::ValueMut, get_driver, spawn,
+    dev::ValueMut, get_driver, spawn, websocket_collection::ws_message_from::WsMessageData,
 };
 
 mod types;
@@ -94,7 +94,23 @@ impl WsSocket {
     /// [`AuthTokenProvider`]). The connection is reconnected by the driver; every live
     /// subscription is re-sent automatically when it comes back up.
     pub fn new(url: impl Into<String>, auth: AuthTokenProvider) -> Self {
-        let url = url.into();
+        Self::new_internal(url.into(), auth, None)
+    }
+
+    /// Like `new`, but sets a callback for error messages from the server.
+    pub fn new_with_error_cb(
+        url: impl Into<String>,
+        auth: AuthTokenProvider,
+        error_cb: impl Fn(WsMessageData) + 'static,
+    ) -> Self {
+        Self::new_internal(url.into(), auth, Some(Rc::new(error_cb)))
+    }
+
+    fn new_internal(
+        url: String,
+        auth: AuthTokenProvider,
+        error_cb: Option<Rc<dyn Fn(WsMessageData)>>,
+    ) -> Self {
         let collections = Rc::new(ValueMut::new(
             HashMap::<WebsocketQueryId, Subscription>::new(),
         ));
@@ -102,7 +118,7 @@ impl WsSocket {
 
         let drop = get_driver().websocket(
             url.as_str(),
-            bind!(connection_box, collections, auth, |message| {
+            bind!(connection_box, collections, auth, error_cb, |message| {
                 match message {
                     WebsocketMessage::Connection(connection) => {
                         log::info!("ws-collection - connection ...");
@@ -129,7 +145,7 @@ impl WsSocket {
                                 return;
                             }
                         };
-                        dispatch(&collections, parsed);
+                        dispatch(&collections, parsed, &error_cb);
                     }
                     WebsocketMessage::Close => {
                         log::info!("ws-collection - close ...");
@@ -193,19 +209,26 @@ impl WsSocket {
 fn dispatch(
     collections: &Rc<ValueMut<HashMap<WebsocketQueryId, Subscription>>>,
     parsed: WsServerMessageFrom,
+    error_cb: &Option<Rc<dyn Fn(WsMessageData)>>,
 ) {
     match parsed {
         WsServerMessageFrom::Batch(items) => {
             for item in items {
-                dispatch(collections, item);
+                dispatch(collections, item, error_cb);
             }
         }
         WsServerMessageFrom::Message(data) => match data.kind {
-            WsMessageKind::Error => log::error!(
-                "ws-collection - server reported error (query_id={:?}): {}",
-                data.query_id,
-                data.message,
-            ),
+            WsMessageKind::Error => {
+                if let Some(cb) = error_cb {
+                    cb(data)
+                } else {
+                    log::error!(
+                        "ws-collection - server reported error (query_id={:?}): {}",
+                        data.query_id,
+                        data.message,
+                    );
+                }
+            }
             WsMessageKind::Log => log::info!(
                 "ws-collection - server log (query_id={:?}): {}",
                 data.query_id,

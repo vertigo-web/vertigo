@@ -17,6 +17,7 @@ pub enum Route {
     JsApiAccess,
     List,
     LazyList,
+    WsCollection,
     Svg,
     NotFound,
 }
@@ -36,6 +37,7 @@ impl Route {
             "/js-api-access" => Self::JsApiAccess,
             "/list" => Self::List,
             "/lazy-list" => Self::LazyList,
+            "/ws-collection" => Self::WsCollection,
             "/svg" => Self::Svg,
             _ => Self::NotFound,
         }
@@ -55,6 +57,7 @@ impl Route {
             Self::JsApiAccess => "JS Api Access",
             Self::List => "List",
             Self::LazyList => "Lazy List",
+            Self::WsCollection => "WS Collection",
             Self::Svg => "Svg",
             Self::NotFound => "Not Found",
         }
@@ -83,6 +86,7 @@ impl Display for Route {
             Self::JsApiAccess => "/js-api-access",
             Self::List => "/list",
             Self::LazyList => "/lazy-list",
+            Self::WsCollection => "/ws-collection",
             Self::Svg => "/svg",
             Self::NotFound => "/not-found",
         };

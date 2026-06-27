@@ -14,6 +14,7 @@ mod styling;
 mod sudoku;
 mod svg;
 mod todo;
+mod ws_collection;
 
 pub use render::render;
 pub use state::State;

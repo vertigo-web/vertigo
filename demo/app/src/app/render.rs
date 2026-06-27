@@ -6,7 +6,7 @@ use super::{
     chat::Chat, counters::CountersDemo, dropfiles::DropFiles, game_of_life::GameOfLife,
     github_explorer::GitHubExplorer, input::MyInput, js_api_access::JsApiAccess,
     lazy_list::LazyList, list::ListDemo, route::Route, styling::Styling, sudoku::Sudoku,
-    svg::SvgDemo, todo::Todo,
+    svg::SvgDemo, todo::Todo, ws_collection::WsCollectionDemo,
 };
 
 fn css_menu_item(active: bool) -> Css {
@@ -75,6 +75,7 @@ fn render_header() -> DomNode {
                 { render_menu_item(Route::JsApiAccess) }
                 { render_menu_item(Route::List) }
                 { render_menu_item(Route::LazyList) }
+                { render_menu_item(Route::WsCollection) }
                 { render_menu_item(Route::Svg) }
             </div>
         </div>
@@ -130,6 +131,13 @@ pub fn render(state: &app::State) -> DomNode {
             Route::JsApiAccess => dom! { <JsApiAccess /> },
             Route::List => dom! { <ListDemo /> },
             Route::LazyList => dom! { <LazyList /> },
+            Route::WsCollection => {
+                if let Some(ws_collection) = &state.ws_collection {
+                    dom! { <WsCollectionDemo {ws_collection}/> }
+                } else {
+                    WsCollectionDemo::turn_off_message()
+                }
+            }
             Route::Svg => dom! { <SvgDemo /> },
             Route::NotFound => {
                 get_driver().set_status(404);

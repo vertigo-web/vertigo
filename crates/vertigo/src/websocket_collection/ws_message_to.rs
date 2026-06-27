@@ -34,7 +34,7 @@ impl WsClientMessageTo {
 
 #[cfg(test)]
 mod tests {
-    use std::collections::BTreeMap;
+    use std::{collections::BTreeMap, error::Error};
 
     use crate::{JsJson, JsJsonContext, JsJsonDeserialize, JsJsonNumber, to_json};
 
@@ -93,7 +93,7 @@ mod tests {
     }
 
     #[test]
-    fn ws_subscribe_query_uses_where_json_key_not_filters() {
+    fn ws_subscribe_query_uses_where_json_key_not_filters() -> Result<(), Box<dyn Error>> {
         let msg = WsClientMessageTo::Subscribe {
             query_id: WebsocketQueryId("1".into()),
             auth: String::new(),
@@ -123,19 +123,21 @@ mod tests {
 
         let json = to_json(msg);
         assert_eq!(json, expected);
-        let map = json.get_hashmap(&ctx()).expect("root object");
-        let subscribe = map.get("Subscribe").expect("Subscribe").clone();
-        let subscribe_map = subscribe.get_hashmap(&ctx()).expect("payload");
-        let query = subscribe_map.get("query").expect("query").clone();
-        let qmap = query.get_hashmap(&ctx()).expect("query object");
+        let map = json.get_hashmap(&ctx())?;
+        let subscribe = map.get("Subscribe").ok_or("Subscribe")?.clone();
+        let subscribe_map = subscribe.get_hashmap(&ctx())?;
+        let query = subscribe_map.get("query").ok_or("query")?.clone();
+        let qmap = query.get_hashmap(&ctx())?;
         assert!(
             !qmap.contains_key("filters"),
             "Rust field `filters` must not appear as `filters` in JSON"
         );
+
+        Ok(())
     }
 
     #[test]
-    fn ws_client_subscribe_round_trips_through_js_json() {
+    fn ws_client_subscribe_round_trips_through_js_json() -> Result<(), Box<dyn Error>> {
         let msg = WsClientMessageTo::Subscribe {
             query_id: WebsocketQueryId("q9".into()),
             auth: "jwt".into(),
@@ -152,12 +154,14 @@ mod tests {
         };
 
         let json = to_json(msg.clone());
-        let back = WsClientMessageTo::from_json(ctx(), json).expect("deserialize");
+        let back = WsClientMessageTo::from_json(ctx(), json)?;
         assert_eq!(back, msg);
+
+        Ok(())
     }
 
     #[test]
-    fn ws_client_unsubscribe_serializes_and_round_trips() {
+    fn ws_client_unsubscribe_serializes_and_round_trips() -> Result<(), Box<dyn Error>> {
         let msg = WsClientMessageTo::Unsubscribe {
             query_id: WebsocketQueryId("query_7".into()),
         };
@@ -172,12 +176,14 @@ mod tests {
 
         let wire = to_json(msg.clone());
         assert_eq!(wire, expected.clone());
-        let back = WsClientMessageTo::from_json(ctx(), wire).expect("deserialize");
+        let back = WsClientMessageTo::from_json(ctx(), wire)?;
         assert_eq!(back, msg);
+
+        Ok(())
     }
 
     #[test]
-    fn ws_subscribe_serializes_like_and_logic_and_gt() {
+    fn ws_subscribe_serializes_like_and_logic_and_gt() -> Result<(), Box<dyn Error>> {
         let msg = WsClientMessageTo::Subscribe {
             query_id: WebsocketQueryId("text-search-1".into()),
             auth: "<JWT>".into(),
@@ -193,23 +199,21 @@ mod tests {
             },
         };
         let json = to_json(msg);
-        let root = json.get_hashmap(&ctx()).unwrap();
+        let root = json.get_hashmap(&ctx())?;
         let sub = root
             .get("Subscribe")
-            .unwrap()
+            .ok_or("root get Subscribe")?
             .clone()
-            .get_hashmap(&ctx())
-            .unwrap();
+            .get_hashmap(&ctx())?;
         let query = sub
             .get("query")
-            .unwrap()
+            .ok_or("sub get query")?
             .clone()
-            .get_hashmap(&ctx())
-            .unwrap();
+            .get_hashmap(&ctx())?;
         assert_eq!(query.get("logic"), Some(&JsJson::String("And".into())));
-        let where_list = query.get("where").unwrap().clone();
+        let where_list = query.get("where").ok_or("query get where")?.clone();
         let JsJson::List(rows) = where_list else {
-            panic!("where list");
+            return Err("where list".into());
         };
         assert_eq!(rows.len(), 1);
 
@@ -235,21 +239,21 @@ mod tests {
             },
         };
         let json2 = to_json(msg2.clone());
-        let root2 = json2.clone().get_hashmap(&ctx()).unwrap();
+        let root2 = json2.clone().get_hashmap(&ctx())?;
         let sub2 = root2
             .get("Subscribe")
-            .unwrap()
+            .ok_or("root get Subscribe")?
             .clone()
-            .get_hashmap(&ctx())
-            .unwrap();
+            .get_hashmap(&ctx())?;
         let query2 = sub2
             .get("query")
-            .unwrap()
+            .ok_or("sub get query")?
             .clone()
-            .get_hashmap(&ctx())
-            .unwrap();
+            .get_hashmap(&ctx())?;
         assert_eq!(query2.get("logic"), Some(&JsJson::String("And".into())));
-        let back2 = WsClientMessageTo::from_json(ctx(), json2).expect("deserialize");
+        let back2 = WsClientMessageTo::from_json(ctx(), json2)?;
         assert_eq!(back2, msg2);
+
+        Ok(())
     }
 }
