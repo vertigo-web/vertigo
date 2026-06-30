@@ -25,7 +25,7 @@ doc = false
 
 [lib]
 name = "vertigo_cli"
-path = "src/main.rs"
+path = "src/lib.rs"
 
 [dependencies]
 actix-cors = "0.7"
