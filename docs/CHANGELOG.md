@@ -49,6 +49,10 @@ gone. See [`guides::collection_key_and_list_renderers`](https://docs.rs/vertigo/
   because every row copied the whole shared key-to-value map on each update
 * `Value::new` and `Value::set` no longer deep-copy the payload when nothing is listening for
   `Value::add_event`
+* `vertigo build` no longer fails wasm optimization with *"memory.copy operations require bulk
+  memory operations"* - the WASM features enabled by default for `wasm32-unknown-unknown` are now
+  passed to `wasm-opt` explicitly, because `strip = true` in the cargo profile removes the
+  `target_features` section that `wasm-opt` would otherwise read them from
 
 ## 0.12.0 - 2026-07-01
 
