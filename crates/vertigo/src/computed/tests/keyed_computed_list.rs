@@ -339,6 +339,88 @@ fn unchanged_rows_do_not_notify() {
     );
 }
 
+/// Building a keyed list allocates graph nodes. Doing that from a computed that re-runs
+/// while the graph is being refreshed must work - a render closure reached during an update
+/// is exactly that situation.
+#[test]
+fn can_be_built_during_a_refresh() {
+    let trigger = Value::new(1);
+
+    let ages = Computed::from({
+        let trigger = trigger.clone();
+        move |ctx| {
+            let age = trigger.get(ctx);
+            let source = Value::new(vec![Person {
+                id: "1",
+                name: "Ann",
+                age,
+            }]);
+
+            let list = keyed_computed_list(source.to_computed(), |item| item.id);
+
+            list.get(ctx)
+                .iter()
+                .map(|row| row.value.get(ctx).age)
+                .collect::<Vec<_>>()
+        }
+    });
+
+    let seen = Rc::new(RefCell::new(Vec::new()));
+    let _subscription = ages.subscribe({
+        let seen = seen.clone();
+        move |ages| seen.borrow_mut().push(ages)
+    });
+
+    assert_eq!(*seen.borrow(), vec![vec![1]]);
+
+    // Re-runs the closure - and so builds a second keyed list - mid-refresh.
+    trigger.set(2);
+
+    assert_eq!(*seen.borrow(), vec![vec![1], vec![2]]);
+}
+
+/// The duplicate-key path logs and skips; make sure it does so safely mid-refresh too.
+#[test]
+fn duplicate_keys_during_a_refresh() {
+    let trigger = Value::new(1);
+
+    let names = Computed::from({
+        let trigger = trigger.clone();
+        move |ctx| {
+            let age = trigger.get(ctx);
+            let source = Value::new(vec![
+                Person {
+                    id: "1",
+                    name: "first",
+                    age,
+                },
+                Person {
+                    id: "1",
+                    name: "duplicate",
+                    age,
+                },
+            ]);
+
+            let list = keyed_computed_list(source.to_computed(), |item| item.id);
+
+            list.get(ctx)
+                .iter()
+                .map(|row| row.value.get(ctx).name)
+                .collect::<Vec<_>>()
+        }
+    });
+
+    let seen = Rc::new(RefCell::new(Vec::new()));
+    let _subscription = names.subscribe({
+        let seen = seen.clone();
+        move |names| seen.borrow_mut().push(names)
+    });
+
+    trigger.set(2);
+
+    assert_eq!(*seen.borrow(), vec![vec!["first"]]);
+}
+
 /// Counts how often the item type is cloned, to pin down the cost of an update.
 #[derive(Debug)]
 struct Counted {
