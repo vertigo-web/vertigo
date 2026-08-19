@@ -1,6 +1,55 @@
 <!-- markdownlint-configure-file { "no-duplicate-heading": { "siblings_only": true } } -->
 
 <!-- markdownlint-disable-next-line first-line-h1 -->
+## 0.13.0 - unreleased
+
+Keyed list rendering was rebuilt around per-key `Computed`s. `render_list` and the memoized
+list renderers changed shape, and the `Value::synchronize` machinery they used to rely on is
+gone. See [`guides::collection_key_and_list_renderers`](https://docs.rs/vertigo/latest/vertigo/guides/collection_key_and_list_renderers/index.html).
+
+### Added
+
+* `keyed_computed_list` - maps a reactive list into a list of per-item `Computed`s, reusing the
+  same `Computed` for a given key across updates (Solid `<For>`-style), together with `KeyedListItem`
+* `MarkerContent` - lets a marker comment report the nodes it keeps in front of itself, so the
+  subtree travels with the marker instead of being rebuilt when it moves
+
+### Changed
+
+* **Breaking**: `render_list` now takes a `Vec<T>` source (previously any
+  `IntoIterator + Clone + PartialEq`), its render closure receives `&Computed<T>` instead of `&T`,
+  and the key type must implement `Debug`. The closure runs once per key *appearance*; item
+  updates flow through the per-key `Computed`, so embed it in `dom!` or wrap it with
+  `Computed::render_value`
+* **Breaking**: the render closures of `render_list_memo` and `render_resource_list_memo` receive
+  `&Computed<T::Value>`. `render_resource_list_memo` renders `Loading` and `Error` as an empty list
+* **Breaking**: the mount closure of `DomComment::new_marker` takes a third argument,
+  `&MarkerContent`. A marker moved within the same parent no longer re-runs its mount
+* Every `render_list` row is preceded by an anchor comment node, which marks where the row begins
+  regardless of the shape the row renders to
+* Guide `guides::value_synchronize_and_collections` replaced by
+  `guides::collection_key_and_list_renderers`
+
+### Removed
+
+* **Breaking**: `ValueSynchronize`, `Value::synchronize`, `LazyCache::synchronize` and
+  `CacheValue::synchronize`. `render_list_memo` no longer mirrors its source into a side
+  structure, so there is nothing left to synchronize; use `keyed_computed_list` to derive
+  per-item `Computed`s
+* **Breaking**: `Collection` and `CollectionModel`, superseded by `keyed_computed_list`.
+  `CollectionKey` stays and still describes how list items are identified
+
+### Fixed
+
+* `render_list` corrupted sibling order when reordering or inserting rows whose root is a plain
+  element rather than a `render_value` marker
+* Moving a row no longer destroys and rebuilds its DOM; the existing nodes are repositioned, so
+  their state (input values, listeners, children) survives a reorder
+* Updating one row of a keyed list cost work proportional to the *square* of the list length,
+  because every row copied the whole shared key-to-value map on each update
+* `Value::new` and `Value::set` no longer deep-copy the payload when nothing is listening for
+  `Value::add_event`
+
 ## 0.12.0 - 2026-07-01
 
 ### Added

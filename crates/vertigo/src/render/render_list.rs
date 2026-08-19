@@ -454,6 +454,41 @@ mod tests {
         );
     }
 
+    /// A key appearing during an update runs `render` while the graph is mid-refresh, so
+    /// the nested list this row renders is built at that point.
+    #[test]
+    fn row_that_is_itself_a_list_can_be_added_during_an_update() {
+        let items = Value::new(vec![row(1, "one")]);
+
+        log_start();
+        let list = render_list(
+            &items,
+            |item| item.0,
+            |item| {
+                let labels = item.map(|item| vec![item.1]);
+                render_list(
+                    labels,
+                    |label| label.clone(),
+                    |label| label.render_value(|label| dom! { <li>{label}</li> }),
+                )
+            },
+        );
+        let _root = dom! { <ul>{list}</ul> };
+        items.set(vec![row(1, "one"), row(2, "two")]);
+
+        let rows = ["one", "two"]
+            .iter()
+            .map(|label| {
+                format!("<!-- row --><!-- row --><li>{label}</li><!-- v --><!-- list element -->")
+            })
+            .collect::<String>();
+
+        assert_eq!(
+            DomDebugFragment::from_log().to_pseudo_html(),
+            format!("<ul>{rows}<!-- list element --></ul>")
+        );
+    }
+
     #[test]
     fn key_removed_and_added_again() {
         let items = Value::new(vec![row(1, "one"), row(2, "two"), row(3, "three")]);
