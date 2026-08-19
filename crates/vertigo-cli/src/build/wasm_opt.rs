@@ -1,12 +1,37 @@
-use std::{fs, process::Command};
+use std::{fs, process::Command, sync::OnceLock};
 
 use super::wasm_path::WasmPath;
+
+/// Features that rustc enables by default for the `wasm32-unknown-unknown` target.
+///
+/// Normally `wasm-opt` picks these up from the `target_features` custom section emitted
+/// by LLVM, but that section is dropped whenever the binary is stripped
+/// (`strip = true` in the cargo profile, which is a very common setting for wasm builds).
+/// Without it `wasm-opt` falls back to its own default feature set and refuses to validate
+/// the module, e.g.:
+///
+/// ```text
+/// [wasm-validator error in function 1765] unexpected false: memory.copy operations
+/// require bulk memory operations [--enable-bulk-memory-opt]
+/// ```
+///
+/// So we always pass them explicitly.
+const WASM_FEATURES: &[&str] = &[
+    "--enable-bulk-memory",
+    "--enable-bulk-memory-opt",
+    "--enable-nontrapping-float-to-int",
+    "--enable-sign-ext",
+    "--enable-mutable-globals",
+    "--enable-reference-types",
+    "--enable-multivalue",
+];
 
 pub fn run_wasm_opt(from: &WasmPath, to: &WasmPath) -> bool {
     let from_str = from.as_string();
     let to_str = to.as_string();
 
     let mut wasm_opt_command = Command::new("wasm-opt");
+    wasm_opt_command.args(supported_features());
     wasm_opt_command.args(["-Os", "--strip-debug", "-o", &to_str, &from_str]);
 
     log::info!("Running: {wasm_opt_command:?}");
@@ -41,6 +66,34 @@ pub fn run_wasm_opt(from: &WasmPath, to: &WasmPath) -> bool {
             false
         }
     }
+}
+
+/// Subset of [`WASM_FEATURES`] understood by the installed `wasm-opt`.
+///
+/// Older Binaryen releases reject unknown options, so flags missing from `--help`
+/// are filtered out instead of failing the whole optimization step.
+fn supported_features() -> &'static Vec<&'static str> {
+    static FEATURES: OnceLock<Vec<&'static str>> = OnceLock::new();
+
+    FEATURES.get_or_init(|| {
+        let help = Command::new("wasm-opt").arg("--help").output();
+
+        let help = match help {
+            Ok(output) => {
+                let mut help = String::from_utf8_lossy(&output.stdout).into_owned();
+                help.push_str(&String::from_utf8_lossy(&output.stderr));
+                help
+            }
+            // wasm-opt is missing or unusable - run_wasm_opt will report it
+            Err(_) => return Vec::new(),
+        };
+
+        WASM_FEATURES
+            .iter()
+            .copied()
+            .filter(|feature| help.contains(feature))
+            .collect()
+    })
 }
 
 fn size(path: &str) -> u64 {
