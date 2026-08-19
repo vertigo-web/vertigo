@@ -2,7 +2,8 @@ use std::any::Any;
 use std::collections::BTreeSet;
 use std::rc::Rc;
 
-use super::{GraphId, struct_mut::VecMut};
+use crate::reactive_old::GraphId;
+use crate::struct_mut::VecMut;
 
 pub enum Context {
     Computed {
@@ -46,7 +47,7 @@ impl Context {
 
 #[test]
 fn test_context() {
-    use crate::computed::graph_id::GraphIdKind;
+    use crate::reactive_old::graph_id::GraphIdKind;
 
     let context = Context::computed();
 

@@ -1,4 +1,5 @@
-use super::{GraphId, struct_mut::ValueMut};
+use crate::reactive_old::GraphId;
+use crate::struct_mut::ValueMut;
 use crate::{DropResource, driver_module::event_emitter::EventEmitter};
 
 pub struct ValueInner<T: PartialEq + Clone + 'static> {

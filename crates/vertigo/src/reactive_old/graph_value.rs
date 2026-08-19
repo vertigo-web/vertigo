@@ -1,9 +1,8 @@
 use std::any::Any;
 use std::rc::Rc;
 
-use crate::{Context, Dependencies};
-
-use super::{GraphId, get_dependencies, struct_mut::ValueMut};
+use crate::reactive_old::{Context, Dependencies, GraphId, get_dependencies};
+use crate::struct_mut::ValueMut;
 
 pub struct GraphValue<T> {
     deps: Rc<Dependencies>,

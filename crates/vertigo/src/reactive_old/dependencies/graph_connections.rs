@@ -1,6 +1,7 @@
 use std::collections::{BTreeMap, BTreeSet};
 
-use crate::computed::{graph_id::GraphId, struct_mut::ValueMut};
+use crate::reactive_old::GraphId;
+use crate::struct_mut::ValueMut;
 
 use super::graph_one_to_many::GraphOneToMany;
 

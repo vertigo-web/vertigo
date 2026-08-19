@@ -1,7 +1,4 @@
-use crate::{
-    computed::{DropResource, ToComputed, struct_mut::VecMut},
-    driver_module::get_driver_dom,
-};
+use crate::{DropResource, ToComputed, driver_module::get_driver_dom, struct_mut::VecMut};
 
 use super::dom_id::DomId;
 

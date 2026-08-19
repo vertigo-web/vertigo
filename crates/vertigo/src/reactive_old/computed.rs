@@ -1,14 +1,8 @@
 use std::rc::Rc;
 
-use crate::{
-    DomNode,
-    render::{render_value, render_value_option},
-};
+use crate::{DropResource, struct_mut::ValueMut};
 
-use super::{
-    DropResource, GraphValue, Value, context::Context, get_dependencies, graph_id::GraphId,
-    struct_mut::ValueMut,
-};
+use super::{GraphValue, Value, context::Context, get_dependencies, graph_id::GraphId};
 
 /// A reactive value that is read-only and computed by dependency graph.
 ///
@@ -166,16 +160,6 @@ impl<T: Clone + PartialEq + 'static> Computed<T> {
         let _ = context;
 
         DropResource::from_struct(graph_value)
-    }
-
-    /// Render value inside this [Computed]. See [Value::render_value()] for examples.
-    pub fn render_value(&self, render: impl Fn(T) -> DomNode + 'static) -> DomNode {
-        render_value(self.clone(), render)
-    }
-
-    /// Render optional value inside this [Computed]. See [Value::render_value_option()] for examples.
-    pub fn render_value_option(&self, render: impl Fn(T) -> Option<DomNode> + 'static) -> DomNode {
-        render_value_option(self.clone(), render)
     }
 }
 

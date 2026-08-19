@@ -2,8 +2,7 @@ use std::{future::Future, pin::Pin, rc::Rc};
 use vertigo_macro::{AutoJsJson, store};
 
 use crate::{
-    Context, Css, DomNode, Instant, InstantType, JsJson, WebsocketMessage,
-    computed::{DropResource, get_dependencies, struct_mut::ValueMut},
+    Context, Css, DomNode, DropResource, Instant, InstantType, JsJson, WebsocketMessage,
     css::get_css_manager,
     dev::{
         FutureBox,
@@ -15,6 +14,7 @@ use crate::{
         utils::futures_spawn::spawn_local,
     },
     fetch::request_builder::{RequestBody, RequestBuilder},
+    struct_mut::ValueMut,
 };
 
 use super::api::DomAccess;
@@ -79,7 +79,7 @@ pub fn get_driver() -> Rc<Driver> {
         })
     };
 
-    let subscribe = get_dependencies().hooks.on_after_transaction(move || {
+    let subscribe = crate::reactive::on_after_transaction(move || {
         get_driver_dom().flush_dom_changes();
     });
 
@@ -237,10 +237,10 @@ impl Driver {
         spawn_executor(future);
     }
 
-    /// Fire provided function in a way that all changes in [dependency graph](struct.Dependencies.html) made by this function
-    /// will trigger only one run of updates, just like the changes were done all at once.
+    /// Fire provided function in a way that all reactive updates made by this function
+    /// run once, as if the changes were done all at once.
     pub fn transaction<R, F: FnOnce(&Context) -> R>(&self, func: F) -> R {
-        get_dependencies().transaction(func)
+        crate::reactive::transaction(func)
     }
 
     /// Allows to access different objects in the browser (See [js!](crate::js) macro for convenient use).
@@ -250,7 +250,7 @@ impl Driver {
 
     /// Function added for diagnostic purposes. It allows you to check whether a block with a transaction is missing somewhere.
     pub fn on_after_transaction(&self, callback: impl Fn() + 'static) -> DropResource {
-        get_dependencies().hooks.on_after_transaction(callback)
+        crate::reactive::on_after_transaction(callback)
     }
 
     /// Return true if the code is executed client-side (in the browser).

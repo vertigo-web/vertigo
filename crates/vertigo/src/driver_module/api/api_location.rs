@@ -2,7 +2,7 @@ use std::rc::Rc;
 use vertigo_macro::store;
 
 use crate::{
-    computed::DropResource,
+    DropResource,
     dev::{
         CallbackId,
         command::{LocationCallbackMode, LocationSetMode, LocationTarget},

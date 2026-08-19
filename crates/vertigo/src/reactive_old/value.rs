@@ -1,8 +1,10 @@
 use std::rc::Rc;
 
-use crate::{Context, DomNode, ToComputed, computed::value_inner::ValueInner};
+use crate::DropResource;
 
-use super::{Computed, DropResource, GraphId, dependencies::get_dependencies};
+use super::{
+    Computed, Context, GraphId, ToComputed, dependencies::get_dependencies, value_inner::ValueInner,
+};
 
 /// A reactive value. Basic building block of app state.
 ///
@@ -120,60 +122,6 @@ impl<T: Clone + PartialEq + 'static> Value<T> {
                 get_dependencies().report_set(self.inner.id);
             }
         });
-    }
-
-    /// Render value (reactively transforms `T` into `DomNode`)
-    ///
-    /// See [computed_tuple](macro.computed_tuple.html) if you want to render multiple values in a handy way.
-    ///
-    /// ```rust
-    /// use vertigo::{dom, Value};
-    ///
-    /// let my_value = Value::new(5);
-    ///
-    /// let element = my_value.render_value(|bare_value| dom! { <div>{bare_value}</div> });
-    ///
-    /// dom! {
-    ///     <div>
-    ///         {element}
-    ///     </div>
-    /// };
-    /// ```
-    ///
-    pub fn render_value(&self, render: impl Fn(T) -> DomNode + 'static) -> DomNode {
-        self.to_computed().render_value(render)
-    }
-
-    /// Render optional value (reactively transforms `Option<T>` into `Option<DomNode>`)
-    ///
-    /// See [computed_tuple](macro.computed_tuple.html) if you want to render multiple values in a handy way.
-    ///
-    /// ```rust
-    /// use vertigo::{dom, Value};
-    ///
-    /// let value1 = Value::new(Some(5));
-    /// let value2 = Value::new(None::<i32>);
-    ///
-    /// let element1 = value1.render_value_option(|bare_value|
-    ///     bare_value.map(|value| dom! { <div>{value}</div> })
-    /// );
-    /// let element2 = value2.render_value_option(|bare_value|
-    ///     match bare_value {
-    ///         Some(value) => Some(dom! { <div>{value}</div> }),
-    ///         None => Some(dom! { <div>"default"</div> }),
-    ///     }
-    /// );
-    ///
-    /// dom! {
-    ///     <div>
-    ///         {element1}
-    ///         {element2}
-    ///     </div>
-    /// };
-    /// ```
-    ///
-    pub fn render_value_option(&self, render: impl Fn(T) -> Option<DomNode> + 'static) -> DomNode {
-        self.to_computed().render_value_option(render)
     }
 
     pub fn add_event(&self, callback: impl Fn(T) + 'static) -> DropResource {

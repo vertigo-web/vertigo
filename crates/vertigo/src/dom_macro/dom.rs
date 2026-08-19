@@ -8,6 +8,7 @@ use crate::{
         dom_node::DomNode,
         events::{ClickEvent, IntersectionEvent},
     },
+    render::render_value,
 };
 
 /// Type interpreted as component's dynamic attributes groups
@@ -169,7 +170,15 @@ impl EmbedDom for DomNode {
     }
 }
 
-impl<T: ToString> EmbedDom for T {
+impl EmbedDom for &mut String {
+    fn embed(self) -> DomNode {
+        DomNode::Text {
+            node: DomText::new(self.clone()),
+        }
+    }
+}
+
+impl EmbedDom for &str {
     fn embed(self) -> DomNode {
         DomNode::Text {
             node: DomText::new(self.to_string()),
@@ -177,9 +186,43 @@ impl<T: ToString> EmbedDom for T {
     }
 }
 
+impl<T: ToString> EmbedDom for std::rc::Rc<T> {
+    fn embed(self) -> DomNode {
+        DomNode::Text {
+            node: DomText::new((*self).to_string()),
+        }
+    }
+}
+
+impl EmbedDom for &String {
+    fn embed(self) -> DomNode {
+        DomNode::Text {
+            node: DomText::new((*self).clone()),
+        }
+    }
+}
+
+macro_rules! impl_embed_to_string {
+    ($($typename:ty),* $(,)?) => {
+        $(
+            impl EmbedDom for $typename {
+                fn embed(self) -> DomNode {
+                    DomNode::Text {
+                        node: DomText::new(self.to_string()),
+                    }
+                }
+            }
+        )*
+    };
+}
+
+impl_embed_to_string!(
+    String, bool, char, u8, u16, u32, u64, u128, usize, i8, i16, i32, i64, i128, isize, f32, f64
+);
+
 impl<T: ToString + Clone + PartialEq + 'static> EmbedDom for &Computed<T> {
     fn embed(self) -> DomNode {
-        self.render_value(|val| DomNode::Text {
+        render_value(self.clone(), |val| DomNode::Text {
             node: DomText::new(val.to_string()),
         })
     }

@@ -6,7 +6,7 @@ use std::{
     task::{Context, RawWaker, RawWakerVTable, Waker},
 };
 
-use crate::{computed::struct_mut::ValueMut, driver_module::api::api_timers};
+use crate::{driver_module::api::api_timers, struct_mut::ValueMut};
 
 #[inline]
 pub fn spawn_local<F>(future: F)

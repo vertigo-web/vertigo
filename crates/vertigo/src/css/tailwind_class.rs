@@ -3,7 +3,7 @@ use std::{
     ops::{Add, AddAssign},
 };
 
-use crate::{AttrValue, Computed};
+use crate::AttrValue;
 
 /// This represents a tailwind class. Use [tw!](crate::tw!) macro to create one.
 #[derive(Clone, PartialEq, Eq)]
@@ -60,26 +60,6 @@ impl Add for TwClass {
 impl AddAssign for TwClass {
     fn add_assign(&mut self, other: Self) {
         *self = self.join(&other);
-    }
-}
-
-impl Add<TwClass> for Computed<TwClass> {
-    type Output = Computed<TwClass>;
-
-    fn add(self, rhs: TwClass) -> Self::Output {
-        self.map(move |left| left.join(&rhs))
-    }
-}
-
-impl Add<Computed<TwClass>> for Computed<TwClass> {
-    type Output = Computed<TwClass>;
-
-    fn add(self, rhs: Computed<TwClass>) -> Self::Output {
-        Computed::from({
-            let left = self.clone();
-            let right = rhs.clone();
-            move |ctx| left.get(ctx) + right.get(ctx)
-        })
     }
 }
 

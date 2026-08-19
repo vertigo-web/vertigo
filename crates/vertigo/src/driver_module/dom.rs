@@ -2,13 +2,10 @@ use std::rc::Rc;
 use vertigo_macro::store;
 
 use crate::{
-    DomId,
-    computed::{
-        DropResource,
-        struct_mut::{HashMapMut, VecMut},
-    },
+    DomId, DropResource,
     dev::{CallbackId, command::DriverDomCommand},
     driver_module::{api::api_browser_command, event_emitter::EventEmitter},
+    struct_mut::{HashMapMut, VecMut},
 };
 
 use super::StaticString;

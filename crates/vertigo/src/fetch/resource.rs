@@ -77,7 +77,7 @@ impl<T: PartialEq> PartialEq for Resource<T> {
     }
 }
 
-impl<T: Clone + 'static> ToComputed<Resource<Rc<T>>> for Resource<T> {
+impl<T: Clone + PartialEq + 'static> ToComputed<Resource<Rc<T>>> for Resource<T> {
     fn to_computed(&self) -> crate::Computed<Resource<Rc<T>>> {
         Computed::from({
             let myself = self.clone();
@@ -86,7 +86,7 @@ impl<T: Clone + 'static> ToComputed<Resource<Rc<T>>> for Resource<T> {
     }
 }
 
-impl<T: Clone + 'static> ToComputed<Resource<Rc<T>>> for Computed<Resource<T>> {
+impl<T: Clone + PartialEq + 'static> ToComputed<Resource<Rc<T>>> for Computed<Resource<T>> {
     fn to_computed(&self) -> crate::Computed<Resource<Rc<T>>> {
         self.map(|res| res.map(|item| Rc::new(item)))
     }

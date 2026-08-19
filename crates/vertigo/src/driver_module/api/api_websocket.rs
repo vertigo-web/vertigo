@@ -3,8 +3,7 @@ use std::rc::Rc;
 use vertigo_macro::store;
 
 use crate::{
-    WebsocketConnection, WebsocketMessage,
-    computed::DropResource,
+    DropResource, WebsocketConnection, WebsocketMessage,
     dev::{CallbackId, command::WebsocketMessageFromBrowser},
 };
 

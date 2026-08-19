@@ -12,7 +12,7 @@ pub enum AttrValue {
 }
 
 impl AttrValue {
-    pub fn get(&self, ctx: &crate::computed::context::Context) -> Option<Rc<String>> {
+    pub fn get(&self, ctx: &crate::Context) -> Option<Rc<String>> {
         match self {
             AttrValue::String(s) => Some(s.clone()),
             AttrValue::Computed(c) => Some(Rc::new(c.get(ctx))),
@@ -61,11 +61,45 @@ impl AttrValue {
     }
 }
 
-impl<K: ToString> From<K> for AttrValue {
-    fn from(value: K) -> Self {
+impl From<String> for AttrValue {
+    fn from(value: String) -> Self {
+        AttrValue::String(Rc::new(value))
+    }
+}
+
+impl From<&&str> for AttrValue {
+    fn from(value: &&str) -> Self {
+        AttrValue::from(*value)
+    }
+}
+
+impl From<&str> for AttrValue {
+    fn from(value: &str) -> Self {
         AttrValue::String(Rc::new(value.to_string()))
     }
 }
+
+impl From<&String> for AttrValue {
+    fn from(value: &String) -> Self {
+        AttrValue::String(Rc::new(value.clone()))
+    }
+}
+
+macro_rules! impl_from_display_for_attrvalue {
+    ($($typename:ty),* $(,)?) => {
+        $(
+            impl From<$typename> for AttrValue {
+                fn from(value: $typename) -> Self {
+                    AttrValue::String(Rc::new(value.to_string()))
+                }
+            }
+        )*
+    };
+}
+
+impl_from_display_for_attrvalue!(
+    bool, char, u8, u16, u32, u64, u128, usize, i8, i16, i32, i64, i128, isize, f32, f64
+);
 
 macro_rules! impl_from_computed_for_attrvalue {
     ($typename:ty, $variant:ident, |$var:ident| $body:expr) => {

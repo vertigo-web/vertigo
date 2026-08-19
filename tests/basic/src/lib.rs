@@ -1,4 +1,4 @@
-use vertigo::{DomNode, Value, bind, dom, main, render::render_list};
+use vertigo::{DomNode, EmbedDom, Value, bind, dom, main, render::render_list};
 
 mod row;
 use row::Row;
@@ -15,6 +15,12 @@ impl std::fmt::Display for Mode {
             Self::Div => f.write_str("Div"),
             Self::Div4 => f.write_str("Div4"),
         }
+    }
+}
+
+impl EmbedDom for Mode {
+    fn embed(self) -> DomNode {
+        self.to_string().embed()
     }
 }
 

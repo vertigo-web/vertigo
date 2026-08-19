@@ -1,6 +1,7 @@
 use std::rc::Rc;
 
-use crate::computed::{graph_id::GraphId, struct_mut::BTreeMapMut};
+use crate::reactive_old::GraphId;
+use crate::struct_mut::BTreeMapMut;
 
 pub struct Refresh {
     refresh: BTreeMapMut<GraphId, Rc<dyn Fn(bool) + 'static>>, // Reference to GraphValue for refreshing if necessary

@@ -5,8 +5,8 @@ use std::{
 };
 
 use crate::{
-    Computed, DomComment, DomNode, KeyedListItem, ToComputed, computed::struct_mut::ValueMut,
-    dom::dom_id::DomId, driver_module::get_driver_dom, keyed_computed_list,
+    Computed, DomComment, DomNode, KeyedListItem, ToComputed, dom::dom_id::DomId,
+    driver_module::get_driver_dom, keyed_computed_list, struct_mut::ValueMut,
 };
 
 /// Render an iterable as a keyed list of DOM nodes.
@@ -118,7 +118,7 @@ impl Row {
     }
 }
 
-fn reorder_nodes<T: Clone + 'static, K: Clone + Eq + Hash>(
+fn reorder_nodes<T: Clone + PartialEq + 'static, K: Clone + Eq + Hash>(
     parent_id: DomId,
     comment_id: DomId,
     mut real_child: VecDeque<(K, Row)>,
@@ -141,7 +141,7 @@ fn reorder_nodes<T: Clone + 'static, K: Clone + Eq + Hash>(
     pairs
 }
 
-fn get_pairs_top<T: Clone, K: PartialEq>(
+fn get_pairs_top<T: Clone + PartialEq, K: PartialEq>(
     current: &mut VecDeque<(K, Row)>,
     new_child: &mut VecDeque<KeyedListItem<K, Computed<T>>>,
 ) -> VecDeque<(K, Row)> {
@@ -167,7 +167,7 @@ fn get_pairs_top<T: Clone, K: PartialEq>(
     }
 }
 
-fn get_pairs_bottom<T: Clone, K: PartialEq>(
+fn get_pairs_bottom<T: Clone + PartialEq, K: PartialEq>(
     current: &mut VecDeque<(K, Row)>,
     new_child: &mut VecDeque<KeyedListItem<K, Computed<T>>>,
 ) -> VecDeque<(K, Row)> {
@@ -193,7 +193,7 @@ fn get_pairs_bottom<T: Clone, K: PartialEq>(
     }
 }
 
-fn get_pairs_middle<T: Clone + 'static, K: Clone + Eq + Hash>(
+fn get_pairs_middle<T: Clone + PartialEq + 'static, K: Clone + Eq + Hash>(
     parent_id: DomId,
     last_before: DomId,
     real_child: VecDeque<(K, Row)>,

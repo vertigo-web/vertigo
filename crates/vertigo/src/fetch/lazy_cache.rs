@@ -2,11 +2,12 @@ use std::fmt::Debug;
 use std::rc::Rc;
 
 use crate::{
-    Computed, DomNode, JsJsonDeserialize, RequestResponse, Resource, ToComputed,
-    computed::{context::Context, struct_mut::ValueMut},
+    Computed, Context, DomNode, JsJsonDeserialize, RequestResponse, Resource, ToComputed,
     driver_module::api::{api_fetch, api_fetch_cache},
     fetch::{api_response::ApiResponse, cache_value::CacheValue},
-    get_driver, transaction,
+    get_driver,
+    struct_mut::ValueMut,
+    transaction,
 };
 
 use super::request_builder::{RequestBody, RequestBuilder};
@@ -258,7 +259,7 @@ impl<T: PartialEq> PartialEq for LazyCache<T> {
 
 impl<T: PartialEq + Clone> LazyCache<T> {
     pub fn render(&self, render: impl Fn(Rc<T>) -> DomNode + 'static) -> DomNode {
-        self.to_computed().render_value(move |value| match value {
+        crate::render::render_value(self.to_computed(), move |value| match value {
             Resource::Ready(value) => render(value),
             Resource::Loading => {
                 use crate as vertigo;

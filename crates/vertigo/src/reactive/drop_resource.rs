@@ -1,6 +1,6 @@
 use std::any::Any;
 
-/// A struct used by [driver](struct.Driver.html) to tidy things up on javascript side after a rust object goes out of scope.
+/// Runs a destructor when dropped (or holds a value whose `Drop` cleans up).
 pub enum DropResource {
     Fun(Option<Box<dyn FnOnce()>>),
     Struct(Box<dyn Any>),

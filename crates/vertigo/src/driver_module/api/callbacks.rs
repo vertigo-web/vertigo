@@ -1,10 +1,6 @@
 use std::rc::Rc;
 
-use crate::{
-    JsJson,
-    computed::{DropResource, struct_mut::HashMapMut},
-    dev::CallbackId,
-};
+use crate::{DropResource, JsJson, dev::CallbackId, struct_mut::HashMapMut};
 
 type CallBackFn = dyn Fn(JsJson) -> JsJson + 'static;
 

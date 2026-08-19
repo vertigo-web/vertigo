@@ -7,3 +7,5 @@ mod css;
 mod dom;
 mod js_macro;
 mod jsjson_bytes;
+mod keyed_computed_list;
+mod value_copies;

@@ -13,10 +13,10 @@ pub use ssr_fetch_response::{
 };
 
 pub use super::{
-    computed::struct_mut::{BTreeMapMut, HashMapMut, ValueMut, VecDequeMut, VecMut},
     driver_module::{
         driver::{VERTIGO_MOUNT_POINT_PLACEHOLDER, VERTIGO_PUBLIC_BUILD_PATH_PLACEHOLDER},
         js_value::{JsJsonListDecoder, MemoryBlock, MemoryBlockRead, MemoryBlockWrite},
     },
     future_box::{FutureBox, FutureBoxSend},
+    struct_mut::{BTreeMapMut, HashMapMut, ValueMut, VecDequeMut, VecMut},
 };
