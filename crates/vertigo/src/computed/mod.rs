@@ -2,6 +2,7 @@ mod auto_map;
 mod computed_box;
 pub mod context;
 mod dependencies;
+mod keyed_computed_list;
 pub use dependencies::{Dependencies, get_dependencies};
 mod drop_resource;
 mod graph_id;
@@ -20,9 +21,10 @@ pub use computed_box::Computed;
 pub use drop_resource::DropResource;
 pub use graph_id::GraphId;
 pub use graph_value::GraphValue;
+pub use keyed_computed_list::{KeyedListItem, keyed_computed_list};
 pub use reactive::Reactive;
 pub use to_computed::ToComputed;
-pub use value::{Value, ValueSynchronize};
+pub use value::Value;
 
 /// Allows to create `Computed<T1, T2, ...>` out of `Value<T1>`, `Value<T2>`, ...
 ///

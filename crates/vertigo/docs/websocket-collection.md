@@ -215,7 +215,7 @@ let rows: Computed<Vec<Item>> = collection.items_sorted.map(|o| o.unwrap_or_defa
 For long lists where only a few rows change at a time, pair the inner `Vec` with
 [`render_list_memo`](crate::render::render_list_memo) so unchanged rows are not
 re-rendered — see the
-[value-synchronize & collections guide](crate::guides::value_synchronize_and_collections).
+[keyed collections guide](crate::guides::collection_key_and_list_renderers).
 
 ---
 

@@ -12,6 +12,7 @@
 //! * Data storing
 //!   * [Value] - Read-write reactive value
 //!   * [Computed] - Read-only (computed) reactive value
+//!   * [keyed_computed_list] - Stable per-key [`Computed`]s from a reactive list
 //!   * [LazyCache] - Lazy cache for fetched resources
 //!   * [LazyListCache] - Lazy cache for fetched lists (optimized for CRUD operations)
 //!   * [WsCollection] - Reactive collection driven by a server subscription over a WebSocket
@@ -23,8 +24,7 @@
 //!
 //! # Guides
 //!
-//! * [guides::value_synchronize_and_collections] - `Value::synchronize`, `ValueSynchronize`,
-//!   `CollectionKey` and the memoized list renderers
+//! * [guides::collection_key_and_list_renderers] - `CollectionKey` and the memoized list renderers
 //! * [guides::lazy_list_cache] - `LazyListCache`: optimistic, per-item reactive list cache
 //! * [guides::websocket_collection] - `WsCollection`: server-pushed reactive collections over a WebSocket
 
@@ -56,8 +56,8 @@ mod websocket_collection;
 /// directory so it gets its own rustdoc page instead of being inlined into the
 /// crate root.
 pub mod guides {
-    #[doc = include_str!("../docs/value-synchronize-and-collections.md")]
-    pub mod value_synchronize_and_collections {}
+    #[doc = include_str!("../docs/collection-key-and-list-renderers.md")]
+    pub mod collection_key_and_list_renderers {}
 
     #[doc = include_str!("../docs/lazy-list-cache.md")]
     pub mod lazy_list_cache {}
@@ -69,8 +69,8 @@ pub mod guides {
 // Exports from vertigo
 
 pub use computed::{
-    AutoMap, Computed, Dependencies, DropResource, Reactive, ToComputed, Value, ValueSynchronize,
-    context::Context,
+    AutoMap, Computed, Dependencies, DropResource, KeyedListItem, Reactive, ToComputed, Value,
+    context::Context, keyed_computed_list,
 };
 pub use css::{
     css_structs::{Css, CssGroup},

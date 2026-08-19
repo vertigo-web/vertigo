@@ -74,7 +74,7 @@ impl<K: Eq + Hash, V> HashMapMut<K, V> {
     pub fn filter_and_map<R>(&self, map: fn(&V) -> Option<R>) -> Vec<R> {
         let state = self.data.get();
         let mut list = Vec::new();
-        for (_, value) in (*state).iter() {
+        for value in (*state).values() {
             if let Some(mapped) = map(value) {
                 list.push(mapped);
             }
@@ -104,7 +104,7 @@ impl<K: Eq + Hash + Clone, V: Clone> HashMapMut<K, V> {
 
         let mut out = Vec::new();
 
-        for (_, callback) in state.iter() {
+        for callback in state.values() {
             out.push((*callback).clone());
         }
 
