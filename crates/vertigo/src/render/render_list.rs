@@ -5,9 +5,8 @@ use std::{
 };
 
 use crate::{
-    Computed, DomComment, DomNode, DropResource, KeyedListItem, ToComputed,
-    computed::struct_mut::ValueMut, dev::command::DriverDomCommand, dom::dom_id::DomId,
-    driver_module::get_driver_dom, keyed_computed_list,
+    Computed, DomComment, DomNode, KeyedListItem, ToComputed, computed::struct_mut::ValueMut,
+    dom::dom_id::DomId, driver_module::get_driver_dom, keyed_computed_list,
 };
 
 /// Render an iterable as a keyed list of DOM nodes.
@@ -52,33 +51,11 @@ pub fn render_list<
     let render = Rc::new(render);
 
     DomComment::new_marker("list element", move |parent_id, comment_id| {
-        let current_list: Rc<ValueMut<VecDeque<(K, DomNode)>>> =
+        let current_list: Rc<ValueMut<VecDeque<(K, Row)>>> =
             Rc::new(ValueMut::new(VecDeque::new()));
-        let child_order = Rc::new(ValueMut::new(Vec::<DomId>::new()));
 
-        let inspect = get_driver_dom().inspect_command({
-            let child_order = child_order.clone();
-
-            move |command| match command {
-                DriverDomCommand::InsertBefore {
-                    parent,
-                    child,
-                    ref_id,
-                } if parent == parent_id => {
-                    child_order.change(|order| update_child_order(order, child, ref_id));
-                }
-                DriverDomCommand::RemoveNode { id }
-                | DriverDomCommand::RemoveText { id }
-                | DriverDomCommand::RemoveComment { id } => {
-                    child_order.change(|order| order.retain(|node_id| *node_id != id));
-                }
-                _ => {}
-            }
-        });
-
-        let rows_sub = rows.clone().subscribe({
+        Some(rows.clone().subscribe({
             let render = render.clone();
-            let child_order = child_order.clone();
 
             move |new_list| {
                 current_list.change(|current| {
@@ -89,84 +66,66 @@ pub fn render_list<
                         prev,
                         VecDeque::from(new_list),
                         render.as_ref(),
-                        child_order.as_ref(),
                     );
                 })
             }
-        });
-
-        Some(DropResource::new(move || {
-            inspect.off();
-            rows_sub.off();
         }))
     })
     .into()
 }
 
-fn update_child_order(order: &mut Vec<DomId>, child: DomId, ref_id: Option<DomId>) {
-    order.retain(|node_id| *node_id != child);
+/// One rendered row of the list.
+///
+/// A row is not necessarily a single sibling under the list parent:
+/// [`render_value`](crate::Computed::render_value) keeps its content *in front of*
+/// its own marker and re-creates it every time that marker is mounted. `anchor` is
+/// an empty comment kept directly in front of the row, so that whatever shape the
+/// row has, it always has one stable node marking where it begins — that is what
+/// insert and move operations anchor on.
+struct Row {
+    anchor: DomComment,
+    node: DomNode,
+}
 
-    if let Some(ref_id) = ref_id
-        && let Some(index) = order.iter().position(|node_id| *node_id == ref_id)
-    {
-        order.insert(index, child);
-        return;
+impl Row {
+    fn new(node: DomNode) -> Row {
+        Row {
+            anchor: DomComment::new("row"),
+            node,
+        }
     }
 
-    order.push(child);
-}
-
-/// `render_value` rows are `[content…][marker]` siblings under the list parent.
-/// For insert/move use the content node before the marker, not the marker itself.
-fn row_content_before_marker(order: &[DomId], marker_id: DomId) -> Option<DomId> {
-    order
-        .iter()
-        .position(|node_id| *node_id == marker_id)
-        .and_then(|index| index.checked_sub(1))
-        .map(|index| order[index])
-}
-
-fn find_insert_anchor<K>(
-    pairs_bottom: &VecDeque<(K, DomNode)>,
-    comment_id: DomId,
-    child_order: &[DomId],
-) -> DomId {
-    pairs_bottom
-        .front()
-        .map(|(_, node)| node.id_dom())
-        .and_then(|marker_id| row_content_before_marker(child_order, marker_id))
-        .unwrap_or(comment_id)
-}
-
-fn reposition_row(parent_id: DomId, before: DomId, marker_id: DomId, child_order: &[DomId]) {
-    if let Some(content_id) = row_content_before_marker(child_order, marker_id) {
-        get_driver_dom().insert_before(parent_id, content_id, Some(before));
+    fn anchor_id(&self) -> DomId {
+        self.anchor.id_dom()
     }
 
-    get_driver_dom().insert_before(parent_id, marker_id, Some(before));
+    /// Insert the row - or move it, when it is already mounted - in front of `before`.
+    fn insert_before(&self, parent_id: DomId, before: DomId) {
+        let driver = get_driver_dom();
+
+        driver.insert_before(parent_id, self.anchor.id_dom(), Some(before));
+        // Mounting the node renders its content in front of itself, which lands
+        // between the anchor and the node.
+        driver.insert_before(parent_id, self.node.id_dom(), Some(before));
+    }
 }
 
 fn reorder_nodes<T: Clone + 'static, K: Clone + Eq + Hash>(
     parent_id: DomId,
     comment_id: DomId,
-    mut real_child: VecDeque<(K, DomNode)>,
+    mut real_child: VecDeque<(K, Row)>,
     mut new_child: VecDeque<KeyedListItem<K, Computed<T>>>,
     render: &dyn Fn(&Computed<T>) -> DomNode,
-    child_order: &ValueMut<Vec<DomId>>,
-) -> VecDeque<(K, DomNode)> {
+) -> VecDeque<(K, Row)> {
     let pairs_top = get_pairs_top(&mut real_child, &mut new_child);
     let mut pairs_bottom = get_pairs_bottom(&mut real_child, &mut new_child);
 
-    let order = child_order.get();
-    let last_before = find_insert_anchor(&pairs_bottom, comment_id, &order);
-    let mut pairs_middle = get_pairs_middle(
-        parent_id,
-        last_before,
-        real_child,
-        new_child,
-        render,
-        child_order,
-    );
+    let last_before = pairs_bottom
+        .front()
+        .map(|(_, row)| row.anchor_id())
+        .unwrap_or(comment_id);
+
+    let mut pairs_middle = get_pairs_middle(parent_id, last_before, real_child, new_child, render);
 
     let mut pairs = pairs_top;
     pairs.append(&mut pairs_middle);
@@ -175,9 +134,9 @@ fn reorder_nodes<T: Clone + 'static, K: Clone + Eq + Hash>(
 }
 
 fn get_pairs_top<T: Clone, K: PartialEq>(
-    current: &mut VecDeque<(K, DomNode)>,
+    current: &mut VecDeque<(K, Row)>,
     new_child: &mut VecDeque<KeyedListItem<K, Computed<T>>>,
-) -> VecDeque<(K, DomNode)> {
+) -> VecDeque<(K, Row)> {
     let mut pairs_top = VecDeque::new();
 
     loop {
@@ -201,9 +160,9 @@ fn get_pairs_top<T: Clone, K: PartialEq>(
 }
 
 fn get_pairs_bottom<T: Clone, K: PartialEq>(
-    current: &mut VecDeque<(K, DomNode)>,
+    current: &mut VecDeque<(K, Row)>,
     new_child: &mut VecDeque<KeyedListItem<K, Computed<T>>>,
-) -> VecDeque<(K, DomNode)> {
+) -> VecDeque<(K, Row)> {
     let mut pairs_bottom = VecDeque::new();
 
     loop {
@@ -229,24 +188,21 @@ fn get_pairs_bottom<T: Clone, K: PartialEq>(
 fn get_pairs_middle<T: Clone + 'static, K: Clone + Eq + Hash>(
     parent_id: DomId,
     last_before: DomId,
-    real_child: VecDeque<(K, DomNode)>,
+    real_child: VecDeque<(K, Row)>,
     new_child: VecDeque<KeyedListItem<K, Computed<T>>>,
     render: &dyn Fn(&Computed<T>) -> DomNode,
-    child_order: &ValueMut<Vec<DomId>>,
-) -> VecDeque<(K, DomNode)> {
-    let mut cache: HashMap<K, DomNode> = real_child.into_iter().collect();
+) -> VecDeque<(K, Row)> {
+    let mut cache: HashMap<K, Row> = real_child.into_iter().collect();
     let mut pairs_middle = VecDeque::new();
 
     for item in new_child {
-        let node = match cache.remove(&item.key) {
-            Some(node) => node,
-            None => render(&item.value),
+        let row = match cache.remove(&item.key) {
+            Some(row) => row,
+            None => Row::new(render(&item.value)),
         };
-        let marker_id = node.id_dom();
-        let order = child_order.get();
 
-        reposition_row(parent_id, last_before, marker_id, &order);
-        pairs_middle.push_back((item.key, node));
+        row.insert_before(parent_id, last_before);
+        pairs_middle.push_back((item.key, row));
     }
 
     pairs_middle
@@ -256,11 +212,10 @@ fn get_pairs_middle<T: Clone + 'static, K: Clone + Eq + Hash>(
 mod tests {
     use std::{cell::Cell, rc::Rc};
 
-    use super::{render_list, reorder_nodes};
+    use super::{Row, render_list, reorder_nodes};
     use crate::{self as vertigo, dom};
     use crate::{
         Computed, DomId, DomNode, KeyedListItem, Value,
-        computed::struct_mut::ValueMut,
         dev::inspect::{DomDebugFragment, log_start},
     };
 
@@ -301,7 +256,7 @@ mod tests {
     }
 
     fn row_html(label: &str) -> String {
-        format!("<li>{label}</li><!-- v -->")
+        format!("<!-- row --><li>{label}</li><!-- v -->")
     }
 
     fn list_html(rows: &[&str]) -> String {
@@ -311,8 +266,196 @@ mod tests {
         )
     }
 
-    fn empty_child_order() -> ValueMut<Vec<DomId>> {
-        ValueMut::new(Vec::new())
+    /// A row whose root is a plain element (no `render_value` wrapper around it).
+    fn mount_element_list(items: &Value<Vec<(u32, String)>>) -> DomNode {
+        let list = render_list(
+            items,
+            |item| item.0,
+            |item| {
+                let label = item.map(|item| item.1);
+                dom! { <li>{label}</li> }
+            },
+        );
+        dom! { <ul>{list}</ul> }
+    }
+
+    fn element_pseudo_html_after(
+        items: &Value<Vec<(u32, String)>>,
+        update: impl FnOnce(),
+    ) -> String {
+        log_start();
+        let _root = mount_element_list(items);
+        update();
+        DomDebugFragment::from_log().to_pseudo_html()
+    }
+
+    fn element_list_html(rows: &[&str]) -> String {
+        format!(
+            "<ul>{rows}<!-- list element --></ul>",
+            rows = rows
+                .iter()
+                .map(|label| format!("<!-- row --><li>{label}<!-- v --></li>"))
+                .collect::<String>()
+        )
+    }
+
+    #[test]
+    fn element_rows_prepend() {
+        let items = Value::new(vec![row(2, "two"), row(3, "three")]);
+
+        let html = element_pseudo_html_after(&items, || {
+            items.set(vec![row(1, "one"), row(2, "two"), row(3, "three")]);
+        });
+
+        assert_eq!(html, element_list_html(&["one", "two", "three"]));
+    }
+
+    #[test]
+    fn element_rows_insert_in_middle() {
+        let items = Value::new(vec![row(1, "one"), row(3, "three")]);
+
+        let html = element_pseudo_html_after(&items, || {
+            items.set(vec![row(1, "one"), row(2, "two"), row(3, "three")]);
+        });
+
+        assert_eq!(html, element_list_html(&["one", "two", "three"]));
+    }
+
+    /// The trailing row is untouched, so the moved rows have to anchor on it
+    /// instead of on the list marker.
+    #[test]
+    fn element_rows_reorder_in_middle() {
+        let items = Value::new(vec![
+            row(1, "one"),
+            row(2, "two"),
+            row(3, "three"),
+            row(4, "four"),
+        ]);
+
+        let html = element_pseudo_html_after(&items, || {
+            items.set(vec![
+                row(1, "one"),
+                row(3, "three"),
+                row(2, "two"),
+                row(4, "four"),
+            ]);
+        });
+
+        assert_eq!(html, element_list_html(&["one", "three", "two", "four"]));
+    }
+
+    /// A row only ever anchors on nodes it owns, so unrelated siblings under the
+    /// same parent keep their place.
+    #[test]
+    fn sibling_before_the_list_keeps_its_place() {
+        let items = Value::new(vec![row(2, "two"), row(3, "three"), row(4, "four")]);
+
+        log_start();
+        let list = render_list(
+            &items,
+            |item| item.0,
+            |item| item.render_value(|item| dom! { <li>{item.1.as_str()}</li> }),
+        );
+        let _root = dom! { <ul><li>"header"</li>{list}</ul> };
+        items.set(vec![
+            row(1, "one"),
+            row(3, "three"),
+            row(2, "two"),
+            row(4, "four"),
+        ]);
+
+        let rows = ["one", "three", "two", "four"]
+            .iter()
+            .map(|label| row_html(label))
+            .collect::<String>();
+
+        assert_eq!(
+            DomDebugFragment::from_log().to_pseudo_html(),
+            format!("<ul><li>header</li>{rows}<!-- list element --></ul>")
+        );
+    }
+
+    /// Two lists interleaved under one parent: each moves only its own rows.
+    #[test]
+    fn two_lists_in_the_same_parent_do_not_interfere() {
+        let left = Value::new(vec![row(1, "l1"), row(2, "l2")]);
+        let right = Value::new(vec![row(1, "r1"), row(2, "r2"), row(3, "r3")]);
+
+        log_start();
+        let left_list = render_list(
+            &left,
+            |item| item.0,
+            |item| item.render_value(|item| dom! { <li>{item.1.as_str()}</li> }),
+        );
+        let right_list = render_list(
+            &right,
+            |item| item.0,
+            |item| item.render_value(|item| dom! { <li>{item.1.as_str()}</li> }),
+        );
+        let _root = dom! { <ul>{left_list}{right_list}</ul> };
+
+        right.set(vec![row(2, "r2"), row(1, "r1"), row(3, "r3")]);
+
+        let left_rows = ["l1", "l2"]
+            .iter()
+            .map(|label| row_html(label))
+            .collect::<String>();
+        let right_rows = ["r2", "r1", "r3"]
+            .iter()
+            .map(|label| row_html(label))
+            .collect::<String>();
+
+        assert_eq!(
+            DomDebugFragment::from_log().to_pseudo_html(),
+            format!("<ul>{left_rows}<!-- list element -->{right_rows}<!-- list element --></ul>")
+        );
+    }
+
+    /// A row that is itself a list spans several siblings of the outer list's
+    /// parent, none of which is at a fixed offset from the row's own node.
+    #[test]
+    fn row_that_is_itself_a_list_reorders() {
+        let items = Value::new(vec![row(1, "one"), row(2, "two"), row(3, "three")]);
+
+        log_start();
+        let list = render_list(
+            &items,
+            |item| item.0,
+            |item| {
+                let labels = item.map(|item| vec![item.1]);
+                render_list(
+                    labels,
+                    |label| label.clone(),
+                    |label| label.render_value(|label| dom! { <li>{label}</li> }),
+                )
+            },
+        );
+        let _root = dom! { <ul>{list}</ul> };
+        items.set(vec![row(2, "two"), row(1, "one"), row(3, "three")]);
+
+        let rows = ["two", "one", "three"]
+            .iter()
+            .map(|label| {
+                format!("<!-- row --><!-- row --><li>{label}</li><!-- v --><!-- list element -->")
+            })
+            .collect::<String>();
+
+        assert_eq!(
+            DomDebugFragment::from_log().to_pseudo_html(),
+            format!("<ul>{rows}<!-- list element --></ul>")
+        );
+    }
+
+    #[test]
+    fn key_removed_and_added_again() {
+        let items = Value::new(vec![row(1, "one"), row(2, "two"), row(3, "three")]);
+
+        let html = pseudo_html_after(&items, || {
+            items.set(vec![row(1, "one"), row(3, "three")]);
+            items.set(vec![row(1, "one"), row(2, "two"), row(3, "three")]);
+        });
+
+        assert_eq!(html, list_html(&["one", "two", "three"]));
     }
 
     #[test]
@@ -400,6 +543,45 @@ mod tests {
         assert_eq!(html, list_html(&["one", "two", "three"]));
     }
 
+    /// A row that occupies more than two siblings: the inner `render_value` adds
+    /// its own marker, so the row is `[anchor][content][inner marker][outer marker]`.
+    #[test]
+    fn nested_render_value_rows_reorder() {
+        let items = Value::new(vec![
+            row(1, "one"),
+            row(2, "two"),
+            row(3, "three"),
+            row(4, "four"),
+        ]);
+
+        log_start();
+        let list = render_list(
+            &items,
+            |item| item.0,
+            |item| {
+                let label = item.map(|item| item.1);
+                item.render_value(move |_| label.render_value(|label| dom! { <li>{label}</li> }))
+            },
+        );
+        let _root = dom! { <ul>{list}</ul> };
+        items.set(vec![
+            row(1, "one"),
+            row(3, "three"),
+            row(2, "two"),
+            row(4, "four"),
+        ]);
+
+        let rows = ["one", "three", "two", "four"]
+            .iter()
+            .map(|label| format!("<!-- row --><li>{label}</li><!-- v --><!-- v -->"))
+            .collect::<String>();
+
+        assert_eq!(
+            DomDebugFragment::from_log().to_pseudo_html(),
+            format!("<ul>{rows}<!-- list element --></ul>")
+        );
+    }
+
     #[test]
     fn renders_without_render_value_markers() {
         let items = Value::new(vec![row(1, "one"), row(2, "two"), row(3, "three")]);
@@ -414,7 +596,7 @@ mod tests {
 
         assert_eq!(
             DomDebugFragment::from_log().to_pseudo_html(),
-            "<ul><li>one</li><li>two</li><li>three</li><!-- list element --></ul>"
+            "<ul><!-- row --><li>one</li><!-- row --><li>two</li><!-- row --><li>three</li><!-- list element --></ul>"
         );
     }
 
@@ -438,16 +620,14 @@ mod tests {
 
     #[test]
     fn reuses_node_when_key_stays() {
-        let node = DomNode::from("same");
-        let node_id = node.id_dom();
+        let existing = Row::new(DomNode::from("same"));
+        let node_id = existing.node.id_dom();
         let render_calls = Rc::new(std::cell::Cell::new(0usize));
-
-        let child_order = empty_child_order();
 
         let result = reorder_nodes(
             DomId::from_u64(200),
             DomId::from_u64(201),
-            std::collections::VecDeque::from([(1, node)]),
+            std::collections::VecDeque::from([(1, existing)]),
             std::collections::VecDeque::from([item(1, "same")]),
             &{
                 let render_calls = render_calls.clone();
@@ -456,21 +636,18 @@ mod tests {
                     crate::transaction(|ctx| DomNode::from(value.get(ctx)))
                 }
             },
-            &child_order,
         );
 
         assert_eq!(result.len(), 1);
         assert_eq!(render_calls.get(), 0);
-        assert_eq!(result[0].1.id_dom(), node_id);
+        assert_eq!(result[0].1.node.id_dom(), node_id);
     }
 
     #[test]
     fn renders_only_the_new_key() {
-        let existing = DomNode::from("old");
-        let existing_id = existing.id_dom();
+        let existing = Row::new(DomNode::from("old"));
+        let existing_id = existing.node.id_dom();
         let render_calls = Rc::new(std::cell::Cell::new(0usize));
-
-        let child_order = empty_child_order();
 
         let result = reorder_nodes(
             DomId::from_u64(100),
@@ -484,11 +661,10 @@ mod tests {
                     crate::transaction(|ctx| DomNode::from(value.get(ctx)))
                 }
             },
-            &child_order,
         );
 
         assert_eq!(result.len(), 2);
-        assert_eq!(result[0].1.id_dom(), existing_id);
+        assert_eq!(result[0].1.node.id_dom(), existing_id);
         assert_eq!(result[1].0, 2);
         assert_eq!(render_calls.get(), 1);
     }
