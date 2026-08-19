@@ -47,8 +47,10 @@ impl WasmPath {
         use std::fs::File;
         use std::io::prelude::*;
 
-        let mut f = File::create(&self.path)?;
-        f.write_all(content)?;
+        let mut f = File::create(&self.path)
+            .map_err(|err| format!("Can't create {}: {err}", self.as_string()))?;
+        f.write_all(content)
+            .map_err(|err| format!("Can't write to {}: {err}", self.as_string()))?;
         Ok(())
     }
 

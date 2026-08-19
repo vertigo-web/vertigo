@@ -1,10 +1,11 @@
 use std::env;
 use std::error::Error;
+use std::ffi::OsStr;
 use std::fs;
 use std::path::{Path, PathBuf};
 
 fn main() -> Result<(), Box<dyn Error>> {
-    let target_dir = PathBuf::from(env::var("OUT_DIR")?).join("../../..");
+    let target_dir = find_target_dir()?;
 
     let _ = fs::remove_dir_all(target_dir.join("tailwind"));
 
@@ -40,6 +41,18 @@ fn main() -> Result<(), Box<dyn Error>> {
     )?;
 
     Ok(())
+}
+
+fn find_target_dir() -> Result<PathBuf, Box<dyn Error>> {
+    let out_dir = PathBuf::from(env::var("OUT_DIR")?);
+
+    let target_dir = out_dir
+        .ancestors()
+        .find(|dir| dir.file_name() == Some(OsStr::new("build")))
+        .and_then(Path::parent)
+        .ok_or_else(|| format!("Can't find target dir in OUT_DIR: {}", out_dir.display()))?;
+
+    Ok(target_dir.to_path_buf())
 }
 
 fn bundle_file(
