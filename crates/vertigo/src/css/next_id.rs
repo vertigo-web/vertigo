@@ -1,4 +1,4 @@
-use crate::computed::struct_mut::ValueMut;
+use crate::struct_mut::ValueMut;
 
 pub struct NextId {
     counter: ValueMut<u64>,

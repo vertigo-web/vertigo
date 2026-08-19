@@ -11,6 +11,11 @@ tasks:
     cmds:
       - cargo test --all-features
 
+  reactive-compare:
+    desc: Compare old vs new reactive graph performance
+    cmds:
+      - cargo test -p vertigo --lib reactive_old::compare -- --nocapture
+
   automated-tests:
     desc: "NOTE: WebDriver on localhost:9515 needs to be running"
     cmds:

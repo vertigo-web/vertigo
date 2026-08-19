@@ -1,4 +1,4 @@
-use std::{collections::HashSet, rc::Rc};
+use std::collections::HashSet;
 
 use crate::app::sudoku::state::{Cell, number_item::SudokuValue};
 use vertigo::{ClickEvent, Computed, Css, DomNode, bind, bind_rc, css, dom, dom_element};
@@ -75,13 +75,9 @@ fn view_last_value(cell_width: u32, cell: &Cell, possible_last_value: SudokuValu
     //     cell.number.value.set(Some(possible_last_value));
     // });
 
-    let on_set = Computed::from(bind!(cell, possible_last_value, |_context| -> Rc<
-        dyn Fn(ClickEvent) + 'static,
-    > {
-        Rc::new(bind!(cell, possible_last_value, |_| {
-            cell.number.set(Some(possible_last_value));
-        }))
-    }));
+    let on_set = bind!(cell, possible_last_value, |_| {
+        cell.number.set(Some(possible_last_value));
+    });
 
     dom! {
         <div css={css_wrapper_one(cell_width)}>

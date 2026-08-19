@@ -1,15 +1,12 @@
 use std::{collections::HashSet, rc::Rc};
 
 use crate::{
-    Computed, DomNode, JsJsonDeserialize, RequestResponse, Resource, Value,
-    computed::{
-        context::Context,
-        struct_mut::{HashMapMut, ValueMut},
-    },
+    Computed, Context, DomNode, JsJsonDeserialize, RequestResponse, Resource, Value,
     driver_module::api::api_fetch,
     fetch::request_builder::{RequestBody, RequestBuilder},
     get_driver,
     render::collection::CollectionKey,
+    struct_mut::{HashMapMut, ValueMut},
     transaction,
 };
 
@@ -591,7 +588,7 @@ impl<T: CollectionKey> LazyListCache<T> {
     /// For per-row reactivity, prefer rendering each row from its own [`Computed`] over
     /// [`get_by_key`](Self::get_by_key) instead.
     pub fn render(&self, render: impl Fn(Rc<Vec<T::Value>>) -> DomNode + 'static) -> DomNode {
-        self.to_computed().render_value(move |value| match value {
+        crate::render::render_value(self.to_computed(), move |value| match value {
             Resource::Ready(value) => render(value),
             Resource::Loading => {
                 use crate as vertigo;

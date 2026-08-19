@@ -1,10 +1,10 @@
 use std::rc::Rc;
 
 use crate::{
-    Css, DomId,
-    computed::{DropResource, struct_mut::ValueMut},
+    Css, DomId, DropResource,
     css::get_css_manager,
     driver_module::{StaticString, get_driver_dom},
+    struct_mut::ValueMut,
 };
 
 struct DomElementClassMergeInner {

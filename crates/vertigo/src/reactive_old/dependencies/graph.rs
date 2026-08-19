@@ -1,7 +1,7 @@
 use super::external_connections::ExternalConnections;
 use super::graph_connections::GraphConnections;
 use super::refresh::Refresh;
-use crate::computed::graph_id::GraphId;
+use crate::reactive_old::GraphId;
 use std::collections::BTreeSet;
 
 pub struct Graph {

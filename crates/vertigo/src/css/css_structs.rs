@@ -1,7 +1,5 @@
 use std::ops::{Add, AddAssign};
 
-use crate::Computed;
-
 /// Css chunk, represented either as static or dynamic string.
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub enum CssGroup {
@@ -124,26 +122,6 @@ impl AddAssign<&Self> for Css {
 impl AddAssign<&Css> for &mut Css {
     fn add_assign(&mut self, other: &Css) {
         self.extend_inplace(other.clone());
-    }
-}
-
-impl Add<Css> for Computed<Css> {
-    type Output = Computed<Css>;
-
-    fn add(self, rhs: Css) -> Self::Output {
-        self.map(move |left| left.extend(rhs.clone()))
-    }
-}
-
-impl Add<Computed<Css>> for Computed<Css> {
-    type Output = Computed<Css>;
-
-    fn add(self, rhs: Computed<Css>) -> Self::Output {
-        Computed::from({
-            let left = self.clone();
-            let right = rhs.clone();
-            move |ctx| left.get(ctx) + right.get(ctx)
-        })
     }
 }
 

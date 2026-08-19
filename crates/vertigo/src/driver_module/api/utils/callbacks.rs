@@ -1,11 +1,9 @@
 use std::rc::Rc;
 
 use crate::{
-    computed::{
-        DropResource,
-        struct_mut::{HashMapMut, ValueMut},
-    },
+    DropResource,
     dev::CallbackId,
+    struct_mut::{HashMapMut, ValueMut},
 };
 
 type CallBackFn<R, R2> = dyn Fn(R) -> R2;

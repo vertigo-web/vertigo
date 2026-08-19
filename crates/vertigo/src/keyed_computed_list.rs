@@ -4,7 +4,7 @@ use std::{
     rc::Rc,
 };
 
-use super::{Computed, ToComputed, struct_mut::ValueMut};
+use crate::{Computed, ToComputed, struct_mut::ValueMut};
 
 /// One entry in a [`keyed_computed_list`]: a stable key plus a per-item value.
 ///

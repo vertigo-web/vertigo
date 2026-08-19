@@ -1,12 +1,9 @@
 use std::rc::Rc;
 
 use crate::{
-    DomNode,
-    computed::{
-        DropResource,
-        struct_mut::{ValueMut, VecMut},
-    },
+    DomNode, DropResource,
     driver_module::get_driver_dom,
+    struct_mut::{ValueMut, VecMut},
 };
 
 use super::dom_id::DomId;

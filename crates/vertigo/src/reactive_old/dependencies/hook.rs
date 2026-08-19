@@ -1,4 +1,4 @@
-use crate::{computed::DropResource, driver_module::event_emitter::EventEmitter};
+use crate::{DropResource, driver_module::event_emitter::EventEmitter};
 
 #[derive(Clone)]
 pub struct Hooks {

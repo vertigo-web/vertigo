@@ -1,6 +1,6 @@
 use std::rc::Rc;
 
-use crate::computed::{
+use crate::{
     DropResource,
     struct_mut::{BTreeMapMut, CounterMut},
 };
@@ -43,7 +43,7 @@ impl<T: Clone> EventEmitter<T> {
     pub fn trigger(&self, value: &T) {
         // Emitters on hot paths (every DOM command, every `Value` write) usually have no
         // listeners at all, so do not snapshot the callback list for them.
-        if self.list.is_empty() {
+        if self.is_empty() {
             return;
         }
 

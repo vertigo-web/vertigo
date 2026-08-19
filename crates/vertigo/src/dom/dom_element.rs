@@ -1,13 +1,10 @@
 use std::rc::Rc;
 
 use crate::{
-    AttrGroupValue, Computed, DomText, DropFileItem, JsJson,
-    computed::{
-        DropResource,
-        struct_mut::{VecDequeMut, VecMut},
-    },
+    AttrGroupValue, Computed, DomText, DropFileItem, DropResource, JsJson,
     dev::JsJsonListDecoder,
     driver_module::{StaticString, api::api_callbacks, get_driver_dom},
+    struct_mut::{VecDequeMut, VecMut},
 };
 
 use super::{

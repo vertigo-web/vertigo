@@ -26,6 +26,7 @@ fn test_generics() {
 
     #[component]
     fn Hello<T: Display>(name: T) {
+        let name = name.to_string();
         dom! {
             <span>"Hello " {name}</span>
         }

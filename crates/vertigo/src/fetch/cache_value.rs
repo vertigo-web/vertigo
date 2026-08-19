@@ -1,7 +1,5 @@
 use crate::{
-    Computed, DropResource,
-    computed::{Value, context::Context},
-    driver_module::api::api_timers,
+    Computed, Context, DropResource, Value, driver_module::api::api_timers,
     fetch::api_response::ApiResponse,
 };
 

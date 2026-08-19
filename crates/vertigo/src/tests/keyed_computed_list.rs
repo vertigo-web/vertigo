@@ -5,8 +5,8 @@ use std::{
 };
 
 use crate::{
-    Computed, DropResource, KeyedListItem, Value, computed::struct_mut::ValueMut,
-    keyed_computed_list, transaction,
+    Computed, DropResource, KeyedListItem, Value, keyed_computed_list, struct_mut::ValueMut,
+    transaction,
 };
 
 #[derive(Clone, PartialEq, Debug)]
@@ -546,8 +546,8 @@ fn map_keyed_list_state<T, S, K>(
     create_state: impl Fn(Computed<T>) -> S + 'static,
 ) -> Computed<Vec<KeyedListItem<K, S>>>
 where
-    T: Clone + 'static,
-    S: Clone + 'static,
+    T: Clone + PartialEq + 'static,
+    S: Clone + PartialEq + 'static,
     K: Clone + Eq + std::hash::Hash + 'static,
 {
     let cache = Rc::new(ValueMut::new(HashMap::<K, KeyedListItem<K, S>>::new()));

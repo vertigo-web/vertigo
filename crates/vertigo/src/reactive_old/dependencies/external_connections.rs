@@ -1,6 +1,7 @@
 use std::rc::Rc;
 
-use crate::computed::{DropResource, GraphId, struct_mut::BTreeMapMut};
+use crate::reactive_old::GraphId;
+use crate::{DropResource, struct_mut::BTreeMapMut};
 
 pub type ConnectType = Rc<dyn Fn() -> DropResource>;
 
