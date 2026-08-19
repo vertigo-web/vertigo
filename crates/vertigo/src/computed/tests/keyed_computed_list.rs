@@ -1,4 +1,8 @@
-use std::{cell::RefCell, collections::HashMap, rc::Rc};
+use std::{
+    cell::{Cell, RefCell},
+    collections::HashMap,
+    rc::Rc,
+};
 
 use crate::{
     Computed, DropResource, KeyedListItem, Value, computed::struct_mut::ValueMut,
@@ -272,6 +276,66 @@ fn exposes_computed_values_for_the_initial_list() {
                 revision: 3,
             }],
         }
+    );
+}
+
+/// A row notifies only when its own value changes. Rewriting the list with equal
+/// content, reordering it, or adding a key must leave the existing rows quiet.
+#[test]
+fn unchanged_rows_do_not_notify() {
+    fn zoe() -> Person {
+        Person {
+            id: "3",
+            name: "Zoe",
+            age: 30,
+        }
+    }
+
+    let source = Value::new(SignalList(vec![bob(), frank(23)]));
+    let list = keyed_computed_list(people_computed(&source), |item| item.id);
+
+    let (bob_row, frank_row) = transaction(|ctx| {
+        let rows = list.get(ctx);
+        (rows[0].value.clone(), rows[1].value.clone())
+    });
+
+    let bob_calls = Rc::new(Cell::new(0));
+    let frank_calls = Rc::new(Cell::new(0));
+
+    let _bob_sub = bob_row.subscribe({
+        let bob_calls = bob_calls.clone();
+        move |_| bob_calls.set(bob_calls.get() + 1)
+    });
+    let _frank_sub = frank_row.subscribe({
+        let frank_calls = frank_calls.clone();
+        move |_| frank_calls.set(frank_calls.get() + 1)
+    });
+
+    // `subscribe` delivers the current value straight away.
+    assert_eq!((bob_calls.get(), frank_calls.get()), (1, 1), "initial read");
+
+    // A brand new list carrying structurally equal rows.
+    source.set(SignalList(vec![bob(), frank(23)]));
+    assert_eq!(
+        (bob_calls.get(), frank_calls.get()),
+        (1, 1),
+        "equal content"
+    );
+
+    // Same membership, different order.
+    source.set(SignalList(vec![frank(23), bob()]));
+    assert_eq!((bob_calls.get(), frank_calls.get()), (1, 1), "reorder");
+
+    // A key appears; the rows that were already there are untouched.
+    source.set(SignalList(vec![frank(23), bob(), zoe()]));
+    assert_eq!((bob_calls.get(), frank_calls.get()), (1, 1), "new key");
+
+    // Only the row that really changed notifies.
+    source.set(SignalList(vec![frank(24), bob(), zoe()]));
+    assert_eq!(
+        (bob_calls.get(), frank_calls.get()),
+        (1, 2),
+        "only Frank changed"
     );
 }
 
