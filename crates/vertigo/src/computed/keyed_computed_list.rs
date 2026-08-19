@@ -103,31 +103,15 @@ where
         }
     });
 
-    let prev_hash = Rc::new(ValueMut::new(HashMap::<K, T>::new()));
-
+    // Rows are looked up by key from here. A row only notifies when its own value
+    // changes, because `Computed` compares with `PartialEq` before notifying.
     let hash = Computed::from({
         let unique_keyed_items = unique_keyed_items.clone();
         move |ctx| {
-            let mut result = HashMap::new();
-
-            for (key, item) in unique_keyed_items.get(ctx) {
-                let prev_item = prev_hash.map(|prev| prev.get(&key).cloned());
-
-                // Keep the previous clone when the value is equal, so per-item
-                // `subscribe` does not fire for a rewritten-but-unchanged row.
-                match prev_item {
-                    Some(prev_item) if prev_item == item => {
-                        result.insert(key, prev_item);
-                        continue;
-                    }
-                    _ => {}
-                }
-
-                result.insert(key, item);
-            }
-
-            prev_hash.set(result.clone());
-            result
+            unique_keyed_items
+                .get(ctx)
+                .into_iter()
+                .collect::<HashMap<K, T>>()
         }
     });
 
