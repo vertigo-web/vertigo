@@ -25,7 +25,7 @@ where you don't need per-item granularity, prefer
 `T` is a **marker type** implementing [`CollectionKey`](crate::CollectionKey).
 It declares the item type (`T::Value`) and how to derive a stable key from it
 (`T::Key`, via `T::get_key`). See the
-[companion guide](crate::guides::value_synchronize_and_collections) for the
+[companion guide](crate::guides::collection_key_and_list_renderers) for the
 full rationale.
 
 Internally the cache holds, per visible item, a `ListItem<V>` with **two**

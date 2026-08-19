@@ -40,10 +40,15 @@ where
             options,
             |item| item.to_string(),
             move |item| {
-                let text_item = item.to_string();
-                let selected = is_selected(&value, item);
+                item.render_value({
+                    let value = value.clone();
+                    move |item| {
+                        let text_item = item.to_string();
+                        let selected = is_selected(&value, &item);
 
-                dom! { <option value={&text_item} {selected}>{text_item}</option> }
+                        dom! { <option value={&text_item} {selected}>{text_item}</option> }
+                    }
+                })
             },
         );
 

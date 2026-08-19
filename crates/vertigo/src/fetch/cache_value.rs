@@ -1,6 +1,6 @@
 use crate::{
     Computed, DropResource,
-    computed::{Value, ValueSynchronize, context::Context},
+    computed::{Value, context::Context},
     driver_module::api::api_timers,
     fetch::api_response::ApiResponse,
 };
@@ -62,36 +62,5 @@ impl<T: PartialEq + 'static> CacheValue<T> {
 
     pub fn set(&self, value: ApiResponse<T>) {
         self.value_write.set(value);
-    }
-
-    pub fn synchronize<R: ValueSynchronize<std::rc::Rc<T>> + Clone + 'static>(
-        &self,
-    ) -> (R, DropResource)
-    where
-        T: Default + Clone,
-    {
-        use crate::{Resource, transaction};
-        use std::rc::Rc;
-        use vertigo_macro::bind;
-
-        fn normalize<T: Default>(val: ApiResponse<T>) -> Rc<T> {
-            match val {
-                ApiResponse::Uninitialized => Rc::new(T::default()),
-                ApiResponse::Data { value, expiry: _ } => match value {
-                    Resource::Ready(data) => data,
-                    Resource::Loading => Rc::new(T::default()),
-                    Resource::Error(_) => Rc::new(T::default()),
-                },
-            }
-        }
-
-        let init_val = transaction(|ctx| normalize(self.value_write.get(ctx)));
-        let target = R::new(init_val);
-
-        let drop = self.value_write.add_event(bind!(target, |val| {
-            target.set(normalize(val));
-        }));
-
-        (target, drop)
     }
 }

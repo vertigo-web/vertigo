@@ -104,11 +104,13 @@ pub fn ListDemo() {
                 padding: 5px;
                 border: 1px solid #eee;
             "};
-            dom! {
-                <div css={css_item}>
-                    {item}
-                </div>
-            }
+            item.render_value(move |item| {
+                dom! {
+                    <div css={css_item.clone()}>
+                        {item}
+                    </div>
+                }
+            })
         },
     );
 

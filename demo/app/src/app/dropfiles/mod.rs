@@ -19,12 +19,14 @@ impl DropFiles {
             &state.list,
             |item| item.name.clone(),
             |file| {
-                let message = format_line(file);
-                dom! {
-                    <div>
-                        { message }
-                    </div>
-                }
+                file.render_value(|file| {
+                    let message = format_line(&file);
+                    dom! {
+                        <div>
+                            { message }
+                        </div>
+                    }
+                })
             },
         );
 

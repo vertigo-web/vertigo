@@ -48,22 +48,26 @@ pub fn app(state: AppState) -> DomNode {
         Mode::Div => render_list(
             &rows,
             |row| row.0.clone(),
-            |(key, label)| {
-                dom! {
-                    <Row id={&&key} label={&&label} />
-                }
+            |row| {
+                row.render_value(|(key, label)| {
+                    dom! {
+                        <Row id={&&key} label={&&label} />
+                    }
+                })
             },
         ),
         Mode::Div4 => render_list(
             &rows,
             |row| row.0.clone(),
-            |(key, label)| {
-                dom! {
-                    <div>
-                        <div>"Row"</div><div>"Label"</div>
-                        <Row id={&&key} label={&&label} />
-                    </div>
-                }
+            |row| {
+                row.render_value(|(key, label)| {
+                    dom! {
+                        <div>
+                            <div>"Row"</div><div>"Label"</div>
+                            <Row id={&&key} label={&&label} />
+                        </div>
+                    }
+                })
             },
         ),
     });

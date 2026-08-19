@@ -73,7 +73,7 @@ impl GraphOneToMany {
     pub fn all_connections_len(&self) -> u64 {
         let mut count: u64 = 0;
 
-        for (_, item) in self.data.iter() {
+        for item in self.data.values() {
             count += item.len() as u64;
         }
 

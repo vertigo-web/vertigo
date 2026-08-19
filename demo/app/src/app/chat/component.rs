@@ -15,7 +15,7 @@ pub fn Chat(ws_chat: String) {
         |message| {
             dom! {
                 <div>
-                    { message.clone() }
+                    { message }
                 </div>
             }
         },
