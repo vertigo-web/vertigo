@@ -79,6 +79,8 @@ where
     let items = items.to_computed();
     let get_key = Rc::new(get_key);
 
+    // Behind an `Rc` for the same reason as `hash` below: both readers would otherwise
+    // deep-copy the whole list on every update.
     let unique_keyed_items = Computed::from({
         move |ctx| {
             let mut result = Vec::new();
@@ -99,19 +101,26 @@ where
                 result.push((key, item));
             }
 
-            result
+            Rc::new(result)
         }
     });
 
     // Rows are looked up by key from here. A row only notifies when its own value
     // changes, because `Computed` compares with `PartialEq` before notifying.
+    //
+    // Behind an `Rc` because every row reads this map, and `Computed::get` hands back a
+    // clone of the cached value - cloning the map itself would make one update cost
+    // `rows * rows` item clones.
     let hash = Computed::from({
         let unique_keyed_items = unique_keyed_items.clone();
         move |ctx| {
-            unique_keyed_items
-                .get(ctx)
-                .into_iter()
-                .collect::<HashMap<K, T>>()
+            Rc::new(
+                unique_keyed_items
+                    .get(ctx)
+                    .iter()
+                    .map(|(key, item)| (key.clone(), item.clone()))
+                    .collect::<HashMap<K, T>>(),
+            )
         }
     });
 
@@ -125,18 +134,19 @@ where
             let unique_items = unique_keyed_items.get(ctx);
             let mut result_list = Vec::with_capacity(unique_items.len());
 
-            for (key, item) in unique_items {
+            for (key, item) in unique_items.iter() {
                 let next_computed = cache_computed.change(|cache| {
-                    if let Some(prev) = cache.get(&key) {
+                    if let Some(prev) = cache.get(key) {
                         prev.clone()
                     } else {
                         let hash = hash.clone();
-                        let last = Rc::new(ValueMut::new(item));
+                        let last = Rc::new(ValueMut::new(item.clone()));
                         let lookup_key = key.clone();
                         Computed::from(move |ctx| match hash.get(ctx).get(&lookup_key) {
                             Some(val) => {
+                                let val = val.clone();
                                 last.set(val.clone());
-                                val.clone()
+                                val
                             }
                             None => {
                                 log::error!(
@@ -149,7 +159,7 @@ where
                     }
                 });
 
-                let list_item = cache_list_items.change(|cache| match cache.get(&key) {
+                let list_item = cache_list_items.change(|cache| match cache.get(key) {
                     Some(prev) if prev.value == next_computed => prev.clone(),
                     _ => KeyedListItem {
                         key: key.clone(),
