@@ -50,12 +50,13 @@ pub fn render_list<
     let rows = keyed_computed_list(computed, get_key);
     let render = Rc::new(render);
 
-    DomComment::new_marker("list element", move |parent_id, comment_id| {
+    DomComment::new_marker("list element", move |parent_id, comment_id, content| {
         let current_list: Rc<ValueMut<VecDeque<(K, Row)>>> =
             Rc::new(ValueMut::new(VecDeque::new()));
 
         Some(rows.clone().subscribe({
             let render = render.clone();
+            let content = content.clone();
 
             move |new_list| {
                 current_list.change(|current| {
@@ -66,6 +67,13 @@ pub fn render_list<
                         prev,
                         VecDeque::from(new_list),
                         render.as_ref(),
+                    );
+
+                    content.set(
+                        current
+                            .iter()
+                            .flat_map(|(_, row)| [row.anchor_id(), row.node.id_dom()])
+                            .collect(),
                     );
                 })
             }
@@ -541,6 +549,123 @@ mod tests {
         });
 
         assert_eq!(html, list_html(&["one", "two", "three"]));
+    }
+
+    /// Moving a row must carry its DOM along, not rebuild it — a rebuilt row loses
+    /// focus, selection, scroll position and running animations.
+    #[test]
+    fn moving_a_row_keeps_its_content() {
+        let items = Value::new(vec![
+            row(1, "one"),
+            row(2, "two"),
+            row(3, "three"),
+            row(4, "four"),
+        ]);
+        let content_renders = Rc::new(Cell::new(0));
+
+        log_start();
+        let list = render_list(&items, |item| item.0, {
+            let content_renders = content_renders.clone();
+            move |item| {
+                let content_renders = content_renders.clone();
+                item.render_value(move |item| {
+                    content_renders.set(content_renders.get() + 1);
+                    dom! { <li>{item.1.as_str()}</li> }
+                })
+            }
+        });
+        let _root = dom! { <ul>{list}</ul> };
+        assert_eq!(content_renders.get(), 4);
+
+        items.set(vec![
+            row(1, "one"),
+            row(3, "three"),
+            row(2, "two"),
+            row(4, "four"),
+        ]);
+
+        assert_eq!(
+            content_renders.get(),
+            4,
+            "moving a row must not re-render its content"
+        );
+        assert_eq!(
+            DomDebugFragment::from_log().to_pseudo_html(),
+            list_html(&["one", "three", "two", "four"])
+        );
+    }
+
+    /// A moved row keeps its subscription, so a later value change still lands in the
+    /// row's new position rather than where it used to be.
+    #[test]
+    fn updating_a_moved_row_replaces_content_in_place() {
+        let items = Value::new(vec![
+            row(1, "one"),
+            row(2, "two"),
+            row(3, "three"),
+            row(4, "four"),
+        ]);
+
+        let html = pseudo_html_after(&items, || {
+            items.set(vec![
+                row(1, "one"),
+                row(3, "three"),
+                row(2, "two"),
+                row(4, "four"),
+            ]);
+            items.set(vec![
+                row(1, "one"),
+                row(3, "three"),
+                row(2, "TWO"),
+                row(4, "four"),
+            ]);
+        });
+
+        assert_eq!(html, list_html(&["one", "three", "TWO", "four"]));
+    }
+
+    /// The same guarantee one level down: moving a row whose node is a nested marker
+    /// must not rebuild the nested subtree either.
+    #[test]
+    fn moving_a_row_keeps_nested_content() {
+        let items = Value::new(vec![
+            row(1, "one"),
+            row(2, "two"),
+            row(3, "three"),
+            row(4, "four"),
+        ]);
+        let content_renders = Rc::new(Cell::new(0));
+
+        log_start();
+        let list = render_list(&items, |item| item.0, {
+            let content_renders = content_renders.clone();
+            move |item| {
+                let label = item.map(|item| item.1);
+                let content_renders = content_renders.clone();
+                item.render_value(move |_| {
+                    let content_renders = content_renders.clone();
+                    label.render_value(move |label| {
+                        content_renders.set(content_renders.get() + 1);
+                        dom! { <li>{label}</li> }
+                    })
+                })
+            }
+        });
+        let _root = dom! { <ul>{list}</ul> };
+        assert_eq!(content_renders.get(), 4);
+
+        items.set(vec![
+            row(1, "one"),
+            row(3, "three"),
+            row(2, "two"),
+            row(4, "four"),
+        ]);
+
+        assert_eq!(
+            content_renders.get(),
+            4,
+            "moving a row must not re-render its nested content"
+        );
     }
 
     /// A row that occupies more than two siblings: the inner `render_value` adds

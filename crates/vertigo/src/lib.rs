@@ -78,7 +78,7 @@ pub use css::{
 };
 pub use dom::{
     attr_value::{AttrValue, CssAttrValue},
-    dom_comment::DomComment,
+    dom_comment::{DomComment, MarkerContent},
     dom_element::DomElement,
     dom_element_ref::DomElementRef,
     dom_id::DomId,
