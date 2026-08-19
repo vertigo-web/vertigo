@@ -15,7 +15,8 @@ use super::StaticString;
 
 struct Commands {
     commands: VecMut<DriverDomCommand>,
-    // For testing/debuging purposes
+    /// Opt-in tap on the command stream, used by [`crate::dev::inspect`]. Nothing
+    /// subscribes to it unless a debugging session asks for it.
     new_command: EventEmitter<DriverDomCommand>,
 }
 
@@ -27,7 +28,6 @@ impl Commands {
         }
     }
 
-    #[allow(dead_code)]
     fn inspect_command(&self, func: impl Fn(DriverDomCommand) + 'static) -> DropResource {
         self.new_command.add(func)
     }
@@ -86,7 +86,8 @@ impl DriverDom {
         }
     }
 
-    #[allow(dead_code)]
+    /// Watch every DOM command as it is produced. For debugging and tests only - each
+    /// subscriber gets its own clone of every command.
     pub fn inspect_command(&self, func: impl Fn(DriverDomCommand) + 'static) -> DropResource {
         self.commands.inspect_command(func)
     }
