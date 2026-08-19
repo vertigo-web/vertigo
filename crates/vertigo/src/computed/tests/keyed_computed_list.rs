@@ -339,6 +339,79 @@ fn unchanged_rows_do_not_notify() {
     );
 }
 
+/// Counts how often the item type is cloned, to pin down the cost of an update.
+#[derive(Debug)]
+struct Counted {
+    id: u32,
+    value: u32,
+    clones: Rc<Cell<usize>>,
+}
+
+impl Clone for Counted {
+    fn clone(&self) -> Self {
+        self.clones.set(self.clones.get() + 1);
+
+        Counted {
+            id: self.id,
+            value: self.value,
+            clones: self.clones.clone(),
+        }
+    }
+}
+
+impl PartialEq for Counted {
+    fn eq(&self, other: &Self) -> bool {
+        self.id == other.id && self.value == other.value
+    }
+}
+
+/// Build a list of `rows` rows, observe every row the way a rendered list does, then
+/// change a single row and report how many item clones that update cost.
+fn clones_for_one_row_update(rows: u32) -> usize {
+    let clones = Rc::new(Cell::new(0));
+
+    let build = |first_value: u32| {
+        (0..rows)
+            .map(|id| Counted {
+                id,
+                value: if id == 0 { first_value } else { id },
+                clones: clones.clone(),
+            })
+            .collect::<Vec<_>>()
+    };
+
+    let source = Value::new(build(0));
+    let list = keyed_computed_list(source.to_computed(), |item| item.id);
+
+    // Observe the same way a rendered list does: the list itself, plus every row.
+    let _row_subscriptions = transaction(|ctx| list.get(ctx))
+        .into_iter()
+        .map(|item| item.value.subscribe(|_| {}))
+        .collect::<Vec<_>>();
+    let _list_subscription = list.subscribe(|_| {});
+
+    clones.set(0);
+    source.set(build(1));
+    clones.get()
+}
+
+/// Changing one row must cost work proportional to the list, not to its square.
+///
+/// Every row's `Computed` reads the shared key->value map, and `Computed::get` hands
+/// back a clone of the cached value - so if that map is not behind an `Rc`, each of
+/// the n rows copies all n items on every update.
+#[test]
+fn one_row_update_scales_linearly() {
+    let small = clones_for_one_row_update(20);
+    let large = clones_for_one_row_update(80);
+
+    assert!(
+        large < small * 6,
+        "updating one row looks quadratic: 20 rows cost {small} clones, \
+         80 rows cost {large} (linear would be about 4x, quadratic about 16x)"
+    );
+}
+
 #[test]
 fn keeps_the_first_item_when_duplicate_keys_appear() {
     let source = Value::new(vec![
