@@ -21,11 +21,12 @@ pub fn render_value_option<T: Clone + PartialEq + 'static>(
 ) -> DomNode {
     let render = Rc::new(render);
 
-    DomComment::new_marker("v", move |parent_id, comment_id| {
+    DomComment::new_marker("v", move |parent_id, comment_id, content| {
         let current_node: ValueMut<Option<DomNode>> = ValueMut::new(None);
 
         Some(computed.clone().subscribe({
             let render = render.clone();
+            let content = content.clone();
 
             move |value| {
                 let new_element = render(value).inspect(|new_element| {
@@ -35,6 +36,8 @@ pub fn render_value_option<T: Clone + PartialEq + 'static>(
                         Some(comment_id),
                     );
                 });
+
+                content.set(new_element.iter().map(|node| node.id_dom()).collect());
 
                 current_node.change(|current| {
                     *current = new_element;
