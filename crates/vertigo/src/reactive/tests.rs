@@ -284,6 +284,30 @@ fn when_connect_multiple_subscribers_share_one_connection() {
 }
 
 #[test]
+fn when_connect_disconnects_while_computed_lives() {
+    let connect = Rc::new(Cell::new(0));
+    let disconnect = Rc::new(Cell::new(0));
+    let value = Value::new(1);
+    let comp = value.to_computed().when_connect({
+        let connect = connect.clone();
+        let disconnect = disconnect.clone();
+        move || {
+            connect.set(1);
+            DropResource::new({
+                let disconnect = disconnect.clone();
+                move || disconnect.set(1)
+            })
+        }
+    });
+    let keep = comp.clone();
+    let sub = comp.subscribe(|_| {});
+    assert_eq!(connect.get(), 1);
+    drop(sub);
+    assert_eq!(disconnect.get(), 1);
+    drop(keep);
+}
+
+#[test]
 fn nested_computed_subscription() {
     let token_value = Value::new("token1".to_string());
     let token_computed = token_value.to_computed();
@@ -350,5 +374,24 @@ fn on_after_transaction_fires_after_set() {
 
     let a = Value::new(1);
     a.set(2);
+    assert_eq!(fires.get(), 1);
+}
+
+#[test]
+fn hook_once_when_set_during_propagate() {
+    let g = Graph::new();
+    let fires = Rc::new(Cell::new(0));
+    let _hook = g.on_after_transaction({
+        let fires = fires.clone();
+        move || fires.set(fires.get() + 1)
+    });
+    let a = g.value(0);
+    let b = g.value(0);
+    let _sub = a.to_computed().subscribe({
+        let b = b.clone();
+        move |_| b.set(1)
+    });
+    fires.set(0);
+    a.set(1);
     assert_eq!(fires.get(), 1);
 }

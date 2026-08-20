@@ -39,3 +39,40 @@ impl Hooks {
         }
     }
 }
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use std::rc::Rc;
+
+    #[test]
+    fn remove_does_not_fire() {
+        let hooks = Hooks::new();
+        let n = Rc::new(Cell::new(0));
+        let id = hooks.insert({
+            let n = n.clone();
+            move || n.set(1)
+        });
+        hooks.remove(id);
+        hooks.fire();
+        assert_eq!(n.get(), 0);
+    }
+
+    #[test]
+    fn two_hooks_both_fire() {
+        let hooks = Hooks::new();
+        let a = Rc::new(Cell::new(0));
+        let b = Rc::new(Cell::new(0));
+        hooks.insert({
+            let a = a.clone();
+            move || a.set(1)
+        });
+        hooks.insert({
+            let b = b.clone();
+            move || b.set(1)
+        });
+        hooks.fire();
+        assert_eq!(a.get(), 1);
+        assert_eq!(b.get(), 1);
+    }
+}
