@@ -1,9 +1,11 @@
 use std::cell::Cell;
 
-/// Nesting depth of `Graph::transaction` and the reentrancy flag for `propagate`.
+/// Nesting depth of `Graph::transaction`, the reentrancy flag for `propagate`,
+/// and the depth of graph callbacks (`compute` / `subscribe`) that must not write.
 pub(super) struct Transaction {
     depth: Cell<u32>,
     propagating: Cell<bool>,
+    callback_depth: Cell<u32>,
 }
 
 /// The outermost transaction just closed.
@@ -23,16 +25,31 @@ impl Drop for Propagating<'_> {
     }
 }
 
+/// Decrements callback depth when a `compute` / `subscribe` closure returns (including panic).
+pub(crate) struct CallbackGuard<'a> {
+    tx: &'a Transaction,
+}
+
+impl Drop for CallbackGuard<'_> {
+    fn drop(&mut self) {
+        self.tx.callback_depth.set(self.tx.callback_depth.get() - 1);
+    }
+}
+
 impl Transaction {
     pub(super) fn new() -> Self {
         Self {
             depth: Cell::new(0),
             propagating: Cell::new(false),
+            callback_depth: Cell::new(0),
         }
     }
 
-    pub(super) fn enter(&self) {
-        self.depth.set(self.depth.get() + 1);
+    /// Increment nesting. `true` when this opened the outermost transaction.
+    pub(super) fn enter(&self) -> bool {
+        let depth = self.depth.get();
+        self.depth.set(depth + 1);
+        depth == 0
     }
 
     /// Close one nesting level. `Some` when this was the outermost transaction.
@@ -54,11 +71,25 @@ impl Transaction {
         self.depth.get() == 0 && !self.propagating.get()
     }
 
+    pub(super) fn is_propagating(&self) -> bool {
+        self.propagating.get()
+    }
+
     /// Start a propagate wave. Call only when [`Self::can_propagate`] is `true`.
     pub(super) fn start_propagate(&self) -> Propagating<'_> {
         debug_assert!(self.can_propagate());
         self.propagating.set(true);
         Propagating { tx: self }
+    }
+
+    pub(super) fn enter_callback(&self) -> CallbackGuard<'_> {
+        self.callback_depth.set(self.callback_depth.get() + 1);
+        CallbackGuard { tx: self }
+    }
+
+    /// `Value::set` is forbidden from `compute` / `subscribe` and while a wave is running.
+    pub(super) fn writes_blocked(&self) -> bool {
+        self.callback_depth.get() > 0 || self.propagating.get()
     }
 }
 
@@ -71,5 +102,14 @@ mod tests {
         let tx = Transaction::new();
         let _wave = tx.start_propagate();
         assert!(!tx.can_propagate());
+        assert!(tx.writes_blocked());
+    }
+
+    #[test]
+    fn writes_blocked_inside_callback() {
+        let tx = Transaction::new();
+        assert!(!tx.writes_blocked());
+        let _guard = tx.enter_callback();
+        assert!(tx.writes_blocked());
     }
 }

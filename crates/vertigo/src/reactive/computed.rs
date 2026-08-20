@@ -1,7 +1,7 @@
 use std::{cell::RefCell, ops::Add, rc::Rc};
 
 use super::{
-    Context, DropResource, GraphId, ToComputed, Value,
+    Context, DropResource, Graph, GraphId, ToComputed, Value,
     graph::{ErasedNode, GraphInner, NodeId},
 };
 
@@ -45,6 +45,7 @@ impl<T: Clone + PartialEq + 'static> ErasedNode for ComputedInner<T> {
 
 impl ErasedNode for SubscribeInner {
     fn refresh(&self) -> bool {
+        let _guard = self.graph.enter_callback();
         let ctx = Context::tracking();
         (self.refresh)(&ctx);
         self.graph.set_parents(self.id, ctx.take_parents());
@@ -66,6 +67,7 @@ impl Drop for SubscribeInner {
 
 impl<T: Clone + PartialEq + 'static> ComputedInner<T> {
     fn recompute(&self) -> bool {
+        let _guard = self.graph.enter_callback();
         let ctx = Context::tracking();
         let new_value = (self.compute)(&ctx);
         self.graph.set_parents(self.id, ctx.take_parents());
@@ -110,6 +112,7 @@ impl<T: Clone + PartialEq + 'static> Computed<T> {
 
     pub fn get(&self, ctx: &Context) -> T {
         ctx.track(self.inner.id, self.inner.clone());
+        self.inner.graph.ensure_fresh(self.inner.id);
         self.inner.ensure()
     }
 
@@ -117,8 +120,9 @@ impl<T: Clone + PartialEq + 'static> Computed<T> {
         GraphId::from_node(self.inner.id)
     }
 
-    /// Runs `create` when this value starts being observed; the returned
-    /// [`DropResource`] is dropped when it stops being observed.
+    /// Runs `create` after the wave in which this value starts being observed; the
+    /// returned [`DropResource`] is dropped after the wave in which it stops being
+    /// observed. `create` may write `Value`s. A `set` from compute or subscribe is ignored.
     pub fn when_connect<F: Fn() -> DropResource + 'static>(&self, create: F) -> Computed<T> {
         let new_computed = Computed::create(self.inner.graph.clone(), {
             let parent = self.clone();
@@ -144,7 +148,19 @@ impl<T: Clone + PartialEq + 'static> Computed<T> {
             }),
         });
         graph.register(id, inner.clone());
-        inner.refresh();
+
+        // The first run has to be a transaction: registering the parents it read is what
+        // makes them watched, and `when_connect` closures only run when a transaction
+        // closes. Refreshing bare would leave them queued until some later, unrelated
+        // transaction happened to flush them. Subscribing from inside a wave is fine -
+        // that transaction closes without flushing, and the running wave does it at the end.
+        Graph {
+            inner: graph.clone(),
+        }
+        .transaction(|_| {
+            inner.refresh();
+        });
+
         DropResource::from_struct(inner)
     }
 
@@ -229,6 +245,7 @@ mod tests {
     #[test]
     fn subscribe_does_not_notify_dependents() {
         let g = Graph::new();
+        let logs = g.logger().listen();
         let a = g.value(0);
         let id = g.inner.alloc_id();
         let sink = Rc::new(SubscribeInner {
@@ -260,5 +277,6 @@ mod tests {
         runs.set(0);
         a.set(1);
         assert_eq!(runs.get(), 0);
+        logs.assert_eq(&[]);
     }
 }

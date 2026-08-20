@@ -7,6 +7,10 @@ use super::{NodeId, edges::Edges};
 
 /// Kahn-style worklist for one propagation wave.
 ///
+/// Children are enqueued only when a parent’s value changed (equality cutoff). A join
+/// node that runs before a later parent is therefore pulled to freshness in `get`, not
+/// by marking the whole descendant set up front.
+///
 /// A dirty node is **ready** when none of its parents are still dirty. `dirty_parent_count`
 /// stores that remaining count; `0` (or missing) means the node can be processed.
 /// `scratch_children` is reused so `propagate` does not allocate a new `Vec` per node.
@@ -15,6 +19,27 @@ pub(super) struct Dirty {
     dirty_parent_count: RefCell<HashMap<NodeId, u32>>,
     ready: RefCell<VecDeque<NodeId>>,
     scratch_children: RefCell<Vec<NodeId>>,
+    /// Already refreshed (or confirmed fresh) in this wave. At most one `refresh` per id.
+    done: RefCell<HashSet<NodeId>>,
+    /// Subset of `done` whose value changed.
+    changed: RefCell<HashSet<NodeId>>,
+    /// Nodes whose `refresh` is on the stack (gray). Re-entering one is a cycle.
+    refreshing: RefCell<HashSet<NodeId>>,
+    /// The same nodes in the order they were entered, so a cycle can name its path.
+    refresh_stack: RefCell<Vec<NodeId>>,
+}
+
+/// Clears the gray mark when `refresh` returns, including panic.
+pub(super) struct Refreshing<'a> {
+    dirty: &'a Dirty,
+    id: NodeId,
+}
+
+impl Drop for Refreshing<'_> {
+    fn drop(&mut self) {
+        self.dirty.refreshing.borrow_mut().remove(&self.id);
+        self.dirty.refresh_stack.borrow_mut().pop();
+    }
 }
 
 impl Dirty {
@@ -24,14 +49,66 @@ impl Dirty {
             dirty_parent_count: RefCell::new(HashMap::new()),
             ready: RefCell::new(VecDeque::new()),
             scratch_children: RefCell::new(Vec::new()),
+            done: RefCell::new(HashSet::new()),
+            changed: RefCell::new(HashSet::new()),
+            refreshing: RefCell::new(HashSet::new()),
+            refresh_stack: RefCell::new(Vec::new()),
         }
+    }
+
+    pub(super) fn begin_wave(&self) {
+        self.done.borrow_mut().clear();
+        self.changed.borrow_mut().clear();
     }
 
     pub(super) fn contains(&self, id: NodeId) -> bool {
         self.in_dirty.borrow().contains(&id)
     }
 
+    pub(super) fn is_done(&self, id: NodeId) -> bool {
+        self.done.borrow().contains(&id)
+    }
+
+    pub(super) fn changed_this_wave(&self, id: NodeId) -> bool {
+        self.changed.borrow().contains(&id)
+    }
+
+    pub(super) fn is_refreshing(&self, id: NodeId) -> bool {
+        self.refreshing.borrow().contains(&id)
+    }
+
+    /// Mark `id` gray for the duration of `refresh`.
+    ///
+    /// A node already gray means a cycle, but the read that closes it is caught earlier,
+    /// in `ensure_fresh`, where the path is still on the stack - hence an assertion here
+    /// rather than a second panic with a poorer message.
+    pub(super) fn enter_refresh(&self, id: NodeId) -> Refreshing<'_> {
+        let marked = self.refreshing.borrow_mut().insert(id);
+        debug_assert!(marked, "{id:?} is already refreshing");
+        self.refresh_stack.borrow_mut().push(id);
+        Refreshing { dirty: self, id }
+    }
+
+    /// The refresh path from `id` back to itself, as `NodeId(1) -> NodeId(2) -> NodeId(1)`.
+    pub(super) fn cycle_path(&self, id: NodeId) -> String {
+        let stack = self.refresh_stack.borrow();
+        let start = stack.iter().position(|entry| *entry == id).unwrap_or(0);
+        let mut path: Vec<String> = stack[start..].iter().map(|n| format!("{n:?}")).collect();
+        path.push(format!("{id:?}"));
+        path.join(" -> ")
+    }
+
+    pub(super) fn finish(&self, id: NodeId, changed: bool) {
+        self.done.borrow_mut().insert(id);
+        if changed {
+            self.changed.borrow_mut().insert(id);
+        }
+    }
+
     pub(super) fn enqueue(&self, id: NodeId, edges: &Edges) {
+        if self.done.borrow().contains(&id) || self.refreshing.borrow().contains(&id) {
+            return;
+        }
         if !self.in_dirty.borrow_mut().insert(id) {
             return;
         }
@@ -46,8 +123,10 @@ impl Dirty {
     pub(super) fn take_ready(&self) -> Option<NodeId> {
         let mut ready = self.ready.borrow_mut();
         let in_dirty = self.in_dirty.borrow();
+        let refreshing = self.refreshing.borrow();
+        let done = self.done.borrow();
         while let Some(id) = ready.pop_front() {
-            if in_dirty.contains(&id) {
+            if in_dirty.contains(&id) && !refreshing.contains(&id) && !done.contains(&id) {
                 return Some(id);
             }
         }
@@ -80,11 +159,24 @@ impl Dirty {
         self.release_from_scratch();
     }
 
-    /// After `refresh`: release waiting children; enqueue dependents only on value change.
+    /// After `refresh` of a node that was in the dirty set: release the children waiting
+    /// on it, and enqueue dependents if its value changed.
     ///
     /// Cutoff with no waiters returns before `fill_scratch` so a large fan-out is not copied.
     pub(super) fn after_refresh(&self, id: NodeId, changed: bool, edges: &Edges) {
-        let need_release = !self.dirty_parent_count.borrow().is_empty();
+        self.settle(id, changed, true, edges);
+    }
+
+    /// After `refresh` of a node pulled by a `get`: it was never dirty, so no child ever
+    /// counted it among the parents it is waiting for, and there is nothing to release.
+    /// Releasing anyway would zero a child's count while a parent that really is dirty
+    /// has not run - the child would be handed out early and have to pull that parent.
+    pub(super) fn after_pull(&self, id: NodeId, changed: bool, edges: &Edges) {
+        self.settle(id, changed, false, edges);
+    }
+
+    fn settle(&self, id: NodeId, changed: bool, was_dirty: bool, edges: &Edges) {
+        let need_release = was_dirty && !self.dirty_parent_count.borrow().is_empty();
         if !need_release && !changed {
             return;
         }
@@ -110,16 +202,25 @@ impl Dirty {
 
     fn release_from_scratch(&self) {
         let mut newly_ready = Vec::new();
+        let mut zeroed = Vec::new();
         {
             let children = self.scratch_children.borrow();
             let mut counts = self.dirty_parent_count.borrow_mut();
+            let refreshing = self.refreshing.borrow();
+            let done = self.done.borrow();
             for child in children.iter() {
                 if let Some(count) = counts.get_mut(child) {
                     *count = count.saturating_sub(1);
                     if *count == 0 {
-                        newly_ready.push(*child);
+                        zeroed.push(*child);
+                        if !refreshing.contains(child) && !done.contains(child) {
+                            newly_ready.push(*child);
+                        }
                     }
                 }
+            }
+            for id in zeroed {
+                counts.remove(&id);
             }
         }
         if !newly_ready.is_empty() {
@@ -231,5 +332,106 @@ mod tests {
         dirty.dequeue(NodeId(1));
         dirty.after_refresh(NodeId(1), false, &edges);
         assert!(!dirty.contains(NodeId(2)));
+    }
+
+    #[test]
+    fn cutoff_does_not_copy_or_enqueue_children() {
+        let dirty = Dirty::new();
+        let edges = Edges::new();
+        edges.replace(NodeId(2), vec![slot(1)]);
+        dirty.enqueue(NodeId(1), &edges);
+        dirty.dequeue(NodeId(1));
+        dirty.after_refresh(NodeId(1), false, &edges);
+        assert!(!dirty.contains(NodeId(2)));
+        assert_eq!(dirty.take_ready(), None);
+    }
+
+    #[test]
+    fn child_waits_for_both_dirty_parents() {
+        let dirty = Dirty::new();
+        let edges = Edges::new();
+        edges.replace(NodeId(3), vec![slot(1), slot(2)]);
+        dirty.enqueue(NodeId(1), &edges);
+        dirty.enqueue(NodeId(2), &edges);
+        dirty.enqueue(NodeId(3), &edges);
+        assert_eq!(dirty.wait_count(NodeId(3)), Some(2));
+
+        let Some(first) = dirty.take_ready() else {
+            panic!("one of the two parents must be ready");
+        };
+        assert!(first == NodeId(1) || first == NodeId(2));
+        dirty.dequeue(first);
+        dirty.after_refresh(first, true, &edges);
+
+        let Some(second) = dirty.take_ready() else {
+            panic!("the other parent must be ready");
+        };
+        assert!(second == NodeId(1) || second == NodeId(2));
+        assert_ne!(second, first);
+        dirty.dequeue(second);
+        dirty.after_refresh(second, true, &edges);
+        assert_eq!(dirty.take_ready(), Some(NodeId(3)));
+    }
+
+    /// A node pulled by a read was never dirty, so no child ever counted it as a dirty
+    /// parent. Refreshing it must not release children that are waiting for parents which
+    /// really are dirty.
+    #[test]
+    fn a_pulled_node_does_not_release_waiting_children() {
+        let dirty = Dirty::new();
+        let edges = Edges::new();
+        // `3` reads two parents that are dirty and one that is not.
+        edges.replace(NodeId(3), vec![slot(1), slot(2), slot(4)]);
+        dirty.enqueue(NodeId(1), &edges);
+        dirty.enqueue(NodeId(2), &edges);
+        dirty.enqueue(NodeId(3), &edges);
+        assert_eq!(dirty.wait_count(NodeId(3)), Some(2));
+
+        dirty.after_pull(NodeId(4), true, &edges);
+
+        assert_eq!(dirty.wait_count(NodeId(3)), Some(2));
+        assert_eq!(dirty.take_ready(), Some(NodeId(1)));
+    }
+
+    #[test]
+    fn begin_wave_allows_enqueue_of_previously_done_node() {
+        let dirty = Dirty::new();
+        let edges = Edges::new();
+        dirty.finish(NodeId(1), true);
+        dirty.enqueue(NodeId(1), &edges);
+        assert!(!dirty.contains(NodeId(1)));
+        dirty.begin_wave();
+        dirty.enqueue(NodeId(1), &edges);
+        assert!(dirty.contains(NodeId(1)));
+    }
+
+    #[test]
+    fn enter_refresh_is_gray() {
+        let dirty = Dirty::new();
+        let _guard = dirty.enter_refresh(NodeId(1));
+        assert!(dirty.is_refreshing(NodeId(1)));
+    }
+
+    /// The read that closes a cycle is caught in `ensure_fresh`; this is the backstop.
+    #[test]
+    #[cfg(debug_assertions)]
+    #[should_panic(expected = "already refreshing")]
+    fn reentering_refresh_is_rejected() {
+        let dirty = Dirty::new();
+        let _guard = dirty.enter_refresh(NodeId(1));
+        let _again = dirty.enter_refresh(NodeId(1));
+    }
+
+    #[test]
+    fn cycle_path_names_the_way_back() {
+        let dirty = Dirty::new();
+        let _outer = dirty.enter_refresh(NodeId(7));
+        let _a = dirty.enter_refresh(NodeId(1));
+        let _b = dirty.enter_refresh(NodeId(2));
+
+        assert_eq!(
+            dirty.cycle_path(NodeId(1)),
+            "NodeId(1) -> NodeId(2) -> NodeId(1)"
+        );
     }
 }

@@ -54,18 +54,29 @@ impl Edges {
         }
     }
 
+    pub(super) fn copy_parents(&self, id: NodeId, buf: &mut Vec<NodeId>) {
+        buf.clear();
+        if let Some(set) = self.child_parents.borrow().get(&id) {
+            buf.extend(set.iter().copied());
+        }
+    }
+
     /// Replace `child`'s parent set. `None` means the parent ids were already the same.
     pub(super) fn replace(&self, child: NodeId, pairs: ParentList) -> Option<ParentDiff> {
+        // Collect the ids before comparing. Set-against-set is linear, while comparing the
+        // stored set against the raw `pairs` list is quadratic - and `pairs` carries one
+        // entry per `get` call, duplicates included, so it can be much longer than the set.
+        let new_parents: HashSet<NodeId> = pairs.iter().map(|(id, _)| *id).collect();
+
         {
             let child_parents = self.child_parents.borrow();
             if let Some(old) = child_parents.get(&child)
-                && Self::same_parent_ids(old, &pairs)
+                && *old == new_parents
             {
                 return None;
             }
         }
 
-        let new_parents: HashSet<NodeId> = pairs.iter().map(|(id, _)| *id).collect();
         let kept: Vec<Rc<dyn ErasedNode>> = pairs.into_iter().map(|(_, slot)| slot).collect();
 
         let old = self
@@ -139,13 +150,6 @@ impl Edges {
         }
         became_unwatched
     }
-
-    fn same_parent_ids(old: &HashSet<NodeId>, pairs: &ParentList) -> bool {
-        pairs.iter().all(|(id, _)| old.contains(id))
-            && old
-                .iter()
-                .all(|id| pairs.iter().any(|(parent, _)| parent == id))
-    }
 }
 
 #[cfg(test)]
@@ -186,6 +190,35 @@ mod tests {
             .replace(NodeId(2), vec![])
             .map(|diff| diff.became_unwatched);
         assert_eq!(became_unwatched, Some(vec![NodeId(1)]));
+    }
+
+    /// Parent sets are compared as sets: order must not matter.
+    #[test]
+    fn replace_with_reordered_parents_is_noop() {
+        let edges = Edges::new();
+        edges.replace(NodeId(3), vec![slot(1), slot(2)]);
+        assert!(edges.replace(NodeId(3), vec![slot(2), slot(1)]).is_none());
+    }
+
+    /// `ParentList` holds one entry per `get` call, so the same parent can repeat.
+    #[test]
+    fn replace_with_duplicate_parents_is_noop() {
+        let edges = Edges::new();
+        edges.replace(NodeId(3), vec![slot(1)]);
+        assert!(
+            edges
+                .replace(NodeId(3), vec![slot(1), slot(1), slot(1)])
+                .is_none()
+        );
+    }
+
+    #[test]
+    fn replace_with_different_parents_is_applied() {
+        let edges = Edges::new();
+        edges.replace(NodeId(3), vec![slot(1)]);
+        assert!(edges.replace(NodeId(3), vec![slot(2)]).is_some());
+        assert!(!edges.is_watched(NodeId(1)));
+        assert!(edges.is_watched(NodeId(2)));
     }
 
     #[test]
