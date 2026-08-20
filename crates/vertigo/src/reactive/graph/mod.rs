@@ -6,12 +6,14 @@ mod dirty;
 mod edges;
 mod hooks;
 mod nodes;
+mod transaction;
 mod watch;
 
 use dirty::Dirty;
 use edges::Edges;
 use hooks::Hooks;
 use nodes::Nodes;
+use transaction::Transaction;
 use watch::Watch;
 
 #[derive(Clone, Copy, PartialEq, Eq, Hash, PartialOrd, Ord, Debug)]
@@ -45,8 +47,7 @@ pub struct Graph {
 /// Persistent state lives in `Nodes`, `Edges`, `Dirty`, `Watch`, `Hooks`.
 pub(crate) struct GraphInner {
     next_id: Cell<u64>,
-    tx: Cell<u32>,
-    propagating: Cell<bool>,
+    tx: Transaction,
     nodes: Nodes,
     edges: Edges,
     dirty: Dirty,
@@ -73,8 +74,7 @@ impl Graph {
         Graph {
             inner: Rc::new(GraphInner {
                 next_id: Cell::new(1),
-                tx: Cell::new(0),
-                propagating: Cell::new(false),
+                tx: Transaction::new(),
                 nodes: Nodes::new(),
                 edges: Edges::new(),
                 dirty: Dirty::new(),
@@ -96,14 +96,12 @@ impl Graph {
     }
 
     pub fn transaction<R>(&self, f: impl FnOnce(&Context) -> R) -> R {
-        self.inner.tx.set(self.inner.tx.get() + 1);
+        self.inner.tx.enter();
         let ctx = Context::read();
         let result = f(&ctx);
-        self.inner.tx.set(self.inner.tx.get() - 1);
-        if self.inner.tx.get() == 0 {
-            let nested_in_propagate = self.inner.propagating.get();
+        if let Some(leave) = self.inner.tx.leave() {
             self.inner.propagate();
-            if !nested_in_propagate {
+            if !leave.already_propagating {
                 self.inner.hooks.fire();
             }
         }
@@ -159,15 +157,14 @@ impl GraphInner {
     /// Process dirty nodes in topological order. Dependents are enqueued only when
     /// the node's value changed.
     pub(crate) fn propagate(&self) {
-        if self.tx.get() != 0 || self.propagating.get() {
+        if !self.tx.can_propagate() {
             return;
         }
-        self.propagating.set(true);
+        let _guard = self.tx.start_propagate();
 
         loop {
             let Some(id) = self.dirty.take_ready() else {
                 if let Some(leftover) = self.dirty.cycle_leftover() {
-                    self.propagating.set(false);
                     panic!("vertigo: cycle in dirty graph ({leftover:?})");
                 }
                 break;
@@ -183,7 +180,43 @@ impl GraphInner {
             let changed = node.refresh();
             self.dirty.after_refresh(id, changed, &self.edges);
         }
+    }
+}
 
-        self.propagating.set(false);
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    struct N;
+    impl ErasedNode for N {
+        fn refresh(&self) -> bool {
+            false
+        }
+    }
+
+    fn slot(id: u64) -> (NodeId, Rc<dyn ErasedNode>) {
+        (NodeId(id), Rc::new(N))
+    }
+
+    #[test]
+    fn unregister_releases_waiting_child() {
+        let g = Graph::new();
+        let inner = &*g.inner;
+        inner.edges.replace(NodeId(2), vec![slot(1)]);
+        inner.dirty.enqueue(NodeId(1), &inner.edges);
+        inner.dirty.enqueue(NodeId(2), &inner.edges);
+        inner.unregister(NodeId(1));
+        assert_eq!(inner.dirty.take_ready(), Some(NodeId(2)));
+    }
+
+    #[test]
+    fn dead_dirty_parent_releases_waiting_child() {
+        let g = Graph::new();
+        let inner = &*g.inner;
+        inner.edges.replace(NodeId(2), vec![slot(1)]);
+        inner.dirty.enqueue(NodeId(1), &inner.edges);
+        inner.dirty.enqueue(NodeId(2), &inner.edges);
+        inner.propagate();
+        assert!(!inner.dirty.contains(NodeId(2)));
     }
 }

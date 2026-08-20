@@ -141,18 +141,65 @@ impl Edges {
     }
 
     fn same_parent_ids(old: &HashSet<NodeId>, pairs: &ParentList) -> bool {
-        if old.is_empty() {
-            return pairs.is_empty();
+        pairs.iter().all(|(id, _)| old.contains(id))
+            && old
+                .iter()
+                .all(|id| pairs.iter().any(|(parent, _)| parent == id))
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    struct N;
+    impl ErasedNode for N {
+        fn refresh(&self) -> bool {
+            false
         }
-        for (id, _) in pairs {
-            if !old.contains(id) {
-                return false;
-            }
-        }
-        if pairs.len() < old.len() {
-            return false;
-        }
-        old.iter()
-            .all(|id| pairs.iter().any(|(parent, _)| parent == id))
+    }
+
+    fn slot(id: u64) -> (NodeId, Rc<dyn ErasedNode>) {
+        (NodeId(id), Rc::new(N))
+    }
+
+    #[test]
+    fn is_watched_after_replace() {
+        let edges = Edges::new();
+        edges.replace(NodeId(2), vec![slot(1)]);
+        assert!(edges.is_watched(NodeId(1)));
+    }
+
+    #[test]
+    fn empty_children_is_not_watched() {
+        let edges = Edges::new();
+        edges.replace(NodeId(2), vec![slot(1)]);
+        edges.replace(NodeId(2), vec![]);
+        assert!(!edges.is_watched(NodeId(1)));
+    }
+
+    #[test]
+    fn replace_reports_unwatched() {
+        let edges = Edges::new();
+        edges.replace(NodeId(2), vec![slot(1)]);
+        let became_unwatched = edges
+            .replace(NodeId(2), vec![])
+            .map(|diff| diff.became_unwatched);
+        assert_eq!(became_unwatched, Some(vec![NodeId(1)]));
+    }
+
+    #[test]
+    fn unregister_clears_parent_from_child() {
+        let edges = Edges::new();
+        edges.replace(NodeId(2), vec![slot(1)]);
+        edges.unregister(NodeId(1));
+        assert_eq!(edges.count_parents_if(NodeId(2), |_| true), 0);
+    }
+
+    #[test]
+    fn unregister_reports_unwatched() {
+        let edges = Edges::new();
+        edges.replace(NodeId(2), vec![slot(1)]);
+        assert_eq!(edges.unregister(NodeId(2)), vec![NodeId(1)]);
     }
 }

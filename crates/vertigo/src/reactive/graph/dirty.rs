@@ -70,6 +70,8 @@ impl Dirty {
     }
 
     /// Parent left the dirty set: dependents waiting on it may become ready.
+    ///
+    /// Empty `dirty_parent_count` means nobody is waiting, so skip copying children.
     pub(super) fn release_parent(&self, parent: NodeId, edges: &Edges) {
         if self.dirty_parent_count.borrow().is_empty() {
             return;
@@ -79,6 +81,8 @@ impl Dirty {
     }
 
     /// After `refresh`: release waiting children; enqueue dependents only on value change.
+    ///
+    /// Cutoff with no waiters returns before `fill_scratch` so a large fan-out is not copied.
     pub(super) fn after_refresh(&self, id: NodeId, changed: bool, edges: &Edges) {
         let need_release = !self.dirty_parent_count.borrow().is_empty();
         if !need_release && !changed {
@@ -128,5 +132,104 @@ impl Dirty {
         for child in children.iter() {
             self.enqueue(*child, edges);
         }
+    }
+
+    #[cfg(test)]
+    fn wait_count(&self, id: NodeId) -> Option<u32> {
+        self.dirty_parent_count.borrow().get(&id).copied()
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::super::{ErasedNode, NodeId, edges::Edges};
+    use super::*;
+    use std::rc::Rc;
+
+    struct N;
+    impl ErasedNode for N {
+        fn refresh(&self) -> bool {
+            false
+        }
+    }
+
+    fn slot(id: u64) -> (NodeId, Rc<dyn ErasedNode>) {
+        (NodeId(id), Rc::new(N))
+    }
+
+    #[test]
+    fn ready_is_fifo() {
+        let dirty = Dirty::new();
+        let edges = Edges::new();
+        dirty.enqueue(NodeId(1), &edges);
+        dirty.enqueue(NodeId(2), &edges);
+        assert_eq!(dirty.take_ready(), Some(NodeId(1)));
+        assert_eq!(dirty.take_ready(), Some(NodeId(2)));
+    }
+
+    #[test]
+    fn leftover_when_waiting_child_never_released() {
+        let dirty = Dirty::new();
+        let edges = Edges::new();
+        edges.replace(NodeId(2), vec![slot(1)]);
+        dirty.enqueue(NodeId(1), &edges);
+        dirty.enqueue(NodeId(2), &edges);
+        dirty.dequeue(NodeId(1));
+        assert_eq!(dirty.take_ready(), None);
+        assert!(dirty.cycle_leftover().is_some());
+    }
+
+    #[test]
+    fn enqueue_dedups_ready() {
+        let dirty = Dirty::new();
+        let edges = Edges::new();
+        dirty.enqueue(NodeId(1), &edges);
+        dirty.enqueue(NodeId(1), &edges);
+        assert_eq!(dirty.take_ready(), Some(NodeId(1)));
+        assert_eq!(dirty.take_ready(), None);
+    }
+
+    #[test]
+    fn child_not_ready_while_parent_dirty() {
+        let dirty = Dirty::new();
+        let edges = Edges::new();
+        edges.replace(NodeId(2), vec![slot(1)]);
+        dirty.enqueue(NodeId(1), &edges);
+        dirty.enqueue(NodeId(2), &edges);
+        assert_eq!(dirty.take_ready(), Some(NodeId(1)));
+        assert_eq!(dirty.take_ready(), None);
+    }
+
+    #[test]
+    fn take_ready_skips_dequeued() {
+        let dirty = Dirty::new();
+        let edges = Edges::new();
+        dirty.enqueue(NodeId(1), &edges);
+        dirty.dequeue(NodeId(1));
+        assert_eq!(dirty.take_ready(), None);
+    }
+
+    #[test]
+    fn dequeue_clears_wait_count() {
+        let dirty = Dirty::new();
+        let edges = Edges::new();
+        edges.replace(NodeId(2), vec![slot(1)]);
+        dirty.enqueue(NodeId(1), &edges);
+        dirty.enqueue(NodeId(2), &edges);
+        dirty.dequeue(NodeId(2));
+        assert_eq!(dirty.wait_count(NodeId(2)), None);
+    }
+
+    #[test]
+    fn cutoff_does_not_enqueue_waiting_sibling() {
+        let dirty = Dirty::new();
+        let edges = Edges::new();
+        edges.replace(NodeId(2), vec![slot(1)]);
+        edges.replace(NodeId(3), vec![slot(1)]);
+        dirty.enqueue(NodeId(1), &edges);
+        dirty.enqueue(NodeId(3), &edges);
+        dirty.dequeue(NodeId(1));
+        dirty.after_refresh(NodeId(1), false, &edges);
+        assert!(!dirty.contains(NodeId(2)));
     }
 }

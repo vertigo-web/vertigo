@@ -220,3 +220,45 @@ where
         self.map(move |left| left + rhs.clone())
     }
 }
+
+#[cfg(test)]
+mod tests {
+    use super::{super::Graph, *};
+    use std::cell::Cell;
+
+    #[test]
+    fn subscribe_does_not_notify_dependents() {
+        let g = Graph::new();
+        let a = g.value(0);
+        let id = g.inner.alloc_id();
+        let sink = Rc::new(SubscribeInner {
+            graph: g.inner.clone(),
+            id,
+            refresh: Box::new({
+                let a = a.clone();
+                move |ctx| {
+                    let _ = a.get(ctx);
+                }
+            }),
+        });
+        g.inner.register(id, sink.clone());
+        sink.refresh();
+
+        let runs = Rc::new(Cell::new(0));
+        let child = g.computed({
+            let sink = sink.clone();
+            let runs = runs.clone();
+            move |ctx| {
+                runs.set(runs.get() + 1);
+                ctx.track(id, sink.clone());
+                0
+            }
+        });
+        g.transaction(|ctx| {
+            let _ = child.get(ctx);
+        });
+        runs.set(0);
+        a.set(1);
+        assert_eq!(runs.get(), 0);
+    }
+}
