@@ -85,11 +85,53 @@ impl From<&String> for AttrValue {
     }
 }
 
+impl From<&&String> for AttrValue {
+    fn from(value: &&String) -> Self {
+        AttrValue::from(*value)
+    }
+}
+
+impl From<Rc<String>> for AttrValue {
+    fn from(value: Rc<String>) -> Self {
+        AttrValue::String(value)
+    }
+}
+
+impl From<&Rc<String>> for AttrValue {
+    fn from(value: &Rc<String>) -> Self {
+        AttrValue::String(value.clone())
+    }
+}
+
+impl From<Rc<str>> for AttrValue {
+    fn from(value: Rc<str>) -> Self {
+        AttrValue::String(Rc::new(value.to_string()))
+    }
+}
+
+impl From<&Rc<str>> for AttrValue {
+    fn from(value: &Rc<str>) -> Self {
+        AttrValue::String(Rc::new(value.to_string()))
+    }
+}
+
+impl From<std::borrow::Cow<'_, str>> for AttrValue {
+    fn from(value: std::borrow::Cow<'_, str>) -> Self {
+        AttrValue::String(Rc::new(value.into_owned()))
+    }
+}
+
 macro_rules! impl_from_display_for_attrvalue {
     ($($typename:ty),* $(,)?) => {
         $(
             impl From<$typename> for AttrValue {
                 fn from(value: $typename) -> Self {
+                    AttrValue::String(Rc::new(value.to_string()))
+                }
+            }
+
+            impl From<&$typename> for AttrValue {
+                fn from(value: &$typename) -> Self {
                     AttrValue::String(Rc::new(value.to_string()))
                 }
             }

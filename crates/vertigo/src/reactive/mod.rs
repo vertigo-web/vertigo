@@ -1,13 +1,18 @@
 //! Transactional reactive graph with equality cutoff.
 //!
 //! After a transaction, dirty nodes are processed in topological order (a node is
-//! ready when none of its parents are dirty). After a node becomes clean, dependents
-//! are enqueued **only if** the node's value changed ([`PartialEq`]).
+//! ready when none of its parents are dirty). `get` during the wave pulls a stale
+//! parent before returning its cache. After a node becomes clean, dependents are
+//! enqueued **only if** the node's value changed ([`PartialEq`]).
+//!
+//! Domain invariants for this bounded context: [`invariants`].
 
 mod computed;
 mod context;
 mod drop_resource;
 mod graph;
+#[doc = include_str!("invariants.md")]
+pub mod invariants {}
 mod to_computed;
 mod value;
 
@@ -63,5 +68,7 @@ pub fn on_after_transaction(callback: impl Fn() + 'static) -> DropResource {
     default_graph().on_after_transaction(callback)
 }
 
+#[cfg(test)]
+mod propagation_order;
 #[cfg(test)]
 mod tests;

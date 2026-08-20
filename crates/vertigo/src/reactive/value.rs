@@ -89,6 +89,9 @@ impl<T: Clone + PartialEq + 'static> Value<T> {
 
     /// Create a value that is connected to a generator. `value` is the starting
     /// value; `create` is responsible for keeping it up to date.
+    ///
+    /// `create` runs after the wave in which this value starts being observed, so it
+    /// may call [`Value::set`](Self::set). A `set` from compute or subscribe is ignored.
     pub fn with_connect<F>(value: T, create: F) -> Computed<T>
     where
         F: Fn(&Value<T>) -> DropResource + 'static,
@@ -102,10 +105,17 @@ impl<T: Clone + PartialEq + 'static> Value<T> {
 
     pub fn get(&self, ctx: &Context) -> T {
         ctx.track(self.inner.id, self.inner.clone());
+        self.inner.graph.ensure_fresh(self.inner.id);
         self.inner.value.borrow().clone()
     }
 
     pub fn set(&self, value: T) {
+        // Before the equality check below, deliberately: writing from a place that must
+        // not write is reported even when the new value happens to equal the old one.
+        // Otherwise the same broken code would report itself or not depending on the data.
+        if !self.inner.graph.check_write_allowed() {
+            return;
+        }
         let graph = Graph {
             inner: self.inner.graph.clone(),
         };

@@ -178,7 +178,14 @@ impl EmbedDom for &mut String {
     }
 }
 
-impl EmbedDom for &str {
+/// Anything printable, borrowed - `&str`, `&String`, `&u32`, `&MyDisplayType`.
+///
+/// This is deliberately a blanket impl over references only. The by-value side is an
+/// explicit list (the `impl_embed_to_string!` block below) so that a downstream type implementing
+/// [`Display`](std::fmt::Display) can still provide its own `EmbedDom` and render real
+/// DOM instead of a text node - a blanket `impl<T: ToString> EmbedDom for T` would
+/// collide with it.
+impl<T: ToString + ?Sized> EmbedDom for &T {
     fn embed(self) -> DomNode {
         DomNode::Text {
             node: DomText::new(self.to_string()),
@@ -190,14 +197,6 @@ impl<T: ToString> EmbedDom for std::rc::Rc<T> {
     fn embed(self) -> DomNode {
         DomNode::Text {
             node: DomText::new((*self).to_string()),
-        }
-    }
-}
-
-impl EmbedDom for &String {
-    fn embed(self) -> DomNode {
-        DomNode::Text {
-            node: DomText::new((*self).clone()),
         }
     }
 }
@@ -217,7 +216,36 @@ macro_rules! impl_embed_to_string {
 }
 
 impl_embed_to_string!(
-    String, bool, char, u8, u16, u32, u64, u128, usize, i8, i16, i32, i64, i128, isize, f32, f64
+    String,
+    std::borrow::Cow<'_, str>,
+    bool,
+    char,
+    u8,
+    u16,
+    u32,
+    u64,
+    u128,
+    usize,
+    i8,
+    i16,
+    i32,
+    i64,
+    i128,
+    isize,
+    f32,
+    f64,
+    std::num::NonZeroU8,
+    std::num::NonZeroU16,
+    std::num::NonZeroU32,
+    std::num::NonZeroU64,
+    std::num::NonZeroU128,
+    std::num::NonZeroUsize,
+    std::num::NonZeroI8,
+    std::num::NonZeroI16,
+    std::num::NonZeroI32,
+    std::num::NonZeroI64,
+    std::num::NonZeroI128,
+    std::num::NonZeroIsize,
 );
 
 impl<T: ToString + Clone + PartialEq + 'static> EmbedDom for &Computed<T> {

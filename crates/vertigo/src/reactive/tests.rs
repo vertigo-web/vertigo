@@ -1,10 +1,14 @@
-use std::{cell::Cell, rc::Rc};
+use std::{
+    cell::{Cell, RefCell},
+    rc::Rc,
+};
 
 use super::{Computed, DropResource, Graph, Value};
 
 #[test]
 fn basic_sum() {
     let g = Graph::new();
+    let logs = g.logger().listen();
     let a = g.value(1);
     let b = g.value(2);
     let sum = g.computed({
@@ -21,11 +25,13 @@ fn basic_sum() {
     g.transaction(|ctx| {
         assert_eq!(sum.get(ctx), 6);
     });
+    logs.assert_eq(&[]);
 }
 
 #[test]
 fn two_sets_in_one_transaction_compute_once() {
     let g = Graph::new();
+    let logs = g.logger().listen();
     let a = g.value(0);
     let b = g.value(0);
     let runs = Rc::new(Cell::new(0));
@@ -53,11 +59,13 @@ fn two_sets_in_one_transaction_compute_once() {
         assert_eq!(sum.get(ctx), 30);
     });
     assert_eq!(runs.get(), 1);
+    logs.assert_eq(&[]);
 }
 
 #[test]
 fn cutoff_leaves_fanout_untouched() {
     let g = Graph::new();
+    let logs = g.logger().listen();
     let a = g.value(1);
     let even = g.computed({
         let a = a.clone();
@@ -105,11 +113,13 @@ fn cutoff_leaves_fanout_untouched() {
         10_000,
         "odd→even: fan-out must run once each"
     );
+    logs.assert_eq(&[]);
 }
 
 #[test]
 fn diamond_waits_for_both_parents() {
     let g = Graph::new();
+    let logs = g.logger().listen();
     let a = g.value(1);
     let left = g.computed({
         let a = a.clone();
@@ -142,11 +152,13 @@ fn diamond_waits_for_both_parents() {
         assert_eq!(d.get(ctx), 23);
     });
     assert_eq!(d_runs.get(), 1);
+    logs.assert_eq(&[]);
 }
 
 #[test]
 fn subscribe_skips_when_parent_cuts_off() {
     let g = Graph::new();
+    let logs = g.logger().listen();
     let a = g.value(1);
     let even = g.computed({
         let a = a.clone();
@@ -173,11 +185,13 @@ fn subscribe_skips_when_parent_cuts_off() {
     a.set(4);
     assert_eq!(fires.get(), 2);
     assert!(last.get());
+    logs.assert_eq(&[]);
 }
 
 #[test]
 fn equal_set_does_not_enqueue() {
     let g = Graph::new();
+    let logs = g.logger().listen();
     let a = g.value(5);
     let runs = Rc::new(Cell::new(0));
     let c = g.computed({
@@ -196,10 +210,12 @@ fn equal_set_does_not_enqueue() {
 
     a.set(5);
     assert_eq!(runs.get(), 0);
+    logs.assert_eq(&[]);
 }
 
 #[test]
 fn default_graph_value_new() {
+    let logs = super::default_graph().logger().listen();
     let a = Value::new(1);
     let double = Computed::from({
         let a = a.clone();
@@ -214,10 +230,12 @@ fn default_graph_value_new() {
     super::transaction(|ctx| {
         assert_eq!(double.get(ctx), 10);
     });
+    logs.assert_eq(&[]);
 }
 
 #[test]
 fn when_connect_tracks_watchers() {
+    let logs = super::default_graph().logger().listen();
     let connect_count = Rc::new(Cell::new(0));
     let disconnect_count = Rc::new(Cell::new(0));
 
@@ -248,10 +266,12 @@ fn when_connect_tracks_watchers() {
 
     assert_eq!(connect_count.get(), 1);
     assert_eq!(disconnect_count.get(), 1);
+    logs.assert_eq(&[]);
 }
 
 #[test]
 fn when_connect_multiple_subscribers_share_one_connection() {
+    let logs = super::default_graph().logger().listen();
     let connect_count = Rc::new(Cell::new(0));
     let disconnect_count = Rc::new(Cell::new(0));
 
@@ -281,10 +301,12 @@ fn when_connect_multiple_subscribers_share_one_connection() {
 
     drop(drop2);
     assert_eq!(disconnect_count.get(), 1);
+    logs.assert_eq(&[]);
 }
 
 #[test]
 fn when_connect_disconnects_while_computed_lives() {
+    let logs = super::default_graph().logger().listen();
     let connect = Rc::new(Cell::new(0));
     let disconnect = Rc::new(Cell::new(0));
     let value = Value::new(1);
@@ -305,10 +327,112 @@ fn when_connect_disconnects_while_computed_lives() {
     drop(sub);
     assert_eq!(disconnect.get(), 1);
     drop(keep);
+    logs.assert_eq(&[]);
+}
+
+#[test]
+fn when_connect_runs_after_subscribe_callback() {
+    let g = Graph::new();
+    let logs = g.logger().listen();
+    let order = Rc::new(RefCell::new(Vec::new()));
+    let value = g.value(1);
+    let comp = value.to_computed().when_connect({
+        let order = order.clone();
+        move || {
+            order.borrow_mut().push("connect");
+            DropResource::new(|| {})
+        }
+    });
+    let _sub = comp.subscribe({
+        let order = order.clone();
+        move |_| order.borrow_mut().push("subscribe")
+    });
+    assert_eq!(*order.borrow(), ["subscribe", "connect"]);
+    logs.assert_eq(&[]);
+}
+
+/// A `when_connect` closure may write, and that write runs a whole wave before the
+/// closure returns. If the wave takes the last child away from the node that is
+/// connecting, the resource it returns must be dropped - the node is no longer watched,
+/// so nothing is left to keep the external work alive.
+#[test]
+fn connect_that_unwatches_itself_disconnects() {
+    let g = Graph::new();
+    let logs = g.logger().listen();
+    let connects = Rc::new(Cell::new(0));
+    let disconnects = Rc::new(Cell::new(0));
+
+    let flag = g.value(true);
+    let source = g.value(1);
+
+    let connected = source.to_computed().when_connect({
+        let connects = connects.clone();
+        let disconnects = disconnects.clone();
+        let flag = flag.clone();
+        move || {
+            connects.set(connects.get() + 1);
+            // Legal from `when_connect`, and it costs `connected` its only child.
+            flag.set(false);
+            DropResource::new({
+                let disconnects = disconnects.clone();
+                move || disconnects.set(disconnects.get() + 1)
+            })
+        }
+    });
+
+    let reader = g.computed({
+        let flag = flag.clone();
+        let connected = connected.clone();
+        move |ctx| {
+            if flag.get(ctx) { connected.get(ctx) } else { 0 }
+        }
+    });
+    let _sub = reader.subscribe(|_| {});
+
+    assert_eq!(connects.get(), 1);
+    assert_eq!(
+        disconnects.get(),
+        1,
+        "unwatched, so it must not stay connected"
+    );
+
+    // And it stays disconnected: no later wave revives it.
+    source.set(2);
+    assert_eq!(connects.get(), 1);
+    assert_eq!(disconnects.get(), 1);
+    logs.assert_eq(&[]);
+}
+
+#[test]
+fn watch_and_unwatch_in_one_transaction_does_not_connect() {
+    let g = Graph::new();
+    let logs = g.logger().listen();
+    let connects = Rc::new(Cell::new(0));
+    let disconnects = Rc::new(Cell::new(0));
+    let value = g.value(1);
+    let comp = value.to_computed().when_connect({
+        let connects = connects.clone();
+        let disconnects = disconnects.clone();
+        move || {
+            connects.set(connects.get() + 1);
+            DropResource::new({
+                let disconnects = disconnects.clone();
+                move || disconnects.set(disconnects.get() + 1)
+            })
+        }
+    });
+    g.transaction(|_| {
+        let sub = comp.subscribe(|_| {});
+        drop(sub);
+    });
+    assert_eq!(connects.get(), 0);
+    assert_eq!(disconnects.get(), 0);
+    logs.assert_eq(&[]);
 }
 
 #[test]
 fn nested_computed_subscription() {
+    let logs = super::default_graph().logger().listen();
     let token_value = Value::new("token1".to_string());
     let token_computed = token_value.to_computed();
 
@@ -335,10 +459,12 @@ fn nested_computed_subscription() {
 
     token_value.set("token2".to_string());
     assert_eq!(counter.get(), 2);
+    logs.assert_eq(&[]);
 }
 
 #[test]
 fn nested_computed_subscription_no_flattening() {
+    let logs = super::default_graph().logger().listen();
     let token_value = Value::new("token1".to_string());
     let token_computed = token_value.to_computed();
 
@@ -360,10 +486,12 @@ fn nested_computed_subscription_no_flattening() {
 
     token_value.set("token2".to_string());
     assert_eq!(counter.get(), 1);
+    logs.assert_eq(&[]);
 }
 
 #[test]
 fn on_after_transaction_fires_after_set() {
+    let logs = super::default_graph().logger().listen();
     let fires = Rc::new(Cell::new(0));
     let _hook = super::on_after_transaction({
         let fires = fires.clone();
@@ -375,23 +503,223 @@ fn on_after_transaction_fires_after_set() {
     let a = Value::new(1);
     a.set(2);
     assert_eq!(fires.get(), 1);
+    logs.assert_eq(&[]);
 }
 
 #[test]
-fn hook_once_when_set_during_propagate() {
+fn set_from_subscribe_is_ignored() {
     let g = Graph::new();
-    let fires = Rc::new(Cell::new(0));
-    let _hook = g.on_after_transaction({
-        let fires = fires.clone();
-        move || fires.set(fires.get() + 1)
-    });
+    let logs = g.logger().listen();
     let a = g.value(0);
     let b = g.value(0);
     let _sub = a.to_computed().subscribe({
         let b = b.clone();
         move |_| b.set(1)
     });
-    fires.set(0);
-    a.set(1);
-    assert_eq!(fires.get(), 1);
+    logs.assert_eq(&[super::graph::BLOCKED_WRITE]);
+
+    g.transaction(|ctx| {
+        assert_eq!(b.get(ctx), 0);
+    });
+    logs.assert_eq(&[]);
+
+    a.set(2);
+    logs.assert_eq(&[super::graph::BLOCKED_WRITE]);
+
+    g.transaction(|ctx| {
+        assert_eq!(b.get(ctx), 0);
+    });
+    logs.assert_eq(&[]);
+}
+
+#[test]
+fn set_from_compute_is_ignored() {
+    let g = Graph::new();
+    let logs = g.logger().listen();
+    let a = g.value(0);
+    let b = g.value(0);
+    let c = g.computed({
+        let a = a.clone();
+        let b = b.clone();
+        move |ctx| {
+            b.set(a.get(ctx));
+            a.get(ctx)
+        }
+    });
+    logs.assert_eq(&[]);
+
+    g.transaction(|ctx| {
+        assert_eq!(c.get(ctx), 0);
+        assert_eq!(b.get(ctx), 0);
+    });
+    logs.assert_eq(&[super::graph::BLOCKED_WRITE]);
+    logs.assert_eq(&[]);
+}
+
+/// `when_connect` runs after the wave, so a write from there is a new transaction
+/// and must reach the subscriber too, not just land in the value.
+#[test]
+fn write_from_when_connect_reaches_the_subscriber() {
+    let g = Graph::new();
+    let logs = g.logger().listen();
+
+    let source = g.value(0);
+    let observed = g
+        .computed({
+            let source = source.clone();
+            move |ctx| source.get(ctx)
+        })
+        .when_connect({
+            let source = source.clone();
+            move || {
+                source.set(7);
+                DropResource::new(|| {})
+            }
+        });
+
+    let seen = Rc::new(RefCell::new(Vec::new()));
+    let _sub = observed.subscribe({
+        let seen = seen.clone();
+        move |value| seen.borrow_mut().push(value)
+    });
+
+    assert_eq!(*seen.borrow(), vec![0, 7]);
+    logs.assert_eq(&[]);
+}
+
+/// `when_connect` and its disconnect are both allowed to write, so two of them can undo
+/// each other: connect takes the node's last child away, and dropping the resource gives
+/// it back. That is a loop with no wave to end it, so the flush cuts it off and says so.
+#[test]
+fn connect_and_disconnect_that_undo_each_other_are_cut_off() {
+    let g = Graph::new();
+    let logs = g.logger().listen();
+    let connects = Rc::new(Cell::new(0));
+    let flag = g.value(true);
+    let source = g.value(1);
+
+    let connected = source.to_computed().when_connect({
+        let connects = connects.clone();
+        let flag = flag.clone();
+        move || {
+            connects.set(connects.get() + 1);
+            flag.set(false);
+            DropResource::new({
+                let flag = flag.clone();
+                move || flag.set(true)
+            })
+        }
+    });
+
+    let reader = g.computed({
+        let flag = flag.clone();
+        let connected = connected.clone();
+        move |ctx| {
+            if flag.get(ctx) { connected.get(ctx) } else { 0 }
+        }
+    });
+    let _sub = reader.subscribe(|_| {});
+
+    assert_eq!(connects.get(), super::graph::MAX_CONNECTS_PER_FLUSH);
+    let messages = logs.take();
+    assert_eq!(messages.len(), 1, "{messages:?}");
+    assert!(
+        messages[0].starts_with(super::graph::CONNECT_LOOP),
+        "{messages:?}"
+    );
+}
+
+/// Dropping something from inside a subscribe callback - a component going away while the
+/// view is rebuilt - runs that `Drop` inside the callback, so its writes are refused like
+/// any other write from there.
+#[test]
+fn a_write_from_a_drop_inside_a_callback_is_ignored() {
+    let g = Graph::new();
+    let logs = g.logger().listen();
+    let cleared = g.value(false);
+    let source = g.value(0);
+
+    let resource = Rc::new(RefCell::new(Some(DropResource::new({
+        let cleared = cleared.clone();
+        move || cleared.set(true)
+    }))));
+
+    let _sub = source.to_computed().subscribe({
+        let resource = resource.clone();
+        move |value| {
+            if value == 1 {
+                resource.borrow_mut().take();
+            }
+        }
+    });
+    logs.assert_eq(&[]);
+
+    source.set(1);
+
+    logs.assert_eq(&[super::graph::BLOCKED_WRITE]);
+    assert!(!g.transaction(|ctx| cleared.get(ctx)));
+}
+
+/// A compute closure that reads its own value closes a cycle. It is caught by the read,
+/// while the path is still on the refresh stack, so the panic can name it.
+#[test]
+#[should_panic(expected = "NodeId(2) -> NodeId(2)")]
+fn a_computed_reading_itself_panics() {
+    let g = Graph::new();
+    let source = g.value(1i32);
+    let holder: Rc<RefCell<Option<Computed<i32>>>> = Rc::new(RefCell::new(None));
+
+    let c = g.computed({
+        let source = source.clone();
+        let holder = holder.clone();
+        move |ctx| {
+            let base = source.get(ctx);
+            // The first run must not close the cycle - a `Computed` that reads itself
+            // before it ever had a value just recurses in `ensure`.
+            if base < 5 {
+                return base;
+            }
+            match holder.borrow().clone() {
+                Some(myself) => base + myself.get(ctx),
+                None => base,
+            }
+        }
+    });
+    *holder.borrow_mut() = Some(c.clone());
+    let _sub = c.subscribe(|_| {});
+
+    source.set(5);
+}
+
+/// Two computeds that start reading each other mid-wave. The path names both.
+#[test]
+#[should_panic(expected = "cycle in the reactive graph")]
+fn two_computeds_reading_each_other_panic() {
+    let g = Graph::new();
+    let flag = g.value(false);
+    let hold_a: Rc<RefCell<Option<Computed<i32>>>> = Rc::new(RefCell::new(None));
+    let hold_b: Rc<RefCell<Option<Computed<i32>>>> = Rc::new(RefCell::new(None));
+
+    let a = g.computed({
+        let flag = flag.clone();
+        let hold_b = hold_b.clone();
+        move |ctx| match (flag.get(ctx), hold_b.borrow().clone()) {
+            (true, Some(other)) => other.get(ctx) + 1,
+            _ => 1,
+        }
+    });
+    let b = g.computed({
+        let flag = flag.clone();
+        let hold_a = hold_a.clone();
+        move |ctx| match (flag.get(ctx), hold_a.borrow().clone()) {
+            (true, Some(other)) => other.get(ctx) + 1,
+            _ => 2,
+        }
+    });
+    *hold_a.borrow_mut() = Some(a.clone());
+    *hold_b.borrow_mut() = Some(b.clone());
+    let _sa = a.subscribe(|_| {});
+    let _sb = b.subscribe(|_| {});
+
+    flag.set(true);
 }

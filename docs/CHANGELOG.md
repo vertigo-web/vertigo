@@ -3,56 +3,85 @@
 <!-- markdownlint-disable-next-line first-line-h1 -->
 ## 0.13.0 - unreleased
 
-Keyed list rendering was rebuilt around per-key `Computed`s. `render_list` and the memoized
-list renderers changed shape, and the `Value::synchronize` machinery they used to rely on is
-gone. See [`guides::collection_key_and_list_renderers`](https://docs.rs/vertigo/latest/vertigo/guides/collection_key_and_list_renderers/index.html).
+The reactive graph was rewritten and keyed list rendering was rebuilt around per-key
+`Computed`s. See the [reactive graph guide][reactive-graph] and the
+[collection guide][collections].
 
 ### Added
 
-* `keyed_computed_list` - maps a reactive list into a list of per-item `Computed`s, reusing the
-  same `Computed` for a given key across updates (Solid `<For>`-style), together with `KeyedListItem`
-* `MarkerContent` - lets a marker comment report the nodes it keeps in front of itself, so the
-  subtree travels with the marker instead of being rebuilt when it moves
+* A new reactive graph in the `vertigo::reactive` module: transactional, with an equality
+  cutoff. See the [guide][reactive-graph]
+* `reactive::Graph` - an isolated graph instance, mostly useful in tests
+* `reactive::invariants` - the rules the graph enforces, and where you may write
+* `reactive::transaction` and `reactive::on_after_transaction`
+* `GraphId` - identity of a `Value` or `Computed`
+* `RenderValue` - trait form of `render_value` / `render_value_option`, for generic code
+* `keyed_computed_list` and `KeyedListItem` - per-key `Computed`s from a reactive list,
+  reusing the same `Computed` for a given key across updates (Solid `<For>`-style)
+* `MarkerContent` - lets a marker comment report the nodes it keeps in front of itself
 
 ### Changed
 
-* **Breaking**: `render_list` now takes a `Vec<T>` source (previously any
-  `IntoIterator + Clone + PartialEq`), its render closure receives `&Computed<T>` instead of `&T`,
-  and the key type must implement `Debug`. The closure runs once per key *appearance*; item
-  updates flow through the per-key `Computed`, so embed it in `dom!` or wrap it with
-  `Computed::render_value`
-* **Breaking**: the render closures of `render_list_memo` and `render_resource_list_memo` receive
-  `&Computed<T::Value>`. `render_resource_list_memo` renders `Loading` and `Error` as an empty list
+* **Breaking**: `Computed<T>` requires `T: PartialEq` everywhere, not only for `subscribe`
+* **Breaking**: `Value::set` from a compute closure or a `subscribe` callback is refused.
+  It used to panic with *"You cannot change the source value while the dependency graph is
+  being refreshed"*; the write is now ignored and reported through `log::error!`, so one
+  misplaced write no longer takes the application down. This follows the call stack, so it
+  covers a `Drop` that runs inside such a callback. Writing from event handlers, timers,
+  fetch, `on_after_transaction` and `when_connect` is unaffected - see the
+  [invariants][invariants]
+* **Breaking**: `when_connect` and `Value::with_connect` run their closure after the wave
+  that made the node watched, and drop the resource after the wave that unwatched it,
+  instead of in the middle of a refresh. Because of that, `create` may write
+* **Breaking**: a `Computed` recomputes when its dependencies change, not on the next read
+* **Breaking**: reading through `transaction(|ctx| ...)` serves the cached value
+* **Breaking**: `EmbedDom` is no longer implemented for every owned `T: ToString`. Owned
+  support is an explicit list; references stay blanket, so `&MyType` still embeds. For an
+  owned value: `impl EmbedDom for MyType { fn embed(self) -> DomNode { self.to_string().embed() } }`
+* **Breaking**: `render_list` takes a `Vec<T>` source, its render closure receives
+  `&Computed<T>` instead of `&T`, and the key type must implement `Debug`
+* **Breaking**: the render closures of `render_list_memo` and `render_resource_list_memo`
+  receive `&Computed<T::Value>`; `Loading` and `Error` render as an empty list
 * **Breaking**: the mount closure of `DomComment::new_marker` takes a third argument,
   `&MarkerContent`. A marker moved within the same parent no longer re-runs its mount
-* Every `render_list` row is preceded by an anchor comment node, which marks where the row begins
-  regardless of the shape the row renders to
-* Guide `guides::value_synchronize_and_collections` replaced by
-  `guides::collection_key_and_list_renderers`
+* Every `render_list` row is preceded by an anchor comment node
+* Guide `guides::value_synchronize_and_collections` replaced by [`collections`][collections]
 
 ### Removed
 
+* **Breaking**: `Dependencies`. Use `transaction`, `Driver::transaction` and
+  `Driver::on_after_transaction`
+* **Breaking**: `Computed::subscribe_all` - unchanged values no longer notify anybody, so
+  it has nothing to report. Use `subscribe`
 * **Breaking**: `ValueSynchronize`, `Value::synchronize`, `LazyCache::synchronize` and
-  `CacheValue::synchronize`. `render_list_memo` no longer mirrors its source into a side
-  structure, so there is nothing left to synchronize; use `keyed_computed_list` to derive
-  per-item `Computed`s
+  `CacheValue::synchronize`. Use `keyed_computed_list`
 * **Breaking**: `Collection` and `CollectionModel`, superseded by `keyed_computed_list`.
-  `CollectionKey` stays and still describes how list items are identified
+  `CollectionKey` stays
 
 ### Fixed
 
-* `render_list` corrupted sibling order when reordering or inserting rows whose root is a plain
-  element rather than a `render_value` marker
-* Moving a row no longer destroys and rebuilds its DOM; the existing nodes are repositioned, so
-  their state (input values, listeners, children) survives a reorder
-* Updating one row of a keyed list cost work proportional to the *square* of the list length,
-  because every row copied the whole shared key-to-value map on each update
-* `Value::new` and `Value::set` no longer deep-copy the payload when nothing is listening for
-  `Value::add_event`
-* `vertigo build` no longer fails wasm optimization with *"memory.copy operations require bulk
-  memory operations"* - the WASM features enabled by default for `wasm32-unknown-unknown` are now
-  passed to `wasm-opt` explicitly, because `strip = true` in the cargo profile removes the
-  `target_features` section that `wasm-opt` would otherwise read them from
+* `render_list` corrupted sibling order when reordering or inserting rows whose root is a
+  plain element rather than a `render_value` marker
+* Moving a row repositions its DOM instead of rebuilding it, so input values, listeners and
+  children survive a reorder
+* Updating one row of a keyed list no longer costs work proportional to the *square* of the
+  list length
+* `Value::new` and `Value::set` no longer deep-copy the payload when nothing is listening
+  for `Value::add_event`
+* A node is computed at most once per change, whatever the shape of the graph. A `get`
+  during propagation refreshes a stale parent before returning, so unequal path lengths and
+  conditionally read parents no longer recompute a join once per path, and a subscriber
+  cannot observe a value assembled from a half-updated graph
+* Recomputing a node with many dependencies is no longer quadratic in their number
+* A compute closure reading the same value repeatedly records it once
+* `vertigo build` no longer fails wasm optimization with *"memory.copy operations require
+  bulk memory operations"* - the WASM features enabled by default for
+  `wasm32-unknown-unknown` are now passed to `wasm-opt` explicitly, because `strip = true`
+  removes the `target_features` section it would otherwise read them from
+
+[reactive-graph]: https://docs.rs/vertigo/latest/vertigo/guides/reactive_graph/index.html
+[invariants]: https://docs.rs/vertigo/latest/vertigo/reactive/invariants/index.html
+[collections]: https://docs.rs/vertigo/latest/vertigo/guides/collection_key_and_list_renderers/index.html
 
 ## 0.12.0 - 2026-07-01
 
