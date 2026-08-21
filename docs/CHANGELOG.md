@@ -23,16 +23,17 @@ The reactive graph was rewritten and keyed list rendering was rebuilt around per
 ### Changed
 
 * **Breaking**: `Computed<T>` requires `T: PartialEq` everywhere, not only for `subscribe`
-* **Breaking**: `Value::set` from a compute closure or a `subscribe` callback is refused.
-  It used to panic with *"You cannot change the source value while the dependency graph is
-  being refreshed"*; the write is now ignored and reported through `log::error!`, so one
-  misplaced write no longer takes the application down. This follows the call stack, so it
-  covers a `Drop` that runs inside such a callback. Writing from event handlers, timers,
-  fetch, `on_after_transaction` and `when_connect` is unaffected - see the
-  [invariants][invariants]
+* **Breaking**: `Value::set` from a compute closure, a `subscribe` callback, or a
+  `DropResource` destructor is refused. It used to panic with *"You cannot change the
+  source value while the dependency graph is being refreshed"*; the write is now ignored
+  and reported through `log::error!`, so one misplaced write no longer takes the
+  application down. This follows the call stack, so it covers a `Drop` that runs inside
+  such a callback. Writing from event handlers, timers, fetch, `on_after_transaction` and
+  `when_connect` (`create`) is unaffected - see the [invariants][invariants]
 * **Breaking**: `when_connect` and `Value::with_connect` run their closure after the wave
-  that made the node watched, and drop the resource after the wave that unwatched it,
-  instead of in the middle of a refresh. Because of that, `create` may write
+  that made the node watched (and after `on_after_transaction`), and drop the resource
+  after the wave that unwatched it, instead of in the middle of a refresh. `create` may
+  write; the destructor must only tear down the external handler
 * **Breaking**: a `Computed` recomputes when its dependencies change, not on the next read
 * **Breaking**: reading through `transaction(|ctx| ...)` serves the cached value
 * **Breaking**: `EmbedDom` is no longer implemented for every owned `T: ToString`. Owned

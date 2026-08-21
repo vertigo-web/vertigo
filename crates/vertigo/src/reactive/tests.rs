@@ -331,10 +331,14 @@ fn when_connect_disconnects_while_computed_lives() {
 }
 
 #[test]
-fn when_connect_runs_after_subscribe_callback() {
+fn when_connect_runs_after_on_after_transaction() {
     let g = Graph::new();
     let logs = g.logger().listen();
     let order = Rc::new(RefCell::new(Vec::new()));
+    let _hook = g.on_after_transaction({
+        let order = order.clone();
+        move || order.borrow_mut().push("hook")
+    });
     let value = g.value(1);
     let comp = value.to_computed().when_connect({
         let order = order.clone();
@@ -347,7 +351,7 @@ fn when_connect_runs_after_subscribe_callback() {
         let order = order.clone();
         move |_| order.borrow_mut().push("subscribe")
     });
-    assert_eq!(*order.borrow(), ["subscribe", "connect"]);
+    assert_eq!(*order.borrow(), ["subscribe", "hook", "connect"]);
     logs.assert_eq(&[]);
 }
 
@@ -371,7 +375,7 @@ fn connect_that_unwatches_itself_disconnects() {
         let flag = flag.clone();
         move || {
             connects.set(connects.get() + 1);
-            // Legal from `when_connect`, and it costs `connected` its only child.
+            // From `create` after the graph has settled: costs `connected` its only child.
             flag.set(false);
             DropResource::new({
                 let disconnects = disconnects.clone();
@@ -556,7 +560,7 @@ fn set_from_compute_is_ignored() {
     logs.assert_eq(&[]);
 }
 
-/// `when_connect` runs after the wave, so a write from there is a new transaction
+/// `when_connect` runs after the wave, so a write from `create` is a new transaction
 /// and must reach the subscriber too, not just land in the value.
 #[test]
 fn write_from_when_connect_reaches_the_subscriber() {
@@ -587,11 +591,10 @@ fn write_from_when_connect_reaches_the_subscriber() {
     logs.assert_eq(&[]);
 }
 
-/// `when_connect` and its disconnect are both allowed to write, so two of them can undo
-/// each other: connect takes the node's last child away, and dropping the resource gives
-/// it back. That is a loop with no wave to end it, so the flush cuts it off and says so.
+/// Disconnect must not write. Connect takes the node's last child away; dropping the
+/// resource tries to give it back and is ignored, so the node stays disconnected.
 #[test]
-fn connect_and_disconnect_that_undo_each_other_are_cut_off() {
+fn disconnect_must_not_write() {
     let g = Graph::new();
     let logs = g.logger().listen();
     let connects = Rc::new(Cell::new(0));
@@ -620,13 +623,9 @@ fn connect_and_disconnect_that_undo_each_other_are_cut_off() {
     });
     let _sub = reader.subscribe(|_| {});
 
-    assert_eq!(connects.get(), super::graph::MAX_CONNECTS_PER_FLUSH);
-    let messages = logs.take();
-    assert_eq!(messages.len(), 1, "{messages:?}");
-    assert!(
-        messages[0].starts_with(super::graph::CONNECT_LOOP),
-        "{messages:?}"
-    );
+    assert_eq!(connects.get(), 1);
+    logs.assert_eq(&[super::graph::BLOCKED_WRITE]);
+    g.transaction(|ctx| assert!(!flag.get(ctx)));
 }
 
 /// Dropping something from inside a subscribe callback - a component going away while the
@@ -658,6 +657,20 @@ fn a_write_from_a_drop_inside_a_callback_is_ignored() {
 
     logs.assert_eq(&[super::graph::BLOCKED_WRITE]);
     assert!(!g.transaction(|ctx| cleared.get(ctx)));
+}
+
+#[test]
+fn set_from_drop_resource_is_ignored() {
+    let g = Graph::new();
+    let logs = g.logger().listen();
+    let a = g.value(0);
+    let resource = DropResource::new({
+        let a = a.clone();
+        move || a.set(1)
+    });
+    drop(resource);
+    logs.assert_eq(&[super::graph::BLOCKED_WRITE]);
+    g.transaction(|ctx| assert_eq!(a.get(ctx), 0));
 }
 
 /// A compute closure that reads its own value closes a cycle. It is caught by the read,

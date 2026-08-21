@@ -4,7 +4,8 @@ use std::{
     rc::Rc,
 };
 
-/// Callbacks fired after a completed transaction (once `propagate` has finished).
+/// Callbacks fired after a completed transaction (once `propagate` has finished,
+/// before `when_connect` / disconnect).
 pub(super) struct Hooks {
     next_id: Cell<u64>,
     hooks: RefCell<BTreeMap<u64, Rc<dyn Fn()>>>,

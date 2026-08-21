@@ -19,8 +19,6 @@ use hooks::Hooks;
 use nodes::Nodes;
 pub(crate) use transaction::CallbackGuard;
 use transaction::Transaction;
-#[cfg(test)]
-pub(crate) use watch::MAX_CONNECTS_PER_FLUSH;
 use watch::Watch;
 
 pub(crate) use logger::Logger;
@@ -46,14 +44,12 @@ pub(crate) trait ErasedNode {
     fn refresh(&self) -> bool;
 }
 
-pub(crate) const BLOCKED_WRITE: &str = "vertigo: Value::set is not allowed from a computed, a subscribe callback, or during propagation";
+pub(crate) const BLOCKED_WRITE: &str = "vertigo: Value::set is not allowed from a computed, a subscribe callback, a DropResource, or during propagation";
 
 /// Parent buffers kept for reuse by `parents_changed`; see there.
 const MAX_POOLED_PARENT_BUFFERS: usize = 64;
 
 pub(crate) const CYCLE: &str = "vertigo: cycle in the reactive graph";
-
-pub(crate) const CONNECT_LOOP: &str = "vertigo: when_connect and its disconnect keep undoing each other - leaving the node disconnected";
 
 /// One reactive graph. Nodes created from different graphs do not see each other.
 pub struct Graph {
@@ -137,8 +133,8 @@ impl Graph {
         if let Some(leave) = self.inner.tx.leave() {
             self.inner.propagate();
             if !leave.already_propagating {
-                self.inner.flush_watch();
                 self.inner.hooks.fire();
+                self.inner.flush_watch();
             }
         }
         result
@@ -190,7 +186,7 @@ impl GraphInner {
     }
 
     pub(crate) fn check_write_allowed(&self) -> bool {
-        if self.tx.writes_blocked() {
+        if self.tx.writes_blocked() || super::drop_resource::in_drop() {
             self.logger.error(BLOCKED_WRITE);
             return false;
         }
@@ -207,7 +203,7 @@ impl GraphInner {
     /// stops here instead of walking the ancestors again. That is what keeps the cost
     /// linear: without it, every read repeats the walk, and a re-convergent graph repeats
     /// it once per path. Nothing can make such a node stale later in the same wave -
-    /// sources do not change during a wave (writes from compute and subscribe are
+    /// sources do not change during a wave (writes from compute, subscribe and Drop are
     /// refused, `when_connect` runs after), so every ancestor is settled by the time the
     /// walk returns.
     pub(crate) fn ensure_fresh(&self, id: NodeId) {
@@ -298,10 +294,7 @@ impl GraphInner {
     }
 
     fn flush_watch(&self) {
-        let looping = self.watch.flush(|id| self.edges.is_watched(id));
-        for id in looping {
-            self.logger.error(&format!("{CONNECT_LOOP} ({id:?})"));
-        }
+        self.watch.flush(|id| self.edges.is_watched(id));
     }
 
     fn flush_watch_if_idle(&self) {

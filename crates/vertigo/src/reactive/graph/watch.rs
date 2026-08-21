@@ -7,22 +7,11 @@ use std::{
 use super::super::DropResource;
 use super::{NodeId, edges::ParentDiff};
 
-/// How many times one node may connect inside a single flush.
-///
-/// Connect and disconnect are legal places to write, and a write can change who is
-/// watched - including the node that is connecting. That is what makes a chain of
-/// connects work, and it is also what lets two of them undo each other: a connect that
-/// unwatches its own node, whose disconnect watches it again, would flush forever. Each
-/// node connecting at most this many times per flush bounds the loop; a node that reaches
-/// the limit is left disconnected for the rest of the flush and reported to the caller.
-///
-/// A legitimate chain connects each node once, so this is only reached by a loop.
-pub(crate) const MAX_CONNECTS_PER_FLUSH: u32 = 100;
-
 /// `when_connect` lifecycle: connect while a node has children, drop the resource when not.
 ///
-/// `apply` / `register` / `unregister` only mark the node pending. [`Self::flush`] runs
-/// after the propagation wave so connect/disconnect never run in the middle of a refresh.
+/// `apply` / `register` / `unregister` only mark the node pending. The graph runs
+/// [`Self::flush`] after the wave and after `on_after_transaction`, so installing and
+/// tearing down external handlers is not part of propagation.
 pub(super) struct Watch {
     connect: RefCell<HashMap<NodeId, Rc<dyn Fn() -> DropResource>>>,
     connected: RefCell<HashMap<NodeId, DropResource>>,
@@ -98,27 +87,21 @@ impl Watch {
     /// forever, and one re-watched there would connect twice, the second resource
     /// silently replacing the first.
     ///
-    /// Returns the nodes given up on - see [`MAX_CONNECTS_PER_FLUSH`]. The caller reports
-    /// them; `Watch` has no logger of its own.
-    pub(super) fn flush(&self, is_watched: impl Fn(NodeId) -> bool) -> Vec<NodeId> {
+    /// Disconnect only tears down the external handler. `Value::set` from that `Drop` is
+    /// refused, so disconnect cannot watch the node again and this loop cannot bounce.
+    pub(super) fn flush(&self, is_watched: impl Fn(NodeId) -> bool) {
         if self.flushing.get() {
-            return Vec::new();
+            return;
         }
         self.flushing.set(true);
         let _guard = Flushing { watch: self };
 
-        let mut connects: HashMap<NodeId, u32> = HashMap::new();
-        let mut looping: Vec<NodeId> = Vec::new();
-
         loop {
             let pending: Vec<NodeId> = self.pending.borrow_mut().drain().collect();
             if pending.is_empty() {
-                return looping;
+                return;
             }
             for id in pending {
-                if looping.contains(&id) {
-                    continue;
-                }
                 let watched = is_watched(id);
                 let has_connect = self.connect.borrow().contains_key(&id);
                 let is_connected = self.connected.borrow().contains_key(&id);
@@ -128,12 +111,6 @@ impl Watch {
                 }
 
                 if watched && has_connect && !self.connected.borrow().contains_key(&id) {
-                    let count = connects.entry(id).or_insert(0);
-                    *count += 1;
-                    if *count > MAX_CONNECTS_PER_FLUSH {
-                        looping.push(id);
-                        continue;
-                    }
                     let Some(connect) = self.connect.borrow().get(&id).cloned() else {
                         continue;
                     };
@@ -268,10 +245,11 @@ mod tests {
         assert_eq!(live.get(), 0, "unwatched, so it must not stay connected");
     }
 
-    /// Connect and disconnect that undo each other: the node unwatches itself on connect
-    /// and watches itself again when the resource is dropped. The flush must end.
+    /// Connect unwatches the node; disconnect must not watch it again. The graph refuses
+    /// `set` from `Drop`, so this is only a Cell here - the flush still has to end after
+    /// the one disconnect.
     #[test]
-    fn connect_disconnect_loop_is_cut_off() {
+    fn disconnect_does_not_reconnect() {
         let watch = Rc::new(Watch::new());
         let connects = Rc::new(Cell::new(0));
         let watched = Rc::new(Cell::new(true));
@@ -286,34 +264,23 @@ mod tests {
                 if let Some(watch) = watch.upgrade() {
                     watch.schedule(NodeId(1));
                 }
-                DropResource::new({
-                    let watch = watch.clone();
-                    let watched = watched.clone();
-                    move || {
-                        watched.set(true);
-                        if let Some(watch) = watch.upgrade() {
-                            watch.schedule(NodeId(1));
-                        }
-                    }
-                })
+                DropResource::new(|| {})
             }
         });
 
         watch.register(NodeId(1), connect, true);
         let is_watched = watched.clone();
-        let looping = watch.flush(move |_| is_watched.get());
+        watch.flush(move |_| is_watched.get());
 
-        assert_eq!(looping, vec![NodeId(1)]);
-        assert_eq!(connects.get(), MAX_CONNECTS_PER_FLUSH);
+        assert_eq!(connects.get(), 1);
     }
 
-    /// A chain - connecting one node watches the next - is not a loop, and must not be
-    /// cut off however long it is.
+    /// A chain - connecting one node watches the next - must run to the end.
     #[test]
     fn a_chain_of_connects_is_not_a_loop() {
         let watch = Rc::new(Watch::new());
         let reached = Rc::new(Cell::new(0u64));
-        let length = u64::from(MAX_CONNECTS_PER_FLUSH) * 3;
+        let length = 30u64;
 
         for id in 1..=length {
             let connect: Rc<dyn Fn() -> DropResource> = Rc::new({
@@ -330,9 +297,8 @@ mod tests {
             watch.register(NodeId(id), connect, id == 1);
         }
 
-        let looping = watch.flush(|_| true);
+        watch.flush(|_| true);
 
-        assert!(looping.is_empty(), "{looping:?}");
         assert_eq!(reached.get(), length);
     }
 
