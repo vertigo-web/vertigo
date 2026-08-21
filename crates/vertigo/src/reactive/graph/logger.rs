@@ -8,7 +8,7 @@ struct LoggerInner {
     buffers: RefCell<BTreeMap<u64, Rc<RefCell<Vec<String>>>>>,
 }
 
-/// Where a graph reports the rules it had to enforce (a refused write, a connect loop).
+/// Where a graph reports the rules it had to enforce (a refused write).
 ///
 /// Every message goes to `log::error!`. Listening to them is a test facility and is not
 /// part of the public API: an application observes them through its `log` implementation,

@@ -103,27 +103,23 @@ selected_id.to_computed().subscribe(move |id| {
 
 The rule follows the call stack, not the source: anything dropped while a callback runs -
 a component going away as the view is rebuilt - has its `Drop` run inside that callback,
-so a `set` from there is ignored as well. Clearing a value on unmount belongs in a
-`when_connect` resource, which is dropped after the wave.
+so a `set` from there is ignored as well. A `DropResource` destructor must not write
+either: it only tears down the external handler.
 
 Legal places to write: DOM/event handlers, timers, fetch/socket callbacks,
-`on_after_transaction`, and `when_connect` / `Value::with_connect`.
+`on_after_transaction`, and `when_connect` / `Value::with_connect` (`create` only).
 
 ## Connecting to the outside world
 
-[`when_connect`](crate::Computed::when_connect) runs a closure **after the wave** in which
-a node gains its first dependent, and drops the returned
+[`when_connect`](crate::Computed::when_connect) runs a closure **after the wave and after
+`on_after_transaction`** in which a node gains its first dependent, and drops the returned
 [`DropResource`](crate::DropResource) after the wave in which it loses its last one.
 Watched-then-unwatched in the same wave is a no-op. This is how a node backed by a fetch,
 a timer or a socket only does work while something is actually looking at it.
 [`Value::with_connect`](crate::Value::with_connect) packages the common shape of it;
-because `create` runs after the wave, it may write the `Value`.
-
-That write can change who is watched, which is what lets one connect pull in the next. It
-also means two of them can undo each other - a connect that takes away its own node's last
-child, whose disconnect gives it back. That never settles, so after 100 connects of one
-node in a single flush the loop is cut: the error is logged and the node is left
-disconnected. A chain, however long, connects each node once and is never cut.
+because `create` runs after the graph has settled, it may write the `Value` (for example
+to clear it when attaching). Disconnect only tears down the external handler; a `set`
+from that drop is ignored, so connect and disconnect cannot bounce.
 
 ## Isolated graphs
 
@@ -141,6 +137,7 @@ avoid sharing state.
   the same value, and those no longer notify anybody.
 * Writing a `Value` from a compute or subscribe callback is ignored and logged (same idea as
   0.12's *"You cannot change the source value while the dependency graph is being refreshed"*).
-  `when_connect` / `Value::with_connect` run after the wave and may write.
+  `when_connect` / `Value::with_connect` `create` runs after the wave and may write;
+  a `set` from the returned `DropResource` is ignored.
 * Reading through `transaction(|ctx| ...)` serves the cached value instead of recomputing
   the chain behind it.

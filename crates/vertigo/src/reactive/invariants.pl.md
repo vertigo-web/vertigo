@@ -14,63 +14,63 @@ Węzły z różnych grafów nie widzą się nawzajem.
 1. `set` albo `transaction` zapisuje wartości i oznacza je jako brudne.
 2. Najbardziej zewnętrzna transakcja startuje falę.
 3. Fala odświeża gotowe węzły. Niezmienione węzły nie brudzą dzieci.
-4. Po fali: connect i disconnect.
-5. Potem hooki `on_after_transaction`.
+4. Potem hooki `on_after_transaction`.
+5. Po tym: connect i disconnect. Zakładanie i zdejmowanie handlerów na zewnątrz
+   nie jest częścią fali.
 
-`set` z `when_connect` odpala to od nowa.
-`set` z compute albo subscribe leci na konsolę jako błąd i jest ignorowany. Nic nie zapisuje.
+`set` z `when_connect` (`create`) odpala to od nowa.
+`set` z compute, subscribe albo destruktora `DropResource` leci na konsolę jako błąd
+i jest ignorowany. Nic nie zapisuje.
 
 ## Niezmienniki
 
-### 1. Compute i subscribe nie mogą pisać
+### 1. Compute, subscribe i Drop nie mogą pisać
 
 Nie wołaj `Value::set` (ani `change`) z:
 
 - funkcji compute
 - callbacku subscribe
+- destruktora `DropResource`
 - fali, która już trwa
 
 Compute tylko czyta. Subscribe tylko gada ze światem (DOM, logi).
+Drop tylko zdejmuje zewnętrzną subskrypcję (timer, socket, `popstate`).
 Żadne z nich nie może zapisać z powrotem do grafu.
 
 Jeśli taka próba się odbędzie, zapis jest ignorowany i na konsolę leci:
 
 ```text
-vertigo: Value::set is not allowed from a computed, a subscribe callback, or during propagation
+vertigo: Value::set is not allowed from a computed, a subscribe callback, a DropResource, or during propagation
 ```
 
 Dotyczy to wszystkiego, co leci *wewnątrz* tych domknięć, nie tylko kodu napisanego w nich
 wprost. Jeśli w callbacku subscribe coś zostanie zdropowane — komponent znika, bo widok jest
 przebudowywany — jego `Drop` leci wewnątrz callbacku, więc `set` stamtąd też jest ignorowany.
-Żeby wyczyścić wartość przy odmontowaniu, zrób to z zasobu `when_connect`: te są dropowane
-po fali.
 
 Pisać wolno z handlerów click/input, timerów, fetcha, socketów,
-`on_after_transaction` oraz `when_connect` / `Value::with_connect`.
+`on_after_transaction` oraz `when_connect` / `Value::with_connect` (tylko `create`).
 
 ### 2. Connect i disconnect czekają na koniec fali
 
 `when_connect` nie leci w chwili, gdy węzeł dostaje dziecko.
 Disconnect nie leci w chwili, gdy traci ostatnie dziecko.
-Oba czekają, aż fala się skończy.
+Oba czekają, aż fala się skończy i aż odpalą się hooki `on_after_transaction`.
 Gdy graf nic nie liczy, lecą od razu.
 
 Jeśli węzeł w jednej fali był obserwowany i przestał być — nic się nie dzieje.
 Jeśli nie był, a potem zaczął być — connect leci raz.
 
-`when_connect` leci po fali, więc `Value::with_connect` może wołać `set`.
-Ten `set` to nowa transakcja i nowa fala.
+`create` leci, gdy graf już spoczął, więc `Value::with_connect` może wołać `set`
+(na przykład żeby wyzerować wartość przy podłączeniu). Ten `set` to nowa transakcja
+i nowa fala.
 
 Ta fala może zmienić to, kto jest obserwowany — także węzeł, który właśnie się łączy.
 Po powrocie z domknięcia stan połączeń jest ponownie dopasowywany do grafu.
 Węzeł, który sam siebie przestał obserwować, dostaje disconnect. Nie zostaje połączony.
 
-Connect i disconnect nie mogą się nawzajem cofać.
-Connect, który przestaje obserwować własny węzeł, a jego disconnect zaczyna z powrotem —
-to pętla bez końca.
-Po 100 connectach jednego węzła w jednym flushu pętla jest ucinana:
-leci błąd do logu, a węzeł zostaje rozłączony.
-Łańcuch — connect, który zaczyna obserwować kolejny węzeł — to nie pętla i nigdy nie jest ucinany.
+Disconnect nie może pisać. Nie może z powrotem oglądać węzła, więc connect i disconnect
+nie odbijają się w kółko. Łańcuch — connect, który zaczyna obserwować kolejny węzeł —
+to nie pętla.
 
 ### 3. Falę startuje tylko zewnętrzna transakcja
 

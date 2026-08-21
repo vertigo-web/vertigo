@@ -120,9 +120,11 @@ impl<T: Clone + PartialEq + 'static> Computed<T> {
         GraphId::from_node(self.inner.id)
     }
 
-    /// Runs `create` after the wave in which this value starts being observed; the
-    /// returned [`DropResource`] is dropped after the wave in which it stops being
-    /// observed. `create` may write `Value`s. A `set` from compute or subscribe is ignored.
+    /// Runs `create` after the wave (and after `on_after_transaction`) in which this
+    /// value starts being observed. The returned [`DropResource`] is dropped after the
+    /// wave in which it stops being observed; that drop must only tear down the external
+    /// handler, it must not write. `create` may write `Value`s. A `set` from compute or
+    /// subscribe is ignored.
     pub fn when_connect<F: Fn() -> DropResource + 'static>(&self, create: F) -> Computed<T> {
         let new_computed = Computed::create(self.inner.graph.clone(), {
             let parent = self.clone();

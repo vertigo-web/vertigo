@@ -12,62 +12,62 @@ A **wave** is one run of `propagate`. A **transaction** batches writes.
 1. `set` or `transaction` writes values and marks them dirty.
 2. The outermost transaction starts a wave.
 3. The wave refreshes ready nodes. Unchanged nodes do not dirty their children.
-4. After the wave: connect and disconnect.
-5. Then `on_after_transaction` hooks.
+4. Then `on_after_transaction` hooks.
+5. After that: connect and disconnect. Installing and dropping external handlers is
+   not part of the wave.
 
-A `set` from `when_connect` starts this again.
-A `set` from compute or subscribe is logged and ignored. It never writes.
+A `set` from `when_connect` (`create`) starts this again.
+A `set` from compute, subscribe, or a `DropResource` destructor is logged and ignored.
+It never writes.
 
 ## Invariants
 
-### 1. Compute and subscribe must not write
+### 1. Compute, subscribe and Drop must not write
 
 Do not call `Value::set` (or `change`) from:
 
 - a compute closure
 - a subscribe callback
+- a `DropResource` destructor
 - a wave that is already running
 
 Compute only reads. Subscribe only talks to the outside world (DOM, logs).
-Neither may write back into the graph.
+Drop only tears down an external subscription (timer, socket, `popstate`).
+None of them may write back into the graph.
 
 If they do, the write is ignored and the console gets:
 
 ```text
-vertigo: Value::set is not allowed from a computed, a subscribe callback, or during propagation
+vertigo: Value::set is not allowed from a computed, a subscribe callback, a DropResource, or during propagation
 ```
 
 This covers anything that runs *inside* those closures, not only the code you wrote there.
 Dropping something from a subscribe callback — a component going away while the view is
 rebuilt — runs its `Drop` inside the callback, so a `set` from there is ignored too.
-To clear a value on unmount, do it from a `when_connect` resource: those are dropped after
-the wave.
 
 You may write from click/input handlers, timers, fetch, sockets,
-`on_after_transaction`, and `when_connect` / `Value::with_connect`.
+`on_after_transaction`, and `when_connect` / `Value::with_connect` (`create` only).
 
 ### 2. Connect and disconnect wait until the wave is done
 
 `when_connect` does not run the moment a node gets a child.
 Disconnect does not run the moment it loses the last child.
-Both wait until the wave ends.
+Both wait until the wave ends, and until `on_after_transaction` has run.
 If the graph is idle, they run at once.
 
 If a node is watched and then unwatched in the same wave, nothing happens.
 If it is unwatched and then watched, it connects once.
 
-`when_connect` runs after the wave, so `Value::with_connect` may call `set`.
-That `set` is a new transaction and a new wave.
+`create` runs after the graph has settled, so `Value::with_connect` may call `set`
+(for example to clear the value when attaching). That `set` is a new transaction
+and a new wave.
 
 That wave can change who is watched, including the node that is connecting right now.
 The connect state is matched to the graph again once the closure returns.
 A node unwatched by its own connect is disconnected. It never stays connected.
 
-Connect and disconnect must not undo each other.
-A connect that unwatches its own node, whose disconnect watches it again, never ends.
-After 100 connects of one node in one flush, the loop is cut:
-an error is logged and that node is left disconnected.
-A chain — one connect watching the next node — is not a loop and is never cut.
+Disconnect must not write. It cannot watch the node again, so connect and disconnect
+cannot bounce. A chain — one connect watching the next node — is not a loop.
 
 ### 3. Only the outermost transaction starts a wave
 

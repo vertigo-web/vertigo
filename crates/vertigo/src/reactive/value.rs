@@ -90,8 +90,10 @@ impl<T: Clone + PartialEq + 'static> Value<T> {
     /// Create a value that is connected to a generator. `value` is the starting
     /// value; `create` is responsible for keeping it up to date.
     ///
-    /// `create` runs after the wave in which this value starts being observed, so it
-    /// may call [`Value::set`](Self::set). A `set` from compute or subscribe is ignored.
+    /// `create` runs after the wave in which this value starts being observed (and after
+    /// `on_after_transaction`), so it may call [`Value::set`](Self::set). The returned
+    /// [`DropResource`] must only tear down the external handler; a `set` from drop is
+    /// ignored. A `set` from compute or subscribe is ignored.
     pub fn with_connect<F>(value: T, create: F) -> Computed<T>
     where
         F: Fn(&Value<T>) -> DropResource + 'static,
