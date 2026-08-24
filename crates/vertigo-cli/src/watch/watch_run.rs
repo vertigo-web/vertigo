@@ -209,7 +209,7 @@ fn build_and_watch(
                 log::info!("Build successful.");
 
                 let check_spawn = SpawnOwner::new(async move {
-                    let _ = Retry::spawn(
+                    let _ = Retry::start(
                         FibonacciBackoff::from_millis(100).max_delay(Duration::from_secs(4)),
                         || is_http_server_listening(opts.serve.port),
                     )

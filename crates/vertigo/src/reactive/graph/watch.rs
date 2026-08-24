@@ -88,19 +88,35 @@ impl Watch {
     /// silently replacing the first.
     ///
     /// Disconnect only tears down the external handler. `Value::set` from that `Drop` is
-    /// refused, so disconnect cannot watch the node again and this loop cannot bounce.
-    pub(super) fn flush(&self, is_watched: impl Fn(NodeId) -> bool) {
+    /// refused, so a disconnect cannot watch its node again.
+    ///
+    /// A `create` may write, though, and one node's write can watch another - which is how
+    /// a chain of connects works, and also how a ring of them could hand the connection
+    /// round forever, each write undoing the one before. So a flush is **one round of
+    /// connect decisions per node**: a node connects at most once here. A legitimate chain
+    /// connects each of its nodes exactly once however long it is, so only a ring reaches
+    /// the limit. Reaching it leaves that node disconnected, and its id is returned for the
+    /// caller to report - `Watch` has no logger of its own.
+    pub(super) fn flush(&self, is_watched: impl Fn(NodeId) -> bool) -> Vec<NodeId> {
         if self.flushing.get() {
-            return;
+            return Vec::new();
         }
         self.flushing.set(true);
         let _guard = Flushing { watch: self };
 
+        let mut connected_once: HashSet<NodeId> = HashSet::new();
+        let mut left_disconnected: Vec<NodeId> = Vec::new();
+
         loop {
-            let pending: Vec<NodeId> = self.pending.borrow_mut().drain().collect();
+            let mut pending: Vec<NodeId> = self.pending.borrow_mut().drain().collect();
             if pending.is_empty() {
-                return;
+                return left_disconnected;
             }
+            // By id, so a round is processed in the order the nodes were created rather
+            // than in hash order. When `create` closures fight over who is watched, the
+            // order decides which of them wins and whether one has to be cut - and that
+            // should be the same on every run, not a different answer per page load.
+            pending.sort_unstable();
             for id in pending {
                 let watched = is_watched(id);
                 let has_connect = self.connect.borrow().contains_key(&id);
@@ -111,6 +127,12 @@ impl Watch {
                 }
 
                 if watched && has_connect && !self.connected.borrow().contains_key(&id) {
+                    if !connected_once.insert(id) {
+                        if !left_disconnected.contains(&id) {
+                            left_disconnected.push(id);
+                        }
+                        continue;
+                    }
                     let Some(connect) = self.connect.borrow().get(&id).cloned() else {
                         continue;
                     };
@@ -273,6 +295,47 @@ mod tests {
         watch.flush(move |_| is_watched.get());
 
         assert_eq!(connects.get(), 1);
+    }
+
+    /// A flush is one round of connect decisions per node. Here the node keeps being
+    /// handed back its watcher after each disconnect - in the graph that can only come
+    /// from another node's `create`, so a `Cell` stands in for it. The second connect is
+    /// refused, the node is left disconnected, and its id is handed back to be reported.
+    #[test]
+    fn a_node_connects_at_most_once_per_flush() {
+        let watch = Rc::new(Watch::new());
+        let connects = Rc::new(Cell::new(0));
+        let watched = Rc::new(Cell::new(true));
+
+        let connect: Rc<dyn Fn() -> DropResource> = Rc::new({
+            let watch = Rc::downgrade(&watch);
+            let connects = connects.clone();
+            let watched = watched.clone();
+            move || {
+                connects.set(connects.get() + 1);
+                watched.set(false);
+                if let Some(watch) = watch.upgrade() {
+                    watch.schedule(NodeId(1));
+                }
+                DropResource::new({
+                    let watch = watch.clone();
+                    let watched = watched.clone();
+                    move || {
+                        watched.set(true);
+                        if let Some(watch) = watch.upgrade() {
+                            watch.schedule(NodeId(1));
+                        }
+                    }
+                })
+            }
+        });
+
+        watch.register(NodeId(1), connect, true);
+        let is_watched = watched.clone();
+        let left_disconnected = watch.flush(move |_| is_watched.get());
+
+        assert_eq!(connects.get(), 1);
+        assert_eq!(left_disconnected, vec![NodeId(1)]);
     }
 
     /// A chain - connecting one node watches the next - must run to the end.

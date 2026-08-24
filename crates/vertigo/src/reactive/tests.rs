@@ -736,3 +736,74 @@ fn two_computeds_reading_each_other_panic() {
 
     flag.set(true);
 }
+
+/// Two `when_connect` closures that write can hand the connection back and forth: the
+/// first takes its own reader away and gives it to the second, and the second does the
+/// reverse. Neither write is illegal - `create` is a legal place to write - and there is
+/// no state this settles in, so the flush has to end it.
+///
+/// One connect per node per flush is what ends it. `second` connects, its write hands the
+/// reader back to `first`, and `first` has already had its turn in this flush, so it is
+/// left disconnected and the graph says which node that was. Which of the two loses
+/// depends on the order a round is processed in, and that order is by node id, so the
+/// outcome is the same on every run.
+///
+/// The counter is a safety valve, not the thing under test: past it the closures stop
+/// writing, so a graph that cannot end the loop fails an assert instead of hanging.
+#[test]
+fn two_connects_that_hand_the_connection_back_and_forth_are_cut() {
+    const VALVE: u32 = 1000;
+
+    let g = Graph::new();
+    let logs = g.logger().listen();
+    let connects = Rc::new(Cell::new(0));
+    let flag = g.value(true);
+    let source = g.value(1);
+
+    let connect = |wants: bool| {
+        let connects = connects.clone();
+        let flag = flag.clone();
+        move || {
+            connects.set(connects.get() + 1);
+            if connects.get() < VALVE {
+                flag.set(wants);
+            }
+            DropResource::new(|| {})
+        }
+    };
+
+    let first = source.to_computed().when_connect(connect(false));
+    let second = source.to_computed().when_connect(connect(true));
+
+    let reader = g.computed({
+        let flag = flag.clone();
+        let first = first.clone();
+        let second = second.clone();
+        move |ctx| {
+            if flag.get(ctx) {
+                first.get(ctx)
+            } else {
+                second.get(ctx)
+            }
+        }
+    });
+    let _sub = reader.subscribe(|_| {});
+
+    assert!(
+        connects.get() < VALVE,
+        "connected {} times - the flush only stopped because the test refused to keep writing",
+        connects.get()
+    );
+    assert_eq!(
+        connects.get(),
+        2,
+        "two nodes, one connect each - a flush connects a node once"
+    );
+
+    let messages = logs.take();
+    assert_eq!(messages.len(), 1, "{messages:?}");
+    assert!(
+        messages[0].starts_with(super::graph::CONNECT_LOOP),
+        "{messages:?}"
+    );
+}

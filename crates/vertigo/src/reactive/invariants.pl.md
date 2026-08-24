@@ -1,7 +1,5 @@
 # Graf reaktywny — niezmienniki
 
-(wersja robocza)
-
 Jeden `Graph` trzyma węzły `Value`, `Computed` i subskrypcje.
 Węzły z różnych grafów nie widzą się nawzajem.
 
@@ -69,8 +67,20 @@ Po powrocie z domknięcia stan połączeń jest ponownie dopasowywany do grafu.
 Węzeł, który sam siebie przestał obserwować, dostaje disconnect. Nie zostaje połączony.
 
 Disconnect nie może pisać. Nie może z powrotem oglądać węzła, więc connect i disconnect
-nie odbijają się w kółko. Łańcuch — connect, który zaczyna obserwować kolejny węzeł —
-to nie pętla.
+nie odbijają się w kółko.
+
+`create` już może, a zapis stamtąd może sprawić, że obserwowany zaczyna być inny węzeł.
+Tak jeden connect pociąga następny — i tak samo pierścień connectów mógłby podawać sobie
+połączenie bez końca, gdzie każdy zapis cofa poprzedni. Dlatego flush to jedna runda
+decyzji connect na węzeł: węzeł łączy się w nim najwyżej raz. Ten, który miałby połączyć
+się drugi raz, zostaje rozłączony, a na konsolę leci:
+
+```text
+vertigo: when_connect closures are undoing each other - a node cannot connect twice in one flush, so it is left disconnected
+```
+
+Łańcuch — connect, który zaczyna obserwować kolejny węzeł — łączy każdy swój węzeł raz,
+choćby był długi, i nigdy nie jest ucinany.
 
 ### 3. Falę startuje tylko zewnętrzna transakcja
 
