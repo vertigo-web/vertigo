@@ -16,10 +16,15 @@ tasks:
     cmds:
       - cargo test --release -p vertigo --lib reactive_old::compare -- --nocapture --test-threads=1
 
+  reactive-bench-wasm:
+    desc: "Reactive graph benchmark in a browser (NOTE: WebDriver on localhost:9515 needs to be running)"
+    cmds:
+      - cargo test --package fantoccini-tests --test reactive_bench -- --ignored --nocapture
+
   automated-tests:
     desc: "NOTE: WebDriver on localhost:9515 needs to be running"
     cmds:
-      - cargo test --package fantoccini-tests -- --ignored
+      - cargo test --package fantoccini-tests --test basic -- --ignored
 
   ci:
     desc: Ci tests
@@ -44,7 +49,7 @@ tasks:
   clean-build:
     desc: clean
     cmds:
-      - rm -rf build
+      - rm -rf build build-reactive-bench
 
   clippy-wasm32:
     desc: Run clippy for wasm32 target

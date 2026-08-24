@@ -1,0 +1,12 @@
+[package]
+name = "vertigo-test-reactive-bench"
+version = "0.1.0"
+authors = ["Michał Pokrywka <wolfmoon@o2.pl>"]
+edition = "2024"
+publish = false
+
+[lib]
+crate-type = ["cdylib", "rlib"]
+
+[dependencies]
+vertigo = { path = "../../crates/vertigo" }

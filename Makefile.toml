@@ -12,10 +12,17 @@ script = [
     "cargo test --release -p vertigo --lib reactive_old::compare -- --nocapture --test-threads=1"
 ]
 
+# Reactive graph benchmark in a browser
+# NOTE: WebDriver on localhost:9515 needs to be running
+[tasks.reactive-bench-wasm]
+script = [
+    "cargo test --package fantoccini-tests --test reactive_bench -- --ignored --nocapture"
+]
+
 # NOTE: WebDriver on localhost:9515 needs to be running
 [tasks.automated-tests]
 script = [
-    "cargo test --package fantoccini-tests -- --ignored"
+    "cargo test --package fantoccini-tests --test basic -- --ignored"
 ]
 
 [tasks.ci]
@@ -33,7 +40,7 @@ dependencies = ["unit-tests", "automated-tests"]
 
 [tasks.clean-build]
 dependencies = ["clean"]
-script = ["rm -rf build"]
+script = ["rm -rf build build-reactive-bench"]
 
 # Run clippy for wasm32 target
 

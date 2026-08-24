@@ -13,6 +13,7 @@ members = [
 
     "tests",
     "tests/basic",
+    "tests/reactive-bench",
 
     "lint-project",
 ]

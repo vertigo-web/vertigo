@@ -13,3 +13,7 @@ tokio = "1"
 [[test]]
 name = "basic"
 path = "basic/tests.rs"
+
+[[test]]
+name = "reactive_bench"
+path = "reactive-bench/tests.rs"
