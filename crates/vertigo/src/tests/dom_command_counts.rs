@@ -65,10 +65,13 @@ fn counts(pairs: &[(&str, u32)]) -> BTreeMap<String, u32> {
         .collect()
 }
 
-/// Interpolating a value into `dom!` routes through `EmbedDom` and `render_value`, which
-/// builds a fresh text node and throws the old one away.
+/// Interpolating a value into `dom!` patches the text node it already has.
+///
+/// This used to route through `render_value`, which replaced the whole node on every
+/// change - three commands, a new id each time, and a marker comment left behind. The
+/// `editor-keystroke-*` pair in `tests/dom-bench` measures what that cost.
 #[test]
-fn interpolated_text_is_replaced_not_patched() {
+fn interpolated_text_is_patched_in_place() {
     let text = Value::new("aaa".to_string());
 
     let emitted = commands_for(
@@ -79,17 +82,11 @@ fn interpolated_text_is_replaced_not_patched() {
         || text.set("bbb".to_string()),
     );
 
-    assert_eq!(
-        emitted,
-        counts(&[("CreateText", 1), ("InsertBefore", 1), ("RemoveText", 1)])
-    );
+    assert_eq!(emitted, counts(&[("UpdateText", 1)]));
 }
 
-/// `DomText::new_computed` subscribes the value straight to an existing node.
-///
-/// Three commands become one, with no node churn and no marker comment. Nothing in the
-/// repo uses this yet - see the `editor-keystroke-*` pair in `tests/dom-bench`, which
-/// measures what the difference is worth.
+/// Reaching for [`DomText::new_computed`] by hand gets the same thing - it is what the
+/// interpolation above is built on.
 #[test]
 fn computed_text_node_is_patched_in_place() {
     let text = Value::new("aaa".to_string());
@@ -103,6 +100,40 @@ fn computed_text_node_is_patched_in_place() {
     );
 
     assert_eq!(emitted, counts(&[("UpdateText", 1)]));
+}
+
+/// Mounting is a single `CreateText` carrying the value, not an empty node patched
+/// afterwards.
+///
+/// This is load-bearing rather than cosmetic: server-side rendering replays these commands
+/// into HTML, and the hydration pass builds its virtual tree from `CreateText` while
+/// ignoring `UpdateText`. A node created empty would hydrate empty.
+#[test]
+fn interpolated_text_mounts_with_its_value_already_set() {
+    let text = Value::new("hello".to_string());
+
+    log_start();
+    let _root = {
+        let text = text.clone();
+        dom! { <div>{text}</div> }
+    };
+    let commands = log_take();
+
+    let created: Vec<&String> = commands
+        .iter()
+        .filter_map(|command| match command {
+            DriverDomCommand::CreateText { value, .. } => Some(value),
+            _ => None,
+        })
+        .collect();
+
+    assert_eq!(created, vec!["hello"], "{commands:?}");
+    assert!(
+        !commands
+            .iter()
+            .any(|command| matches!(command, DriverDomCommand::UpdateText { .. })),
+        "mounting must not need a follow-up patch: {commands:?}"
+    );
 }
 
 /// A class change is one attribute write, with no node churn.
@@ -287,7 +318,7 @@ fn updating_one_row_does_not_disturb_the_list() {
 
     assert_eq!(
         emitted,
-        counts(&[("CreateText", 1), ("InsertBefore", 1), ("RemoveText", 1)]),
+        counts(&[("UpdateText", 1)]),
         "one row's update must not touch the other rows"
     );
 }

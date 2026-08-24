@@ -1,4 +1,8 @@
-use crate::{DropResource, ToComputed, driver_module::get_driver_dom, struct_mut::VecMut};
+use std::cell::Cell;
+
+use crate::{
+    Computed, Context, DropResource, ToComputed, driver_module::get_driver_dom, struct_mut::VecMut,
+};
 
 use super::dom_id::DomId;
 
@@ -21,16 +25,51 @@ impl DomText {
         }
     }
 
+    /// A text node that keeps itself current by **patching its own content**.
+    ///
+    /// One `UpdateText` per change, and the node keeps its identity - which means anything
+    /// holding a reference to it, and any browser state attached to it, survives.
+    ///
+    /// The alternative shape, a `render_value` that builds a fresh [`DomText`] each time,
+    /// costs three commands per change (create, insert, remove), leaves a marker comment
+    /// behind, and hands out a new [`DomId`] every time.
     pub fn new_computed<T: Into<String> + Clone + PartialEq + 'static>(
         computed: impl ToComputed<T>,
     ) -> Self {
-        let text_node = DomText::new(String::new());
+        Self::patched(computed.to_computed(), Into::into)
+    }
+
+    /// As [`Self::new_computed`], but for anything *printable* rather than convertible into
+    /// a `String` - `u32`, `bool`, a [`Display`](std::fmt::Display) type of your own.
+    pub fn new_computed_display<T: ToString + Clone + PartialEq + 'static>(
+        computed: impl ToComputed<T>,
+    ) -> Self {
+        Self::patched(computed.to_computed(), |value| value.to_string())
+    }
+
+    fn patched<T: Clone + PartialEq + 'static>(
+        computed: Computed<T>,
+        print: impl Fn(T) -> String + 'static,
+    ) -> Self {
+        // Created with the value already in it, rather than created empty and patched by
+        // the subscription's first run. That keeps the mount stream a single `CreateText`,
+        // which matters for more than the one saved command: the hydration pass builds its
+        // virtual tree from `CreateText` and ignores `UpdateText` entirely
+        // (`src_js/api/command/dom/hydration.ts`), so a node created empty would hydrate
+        // as empty and then have to be corrected.
+        let initial = print(computed.get(&Context::read()));
+        let text_node = DomText::new(initial);
         let id_dom = text_node.id_dom;
 
-        let computed = computed.to_computed();
+        // `subscribe` replays the current value immediately, and that first call would
+        // write the very string the node was just created with. Skip it; every later call
+        // is a real change, because a `Computed` only notifies when its value differs.
+        let is_first_call = Cell::new(true);
         let client = computed.subscribe(move |value| {
-            let value: String = value.into();
-            get_driver_dom().update_text(id_dom, &value);
+            if is_first_call.replace(false) {
+                return;
+            }
+            get_driver_dom().update_text(id_dom, &print(value));
         });
 
         text_node.subscriptions.push(client);

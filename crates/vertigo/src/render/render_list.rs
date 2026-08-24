@@ -297,12 +297,15 @@ mod tests {
         DomDebugFragment::from_log().to_pseudo_html()
     }
 
+    /// A row whose body is an interpolated reactive value. That embeds as a self-patching
+    /// text node, so - unlike the `render_value` rows above - it leaves no marker comment
+    /// inside the element.
     fn element_list_html(rows: &[&str]) -> String {
         format!(
             "<ul>{rows}<!-- list element --></ul>",
             rows = rows
                 .iter()
-                .map(|label| format!("<!-- row --><li>{label}<!-- v --></li>"))
+                .map(|label| format!("<!-- row --><li>{label}</li>"))
                 .collect::<String>()
         )
     }
