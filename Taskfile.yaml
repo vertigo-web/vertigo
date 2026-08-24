@@ -14,7 +14,7 @@ tasks:
   reactive-compare:
     desc: Compare old vs new reactive graph performance
     cmds:
-      - cargo test -p vertigo --lib reactive_old::compare -- --nocapture
+      - cargo test --release -p vertigo --lib reactive_old::compare -- --nocapture --test-threads=1
 
   automated-tests:
     desc: "NOTE: WebDriver on localhost:9515 needs to be running"

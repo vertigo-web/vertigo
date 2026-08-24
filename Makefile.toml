@@ -7,6 +7,11 @@ script = [
     "cargo test --all-features"
 ]
 
+[tasks.reactive-compare]
+script = [
+    "cargo test --release -p vertigo --lib reactive_old::compare -- --nocapture --test-threads=1"
+]
+
 # NOTE: WebDriver on localhost:9515 needs to be running
 [tasks.automated-tests]
 script = [
