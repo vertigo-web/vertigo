@@ -228,28 +228,27 @@ fn assert_writes(rows: &[Reported]) {
     }
 }
 
-/// The headline comparison: the two ways a `Value<String>` can reach a text node.
+/// The two ways a `Value<String>` can reach a text node must cost the same.
+///
+/// `{value}` interpolation used to wrap the text in a `render_value`, which replaced the
+/// whole node on every change: three commands against one, plus a marker comment per
+/// interpolation and a fresh id each time. It now patches, like the hand-written form. This
+/// pair is what stops that regressing - the two workloads are the same scene built with the
+/// two spellings, so any divergence shows up here.
 fn assert_text_paths(rows: &[Reported]) {
     let embed = find_row(rows, "editor-keystroke-embed");
     let patch = find_row(rows, "editor-keystroke-patch");
 
-    // `EmbedDom` -> `render_value` throws the text node away and builds a new one.
-    assert_eq!(embed.cmds, 3, "embed keystroke: {:?}", embed.breakdown);
-    assert_eq!(embed.cmd("CreateText"), 1);
-    assert_eq!(embed.cmd("InsertBefore"), 1);
-    assert_eq!(embed.cmd("RemoveText"), 1);
-
-    // `DomText::new_computed` patches it in place.
-    assert_eq!(patch.cmds, 1, "patch keystroke: {:?}", patch.breakdown);
-    assert_eq!(patch.cmd("UpdateText"), 1);
-
-    // Kept alongside the exact counts because it stays meaningful if they ever change.
-    assert!(
-        patch.cmds < embed.cmds,
-        "patching a text node must not cost more than replacing it"
+    for row in [embed, patch] {
+        assert_eq!(row.cmds, 1, "{}: {:?}", row.slug, row.breakdown);
+        assert_eq!(row.cmd("UpdateText"), 1, "{}: and it is a patch", row.slug);
+    }
+    assert_eq!(
+        embed.breakdown, patch.breakdown,
+        "ordinary interpolation must take the same path as DomText::new_computed"
     );
 
-    // Same mechanism as the embed keystroke; catches the two scenes drifting apart.
+    // Same mechanism again, in a different scene; catches the two drifting apart.
     let list_text = find_row(rows, "list-update-text");
     assert_eq!(
         list_text.breakdown, embed.breakdown,
@@ -318,8 +317,9 @@ fn assert_dashboard(rows: &[Reported]) {
     let all = find_row(rows, "dash-tick-all");
 
     // The aggregate depends on the status flag, not the latency, so a tick is exactly one
-    // row's text update.
-    assert_eq!(one.cmds, 3, "dash-tick-one: {:?}", one.breakdown);
+    // row's text update - and a text update is one patch.
+    assert_eq!(one.cmds, 1, "dash-tick-one: {:?}", one.breakdown);
+    assert_eq!(one.cmd("UpdateText"), 1);
 
     // One transaction covering every site costs exactly what the sites cost individually -
     // the batching saves flushes, not commands.

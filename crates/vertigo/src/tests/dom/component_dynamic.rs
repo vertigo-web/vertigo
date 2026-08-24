@@ -230,7 +230,7 @@ fn test_stringifyable_group_attrs() {
 
     assert_eq!(
         el1_str,
-        "<div v-component='Hello'><span>Hello<!-- v --> world</span></div>"
+        "<div v-component='Hello'><span>Hello world</span></div>"
     );
 
     log_start();
@@ -246,7 +246,7 @@ fn test_stringifyable_group_attrs() {
 
     assert_eq!(
         el2_str,
-        "<div v-component='Hello'><span>Good bye<!-- v --> world</span></div>"
+        "<div v-component='Hello'><span>Good bye world</span></div>"
     );
 }
 
@@ -299,7 +299,7 @@ fn test_embeddable_group_attrs() {
 
     assert_eq!(
         el2_str,
-        "<div id='my_div' v-component='Hello'><span>Good bye<!-- v --> world</span></div>"
+        "<div id='my_div' v-component='Hello'><span>Good bye world</span></div>"
     );
 }
 

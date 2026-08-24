@@ -8,7 +8,6 @@ use crate::{
         dom_node::DomNode,
         events::{ClickEvent, IntersectionEvent},
     },
-    render::render_value,
 };
 
 /// Type interpreted as component's dynamic attributes groups
@@ -248,11 +247,18 @@ impl_embed_to_string!(
     std::num::NonZeroIsize,
 );
 
+/// A reactive value embedded in `dom!` becomes a text node that **patches itself**.
+///
+/// One `UpdateText` command per change, and the node keeps its id. Wrapping the value in a
+/// [`render_value`] instead - which is what this used to do - replaced the whole text node
+/// on every change: three commands, a new [`DomId`](crate::DomId) each time, and a marker
+/// comment left in the document forever. For text that is all cost and no benefit, because
+/// the rendered shape is always the same single text node.
 impl<T: ToString + Clone + PartialEq + 'static> EmbedDom for &Computed<T> {
     fn embed(self) -> DomNode {
-        render_value(self.clone(), |val| DomNode::Text {
-            node: DomText::new(val.to_string()),
-        })
+        DomNode::Text {
+            node: DomText::new_computed_display(self.clone()),
+        }
     }
 }
 

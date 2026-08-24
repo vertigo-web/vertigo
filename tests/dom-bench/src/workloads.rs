@@ -25,53 +25,56 @@
 //! Recorded 2026-08-24 on Linux x86_64 (6.18.12-amd64), Chrome 145.0.7632.109 via
 //! ChromeDriver 145, release build with `wasm-opt -Os`.
 //!
+//! The `was` columns are the run that prompted making reactive text patch in place instead
+//! of replacing the node; see the CHANGELOG entry for 0.13.0.
+//!
 //! ```text
-//! workload                        per op      cmds
-//! list-mount-unmount            27350 us     17000
-//! list-append-remove              285 us        34
-//! list-append-remove-small         82 us        34
-//! list-middle-remove-reinsert     277 us        34
-//! list-reverse                   1317 us      1000
-//! list-reverse-layout            4843 us      1000
-//! list-update-text                6.6 us         3
-//! list-toggle-class               5.1 us         1
-//! editor-keystroke-embed          7.0 us         3
-//! editor-keystroke-patch          4.5 us         1
-//! editor-toggle-bold              5.3 us         1
-//! editor-caret-move               0.4 us         0
-//! editor-block-insert-delete      163 us        13
-//! dash-tick-all                   644 us       600
-//! dash-tick-one                   6.9 us         3
-//! dash-status-change               35 us        15
-//! flush-min                       5.2 us         1
+//! workload                        per op      cmds    (was)     (was)
+//! list-mount-unmount            18430 us     14000   27350 us   17000
+//! list-append-remove              274 us        28     285 us      34
+//! list-append-remove-small         74 us        28      82 us      34
+//! list-middle-remove-reinsert     275 us        28     277 us      34
+//! list-reverse                   1316 us      1000    1317 us    1000
+//! list-reverse-layout            4873 us      1000    4843 us    1000
+//! list-update-text                4.8 us         1     6.6 us       3
+//! list-toggle-class               5.6 us         1     5.1 us       1
+//! editor-keystroke-embed          5.0 us         1     7.0 us       3
+//! editor-keystroke-patch          4.7 us         1     4.5 us       1
+//! editor-toggle-bold              5.6 us         1     5.3 us       1
+//! editor-caret-move               0.6 us         0     0.4 us       0
+//! editor-block-insert-delete      162 us        10     163 us      13
+//! dash-tick-all                   278 us       200     644 us     600
+//! dash-tick-one                   4.9 us         1     6.9 us       3
+//! dash-status-change               32 us        11      35 us      15
+//! flush-min                       5.7 us         1     5.2 us       1
 //! ```
 //!
-//! Read the table against two subtrahends. **`flush-min` is 5.2us**: one flush carrying one
-//! command, which every operation pays and almost none of which is DOM work - it is the
-//! wasm to JS round trip. So `editor-toggle-bold` at 5.3us is essentially free, and the
-//! interesting figures are the ones well above the floor. The graph suite's
-//! `clock-roundtrip` measures the same crossing at ~4.1us, which corroborates it.
+//! Read the table against `flush-min`, ~5us: one flush carrying one command, which every
+//! operation pays and almost none of which is DOM work - it is the wasm to JS round trip.
+//! So `editor-toggle-bold` is essentially free, and the interesting figures are the ones
+//! well above the floor. The graph suite's `clock-roundtrip` measures the same crossing at
+//! ~4.1us, which corroborates it.
 //!
 //! What the numbers say:
 //!
-//! - **Patching a text node beats replacing one.** `editor-keystroke-patch` (4.5us, one
-//!   `UpdateText`) against `editor-keystroke-embed` (7.0us, three commands and a node swap):
-//!   36% less time and a third of the commands, for what an app author writes as the same
-//!   thing. `DomText::new_computed` is public and used nowhere; ordinary `{value}`
-//!   interpolation takes the slower path. The wall-clock gap is modest only because the
-//!   round trip dominates a one-command flush.
-//! - **The equality cutoff reaches all the way to the DOM.** `editor-caret-move` is 0.4us
-//!   and zero commands - thirteen times cheaper than the cheapest operation that does touch
+//! - **Reactive text costs one command.** `{value}` interpolation and
+//!   `DomText::new_computed` now agree at one `UpdateText`; the two keystroke workloads
+//!   exist to keep them agreeing. Every text update in the suite got a third cheaper as a
+//!   result, and `dash-tick-all` - two hundred readings refreshed at once - more than
+//!   halved, from 644us to 278us.
+//! - **The equality cutoff reaches all the way to the DOM.** `editor-caret-move` is 0.6us
+//!   and zero commands - eight times cheaper than the cheapest operation that does touch
 //!   the DOM.
-//! - **Layout is the larger half of a reorder.** `list-reverse` mutates in 1317us;
-//!   forcing the browser to settle the layout it invalidated costs 4843us. Vertigo's share
+//! - **Layout is the larger half of a reorder.** `list-reverse` mutates in 1316us;
+//!   forcing the browser to settle the layout it invalidated costs 4873us. Vertigo's share
 //!   of a full 500-row reorder is about a quarter of what the user actually waits for.
 //! - **One-row list edits are dominated by reconciliation, not by the DOM.** Appending one
-//!   row emits the same 34 commands whether the list holds 50 rows or 500, yet costs 82us
-//!   against 285us. The DOM work is constant; the reconciler's per-update walk is not.
+//!   row emits the same 28 commands whether the list holds 50 rows or 500, yet costs 74us
+//!   against 274us. The DOM work is constant; the reconciler's per-update walk is not.
+//!   This is the clearest remaining target.
 //! - **Batching saves flushes, not commands.** `dash-tick-all` emits exactly 200x what
-//!   `dash-tick-one` emits, but at 644us against 6.9us x 200 = 1380us it is more than twice
-//!   as fast, because it is one transaction and therefore one flush.
+//!   `dash-tick-one` emits, but at 278us against 4.9us x 200 = 980us it is three and a half
+//!   times faster, because it is one transaction and therefore one flush.
 //!
 //! Iteration counts are tuned so every batch lands in 100-300ms on that machine. Re-tune if
 //! a batch drifts far outside that band; `?scale=` shortens a run without changing the

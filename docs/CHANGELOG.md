@@ -46,6 +46,13 @@ The reactive graph was rewritten and keyed list rendering was rebuilt around per
 * **Breaking**: the mount closure of `DomComment::new_marker` takes a third argument,
   `&MarkerContent`. A marker moved within the same parent no longer re-runs its mount
 * Every `render_list` row is preceded by an anchor comment node
+* A reactive value embedded in `dom!` - `<span>{my_value}</span>` - now updates its text
+  node in place instead of replacing it - 3x faster. Note the DOM
+  shape change if you assert on rendered HTML - `<li>{value}</li>` no longer emits a
+  trailing `<!-- v -->` inside the element
+* `DomText::new_computed` creates its node with the value already set rather than empty,
+  and gained a `new_computed_display` sibling for `T: ToString` (`u32`, `bool`, your own
+  `Display` types) alongside the existing `T: Into<String>` form
 * Guide `guides::value_synchronize_and_collections` replaced by [`collections`][collections]
 
 ### Removed
