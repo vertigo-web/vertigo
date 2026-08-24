@@ -1,10 +1,38 @@
 use std::{cell::RefCell, collections::VecDeque};
 
-use super::{
-    NodeId,
-    edges::Edges,
-    node_hash::{NodeMap, NodeSet},
-};
+use super::{NodeId, edges::Edges, node_hash::NodeMap};
+
+/// What one wave knows about one node.
+///
+/// These four facts are asked about the same id together - `ensure_fresh` wants three of
+/// them before it can do anything, and the parent walk then wants `changed` - so they
+/// share an entry and are read in one lookup rather than four.
+///
+/// A node with no entry is the common case: not dirty, not yet visited by this wave.
+#[derive(Clone, Copy, Default, PartialEq, Eq, Debug)]
+pub(super) struct WaveState {
+    /// Enqueued for this wave and not yet refreshed.
+    pub(super) dirty: bool,
+    /// Already refreshed (or confirmed fresh) in this wave. At most one `refresh` per id.
+    pub(super) done: bool,
+    /// `done`, and the value came out different.
+    pub(super) changed: bool,
+    /// `refresh` is on the stack (gray). Re-entering it is a cycle.
+    pub(super) refreshing: bool,
+}
+
+impl WaveState {
+    /// Nothing left to remember, so the entry can go.
+    fn is_empty(&self) -> bool {
+        !self.dirty && !self.done && !self.changed && !self.refreshing
+    }
+
+    /// A dirty node is handed out by `take_ready` once, and only if this wave has not
+    /// already dealt with it.
+    fn is_takeable(&self) -> bool {
+        self.dirty && !self.refreshing && !self.done
+    }
+}
 
 /// Kahn-style worklist for one propagation wave.
 ///
@@ -16,17 +44,12 @@ use super::{
 /// stores that remaining count; `0` (or missing) means the node can be processed.
 /// `scratch_children` is reused so `propagate` does not allocate a new `Vec` per node.
 pub(super) struct Dirty {
-    in_dirty: RefCell<NodeSet>,
+    /// Per-node wave bookkeeping; see [`WaveState`].
+    wave: RefCell<NodeMap<WaveState>>,
     dirty_parent_count: RefCell<NodeMap<u32>>,
     ready: RefCell<VecDeque<NodeId>>,
     scratch_children: RefCell<Vec<NodeId>>,
-    /// Already refreshed (or confirmed fresh) in this wave. At most one `refresh` per id.
-    done: RefCell<NodeSet>,
-    /// Subset of `done` whose value changed.
-    changed: RefCell<NodeSet>,
-    /// Nodes whose `refresh` is on the stack (gray). Re-entering one is a cycle.
-    refreshing: RefCell<NodeSet>,
-    /// The same nodes in the order they were entered, so a cycle can name its path.
+    /// Gray nodes in the order they were entered, so a cycle can name its path.
     refresh_stack: RefCell<Vec<NodeId>>,
 }
 
@@ -38,7 +61,10 @@ pub(super) struct Refreshing<'a> {
 
 impl Drop for Refreshing<'_> {
     fn drop(&mut self) {
-        self.dirty.refreshing.borrow_mut().remove(&self.id);
+        // Only the gray mark: `finish` has already recorded `done`/`changed` on this same
+        // entry, and those belong to the wave, not to the call that is returning.
+        self.dirty
+            .clear_flag(self.id, |state| state.refreshing = false);
         self.dirty.refresh_stack.borrow_mut().pop();
     }
 }
@@ -46,36 +72,61 @@ impl Drop for Refreshing<'_> {
 impl Dirty {
     pub(super) fn new() -> Self {
         Self {
-            in_dirty: RefCell::new(NodeSet::default()),
+            wave: RefCell::new(NodeMap::default()),
             dirty_parent_count: RefCell::new(NodeMap::default()),
             ready: RefCell::new(VecDeque::new()),
             scratch_children: RefCell::new(Vec::new()),
-            done: RefCell::new(NodeSet::default()),
-            changed: RefCell::new(NodeSet::default()),
-            refreshing: RefCell::new(NodeSet::default()),
             refresh_stack: RefCell::new(Vec::new()),
         }
     }
 
+    /// Everything this wave knows about `id`, in one lookup.
+    pub(super) fn wave_state(&self, id: NodeId) -> WaveState {
+        self.wave.borrow().get(&id).copied().unwrap_or_default()
+    }
+
+    fn set_flag(&self, id: NodeId, edit: impl FnOnce(&mut WaveState)) {
+        edit(self.wave.borrow_mut().entry(id).or_default());
+    }
+
+    /// Turn a flag off, dropping the entry once it holds nothing.
+    fn clear_flag(&self, id: NodeId, edit: impl FnOnce(&mut WaveState)) {
+        let mut wave = self.wave.borrow_mut();
+        if let Some(state) = wave.get_mut(&id) {
+            edit(state);
+            if state.is_empty() {
+                wave.remove(&id);
+            }
+        }
+    }
+
+    /// Start a wave: forget what the previous one refreshed.
+    ///
+    /// `dirty` and `refreshing` survive. Nodes enqueued by the writes that opened this
+    /// wave are already dirty and must stay so, and a transaction opened from inside a
+    /// running wave reaches here with `refresh` on the stack.
     pub(super) fn begin_wave(&self) {
-        self.done.borrow_mut().clear();
-        self.changed.borrow_mut().clear();
+        self.wave.borrow_mut().retain(|_, state| {
+            state.done = false;
+            state.changed = false;
+            !state.is_empty()
+        });
     }
 
     pub(super) fn contains(&self, id: NodeId) -> bool {
-        self.in_dirty.borrow().contains(&id)
+        self.wave_state(id).dirty
     }
 
+    /// The graph reads these off [`Self::wave_state`] instead, in one lookup with the
+    /// rest; they are here for tests that assert on a single flag.
+    #[cfg(test)]
     pub(super) fn is_done(&self, id: NodeId) -> bool {
-        self.done.borrow().contains(&id)
+        self.wave_state(id).done
     }
 
-    pub(super) fn changed_this_wave(&self, id: NodeId) -> bool {
-        self.changed.borrow().contains(&id)
-    }
-
+    #[cfg(test)]
     pub(super) fn is_refreshing(&self, id: NodeId) -> bool {
-        self.refreshing.borrow().contains(&id)
+        self.wave_state(id).refreshing
     }
 
     /// Mark `id` gray for the duration of `refresh`.
@@ -84,8 +135,10 @@ impl Dirty {
     /// in `ensure_fresh`, where the path is still on the stack - hence an assertion here
     /// rather than a second panic with a poorer message.
     pub(super) fn enter_refresh(&self, id: NodeId) -> Refreshing<'_> {
-        let marked = self.refreshing.borrow_mut().insert(id);
-        debug_assert!(marked, "{id:?} is already refreshing");
+        self.set_flag(id, |state| {
+            debug_assert!(!state.refreshing, "{id:?} is already refreshing");
+            state.refreshing = true;
+        });
         self.refresh_stack.borrow_mut().push(id);
         Refreshing { dirty: self, id }
     }
@@ -100,18 +153,20 @@ impl Dirty {
     }
 
     pub(super) fn finish(&self, id: NodeId, changed: bool) {
-        self.done.borrow_mut().insert(id);
-        if changed {
-            self.changed.borrow_mut().insert(id);
-        }
+        self.set_flag(id, |state| {
+            state.done = true;
+            state.changed |= changed;
+        });
     }
 
     pub(super) fn enqueue(&self, id: NodeId, edges: &Edges) {
-        if self.done.borrow().contains(&id) || self.refreshing.borrow().contains(&id) {
-            return;
-        }
-        if !self.in_dirty.borrow_mut().insert(id) {
-            return;
+        {
+            let mut wave = self.wave.borrow_mut();
+            let state = wave.entry(id).or_default();
+            if state.done || state.refreshing || state.dirty {
+                return;
+            }
+            state.dirty = true;
         }
         let count = self.count_dirty_parents(id, edges);
         if count == 0 {
@@ -123,11 +178,10 @@ impl Dirty {
 
     pub(super) fn take_ready(&self) -> Option<NodeId> {
         let mut ready = self.ready.borrow_mut();
-        let in_dirty = self.in_dirty.borrow();
-        let refreshing = self.refreshing.borrow();
-        let done = self.done.borrow();
+        let wave = self.wave.borrow();
         while let Some(id) = ready.pop_front() {
-            if in_dirty.contains(&id) && !refreshing.contains(&id) && !done.contains(&id) {
+            let takeable = wave.get(&id).is_some_and(WaveState::is_takeable);
+            if takeable {
                 return Some(id);
             }
         }
@@ -135,17 +189,23 @@ impl Dirty {
     }
 
     pub(super) fn dequeue(&self, id: NodeId) {
-        self.in_dirty.borrow_mut().remove(&id);
+        self.clear_flag(id, |state| state.dirty = false);
         self.dirty_parent_count.borrow_mut().remove(&id);
     }
 
     /// `Some` leftover ids when `ready` is empty but dirty nodes remain (a cycle).
     pub(super) fn cycle_leftover(&self) -> Option<Vec<NodeId>> {
-        let in_dirty = self.in_dirty.borrow();
-        if in_dirty.is_empty() {
+        let leftover: Vec<NodeId> = self
+            .wave
+            .borrow()
+            .iter()
+            .filter(|(_, state)| state.dirty)
+            .map(|(id, _)| *id)
+            .collect();
+        if leftover.is_empty() {
             None
         } else {
-            Some(in_dirty.iter().copied().collect())
+            Some(leftover)
         }
     }
 
@@ -192,8 +252,10 @@ impl Dirty {
     }
 
     fn count_dirty_parents(&self, id: NodeId, edges: &Edges) -> u32 {
-        let in_dirty = self.in_dirty.borrow();
-        edges.count_parents_if(id, |parent| in_dirty.contains(&parent))
+        let wave = self.wave.borrow();
+        edges.count_parents_if(id, |parent| {
+            wave.get(&parent).is_some_and(|state| state.dirty)
+        })
     }
 
     fn fill_scratch(&self, id: NodeId, edges: &Edges) {
@@ -207,14 +269,14 @@ impl Dirty {
         {
             let children = self.scratch_children.borrow();
             let mut counts = self.dirty_parent_count.borrow_mut();
-            let refreshing = self.refreshing.borrow();
-            let done = self.done.borrow();
+            let wave = self.wave.borrow();
             for child in children.iter() {
                 if let Some(count) = counts.get_mut(child) {
                     *count = count.saturating_sub(1);
                     if *count == 0 {
                         zeroed.push(*child);
-                        if !refreshing.contains(child) && !done.contains(child) {
+                        let state = wave.get(child).copied().unwrap_or_default();
+                        if !state.refreshing && !state.done {
                             newly_ready.push(*child);
                         }
                     }
