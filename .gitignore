@@ -1,6 +1,7 @@
 .vscode
 /build
 /build-reactive-bench
+/build-dom-bench
 /demo_build
 /examples/build
 /node_modules

@@ -17,3 +17,7 @@ path = "basic/tests.rs"
 [[test]]
 name = "reactive_bench"
 path = "reactive-bench/tests.rs"
+
+[[test]]
+name = "dom_bench"
+path = "dom-bench/tests.rs"

@@ -3587,6 +3587,13 @@ dependencies = [
 ]
 
 [[package]]
+name = "vertigo-bench-support"
+version = "0.1.0"
+dependencies = [
+ "vertigo",
+]
+
+[[package]]
 name = "vertigo-cli"
 version = "0.13.0"
 dependencies = [
@@ -3692,10 +3699,19 @@ dependencies = [
 ]
 
 [[package]]
+name = "vertigo-test-dom-bench"
+version = "0.1.0"
+dependencies = [
+ "vertigo",
+ "vertigo-bench-support",
+]
+
+[[package]]
 name = "vertigo-test-reactive-bench"
 version = "0.1.0"
 dependencies = [
  "vertigo",
+ "vertigo-bench-support",
 ]
 
 [[package]]
