@@ -67,7 +67,20 @@ The connect state is matched to the graph again once the closure returns.
 A node unwatched by its own connect is disconnected. It never stays connected.
 
 Disconnect must not write. It cannot watch the node again, so connect and disconnect
-cannot bounce. A chain — one connect watching the next node — is not a loop.
+cannot bounce.
+
+`create` can, though, and a write there can watch another node. That is how one connect
+pulls in the next, and it is also how a ring of them could hand the connection round
+forever, each write undoing the one before. So a flush is one round of connect decisions
+per node: a node connects at most once in it. The node that would connect a second time
+is left disconnected and the console gets:
+
+```text
+vertigo: when_connect closures are undoing each other - a node cannot connect twice in one flush, so it is left disconnected
+```
+
+A chain — one connect watching the next node — connects each of its nodes once, however
+long it is, and is never cut.
 
 ### 3. Only the outermost transaction starts a wave
 

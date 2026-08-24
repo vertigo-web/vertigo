@@ -51,6 +51,8 @@ const MAX_POOLED_PARENT_BUFFERS: usize = 64;
 
 pub(crate) const CYCLE: &str = "vertigo: cycle in the reactive graph";
 
+pub(crate) const CONNECT_LOOP: &str = "vertigo: when_connect closures are undoing each other - a node cannot connect twice in one flush, so it is left disconnected";
+
 /// One reactive graph. Nodes created from different graphs do not see each other.
 pub struct Graph {
     pub(crate) inner: Rc<GraphInner>,
@@ -294,7 +296,10 @@ impl GraphInner {
     }
 
     fn flush_watch(&self) {
-        self.watch.flush(|id| self.edges.is_watched(id));
+        let left_disconnected = self.watch.flush(|id| self.edges.is_watched(id));
+        for id in left_disconnected {
+            self.logger.error(&format!("{CONNECT_LOOP} ({id:?})"));
+        }
     }
 
     fn flush_watch_if_idle(&self) {

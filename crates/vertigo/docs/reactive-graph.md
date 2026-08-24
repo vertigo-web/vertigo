@@ -121,6 +121,13 @@ because `create` runs after the graph has settled, it may write the `Value` (for
 to clear it when attaching). Disconnect only tears down the external handler; a `set`
 from that drop is ignored, so connect and disconnect cannot bounce.
 
+`create` may write, and that write can change who is watched - which is how one connect
+pulls in the next, and also how a ring of them could hand the connection round forever,
+each write undoing the one before. So a flush is one round of connect decisions per node:
+a node connects at most once in it, and one that would connect a second time is left
+disconnected with the reason logged. A chain connects each of its nodes once however long
+it is, so only a ring is ever cut.
+
 ## Isolated graphs
 
 `Value::new` and `Computed::from` use one graph per thread. `Graph::new()` creates a
