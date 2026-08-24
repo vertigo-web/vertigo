@@ -1,11 +1,14 @@
 use std::{
     cell::{Cell, RefCell},
-    collections::{HashMap, HashSet},
     rc::Rc,
 };
 
 use super::super::DropResource;
-use super::{NodeId, edges::ParentDiff};
+use super::{
+    NodeId,
+    edges::ParentDiff,
+    node_hash::{NodeMap, NodeSet},
+};
 
 /// `when_connect` lifecycle: connect while a node has children, drop the resource when not.
 ///
@@ -13,9 +16,9 @@ use super::{NodeId, edges::ParentDiff};
 /// [`Self::flush`] after the wave and after `on_after_transaction`, so installing and
 /// tearing down external handlers is not part of propagation.
 pub(super) struct Watch {
-    connect: RefCell<HashMap<NodeId, Rc<dyn Fn() -> DropResource>>>,
-    connected: RefCell<HashMap<NodeId, DropResource>>,
-    pending: RefCell<HashSet<NodeId>>,
+    connect: RefCell<NodeMap<Rc<dyn Fn() -> DropResource>>>,
+    connected: RefCell<NodeMap<DropResource>>,
+    pending: RefCell<NodeSet>,
     flushing: Cell<bool>,
 }
 
@@ -33,9 +36,9 @@ impl Drop for Flushing<'_> {
 impl Watch {
     pub(super) fn new() -> Self {
         Self {
-            connect: RefCell::new(HashMap::new()),
-            connected: RefCell::new(HashMap::new()),
-            pending: RefCell::new(HashSet::new()),
+            connect: RefCell::new(NodeMap::default()),
+            connected: RefCell::new(NodeMap::default()),
+            pending: RefCell::new(NodeSet::default()),
             flushing: Cell::new(false),
         }
     }
@@ -104,7 +107,7 @@ impl Watch {
         self.flushing.set(true);
         let _guard = Flushing { watch: self };
 
-        let mut connected_once: HashSet<NodeId> = HashSet::new();
+        let mut connected_once = NodeSet::default();
         let mut left_disconnected: Vec<NodeId> = Vec::new();
 
         loop {
