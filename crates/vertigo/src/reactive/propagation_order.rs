@@ -288,8 +288,9 @@ fn lattice_walks(depth: usize) -> u64 {
 #[test]
 fn a_clean_lattice_is_walked_once_per_node() {
     for depth in [2usize, 4, 8, 16] {
-        // `top`, two nodes per level, the two at level zero, and the base value.
-        let nodes = 1 + 2 * depth + 2 + 1;
+        // `top`, two nodes per level, and the two at level zero. The base value is not
+        // walked: it has no parents, so `ensure_fresh` settles it from the edge map.
+        let nodes = 1 + 2 * depth + 2;
 
         assert_eq!(lattice_walks(depth) as usize, nodes, "depth {depth}");
     }

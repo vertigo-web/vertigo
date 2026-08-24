@@ -1,8 +1,8 @@
-use std::{cell::RefCell, rc::Rc};
+use std::cell::RefCell;
 
 use super::super::context::ParentList;
 use super::{
-    ErasedNode, NodeId,
+    NodeId,
     node_hash::{NodeMap, NodeSet},
 };
 
@@ -16,7 +16,9 @@ pub(super) struct ParentDiff {
 pub(super) struct Edges {
     child_parents: RefCell<NodeMap<NodeSet>>,
     parent_children: RefCell<NodeMap<NodeSet>>,
-    parent_refs: RefCell<NodeMap<Vec<Rc<dyn ErasedNode>>>>,
+    /// The parents exactly as the last compute read them: strong refs, in order, so a
+    /// parent outlives the child listing it and [`Self::replace`] can compare sequences.
+    parent_refs: RefCell<NodeMap<ParentList>>,
 }
 
 impl Edges {
@@ -33,6 +35,15 @@ impl Edges {
             .borrow()
             .get(&id)
             .is_some_and(|c| !c.is_empty())
+    }
+
+    /// Whether `id` reads anything. A node with no parents cannot be made stale by the
+    /// graph, so this answers `ensure_fresh` without walking or recording anything.
+    pub(super) fn has_parents(&self, id: NodeId) -> bool {
+        self.child_parents
+            .borrow()
+            .get(&id)
+            .is_some_and(|parents| !parents.is_empty())
     }
 
     pub(super) fn count_parents_if(&self, id: NodeId, mut pred: impl FnMut(NodeId) -> bool) -> u32 {
@@ -62,6 +73,25 @@ impl Edges {
 
     /// Replace `child`'s parent set. `None` means the parent ids were already the same.
     pub(super) fn replace(&self, child: NodeId, pairs: ParentList) -> Option<ParentDiff> {
+        // Almost every recompute reads exactly what it read last time, in the same order,
+        // so `pairs` arrives element-for-element identical to what is stored. Comparing the
+        // two id sequences is a linear scan of `u64`s and settles that case outright. The
+        // set below is the general answer, but building it hashes every id twice over and
+        // allocates a table - per recompute, and a node that aggregates a list pays it in
+        // the hundreds.
+        {
+            let parent_refs = self.parent_refs.borrow();
+            if let Some(previous) = parent_refs.get(&child)
+                && previous.len() == pairs.len()
+                && previous
+                    .iter()
+                    .zip(pairs.iter())
+                    .all(|((before, _), (now, _))| before == now)
+            {
+                return None;
+            }
+        }
+
         // Collect the ids before comparing. Set-against-set is linear, while comparing the
         // stored set against the raw `pairs` list is quadratic - and `pairs` carries one
         // entry per `get` call, duplicates included, so it can be much longer than the set.
@@ -75,8 +105,6 @@ impl Edges {
                 return None;
             }
         }
-
-        let kept: Vec<Rc<dyn ErasedNode>> = pairs.into_iter().map(|(_, slot)| slot).collect();
 
         let old = self
             .child_parents
@@ -109,7 +137,10 @@ impl Edges {
             }
         }
 
-        let old_kept = self.parent_refs.borrow_mut().insert(child, kept);
+        // Stored whole rather than stripped to the `Rc`s: keeping the ids alongside is
+        // what lets the next call answer by comparing sequences, and it saves building a
+        // second vector here.
+        let old_kept = self.parent_refs.borrow_mut().insert(child, pairs);
         drop(old_kept);
 
         Some(ParentDiff {
@@ -153,7 +184,9 @@ impl Edges {
 
 #[cfg(test)]
 mod tests {
-    use super::*;
+    use std::rc::Rc;
+
+    use super::{super::ErasedNode, *};
 
     struct N;
     impl ErasedNode for N {

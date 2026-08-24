@@ -209,25 +209,38 @@ impl GraphInner {
     /// sources do not change during a wave (writes from compute, subscribe and Drop are
     /// refused, `when_connect` runs after), so every ancestor is settled by the time the
     /// walk returns.
-    pub(crate) fn ensure_fresh(&self, id: NodeId) {
-        if !self.tx.is_propagating() || self.dirty.is_done(id) {
-            return;
+    /// Returns whether `id`'s value changed in this wave, which is what the parent walk
+    /// below needs; reading it from the same lookup saves asking `Dirty` again per parent.
+    pub(crate) fn ensure_fresh(&self, id: NodeId) -> bool {
+        if !self.tx.is_propagating() {
+            return false;
         }
-        if self.dirty.is_refreshing(id) {
+        let state = self.dirty.wave_state(id);
+        if state.done {
+            return state.changed;
+        }
+        if state.refreshing {
             panic!(
                 "{CYCLE} - a computed read a value that depends on it: {}",
                 self.dirty.cycle_path(id)
             );
         }
-        if self.dirty.contains(id) {
-            self.refresh_now(id);
-            return;
+        if state.dirty {
+            return self.refresh_now(id);
+        }
+        // A node that reads nothing cannot be stale, and during a wave most reads land on
+        // one: every `Value` is parentless, and a node that aggregates a list reaches them
+        // by the hundred. Answering from the edge map costs a single lookup, where the
+        // walk below would take a scratch buffer and leave a `done` mark behind - and that
+        // mark buys nothing here, because there are no ancestors for a later read to skip.
+        if !self.edges.has_parents(id) {
+            return false;
         }
         if self.parents_changed(id) {
-            self.refresh_now(id);
-        } else {
-            self.dirty.finish(id, false);
+            return self.refresh_now(id);
         }
+        self.dirty.finish(id, false);
+        false
     }
 
     /// Parent sets have to be copied out: the walk below re-enters the graph, so no
@@ -245,8 +258,7 @@ impl GraphInner {
 
         let mut changed = false;
         for parent in parents.iter().copied() {
-            self.ensure_fresh(parent);
-            if self.dirty.changed_this_wave(parent) {
+            if self.ensure_fresh(parent) {
                 changed = true;
             }
         }
@@ -261,39 +273,41 @@ impl GraphInner {
         changed
     }
 
-    fn refresh_now(&self, id: NodeId) {
-        if self.dirty.is_done(id) {
-            return;
+    /// Returns whether the node's value changed.
+    fn refresh_now(&self, id: NodeId) -> bool {
+        let state = self.dirty.wave_state(id);
+        if state.done {
+            return state.changed;
         }
         let _guard = self.dirty.enter_refresh(id);
 
         let Some(node) = self.nodes.upgrade(id) else {
-            if self.dirty.contains(id) {
+            if state.dirty {
                 self.dirty.dequeue(id);
                 self.dirty.after_refresh(id, false, &self.edges);
             }
             self.dirty.finish(id, false);
-            return;
+            return false;
         };
 
         let changed = node.refresh();
 
-        // Still the state it had before the refresh: `enqueue` refuses a node that is
-        // being refreshed, so nothing could have made it dirty in between.
+        // `state` was read before the refresh and still holds: `enqueue` refuses a node
+        // that is being refreshed, so nothing could have made it dirty in between.
         //
         // A pull normally arrives here with the node already dirty: reaching it means a
         // parent changed, and a parent that changed enqueues its children before its
         // dependents can read it. The other branch is a guard, not a hot path - what it
         // must never do is release children that are waiting on parents which really are
         // dirty, for a node no child was ever waiting on.
-        let was_dirty = self.dirty.contains(id);
-        if was_dirty {
+        if state.dirty {
             self.dirty.dequeue(id);
             self.dirty.after_refresh(id, changed, &self.edges);
         } else {
             self.dirty.after_pull(id, changed, &self.edges);
         }
         self.dirty.finish(id, changed);
+        changed
     }
 
     fn flush_watch(&self) {
