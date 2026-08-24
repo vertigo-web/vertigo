@@ -21,6 +21,11 @@ tasks:
     cmds:
       - cargo test --package fantoccini-tests --test reactive_bench -- --ignored --nocapture
 
+  dom-bench-wasm:
+    desc: "Rendering / DOM benchmark in a browser (NOTE: WebDriver on localhost:9515 needs to be running)"
+    cmds:
+      - cargo test --package fantoccini-tests --test dom_bench -- --ignored --nocapture
+
   automated-tests:
     desc: "NOTE: WebDriver on localhost:9515 needs to be running"
     cmds:
@@ -49,7 +54,7 @@ tasks:
   clean-build:
     desc: clean
     cmds:
-      - rm -rf build build-reactive-bench
+      - rm -rf build build-reactive-bench build-dom-bench
 
   clippy-wasm32:
     desc: Run clippy for wasm32 target

@@ -5,6 +5,7 @@ mod autojsjson;
 mod bind;
 mod css;
 mod dom;
+mod dom_command_counts;
 mod js_macro;
 mod jsjson_bytes;
 mod keyed_computed_list;

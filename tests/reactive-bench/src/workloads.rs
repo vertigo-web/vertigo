@@ -48,10 +48,7 @@ use std::{cell::Cell, rc::Rc};
 
 use vertigo::{Computed, DropResource, Value, reactive::Graph};
 
-use crate::{
-    clock::now_ms,
-    runner::{Bench, Workload},
-};
+use vertigo_bench_support::{Bench, Workload, now_ms};
 
 const ITEMS: usize = 500;
 const CHAIN: usize = 200;

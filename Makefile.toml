@@ -19,6 +19,13 @@ script = [
     "cargo test --package fantoccini-tests --test reactive_bench -- --ignored --nocapture"
 ]
 
+# Rendering / DOM benchmark in a browser
+# NOTE: WebDriver on localhost:9515 needs to be running
+[tasks.dom-bench-wasm]
+script = [
+    "cargo test --package fantoccini-tests --test dom_bench -- --ignored --nocapture"
+]
+
 # NOTE: WebDriver on localhost:9515 needs to be running
 [tasks.automated-tests]
 script = [
@@ -40,7 +47,7 @@ dependencies = ["unit-tests", "automated-tests"]
 
 [tasks.clean-build]
 dependencies = ["clean"]
-script = ["rm -rf build build-reactive-bench"]
+script = ["rm -rf build build-reactive-bench build-dom-bench"]
 
 # Run clippy for wasm32 target
 
