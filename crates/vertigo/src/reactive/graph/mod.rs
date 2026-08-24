@@ -9,6 +9,7 @@ mod dirty;
 mod edges;
 mod hooks;
 mod logger;
+mod node_hash;
 mod nodes;
 mod transaction;
 mod watch;

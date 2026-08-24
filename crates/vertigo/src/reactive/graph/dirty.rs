@@ -1,9 +1,10 @@
-use std::{
-    cell::RefCell,
-    collections::{HashMap, HashSet, VecDeque},
-};
+use std::{cell::RefCell, collections::VecDeque};
 
-use super::{NodeId, edges::Edges};
+use super::{
+    NodeId,
+    edges::Edges,
+    node_hash::{NodeMap, NodeSet},
+};
 
 /// Kahn-style worklist for one propagation wave.
 ///
@@ -15,16 +16,16 @@ use super::{NodeId, edges::Edges};
 /// stores that remaining count; `0` (or missing) means the node can be processed.
 /// `scratch_children` is reused so `propagate` does not allocate a new `Vec` per node.
 pub(super) struct Dirty {
-    in_dirty: RefCell<HashSet<NodeId>>,
-    dirty_parent_count: RefCell<HashMap<NodeId, u32>>,
+    in_dirty: RefCell<NodeSet>,
+    dirty_parent_count: RefCell<NodeMap<u32>>,
     ready: RefCell<VecDeque<NodeId>>,
     scratch_children: RefCell<Vec<NodeId>>,
     /// Already refreshed (or confirmed fresh) in this wave. At most one `refresh` per id.
-    done: RefCell<HashSet<NodeId>>,
+    done: RefCell<NodeSet>,
     /// Subset of `done` whose value changed.
-    changed: RefCell<HashSet<NodeId>>,
+    changed: RefCell<NodeSet>,
     /// Nodes whose `refresh` is on the stack (gray). Re-entering one is a cycle.
-    refreshing: RefCell<HashSet<NodeId>>,
+    refreshing: RefCell<NodeSet>,
     /// The same nodes in the order they were entered, so a cycle can name its path.
     refresh_stack: RefCell<Vec<NodeId>>,
 }
@@ -45,13 +46,13 @@ impl Drop for Refreshing<'_> {
 impl Dirty {
     pub(super) fn new() -> Self {
         Self {
-            in_dirty: RefCell::new(HashSet::new()),
-            dirty_parent_count: RefCell::new(HashMap::new()),
+            in_dirty: RefCell::new(NodeSet::default()),
+            dirty_parent_count: RefCell::new(NodeMap::default()),
             ready: RefCell::new(VecDeque::new()),
             scratch_children: RefCell::new(Vec::new()),
-            done: RefCell::new(HashSet::new()),
-            changed: RefCell::new(HashSet::new()),
-            refreshing: RefCell::new(HashSet::new()),
+            done: RefCell::new(NodeSet::default()),
+            changed: RefCell::new(NodeSet::default()),
+            refreshing: RefCell::new(NodeSet::default()),
             refresh_stack: RefCell::new(Vec::new()),
         }
     }

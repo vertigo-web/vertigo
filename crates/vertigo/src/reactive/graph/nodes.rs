@@ -1,20 +1,19 @@
 use std::{
     cell::RefCell,
-    collections::HashMap,
     rc::{Rc, Weak},
 };
 
-use super::{ErasedNode, NodeId};
+use super::{ErasedNode, NodeId, node_hash::NodeMap};
 
 /// Weak registry of live nodes.
 pub(super) struct Nodes {
-    slots: RefCell<HashMap<NodeId, Weak<dyn ErasedNode>>>,
+    slots: RefCell<NodeMap<Weak<dyn ErasedNode>>>,
 }
 
 impl Nodes {
     pub(super) fn new() -> Self {
         Self {
-            slots: RefCell::new(HashMap::new()),
+            slots: RefCell::new(NodeMap::default()),
         }
     }
 

@@ -1,11 +1,10 @@
-use std::{
-    cell::RefCell,
-    collections::{HashMap, HashSet},
-    rc::Rc,
-};
+use std::{cell::RefCell, rc::Rc};
 
 use super::super::context::ParentList;
-use super::{ErasedNode, NodeId};
+use super::{
+    ErasedNode, NodeId,
+    node_hash::{NodeMap, NodeSet},
+};
 
 /// Result of replacing a child's parents: nodes that gained or lost their last child.
 pub(super) struct ParentDiff {
@@ -15,17 +14,17 @@ pub(super) struct ParentDiff {
 
 /// Bidirectional DAG plus strong parent refs (so parents outlive the child that lists them).
 pub(super) struct Edges {
-    child_parents: RefCell<HashMap<NodeId, HashSet<NodeId>>>,
-    parent_children: RefCell<HashMap<NodeId, HashSet<NodeId>>>,
-    parent_refs: RefCell<HashMap<NodeId, Vec<Rc<dyn ErasedNode>>>>,
+    child_parents: RefCell<NodeMap<NodeSet>>,
+    parent_children: RefCell<NodeMap<NodeSet>>,
+    parent_refs: RefCell<NodeMap<Vec<Rc<dyn ErasedNode>>>>,
 }
 
 impl Edges {
     pub(super) fn new() -> Self {
         Self {
-            child_parents: RefCell::new(HashMap::new()),
-            parent_children: RefCell::new(HashMap::new()),
-            parent_refs: RefCell::new(HashMap::new()),
+            child_parents: RefCell::new(NodeMap::default()),
+            parent_children: RefCell::new(NodeMap::default()),
+            parent_refs: RefCell::new(NodeMap::default()),
         }
     }
 
@@ -66,7 +65,7 @@ impl Edges {
         // Collect the ids before comparing. Set-against-set is linear, while comparing the
         // stored set against the raw `pairs` list is quadratic - and `pairs` carries one
         // entry per `get` call, duplicates included, so it can be much longer than the set.
-        let new_parents: HashSet<NodeId> = pairs.iter().map(|(id, _)| *id).collect();
+        let new_parents: NodeSet = pairs.iter().map(|(id, _)| *id).collect();
 
         {
             let child_parents = self.child_parents.borrow();
