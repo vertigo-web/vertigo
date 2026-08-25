@@ -99,8 +99,14 @@ pub enum CommandForBrowser {
         commands: Vec<JsApiCommand>,
     },
 
+    /// A batch of DOM commands, flat-encoded.
+    ///
+    /// Not a `Vec<DriverDomCommand>`: as `JsJson` that becomes two `BTreeMap`s and three
+    /// heap `String`s per command, which dominated the cost of a large update. Encode with
+    /// [`encode_dom_commands`](crate::dev::command_wire::encode_dom_commands) and read it
+    /// back with [`decode_dom_commands`](crate::dev::command_wire::decode_dom_commands).
     DomBulkUpdate {
-        list: Vec<DriverDomCommand>,
+        commands: Vec<u8>,
     },
 }
 

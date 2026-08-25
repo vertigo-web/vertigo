@@ -4,7 +4,10 @@ use quote::quote;
 use std::error::Error;
 use syn::{DataEnum, Fields, Ident, ext::IdentExt};
 
-use crate::jsjson::attributes::{ContainerOpts, FieldOpts};
+use crate::jsjson::{
+    attributes::{ContainerOpts, FieldOpts},
+    is_vec_u8,
+};
 
 // {
 //   "Somestring": "foobar"
@@ -136,10 +139,20 @@ pub(super) fn impl_js_json_enum(
                     .filter_map(|field| field.ident.clone())
                     .collect::<Vec<_>>();
 
-                let field_encodes = field_idents
+                let field_encodes = fields
+                    .named
                     .iter()
-                    .map(|field_ident| {
+                    .filter_map(|field| Some((field.ident.clone()?, &field.ty)))
+                    .map(|(field_ident, field_ty)| {
                         let field_name = field_ident.unraw().to_string();
+
+                        // Same treatment a struct field of this type gets - see `is_vec_u8`.
+                        if is_vec_u8(field_ty) {
+                            return quote! {
+                                (#field_name.to_string(), vertigo::JsJson::Vec(#field_ident)),
+                            };
+                        }
+
                         quote! {
                             (#field_name.to_string(), #field_ident.to_json()),
                         }
@@ -160,10 +173,30 @@ pub(super) fn impl_js_json_enum(
                 });
 
                 // Decode
-                let field_decodes = field_idents
+                let field_decodes = fields
+                    .named
                     .iter()
-                    .map(|field_ident| {
+                    .filter_map(|field| Some((field.ident.clone()?, &field.ty)))
+                    .map(|(field_ident, field_ty)| {
                         let field_name = field_ident.unraw().to_string();
+
+                        if is_vec_u8(field_ty) {
+                            return quote! {
+                                #field_ident: value
+                                    .get_property_jsjson(&ctx, #field_name)
+                                    .and_then(|item| match item {
+                                        vertigo::JsJson::Vec(data) => Ok(data),
+                                        other => {
+                                            let message = [
+                                                "Vec<u8> expected, received ",
+                                                other.typename(),
+                                            ].concat();
+                                            Err(ctx.add(message))
+                                        }
+                                    })?,
+                            };
+                        }
+
                         quote! {
                             #field_ident: value.get_property(&ctx, #field_name)?,
                         }

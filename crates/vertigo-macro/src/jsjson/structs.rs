@@ -2,17 +2,12 @@ use darling::FromAttributes;
 use proc_macro::TokenStream;
 use quote::quote;
 use std::error::Error;
-use syn::{DataStruct, Ident, ext::IdentExt, spanned::Spanned};
+use syn::{DataStruct, Ident, ext::IdentExt};
 
-use crate::jsjson::attributes::{ContainerOpts, FieldOpts};
-
-fn is_vec_u8(ty: &syn::Type) -> bool {
-    let Ok(vec_u8_type) = syn::parse2::<syn::Type>(quote! { Vec<u8> }) else {
-        emit_error!(ty.span(), "Unreachable: Unable to parse Vec<u8>");
-        return false;
-    };
-    ty == &vec_u8_type
-}
+use crate::jsjson::{
+    attributes::{ContainerOpts, FieldOpts},
+    is_vec_u8,
+};
 
 pub(super) fn impl_js_json_struct(
     name: &Ident,

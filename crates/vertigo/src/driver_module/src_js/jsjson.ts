@@ -103,7 +103,12 @@ export const jsJsonDecodeItem = (buffer: BufferCursor): JsJsonType => {
     }
 
     if (typeId === JsJsonConst.Vec) {
-        return buffer.getBuffer();
+        // `.slice()`, and it has to be: `getBuffer` hands back a view straight into wasm
+        // linear memory, and the caller frees the block it points into before the decoded
+        // value is used (see `dom_access` in `wasm_module.ts`). Every other variant decodes
+        // into JS values that own their data; this is the only one that would otherwise
+        // escape as a window onto memory the allocator is free to reuse or grow away from.
+        return buffer.getBuffer().slice();
     }
 
     throw new Error(`jsJsonDecodeItem: Unknown type id ${typeId}`);

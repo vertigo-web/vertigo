@@ -2,7 +2,8 @@ import { AppLocation } from "../../location/AppLocation";
 import { CallbackManager } from "./callbackManager";
 import { ExportType } from "../../../wasm_module";
 import { hydrate } from "./hydration";
-import { injects } from "./injects";
+import { hydrateLink } from "./injects";
+import { CommandCursor, Tag, decodeCommands, readNames } from "./dom_wire";
 import { MapNodes } from "./map_nodes";
 import { ModuleControllerType } from "../../../wasm_init";
 import { Metadata } from "../../metadata";
@@ -98,10 +99,14 @@ export type CommandType = {
     }
 };
 
-const assertNeverCommand = (data: never): never => {
-    console.error(data);
-    throw Error('unknown command');
+const applyFailed = (error: unknown, name: string): void => {
+    console.error('bulk_update - item', name, error);
 };
+
+/// Position of a name in the batch dictionary, or -1. Compared against the index carried by
+/// each command, so the per-command string test it replaces never runs.
+const indexOfName = (names: Array<string>, wanted: string): number =>
+    names.findIndex((name) => name.toLowerCase() === wanted);
 
 export class DriverDom {
     private appLocation: AppLocation;
@@ -119,23 +124,148 @@ export class DriverDom {
         });
     }
 
-    public update = (commands: Array<CommandType>) => {
+    // `bytes` is the flat command stream - see `dom_wire.ts` and, for the format itself,
+    // `crates/vertigo/src/dev/command_wire.rs`. It is a view straight into wasm memory,
+    // valid for as long as this call runs, which is why nothing here is deferred.
+    public update = (bytes: Uint8Array) => {
         if (this.nodes.hasInitNodes() && this.metadata.getEnabledHydration()) {
-            hydrate(commands, this.nodes, this.appLocation);
+            // First flush only, so the object form is worth building here and nowhere else.
+            hydrate(decodeCommands(bytes), this.nodes, this.appLocation);
         }
+
+        const cursor = new CommandCursor(bytes);
+        const names = readNames(cursor);
+
+        // Names arrive as dictionary indices, so the two tests that used to run per command -
+        // "is this attribute autofocus" and "is this element an anchor" - are resolved once
+        // for the whole batch and then compared as integers. They used to call
+        // `toLocaleLowerCase()` on every SetAttr and on every created node.
+        const autofocusName = indexOfName(names, 'autofocus');
+        const anchorName = indexOfName(names, 'a');
 
         const setFocus: Set<number> = new Set();
 
-        for (const command of commands) {
-            try {
-                this.runCommand(command);
-            } catch (error) {
-                console.error('bulk_update - item', error, command);
-            }
+        // Two levels of failure, and they are not the same.
+        //
+        // Reading a command's fields happens outside the guard: those reads are what advance
+        // the cursor, so a throw from one leaves it at an unknown offset with no way to find
+        // the next command. That aborts the batch (`decodeFailed`) rather than applying
+        // whatever the following bytes happen to look like.
+        //
+        // Applying a command is guarded per command, exactly as it was before this format
+        // existed: one missing node id is logged and the rest of the batch still lands.
+        try {
+            while (!cursor.isEmpty()) {
+                const tag = cursor.byte();
 
-            if ('SetAttr' in command && command.SetAttr.name.toLocaleLowerCase() === 'autofocus') {
-                setFocus.add(command.SetAttr.id);
+                switch (tag) {
+                    case Tag.CreateNode: {
+                        const id = cursor.varint();
+                        const name = cursor.varint();
+                        try {
+                            this.createNode(id, names[name] ?? '', name === anchorName);
+                        } catch (error) { applyFailed(error, 'CreateNode'); }
+                        break;
+                    }
+                    case Tag.CreateText: {
+                        const id = cursor.varint();
+                        const value = cursor.string();
+                        try { this.createText(id, value); }
+                        catch (error) { applyFailed(error, 'CreateText'); }
+                        break;
+                    }
+                    case Tag.UpdateText: {
+                        const id = cursor.varint();
+                        const value = cursor.string();
+                        try { this.updateText(id, value); }
+                        catch (error) { applyFailed(error, 'UpdateText'); }
+                        break;
+                    }
+                    case Tag.SetAttr: {
+                        const id = cursor.varint();
+                        const name = cursor.varint();
+                        const value = cursor.string();
+
+                        if (name === autofocusName) {
+                            setFocus.add(id);
+                        }
+
+                        try { this.setAttr(id, names[name] ?? '', value); }
+                        catch (error) { applyFailed(error, 'SetAttr'); }
+                        break;
+                    }
+                    case Tag.RemoveAttr: {
+                        const id = cursor.varint();
+                        const name = cursor.varint();
+                        try { this.removeAttr(id, names[name] ?? ''); }
+                        catch (error) { applyFailed(error, 'RemoveAttr'); }
+                        break;
+                    }
+                    case Tag.RemoveNode: {
+                        const id = cursor.varint();
+                        try { this.removeNode(id); }
+                        catch (error) { applyFailed(error, 'RemoveNode'); }
+                        break;
+                    }
+                    case Tag.RemoveText: {
+                        const id = cursor.varint();
+                        try { this.removeText(id); }
+                        catch (error) { applyFailed(error, 'RemoveText'); }
+                        break;
+                    }
+                    case Tag.InsertBefore: {
+                        const parent = cursor.varint();
+                        const child = cursor.varint();
+                        const ref = cursor.optionalId();
+                        try { this.nodes.insertBefore(parent, child, ref); }
+                        catch (error) { applyFailed(error, 'InsertBefore'); }
+                        break;
+                    }
+                    case Tag.InsertCss: {
+                        const selector = cursor.byte() === 0 ? null : cursor.string();
+                        const value = cursor.string();
+                        try { this.nodes.insertCss(selector, value); }
+                        catch (error) { applyFailed(error, 'InsertCss'); }
+                        break;
+                    }
+                    case Tag.CreateComment: {
+                        const id = cursor.varint();
+                        const value = cursor.string();
+                        try { this.nodes.set(id, document.createComment(value)); }
+                        catch (error) { applyFailed(error, 'CreateComment'); }
+                        break;
+                    }
+                    case Tag.RemoveComment: {
+                        const id = cursor.varint();
+                        try { this.nodes.delete("remove_comment", id).remove(); }
+                        catch (error) { applyFailed(error, 'RemoveComment'); }
+                        break;
+                    }
+                    case Tag.CallbackAdd: {
+                        const id = cursor.varint();
+                        const eventName = cursor.string();
+                        const callbackId = cursor.varint();
+                        try { this.callbacks.add(this.nodes, id, eventName, callbackId); }
+                        catch (error) { applyFailed(error, 'CallbackAdd'); }
+                        break;
+                    }
+                    case Tag.CallbackRemove: {
+                        const id = cursor.varint();
+                        const eventName = cursor.string();
+                        const callbackId = cursor.varint();
+                        try { this.callbacks.remove(this.nodes, id, eventName, callbackId); }
+                        catch (error) { applyFailed(error, 'CallbackRemove'); }
+                        break;
+                    }
+                    default:
+                        throw new Error(`bulk_update: unknown command tag ${tag}`);
+                }
             }
+        } catch (error) {
+            console.error(
+                `bulk_update - stream is unreadable at ${cursor.where()}, dropping the rest of the batch`,
+                error
+            );
         }
 
         if (setFocus.size > 0) {
@@ -153,7 +283,7 @@ export class DriverDom {
         this.nodes.addStyles();
     }
 
-    private createNode(id: number, name: string) {
+    private createNode(id: number, name: string, isAnchor: boolean) {
         // Root nodes (html/head/body) already exist in the real DOM
         if (id === 1 || id === 2 || id === 3) {
             return;
@@ -166,7 +296,9 @@ export class DriverDom {
         const node = createElement(name);
         this.nodes.set(id, node);
 
-        injects(node, this.appLocation);
+        if (isAnchor) {
+            hydrateLink(node, this.appLocation);
+        }
     }
 
     private setAttr(id: number, name: string, value: string) {
@@ -234,74 +366,4 @@ export class DriverDom {
         text.textContent = value;
     }
 
-    private runCommand(command: CommandType) {
-        if ('RemoveNode' in command) {
-            this.removeNode(command.RemoveNode.id);
-            return;
-        }
-
-        if ('InsertBefore' in command) {
-            this.nodes.insertBefore(command.InsertBefore.parent, command.InsertBefore.child, command.InsertBefore.ref_id === null ? null : command.InsertBefore.ref_id);
-            return;
-        }
-
-        if ('CreateNode' in command) {
-            this.createNode(command.CreateNode.id, command.CreateNode.name);
-            return;
-        }
-
-        if ('CreateText' in command) {
-            this.createText(command.CreateText.id, command.CreateText.value);
-            return;
-        }
-
-        if ('UpdateText' in command) {
-            this.updateText(command.UpdateText.id, command.UpdateText.value);
-            return;
-        }
-
-        if ('SetAttr' in command) {
-            this.setAttr(command.SetAttr.id, command.SetAttr.name, command.SetAttr.value);
-            return;
-        }
-
-        if ('RemoveAttr' in command) {
-            this.removeAttr(command.RemoveAttr.id, command.RemoveAttr.name);
-            return;
-        }
-
-        if ('RemoveText' in command) {
-            this.removeText(command.RemoveText.id);
-            return;
-        }
-
-        if ('InsertCss' in command) {
-            this.nodes.insertCss(command.InsertCss.selector, command.InsertCss.value);
-            return;
-        }
-
-        if ('CreateComment' in command) {
-            const comment = document.createComment(command.CreateComment.value);
-            this.nodes.set(command.CreateComment.id, comment);
-            return;
-        }
-
-        if ('RemoveComment' in command) {
-            const comment = this.nodes.delete("remove_comment", command.RemoveComment.id);
-            comment.remove();
-            return;
-        }
-
-        if ('CallbackAdd' in command) {
-            this.callbacks.add(this.nodes, command.CallbackAdd.id, command.CallbackAdd.event_name, command.CallbackAdd.callback_id);
-            return;
-        }
-
-        if ('CallbackRemove' in command) {
-            this.callbacks.remove(this.nodes, command.CallbackRemove.id, command.CallbackRemove.event_name, command.CallbackRemove.callback_id);
-            return;
-        }
-
-        return assertNeverCommand(command);
-    }
 }

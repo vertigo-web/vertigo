@@ -53,6 +53,16 @@ The reactive graph was rewritten and keyed list rendering was rebuilt around per
 * `DomText::new_computed` creates its node with the value already set rather than empty,
   and gained a `new_computed_display` sibling for `T: ToString` (`u32`, `bool`, your own
   `Display` types) alongside the existing `T: Into<String>` form
+* **Breaking** (`dev`): DOM commands travel to the browser in a flat binary format instead of
+  as `JsJson` objects, so `CommandForBrowser::DomBulkUpdate` now carries `commands: Vec<u8>`
+  rather than `list: Vec<DriverDomCommand>`. Encode and decode with
+  `dev::command_wire::{encode_dom_commands, decode_dom_commands}`. Every command used to cost
+  two `BTreeMap`s and three heap `String`s to build, serialize and drop, and repeated its
+  field names on the wire once per command; element and attribute names are now interned per
+  batch. Nothing above the wire changed - the same commands are emitted in the same order
+* `AutoJsJson` encodes a `Vec<u8>` field of an enum variant as `JsJson::Vec` - one
+  length-prefixed byte run - which is what it already did for a struct field of that type.
+  It previously produced a list with a `JsJson::Number` per byte
 * Guide `guides::value_synchronize_and_collections` replaced by [`collections`][collections]
 
 ### Removed
@@ -86,6 +96,9 @@ The reactive graph was rewritten and keyed list rendering was rebuilt around per
   cannot observe a value assembled from a half-updated graph
 * Recomputing a node with many dependencies is no longer quadratic in their number
 * A compute closure reading the same value repeatedly records it once
+* A `Vec<u8>` arriving from wasm is copied out of linear memory before use. It was decoded as
+  a view onto the memory block, which the caller frees before the decoded value is read, so
+  the bytes could be reused or grown away from underneath it
 * `vertigo build` no longer fails wasm optimization with *"memory.copy operations require
   bulk memory operations"* - the WASM features enabled by default for
   `wasm32-unknown-unknown` are now passed to `wasm-opt` explicitly, because `strip = true`

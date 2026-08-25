@@ -9,6 +9,7 @@ use crate::{
             CommandForBrowser, ConsoleLogLevel, DriverDomCommand, LocationCallbackMode,
             LocationSetMode, LocationTarget, TimerKind, browser_response, decode_json,
         },
+        command_wire::encode_dom_commands,
     },
     external_api::safe_wrappers,
 };
@@ -169,7 +170,9 @@ impl CommandForBrowserApi {
     }
 
     pub fn dom_bulk_update(&self, list: Vec<DriverDomCommand>) {
-        exec_command(CommandForBrowser::DomBulkUpdate { list });
+        exec_command(CommandForBrowser::DomBulkUpdate {
+            commands: encode_dom_commands(&list),
+        });
     }
 
     pub fn cookie_get(&self, name: String) -> String {

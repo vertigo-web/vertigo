@@ -10,7 +10,7 @@ import { Interval } from "./command/interval";
 import { AppLocation } from './location/AppLocation';
 import { Cookies } from "./command/cookies";
 import { getRandom } from "./command/getRandom";
-import { CommandType, DriverDom } from "./command/dom/dom";
+import { DriverDom } from "./command/dom/dom";
 import { Metadata } from "./metadata";
 
 type JsApiCommandType =
@@ -130,8 +130,9 @@ type ExecType
         }
     }
     | {
+        // Flat command stream, not a list of objects - see `command/dom/dom_wire.ts`.
         DomBulkUpdate: {
-            list: Array<CommandType>
+            commands: Uint8Array
         }
     };
 
@@ -299,7 +300,7 @@ export class Api {
         }
 
         if ('DomBulkUpdate' in safeArg) {
-            this.dom.update(safeArg.DomBulkUpdate.list);
+            this.dom.update(safeArg.DomBulkUpdate.commands);
             return null;
         }
 
