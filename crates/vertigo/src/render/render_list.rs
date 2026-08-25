@@ -1,12 +1,8 @@
-use std::{
-    collections::{HashMap, VecDeque},
-    hash::Hash,
-    rc::Rc,
-};
+use std::{collections::VecDeque, hash::Hash, rc::Rc};
 
 use crate::{
     Computed, DomComment, DomNode, KeyedListItem, ToComputed, dom::dom_id::DomId,
-    driver_module::get_driver_dom, keyed_computed_list, struct_mut::ValueMut,
+    driver_module::get_driver_dom, fast_hash::FastMap, keyed_computed_list, struct_mut::ValueMut,
 };
 
 /// Render an iterable as a keyed list of DOM nodes.
@@ -200,7 +196,7 @@ fn get_pairs_middle<T: Clone + PartialEq + 'static, K: Clone + Eq + Hash>(
     new_child: VecDeque<KeyedListItem<K, Computed<T>>>,
     render: &dyn Fn(&Computed<T>) -> DomNode,
 ) -> VecDeque<(K, Row)> {
-    let mut cache: HashMap<K, (usize, Row)> = real_child
+    let mut cache: FastMap<K, (usize, Row)> = real_child
         .into_iter()
         .enumerate()
         .map(|(index, (key, row))| (key, (index, row)))

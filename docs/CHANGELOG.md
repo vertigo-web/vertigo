@@ -63,6 +63,15 @@ The reactive graph was rewritten and keyed list rendering was rebuilt around per
 * `AutoJsJson` encodes a `Vec<u8>` field of an enum variant as `JsJson::Vec` - one
   length-prefixed byte run - which is what it already did for a struct field of that type.
   It previously produced a list with a `JsJson::Number` per byte
+* `keyed_computed_list` builds one index per update instead of three, and stamps a single
+  key cache instead of rebuilding two.
+* Vertigo's own hash maps - the keyed-list index, the list reconciler's middle cache, and
+  every `dev::HashMapMut` including the one consulted for each DOM insertion - use an FxHash
+  hasher instead of the standard `SipHash-1-3`. This is **not** collision-resistant against
+  chosen keys: the worst case is a render that degrades to quadratic on a list keyed by
+  attacker-chosen strings, which matters server-side under SSR and not in the browser. It is
+  worth about a fifth of the keyed-list improvement above. `dev::HashMapMut` gains a
+  defaulted hasher parameter, so a map that wants `RandomState` can still say so
 * Guide `guides::value_synchronize_and_collections` replaced by [`collections`][collections]
 
 ### Removed

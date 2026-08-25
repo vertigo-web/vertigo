@@ -40,6 +40,7 @@ mod dom_macro;
 mod driver_module;
 mod exports;
 pub mod external_api;
+mod fast_hash;
 mod fetch;
 mod future_box;
 pub mod html_entities;
