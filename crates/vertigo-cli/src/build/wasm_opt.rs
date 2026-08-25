@@ -26,13 +26,23 @@ const WASM_FEATURES: &[&str] = &[
     "--enable-multivalue",
 ];
 
+/// Optimization level passed to `wasm-opt`.
+///
+/// `-Os` rather than a speed level, and measured rather than assumed. Running the whole
+/// `tests/dom-bench` suite three times at each level, same source tree, `-O4` came out 0.5%
+/// slower at the median with every single workload's ratio inside its own run-to-run spread
+/// and 0.25% larger (262000 bytes against 261351). There is little left for `wasm-opt` to
+/// do once rustc has run LTO over the crate graph, so size is the only axis where the choice
+/// still shows up, and `-Os` is the one that wins it.
+const OPT_LEVEL: &str = "-Os";
+
 pub fn run_wasm_opt(from: &WasmPath, to: &WasmPath) -> bool {
     let from_str = from.as_string();
     let to_str = to.as_string();
 
     let mut wasm_opt_command = Command::new("wasm-opt");
     wasm_opt_command.args(supported_features());
-    wasm_opt_command.args(["-Os", "--strip-debug", "-o", &to_str, &from_str]);
+    wasm_opt_command.args([OPT_LEVEL, "--strip-debug", "-o", &to_str, &from_str]);
 
     log::info!("Running: {wasm_opt_command:?}");
 

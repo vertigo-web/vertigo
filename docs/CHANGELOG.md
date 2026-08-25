@@ -74,6 +74,10 @@ The reactive graph was rewritten and keyed list rendering was rebuilt around per
   children survive a reorder
 * Updating one row of a keyed list no longer costs work proportional to the *square* of the
   list length
+* Reordering a keyed list moves only the rows whose order actually changed. The keyed phase
+  used to re-insert every row it walked, so swapping two rows of a thousand moved the 998
+  rows between them; it now moves two. Measured on the `js-framework-benchmark` swap
+  workload: 179ms to 32ms
 * `Value::new` and `Value::set` no longer deep-copy the payload when nothing is listening
   for `Value::add_event`
 * A node is computed at most once per change, whatever the shape of the graph. A `get`

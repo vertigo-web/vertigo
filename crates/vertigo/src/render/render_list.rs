@@ -200,20 +200,85 @@ fn get_pairs_middle<T: Clone + PartialEq + 'static, K: Clone + Eq + Hash>(
     new_child: VecDeque<KeyedListItem<K, Computed<T>>>,
     render: &dyn Fn(&Computed<T>) -> DomNode,
 ) -> VecDeque<(K, Row)> {
-    let mut cache: HashMap<K, Row> = real_child.into_iter().collect();
-    let mut pairs_middle = VecDeque::new();
+    let mut cache: HashMap<K, (usize, Row)> = real_child
+        .into_iter()
+        .enumerate()
+        .map(|(index, (key, row))| (key, (index, row)))
+        .collect();
+
+    // The middle in its new order, each surviving row carrying where it used to be.
+    // Rows the cache does not know are new, and are rendered here.
+    let mut rows: Vec<(K, Row, Option<usize>)> = Vec::with_capacity(new_child.len());
 
     for item in new_child {
-        let row = match cache.remove(&item.key) {
-            Some(row) => row,
-            None => Row::new(render(&item.value)),
-        };
-
-        row.insert_before(parent_id, last_before);
-        pairs_middle.push_back((item.key, row));
+        match cache.remove(&item.key) {
+            Some((was_at, row)) => rows.push((item.key, row, Some(was_at))),
+            None => rows.push((item.key, Row::new(render(&item.value)), None)),
+        }
     }
 
-    pairs_middle
+    let settled = rows_already_in_order(&rows);
+
+    // Right to left, so that every row anchors on the one that follows it - which by then is
+    // already in its final position, whether it was moved or left alone.
+    let mut before = last_before;
+
+    for (index, (_, row, _)) in rows.iter().enumerate().rev() {
+        if !settled[index] {
+            row.insert_before(parent_id, before);
+        }
+
+        before = row.anchor_id();
+    }
+
+    // Whatever is left in the cache is a row that left the list; dropping it removes its DOM.
+    rows.into_iter().map(|(key, row, _)| (key, row)).collect()
+}
+
+/// Which rows are already in the right order relative to each other, and so need no move.
+///
+/// This is a longest-increasing-subsequence over the rows' previous positions. Any set of
+/// surviving rows whose old positions ascend is, by construction, already in the correct
+/// relative order in the document - so only the rows *outside* that set have to be
+/// re-inserted. Taking the longest such set is what makes the number of moves minimal.
+fn rows_already_in_order<K>(rows: &[(K, Row, Option<usize>)]) -> Vec<bool> {
+    let mut settled = vec![false; rows.len()];
+
+    // Patience sorting. `tails[length - 1]` is the row index ending the increasing run of
+    // that length with the smallest possible tail; `previous` threads each row back to its
+    // predecessor so the winning run can be walked out at the end.
+    let mut tails: Vec<usize> = Vec::new();
+    let mut previous: Vec<Option<usize>> = vec![None; rows.len()];
+
+    for (index, (_, _, was_at)) in rows.iter().enumerate() {
+        // A row that did not exist before has to be inserted no matter what the others do.
+        let Some(was_at) = *was_at else {
+            continue;
+        };
+
+        let position = tails.partition_point(|tail| match rows[*tail].2 {
+            Some(tail_was_at) => tail_was_at < was_at,
+            // `tails` only ever holds surviving rows, so this arm is unreachable. Treating it
+            // as "not smaller" keeps the search total rather than panicking on a future edit.
+            None => false,
+        });
+
+        previous[index] = position.checked_sub(1).map(|earlier| tails[earlier]);
+
+        match tails.get_mut(position) {
+            Some(tail) => *tail = index,
+            None => tails.push(index),
+        }
+    }
+
+    let mut cursor = tails.last().copied();
+
+    while let Some(index) = cursor {
+        settled[index] = true;
+        cursor = previous[index];
+    }
+
+    settled
 }
 
 #[cfg(test)]
