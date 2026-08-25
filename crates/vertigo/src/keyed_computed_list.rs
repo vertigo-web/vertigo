@@ -1,10 +1,6 @@
-use std::{
-    collections::{HashMap, HashSet},
-    hash::Hash,
-    rc::Rc,
-};
+use std::{cell::Cell, collections::hash_map::Entry, hash::Hash, rc::Rc};
 
-use crate::{Computed, ToComputed, struct_mut::ValueMut};
+use crate::{Computed, ToComputed, fast_hash::FastMap, struct_mut::ValueMut};
 
 /// One entry in a [`keyed_computed_list`]: a stable key plus a per-item value.
 ///
@@ -30,6 +26,9 @@ impl<K: PartialEq, V: PartialEq> PartialEq for KeyedListItem<K, V> {
         self.key == other.key && self.value == other.value
     }
 }
+
+/// Every key ever seen, with the `Computed` handed out for it and the pass that last saw it.
+type RowCache<K, T> = FastMap<K, (u64, Computed<T>)>;
 
 /// Maps a reactive list into a reactive list of per-item [`Computed`]s, reusing the same
 /// `Computed` instance for each key across updates (Solid `<For>`-style).
@@ -68,6 +67,14 @@ impl<K: PartialEq, V: PartialEq> PartialEq for KeyedListItem<K, V> {
 ///     assert_eq!(list[0].value.get(ctx).name, "Ann");
 /// });
 /// ```
+///
+/// # Cost of an update
+///
+/// One update of an n-row list is O(n) whatever changed, and that is inherent here: the
+/// source is a `Computed<Vec<T>>`, so reading it copies the vector, and the order has to be
+/// walked to be diffed. What the three nodes below are shaped for is keeping the constant
+/// small - one hash lookup, two key clones and one item clone per row, rather than a
+/// rebuild of every index.
 pub fn keyed_computed_list<T, K>(
     items: impl ToComputed<Vec<T>>,
     get_key: impl Fn(&T) -> K + 'static,
@@ -77,113 +84,156 @@ where
     K: Clone + Eq + Hash + std::fmt::Debug + 'static,
 {
     let items = items.to_computed();
-    let get_key = Rc::new(get_key);
 
-    // Behind an `Rc` for the same reason as `hash` below: both readers would otherwise
-    // deep-copy the whole list on every update.
-    let unique_keyed_items = Computed::from({
+    // Order and lookup, built together in one pass. The map is also the duplicate detector,
+    // so there is no separate set, and each item is moved into it rather than copied into a
+    // second structure.
+    let indexed = Computed::from({
         move |ctx| {
-            let mut result = Vec::new();
-            let mut seen = HashSet::new();
+            let items = items.get(ctx);
 
-            for item in items.get(ctx) {
+            let mut order = Vec::with_capacity(items.len());
+            let mut by_key = FastMap::with_capacity_and_hasher(items.len(), Default::default());
+
+            for item in items {
                 let key = get_key(&item);
 
-                if seen.contains(&key) {
-                    log::error!(
-                        "keyed_computed_list: duplicate key {:?}; keeping the first occurrence",
-                        key
-                    );
-                    continue;
+                match by_key.entry(key.clone()) {
+                    Entry::Occupied(_) => {
+                        log::error!(
+                            "keyed_computed_list: duplicate key {:?}; keeping the first occurrence",
+                            key
+                        );
+                    }
+                    Entry::Vacant(slot) => {
+                        slot.insert(item);
+                        order.push(key);
+                    }
                 }
-
-                seen.insert(key.clone());
-                result.push((key, item));
             }
 
-            Rc::new(result)
+            (Rc::new(order), Rc::new(by_key))
         }
     });
 
-    // Rows are looked up by key from here. A row only notifies when its own value
-    // changes, because `Computed` compares with `PartialEq` before notifying.
+    // The lookup on its own, and deliberately its own node.
     //
-    // Behind an `Rc` because every row reads this map, and `Computed::get` hands back a
-    // clone of the cached value - cloning the map itself would make one update cost
-    // `rows * rows` item clones.
-    let hash = Computed::from({
-        let unique_keyed_items = unique_keyed_items.clone();
-        move |ctx| {
-            Rc::new(
-                unique_keyed_items
-                    .get(ctx)
-                    .iter()
-                    .map(|(key, item)| (key.clone(), item.clone()))
-                    .collect::<HashMap<K, T>>(),
-            )
-        }
+    // Every row reads this, so its equality cutoff is what decides whether n rows recompute.
+    // Reordering a list leaves the map untouched, so a swap stops here; folding this back
+    // into `indexed` - whose value also carries the order - would make every reorder re-run
+    // the whole list. `unchanged_rows_do_not_notify` is the test that holds this in place.
+    let by_key = Computed::from({
+        let indexed = indexed.clone();
+        move |ctx| indexed.get(ctx).1
     });
 
-    let cache_computed = Rc::new(ValueMut::new(HashMap::<K, Computed<T>>::new()));
-    let cache_list_items = Rc::new(ValueMut::new(
-        HashMap::<K, KeyedListItem<K, Computed<T>>>::new(),
-    ));
+    // Key -> the `Computed` handed out for it, stamped with the pass that last saw the key.
+    // The stamp is what lets a single `retain` evict departed keys without a second set:
+    // re-running a pass simply re-stamps, so a repeated run is harmless.
+    let cache: Rc<ValueMut<RowCache<K, T>>> = Rc::new(ValueMut::new(FastMap::default()));
+    let pass = Rc::new(Cell::new(0u64));
 
     Computed::from({
         move |ctx| {
-            let unique_items = unique_keyed_items.get(ctx);
-            let mut result_list = Vec::with_capacity(unique_items.len());
+            let (order, by_key_now) = indexed.get(ctx);
 
-            for (key, item) in unique_items.iter() {
-                let next_computed = cache_computed.change(|cache| {
-                    if let Some(prev) = cache.get(key) {
-                        prev.clone()
-                    } else {
-                        let hash = hash.clone();
-                        let last = Rc::new(ValueMut::new(item.clone()));
-                        let lookup_key = key.clone();
-                        Computed::from(move |ctx| match hash.get(ctx).get(&lookup_key) {
-                            Some(val) => {
-                                let val = val.clone();
-                                last.set(val.clone());
-                                val
-                            }
-                            None => {
-                                log::error!(
-                                    "keyed_computed_list: item Computed for key {:?} was read after that key left the source list; returning last value",
-                                    lookup_key
-                                );
-                                last.get()
-                            }
-                        })
-                    }
-                });
+            let stamp = pass.get().wrapping_add(1);
+            pass.set(stamp);
 
-                let list_item = cache_list_items.change(|cache| match cache.get(key) {
-                    Some(prev) if prev.value == next_computed => prev.clone(),
-                    _ => KeyedListItem {
+            let mut result_list = Vec::with_capacity(order.len());
+
+            cache.change(|cache| {
+                for key in order.iter() {
+                    let value = match cache.get_mut(key) {
+                        Some(entry) => {
+                            entry.0 = stamp;
+                            entry.1.clone()
+                        }
+                        None => {
+                            // `order` and the map were built from the same pass, so every
+                            // key here is in it. Skipping rather than inventing a value is
+                            // what a future edit that breaks that should cost.
+                            let Some(item) = by_key_now.get(key) else {
+                                continue;
+                            };
+
+                            let value = row_computed(
+                                key.clone(),
+                                &by_key,
+                                by_key_now.clone(),
+                                item.clone(),
+                            );
+                            cache.insert(key.clone(), (stamp, value.clone()));
+                            value
+                        }
+                    };
+
+                    result_list.push(KeyedListItem {
                         key: key.clone(),
-                        value: next_computed.clone(),
-                    },
-                });
+                        value,
+                    });
+                }
 
-                result_list.push(list_item);
-            }
-
-            cache_computed.set(
-                result_list
-                    .iter()
-                    .map(|item| (item.key.clone(), item.value.clone()))
-                    .collect(),
-            );
-            cache_list_items.set(
-                result_list
-                    .iter()
-                    .map(|item| (item.key.clone(), item.clone()))
-                    .collect(),
-            );
+                cache.retain(|_, (seen, _)| *seen == stamp);
+            });
 
             result_list
         }
+    })
+}
+
+/// The `Computed` for one key: look the key up in the shared map, and hold on to the map
+/// that answered.
+///
+/// `last` keeps the *map* rather than the value, which is what makes the ordinary path cost
+/// one item clone instead of two - retaining the `Rc` is a pointer bump, retaining the value
+/// is a copy of it. Every row re-runs whenever a key joins or leaves the list, so that clone
+/// is paid n times per membership change and is worth removing.
+///
+/// The map doubles as the answer for a read after the key has left: the retained map is the
+/// last one that still had it. `seed` covers the one case it cannot - a read that happens
+/// before this `Computed` has ever run.
+fn row_computed<T, K>(
+    key: K,
+    by_key: &Computed<Rc<FastMap<K, T>>>,
+    initial: Rc<FastMap<K, T>>,
+    seed: T,
+) -> Computed<T>
+where
+    T: Clone + PartialEq + 'static,
+    K: Clone + Eq + Hash + std::fmt::Debug + 'static,
+{
+    let by_key = by_key.clone();
+    let last = Rc::new(ValueMut::new(initial));
+
+    Computed::from(move |ctx| {
+        let current = by_key.get(ctx);
+
+        if let Some(value) = current.get(&key) {
+            let value = value.clone();
+            last.set(current);
+            return value;
+        }
+
+        log::error!(
+            "keyed_computed_list: item Computed for key {:?} was read after that key left the source list; returning last value",
+            key
+        );
+
+        let value = last
+            .map(|last| last.get(&key).cloned())
+            .unwrap_or_else(|| seed.clone());
+
+        // The key is gone for good, so shrink what this row retains to its own last value.
+        // Holding the whole map is right while the row is live - every row shares that one
+        // `Rc` - but a row nobody re-renders would otherwise pin every item of the list it
+        // was last part of.
+        last.change(|last| {
+            if last.len() > 1 {
+                *last = Rc::new(FastMap::from_iter([(key.clone(), value.clone())]));
+            }
+        });
+
+        value
     })
 }

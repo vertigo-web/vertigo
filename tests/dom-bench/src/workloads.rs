@@ -29,36 +29,45 @@
 //!
 //! ```text
 //! workload                        per op      cmds
-//! list-mount-unmount             6200 us     14000
-//! list-append-remove              253 us        28
-//! list-append-remove-small       50.3 us        28
-//! list-middle-remove-reinsert     246 us        28
-//! list-reverse                    378 us       998
-//! list-reverse-layout            3735 us       998
-//! list-update-text                4.2 us         1
-//! list-toggle-class               4.6 us         1
-//! editor-keystroke-embed          4.3 us         1
-//! editor-keystroke-patch          4.1 us         1
-//! editor-toggle-bold              4.6 us         1
-//! editor-caret-move               0.6 us         0
-//! editor-block-insert-delete      153 us        10
-//! dash-tick-all                   127 us       200
-//! dash-tick-one                   4.1 us         1
-//! dash-status-change             22.8 us        11
-//! flush-min                       4.7 us         1
+//! list-mount-unmount             5960 us     14000
+//! list-append-remove              152 us        28
+//! list-append-remove-small       37.6 us        28
+//! list-middle-remove-reinsert     151 us        28
+//! list-reverse                    317 us       998
+//! list-reverse-layout            3740 us       998
+//! list-update-text                4.1 us         1
+//! list-toggle-class               4.5 us         1
+//! editor-keystroke-embed          4.2 us         1
+//! editor-keystroke-patch          3.9 us         1
+//! editor-toggle-bold              4.4 us         1
+//! editor-caret-move               0.5 us         0
+//! editor-block-insert-delete     93.4 us        10
+//! dash-tick-all                   126 us       200
+//! dash-tick-one                   4.0 us         1
+//! dash-status-change             21.4 us        11
+//! flush-min                       4.6 us         1
 //! ```
 //!
-//! One variable per table. Three earlier changes are worth their own note rather than extra
+//! One variable per table. Four earlier changes are worth their own note rather than extra
 //! columns here, because a table whose columns differ in more than one thing invites being
 //! read as a comparison it is not:
 //!
-//! - **The flat command wire format** (CHANGELOG 0.13.0) is the most recent, and the reason
-//!   the command counts below no longer track the cost. Encoding each command as a `JsJson`
-//!   object cost two `BTreeMap`s and three heap `String`s to build and drop, so the price of
-//!   an update was set by how many commands it carried. Mounting and unmounting a 500-row
-//!   list went from 18570us to 6200us, a full reverse from 1316us to 378us, and a
-//!   two-hundred-cell dashboard refresh from 275us to 127us - all at unchanged command
-//!   counts.
+//! - **The keyed-list index rewrite** (CHANGELOG 0.13.0) is the most recent, and the reason
+//!   every list figure above is well below the one before it.
+//!   [`keyed_computed_list`](vertigo::keyed_computed_list) used to rebuild three indexes and
+//!   two caches on every update, so a list paid for its whole length whatever changed;
+//!   it now builds one index and stamps one cache, and hashes with FxHash rather than
+//!   SipHash. `list-append-remove` went from 253us to 152us,
+//!   `list-middle-remove-reinsert` from 246us to 151us, `editor-block-insert-delete` from
+//!   153us to 93.4us. Split across the two halves of that change, on
+//!   `list-append-remove`: 253 -> 174us for the restructuring and 174 -> 152us for the
+//!   hasher.
+//! - **The flat command wire format** is the reason the command counts below no longer track
+//!   the cost. Encoding each command as a `JsJson` object cost two `BTreeMap`s and three heap
+//!   `String`s to build and drop, so the price of an update was set by how many commands it
+//!   carried. Mounting and unmounting a 500-row list went from 18570us to 6200us, a full
+//!   reverse from 1316us to 378us, and a two-hundred-cell dashboard refresh from 275us to
+//!   127us - all at unchanged command counts.
 //! - **Reactive text patching in place** is what took `list-update-text`,
 //!   `editor-keystroke-embed` and `dash-tick-one` from three commands to one. Before it,
 //!   those cost 6.6us, 7.0us and 6.9us, and `list-mount-unmount` needed 17000 commands.
@@ -69,7 +78,7 @@
 //!   buys everything; the native tests in `crates/vertigo/src/tests/dom_command_counts` pin
 //!   that at four commands, not two thousand.
 //!
-//! Read the table against `flush-min`, ~4.7us: one flush carrying one command, which every
+//! Read the table against `flush-min`, ~4.6us: one flush carrying one command, which every
 //! operation pays and almost none of which is DOM work - it is the wasm to JS round trip.
 //! So `editor-toggle-bold` is essentially free, and the interesting figures are the ones
 //! well above the floor. The graph suite's `clock-roundtrip` measures the same crossing at
@@ -79,21 +88,24 @@
 //!
 //! - **Commands are cheap now; the browser is not.** Before the flat wire format, cost
 //!   tracked command count closely enough that counting commands was a good proxy for
-//!   timing. It no longer is - `list-reverse` moves 998 nodes in 378us, 0.38us each - so the
+//!   timing. It no longer is - `list-reverse` moves 998 nodes in 317us, 0.32us each - so the
 //!   remaining large figures are real browser work rather than encoding overhead.
-//! - **Layout is almost all of a reorder.** `list-reverse` mutates in 378us; forcing the
-//!   browser to settle the layout it invalidated costs 3735us. Vertigo's share of a full
-//!   500-row reorder is now about a tenth of what the user actually waits for, so there is
+//! - **Layout is almost all of a reorder.** `list-reverse` mutates in 317us; forcing the
+//!   browser to settle the layout it invalidated costs 3740us. Vertigo's share of a full
+//!   500-row reorder is now about a twelfth of what the user actually waits for, so there is
 //!   very little left to win here.
-//! - **The equality cutoff reaches all the way to the DOM.** `editor-caret-move` is 0.6us
-//!   and zero commands - seven times cheaper than the cheapest operation that does touch
+//! - **The equality cutoff reaches all the way to the DOM.** `editor-caret-move` is 0.5us
+//!   and zero commands - eight times cheaper than the cheapest operation that does touch
 //!   the DOM.
-//! - **One-row list edits are dominated by reconciliation, not by the DOM.** Appending one
-//!   row emits the same 28 commands whether the list holds 50 rows or 500, yet costs 50us
-//!   against 253us. The DOM work is constant; the reconciler's per-update walk is not, and
-//!   with the encoding cost gone this gap is the clearest remaining target in the suite.
+//! - **One-row list edits still scale with the list, at about half the slope.** Appending one
+//!   row emits the same 28 commands whether the list holds 50 rows or 500, yet costs 37.6us
+//!   against 152us. Read as a line through those two points that is 0.25us per row per
+//!   operation, down from 0.45us before the index rewrite, over a fixed cost of ~25us. The
+//!   linear term does not go away: the source of a keyed list is a `Computed<Vec<T>>`, so
+//!   reading it copies the vector and the order has to be walked to be diffed. What is left
+//!   to remove is the constant, not the shape.
 //! - **Batching saves flushes, not commands.** `dash-tick-all` emits exactly 200x what
-//!   `dash-tick-one` emits, but at 127us against 4.1us x 200 = 820us it is six times
+//!   `dash-tick-one` emits, but at 126us against 4.0us x 200 = 800us it is six times
 //!   faster, because it is one transaction and therefore one flush.
 //!
 //! Iteration counts are tuned so every batch lands in 100-300ms on that machine. Re-tune if

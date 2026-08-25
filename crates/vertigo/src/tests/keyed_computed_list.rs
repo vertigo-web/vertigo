@@ -494,6 +494,182 @@ fn one_row_update_scales_linearly() {
     );
 }
 
+/// A row that outlives its key keeps its own last value, and nothing else.
+///
+/// Rows share one `Rc` to the key-value map while they are live, which is what keeps a read
+/// down to a single item clone. A row whose key has left cannot share it any more - the map
+/// has moved on - so it has to let go of the map rather than pin every item that was in the
+/// list when it was last seen. The counts below are for the *same* stale row in a ten-row and
+/// a hundred-row list: if they differ, the row is holding the list.
+#[test]
+fn a_stale_row_does_not_pin_the_rest_of_the_list() {
+    #[derive(Clone, Debug)]
+    struct Tracked {
+        id: u32,
+        /// Never read - counted. `Rc::strong_count` on the handle below is how many copies
+        /// of this item are still alive somewhere in the graph.
+        #[expect(dead_code, reason = "counted through Rc::strong_count, not read")]
+        alive: Rc<()>,
+    }
+
+    impl PartialEq for Tracked {
+        fn eq(&self, other: &Self) -> bool {
+            self.id == other.id
+        }
+    }
+
+    let retained_after_clearing = |rows: u32| {
+        let alive = Rc::new(());
+
+        let source = Value::new(
+            (0..rows)
+                .map(|id| Tracked {
+                    id,
+                    alive: alive.clone(),
+                })
+                .collect::<Vec<_>>(),
+        );
+        let list = keyed_computed_list(source.to_computed(), |item| item.id);
+        let stale = transaction(|ctx| list.get(ctx)[3].value.clone());
+
+        source.set(Vec::new());
+
+        // Reading a departed key is what tells the row its key is gone.
+        transaction(|ctx| {
+            assert_eq!(stale.get(ctx).id, 3);
+        });
+
+        Rc::strong_count(&alive)
+    };
+
+    let small = retained_after_clearing(10);
+    let large = retained_after_clearing(100);
+
+    assert_eq!(
+        small, large,
+        "a stale row retained {small} items out of 10 and {large} out of 100, \
+         so it is holding on to the list rather than to its own value"
+    );
+}
+
+/// Counts what a keyed list actually does to its keys: how often it hashes one, and how
+/// often it copies one.
+#[derive(Debug, Default)]
+struct KeyWork {
+    hashes: Cell<usize>,
+    clones: Cell<usize>,
+}
+
+/// A key that reports itself. Identity and hashing both come from `id` alone, so the
+/// counters change nothing about how the list behaves.
+#[derive(Debug)]
+struct CountedKey {
+    id: u32,
+    work: Rc<KeyWork>,
+}
+
+impl Clone for CountedKey {
+    fn clone(&self) -> Self {
+        self.work.clones.set(self.work.clones.get() + 1);
+
+        CountedKey {
+            id: self.id,
+            work: self.work.clone(),
+        }
+    }
+}
+
+impl std::hash::Hash for CountedKey {
+    fn hash<H: std::hash::Hasher>(&self, state: &mut H) {
+        self.work.hashes.set(self.work.hashes.get() + 1);
+        self.id.hash(state);
+    }
+}
+
+impl PartialEq for CountedKey {
+    fn eq(&self, other: &Self) -> bool {
+        self.id == other.id
+    }
+}
+
+impl Eq for CountedKey {}
+
+#[derive(Clone, Debug)]
+struct KeyedRow {
+    key: CountedKey,
+    value: u32,
+}
+
+impl PartialEq for KeyedRow {
+    fn eq(&self, other: &Self) -> bool {
+        self.key.id == other.key.id && self.value == other.value
+    }
+}
+
+/// Build `rows` rows, observe them the way a rendered list does, change one row's value, and
+/// report the key work that single update cost.
+fn key_work_for_one_row_update(rows: u32) -> (usize, usize) {
+    let work = Rc::new(KeyWork::default());
+
+    let build = |first_value: u32| {
+        (0..rows)
+            .map(|id| KeyedRow {
+                key: CountedKey {
+                    id,
+                    work: work.clone(),
+                },
+                value: if id == 0 { first_value } else { id },
+            })
+            .collect::<Vec<_>>()
+    };
+
+    let source = Value::new(build(0));
+    let list = keyed_computed_list(source.to_computed(), |item| item.key.clone());
+
+    let _row_subscriptions = transaction(|ctx| list.get(ctx))
+        .into_iter()
+        .map(|item| item.value.subscribe(|_| {}))
+        .collect::<Vec<_>>();
+    let _list_subscription = list.subscribe(|_| {});
+
+    work.hashes.set(0);
+    work.clones.set(0);
+    source.set(build(1));
+
+    (work.hashes.get(), work.clones.get())
+}
+
+/// A budget, not a shape.
+///
+/// [`one_row_update_scales_linearly`] pins the exponent; this pins the coefficient, which is
+/// the thing an ordinary-looking edit here regresses. Every count below is per row of a list
+/// that is only being *read* - one row's value changed, membership and order did not - so
+/// each unit of it is paid by every row of every list on every update.
+///
+/// Measured at 100 rows: 302 hashes and 601 key clones, against 919 and 1201 for the version
+/// that rebuilt three indexes and two caches on every pass. The budgets below sit above those
+/// figures with room for a small change and well under room for a doubling. If this fails,
+/// something started rebuilding an index again.
+#[test]
+fn one_row_update_stays_within_its_key_budget() {
+    const ROWS: u32 = 100;
+    const HASHES_PER_ROW: usize = 4;
+    const CLONES_PER_ROW: usize = 7;
+
+    let (hashes, clones) = key_work_for_one_row_update(ROWS);
+
+    assert!(
+        hashes <= ROWS as usize * HASHES_PER_ROW,
+        "one update of {ROWS} rows hashed a key {hashes} times, budget is {}",
+        ROWS as usize * HASHES_PER_ROW
+    );
+    assert!(
+        clones <= ROWS as usize * CLONES_PER_ROW,
+        "one update of {ROWS} rows cloned a key {clones} times, budget is {}",
+        ROWS as usize * CLONES_PER_ROW
+    );
+}
+
 #[test]
 fn keeps_the_first_item_when_duplicate_keys_appear() {
     let source = Value::new(vec![

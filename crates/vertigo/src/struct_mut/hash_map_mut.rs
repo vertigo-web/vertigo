@@ -1,22 +1,30 @@
 use std::collections::HashMap;
-use std::hash::Hash;
+use std::hash::{BuildHasher, Hash};
+
+use crate::fast_hash::FastBuildHasher;
 
 use super::inner_value::InnerValue;
 
-pub struct HashMapMut<K, V> {
-    data: InnerValue<HashMap<K, V>>,
+/// A `HashMap` behind interior mutability.
+///
+/// Hashed with [`FastBuildHasher`](crate::dev::FastBuildHasher) by default rather than the standard
+/// `RandomState`: these maps are framework internals keyed by ids and static names, and
+/// several of them are asked a question per DOM node. The parameter is there so a map that
+/// does need `RandomState` can still ask for it.
+pub struct HashMapMut<K, V, S = FastBuildHasher> {
+    data: InnerValue<HashMap<K, V, S>>,
 }
 
-impl<K: Eq + Hash, V> Default for HashMapMut<K, V> {
+impl<K: Eq + Hash, V, S: BuildHasher + Default> Default for HashMapMut<K, V, S> {
     fn default() -> Self {
         Self::new()
     }
 }
 
-impl<K: Eq + Hash, V> HashMapMut<K, V> {
-    pub fn new() -> HashMapMut<K, V> {
+impl<K: Eq + Hash, V, S: BuildHasher + Default> HashMapMut<K, V, S> {
+    pub fn new() -> HashMapMut<K, V, S> {
         HashMapMut {
-            data: InnerValue::new(HashMap::new()),
+            data: InnerValue::new(HashMap::default()),
         }
     }
 
@@ -54,7 +62,7 @@ impl<K: Eq + Hash, V> HashMapMut<K, V> {
         state.remove(key)
     }
 
-    pub fn mem_replace(&self, new_map: HashMap<K, V>) -> HashMap<K, V> {
+    pub fn mem_replace(&self, new_map: HashMap<K, V, S>) -> HashMap<K, V, S> {
         let state = self.data.get_mut();
         std::mem::replace(state, new_map)
     }
@@ -84,7 +92,7 @@ impl<K: Eq + Hash, V> HashMapMut<K, V> {
     }
 }
 
-impl<K: Eq + Hash + Clone, V: Clone + Default> HashMapMut<K, V> {
+impl<K: Eq + Hash + Clone, V: Clone + Default, S: BuildHasher + Default> HashMapMut<K, V, S> {
     pub fn get_or_default(&self, key: &K) -> V {
         let value = self.get(key);
 
@@ -98,7 +106,7 @@ impl<K: Eq + Hash + Clone, V: Clone + Default> HashMapMut<K, V> {
     }
 }
 
-impl<K: Eq + Hash + Clone, V: Clone> HashMapMut<K, V> {
+impl<K: Eq + Hash + Clone, V: Clone, S: BuildHasher + Default> HashMapMut<K, V, S> {
     pub fn get_all_values(&self) -> Vec<V> {
         let state = self.data.get();
 
@@ -128,7 +136,7 @@ impl<K: Eq + Hash + Clone, V: Clone> HashMapMut<K, V> {
     }
 }
 
-impl<K: Eq + Hash, V: PartialEq> HashMapMut<K, V> {
+impl<K: Eq + Hash, V: PartialEq, S: BuildHasher + Default> HashMapMut<K, V, S> {
     pub fn insert_and_check(&self, key: K, value: V) -> bool {
         let state = self.data.get_mut();
         let is_change = state.get(&key) != Some(&value);
