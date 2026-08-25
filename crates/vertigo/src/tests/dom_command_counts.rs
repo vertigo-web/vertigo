@@ -235,13 +235,17 @@ fn removal_cost_does_not_depend_on_position() {
 /// A full reverse is the reconciler's worst case - prefix and suffix match nothing, so every
 /// row goes through the keyed middle map. Rows must be *moved*, never rebuilt.
 ///
+/// One row short of every row, in fact: no two rows of a reversed list are in ascending order
+/// relative to each other, so the longest run the middle phase can leave alone is a single
+/// row. That one is the floor, and it is what tells reordering apart from rebuilding.
+///
 /// The per-row cost is one insert per node the row spans, because a marker that is moved
 /// brings the content it reports along with it. Here a row is three nodes - its anchor
 /// comment, the `render_value` marker, and the element that marker owns. A row whose body is
 /// a plain element rather than a `render_value` spans two, which is what the
 /// `list-reverse` workload in `tests/dom-bench` measures.
 #[test]
-fn reversing_moves_every_row_and_rebuilds_none() {
+fn reversing_moves_every_row_but_one_and_rebuilds_none() {
     let size = 50u32;
     let order = Value::new(keys(0..size));
 
@@ -256,9 +260,63 @@ fn reversing_moves_every_row_and_rebuilds_none() {
 
     assert_eq!(
         emitted,
-        counts(&[("InsertBefore", 3 * size)]),
+        counts(&[("InsertBefore", 3 * (size - 1))]),
         "reversing must only re-insert - no row may be recreated"
     );
+}
+
+/// Swapping two rows moves two rows, whatever the list length.
+///
+/// The reconciler's prefix and suffix phases only strip one row from each end here, so
+/// everything between the two swapped positions goes through the keyed middle map.
+#[test]
+fn swap_cost_does_not_depend_on_the_distance_between_the_rows() {
+    let measure = |size: u32| {
+        let order = Value::new(keys(0..size));
+        commands_for(
+            || {
+                let list = render_list(
+                    &order,
+                    |key| *key,
+                    |key| {
+                        let key = crate::transaction(|ctx| key.get(ctx));
+                        dom! { <li>{key}</li> }
+                    },
+                );
+                dom! { <ul>{list}</ul> }
+            },
+            || {
+                let mut swapped = keys(0..size);
+                swapped.swap(1, (size - 2) as usize);
+                order.set(swapped);
+            },
+        )
+    };
+
+    let near = measure(100);
+    let far = measure(1_000);
+
+    assert_eq!(near, far, "swap cost must not scale with list length");
+    // Two rows, two nodes each - the row's anchor comment and its element.
+    assert_eq!(near, counts(&[("InsertBefore", 4)]));
+}
+
+/// The same swap over `render_value` rows: still two rows, but three nodes each.
+#[test]
+fn swapping_render_value_rows_moves_two_rows() {
+    let size = 1_000u32;
+    let order = Value::new(keys(0..size));
+
+    let emitted = commands_for(
+        || mount_list(&order),
+        || {
+            let mut swapped = keys(0..size);
+            swapped.swap(1, (size - 2) as usize);
+            order.set(swapped);
+        },
+    );
+
+    assert_eq!(emitted, counts(&[("InsertBefore", 6)]));
 }
 
 /// The same reverse over rows that are plain elements: two nodes per row, so two inserts.
@@ -266,7 +324,7 @@ fn reversing_moves_every_row_and_rebuilds_none() {
 /// Pinned separately from the `render_value` case above so that a change to how markers
 /// carry their content cannot pass by shifting both numbers together.
 #[test]
-fn reversing_plain_element_rows_moves_two_nodes_each() {
+fn reversing_plain_element_rows_moves_two_nodes_each_but_one_row() {
     let size = 50u32;
     let order = Value::new(keys(0..size));
 
@@ -289,7 +347,7 @@ fn reversing_plain_element_rows_moves_two_nodes_each() {
         },
     );
 
-    assert_eq!(emitted, counts(&[("InsertBefore", 2 * size)]));
+    assert_eq!(emitted, counts(&[("InsertBefore", 2 * (size - 1))]));
 }
 
 /// Changing one row's value notifies that row alone. The list's own subscription does not

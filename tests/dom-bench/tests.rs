@@ -298,15 +298,18 @@ fn assert_list_reconciler(rows: &[Reported]) {
     // A full reverse is the reconciler's worst case: prefix and suffix match nothing, so
     // every row goes through the middle map. Rows are moved, never rebuilt - two
     // `InsertBefore` each, for the row's anchor comment and its content.
+    //
+    // Every row but one. No two rows of a reversed list are in ascending order relative to
+    // each other, so the longest run the middle phase can leave in place is a single row.
     let reverse = find_row(rows, "list-reverse");
     assert_eq!(
         reverse.cmd("InsertBefore"),
-        2 * ITEMS,
+        2 * (ITEMS - 1),
         "reversing {ITEMS} rows re-inserts each row's anchor and content"
     );
     assert_eq!(
         reverse.cmds,
-        2 * ITEMS,
+        2 * (ITEMS - 1),
         "and does nothing else - no row is rebuilt: {:?}",
         reverse.breakdown
     );

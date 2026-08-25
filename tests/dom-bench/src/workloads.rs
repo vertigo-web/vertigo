@@ -22,32 +22,47 @@
 //!
 //! ## Baseline
 //!
-//! Recorded 2026-08-24 on Linux x86_64 (6.18.12-amd64), Chrome 145.0.7632.109 via
-//! ChromeDriver 145, release build with `wasm-opt -Os`.
-//!
-//! The `was` columns are the run that prompted making reactive text patch in place instead
-//! of replacing the node; see the CHANGELOG entry for 0.13.0.
+//! Recorded 2026-08-25 on Linux x86_64 (6.18.12-amd64), Chrome 145.0.7632.109 via
+//! ChromeDriver 145, release build with `wasm-opt -Os`. Median of three runs, because the
+//! run-to-run spread on an idle machine reaches 12% on `list-mount-unmount` (it takes only
+//! ten iterations per batch) and 1-7% elsewhere. Read any single figure with that in mind.
 //!
 //! ```text
-//! workload                        per op      cmds    (was)     (was)
-//! list-mount-unmount            18430 us     14000   27350 us   17000
-//! list-append-remove              274 us        28     285 us      34
-//! list-append-remove-small         74 us        28      82 us      34
-//! list-middle-remove-reinsert     275 us        28     277 us      34
-//! list-reverse                   1316 us      1000    1317 us    1000
-//! list-reverse-layout            4873 us      1000    4843 us    1000
-//! list-update-text                4.8 us         1     6.6 us       3
-//! list-toggle-class               5.6 us         1     5.1 us       1
-//! editor-keystroke-embed          5.0 us         1     7.0 us       3
-//! editor-keystroke-patch          4.7 us         1     4.5 us       1
-//! editor-toggle-bold              5.6 us         1     5.3 us       1
-//! editor-caret-move               0.6 us         0     0.4 us       0
-//! editor-block-insert-delete      162 us        10     163 us      13
-//! dash-tick-all                   278 us       200     644 us     600
-//! dash-tick-one                   4.9 us         1     6.9 us       3
-//! dash-status-change               32 us        11      35 us      15
-//! flush-min                       5.7 us         1     5.2 us       1
+//! workload                        per op      cmds
+//! list-mount-unmount            18570 us     14000
+//! list-append-remove              280 us        28
+//! list-append-remove-small       72.5 us        28
+//! list-middle-remove-reinsert     278 us        28
+//! list-reverse                   1316 us       998
+//! list-reverse-layout            4865 us       998
+//! list-update-text                4.9 us         1
+//! list-toggle-class               5.3 us         1
+//! editor-keystroke-embed          4.9 us         1
+//! editor-keystroke-patch          4.5 us         1
+//! editor-toggle-bold              5.4 us         1
+//! editor-caret-move               0.6 us         0
+//! editor-block-insert-delete      162 us        10
+//! dash-tick-all                   275 us       200
+//! dash-tick-one                   4.7 us         1
+//! dash-status-change             30.8 us        11
+//! flush-min                       5.4 us         1
 //! ```
+//!
+//! One variable per table. Two earlier changes are worth their own note rather than an extra
+//! pair of columns here, because a table whose columns differ in more than one thing invites
+//! being read as a comparison it is not:
+//!
+//! - **Reactive text patching in place** (CHANGELOG 0.13.0) is what took `list-update-text`,
+//!   `editor-keystroke-embed` and `dash-tick-one` from three commands to one. Before it,
+//!   those cost 6.6us, 7.0us and 6.9us, `dash-tick-all` cost 644us against 275us here, and
+//!   `list-mount-unmount` cost 27350us over 17000 commands.
+//! - **The keyed reorder fix** is why `list-reverse` costs 998 commands rather than 1000: the
+//!   middle phase now leaves the longest already-ordered run of rows in place, and in a
+//!   reversed list that run is one row long. Reverse is the case where the change buys almost
+//!   nothing - and, measured at 1316us both before and after, costs nothing either. A *swap*
+//!   is where it buys everything; the native tests in
+//!   `crates/vertigo/src/tests/dom_command_counts` pin that at four commands, not two
+//!   thousand.
 //!
 //! Read the table against `flush-min`, ~5us: one flush carrying one command, which every
 //! operation pays and almost none of which is DOM work - it is the wasm to JS round trip.
@@ -61,19 +76,19 @@
 //!   `DomText::new_computed` now agree at one `UpdateText`; the two keystroke workloads
 //!   exist to keep them agreeing. Every text update in the suite got a third cheaper as a
 //!   result, and `dash-tick-all` - two hundred readings refreshed at once - more than
-//!   halved, from 644us to 278us.
+//!   halved, from 644us to 275us.
 //! - **The equality cutoff reaches all the way to the DOM.** `editor-caret-move` is 0.6us
-//!   and zero commands - eight times cheaper than the cheapest operation that does touch
+//!   and zero commands - seven times cheaper than the cheapest operation that does touch
 //!   the DOM.
 //! - **Layout is the larger half of a reorder.** `list-reverse` mutates in 1316us;
-//!   forcing the browser to settle the layout it invalidated costs 4873us. Vertigo's share
+//!   forcing the browser to settle the layout it invalidated costs 4865us. Vertigo's share
 //!   of a full 500-row reorder is about a quarter of what the user actually waits for.
 //! - **One-row list edits are dominated by reconciliation, not by the DOM.** Appending one
-//!   row emits the same 28 commands whether the list holds 50 rows or 500, yet costs 74us
-//!   against 274us. The DOM work is constant; the reconciler's per-update walk is not.
+//!   row emits the same 28 commands whether the list holds 50 rows or 500, yet costs 72us
+//!   against 280us. The DOM work is constant; the reconciler's per-update walk is not.
 //!   This is the clearest remaining target.
 //! - **Batching saves flushes, not commands.** `dash-tick-all` emits exactly 200x what
-//!   `dash-tick-one` emits, but at 278us against 4.9us x 200 = 980us it is three and a half
+//!   `dash-tick-one` emits, but at 275us against 4.7us x 200 = 940us it is three and a half
 //!   times faster, because it is one transaction and therefore one flush.
 //!
 //! Iteration counts are tuned so every batch lands in 100-300ms on that machine. Re-tune if
