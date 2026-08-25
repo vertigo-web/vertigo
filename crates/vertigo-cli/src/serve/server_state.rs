@@ -7,7 +7,10 @@ use std::{
 use tokio::sync::mpsc::{error::TryRecvError, unbounded_channel};
 use vertigo::{
     JsJson, JsJsonSerialize,
-    dev::command::{CommandForBrowser, ConsoleLogLevel, browser_response},
+    dev::{
+        command::{CommandForBrowser, ConsoleLogLevel, browser_response},
+        command_wire::decode_dom_commands,
+    },
 };
 use wasmtime::{Engine, Module};
 
@@ -225,11 +228,18 @@ impl ServerState {
                         browser_response::GetRandom { value: min }.to_json()
                     }
                     CommandForBrowser::JsApiCall { commands: _ } => JsJson::Null,
-                    CommandForBrowser::DomBulkUpdate { list } => {
-                        sender
-                            .send(Message::DomUpdate(list))
-                            .inspect_err(|err| log::error!("Error sending DomUpdate: {err}"))
-                            .unwrap_or_default();
+                    CommandForBrowser::DomBulkUpdate { commands } => {
+                        match decode_dom_commands(&commands) {
+                            Ok(list) => {
+                                sender
+                                    .send(Message::DomUpdate(list))
+                                    .inspect_err(|err| {
+                                        log::error!("Error sending DomUpdate: {err}")
+                                    })
+                                    .unwrap_or_default();
+                            }
+                            Err(err) => log::error!("Error decoding DomBulkUpdate: {err}"),
+                        }
 
                         JsJson::Null
                     }

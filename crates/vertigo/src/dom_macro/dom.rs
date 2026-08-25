@@ -250,8 +250,9 @@ impl_embed_to_string!(
 /// A reactive value embedded in `dom!` becomes a text node that **patches itself**.
 ///
 /// One `UpdateText` command per change, and the node keeps its id. Wrapping the value in a
-/// [`render_value`] instead - which is what this used to do - replaced the whole text node
-/// on every change: three commands, a new [`DomId`](crate::DomId) each time, and a marker
+/// [`render_value`](crate::Computed::render_value) instead - which is what this used to do -
+/// replaced the whole text node on every change: three commands, a new
+/// [`DomId`](crate::DomId) each time, and a marker
 /// comment left in the document forever. For text that is all cost and no benefit, because
 /// the rendered shape is always the same single text node.
 impl<T: ToString + Clone + PartialEq + 'static> EmbedDom for &Computed<T> {

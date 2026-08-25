@@ -2,6 +2,7 @@ mod callback_id;
 pub use callback_id::CallbackId;
 
 pub mod command;
+pub mod command_wire;
 pub mod inspect;
 
 mod long_ptr;

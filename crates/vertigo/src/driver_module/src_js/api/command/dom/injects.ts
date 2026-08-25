@@ -1,12 +1,14 @@
 import { AppLocation } from "../../location/AppLocation";
 
+/// Used by hydration, which claims an existing element and so has to look at its tag. The
+/// command stream knows the tag from its dictionary index and calls [`hydrateLink`] directly.
 export function injects(node: Element, appLocation: AppLocation) {
-    if (node.tagName.toLocaleLowerCase() === 'a') {
+    if (node.tagName.toLowerCase() === 'a') {
         hydrateLink(node, appLocation);
     }
 }
 
-function hydrateLink(node: Element, appLocation: AppLocation) {
+export function hydrateLink(node: Element, appLocation: AppLocation) {
     node.addEventListener('click', (e) => {
         let href = node.getAttribute('href');
         if (href === null) {
