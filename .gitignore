@@ -2,6 +2,7 @@
 /build
 /build-reactive-bench
 /build-dom-bench
+/build-demo
 /demo_build
 /examples/build
 /node_modules

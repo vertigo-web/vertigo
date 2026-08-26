@@ -1,3 +1,4 @@
+mod api;
 mod chat;
 mod counters;
 mod dropfiles;

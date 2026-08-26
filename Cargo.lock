@@ -1221,8 +1221,10 @@ name = "fantoccini-tests"
 version = "0.1.0"
 dependencies = [
  "fantoccini",
+ "serde_json",
  "tokio",
  "vertigo-cli",
+ "vertigo-demo-server",
 ]
 
 [[package]]
