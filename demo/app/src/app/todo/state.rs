@@ -1,6 +1,14 @@
 use vertigo::AutoJsJson;
 use vertigo::{LazyCache, RequestBuilder, Value, store};
 
+use crate::app::api::api_base;
+
+const DEFAULT_BASE: &str = "https://jsonplaceholder.typicode.com";
+
+fn base() -> String {
+    api_base("api_todo", DEFAULT_BASE)
+}
+
 #[derive(PartialEq, Eq, Clone)]
 pub enum View {
     Main,
@@ -32,7 +40,7 @@ pub fn state_todo_view() -> Value<View> {
 
 #[store]
 pub fn state_todo_posts() -> LazyCache<Vec<PostModel>> {
-    RequestBuilder::get("https://jsonplaceholder.typicode.com/posts")
+    RequestBuilder::get(format!("{}/posts", base()))
         .ttl_minutes(10)
         .lazy_cache(|status, body| {
             if status == 200 {
@@ -45,15 +53,13 @@ pub fn state_todo_posts() -> LazyCache<Vec<PostModel>> {
 
 #[store]
 pub fn state_todo_comments(post_id: u32) -> LazyCache<Vec<CommentModel>> {
-    RequestBuilder::get(format!(
-        "https://jsonplaceholder.typicode.com/posts/{post_id}/comments"
-    ))
-    .ttl_minutes(10)
-    .lazy_cache(|status, body| {
-        if status == 200 {
-            Some(body.into::<Vec<CommentModel>>())
-        } else {
-            None
-        }
-    })
+    RequestBuilder::get(format!("{}/posts/{post_id}/comments", base()))
+        .ttl_minutes(10)
+        .lazy_cache(|status, body| {
+            if status == 200 {
+                Some(body.into::<Vec<CommentModel>>())
+            } else {
+                None
+            }
+        })
 }

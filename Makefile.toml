@@ -29,7 +29,7 @@ script = [
 # NOTE: WebDriver on localhost:9515 needs to be running
 [tasks.automated-tests]
 script = [
-    "cargo test --package fantoccini-tests --test basic -- --ignored"
+    "cargo test --package fantoccini-tests --test basic --test demo -- --ignored"
 ]
 
 [tasks.ci]

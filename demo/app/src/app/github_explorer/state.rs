@@ -2,6 +2,10 @@ use std::cmp::PartialEq;
 use vertigo::AutoJsJson;
 use vertigo::{LazyCache, RequestBuilder, Value, store};
 
+use crate::app::api::api_base;
+
+const DEFAULT_BASE: &str = "https://api.github.com";
+
 #[derive(Debug, AutoJsJson, PartialEq, Eq, Clone, Default)]
 pub struct Commit {
     pub sha: String,
@@ -30,7 +34,8 @@ pub struct Branch {
 pub fn state_github_branch_name(repo_name: &String) -> LazyCache<Branch> {
     log::info!("Creating for {repo_name}");
 
-    let url = format!("https://api.github.com/repos/{repo_name}/branches/master");
+    let base = api_base("api_github", DEFAULT_BASE);
+    let url = format!("{base}/repos/{repo_name}/branches/master");
     RequestBuilder::get(url)
         .ttl_minutes(10)
         .lazy_cache(|status, body| {
