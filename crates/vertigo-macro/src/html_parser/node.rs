@@ -1,7 +1,7 @@
 use proc_macro2::TokenStream as TokenStream2;
 use quote::{ToTokens, TokenStreamExt, quote};
 use rstml::node::{KeyedAttribute, Node, NodeAttribute, NodeBlock};
-use syn::{Ident, spanned::Spanned};
+use syn::{Ident, Lit, spanned::Spanned};
 
 use crate::trace_tailwind::add_to_tailwind;
 
@@ -40,7 +40,15 @@ pub(super) fn convert_node(node: &Node, convert_to_dom_node: bool) -> TokenStrea
     let mut out_child = Vec::new();
     let mut class_values = Vec::new();
 
-    let mut push_attr = |name, value| push_attribute(name, value, &mut out_attr, &mut class_values);
+    let mut push_attr = |name, value, is_str_literal| {
+        push_attribute(
+            name,
+            value,
+            is_str_literal,
+            &mut out_attr,
+            &mut class_values,
+        )
+    };
 
     for attr_item in element.attributes() {
         let span = attr_item.span();
@@ -54,13 +62,17 @@ pub(super) fn convert_node(node: &Node, convert_to_dom_node: bool) -> TokenStrea
                 match matches {
                     (Some(value), None) => {
                         let outcome = if is_default_block(&value.block) {
-                            quote! { vertigo::AttrValue::String(Default::default()) }
+                            quote! { vertigo::AttrValue::Static("") }
                         } else {
                             unwrap_block_if_single(&value.block)
                         };
-                        push_attr(key.to_string(), outcome)
+                        push_attr(key.to_string(), outcome, false)
                     }
-                    (None, Some(lit)) => push_attr(key.to_string(), lit.to_token_stream()),
+                    (None, Some(lit)) => push_attr(
+                        key.to_string(),
+                        lit.to_token_stream(),
+                        matches!(lit.lit, Lit::Str(_)),
+                    ),
                     _ => (),
                 }
             }
@@ -82,7 +94,7 @@ pub(super) fn convert_node(node: &Node, convert_to_dom_node: bool) -> TokenStrea
                             }
 
                             let (key, value, _) = parse_block_of_statements(block);
-                            push_attr(key.to_string(), quote! { #value })
+                            push_attr(key.to_string(), quote! { #value }, false)
                         }
                     }
                 } else {
@@ -95,14 +107,16 @@ pub(super) fn convert_node(node: &Node, convert_to_dom_node: bool) -> TokenStrea
 
     // Generate code glueing class= values with tw= values
     if !class_values.is_empty() {
-        if class_values.len() == 1 {
-            let class_value = &class_values[0];
-            out_attr.push(quote! {
-                .attr("class", #class_value)
+        if let [(class_value, is_str_literal)] = class_values.as_slice() {
+            out_attr.push(if *is_str_literal {
+                quote! { .attr_static("class", #class_value) }
+            } else {
+                quote! { .attr("class", #class_value) }
             });
         } else {
             let mut output = quote! {};
-            for class_value in class_values {
+            for (class_value, is_str_literal) in class_values {
+                let class_value = as_static_attr_value(class_value, is_str_literal);
                 output.append_all(quote! { vertigo::AttrValue::from(#class_value), });
             }
             out_attr.push(quote! {
@@ -135,11 +149,23 @@ pub(super) fn convert_node(node: &Node, convert_to_dom_node: bool) -> TokenStrea
     }
 }
 
+/// A string literal in the source is a `&'static str`, and saying so spares the runtime two
+/// heap allocations per attribute - `AttrValue::from(&str)` cannot tell a literal from a
+/// borrow of a local, so it has to copy into an `Rc<String>`. Only the macro knows.
+fn as_static_attr_value(value: TokenStream2, is_str_literal: bool) -> TokenStream2 {
+    if is_str_literal {
+        quote! { vertigo::AttrValue::Static(#value) }
+    } else {
+        value
+    }
+}
+
 fn push_attribute(
     name: String,
     value: TokenStream2,
+    is_str_literal: bool,
     out_attr: &mut Vec<TokenStream2>,
-    class_values: &mut Vec<TokenStream2>,
+    class_values: &mut Vec<(TokenStream2, bool)>,
 ) {
     // Store used class name for tailwind bundler
     if name.as_str() == "tw" {
@@ -151,12 +177,12 @@ fn push_attribute(
                 return;
             }
         };
-        class_values.push(quote! { #output });
+        class_values.push((output, is_str_literal));
         return;
     }
 
     if name.as_str() == "class" {
-        class_values.push(quote! { #value });
+        class_values.push((value, is_str_literal));
         return;
     }
 
@@ -176,7 +202,13 @@ fn push_attribute(
         }
 
         _ => {
-            out_attr.push(quote! { .attr(#name, #value) });
+            // A literal has a `&'static str` value and a name known here, so it can skip
+            // `AttrValue` entirely - see `DomElement::attr_static`.
+            out_attr.push(if is_str_literal {
+                quote! { .attr_static(#name, #value) }
+            } else {
+                quote! { .attr(#name, #value) }
+            });
             return;
         }
     };
@@ -247,11 +279,74 @@ mod tests {
     fn run_push_attribute(
         name: &str,
         value: TokenStream2,
-    ) -> (Vec<TokenStream2>, Vec<TokenStream2>) {
+    ) -> (Vec<TokenStream2>, Vec<(TokenStream2, bool)>) {
+        run_push_attribute_lit(name, value, false)
+    }
+
+    fn run_push_attribute_lit(
+        name: &str,
+        value: TokenStream2,
+        is_str_literal: bool,
+    ) -> (Vec<TokenStream2>, Vec<(TokenStream2, bool)>) {
         let mut out_attr = Vec::new();
         let mut class_values = Vec::new();
-        push_attribute(name.to_string(), value, &mut out_attr, &mut class_values);
+        push_attribute(
+            name.to_string(),
+            value,
+            is_str_literal,
+            &mut out_attr,
+            &mut class_values,
+        );
         (out_attr, class_values)
+    }
+
+    fn without_whitespace(tokens: &TokenStream2) -> String {
+        tokens
+            .to_string()
+            .chars()
+            .filter(|c| !c.is_whitespace())
+            .collect()
+    }
+
+    /// A literal in the source has a `&'static str` value, and only the macro knows that -
+    /// `AttrValue::from(&str)` cannot tell a literal from a borrow of a local.
+    ///
+    /// It routes to `attr_static`, which skips `AttrValue` altogether. That matters for more
+    /// than the two allocations it saves: the enum has four reactive variants, and reaching
+    /// them from a shared non-generic function keeps `Computed`, `Value` and their drop glue
+    /// linked into applications that use no reactive attributes at all. Measured on the
+    /// js-framework-benchmark entry, going through `AttrValue` here cost 12kB of wasm.
+    #[test]
+    fn test_string_literal_takes_the_static_path() {
+        let (out_attr, _) = run_push_attribute_lit("id", quote! { "main" }, true);
+        let emitted = without_whitespace(&out_attr[0]);
+        assert!(
+            emitted.contains(".attr_static(\"id\",\"main\")"),
+            "expected the static path, got: {emitted}"
+        );
+    }
+
+    /// A class is held back until the end - `tw=` and `class=` are glued together first - so
+    /// the literal flag has to travel with it.
+    #[test]
+    fn test_string_literal_class_keeps_its_literal_flag() {
+        let (out_attr, class_values) = run_push_attribute_lit("class", quote! { "row" }, true);
+        assert!(out_attr.is_empty());
+        let (value, is_str_literal) = &class_values[0];
+        assert!(is_str_literal, "a literal class must be marked as one");
+        assert_eq!(without_whitespace(value), "\"row\"");
+    }
+
+    /// Anything that is not a literal has to keep going through `Into<AttrValue>`, because
+    /// its lifetime is unknown here.
+    #[test]
+    fn test_non_literal_is_left_alone() {
+        let (out_attr, _) = run_push_attribute("id", quote! { some_variable });
+        let emitted = without_whitespace(&out_attr[0]);
+        assert!(
+            !emitted.contains("attr_static") && !emitted.contains("AttrValue::Static"),
+            "a non-literal must not be claimed as static: {emitted}"
+        );
     }
 
     #[test]
@@ -342,12 +437,14 @@ mod tests {
         push_attribute(
             "class".to_string(),
             quote! { "foo" },
+            true,
             &mut out_attr,
             &mut class_values,
         );
         push_attribute(
             "class".to_string(),
             quote! { "bar" },
+            true,
             &mut out_attr,
             &mut class_values,
         );

@@ -4,13 +4,13 @@ use crate::{
     AttrGroupValue, Computed, DomText, DropFileItem, DropResource, JsJson,
     dev::JsJsonListDecoder,
     driver_module::{StaticString, api::api_callbacks, get_driver_dom},
-    struct_mut::{VecDequeMut, VecMut},
+    struct_mut::{ValueMut, VecDequeMut, VecMut},
 };
 
 use super::{
-    attr_value::{AttrValue, CssAttrValue},
+    attr_value::{AttrText, AttrValue, CssAttrValue},
     callback::{Callback, Callback1},
-    dom_element_class::DomElementClassMerge,
+    dom_element_class::{ClassState, DomElementClassMerge},
     dom_element_ref::DomElementRef,
     dom_id::DomId,
     dom_node::DomNode,
@@ -22,7 +22,10 @@ pub struct DomElement {
     id_dom: DomId,
     child_node: VecDequeMut<DomNode>,
     subscriptions: VecMut<DropResource>,
-    class_manager: DomElementClassMerge,
+    /// See [`ClassState`]: inline until this element turns out to need a shared cell, which
+    /// only a `css` or a reactive class does. `ValueMut` is a bare cell with no indirection
+    /// of its own, so a static class allocates nothing at all.
+    class_state: ValueMut<ClassState>,
 }
 
 impl DomElement {
@@ -32,53 +35,131 @@ impl DomElement {
 
         get_driver_dom().create_node(id_dom, name);
 
-        let class_manager = DomElementClassMerge::new(id_dom);
-
         Self {
             id_dom,
             child_node: VecDequeMut::new(),
             subscriptions: VecMut::new(),
-            class_manager,
+            class_state: ValueMut::new(ClassState::Empty),
         }
     }
 
+    /// The shared merger, built on demand. Only a `css` or a reactive class needs one.
+    fn class_manager(&self) -> DomElementClassMerge {
+        self.class_state.change(|state| state.merger(self.id_dom))
+    }
+
+    /// An attribute whose name *and* value were literals in the source.
+    ///
+    /// Worth its own entry point rather than going through [`AttrValue`]: that enum has six
+    /// variants, four of them reactive, and a literal can only ever be one of them. Reaching
+    /// them through a shared non-generic function keeps `Computed`, `Value` and their drop
+    /// glue linked into applications that never use a reactive attribute at all. This has no
+    /// match to fold and nothing to allocate.
+    #[inline]
+    pub fn attr_static(self, name: &'static str, value: &'static str) -> Self {
+        self.add_attr_static(name, value);
+        self
+    }
+
+    #[inline]
+    pub fn add_attr_static(&self, name: &'static str, value: &'static str) {
+        if name == "class" {
+            self.set_class(AttrText::Static(value));
+        } else {
+            get_driver_dom().set_attr(self.id_dom, name, value);
+        }
+    }
+
+    /// The name is known when the element is built, so `class` is told apart from everything
+    /// else here rather than on every write.
+    ///
+    /// Only `class` goes through the merger. Every other attribute captures the element's
+    /// [`DomId`] - a `Copy` - and talks to the driver directly, so a reactive `href` no
+    /// longer clones an `Rc` into its subscription and reaches into a cell to read back an id
+    /// it could have kept.
     pub fn add_attr(&self, name: impl Into<StaticString>, value: impl Into<AttrValue>) {
         let name = name.into();
         let value = value.into();
 
-        match value {
-            AttrValue::String(value) => {
-                self.class_manager.set_attr_value(name, Some(value));
-            }
-            AttrValue::Computed(computed) => {
-                let class_manager = self.class_manager.clone();
+        if name.as_str() == "class" {
+            self.add_class_attr(value);
+            return;
+        }
 
-                self.subscribe(computed, move |value| {
-                    class_manager.set_attr_value(name.clone(), Some(Rc::new(value)));
-                });
+        let id_dom = self.id_dom;
+        let write = move |value: Option<AttrText>| match value {
+            Some(value) => get_driver_dom().set_attr(id_dom, name.clone(), value.as_str()),
+            None => get_driver_dom().remove_attr(id_dom, name.clone()),
+        };
+
+        match value {
+            AttrValue::Static(value) => write(Some(AttrText::Static(value))),
+            AttrValue::String(value) => write(Some(AttrText::Shared(value))),
+            AttrValue::Computed(computed) => {
+                self.subscribe(computed, move |value| write(Some(AttrText::from(value))));
             }
             AttrValue::ComputedOpt(computed) => {
-                let class_manager = self.class_manager.clone();
-
-                self.subscribe(computed, move |value| {
-                    class_manager.set_attr_value(name.clone(), value.map(Rc::new));
-                });
+                self.subscribe(computed, move |value| write(value.map(AttrText::from)));
             }
             AttrValue::Value(value) => {
-                let class_manager = self.class_manager.clone();
-
                 self.subscribe(value.to_computed(), move |value| {
-                    class_manager.set_attr_value(name.clone(), Some(Rc::new(value)));
+                    write(Some(AttrText::from(value)))
                 });
             }
             AttrValue::ValueOpt(value) => {
-                let class_manager = self.class_manager.clone();
-
                 self.subscribe(value.to_computed(), move |value| {
-                    class_manager.set_attr_value(name.clone(), value.map(Rc::new));
+                    write(value.map(AttrText::from))
                 });
             }
         };
+    }
+
+    /// A *static* class needs no merger - see [`ClassState`] - but a reactive one does, and
+    /// at *build* time rather than at first fire, because the subscription has to capture it.
+    fn add_class_attr(&self, value: AttrValue) {
+        match value {
+            AttrValue::Static(value) => {
+                self.set_class(AttrText::Static(value));
+            }
+            AttrValue::String(value) => {
+                self.set_class(AttrText::Shared(value));
+            }
+            AttrValue::Computed(computed) => {
+                let class_manager = self.class_manager();
+
+                self.subscribe(computed, move |value| {
+                    class_manager.set_attribute(AttrText::from(value));
+                });
+            }
+            AttrValue::ComputedOpt(computed) => {
+                let class_manager = self.class_manager();
+
+                self.subscribe(computed, move |value| match value {
+                    Some(value) => class_manager.set_attribute(AttrText::from(value)),
+                    None => class_manager.remove_attribute(),
+                });
+            }
+            AttrValue::Value(value) => {
+                let class_manager = self.class_manager();
+
+                self.subscribe(value.to_computed(), move |value| {
+                    class_manager.set_attribute(AttrText::from(value));
+                });
+            }
+            AttrValue::ValueOpt(value) => {
+                let class_manager = self.class_manager();
+
+                self.subscribe(value.to_computed(), move |value| match value {
+                    Some(value) => class_manager.set_attribute(AttrText::from(value)),
+                    None => class_manager.remove_attribute(),
+                });
+            }
+        }
+    }
+
+    fn set_class(&self, value: AttrText) {
+        self.class_state
+            .change(|state| state.set_attribute(self.id_dom, value));
     }
 
     pub fn add_attr_group(
@@ -197,10 +278,10 @@ impl DomElement {
 
         match css {
             CssAttrValue::Css(css) => {
-                self.class_manager.set_css(css, debug_class_name);
+                self.class_manager().set_css(css, debug_class_name);
             }
             CssAttrValue::Computed(css) => {
-                let class_manager = self.class_manager.clone();
+                let class_manager = self.class_manager();
 
                 self.subscribe(css, move |css| {
                     class_manager.set_css(css, debug_class_name.clone());
