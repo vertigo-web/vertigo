@@ -72,6 +72,21 @@ The reactive graph was rewritten and keyed list rendering was rebuilt around per
   attacker-chosen strings, which matters server-side under SSR and not in the browser. It is
   worth about a fifth of the keyed-list improvement above. `dev::HashMapMut` gains a
   defaulted hasher parameter, so a map that wants `RandomState` can still say so
+* **Breaking**: `AttrValue` has a new `Static(&'static str)` variant, and `AttrValue::get`
+  returns the new `AttrText` instead of `Rc<String>`.
+* An element only builds a class merger when it has two sources to merge. It used to build
+  one always: 160 bytes behind an `Rc` on every element
+* The merger itself is smaller and quieter, the `css` half is boxed so only elements using
+  css carry it, and the resolved css class name is cached rather than re-derived whenever
+  the class attribute moves
+* Only `class` goes through that merger now. Every other attribute is recognised when the
+  element is built rather than on every write, and talks to the driver directly, so a
+  reactive `href` no longer clones an `Rc` into its subscription
+* New `DomElement::attr_static`, which the `dom!` macro emits for an attribute whose name and
+  value are both literals - `class="col-md-1"`, `aria-hidden="true"`.
+* An application that uses no `css!` no longer links the css engine either. Together with
+  the entry above, wasm going from 284 kB to 261 (84 kB to 76 gzipped) and 16% off first
+  paint. **An application that does use `css!` keeps the engine and sees no size change**.
 * Guide `guides::value_synchronize_and_collections` replaced by [`collections`][collections]
 
 ### Removed

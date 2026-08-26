@@ -84,7 +84,7 @@ pub use css::{
     tailwind_class::TwClass,
 };
 pub use dom::{
-    attr_value::{AttrValue, CssAttrValue},
+    attr_value::{AttrText, AttrValue, CssAttrValue},
     dom_comment::{DomComment, MarkerContent},
     dom_element::DomElement,
     dom_element_ref::DomElementRef,

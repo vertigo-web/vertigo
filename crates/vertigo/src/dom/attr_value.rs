@@ -2,8 +2,58 @@ use std::rc::Rc;
 
 use crate::{Computed, Css, Value};
 
+/// The text of an attribute, in whichever form costs nothing to keep hold of.
+///
+/// An element stores the value it last wrote so it can tell a real change from a repeat, and
+/// the [`dom!`](crate::dom) macro knows at compile time that `class="col-md-1"` is a literal
+/// living in the binary. Boxing that into an `Rc<String>` - which is what every attribute
+/// value used to become - costs two heap allocations to hold bytes that were already there.
+///
+/// Both variants clone by copying a pointer, and compare by their text.
+#[derive(Clone, Debug)]
+pub enum AttrText {
+    Static(&'static str),
+    Shared(Rc<String>),
+}
+
+impl AttrText {
+    pub fn as_str(&self) -> &str {
+        match self {
+            AttrText::Static(value) => value,
+            AttrText::Shared(value) => value.as_str(),
+        }
+    }
+}
+
+impl PartialEq for AttrText {
+    fn eq(&self, other: &Self) -> bool {
+        self.as_str() == other.as_str()
+    }
+}
+
+impl From<&'static str> for AttrText {
+    fn from(value: &'static str) -> Self {
+        AttrText::Static(value)
+    }
+}
+
+impl From<String> for AttrText {
+    fn from(value: String) -> Self {
+        AttrText::Shared(Rc::new(value))
+    }
+}
+
+impl From<Rc<String>> for AttrText {
+    fn from(value: Rc<String>) -> Self {
+        AttrText::Shared(value)
+    }
+}
+
 #[derive(Clone)]
 pub enum AttrValue {
+    /// A literal from the `dom!` macro. Distinguished from [`String`](Self::String) so that
+    /// it never has to be copied onto the heap - see [`AttrText`].
+    Static(&'static str),
     String(Rc<String>),
     Computed(Computed<String>),
     ComputedOpt(Computed<Option<String>>),
@@ -12,33 +62,38 @@ pub enum AttrValue {
 }
 
 impl AttrValue {
-    pub fn get(&self, ctx: &crate::Context) -> Option<Rc<String>> {
+    pub fn get(&self, ctx: &crate::Context) -> Option<AttrText> {
         match self {
-            AttrValue::String(s) => Some(s.clone()),
-            AttrValue::Computed(c) => Some(Rc::new(c.get(ctx))),
-            AttrValue::ComputedOpt(c) => c.get(ctx).map(Rc::new),
-            AttrValue::Value(v) => Some(Rc::new(v.get(ctx))),
-            AttrValue::ValueOpt(v) => v.get(ctx).map(Rc::new),
+            AttrValue::Static(s) => Some(AttrText::Static(s)),
+            AttrValue::String(s) => Some(AttrText::Shared(s.clone())),
+            AttrValue::Computed(c) => Some(AttrText::from(c.get(ctx))),
+            AttrValue::ComputedOpt(c) => c.get(ctx).map(AttrText::from),
+            AttrValue::Value(v) => Some(AttrText::from(v.get(ctx))),
+            AttrValue::ValueOpt(v) => v.get(ctx).map(AttrText::from),
+        }
+    }
+
+    /// The text this value has right now, if it is known without reading the graph.
+    fn as_static_text(&self) -> Option<&str> {
+        match self {
+            AttrValue::Static(value) => Some(value),
+            AttrValue::String(value) => Some(value.as_str()),
+            _ => None,
         }
     }
 
     pub fn combine(classes: Vec<AttrValue>) -> AttrValue {
-        let mut all_static = true;
-        for class in &classes {
-            if !matches!(class, AttrValue::String(_)) {
-                all_static = false;
-                break;
-            }
-        }
+        let all_static = classes.iter().all(|class| class.as_static_text().is_some());
 
         if all_static {
             let mut result = Vec::new();
-            for class in classes {
-                if let AttrValue::String(s) = class {
-                    let s = s.trim();
-                    if !s.is_empty() {
-                        result.push(s.to_string());
-                    }
+            for class in &classes {
+                let Some(text) = class.as_static_text() else {
+                    continue;
+                };
+                let text = text.trim();
+                if !text.is_empty() {
+                    result.push(text);
                 }
             }
             return AttrValue::String(Rc::new(result.join(" ")));
@@ -48,7 +103,7 @@ impl AttrValue {
             let mut result = Vec::new();
             for class in &classes {
                 if let Some(s) = class.get(ctx) {
-                    let s = s.trim();
+                    let s = s.as_str().trim();
                     if !s.is_empty() {
                         result.push(s.to_string());
                     }

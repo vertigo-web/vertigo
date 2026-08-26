@@ -107,6 +107,10 @@ impl AttrGroupValue {
     /// For displaying in HTML it's better to use `.embed()` method (which uses this one internally).
     pub fn to_string_or_empty(&self) -> Computed<String> {
         match self {
+            Self::AttrValue(AttrValue::Static(val)) => {
+                let val = *val;
+                Computed::from(move |_| val.to_string())
+            }
             Self::AttrValue(AttrValue::String(val)) => {
                 let val = val.clone();
                 Computed::from(move |_| val.to_string())
