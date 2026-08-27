@@ -97,37 +97,40 @@ impl Edges {
         // entry per `get` call, duplicates included, so it can be much longer than the set.
         let new_parents: NodeSet = pairs.iter().map(|(id, _)| *id).collect();
 
-        {
-            let child_parents = self.child_parents.borrow();
-            if let Some(old) = child_parents.get(&child)
-                && *old == new_parents
-            {
-                return None;
-            }
-        }
-
-        let old = self
-            .child_parents
-            .borrow_mut()
-            .insert(child, new_parents.clone())
-            .unwrap_or_default();
-
         let mut became_watched = Vec::new();
         let mut became_unwatched = Vec::new();
 
+        // The diff runs against the stored set *in place*, before the new one replaces it.
         {
+            let child_parents = self.child_parents.borrow();
+            let old = child_parents.get(&child);
+
+            if old == Some(&new_parents) {
+                return None;
+            }
+
+            // A different `RefCell` from the one borrowed above, so this is not re-entrant.
             let mut parent_children = self.parent_children.borrow_mut();
 
-            for parent in old.difference(&new_parents) {
-                if let Some(children) = parent_children.get_mut(parent) {
-                    children.remove(&child);
-                    if children.is_empty() {
-                        became_unwatched.push(*parent);
+            if let Some(old) = old {
+                for parent in old.difference(&new_parents) {
+                    if let Some(children) = parent_children.get_mut(parent) {
+                        children.remove(&child);
+                        if children.is_empty() {
+                            became_unwatched.push(*parent);
+                        }
                     }
                 }
             }
 
-            for parent in new_parents.difference(&old) {
+            // `NodeSet::difference` wants a set on both sides and `old` is an `Option` here,
+            // so the other direction is spelled out. Same work either way - one lookup in
+            // `old` per new parent.
+            for parent in &new_parents {
+                if old.is_some_and(|old| old.contains(parent)) {
+                    continue;
+                }
+
                 let children = parent_children.entry(*parent).or_default();
                 let was_empty = children.is_empty();
                 children.insert(child);
@@ -136,6 +139,8 @@ impl Edges {
                 }
             }
         }
+
+        self.child_parents.borrow_mut().insert(child, new_parents);
 
         // Stored whole rather than stripped to the `Rc`s: keeping the ids alongside is
         // what lets the next call answer by comparing sequences, and it saves building a
@@ -251,6 +256,27 @@ mod tests {
         assert!(edges.replace(NodeId(3), vec![slot(2)]).is_some());
         assert!(!edges.is_watched(NodeId(1)));
         assert!(edges.is_watched(NodeId(2)));
+    }
+
+    /// A parent kept, one dropped and one added, in a single replace.
+    ///
+    /// The interesting case for the diff, and the one the other tests leave out: they change
+    /// the parent set wholesale, so a bug that mishandled the *overlap* would pass them. Here
+    /// node 2 is in both sets and must neither be re-inserted nor reported.
+    #[test]
+    fn replace_diffs_only_what_changed() {
+        let edges = Edges::new();
+        edges.replace(NodeId(4), vec![slot(1), slot(2)]);
+
+        let diff = edges
+            .replace(NodeId(4), vec![slot(2), slot(3)])
+            .map(|diff| (diff.became_unwatched, diff.became_watched));
+
+        assert_eq!(diff, Some((vec![NodeId(1)], vec![NodeId(3)])));
+
+        assert!(!edges.is_watched(NodeId(1)));
+        assert!(edges.is_watched(NodeId(2)));
+        assert!(edges.is_watched(NodeId(3)));
     }
 
     #[test]
