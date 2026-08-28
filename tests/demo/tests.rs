@@ -19,6 +19,7 @@
 
 mod console;
 mod harness;
+mod ssr;
 mod tabs;
 
 use harness::{Harness, wait_for_text};
@@ -67,6 +68,14 @@ async fn demo() {
     // reactive graph is dead and this write never reaches the DOM.
     println!("Closing check");
     step!("the closing check", tabs::counters(client));
+
+    // Last, because it is the only step that reloads the page - which is the whole point of
+    // it, and which also discards the recorder installed above. It puts a fresh one back, so
+    // the console gate still applies to the page it loads.
+    step!(
+        "the SSR fetch cache check",
+        ssr::fetch_cache(client, &harness.site_url)
+    );
 
     harness.finish().await;
 }

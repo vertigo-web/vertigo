@@ -497,8 +497,9 @@ mod tests {
                         panic!("Expected Ready, got {:?}", res);
                     }
                 });
-                // It fetches twice: once in new(), and once when bearer_auth.subscribe triggers initially (which sets Uninitialized)
-                assert_eq!(call_count.get(), 2);
+                // Once. Subscribing to the token is not a token change, so it does not
+                // invalidate what was just fetched - this used to count 2.
+                assert_eq!(call_count.get(), 1);
 
                 // 3. Change token
                 transaction(|_| {
@@ -518,7 +519,7 @@ mod tests {
                         panic!("Expected Ready after token change, got {:?}", res);
                     }
                 });
-                assert_eq!(call_count.get(), 3);
+                assert_eq!(call_count.get(), 2);
             })
             .await;
     }
@@ -584,7 +585,7 @@ mod tests {
                         panic!("Expected Ready, got {:?}", res);
                     }
                 });
-                assert_eq!(call_count.get(), 2);
+                assert_eq!(call_count.get(), 1);
 
                 // Setting SAME token computed again on the request builder
                 let _ = rb.bearer_auth(token_computed.clone());
@@ -593,7 +594,7 @@ mod tests {
                 tokio::task::yield_now().await;
 
                 // Should NOT have fetched again yet because token content didn't change and Computed instance is the same
-                assert_eq!(call_count.get(), 2);
+                assert_eq!(call_count.get(), 1);
 
                 // Change content of the same Computed
                 transaction(|_| {
@@ -611,7 +612,7 @@ mod tests {
                         panic!("Expected Ready after token change, got {:?}", res);
                     }
                 });
-                assert_eq!(call_count.get(), 3);
+                assert_eq!(call_count.get(), 2);
             })
             .await;
     }

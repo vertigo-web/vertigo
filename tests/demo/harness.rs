@@ -34,6 +34,9 @@ const POLL: Duration = Duration::from_millis(100);
 
 pub struct Harness {
     pub client: Client,
+    /// Where the demo is being served, with a trailing slash. Only the SSR check needs it -
+    /// everything else navigates by clicking.
+    pub site_url: String,
     api: vertigo_demo_server::ServerHandle,
     serve_stop: Option<oneshot::Sender<i32>>,
 }
@@ -149,6 +152,7 @@ impl Harness {
 
         Harness {
             client,
+            site_url,
             api,
             serve_stop: Some(serve_stop),
         }

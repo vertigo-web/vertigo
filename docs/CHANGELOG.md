@@ -90,6 +90,9 @@ The reactive graph was rewritten and keyed list rendering was rebuilt around per
 * `vertigo new` now writes a `[profile.release]` into the project it generates.
   The fullstack template additionally splits `opt-level` per target through `.cargo/config.toml`,
   so the frontend is built for size and the backend for speed
+* The SSR fetch cache is decoded on first use rather than at startup. An application with no
+  `LazyCache` never mentions it, so the linker drops the whole decode path producing smaller
+  wasm
 * Guide `guides::value_synchronize_and_collections` replaced by [`collections`][collections]
 
 ### Removed
@@ -130,6 +133,7 @@ The reactive graph was rewritten and keyed list rendering was rebuilt around per
   bulk memory operations"* - the WASM features enabled by default for
   `wasm32-unknown-unknown` are now passed to `wasm-opt` explicitly, because `strip = true`
   removes the `target_features` section it would otherwise read them from
+* A server-rendered `LazyCache` no longer re-requests on hydration
 
 [reactive-graph]: https://docs.rs/vertigo/latest/vertigo/guides/reactive_graph/index.html
 [invariants]: https://docs.rs/vertigo/latest/vertigo/reactive/invariants/index.html
