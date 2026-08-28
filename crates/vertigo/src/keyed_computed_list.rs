@@ -38,7 +38,10 @@ type RowCache<K, T> = FastMap<K, (u64, Computed<T>)>;
 /// keys are logged and skipped (the first occurrence is kept).
 ///
 /// If a per-item `Computed` is read after its key has left the source list, the last
-/// seen value is returned. Drop observers when a row unmounts.
+/// seen value is returned. Removing a row refreshes that row one last time on its way out,
+/// which is ordinary and silent; a row still being read as the list moves on past it is
+/// reported, because that means an observer outlived the row. Drop observers when a row
+/// unmounts.
 ///
 /// This is the `Computed`-to-`Computed` transform used by
 /// [`render_list`](crate::render::render_list) /
@@ -193,6 +196,19 @@ where
 /// The map doubles as the answer for a read after the key has left: the retained map is the
 /// last one that still had it. `seed` covers the one case it cannot - a read that happens
 /// before this `Computed` has ever run.
+///
+/// # Why the first read of a departed key is not reported
+///
+/// Removing a row refreshes that row. The row is a child of the shared key->value map, so
+/// dropping a key makes every row stale, and the departing one is still watched at that
+/// moment - its observer is dropped by whoever renders the list, which only runs afterwards.
+/// So the graph asks a row for a value it can no longer produce, once, as an ordinary part of
+/// removing it. Reporting that is a false alarm nobody can act on: it fires from `render_list`
+/// on a plain removal.
+///
+/// A *later* read is different. It means something kept the row and went on asking after the
+/// list let go of it, which is worth saying, so that one is still reported. `departed` is what
+/// separates the two, and it resets if the key comes back.
 fn row_computed<T, K>(
     key: K,
     by_key: &Computed<Rc<FastMap<K, T>>>,
@@ -205,6 +221,8 @@ where
 {
     let by_key = by_key.clone();
     let last = Rc::new(ValueMut::new(initial));
+    // Whether this row has already been asked for a value its key cannot answer.
+    let departed = Cell::new(false);
 
     Computed::from(move |ctx| {
         let current = by_key.get(ctx);
@@ -212,17 +230,21 @@ where
         if let Some(value) = current.get(&key) {
             let value = value.clone();
             last.set(current);
+            departed.set(false);
             return value;
         }
-
-        log::error!(
-            "keyed_computed_list: item Computed for key {:?} was read after that key left the source list; returning last value",
-            key
-        );
 
         let value = last
             .map(|last| last.get(&key).cloned())
             .unwrap_or_else(|| seed.clone());
+
+        // The first one is the removal refreshing this row on its way out; see above.
+        if departed.replace(true) {
+            log::error!(
+                "keyed_computed_list: item Computed for key {:?} was read after that key left the source list; returning last value",
+                key
+            );
+        }
 
         // The key is gone for good, so shrink what this row retains to its own last value.
         // Holding the whole map is right while the row is live - every row shares that one
