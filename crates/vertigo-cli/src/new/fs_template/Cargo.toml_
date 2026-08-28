@@ -3,3 +3,14 @@ members = ["backend", "frontend"]
 default-members = ["backend"]
 
 resolver = "2"
+
+# Cargo only reads `[profile]` from the workspace root, so this has to live here rather
+# than in `frontend/Cargo.toml`, where it would be ignored.
+#
+# These suit both targets: they let the linker drop the parts of vertigo the application
+# never calls, which is where most of the frontend's size saving comes from. What the two
+# targets disagree about - `opt-level` - is split per target in `.cargo/config.toml`.
+[profile.release]
+lto = "thin"
+codegen-units = 1
+strip = true

@@ -87,6 +87,9 @@ The reactive graph was rewritten and keyed list rendering was rebuilt around per
 * An application that uses no `css!` no longer links the css engine either. Together with
   the entry above, wasm going from 284 kB to 261 (84 kB to 76 gzipped) and 16% off first
   paint. **An application that does use `css!` keeps the engine and sees no size change**.
+* `vertigo new` now writes a `[profile.release]` into the project it generates.
+  The fullstack template additionally splits `opt-level` per target through `.cargo/config.toml`,
+  so the frontend is built for size and the backend for speed
 * Guide `guides::value_synchronize_and_collections` replaced by [`collections`][collections]
 
 ### Removed
