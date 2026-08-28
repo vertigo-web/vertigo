@@ -1,0 +1,8 @@
+# Cargo has no per-target profiles.
+#
+# Change flag here so the frontend builds for size while the backend keeps the profile's
+# `opt-level = 3`, where speed is what matters.
+#
+# `-Copt-level=z` is smaller again, at the cost of runtime speed. Measure before taking it.
+[target.wasm32-unknown-unknown]
+rustflags = ["-Copt-level=s"]

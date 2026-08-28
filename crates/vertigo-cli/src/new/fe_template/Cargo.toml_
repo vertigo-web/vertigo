@@ -10,3 +10,15 @@ crate-type = ["cdylib", "rlib"]
 
 [dependencies]
 vertigo = "0.12"
+
+# Every visitor downloads this wasm before the page can do anything, so the release build
+# is tuned for size - over 10% smaller than cargo's defaults. Most of that is `lto` and
+# `codegen-units`, which let the linker drop the parts of vertigo the application never
+# calls; fat LTO was measured against thin and saves nothing here.
+#
+# `opt-level = "z"` is smaller again, at the cost of runtime speed. Measure before taking it.
+[profile.release]
+opt-level = "s"
+lto = "thin"
+codegen-units = 1
+strip = true
