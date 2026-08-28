@@ -134,6 +134,7 @@ The reactive graph was rewritten and keyed list rendering was rebuilt around per
   `wasm32-unknown-unknown` are now passed to `wasm-opt` explicitly, because `strip = true`
   removes the `target_features` section it would otherwise read them from
 * A server-rendered `LazyCache` no longer re-requests on hydration
+* `keyed_computed_list` no longer reports a read after removal when a row is simply removed.
 
 [reactive-graph]: https://docs.rs/vertigo/latest/vertigo/guides/reactive_graph/index.html
 [invariants]: https://docs.rs/vertigo/latest/vertigo/reactive/invariants/index.html

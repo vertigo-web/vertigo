@@ -875,3 +875,247 @@ fn returns_last_value_after_key_leaves_the_list() {
         assert_eq!(stale_item.get(ctx), bob());
     });
 }
+
+// --- the read-after-removal false positive -------------------------------------------------
+
+/// Captures `log::error!` records for the current thread.
+///
+/// The logger is global and installed once, but the buffer it writes to is thread local, so
+/// tests running in parallel do not see each other's records.
+mod log_capture {
+    use std::cell::RefCell;
+
+    thread_local! {
+        static RECORDS: RefCell<Option<Vec<String>>> = const { RefCell::new(None) };
+    }
+
+    struct Capture;
+
+    impl log::Log for Capture {
+        fn enabled(&self, metadata: &log::Metadata<'_>) -> bool {
+            metadata.level() <= log::Level::Error
+        }
+
+        fn log(&self, record: &log::Record<'_>) {
+            if !self.enabled(record.metadata()) {
+                return;
+            }
+
+            RECORDS.with(|slot| {
+                if let Some(records) = slot.borrow_mut().as_mut() {
+                    records.push(record.args().to_string());
+                }
+            });
+        }
+
+        fn flush(&self) {}
+    }
+
+    /// Run `body`, returning every error logged from this thread while it ran.
+    pub fn errors_during(body: impl FnOnce()) -> Vec<String> {
+        // Another test may have installed a logger first; either way one is now in place, and
+        // `log` only lets the level be raised by whoever wins.
+        let _ = log::set_logger(&Capture);
+        log::set_max_level(log::LevelFilter::Error);
+
+        RECORDS.with(|slot| *slot.borrow_mut() = Some(Vec::new()));
+        body();
+        RECORDS
+            .with(|slot| slot.borrow_mut().take())
+            .unwrap_or_default()
+    }
+}
+
+/// Removing a row must not report a read after removal.
+///
+/// This is the demo's List tab in miniature, and the three things it needs are all load
+/// bearing: the source is a `Computed<Vec<Computed<T>>>` keyed on `Computed::id()`, a second
+/// subscriber is live on the same source, and a row is removed.
+#[test]
+fn removing_a_row_does_not_report_a_read_after_removal() {
+    use crate::{self as vertigo, dom, render::render_list};
+
+    fn item(text: &str) -> (Value<String>, Computed<String>) {
+        let value = Value::new(text.to_string());
+        let rendered = value.map(|text| format!("rendered: {text}"));
+        (value, rendered)
+    }
+
+    let source = Value::new(vec![item("one"), item("two"), item("three")]);
+
+    let items: Computed<Vec<Computed<String>>> = Computed::from({
+        let source = source.clone();
+        move |ctx| source.get(ctx).into_iter().map(|(_, c)| c).collect()
+    });
+
+    // The left panel: a second reader of the same source, rendering its own DOM.
+    let left = source.render_value(|rows| {
+        let out = crate::dom_element! { <div /> };
+        for (value, _) in rows {
+            out.add_child(dom! { <div>{value}</div> });
+        }
+        out.into()
+    });
+
+    // The right panel: the keyed list, each row rendered through its own `render_value`.
+    let right = render_list(
+        &items,
+        |item| item.id(),
+        |item| item.render_value(|text| dom! { <div>{text}</div> }),
+    );
+
+    let _root = dom! { <div>{left}{right}</div> };
+
+    let errors = log_capture::errors_during(|| {
+        source.change(|current| {
+            current.remove(1);
+        });
+    });
+
+    assert!(
+        errors.is_empty(),
+        "removing one row of three logged {}: {errors:#?}",
+        errors.len()
+    );
+}
+
+/// The same removal driven straight through `keyed_computed_list`, with the row observers
+/// dropped the way a reconciler drops them.
+///
+/// This is the demo's List tab in miniature, and the three things it needs are all load
+/// bearing: the source is a `Computed<Vec<Computed<T>>>` keyed on `Computed::id()`, a second
+/// subscriber is live on the same source, and a row is removed. The departing row's `Computed`
+/// is a child of the shared key->value map, so the graph refreshes it as part of the very
+/// update that removes it - before the outer list has run and dropped the row's observer. That
+/// refresh finds the key gone, which is the ordinary course of a removal and not a mistake
+/// anyone can avoid.
+#[test]
+fn removing_a_row_with_hand_rolled_observers_is_quiet() {
+    fn item(text: &str) -> (Value<String>, Computed<String>) {
+        let value = Value::new(text.to_string());
+        let rendered = value.map(|text| format!("rendered: {text}"));
+        (value, rendered)
+    }
+
+    let source = Value::new(vec![item("one"), item("two"), item("three")]);
+
+    let items: Computed<Vec<Computed<String>>> = Computed::from({
+        let source = source.clone();
+        move |ctx| source.get(ctx).into_iter().map(|(_, c)| c).collect()
+    });
+
+    let rows = keyed_computed_list(items, |item| item.id());
+
+    // The second panel, reading the same source. Without it the removal does not reach the
+    // departing row before the list has dropped it.
+    let _other_sub = source.to_computed().subscribe(|_| {});
+
+    // The rendered list: observe the rows, and each row, dropping a row's observer when the
+    // row goes - which is what a reconciler does, and when it does it that matters here.
+    let row_subs: Rc<RefCell<HashMap<crate::GraphId, DropResource>>> =
+        Rc::new(RefCell::new(HashMap::new()));
+
+    let _rows_sub = rows.subscribe({
+        let row_subs = row_subs.clone();
+        move |rows| {
+            let mut subs = row_subs.borrow_mut();
+            let mut kept = HashMap::new();
+
+            for row in rows {
+                match subs.remove(&row.key) {
+                    Some(existing) => {
+                        kept.insert(row.key, existing);
+                    }
+                    None => {
+                        kept.insert(row.key, row.value.subscribe(|_| {}));
+                    }
+                }
+            }
+
+            *subs = kept;
+        }
+    });
+
+    let errors = log_capture::errors_during(|| {
+        source.change(|current| {
+            current.remove(1);
+        });
+    });
+
+    assert!(
+        errors.is_empty(),
+        "removing one row of three logged {}: {errors:#?}",
+        errors.len()
+    );
+}
+
+/// A row that is still being read as the list moves on without it is still reported.
+///
+/// The counterpart to the test above: silencing the removal must not silence the thing the
+/// message exists for. A row only recomputes when the shared map changes, so "later" means a
+/// further update to the list - by which point holding this row really is the caller's doing.
+#[test]
+fn a_row_read_after_the_list_moves_on_is_reported() {
+    let source = Value::new(vec![bob(), frank(30)]);
+    let list = keyed_computed_list(source.to_computed(), |item| item.id);
+
+    let stale = transaction(|ctx| list.get(ctx)[0].value.clone());
+
+    source.set(vec![frank(30)]);
+
+    let removal = log_capture::errors_during(|| {
+        transaction(|ctx| {
+            assert_eq!(stale.get(ctx), bob());
+        });
+    });
+    assert!(
+        removal.is_empty(),
+        "the first read after removal is the removal itself and must be quiet: {removal:#?}"
+    );
+
+    // The list carries on. Anyone still reading the departed row now is doing it on their own.
+    let later = log_capture::errors_during(|| {
+        for age in 31..34 {
+            source.set(vec![frank(age)]);
+            transaction(|ctx| {
+                assert_eq!(stale.get(ctx), bob());
+            });
+        }
+    });
+    assert_eq!(
+        later.len(),
+        3,
+        "a row read across three later updates should report each time: {later:#?}"
+    );
+}
+
+/// A key that leaves and comes back gets a clean slate.
+#[test]
+fn a_returning_key_is_not_still_marked_departed() {
+    let source = Value::new(vec![bob()]);
+    let list = keyed_computed_list(source.to_computed(), |item| item.id);
+
+    let row = transaction(|ctx| list.get(ctx)[0].value.clone());
+
+    source.set(Vec::new());
+    transaction(|ctx| {
+        assert_eq!(row.get(ctx), bob());
+    });
+
+    source.set(vec![bob()]);
+    transaction(|ctx| {
+        assert_eq!(row.get(ctx), bob());
+    });
+
+    // Gone again: this is a fresh departure, so it is quiet again rather than reported.
+    source.set(Vec::new());
+    let errors = log_capture::errors_during(|| {
+        transaction(|ctx| {
+            assert_eq!(row.get(ctx), bob());
+        });
+    });
+    assert!(
+        errors.is_empty(),
+        "a key that left, returned and left again reported on its second departure: {errors:#?}"
+    );
+}

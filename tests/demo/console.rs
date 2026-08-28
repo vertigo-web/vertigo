@@ -75,18 +75,11 @@ const ALLOWED: &[(&str, &str)] = &[
 /// itself and will always be there; one of these is a real defect that the run is tolerating
 /// so that the other thirteen tabs can still be checked. Each is printed loudly on every run,
 /// and deleting the entry is what closing the issue looks like.
-const KNOWN_ISSUES: &[(&str, &str)] = &[(
-    "was read after that key left the source list",
-    "Removing a row from the List tab reaches `keyed_computed_list`'s read-after-removal \
-     fallback. The rendered output is right - the fallback returns the last value - but the \
-     row's `Computed` is being refreshed after its key has gone, which the framework logs at \
-     error level because it is not supposed to happen. \
-     Reproduces natively, and needs three things together: the source is a \
-     `Computed<Vec<Computed<T>>>` keyed on `Computed::id()`, a second subscriber is live on \
-     the same source, and a row is removed. With the keyed list as the only subscriber it \
-     does not fire, which points at the order pending updates are flushed in rather than at \
-     the list reconciler.",
-)];
+///
+/// Empty, and worth keeping empty. The last entry here was `keyed_computed_list` reporting a
+/// read after removal when the List tab dropped a row; that is now covered by
+/// `removing_a_row_does_not_report_a_read_after_removal` in the vertigo unit tests.
+const KNOWN_ISSUES: &[(&str, &str)] = &[];
 
 fn matches(patterns: &[(&str, &str)], message: &str) -> bool {
     patterns
