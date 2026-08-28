@@ -2,7 +2,7 @@ use crate::{
     DomNode, JsJson,
     dev::LongPtr,
     driver_module::{
-        api::{api_arguments, api_command_wasm, api_fetch_cache, api_server_handler},
+        api::{api_arguments, api_command_wasm, api_server_handler},
         driver::get_driver,
         get_driver_dom,
         init_env::init_env,
@@ -12,8 +12,6 @@ use crate::{
 /// Starting point of the app (used by [vertigo::main] macro, which is preferred)
 pub fn start_app(init_app: fn() -> DomNode) {
     init_env();
-
-    api_fetch_cache().init_cache();
 
     let root_view = init_app();
 
