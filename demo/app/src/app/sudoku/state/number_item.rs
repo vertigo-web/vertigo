@@ -41,6 +41,24 @@ impl SudokuValue {
             SudokuValue::Value9,
         ]
     }
+
+    /// One ASCII digit as a value, for reading the example boards.
+    ///
+    /// Anything else reads as an empty cell.
+    pub fn from_ascii(byte: u8) -> Option<SudokuValue> {
+        match byte {
+            b'1' => Some(SudokuValue::Value1),
+            b'2' => Some(SudokuValue::Value2),
+            b'3' => Some(SudokuValue::Value3),
+            b'4' => Some(SudokuValue::Value4),
+            b'5' => Some(SudokuValue::Value5),
+            b'6' => Some(SudokuValue::Value6),
+            b'7' => Some(SudokuValue::Value7),
+            b'8' => Some(SudokuValue::Value8),
+            b'9' => Some(SudokuValue::Value9),
+            _ => None,
+        }
+    }
 }
 
 pub type NumberItem = Value<Option<SudokuValue>>;
