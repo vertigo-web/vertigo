@@ -12,6 +12,28 @@ mod newtypes;
 mod structs;
 mod tuple_fields;
 
+/// Assembles a `JsJson::Object` out of `vertigo::object_insert` calls against [`object_ident`].
+///
+/// See `object_insert` for why the fields go in one at a time rather than through
+/// `BTreeMap::from([..])`.
+pub(super) fn js_json_object(inserts: &[proc_macro2::TokenStream]) -> proc_macro2::TokenStream {
+    let object = object_ident();
+
+    quote! {
+        {
+            let mut #object = ::std::collections::BTreeMap::new();
+            #(#inserts)*
+            vertigo::JsJson::Object(#object)
+        }
+    }
+}
+
+/// The local [`js_json_object`] builds into, named so it cannot collide with a field of the
+/// item being derived - the inserts sit in the same scope as destructured fields.
+pub(super) fn object_ident() -> syn::Ident {
+    syn::Ident::new("__vertigo_json_object", proc_macro2::Span::call_site())
+}
+
 /// `Vec<u8>` travels as [`JsJson::Vec`] - one length-prefixed byte run - rather than as a
 /// list of numbers, which would cost a `JsJson::Number` per byte.
 ///

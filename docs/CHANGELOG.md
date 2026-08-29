@@ -93,6 +93,10 @@ The reactive graph was rewritten and keyed list rendering was rebuilt around per
 * The SSR fetch cache is decoded on first use rather than at startup. An application with no
   `LazyCache` never mentions it, so the linker drops the whole decode path producing smaller
   wasm
+* `AutoJsJson` builds an object one field at a time through a shared function instead of with
+  `BTreeMap::from([..])`, and inserts the fields in key order. Saves 1-5% of the wasm, depending
+  on how many types the application derives. Encoding an enum gets faster and encoding a struct
+  slightly slower; the browser benchmark sees neither.
 * Guide `guides::value_synchronize_and_collections` replaced by [`collections`][collections]
 
 ### Removed

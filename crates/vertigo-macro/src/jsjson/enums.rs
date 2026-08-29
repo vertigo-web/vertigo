@@ -6,7 +6,7 @@ use syn::{DataEnum, Fields, Ident, ext::IdentExt};
 
 use crate::jsjson::{
     attributes::{ContainerOpts, FieldOpts},
-    is_vec_u8,
+    is_vec_u8, js_json_object, object_ident,
 };
 
 // {
@@ -27,6 +27,8 @@ pub(super) fn impl_js_json_enum(
     data: &DataEnum,
     container_opts: ContainerOpts,
 ) -> Result<TokenStream, Box<dyn Error>> {
+    let object = object_ident();
+
     // Encoding code for every variant
     let mut variant_encodes = vec![];
 
@@ -63,15 +65,12 @@ pub(super) fn impl_js_json_enum(
                 // Enum::Variant(T) <-> "Variant": T
                 if fields.unnamed.len() == 1 {
                     // Encode
+                    let encoded = js_json_object(&[quote! {
+                        vertigo::object_insert(&mut #object, #json_key, value.to_json());
+                    }]);
+
                     variant_encodes.push(quote! {
-                        Self::#variant_ident(value) => {
-                            vertigo::JsJson::Object(::std::collections::BTreeMap::from([
-                                (
-                                    #json_key.to_string(),
-                                    value.to_json(),
-                                ),
-                            ]))
-                        }
+                        Self::#variant_ident(value) => #encoded,
                     });
 
                     // Decode
@@ -89,17 +88,16 @@ pub(super) fn impl_js_json_enum(
                     let (field_idents, field_encodes) =
                         super::tuple_fields::get_encodes(fields.unnamed.iter());
 
+                    let encoded = js_json_object(&[quote! {
+                        vertigo::object_insert(
+                            &mut #object,
+                            #json_key,
+                            vertigo::JsJson::List(::std::vec![#(#field_encodes)*]),
+                        );
+                    }]);
+
                     variant_encodes.push(quote! {
-                        Self::#variant_ident(#(#field_idents,)*) => {
-                            vertigo::JsJson::Object(::std::collections::BTreeMap::from([
-                                (
-                                    #json_key.to_string(),
-                                    vertigo::JsJson::List(vec![
-                                        #(#field_encodes)*
-                                    ])
-                                ),
-                            ]))
-                        }
+                        Self::#variant_ident(#(#field_idents,)*) => #encoded,
                     });
 
                     // Decode
@@ -139,7 +137,7 @@ pub(super) fn impl_js_json_enum(
                     .filter_map(|field| field.ident.clone())
                     .collect::<Vec<_>>();
 
-                let field_encodes = fields
+                let mut field_encodes = fields
                     .named
                     .iter()
                     .filter_map(|field| Some((field.ident.clone()?, &field.ty)))
@@ -147,29 +145,35 @@ pub(super) fn impl_js_json_enum(
                         let field_name = field_ident.unraw().to_string();
 
                         // Same treatment a struct field of this type gets - see `is_vec_u8`.
-                        if is_vec_u8(field_ty) {
-                            return quote! {
-                                (#field_name.to_string(), vertigo::JsJson::Vec(#field_ident)),
-                            };
-                        }
+                        let insert = if is_vec_u8(field_ty) {
+                            quote! {
+                                vertigo::object_insert(&mut #object, #field_name, vertigo::JsJson::Vec(#field_ident));
+                            }
+                        } else {
+                            quote! {
+                                vertigo::object_insert(&mut #object, #field_name, #field_ident.to_json());
+                            }
+                        };
 
-                        quote! {
-                            (#field_name.to_string(), #field_ident.to_json()),
-                        }
+                        (field_name, insert)
                     })
                     .collect::<Vec<_>>();
 
+                // Ascending key order, for the same reason the struct encoder sorts: an
+                // insert that lands past everything already in the map shifts nothing.
+                field_encodes.sort_by(|(left, _), (right, _)| left.cmp(right));
+                let field_encodes = field_encodes
+                    .into_iter()
+                    .map(|(_, tokens)| tokens)
+                    .collect::<Vec<_>>();
+
+                let inner = js_json_object(&field_encodes);
+                let encoded = js_json_object(&[quote! {
+                    vertigo::object_insert(&mut #object, #json_key, #inner);
+                }]);
+
                 variant_encodes.push(quote! {
-                    Self::#variant_ident {#(#field_idents,)*} => {
-                        vertigo::JsJson::Object(::std::collections::BTreeMap::from([
-                            (
-                                #json_key.to_string(),
-                                vertigo::JsJson::Object(::std::collections::BTreeMap::from([
-                                    #(#field_encodes)*
-                                ]))
-                            ),
-                        ]))
-                    }
+                    Self::#variant_ident {#(#field_idents,)*} => #encoded,
                 });
 
                 // Decode

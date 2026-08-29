@@ -6,7 +6,7 @@ use syn::{DataStruct, Ident, ext::IdentExt};
 
 use crate::jsjson::{
     attributes::{ContainerOpts, FieldOpts},
-    is_vec_u8,
+    is_vec_u8, js_json_object, object_ident,
 };
 
 pub(super) fn impl_js_json_struct(
@@ -26,7 +26,9 @@ pub(super) fn impl_js_json_struct(
         field_list.push((field_name, attrs, &field.ty));
     }
 
-    let mut list_to_json = Vec::new();
+    let object = object_ident();
+
+    let mut list_to_json: Vec<(String, proc_macro2::TokenStream)> = Vec::new();
     let mut list_from_json = Vec::new();
 
     for (field_name, attrs, field_ty) in field_list {
@@ -59,9 +61,9 @@ pub(super) fn impl_js_json_struct(
         };
 
         if is_vec_u8(field_ty) {
-            list_to_json.push(quote! {
-                (#json_key.to_string(), vertigo::JsJson::Vec(self.#field_name)),
-            });
+            list_to_json.push((json_key.clone(), quote! {
+                vertigo::object_insert(&mut #object, #json_key, vertigo::JsJson::Vec(self.#field_name));
+            }));
 
             list_from_json.push(quote! {
                 #field_name: json.get_property_jsjson(&context, #json_key).and_then(|item| {
@@ -85,12 +87,15 @@ pub(super) fn impl_js_json_struct(
             };
 
             if is_option {
-                list_to_json.push(quote! {
-                    (#json_key.to_string(), match &self.#field_name {
-                        Some(val) => vertigo::JsJson::String(format!("{}", val)),
-                        None => vertigo::JsJson::Null,
-                    }),
-                });
+                list_to_json.push((
+                    json_key.clone(),
+                    quote! {
+                        vertigo::object_insert(&mut #object, #json_key, match &self.#field_name {
+                            Some(val) => vertigo::JsJson::String(format!("{}", val)),
+                            None => vertigo::JsJson::Null,
+                        });
+                    },
+                ));
 
                 list_from_json.push(quote! {
                     #field_name: json.get_property(&context, #json_key).and_then(|item| {
@@ -113,9 +118,9 @@ pub(super) fn impl_js_json_struct(
                     })#unpack_expr,
                 })
             } else {
-                list_to_json.push(quote! {
-                    (#json_key.to_string(), vertigo::JsJson::String(format!("{}", self.#field_name))),
-                });
+                list_to_json.push((json_key.clone(), quote! {
+                    vertigo::object_insert(&mut #object, #json_key, vertigo::JsJson::String(format!("{}", self.#field_name)));
+                }));
 
                 list_from_json.push(quote! {
                     #field_name: json.get_property(&context, #json_key).and_then(|item| {
@@ -138,9 +143,12 @@ pub(super) fn impl_js_json_struct(
                 })
             }
         } else {
-            list_to_json.push(quote! {
-                (#json_key.to_string(), self.#field_name.to_json()),
-            });
+            list_to_json.push((
+                json_key.clone(),
+                quote! {
+                    vertigo::object_insert(&mut #object, #json_key, self.#field_name.to_json());
+                },
+            ));
 
             list_from_json.push(quote! {
                 #field_name: json.get_property(&context, #json_key)#unpack_expr,
@@ -148,12 +156,20 @@ pub(super) fn impl_js_json_struct(
         }
     }
 
+    // Ascending key order: a `BTreeMap` insert that appends past everything already there
+    // does no shifting, and the derive knows the names at compile time, so the sort is free.
+    list_to_json.sort_by(|(left, _), (right, _)| left.cmp(right));
+    let list_to_json = list_to_json
+        .into_iter()
+        .map(|(_, tokens)| tokens)
+        .collect::<Vec<_>>();
+
+    let to_json_body = js_json_object(&list_to_json);
+
     let result = quote! {
         impl vertigo::JsJsonSerialize for #name {
             fn to_json(self) -> vertigo::JsJson {
-                vertigo::JsJson::Object(::std::collections::BTreeMap::from([
-                    #(#list_to_json)*
-                ]))
+                #to_json_body
             }
         }
 
