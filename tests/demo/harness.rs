@@ -110,7 +110,7 @@ impl Harness {
                             format!("ws://127.0.0.1:{API_PORT}/ws-collection"),
                         ),
                         // The two public APIs, pointed at their local stand-ins.
-                        ("api_todo".to_string(), format!("{api}/todo")),
+                        ("api_fetch".to_string(), format!("{api}/fetch")),
                         ("api_github".to_string(), format!("{api}/github")),
                     ],
                     wasm_preload: true,

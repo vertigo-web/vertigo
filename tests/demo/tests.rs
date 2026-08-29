@@ -49,6 +49,7 @@ async fn demo() {
         }};
     }
 
+    step!("Home", tabs::home(client));
     step!("Counters", tabs::counters(client));
     step!("Styling", tabs::styling(client));
     step!("Sudoku", tabs::sudoku(client));
@@ -56,7 +57,7 @@ async fn demo() {
     step!("Github Explorer", tabs::github_explorer(client));
     step!("Game Of Life", tabs::game_of_life(client));
     step!("Chat", tabs::chat(client));
-    step!("Todo", tabs::todo(client));
+    step!("Fetch", tabs::fetch(client));
     step!("Drop File", tabs::drop_file(client));
     step!("JS Api Access", tabs::js_api_access(client));
     step!("List", tabs::list(client));
@@ -64,14 +65,21 @@ async fn demo() {
     step!("WS Collection", tabs::ws_collection(client));
     step!("Svg", tabs::svg(client));
 
+    // Not a tab: the arrow keys belong to the frame the tabs sit in.
+    step!("the arrow keys", tabs::arrow_keys(client));
+
     // Liveness, independent of the console gate: if the wasm panicked anywhere above, the
     // reactive graph is dead and this write never reaches the DOM.
     println!("Closing check");
     step!("the closing check", tabs::counters(client));
 
-    // Last, because it is the only step that reloads the page - which is the whole point of
-    // it, and which also discards the recorder installed above. It puts a fresh one back, so
-    // the console gate still applies to the page it loads.
+    // Last, because these are the only steps that reload the page - which is the whole point
+    // of them, and which also discards the recorder installed above. Each puts a fresh one
+    // back, so the console gate still applies to the pages they load.
+    step!(
+        "the SSR hydration check",
+        ssr::hydration(client, &harness.site_url)
+    );
     step!(
         "the SSR fetch cache check",
         ssr::fetch_cache(client, &harness.site_url)

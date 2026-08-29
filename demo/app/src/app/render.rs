@@ -1,12 +1,15 @@
-use vertigo::{Computed, Css, DomNode, KeyDownEvent, css, dom, get_driver, include_static};
+use vertigo::{
+    Computed, Css, DomNode, JsJson, KeyDownEvent, css, dom, dom_element, get_driver,
+    include_static, js, transaction,
+};
 
 use crate::app::{self, counters::state_counters, state::state_route};
 
 use super::{
-    chat::Chat, counters::CountersDemo, dropfiles::DropFiles, game_of_life::GameOfLife,
-    github_explorer::GitHubExplorer, input::MyInput, js_api_access::JsApiAccess,
-    lazy_list::LazyList, list::ListDemo, route::Route, styling::Styling, sudoku::Sudoku,
-    svg::SvgDemo, todo::Todo, ws_collection::WsCollectionDemo,
+    chat::Chat, counters::CountersDemo, dropfiles::DropFiles, fetch::FetchDemo,
+    game_of_life::GameOfLife, github_explorer::GitHubExplorer, home::Home, input::MyInput,
+    js_api_access::JsApiAccess, lazy_list::LazyList, list::ListDemo, route::Route,
+    styling::Styling, sudoku::Sudoku, svg::SvgDemo, ws_collection::WsCollectionDemo,
 };
 
 fn css_menu_item(active: bool) -> Css {
@@ -40,44 +43,54 @@ fn render_menu_item(menu_item: Route) -> DomNode {
     }
 }
 
+/// Whether the keystroke belongs to something the visitor is typing in.
+///
+/// `hook_key_down` is registered on the document, so it sees every keystroke on the page - the
+/// arrows that move a caret through the chat box or the Game Of Life delay field included.
+/// Those have to reach the field rather than change tab.
+fn is_typing() -> bool {
+    match js! { document.activeElement.tagName } {
+        JsJson::String(tag) => matches!(tag.as_str(), "INPUT" | "TEXTAREA" | "SELECT"),
+        _ => false,
+    }
+}
+
 fn render_header() -> DomNode {
+    // Left and right step through the menu. Returning true is what stops the browser also
+    // scrolling the page sideways.
     let hook_key_down = |event: KeyDownEvent| {
-        if event.code == "ArrowRight" {
-            log::info!("right");
-            return true;
+        let offset = match event.code.as_str() {
+            "ArrowRight" => 1,
+            "ArrowLeft" => -1,
+            _ => return false,
+        };
+
+        if is_typing() {
+            return false;
         }
 
-        if event.code == "ArrowLeft" {
-            log::info!("left");
-            return true;
-        }
-
-        false
+        let route = transaction(|context| state_route().route.get(context));
+        state_route().set(route.step(offset));
+        true
     };
 
     let css_menu = css! {"
         display: flex;
+        flex-wrap: wrap;
         padding: 0;
     "};
 
+    let menu = dom_element! {
+        <div css={css_menu} />
+    };
+
+    for route in Route::ALL {
+        menu.add_child(render_menu_item(route.clone()));
+    }
+
     dom! {
         <div hook_key_down={hook_key_down}>
-            <div css={css_menu}>
-                { render_menu_item(Route::Counters) }
-                { render_menu_item(Route::Styling) }
-                { render_menu_item(Route::Sudoku) }
-                { render_menu_item(Route::Input) }
-                { render_menu_item(Route::GithubExplorer) }
-                { render_menu_item(Route::GameOfLife) }
-                { render_menu_item(Route::Chat) }
-                { render_menu_item(Route::Todo) }
-                { render_menu_item(Route::DropFile) }
-                { render_menu_item(Route::JsApiAccess) }
-                { render_menu_item(Route::List) }
-                { render_menu_item(Route::LazyList) }
-                { render_menu_item(Route::WsCollection) }
-                { render_menu_item(Route::Svg) }
-            </div>
+            { menu }
         </div>
     }
 }
@@ -90,6 +103,7 @@ fn title_value(state: app::State) -> Computed<String> {
         let route = state_route().route.get(context);
 
         match route {
+            Route::Home => "Vertigo demo".into(),
             Route::Counters => {
                 let sum = sum.get(context);
                 format!("Counter = {sum}")
@@ -113,6 +127,7 @@ pub fn render(state: &app::State) -> DomNode {
         let state = state.clone();
 
         move |route| match route {
+            Route::Home => dom! { <Home /> },
             Route::Styling => dom! { <Styling /> },
             Route::Counters => dom! { <CountersDemo /> },
             Route::Sudoku => dom! { <Sudoku state={&state.sudoku} /> },
@@ -126,7 +141,7 @@ pub fn render(state: &app::State) -> DomNode {
                     Chat::turn_off_message()
                 }
             }
-            Route::Todo => dom! { <Todo /> },
+            Route::Fetch => dom! { <FetchDemo /> },
             Route::DropFile => dom! { <DropFiles /> },
             Route::JsApiAccess => dom! { <JsApiAccess /> },
             Route::List => dom! { <ListDemo /> },
@@ -145,8 +160,6 @@ pub fn render(state: &app::State) -> DomNode {
             }
         }
     });
-
-    let on_keydown = |_event: KeyDownEvent| -> bool { false };
 
     let css_wrapper = css! {"
         padding: 5px;
@@ -178,7 +191,7 @@ pub fn render(state: &app::State) -> DomNode {
                 "</style>
             </head>
             <body>
-                <div on_key_down={on_keydown} css={css_wrapper}>
+                <div css={css_wrapper}>
                     { header }
 
                     { content }

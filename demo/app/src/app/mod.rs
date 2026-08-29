@@ -2,8 +2,10 @@ mod api;
 mod chat;
 mod counters;
 mod dropfiles;
+mod fetch;
 mod game_of_life;
 mod github_explorer;
+mod home;
 mod input;
 mod js_api_access;
 mod lazy_list;
@@ -14,7 +16,6 @@ mod state;
 mod styling;
 mod sudoku;
 mod svg;
-mod todo;
 mod ws_collection;
 
 pub use render::render;

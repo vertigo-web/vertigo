@@ -7,7 +7,7 @@ use vertigo::get_driver;
 /// stand-ins in `demo/server/src/stub_api.rs` rather than depending on someone else's uptime:
 ///
 /// ```text
-/// vertigo serve --env api_todo=http://127.0.0.1:5559/todo
+/// vertigo serve --env api_fetch=http://127.0.0.1:5559/fetch
 /// ```
 pub fn api_base(name: &str, default: &str) -> String {
     get_driver()

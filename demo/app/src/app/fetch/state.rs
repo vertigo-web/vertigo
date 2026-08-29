@@ -6,7 +6,7 @@ use crate::app::api::api_base;
 const DEFAULT_BASE: &str = "https://jsonplaceholder.typicode.com";
 
 fn base() -> String {
-    api_base("api_todo", DEFAULT_BASE)
+    api_base("api_fetch", DEFAULT_BASE)
 }
 
 #[derive(PartialEq, Eq, Clone)]
@@ -34,12 +34,12 @@ pub struct CommentModel {
 }
 
 #[store]
-pub fn state_todo_view() -> Value<View> {
+pub fn state_fetch_view() -> Value<View> {
     Value::new(View::Main)
 }
 
 #[store]
-pub fn state_todo_posts() -> LazyCache<Vec<PostModel>> {
+pub fn state_fetch_posts() -> LazyCache<Vec<PostModel>> {
     RequestBuilder::get(format!("{}/posts", base()))
         .ttl_minutes(10)
         .lazy_cache(|status, body| {
@@ -52,7 +52,7 @@ pub fn state_todo_posts() -> LazyCache<Vec<PostModel>> {
 }
 
 #[store]
-pub fn state_todo_comments(post_id: u32) -> LazyCache<Vec<CommentModel>> {
+pub fn state_fetch_comments(post_id: u32) -> LazyCache<Vec<CommentModel>> {
     RequestBuilder::get(format!("{}/posts/{post_id}/comments", base()))
         .ttl_minutes(10)
         .lazy_cache(|status, body| {
