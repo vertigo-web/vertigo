@@ -5,3 +5,5 @@ mod state;
 pub use state::State;
 
 mod next_generation;
+
+mod patterns;

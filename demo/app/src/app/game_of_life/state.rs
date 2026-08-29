@@ -1,7 +1,8 @@
 use std::rc::Rc;
-use vertigo::{ClickEvent, DropResource, Value, get_driver, transaction};
+use vertigo::{ClickEvent, Computed, DropResource, Value, get_driver, transaction};
 
 use super::next_generation::next_generation;
+use super::patterns::Pattern;
 
 #[derive(Clone)]
 pub struct State {
@@ -14,13 +15,15 @@ pub struct State {
     /// Why the last Set was refused, or `None` if it was accepted.
     pub delay_error: Value<Option<String>>,
     pub year: Value<u32>,
+    /// How many cells are alive. Every one of the 8400 `Value<bool>` feeds this.
+    pub population: Computed<usize>,
 }
 
 impl State {
     const X_LEN: u16 = 120;
     const Y_LEN: u16 = 70;
 
-    const DEFAULT_DELAY: u32 = 150;
+    const DEFAULT_DELAY: u32 = 50;
 
     /// Share of the board that [`State::randomize`] fills, in percent.
     const RANDOM_DENSITY: u32 = 35;
@@ -34,6 +37,17 @@ impl State {
         let delay_error = Value::new(None);
         let year = Value::new(1);
 
+        let population = Computed::from({
+            let matrix = matrix.clone();
+            move |context| {
+                matrix
+                    .iter()
+                    .flatten()
+                    .filter(|cell| cell.get(context))
+                    .count()
+            }
+        });
+
         Self {
             matrix,
             timer,
@@ -41,6 +55,7 @@ impl State {
             new_delay,
             delay_error,
             year,
+            population,
         }
     }
 
@@ -61,38 +76,70 @@ impl State {
 
     /// Fill the board with a random soup, roughly [`State::RANDOM_DENSITY`] percent alive.
     pub fn randomize(&self) -> impl Fn(ClickEvent) + 'static {
-        let matrix = self.matrix.clone();
+        let state = self.clone();
         move |_| {
             let mut rng = Rng::new();
             log::info!("randomize: filling ~{}% of the board", Self::RANDOM_DENSITY);
-
-            transaction(|_| {
-                for row in matrix.iter() {
-                    for cell in row.iter() {
-                        cell.set(rng.next() % 100 < Self::RANDOM_DENSITY);
-                    }
-                }
-            });
+            state.set_board(|_, _| rng.next() % 100 < Self::RANDOM_DENSITY);
         }
+    }
+
+    /// Put one of the presets on the board.
+    pub fn load_pattern(&self, pattern: &'static Pattern) -> impl Fn(ClickEvent) + 'static {
+        let state = self.clone();
+        move |_| {
+            log::info!("loading {}", pattern.name);
+            let live = pattern.live_cells(Self::X_LEN, Self::Y_LEN);
+            state.set_board(|y, x| live.contains(&(y, x)));
+        }
+    }
+
+    pub fn clear(&self) -> impl Fn(ClickEvent) + 'static {
+        let state = self.clone();
+        move |_| {
+            log::info!("clear");
+            state.set_board(|_, _| false);
+        }
+    }
+
+    /// Advance one generation, without needing the timer to be running.
+    pub fn step(&self) -> impl Fn(ClickEvent) + 'static {
+        let state = self.clone();
+        move |_| state.advance()
+    }
+
+    /// Replace the board and start counting generations again.
+    ///
+    /// One transaction, so the 8400 writes reach `population` and the grid as a single change
+    /// rather than as 8400 of them.
+    fn set_board(&self, mut live: impl FnMut(u16, u16) -> bool) {
+        transaction(|_| {
+            for (y, row) in self.matrix.iter().enumerate() {
+                for (x, cell) in row.iter().enumerate() {
+                    cell.set(live(y as u16, x as u16));
+                }
+            }
+
+            self.year.set(1);
+        });
+    }
+
+    fn advance(&self) {
+        transaction(|context| {
+            self.year.set(self.year.get(context) + 1);
+            next_generation(Self::X_LEN, Self::Y_LEN, &self.matrix);
+        });
     }
 
     pub fn start_timer(&self) {
         transaction(|context| {
             let delay = self.delay.get(context);
-            let matrix = self.matrix.clone();
 
             log::info!("Setting timer for {delay} ms");
 
             let timer = get_driver().set_interval(delay, {
                 let state = self.clone();
-                move || {
-                    transaction(|context| {
-                        let current = state.year.get(context);
-                        state.year.set(current + 1);
-
-                        next_generation(Self::X_LEN, Self::Y_LEN, &matrix)
-                    })
-                }
+                move || state.advance()
             });
 
             self.timer.set(Some(Rc::new(timer)));

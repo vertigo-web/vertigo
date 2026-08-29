@@ -1,4 +1,4 @@
-use vertigo::{Value, get_driver};
+use vertigo::{Computed, Value, get_driver};
 
 use self::{
     number_item::{NumberItem, SudokuValue},
@@ -12,10 +12,12 @@ pub mod examples;
 pub mod number_item;
 pub mod possible_values;
 pub mod possible_values_last;
+pub mod status;
 pub mod sudoku_square;
 pub mod tree_box;
 
 use examples::Board;
+pub use status::Status;
 
 fn create_grid() -> SudokuSquare<SudokuSquare<NumberItem>> {
     SudokuSquare::create_with_iterator(move |_level0x, _level0y| {
@@ -56,7 +58,9 @@ pub struct Cell {
     pub number: NumberItem,
     pub possible: PossibleValues,
     pub possible_last: PossibleValuesLast,
-    pub show_delete: Value<bool>,
+    /// Part of the puzzle as loaded, rather than something the player put there. Givens are
+    /// styled differently and cannot be deleted.
+    pub is_given: Value<bool>,
 }
 
 fn create_grid_view(
@@ -80,7 +84,7 @@ fn create_grid_view(
                 number: number.clone(),
                 possible: possible.clone(),
                 possible_last: possible_last.clone(),
-                show_delete: Value::new(true),
+                is_given: Value::new(false),
             }
         })
     })
@@ -89,6 +93,14 @@ fn create_grid_view(
 #[derive(Clone)]
 pub struct SudokuState {
     pub grid: SudokuSquare<SudokuSquare<Cell>>,
+    /// Empty, in progress, broken or done - derived from all 81 cells.
+    pub status: Computed<Status>,
+    /// Whether empty cells show what the solver has worked out.
+    ///
+    /// Off by default: with them on, the two rules in `possible_values` and
+    /// `possible_values_last` settle most of a board on their own, and there is not much of a
+    /// puzzle left to do.
+    pub hints: Value<bool>,
 }
 
 impl SudokuState {
@@ -97,23 +109,28 @@ impl SudokuState {
         let grid_possible = create_grid_possible(&grid_number);
         let grid_possible_last = create_grid_possible_last(&grid_number, &grid_possible);
 
+        let grid = create_grid_view(grid_number, grid_possible, grid_possible_last);
+        let status = status::status(rows_of(&grid));
+
         Self {
-            grid: create_grid_view(grid_number, grid_possible, grid_possible_last),
+            grid,
+            status,
+            hints: Value::new(false),
         }
+    }
+
+    /// The grid as nine rows of nine cells, top row first.
+    fn rows(&self) -> Vec<Vec<Cell>> {
+        rows_of(&self.grid)
     }
 
     pub fn clear(&self) {
         log::info!("clear");
 
         get_driver().transaction(|_| {
-            for x0 in TreeBoxIndex::variants() {
-                for y0 in TreeBoxIndex::variants() {
-                    for x1 in TreeBoxIndex::variants() {
-                        for y1 in TreeBoxIndex::variants() {
-                            self.grid.get_from(x0, y0).get_from(x1, y1).number.set(None);
-                        }
-                    }
-                }
+            for cell in self.rows().into_iter().flatten() {
+                cell.number.set(None);
+                cell.is_given.set(false);
             }
         });
     }
@@ -133,41 +150,50 @@ impl SudokuState {
     /// Put `board` on the grid, replacing whatever was there.
     ///
     /// Every one of the 81 cells is written, blanks included, so this is a load and a clear at
-    /// once - there is no way to be left with leftovers from the previous board.
-    ///
-    /// The whole thing is one transaction. Each write fans out to the cell's twenty peers
-    /// through `possible_values`, and to the rest of its row, column and block again through
-    /// `possible_values_last`; done one at a time, the grid would re-render after every
-    /// character and spend most of its time on states no one asked to see.
+    /// once. One transaction, because each write fans out to the cell's peers through
+    /// `possible_values` and `possible_values_last`.
     fn load(&self, board: &Board, name: &str) {
         log::info!("loading {name}");
 
         get_driver().transaction(|_| {
-            // Walked through `variants()` rather than by arithmetic on an index, so the
-            // mapping from a character to a cell cannot fail. The first index of `get_from`
-            // selects the row and the second the column, at both levels - which is the order
-            // `MainRender` lays the nine blocks out in.
-            for (block_row_n, block_row) in TreeBoxIndex::variants().into_iter().enumerate() {
-                for (in_row_n, in_row) in TreeBoxIndex::variants().into_iter().enumerate() {
-                    let row = board[block_row_n * 3 + in_row_n].as_bytes();
+            for (row, cells) in self.rows().into_iter().enumerate() {
+                let line = board[row].as_bytes();
 
-                    for (block_col_n, block_col) in TreeBoxIndex::variants().into_iter().enumerate()
-                    {
-                        for (in_col_n, in_col) in TreeBoxIndex::variants().into_iter().enumerate() {
-                            let value = row
-                                .get(block_col_n * 3 + in_col_n)
-                                .copied()
-                                .and_then(SudokuValue::from_ascii);
+                for (col, cell) in cells.into_iter().enumerate() {
+                    let value = line.get(col).copied().and_then(SudokuValue::from_ascii);
 
-                            self.grid
-                                .get_from(block_row, block_col)
-                                .get_from(in_row, in_col)
-                                .number
-                                .set(value);
-                        }
-                    }
+                    cell.number.set(value);
+                    cell.is_given.set(value.is_some());
                 }
             }
         });
     }
+}
+
+/// The grid in reading order.
+///
+/// `get_from` takes the row first and the column second at both levels, which is the order
+/// `MainRender` lays the nine blocks out in.
+fn rows_of(grid: &SudokuSquare<SudokuSquare<Cell>>) -> Vec<Vec<Cell>> {
+    let mut rows = Vec::with_capacity(9);
+
+    for block_row in TreeBoxIndex::variants() {
+        for in_row in TreeBoxIndex::variants() {
+            let mut row = Vec::with_capacity(9);
+
+            for block_col in TreeBoxIndex::variants() {
+                for in_col in TreeBoxIndex::variants() {
+                    row.push(
+                        grid.get_from(block_row, block_col)
+                            .get_from(in_row, in_col)
+                            .clone(),
+                    );
+                }
+            }
+
+            rows.push(row);
+        }
+    }
+
+    rows
 }

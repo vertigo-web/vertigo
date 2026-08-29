@@ -2,6 +2,7 @@ use std::rc::Rc;
 use vertigo::{DomElement, DomNode, Value, bind, css, dom, dom_element};
 
 pub use super::State;
+use super::patterns;
 
 pub struct GameOfLife {
     pub state: State,
@@ -24,6 +25,7 @@ impl GameOfLife {
         dom! {
             <div css={css_wrapper}>
                 { Self::render_header(&self.state) }
+                { Self::render_patterns(&self.state) }
                 <br/>
                 <a href="https://www.youtube.com/watch?v=C2vgICfQawE" target="_blank">
                     "https://www.youtube.com/watch?v=C2vgICfQawE"
@@ -33,6 +35,49 @@ impl GameOfLife {
                 { Self::render_matrix(matrix) }
             </div>
         }
+    }
+
+    /// The preset boards, one button each, plus the two that are not patterns.
+    fn render_patterns(state: &State) -> DomNode {
+        let row_css = css! {"
+            display: flex;
+            gap: 5px;
+            align-items: center;
+            flex-wrap: wrap;
+            margin-bottom: 5px;
+        "};
+
+        let button_css = css! {"
+            cursor: pointer;
+            border: black 1px solid;
+        "};
+
+        let out = dom_element! {
+            <div css={row_css}>
+                <div>"Start from: "</div>
+            </div>
+        };
+
+        for pattern in patterns::PATTERNS {
+            out.add_child(dom! {
+                <button
+                    css={&button_css}
+                    title={pattern.about}
+                    on_click={state.load_pattern(pattern)}
+                >
+                    {pattern.name}
+                </button>
+            });
+        }
+
+        out.add_child(dom! {
+            <button css={&button_css} on_click={state.randomize()}>"Random"</button>
+        });
+        out.add_child(dom! {
+            <button css={button_css} on_click={state.clear()}>"Clear"</button>
+        });
+
+        out.into()
     }
 
     fn render_header(state: &State) -> DomNode {
@@ -63,9 +108,12 @@ impl GameOfLife {
             })
         });
 
+        let population = state.population.map(|count| count.to_string());
+
         let flex_menu = css! {"
             display: flex;
             gap: 40px;
+            flex-wrap: wrap;
             margin-bottom: 5px;
         "};
 
@@ -78,19 +126,32 @@ impl GameOfLife {
             border: black 1px solid;
         "};
 
+        // Both of these change every generation, and a spaceship makes them change *width* -
+        // an LWSS breathes between 9 and 12 cells. Without room reserved for the widest value
+        // they will ever hold, the flex row re-lays-out on every frame and everything to the
+        // right of them - Start, Step, the delay field - slides about while the board runs.
+        let css_counter = |width: &str| {
+            css! {"
+                min-width: {width};
+            "}
+        };
+
         dom! {
             <div css={flex_menu}>
                 <div>
                     "Game of life"
                 </div>
-                <div>
+                <div css={css_counter("14ch")}>
                     "Year = " { year }
+                </div>
+                <div css={css_counter("18ch")}>
+                    "Population = " { population }
                 </div>
                 <div>
                     <button css={&button_css} on_click={state.on_toggle_timer()}>
                         {button_label}
                     </button>
-                    <button css={&button_css} on_click={state.randomize()}>"Random"</button>
+                    <button css={&button_css} on_click={state.step()}>"Step"</button>
                 </div>
                 <div>
                     <div>
