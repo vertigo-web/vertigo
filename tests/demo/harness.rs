@@ -22,6 +22,11 @@ const DEST_DIR: &str = "./build-demo";
 const PACKAGE: &str = "vertigo-demo";
 const WEBDRIVER: &str = "http://localhost:9515";
 
+/// The browser window the whole run uses. See where it is applied for why it is not the
+/// WebDriver default.
+const WINDOW_WIDTH: u32 = 1400;
+const WINDOW_HEIGHT: u32 = 1000;
+
 /// How long any single "the DOM should say X by now" poll is given.
 ///
 /// Generous, because it also covers a websocket connecting and a fetch round-trip. Nothing
@@ -145,6 +150,17 @@ impl Harness {
             .connect(WEBDRIVER)
             .await
             .expect("failed to connect to WebDriver - is chromedriver running on :9515?");
+
+        // Wide enough that the demo's flex rows are not permanently squeezed.
+        //
+        // A default WebDriver window is around 800px, and the Sudoku tab alone wants 676 of
+        // them for its board - so the panel beside it sits at its minimum width and *cannot*
+        // grow, whatever is put in it. That hides the reflow the layout assertions exist to
+        // catch, and would let one of them pass while the bug it names was still there.
+        client
+            .set_window_size(WINDOW_WIDTH, WINDOW_HEIGHT)
+            .await
+            .expect("could not size the browser window");
 
         let site_url = format!("http://127.0.0.1:{SERVE_PORT}/");
         println!("Opening {site_url}");

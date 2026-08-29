@@ -1,7 +1,7 @@
 use std::collections::HashSet;
 
 use crate::app::sudoku::state::{Cell, number_item::SudokuValue};
-use vertigo::{ClickEvent, Computed, Css, DomNode, bind, bind_rc, css, dom, dom_element};
+use vertigo::{ClickEvent, Computed, Css, DomNode, Value, bind, bind_rc, css, dom, dom_element};
 
 fn css_item_only_one(cell_width: u32) -> Css {
     css! {"
@@ -88,8 +88,9 @@ fn view_last_value(cell_width: u32, cell: &Cell, possible_last_value: SudokuValu
     }
 }
 
-fn view_default(cell_width: u32, cell: &Cell, possible: HashSet<SudokuValue>) -> DomNode {
-    let css_wrapper = css! {"
+/// The 3x3 of digits an empty cell is divided into, hints on or off.
+fn css_grid(cell_width: u32) -> Css {
+    css! {"
         width: {cell_width}px;
         height: {cell_width}px;
 
@@ -97,10 +98,12 @@ fn view_default(cell_width: u32, cell: &Cell, possible: HashSet<SudokuValue>) ->
         grid-template-columns: 1fr 1fr 1fr;
         grid-template-rows: 1fr 1fr 1fr;
         flex-shrink: 0;
-    "};
+    "}
+}
 
+fn view_default(cell_width: u32, cell: &Cell, possible: HashSet<SudokuValue>) -> DomNode {
     let wrapper = dom_element! {
-        <div css={css_wrapper} />
+        <div css={css_grid(cell_width)} />
     };
 
     for number in SudokuValue::variants().into_iter() {
@@ -128,20 +131,69 @@ fn view_default(cell_width: u32, cell: &Cell, possible: HashSet<SudokuValue>) ->
     wrapper.into()
 }
 
+/// Every digit, offered plainly - what an empty cell looks like with the hints turned off.
+///
+/// The solver is not consulted, so a digit that conflicts with the cell's row, column or block
+/// can be entered here. That is the point: without it nothing in the demo could reach
+/// [`Status::Conflict`](crate::app::sudoku::state::Status::Conflict).
+fn view_picker(cell_width: u32, cell: &Cell) -> DomNode {
+    let wrapper = dom_element! {
+        <div css={css_grid(cell_width)} />
+    };
+
+    for number in SudokuValue::variants().into_iter() {
+        let on_click = bind_rc!(cell, number, |_: ClickEvent| {
+            cell.number.set(Some(number));
+        });
+
+        wrapper.add_child(dom! {
+            <div css={css_picker_item()} on_click={on_click}>
+                { number.as_u16() }
+            </div>
+        });
+    }
+
+    wrapper.into()
+}
+
+fn css_picker_item() -> Css {
+    css! {"
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        color: #bbb;
+        cursor: pointer;
+
+        :hover {
+            background-color: #eee;
+            color: #333;
+        }
+    "}
+}
+
 #[derive(Clone, PartialEq, Eq)]
 enum CellView {
     One,
     LastPossible(SudokuValue),
     Default(HashSet<SudokuValue>),
+    Picker,
 }
 
-pub fn render_cell_possible(cell_width: u32, cell: &Cell) -> DomNode {
+pub fn render_cell_possible(cell_width: u32, cell: &Cell, hints: &Value<bool>) -> DomNode {
     let cell = cell.clone();
 
     let view = Computed::from({
         let cell = cell.clone();
+        let hints = hints.clone();
 
         move |context| {
+            // Returning before either of the solver's `Computed`s is read means the cell is
+            // not subscribed to them at all while the hints are off - so a write no longer
+            // fans out to the twenty peers that would have had to re-render.
+            if !hints.get(context) {
+                return CellView::Picker;
+            }
+
             let possible = cell.possible.get(context);
             let only_one_possible = possible.len() == 1;
 
@@ -163,6 +215,7 @@ pub fn render_cell_possible(cell_width: u32, cell: &Cell) -> DomNode {
         CellView::One => view_one_possible(cell_width, &cell),
         CellView::LastPossible(last) => view_last_value(cell_width, &cell, last),
         CellView::Default(possible) => view_default(cell_width, &cell, possible),
+        CellView::Picker => view_picker(cell_width, &cell),
     });
 
     dom! {

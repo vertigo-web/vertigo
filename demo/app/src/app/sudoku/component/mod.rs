@@ -1,4 +1,4 @@
-use vertigo::{DomNode, bind, component, css, dom};
+use vertigo::{DomNode, Value, bind, component, css, dom};
 
 use super::state::{Cell, SudokuState, sudoku_square::SudokuSquare, tree_box::TreeBoxIndex};
 
@@ -22,47 +22,60 @@ pub fn Sudoku(state: SudokuState) {
 
 #[component]
 pub fn MainRender(sudoku: SudokuState) {
+    let hints = &sudoku.hints;
+
     let (group_width, group_height, view1) = render_group(
         sudoku
             .grid
             .get_from(TreeBoxIndex::First, TreeBoxIndex::First),
+        hints,
     );
     let (_, _, view2) = render_group(
         sudoku
             .grid
             .get_from(TreeBoxIndex::First, TreeBoxIndex::Middle),
+        hints,
     );
     let (_, _, view3) = render_group(
         sudoku
             .grid
             .get_from(TreeBoxIndex::First, TreeBoxIndex::Last),
+        hints,
     );
     let (_, _, view4) = render_group(
         sudoku
             .grid
             .get_from(TreeBoxIndex::Middle, TreeBoxIndex::First),
+        hints,
     );
     let (_, _, view5) = render_group(
         sudoku
             .grid
             .get_from(TreeBoxIndex::Middle, TreeBoxIndex::Middle),
+        hints,
     );
     let (_, _, view6) = render_group(
         sudoku
             .grid
             .get_from(TreeBoxIndex::Middle, TreeBoxIndex::Last),
+        hints,
     );
     let (_, _, view7) = render_group(
         sudoku
             .grid
             .get_from(TreeBoxIndex::Last, TreeBoxIndex::First),
+        hints,
     );
     let (_, _, view8) = render_group(
         sudoku
             .grid
             .get_from(TreeBoxIndex::Last, TreeBoxIndex::Middle),
+        hints,
     );
-    let (_, _, view9) = render_group(sudoku.grid.get_from(TreeBoxIndex::Last, TreeBoxIndex::Last));
+    let (_, _, view9) = render_group(
+        sudoku.grid.get_from(TreeBoxIndex::Last, TreeBoxIndex::Last),
+        hints,
+    );
 
     let width = 3 * group_width + 2 * 2;
     let height = 3 * group_height + 2 * 2;
@@ -101,17 +114,43 @@ pub fn MainRender(sudoku: SudokuState) {
     }
 }
 
-fn render_group(group: &SudokuSquare<Cell>) -> (u32, u32, DomNode) {
-    let (cell_width, cell_height, view1) =
-        render_cell(group.get_from(TreeBoxIndex::First, TreeBoxIndex::First));
-    let (_, _, view2) = render_cell(group.get_from(TreeBoxIndex::First, TreeBoxIndex::Middle));
-    let (_, _, view3) = render_cell(group.get_from(TreeBoxIndex::First, TreeBoxIndex::Last));
-    let (_, _, view4) = render_cell(group.get_from(TreeBoxIndex::Middle, TreeBoxIndex::First));
-    let (_, _, view5) = render_cell(group.get_from(TreeBoxIndex::Middle, TreeBoxIndex::Middle));
-    let (_, _, view6) = render_cell(group.get_from(TreeBoxIndex::Middle, TreeBoxIndex::Last));
-    let (_, _, view7) = render_cell(group.get_from(TreeBoxIndex::Last, TreeBoxIndex::First));
-    let (_, _, view8) = render_cell(group.get_from(TreeBoxIndex::Last, TreeBoxIndex::Middle));
-    let (_, _, view9) = render_cell(group.get_from(TreeBoxIndex::Last, TreeBoxIndex::Last));
+fn render_group(group: &SudokuSquare<Cell>, hints: &Value<bool>) -> (u32, u32, DomNode) {
+    let (cell_width, cell_height, view1) = render_cell(
+        group.get_from(TreeBoxIndex::First, TreeBoxIndex::First),
+        hints,
+    );
+    let (_, _, view2) = render_cell(
+        group.get_from(TreeBoxIndex::First, TreeBoxIndex::Middle),
+        hints,
+    );
+    let (_, _, view3) = render_cell(
+        group.get_from(TreeBoxIndex::First, TreeBoxIndex::Last),
+        hints,
+    );
+    let (_, _, view4) = render_cell(
+        group.get_from(TreeBoxIndex::Middle, TreeBoxIndex::First),
+        hints,
+    );
+    let (_, _, view5) = render_cell(
+        group.get_from(TreeBoxIndex::Middle, TreeBoxIndex::Middle),
+        hints,
+    );
+    let (_, _, view6) = render_cell(
+        group.get_from(TreeBoxIndex::Middle, TreeBoxIndex::Last),
+        hints,
+    );
+    let (_, _, view7) = render_cell(
+        group.get_from(TreeBoxIndex::Last, TreeBoxIndex::First),
+        hints,
+    );
+    let (_, _, view8) = render_cell(
+        group.get_from(TreeBoxIndex::Last, TreeBoxIndex::Middle),
+        hints,
+    );
+    let (_, _, view9) = render_cell(
+        group.get_from(TreeBoxIndex::Last, TreeBoxIndex::Last),
+        hints,
+    );
 
     let border = 1;
 
@@ -146,7 +185,7 @@ fn render_group(group: &SudokuSquare<Cell>) -> (u32, u32, DomNode) {
     (width, height, group)
 }
 
-fn render_cell(item: &Cell) -> (u32, u32, DomNode) {
+fn render_cell(item: &Cell, hints: &Value<bool>) -> (u32, u32, DomNode) {
     let item = item.clone();
 
     let small_item_width = 24;
@@ -158,11 +197,12 @@ fn render_cell(item: &Cell) -> (u32, u32, DomNode) {
 
     let value_view = item.number.render_value({
         let item = item.clone();
+        let hints = hints.clone();
         move |value| {
             if let Some(value) = value {
                 render_cell_value::render_cell_value(cell_height, value, &item)
             } else {
-                render_cell_possible::render_cell_possible(cell_width, &item)
+                render_cell_possible::render_cell_possible(cell_width, &item, &hints)
             }
         }
     });
@@ -200,10 +240,15 @@ fn ExamplesRender(sudoku: SudokuState) {
         sudoku.example3();
     });
 
+    // A fixed width rather than one sized to its contents. The status line's text changes
+    // with the board, and "Conflict: a digit repeats" is a good deal wider than
+    // "36 of 81 filled" - so a panel left to grow pushes the board sideways for as long as
+    // the message is up. Long messages wrap instead.
     let css_sudoku_example = css! {"
         border: 1px solid black;
         padding: 10px;
-        flex-shrink: 1;
+        width: 170px;
+        flex-shrink: 0;
         display: flex;
         flex-direction: column;
         margin-right: 10px;
@@ -214,12 +259,92 @@ fn ExamplesRender(sudoku: SudokuState) {
         cursor: pointer;
     "};
 
+    let status = sudoku.status.render_value(|status| {
+        let colour = status.colour();
+
+        let css_status = css! {"
+            margin: 10px 5px 0 5px;
+            color: {colour};
+        "};
+
+        dom! {
+            <div css={css_status}>
+                { status.message() }
+            </div>
+        }
+    });
+
     dom! {
         <div css={css_sudoku_example}>
             <button css={&css_sudoku_example_button} on_click={clear}>"Clear"</button>
             <button css={&css_sudoku_example_button} on_click={example1}>"Easy"</button>
             <button css={&css_sudoku_example_button} on_click={example2}>"Medium"</button>
             <button css={css_sudoku_example_button} on_click={example3}>"Hard"</button>
+            { status }
+            <HintsSwitch hints={sudoku.hints} />
+        </div>
+    }
+}
+
+/// The hints toggle: a track with a knob that slides, and a label saying which way it is.
+///
+/// Built out of two divs rather than an `<input type="checkbox">` because vertigo gives
+/// `value` the property treatment when it sets an attribute but nothing else, so a checkbox's
+/// `checked` would only ever be its *initial* state and would drift as soon as it was clicked.
+/// Two divs and a reactive `css` say what is meant and stay in step.
+#[component]
+fn HintsSwitch(hints: Value<bool>) {
+    let on_click = bind!(hints, |_| {
+        hints.change(|on| *on = !*on);
+    });
+
+    let css_track = hints.map(|on| {
+        let colour = if on { "#3a3" } else { "#bbb" };
+
+        css! {"
+            width: 34px;
+            height: 18px;
+            border-radius: 9px;
+            background-color: {colour};
+            flex-shrink: 0;
+            transition: background-color .15s;
+        "}
+    });
+
+    let css_knob = hints.map(|on| {
+        let offset = if on { "18px" } else { "2px" };
+
+        // `margin-left` on its own rather than inside a `margin` shorthand: the `css!`
+        // interpolation does not reach a placeholder buried in a multi-value shorthand, and
+        // silently leaves it as literal text.
+        css! {"
+            width: 14px;
+            height: 14px;
+            margin-top: 2px;
+            margin-left: {offset};
+            border-radius: 50%;
+            background-color: white;
+            transition: margin-left .15s;
+        "}
+    });
+
+    let label = hints.map(|on| if on { "Hints: on" } else { "Hints: off" });
+
+    let css_row = css! {"
+        display: flex;
+        align-items: center;
+        gap: 8px;
+        margin: 10px 5px 0 5px;
+        cursor: pointer;
+        user-select: none;
+    "};
+
+    dom! {
+        <div css={css_row} {on_click}>
+            <div css={css_track}>
+                <div css={css_knob} />
+            </div>
+            { label }
         </div>
     }
 }
