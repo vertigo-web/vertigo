@@ -28,6 +28,7 @@ use crate::harness::{
 
 /// Menu labels, in `Route::label()` order. Also the list the test walks.
 pub const TABS: &[&str] = &[
+    "Home",
     "Counters",
     "Styling",
     "Sudoku",
@@ -35,7 +36,7 @@ pub const TABS: &[&str] = &[
     "Github Explorer",
     "Game Of Life",
     "Chat",
-    "Todo",
+    "Fetch",
     "Drop File",
     "JS Api Access",
     "List",
@@ -144,11 +145,76 @@ async fn click_and_accept_dialog(client: &Client, label: &str, answer: Option<&s
 
 // -----------------------------------------------------------------------------------------
 
-/// The landing tab. Four counters, their sum, and its double - one `Value` reaching three
+/// The landing page: what vertigo is, and an index of everything else.
+///
+/// The index is generated from `Route::ALL`, the same list the menu is built from, so the
+/// assertion worth making is that the two agree - a tab reachable from the menu but missing
+/// from the index would be a tab nobody is told about.
+pub async fn home(client: &Client) {
+    open(client, "Home", "A reactive Real-DOM library").await;
+
+    // Every tab but this one has an entry, and each entry says something about it.
+    for tab in TABS {
+        if *tab == "Home" {
+            continue;
+        }
+
+        let about = index_entry(client, tab)
+            .await
+            .text()
+            .await
+            .unwrap_or_default();
+
+        assert!(
+            about.trim().len() > tab.len() + 20,
+            "the index entry for {tab:?} should say what the tab demonstrates, got {about:?}"
+        );
+    }
+
+    // And the entries are links, not decoration. Reached through the entry rather than by
+    // text: the menu carries an anchor for every tab too, and it comes first in the document.
+    index_entry(client, "Svg")
+        .await
+        .find(Locator::Css("a"))
+        .await
+        .expect("the index entry's own link")
+        .click()
+        .await
+        .expect("clicking the index link failed");
+
+    wait_until("the index link to reach /svg", || async {
+        Ok(client.current_url().await?.path() == "/svg")
+    })
+    .await;
+
+    click_by_text(client, "a", "Home").await;
+    wait_until("and back to the index", || async {
+        Ok(client.current_url().await?.path() == "/")
+    })
+    .await;
+}
+
+/// The landing page's row for one tab: its link and the line describing it.
+///
+/// The `span` in the predicate is what separates this from the menu, which is also a `div`
+/// full of anchors - one of them with the same text - and which comes first in the document.
+async fn index_entry(client: &Client, tab: &str) -> fantoccini::elements::Element {
+    let xpath = format!("//div[span][a[normalize-space(text())={tab:?}]]");
+
+    client
+        .find(Locator::XPath(&xpath))
+        .await
+        .unwrap_or_else(|err| panic!("no index entry for {tab:?}: {err}"))
+}
+
+/// Four counters, their sum, and its double - one `Value` reaching three
 /// places, which is the smallest end-to-end check that the reactive graph is alive.
 ///
-/// Also the hydration check: `SsrTest` renders "Content from server" on the server and
-/// "Content from browser" in the browser, so seeing the latter proves the wasm took over.
+/// Also the smoke end of the hydration check: `SsrTest` renders a different tree on the server
+/// and in the browser, so seeing the browser's marker proves the wasm took over. What hydration
+/// did to reconcile the two is asserted in `ssr::hydration`, which is the only place that can
+/// say anything about it - by the time this runs a second time as the closing check, the panel
+/// has been built in the browser from scratch and no server tree was ever involved.
 pub async fn counters(client: &Client) {
     open(client, "Counters", "counter1 value").await;
 
@@ -156,7 +222,7 @@ pub async fn counters(client: &Client) {
         wait_for_text(client, &format!("counter{n} value = {value}")).await;
     }
     wait_for_text(client, "sum = 10").await;
-    wait_for_text(client, "Content from browser").await;
+    wait_for_text(client, "Rendered by: browser").await;
 
     // One write, three readers: the counter, the sum, and the sum's double - the last through
     // a `Computed` nested inside another, which is its own path through the graph.
@@ -660,6 +726,9 @@ pub async fn input(client: &Client) {
 pub async fn github_explorer(client: &Client) {
     open(client, "Github Explorer", "Enter author/repo tuple").await;
 
+    // Nothing has been asked for yet, and the tab says so rather than showing an empty box.
+    wait_for_text(client, "Nothing fetched yet").await;
+
     let field = client
         .find(Locator::Css("input"))
         .await
@@ -668,9 +737,6 @@ pub async fn github_explorer(client: &Client) {
 
     click_by_text(client, "button", "Fetch").await;
 
-    // The sha the stub always answers with - the fetch landed and rendered.
-    wait_for_text(client, "0000000000000000000000000000000000000001").await;
-
     // The tab echoes back which repo it is showing. This used to be `<text computed={..} />`,
     // which rendered nothing at all, and the assertion here had to read the value off an
     // attribute instead: `computed` is not special to `dom!` so it became a plain attribute
@@ -678,6 +744,17 @@ pub async fn github_explorer(client: &Client) {
     // workaround for issue #539) so the element was created in the SVG namespace, where a
     // browser paints nothing unless it sits inside an `<svg>`.
     wait_for_text(client, "Showing: vertigo-web/vertigo").await;
+
+    // All four fields the response carries, where the tab used to render only the sha.
+    //
+    // `Branch` nests three deep - `commit.commit.author.name` - so between them these say that
+    // `AutoJsJson` decoded the whole tree rather than just its outermost struct. The stub
+    // gives the author and the committer different names and addresses, so rendering one of
+    // them in both places would fail here rather than pass twice.
+    wait_for_text(client, "Branch: master").await;
+    wait_for_text(client, "Commit: 0000000000000000000000000000000000000001").await;
+    wait_for_text(client, "Author: Stub Author <author@example.com>").await;
+    wait_for_text(client, "Committer: Stub Committer <committer@example.com>").await;
 }
 
 /// A timer driving a grid of `Value<bool>`, plus the controls around it.
@@ -1005,8 +1082,8 @@ pub async fn chat(client: &Client) {
 }
 
 /// Two fetches and three views, against the local stand-in for jsonplaceholder.
-pub async fn todo(client: &Client) {
-    open(client, "Todo", "post = stub post 1").await;
+pub async fn fetch(client: &Client) {
+    open(client, "Fetch", "post = stub post 1").await;
 
     wait_for_text(client, "post = stub post 5").await;
 
@@ -1034,13 +1111,160 @@ pub async fn todo(client: &Client) {
     wait_for_text(client, "post = stub post 1").await;
 }
 
-/// Landmarks only.
+/// Left and right step through the menu.
 ///
-/// **Gap, stated rather than hidden:** WebDriver cannot synthesise a file drop, so the one
-/// thing this tab exists to demonstrate is not exercised. Everything except the drop itself -
-/// the zone rendering, the list that receives files - is checked.
+/// Not part of any one tab: the handler is a `hook_key_down` on the frame around them, which
+/// is registered on the document and so sees every keystroke on the page. That is what makes
+/// the last part of this - a field keeping its own arrows - the half worth having.
+pub async fn arrow_keys(client: &Client) {
+    println!("  -> arrow keys");
+
+    let at = |path: &'static str| async move {
+        wait_until(&format!("the route to become {path}"), || async {
+            Ok(client.current_url().await?.path() == path)
+        })
+        .await;
+    };
+
+    // Start at the far end of the menu, so the first press has to wrap.
+    click_by_text(client, "a", "Svg").await;
+    at("/svg").await;
+
+    press_key(client, ARROW_RIGHT).await;
+    at("/").await;
+
+    press_key(client, ARROW_LEFT).await;
+    at("/svg").await;
+
+    press_key(client, ARROW_LEFT).await;
+    at("/ws-collection").await;
+
+    // ...and a field being typed in keeps its arrows. Without the guard the caret would stay
+    // put and the tab would change underneath it.
+    click_by_text(client, "a", "Input").await;
+    at("/input").await;
+
+    let field = client
+        .find(Locator::Css("input"))
+        .await
+        .expect("the input field");
+    retype(&field, "abc").await;
+
+    field
+        .send_keys(ARROW_LEFT)
+        .await
+        .expect("sending an arrow to the field failed");
+
+    // The route is unchanged, and the caret moved rather than the page.
+    assert_eq!(
+        client.current_url().await.expect("reading the url").path(),
+        "/input",
+        "an arrow key inside a text field should stay in the field"
+    );
+    assert_eq!(
+        field.prop("value").await.expect("reading the field"),
+        Some("abc".to_string()),
+        "and should not have disturbed what was typed"
+    );
+}
+
+/// WebDriver's key codes for the two arrows.
+const ARROW_LEFT: &str = "\u{E012}";
+const ARROW_RIGHT: &str = "\u{E014}";
+
+/// Send a key to the page rather than to any particular field.
+///
+/// Through whatever holds focus - a menu link, after the click that got here. The handler is
+/// on the document, so anything that lets the event bubble will do.
+async fn press_key(client: &Client, key: &str) {
+    client
+        .active_element()
+        .await
+        .expect("no active element to send a key to")
+        .send_keys(key)
+        .await
+        .expect("sending the key failed");
+}
+
+/// Files in, files out.
+///
+/// **Gap, narrowed but not closed:** WebDriver still cannot synthesise a drag-and-drop of a
+/// file, so the green zone's own `on_dropfile` is not what runs here. The file input beside it
+/// is, and the two meet immediately: both hand a `DropFileEvent` to the same
+/// `DropFilesState::add`. What is left untested is the browser's drop plumbing, not the app's.
+///
+/// `send_keys` on a file input is how WebDriver uploads - the path goes to the element rather
+/// than to the keyboard - and several paths can be sent at once by separating them with
+/// newlines.
 pub async fn drop_file(client: &Client) {
     open(client, "Drop File", "drop file").await;
+
+    wait_for_text(client, "No files yet").await;
+
+    // Deliberately different lengths, so the byte counts below say which row is which - and
+    // deliberately not the same content, so a row cannot match by accident.
+    let first = Fixture::write("vertigo-demo-one.txt", "one\n");
+    let second = Fixture::write("vertigo-demo-two.txt", "two, and a little more\n");
+
+    let input = client
+        .find(Locator::Css("input[type=file]"))
+        .await
+        .expect("the file input");
+
+    input
+        .send_keys(&format!("{}\n{}", first.path, second.path))
+        .await
+        .expect("uploading the fixtures failed");
+
+    // The name proves the file arrived; the byte count proves its *contents* did, which is the
+    // part a plain "the row appeared" assertion would miss.
+    wait_for_text(client, &first.row()).await;
+    wait_for_text(client, &second.row()).await;
+    wait_for_text(client, "2 files").await;
+
+    // Each row removes itself and leaves the other alone - which is what the per-file id is
+    // for, and what a list keyed on the file name could not do.
+    row_button(client, &first.row(), "Remove").await;
+    wait_for_no_text(client, &first.row()).await;
+    wait_for_text(client, &second.row()).await;
+    wait_for_text(client, "1 file").await;
+
+    click_by_text(client, "button", "Clear all").await;
+    wait_for_no_text(client, &second.row()).await;
+    wait_for_text(client, "No files yet").await;
+}
+
+/// A file on disk for the upload to pick up, removed when the test is done with it.
+struct Fixture {
+    name: String,
+    path: String,
+    size: usize,
+}
+
+impl Fixture {
+    fn write(name: &str, contents: &str) -> Fixture {
+        let path = std::env::temp_dir().join(name);
+
+        std::fs::write(&path, contents)
+            .unwrap_or_else(|err| panic!("could not write the fixture {path:?}: {err}"));
+
+        Fixture {
+            name: name.to_string(),
+            path: path.to_string_lossy().into_owned(),
+            size: contents.len(),
+        }
+    }
+
+    /// How the demo renders this file - see `describe` in `demo/app/src/app/dropfiles`.
+    fn row(&self) -> String {
+        format!("{} - {} bytes", self.name, self.size)
+    }
+}
+
+impl Drop for Fixture {
+    fn drop(&mut self) {
+        let _ = std::fs::remove_file(&self.path);
+    }
 }
 
 /// Direct JS access, including the three tabs' worth of modal dialogs.

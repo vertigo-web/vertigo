@@ -1,7 +1,7 @@
 use vertigo::{Computed, DomNode, Resource, css, dom, transaction};
 
 use crate::app::github_explorer::state::{
-    state_github_branch_name, state_github_repo_input, state_github_repo_shown,
+    Branch, Signature, state_github_branch_name, state_github_repo_input, state_github_repo_shown,
 };
 
 pub struct GitHubExplorer {}
@@ -59,24 +59,27 @@ impl GitHubExplorer {
     }
 
     fn render_commit(&self) -> DomNode {
-        let commit_message = Computed::from({
-            move |context| {
-                let repo_shown = state_github_repo_shown().get(context);
-                match repo_shown.as_str() {
-                    "" => "".to_string(),
-                    _ => match state_github_branch_name(&repo_shown).get(context) {
-                        Resource::Loading => "Loading...".to_string(),
-                        Resource::Ready(branch) => branch.as_ref().commit.sha.clone(),
-                        Resource::Error(err) => format!("Error: {err}"),
-                    },
-                }
+        let branch = Computed::from(move |context| {
+            let repo_shown = state_github_repo_shown().get(context);
+
+            match repo_shown.as_str() {
+                "" => None,
+                _ => Some(state_github_branch_name(&repo_shown).get(context)),
             }
         });
 
-        commit_message.render_value(|message| {
+        branch.render_value(|branch| {
+            let body = match branch {
+                None => dom! { <div>"Nothing fetched yet."</div> },
+                Some(Resource::Loading) => dom! { <div>"Loading..."</div> },
+                Some(Resource::Error(err)) => dom! { <div>"Error: " { err }</div> },
+                Some(Resource::Ready(branch)) => render_branch(&branch),
+            };
+
+            // A fixed width, so the box does not resize as it moves between these states.
             let text_css = css! {"
                 width: 600px;
-                height: 150px;
+                min-height: 150px;
                 border: 1px solid black;
                 padding: 5px;
                 margin: 10px;
@@ -84,9 +87,39 @@ impl GitHubExplorer {
 
             dom! {
                 <div css={text_css}>
-                    { message }
+                    { body }
                 </div>
             }
         })
+    }
+}
+
+/// Everything the response carried, rather than just the sha.
+///
+/// `Branch` nests three deep - `commit.commit.author.name` - so rendering all of it is also
+/// what shows that `AutoJsJson` decoded the whole tree and not only its top level.
+fn render_branch(branch: &Branch) -> DomNode {
+    let details = &branch.commit.commit;
+
+    let name = branch.name.clone();
+    let sha = branch.commit.sha.clone();
+
+    dom! {
+        <div>
+            <div>"Branch: " { name }</div>
+            <div>"Commit: " { sha }</div>
+            { render_signature("Author", &details.author) }
+            { render_signature("Committer", &details.committer) }
+        </div>
+    }
+}
+
+fn render_signature(role: &'static str, who: &Signature) -> DomNode {
+    // Built in Rust rather than interpolated into the markup: the angle brackets around an
+    // address are text, and spelling them as literals inside `dom!` reads like tags.
+    let line = format!("{role}: {} <{}>", who.name, who.email);
+
+    dom! {
+        <div>{ line }</div>
     }
 }

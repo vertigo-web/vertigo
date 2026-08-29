@@ -1,5 +1,5 @@
 mod component;
-pub use component::Todo;
+pub use component::FetchDemo;
 
 mod state;
 

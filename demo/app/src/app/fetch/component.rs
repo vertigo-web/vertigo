@@ -1,30 +1,30 @@
 use vertigo::{Css, DomNode, Resource, Value, bind, css, dom, dom_element};
 
-use crate::app::todo::{
+use crate::app::fetch::{
     Select,
-    state::{state_todo_comments, state_todo_posts, state_todo_view},
+    state::{state_fetch_comments, state_fetch_posts, state_fetch_view},
 };
 
 use super::state::View;
 
-pub struct Todo {}
+pub struct FetchDemo {}
 
-impl Todo {
+impl FetchDemo {
     pub fn into_component(self) -> Self {
         self
     }
 
     pub fn mount(&self) -> DomNode {
-        let render = state_todo_view().render_value({
+        let render = state_fetch_view().render_value({
             move |view| -> DomNode {
                 match view {
-                    View::Main => todo_main_render(),
-                    View::Post { id } => todo_post_render(id),
+                    View::Main => main_render(),
+                    View::Post { id } => post_render(id),
                     View::User { email } => {
                         let messag: String = format!("user = {email}");
 
                         let on_click = |_| {
-                            state_todo_view().set(View::Main);
+                            state_fetch_view().set(View::Main);
                         };
 
                         dom! {
@@ -50,8 +50,8 @@ impl Todo {
     }
 }
 
-fn todo_main_render() -> DomNode {
-    let posts = state_todo_posts()
+fn main_render() -> DomNode {
+    let posts = state_fetch_posts()
         .to_computed()
         .render_value(move |posts| -> DomNode {
             match posts {
@@ -62,7 +62,7 @@ fn todo_main_render() -> DomNode {
 
                     for post in posts.as_ref() {
                         let on_click = {
-                            let view = state_todo_view();
+                            let view = state_fetch_view();
                             let id = post.id;
 
                             move |_| {
@@ -105,11 +105,11 @@ fn todo_main_render() -> DomNode {
     }
 }
 
-fn todo_post_render(post_id: u32) -> DomNode {
+fn post_render(post_id: u32) -> DomNode {
     let message = render_message(post_id);
     let comments_out = render_comments(post_id);
 
-    let authors = state_todo_comments(post_id)
+    let authors = state_fetch_comments(post_id)
         .to_computed()
         .map(|comments_res| {
             let mut options = vec!["".to_string()];
@@ -129,7 +129,7 @@ fn todo_post_render(post_id: u32) -> DomNode {
             <div
                 css={css_hover_item()}
                 on_click={|_| {
-                    state_todo_view().set(View::Main);
+                    state_fetch_view().set(View::Main);
                 }}
             >
                 "go to post list"
@@ -154,7 +154,7 @@ fn render_message(post_id: u32) -> DomNode {
 }
 
 fn render_comments(post_id: u32) -> DomNode {
-    let comments = state_todo_comments(post_id);
+    let comments = state_fetch_comments(post_id);
 
     let comments_component = comments
         .to_computed()
@@ -172,7 +172,7 @@ fn render_comments(post_id: u32) -> DomNode {
 
                 for comment in list.as_ref() {
                     let on_click_author = bind!(comment, |_| {
-                        state_todo_view().set(View::User {
+                        state_fetch_view().set(View::User {
                             email: comment.email.clone(),
                         });
                     });
