@@ -1,7 +1,9 @@
 use vertigo::{component, dom};
 
 mod animations;
+mod images;
 pub use animations::Animations;
+use images::Images;
 
 mod spinner;
 
@@ -17,5 +19,6 @@ pub fn Styling() {
         <Animations />
         <TooltipDemo />
         <Tailwind />
+        <Images />
     }
 }

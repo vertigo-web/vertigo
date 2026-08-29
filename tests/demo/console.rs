@@ -79,6 +79,10 @@ const ALLOWED: &[(&str, &str)] = &[
 /// Empty, and worth keeping empty. The last entry here was `keyed_computed_list` reporting a
 /// read after removal when the List tab dropped a row; that is now covered by
 /// `removing_a_row_does_not_report_a_read_after_removal` in the vertigo unit tests.
+///
+/// Kept rather than deleted now that it is empty. It is four lines, and it is the difference
+/// between a tolerated defect being recorded with a reason and someone quietly widening
+/// [`ALLOWED`] instead - which is where a real bug would go to be forgotten.
 const KNOWN_ISSUES: &[(&str, &str)] = &[];
 
 fn matches(patterns: &[(&str, &str)], message: &str) -> bool {

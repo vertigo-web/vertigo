@@ -77,17 +77,6 @@ impl ChatState {
             },
         };
 
-        transaction(|context| {
-            let prev_list: Vec<Rc<String>> = messages.get(context);
-            let mut new_list: Vec<Rc<String>> = Vec::new();
-
-            for item in prev_list.iter() {
-                new_list.push(item.clone());
-            }
-
-            new_list.push(Rc::new(text));
-
-            messages.set(new_list);
-        });
+        messages.change(|list| list.push(Rc::new(text)));
     }
 }

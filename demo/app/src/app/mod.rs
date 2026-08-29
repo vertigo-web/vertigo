@@ -1,6 +1,7 @@
 mod api;
 mod chat;
 mod counters;
+mod driver;
 mod dropfiles;
 mod fetch;
 mod game_of_life;
