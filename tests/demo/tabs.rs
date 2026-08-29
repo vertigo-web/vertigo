@@ -38,6 +38,7 @@ pub const TABS: &[&str] = &[
     "Chat",
     "Fetch",
     "Drop File",
+    "Driver",
     "JS Api Access",
     "List",
     "Lazy List",
@@ -207,14 +208,11 @@ async fn index_entry(client: &Client, tab: &str) -> fantoccini::elements::Elemen
         .unwrap_or_else(|err| panic!("no index entry for {tab:?}: {err}"))
 }
 
-/// Four counters, their sum, and its double - one `Value` reaching three
-/// places, which is the smallest end-to-end check that the reactive graph is alive.
+/// Four counters, their sum, and its double - one `Value` reaching three places, which is the
+/// smallest end-to-end check that the reactive graph is alive.
 ///
-/// Also the smoke end of the hydration check: `SsrTest` renders a different tree on the server
-/// and in the browser, so seeing the browser's marker proves the wasm took over. What hydration
-/// did to reconcile the two is asserted in `ssr::hydration`, which is the only place that can
-/// say anything about it - by the time this runs a second time as the closing check, the panel
-/// has been built in the browser from scratch and no server tree was ever involved.
+/// Also the closing liveness check for the whole run, which is why it is deliberately the
+/// least entangled tab there is: nothing here fetches, connects or navigates.
 pub async fn counters(client: &Client) {
     open(client, "Counters", "counter1 value").await;
 
@@ -222,7 +220,6 @@ pub async fn counters(client: &Client) {
         wait_for_text(client, &format!("counter{n} value = {value}")).await;
     }
     wait_for_text(client, "sum = 10").await;
-    wait_for_text(client, "Rendered by: browser").await;
 
     // One write, three readers: the counter, the sum, and the sum's double - the last through
     // a `Computed` nested inside another, which is its own path through the graph.
@@ -235,23 +232,52 @@ pub async fn counters(client: &Client) {
     wait_for_text(client, "counter2 value = 2").await;
     wait_for_text(client, "sum = 10").await;
 
-    // The div-based controls. None of them changes what is rendered - they write cookies and
-    // log - so what is asserted is that the app is still standing afterwards, which the
-    // console gate and the closing check between them cover.
-    for label in [
-        "outer click",
-        "Set cookie",
-        "Get cookie",
-        "Set json cookie",
-        "Get json cookie",
-        "Get timezone_offset",
-        "Get random",
-    ] {
-        click_by_text(client, "div", label).await;
+    // A handler on the outer div and one on the button inside it, the inner one calling
+    // `stop_propagation`. Neither changes what is rendered, so what this asserts is that the
+    // app is still standing afterwards - the console gate covers the rest.
+    click_by_text(client, "div", "outer click").await;
+    click_by_text(client, "button", "Inner click").await;
+}
+
+/// What the app can ask of the environment around it.
+///
+/// These controls used to be loose on the Counters tab. Each now reports what it got, so the
+/// assertions are about values rather than about nothing having caught fire.
+pub async fn driver(client: &Client) {
+    open(client, "Driver", "Last result:").await;
+
+    // Round trip through the browser's cookie jar.
+    click_by_text(client, "div", "Set cookie").await;
+    wait_for_text(client, "set the cookie").await;
+    click_by_text(client, "div", "Get cookie").await;
+    wait_for_text(client, r#"cookie "test" = "test value""#).await;
+
+    // ...and through `JsJson`, which is the more interesting one: it goes out as a list and
+    // has to come back as one.
+    click_by_text(client, "div", "Set json cookie").await;
+    wait_for_text(client, "set the json cookie").await;
+    click_by_text(client, "div", "Get json cookie").await;
+    for value in ["value1", "value2", "value3"] {
+        wait_for_text(client, value).await;
     }
 
-    // Nested handler with `stop_propagation`.
-    click_by_text(client, "button", "Inner click").await;
+    click_by_text(client, "div", "Get timezone_offset").await;
+    wait_for_text(client, "timezone offset = ").await;
+
+    click_by_text(client, "div", "Get random").await;
+    wait_until("a random number in the range asked for", || async {
+        Ok(driver_result(client)
+            .await
+            .rsplit(" = ")
+            .next()
+            .and_then(|value| value.parse::<u32>().ok())
+            .is_some_and(|value| (34..=100).contains(&value)))
+    })
+    .await;
+
+    // The hydration panel lives here too, because `is_browser()` is driver API as much as the
+    // rest of it. What hydration actually did is asserted in `ssr::hydration`.
+    wait_for_text(client, "Rendered by: browser").await;
 
     // Left until last, because both leave the tab.
     click_by_text(client, "div", "Go to Sudoku").await;
@@ -260,14 +286,30 @@ pub async fn counters(client: &Client) {
     })
     .await;
 
-    click_by_text(client, "a", "Counters").await;
-    wait_for_text(client, "counter1 value").await;
+    click_by_text(client, "a", "Driver").await;
+    wait_for_text(client, "Last result:").await;
 
     click_by_text(client, "div", "History back").await;
     wait_until("history_back to return to /sudoku", || async {
         Ok(client.current_url().await?.path() == "/sudoku")
     })
     .await;
+}
+
+/// The Driver tab's "Last result" line.
+async fn driver_result(client: &Client) -> String {
+    const SCRIPT: &str = r#"
+        const node = Array.from(document.querySelectorAll('div'))
+            .find((candidate) => candidate.textContent.trim().startsWith('Last result: '));
+        return node === undefined ? '' : node.textContent.trim();
+    "#;
+
+    client
+        .execute(SCRIPT, vec![])
+        .await
+        .ok()
+        .and_then(|value| value.as_str().map(str::to_string))
+        .unwrap_or_default()
 }
 
 /// The `up`/`down` button belonging to one counter.
@@ -781,6 +823,7 @@ pub async fn game_of_life(client: &Client) {
     // A load that dropped or duplicated a cell, or a generation that mis-stepped, would not
     // hold this.
     load_pattern(client, "Glider", 5).await;
+    let start = live_cells(client).await;
 
     for year in 2..=5 {
         click_by_text(client, "button", "Step").await;
@@ -795,6 +838,22 @@ pub async fn game_of_life(client: &Client) {
             "a glider keeps its five cells through year {year}"
         );
     }
+
+    // ...and after its period of four it is those same five cells, one row down and one column
+    // across. The count alone would not say that: a five-cell still life holds the count too,
+    // and would sit there passing while nothing moved.
+    let (start_shape, start_at) = normalise(&start);
+    let (moved_shape, moved_at) = normalise(&live_cells(client).await);
+
+    assert_eq!(
+        start_shape, moved_shape,
+        "a glider should keep its shape across a full period"
+    );
+    assert_eq!(
+        (moved_at.0 - start_at.0, moved_at.1 - start_at.1),
+        (1, 1),
+        "and should have travelled one cell diagonally"
+    );
 
     // A lightweight spaceship breathes between 9 and 12 cells as it travels, so the population
     // label changes width every generation. The counters reserve room for their widest value
@@ -1041,6 +1100,71 @@ async fn element_left(client: &Client, selector: &str, text: &str) -> i64 {
         .unwrap_or_else(|err| panic!("reading the position of the {selector} {text:?}: {err}"));
 
     left.round() as i64
+}
+
+/// Where the live cells of the Game Of Life board are, as `(row, column)`.
+///
+/// The board is rows of cells, each cell a leaf `<div>` whose class comes from
+/// `cell.map(css_cell)` - so the cells fall into two generated classes and the live one is
+/// whichever is in the minority. That holds for the handful of cells a preset puts down; it
+/// would not for a board Random had filled, which is why nothing calls this after one.
+async fn live_cells(client: &Client) -> Vec<(i64, i64)> {
+    const SCRIPT: &str = r#"
+        const rows = Array.from(document.querySelectorAll('div')).filter((node) => {
+            const cells = Array.from(node.children);
+            return cells.length > 50 && cells.every((cell) => cell.children.length === 0);
+        });
+
+        const counts = new Map();
+        for (const row of rows) {
+            for (const cell of row.children) {
+                counts.set(cell.className, (counts.get(cell.className) || 0) + 1);
+            }
+        }
+        if (counts.size < 2) { return []; }
+
+        const live = [...counts.entries()].sort((a, b) => a[1] - b[1])[0][0];
+
+        const found = [];
+        rows.forEach((row, y) => Array.from(row.children).forEach((cell, x) => {
+            if (cell.className === live) { found.push([y, x]); }
+        }));
+        return found;
+    "#;
+
+    let cells = client
+        .execute(SCRIPT, vec![])
+        .await
+        .ok()
+        .and_then(|value| value.as_array().cloned())
+        .unwrap_or_default()
+        .into_iter()
+        .filter_map(|pair| {
+            let pair = pair.as_array()?;
+            Some((pair.first()?.as_i64()?, pair.get(1)?.as_i64()?))
+        })
+        .collect::<Vec<_>>();
+
+    assert!(
+        !cells.is_empty(),
+        "could not read the live cells off the Game Of Life board"
+    );
+
+    cells
+}
+
+/// A shape with its top-left corner moved to the origin, and where that corner was.
+fn normalise(cells: &[(i64, i64)]) -> (Vec<(i64, i64)>, (i64, i64)) {
+    let top = cells.iter().map(|(row, _)| *row).min().unwrap_or(0);
+    let left = cells.iter().map(|(_, col)| *col).min().unwrap_or(0);
+
+    let mut shape = cells
+        .iter()
+        .map(|(row, col)| (row - top, col - left))
+        .collect::<Vec<_>>();
+    shape.sort_unstable();
+
+    (shape, (top, left))
 }
 
 /// How many cells the Game Of Life board says are alive.

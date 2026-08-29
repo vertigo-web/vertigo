@@ -18,16 +18,9 @@ pub fn possible_values(
 ) -> Computed<HashSet<SudokuValue>> {
     let grid = grid.clone();
     Computed::from(move |context| {
-        let mut current_numbers_in_ceis: HashSet<SudokuValue> = HashSet::new();
-        current_numbers_in_ceis.insert(SudokuValue::Value1);
-        current_numbers_in_ceis.insert(SudokuValue::Value2);
-        current_numbers_in_ceis.insert(SudokuValue::Value3);
-        current_numbers_in_ceis.insert(SudokuValue::Value4);
-        current_numbers_in_ceis.insert(SudokuValue::Value5);
-        current_numbers_in_ceis.insert(SudokuValue::Value6);
-        current_numbers_in_ceis.insert(SudokuValue::Value7);
-        current_numbers_in_ceis.insert(SudokuValue::Value8);
-        current_numbers_in_ceis.insert(SudokuValue::Value9);
+        // Everything, less whatever is already taken in this cell's row, column and block.
+        let mut current_numbers_in_ceis: HashSet<SudokuValue> =
+            SudokuValue::variants().into_iter().collect();
 
         // Iterate by row
         for x0 in TreeBoxIndex::variants() {

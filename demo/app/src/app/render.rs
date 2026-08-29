@@ -6,7 +6,7 @@ use vertigo::{
 use crate::app::{self, counters::state_counters, state::state_route};
 
 use super::{
-    chat::Chat, counters::CountersDemo, dropfiles::DropFiles, fetch::FetchDemo,
+    chat::Chat, counters::CountersDemo, driver::DriverDemo, dropfiles::DropFiles, fetch::FetchDemo,
     game_of_life::GameOfLife, github_explorer::GitHubExplorer, home::Home, input::MyInput,
     js_api_access::JsApiAccess, lazy_list::LazyList, list::ListDemo, route::Route,
     styling::Styling, sudoku::Sudoku, svg::SvgDemo, ws_collection::WsCollectionDemo,
@@ -143,6 +143,7 @@ pub fn render(state: &app::State) -> DomNode {
             }
             Route::Fetch => dom! { <FetchDemo /> },
             Route::DropFile => dom! { <DropFiles /> },
+            Route::Driver => dom! { <DriverDemo /> },
             Route::JsApiAccess => dom! { <JsApiAccess /> },
             Route::List => dom! { <ListDemo /> },
             Route::LazyList => dom! { <LazyList /> },
@@ -155,6 +156,10 @@ pub fn render(state: &app::State) -> DomNode {
             }
             Route::Svg => dom! { <SvgDemo /> },
             Route::NotFound => {
+                // Deliberately here rather than somewhere tidier: `set_status` does nothing
+                // unless `is_server()`, so it has to run while the server is rendering this
+                // route. Rendering is the only thing the server does, which makes the render
+                // path the place the status has to be decided.
                 get_driver().set_status(404);
                 dom! { <div>"Page Not Found"</div> }
             }

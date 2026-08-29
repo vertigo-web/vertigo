@@ -97,8 +97,6 @@ pub fn ListDemo() {
         &list_computed,
         |item| item.id(),
         |item| {
-            log::info!("create item");
-
             let css_item = css! {"
                 margin-bottom: 5px;
                 padding: 5px;

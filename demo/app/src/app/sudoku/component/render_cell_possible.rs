@@ -71,10 +71,6 @@ fn view_one_possible(cell_width: u32, cell: &Cell) -> DomNode {
 }
 
 fn view_last_value(cell_width: u32, cell: &Cell, possible_last_value: SudokuValue) -> DomNode {
-    // let on_set = bind!(cell, possible_last_value, || {
-    //     cell.number.value.set(Some(possible_last_value));
-    // });
-
     let on_set = bind!(cell, possible_last_value, |_| {
         cell.number.set(Some(possible_last_value));
     });

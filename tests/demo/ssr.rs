@@ -1,26 +1,26 @@
-//! The two checks in this run that need a real page load.
+//! The checks in this run that need a real request to the server.
 //!
 //! Everything in `tabs` navigates by clicking, which is client-side routing: the server is
-//! never asked to render a route, so nothing there touches SSR at all. Both checks below start
-//! with a `goto` for that reason, and each puts a fresh console recorder back afterwards
-//! because the reload throws away the one that was watching.
+//! never asked for a route, so nothing there touches SSR, the plain-text handler, or the
+//! status a route sets. Each check below starts with a `goto` for that reason, and each puts a
+//! fresh console recorder back afterwards because the reload throws away the one watching.
 
 use fantoccini::{Client, Locator};
 
 use crate::harness::{find_all, wait_for_no_text, wait_for_text};
 
-/// Load the Counters tab for real, and check what hydration left behind.
+/// Load the Driver tab for real, and check what hydration left behind.
 ///
 /// `SsrTest` renders one tree on the server and a deliberately different one in the browser -
 /// different depth, different order, different number of children. Hydration has to end up at
 /// the browser's tree, and this is the only place in the run that can say whether it did: by
-/// the time `tabs::counters` runs the panel a second time, it has been built in the browser
+/// the time `tabs::driver` runs the panel a second time, it has been built in the browser
 /// from scratch and no server tree was ever in the document to reconcile.
 pub async fn hydration(client: &Client, site_url: &str) {
     println!("  -> SSR hydration");
 
-    let url = format!("{site_url}counters");
-    client.goto(&url).await.expect("goto /counters failed");
+    let url = format!("{site_url}driver");
+    client.goto(&url).await.expect("goto /driver failed");
     crate::console::install(client).await;
 
     // First, because it only appears once the wasm has taken over. Everything after it is a
@@ -147,5 +147,62 @@ pub async fn fetch_cache(client: &Client, site_url: &str) {
         "the browser re-fetched what the server had already put in `data-fetch-cache`: {requests:?}\n\
          The posts still rendered, so this is not a visible break - it is the SSR fetch cache \
          no longer being consumed, and every visitor paying a round-trip for it."
+    );
+}
+
+/// The plain-text handler: `get_driver().plains(..)` in `demo/app/src/lib.rs`.
+///
+/// Nothing about it involves the app's DOM - it answers before any route is rendered - so
+/// clicking around could never reach it. Read through the browser rather than with an HTTP
+/// client so that what is checked is what a crawler would actually be served.
+pub async fn robots_txt(client: &Client, site_url: &str) {
+    println!("  -> robots.txt");
+
+    let url = format!("{site_url}robots.txt");
+    client.goto(&url).await.expect("goto /robots.txt failed");
+
+    let body = crate::harness::body_text(client)
+        .await
+        .expect("reading robots.txt failed");
+
+    assert!(
+        body.contains("User-Agent: *") && body.contains("Disallow: /search"),
+        "robots.txt should be the app's plain-text answer, got {body:?}"
+    );
+}
+
+/// An unknown address: the app renders Not Found, and the server answers 404.
+///
+/// The status is the half that has never been covered. `set_status` does nothing unless
+/// `is_server()`, so it only takes effect on a real request - and it leaves no trace in the
+/// DOM, which means the page rendering correctly says nothing about it. Asked for with a
+/// `fetch` from a page already on the origin, because WebDriver will not report the status of
+/// a navigation.
+pub async fn not_found(client: &Client, site_url: &str) {
+    println!("  -> 404");
+
+    let url = format!("{site_url}no-such-page");
+    client
+        .goto(&url)
+        .await
+        .expect("goto an unknown page failed");
+    crate::console::install(client).await;
+
+    wait_for_text(client, "Page Not Found").await;
+
+    const SCRIPT: &str = r#"
+        const [url, done] = arguments;
+        fetch(url).then((response) => done(response.status)).catch(() => done(-1));
+    "#;
+
+    let status = client
+        .execute_async(SCRIPT, vec![serde_json::json!(url)])
+        .await
+        .expect("fetching the unknown page failed");
+
+    assert_eq!(
+        status.as_i64(),
+        Some(404),
+        "an unknown route should answer 404, not {status}"
     );
 }

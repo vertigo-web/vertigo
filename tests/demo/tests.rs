@@ -59,6 +59,7 @@ async fn demo() {
     step!("Chat", tabs::chat(client));
     step!("Fetch", tabs::fetch(client));
     step!("Drop File", tabs::drop_file(client));
+    step!("Driver", tabs::driver(client));
     step!("JS Api Access", tabs::js_api_access(client));
     step!("List", tabs::list(client));
     step!("Lazy List", tabs::lazy_list(client));
@@ -83,6 +84,14 @@ async fn demo() {
     step!(
         "the SSR fetch cache check",
         ssr::fetch_cache(client, &harness.site_url)
+    );
+    step!("the 404 check", ssr::not_found(client, &harness.site_url));
+
+    // Last of all: it navigates away from the app entirely, so there is no app left to watch
+    // afterwards and nothing below it could rely on one.
+    step!(
+        "the robots.txt check",
+        ssr::robots_txt(client, &harness.site_url)
     );
 
     harness.finish().await;

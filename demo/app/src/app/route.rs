@@ -15,6 +15,7 @@ pub enum Route {
     Chat,
     Fetch,
     DropFile,
+    Driver,
     JsApiAccess,
     List,
     LazyList,
@@ -40,6 +41,7 @@ impl Route {
         Self::Chat,
         Self::Fetch,
         Self::DropFile,
+        Self::Driver,
         Self::JsApiAccess,
         Self::List,
         Self::LazyList,
@@ -93,6 +95,9 @@ impl Route {
             Self::DropFile => {
                 "Files by drag-and-drop or by a file input, both arriving as a DropFileEvent."
             }
+            Self::Driver => {
+                "get_driver(): cookies, the timezone, a random number, history and the router."
+            }
             Self::JsApiAccess => {
                 "The js! macro and NodeRef, for reaching what vertigo does not wrap itself."
             }
@@ -108,6 +113,33 @@ impl Route {
         }
     }
 
+    /// The route's own path, before a mount point is applied.
+    ///
+    /// Separate from `Display` so it can be checked against [`Route::new`] without a driver -
+    /// see the round-trip test below. The two are written out independently, and nothing but
+    /// that test stops them disagreeing.
+    pub fn path(&self) -> &'static str {
+        match self {
+            Self::Home => "/",
+            Self::Counters => "/counters",
+            Self::Styling => "/styling",
+            Self::Sudoku => "/sudoku",
+            Self::Input => "/input",
+            Self::GithubExplorer => "/github_explorer",
+            Self::GameOfLife { .. } => "/game_of_life",
+            Self::Chat => "/chat",
+            Self::Fetch => "/fetch",
+            Self::DropFile => "/drop-file",
+            Self::Driver => "/driver",
+            Self::JsApiAccess => "/js-api-access",
+            Self::List => "/list",
+            Self::LazyList => "/lazy-list",
+            Self::WsCollection => "/ws-collection",
+            Self::Svg => "/svg",
+            Self::NotFound => "/not-found",
+        }
+    }
+
     pub fn new(path: &str) -> Route {
         match path {
             "" | "/" => Self::Home,
@@ -120,6 +152,7 @@ impl Route {
             "/chat" => Self::Chat,
             "/fetch" => Self::Fetch,
             "/drop-file" => Self::DropFile,
+            "/driver" => Self::Driver,
             "/js-api-access" => Self::JsApiAccess,
             "/list" => Self::List,
             "/lazy-list" => Self::LazyList,
@@ -141,6 +174,7 @@ impl Route {
             Self::Chat => "Chat",
             Self::Fetch => "Fetch",
             Self::DropFile => "Drop File",
+            Self::Driver => "Driver",
             Self::JsApiAccess => "JS Api Access",
             Self::List => "List",
             Self::LazyList => "Lazy List",
@@ -159,26 +193,9 @@ impl From<String> for Route {
 }
 
 impl Display for Route {
+    /// The public URL, which is [`Route::path`] with any mount point applied.
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-        let str = match self {
-            Self::Home => "/",
-            Self::Counters => "/counters",
-            Self::Styling => "/styling",
-            Self::Sudoku => "/sudoku",
-            Self::Input => "/input",
-            Self::GithubExplorer => "/github_explorer",
-            Self::GameOfLife { .. } => "/game_of_life",
-            Self::Chat => "/chat",
-            Self::Fetch => "/fetch",
-            Self::DropFile => "/drop-file",
-            Self::JsApiAccess => "/js-api-access",
-            Self::List => "/list",
-            Self::LazyList => "/lazy-list",
-            Self::WsCollection => "/ws-collection",
-            Self::Svg => "/svg",
-            Self::NotFound => "/not-found",
-        };
-        f.write_str(&get_driver().route_to_public(str))
+        f.write_str(&get_driver().route_to_public(self.path()))
     }
 }
 
@@ -213,6 +230,32 @@ mod tests {
         for route in Route::ALL {
             assert_eq!(&route.step(length), route);
             assert_eq!(&route.step(-length), route);
+        }
+    }
+
+    /// `new` and `path` are two hand-written lists of the same thing, so they can disagree -
+    /// a typo in one would give a menu link that lands on Not Found.
+    #[test]
+    fn every_route_round_trips_through_its_path() {
+        for route in Route::ALL {
+            assert_eq!(
+                &Route::new(route.path()),
+                route,
+                "{route:?} has the path {:?}, which does not route back to it",
+                route.path()
+            );
+        }
+    }
+
+    /// Likewise for the other two lists: a copy-pasted arm would show up as a duplicate.
+    #[test]
+    fn every_tab_is_distinct() {
+        for (n, route) in Route::ALL.iter().enumerate() {
+            for other in &Route::ALL[n + 1..] {
+                assert_ne!(route.path(), other.path(), "{route:?} and {other:?}");
+                assert_ne!(route.label(), other.label(), "{route:?} and {other:?}");
+                assert_ne!(route.about(), other.about(), "{route:?} and {other:?}");
+            }
         }
     }
 
