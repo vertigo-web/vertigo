@@ -41,13 +41,17 @@ impl GitHubExplorer {
             cursor: pointer;
         "};
 
+        let shown_css = css! {"
+            margin: 10px 0 0 10px;
+        "};
+
         dom! {
             <div css={wrapper}>
                 "Enter author/repo tuple: "
                 <input css={input_css} value={state_github_repo_input().to_computed()} on_input={on_input_callback} />
-                <button css={&button_css} on_click={on_show}>"Fetch"</button>
-                <div css={button_css}>
-                    <text computed={&state_github_repo_shown()} />
+                <button css={button_css} on_click={on_show}>"Fetch"</button>
+                <div css={shown_css}>
+                    "Showing: " { state_github_repo_shown() }
                 </div>
                 { self.render_commit() }
             </div>

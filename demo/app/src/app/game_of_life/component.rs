@@ -38,7 +38,7 @@ impl GameOfLife {
     fn render_header(state: &State) -> DomNode {
         let year = state.year.map(|item| item.to_string());
         let delay = state.delay.map(|item| item.to_string());
-        let new_delay = state.new_delay.map(|item| item.to_string());
+        let new_delay = state.new_delay.to_computed();
 
         let button_label = state.timer.map(|item| -> &'static str {
             match item.is_some() {
@@ -47,8 +47,20 @@ impl GameOfLife {
             }
         });
 
+        // Stored as typed. Validation happens once, when Set is pressed, so that a
+        // half-finished entry is not rewritten under the caret.
         let on_input = bind!(state, |new_value: String| {
-            state.new_delay.set(new_value.parse().unwrap_or_default());
+            state.new_delay.set(new_value);
+        });
+
+        let delay_error = state.delay_error.render_value_option(|error| {
+            error.map(|message| {
+                let css_error = css! {"
+                    color: #b00;
+                "};
+
+                dom! { <div css={css_error}>"Delay not set: " { message }</div> }
+            })
         });
 
         let flex_menu = css! {"
@@ -87,6 +99,7 @@ impl GameOfLife {
                     "Set delay: "
                     <input value={new_delay} css={input_css} on_input={on_input} />
                     " " <button css={button_css} on_click={state.accept_new_delay()}>"Set"</button>
+                    { delay_error }
                 </div>
             </div>
         }

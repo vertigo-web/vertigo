@@ -231,6 +231,13 @@ async fn counter_button(client: &Client, counter: u32, label: &str) {
 pub async fn styling(client: &Client) {
     open(client, "Styling", "Label with tooltip").await;
 
+    let (label_left, label_width, popup_left) = tooltip_geometry(client).await;
+    assert!(
+        popup_left >= label_left + label_width,
+        "the tooltip popup should sit past the right edge of its label; \
+         label starts at {label_left} and is {label_width} wide, popup starts at {popup_left}"
+    );
+
     wait_for_text(client, "Spinner:").await;
     wait_for_text(client, "Some tailwind-styled elements").await;
     wait_for_text(client, "Tailwind CSS 4 test").await;
@@ -283,13 +290,42 @@ pub async fn styling(client: &Client) {
     .await;
 }
 
+/// Where the tooltip's label and popup are: `(label left, label width, popup left)`.
+///
+/// The popup is `visibility: hidden` until hovered, which still reserves its box - so its
+/// position is readable without having to drive a hover.
+async fn tooltip_geometry(client: &Client) -> (f64, f64, f64) {
+    const SCRIPT: &str = r#"
+        const popup = Array.from(document.querySelectorAll('span'))
+            .find((node) => node.textContent.trim() === 'This is content of the tooltip');
+        if (!popup) { return null; }
+        const label = popup.parentElement.getBoundingClientRect();
+        return [label.left, label.width, popup.getBoundingClientRect().left];
+    "#;
+
+    let values = client
+        .execute(SCRIPT, vec![])
+        .await
+        .ok()
+        .and_then(|value| value.as_array().cloned())
+        .unwrap_or_default()
+        .into_iter()
+        .filter_map(|value| value.as_f64())
+        .collect::<Vec<_>>();
+
+    match values.as_slice() {
+        [label_left, label_width, popup_left] => (*label_left, *label_width, *popup_left),
+        _ => panic!("could not measure the tooltip; got {values:?}"),
+    }
+}
+
 /// An empty 9x9 board, so every cell renders its nine candidates.
 ///
 /// Setting one cell propagates through the solver and removes that candidate from the cell's
 /// peers, which is a fan-out no other tab produces: one write, dozens of re-renders. "Clear"
 /// must put every one of them back.
 pub async fn sudoku(client: &Client) {
-    open(client, "Sudoku", "Example 1").await;
+    open(client, "Sudoku", "Easy").await;
 
     let fives = || async { count_by_text(client, "div", "5").await };
 
@@ -298,6 +334,7 @@ pub async fn sudoku(client: &Client) {
         before, 81,
         "an empty board should offer the candidate 5 in all 81 cells"
     );
+    assert_eq!(filled_cells(client).await, 0, "the board starts empty");
 
     client
         .find(Locator::XPath("//div[normalize-space(text())='5']"))
@@ -319,8 +356,125 @@ pub async fn sudoku(client: &Client) {
     })
     .await;
 
-    // The remaining example buttons, for the sweep. They log and do nothing else today.
-    click_all_buttons_except(client, &["Clear"]).await;
+    // The three example boards. Each used to be a `log::info!` and nothing else.
+    //
+    // Every one of them writes all 81 cells, blanks included, so the count after a load is
+    // that board's own given count and never anything left over from the board before it -
+    // which is why these run back to back with no Clear in between.
+    for (label, givens) in [("Easy", 36), ("Medium", 30), ("Hard", 23)] {
+        click_by_text(client, "button", label).await;
+
+        wait_until(&format!("{label} to put {givens} givens on the board"), {
+            || async { Ok(filled_cells(client).await == givens) }
+        })
+        .await;
+
+        // ...and that the solver saw them. A board with givens on it cannot still be
+        // offering every candidate in every cell.
+        assert!(
+            fives().await < before,
+            "{label} should have withdrawn candidates from the givens' peers"
+        );
+    }
+
+    // Hard is on the board now, so walk back to the first one and read it off the screen.
+    //
+    // The counts above say the right number of cells were filled; they say nothing about
+    // *where*. A board loaded along the wrong axis is still 36 givens, still consistent, and
+    // still uniquely solvable - a sudoku transposes to a sudoku - so it would pass everything
+    // above while rendering the puzzle mirrored along its diagonal.
+    click_by_text(client, "button", "Easy").await;
+    wait_until("Easy to come back", || async {
+        Ok(filled_cells(client).await == 36)
+    })
+    .await;
+
+    assert_eq!(
+        read_board(client).await,
+        [
+            "...26.7.1",
+            "68..7..9.",
+            "19...45..",
+            "82.1...4.",
+            "..46.29..",
+            ".5...3.28",
+            "..93...74",
+            ".4..5..36",
+            "7.3.18...",
+        ],
+        "Easy should render the board the way `examples::EASY` is written"
+    );
+
+    click_by_text(client, "button", "Clear").await;
+    wait_until("Clear to take the last board off again", || async {
+        Ok(filled_cells(client).await == 0 && fives().await == before)
+    })
+    .await;
+}
+
+/// How many cells on the Sudoku board hold a value.
+///
+/// Counted by the little red "X" each filled cell renders to clear itself - a candidate cell
+/// has no such child, so this is exactly the number of filled cells. Own text will not
+/// separate the two: a filled cell owns "5" and so does a candidate cell reading 5.
+async fn filled_cells(client: &Client) -> usize {
+    count_by_text(client, "div", "X").await
+}
+
+/// The Sudoku board as it is laid out on screen: nine rows of nine, `.` for a blank.
+///
+/// Read from geometry rather than from the DOM tree, because the tree does not have rows in
+/// it - the board is nine 3x3 blocks, each its own grid - so reconstructing a row by walking
+/// parents would just re-derive the same index arithmetic the app used, and agree with it
+/// whether or not that arithmetic is right.
+///
+/// A filled cell is one owning a single digit *and* holding an element child, which is the
+/// little "X" that clears it. That is what separates it from a candidate cell, which owns a
+/// digit too but has no children.
+///
+/// Rows and columns come from ranking the distinct top and left offsets, so uneven block
+/// borders cannot shift a cell into the wrong slot. It does assume every row and column of the
+/// board being read holds at least one given - true of `examples::EASY`, which is the only
+/// board this is used on.
+async fn read_board(client: &Client) -> Vec<String> {
+    const SCRIPT: &str = r#"
+        const ownText = (node) => Array.from(node.childNodes)
+            .filter((child) => child.nodeType === Node.TEXT_NODE)
+            .map((child) => child.textContent)
+            .join('')
+            .trim();
+
+        const cells = Array.from(document.querySelectorAll('div'))
+            .filter((node) => /^[1-9]$/.test(ownText(node)) && node.querySelector('div'))
+            .map((node) => {
+                const box = node.getBoundingClientRect();
+                return {
+                    top: Math.round(box.top),
+                    left: Math.round(box.left),
+                    value: ownText(node),
+                };
+            });
+
+        const ranks = (values) => [...new Set(values)].sort((a, b) => a - b);
+        const tops = ranks(cells.map((cell) => cell.top));
+        const lefts = ranks(cells.map((cell) => cell.left));
+
+        const board = Array.from({ length: 9 }, () => Array(9).fill('.'));
+        for (const cell of cells) {
+            board[tops.indexOf(cell.top)][lefts.indexOf(cell.left)] = cell.value;
+        }
+        return board.map((row) => row.join(''));
+    "#;
+
+    client
+        .execute(SCRIPT, vec![])
+        .await
+        .ok()
+        .and_then(|value| value.as_array().cloned())
+        .unwrap_or_default()
+        .into_iter()
+        .filter_map(|value| value.as_str().map(str::to_string))
+        .collect()
 }
 
 /// Text in, text out: one `Value<String>` behind an input, a textarea and a derived length.
@@ -356,6 +510,10 @@ pub async fn input(client: &Client) {
         .expect("the textarea");
     retype(&textarea, "abc").await;
     wait_for_text(client, "count = 3").await;
+
+    // Characters, not bytes. The count used to be `String::len()`, which reads seven here.
+    retype(&textarea, "żółw").await;
+    wait_for_text(client, "count = 4").await;
 }
 
 /// A fetch, rendered. Points at the local stub rather than api.github.com - see
@@ -374,28 +532,13 @@ pub async fn github_explorer(client: &Client) {
     // The sha the stub always answers with - the fetch landed and rendered.
     wait_for_text(client, "0000000000000000000000000000000000000001").await;
 
-    // The tab means to echo the repo name back too, with `<text computed={..} />`. It does
-    // not, and this is asserted where the value actually lands rather than where the demo
-    // meant to put it. Two things go wrong there and neither is this test's to fix:
-    //
-    //  - `computed` is not special to `dom!`, so it becomes a plain attribute rather than the
-    //    element's content;
-    //  - `text` is on vertigo's SVG tag list (the workaround for issue #539), so the element
-    //    is created in the SVG namespace, and a browser renders nothing for an SVG `<text>`
-    //    that is not inside an `<svg>`.
-    //
-    // Written down here because it is exactly the kind of thing a click-through is supposed to
-    // notice: the reactive write is fine, only its destination is wrong.
-    wait_until("the repo echo to receive the fetched name", || async {
-        Ok(client
-            .find(Locator::Css("text"))
-            .await?
-            .attr("computed")
-            .await?
-            .as_deref()
-            == Some("vertigo-web/vertigo"))
-    })
-    .await;
+    // The tab echoes back which repo it is showing. This used to be `<text computed={..} />`,
+    // which rendered nothing at all, and the assertion here had to read the value off an
+    // attribute instead: `computed` is not special to `dom!` so it became a plain attribute
+    // rather than the element's content, and `text` is on vertigo's SVG tag list (the
+    // workaround for issue #539) so the element was created in the SVG namespace, where a
+    // browser paints nothing unless it sits inside an `<svg>`.
+    wait_for_text(client, "Showing: vertigo-web/vertigo").await;
 }
 
 /// A timer driving a grid of `Value<bool>`, plus the controls around it.
@@ -411,11 +554,27 @@ pub async fn game_of_life(client: &Client) {
 
     click_by_text(client, "button", "Random").await;
 
+    // Random has to produce a board that is actually alive. It used to fill by
+    // `(y * 2 + (x + 4)) % 2 == 0`, which reduces to `x % 2 == 0` - every other column, filled
+    // top to bottom. That is a still life under this neighbourhood, and it is also an exact
+    // half of the board, so the two buckets below came back equal and never moved again.
+    let (dead, live) = cell_split(client).await;
+    assert!(
+        live > 0 && dead > live,
+        "Random should fill part of the board, not half of it exactly: got {live} and {dead}"
+    );
+
     click_by_text(client, "button", "Start").await;
     // The label is the timer's own state, so this is the timer confirming it started, and the
     // year moving is it having actually run a generation over 8400 cells.
     wait_for_text(client, "Stop").await;
     wait_for_text(client, "Year = 2").await;
+
+    // ...and the generation it ran changed something. A still life would leave this equal.
+    wait_until("the population to move between generations", || async {
+        Ok(cell_split(client).await != (dead, live))
+    })
+    .await;
 
     click_by_text(client, "button", "Stop").await;
     wait_for_text(client, "Start").await;
@@ -424,9 +583,101 @@ pub async fn game_of_life(client: &Client) {
         .find(Locator::Css("input"))
         .await
         .expect("the delay field");
+
+    // A non-numeric delay used to parse as `unwrap_or_default()` - zero - on every keystroke,
+    // and the Set button then handed that zero to `set_interval` without anyone asking for it.
+    // Refused now, and said so.
+    retype(&delay, "abc").await;
+    click_by_text(client, "button", "Set").await;
+    wait_for_text(client, "Delay not set").await;
+    wait_for_text(client, "delay = 150").await;
+
+    // Zero is a legitimate answer, not a typo: being a number is the whole of the check, and
+    // the very short delays are the ones worth watching.
+    retype(&delay, "0").await;
+    click_by_text(client, "button", "Set").await;
+    wait_for_text(client, "delay = 0").await;
+    wait_for_no_text(client, "Delay not set").await;
+
+    // ...and the board is still drivable at that end of the range. This is the assertion that
+    // matters for the small delays: a generation over 8400 cells takes longer than the
+    // interval, so the timer is re-entered as fast as the browser will schedule it, and the
+    // question is whether the Stop button still gets a turn.
+    retype(&delay, "5").await;
+    click_by_text(client, "button", "Set").await;
+    wait_for_text(client, "delay = 5").await;
+
+    let before = life_year(client).await;
+    click_by_text(client, "button", "Start").await;
+    wait_until("the board to run several generations at a 5 ms delay", {
+        || async { Ok(life_year(client).await > before + 2) }
+    })
+    .await;
+
+    click_by_text(client, "button", "Stop").await;
+    wait_for_text(client, "Start").await;
+
+    // Left somewhere unremarkable: an unstopped fast timer would make every later tab slower
+    // and noisier than it should be, and the run has eight more to go.
     retype(&delay, "500").await;
     click_by_text(client, "button", "Set").await;
     wait_for_text(client, "delay = 500").await;
+}
+
+/// The generation counter the Game Of Life board is showing.
+///
+/// Matched on the whole label rather than with `wait_for_text`, which asks whether the page
+/// *contains* a string: "Year = 1" is a substring of "Year = 10", so waiting on one of those
+/// by text starts answering the wrong question as soon as the board passes its ninth
+/// generation - which at a five millisecond delay is immediately.
+async fn life_year(client: &Client) -> u32 {
+    const SCRIPT: &str = r#"
+        const node = Array.from(document.querySelectorAll('div'))
+            .find((candidate) => /^Year = \d+$/.test(candidate.textContent.trim()));
+        return node === undefined ? null : parseInt(node.textContent.trim().slice(7), 10);
+    "#;
+
+    client
+        .execute(SCRIPT, vec![])
+        .await
+        .ok()
+        .and_then(|value| value.as_u64())
+        .unwrap_or_else(|| panic!("could not read the Game Of Life generation counter")) as u32
+}
+
+/// The two population buckets of the Game Of Life board, smaller first.
+///
+/// Each of the 8400 cells is a `<div>` whose class comes from `cell.map(css_cell)`, so they
+/// fall into exactly two generated classes - one per colour. Which class is the live one is
+/// not knowable from here, hence a sorted pair rather than a named count; at the density
+/// Random fills to, the smaller bucket is the live one.
+///
+/// Read off `className` in a single pass. `getComputedStyle` would say the colour outright but
+/// costs 8400 style resolutions per call, several times over the course of this tab.
+async fn cell_split(client: &Client) -> (usize, usize) {
+    const SCRIPT: &str = r#"
+        const counts = new Map();
+        for (const node of document.querySelectorAll('div')) {
+            counts.set(node.className, (counts.get(node.className) || 0) + 1);
+        }
+        const sizes = Array.from(counts.values()).sort((a, b) => b - a);
+        return [sizes[0] || 0, sizes[1] || 0];
+    "#;
+
+    let sizes = client
+        .execute(SCRIPT, vec![])
+        .await
+        .ok()
+        .and_then(|value| value.as_array().cloned())
+        .unwrap_or_default()
+        .into_iter()
+        .filter_map(|value| value.as_u64())
+        .collect::<Vec<_>>();
+
+    match sizes.as_slice() {
+        [larger, smaller] => (*larger as usize, *smaller as usize),
+        _ => (0, 0),
+    }
 }
 
 /// The websocket chat, against the demo's own server.

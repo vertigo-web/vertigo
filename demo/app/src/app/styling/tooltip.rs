@@ -14,7 +14,7 @@ pub fn TooltipDemo() {
         /* Position the tooltip text */
         position: absolute;
         top: -5px;
-        left: 10c5%;
+        left: 105%;
     "};
 
     let label_css = css! {"

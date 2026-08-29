@@ -1,18 +1,21 @@
 use vertigo::{Value, get_driver};
 
 use self::{
-    number_item::NumberItem,
+    number_item::{NumberItem, SudokuValue},
     possible_values::{PossibleValues, possible_values},
     possible_values_last::{PossibleValuesLast, possible_values_last},
     sudoku_square::SudokuSquare,
     tree_box::TreeBoxIndex,
 };
 
+pub mod examples;
 pub mod number_item;
 pub mod possible_values;
 pub mod possible_values_last;
 pub mod sudoku_square;
 pub mod tree_box;
+
+use examples::Board;
 
 fn create_grid() -> SudokuSquare<SudokuSquare<NumberItem>> {
     SudokuSquare::create_with_iterator(move |_level0x, _level0y| {
@@ -116,14 +119,55 @@ impl SudokuState {
     }
 
     pub fn example1(&self) {
-        log::info!("example 1");
+        self.load(&examples::EASY, "Easy");
     }
 
     pub fn example2(&self) {
-        log::info!("example 2");
+        self.load(&examples::MEDIUM, "Medium");
     }
 
     pub fn example3(&self) {
-        log::info!("example 3");
+        self.load(&examples::HARD, "Hard");
+    }
+
+    /// Put `board` on the grid, replacing whatever was there.
+    ///
+    /// Every one of the 81 cells is written, blanks included, so this is a load and a clear at
+    /// once - there is no way to be left with leftovers from the previous board.
+    ///
+    /// The whole thing is one transaction. Each write fans out to the cell's twenty peers
+    /// through `possible_values`, and to the rest of its row, column and block again through
+    /// `possible_values_last`; done one at a time, the grid would re-render after every
+    /// character and spend most of its time on states no one asked to see.
+    fn load(&self, board: &Board, name: &str) {
+        log::info!("loading {name}");
+
+        get_driver().transaction(|_| {
+            // Walked through `variants()` rather than by arithmetic on an index, so the
+            // mapping from a character to a cell cannot fail. The first index of `get_from`
+            // selects the row and the second the column, at both levels - which is the order
+            // `MainRender` lays the nine blocks out in.
+            for (block_row_n, block_row) in TreeBoxIndex::variants().into_iter().enumerate() {
+                for (in_row_n, in_row) in TreeBoxIndex::variants().into_iter().enumerate() {
+                    let row = board[block_row_n * 3 + in_row_n].as_bytes();
+
+                    for (block_col_n, block_col) in TreeBoxIndex::variants().into_iter().enumerate()
+                    {
+                        for (in_col_n, in_col) in TreeBoxIndex::variants().into_iter().enumerate() {
+                            let value = row
+                                .get(block_col_n * 3 + in_col_n)
+                                .copied()
+                                .and_then(SudokuValue::from_ascii);
+
+                            self.grid
+                                .get_from(block_row, block_col)
+                                .get_from(in_row, in_col)
+                                .number
+                                .set(value);
+                        }
+                    }
+                }
+            }
+        });
     }
 }

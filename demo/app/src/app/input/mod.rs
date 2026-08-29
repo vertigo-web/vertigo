@@ -10,7 +10,8 @@ pub fn MyInput(value: Value<String>) {
         log::info!("out");
     };
 
-    let count = value.map(|inner| inner.len().to_string());
+    // Chars rather than `len()`, which is a byte count: "żółw" is four characters and seven bytes.
+    let count = value.map(|inner| inner.chars().count().to_string());
 
     let wrapper = css! {"
         border: 1px solid black;
