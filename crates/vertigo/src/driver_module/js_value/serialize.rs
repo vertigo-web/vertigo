@@ -10,6 +10,29 @@ pub trait JsJsonSerialize {
     fn to_json(self) -> JsJson;
 }
 
+/// Adds one field to a `JsJson::Object` under construction. Used by `AutoJsJson`.
+///
+/// The obvious way to write the derive is `BTreeMap::from([(k, v), ..])`, and the reason not
+/// to is that the form is generic over the *length* of the array: the bulk-build path behind
+/// it - `bulk_push`, `DedupSortedIter`, the sort - is instantiated once per distinct field
+/// count, and every derived type in the program adds to the tally rather than sharing it.
+/// Inserting one field at a time is a single instantiation the whole program shares.
+///
+/// `#[inline(never)]` because sharing is the point: a real application has hundreds of
+/// derived fields, and LLVM would otherwise paste the tree descent into every one of them.
+///
+/// Keys arrive as `&'static str` because the derive only ever passes literals; allocating
+/// here rather than at each caller is a little less code at every call site.
+///
+/// Collecting the fields into a `Vec` first and bulk-building from that was measured too - it
+/// is one instantiation as well, but the heap allocation costs more than the bulk build saves,
+/// and it was slower than this on every shape tried.
+#[doc(hidden)]
+#[inline(never)]
+pub fn object_insert(object: &mut BTreeMap<String, JsJson>, key: &'static str, value: JsJson) {
+    object.insert(key.to_string(), value);
+}
+
 pub trait JsJsonDeserialize
 where
     Self: Sized,
