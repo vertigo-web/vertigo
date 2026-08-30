@@ -1,6 +1,7 @@
 pub mod attr_value;
 pub mod callback;
 pub mod dom_comment;
+pub mod dom_display;
 pub mod dom_element;
 mod dom_element_class;
 pub mod dom_element_ref;

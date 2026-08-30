@@ -1,6 +1,6 @@
 use std::rc::Rc;
 
-use crate::{Computed, Css, Value};
+use crate::{Computed, Css, DomDisplay, Value};
 
 /// The text of an attribute, in whichever form costs nothing to keep hold of.
 ///
@@ -116,6 +116,41 @@ impl AttrValue {
     }
 }
 
+/// The bound on every attribute value - what [`DomElement::attr`](crate::DomElement::attr)
+/// and the `dom!` macro accept.
+///
+/// Vertigo implements it exactly once, as a blanket over `Into<AttrValue>`; it exists so that
+/// the compiler has somewhere to hang an explanation. The conversions that blanket picks up
+/// are the `From` impls below plus whatever opts in through [`DomDisplay`], and a type
+/// outside both fails a `From` bound whose error names a hundred impls and none of the ones
+/// you want.
+///
+/// A crate of its own *may* implement this trait directly for its own type - coherence
+/// permits it, since only that crate could ever give the type a [`DomDisplay`] impl. But
+/// [`DomDisplay`] is one line rather than a function body, it also reaches `&T`,
+/// [`Computed<T>`](crate::Computed) and [`Value<T>`](crate::Value), and it renders the same
+/// type as a text node in [`dom!`](crate::dom) too.
+#[diagnostic::on_unimplemented(
+    message = "`{Self}` cannot be used as an attribute value",
+    label = "no conversion from `{Self}` into `AttrValue`",
+    note = "a value becomes an attribute through an explicit conversion - vertigo no longer converts every `T: ToString`",
+    note = "a printable type of your own opts in with one line: `impl vertigo::DomDisplay for YourType {{}}`, which covers the value, references to it, its `Computed`/`Value` wrappers, and embedding it as text",
+    note = "if it comes from another crate, pass `value.to_string()` or wrap it in a newtype of your own"
+)]
+pub trait IntoAttrValue {
+    fn into_attr_value(self) -> AttrValue;
+}
+
+/// Without this, a missing conversion is reported as the `From` obligation *inside* this
+/// impl - a hundred `From` impls and no advice - rather than as the bound the call site
+/// actually wrote.
+#[diagnostic::do_not_recommend]
+impl<T: Into<AttrValue>> IntoAttrValue for T {
+    fn into_attr_value(self) -> AttrValue {
+        self.into()
+    }
+}
+
 impl From<String> for AttrValue {
     fn from(value: String) -> Self {
         AttrValue::String(Rc::new(value))
@@ -176,27 +211,12 @@ impl From<std::borrow::Cow<'_, str>> for AttrValue {
     }
 }
 
-macro_rules! impl_from_display_for_attrvalue {
-    ($($typename:ty),* $(,)?) => {
-        $(
-            impl From<$typename> for AttrValue {
-                fn from(value: $typename) -> Self {
-                    AttrValue::String(Rc::new(value.to_string()))
-                }
-            }
-
-            impl From<&$typename> for AttrValue {
-                fn from(value: &$typename) -> Self {
-                    AttrValue::String(Rc::new(value.to_string()))
-                }
-            }
-        )*
-    };
+/// Covers `&T` too, via the reference impl on [`DomDisplay`] itself.
+impl<T: DomDisplay> From<T> for AttrValue {
+    fn from(value: T) -> Self {
+        AttrValue::String(Rc::new(value.to_string()))
+    }
 }
-
-impl_from_display_for_attrvalue!(
-    bool, char, u8, u16, u32, u64, u128, usize, i8, i16, i32, i64, i128, isize, f32, f64
-);
 
 macro_rules! impl_from_computed_for_attrvalue {
     ($typename:ty, $variant:ident, |$var:ident| $body:expr) => {
@@ -221,39 +241,45 @@ impl_from_computed_for_attrvalue!(Value<Option<String>>, ValueOpt);
 impl_from_computed_for_attrvalue!(&Value<String>, Value, |v| v.clone());
 impl_from_computed_for_attrvalue!(&Value<Option<String>>, ValueOpt, |v| v.clone());
 
-macro_rules! impl_stringable_into_computed_for_attrvalue {
-    ($typename:ty) => {
-        impl_from_computed_for_attrvalue!(Computed<$typename>, Computed, |v| v
-            .map(|v| v.to_string()));
-        impl_from_computed_for_attrvalue!(&Computed<$typename>, Computed, |v| v
-            .map(|v| v.to_string()));
-        impl_from_computed_for_attrvalue!(Value<$typename>, Computed, |v| v
-            .to_computed()
-            .map(|v| v.to_string()));
-        impl_from_computed_for_attrvalue!(&Value<$typename>, Computed, |v| v
-            .to_computed()
-            .map(|v| v.to_string()));
+/// A reactive attribute of any type which opted into [`DomDisplay`], printed on each read.
+///
+/// The `String` and `Option<String>` cases above are the same conversions without the
+/// `to_string` - they stay separate impls so that the common case does not map through a
+/// second node.
+macro_rules! impl_attr_display_computed {
+    ($typename:ty, |$var:ident| $body:expr) => {
+        impl<T: DomDisplay + Clone + PartialEq + 'static> From<$typename> for AttrValue {
+            fn from($var: $typename) -> Self {
+                AttrValue::Computed($body)
+            }
+        }
     };
 }
 
-impl_stringable_into_computed_for_attrvalue!(i8);
-impl_stringable_into_computed_for_attrvalue!(i16);
-impl_stringable_into_computed_for_attrvalue!(i32);
-impl_stringable_into_computed_for_attrvalue!(i64);
-impl_stringable_into_computed_for_attrvalue!(isize);
+impl_attr_display_computed!(Computed<T>, |v| v.map(|v| v.to_string()));
+impl_attr_display_computed!(&Computed<T>, |v| v.map(|v| v.to_string()));
+impl_attr_display_computed!(Value<T>, |v| v.to_computed().map(|v| v.to_string()));
+impl_attr_display_computed!(&Value<T>, |v| v.to_computed().map(|v| v.to_string()));
 
-impl_stringable_into_computed_for_attrvalue!(u8);
-impl_stringable_into_computed_for_attrvalue!(u16);
-impl_stringable_into_computed_for_attrvalue!(u32);
-impl_stringable_into_computed_for_attrvalue!(u64);
-impl_stringable_into_computed_for_attrvalue!(usize);
+macro_rules! impl_attr_display_computed_opt {
+    ($typename:ty, |$var:ident| $body:expr) => {
+        impl<T: DomDisplay + Clone + PartialEq + 'static> From<$typename> for AttrValue {
+            fn from($var: $typename) -> Self {
+                AttrValue::ComputedOpt($body)
+            }
+        }
+    };
+}
 
-impl_stringable_into_computed_for_attrvalue!(f32);
-impl_stringable_into_computed_for_attrvalue!(f64);
-
-impl_stringable_into_computed_for_attrvalue!(char);
-
-impl_stringable_into_computed_for_attrvalue!(bool);
+impl_attr_display_computed_opt!(Computed<Option<T>>, |v| v.map(|v| v.map(|v| v.to_string())));
+impl_attr_display_computed_opt!(&Computed<Option<T>>, |v| v
+    .map(|v| v.map(|v| v.to_string())));
+impl_attr_display_computed_opt!(Value<Option<T>>, |v| v
+    .to_computed()
+    .map(|v| v.map(|v| v.to_string())));
+impl_attr_display_computed_opt!(&Value<Option<T>>, |v| v
+    .to_computed()
+    .map(|v| v.map(|v| v.to_string())));
 
 pub enum CssAttrValue {
     Css(Css),
