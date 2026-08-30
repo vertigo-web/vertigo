@@ -8,7 +8,7 @@ use crate::{
 };
 
 use super::{
-    attr_value::{AttrText, AttrValue, CssAttrValue},
+    attr_value::{AttrText, AttrValue, CssAttrValue, IntoAttrValue},
     callback::{Callback, Callback1},
     dom_element_class::{ClassState, DomElementClassMerge},
     dom_element_ref::DomElementRef,
@@ -77,9 +77,9 @@ impl DomElement {
     /// [`DomId`] - a `Copy` - and talks to the driver directly, so a reactive `href` no
     /// longer clones an `Rc` into its subscription and reaches into a cell to read back an id
     /// it could have kept.
-    pub fn add_attr(&self, name: impl Into<StaticString>, value: impl Into<AttrValue>) {
+    pub fn add_attr(&self, name: impl Into<StaticString>, value: impl IntoAttrValue) {
         let name = name.into();
-        let value = value.into();
+        let value = value.into_attr_value();
 
         if name.as_str() == "class" {
             self.add_class_attr(value);
@@ -236,12 +236,12 @@ impl DomElement {
         });
     }
 
-    pub fn attr(self, name: impl Into<StaticString>, value: impl Into<AttrValue>) -> Self {
+    pub fn attr(self, name: impl Into<StaticString>, value: impl IntoAttrValue) -> Self {
         self.add_attr(name, value);
         self
     }
 
-    pub fn attrs<T: Into<AttrValue>>(self, attrs: Vec<(impl Into<StaticString>, T)>) -> Self {
+    pub fn attrs<T: IntoAttrValue>(self, attrs: Vec<(impl Into<StaticString>, T)>) -> Self {
         for (name, value) in attrs.into_iter() {
             self.add_attr(name, value)
         }

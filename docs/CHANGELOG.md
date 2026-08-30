@@ -19,6 +19,15 @@ The reactive graph was rewritten and keyed list rendering was rebuilt around per
 * `keyed_computed_list` and `KeyedListItem` - per-key `Computed`s from a reactive list,
   reusing the same `Computed` for a given key across updates (Solid `<For>`-style)
 * `MarkerContent` - lets a marker comment report the nodes it keeps in front of itself
+* `IntoAttrValue` - the bound `DomElement::attr` and the `dom!` macro now use for attribute
+  values. `Into<AttrValue>` with a blanket impl, so nothing to implement; it exists to give
+  a value with no conversion an error that says what to write
+* `DomDisplay` - opts a `Display` type of your own into everything vertigo renders, so both
+  `<a href={my_route}>` and `<div>{my_route}</div>` work. `impl vertigo::DomDisplay for Route {}`
+  is the whole of it, and that one impl covers `Route` and `&Route` as an attribute value and
+  as embedded text, plus `Computed<Route>`, `Value<Route>`, their `Option` variants and
+  references to those
+* `DomDisplay` for the types behind the `chrono` and `rust_decimal` features - `NaiveDate`,
 
 ### Changed
 
@@ -36,9 +45,16 @@ The reactive graph was rewritten and keyed list rendering was rebuilt around per
   write; the destructor must only tear down the external handler
 * **Breaking**: a `Computed` recomputes when its dependencies change, not on the next read
 * **Breaking**: reading through `transaction(|ctx| ...)` serves the cached value
-* **Breaking**: `EmbedDom` is no longer implemented for every owned `T: ToString`. Owned
-  support is an explicit list; references stay blanket, so `&MyType` still embeds. For an
-  owned value: `impl EmbedDom for MyType { fn embed(self) -> DomNode { self.to_string().embed() } }`
+* **Breaking**: `EmbedDom` is no longer implemented for every `T: ToString`, by value or by
+  reference. Embedding a printable type of your own - `<div>{my_route}</div>` or
+  `<div>{&my_route}</div>` - needs the same one-line `impl DomDisplay for Route {}` that
+  attributes need. The primitives are opted in already, the string types embed as before, and
+  a reactive wrapper still embeds anything printable, so `Computed<MyType>` is unaffected.
+  A type which renders real DOM keeps implementing `EmbedDom` directly; that impl no longer
+  has to compete with a blanket one, and a type asking for both is now a coherence error
+* **Breaking**: `AttrValue` is likewise no longer built from every `T: ToString`. Printing
+  is now opt-in per type through the new `DomDisplay`, which vertigo implements for the
+  primitives and nothing else. See `DomDisplay` docs for details.
 * **Breaking**: `render_list` takes a `Vec<T>` source, its render closure receives
   `&Computed<T>` instead of `&T`, and the key type must implement `Debug`
 * **Breaking**: the render closures of `render_list_memo` and `render_resource_list_memo`

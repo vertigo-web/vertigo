@@ -117,7 +117,8 @@ pub(super) fn convert_node(node: &Node, convert_to_dom_node: bool) -> TokenStrea
             let mut output = quote! {};
             for (class_value, is_str_literal) in class_values {
                 let class_value = as_static_attr_value(class_value, is_str_literal);
-                output.append_all(quote! { vertigo::AttrValue::from(#class_value), });
+                output
+                    .append_all(quote! { vertigo::IntoAttrValue::into_attr_value(#class_value), });
             }
             out_attr.push(quote! {
                 .attr("class", vertigo::AttrValue::combine(vec![#output]))
