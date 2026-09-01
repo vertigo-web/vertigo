@@ -67,6 +67,23 @@ fn borrowed_values_embed() {
     );
 }
 
+/// `Cow` reaches an attribute owned or borrowed, the way `String` and `Rc<String>` do -
+/// borrowing it at the call site is what a caller holding one in a match arm ends up writing.
+#[test]
+fn cow_attributes_owned_and_borrowed() {
+    let borrowed: Cow<'_, str> = Cow::Borrowed("/a");
+    let owned: Cow<'_, str> = Cow::Owned(String::from("/b"));
+
+    assert_eq!(
+        html(|| dom! { <a href={&borrowed}>"x"</a> }),
+        "<a href='/a'>x</a>"
+    );
+    assert_eq!(
+        html(move || dom! { <a href={owned}>"y"</a> }),
+        "<a href='/b'>y</a>"
+    );
+}
+
 /// One `impl DomDisplay` covers both directions, and the attribute side with it.
 #[test]
 fn a_dom_display_type_embeds_owned_and_borrowed() {
