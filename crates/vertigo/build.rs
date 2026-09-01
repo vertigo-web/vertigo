@@ -7,24 +7,17 @@ use std::path::{Path, PathBuf};
 fn main() -> Result<(), Box<dyn Error>> {
     let target_dir = find_target_dir()?;
 
-    let _ = fs::remove_dir_all(target_dir.join("tailwind"));
-
     let dir = target_dir.join("static");
 
     fs::create_dir_all(&dir)?;
 
-    if let Err(error) = fs::remove_dir_all(dir.join("included")) {
-        eprintln!("remove_dir_all => {error:?}");
-    }
-
-    // Subdirectory for files included in dom macro invocations
-    fs::create_dir_all(dir.join("included"))?;
-
-    // Invokes build script again if these changed:
-    println!("cargo:rerun-if-changed={}", dir.to_string_lossy());
-
-    println!("cargo:rerun-if-changed=src/driver_module/wasm_run.js");
-    println!("cargo:rerun-if-changed=src/driver_module/wasm_run.js.map");
+    // NOTE: Never declare `cargo:rerun-if-changed` for `dir` or anything below it.
+    // It is pure output of this script, and cargo watches directories recursively,
+    // so watching it guarantees a false invalidation on every build: `include_static!`
+    // writes into `static/included` while downstream crates are being expanded, and
+    // every vertigo build-script unit sharing this target dir rewrites these files.
+    // Cleanup of `static/included` and `tailwind` belongs to vertigo-cli, which is
+    // the only thing that sets VERTIGO_BUNDLE (see cli's cargo_build.rs).
 
     bundle_file(
         "src/driver_module/wasm_run.js",
@@ -61,7 +54,10 @@ fn bundle_file(
     out_dir: &Path,
     file_name: &str,
 ) -> Result<(), Box<dyn Error>> {
-    // Invokes build script again if this file changed
+    // Invokes build script again if this file changed. These are the only inputs of
+    // this script, and emitting them switches cargo from "watch all sources" to
+    // "watch only these paths" (changes to build.rs itself are still covered, via the
+    // build script binary's own fingerprint).
     println!("cargo:rerun-if-changed={in_path}");
 
     let out_path = out_dir.join(file_name);
