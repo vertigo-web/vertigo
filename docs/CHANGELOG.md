@@ -155,6 +155,7 @@ The reactive graph was rewritten and keyed list rendering was rebuilt around per
   removes the `target_features` section it would otherwise read them from
 * A server-rendered `LazyCache` no longer re-requests on hydration
 * `keyed_computed_list` no longer reports a read after removal when a row is simply removed.
+* Fixed excessive `cargo clean` calls during re-build.
 
 [reactive-graph]: https://docs.rs/vertigo/latest/vertigo/guides/reactive_graph/index.html
 [invariants]: https://docs.rs/vertigo/latest/vertigo/reactive/invariants/index.html

@@ -47,6 +47,11 @@ impl WasmPath {
         use std::fs::File;
         use std::io::prelude::*;
 
+        if let Some(parent) = self.path.parent() {
+            std::fs::create_dir_all(parent)
+                .map_err(|err| format!("Can't create {}: {err}", parent.to_string_lossy()))?;
+        }
+
         let mut f = File::create(&self.path)
             .map_err(|err| format!("Can't create {}: {err}", self.as_string()))?;
         f.write_all(content)

@@ -3,7 +3,10 @@ use std::env;
 fn main() {
     // Save PROFILE to env variable for use by bundling macros. Directly used by get_target_dir function.
     export_var("PROFILE");
-    println!("cargo:rerun-if-changed-env=PROFILE")
+
+    // No `rerun-if-*` directive here on purpose: a PROFILE change already yields a
+    // different build-script unit, and emitting any of them would narrow cargo from
+    // tracking every source of this crate down to the listed paths only.
 }
 
 fn export_var(name: &str) {

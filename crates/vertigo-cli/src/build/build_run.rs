@@ -7,7 +7,7 @@ use super::{
     cargo_build::run_cargo_build,
     cargo_workspace::{Workspace, get_workspace},
     check_env::check_env,
-    find_target::{find_package_rlib_in_target, find_wasm_in_target, profile_name},
+    find_target::find_wasm_in_target,
     wasm_opt::run_wasm_opt,
     wasm_path::WasmPath,
 };
@@ -45,7 +45,6 @@ pub fn run_with_ws(opts: BuildOpts, ws: &Workspace, allow_error: bool) -> Result
     check_env()?;
 
     let release = opts.inner.release_mode.unwrap_or(true);
-    let profile = profile_name(release);
 
     let dest_dir = WasmPath::new(PathBuf::from(&opts.common.dest_dir));
 
@@ -54,11 +53,7 @@ pub fn run_with_ws(opts: BuildOpts, ws: &Workspace, allow_error: bool) -> Result
     dest_dir.remove_dir_all();
     dest_dir.create_dir_all();
 
-    // Delete rlibs to re-generate static files
-
-    find_package_rlib_in_target(&package_name, profile).remove_file()?;
-
-    // Run build
+    // Run build (which cleans the package first, to re-generate static files)
 
     let target_path = match run_cargo_build(
         &package_name,
@@ -111,7 +106,7 @@ pub fn run_with_ws(opts: BuildOpts, ws: &Workspace, allow_error: bool) -> Result
 
     // Copy .wasm to destination
 
-    let wasm_path_target = find_wasm_in_target(&package_name, profile);
+    let wasm_path_target = find_wasm_in_target(&target_path, &package_name);
     let wasm_path = opts.new_path_in_static_from(&wasm_path_target);
 
     // Optimize .wasm
