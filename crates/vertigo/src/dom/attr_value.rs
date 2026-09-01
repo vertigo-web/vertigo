@@ -211,6 +211,12 @@ impl From<std::borrow::Cow<'_, str>> for AttrValue {
     }
 }
 
+impl From<&std::borrow::Cow<'_, str>> for AttrValue {
+    fn from(value: &std::borrow::Cow<'_, str>) -> Self {
+        AttrValue::String(Rc::new(value.to_string()))
+    }
+}
+
 /// Covers `&T` too, via the reference impl on [`DomDisplay`] itself.
 impl<T: DomDisplay> From<T> for AttrValue {
     fn from(value: T) -> Self {
