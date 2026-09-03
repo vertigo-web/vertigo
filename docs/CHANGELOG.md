@@ -1,162 +1,111 @@
 <!-- markdownlint-configure-file { "no-duplicate-heading": { "siblings_only": true } } -->
 
 <!-- markdownlint-disable-next-line first-line-h1 -->
-## 0.13.0 - unreleased
+## 0.13.0 - 2026-09-07
 
 The reactive graph was rewritten and keyed list rendering was rebuilt around per-key
-`Computed`s. See the [reactive graph guide][reactive-graph] and the
-[collection guide][collections].
+`Computed`s. Printing a type into the DOM is now opt-in through `DomDisplay`.
+
+The [0.13.0 release notes][notes-0130] carry the migration steps, the reasoning behind each
+breaking change and the mechanism behind the performance numbers. See also the
+[reactive graph guide][reactive-graph] and the [collection guide][collections].
+
+### Breaking
+
+* `Computed<T>` requires `T: PartialEq` everywhere, not only for `subscribe`
+* a `Computed` recomputes when its dependencies change, not on the next read, and reading
+  through `transaction(|ctx| ...)` serves the cached value
+* `Value::set` from a compute closure, a `subscribe` callback or a `DropResource` destructor
+  is ignored and reported through `log::error!` rather than panicking. Event handlers,
+  timers, fetch, `on_after_transaction` and `when_connect` (`create`) are unaffected - see
+  the [invariants][invariants]
+* `when_connect` and `Value::with_connect` run `create` after the wave that made the node
+  watched (and after `on_after_transaction`), and drop the resource after the wave that
+  unwatched it, instead of in the middle of a refresh. `create` may write; the destructor
+  must only tear down the external handler
+* `EmbedDom` is no longer implemented for every `T: ToString`, by value or by reference, and
+  `AttrValue` is likewise no longer built from every `T: ToString`. A printable type of your
+  own opts in with one line - `impl vertigo::DomDisplay for Route {}` - which covers both
+  `<a href={my_route}>` and `<div>{my_route}</div>`. Primitives, the string types and the
+  reactive wrappers are unaffected
+* `AttrValue` has a new `Static(&'static str)` variant, and `AttrValue::get` returns the new
+  `AttrText` instead of `Rc<String>`
+* `render_list` takes a `Vec<T>` source, render closure - `&Computed<T>` instead of `&T`
+* the render closures of `render_list_memo` and `render_resource_list_memo` receive
+  `&Computed<T::Value>`; `Loading` and `Error` render as an empty list
+* removed: `Dependencies` - use `transaction` and `on_after_transaction`
+* removed: `Computed::subscribe_all` - use `subscribe`
+* removed: `ValueSynchronize`, `Value::synchronize`, `LazyCache::synchronize` and
+  `CacheValue::synchronize` - use `keyed_computed_list`
+* removed: `Collection` and `CollectionModel`, superseded by `keyed_computed_list`
 
 ### Added
 
 * A new reactive graph in the `vertigo::reactive` module: transactional, with an equality
   cutoff. See the [guide][reactive-graph]
-* `reactive::Graph` - an isolated graph instance, mostly useful in tests
-* `reactive::invariants` - the rules the graph enforces, and where you may write
 * `reactive::transaction` and `reactive::on_after_transaction`
 * `GraphId` - identity of a `Value` or `Computed`
 * `RenderValue` - trait form of `render_value` / `render_value_option`, for generic code
 * `keyed_computed_list` and `KeyedListItem` - per-key `Computed`s from a reactive list,
   reusing the same `Computed` for a given key across updates (Solid `<For>`-style)
 * `MarkerContent` - lets a marker comment report the nodes it keeps in front of itself
-* `IntoAttrValue` - the bound `DomElement::attr` and the `dom!` macro now use for attribute
-  values. `Into<AttrValue>` with a blanket impl, so nothing to implement; it exists to give
-  a value with no conversion an error that says what to write
-* `DomDisplay` - opts a `Display` type of your own into everything vertigo renders, so both
-  `<a href={my_route}>` and `<div>{my_route}</div>` work. `impl vertigo::DomDisplay for Route {}`
-  is the whole of it, and that one impl covers `Route` and `&Route` as an attribute value and
-  as embedded text, plus `Computed<Route>`, `Value<Route>`, their `Option` variants and
-  references to those
-* `DomDisplay` for the types behind the `chrono` and `rust_decimal` features - `NaiveDate`,
+* `DomDisplay` - opts a `Display` type of your own into everything vertigo renders. One impl
+  covers the value, references to it and its reactive wrappers, in attributes and as text
+* `IntoAttrValue` - the attribute-value bound of `DomElement::attr` and the `dom!` macro.
+  Blanket over `Into<AttrValue>`, so nothing to implement; it exists for the error message
+* `DomElement::attr_static`, emitted by `dom!` when an attribute's name and value are both
+  literals - `class="col-md-1"`, `aria-hidden="true"`
+* `DomText::new_computed_display`, for `T: ToString`, beside the `T: Into<String>` form
 
 ### Changed
 
-* **Breaking**: `Computed<T>` requires `T: PartialEq` everywhere, not only for `subscribe`
-* **Breaking**: `Value::set` from a compute closure, a `subscribe` callback, or a
-  `DropResource` destructor is refused. It used to panic with *"You cannot change the
-  source value while the dependency graph is being refreshed"*; the write is now ignored
-  and reported through `log::error!`, so one misplaced write no longer takes the
-  application down. This follows the call stack, so it covers a `Drop` that runs inside
-  such a callback. Writing from event handlers, timers, fetch, `on_after_transaction` and
-  `when_connect` (`create`) is unaffected - see the [invariants][invariants]
-* **Breaking**: `when_connect` and `Value::with_connect` run their closure after the wave
-  that made the node watched (and after `on_after_transaction`), and drop the resource
-  after the wave that unwatched it, instead of in the middle of a refresh. `create` may
-  write; the destructor must only tear down the external handler
-* **Breaking**: a `Computed` recomputes when its dependencies change, not on the next read
-* **Breaking**: reading through `transaction(|ctx| ...)` serves the cached value
-* **Breaking**: `EmbedDom` is no longer implemented for every `T: ToString`, by value or by
-  reference. Embedding a printable type of your own - `<div>{my_route}</div>` or
-  `<div>{&my_route}</div>` - needs the same one-line `impl DomDisplay for Route {}` that
-  attributes need. The primitives are opted in already, the string types embed as before, and
-  a reactive wrapper still embeds anything printable, so `Computed<MyType>` is unaffected.
-  A type which renders real DOM keeps implementing `EmbedDom` directly; that impl no longer
-  has to compete with a blanket one, and a type asking for both is now a coherence error
-* **Breaking**: `AttrValue` is likewise no longer built from every `T: ToString`. Printing
-  is now opt-in per type through the new `DomDisplay`, which vertigo implements for the
-  primitives and nothing else. See `DomDisplay` docs for details.
-* **Breaking**: `render_list` takes a `Vec<T>` source, its render closure receives
-  `&Computed<T>` instead of `&T`, and the key type must implement `Debug`
-* **Breaking**: the render closures of `render_list_memo` and `render_resource_list_memo`
-  receive `&Computed<T::Value>`; `Loading` and `Error` render as an empty list
-* **Breaking**: the mount closure of `DomComment::new_marker` takes a third argument,
-  `&MarkerContent`. A marker moved within the same parent no longer re-runs its mount
-* Every `render_list` row is preceded by an anchor comment node
-* A reactive value embedded in `dom!` - `<span>{my_value}</span>` - now updates its text
-  node in place instead of replacing it - 3x faster. Note the DOM
-  shape change if you assert on rendered HTML - `<li>{value}</li>` no longer emits a
-  trailing `<!-- v -->` inside the element
-* `DomText::new_computed` creates its node with the value already set rather than empty,
-  and gained a `new_computed_display` sibling for `T: ToString` (`u32`, `bool`, your own
-  `Display` types) alongside the existing `T: Into<String>` form
-* **Breaking** (`dev`): DOM commands travel to the browser in a flat binary format instead of
-  as `JsJson` objects, so `CommandForBrowser::DomBulkUpdate` now carries `commands: Vec<u8>`
-  rather than `list: Vec<DriverDomCommand>`. Encode and decode with
-  `dev::command_wire::{encode_dom_commands, decode_dom_commands}`. Every command used to cost
-  two `BTreeMap`s and three heap `String`s to build, serialize and drop, and repeated its
-  field names on the wire once per command; element and attribute names are now interned per
-  batch. Nothing above the wire changed - the same commands are emitted in the same order
+* two DOM shape changes, invisible in the browser but visible to a test asserting on
+  rendered HTML: every `render_list` row is preceded by an anchor comment node, and
+  `<li>{value}</li>` no longer emits a trailing `<!-- v -->` inside the element
+* `DomText::new_computed` creates its node with the value already set rather than empty
 * `AutoJsJson` encodes a `Vec<u8>` field of an enum variant as `JsJson::Vec` - one
   length-prefixed byte run - which is what it already did for a struct field of that type.
   It previously produced a list with a `JsJson::Number` per byte
-* `keyed_computed_list` builds one index per update instead of three, and stamps a single
-  key cache instead of rebuilding two.
-* Vertigo's own hash maps - the keyed-list index, the list reconciler's middle cache, and
-  every `dev::HashMapMut` including the one consulted for each DOM insertion - use an FxHash
-  hasher instead of the standard `SipHash-1-3`. This is **not** collision-resistant against
-  chosen keys: the worst case is a render that degrades to quadratic on a list keyed by
-  attacker-chosen strings, which matters server-side under SSR and not in the browser. It is
-  worth about a fifth of the keyed-list improvement above. `dev::HashMapMut` gains a
-  defaulted hasher parameter, so a map that wants `RandomState` can still say so
-* **Breaking**: `AttrValue` has a new `Static(&'static str)` variant, and `AttrValue::get`
-  returns the new `AttrText` instead of `Rc<String>`.
-* An element only builds a class merger when it has two sources to merge. It used to build
-  one always: 160 bytes behind an `Rc` on every element
-* The merger itself is smaller and quieter, the `css` half is boxed so only elements using
-  css carry it, and the resolved css class name is cached rather than re-derived whenever
-  the class attribute moves
-* Only `class` goes through that merger now. Every other attribute is recognised when the
-  element is built rather than on every write, and talks to the driver directly, so a
-  reactive `href` no longer clones an `Rc` into its subscription
-* New `DomElement::attr_static`, which the `dom!` macro emits for an attribute whose name and
-  value are both literals - `class="col-md-1"`, `aria-hidden="true"`.
-* An application that uses no `css!` no longer links the css engine either. Together with
-  the entry above, wasm going from 284 kB to 261 (84 kB to 76 gzipped) and 16% off first
-  paint. **An application that does use `css!` keeps the engine and sees no size change**.
-* `vertigo new` now writes a `[profile.release]` into the project it generates.
-  The fullstack template additionally splits `opt-level` per target through `.cargo/config.toml`,
-  so the frontend is built for size and the backend for speed
-* The SSR fetch cache is decoded on first use rather than at startup. An application with no
-  `LazyCache` never mentions it, so the linker drops the whole decode path producing smaller
-  wasm
-* `AutoJsJson` builds an object one field at a time through a shared function instead of with
-  `BTreeMap::from([..])`, and inserts the fields in key order. Saves 1-5% of the wasm, depending
-  on how many types the application derives. Encoding an enum gets faster and encoding a struct
-  slightly slower; the browser benchmark sees neither.
-* Guide `guides::value_synchronize_and_collections` replaced by [`collections`][collections]
+* `vertigo new` now writes a `[profile.release]` into the project it generates. The fullstack
+  template additionally splits `opt-level` per target through `.cargo/config.toml`, so the
+  frontend is built for size and the backend for speed
 
-### Removed
+### Performance
 
-* **Breaking**: `Dependencies`. Use `transaction`, `Driver::transaction` and
-  `Driver::on_after_transaction`
-* **Breaking**: `Computed::subscribe_all` - unchanged values no longer notify anybody, so
-  it has nothing to report. Use `subscribe`
-* **Breaking**: `ValueSynchronize`, `Value::synchronize`, `LazyCache::synchronize` and
-  `CacheValue::synchronize`. Use `keyed_computed_list`
-* **Breaking**: `Collection` and `CollectionModel`, superseded by `keyed_computed_list`.
-  `CollectionKey` stays
+Mechanism and measurement conditions for each of these are in the
+[release notes][notes-0130].
+
+* DOM commands travel to the browser in a fast flat binary format
+* reordering a keyed list moves only the rows whose order actually changed
+* updating one row of a keyed list no longer costs work proportional to list length,
+* a reactive value embedded in `dom!` updates its text node in place
+* an application that uses no `css!` no longer links the css engine (~13 kB gzipped less)
+* the SSR fetch cache decodes on first use rather than at startup, so an application with no
+  `LazyCache` drops the decode path entirely (another ~13 kB gzipped less)
+* `AutoJsJson` builds an object one field at a time instead of with `BTreeMap::from([..])` -
+  1-5% of the wasm, depending on how many types the application derives
+* vertigo's own hash maps use FxHash instead of `SipHash-1-3`
+* fewer copies in the graph: Value's `new` and `set` skip the deep copy when nothing listens
 
 ### Fixed
 
+* a server-rendered `LazyCache` no longer re-requests on hydration
 * `render_list` corrupted sibling order when reordering or inserting rows whose root is a
   plain element rather than a `render_value` marker
-* Moving a row repositions its DOM instead of rebuilding it, so input values, listeners and
+* moving a row repositions its DOM instead of rebuilding it, so input values, listeners and
   children survive a reorder
-* Updating one row of a keyed list no longer costs work proportional to the *square* of the
-  list length
-* Reordering a keyed list moves only the rows whose order actually changed. The keyed phase
-  used to re-insert every row it walked, so swapping two rows of a thousand moved the 998
-  rows between them; it now moves two. Measured on the `js-framework-benchmark` swap
-  workload: 179ms to 32ms
-* `Value::new` and `Value::set` no longer deep-copy the payload when nothing is listening
-  for `Value::add_event`
-* A node is computed at most once per change, whatever the shape of the graph. A `get`
-  during propagation refreshes a stale parent before returning, so unequal path lengths and
-  conditionally read parents no longer recompute a join once per path, and a subscriber
-  cannot observe a value assembled from a half-updated graph
-* Recomputing a node with many dependencies is no longer quadratic in their number
-* A compute closure reading the same value repeatedly records it once
-* A `Vec<u8>` arriving from wasm is copied out of linear memory before use. It was decoded as
+* a node is computed at most once per change, whatever the shape of the graph
+* a `Vec<u8>` arriving from wasm is copied out of linear memory before use. It was decoded as
   a view onto the memory block, which the caller frees before the decoded value is read, so
   the bytes could be reused or grown away from underneath it
 * `vertigo build` no longer fails wasm optimization with *"memory.copy operations require
   bulk memory operations"* - the WASM features enabled by default for
-  `wasm32-unknown-unknown` are now passed to `wasm-opt` explicitly, because `strip = true`
-  removes the `target_features` section it would otherwise read them from
-* A server-rendered `LazyCache` no longer re-requests on hydration
-* `keyed_computed_list` no longer reports a read after removal when a row is simply removed.
-* Fixed excessive `cargo clean` calls during re-build.
+  `wasm32-unknown-unknown` are now passed to `wasm-opt` explicitly
+* `keyed_computed_list` no longer reports a read after removal when a row is simply removed
+* the bundling macros re-run when they need to, giving faster rebuilds
+* `vertigo build` honours a `--target-dir` passed through to cargo
 
+[notes-0130]: https://github.com/vertigo-web/vertigo/blob/master/docs/releases/0.13.0.md
 [reactive-graph]: https://docs.rs/vertigo/latest/vertigo/guides/reactive_graph/index.html
 [invariants]: https://docs.rs/vertigo/latest/vertigo/reactive/invariants/index.html
 [collections]: https://docs.rs/vertigo/latest/vertigo/guides/collection_key_and_list_renderers/index.html

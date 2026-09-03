@@ -2,7 +2,7 @@
 <!-- markdownlint-disable no-inline-html -->
 
 <!-- markdownlint-disable-next-line no-emphasis-as-heading -->
-*Up to date with version 0.11.4*
+*Up to date with version 0.13.0*
 
 <!-- markdownlint-disable-next-line heading-increment -->
 ### Table of contents
@@ -58,18 +58,18 @@ The most common thing you'll be doing is watching the project. This means build 
 Vertigo uses a built-in web server which supports server-side rendering.
 This makes simple pages work even if the browser have JavScript turned off.
 
-After seeing message `Listening on 127.0.0.1:4444` you can point your browser to `http://127.0.0.1:4444/` to see the "Hello World" message. The page should update automatically when the code gets edited.
+After seeing message `Listening on 127.0.0.1:4444` you can point your browser to `http://127.0.0.1:4444/` to see the "Hello frontend world" message. The page should update automatically when the code gets edited.
 
 ## 4. Initial code description
 
 Open `/src/lib.rs` file.
 
 ```rust
-use vertigo::{main, DomNode, dom, Value};
+use vertigo::{dom, main, DomNode, Value};
 
 #[main]
 fn app() -> DomNode {
-    let message = Value::new("world");
+    let message = Value::new("frontend world");
     dom! {
         <html>
             <head />
@@ -81,7 +81,7 @@ fn app() -> DomNode {
 }
 ```
 
-This is the main entry point for the application. It creates a very simple state (a string message) and transforms this state into a `DomElement`.
+This is the main entry point for the application. It creates a very simple state (a string message) and transforms this state into a `DomNode`.
 
 Let's outline a little bigger picture now.
 
@@ -96,8 +96,8 @@ If we want to be a little more detailed in this description, then it would be:
 
 - Dependency graph holds values, computed values (computeds) and clients (mount functions).
 - Upon changing some value all dependent computeds get computed, and all dependent clients get updated.
-- Mount function takes a computed state provided by the graph and returns a "render definition" (`DomElement`).
-It is important to remember that `DomElement` is not a product of render process. It is a **definition of a render process**.
+- Mount function takes a computed state provided by the graph and returns a "render definition" (`DomNode`).
+It is important to remember that `DomNode` is not a product of render process. It is a **definition of a render process**.
 - Upon any change in state, DOM is also updated if necessary.
 - Mount functions can provide the DOM with functions that get fired on events like `on_click`,
 which may modify the state, thus triggering necessary computing once again.
@@ -109,13 +109,15 @@ this speeds-up page loads and allows web crawlers to properly index your website
 Now let's breakdown the code line by line:
 
 ```rust
-use vertigo::{main, DomNode, dom, Value};
+use vertigo::{dom, main, DomNode, Value};
 ```
 
 Here we import:
 
 - `main` - Marks an entry point of the app
-- `DomElement` - a struct that will define output of our mount function (a reactive component),
+- `DomNode` - the type that will define output of our mount function (a reactive component).
+It is an enum over the three kinds of node vertigo can produce - `DomElement`, `DomText` and
+`DomComment` - which is why an element-shaped `dom!` still hands you a `DomNode`,
 - `dom!` - a macro to use HTML tags to define the shape of the resultant element, and
 - `Value` - a reactive box for values,
 
@@ -125,22 +127,22 @@ fn app() -> DomNode {
 ```
 
 This is our main "render" function, but in fact it is a mount function (fired only once because updates are
-performed through dependency graph). It returns a definition of a reactive DOM in the form of `DomElement` instance.
+performed through dependency graph). It returns a definition of a reactive DOM in the form of `DomNode` instance.
 
 It is decorated with `main` macro which wraps the function in a gateway from JavaScript world.
 
 ```rust
-    let message = Value::new("world!".to_string());
+    let message = Value::new("frontend world");
 ```
 
-Here we create a very simple state which only hold a String value. This is performed inside the mount function,
+Here we create a very simple state which only holds a piece of text. This is performed inside the mount function,
 which means the state will be created from scratch every time our component gets mounted (but not on every render!).
 
 ```rust
     dom! {
 ```
 
-The `dom!` macro always returns `DomElement` object so it usually is at the end of the function which returns the same type.
+The `dom!` macro always returns a `DomNode` so it usually is at the end of the function which returns the same type.
 You may as well pre-generate parts of the component using this macro and use it in the body of another `dom!` invocation.
 
 ```rust
@@ -159,8 +161,9 @@ you need at least place such an empty tag in your HTML.
 
 Next, in the `div` we insert a text node. Strings in `dom!` macro must always be double-quoted. This assures us we won't miss a space between the text and the next DOM element.
 
-Next we're inserting a value from the state. The state is of type `Value<String>` which can be directly embedded into
-`dom!` macro without any transformations.
+Next we're inserting a value from the state. The state is of type `Value<&'static str>`, and a `Value`
+wrapping anything printable can be embedded into the `dom!` macro without any transformations - as can a
+`Computed`, and references to either.
 
 ## 5. Add new value
 
@@ -201,7 +204,7 @@ as an argument. The closure needs `message` value from outside, hence the `move`
 If the `message` cannot be moved because it is used later, then it should be cloned first.
 `Value` implements shallow cloning[^clone], so it's perfectly ok to clone it whenever it is needed.
 
-`message_element` is of type `DomElement` so it can be used in `dom!` macro directly in the same way as string.
+`message_element` is of type `DomNode` so it can be used in `dom!` macro directly in the same way as string.
 
 ## 6. Set value
 
@@ -321,7 +324,22 @@ We can create state this way, because this function is fired upon mounting, not 
 > The first closure should return a key unique across all items,
 > while the latter should return the rendered item itself.
 >
-> Note that `render_list()` works only if the inner type of `Value` implements `IntoIterator`.
+> Note that `render_list()` takes a source of `Vec<T>` - a `Value<Vec<T>>`, a
+> `Computed<Vec<T>>`, or a reference to either. The key type has to implement `Debug`
+> alongside `Clone`, `Eq` and `Hash`.
+
+The two closures see the item differently, and it is worth pausing on this. The **key**
+closure gets a plain `&String`, because a key is read once per update to decide which row is
+which. The **render** closure gets a `&Computed<String>` - a reactive handle to *this row's*
+value, which vertigo keeps alive for as long as the key stays in the list.
+
+That is what makes an update cheap: when one item changes, its `Computed` fires and only that
+row's text node is patched. The row itself is never rebuilt, so anything living inside it -
+input contents, event listeners, child components - survives.
+
+A `Computed<String>` embeds into `dom!` exactly like a `String` would, which is why
+`{item}` above needs no ceremony. Reading the *content* is the case that differs, and
+[section 12](#12-Parametrized-styles) covers it.
 
 If we want to provide the state for a component from the upstream, then we can take the state as an argument
 to the `List` function, then the state can be passed to our component as a property:
@@ -497,8 +515,6 @@ We'll make the list change font color for every other row (`list.rs` file).
     );
 ```
 
-</details>
-
 ## 12. Parametrized styles
 
 Say we want to have particular items emphasized by different background.
@@ -527,13 +543,22 @@ And here's the usage in rendering:
         &items,
         |item| item.clone(),
         move |item| {
-            let excl = item.ends_with('!');
+            let row_css = item.map(move |item| alternate_rows(item.ends_with('!')));
             dom! {
-                <li css={alternate_rows(excl)}>{item}</li>
+                <li css={row_css}>{item}</li>
             }
         },
     );
 ```
+
+Here is where the `&Computed<String>` from [section 8](#8-Add-state-to-component) starts to
+matter. We cannot call `item.ends_with('!')` directly - `item` is a reactive handle, not a
+`String`. Instead we `map` it into a `Computed<Css>`, and the `css` attribute accepts that as
+readily as it accepts a plain `Css`.
+
+The payoff is that the style is now reactive on its own. Edit an item so that it gains or
+loses its exclamation mark and the background follows, without the row being torn down and
+rebuilt.
 
 ## Further reading
 

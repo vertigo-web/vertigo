@@ -9,7 +9,7 @@ edition = "2024"
 crate-type = ["cdylib", "rlib"]
 
 [dependencies]
-vertigo = "0.12"
+vertigo = "0.13"
 
 # Every visitor downloads this wasm before the page can do anything, so the release build
 # is tuned for size - over 10% smaller than cargo's defaults. Most of that is `lto` and
