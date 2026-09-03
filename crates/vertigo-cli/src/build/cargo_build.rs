@@ -1,7 +1,11 @@
-use std::{fs, path::PathBuf};
+use std::{
+    fs,
+    path::PathBuf,
+    time::{SystemTime, UNIX_EPOCH},
+};
 
 use crate::{
-    build::find_target::{BuildProfile, resolve_target_root, target_dir_opt},
+    build::find_target::{BuildProfile, resolve_target_root},
     commons::{ErrorCode, command::CommandRun},
 };
 
@@ -9,42 +13,19 @@ use super::Workspace;
 
 const TARGET: &str = "wasm32-unknown-unknown";
 
-/// Drop the package's artifacts so the next build re-expands its macros.
+/// Value for `VERTIGO_BUILD_ID`, the variable `#[vertigo::main]` pulls into the app crate's
+/// dep-info via `option_env!`.
 ///
-/// Uses `cargo clean -p` rather than deleting the artifact by path: the layout of the
-/// target directory is not stable across toolchains (stable cargo puts the rlib in
-/// `<target>/deps/`, nightly 1.100 in `<target>/build/<pkg>/<hash>/out/`), so a
-/// hardcoded path silently stops matching and the bundle ends up missing every asset.
-fn run_cargo_clean(
-    package_name: &str,
-    target_dir_opt: Option<&str>,
-    release: bool,
-    profile: &BuildProfile,
-) -> Result<(), ErrorCode> {
-    let mut command = CommandRun::new("cargo")
-        .add_param("clean")
-        .add_param("--target")
-        .add_param(TARGET)
-        .add_param("--package")
-        .add_param(package_name);
-
-    // Select the same profile and directory the build below will write to. Whatever cargo
-    // can work out by itself (CARGO_TARGET_DIR, cargo config) is left to it: passing
-    // `--target-dir` explicitly makes cargo apply a CACHEDIR.TAG check that target
-    // directories created by older cargo versions fail.
-    if profile.from_cargo_opts {
-        command = command
-            .add_param("--profile")
-            .add_param(profile.name.as_str());
-    } else if release {
-        command = command.add_param("--release");
-    }
-
-    if let Some(target_dir) = target_dir_opt {
-        command = command.add_param("--target-dir").add_param(target_dir);
-    }
-
-    command.set_error_code(ErrorCode::BuildFailed).run()
+/// Cargo can't see that the bundling macros read `VERTIGO_BUNDLE` and write asset files, so
+/// left alone it would call the app crate fresh and we'd bundle nothing. Handing it a value
+/// that differs from last time makes cargo re-expand the crate - and unlike dropping the
+/// crate's artifacts (`cargo clean -p`), the incremental cache survives, which is the
+/// difference between a ~1s and a ~7s watch-mode rebuild.
+fn build_id() -> String {
+    SystemTime::now()
+        .duration_since(UNIX_EPOCH)
+        .map(|since_epoch| since_epoch.as_nanos().to_string())
+        .unwrap_or_default()
 }
 
 pub fn run_cargo_build(
@@ -61,7 +42,6 @@ pub fn run_cargo_build(
     // then they - not `cargo metadata`, not `release` - decide where the build lands. Get
     // this wrong and we wipe, clean and read a directory the build never touches.
     let profile = BuildProfile::resolve(release, cargo_opts);
-    let target_dir_opt = target_dir_opt(cargo_opts);
     let target_dir = resolve_target_root(ws.get_target_dir(), cargo_opts)
         .join(TARGET)
         .join(&profile.dir);
@@ -72,11 +52,6 @@ pub fn run_cargo_build(
     // build script, which only reruns when the js actually changes.
     let _ = fs::remove_dir_all(target_dir.join("tailwind"));
     let _ = fs::remove_dir_all(target_dir.join("static").join("included"));
-
-    // ...and force the macros to run again to repopulate it. Cargo can't see that proc
-    // macros read VERTIGO_BUNDLE and write files, so it would otherwise consider the
-    // package fresh and we'd bundle nothing.
-    run_cargo_clean(package_name, target_dir_opt, release, &profile)?;
 
     let mut command = CommandRun::new("cargo").add_param("build");
 
@@ -100,7 +75,9 @@ pub fn run_cargo_build(
         .env("VERTIGO_BUNDLE", "true")
         // Cargo tells proc macros nothing about the target directory, so hand them the
         // path we got from `cargo metadata`
-        .env("VERTIGO_TARGET_DIR", target_dir.to_string_lossy());
+        .env("VERTIGO_TARGET_DIR", target_dir.to_string_lossy())
+        // ...and force the macros to run again, so they repopulate what we just wiped
+        .env("VERTIGO_BUILD_ID", build_id());
 
     for opt in cargo_opts {
         command = command.add_param(opt);

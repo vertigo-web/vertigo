@@ -5,11 +5,9 @@ use super::wasm_path::WasmPath;
 /// Profile the build runs under, resolved from `--release` and from any `--profile` the
 /// caller passed through in their own cargo options.
 pub struct BuildProfile {
-    /// Name as cargo spells it on the command line.
-    pub name: String,
     /// Directory cargo writes artifacts into, under `<target-dir>/<triple>`.
     pub dir: String,
-    /// Set when the name came from the caller's cargo options, in which case `cargo build`
+    /// Set when the profile came from the caller's cargo options, in which case `cargo build`
     /// already receives it and must not also get `--release` - cargo rejects both together.
     pub from_cargo_opts: bool,
 }
@@ -19,16 +17,12 @@ impl BuildProfile {
         if let Some(name) = find_opt_value(cargo_opts, "--profile") {
             return Self {
                 dir: profile_dir(name).to_string(),
-                name: name.to_string(),
                 from_cargo_opts: true,
             };
         }
 
-        let name = if release { "release" } else { "dev" };
-
         Self {
-            name: name.to_string(),
-            dir: profile_dir(name).to_string(),
+            dir: profile_dir(if release { "release" } else { "dev" }).to_string(),
             from_cargo_opts: false,
         }
     }
@@ -122,26 +116,18 @@ mod tests {
     #[test]
     fn profile_defaults_to_release_flag() {
         let profile = BuildProfile::resolve(true, &[]);
-        assert_eq!(
-            (profile.name.as_str(), profile.dir.as_str()),
-            ("release", "release")
-        );
+        assert_eq!(profile.dir, "release");
         assert!(!profile.from_cargo_opts);
 
         let profile = BuildProfile::resolve(false, &[]);
-        assert_eq!(
-            (profile.name.as_str(), profile.dir.as_str()),
-            ("dev", "debug")
-        );
+        assert_eq!(profile.dir, "debug");
+        assert!(!profile.from_cargo_opts);
     }
 
     #[test]
     fn profile_from_cargo_opts_wins_over_release() {
         let profile = BuildProfile::resolve(true, &opts(&["--profile", "prod"]));
-        assert_eq!(
-            (profile.name.as_str(), profile.dir.as_str()),
-            ("prod", "prod")
-        );
+        assert_eq!(profile.dir, "prod");
         assert!(profile.from_cargo_opts);
     }
 
