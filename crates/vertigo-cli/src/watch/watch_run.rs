@@ -2,10 +2,7 @@ use actix_cors::Cors;
 use actix_web::{App, HttpServer, rt::System, web};
 use notify::RecursiveMode;
 use std::{path::Path, process::exit, sync::Arc, time::Duration};
-use tokio::{
-    sync::{Notify, watch::Sender},
-    time::sleep,
-};
+use tokio::sync::{Notify, watch::Sender};
 use tokio_retry::{Retry, strategy::FibonacciBackoff};
 
 use crate::build::{Workspace, get_workspace};
@@ -18,6 +15,9 @@ use super::{
     ignore_agent::IgnoreAgents, is_http_server_listening::is_http_server_listening,
     sse::handler_sse, watch_opts::WatchOpts,
 };
+
+/// How long the watched tree has to stay quiet before a change counts as one edit.
+const SETTLE_TIME: Duration = Duration::from_millis(200);
 
 #[derive(Clone, Debug, Default, PartialEq)]
 pub enum Status {
@@ -174,7 +174,14 @@ pub async fn run(mut opts: WatchOpts) -> Result<(), ErrorCode> {
             return Err(ErrorCode::OtherProcessAlreadyRunning);
         };
 
-        sleep(Duration::from_millis(200)).await;
+        // One editor save emits several filesystem events. Wait for them to stop arriving
+        // rather than just sleeping through them - a plain sleep leaves the later events
+        // queued on `notify_build`, which then aborts the build we are about to start and
+        // runs the whole thing a second time.
+        while tokio::time::timeout(SETTLE_TIME, notify_build.notified())
+            .await
+            .is_ok()
+        {}
 
         log::info!("Build run...");
 
