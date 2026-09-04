@@ -150,6 +150,31 @@ fn chrono_types_embed() {
     );
 }
 
+/// What `.format()` hands back, which is what a template reaches for the moment the ISO
+/// rendering above is not the wanted one.
+#[cfg(feature = "chrono")]
+#[test]
+fn a_chrono_format_embeds() {
+    use chrono::{NaiveDate, NaiveTime};
+
+    let date = NaiveDate::from_ymd_opt(2026, 8, 30).unwrap_or_default();
+    let time = NaiveTime::from_hms_opt(14, 3, 11).unwrap_or_default();
+    let stamp = date.and_time(time);
+
+    assert_eq!(
+        html(|| dom! { <div>{stamp.format("%Y-%m-%d %H:%M")}</div> }),
+        "<div>2026-08-30 14:03</div>"
+    );
+    assert_eq!(
+        html(|| dom! { <div>{date.format("%d/%m/%Y")}</div> }),
+        "<div>30/08/2026</div>"
+    );
+    assert_eq!(
+        html(|| dom! { <time datetime={stamp.format("%Y-%m-%dT%H:%M:%S")}>"then"</time> }),
+        "<time datetime='2026-08-30T14:03:11'>then</time>"
+    );
+}
+
 /// Same reasoning as the chrono types above.
 #[cfg(feature = "rust_decimal")]
 #[test]

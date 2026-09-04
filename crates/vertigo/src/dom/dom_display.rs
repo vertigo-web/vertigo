@@ -118,6 +118,16 @@ mod chrono_impls {
     impl DomDisplay for chrono::NaiveDateTime {}
 
     impl<Tz: chrono::TimeZone> DomDisplay for chrono::DateTime<Tz> where Tz::Offset: std::fmt::Display {}
+
+    /// The bounds mirror chrono's own `Display` impl, so this covers `format`,
+    /// `format_with_items` and `format_localized` alike. `'a` is constrained by nothing but
+    /// the `Borrow` bound, which is allowed here - `DomDisplay` has no associated types.
+    impl<'a, I, B> DomDisplay for chrono::format::DelayedFormat<I>
+    where
+        I: Iterator<Item = B> + Clone,
+        B: std::borrow::Borrow<chrono::format::Item<'a>>,
+    {
+    }
 }
 
 /// `Decimal` behind the `rust_decimal` feature, for the same reason as the chrono types
