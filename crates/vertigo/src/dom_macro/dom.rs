@@ -156,7 +156,8 @@ impl EmbedDom for &AttrGroupValue {
     message = "`{Self}` cannot be embedded in `dom!` - a printable type opts in with `impl vertigo::DomDisplay for YourType {{}}`, a type which renders DOM implements `vertigo::EmbedDom`",
     label = "no `EmbedDom` impl for `{Self}`",
     note = "a value is embedded only through an explicit opt-in - vertigo no longer embeds every `T: ToString`",
-    note = "see `vertigo::DomDisplay` for the one-line opt-in, which makes the type an attribute value at the same time"
+    note = "see `vertigo::DomDisplay` for the one-line opt-in, which makes the type an attribute value at the same time",
+    note = "if `{Self}` comes from another crate the orphan rule rules that line out: pass `value.to_string()` or wrap it in a newtype of your own - vertigo's `chrono` and `rust_decimal` features already cover those crates' date and decimal types"
 )]
 pub trait EmbedDom {
     fn embed(self) -> DomNode;
