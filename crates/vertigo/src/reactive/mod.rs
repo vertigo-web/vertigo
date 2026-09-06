@@ -7,6 +7,7 @@
 //!
 //! Domain invariants for this bounded context: [`invariants`].
 
+mod by_rc;
 mod computed;
 mod context;
 mod drop_resource;
@@ -16,6 +17,7 @@ pub mod invariants {}
 mod to_computed;
 mod value;
 
+pub use by_rc::ByRc;
 pub use computed::Computed;
 pub use context::Context;
 pub use drop_resource::DropResource;

@@ -45,6 +45,8 @@ breaking change and the mechanism behind the performance numbers. See also the
   cutoff. See the [guide][reactive-graph]
 * `reactive::transaction` and `reactive::on_after_transaction`
 * `GraphId` - identity of a `Value` or `Computed`
+* `ByRc` - an `Rc` compared by pointer identity, so a handle owning something incomparable
+  (a `DropResource`, a callback, a subscription) can still live in a `Computed`
 * `RenderValue` - trait form of `render_value` / `render_value_option`, for generic code
 * `keyed_computed_list` and `KeyedListItem` - per-key `Computed`s from a reactive list,
   reusing the same `Computed` for a given key across updates (Solid `<For>`-style)
