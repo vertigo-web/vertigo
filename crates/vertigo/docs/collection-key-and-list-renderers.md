@@ -150,6 +150,29 @@ When `items` is updated:
 
 ---
 
+## Coming from 0.12
+
+The render closure receives a [`Computed`](crate::Computed) of the item rather than the item.
+In 0.12 it re-ran whenever an item's value changed under an unchanged key; now it runs once,
+when the key appears, and content updates reach the row through that `Computed`.
+
+A 0.12 closure therefore ports by wrapping its body in
+[`render_value`](crate::Computed::render_value):
+
+```rust,ignore
+// 0.12
+|item: &Item| dom! { <div>{ item.name.clone() }</div> }
+
+// 0.13
+|item: &Computed<Item>| item.render_value(|item| dom! { <div>{ item.name }</div> })
+```
+
+Reading the value out instead — `let item = transaction(|ctx| item.get(ctx));` — compiles, but
+it is a plain read rather than a subscription: the row renders once with its initial value and
+then never updates. Reach for it only when the row is genuinely constant for its key.
+
+---
+
 ## Public surface (what you can use directly)
 
 | Item                          | Exported as                              |

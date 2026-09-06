@@ -14,6 +14,12 @@ use crate::{
 ///
 /// Duplicate keys are skipped (first occurrence is kept).
 ///
+/// Coming from 0.12, where the closure re-ran whenever an item's value changed under an
+/// unchanged key: wrap the old body in `render_value`. Reading the value out with
+/// `transaction(|ctx| item.get(ctx))` compiles but is a plain read rather than a
+/// subscription, so the row renders once and then never updates — use it only for a row
+/// that is constant for its key.
+///
 /// ```rust
 /// use vertigo::{dom, Value, render::render_list};
 ///

@@ -111,7 +111,7 @@ pub use fetch::{
 };
 pub use instant::{Instant, InstantType};
 pub use keyed_computed_list::{KeyedListItem, keyed_computed_list};
-pub use reactive::{Computed, Context, DropResource, GraphId, Reactive, ToComputed, Value};
+pub use reactive::{ByRc, Computed, Context, DropResource, GraphId, Reactive, ToComputed, Value};
 pub use render::RenderValue;
 pub use render::collection::CollectionKey;
 pub use websocket::{WebsocketConnection, WebsocketMessage};
