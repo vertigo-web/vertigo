@@ -27,3 +27,6 @@ path = "dom-bench/tests.rs"
 [[test]]
 name = "demo"
 path = "demo/tests.rs"
+
+# Deliberately does NOT inherit [workspace.lints]: test code relies on unwrap()/expect().
+[lints]

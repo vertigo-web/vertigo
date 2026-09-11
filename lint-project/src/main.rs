@@ -21,8 +21,15 @@ fn log_error(message: impl Into<String>) {
 
 fn visit_dirs(result: &mut Vec<String>, dir: &Path) {
     if dir.is_dir() {
-        for entry in fs::read_dir(dir).unwrap() {
-            let entry = entry.unwrap();
+        let entries = match fs::read_dir(dir) {
+            Ok(entries) => entries,
+            Err(error) => {
+                log_error(format!("Error reading directory {dir:?}: {error}"));
+                return;
+            }
+        };
+
+        for entry in entries.flatten() {
             let path = entry.path();
             visit_dirs(result, &path);
         }
@@ -40,9 +47,7 @@ fn visit_dirs(result: &mut Vec<String>, dir: &Path) {
             return;
         }
 
-        if let Some(ext) = dir.extension() {
-            let ext_str = ext.to_str().unwrap();
-
+        if let Some(ext_str) = dir.extension().and_then(|ext| ext.to_str()) {
             for pattern_ext in EXTENSIONS_IGNORED {
                 if pattern_ext.trim() == ext_str.trim() {
                     return;
@@ -50,9 +55,7 @@ fn visit_dirs(result: &mut Vec<String>, dir: &Path) {
             }
         }
 
-        if let Some(name) = dir.file_name() {
-            let name_str = name.to_str().unwrap();
-
+        if let Some(name_str) = dir.file_name().and_then(|name| name.to_str()) {
             for pattern_ext in IGNORE_NAME {
                 if pattern_ext.trim() == name_str.trim() {
                     return;
@@ -150,7 +153,13 @@ fn test_file(errors_counter: &mut u64, file_path: &String, content: String) {
 }
 
 fn main() {
-    let current = current_dir().unwrap();
+    let current = match current_dir() {
+        Ok(current) => current,
+        Err(error) => {
+            log_error(format!("Error reading current directory: {error}"));
+            return;
+        }
+    };
     println!("Linting current_dir={current:?} ...");
 
     let mut result = Vec::new();

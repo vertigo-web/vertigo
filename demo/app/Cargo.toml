@@ -9,3 +9,6 @@ crate-type = ["cdylib", "rlib"]
 [dependencies]
 log = "0.4"
 vertigo = { workspace = true }
+
+[lints]
+workspace = true

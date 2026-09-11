@@ -98,10 +98,7 @@ pub async fn run(mut opts: WatchOpts) -> Result<(), ErrorCode> {
                         }
                     }
                     // Check against ignore lists and custom excludes
-                    if ignore_agents.should_be_ignored(path) {
-                        return true;
-                    }
-                    false
+                    ignore_agents.should_be_ignored(path)
                 }) {
                     return;
                 }
