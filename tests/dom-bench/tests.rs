@@ -13,6 +13,7 @@
 use std::{collections::BTreeMap, time::Duration};
 
 use fantoccini::{Client, ClientBuilder, Locator};
+use fantoccini_tests::{Ctx, TestResult};
 use vertigo_cli::{BuildOpts, CommonOpts, ServeOpts, build, serve};
 
 /// Distinct from `basic` (5555) and `reactive_bench` (5556): cargo may run the three test
@@ -72,7 +73,7 @@ impl Reported {
 
 #[tokio::test]
 #[ignore]
-async fn dom_bench() {
+async fn dom_bench() -> TestResult {
     // Go to project root
     let _ = std::env::set_current_dir("..");
 
@@ -142,18 +143,18 @@ async fn dom_bench() {
     let client = ClientBuilder::native()
         .connect("http://localhost:9515")
         .await
-        .expect("failed to connect to WebDriver - is chromedriver running on :9515?");
+        .ctx("failed to connect to WebDriver - is chromedriver running on :9515?")?;
 
     let site_url = format!("http://127.0.0.1:{PORT}/");
     println!("Opening {site_url}");
-    client.goto(&site_url).await.expect("goto failed");
+    client.goto(&site_url).await.ctx("goto failed")?;
 
     println!("Waiting for the benchmark to finish (timeout {RUN_TIMEOUT:?})");
     wait_for_done(&client, RUN_TIMEOUT).await;
 
     let report = text_of(&client, "bench-report")
         .await
-        .expect("#bench-report missing");
+        .ctx("#bench-report missing")?;
     let user_agent = text_of(&client, "bench-ua").await.unwrap_or_default();
     let total_ms = text_of(&client, "bench-total-ms").await.unwrap_or_default();
 
@@ -161,7 +162,7 @@ async fn dom_bench() {
 
     print_table(&rows, &user_agent, &total_ms);
 
-    client.close().await.expect("close failed");
+    client.close().await.ctx("close failed")?;
     sender.send(1).ok();
     tokio::time::sleep(Duration::from_secs(1)).await;
 
@@ -192,6 +193,8 @@ async fn dom_bench() {
             row.slug, row.leaked
         );
     }
+
+    Ok(())
 }
 
 /// Writes performed per operation. This is what makes "one operation is a pair" checkable

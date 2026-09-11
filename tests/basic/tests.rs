@@ -1,4 +1,5 @@
 use fantoccini::{ClientBuilder, Locator};
+use fantoccini_tests::{Ctx, TestResult};
 use std::time::Duration;
 use vertigo_cli::{BuildOpts, CommonOpts, ServeOpts, build, serve};
 
@@ -6,7 +7,7 @@ const PORT: u16 = 5555;
 
 #[tokio::test]
 #[ignore]
-async fn basic() {
+async fn basic() -> TestResult {
     // Go to project root
     let _ = std::env::set_current_dir("..");
 
@@ -81,15 +82,15 @@ async fn basic() {
     let c = ClientBuilder::native()
         .connect("http://localhost:9515")
         .await
-        .expect("failed to connect to WebDriver");
+        .ctx("failed to connect to WebDriver")?;
 
     println!("Opening site");
 
     let site_url = format!("http://127.0.0.1:{PORT}/");
 
-    c.goto(&site_url).await.expect("goto failed");
+    c.goto(&site_url).await.ctx("goto failed")?;
 
-    let url = c.current_url().await.expect("current_url failed");
+    let url = c.current_url().await.ctx("current_url failed")?;
 
     assert_eq!(url.as_ref(), site_url);
 
@@ -102,21 +103,21 @@ async fn basic() {
     // Find "row-2"
     c.find(Locator::Id("row-2"))
         .await
-        .expect("find row-2 failed");
+        .ctx("find row-2 failed")?;
 
     // Heatup
     c.find(Locator::Id("generate"))
         .await
-        .expect("heatup: find generate button failed")
+        .ctx("heatup: find generate button failed")?
         .click()
         .await
-        .expect("heatup: click generate failed");
+        .ctx("heatup: click generate failed")?;
     c.find(Locator::Id("clear"))
         .await
-        .expect("heatup:  find clear button failed")
+        .ctx("heatup:  find clear button failed")?
         .click()
         .await
-        .expect("heatup: click clear failed");
+        .ctx("heatup: click clear failed")?;
 
     // *** Div1 test ***
     let start = std::time::Instant::now();
@@ -124,10 +125,10 @@ async fn basic() {
     // click "Generate"
     c.find(Locator::Id("generate"))
         .await
-        .expect("div: find generate button failed")
+        .ctx("div: find generate button failed")?
         .click()
         .await
-        .expect("div: click generate failed");
+        .ctx("div: click generate failed")?;
 
     let click_time = start.elapsed();
 
@@ -135,7 +136,7 @@ async fn basic() {
 
     c.find(Locator::Id("row-9999"))
         .await
-        .expect("div: find row-9999 failed");
+        .ctx("div: find row-9999 failed")?;
 
     let row999_time = start.elapsed();
 
@@ -147,16 +148,16 @@ async fn basic() {
     // Change mode
     c.find(Locator::Id("clear"))
         .await
-        .expect("find clear button failed")
+        .ctx("find clear button failed")?
         .click()
         .await
-        .expect("click clear failed");
+        .ctx("click clear failed")?;
     c.find(Locator::Id("mode_div4"))
         .await
-        .expect("find mode_div4 button failed")
+        .ctx("find mode_div4 button failed")?
         .click()
         .await
-        .expect("click mode_div4 failed");
+        .ctx("click mode_div4 failed")?;
 
     // *** Div4 test ***
     let start = std::time::Instant::now();
@@ -165,10 +166,10 @@ async fn basic() {
     {
         c.find(Locator::Id("generate"))
             .await
-            .expect("div4: find generate button failed")
+            .ctx("div4: find generate button failed")?
             .click()
             .await
-            .expect("div4: click generate failed");
+            .ctx("div4: click generate failed")?;
 
         let click_time = start.elapsed();
 
@@ -176,7 +177,7 @@ async fn basic() {
 
         c.find(Locator::Id("row-9999"))
             .await
-            .expect("div4: find row-9999 failed");
+            .ctx("div4: find row-9999 failed")?;
 
         let row999_time = start.elapsed();
 
@@ -190,10 +191,10 @@ async fn basic() {
     {
         c.find(Locator::Id("generate"))
             .await
-            .expect("div4: find generate button failed")
+            .ctx("div4: find generate button failed")?
             .click()
             .await
-            .expect("div4-2: click generate failed");
+            .ctx("div4-2: click generate failed")?;
 
         let click_time = start.elapsed();
 
@@ -201,7 +202,7 @@ async fn basic() {
 
         c.find(Locator::Id("row-9999"))
             .await
-            .expect("div4-2: find row-9999 failed");
+            .ctx("div4-2: find row-9999 failed")?;
 
         let row999_time = start.elapsed();
 
@@ -213,10 +214,12 @@ async fn basic() {
 
     println!("Closing browser");
 
-    c.close().await.expect("close failed");
+    c.close().await.ctx("close failed")?;
 
-    sender.send(1).unwrap();
+    sender.send(1).ctx("stopping the serve thread")?;
 
     println!("Sleeping for a second waiting for vertigo-cli to stop");
     tokio::time::sleep(tokio::time::Duration::from_secs(1)).await;
+
+    Ok(())
 }

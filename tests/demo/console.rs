@@ -9,6 +9,7 @@
 //! So: record everything the console complains about, and require the tally to be empty.
 
 use fantoccini::Client;
+use fantoccini_tests::{Ctx, TestResult};
 use serde_json::Value;
 
 /// Installs the recorder. Anything the page reports from here on is collected into
@@ -18,7 +19,7 @@ use serde_json::Value;
 /// possibly before the wasm has finished booting - so it usually, but not certainly, catches a
 /// boot-time failure. The landmark assertions cover that case from the other side: a demo that
 /// failed to boot renders nothing to find.
-pub async fn install(client: &Client) {
+pub async fn install(client: &Client) -> TestResult {
     client
         .execute(
             r#"
@@ -45,7 +46,9 @@ pub async fn install(client: &Client) {
             vec![],
         )
         .await
-        .expect("installing the console recorder failed");
+        .ctx("installing the console recorder failed")?;
+
+    Ok(())
 }
 
 /// Patterns that are the environment misbehaving rather than the app.
@@ -100,14 +103,14 @@ fn is_allowed(message: &str) -> bool {
 /// Drained rather than merely read, and called after every tab rather than once at the end, so
 /// that a message names the tab that produced it. A single check at the end would say only
 /// that something, somewhere, went wrong.
-pub async fn assert_clean(client: &Client, stage: &str) {
+pub async fn assert_clean(client: &Client, stage: &str) -> TestResult {
     let recorded = client
         .execute(
             "const found = window.__vertigoErrors || []; window.__vertigoErrors = []; return found;",
             vec![],
         )
         .await
-        .expect("reading the console recorder failed");
+        .ctx("reading the console recorder failed")?;
 
     let Value::Array(entries) = recorded else {
         panic!("the console recorder returned {recorded:?} rather than an array");
@@ -161,4 +164,6 @@ pub async fn assert_clean(client: &Client, stage: &str) {
             .collect::<Vec<_>>()
             .join("\n"),
     );
+
+    Ok(())
 }

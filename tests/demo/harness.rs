@@ -7,6 +7,7 @@
 use std::time::Duration;
 
 use fantoccini::{Client, ClientBuilder, Locator, elements::Element, error::CmdError};
+use fantoccini_tests::{Ctx, TestResult};
 use serde_json::{Map, json};
 use tokio::sync::oneshot;
 use vertigo_cli::{BuildOpts, CommonOpts, ServeOpts, build, serve};
@@ -47,14 +48,14 @@ pub struct Harness {
 }
 
 impl Harness {
-    pub async fn start() -> Harness {
+    pub async fn start() -> TestResult<Harness> {
         // Go to project root
         let _ = std::env::set_current_dir("..");
 
         println!("Starting the demo API server on port {API_PORT}");
 
         let api = vertigo_demo_server::start_background("127.0.0.1", API_PORT)
-            .expect("could not start the demo API server");
+            .ctx("could not start the demo API server")?;
 
         println!("Building {PACKAGE}");
 
@@ -149,7 +150,7 @@ impl Harness {
             .capabilities(capabilities)
             .connect(WEBDRIVER)
             .await
-            .expect("failed to connect to WebDriver - is chromedriver running on :9515?");
+            .ctx("failed to connect to WebDriver - is chromedriver running on :9515?")?;
 
         // Wide enough that the demo's flex rows are not permanently squeezed.
         //
@@ -160,23 +161,23 @@ impl Harness {
         client
             .set_window_size(WINDOW_WIDTH, WINDOW_HEIGHT)
             .await
-            .expect("could not size the browser window");
+            .ctx("could not size the browser window")?;
 
         let site_url = format!("http://127.0.0.1:{SERVE_PORT}/");
         println!("Opening {site_url}");
-        client.goto(&site_url).await.expect("goto failed");
+        client.goto(&site_url).await.ctx("goto failed")?;
 
-        Harness {
+        Ok(Harness {
             client,
             site_url,
             api,
             serve_stop: Some(serve_stop),
-        }
+        })
     }
 
-    pub async fn finish(mut self) {
+    pub async fn finish(mut self) -> TestResult {
         println!("Closing the browser");
-        self.client.close().await.expect("close failed");
+        self.client.close().await.ctx("close failed")?;
 
         if let Some(stop) = self.serve_stop.take() {
             stop.send(1).ok();
@@ -184,6 +185,8 @@ impl Harness {
         self.api.stop(false).await;
 
         tokio::time::sleep(Duration::from_secs(1)).await;
+
+        Ok(())
     }
 }
 
@@ -219,7 +222,7 @@ async fn wait_for_listener(port: u16) {
 pub async fn wait_until<F, Fut>(what: &str, mut check: F)
 where
     F: FnMut() -> Fut,
-    Fut: Future<Output = Result<bool, CmdError>>,
+    Fut: Future<Output = TestResult<bool>>,
 {
     let deadline = std::time::Instant::now() + SETTLE;
 
@@ -402,13 +405,15 @@ pub async fn click_by_text(client: &Client, selector: &str, text: &str) {
 /// reach the page as an `input` event, and everything in this demo learns about a change from
 /// one - emptying a field with `clear` looks to the app like nothing happened. The escapes are
 /// the WebDriver key codes for Control, NULL (which releases held modifiers) and Backspace.
-pub async fn retype(element: &Element, text: &str) {
+pub async fn retype(element: &Element, text: &str) -> TestResult {
     element
         .send_keys("\u{E009}a\u{E000}\u{E003}")
         .await
-        .expect("clearing the field failed");
+        .ctx("clearing the field failed")?;
 
     if !text.is_empty() {
-        element.send_keys(text).await.expect("send_keys failed");
+        element.send_keys(text).await.ctx("send_keys failed")?;
     }
+
+    Ok(())
 }
