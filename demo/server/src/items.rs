@@ -1,5 +1,5 @@
 use std::collections::HashMap;
-use std::sync::Mutex;
+use std::sync::{Mutex, MutexGuard};
 
 use actix_web::{HttpResponse, Responder, web};
 use serde::{Deserialize, Serialize};
@@ -36,6 +36,12 @@ pub fn new_state() -> ItemsData {
     web::Data::new(Mutex::new(ItemsState { items, next_id: 4 }))
 }
 
+fn lock_state(data: &ItemsData) -> MutexGuard<'_, ItemsState> {
+    // A poisoned lock only means a previous handler panicked; the demo state
+    // stays consistent, so recover rather than cascade the panic.
+    data.lock().unwrap_or_else(|poisoned| poisoned.into_inner())
+}
+
 fn sorted_items(state: &ItemsState) -> Vec<Item> {
     let mut list: Vec<Item> = state.items.values().cloned().collect();
     list.sort_by_key(|i| i.id);
@@ -43,12 +49,12 @@ fn sorted_items(state: &ItemsState) -> Vec<Item> {
 }
 
 pub async fn list(data: ItemsData) -> impl Responder {
-    let state = data.lock().unwrap();
+    let state = lock_state(&data);
     HttpResponse::Ok().json(sorted_items(&state))
 }
 
 pub async fn get_one(id: web::Path<u32>, data: ItemsData) -> impl Responder {
-    let state = data.lock().unwrap();
+    let state = lock_state(&data);
     match state.items.get(&id.into_inner()) {
         Some(item) => HttpResponse::Ok().json(item),
         None => HttpResponse::NotFound().finish(),
@@ -56,7 +62,7 @@ pub async fn get_one(id: web::Path<u32>, data: ItemsData) -> impl Responder {
 }
 
 pub async fn create(body: web::Json<NewItem>, data: ItemsData) -> impl Responder {
-    let mut state = data.lock().unwrap();
+    let mut state = lock_state(&data);
     let id = state.next_id;
     state.next_id += 1;
     let item = Item {
@@ -73,7 +79,7 @@ pub async fn update(
     data: ItemsData,
 ) -> impl Responder {
     let id = id.into_inner();
-    let mut state = data.lock().unwrap();
+    let mut state = lock_state(&data);
     match state.items.get_mut(&id) {
         Some(item) => {
             item.name = body.into_inner().name;
@@ -84,7 +90,7 @@ pub async fn update(
 }
 
 pub async fn delete(id: web::Path<u32>, data: ItemsData) -> impl Responder {
-    let mut state = data.lock().unwrap();
+    let mut state = lock_state(&data);
     match state.items.remove(&id.into_inner()) {
         Some(_) => HttpResponse::NoContent().finish(),
         None => HttpResponse::NotFound().finish(),

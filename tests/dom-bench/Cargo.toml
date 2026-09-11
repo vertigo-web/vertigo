@@ -11,3 +11,6 @@ crate-type = ["cdylib", "rlib"]
 [dependencies]
 vertigo = { path = "../../crates/vertigo" }
 vertigo-bench-support = { path = "../bench-support" }
+
+# Deliberately does NOT inherit [workspace.lints]: test code relies on unwrap()/expect().
+[lints]

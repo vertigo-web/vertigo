@@ -7,3 +7,6 @@ publish = false
 
 [dependencies]
 vertigo = { path = "../../crates/vertigo" }
+
+[lints]
+workspace = true

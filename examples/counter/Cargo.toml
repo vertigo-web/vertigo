@@ -8,3 +8,6 @@ crate-type = ["cdylib", "rlib"]
 
 [dependencies]
 vertigo = { workspace = true }
+
+[lints]
+workspace = true
