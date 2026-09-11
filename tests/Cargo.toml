@@ -5,6 +5,10 @@ authors = ["Michał Pokrywka <wolfmoon@o2.pl>"]
 edition = "2024"
 publish = false
 
+[lib]
+name = "fantoccini_tests"
+path = "lib.rs"
+
 [dev-dependencies]
 fantoccini = "0.22"
 vertigo-cli = { path = "../crates/vertigo-cli" }
@@ -28,5 +32,5 @@ path = "dom-bench/tests.rs"
 name = "demo"
 path = "demo/tests.rs"
 
-# Deliberately does NOT inherit [workspace.lints]: test code relies on unwrap()/expect().
 [lints]
+workspace = true

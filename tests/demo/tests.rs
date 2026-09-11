@@ -22,15 +22,17 @@ mod harness;
 mod ssr;
 mod tabs;
 
+use fantoccini_tests::TestResult;
+
 use harness::{Harness, wait_for_text};
 
 #[tokio::test]
 #[ignore]
-async fn demo() {
-    let harness = Harness::start().await;
+async fn demo() -> TestResult {
+    let harness = Harness::start().await?;
     let client = &harness.client;
 
-    console::install(client).await;
+    console::install(client).await?;
 
     // The menu is rendered by the app, so finding every entry is already a statement that the
     // wasm booted and took over from the server-rendered HTML.
@@ -44,8 +46,8 @@ async fn demo() {
     // produced it rather than the run as a whole.
     macro_rules! step {
         ($name:literal, $call:expr) => {{
-            $call.await;
-            console::assert_clean(client, $name).await;
+            $call.await?;
+            console::assert_clean(client, $name).await?;
         }};
     }
 
@@ -94,5 +96,7 @@ async fn demo() {
         ssr::robots_txt(client, &harness.site_url)
     );
 
-    harness.finish().await;
+    harness.finish().await?;
+
+    Ok(())
 }
