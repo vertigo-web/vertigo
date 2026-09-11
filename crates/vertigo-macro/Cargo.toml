@@ -12,23 +12,23 @@ name = "vertigo_macro"
 proc-macro = true
 
 [dependencies]
-base64 = "0.22"
+base64 = "0.23"
 crc = "3.4"
-darling = "0.23"
+darling = "0.24"
 heck = "0.5"
-itertools = "0.14"
-minreq = { version = "2.14", features = ["https-rustls"] }
-pest = "2.8"
-pest_derive = "2.8"
+itertools = "0.15"
+minreq = { version = "3.0", features = ["https-rustls"] }
+pest = "2.9"
+pest_derive = "2.9"
 pkg-version = "1"
 proc-macro-error = "1.0"
 proc-macro2 = "1.0"
 quote = "1.0"
-rstml = "0.12"
-syn = { version = "2.0", features = ["full"] }
+rstml = "0.13"
+syn = { version = "3.0", features = ["full"] }
 
 [dev-dependencies]
-prettyplease = "0.2"
+prettyplease = "0.3"
 pretty_assertions = "1.4"
 
 [lints]

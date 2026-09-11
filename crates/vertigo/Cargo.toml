@@ -12,7 +12,7 @@ license.workspace = true
 edition.workspace = true
 
 [dependencies]
-base64 = { version = "0.22", default-features = false, features = ["alloc"] }
+base64 = { version = "0.23", default-features = false, features = ["alloc"] }
 log = { version = "0.4", features = ["std"] }
 vertigo-macro = { workspace = true }
 
