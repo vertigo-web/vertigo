@@ -127,13 +127,13 @@ impl Graph {
         // A transaction opened from inside a wave (`subscribe`, `Value::change`, or any
         // render running in a callback) is outermost by depth but is not a new wave, and
         // must leave the running wave's bookkeeping alone.
-        let outermost = self.inner.tx.enter();
+        let (outermost, guard) = self.inner.tx.enter();
         if outermost && !self.inner.tx.is_propagating() {
             self.inner.dirty.begin_wave();
         }
         let ctx = Context::read();
         let result = f(&ctx);
-        if let Some(leave) = self.inner.tx.leave() {
+        if let Some(leave) = guard.leave() {
             self.inner.propagate();
             if !leave.already_propagating {
                 self.inner.hooks.fire();

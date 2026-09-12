@@ -20,6 +20,16 @@ impl Element {
     pub fn new(name: impl Into<String>) -> Self {
         let name = name.into();
 
+        // `svg:a` etc. disambiguate at the `dom!` level.
+        // In markup the namespace comes from sitting inside `<svg>`.
+        // To a parser `<svg:a>` is not an SVG anchor but an unknown element with a colon.
+        // The browser-side applier strips it the same way (`createElement` in `tags.ts`),
+        // and hydration can only pair the two up if they agree here.
+        let name = match name.strip_prefix("svg:") {
+            Some(stripped) => stripped.to_string(),
+            None => name,
+        };
+
         Element {
             name,
             attr: BTreeMap::new(),

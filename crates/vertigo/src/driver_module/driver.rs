@@ -107,6 +107,18 @@ impl Driver {
         self.subscription.set(Some(root_view));
     }
 
+    /// Hands the mounted tree back, so it can be dropped deliberately.
+    ///
+    /// In the browser the app owns its tree until the tab closes, so nothing calls this. On
+    /// the host it matters: `Driver` lives in a thread-local, and dropping a `DomNode` emits
+    /// removal commands through *another* thread-local. Left to run at thread teardown those
+    /// two race on destruction order, and reaching an already-dropped store aborts the
+    /// process. Tests that mount call this before they finish.
+    #[cfg(test)]
+    pub(crate) fn take_root(&self) -> Option<DomNode> {
+        self.subscription.change(|root| root.take())
+    }
+
     /// Gets a cookie by name
     pub fn cookie_get(&self, cname: &str) -> String {
         api_browser_command().cookie_get(cname.into())
