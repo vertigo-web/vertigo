@@ -63,6 +63,104 @@ pub async fn hydration(client: &Client, site_url: &str) -> TestResult {
     Ok(())
 }
 
+/// What hydration reported it did, read back from the page.
+///
+/// `window.__vertigo_hydration` exists for this: the wasm boots asynchronously, so there is no
+/// moment at which the test could install a shim on `console.log` and be sure of catching the
+/// line hydration prints. A value parked on `window` can be read whenever.
+#[derive(Debug)]
+struct HydrationReport {
+    root_found: bool,
+    matched: u64,
+    hydratable: u64,
+    skipped: u64,
+    total: u64,
+}
+
+async fn hydration_report(client: &Client) -> TestResult<HydrationReport> {
+    let raw = client
+        .execute("return window.__vertigo_hydration ?? null;", vec![])
+        .await
+        .ctx("reading window.__vertigo_hydration failed")?;
+
+    if raw.is_null() {
+        return Err("the page published no hydration report - did the wasm boot?".into());
+    }
+
+    let field = |name: &str| -> TestResult<u64> {
+        raw.get(name)
+            .and_then(|value| value.as_u64())
+            .ctx(format!("hydration report has no numeric {name:?}: {raw}"))
+    };
+
+    Ok(HydrationReport {
+        root_found: raw
+            .get("rootFound")
+            .and_then(|value| value.as_bool())
+            .ctx(format!(
+                "hydration report has no boolean \"rootFound\": {raw}"
+            ))?,
+        matched: field("matched")?,
+        hydratable: field("hydratable")?,
+        skipped: field("skipped")?,
+        total: field("total")?,
+    })
+}
+
+/// Every server-rendered node on a route should be adopted, not rebuilt.
+///
+/// This is the check that says hydration *happened*. The one above asserts the tree it ends up
+/// with, which a full client-side rebuild satisfies just as well - so it passed throughout the
+/// period when the first DOM batch reached the browser without `<body>` in it, hydration
+/// matched nothing, and the server's markup was thrown away wholesale.
+pub async fn hydration_is_complete(client: &Client, site_url: &str) -> TestResult {
+    println!("  -> SSR hydration coverage");
+
+    // `/svg` is in here deliberately: SVG elements keep their own casing in `tagName`, so
+    // matching them against an uppercased name never succeeded and the whole subtree was
+    // deleted and rebuilt.
+    for route in ["", "svg"] {
+        let url = format!("{site_url}{route}");
+        client
+            .goto(&url)
+            .await
+            .ctx(format!("goto /{route} failed"))?;
+        crate::console::install(client).await?;
+
+        // Only true once the wasm has taken over, so the report below is the finished one.
+        wait_for_text(client, "Game Of Life").await;
+
+        let report = hydration_report(client).await?;
+
+        assert!(
+            report.root_found,
+            "/{route}: hydration never found <body> in the first DOM batch, so the \
+             server-rendered markup was replaced instead of adopted - {report:?}"
+        );
+
+        assert!(
+            report.hydratable > 0,
+            "/{route}: nothing to hydrate, which means this check proves nothing - {report:?}"
+        );
+
+        assert_eq!(
+            report.matched,
+            report.hydratable,
+            "/{route}: hydration left {} of {} vnodes unmatched, so that much of the \
+             server-rendered page was rebuilt - {report:?}",
+            report.hydratable - report.matched,
+            report.hydratable,
+        );
+
+        println!(
+            "     /{route}: {}/{} matched, {} markers skipped, {} vnodes in batch",
+            report.matched, report.hydratable, report.skipped, report.total
+        );
+    }
+
+    Ok(())
+}
+
 async fn read_values(fields: &[fantoccini::elements::Element]) -> TestResult<Vec<String>> {
     let mut values = Vec::new();
 

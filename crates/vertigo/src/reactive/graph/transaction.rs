@@ -25,6 +25,34 @@ impl Drop for Propagating<'_> {
     }
 }
 
+/// Restores the transaction depth if the transaction body unwinds.
+///
+/// The normal path goes through [`Self::leave`], which also reports whether this was the
+/// outermost level so the caller can run the wave. A panic has nobody to report to, and
+/// propagating over half-applied state would be worse than not propagating at all - so an
+/// unwind only restores the depth. Without this, one panic inside a transaction would leave
+/// the depth above zero forever and the graph would never propagate again.
+pub(super) struct DepthGuard<'a> {
+    tx: &'a Transaction,
+    armed: bool,
+}
+
+impl DepthGuard<'_> {
+    /// Close the level normally. `Some` when this was the outermost transaction.
+    pub(super) fn leave(mut self) -> Option<OuterLeave> {
+        self.armed = false;
+        self.tx.leave()
+    }
+}
+
+impl Drop for DepthGuard<'_> {
+    fn drop(&mut self) {
+        if self.armed {
+            self.tx.leave();
+        }
+    }
+}
+
 /// Decrements callback depth when a `compute` / `subscribe` closure returns (including panic).
 pub(crate) struct CallbackGuard<'a> {
     tx: &'a Transaction,
@@ -46,14 +74,23 @@ impl Transaction {
     }
 
     /// Increment nesting. `true` when this opened the outermost transaction.
-    pub(super) fn enter(&self) -> bool {
+    ///
+    /// The guard restores the depth if the transaction body unwinds; close the level normally
+    /// with [`DepthGuard::leave`].
+    pub(super) fn enter(&self) -> (bool, DepthGuard<'_>) {
         let depth = self.depth.get();
         self.depth.set(depth + 1);
-        depth == 0
+        (
+            depth == 0,
+            DepthGuard {
+                tx: self,
+                armed: true,
+            },
+        )
     }
 
     /// Close one nesting level. `Some` when this was the outermost transaction.
-    pub(super) fn leave(&self) -> Option<OuterLeave> {
+    fn leave(&self) -> Option<OuterLeave> {
         let depth = self.depth.get();
         debug_assert!(depth > 0);
         self.depth.set(depth - 1);

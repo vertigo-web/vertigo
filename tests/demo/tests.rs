@@ -84,6 +84,10 @@ async fn demo() -> TestResult {
         ssr::hydration(client, &harness.site_url)
     );
     step!(
+        "the SSR hydration coverage check",
+        ssr::hydration_is_complete(client, &harness.site_url)
+    );
+    step!(
         "the SSR fetch cache check",
         ssr::fetch_cache(client, &harness.site_url)
     );

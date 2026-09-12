@@ -114,7 +114,7 @@ tasks:
     desc: JavaScript dev build
     cmds:
       - npm install
-      - npm run test:hydration
+      - npm run test
 
   js-build:
     desc: Js build

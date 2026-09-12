@@ -42,7 +42,21 @@ class MockElement extends MockNode {
     }
     setAttribute(name: string, value: string) { this.attributes.set(name, value); }
     getAttribute(name: string) { return this.attributes.get(name); }
+    removeAttribute(name: string) { this.attributes.delete(name); }
+    getAttributeNames() { return Array.from(this.attributes.keys()); }
     addEventListener(_event: string, _callback: (e: any) => void) { }
+}
+
+/// An element in the SVG namespace.
+///
+/// The distinction that matters here is the only one hydration can see: `createElementNS`
+/// keeps the case it was given, and the HTML parser adjusts server-rendered SVG the same way,
+/// so these report `tagName` as "svg" / "path" / "linearGradient" - never uppercased.
+class MockSvgElement extends MockElement {
+    constructor(tagName: string) {
+        super(tagName);
+        this.tagName = tagName;
+    }
 }
 
 class MockText extends MockNode {
@@ -222,8 +236,194 @@ function testAttributeMismatch() {
     assert(divNode.getAttribute('class') === 'new', "Attributes updated");
 }
 
+// 5. SVG keeps its own casing
+function testSvgHydration() {
+    console.log("\n--- Test hydration 5: SVG tag names ---");
+    clearBody();
+
+    // DOM: <svg><path/><linearGradient/></svg>, as the HTML parser builds it from SSR markup.
+    const svg = new MockSvgElement('svg');
+    const path = new MockSvgElement('path');
+    const gradient = new MockSvgElement('linearGradient');
+    svg.appendChild(path);
+    svg.appendChild(gradient);
+    documentMock.body.appendChild(svg);
+
+    const commands: CommandType[] = [
+        { CreateNode: { id: 50, name: 'svg' } },
+        { CreateNode: { id: 51, name: 'path' } },
+        { CreateNode: { id: 52, name: 'linearGradient' } },
+        { InsertBefore: { parent: 3, child: 50, ref_id: null } },
+        { InsertBefore: { parent: 50, child: 51, ref_id: null } },
+        { InsertBefore: { parent: 50, child: 52, ref_id: null } },
+    ];
+
+    const mapNodes = new MapNodes();
+    const report = hydrate(commands, mapNodes, mockedApiLocation());
+
+    assert(mapNodes.getAnyOption(50) as any === svg, "<svg> claimed, not rebuilt");
+    assert(mapNodes.getAnyOption(51) as any === path, "<path> claimed");
+    assert(mapNodes.getAnyOption(52) as any === gradient, "<linearGradient> claimed");
+    assert(documentMock.body.childNodes.length === 1, "SVG subtree survived");
+    assert(report.matched === report.hydratable, "every SVG vnode matched");
+}
+
+// 6. The batch never contained <body>
+function testMissingRoot() {
+    console.log("\n--- Test hydration 6: Missing <body> in the batch ---");
+    clearBody();
+
+    const survivor = new MockElement('DIV');
+    documentMock.body.appendChild(survivor);
+
+    // A partial batch: a subtree that was never attached to the document roots.
+    const commands: CommandType[] = [
+        { CreateNode: { id: 60, name: 'div' } },
+        { CreateNode: { id: 61, name: 'a' } },
+        { InsertBefore: { parent: 60, child: 61, ref_id: null } },
+    ];
+
+    const errors: string[] = [];
+    const original = console.error;
+    console.error = (...args: any[]) => { errors.push(String(args[0])); };
+
+    let report;
+    try {
+        report = hydrate(commands, new MapNodes(), mockedApiLocation());
+    } finally {
+        console.error = original;
+    }
+
+    assert(report.rootFound === false, "rootFound is false");
+    assert(report.matched === 0, "nothing matched");
+    assert(errors.length === 1, "the cause was reported once");
+    assert(
+        errors[0] !== undefined && errors[0].includes("no <body>"),
+        "the error names the missing root rather than printing a bare 0 %",
+    );
+    assert(documentMock.body.childNodes.length === 1, "hydration left the DOM alone");
+}
+
+// 7. Marker comments do not count against the score
+function testMarkersAreNotCountedAgainstTheScore() {
+    console.log("\n--- Test hydration 7: Marker comments ---");
+    clearBody();
+
+    // The server strips comments from its output, so only the <div> is in the DOM.
+    const div = new MockElement('DIV');
+    documentMock.body.appendChild(div);
+
+    // id 71 is a `render_value` anchor: inserted, but never given a name or a value.
+    const commands: CommandType[] = [
+        { CreateNode: { id: 70, name: 'div' } },
+        { InsertBefore: { parent: 3, child: 70, ref_id: null } },
+        { InsertBefore: { parent: 3, child: 71, ref_id: null } },
+    ];
+
+    const report = hydrate(commands, new MapNodes(), mockedApiLocation());
+
+    assert(report.hydratable === 1, "only the <div> is hydratable");
+    assert(report.skipped === 1, "the marker is counted as skipped");
+    assert(report.matched === 1, "the <div> matched");
+    assert(report.matched === report.hydratable, "a fully matching batch scores 100%");
+    assert(report.total > report.hydratable, "...even though the batch mentions more ids");
+}
+
+// 8. A subtree created and dropped inside the same batch
+function testCreateThenRemoveInOneBatch() {
+    console.log("\n--- Test hydration 8: Create-then-remove churn ---");
+    clearBody();
+
+    // The server only ever rendered these two - the churned node was never in its output.
+    const first = new MockElement('DIV'); first.setAttribute('id', 'first');
+    const second = new MockElement('SPAN'); second.setAttribute('id', 'second');
+    documentMock.body.appendChild(first);
+    documentMock.body.appendChild(second);
+
+    const commands: CommandType[] = [
+        { CreateNode: { id: 80, name: 'div' } },
+        { InsertBefore: { parent: 3, child: 80, ref_id: null } },
+        // A subscriber re-ran during the mount: this was built and then dropped.
+        { CreateNode: { id: 81, name: 'p' } },
+        { InsertBefore: { parent: 3, child: 81, ref_id: null } },
+        { RemoveNode: { id: 81 } },
+        { CreateNode: { id: 82, name: 'span' } },
+        { InsertBefore: { parent: 3, child: 82, ref_id: null } },
+    ];
+
+    const mapNodes = new MapNodes();
+    const report = hydrate(commands, mapNodes, mockedApiLocation());
+
+    assert(mapNodes.getAnyOption(80) as any === first, "the <div> was claimed");
+    assert(
+        mapNodes.getAnyOption(82) as any === second,
+        "the <span> after the churn was claimed, not deleted while scanning past a ghost",
+    );
+    assert(documentMock.body.childNodes.length === 2, "both server nodes survived");
+    assert(report.matched === report.hydratable, "the removed node is not in the denominator");
+}
+
+// 9. UpdateText later in the same batch is the value that counts
+function testUpdateTextWins() {
+    console.log("\n--- Test hydration 9: UpdateText within the batch ---");
+    clearBody();
+
+    // What the server rendered - it replayed the whole batch, so it saw the final value.
+    const textNode = new MockText("final");
+    documentMock.body.appendChild(textNode);
+
+    const commands: CommandType[] = [
+        { CreateText: { id: 90, value: "stale" } },
+        { InsertBefore: { parent: 3, child: 90, ref_id: null } },
+        { UpdateText: { id: 90, value: "final" } },
+    ];
+
+    const mapNodes = new MapNodes();
+    hydrate(commands, mapNodes, mockedApiLocation());
+
+    assert(mapNodes.getAnyOption(90) as any === textNode, "the text node was claimed");
+    assert(
+        textNode.textContent === "final",
+        "the server's text was kept, not overwritten with the value CreateText carried",
+    );
+}
+
+// 10. Attributes the server rendered that this tree does not have
+function testStaleAttributeRemoved() {
+    console.log("\n--- Test hydration 10: Stale attribute on an adopted node ---");
+    clearBody();
+
+    // The server drew this anchor with an href; the browser's tree draws it without one.
+    const anchor = new MockElement('A');
+    anchor.setAttribute('href', '/server-only');
+    anchor.setAttribute('class', 'old');
+    documentMock.body.appendChild(anchor);
+
+    const commands: CommandType[] = [
+        { CreateNode: { id: 100, name: 'a' } },
+        { SetAttr: { id: 100, name: 'class', value: 'new' } },
+        { InsertBefore: { parent: 3, child: 100, ref_id: null } },
+    ];
+
+    const mapNodes = new MapNodes();
+    hydrate(commands, mapNodes, mockedApiLocation());
+
+    assert(mapNodes.getAnyOption(100) as any === anchor, "the anchor was adopted");
+    assert(anchor.getAttribute('class') === 'new', "the tracked attribute was updated");
+    assert(
+        anchor.getAttribute('href') === undefined,
+        "the server's href was dropped - adopting a node takes on its attributes in both directions",
+    );
+}
+
 // Run all tests
 testExtraNodes();
 testTextMismatch();
 testTagMismatch();
 testAttributeMismatch();
+testSvgHydration();
+testMissingRoot();
+testMarkersAreNotCountedAgainstTheScore();
+testCreateThenRemoveInOneBatch();
+testUpdateTextWins();
+testStaleAttributeRemoved();

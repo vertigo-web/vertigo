@@ -88,6 +88,15 @@ long it is, and is never cut.
 A `transaction` inside another `transaction` only writes and marks dirty.
 The wave starts when the outer call returns.
 
+That is also why a `Computed` read *inside* an open transaction can be stale: nothing has
+refreshed it yet, so `get` returns the cached value. A `Value` is always current — it is read
+straight from the cell. It only matters when the same transaction writes a value and then
+reads something computed from it, which is why the mount (`start_app`) wraps the whole tree in
+one transaction and does not write during it.
+
+If a transaction body panics, the nesting depth is restored but no wave runs: propagating over
+half-applied state would be worse than not propagating at all.
+
 ### 4. Unchanged values stop the update
 
 After a refresh, children run only if the new value is different (`PartialEq`).

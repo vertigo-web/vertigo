@@ -11,12 +11,31 @@ use crate::{
 
 /// Starting point of the app (used by [vertigo::main] macro, which is preferred)
 pub fn start_app(init_app: fn() -> DomNode) {
+    mount(init_app)
+}
+
+/// What [`start_app`] does, minus the `fn` pointer - so a test can drive it with a closure
+/// that captures.
+pub(crate) fn mount(init_app: impl FnOnce() -> DomNode) {
     init_env();
 
-    let root_view = init_app();
+    // Before the transaction, deliberately: `get_driver()` is what registers the flush hook,
+    // and the transaction below only suppresses mid-build flushes if it is the outermost one.
+    let driver = get_driver();
 
-    get_driver().set_root(root_view);
+    // The mount has to reach the browser as a single DOM batch. Hydration gets one shot, and
+    // it starts its walk from `<body>` - which is created late, after the whole `<head>`
+    // subtree and after anything the app built before reaching its top-level `dom!`.
+    // Without this transaction the first `Computed::subscribe` inside the tree closes an
+    // outermost transaction of its own, fires the flush hook, and ships a partial batch
+    // with no `<html>`/`<head>`/`<body>` in it.
+    driver.transaction(|_| {
+        let root_view = init_app();
+        driver.set_root(root_view);
+    });
 
+    // `flush_watch` - and so `when_connect` - runs *after* the hooks, so anything it queued is
+    // still sitting in the buffer. A no-op when the buffer is empty.
     get_driver_dom().flush_dom_changes();
 }
 

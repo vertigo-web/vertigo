@@ -1,6 +1,12 @@
 <!-- markdownlint-configure-file { "no-duplicate-heading": { "siblings_only": true } } -->
 
 <!-- markdownlint-disable-next-line first-line-h1 -->
+## 0.13.1 - Unreleased
+
+### Fixed
+
+* Hydration fail when the app subscribes to a value before the root `dom!` block.
+
 ## 0.13.0 - 2026-09-07
 
 The reactive graph was rewritten and keyed list rendering was rebuilt around per-key
