@@ -74,6 +74,8 @@ fn variant_index(command: &DriverDomCommand) -> usize {
         DriverDomCommand::RemoveComment { .. } => 10,
         DriverDomCommand::CallbackAdd { .. } => 11,
         DriverDomCommand::CallbackRemove { .. } => 12,
+        DriverDomCommand::NodeAdopt { .. } => 13,
+        DriverDomCommand::SnapshotRemove { .. } => 14,
     }
 }
 

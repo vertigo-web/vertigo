@@ -23,7 +23,7 @@ const FIXTURE = new Uint8Array([
     240, 159, 166, 128, 3, 5, 0, 8, 1, 4, 240, 162, 4, 8, 1, 4, 0, 9, 1, 2, 46, 97, 9, 99,
     111, 108, 111, 114, 58, 114, 101, 100, 9, 0, 14, 64, 109, 101, 100, 105, 97, 32, 112,
     114, 105, 110, 116, 123, 125, 10, 6, 3, 114, 111, 119, 11, 6, 6, 4, 7, 5, 12, 4, 5, 99,
-    108, 105, 99, 107, 77, 13, 4, 5, 99, 108, 105, 99, 107, 172, 2,
+    108, 105, 99, 107, 77, 13, 4, 5, 99, 108, 105, 99, 107, 172, 2, 14, 4, 0, 15, 172, 2,
 ]);
 
 const EXPECTED: Array<CommandType> = [
@@ -43,6 +43,8 @@ const EXPECTED: Array<CommandType> = [
     { RemoveText: { id: 5 } },
     { CallbackAdd: { id: 4, event_name: 'click', callback_id: 77 } },
     { CallbackRemove: { id: 4, event_name: 'click', callback_id: 300 } },
+    { NodeAdopt: { id: 4, snapshot: 0 } },
+    { SnapshotRemove: { snapshot: 300 } },
 ];
 
 console.log("\n--- Test dom wire: cross-language fixture ---");

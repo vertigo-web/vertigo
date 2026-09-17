@@ -211,6 +211,12 @@ impl DomDebugFragment {
                         node.callbacks.remove(&event_name);
                     });
                 }
+                DriverDomCommand::NodeAdopt { .. } => {
+                    // Not relevant for debug representation
+                }
+                DriverDomCommand::SnapshotRemove { .. } => {
+                    // Not relevant for debug representation
+                }
             }
         }
 

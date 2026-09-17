@@ -27,6 +27,8 @@ export const Tag = {
     RemoveComment: 11,
     CallbackAdd: 12,
     CallbackRemove: 13,
+    NodeAdopt: 14,
+    SnapshotRemove: 15,
 } as const;
 
 const decoder = new TextDecoder("utf-8");
@@ -196,6 +198,17 @@ export const decodeCommands = (bytes: Uint8Array): Array<CommandType> => {
                     },
                 });
                 break;
+            case Tag.NodeAdopt: {
+                const id = cursor.varint();
+                const snapshot = cursor.varint();
+                commands.push({ NodeAdopt: { id, snapshot } });
+                break;
+            }
+            case Tag.SnapshotRemove: {
+                const snapshot = cursor.varint();
+                commands.push({ SnapshotRemove: { snapshot } });
+                break;
+            }
             default:
                 throw new Error(`dom command: unknown tag ${tag}`);
         }

@@ -75,6 +75,10 @@ export type CommandType = {
         event_name: string,
         callback_id: number,
     }
+} | {
+    NodeAdopt: { id: number, snapshot: number }
+} | {
+    SnapshotRemove: { snapshot: number }
 };
 
 const applyFailed = (error: unknown, name: string): void => {
