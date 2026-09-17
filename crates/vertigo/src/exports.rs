@@ -23,20 +23,19 @@ pub(crate) fn mount(init_app: impl FnOnce() -> DomNode) {
     // and the transaction below only suppresses mid-build flushes if it is the outermost one.
     let driver = get_driver();
 
-    // The mount has to reach the browser as a single DOM batch. Hydration gets one shot, and
-    // it starts its walk from `<body>` - which is created late, after the whole `<head>`
-    // subtree and after anything the app built before reaching its top-level `dom!`.
-    // Without this transaction the first `Computed::subscribe` inside the tree closes an
-    // outermost transaction of its own, fires the flush hook, and ships a partial batch
-    // with no `<html>`/`<head>`/`<body>` in it.
+    // Nothing reaches the browser until the tree is complete: hydration compares the whole
+    // thing against the document the server rendered, so a partial flush would have it
+    // matching half a tree.
+    get_driver_dom().arm_hydration();
+
     driver.transaction(|_| {
         let root_view = init_app();
         driver.set_root(root_view);
     });
 
-    // `flush_watch` - and so `when_connect` - runs *after* the hooks, so anything it queued is
-    // still sitting in the buffer. A no-op when the buffer is empty.
-    get_driver_dom().flush_dom_changes();
+    // `flush_watch` - and so `when_connect` - runs *after* the hooks, so anything it queued
+    // is still sitting in the buffer. This is where the batch is reconciled and sent.
+    get_driver_dom().flush_hydration();
 }
 
 #[doc(hidden)]

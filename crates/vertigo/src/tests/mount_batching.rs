@@ -1,15 +1,17 @@
 //! The mount has to reach the browser as one DOM batch.
 //!
-//! Hydration gets a single shot - at the first `DomBulkUpdate` - and it starts its walk from
-//! the `<body>` vnode. `<body>` is created late: after the whole `<head>` subtree, and after
-//! anything the app built in a statement before the `dom!` block (which is the demo's shape -
-//! it builds its header first). So anything that flushes while the tree is still being built
-//! ships a batch with no root in it, hydration matches nothing, and the server-rendered
-//! document is thrown away.
+//! Hydration compares the tree the application built against the document the server
+//! rendered. The tree is complete only after the mount transaction closes and
+//! `flush_watch` runs - `<body>` is created late, after the whole `<head>` subtree
+//! and after anything the app built before reaching the `dom!` block - so nothing may
+//! reach the browser until that moment. Hydration achieves this by arming a silencing
+//! flag before the transaction and only flushing the reconciled batch in `flush_hydration`
+//! after `flush_watch` completes. From that point forward the driver returns to ordinary
+//! flushing after each transaction.
 //!
-//! With `init_app` running outside any transaction, the first such binding closed an
-//! *outermost* transaction and fired the hook.
-//! Now `mount` wraps construction in one transaction, which makes those nested.
+//! With `init_app` running outside any transaction, the first reactive binding closed an
+//! *outermost* transaction and fired the hook. Now `mount` wraps construction in one
+//! transaction, which makes those nested.
 
 use std::{cell::RefCell, rc::Rc};
 
