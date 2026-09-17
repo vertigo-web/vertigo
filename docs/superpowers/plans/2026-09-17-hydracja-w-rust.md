@@ -12,6 +12,12 @@
 
 ## Global Constraints
 
+- **Wszystkie komentarze w kodzie — w tym doc comments — piszemy po angielsku.** Całe
+  repozytorium jest po angielsku, a `vertigo` to publiczna skrzynka, więc doc comments
+  jadą na docs.rs. Bloki kodu w tym planie mają komentarze po polsku, bo plan jest
+  notatką robocza pisaną po polsku: **przy przepisywaniu do kodu tłumacz je na
+  angielski**, zachowując treść i to, że tłumaczą *dlaczego*, a nie *co*. Polski
+  zostaje w tym planie i w specyfikacji.
 - `unwrap_used` i `expect_used` są w workspace ustawione na `deny` (`Cargo.toml`, `[workspace.lints.clippy]`). W kodzie produkcyjnym **i w testach** używaj `match`, `let ... else` albo `panic!` z komunikatem.
 - Tagi formatu druciarskiego są **append-only**: numer raz użyty nie może dostać innego znaczenia (`crates/vertigo/src/dev/command_wire.rs`, komentarz nad `mod tag`).
 - Identyfikator 0 jest sentinelem „brak węzła odniesienia" w `InsertBefore`. Żaden prawdziwy `DomId` nie może być zerem (`debug_assert` w `write_id`).
@@ -2661,13 +2667,13 @@ Dopisz pomocniczą funkcję w tym samym pliku:
 /// Polityka należy do rusta: js zwraca snapshot niezależnie od flagi, a decyzję o tym, czy
 /// cokolwiek adoptować, podejmuje ta gałąź.
 fn hydration_disabled() -> bool {
-    api_browser_command().get_env("disable-hydration".to_string()) == Some("true".to_string())
+    api_browser_command().get_env("disable-hydration") == Some("true".to_string())
 }
 ```
 
 Dopisz importy: `api_dom_snapshot` z `crate::driver_module::api`, `discard`, `reconcile`, `split_buffer` i `Reconciled` z `crate::driver_module::hydration`, oraz `ValueMut` z `crate::dev` (dotąd ten plik go nie potrzebował).
 
-Sprawdź, czy `get_env` w `api_browser_command.rs` przyjmuje `String` czy `&str`, i dopasuj wywołanie — sygnatura jest tam jedna i kompilator powie ci od razu.
+Dla orientacji: `exec_command(command: CommandForBrowser) -> JsJson` i `get_env(&self, name: impl Into<String>) -> Option<String>` — obie są już w `api_browser_command.rs` i nie wymagają zmian.
 
 - [ ] **Step 4: Podepnij to w mount**
 
