@@ -13,12 +13,12 @@ pub fn decode_json<T: JsJsonDeserialize>(json: JsJson) -> Result<T, JsJsonContex
 #[derive(AutoJsJson, Debug)]
 pub enum CommandForBrowser {
     FetchCacheGet,
-    /// Prośba o stan DOM przeglądarki na potrzeby hydracji.
+    /// Request for browser DOM state for hydration purposes.
     ///
-    /// Pytamy, zamiast czekać na wypchnięcie z js, żeby kolejność nie była umową: rust
-    /// pobiera snapshot dokładnie wtedy, gdy jest mu potrzebny, czyli w
-    /// `DriverDom::flush_hydration`. Odpowiedzią jest [`DomSnapshot`] albo `Null`, gdy nie
-    /// ma DOM do zwrócenia (renderowanie serwerowe, testy na hoście).
+    /// We ask rather than wait for JS to push, so the sequencing is not a contract: Rust
+    /// fetches the snapshot exactly when it needs it, in `DriverDom::flush_hydration`.
+    /// The response is [`DomSnapshot`] or `Null` when there is no DOM to return
+    /// (server-side rendering, host tests).
     DomSnapshotGet,
     FetchExec {
         request: SsrFetchRequest,

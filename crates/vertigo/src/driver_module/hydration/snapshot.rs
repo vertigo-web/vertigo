@@ -1,12 +1,12 @@
 use vertigo_macro::AutoJsJson;
 
-/// Stan DOM odczytany z przeglądarki, w kolejności pre-order.
+/// Browser DOM state read in pre-order traversal.
 ///
-/// Indeks w [`Self::nodes`] jest adresem węzła w protokole: komendy
-/// [`NodeAdopt`](crate::dev::command::DriverDomCommand::NodeAdopt) i
-/// [`SnapshotRemove`](crate::dev::command::DriverDomCommand::SnapshotRemove) odwołują się
-/// nim do prawdziwego węzła, który js trzyma w tablicy zbudowanej przy tym samym przejściu.
-/// Element 0 to `<html>`.
+/// The index into [`Self::nodes`] is the node address in the protocol:
+/// [`NodeAdopt`](crate::dev::command::DriverDomCommand::NodeAdopt) and
+/// [`SnapshotRemove`](crate::dev::command::DriverDomCommand::SnapshotRemove) commands refer
+/// to the actual node that JS holds in an array built during the same traversal.
+/// Element 0 is `<html>`.
 #[derive(AutoJsJson, Debug, Clone)]
 pub struct DomSnapshot {
     pub nodes: Vec<SnapshotNode>,
@@ -17,9 +17,9 @@ pub struct DomSnapshot {
 #[derive(AutoJsJson, Debug, Clone)]
 pub enum SnapshotNode {
     Element {
-        /// `tagName` zmniejszone do małych liter. Dopasowanie po stronie rusta porównuje
-        /// bez uwzględniania wielkości liter, co jest poprawne dla html i svg naraz i
-        /// oszczędza przeniesienia tablicy `SVG_TAGS` do wasma.
+        /// The `tagName` lowercased. Rust-side matching compares case-insensitively,
+        /// which is correct for both HTML and SVG, and avoids shipping the `SVG_TAGS`
+        /// array to wasm.
         name: String,
         attrs: Vec<SnapshotAttr>,
         children: Vec<u32>,
@@ -39,6 +39,7 @@ pub struct SnapshotAttr {
 }
 
 impl DomSnapshot {
+    /// Returns the node at the given index, or `None` if the index is out of range.
     pub fn node(&self, index: u32) -> Option<&SnapshotNode> {
         self.nodes.get(index as usize)
     }

@@ -18,11 +18,10 @@ pub fn api_dom_snapshot() -> Rc<ApiDomSnapshot> {
     })
 }
 
-/// Stan DOM przeglądarki, pobierany raz, w czasie montowania aplikacji.
+/// Browser DOM state, fetched once during application mount.
 ///
-/// Osobny store, a nie metoda na `DriverDom`, z tego samego powodu, dla którego osobny jest
-/// `api_fetch_cache`: aplikacja, która nigdy nie jest hydratowana, nie wciąga dekodera
-/// snapshotu do wasma.
+/// A separate store rather than a method on `DriverDom` for the same reason `api_fetch_cache`
+/// is separate: an application that never hydrates does not pull the snapshot decoder into wasm.
 pub struct ApiDomSnapshot {
     #[cfg(test)]
     mock: ValueMut<Option<Rc<DomSnapshot>>>,
@@ -49,7 +48,7 @@ impl ApiDomSnapshot {
         match decode_json::<DomSnapshot>(json) {
             Ok(snapshot) => Some(snapshot),
             Err(err) => {
-                log::error!("dom snapshot decode error = {err}");
+                log::error!("dom snapshot decode error = {err}, returning None");
                 None
             }
         }
