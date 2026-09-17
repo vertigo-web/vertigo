@@ -26,6 +26,7 @@
 - Testy jednostkowe uruchamiane są na hoście, nie w wasmie. `crates/vertigo/src/external_api.rs` dostarcza wtedy atrapę `safe_dom_access`, która odpowiada na każdy wariant `CommandForBrowser`.
 - Po każdym teście, który montuje aplikację, trzeba zwolnić drzewo przez `drop(get_driver().take_root())` — inaczej porzucenie `DomNode` przy zamykaniu wątku sięga do już zwolnionego store'u i przerywa proces. Wzór: `crates/vertigo/src/tests/mount_batching.rs`.
 - Komendy: testy Rusta `cargo test --all-features`, testy JS `npm run test`, budowa bundla JS `npx rollup -c`, clippy `cargo clippy --locked -p vertigo --all-features --tests --target wasm32-unknown-unknown -- -Dwarnings`.
+- Clippy trzeba puścić **dwa razy: z `--tests` i bez**. Bez `--tests` to konfiguracja, którą kompiluje CI i konsumenci biblioteki, i tylko tam widać `dead_code` w rzeczach używanych wyłącznie z testów — `-D warnings` implikuje `-D dead-code`. Podczas Taska 6 komenda z `--tests` przepuściła zepsuty build produkcyjny (`inspect_batch is never used`, 2 błędy); rozwiązanie to `#[cfg(test)]` na takim elemencie, wzorem `ApiDomSnapshot::set_mock`. Uwaga przy wyborze: `cfg(test)` nie jest ustawione dla `vertigo` kompilowanego jako zależność testu integracyjnego ani testu przeglądarkowego, więc `#[cfg(test)]` nadaje się tylko dla rzeczy używanych z testów jednostkowych wewnątrz crate'a.
 
 ---
 
