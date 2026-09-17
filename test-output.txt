@@ -1,0 +1,1004 @@
+warning: struct `ApiDomSnapshot` is never constructed
+  --> crates/vertigo/src/driver_module/api/api_dom_snapshot.rs:25:12
+   |
+25 | pub struct ApiDomSnapshot {
+   |            ^^^^^^^^^^^^^^
+   |
+   = note: `#[warn(dead_code)]` (part of `#[warn(unused)]`) on by default
+
+warning: method `get` is never used
+  --> crates/vertigo/src/driver_module/api/api_dom_snapshot.rs:36:12
+   |
+30 | impl ApiDomSnapshot {
+   | ------------------- method in this implementation
+...
+36 |     pub fn get(&self) -> Option<DomSnapshot> {
+   |            ^^^
+
+warning: method `dom_snapshot_get` is never used
+  --> crates/vertigo/src/driver_module/api/api_browser_command.rs:63:12
+   |
+32 | impl CommandForBrowserApi {
+   | ------------------------- method in this implementation
+...
+63 |     pub fn dom_snapshot_get(&self) -> JsJson {
+   |            ^^^^^^^^^^^^^^^^
+
+warning: constant `HTML_ID` is never used
+  --> crates/vertigo/src/driver_module/hydration/matcher.rs:10:7
+   |
+10 | const HTML_ID: u64 = 1;
+   |       ^^^^^^^
+
+warning: constant `HEAD_ID` is never used
+  --> crates/vertigo/src/driver_module/hydration/matcher.rs:11:7
+   |
+11 | const HEAD_ID: u64 = 2;
+   |       ^^^^^^^
+
+warning: constant `BODY_ID` is never used
+  --> crates/vertigo/src/driver_module/hydration/matcher.rs:12:7
+   |
+12 | const BODY_ID: u64 = 3;
+   |       ^^^^^^^
+
+warning: struct `Reconciled` is never constructed
+  --> crates/vertigo/src/driver_module/hydration/matcher.rs:14:12
+   |
+14 | pub struct Reconciled {
+   |            ^^^^^^^^^^
+
+warning: function `reconcile` is never used
+  --> crates/vertigo/src/driver_module/hydration/matcher.rs:23:8
+   |
+23 | pub fn reconcile(split: SplitBuffer, snapshot: &DomSnapshot) -> Reconciled {
+   |        ^^^^^^^^^
+
+warning: function `discard` is never used
+  --> crates/vertigo/src/driver_module/hydration/matcher.rs:72:8
+   |
+72 | pub fn discard(split: SplitBuffer, snapshot: &DomSnapshot) -> Vec<DriverDomCommand> {
+   |        ^^^^^^^
+
+warning: function `rebuild_verbatim` is never used
+  --> crates/vertigo/src/driver_module/hydration/matcher.rs:94:4
+   |
+94 | fn rebuild_verbatim(tree: &TargetTree) -> Vec<DriverDomCommand> {
+   |    ^^^^^^^^^^^^^^^^
+
+warning: function `rebuild_children` is never used
+   --> crates/vertigo/src/driver_module/hydration/matcher.rs:115:4
+    |
+115 | fn rebuild_children(
+    |    ^^^^^^^^^^^^^^^^
+
+warning: function `create_commands` is never used
+   --> crates/vertigo/src/driver_module/hydration/matcher.rs:145:4
+    |
+145 | fn create_commands(id: DomId, node: &TargetNode) -> Vec<DriverDomCommand> {
+    |    ^^^^^^^^^^^^^^^
+
+warning: enum `ChildPlan` is never used
+   --> crates/vertigo/src/driver_module/hydration/matcher.rs:181:6
+    |
+181 | enum ChildPlan {
+    |      ^^^^^^^^^
+
+warning: methods `child` and `is_adopted` are never used
+   --> crates/vertigo/src/driver_module/hydration/matcher.rs:188:8
+    |
+187 | impl ChildPlan {
+    | -------------- methods in this implementation
+188 |     fn child(&self) -> DomId {
+    |        ^^^^^
+...
+196 |     fn is_adopted(&self) -> bool {
+    |        ^^^^^^^^^^
+
+warning: struct `Matcher` is never constructed
+   --> crates/vertigo/src/driver_module/hydration/matcher.rs:201:8
+    |
+201 | struct Matcher<'a> {
+    |        ^^^^^^^
+
+warning: multiple methods are never used
+   --> crates/vertigo/src/driver_module/hydration/matcher.rs:209:8
+    |
+208 | impl<'a> Matcher<'a> {
+    | -------------------- methods in this implementation
+209 |     fn reconcile_root(&mut self, root: DomId, snapshot_index: u32) {
+    |        ^^^^^^^^^^^^^^
+...
+214 |     fn reconcile_attrs(&mut self, id: DomId, snapshot_index: u32) {
+    |        ^^^^^^^^^^^^^^^
+...
+249 |     fn reconcile_children(&mut self, parent: DomId, parent_snapshot: u32) {
+    |        ^^^^^^^^^^^^^^^^^^
+...
+260 |     fn plan_children(&mut self, parent: DomId, parent_snapshot: u32) -> (Vec<ChildPlan>, Vec<u32>) {
+    |        ^^^^^^^^^^^^^
+...
+344 |     fn emit_children(&mut self, parent: DomId, plans: &[ChildPlan]) {
+    |        ^^^^^^^^^^^^^
+...
+402 |     fn create_subtree(&mut self, id: DomId, parent: DomId, ref_id: Option<DomId>) {
+    |        ^^^^^^^^^^^^^^
+...
+428 |     fn plan_text_run(
+    |        ^^^^^^^^^^^^^
+
+warning: function `tag_matches` is never used
+   --> crates/vertigo/src/driver_module/hydration/matcher.rs:478:4
+    |
+478 | fn tag_matches(target: &str, candidate: &str) -> bool {
+    |    ^^^^^^^^^^^
+
+warning: function `find_element` is never used
+   --> crates/vertigo/src/driver_module/hydration/matcher.rs:483:4
+    |
+483 | fn find_element(
+    |    ^^^^^^^^^^^^
+
+warning: function `text_run_length` is never used
+   --> crates/vertigo/src/driver_module/hydration/matcher.rs:502:4
+    |
+502 | fn text_run_length(tree: &TargetTree, children: &[DomId], from: usize) -> usize {
+    |    ^^^^^^^^^^^^^^^
+
+warning: function `is_text` is never used
+   --> crates/vertigo/src/driver_module/hydration/matcher.rs:515:4
+    |
+515 | fn is_text(snapshot: &DomSnapshot, index: u32) -> bool {
+    |    ^^^^^^^
+
+warning: function `is_whitespace` is never used
+   --> crates/vertigo/src/driver_module/hydration/matcher.rs:519:4
+    |
+519 | fn is_whitespace(snapshot: &DomSnapshot, index: u32) -> bool {
+    |    ^^^^^^^^^^^^^
+
+warning: function `text_equals` is never used
+   --> crates/vertigo/src/driver_module/hydration/matcher.rs:526:4
+    |
+526 | fn text_equals(snapshot: &DomSnapshot, index: u32, value: &str) -> bool {
+    |    ^^^^^^^^^^^
+
+warning: method `children` is never used
+  --> crates/vertigo/src/driver_module/hydration/snapshot.rs:47:12
+   |
+41 | impl DomSnapshot {
+   | ---------------- method in this implementation
+...
+47 |     pub fn children(&self, index: u32) -> &[u32] {
+   |            ^^^^^^^^
+
+warning: variants `Element`, `Text`, and `Comment` are never constructed
+  --> crates/vertigo/src/driver_module/hydration/target_tree.rs:9:5
+   |
+ 8 | pub enum TargetKind {
+   |          ---------- variants in this enum
+ 9 |     Element { name: StaticString },
+   |     ^^^^^^^
+10 |     Text { value: String },
+   |     ^^^^
+11 |     Comment { value: String },
+   |     ^^^^^^^
+   |
+   = note: `TargetKind` has derived impls for the traits `Clone` and `Debug`, but these are intentionally ignored during dead code analysis
+
+warning: fields `kind`, `attrs`, and `children` are never read
+  --> crates/vertigo/src/driver_module/hydration/target_tree.rs:16:9
+   |
+15 | pub struct TargetNode {
+   |            ---------- fields in this struct
+16 |     pub kind: TargetKind,
+   |         ^^^^
+17 |     pub attrs: BTreeMap<StaticString, String>,
+   |         ^^^^^
+18 |     pub children: Vec<DomId>,
+   |         ^^^^^^^^
+   |
+   = note: `TargetNode` has derived impls for the traits `Clone` and `Debug`, but these are intentionally ignored during dead code analysis
+
+warning: field `parent` is never read
+  --> crates/vertigo/src/driver_module/hydration/target_tree.rs:35:5
+   |
+30 | pub struct TargetTree {
+   |            ---------- field in this struct
+...
+35 |     parent: HashMap<DomId, DomId>,
+   |     ^^^^^^
+   |
+   = note: `TargetTree` has a derived impl for the trait `Debug`, but this is intentionally ignored during dead code analysis
+
+warning: struct `SplitBuffer` is never constructed
+  --> crates/vertigo/src/driver_module/hydration/target_tree.rs:38:12
+   |
+38 | pub struct SplitBuffer {
+   |            ^^^^^^^^^^^
+
+warning: function `split_buffer` is never used
+  --> crates/vertigo/src/driver_module/hydration/target_tree.rs:45:8
+   |
+45 | pub fn split_buffer(commands: Vec<DriverDomCommand>) -> SplitBuffer {
+   |        ^^^^^^^^^^^^
+
+warning: methods `insert`, `unlink`, `link`, `get`, and `children` are never used
+   --> crates/vertigo/src/driver_module/hydration/target_tree.rs:97:8
+    |
+ 96 | impl TargetTree {
+    | --------------- methods in this implementation
+ 97 |     fn insert(&mut self, id: DomId, kind: TargetKind) {
+    |        ^^^^^^
+...
+108 |     fn unlink(&mut self, child: DomId) {
+    |        ^^^^^^
+...
+120 |     fn link(&mut self, parent: DomId, child: DomId, ref_id: Option<DomId>) {
+    |        ^^^^
+...
+133 |     pub fn get(&self, id: DomId) -> Option<&TargetNode> {
+    |            ^^^
+...
+137 |     pub fn children(&self, id: DomId) -> &[DomId] {
+    |            ^^^^^^^^
+
+warning: `vertigo` (lib) generated 29 warnings
+    Finished `test` profile [unoptimized + debuginfo] target(s) in 0.20s
+warning: the following packages contain code that will be rejected by a future version of Rust: proc-macro-error2 v2.0.1
+note: to see what the problems were, use the option `--future-incompat-report`, or run `cargo report future-incompatibilities --id 1`
+     Running unittests lib.rs (/var/folders/zk/ss53sb5543x36nnb0h_6p49r0000gn/T/cursor-sandbox-cache/b23d3c36d75ba616bbc71ea70a24001e/cargo-target/debug/deps/fantoccini_tests-58ed203b7cff4419)
+
+running 0 tests
+
+test result: ok. 0 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.00s
+
+     Running basic/tests.rs (/var/folders/zk/ss53sb5543x36nnb0h_6p49r0000gn/T/cursor-sandbox-cache/b23d3c36d75ba616bbc71ea70a24001e/cargo-target/debug/deps/basic-1cc08737771fdf08)
+
+running 1 test
+test basic ... ignored
+
+test result: ok. 0 passed; 0 failed; 1 ignored; 0 measured; 0 filtered out; finished in 0.00s
+
+     Running demo/tests.rs (/var/folders/zk/ss53sb5543x36nnb0h_6p49r0000gn/T/cursor-sandbox-cache/b23d3c36d75ba616bbc71ea70a24001e/cargo-target/debug/deps/demo-521a4664d03e2c65)
+
+running 1 test
+test demo ... ignored
+
+test result: ok. 0 passed; 0 failed; 1 ignored; 0 measured; 0 filtered out; finished in 0.00s
+
+     Running dom-bench/tests.rs (/var/folders/zk/ss53sb5543x36nnb0h_6p49r0000gn/T/cursor-sandbox-cache/b23d3c36d75ba616bbc71ea70a24001e/cargo-target/debug/deps/dom_bench-b1c7f197566b08e7)
+
+running 1 test
+test dom_bench ... ignored
+
+test result: ok. 0 passed; 0 failed; 1 ignored; 0 measured; 0 filtered out; finished in 0.00s
+
+     Running reactive-bench/tests.rs (/var/folders/zk/ss53sb5543x36nnb0h_6p49r0000gn/T/cursor-sandbox-cache/b23d3c36d75ba616bbc71ea70a24001e/cargo-target/debug/deps/reactive_bench-327b4c0d36c9b627)
+
+running 1 test
+test reactive_bench ... ignored
+
+test result: ok. 0 passed; 0 failed; 1 ignored; 0 measured; 0 filtered out; finished in 0.00s
+
+     Running unittests src/main.rs (/var/folders/zk/ss53sb5543x36nnb0h_6p49r0000gn/T/cursor-sandbox-cache/b23d3c36d75ba616bbc71ea70a24001e/cargo-target/debug/deps/lint_project-1d976f189d45d255)
+
+running 0 tests
+
+test result: ok. 0 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.00s
+
+     Running unittests src/lib.rs (/var/folders/zk/ss53sb5543x36nnb0h_6p49r0000gn/T/cursor-sandbox-cache/b23d3c36d75ba616bbc71ea70a24001e/cargo-target/debug/deps/vertigo-7729947f2501f795)
+
+running 416 tests
+test css::transform_css::splits::tests::test_css_split_rows_hover ... ok
+test css::transform_css::splits::tests::test_css_split_rows_media_query_1 ... ok
+test css::transform_css::splits::tests::test_css_split_rows_simple ... ok
+test css::transform_css::splits::tests::test_css_split_rows_media_query_2 ... ok
+test css::transform_css::splits::tests::test_css_split_rows1 ... ok
+test css::transform_css::splits::tests::test_square_brackets ... ok
+test css::transform_css::splits::tests::test_css_split_rows2 ... ok
+test css::transform_css::splits::tests::test_css_split_rows3 ... ok
+test css::transform_css::splits::tests::test_find_brackets ... ok
+test css::transform_css::tests::animation::test_animation_with_additional_rule ... ok
+test css::transform_css::tests::animation::test_transform_css_animation_value ... ok
+test css::transform_css::tests::basic::test_basic1 ... ok
+test css::transform_css::tests::basic::test_basic2 ... ok
+test css::transform_css::tests::basic::test_basic3 ... ok
+test css::tailwind_class::tests::computed_twclass_add_twclass ... ok
+test css::css_structs::tests::computed_css_add_css ... ok
+test css::tailwind_class::tests::computed_twclass_add_computed_twclass ... ok
+test css::css_structs::tests::computed_css_add_computed_css ... ok
+test css::transform_css::tests::media::test_doubled ... ok
+test css::transform_css::tests::media::test_media ... ok
+test css::transform_css::tests::media::test_media_and_pseudo_1 ... ok
+test css::transform_css::tests::pseudo::test_doubled ... ok
+test css::transform_css::tests::media::test_media_and_pseudo_2 ... ok
+test css::transform_css::tests::pseudo::test_hover ... ok
+test css::transform_css::tests::pseudo::test_of_type ... ok
+test dev::command_wire::tests::an_empty_batch_round_trips ... ok
+test dev::command_wire::tests::malformed_input_is_an_error ... ok
+test dev::command_wire::tests::matches_the_cross_language_fixture ... ok
+test dev::command_wire::tests::round_trips_large_ids ... ok
+test dev::command_wire::tests::round_trips_every_variant ... ok
+test dev::command_wire::tests::round_trips_the_snapshot_commands ... ok
+test dev::command_wire::tests::round_trips_non_ascii_and_empty_text ... ok
+test dev::inspect::tests::pseudo_html_attrs_order ... ok
+test dev::inspect::tests::pseudo_html_callback ... ok
+test driver_module::api::api_dom_snapshot::tests::a_mocked_snapshot_is_returned_as_is ... ok
+test dev::inspect::tests::pseudo_html_css ... ok
+test driver_module::api::api_dom_snapshot::tests::without_a_browser_there_is_no_snapshot ... ok
+test dev::inspect::tests::pseudo_html_css_in_two_elements ... ok
+test dev::inspect::tests::pseudo_html_list ... ok
+test dev::inspect::tests::pseudo_html_css_unwrap ... ok
+test dev::inspect::tests::pseudo_html_css_unwrap_with_custom_class_names ... ok
+test driver_module::event_emitter::tests::trigger_without_listeners_does_not_touch_the_payload ... ok
+test driver_module::event_emitter::tests::trigger_clones_the_payload_once_per_listener ... ok
+test driver_module::hydration::matcher::tests::a_comment_marker_does_not_consume_a_snapshot_node ... ok
+test driver_module::hydration::matcher::tests::a_differing_single_text_is_adopted_and_patched ... ok
+test driver_module::hydration::matcher::tests::a_matching_element_is_adopted ... ok
+test dev::command_wire::tests::a_repeated_name_is_stored_once ... ok
+test driver_module::api::api_fetch::tests::test_mock_fetch ... ok
+test driver_module::hydration::matcher::tests::a_missing_match_leaves_the_cursor_where_it_was ... ok
+test driver_module::hydration::matcher::tests::a_merged_text_run_is_split ... ok
+test driver_module::hydration::matcher::tests::a_snapshot_without_a_body_falls_back_to_building_everything ... ok
+test driver_module::hydration::matcher::tests::an_adopted_node_in_place_needs_no_insert ... ok
+test driver_module::hydration::matcher::tests::an_identical_single_text_is_adopted_without_a_patch ... ok
+test driver_module::hydration::matcher::tests::an_svg_prefixed_name_matches_its_local_name ... ok
+test driver_module::hydration::matcher::tests::an_unmatched_target_is_created_before_the_next_adopted_sibling ... ok
+test driver_module::hydration::matcher::tests::attributes_are_reconciled_in_both_directions ... ok
+test driver_module::hydration::matcher::tests::discard_removes_the_server_markup_and_keeps_the_buffer ... ok
+test driver_module::hydration::matcher::tests::formatting_whitespace_is_skipped_when_looking_for_an_element ... ok
+test driver_module::hydration::matcher::tests::matching_recurses_into_children ... ok
+test driver_module::hydration::matcher::tests::passthrough_commands_are_kept ... ok
+test driver_module::hydration::matcher::tests::skipped_nodes_are_removed_once_per_subtree ... ok
+test driver_module::hydration::matcher::tests::svg_casing_matches_without_a_tag_table ... ok
+test driver_module::hydration::matcher::tests::the_document_roots_are_not_adopted_but_their_attributes_are ... ok
+test driver_module::hydration::snapshot::tests::children_of_a_non_element_is_empty ... ok
+test driver_module::hydration::target_tree::tests::a_moved_node_leaves_its_previous_parent ... ok
+test driver_module::hydration::target_tree::tests::a_node_created_and_removed_is_gone ... ok
+test driver_module::hydration::snapshot::tests::a_snapshot_survives_the_json_round_trip ... ok
+test driver_module::hydration::target_tree::tests::attributes_are_accumulated_and_removed ... ok
+test driver_module::hydration::target_tree::tests::builds_a_tree_from_creates_and_inserts ... ok
+test driver_module::hydration::target_tree::tests::css_and_callbacks_pass_through_in_order ... ok
+test driver_module::hydration::target_tree::tests::insert_before_respects_the_reference ... ok
+test driver_module::hydration::target_tree::tests::update_text_wins_over_create_text ... ok
+test driver_module::js_value::serialize::tests::aaaa ... ok
+test driver_module::js_value::serialize::tests::test_serialize_to_string ... ok
+test driver_module::js_value::serialize::tests::test_unit ... ok
+test driver_module::js_value::serialize::tests::test_vec ... ok
+test driver_module::js_value::serialize_chrono::tests::datetime_utc_deserialization ... ok
+test driver_module::js_value::serialize_chrono::tests::datetime_utc_invalid_format ... ok
+test driver_module::js_value::serialize_chrono::tests::datetime_utc_round_trip ... ok
+test driver_module::js_value::serialize_chrono::tests::datetime_utc_serialization ... ok
+test driver_module::js_value::serialize_chrono::tests::naive_date_deserialization ... ok
+test driver_module::js_value::serialize_chrono::tests::naive_date_invalid_format ... ok
+test driver_module::js_value::serialize_chrono::tests::naive_date_round_trip ... ok
+test driver_module::js_value::serialize_chrono::tests::naive_date_serialization ... ok
+test driver_module::js_value::serialize_chrono::tests::naive_datetime_deserialization ... ok
+test driver_module::js_value::serialize_chrono::tests::naive_datetime_invalid_format ... ok
+test driver_module::js_value::serialize_chrono::tests::naive_datetime_round_trip ... ok
+test driver_module::js_value::serialize_chrono::tests::naive_datetime_serialization ... ok
+test driver_module::js_value::serialize_rust_decimal::tests::decimal_deserialization ... ok
+test driver_module::js_value::serialize_rust_decimal::tests::decimal_precision_loss ... ok
+test driver_module::js_value::serialize_rust_decimal::tests::decimal_round_trip ... ok
+test driver_module::js_value::serialize_rust_decimal::tests::decimal_serialization ... ok
+test driver_module::js_value::tests::btreemap_from_empty_list ... ok
+test driver_module::js_value::tests::btreemap_from_empty_object ... ok
+test driver_module::js_value::tests::btreemap_from_list_of_items ... ok
+test driver_module::js_value::tests::btreemap_from_non_empty_object_string_keys ... ok
+test driver_module::js_value::tests::btreemap_from_object_non_string_keys_errors ... ok
+test driver_module::js_value::tests::json_json_float ... ok
+test driver_module::js_value::tests::json_json_list ... ok
+test driver_module::js_value::tests::json_json_string ... ok
+test driver_module::js_value::tests::json_json_vec ... ok
+test driver_module::js_value::vec_to_string::test ... ok
+test fast_hash::tests::every_word_of_a_long_key_counts ... ok
+test fast_hash::tests::the_same_value_hashes_the_same ... ok
+test fast_hash::tests::trailing_zero_bytes_are_not_padding ... ok
+test fast_hash::tests::map_round_trip ... ok
+test fetch::lazy_list_cache::tests::test_clone_eq ... ok
+test fast_hash::tests::consecutive_integers_spread ... ok
+test fetch::lazy_cache::tests::test_lazy_cache_optimistically_change ... ok
+test fetch::lazy_cache::tests::test_lazy_cache_initial_state ... ok
+test fetch::lazy_list_cache::tests::test_get_applies_optimistic_edit ... ok
+test fast_hash::tests::similar_strings_spread ... ok
+test fetch::lazy_list_cache::tests::test_get_by_key_error_when_key_missing ... ok
+test fetch::lazy_cache::tests::test_lazy_cache_optimistically_set ... ok
+test fetch::lazy_list_cache::tests::test_get_by_key_falls_back_to_original ... ok
+test fetch::lazy_cache::tests::test_lazy_cache_to_computed ... ok
+test fetch::lazy_list_cache::tests::test_get_by_key_loading_when_not_ready ... ok
+test fetch::lazy_list_cache::tests::test_get_includes_optimistic_insert ... ok
+test fetch::lazy_list_cache::tests::test_get_returns_loading_before_fetch ... ok
+test fetch::lazy_list_cache::tests::test_get_omits_optimistically_removed ... ok
+test fetch::lazy_list_cache::tests::test_get_returns_ordered_items ... ok
+test fetch::lazy_list_cache::tests::test_granular_applies_optimistic_edit ... ok
+test fetch::lazy_list_cache::tests::test_granular_filter_composes_with_override ... ok
+test fetch::lazy_list_cache::tests::test_granular_omits_optimistically_removed ... ok
+test fetch::lazy_cache::tests::test_lazy_cache_token_revalidation ... ok
+test fetch::lazy_list_cache::tests::test_granular_includes_optimistic_insert ... ok
+test fetch::lazy_list_cache::tests::test_override_does_not_modify_original ... ok
+test fetch::lazy_list_cache::tests::test_optimistic_set_then_update_item_appears_in_list ... ok
+test fetch::lazy_cache::tests::test_lazy_cache_set_same_computed_token ... ok
+test fetch::lazy_list_cache::tests::test_override_visible_via_get_by_key ... ok
+test fetch::lazy_list_cache::tests::test_granular_reactivity_on_remove ... ok
+test fetch::lazy_list_cache::tests::test_keys_reactivity_via_computed ... ok
+test fetch::lazy_list_cache::tests::test_override_other_keys_unaffected ... ok
+test fetch::lazy_list_cache::tests::test_refresh_preserves_override ... ok
+test fetch::lazy_list_cache::tests::test_override_update_same_key ... ok
+test fetch::lazy_list_cache::tests::test_override_works_while_loading ... ok
+test fetch::lazy_list_cache::tests::test_rollback_noop_for_unknown_key ... ok
+test fetch::lazy_list_cache::tests::test_rollback_removes_optimistic_placeholder ... ok
+test fetch::lazy_list_cache::tests::test_rollback_existing_item_only_clears_override ... ok
+test fetch::lazy_list_cache::tests::test_optimistic_then_remove_item_reactivity_via_granular ... ok
+test fetch::lazy_list_cache::tests::test_rollback_restores_original ... ok
+test fetch::lazy_list_cache::tests::test_remove_item_after_optimistically_remove_item ... ok
+test reactive::by_rc::tests::an_equal_value_in_a_different_allocation_does_not ... ok
+test reactive::by_rc::tests::clone_does_not_require_the_payload_to_be_clone ... ok
+test fetch::lazy_list_cache::tests::test_update_item_clears_placeholder_so_later_rollback_keeps_row ... ok
+test reactive::by_rc::tests::deref_reaches_the_wrapped_value ... ok
+test fetch::lazy_list_cache::tests::test_update_item_with_old_key_same_key_acts_as_update ... ok
+test fetch::lazy_list_cache::tests::test_update_item_with_old_key_rekeys_in_place ... ok
+test reactive::by_rc::tests::the_same_allocation_compares_equal ... ok
+test fetch::lazy_list_cache::tests::test_update_item_inserts_unknown_key ... ok
+test reactive::context::tests::distinct_reads_are_all_kept ... ok
+test reactive::computed::tests::subscribe_does_not_notify_dependents ... ok
+test reactive::context::tests::interleaved_repeats_are_left_for_the_edge_set ... ok
+test reactive::context::tests::read_context_tracks_nothing ... ok
+test reactive::context::tests::repeated_reads_of_one_node_collapse ... ok
+test reactive::graph::dirty::tests::a_pulled_node_does_not_release_waiting_children ... ok
+test reactive::graph::dirty::tests::begin_wave_allows_enqueue_of_previously_done_node ... ok
+test reactive::graph::dirty::tests::child_not_ready_while_parent_dirty ... ok
+test reactive::graph::dirty::tests::child_waits_for_both_dirty_parents ... ok
+test reactive::graph::dirty::tests::cutoff_does_not_copy_or_enqueue_children ... ok
+test reactive::graph::dirty::tests::cutoff_does_not_enqueue_waiting_sibling ... ok
+test reactive::graph::dirty::tests::cycle_path_names_the_way_back ... ok
+test reactive::graph::dirty::tests::dequeue_clears_wait_count ... ok
+test reactive::graph::dirty::tests::enqueue_dedups_ready ... ok
+test reactive::graph::dirty::tests::enter_refresh_is_gray ... ok
+test reactive::graph::dirty::tests::leftover_when_waiting_child_never_released ... ok
+test reactive::graph::dirty::tests::ready_is_fifo ... ok
+test reactive::graph::dirty::tests::take_ready_skips_dequeued ... ok
+test reactive::graph::edges::tests::empty_children_is_not_watched ... ok
+test reactive::graph::edges::tests::is_watched_after_replace ... ok
+test reactive::graph::edges::tests::replace_diffs_only_what_changed ... ok
+test reactive::graph::edges::tests::replace_reports_unwatched ... ok
+test reactive::graph::dirty::tests::reentering_refresh_is_rejected - should panic ... ok
+test reactive::graph::edges::tests::replace_with_different_parents_is_applied ... ok
+test reactive::graph::edges::tests::replace_with_duplicate_parents_is_noop ... ok
+test reactive::graph::edges::tests::replace_with_reordered_parents_is_noop ... ok
+test reactive::graph::edges::tests::unregister_clears_parent_from_child ... ok
+test reactive::graph::edges::tests::unregister_reports_unwatched ... ok
+test reactive::graph::hooks::tests::remove_does_not_fire ... ok
+test reactive::graph::hooks::tests::two_hooks_both_fire ... ok
+test reactive::graph::logger::tests::drop_unregisters ... ok
+test reactive::graph::logger::tests::take_returns_messages_and_clears ... ok
+test reactive::graph::logger::tests::two_listeners_both_receive ... ok
+test reactive::graph::node_hash::tests::the_same_id_hashes_the_same ... ok
+test reactive::graph::node_hash::tests::map_round_trip ... ok
+test reactive::graph::tests::dead_dirty_parent_releases_waiting_child ... ok
+test reactive::graph::transaction::tests::cannot_propagate_while_propagating ... ok
+test reactive::graph::tests::a_transaction_opened_during_a_wave_keeps_the_wave_state ... ok
+test reactive::graph::tests::unregister_releases_waiting_child ... ok
+test reactive::graph::tests::a_node_found_fresh_is_recorded_for_the_wave ... ok
+test reactive::graph::transaction::tests::writes_blocked_inside_callback ... ok
+test reactive::graph::watch::tests::a_node_connects_at_most_once_per_flush ... ok
+test reactive::graph::watch::tests::apply_unwatched_drops_connected ... ok
+test reactive::graph::watch::tests::connect_that_unwatches_itself_is_disconnected ... ok
+test reactive::graph::watch::tests::disconnect_does_not_reconnect ... ok
+test reactive::graph::watch::tests::a_chain_of_connects_is_not_a_loop ... ok
+test reactive::graph::watch::tests::reentrant_flush_does_not_connect_twice ... ok
+test reactive::graph::watch::tests::register_connects_when_watched ... ok
+test reactive::graph::watch::tests::unregister_drops_connected ... ok
+test reactive::graph::node_hash::tests::distinct_ids_hash_apart ... ok
+test reactive::graph::watch::tests::unwatched_many_drops_connected ... ok
+test reactive::graph::watch::tests::watch_and_unwatch_before_flush_does_not_connect ... ok
+test reactive::graph::watch::tests::watched_twice_connects_once ... ok
+test reactive::propagation_order::a_read_outside_a_wave_walks_nothing ... ok
+test reactive::tests::a_write_from_a_drop_inside_a_callback_is_ignored ... ok
+test reactive::tests::basic_sum ... ok
+test reactive::propagation_order::static_unequal_path_lengths_compute_once ... ok
+test reactive::tests::default_graph_value_new ... ok
+test reactive::tests::a_computed_reading_itself_panics - should panic ... ok
+test reactive::tests::diamond_waits_for_both_parents ... ok
+test reactive::tests::connect_that_unwatches_itself_disconnects ... ok
+test reactive::propagation_order::dynamic_branch_switch_computes_once ... ok
+test reactive::tests::on_after_transaction_fires_after_set ... ok
+test reactive::tests::equal_set_does_not_enqueue ... ok
+test reactive::tests::nested_computed_subscription_no_flattening ... ok
+test reactive::tests::disconnect_must_not_write ... ok
+test reactive::tests::set_from_drop_resource_is_ignored ... ok
+test reactive::tests::nested_computed_subscription ... ok
+test reactive::tests::set_from_compute_is_ignored ... ok
+test reactive::tests::set_from_subscribe_is_ignored ... ok
+test reactive::tests::subscribe_skips_when_parent_cuts_off ... ok
+test reactive::tests::two_sets_in_one_transaction_compute_once ... ok
+test reactive::tests::watch_and_unwatch_in_one_transaction_does_not_connect ... ok
+test reactive::tests::two_connects_that_hand_the_connection_back_and_forth_are_cut ... ok
+test reactive::tests::when_connect_disconnects_while_computed_lives ... ok
+test reactive::tests::two_computeds_reading_each_other_panic - should panic ... ok
+test reactive::tests::when_connect_runs_after_on_after_transaction ... ok
+test reactive::tests::when_connect_multiple_subscribers_share_one_connection ... ok
+test reactive::tests::when_connect_tracks_watchers ... ok
+test reactive::tests::write_from_when_connect_reaches_the_subscriber ... ok
+test reactive::propagation_order::a_clean_lattice_is_walked_once_per_node ... ok
+test reactive_old::computed::drop_computed ... ok
+test reactive_old::computed::test_when_connect ... ok
+test reactive_old::computed::test_when_connect_multiple ... ok
+test reactive_old::context::test_context ... ok
+test render::render_list::tests::appends_item_after_initial_render ... ok
+test render::render_list::tests::element_rows_insert_in_middle ... ok
+test render::render_list::tests::element_rows_prepend ... ok
+test render::render_list::tests::element_rows_reorder_in_middle ... ok
+test reactive_old::compare::diamond_repeated_updates ... ok
+test render::render_list::tests::key_removed_and_added_again ... ok
+test render::render_list::tests::moving_a_row_keeps_nested_content ... ok
+test render::render_list::tests::moving_a_row_keeps_its_content ... ok
+test render::render_list::tests::nested_render_value_rows_reorder ... ok
+test render::render_list::tests::prepends_item ... ok
+test render::render_list::tests::removes_all_items ... ok
+test render::render_list::tests::renders_empty_list_then_populates ... ok
+test render::render_list::tests::removes_item_from_middle ... ok
+test render::render_list::tests::renders_only_the_new_key ... ok
+test render::render_list::tests::renders_three_items_in_source_order ... ok
+test render::render_list::tests::renders_without_render_value_markers ... ok
+test render::render_list::tests::reuses_node_when_key_stays ... ok
+test render::render_list::tests::reorders_items_in_middle ... ok
+test render::render_list::tests::row_that_is_itself_a_list_can_be_added_during_an_update ... ok
+test render::render_list::tests::row_that_is_itself_a_list_reorders ... ok
+test render::render_list::tests::skips_duplicate_keys ... ok
+test render::render_list::tests::sibling_before_the_list_keeps_its_place ... ok
+test render::render_list::tests::updates_item_content_without_rerendering ... ok
+test render::render_list::tests::two_lists_in_the_same_parent_do_not_interfere ... ok
+test tests::autojsjson::rename::test_compound_enum ... ok
+test tests::autojsjson::rename::test_serialize_and_deserialize_struct ... ok
+test render::render_list::tests::updating_a_moved_row_replaces_content_in_place ... ok
+test tests::autojsjson::rename::test_simple_enum ... ok
+test tests::autojsjson::skip::test_skip_deserialize_missing_key ... ok
+test tests::autojsjson::skip::test_skip_field_not_serialized ... ok
+test tests::autojsjson::skip::test_skip_with_rename ... ok
+test tests::autojsjson::stringify::test_from_string ... ok
+test tests::autojsjson::test_compound_enum ... ok
+test tests::autojsjson::test_newtype ... ok
+test tests::autojsjson::test_newtype_tuple ... ok
+test tests::autojsjson::test_optional_field ... ok
+test tests::autojsjson::test_serialize_and_deserialize_struct ... ok
+test tests::autojsjson::test_simple_enum ... ok
+test tests::bind::test_bind ... ok
+test tests::bind::test_bind_namespaced_params ... ok
+test tests::css::animation::test_animation ... ok
+test tests::css::animation::test_animation_with_rgba_and_comments ... ok
+test tests::css::classes::class_and_css_merge_in_either_order ... ok
+test tests::css::classes::test_explicit_class_attribute ... ok
+test tests::css::colors::test_basic_colors ... ok
+test tests::css::colors::test_hex_value_colors ... ok
+test tests::css::colors::test_hsl_value_colors ... ok
+test tests::css::colors::test_rgb_value_colors ... ok
+test tests::css::comments::test_empty ... ok
+test tests::css::comments::test_empty2 ... ok
+test tests::css::comments::test_quite_long ... ok
+test tests::css::expressions::test_background_url_expression ... ok
+test tests::css::expressions::test_background_url_plain ... ok
+test tests::css::media::test_doubled ... ok
+test tests::css::media::test_media ... ok
+test tests::css::media::test_media_with_params ... ok
+test tests::css::media::test_media_with_pseudo ... ok
+test tests::css::pseudoselectors::test_doubled ... ok
+test tests::css::pseudoselectors::test_hover ... ok
+test tests::css::pseudoselectors::test_hover_with_params ... ok
+test tests::css::pseudoselectors::test_last_of_type ... ok
+test tests::css::refs::test_pseudo_and_two_refs ... ok
+test tests::css::refs::test_pseudo_and_ref ... ok
+test tests::css::refs::test_ref ... ok
+test tests::css::refs::test_ref_and_variable ... ok
+test tests::css::unknown::animation_rules ... ok
+test tests::css::unknown::test_unknown_rule ... ok
+test tests::css::unknown::test_unknown_rule_expression ... ok
+test tests::dom::component::test_generics ... ok
+test tests::dom::children::test_children ... ok
+test tests::dom::component::test_if_docstrings_allowed ... ok
+test tests::dom::component::test_if_lifetimes_allowed ... ok
+test tests::dom::component::test_manual_mounting ... ok
+test tests::dom::component::test_mutable_parameter ... ok
+test tests::dom::component::test_mutable_ref_parameter ... ok
+test tests::dom::component_dynamic::test_attr_values_grouping_and_spreading ... ok
+test tests::dom::component_dynamic::test_css_attrs_grouping_and_spreading ... ok
+test tests::dom::component_dynamic::test_css_extending ... ok
+test tests::dom::component_dynamic::test_embeddable_group_attrs ... ok
+test tests::dom::component_dynamic::test_embeddable_group_attrs_cloned ... ok
+test tests::dom::component_dynamic::test_empty_attrs_grouping ... ok
+test tests::dom::component_dynamic::test_on_events_grouping_and_spreading ... ok
+test tests::dom::component_dynamic::test_passable_attr_group ... ok
+test tests::dom::component_dynamic::test_tw_attrs_grouping_and_spreading ... ok
+test tests::dom::component_namespaces::test_namespaces ... ok
+test tests::dom::component_dynamic::test_stringifyable_group_attrs ... ok
+test tests::dom::component_namespaces::test_pub_super ... ok
+test tests::dom::component_namespaces::test_pub_crate ... ok
+test tests::dom::embed::a_chrono_format_embeds ... ok
+test tests::dom::embed::a_dom_display_type_embeds_owned_and_borrowed ... ok
+test tests::dom::embed::a_type_can_define_its_own_embedding ... ok
+test tests::dom::embed::borrowed_values_embed ... ok
+test tests::dom::embed::chrono_types_embed ... ok
+test tests::dom::embed::cow_attributes_owned_and_borrowed ... ok
+test tests::dom::embed::decimal_embeds ... ok
+test tests::dom::embed::owned_values_embed ... ok
+test tests::dom::embed::reactive_values_embed ... ok
+test tests::dom::html_attrs::button_on_click ... ok
+test tests::dom::html_attrs::default_values ... ok
+test tests::dom::html_attrs::form_on_submit ... ok
+test tests::dom::html_attrs::input_on_change_file ... ok
+test tests::dom::html_attrs::input_on_change_file_accept ... ok
+test tests::dom::html_attrs::no_keys ... ok
+test tests::dom::html_attrs::references ... ok
+test tests::dom::list_spread::child_from_block ... ok
+test tests::dom::list_spread::children_from_iter ... ok
+test tests::dom::list_spread::children_from_block_with_iter_inline ... ok
+test tests::dom::list_spread::iter_option ... ok
+test tests::dom::list_spread::children_from_iter_inline ... ok
+test tests::dom::params::component_params_with_blocks ... ok
+test tests::dom::params::component_params_with_default_values ... ok
+test tests::dom::params::component_params_with_inferred_names ... ok
+test tests::dom::params::component_static_param ... ok
+test tests::dom::params::component_variable_params ... ok
+test tests::dom_command_counts::a_cut_off_write_emits_nothing ... ok
+test tests::dom_command_counts::attribute_change_is_one_command ... ok
+test tests::dom_command_counts::computed_text_node_is_patched_in_place ... ok
+test tests::dom_command_counts::interpolated_text_is_patched_in_place ... ok
+test tests::dom_command_counts::interpolated_text_mounts_with_its_value_already_set ... ok
+test reactive_old::compare::dashboard_metric_tick_is_absorbed ... ok
+test tests::dom_command_counts::reversing_moves_every_row_but_one_and_rebuilds_none ... ok
+test tests::dom_command_counts::removal_cost_does_not_depend_on_position ... ok
+test tests::dom_command_counts::reversing_plain_element_rows_moves_two_nodes_each_but_one_row ... ok
+test reactive_old::compare::editor_typing_does_not_touch_the_status_bar ... ok
+test tests::dom_command_counts::updating_one_row_does_not_disturb_the_list ... ok
+test tests::js_macro::test_complex_receiver ... ok
+test tests::js_macro::test_many_arguments ... ok
+test tests::js_macro::test_method_call ... ok
+test tests::js_macro::test_property ... ok
+test tests::js_macro::test_ref ... ok
+test tests::jsjson_bytes::test_auto_js_json_vec ... ok
+test tests::keyed_computed_list::a_returning_key_is_not_still_marked_departed ... ok
+test tests::keyed_computed_list::a_row_read_after_the_list_moves_on_is_reported ... ok
+test tests::keyed_computed_list::a_stale_row_does_not_pin_the_rest_of_the_list ... ok
+test reactive_old::compare::editor_caret_move_inside_block ... ok
+test tests::keyed_computed_list::duplicate_keys_during_a_refresh ... ok
+test tests::keyed_computed_list::can_be_built_during_a_refresh ... ok
+test tests::keyed_computed_list::keeps_the_first_item_when_duplicate_keys_appear ... ok
+test tests::keyed_computed_list::keyed_list_builds_a_keyed_computed_list ... ok
+test tests::keyed_computed_list::exposes_computed_values_for_the_initial_list ... ok
+test tests::keyed_computed_list::keyed_list_map_runs_create_state_once_per_key ... ok
+test reactive_old::compare::dashboard_incident_reaches_the_banner ... ok
+test tests::dom_command_counts::swap_cost_does_not_depend_on_the_distance_between_the_rows ... ok
+test tests::keyed_computed_list::one_row_update_stays_within_its_key_budget ... ok
+test tests::keyed_computed_list::removing_a_row_does_not_report_a_read_after_removal ... ok
+test tests::keyed_computed_list::one_row_update_scales_linearly ... ok
+test tests::keyed_computed_list::unchanged_rows_do_not_notify ... ok
+test tests::keyed_computed_list::returns_last_value_after_key_leaves_the_list ... ok
+test tests::keyed_computed_list::removing_a_row_with_hand_rolled_observers_is_quiet ... ok
+test tests::value_copies::new_takes_ownership_of_the_payload ... ok
+test tests::value_copies::set_still_delivers_to_listeners ... ok
+test tests::mount_batching::mount_emits_a_single_batch ... ok
+test tests::mount_batching::first_batch_contains_the_document_roots ... ok
+test tests::value_copies::set_without_listeners_does_not_copy_the_payload ... ok
+test websocket_collection::types::tests::query_to_ws_subscribe_query_preserves_value_kinds ... ok
+test websocket_collection::types::tests::subscribe_query_and_eq_gt_serializes_logic_and_where ... ok
+test websocket_collection::types::tests::subscribe_query_like_text_column_serializes_logic_and_where ... ok
+test websocket_collection::types::tests::subscribe_query_lt_serializes_op_and_value ... ok
+test websocket_collection::types::tests::subscribe_query_new_or_serializes_logic_or ... ok
+test websocket_collection::types::tests::websocket_query_id_serializes_as_plain_string ... ok
+test websocket_collection::types::tests::ws_where_clause_serializes_op_column_value ... ok
+test websocket_collection::ws_message_from::tests::from_js_json_reports_unknown_variant_by_tag ... ok
+test websocket_collection::ws_message_from::tests::ws_server_message_delete_round_trips ... ok
+test websocket_collection::ws_message_from::tests::ws_server_message_init_matches_from_json_on_jsjson ... ok
+test websocket_collection::ws_message_from::tests::ws_server_message_init_round_trips ... ok
+test websocket_collection::ws_message_from::tests::ws_server_message_set_round_trips ... ok
+test websocket_collection::ws_message_to::tests::ws_client_subscribe_round_trips_through_js_json ... ok
+test websocket_collection::ws_message_to::tests::ws_client_subscribe_serializes_as_subscribe_variant_object ... ok
+test websocket_collection::ws_message_to::tests::ws_client_unsubscribe_serializes_and_round_trips ... ok
+test websocket_collection::ws_message_to::tests::ws_subscribe_query_uses_where_json_key_not_filters ... ok
+test websocket_collection::ws_message_to::tests::ws_subscribe_serializes_like_and_logic_and_gt ... ok
+test tests::dom_command_counts::append_cost_does_not_depend_on_list_length ... ok
+test tests::dom_command_counts::swapping_render_value_rows_moves_two_rows ... ok
+test reactive_old::compare::list_widget_edit_one_quantity ... ok
+test reactive::tests::cutoff_leaves_fanout_untouched ... ok
+test reactive_old::compare::list_widget_second_selection_keeps_toolbar ... ok
+test reactive_old::compare::list_widget_reprice_all_in_one_transaction ... ok
+test reactive::propagation_order::one_run_regardless_of_incoming_paths ... ok
+test reactive_old::compare::cutoff_fanout_skips_unchanged_children ... ok
+test reactive_old::compare::fanout_runs_when_parity_changes ... ok
+test reactive_old::compare::deep_chain_updates ... ok
+
+test result: ok. 416 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.49s
+
+     Running unittests src/lib.rs (/var/folders/zk/ss53sb5543x36nnb0h_6p49r0000gn/T/cursor-sandbox-cache/b23d3c36d75ba616bbc71ea70a24001e/cargo-target/debug/deps/vertigo_bench_support-35a9dec5b15b160a)
+
+running 0 tests
+
+test result: ok. 0 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.00s
+
+     Running unittests src/lib.rs (/var/folders/zk/ss53sb5543x36nnb0h_6p49r0000gn/T/cursor-sandbox-cache/b23d3c36d75ba616bbc71ea70a24001e/cargo-target/debug/deps/vertigo_cli-7aea2f5cdba5135f)
+
+running 12 tests
+test build::find_target::tests::opt_value_absent_or_only_a_prefix_match ... ok
+test build::find_target::tests::builtin_profiles_map_to_their_directories ... ok
+test build::find_target::tests::profile_from_cargo_opts_wins_over_release ... ok
+test build::find_target::tests::target_root_prefers_the_cargo_opt ... ok
+test build::find_target::tests::profile_defaults_to_release_flag ... ok
+test build::find_target::tests::opt_value_separate_and_joined ... ok
+test build::wasm_path::test_hash ... ok
+test serve::mount_path::tests::test_replace_prefix ... ok
+test serve::html::element_children::tests::test_children ... ok
+test serve::html::html_node_convert_to_string::tests::html_inline_mixed_content_no_extra_whitespace ... ok
+test serve::html::html_node_convert_to_string::tests::html_pre_formatting ... ok
+test serve::html::element::tests::test_html ... ok
+
+test result: ok. 12 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.00s
+
+     Running unittests src/main.rs (/var/folders/zk/ss53sb5543x36nnb0h_6p49r0000gn/T/cursor-sandbox-cache/b23d3c36d75ba616bbc71ea70a24001e/cargo-target/debug/deps/vertigo-9f8c616777667661)
+
+running 0 tests
+
+test result: ok. 0 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.00s
+
+     Running unittests src/lib.rs (/var/folders/zk/ss53sb5543x36nnb0h_6p49r0000gn/T/cursor-sandbox-cache/b23d3c36d75ba616bbc71ea70a24001e/cargo-target/debug/deps/vertigo_demo-c528acb6cc187fa9)
+
+running 13 tests
+test app::game_of_life::next_generation::test_mod ... ok
+test app::route::tests::a_full_lap_comes_back_to_the_start ... ok
+test app::route::tests::every_route_round_trips_through_its_path ... ok
+test app::route::tests::every_tab_is_distinct ... ok
+test app::route::tests::stepping_from_outside_the_menu_enters_it ... ok
+test app::route::tests::stepping_moves_along_the_menu ... ok
+test app::route::tests::stepping_wraps_at_both_ends ... ok
+test app::route::tests::walking_forward_visits_every_tab ... ok
+test app::sudoku::state::status::tests::a_repeat_in_a_block_is_a_conflict ... ok
+test app::sudoku::state::status::tests::a_repeat_in_a_column_is_a_conflict ... ok
+test app::sudoku::state::status::tests::a_repeat_in_a_row_is_a_conflict ... ok
+test app::sudoku::state::status::tests::an_empty_board_has_no_conflict ... ok
+test app::sudoku::state::status::tests::a_finished_board_has_no_conflict ... ok
+
+test result: ok. 13 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.00s
+
+     Running unittests src/lib.rs (/var/folders/zk/ss53sb5543x36nnb0h_6p49r0000gn/T/cursor-sandbox-cache/b23d3c36d75ba616bbc71ea70a24001e/cargo-target/debug/deps/vertigo_demo_server-653d193dcf51fd11)
+
+running 0 tests
+
+test result: ok. 0 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.00s
+
+     Running unittests src/main.rs (/var/folders/zk/ss53sb5543x36nnb0h_6p49r0000gn/T/cursor-sandbox-cache/b23d3c36d75ba616bbc71ea70a24001e/cargo-target/debug/deps/vertigo_demo_server-1b64987692679211)
+
+running 0 tests
+
+test result: ok. 0 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.00s
+
+     Running unittests src/lib.rs (/var/folders/zk/ss53sb5543x36nnb0h_6p49r0000gn/T/cursor-sandbox-cache/b23d3c36d75ba616bbc71ea70a24001e/cargo-target/debug/deps/vertigo_example_counter-d962b577bda9163d)
+
+running 0 tests
+
+test result: ok. 0 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.00s
+
+     Running unittests src/lib.rs (/var/folders/zk/ss53sb5543x36nnb0h_6p49r0000gn/T/cursor-sandbox-cache/b23d3c36d75ba616bbc71ea70a24001e/cargo-target/debug/deps/vertigo_example_router-95d22a06f830dc32)
+
+running 0 tests
+
+test result: ok. 0 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.00s
+
+     Running unittests src/lib.rs (/var/folders/zk/ss53sb5543x36nnb0h_6p49r0000gn/T/cursor-sandbox-cache/b23d3c36d75ba616bbc71ea70a24001e/cargo-target/debug/deps/vertigo_example_trafficlights-a41fff6ad5f87182)
+
+running 0 tests
+
+test result: ok. 0 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.00s
+
+     Running unittests src/lib.rs (/var/folders/zk/ss53sb5543x36nnb0h_6p49r0000gn/T/cursor-sandbox-cache/b23d3c36d75ba616bbc71ea70a24001e/cargo-target/debug/deps/vertigo_macro-43dad4ce1c446be3)
+
+running 50 tests
+test bind::tests::test_contains_bracket ... ok
+test bind::tests::test_find_param_name ... ok
+test bind::tests::test_is_char ... ok
+test html_parser::commons::tests::test_extract_spread_block_without_spread ... ok
+test bind::tests::test_split_params_and_body_function ... ok
+test bind::tests::test_get_type ... ok
+test html_parser::commons::tests::test_extract_spread_block_with_spread ... ok
+test html_parser::commons::tests::test_is_component_name ... ok
+test bind::tests::test_is_first_pipe_char ... ok
+test html_parser::commons::tests::test_dereference_maybe ... ok
+test bind::tests::test_split_params_and_body_block ... ok
+test bind::tests::test_bind_inner_simple ... ok
+test html_parser::commons::tests::test_is_default_block ... ok
+test html_parser::commons::tests::test_parse_block_of_statements_reference_value ... ok
+test html_parser::commons::tests::test_parse_block_of_statements_simple_value ... ok
+test bind::tests::test_bind_inner_with_params ... ok
+test bind::tests::test_bind_spawn_inner ... ok
+test bind::tests::test_bind_inner_closure ... ok
+test html_parser::commons::tests::test_parse_block_of_statements_reference_with_preceding_stmts ... ok
+test html_parser::commons::tests::test_unwrap_block_if_single ... ok
+test html_parser::group_attrs::tests::test_attr_to_group_variant_css ... ok
+test bind::tests::test_bind_rc_inner ... ok
+test html_parser::group_attrs::tests::test_attr_to_group_variant_fallback ... ok
+test html_parser::node::tests::test_non_literal_is_left_alone ... ok
+test html_parser::node::tests::test_push_attribute_class ... ok
+test html_parser::node::tests::test_push_attribute_css ... ok
+test html_parser::node::tests::test_push_attribute_form_alias ... ok
+test html_parser::node::tests::test_push_attribute_multiple_classes_accumulated ... ok
+test html_parser::node::tests::test_push_attribute_event_handlers ... ok
+test html_parser::node::tests::test_string_literal_class_keeps_its_literal_flag ... ok
+test html_parser::node::tests::test_push_attribute_plain_attr ... ok
+test html_parser::node::tests::test_string_literal_takes_the_static_path ... ok
+test main_wrap::tests::test_dom_debug_no_warning ... ok
+test main_wrap::tests::test_complex_nested_structure ... ok
+test html_parser::component::tests::test_convert_to_component_simple ... ok
+test main_wrap::tests::test_nested_dom_warning ... ok
+test main_wrap::tests::test_tw_attribute_warning ... ok
+test html_parser::component::tests::test_convert_to_component_with_block_attribute ... ok
+test main_wrap::tests::test_no_warnings ... ok
+test main_wrap::tests::test_tw_macro_warning ... ok
+test store::tests::not_a_function ... ok
+test wasm_path::test_hash ... ok
+test store::tests::no_return_type ... ok
+test html_parser::component::tests::test_convert_to_component_with_attributes ... ok
+test html_parser::component::tests::test_convert_to_component_with_tw_attribute ... ok
+test html_parser::component::tests::test_convert_to_component_with_spread_attribute ... ok
+test html_parser::component::tests::test_convert_to_component_with_default_attribute ... ok
+test html_parser::component::tests::test_convert_to_component_with_grouped_attributes ... ok
+test store::tests::function_without_arguments ... ok
+test store::tests::with_arguments ... ok
+
+test result: ok. 50 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.00s
+
+     Running unittests src/lib.rs (/var/folders/zk/ss53sb5543x36nnb0h_6p49r0000gn/T/cursor-sandbox-cache/b23d3c36d75ba616bbc71ea70a24001e/cargo-target/debug/deps/vertigo_test_basic-c2b55d4f9fa5bf66)
+
+running 0 tests
+
+test result: ok. 0 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.00s
+
+     Running unittests src/lib.rs (/var/folders/zk/ss53sb5543x36nnb0h_6p49r0000gn/T/cursor-sandbox-cache/b23d3c36d75ba616bbc71ea70a24001e/cargo-target/debug/deps/vertigo_test_dom_bench-2ab5fc84eafd7ba8)
+
+running 0 tests
+
+test result: ok. 0 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.00s
+
+     Running unittests src/lib.rs (/var/folders/zk/ss53sb5543x36nnb0h_6p49r0000gn/T/cursor-sandbox-cache/b23d3c36d75ba616bbc71ea70a24001e/cargo-target/debug/deps/vertigo_test_reactive_bench-a19b2267660af9d6)
+
+running 0 tests
+
+test result: ok. 0 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.00s
+
+   Doc-tests fantoccini_tests
+
+running 0 tests
+
+test result: ok. 0 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.00s
+
+   Doc-tests vertigo
+
+running 57 tests
+test crates/vertigo/src/../docs/collection-key-and-list-renderers.md - guides::collection_key_and_list_renderers (line 122) ... ignored
+test crates/vertigo/src/../docs/collection-key-and-list-renderers.md - guides::collection_key_and_list_renderers (line 162) ... ignored
+test crates/vertigo/src/../docs/collection-key-and-list-renderers.md - guides::collection_key_and_list_renderers (line 29) ... ignored
+test crates/vertigo/src/../docs/collection-key-and-list-renderers.md - guides::collection_key_and_list_renderers (line 46) ... ignored
+test crates/vertigo/src/../docs/collection-key-and-list-renderers.md - guides::collection_key_and_list_renderers (line 72) ... ignored
+test crates/vertigo/src/../docs/collection-key-and-list-renderers.md - guides::collection_key_and_list_renderers (line 96) ... ignored
+test crates/vertigo/src/../docs/lazy-list-cache.md - guides::lazy_list_cache (line 249) ... ignored
+test crates/vertigo/src/../docs/lazy-list-cache.md - guides::lazy_list_cache (line 82) ... ignored
+test crates/vertigo/src/../docs/reactive-graph.md - guides::reactive_graph (line 30) ... ignored
+test crates/vertigo/src/../docs/reactive-graph.md - guides::reactive_graph (line 73) ... ignored
+test crates/vertigo/src/../docs/reactive-graph.md - guides::reactive_graph (line 97) ... ignored
+test crates/vertigo/src/../docs/websocket-collection.md - guides::websocket_collection (line 108) ... ignored
+test crates/vertigo/src/../docs/websocket-collection.md - guides::websocket_collection (line 159) ... ignored
+test crates/vertigo/src/../docs/websocket-collection.md - guides::websocket_collection (line 177) ... ignored
+test crates/vertigo/src/../docs/websocket-collection.md - guides::websocket_collection (line 204) ... ignored
+test crates/vertigo/src/../docs/websocket-collection.md - guides::websocket_collection (line 61) ... ignored
+test crates/vertigo/src/../docs/websocket-collection.md - guides::websocket_collection (line 87) ... ignored
+test crates/vertigo/src/driver_module/driver.rs - driver_module::driver::Driver::set_status (line 370) ... ok
+test crates/vertigo/src/html_entities.rs - html_entities (line 4) ... ok
+test crates/vertigo/src/css/css_structs.rs - css::css_structs::Css (line 17) ... ok
+test crates/vertigo/src/driver_module/driver.rs - driver_module::driver::Driver::is_browser (line 270) ... ok
+test crates/vertigo/src/auto_map.rs - auto_map::AutoMap (line 19) ... ok
+test crates/vertigo/src/dom/dom_display.rs - dom::dom_display::DomDisplay (line 17) ... ok
+test crates/vertigo/src/lib.rs - AutoJsJson (line 284) ... ok
+test crates/vertigo/src/fetch/lazy_cache.rs - fetch::lazy_cache::LazyCache (line 26) ... ok
+test crates/vertigo/src/driver_module/driver.rs - driver_module::driver::Driver::plains (line 353) ... ok
+test crates/vertigo/src/lib.rs - (line 104) ... ok
+test crates/vertigo/src/lib.rs - (line 68) ... ok
+test crates/vertigo/src/fetch/lazy_cache.rs - fetch::lazy_cache::LazyCache<T>::new_resource (line 290) ... ok
+test crates/vertigo/src/keyed_computed_list.rs - keyed_computed_list::keyed_computed_list (line 50) ... ok
+test crates/vertigo/src/dom_macro/dom.rs - dom_macro::dom::AttrGroup (line 18) ... ok
+test crates/vertigo/src/lib.rs - AutoJsJson (line 341) ... ok
+test crates/vertigo/src/lib.rs - bind (line 219) ... ok
+test crates/vertigo/src/lib.rs - bind (line 240) ... ok
+test crates/vertigo/src/lib.rs - component (line 369) ... ok
+test crates/vertigo/src/lib.rs - component (line 388) ... ok
+test crates/vertigo/src/lib.rs - computed_tuple (line 132) ... ok
+test crates/vertigo/src/lib.rs - computed_tuple (line 148) ... ok
+test crates/vertigo/src/lib.rs - css (line 543) ... ok
+test crates/vertigo/src/lib.rs - css (line 556) ... ok
+test crates/vertigo/src/lib.rs - css_block (line 583) ... ok
+test crates/vertigo/src/lib.rs - dom (line 500) ... ok
+test crates/vertigo/src/lib.rs - dom (line 515) ... ok
+test crates/vertigo/src/lib.rs - js (line 421) ... ok
+test crates/vertigo/src/lib.rs - js (line 429) ... ok
+test crates/vertigo/src/lib.rs - js (line 437) ... ok
+test crates/vertigo/src/lib.rs - js (line 447) ... ok
+test crates/vertigo/src/lib.rs - main (line 479) ... ok
+test crates/vertigo/src/lib.rs - store (line 603) ... ok
+test crates/vertigo/src/lib.rs - tw (line 203) ... ok
+test crates/vertigo/src/reactive/by_rc.rs - reactive::by_rc::ByRc (line 13) ... ok
+test crates/vertigo/src/reactive/value.rs - reactive::value::Value (line 12) ... ok
+test crates/vertigo/src/render/collection.rs - render::collection::CollectionKey (line 18) ... ok
+test crates/vertigo/src/render/render_list.rs - render::render_list::render_list (line 23) ... ok
+test crates/vertigo/src/render/render_value.rs - render::render_value::Value<T>::render_value (line 68) ... ok
+test crates/vertigo/src/render/render_value.rs - render::render_value::Value<T>::render_value_option (line 89) ... ok
+test crates/vertigo/src/router.rs - router::Router (line 14) ... ok
+
+test result: ok. 40 passed; 0 failed; 17 ignored; 0 measured; 0 filtered out; finished in 6.80s
+
+all doctests ran in 6.97s; merged doctests compilation took 0.17s
+   Doc-tests vertigo_bench_support
+
+running 0 tests
+
+test result: ok. 0 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.00s
+
+   Doc-tests vertigo_cli
+
+running 3 tests
+test crates/vertigo-cli/src/serve/vertigo_handler.rs - serve::vertigo_handler::vertigo_handler (line 12) - compile ... ok
+test crates/vertigo-cli/src/serve/vertigo_handler.rs - serve::vertigo_handler::vertigo_handler (line 22) - compile ... ok
+test crates/vertigo-cli/src/serve/vertigo_install.rs - serve::vertigo_install::vertigo_install (line 15) - compile ... ok
+
+test result: ok. 3 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.00s
+
+all doctests ran in 1.44s; merged doctests compilation took 1.10s
+   Doc-tests vertigo_demo
+
+running 0 tests
+
+test result: ok. 0 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.00s
+
+   Doc-tests vertigo_demo_server
+
+running 0 tests
+
+test result: ok. 0 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.00s
+
+   Doc-tests vertigo_example_counter
+
+running 0 tests
+
+test result: ok. 0 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.00s
+
+   Doc-tests vertigo_example_router
+
+running 0 tests
+
+test result: ok. 0 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.00s
+
+   Doc-tests vertigo_example_trafficlights
+
+running 0 tests
+
+test result: ok. 0 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.00s
+
+   Doc-tests vertigo_macro
+
+running 0 tests
+
+test result: ok. 0 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.00s
+
+   Doc-tests vertigo_test_basic
+
+running 0 tests
+
+test result: ok. 0 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.00s
+
+   Doc-tests vertigo_test_dom_bench
+
+running 0 tests
+
+test result: ok. 0 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.00s
+
+   Doc-tests vertigo_test_reactive_bench
+
+running 0 tests
+
+test result: ok. 0 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.00s
+
