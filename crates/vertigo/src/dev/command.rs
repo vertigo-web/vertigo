@@ -13,6 +13,13 @@ pub fn decode_json<T: JsJsonDeserialize>(json: JsJson) -> Result<T, JsJsonContex
 #[derive(AutoJsJson, Debug)]
 pub enum CommandForBrowser {
     FetchCacheGet,
+    /// Prośba o stan DOM przeglądarki na potrzeby hydracji.
+    ///
+    /// Pytamy, zamiast czekać na wypchnięcie z js, żeby kolejność nie była umową: rust
+    /// pobiera snapshot dokładnie wtedy, gdy jest mu potrzebny, czyli w
+    /// `DriverDom::flush_hydration`. Odpowiedzią jest [`DomSnapshot`] albo `Null`, gdy nie
+    /// ma DOM do zwrócenia (renderowanie serwerowe, testy na hoście).
+    DomSnapshotGet,
     FetchExec {
         request: SsrFetchRequest,
         callback: CallbackId,

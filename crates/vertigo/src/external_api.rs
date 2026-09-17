@@ -92,7 +92,8 @@ pub mod safe_wrappers {
                     | CommandForBrowser::Log { .. }
                     | CommandForBrowser::HistoryBack
                     | CommandForBrowser::JsApiCall { .. }
-                    | CommandForBrowser::DomBulkUpdate { .. } => JsJson::Null,
+                    | CommandForBrowser::DomBulkUpdate { .. }
+                    | CommandForBrowser::DomSnapshotGet => JsJson::Null,
                 };
 
                 return response.to_ptr_long();
