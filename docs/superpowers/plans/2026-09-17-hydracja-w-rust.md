@@ -418,8 +418,10 @@ git commit -m "feat(hydration): snapshot types and the DomSnapshotGet channel"
 **Files:**
 - Modify: `crates/vertigo/src/dev/command.rs`
 - Modify: `crates/vertigo/src/dev/command_wire.rs`
-- Modify: `crates/vertigo/src/driver_module/dom.rs`
 - Modify: `crates/vertigo-cli/src/serve/html/element.rs`
+- Modify: pozostałe wyczerpujące `match`e po `DriverDomCommand`, które wskaże kompilator:
+  `crates/vertigo/src/dev/inspect.rs`, `crates/vertigo/src/tests/dom_command_counts.rs`,
+  `tests/dom-bench/src/counts.rs`
 - Modify: `crates/vertigo/src/driver_module/src_js/api/command/dom/dom_wire.ts`
 - Modify: `crates/vertigo/src/driver_module/src_js/api/command/dom/dom.ts`
 - Modify: `crates/vertigo/src/driver_module/src_js/api/command/dom/dom_wire.test.ts`
