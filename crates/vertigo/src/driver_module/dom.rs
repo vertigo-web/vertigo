@@ -46,6 +46,7 @@ impl Commands {
         self.new_command.add(func)
     }
 
+    #[cfg(test)]
     fn inspect_batch(&self, func: impl Fn(Vec<DriverDomCommand>) + 'static) -> DropResource {
         self.new_batch.add(func)
     }
@@ -262,6 +263,7 @@ impl DriverDom {
         self.commands.flush_hydration();
     }
 
+    #[cfg(test)]
     pub fn inspect_batch(&self, func: impl Fn(Vec<DriverDomCommand>) + 'static) -> DropResource {
         self.commands.inspect_batch(func)
     }
