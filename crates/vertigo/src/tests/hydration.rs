@@ -12,6 +12,7 @@ use crate::{
         get_driver_dom,
         hydration::{DomSnapshot, SnapshotAttr, SnapshotNode},
     },
+    exports::mount,
 };
 
 fn snap_element(name: &str, attrs: Vec<(&str, &str)>, children: Vec<u32>) -> SnapshotNode {
@@ -68,9 +69,6 @@ fn app() -> DomNode {
 /// `inspect_batch`, not `inspect_command`: the latter fires when the command is queued, and
 /// hydration replaces the queued stream with the reconciled one, so adoptions would never pass
 /// through that path.
-///
-/// Does not call `init_env()` to avoid installing a global logger that would interfere with
-/// other tests' log capture (particularly `keyed_computed_list::a_row_read_after_the_list_moves_on_is_reported`).
 fn mount_capturing(init_app: impl FnOnce() -> DomNode) -> Vec<DriverDomCommand> {
     let seen: Rc<RefCell<Vec<DriverDomCommand>>> = Rc::new(RefCell::new(Vec::new()));
 
@@ -79,14 +77,7 @@ fn mount_capturing(init_app: impl FnOnce() -> DomNode) -> Vec<DriverDomCommand> 
         move |batch| seen.borrow_mut().extend(batch)
     });
 
-    // Inline mount logic without calling init_env() to avoid global logger installation
-    let driver = get_driver();
-    get_driver_dom().arm_hydration();
-    driver.transaction(|_| {
-        let root_view = init_app();
-        driver.set_root(root_view);
-    });
-    get_driver_dom().flush_hydration();
+    mount(init_app);
 
     // See `Driver::take_root` - dropping the tree when closing the thread reaches into
     // already freed store and aborts the process.

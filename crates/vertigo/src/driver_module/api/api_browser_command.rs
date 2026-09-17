@@ -218,6 +218,7 @@ impl CommandForBrowserApi {
         }
     }
 
+    #[cfg_attr(test, allow(dead_code))]
     pub fn console_log(
         &self,
         kind: ConsoleLogLevel,
