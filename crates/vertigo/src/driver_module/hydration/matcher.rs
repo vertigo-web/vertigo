@@ -289,7 +289,15 @@ impl<'a> Matcher<'a> {
                 TargetKind::Element { name } => {
                     self.report.hydratable += 1;
 
-                    match find_element(snapshot, snapshot_children, cursor, name.as_str()) {
+                    let mut from = cursor;
+                    while snapshot_children
+                        .get(from)
+                        .is_some_and(|index| is_whitespace(snapshot, *index))
+                    {
+                        from += 1;
+                    }
+
+                    match find_element(snapshot, snapshot_children, from, name.as_str()) {
                         Some(found) => {
                             removals.extend_from_slice(&snapshot_children[cursor..found]);
                             let snapshot_index = snapshot_children[found];
@@ -409,38 +417,55 @@ impl<'a> Matcher<'a> {
         }
     }
 
-    /// Temporary single-element text run handler. Task 5 replaces this with full
-    /// text-run and whitespace logic.
+    /// Plans a run of `run` consecutive text children, starting at `index`.
+    ///
+    /// Merged-run detection happens on the target tree side, not by analyzing snapshot
+    /// content: the server merges exactly such runs, so the run's length is sufficient
+    /// and we don't need to match prefixes.
+    ///
+    /// Returns the new cursor position in `snapshot_children`.
     #[allow(clippy::too_many_arguments)]
     fn plan_text_run(
         &mut self,
         plans: &mut Vec<ChildPlan>,
         target_children: &[DomId],
         index: usize,
-        _run: usize,
+        run: usize,
         snapshot_children: &[u32],
         cursor: usize,
         value: &str,
     ) -> usize {
+        // Only the first in the run has a chance of matching. The rest were merged by
+        // the server, so they have nothing to match - just like comment markers, and
+        // they likewise don't count against the result.
         self.report.hydratable += 1;
+        self.report.skipped += (run - 1) as u64;
 
-        let child = target_children[index];
+        let first = target_children[index];
 
-        match snapshot_children.get(cursor) {
+        let matched = match snapshot_children.get(cursor) {
             Some(snapshot_index) if is_text(self.snapshot, *snapshot_index) => {
-                let patch = !text_equals(self.snapshot, *snapshot_index, value);
+                let patch = run > 1 || !text_equals(self.snapshot, *snapshot_index, value);
+
                 plans.push(ChildPlan::AdoptText {
-                    child,
+                    child: first,
                     snapshot: *snapshot_index,
                     patch,
                 });
+
                 cursor + 1
             }
             _ => {
-                plans.push(ChildPlan::Create { child });
+                plans.push(ChildPlan::Create { child: first });
                 cursor
             }
+        };
+
+        for child in target_children.iter().skip(index + 1).take(run - 1) {
+            plans.push(ChildPlan::Create { child: *child });
         }
+
+        matched
     }
 }
 
@@ -489,6 +514,13 @@ fn text_run_length(tree: &TargetTree, children: &[DomId], from: usize) -> usize 
 
 fn is_text(snapshot: &DomSnapshot, index: u32) -> bool {
     matches!(snapshot.node(index), Some(SnapshotNode::Text { .. }))
+}
+
+fn is_whitespace(snapshot: &DomSnapshot, index: u32) -> bool {
+    match snapshot.node(index) {
+        Some(SnapshotNode::Text { value }) => value.trim().is_empty(),
+        _ => false,
+    }
 }
 
 fn text_equals(snapshot: &DomSnapshot, index: u32, value: &str) -> bool {
@@ -917,5 +949,177 @@ mod tests {
         assert_eq!(removed(&commands), vec![3, 4]);
         assert!(adopted(&commands).is_empty());
         assert!(created(&commands).contains(&3), "the buffer is untouched");
+    }
+
+    /// Multiple adjacent `DomText` nodes are merged by the server into a single text run
+    /// (`last_text_add` in `get_render_child_mode`), and the parser creates one node from it.
+    ///
+    /// The merged node adopts the first text and receives an `UpdateText` trimming it to its
+    /// own value; siblings are created anew. The js equivalent counted the rest as matched
+    /// without binding them to anything - and a later `UpdateText` on the second would hit
+    /// an id absent from `MapNodes`.
+    #[test]
+    fn a_merged_text_run_is_split() {
+        let snapshot = document(vec![snap_text("firstsecond")]);
+
+        let result = run(
+            vec![
+                text(4, "first"),
+                insert(3, 4),
+                text(5, "second"),
+                insert(3, 5),
+            ],
+            &snapshot,
+        );
+
+        assert_eq!(adopted(&result.commands), vec![(4, 3)]);
+        assert_eq!(created(&result.commands), vec![5]);
+
+        let patches: Vec<(u64, &str)> = result
+            .commands
+            .iter()
+            .filter_map(|command| match command {
+                DriverDomCommand::UpdateText { id, value } => Some((id.to_u64(), value.as_str())),
+                _ => None,
+            })
+            .collect();
+
+        assert_eq!(
+            patches,
+            vec![(4, "first")],
+            "the adopted node is cut down to its own value"
+        );
+
+        assert_eq!(
+            result.report.skipped, 1,
+            "the second text cannot be matched - the server merged it away - so it must not \
+             count against the score"
+        );
+        assert_eq!(result.report.hydratable, 1);
+        assert_eq!(result.report.matched, 1);
+    }
+
+    /// A single text with matching content needs no patch.
+    #[test]
+    fn an_identical_single_text_is_adopted_without_a_patch() {
+        let snapshot = document(vec![snap_text("hello")]);
+
+        let result = run(vec![text(4, "hello"), insert(3, 4)], &snapshot);
+
+        assert_eq!(adopted(&result.commands), vec![(4, 3)]);
+        assert!(
+            !result
+                .commands
+                .iter()
+                .any(|command| matches!(command, DriverDomCommand::UpdateText { .. })),
+            "nothing changed, so nothing should be patched"
+        );
+    }
+
+    #[test]
+    fn a_differing_single_text_is_adopted_and_patched() {
+        let snapshot = document(vec![snap_text("stale")]);
+
+        let result = run(vec![text(4, "fresh"), insert(3, 4)], &snapshot);
+
+        assert_eq!(adopted(&result.commands), vec![(4, 3)]);
+
+        let patches: Vec<&str> = result
+            .commands
+            .iter()
+            .filter_map(|command| match command {
+                DriverDomCommand::UpdateText { value, .. } => Some(value.as_str()),
+                _ => None,
+            })
+            .collect();
+
+        assert_eq!(patches, vec!["fresh"]);
+    }
+
+    /// Production server rendering formats output (`convert_to_string(true)`), so the html
+    /// contains indentation that the parser turns into text nodes not present in the vertigo
+    /// tree. When searching for an element, we're allowed to skip and remove them.
+    ///
+    /// This is safe because contexts don't overlap: where whitespace is significant
+    /// (`<pre>`, inline content), formatting switches to `Format::none()` and injects
+    /// nothing - and then the corresponding text node also exists in the target tree.
+    #[test]
+    fn formatting_whitespace_is_skipped_when_looking_for_an_element() {
+        let snapshot = document(vec![
+            snap_text("\n  "),
+            snap_element("div", vec![]),
+            snap_text("\n"),
+        ]);
+
+        let result = run(vec![element(4, "div"), insert(3, 4)], &snapshot);
+
+        assert_eq!(adopted(&result.commands), vec![(4, 4)]);
+        assert_eq!(removed(&result.commands), vec![3, 5]);
+        assert!(created(&result.commands).is_empty());
+    }
+
+    /// SVG elements preserve their case in `tagName`, html reports uppercase.
+    /// JS sends the name lowercased, and case-insensitive comparison handles both
+    /// worlds at once - so `SVG_TAGS` doesn't need to reach wasm.
+    #[test]
+    fn svg_casing_matches_without_a_tag_table() {
+        let snapshot = document(vec![snap_element("svg", vec![4]), snap_element("lineargradient", vec![])]);
+
+        let result = run(
+            vec![
+                element(4, "svg"),
+                insert(3, 4),
+                element(5, "linearGradient"),
+                insert(4, 5),
+            ],
+            &snapshot,
+        );
+
+        assert_eq!(adopted(&result.commands), vec![(4, 3), (5, 4)]);
+    }
+
+    /// A name with `svg:` prefix matches its local name - js creates such an element
+    /// via `createElementNS` after stripping the prefix, so the parser sees `<a>`.
+    #[test]
+    fn an_svg_prefixed_name_matches_its_local_name() {
+        let snapshot = document(vec![snap_element("svg", vec![4]), snap_element("a", vec![])]);
+
+        let result = run(
+            vec![
+                element(4, "svg"),
+                insert(3, 4),
+                element(5, "svg:a"),
+                insert(4, 5),
+            ],
+            &snapshot,
+        );
+
+        assert_eq!(adopted(&result.commands), vec![(4, 3), (5, 4)]);
+    }
+
+    /// A comment marker is created anew and doesn't consume a snapshot node - the next
+    /// target element must hit what the server actually rendered.
+    #[test]
+    fn a_comment_marker_does_not_consume_a_snapshot_node() {
+        let snapshot = document(vec![snap_element("div", vec![])]);
+
+        let result = run(
+            vec![
+                DriverDomCommand::CreateComment {
+                    id: id(4),
+                    value: "marker".to_string(),
+                },
+                insert(3, 4),
+                element(5, "div"),
+                insert(3, 5),
+            ],
+            &snapshot,
+        );
+
+        assert_eq!(adopted(&result.commands), vec![(5, 3)]);
+        assert_eq!(created(&result.commands), vec![4]);
+        assert_eq!(result.report.skipped, 1);
+        assert_eq!(result.report.hydratable, 1);
+        assert!(removed(&result.commands).is_empty());
     }
 }
