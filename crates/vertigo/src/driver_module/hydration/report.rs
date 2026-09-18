@@ -31,7 +31,6 @@ pub struct HydrationReport {
 }
 
 impl HydrationReport {
-    #[allow(dead_code)] // Used in later hydration tasks
     pub fn publish(&self) {
         DomAccess::default()
             .root("window")

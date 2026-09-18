@@ -6,9 +6,9 @@ use std::sync::Once;
 
 #[cfg(not(test))]
 use crate::dev::command::ConsoleLogLevel;
-use crate::driver_module::api::api_panic_message;
 #[cfg(not(test))]
 use crate::driver_module::api::api_browser_command;
+use crate::driver_module::api::api_panic_message;
 
 static SET_HOOK: Once = Once::new();
 

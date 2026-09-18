@@ -179,9 +179,18 @@ fn create_commands(id: DomId, node: &TargetNode) -> Vec<DriverDomCommand> {
 /// of the **next** adopted sibling - and that's knowledge about the future if we were
 /// emitting while deciding.
 enum ChildPlan {
-    Adopt { child: DomId, snapshot: u32 },
-    AdoptText { child: DomId, snapshot: u32, patch: bool },
-    Create { child: DomId },
+    Adopt {
+        child: DomId,
+        snapshot: u32,
+    },
+    AdoptText {
+        child: DomId,
+        snapshot: u32,
+        patch: bool,
+    },
+    Create {
+        child: DomId,
+    },
 }
 
 impl ChildPlan {
@@ -251,8 +260,7 @@ impl<'a> Matcher<'a> {
         self.emit_children(parent, &plans);
 
         for snapshot in removals {
-            self.out
-                .push(DriverDomCommand::SnapshotRemove { snapshot });
+            self.out.push(DriverDomCommand::SnapshotRemove { snapshot });
         }
     }
 
@@ -574,7 +582,11 @@ mod tests {
         }
     }
 
-    fn snap_element_attrs(name: &str, attrs: Vec<(&str, &str)>, children: Vec<u32>) -> SnapshotNode {
+    fn snap_element_attrs(
+        name: &str,
+        attrs: Vec<(&str, &str)>,
+        children: Vec<u32>,
+    ) -> SnapshotNode {
         SnapshotNode::Element {
             name: name.to_string(),
             attrs: attrs
@@ -679,7 +691,10 @@ mod tests {
     /// This is where the batch shrinkage comes from.
     #[test]
     fn an_adopted_node_in_place_needs_no_insert() {
-        let snapshot = document(vec![snap_element("div", vec![]), snap_element("span", vec![])]);
+        let snapshot = document(vec![
+            snap_element("div", vec![]),
+            snap_element("span", vec![]),
+        ]);
 
         let result = run(
             vec![
@@ -793,7 +808,11 @@ mod tests {
                     parent,
                     child,
                     ref_id,
-                } => Some((parent.to_u64(), child.to_u64(), ref_id.map(|id| id.to_u64()))),
+                } => Some((
+                    parent.to_u64(),
+                    child.to_u64(),
+                    ref_id.map(|id| id.to_u64()),
+                )),
                 _ => None,
             })
             .collect();
@@ -1063,7 +1082,10 @@ mod tests {
     /// worlds at once - so `SVG_TAGS` doesn't need to reach wasm.
     #[test]
     fn svg_casing_matches_without_a_tag_table() {
-        let snapshot = document(vec![snap_element("svg", vec![4]), snap_element("lineargradient", vec![])]);
+        let snapshot = document(vec![
+            snap_element("svg", vec![4]),
+            snap_element("lineargradient", vec![]),
+        ]);
 
         let result = run(
             vec![
@@ -1082,7 +1104,10 @@ mod tests {
     /// via `createElementNS` after stripping the prefix, so the parser sees `<a>`.
     #[test]
     fn an_svg_prefixed_name_matches_its_local_name() {
-        let snapshot = document(vec![snap_element("svg", vec![4]), snap_element("a", vec![])]);
+        let snapshot = document(vec![
+            snap_element("svg", vec![4]),
+            snap_element("a", vec![]),
+        ]);
 
         let result = run(
             vec![

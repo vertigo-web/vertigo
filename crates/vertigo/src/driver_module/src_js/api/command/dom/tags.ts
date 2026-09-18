@@ -1,5 +1,4 @@
-// Tag-name handling, shared by the command applier (`dom.ts`) and the hydration matcher
-// (`hydration.ts`).
+// Tag-name handling for the command applier (`dom.ts`).
 
 // Workaround, remove when https://github.com/vertigo-web/vertigo/issues/539 is done.
 const SVG_TAGS = new Set([
@@ -15,20 +14,6 @@ const SVG_TAGS = new Set([
     "symbol", "text", "textPath", "tspan", "use", "view",
     "svg:a", "svg:title", "svg:desc", "svg:script", "svg:style"
 ]);
-
-/// The name an element created from `name` reports as its `tagName`.
-///
-/// HTML elements uppercase it; SVG ones keep the case they were created with, and the HTML
-/// parser applies the same adjustment when it reads server-rendered markup - so `<svg>` comes
-/// back as "svg" and `<linearGradient>` as "linearGradient", never "SVG" or "LINEARGRADIENT".
-/// Hydration compares against this rather than blanket-uppercasing.
-export const expectedTagName = (name: string): string => {
-    if (SVG_TAGS.has(name)) {
-        return name.replace("svg:", "");
-    }
-
-    return name.toUpperCase();
-};
 
 export const createElement = (name: string): Element => {
     if (SVG_TAGS.has(name)) {

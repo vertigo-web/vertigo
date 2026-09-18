@@ -51,7 +51,6 @@ impl DomSnapshot {
         }
     }
 
-    #[allow(dead_code)] // Used in later hydration tasks
     pub fn attrs(&self, index: u32) -> &[SnapshotAttr] {
         match self.node(index) {
             Some(SnapshotNode::Element { attrs, .. }) => attrs.as_slice(),

@@ -306,13 +306,18 @@ pub enum DriverDomCommand {
     /// to it. This way everything that comes later - `SetAttr`, `UpdateText`, `CallbackAdd`,
     /// patches from subscriptions - hits unchanged identifiers and requires no knowledge
     /// of hydration.
-    NodeAdopt { id: DomId, snapshot: u32 },
+    NodeAdopt {
+        id: DomId,
+        snapshot: u32,
+    },
     /// Removes a snapshot node that was not adopted.
     ///
     /// `RemoveNode` cannot be used here: leftover server-rendered nodes have no `DomId`,
     /// because they were never registered. Removing a node in the DOM takes its entire
     /// subtree with it, so one command on the root is enough for a rejected subtree.
-    SnapshotRemove { snapshot: u32 },
+    SnapshotRemove {
+        snapshot: u32,
+    },
 }
 
 impl DriverDomCommand {
