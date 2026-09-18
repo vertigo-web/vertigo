@@ -5,7 +5,7 @@
 
 ### Changed
 
-- Hydration moved from JavaScript to Rust. The browser is asked for a DOM snapshot
+* Hydration moved from JavaScript to Rust. The browser is asked for a DOM snapshot
   (`DomSnapshotGet`), and the mount batch is reconciled against it in wasm: existing nodes
   are adopted through the new `NodeAdopt` command and only differences are sent. Two
   consequences are visible from the outside: the first DOM batch of a server-rendered page is
