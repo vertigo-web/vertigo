@@ -3,11 +3,11 @@ import typescript from '@rollup/plugin-typescript';
 
 export default [
     {
-        input: 'crates/vertigo/src/driver_module/src_js/api/command/dom/hydration.test.ts',
+        input: 'crates/vertigo/src/driver_module/src_js/api/command/dom/snapshot.test.ts',
         output: [
             {
                 sourcemap: true,
-                file: 'build/hydration.test.js',
+                file: 'build/snapshot.test.js',
                 format: 'cjs',
             }
         ],
