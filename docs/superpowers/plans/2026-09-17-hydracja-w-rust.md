@@ -2823,7 +2823,7 @@ const run = () => {
 
         assert(payload.nodes.length === nodes.length, 'the payload and the node table must line up');
         assert(payload.head === 1, `head should be index 1, got ${payload.head}`);
-        assert(payload.body === 3, `body should be index 3, got ${payload.body}`);
+        assert(payload.body === 4, `body should be index 4, got ${payload.body}`);
 
         const root = payload.nodes[0];
         assert(elementName(root) === 'html', 'index 0 is <html>');
@@ -2835,7 +2835,10 @@ const run = () => {
             'Element' in root && root.Element.children.length === 2,
             'children are recorded as indices into the same list',
         );
-        assert('Text' in payload.nodes[2], 'the title text is at index 2');
+        // Obchód jest pre-order, więc poddrzewo węzła jest numerowane przed jego następnym
+        // rodzeństwem: <title> bierze 2, jego tekst 3, a <body> dopiero 4.
+        assert(elementName(payload.nodes[2]) === 'title', 'index 2 is <title>');
+        assert('Text' in payload.nodes[3], 'the title text follows its element, at index 3');
     }
 
     {
