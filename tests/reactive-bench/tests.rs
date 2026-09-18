@@ -1,27 +1,68 @@
-//! Runs the reactive-graph benchmark in a real browser and prints the results.
+//! Runs the reactive-graph benchmark in a real browser, prints the results, and compares them
+//! against an earlier run.
 //!
 //! Requires a WebDriver on localhost:9515. Run with:
 //!
 //! ```text
-//! cargo test --package fantoccini-tests --test reactive_bench -- --ignored --nocapture
+//! task reactive-bench
+//! BASELINE=target/bench/reactive/<earlier>.json task reactive-bench-compare
 //! ```
 //!
 //! This is a *reporter*, not a perf gate: it asserts only on things that hold regardless of
-//! machine speed (see `assert_row` and the cutoff/fan-out invariants at the bottom).
+//! machine speed (see `assert_row` and the cutoff/fan-out invariants at the bottom). Timings go
+//! into the table and the JSON; what is asserted is the graph's semantics.
+//!
+//! Why the suite exists at all: the graph's recent optimisations were allocation-shaped, and
+//! wasm32 uses dlmalloc where native builds use glibc malloc, so a native harness cannot see
+//! the difference that matters.
 
 use std::time::Duration;
 
 use fantoccini::{Client, ClientBuilder, Locator};
 use fantoccini_tests::{Ctx, TestResult};
+use vertigo_bench_report::{
+    Artifact, Meta, Metric, Row, Run, Suite, now_unix, parse_samples, scale,
+};
 use vertigo_cli::{BuildOpts, CommonOpts, ServeOpts, build, serve};
 
-/// Must differ from `basic` (5555): cargo may run the two test binaries concurrently.
+/// Must differ from `basic` (5555): cargo may run the test binaries concurrently.
 const PORT: u16 = 5556;
-/// Must also differ - `build::run` starts by wiping its dest dir, so sharing `./build`
-/// would let one test delete the other's artifacts.
+/// Must also differ - `build::run` starts by wiping its dest dir, so sharing `./build` would
+/// let one test delete the other's artifacts.
 const DEST_DIR: &str = "./build-reactive-bench";
 const PACKAGE: &str = "vertigo-test-reactive-bench";
 const RUN_TIMEOUT: Duration = Duration::from_secs(300);
+
+/// Batches per workload, fixed in `vertigo-bench-support`'s runner. Recorded in the harness
+/// block so a baseline taken with a different number says so rather than being subtracted.
+const REPEATS: usize = 3;
+
+const SUITE: Suite = Suite {
+    kind: "vertigo-reactive-bench",
+    dir: "reactive",
+    title: "reactive graph, WASM in a browser",
+    metrics: &[
+        Metric {
+            name: "batch_ms",
+            unit: "ms",
+            floor: 1.0,
+        },
+        Metric {
+            name: "per_op_us",
+            unit: "us",
+            floor: 0.005,
+        },
+    ],
+    headline: "batch_ms",
+    counters: &["iters", "runs", "checksum"],
+    // Three batches on a browser main thread, with GC and the compositor in the way. Wider than
+    // the SSR suite's band for the same reason the hydration suite's is.
+    noise_band_pct: 5.0,
+    instability_ratio: 1.5,
+    instability_floor: 2.0,
+    baseline_env: "VERTIGO_REACTIVE_BENCH_BASELINE",
+    label_env: "VERTIGO_REACTIVE_BENCH_LABEL",
+};
 
 /// Every workload expected in the report. Catches one being dropped from the table silently.
 const EXPECTED_SLUGS: &[&str] = &[
@@ -41,10 +82,10 @@ struct Reported {
     slug: String,
     iters: u64,
     best_ms: f64,
-    median_ms: f64,
     per_op_us: f64,
     runs: u64,
     checksum: u64,
+    samples_ms: Vec<f64>,
 }
 
 #[tokio::test]
@@ -120,7 +161,10 @@ async fn reactive_bench() -> TestResult {
         .await
         .ctx("failed to connect to WebDriver - is chromedriver running on :9515?")?;
 
-    let site_url = format!("http://127.0.0.1:{PORT}/");
+    // The app reads `?scale=` and multiplies every workload's iteration count by it, which is
+    // how a run is made long enough to be readable on a slow machine or short enough to iterate
+    // on. Passed through the URL rather than the environment because the app is in the browser.
+    let site_url = format!("http://127.0.0.1:{PORT}/?scale={}", scale());
     println!("Opening {site_url}");
     client.goto(&site_url).await.ctx("goto failed")?;
 
@@ -135,11 +179,23 @@ async fn reactive_bench() -> TestResult {
 
     let rows = parse_report(&report);
 
-    print_table(&rows, &user_agent, &total_ms);
-
     client.close().await.ctx("close failed")?;
     sender.send(1).ok();
     tokio::time::sleep(Duration::from_secs(1)).await;
+
+    // --- the report ---------------------------------------------------------
+
+    let created_at_unix = now_unix();
+    let run = build_run(
+        &rows,
+        user_agent,
+        &total_ms,
+        Artifact::scan("reactive-bench", DEST_DIR)?,
+    );
+
+    run.print();
+
+    let path = run.write_and_compare(created_at_unix)?;
 
     // --- assertions: only what is machine-independent -----------------------
 
@@ -168,11 +224,60 @@ async fn reactive_bench() -> TestResult {
         "a write that flips the parity must recompute every child exactly once per iteration"
     );
 
+    // Last, and only on the way out: `latest.json` is what the next `-compare` subtracts
+    // against by default, so a run that failed the semantic gates above must not become one.
+    run.promote_to_latest(&path)?;
+
     Ok(())
 }
 
-/// `Client::find` does not retry, so poll - and on timeout say what the page was doing,
-/// rather than just that an element was missing.
+fn build_run(
+    rows: &[Reported],
+    user_agent: String,
+    total_ms: &str,
+    artifacts: Vec<Artifact>,
+) -> Run {
+    let mut meta = Meta::collect();
+    meta.user_agent = user_agent;
+    let label = meta.label_for(&SUITE, meta.label_sha());
+
+    Run::new(&SUITE, meta, label)
+        .artifacts(artifacts)
+        .header_line(format!("total     : {total_ms} ms for the whole page"))
+        .harness("repeats", REPEATS)
+        .harness("scale", scale())
+        .rows(rows.iter().map(Reported::to_row).collect())
+}
+
+impl Reported {
+    fn to_row(&self) -> Row {
+        let row = Row::new(&self.slug)
+            .batch(self.samples_ms.clone(), self.iters)
+            .counter("runs", self.runs as i64);
+
+        // Not a measurement: it is the value the workload folded out of its own graph, and it
+        // changing means the workload computed something different - which the comparison
+        // reports loudly. Recorded only where that statement is true.
+        match CLOCK_DERIVED_CHECKSUM.contains(&self.slug.as_str()) {
+            true => row,
+            false => row.counter("checksum", self.checksum as i64),
+        }
+    }
+}
+
+/// Workloads whose checksum cannot repeat, and so must not be compared.
+///
+/// Exactly one. `clock-roundtrip` sums `now_ms()`: it exists to price the wasm/JS round trip
+/// that the timer itself costs, so its checksum is wall-clock-derived by construction.
+/// Comparing it reports `COUNTERS CHANGED - the work itself is different` on every single
+/// comparison, which is how a real alarm gets learned as noise and stops being read.
+///
+/// An exclusion list rather than an inclusion list, so a workload added to `EXPECTED_SLUGS`
+/// gets its checksum compared by default and has to opt out deliberately.
+const CLOCK_DERIVED_CHECKSUM: &[&str] = &["clock-roundtrip"];
+
+/// `Client::find` does not retry, so poll - and on timeout say what the page was doing, rather
+/// than just that an element was missing.
 async fn wait_for_done(client: &Client, timeout: Duration) {
     let found = client
         .wait()
@@ -210,8 +315,8 @@ fn parse_report(report: &str) -> Vec<Reported> {
             let fields: Vec<&str> = line.split('|').collect();
             assert_eq!(
                 fields.len(),
-                7,
-                "malformed report line {line:?} - expected 7 `|`-separated fields"
+                8,
+                "malformed report line {line:?} - expected 8 `|`-separated fields"
             );
             let number = |index: usize| -> f64 {
                 fields[index]
@@ -222,10 +327,10 @@ fn parse_report(report: &str) -> Vec<Reported> {
                 slug: fields[0].to_string(),
                 iters: number(1) as u64,
                 best_ms: number(2),
-                median_ms: number(3),
                 per_op_us: number(4),
                 runs: number(5) as u64,
                 checksum: number(6) as u64,
+                samples_ms: parse_samples(fields[7], line),
             }
         })
         .collect()
@@ -254,30 +359,4 @@ fn assert_row(row: &Reported) {
         per_op_us.is_finite() && *per_op_us > 0.0,
         "{slug}: implausible per-operation time {per_op_us}us"
     );
-}
-
-fn print_table(rows: &[Reported], user_agent: &str, total_ms: &str) {
-    println!();
-    println!("reactive graph, WASM in a browser");
-    println!("  user agent : {user_agent}");
-    println!("  total      : {total_ms} ms");
-    println!();
-    println!(
-        "  {:<16} {:>10} {:>12} {:>12} {:>14} {:>12}",
-        "workload", "iters", "best (ms)", "median (ms)", "per op (us)", "runs"
-    );
-    for row in rows {
-        println!(
-            "  {:<16} {:>10} {:>12.3} {:>12.3} {:>14.4} {:>12}",
-            row.slug, row.iters, row.best_ms, row.median_ms, row.per_op_us, row.runs
-        );
-    }
-    println!();
-    // Printed so a pasted table cannot be mistaken for one whose work was optimised away.
-    let checksums: Vec<String> = rows
-        .iter()
-        .map(|row| format!("{}={}", row.slug, row.checksum))
-        .collect();
-    println!("  checksums  : {}", checksums.join(" "));
-    println!();
 }

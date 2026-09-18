@@ -11,7 +11,11 @@ use wasmtime::{Caller, Engine, Func, Instance, Module, Store};
 
 use crate::{
     commons::ErrorCode,
-    serve::{request_state::RequestState, response_state::ResponseState},
+    serve::{
+        request_state::RequestState,
+        response_state::ResponseState,
+        timings::{ENTRY_FUNCTION, HANDLE_URL_FUNCTION, SsrProbe, WASM_COMMAND_FUNCTION},
+    },
 };
 
 use super::{data_context::DataContext, message::Message};
@@ -19,6 +23,11 @@ use super::{data_context::DataContext, message::Message};
 pub struct WasmInstance {
     instance: Instance,
     store: Store<RequestState>,
+    probe: SsrProbe,
+    /// The import-order workaround below was needed. Reported through
+    /// [`WasmInstance::instantiate_retried`] so a doubled instantiation time explains
+    /// itself rather than reading as noise.
+    retried: bool,
 }
 
 impl WasmInstance {
@@ -27,6 +36,7 @@ impl WasmInstance {
         engine: &Engine,
         module: &Module,
         request: RequestState,
+        probe: SsrProbe,
         handle_command: Arc<
             dyn Fn(RequestState, CommandForBrowser) -> JsJson + 'static + Send + Sync,
         >,
@@ -49,9 +59,19 @@ impl WasmInstance {
         });
 
         let import_dom_access = {
+            let probe = probe.clone();
+
             Func::wrap(
                 &mut store,
                 move |caller: Caller<'_, RequestState>, long_ptr: u64| -> u64 {
+                    // The whole body, not just the dispatch: pulling the argument out of
+                    // linear memory and writing the answer back are host work proportional
+                    // to the batch size, and a `DomBulkUpdate` blob is the largest thing
+                    // that ever crosses here. Timing only the dispatch would charge that
+                    // copying to wasm execution - exactly the mis-attribution the
+                    // benchmark exists to avoid.
+                    let host_mark = probe.start();
+
                     let long_ptr = LongPtr::from(long_ptr);
                     let mut data_context = DataContext::from_caller(caller);
 
@@ -60,24 +80,29 @@ impl WasmInstance {
                     let result = decode_json::<CommandForBrowser>(value)
                         .map(|item| handle_command(request.clone(), item));
 
-                    match result {
+                    let result = match result {
                         Ok(result) => data_context.save_value(result).get_long_ptr(),
                         Err(err) => {
                             log::error!("import_dom_access -> decode error = {err}");
                             0
                         }
-                    }
+                    };
+
+                    probe.host_call(host_mark);
+                    result
                 },
             )
         };
 
         let mut imports = [import_dom_access.into(), import_panic_message.into()];
+        let mut retried = false;
         let instance = match Instance::new(&mut store, module, &imports) {
             Ok(instance) => instance,
             Err(err) => {
                 // Workaround for rust/wasmtime mangling with functions order.
                 // Upon error try with panic/dom_access reversed before giving up.
                 imports.reverse();
+                retried = true;
                 match Instance::new(&mut store, module, &imports) {
                     Ok(instance) => {
                         log::warn!(
@@ -94,7 +119,16 @@ impl WasmInstance {
             }
         };
 
-        WasmInstance { instance, store }
+        WasmInstance {
+            instance,
+            store,
+            probe,
+            retried,
+        }
+    }
+
+    pub fn instantiate_retried(&self) -> bool {
+        self.retried
     }
 
     fn call_function<Params: wasmtime::WasmParams, Results: wasmtime::WasmResults>(
@@ -111,14 +145,24 @@ impl WasmInstance {
                 })?
         };
 
-        vertigo_entry_function
+        // Every call into wasm passes through here - the mount, `handle_url`, and the
+        // timer and fetch-response re-entries from the drain loop - so this is the one
+        // place phase 2 has to be measured. Deliberately outside the `get_typed_func`
+        // lookup above: that is a host-side export-map lookup repeated on every call, and
+        // charging it to wasm would hide it. It lands in `unaccounted` instead.
+        let call_mark = self.probe.start();
+
+        let result = vertigo_entry_function
             .call(&mut self.store, params)
-            .map_err(|error| format!("{error}"))
+            .map_err(|error| format!("{error}"));
+
+        self.probe.wasm_call(name, call_mark);
+        result
     }
 
     pub fn call_vertigo_entry_function(&mut self) {
         self.call_function::<(u32, u32), ()>(
-            "vertigo_entry_function",
+            ENTRY_FUNCTION,
             (super::VERTIGO_VERSION_MAJOR, super::VERTIGO_VERSION_MINOR),
         )
         .inspect_err(|err| log::error!("Error calling entry function: {err}"))
@@ -130,7 +174,7 @@ impl WasmInstance {
         let params_ptr = data_context.save_value(command.to_json());
 
         let _result = self
-            .call_function::<u64, u64>("vertigo_export_wasm_command", params_ptr.get_long_ptr())
+            .call_function::<u64, u64>(WASM_COMMAND_FUNCTION, params_ptr.get_long_ptr())
             .inspect_err(|err| log::error!("Error calling callback: {err}"))
             .unwrap_or_default();
 
@@ -146,7 +190,7 @@ impl WasmInstance {
         };
 
         let result = self
-            .call_function::<u64, u64>("vertigo_export_handle_url", params_ptr.get_long_ptr())
+            .call_function::<u64, u64>(HANDLE_URL_FUNCTION, params_ptr.get_long_ptr())
             .inspect_err(|err| log::error!("Error calling callback: {err}"))
             .unwrap_or_default();
 

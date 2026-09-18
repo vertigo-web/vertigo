@@ -8,6 +8,7 @@ use crate::serve::{
     html::{fetch_cache::FetchCache, html_build_response::build_response},
     mount_path::MountConfig,
     response_state::ResponseState,
+    timings::SsrProbe,
     wasm::{Message, WasmInstance},
 };
 
@@ -21,6 +22,7 @@ pub struct HtmlResponse {
     fetch: Arc<RwLock<FetchCache>>,
     env: Arc<HashMap<String, String>>,
     status: StatusCode,
+    probe: SsrProbe,
 }
 
 impl HtmlResponse {
@@ -30,6 +32,7 @@ impl HtmlResponse {
         inst: WasmInstance,
         env: Arc<HashMap<String, String>>,
         fetch: Arc<RwLock<FetchCache>>,
+        probe: SsrProbe,
     ) -> Self {
         Self {
             sender,
@@ -39,11 +42,14 @@ impl HtmlResponse {
             fetch,
             env,
             status: StatusCode::default(),
+            probe,
         }
     }
 
     pub fn feed(&mut self, commands: Vec<DriverDomCommand>) {
+        let mark = self.probe.start();
         self.all_elements.feed(commands);
+        self.probe.dom_apply(mark);
     }
 
     pub fn awaiting_response(&self) -> bool {
@@ -51,14 +57,23 @@ impl HtmlResponse {
         !guard.fetch_waiting.is_empty()
     }
 
+    /// Measured here rather than at the call site in `ServerState`, because the timeout
+    /// branch of `process_message` also builds a response and returns early, never reaching
+    /// that call site.
     pub fn build_response(&self) -> ResponseState {
-        build_response(
+        let mark = self.probe.start();
+
+        let response = build_response(
             &self.all_elements,
             &self.env,
             &self.mount_path,
             self.status,
             &self.fetch,
-        )
+            &self.probe,
+        );
+
+        self.probe.build_response(mark);
+        response
     }
 
     pub fn process_message(&mut self, message: Message) -> Option<ResponseState> {
@@ -93,6 +108,10 @@ impl HtmlResponse {
                 if let Some(callbacks) = guard.fetch_waiting.get_mut(&request) {
                     callbacks.push(callback);
                 } else {
+                    // Counted in this branch only: the one above coalesces onto a request
+                    // already in flight and issues nothing.
+                    self.probe.fetch_started();
+
                     actix_web::rt::spawn({
                         let request = request.clone();
                         let sender = self.sender.clone();

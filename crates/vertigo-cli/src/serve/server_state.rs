@@ -24,8 +24,12 @@ use super::{
     mount_path::MountConfig,
     request_state::RequestState,
     response_state::ResponseState,
+    timings::SsrProbe,
     wasm::{Message, WasmInstance},
 };
+
+#[cfg(feature = "ssr-timings")]
+use super::timings::SsrTimings;
 
 pub fn get_now() -> Duration {
     let start = SystemTime::now();
@@ -46,6 +50,8 @@ static STATE: OnceLock<Arc<RwLock<ServerStateMap>>> = OnceLock::new();
 pub struct ServerState {
     engine: Engine,
     module: Module,
+    /// What `Module::from_binary` cost at startup.
+    module_compile: Duration,
     pub mount_config: MountConfig,
     pub port_watch: Option<u16>,
 }
@@ -61,7 +67,7 @@ impl ServerState {
     ) -> Result<(), ErrorCode> {
         let engine = Engine::default();
 
-        let module = build_module_wasm(&engine, mount_config)?;
+        let (module, module_compile) = build_module_wasm(&engine, mount_config)?;
 
         let mutex = STATE.get_or_init(|| Arc::new(RwLock::new(ServerStateMap::new())));
 
@@ -71,12 +77,18 @@ impl ServerState {
             Arc::new(Self {
                 engine,
                 module,
+                module_compile,
                 mount_config: mount_config.clone(),
                 port_watch,
             }),
         );
 
         Ok(())
+    }
+
+    /// How long compiling this mount point's wasm module took, at startup.
+    pub fn module_compile_time(&self) -> Duration {
+        self.module_compile
     }
 
     pub fn global(mount_point: &str) -> Arc<ServerState> {
@@ -92,6 +104,22 @@ impl ServerState {
     }
 
     pub async fn request(&self, url: &str) -> ResponseState {
+        self.request_inner(url, &SsrProbe::new()).await
+    }
+
+    /// [`ServerState::request`], with the per-phase breakdown of how the render was spent.
+    #[cfg(feature = "ssr-timings")]
+    pub async fn request_timed(&self, url: &str) -> (ResponseState, SsrTimings) {
+        let probe = SsrProbe::new();
+        let mark = probe.start();
+
+        let response = self.request_inner(url, &probe).await;
+
+        let timings = probe.finish(mark, response.body.len());
+        (response, timings)
+    }
+
+    async fn request_inner(&self, url: &str, probe: &SsrProbe) -> ResponseState {
         let (sender, mut receiver) = unbounded_channel::<Message>();
 
         let request = RequestState {
@@ -101,13 +129,16 @@ impl ServerState {
 
         let fetch = FetchCache::new();
 
+        let instantiate_mark = probe.start();
         let mut inst = WasmInstance::new(
             sender.clone(),
             &self.engine,
             &self.module,
             request,
+            probe.clone(),
             Arc::new({
                 let sender = sender.clone();
+                let probe = probe.clone();
 
                 move |request: RequestState, command| match command {
                     CommandForBrowser::FetchCacheGet => {
@@ -229,8 +260,18 @@ impl ServerState {
                     }
                     CommandForBrowser::JsApiCall { commands: _ } => JsJson::Null,
                     CommandForBrowser::DomBulkUpdate { commands } => {
+                        // Host work, but reached from inside a wasm call - so this is
+                        // phase-3 time measured within a phase-2 region, and `SsrTimings`
+                        // subtracts it back out. See the module docs in `timings.rs`.
+                        let blob_bytes = commands.len();
+                        let decode_mark = probe.start();
+
                         match decode_dom_commands(&commands) {
                             Ok(list) => {
+                                // Before the send, so the channel push is not counted as
+                                // decoding.
+                                probe.decoded(decode_mark, blob_bytes, list.len());
+
                                 sender
                                     .send(Message::DomUpdate(list))
                                     .inspect_err(|err| {
@@ -246,6 +287,7 @@ impl ServerState {
                 }
             }),
         );
+        probe.instantiate(instantiate_mark, inst.instantiate_retried());
 
         // -- !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
         //TODO - ultimately, do not call call_vertigo_entry_function if something is returned by handle_url
@@ -272,6 +314,7 @@ impl ServerState {
             inst,
             self.mount_config.env.clone(),
             fetch,
+            probe.clone(),
         );
 
         loop {
@@ -291,7 +334,12 @@ impl ServerState {
             }
 
             if html_response.awaiting_response() {
+                // Parked on an SSR fetch: time the request spent, but not time it spent
+                // working. Kept in its own bucket so it cannot be read as either.
+                let wait_mark = probe.start();
                 let message = receiver.recv().await;
+                probe.fetch_wait(wait_mark);
+
                 if let Some(message) = message
                     && let Some(response) = html_response.process_message(message)
                 {
@@ -307,7 +355,10 @@ impl ServerState {
     }
 }
 
-fn build_module_wasm(engine: &Engine, mount_path: &MountConfig) -> Result<Module, ErrorCode> {
+fn build_module_wasm(
+    engine: &Engine,
+    mount_path: &MountConfig,
+) -> Result<(Module, Duration), ErrorCode> {
     let full_wasm_path = mount_path.get_wasm_fs_path();
 
     log::info!("Mounting {} -> {full_wasm_path}", mount_path.mount_point());
@@ -330,6 +381,7 @@ fn build_module_wasm(engine: &Engine, mount_path: &MountConfig) -> Result<Module
         }
     };
 
-    log::info!("WASM module compiled in {} ms.", now.elapsed().as_millis());
-    Ok(module)
+    let elapsed = now.elapsed();
+    log::info!("WASM module compiled in {} ms.", elapsed.as_millis());
+    Ok((module, elapsed))
 }

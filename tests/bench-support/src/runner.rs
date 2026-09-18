@@ -45,6 +45,17 @@ pub struct Row {
     pub iters: u32,
     pub best_ms: f64,
     pub median_ms: f64,
+    /// Every batch time, in the order they were taken.
+    ///
+    /// `best_ms` and `median_ms` are what this app renders into its own table; the raw samples
+    /// go out as well so the driver can reduce them the same way the other suites reduce
+    /// theirs, and so a run's spread survives into the JSON rather than being thrown away here.
+    ///
+    /// Arrival order rather than sorted, which is the more informative of the two and the only
+    /// one that cannot be recovered afterwards: it is what says whether the first batch is
+    /// systematically the slow one, i.e. whether the warm-up above is doing its job. Everything
+    /// that wants them ordered sorts its own copy.
+    pub samples_ms: Vec<f64>,
     pub runs: u64,
     pub checksum: u64,
     /// `Some` only when [`RunOpts::count_commands`] is set. When it is `None` the report
@@ -111,14 +122,18 @@ fn run_timed(workload: &Workload, scale: f64) -> Row {
         runs = bench.take_runs();
     }
 
-    samples.sort_by(|left, right| left.partial_cmp(right).unwrap_or(Ordering::Equal));
+    // A copy, so `samples` keeps the order the batches were taken in - which is what
+    // `Row::samples_ms` publishes and what a reader needs to see a warm-up effect.
+    let mut ordered = samples.clone();
+    ordered.sort_by(|left, right| left.partial_cmp(right).unwrap_or(Ordering::Equal));
 
     Row {
         slug: workload.slug,
         title: workload.title,
         iters,
-        best_ms: samples.first().copied().unwrap_or(0.0),
-        median_ms: samples.get(REPEATS / 2).copied().unwrap_or(0.0),
+        best_ms: ordered.first().copied().unwrap_or(0.0),
+        median_ms: ordered.get(REPEATS / 2).copied().unwrap_or(0.0),
+        samples_ms: samples,
         runs,
         checksum: bench.checksum(),
         cmds: None,
@@ -131,13 +146,21 @@ fn run_timed(workload: &Workload, scale: f64) -> Row {
 /// One line per workload, `|`-separated: the test parses this instead of hunting for
 /// per-workload element ids, so adding a workload does not touch the test.
 ///
-/// Seven fields, or ten when the workload was command-counted. The tail is all-or-nothing
-/// per suite, never per row, so a parser can decide on the field count once.
+/// Eight fields, or eleven when the workload was command-counted. The optional tail stays the
+/// tail, so the sample list is at a fixed index either way. All-or-nothing per suite, never per
+/// row, so a parser can decide on the field count once.
 pub fn report_text(rows: &[Row]) -> String {
     let mut out = String::new();
     for row in rows {
+        let samples = row
+            .samples_ms
+            .iter()
+            .map(|sample| format!("{sample:.4}"))
+            .collect::<Vec<_>>()
+            .join(";");
+
         out.push_str(&format!(
-            "{}|{}|{:.3}|{:.3}|{:.4}|{}|{}",
+            "{}|{}|{:.3}|{:.3}|{:.4}|{}|{}|{samples}",
             row.slug,
             row.iters,
             row.best_ms,

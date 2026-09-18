@@ -4,6 +4,7 @@ use crate::serve::{
     html::{HtmlNode, element::AllElements, fetch_cache::FetchCache, html_element::HtmlElement},
     mount_path::MountConfig,
     response_state::ResponseState,
+    timings::SsrProbe,
 };
 use actix_web::http::StatusCode;
 use parking_lot::RwLock;
@@ -18,8 +19,16 @@ pub fn build_response(
     mount_path: &MountConfig,
     status: StatusCode,
     fetch: &Arc<RwLock<FetchCache>>,
+    probe: &SsrProbe,
 ) -> ResponseState {
+    let tree_mark = probe.start();
     let (mut root_html, css) = all_elements.get_response(false);
+    probe.html_tree(tree_mark);
+
+    // Starts here rather than above so the two `internal_error` returns below leave it
+    // unspent: on a malformed document there is no HTML to have injected into, and
+    // recording a partial region would read as a suspiciously fast injection.
+    let inject_mark = probe.start();
 
     if let HtmlNode::Element(html) = &mut root_html {
         if html.name != "html" {
@@ -95,7 +104,13 @@ pub fn build_response(
         body.add_child(data_div);
     });
 
+    probe.html_inject(inject_mark);
+
     if body_exists {
+        // The two substitutions are a full pass over the whole document each, so they
+        // belong to serialisation rather than to injection.
+        let string_mark = probe.start();
+
         let mut body = root_html.convert_to_string(true).replace(
             VERTIGO_PUBLIC_BUILD_PATH_PLACEHOLDER,
             &mount_path.dest_http_root(),
@@ -106,6 +121,8 @@ pub fn build_response(
         } else {
             body = body.replace(VERTIGO_MOUNT_POINT_PLACEHOLDER, "");
         }
+
+        probe.html_string(string_mark);
 
         ResponseState::html(status, body)
     } else {

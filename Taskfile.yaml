@@ -16,15 +16,76 @@ tasks:
     cmds:
       - cargo test --release -p vertigo --lib reactive_old::compare -- --nocapture --test-threads=1
 
-  reactive-bench-wasm:
+  bench:
+    desc: "All four benchmark suites (NOTE: three of them need a WebDriver on localhost:9515)"
+    cmds:
+      - task: ssr-bench
+      - task: hydration-bench
+      - task: reactive-bench
+      - task: dom-bench
+
+  bench-compare:
+    desc: "All four suites, each against its own target/bench/<suite>/latest.json"
+    cmds:
+      - task: ssr-bench-compare
+      - task: hydration-bench-compare
+      - task: reactive-bench-compare
+      - task: dom-bench-compare
+
+  reactive-bench:
     desc: "Reactive graph benchmark in a browser (NOTE: WebDriver on localhost:9515 needs to be running)"
     cmds:
       - cargo test --package fantoccini-tests --test reactive_bench -- --ignored --nocapture
 
-  dom-bench-wasm:
-    desc: "Rendering / DOM benchmark in a browser (NOTE: WebDriver on localhost:9515 needs to be running)"
+  reactive-bench-compare:
+    desc: "Reactive graph benchmark against an earlier run (BASELINE=path/to.json, defaults to the last)"
+    env:
+      VERTIGO_REACTIVE_BENCH_BASELINE: '{{.BASELINE | default "target/bench/reactive/latest.json"}}'
+    cmds:
+      - cargo test --package fantoccini-tests --test reactive_bench -- --ignored --nocapture
+
+  dom-bench:
+    desc: "Reactive framework end to end - graph, DOM commands, rendering (NOTE: WebDriver on localhost:9515 needs to be running)"
     cmds:
       - cargo test --package fantoccini-tests --test dom_bench -- --ignored --nocapture
+
+  dom-bench-compare:
+    desc: "End-to-end benchmark against an earlier run (BASELINE=path/to.json, defaults to the last)"
+    env:
+      VERTIGO_DOM_BENCH_BASELINE: '{{.BASELINE | default "target/bench/dom/latest.json"}}'
+    cmds:
+      - cargo test --package fantoccini-tests --test dom_bench -- --ignored --nocapture
+
+  hydration-bench:
+    desc: "Hydration benchmark in a browser (NOTE: WebDriver on localhost:9515 needs to be running)"
+    cmds:
+      - cargo test --release --package fantoccini-tests --test hydration_bench -- --ignored --nocapture
+
+  hydration-bench-compare:
+    desc: "Hydration benchmark against another implementation's run (BASELINE=path/to.json)"
+    env:
+      VERTIGO_HYDRATION_BENCH_BASELINE: '{{.BASELINE | default "target/bench/hydration/latest.json"}}'
+    cmds:
+      - cargo test --release --package fantoccini-tests --test hydration_bench -- --ignored --nocapture
+
+  ssr-bench:
+    desc: "Server-side rendering benchmark, per phase (native - no browser, no WebDriver)"
+    env:
+      # Surfaces the wasmtime import-order fallback, which otherwise silently doubles
+      # instantiation time and says so only at warn level.
+      RUST_LOG: warn
+    cmds:
+      # --release is load-bearing and unique to this suite: the other three measure wasm
+      # inside a browser, this one measures the host.
+      - cargo test --release --package fantoccini-tests --test ssr_bench -- --ignored --nocapture
+
+  ssr-bench-compare:
+    desc: "SSR benchmark against an earlier run (BASELINE=path/to.json, defaults to the last)"
+    env:
+      RUST_LOG: warn
+      VERTIGO_SSR_BENCH_BASELINE: '{{.BASELINE | default "target/bench/ssr/latest.json"}}'
+    cmds:
+      - cargo test --release --package fantoccini-tests --test ssr_bench -- --ignored --nocapture
 
   automated-tests:
     desc: "NOTE: WebDriver on localhost:9515 needs to be running"
@@ -42,6 +103,10 @@ tasks:
       - cargo clippy --locked -p vertigo -p vertigo-macro --all-features --tests --target wasm32-unknown-unknown -- -Dwarnings
       - cargo clippy --locked -p vertigo-demo -p vertigo-example-counter -p vertigo-example-router -p vertigo-example-trafficlights --all-features --tests --target wasm32-unknown-unknown -- -Dwarnings
       - cargo test --locked --all-features
+      # The shipping configuration of vertigo-cli. Everything above passes --all-features,
+      # which turns `ssr-timings` on - so without this line the build that actually ships is
+      # the one nothing lints.
+      - cargo clippy --locked -p vertigo-cli --tests -- -Dwarnings
       - cargo fmt
       # - tests/check_versions.sh
       # - tests/js_tests.sh
@@ -59,7 +124,7 @@ tasks:
   clean-build:
     desc: clean
     cmds:
-      - rm -rf build build-reactive-bench build-dom-bench build-demo
+      - rm -rf build build-reactive-bench build-dom-bench build-demo build-ssr-bench build-ssr-demo build-hydration-bench build-hydration-demo
 
   clippy-wasm32:
     desc: Run clippy for wasm32 target
