@@ -4,10 +4,9 @@
 //! rendered. The tree is complete only after the mount transaction closes and
 //! `flush_watch` runs - `<body>` is created late, after the whole `<head>` subtree
 //! and after anything the app built before reaching the `dom!` block - so nothing may
-//! reach the browser until that moment. Hydration achieves this by arming a silencing
-//! flag before the transaction and only flushing the reconciled batch in `flush_hydration`
-//! after `flush_watch` completes. From that point forward the driver returns to ordinary
-//! flushing after each transaction.
+//! reach the browser until that moment. The post-transaction flush hook is installed
+//! only after that first send. From that point forward the driver flushes after each
+//! transaction as usual.
 //!
 //! With `init_app` running outside any transaction, the first reactive binding closed an
 //! *outermost* transaction and fired the hook. Now `mount` wraps construction in one
@@ -73,7 +72,7 @@ fn mount_capturing_batches(init_app: impl FnOnce() -> DomNode) -> Vec<Vec<Driver
 
     mount(init_app);
 
-    // Whatever `mount`'s trailing `flush_dom_changes` picked up, for completeness.
+    // Whatever `mount`'s trailing send picked up, for completeness.
     let tail = pending.borrow_mut().drain(..).collect::<Vec<_>>();
     if !tail.is_empty() {
         batches.borrow_mut().push(tail);
@@ -127,4 +126,41 @@ fn first_batch_contains_the_document_roots() {
             "<{name}> (id {id}) should be in the first batch, got {created:?}"
         );
     }
+}
+
+/// After the mount send, the post-transaction hook is live - a later write reaches the browser.
+#[test]
+fn after_the_mount_send_a_write_flushes() {
+    let sends: Rc<RefCell<usize>> = Rc::new(RefCell::new(0));
+
+    let _tee = get_driver_dom().inspect_batch({
+        let sends = sends.clone();
+        move |_| {
+            *sends.borrow_mut() += 1;
+        }
+    });
+
+    let label = Value::new("one".to_string());
+    let label_for_app = label.clone();
+
+    mount(move || {
+        dom! {
+            <html>
+                <head></head>
+                <body>{label_for_app}</body>
+            </html>
+        }
+    });
+
+    assert_eq!(*sends.borrow(), 1, "mount is one send");
+
+    label.set("two".to_string());
+
+    assert_eq!(
+        *sends.borrow(),
+        2,
+        "a write after mount should flush on its own"
+    );
+
+    drop(get_driver().take_root());
 }

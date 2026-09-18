@@ -79,13 +79,9 @@ pub fn get_driver() -> Rc<Driver> {
         })
     };
 
-    let subscribe = crate::reactive::on_after_transaction(move || {
-        get_driver_dom().flush_dom_changes();
-    });
-
     Rc::new(Driver {
         spawn_executor,
-        _subscribe: subscribe,
+        flush_hook: ValueMut::new(None),
         subscription: ValueMut::new(None),
     })
 }
@@ -98,13 +94,31 @@ pub fn transaction<R, F: FnOnce(&Context) -> R>(f: F) -> R {
 /// Set of functions to communicate with the browser.
 pub struct Driver {
     spawn_executor: Rc<Executable>,
-    _subscribe: DropResource,
+    /// Installed after the mount send. Until then, DOM commands stay in the buffer so the
+    /// first batch is the complete tree.
+    flush_hook: ValueMut<Option<DropResource>>,
     subscription: ValueMut<Option<DomNode>>,
 }
 
 impl Driver {
     pub(crate) fn set_root(&self, root_view: DomNode) {
         self.subscription.set(Some(root_view));
+    }
+
+    /// Start sending the command buffer after every transaction.
+    ///
+    /// Mount calls this after the first send, once the tree is complete. Installing it
+    /// earlier would flush a half-built document, which hydration cannot match.
+    pub(crate) fn enable_dom_flush(&self) {
+        self.flush_hook.change(|slot| {
+            if slot.is_some() {
+                return;
+            }
+
+            *slot = Some(crate::reactive::on_after_transaction(|| {
+                get_driver_dom().flush_dom_changes();
+            }));
+        });
     }
 
     /// Hands the mounted tree back, so it can be dropped deliberately.

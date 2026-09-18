@@ -6,11 +6,12 @@
 ### Changed
 
 * Hydration moved from JavaScript to Rust. The browser is asked for a DOM snapshot
-  (`DomSnapshotGet`), and the mount batch is reconciled against it in wasm: existing nodes
-  are adopted through the new `NodeAdopt` command and only differences are sent. Two
+  (`DomSnapshotGet`), and the first mount send is reconciled against it in wasm: existing
+  nodes are adopted through the new `NodeAdopt` command and only differences are sent. Two
   consequences are visible from the outside: the first DOM batch of a server-rendered page is
   much smaller, and a merged run of adjacent text nodes now keeps every node bound to its id
-  (previously all but the first were left dangling).
+  (previously all but the first were left dangling). Ordinary post-transaction flushing
+  starts only after that first send.
 
 ### Fixed
 

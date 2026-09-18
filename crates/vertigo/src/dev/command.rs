@@ -16,7 +16,7 @@ pub enum CommandForBrowser {
     /// Request for browser DOM state for hydration purposes.
     ///
     /// We ask rather than wait for JS to push, so the sequencing is not a contract: Rust
-    /// fetches the snapshot exactly when it needs it, in `DriverDom::flush_hydration`.
+    /// fetches the snapshot exactly when it needs it, on the first mount send.
     /// The response is [`DomSnapshot`] or `Null` when there is no DOM to return
     /// (server-side rendering, host tests).
     DomSnapshotGet,

@@ -23,7 +23,7 @@ pub(crate) struct TargetNode {
 /// `DomText` does not store text. The command stream is therefore the only description of
 /// the tree, and this index is built from it.
 ///
-/// It lives only for the duration of `DriverDom::flush_hydration` and is discarded afterward.
+/// It lives only for the duration of the first mount send and is discarded afterward.
 #[derive(Debug, Default)]
 pub(crate) struct TargetTree {
     nodes: HashMap<DomId, TargetNode>,
