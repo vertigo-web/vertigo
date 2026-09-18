@@ -90,19 +90,23 @@ impl Commands {
             return;
         }
 
-        let commands = match api_dom_snapshot().get() {
+        let snapshot = api_dom_snapshot().get();
+        let hydrated = snapshot.is_some() && !hydration_disabled();
+
+        let commands = match snapshot {
+            Some(snapshot) if hydration_disabled() => discard(split_buffer(commands), &snapshot),
             Some(snapshot) => {
-                if hydration_disabled() {
-                    discard(split_buffer(commands), &snapshot)
-                } else {
-                    let Reconciled { commands, report } =
-                        reconcile(split_buffer(commands), &snapshot);
-                    report.publish();
-                    commands
-                }
+                let Reconciled { commands, report } = reconcile(split_buffer(commands), &snapshot);
+                report.publish(commands.len());
+                commands
             }
             None => commands,
         };
+
+        // The hydrate path already printed this count inside `Hydration complete`.
+        if !hydrated {
+            log::info!("Startup DOM commands: {}", commands.len());
+        }
 
         self.send(commands);
     }

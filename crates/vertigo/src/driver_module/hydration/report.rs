@@ -31,7 +31,7 @@ pub struct HydrationReport {
 }
 
 impl HydrationReport {
-    pub fn publish(&self) {
+    pub fn publish(&self, commands_sent: usize) {
         DomAccess::default()
             .root("window")
             .set("__vertigo_hydration", self.clone().to_json())
@@ -43,7 +43,7 @@ impl HydrationReport {
         };
 
         let summary = format!(
-            "Hydration complete: {}/{} matched ({percent:.2}%), {} skipped, {} nodes in batch.",
+            "Hydration complete: {}/{} matched ({percent:.2}%), {} skipped, {} nodes in batch, {commands_sent} commands sent.",
             self.matched, self.hydratable, self.skipped, self.total
         );
 
