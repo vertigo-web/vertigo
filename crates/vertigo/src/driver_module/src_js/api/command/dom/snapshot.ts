@@ -1,5 +1,3 @@
-import { JsJsonType } from '../../../jsjson';
-
 type SnapshotNodeJson =
     | { Element: { name: string, attrs: Array<{ name: string, value: string }>, children: Array<number> } }
     | { Text: { value: string } }
@@ -11,7 +9,7 @@ interface SnapshotPayload {
     body: number | null;
 }
 
-export interface SnapshotResult {
+interface SnapshotResult {
     /// Goes to rust.
     payload: SnapshotPayload;
     /// Stays here: the index in this table is the address rust uses to reference the node in
@@ -118,4 +116,3 @@ export const buildSnapshot = (root: Node): SnapshotResult => {
     return { payload, nodes };
 };
 
-export const snapshotToJson = (payload: SnapshotPayload): JsJsonType => payload as unknown as JsJsonType;

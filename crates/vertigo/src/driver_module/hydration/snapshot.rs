@@ -8,14 +8,14 @@ use vertigo_macro::AutoJsJson;
 /// to the actual node that JS holds in an array built during the same traversal.
 /// Element 0 is `<html>`.
 #[derive(AutoJsJson, Debug, Clone)]
-pub struct DomSnapshot {
+pub(crate) struct DomSnapshot {
     pub nodes: Vec<SnapshotNode>,
     pub head: Option<u32>,
     pub body: Option<u32>,
 }
 
 #[derive(AutoJsJson, Debug, Clone)]
-pub enum SnapshotNode {
+pub(crate) enum SnapshotNode {
     Element {
         /// The `tagName` lowercased. Rust-side matching compares case-insensitively,
         /// which is correct for both HTML and SVG, and avoids shipping the `SVG_TAGS`
@@ -33,7 +33,7 @@ pub enum SnapshotNode {
 }
 
 #[derive(AutoJsJson, Debug, Clone)]
-pub struct SnapshotAttr {
+pub(crate) struct SnapshotAttr {
     pub name: String,
     pub value: String,
 }

@@ -7,11 +7,7 @@ use super::{
 };
 use crate::{dev::command::DriverDomCommand, dom::dom_id::DomId, driver_module::StaticString};
 
-const HTML_ID: u64 = 1;
-const HEAD_ID: u64 = 2;
-const BODY_ID: u64 = 3;
-
-pub struct Reconciled {
+pub(crate) struct Reconciled {
     pub commands: Vec<DriverDomCommand>,
     pub report: HydrationReport,
 }
@@ -20,7 +16,7 @@ pub struct Reconciled {
 ///
 /// The result is a reduced stream: adoptions of existing nodes, creation of only what
 /// the server didn't render, patches only where something differs, and removal of leftovers.
-pub fn reconcile(split: SplitBuffer, snapshot: &DomSnapshot) -> Reconciled {
+pub(crate) fn reconcile(split: SplitBuffer, snapshot: &DomSnapshot) -> Reconciled {
     let SplitBuffer { tree, passthrough } = split;
 
     let report = HydrationReport {
@@ -29,8 +25,8 @@ pub fn reconcile(split: SplitBuffer, snapshot: &DomSnapshot) -> Reconciled {
     };
 
     // Without a `<body>` there's nowhere to start the walk. Instead of adopting anything
-    // blindly, we fall back to a stream without hydration - the same decision that today's
-    // `hydrate` makes when the batch has no id 3.
+    // blindly, we fall back to a stream without hydration - the same decision as when
+    // the batch has no body to start from.
     let Some(body) = snapshot.body else {
         let mut commands = rebuild_verbatim(&tree);
         commands.extend(passthrough);
@@ -49,13 +45,13 @@ pub fn reconcile(split: SplitBuffer, snapshot: &DomSnapshot) -> Reconciled {
     };
 
     if !snapshot.nodes.is_empty() {
-        matcher.reconcile_attrs(DomId::from_u64(HTML_ID), 0);
+        matcher.reconcile_attrs(DomId::root_id(), 0);
     }
 
-    matcher.reconcile_root(DomId::from_u64(BODY_ID), body);
+    matcher.reconcile_root(DomId::body(), body);
 
     if let Some(head) = snapshot.head {
-        matcher.reconcile_root(DomId::from_u64(HEAD_ID), head);
+        matcher.reconcile_root(DomId::head(), head);
     }
 
     let mut commands = matcher.out;
@@ -69,7 +65,7 @@ pub fn reconcile(split: SplitBuffer, snapshot: &DomSnapshot) -> Reconciled {
 
 /// Variant for `--disable-hydration`: nothing is adopted, the server's content is
 /// removed, and the mount buffer goes out unchanged.
-pub fn discard(split: SplitBuffer, snapshot: &DomSnapshot) -> Vec<DriverDomCommand> {
+pub(crate) fn discard(split: SplitBuffer, snapshot: &DomSnapshot) -> Vec<DriverDomCommand> {
     let SplitBuffer { tree, passthrough } = split;
 
     let mut commands = Vec::new();
@@ -95,8 +91,7 @@ fn rebuild_verbatim(tree: &TargetTree) -> Vec<DriverDomCommand> {
     let mut out = Vec::new();
     let mut visited: HashSet<DomId> = HashSet::new();
 
-    for id in [HTML_ID, HEAD_ID, BODY_ID] {
-        let id = DomId::from_u64(id);
+    for id in [DomId::root_id(), DomId::head(), DomId::body()] {
         if let Some(node) = tree.get(id) {
             out.extend(create_commands(id, node));
         }
@@ -105,8 +100,8 @@ fn rebuild_verbatim(tree: &TargetTree) -> Vec<DriverDomCommand> {
     // Three entries, not one, because `<html>` might not be in the tree - an app mounted
     // via `start_app` without its own `<html>` gets just `<head>` and `<body>`. The visited
     // set ensures that `<head>` and `<body>` reached from `<html>` aren't walked twice.
-    for root in [HTML_ID, HEAD_ID, BODY_ID] {
-        rebuild_children(tree, DomId::from_u64(root), &mut visited, &mut out);
+    for root in [DomId::root_id(), DomId::head(), DomId::body()] {
+        rebuild_children(tree, root, &mut visited, &mut out);
     }
 
     out
@@ -126,7 +121,7 @@ fn rebuild_children(
         let child = *child;
 
         // Document roots already exist - `MapNodes` resolves their ids dynamically.
-        if !matches!(child.to_u64(), HTML_ID | HEAD_ID | BODY_ID)
+        if !child.is_document_root()
             && let Some(node) = tree.get(child)
         {
             out.extend(create_commands(child, node));

@@ -55,17 +55,8 @@ export class MapNodes {
         return item;
     }
 
-    public get(label: string, id: number): NodeType {
-        const item = this.getAnyOption(id);
-
-        if (item === undefined) {
-            throw new Error(`${label}->get: Item id not found = ${id}`);
-        }
-        return item;
-    }
-
     public getNodeElement(label: string, id: number): HTMLElement {
-        const node = this.get(label, id);
+        const node = this.getAny(label, id);
         if (node instanceof HTMLElement) {
             return node;
         } else {
@@ -74,7 +65,7 @@ export class MapNodes {
     }
 
     public getNode(label: string, id: number): Element {
-        const node = this.get(label, id);
+        const node = this.getAny(label, id);
         if (node instanceof Element) {
             return node;
         } else {
@@ -83,7 +74,7 @@ export class MapNodes {
     }
 
     public getText(label: string, id: number): Text {
-        const node = this.get(label, id);
+        const node = this.getAny(label, id);
         if (node instanceof Text) {
             return node;
         } else {
@@ -92,7 +83,7 @@ export class MapNodes {
     }
 
     public getComment(label: string, id: number): Comment {
-        const node = this.get(label, id);
+        const node = this.getAny(label, id);
         if (node instanceof Comment) {
             return node;
         } else {
@@ -124,7 +115,7 @@ export class MapNodes {
     }
 
     public insertBefore(parent: number, child: number, ref_id: number | null | undefined) {
-        const parentNode = this.get("insert_before", parent);
+        const parentNode = this.getAny("insert_before", parent);
         const childNode = this.getAny("insert_before child", child);
 
         if (ref_id === null || ref_id === undefined) {
@@ -137,14 +128,5 @@ export class MapNodes {
 
     public addStyles() {
         this.getRootHead().appendChild(this.style);
-    }
-
-    public has(id: number): boolean {
-        // Root nodes always exist in real DOM
-        if (id === 1 || id === 2 || id === 3) {
-            return true;
-        }
-
-        return this.data.has(id);
     }
 }

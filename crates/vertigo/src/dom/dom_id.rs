@@ -38,6 +38,18 @@ impl DomId {
         DomId(HTML_ID)
     }
 
+    pub(crate) fn head() -> DomId {
+        DomId(HEAD_ID)
+    }
+
+    pub(crate) fn body() -> DomId {
+        DomId(BODY_ID)
+    }
+
+    pub(crate) fn is_document_root(self) -> bool {
+        matches!(self.0, HTML_ID | HEAD_ID | BODY_ID)
+    }
+
     pub fn from_u64(id: u64) -> DomId {
         DomId(id)
     }

@@ -3,14 +3,14 @@ use std::collections::{BTreeMap, HashMap};
 use crate::{dev::command::DriverDomCommand, dom::dom_id::DomId, driver_module::StaticString};
 
 #[derive(Debug, Clone, PartialEq)]
-pub enum TargetKind {
+pub(crate) enum TargetKind {
     Element { name: StaticString },
     Text { value: String },
     Comment { value: String },
 }
 
 #[derive(Debug, Clone)]
-pub struct TargetNode {
+pub(crate) struct TargetNode {
     pub kind: TargetKind,
     pub attrs: BTreeMap<StaticString, String>,
     pub children: Vec<DomId>,
@@ -25,7 +25,7 @@ pub struct TargetNode {
 ///
 /// It lives only for the duration of `DriverDom::flush_hydration` and is discarded afterward.
 #[derive(Debug, Default)]
-pub struct TargetTree {
+pub(crate) struct TargetTree {
     nodes: HashMap<DomId, TargetNode>,
     /// Parent of every inserted node. Kept separately so detaching costs one sibling list
     /// instead of scanning every node — the JavaScript equivalent searches the whole node map
@@ -33,14 +33,14 @@ pub struct TargetTree {
     parent: HashMap<DomId, DomId>,
 }
 
-pub struct SplitBuffer {
+pub(crate) struct SplitBuffer {
     pub tree: TargetTree,
     /// Commands unrelated to node identity, sent unchanged.
     pub passthrough: Vec<DriverDomCommand>,
 }
 
 /// Splits a mount buffer into a tree index and commands that pass through unchanged.
-pub fn split_buffer(commands: Vec<DriverDomCommand>) -> SplitBuffer {
+pub(crate) fn split_buffer(commands: Vec<DriverDomCommand>) -> SplitBuffer {
     let mut tree = TargetTree::default();
     let mut passthrough = Vec::new();
 
@@ -128,24 +128,19 @@ impl TargetTree {
         self.parent.insert(child, parent);
     }
 
-    pub fn get(&self, id: DomId) -> Option<&TargetNode> {
+    pub(crate) fn get(&self, id: DomId) -> Option<&TargetNode> {
         self.nodes.get(&id)
     }
 
-    pub fn children(&self, id: DomId) -> &[DomId] {
+    pub(crate) fn children(&self, id: DomId) -> &[DomId] {
         match self.nodes.get(&id) {
             Some(node) => node.children.as_slice(),
             None => &[],
         }
     }
 
-    pub fn len(&self) -> usize {
+    pub(crate) fn len(&self) -> usize {
         self.nodes.len()
-    }
-
-    #[allow(dead_code)]
-    pub fn is_empty(&self) -> bool {
-        self.nodes.is_empty()
     }
 }
 

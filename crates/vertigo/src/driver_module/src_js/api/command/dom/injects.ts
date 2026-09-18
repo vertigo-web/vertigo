@@ -11,7 +11,7 @@ export function injects(node: Element, appLocation: AppLocation) {
     }
 }
 
-export function hydrateLink(node: Element, appLocation: AppLocation) {
+function hydrateLink(node: Element, appLocation: AppLocation) {
     node.addEventListener('click', (e) => {
         let href = node.getAttribute('href');
         if (href === null) {

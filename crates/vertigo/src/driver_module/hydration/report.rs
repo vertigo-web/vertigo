@@ -12,7 +12,7 @@ use crate::{JsJsonSerialize, driver_module::api::DomAccess};
 /// Field names are deliberately in camelCase - this is a contract with that test,
 /// older than this version of hydration.
 #[derive(AutoJsJson, Debug, Clone, Default)]
-pub struct HydrationReport {
+pub(crate) struct HydrationReport {
     /// False when the snapshot had no `<body>` - hydration had nowhere to start.
     #[js_json(rename = "rootFound")]
     pub root_found: bool,

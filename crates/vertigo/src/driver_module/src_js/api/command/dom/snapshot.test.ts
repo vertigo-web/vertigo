@@ -1,6 +1,6 @@
 import { buildSnapshot } from './snapshot';
 
-// --- MOCKS: copied from hydration.test.ts ---
+// --- MOCKS ---
 class MockNode {
     static ELEMENT_NODE = 1;
     static TEXT_NODE = 3;

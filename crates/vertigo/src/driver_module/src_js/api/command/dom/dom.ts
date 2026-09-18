@@ -7,80 +7,8 @@ import { MapNodes } from "./map_nodes";
 import { ModuleControllerType } from "../../../wasm_init";
 import { Metadata } from "../../metadata";
 import { createElement } from "./tags";
-import { buildSnapshot, snapshotToJson } from "./snapshot";
+import { buildSnapshot } from "./snapshot";
 import { JsJsonType } from "../../../jsjson";
-
-export type CommandType = {
-    CreateNode: {
-        id: number,
-        name: string,
-    }
-} | {
-    CreateText: {
-        id: number,
-        value: string
-    }
-} | {
-    UpdateText: {
-        id: number,
-        value: string
-    }
-} | {
-    SetAttr: {
-        id: number,
-        name: string,
-        value: string
-    }
-} | {
-    RemoveAttr: {
-        id: number,
-        name: string
-    }
-} | {
-    RemoveNode: {
-        id: number,
-    }
-} | {
-    RemoveText: {
-        id: number,
-    }
-} | {
-    InsertBefore: {
-        parent: number,
-        child: number,
-        ref_id: number | null,
-    }
-} | {
-    InsertCss: {
-        selector: string | null,
-        value: string
-    }
-} | {
-    CreateComment: {
-        id: number,
-        value: string
-    }
-} | {
-    RemoveComment: {
-        id: number,
-    }
-} | {
-    CallbackAdd: {
-        id: number,
-        event_name: string,
-        callback_id: number,
-    }
-} | {
-    CallbackRemove: {
-        id: number,
-        event_name: string,
-        callback_id: number,
-    }
-} | {
-    NodeAdopt: { id: number, snapshot: number }
-} | {
-    SnapshotRemove: { snapshot: number }
-};
 
 const applyFailed = (error: unknown, name: string): void => {
     console.error('bulk_update - item', name, error);
@@ -112,7 +40,7 @@ export class DriverDom {
     public snapshot = (): JsJsonType => {
         const { payload, nodes } = buildSnapshot(document.documentElement);
         this.snapshotNodes = nodes;
-        return snapshotToJson(payload);
+        return payload as unknown as JsJsonType;
     }
 
     // `bytes` is the flat command stream - see `dom_wire.ts` and, for the format itself,

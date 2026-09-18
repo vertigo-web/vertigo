@@ -5,8 +5,122 @@
 // round-trips against itself, which only proves each is self-consistent; this is what stops
 // the two agreeing on different formats. Change the format and one of these two tests fails.
 
-import { decodeCommands } from "./dom_wire";
-import { CommandType } from "./dom";
+import { CommandCursor, Tag, readNames } from "./dom_wire";
+
+// Object form of the stream. Production `dom.ts` never builds these: it applies tags
+// from the cursor directly.
+type CommandType =
+    | { CreateNode: { id: number, name: string } }
+    | { CreateText: { id: number, value: string } }
+    | { UpdateText: { id: number, value: string } }
+    | { SetAttr: { id: number, name: string, value: string } }
+    | { RemoveAttr: { id: number, name: string } }
+    | { RemoveNode: { id: number } }
+    | { RemoveText: { id: number } }
+    | { InsertBefore: { parent: number, child: number, ref_id: number | null } }
+    | { InsertCss: { selector: string | null, value: string } }
+    | { CreateComment: { id: number, value: string } }
+    | { RemoveComment: { id: number } }
+    | { CallbackAdd: { id: number, event_name: string, callback_id: number } }
+    | { CallbackRemove: { id: number, event_name: string, callback_id: number } }
+    | { NodeAdopt: { id: number, snapshot: number } }
+    | { SnapshotRemove: { snapshot: number } };
+
+const decodeCommands = (bytes: Uint8Array): Array<CommandType> => {
+    const cursor = new CommandCursor(bytes);
+    const names = readNames(cursor);
+    const commands: Array<CommandType> = [];
+
+    while (!cursor.isEmpty()) {
+        const tag = cursor.byte();
+
+        switch (tag) {
+            case Tag.CreateNode:
+                commands.push({ CreateNode: { id: cursor.varint(), name: cursor.name(names) } });
+                break;
+            case Tag.CreateText:
+                commands.push({ CreateText: { id: cursor.varint(), value: cursor.string() } });
+                break;
+            case Tag.UpdateText:
+                commands.push({ UpdateText: { id: cursor.varint(), value: cursor.string() } });
+                break;
+            case Tag.SetAttr:
+                commands.push({
+                    SetAttr: {
+                        id: cursor.varint(),
+                        name: cursor.name(names),
+                        value: cursor.string(),
+                    },
+                });
+                break;
+            case Tag.RemoveAttr:
+                commands.push({ RemoveAttr: { id: cursor.varint(), name: cursor.name(names) } });
+                break;
+            case Tag.RemoveNode:
+                commands.push({ RemoveNode: { id: cursor.varint() } });
+                break;
+            case Tag.RemoveText:
+                commands.push({ RemoveText: { id: cursor.varint() } });
+                break;
+            case Tag.InsertBefore:
+                commands.push({
+                    InsertBefore: {
+                        parent: cursor.varint(),
+                        child: cursor.varint(),
+                        ref_id: cursor.optionalId(),
+                    },
+                });
+                break;
+            case Tag.InsertCss:
+                commands.push({
+                    InsertCss: {
+                        selector: cursor.byte() === 0 ? null : cursor.string(),
+                        value: cursor.string(),
+                    },
+                });
+                break;
+            case Tag.CreateComment:
+                commands.push({ CreateComment: { id: cursor.varint(), value: cursor.string() } });
+                break;
+            case Tag.RemoveComment:
+                commands.push({ RemoveComment: { id: cursor.varint() } });
+                break;
+            case Tag.CallbackAdd:
+                commands.push({
+                    CallbackAdd: {
+                        id: cursor.varint(),
+                        event_name: cursor.string(),
+                        callback_id: cursor.varint(),
+                    },
+                });
+                break;
+            case Tag.CallbackRemove:
+                commands.push({
+                    CallbackRemove: {
+                        id: cursor.varint(),
+                        event_name: cursor.string(),
+                        callback_id: cursor.varint(),
+                    },
+                });
+                break;
+            case Tag.NodeAdopt: {
+                const id = cursor.varint();
+                const snapshot = cursor.varint();
+                commands.push({ NodeAdopt: { id, snapshot } });
+                break;
+            }
+            case Tag.SnapshotRemove: {
+                const snapshot = cursor.varint();
+                commands.push({ SnapshotRemove: { snapshot } });
+                break;
+            }
+            default:
+                throw new Error(`dom command: unknown tag ${tag}`);
+        }
+    }
+
+    return commands;
+};
 
 const assert = (condition: boolean, message: string) => {
     if (condition) {

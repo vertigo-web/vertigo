@@ -17,7 +17,6 @@ mod api_fetch_cache;
 pub use api_fetch_cache::api_fetch_cache;
 
 mod api_dom_snapshot;
-#[allow(unused_imports)]
 pub use api_dom_snapshot::api_dom_snapshot;
 
 mod api_browser_command;
