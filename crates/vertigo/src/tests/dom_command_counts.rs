@@ -36,6 +36,8 @@ fn variant(command: &DriverDomCommand) -> &'static str {
         DriverDomCommand::RemoveComment { .. } => "RemoveComment",
         DriverDomCommand::CallbackAdd { .. } => "CallbackAdd",
         DriverDomCommand::CallbackRemove { .. } => "CallbackRemove",
+        DriverDomCommand::NodeAdopt { .. } => "NodeAdopt",
+        DriverDomCommand::SnapshotRemove { .. } => "SnapshotRemove",
     }
 }
 

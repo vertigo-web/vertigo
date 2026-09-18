@@ -23,9 +23,4 @@ export class Metadata {
     getFetchCache() {
         return this.get('data-fetch-cache') ?? null;
     }
-
-    getEnabledHydration = (): boolean => {
-        const value = this.get('data-env-disable-hydration');
-        return value !== 'true';
-    }
 }

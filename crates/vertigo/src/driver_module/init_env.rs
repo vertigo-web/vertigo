@@ -1,17 +1,23 @@
+#[cfg(not(test))]
 use log::{Level, Log, Metadata, Record};
 use std::panic;
 
 use std::sync::Once;
 
-use crate::{
-    dev::command::ConsoleLogLevel,
-    driver_module::api::{api_browser_command, api_panic_message},
-};
+#[cfg(not(test))]
+use crate::dev::command::ConsoleLogLevel;
+#[cfg(not(test))]
+use crate::driver_module::api::api_browser_command;
+use crate::driver_module::api::api_panic_message;
 
 static SET_HOOK: Once = Once::new();
 
 pub fn init_env() {
     SET_HOOK.call_once(|| {
+        // In test mode, skip installing the global logger to avoid conflicts with tests that
+        // use log_capture to verify error logging behavior. The logger is only needed in
+        // browser/wasm environments, not in host unit tests.
+        #[cfg(not(test))]
         init_logger();
 
         panic::set_hook(Box::new(move |info: &panic::PanicHookInfo<'_>| {
@@ -22,11 +28,13 @@ pub fn init_env() {
 }
 
 /// Specify what to be logged
+#[cfg(not(test))]
 pub struct Config {
     level: Level,
     module_prefix: Option<String>,
 }
 
+#[cfg(not(test))]
 impl Default for Config {
     fn default() -> Self {
         Self {
@@ -37,6 +45,7 @@ impl Default for Config {
 }
 
 /// The log styles
+#[cfg(not(test))]
 struct Style {
     lvl_trace: String,
     lvl_debug: String,
@@ -47,6 +56,7 @@ struct Style {
     args: String,
 }
 
+#[cfg(not(test))]
 impl Style {
     fn new() -> Style {
         let base = String::from("color: white; padding: 0 3px; background:");
@@ -62,11 +72,13 @@ impl Style {
     }
 }
 
+#[cfg(not(test))]
 struct WasmLogger {
     config: Config,
     style: Style,
 }
 
+#[cfg(not(test))]
 impl Log for WasmLogger {
     fn enabled(&self, metadata: &Metadata<'_>) -> bool {
         if let Some(ref prefix) = self.config.module_prefix {
@@ -139,6 +151,7 @@ impl Log for WasmLogger {
     fn flush(&self) {}
 }
 
+#[cfg(not(test))]
 fn init_logger() {
     let config = Config::default();
     let max_level = config.level;

@@ -1,81 +1,14 @@
 import { AppLocation } from "../../location/AppLocation";
 import { CallbackManager } from "./callbackManager";
 import { ExportType } from "../../../wasm_module";
-import { hydrate } from "./hydration";
-import { hydrateLink } from "./injects";
-import { CommandCursor, Tag, decodeCommands, readNames } from "./dom_wire";
+import { injects } from "./injects";
+import { CommandCursor, Tag, readNames } from "./dom_wire";
 import { MapNodes } from "./map_nodes";
 import { ModuleControllerType } from "../../../wasm_init";
 import { Metadata } from "../../metadata";
 import { createElement } from "./tags";
-
-export type CommandType = {
-    CreateNode: {
-        id: number,
-        name: string,
-    }
-} | {
-    CreateText: {
-        id: number,
-        value: string
-    }
-} | {
-    UpdateText: {
-        id: number,
-        value: string
-    }
-} | {
-    SetAttr: {
-        id: number,
-        name: string,
-        value: string
-    }
-} | {
-    RemoveAttr: {
-        id: number,
-        name: string
-    }
-} | {
-    RemoveNode: {
-        id: number,
-    }
-} | {
-    RemoveText: {
-        id: number,
-    }
-} | {
-    InsertBefore: {
-        parent: number,
-        child: number,
-        ref_id: number | null,
-    }
-} | {
-    InsertCss: {
-        selector: string | null,
-        value: string
-    }
-} | {
-    CreateComment: {
-        id: number,
-        value: string
-    }
-} | {
-    RemoveComment: {
-        id: number,
-    }
-} | {
-    CallbackAdd: {
-        id: number,
-        event_name: string,
-        callback_id: number,
-    }
-} | {
-    CallbackRemove: {
-        id: number,
-        event_name: string,
-        callback_id: number,
-    }
-};
+import { buildSnapshot } from "./snapshot";
+import { JsJsonType } from "../../../jsjson";
 
 const applyFailed = (error: unknown, name: string): void => {
     console.error('bulk_update - item', name, error);
@@ -90,8 +23,9 @@ export class DriverDom {
     private appLocation: AppLocation;
     public readonly nodes: MapNodes;
     private readonly callbacks: CallbackManager;
+    private snapshotNodes: Array<Node> | null = null;
 
-    public constructor(private readonly metadata: Metadata, appLocation: AppLocation, getWasm: () => ModuleControllerType<ExportType>) {
+    public constructor(_metadata: Metadata, appLocation: AppLocation, getWasm: () => ModuleControllerType<ExportType>) {
         this.appLocation = appLocation;
         this.nodes = new MapNodes();
         this.callbacks = new CallbackManager(getWasm);
@@ -102,15 +36,17 @@ export class DriverDom {
         });
     }
 
+    /// Response to `DomSnapshotGet`. The node array stays here - rust addresses them by index.
+    public snapshot = (): JsJsonType => {
+        const { payload, nodes } = buildSnapshot(document.documentElement);
+        this.snapshotNodes = nodes;
+        return payload as unknown as JsJsonType;
+    }
+
     // `bytes` is the flat command stream - see `dom_wire.ts` and, for the format itself,
     // `crates/vertigo/src/dev/command_wire.rs`. It is a view straight into wasm memory,
     // valid for as long as this call runs, which is why nothing here is deferred.
     public update = (bytes: Uint8Array) => {
-        if (this.nodes.hasInitNodes() && this.metadata.getEnabledHydration()) {
-            // First flush only, so the object form is worth building here and nowhere else.
-            hydrate(decodeCommands(bytes), this.nodes, this.appLocation);
-        }
-
         const cursor = new CommandCursor(bytes);
         const names = readNames(cursor);
 
@@ -235,6 +171,34 @@ export class DriverDom {
                         catch (error) { applyFailed(error, 'CallbackRemove'); }
                         break;
                     }
+                    case Tag.NodeAdopt: {
+                        const id = cursor.varint();
+                        const snapshot = cursor.varint();
+                        const node = this.snapshotNodes?.[snapshot];
+
+                        if (node === undefined) {
+                            console.error(`NodeAdopt: no snapshot node at ${snapshot}`);
+                            break;
+                        }
+
+                        this.nodes.set(id, node as Element | Comment | Text);
+
+                        if (node.nodeType === 1) {
+                            // Without this, capturing clicks in links stops working -
+                            // `claimNode` used to do it in the hydration branch.
+                            injects(node as Element, this.appLocation);
+                        }
+                        break;
+                    }
+                    case Tag.SnapshotRemove: {
+                        const snapshot = cursor.varint();
+                        const node = this.snapshotNodes?.[snapshot];
+
+                        if (node !== undefined) {
+                            (node as ChildNode).remove();
+                        }
+                        break;
+                    }
                     default:
                         throw new Error(`bulk_update: unknown command tag ${tag}`);
                 }
@@ -255,7 +219,8 @@ export class DriverDom {
             }, 0);
         }
 
-        this.nodes.removeInitNodes();
+        // The hydration batch is the only one that addresses snapshot nodes.
+        this.snapshotNodes = null;
 
         // Make sure that the client-side generated styles are always the last element of the head
         this.nodes.addStyles();
@@ -267,15 +232,11 @@ export class DriverDom {
             return;
         }
 
-        if (this.nodes.has(id)) {
-            return;
-        }
-
         const node = createElement(name);
         this.nodes.set(id, node);
 
         if (isAnchor) {
-            hydrateLink(node, this.appLocation);
+            injects(node, this.appLocation);
         }
     }
 
@@ -326,10 +287,6 @@ export class DriverDom {
     }
 
     private createText(id: number, value: string) {
-        if (this.nodes.has(id)) {
-            return;
-        }
-
         const text = document.createTextNode(value);
         this.nodes.set(id, text);
     }

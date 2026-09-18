@@ -28,6 +28,7 @@
 //! * [guides::collection_key_and_list_renderers] - `CollectionKey` and the memoized list renderers
 //! * [guides::lazy_list_cache] - `LazyListCache`: optimistic, per-item reactive list cache
 //! * [guides::websocket_collection] - `WsCollection`: server-pushed reactive collections over a WebSocket
+//! * [guides::hydration] - how the first DOM send is matched against the server-rendered document
 
 #![deny(rust_2018_idioms)]
 #![cfg_attr(test, allow(clippy::panic_in_result_fn))]
@@ -74,6 +75,9 @@ pub mod guides {
 
     #[doc = include_str!("../docs/websocket-collection.md")]
     pub mod websocket_collection {}
+
+    #[doc = include_str!("../docs/hydration.md")]
+    pub mod hydration {}
 }
 
 // Exports from vertigo

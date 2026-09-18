@@ -11,8 +11,6 @@
 // Element and attribute names live in the dictionary and are referenced by index, so a name
 // is decoded once per batch rather than once per command.
 
-import { CommandType } from "./dom";
-
 export const Tag = {
     CreateNode: 1,
     CreateText: 2,
@@ -27,6 +25,8 @@ export const Tag = {
     RemoveComment: 11,
     CallbackAdd: 12,
     CallbackRemove: 13,
+    NodeAdopt: 14,
+    SnapshotRemove: 15,
 } as const;
 
 const decoder = new TextDecoder("utf-8");
@@ -115,91 +115,4 @@ export const readNames = (cursor: CommandCursor): Array<string> => {
     }
 
     return names;
-};
-
-// Object form of the stream, for hydration - which runs on the first flush only and wants to
-// look at the commands before they are applied. The hot path in `dom.ts` never builds these.
-export const decodeCommands = (bytes: Uint8Array): Array<CommandType> => {
-    const cursor = new CommandCursor(bytes);
-    const names = readNames(cursor);
-    const commands: Array<CommandType> = [];
-
-    while (!cursor.isEmpty()) {
-        const tag = cursor.byte();
-
-        switch (tag) {
-            case Tag.CreateNode:
-                commands.push({ CreateNode: { id: cursor.varint(), name: cursor.name(names) } });
-                break;
-            case Tag.CreateText:
-                commands.push({ CreateText: { id: cursor.varint(), value: cursor.string() } });
-                break;
-            case Tag.UpdateText:
-                commands.push({ UpdateText: { id: cursor.varint(), value: cursor.string() } });
-                break;
-            case Tag.SetAttr:
-                commands.push({
-                    SetAttr: {
-                        id: cursor.varint(),
-                        name: cursor.name(names),
-                        value: cursor.string(),
-                    },
-                });
-                break;
-            case Tag.RemoveAttr:
-                commands.push({ RemoveAttr: { id: cursor.varint(), name: cursor.name(names) } });
-                break;
-            case Tag.RemoveNode:
-                commands.push({ RemoveNode: { id: cursor.varint() } });
-                break;
-            case Tag.RemoveText:
-                commands.push({ RemoveText: { id: cursor.varint() } });
-                break;
-            case Tag.InsertBefore:
-                commands.push({
-                    InsertBefore: {
-                        parent: cursor.varint(),
-                        child: cursor.varint(),
-                        ref_id: cursor.optionalId(),
-                    },
-                });
-                break;
-            case Tag.InsertCss:
-                commands.push({
-                    InsertCss: {
-                        selector: cursor.byte() === 0 ? null : cursor.string(),
-                        value: cursor.string(),
-                    },
-                });
-                break;
-            case Tag.CreateComment:
-                commands.push({ CreateComment: { id: cursor.varint(), value: cursor.string() } });
-                break;
-            case Tag.RemoveComment:
-                commands.push({ RemoveComment: { id: cursor.varint() } });
-                break;
-            case Tag.CallbackAdd:
-                commands.push({
-                    CallbackAdd: {
-                        id: cursor.varint(),
-                        event_name: cursor.string(),
-                        callback_id: cursor.varint(),
-                    },
-                });
-                break;
-            case Tag.CallbackRemove:
-                commands.push({
-                    CallbackRemove: {
-                        id: cursor.varint(),
-                        event_name: cursor.string(),
-                        callback_id: cursor.varint(),
-                    },
-                });
-                break;
-            default:
-                throw new Error(`dom command: unknown tag ${tag}`);
-        }
-    }
-
-    return commands;
 };

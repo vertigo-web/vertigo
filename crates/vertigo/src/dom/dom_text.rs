@@ -54,9 +54,8 @@ impl DomText {
         // Created with the value already in it, rather than created empty and patched by
         // the subscription's first run. That keeps the mount stream a single `CreateText`,
         // which matters for more than the one saved command: the hydration pass builds its
-        // virtual tree from `CreateText` and ignores `UpdateText` entirely
-        // (`src_js/api/command/dom/hydration.ts`), so a node created empty would hydrate
-        // as empty and then have to be corrected.
+        // virtual tree from `CreateText` and ignores `UpdateText` entirely, so a node
+        // created empty would hydrate as empty and then have to be corrected.
         let initial = print(computed.get(&Context::read()));
         let text_node = DomText::new(initial);
         let id_dom = text_node.id_dom;

@@ -93,7 +93,7 @@ export class CallbackManager {
         if (event_name === 'hook_keydown') {
             document.addEventListener('keydown', callback, false);
         } else {
-            const node = nodes.get('callback_add', id);
+            const node = nodes.getAny('callback_add', id);
             const domEventName = event_name === 'change_file' ? 'change' : event_name;
             node.addEventListener(domEventName, callback, false);
         }
@@ -115,7 +115,7 @@ export class CallbackManager {
         if (event_name === 'hook_keydown') {
             document.removeEventListener('keydown', callback);
         } else {
-            const node = nodes.get('callback_remove', id);
+            const node = nodes.getAny('callback_remove', id);
             const domEventName = event_name === 'change_file' ? 'change' : event_name;
             node.removeEventListener(domEventName, callback);
         }

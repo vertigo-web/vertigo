@@ -60,6 +60,10 @@ impl CommandForBrowserApi {
             .unwrap_or_else(SsrFetchCache::empty)
     }
 
+    pub fn dom_snapshot_get(&self) -> JsJson {
+        exec_command(CommandForBrowser::DomSnapshotGet)
+    }
+
     pub fn fetch_exec(&self, request: SsrFetchRequest, callback: CallbackId) {
         exec_command(CommandForBrowser::FetchExec { request, callback });
     }
@@ -214,6 +218,7 @@ impl CommandForBrowserApi {
         }
     }
 
+    #[cfg_attr(test, allow(dead_code))]
     pub fn console_log(
         &self,
         kind: ConsoleLogLevel,

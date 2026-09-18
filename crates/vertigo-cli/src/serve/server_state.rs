@@ -113,6 +113,7 @@ impl ServerState {
                     CommandForBrowser::FetchCacheGet => {
                         browser_response::FetchCacheGet { data: None }.to_json()
                     }
+                    CommandForBrowser::DomSnapshotGet => JsJson::Null,
                     CommandForBrowser::FetchExec { request, callback } => {
                         sender
                             .send(Message::FetchRequest { callback, request })

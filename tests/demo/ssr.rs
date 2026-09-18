@@ -67,7 +67,8 @@ pub async fn hydration(client: &Client, site_url: &str) -> TestResult {
 ///
 /// `window.__vertigo_hydration` exists for this: the wasm boots asynchronously, so there is no
 /// moment at which the test could install a shim on `console.log` and be sure of catching the
-/// line hydration prints. A value parked on `window` can be read whenever.
+/// line hydration prints. The report is produced in Rust and parked on `window` through
+/// `dom_access`.
 #[derive(Debug)]
 struct HydrationReport {
     root_found: bool,
@@ -77,6 +78,7 @@ struct HydrationReport {
     total: u64,
 }
 
+/// Reads the hydration report that was published to `window.__vertigo_hydration` by Rust.
 async fn hydration_report(client: &Client) -> TestResult<HydrationReport> {
     let raw = client
         .execute("return window.__vertigo_hydration ?? null;", vec![])

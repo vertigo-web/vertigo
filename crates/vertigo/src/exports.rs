@@ -9,7 +9,10 @@ use crate::{
     },
 };
 
-/// Starting point of the app (used by [vertigo::main] macro, which is preferred)
+/// Starting point of the app (used by [vertigo::main] macro, which is preferred).
+///
+/// See the [hydration guide](crate::guides::hydration) for how the first DOM send
+/// is matched against the server-rendered document.
 pub fn start_app(init_app: fn() -> DomNode) {
     mount(init_app)
 }
@@ -19,24 +22,19 @@ pub fn start_app(init_app: fn() -> DomNode) {
 pub(crate) fn mount(init_app: impl FnOnce() -> DomNode) {
     init_env();
 
-    // Before the transaction, deliberately: `get_driver()` is what registers the flush hook,
-    // and the transaction below only suppresses mid-build flushes if it is the outermost one.
     let driver = get_driver();
 
-    // The mount has to reach the browser as a single DOM batch. Hydration gets one shot, and
-    // it starts its walk from `<body>` - which is created late, after the whole `<head>`
-    // subtree and after anything the app built before reaching its top-level `dom!`.
-    // Without this transaction the first `Computed::subscribe` inside the tree closes an
-    // outermost transaction of its own, fires the flush hook, and ships a partial batch
-    // with no `<html>`/`<head>`/`<body>` in it.
     driver.transaction(|_| {
         let root_view = init_app();
         driver.set_root(root_view);
     });
 
-    // `flush_watch` - and so `when_connect` - runs *after* the hooks, so anything it queued is
-    // still sitting in the buffer. A no-op when the buffer is empty.
-    get_driver_dom().flush_dom_changes();
+    // `flush_watch` - and so `when_connect` - runs *after* `on_after_transaction`, so the
+    // tree is complete only when `transaction` returns. The post-transaction flush hook is
+    // not installed yet, so nothing was sent mid-build. This is the first (and only) mount
+    // send: hydrate if the browser handed us a snapshot, otherwise go out as queued.
+    get_driver_dom().flush_mount();
+    driver.enable_dom_flush();
 }
 
 #[doc(hidden)]

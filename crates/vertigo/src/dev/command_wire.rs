@@ -62,6 +62,8 @@ mod tag {
     pub const REMOVE_COMMENT: u8 = 11;
     pub const CALLBACK_ADD: u8 = 12;
     pub const CALLBACK_REMOVE: u8 = 13;
+    pub const NODE_ADOPT: u8 = 14;
+    pub const SNAPSHOT_REMOVE: u8 = 15;
 }
 
 /// `InsertBefore` with no reference node. Safe as a sentinel because ids 1, 2 and 3 are
@@ -211,6 +213,15 @@ fn write_command(out: &mut Vec<u8>, command: &DriverDomCommand, index: &HashMap<
             write_str(out, event_name);
             write_varint(out, callback_id.as_u64());
         }
+        DriverDomCommand::NodeAdopt { id, snapshot } => {
+            out.push(tag::NODE_ADOPT);
+            write_id(out, *id);
+            write_varint(out, u64::from(*snapshot));
+        }
+        DriverDomCommand::SnapshotRemove { snapshot } => {
+            out.push(tag::SNAPSHOT_REMOVE);
+            write_varint(out, u64::from(*snapshot));
+        }
     }
 }
 
@@ -328,6 +339,13 @@ fn read_command(
             id: cursor.id()?,
             event_name: cursor.string()?,
             callback_id: CallbackId::from_u64(cursor.varint()?),
+        },
+        tag::NODE_ADOPT => DriverDomCommand::NodeAdopt {
+            id: cursor.id()?,
+            snapshot: cursor.varint()? as u32,
+        },
+        tag::SNAPSHOT_REMOVE => DriverDomCommand::SnapshotRemove {
+            snapshot: cursor.varint()? as u32,
         },
         other => return Err(format!("dom command: unknown tag {other}")),
     };
@@ -486,6 +504,11 @@ mod tests {
                 event_name: "click".to_string(),
                 callback_id: CallbackId::from_u64(300),
             },
+            DriverDomCommand::NodeAdopt {
+                id: id(4),
+                snapshot: 0,
+            },
+            DriverDomCommand::SnapshotRemove { snapshot: 300 },
         ]
     }
 
@@ -502,7 +525,7 @@ mod tests {
         159, 166, 128, 3, 5, 0, 8, 1, 4, 240, 162, 4, 8, 1, 4, 0, 9, 1, 2, 46, 97, 9, 99, 111, 108,
         111, 114, 58, 114, 101, 100, 9, 0, 14, 64, 109, 101, 100, 105, 97, 32, 112, 114, 105, 110,
         116, 123, 125, 10, 6, 3, 114, 111, 119, 11, 6, 6, 4, 7, 5, 12, 4, 5, 99, 108, 105, 99, 107,
-        77, 13, 4, 5, 99, 108, 105, 99, 107, 172, 2,
+        77, 13, 4, 5, 99, 108, 105, 99, 107, 172, 2, 14, 4, 0, 15, 172, 2,
     ];
 
     #[test]
@@ -642,6 +665,29 @@ mod tests {
         }];
 
         let decoded = decoded(&encode_dom_commands(&commands));
+        assert_eq!(format!("{decoded:?}"), format!("{commands:?}"));
+    }
+
+    /// Adoption and removal of snapshot nodes address the node by its ordinal number in
+    /// `DomSnapshot::nodes`, not by `DomId`. Zero is a valid value here - `<html>` has
+    /// index 0 - so unlike `write_id` there is no sentinel.
+    #[test]
+    fn round_trips_the_snapshot_commands() {
+        let commands = vec![
+            DriverDomCommand::NodeAdopt {
+                id: id(4),
+                snapshot: 0,
+            },
+            DriverDomCommand::NodeAdopt {
+                id: id(70000),
+                snapshot: 300,
+            },
+            DriverDomCommand::SnapshotRemove { snapshot: 0 },
+            DriverDomCommand::SnapshotRemove { snapshot: 1 << 20 },
+        ];
+
+        let decoded = decoded(&encode_dom_commands(&commands));
+
         assert_eq!(format!("{decoded:?}"), format!("{commands:?}"));
     }
 

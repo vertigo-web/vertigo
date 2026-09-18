@@ -138,6 +138,12 @@ impl AllElements {
                 DriverDomCommand::CallbackRemove { .. } => {
                     // ignored on server-side
                 }
+                DriverDomCommand::NodeAdopt { .. } => {
+                    // ignored on server-side
+                }
+                DriverDomCommand::SnapshotRemove { .. } => {
+                    // ignored on server-side
+                }
                 DriverDomCommand::CreateNode { id, name } => {
                     self.create_node(id, name.to_string());
                 }

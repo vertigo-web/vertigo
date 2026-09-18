@@ -22,6 +22,7 @@ type JsApiCommandType =
 
 type ExecType
     = 'FetchCacheGet'
+    | 'DomSnapshotGet'
     | 'IsBrowser'
     | 'GetDateNow'
     | 'TimezoneOffset'
@@ -163,6 +164,10 @@ export class Api {
 
         if (safeArg === 'FetchCacheGet') {
             return fetchCacheGet(this.metadata);
+        }
+
+        if (safeArg === 'DomSnapshotGet') {
+            return this.dom.snapshot();
         }
 
         if (safeArg === 'IsBrowser') {

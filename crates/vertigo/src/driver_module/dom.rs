@@ -4,7 +4,11 @@ use vertigo_macro::store;
 use crate::{
     DomId, DropResource,
     dev::{CallbackId, command::DriverDomCommand},
-    driver_module::{api::api_browser_command, event_emitter::EventEmitter},
+    driver_module::{
+        api::{api_browser_command, api_dom_snapshot},
+        event_emitter::EventEmitter,
+        hydration::{Reconciled, discard, reconcile, split_buffer},
+    },
     struct_mut::{HashMapMut, VecMut},
 };
 
@@ -15,6 +19,10 @@ struct Commands {
     /// Opt-in tap on the command stream, used by [`crate::dev::inspect`]. Nothing
     /// subscribes to it unless a debugging session asks for it.
     new_command: EventEmitter<DriverDomCommand>,
+    /// Inspection of the actually sent batches. `new_command` fires when a command is
+    /// queued, which is the wrong moment for anything that wants to see what the browser
+    /// received: the mount send replaces the queued stream with the reconciled one.
+    new_batch: EventEmitter<Vec<DriverDomCommand>>,
 }
 
 impl Commands {
@@ -22,6 +30,7 @@ impl Commands {
         Commands {
             commands: VecMut::new(),
             new_command: EventEmitter::default(),
+            new_batch: EventEmitter::default(),
         }
     }
 
@@ -29,18 +38,59 @@ impl Commands {
         self.new_command.add(func)
     }
 
+    #[cfg(test)]
+    fn inspect_batch(&self, func: impl Fn(Vec<DriverDomCommand>) + 'static) -> DropResource {
+        self.new_batch.add(func)
+    }
+
     fn add_command(&self, command: DriverDomCommand) {
         self.new_command.trigger(&command);
         self.commands.push(command);
     }
 
-    fn flush_dom_changes(&self) {
-        let state = self.commands.take();
-
-        if !state.is_empty() {
-            let state: Vec<DriverDomCommand> = sort_commands(state);
-            api_browser_command().dom_bulk_update(state);
+    fn send(&self, commands: Vec<DriverDomCommand>) {
+        if commands.is_empty() {
+            return;
         }
+
+        let commands = sort_commands(commands);
+        self.new_batch.trigger(&commands);
+        api_browser_command().dom_bulk_update(commands);
+    }
+
+    fn flush_dom_changes(&self) {
+        self.send(self.commands.take());
+    }
+
+    /// First send of the mounted tree. If the browser returned a snapshot, the buffer is
+    /// reconciled against it; otherwise it goes out as queued. Ordinary flushing starts
+    /// after this, via the post-transaction hook.
+    fn flush_mount(&self) {
+        let commands = self.commands.take();
+
+        if commands.is_empty() {
+            return;
+        }
+
+        let snapshot = api_dom_snapshot().get();
+        let hydrated = snapshot.is_some() && !hydration_disabled();
+
+        let commands = match snapshot {
+            Some(snapshot) if hydration_disabled() => discard(split_buffer(commands), &snapshot),
+            Some(snapshot) => {
+                let Reconciled { commands, report } = reconcile(split_buffer(commands), &snapshot);
+                report.publish(commands.len());
+                commands
+            }
+            None => commands,
+        };
+
+        // The hydrate path already printed this count inside `Hydration complete`.
+        if !hydrated {
+            log::info!("Startup DOM commands: {}", commands.len());
+        }
+
+        self.send(commands);
     }
 }
 
@@ -191,6 +241,15 @@ impl DriverDom {
         self.commands.flush_dom_changes();
     }
 
+    pub(crate) fn flush_mount(&self) {
+        self.commands.flush_mount();
+    }
+
+    #[cfg(test)]
+    pub fn inspect_batch(&self, func: impl Fn(Vec<DriverDomCommand>) + 'static) -> DropResource {
+        self.commands.inspect_batch(func)
+    }
+
     pub fn node_parent(&self, node_id: DomId, callback: impl Fn(DomId) + 'static) -> DropResource {
         self.node_parent_callback.insert(node_id, Rc::new(callback));
 
@@ -200,4 +259,13 @@ impl DriverDom {
             node_parent_callback.remove(&node_id);
         })
     }
+}
+
+/// Command-line flag `--disable-hydration`, inserted by cli as
+/// `data-env-disable-hydration` and read the same way as other environment variables.
+///
+/// The policy belongs to rust: js returns the snapshot regardless of the flag, and the
+/// decision whether to adopt anything is made by this branch.
+fn hydration_disabled() -> bool {
+    api_browser_command().get_env("disable-hydration") == Some("true".to_string())
 }
