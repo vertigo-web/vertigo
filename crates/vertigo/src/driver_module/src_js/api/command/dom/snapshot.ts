@@ -38,16 +38,12 @@ const isInfrastructure = (node: Element): boolean => node.hasAttribute('data-ver
 /// Node type is recognized through `nodeType`, not `instanceof`: same as the real DOM does,
 /// and by the way the only thing the test mocks can do.
 ///
-/// Elements are visited before text/comment nodes to match Rust's expectations: all elements
-/// in the tree are indexed first, then all text/comment nodes.
-///
 /// Takes the root node, not `Document`, for the same reason.
 export const buildSnapshot = (root: Node): SnapshotResult => {
     const payload: SnapshotPayload = { nodes: [], head: null, body: null };
     const nodes: Array<Node> = [];
 
-    // First pass: visit all elements and record their structure
-    const visitElements = (node: Node, depth: number): number | null => {
+    const visit = (node: Node, depth: number): number | null => {
         if (node.nodeType === ELEMENT_NODE) {
             const element = node as Element;
 
@@ -84,12 +80,32 @@ export const buildSnapshot = (root: Node): SnapshotResult => {
                 }
             }
 
-            // Process element children first
+            const children: Array<number> = [];
             for (const child of Array.from(node.childNodes)) {
-                if (child.nodeType === ELEMENT_NODE) {
-                    visitElements(child, depth + 1);
+                const childIndex = visit(child, depth + 1);
+                if (childIndex !== null) {
+                    children.push(childIndex);
                 }
             }
+
+            const entry = payload.nodes[index];
+            if (entry !== undefined && 'Element' in entry) {
+                entry.Element.children = children;
+            }
+
+            return index;
+        }
+
+        if (node.nodeType === TEXT_NODE || node.nodeType === COMMENT_NODE) {
+            const index = payload.nodes.length;
+            const value = (node as Text | Comment).data;
+
+            // Texts of only whitespace too: in `<pre>` and with inline content they are
+            // significant, so js cannot safely filter them.
+            payload.nodes.push(
+                node.nodeType === TEXT_NODE ? { Text: { value } } : { Comment: { value } },
+            );
+            nodes.push(node);
 
             return index;
         }
@@ -97,54 +113,7 @@ export const buildSnapshot = (root: Node): SnapshotResult => {
         return null;
     };
 
-    // Second pass: visit text/comment nodes and link them to their parents
-    const visitNonElements = (node: Node): void => {
-        if (node.nodeType === ELEMENT_NODE) {
-            const element = node as Element;
-            
-            if (isInfrastructure(element)) {
-                return;
-            }
-
-            // Find this element's index from the first pass
-            const elementIndex = nodes.indexOf(node);
-            if (elementIndex === -1) {
-                return;
-            }
-
-            const children: number[] = [];
-
-            for (const child of Array.from(node.childNodes)) {
-                if (child.nodeType === ELEMENT_NODE) {
-                    // Element child - find its index from first pass
-                    const childIndex = nodes.indexOf(child);
-                    if (childIndex !== -1) {
-                        children.push(childIndex);
-                    }
-                    visitNonElements(child);
-                } else if (child.nodeType === TEXT_NODE || child.nodeType === COMMENT_NODE) {
-                    // Add text/comment node now
-                    const index = payload.nodes.length;
-                    const value = (child as Text | Comment).data;
-                    
-                    payload.nodes.push(
-                        child.nodeType === TEXT_NODE ? { Text: { value } } : { Comment: { value } },
-                    );
-                    nodes.push(child);
-                    children.push(index);
-                }
-            }
-
-            // Update the element's children list
-            const entry = payload.nodes[elementIndex];
-            if (entry !== undefined && 'Element' in entry) {
-                entry.Element.children = children;
-            }
-        }
-    };
-
-    visitElements(root, 0);
-    visitNonElements(root);
+    visit(root, 0);
 
     return { payload, nodes };
 };

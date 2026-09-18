@@ -118,7 +118,7 @@ const run = () => {
 
         assert(payload.nodes.length === nodes.length, 'the payload and the node table must line up');
         assert(payload.head === 1, `head should be index 1, got ${payload.head}`);
-        assert(payload.body === 3, `body should be index 3, got ${payload.body}`);
+        assert(payload.body === 4, `body should be index 4, got ${payload.body}`);
 
         const root = payload.nodes[0]!;
         assert(root !== undefined, 'root element must exist');
@@ -131,8 +131,10 @@ const run = () => {
             'Element' in root && root.Element.children.length === 2,
             'children are recorded as indices into the same list',
         );
-        const titleText = payload.nodes[5]!;
-        assert(titleText !== undefined && 'Text' in titleText, 'the title text is at index 5');
+        // The walk is pre-order, so a node's own subtree is numbered before its next sibling:
+        // <title> takes 2, its text 3, and <body> only then 4.
+        assert(elementName(payload.nodes[2]!) === 'title', 'index 2 is <title>');
+        assert('Text' in payload.nodes[3]!, 'the title text follows its element, at index 3');
     }
 
     {
