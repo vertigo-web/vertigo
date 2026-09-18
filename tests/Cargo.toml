@@ -11,8 +11,17 @@ path = "lib.rs"
 
 [dev-dependencies]
 fantoccini = "0.22"
-vertigo-cli = { path = "../crates/vertigo-cli" }
+# The table, the JSON file and the baseline comparison, shared by all four benchmark suites so
+# that a run of one is readable and comparable the same way as a run of any other.
+vertigo-bench-report = { path = "bench-report" }
+# `ssr-timings` is what exposes `ServerState::request_timed`, which the SSR benchmark reads
+# its per-phase breakdown from. Dev-dependency features do not reach the shipping binary.
+vertigo-cli = { path = "../crates/vertigo-cli", features = ["ssr-timings"] }
 vertigo-demo-server = { path = "../demo/server" }
+# The SSR benchmark's subject app, as an rlib: the driver imports its route list and its
+# size constants rather than keeping a second copy that can drift.
+vertigo-test-ssr-bench = { path = "ssr-bench" }
+vertigo-test-hydration-bench = { path = "hydration-bench" }
 serde_json = "1"
 tokio = { version = "1", features = ["macros", "net", "rt-multi-thread", "time"] }
 
@@ -27,6 +36,14 @@ path = "reactive-bench/tests.rs"
 [[test]]
 name = "dom_bench"
 path = "dom-bench/tests.rs"
+
+[[test]]
+name = "ssr_bench"
+path = "ssr-bench/tests.rs"
+
+[[test]]
+name = "hydration_bench"
+path = "hydration-bench/tests.rs"
 
 [[test]]
 name = "demo"

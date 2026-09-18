@@ -26,6 +26,12 @@ doc = false
 name = "vertigo_cli"
 path = "src/lib.rs"
 
+[features]
+default = []
+# Per-request SSR phase timings, through `ServerState::request_timed`.
+# Used by task ssr-bench.
+ssr-timings = []
+
 [dependencies]
 actix-cors = "0.7"
 actix-files = "0.7"

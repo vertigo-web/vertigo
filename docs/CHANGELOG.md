@@ -7,6 +7,26 @@
 
 * Hydration fail when the app subscribes to a value before the root `dom!` block.
 
+### Internals
+
+* Added benchmarks:
+
+  - `task ssr-bench` renders a set of pages and reports where the time went,
+  - `task hydration-bench` loads a set of server-rendered pages in a real browser and reports
+    how long hydration took and how many DOM mutations it performed,
+  - `task reactive-bench` runs the reactive-graph benchmark suite,
+  - `task dom-bench` runs the end-to-end benchmark suite.
+
+  `task bench` runs all four benchmarks. `task bench-compare` runs all four benchmarks and
+  compares them against the baseline.
+
+  See [benchmarks][benchmarks]
+
+* `vertigo-cli` gained an off-by-default `ssr-timings` feature, which is what exposes the
+  per-phase breakdown through `ServerState::request_timed`. It compiles to nothing when off
+
+[benchmarks]: https://github.com/vertigo-web/vertigo/blob/master/docs/benchmarks.md
+
 ## 0.13.0 - 2026-09-07
 
 The reactive graph was rewritten and keyed list rendering was rebuilt around per-key

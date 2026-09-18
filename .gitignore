@@ -2,6 +2,10 @@
 /build
 /build-reactive-bench
 /build-dom-bench
+/build-hydration-bench
+/build-hydration-demo
+/build-ssr-bench
+/build-ssr-demo
 /build-demo
 /demo_build
 /examples/build

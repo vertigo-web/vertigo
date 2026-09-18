@@ -1276,8 +1276,11 @@ dependencies = [
  "fantoccini",
  "serde_json",
  "tokio",
+ "vertigo-bench-report",
  "vertigo-cli",
  "vertigo-demo-server",
+ "vertigo-test-hydration-bench",
+ "vertigo-test-ssr-bench",
 ]
 
 [[package]]
@@ -3723,6 +3726,14 @@ dependencies = [
 ]
 
 [[package]]
+name = "vertigo-bench-report"
+version = "0.1.0"
+dependencies = [
+ "flate2",
+ "serde_json",
+]
+
+[[package]]
 name = "vertigo-bench-support"
 version = "0.1.0"
 dependencies = [
@@ -3843,11 +3854,25 @@ dependencies = [
 ]
 
 [[package]]
+name = "vertigo-test-hydration-bench"
+version = "0.1.0"
+dependencies = [
+ "vertigo",
+]
+
+[[package]]
 name = "vertigo-test-reactive-bench"
 version = "0.1.0"
 dependencies = [
  "vertigo",
  "vertigo-bench-support",
+]
+
+[[package]]
+name = "vertigo-test-ssr-bench"
+version = "0.1.0"
+dependencies = [
+ "vertigo",
 ]
 
 [[package]]

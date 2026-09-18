@@ -1,3 +1,6 @@
+use std::fmt::{self, Display};
+
+/// Why a command failed, and the process exit code it becomes.
 #[derive(Clone, Copy, Debug)]
 #[repr(i32)]
 pub enum ErrorCode {
@@ -30,3 +33,12 @@ pub enum ErrorCode {
     ServeWasmCompileFailed = 26,
     ServeWasmInstanceFailed = 27,
 }
+
+impl Display for ErrorCode {
+    /// The variant name and its exit code.
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        write!(f, "{self:?} (exit code {})", *self as i32)
+    }
+}
+
+impl std::error::Error for ErrorCode {}

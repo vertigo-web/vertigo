@@ -10,6 +10,7 @@ pub mod serve;
 pub mod watch;
 
 pub use build::BuildOpts;
+pub use commons::ErrorCode;
 pub use commons::models::CommonOpts;
 pub use new::NewOpts;
 pub use serve::ServeOpts;
