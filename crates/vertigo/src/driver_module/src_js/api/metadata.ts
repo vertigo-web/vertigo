@@ -13,7 +13,7 @@ export class Metadata {
     }
 
     private get = (attr: string): string | null => {
-        return this.metadata.getAttribute(attr) ?? null;
+        return this.metadata.getAttribute(attr);
     }
 
     getEnv(name: string) {
@@ -21,7 +21,7 @@ export class Metadata {
     }
 
     getFetchCache() {
-        return this.get('data-fetch-cache') ?? null;
+        return this.get('data-fetch-cache');
     }
 
     getEnabledHydration = (): boolean => {

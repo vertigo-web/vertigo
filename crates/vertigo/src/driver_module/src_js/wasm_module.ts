@@ -3,6 +3,7 @@ import { BufferCursor } from './buffer_cursor';
 import { jsJsonDecodeItem, jsJsonGetSize, saveJsJsonToBufferItem } from './jsjson';
 import { Api } from './api/api';
 import { Metadata } from './api/metadata';
+import { decoder } from './text';
 
 //Number -> u32 or i32
 //BigInt -> u64 or i64
@@ -57,7 +58,6 @@ export class WasmModule {
                     const size = Number(long_ptr % (2n ** 32n));
                     const ptr = Number(long_ptr >> 32n);
 
-                    const decoder = new TextDecoder("utf-8");
                     const m = getWasm().getUint8Memory().subarray(ptr, ptr + size);
                     const message = decoder.decode(m);
                     console.error('PANIC', message);

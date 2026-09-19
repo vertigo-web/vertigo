@@ -1,8 +1,7 @@
 import { ModuleControllerType } from "../../wasm_init";
 import { ExportType } from "../../wasm_module";
 import { CallbackId } from "../types";
-import { HashRouter } from "./hashrouter";
-import { HistoryLocation } from "./historyLocation";
+import { BrowserLocation } from "./browserLocation";
 import { LocationCommonType } from "./types";
 
 type LocationTarget = 'Hash' | 'History';
@@ -12,8 +11,21 @@ export class AppLocation {
 
     constructor(getWasm: () => ModuleControllerType<ExportType>) {
         this.locations = {
-            Hash: new HashRouter(getWasm),
-            History: new HistoryLocation(getWasm),
+            Hash: new BrowserLocation(
+                getWasm,
+                "hashchange",
+                () => decodeURIComponent(location.hash.substr(1)),
+                (value, trigger) => { location.hash = value; trigger(); },
+                // No trigger: replacing the hash deliberately does not re-announce.
+                (value) => { history.replaceState(null, '', `#${value}`); },
+            ),
+            History: new BrowserLocation(
+                getWasm,
+                "popstate",
+                () => window.location.pathname + window.location.search + window.location.hash,
+                (value, trigger) => { window.history.pushState(null, '', value); trigger(); },
+                (value, trigger) => { window.history.replaceState(null, '', value); trigger(); },
+            ),
         };
     }
 

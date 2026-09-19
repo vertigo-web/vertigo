@@ -136,6 +136,24 @@ type ExecType
         }
     };
 
+// The union of `ExecType`'s object variants as [key, payload] pairs, so that switching on the
+// key narrows the payload.
+type EntryOf<T> = T extends object ? { [K in keyof T]-?: [K, T[K]] }[keyof T] : never;
+type ExecEntry = EntryOf<Extract<ExecType, object>>;
+
+// `console.debug`/`info`/`log`/`warn`/`error`, keyed by the Rust `ConsoleLogLevel` variant.
+// Those five spellings are fixed by the wire format.
+//
+// Method *names*, not captured functions, and that is deliberate,
+// because app can install its own console.error recorder
+const CONSOLE_METHOD = {
+    Debug: 'debug',
+    Info: 'info',
+    Log: 'log',
+    Warn: 'warn',
+    Error: 'error',
+} as const;
+
 export class Api {
     public readonly dom: DriverDom;
     private readonly websocket: DriverWebsocket;
@@ -188,124 +206,104 @@ export class Api {
             return null;
         }
 
-        if ('FetchExec' in safeArg) {
-            fetchExec(this.getWasm, safeArg.FetchExec.callback, safeArg.FetchExec.request);
-            return null;
+        // Exhaustiveness check for the half of `ExecType` that is a bare string: add one
+        // without a branch above and this assignment stops compiling.
+        const objectArg: Extract<ExecType, object> = safeArg;
+
+        // Every remaining variant is `{ Name: payload }` with exactly one key - that is how
+        // `AutoJsJson` encodes an enum - so pulling that one entry out lets each FFI name be
+        // written once, in a `case` label, instead of once per payload access.
+        //
+        // `?? []` is not decoration: a number or a bare string that is not handled above
+        // should reach `default` and produce the same 'exec_command: Arg' line it produces
+        // today, rather than throwing out of `Object.entries`.
+        const [command, params] = (Object.entries(objectArg)[0] ?? []) as ExecEntry;
+
+        switch (command) {
+            case 'FetchExec':
+                fetchExec(this.getWasm, params.callback, params.request);
+                return null;
+
+            case 'WebsocketRegister':
+                this.websocket.websocket_register_callback(params.host, params.callback);
+                return null;
+
+            case 'WebsocketSendMessage':
+                this.websocket.websocket_send_message(params.callback, params.message);
+                return null;
+
+            case 'WebsocketUnregister':
+                this.websocket.websocket_unregister_callback(params.callback);
+                return null;
+
+            case 'TimerSet':
+                this.interval.timerSet(params.callback, params.duration, params.kind);
+                return null;
+
+            case 'TimerClear':
+                this.interval.timerClear(params.callback);
+                return null;
+
+            case 'LocationGet':
+                return {
+                    value: this.location.get(params.target)
+                };
+
+            case 'LocationCallback':
+                this.location.callback(params.target, params.mode, params.callback);
+                return null;
+
+            case 'LocationSet':
+                this.location.set(params.target, params.mode, params.value);
+                return null;
+
+            case 'CookieGet':
+                return {
+                    value: this.cookie.get(params.name)
+                };
+
+            case 'CookieSet':
+                this.cookie.set(params.name, params.value, params.expires_in);
+                return null;
+
+            case 'CookieJsonGet':
+                return {
+                    value: this.cookie.getJson(params.name)
+                };
+
+            case 'CookieJsonSet':
+                this.cookie.setJson(params.name, params.value, params.expires_in);
+                return null;
+
+            case 'GetEnv':
+                return {
+                    value: this.metadata.getEnv(params.name),
+                };
+
+            case 'Log':
+                console[CONSOLE_METHOD[params.kind]](params.message, params.arg2, params.arg3, params.arg4);
+                return null;
+
+            case 'GetRandom':
+                return {
+                    value: getRandom(params.min, params.max)
+                };
+
+            case 'JsApiCall':
+                return this.executeJsApiCall(params.commands);
+
+            case 'DomBulkUpdate':
+                this.dom.update(params.commands);
+                return null;
+
+            default:
+                console.info('exec_command: Arg', safeArg);
+                // Exhaustiveness check for the object half. `CommandForBrowser::SetStatus`
+                // (`crates/vertigo/src/dev/command.rs`) is deliberately absent from
+                // `ExecType` - `Driver::set_status` only does anything on the server - so it
+                // is not checked here and, were wasm ever to send it, it would land here.
+                return assertNever(command);
         }
-
-        if ('WebsocketRegister' in safeArg) {
-            this.websocket.websocket_register_callback(safeArg.WebsocketRegister.host, safeArg.WebsocketRegister.callback);
-            return null;
-        }
-
-        if ('WebsocketSendMessage' in safeArg) {
-            this.websocket.websocket_send_message(safeArg.WebsocketSendMessage.callback, safeArg.WebsocketSendMessage.message);
-            return null;
-        }
-
-        if ('WebsocketUnregister' in safeArg) {
-            this.websocket.websocket_unregister_callback(safeArg.WebsocketUnregister.callback);
-            return null;
-        }
-
-        if ('TimerSet' in safeArg) {
-            this.interval.timerSet(safeArg.TimerSet.callback, safeArg.TimerSet.duration, safeArg.TimerSet.kind);
-            return null;
-        }
-
-        if ('TimerClear' in safeArg) {
-            this.interval.timerClear(safeArg.TimerClear.callback);
-            return null;
-        }
-
-        if ('LocationGet' in safeArg) {
-            return {
-                value: this.location.get(safeArg.LocationGet.target)
-            };
-        }
-
-        if ('LocationCallback' in safeArg) {
-            this.location.callback(safeArg.LocationCallback.target, safeArg.LocationCallback.mode, safeArg.LocationCallback.callback);
-            return null;
-        }
-
-        if ('LocationSet' in safeArg) {
-            this.location.set(safeArg.LocationSet.target, safeArg.LocationSet.mode, safeArg.LocationSet.value);
-            return null;
-        }
-
-        if ('CookieGet' in safeArg) {
-            return {
-                value: this.cookie.get(safeArg.CookieGet.name)
-            };
-        }
-
-        if ('CookieSet' in safeArg) {
-            this.cookie.set(safeArg.CookieSet.name, safeArg.CookieSet.value, safeArg.CookieSet.expires_in);
-            return null;
-        }
-
-        if ('CookieJsonGet' in safeArg) {
-            return {
-                value: this.cookie.getJson(safeArg.CookieJsonGet.name)
-            };
-        }
-
-        if ('CookieJsonSet' in safeArg) {
-            this.cookie.setJson(safeArg.CookieJsonSet.name, safeArg.CookieJsonSet.value, safeArg.CookieJsonSet.expires_in);
-            return null;
-        }
-
-        if ('GetEnv' in safeArg) {
-            const name = safeArg.GetEnv.name;
-
-            return {
-                value: this.metadata.getEnv(name),
-            }
-        }
-
-        if ('Log' in safeArg) {
-            switch (safeArg.Log.kind) {
-                case 'Info': {
-                    console.info(safeArg.Log.message, safeArg.Log.arg2, safeArg.Log.arg3, safeArg.Log.arg4);
-                    return null;
-                }
-                case 'Debug': {
-                    console.debug(safeArg.Log.message, safeArg.Log.arg2, safeArg.Log.arg3, safeArg.Log.arg4);
-                    return null;
-                }
-                case 'Error': {
-                    console.error(safeArg.Log.message, safeArg.Log.arg2, safeArg.Log.arg3, safeArg.Log.arg4);
-                    return null;
-                }
-                case 'Log': {
-                    console.log(safeArg.Log.message, safeArg.Log.arg2, safeArg.Log.arg3, safeArg.Log.arg4);
-                    return null;
-                }
-                case 'Warn': {
-                    console.warn(safeArg.Log.message, safeArg.Log.arg2, safeArg.Log.arg3, safeArg.Log.arg4);
-                    return null;
-                }
-            }
-        }
-
-        if ('GetRandom' in safeArg) {
-            return {
-                value: getRandom(safeArg.GetRandom.min, safeArg.GetRandom.max)
-            };
-        }
-
-        if ('JsApiCall' in safeArg) {
-            return this.executeJsApiCall(safeArg.JsApiCall.commands);
-        }
-
-        if ('DomBulkUpdate' in safeArg) {
-            this.dom.update(safeArg.DomBulkUpdate.commands);
-            return null;
-        }
-
-        console.info('exec_command: Arg', safeArg);
-        return assertNever(safeArg);
     }
 
     private executeJsApiCall(commands: Array<JsApiCommandType>): JsJsonType {

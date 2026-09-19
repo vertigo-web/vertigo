@@ -12,6 +12,7 @@
 // is decoded once per batch rather than once per command.
 
 import { CommandType } from "./dom";
+import { decoder } from "../../../text";
 
 export const Tag = {
     CreateNode: 1,
@@ -29,7 +30,6 @@ export const Tag = {
     CallbackRemove: 13,
 } as const;
 
-const decoder = new TextDecoder("utf-8");
 
 export class CommandCursor {
     private at: number = 0;
@@ -117,6 +117,41 @@ export const readNames = (cursor: CommandCursor): Array<string> => {
     return names;
 };
 
+// How one field is read off the stream.
+type FieldReader = (cursor: CommandCursor, names: Array<string>) => number | string | null;
+
+const readVarint: FieldReader = (cursor) => cursor.varint();
+const readString: FieldReader = (cursor) => cursor.string();
+const readName: FieldReader = (cursor, names) => cursor.name(names);
+const readOptionalId: FieldReader = (cursor) => cursor.optionalId();
+const readSelector: FieldReader = (cursor) => cursor.byte() === 0 ? null : cursor.string();
+
+type Spec = readonly [string, ReadonlyArray<readonly [string, FieldReader]>];
+
+// The variant key and ordered fields for each tag.
+//
+// Field order is load-bearing twice over: it is the order the bytes arrive in, and it is the
+// order the keys are written in. `dom_wire.test.ts` compares decoded commands with
+// `JSON.stringify`, which is key-order sensitive, so a reordering here fails there.
+//
+// Only the object-form builder below reads this. The hot applier in `dom.ts` keeps its own
+// switch over the same tags and never allocates a command object.
+const SPEC: Record<number, Spec> = {
+    [Tag.CreateNode]: ['CreateNode', [['id', readVarint], ['name', readName]]],
+    [Tag.CreateText]: ['CreateText', [['id', readVarint], ['value', readString]]],
+    [Tag.UpdateText]: ['UpdateText', [['id', readVarint], ['value', readString]]],
+    [Tag.SetAttr]: ['SetAttr', [['id', readVarint], ['name', readName], ['value', readString]]],
+    [Tag.RemoveAttr]: ['RemoveAttr', [['id', readVarint], ['name', readName]]],
+    [Tag.RemoveNode]: ['RemoveNode', [['id', readVarint]]],
+    [Tag.RemoveText]: ['RemoveText', [['id', readVarint]]],
+    [Tag.InsertBefore]: ['InsertBefore', [['parent', readVarint], ['child', readVarint], ['ref_id', readOptionalId]]],
+    [Tag.InsertCss]: ['InsertCss', [['selector', readSelector], ['value', readString]]],
+    [Tag.CreateComment]: ['CreateComment', [['id', readVarint], ['value', readString]]],
+    [Tag.RemoveComment]: ['RemoveComment', [['id', readVarint]]],
+    [Tag.CallbackAdd]: ['CallbackAdd', [['id', readVarint], ['event_name', readString], ['callback_id', readVarint]]],
+    [Tag.CallbackRemove]: ['CallbackRemove', [['id', readVarint], ['event_name', readString], ['callback_id', readVarint]]],
+};
+
 // Object form of the stream, for hydration - which runs on the first flush only and wants to
 // look at the commands before they are applied. The hot path in `dom.ts` never builds these.
 export const decodeCommands = (bytes: Uint8Array): Array<CommandType> => {
@@ -126,79 +161,20 @@ export const decodeCommands = (bytes: Uint8Array): Array<CommandType> => {
 
     while (!cursor.isEmpty()) {
         const tag = cursor.byte();
+        const spec = SPEC[tag];
 
-        switch (tag) {
-            case Tag.CreateNode:
-                commands.push({ CreateNode: { id: cursor.varint(), name: cursor.name(names) } });
-                break;
-            case Tag.CreateText:
-                commands.push({ CreateText: { id: cursor.varint(), value: cursor.string() } });
-                break;
-            case Tag.UpdateText:
-                commands.push({ UpdateText: { id: cursor.varint(), value: cursor.string() } });
-                break;
-            case Tag.SetAttr:
-                commands.push({
-                    SetAttr: {
-                        id: cursor.varint(),
-                        name: cursor.name(names),
-                        value: cursor.string(),
-                    },
-                });
-                break;
-            case Tag.RemoveAttr:
-                commands.push({ RemoveAttr: { id: cursor.varint(), name: cursor.name(names) } });
-                break;
-            case Tag.RemoveNode:
-                commands.push({ RemoveNode: { id: cursor.varint() } });
-                break;
-            case Tag.RemoveText:
-                commands.push({ RemoveText: { id: cursor.varint() } });
-                break;
-            case Tag.InsertBefore:
-                commands.push({
-                    InsertBefore: {
-                        parent: cursor.varint(),
-                        child: cursor.varint(),
-                        ref_id: cursor.optionalId(),
-                    },
-                });
-                break;
-            case Tag.InsertCss:
-                commands.push({
-                    InsertCss: {
-                        selector: cursor.byte() === 0 ? null : cursor.string(),
-                        value: cursor.string(),
-                    },
-                });
-                break;
-            case Tag.CreateComment:
-                commands.push({ CreateComment: { id: cursor.varint(), value: cursor.string() } });
-                break;
-            case Tag.RemoveComment:
-                commands.push({ RemoveComment: { id: cursor.varint() } });
-                break;
-            case Tag.CallbackAdd:
-                commands.push({
-                    CallbackAdd: {
-                        id: cursor.varint(),
-                        event_name: cursor.string(),
-                        callback_id: cursor.varint(),
-                    },
-                });
-                break;
-            case Tag.CallbackRemove:
-                commands.push({
-                    CallbackRemove: {
-                        id: cursor.varint(),
-                        event_name: cursor.string(),
-                        callback_id: cursor.varint(),
-                    },
-                });
-                break;
-            default:
-                throw new Error(`dom command: unknown tag ${tag}`);
+        if (spec === undefined) {
+            throw new Error(`dom command: unknown tag ${tag}`);
         }
+
+        const [key, fields] = spec;
+        const body: Record<string, unknown> = {};
+
+        for (const [name, read] of fields) {
+            body[name] = read(cursor, names);
+        }
+
+        commands.push({ [key]: body } as CommandType);
     }
 
     return commands;

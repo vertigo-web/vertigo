@@ -9,7 +9,7 @@ export default [
       {
         sourcemap: true,
         file: 'crates/vertigo/src/driver_module/wasm_run.js',
-        format: 'cjs',
+        format: 'es',
       }
     ],
     plugins: [
