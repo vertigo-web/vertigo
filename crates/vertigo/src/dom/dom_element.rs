@@ -351,7 +351,7 @@ impl DomElement {
             if let JsJson::String(text) = data {
                 on_change(text);
             } else {
-                log::error!("Invalid data: on_change: {data:?}");
+                log::error!("Invalid data: on_change: {}", data.typename());
             }
 
             JsJson::Null
@@ -451,7 +451,7 @@ impl DomElement {
             if let JsJson::String(text) = data {
                 on_input(text);
             } else {
-                log::error!("Invalid data: on_input: {data:?}");
+                log::error!("Invalid data: on_input: {}", data.typename());
             }
 
             JsJson::Null

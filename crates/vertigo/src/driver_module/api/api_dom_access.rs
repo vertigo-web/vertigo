@@ -57,7 +57,7 @@ impl DomAccess {
         if let JsJson::Null = result {
             //ok
         } else {
-            let message = format!("Expected null dump={result:?}");
+            let message = format!("Expected null, got {}", result.typename());
             api_panic_message().show(message);
         }
     }
