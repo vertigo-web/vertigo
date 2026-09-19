@@ -4,28 +4,28 @@ use vertigo::{
 };
 use wasmtime::{AsContextMut, Caller, Extern, Instance, Memory, Store, StoreContextMut};
 
-use crate::serve::request_state::RequestState;
+use super::host_state::HostState;
 
 pub enum DataContext<'a> {
     Caller {
-        caller: Caller<'a, RequestState>,
+        caller: Caller<'a, HostState>,
     },
     Store {
-        store: &'a mut Store<RequestState>,
+        store: &'a mut Store<HostState>,
         instance: Instance,
     },
 }
 
 impl<'a> DataContext<'a> {
-    pub fn from_caller(caller: Caller<'a, RequestState>) -> Self {
+    pub fn from_caller(caller: Caller<'a, HostState>) -> Self {
         DataContext::Caller { caller }
     }
 
-    pub fn from_store(store: &'a mut Store<RequestState>, instance: Instance) -> Self {
+    pub fn from_store(store: &'a mut Store<HostState>, instance: Instance) -> Self {
         DataContext::Store { store, instance }
     }
 
-    fn get_context(&mut self) -> StoreContextMut<'_, RequestState> {
+    fn get_context(&mut self) -> StoreContextMut<'_, HostState> {
         match self {
             Self::Caller { caller } => caller.as_context_mut(),
             Self::Store { store, .. } => store.as_context_mut(),

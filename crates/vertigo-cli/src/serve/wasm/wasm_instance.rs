@@ -1,5 +1,4 @@
-use std::{process::exit, sync::Arc};
-use tokio::sync::mpsc::UnboundedSender;
+use std::process::exit;
 use vertigo::{
     JsJson, JsJsonSerialize,
     dev::{
@@ -7,46 +6,45 @@ use vertigo::{
         command::{CommandForBrowser, CommandForWasm, decode_json},
     },
 };
-use wasmtime::{Caller, Engine, Func, Instance, Module, Store};
+use wasmtime::{Caller, Engine, Instance, InstancePre, Linker, Store};
 
 use crate::{
     commons::ErrorCode,
     serve::{
-        request_state::RequestState,
         response_state::ResponseState,
         timings::{ENTRY_FUNCTION, HANDLE_URL_FUNCTION, SsrProbe, WASM_COMMAND_FUNCTION},
     },
 };
 
-use super::{data_context::DataContext, message::Message};
+use super::{data_context::DataContext, host_state::HostState, message::Message};
 
-pub struct WasmInstance {
-    instance: Instance,
-    store: Store<RequestState>,
-    probe: SsrProbe,
-    /// The import-order workaround below was needed. Reported through
-    /// [`WasmInstance::instantiate_retried`] so a doubled instantiation time explains
-    /// itself rather than reading as noise.
-    retried: bool,
-}
+/// The module the guest imports from - `#[link(wasm_import_module = "mod")]` in
+/// `vertigo::external_api`, and the `mod` key of the import object the browser builds in
+/// `wasm_module.ts`.
+const IMPORT_MODULE: &str = "mod";
 
-impl WasmInstance {
-    pub fn new(
-        sender: UnboundedSender<Message>,
-        engine: &Engine,
-        module: &Module,
-        request: RequestState,
-        probe: SsrProbe,
-        handle_command: Arc<
-            dyn Fn(RequestState, CommandForBrowser) -> JsJson + 'static + Send + Sync,
-        >,
-    ) -> Self {
-        let mut store = Store::new(engine, request.clone());
+/// Defines the host functions the guest imports, keyed by name.
+///
+/// The closures capture nothing, reaching their per-request collaborators through
+/// [`HostState`] on the `Store`. That is what allows one linker, built once at startup, to
+/// serve every request.
+pub fn build_linker(engine: &Engine) -> Result<Linker<HostState>, ErrorCode> {
+    fn registration_failed(name: &str, err: impl std::fmt::Debug) -> ErrorCode {
+        log::error!("WASM host function registration failed: {IMPORT_MODULE}.{name}: {err:?}");
+        ErrorCode::ServeWasmInstanceFailed
+    }
 
-        let import_panic_message = Func::wrap(&mut store, {
-            let sender = sender.clone();
+    let mut linker = Linker::new(engine);
 
-            move |caller: Caller<'_, RequestState>, long_ptr: u64| {
+    linker
+        .func_wrap(
+            IMPORT_MODULE,
+            "panic_message",
+            |caller: Caller<'_, HostState>, long_ptr: u64| {
+                // `Caller::data` borrows and `DataContext::from_caller` moves, so whatever
+                // the body needs is taken off the state first.
+                let sender = caller.data().sender.clone();
+
                 let mut data_context = DataContext::from_caller(caller);
                 let long_ptr = LongPtr::from(long_ptr);
                 let (ptr, offset) = long_ptr.into_parts();
@@ -55,67 +53,71 @@ impl WasmInstance {
                 log::error!("wasm panic: {message:?}");
 
                 sender.send(Message::Panic(message)).unwrap_or_default();
-            }
-        });
+            },
+        )
+        .map_err(|err| registration_failed("panic_message", err))?;
 
-        let import_dom_access = {
-            let probe = probe.clone();
+    linker
+        .func_wrap(
+            IMPORT_MODULE,
+            "dom_access",
+            |caller: Caller<'_, HostState>, long_ptr: u64| -> u64 {
+                let state = caller.data();
+                let probe = state.probe.clone();
+                let request = state.request.clone();
+                let handle_command = state.handle_command.clone();
 
-            Func::wrap(
-                &mut store,
-                move |caller: Caller<'_, RequestState>, long_ptr: u64| -> u64 {
-                    // The whole body, not just the dispatch: pulling the argument out of
-                    // linear memory and writing the answer back are host work proportional
-                    // to the batch size, and a `DomBulkUpdate` blob is the largest thing
-                    // that ever crosses here. Timing only the dispatch would charge that
-                    // copying to wasm execution - exactly the mis-attribution the
-                    // benchmark exists to avoid.
-                    let host_mark = probe.start();
+                // The whole body, not just the dispatch: pulling the argument out of
+                // linear memory and writing the answer back are host work proportional
+                // to the batch size, and a `DomBulkUpdate` blob is the largest thing
+                // that ever crosses here. Timing only the dispatch would charge that
+                // copying to wasm execution - exactly the mis-attribution the
+                // benchmark exists to avoid.
+                let host_mark = probe.start();
 
-                    let long_ptr = LongPtr::from(long_ptr);
-                    let mut data_context = DataContext::from_caller(caller);
+                let long_ptr = LongPtr::from(long_ptr);
+                let mut data_context = DataContext::from_caller(caller);
 
-                    let value = data_context.get_value_long_ptr(long_ptr);
+                let value = data_context.get_value_long_ptr(long_ptr);
 
-                    let result = decode_json::<CommandForBrowser>(value)
-                        .map(|item| handle_command(request.clone(), item));
+                let result = decode_json::<CommandForBrowser>(value)
+                    .map(|item| handle_command(request, item));
 
-                    let result = match result {
-                        Ok(result) => data_context.save_value(result).get_long_ptr(),
-                        Err(err) => {
-                            log::error!("import_dom_access -> decode error = {err}");
-                            0
-                        }
-                    };
+                let result = match result {
+                    Ok(result) => data_context.save_value(result).get_long_ptr(),
+                    Err(err) => {
+                        log::error!("import_dom_access -> decode error = {err}");
+                        0
+                    }
+                };
 
-                    probe.host_call(host_mark);
-                    result
-                },
-            )
-        };
+                probe.host_call(host_mark);
+                result
+            },
+        )
+        .map_err(|err| registration_failed("dom_access", err))?;
 
-        let mut imports = [import_dom_access.into(), import_panic_message.into()];
-        let mut retried = false;
-        let instance = match Instance::new(&mut store, module, &imports) {
+    Ok(linker)
+}
+
+pub struct WasmInstance {
+    instance: Instance,
+    store: Store<HostState>,
+    probe: SsrProbe,
+}
+
+impl WasmInstance {
+    /// Instantiates from an [`InstancePre`] whose imports were resolved at startup.
+    pub fn new(engine: &Engine, instance_pre: &InstancePre<HostState>, state: HostState) -> Self {
+        let probe = state.probe.clone();
+        let mut store = Store::new(engine, state);
+
+        // A failure here is a trap in the start function or an allocation failure.
+        let instance = match instance_pre.instantiate(&mut store) {
             Ok(instance) => instance,
             Err(err) => {
-                // Workaround for rust/wasmtime mangling with functions order.
-                // Upon error try with panic/dom_access reversed before giving up.
-                imports.reverse();
-                retried = true;
-                match Instance::new(&mut store, module, &imports) {
-                    Ok(instance) => {
-                        log::warn!(
-                            "WASM instantiation types order problem - update rust or soon it will stop working"
-                        );
-                        instance
-                    }
-                    Err(err2) => {
-                        log::error!("WASM instantiation error (1): {err:?}");
-                        log::error!("WASM instantiation error (2): {err2:?}");
-                        exit(ErrorCode::ServeWasmInstanceFailed as i32)
-                    }
-                }
+                log::error!("WASM instantiation error: {err:?}");
+                exit(ErrorCode::ServeWasmInstanceFailed as i32)
             }
         };
 
@@ -123,12 +125,7 @@ impl WasmInstance {
             instance,
             store,
             probe,
-            retried,
         }
-    }
-
-    pub fn instantiate_retried(&self) -> bool {
-        self.retried
     }
 
     fn call_function<Params: wasmtime::WasmParams, Results: wasmtime::WasmResults>(
@@ -222,5 +219,58 @@ impl WasmInstance {
     pub fn send_fetch_response(&mut self, callback: CallbackId, response: SsrFetchResponse) {
         let result = self.wasm_command(CommandForWasm::FetchExecResponse { response, callback });
         assert_eq!(result, JsJson::Null);
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use wasmtime::Module;
+
+    use super::*;
+
+    /// The two imports as the guest declares them in `vertigo::external_api`.
+    const PANIC_FIRST: &str = r#"(module
+        (import "mod" "panic_message" (func (param i64)))
+        (import "mod" "dom_access"    (func (param i64) (result i64))))"#;
+
+    /// The same module with the import section emitted the other way round. `wasm-ld` picks
+    /// the order, and it differs between build profiles - `lto`/`codegen-units` change it -
+    /// as well as across toolchains. Both must resolve.
+    const DOM_ACCESS_FIRST: &str = r#"(module
+        (import "mod" "dom_access"    (func (param i64) (result i64)))
+        (import "mod" "panic_message" (func (param i64))))"#;
+
+    /// Whether a module's imports resolve against the real linker. The module is parsed in a
+    /// separate step so a typo in the WAT above cannot pass for a resolution failure.
+    fn imports_resolve(wat: &str) -> bool {
+        let engine = Engine::default();
+
+        let Ok(module) = Module::new(&engine, wat) else {
+            panic!("test WAT does not parse");
+        };
+
+        let Ok(linker) = build_linker(&engine) else {
+            panic!("build_linker failed");
+        };
+
+        linker.instantiate_pre(&module).is_ok()
+    }
+
+    #[test]
+    fn imports_resolve_in_either_declared_order() {
+        assert!(imports_resolve(PANIC_FIRST));
+        assert!(imports_resolve(DOM_ACCESS_FIRST));
+    }
+
+    #[test]
+    fn an_unknown_import_does_not_resolve() {
+        // Guards the assertion above against passing for the wrong reason: if the linker
+        // matched by position it would happily satisfy this too, since the signatures and
+        // the arity are those of the real pair.
+        let wat = r#"(module
+            (import "mod" "dom_access_typo" (func (param i64) (result i64)))
+            (import "mod" "panic_message"   (func (param i64))))"#;
+
+        assert!(!imports_resolve(wat));
     }
 }
