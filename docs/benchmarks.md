@@ -53,7 +53,7 @@ Every suite records the size of everything it built, above the timings:
 ```text
   artifacts
     demo wasm                   999 442   gz     313 200  code 936 681  data 58 850  elem 1 852  function 1 581  other 440
-    demo js                      33 670   gz      10 210
+    demo js                      30 568   gz      10 024
 ```
 
 - The **wasm section breakdown** is read out of the module itself, so a size regression is
@@ -62,9 +62,14 @@ Every suite records the size of everything it built, above the timings:
   convention `wasm-objdump -h` prints, so they sum to slightly less than the file - the header
   and each section's own id and length byte belong to no section. Sections under a kilobyte are
   summed into `other`; the full map is in the JSON.
-- **`gz`** is what actually crosses the wire, at a fixed compression level. It will not match
-  `gzip -9` to the byte - a different deflate implementation makes slightly different choices -
-  but it is consistent from run to run, which is what a comparison needs.
+- **`gz`** is the transfer size to compare against, at a fixed compression level. It will not
+  match `gzip -9` to the byte - a different deflate implementation makes slightly different
+  choices - but it is consistent from run to run, which is what a comparison needs. It is an
+  indication rather than the exact number a visitor downloads: `vertigo serve` negotiates
+  brotli first and at its own compression level, so a real transfer is usually a little
+  smaller. The benchmarks themselves run with `--disable-compression`, so that what they time
+  is vertigo rather than brotli, and so that they stay comparable with baselines recorded
+  before compression existed.
 - `wasm_run.js` is the same file for every suite: it comes from the vertigo crate rather than
   from the subject app. Four suites reporting an identical number is a free cross-check.
 

@@ -33,8 +33,4 @@ export class EventEmitter<T> {
             }
         }
     }
-
-    get size(): number {
-        return this.events.size;
-    }
 }

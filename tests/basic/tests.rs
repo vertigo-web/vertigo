@@ -53,6 +53,9 @@ async fn basic() -> TestResult {
                 env: vec![],
                 wasm_preload: true,
                 disable_hydration: false,
+                // Left on, as a served app has it: these suites are the only place the
+                // compressed path is exercised end to end.
+                disable_compression: false,
                 threads: None,
             },
         };

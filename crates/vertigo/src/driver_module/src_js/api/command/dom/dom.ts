@@ -168,14 +168,14 @@ export class DriverDom {
                             setFocus.add(id);
                         }
 
-                        try { this.setAttr(id, names[name] ?? '', value); }
+                        try { this.writeAttr("set_attribute", id, names[name] ?? '', value); }
                         catch (error) { applyFailed(error, 'SetAttr'); }
                         break;
                     }
                     case Tag.RemoveAttr: {
                         const id = cursor.varint();
                         const name = cursor.varint();
-                        try { this.removeAttr(id, names[name] ?? ''); }
+                        try { this.writeAttr("remove_attribute", id, names[name] ?? '', null); }
                         catch (error) { applyFailed(error, 'RemoveAttr'); }
                         break;
                     }
@@ -279,37 +279,30 @@ export class DriverDom {
         }
     }
 
-    private setAttr(id: number, name: string, value: string) {
-        const node = this.nodes.getNode("set_attribute", id);
-        node.setAttribute(name, value);
+    // Both attribute commands: `value === null` means remove. Once the replacement text is
+    // `value ?? ""` the `value` property fix-up below is the same either way - setting the
+    // attribute does not update the live property on an input or a textarea, so it is done
+    // by hand.
+    private writeAttr(label: string, id: number, name: string, value: string | null) {
+        const node = this.nodes.getNode(label, id);
 
-        if (name == "value") {
-            if (node instanceof HTMLInputElement) {
-                node.value = value;
-                return;
-            }
-
-            if (node instanceof HTMLTextAreaElement) {
-                node.value = value;
-                node.defaultValue = value;
-                return;
-            }
+        if (value === null) {
+            node.removeAttribute(name);
+        } else {
+            node.setAttribute(name, value);
         }
-    }
-
-    private removeAttr(id: number, name: string) {
-        const node = this.nodes.getNode("remove_attribute", id);
-        node.removeAttribute(name);
 
         if (name == "value") {
+            const text = value ?? "";
+
             if (node instanceof HTMLInputElement) {
-                node.value = "";
+                node.value = text;
                 return;
             }
 
             if (node instanceof HTMLTextAreaElement) {
-                node.value = "";
-                node.defaultValue = "";
+                node.value = text;
+                node.defaultValue = text;
                 return;
             }
         }
