@@ -95,11 +95,21 @@ impl<T: Clone + PartialEq + 'static> ComputedInner<T> {
 
 impl<T: Clone + PartialEq + 'static> Computed<T> {
     pub(crate) fn create(graph: Rc<GraphInner>, compute: impl Fn(&Context) -> T + 'static) -> Self {
+        Self::create_dyn(graph, Box::new(compute))
+    }
+
+    /// The body of [`Self::create`], with the closure already in the box `ComputedInner`
+    /// stores it in anyway.
+    ///
+    /// Generic over `T` but not over the closure type: every `Computed::from`, `map` and
+    /// `to_computed` in an application funnels through here, and each one used to get its
+    /// own copy of the registration below.
+    fn create_dyn(graph: Rc<GraphInner>, compute: Box<dyn Fn(&Context) -> T>) -> Self {
         let id = graph.alloc_id();
         let inner = Rc::new(ComputedInner {
             graph: graph.clone(),
             id,
-            compute: Box::new(compute),
+            compute,
             value: RefCell::new(None),
         });
         graph.register(id, inner.clone());
