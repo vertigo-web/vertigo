@@ -53,17 +53,6 @@ export class PromiseBoxRace<T> {
         promiseResolveReject.resolve(value);
     }
 
-    reject = (err?: unknown) => {
-        const promiseResolveReject = this.inner;
-        this.inner = null;
-
-        if (promiseResolveReject === null) {
-            return;
-        }
-
-        promiseResolveReject.reject(err);
-    }
-
     isFulfilled = (): boolean => {
         return this.inner === null;
     }

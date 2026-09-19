@@ -52,5 +52,22 @@ export default [
             }),
             sourcemaps(),
         ],
+    },
+    {
+        input: 'crates/vertigo/src/driver_module/src_js/jsjson.test.ts',
+        output: [
+            {
+                sourcemap: true,
+                file: 'build/jsjson.test.js',
+                format: 'cjs',
+            }
+        ],
+        plugins: [
+            typescript({
+                sourceMap: true,
+                inlineSources: true,
+            }),
+            sourcemaps(),
+        ],
     }
 ];

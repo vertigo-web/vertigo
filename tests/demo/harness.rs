@@ -116,6 +116,10 @@ impl Harness {
                     ],
                     wasm_preload: true,
                     disable_hydration: false,
+                    // Left on, as a served app has it. With the `/api` proxy above, this is
+                    // the one suite that covers a compressing server and a proxied route
+                    // together.
+                    disable_compression: false,
                     threads: None,
                 },
             };

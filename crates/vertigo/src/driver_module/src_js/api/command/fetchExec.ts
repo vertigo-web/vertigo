@@ -96,6 +96,15 @@ export const fetchExec = async (
 ): Promise<void> => {
     const wasm = getWasm();
 
+    const send = (response: FetchResponseType) => {
+        wasm.wasmCommand({
+            'FetchExecResponse': {
+                response,
+                callback: callback_id,
+            }
+        });
+    };
+
     try {
         const response = await fetch(request.url, {
             method: request.method,
@@ -103,29 +112,14 @@ export const fetchExec = async (
             body: getBodyString(request.body),
         });
 
-        const response2 = await processResponse(response);
-
-        wasm.wasmCommand({
-            'FetchExecResponse': {
-                response: response2,
-                callback: callback_id,
-            }
-        });
-
+        send(await processResponse(response));
     } catch (err) {
         console.error('fetch error (1)', err);
         const responseMessage = new String(err).toString();
 
-        const responseToWasm: FetchResponseType = {
+        send({
             'Err': {
                 message: responseMessage
-            }
-        };
-
-        wasm.wasmCommand({
-            'FetchExecResponse': {
-                response: responseToWasm,
-                callback: callback_id,
             }
         });
     }

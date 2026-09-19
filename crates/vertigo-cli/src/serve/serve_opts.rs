@@ -40,6 +40,12 @@ pub struct ServeOptsInner {
     #[arg(long, default_value_t = {false})]
     pub disable_hydration: bool,
 
+    /// Disable gzip/brotli/zstd compression of served responses
+    ///
+    /// (useful behind a proxy or CDN that already compresses)
+    #[arg(long, default_value_t = {false})]
+    pub disable_compression: bool,
+
     /// Number of threads to use for processing requests
     ///
     /// (default: number of CPU cores, 2 for watch mode)

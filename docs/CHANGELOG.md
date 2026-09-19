@@ -3,11 +3,27 @@
 <!-- markdownlint-disable-next-line first-line-h1 -->
 ## 0.13.1 - Unreleased
 
+### Added
+
+* `vertigo serve` and `vertigo watch` now compress responses (brotli/gzip/zstd, by content
+  negotiation). The wasm binary and `wasm_run.js` are then about 3 times smaller.
+  Pass `--disable-compression` behind a proxy or CDN that already compresses.
+  The fullstack template (`vertigo new -t fullstack`) does the same through
+  `App::wrap(Compress::default())`.
+
 ### Fixed
 
 * Hydration fail when the app subscribes to a value before the root `dom!` block.
+* `--proxy` forwarded the upstream's `Content-Encoding` and `Content-Length` even though `awc`
+  had already decoded the body, so proxying to an upstream that compressed produced a response
+  no client could decode.
 
 ### Internals
+
+* `wasm_run.js` shrank from 33,670 to 30,568 bytes (-9.2%) - dead code removed, and different
+  functions were optimized. `tests/js_tests.sh` now enforces a size budget so it does not drift back.
+
+* Added tests for the JsJson codec (`jsjson.ts`).
 
 * Added benchmarks:
 
