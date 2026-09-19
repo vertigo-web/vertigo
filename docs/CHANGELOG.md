@@ -17,6 +17,9 @@
 * `--proxy` forwarded the upstream's `Content-Encoding` and `Content-Length` even though `awc`
   had already decoded the body, so proxying to an upstream that compressed produced a response
   no client could decode.
+* WASM instantiation types order problem. Imports are now resolved by name, once at startup.
+  Per-request instantiation got about 24% cheaper. A missing or mistyped import is now reported
+  at startup, naming the import, instead of per request.
 
 ### Internals
 
