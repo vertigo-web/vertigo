@@ -1,6 +1,5 @@
 use std::{
     cmp::Ordering,
-    collections::BTreeMap,
     hash::{Hash, Hasher},
 };
 
@@ -8,6 +7,7 @@ use crate::{
     dev::{JsJsonListDecoder, LongPtr},
     driver_module::js_value::{
         MemoryBlock,
+        js_object::JsObject,
         vec_to_string::{string_to_vec, vec_to_string},
     },
 };
@@ -120,7 +120,7 @@ pub enum JsJson {
     String(String),
     Number(JsJsonNumber),
     List(Vec<JsJson>),
-    Object(BTreeMap<String, JsJson>),
+    Object(JsObject),
     Vec(Vec<u8>),
 }
 
@@ -261,10 +261,7 @@ impl JsJson {
         }
     }
 
-    pub fn get_hashmap(
-        self,
-        context: &JsJsonContext,
-    ) -> Result<BTreeMap<String, JsJson>, JsJsonContext> {
+    pub fn get_hashmap(self, context: &JsJsonContext) -> Result<JsObject, JsJsonContext> {
         let object = match self {
             JsJson::Object(object) => object,
             other => {
@@ -359,7 +356,7 @@ pub fn decode_js_json_inner(buffer: &mut MemoryBlockRead) -> Result<JsJson, Stri
             JsJson::List(param_list)
         }
         JsJsonConst::Object => {
-            let mut props = BTreeMap::new();
+            let mut props = JsObject::new();
             let object_size = buffer.get_u16();
 
             for _ in 0..object_size {
@@ -457,7 +454,7 @@ impl From<Vec<u8>> for JsJson {
 }
 impl From<Vec<(&str, JsJson)>> for JsJson {
     fn from(value: Vec<(&str, JsJson)>) -> Self {
-        let mut map = BTreeMap::new();
+        let mut map = JsObject::new();
         for (key, val) in value {
             map.insert(key.to_string(), val);
         }

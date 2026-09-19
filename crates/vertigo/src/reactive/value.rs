@@ -1,11 +1,11 @@
-use std::{cell::RefCell, collections::BTreeMap, rc::Rc};
+use std::{cell::RefCell, rc::Rc};
 
 use super::{
     Computed, Context, DropResource, Graph, GraphId, ToComputed,
     graph::{ErasedNode, GraphInner, NodeId},
 };
 
-type ValueEvents<T> = BTreeMap<u64, Rc<dyn Fn(T)>>;
+type ValueEvents<T> = Vec<(u64, Rc<dyn Fn(T)>)>;
 
 /// A writable reactive cell.
 ///
@@ -76,7 +76,7 @@ impl<T: Clone + PartialEq + 'static> Value<T> {
             id,
             value: RefCell::new(value),
             next_event: RefCell::new(1),
-            events: RefCell::new(BTreeMap::new()),
+            events: RefCell::new(Vec::new()),
         });
         graph.register(id, inner.clone());
         Value { inner }
@@ -131,7 +131,13 @@ impl<T: Clone + PartialEq + 'static> Value<T> {
                 *self.inner.value.borrow_mut() = value;
             } else {
                 *self.inner.value.borrow_mut() = value.clone();
-                let events: Vec<_> = self.inner.events.borrow().values().cloned().collect();
+                let events: Vec<_> = self
+                    .inner
+                    .events
+                    .borrow()
+                    .iter()
+                    .map(|(_, event)| event.clone())
+                    .collect();
                 for event in events {
                     event(value.clone());
                 }
@@ -177,10 +183,13 @@ impl<T: Clone + PartialEq + 'static> Value<T> {
             *next += 1;
             id
         };
-        self.inner.events.borrow_mut().insert(id, Rc::new(callback));
+        self.inner.events.borrow_mut().push((id, Rc::new(callback)));
         let inner = self.inner.clone();
         DropResource::new(move || {
-            inner.events.borrow_mut().remove(&id);
+            inner
+                .events
+                .borrow_mut()
+                .retain(|(event_id, _)| *event_id != id);
         })
     }
 }

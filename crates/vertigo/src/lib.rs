@@ -98,8 +98,8 @@ pub use dom_macro::{AttrGroup, AttrGroupValue, EmbedDom};
 pub use driver_module::{
     driver::{Driver, FetchMethod, FetchResult, get_driver, transaction},
     js_value::{
-        JsJson, JsJsonContext, JsJsonDeserialize, JsJsonNumber, JsJsonSerialize, from_json,
-        object_insert, to_json,
+        JsJson, JsJsonContext, JsJsonDeserialize, JsJsonNumber, JsJsonSerialize, JsObject,
+        from_json, object_insert, to_json,
     },
 };
 pub use exports::start_app;

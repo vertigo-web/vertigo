@@ -1,7 +1,5 @@
-use std::{
-    collections::BTreeMap,
-    sync::atomic::{AtomicU64, Ordering},
-};
+use crate::driver_module::js_value::JsObject;
+use std::sync::atomic::{AtomicU64, Ordering};
 
 use crate::{AutoJsJson, JsJson, JsJsonContext, JsJsonDeserialize, JsJsonNumber, JsJsonSerialize};
 
@@ -229,7 +227,7 @@ pub struct WsSubscribeQuery {
 
 impl JsJsonSerialize for WsSubscribeQuery {
     fn to_json(self) -> JsJson {
-        let mut map = BTreeMap::new();
+        let mut map = JsObject::new();
         map.insert("table".to_string(), self.table.to_json());
         map.insert("logic".to_string(), self.logic.to_json());
         map.insert(

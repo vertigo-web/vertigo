@@ -92,7 +92,7 @@ fn test_skip_deserialize_missing_key() {
     }
 
     // Build JSON that only has "value" — no "tmp" key at all.
-    let json = JsJson::Object(std::collections::BTreeMap::from([(
+    let json = JsJson::Object(crate::JsObject::from([(
         "value".to_string(),
         JsJson::Number(JsJsonNumber(7.0)),
     )]));
