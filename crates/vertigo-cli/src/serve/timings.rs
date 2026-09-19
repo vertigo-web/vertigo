@@ -77,11 +77,9 @@ mod on {
         pub total: Duration,
 
         // -- phase 1 ------------------------------------------------------------------
-        /// `WasmInstance::new`: `Store::new`, the two `Func::wrap`s, `Instance::new`.
+        /// `WasmInstance::new`: `Store::new` and `InstancePre::instantiate`. Imports were
+        /// resolved by name once at startup, so none of that cost lands here.
         pub instantiate: Duration,
-        /// The reversed-imports workaround in `WasmInstance::new` was needed, which roughly
-        /// doubles `instantiate`. Recorded so that outlier explains itself.
-        pub instantiate_retried: bool,
 
         // -- phase 2, and the host work nested inside it --------------------------------
         /// Wall time of every call into wasm, summed. Host callbacks are *inside* this.
@@ -208,11 +206,10 @@ mod on {
             *pick(&mut guard) += elapsed;
         }
 
-        pub fn instantiate(&self, mark: Mark, retried: bool) {
+        pub fn instantiate(&self, mark: Mark) {
             let elapsed = mark.elapsed();
             let mut guard = self.0.lock();
             guard.instantiate += elapsed;
-            guard.instantiate_retried |= retried;
         }
 
         /// Keyed on the exported function name, so the one call site in
@@ -312,7 +309,7 @@ mod off {
             Mark::now()
         }
         #[inline(always)]
-        pub fn instantiate(&self, _mark: Mark, _retried: bool) {}
+        pub fn instantiate(&self, _mark: Mark) {}
         #[inline(always)]
         pub fn wasm_call(&self, _name: &'static str, _mark: Mark) {}
         #[inline(always)]

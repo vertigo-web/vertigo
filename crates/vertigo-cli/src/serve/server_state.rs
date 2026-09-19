@@ -12,7 +12,7 @@ use vertigo::{
         command_wire::decode_dom_commands,
     },
 };
-use wasmtime::{Engine, Module};
+use wasmtime::{Engine, InstancePre, Module};
 
 use crate::{
     commons::{ErrorCode, spawn::SpawnOwner},
@@ -25,7 +25,7 @@ use super::{
     request_state::RequestState,
     response_state::ResponseState,
     timings::SsrProbe,
-    wasm::{Message, WasmInstance},
+    wasm::{HostState, Message, WasmInstance, build_linker},
 };
 
 #[cfg(feature = "ssr-timings")]
@@ -49,7 +49,9 @@ static STATE: OnceLock<Arc<RwLock<ServerStateMap>>> = OnceLock::new();
 #[derive(Clone)]
 pub struct ServerState {
     engine: Engine,
-    module: Module,
+    /// The module with its imports already resolved by name, once, at startup. Holds the
+    /// [`Module`] internally, so there is no separate field for it.
+    instance_pre: InstancePre<HostState>,
     /// What `Module::from_binary` cost at startup.
     module_compile: Duration,
     pub mount_config: MountConfig,
@@ -69,6 +71,15 @@ impl ServerState {
 
         let (module, module_compile) = build_module_wasm(&engine, mount_config)?;
 
+        // Import resolution happens here, once - a missing or mistyped import is a startup
+        // failure naming the offending import, not a per-request one.
+        let instance_pre = build_linker(&engine)?
+            .instantiate_pre(&module)
+            .map_err(|err| {
+                log::error!("WASM import resolution failed: {err:?}");
+                ErrorCode::ServeWasmInstanceFailed
+            })?;
+
         let mutex = STATE.get_or_init(|| Arc::new(RwLock::new(ServerStateMap::new())));
 
         let mut guard = mutex.write();
@@ -76,7 +87,7 @@ impl ServerState {
             mount_config.mount_point().to_string(),
             Arc::new(Self {
                 engine,
-                module,
+                instance_pre,
                 module_compile,
                 mount_config: mount_config.clone(),
                 port_watch,
@@ -130,164 +141,162 @@ impl ServerState {
         let fetch = FetchCache::new();
 
         let instantiate_mark = probe.start();
-        let mut inst = WasmInstance::new(
-            sender.clone(),
-            &self.engine,
-            &self.module,
-            request,
-            probe.clone(),
-            Arc::new({
-                let sender = sender.clone();
-                let probe = probe.clone();
+        let handle_command = Arc::new({
+            let sender = sender.clone();
+            let probe = probe.clone();
 
-                move |request: RequestState, command| match command {
-                    CommandForBrowser::FetchCacheGet => {
-                        browser_response::FetchCacheGet { data: None }.to_json()
-                    }
-                    CommandForBrowser::FetchExec { request, callback } => {
+            move |request: RequestState, command| match command {
+                CommandForBrowser::FetchCacheGet => {
+                    browser_response::FetchCacheGet { data: None }.to_json()
+                }
+                CommandForBrowser::FetchExec { request, callback } => {
+                    sender
+                        .send(Message::FetchRequest { callback, request })
+                        .inspect_err(|err| log::error!("Error sending FetchRequest: {err}"))
+                        .unwrap_or_default();
+
+                    JsJson::Null
+                }
+                CommandForBrowser::SetStatus { status } => {
+                    sender
+                        .send(Message::SetStatus(status))
+                        .inspect_err(|err| log::error!("Error sending FetchRequest: {err}"))
+                        .unwrap_or_default();
+
+                    JsJson::Null
+                }
+                CommandForBrowser::IsBrowser => {
+                    let response = browser_response::IsBrowser { value: false };
+
+                    response.to_json()
+                }
+                CommandForBrowser::GetDateNow => {
+                    let time = get_now().as_millis();
+
+                    let response = browser_response::GetDateNow { value: time as u64 };
+
+                    response.to_json()
+                }
+                CommandForBrowser::WebsocketRegister {
+                    host: _,
+                    callback: _,
+                } => JsJson::Null,
+                CommandForBrowser::WebsocketUnregister { callback: _ } => JsJson::Null,
+                CommandForBrowser::WebsocketSendMessage {
+                    callback: _,
+                    message: _,
+                } => JsJson::Null,
+                CommandForBrowser::TimerSet {
+                    callback,
+                    duration,
+                    kind: _,
+                } => {
+                    if duration == 0 {
                         sender
-                            .send(Message::FetchRequest { callback, request })
-                            .inspect_err(|err| log::error!("Error sending FetchRequest: {err}"))
+                            .send(Message::SetTimeoutZero { callback })
+                            .inspect_err(|err| log::error!("Error sending SetTimeoutZero: {err}"))
                             .unwrap_or_default();
-
-                        JsJson::Null
                     }
-                    CommandForBrowser::SetStatus { status } => {
-                        sender
-                            .send(Message::SetStatus(status))
-                            .inspect_err(|err| log::error!("Error sending FetchRequest: {err}"))
-                            .unwrap_or_default();
 
-                        JsJson::Null
+                    JsJson::Null
+                }
+                CommandForBrowser::TimerClear { callback: _ } => JsJson::Null,
+                CommandForBrowser::LocationCallback {
+                    target: _,
+                    mode: _,
+                    callback: _,
+                } => JsJson::Null,
+                CommandForBrowser::LocationSet {
+                    target: _,
+                    mode: _,
+                    value: _,
+                } => JsJson::Null,
+                CommandForBrowser::LocationGet { target: _ } => {
+                    let url = request.url.clone();
+                    browser_response::LocationGet { value: url }.to_json()
+                }
+                CommandForBrowser::CookieGet { name: _ } => {
+                    browser_response::CookieGet { value: "".into() }.to_json()
+                }
+                CommandForBrowser::CookieSet {
+                    name: _,
+                    value: _,
+                    expires_in: _,
+                } => JsJson::Null,
+                CommandForBrowser::CookieJsonGet { name: _ } => browser_response::CookieJsonGet {
+                    value: JsJson::Null,
+                }
+                .to_json(),
+                CommandForBrowser::CookieJsonSet {
+                    name: _,
+                    value: _,
+                    expires_in: _,
+                } => JsJson::Null,
+                CommandForBrowser::GetEnv { name } => {
+                    let env_value = request.env(name);
+
+                    browser_response::GetEnv { value: env_value }.to_json()
+                }
+                CommandForBrowser::Log {
+                    kind,
+                    message,
+                    arg2: _,
+                    arg3: _,
+                    arg4: _,
+                } => {
+                    if kind == ConsoleLogLevel::Error {
+                        log::warn!("{message}");
+                    } else {
+                        log::info!("{message}");
                     }
-                    CommandForBrowser::IsBrowser => {
-                        let response = browser_response::IsBrowser { value: false };
 
-                        response.to_json()
-                    }
-                    CommandForBrowser::GetDateNow => {
-                        let time = get_now().as_millis();
+                    JsJson::Null
+                }
+                CommandForBrowser::TimezoneOffset => {
+                    browser_response::TimezoneOffset { value: 0 }.to_json()
+                }
+                CommandForBrowser::HistoryBack => JsJson::Null,
+                CommandForBrowser::GetRandom { min, max: _ } => {
+                    browser_response::GetRandom { value: min }.to_json()
+                }
+                CommandForBrowser::JsApiCall { commands: _ } => JsJson::Null,
+                CommandForBrowser::DomBulkUpdate { commands } => {
+                    // Host work, but reached from inside a wasm call - so this is
+                    // phase-3 time measured within a phase-2 region, and `SsrTimings`
+                    // subtracts it back out. See the module docs in `timings.rs`.
+                    let blob_bytes = commands.len();
+                    let decode_mark = probe.start();
 
-                        let response = browser_response::GetDateNow { value: time as u64 };
+                    match decode_dom_commands(&commands) {
+                        Ok(list) => {
+                            // Before the send, so the channel push is not counted as
+                            // decoding.
+                            probe.decoded(decode_mark, blob_bytes, list.len());
 
-                        response.to_json()
-                    }
-                    CommandForBrowser::WebsocketRegister {
-                        host: _,
-                        callback: _,
-                    } => JsJson::Null,
-                    CommandForBrowser::WebsocketUnregister { callback: _ } => JsJson::Null,
-                    CommandForBrowser::WebsocketSendMessage {
-                        callback: _,
-                        message: _,
-                    } => JsJson::Null,
-                    CommandForBrowser::TimerSet {
-                        callback,
-                        duration,
-                        kind: _,
-                    } => {
-                        if duration == 0 {
                             sender
-                                .send(Message::SetTimeoutZero { callback })
-                                .inspect_err(|err| {
-                                    log::error!("Error sending SetTimeoutZero: {err}")
-                                })
+                                .send(Message::DomUpdate(list))
+                                .inspect_err(|err| log::error!("Error sending DomUpdate: {err}"))
                                 .unwrap_or_default();
                         }
+                        Err(err) => log::error!("Error decoding DomBulkUpdate: {err}"),
+                    }
 
-                        JsJson::Null
-                    }
-                    CommandForBrowser::TimerClear { callback: _ } => JsJson::Null,
-                    CommandForBrowser::LocationCallback {
-                        target: _,
-                        mode: _,
-                        callback: _,
-                    } => JsJson::Null,
-                    CommandForBrowser::LocationSet {
-                        target: _,
-                        mode: _,
-                        value: _,
-                    } => JsJson::Null,
-                    CommandForBrowser::LocationGet { target: _ } => {
-                        let url = request.url.clone();
-                        browser_response::LocationGet { value: url }.to_json()
-                    }
-                    CommandForBrowser::CookieGet { name: _ } => {
-                        browser_response::CookieGet { value: "".into() }.to_json()
-                    }
-                    CommandForBrowser::CookieSet {
-                        name: _,
-                        value: _,
-                        expires_in: _,
-                    } => JsJson::Null,
-                    CommandForBrowser::CookieJsonGet { name: _ } => {
-                        browser_response::CookieJsonGet {
-                            value: JsJson::Null,
-                        }
-                        .to_json()
-                    }
-                    CommandForBrowser::CookieJsonSet {
-                        name: _,
-                        value: _,
-                        expires_in: _,
-                    } => JsJson::Null,
-                    CommandForBrowser::GetEnv { name } => {
-                        let env_value = request.env(name);
-
-                        browser_response::GetEnv { value: env_value }.to_json()
-                    }
-                    CommandForBrowser::Log {
-                        kind,
-                        message,
-                        arg2: _,
-                        arg3: _,
-                        arg4: _,
-                    } => {
-                        if kind == ConsoleLogLevel::Error {
-                            log::warn!("{message}");
-                        } else {
-                            log::info!("{message}");
-                        }
-
-                        JsJson::Null
-                    }
-                    CommandForBrowser::TimezoneOffset => {
-                        browser_response::TimezoneOffset { value: 0 }.to_json()
-                    }
-                    CommandForBrowser::HistoryBack => JsJson::Null,
-                    CommandForBrowser::GetRandom { min, max: _ } => {
-                        browser_response::GetRandom { value: min }.to_json()
-                    }
-                    CommandForBrowser::JsApiCall { commands: _ } => JsJson::Null,
-                    CommandForBrowser::DomBulkUpdate { commands } => {
-                        // Host work, but reached from inside a wasm call - so this is
-                        // phase-3 time measured within a phase-2 region, and `SsrTimings`
-                        // subtracts it back out. See the module docs in `timings.rs`.
-                        let blob_bytes = commands.len();
-                        let decode_mark = probe.start();
-
-                        match decode_dom_commands(&commands) {
-                            Ok(list) => {
-                                // Before the send, so the channel push is not counted as
-                                // decoding.
-                                probe.decoded(decode_mark, blob_bytes, list.len());
-
-                                sender
-                                    .send(Message::DomUpdate(list))
-                                    .inspect_err(|err| {
-                                        log::error!("Error sending DomUpdate: {err}")
-                                    })
-                                    .unwrap_or_default();
-                            }
-                            Err(err) => log::error!("Error decoding DomBulkUpdate: {err}"),
-                        }
-
-                        JsJson::Null
-                    }
+                    JsJson::Null
                 }
-            }),
+            }
+        });
+
+        let mut inst = WasmInstance::new(
+            &self.engine,
+            &self.instance_pre,
+            HostState {
+                request,
+                sender: sender.clone(),
+                probe: probe.clone(),
+                handle_command,
+            },
         );
-        probe.instantiate(instantiate_mark, inst.instantiate_retried());
+        probe.instantiate(instantiate_mark);
 
         // -- !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
         //TODO - ultimately, do not call call_vertigo_entry_function if something is returned by handle_url

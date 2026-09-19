@@ -71,8 +71,8 @@ tasks:
   ssr-bench:
     desc: "Server-side rendering benchmark, per phase (native - no browser, no WebDriver)"
     env:
-      # Surfaces the wasmtime import-order fallback, which otherwise silently doubles
-      # instantiation time and says so only at warn level.
+      # The host logs nothing above warn on a healthy run, so anything this surfaces is a
+      # problem worth seeing next to the numbers.
       RUST_LOG: warn
     cmds:
       # --release is load-bearing and unique to this suite: the other three measure wasm
