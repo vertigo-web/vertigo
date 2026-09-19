@@ -21,7 +21,7 @@ pub(super) fn js_json_object(inserts: &[proc_macro2::TokenStream]) -> proc_macro
 
     quote! {
         {
-            let mut #object = ::std::collections::BTreeMap::new();
+            let mut #object = vertigo::JsObject::new();
             #(#inserts)*
             vertigo::JsJson::Object(#object)
         }

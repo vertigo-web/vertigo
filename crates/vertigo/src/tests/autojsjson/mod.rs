@@ -1,4 +1,4 @@
-use std::collections::BTreeMap;
+use crate::driver_module::js_value::JsObject;
 
 use crate::{self as vertigo, JsJson, JsJsonContext};
 use crate::{AutoJsJson, JsJsonDeserialize, JsJsonSerialize};
@@ -22,7 +22,7 @@ fn test_serialize_and_deserialize_struct() {
         r#type: "one".to_string(),
         name: "two".to_string(),
         data: JsJson::String("test test".into()),
-        data_opt1: Some(JsJson::Object(BTreeMap::from([
+        data_opt1: Some(JsJson::Object(JsObject::from([
             ("three".to_string(), JsJson::String("value3".to_string())),
             ("four".to_string(), JsJson::String("value4".to_string())),
         ]))),

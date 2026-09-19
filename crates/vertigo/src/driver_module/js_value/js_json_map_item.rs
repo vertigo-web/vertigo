@@ -1,6 +1,7 @@
-use std::collections::BTreeMap;
-
-use crate::{JsJson, JsJsonContext, JsJsonDeserialize, JsJsonSerialize, from_json};
+use crate::{
+    JsJson, JsJsonContext, JsJsonDeserialize, JsJsonSerialize, driver_module::js_value::JsObject,
+    from_json,
+};
 
 pub struct MapItem<K: JsJsonSerialize + JsJsonDeserialize, V: JsJsonSerialize + JsJsonDeserialize> {
     pub key: K,
@@ -11,7 +12,7 @@ impl<K: JsJsonSerialize + JsJsonDeserialize, V: JsJsonSerialize + JsJsonDeserial
     for MapItem<K, V>
 {
     fn to_json(self) -> JsJson {
-        let mut object = BTreeMap::<String, JsJson>::new();
+        let mut object = JsObject::new();
         object.insert("k".into(), self.key.to_json());
         object.insert("v".into(), self.value.to_json());
         JsJson::Object(object)

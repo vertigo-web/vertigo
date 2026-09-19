@@ -1,6 +1,7 @@
 mod js_json_context;
 mod js_json_list_decoder;
 mod js_json_struct;
+mod js_object;
 mod memory_block;
 mod memory_block_read;
 mod memory_block_write;
@@ -13,6 +14,7 @@ mod serialize_rust_decimal;
 pub use js_json_context::JsJsonContext;
 pub use js_json_list_decoder::JsJsonListDecoder;
 pub use js_json_struct::{JsJson, JsJsonNumber};
+pub use js_object::JsObject;
 pub use memory_block::MemoryBlock;
 pub use memory_block_read::MemoryBlockRead;
 pub use memory_block_write::MemoryBlockWrite;

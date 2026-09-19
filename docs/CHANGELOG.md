@@ -11,20 +11,23 @@
   The fullstack template (`vertigo new -t fullstack`) does the same through
   `App::wrap(Compress::default())`.
 
+### Performance
+
+* Reduced WASM sizes by around 10% by de-genericization.  
+* Reduces `wasm_run.js` by 9% - dead code removed, and different functions were optimized.
+* SSR: Per-request WASM instantiation got about 24% cheaper (see fix below).
+
 ### Fixed
 
 * Hydration fail when the app subscribes to a value before the root `dom!` block.
 * `--proxy` forwarded the upstream's `Content-Encoding` and `Content-Length` even though `awc`
   had already decoded the body, so proxying to an upstream that compressed produced a response
   no client could decode.
-* WASM instantiation types order problem. Imports are now resolved by name, once at startup.
+* SSR: WASM instantiation types order problem. Imports are now resolved by name, once at startup.
   Per-request instantiation got about 24% cheaper. A missing or mistyped import is now reported
   at startup, naming the import, instead of per request.
 
 ### Internals
-
-* `wasm_run.js` shrank from 33,670 to 30,568 bytes (-9.2%) - dead code removed, and different
-  functions were optimized. `tests/js_tests.sh` now enforces a size budget so it does not drift back.
 
 * Added tests for the JsJson codec (`jsjson.ts`).
 

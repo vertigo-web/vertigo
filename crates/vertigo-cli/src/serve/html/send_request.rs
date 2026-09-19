@@ -32,7 +32,7 @@ fn convert_to_jsjson(value: Value) -> JsJson {
             JsJson::List(list.into_iter().map(convert_to_jsjson).collect::<Vec<_>>())
         }
         Value::Object(object) => {
-            let mut result = BTreeMap::new();
+            let mut result = vertigo::JsObject::new();
 
             for (prop_name, prop_value) in object {
                 result.insert(prop_name, convert_to_jsjson(prop_value));

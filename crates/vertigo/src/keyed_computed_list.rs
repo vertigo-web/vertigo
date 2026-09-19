@@ -84,7 +84,7 @@ pub fn keyed_computed_list<T, K>(
 ) -> Computed<Vec<KeyedListItem<K, Computed<T>>>>
 where
     T: Clone + PartialEq + 'static,
-    K: Clone + Eq + Hash + std::fmt::Debug + 'static,
+    K: Clone + Eq + Hash + 'static,
 {
     let items = items.to_computed();
 
@@ -104,8 +104,7 @@ where
                 match by_key.entry(key.clone()) {
                     Entry::Occupied(_) => {
                         log::error!(
-                            "keyed_computed_list: duplicate key {:?}; keeping the first occurrence",
-                            key
+                            "keyed_computed_list: duplicate key; keeping the first occurrence"
                         );
                     }
                     Entry::Vacant(slot) => {
@@ -217,7 +216,7 @@ fn row_computed<T, K>(
 ) -> Computed<T>
 where
     T: Clone + PartialEq + 'static,
-    K: Clone + Eq + Hash + std::fmt::Debug + 'static,
+    K: Clone + Eq + Hash + 'static,
 {
     let by_key = by_key.clone();
     let last = Rc::new(ValueMut::new(initial));
@@ -241,8 +240,7 @@ where
         // The first one is the removal refreshing this row on its way out; see above.
         if departed.replace(true) {
             log::error!(
-                "keyed_computed_list: item Computed for key {:?} was read after that key left the source list; returning last value",
-                key
+                "keyed_computed_list: item Computed was read after its key left the source list; returning last value"
             );
         }
 
