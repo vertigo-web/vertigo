@@ -1,40 +1,49 @@
 use std::{
     cell::{Cell, RefCell},
-    collections::BTreeMap,
     rc::Rc,
 };
+
+/// One registered callback, paired with the id `remove` takes back.
+type Hook = (u64, Rc<dyn Fn()>);
 
 /// Callbacks fired after a completed transaction (once `propagate` has finished,
 /// before `when_connect` / disconnect).
 pub(super) struct Hooks {
     next_id: Cell<u64>,
-    hooks: RefCell<BTreeMap<u64, Rc<dyn Fn()>>>,
+    hooks: RefCell<Vec<Hook>>,
 }
 
 impl Hooks {
     pub(super) fn new() -> Self {
         Self {
             next_id: Cell::new(1),
-            hooks: RefCell::new(BTreeMap::new()),
+            hooks: RefCell::new(Vec::new()),
         }
     }
 
     pub(super) fn insert(&self, callback: impl Fn() + 'static) -> u64 {
         let id = self.next_id.get();
         self.next_id.set(id + 1);
-        self.hooks.borrow_mut().insert(id, Rc::new(callback));
+        self.hooks.borrow_mut().push((id, Rc::new(callback)));
         id
     }
 
     pub(super) fn remove(&self, id: u64) {
-        self.hooks.borrow_mut().remove(&id);
+        self.hooks
+            .borrow_mut()
+            .retain(|(hook_id, _)| *hook_id != id);
     }
 
     pub(super) fn fire(&self) {
         if self.hooks.borrow().is_empty() {
             return;
         }
-        let hooks: Vec<_> = self.hooks.borrow().values().cloned().collect();
+        let hooks: Vec<_> = self
+            .hooks
+            .borrow()
+            .iter()
+            .map(|(_, hook)| hook.clone())
+            .collect();
         for hook in hooks {
             hook();
         }
