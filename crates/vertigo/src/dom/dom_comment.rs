@@ -10,6 +10,9 @@ use super::dom_id::DomId;
 
 /// The nodes a marker keeps directly in front of itself, in document order.
 ///
+/// What a marker runs when it is mounted into a parent: see [`DomComment::new_marker`].
+type MarkerMount = Box<dyn Fn(DomId, DomId, &MarkerContent) -> Option<DropResource>>;
+
 /// A marker created with [`DomComment::new_marker`] renders its content as siblings
 /// placed just before the marker comment. Reporting those ids here lets the marker
 /// carry them along when it is moved inside its parent, instead of tearing the
@@ -65,6 +68,15 @@ impl DomComment {
         comment_value: &'static str,
         mount: F,
     ) -> DomComment {
+        Self::new_marker_dyn(comment_value, Box::new(mount))
+    }
+
+    /// The body of [`Self::new_marker`], generic over nothing.
+    ///
+    /// Its three callers are themselves generic - `render_value_option<T>`,
+    /// `render_list<T, K>` - so left inline this was emitted once per type the application
+    /// renders, rather than once.
+    fn new_marker_dyn(comment_value: &'static str, mount: MarkerMount) -> DomComment {
         let id_comment = DomId::default();
         let content = MarkerContent::new();
 

@@ -34,7 +34,8 @@ impl WsClientMessageTo {
 
 #[cfg(test)]
 mod tests {
-    use std::{collections::BTreeMap, error::Error};
+    use crate::JsObject;
+    use std::error::Error;
 
     use crate::{JsJson, JsJsonContext, JsJsonDeserialize, JsJsonNumber, to_json};
 
@@ -66,18 +67,18 @@ mod tests {
             },
         };
 
-        let expected = JsJson::Object(BTreeMap::from([(
+        let expected = JsJson::Object(JsObject::from([(
             "Subscribe".into(),
-            JsJson::Object(BTreeMap::from([
+            JsJson::Object(JsObject::from([
                 ("auth".into(), JsJson::String("token-abc".into())),
                 (
                     "query".into(),
-                    JsJson::Object(BTreeMap::from([
+                    JsJson::Object(JsObject::from([
                         ("logic".into(), JsJson::String("And".into())),
                         ("table".into(), JsJson::String("items".into())),
                         (
                             "where".into(),
-                            JsJson::List(vec![JsJson::Object(BTreeMap::from([
+                            JsJson::List(vec![JsJson::Object(JsObject::from([
                                 ("column".into(), JsJson::String("category".into())),
                                 ("op".into(), JsJson::String("Eq".into())),
                                 ("value".into(), JsJson::String("alpha".into())),
@@ -105,13 +106,13 @@ mod tests {
             },
         };
 
-        let expected = JsJson::Object(BTreeMap::from([(
+        let expected = JsJson::Object(JsObject::from([(
             "Subscribe".into(),
-            JsJson::Object(BTreeMap::from([
+            JsJson::Object(JsObject::from([
                 ("auth".into(), JsJson::String(String::new())),
                 (
                     "query".into(),
-                    JsJson::Object(BTreeMap::from([
+                    JsJson::Object(JsObject::from([
                         ("logic".into(), JsJson::String("And".into())),
                         ("table".into(), JsJson::String("items".into())),
                         ("where".into(), JsJson::List(vec![])),
@@ -166,9 +167,9 @@ mod tests {
             query_id: WebsocketQueryId("query_7".into()),
         };
 
-        let expected = JsJson::Object(BTreeMap::from([(
+        let expected = JsJson::Object(JsObject::from([(
             "Unsubscribe".into(),
-            JsJson::Object(BTreeMap::from([(
+            JsJson::Object(JsObject::from([(
                 "query_id".into(),
                 JsJson::String("query_7".into()),
             )])),

@@ -95,11 +95,21 @@ impl<T: Clone + PartialEq + 'static> ComputedInner<T> {
 
 impl<T: Clone + PartialEq + 'static> Computed<T> {
     pub(crate) fn create(graph: Rc<GraphInner>, compute: impl Fn(&Context) -> T + 'static) -> Self {
+        Self::create_dyn(graph, Box::new(compute))
+    }
+
+    /// The body of [`Self::create`], with the closure already in the box `ComputedInner`
+    /// stores it in anyway.
+    ///
+    /// Generic over `T` but not over the closure type: every `Computed::from`, `map` and
+    /// `to_computed` in an application funnels through here, and each one used to get its
+    /// own copy of the registration below.
+    fn create_dyn(graph: Rc<GraphInner>, compute: Box<dyn Fn(&Context) -> T>) -> Self {
         let id = graph.alloc_id();
         let inner = Rc::new(ComputedInner {
             graph: graph.clone(),
             id,
-            compute: Box::new(compute),
+            compute,
             value: RefCell::new(None),
         });
         graph.register(id, inner.clone());
@@ -140,30 +150,16 @@ impl<T: Clone + PartialEq + 'static> Computed<T> {
     /// Subscribe; the callback runs only when the computed value *changes*.
     pub fn subscribe<R: 'static, F: Fn(T) -> R + 'static>(self, callback: F) -> DropResource {
         let graph = self.inner.graph.clone();
-        let parent = self.clone();
-        let id = graph.alloc_id();
-        let inner = Rc::new(SubscribeInner {
-            graph: graph.clone(),
-            id,
-            refresh: Box::new(move |ctx| {
+        let parent = self;
+
+        // Everything below this line is the same code whatever `T` and whatever the callback
+        // is, so it lives in a function that is generic over neither - see `register_sink`.
+        register_sink(
+            graph,
+            Box::new(move |ctx| {
                 let _ = callback(parent.get(ctx));
             }),
-        });
-        graph.register(id, inner.clone());
-
-        // The first run has to be a transaction: registering the parents it read is what
-        // makes them watched, and `when_connect` closures only run when a transaction
-        // closes. Refreshing bare would leave them queued until some later, unrelated
-        // transaction happened to flush them. Subscribing from inside a wave is fine -
-        // that transaction closes without flushing, and the running wave does it at the end.
-        Graph {
-            inner: graph.clone(),
-        }
-        .transaction(|_| {
-            inner.refresh();
-        });
-
-        DropResource::from_struct(inner)
+        )
     }
 
     pub fn map<K: Clone + PartialEq + 'static, F: 'static + Fn(T) -> K>(
@@ -175,6 +171,33 @@ impl<T: Clone + PartialEq + 'static> Computed<T> {
             move |context| fun(myself.get(context))
         })
     }
+}
+
+/// Registers a subscription sink on the graph and runs it once.
+///
+/// Split out of [`Computed::subscribe`] and generic over nothing at all.
+fn register_sink(graph: Rc<GraphInner>, refresh: Box<dyn Fn(&Context)>) -> DropResource {
+    let id = graph.alloc_id();
+    let inner = Rc::new(SubscribeInner {
+        graph: graph.clone(),
+        id,
+        refresh,
+    });
+    graph.register(id, inner.clone());
+
+    // The first run has to be a transaction: registering the parents it read is what
+    // makes them watched, and `when_connect` closures only run when a transaction
+    // closes. Refreshing bare would leave them queued until some later, unrelated
+    // transaction happened to flush them. Subscribing from inside a wave is fine -
+    // that transaction closes without flushing, and the running wave does it at the end.
+    Graph {
+        inner: graph.clone(),
+    }
+    .transaction(|_| {
+        inner.refresh();
+    });
+
+    DropResource::from_struct(inner)
 }
 
 impl<T: Clone + PartialEq + 'static> ToComputed<T> for Computed<T> {

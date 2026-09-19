@@ -2,6 +2,7 @@ use std::collections::{BTreeMap, HashMap};
 
 use crate::driver_module::js_value::MapItem;
 use crate::driver_module::js_value::js_json_struct::JsJsonNumber;
+use crate::driver_module::js_value::js_object::JsObject;
 
 use super::JsJsonContext;
 use super::js_json_struct::JsJson;
@@ -29,7 +30,7 @@ pub trait JsJsonSerialize {
 /// and it was slower than this on every shape tried.
 #[doc(hidden)]
 #[inline(never)]
-pub fn object_insert(object: &mut BTreeMap<String, JsJson>, key: &'static str, value: JsJson) {
+pub fn object_insert(object: &mut JsObject, key: &'static str, value: JsJson) {
     object.insert(key.to_string(), value);
 }
 
@@ -117,7 +118,7 @@ impl JsJsonDeserialize for bool {
 
 impl JsJsonSerialize for () {
     fn to_json(self) -> JsJson {
-        JsJson::Object(BTreeMap::default())
+        JsJson::Object(JsObject::default())
     }
 }
 
@@ -190,7 +191,7 @@ impl<T: JsJsonDeserialize> JsJsonDeserialize for Option<T> {
 
 impl<T: JsJsonSerialize> JsJsonSerialize for HashMap<String, T> {
     fn to_json(self) -> JsJson {
-        let mut result = BTreeMap::new();
+        let mut result = JsObject::new();
 
         for (key, item) in self {
             result.insert(key, item.to_json());
@@ -253,7 +254,7 @@ impl<K: JsJsonSerialize + JsJsonDeserialize + Ord, T: JsJsonSerialize + JsJsonDe
             // surface a graceful error because the key arrives as a JsJson::String.
             JsJson::Object(obj) => {
                 for (key, value) in obj {
-                    let synthetic = JsJson::Object(BTreeMap::from([
+                    let synthetic = JsJson::Object(JsObject::from([
                         ("k".to_string(), JsJson::String(key.clone())),
                         ("v".to_string(), value),
                     ]));
@@ -291,6 +292,7 @@ pub fn to_json<T: JsJsonSerialize>(value: T) -> JsJson {
 #[cfg(test)]
 mod tests {
     use super::*;
+    use crate::JsObject;
 
     #[derive(Debug, PartialEq, Clone)]
     struct Post {
@@ -300,7 +302,7 @@ mod tests {
 
     impl JsJsonSerialize for Post {
         fn to_json(self) -> JsJson {
-            JsJson::Object(BTreeMap::from([
+            JsJson::Object(JsObject::from([
                 ("name".to_string(), self.name.to_json()),
                 ("age".to_string(), self.age.to_json()),
             ]))
@@ -362,7 +364,7 @@ mod tests {
 
     #[test]
     fn test_unit() {
-        let unit = JsJson::Object(BTreeMap::default());
+        let unit = JsJson::Object(JsObject::default());
 
         let Ok(()) = from_json::<()>(unit.clone()) else {
             unreachable!();

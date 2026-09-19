@@ -106,7 +106,8 @@ impl WsServerMessageFrom {
 
 #[cfg(test)]
 mod tests {
-    use std::{collections::BTreeMap, error::Error};
+    use crate::JsObject;
+    use std::error::Error;
 
     use crate::{JsJson, JsJsonContext, JsJsonDeserialize, JsJsonNumber, to_json};
 
@@ -117,7 +118,7 @@ mod tests {
     }
 
     fn sample_model_js() -> JsJson {
-        JsJson::Object(BTreeMap::from([
+        JsJson::Object(JsObject::from([
             ("name".into(), JsJson::String("Test".into())),
             ("ref_id".into(), JsJson::String("1".into())),
             ("id".into(), JsJson::Number(JsJsonNumber(1.0))),
@@ -173,9 +174,9 @@ mod tests {
     fn from_js_json_reports_unknown_variant_by_tag() -> Result<(), Box<dyn Error>> {
         // Simulates server drift (e.g. a new `InitOne` variant) — the parser must report
         // the offending tag in the error so logs are actionable, and must not panic.
-        let raw = JsJson::Object(BTreeMap::from([(
+        let raw = JsJson::Object(JsObject::from([(
             "initOne".into(),
-            JsJson::Object(BTreeMap::from([
+            JsJson::Object(JsObject::from([
                 ("queryId".into(), JsJson::String("query_0".into())),
                 ("modelId".into(), JsJson::String("1".into())),
                 ("model".into(), JsJson::Number(JsJsonNumber(1.0))),
