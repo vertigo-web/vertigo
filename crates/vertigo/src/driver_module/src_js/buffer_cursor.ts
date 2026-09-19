@@ -1,7 +1,6 @@
 ///https://javascript.info/arraybuffer-binary-arrays#dataview
 
-const decoder = new TextDecoder("utf-8");
-const encoder = new TextEncoder();
+import { decoder, encoder } from "./text";
 
 export class BufferCursor {
     private dataView: DataView;
@@ -56,39 +55,6 @@ export class BufferCursor {
         this.pointer += 4;
     }
 
-    public getI32(): number {
-        const value = this.dataView.getInt32(this.pointer);
-        this.pointer += 4;
-        return value;
-    }
-
-    public setI32(value: number) {
-        this.dataView.setInt32(this.pointer, value);
-        this.pointer += 4;
-    }
-
-    public getU64(): bigint {
-        const value = this.dataView.getBigUint64(this.pointer);
-        this.pointer += 8;
-        return value;
-    }
-
-    public setU64(value: bigint) {
-        this.dataView.setBigUint64(this.pointer, value);
-        this.pointer += 8;
-    }
-
-    public getI64(): bigint {
-        const value = this.dataView.getBigInt64(this.pointer);
-        this.pointer += 8;
-        return value;
-    }
-
-    public setI64(value: bigint) {
-        this.dataView.setBigInt64(this.pointer, value);
-        this.pointer += 8;
-    }
-
     public getF64(): number {
         const value = this.dataView.getFloat64(this.pointer);
         this.pointer += 8;
@@ -137,13 +103,4 @@ export class BufferCursor {
         const buffer = encoder.encode(value);
         this.setBuffer(buffer);
     }
-
-    public getSavedSize(): number {
-        return this.pointer;
-    }
 }
-
-export const getStringSize = (value: string): number => {
-    return new TextEncoder().encode(value).length;
-};
-

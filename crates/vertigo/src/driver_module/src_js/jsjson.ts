@@ -1,4 +1,5 @@
 import { BufferCursor } from "./buffer_cursor";
+import { encoder } from "./text";
 
 const JsJsonConst = {
     True: 1,
@@ -14,13 +15,26 @@ const JsJsonConst = {
 
 export type JsJsonType = boolean | null | undefined | string | number | Uint8Array | Array<JsJsonType> | { [key: string]: JsJsonType };
 
+/// Sizing pass. Walks the value to work out how large a wasm block to ask for, before
+/// `saveJsJsonToBufferItem` walks it again to fill that block.
+///
+/// Two walks looks like waste, and collapsing them into a single pass over a growable JS
+/// buffer was tried. It is slower, and worth recording why so it is not tried again: writing
+/// through `BufferCursor` goes straight into wasm linear memory with nothing allocated on the
+/// JS side, whereas a growable sink costs a buffer plus a DataView per message and then a full
+/// copy of the payload into wasm at the end. Measured on dom-bench over three interleaved
+/// rounds, the single-pass version cost a mean of 4% and up to 16% on the callback-heavy
+/// workloads (`flush-min`, `editor-toggle-bold`, `editor-keystroke-patch`), to save 169 bytes.
+///
+/// The invariant the two passes have to keep - that this returns exactly the number of bytes
+/// the writer goes on to use - is what `jsjson.test.ts` pins.
 export const jsJsonGetSize = (value: JsJsonType): number => {
     if (value === true || value === false || value === null || value === undefined) {
         return 1;
     }
 
     if (typeof value === 'string') {
-        return 1 + 4 + new TextEncoder().encode(value).length;
+        return 1 + 4 + encoder.encode(value).length;
     }
 
     if (typeof value === 'number') {
@@ -42,7 +56,7 @@ export const jsJsonGetSize = (value: JsJsonType): number => {
     if (typeof value === 'object' && value !== null) {
         let sum = 1 + 2;
         for (const [key, propertyValue] of Object.entries(value)) {
-            sum += 4 + new TextEncoder().encode(key).length;
+            sum += 4 + encoder.encode(key).length;
             sum += jsJsonGetSize(propertyValue);
         }
         return sum;

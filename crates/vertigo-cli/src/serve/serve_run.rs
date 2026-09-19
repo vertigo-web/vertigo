@@ -2,6 +2,8 @@ use actix_proxy::IntoHttpResponse;
 use actix_web::{
     App, HttpRequest, HttpResponse, HttpServer,
     dev::{ServiceFactory, ServiceRequest},
+    http::header,
+    middleware::{Compress, Condition},
     rt::System,
     web,
 };
@@ -48,6 +50,7 @@ pub async fn run(opts: ServeOpts, port_watch: Option<u16>) -> Result<(), ErrorCo
         env,
         wasm_preload,
         disable_hydration,
+        disable_compression,
         threads,
     } = opts.inner;
 
@@ -62,7 +65,9 @@ pub async fn run(opts: ServeOpts, port_watch: Option<u16>) -> Result<(), ErrorCo
     ServerState::init_with_watch(&mount_config, port_watch)?;
 
     let app = move || {
-        let mut app = App::new();
+        // Already-encoded responses (what `install_proxy` forwards) carry a `Content-Encoding`
+        // and `Compress` leaves those alone.
+        let mut app = App::new().wrap(Condition::new(!disable_compression, Compress::default()));
 
         for (path, target) in &proxy {
             app = install_proxy(app, path.clone(), target.clone());
@@ -138,7 +143,20 @@ where
                 };
 
                 match response.await {
-                    Ok(response) => response.into_http_response(),
+                    Ok(response) => {
+                        let mut response = response.into_http_response();
+
+                        let headers = response.headers_mut();
+
+                        // `awc` decompresses the upstream body transparently, but
+                        // `into_http_response` copies the upstream headers across verbatim
+                        // so remove appropriate headers.
+                        if headers.remove(header::CONTENT_ENCODING).next().is_some() {
+                            headers.remove(header::CONTENT_LENGTH);
+                        }
+
+                        response
+                    }
                     Err(error) => {
                         let message = format!("Error fetching from url={target_url} error={error}");
                         HttpResponse::InternalServerError().body(message)

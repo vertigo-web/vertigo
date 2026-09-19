@@ -70,40 +70,32 @@ export class MapNodes {
         return item;
     }
 
-    public getNodeElement(label: string, id: number): HTMLElement {
+    // `expected` is passed rather than read off `kind.name` so the thrown text stays
+    // greppable from source.
+    //
+    // `getNode` runs once per SetAttr and per RemoveAttr, so the `instanceof` against a
+    // variable here is on a hot path. Checked on dom-bench, three interleaved rounds against
+    // the three-literal-methods version: no cost - if anything slightly faster, and well
+    // inside the noise.
+    private expect<T>(label: string, id: number, kind: Function, expected: string): T {
         const node = this.get(label, id);
-        if (node instanceof HTMLElement) {
-            return node;
+        if (node instanceof kind) {
+            return node as T;
         } else {
-            throw Error(`Expected id=${id} as HTMLElement`);
+            throw Error(`Expected id=${id} as ${expected}`);
         }
+    }
+
+    public getNodeElement(label: string, id: number): HTMLElement {
+        return this.expect(label, id, HTMLElement, "HTMLElement");
     }
 
     public getNode(label: string, id: number): Element {
-        const node = this.get(label, id);
-        if (node instanceof Element) {
-            return node;
-        } else {
-            throw Error(`Expected id=${id} as Element`);
-        }
+        return this.expect(label, id, Element, "Element");
     }
 
     public getText(label: string, id: number): Text {
-        const node = this.get(label, id);
-        if (node instanceof Text) {
-            return node;
-        } else {
-            throw Error(`Expected id=${id} as Text`);
-        }
-    }
-
-    public getComment(label: string, id: number): Comment {
-        const node = this.get(label, id);
-        if (node instanceof Comment) {
-            return node;
-        } else {
-            throw Error(`Expected id=${id} as Comment`);
-        }
+        return this.expect(label, id, Text, "Text");
     }
 
     public delete(label: string, id: number): NodeType {

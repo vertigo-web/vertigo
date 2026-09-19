@@ -416,6 +416,10 @@ fn spawn_server(server: Server) -> oneshot::Sender<i32> {
                 env: vec![],
                 wasm_preload: true,
                 disable_hydration: server.disable_hydration,
+                // Off for the benchmarks: compressing every response measures brotli's
+                // throughput as much as vertigo's, and the recorded baselines in
+                // `target/bench/` were taken without it.
+                disable_compression: true,
                 threads: None,
             },
         };
