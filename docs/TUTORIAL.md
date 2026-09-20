@@ -2,7 +2,7 @@
 <!-- markdownlint-disable no-inline-html -->
 
 <!-- markdownlint-disable-next-line no-emphasis-as-heading -->
-*Up to date with version 0.13.0*
+*Up to date with version 0.13.1*
 
 <!-- markdownlint-disable-next-line heading-increment -->
 ### Table of contents
@@ -28,7 +28,7 @@
 
 In order to produce smaller builds vertigo uses `wasm-opt` tool during every build.
 
-To have `wasm-top` in your system, install `binaryen` package in your linux distribution
+To have `wasm-opt` in your system, install `binaryen` package in your linux distribution
 (f. ex. `apt-get install binaryen` on Debian/Ubuntu) or go to
 [https://github.com/WebAssembly/binaryen/discussions/3797](https://github.com/WebAssembly/binaryen/discussions/3797)
 for other instructions.
@@ -58,7 +58,7 @@ The most common thing you'll be doing is watching the project. This means build 
 Vertigo uses a built-in web server which supports server-side rendering.
 This makes simple pages work even if the browser have JavScript turned off.
 
-After seeing message `Listening on 127.0.0.1:4444` you can point your browser to `http://127.0.0.1:4444/` to see the "Hello frontend world" message. The page should update automatically when the code gets edited.
+After seeing message `listening on: 127.0.0.1:4444` you can point your browser to `http://127.0.0.1:4444/` to see the "Hello frontend world" message. The page should update automatically when the code gets edited.
 
 ## 4. Initial code description
 
@@ -564,7 +564,7 @@ rebuilt.
 
 Complete code for this tutorial should be [found here](https://github.com/vertigo-web/vertigo-tutorial/tree/master).
 
-For any more complex scenarios please refer to [examples](/examples) and [demo](/demo/src/app) package.
+For any more complex scenarios please refer to [examples](/examples) and [demo](/demo/app) package.
 
 [^simplification]: This is a shameful simplification but enough for a tutorial - the correct description will be able to be found in future, more robust documentation.
 
