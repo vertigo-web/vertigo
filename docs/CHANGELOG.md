@@ -1,6 +1,14 @@
 <!-- markdownlint-configure-file { "no-duplicate-heading": { "siblings_only": true } } -->
 
 <!-- markdownlint-disable-next-line first-line-h1 -->
+## Unreleased
+
+### Added
+
+* SSR can fetch relative URLs (`/api/posts`), resolved against the origin set with
+  `MountConfigBuilder::ssr_fetch_base` or `--ssr-fetch-base` (`vertigo serve`/`watch` default
+  to their own address, so `--proxy` applies).
+
 ## 0.13.1 - 2026-09-21
 
 ### Added
