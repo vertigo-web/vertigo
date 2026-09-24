@@ -3774,6 +3774,7 @@ dependencies = [
  "time",
  "tokio",
  "tokio-retry",
+ "url",
  "vertigo",
  "walkdir",
  "wasmtime",

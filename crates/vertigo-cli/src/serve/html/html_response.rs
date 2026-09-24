@@ -2,7 +2,10 @@ use actix_web::http::StatusCode;
 use parking_lot::RwLock;
 use std::{collections::HashMap, sync::Arc};
 use tokio::sync::mpsc::UnboundedSender;
-use vertigo::dev::command::{CommandForWasm, DriverDomCommand};
+use vertigo::dev::{
+    SsrFetchResponse,
+    command::{CommandForWasm, DriverDomCommand},
+};
 
 use crate::serve::{
     html::{fetch_cache::FetchCache, html_build_response::build_response},
@@ -12,7 +15,7 @@ use crate::serve::{
     wasm::{Message, WasmInstance},
 };
 
-use super::{element::AllElements, send_request::send_request};
+use super::{element::AllElements, fetch_url::resolve_fetch_url, send_request::send_request};
 
 pub struct HtmlResponse {
     sender: UnboundedSender<Message>,
@@ -23,6 +26,8 @@ pub struct HtmlResponse {
     env: Arc<HashMap<String, String>>,
     status: StatusCode,
     probe: SsrProbe,
+    /// Rendered page URL (without the mount point)
+    local_url: String,
 }
 
 impl HtmlResponse {
@@ -33,6 +38,7 @@ impl HtmlResponse {
         env: Arc<HashMap<String, String>>,
         fetch: Arc<RwLock<FetchCache>>,
         probe: SsrProbe,
+        local_url: &str,
     ) -> Self {
         Self {
             sender,
@@ -43,6 +49,7 @@ impl HtmlResponse {
             env,
             status: StatusCode::default(),
             probe,
+            local_url: local_url.to_string(),
         }
     }
 
@@ -112,12 +119,26 @@ impl HtmlResponse {
                     // already in flight and issues nothing.
                     self.probe.fetch_started();
 
+                    // Cached under the original URL, so hydration finds relative ones too
+                    let target = resolve_fetch_url(
+                        &request.url,
+                        self.mount_path.ssr_fetch_base.as_deref(),
+                        self.mount_path.mount_point(),
+                        &self.local_url,
+                    );
+
                     actix_web::rt::spawn({
                         let request = request.clone();
                         let sender = self.sender.clone();
 
                         async move {
-                            let response = send_request(request.clone()).await;
+                            let response = match target {
+                                Ok(target) => send_request(request.clone(), target).await,
+                                Err(message) => {
+                                    log::error!("{message}");
+                                    SsrFetchResponse::Err { message }
+                                }
+                            };
 
                             sender
                                 .send(Message::FetchResponse { request, response })

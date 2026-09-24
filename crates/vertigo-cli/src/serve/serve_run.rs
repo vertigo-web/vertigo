@@ -13,7 +13,7 @@ use crate::commons::{
     ErrorCode,
     spawn::{ServerOwner, term_signal},
 };
-use crate::serve::mount_path::MountConfig;
+use crate::serve::{html::local_origin, mount_path::MountConfig};
 
 use super::{
     ServeOpts, ServeOptsInner, server_state::ServerState, vertigo_install::vertigo_install,
@@ -50,17 +50,20 @@ pub async fn run(opts: ServeOpts, port_watch: Option<u16>) -> Result<(), ErrorCo
         env,
         wasm_preload,
         disable_hydration,
+        ssr_fetch_base,
         disable_compression,
         threads,
     } = opts.inner;
 
-    let mount_config = MountConfig::new(
+    let mut mount_config = MountConfig::new(
         mount_point,
         opts.common.dest_dir,
         env,
         wasm_preload,
         disable_hydration,
     )?;
+    // By default through this server, so relative URLs hit `--proxy` like the browser's requests
+    mount_config.ssr_fetch_base = Some(ssr_fetch_base.unwrap_or_else(|| local_origin(&host, port)));
 
     ServerState::init_with_watch(&mount_config, port_watch)?;
 

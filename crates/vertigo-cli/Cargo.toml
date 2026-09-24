@@ -59,6 +59,7 @@ serde = { version = "1.0", features = ["derive", "rc"] }
 serde_json = "1.0"
 tokio = { version = "1.49", features = ["full"] }
 tokio-retry = "0.3"
+url = "2.5"
 walkdir = "2.5"
 wasmtime = "46.0"
 vertigo = { workspace = true }

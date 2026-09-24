@@ -6,6 +6,8 @@ use vertigo::{
     dev::{SsrFetchRequest, SsrFetchRequestBody, SsrFetchResponse, SsrFetchResponseContent},
 };
 
+use super::fetch_url::{FetchTarget, SSR_FETCH_HEADER};
+
 fn convert_to_jsjson(value: Value) -> JsJson {
     match value {
         Value::Bool(true) => JsJson::True,
@@ -83,8 +85,11 @@ fn convert_to_serde_value(value: JsJson) -> Value {
     }
 }
 
-pub async fn send_request(request_params: SsrFetchRequest) -> SsrFetchResponse {
-    send_request_inner(request_params).await
+pub async fn send_request(
+    request_params: SsrFetchRequest,
+    target: FetchTarget,
+) -> SsrFetchResponse {
+    send_request_inner(request_params, target).await
 }
 
 enum BodyToSend {
@@ -126,7 +131,10 @@ fn clear_headers(headers: &BTreeMap<String, String>) -> BTreeMap<String, String>
         .collect::<BTreeMap<_, _>>()
 }
 
-async fn send_request_inner(request_params: SsrFetchRequest) -> SsrFetchResponse {
+async fn send_request_inner(
+    request_params: SsrFetchRequest,
+    target: FetchTarget,
+) -> SsrFetchResponse {
     let client = awc::Client::new();
 
     let mut request = {
@@ -137,8 +145,12 @@ async fn send_request_inner(request_params: SsrFetchRequest) -> SsrFetchResponse
             };
         };
 
-        client.request(method, &request_params.url)
+        client.request(method, target.url())
     };
+
+    if let FetchTarget::Local(_) = target {
+        request = request.append_header((SSR_FETCH_HEADER, "1"));
+    }
 
     let headers = clear_headers(&request_params.headers);
     let (headers, body) = get_headers_and_body(headers, &request_params.body);

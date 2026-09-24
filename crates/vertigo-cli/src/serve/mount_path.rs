@@ -10,6 +10,7 @@ pub struct MountConfigBuilder {
     pub env: Vec<(String, String)>,
     pub wasm_preload: bool,
     pub disable_hydration: bool,
+    pub ssr_fetch_base: Option<String>,
 }
 
 impl MountConfigBuilder {
@@ -20,6 +21,7 @@ impl MountConfigBuilder {
             env: vec![],
             wasm_preload: false,
             disable_hydration: false,
+            ssr_fetch_base: None,
         }
     }
 
@@ -43,14 +45,24 @@ impl MountConfigBuilder {
         self
     }
 
+    /// Origin against which SSR resolves relative fetch URLs (`/api/posts`), e.g. `http://127.0.0.1:8080`.
+    ///
+    /// Without it, fetching a relative URL during SSR fails.
+    pub fn ssr_fetch_base(mut self, origin: impl Into<String>) -> Self {
+        self.ssr_fetch_base = Some(origin.into());
+        self
+    }
+
     pub fn build(self) -> Result<MountConfig, ErrorCode> {
-        MountConfig::new(
+        let mut config = MountConfig::new(
             self.mount_point,
             self.dest_dir,
             self.env,
             self.wasm_preload,
             self.disable_hydration,
-        )
+        )?;
+        config.ssr_fetch_base = self.ssr_fetch_base;
+        Ok(config)
     }
 }
 
@@ -70,6 +82,8 @@ pub struct MountConfig {
     pub wasm_preload: bool,
     /// Whether to disable hydration
     pub disable_hydration: bool,
+    /// See [`MountConfigBuilder::ssr_fetch_base`]
+    pub ssr_fetch_base: Option<String>,
 }
 
 impl MountConfig {
@@ -91,6 +105,7 @@ impl MountConfig {
             env: Arc::new(env.into_iter().collect()),
             wasm_preload,
             disable_hydration,
+            ssr_fetch_base: None,
         })
     }
 

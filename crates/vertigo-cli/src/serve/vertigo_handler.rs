@@ -1,7 +1,7 @@
 use actix_web::{HttpRequest, http::StatusCode, web};
 use std::time::Instant;
 
-use crate::serve::{MountConfig, response_state::ResponseState};
+use crate::serve::{MountConfig, html::SSR_FETCH_HEADER, response_state::ResponseState};
 
 use super::server_state::ServerState;
 
@@ -35,6 +35,15 @@ pub fn vertigo_handler(mount_config: &MountConfig) -> actix_web::Route {
     web::route().to(move |req: HttpRequest| {
         let mount_point = mount_point.clone();
         async move {
+            // Rendering a page for an SSR fetch could fetch the same URL again, endlessly
+            if req.headers().contains_key(SSR_FETCH_HEADER) {
+                log::error!(
+                    "SSR fetched {}, which only the SSR handler serves",
+                    req.uri()
+                );
+                return actix_web::HttpResponse::NotFound().finish();
+            }
+
             let state = ServerState::global(&mount_point);
             let now = Instant::now();
             let url = req.uri();
