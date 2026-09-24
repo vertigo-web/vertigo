@@ -324,6 +324,7 @@ impl ServerState {
             self.mount_config.env.clone(),
             fetch,
             probe.clone(),
+            url,
         );
 
         loop {

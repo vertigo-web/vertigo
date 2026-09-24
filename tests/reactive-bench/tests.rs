@@ -134,6 +134,7 @@ async fn reactive_bench() -> TestResult {
                 env: vec![],
                 wasm_preload: true,
                 disable_hydration: false,
+                ssr_fetch_base: None,
                 // Off for the benchmarks: compressing every response measures brotli's
                 // throughput as much as vertigo's, and the recorded baselines in
                 // `target/bench/` were taken without it.

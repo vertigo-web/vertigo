@@ -116,6 +116,7 @@ impl Harness {
                     ],
                     wasm_preload: true,
                     disable_hydration: false,
+                    ssr_fetch_base: None,
                     // Left on, as a served app has it. With the `/api` proxy above, this is
                     // the one suite that covers a compressing server and a proxied route
                     // together.

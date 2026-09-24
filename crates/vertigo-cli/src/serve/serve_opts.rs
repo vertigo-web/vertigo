@@ -40,6 +40,12 @@ pub struct ServeOptsInner {
     #[arg(long, default_value_t = {false})]
     pub disable_hydration: bool,
 
+    /// Origin for resolving relative fetch URLs during SSR: `--ssr-fetch-base http://127.0.0.1:8080`
+    ///
+    /// (default: this server's address)
+    #[arg(long)]
+    pub ssr_fetch_base: Option<String>,
+
     /// Disable gzip/brotli/zstd compression of served responses
     ///
     /// (useful behind a proxy or CDN that already compresses)
