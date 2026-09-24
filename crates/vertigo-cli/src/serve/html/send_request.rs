@@ -190,26 +190,91 @@ async fn send_request_inner(
         }
     };
 
-    match content_type {
-        Some(v) if v.starts_with("text/plain;") => {
-            let text_response = String::from_utf8_lossy(&buffer);
-            SsrFetchResponse::Ok {
-                status,
-                response: SsrFetchResponseContent::Text(text_response.into()),
-            }
-        }
-        _ => match serde_json::from_slice::<Value>(buffer.as_slice()) {
-            Ok(json) => {
-                let json = convert_to_jsjson(json);
+    SsrFetchResponse::Ok {
+        status,
+        response: decode_body(content_type.as_deref(), &buffer),
+    }
+}
 
-                SsrFetchResponse::Ok {
-                    status,
-                    response: SsrFetchResponseContent::Json(json),
-                }
-            }
-            Err(error) => SsrFetchResponse::Err {
-                message: format!("response decoding json problem error={error}"),
-            },
-        },
+/// Decodes a response body the same way the browser does (`decodeBody` in `fetchExec.ts`).
+///
+/// A body that isn't JSON falls back to text rather than failing, so the caller still gets the
+/// status - e.g. a readiness endpoint answering a bare `OK` without any `Content-Type`.
+fn decode_body(content_type: Option<&str>, buffer: &[u8]) -> SsrFetchResponseContent {
+    let is_text_plain = content_type
+        .and_then(|v| v.split(';').next())
+        .is_some_and(|mime| mime.trim().eq_ignore_ascii_case("text/plain"));
+
+    if is_text_plain {
+        return SsrFetchResponseContent::Text(String::from_utf8_lossy(buffer).into());
+    }
+
+    if buffer.is_empty() {
+        return SsrFetchResponseContent::Json(JsJson::Null);
+    }
+
+    match serde_json::from_slice::<Value>(buffer) {
+        Ok(json) => SsrFetchResponseContent::Json(convert_to_jsjson(json)),
+        Err(_) => SsrFetchResponseContent::Text(String::from_utf8_lossy(buffer).into()),
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use vertigo::{JsJson, dev::SsrFetchResponseContent};
+
+    use super::decode_body;
+
+    fn text(content: SsrFetchResponseContent) -> String {
+        match content {
+            SsrFetchResponseContent::Text(text) => text,
+            SsrFetchResponseContent::Json(json) => panic!("expected text, got json: {json:?}"),
+        }
+    }
+
+    fn json(content: SsrFetchResponseContent) -> JsJson {
+        match content {
+            SsrFetchResponseContent::Json(json) => json,
+            SsrFetchResponseContent::Text(text) => panic!("expected json, got text: {text:?}"),
+        }
+    }
+
+    #[test]
+    fn json_body_is_parsed() {
+        let mut expected = vertigo::JsObject::new();
+        expected.insert("key".to_string(), JsJson::String("value".to_string()));
+        assert_eq!(
+            json(decode_body(Some("application/json"), br#"{"key":"value"}"#)),
+            JsJson::Object(expected)
+        );
+        assert_eq!(json(decode_body(None, b"true")), JsJson::True);
+    }
+
+    #[test]
+    fn non_json_body_without_content_type_falls_back_to_text() {
+        assert_eq!(text(decode_body(None, b"OK")), "OK");
+        assert_eq!(
+            text(decode_body(Some("text/html"), b"<html>Bad Gateway</html>")),
+            "<html>Bad Gateway</html>"
+        );
+    }
+
+    #[test]
+    fn text_plain_is_never_parsed_as_json() {
+        assert_eq!(text(decode_body(Some("text/plain"), b"true")), "true");
+        assert_eq!(
+            text(decode_body(Some("text/plain; charset=utf-8"), b"123")),
+            "123"
+        );
+        assert_eq!(text(decode_body(Some("Text/Plain;charset=utf-8"), b"")), "");
+    }
+
+    #[test]
+    fn empty_body_is_null() {
+        assert_eq!(json(decode_body(None, b"")), JsJson::Null);
+        assert_eq!(
+            json(decode_body(Some("application/json"), b"")),
+            JsJson::Null
+        );
     }
 }

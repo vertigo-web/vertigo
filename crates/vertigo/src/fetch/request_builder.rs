@@ -237,9 +237,9 @@ impl RequestResponse {
                     SsrFetchResponseContent::Json(json_response) => {
                         convert(status, RequestBody::Json(json_response))
                     }
-                    SsrFetchResponseContent::Text(_) => {
-                        return Err("Tried to decode text/plain reponse".to_string());
-                    }
+                    SsrFetchResponseContent::Text(_) => Some(Err(format!(
+                        "Expected JSON response, got text (status {status})"
+                    ))),
                 };
 
                 match data {

@@ -14,14 +14,16 @@ export interface FetchRequestType {
     }
 }
 
+type FetchResponseContent = {
+    Text: string
+} | {
+    Json: JsJsonType,
+};
+
 type FetchResponseType = {
     Ok: {
         status: number,
-        response: {
-            Text: string
-        } | {
-            Json: JsJsonType,
-        }
+        response: FetchResponseContent,
     }
 } | {
     Err: {
@@ -53,30 +55,33 @@ const getBodyString = (body: FetchRequestType['body']): string | undefined => {
 export const parseJsonBody = (bodyText: string): JsJsonType | null =>
     bodyText.length === 0 ? null : JSON.parse(bodyText);
 
+const isTextPlain = (contentType: string | null): boolean =>
+    contentType?.split(';')[0]?.trim().toLowerCase() === 'text/plain';
+
+// A body that isn't JSON falls back to Text rather than failing, so the caller
+// still gets the status code - e.g. a readiness endpoint answering a bare `OK`
+// without any Content-Type. Mirrors `decode_body` in vertigo-cli's SSR fetch.
+export const decodeBody = (contentType: string | null, bodyText: string): FetchResponseContent => {
+    if (isTextPlain(contentType)) {
+        return { Text: bodyText };
+    }
+
+    try {
+        return { Json: parseJsonBody(bodyText) };
+    } catch {
+        return { Text: bodyText };
+    }
+};
+
 const processResponse = async (response: Response): Promise<FetchResponseType> => {
     const status = response.status;
     const contentType = response.headers.get("Content-Type");
 
     try {
-        if (contentType?.startsWith('text/plain;')) {
-            return {
-                Ok: {
-                    status,
-                    response: {
-                        Text: await response.text(),
-                    }
-                }
-            }
-        }
-
-        const json = parseJsonBody(await response.text());
-
         return {
             Ok: {
                 status,
-                response: {
-                    Json: json
-                }
+                response: decodeBody(contentType, await response.text()),
             }
         };
     } catch (error) {
