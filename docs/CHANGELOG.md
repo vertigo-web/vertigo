@@ -9,6 +9,11 @@
   `MountConfigBuilder::ssr_fetch_base` or `--ssr-fetch-base` (`vertigo serve`/`watch` default
   to their own address, so `--proxy` applies).
 
+### Fixed
+
+* Fetch no longer loses the HTTP status when the response body isn't JSON. Bare `text/plain`
+  (without `charset`) is now recognized as text too, and SSR treats an empty body as `null`.
+
 ## 0.13.1 - 2026-09-21
 
 ### Added
@@ -21,7 +26,7 @@
 
 ### Performance
 
-* Reduced WASM sizes by around 10% by de-genericization.  
+* Reduced WASM sizes by around 10% by de-genericization.
 * Reduces `wasm_run.js` by 9% - dead code removed, and different functions were optimized.
 * SSR: Per-request WASM instantiation got about 24% cheaper (see fix below).
 
@@ -41,11 +46,11 @@
 
 * Added benchmarks:
 
-  - `task ssr-bench` renders a set of pages and reports where the time went,
-  - `task hydration-bench` loads a set of server-rendered pages in a real browser and reports
+  * `task ssr-bench` renders a set of pages and reports where the time went,
+  * `task hydration-bench` loads a set of server-rendered pages in a real browser and reports
     how long hydration took and how many DOM mutations it performed,
-  - `task reactive-bench` runs the reactive-graph benchmark suite,
-  - `task dom-bench` runs the end-to-end benchmark suite.
+  * `task reactive-bench` runs the reactive-graph benchmark suite,
+  * `task dom-bench` runs the end-to-end benchmark suite.
 
   `task bench` runs all four benchmarks. `task bench-compare` runs all four benchmarks and
   compares them against the baseline.
