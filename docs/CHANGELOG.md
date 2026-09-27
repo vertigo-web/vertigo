@@ -8,6 +8,11 @@
 * SSR can fetch relative URLs (`/api/posts`), resolved against the origin set with
   `MountConfigBuilder::ssr_fetch_base` or `--ssr-fetch-base` (`vertigo serve`/`watch` default
   to their own address, so `--proxy` applies).
+* SSR forwards the browser's cookies to fetches to its own origin (relative URLs), as the
+  browser does with a same-origin `fetch` - so an API behind a session renders the page for the
+  logged-in user. `vertigo serve`/`watch` do it on their own; a server embedding SSR calls
+  `ServerState::request_with_cookie` with the `Cookie` header (`serve::request_cookie`).
+  Fetches to other origins never get the cookies.
 
 ### Fixed
 

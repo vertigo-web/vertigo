@@ -1,4 +1,8 @@
-use actix_web::{HttpRequest, http::StatusCode, web};
+use actix_web::{
+    HttpRequest,
+    http::{StatusCode, header},
+    web,
+};
 use std::time::Instant;
 
 use crate::serve::{MountConfig, html::SSR_FETCH_HEADER, response_state::ResponseState};
@@ -64,7 +68,8 @@ pub fn vertigo_handler(mount_config: &MountConfig) -> actix_web::Route {
             };
 
             log::debug!("Incoming request: {uri}");
-            let mut response_state = state.request(&uri).await;
+            let cookie = request_cookie(&req);
+            let mut response_state = state.request_with_cookie(&uri, cookie.as_deref()).await;
 
             let time = now.elapsed().as_millis();
             let log_level = if time > 1000 {
@@ -105,4 +110,43 @@ pub fn vertigo_handler(mount_config: &MountConfig) -> actix_web::Route {
             actix_web::HttpResponse::from(response_state)
         }
     })
+}
+
+/// `Cookie` header of the request, for [`ServerState::request_with_cookie`].
+///
+/// HTTP/2 may send the cookies as several header fields; they are joined with `; `
+/// (RFC 9113, section 8.2.3).
+pub fn request_cookie(req: &HttpRequest) -> Option<String> {
+    let parts: Vec<&str> = req
+        .headers()
+        .get_all(header::COOKIE)
+        .filter_map(|value| value.to_str().ok())
+        .collect();
+
+    (!parts.is_empty()).then(|| parts.join("; "))
+}
+
+#[cfg(test)]
+mod tests {
+    use actix_web::{http::header, test::TestRequest};
+
+    use super::request_cookie;
+
+    #[test]
+    fn no_cookie_header() {
+        assert_eq!(request_cookie(&TestRequest::get().to_http_request()), None);
+    }
+
+    #[test]
+    fn split_cookie_headers_are_joined() {
+        let req = TestRequest::get()
+            .append_header((header::COOKIE, "session=abc"))
+            .append_header((header::COOKIE, "theme=dark"))
+            .to_http_request();
+
+        assert_eq!(
+            request_cookie(&req).as_deref(),
+            Some("session=abc; theme=dark")
+        );
+    }
 }

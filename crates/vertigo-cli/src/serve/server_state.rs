@@ -115,7 +115,23 @@ impl ServerState {
     }
 
     pub async fn request(&self, url: &str) -> ResponseState {
-        self.request_inner(url, &SsrProbe::new()).await
+        self.request_inner(url, None, &SsrProbe::new()).await
+    }
+
+    /// [`ServerState::request`] for a browser request that carried cookies.
+    ///
+    /// `cookie` is the request's `Cookie` header. It goes out with every SSR fetch to the
+    /// server's own origin (a relative URL, resolved against `ssr_fetch_base`), as the browser
+    /// sends it with a same-origin `fetch` - so an API behind a session answers for the
+    /// logged-in user and the page renders as it will look after hydration. Fetches to other
+    /// origins never get it.
+    ///
+    /// The app itself still can't read cookies during SSR (`get_driver().cookie_get()` returns
+    /// nothing): the header doesn't say which cookies are `HttpOnly`, and those are hidden
+    /// from the browser's `document.cookie`, so exposing them would render differently than
+    /// the browser can.
+    pub async fn request_with_cookie(&self, url: &str, cookie: Option<&str>) -> ResponseState {
+        self.request_inner(url, cookie, &SsrProbe::new()).await
     }
 
     /// [`ServerState::request`], with the per-phase breakdown of how the render was spent.
@@ -124,13 +140,18 @@ impl ServerState {
         let probe = SsrProbe::new();
         let mark = probe.start();
 
-        let response = self.request_inner(url, &probe).await;
+        let response = self.request_inner(url, None, &probe).await;
 
         let timings = probe.finish(mark, response.body.len());
         (response, timings)
     }
 
-    async fn request_inner(&self, url: &str, probe: &SsrProbe) -> ResponseState {
+    async fn request_inner(
+        &self,
+        url: &str,
+        cookie: Option<&str>,
+        probe: &SsrProbe,
+    ) -> ResponseState {
         let (sender, mut receiver) = unbounded_channel::<Message>();
 
         let request = RequestState {
@@ -325,6 +346,7 @@ impl ServerState {
             fetch,
             probe.clone(),
             url,
+            cookie.map(str::to_string),
         );
 
         loop {

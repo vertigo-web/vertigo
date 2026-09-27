@@ -17,5 +17,5 @@ pub use serve_run::run;
 pub use server_state::ServerState;
 #[cfg(feature = "ssr-timings")]
 pub use timings::SsrTimings;
-pub use vertigo_handler::vertigo_handler;
+pub use vertigo_handler::{request_cookie, vertigo_handler};
 pub use vertigo_install::vertigo_install;
