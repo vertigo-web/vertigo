@@ -28,9 +28,12 @@ pub struct HtmlResponse {
     probe: SsrProbe,
     /// Rendered page URL (without the mount point)
     local_url: String,
+    /// `Cookie` header of the browser request, sent along with fetches to the own origin
+    cookie: Option<String>,
 }
 
 impl HtmlResponse {
+    #[allow(clippy::too_many_arguments)]
     pub fn new(
         sender: UnboundedSender<Message>,
         mount_path: &MountConfig,
@@ -39,6 +42,7 @@ impl HtmlResponse {
         fetch: Arc<RwLock<FetchCache>>,
         probe: SsrProbe,
         local_url: &str,
+        cookie: Option<String>,
     ) -> Self {
         Self {
             sender,
@@ -50,6 +54,7 @@ impl HtmlResponse {
             status: StatusCode::default(),
             probe,
             local_url: local_url.to_string(),
+            cookie,
         }
     }
 
@@ -130,10 +135,11 @@ impl HtmlResponse {
                     actix_web::rt::spawn({
                         let request = request.clone();
                         let sender = self.sender.clone();
+                        let cookie = self.cookie.clone();
 
                         async move {
                             let response = match target {
-                                Ok(target) => send_request(request.clone(), target).await,
+                                Ok(target) => send_request(request.clone(), target, cookie).await,
                                 Err(message) => {
                                     log::error!("{message}");
                                     SsrFetchResponse::Err { message }

@@ -85,11 +85,13 @@ fn convert_to_serde_value(value: JsJson) -> Value {
     }
 }
 
+/// `cookie` is the `Cookie` header of the browser request being rendered, if it had one.
 pub async fn send_request(
     request_params: SsrFetchRequest,
     target: FetchTarget,
+    cookie: Option<String>,
 ) -> SsrFetchResponse {
-    send_request_inner(request_params, target).await
+    send_request_inner(request_params, target, cookie).await
 }
 
 enum BodyToSend {
@@ -131,9 +133,30 @@ fn clear_headers(headers: &BTreeMap<String, String>) -> BTreeMap<String, String>
         .collect::<BTreeMap<_, _>>()
 }
 
+/// The app's headers, plus the browser's cookies when the fetch goes to the server's own origin.
+///
+/// That is what the browser does with a same-origin `fetch`: the API sees the same session
+/// during SSR as after hydration, so the rendered page matches what the browser will show.
+/// Other origins never get the cookies. The browser also ignores a `Cookie` header set by
+/// the app (a forbidden header name) and sends its own, so ours takes precedence.
+fn request_headers(
+    app_headers: &BTreeMap<String, String>,
+    target: &FetchTarget,
+    cookie: Option<&str>,
+) -> BTreeMap<String, String> {
+    let mut headers = clear_headers(app_headers);
+
+    if let (FetchTarget::Local(_), Some(cookie)) = (target, cookie) {
+        headers.insert("cookie".into(), cookie.into());
+    }
+
+    headers
+}
+
 async fn send_request_inner(
     request_params: SsrFetchRequest,
     target: FetchTarget,
+    cookie: Option<String>,
 ) -> SsrFetchResponse {
     let client = awc::Client::new();
 
@@ -152,7 +175,7 @@ async fn send_request_inner(
         request = request.append_header((SSR_FETCH_HEADER, "1"));
     }
 
-    let headers = clear_headers(&request_params.headers);
+    let headers = request_headers(&request_params.headers, &target, cookie.as_deref());
     let (headers, body) = get_headers_and_body(headers, &request_params.body);
 
     for (key, value) in headers {
@@ -220,9 +243,13 @@ fn decode_body(content_type: Option<&str>, buffer: &[u8]) -> SsrFetchResponseCon
 
 #[cfg(test)]
 mod tests {
+    use std::collections::BTreeMap;
     use vertigo::{JsJson, dev::SsrFetchResponseContent};
 
     use super::decode_body;
+    use super::{FetchTarget, request_headers};
+
+    const COOKIE: &str = "session=abc; theme=dark";
 
     fn text(content: SsrFetchResponseContent) -> String {
         match content {
@@ -274,6 +301,53 @@ mod tests {
         assert_eq!(
             json(decode_body(Some("application/json"), b"")),
             JsJson::Null
+        );
+    }
+
+    fn app_headers() -> BTreeMap<String, String> {
+        BTreeMap::from([("Accept".to_string(), "application/json".to_string())])
+    }
+
+    #[test]
+    fn own_origin_gets_browser_cookies() {
+        let target = FetchTarget::Local("http://127.0.0.1:8080/api/me".to_string());
+
+        let headers = request_headers(&app_headers(), &target, Some(COOKIE));
+
+        assert_eq!(headers.get("cookie").map(String::as_str), Some(COOKIE));
+        assert_eq!(
+            headers.get("accept").map(String::as_str),
+            Some("application/json")
+        );
+    }
+
+    #[test]
+    fn other_origin_never_gets_them() {
+        let target = FetchTarget::External("https://api.example.com/me".to_string());
+
+        let headers = request_headers(&app_headers(), &target, Some(COOKIE));
+
+        assert_eq!(headers.get("cookie"), None);
+    }
+
+    #[test]
+    fn browser_cookies_replace_the_apps_own() {
+        let target = FetchTarget::Local("http://127.0.0.1:8080/api/me".to_string());
+        let mut app = app_headers();
+        app.insert("Cookie".to_string(), "forged=1".to_string());
+
+        let headers = request_headers(&app, &target, Some(COOKIE));
+
+        assert_eq!(headers.get("cookie").map(String::as_str), Some(COOKIE));
+    }
+
+    #[test]
+    fn without_cookies_app_headers_stay_as_they_were() {
+        let target = FetchTarget::Local("http://127.0.0.1:8080/api/posts".to_string());
+
+        assert_eq!(
+            request_headers(&app_headers(), &target, None),
+            BTreeMap::from([("accept".to_string(), "application/json".to_string())])
         );
     }
 }
