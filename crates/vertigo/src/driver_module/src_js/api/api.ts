@@ -163,7 +163,7 @@ export class Api {
 
 
     constructor(private readonly metadata: Metadata, private readonly getWasm: () => ModuleControllerType<ExportType>) {
-        const appLocation = new AppLocation(getWasm);
+        const appLocation = new AppLocation(getWasm, metadata.getEnv('vertigo-mount-point') ?? '/');
 
         this.dom = new DriverDom(metadata, appLocation, getWasm);
         this.websocket = new DriverWebsocket(getWasm);

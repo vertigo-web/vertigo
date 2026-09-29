@@ -13,6 +13,11 @@
   logged-in user. `vertigo serve`/`watch` do it on their own; a server embedding SSR calls
   `ServerState::request_with_cookie` with the `Cookie` header (`serve::request_cookie`).
   Fetches to other origins never get the cookies.
+* `LazyCache::refresh()` fetches the value again and resolves once the new one is in the
+  cache, so the caller can act on what it renders - e.g. scroll to the comment it brings.
+  The current value stays until then, without a loading state.
+* A link with `rel="external"` is left to the browser. For an app mounted at `/` that shares
+  the site with another one (say, `/panel/`), whose pages it can't render.
 
 ### Fixed
 
@@ -26,6 +31,18 @@
 * `mailto:`, `tel:` and `javascript:` links did nothing when clicked. Links with an absolute URL to the app's own origin now open in the
   app instead of reloading the page, and relative links (`edit`, `?page=2`) hand the app the
   resolved path (`/post/edit`, `/post/5?page=2`).
+* An app mounted at a path (`--mount-point /panel`) no longer takes over links out of it
+  (`/`, `/other/`) - it has no page for them, so they are left to the browser.
+* `Driver::route_to_public` and `Driver::public_build_path` (so `include_static!` too) give the
+  same path during SSR as in the browser - the server passes the mount point and the public
+  path to the app in env (`vertigo-mount-point`, `vertigo-public-path`). SSR used to write
+  placeholders replaced only in the finished HTML, so a route encoded into a query string
+  (`/login?back=%2Fpanel%2F`) came out broken.
+* SSR HTML no longer puts a line break before the text of an element (`<a>\nLink</a>`) or
+  inside an empty one, and no longer loses the one a `<pre>` or a `<textarea>` starts with -
+  the text, and the value of a `<textarea>`, are exactly what the app rendered.
+* An element with `autofocus` removed by another render before it got the focus no longer
+  throws `Item id not found`.
 
 ## 0.13.1 - 2026-09-21
 

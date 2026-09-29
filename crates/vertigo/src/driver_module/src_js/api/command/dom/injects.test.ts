@@ -11,6 +11,15 @@ class MockLink {
     getAttribute(name: string) { return this.attributes.get(name) ?? null; }
     hasAttribute(name: string) { return this.attributes.has(name); }
     addEventListener(_event: string, listener: (e: any) => void) { this.listener = listener; }
+
+    /// Only the selector for `rel="external"`, matched the way the browser does - one of the
+    /// words, in any letter case.
+    matches(selector: string) {
+        if (selector !== '[rel~="external" i]') {
+            throw new Error(`MockLink can't match ${selector}`);
+        }
+        return (this.attributes.get('rel') ?? '').toLowerCase().split(/\s+/).includes('external');
+    }
 }
 
 class MockMouseEvent {
@@ -53,15 +62,22 @@ function assert(condition: boolean, message: string) {
     }
 }
 
-/// Clicks a link built with `attributes`. `render` runs when the app is told the new address -
-/// the moment it renders the new page.
-function click(attributes: Record<string, string>, event: Partial<MouseEvent> = {}, render = () => { }) {
+/// Opens the page the links are clicked on. It has no `<base>`, so its address is the base URL too.
+function openPage(address: string) {
+    (globalThis as any).document.baseURI = address;
+    (globalThis as any).window.location = new URL(address);
+}
+
+/// Clicks a link built with `attributes` in an app mounted at `mountPoint`. `render` runs when
+/// the app is told the new address - the moment it renders the new page.
+function click(attributes: Record<string, string>, event: Partial<MouseEvent> = {}, render = () => { }, mountPoint = '/') {
     elements.clear();
     scrolledToTop = false;
 
     const link = new MockLink(attributes);
     const pushed: Array<string> = [];
     const appLocation = {
+        mountPoint,
         set: (_target: string, _mode: string, href: string) => {
             pushed.push(href);
             render();
@@ -173,6 +189,38 @@ function testAddressesResolvedLikeTheBrowser() {
     }
 }
 
+function testRelExternal() {
+    console.log("\n--- Test links 9: rel=\"external\" leaves the app ---");
+    for (const rel of ['external', 'nofollow external', 'EXTERNAL']) {
+        const { pushed, prevented } = click({ href: '/panel/', rel });
+        assert(!prevented && pushed.length === 0, `rel="${rel}" is left to the browser`);
+    }
+
+    const { pushed, prevented } = click({ href: '/post', rel: 'nofollow' });
+    assert(prevented && pushed.length === 1, "another rel stays in the app");
+}
+
+function testMountPoint() {
+    console.log("\n--- Test links 10: an app mounted at /panel ---");
+    openPage('https://app.test/panel/comments/');
+
+    for (const mountPoint of ['/panel', '/panel/']) {
+        const inApp = ['/panel/settings/', '/panel', '?page=2', 'users/'];
+        for (const href of inApp) {
+            const { pushed, prevented } = click({ href }, {}, () => { }, mountPoint);
+            assert(prevented && pushed.length === 1, `${href} stays in the app mounted at ${mountPoint}`);
+        }
+
+        const outside = ['/', '/panels-on-the-roof/', '../../other/'];
+        for (const href of outside) {
+            const { pushed, prevented } = click({ href }, {}, () => { }, mountPoint);
+            assert(!prevented && pushed.length === 0, `${href} is left to the browser by the app mounted at ${mountPoint}`);
+        }
+    }
+
+    openPage('https://app.test/post/5');
+}
+
 testPlainLinkGoesToTop();
 testFragmentOfTheNewPage();
 testFragmentWithoutElement();
@@ -181,3 +229,5 @@ testModifiedClicksAreLeftToTheBrowser();
 testTargetAndDownloadAreLeftToTheBrowser();
 testOtherLinksAreLeftToTheBrowser();
 testAddressesResolvedLikeTheBrowser();
+testRelExternal();
+testMountPoint();

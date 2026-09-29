@@ -12,7 +12,8 @@ export function injects(node: Element, appLocation: AppLocation) {
 /// would: to the element named in the fragment (`/post?edit=1#comment-5`), otherwise to the top.
 ///
 /// Clicks the browser gives a meaning of its own are left to it - with a modifier key (new tab,
-/// new window, download) or on a link with a `target` or `download` attribute.
+/// new window, download) or on a link with a `target` or `download` attribute. So are links out
+/// of the app, which it has no page for (see [`pathInApp`]).
 export function hydrateLink(node: Element, appLocation: AppLocation) {
     node.addEventListener('click', (e) => {
         const href = node.getAttribute('href');
@@ -24,7 +25,7 @@ export function hydrateLink(node: Element, appLocation: AppLocation) {
             return;
         }
 
-        const path = pathInApp(href);
+        const path = pathInApp(node, href, appLocation.mountPoint);
         if (path === null) {
             return;
         }
@@ -38,9 +39,15 @@ export function hydrateLink(node: Element, appLocation: AppLocation) {
 }
 
 /// The address the link leads to, the way the history router keeps it (`/post?edit=1#comment-5`),
-/// or `null` when it leads out of the app: to another origin, or to another scheme (`mailto:`,
-/// `tel:`, `javascript:`) - `pushState` would refuse those.
-function pathInApp(href: string): string | null {
+/// or `null` when it leads out of the app: to another origin or scheme (`mailto:`, `tel:`,
+/// `javascript:`), outside the path the app is mounted at, or to a page marked `rel="external"`.
+function pathInApp(node: Element, href: string, mountPoint: string): string | null {
+    // The app at `/` can't tell a page of another app on the site (`/panel/`) from its own, so a
+    // link to one says it (`~=` - one of the words in `rel`, `i` - in any letter case)
+    if (node.matches('[rel~="external" i]')) {
+        return null;
+    }
+
     let url: URL;
     try {
         url = new URL(href, document.baseURI);
@@ -49,8 +56,16 @@ function pathInApp(href: string): string | null {
         return null;
     }
 
-    // `protocol` and `host` rather than `origin` - a `blob:` URL has the page's origin too
+    // Another origin or scheme - `pushState` would refuse it. `protocol` and `host` rather than
+    // `origin`, as a `blob:` URL has the page's origin too
     if (url.protocol !== window.location.protocol || url.host !== window.location.host) {
+        return null;
+    }
+
+    // An app mounted at `/panel` leaves `/` and `/other/` to the browser - those pages belong to
+    // whatever else the site serves
+    const mount = mountPoint.replace(/\/+$/, '');
+    if (mount !== '' && url.pathname !== mount && !url.pathname.startsWith(`${mount}/`)) {
         return null;
     }
 

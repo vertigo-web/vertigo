@@ -74,14 +74,10 @@ pub fn build_response(
             .attr("style", "display: none")
             .attr("data-fetch-cache", fetch_cache);
 
-        // Add custom env parameters
+        // Add env parameters, with the mount point and the public path among them
         for (env_name, env_value) in env {
             data_div.add_attr(format!("data-env-{env_name}"), env_value);
         }
-
-        // Add dynamic values for public path
-        data_div.add_attr("data-env-vertigo-mount-point", mount_path.mount_point());
-        data_div.add_attr("data-env-vertigo-public-path", mount_path.dest_http_root());
 
         // Add disable hydration flag
         data_div.add_attr(

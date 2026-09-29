@@ -61,8 +61,19 @@ fn html_node_to_string(result: &mut Vec<String>, ident: Format, node: HtmlNode) 
                         Format::none()
                     };
 
+                    let first_text = match children.first() {
+                        Some(HtmlNode::Text(text)) => text.as_str(),
+                        _ => "",
+                    };
+
                     // open tag
-                    let line = [l_chevron, &el_name, &attrs, inner_ident.r_chevron()];
+                    let line = [
+                        l_chevron,
+                        &el_name,
+                        &attrs,
+                        inner_ident.r_chevron(),
+                        line_break_for_parser(&element.name, first_text),
+                    ];
                     result.push(line.concat());
 
                     // render child
@@ -80,6 +91,7 @@ fn html_node_to_string(result: &mut Vec<String>, ident: Format, node: HtmlNode) 
                     result.push(line.concat());
                 }
                 ChildMode::Text(text) => {
+                    let line_break = line_break_for_parser(&element.name, &text);
                     let escaped_text =
                         if ["script", "style"].contains(&element.name.to_lowercase().as_str()) {
                             Cow::from(text)
@@ -88,11 +100,13 @@ fn html_node_to_string(result: &mut Vec<String>, ident: Format, node: HtmlNode) 
                         };
 
                     let line = [
-                        //open tag
+                        //open tag - no line break for formatting: it would become part of
+                        // the text (`<a>\nLink</a>`)
                         l_chevron,
                         &el_name,
                         &attrs,
-                        r_chevron,
+                        ">",
+                        line_break,
                         // content
                         &escaped_text,
                         //close tag
@@ -121,6 +135,20 @@ const SELF_CLOSING_TAGS: [&str; 14] = [
 
 fn is_self_closing(element: &HtmlElement) -> bool {
     SELF_CLOSING_TAGS.contains(&element.name.as_str())
+}
+
+/// The parser drops a line break right after the open tag of `<pre>`, `<textarea>` and
+/// `<listing>` - content starting with one needs another in front, or loses it.
+fn line_break_for_parser(name: &str, content: &str) -> &'static str {
+    let drops_it = ["pre", "textarea", "listing"]
+        .iter()
+        .any(|tag| name.eq_ignore_ascii_case(tag));
+
+    if drops_it && content.starts_with('\n') {
+        "\n"
+    } else {
+        ""
+    }
 }
 
 fn attributes_to_string(attr: BTreeMap<String, String>) -> String {
@@ -161,11 +189,11 @@ fn get_render_child_mode(element: VecDeque<HtmlNode>) -> ChildMode {
 
     let last = result.pop();
 
+    // Nothing inside is written the same as empty text - `<textarea></textarea>`, not a line
+    // break and indentation: the parser drops the line break, but the indentation would be
+    // the textarea's value
     let Some(last) = last else {
-        return ChildMode::Child {
-            children: vec![],
-            inline: false,
-        };
+        return ChildMode::Text(String::new());
     };
 
     if result.is_empty()
@@ -316,6 +344,89 @@ mod tests {
         assert_eq!(
             output,
             "<!DOCTYPE html><div><pre><span>    </span><span>let</span><span> </span><span>x</span><span> </span><span>;</span><span>\n</span></pre><img /></div>"
+        );
+    }
+
+    #[test]
+    fn html_text_and_empty_elements_get_no_extra_whitespace() {
+        // The text of an element, and the lack of it, are the content - formatting may only
+        // add whitespace between elements
+        let div: HtmlNode = HtmlElement::new("div")
+            .child(
+                HtmlElement::new("h1")
+                    .child(HtmlNode::Text("Title".into()))
+                    .into(),
+            )
+            .child(
+                HtmlElement::new("a")
+                    .attr("href", "/panel/")
+                    .child(HtmlNode::Text("Panel".into()))
+                    .into(),
+            )
+            .child(HtmlElement::new("textarea").attr("name", "text").into())
+            .child(HtmlElement::new("div").into())
+            .into();
+
+        assert_eq!(
+            convert_to_string(div.clone(), true),
+            "<!DOCTYPE html>
+<div>
+  <h1>Title</h1>
+  <a href=\"/panel/\">Panel</a>
+  <textarea name=\"text\"></textarea>
+  <div></div>
+</div>
+"
+        );
+
+        assert_eq!(
+            convert_to_string(div, false),
+            "<!DOCTYPE html><div><h1>Title</h1><a href=\"/panel/\">Panel</a><textarea name=\"text\"></textarea><div></div></div>"
+        );
+    }
+
+    #[test]
+    fn html_leading_line_break_survives_the_parser() {
+        // The parser drops a line break right after `<textarea>` and `<pre>`, so the one their
+        // content starts with needs another in front - any other element keeps it as it is
+        let div: HtmlNode = HtmlElement::new("div")
+            .child(
+                HtmlElement::new("textarea")
+                    .child(HtmlNode::Text("\nsecond line".into()))
+                    .into(),
+            )
+            .child(
+                HtmlElement::new("pre")
+                    .child(HtmlNode::Text("\nfn ".into()))
+                    .child(
+                        HtmlElement::new("b")
+                            .child(HtmlNode::Text("main".into()))
+                            .into(),
+                    )
+                    .into(),
+            )
+            .child(
+                HtmlElement::new("div")
+                    .child(HtmlNode::Text("\nkept".into()))
+                    .into(),
+            )
+            .into();
+
+        assert_eq!(
+            convert_to_string(div.clone(), true),
+            concat!(
+                "<!DOCTYPE html>\n",
+                "<div>\n",
+                "  <textarea>\n\nsecond line</textarea>\n",
+                "  <pre>\n\nfn <b>main</b></pre>\n",
+                "  <div>\nkept</div>\n",
+                "</div>\n",
+            )
+        );
+
+        assert_eq!(
+            convert_to_string(div, false),
+            "<!DOCTYPE html><div><textarea>\n\nsecond line</textarea><pre>\n\nfn <b>main</b></pre><div>\nkept</div></div>"
         );
     }
 

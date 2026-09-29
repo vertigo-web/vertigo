@@ -249,8 +249,12 @@ export class DriverDom {
         if (setFocus.size > 0) {
             setTimeout(() => {
                 for (const id of setFocus) {
-                    const node = this.nodes.getNodeElement(`set focus ${id}`, id);
-                    node.focus();
+                    // A render in between can have removed the element already - there is
+                    // nothing to focus then, and the rest of the set still gets its turn
+                    const node = this.nodes.getAnyOption(id);
+                    if (node instanceof HTMLElement) {
+                        node.focus();
+                    }
                 }
             }, 0);
         }

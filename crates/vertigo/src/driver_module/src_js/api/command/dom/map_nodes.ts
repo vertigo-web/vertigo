@@ -86,10 +86,6 @@ export class MapNodes {
         }
     }
 
-    public getNodeElement(label: string, id: number): HTMLElement {
-        return this.expect(label, id, HTMLElement, "HTMLElement");
-    }
-
     public getNode(label: string, id: number): Element {
         return this.expect(label, id, Element, "Element");
     }

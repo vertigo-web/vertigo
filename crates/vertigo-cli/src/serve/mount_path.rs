@@ -1,6 +1,8 @@
 #![allow(clippy::question_mark)]
 use std::{collections::HashMap, path::Path, sync::Arc};
-use vertigo::dev::VERTIGO_PUBLIC_BUILD_PATH_PLACEHOLDER;
+use vertigo::dev::{
+    VERTIGO_MOUNT_POINT_ENV, VERTIGO_PUBLIC_BUILD_PATH_PLACEHOLDER, VERTIGO_PUBLIC_PATH_ENV,
+};
 
 use crate::commons::{ErrorCode, models::IndexModel};
 
@@ -76,7 +78,8 @@ pub struct MountConfig {
     run_js: String,
     /// path to wasm-file taken from index.json
     wasm_path: String,
-    /// Environment variables passed to WASM runtime
+    /// Environment variables passed to WASM runtime - together with the mount point and the
+    /// public path of the build (`vertigo-mount-point`, `vertigo-public-path`)
     pub env: Arc<HashMap<String, String>>,
     /// Whether to preload wasm script using <link rel="preload">
     pub wasm_preload: bool,
@@ -97,16 +100,26 @@ impl MountConfig {
         let dest_dir = dest_dir.into();
         let index_model = read_index(&dest_dir)?;
 
-        Ok(MountConfig {
+        let mut config = MountConfig {
             dest_dir,
             mount_point: public_mount_point.into(),
             run_js: index_model.run_js,
             wasm_path: index_model.wasm,
-            env: Arc::new(env.into_iter().collect()),
+            env: Arc::default(),
             wasm_preload,
             disable_hydration,
             ssr_fetch_base: None,
-        })
+        };
+
+        // The app gets them wherever it runs - in the browser as `data-env-*`, during SSR from
+        // the host - so both sides build the same paths (`Driver::route_to_public`,
+        // `Driver::public_build_path`)
+        let mut env: HashMap<String, String> = env.into_iter().collect();
+        env.insert(VERTIGO_MOUNT_POINT_ENV.into(), config.mount_point.clone());
+        env.insert(VERTIGO_PUBLIC_PATH_ENV.into(), config.dest_http_root());
+        config.env = Arc::new(env);
+
+        Ok(config)
     }
 
     pub fn mount_point(&self) -> &str {
@@ -182,7 +195,37 @@ fn replace_prefix(dest_dir: &str, path: &str) -> String {
 mod tests {
     use vertigo::dev::VERTIGO_PUBLIC_BUILD_PATH_PLACEHOLDER;
 
-    use super::replace_prefix;
+    use super::{MountConfig, replace_prefix};
+
+    #[test]
+    fn env_carries_mount_point_and_public_path() -> std::io::Result<()> {
+        let dest_dir = std::env::temp_dir().join(format!("vertigo-mount-{}", std::process::id()));
+        std::fs::create_dir_all(&dest_dir)?;
+        std::fs::write(
+            dest_dir.join("index.json"),
+            r#"{"run_js": "wasm_run.js", "wasm": "app.wasm"}"#,
+        )?;
+
+        let Ok(config) = MountConfig::new(
+            "/panel",
+            dest_dir.to_string_lossy(),
+            vec![
+                ("api_url".into(), "/api".into()),
+                // the server knows better where it mounted the app
+                ("vertigo-mount-point".into(), "/elsewhere".into()),
+            ],
+            false,
+            false,
+        ) else {
+            panic!("index.json in {dest_dir:?} should read");
+        };
+
+        assert_eq!(config.env["api_url"], "/api");
+        assert_eq!(config.env["vertigo-mount-point"], "/panel");
+        assert_eq!(config.env["vertigo-public-path"], config.dest_http_root());
+
+        std::fs::remove_dir_all(&dest_dir)
+    }
 
     #[test]
     fn test_replace_prefix() {

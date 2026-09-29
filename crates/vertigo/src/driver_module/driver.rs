@@ -25,6 +25,14 @@ pub const VERTIGO_PUBLIC_BUILD_PATH_PLACEHOLDER: &str = "%%VERTIGO_PUBLIC_BUILD_
 /// Placeholder where to put public mount point at runtime (default /)
 pub const VERTIGO_MOUNT_POINT_PLACEHOLDER: &str = "%%VERTIGO_MOUNT_POINT%%";
 
+/// Env variable with the public path of the build directory, set by the server both for SSR
+/// and for the browser - see [`Driver::public_build_path`].
+pub const VERTIGO_PUBLIC_PATH_ENV: &str = "vertigo-public-path";
+
+/// Env variable with the mount point of the app, set by the server both for SSR and for the
+/// browser - see [`Driver::route_to_public`].
+pub const VERTIGO_MOUNT_POINT_ENV: &str = "vertigo-mount-point";
+
 #[derive(AutoJsJson, Debug, Clone, Copy, Hash, PartialEq, Eq, PartialOrd, Ord)]
 pub enum FetchMethod {
     GET,
@@ -291,38 +299,33 @@ impl Driver {
     }
 
     /// Get public path to build directory where the browser can access WASM and other build files.
+    ///
+    /// The server passes the path in env during SSR as well as to the browser, so the path is
+    /// the same on both sides - also where it gets encoded, e.g. into a query string.
     pub fn public_build_path(&self, path: impl Into<String>) -> String {
         let path = path.into();
-        if self.is_browser() {
-            // In the browser use env variable attached during SSR
-            if let Some(public_path) = self.env("vertigo-public-path") {
-                path.replace(VERTIGO_PUBLIC_BUILD_PATH_PLACEHOLDER, &public_path)
-            } else {
-                // Fallback to default dest_dir
-                path.replace(VERTIGO_PUBLIC_BUILD_PATH_PLACEHOLDER, "/build")
-            }
-        } else {
-            // On the server, leave it, it will be replaced during SSR
-            path
+        match self.env(VERTIGO_PUBLIC_PATH_ENV) {
+            Some(public_path) => path.replace(VERTIGO_PUBLIC_BUILD_PATH_PLACEHOLDER, &public_path),
+            // A server that doesn't pass it replaces the placeholder in the finished HTML
+            None if !self.is_browser() => path,
+            // Fallback to default dest_dir
+            None => path.replace(VERTIGO_PUBLIC_BUILD_PATH_PLACEHOLDER, "/build"),
         }
     }
 
     /// Convert relative route to public path (with mount point attached)
+    ///
+    /// The server passes the mount point in env during SSR as well as to the browser, so the
+    /// route is the same on both sides - also where it gets encoded, e.g. as the page to return
+    /// to after logging in (`/login?back=%2Fpanel%2F`).
     pub fn route_to_public(&self, path: impl Into<String>) -> String {
         let path = path.into();
-        if self.is_browser() {
-            // In the browser use env variable attached during SSR
-            let mount_point = self
-                .env("vertigo-mount-point")
-                .unwrap_or_else(|| "/".to_string());
-            if mount_point != "/" {
-                [mount_point, path].concat()
-            } else {
-                path
-            }
-        } else {
-            // On the server, prepend it with mount point token
-            [VERTIGO_MOUNT_POINT_PLACEHOLDER, &path].concat()
+        match self.env(VERTIGO_MOUNT_POINT_ENV) {
+            Some(mount_point) if mount_point != "/" => [mount_point, path].concat(),
+            Some(_) => path,
+            // A server that doesn't pass it replaces this placeholder in the finished HTML
+            None if !self.is_browser() => [VERTIGO_MOUNT_POINT_PLACEHOLDER, &path].concat(),
+            None => path,
         }
     }
 
@@ -333,7 +336,7 @@ impl Driver {
         if api_browser_command().is_browser() {
             // In the browser use env variable attached during SSR
             let mount_point = api_browser_command()
-                .get_env("vertigo-mount-point")
+                .get_env(VERTIGO_MOUNT_POINT_ENV)
                 .unwrap_or_else(|| "/".to_string());
             if mount_point != "/" {
                 path.trim_start_matches(&mount_point).to_string()
@@ -390,5 +393,36 @@ impl Driver {
     /// There shouldn't be need to use it manually. It's used by `main!` macro.
     pub fn register_bundle(&self, bundle: impl Into<String>) {
         get_css_manager().register_bundle(bundle.into())
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use crate::external_api::safe_wrappers::TEST_ENV;
+
+    fn set_env(name: &str, value: &str) {
+        TEST_ENV.with(|env| env.borrow_mut().insert(name.into(), value.into()));
+    }
+
+    #[test]
+    fn public_paths_are_built_from_env_during_ssr_too() {
+        let driver = get_driver();
+        let style = format!("{VERTIGO_PUBLIC_BUILD_PATH_PLACEHOLDER}/style.css");
+
+        // An older server passes neither, and replaces the placeholders in the finished HTML
+        assert_eq!(
+            driver.route_to_public("/users/"),
+            format!("{VERTIGO_MOUNT_POINT_PLACEHOLDER}/users/")
+        );
+        assert_eq!(driver.public_build_path(style.clone()), style);
+
+        set_env(VERTIGO_MOUNT_POINT_ENV, "/panel");
+        set_env(VERTIGO_PUBLIC_PATH_ENV, "/panel/build");
+        assert_eq!(driver.route_to_public("/users/"), "/panel/users/");
+        assert_eq!(driver.public_build_path(style), "/panel/build/style.css");
+
+        set_env(VERTIGO_MOUNT_POINT_ENV, "/");
+        assert_eq!(driver.route_to_public("/users/"), "/users/");
     }
 }
