@@ -9,7 +9,9 @@ type LocationTarget = 'Hash' | 'History';
 export class AppLocation {
     private readonly locations: Record<LocationTarget, LocationCommonType>;
 
-    constructor(getWasm: () => ModuleControllerType<ExportType>) {
+    /// `mountPoint` is where the server mounted the app (`vertigo-mount-point`): `/`, or a path
+    /// like `/panel` when the app is one of several on the site.
+    constructor(getWasm: () => ModuleControllerType<ExportType>, public readonly mountPoint: string) {
         this.locations = {
             Hash: new BrowserLocation(
                 getWasm,

@@ -38,6 +38,23 @@ pub mod safe_wrappers {
 
     pub fn safe_panic_message(_long_ptr: LongPtr) {}
 
+    #[cfg(test)]
+    thread_local! {
+        /// Env the tests pretend the server passed to the app (`Driver::env`).
+        pub static TEST_ENV: std::cell::RefCell<std::collections::HashMap<String, String>> =
+            Default::default();
+    }
+
+    #[cfg(test)]
+    fn env(name: &str) -> Option<String> {
+        TEST_ENV.with(|env| env.borrow().get(name).cloned())
+    }
+
+    #[cfg(not(test))]
+    fn env(_name: &str) -> Option<String> {
+        None
+    }
+
     pub fn safe_dom_access(long_ptr: LongPtr) -> LongPtr {
         let json = api_arguments().get_by_long_ptr(long_ptr);
 
@@ -69,8 +86,8 @@ pub mod safe_wrappers {
                         }
                         .to_json()
                     }
-                    CommandForBrowser::GetEnv { name: _ } => {
-                        browser_response::GetEnv { value: None }.to_json()
+                    CommandForBrowser::GetEnv { name } => {
+                        browser_response::GetEnv { value: env(&name) }.to_json()
                     }
                     CommandForBrowser::TimezoneOffset => {
                         browser_response::TimezoneOffset { value: 0 }.to_json()

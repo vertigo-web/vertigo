@@ -202,37 +202,66 @@ impl<T: PartialEq> LazyCache<T> {
             let api_response = transaction(|context| self_clone.value.get(context));
 
             if force || api_response.needs_update() {
-                if with_loading {
-                    self_clone.value.set(ApiResponse::new_loading());
-                }
-
-                let request = transaction(|context| {
-                    self_clone
-                        .request
-                        .as_ref()
-                        .clone()
-                        .to_request_context(context)
-                });
-
-                let result = api_fetch().fetch(request.clone()).await;
-                let new_value =
-                    RequestResponse::new(request, result).into(self_clone.map_response.as_ref());
-
-                let new_value = match new_value {
-                    Ok(value) => Resource::Ready(Rc::new(value)),
-                    Err(message) => Resource::Error(message),
-                };
-
-                let expiry = self_clone
-                    .request
-                    .get_ttl()
-                    .map(|ttl| get_driver().now().add_duration(ttl));
-
-                self_clone.value.set(ApiResponse::new(new_value, expiry));
+                self_clone.fetch(with_loading).await;
             }
 
             self_clone.queued.set(false);
         });
+    }
+
+    /// Fetch the value again now and wait until the new one is in the cache - unlike with
+    /// [`force_update`](LazyCache::force_update), whose caller can't tell when that happens.
+    /// The current value stays until then, without a loading state, and the response replaces
+    /// it - an error as well, as with `force_update`.
+    ///
+    /// For code that acts on what the new data renders, e.g. scrolls to the comment it brings:
+    ///
+    /// ```rust
+    /// use vertigo::{LazyCache, js};
+    ///
+    /// async fn show_new_comment(comments: LazyCache<Vec<String>>) {
+    ///     comments.refresh().await;
+    ///     js! { document.getElementById("new-comment").scrollIntoView() };
+    /// }
+    /// ```
+    pub async fn refresh(&self) {
+        // Held like in `update`, so that reading the cache meanwhile doesn't send a second
+        // request. An update already on its way keeps its own - both then fetch, and the
+        // later response stays.
+        let locked = !self.queued.get();
+        if locked {
+            self.queued.set(true);
+        }
+
+        self.fetch(false).await;
+
+        if locked {
+            self.queued.set(false);
+        }
+    }
+
+    async fn fetch(&self, with_loading: bool) {
+        if with_loading {
+            self.value.set(ApiResponse::new_loading());
+        }
+
+        let request =
+            transaction(|context| self.request.as_ref().clone().to_request_context(context));
+
+        let result = api_fetch().fetch(request.clone()).await;
+        let new_value = RequestResponse::new(request, result).into(self.map_response.as_ref());
+
+        let new_value = match new_value {
+            Ok(value) => Resource::Ready(Rc::new(value)),
+            Err(message) => Resource::Error(message),
+        };
+
+        let expiry = self
+            .request
+            .get_ttl()
+            .map(|ttl| get_driver().now().add_duration(ttl));
+
+        self.value.set(ApiResponse::new(new_value, expiry));
     }
 }
 
@@ -409,6 +438,39 @@ mod tests {
             let result = cache.get(context);
             assert_eq!(result, Resource::Loading);
         });
+    }
+
+    #[tokio::test]
+    async fn test_lazy_cache_refresh_waits_for_the_new_value() {
+        let calls = Rc::new(std::cell::Cell::new(0));
+        api_fetch().set_mock_handler({
+            let calls = calls.clone();
+            move |_request| {
+                calls.set(calls.get() + 1);
+                SsrFetchResponse::Ok {
+                    status: 200,
+                    response: SsrFetchResponseContent::Json(JsJson::String(format!(
+                        "response {}",
+                        calls.get()
+                    ))),
+                }
+            }
+        });
+
+        let cache = RequestBuilder::get("https://test.com/api")
+            .lazy_cache(|status, body| (status == 200).then(|| body.into::<String>()));
+        cache.optimistically_set("old".to_string());
+
+        for expected in ["response 1", "response 2"] {
+            cache.refresh().await;
+            transaction(|context| {
+                assert_eq!(
+                    cache.get(context),
+                    Resource::Ready(Rc::new(expected.to_string()))
+                );
+            });
+        }
+        assert_eq!(calls.get(), 2);
     }
 
     #[tokio::test]

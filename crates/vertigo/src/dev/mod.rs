@@ -15,7 +15,10 @@ pub use ssr_fetch_response::{
 
 pub use super::{
     driver_module::{
-        driver::{VERTIGO_MOUNT_POINT_PLACEHOLDER, VERTIGO_PUBLIC_BUILD_PATH_PLACEHOLDER},
+        driver::{
+            VERTIGO_MOUNT_POINT_ENV, VERTIGO_MOUNT_POINT_PLACEHOLDER,
+            VERTIGO_PUBLIC_BUILD_PATH_PLACEHOLDER, VERTIGO_PUBLIC_PATH_ENV,
+        },
         js_value::{JsJsonListDecoder, MemoryBlock, MemoryBlockRead, MemoryBlockWrite},
     },
     fast_hash::{FastBuildHasher, FastHasher},
