@@ -54,6 +54,23 @@ export default [
         ],
     },
     {
+        input: 'crates/vertigo/src/driver_module/src_js/api/command/dom/callbackManager.test.ts',
+        output: [
+            {
+                sourcemap: true,
+                file: 'build/callbackManager.test.js',
+                format: 'cjs',
+            }
+        ],
+        plugins: [
+            typescript({
+                sourceMap: true,
+                inlineSources: true,
+            }),
+            sourcemaps(),
+        ],
+    },
+    {
         input: 'crates/vertigo/src/driver_module/src_js/api/command/fetchExec.test.ts',
         output: [
             {

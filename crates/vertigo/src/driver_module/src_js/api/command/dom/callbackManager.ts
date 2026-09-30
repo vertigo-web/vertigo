@@ -26,9 +26,10 @@ const notifyPreventIfTrue: Handler = (event, send) => {
     }
 };
 
-const click: Handler = (event, send) => {
-    event.preventDefault();
-    let click_event = send(undefined);
+/// Wasm replies with the `ClickEvent` flags. The browser's default action - following a link,
+/// submitting a form, toggling a checkbox - goes ahead unless the handler asked to prevent it.
+export const click: Handler = (event, send) => {
+    const click_event = send(undefined);
 
     // Check if click_event is an object (JsJson Object type)
     if (click_event !== null && typeof click_event === 'object' && !Array.isArray(click_event)) {

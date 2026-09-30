@@ -19,6 +19,11 @@
 * A link with `rel="external"` is left to the browser. For an app mounted at `/` that shares
   the site with another one (say, `/panel/`), whose pages it can't render.
 
+### Changed
+
+* `on_click` no longer prevents the browser's default action on its own - a link opens, a form
+  is submitted, a checkbox is toggled - unless the callback calls `ClickEvent::prevent_default()`.
+
 ### Fixed
 
 * Fetch no longer loses the HTTP status when the response body isn't JSON. Bare `text/plain`
