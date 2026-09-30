@@ -2,7 +2,7 @@
 <!-- markdownlint-disable no-inline-html -->
 
 <!-- markdownlint-disable-next-line no-emphasis-as-heading -->
-*Up to date with version 0.13.1*
+*Up to date with version 0.13.2*
 
 <!-- markdownlint-disable-next-line heading-increment -->
 ### Table of contents
@@ -56,7 +56,7 @@ The most common thing you'll be doing is watching the project. This means build 
 - `vertigo watch`
 
 Vertigo uses a built-in web server which supports server-side rendering.
-This makes simple pages work even if the browser have JavScript turned off.
+This makes simple pages work even if the browser has JavaScript turned off.
 
 After seeing message `listening on: 127.0.0.1:4444` you can point your browser to `http://127.0.0.1:4444/` to see the "Hello frontend world" message. The page should update automatically when the code gets edited.
 
@@ -459,7 +459,7 @@ For **change** event, we are getting `new_value` as an argument to the closure. 
 
 ## 10. Computed value
 
-It is possible to have a value that is automatically computed. Let's show the amount of items in the list. First import `Computed` from `vertigo` and add to the `List` function just after creating `elements`:
+It is possible to have a value that is automatically computed. Let's show the amount of items in the list. Add to the `List` function just after creating `elements`:
 
 ```rust
     let count = items.map(|items| items.len());
@@ -568,7 +568,7 @@ For any more complex scenarios please refer to [examples](/examples) and [demo](
 
 [^simplification]: This is a shameful simplification but enough for a tutorial - the correct description will be able to be found in future, more robust documentation.
 
-[^clone]: Every `Value` and `Computed` wraps it's inner value in an `Rc` so cloning does not clone the content. It just creates another pointer - a handler to access the value.
+[^clone]: Every `Value` and `Computed` wraps its inner value in an `Rc` so cloning does not clone the content. It just creates another pointer - a handler to access the value.
 
 [^subscription]: `get()` method creates a subscription in dependency graph so the render function is now dependent on the value, and will be fired every time the value changes. This is similar to how the MobX library works in React world.
 

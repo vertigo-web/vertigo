@@ -1,54 +1,33 @@
 <!-- markdownlint-configure-file { "no-duplicate-heading": { "siblings_only": true } } -->
 
 <!-- markdownlint-disable-next-line first-line-h1 -->
-## Unreleased
+## 0.13.2 - 2026-10-01
 
 ### Added
 
-* SSR can fetch relative URLs (`/api/posts`), resolved against the origin set with
-  `MountConfigBuilder::ssr_fetch_base` or `--ssr-fetch-base` (`vertigo serve`/`watch` default
-  to their own address, so `--proxy` applies).
-* SSR forwards the browser's cookies to fetches to its own origin (relative URLs), as the
-  browser does with a same-origin `fetch` - so an API behind a session renders the page for the
-  logged-in user. `vertigo serve`/`watch` do it on their own; a server embedding SSR calls
-  `ServerState::request_with_cookie` with the `Cookie` header (`serve::request_cookie`).
-  Fetches to other origins never get the cookies.
-* `LazyCache::refresh()` fetches the value again and resolves once the new one is in the
-  cache, so the caller can act on what it renders - e.g. scroll to the comment it brings.
-  The current value stays until then, without a loading state.
-* A link with `rel="external"` is left to the browser. For an app mounted at `/` that shares
-  the site with another one (say, `/panel/`), whose pages it can't render.
+* SSR can fetch relative URLs (base set by `MountConfigBuilder::ssr_fetch_base`/`--ssr-fetch-base`).
+* SSR forwards the browser's cookies to same-origin fetches (`ServerState::request_with_cookie`).
+* `LazyCache::refresh()` - refetch without a loading state.
+* Links with `rel="external"` are left to the browser.
 
 ### Changed
 
-* `on_click` no longer prevents the browser's default action on its own - a link opens, a form
-  is submitted, a checkbox is toggled - unless the callback calls `ClickEvent::prevent_default()`.
+* `on_click` no longer prevents the default action unless `ClickEvent::prevent_default()` is
+  called.
 
 ### Fixed
 
-* Fetch no longer loses the HTTP status when the response body isn't JSON. Bare `text/plain`
-  (without `charset`) is now recognized as text too, and SSR treats an empty body as `null`.
-* A link to the app's own page with a fragment (`/post?edit=1#comment-5`) scrolled to the top
-  of the new page instead of to the element the fragment names. Also the page now starts at the
-  top and scrolls to the element once a render brings it, unless the reader has scrolled or left.
-* Links clicked with Ctrl, Cmd, Shift or Alt, with a button other than the main one, or having
-  a `target` other than `_self` or a `download` attribute, are left to the browser (new tab,
-  new window, download) instead of being opened in place.
-* `mailto:`, `tel:` and `javascript:` links did nothing when clicked. Links with an absolute URL
-  to the app's own origin now open in the app instead of reloading the page, and relative
-  links (`edit`, `?page=2`) hand the app the resolved path (`/post/edit`, `/post/5?page=2`).
-* An app mounted at a path (`--mount-point /panel`) no longer takes over links out of it
-  (`/`, `/other/`) - it has no page for them, so they are left to the browser.
-* `Driver::route_to_public` and `Driver::public_build_path` (so `include_static!` too) give the
-  same path during SSR as in the browser - the server passes the mount point and the public
-  path to the app in env (`vertigo-mount-point`, `vertigo-public-path`). SSR used to write
-  placeholders replaced only in the finished HTML, so a route encoded into a query string
-  (`/login?back=%2Fpanel%2F`) came out broken.
-* SSR HTML no longer puts a line break before the text of an element (`<a>\nLink</a>`) or
-  inside an empty one, and no longer loses the one a `<pre>` or a `<textarea>` starts with -
-  the text, and the value of a `<textarea>`, are exactly what the app rendered.
-* An element with `autofocus` removed by another render before it got the focus no longer
-  throws `Item id not found`.
+* Fetch keeps the HTTP status for non-JSON bodies; bare `text/plain` is recognized as text.
+* Links with a fragment scroll to the element instead of to the top.
+* Modified clicks (Ctrl/Cmd/Shift/Alt, non-main button), `target` and `download` links are left
+  to the browser.
+* `mailto:`, `tel:` and `javascript:` links work; same-origin absolute and relative links are
+  routed in the app.
+* An app with a mount point no longer takes over links outside of it.
+* `Driver::route_to_public` and `Driver::public_build_path` give the same path in SSR as in the
+  browser.
+* SSR HTML preserves text whitespace exactly (incl. `<pre>` and `<textarea>`).
+* `Item id not found` when an `autofocus` element was removed before getting focus.
 
 ## 0.13.1 - 2026-09-21
 
