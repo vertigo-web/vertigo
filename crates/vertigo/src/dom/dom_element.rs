@@ -392,6 +392,8 @@ impl DomElement {
         })
     }
 
+    /// The browser's default action still happens unless the callback calls
+    /// [`ClickEvent::prevent_default`].
     pub fn on_click(self, on_click: impl Into<Callback1<ClickEvent, ()>>) -> Self {
         self.on_click_rc(Rc::new(on_click.into()))
     }
