@@ -32,25 +32,33 @@ class MockMouseEvent {
 }
 
 class MockTarget {
-    scrolledTo = false;
-    scrollIntoView() { this.scrolledTo = true; }
+    scrolledTo = 0;
+    /// Upper case for an HTML element, as `tagName` is in the browser.
+    constructor(public tagName = 'DIV') { }
+    scrollIntoView() { this.scrolledTo += 1; }
 }
 
-/// Elements of the page, by id.
+/// Elements of the page, by id and by `name`.
 const elements: Map<string, MockTarget> = new Map();
+const named: Map<string, Array<MockTarget>> = new Map();
 let scrolledToTop = false;
 
 (globalThis as any).document = {
     baseURI: 'https://app.test/post/5',
     getElementById: (id: string) => elements.get(id) ?? null,
+    getElementsByName: (name: string) => named.get(name) ?? [],
 };
 (globalThis as any).window = {
     location: new URL('https://app.test/post/5'),
-    scrollTo: () => { scrolledToTop = true; },
+    scrollY: 0,
+    scrollTo: () => {
+        scrolledToTop = true;
+        (globalThis as any).window.scrollY = 0;
+    },
 };
 (globalThis as any).MouseEvent = MockMouseEvent;
 
-import { hydrateLink } from "./injects";
+import { hydrateLink, scrollToPendingFragment } from "./injects";
 
 // --- TEST RUNNER ---
 function assert(condition: boolean, message: string) {
@@ -72,7 +80,11 @@ function openPage(address: string) {
 /// the app is told the new address - the moment it renders the new page.
 function click(attributes: Record<string, string>, event: Partial<MouseEvent> = {}, render = () => { }, mountPoint = '/') {
     elements.clear();
+    named.clear();
     scrolledToTop = false;
+    // the link is on the page opened with `openPage`, scrolled somewhere down
+    (globalThis as any).window.location = new URL((globalThis as any).document.baseURI);
+    (globalThis as any).window.scrollY = 700;
 
     const link = new MockLink(attributes);
     const pushed: Array<string> = [];
@@ -80,6 +92,8 @@ function click(attributes: Record<string, string>, event: Partial<MouseEvent> = 
         mountPoint,
         set: (_target: string, _mode: string, href: string) => {
             pushed.push(href);
+            // what `pushState` does to the address bar
+            (globalThis as any).window.location = new URL(href, (globalThis as any).document.baseURI);
             render();
         },
     } as any;
@@ -109,7 +123,7 @@ function testFragmentOfTheNewPage() {
     // The element only appears when the app renders the new page
     click({ href: '/post?edit=5#comment-5' }, {}, () => elements.set('comment-5', comment));
 
-    assert(comment.scrolledTo, "scrolled to the element named in the fragment");
+    assert(comment.scrolledTo === 1, "scrolled to the element named in the fragment");
     assert(!scrolledToTop, "not to the top");
 }
 
@@ -126,7 +140,7 @@ function testEncodedFragment() {
     console.log("\n--- Test links 4: percent-encoded fragment ---");
     const heading = new MockTarget();
     click({ href: '/post#za%C5%BC%C3%B3%C5%82%C4%87' }, {}, () => elements.set('zażółć', heading));
-    assert(heading.scrolledTo, "found by the decoded id");
+    assert(heading.scrolledTo === 1, "found by the decoded id");
 
     click({ href: '/post#%E0' });
     assert(scrolledToTop, "a malformed escape doesn't throw and falls back to the top");
@@ -221,6 +235,125 @@ function testMountPoint() {
     openPage('https://app.test/post/5');
 }
 
+function testNamedAnchor() {
+    console.log("\n--- Test links 11: an old-style anchor, <a name> ---");
+    const anchor = new MockTarget('A');
+    click({ href: '/support/#4b' }, {}, () => named.set('4b', [new MockTarget('INPUT'), anchor]));
+    assert(anchor.scrolledTo === 1, "found by the name of an <a>, not of another element");
+
+    const byId = new MockTarget();
+    const byName = new MockTarget('A');
+    click({ href: '/support/#paypal' }, {}, () => {
+        elements.set('paypal', byId);
+        named.set('paypal', [byName]);
+    });
+    assert(byId.scrolledTo === 1 && byName.scrolledTo === 0, "the id comes first, as in the browser");
+
+    const svgLink = new MockTarget('a');
+    click({ href: '/support/#logo' }, {}, () => named.set('logo', [svgLink]));
+    assert(svgLink.scrolledTo === 0 && scrolledToTop, "an SVG <a> doesn't count");
+}
+
+function testFragmentOfDataArrivingLater() {
+    console.log("\n--- Test links 12: the element comes with the page's data, after the click ---");
+    const comments = new MockTarget();
+    click({ href: '/post/7#comments' });
+    assert(scrolledToTop && comments.scrolledTo === 0, "the new page starts at the top");
+
+    scrollToPendingFragment();
+    assert(comments.scrolledTo === 0, "a render without the element leaves the page where it is");
+
+    elements.set('comments', comments);
+    scrollToPendingFragment();
+    assert(comments.scrolledTo === 1, "the render that brings the element scrolls to it");
+
+    scrollToPendingFragment();
+    assert(comments.scrolledTo === 1, "and only that one - later renders don't scroll again");
+
+    const anchor = new MockTarget('A');
+    click({ href: '/support/#4b' });
+    named.set('4b', [anchor]);
+    scrollToPendingFragment();
+    assert(anchor.scrolledTo === 1, "an <a name> arriving later counts too");
+}
+
+function testPendingFragmentGivesUp() {
+    console.log("\n--- Test links 13: waiting for the element ends ---");
+    const later = new MockTarget();
+
+    click({ href: '/post/7#comments' });
+    (globalThis as any).window.scrollY = 250;
+    elements.set('comments', later);
+    scrollToPendingFragment();
+    assert(later.scrolledTo === 0, "when the reader has scrolled in the meantime");
+
+    click({ href: '/post/7#comments' });
+    (globalThis as any).window.location = new URL('https://app.test/other');
+    elements.set('comments', later);
+    scrollToPendingFragment();
+    assert(later.scrolledTo === 0, "when the reader has left the address");
+
+    const now = Date.now;
+    try {
+        click({ href: '/post/7#comments' });
+        const clickedAt = now();
+        Date.now = () => clickedAt + 10_001;
+        elements.set('comments', later);
+        scrollToPendingFragment();
+        assert(later.scrolledTo === 0, "after 10 seconds");
+    } finally {
+        Date.now = now;
+    }
+
+    click({ href: '/post/7#comments' });
+    const other = new MockTarget();
+    click({ href: '/post/8#other' }, {}, () => elements.set('other', other));
+    elements.set('comments', later);
+    scrollToPendingFragment();
+    assert(other.scrolledTo === 1 && later.scrolledTo === 0, "when another link has been followed");
+}
+
+function testTopFragment() {
+    console.log("\n--- Test links 14: #top ---");
+    const top = new MockTarget();
+    click({ href: '/post#top' });
+    assert(scrolledToTop, "without an element named so, the top of the page");
+    elements.set('top', top);
+    scrollToPendingFragment();
+    assert(top.scrolledTo === 0, "and nothing to wait for");
+
+    click({ href: '/post#top' }, {}, () => elements.set('top', top));
+    assert(top.scrolledTo === 1, "an element named so comes first");
+}
+
+function testSmoothScrollToTheTop() {
+    console.log("\n--- Test links 15: scroll-behavior: smooth ---");
+    // The way to the top takes a few frames, and renders come in between
+    const jump = (globalThis as any).window.scrollTo;
+    (globalThis as any).window.scrollTo = () => { scrolledToTop = true; };
+    try {
+        const comments = new MockTarget();
+        click({ href: '/post/7#comments' });
+        (globalThis as any).window.scrollY = 400;
+        scrollToPendingFragment();
+        (globalThis as any).window.scrollY = 0;
+        elements.set('comments', comments);
+        scrollToPendingFragment();
+        assert(comments.scrolledTo === 1, "the fragment waits while the page is on its way to the top");
+
+        const later = new MockTarget();
+        click({ href: '/post/7#comments' });
+        (globalThis as any).window.scrollY = 0;
+        scrollToPendingFragment();
+        (globalThis as any).window.scrollY = 150;
+        elements.set('comments', later);
+        scrollToPendingFragment();
+        assert(later.scrolledTo === 0, "but not once the reader scrolls down from there");
+    } finally {
+        (globalThis as any).window.scrollTo = jump;
+    }
+}
+
 testPlainLinkGoesToTop();
 testFragmentOfTheNewPage();
 testFragmentWithoutElement();
@@ -231,3 +364,8 @@ testOtherLinksAreLeftToTheBrowser();
 testAddressesResolvedLikeTheBrowser();
 testRelExternal();
 testMountPoint();
+testNamedAnchor();
+testFragmentOfDataArrivingLater();
+testPendingFragmentGivesUp();
+testTopFragment();
+testSmoothScrollToTheTop();
