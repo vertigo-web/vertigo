@@ -24,13 +24,14 @@
 * Fetch no longer loses the HTTP status when the response body isn't JSON. Bare `text/plain`
   (without `charset`) is now recognized as text too, and SSR treats an empty body as `null`.
 * A link to the app's own page with a fragment (`/post?edit=1#comment-5`) scrolled to the top
-  of the new page instead of to the element the fragment names.
+  of the new page instead of to the element the fragment names. Also the page now starts at the
+  top and scrolls to the element once a render brings it, unless the reader has scrolled or left.
 * Links clicked with Ctrl, Cmd, Shift or Alt, with a button other than the main one, or having
   a `target` other than `_self` or a `download` attribute, are left to the browser (new tab,
   new window, download) instead of being opened in place.
-* `mailto:`, `tel:` and `javascript:` links did nothing when clicked. Links with an absolute URL to the app's own origin now open in the
-  app instead of reloading the page, and relative links (`edit`, `?page=2`) hand the app the
-  resolved path (`/post/edit`, `/post/5?page=2`).
+* `mailto:`, `tel:` and `javascript:` links did nothing when clicked. Links with an absolute URL
+  to the app's own origin now open in the app instead of reloading the page, and relative
+  links (`edit`, `?page=2`) hand the app the resolved path (`/post/edit`, `/post/5?page=2`).
 * An app mounted at a path (`--mount-point /panel`) no longer takes over links out of it
   (`/`, `/other/`) - it has no page for them, so they are left to the browser.
 * `Driver::route_to_public` and `Driver::public_build_path` (so `include_static!` too) give the

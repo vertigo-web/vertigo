@@ -33,7 +33,8 @@ export function hydrateLink(node: Element, appLocation: AppLocation) {
         e.preventDefault();
         appLocation.set('History', 'Push', path);
         // The app renders the new page before `set` returns. Only a part still waiting for its
-        // data isn't there yet - a fragment pointing into it ends up at the top.
+        // data isn't there yet - a fragment pointing into it waits for it (see
+        // [`scrollToPendingFragment`]).
         scrollToFragment(path);
     })
 }
@@ -81,20 +82,68 @@ function opensInPlace(node: Element): boolean {
     return target === null || target === '' || target === '_self';
 }
 
-/// Like the browser, tries the fragment as written first and percent-decoded second
-/// (`#za%C5%BC%C3%B3%C5%82%C4%87` finds `id="zażółć"`).
-function scrollToFragment(href: string) {
-    const hash = href.indexOf('#');
-    const fragment = hash === -1 ? '' : href.slice(hash + 1);
-    const target = fragment === ''
-        ? null
-        : document.getElementById(fragment) ?? document.getElementById(decodeFragment(fragment));
+/// How long a followed link's fragment waits for its element to arrive with the page's data.
+const FRAGMENT_WAIT_MS = 10_000;
 
-    if (target === null) {
-        window.scrollTo(0, 0);
-    } else {
+/// A fragment followed before the new page had its element (f. ex. for `/post#comments`) - see [`scrollToPendingFragment`].
+let pending: { path: string, fragment: string, until: number, scrollY: number } | null = null;
+
+/// Where a followed link lands: on the element its fragment names, otherwise at the top - where
+/// the page also waits for an element that hasn't arrived yet.
+function scrollToFragment(path: string) {
+    const hash = path.indexOf('#');
+    const fragment = hash === -1 ? '' : path.slice(hash + 1);
+    const target = fragmentTarget(fragment);
+
+    pending = null;
+    if (target !== null) {
+        target.scrollIntoView();
+        return;
+    }
+
+    window.scrollTo(0, 0);
+    // `#top` with nothing named so means the top of the page, as in the browser
+    if (fragment !== '' && decodeFragment(fragment).toLowerCase() !== 'top') {
+        pending = { path, fragment, until: Date.now() + FRAGMENT_WAIT_MS, scrollY: window.scrollY };
+    }
+}
+
+/// Run after every render. Scrolls to the element a followed link's fragment names once it is
+/// on the page - unless the reader has scrolled or left the address in the meantime, or it took
+/// longer than [`FRAGMENT_WAIT_MS`].
+export function scrollToPendingFragment() {
+    if (pending === null) {
+        return;
+    }
+
+    // The way to the top only goes up, even when the page scrolls smoothly
+    // (`scroll-behavior: smooth`) - so the page lower than it has been means the reader scrolled.
+    const here = window.location.pathname + window.location.search + window.location.hash;
+    if (here !== pending.path || window.scrollY > pending.scrollY || Date.now() > pending.until) {
+        pending = null;
+        return;
+    }
+    pending.scrollY = window.scrollY;
+
+    const target = fragmentTarget(pending.fragment);
+    if (target !== null) {
+        pending = null;
         target.scrollIntoView();
     }
+}
+
+/// The element a fragment names, the way the browser finds it.
+function fragmentTarget(fragment: string): Element | null {
+    return fragment === ''
+        ? null
+        : namedElement(fragment) ?? namedElement(decodeFragment(fragment));
+}
+
+/// The element with this `id`, otherwise the first `<a>` with this `name`.
+function namedElement(name: string): Element | null {
+    return document.getElementById(name)
+        ?? Array.from(document.getElementsByName(name)).find((element) => element.tagName === 'A')
+        ?? null;
 }
 
 function decodeFragment(fragment: string): string {

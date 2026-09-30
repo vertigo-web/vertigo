@@ -2,7 +2,7 @@ import { AppLocation } from "../../location/AppLocation";
 import { CallbackManager } from "./callbackManager";
 import { ExportType } from "../../../wasm_module";
 import { hydrate } from "./hydration";
-import { hydrateLink } from "./injects";
+import { hydrateLink, scrollToPendingFragment } from "./injects";
 import { CommandCursor, Tag, decodeCommands, readNames } from "./dom_wire";
 import { MapNodes } from "./map_nodes";
 import { ModuleControllerType } from "../../../wasm_init";
@@ -263,6 +263,9 @@ export class DriverDom {
 
         // Make sure that the client-side generated styles are always the last element of the head
         this.nodes.addStyles();
+
+        // A link followed a moment ago may point at an element that has only now arrived
+        scrollToPendingFragment();
     }
 
     private createNode(id: number, name: string, isAnchor: boolean) {
