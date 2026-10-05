@@ -1,6 +1,14 @@
 <!-- markdownlint-configure-file { "no-duplicate-heading": { "siblings_only": true } } -->
 
 <!-- markdownlint-disable-next-line first-line-h1 -->
+## Unreleased
+
+### Fixed
+
+* Hydration of an empty text (e.g. `{label}` with `label == ""`) was counted as not matched,
+  and when an element and a text followed it, hydration claimed that text for it and removed
+  the element in between.
+
 ## 0.13.2 - 2026-10-01
 
 ### Added

@@ -22,8 +22,9 @@ export interface HydrationReport {
     matched: number;
     /// Vnodes hydration set out to match: the elements and texts under `<head>`/`<body>`.
     hydratable: number;
-    /// Marker comments (`render_value` / `render_list` anchors). The server strips comments
-    /// from its output, so these have nothing to match and are not counted against the score.
+    /// Marker comments (`render_value` / `render_list` anchors) and empty texts. The server
+    /// strips comments from its output and an empty text leaves no trace in HTML, so these have
+    /// nothing to match and are not counted against the score.
     skipped: number;
     /// Every distinct id the batch mentioned, matchable or not.
     total: number;
@@ -33,6 +34,9 @@ export const hydrate = (commands: Array<CommandType>, nodes: MapNodes, appLocati
     const engine = new HydrationEngine(commands, nodes, appLocation);
     return engine.hydrate();
 };
+
+const isNonEmptyText = (vNode: VirtualNode): boolean =>
+    vNode.value !== undefined && vNode.value !== "";
 
 class HydrationEngine {
     private nodes: MapNodes;
@@ -122,13 +126,14 @@ class HydrationEngine {
 
             // The roots are where the walk starts, not candidates to match.
             if (!isRoot) {
-                if (vNode !== undefined && (vNode.name !== undefined || vNode.value !== undefined)) {
+                if (vNode !== undefined && (vNode.name !== undefined || isNonEmptyText(vNode))) {
                     hydratable++;
                 } else {
                     // A marker comment: `InsertBefore` records the child id on its parent, but
                     // only `CreateNode` / `CreateText` give a vnode something to match on, and
-                    // the server strips comments from its output anyway. `hydrateNode` skips
-                    // these, so they must not count against the score either.
+                    // the server strips comments from its output anyway. Or an empty text,
+                    // which the server's HTML has no way to carry. `hydrateNode` skips both,
+                    // so they must not count against the score either.
                     skipped++;
                 }
             }
@@ -164,6 +169,13 @@ class HydrationEngine {
         for (const childVId of vNode.children) {
             const childVNode = this.virtualNodes.get(childVId);
             if (!childVNode) continue;
+
+            // An empty text (`{label}` with `label == ""`) is not in the server's HTML at all.
+            // Looking for it would claim - and empty - the next text node instead, deleting
+            // every element on the way. Left unclaimed, it is created by the command replay,
+            // like a marker comment. It does not end a group of texts either: the server
+            // merged the texts around it into one node.
+            if (childVNode.value === "") continue;
 
             // If we are in group of text vnodes, skip them until we find a non-text vnode.
             if (skipTextVNodes && childVNode.value !== undefined) {
