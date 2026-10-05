@@ -416,6 +416,129 @@ function testStaleAttributeRemoved() {
     );
 }
 
+/// Runs `hydrate`, collecting what it logged with `console.error`.
+function hydrateCollectingErrors(commands: CommandType[], mapNodes: MapNodes) {
+    const errors: string[] = [];
+    const original = console.error;
+    console.error = (...args: any[]) => { errors.push(String(args[0])); };
+
+    try {
+        const report = hydrate(commands, mapNodes, mockedApiLocation());
+        return { report, errors };
+    } finally {
+        console.error = original;
+    }
+}
+
+// 11. An empty text has nothing to match
+function testEmptyTextIsNotCountedAgainstTheScore() {
+    console.log("\n--- Test hydration 11: Empty text ---");
+    clearBody();
+
+    // `<a><span>{label}</span><span>" >"</span></a>` with `label == ""`: the server writes
+    // `<span></span>`, as there is no way to write an empty text node in HTML.
+    const anchor = new MockElement('A');
+    const label = new MockElement('SPAN');
+    const symbol = new MockElement('SPAN');
+    const symbolText = new MockText(" >");
+    symbol.appendChild(symbolText);
+    anchor.appendChild(label);
+    anchor.appendChild(symbol);
+    documentMock.body.appendChild(anchor);
+
+    const commands: CommandType[] = [
+        { CreateNode: { id: 110, name: 'a' } },
+        { CreateNode: { id: 111, name: 'span' } },
+        { CreateText: { id: 112, value: "" } },
+        { CreateNode: { id: 113, name: 'span' } },
+        { CreateText: { id: 114, value: " >" } },
+        { InsertBefore: { parent: 3, child: 110, ref_id: null } },
+        { InsertBefore: { parent: 110, child: 111, ref_id: null } },
+        { InsertBefore: { parent: 111, child: 112, ref_id: null } },
+        { InsertBefore: { parent: 110, child: 113, ref_id: null } },
+        { InsertBefore: { parent: 113, child: 114, ref_id: null } },
+    ];
+
+    const mapNodes = new MapNodes();
+    const { report, errors } = hydrateCollectingErrors(commands, mapNodes);
+
+    assert(mapNodes.getAnyOption(111) as any === label, "the empty <span> was claimed");
+    assert(mapNodes.getAnyOption(114) as any === symbolText, "the text after it was claimed");
+    assert(mapNodes.getAnyOption(112) === undefined, "the empty text is left to the replay");
+    assert(report.skipped === 1, "the empty text is counted as skipped");
+    assert(report.matched === report.hydratable, "a batch with an empty text scores 100%");
+    assert(errors.length === 0, "nothing was reported as a mismatch");
+}
+
+// 12. An empty text does not take over the text after its siblings
+function testEmptyTextDoesNotEatItsSiblings() {
+    console.log("\n--- Test hydration 12: Empty text before an element ---");
+    clearBody();
+
+    // `<div>{""}<b>"bold"</b>"tail"</div>` - the server wrote `<div><b>bold</b>tail</div>`.
+    const div = new MockElement('DIV');
+    const bold = new MockElement('B');
+    bold.appendChild(new MockText("bold"));
+    const tail = new MockText("tail");
+    div.appendChild(bold);
+    div.appendChild(tail);
+    documentMock.body.appendChild(div);
+
+    const commands: CommandType[] = [
+        { CreateNode: { id: 120, name: 'div' } },
+        { CreateText: { id: 121, value: "" } },
+        { CreateNode: { id: 122, name: 'b' } },
+        { CreateText: { id: 123, value: "bold" } },
+        { CreateText: { id: 124, value: "tail" } },
+        { InsertBefore: { parent: 3, child: 120, ref_id: null } },
+        { InsertBefore: { parent: 120, child: 121, ref_id: null } },
+        { InsertBefore: { parent: 120, child: 122, ref_id: null } },
+        { InsertBefore: { parent: 122, child: 123, ref_id: null } },
+        { InsertBefore: { parent: 120, child: 124, ref_id: null } },
+    ];
+
+    const mapNodes = new MapNodes();
+    const { report, errors } = hydrateCollectingErrors(commands, mapNodes);
+
+    assert(mapNodes.getAnyOption(122) as any === bold, "the <b> was claimed, not deleted");
+    assert(mapNodes.getAnyOption(124) as any === tail, "\"tail\" was claimed by its own vnode");
+    assert(tail.textContent === "tail", "...and kept its text");
+    assert(div.childNodes.length === 2, "both server nodes survived");
+    assert(report.matched === report.hydratable, "every non-empty vnode matched");
+    assert(errors.length === 0, "nothing was reported as a mismatch");
+}
+
+// 13. An empty text inside texts the server merged
+function testEmptyTextInsideMergedTexts() {
+    console.log("\n--- Test hydration 13: Empty text between texts ---");
+    clearBody();
+
+    // `<p>"abc"{""}"def"</p>` - the server merged the texts into one node.
+    const paragraph = new MockElement('P');
+    const merged = new MockText("abcdef");
+    paragraph.appendChild(merged);
+    documentMock.body.appendChild(paragraph);
+
+    const commands: CommandType[] = [
+        { CreateNode: { id: 130, name: 'p' } },
+        { CreateText: { id: 131, value: "abc" } },
+        { CreateText: { id: 132, value: "" } },
+        { CreateText: { id: 133, value: "def" } },
+        { InsertBefore: { parent: 3, child: 130, ref_id: null } },
+        { InsertBefore: { parent: 130, child: 131, ref_id: null } },
+        { InsertBefore: { parent: 130, child: 132, ref_id: null } },
+        { InsertBefore: { parent: 130, child: 133, ref_id: null } },
+    ];
+
+    const mapNodes = new MapNodes();
+    const { report, errors } = hydrateCollectingErrors(commands, mapNodes);
+
+    assert(mapNodes.getAnyOption(131) as any === merged, "the merged text went to the first vnode");
+    assert(report.skipped === 1, "only the empty text is skipped");
+    assert(report.matched === report.hydratable, "the empty text did not break up the group");
+    assert(errors.length === 0, "nothing was reported as a mismatch");
+}
+
 // Run all tests
 testExtraNodes();
 testTextMismatch();
@@ -427,3 +550,6 @@ testMarkersAreNotCountedAgainstTheScore();
 testCreateThenRemoveInOneBatch();
 testUpdateTextWins();
 testStaleAttributeRemoved();
+testEmptyTextIsNotCountedAgainstTheScore();
+testEmptyTextDoesNotEatItsSiblings();
+testEmptyTextInsideMergedTexts();
