@@ -121,9 +121,9 @@ struct Counters {
     wasm_calls: u32,
 }
 
-/// Distinct from `./build`, `./build-reactive-bench`, `./build-dom-bench` and
-/// `./build-demo`, and from each other: `build::run` wipes its dest dir on entry, so a
-/// shared one would let two suites delete each other's artifacts.
+/// Distinct from `./build-reactive-bench`, `./build-dom-bench`, `./build-hydration-bench` and
+/// `./build-hydration-demo`, and from each other: `build::run` wipes its dest dir on entry, so
+/// a shared one would let two suites delete each other's artifacts.
 const SSR_DEST_DIR: &str = "./build-ssr-bench";
 const DEMO_DEST_DIR: &str = "./build-ssr-demo";
 
