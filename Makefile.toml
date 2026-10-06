@@ -26,8 +26,8 @@ script = [
     "cargo test --package fantoccini-tests --test dom_bench -- --ignored --nocapture"
 ]
 
-# NOTE: WebDriver on localhost:9515 needs to be running
-[tasks.automated-tests]
+# The harness starts chromedriver itself; E2E_WEBDRIVER=http://localhost:9515 uses a running one
+[tasks.e2e-tests]
 script = [
     "cargo test --package fantoccini-tests --test basic --test demo -- --ignored"
 ]
@@ -43,7 +43,7 @@ script = [
 ]
 
 [tasks.all-tests]
-dependencies = ["unit-tests", "automated-tests"]
+dependencies = ["unit-tests", "e2e-tests"]
 
 [tasks.clean-build]
 dependencies = ["clean"]

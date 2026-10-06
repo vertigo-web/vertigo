@@ -6,50 +6,17 @@
 //! handler is entirely invisible to element assertions - the app just quietly stops
 //! responding, and only a later assertion notices, if one happens to cover that path.
 //!
-//! So: record everything the console complains about, and require the tally to be empty.
+//! So: read what the console complained about, and require it to be nothing.
+//!
+//! Read from the browser's own log rather than from a recorder put into the page. The log
+//! covers the page from its first byte, so a boot-time failure is caught for certain, and a
+//! page load does not throw it away - nothing has to be put back after a `goto`. It also holds
+//! what a recorder never sees, such as failed requests, which is why some of [`ALLOWED`] is
+//! about those.
 
-use fantoccini::Client;
-use fantoccini_tests::{Ctx, TestResult};
-use serde_json::Value;
+use vertigo_testing::prelude::*;
 
-/// Installs the recorder. Anything the page reports from here on is collected into
-/// `window.__vertigoErrors`.
-///
-/// **Known gap:** this runs after `goto` resolves, which is after the document has loaded but
-/// possibly before the wasm has finished booting - so it usually, but not certainly, catches a
-/// boot-time failure. The landmark assertions cover that case from the other side: a demo that
-/// failed to boot renders nothing to find.
-pub async fn install(client: &Client) -> TestResult {
-    client
-        .execute(
-            r#"
-            window.__vertigoErrors = [];
-            const record = (kind, text) => window.__vertigoErrors.push(kind + ': ' + text);
-
-            const original = console.error.bind(console);
-            console.error = (...args) => {
-                record('console.error', args.map((a) => {
-                    try { return typeof a === 'string' ? a : JSON.stringify(a); }
-                    catch (_) { return String(a); }
-                }).join(' '));
-                original(...args);
-            };
-
-            window.addEventListener('error', (event) => {
-                record('window.onerror', String(event.message));
-            });
-
-            window.addEventListener('unhandledrejection', (event) => {
-                record('unhandledrejection', String(event.reason));
-            });
-            "#,
-            vec![],
-        )
-        .await
-        .ctx("installing the console recorder failed")?;
-
-    Ok(())
-}
+use crate::Ctx;
 
 /// Patterns that are the environment misbehaving rather than the app.
 ///
@@ -69,6 +36,12 @@ const ALLOWED: &[(&str, &str)] = &[
     (
         "scrollMaxY",
         "the button is labelled Firefox-only in the demo",
+    ),
+    // A page without an icon link - the plain-text robots.txt - makes Chrome ask for
+    // `/favicon.ico`, which the demo does not have. The request is the browser's, not the app's.
+    (
+        "/favicon.ico - Failed to load resource",
+        "Chrome looks for an icon the plain-text robots.txt cannot name",
     ),
 ];
 
@@ -94,41 +67,43 @@ fn matches(patterns: &[(&str, &str)], message: &str) -> bool {
         .any(|(pattern, _)| message.contains(pattern))
 }
 
-fn is_allowed(message: &str) -> bool {
-    matches(ALLOWED, message) || matches(KNOWN_ISSUES, message)
+/// Lets the harness's own check, after the last step, apply the same allowlist.
+pub fn allow_in_harness(ctx: &Ctx) {
+    for (pattern, _) in ALLOWED.iter().chain(KNOWN_ISSUES) {
+        ctx.allow_console(pattern);
+    }
 }
 
-/// Drain the tally and fail on anything left after the allowlist.
+/// Drain the log and fail on any error left after the allowlist.
 ///
 /// Drained rather than merely read, and called after every tab rather than once at the end, so
-/// that a message names the tab that produced it. A single check at the end would say only
-/// that something, somewhere, went wrong.
-pub async fn assert_clean(client: &Client, stage: &str) -> TestResult {
-    let recorded = client
-        .execute(
-            "const found = window.__vertigoErrors || []; window.__vertigoErrors = []; return found;",
-            vec![],
-        )
-        .await
-        .ctx("reading the console recorder failed")?;
+/// that a message names the tab that produced it.
+pub async fn assert_clean(ctx: &Ctx, stage: &str) -> Result<()> {
+    assert_clean_except(ctx, stage, &[]).await
+}
 
-    let Value::Array(entries) = recorded else {
-        panic!("the console recorder returned {recorded:?} rather than an array");
-    };
+/// [`assert_clean`] for a stage which provokes some errors on purpose: messages containing one
+/// of `expected` are its own doing.
+pub async fn assert_clean_except(ctx: &Ctx, stage: &str, expected: &[&str]) -> Result<()> {
+    // Chrome hands each entry out once, so this reads what came since the previous stage
+    let logs = ctx
+        .driver
+        .browser_log()
+        .await
+        .context("reading the browser log failed")?;
 
     let mut unexpected = Vec::new();
     let mut ignored = Vec::new();
     let mut known = Vec::new();
 
-    for entry in entries {
-        let message = match entry {
-            Value::String(message) => message,
-            other => other.to_string(),
-        };
+    for entry in logs.into_iter().filter(|entry| entry.level == "SEVERE") {
+        let message = entry.message;
 
         if matches(KNOWN_ISSUES, &message) {
             known.push(message);
-        } else if is_allowed(&message) {
+        } else if matches(ALLOWED, &message)
+            || expected.iter().any(|pattern| message.contains(pattern))
+        {
             ignored.push(message);
         } else {
             unexpected.push(message);
@@ -154,7 +129,7 @@ pub async fn assert_clean(client: &Client, stage: &str) -> TestResult {
         }
     }
 
-    assert!(
+    ensure!(
         unexpected.is_empty(),
         "the browser console reported {} problem(s) during {stage}:\n{}",
         unexpected.len(),

@@ -24,10 +24,14 @@ vertigo-test-ssr-bench = { path = "ssr-bench" }
 vertigo-test-hydration-bench = { path = "hydration-bench" }
 serde_json = "1"
 tokio = { version = "1", features = ["macros", "net", "rt-multi-thread", "time"] }
+# The thirtyfour harness the `basic` and `demo` suites run on. The benchmark suites are still
+# on fantoccini.
+vertigo-testing = { path = "../crates/vertigo-testing" }
 
 [[test]]
 name = "basic"
 path = "basic/tests.rs"
+harness = false
 
 [[test]]
 name = "reactive_bench"
@@ -48,6 +52,7 @@ path = "hydration-bench/tests.rs"
 [[test]]
 name = "demo"
 path = "demo/tests.rs"
+harness = false
 
 [lints]
 workspace = true

@@ -152,7 +152,7 @@ const DEMO_DEST_DIR: &str = "./build-hydration-demo";
 const BENCH_PACKAGE: &str = "vertigo-test-hydration-bench";
 const DEMO_PACKAGE: &str = "vertigo-demo";
 
-/// 5555-5559 are taken by `basic`, `reactive_bench`, `dom_bench`, `demo` and the demo API.
+/// 5556 and 5557 are taken by `reactive_bench` and `dom_bench`.
 ///
 /// Three servers rather than one, because `disable_hydration` is a per-`MountConfig` flag
 /// and `ServerState`'s global registry is keyed by mount point - so each combination needs

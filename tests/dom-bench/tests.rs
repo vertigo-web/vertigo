@@ -25,8 +25,7 @@ use vertigo_bench_report::{
 };
 use vertigo_cli::{BuildOpts, CommonOpts, ServeOpts, build, serve};
 
-/// Distinct from `basic` (5555) and `reactive_bench` (5556): cargo may run the test binaries
-/// concurrently.
+/// Distinct from `reactive_bench` (5556): cargo may run the test binaries concurrently.
 const PORT: u16 = 5557;
 /// Distinct for the same reason, and because `build::run` wipes its dest dir on entry.
 const DEST_DIR: &str = "./build-dom-bench";

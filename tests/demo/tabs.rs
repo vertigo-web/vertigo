@@ -10,22 +10,19 @@
 //!
 //! Always by clicking the menu, never with `goto`. `hydrateLink` intercepts clicks on
 //! same-origin `<a href>` and pushes history client-side; a `goto` is a full page load, which
-//! runs SSR for that route - and SSR fetches with `awc` against the raw URL, so the lazy-list
-//! tab's relative `/api/items` fails there. That failure is then *cached*: it rides to the
-//! browser in `data-fetch-cache` and `LazyCache` turns it straight into `Resource::Error`.
+//! runs SSR for that route.
 //!
 //! By the same token, links that leave the site must not be clicked: `hydrateLink` ignores
 //! `http://` and `https://`, so the YouTube link on Game Of Life and the link inside the SVG
 //! would navigate the browser away from the app.
 
-use fantoccini::{Client, Locator};
-use serde_json::json;
+use std::path::PathBuf;
 
-use fantoccini_tests::{Ctx, TestResult};
+use vertigo_testing::{prelude::*, thirtyfour::WebElement};
 
-use crate::harness::{
-    body_text, click_by_text, find_all, find_by_text, retype, wait_for_count, wait_for_no_text,
-    wait_for_text, wait_until,
+use crate::{
+    Ctx,
+    helpers::{check_eq, click_by_text, count, find_all, find_by_text, wait_for_count},
 };
 
 /// Menu labels, in `Route::label()` order. Also the list the test walks.
@@ -49,33 +46,23 @@ pub const TABS: &[&str] = &[
 ];
 
 /// Click a menu entry and wait for the tab to show something of its own.
-pub async fn open(client: &Client, tab: &str, landmark: &str) {
+pub async fn open(ctx: &Ctx, tab: &str, landmark: &str) -> Result<()> {
     println!("  -> {tab}");
-    click_by_text(client, "a", tab).await;
-    wait_for_text(client, landmark).await;
-}
-
-/// How many elements match `selector`.
-async fn count(client: &Client, selector: &str) -> usize {
-    client
-        .find_all(Locator::Css(selector))
-        .await
-        .map(|found| found.len())
-        .unwrap_or(0)
+    click_by_text(ctx, "a", tab).await?;
+    ctx.wait_for_text(landmark).await
 }
 
 /// How many elements matching `selector` read exactly `text`.
 ///
 /// Done in one script rather than a round-trip per element: the Sudoku grid alone puts seven
 /// hundred candidate divs on the page, and asking about each individually takes minutes.
-async fn count_by_text(client: &Client, selector: &str, text: &str) -> usize {
+async fn count_by_text(ctx: &Ctx, selector: &str, text: &str) -> usize {
     let script = format!(
         "return Array.from(document.querySelectorAll({selector:?}))\
          .filter((node) => node.textContent.trim() === {text:?}).length;"
     );
 
-    client
-        .execute(&script, vec![])
+    ctx.js(&script)
         .await
         .ok()
         .and_then(|value| value.as_u64())
@@ -83,16 +70,16 @@ async fn count_by_text(client: &Client, selector: &str, text: &str) -> usize {
 }
 
 /// Every button reading `label` - for the tabs that have more than one of the same name.
-async fn buttons_labelled(client: &Client, label: &str) -> Vec<fantoccini::elements::Element> {
+async fn buttons_labelled(ctx: &Ctx, label: &str) -> Result<Vec<WebElement>> {
     let mut matching = Vec::new();
 
-    for button in find_all(client, "button").await {
+    for button in find_all(ctx, "button").await? {
         if button.text().await.unwrap_or_default().trim() == label {
             matching.push(button);
         }
     }
 
-    matching
+    Ok(matching)
 }
 
 /// Click every `<button>` on the page except those whose text is listed.
@@ -101,10 +88,8 @@ async fn buttons_labelled(client: &Client, label: &str) -> Vec<fantoccini::eleme
 /// attaches click handlers with `addEventListener` and leaves no attribute behind, so the many
 /// `<div on_click=..>` controls are invisible to any selector. Those are named explicitly by
 /// each tab below.
-async fn click_all_buttons_except(client: &Client, skip: &[&str]) {
-    let buttons = find_all(client, "button").await;
-
-    for button in buttons {
+async fn click_all_buttons_except(ctx: &Ctx, skip: &[&str]) -> Result<()> {
+    for button in find_all(ctx, "button").await? {
         let label = button.text().await.unwrap_or_default().trim().to_string();
 
         if skip.iter().any(|skipped| *skipped == label) {
@@ -115,37 +100,36 @@ async fn click_all_buttons_except(client: &Client, skip: &[&str]) {
         // be stale by now. That is not a failure - what matters is asserted afterwards.
         let _ = button.click().await;
     }
+
+    Ok(())
 }
 
 /// Click something that opens a modal dialog, then answer it.
 ///
-/// The session is created with `unhandledPromptBehavior: "ignore"`, so the dialog stands until
-/// it is dealt with - and the click itself comes back as an error, because a command cannot
-/// complete while a dialog is open. Both are expected.
-async fn click_and_accept_dialog(
-    client: &Client,
-    label: &str,
-    answer: Option<&str>,
-) -> TestResult<String> {
-    let button = find_by_text(client, "button", label).await;
+/// The harness creates sessions with `unhandledPromptBehavior: "ignore"`, so the dialog stands
+/// until it is dealt with - and the click itself comes back as an error, because a command
+/// cannot complete while a dialog is open. Both are expected.
+async fn click_and_accept_dialog(ctx: &Ctx, label: &str, answer: Option<&str>) -> Result<String> {
+    let button = find_by_text(ctx, "button", label).await?;
     let _ = button.click().await;
 
-    let text = client
+    let text = ctx
+        .driver
         .get_alert_text()
         .await
-        .unwrap_or_else(|err| panic!("{label:?} should have opened a dialog: {err}"));
+        .with_context(|| format!("{label:?} should have opened a dialog"))?;
 
     if let Some(answer) = answer {
-        client
+        ctx.driver
             .send_alert_text(answer)
             .await
-            .ctx("answering the prompt failed")?;
+            .context("answering the prompt failed")?;
     }
 
-    client
+    ctx.driver
         .accept_alert()
         .await
-        .ctx("accepting the dialog failed")?;
+        .context("accepting the dialog failed")?;
 
     Ok(text)
 }
@@ -157,8 +141,8 @@ async fn click_and_accept_dialog(
 /// The index is generated from `Route::ALL`, the same list the menu is built from, so the
 /// assertion worth making is that the two agree - a tab reachable from the menu but missing
 /// from the index would be a tab nobody is told about.
-pub async fn home(client: &Client) -> TestResult {
-    open(client, "Home", "A reactive Real-DOM library").await;
+pub async fn home(ctx: &Ctx) -> Result<()> {
+    open(ctx, "Home", "A reactive Real-DOM library").await?;
 
     // Every tab but this one has an entry, and each entry says something about it.
     for tab in TABS {
@@ -166,13 +150,13 @@ pub async fn home(client: &Client) -> TestResult {
             continue;
         }
 
-        let about = index_entry(client, tab)
-            .await
+        let about = index_entry(ctx, tab)
+            .await?
             .text()
             .await
             .unwrap_or_default();
 
-        assert!(
+        ensure!(
             about.trim().len() > tab.len() + 20,
             "the index entry for {tab:?} should say what the tab demonstrates, got {about:?}"
         );
@@ -180,25 +164,23 @@ pub async fn home(client: &Client) -> TestResult {
 
     // And the entries are links, not decoration. Reached through the entry rather than by
     // text: the menu carries an anchor for every tab too, and it comes first in the document.
-    index_entry(client, "Svg")
+    index_entry(ctx, "Svg")
+        .await?
+        .find(By::Css("a"))
         .await
-        .find(Locator::Css("a"))
-        .await
-        .ctx("the index entry's own link")?
+        .context("the index entry's own link")?
         .click()
         .await
-        .ctx("clicking the index link failed")?;
+        .context("clicking the index link failed")?;
 
-    wait_until("the index link to reach /svg", || async {
-        Ok(client.current_url().await?.path() == "/svg")
-    })
-    .await;
+    ctx.wait_for_path("/svg")
+        .await
+        .context("the index link to reach /svg")?;
 
-    click_by_text(client, "a", "Home").await;
-    wait_until("and back to the index", || async {
-        Ok(client.current_url().await?.path() == "/")
-    })
-    .await;
+    click_by_text(ctx, "a", "Home").await?;
+    ctx.wait_for_path("/")
+        .await
+        .context("and back to the index")?;
 
     Ok(())
 }
@@ -207,13 +189,12 @@ pub async fn home(client: &Client) -> TestResult {
 ///
 /// The `span` in the predicate is what separates this from the menu, which is also a `div`
 /// full of anchors - one of them with the same text - and which comes first in the document.
-async fn index_entry(client: &Client, tab: &str) -> fantoccini::elements::Element {
+async fn index_entry(ctx: &Ctx, tab: &str) -> Result<WebElement> {
     let xpath = format!("//div[span][a[normalize-space(text())={tab:?}]]");
 
-    client
-        .find(Locator::XPath(&xpath))
+    ctx.find(By::XPath(xpath))
         .await
-        .unwrap_or_else(|err| panic!("no index entry for {tab:?}: {err}"))
+        .with_context(|| format!("no index entry for {tab:?}"))
 }
 
 /// Four counters, their sum, and its double - one `Value` reaching three places, which is the
@@ -221,30 +202,31 @@ async fn index_entry(client: &Client, tab: &str) -> fantoccini::elements::Elemen
 ///
 /// Also the closing liveness check for the whole run, which is why it is deliberately the
 /// least entangled tab there is: nothing here fetches, connects or navigates.
-pub async fn counters(client: &Client) -> TestResult {
-    open(client, "Counters", "counter1 value").await;
+pub async fn counters(ctx: &Ctx) -> Result<()> {
+    open(ctx, "Counters", "counter1 value").await?;
 
     for (n, value) in [(1, 1), (2, 2), (3, 3), (4, 4)] {
-        wait_for_text(client, &format!("counter{n} value = {value}")).await;
+        ctx.wait_for_text(&format!("counter{n} value = {value}"))
+            .await?;
     }
-    wait_for_text(client, "sum = 10").await;
+    ctx.wait_for_text("sum = 10").await?;
 
     // One write, three readers: the counter, the sum, and the sum's double - the last through
     // a `Computed` nested inside another, which is its own path through the graph.
-    counter_button(client, 2, "up").await;
-    wait_for_text(client, "counter2 value = 3").await;
-    wait_for_text(client, "sum = 11").await;
-    find_by_text(client, "div", "22").await;
+    counter_button(ctx, 2, "up").await?;
+    ctx.wait_for_text("counter2 value = 3").await?;
+    ctx.wait_for_text("sum = 11").await?;
+    find_by_text(ctx, "div", "22").await?;
 
-    counter_button(client, 2, "down").await;
-    wait_for_text(client, "counter2 value = 2").await;
-    wait_for_text(client, "sum = 10").await;
+    counter_button(ctx, 2, "down").await?;
+    ctx.wait_for_text("counter2 value = 2").await?;
+    ctx.wait_for_text("sum = 10").await?;
 
     // A handler on the outer div and one on the button inside it, the inner one calling
     // `stop_propagation`. Neither changes what is rendered, so what this asserts is that the
     // app is still standing afterwards - the console gate covers the rest.
-    click_by_text(client, "div", "outer click").await;
-    click_by_text(client, "button", "Inner click").await;
+    click_by_text(ctx, "div", "outer click").await?;
+    click_by_text(ctx, "button", "Inner click").await?;
 
     Ok(())
 }
@@ -253,71 +235,67 @@ pub async fn counters(client: &Client) -> TestResult {
 ///
 /// These controls used to be loose on the Counters tab. Each now reports what it got, so the
 /// assertions are about values rather than about nothing having caught fire.
-pub async fn driver(client: &Client) -> TestResult {
-    open(client, "Driver", "Last result:").await;
+pub async fn driver(ctx: &Ctx) -> Result<()> {
+    open(ctx, "Driver", "Last result:").await?;
 
     // Round trip through the browser's cookie jar.
-    click_by_text(client, "div", "Set cookie").await;
-    wait_for_text(client, "set the cookie").await;
-    click_by_text(client, "div", "Get cookie").await;
-    wait_for_text(client, r#"cookie "test" = "test value""#).await;
+    click_by_text(ctx, "div", "Set cookie").await?;
+    ctx.wait_for_text("set the cookie").await?;
+    click_by_text(ctx, "div", "Get cookie").await?;
+    ctx.wait_for_text(r#"cookie "test" = "test value""#).await?;
 
     // ...and through `JsJson`, which is the more interesting one: it goes out as a list and
     // has to come back as one.
-    click_by_text(client, "div", "Set json cookie").await;
-    wait_for_text(client, "set the json cookie").await;
-    click_by_text(client, "div", "Get json cookie").await;
+    click_by_text(ctx, "div", "Set json cookie").await?;
+    ctx.wait_for_text("set the json cookie").await?;
+    click_by_text(ctx, "div", "Get json cookie").await?;
     for value in ["value1", "value2", "value3"] {
-        wait_for_text(client, value).await;
+        ctx.wait_for_text(value).await?;
     }
 
-    click_by_text(client, "div", "Get timezone_offset").await;
-    wait_for_text(client, "timezone offset = ").await;
+    click_by_text(ctx, "div", "Get timezone_offset").await?;
+    ctx.wait_for_text("timezone offset = ").await?;
 
-    click_by_text(client, "div", "Get random").await;
-    wait_until("a random number in the range asked for", || async {
-        Ok(driver_result(client)
+    click_by_text(ctx, "div", "Get random").await?;
+    ctx.wait_for("a random number in the range asked for", async || {
+        Ok(driver_result(ctx)
             .await
             .rsplit(" = ")
             .next()
             .and_then(|value| value.parse::<u32>().ok())
-            .is_some_and(|value| (34..=100).contains(&value)))
+            .is_some_and(|value| (34..=100).contains(&value))
+            .then_some(()))
     })
-    .await;
+    .await?;
 
     // The hydration panel lives here too, because `is_browser()` is driver API as much as the
     // rest of it. What hydration actually did is asserted in `ssr::hydration`.
-    wait_for_text(client, "Rendered by: browser").await;
+    ctx.wait_for_text("Rendered by: browser").await?;
 
     // Left until last, because both leave the tab.
-    click_by_text(client, "div", "Go to Sudoku").await;
-    wait_until("the route to become /sudoku", || async {
-        Ok(client.current_url().await?.path() == "/sudoku")
-    })
-    .await;
+    click_by_text(ctx, "div", "Go to Sudoku").await?;
+    ctx.wait_for_path("/sudoku").await?;
 
-    click_by_text(client, "a", "Driver").await;
-    wait_for_text(client, "Last result:").await;
+    click_by_text(ctx, "a", "Driver").await?;
+    ctx.wait_for_text("Last result:").await?;
 
-    click_by_text(client, "div", "History back").await;
-    wait_until("history_back to return to /sudoku", || async {
-        Ok(client.current_url().await?.path() == "/sudoku")
-    })
-    .await;
+    click_by_text(ctx, "div", "History back").await?;
+    ctx.wait_for_path("/sudoku")
+        .await
+        .context("history_back to return to /sudoku")?;
 
     Ok(())
 }
 
 /// The Driver tab's "Last result" line.
-async fn driver_result(client: &Client) -> String {
+async fn driver_result(ctx: &Ctx) -> String {
     const SCRIPT: &str = r#"
         const node = Array.from(document.querySelectorAll('div'))
             .find((candidate) => candidate.textContent.trim().startsWith('Last result: '));
         return node === undefined ? '' : node.textContent.trim();
     "#;
 
-    client
-        .execute(SCRIPT, vec![])
+    ctx.js(SCRIPT)
         .await
         .ok()
         .and_then(|value| value.as_str().map(str::to_string))
@@ -328,19 +306,18 @@ async fn driver_result(client: &Client) -> String {
 ///
 /// Anchored on the label rather than counted, so reordering the demo does not silently point
 /// this at a different counter. The label div's following sibling is the button row.
-async fn counter_button(client: &Client, counter: u32, label: &str) {
+async fn counter_button(ctx: &Ctx, counter: u32, label: &str) -> Result<()> {
     let xpath = format!(
         "//div[starts-with(normalize-space(.), 'counter{counter} value')]\
          /following-sibling::div/button[normalize-space(text())='{label}']"
     );
 
-    client
-        .find(Locator::XPath(&xpath))
+    ctx.find(By::XPath(xpath))
         .await
-        .unwrap_or_else(|err| panic!("counter{counter}'s {label:?} button: {err}"))
+        .with_context(|| format!("counter{counter}'s {label:?} button"))?
         .click()
         .await
-        .unwrap_or_else(|err| panic!("clicking counter{counter}'s {label:?}: {err}"));
+        .with_context(|| format!("clicking counter{counter}'s {label:?}"))
 }
 
 /// Animations, the tooltip, and the tailwind classes.
@@ -349,77 +326,76 @@ async fn counter_button(client: &Client, counter: u32, label: &str) {
 /// tw={..}>` is a static class and a reactive one on the same element, which is exactly the
 /// `Plain -> Merged` promotion the lazy class merger introduced. If that promotion ever drops
 /// the value already written, the static class disappears here.
-pub async fn styling(client: &Client) -> TestResult {
-    open(client, "Styling", "Label with tooltip").await;
+pub async fn styling(ctx: &Ctx) -> Result<()> {
+    open(ctx, "Styling", "Label with tooltip").await?;
 
-    let (label_left, label_width, popup_left) = tooltip_geometry(client).await;
-    assert!(
+    let (label_left, label_width, popup_left) = tooltip_geometry(ctx).await?;
+    ensure!(
         popup_left >= label_left + label_width,
         "the tooltip popup should sit past the right edge of its label; \
          label starts at {label_left} and is {label_width} wide, popup starts at {popup_left}"
     );
 
-    wait_for_text(client, "Spinner:").await;
-    wait_for_text(client, "Some tailwind-styled elements").await;
-    wait_for_text(client, "Tailwind CSS 4 test").await;
-    wait_for_text(client, "Component Taking Tw").await;
+    ctx.wait_for_text("Spinner:").await?;
+    ctx.wait_for_text("Some tailwind-styled elements").await?;
+    ctx.wait_for_text("Tailwind CSS 4 test").await?;
+    ctx.wait_for_text("Component Taking Tw").await?;
 
-    let tw_class = || async {
-        let class = client
-            .find(Locator::Css("div.some-external-class"))
-            .await
-            .ctx("the tailwind div kept its static class")?
-            .attr("class")
-            .await
-            .ctx("reading class failed")?
-            .unwrap_or_default();
-
-        TestResult::Ok(class)
-    };
-
-    let before = tw_class().await?;
-    assert!(
+    let before = tw_class(ctx).await?;
+    ensure!(
         before.contains("some-external-class") && before.contains("bg-green-900"),
         "the tailwind div should carry both its static class and its reactive one, got {before:?}"
     );
 
-    click_by_text(client, "button", "Switch background dd").await;
+    click_by_text(ctx, "button", "Switch background dd").await?;
 
-    wait_until("the tailwind background class to toggle", || async {
-        Ok(tw_class().await?.contains("bg-green-500"))
+    ctx.wait_for("the tailwind background class to toggle", async || {
+        Ok(tw_class(ctx).await?.contains("bg-green-500").then_some(()))
     })
-    .await;
+    .await?;
 
-    let after = tw_class().await?;
-    assert!(
+    let after = tw_class(ctx).await?;
+    ensure!(
         after.contains("some-external-class"),
         "the static class must survive a reactive class change, got {after:?}"
     );
 
     // The progress bar: a `bind_spawn` that ticks a `Value` up and back down, rendering one
     // span per step. Asserted as a round trip rather than on a count at any instant.
-    let dots = || async { count(client, "button span span").await };
+    let dots = async || count(ctx, "button span span").await;
 
     // The label sits in a span inside the button - the button itself owns no text - so the
     // click goes to the span and bubbles.
-    click_by_text(client, "span", "start the progress bar").await;
-    wait_until("the progress bar to advance", || async {
-        Ok(dots().await > 5)
+    click_by_text(ctx, "span", "start the progress bar").await?;
+    ctx.wait_for("the progress bar to advance", async || {
+        Ok((dots().await > 5).then_some(()))
     })
-    .await;
-    wait_until("the progress bar to run back down", || async {
-        Ok(dots().await == 0)
+    .await?;
+    ctx.wait_for("the progress bar to run back down", async || {
+        Ok((dots().await == 0).then_some(()))
     })
-    .await;
+    .await?;
 
     Ok(())
+}
+
+/// The class of the tailwind-styled div.
+async fn tw_class(ctx: &Ctx) -> Result<String> {
+    Ok(ctx
+        .find(By::Css("div.some-external-class"))
+        .await
+        .context("the tailwind div kept its static class")?
+        .attr("class")
+        .await
+        .context("reading class failed")?
+        .unwrap_or_default())
 }
 
 /// Where the tooltip's label and popup are: `(label left, label width, popup left)`.
 ///
 /// The popup is `visibility: hidden` until hovered, which still reserves its box - so its
 /// position is readable without having to drive a hover.
-async fn tooltip_geometry(client: &Client) -> (f64, f64, f64) {
+async fn tooltip_geometry(ctx: &Ctx) -> Result<(f64, f64, f64)> {
     const SCRIPT: &str = r#"
         const popup = Array.from(document.querySelectorAll('span'))
             .find((node) => node.textContent.trim() === 'This is content of the tooltip');
@@ -428,19 +404,19 @@ async fn tooltip_geometry(client: &Client) -> (f64, f64, f64) {
         return [label.left, label.width, popup.getBoundingClientRect().left];
     "#;
 
-    let values = client
-        .execute(SCRIPT, vec![])
-        .await
-        .ok()
-        .and_then(|value| value.as_array().cloned())
+    let values = ctx
+        .js(SCRIPT)
+        .await?
+        .as_array()
+        .cloned()
         .unwrap_or_default()
         .into_iter()
         .filter_map(|value| value.as_f64())
         .collect::<Vec<_>>();
 
     match values.as_slice() {
-        [label_left, label_width, popup_left] => (*label_left, *label_width, *popup_left),
-        _ => panic!("could not measure the tooltip; got {values:?}"),
+        [label_left, label_width, popup_left] => Ok((*label_left, *label_width, *popup_left)),
+        _ => bail!("could not measure the tooltip; got {values:?}"),
     }
 }
 
@@ -450,84 +426,85 @@ async fn tooltip_geometry(client: &Client) -> (f64, f64, f64) {
 /// cell propagates through the solver and withdraws that candidate from the cell's peers - a
 /// fan-out no other tab produces, one write and dozens of re-renders. With them off the cells
 /// offer every digit and say nothing, which is the only way to enter something illegal.
-pub async fn sudoku(client: &Client) -> TestResult {
-    open(client, "Sudoku", "Easy").await;
+pub async fn sudoku(ctx: &Ctx) -> Result<()> {
+    open(ctx, "Sudoku", "Easy").await?;
 
-    let fives = || async { count_by_text(client, "div", "5").await };
+    let fives = async || count_by_text(ctx, "div", "5").await;
 
     // Hints start off.
-    wait_for_text(client, "Hints: off").await;
-    wait_for_text(client, "Empty board").await;
-    assert_eq!(filled_cells(client).await, 0, "the board starts empty");
-    assert_eq!(
+    ctx.wait_for_text("Hints: off").await?;
+    ctx.wait_for_text("Empty board").await?;
+    check_eq(filled_cells(ctx).await?, 0, "the board starts empty")?;
+    check_eq(
         fives().await,
         81,
-        "with the hints off every cell should offer a 5, possible or not"
-    );
+        "with the hints off every cell should offer a 5, possible or not",
+    )?;
 
     // Nothing the solver knows is on show, so a digit it would rule out can still be entered.
     // That is the only route to a conflict: with hints on, the only digits a cell offers are
     // the ones that are still legal in it.
-    let board_at = board_left(client).await;
+    let board_at = board_left(ctx).await?;
 
-    click_digit(client, "5", 0).await?;
-    wait_for_text(client, "1 of 81 filled").await;
+    click_digit(ctx, "5", 0).await?;
+    ctx.wait_for_text("1 of 81 filled").await?;
 
     // The next cell still offering a 5 is the one beside it, in the same 3x3 block.
-    click_digit(client, "5", 0).await?;
-    wait_for_text(client, "Conflict: a digit repeats").await;
+    click_digit(ctx, "5", 0).await?;
+    ctx.wait_for_text("Conflict: a digit repeats").await?;
 
     // That message is much wider than the counts it replaces, and it sits in the panel beside
     // the board. The panel is a fixed width so the board cannot be pushed sideways by it.
-    assert_eq!(
-        board_left(client).await,
+    check_eq(
+        board_left(ctx).await?,
         board_at,
-        "the board should stay put while the status message is a wide one"
-    );
+        "the board should stay put while the status message is a wide one",
+    )?;
 
-    click_by_text(client, "button", "Clear").await;
-    wait_for_text(client, "Empty board").await;
-    assert_eq!(
-        board_left(client).await,
+    click_by_text(ctx, "button", "Clear").await?;
+    ctx.wait_for_text("Empty board").await?;
+    check_eq(
+        board_left(ctx).await?,
         board_at,
-        "...and be back where it started once the message goes"
-    );
+        "...and be back where it started once the message goes",
+    )?;
 
     // Hints on, and now the solver drives what an empty cell shows.
-    click_by_text(client, "div", "Hints: off").await;
-    wait_for_text(client, "Hints: on").await;
+    click_by_text(ctx, "div", "Hints: off").await?;
+    ctx.wait_for_text("Hints: on").await?;
 
     let before = fives().await;
-    assert_eq!(
-        before, 81,
-        "an empty board should offer the candidate 5 in all 81 cells"
-    );
+    check_eq(
+        before,
+        81,
+        "an empty board should offer the candidate 5 in all 81 cells",
+    )?;
 
-    click_digit(client, "5", 0).await?;
+    click_digit(ctx, "5", 0).await?;
 
-    wait_until(
+    ctx.wait_for(
         "the solver to withdraw 5 from that cell's peers",
-        || async { Ok(fives().await < before) },
+        async || Ok((fives().await < before).then_some(())),
     )
-    .await;
+    .await?;
 
     // The status line is a second `Computed` over the same 81 cells, so it agreeing with what
     // was rendered is two independent readings of one write.
-    wait_for_text(client, "1 of 81 filled").await;
+    ctx.wait_for_text("1 of 81 filled").await?;
 
     // A value the player entered can be taken back off, and carries the "X" that does it.
-    assert_eq!(
-        count_by_text(client, "div", "X").await,
+    check_eq(
+        count_by_text(ctx, "div", "X").await,
         1,
-        "an entered value should offer its delete control"
-    );
+        "an entered value should offer its delete control",
+    )?;
 
-    click_by_text(client, "button", "Clear").await;
-    wait_until("Clear to restore every candidate", || async {
-        Ok(fives().await == before)
+    click_by_text(ctx, "button", "Clear").await?;
+    ctx.wait_for("Clear to restore every candidate", async || {
+        Ok((fives().await == before).then_some(()))
     })
-    .await;
-    wait_for_text(client, "Empty board").await;
+    .await?;
+    ctx.wait_for_text("Empty board").await?;
 
     // The three example boards. Each used to be a `log::info!` and nothing else.
     //
@@ -535,29 +512,30 @@ pub async fn sudoku(client: &Client) -> TestResult {
     // that board's own given count and never anything left over from the board before it -
     // which is why these run back to back with no Clear in between.
     for (label, givens) in [("Easy", 36), ("Medium", 30), ("Hard", 23)] {
-        click_by_text(client, "button", label).await;
+        click_by_text(ctx, "button", label).await?;
 
-        wait_until(&format!("{label} to put {givens} givens on the board"), {
-            || async { Ok(filled_cells(client).await == givens) }
-        })
-        .await;
+        ctx.wait_for(
+            &format!("{label} to put {givens} givens on the board"),
+            async || Ok((filled_cells(ctx).await? == givens).then_some(())),
+        )
+        .await?;
 
         // ...and that the solver saw them. A board with givens on it cannot still be
         // offering every candidate in every cell.
-        assert!(
+        ensure!(
             fives().await < before,
             "{label} should have withdrawn candidates from the givens' peers"
         );
 
-        wait_for_text(client, &format!("{givens} of 81 filled")).await;
+        ctx.wait_for_text(&format!("{givens} of 81 filled")).await?;
 
         // Givens belong to the puzzle, so none of them offers the delete control that an
         // entered value does.
-        assert_eq!(
-            count_by_text(client, "div", "X").await,
+        check_eq(
+            count_by_text(ctx, "div", "X").await,
             0,
-            "{label}'s givens should not be deletable"
-        );
+            format!("{label}'s givens should not be deletable"),
+        )?;
     }
 
     // Hard is on the board now, so walk back to the first one and read it off the screen.
@@ -566,14 +544,14 @@ pub async fn sudoku(client: &Client) -> TestResult {
     // *where*. A board loaded along the wrong axis is still 36 givens, still consistent, and
     // still uniquely solvable - a sudoku transposes to a sudoku - so it would pass everything
     // above while rendering the puzzle mirrored along its diagonal.
-    click_by_text(client, "button", "Easy").await;
-    wait_until("Easy to come back", || async {
-        Ok(filled_cells(client).await == 36)
+    click_by_text(ctx, "button", "Easy").await?;
+    ctx.wait_for("Easy to come back", async || {
+        Ok((filled_cells(ctx).await? == 36).then_some(()))
     })
-    .await;
+    .await?;
 
-    assert_eq!(
-        read_board(client).await,
+    check_eq(
+        read_board(ctx).await?,
         [
             "...26.7.1",
             "68..7..9.",
@@ -585,14 +563,14 @@ pub async fn sudoku(client: &Client) -> TestResult {
             ".4..5..36",
             "7.3.18...",
         ],
-        "Easy should render the board the way `examples::EASY` is written"
-    );
+        "Easy should render the board the way `examples::EASY` is written",
+    )?;
 
-    click_by_text(client, "button", "Clear").await;
-    wait_until("Clear to take the last board off again", || async {
-        Ok(filled_cells(client).await == 0 && fives().await == before)
+    click_by_text(ctx, "button", "Clear").await?;
+    ctx.wait_for("Clear to take the last board off again", async || {
+        Ok((filled_cells(ctx).await? == 0 && fives().await == before).then_some(()))
     })
-    .await;
+    .await?;
 
     Ok(())
 }
@@ -602,7 +580,7 @@ pub async fn sudoku(client: &Client) -> TestResult {
 /// Found by shape rather than by any marker on it: the board is the one element holding nine
 /// children that each hold nine of their own. A group div has nine children too, but each of
 /// those holds one, so only the board matches.
-async fn board_left(client: &Client) -> i64 {
+async fn board_left(ctx: &Ctx) -> Result<i64> {
     const SCRIPT: &str = r#"
         const board = Array.from(document.querySelectorAll('div')).find((node) => {
             const groups = Array.from(node.children);
@@ -612,12 +590,10 @@ async fn board_left(client: &Client) -> i64 {
         return board === undefined ? null : Math.round(board.getBoundingClientRect().left);
     "#;
 
-    client
-        .execute(SCRIPT, vec![])
-        .await
-        .ok()
-        .and_then(|value| value.as_i64())
-        .unwrap_or_else(|| panic!("could not find the Sudoku board"))
+    ctx.js(SCRIPT)
+        .await?
+        .as_i64()
+        .context("could not find the Sudoku board")
 }
 
 /// Click `digit` in the nth empty Sudoku cell that is offering it.
@@ -626,7 +602,7 @@ async fn board_left(client: &Client) -> i64 {
 /// candidates or one of the plain choices shown when the hints are off. A cell that already
 /// *holds* that digit sets it at 30px - so the size is what keeps this pointed at somewhere
 /// still to fill rather than at what was just entered.
-async fn click_digit(client: &Client, digit: &str, nth: usize) -> TestResult {
+async fn click_digit(ctx: &Ctx, digit: &str, nth: usize) -> Result<()> {
     const SCRIPT: &str = r#"
         const [digit, nth] = arguments;
         const own = (node) => Array.from(node.childNodes)
@@ -643,12 +619,12 @@ async fn click_digit(client: &Client, digit: &str, nth: usize) -> TestResult {
         return null;
     "#;
 
-    let available = client
-        .execute(SCRIPT, vec![json!(digit), json!(nth)])
+    let available = ctx
+        .js_with(SCRIPT, vec![json!(digit), json!(nth)])
         .await
-        .ctx("looking for a cell offering that digit failed")?;
+        .context("looking for a cell offering that digit failed")?;
 
-    assert!(
+    ensure!(
         available.is_null(),
         "wanted the cell at index {nth} offering {digit:?}, but only {available} cells offer it"
     );
@@ -663,7 +639,7 @@ async fn click_digit(client: &Client, digit: &str, nth: usize) -> TestResult {
 /// protected. What does separate them is how they are drawn: a filled cell is set in 30px on
 /// the cell's own background, while the candidates that share that size (the one-remaining and
 /// last-possible hints) sit on green.
-async fn filled_cells(client: &Client) -> usize {
+async fn filled_cells(ctx: &Ctx) -> Result<usize> {
     const SCRIPT: &str = r#"
         return Array.from(document.querySelectorAll('div')).filter((node) => {
             const own = Array.from(node.childNodes)
@@ -677,12 +653,11 @@ async fn filled_cells(client: &Client) -> usize {
         }).length;
     "#;
 
-    client
-        .execute(SCRIPT, vec![])
-        .await
-        .ok()
-        .and_then(|value| value.as_u64())
-        .unwrap_or_else(|| panic!("could not count the filled Sudoku cells")) as usize
+    Ok(ctx
+        .js(SCRIPT)
+        .await?
+        .as_u64()
+        .context("could not count the filled Sudoku cells")? as usize)
 }
 
 /// The Sudoku board as it is laid out on screen: nine rows of nine, `.` for a blank.
@@ -698,7 +673,7 @@ async fn filled_cells(client: &Client) -> usize {
 /// borders cannot shift a cell into the wrong slot. It does assume every row and column of the
 /// board being read holds at least one given - true of `examples::EASY`, which is the only
 /// board this is used on.
-async fn read_board(client: &Client) -> Vec<String> {
+async fn read_board(ctx: &Ctx) -> Result<Vec<String>> {
     const SCRIPT: &str = r#"
         const ownText = (node) => Array.from(node.childNodes)
             .filter((child) => child.nodeType === Node.TEXT_NODE)
@@ -733,73 +708,70 @@ async fn read_board(client: &Client) -> Vec<String> {
         return board.map((row) => row.join(''));
     "#;
 
-    client
-        .execute(SCRIPT, vec![])
-        .await
-        .ok()
-        .and_then(|value| value.as_array().cloned())
+    Ok(ctx
+        .js(SCRIPT)
+        .await?
+        .as_array()
+        .cloned()
         .unwrap_or_default()
         .into_iter()
         .filter_map(|value| value.as_str().map(str::to_string))
-        .collect()
+        .collect())
 }
 
 /// Text in, text out: one `Value<String>` behind an input, a textarea and a derived length.
-pub async fn input(client: &Client) -> TestResult {
-    open(client, "Input", "This is input").await;
+pub async fn input(ctx: &Ctx) -> Result<()> {
+    open(ctx, "Input", "This is input").await?;
 
-    wait_for_text(client, "count = 0").await;
+    ctx.wait_for_text("count = 0").await?;
 
-    let field = client
-        .find(Locator::Css("input"))
+    let field = ctx
+        .find(By::Css("input"))
         .await
-        .ctx("the input field")?;
-    retype(&field, "hello").await?;
-    wait_for_text(client, "count = 5").await;
+        .context("the input field")?;
+    ctx.retype(&field, "hello").await?;
+    ctx.wait_for_text("count = 5").await?;
 
     // Two buttons writing the same `Value` the input reads.
-    click_by_text(client, "button", "set 1").await;
-    wait_for_text(client, "count = 5").await;
-    wait_until("the input to show the value the button set", || async {
-        Ok(field.prop("value").await? == Some("set 1".to_string()))
+    click_by_text(ctx, "button", "set 1").await?;
+    ctx.wait_for_text("count = 5").await?;
+    ctx.wait_for("the input to show the value the button set", async || {
+        Ok((field.prop("value").await? == Some("set 1".to_string())).then_some(()))
     })
-    .await;
+    .await?;
 
-    click_by_text(client, "button", "set 2").await;
-    wait_until("the second button to win", || async {
-        Ok(field.prop("value").await? == Some("set 2".to_string()))
+    click_by_text(ctx, "button", "set 2").await?;
+    ctx.wait_for("the second button to win", async || {
+        Ok((field.prop("value").await? == Some("set 2".to_string())).then_some(()))
     })
-    .await;
+    .await?;
 
-    let textarea = client
-        .find(Locator::Css("textarea"))
+    let textarea = ctx
+        .find(By::Css("textarea"))
         .await
-        .ctx("the textarea")?;
-    retype(&textarea, "abc").await?;
-    wait_for_text(client, "count = 3").await;
+        .context("the textarea")?;
+    ctx.retype(&textarea, "abc").await?;
+    ctx.wait_for_text("count = 3").await?;
 
     // Characters, not bytes. The count used to be `String::len()`, which reads seven here.
-    retype(&textarea, "żółw").await?;
-    wait_for_text(client, "count = 4").await;
+    ctx.retype(&textarea, "żółw").await?;
+    ctx.wait_for_text("count = 4").await?;
 
     Ok(())
 }
 
 /// A fetch, rendered. Points at the local stub rather than api.github.com - see
 /// `demo/server/src/stub_api.rs`.
-pub async fn github_explorer(client: &Client) -> TestResult {
-    open(client, "Github Explorer", "Enter author/repo tuple").await;
+pub async fn github_explorer(ctx: &Ctx) -> Result<()> {
+    open(ctx, "Github Explorer", "Enter author/repo tuple").await?;
 
     // Nothing has been asked for yet, and the tab says so rather than showing an empty box.
-    wait_for_text(client, "Nothing fetched yet").await;
+    ctx.wait_for_text("Nothing fetched yet").await?;
 
-    let field = client
-        .find(Locator::Css("input"))
-        .await
-        .ctx("the repo field")?;
-    retype(&field, "vertigo-web/vertigo").await?;
+    let field = ctx.find(By::Css("input")).await.context("the repo field")?;
+    ctx.retype(&field, "vertigo-web/vertigo").await?;
 
-    click_by_text(client, "button", "Fetch").await;
+    click_by_text(ctx, "button", "Fetch").await?;
 
     // The tab echoes back which repo it is showing. This used to be `<text computed={..} />`,
     // which rendered nothing at all, and the assertion here had to read the value off an
@@ -807,18 +779,19 @@ pub async fn github_explorer(client: &Client) -> TestResult {
     // rather than the element's content, and `text` is on vertigo's SVG tag list (the
     // workaround for issue #539) so the element was created in the SVG namespace, where a
     // browser paints nothing unless it sits inside an `<svg>`.
-    wait_for_text(client, "Showing: vertigo-web/vertigo").await;
+    ctx.wait_for_text("Showing: vertigo-web/vertigo").await?;
 
-    // All four fields the response carries, where the tab used to render only the sha.
-    //
-    // `Branch` nests three deep - `commit.commit.author.name` - so between them these say that
-    // `AutoJsJson` decoded the whole tree rather than just its outermost struct. The stub
-    // gives the author and the committer different names and addresses, so rendering one of
-    // them in both places would fail here rather than pass twice.
-    wait_for_text(client, "Branch: master").await;
-    wait_for_text(client, "Commit: 0000000000000000000000000000000000000001").await;
-    wait_for_text(client, "Author: Stub Author <author@example.com>").await;
-    wait_for_text(client, "Committer: Stub Committer <committer@example.com>").await;
+    // All four fields the response carries. `Branch` nests three deep -
+    // `commit.commit.author.name` - so between them these say that `AutoJsJson` decoded the
+    // whole tree. The stub gives the author and the committer different names and addresses,
+    // so rendering one of them in both places would fail here rather than pass twice.
+    ctx.wait_for_text("Branch: master").await?;
+    ctx.wait_for_text("Commit: 0000000000000000000000000000000000000001")
+        .await?;
+    ctx.wait_for_text("Author: Stub Author <author@example.com>")
+        .await?;
+    ctx.wait_for_text("Committer: Stub Committer <committer@example.com>")
+        .await?;
 
     Ok(())
 }
@@ -827,207 +800,209 @@ pub async fn github_explorer(client: &Client) -> TestResult {
 ///
 /// Start and Stop are asserted as a pair: an unstopped timer keeps re-rendering across every
 /// later tab, which would make the rest of the run mean less than it appears to.
-pub async fn game_of_life(client: &Client) -> TestResult {
-    open(client, "Game Of Life", "Game of life").await;
+pub async fn game_of_life(ctx: &Ctx) -> Result<()> {
+    open(ctx, "Game Of Life", "Game of life").await?;
 
     // The board counts generations from one, and starts at the delay the state was built with.
-    wait_for_text(client, "Year = 1").await;
-    wait_for_delay(client, 50).await;
+    ctx.wait_for_text("Year = 1").await?;
+    wait_for_delay(ctx, 50).await?;
 
     // Population is a `Computed` over all 8400 cells - the widest fan-in on this tab, and the
     // handle everything below uses to say what the board is doing.
-    click_by_text(client, "button", "Clear").await;
-    assert_eq!(
-        life_population(client).await,
+    click_by_text(ctx, "button", "Clear").await?;
+    check_eq(
+        life_population(ctx).await?,
         0,
-        "Clear should empty the board"
-    );
+        "Clear should empty the board",
+    )?;
 
     // A spaceship: the same five cells for as long as it runs, wherever they have got to.
     // A load that dropped or duplicated a cell, or a generation that mis-stepped, would not
     // hold this.
-    load_pattern(client, "Glider", 5).await;
-    let start = live_cells(client).await;
+    load_pattern(ctx, "Glider", 5).await?;
+    let start = live_cells(ctx).await?;
 
     for year in 2..=5 {
-        click_by_text(client, "button", "Step").await;
-        wait_until(&format!("Step to reach year {year}"), || async {
-            Ok(life_year(client).await == year)
+        click_by_text(ctx, "button", "Step").await?;
+        ctx.wait_for(&format!("Step to reach year {year}"), async || {
+            Ok((life_year(ctx).await? == year).then_some(()))
         })
-        .await;
+        .await?;
 
-        assert_eq!(
-            life_population(client).await,
+        check_eq(
+            life_population(ctx).await?,
             5,
-            "a glider keeps its five cells through year {year}"
-        );
+            format!("a glider keeps its five cells through year {year}"),
+        )?;
     }
 
     // ...and after its period of four it is those same five cells, one row down and one column
     // across. The count alone would not say that: a five-cell still life holds the count too,
     // and would sit there passing while nothing moved.
     let (start_shape, start_at) = normalise(&start);
-    let (moved_shape, moved_at) = normalise(&live_cells(client).await);
+    let (moved_shape, moved_at) = normalise(&live_cells(ctx).await?);
 
-    assert_eq!(
-        start_shape, moved_shape,
-        "a glider should keep its shape across a full period"
-    );
-    assert_eq!(
+    check_eq(
+        start_shape,
+        moved_shape,
+        "a glider should keep its shape across a full period",
+    )?;
+    check_eq(
         (moved_at.0 - start_at.0, moved_at.1 - start_at.1),
         (1, 1),
-        "and should have travelled one cell diagonally"
-    );
+        "and should have travelled one cell diagonally",
+    )?;
 
     // A lightweight spaceship breathes between 9 and 12 cells as it travels, so the population
     // label changes width every generation. The counters reserve room for their widest value
     // precisely so that does not re-flow the header: without it, Start, Step and the delay
     // field slide left and right on every frame while the board runs.
-    load_pattern(client, "Spaceship", 9).await;
-    let anchored = element_left(client, "button", "Step").await;
+    load_pattern(ctx, "Spaceship", 9).await?;
+    let anchored = element_left(ctx, "button", "Step").await?;
 
     for expected in [12, 9, 12] {
-        click_by_text(client, "button", "Step").await;
-        wait_until(
+        click_by_text(ctx, "button", "Step").await?;
+        ctx.wait_for(
             &format!("the spaceship to reach {expected} cells"),
-            || async { Ok(life_population(client).await == expected) },
+            async || Ok((life_population(ctx).await? == expected).then_some(())),
         )
-        .await;
+        .await?;
 
-        assert_eq!(
-            element_left(client, "button", "Step").await,
+        check_eq(
+            element_left(ctx, "button", "Step").await?,
             anchored,
-            "the controls should stay put as the population label changes width"
-        );
+            "the controls should stay put as the population label changes width",
+        )?;
     }
 
     // An oscillator with a period of three: 48 -> 56 -> 72 -> 48. Asserted through a whole
     // cycle, so it is the shape coming back rather than a count that happens to match.
-    load_pattern(client, "Pulsar", 48).await;
+    load_pattern(ctx, "Pulsar", 48).await?;
 
     for expected in [56, 72, 48] {
-        click_by_text(client, "button", "Step").await;
-        wait_until(
+        click_by_text(ctx, "button", "Step").await?;
+        ctx.wait_for(
             &format!("the pulsar to reach a population of {expected}"),
-            || async { Ok(life_population(client).await == expected) },
+            async || Ok((life_population(ctx).await? == expected).then_some(())),
         )
-        .await;
+        .await?;
     }
 
     // Seven cells that vanish completely, and only at generation 130. Stepped rather than
     // timed, so this is the rule being applied 129 times and not a race with a timer.
-    load_pattern(client, "Diehard", 7).await;
+    load_pattern(ctx, "Diehard", 7).await?;
 
     // The board counts the pattern as it was loaded as year 1, so its year N is generation
     // N - 1. Both sides of the transition are asserted, which is what makes this "at 130" and
     // not merely "eventually".
-    step_times(client, 129).await?;
-    assert_eq!(
-        (life_year(client).await, life_population(client).await),
+    step_times(ctx, 129).await?;
+    check_eq(
+        (life_year(ctx).await?, life_population(ctx).await?),
         (130, 2),
-        "diehard should still have two cells one generation short of the end"
-    );
+        "diehard should still have two cells one generation short of the end",
+    )?;
 
-    step_times(client, 1).await?;
-    assert_eq!(
-        (life_year(client).await, life_population(client).await),
+    step_times(ctx, 1).await?;
+    check_eq(
+        (life_year(ctx).await?, life_population(ctx).await?),
         (131, 0),
-        "diehard should be gone at generation 130 - the board's year 131"
-    );
+        "diehard should be gone at generation 130 - the board's year 131",
+    )?;
 
     // A board of still lifes and oscillators, none of them close enough to disturb another.
     // Every period in it divides 30, so after thirty generations the whole thing is back
     // exactly where it started - which a single stray interaction would destroy.
-    load_pattern(client, "Menagerie", 103).await;
+    load_pattern(ctx, "Menagerie", 103).await?;
 
-    step_times(client, 30).await?;
+    step_times(ctx, 30).await?;
 
-    assert_eq!(
-        (life_year(client).await, life_population(client).await),
+    check_eq(
+        (life_year(ctx).await?, life_population(ctx).await?),
         (31, 103),
-        "the menagerie should come back to its own population after 30 generations"
-    );
+        "the menagerie should come back to its own population after 30 generations",
+    )?;
 
     // A gun grows without bound, which no still life or oscillator does.
-    load_pattern(client, "Glider gun", 36).await;
+    load_pattern(ctx, "Glider gun", 36).await?;
 
-    click_by_text(client, "button", "Start").await;
-    wait_for_text(client, "Stop").await;
-    wait_until(
+    click_by_text(ctx, "button", "Start").await?;
+    ctx.wait_for_text("Stop").await?;
+    ctx.wait_for(
         "the glider gun to grow past its initial 36 cells",
-        || async { Ok(life_population(client).await > 60) },
+        async || Ok((life_population(ctx).await? > 60).then_some(())),
     )
-    .await;
+    .await?;
 
-    click_by_text(client, "button", "Stop").await;
-    wait_for_text(client, "Start").await;
+    click_by_text(ctx, "button", "Stop").await?;
+    ctx.wait_for_text("Start").await?;
 
     // Random fills roughly 35% of 8400, so about 2940 cells. It used to fill by
     // `(y * 2 + (x + 4)) % 2 == 0`, which reduces to `x % 2 == 0` - every other column, filled
     // top to bottom. That is exactly 4200 cells, and a still life besides.
-    click_by_text(client, "button", "Random").await;
-    let live = life_population(client).await;
-    assert!(
+    click_by_text(ctx, "button", "Random").await?;
+    let live = life_population(ctx).await?;
+    ensure!(
         (2500..3400).contains(&live),
         "Random should fill about 35% of the 8400 cells, got {live}"
     );
 
-    click_by_text(client, "button", "Start").await;
-    wait_for_text(client, "Stop").await;
-    wait_for_text(client, "Year = 2").await;
+    click_by_text(ctx, "button", "Start").await?;
+    ctx.wait_for_text("Stop").await?;
+    ctx.wait_for_text("Year = 2").await?;
 
     // ...and the generation it ran changed something. A still life would leave this equal.
-    wait_until("the population to move between generations", || async {
-        Ok(life_population(client).await != live)
+    ctx.wait_for("the population to move between generations", async || {
+        Ok((life_population(ctx).await? != live).then_some(()))
     })
-    .await;
+    .await?;
 
-    click_by_text(client, "button", "Stop").await;
-    wait_for_text(client, "Start").await;
+    click_by_text(ctx, "button", "Stop").await?;
+    ctx.wait_for_text("Start").await?;
 
-    let delay = client
-        .find(Locator::Css("input"))
+    let delay = ctx
+        .find(By::Css("input"))
         .await
-        .ctx("the delay field")?;
+        .context("the delay field")?;
 
     // A non-numeric delay used to parse as `unwrap_or_default()` - zero - on every keystroke,
     // and the Set button then handed that zero to `set_interval` without anyone asking for it.
     // Refused now, and said so.
-    retype(&delay, "abc").await?;
-    click_by_text(client, "button", "Set").await;
-    wait_for_text(client, "Delay not set").await;
-    wait_for_delay(client, 50).await;
+    ctx.retype(&delay, "abc").await?;
+    click_by_text(ctx, "button", "Set").await?;
+    ctx.wait_for_text("Delay not set").await?;
+    wait_for_delay(ctx, 50).await?;
 
     // Zero is a legitimate answer, not a typo: being a number is the whole of the check, and
     // the very short delays are the ones worth watching.
-    retype(&delay, "0").await?;
-    click_by_text(client, "button", "Set").await;
-    wait_for_delay(client, 0).await;
-    wait_for_no_text(client, "Delay not set").await;
+    ctx.retype(&delay, "0").await?;
+    click_by_text(ctx, "button", "Set").await?;
+    wait_for_delay(ctx, 0).await?;
+    ctx.wait_for_no_text("Delay not set").await?;
 
     // ...and the board is still drivable at that end of the range. This is the assertion that
     // matters for the small delays: a generation over 8400 cells takes longer than the
     // interval, so the timer is re-entered as fast as the browser will schedule it, and the
     // question is whether the Stop button still gets a turn.
-    retype(&delay, "5").await?;
-    click_by_text(client, "button", "Set").await;
-    wait_for_delay(client, 5).await;
+    ctx.retype(&delay, "5").await?;
+    click_by_text(ctx, "button", "Set").await?;
+    wait_for_delay(ctx, 5).await?;
 
-    let before = life_year(client).await;
-    click_by_text(client, "button", "Start").await;
-    wait_until("the board to run several generations at a 5 ms delay", {
-        || async { Ok(life_year(client).await > before + 2) }
-    })
-    .await;
+    let before = life_year(ctx).await?;
+    click_by_text(ctx, "button", "Start").await?;
+    ctx.wait_for(
+        "the board to run several generations at a 5 ms delay",
+        async || Ok((life_year(ctx).await? > before + 2).then_some(())),
+    )
+    .await?;
 
-    click_by_text(client, "button", "Stop").await;
-    wait_for_text(client, "Start").await;
+    click_by_text(ctx, "button", "Stop").await?;
+    ctx.wait_for_text("Start").await?;
 
     // Left somewhere unremarkable: an unstopped fast timer would make every later tab slower
     // and noisier than it should be, and the run has eight more to go.
-    retype(&delay, "500").await?;
-    click_by_text(client, "button", "Set").await;
-    wait_for_delay(client, 500).await;
+    ctx.retype(&delay, "500").await?;
+    click_by_text(ctx, "button", "Set").await?;
+    wait_for_delay(ctx, 500).await?;
 
     Ok(())
 }
@@ -1037,23 +1012,18 @@ pub async fn game_of_life(client: &Client) -> TestResult {
 /// Exact, unlike `wait_for_text`, which asks whether the page *contains* a string: now that
 /// the default is 50, "delay = 5" is a substring of "delay = 50" and "delay = 500" - so
 /// waiting on the short one by text would pass while a longer one was still on screen.
-async fn wait_for_delay(client: &Client, expected: u32) {
+async fn wait_for_delay(ctx: &Ctx, expected: u32) -> Result<()> {
     const SCRIPT: &str = r#"
         const node = Array.from(document.querySelectorAll('div'))
             .find((candidate) => /^delay = \d+$/.test(candidate.textContent.trim()));
         return node === undefined ? null : parseInt(node.textContent.trim().slice(8), 10);
     "#;
 
-    wait_until(&format!("the delay to become {expected}"), || async {
-        let shown = client
-            .execute(SCRIPT, vec![])
-            .await
-            .ok()
-            .and_then(|value| value.as_u64());
-
-        Ok(shown == Some(expected as u64))
+    ctx.wait_for(&format!("the delay to become {expected}"), async || {
+        let shown = ctx.js(SCRIPT).await?.as_u64();
+        Ok((shown == Some(u64::from(expected))).then_some(()))
     })
-    .await;
+    .await
 }
 
 /// The generation counter the Game Of Life board is showing.
@@ -1062,31 +1032,36 @@ async fn wait_for_delay(client: &Client, expected: u32) {
 /// *contains* a string: "Year = 1" is a substring of "Year = 10", so waiting on one of those
 /// by text starts answering the wrong question as soon as the board passes its ninth
 /// generation - which at a five millisecond delay is immediately.
-async fn life_year(client: &Client) -> u32 {
+async fn life_year(ctx: &Ctx) -> Result<u32> {
     const SCRIPT: &str = r#"
         const node = Array.from(document.querySelectorAll('div'))
             .find((candidate) => /^Year = \d+$/.test(candidate.textContent.trim()));
         return node === undefined ? null : parseInt(node.textContent.trim().slice(7), 10);
     "#;
 
-    client
-        .execute(SCRIPT, vec![])
-        .await
-        .ok()
-        .and_then(|value| value.as_u64())
-        .unwrap_or_else(|| panic!("could not read the Game Of Life generation counter")) as u32
+    Ok(ctx
+        .js(SCRIPT)
+        .await?
+        .as_u64()
+        .context("could not read the Game Of Life generation counter")? as u32)
 }
 
 /// Press a preset button and wait for its cells to land.
 ///
 /// Loading also resets the generation counter, so this is where a preset run starts.
-async fn load_pattern(client: &Client, name: &str, population: usize) {
-    click_by_text(client, "button", name).await;
+async fn load_pattern(ctx: &Ctx, name: &str, population: usize) -> Result<()> {
+    click_by_text(ctx, "button", name).await?;
 
-    wait_until(&format!("{name} to put {population} cells on the board"), {
-        || async { Ok(life_population(client).await == population && life_year(client).await == 1) }
-    })
-    .await;
+    ctx.wait_for(
+        &format!("{name} to put {population} cells on the board"),
+        async || {
+            Ok(
+                (life_population(ctx).await? == population && life_year(ctx).await? == 1)
+                    .then_some(()),
+            )
+        },
+    )
+    .await
 }
 
 /// Press Step `times` times.
@@ -1095,7 +1070,7 @@ async fn load_pattern(client: &Client, name: &str, population: usize) {
 /// same handler, but a round trip per press turns the hundred and thirty generations Diehard
 /// needs into several seconds of the run. The click is a real one - vertigo attaches its
 /// handlers with `addEventListener`, so nothing here bypasses the app.
-async fn step_times(client: &Client, times: usize) -> TestResult {
+async fn step_times(ctx: &Ctx, times: usize) -> Result<()> {
     let script = format!(
         "const step = Array.from(document.querySelectorAll('button'))\
            .find((node) => node.textContent.trim() === 'Step');\
@@ -1104,12 +1079,9 @@ async fn step_times(client: &Client, times: usize) -> TestResult {
          return null;"
     );
 
-    let complaint = client
-        .execute(&script, vec![])
-        .await
-        .ctx("stepping the board failed")?;
+    let complaint = ctx.js(&script).await.context("stepping the board failed")?;
 
-    assert!(
+    ensure!(
         complaint.is_null(),
         "could not press Step {times} times: {complaint}"
     );
@@ -1120,14 +1092,14 @@ async fn step_times(client: &Client, times: usize) -> TestResult {
 /// The x position of the element matching `selector` whose own text is `text`.
 ///
 /// Rounded, because a sub-pixel difference is not the kind of movement worth failing over.
-async fn element_left(client: &Client, selector: &str, text: &str) -> i64 {
-    let (left, _, _, _) = find_by_text(client, selector, text)
+async fn element_left(ctx: &Ctx, selector: &str, text: &str) -> Result<i64> {
+    let rect = find_by_text(ctx, selector, text)
+        .await?
+        .rect()
         .await
-        .rectangle()
-        .await
-        .unwrap_or_else(|err| panic!("reading the position of the {selector} {text:?}: {err}"));
+        .with_context(|| format!("reading the position of the {selector} {text:?}"))?;
 
-    left.round() as i64
+    Ok(rect.x.round() as i64)
 }
 
 /// Where the live cells of the Game Of Life board are, as `(row, column)`.
@@ -1136,7 +1108,7 @@ async fn element_left(client: &Client, selector: &str, text: &str) -> i64 {
 /// `cell.map(css_cell)` - so the cells fall into two generated classes and the live one is
 /// whichever is in the minority. That holds for the handful of cells a preset puts down; it
 /// would not for a board Random had filled, which is why nothing calls this after one.
-async fn live_cells(client: &Client) -> Vec<(i64, i64)> {
+async fn live_cells(ctx: &Ctx) -> Result<Vec<(i64, i64)>> {
     const SCRIPT: &str = r#"
         const rows = Array.from(document.querySelectorAll('div')).filter((node) => {
             const cells = Array.from(node.children);
@@ -1160,11 +1132,11 @@ async fn live_cells(client: &Client) -> Vec<(i64, i64)> {
         return found;
     "#;
 
-    let cells = client
-        .execute(SCRIPT, vec![])
-        .await
-        .ok()
-        .and_then(|value| value.as_array().cloned())
+    let cells = ctx
+        .js(SCRIPT)
+        .await?
+        .as_array()
+        .cloned()
         .unwrap_or_default()
         .into_iter()
         .filter_map(|pair| {
@@ -1173,12 +1145,12 @@ async fn live_cells(client: &Client) -> Vec<(i64, i64)> {
         })
         .collect::<Vec<_>>();
 
-    assert!(
+    ensure!(
         !cells.is_empty(),
         "could not read the live cells off the Game Of Life board"
     );
 
-    cells
+    Ok(cells)
 }
 
 /// A shape with its top-left corner moved to the origin, and where that corner was.
@@ -1196,75 +1168,72 @@ fn normalise(cells: &[(i64, i64)]) -> (Vec<(i64, i64)>, (i64, i64)) {
 }
 
 /// How many cells the Game Of Life board says are alive.
-async fn life_population(client: &Client) -> usize {
+async fn life_population(ctx: &Ctx) -> Result<usize> {
     const SCRIPT: &str = r#"
         const node = Array.from(document.querySelectorAll('div'))
             .find((candidate) => /^Population = \d+$/.test(candidate.textContent.trim()));
         return node === undefined ? null : parseInt(node.textContent.trim().slice(13), 10);
     "#;
 
-    client
-        .execute(SCRIPT, vec![])
-        .await
-        .ok()
-        .and_then(|value| value.as_u64())
-        .unwrap_or_else(|| panic!("could not read the Game Of Life population")) as usize
+    Ok(ctx
+        .js(SCRIPT)
+        .await?
+        .as_u64()
+        .context("could not read the Game Of Life population")? as usize)
 }
 
 /// The websocket chat, against the demo's own server.
-pub async fn chat(client: &Client) -> TestResult {
-    open(client, "Chat", "Send").await;
+pub async fn chat(ctx: &Ctx) -> Result<()> {
+    open(ctx, "Chat", "Send").await?;
 
-    // Not "turned off": the harness passes `--env ws_chat=..`, so a missing connection here is
-    // a real failure rather than a configuration one.
-    wait_for_text(client, "Connection active").await;
+    // Not "turned off": the environment passes `ws_chat`, so a missing connection here is a
+    // real failure rather than a configuration one.
+    ctx.wait_for_text("Connection active").await?;
 
     let message = "hello from the browser test";
 
-    let field = client
-        .find(Locator::Css("input[type=text]"))
+    let field = ctx
+        .find(By::Css("input[type=text]"))
         .await
-        .ctx("the chat input")?;
-    retype(&field, message).await?;
+        .context("the chat input")?;
+    ctx.retype(&field, message).await?;
 
-    click_by_text(client, "button", "Send").await;
+    click_by_text(ctx, "button", "Send").await?;
 
     // Round trip: the server echoes to every connection, including this one.
-    wait_for_text(client, message).await;
-
-    Ok(())
+    ctx.wait_for_text(message).await
 }
 
 /// Two fetches and three views, against the local stand-in for jsonplaceholder.
-pub async fn fetch(client: &Client) -> TestResult {
-    open(client, "Fetch", "post = stub post 1").await;
+pub async fn fetch(ctx: &Ctx) -> Result<()> {
+    open(ctx, "Fetch", "post = stub post 1").await?;
 
-    wait_for_text(client, "post = stub post 5").await;
+    ctx.wait_for_text("post = stub post 5").await?;
 
-    click_by_text(client, "div", "post = stub post 1").await;
-    wait_for_text(client, "post_id = 1").await;
-    wait_for_text(client, "Comments:").await;
-    wait_for_text(client, "comment 1 on post 1").await;
+    click_by_text(ctx, "div", "post = stub post 1").await?;
+    ctx.wait_for_text("post_id = 1").await?;
+    ctx.wait_for_text("Comments:").await?;
+    ctx.wait_for_text("comment 1 on post 1").await?;
 
     // The author `<select>`, whose options come from the fetched comments.
-    let select = client
-        .find(Locator::Css("select"))
+    let select = ctx
+        .find(By::Css("select"))
         .await
-        .ctx("the author select")?;
-    select
+        .context("the author select")?;
+    SelectElement::new(&select)
+        .await?
         .select_by_value("commenter2@example.com")
         .await
-        .ctx("selecting an author failed")?;
-    wait_for_text(client, "Selected author: commenter2@example.com").await;
+        .context("selecting an author failed")?;
+    ctx.wait_for_text("Selected author: commenter2@example.com")
+        .await?;
 
     // Clicking an author's name is a third view.
-    click_by_text(client, "span", "commenter1@example.com").await;
-    wait_for_text(client, "user = commenter1@example.com").await;
+    click_by_text(ctx, "span", "commenter1@example.com").await?;
+    ctx.wait_for_text("user = commenter1@example.com").await?;
 
-    click_by_text(client, "div", "go to post list").await;
-    wait_for_text(client, "post = stub post 1").await;
-
-    Ok(())
+    click_by_text(ctx, "div", "go to post list").await?;
+    ctx.wait_for_text("post = stub post 1").await
 }
 
 /// Left and right step through the menu.
@@ -1272,76 +1241,63 @@ pub async fn fetch(client: &Client) -> TestResult {
 /// Not part of any one tab: the handler is a `hook_key_down` on the frame around them, which
 /// is registered on the document and so sees every keystroke on the page. That is what makes
 /// the last part of this - a field keeping its own arrows - the half worth having.
-pub async fn arrow_keys(client: &Client) -> TestResult {
+pub async fn arrow_keys(ctx: &Ctx) -> Result<()> {
     println!("  -> arrow keys");
 
-    let at = |path: &'static str| async move {
-        wait_until(&format!("the route to become {path}"), || async {
-            Ok(client.current_url().await?.path() == path)
-        })
-        .await;
-    };
-
     // Start at the far end of the menu, so the first press has to wrap.
-    click_by_text(client, "a", "Svg").await;
-    at("/svg").await;
+    click_by_text(ctx, "a", "Svg").await?;
+    ctx.wait_for_path("/svg").await?;
 
-    press_key(client, ARROW_RIGHT).await?;
-    at("/").await;
+    press_key(ctx, Key::Right).await?;
+    ctx.wait_for_path("/").await?;
 
-    press_key(client, ARROW_LEFT).await?;
-    at("/svg").await;
+    press_key(ctx, Key::Left).await?;
+    ctx.wait_for_path("/svg").await?;
 
-    press_key(client, ARROW_LEFT).await?;
-    at("/ws-collection").await;
+    press_key(ctx, Key::Left).await?;
+    ctx.wait_for_path("/ws-collection").await?;
 
     // ...and a field being typed in keeps its arrows. Without the guard the caret would stay
     // put and the tab would change underneath it.
-    click_by_text(client, "a", "Input").await;
-    at("/input").await;
+    click_by_text(ctx, "a", "Input").await?;
+    ctx.wait_for_path("/input").await?;
 
-    let field = client
-        .find(Locator::Css("input"))
+    let field = ctx
+        .find(By::Css("input"))
         .await
-        .ctx("the input field")?;
-    retype(&field, "abc").await?;
+        .context("the input field")?;
+    ctx.retype(&field, "abc").await?;
 
     field
-        .send_keys(ARROW_LEFT)
+        .send_keys(Key::Left)
         .await
-        .ctx("sending an arrow to the field failed")?;
+        .context("sending an arrow to the field failed")?;
 
     // The route is unchanged, and the caret moved rather than the page.
-    assert_eq!(
-        client.current_url().await.ctx("reading the url")?.path(),
+    check_eq(
+        ctx.path().await?,
         "/input",
-        "an arrow key inside a text field should stay in the field"
-    );
-    assert_eq!(
-        field.prop("value").await.ctx("reading the field")?,
+        "an arrow key inside a text field should stay in the field",
+    )?;
+    check_eq(
+        field.prop("value").await.context("reading the field")?,
         Some("abc".to_string()),
-        "and should not have disturbed what was typed"
-    );
-
-    Ok(())
+        "and should not have disturbed what was typed",
+    )
 }
-
-/// WebDriver's key codes for the two arrows.
-const ARROW_LEFT: &str = "\u{E012}";
-const ARROW_RIGHT: &str = "\u{E014}";
 
 /// Send a key to the page rather than to any particular field.
 ///
 /// Through whatever holds focus - a menu link, after the click that got here. The handler is
 /// on the document, so anything that lets the event bubble will do.
-async fn press_key(client: &Client, key: &str) -> TestResult {
-    client
+async fn press_key(ctx: &Ctx, key: Key) -> Result<()> {
+    ctx.driver
         .active_element()
         .await
-        .ctx("no active element to send a key to")?
+        .context("no active element to send a key to")?
         .send_keys(key)
         .await
-        .ctx("sending the key failed")?;
+        .context("sending the key failed")?;
 
     Ok(())
 }
@@ -1356,65 +1312,69 @@ async fn press_key(client: &Client, key: &str) -> TestResult {
 /// `send_keys` on a file input is how WebDriver uploads - the path goes to the element rather
 /// than to the keyboard - and several paths can be sent at once by separating them with
 /// newlines.
-pub async fn drop_file(client: &Client) -> TestResult {
-    open(client, "Drop File", "drop file").await;
+pub async fn drop_file(ctx: &Ctx) -> Result<()> {
+    open(ctx, "Drop File", "drop file").await?;
 
-    wait_for_text(client, "No files yet").await;
+    ctx.wait_for_text("No files yet").await?;
 
     // Deliberately different lengths, so the byte counts below say which row is which - and
     // deliberately not the same content, so a row cannot match by accident.
-    let first = Fixture::write("vertigo-demo-one.txt", "one\n");
-    let second = Fixture::write("vertigo-demo-two.txt", "two, and a little more\n");
+    let dir = ctx.env.work_dir.join("files");
+    let first = Fixture::write(&dir, "vertigo-demo-one.txt", "one\n")?;
+    let second = Fixture::write(&dir, "vertigo-demo-two.txt", "two, and a little more\n")?;
 
-    let input = client
-        .find(Locator::Css("input[type=file]"))
+    let input = ctx
+        .find(By::Css("input[type=file]"))
         .await
-        .ctx("the file input")?;
+        .context("the file input")?;
 
     input
-        .send_keys(&format!("{}\n{}", first.path, second.path))
+        .send_keys(format!(
+            "{}\n{}",
+            first.path.display(),
+            second.path.display()
+        ))
         .await
-        .ctx("uploading the fixtures failed")?;
+        .context("uploading the fixtures failed")?;
 
     // The name proves the file arrived; the byte count proves its *contents* did, which is the
     // part a plain "the row appeared" assertion would miss.
-    wait_for_text(client, &first.row()).await;
-    wait_for_text(client, &second.row()).await;
-    wait_for_text(client, "2 files").await;
+    ctx.wait_for_text(&first.row()).await?;
+    ctx.wait_for_text(&second.row()).await?;
+    ctx.wait_for_text("2 files").await?;
 
     // Each row removes itself and leaves the other alone - which is what the per-file id is
     // for, and what a list keyed on the file name could not do.
-    row_button(client, &first.row(), "Remove").await;
-    wait_for_no_text(client, &first.row()).await;
-    wait_for_text(client, &second.row()).await;
-    wait_for_text(client, "1 file").await;
+    row_button(ctx, &first.row(), "Remove").await?;
+    ctx.wait_for_no_text(&first.row()).await?;
+    ctx.wait_for_text(&second.row()).await?;
+    ctx.wait_for_text("1 file").await?;
 
-    click_by_text(client, "button", "Clear all").await;
-    wait_for_no_text(client, &second.row()).await;
-    wait_for_text(client, "No files yet").await;
-
-    Ok(())
+    click_by_text(ctx, "button", "Clear all").await?;
+    ctx.wait_for_no_text(&second.row()).await?;
+    ctx.wait_for_text("No files yet").await
 }
 
 /// A file on disk for the upload to pick up, removed when the test is done with it.
 struct Fixture {
     name: String,
-    path: String,
+    path: PathBuf,
     size: usize,
 }
 
 impl Fixture {
-    fn write(name: &str, contents: &str) -> Fixture {
-        let path = std::env::temp_dir().join(name);
-
+    fn write(dir: &std::path::Path, name: &str, contents: &str) -> Result<Fixture> {
+        std::fs::create_dir_all(dir)
+            .with_context(|| format!("could not create {}", dir.display()))?;
+        let path = dir.join(name);
         std::fs::write(&path, contents)
-            .unwrap_or_else(|err| panic!("could not write the fixture {path:?}: {err}"));
+            .with_context(|| format!("could not write the fixture {}", path.display()))?;
 
-        Fixture {
+        Ok(Fixture {
             name: name.to_string(),
-            path: path.to_string_lossy().into_owned(),
+            path,
             size: contents.len(),
-        }
+        })
     }
 
     /// How the demo renders this file - see `describe` in `demo/app/src/app/dropfiles`.
@@ -1430,93 +1390,86 @@ impl Drop for Fixture {
 }
 
 /// Direct JS access, including the three tabs' worth of modal dialogs.
-pub async fn js_api_access(client: &Client) -> TestResult {
-    open(client, "JS Api Access", "Text to copy:").await;
+pub async fn js_api_access(ctx: &Ctx) -> Result<()> {
+    open(ctx, "JS Api Access", "Text to copy:").await?;
 
-    wait_for_text(client, "Input with ref:").await;
-    wait_for_count(client, "ol li", 200).await;
+    ctx.wait_for_text("Input with ref:").await?;
+    wait_for_count(ctx, "ol li", 200).await?;
 
     // The two "Focus" buttons - one reaching an element by id, one through a `NodeRef` - are
     // done one at a time and checked immediately. They cannot go in the sweep: clicking a
     // button focuses the button, so whatever the sweep pressed last would be the answer.
-    let focus_buttons = buttons_labelled(client, "Focus").await;
-    assert_eq!(focus_buttons.len(), 2, "both Focus buttons");
+    let focus_buttons = buttons_labelled(ctx, "Focus").await?;
+    check_eq(focus_buttons.len(), 2, "both Focus buttons")?;
 
     for button in focus_buttons {
-        button.click().await.ctx("clicking Focus failed")?;
+        button.click().await.context("clicking Focus failed")?;
 
-        wait_until("Focus to move the caret into an input", || async {
-            Ok(client
-                .execute(
-                    "return document.activeElement ? document.activeElement.tagName : '';",
-                    vec![],
-                )
-                .await?
-                .as_str()
-                == Some("INPUT"))
+        ctx.wait_for("Focus to move the caret into an input", async || {
+            let tag = ctx
+                .js("return document.activeElement ? document.activeElement.tagName : '';")
+                .await?;
+            Ok((tag.as_str() == Some("INPUT")).then_some(()))
         })
-        .await;
+        .await?;
     }
 
     click_all_buttons_except(
-        client,
+        ctx,
         // Dialogs are answered separately, below - a sweep would leave them standing and
         // every command after would fail with "unexpected alert open". Focus is done above.
         &["URL", "Referrer", "Ask", "Focus"],
     )
-    .await;
+    .await?;
 
-    let url = click_and_accept_dialog(client, "URL", None).await?;
-    assert!(
+    let url = click_and_accept_dialog(ctx, "URL", None).await?;
+    ensure!(
         url.contains("127.0.0.1"),
         "the URL alert should show the page's own address, got {url:?}"
     );
 
-    click_and_accept_dialog(client, "Referrer", None).await?;
+    click_and_accept_dialog(ctx, "Referrer", None).await?;
 
-    click_and_accept_dialog(client, "Ask", Some("very well")).await?;
-    wait_for_text(client, "Answer: very well").await;
-
-    Ok(())
+    click_and_accept_dialog(ctx, "Ask", Some("very well")).await?;
+    ctx.wait_for_text("Answer: very well").await
 }
 
 /// One `Value` per row, rendered twice - editable on the left, derived on the right.
 ///
 /// The two panels are built by different machinery (a hand-built `dom_element!` loop and
 /// `render_list`), so they diverging is exactly the kind of reconciler bug worth catching.
-pub async fn list(client: &Client) -> TestResult {
-    open(client, "List", "Left Panel").await;
+pub async fn list(ctx: &Ctx) -> Result<()> {
+    open(ctx, "List", "Left Panel").await?;
 
-    wait_for_text(client, "Right Panel").await;
-    wait_for_count(client, "input", 3).await;
-    assert_eq!(
-        count_computed(client).await,
+    ctx.wait_for_text("Right Panel").await?;
+    wait_for_count(ctx, "input", 3).await?;
+    check_eq(
+        count_computed(ctx).await,
         3,
-        "the right panel should mirror the left"
-    );
+        "the right panel should mirror the left",
+    )?;
 
-    click_by_text(client, "button", "Add Item").await;
-    wait_for_count(client, "input", 4).await;
-    wait_until("the right panel to follow the left", || async {
-        Ok(count_computed(client).await == 4)
+    click_by_text(ctx, "button", "Add Item").await?;
+    wait_for_count(ctx, "input", 4).await?;
+    ctx.wait_for("the right panel to follow the left", async || {
+        Ok((count_computed(ctx).await == 4).then_some(()))
     })
-    .await;
+    .await?;
 
     // A write on the left has to reach the derived text on the right.
-    let inputs = find_all(client, "input").await;
-    retype(&inputs[0], "renamed").await?;
-    wait_for_text(client, "Computed: renamed").await;
+    let inputs = find_all(ctx, "input").await?;
+    let first = inputs.first().context("no input on the left")?;
+    ctx.retype(first, "renamed").await?;
+    ctx.wait_for_text("Computed: renamed").await?;
 
-    click_by_text(client, "button", "Remove").await;
-    wait_for_count(client, "input", 3).await;
-    wait_for_no_text(client, "Computed: renamed").await;
-
-    Ok(())
+    click_by_text(ctx, "button", "Remove").await?;
+    wait_for_count(ctx, "input", 3).await?;
+    ctx.wait_for_no_text("Computed: renamed").await
 }
 
 /// How many rows the right-hand panel is showing.
-async fn count_computed(client: &Client) -> usize {
-    body_text(client)
+async fn count_computed(ctx: &Ctx) -> usize {
+    ctx.page_text()
         .await
         .unwrap_or_default()
         .matches("Computed: ")
@@ -1524,77 +1477,68 @@ async fn count_computed(client: &Client) -> usize {
 }
 
 /// Optimistic create, update and delete against `/api/items`, proxied to the demo's server.
-pub async fn lazy_list(client: &Client) -> TestResult {
-    open(client, "Lazy List", "LazyListCache CRUD demo").await;
+pub async fn lazy_list(ctx: &Ctx) -> Result<()> {
+    open(ctx, "Lazy List", "LazyListCache CRUD demo").await?;
 
     for seeded in ["Apples", "Bread", "Coffee"] {
-        wait_for_text(client, seeded).await;
+        ctx.wait_for_text(seeded).await?;
     }
 
-    let name_field = client
-        .find(Locator::Css("input"))
+    let name_field = ctx
+        .find(By::Css("input"))
         .await
-        .ctx("the new-item field")?;
-    retype(&name_field, "Dates").await?;
-    click_by_text(client, "button", "Add").await;
+        .context("the new-item field")?;
+    ctx.retype(&name_field, "Dates").await?;
+    click_by_text(ctx, "button", "Add").await?;
 
     // The row appears optimistically under the placeholder id, then the server's id replaces
     // it. Waiting for the id is what distinguishes "the round trip completed" from "the
     // optimistic row is still sitting there".
-    wait_for_text(client, "Dates").await;
-    wait_for_text(client, "#4").await;
+    ctx.wait_for_text("Dates").await?;
+    ctx.wait_for_text("#4").await?;
 
-    click_by_text(client, "button", "Refresh").await;
-    wait_for_text(client, "Dates").await;
+    click_by_text(ctx, "button", "Refresh").await?;
+    ctx.wait_for_text("Dates").await?;
 
     // Edit the row just created, so the seeded rows stay put for a re-run.
-    edit_row(client, "Dates", "Dates (edited)").await?;
-    wait_for_text(client, "Dates (edited)").await;
+    edit_row(ctx, "Dates", "Dates (edited)").await?;
+    ctx.wait_for_text("Dates (edited)").await?;
 
-    delete_row(client, "Dates (edited)").await;
-    wait_for_no_text(client, "Dates (edited)").await;
-
-    Ok(())
+    row_button(ctx, "Dates (edited)", "Delete").await?;
+    ctx.wait_for_no_text("Dates (edited)").await
 }
 
 /// Press "Edit" on the row showing `name`, retype it, and save.
 ///
 /// The row being edited is the only one with a "Save" button, which is what identifies its
 /// input - there is another input on this tab, the one that adds new items.
-async fn edit_row(client: &Client, name: &str, new_name: &str) -> TestResult {
-    row_button(client, name, "Edit").await;
+async fn edit_row(ctx: &Ctx, name: &str, new_name: &str) -> Result<()> {
+    row_button(ctx, name, "Edit").await?;
 
-    let field = client
-        .find(Locator::XPath(
+    let field = ctx
+        .find(By::XPath(
             "//div[button[normalize-space(text())='Save']]/input",
         ))
         .await
-        .ctx("the row's edit field")?;
-    retype(&field, new_name).await?;
+        .context("the row's edit field")?;
+    ctx.retype(&field, new_name).await?;
 
-    click_by_text(client, "button", "Save").await;
-
-    Ok(())
-}
-
-async fn delete_row(client: &Client, name: &str) {
-    row_button(client, name, "Delete").await;
+    click_by_text(ctx, "button", "Save").await
 }
 
 /// The button in the row whose name cell reads `name`.
-async fn row_button(client: &Client, name: &str, label: &str) {
+async fn row_button(ctx: &Ctx, name: &str, label: &str) -> Result<()> {
     let xpath = format!(
         "//div[span[normalize-space(text())={name:?}]]\
          /button[normalize-space(text())={label:?}]"
     );
 
-    client
-        .find(Locator::XPath(&xpath))
+    ctx.find(By::XPath(xpath))
         .await
-        .unwrap_or_else(|err| panic!("the {label:?} button on row {name:?}: {err}"))
+        .with_context(|| format!("the {label:?} button on row {name:?}"))?
         .click()
         .await
-        .unwrap_or_else(|err| panic!("clicking {label:?} on row {name:?}: {err}"));
+        .with_context(|| format!("clicking {label:?} on row {name:?}"))
 }
 
 /// A server-pushed collection: rows arrive over a websocket and the query narrows them.
@@ -1603,68 +1547,67 @@ async fn row_button(client: &Client, name: &str, label: &str) {
 /// own - the stock column ticks and rows come and go - so "the same number as a moment ago" is
 /// not a property this tab has. What is asserted is the shape: a query narrows, clearing it
 /// widens, and a query that matches nothing says so.
-pub async fn ws_collection(client: &Client) -> TestResult {
-    open(client, "WS Collection", "Name search:").await;
+pub async fn ws_collection(ctx: &Ctx) -> Result<()> {
+    open(ctx, "WS Collection", "Name search:").await?;
 
-    let rows = || async { count(client, "tbody tr").await };
+    let rows = async || count(ctx, "tbody tr").await;
 
-    wait_until("the collection to arrive over the websocket", || async {
-        Ok(rows().await > 0)
+    ctx.wait_for("the collection to arrive over the websocket", async || {
+        Ok((rows().await > 0).then_some(()))
     })
-    .await;
+    .await?;
 
     let all = rows().await;
 
     // Narrowing is done by the server: the client re-subscribes with a new query rather than
     // filtering what it already has.
-    let select = client
-        .find(Locator::Css("select"))
+    let select = ctx
+        .find(By::Css("select"))
         .await
-        .ctx("the kind select")?;
-    select
+        .context("the kind select")?;
+    SelectElement::new(&select)
+        .await?
         .select_by_value("Soprano")
         .await
-        .ctx("selecting a kind failed")?;
+        .context("selecting a kind failed")?;
 
-    wait_until("the kind filter to narrow the collection", || async {
+    ctx.wait_for("the kind filter to narrow the collection", async || {
         let narrowed = rows().await;
-        Ok(narrowed > 0 && narrowed < all)
+        Ok((narrowed > 0 && narrowed < all).then_some(()))
     })
-    .await;
+    .await?;
 
     let narrowed = rows().await;
 
-    select
+    SelectElement::new(&select)
+        .await?
         .select_by_value("")
         .await
-        .ctx("clearing the kind failed")?;
-    wait_until("clearing the kind filter to widen it again", || async {
-        Ok(rows().await > narrowed)
+        .context("clearing the kind failed")?;
+    ctx.wait_for("clearing the kind filter to widen it again", async || {
+        Ok((rows().await > narrowed).then_some(()))
     })
-    .await;
+    .await?;
 
-    let search = client
-        .find(Locator::Css("input[type=text]"))
+    let search = ctx
+        .find(By::Css("input[type=text]"))
         .await
-        .ctx("the name search")?;
-    retype(&search, "zzzzz").await?;
-    wait_for_text(client, "No ukuleles match the current query.").await;
+        .context("the name search")?;
+    ctx.retype(&search, "zzzzz").await?;
+    ctx.wait_for_text("No ukuleles match the current query.")
+        .await?;
 
-    retype(&search, "").await?;
-    wait_until("clearing the search to bring the rows back", || async {
-        Ok(rows().await > 0)
+    ctx.retype(&search, "").await?;
+    ctx.wait_for("clearing the search to bring the rows back", async || {
+        Ok((rows().await > 0).then_some(()))
     })
-    .await;
-
-    Ok(())
+    .await
 }
 
 /// Namespaced elements. Nothing here is safe to click - the only link leaves the site.
-pub async fn svg(client: &Client) -> TestResult {
-    open(client, "Svg", "Link in SVG").await;
+pub async fn svg(ctx: &Ctx) -> Result<()> {
+    open(ctx, "Svg", "Link in SVG").await?;
 
-    assert_eq!(count(client, "svg circle").await, 1, "the svg circle");
-    assert_eq!(count(client, "svg path").await, 2, "both svg paths");
-
-    Ok(())
+    check_eq(count(ctx, "svg circle").await, 1, "the svg circle")?;
+    check_eq(count(ctx, "svg path").await, 2, "both svg paths")
 }

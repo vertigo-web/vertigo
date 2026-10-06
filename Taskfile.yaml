@@ -87,15 +87,15 @@ tasks:
     cmds:
       - cargo test --release --package fantoccini-tests --test ssr_bench -- --ignored --nocapture
 
-  automated-tests:
-    desc: "NOTE: WebDriver on localhost:9515 needs to be running"
+  e2e-tests:
+    desc: "Basic and demo suites in a browser (the harness starts chromedriver; E2E_WEBDRIVER=http://localhost:9515 uses a running one, E2E_HEADLESS=0 shows it)"
     cmds:
       - cargo test --package fantoccini-tests --test basic --test demo -- --ignored
 
   demo-tests:
-    desc: "Click through every demo tab in a browser (NOTE: WebDriver on localhost:9515 needs to be running)"
+    desc: "Click through every demo tab in a browser (the harness starts chromedriver; E2E_WEBDRIVER=http://localhost:9515 uses a running one, E2E_HEADLESS=0 shows it)"
     cmds:
-      - cargo test --package fantoccini-tests --test demo -- --ignored --nocapture
+      - cargo test --package fantoccini-tests --test demo -- --ignored
 
   ci:
     desc: Ci tests
@@ -114,7 +114,7 @@ tasks:
 
   all-tests:
     desc: All tests
-    deps: [unit-tests, automated-tests, demo-tests]
+    deps: [unit-tests, e2e-tests, demo-tests]
 
   clean:
     desc: Demo clean

@@ -25,10 +25,10 @@ use vertigo_bench_report::{
 };
 use vertigo_cli::{BuildOpts, CommonOpts, ServeOpts, build, serve};
 
-/// Must differ from `basic` (5555): cargo may run the test binaries concurrently.
+/// Must differ from `dom_bench` (5557): cargo may run the test binaries concurrently.
 const PORT: u16 = 5556;
-/// Must also differ - `build::run` starts by wiping its dest dir, so sharing `./build` would
-/// let one test delete the other's artifacts.
+/// Must also differ - `build::run` starts by wiping its dest dir, so sharing one would let one
+/// test delete the other's artifacts.
 const DEST_DIR: &str = "./build-reactive-bench";
 const PACKAGE: &str = "vertigo-test-reactive-bench";
 const RUN_TIMEOUT: Duration = Duration::from_secs(300);

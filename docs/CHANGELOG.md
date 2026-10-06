@@ -3,6 +3,10 @@
 <!-- markdownlint-disable-next-line first-line-h1 -->
 ## Unreleased
 
+### Added
+
+* `vertigo-testing` - crate with harness for end-to-end browser tests of vertigo apps.
+
 ### Fixed
 
 * Hydration of an empty text (e.g. `{label}` with `label == ""`) was counted as not matched,

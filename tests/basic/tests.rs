@@ -1,229 +1,132 @@
-use fantoccini::{ClientBuilder, Locator};
-use fantoccini_tests::{Ctx, TestResult};
-use std::time::Duration;
-use vertigo_cli::{BuildOpts, CommonOpts, ServeOpts, build, serve};
+//! Renders 10 000 rows in a real browser, in two modes, and prints how long it took.
+//!
+//! Timed from Rust, around the WebDriver commands, so the numbers include a round trip or two
+//! besides the rendering. Printed, never asserted. Runs on the harness of `vertigo-testing`:
+//!
+//! ```text
+//! cargo test --package fantoccini-tests --test basic -- --ignored
+//! ```
+//!
+//! The harness starts a chromedriver of its own; `E2E_WEBDRIVER=http://localhost:9515` uses a
+//! running one instead, and `E2E_HEADLESS=0` shows the window. Fantoccini, which this suite
+//! ran on before, opened a visible window, so compare with older numbers using that.
 
-const PORT: u16 = 5555;
+use std::{ops::Deref, time::Instant};
 
-#[tokio::test]
-#[ignore]
-async fn basic() -> TestResult {
-    // Go to project root
-    let _ = std::env::set_current_dir("..");
+use vertigo_testing::{
+    ChromeConfig, Core, Env, Settings, browser_tests, build, prelude::*, serve::Server,
+};
 
-    // Build basic test site
-    let opts = BuildOpts {
-        common: CommonOpts {
-            dest_dir: "./build".to_string(),
-            log_local_time: None,
-        },
-        inner: build::BuildOptsInner {
-            package_name: Some("vertigo-test-basic".to_string()),
-            public_path: None,
-            wasm_opt: Some(true),
-            release_mode: Some(true),
-            wasm_run_source_map: false,
-            cargo_opts: vec![],
-        },
-    };
+struct BasicEnv {
+    core: Core,
+    server: Server,
+}
 
-    println!("Running site build");
+impl Env for BasicEnv {
+    async fn start(suite: &'static str) -> Result<Self> {
+        let mut settings = Settings::from_env(env!("CARGO_MANIFEST_DIR"))?;
+        // What is timed is what ships
+        settings.release = true;
+        settings.wasm_opt = true;
 
-    let ret = build::run(opts);
+        let build_dir = settings.build_dir().join("basic");
+        build::vertigo_app(&settings, "vertigo-test-basic", &build_dir).await?;
+        let server = Server::start(&build_dir).await?;
 
-    assert!(ret.is_ok());
-
-    use tokio::sync::oneshot;
-    let (sender, receiver) = oneshot::channel::<i32>();
-
-    println!("Spawning vertigo serve");
-
-    let handle = tokio::runtime::Handle::current();
-    std::thread::spawn(move || {
-        let opts = ServeOpts {
-            common: CommonOpts {
-                dest_dir: "./build".to_string(),
-                log_local_time: None,
-            },
-            inner: serve::ServeOptsInner {
-                host: "127.0.0.1".into(),
-                port: PORT,
-                mount_point: "/".to_string(),
-                proxy: vec![],
-                env: vec![],
-                wasm_preload: true,
-                disable_hydration: false,
-                ssr_fetch_base: None,
-                // Left on, as a served app has it: these suites are the only place the
-                // compressed path is exercised end to end.
-                disable_compression: false,
-                threads: None,
-            },
+        let chrome = ChromeConfig {
+            // What a chromedriver session gets without capabilities, as the fantoccini one this
+            // suite ran on before - so its timings stay comparable
+            window_size: (1050, 1000),
+            ..Default::default()
         };
+        let core = Core::new(suite, settings, server.base_url.clone(), chrome)?;
 
-        handle.block_on(async {
-            tokio::select! {
-                ret = serve::run(opts, None) => {
-                    match ret {
-                        Ok(()) => 1,
-                        Err(err) => {
-                            println!("Can't spawn vertigo-cli: {err:?}");
-                            1
-                        }
-                    }
-                }
-                _ = receiver => { 2 }
-            }
-        });
-    });
+        Ok(Self { core, server })
+    }
 
-    println!("Sleeping for a second waiting for vertigo-cli to start");
+    async fn shutdown(&self) {
+        self.server.stop().await;
+    }
+}
 
-    tokio::time::sleep(tokio::time::Duration::from_secs(1)).await;
+impl Deref for BasicEnv {
+    type Target = Core;
 
-    println!("Starting fantoccini");
+    fn deref(&self) -> &Core {
+        &self.core
+    }
+}
 
-    let c = ClientBuilder::native()
-        .connect("http://localhost:9515")
-        .await
-        .ctx("failed to connect to WebDriver")?;
+type Ctx = vertigo_testing::Ctx<BasicEnv>;
 
-    println!("Opening site");
-
-    let site_url = format!("http://127.0.0.1:{PORT}/");
-
-    c.goto(&site_url).await.ctx("goto failed")?;
-
-    let url = c.current_url().await.ctx("current_url failed")?;
-
-    assert_eq!(url.as_ref(), site_url);
-
-    println!("Wait for DOM regeneration by WASM");
-
+async fn basic(ctx: Ctx) -> Result<()> {
+    ctx.open("/").await?;
+    // The app has started, but Chrome still optimizes its wasm in the background. Two seconds
+    // let that finish, so what is timed below is the optimized code.
     tokio::time::sleep(Duration::from_secs(2)).await;
 
-    println!("Find row numer 2");
-
-    // Find "row-2"
-    c.find(Locator::Id("row-2"))
-        .await
-        .ctx("find row-2 failed")?;
+    ctx.find(By::Id("row-2")).await?;
 
     // Heatup
-    c.find(Locator::Id("generate"))
-        .await
-        .ctx("heatup: find generate button failed")?
-        .click()
-        .await
-        .ctx("heatup: click generate failed")?;
-    c.find(Locator::Id("clear"))
-        .await
-        .ctx("heatup:  find clear button failed")?
-        .click()
-        .await
-        .ctx("heatup: click clear failed")?;
+    click(&ctx, "generate").await?;
+    click(&ctx, "clear").await?;
 
-    // *** Div1 test ***
-    let start = std::time::Instant::now();
+    // *** Div test ***
+    let start = Instant::now();
 
-    // click "Generate"
-    c.find(Locator::Id("generate"))
-        .await
-        .ctx("div: find generate button failed")?
-        .click()
-        .await
-        .ctx("div: click generate failed")?;
+    click(&ctx, "generate").await?;
+    println!("div: Generate took {} ms", start.elapsed().as_millis());
 
-    let click_time = start.elapsed();
-
-    println!("div: Generate took {} ms", click_time.as_millis());
-
-    c.find(Locator::Id("row-9999"))
-        .await
-        .ctx("div: find row-9999 failed")?;
-
-    let row999_time = start.elapsed();
-
+    ctx.find(By::Id("row-9999")).await?;
     println!(
         "div: Row 9999 found {} ms after click",
-        row999_time.as_millis()
+        start.elapsed().as_millis()
     );
 
     // Change mode
-    c.find(Locator::Id("clear"))
-        .await
-        .ctx("find clear button failed")?
-        .click()
-        .await
-        .ctx("click clear failed")?;
-    c.find(Locator::Id("mode_div4"))
-        .await
-        .ctx("find mode_div4 button failed")?
-        .click()
-        .await
-        .ctx("click mode_div4 failed")?;
+    click(&ctx, "clear").await?;
+    click(&ctx, "mode_div4").await?;
 
     // *** Div4 test ***
-    let start = std::time::Instant::now();
+    let start = Instant::now();
 
-    // click "Generate"
-    {
-        c.find(Locator::Id("generate"))
-            .await
-            .ctx("div4: find generate button failed")?
-            .click()
-            .await
-            .ctx("div4: click generate failed")?;
+    click(&ctx, "generate").await?;
+    println!("div4: Generate took {} ms", start.elapsed().as_millis());
 
-        let click_time = start.elapsed();
+    ctx.find(By::Id("row-9999")).await?;
+    println!(
+        "div4: Row 9999 found {} ms after click",
+        start.elapsed().as_millis()
+    );
 
-        println!("div4: Generate took {} ms", click_time.as_millis());
+    // "Generate" again, timed from the same start as the first one: cumulative, as it always
+    // was, so the numbers stay comparable
+    click(&ctx, "generate").await?;
+    println!("div4-2: Generate took {} ms", start.elapsed().as_millis());
 
-        c.find(Locator::Id("row-9999"))
-            .await
-            .ctx("div4: find row-9999 failed")?;
-
-        let row999_time = start.elapsed();
-
-        println!(
-            "div4: Row 9999 found {} ms after click",
-            row999_time.as_millis()
-        );
-    }
-
-    // click "Generate" again
-    {
-        c.find(Locator::Id("generate"))
-            .await
-            .ctx("div4: find generate button failed")?
-            .click()
-            .await
-            .ctx("div4-2: click generate failed")?;
-
-        let click_time = start.elapsed();
-
-        println!("div4-2: Generate took {} ms", click_time.as_millis());
-
-        c.find(Locator::Id("row-9999"))
-            .await
-            .ctx("div4-2: find row-9999 failed")?;
-
-        let row999_time = start.elapsed();
-
-        println!(
-            "div4-2: Row 9999 found {} ms after click",
-            row999_time.as_millis()
-        );
-    }
-
-    println!("Closing browser");
-
-    c.close().await.ctx("close failed")?;
-
-    sender.send(1).ctx("stopping the serve thread")?;
-
-    println!("Sleeping for a second waiting for vertigo-cli to stop");
-    tokio::time::sleep(tokio::time::Duration::from_secs(1)).await;
+    ctx.find(By::Id("row-9999")).await?;
+    println!(
+        "div4-2: Row 9999 found {} ms after click",
+        start.elapsed().as_millis()
+    );
 
     Ok(())
+}
+
+async fn click(ctx: &Ctx, id: &str) -> Result<()> {
+    ctx.find(By::Id(id)).await?.click().await?;
+    Ok(())
+}
+
+fn main() {
+    // Run on request only (`--ignored`), like the other browser suites: it needs a browser.
+    let tests = browser_tests![basic]
+        .into_iter()
+        .map(|test| TestCase {
+            ignored: true,
+            ..test
+        })
+        .collect();
+
+    run_suite("basic", tests);
 }
