@@ -3,8 +3,8 @@
 //! Requires a WebDriver on localhost:9515. Run with:
 //!
 //! ```text
-//! task hydration-bench
-//! BASELINE=target/bench/hydration/<earlier>.json task hydration-bench-compare
+//! just hydration-bench
+//! just hydration-bench-compare target/bench/hydration/<earlier>.json
 //! ```
 //!
 //! ## What this is for

@@ -29,7 +29,7 @@ impl WsCollectionDemo {
             <div>
                 <p>"WS Collection demo is turned off."</p>
                 <p>"To use it, run the demo locally. After cloning the vertigo repository, run:"</p>
-                <p><pre>"cargo make demo"</pre></p>
+                <p><pre>"just demo"</pre></p>
             </div>
         }
     }

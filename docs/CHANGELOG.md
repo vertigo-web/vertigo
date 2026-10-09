@@ -12,6 +12,16 @@
 * Hydration of an empty text (e.g. `{label}` with `label == ""`) was counted as not matched,
   and when an element and a text followed it, hydration claimed that text for it and removed
   the element in between.
+* The fullstack template (`vertigo new -t fullstack`) renamed backend to `<project>-be` (kebab-case).
+
+### Internals
+
+* `Taskfile.yaml` and `Makefile.toml` replaced with `Justfile` (needs just 1.46 or newer) -
+  run `just <recipe>` instead of `task <task>` or `cargo make <task>`.
+  The `-compare` benchmark recipes take the baseline path as an argument
+  (`just ssr-bench-compare <path>`) instead of the `BASELINE` variable.
+  `just e2e-tests` and `just demo-tests` take `--headed`, `--release`, `--wasm-opt` and
+  `--skip-build` (`just --usage <recipe>` lists them).
 
 ## 0.13.2 - 2026-10-01
 

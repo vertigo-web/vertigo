@@ -4,8 +4,8 @@
 //! Requires a WebDriver on localhost:9515. Run with:
 //!
 //! ```text
-//! task reactive-bench
-//! BASELINE=target/bench/reactive/<earlier>.json task reactive-bench-compare
+//! just reactive-bench
+//! just reactive-bench-compare target/bench/reactive/<earlier>.json
 //! ```
 //!
 //! This is a *reporter*, not a perf gate: it asserts only on things that hold regardless of

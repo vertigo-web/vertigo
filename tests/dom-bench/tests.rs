@@ -8,8 +8,8 @@
 //! Requires a WebDriver on localhost:9515. Run with:
 //!
 //! ```text
-//! task dom-bench
-//! BASELINE=target/bench/dom/<earlier>.json task dom-bench-compare
+//! just dom-bench
+//! just dom-bench-compare target/bench/dom/<earlier>.json
 //! ```
 //!
 //! Timings are printed, never asserted - they swing several-fold across machines. What *is*

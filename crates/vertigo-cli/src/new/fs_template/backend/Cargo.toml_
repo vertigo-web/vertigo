@@ -1,5 +1,5 @@
 [package]
-name = "my_app_be"
+name = "my-app-be"
 version = "0.1.0"
 edition = "2024"
 
