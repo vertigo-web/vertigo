@@ -80,8 +80,11 @@ pub fn run(opts: NewOpts) -> Result<(), ErrorCode> {
     Ok(())
 }
 
-/// Find all Cargo.toml_ files, replace "my_app" with package_name, and save as Cargo.toml
+/// Find all Cargo.toml_ files, replace "my_app" with package_name and "my-app" with its
+/// kebab-case form (cargo wants binary names in kebab-case), and save as Cargo.toml
 fn process_cargo_toml_files(dir: &Path, package_name: &str) -> Result<(), ErrorCode> {
+    let kebab_name = package_name.replace('_', "-");
+
     for entry in WalkDir::new(dir).into_iter().filter_map(|e| e.ok()) {
         if entry.file_name() == "Cargo.toml_" {
             let path = entry.path();
@@ -94,8 +97,9 @@ fn process_cargo_toml_files(dir: &Path, package_name: &str) -> Result<(), ErrorC
                 }
             };
 
-            // Replace my_app with package_name
-            let new_content = content.replace("my_app", package_name);
+            let new_content = content
+                .replace("my_app", package_name)
+                .replace("my-app", &kebab_name);
 
             // Write to Cargo.toml in the same directory
             if let Some(parent) = path.parent() {

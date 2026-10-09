@@ -1,8 +1,8 @@
 //! Measures server-side rendering, per phase, and compares a run against an earlier one.
 //!
 //! ```text
-//! task ssr-bench                                   # run and write target/bench/ssr/<sha>-<ts>.json
-//! BASELINE=target/bench/ssr/<earlier>.json task ssr-bench-compare
+//! just ssr-bench                                   # run and write target/bench/ssr/<sha>-<ts>.json
+//! just ssr-bench-compare target/bench/ssr/<earlier>.json
 //! ```
 //!
 //! Unlike the other three suites in this package there is **no browser and no WebDriver**,
@@ -189,7 +189,7 @@ async fn ssr_bench() -> TestResult {
     // of the whole package rather than this one test.
     if cfg!(debug_assertions) {
         return Err(
-            "build this suite with --release, or use `task ssr-bench` - a debug host \
+            "build this suite with --release, or use `just ssr-bench` - a debug host \
                     measures wasmtime rather than vertigo"
                 .into(),
         );

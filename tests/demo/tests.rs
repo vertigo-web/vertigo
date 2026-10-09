@@ -4,7 +4,7 @@
 //! cargo test --package fantoccini-tests --test demo -- --ignored
 //! ```
 //!
-//! or `task demo-tests`. The harness of `vertigo-testing` starts a chromedriver of its own;
+//! or `just demo-tests`. The harness of `vertigo-testing` starts a chromedriver of its own;
 //! `E2E_WEBDRIVER=http://localhost:9515` uses a running one instead, and `E2E_HEADLESS=0`
 //! shows the window.
 //!

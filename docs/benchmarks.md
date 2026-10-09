@@ -2,14 +2,14 @@
 
 Four suites, all `#[ignore]`d so an ordinary `cargo test` never runs them.
 
-| task | what it measures | needs a browser |
+| recipe | what it measures | needs a browser |
 |---|---|---|
-| `task ssr-bench` | server-side rendering, per phase | no |
-| `task hydration-bench` | hydration of server markup | yes |
-| `task reactive-bench` | the reactive graph alone | yes |
-| `task dom-bench` | the whole framework: graph, DOM commands, rendering | yes |
+| `just ssr-bench` | server-side rendering, per phase | no |
+| `just hydration-bench` | hydration of server markup | yes |
+| `just reactive-bench` | the reactive graph alone | yes |
+| `just dom-bench` | the whole framework: graph, DOM commands, rendering | yes |
 
-`task bench` runs all four in that order; `task bench-compare` runs all four against the last
+`just bench` runs all four in that order; `just bench-compare` runs all four against the last
 run of each. The browser suites need a WebDriver on `localhost:9515` (`chromedriver
 --port=9515`).
 
@@ -94,15 +94,15 @@ meaningful statement is a difference from a named earlier run.
 ## Comparing two commits
 
 ```bash
-git checkout <base> && task ssr-bench          # writes target/bench/ssr/<sha>-<ts>.json
+git checkout <base> && just ssr-bench          # writes target/bench/ssr/<sha>-<ts>.json
 git checkout <head>
-VERTIGO_SSR_BENCH_BASELINE=target/bench/ssr/<base>-<ts>.json task ssr-bench
+just ssr-bench-compare target/bench/ssr/<base>-<ts>.json
 ```
 
-`task ssr-bench-compare` does the same against `target/bench/ssr/latest.json`, and each of the
-other three suites has the same pair. Every suite also takes a `..._BENCH_LABEL` variable,
-which names the run in the file and in the table; it defaults to the commit, except for
-hydration, where it defaults to the branch.
+Without a path, `just ssr-bench-compare` compares against `target/bench/ssr/latest.json`, and
+each of the other three suites has the same pair. Every suite also takes a `..._BENCH_LABEL`
+variable, which names the run in the file and in the table; it defaults to the commit, except
+for hydration, where it defaults to the branch.
 
 Two things about `latest.json` are worth knowing, because both are deliberate:
 
@@ -112,7 +112,7 @@ Two things about `latest.json` are worth knowing, because both are deliberate:
   path was wrong. `latest.json` is only pointed at the run once it has passed its own
   assertions, so a run whose command counts the suite calls wrong never becomes the thing the
   next comparison silently subtracts against.
-- **A named baseline that does not exist is not an error.** The `-compare` tasks name
+- **A named baseline that does not exist is not an error.** The `-compare` recipes name
   `latest.json` by default, and the first time a suite is ever run there is no earlier run; it
   says so and prints no delta table. A baseline that *is* there and cannot be read - truncated,
   or belonging to another suite - does fail, because comparing against nothing would read as
@@ -137,14 +137,14 @@ implementations is a thing the comparison could be an artifact of:
 To run it against a branch that has its own hydration:
 
 ```bash
-task hydration-bench                                   # on the branch you are holding
+just hydration-bench                                   # on the branch you are holding
 
 git worktree add --detach ../vertigo-other origin/<the-other-branch>
 cd ../vertigo-other
 git cherry-pick <the hydration-bench commit>           # see the note below
 VERTIGO_HYDRATION_BENCH_LABEL=other \
 VERTIGO_HYDRATION_BENCH_BASELINE=<absolute path to the first run's json> \
-  task hydration-bench
+  cargo test --release --package fantoccini-tests --test hydration_bench -- --ignored --nocapture
 ```
 
 **The cherry-pick is not always clean.** The commit only adds `tests/hydration-bench/`, but it

@@ -13,7 +13,7 @@
 //!
 //! Recorded 2026-08-24 on Linux x86_64 (6.18.12-amd64), Chrome 145.0.7632.109 via
 //! ChromeDriver 145, release build with `wasm-opt -Os`. Native column is
-//! `task reactive-compare` on the same machine, same day.
+//! `just reactive-compare` on the same machine, same day.
 //!
 //! ```text
 //! workload           per op (wasm)   per op (native)   wasm/native

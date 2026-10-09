@@ -29,7 +29,7 @@ path = "src/lib.rs"
 [features]
 default = []
 # Per-request SSR phase timings, through `ServerState::request_timed`.
-# Used by task ssr-bench.
+# Used by just ssr-bench.
 ssr-timings = []
 
 [dependencies]

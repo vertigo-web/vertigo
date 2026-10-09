@@ -125,21 +125,21 @@ cargo install --force vertigo-cli
 
 ### Prepare
 
-Install cargo-make and vertigo-cli:
+Install just (1.46 or newer) and vertigo-cli:
 
-* `cargo install cargo-make vertigo-cli`
+* `cargo install just vertigo-cli`
 
 ### Run
 
 Build and run project using:
 
-* `cargo make demo`
+* `just demo`
 
 Eventually terminal will let you know that app is available under `http://localhost:4444/`
 
 If you want to play around with the demo code, run:
 
-* `cargo make demo-watch`
+* `just demo-watch`
 
 It should automatically recompile upon changes and the browser tab should be informed to refresh.
 Note that this compiles the code in debug mode so the WASM is not optimized.
@@ -147,7 +147,7 @@ Note that this compiles the code in debug mode so the WASM is not optimized.
 --------------
 
 To run the examples in watch mode (they will run on localhost:4444):
-`cargo make examples-counter` or `cargo make examples-router` or `cargo make examples-trafficlights`
+`just examples-counter` or `just examples-router` or `just examples-trafficlights`
 
 ## A community, soon to grow
 
