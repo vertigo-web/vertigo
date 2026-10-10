@@ -1,6 +1,7 @@
 [package]
 name = "vertigo-macro"
 description = "Reactive Real-DOM library with SSR for Rust - macros"
+keywords = ["vertigo", "wasm"]
 version.workspace = true
 repository.workspace = true
 authors.workspace = true

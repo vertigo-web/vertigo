@@ -4,15 +4,15 @@ description = "Reactive Real-DOM library with SSR for Rust - packaging/serving t
 documentation = "https://docs.rs/vertigo-cli/"
 categories = [
     "command-line-utilities",
-    "development-tools",
     "development-tools::build-utils",
     "wasm",
     "web-programming",
+    "web-programming::http-server",
 ]
 version.workspace = true
 repository.workspace = true
 authors.workspace = true
-keywords.workspace = true
+keywords = ["vertigo", "wasm", "cli", "ssr", "server"]
 homepage.workspace = true
 license.workspace = true
 edition.workspace = true
