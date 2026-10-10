@@ -1,8 +1,12 @@
 [package]
 name = "vertigo-testing"
 description = "Harness for end-to-end browser tests of vertigo apps"
+documentation = "https://docs.rs/vertigo-testing/"
+categories = ["development-tools::testing", "wasm", "web-programming"]
+keywords = ["vertigo", "e2e", "testing", "webdriver", "browser"]
 version.workspace = true
 repository.workspace = true
+homepage.workspace = true
 authors.workspace = true
 license.workspace = true
 edition.workspace = true

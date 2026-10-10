@@ -1,27 +1,21 @@
 <!-- markdownlint-configure-file { "no-duplicate-heading": { "siblings_only": true } } -->
 
 <!-- markdownlint-disable-next-line first-line-h1 -->
-## Unreleased
+## 0.13.3 - 2026-10-10
 
 ### Added
 
-* `vertigo-testing` - crate with harness for end-to-end browser tests of vertigo apps.
+* `vertigo-testing` - harness for end-to-end browser tests of vertigo apps.
 
 ### Fixed
 
-* Hydration of an empty text (e.g. `{label}` with `label == ""`) was counted as not matched,
-  and when an element and a text followed it, hydration claimed that text for it and removed
-  the element in between.
-* The fullstack template (`vertigo new -t fullstack`) renamed backend to `<project>-be` (kebab-case).
+* Hydration of an empty text no longer claims the following text and removes the element in
+  between.
+* `vertigo new -t fullstack` names the backend `<project>-be` (kebab-case).
 
 ### Internals
 
-* `Taskfile.yaml` and `Makefile.toml` replaced with `Justfile` (needs just 1.46 or newer) -
-  run `just <recipe>` instead of `task <task>` or `cargo make <task>`.
-  The `-compare` benchmark recipes take the baseline path as an argument
-  (`just ssr-bench-compare <path>`) instead of the `BASELINE` variable.
-  `just e2e-tests` and `just demo-tests` take `--headed`, `--release`, `--wasm-opt` and
-  `--skip-build` (`just --usage <recipe>` lists them).
+* `Justfile` (just 1.46+) replaces `Taskfile.yaml` and `Makefile.toml`.
 
 ## 0.13.2 - 2026-10-01
 

@@ -4207,7 +4207,7 @@ checksum = "0b928f33d975fc6ad9f86c8f283853ad26bdd5b10b7f1542aa2fa15e2289105a"
 
 [[package]]
 name = "vertigo"
-version = "0.13.2"
+version = "0.13.3"
 dependencies = [
  "base64 0.23.1",
  "chrono",
@@ -4234,7 +4234,7 @@ dependencies = [
 
 [[package]]
 name = "vertigo-cli"
-version = "0.13.2"
+version = "0.13.3"
 dependencies = [
  "actix-cors",
  "actix-files",
@@ -4268,7 +4268,7 @@ dependencies = [
 
 [[package]]
 name = "vertigo-demo"
-version = "0.13.2"
+version = "0.13.3"
 dependencies = [
  "log",
  "vertigo",
@@ -4276,7 +4276,7 @@ dependencies = [
 
 [[package]]
 name = "vertigo-demo-server"
-version = "0.13.2"
+version = "0.13.3"
 dependencies = [
  "actix-web",
  "actix-ws",
@@ -4290,28 +4290,28 @@ dependencies = [
 
 [[package]]
 name = "vertigo-example-counter"
-version = "0.13.2"
+version = "0.13.3"
 dependencies = [
  "vertigo",
 ]
 
 [[package]]
 name = "vertigo-example-router"
-version = "0.13.2"
+version = "0.13.3"
 dependencies = [
  "vertigo",
 ]
 
 [[package]]
 name = "vertigo-example-trafficlights"
-version = "0.13.2"
+version = "0.13.3"
 dependencies = [
  "vertigo",
 ]
 
 [[package]]
 name = "vertigo-macro"
-version = "0.13.2"
+version = "0.13.3"
 dependencies = [
  "base64 0.23.1",
  "crc",
@@ -4370,7 +4370,7 @@ dependencies = [
 
 [[package]]
 name = "vertigo-testing"
-version = "0.13.2"
+version = "0.13.3"
 dependencies = [
  "actix-web",
  "anyhow",
