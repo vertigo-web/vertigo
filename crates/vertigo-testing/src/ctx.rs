@@ -261,14 +261,21 @@ impl<E: Env> Ctx<E> {
 
     /// Replaces the value of a field the way a user does. WebDriver's `clear()` doesn't send an
     /// `input` event, so vertigo would keep the old value.
+    ///
+    /// Selects all with the keyboard, in the same `send_keys` as the rest: chromedriver moves the
+    /// caret to the end before typing into a field it takes for unfocused, which a field of a
+    /// window without the system focus is (with `E2E_HEADLESS=0`, the windows of parallel tests
+    /// take it from each other). A selection made earlier would be gone.
     pub async fn retype(&self, element: &WebElement, text: &str) -> Result<()> {
+        let select_all = if cfg!(target_os = "macos") {
+            Key::Command
+        } else {
+            Key::Control
+        };
         element.click().await?;
-        self.js_with("arguments[0].select()", vec![element.to_json()?])
+        element
+            .send_keys(select_all + "a" + Key::Null + Key::Backspace + text)
             .await?;
-        element.send_keys(Key::Backspace).await?;
-        if !text.is_empty() {
-            element.send_keys(text).await?;
-        }
         Ok(())
     }
 
