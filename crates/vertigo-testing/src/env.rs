@@ -209,17 +209,33 @@ impl Core {
         // Leaves `window.alert`/`confirm` open for the test to answer
         caps.set("unhandledPromptBehavior", "ignore")?;
 
-        match &self.settings.webdriver {
+        let driver = match &self.settings.webdriver {
             Some(url) => WebDriver::builder(url, caps)
                 .poller(poller())
                 .await
-                .with_context(|| format!("can't start Chrome through the WebDriver at {url}")),
+                .with_context(|| format!("can't start Chrome through the WebDriver at {url}"))?,
             None => self
                 .webdriver
                 .launch(caps)
                 .await
-                .context("can't start Chrome through chromedriver"),
+                .context("can't start Chrome through chromedriver")?,
+        };
+
+        // With E2E_HEADLESS=0 the windows of parallel tests take the system focus from each
+        // other. A page losing it blurs its focused element, which closes drop-downs in the
+        // middle of a test. Emulated, the page keeps the focus, as it does headless.
+        let emulated = driver
+            .cdp()
+            .send_raw(
+                "Emulation.setFocusEmulationEnabled",
+                serde_json::json!({ "enabled": true }),
+            )
+            .await;
+        if let Err(err) = emulated {
+            let _ = driver.quit().await;
+            return Err(err).context("can't emulate the focus of the page");
         }
+        Ok(driver)
     }
 }
 
