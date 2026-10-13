@@ -3,8 +3,8 @@ use std::rc::Rc;
 use vertigo::{Computed, Css, DomNode, Resource, bind, css, dom, dom_element, transaction};
 
 use super::state::{
-    Item, begin_edit, cancel_edit, create_item, delete_item, refresh, save_edit, state_edit_buffer,
-    state_editing, state_items, state_new_name, state_status,
+    Item, begin_edit, cancel_edit, create_item, delete_item, new_items_cache, refresh, save_edit,
+    state_edit_buffer, state_editing, state_items, state_new_name, state_status,
 };
 
 pub struct LazyList {}
@@ -62,8 +62,34 @@ impl LazyList {
                 { header }
                 { list }
                 { status }
+                { render_when_opened() }
             </div>
         }
+    }
+}
+
+/// The list as the server had it when the tab opened, from a cache the tab creates each time it
+/// opens rather than from the store.
+///
+/// On a page load the cache starts with the list the server fetched while rendering the page,
+/// as the store does. When the tab opens again later, the list may have changed since, so the
+/// cache created then fetches it.
+fn render_when_opened() -> DomNode {
+    let names = new_items_cache().to_computed().map(|items| match items {
+        Resource::Loading => "Loading…".to_string(),
+        Resource::Error(err) => format!("Error: {err}"),
+        Resource::Ready(items) => items
+            .iter()
+            .map(|item| item.name.as_str())
+            .collect::<Vec<_>>()
+            .join(", "),
+    });
+
+    dom! {
+        <p css={css_hint()}>
+            "When the tab opened, the server had: "
+            <span>{ names }</span>
+        </p>
     }
 }
 

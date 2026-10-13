@@ -1527,7 +1527,7 @@ async fn edit_row(ctx: &Ctx, name: &str, new_name: &str) -> Result<()> {
 }
 
 /// The button in the row whose name cell reads `name`.
-async fn row_button(ctx: &Ctx, name: &str, label: &str) -> Result<()> {
+pub async fn row_button(ctx: &Ctx, name: &str, label: &str) -> Result<()> {
     let xpath = format!(
         "//div[span[normalize-space(text())={name:?}]]\
          /button[normalize-space(text())={label:?}]"

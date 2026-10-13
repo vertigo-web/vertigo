@@ -88,6 +88,10 @@ async fn demo(ctx: Ctx) -> Result<()> {
         "the SSR fetch cache check of LazyListCache",
         ssr::lazy_list_fetch_cache(&ctx)
     );
+    step!(
+        "the check that the SSR fetch cache is only for the first render",
+        ssr::fetch_cache_is_for_first_render(&ctx)
+    );
 
     ssr::not_found(&ctx).await?;
     console::assert_clean_except(&ctx, "the 404 check", &[ssr::NOT_FOUND_PATH]).await?;

@@ -23,6 +23,10 @@ fn get_unique_id() -> u64 {
 /// A structure similar to [Value](crate::Value) but supports Loading/Error states and automatic refresh
 /// after defined amount of time.
 ///
+/// When the server already fetched the value while rendering the page, a cache created during the
+/// first render starts with that response, so hydration renders the same value without fetching it
+/// again. One created later fetches, as the value may have changed since.
+///
 /// ```rust
 /// use vertigo::{LazyCache, RequestBuilder, AutoJsJson};
 ///
@@ -438,6 +442,38 @@ mod tests {
             let result = cache.get(context);
             assert_eq!(result, Resource::Loading);
         });
+    }
+
+    /// The value the server fetched may be stale for a cache created after the first render,
+    /// f. ex. by a route rendered anew after navigating away and back.
+    #[tokio::test]
+    async fn test_lazy_cache_starts_with_ssr_response_in_first_render_only() {
+        use crate::{driver_module::api::ssr_fetched, exports::in_first_render};
+
+        const URL: &str = "https://test.com/api";
+
+        fn make_cache() -> LazyCache<String> {
+            RequestBuilder::get(URL).lazy_cache(|status, body| {
+                if status == 200 {
+                    Some(body.into::<String>())
+                } else {
+                    None
+                }
+            })
+        }
+
+        ssr_fetched(URL, 200, JsJson::String("from server".to_string()));
+
+        let created_in_first_render = in_first_render(make_cache);
+        transaction(|context| {
+            assert_eq!(
+                created_in_first_render.get(context),
+                Resource::Ready(Rc::new("from server".to_string()))
+            );
+        });
+
+        let after = make_cache();
+        transaction(|context| assert_eq!(after.get(context), Resource::Loading));
     }
 
     #[tokio::test]

@@ -25,26 +25,30 @@ impl CollectionKey for ItemKey {
     }
 }
 
+/// A cache of the list. The tab keeps one in [`state_items`] for as long as the app runs, and
+/// creates another each time it opens, to show what the server had then.
+pub fn new_items_cache() -> LazyListCache<ItemKey> {
+    RequestBuilder::get("/api/items").lazy_list_cache::<ItemKey>(|status, body| {
+        if status == 200 {
+            Some(body.into::<Vec<Item>>())
+        } else {
+            None
+        }
+    })
+}
+
 #[store]
 pub fn state_items() -> LazyListCache<ItemKey> {
-    RequestBuilder::get("/api/items")
-        .lazy_list_cache::<ItemKey>(|status, body| {
+    new_items_cache().with_item_fetch(
+        |id: &u32| RequestBuilder::get(format!("/api/items/{id}")),
+        |status, body| {
             if status == 200 {
-                Some(body.into::<Vec<Item>>())
+                Some(body.into::<Item>())
             } else {
                 None
             }
-        })
-        .with_item_fetch(
-            |id: &u32| RequestBuilder::get(format!("/api/items/{id}")),
-            |status, body| {
-                if status == 200 {
-                    Some(body.into::<Item>())
-                } else {
-                    None
-                }
-            },
-        )
+        },
+    )
 }
 
 #[store]

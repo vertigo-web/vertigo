@@ -2,7 +2,7 @@ use crate::{
     DomNode, JsJson,
     dev::LongPtr,
     driver_module::{
-        api::{api_arguments, api_command_wasm, api_server_handler},
+        api::{api_arguments, api_command_wasm, api_server_handler, close_fetch_cache},
         driver::get_driver,
         get_driver_dom,
         init_env::init_env,
@@ -11,14 +11,15 @@ use crate::{
 
 /// Starting point of the app (used by [vertigo::main] macro, which is preferred)
 pub fn start_app(init_app: fn() -> DomNode) {
+    init_env();
     mount(init_app)
 }
 
 /// What [`start_app`] does, minus the `fn` pointer - so a test can drive it with a closure
-/// that captures.
+/// that captures - and minus `init_env`. The logger and the panic hook it installs are
+/// process-wide, so a test mounting with them would take the logger from tests capturing logs,
+/// and hide the panic messages of every test after it.
 pub(crate) fn mount(init_app: impl FnOnce() -> DomNode) {
-    init_env();
-
     // Before the transaction, deliberately: `get_driver()` is what registers the flush hook,
     // and the transaction below only suppresses mid-build flushes if it is the outermost one.
     let driver = get_driver();
@@ -37,6 +38,32 @@ pub(crate) fn mount(init_app: impl FnOnce() -> DomNode) {
     // `flush_watch` - and so `when_connect` - runs *after* the hooks, so anything it queued is
     // still sitting in the buffer. A no-op when the buffer is empty.
     get_driver_dom().flush_dom_changes();
+
+    // The page the server rendered is built again by now. What the server fetched for it would
+    // be stale for a cache created from here on.
+    close_fetch_cache();
+}
+
+/// Mounts an app that calls `create` while it renders, and returns what it created - as a
+/// component does when it's part of the page from the start.
+#[cfg(test)]
+pub(crate) fn in_first_render<T>(create: impl FnOnce() -> T) -> T {
+    use crate as vertigo;
+
+    let mut created = None;
+    mount(|| {
+        created = Some(create());
+        vertigo::dom! { <div /> }
+    });
+
+    // Release the tree while the stores it drops into are still alive - see
+    // `Driver::take_root`. Dropping it at thread teardown aborts the process.
+    drop(get_driver().take_root());
+
+    let Some(created) = created else {
+        unreachable!("mount renders the app")
+    };
+    created
 }
 
 #[doc(hidden)]

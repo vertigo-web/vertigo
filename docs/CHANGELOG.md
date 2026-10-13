@@ -7,6 +7,8 @@
 
 * `LazyListCache` didn't reuse the list fetched during server-side rendering, so the browser
   showed it loading and fetched it again.
+* `LazyCache` created after the first render (f. ex. on navigating back to a route) started with
+  the value the server fetched for the page, which could be stale by then, instead of fetching it.
 * `css!` panicked on an attribute in a pseudo-class argument: `:not([disabled])`.
 * `css!` macro fixes for:
 
