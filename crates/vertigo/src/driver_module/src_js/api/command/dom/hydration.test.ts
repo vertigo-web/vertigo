@@ -573,6 +573,66 @@ function testDiscardedServerNodesAreCounted() {
     assert(report.discarded === 2, "both rows are counted, neither the whitespace nor the script");
 }
 
+// 15. Nodes moved within and between parents, and removed after a move
+function testMovesAndRemovals() {
+    console.log("\n--- Test hydration 15: Moves and removals ---");
+    clearBody();
+
+    const span = (text: string) => {
+        const element = new MockElement('SPAN');
+        element.appendChild(new MockText(text));
+        return element;
+    };
+
+    // What the server ends up with after replaying the stream below: A has z, y and B has w.
+    const serverA = new MockElement('DIV');
+    const serverZ = span("z");
+    const serverY = span("y");
+    serverA.appendChild(serverZ);
+    serverA.appendChild(serverY);
+    const serverB = new MockElement('DIV');
+    const serverW = span("w");
+    serverB.appendChild(serverW);
+    documentMock.body.appendChild(serverA);
+    documentMock.body.appendChild(serverB);
+
+    const [A, B, x, y, z, w] = [150, 151, 152, 153, 154, 155];
+    const commands: CommandType[] = [
+        { CreateNode: { id: A, name: 'div' } },
+        { CreateNode: { id: B, name: 'div' } },
+        { InsertBefore: { parent: 3, child: A, ref_id: null } },
+        { InsertBefore: { parent: 3, child: B, ref_id: null } },
+    ];
+    [x, y, z, w].forEach((id, index) => {
+        commands.push(
+            { CreateNode: { id, name: 'span' } },
+            { CreateText: { id: id + 10, value: "xyzw"[index]! } },
+            { InsertBefore: { parent: id, child: id + 10, ref_id: null } },
+        );
+    });
+    // A copy left behind by a move would be the first child of B: it would take the span that
+    // is w's, and leave w without one.
+    commands.push(
+        { InsertBefore: { parent: A, child: x, ref_id: null } },
+        { InsertBefore: { parent: A, child: y, ref_id: null } },
+        { InsertBefore: { parent: A, child: z, ref_id: null } },  // A: x y z
+        { InsertBefore: { parent: B, child: y, ref_id: null } },  // A: x z, B: y
+        { InsertBefore: { parent: B, child: w, ref_id: null } },  // B: y w
+        { InsertBefore: { parent: A, child: z, ref_id: x } },     // A: z x
+        { RemoveNode: { id: x } },                                // A: z
+        { InsertBefore: { parent: A, child: y, ref_id: null } },  // A: z y, B: w
+    );
+
+    const mapNodes = new MapNodes();
+    const report = hydrate(commands, mapNodes, mockedApiLocation());
+
+    assert(report.matched === report.hydratable && report.hydratable === 8, "every node is where the server has it");
+    assert(report.discarded === 0, "nothing the server rendered is left over");
+    assert(mapNodes.getAnyOption(z) as any === serverZ, "z moved before x");
+    assert(mapNodes.getAnyOption(y) as any === serverY, "y moved to B and back, and is only in A");
+    assert(mapNodes.getAnyOption(w) as any === serverW, "w has its span, so y is not in B anymore");
+}
+
 // Run all tests
 testExtraNodes();
 testTextMismatch();
@@ -588,3 +648,4 @@ testEmptyTextIsNotCountedAgainstTheScore();
 testEmptyTextDoesNotEatItsSiblings();
 testEmptyTextInsideMergedTexts();
 testDiscardedServerNodesAreCounted();
+testMovesAndRemovals();

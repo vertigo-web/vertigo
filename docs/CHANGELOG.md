@@ -30,6 +30,11 @@
   selector.
 * The hydration report didn't count server-rendered elements that hydration threw away.
 
+### Performance
+
+* Hydration built its virtual tree in quadratic time - a page of 6 800 nodes took 130 ms to
+  hydrate, now 27 ms.
+
 ## 0.13.3 - 2026-10-10
 
 ### Added
