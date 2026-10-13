@@ -43,6 +43,10 @@ pub mod safe_wrappers {
         /// Env the tests pretend the server passed to the app (`Driver::env`).
         pub static TEST_ENV: std::cell::RefCell<std::collections::HashMap<String, String>> =
             Default::default();
+
+        /// Responses the tests pretend the server fetched while rendering the page
+        /// (`data-fetch-cache`, an encoded `SsrFetchCache`).
+        pub static TEST_FETCH_CACHE: std::cell::RefCell<Option<String>> = Default::default();
     }
 
     #[cfg(test)]
@@ -55,6 +59,16 @@ pub mod safe_wrappers {
         None
     }
 
+    #[cfg(test)]
+    fn fetch_cache() -> Option<String> {
+        TEST_FETCH_CACHE.with(|cache| cache.borrow().clone())
+    }
+
+    #[cfg(not(test))]
+    fn fetch_cache() -> Option<String> {
+        None
+    }
+
     pub fn safe_dom_access(long_ptr: LongPtr) -> LongPtr {
         let json = api_arguments().get_by_long_ptr(long_ptr);
 
@@ -63,9 +77,10 @@ pub mod safe_wrappers {
         match command_res {
             Ok(command) => {
                 let response = match command {
-                    CommandForBrowser::FetchCacheGet => {
-                        browser_response::FetchCacheGet { data: None }.to_json()
+                    CommandForBrowser::FetchCacheGet => browser_response::FetchCacheGet {
+                        data: fetch_cache(),
                     }
+                    .to_json(),
                     CommandForBrowser::IsBrowser => {
                         let response = browser_response::IsBrowser { value: false };
                         response.to_json()

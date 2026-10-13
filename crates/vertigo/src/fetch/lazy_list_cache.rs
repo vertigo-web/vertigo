@@ -2,7 +2,7 @@ use std::{collections::HashSet, rc::Rc};
 
 use crate::{
     Computed, Context, DomNode, JsJsonDeserialize, RequestResponse, Resource, Value,
-    driver_module::api::api_fetch,
+    driver_module::api::{api_fetch, api_fetch_cache},
     fetch::request_builder::{RequestBody, RequestBuilder},
     get_driver,
     render::collection::CollectionKey,
@@ -193,20 +193,49 @@ impl<T: CollectionKey> LazyListCache<T> {
     ///
     /// The cache starts `Uninitialized` and fetches lazily on the first read
     /// ([`get`](Self::get) / [`get_by_key`](Self::get_by_key) / [`granular`](Self::granular)).
+    /// When the server already fetched the list while rendering the page, the cache starts
+    /// with that response instead, so hydration renders the same list without fetching it again.
     /// Usually constructed via [`RequestBuilder::lazy_list_cache`](crate::RequestBuilder::lazy_list_cache);
     /// add per-item fetching with [`with_item_fetch`](Self::with_item_fetch).
     pub fn new(
         request: RequestBuilder,
         map_response: impl Fn(u32, RequestBody) -> MapResponse<Vec<T::Value>> + 'static,
     ) -> Self {
+        let list_map_response: MapResponseCallback<Vec<T::Value>> = Rc::new(map_response);
+        let items = HashMapMut::new();
+
+        // The initial values are passed to `Value::new` rather than set afterwards, as `new` can be
+        // called inside a computed or a render, where setting a value is not allowed.
+        let (state, keys) = {
+            let ssr_request = request.clone().to_request(None);
+
+            match api_fetch_cache().get_response(&ssr_request) {
+                Some(response) => {
+                    match RequestResponse::new(ssr_request, response)
+                        .into(list_map_response.as_ref())
+                    {
+                        Ok(new_items) => {
+                            let keys = new_items.iter().map(T::get_key).collect::<Vec<_>>();
+                            for item in new_items {
+                                items.insert(T::get_key(&item), ListItem::new(item));
+                            }
+                            (ListCacheState::Ready, keys)
+                        }
+                        Err(message) => (ListCacheState::Error(message), Vec::new()),
+                    }
+                }
+                None => (ListCacheState::Uninitialized, Vec::new()),
+            }
+        };
+
         LazyListCache {
             id: get_unique_id(),
-            state: Value::new(ListCacheState::Uninitialized),
-            keys: Value::new(Vec::new()),
-            items: Rc::new(HashMapMut::new()),
+            state: Value::new(state),
+            keys: Value::new(keys),
+            items: Rc::new(items),
             list_queued: Rc::new(ValueMut::new(false)),
             list_request: Rc::new(request),
-            list_map_response: Rc::new(map_response),
+            list_map_response,
             item_request: None,
             item_map_response: None,
             item_queued: Rc::new(HashMapMut::new()),
@@ -698,7 +727,7 @@ where
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::{Resource, transaction};
+    use crate::{JsJson, Resource, transaction};
 
     #[derive(Clone, PartialEq, Debug)]
     struct Item {
@@ -1434,5 +1463,104 @@ mod tests {
         let cache = make_cache();
         assert_eq!(cache, cache.clone());
         assert_ne!(cache, make_cache());
+    }
+
+    // --- response fetched during server-side rendering ---
+
+    const SSR_URL: &str = "https://test.example/items";
+
+    /// Pretends the server fetched `url` while rendering the page, as it embeds the response
+    /// in `data-fetch-cache`.
+    fn ssr_fetched(url: &str, status: u32, body: JsJson) {
+        use crate::{
+            JsJsonSerialize,
+            dev::{SsrFetchCache, SsrFetchResponse, SsrFetchResponseContent},
+            external_api::safe_wrappers::TEST_FETCH_CACHE,
+        };
+        use std::collections::BTreeMap;
+
+        let request = RequestBuilder::get(url).to_request(None);
+        let response = SsrFetchResponse::Ok {
+            status,
+            response: SsrFetchResponseContent::Json(body),
+        };
+        let cache = SsrFetchCache::new(&BTreeMap::from([(request, response)]));
+
+        TEST_FETCH_CACHE.with(|stored| {
+            *stored.borrow_mut() = Some(cache.to_json().convert_to_string());
+        });
+    }
+
+    fn names(names: &[&str]) -> JsJson {
+        JsJson::List(
+            names
+                .iter()
+                .map(|name| JsJson::String(name.to_string()))
+                .collect(),
+        )
+    }
+
+    /// Cache with the list made of names in the response body
+    fn make_parsing_cache() -> LazyListCache<ItemKey> {
+        LazyListCache::new(RequestBuilder::get(SSR_URL), |status, body| {
+            (status == 200).then(|| {
+                body.into::<Vec<String>>().map(|names| {
+                    names
+                        .into_iter()
+                        .zip(1..)
+                        .map(|(name, id)| Item { id, name })
+                        .collect()
+                })
+            })
+        })
+    }
+
+    #[test]
+    fn test_starts_with_list_fetched_during_ssr() {
+        ssr_fetched(SSR_URL, 200, names(&["One", "Two"]));
+
+        let cache = make_parsing_cache();
+
+        let list = get_list(&cache);
+        let list_names = list
+            .iter()
+            .map(|item| item.name.as_str())
+            .collect::<Vec<_>>();
+        assert_eq!(list_names, ["One", "Two"]);
+        assert_eq!(
+            get_by_key(&cache, 2),
+            Resource::Ready(Rc::new(Item {
+                id: 2,
+                name: "Two".to_string()
+            }))
+        );
+
+        // Ready without asking the server again
+        assert!(!cache.list_queued.get());
+    }
+
+    #[test]
+    fn test_starts_with_error_fetched_during_ssr() {
+        ssr_fetched(SSR_URL, 500, JsJson::Null);
+
+        let cache = make_parsing_cache();
+
+        transaction(|ctx| {
+            assert_eq!(
+                cache.get(ctx),
+                Resource::Error("Unhandled response code 500".to_string())
+            )
+        });
+        assert!(!cache.list_queued.get());
+    }
+
+    #[test]
+    fn test_fetches_list_not_fetched_during_ssr() {
+        ssr_fetched("https://test.example/other", 200, names(&["One"]));
+
+        let cache = make_parsing_cache();
+
+        transaction(|ctx| assert_eq!(cache.get(ctx), Resource::Loading));
+        assert!(cache.list_queued.get());
     }
 }

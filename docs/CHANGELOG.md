@@ -5,6 +5,8 @@
 
 ### Fixed
 
+* `LazyListCache` didn't reuse the list fetched during server-side rendering, so the browser
+  showed it loading and fetched it again.
 * `css!` panicked on an attribute in a pseudo-class argument: `:not([disabled])`.
 * `css!` macro fixes for:
 

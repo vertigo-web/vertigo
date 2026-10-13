@@ -170,31 +170,10 @@ pub async fn fetch_cache(ctx: &Ctx) -> Result<()> {
 
     // ...and rendered without asking for them again. The request carries `ttl_minutes(10)`, so
     // a hit cannot expire mid-run: any request here means the cache was missed, not refreshed.
-    let timings = ctx
-        .js("return performance.getEntriesByType('resource').map((entry) => entry.name);")
-        .await
-        .context("reading resource timings failed")?;
-
-    let timings = timings
-        .as_array()
-        .context("resource timings should be an array")?;
-
-    // Resource timing has to be recording something, or the filter below is vacuous and this
-    // check would pass however broken the cache was. The page loads a `.wasm` at minimum.
-    ensure!(
-        timings
-            .iter()
-            .any(|name| name.as_str().is_some_and(|name| name.ends_with(".wasm"))),
-        "resource timing recorded no wasm request, so it is not recording fetches either \
-         and this check proves nothing. Recorded: {timings:?}"
-    );
-
-    let requests = timings
-        .iter()
-        .filter(|name| {
-            name.as_str()
-                .is_some_and(|name| name.contains("/fetch/posts"))
-        })
+    let requests = requested_resources(ctx)
+        .await?
+        .into_iter()
+        .filter(|name| name.contains("/fetch/posts"))
         .collect::<Vec<_>>();
 
     ensure!(
@@ -205,6 +184,65 @@ pub async fn fetch_cache(ctx: &Ctx) -> Result<()> {
     );
 
     Ok(())
+}
+
+/// Load `/lazy-list` as a real page load and require that the browser did not re-fetch the list.
+///
+/// The same as [`fetch_cache`], but for `LazyListCache`: the list comes from a relative
+/// `/api/items`, which the server fetches during SSR through its own proxy.
+pub async fn lazy_list_fetch_cache(ctx: &Ctx) -> Result<()> {
+    println!("  -> SSR fetch cache of LazyListCache");
+
+    ctx.open("/lazy-list")
+        .await
+        .context("loading /lazy-list failed")?;
+
+    // A cache that was missed shows "Loading ..." from the start of the app until its own
+    // request returns, so once the items are there, such a request has completed and shows up
+    // in resource timing below.
+    for seeded in ["Apples", "Bread", "Coffee"] {
+        ctx.wait_for_text(seeded).await?;
+    }
+
+    // `/api/items/{id}` would be a request for a single item, not for the list.
+    let requests = requested_resources(ctx)
+        .await?
+        .into_iter()
+        .filter(|name| name.ends_with("/api/items"))
+        .collect::<Vec<_>>();
+
+    ensure!(
+        requests.is_empty(),
+        "the browser re-fetched the list the server had already put in `data-fetch-cache`: \
+         {requests:?}"
+    );
+
+    Ok(())
+}
+
+/// Names (URLs) of the resources the page requested, from resource timing.
+async fn requested_resources(ctx: &Ctx) -> Result<Vec<String>> {
+    let timings = ctx
+        .js("return performance.getEntriesByType('resource').map((entry) => entry.name);")
+        .await
+        .context("reading resource timings failed")?;
+
+    let names = timings
+        .as_array()
+        .context("resource timings should be an array")?
+        .iter()
+        .filter_map(|name| name.as_str().map(str::to_string))
+        .collect::<Vec<_>>();
+
+    // Resource timing has to be recording something, or a filter over it is vacuous and a check
+    // would pass however broken the cache was. The page loads a `.wasm` at minimum.
+    ensure!(
+        names.iter().any(|name| name.ends_with(".wasm")),
+        "resource timing recorded no wasm request, so it is not recording fetches either \
+         and this check proves nothing. Recorded: {names:?}"
+    );
+
+    Ok(names)
 }
 
 /// The plain-text handler: `get_driver().plains(..)` in `demo/app/src/lib.rs`.
