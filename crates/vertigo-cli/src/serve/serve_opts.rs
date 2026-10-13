@@ -46,6 +46,13 @@ pub struct ServeOptsInner {
     #[arg(long)]
     pub ssr_fetch_base: Option<String>,
 
+    /// Indent the server-rendered HTML, to read it in the page source
+    ///
+    /// (the indentation is whitespace between elements: until the app starts, it shows as gaps
+    /// between inline ones, which hydration then takes out)
+    #[arg(long, default_value_t = {false})]
+    pub pretty_html: bool,
+
     /// Disable gzip/brotli/zstd compression of served responses
     ///
     /// (useful behind a proxy or CDN that already compresses)

@@ -51,6 +51,7 @@ pub async fn run(opts: ServeOpts, port_watch: Option<u16>) -> Result<(), ErrorCo
         wasm_preload,
         disable_hydration,
         ssr_fetch_base,
+        pretty_html,
         disable_compression,
         threads,
     } = opts.inner;
@@ -64,6 +65,7 @@ pub async fn run(opts: ServeOpts, port_watch: Option<u16>) -> Result<(), ErrorCo
     )?;
     // By default through this server, so relative URLs hit `--proxy` like the browser's requests
     mount_config.ssr_fetch_base = Some(ssr_fetch_base.unwrap_or_else(|| local_origin(&host, port)));
+    mount_config.pretty_html = pretty_html;
 
     ServerState::init_with_watch(&mount_config, port_watch)?;
 

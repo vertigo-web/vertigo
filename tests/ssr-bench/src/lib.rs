@@ -17,7 +17,9 @@
 //!
 //! Two of the pages come in pairs that differ in one respect only, so the difference
 //! between them prices that one thing: `/deep` against `/deep-indent` is the
-//! pretty-printer, `/text` against `/text-plain` is HTML escaping.
+//! pretty-printer, `/text` against `/text-plain` is HTML escaping. The pretty-printer is off
+//! unless `pretty_html` turns it on, so by default the first pair prices nothing - and the
+//! suite checks that it doesn't.
 //!
 //! ## What this app must never do
 //!

@@ -178,12 +178,20 @@ pub async fn hydration_keeps_state(ctx: &Ctx) -> Result<()> {
 }
 
 /// Clicks into the field once the page is parsed, and notes whether the app had started by then.
+///
+/// It also notes how far the frame is from the field: the page shouldn't move when the app
+/// starts.
 const VISITOR: &str = r#"
     if (window === top) {
+        window.fieldToFrame = () => {
+            const field = document.querySelector('textarea[placeholder="Click here before the app starts"]');
+            return field.nextElementSibling.getBoundingClientRect().left - field.getBoundingClientRect().right;
+        };
         document.addEventListener('DOMContentLoaded', () => {
             document.querySelector('textarea[placeholder="Click here before the app starts"]').focus();
             window.visitorWasFirst = window.__vertigo_hydration === undefined
                 && document.activeElement.tagName === 'TEXTAREA';
+            window.fieldToFrameBefore = fieldToFrame();
         });
     }
 "#;
@@ -205,6 +213,14 @@ async fn check_state_kept(ctx: &Ctx) -> Result<()> {
         ctx.js("return document.activeElement.tagName").await?,
         json!("TEXTAREA"),
         "hydration took the focus away from the field the visitor had clicked into",
+    )?;
+
+    // Whitespace between them in the server's HTML is a space on the page until hydration
+    // takes it out, as the browser's tree has none.
+    check_eq(
+        ctx.js("return fieldToFrame()").await?,
+        ctx.js("return window.fieldToFrameBefore").await?,
+        "the frame moved when the app started - left: the gap to the field after, right: before",
     )?;
 
     ctx.wait_for("the frame to load", async || {

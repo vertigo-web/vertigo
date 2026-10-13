@@ -61,11 +61,12 @@ pub fn deep() -> DomNode {
     wrapper("pre").child(deep_chain()).into()
 }
 
-/// The same chain without `<pre>`, so the pretty-printer indents every level.
+/// The same chain without `<pre>`, so the pretty-printer, when on, indents every level.
 ///
 /// `Format::get` is `" ".repeat(depth * 2)` per node, so the whitespace alone is O(DEEP_D²):
 /// a 17 KiB page serialises to over four megabytes at 1 500 levels. Reading this against
-/// `/deep` prices the pretty-printer on its own.
+/// `/deep` prices the pretty-printer on its own - with `pretty_html` on; off, as it is by
+/// default, the two are the same bytes.
 pub fn deep_indent() -> DomNode {
     wrapper("div").child(deep_chain()).into()
 }
