@@ -177,6 +177,7 @@ async fn dom_bench() -> TestResult {
                 wasm_preload: true,
                 disable_hydration: false,
                 ssr_fetch_base: None,
+                pretty_html: false,
                 // Off for the benchmarks: compressing every response measures brotli's
                 // throughput as much as vertigo's, and the recorded baselines in
                 // `target/bench/` were taken without it.

@@ -13,6 +13,7 @@ pub struct MountConfigBuilder {
     pub wasm_preload: bool,
     pub disable_hydration: bool,
     pub ssr_fetch_base: Option<String>,
+    pub pretty_html: bool,
 }
 
 impl MountConfigBuilder {
@@ -24,6 +25,7 @@ impl MountConfigBuilder {
             wasm_preload: false,
             disable_hydration: false,
             ssr_fetch_base: None,
+            pretty_html: false,
         }
     }
 
@@ -55,6 +57,16 @@ impl MountConfigBuilder {
         self
     }
 
+    /// Indent the server-rendered HTML, to read it in the page source.
+    ///
+    /// Off by default: the indentation is whitespace between elements, which the app's own tree
+    /// doesn't have - until the app starts it shows as gaps between inline elements, and
+    /// hydration then takes it out, one node at a time.
+    pub fn pretty_html(mut self, pretty_html: bool) -> Self {
+        self.pretty_html = pretty_html;
+        self
+    }
+
     pub fn build(self) -> Result<MountConfig, ErrorCode> {
         let mut config = MountConfig::new(
             self.mount_point,
@@ -64,6 +76,7 @@ impl MountConfigBuilder {
             self.disable_hydration,
         )?;
         config.ssr_fetch_base = self.ssr_fetch_base;
+        config.pretty_html = self.pretty_html;
         Ok(config)
     }
 }
@@ -87,6 +100,8 @@ pub struct MountConfig {
     pub disable_hydration: bool,
     /// See [`MountConfigBuilder::ssr_fetch_base`]
     pub ssr_fetch_base: Option<String>,
+    /// See [`MountConfigBuilder::pretty_html`]
+    pub pretty_html: bool,
 }
 
 impl MountConfig {
@@ -109,6 +124,7 @@ impl MountConfig {
             wasm_preload,
             disable_hydration,
             ssr_fetch_base: None,
+            pretty_html: false,
         };
 
         // The app gets them wherever it runs - in the browser as `data-env-*`, during SSR from
@@ -195,7 +211,28 @@ fn replace_prefix(dest_dir: &str, path: &str) -> String {
 mod tests {
     use vertigo::dev::VERTIGO_PUBLIC_BUILD_PATH_PLACEHOLDER;
 
-    use super::{MountConfig, replace_prefix};
+    use super::{MountConfig, MountConfigBuilder, replace_prefix};
+
+    #[test]
+    fn html_is_indented_only_when_asked() -> std::io::Result<()> {
+        let dest_dir = std::env::temp_dir().join(format!("vertigo-pretty-{}", std::process::id()));
+        std::fs::create_dir_all(&dest_dir)?;
+        std::fs::write(
+            dest_dir.join("index.json"),
+            r#"{"run_js": "wasm_run.js", "wasm": "app.wasm"}"#,
+        )?;
+
+        let builder = || MountConfigBuilder::new("/", dest_dir.to_string_lossy());
+        let (Ok(default), Ok(pretty)) = (builder().build(), builder().pretty_html(true).build())
+        else {
+            panic!("index.json in {dest_dir:?} should read");
+        };
+
+        assert!(!default.pretty_html);
+        assert!(pretty.pretty_html);
+
+        std::fs::remove_dir_all(&dest_dir)
+    }
 
     #[test]
     fn env_carries_mount_point_and_public_path() -> std::io::Result<()> {

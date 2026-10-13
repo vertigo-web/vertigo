@@ -589,10 +589,12 @@ fn assert_rows(run: &Run) -> TestResult {
         commands("/deep-indent")?,
         "indentation is a serialisation concern and must not change the command stream"
     );
-    assert!(
-        html_bytes("/deep-indent")? > html_bytes("/deep")?,
-        "...but it must change the output, or `<pre>` is not suppressing anything and the \
-         pair prices nothing"
+    // ...and it's off unless `pretty_html` turns it on, so they serialise to the same bytes:
+    // `<pre>` has no indentation to suppress.
+    assert_eq!(
+        html_bytes("/deep-indent")?,
+        html_bytes("/deep")?,
+        "the server-rendered HTML is indented, though `pretty_html` is off"
     );
 
     // `/text` and `/text-plain` likewise: same nodes, same text lengths, different bytes.

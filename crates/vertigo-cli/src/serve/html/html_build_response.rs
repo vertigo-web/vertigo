@@ -107,7 +107,7 @@ pub fn build_response(
         // belong to serialisation rather than to injection.
         let string_mark = probe.start();
 
-        let mut body = root_html.convert_to_string(true).replace(
+        let mut body = root_html.convert_to_string(mount_path.pretty_html).replace(
             VERTIGO_PUBLIC_BUILD_PATH_PLACEHOLDER,
             &mount_path.dest_http_root(),
         );

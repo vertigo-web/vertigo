@@ -3,6 +3,11 @@
 <!-- markdownlint-disable-next-line first-line-h1 -->
 ## Unreleased
 
+### Changed
+
+* SSR now sends HTML without indentation so hydration performs better.
+  `--pretty-html` (`MountConfigBuilder::pretty_html`) brings indentation back.
+
 ### Fixed
 
 * `LazyListCache` didn't reuse the list fetched during server-side rendering, so the browser

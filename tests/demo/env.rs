@@ -122,6 +122,7 @@ fn spawn_serve(dest_dir: &str, port: u16, api_port: u16) -> oneshot::Sender<()> 
             wasm_preload: true,
             disable_hydration: false,
             ssr_fetch_base: None,
+            pretty_html: false,
             // Left on, as a served app has it.
             disable_compression: false,
             threads: None,
