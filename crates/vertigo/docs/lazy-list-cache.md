@@ -113,8 +113,10 @@ let cache: LazyListCache<ItemKey> = RequestBuilder::get("/api/items")
 
 The cache is lazy: it fetches on first read ([`get`] / [`get_by_key`] / [`granular`])
 when in the `Uninitialized` state. When the page was rendered on the server, which already
-fetched the list, the cache starts with that response, so hydration renders the same list
-without fetching it again.
+fetched the list, a cache created during the first render starts with that response, so
+hydration renders the same list without fetching it again. A cache created later - f. ex. by
+a route rendered anew after navigating away and back - fetches, as the list may have changed
+since.
 
 ---
 

@@ -193,8 +193,9 @@ impl<T: CollectionKey> LazyListCache<T> {
     ///
     /// The cache starts `Uninitialized` and fetches lazily on the first read
     /// ([`get`](Self::get) / [`get_by_key`](Self::get_by_key) / [`granular`](Self::granular)).
-    /// When the server already fetched the list while rendering the page, the cache starts
-    /// with that response instead, so hydration renders the same list without fetching it again.
+    /// When the server already fetched the list while rendering the page, a cache created during
+    /// the first render starts with that response instead, so hydration renders the same list
+    /// without fetching it again. One created later fetches, as the list may have changed since.
     /// Usually constructed via [`RequestBuilder::lazy_list_cache`](crate::RequestBuilder::lazy_list_cache);
     /// add per-item fetching with [`with_item_fetch`](Self::with_item_fetch).
     pub fn new(
@@ -727,7 +728,7 @@ where
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::{JsJson, Resource, transaction};
+    use crate::{JsJson, Resource, driver_module::api::ssr_fetched, transaction};
 
     #[derive(Clone, PartialEq, Debug)]
     struct Item {
@@ -1469,28 +1470,6 @@ mod tests {
 
     const SSR_URL: &str = "https://test.example/items";
 
-    /// Pretends the server fetched `url` while rendering the page, as it embeds the response
-    /// in `data-fetch-cache`.
-    fn ssr_fetched(url: &str, status: u32, body: JsJson) {
-        use crate::{
-            JsJsonSerialize,
-            dev::{SsrFetchCache, SsrFetchResponse, SsrFetchResponseContent},
-            external_api::safe_wrappers::TEST_FETCH_CACHE,
-        };
-        use std::collections::BTreeMap;
-
-        let request = RequestBuilder::get(url).to_request(None);
-        let response = SsrFetchResponse::Ok {
-            status,
-            response: SsrFetchResponseContent::Json(body),
-        };
-        let cache = SsrFetchCache::new(&BTreeMap::from([(request, response)]));
-
-        TEST_FETCH_CACHE.with(|stored| {
-            *stored.borrow_mut() = Some(cache.to_json().convert_to_string());
-        });
-    }
-
     fn names(names: &[&str]) -> JsJson {
         JsJson::List(
             names
@@ -1562,5 +1541,20 @@ mod tests {
 
         transaction(|ctx| assert_eq!(cache.get(ctx), Resource::Loading));
         assert!(cache.list_queued.get());
+    }
+
+    /// The list the server fetched may be stale for a cache created after the first render,
+    /// f. ex. by a route rendered anew after navigating away and back.
+    #[test]
+    fn test_fetches_list_when_created_after_first_render() {
+        ssr_fetched(SSR_URL, 200, names(&["One", "Two"]));
+
+        let in_first_render = crate::exports::in_first_render(make_parsing_cache);
+        assert_eq!(get_list(&in_first_render).len(), 2);
+        assert!(!in_first_render.list_queued.get());
+
+        let after = make_parsing_cache();
+        transaction(|ctx| assert_eq!(after.get(ctx), Resource::Loading));
+        assert!(after.list_queued.get());
     }
 }

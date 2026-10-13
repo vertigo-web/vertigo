@@ -8,7 +8,8 @@ use vertigo_testing::{prelude::*, thirtyfour::WebElement};
 
 use crate::{
     Ctx,
-    helpers::{check_eq, find_all},
+    helpers::{check_eq, click_by_text, find_all},
+    tabs::row_button,
 };
 
 /// Load the Driver tab for real, and check what hydration left behind.
@@ -218,6 +219,51 @@ pub async fn lazy_list_fetch_cache(ctx: &Ctx) -> Result<()> {
     );
 
     Ok(())
+}
+
+/// Load `/lazy-list`, change the list, and open the tab again: the cache the tab creates as it
+/// opens has to fetch the list, not start with the one the server fetched for the page load.
+///
+/// What the server fetched is for the first render, which builds the page the server rendered
+/// once more. After that it may be stale - here it is, an item is added in between - and a cache
+/// created later would show the list as it was at the page load, without ever fetching it. The
+/// store can't show that, as it is created once, in the first render. The line the tab renders
+/// from a cache of its own can.
+pub async fn fetch_cache_is_for_first_render(ctx: &Ctx) -> Result<()> {
+    println!("  -> SSR fetch cache only for the first render");
+
+    let when_opened = By::XPath(
+        "//p[starts-with(normalize-space(.), 'When the tab opened, the server had:')]/span",
+    );
+
+    ctx.open("/lazy-list")
+        .await
+        .context("loading /lazy-list failed")?;
+    ctx.wait_for_text_of(when_opened.clone(), "Apples, Bread, Coffee")
+        .await?;
+
+    // The row of a new item shows the placeholder id until the server has saved it.
+    let name_field = ctx
+        .find(By::Css("input"))
+        .await
+        .context("the new-item field")?;
+    ctx.retype(&name_field, "Eggs").await?;
+    click_by_text(ctx, "button", "Add").await?;
+    ctx.wait_for_text("Eggs").await?;
+    ctx.wait_for_no_text("#0").await?;
+
+    // Away and back without a page load, which creates the tab and its cache anew.
+    click_by_text(ctx, "a", "Home").await?;
+    ctx.wait_for_text("A reactive Real-DOM library").await?;
+    click_by_text(ctx, "a", "Lazy List").await?;
+    ctx.wait_for_text_of(when_opened, "Apples, Bread, Coffee, Eggs")
+        .await?;
+
+    // Leave the list as the other checks expect it. The row reads "(pending)" until the server
+    // has deleted the item, and a request still running when the next check loads a page would
+    // end with an error in the console.
+    row_button(ctx, "Eggs", "Delete").await?;
+    ctx.wait_for_no_text("(pending)").await
 }
 
 /// Names (URLs) of the resources the page requested, from resource timing.
