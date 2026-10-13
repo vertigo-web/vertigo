@@ -43,3 +43,43 @@ fn animation_rules() {
 
     assert_eq!(get_s(&value), "animation-fill-mode: forwards;")
 }
+
+#[test]
+fn test_custom_properties() {
+    let value = css! {"
+        --main-color: red;
+        --mainColor: red;
+        --gap-2: 8px;
+        --text_size: 1em;
+    "};
+
+    assert_eq!(
+        get_s(&value),
+        "--main-color: red;\n--mainColor: red;\n--gap-2: 8px;\n--text_size: 1em;"
+    )
+}
+
+#[test]
+fn test_last_rule_without_semicolon() {
+    let value = css! {"
+        color: red;
+        :hover {
+            color: white
+        };
+        background-color: black
+    "};
+
+    assert_eq!(
+        get_s(&value),
+        "color: red;\n:hover { color: white; };\nbackground-color: black;"
+    )
+}
+
+#[test]
+fn test_semicolon_in_quotes() {
+    let value = css! {"
+        content: ';';
+    "};
+
+    assert_eq!(get_s(&value), "content: ';';")
+}

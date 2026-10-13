@@ -108,17 +108,30 @@ impl CssParser {
     }
 
     fn generate_unknown_rule(&mut self, pair: Pair<Rule>) -> Result<String, Box<dyn Error>> {
+        let rule_start = pair.as_span().start();
+        let rule_str = pair.as_str();
+
         let mut pairs = pair.into_inner();
         let rule_ident = pairs.next().ok_or("Missing rule identifier")?;
 
         let ident_str = rule_ident.as_str();
-        let mut value_strs = Vec::new();
+        let mut value_str = String::new();
+        let mut prev_end = None;
 
         for value in pairs {
-            let value_str = match value.as_rule() {
+            let span = value.as_span();
+
+            // Keep the whitespace written between parts of the value, as for example in
+            // `rotate({deg}deg)` no space can be added, while in `1px solid {color}` it can't be lost.
+            if let Some(prev_end) = prev_end {
+                value_str.push_str(&rule_str[prev_end - rule_start..span.start() - rule_start]);
+            }
+            prev_end = Some(span.end());
+
+            let part_str = match value.as_rule() {
                 Rule::color_value => value.as_str().to_string(),
                 Rule::unquoted_value => value.as_str().to_string(),
-                Rule::quoted_value => value.as_str().to_string(),
+                Rule::quoted_value => escape_braces(value.as_str()),
                 Rule::expression => self.params.insert(
                     value
                         .into_inner()
@@ -128,7 +141,7 @@ impl CssParser {
                         .to_string(),
                 ),
                 Rule::url_value => {
-                    // url_value -> expression/quoted_value
+                    // url_value -> expression/quoted_value/url_raw
                     let inner = value.clone().into_inner().next().ok_or("Missing URL")?;
                     match inner.as_rule() {
                         Rule::expression => {
@@ -142,8 +155,8 @@ impl CssParser {
                             format!("url('{}')", self.params.insert(expr_value))
                         }
                         _ => {
-                            // quoted_value
-                            value.as_str().to_string()
+                            // quoted_value or url_raw
+                            escape_braces(value.as_str())
                         }
                     }
                 }
@@ -156,12 +169,12 @@ impl CssParser {
                     "".to_string()
                 }
             };
-            value_strs.push(value_str);
+            value_str.push_str(&part_str);
         }
 
         Ok(format!(
             "{ident_str}: {};",
-            value_strs.join(" ").replace("} px", "}px")
+            value_str.replace("} px", "}px")
         ))
     }
 
@@ -245,23 +258,27 @@ impl CssParser {
     }
 
     fn generate_sub_rule(&mut self, pair: Pair<Rule>) -> Result<String, Box<dyn Error>> {
+        let rule_start = pair.as_span().start();
+        let rule_str = pair.as_str();
         let pairs = pair.into_inner();
 
-        let mut sub_selectors = vec![];
+        // Range of the selector in the rule
+        let mut selector_range: Option<(usize, usize)> = None;
         let mut value_strs = Vec::new();
 
         for pair in pairs {
             match pair.as_rule() {
-                Rule::sub_selector => {
-                    sub_selectors.push(pair.as_str());
-                }
-                Rule::sub_selector_ref => {
-                    // Save reference identifierwithout brackets
-                    self.css_refs.push(Ident::new(
-                        pair.as_str().trim_matches(|c| c == '[' || c == ']'),
-                        self.call_site,
-                    ));
-                    sub_selectors.push(pair.as_str());
+                Rule::sub_selector | Rule::sub_selector_ref => {
+                    if pair.as_rule() == Rule::sub_selector_ref {
+                        // Save reference identifier without brackets
+                        self.css_refs.push(Ident::new(
+                            pair.as_str().trim_matches(|c| c == '[' || c == ']'),
+                            self.call_site,
+                        ));
+                    }
+                    let span = pair.as_span();
+                    let start = selector_range.map_or(span.start(), |(start, _)| start);
+                    selector_range = Some((start, span.end()));
                 }
                 _ => {
                     value_strs.extend(self.generate_rule(pair)?);
@@ -269,17 +286,20 @@ impl CssParser {
             };
         }
 
-        if !sub_selectors.is_empty() {
-            let sub_selectors_str = sub_selectors.join(" ");
-            Ok(format!(
-                "{sub_selectors_str} {{{{ {} }}}};",
-                value_strs.join("\n")
-            ))
+        if let Some((start, end)) = selector_range {
+            // Selector as written, as spaces between its parts matter (`[ref]:hover` vs `[ref] :hover`)
+            let selector = &rule_str[start - rule_start..end - rule_start];
+            Ok(format!("{selector} {{{{ {} }}}};", value_strs.join("\n")))
         } else {
             emit_warning!(self.call_site, "CSS: Generated empty sub-rule");
             Ok("".to_string())
         }
     }
+}
+
+/// Braces in a literal text need to be doubled, as the output can end up as a `format!` string
+fn escape_braces(text: &str) -> String {
+    text.replace('{', "{{").replace('}', "}}")
 }
 
 struct ParamsEnumerator {

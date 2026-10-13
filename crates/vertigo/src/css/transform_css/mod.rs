@@ -1,7 +1,7 @@
 use super::{get_selector::get_selector, next_id::NextId};
 
 mod splits;
-use splits::{css_row_split_to_pair, css_split_rows, find_brackets};
+use splits::{css_row_split_to_pair, css_split_rows, find_brackets, split_selector_list};
 
 #[cfg(test)]
 mod tests;
@@ -34,11 +34,34 @@ pub fn transform_css_selector_value(row: &str, parent_selector: &str) -> Option<
         if !trash.trim().is_empty() {
             log::error!("Unexpected input after pseudo-selector rule set, missing semi-colon?");
         }
-        let new_selector = [parent_selector, pseudo_selector].concat();
+        let new_selector = scope_selector(parent_selector, pseudo_selector);
         return Some((new_selector, rules.into()));
     }
 
     None
+}
+
+// Is it a set of rules for a nested selector: a pseudo-selector (`:hover { ... }`)
+// or a referenced Css, already replaced with its class (`.autocss_2 { ... }`)
+fn is_nested_rule(row: &str) -> bool {
+    row.starts_with([':', '[']) || (row.starts_with('.') && row.contains('{'))
+}
+
+// Attaches nested selector to the parent one. Pseudo-classes and pseudo-elements are attached
+// directly (`.p:hover`), referenced Css becomes a descendant (`.p .autocss_2`).
+// Every selector of a list (`:hover, :focus`) is attached separately (`.p:hover, .p:focus`).
+fn scope_selector(parent_selector: &str, selector: &str) -> String {
+    split_selector_list(selector)
+        .into_iter()
+        .map(|single| {
+            if single.starts_with([':', '[']) {
+                [parent_selector, single].concat()
+            } else {
+                [parent_selector, " ", single].concat()
+            }
+        })
+        .collect::<Vec<_>>()
+        .join(", ")
 }
 
 pub fn transform_css_media_query(
@@ -59,7 +82,7 @@ pub fn transform_css_media_query(
         let mut rules_in_pseudo = vec![];
 
         for row in css_split_rows(rules_input) {
-            if row.starts_with(':') {
+            if is_nested_rule(row) {
                 // Pseudo selectors inside media query, collect it into separate vector
                 let extra_rule = transform_css_selector_value(row, parent_selector);
 
@@ -103,7 +126,7 @@ pub fn transform_css(css: &str, next_id: &NextId) -> (u64, Vec<(String, String)>
     let mut css_documents: Vec<(String, String)> = Vec::new();
 
     for row in css_split_rows(css) {
-        if row.starts_with([':', '[']) {
+        if is_nested_rule(row) {
             // It's a pseudo-selector or references Css
             let extra_rule = transform_css_selector_value(row, &selector);
 

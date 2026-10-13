@@ -1,6 +1,30 @@
 <!-- markdownlint-configure-file { "no-duplicate-heading": { "siblings_only": true } } -->
 
 <!-- markdownlint-disable-next-line first-line-h1 -->
+## Unreleased
+
+### Fixed
+
+* `css!` panicked on an attribute in a pseudo-class argument: `:not([disabled])`.
+* `css!` macro fixes for:
+
+  * pseudo-elements: `::before { ... }`,
+  * chained pseudo-classes: `:first-child:hover`,
+  * pseudo-classes with arguments: `:not(:last-child)`, `:is(:hover, :focus)`,
+  * selector lists: `:hover, :focus`,
+  * pseudo-classes after a referenced Css: `[other_css]:hover`,
+  * custom properties with digits, uppercase letters or `_`: `--gap-2`,
+  * `url(...)` followed by other values: `url('a.png') no-repeat`,
+  * keyframe selectors: `from`, `to`, `0%, 100%`, `33.3%`,
+  * a semicolon in quotes: `content: ';'`,
+  * no semicolon after the last declaration or after a `@media` block.
+
+* `css!` left an expression in the middle of a value unsubstituted: `1px solid {color}`.
+* `@media` without a colon in the query (`@media print`)
+* A semicolon in a string or parentheses (data URI)
+* A referenced Css block (`[other_css] { ... }`) relied on CSS nesting, now it's a descendant
+  selector.
+
 ## 0.13.3 - 2026-10-10
 
 ### Added

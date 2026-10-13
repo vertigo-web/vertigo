@@ -60,3 +60,19 @@ fn test_animation_with_rgba_and_comments() {
 100% { background-color: rgba(255, 255, 0, 0); } };"
     )
 }
+
+#[test]
+fn test_animation_keyframe_selectors() {
+    let value = css! {"
+        animation: 2s infinite {
+            from { opacity: 0; }
+            33.3%, 66.6% { opacity: 1; }
+            to { opacity: 0; }
+        };
+    "};
+
+    assert_eq!(
+        get_s(&value),
+        "animation: 2s infinite { from { opacity: 0; }\n33.3%, 66.6% { opacity: 1; }\nto { opacity: 0; } };"
+    )
+}

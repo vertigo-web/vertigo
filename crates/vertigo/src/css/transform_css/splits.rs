@@ -18,16 +18,35 @@ pub fn css_split_rows(css: &str) -> Vec<&str> {
 
     let mut row_side = RowSideState::Left;
     let mut start = 0;
+    // Quote opening a string, inside which special characters mean nothing
+    let mut quote: Option<char> = None;
+    // Semicolons inside parentheses don't end the row, f. ex. in `url(data:image/png;base64,...)`
+    let mut parentheses: u16 = 0;
 
     for (index, char) in css.char_indices() {
+        if let Some(opening) = quote {
+            if char == opening {
+                quote = None;
+            }
+            continue;
+        }
+
+        match char {
+            '"' | '\'' => {
+                quote = Some(char);
+                continue;
+            }
+            '(' => parentheses += 1,
+            ')' => parentheses = parentheses.saturating_sub(1),
+            _ => {}
+        }
+
         if char == '{' {
-            if row_side == RowSideState::Right {
-                row_side = RowSideState::BracketsOpened(1);
-            } else if let RowSideState::BracketsOpened(counter) = &mut row_side {
+            if let RowSideState::BracketsOpened(counter) = &mut row_side {
                 *counter += 1;
             } else {
-                log::info!("css input: {css}");
-                panic!("unsupported use case at opening bracket");
+                // Also on the left side, as an at-rule like `@media print` has no colon before the block
+                row_side = RowSideState::BracketsOpened(1);
             }
         }
 
@@ -53,7 +72,7 @@ pub fn css_split_rows(css: &str) -> Vec<&str> {
             row_side = RowSideState::Right;
         }
 
-        if char == ';' && row_side == RowSideState::Right {
+        if char == ';' && row_side == RowSideState::Right && parentheses == 0 {
             out.push(css[start..index].trim());
             start = index + 1;
             row_side = RowSideState::Left;
@@ -63,6 +82,42 @@ pub fn css_split_rows(css: &str) -> Vec<&str> {
     out.push(css[start..css.len()].trim());
 
     out.into_iter().filter(|item| item.trim() != "").collect()
+}
+
+// Splits selector list by commas, which are not inside parentheses, brackets or strings
+//
+// ":hover, :is(:focus, :active)" -> [":hover", ":is(:focus, :active)"]
+//
+pub fn split_selector_list(selector: &str) -> Vec<&str> {
+    let mut out: Vec<&str> = Vec::new();
+
+    let mut start = 0;
+    let mut depth: u16 = 0;
+    let mut quote: Option<char> = None;
+
+    for (index, char) in selector.char_indices() {
+        if let Some(opening) = quote {
+            if char == opening {
+                quote = None;
+            }
+            continue;
+        }
+
+        match char {
+            '"' | '\'' => quote = Some(char),
+            '(' | '[' => depth += 1,
+            ')' | ']' => depth = depth.saturating_sub(1),
+            ',' if depth == 0 => {
+                out.push(selector[start..index].trim());
+                start = index + 1;
+            }
+            _ => {}
+        }
+    }
+
+    out.push(selector[start..].trim());
+
+    out
 }
 
 // Split rule into key and value
