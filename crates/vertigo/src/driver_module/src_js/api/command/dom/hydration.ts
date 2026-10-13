@@ -362,6 +362,7 @@ class HydrationEngine {
                 node.value = command.UpdateText.value;
             } else if ('InsertBefore' in command) {
                 const parent = getVNode(command.InsertBefore.parent);
+                const children = parent.children;
                 const childId = command.InsertBefore.child;
                 const refId = command.InsertBefore.ref_id;
 
@@ -369,14 +370,18 @@ class HydrationEngine {
                 parentOf.set(childId, parent);
 
                 if (refId === null || refId === undefined) {
-                    parent.children.push(childId);
+                    children.push(childId);
                 } else {
-                    const index = parent.children.indexOf(refId);
+                    // `render_value` puts its content in front of its marker as soon as the marker
+                    // is appended, so the ref is most often the last child: look there before
+                    // searching, or a list of them is searched from the front for every row.
+                    const last = children.length - 1;
+                    const index = children[last] === refId ? last : children.indexOf(refId);
                     if (index !== -1) {
-                        parent.children.splice(index, 0, childId);
+                        children.splice(index, 0, childId);
                     } else {
                         console.warn(`Hydration: ref_id ${refId} not found in parent ${command.InsertBefore.parent}`);
-                        parent.children.push(childId);
+                        children.push(childId);
                     }
                 }
             } else if ('SetAttr' in command) {

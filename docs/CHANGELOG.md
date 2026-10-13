@@ -32,8 +32,8 @@
 
 ### Performance
 
-* Hydration built its virtual tree in quadratic time - a page of 6 800 nodes took 130 ms to
-  hydrate, now 27 ms.
+* Hydration built its virtual tree in quadratic time - now linear
+  (f. ex. ~7k nodes dropped from 130 ms to 27 ms).
 
 ## 0.13.3 - 2026-10-10
 
