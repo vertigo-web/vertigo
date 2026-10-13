@@ -10,7 +10,9 @@ use vertigo::{Css, JsJson, Value, bind, component, css, dom, get_driver};
 
 use crate::app::{route::Route, state::state_route};
 
+mod hydration_keeps_state;
 mod ssr_test;
+use hydration_keeps_state::HydrationKeepsState;
 use ssr_test::SsrTest;
 
 const COOKIE: &str = "test";
@@ -90,6 +92,10 @@ pub fn DriverDemo() {
             <hr/>
 
             <SsrTest />
+
+            <hr/>
+
+            <HydrationKeepsState />
         </div>
     }
 }

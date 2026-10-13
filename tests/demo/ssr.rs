@@ -139,6 +139,94 @@ pub async fn hydration_is_complete(ctx: &Ctx) -> Result<()> {
     Ok(())
 }
 
+/// What a visitor did with the page before the app started has to be there once it has.
+///
+/// Hydration adopts the nodes the server rendered rather than building new ones, which is what
+/// keeps the state the browser gave them. Taking an adopted node out of the document and putting
+/// it back, even right where it was, drops that state: the field loses its focus, the frame
+/// loads again. So does setting an iframe's `srcdoc` to the value it already has.
+///
+/// The visitor is a script that runs in every new document before the page's own, and clicks
+/// into the field once the document is parsed. The app can't have started by then: its wasm is
+/// only requested by the page's script, and arrives in a later task.
+pub async fn hydration_keeps_state(ctx: &Ctx) -> Result<()> {
+    println!("  -> SSR hydration keeps what the visitor did");
+
+    let added = ctx
+        .driver
+        .cdp()
+        .send_raw(
+            "Page.addScriptToEvaluateOnNewDocument",
+            json!({ "source": VISITOR }),
+        )
+        .await
+        .context("adding the visitor's script failed")?;
+
+    let checked = check_state_kept(ctx).await;
+
+    // For this page load only: the checks after this one load pages of their own.
+    ctx.driver
+        .cdp()
+        .send_raw(
+            "Page.removeScriptToEvaluateOnNewDocument",
+            json!({ "identifier": added["identifier"] }),
+        )
+        .await
+        .context("removing the visitor's script failed")?;
+
+    checked
+}
+
+/// Clicks into the field once the page is parsed, and notes whether the app had started by then.
+const VISITOR: &str = r#"
+    if (window === top) {
+        document.addEventListener('DOMContentLoaded', () => {
+            document.querySelector('textarea[placeholder="Click here before the app starts"]').focus();
+            window.visitorWasFirst = window.__vertigo_hydration === undefined
+                && document.activeElement.tagName === 'TEXTAREA';
+        });
+    }
+"#;
+
+async fn check_state_kept(ctx: &Ctx) -> Result<()> {
+    ctx.open("/driver")
+        .await
+        .context("loading /driver failed")?;
+
+    // Without this, the check below would pass on a field that was never focused, or was only
+    // focused once the app had started.
+    check_eq(
+        ctx.js("return window.visitorWasFirst ?? null").await?,
+        json!(true),
+        "the visitor should have clicked into the field before the app started",
+    )?;
+
+    check_eq(
+        ctx.js("return document.activeElement.tagName").await?,
+        json!("TEXTAREA"),
+        "hydration took the focus away from the field the visitor had clicked into",
+    )?;
+
+    ctx.wait_for("the frame to load", async || {
+        let loads = ctx.js("return window.frameLoads ?? 0").await?;
+        Ok((loads.as_u64() >= Some(1)).then_some(()))
+    })
+    .await?;
+
+    // A reload that hydration started lands a moment later, as a navigation of its own - so the
+    // count has to stay at one for a while, not just be one now.
+    for _ in 0..10 {
+        tokio::time::sleep(Duration::from_millis(100)).await;
+        let loads = ctx.js("return window.frameLoads").await?;
+        ensure!(
+            loads == json!(1),
+            "hydration reloaded the frame: it has loaded {loads} times"
+        );
+    }
+
+    Ok(())
+}
+
 async fn read_values(fields: &[WebElement]) -> Result<Vec<String>> {
     let mut values = Vec::new();
 

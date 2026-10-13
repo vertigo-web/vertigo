@@ -23,6 +23,20 @@ class MockNode {
         child.parentNode = this;
         this.childNodes.push(child);
     }
+    /// Nodes `insertBefore` took out of a parent to put them back - which in a browser drops
+    /// their focus, their scroll position, an iframe's page.
+    static moved: MockNode[] = [];
+    insertBefore(child: MockNode, ref: MockNode | null) {
+        if (child.parentNode) {
+            MockNode.moved.push(child);
+            child.remove();
+        }
+        child.parentNode = this;
+        const index = ref ? this.childNodes.indexOf(ref) : -1;
+        if (index === -1) this.childNodes.push(child);
+        else this.childNodes.splice(index, 0, child);
+        return child;
+    }
     get firstChild(): MockNode | null { return this.childNodes[0] || null; }
     get nextSibling(): MockNode | null {
         if (!this.parentNode) return null;
@@ -259,7 +273,7 @@ function testSvgHydration() {
     ];
 
     const mapNodes = new MapNodes();
-    const report = hydrate(commands, mapNodes, mockedApiLocation());
+    const { report } = hydrate(commands, mapNodes, mockedApiLocation());
 
     assert(mapNodes.getAnyOption(50) as any === svg, "<svg> claimed, not rebuilt");
     assert(mapNodes.getAnyOption(51) as any === path, "<path> claimed");
@@ -289,7 +303,7 @@ function testMissingRoot() {
 
     let report;
     try {
-        report = hydrate(commands, new MapNodes(), mockedApiLocation());
+        report = hydrate(commands, new MapNodes(), mockedApiLocation()).report;
     } finally {
         console.error = original;
     }
@@ -320,7 +334,7 @@ function testMarkersAreNotCountedAgainstTheScore() {
         { InsertBefore: { parent: 3, child: 71, ref_id: null } },
     ];
 
-    const report = hydrate(commands, new MapNodes(), mockedApiLocation());
+    const { report } = hydrate(commands, new MapNodes(), mockedApiLocation());
 
     assert(report.hydratable === 1, "only the <div> is hydratable");
     assert(report.skipped === 1, "the marker is counted as skipped");
@@ -352,7 +366,7 @@ function testCreateThenRemoveInOneBatch() {
     ];
 
     const mapNodes = new MapNodes();
-    const report = hydrate(commands, mapNodes, mockedApiLocation());
+    const { report } = hydrate(commands, mapNodes, mockedApiLocation());
 
     assert(mapNodes.getAnyOption(80) as any === first, "the <div> was claimed");
     assert(
@@ -423,7 +437,7 @@ function hydrateCollectingErrors(commands: CommandType[], mapNodes: MapNodes) {
     console.error = (...args: any[]) => { errors.push(String(args[0])); };
 
     try {
-        const report = hydrate(commands, mapNodes, mockedApiLocation());
+        const { report } = hydrate(commands, mapNodes, mockedApiLocation());
         return { report, errors };
     } finally {
         console.error = original;
@@ -566,7 +580,7 @@ function testDiscardedServerNodesAreCounted() {
         { InsertBefore: { parent: 140, child: 141, ref_id: null } },
     ];
 
-    const report = hydrate(commands, new MapNodes(), mockedApiLocation());
+    const { report } = hydrate(commands, new MapNodes(), mockedApiLocation());
 
     assert(report.matched === report.hydratable, "every vnode of the browser found a server node...");
     assert(list.childNodes.length === 1, "...while the rows under them were removed");
@@ -624,7 +638,7 @@ function testMovesAndRemovals() {
     );
 
     const mapNodes = new MapNodes();
-    const report = hydrate(commands, mapNodes, mockedApiLocation());
+    const { report } = hydrate(commands, mapNodes, mockedApiLocation());
 
     assert(report.matched === report.hydratable && report.hydratable === 8, "every node is where the server has it");
     assert(report.discarded === 0, "nothing the server rendered is left over");
@@ -670,12 +684,151 @@ function testInsertBeforeAnySibling() {
     );
 
     const mapNodes = new MapNodes();
-    const report = hydrate(commands, mapNodes, mockedApiLocation());
+    const { report } = hydrate(commands, mapNodes, mockedApiLocation());
 
     assert(report.matched === report.hydratable && report.discarded === 0, "the list is in the server's order");
     [a, b, c, d, e].forEach((id, index) => {
         assert(mapNodes.getAnyOption(id) as any === serverItems[index], `${"abcde"[index]} is item ${index + 1}`);
     });
+}
+
+/// The server's `<div>`, indented as its HTML is, holding a span per text.
+function serverSpans(texts: string[]): { div: MockElement, spans: MockElement[] } {
+    const div = new MockElement('DIV');
+    const spans = texts.map((text) => {
+        const span = new MockElement('SPAN');
+        span.appendChild(new MockText(text));
+        div.appendChild(new MockText("\n  "));
+        div.appendChild(span);
+        return span;
+    });
+    div.appendChild(new MockText("\n"));
+    documentMock.body.appendChild(div);
+    return { div, spans };
+}
+
+/// The commands that create a span holding `text`.
+function spanCommands(id: number, text: string): CommandType[] {
+    return [
+        { CreateNode: { id, name: 'span' } },
+        { CreateText: { id: id + 1, value: text } },
+        { InsertBefore: { parent: id, child: id + 1, ref_id: null } },
+    ];
+}
+
+// 17. Marker comments are put in without moving what the server sent
+function testMarkersArePlacedWithoutMoves() {
+    console.log("\n--- Test hydration 17: Markers placed among adopted nodes ---");
+    clearBody();
+
+    // The server leaves the markers out: <div><span>a</span><span>b</span></div>
+    const server = serverSpans(["a", "b"]);
+
+    // Two `render_value`s: each marker is appended, then its content goes in front of it.
+    const [div, m1, a, m2, b] = [170, 171, 172, 175, 176];
+    const commands: CommandType[] = [
+        { CreateNode: { id: div, name: 'div' } },
+        { InsertBefore: { parent: 3, child: div, ref_id: null } },
+        { CreateComment: { id: m1, value: "value" } },
+        { InsertBefore: { parent: div, child: m1, ref_id: null } },
+        ...spanCommands(a, "a"),
+        { InsertBefore: { parent: div, child: a, ref_id: m1 } },
+        { CreateComment: { id: m2, value: "value" } },
+        { InsertBefore: { parent: div, child: m2, ref_id: null } },
+        ...spanCommands(b, "b"),
+        { InsertBefore: { parent: div, child: b, ref_id: m2 } },
+    ];
+
+    const mapNodes = new MapNodes();
+    const { report, place } = hydrate(commands, mapNodes, mockedApiLocation());
+
+    // What the batch then creates, as the command replay would: the markers.
+    const markers = [m1, m2].map((id) => {
+        const marker = new MockComment("value");
+        mapNodes.set(id, marker as any);
+        return marker;
+    });
+
+    MockNode.moved = [];
+    place();
+
+    assert(report.matched === report.hydratable, "the spans are adopted");
+    const [spanA, spanB] = server.spans;
+    const [marker1, marker2] = markers;
+    const children = server.div.childNodes;
+    assert(children.length === 4 && children[0] === spanA && children[1] === marker1
+        && children[2] === spanB && children[3] === marker2, "each marker is right after its span");
+    assert(MockNode.moved.length === 0, "no node the server sent was moved");
+}
+
+// 18. A node the batch has and the server didn't send goes in among the adopted ones
+function testNewElementIsPlacedWithoutMoves() {
+    console.log("\n--- Test hydration 18: New element placed among adopted nodes ---");
+    clearBody();
+
+    const server = serverSpans(["a", "c"]);
+
+    const [div, a, b, c] = [180, 181, 183, 185];
+    const commands: CommandType[] = [
+        { CreateNode: { id: div, name: 'div' } },
+        { InsertBefore: { parent: 3, child: div, ref_id: null } },
+        ...spanCommands(a, "a"),
+        { CreateNode: { id: b, name: 'em' } },
+        ...spanCommands(c, "c"),
+        { InsertBefore: { parent: div, child: a, ref_id: null } },
+        { InsertBefore: { parent: div, child: b, ref_id: null } },
+        { InsertBefore: { parent: div, child: c, ref_id: null } },
+    ];
+
+    const mapNodes = new MapNodes();
+    const { place } = hydrate(commands, mapNodes, mockedApiLocation());
+
+    // The <em> has no node from the server, so the replay creates it.
+    const em = new MockElement('EM');
+    mapNodes.set(b, em as any);
+
+    MockNode.moved = [];
+    place();
+
+    const [spanA, spanC] = server.spans;
+    const children = server.div.childNodes;
+    assert(children.length === 3 && children[0] === spanA && children[1] === em && children[2] === spanC,
+        "the <em> is between the spans");
+    assert(MockNode.moved.length === 0, "neither span was moved");
+}
+
+// 19. A node the batch doesn't put in a parent stays where it is
+function testNodesOutsideTheBatchStay() {
+    console.log("\n--- Test hydration 19: Whitespace between <head> and <body> ---");
+    clearBody();
+
+    // <html> keeps the server's whitespace between <head> and <body>; hydration doesn't go there.
+    const html = documentMock.documentElement;
+    const whitespace = new MockText("\n");
+    html.appendChild(documentMock.head);
+    html.appendChild(whitespace);
+    html.appendChild(documentMock.body);
+    documentMock.body.appendChild(new MockElement('DIV'));
+
+    const commands: CommandType[] = [
+        { InsertBefore: { parent: 1, child: 2, ref_id: null } },
+        { InsertBefore: { parent: 1, child: 3, ref_id: null } },
+        { CreateNode: { id: 190, name: 'div' } },
+        { InsertBefore: { parent: 3, child: 190, ref_id: null } },
+    ];
+
+    const { place } = hydrate(commands, new MapNodes(), mockedApiLocation());
+
+    MockNode.moved = [];
+    place();
+
+    assert(html.childNodes[0] === documentMock.head && html.childNodes[1] === whitespace
+        && html.childNodes[2] === documentMock.body, "<html> is as it was");
+    assert(MockNode.moved.length === 0, "neither <head> nor <body> was moved");
+
+    for (const node of [...html.childNodes]) {
+        node.remove();
+    }
 }
 
 // Run all tests
@@ -695,3 +848,6 @@ testEmptyTextInsideMergedTexts();
 testDiscardedServerNodesAreCounted();
 testMovesAndRemovals();
 testInsertBeforeAnySibling();
+testMarkersArePlacedWithoutMoves();
+testNewElementIsPlacedWithoutMoves();
+testNodesOutsideTheBatchStay();

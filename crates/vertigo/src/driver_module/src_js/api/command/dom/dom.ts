@@ -106,10 +106,15 @@ export class DriverDom {
     // `crates/vertigo/src/dev/command_wire.rs`. It is a view straight into wasm memory,
     // valid for as long as this call runs, which is why nothing here is deferred.
     public update = (bytes: Uint8Array) => {
-        if (this.nodes.hasInitNodes() && this.metadata.getEnabledHydration()) {
-            // First flush only, so the object form is worth building here and nowhere else.
-            hydrate(decodeCommands(bytes), this.nodes, this.appLocation);
-        }
+        // First flush only, so the object form is worth building here and nowhere else.
+        const hydration = this.nodes.hasInitNodes() && this.metadata.getEnabledHydration()
+            ? hydrate(decodeCommands(bytes), this.nodes, this.appLocation)
+            : null;
+
+        // When hydration adopted the server's nodes, it puts the batch's nodes in place itself
+        // once they exist, rather than having each insert move an adopted node - see `place`.
+        // Without a root it adopted nothing, and the batch builds the page as any other would.
+        const placing = hydration?.report.rootFound ? hydration : null;
 
         const cursor = new CommandCursor(bytes);
         const names = readNames(cursor);
@@ -195,8 +200,10 @@ export class DriverDom {
                         const parent = cursor.varint();
                         const child = cursor.varint();
                         const ref = cursor.optionalId();
-                        try { this.nodes.insertBefore(parent, child, ref); }
-                        catch (error) { applyFailed(error, 'InsertBefore'); }
+                        if (placing === null) {
+                            try { this.nodes.insertBefore(parent, child, ref); }
+                            catch (error) { applyFailed(error, 'InsertBefore'); }
+                        }
                         break;
                     }
                     case Tag.InsertCss: {
@@ -245,6 +252,8 @@ export class DriverDom {
                 error
             );
         }
+
+        placing?.place();
 
         if (setFocus.size > 0) {
             setTimeout(() => {
@@ -295,7 +304,9 @@ export class DriverDom {
 
         if (value === null) {
             node.removeAttribute(name);
-        } else {
+        } else if (node.getAttribute(name) !== value) {
+            // Not set again when it already has it: an iframe's `src` or `srcdoc` set to the
+            // value it has reloads the frame. A node hydration adopted has its attributes already.
             node.setAttribute(name, value);
         }
 
