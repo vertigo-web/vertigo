@@ -28,6 +28,7 @@
 * A semicolon in a string or parentheses (data URI)
 * A referenced Css block (`[other_css] { ... }`) relied on CSS nesting, now it's a descendant
   selector.
+* The hydration report didn't count server-rendered elements that hydration threw away.
 
 ## 0.13.3 - 2026-10-10
 

@@ -28,6 +28,14 @@ export interface HydrationReport {
     skipped: number;
     /// Every distinct id the batch mentioned, matchable or not.
     total: number;
+    /// Server-rendered elements that hydration removed, as nothing in the browser's tree took
+    /// them: markup the server sent that the browser threw away. `matched` can't show it - it
+    /// counts the browser's vnodes, and those can all find a node while the server's markup
+    /// under them goes, f. ex. a "Loading…" text matching the container the server filled
+    /// with rows. Texts and the top level of `<head>`/`<body>` are left out, as they are by the
+    /// "Removing node" warning: those are the server's formatting whitespace, and the script
+    /// and styles vertigo-cli adds.
+    discarded: number;
 }
 
 export const hydrate = (commands: Array<CommandType>, nodes: MapNodes, appLocation: AppLocation): HydrationReport => {
@@ -44,6 +52,7 @@ class HydrationEngine {
     private virtualNodes: Map<number, VirtualNode>;
     private depth: number = -1;
     private matched: number = 0;
+    private discarded: number = 0;
 
     constructor(commands: Array<CommandType>, nodes: MapNodes, appLocation: AppLocation) {
         this.nodes = nodes;
@@ -57,11 +66,20 @@ class HydrationEngine {
         const bodyVNode = this.virtualNodes.get(3);
         const headVNode = this.virtualNodes.get(2);
 
+        if (bodyVNode) {
+            this.hydrateNode(3, document.body);
+
+            if (headVNode) {
+                this.hydrateNode(2, document.head);
+            }
+        }
+
         const report: HydrationReport = {
             rootFound: bodyVNode !== undefined,
-            matched: 0,
+            matched: this.matched,
             ...this.countHydratable(),
             total: this.virtualNodes.size,
+            discarded: this.discarded,
         };
 
         if (!bodyVNode) {
@@ -77,22 +95,15 @@ class HydrationEngine {
             return report;
         }
 
-        this.hydrateNode(3, document.body);
-
-        if (headVNode) {
-            this.hydrateNode(2, document.head);
-        }
-
-        report.matched = this.matched;
-
         const percent = report.hydratable === 0
             ? "100.00"
             : (report.matched * 100 / report.hydratable).toFixed(2);
 
         const summary = `Hydration complete: ${report.matched}/${report.hydratable} matched (${percent}%), ` +
-            `${report.skipped} markers skipped, ${report.total} vnodes in batch.`;
+            `${report.discarded} server nodes discarded, ${report.skipped} markers skipped, ` +
+            `${report.total} vnodes in batch.`;
 
-        if (report.matched < report.hydratable) {
+        if (report.matched < report.hydratable || report.discarded > 0) {
             console.warn(summary);
         } else {
             console.log(summary);
@@ -293,6 +304,7 @@ class HydrationEngine {
             if (nodeToRemove) {
                 if (this.depth !== 0 && nodeToRemove.nodeType !== Node.TEXT_NODE) {
                     console.warn(`Hydration ${this.depth}: Removing node`, nodeToRemove);
+                    this.discarded++;
                 }
                 nodeToRemove.remove();
             }
