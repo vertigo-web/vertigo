@@ -81,3 +81,24 @@ fn test_ref_and_variable() {
         }],
     );
 }
+
+#[test]
+fn test_ref_with_pseudo_selector() {
+    let css1 = css! {"color: black;"};
+    let css2 = css! {"
+        [css1]:hover {
+            color: red;
+        };
+        [css1]::before {
+            content: 'X';
+        };
+    "};
+
+    assert_eq!(
+        css2.groups,
+        vec![CssGroup::CssDynamic {
+            value: ".autocss_1:hover { color: red; };\n.autocss_1::before { content: 'X'; };"
+                .to_string()
+        }],
+    );
+}

@@ -77,3 +77,14 @@ fn test_doubled() {
         "width: 40px;\n@media only screen and (max-width: 1000px) { color: red; };\n@media print { color: black; };"
     )
 }
+
+#[test]
+fn test_media_without_feature_and_semicolon() {
+    let value = css! {"
+        @media print {
+            color: black;
+        }
+    "};
+
+    assert_eq!(get_s(&value), "@media print { color: black; };")
+}

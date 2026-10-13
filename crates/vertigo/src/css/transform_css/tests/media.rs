@@ -160,3 +160,21 @@ fn test_media_and_pseudo_2() {
         ),
     );
 }
+
+#[test]
+fn test_media_without_feature() {
+    let css = "
+    @media print {
+        color: black;
+    };
+    ";
+
+    let next_id = NextId::new();
+
+    let (_, selectors) = transform_css(css, &next_id);
+
+    assert_eq!(
+        selectors,
+        vec!(("@media print".into(), ".autocss_1 { color: black }".into()))
+    );
+}

@@ -8,9 +8,18 @@ rule = _{ comment | simple_rule | unknown_rule | sub_rule }
 
 comment = _{ comment_start ~ (!comment_end ~ ANY)* ~ comment_end }
 
-sub_rule = { (sub_selector | sub_selector_ref)? ~ sub_selector_ref* ~ brace_left ~ rule+ ~ brace_right ~ semicolon? }
-sub_selector = { colon ~ (!(colon | bracket_left | brace_left) ~ (double_colon | ANY))+ }
-sub_selector_ref = { bracket_left ~ (!(colon | bracket_left | brace_left) ~ ANY)+ }
+sub_rule = { selector ~ brace_left ~ rule+ ~ brace_right ~ semicolon? }
+selector = _{ selector_item+ ~ ("," ~ selector_item+)* }
+selector_item = _{ sub_selector | sub_selector_ref }
+// Pseudo-classes and pseudo-elements, also chained (:first-child:hover), with arguments (:not(:last-child))
+// or in a list (:hover, :focus)
+sub_selector = { (double_colon | colon) ~ sub_selector_part+ }
+sub_selector_part = _{ selector_arguments | (!(bracket_left | brace_left | brace_right | semicolon) ~ ANY) }
+// Anything goes inside parentheses, also brackets, like in :not([disabled])
+selector_arguments = _{ "(" ~ (selector_arguments | (!(")" | brace_left | brace_right) ~ ANY))* ~ ")" }
+// Reference to other Css: [other_css]
+sub_selector_ref = { bracket_left ~ ref_ident ~ bracket_right }
+ref_ident = @{ (ASCII_ALPHA | "_") ~ (ASCII_ALPHANUMERIC | "_")* }
 
 simple_rule = _{
     // align-content 	Specifies the alignment between the lines inside a flexible container when the items do not use all available space
@@ -270,15 +279,21 @@ simple_rule = _{
 
 unknown_rule = {
     !("animation" ~ colon)
-    ~ rule_ident ~ colon ~ value ~ semicolon
+    ~ rule_ident ~ colon ~ value ~ declaration_end
 }
 
-rule_ident = { (ASCII_ALPHA_LOWER | "@" | "-" ) ~ (ASCII_ALPHA_LOWER | "-")+ }
-value = _{ url_value | (simple_value)+ }
-simple_value = _{ expression | color_value | unquoted_value | quoted_value }
+// The last declaration in a block may omit the semicolon
+declaration_end = _{ semicolon | &brace_right | &EOI }
 
-unquoted_value = { (!semicolon ~ ANY)+ }
-quoted_value = { PUSH(quote) ~ (!PEEK ~ ANY)+ ~ POP }
+rule_ident = { custom_property_ident | (ASCII_ALPHA_LOWER | "@" | "-" ) ~ (ASCII_ALPHA_LOWER | "-")+ }
+// Custom property (--my-var) can contain also digits, uppercase letters and underscores
+custom_property_ident = @{ "--" ~ (ASCII_ALPHANUMERIC | "-" | "_")+ }
+value = _{ value_part+ }
+value_part = _{ url_value | expression | quoted_value | color_value | unquoted_value }
+
+// Stops before parts having their own meaning, so they can be placed anywhere in the value
+unquoted_value = { (!(semicolon | brace_left | brace_right | quote | "url(") ~ ANY)+ }
+quoted_value = @{ PUSH(quote) ~ (!PEEK ~ ANY)* ~ POP }
 
 color_value = { hexa_value | hex_value | rgba_value | rgb_value | hsla_value | hsl_value }
 hex_value = _{ hash ~ ASCII_HEX_DIGIT{6} }
@@ -290,7 +305,9 @@ hsla_value = _{ "hsl(" ~ ASCII_DIGIT ~ comma ~ (ASCII_DIGIT ~ percent ~ comma){2
 
 transparency_value = _{ "0" | "1" | ("0." ~ ASCII_DIGIT+) | "1.0" }
 
-url_value = { "url(" ~ (expression | quoted_value) ~ ")" }
+url_value = { "url(" ~ (expression | quoted_value | url_raw) ~ ")" }
+// Unquoted url, which can contain semicolons, like data:image/png;base64,...
+url_raw = @{ (!")" ~ ANY)* }
 
 // { } and {$ $} expressions
 expression = { brace_left ~ /*PUSH("$"*) ~*/ expression_value ~ /*POP ~*/ brace_right }
@@ -338,11 +355,11 @@ animation_rule = {
         // (name? ~ duration ~ timing_function? ~ delay? ~ iteration_count? ~ direction? ~ fill_mode? ~ play_state?)
         // fallback
         animation_params_fallback
-    ) ~ frames? ~ semicolon
+    ) ~ frames? ~ declaration_end
 }
 
 media_rules = {
-    "@media" ~ media_query ~ brace_left ~ rule* ~ brace_right ~ semicolon
+    "@media" ~ media_query ~ brace_left ~ rule* ~ brace_right ~ semicolon?
 }
 
 media_query = {
@@ -364,9 +381,11 @@ direction = { "normal" | "reverse" | "alternate" | "alternate - reverse" | "init
 fill_mode = { "none" | "forwards" | "backwards" | "both" | "initial" | "inherit" }
 play_state = { "paused" | "running" | "initial" | "inherit" }
 
-animation_params_fallback = { (!(brace_left | semicolon) ~ ANY)* }
+animation_params_fallback = { (!(brace_left | brace_right | semicolon) ~ ANY)* }
 
 frames = { brace_left ~ frame+ ~ brace_right }
 frame = { step ~ brace_left ~ frame_rule+ ~ brace_right }
-step = { ASCII_DIGIT+ ~ percent }
+// Keyframe selector: 0%, 33.3%, from, to, or a list of them (0%, 100%)
+step = @{ step_value ~ (WHITESPACE* ~ "," ~ WHITESPACE* ~ step_value)* }
+step_value = @{ "from" | "to" | (ASCII_DIGIT+ ~ ("." ~ ASCII_DIGIT+)? ~ "%") }
 frame_rule = _{ unknown_rule | comment }

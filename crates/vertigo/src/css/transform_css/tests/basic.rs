@@ -62,3 +62,24 @@ fn test_basic3() {
     assert_eq!(id, 1);
     assert_eq!(next_id.current(), 1);
 }
+
+#[test]
+fn test_semicolons_in_strings_and_parentheses() {
+    let css = "
+    background-image: url(\"data:image/gif;base64,AAA\");
+    content: ';';
+    mask-image: url(data:image/gif;base64,BBB);
+    ";
+
+    let next_id = NextId::new();
+
+    let (_, selectors) = transform_css(css, &next_id);
+
+    assert_eq!(
+        selectors,
+        vec!((
+            ".autocss_1".into(),
+            "background-image: url(\"data:image/gif;base64,AAA\"); content: ';'; mask-image: url(data:image/gif;base64,BBB)".into()
+        ))
+    );
+}
