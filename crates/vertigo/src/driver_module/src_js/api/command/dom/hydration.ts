@@ -38,9 +38,16 @@ export interface HydrationReport {
     discarded: number;
 }
 
-export const hydrate = (commands: Array<CommandType>, nodes: MapNodes, appLocation: AppLocation): HydrationReport => {
+export interface Hydration {
+    report: HydrationReport;
+    /// Puts every node of the batch where the batch has it. To be called once the batch has
+    /// created its nodes, in place of applying its inserts - see `HydrationEngine::place`.
+    place: () => void;
+}
+
+export const hydrate = (commands: Array<CommandType>, nodes: MapNodes, appLocation: AppLocation): Hydration => {
     const engine = new HydrationEngine(commands, nodes, appLocation);
-    return engine.hydrate();
+    return { report: engine.hydrate(), place: () => engine.place() };
 };
 
 const isNonEmptyText = (vNode: VirtualNode): boolean =>
@@ -293,6 +300,45 @@ class HydrationEngine {
             // Run injects
             if (candidate instanceof Element) {
                 injects(candidate, this.appLocation);
+            }
+        }
+    }
+
+    /// Puts every node of the batch where the batch has it, once the batch has created them,
+    /// and moves a node only when it isn't there already.
+    ///
+    /// Applying the batch's inserts one by one would move every adopted node - an insert takes a
+    /// node out of the document and puts it back even when it goes right where it was, and a
+    /// node that leaves the document loses its focus, its scroll position, its iframe's page.
+    /// They would move even in a page that matched perfectly: the server leaves out the marker
+    /// comments, so a marker appended to its parent lands behind the nodes after it, and the
+    /// inserts that follow move them around it.
+    ///
+    /// Here the nodes the server sent are where hydration found them, in the order of the
+    /// batch, and nothing else is left in a parent hydration went through - so the nodes it
+    /// adopted are passed over, and only the new ones, markers and whatever didn't match, are
+    /// inserted.
+    public place() {
+        // Children before their parents - the batch creates a parent before its children - so
+        // a subtree the browser builds is put together before it goes into the document, once.
+        for (const vNode of [...this.virtualNodes.values()].reverse()) {
+            const parent = this.nodes.getAnyOption(vNode.id);
+
+            // Except for `<html>`: hydration doesn't go there, so it still has the server's
+            // whitespace between `<head>` and `<body>`, and `<body>` would be moved past it.
+            if (vNode.id === 1 || !parent) {
+                continue;
+            }
+
+            let next = parent.firstChild;
+            for (const childId of vNode.children) {
+                // A node that is missing failed to be created, which the batch reported already.
+                const child = this.nodes.getAnyOption(childId);
+                if (child === next) {
+                    next = child.nextSibling;
+                } else if (child) {
+                    parent.insertBefore(child, next);
+                }
             }
         }
     }

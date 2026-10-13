@@ -28,6 +28,8 @@
 * A semicolon in a string or parentheses (data URI)
 * A referenced Css block (`[other_css] { ... }`) relied on CSS nesting, now it's a descendant
   selector.
+* Hydration moved every node the server sent, so the focus left the field,
+  scrolled boxes went back to the top, iframes reloaded.
 * The hydration report didn't count server-rendered elements that hydration threw away.
 
 ### Performance

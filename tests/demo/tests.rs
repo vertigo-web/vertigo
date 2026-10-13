@@ -83,6 +83,10 @@ async fn demo(ctx: Ctx) -> Result<()> {
         "the SSR hydration coverage check",
         ssr::hydration_is_complete(&ctx)
     );
+    step!(
+        "the check that hydration keeps what the visitor did",
+        ssr::hydration_keeps_state(&ctx)
+    );
     step!("the SSR fetch cache check", ssr::fetch_cache(&ctx));
     step!(
         "the SSR fetch cache check of LazyListCache",
