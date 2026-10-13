@@ -633,6 +633,51 @@ function testMovesAndRemovals() {
     assert(mapNodes.getAnyOption(w) as any === serverW, "w has its span, so y is not in B anymore");
 }
 
+// 16. Inserting before a sibling, wherever the sibling is
+function testInsertBeforeAnySibling() {
+    console.log("\n--- Test hydration 16: Insert before the last, the first and a middle child ---");
+    clearBody();
+
+    // The server's list, in the order the inserts below make: a b c d e
+    const server = new MockElement('UL');
+    const serverItems = ["a", "b", "c", "d", "e"].map((letter) => {
+        const item = new MockElement('LI');
+        item.appendChild(new MockText(letter));
+        server.appendChild(item);
+        return item;
+    });
+    documentMock.body.appendChild(server);
+
+    const list = 160;
+    const [a, b, c, d, e] = [161, 162, 163, 164, 165];
+    const commands: CommandType[] = [
+        { CreateNode: { id: list, name: 'ul' } },
+        { InsertBefore: { parent: 3, child: list, ref_id: null } },
+    ];
+    [a, b, c, d, e].forEach((id, index) => {
+        commands.push(
+            { CreateNode: { id, name: 'li' } },
+            { CreateText: { id: id + 10, value: "abcde"[index]! } },
+            { InsertBefore: { parent: id, child: id + 10, ref_id: null } },
+        );
+    });
+    commands.push(
+        { InsertBefore: { parent: list, child: e, ref_id: null } },  // e
+        { InsertBefore: { parent: list, child: b, ref_id: e } },     // b e - before the last
+        { InsertBefore: { parent: list, child: a, ref_id: b } },     // a b e - before the first
+        { InsertBefore: { parent: list, child: d, ref_id: e } },     // a b d e - before the last
+        { InsertBefore: { parent: list, child: c, ref_id: d } },     // a b c d e - before a middle one
+    );
+
+    const mapNodes = new MapNodes();
+    const report = hydrate(commands, mapNodes, mockedApiLocation());
+
+    assert(report.matched === report.hydratable && report.discarded === 0, "the list is in the server's order");
+    [a, b, c, d, e].forEach((id, index) => {
+        assert(mapNodes.getAnyOption(id) as any === serverItems[index], `${"abcde"[index]} is item ${index + 1}`);
+    });
+}
+
 // Run all tests
 testExtraNodes();
 testTextMismatch();
@@ -649,3 +694,4 @@ testEmptyTextDoesNotEatItsSiblings();
 testEmptyTextInsideMergedTexts();
 testDiscardedServerNodesAreCounted();
 testMovesAndRemovals();
+testInsertBeforeAnySibling();
