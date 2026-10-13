@@ -324,16 +324,19 @@ class HydrationEngine {
             return node;
         };
 
-        // Unlink a child wherever it currently sits. The server does the same when it replays
+        // The node each child is in. Without it, finding a child meant searching every node's
+        // children, on every insert - quadratic in the size of the page.
+        const parentOf = new Map<number, VirtualNode>();
+
+        // Unlink a child from where it currently sits. The server does the same when it replays
         // the stream (`AllElements::insert_before` calls `remove_from_parent`); without it a
         // node that moves between parents shows up under both, and the matcher trips over the
         // copy that is not there.
         const unlink = (childId: number) => {
-            for (const node of virtualNodes.values()) {
-                const index = node.children.indexOf(childId);
-                if (index !== -1) {
-                    node.children.splice(index, 1);
-                }
+            const parent = parentOf.get(childId);
+            if (parent) {
+                parent.children.splice(parent.children.indexOf(childId), 1);
+                parentOf.delete(childId);
             }
         };
 
@@ -363,6 +366,7 @@ class HydrationEngine {
                 const refId = command.InsertBefore.ref_id;
 
                 unlink(childId);
+                parentOf.set(childId, parent);
 
                 if (refId === null || refId === undefined) {
                     parent.children.push(childId);
