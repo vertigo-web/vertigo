@@ -84,6 +84,10 @@ async fn demo(ctx: Ctx) -> Result<()> {
         ssr::hydration_is_complete(&ctx)
     );
     step!("the SSR fetch cache check", ssr::fetch_cache(&ctx));
+    step!(
+        "the SSR fetch cache check of LazyListCache",
+        ssr::lazy_list_fetch_cache(&ctx)
+    );
 
     ssr::not_found(&ctx).await?;
     console::assert_clean_except(&ctx, "the 404 check", &[ssr::NOT_FOUND_PATH]).await?;

@@ -18,11 +18,11 @@ pub fn api_fetch_cache() -> Rc<FetchCache> {
 /// The responses the server already fetched while rendering this page, decoded on first ask.
 ///
 /// Decoding is deferred rather than done at startup so that an application with no
-/// [`LazyCache`](crate::LazyCache) never mentions it. `get_response` is the only caller, and
-/// the only call to `get_response` is the one in `LazyCache::new`, so in an application that
-/// fetches nothing the linker can drop this whole file and the `SsrFetchCache` decoder behind
-/// it - a tenth of the wasm of a small application. It used to be pulled in unconditionally
-/// from `start_app`.
+/// [`LazyCache`](crate::LazyCache) or [`LazyListCache`](crate::LazyListCache) never mentions it.
+/// `get_response` is the only caller, and the only calls to `get_response` are the ones in
+/// `LazyCache::new` and `LazyListCache::new`, so in an application that fetches nothing
+/// the linker can drop this whole file and the `SsrFetchCache` decoder behind it - a tenth of
+/// the wasm of a small application. It used to be pulled in unconditionally from `start_app`.
 pub struct FetchCache {
     cache: ValueMut<Option<Rc<SsrFetchCache>>>,
 }

@@ -112,7 +112,9 @@ let cache: LazyListCache<ItemKey> = RequestBuilder::get("/api/items")
   shortcut when `T::Value: JsJsonDeserialize` and a plain `GET` returning `200` is enough.
 
 The cache is lazy: it fetches on first read ([`get`] / [`get_by_key`] / [`granular`])
-when in the `Uninitialized` state.
+when in the `Uninitialized` state. When the page was rendered on the server, which already
+fetched the list, the cache starts with that response, so hydration renders the same list
+without fetching it again.
 
 ---
 
