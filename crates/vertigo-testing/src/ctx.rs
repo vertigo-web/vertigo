@@ -49,6 +49,10 @@ pub struct HydrationReport {
     pub hydratable: u64,
     pub skipped: u64,
     pub total: u64,
+    /// Server-rendered elements hydration removed, as nothing in the browser's tree took them.
+    /// `matched == hydratable` can hold while the server's markup goes, so a check of complete
+    /// hydration needs this too. `None` from a vertigo that doesn't report it.
+    pub discarded: Option<u64>,
 }
 
 impl<E: Env> Ctx<E> {
@@ -379,6 +383,7 @@ impl<E: Env> Ctx<E> {
             hydratable: number("hydratable")?,
             skipped: number("skipped")?,
             total: number("total")?,
+            discarded: raw.get("discarded").and_then(Value::as_u64),
         })
     }
 

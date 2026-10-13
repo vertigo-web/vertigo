@@ -539,6 +539,40 @@ function testEmptyTextInsideMergedTexts() {
     assert(errors.length === 0, "nothing was reported as a mismatch");
 }
 
+// 14. Server markup the browser's tree has no place for
+function testDiscardedServerNodesAreCounted() {
+    console.log("\n--- Test hydration 14: Discarded server nodes ---");
+    clearBody();
+
+    // The server rendered a list, indented as its HTML is, and the script that starts the app:
+    // <div>⏎<div>Apples</div>⏎<div>Bread</div></div><script>
+    const list = new MockElement('DIV');
+    list.appendChild(new MockText("\n  "));
+    const apples = new MockElement('DIV');
+    apples.appendChild(new MockText("Apples"));
+    list.appendChild(apples);
+    list.appendChild(new MockText("\n  "));
+    const bread = new MockElement('DIV');
+    bread.appendChild(new MockText("Bread"));
+    list.appendChild(bread);
+    documentMock.body.appendChild(list);
+    documentMock.body.appendChild(new MockElement('SCRIPT'));
+
+    // The browser renders the list still loading: <div>Loading…</div>
+    const commands: CommandType[] = [
+        { CreateNode: { id: 140, name: 'div' } },
+        { CreateText: { id: 141, value: "Loading…" } },
+        { InsertBefore: { parent: 3, child: 140, ref_id: null } },
+        { InsertBefore: { parent: 140, child: 141, ref_id: null } },
+    ];
+
+    const report = hydrate(commands, new MapNodes(), mockedApiLocation());
+
+    assert(report.matched === report.hydratable, "every vnode of the browser found a server node...");
+    assert(list.childNodes.length === 1, "...while the rows under them were removed");
+    assert(report.discarded === 2, "both rows are counted, neither the whitespace nor the script");
+}
+
 // Run all tests
 testExtraNodes();
 testTextMismatch();
@@ -553,3 +587,4 @@ testStaleAttributeRemoved();
 testEmptyTextIsNotCountedAgainstTheScore();
 testEmptyTextDoesNotEatItsSiblings();
 testEmptyTextInsideMergedTexts();
+testDiscardedServerNodesAreCounted();

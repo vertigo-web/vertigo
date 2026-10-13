@@ -80,7 +80,12 @@ pub async fn hydration_is_complete(ctx: &Ctx) -> Result<()> {
     // `/svg` is in here deliberately: SVG elements keep their own casing in `tagName`, so
     // matching them against an uppercased name never succeeded and the whole subtree was
     // deleted and rebuilt.
-    for route in ["/", "/svg"] {
+    //
+    // So is `/lazy-list`: its list is fetched, and a browser that doesn't start with the list the
+    // server fetched renders "Loading…" where the server rendered the rows. That text finds a
+    // node to match, so every vnode still matches - it's the rows that are thrown away, which
+    // only `discarded` shows.
+    for route in ["/", "/svg", "/lazy-list"] {
         // Waits for the report itself. Waiting for a text instead, "Game Of Life" say, races
         // the boot: the menu is in the server-rendered HTML already, so the text is there
         // before the wasm is, and the report sometimes is not yet.
@@ -112,9 +117,22 @@ pub async fn hydration_is_complete(ctx: &Ctx) -> Result<()> {
             ),
         )?;
 
+        check_eq(
+            report.discarded,
+            Some(0),
+            format!(
+                "{route}: hydration removed server-rendered elements nothing in the browser's \
+                 tree took, so that much of the server-rendered page was thrown away - {report:?}"
+            ),
+        )?;
+
         println!(
-            "     {route}: {}/{} matched, {} markers skipped, {} vnodes in batch",
-            report.matched, report.hydratable, report.skipped, report.total
+            "     {route}: {}/{} matched, {} discarded, {} markers skipped, {} vnodes in batch",
+            report.matched,
+            report.hydratable,
+            report.discarded.unwrap_or_default(),
+            report.skipped,
+            report.total
         );
     }
 
