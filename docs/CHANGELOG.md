@@ -1,20 +1,26 @@
 <!-- markdownlint-configure-file { "no-duplicate-heading": { "siblings_only": true } } -->
 
 <!-- markdownlint-disable-next-line first-line-h1 -->
-## Unreleased
+## 0.13.4 - 2026-10-14
 
 ### Changed
 
 * SSR now sends HTML without indentation so hydration performs better.
   `--pretty-html` (`MountConfigBuilder::pretty_html`) brings indentation back.
+* SSR fetches and the proxy use rustls 0.23 (was 0.20, RUSTSEC-2024-0336) with the `ring`
+  provider, unless the app installed one, and HTTP/1.1 only (h2 0.3, RUSTSEC-2026-0258).
 
 ### Fixed
 
+* Hydration moved every node the server sent, so the focus left the field,
+  scrolled boxes went back to the top, iframes reloaded.
+* The hydration report didn't count server-rendered elements that hydration threw away.
 * `LazyListCache` didn't reuse the list fetched during server-side rendering, so the browser
   showed it loading and fetched it again.
 * `LazyCache` created after the first render (f. ex. on navigating back to a route) started with
   the value the server fetched for the page, which could be stale by then, instead of fetching it.
 * `css!` panicked on an attribute in a pseudo-class argument: `:not([disabled])`.
+* `css!` left an expression in the middle of a value unsubstituted: `1px solid {color}`.
 * `css!` macro fixes for:
 
   * pseudo-elements: `::before { ... }`,
@@ -25,17 +31,14 @@
   * custom properties with digits, uppercase letters or `_`: `--gap-2`,
   * `url(...)` followed by other values: `url('a.png') no-repeat`,
   * keyframe selectors: `from`, `to`, `0%, 100%`, `33.3%`,
-  * a semicolon in quotes: `content: ';'`,
+  * `@media` without a colon in the query: `@media print`,
+  * a semicolon in quotes or parentheses: `content: ';'`, data URI,
   * no semicolon after the last declaration or after a `@media` block.
 
-* `css!` left an expression in the middle of a value unsubstituted: `1px solid {color}`.
-* `@media` without a colon in the query (`@media print`)
-* A semicolon in a string or parentheses (data URI)
 * A referenced Css block (`[other_css] { ... }`) relied on CSS nesting, now it's a descendant
   selector.
-* Hydration moved every node the server sent, so the focus left the field,
-  scrolled boxes went back to the top, iframes reloaded.
-* The hydration report didn't count server-rendered elements that hydration threw away.
+* `vertigo-testing`: with `E2E_HEADLESS=0`, windows of parallel tests took the focus from each
+  other, so `Ctx::retype` typed after the old value and drop-downs closed mid-test.
 
 ### Performance
 

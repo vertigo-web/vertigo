@@ -36,26 +36,27 @@ ssr-timings = []
 actix-cors = "0.7"
 actix-files = "0.7"
 actix-proxy = "0.2"
-actix-web = "4.15"
-awc = { version = "3.8", features = ["rustls"] }
+actix-web = "4.16"
+awc = { version = "3.8", features = ["rustls-0_23-webpki-roots"] }
 base64 = "0.23"
 chrono = "0.4"
-clap = { version = "4.5", features = ["derive"] }
+clap = { version = "4.6", features = ["derive"] }
 crc = "3.4"
 derive_more = "2.1"
 env_logger = "0.11"
 futures = "0.3"
-html-escape = "0.2"
+html-escape = "0.3"
 ignore = "0.4"
 include_dir = "0.7"
 log = "0.4"
 notify = "8.2"
 parking_lot = "0.12"
 pkg-version = "1"
+rustls = { version = "0.23", default-features = false, features = ["ring", "logging", "std", "tls12"] }
 time = "0.3"
 serde = { version = "1.0", features = ["derive", "rc"] }
 serde_json = "1.0"
-tokio = { version = "1.49", features = ["full"] }
+tokio = { version = "1.53", features = ["full"] }
 tokio-retry = "0.3"
 url = "2.5"
 walkdir = "2.5"
