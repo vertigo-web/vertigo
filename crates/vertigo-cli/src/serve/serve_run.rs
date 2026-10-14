@@ -13,7 +13,7 @@ use crate::commons::{
     ErrorCode,
     spawn::{ServerOwner, term_signal},
 };
-use crate::serve::{html::local_origin, mount_path::MountConfig};
+use crate::serve::{html::local_origin, http_client::http_client, mount_path::MountConfig};
 
 use super::{
     ServeOpts, ServeOptsInner, server_state::ServerState, vertigo_install::vertigo_install,
@@ -139,7 +139,7 @@ where
 
                 log::info!("proxy {method} {path}{tail} -> {target_url}");
 
-                let request = awc::Client::new().request_from(&target_url, req.head());
+                let request = http_client().request_from(&target_url, req.head());
 
                 let response = if !body.is_empty() {
                     request.send_body(body)

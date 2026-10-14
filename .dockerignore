@@ -1,5 +1,11 @@
-Cargo.lock
-/target
+.git
+.vscode
+**/target
+/build
+/build-*
 /demo_build
 /examples/build
-.vscode
+/node_modules
+
+**/*.swp
+**/*.rs.bk

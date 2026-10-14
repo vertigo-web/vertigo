@@ -1,4 +1,5 @@
 mod html;
+mod http_client;
 mod mount_path;
 mod request_state;
 mod response_state;

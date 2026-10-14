@@ -12,7 +12,7 @@ license.workspace = true
 edition.workspace = true
 
 [dependencies]
-actix-web = "4.15"
+actix-web = "4.16"
 anyhow = "1.0"
 libtest-mimic = "0.8"
 reqwest = { version = "0.13", default-features = false, features = ["json"] }

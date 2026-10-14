@@ -7,6 +7,7 @@ use vertigo::{
 };
 
 use super::fetch_url::{FetchTarget, SSR_FETCH_HEADER};
+use crate::serve::http_client::http_client;
 
 fn convert_to_jsjson(value: Value) -> JsJson {
     match value {
@@ -158,7 +159,7 @@ async fn send_request_inner(
     target: FetchTarget,
     cookie: Option<String>,
 ) -> SsrFetchResponse {
-    let client = awc::Client::new();
+    let client = http_client();
 
     let mut request = {
         let method = request_params.method.to_str().trim().to_uppercase();
