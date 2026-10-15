@@ -1,6 +1,7 @@
 // The socket loop: connecting, reconnecting, and letting go of the socket on dispose.
 
 import { SocketConnection } from "./connection";
+import { FakeWebSocket, sleep } from "../../testing/fake_websocket";
 
 const logError = console.error;
 
@@ -15,50 +16,6 @@ const assert = (condition: boolean, message: string) => {
 
 // --- MOCKS ---
 
-/// Stands in for the browser's WebSocket. The test decides when a socket opens or the server
-/// closes it. `close()` ends in a `close` event, after an `error` one if the socket was still
-/// connecting - as in a browser.
-class FakeWebSocket {
-    static instances: FakeWebSocket[] = [];
-    opened = false;
-    closed = false;
-    private listeners: Map<string, Array<(event: unknown) => void>> = new Map();
-
-    constructor(readonly url: string) {
-        FakeWebSocket.instances.push(this);
-    }
-
-    addEventListener(type: string, listener: (event: unknown) => void) {
-        this.listeners.set(type, [...(this.listeners.get(type) ?? []), listener]);
-    }
-
-    send(_message: string) {}
-
-    close() {
-        if (this.closed) {
-            return;
-        }
-        this.closed = true;
-        setTimeout(() => {
-            if (!this.opened) {
-                this.emit('error');
-            }
-            this.emit('close');
-        }, 0);
-    }
-
-    open() {
-        this.opened = true;
-        this.emit('open');
-    }
-
-    emit(type: string, event: unknown = {}) {
-        for (const listener of this.listeners.get(type) ?? []) {
-            listener(event);
-        }
-    }
-}
-
 (globalThis as any).WebSocket = FakeWebSocket;
 // The loop narrates every step; the PASS lines are what matters here.
 console.info = () => {};
@@ -69,7 +26,6 @@ console.error = (...args: Array<unknown>) => {
 };
 
 const RETRY_MS = 10;
-const sleep = (ms: number) => new Promise<void>((resolve) => setTimeout(resolve, ms));
 
 /// Starts a socket loop against fresh mocks, with what it reports to the app.
 const start = () => {
@@ -79,14 +35,7 @@ const start = () => {
     const controller = SocketConnection.startSocket('ws://test', 1000, RETRY_MS, (message) => {
         events.push(message.type);
     });
-    const latest = (): FakeWebSocket => {
-        const socket = FakeWebSocket.instances[FakeWebSocket.instances.length - 1];
-        if (socket === undefined) {
-            throw new Error('no socket was created');
-        }
-        return socket;
-    };
-    return { controller, events, latest };
+    return { controller, events, latest: FakeWebSocket.latest };
 };
 
 // --- TESTS ---

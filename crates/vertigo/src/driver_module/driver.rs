@@ -241,6 +241,11 @@ impl Driver {
     }
 
     /// Initiate a websocket connection. Provided callback should handle a single [WebsocketMessage].
+    ///
+    /// The connection is kept up until the returned [DropResource] is dropped: after a close the
+    /// callback gets [WebsocketMessage::Close], and a new [WebsocketMessage::Connection] once it
+    /// reconnects. A page that goes into the browser's back/forward cache closes its websockets
+    /// the same way and connects them again when the user comes back to it.
     #[must_use]
     pub fn websocket<F: Fn(WebsocketMessage) + 'static>(
         &self,
