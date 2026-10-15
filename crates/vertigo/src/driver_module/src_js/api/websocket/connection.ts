@@ -19,9 +19,12 @@ interface CloseInfo {
     reason: string,
 }
 
+// What a frame carries: text, or the bytes of a binary frame.
+export type FrameData = string | Uint8Array<ArrayBuffer>;
+
 export type SocketEventType = {
     type: 'message',
-    message: string,
+    message: FrameData,
 } | {
     type: 'socket',
     socket: SocketConnection
@@ -56,13 +59,13 @@ class LogContext {
     public formatLog = (message: string): string => `Socket ${this.host} ==> ${message}`;
 }
 export class SocketConnection {
-    private readonly eventMessage: EventEmitter<string>;
+    private readonly eventMessage: EventEmitter<FrameData>;
     public readonly close: () => void;
-    public readonly send: (message: string) => void;
+    public readonly send: (message: FrameData) => void;
 
     private constructor(
         close: () => void,
-        send: (message: string) => void,
+        send: (message: FrameData) => void,
     ) {
         this.eventMessage = new EventEmitter();
         this.close = close;
@@ -77,6 +80,8 @@ export class SocketConnection {
         const result = new PromiseBoxRace<SocketConnection | null>();
         const done = new PromiseBoxRace<CloseInfo>();
         const socket = new WebSocket(host);
+        // Binary frames as `ArrayBuffer`s, which can be read at once, unlike the default `Blob`s.
+        socket.binaryType = 'arraybuffer';
         let isClose: boolean = false;
 
         console.info(log.formatLog('starting ...'));
@@ -100,7 +105,7 @@ export class SocketConnection {
 
         const socketConnection = new SocketConnection(
             closeSocket,
-            (message: string) => {
+            (message: FrameData) => {
                 if (isClose) {
                     return;
                 }
@@ -135,14 +140,10 @@ export class SocketConnection {
                 return;
             }
 
-            const dataRaw = event.data;
-
-            if (typeof dataRaw === 'string') {
-                socketConnection.eventMessage.trigger(dataRaw);
-                return;
-            }
-
-            console.error(log.formatLog('onMessage - expected string'), dataRaw);
+            const dataRaw: string | ArrayBuffer = event.data;
+            socketConnection.eventMessage.trigger(
+                typeof dataRaw === 'string' ? dataRaw : new Uint8Array(dataRaw)
+            );
         };
 
         socket.addEventListener('open', onOpen);

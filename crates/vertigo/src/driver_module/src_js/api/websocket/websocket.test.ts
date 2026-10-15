@@ -20,16 +20,20 @@ const assert = (condition: boolean, message: string) => {
 // The socket loops narrate every step; the PASS lines are what matters here.
 console.info = () => {};
 
-/// What the driver tells the app, as `callback:message`, and the closes as
-/// `code:reason:connected`.
+/// What the driver tells the app, as `callback:message`, the closes as `code:reason:connected`,
+/// and what came in the messages.
 const commands: Array<string> = [];
 const closes: Array<string> = [];
+const messages: Array<unknown> = [];
 /// The app's answer to a close: the wait before the next attempt, or null to stop.
 let reply: number | null = null;
 const wasm = {
     wasmCommand: (command: any) => {
         const { callback, message } = command.Websocket;
         commands.push(`${callback}:${typeof message === 'string' ? message : Object.keys(message)[0]}`);
+        if (message.Message !== undefined) {
+            messages.push(message.Message.message);
+        }
         if (message.Disconnected === undefined) {
             return null;
         }
@@ -128,12 +132,38 @@ async function testTheAppDecidesAfterAClose() {
     driver.websocket_unregister_callback(3);
 }
 
+async function testBinaryFrames() {
+    console.log("\n--- Test driver 6: binary frames ---");
+    driver.websocket_register_callback('ws://test/d', 4, 1000);
+    const socket = FakeWebSocket.latest();
+    socket.open();
+    await sleep(0);
+
+    socket.emit('message', { data: new Uint8Array([1, 2, 255]).buffer });
+    const bytes = messages[messages.length - 1];
+    assert(
+        bytes instanceof Uint8Array && Array.from(bytes).join() === '1,2,255',
+        "the app gets a binary frame as bytes, not parsed"
+    );
+
+    driver.websocket_send_message(4, new Uint8Array([7, 8]));
+    driver.websocket_send_message(4, { n: 1 });
+    const [binary, text] = socket.sent;
+    assert(
+        binary instanceof Uint8Array && Array.from(binary).join() === '7,8',
+        "bytes from the app go out in a binary frame"
+    );
+    assert(text === '{"n":1}', "and JSON in a text one, as before");
+    driver.websocket_unregister_callback(4);
+}
+
 async function main() {
     await testCachedPageClosesItsSockets();
     await testPageBackFromCacheConnectsAgain();
     await testUnloadLeavesSocketsToTheBrowser();
     await testDroppedSocketStaysClosed();
     await testTheAppDecidesAfterAClose();
+    await testBinaryFrames();
 }
 
 // Every attempt arms a connection timeout, which would keep node waiting for nothing once the

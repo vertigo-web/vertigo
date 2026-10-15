@@ -49,7 +49,7 @@ impl ApiWebsocket {
                     None
                 }
                 WebsocketMessageFromBrowser::Message { message } => {
-                    callback(WebsocketMessage::Message(message));
+                    callback(WebsocketMessage::frame(message));
                     None
                 }
                 WebsocketMessageFromBrowser::Disconnected {

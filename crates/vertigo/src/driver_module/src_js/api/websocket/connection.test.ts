@@ -30,13 +30,19 @@ const RETRY_MS = 10;
 type Close = Extract<SocketEventType, { type: 'close' }>;
 
 /// Starts a socket loop against fresh mocks. `events` is what the loop reports to the app, a close
-/// as `close:<code>:<reason>:<connected>`. `reply` answers a close as the app does: with the wait
-/// before the next attempt, or anything else to stop.
+/// as `close:<code>:<reason>:<connected>` and a message as `message:<text>` or `message:[<bytes>]`.
+/// `reply` answers a close as the app does: with the wait before the next attempt, or anything
+/// else to stop.
 const start = (reply: (close: Close) => unknown = () => RETRY_MS) => {
     FakeWebSocket.instances = [];
     errors.length = 0;
     const events: Array<string> = [];
     const controller = SocketConnection.startSocket('ws://test', 1000, (message) => {
+        if (message.type === 'message') {
+            const data = message.message;
+            events.push(`message:${typeof data === 'string' ? data : `[${Array.from(data)}]`}`);
+            return;
+        }
         if (message.type !== 'close') {
             events.push(message.type);
             return;
@@ -147,6 +153,39 @@ async function testTheAppDecidesTheWait() {
     assert(FakeWebSocket.instances.length === 1, "without a wait from the app the loop stops");
 }
 
+async function testBinaryFrames() {
+    console.log("\n--- Test socket 7: binary frames ---");
+    const sockets: Array<SocketConnection> = [];
+    FakeWebSocket.instances = [];
+    const events: Array<string> = [];
+    const controller = SocketConnection.startSocket('ws://test', 1000, (message) => {
+        if (message.type === 'socket') {
+            sockets.push(message.socket);
+        }
+        if (message.type === 'message') {
+            const data = message.message;
+            events.push(typeof data === 'string' ? data : `[${Array.from(data)}]`);
+        }
+        return null;
+    });
+    const socket = FakeWebSocket.latest();
+    assert(socket.binaryType === 'arraybuffer', "binary frames come as ArrayBuffers, read at once");
+
+    socket.open();
+    await sleep(0);
+    socket.emit('message', { data: new Uint8Array([1, 2, 255]).buffer });
+    socket.emit('message', { data: '{"n": 1}' });
+    assert(events.join() === '[1,2,255],{"n": 1}', "the app gets the bytes, and text as before");
+
+    sockets[0]?.send(new Uint8Array([7, 8]));
+    const sent = socket.sent[0];
+    assert(
+        sent instanceof Uint8Array && Array.from(sent).join() === '7,8',
+        "bytes go out as they are, in a binary frame"
+    );
+    controller.dispose();
+}
+
 async function main() {
     await testDisposeWhileConnecting();
     await testDisposeWhileOpen();
@@ -154,6 +193,7 @@ async function main() {
     await testDisposeDuringReconnectDelay();
     await testFailedAttempt();
     await testTheAppDecidesTheWait();
+    await testBinaryFrames();
 }
 
 main();

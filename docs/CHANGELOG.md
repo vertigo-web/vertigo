@@ -13,12 +13,15 @@
   server closed it with a code of the app's own.
 * `Driver::websocket_with_options` with `WebsocketOptions`: the timeout to connect and the waits
   between attempts.
+* Binary websocket frames: they come as `WebsocketMessage::Binary(Vec<u8>)`, and
+  `WebsocketConnection::send_binary` sends one. Before, the driver dropped them with an error.
 
 ### Changed
 
 * **Breaking:** `WebsocketMessage::Close` carries a `WebsocketClose` with the close code and
   reason, and comes also after an attempt to connect that failed (`was_connected: false`, code
   1006). Match it as `WebsocketMessage::Close(close)`.
+* **Breaking:** `WebsocketMessage` has a new variant, `Binary`.
 * A websocket reconnects after a growing wait - a random 0.5-1 s after a close, doubled with each
   failed attempt up to 15-30 s - instead of every 3 s.
 

@@ -147,6 +147,9 @@ impl WsSocket {
                         };
                         dispatch(&collections, parsed, &error_cb);
                     }
+                    WebsocketMessage::Binary(_) => {
+                        log::error!("ws-collection - skipping a binary frame");
+                    }
                     WebsocketMessage::Close(close) => {
                         log::info!("ws-collection - close {} ...", close.code);
                     }
