@@ -1,3 +1,8 @@
+// Default component props on compilers that have default field values only on nightly,
+// see `probe_default_field_values` in build.rs.
+#![cfg_attr(vertigo_default_props_unstable, feature(allow_internal_unstable))]
+#![cfg_attr(vertigo_default_props_unstable, allow(internal_features))]
+
 #[macro_use]
 extern crate pest_derive;
 #[macro_use]
@@ -139,6 +144,10 @@ pub fn main(_attr: TokenStream, input: TokenStream) -> TokenStream {
 
 #[proc_macro_attribute]
 #[proc_macro_error]
+#[cfg_attr(
+    vertigo_default_props_unstable,
+    allow_internal_unstable(default_field_values)
+)]
 pub fn component(attrs: TokenStream, input: TokenStream) -> TokenStream {
     component_inner(attrs, input)
 }

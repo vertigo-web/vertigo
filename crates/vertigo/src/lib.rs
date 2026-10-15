@@ -412,6 +412,31 @@ pub use vertigo_macro::AutoJsJson;
 /// ```
 ///
 /// Note: [AttrGroup] allows to dynamically pass arguments to some child node.
+///
+/// ## Default props
+///
+/// A param can declare a default, `#[default = <constant expression>]`. Where the compiler has
+/// default field values ([rust-lang/rust#132162](https://github.com/rust-lang/rust/issues/132162)),
+/// `{..}` in the tag fills the props left out with their defaults. For now that's nightly, with
+/// `#![feature(default_field_values)]` in each crate using `{..}` - the crate declaring the
+/// component doesn't need it.
+///
+/// ```rust,ignore
+/// #![feature(default_field_values)]
+///
+/// use vertigo::{component, dom};
+///
+/// #[component]
+/// pub fn Chart(title: String, #[default = 0.0] padding: f64, #[default = true] legend: bool) {
+///     dom! { <div>{title}</div> }
+/// }
+///
+/// dom! { <Chart title="Sales" {..} /> };
+/// ```
+///
+/// Other compilers ignore the defaults, so there every prop has to be given, as before. Mind that
+/// `prop={}` gives `Default::default()`, not the declared default. Defaults are constants, so
+/// `String::new()` works but `"text".to_string()` doesn't.
 pub use vertigo_macro::component;
 
 /// Macro that allows to evaluate pseudo-JavaScript expressions.

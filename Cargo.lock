@@ -4298,6 +4298,7 @@ dependencies = [
  "quote",
  "rstml",
  "syn 3.0.9",
+ "vertigo",
 ]
 
 [[package]]
