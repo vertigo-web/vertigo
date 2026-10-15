@@ -9,6 +9,9 @@ export class FakeWebSocket {
     static instances: FakeWebSocket[] = [];
     opened = false;
     closed = false;
+    binaryType = 'blob';
+    /// What was sent through the socket.
+    sent: Array<unknown> = [];
     private listeners: Map<string, Array<(event: unknown) => void>> = new Map();
 
     constructor(readonly url: string) {
@@ -28,7 +31,9 @@ export class FakeWebSocket {
         this.listeners.set(type, [...(this.listeners.get(type) ?? []), listener]);
     }
 
-    send(_message: string) {}
+    send(message: unknown) {
+        this.sent.push(message);
+    }
 
     close() {
         if (this.closed) {

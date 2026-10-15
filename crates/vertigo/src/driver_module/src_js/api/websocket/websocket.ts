@@ -110,9 +110,12 @@ export class DriverWebsocket {
                 }
 
                 if (message.type === 'message') {
+                    // The bytes of a binary frame go as they are: on this channel bytes always
+                    // mean a binary frame.
+                    const data = message.message;
                     wasmCallback(wasm, callback_id, {
                         'Message': {
-                            message: wireStringToJsJson(message.message)
+                            message: typeof data === 'string' ? wireStringToJsJson(data) : data
                         }
                     });
                     return;
@@ -158,7 +161,12 @@ export class DriverWebsocket {
         if (socket === undefined) {
             console.error(`Missing socket connection for callback_id=${callback_id}`);
         } else {
-            socket.send(jsJsonToWebSocketWire(message));
+            // Bytes from wasm come copied out by `.slice()`, with an `ArrayBuffer` of their own.
+            socket.send(
+                message instanceof Uint8Array
+                    ? message as Uint8Array<ArrayBuffer>
+                    : jsJsonToWebSocketWire(message)
+            );
         }
     }
 }

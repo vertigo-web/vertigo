@@ -32,6 +32,7 @@ pub enum CommandForBrowser {
     WebsocketUnregister {
         callback: CallbackId,
     },
+    /// Sends `message` as JSON in a text frame, or a [JsJson::Vec] as a binary frame.
     WebsocketSendMessage {
         callback: CallbackId,
         message: JsJson,
@@ -208,6 +209,7 @@ pub mod browser_response {
 #[derive(AutoJsJson, Debug)]
 pub enum WebsocketMessageFromBrowser {
     Connected,
+    /// A text frame parsed as JSON, or a binary frame as [JsJson::Vec].
     Message {
         message: JsJson,
     },

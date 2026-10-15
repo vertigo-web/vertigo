@@ -38,6 +38,9 @@ impl ChatState {
                 WebsocketMessage::Message(message) => {
                     Self::add_message(&messages, message);
                 }
+                WebsocketMessage::Binary(data) => {
+                    log::info!("socket demo - binary frame, {} bytes", data.len());
+                }
                 WebsocketMessage::Close(close) => {
                     connect.set(None);
                     log::info!("socket demo - close {} ...", close.code);

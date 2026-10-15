@@ -4,9 +4,22 @@ use crate::{JsJson, JsJsonSerialize, dev::CallbackId, driver_module::api::api_br
 
 /// Websocket message type on which a websocket handler operates.
 pub enum WebsocketMessage {
+    /// A text frame, parsed as JSON.
     Message(JsJson),
+    /// A binary frame.
+    Binary(Vec<u8>),
     Connection(WebsocketConnection),
     Close(WebsocketClose),
+}
+
+impl WebsocketMessage {
+    /// A frame as the browser passes it on: bytes for a binary frame, JSON for a text one.
+    pub(crate) fn frame(data: JsJson) -> WebsocketMessage {
+        match data {
+            JsJson::Vec(data) => WebsocketMessage::Binary(data),
+            message => WebsocketMessage::Message(message),
+        }
+    }
 }
 
 /// Represents websocket connection.
@@ -20,9 +33,16 @@ impl WebsocketConnection {
         WebsocketConnection { callback_id }
     }
 
+    /// Sends `message` as JSON in a text frame.
     pub fn send(&self, message: impl JsJsonSerialize) {
         let message = message.to_json();
         api_browser_command().websocket_send_message(self.callback_id, message);
+    }
+
+    /// Sends `data` in a binary frame.
+    pub fn send_binary(&self, data: impl Into<Vec<u8>>) {
+        // On the websocket channel bytes always mean a binary frame.
+        api_browser_command().websocket_send_message(self.callback_id, JsJson::Vec(data.into()));
     }
 }
 
@@ -144,6 +164,18 @@ mod tests {
         };
 
         assert_eq!(options.reconnect_delay_range(1), (1_500, 3_000));
+    }
+
+    #[test]
+    fn bytes_are_a_binary_frame_and_anything_else_json() {
+        let binary = WebsocketMessage::frame(JsJson::Vec(vec![1, 2, 255]));
+        let text = WebsocketMessage::frame(JsJson::String("hello".to_string()));
+        let list = WebsocketMessage::frame(vec![1_u32, 2].to_json());
+
+        assert!(matches!(binary, WebsocketMessage::Binary(data) if data == [1, 2, 255]));
+        assert!(matches!(text, WebsocketMessage::Message(JsJson::String(s)) if s == "hello"));
+        // A JSON list of numbers is still JSON, not bytes.
+        assert!(matches!(list, WebsocketMessage::Message(JsJson::List(_))));
     }
 
     #[test]
