@@ -147,8 +147,8 @@ impl WsSocket {
                         };
                         dispatch(&collections, parsed, &error_cb);
                     }
-                    WebsocketMessage::Close => {
-                        log::info!("ws-collection - close ...");
+                    WebsocketMessage::Close(close) => {
+                        log::info!("ws-collection - close {} ...", close.code);
                     }
                 }
             }),

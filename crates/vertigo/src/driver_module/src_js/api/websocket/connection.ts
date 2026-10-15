@@ -14,6 +14,11 @@ const reconnectDelay = async (label: string, timeout_retry: number): Promise<voi
     console.info(`${label} go forth`);
 };
 
+interface CloseInfo {
+    code: number,
+    reason: string,
+}
+
 export type SocketEventType = {
     type: 'message',
     message: string,
@@ -21,17 +26,23 @@ export type SocketEventType = {
     type: 'socket',
     socket: SocketConnection
 } | {
+    // A connection closed (`connected`) or an attempt to connect failed.
     type: 'close',
+    code: number,
+    reason: string,
+    connected: boolean,
 };
 
-export type OnMessageType = (message: SocketEventType) => void;
+// For a close, the answer is how many milliseconds to wait before connecting again - anything
+// but a number stops the loop.
+export type OnMessageType = (message: SocketEventType) => unknown;
 export type UnsubscribeFnType = () => void;
 
 interface OpenSocketResult {
     // Closes the socket whether it is still connecting or already open.
     close: () => void,
     socket: Promise<SocketConnection | null>,
-    done: Promise<void>,
+    done: Promise<CloseInfo>,
 }
 
 // Messages go through the `SocketConnection` the loop reports, so the loop's own controller
@@ -64,13 +75,16 @@ export class SocketConnection {
         timeout: number,
     ): OpenSocketResult {
         const result = new PromiseBoxRace<SocketConnection | null>();
-        const done = new PromiseBoxRace<void>();
+        const done = new PromiseBoxRace<CloseInfo>();
         const socket = new WebSocket(host);
         let isClose: boolean = false;
 
         console.info(log.formatLog('starting ...'));
 
-        const closeSocket = (): void => {
+        // Called with the browser's close event, or without one when we close the socket
+        // ourselves. Of our own closes the app only hears of the one when the page goes into
+        // the back/forward cache - as 1001, going away.
+        const closeSocket = (event?: CloseEvent): void => {
             if (isClose) {
                 return;
             }
@@ -79,7 +93,7 @@ export class SocketConnection {
 
             isClose = true;
             result.resolve(null);
-            done.resolve();
+            done.resolve({ code: event?.code ?? 1001, reason: event?.reason ?? '' });
             socket.close();
         };
 
@@ -112,8 +126,8 @@ export class SocketConnection {
                 return;
             }
 
+            // The close event comes next, with the code.
             console.error(log.formatLog('error'), error);
-            closeSocket();
         };
 
         const onMessage = (event: MessageEvent): void => {
@@ -146,7 +160,6 @@ export class SocketConnection {
     public static startSocket(
         host: string,
         timeout_connection: number,
-        timeout_retry: number,
         onMessage: OnMessageType,
     ): SocketConnectionController {
         let isConnect: boolean = true;
@@ -170,35 +183,49 @@ export class SocketConnection {
                     return;
                 }
 
+                let delay: unknown;
+
                 if (socket === null) {
-                    await reconnectDelay(log.formatLog('reconnect after error'), timeout_retry);
-                    continue;
+                    // Browsers tell no more about a failed attempt than 1006.
+                    delay = onMessage({
+                        type: 'close',
+                        code: 1006,
+                        reason: '',
+                        connected: false,
+                    });
+                } else {
+                    onMessage({
+                        type: 'socket',
+                        socket
+                    });
+
+                    socket.eventMessage.on(message => {
+                        onMessage({
+                            type: 'message',
+                            message
+                        });
+                    });
+
+                    const closed = await openSocketResult.done;
+
+                    delay = onMessage({
+                        type: 'close',
+                        ...closed,
+                        connected: true,
+                    });
+
+                    if (!isConnect) {
+                        console.info(log.formatLog('disconnect (1)'));
+                        return;
+                    }
                 }
 
-                onMessage({
-                    type: 'socket',
-                    socket
-                });
-
-                socket.eventMessage.on(message => {
-                    onMessage({
-                        type: 'message',
-                        message
-                    });
-                });
-
-                await openSocketResult.done;
-
-                onMessage({
-                    type: 'close'
-                });
-
-                if (!isConnect) {
-                    console.info(log.formatLog('disconnect (1)'));
+                if (typeof delay !== 'number') {
+                    console.info(log.formatLog('stop'));
                     return;
                 }
 
-                await reconnectDelay(log.formatLog('reconnect after close'), timeout_retry);
+                await reconnectDelay(log.formatLog('reconnect'), delay);
             }
 
             console.info(log.formatLog('disconnect (2)'));

@@ -35,7 +35,8 @@ type ExecType
     | {
         WebsocketRegister: {
             callback: CallbackId,
-            host: string
+            host: string,
+            connect_timeout: number,
         }
     }
     | {
@@ -225,7 +226,7 @@ export class Api {
                 return null;
 
             case 'WebsocketRegister':
-                this.websocket.websocket_register_callback(params.host, params.callback);
+                this.websocket.websocket_register_callback(params.host, params.callback, params.connect_timeout);
                 return null;
 
             case 'WebsocketSendMessage':

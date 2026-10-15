@@ -3,6 +3,7 @@ use vertigo_macro::{AutoJsJson, store};
 
 use crate::{
     Context, Css, DomNode, DropResource, Instant, InstantType, JsJson, WebsocketMessage,
+    WebsocketOptions,
     css::get_css_manager,
     dev::{
         FutureBox,
@@ -242,17 +243,32 @@ impl Driver {
 
     /// Initiate a websocket connection. Provided callback should handle a single [WebsocketMessage].
     ///
-    /// The connection is kept up until the returned [DropResource] is dropped: after a close the
-    /// callback gets [WebsocketMessage::Close], and a new [WebsocketMessage::Connection] once it
-    /// reconnects. A page that goes into the browser's back/forward cache closes its websockets
-    /// the same way and connects them again when the user comes back to it.
+    /// The connection is kept up until the returned [DropResource] is dropped: after a close, or
+    /// an attempt to connect that failed, the callback gets [WebsocketMessage::Close], and a new
+    /// [WebsocketMessage::Connection] once it reconnects. The wait between attempts grows while
+    /// they keep failing, see [WebsocketOptions]. The callback can call
+    /// [WebsocketClose::stop_reconnecting](crate::WebsocketClose::stop_reconnecting) to give up.
+    ///
+    /// A page that goes into the browser's back/forward cache closes its websockets the same way
+    /// and connects them again when the user comes back to it.
     #[must_use]
     pub fn websocket<F: Fn(WebsocketMessage) + 'static>(
         &self,
         host: impl Into<String>,
         callback: F,
     ) -> DropResource {
-        api_websocket().websocket(host, callback)
+        self.websocket_with_options(host, WebsocketOptions::default(), callback)
+    }
+
+    /// [Driver::websocket] with its own timeout and waits between attempts.
+    #[must_use]
+    pub fn websocket_with_options<F: Fn(WebsocketMessage) + 'static>(
+        &self,
+        host: impl Into<String>,
+        options: WebsocketOptions,
+        callback: F,
+    ) -> DropResource {
+        api_websocket().websocket(host, options, callback)
     }
 
     /// Spawn a future - thus allowing to fire async functions in, for example, event handler. Handy when fetching resources from internet.

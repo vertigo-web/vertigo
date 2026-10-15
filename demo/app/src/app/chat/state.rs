@@ -38,9 +38,9 @@ impl ChatState {
                 WebsocketMessage::Message(message) => {
                     Self::add_message(&messages, message);
                 }
-                WebsocketMessage::Close => {
+                WebsocketMessage::Close(close) => {
                     connect.set(None);
-                    log::info!("socket demo - close ...");
+                    log::info!("socket demo - close {} ...", close.code);
                 }
             })
         };

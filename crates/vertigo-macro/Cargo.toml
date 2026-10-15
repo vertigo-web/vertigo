@@ -18,7 +18,6 @@ crc = "3.4"
 darling = "0.24"
 heck = "0.5"
 itertools = "0.15"
-minreq = { version = "3.0", features = ["https-rustls"] }
 pest = "2.9"
 pest_derive = "2.9"
 pkg-version = "1"
@@ -27,6 +26,12 @@ proc-macro2 = "1.0"
 quote = "1.0"
 rstml = "0.13"
 syn = { version = "3.0", features = ["full"] }
+
+# Downloads the Tailwind CLI while the macros expand, which is on the host. Built for wasm32 are
+# only the macros' own tests (`--tests --target wasm32-unknown-unknown`), and there rustls would
+# need a C library for wasm32 to build aws-lc.
+[target.'cfg(not(target_arch = "wasm32"))'.dependencies]
+minreq = { version = "3.0", features = ["https-rustls"] }
 
 [dev-dependencies]
 prettyplease = "0.3"
