@@ -31,6 +31,8 @@ syn = { version = "3.0", features = ["full"] }
 [dev-dependencies]
 prettyplease = "0.3"
 pretty_assertions = "1.4"
+# For tests/ using the macros on real components. Path only, so publishing strips it.
+vertigo = { path = "../vertigo" }
 
 [lints]
 workspace = true

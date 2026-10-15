@@ -1,12 +1,12 @@
 use proc_macro2::Punct;
-use proc_macro2::TokenStream as TokenStream2;
-use quote::{ToTokens, quote};
+use proc_macro2::{Span, TokenStream as TokenStream2};
+use quote::{ToTokens, quote, quote_spanned};
 use rstml::node::{
     KeyedAttribute, KeyedAttributeValue, Node, NodeAttribute, NodeBlock, NodeName, NodeNameFragment,
 };
 use std::collections::BTreeMap;
 use syn::punctuated::Punctuated;
-use syn::{ExprPath, spanned::Spanned};
+use syn::{Expr, ExprPath, RangeLimits, Stmt, spanned::Spanned};
 
 use crate::{
     component::get_group_attrs_replace_method_name, trace_tailwind::add_to_tailwind,
@@ -41,11 +41,16 @@ pub(super) fn convert_to_component(node: &Node) -> TokenStream2 {
 
     let mut groupped_attrs = BTreeMap::<String, BTreeMap<String, KeyedAttributeValue>>::new();
     let mut spread_attrs = Vec::new();
+    let mut fill_defaults = None;
 
     let attributes = element
         .attributes()
         .iter()
         .filter_map(|attr_node| {
+            if let Some(span) = fill_defaults_marker(attr_node) {
+                fill_defaults = Some(fill_defaults_rest(span));
+                return None;
+            }
             attribute_to_tokens(attr_node, &mut spread_attrs, &mut groupped_attrs)
         })
         .collect::<Vec<_>>();
@@ -152,6 +157,7 @@ pub(super) fn convert_to_component(node: &Node) -> TokenStream2 {
             let cmp = #constructor_name {
                 #(#attributes)*
                 #children_stream
+                #fill_defaults
             };
             let cmp = cmp.into_component()
                 #grouped_attrs_stream
@@ -161,6 +167,39 @@ pub(super) fn convert_to_component(node: &Node) -> TokenStream2 {
             #effective_debug_info
             cmp
         }
+    }
+}
+
+/// `{..}` among a component's attributes - the props left out take their `#[default = ...]`
+/// values.
+fn fill_defaults_marker(attr_node: &NodeAttribute) -> Option<Span> {
+    if let NodeAttribute::Block(NodeBlock::ValidBlock(block)) = attr_node
+        && let [Stmt::Expr(Expr::Range(range), None)] = block.stmts.as_slice()
+        && range.start.is_none()
+        && range.end.is_none()
+        && matches!(range.limits, RangeLimits::HalfOpen(_))
+    {
+        Some(block.span())
+    } else {
+        None
+    }
+}
+
+/// `..` closing the props struct for `{..}`, so the compiler fills in the defaults.
+///
+/// The crate using it needs default field values enabled (`#![feature(default_field_values)]`
+/// while they're unstable) - the compiler checks `S { .. }` against the features of the crate
+/// it ends up in, and points at `{..}` when they're off.
+fn fill_defaults_rest(span: Span) -> TokenStream2 {
+    if cfg!(vertigo_default_props) {
+        quote_spanned! {span=> .. }
+    } else {
+        emit_error!(
+            span,
+            "{}",
+            "`{..}` fills the props left out with their `#[default = ...]` values, which needs a compiler with default field values (rust-lang/rust#132162, on nightly behind `#![feature(default_field_values)]`). Pass every prop instead, f. ex. `prop={}` for `Default::default()`."
+        );
+        quote! {}
     }
 }
 

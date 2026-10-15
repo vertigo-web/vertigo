@@ -1,6 +1,15 @@
 <!-- markdownlint-configure-file { "no-duplicate-heading": { "siblings_only": true } } -->
 
 <!-- markdownlint-disable-next-line first-line-h1 -->
+## Unreleased
+
+### Added
+
+* Default component props: `#[default = <constant>]` on a `#[component]` param, and `{..}` in a
+  component's tag to leave out the props that have one. Needs a compiler with default field values
+  (rust-lang/rust#132162) - for now nightly, with `#![feature(default_field_values)]` in the crate
+  using `{..}`. Other compilers ignore the defaults, so every prop has to be given there.
+
 ## 0.13.4 - 2026-10-14
 
 ### Changed
