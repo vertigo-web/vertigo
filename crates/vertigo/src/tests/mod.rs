@@ -3,6 +3,7 @@
 
 mod autojsjson;
 mod bind;
+mod browser_events_batching;
 mod css;
 mod dom;
 mod dom_command_counts;

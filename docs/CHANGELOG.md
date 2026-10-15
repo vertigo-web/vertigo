@@ -24,6 +24,9 @@
 * **Breaking:** `WebsocketMessage` has a new variant, `Binary`.
 * A websocket reconnects after a growing wait - a random 0.5-1 s after a close, doubled with each
   failed attempt up to 15-30 s - instead of every 3 s.
+* Every event from the browser - a DOM event, a websocket message, a fetch response, a timer, a
+  change of the location, and with the timer every step of async code - runs in one transaction,
+  so whatever the app sets in it reaches the DOM in one batch.
 
 ### Fixed
 
