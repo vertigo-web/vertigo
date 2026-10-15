@@ -15,6 +15,9 @@
 * A websocket dropped while still connecting (f. ex. its component left the page) connected
   anyway and stayed open until the page went away, unseen by the app, while the server kept
   sending to it. Now dropping it aborts the connection, without logging an error.
+* A page kept in the browser's back/forward cache kept its websockets open, so the server went on
+  sending to a page nobody saw. Now they close when the page goes into the cache (the app gets
+  `Close`) and connect again at once when it comes back (a new `Connection`).
 
 ## 0.13.4 - 2026-10-14
 
