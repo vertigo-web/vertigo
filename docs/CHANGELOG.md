@@ -15,6 +15,9 @@
   between attempts.
 * Binary websocket frames: they come as `WebsocketMessage::Binary(Vec<u8>)`, and
   `WebsocketConnection::send_binary` sends one. Before, the driver dropped them with an error.
+* `--proxy` of `vertigo serve` and `vertigo watch` carries websockets too: a websocket handshake
+  under a proxied path goes on to the target, and then the frames go through both ways as they
+  are. Before, the handshake hung, so an app in `watch` had to connect to its backend directly.
 
 ### Changed
 

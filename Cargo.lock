@@ -4150,8 +4150,10 @@ version = "0.13.4"
 dependencies = [
  "actix-cors",
  "actix-files",
+ "actix-http",
  "actix-proxy",
  "actix-web",
+ "actix-ws",
  "awc",
  "base64 0.23.1",
  "chrono",
