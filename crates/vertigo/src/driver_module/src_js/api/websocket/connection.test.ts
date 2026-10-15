@@ -1,6 +1,6 @@
 // The socket loop: connecting, reconnecting, and letting go of the socket on dispose.
 
-import { SocketConnection } from "./connection";
+import { SocketConnection, SocketEventType } from "./connection";
 import { FakeWebSocket, sleep } from "../../testing/fake_websocket";
 
 const logError = console.error;
@@ -27,13 +27,22 @@ console.error = (...args: Array<unknown>) => {
 
 const RETRY_MS = 10;
 
-/// Starts a socket loop against fresh mocks, with what it reports to the app.
-const start = () => {
+type Close = Extract<SocketEventType, { type: 'close' }>;
+
+/// Starts a socket loop against fresh mocks. `events` is what the loop reports to the app, a close
+/// as `close:<code>:<reason>:<connected>`. `reply` answers a close as the app does: with the wait
+/// before the next attempt, or anything else to stop.
+const start = (reply: (close: Close) => unknown = () => RETRY_MS) => {
     FakeWebSocket.instances = [];
     errors.length = 0;
     const events: Array<string> = [];
-    const controller = SocketConnection.startSocket('ws://test', 1000, RETRY_MS, (message) => {
-        events.push(message.type);
+    const controller = SocketConnection.startSocket('ws://test', 1000, (message) => {
+        if (message.type !== 'close') {
+            events.push(message.type);
+            return;
+        }
+        events.push(`close:${message.code}:${message.reason}:${message.connected}`);
+        return reply(message);
     });
     return { controller, events, latest: FakeWebSocket.latest };
 };
@@ -53,7 +62,7 @@ async function testDisposeWhileConnecting() {
     // The worst case: it opens all the same.
     socket.open();
     await sleep(RETRY_MS * 5);
-    assert(!events.includes('socket'), "the app never hears of it");
+    assert(events.length === 0, "the app never hears of it");
     assert(FakeWebSocket.instances.length === 1, "and no new attempt starts");
 }
 
@@ -68,7 +77,7 @@ async function testDisposeWhileOpen() {
     controller.dispose();
     await sleep(RETRY_MS * 5);
     assert(socket.closed, "dispose closes it");
-    assert(events.join() === 'socket,close', "the app hears it closed");
+    assert(events.join() === 'socket,close:1001::true', "the app hears it went away (1001)");
     assert(FakeWebSocket.instances.length === 1, "and no new attempt starts");
 }
 
@@ -78,10 +87,13 @@ async function testReconnectAfterServerClose() {
     latest().open();
     await sleep(0);
 
-    latest().emit('close');
+    latest().emit('close', { code: 4000, reason: 'bye' });
     await sleep(RETRY_MS * 5);
-    assert(FakeWebSocket.instances.length === 2, "a new attempt starts after the delay");
-    assert(events.join() === 'socket,close', "after telling the app the socket closed");
+    assert(
+        events.join() === 'socket,close:4000:bye:true',
+        "the app gets the server's code and reason"
+    );
+    assert(FakeWebSocket.instances.length === 2, "and a new attempt starts after the delay");
 
     controller.dispose();
     assert(latest().closed, "dispose closes the new attempt too");
@@ -92,7 +104,7 @@ async function testDisposeDuringReconnectDelay() {
     const { controller, latest } = start();
     latest().open();
     await sleep(0);
-    latest().emit('close');
+    latest().emit('close', { code: 1000, reason: '' });
     await sleep(0);
 
     controller.dispose();
@@ -100,11 +112,48 @@ async function testDisposeDuringReconnectDelay() {
     assert(FakeWebSocket.instances.length === 1, "no new attempt starts");
 }
 
+async function testFailedAttempt() {
+    console.log("\n--- Test socket 5: an attempt to connect fails ---");
+    const { controller, events, latest } = start();
+
+    // What a browser does when nobody answers.
+    latest().emit('error');
+    latest().emit('close', { code: 1006, reason: '' });
+    await sleep(RETRY_MS * 5);
+    assert(events.join() === 'close:1006::false', "the app hears of the failed attempt");
+    assert(FakeWebSocket.instances.length === 2, "and the loop tries again after its delay");
+
+    controller.dispose();
+}
+
+async function testTheAppDecidesTheWait() {
+    console.log("\n--- Test socket 6: the app's answer to a close ---");
+    const { controller, latest } = start(() => 200);
+    latest().open();
+    await sleep(0);
+
+    latest().emit('close', { code: 1000, reason: '' });
+    await sleep(50);
+    assert(FakeWebSocket.instances.length === 1, "the loop waits as long as the app said");
+    await sleep(250);
+    assert(FakeWebSocket.instances.length === 2, "and then tries again");
+    controller.dispose();
+
+    const stopped = start(() => null);
+    stopped.latest().open();
+    await sleep(0);
+    stopped.latest().emit('close', { code: 4004, reason: 'no such world' });
+    await sleep(RETRY_MS * 5);
+    assert(FakeWebSocket.instances.length === 1, "without a wait from the app the loop stops");
+}
+
 async function main() {
     await testDisposeWhileConnecting();
     await testDisposeWhileOpen();
     await testReconnectAfterServerClose();
     await testDisposeDuringReconnectDelay();
+    await testFailedAttempt();
+    await testTheAppDecidesTheWait();
 }
 
 main();

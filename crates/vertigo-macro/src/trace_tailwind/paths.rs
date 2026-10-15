@@ -1,5 +1,5 @@
 use std::error::Error;
-use std::path::PathBuf;
+use std::path::{Path, PathBuf};
 
 use crate::get_target_dir::get_target_dir;
 
@@ -67,17 +67,7 @@ pub(crate) fn get_tailwind_binary_path() -> Result<PathBuf, Box<dyn Error>> {
             executable_path.display()
         );
 
-        let response = minreq::get(&url).send()?;
-        if response.status_code != 200 {
-            return Err(format!(
-                "Failed to download Tailwind CLI: HTTP {}",
-                response.status_code
-            )
-            .into());
-        }
-
-        let mut file = std::fs::File::create(&executable_path)?;
-        std::io::copy(&mut response.as_bytes(), &mut file)?;
+        download(&url, &executable_path)?;
 
         #[cfg(unix)]
         {
@@ -89,4 +79,28 @@ pub(crate) fn get_tailwind_binary_path() -> Result<PathBuf, Box<dyn Error>> {
     }
 
     Ok(executable_path)
+}
+
+/// Saves what `url` serves to `path`.
+#[cfg(not(target_arch = "wasm32"))]
+fn download(url: &str, path: &Path) -> Result<(), Box<dyn Error>> {
+    let response = minreq::get(url).send()?;
+    if response.status_code != 200 {
+        return Err(format!(
+            "Failed to download Tailwind CLI: HTTP {}",
+            response.status_code
+        )
+        .into());
+    }
+
+    let mut file = std::fs::File::create(path)?;
+    std::io::copy(&mut response.as_bytes(), &mut file)?;
+    Ok(())
+}
+
+/// Macros expand on the host, so this is only built for their own tests on wasm32, which
+/// download nothing.
+#[cfg(target_arch = "wasm32")]
+fn download(_url: &str, _path: &Path) -> Result<(), Box<dyn Error>> {
+    Err("Can't download the Tailwind CLI on wasm32".into())
 }

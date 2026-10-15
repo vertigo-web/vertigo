@@ -92,10 +92,16 @@ impl CommandForBrowserApi {
         }
     }
 
-    pub fn websocket_register_callback(&self, host: &str, callback: CallbackId) {
+    pub fn websocket_register_callback(
+        &self,
+        host: &str,
+        callback: CallbackId,
+        connect_timeout: u32,
+    ) {
         exec_command(CommandForBrowser::WebsocketRegister {
             host: host.to_string(),
             callback,
+            connect_timeout,
         });
     }
 

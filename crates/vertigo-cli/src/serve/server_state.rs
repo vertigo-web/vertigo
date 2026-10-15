@@ -201,6 +201,7 @@ impl ServerState {
                 CommandForBrowser::WebsocketRegister {
                     host: _,
                     callback: _,
+                    connect_timeout: _,
                 } => JsJson::Null,
                 CommandForBrowser::WebsocketUnregister { callback: _ } => JsJson::Null,
                 CommandForBrowser::WebsocketSendMessage {

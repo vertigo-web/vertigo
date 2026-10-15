@@ -20,13 +20,22 @@ const assert = (condition: boolean, message: string) => {
 // The socket loops narrate every step; the PASS lines are what matters here.
 console.info = () => {};
 
-/// What the driver tells the app, as `callback:message`.
+/// What the driver tells the app, as `callback:message`, and the closes as
+/// `code:reason:connected`.
 const commands: Array<string> = [];
+const closes: Array<string> = [];
+/// The app's answer to a close: the wait before the next attempt, or null to stop.
+let reply: number | null = null;
 const wasm = {
     wasmCommand: (command: any) => {
         const { callback, message } = command.Websocket;
         commands.push(`${callback}:${typeof message === 'string' ? message : Object.keys(message)[0]}`);
-        return null;
+        if (message.Disconnected === undefined) {
+            return null;
+        }
+        const { code, reason, connected } = message.Disconnected;
+        closes.push(`${code}:${reason}:${connected}`);
+        return reply;
     },
 };
 
@@ -44,7 +53,7 @@ const pageTransition = (type: 'pagehide' | 'pageshow', persisted: boolean) => {
 
 async function testCachedPageClosesItsSockets() {
     console.log("\n--- Test driver 1: the page goes into the back/forward cache ---");
-    driver.websocket_register_callback('ws://test/a', 1);
+    driver.websocket_register_callback('ws://test/a', 1, 1000);
     const socket = FakeWebSocket.latest();
     socket.open();
     await sleep(0);
@@ -54,6 +63,7 @@ async function testCachedPageClosesItsSockets() {
     assert(socket.closed, "the socket closes when the page goes into the cache");
     await sleep(0);
     assert(commands.join() === '1:Connected,1:Disconnected', "and the app hears it closed");
+    assert(closes.join() === '1001::true', "as going away (1001)");
 }
 
 async function testPageBackFromCacheConnectsAgain() {
@@ -84,7 +94,7 @@ async function testUnloadLeavesSocketsToTheBrowser() {
 
 async function testDroppedSocketStaysClosed() {
     console.log("\n--- Test driver 4: a socket the app dropped before the page went away ---");
-    driver.websocket_register_callback('ws://test/b', 2);
+    driver.websocket_register_callback('ws://test/b', 2, 1000);
     FakeWebSocket.latest().open();
     await sleep(0);
     driver.websocket_unregister_callback(2);
@@ -96,13 +106,36 @@ async function testDroppedSocketStaysClosed() {
     assert(addresses.join() === 'ws://test/a', "only the sockets still registered connect again");
 }
 
+async function testTheAppDecidesAfterAClose() {
+    console.log("\n--- Test driver 5: the app's answer to a close ---");
+    driver.websocket_register_callback('ws://test/c', 3, 1000);
+    FakeWebSocket.latest().open();
+    await sleep(0);
+
+    reply = 10;
+    FakeWebSocket.latest().emit('close', { code: 1012, reason: 'restart' });
+    await sleep(50);
+    assert(closes[closes.length - 1] === '1012:restart:true', "the app gets the server's code and reason");
+    assert(FakeWebSocket.latest().url === 'ws://test/c', "and the socket connects again after the app's wait");
+
+    reply = null;
+    const before = FakeWebSocket.instances.length;
+    FakeWebSocket.latest().open();
+    await sleep(0);
+    FakeWebSocket.latest().emit('close', { code: 4004, reason: 'gone' });
+    await sleep(50);
+    assert(FakeWebSocket.instances.length === before, "or stays closed when the app says so");
+    driver.websocket_unregister_callback(3);
+}
+
 async function main() {
     await testCachedPageClosesItsSockets();
     await testPageBackFromCacheConnectsAgain();
     await testUnloadLeavesSocketsToTheBrowser();
     await testDroppedSocketStaysClosed();
+    await testTheAppDecidesAfterAClose();
 }
 
-// Every attempt arms the driver's 5 s connection timeout, which would keep node waiting for
-// nothing once the tests are done.
+// Every attempt arms a connection timeout, which would keep node waiting for nothing once the
+// tests are done.
 main().then(() => (globalThis as any).process.exit(0));

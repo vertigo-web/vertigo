@@ -26,6 +26,8 @@ pub enum CommandForBrowser {
     WebsocketRegister {
         host: String,
         callback: CallbackId,
+        /// Milliseconds an attempt may take to connect.
+        connect_timeout: u32,
     },
     WebsocketUnregister {
         callback: CallbackId,
@@ -206,8 +208,15 @@ pub mod browser_response {
 #[derive(AutoJsJson, Debug)]
 pub enum WebsocketMessageFromBrowser {
     Connected,
-    Message { message: JsJson },
-    Disconnected,
+    Message {
+        message: JsJson,
+    },
+    /// A connection closed (`connected`), or an attempt to connect failed.
+    Disconnected {
+        code: u16,
+        reason: String,
+        connected: bool,
+    },
 }
 
 #[derive(AutoJsJson, Debug)]

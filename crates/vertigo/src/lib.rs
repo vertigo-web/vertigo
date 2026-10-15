@@ -114,7 +114,7 @@ pub use keyed_computed_list::{KeyedListItem, keyed_computed_list};
 pub use reactive::{ByRc, Computed, Context, DropResource, GraphId, Reactive, ToComputed, Value};
 pub use render::RenderValue;
 pub use render::collection::CollectionKey;
-pub use websocket::{WebsocketConnection, WebsocketMessage};
+pub use websocket::{WebsocketClose, WebsocketConnection, WebsocketMessage, WebsocketOptions};
 pub use websocket_collection::{
     AuthTokenProvider, CollectionWhereValue, IntoCollectionWhereValue, MergeFn, WsCollection,
     WsMessageKind, WsQuery, WsServerMessageFrom, WsSocket,

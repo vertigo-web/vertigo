@@ -22,33 +22,39 @@ const assertNeverMessage = (data: never): never => {
     throw Error('unknown message');
 };
 
-type CommandType = 'Connected' | 'Disconnected' | {
+type CommandType = 'Connected' | {
     'Message': {
         message: JsJsonType,
     }
+} | {
+    'Disconnected': {
+        code: number,
+        reason: string,
+        connected: boolean,
+    }
 }
-const wasmCallback = (wasm: ModuleControllerType<ExportType>, callbackId: CallbackId, command: CommandType) => {
+// After `Disconnected` the answer is how many milliseconds to wait before reconnecting, or null.
+const wasmCallback = (wasm: ModuleControllerType<ExportType>, callbackId: CallbackId, command: CommandType) =>
     wasm.wasmCommand({
         'Websocket': {
             callback: callbackId,
             message: command,
         }
-    })
-};
+    });
 
 
 export class DriverWebsocket {
     private getWasm: () => ModuleControllerType<ExportType>;
     private readonly controllerList: Map<CallbackId, SocketConnectionController>;
     private readonly socket: Map<CallbackId, SocketConnection>;
-    // Where each registered socket connects, to connect it again when the page comes back.
-    private readonly hosts: Map<CallbackId, string>;
+    // Connects each registered socket again, when the page comes back.
+    private readonly starts: Map<CallbackId, () => void>;
 
     constructor(getWasm: () => ModuleControllerType<ExportType>) {
         this.getWasm = getWasm;
         this.controllerList = new Map();
         this.socket = new Map();
-        this.hosts = new Map();
+        this.starts = new Map();
 
         // A page kept in the back/forward cache must not keep its sockets: the browser answers
         // the server's pings for it, so the server would go on sending to a page nobody sees.
@@ -64,8 +70,8 @@ export class DriverWebsocket {
 
         window.addEventListener('pageshow', (event) => {
             if (event.persisted) {
-                for (const [callback_id, host] of this.hosts) {
-                    this.start(host, callback_id);
+                for (const start of this.starts.values()) {
+                    start();
                 }
             }
         });
@@ -74,12 +80,14 @@ export class DriverWebsocket {
     public websocket_register_callback = (
         host: string,
         callback_id: CallbackId,
+        connect_timeout: number,
     ) => {
-        this.hosts.set(callback_id, host);
-        this.start(host, callback_id);
+        const start = () => this.start(host, callback_id, connect_timeout);
+        this.starts.set(callback_id, start);
+        start();
     }
 
-    private start(host: string, callback_id: CallbackId) {
+    private start(host: string, callback_id: CallbackId, connect_timeout: number) {
         const wasm = this.getWasm();
 
         // The loop this one replaces, if any, stops here.
@@ -87,8 +95,7 @@ export class DriverWebsocket {
 
         const controller: SocketConnectionController = SocketConnection.startSocket(
             host,
-            5000,                   //timeout connection
-            3000,                   //timeout reconnection
+            connect_timeout,
             (message) => {
 
                 // Only the latest loop of a registered socket speaks for it.
@@ -113,8 +120,13 @@ export class DriverWebsocket {
 
                 if (message.type === 'close') {
                     this.socket.delete(callback_id);
-                    wasmCallback(wasm, callback_id, 'Disconnected');
-                    return;
+                    return wasmCallback(wasm, callback_id, {
+                        'Disconnected': {
+                            code: message.code,
+                            reason: message.reason,
+                            connected: message.connected,
+                        }
+                    });
                 }
 
                 return assertNeverMessage(message);
@@ -134,7 +146,7 @@ export class DriverWebsocket {
 
         controller.dispose();
         this.controllerList.delete(callback_id);
-        this.hosts.delete(callback_id);
+        this.starts.delete(callback_id);
     }
 
     public websocket_send_message = (

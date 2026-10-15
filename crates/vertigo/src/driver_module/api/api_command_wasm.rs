@@ -30,7 +30,8 @@ impl CommandWasmApi {
                     api_fetch().callback(callback, response);
                 }
                 CommandForWasm::Websocket { callback, message } => {
-                    api_websocket().callback(callback, message);
+                    // After a close, how long the browser should wait before reconnecting.
+                    return api_websocket().callback(callback, message);
                 }
                 CommandForWasm::TimerCall { callback } => {
                     api_timers().callback_timeout(callback);
