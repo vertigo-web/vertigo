@@ -143,7 +143,13 @@ export class MapNodes {
     }
 
     public addStyles() {
-        this.getRootHead().appendChild(this.style);
+        const head = this.getRootHead();
+
+        // `appendChild` moves a node that is already in place too, and taking the styles out and
+        // putting them back made the browser restyle the page after every batch.
+        if (head.lastChild !== this.style) {
+            head.appendChild(this.style);
+        }
     }
 
     public hasInitNodes(): boolean {
