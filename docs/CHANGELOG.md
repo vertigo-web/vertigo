@@ -10,6 +10,12 @@
   (rust-lang/rust#132162) - for now nightly, with `#![feature(default_field_values)]` in the crate
   using `{..}`. Other compilers ignore the defaults, so every prop has to be given there.
 
+### Fixed
+
+* A websocket dropped while still connecting (f. ex. its component left the page) connected
+  anyway and stayed open until the page went away, unseen by the app, while the server kept
+  sending to it. Now dropping it aborts the connection, without logging an error.
+
 ## 0.13.4 - 2026-10-14
 
 ### Changed

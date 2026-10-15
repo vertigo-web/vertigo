@@ -28,12 +28,15 @@ export type OnMessageType = (message: SocketEventType) => void;
 export type UnsubscribeFnType = () => void;
 
 interface OpenSocketResult {
+    // Closes the socket whether it is still connecting or already open.
+    close: () => void,
     socket: Promise<SocketConnection | null>,
     done: Promise<void>,
 }
 
+// Messages go through the `SocketConnection` the loop reports, so the loop's own controller
+// only stops it.
 export interface SocketConnectionController {
-    send: (message: string) => void,
     dispose: UnsubscribeFnType
 }
 
@@ -104,6 +107,11 @@ export class SocketConnection {
         };
 
         const onError = (error: Event): void => {
+            if (isClose) {
+                // Comes from our own close, f. ex. of a socket that was still connecting.
+                return;
+            }
+
             console.error(log.formatLog('error'), error);
             closeSocket();
         };
@@ -129,6 +137,7 @@ export class SocketConnection {
         socket.addEventListener('message', onMessage);
 
         return {
+            close: closeSocket,
             socket: result.promise,
             done: done.promise
         };
@@ -141,22 +150,31 @@ export class SocketConnection {
         onMessage: OnMessageType,
     ): SocketConnectionController {
         let isConnect: boolean = true;
-        let socketConnection: SocketConnection | null = null;
+        // The latest attempt, still connecting or open. `dispose` has to close it in either
+        // state - a socket that finished connecting after `dispose` would otherwise stay open,
+        // unseen by the app, until the page goes away.
+        let closeCurrent: () => void = () => {};
 
         const log = new LogContext(host);
 
         (async (): Promise<void> => {
             while (isConnect) {
                 const openSocketResult = SocketConnection.connect(log, host, timeout_connection);
+                closeCurrent = openSocketResult.close;
 
                 const socket = await openSocketResult.socket;
+
+                if (!isConnect) {
+                    // Disposed while connecting, and `dispose` has closed the socket.
+                    console.info(log.formatLog('disconnect (3)'));
+                    return;
+                }
 
                 if (socket === null) {
                     await reconnectDelay(log.formatLog('reconnect after error'), timeout_retry);
                     continue;
                 }
 
-                socketConnection = socket;
                 onMessage({
                     type: 'socket',
                     socket
@@ -189,16 +207,9 @@ export class SocketConnection {
         });
 
         return {
-            send: (message: string): void => {
-                if (socketConnection === null) {
-                    console.error('send fail - missing connection', message);
-                } else {
-                    socketConnection.send(message);
-                }
-            },
             dispose: (): void => {
                 isConnect = false;
-                socketConnection?.close();
+                closeCurrent();
             }
         };
     }

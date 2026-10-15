@@ -88,6 +88,23 @@ export default [
         ],
     },
     {
+        input: 'crates/vertigo/src/driver_module/src_js/api/websocket/connection.test.ts',
+        output: [
+            {
+                sourcemap: true,
+                file: 'build/connection.test.js',
+                format: 'cjs',
+            }
+        ],
+        plugins: [
+            typescript({
+                sourceMap: true,
+                inlineSources: true,
+            }),
+            sourcemaps(),
+        ],
+    },
+    {
         input: 'crates/vertigo/src/driver_module/src_js/jsjson.test.ts',
         output: [
             {
