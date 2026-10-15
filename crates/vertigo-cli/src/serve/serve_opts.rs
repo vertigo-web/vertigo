@@ -19,6 +19,8 @@ pub struct ServeOptsInner {
     pub port: u16,
 
     /// sets up proxy: `--proxy /path=http://domain.com/path`
+    ///
+    /// Websockets under the path go through as well.
     #[arg(long, value_parser = parse_key_val::<String, String>)]
     pub proxy: Vec<(String, String)>,
 

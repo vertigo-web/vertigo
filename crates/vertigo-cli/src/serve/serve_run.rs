@@ -1,11 +1,7 @@
-use actix_proxy::IntoHttpResponse;
 use actix_web::{
-    App, HttpRequest, HttpResponse, HttpServer,
-    dev::{ServiceFactory, ServiceRequest},
-    http::header,
+    App, HttpServer,
     middleware::{Compress, Condition},
     rt::System,
-    web,
 };
 use std::{num::NonZeroUsize, time::Duration};
 
@@ -13,10 +9,11 @@ use crate::commons::{
     ErrorCode,
     spawn::{ServerOwner, term_signal},
 };
-use crate::serve::{html::local_origin, http_client::http_client, mount_path::MountConfig};
+use crate::serve::{html::local_origin, mount_path::MountConfig};
 
 use super::{
-    ServeOpts, ServeOptsInner, server_state::ServerState, vertigo_install::vertigo_install,
+    ServeOpts, ServeOptsInner, proxy::install_proxy, server_state::ServerState,
+    vertigo_install::vertigo_install,
 };
 
 async fn wait_for_port(addr: &str, port: u16) {
@@ -118,56 +115,4 @@ pub async fn run(opts: ServeOpts, port_watch: Option<u16>) -> Result<(), ErrorCo
     }
 
     Ok(())
-}
-
-fn install_proxy<T>(app: App<T>, path: String, target: String) -> App<T>
-where
-    T: ServiceFactory<ServiceRequest, Config = (), Error = actix_web::Error, InitError = ()>,
-{
-    app.service(web::scope(&path).default_service(web::to({
-        move |req: HttpRequest, body: web::Bytes| {
-            let path = path.clone();
-            let target = target.clone();
-            async move {
-                let method = req.method();
-                let uri = req.uri();
-                let current_path = uri.path();
-                let tail = current_path.strip_prefix(&path).unwrap_or(current_path);
-                let query = uri.query().map(|q| format!("?{}", q)).unwrap_or_default();
-
-                let target_url = format!("{target}{tail}{query}");
-
-                log::info!("proxy {method} {path}{tail} -> {target_url}");
-
-                let request = http_client().request_from(&target_url, req.head());
-
-                let response = if !body.is_empty() {
-                    request.send_body(body)
-                } else {
-                    request.send()
-                };
-
-                match response.await {
-                    Ok(response) => {
-                        let mut response = response.into_http_response();
-
-                        let headers = response.headers_mut();
-
-                        // `awc` decompresses the upstream body transparently, but
-                        // `into_http_response` copies the upstream headers across verbatim
-                        // so remove appropriate headers.
-                        if headers.remove(header::CONTENT_ENCODING).next().is_some() {
-                            headers.remove(header::CONTENT_LENGTH);
-                        }
-
-                        response
-                    }
-                    Err(error) => {
-                        let message = format!("Error fetching from url={target_url} error={error}");
-                        HttpResponse::InternalServerError().body(message)
-                    }
-                }
-            }
-        }
-    })))
 }
