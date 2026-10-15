@@ -19,12 +19,16 @@ class MockNode {
         }
     }
     appendChild(child: MockNode) {
-        if (child.parentNode) child.remove();
+        if (child.parentNode) {
+            MockNode.moved.push(child);
+            child.remove();
+        }
         child.parentNode = this;
         this.childNodes.push(child);
     }
-    /// Nodes `insertBefore` took out of a parent to put them back - which in a browser drops
-    /// their focus, their scroll position, an iframe's page.
+    /// Nodes `insertBefore` or `appendChild` took out of a parent to put them back - which in a
+    /// browser drops their focus, their scroll position, an iframe's page, and for a `<style>`
+    /// restyles the page.
     static moved: MockNode[] = [];
     insertBefore(child: MockNode, ref: MockNode | null) {
         if (child.parentNode) {
@@ -38,6 +42,7 @@ class MockNode {
         return child;
     }
     get firstChild(): MockNode | null { return this.childNodes[0] || null; }
+    get lastChild(): MockNode | null { return this.childNodes[this.childNodes.length - 1] || null; }
     get nextSibling(): MockNode | null {
         if (!this.parentNode) return null;
         const idx = this.parentNode.childNodes.indexOf(this);
@@ -831,6 +836,35 @@ function testNodesOutsideTheBatchStay() {
     }
 }
 
+// 20. The client-side styles go to the end of <head> once, not after every batch
+function testStylesStayAtTheEndOfHead() {
+    console.log("\n--- Test hydration 20: Styles stay at the end of <head> ---");
+    const head = documentMock.head;
+    const meta = new MockElement('META');
+    head.appendChild(meta);
+
+    // `bulk_update` places the styles after every batch.
+    const mapNodes = new MapNodes();
+    mapNodes.addStyles();
+    const style = head.lastChild;
+    assert(head.childNodes.length === 2 && style !== meta, "the first batch puts the styles last");
+
+    MockNode.moved = [];
+    mapNodes.addStyles();
+    mapNodes.addStyles();
+    assert(MockNode.moved.length === 0, "the next batches leave them where they are");
+
+    // Something the page put after them: the styles go back to the end.
+    const link = new MockElement('LINK');
+    head.appendChild(link);
+    mapNodes.addStyles();
+    assert(head.lastChild === style && head.childNodes[1] === link, "they are last again");
+
+    for (const node of [...head.childNodes]) {
+        node.remove();
+    }
+}
+
 // Run all tests
 testExtraNodes();
 testTextMismatch();
@@ -851,3 +885,4 @@ testInsertBeforeAnySibling();
 testMarkersArePlacedWithoutMoves();
 testNewElementIsPlacedWithoutMoves();
 testNodesOutsideTheBatchStay();
+testStylesStayAtTheEndOfHead();

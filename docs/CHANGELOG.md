@@ -39,6 +39,9 @@
 * A page kept in the browser's back/forward cache kept its websockets open, so the server went on
   sending to a page nobody saw. Now they close when the page goes into the cache (the app gets
   `Close`) and connect again at once when it comes back (a new `Connection`).
+* The driver took its `<style>` out of `<head>` and put it back after every batch of DOM changes,
+  to keep it last, even when it was last already, and the browser restyled elements of the page
+  each time. Now it only moves the styles when something came after them.
 
 ## 0.13.4 - 2026-10-14
 
