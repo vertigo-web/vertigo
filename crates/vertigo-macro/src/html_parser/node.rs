@@ -190,9 +190,8 @@ fn push_attribute(
     let method_str = match name.as_str() {
         "hook_key_down" | "on_blur" | "on_change" | "on_change_file" | "on_click"
         | "on_dropfile" | "on_input" | "on_intersect" | "on_key_down" | "on_load"
-        | "on_mouse_down" | "on_mouse_enter" | "on_mouse_leave" | "on_mouse_up" | "on_submit" => {
-            &name
-        }
+        | "on_mouse_down" | "on_mouse_enter" | "on_mouse_leave" | "on_mouse_up" | "on_submit"
+        | "on_wheel" => &name,
 
         "form" => "on_submit",
 
@@ -381,6 +380,7 @@ mod tests {
             "on_mouse_leave",
             "on_mouse_up",
             "on_dropfile",
+            "on_wheel",
             "hook_key_down",
         ];
         for attr in event_attrs {

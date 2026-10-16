@@ -117,6 +117,8 @@ pub mod safe_wrappers {
                     | CommandForBrowser::WebsocketSendMessage { .. }
                     | CommandForBrowser::TimerSet { .. }
                     | CommandForBrowser::TimerClear { .. }
+                    | CommandForBrowser::AnimationFrameStart
+                    | CommandForBrowser::AnimationFrameStop
                     | CommandForBrowser::LocationCallback { .. }
                     | CommandForBrowser::LocationSet { .. }
                     | CommandForBrowser::CookieSet { .. }

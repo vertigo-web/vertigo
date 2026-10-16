@@ -2,6 +2,7 @@ use std::{collections::BTreeMap, rc::Rc};
 
 use crate::{
     Computed, Css, DomComment, DomDisplay, DomElement, DomText, DropFileEvent, KeyDownEvent, Value,
+    WheelEvent,
     dom::{
         attr_value::AttrValue,
         callback::{Callback, Callback1},
@@ -61,6 +62,7 @@ pub enum AttrGroupValue {
     OnMouseLeave(Rc<Callback<()>>),
     OnMouseUp(Rc<Callback<bool>>),
     OnSubmit(Rc<Callback<()>>),
+    OnWheel(Rc<Callback1<WheelEvent, ()>>),
 }
 
 impl From<&Self> for AttrGroupValue {
@@ -100,6 +102,7 @@ impl AttrGroupValue {
     group_value_constructor!(on_mouse_leave, Callback<()>, OnMouseLeave);
     group_value_constructor!(on_mouse_up, Callback<bool>, OnMouseUp);
     group_value_constructor!(on_submit, Callback<()>, OnSubmit);
+    group_value_constructor!(on_wheel, Callback1<WheelEvent, ()>, OnWheel);
 
     /// Extract [`Computed<String>`] from this [AttrGroupValue] if possible.
     ///

@@ -18,6 +18,14 @@
 * `--proxy` of `vertigo serve` and `vertigo watch` carries websockets too: a websocket handshake
   under a proxied path goes on to the target, and then the frames go through both ways as they
   are. Before, the handshake hung, so an app in `watch` had to connect to its backend directly.
+* `Driver::on_animation_frame`: a callback before every frame the browser draws
+  (`requestAnimationFrame`), with the time of the frame, until the returned `DropResource` drops.
+  Each frame comes as one call into wasm for all such callbacks, so they run in one transaction
+  and what they change reaches the DOM in one batch.
+* `on_wheel` on elements, with a `WheelEvent`: how far the wheel or the touchpad moved and in what
+  unit (`WheelDeltaMode`), where the pointer is on the element and how big the element is, the
+  modifier keys, and `prevent_default` and `stop_propagation` - f. ex. to zoom instead of
+  scrolling the page.
 
 ### Changed
 

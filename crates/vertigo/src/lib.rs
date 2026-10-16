@@ -92,7 +92,10 @@ pub use dom::{
     dom_id::DomId,
     dom_node::DomNode,
     dom_text::DomText,
-    events::{ClickEvent, DropFileEvent, DropFileItem, IntersectionEvent, KeyDownEvent},
+    events::{
+        ClickEvent, DropFileEvent, DropFileItem, IntersectionEvent, KeyDownEvent, WheelDeltaMode,
+        WheelEvent,
+    },
 };
 pub use dom_macro::{AttrGroup, AttrGroupValue, EmbedDom};
 pub use driver_module::{

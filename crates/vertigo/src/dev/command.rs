@@ -47,6 +47,11 @@ pub enum CommandForBrowser {
         callback: CallbackId,
     },
 
+    /// From now on, before every frame the browser draws, send
+    /// [`CommandForWasm::AnimationFrame`] - until [`CommandForBrowser::AnimationFrameStop`].
+    AnimationFrameStart,
+    AnimationFrameStop,
+
     LocationCallback {
         target: LocationTarget,
         mode: LocationCallbackMode,
@@ -235,6 +240,12 @@ pub enum CommandForWasm {
 
     TimerCall {
         callback: CallbackId,
+    },
+
+    /// A frame the browser is about to draw, with its time in milliseconds - the timestamp of
+    /// `requestAnimationFrame`.
+    AnimationFrame {
+        time: f64,
     },
 
     LocationCall {

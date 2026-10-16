@@ -9,3 +9,6 @@ pub use intersect_event::*;
 
 mod key_down_event;
 pub use key_down_event::*;
+
+mod wheel_event;
+pub use wheel_event::*;
