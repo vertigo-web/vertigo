@@ -1,7 +1,7 @@
-// The click and wheel handlers: what a `ClickEvent` or `WheelEvent` reply does to the browser's
-// own handling of the event, and what the wheel handler tells wasm.
+// The click, wheel and pointer handlers: what a `ClickEvent`, `WheelEvent` or `PointerEvent`
+// reply does to the browser's own handling of the event, and what the handlers tell wasm.
 
-import { CallbackManager, click, wheel } from "./callbackManager";
+import { CallbackManager, click, pointer, wheel } from "./callbackManager";
 import { MapNodes } from "./map_nodes";
 
 const assert = (condition: boolean, message: string) => {
@@ -145,6 +145,98 @@ function testWheelListenerIsNotPassive() {
     assert(JSON.stringify(node.added[1]) === JSON.stringify(['click', false]), "the others are added as before");
 }
 
+/// A finger touching (130, 240) of the viewport, with Shift held, on an element whose top left
+/// corner is at (100, 200) and which is 300 x 150. The element keeps what it was asked to
+/// capture.
+class MockPointerEvent extends MockEvent {
+    pointerId = 7;
+    pointerType = 'touch';
+    isPrimary = true;
+    button = 0;
+    buttons = 1;
+    clientX = 130;
+    clientY = 240;
+    altKey = false;
+    ctrlKey = false;
+    shiftKey = true;
+    metaKey = false;
+    captured: Array<number> = [];
+    currentTarget = {
+        getBoundingClientRect: () => ({ left: 100, top: 200, width: 300, height: 150 }),
+        setPointerCapture: (pointerId: number) => { this.captured.push(pointerId); },
+    };
+}
+
+/// A pointer event whose listener in wasm replied with `reply`, and what wasm got.
+function pointerReplying(reply: unknown): { event: MockPointerEvent, sent: unknown } {
+    const event = new MockPointerEvent();
+    let sent: unknown;
+    pointer(event as unknown as Event, (value) => {
+        sent = value;
+        return reply as any;
+    });
+    return { event, sent };
+}
+
+function testPointerPayload() {
+    console.log("\n--- Test pointer 1: what wasm gets ---");
+    const { sent } = pointerReplying(null);
+    assert(
+        JSON.stringify(sent) === JSON.stringify([7, 'touch', true, 0, 1, 30, 40, 300, 150, false, false, true, false]),
+        `id, type, primary, buttons, pointer from the element's corner, its size, modifiers: ${JSON.stringify(sent)}`,
+    );
+}
+
+function testPointerByDefault() {
+    console.log("\n--- Test pointer 2: nothing asked ---");
+    const { event } = pointerReplying({ stop_propagation: false, prevent_default: false, capture_pointer: false });
+    assert(!event.defaultPrevented && !event.propagationStopped, "the browser goes on as usual");
+    assert(event.captured.length === 0, "and captures nothing");
+}
+
+function testPointerCapture() {
+    console.log("\n--- Test pointer 3: PointerEvent::capture_pointer ---");
+    const { event } = pointerReplying({ stop_propagation: false, prevent_default: false, capture_pointer: true });
+    assert(JSON.stringify(event.captured) === JSON.stringify([7]), "the element with the listener captures the pointer");
+    assert(!event.defaultPrevented && !event.propagationStopped, "and that's all");
+}
+
+function testPointerCaptureOfAPointerThatIsUp() {
+    console.log("\n--- Test pointer 3b: capture_pointer of a pointer that's up ---");
+    const event = new MockPointerEvent();
+    event.currentTarget.setPointerCapture = () => { throw new Error('NotFoundError'); };
+    let threw = false;
+    try {
+        pointer(event as unknown as Event, () => ({ stop_propagation: true, prevent_default: false, capture_pointer: true }) as any);
+    } catch {
+        threw = true;
+    }
+    assert(!threw, "the browser's error goes to the console, not out of the listener");
+    assert(event.propagationStopped, "and the other flags still apply");
+}
+
+function testPointerFlags() {
+    console.log("\n--- Test pointer 4: prevent_default and stop_propagation ---");
+    const { event } = pointerReplying({ stop_propagation: true, prevent_default: true, capture_pointer: false });
+    assert(event.defaultPrevented && event.propagationStopped, "both, as for a click");
+    assert(event.captured.length === 0, "without capturing");
+}
+
+function testPointerListeners() {
+    console.log("\n--- Test pointer 5: the listeners ---");
+    const node = new MockNode();
+    const nodes = { get: () => node } as unknown as MapNodes;
+    const manager = new CallbackManager(() => ({}) as any);
+    const names = ['pointerdown', 'pointermove', 'pointerup', 'pointercancel'];
+
+    names.forEach((name, index) => manager.add(nodes, 1, name, 20 + index));
+
+    assert(
+        JSON.stringify(node.added) === JSON.stringify(names.map((name) => [name, false])),
+        "each goes on the DOM event of its name",
+    );
+}
+
 testDefaultActionIsLeftToTheBrowser();
 testPreventDefault();
 testStopPropagation();
@@ -154,3 +246,9 @@ testWheelScrollsByDefault();
 testWheelPreventDefault();
 testWheelStopPropagation();
 testWheelListenerIsNotPassive();
+testPointerPayload();
+testPointerByDefault();
+testPointerCapture();
+testPointerCaptureOfAPointerThatIsUp();
+testPointerFlags();
+testPointerListeners();

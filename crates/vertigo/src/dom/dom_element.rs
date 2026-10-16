@@ -14,7 +14,9 @@ use super::{
     dom_element_ref::DomElementRef,
     dom_id::DomId,
     dom_node::DomNode,
-    events::{ClickEvent, DropFileEvent, IntersectionEvent, KeyDownEvent, WheelEvent},
+    events::{
+        ClickEvent, DropFileEvent, IntersectionEvent, KeyDownEvent, PointerEvent, WheelEvent,
+    },
 };
 
 /// A Real DOM representative - element kind
@@ -208,6 +210,18 @@ impl DomElement {
             }
             ("on_mouse_up", AttrGroupValue::OnMouseUp(on_mouse_up)) => {
                 self.on_mouse_up_rc(on_mouse_up)
+            }
+            ("on_pointer_down", AttrGroupValue::OnPointerDown(on_pointer_down)) => {
+                self.on_pointer_down_rc(on_pointer_down)
+            }
+            ("on_pointer_move", AttrGroupValue::OnPointerMove(on_pointer_move)) => {
+                self.on_pointer_move_rc(on_pointer_move)
+            }
+            ("on_pointer_up", AttrGroupValue::OnPointerUp(on_pointer_up)) => {
+                self.on_pointer_up_rc(on_pointer_up)
+            }
+            ("on_pointer_cancel", AttrGroupValue::OnPointerCancel(on_pointer_cancel)) => {
+                self.on_pointer_cancel_rc(on_pointer_cancel)
             }
             ("on_submit", AttrGroupValue::OnSubmit(on_submit))
             | ("form", AttrGroupValue::OnSubmit(on_submit)) => self.on_submit_rc(on_submit),
@@ -576,6 +590,68 @@ impl DomElement {
                 JsJson::True
             } else {
                 JsJson::False
+            }
+        })
+    }
+
+    /// A mouse button pressed, or a finger or a pen touching the screen. See [`PointerEvent`].
+    pub fn on_pointer_down(self, on_pointer_down: impl Into<Callback1<PointerEvent, ()>>) -> Self {
+        self.on_pointer_down_rc(Rc::new(on_pointer_down.into()))
+    }
+
+    pub fn on_pointer_down_rc(self, on_pointer_down: Rc<Callback1<PointerEvent, ()>>) -> Self {
+        self.on_pointer("pointerdown", on_pointer_down)
+    }
+
+    /// A pointer moved over the element, or anywhere once the element captured it. See
+    /// [`PointerEvent`].
+    pub fn on_pointer_move(self, on_pointer_move: impl Into<Callback1<PointerEvent, ()>>) -> Self {
+        self.on_pointer_move_rc(Rc::new(on_pointer_move.into()))
+    }
+
+    pub fn on_pointer_move_rc(self, on_pointer_move: Rc<Callback1<PointerEvent, ()>>) -> Self {
+        self.on_pointer("pointermove", on_pointer_move)
+    }
+
+    /// A mouse button released, or a finger or a pen lifted. See [`PointerEvent`].
+    pub fn on_pointer_up(self, on_pointer_up: impl Into<Callback1<PointerEvent, ()>>) -> Self {
+        self.on_pointer_up_rc(Rc::new(on_pointer_up.into()))
+    }
+
+    pub fn on_pointer_up_rc(self, on_pointer_up: Rc<Callback1<PointerEvent, ()>>) -> Self {
+        self.on_pointer("pointerup", on_pointer_up)
+    }
+
+    /// The browser took the pointer over, f. ex. to scroll the page with a finger, and no more of
+    /// its events come - not even the one of releasing it. See [`PointerEvent`].
+    pub fn on_pointer_cancel(
+        self,
+        on_pointer_cancel: impl Into<Callback1<PointerEvent, ()>>,
+    ) -> Self {
+        self.on_pointer_cancel_rc(Rc::new(on_pointer_cancel.into()))
+    }
+
+    pub fn on_pointer_cancel_rc(self, on_pointer_cancel: Rc<Callback1<PointerEvent, ()>>) -> Self {
+        self.on_pointer("pointercancel", on_pointer_cancel)
+    }
+
+    fn on_pointer(
+        self,
+        event_name: &'static str,
+        callback: Rc<Callback1<PointerEvent, ()>>,
+    ) -> Self {
+        let callback = self.install_callback1(callback);
+
+        self.add_event_listener(event_name, move |data| {
+            match PointerEvent::from_driver(data) {
+                Ok(event) => {
+                    callback(event.clone());
+                    JsJson::from(event)
+                }
+                Err(error) => {
+                    log::error!("{event_name} -> params decode error -> {error}");
+                    JsJson::Null
+                }
             }
         })
     }
