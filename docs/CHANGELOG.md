@@ -26,6 +26,11 @@
   unit (`WheelDeltaMode`), where the pointer is on the element and how big the element is, the
   modifier keys, and `prevent_default` and `stop_propagation` - f. ex. to zoom instead of
   scrolling the page.
+* `on_pointer_down`, `on_pointer_move`, `on_pointer_up` and `on_pointer_cancel` on elements, with
+  a `PointerEvent` for a mouse, a pen or a finger alike: which pointer it is (`PointerType`), the
+  buttons, where the pointer is on the element and how big the element is, the modifier keys,
+  `prevent_default`, `stop_propagation`, and `capture_pointer` to get the pointer's events until
+  it's released, even outside the element - f. ex. to drag.
 
 ### Changed
 

@@ -26,7 +26,8 @@ const notifyPreventIfTrue: Handler = (event, send) => {
     }
 };
 
-/// What the handler in wasm asked of the browser: the flags of a `ClickEvent` or a `WheelEvent`.
+/// What the handler in wasm asked of the browser: the flags of a `ClickEvent`, a `WheelEvent` or
+/// a `PointerEvent`.
 const applyFlags = (event: Event, flags: JsJsonType) => {
     // Check if flags is an object (JsJson Object type)
     if (flags !== null && typeof flags === 'object' && !Array.isArray(flags)) {
@@ -35,6 +36,15 @@ const applyFlags = (event: Event, flags: JsJsonType) => {
         }
         if ('prevent_default' in flags && flags['prevent_default'] === true) {
             event.preventDefault();
+        }
+        // Only a `PointerEvent` asks for it.
+        if ('capture_pointer' in flags && flags['capture_pointer'] === true) {
+            try {
+                (event.currentTarget as Element).setPointerCapture((event as PointerEvent).pointerId);
+            } catch (error) {
+                // A pointer that's up already, f. ex. a finger in `pointerup`.
+                console.warn('capture_pointer', error);
+            }
         }
     }
 };
@@ -66,6 +76,31 @@ export const wheel: Handler = (event, send) => {
         wheelEvent.ctrlKey,
         wheelEvent.shiftKey,
         wheelEvent.metaKey,
+    ]));
+};
+
+/// The pointer events, all four of them. Wasm replies with the `PointerEvent` flags, and with
+/// `capture_pointer` the events of this pointer go to the element with the listener until it's
+/// released. The pointer goes relative to that element, as for the wheel.
+export const pointer: Handler = (event, send) => {
+    const pointerEvent = event as PointerEvent;
+    const rect = (pointerEvent.currentTarget as Element).getBoundingClientRect();
+
+    // Payload order MUST match the Rust decoder `PointerEvent::from_driver`.
+    applyFlags(event, send([
+        pointerEvent.pointerId,
+        pointerEvent.pointerType,
+        pointerEvent.isPrimary,
+        pointerEvent.button,
+        pointerEvent.buttons,
+        pointerEvent.clientX - rect.left,
+        pointerEvent.clientY - rect.top,
+        rect.width,
+        rect.height,
+        pointerEvent.altKey,
+        pointerEvent.ctrlKey,
+        pointerEvent.shiftKey,
+        pointerEvent.metaKey,
     ]));
 };
 
@@ -169,6 +204,10 @@ const HANDLERS: Record<string, Handler> = {
     load: notifyPreventDefault,
     change_file: changeFile,
     wheel,
+    pointerdown: pointer,
+    pointermove: pointer,
+    pointerup: pointer,
+    pointercancel: pointer,
 };
 
 export class CallbackManager {
