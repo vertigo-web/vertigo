@@ -1,6 +1,8 @@
-// The click handler: what a `ClickEvent` reply does to the browser's own handling of the click.
+// The click and wheel handlers: what a `ClickEvent` or `WheelEvent` reply does to the browser's
+// own handling of the event, and what the wheel handler tells wasm.
 
-import { click } from "./callbackManager";
+import { CallbackManager, click, wheel } from "./callbackManager";
+import { MapNodes } from "./map_nodes";
 
 const assert = (condition: boolean, message: string) => {
     if (condition) {
@@ -60,7 +62,95 @@ function testReplyWithoutFlags() {
     }
 }
 
+/// A wheel turned 120 px down, with Ctrl held, over (130, 240) of the viewport, on an element
+/// whose top left corner is at (100, 200) and which is 300 x 150.
+class MockWheelEvent extends MockEvent {
+    deltaX = -2.5;
+    deltaY = 120;
+    deltaZ = 0;
+    deltaMode = 0;
+    clientX = 130;
+    clientY = 240;
+    altKey = false;
+    ctrlKey = true;
+    shiftKey = false;
+    metaKey = false;
+    currentTarget = {
+        getBoundingClientRect: () => ({ left: 100, top: 200, width: 300, height: 150 }),
+    };
+}
+
+/// A wheel whose `on_wheel` in wasm replied with `reply`, and what wasm got.
+function wheelReplying(reply: unknown): { event: MockWheelEvent, sent: unknown } {
+    const event = new MockWheelEvent();
+    let sent: unknown;
+    wheel(event as unknown as Event, (value) => {
+        sent = value;
+        return reply as any;
+    });
+    return { event, sent };
+}
+
+function testWheelPayload() {
+    console.log("\n--- Test wheel 1: what wasm gets ---");
+    const { sent } = wheelReplying(null);
+    assert(
+        JSON.stringify(sent) === JSON.stringify([-2.5, 120, 0, 0, 30, 40, 300, 150, false, true, false, false]),
+        `deltas, mode, pointer from the element's corner, its size, modifiers: ${JSON.stringify(sent)}`,
+    );
+}
+
+function testWheelScrollsByDefault() {
+    console.log("\n--- Test wheel 2: the page scrolls ---");
+    const { event } = wheelReplying({ stop_propagation: false, prevent_default: false });
+    assert(!event.defaultPrevented, "the page scrolls");
+    assert(!event.propagationStopped, "and the parents get the wheel");
+}
+
+function testWheelPreventDefault() {
+    console.log("\n--- Test wheel 3: WheelEvent::prevent_default ---");
+    const { event } = wheelReplying({ stop_propagation: false, prevent_default: true });
+    assert(event.defaultPrevented, "the page doesn't scroll");
+    assert(!event.propagationStopped, "and the parents still get the wheel");
+}
+
+function testWheelStopPropagation() {
+    console.log("\n--- Test wheel 4: WheelEvent::stop_propagation ---");
+    const { event } = wheelReplying({ stop_propagation: true, prevent_default: false });
+    assert(event.propagationStopped, "the parents don't get the wheel");
+    assert(!event.defaultPrevented, "and the page scrolls");
+}
+
+/// A node that keeps how its listeners were added.
+class MockNode {
+    added: Array<[string, unknown]> = [];
+    addEventListener(name: string, _listener: unknown, options: unknown) {
+        this.added.push([name, options]);
+    }
+}
+
+function testWheelListenerIsNotPassive() {
+    console.log("\n--- Test wheel 5: the listener ---");
+    const node = new MockNode();
+    const nodes = { get: () => node } as unknown as MapNodes;
+    const manager = new CallbackManager(() => ({}) as any);
+
+    manager.add(nodes, 1, 'wheel', 10);
+    manager.add(nodes, 1, 'click', 11);
+
+    assert(
+        JSON.stringify(node.added[0]) === JSON.stringify(['wheel', { passive: false }]),
+        "a wheel listener isn't passive, so prevent_default works even on <body>",
+    );
+    assert(JSON.stringify(node.added[1]) === JSON.stringify(['click', false]), "the others are added as before");
+}
+
 testDefaultActionIsLeftToTheBrowser();
 testPreventDefault();
 testStopPropagation();
 testReplyWithoutFlags();
+testWheelPayload();
+testWheelScrollsByDefault();
+testWheelPreventDefault();
+testWheelStopPropagation();
+testWheelListenerIsNotPassive();

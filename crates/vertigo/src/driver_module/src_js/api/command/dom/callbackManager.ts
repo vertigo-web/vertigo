@@ -26,20 +26,47 @@ const notifyPreventIfTrue: Handler = (event, send) => {
     }
 };
 
-/// Wasm replies with the `ClickEvent` flags. The browser's default action - following a link,
-/// submitting a form, toggling a checkbox - goes ahead unless the handler asked to prevent it.
-export const click: Handler = (event, send) => {
-    const click_event = send(undefined);
-
-    // Check if click_event is an object (JsJson Object type)
-    if (click_event !== null && typeof click_event === 'object' && !Array.isArray(click_event)) {
-        if ('stop_propagation' in click_event && click_event['stop_propagation'] === true) {
+/// What the handler in wasm asked of the browser: the flags of a `ClickEvent` or a `WheelEvent`.
+const applyFlags = (event: Event, flags: JsJsonType) => {
+    // Check if flags is an object (JsJson Object type)
+    if (flags !== null && typeof flags === 'object' && !Array.isArray(flags)) {
+        if ('stop_propagation' in flags && flags['stop_propagation'] === true) {
             event.stopPropagation();
         }
-        if ('prevent_default' in click_event && click_event['prevent_default'] === true) {
+        if ('prevent_default' in flags && flags['prevent_default'] === true) {
             event.preventDefault();
         }
     }
+};
+
+/// Wasm replies with the `ClickEvent` flags. The browser's default action - following a link,
+/// submitting a form, toggling a checkbox - goes ahead unless the handler asked to prevent it.
+export const click: Handler = (event, send) => {
+    applyFlags(event, send(undefined));
+};
+
+/// Wasm replies with the `WheelEvent` flags: the page scrolls, or zooms, unless the handler
+/// asked to prevent it. The pointer goes relative to the element with the listener, the one
+/// whose size comes along, rather than to the child under the pointer as `offsetX` would.
+export const wheel: Handler = (event, send) => {
+    const wheelEvent = event as WheelEvent;
+    const rect = (wheelEvent.currentTarget as Element).getBoundingClientRect();
+
+    // Payload order MUST match the Rust decoder `WheelEvent::from_driver`.
+    applyFlags(event, send([
+        wheelEvent.deltaX,
+        wheelEvent.deltaY,
+        wheelEvent.deltaZ,
+        wheelEvent.deltaMode,
+        wheelEvent.clientX - rect.left,
+        wheelEvent.clientY - rect.top,
+        rect.width,
+        rect.height,
+        wheelEvent.altKey,
+        wheelEvent.ctrlKey,
+        wheelEvent.shiftKey,
+        wheelEvent.metaKey,
+    ]));
 };
 
 /// `input` and `change` differ only in whether a `<select>` counts as a value source. They
@@ -141,6 +168,7 @@ const HANDLERS: Record<string, Handler> = {
     drop,
     load: notifyPreventDefault,
     change_file: changeFile,
+    wheel,
 };
 
 export class CallbackManager {
@@ -189,7 +217,9 @@ export class CallbackManager {
         } else {
             const node = nodes.get('callback_add', id);
             const domEventName = event_name === 'change_file' ? 'change' : event_name;
-            node.addEventListener(domEventName, callback, false);
+            // A wheel listener isn't passive, so that `WheelEvent::prevent_default` can keep the
+            // page from scrolling: browsers make one on `<body>` passive unless told.
+            node.addEventListener(domEventName, callback, event_name === 'wheel' ? { passive: false } : false);
         }
     }
 

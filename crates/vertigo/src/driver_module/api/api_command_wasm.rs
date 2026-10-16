@@ -8,7 +8,7 @@ use crate::{
     driver_module::{driver::get_driver, get_driver_dom},
 };
 
-use super::{api_fetch::api_fetch, api_location, api_timers, api_websocket};
+use super::{api_animation_frame, api_fetch::api_fetch, api_location, api_timers, api_websocket};
 
 #[store]
 pub fn api_command_wasm() -> Rc<CommandWasmApi> {
@@ -19,8 +19,8 @@ pub struct CommandWasmApi {}
 
 impl CommandWasmApi {
     /// Every event from the browser comes through here: a DOM event, a websocket message, a fetch
-    /// response, a timer - and through the timer every step of async code - or a change of the
-    /// location.
+    /// response, a timer - and through the timer every step of async code - a frame to draw, or
+    /// a change of the location.
     pub fn command_from_js(self: &Rc<CommandWasmApi>, json: JsJson) -> JsJson {
         let command = decode_json::<CommandForWasm>(json)
             .inspect_err(|err| {
@@ -46,6 +46,10 @@ impl CommandWasmApi {
             }
             CommandForWasm::TimerCall { callback } => {
                 api_timers().callback_timeout(callback);
+                JsJson::Null
+            }
+            CommandForWasm::AnimationFrame { time } => {
+                api_animation_frame().frame(time);
                 JsJson::Null
             }
             CommandForWasm::LocationCall { callback, value } => {

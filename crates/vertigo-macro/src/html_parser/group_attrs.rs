@@ -65,6 +65,7 @@ fn attr_to_group_variant(key: impl AsRef<str>, value: TokenStream2) -> TokenStre
         "on_mouse_leave" => quote! { vertigo::AttrGroupValue::on_mouse_leave(#value) },
         "on_mouse_up" => quote! { vertigo::AttrGroupValue::on_mouse_up(#value) },
         "on_submit" | "form" => quote! { vertigo::AttrGroupValue::on_submit(#value) },
+        "on_wheel" => quote! { vertigo::AttrGroupValue::on_wheel(#value) },
         _ => quote! { {#value}.into() },
     }
 }

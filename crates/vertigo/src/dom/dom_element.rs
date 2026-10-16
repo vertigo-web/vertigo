@@ -14,7 +14,7 @@ use super::{
     dom_element_ref::DomElementRef,
     dom_id::DomId,
     dom_node::DomNode,
-    events::{ClickEvent, DropFileEvent, IntersectionEvent, KeyDownEvent},
+    events::{ClickEvent, DropFileEvent, IntersectionEvent, KeyDownEvent, WheelEvent},
 };
 
 /// A Real DOM representative - element kind
@@ -211,6 +211,7 @@ impl DomElement {
             }
             ("on_submit", AttrGroupValue::OnSubmit(on_submit))
             | ("form", AttrGroupValue::OnSubmit(on_submit)) => self.on_submit_rc(on_submit),
+            ("on_wheel", AttrGroupValue::OnWheel(on_wheel)) => self.on_wheel_rc(on_wheel),
             ("tw", AttrGroupValue::AttrValue(value)) => self.attr("class", value),
             (_, AttrGroupValue::AttrValue(value)) => self.attr(key, value),
             (_, _) => {
@@ -589,6 +590,28 @@ impl DomElement {
         self.add_event_listener("submit", move |_data| {
             on_submit();
             JsJson::Null
+        })
+    }
+
+    /// The wheel scrolls the page, and in Chrome and Firefox with Ctrl held zooms it, unless the
+    /// callback calls [`WheelEvent::prevent_default`]. The listener isn't passive, so the browser
+    /// waits for the callback before it scrolls: keep it short.
+    pub fn on_wheel(self, on_wheel: impl Into<Callback1<WheelEvent, ()>>) -> Self {
+        self.on_wheel_rc(Rc::new(on_wheel.into()))
+    }
+
+    pub fn on_wheel_rc(self, on_wheel: Rc<Callback1<WheelEvent, ()>>) -> Self {
+        let on_wheel = self.install_callback1(on_wheel);
+
+        self.add_event_listener("wheel", move |data| match WheelEvent::from_driver(data) {
+            Ok(event) => {
+                on_wheel(event.clone());
+                JsJson::from(event)
+            }
+            Err(error) => {
+                log::error!("on_wheel -> params decode error -> {error}");
+                JsJson::Null
+            }
         })
     }
 

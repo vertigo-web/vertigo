@@ -6,3 +6,4 @@ mod embed;
 mod html_attrs;
 mod list_spread;
 mod params;
+mod wheel_event;

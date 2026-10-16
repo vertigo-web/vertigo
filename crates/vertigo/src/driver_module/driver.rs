@@ -10,7 +10,10 @@ use crate::{
         command::{LocationSetMode, LocationTarget},
     },
     driver_module::{
-        api::{api_browser_command, api_location, api_server_handler, api_timers, api_websocket},
+        api::{
+            api_animation_frame, api_browser_command, api_location, api_server_handler, api_timers,
+            api_websocket,
+        },
         dom::get_driver_dom,
         utils::futures_spawn::spawn_local,
     },
@@ -162,6 +165,43 @@ impl Driver {
     #[must_use]
     pub fn set_interval(&self, time: u32, func: impl Fn() + 'static) -> DropResource {
         api_timers().interval(time, func)
+    }
+
+    /// Make `func` fire before every frame the browser draws (`requestAnimationFrame`), until
+    /// the returned [DropResource] is dropped. It gets the time of the frame in milliseconds,
+    /// the same for every callback of the frame, so the time between two frames tells how far
+    /// to move an animation. The time is on the page's `performance.now()` clock, which starts
+    /// when the page loads, so it can't be compared with [Driver::now].
+    ///
+    /// All the callbacks of a frame run in one transaction, so whatever they change reaches the
+    /// DOM in one batch, in time for the frame. The browser draws about as often as the screen
+    /// refreshes, and not at all in a background tab or during SSR.
+    ///
+    /// ```rust
+    /// use vertigo::{Value, dom, get_driver};
+    ///
+    /// // Seconds since the clock appeared, for as long as it's on the page.
+    /// let seconds = Value::with_connect(0, |seconds| {
+    ///     let seconds = seconds.clone();
+    ///     let start = std::cell::Cell::new(None);
+    ///
+    ///     get_driver().on_animation_frame(move |time| {
+    ///         let first = start.get().unwrap_or(time);
+    ///         start.set(Some(first));
+    ///         // The page only changes when a whole second has gone.
+    ///         seconds.set(((time - first) / 1000.0) as u32);
+    ///     })
+    /// });
+    ///
+    /// dom! {
+    ///     <p>{seconds}</p>
+    /// };
+    /// ```
+    #[doc(alias = "requestAnimationFrame")]
+    #[doc(alias = "request_animation_frame")]
+    #[must_use]
+    pub fn on_animation_frame(&self, func: impl Fn(f64) + 'static) -> DropResource {
+        api_animation_frame().on_frame(func)
     }
 
     /// Gets current value of monotonic clock.

@@ -141,3 +141,24 @@ fn an_event_that_changes_nothing_sends_nothing() {
 
     assert!(batches.is_empty(), "{batches:?}");
 }
+
+/// The callbacks of a frame run in one transaction too, however many there are: each draws its
+/// own part of the page, and the browser gets the frame as one batch.
+#[test]
+fn the_callbacks_of_an_animation_frame_reach_the_dom_as_one_batch() {
+    let labels = mounted_labels();
+
+    let _callbacks = labels
+        .clone()
+        .map(|label| get_driver().on_animation_frame(move |time| label.set(format!("{time}"))));
+
+    let batches = batches_during(|| {
+        let frame = CommandForWasm::AnimationFrame { time: 16.0 };
+        api_command_wasm().command_from_js(frame.to_json());
+    });
+
+    drop(get_driver().take_root());
+
+    assert_eq!(batches.len(), 1, "one frame, one batch: {batches:?}");
+    assert_eq!(text_updates(&batches[0]), 3);
+}

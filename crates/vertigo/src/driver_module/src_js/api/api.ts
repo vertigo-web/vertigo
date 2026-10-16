@@ -7,6 +7,7 @@ import { fetchCacheGet } from "./command/fetchCacheGet";
 import { fetchExec, FetchRequestType } from "./command/fetchExec";
 import { CallbackId } from "./types";
 import { Interval } from "./command/interval";
+import { AnimationFrames } from "./command/animationFrames";
 import { AppLocation } from './location/AppLocation';
 import { Cookies } from "./command/cookies";
 import { getRandom } from "./command/getRandom";
@@ -26,6 +27,8 @@ type ExecType
     | 'GetDateNow'
     | 'TimezoneOffset'
     | 'HistoryBack'
+    | 'AnimationFrameStart'
+    | 'AnimationFrameStop'
     | {
         FetchExec: {
             callback: CallbackId,
@@ -159,6 +162,7 @@ export class Api {
     public readonly dom: DriverDom;
     private readonly websocket: DriverWebsocket;
     private readonly interval: Interval;
+    private readonly animationFrames: AnimationFrames;
     private readonly location: AppLocation;
     private readonly cookie: Cookies;
 
@@ -169,6 +173,7 @@ export class Api {
         this.dom = new DriverDom(metadata, appLocation, getWasm);
         this.websocket = new DriverWebsocket(getWasm);
         this.interval = new Interval(getWasm);
+        this.animationFrames = new AnimationFrames(getWasm);
         this.location = appLocation;
         this.cookie = new Cookies();
     }
@@ -204,6 +209,16 @@ export class Api {
 
         if (safeArg === 'HistoryBack') {
             window.history.back();
+            return null;
+        }
+
+        if (safeArg === 'AnimationFrameStart') {
+            this.animationFrames.start();
+            return null;
+        }
+
+        if (safeArg === 'AnimationFrameStop') {
+            this.animationFrames.stop();
             return null;
         }
 

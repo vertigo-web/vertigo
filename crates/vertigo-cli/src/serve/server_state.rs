@@ -223,6 +223,10 @@ impl ServerState {
                     JsJson::Null
                 }
                 CommandForBrowser::TimerClear { callback: _ } => JsJson::Null,
+                // No frames are drawn on the server.
+                CommandForBrowser::AnimationFrameStart | CommandForBrowser::AnimationFrameStop => {
+                    JsJson::Null
+                }
                 CommandForBrowser::LocationCallback {
                     target: _,
                     mode: _,
