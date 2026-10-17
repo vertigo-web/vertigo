@@ -11,6 +11,7 @@ import { AnimationFrames } from "./command/animationFrames";
 import { AppLocation } from './location/AppLocation';
 import { Cookies } from "./command/cookies";
 import { getRandom } from "./command/getRandom";
+import { languages } from "./command/languages";
 import { DriverDom } from "./command/dom/dom";
 import { Metadata } from "./metadata";
 
@@ -26,6 +27,7 @@ type ExecType
     | 'IsBrowser'
     | 'GetDateNow'
     | 'TimezoneOffset'
+    | 'Languages'
     | 'HistoryBack'
     | 'AnimationFrameStart'
     | 'AnimationFrameStop'
@@ -204,6 +206,12 @@ export class Api {
         if (safeArg === 'TimezoneOffset') {
             return {
                 value: new Date().getTimezoneOffset()
+            };
+        }
+
+        if (safeArg === 'Languages') {
+            return {
+                value: languages(navigator),
             };
         }
 

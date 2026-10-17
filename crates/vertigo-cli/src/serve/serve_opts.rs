@@ -48,6 +48,14 @@ pub struct ServeOptsInner {
     #[arg(long)]
     pub ssr_fetch_base: Option<String>,
 
+    /// A cookie the app may read during SSR too, f. ex. the language the user picked:
+    /// `--ssr-cookie lang --ssr-cookie theme`
+    ///
+    /// (only one the browser shows the app too, not `HttpOnly`: the server would render what the
+    /// browser can't)
+    #[arg(long)]
+    pub ssr_cookie: Vec<String>,
+
     /// Indent the server-rendered HTML, to read it in the page source
     ///
     /// (the indentation is whitespace between elements: until the app starts, it shows as gaps

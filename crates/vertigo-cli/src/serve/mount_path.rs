@@ -13,6 +13,7 @@ pub struct MountConfigBuilder {
     pub wasm_preload: bool,
     pub disable_hydration: bool,
     pub ssr_fetch_base: Option<String>,
+    pub ssr_cookies: Vec<String>,
     pub pretty_html: bool,
 }
 
@@ -25,6 +26,7 @@ impl MountConfigBuilder {
             wasm_preload: false,
             disable_hydration: false,
             ssr_fetch_base: None,
+            ssr_cookies: vec![],
             pretty_html: false,
         }
     }
@@ -57,6 +59,17 @@ impl MountConfigBuilder {
         self
     }
 
+    /// A cookie the app may read with `get_driver().cookie_get()` while the server renders the
+    /// page, f. ex. the language the user picked, so the page comes rendered as the browser will
+    /// show it. Others read as empty there, as they always did.
+    ///
+    /// Only for a cookie the browser shows the app too: not `HttpOnly`. The `Cookie` header doesn't
+    /// tell which are, and the server would render what the browser can't.
+    pub fn ssr_cookie(mut self, name: impl Into<String>) -> Self {
+        self.ssr_cookies.push(name.into());
+        self
+    }
+
     /// Indent the server-rendered HTML, to read it in the page source.
     ///
     /// Off by default: the indentation is whitespace between elements, which the app's own tree
@@ -76,6 +89,7 @@ impl MountConfigBuilder {
             self.disable_hydration,
         )?;
         config.ssr_fetch_base = self.ssr_fetch_base;
+        config.ssr_cookies = self.ssr_cookies;
         config.pretty_html = self.pretty_html;
         Ok(config)
     }
@@ -100,6 +114,8 @@ pub struct MountConfig {
     pub disable_hydration: bool,
     /// See [`MountConfigBuilder::ssr_fetch_base`]
     pub ssr_fetch_base: Option<String>,
+    /// See [`MountConfigBuilder::ssr_cookie`]
+    pub ssr_cookies: Vec<String>,
     /// See [`MountConfigBuilder::pretty_html`]
     pub pretty_html: bool,
 }
@@ -124,6 +140,7 @@ impl MountConfig {
             wasm_preload,
             disable_hydration,
             ssr_fetch_base: None,
+            ssr_cookies: vec![],
             pretty_html: false,
         };
 

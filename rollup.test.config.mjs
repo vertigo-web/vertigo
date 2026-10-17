@@ -54,6 +54,23 @@ export default [
         ],
     },
     {
+        input: 'crates/vertigo/src/driver_module/src_js/api/command/languages.test.ts',
+        output: [
+            {
+                sourcemap: true,
+                file: 'build/languages.test.js',
+                format: 'cjs',
+            }
+        ],
+        plugins: [
+            typescript({
+                sourceMap: true,
+                inlineSources: true,
+            }),
+            sourcemaps(),
+        ],
+    },
+    {
         input: 'crates/vertigo/src/driver_module/src_js/api/command/animationFrames.test.ts',
         output: [
             {

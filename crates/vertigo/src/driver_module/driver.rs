@@ -221,6 +221,27 @@ impl Driver {
         api_browser_command().timezone_offset()
     }
 
+    /// The languages the user prefers, the most preferred first, as language tags (`"pl-PL"`,
+    /// `"pl"`, `"en"`): `navigator.languages` in the browser, and the `Accept-Language` header of
+    /// the request while the server renders the page. Browsers send the header from the same
+    /// list, so a page that picks its language from this renders the same on both sides.
+    ///
+    /// Empty when there's no telling, f. ex. a request without the header.
+    ///
+    /// ```rust
+    /// use vertigo::get_driver;
+    ///
+    /// let polish = get_driver()
+    ///     .languages()
+    ///     .iter()
+    ///     .any(|tag| tag.split('-').next() == Some("pl"));
+    /// ```
+    #[doc(alias = "navigator.languages")]
+    #[doc(alias = "Accept-Language")]
+    pub fn languages(&self) -> Vec<String> {
+        api_browser_command().languages()
+    }
+
     /// Create new [RequestBuilder] for GETs
     ///
     /// This is a more complex version of [fetch](struct.Driver.html#method.fetch)

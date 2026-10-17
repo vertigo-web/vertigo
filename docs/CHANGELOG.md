@@ -31,6 +31,16 @@
   buttons, where the pointer is on the element and how big the element is, the modifier keys,
   `prevent_default`, `stop_propagation`, and `capture_pointer` to get the pointer's events until
   it's released, even outside the element - f. ex. to drag.
+* `Driver::languages`: the languages the user prefers, the most preferred first -
+  `navigator.languages` in the browser, and the request's `Accept-Language` while the server
+  renders the page, which browsers send from the same list. A page that picks its language from
+  them comes from the server in the language the browser will show it in.
+* `MountConfigBuilder::ssr_cookie`, and `--ssr-cookie` of `vertigo serve` and `vertigo watch`: a
+  cookie the app may read with `cookie_get` and `cookie_get_json` while the server renders the
+  page too, f. ex. the language the user picked. Only for cookies the browser shows the app, not
+  `HttpOnly` ones. The others read as empty during SSR, as before.
+* `ServerState::request_with_headers` with `RequestHeaders`: the request's cookies and
+  `Accept-Language` for SSR; `request_accept_language` reads the latter from an actix request.
 
 ### Changed
 

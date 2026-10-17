@@ -255,6 +255,18 @@ impl CommandForBrowserApi {
         }
     }
 
+    pub fn languages(&self) -> Vec<String> {
+        let response = exec_command(CommandForBrowser::Languages);
+
+        match decode_json::<browser_response::Languages>(response) {
+            Ok(response) => response.value,
+            Err(err) => {
+                log::error!("api.languages -> incorrect result = {err}");
+                Vec::new()
+            }
+        }
+    }
+
     pub fn history_back(&self) {
         exec_command(CommandForBrowser::HistoryBack);
     }
