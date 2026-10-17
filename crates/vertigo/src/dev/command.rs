@@ -96,6 +96,8 @@ pub enum CommandForBrowser {
     },
 
     TimezoneOffset,
+    /// The languages the user prefers; see [`crate::Driver::languages`].
+    Languages,
     HistoryBack,
     GetRandom {
         min: u32,
@@ -203,6 +205,11 @@ pub mod browser_response {
     #[derive(AutoJsJson)]
     pub struct TimezoneOffset {
         pub value: i32,
+    }
+
+    #[derive(AutoJsJson)]
+    pub struct Languages {
+        pub value: Vec<String>,
     }
 
     #[derive(AutoJsJson)]

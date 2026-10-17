@@ -9,7 +9,7 @@ use vertigo::{
 use super::fetch_url::{FetchTarget, SSR_FETCH_HEADER};
 use crate::serve::http_client::http_client;
 
-fn convert_to_jsjson(value: Value) -> JsJson {
+pub(crate) fn convert_to_jsjson(value: Value) -> JsJson {
     match value {
         Value::Bool(true) => JsJson::True,
         Value::Bool(false) => JsJson::False,

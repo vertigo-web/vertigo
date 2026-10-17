@@ -107,6 +107,9 @@ pub mod safe_wrappers {
                     CommandForBrowser::TimezoneOffset => {
                         browser_response::TimezoneOffset { value: 0 }.to_json()
                     }
+                    CommandForBrowser::Languages => {
+                        browser_response::Languages { value: Vec::new() }.to_json()
+                    }
                     CommandForBrowser::GetRandom { min, max: _ } => {
                         browser_response::GetRandom { value: min }.to_json()
                     }

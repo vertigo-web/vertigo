@@ -10,6 +10,7 @@ mod send_request;
 pub use fetch_url::{SSR_FETCH_HEADER, local_origin};
 pub use html_node::HtmlNode;
 pub use html_response::HtmlResponse;
+pub(crate) use send_request::convert_to_jsjson;
 
 mod html_build_response;
 

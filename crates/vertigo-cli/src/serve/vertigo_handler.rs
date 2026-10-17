@@ -5,7 +5,9 @@ use actix_web::{
 };
 use std::time::Instant;
 
-use crate::serve::{MountConfig, html::SSR_FETCH_HEADER, response_state::ResponseState};
+use crate::serve::{
+    MountConfig, RequestHeaders, html::SSR_FETCH_HEADER, response_state::ResponseState,
+};
 
 use super::server_state::ServerState;
 
@@ -69,7 +71,12 @@ pub fn vertigo_handler(mount_config: &MountConfig) -> actix_web::Route {
 
             log::debug!("Incoming request: {uri}");
             let cookie = request_cookie(&req);
-            let mut response_state = state.request_with_cookie(&uri, cookie.as_deref()).await;
+            let accept_language = request_accept_language(&req);
+            let headers = RequestHeaders {
+                cookie: cookie.as_deref(),
+                accept_language: accept_language.as_deref(),
+            };
+            let mut response_state = state.request_with_headers(&uri, headers).await;
 
             let time = now.elapsed().as_millis();
             let log_level = if time > 1000 {
@@ -126,11 +133,24 @@ pub fn request_cookie(req: &HttpRequest) -> Option<String> {
     (!parts.is_empty()).then(|| parts.join("; "))
 }
 
+/// `Accept-Language` header of the request, for [`ServerState::request_with_headers`].
+///
+/// Several header fields make one list, joined with `, ` (RFC 9110, section 5.3).
+pub fn request_accept_language(req: &HttpRequest) -> Option<String> {
+    let parts: Vec<&str> = req
+        .headers()
+        .get_all(header::ACCEPT_LANGUAGE)
+        .filter_map(|value| value.to_str().ok())
+        .collect();
+
+    (!parts.is_empty()).then(|| parts.join(", "))
+}
+
 #[cfg(test)]
 mod tests {
     use actix_web::{http::header, test::TestRequest};
 
-    use super::request_cookie;
+    use super::{request_accept_language, request_cookie};
 
     #[test]
     fn no_cookie_header() {
@@ -147,6 +167,23 @@ mod tests {
         assert_eq!(
             request_cookie(&req).as_deref(),
             Some("session=abc; theme=dark")
+        );
+    }
+
+    #[test]
+    fn split_accept_language_headers_are_one_list() {
+        let req = TestRequest::get()
+            .append_header((header::ACCEPT_LANGUAGE, "pl-PL,pl;q=0.9"))
+            .append_header((header::ACCEPT_LANGUAGE, "en;q=0.5"))
+            .to_http_request();
+
+        assert_eq!(
+            request_accept_language(&req).as_deref(),
+            Some("pl-PL,pl;q=0.9, en;q=0.5")
+        );
+        assert_eq!(
+            request_accept_language(&TestRequest::get().to_http_request()),
+            None
         );
     }
 }

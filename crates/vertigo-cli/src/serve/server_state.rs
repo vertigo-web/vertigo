@@ -22,6 +22,7 @@ use crate::{
 use super::{
     html::HtmlResponse,
     mount_path::MountConfig,
+    request_headers::{RequestHeaders, accept_languages, readable_cookies},
     request_state::RequestState,
     response_state::ResponseState,
     timings::SsrProbe,
@@ -115,7 +116,8 @@ impl ServerState {
     }
 
     pub async fn request(&self, url: &str) -> ResponseState {
-        self.request_inner(url, None, &SsrProbe::new()).await
+        self.request_inner(url, RequestHeaders::default(), &SsrProbe::new())
+            .await
     }
 
     /// [`ServerState::request`] for a browser request that carried cookies.
@@ -126,12 +128,28 @@ impl ServerState {
     /// logged-in user and the page renders as it will look after hydration. Fetches to other
     /// origins never get it.
     ///
-    /// The app itself still can't read cookies during SSR (`get_driver().cookie_get()` returns
-    /// nothing): the header doesn't say which cookies are `HttpOnly`, and those are hidden
-    /// from the browser's `document.cookie`, so exposing them would render differently than
-    /// the browser can.
+    /// The app itself can read during SSR only the cookies named with
+    /// [`MountConfigBuilder::ssr_cookie`](super::MountConfigBuilder::ssr_cookie)
+    /// (`get_driver().cookie_get()` returns nothing for the others): the header doesn't say which
+    /// cookies are `HttpOnly`, and those are hidden from the browser's `document.cookie`, so
+    /// exposing them would render differently than the browser can.
     pub async fn request_with_cookie(&self, url: &str, cookie: Option<&str>) -> ResponseState {
-        self.request_inner(url, cookie, &SsrProbe::new()).await
+        let headers = RequestHeaders {
+            cookie,
+            ..RequestHeaders::default()
+        };
+        self.request_with_headers(url, headers).await
+    }
+
+    /// [`ServerState::request`] for a browser request, with the headers that change the page:
+    /// the cookies, as in [`ServerState::request_with_cookie`], and the languages the browser
+    /// prefers, which `get_driver().languages()` tells the app.
+    pub async fn request_with_headers(
+        &self,
+        url: &str,
+        headers: RequestHeaders<'_>,
+    ) -> ResponseState {
+        self.request_inner(url, headers, &SsrProbe::new()).await
     }
 
     /// [`ServerState::request`], with the per-phase breakdown of how the render was spent.
@@ -140,7 +158,9 @@ impl ServerState {
         let probe = SsrProbe::new();
         let mark = probe.start();
 
-        let response = self.request_inner(url, None, &probe).await;
+        let response = self
+            .request_inner(url, RequestHeaders::default(), &probe)
+            .await;
 
         let timings = probe.finish(mark, response.body.len());
         (response, timings)
@@ -149,7 +169,7 @@ impl ServerState {
     async fn request_inner(
         &self,
         url: &str,
-        cookie: Option<&str>,
+        headers: RequestHeaders<'_>,
         probe: &SsrProbe,
     ) -> ResponseState {
         let (sender, mut receiver) = unbounded_channel::<Message>();
@@ -157,6 +177,18 @@ impl ServerState {
         let request = RequestState {
             url: url.to_string(),
             env: self.mount_config.env.clone(),
+            languages: Arc::new(
+                headers
+                    .accept_language
+                    .map(accept_languages)
+                    .unwrap_or_default(),
+            ),
+            cookies: Arc::new(
+                headers
+                    .cookie
+                    .map(|cookie| readable_cookies(cookie, &self.mount_config.ssr_cookies))
+                    .unwrap_or_default(),
+            ),
         };
 
         let fetch = FetchCache::new();
@@ -241,16 +273,17 @@ impl ServerState {
                     let url = request.url.clone();
                     browser_response::LocationGet { value: url }.to_json()
                 }
-                CommandForBrowser::CookieGet { name: _ } => {
-                    browser_response::CookieGet { value: "".into() }.to_json()
+                CommandForBrowser::CookieGet { name } => browser_response::CookieGet {
+                    value: request.cookie(&name),
                 }
+                .to_json(),
                 CommandForBrowser::CookieSet {
                     name: _,
                     value: _,
                     expires_in: _,
                 } => JsJson::Null,
-                CommandForBrowser::CookieJsonGet { name: _ } => browser_response::CookieJsonGet {
-                    value: JsJson::Null,
+                CommandForBrowser::CookieJsonGet { name } => browser_response::CookieJsonGet {
+                    value: request.cookie_json(&name),
                 }
                 .to_json(),
                 CommandForBrowser::CookieJsonSet {
@@ -281,6 +314,10 @@ impl ServerState {
                 CommandForBrowser::TimezoneOffset => {
                     browser_response::TimezoneOffset { value: 0 }.to_json()
                 }
+                CommandForBrowser::Languages => browser_response::Languages {
+                    value: request.languages.to_vec(),
+                }
+                .to_json(),
                 CommandForBrowser::HistoryBack => JsJson::Null,
                 CommandForBrowser::GetRandom { min, max: _ } => {
                     browser_response::GetRandom { value: min }.to_json()
@@ -351,7 +388,7 @@ impl ServerState {
             fetch,
             probe.clone(),
             url,
-            cookie.map(str::to_string),
+            headers.cookie.map(str::to_string),
         );
 
         loop {
