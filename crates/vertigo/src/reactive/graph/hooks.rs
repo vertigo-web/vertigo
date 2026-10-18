@@ -29,9 +29,14 @@ impl Hooks {
     }
 
     pub(super) fn remove(&self, id: u64) {
-        self.hooks
-            .borrow_mut()
-            .retain(|(hook_id, _)| *hook_id != id);
+        let mut hooks = self.hooks.borrow_mut();
+        let removed = (hooks.iter())
+            .position(|(hook_id, _)| *hook_id == id)
+            .map(|at| hooks.remove(at));
+        // Dropped once the list is let go: the callback may hold the resource of another hook,
+        // which removes that one, here again.
+        drop(hooks);
+        drop(removed);
     }
 
     pub(super) fn fire(&self) {
@@ -54,6 +59,33 @@ impl Hooks {
 mod tests {
     use super::*;
     use std::rc::Rc;
+
+    /// A callback can hold what removes another hook when it goes.
+    #[test]
+    fn remove_drops_a_hook_that_removes_another() {
+        struct Removes(std::rc::Weak<Hooks>, u64);
+        impl Drop for Removes {
+            fn drop(&mut self) {
+                if let Some(hooks) = self.0.upgrade() {
+                    hooks.remove(self.1);
+                }
+            }
+        }
+
+        let hooks = Rc::new(Hooks::new());
+        let other = hooks.insert(|| {});
+        let removes = Removes(Rc::downgrade(&hooks), other);
+        let first = hooks.insert(move || {
+            let _ = &removes;
+        });
+
+        hooks.remove(first);
+
+        assert!(
+            hooks.hooks.borrow().is_empty(),
+            "the other hook is gone too"
+        );
+    }
 
     #[test]
     fn remove_does_not_fire() {

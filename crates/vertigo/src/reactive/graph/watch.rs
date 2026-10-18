@@ -49,14 +49,17 @@ impl Watch {
         connect: Rc<dyn Fn() -> DropResource>,
         watched: bool,
     ) {
-        self.connect.borrow_mut().insert(id, connect);
+        // Dropped once the map is let go, as in `unregister`.
+        let _replaced = self.connect.borrow_mut().insert(id, connect);
         if watched {
             self.schedule(id);
         }
     }
 
     pub(super) fn unregister(&self, id: NodeId) {
-        self.connect.borrow_mut().remove(&id);
+        // Dropped once the map is let go: the closure may hold the last handle of another node,
+        // which then unregisters too, here again.
+        let _connect = self.connect.borrow_mut().remove(&id);
         self.schedule(id);
     }
 
@@ -209,6 +212,64 @@ mod tests {
         watch.unregister(NodeId(1));
         watch.flush(|_| false);
         assert_eq!(live.get(), 0);
+    }
+
+    /// Holds the last handle of a node, which unregisters when it goes.
+    struct Unregisters(std::rc::Weak<Watch>, NodeId);
+
+    impl Drop for Unregisters {
+        fn drop(&mut self) {
+            if let Some(watch) = self.0.upgrade() {
+                watch.unregister(self.1);
+            }
+        }
+    }
+
+    /// A `connect` closure registered again replaces the one before, which may hold the last
+    /// handle of another node.
+    #[test]
+    fn register_again_drops_a_connect_that_unregisters_another() {
+        let watch = Rc::new(Watch::new());
+        let live = Rc::new(Cell::new(0));
+        watch.register(NodeId(2), connect_flag(&live), true);
+        let holds = Unregisters(Rc::downgrade(&watch), NodeId(2));
+        let holding: Rc<dyn Fn() -> DropResource> = Rc::new(move || {
+            let _ = &holds;
+            DropResource::new(|| {})
+        });
+        watch.register(NodeId(1), holding, false);
+        watch.flush(|id| id == NodeId(2));
+        assert_eq!(live.get(), 1);
+
+        watch.register(NodeId(1), Rc::new(|| DropResource::new(|| {})), false);
+        watch.flush(|_| false);
+
+        assert_eq!(live.get(), 0, "the other node is gone");
+    }
+
+    /// What a `connect` closure holds goes when its node unregisters. That may be the last handle
+    /// of another node, which unregisters in turn, while the first is still at it.
+    #[test]
+    fn unregister_drops_a_connect_that_unregisters_another() {
+        let watch = Rc::new(Watch::new());
+        let live = Rc::new(Cell::new(0));
+        watch.register(NodeId(2), connect_flag(&live), true);
+        let holds = Unregisters(Rc::downgrade(&watch), NodeId(2));
+        watch.register(
+            NodeId(1),
+            Rc::new(move || {
+                let _ = &holds;
+                DropResource::new(|| {})
+            }),
+            true,
+        );
+        watch.flush(|_| true);
+        assert_eq!(live.get(), 1);
+
+        watch.unregister(NodeId(1));
+        watch.flush(|_| false);
+
+        assert_eq!(live.get(), 0, "the other node is gone too");
     }
 
     #[test]
