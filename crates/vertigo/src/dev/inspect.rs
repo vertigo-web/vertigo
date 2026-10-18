@@ -211,6 +211,14 @@ impl DomDebugFragment {
                         node.callbacks.remove(&event_name);
                     });
                 }
+                DriverDomCommand::CanvasDraw { id, drawing } => {
+                    // Shown as the size of the last drawing, which is what a test can tell
+                    // apart without playing it back.
+                    map.entry(id).and_modify(|node| {
+                        node.attrs
+                            .insert("v-drawing".into(), format!("{} bytes", drawing.len()));
+                    });
+                }
             }
         }
 

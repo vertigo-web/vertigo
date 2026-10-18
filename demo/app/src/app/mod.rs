@@ -11,6 +11,7 @@ mod input;
 mod js_api_access;
 mod lazy_list;
 mod list;
+mod paint;
 mod render;
 mod route;
 mod state;

@@ -1,7 +1,7 @@
 use std::rc::Rc;
 
 use crate::{
-    AttrGroupValue, Computed, DomText, DropFileItem, DropResource, JsJson,
+    AttrGroupValue, Computed, DomText, Drawing, DropFileItem, DropResource, JsJson,
     dev::JsJsonListDecoder,
     driver_module::{StaticString, api::api_callbacks, get_driver_dom},
     struct_mut::{ValueMut, VecDequeMut, VecMut},
@@ -179,6 +179,7 @@ impl DomElement {
             ("css", AttrGroupValue::Css { css, class_name }) => {
                 self.css_with_class_name(css, class_name)
             }
+            ("draw", AttrGroupValue::Draw(drawing)) => self.draw(drawing),
             ("hook_key_down", AttrGroupValue::HookKeyDown(on_hook_key_down)) => {
                 self.hook_key_down_rc(on_hook_key_down)
             }
@@ -303,6 +304,18 @@ impl DomElement {
                 });
             }
         }
+        self
+    }
+
+    /// The picture of a `<canvas>`, see [`Drawing`]. Each new drawing clears the canvas and is
+    /// drawn in its place, in the same batch of DOM changes as the rest of the transaction, so
+    /// it never arrives before the canvas does. A drawing equal to the last is not sent again.
+    pub fn draw(self, drawing: impl Into<Computed<Drawing>>) -> Self {
+        let id = self.id_dom;
+
+        self.subscribe(drawing.into(), move |drawing| {
+            get_driver_dom().canvas_draw(id, drawing.as_bytes());
+        });
         self
     }
 

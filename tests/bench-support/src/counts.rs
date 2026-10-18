@@ -16,7 +16,7 @@ use vertigo::{
 
 use crate::runner::Workload;
 
-pub const VARIANT_NAMES: [&str; 13] = [
+pub const VARIANT_NAMES: [&str; 14] = [
     "CreateNode",
     "CreateText",
     "UpdateText",
@@ -30,6 +30,7 @@ pub const VARIANT_NAMES: [&str; 13] = [
     "RemoveComment",
     "CallbackAdd",
     "CallbackRemove",
+    "CanvasDraw",
 ];
 
 #[derive(Clone, PartialEq, Eq, Default)]
@@ -74,6 +75,7 @@ fn variant_index(command: &DriverDomCommand) -> usize {
         DriverDomCommand::RemoveComment { .. } => 10,
         DriverDomCommand::CallbackAdd { .. } => 11,
         DriverDomCommand::CallbackRemove { .. } => 12,
+        DriverDomCommand::CanvasDraw { .. } => 13,
     }
 }
 

@@ -8,6 +8,7 @@ import { MapNodes } from "./map_nodes";
 import { ModuleControllerType } from "../../../wasm_init";
 import { Metadata } from "../../metadata";
 import { createElement } from "./tags";
+import { Canvases } from "../canvas";
 
 export type CommandType = {
     CreateNode: {
@@ -75,6 +76,11 @@ export type CommandType = {
         event_name: string,
         callback_id: number,
     }
+} | {
+    CanvasDraw: {
+        id: number,
+        drawing: Uint8Array,
+    }
 };
 
 const applyFailed = (error: unknown, name: string): void => {
@@ -90,6 +96,7 @@ export class DriverDom {
     private appLocation: AppLocation;
     public readonly nodes: MapNodes;
     private readonly callbacks: CallbackManager;
+    private readonly canvases: Canvases = new Canvases();
 
     public constructor(private readonly metadata: Metadata, appLocation: AppLocation, getWasm: () => ModuleControllerType<ExportType>) {
         this.appLocation = appLocation;
@@ -242,6 +249,13 @@ export class DriverDom {
                         catch (error) { applyFailed(error, 'CallbackRemove'); }
                         break;
                     }
+                    case Tag.CanvasDraw: {
+                        const id = cursor.varint();
+                        const drawing = cursor.bytesView();
+                        try { this.canvases.draw(this.nodes.getNode("canvas_draw", id), drawing); }
+                        catch (error) { applyFailed(error, 'CanvasDraw'); }
+                        break;
+                    }
                     default:
                         throw new Error(`bulk_update: unknown command tag ${tag}`);
                 }
@@ -272,6 +286,9 @@ export class DriverDom {
 
         // Make sure that the client-side generated styles are always the last element of the head
         this.nodes.addStyles();
+
+        // With the batch in place, styles included: see `Canvases.paintDrawn`.
+        this.canvases.paintDrawn();
 
         // A link followed a moment ago may point at an element that has only now arrived
         scrollToPendingFragment();
@@ -333,6 +350,7 @@ export class DriverDom {
         }
 
         const node = this.nodes.delete("remove_node", id);
+        this.canvases.forget(node);
         node.remove();
     }
 

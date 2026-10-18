@@ -1,3 +1,4 @@
+mod canvas;
 mod children;
 mod component;
 mod component_dynamic;

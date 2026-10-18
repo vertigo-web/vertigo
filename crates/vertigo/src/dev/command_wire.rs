@@ -62,6 +62,7 @@ mod tag {
     pub const REMOVE_COMMENT: u8 = 11;
     pub const CALLBACK_ADD: u8 = 12;
     pub const CALLBACK_REMOVE: u8 = 13;
+    pub const CANVAS_DRAW: u8 = 14;
 }
 
 /// `InsertBefore` with no reference node. Safe as a sentinel because ids 1, 2 and 3 are
@@ -211,6 +212,12 @@ fn write_command(out: &mut Vec<u8>, command: &DriverDomCommand, index: &HashMap<
             write_str(out, event_name);
             write_varint(out, callback_id.as_u64());
         }
+        DriverDomCommand::CanvasDraw { id, drawing } => {
+            out.push(tag::CANVAS_DRAW);
+            write_id(out, *id);
+            write_varint(out, drawing.len() as u64);
+            out.extend_from_slice(drawing);
+        }
     }
 }
 
@@ -329,6 +336,10 @@ fn read_command(
             event_name: cursor.string()?,
             callback_id: CallbackId::from_u64(cursor.varint()?),
         },
+        tag::CANVAS_DRAW => DriverDomCommand::CanvasDraw {
+            id: cursor.id()?,
+            drawing: cursor.bytes()?.to_vec(),
+        },
         other => return Err(format!("dom command: unknown tag {other}")),
     };
 
@@ -379,19 +390,25 @@ impl<'a> Cursor<'a> {
     }
 
     fn string(&mut self) -> Result<String, String> {
+        let bytes = self.bytes()?;
+
+        std::str::from_utf8(bytes)
+            .map(str::to_string)
+            .map_err(|err| format!("dom command: string is not utf-8: {err}"))
+    }
+
+    /// Bytes with their length in front, as strings and drawings are written.
+    fn bytes(&mut self) -> Result<&'a [u8], String> {
         let length = self.varint()? as usize;
         let end = self
             .at
             .checked_add(length)
             .filter(|end| *end <= self.bytes.len())
-            .ok_or_else(|| "dom command: string runs past the end of the buffer".to_string())?;
+            .ok_or_else(|| "dom command: bytes run past the end of the buffer".to_string())?;
 
-        let text = std::str::from_utf8(&self.bytes[self.at..end])
-            .map_err(|err| format!("dom command: string is not utf-8: {err}"))?
-            .to_string();
-
+        let bytes = &self.bytes[self.at..end];
         self.at = end;
-        Ok(text)
+        Ok(bytes)
     }
 
     fn name(&mut self, names: &[StaticString]) -> Result<StaticString, String> {
@@ -486,6 +503,10 @@ mod tests {
                 event_name: "click".to_string(),
                 callback_id: CallbackId::from_u64(300),
             },
+            DriverDomCommand::CanvasDraw {
+                id: id(4),
+                drawing: vec![1, 2, 255],
+            },
         ]
     }
 
@@ -502,7 +523,7 @@ mod tests {
         159, 166, 128, 3, 5, 0, 8, 1, 4, 240, 162, 4, 8, 1, 4, 0, 9, 1, 2, 46, 97, 9, 99, 111, 108,
         111, 114, 58, 114, 101, 100, 9, 0, 14, 64, 109, 101, 100, 105, 97, 32, 112, 114, 105, 110,
         116, 123, 125, 10, 6, 3, 114, 111, 119, 11, 6, 6, 4, 7, 5, 12, 4, 5, 99, 108, 105, 99, 107,
-        77, 13, 4, 5, 99, 108, 105, 99, 107, 172, 2,
+        77, 13, 4, 5, 99, 108, 105, 99, 107, 172, 2, 14, 4, 3, 1, 2, 255,
     ];
 
     #[test]
@@ -572,6 +593,14 @@ mod tests {
                 id: id(4),
                 event_name: "click".to_string(),
                 callback_id: CallbackId::from_u64(77),
+            },
+            DriverDomCommand::CanvasDraw {
+                id: id(4),
+                drawing: (0..=255).collect(),
+            },
+            DriverDomCommand::CanvasDraw {
+                id: id(4),
+                drawing: Vec::new(),
             },
         ];
 

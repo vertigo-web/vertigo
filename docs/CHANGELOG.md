@@ -41,6 +41,14 @@
   `HttpOnly` ones. The others read as empty during SSR, as before.
 * `ServerState::request_with_headers` with `RequestHeaders`: the request's cookies and
   `Accept-Language` for SSR; `request_accept_language` reads the latter from an actix request.
+* `draw` on a `<canvas>`, with a `Drawing` (or a `Value` or `Computed` of one): operations of the
+  2D context recorded in Rust - fill and stroke styles, opacity, line width, cap and join, rectangles,
+  circles and polylines - in the units of a `ViewBox` fitted like SVG's `xMidYMid meet`, or in CSS
+  pixels. Widths and radii can also be given in CSS pixels, however big the drawing is shown. A new
+  drawing clears the canvas and goes in the same batch of DOM changes as the rest of the
+  transaction; one equal to the last is not sent again. The canvas takes its size from CSS, keeps
+  its bitmap at that size times `devicePixelRatio`, and draws the last drawing again when the size
+  changes. A canvas that CSS gives no size keeps the size it has, drawn a pixel to a CSS pixel.
 
 ### Changed
 

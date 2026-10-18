@@ -85,7 +85,10 @@ pub async fn hydration_is_complete(ctx: &Ctx) -> Result<()> {
     // server fetched renders "Loading…" where the server rendered the rows. That text finds a
     // node to match, so every vnode still matches - it's the rows that are thrown away, which
     // only `discarded` shows.
-    for route in ["/", "/svg", "/lazy-list"] {
+    //
+    // And `/paint`: the server sends its canvases empty, and their drawings come with the batch
+    // that hydrates them.
+    for route in ["/", "/svg", "/lazy-list", "/paint"] {
         // Waits for the report itself. Waiting for a text instead, "Game Of Life" say, races
         // the boot: the menu is in the server-rendered HTML already, so the text is there
         // before the wasm is, and the report sometimes is not yet.

@@ -33,6 +33,7 @@
 #![cfg_attr(test, allow(clippy::panic_in_result_fn))]
 
 mod auto_map;
+mod canvas;
 mod css;
 pub mod dev;
 mod dom;
@@ -79,6 +80,7 @@ pub mod guides {
 // Exports from vertigo
 
 pub use auto_map::AutoMap;
+pub use canvas::{Drawing, LineCap, LineJoin, ViewBox};
 pub use css::{
     css_structs::{Css, CssGroup},
     tailwind_class::TwClass,

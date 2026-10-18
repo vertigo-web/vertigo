@@ -187,6 +187,13 @@ impl DriverDom {
         });
     }
 
+    pub fn canvas_draw(&self, id: DomId, drawing: &[u8]) {
+        self.commands.add_command(DriverDomCommand::CanvasDraw {
+            id,
+            drawing: drawing.to_vec(),
+        });
+    }
+
     pub fn flush_dom_changes(&self) {
         self.commands.flush_dom_changes();
     }
