@@ -73,6 +73,10 @@
 * The driver took its `<style>` out of `<head>` and put it back after every batch of DOM changes,
   to keep it last, even when it was last already, and the browser restyled elements of the page
   each time. Now it only moves the styles when something came after them.
+* A `Computed` whose `when_connect` closure held the last handle of another `Value` or `Computed`
+  panicked when it went ("RefCell already borrowed"): dropping the closure dropped the other node,
+  which unregistered while the first still held the graph's map of connect closures. The same
+  went for an `on_after_transaction` callback that held the `DropResource` of another one.
 
 ## 0.13.4 - 2026-10-14
 

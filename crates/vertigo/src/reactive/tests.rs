@@ -330,6 +330,25 @@ fn when_connect_disconnects_while_computed_lives() {
     logs.assert_eq(&[]);
 }
 
+/// The closure of `when_connect` can be what keeps another node: it goes with the node it
+/// connects, and the other node with it.
+#[test]
+fn when_connect_holding_the_last_handle_of_another_node_goes_with_it() {
+    let g = Graph::new();
+    let logs = g.logger().listen();
+    let held = g.computed(|_| 1);
+    let comp = g.value(2).to_computed().when_connect(move || {
+        let _ = &held;
+        DropResource::new(|| {})
+    });
+    let sub = comp.clone().subscribe(|_| {});
+
+    drop(sub);
+    drop(comp);
+
+    logs.assert_eq(&[]);
+}
+
 #[test]
 fn when_connect_runs_after_on_after_transaction() {
     let g = Graph::new();
