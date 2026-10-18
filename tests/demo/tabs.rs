@@ -43,6 +43,7 @@ pub const TABS: &[&str] = &[
     "Lazy List",
     "WS Collection",
     "Svg",
+    "Paint",
 ];
 
 /// Click a menu entry and wait for the tab to show something of its own.
@@ -1245,17 +1246,17 @@ pub async fn arrow_keys(ctx: &Ctx) -> Result<()> {
     println!("  -> arrow keys");
 
     // Start at the far end of the menu, so the first press has to wrap.
-    click_by_text(ctx, "a", "Svg").await?;
-    ctx.wait_for_path("/svg").await?;
+    click_by_text(ctx, "a", "Paint").await?;
+    ctx.wait_for_path("/paint").await?;
 
     press_key(ctx, Key::Right).await?;
     ctx.wait_for_path("/").await?;
 
     press_key(ctx, Key::Left).await?;
-    ctx.wait_for_path("/svg").await?;
+    ctx.wait_for_path("/paint").await?;
 
     press_key(ctx, Key::Left).await?;
-    ctx.wait_for_path("/ws-collection").await?;
+    ctx.wait_for_path("/svg").await?;
 
     // ...and a field being typed in keeps its arrows. Without the guard the caret would stay
     // put and the tab would change underneath it.
@@ -1610,4 +1611,95 @@ pub async fn svg(ctx: &Ctx) -> Result<()> {
 
     check_eq(count(ctx, "svg circle").await, 1, "the svg circle")?;
     check_eq(count(ctx, "svg path").await, 2, "both svg paths")
+}
+
+/// Canvases drawn from a `Computed<Drawing>`, and a brush on pointer events.
+///
+/// What a canvas shows is read back from its bitmap. The strokes done are on the lower of the
+/// two canvases, so a stroke the mouse drew has to leave its color there - in the middle of the
+/// paper, which the strokes below cross.
+pub async fn paint(ctx: &Ctx) -> Result<()> {
+    open(ctx, "Paint", "Draw with a mouse").await?;
+
+    wait_for_paint(ctx, BLANK, "a blank paper").await?;
+
+    ctx.find(By::Css("button[title='Red']"))
+        .await
+        .context("the red paint")?
+        .click()
+        .await
+        .context("picking red failed")?;
+    ctx.find(By::Css("button[title='Brush 14']"))
+        .await
+        .context("a brush")?
+        .click()
+        .await
+        .context("picking a brush failed")?;
+
+    stroke_across_the_middle(ctx).await?;
+    wait_for_paint(ctx, RED, "the stroke, in red").await?;
+
+    click_by_text(ctx, "button", "Undo").await?;
+    wait_for_paint(ctx, BLANK, "Undo to take the stroke off").await?;
+
+    // The picture belongs to the visit, not to the tab: it is drawn again on the canvases the
+    // tab makes when it comes back.
+    stroke_across_the_middle(ctx).await?;
+    wait_for_paint(ctx, RED, "the stroke drawn again").await?;
+    click_by_text(ctx, "a", "Svg").await?;
+    ctx.wait_for_path("/svg").await?;
+    click_by_text(ctx, "a", "Paint").await?;
+    ctx.wait_for_path("/paint").await?;
+    wait_for_paint(ctx, RED, "the picture to be there after another tab").await?;
+
+    click_by_text(ctx, "button", "Clear").await?;
+    wait_for_paint(ctx, BLANK, "Clear to take everything off").await
+}
+
+/// `#e53935`, the red of the palette, and a pixel nothing was drawn on.
+const RED: [u64; 4] = [229, 57, 53, 255];
+const BLANK: [u64; 4] = [0, 0, 0, 0];
+
+/// A drag of the mouse across the middle of the paper, from left to right.
+async fn stroke_across_the_middle(ctx: &Ctx) -> Result<()> {
+    let paper = ctx
+        .find(By::XPath("//div[canvas]"))
+        .await
+        .context("the paper")?;
+
+    // From 40 px left of the middle to 40 px right of it.
+    ctx.driver
+        .action_chain()
+        .move_to_element_with_offset(&paper, -40, 0)
+        .click_and_hold()
+        .move_by_offset(40, 0)
+        .move_by_offset(40, 0)
+        .release()
+        .perform()
+        .await
+        .context("drawing a stroke failed")
+}
+
+/// Waits for the pixel in the middle of the lower canvas to be `expected`, as RGBA.
+async fn wait_for_paint(ctx: &Ctx, expected: [u64; 4], what: &str) -> Result<()> {
+    const SCRIPT: &str = r#"
+        const canvas = document.querySelector('canvas');
+        const data = canvas.getContext('2d').getImageData(
+            Math.floor(canvas.width / 2), Math.floor(canvas.height / 2), 1, 1,
+        ).data;
+        return Array.from(data);
+    "#;
+
+    ctx.wait_for(what, async || {
+        let pixel: Vec<u64> = ctx
+            .js(SCRIPT)
+            .await?
+            .as_array()
+            .context("the pixel is not an array")?
+            .iter()
+            .filter_map(Value::as_u64)
+            .collect();
+        Ok((pixel == expected).then_some(()))
+    })
+    .await
 }

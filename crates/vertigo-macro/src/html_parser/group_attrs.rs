@@ -50,6 +50,7 @@ fn attr_to_group_variant(key: impl AsRef<str>, value: TokenStream2) -> TokenStre
             let debug_class_name = generate_debug_class_name(&value);
             quote! { vertigo::AttrGroupValue::css(#value, #debug_class_name) }
         }
+        "draw" => quote! { vertigo::AttrGroupValue::draw(#value) },
         "hook_key_down" => quote! { vertigo::AttrGroupValue::hook_key_down(#value) },
         "on_blur" => quote! { vertigo::AttrGroupValue::on_blur(#value) },
         "on_change" => quote! { vertigo::AttrGroupValue::on_change(#value) },

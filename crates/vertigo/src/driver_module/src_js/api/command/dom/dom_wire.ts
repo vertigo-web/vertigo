@@ -28,6 +28,7 @@ export const Tag = {
     RemoveComment: 11,
     CallbackAdd: 12,
     CallbackRemove: 13,
+    CanvasDraw: 14,
 } as const;
 
 
@@ -74,18 +75,22 @@ export class CommandCursor {
     }
 
     public string(): string {
+        return decoder.decode(this.bytesView());
+    }
+
+    // Bytes with their length in front, as a view into the batch: good only while the batch is.
+    public bytesView(): Uint8Array {
         const length = this.varint();
         const end = this.at + length;
 
         if (end > this.bytes.length) {
-            throw new Error("dom command: string runs past the end of the buffer");
+            throw new Error("dom command: bytes run past the end of the buffer");
         }
 
-        // `subarray`, not `slice`: the bytes are a view straight into wasm memory and the
-        // decoder copies out of them anyway.
-        const text = decoder.decode(this.bytes.subarray(this.at, end));
+        // `subarray`, not `slice`: whoever keeps them copies them.
+        const bytes = this.bytes.subarray(this.at, end);
         this.at = end;
-        return text;
+        return bytes;
     }
 
     public name(names: Array<string>): string {
@@ -118,13 +123,14 @@ export const readNames = (cursor: CommandCursor): Array<string> => {
 };
 
 // How one field is read off the stream.
-type FieldReader = (cursor: CommandCursor, names: Array<string>) => number | string | null;
+type FieldReader = (cursor: CommandCursor, names: Array<string>) => number | string | Uint8Array | null;
 
 const readVarint: FieldReader = (cursor) => cursor.varint();
 const readString: FieldReader = (cursor) => cursor.string();
 const readName: FieldReader = (cursor, names) => cursor.name(names);
 const readOptionalId: FieldReader = (cursor) => cursor.optionalId();
 const readSelector: FieldReader = (cursor) => cursor.byte() === 0 ? null : cursor.string();
+const readBytes: FieldReader = (cursor) => cursor.bytesView().slice();
 
 type Spec = readonly [string, ReadonlyArray<readonly [string, FieldReader]>];
 
@@ -150,6 +156,7 @@ const SPEC: Record<number, Spec> = {
     [Tag.RemoveComment]: ['RemoveComment', [['id', readVarint]]],
     [Tag.CallbackAdd]: ['CallbackAdd', [['id', readVarint], ['event_name', readString], ['callback_id', readVarint]]],
     [Tag.CallbackRemove]: ['CallbackRemove', [['id', readVarint], ['event_name', readString], ['callback_id', readVarint]]],
+    [Tag.CanvasDraw]: ['CanvasDraw', [['id', readVarint], ['drawing', readBytes]]],
 };
 
 // Object form of the stream, for hydration - which runs on the first flush only and wants to

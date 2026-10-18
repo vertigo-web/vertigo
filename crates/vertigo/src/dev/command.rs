@@ -322,6 +322,11 @@ pub enum DriverDomCommand {
         event_name: String,
         callback_id: CallbackId,
     },
+    /// A new picture for a `<canvas>`: the bytes of a [`Drawing`](crate::Drawing).
+    CanvasDraw {
+        id: DomId,
+        drawing: Vec<u8>,
+    },
 }
 
 impl DriverDomCommand {

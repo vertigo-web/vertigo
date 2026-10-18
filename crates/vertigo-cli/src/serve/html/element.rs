@@ -138,6 +138,10 @@ impl AllElements {
                 DriverDomCommand::CallbackRemove { .. } => {
                     // ignored on server-side
                 }
+                DriverDomCommand::CanvasDraw { .. } => {
+                    // ignored on server-side: a canvas comes from the server empty and the
+                    // browser draws it
+                }
                 DriverDomCommand::CreateNode { id, name } => {
                     self.create_node(id, name.to_string());
                 }
@@ -245,6 +249,37 @@ mod tests {
     use vertigo::{DomId, dev::command::DriverDomCommand};
 
     use super::AllElements;
+
+    /// The browser draws a canvas, so the server sends it empty whatever it was given to draw.
+    #[test]
+    fn a_canvas_comes_empty() {
+        let mut all = AllElements::new();
+        all.feed(vec![
+            DriverDomCommand::CreateNode {
+                id: DomId::from_u64(1),
+                name: "div".into(),
+            },
+            DriverDomCommand::CreateNode {
+                id: DomId::from_u64(2),
+                name: "canvas".into(),
+            },
+            DriverDomCommand::CanvasDraw {
+                id: DomId::from_u64(2),
+                drawing: vec![0, 8, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 128, 63],
+            },
+            DriverDomCommand::InsertBefore {
+                parent: DomId::from_u64(1),
+                child: DomId::from_u64(2),
+                ref_id: None,
+            },
+        ]);
+
+        let (document, _) = all.get_response_document(true);
+        assert_eq!(
+            document.convert_to_string(false),
+            r#"<!DOCTYPE html><div data-id="1"><canvas data-id="2"></canvas></div>"#
+        );
+    }
 
     #[test]
     fn test_html() {

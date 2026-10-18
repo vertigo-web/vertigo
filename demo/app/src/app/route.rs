@@ -21,6 +21,7 @@ pub enum Route {
     LazyList,
     WsCollection,
     Svg,
+    Paint,
     NotFound,
 }
 
@@ -47,6 +48,7 @@ impl Route {
         Self::LazyList,
         Self::WsCollection,
         Self::Svg,
+        Self::Paint,
     ];
 
     /// The tab `offset` places along from this one, wrapping at both ends.
@@ -109,6 +111,9 @@ impl Route {
                 "WsCollection - a collection the server pushes, re-queried as you filter it."
             }
             Self::Svg => "Namespaced elements, and the workaround for tags that clash with HTML.",
+            Self::Paint => {
+                "Canvases drawn from a Computed<Drawing>, with pointer events for the brush."
+            }
             Self::NotFound => "Nothing - it is where an unknown address lands.",
         }
     }
@@ -136,6 +141,7 @@ impl Route {
             Self::LazyList => "/lazy-list",
             Self::WsCollection => "/ws-collection",
             Self::Svg => "/svg",
+            Self::Paint => "/paint",
             Self::NotFound => "/not-found",
         }
     }
@@ -158,6 +164,7 @@ impl Route {
             "/lazy-list" => Self::LazyList,
             "/ws-collection" => Self::WsCollection,
             "/svg" => Self::Svg,
+            "/paint" => Self::Paint,
             _ => Self::NotFound,
         }
     }
@@ -180,6 +187,7 @@ impl Route {
             Self::LazyList => "Lazy List",
             Self::WsCollection => "WS Collection",
             Self::Svg => "Svg",
+            Self::Paint => "Paint",
             Self::NotFound => "Not Found",
         }
     }
@@ -212,15 +220,15 @@ mod tests {
 
     #[test]
     fn stepping_wraps_at_both_ends() {
-        assert_eq!(Route::Svg.step(1), Route::Home);
-        assert_eq!(Route::Home.step(-1), Route::Svg);
+        assert_eq!(Route::Paint.step(1), Route::Home);
+        assert_eq!(Route::Home.step(-1), Route::Paint);
     }
 
     /// `NotFound` has no place in the menu, so stepping enters at whichever end you came from.
     #[test]
     fn stepping_from_outside_the_menu_enters_it() {
         assert_eq!(Route::NotFound.step(1), Route::Home);
-        assert_eq!(Route::NotFound.step(-1), Route::Svg);
+        assert_eq!(Route::NotFound.step(-1), Route::Paint);
     }
 
     #[test]

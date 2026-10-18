@@ -1,8 +1,8 @@
 use std::{collections::BTreeMap, rc::Rc};
 
 use crate::{
-    Computed, Css, DomComment, DomDisplay, DomElement, DomText, DropFileEvent, KeyDownEvent,
-    PointerEvent, Value, WheelEvent,
+    Computed, Css, DomComment, DomDisplay, DomElement, DomText, Drawing, DropFileEvent,
+    KeyDownEvent, PointerEvent, Value, WheelEvent,
     dom::{
         attr_value::AttrValue,
         callback::{Callback, Callback1},
@@ -47,6 +47,7 @@ pub enum AttrGroupValue {
         css: Css,
         class_name: Option<String>,
     },
+    Draw(Computed<Drawing>),
     HookKeyDown(Rc<Callback1<KeyDownEvent, bool>>),
     OnBlur(Rc<Callback<()>>),
     OnChange(Rc<Callback1<String, ()>>),
@@ -89,6 +90,10 @@ impl AttrGroupValue {
             css: css.into(),
             class_name,
         }
+    }
+
+    pub fn draw(drawing: impl Into<Computed<Drawing>>) -> Self {
+        Self::Draw(drawing.into())
     }
 
     group_value_constructor!(hook_key_down, Callback1<KeyDownEvent, bool>, HookKeyDown);
