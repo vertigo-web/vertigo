@@ -865,6 +865,51 @@ function testStylesStayAtTheEndOfHead() {
     }
 }
 
+// 21. The marker of a `render_value` that renders <body> goes into <html>
+function testBodyMarkerIsPlacedInHtml() {
+    console.log("\n--- Test hydration 21: Marker of a render_value rendering <body> ---");
+    clearBody();
+
+    const html = documentMock.documentElement;
+    const whitespace = new MockText("\n");
+    html.appendChild(documentMock.head);
+    html.appendChild(whitespace);
+    html.appendChild(documentMock.body);
+    documentMock.body.appendChild(new MockElement('DIV'));
+
+    // `<html><head/>{ value.render_value(|_| dom! { <body>...</body> }) }</html>`: the marker is
+    // appended to <html>, then <body> goes in front of it.
+    const marker = 210;
+    const commands: CommandType[] = [
+        { InsertBefore: { parent: 1, child: 2, ref_id: null } },
+        { CreateComment: { id: marker, value: "value" } },
+        { InsertBefore: { parent: 1, child: marker, ref_id: null } },
+        { InsertBefore: { parent: 1, child: 3, ref_id: marker } },
+        { CreateNode: { id: 211, name: 'div' } },
+        { InsertBefore: { parent: 3, child: 211, ref_id: null } },
+    ];
+
+    const mapNodes = new MapNodes();
+    const { place } = hydrate(commands, mapNodes, mockedApiLocation());
+
+    // The marker, as the command replay creates it.
+    const markerNode = new MockComment("value");
+    mapNodes.set(marker, markerNode as any);
+
+    MockNode.moved = [];
+    place();
+
+    // Without it in the document, the next <body> the value renders has nothing to go in front of.
+    assert(html.childNodes[0] === documentMock.head && html.childNodes[1] === whitespace
+        && html.childNodes[2] === documentMock.body && html.childNodes[3] === markerNode,
+        "the marker is right after <body>");
+    assert(MockNode.moved.length === 0, "neither <head> nor <body> was moved");
+
+    for (const node of [...html.childNodes]) {
+        node.remove();
+    }
+}
+
 // Run all tests
 testExtraNodes();
 testTextMismatch();
@@ -886,3 +931,4 @@ testMarkersArePlacedWithoutMoves();
 testNewElementIsPlacedWithoutMoves();
 testNodesOutsideTheBatchStay();
 testStylesStayAtTheEndOfHead();
+testBodyMarkerIsPlacedInHtml();

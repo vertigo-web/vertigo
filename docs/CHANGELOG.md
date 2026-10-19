@@ -77,6 +77,10 @@
   panicked when it went ("RefCell already borrowed"): dropping the closure dropped the other node,
   which unregistered while the first still held the graph's map of connect closures. The same
   went for an `on_after_transaction` callback that held the `DropResource` of another one.
+* A `render_value` (or `render_list`) right under `<html>`, f. ex. one that swaps `<body>` once
+  the user logs in, broke the page after hydration since 0.13.4: its marker never went into
+  `<html>`, so the next `<body>` it rendered had nothing to go in front of ("InsertBefore"
+  `NotFoundError`).
 
 ## 0.13.4 - 2026-10-14
 
