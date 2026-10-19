@@ -323,20 +323,26 @@ class HydrationEngine {
         // a subtree the browser builds is put together before it goes into the document, once.
         for (const vNode of [...this.virtualNodes.values()].reverse()) {
             const parent = this.nodes.getAnyOption(vNode.id);
-
-            // Except for `<html>`: hydration doesn't go there, so it still has the server's
-            // whitespace between `<head>` and `<body>`, and `<body>` would be moved past it.
-            if (vNode.id === 1 || !parent) {
+            if (!parent) {
                 continue;
             }
+
+            // Hydration doesn't go into `<html>`, so it still has the server's whitespace between
+            // `<head>` and `<body>`, and `<body>` would be moved past it. There a child that is in
+            // place already stays, and only the ones that aren't, like the marker of a
+            // `render_value` that renders `<body>`, go in after the child before them.
+            const keepInPlace = vNode.id === 1;
 
             let next = parent.firstChild;
             for (const childId of vNode.children) {
                 // A node that is missing failed to be created, which the batch reported already.
                 const child = this.nodes.getAnyOption(childId);
-                if (child === next) {
+                if (!child) {
+                    continue;
+                }
+                if (child === next || (keepInPlace && child.parentNode === parent)) {
                     next = child.nextSibling;
-                } else if (child) {
+                } else {
                     parent.insertBefore(child, next);
                 }
             }
