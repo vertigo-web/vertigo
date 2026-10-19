@@ -349,6 +349,30 @@ fn when_connect_holding_the_last_handle_of_another_node_goes_with_it() {
     logs.assert_eq(&[]);
 }
 
+/// An `on_after_transaction` callback can hold the `DropResource` of another one: when it goes,
+/// the other goes with it, and neither fires any more.
+#[test]
+fn on_after_transaction_holding_the_resource_of_another_goes_with_it() {
+    let g = Graph::new();
+    let fired = Rc::new(Cell::new(0));
+    let other = g.on_after_transaction({
+        let fired = fired.clone();
+        move || fired.set(fired.get() + 1)
+    });
+    let first = g.on_after_transaction({
+        let fired = fired.clone();
+        move || {
+            let _ = &other;
+            fired.set(fired.get() + 1);
+        }
+    });
+
+    drop(first);
+    g.transaction(|_| {});
+
+    assert_eq!(fired.get(), 0, "both are gone");
+}
+
 #[test]
 fn when_connect_runs_after_on_after_transaction() {
     let g = Graph::new();

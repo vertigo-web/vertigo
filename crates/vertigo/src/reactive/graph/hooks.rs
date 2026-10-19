@@ -1,7 +1,6 @@
-use std::{
-    cell::{Cell, RefCell},
-    rc::Rc,
-};
+use std::{cell::Cell, rc::Rc};
+
+use crate::struct_mut::ValueMut;
 
 /// One registered callback, paired with the id `remove` takes back.
 type Hook = (u64, Rc<dyn Fn()>);
@@ -10,45 +9,37 @@ type Hook = (u64, Rc<dyn Fn()>);
 /// before `when_connect` / disconnect).
 pub(super) struct Hooks {
     next_id: Cell<u64>,
-    hooks: RefCell<Vec<Hook>>,
+    hooks: ValueMut<Vec<Hook>>,
 }
 
 impl Hooks {
     pub(super) fn new() -> Self {
         Self {
             next_id: Cell::new(1),
-            hooks: RefCell::new(Vec::new()),
+            hooks: ValueMut::new(Vec::new()),
         }
     }
 
     pub(super) fn insert(&self, callback: impl Fn() + 'static) -> u64 {
         let id = self.next_id.get();
         self.next_id.set(id + 1);
-        self.hooks.borrow_mut().push((id, Rc::new(callback)));
+        self.hooks
+            .change(|hooks| hooks.push((id, Rc::new(callback))));
         id
     }
 
     pub(super) fn remove(&self, id: u64) {
-        let mut hooks = self.hooks.borrow_mut();
-        let removed = (hooks.iter())
-            .position(|(hook_id, _)| *hook_id == id)
-            .map(|at| hooks.remove(at));
-        // Dropped once the list is let go: the callback may hold the resource of another hook,
-        // which removes that one, here again.
-        drop(hooks);
-        drop(removed);
+        self.hooks
+            .change(|hooks| hooks.retain(|(hook_id, _)| *hook_id != id));
     }
 
     pub(super) fn fire(&self) {
-        if self.hooks.borrow().is_empty() {
+        if self.hooks.map(|hooks| hooks.is_empty()) {
             return;
         }
         let hooks: Vec<_> = self
             .hooks
-            .borrow()
-            .iter()
-            .map(|(_, hook)| hook.clone())
-            .collect();
+            .map(|hooks| hooks.iter().map(|(_, hook)| hook.clone()).collect());
         for hook in hooks {
             hook();
         }
@@ -82,7 +73,7 @@ mod tests {
         hooks.remove(first);
 
         assert!(
-            hooks.hooks.borrow().is_empty(),
+            hooks.hooks.map(|hooks| hooks.is_empty()),
             "the other hook is gone too"
         );
     }
