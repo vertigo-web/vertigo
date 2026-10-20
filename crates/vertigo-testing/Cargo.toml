@@ -17,7 +17,7 @@ anyhow = "1.0"
 libtest-mimic = "0.8"
 reqwest = { version = "0.13", default-features = false, features = ["json"] }
 serde_json = "1.0"
-thirtyfour = "0.37.8"
+thirtyfour = "0.38"
 tokio = { version = "1", features = ["rt-multi-thread", "process", "time", "sync"] }
 vertigo-cli = { workspace = true }
 
