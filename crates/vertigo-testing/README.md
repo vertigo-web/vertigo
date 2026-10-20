@@ -23,7 +23,7 @@ Each test binary is one suite:
 
 ```toml
 [dev-dependencies]
-vertigo-testing = "0.13"
+vertigo-testing = "0.14"
 
 [[test]]
 name = "app"

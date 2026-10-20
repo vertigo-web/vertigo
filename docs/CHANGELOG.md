@@ -1,86 +1,64 @@
 <!-- markdownlint-configure-file { "no-duplicate-heading": { "siblings_only": true } } -->
 
 <!-- markdownlint-disable-next-line first-line-h1 -->
-## Unreleased
+## 0.14.0 - 2026-10-21
+
+Websockets report why they closed, carry binary frames and reconnect after a growing wait.
+Elements get pointer and wheel events and `<canvas>` drawing, and a page rendered on the server
+can use the user's languages and the cookies the app names.
+
+The [0.14.0 release notes][notes-0140] carry the migration steps, the reasoning behind the
+breaking changes and an example of each new feature.
+
+### Breaking
+
+* Every event from the browser runs in one transaction, so what it writes reaches the DOM in one
+  batch. Until the handler returns, a watched `Computed` of what it wrote and the DOM keep their
+  state from before the event.
+* `WebsocketMessage::Close` carries a `WebsocketClose` with the close code and reason, and comes
+  also after a failed attempt to connect.
+* `WebsocketMessage` has a new variant, `Binary`.
 
 ### Added
 
-* Default component props: `#[default = <constant>]` on a `#[component]` param, and `{..}` in a
-  component's tag to leave out the props that have one. Needs a compiler with default field values
-  (rust-lang/rust#132162) - for now nightly, with `#![feature(default_field_values)]` in the crate
-  using `{..}`. Other compilers ignore the defaults, so every prop has to be given there.
-* `WebsocketClose::stop_reconnecting` lets the handler give up on a websocket, f. ex. when the
-  server closed it with a code of the app's own.
+* Default component props: `#[default = <constant>]` on a `#[component]` param, and `{..}` in its
+  tag (nightly).
+* `WebsocketClose::stop_reconnecting`, to give up on a websocket.
 * `Driver::websocket_with_options` with `WebsocketOptions`: the timeout to connect and the waits
   between attempts.
-* Binary websocket frames: they come as `WebsocketMessage::Binary(Vec<u8>)`, and
-  `WebsocketConnection::send_binary` sends one. Before, the driver dropped them with an error.
-* `--proxy` of `vertigo serve` and `vertigo watch` carries websockets too: a websocket handshake
-  under a proxied path goes on to the target, and then the frames go through both ways as they
-  are. Before, the handshake hung, so an app in `watch` had to connect to its backend directly.
-* `Driver::on_animation_frame`: a callback before every frame the browser draws
-  (`requestAnimationFrame`), with the time of the frame, until the returned `DropResource` drops.
-  Each frame comes as one call into wasm for all such callbacks, so they run in one transaction
-  and what they change reaches the DOM in one batch.
-* `on_wheel` on elements, with a `WheelEvent`: how far the wheel or the touchpad moved and in what
-  unit (`WheelDeltaMode`), where the pointer is on the element and how big the element is, the
-  modifier keys, and `prevent_default` and `stop_propagation` - f. ex. to zoom instead of
-  scrolling the page.
+* Binary websocket frames: `WebsocketMessage::Binary` and `WebsocketConnection::send_binary`.
+* `--proxy` of `vertigo serve` and `vertigo watch` carries websockets too.
+* `Driver::on_animation_frame`: a callback before every frame the browser draws.
+* `on_wheel` on elements, with a `WheelEvent`.
 * `on_pointer_down`, `on_pointer_move`, `on_pointer_up` and `on_pointer_cancel` on elements, with
-  a `PointerEvent` for a mouse, a pen or a finger alike: which pointer it is (`PointerType`), the
-  buttons, where the pointer is on the element and how big the element is, the modifier keys,
-  `prevent_default`, `stop_propagation`, and `capture_pointer` to get the pointer's events until
-  it's released, even outside the element - f. ex. to drag.
-* `Driver::languages`: the languages the user prefers, the most preferred first -
-  `navigator.languages` in the browser, and the request's `Accept-Language` while the server
-  renders the page, which browsers send from the same list. A page that picks its language from
-  them comes from the server in the language the browser will show it in.
-* `MountConfigBuilder::ssr_cookie`, and `--ssr-cookie` of `vertigo serve` and `vertigo watch`: a
-  cookie the app may read with `cookie_get` and `cookie_get_json` while the server renders the
-  page too, f. ex. the language the user picked. Only for cookies the browser shows the app, not
-  `HttpOnly` ones. The others read as empty during SSR, as before.
-* `ServerState::request_with_headers` with `RequestHeaders`: the request's cookies and
-  `Accept-Language` for SSR; `request_accept_language` reads the latter from an actix request.
-* `draw` on a `<canvas>`, with a `Drawing` (or a `Value` or `Computed` of one): operations of the
-  2D context recorded in Rust - fill and stroke styles, opacity, line width, cap and join, rectangles,
-  circles and polylines - in the units of a `ViewBox` fitted like SVG's `xMidYMid meet`, or in CSS
-  pixels. Widths and radii can also be given in CSS pixels, however big the drawing is shown. A new
-  drawing clears the canvas and goes in the same batch of DOM changes as the rest of the
-  transaction; one equal to the last is not sent again. The canvas takes its size from CSS, keeps
-  its bitmap at that size times `devicePixelRatio`, and draws the last drawing again when the size
-  changes. A canvas that CSS gives no size keeps the size it has, drawn a pixel to a CSS pixel.
+  a `PointerEvent`.
+* `Driver::languages`: the languages the user prefers, in the browser and during SSR.
+* `MountConfigBuilder::ssr_cookie` and `--ssr-cookie` of `vertigo serve` and `vertigo watch`: a
+  cookie the app may read during SSR too.
+* `ServerState::request_with_headers` with `RequestHeaders`, and `request_accept_language`: the
+  request's cookies and `Accept-Language` for SSR.
+* `draw` on a `<canvas>`, with a `Drawing` of 2D context operations.
 
 ### Changed
 
-* **Breaking:** `WebsocketMessage::Close` carries a `WebsocketClose` with the close code and
-  reason, and comes also after an attempt to connect that failed (`was_connected: false`, code
-  1006). Match it as `WebsocketMessage::Close(close)`.
-* **Breaking:** `WebsocketMessage` has a new variant, `Binary`.
-* A websocket reconnects after a growing wait - a random 0.5-1 s after a close, doubled with each
-  failed attempt up to 15-30 s - instead of every 3 s.
-* Every event from the browser - a DOM event, a websocket message, a fetch response, a timer, a
-  change of the location, and with the timer every step of async code - runs in one transaction,
-  so whatever the app sets in it reaches the DOM in one batch.
+* A websocket reconnects after a growing wait (0.5-1 s, doubled up to 15-30 s) instead of every
+  3 s.
+* `vertigo-testing` needs thirtyfour 0.38 (was 0.37.8), which uses zip 9 instead of 8
+  (RUSTSEC-2026-0367, RUSTSEC-2026-0368, RUSTSEC-2026-0369). It re-exports thirtyfour, so a crate
+  that also depends on thirtyfour itself needs 0.38 too.
 
 ### Fixed
 
-* A websocket dropped while still connecting (f. ex. its component left the page) connected
-  anyway and stayed open until the page went away, unseen by the app, while the server kept
-  sending to it. Now dropping it aborts the connection, without logging an error.
-* A page kept in the browser's back/forward cache kept its websockets open, so the server went on
-  sending to a page nobody saw. Now they close when the page goes into the cache (the app gets
-  `Close`) and connect again at once when it comes back (a new `Connection`).
-* The driver took its `<style>` out of `<head>` and put it back after every batch of DOM changes,
-  to keep it last, even when it was last already, and the browser restyled elements of the page
-  each time. Now it only moves the styles when something came after them.
-* A `Computed` whose `when_connect` closure held the last handle of another `Value` or `Computed`
-  panicked when it went ("RefCell already borrowed"): dropping the closure dropped the other node,
-  which unregistered while the first still held the graph's map of connect closures. The same
-  went for an `on_after_transaction` callback that held the `DropResource` of another one.
-* A `render_value` (or `render_list`) right under `<html>`, f. ex. one that swaps `<body>` once
-  the user logs in, broke the page after hydration since 0.13.4: its marker never went into
-  `<html>`, so the next `<body>` it rendered had nothing to go in front of ("InsertBefore"
-  `NotFoundError`).
+* A websocket dropped while still connecting connected anyway and stayed open.
+* Websockets of a page in the browser's back/forward cache stayed open.
+* The driver moved its `<style>` after every batch of DOM changes, so the browser restyled the
+  page each time.
+* A `when_connect` closure or an `on_after_transaction` callback holding the last handle of
+  another node panicked when dropped ("RefCell already borrowed").
+* A `render_value` or `render_list` right under `<html>` broke the page after hydration since
+  0.13.4.
+
+[notes-0140]: https://github.com/vertigo-web/vertigo/blob/master/docs/releases/0.14.0.md
 
 ## 0.13.4 - 2026-10-14
 
