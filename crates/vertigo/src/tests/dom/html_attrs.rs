@@ -31,6 +31,26 @@ fn form_on_submit() {
 }
 
 #[test]
+fn button_form_outside_of_it() {
+    let form_id = "edit".to_string();
+
+    log_start();
+
+    let _el = dom! {
+        <div>
+            <form id="edit" on_submit={|| ()} />
+            <button type="submit" form={form_id}>"Save"</button>
+        </div>
+    };
+
+    let html = DomDebugFragment::from_log().to_pseudo_html();
+    assert_eq!(
+        html,
+        "<div><form id='edit' submit=1 /><button form='edit' type='submit'>Save</button></div>"
+    );
+}
+
+#[test]
 fn no_keys() {
     let src = "cat.png";
     let alt = "Not dog";

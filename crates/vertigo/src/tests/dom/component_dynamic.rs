@@ -37,6 +37,29 @@ fn test_attr_values_grouping_and_spreading() {
 }
 
 #[test]
+fn test_form_attr_grouping_and_spreading() {
+    #[component]
+    fn SaveButton(button: AttrGroup) {
+        dom! {
+            <button type="submit" {..button}>"Save"</button>
+        }
+    }
+
+    log_start();
+
+    let _el = dom! {
+        <SaveButton button:form="edit" />
+    };
+
+    let el_str = DomDebugFragment::from_log().to_pseudo_html();
+
+    assert_eq!(
+        el_str,
+        "<button form='edit' type='submit' v-component='SaveButton'>Save</button>"
+    );
+}
+
+#[test]
 fn test_empty_attrs_grouping() {
     #[component]
     fn Hello<'a>(name: &'a str, div: AttrGroup) {

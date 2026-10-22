@@ -224,8 +224,7 @@ impl DomElement {
             ("on_pointer_cancel", AttrGroupValue::OnPointerCancel(on_pointer_cancel)) => {
                 self.on_pointer_cancel_rc(on_pointer_cancel)
             }
-            ("on_submit", AttrGroupValue::OnSubmit(on_submit))
-            | ("form", AttrGroupValue::OnSubmit(on_submit)) => self.on_submit_rc(on_submit),
+            ("on_submit", AttrGroupValue::OnSubmit(on_submit)) => self.on_submit_rc(on_submit),
             ("on_wheel", AttrGroupValue::OnWheel(on_wheel)) => self.on_wheel_rc(on_wheel),
             ("tw", AttrGroupValue::AttrValue(value)) => self.attr("class", value),
             (_, AttrGroupValue::AttrValue(value)) => self.attr(key, value),

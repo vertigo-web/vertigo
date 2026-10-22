@@ -1,6 +1,14 @@
 <!-- markdownlint-configure-file { "no-duplicate-heading": { "siblings_only": true } } -->
 
 <!-- markdownlint-disable-next-line first-line-h1 -->
+## Unreleased
+
+### Changed
+
+* `form=` in `dom!`, `dom_element!` and in attributes spread into a component is the HTML `form`
+  attribute (`<button form="edit">` submits the form with that id from outside it), no longer
+  a shorthand for `on_submit`. Write `on_submit=` for the handler.
+
 ## 0.14.0 - 2026-10-21
 
 Websockets report why they closed, carry binary frames and reconnect after a growing wait.
