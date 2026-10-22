@@ -4169,6 +4169,7 @@ dependencies = [
  "actix-ws",
  "awc",
  "base64 0.23.1",
+ "brotli",
  "chrono",
  "clap",
  "crc",

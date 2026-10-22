@@ -69,6 +69,14 @@ pub struct ServeOptsInner {
     #[arg(long, default_value_t = {false})]
     pub disable_compression: bool,
 
+    /// Compress the wasm, `wasm_run.js` and other text files of the build with brotli at its
+    /// highest level once, at startup, for the browsers that accept brotli
+    ///
+    /// (about a quarter smaller than compressing each response, for about a second of startup
+    /// per megabyte)
+    #[arg(long, default_value_t = {false})]
+    pub precompress: bool,
+
     /// Number of threads to use for processing requests
     ///
     /// (default: number of CPU cores, 2 for watch mode)

@@ -15,6 +15,7 @@ pub struct MountConfigBuilder {
     pub ssr_fetch_base: Option<String>,
     pub ssr_cookies: Vec<String>,
     pub pretty_html: bool,
+    pub precompress: bool,
 }
 
 impl MountConfigBuilder {
@@ -28,6 +29,7 @@ impl MountConfigBuilder {
             ssr_fetch_base: None,
             ssr_cookies: vec![],
             pretty_html: false,
+            precompress: false,
         }
     }
 
@@ -80,6 +82,17 @@ impl MountConfigBuilder {
         self
     }
 
+    /// Compress the build's wasm, `wasm_run.js` and other text files with brotli at its highest
+    /// level once, in [`ServerState::init`](crate::serve::ServerState::init), and serve those to
+    /// the browsers that accept brotli.
+    ///
+    /// They come out about a quarter smaller than compressed per response, for about a second
+    /// of startup per megabyte.
+    pub fn precompress(mut self, precompress: bool) -> Self {
+        self.precompress = precompress;
+        self
+    }
+
     pub fn build(self) -> Result<MountConfig, ErrorCode> {
         let mut config = MountConfig::new(
             self.mount_point,
@@ -91,6 +104,7 @@ impl MountConfigBuilder {
         config.ssr_fetch_base = self.ssr_fetch_base;
         config.ssr_cookies = self.ssr_cookies;
         config.pretty_html = self.pretty_html;
+        config.precompress = self.precompress;
         Ok(config)
     }
 }
@@ -118,6 +132,8 @@ pub struct MountConfig {
     pub ssr_cookies: Vec<String>,
     /// See [`MountConfigBuilder::pretty_html`]
     pub pretty_html: bool,
+    /// See [`MountConfigBuilder::precompress`]
+    pub precompress: bool,
 }
 
 impl MountConfig {
@@ -142,6 +158,7 @@ impl MountConfig {
             ssr_fetch_base: None,
             ssr_cookies: vec![],
             pretty_html: false,
+            precompress: false,
         };
 
         // The app gets them wherever it runs - in the browser as `data-env-*`, during SSR from
