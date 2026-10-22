@@ -43,14 +43,6 @@ pub fn build_response(
     }
 
     let head_exists = root_html.modify(&[("head", 0)], |head| {
-        if mount_path.wasm_preload {
-            let script_preconnect = HtmlElement::new("link")
-                .attr("rel", "preload")
-                .attr("href", mount_path.get_wasm_http_path())
-                .attr("as", "script");
-
-            head.add_child(script_preconnect);
-        }
         head.add_child(css);
     });
 
@@ -90,10 +82,17 @@ pub fn build_response(
         );
 
         // WASM script starter
-        let script = HtmlElement::new("script")
+        let mut script = HtmlElement::new("script")
             .attr("type", "module")
             .attr("data-vertigo-run-wasm", mount_path.get_wasm_http_path())
             .attr("src", mount_path.get_run_js_http_path());
+
+        // The runtime starts the download itself rather than through `<link rel="preload">`:
+        // Safari reuses a preloaded fetch only when the `fetch()` options match it exactly,
+        // and downloads the wasm twice otherwise.
+        if mount_path.wasm_preload {
+            script.add_attr("data-vertigo-preload", "true");
+        }
 
         body.add_child(script);
 

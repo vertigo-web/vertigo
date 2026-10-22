@@ -13,7 +13,32 @@ export interface ModuleControllerType<ExportType extends BaseExportType> {
     wasmCommand: (params: JsJsonType) => JsJsonType,
 }
 
+const preloadedModules: Map<string, Promise<WebAssembly.Module | null>> = new Map();
+
+// Downloads and compiles the wasm while the page loads (`vertigo serve --wasm-preload`),
+// at low priority so the images and styles the page shows first take precedence.
+export const preloadModule = (wasmBinPath: string) => {
+    if (preloadedModules.has(wasmBinPath) || typeof WebAssembly.compileStreaming !== 'function') {
+        return;
+    }
+
+    const module = WebAssembly.compileStreaming(fetch(wasmBinPath, { priority: 'low' })).catch((err) => {
+        console.warn("Preloading wasm failed, it will be fetched again once the page has loaded. Original error:\n", err);
+        return null;
+    });
+
+    preloadedModules.set(wasmBinPath, module);
+};
+
 const fetchModule = async (wasmBinPath: string, imports: Record<string, WebAssembly.ModuleImports>): Promise<WebAssembly.WebAssemblyInstantiatedSource> => {
+    const preloaded = await preloadedModules.get(wasmBinPath);
+    if (preloaded) {
+        return {
+            module: preloaded,
+            instance: await WebAssembly.instantiate(preloaded, imports),
+        };
+    }
+
     if (typeof WebAssembly.instantiateStreaming === 'function') {
         const stream = fetch(wasmBinPath);
         try {
