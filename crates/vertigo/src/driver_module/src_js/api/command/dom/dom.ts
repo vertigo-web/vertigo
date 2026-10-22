@@ -315,7 +315,8 @@ export class DriverDom {
     // Both attribute commands: `value === null` means remove. Once the replacement text is
     // `value ?? ""` the `value` property fix-up below is the same either way - setting the
     // attribute does not update the live property on an input or a textarea, so it is done
-    // by hand.
+    // by hand. The same goes for `checked`: the attribute is only the default, which
+    // a checkbox or a radio button stops following once the user has clicked it.
     private writeAttr(label: string, id: number, name: string, value: string | null) {
         const node = this.nodes.getNode(label, id);
 
@@ -340,6 +341,11 @@ export class DriverDom {
                 node.defaultValue = text;
                 return;
             }
+        }
+
+        // Any value checks it, `checked=""` too, as the attribute does in HTML
+        if (name == "checked" && node instanceof HTMLInputElement) {
+            node.checked = value !== null;
         }
     }
 
