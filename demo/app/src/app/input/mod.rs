@@ -33,6 +33,30 @@ pub fn MyInput(value: Value<String>) {
             <div>
                 "count = " {count}
             </div>
+            <CheckBox checked={Value::new(false)} />
+        </div>
+    }
+}
+
+/// `checked` from a `Value`, with buttons that set it - which reach the box even after it has
+/// been clicked, when the browser stops showing what the attribute says.
+#[component]
+fn CheckBox(checked: Value<bool>) {
+    let attr = checked.map(|checked| checked.then(|| "checked".to_string()));
+
+    let check = bind!(checked, |_| {
+        checked.set(true);
+    });
+
+    let uncheck = bind!(checked, |_| {
+        checked.set(false);
+    });
+
+    dom! {
+        <div>
+            <input type="checkbox" checked={attr} />
+            <button on_click={check}>"check"</button>
+            <button on_click={uncheck}>"uncheck"</button>
         </div>
     }
 }

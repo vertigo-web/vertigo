@@ -19,6 +19,10 @@
 
 ### Fixed
 
+* `checked` from a `Computed` or a `Value` reaches a checkbox or a radio button the user has
+  already clicked. For the browser the attribute is only the default, which a clicked box stops
+  following, so the runtime now sets the `checked` property along with it, as it did for `value`.
+  Before, a "select all" button ticked only the boxes nobody had touched.
 * `vertigo serve --wasm-preload` preloaded the wasm with `<link rel="preload" as="script">`, which
   the runtime's `fetch()` can't use, so the browser requested the file a second time. Now the
   runtime starts the download itself as soon as it runs, at low priority so images and styles take
