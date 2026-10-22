@@ -1,4 +1,5 @@
 import { WasmModule } from "./wasm_module";
+import { preloadModule } from "./wasm_init";
 
 // vertigo-cli compatibility version, change together with package version.
 const VERTIGO_COMPAT_VERSION_MAJOR = 0;
@@ -39,6 +40,14 @@ const findAndRunModule = async () => {
 };
 
 (() => {
+    document.querySelectorAll('*[data-vertigo-run-wasm][data-vertigo-preload]').forEach((node) => {
+        const wasm = node.getAttribute('data-vertigo-run-wasm');
+
+        if (typeof wasm === 'string') {
+            preloadModule(wasm);
+        }
+    });
+
     window.addEventListener('load', findAndRunModule);
     setTimeout(findAndRunModule, 3000);
 })();

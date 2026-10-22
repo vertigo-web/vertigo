@@ -122,7 +122,7 @@ pub struct MountConfig {
     /// Environment variables passed to WASM runtime - together with the mount point and the
     /// public path of the build (`vertigo-mount-point`, `vertigo-public-path`)
     pub env: Arc<HashMap<String, String>>,
-    /// Whether to preload wasm script using <link rel="preload">
+    /// Whether the runtime starts downloading the wasm while the page loads, instead of after
     pub wasm_preload: bool,
     /// Whether to disable hydration
     pub disable_hydration: bool,
