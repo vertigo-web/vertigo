@@ -194,8 +194,6 @@ fn push_attribute(
         | "on_pointer_down" | "on_pointer_move" | "on_pointer_up" | "on_pointer_cancel"
         | "on_submit" | "on_wheel" => &name,
 
-        "form" => "on_submit",
-
         "css" => {
             let class_name = generate_debug_class_name(&value);
             out_attr.push(quote! { .css_with_class_name(#value, #class_name) });
@@ -400,15 +398,23 @@ mod tests {
         }
     }
 
+    /// `form` is the HTML attribute that ties a button or a field to a form elsewhere on the
+    /// page (`<button form="edit">`), not a shorthand for `on_submit`.
     #[test]
-    fn test_push_attribute_form_alias() {
-        // "form" is an alias for on_submit
-        let (out_attr, _) = run_push_attribute("form", quote! { my_handler });
+    fn test_push_attribute_form_is_an_attribute() {
+        let (out_attr, _) = run_push_attribute("form", quote! { form_id });
         assert_eq!(out_attr.len(), 1);
-        let s = out_attr[0].to_string();
+        let s = without_whitespace(&out_attr[0]);
         assert!(
-            s.contains("on_submit"),
-            "Expected on_submit alias, got: {s}"
+            s.contains(".attr(\"form\",form_id)"),
+            "Expected the form attribute, got: {s}"
+        );
+
+        let (out_attr, _) = run_push_attribute_lit("form", quote! { "edit" }, true);
+        let s = without_whitespace(&out_attr[0]);
+        assert!(
+            s.contains(".attr_static(\"form\",\"edit\")"),
+            "Expected the form attribute, got: {s}"
         );
     }
 

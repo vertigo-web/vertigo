@@ -69,7 +69,7 @@ fn attr_to_group_variant(key: impl AsRef<str>, value: TokenStream2) -> TokenStre
         "on_pointer_move" => quote! { vertigo::AttrGroupValue::on_pointer_move(#value) },
         "on_pointer_up" => quote! { vertigo::AttrGroupValue::on_pointer_up(#value) },
         "on_pointer_cancel" => quote! { vertigo::AttrGroupValue::on_pointer_cancel(#value) },
-        "on_submit" | "form" => quote! { vertigo::AttrGroupValue::on_submit(#value) },
+        "on_submit" => quote! { vertigo::AttrGroupValue::on_submit(#value) },
         "on_wheel" => quote! { vertigo::AttrGroupValue::on_wheel(#value) },
         _ => quote! { {#value}.into() },
     }
@@ -104,6 +104,18 @@ mod tests {
         assert!(
             tokens_eq(&result, &expected),
             "Expected fallback into(), got: {}",
+            result
+        );
+    }
+
+    #[test]
+    fn test_attr_to_group_variant_form_is_an_attribute() {
+        let val = quote! { form_id };
+        let result = attr_to_group_variant("form", val);
+        let expected = quote! { { form_id }.into() };
+        assert!(
+            tokens_eq(&result, &expected),
+            "Expected the form attribute, got: {}",
             result
         );
     }
