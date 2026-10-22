@@ -51,6 +51,7 @@ pub async fn run(opts: ServeOpts, port_watch: Option<u16>) -> Result<(), ErrorCo
         ssr_cookie,
         pretty_html,
         disable_compression,
+        precompress,
         threads,
     } = opts.inner;
 
@@ -65,6 +66,7 @@ pub async fn run(opts: ServeOpts, port_watch: Option<u16>) -> Result<(), ErrorCo
     mount_config.ssr_fetch_base = Some(ssr_fetch_base.unwrap_or_else(|| local_origin(&host, port)));
     mount_config.ssr_cookies = ssr_cookie;
     mount_config.pretty_html = pretty_html;
+    mount_config.precompress = precompress;
 
     ServerState::init_with_watch(&mount_config, port_watch)?;
 

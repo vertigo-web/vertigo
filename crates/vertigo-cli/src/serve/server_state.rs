@@ -22,6 +22,7 @@ use crate::{
 use super::{
     html::HtmlResponse,
     mount_path::MountConfig,
+    precompress::{Precompressed, precompress},
     request_headers::{RequestHeaders, accept_languages, readable_cookies},
     request_state::RequestState,
     response_state::ResponseState,
@@ -55,6 +56,8 @@ pub struct ServerState {
     instance_pre: InstancePre<HostState>,
     /// What `Module::from_binary` cost at startup.
     module_compile: Duration,
+    /// The build's files compressed at startup, if [`MountConfig::precompress`] asked for it.
+    precompressed: Arc<Precompressed>,
     pub mount_config: MountConfig,
     pub port_watch: Option<u16>,
 }
@@ -81,6 +84,12 @@ impl ServerState {
                 ErrorCode::ServeWasmInstanceFailed
             })?;
 
+        let precompressed = if mount_config.precompress {
+            precompress(mount_config.dest_dir(), &mount_config.dest_http_root())
+        } else {
+            Precompressed::new()
+        };
+
         let mutex = STATE.get_or_init(|| Arc::new(RwLock::new(ServerStateMap::new())));
 
         let mut guard = mutex.write();
@@ -90,6 +99,7 @@ impl ServerState {
                 engine,
                 instance_pre,
                 module_compile,
+                precompressed: Arc::new(precompressed),
                 mount_config: mount_config.clone(),
                 port_watch,
             }),
@@ -101,6 +111,10 @@ impl ServerState {
     /// How long compiling this mount point's wasm module took, at startup.
     pub fn module_compile_time(&self) -> Duration {
         self.module_compile
+    }
+
+    pub(crate) fn precompressed(&self) -> Arc<Precompressed> {
+        self.precompressed.clone()
     }
 
     pub fn global(mount_point: &str) -> Arc<ServerState> {

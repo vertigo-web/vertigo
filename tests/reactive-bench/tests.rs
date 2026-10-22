@@ -141,6 +141,7 @@ async fn reactive_bench() -> TestResult {
                 // throughput as much as vertigo's, and the recorded baselines in
                 // `target/bench/` were taken without it.
                 disable_compression: true,
+                precompress: false,
                 threads: None,
             },
         };

@@ -1,6 +1,7 @@
 mod html;
 mod http_client;
 mod mount_path;
+mod precompress;
 mod proxy;
 mod request_headers;
 mod request_state;

@@ -3,7 +3,9 @@ use actix_web::web;
 
 use crate::serve::MountConfig;
 
-use super::vertigo_handler::vertigo_handler;
+use super::{
+    precompress::precompressed_files, server_state::ServerState, vertigo_handler::vertigo_handler,
+};
 
 /// Install vertigo handler and static files based on mount config.
 ///
@@ -32,6 +34,11 @@ use super::vertigo_handler::vertigo_handler;
 ///
 pub fn vertigo_install(cfg: &mut web::ServiceConfig, mount_config: &MountConfig) {
     let mount_point = mount_config.mount_point();
+
+    if mount_config.precompress {
+        let files = ServerState::global(mount_point).precompressed();
+        cfg.service(precompressed_files(&mount_config.dest_http_root(), files));
+    }
 
     cfg.service(Files::new(
         &mount_config.dest_http_root(),
