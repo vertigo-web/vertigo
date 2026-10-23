@@ -13,6 +13,9 @@
 * `on_change_checked` for checkboxes and radio buttons gets whether the box is checked now.
   `on_change` gets the `value` attribute, which a click doesn't change, so a `Value<bool>` behind
   `checked` had no way to learn about the click.
+* `ClickEvent` carries the modifier keys held during the click (`alt_key`, `ctrl_key`,
+  `shift_key`, `meta_key`), as `WheelEvent` and `PointerEvent` do, f. ex. for Ctrl+click adding
+  to a selection.
 
 ### Changed
 

@@ -22,9 +22,17 @@ class MockEvent {
     stopPropagation() { this.propagationStopped = true; }
 }
 
+/// A click with Ctrl held.
+class MockClickEvent extends MockEvent {
+    altKey = false;
+    ctrlKey = true;
+    shiftKey = false;
+    metaKey = false;
+}
+
 /// A click whose `on_click` in wasm replied with `reply` - what `ClickEvent` is serialized to.
-function clickReplying(reply: unknown): MockEvent {
-    const event = new MockEvent();
+function clickReplying(reply: unknown): MockClickEvent {
+    const event = new MockClickEvent();
     click(event as unknown as Event, () => reply as any);
     return event;
 }
@@ -50,6 +58,19 @@ function testStopPropagation() {
     const event = clickReplying({ stop_propagation: true, prevent_default: false });
     assert(event.propagationStopped, "stops propagation");
     assert(!event.defaultPrevented, "without preventing the default action");
+}
+
+function testClickPayload() {
+    console.log("\n--- Test click 0: what wasm gets ---");
+    let sent: unknown;
+    click(new MockClickEvent() as unknown as Event, (value) => {
+        sent = value;
+        return null as any;
+    });
+    assert(
+        JSON.stringify(sent) === JSON.stringify([false, true, false, false]),
+        `the modifier keys: ${JSON.stringify(sent)}`,
+    );
 }
 
 function testReplyWithoutFlags() {
@@ -280,6 +301,7 @@ function testChangeChecked() {
     delete (globalThis as any).HTMLInputElement;
 }
 
+testClickPayload();
 testDefaultActionIsLeftToTheBrowser();
 testPreventDefault();
 testStopPropagation();

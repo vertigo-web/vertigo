@@ -1,5 +1,6 @@
 mod canvas;
 mod children;
+mod click_event;
 mod component;
 mod component_dynamic;
 mod component_namespaces;
