@@ -1,6 +1,7 @@
 use std::{fs, process::Command, sync::OnceLock};
 
 use super::wasm_path::WasmPath;
+use crate::serve::brotli_compress;
 
 /// Features that rustc enables by default for the `wasm32-unknown-unknown` target.
 ///
@@ -52,8 +53,9 @@ pub fn run_wasm_opt(from: &WasmPath, to: &WasmPath) -> bool {
         Ok(status) if status.success() => {
             let in_size = size(&from_str);
             let out_size = size(&to_str);
-            let percent = 100 * out_size / in_size;
+            let percent = format_percent(out_size, in_size);
             log::info!("WASM optimized: {in_size}K -> {out_size}K ({percent}%)");
+            log_precompressed_size(&to_str, in_size);
             true
         }
         Ok(_) => {
@@ -104,6 +106,37 @@ fn supported_features() -> &'static Vec<&'static str> {
             .filter(|feature| help.contains(feature))
             .collect()
     })
+}
+
+/// What `serve --precompress` would send, to show it's worth it
+fn log_precompressed_size(path: &str, in_size: u64) {
+    let Ok(content) = fs::read(path) else {
+        return;
+    };
+
+    match brotli_compress(&content) {
+        Ok(brotli) => {
+            let out_size = content.len() as u64 / 1_024;
+            let brotli_size = brotli.len() as u64 / 1_024;
+            let percent = format_percent(brotli_size, out_size);
+            let total_percent = format_percent(brotli_size, in_size);
+            log::info!(
+                "When pre-compressed: {brotli_size}K ({percent}%, {total_percent}% in total) - serve with --precompress"
+            );
+        }
+        Err(error) => log::warn!("Can't compress the WASM with brotli: {error}"),
+    }
+}
+
+/// With a decimal place below 10%, where a whole number would round a big shrink to 0%
+fn format_percent(part: u64, whole: u64) -> String {
+    let percent = 100.0 * part as f64 / whole.max(1) as f64;
+
+    if percent < 9.95 {
+        format!("{percent:.1}")
+    } else {
+        format!("{percent:.0}")
+    }
 }
 
 fn size(path: &str) -> u64 {

@@ -108,13 +108,18 @@ fn is_hidden(entry: &DirEntry) -> bool {
     entry.file_name().to_string_lossy().starts_with('.')
 }
 
-/// The file, and the file compressed at quality 11, where `Compress` uses 3 to keep up with
-/// responses
+/// The file, and the file compressed by [`brotli_compress`]
 fn read_compressed(path: &Path) -> std::io::Result<(Vec<u8>, Vec<u8>)> {
     let content = std::fs::read(path)?;
+    let brotli = brotli_compress(&content)?;
+    Ok((content, brotli))
+}
+
+/// Compresses at quality 11, where `Compress` uses 3 to keep up with responses
+pub(crate) fn brotli_compress(content: &[u8]) -> std::io::Result<Vec<u8>> {
     let mut writer = brotli::CompressorWriter::new(Vec::new(), 64 * 1024, 11, 22);
-    writer.write_all(&content)?;
-    Ok((content, writer.into_inner()))
+    writer.write_all(content)?;
+    Ok(writer.into_inner())
 }
 
 /// What `Files` sends, which adds the charset to text (`prefer_utf8`)
