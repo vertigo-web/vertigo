@@ -758,25 +758,32 @@ pub async fn input(ctx: &Ctx) -> Result<()> {
     ctx.retype(&textarea, "żółw").await?;
     ctx.wait_for_text("count = 4").await?;
 
-    // A box the user has clicked no longer follows its `checked` attribute in the browser, so
-    // taking the attribute off used to leave it ticked.
+    // The click reaches the `Value` through `on_change_checked` - `on_change` would get the
+    // `value` attribute, which a click doesn't change.
     let checkbox = ctx
         .find(By::Css("input[type=checkbox]"))
         .await
         .context("the checkbox")?;
     checkbox.click().await?;
-    click_by_text(ctx, "button", "check").await?;
+    ctx.wait_for_text("checked = true").await?;
+
+    // A box the user has clicked no longer follows its `checked` attribute in the browser, so
+    // taking the attribute off used to leave it ticked.
     click_by_text(ctx, "button", "uncheck").await?;
     ctx.wait_for("the button to untick the clicked box", async || {
         Ok((checkbox.prop("checked").await? == Some("false".to_string())).then_some(()))
     })
     .await?;
+    ctx.wait_for_text("checked = false").await?;
 
     click_by_text(ctx, "button", "check").await?;
     ctx.wait_for("the button to tick it again", async || {
         Ok((checkbox.prop("checked").await? == Some("true".to_string())).then_some(()))
     })
     .await?;
+
+    checkbox.click().await?;
+    ctx.wait_for_text("checked = false").await?;
 
     Ok(())
 }

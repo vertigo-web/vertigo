@@ -119,6 +119,19 @@ const readValue = (allowSelect: boolean): Handler => (event, send) => {
     console.warn('event input ignore', target);
 };
 
+/// `change` of a checkbox or a radio button, with whether it is checked now - its `value` is
+/// the same either way.
+const changeChecked: Handler = (event, send) => {
+    const target = event.target;
+
+    if (target instanceof HTMLInputElement) {
+        send(target.checked);
+        return;
+    }
+
+    console.warn('changeChecked: not an input', target);
+};
+
 const changeFile: Handler = (event, send) => {
     const target = event.target;
 
@@ -186,8 +199,8 @@ const keydown: Handler = (event, send) => {
 };
 
 /// The event names are wire strings from Rust (`dom/dom_element.rs`), so each is spelled out
-/// exactly once here. `hook_keydown` and `change_file` are vertigo-internal names, remapped
-/// to real DOM events where the listener is attached.
+/// exactly once here. `hook_keydown`, `change_file` and `change_checked` are vertigo-internal
+/// names, remapped to real DOM events where the listener is attached.
 const HANDLERS: Record<string, Handler> = {
     click,
     submit: notifyPreventDefault,
@@ -203,12 +216,18 @@ const HANDLERS: Record<string, Handler> = {
     drop,
     load: notifyPreventDefault,
     change_file: changeFile,
+    change_checked: changeChecked,
     wheel,
     pointerdown: pointer,
     pointermove: pointer,
     pointerup: pointer,
     pointercancel: pointer,
 };
+
+/// The DOM event behind a wire name: `change_file` and `change_checked` are the `change` event
+/// with a payload of their own.
+const domEventName = (event_name: string): string =>
+    event_name === 'change_file' || event_name === 'change_checked' ? 'change' : event_name;
 
 export class CallbackManager {
     private readonly getWasm: () => ModuleControllerType<ExportType>;
@@ -255,10 +274,9 @@ export class CallbackManager {
             document.addEventListener('keydown', callback, false);
         } else {
             const node = nodes.get('callback_add', id);
-            const domEventName = event_name === 'change_file' ? 'change' : event_name;
             // A wheel listener isn't passive, so that `WheelEvent::prevent_default` can keep the
             // page from scrolling: browsers make one on `<body>` passive unless told.
-            node.addEventListener(domEventName, callback, event_name === 'wheel' ? { passive: false } : false);
+            node.addEventListener(domEventName(event_name), callback, event_name === 'wheel' ? { passive: false } : false);
         }
     }
 
@@ -279,8 +297,7 @@ export class CallbackManager {
             document.removeEventListener('keydown', callback);
         } else {
             const node = nodes.get('callback_remove', id);
-            const domEventName = event_name === 'change_file' ? 'change' : event_name;
-            node.removeEventListener(domEventName, callback);
+            node.removeEventListener(domEventName(event_name), callback);
         }
     }
 

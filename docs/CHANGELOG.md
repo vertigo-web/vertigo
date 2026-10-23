@@ -10,6 +10,9 @@
   once, at startup, and serves those to browsers that accept brotli. The demo's wasm goes over the
   wire in 216 KiB instead of the 283 KiB of compressing each response, for about a second of
   startup.
+* `on_change_checked` for checkboxes and radio buttons gets whether the box is checked now.
+  `on_change` gets the `value` attribute, which a click doesn't change, so a `Value<bool>` behind
+  `checked` had no way to learn about the click.
 
 ### Changed
 

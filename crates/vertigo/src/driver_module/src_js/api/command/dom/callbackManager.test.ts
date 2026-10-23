@@ -1,5 +1,6 @@
 // The click, wheel and pointer handlers: what a `ClickEvent`, `WheelEvent` or `PointerEvent`
-// reply does to the browser's own handling of the event, and what the handlers tell wasm.
+// reply does to the browser's own handling of the event, and what the handlers tell wasm. And
+// `change_checked`, which tells wasm whether a box is checked.
 
 import { CallbackManager, click, pointer, wheel } from "./callbackManager";
 import { MapNodes } from "./map_nodes";
@@ -124,8 +125,14 @@ function testWheelStopPropagation() {
 /// A node that keeps how its listeners were added.
 class MockNode {
     added: Array<[string, unknown]> = [];
-    addEventListener(name: string, _listener: unknown, options: unknown) {
+    listeners: Array<(event: Event) => void> = [];
+    removed: string[] = [];
+    addEventListener(name: string, listener: (event: Event) => void, options: unknown) {
         this.added.push([name, options]);
+        this.listeners.push(listener);
+    }
+    removeEventListener(name: string, _listener: unknown) {
+        this.removed.push(name);
     }
 }
 
@@ -237,6 +244,42 @@ function testPointerListeners() {
     );
 }
 
+function testChangeChecked() {
+    console.log("\n--- Test change_checked: on_change_checked ---");
+    // The browser's class - here it only has to be there for `instanceof`
+    class MockInput {
+        checked = true;
+        value = 'on';
+    }
+    (globalThis as any).HTMLInputElement = MockInput;
+
+    const node = new MockNode();
+    const nodes = { get: () => node } as unknown as MapNodes;
+    const sent: unknown[] = [];
+    const wasm = { wasmCommand: (command: any) => sent.push(command.CallbackCall.value) };
+    const manager = new CallbackManager(() => wasm as any);
+
+    manager.add(nodes, 1, 'change_checked', 30);
+    assert(
+        JSON.stringify(node.added) === JSON.stringify([['change', false]]),
+        "listens to the DOM change event",
+    );
+
+    const input = new MockInput();
+    node.listeners[0]!({ target: input } as unknown as Event);
+    input.checked = false;
+    node.listeners[0]!({ target: input } as unknown as Event);
+    assert(
+        JSON.stringify(sent) === JSON.stringify([true, false]),
+        "and tells wasm whether the box is checked, not its value",
+    );
+
+    manager.remove(nodes, 1, 'change_checked', 30);
+    assert(JSON.stringify(node.removed) === JSON.stringify(['change']), "which it stops listening to");
+
+    delete (globalThis as any).HTMLInputElement;
+}
+
 testDefaultActionIsLeftToTheBrowser();
 testPreventDefault();
 testStopPropagation();
@@ -252,3 +295,4 @@ testPointerCapture();
 testPointerCaptureOfAPointerThatIsUp();
 testPointerFlags();
 testPointerListeners();
+testChangeChecked();
