@@ -49,10 +49,19 @@ const applyFlags = (event: Event, flags: JsJsonType) => {
     }
 };
 
-/// Wasm replies with the `ClickEvent` flags. The browser's default action - following a link,
-/// submitting a form, toggling a checkbox - goes ahead unless the handler asked to prevent it.
+/// Wasm gets the modifier keys and replies with the `ClickEvent` flags. The browser's default
+/// action - following a link, submitting a form, toggling a checkbox - goes ahead unless the
+/// handler asked to prevent it.
 export const click: Handler = (event, send) => {
-    applyFlags(event, send(undefined));
+    const mouseEvent = event as MouseEvent;
+
+    // Payload order MUST match the Rust decoder `ClickEvent::from_driver`.
+    applyFlags(event, send([
+        mouseEvent.altKey,
+        mouseEvent.ctrlKey,
+        mouseEvent.shiftKey,
+        mouseEvent.metaKey,
+    ]));
 };
 
 /// Wasm replies with the `WheelEvent` flags: the page scrolls, or zooms, unless the handler

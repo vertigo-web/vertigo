@@ -451,8 +451,8 @@ impl DomElement {
     pub fn on_click_rc(self, on_click: Rc<Callback1<ClickEvent, ()>>) -> Self {
         let on_click = self.install_callback1(on_click);
 
-        self.add_event_listener("click", move |_data| {
-            let click_event = ClickEvent::default();
+        self.add_event_listener("click", move |data| {
+            let click_event = ClickEvent::from_driver(data);
             on_click(click_event.clone());
             JsJson::from(click_event)
         })
