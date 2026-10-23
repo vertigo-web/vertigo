@@ -95,6 +95,20 @@ fn input_on_change_file() {
 }
 
 #[test]
+fn input_on_change_checked() {
+    let handler = |_: bool| ();
+
+    log_start();
+
+    let _el = dom! {
+        <input type="checkbox" on_change_checked={handler} />
+    };
+
+    let html = DomDebugFragment::from_log().to_pseudo_html();
+    assert_eq!(html, "<input type='checkbox' change_checked=1 />");
+}
+
+#[test]
 fn input_on_change_file_accept() {
     let handler = |_: DropFileEvent| ();
     let accept = "image/*";

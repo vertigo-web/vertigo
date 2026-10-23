@@ -192,6 +192,9 @@ impl DomElement {
             ("on_change_file", AttrGroupValue::OnChangeFile(on_change_file)) => {
                 self.on_change_file_rc(on_change_file)
             }
+            ("on_change_checked", AttrGroupValue::OnChangeChecked(on_change_checked)) => {
+                self.on_change_checked_rc(on_change_checked)
+            }
             ("on_input", AttrGroupValue::OnInput(on_input)) => self.on_input_rc(on_input),
             ("on_intersect", AttrGroupValue::OnIntersect(on_intersect)) => {
                 self.on_intersect_rc(on_intersect)
@@ -379,6 +382,26 @@ impl DomElement {
                 on_change(text);
             } else {
                 log::error!("Invalid data: on_change: {}", data.typename());
+            }
+
+            JsJson::Null
+        })
+    }
+
+    /// `change` of a checkbox or a radio button, with whether it is checked now. [`Self::on_change`]
+    /// gets the `value` attribute, which a click doesn't change.
+    pub fn on_change_checked(self, on_change_checked: impl Into<Callback1<bool, ()>>) -> Self {
+        self.on_change_checked_rc(Rc::new(on_change_checked.into()))
+    }
+
+    pub fn on_change_checked_rc(self, on_change_checked: Rc<Callback1<bool, ()>>) -> Self {
+        let on_change_checked = self.install_callback1(on_change_checked);
+
+        self.add_event_listener("change_checked", move |data| {
+            match data {
+                JsJson::True => on_change_checked(true),
+                JsJson::False => on_change_checked(false),
+                _ => log::error!("Invalid data: on_change_checked: {}", data.typename()),
             }
 
             JsJson::Null

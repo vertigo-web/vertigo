@@ -39,10 +39,16 @@ pub fn MyInput(value: Value<String>) {
 }
 
 /// `checked` from a `Value`, with buttons that set it - which reach the box even after it has
-/// been clicked, when the browser stops showing what the attribute says.
+/// been clicked, when the browser stops showing what the attribute says. A click on the box goes
+/// back to the `Value` through `on_change_checked`.
 #[component]
 fn CheckBox(checked: Value<bool>) {
     let attr = checked.map(|checked| checked.then(|| "checked".to_string()));
+    let state = checked.map(|checked| format!("checked = {checked}"));
+
+    let on_change_checked = bind!(checked, |now: bool| {
+        checked.set(now);
+    });
 
     let check = bind!(checked, |_| {
         checked.set(true);
@@ -54,9 +60,10 @@ fn CheckBox(checked: Value<bool>) {
 
     dom! {
         <div>
-            <input type="checkbox" checked={attr} />
+            <input type="checkbox" checked={attr} {on_change_checked} />
             <button on_click={check}>"check"</button>
             <button on_click={uncheck}>"uncheck"</button>
+            <div>{state}</div>
         </div>
     }
 }

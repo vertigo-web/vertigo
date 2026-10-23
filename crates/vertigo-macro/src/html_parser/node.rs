@@ -188,11 +188,11 @@ fn push_attribute(
     }
 
     let method_str = match name.as_str() {
-        "draw" | "hook_key_down" | "on_blur" | "on_change" | "on_change_file" | "on_click"
-        | "on_dropfile" | "on_input" | "on_intersect" | "on_key_down" | "on_load"
-        | "on_mouse_down" | "on_mouse_enter" | "on_mouse_leave" | "on_mouse_up"
-        | "on_pointer_down" | "on_pointer_move" | "on_pointer_up" | "on_pointer_cancel"
-        | "on_submit" | "on_wheel" => &name,
+        "draw" | "hook_key_down" | "on_blur" | "on_change" | "on_change_file"
+        | "on_change_checked" | "on_click" | "on_dropfile" | "on_input" | "on_intersect"
+        | "on_key_down" | "on_load" | "on_mouse_down" | "on_mouse_enter" | "on_mouse_leave"
+        | "on_mouse_up" | "on_pointer_down" | "on_pointer_move" | "on_pointer_up"
+        | "on_pointer_cancel" | "on_submit" | "on_wheel" => &name,
 
         "css" => {
             let class_name = generate_debug_class_name(&value);
