@@ -15,6 +15,7 @@ mod vertigo_install;
 mod wasm;
 
 pub use mount_path::{MountConfig, MountConfigBuilder};
+pub(crate) use precompress::brotli_compress;
 pub use request_headers::RequestHeaders;
 pub use response_state::ResponseState;
 pub use serve_opts::{ServeOpts, ServeOptsInner};
