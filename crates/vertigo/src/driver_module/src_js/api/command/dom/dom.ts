@@ -283,6 +283,7 @@ export class DriverDom {
         }
 
         this.nodes.removeInitNodes();
+        this.callbacks.forgetEarlyMessages();
 
         // Make sure that the client-side generated styles are always the last element of the head
         this.nodes.addStyles();

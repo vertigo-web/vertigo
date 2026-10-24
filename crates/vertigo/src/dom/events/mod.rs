@@ -10,6 +10,9 @@ pub use intersect_event::*;
 mod key_down_event;
 pub use key_down_event::*;
 
+mod message_event;
+pub use message_event::*;
+
 mod pointer_event;
 pub use pointer_event::*;
 

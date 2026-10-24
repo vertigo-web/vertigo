@@ -1,6 +1,6 @@
 use crate as vertigo;
 use crate::dev::inspect::{DomDebugFragment, log_start};
-use crate::{DropFileEvent, dom};
+use crate::{DropFileEvent, MessageEvent, dom};
 
 #[test]
 fn button_on_click() {
@@ -106,6 +106,23 @@ fn input_on_change_checked() {
 
     let html = DomDebugFragment::from_log().to_pseudo_html();
     assert_eq!(html, "<input type='checkbox' change_checked=1 />");
+}
+
+#[test]
+fn iframe_on_message() {
+    let handler = |_: MessageEvent| ();
+
+    log_start();
+
+    let _el = dom! {
+        <iframe src="https://player.example.com/" on_message={handler} />
+    };
+
+    let html = DomDebugFragment::from_log().to_pseudo_html();
+    assert_eq!(
+        html,
+        "<iframe src='https://player.example.com/' message=1 />"
+    );
 }
 
 #[test]
