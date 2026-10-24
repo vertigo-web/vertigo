@@ -1,39 +1,23 @@
 <!-- markdownlint-configure-file { "no-duplicate-heading": { "siblings_only": true } } -->
 
 <!-- markdownlint-disable-next-line first-line-h1 -->
-## Unreleased
+## 0.14.1 - 2026-10-24
+
+### Breaking
+
+* `form=` in `dom!` is the HTML `form` attribute, no longer a shorthand for `on_submit`.
 
 ### Added
 
-* `vertigo serve --precompress` (`MountConfigBuilder::precompress` in a server of your own)
-  compresses the build's wasm, `wasm_run.js` and other text files with brotli at its highest level
-  once, at startup, and serves those to browsers that accept brotli. The demo's wasm goes over the
-  wire in 216 KiB instead of the 283 KiB of compressing each response, for about a second of
-  startup.
-* `on_change_checked` for checkboxes and radio buttons gets whether the box is checked now.
-  `on_change` gets the `value` attribute, which a click doesn't change, so a `Value<bool>` behind
-  `checked` had no way to learn about the click.
-* `ClickEvent` carries the modifier keys held during the click (`alt_key`, `ctrl_key`,
-  `shift_key`, `meta_key`), as `WheelEvent` and `PointerEvent` do, f. ex. for Ctrl+click adding
-  to a selection.
-
-### Changed
-
-* `form=` in `dom!`, `dom_element!` and in attributes spread into a component is the HTML `form`
-  attribute (`<button form="edit">` submits the form with that id from outside it), no longer
-  a shorthand for `on_submit`. Write `on_submit=` for the handler.
+* `vertigo serve --precompress` (`MountConfigBuilder::precompress`): the build's text files are
+  compressed with brotli once, at startup, about a quarter smaller. `vertigo build` shows the gain.
+* `on_change_checked` for checkboxes and radio buttons.
+* `ClickEvent` carries the modifier keys: `alt_key`, `ctrl_key`, `shift_key`, `meta_key`.
 
 ### Fixed
 
-* `checked` from a `Computed` or a `Value` reaches a checkbox or a radio button the user has
-  already clicked. For the browser the attribute is only the default, which a clicked box stops
-  following, so the runtime now sets the `checked` property along with it, as it did for `value`.
-  Before, a "select all" button ticked only the boxes nobody had touched.
-* `vertigo serve --wasm-preload` preloaded the wasm with `<link rel="preload" as="script">`, which
-  the runtime's `fetch()` can't use, so the browser requested the file a second time. Now the
-  runtime starts the download itself as soon as it runs, at low priority so images and styles take
-  precedence, and compiles the wasm while the page loads. (A `<link rel="preload" as="fetch">`
-  would still be downloaded twice by Safari.)
+* `checked` from a `Computed` or a `Value` didn't reach a checkbox the user had clicked.
+* `vertigo serve --wasm-preload` made the browser download the wasm twice.
 
 ## 0.14.0 - 2026-10-21
 

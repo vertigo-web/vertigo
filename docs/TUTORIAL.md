@@ -2,7 +2,7 @@
 <!-- markdownlint-disable no-inline-html -->
 
 <!-- markdownlint-disable-next-line no-emphasis-as-heading -->
-*Up to date with version 0.14.0*
+*Up to date with version 0.14.1*
 
 <!-- markdownlint-disable-next-line heading-increment -->
 ### Table of contents
