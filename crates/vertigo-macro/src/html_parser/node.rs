@@ -1,4 +1,4 @@
-use proc_macro2::TokenStream as TokenStream2;
+use proc_macro2::{Span, TokenStream as TokenStream2};
 use quote::{ToTokens, TokenStreamExt, quote};
 use rstml::node::{KeyedAttribute, Node, NodeAttribute, NodeBlock};
 use syn::{Ident, Lit, spanned::Spanned};
@@ -40,7 +40,8 @@ pub(super) fn convert_node(node: &Node, convert_to_dom_node: bool) -> TokenStrea
     let mut out_child = Vec::new();
     let mut class_values = Vec::new();
 
-    let mut push_attr = |name, value, is_str_literal| {
+    let mut push_attr = |name: String, value, is_str_literal, span| {
+        check_element_has(&node_name, &name, span);
         push_attribute(
             name,
             value,
@@ -66,12 +67,13 @@ pub(super) fn convert_node(node: &Node, convert_to_dom_node: bool) -> TokenStrea
                         } else {
                             unwrap_block_if_single(&value.block)
                         };
-                        push_attr(key.to_string(), outcome, false)
+                        push_attr(key.to_string(), outcome, false, span)
                     }
                     (None, Some(lit)) => push_attr(
                         key.to_string(),
                         lit.to_token_stream(),
                         matches!(lit.lit, Lit::Str(_)),
+                        span,
                     ),
                     _ => (),
                 }
@@ -94,7 +96,7 @@ pub(super) fn convert_node(node: &Node, convert_to_dom_node: bool) -> TokenStrea
                             }
 
                             let (key, value, _) = parse_block_of_statements(block);
-                            push_attr(key.to_string(), quote! { #value }, false)
+                            push_attr(key.to_string(), quote! { #value }, false, span)
                         }
                     }
                 } else {
@@ -150,6 +152,19 @@ pub(super) fn convert_node(node: &Node, convert_to_dom_node: bool) -> TokenStrea
     }
 }
 
+/// An attribute that only one element has. The element's name is known here and nowhere later:
+/// `DomElement` and an `AttrGroup` take any name.
+fn check_element_has(node_name: &str, attr_name: &str, span: Span) {
+    // The messages come to the window, and the driver passes on the ones from the page in this
+    // frame - anything else has no page of its own to hear from.
+    if attr_name == "on_message" && node_name != "iframe" {
+        emit_error!(
+            span,
+            "on_message works only on <iframe>: it gets the messages from the page in the frame"
+        );
+    }
+}
+
 /// A string literal in the source is a `&'static str`, and saying so spares the runtime two
 /// heap allocations per attribute - `AttrValue::from(&str)` cannot tell a literal from a
 /// borrow of a local, so it has to copy into an `Rc<String>`. Only the macro knows.
@@ -190,9 +205,9 @@ fn push_attribute(
     let method_str = match name.as_str() {
         "draw" | "hook_key_down" | "on_blur" | "on_change" | "on_change_file"
         | "on_change_checked" | "on_click" | "on_dropfile" | "on_input" | "on_intersect"
-        | "on_key_down" | "on_load" | "on_mouse_down" | "on_mouse_enter" | "on_mouse_leave"
-        | "on_mouse_up" | "on_pointer_down" | "on_pointer_move" | "on_pointer_up"
-        | "on_pointer_cancel" | "on_submit" | "on_wheel" => &name,
+        | "on_key_down" | "on_load" | "on_message" | "on_mouse_down" | "on_mouse_enter"
+        | "on_mouse_leave" | "on_mouse_up" | "on_pointer_down" | "on_pointer_move"
+        | "on_pointer_up" | "on_pointer_cancel" | "on_submit" | "on_wheel" => &name,
 
         "css" => {
             let class_name = generate_debug_class_name(&value);
@@ -374,6 +389,7 @@ mod tests {
             "on_submit",
             "on_key_down",
             "on_load",
+            "on_message",
             "on_mouse_down",
             "on_mouse_enter",
             "on_mouse_leave",

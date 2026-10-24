@@ -1442,6 +1442,32 @@ pub async fn js_api_access(ctx: &Ctx) -> Result<()> {
         .await?;
     }
 
+    // `on_message` of the frame gets what the page in it sends - the button is in that page,
+    // which a `srcdoc` frame shares the origin with, so the test can reach it.
+    ctx.wait_for("the button in the frame", async || {
+        let clicked = ctx
+            .js("const button = document.querySelector('iframe')?.contentDocument?.querySelector('button');
+                 button?.click();
+                 return !!button;")
+            .await?;
+        Ok((clicked.as_bool() == Some(true)).then_some(()))
+    })
+    .await?;
+    ctx.wait_for_text("Message from the frame: Hello from the frame")
+        .await?;
+
+    // And not what the page sends itself, though it comes to the same window. The promise waits
+    // for the message, and by then the listener of the frame, added earlier, has had it too.
+    ctx.js("return new Promise((done) => {
+                addEventListener('message', () => done(true), { once: true });
+                postMessage({ text: 'Not from the frame' }, '*');
+            });")
+        .await?;
+    ensure!(
+        !ctx.page_text().await?.contains("Not from the frame"),
+        "on_message of the frame got a message the page sent itself"
+    );
+
     click_all_buttons_except(
         ctx,
         // Dialogs are answered separately, below - a sweep would leave them standing and

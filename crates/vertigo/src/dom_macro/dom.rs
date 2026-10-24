@@ -2,7 +2,7 @@ use std::{collections::BTreeMap, rc::Rc};
 
 use crate::{
     Computed, Css, DomComment, DomDisplay, DomElement, DomText, Drawing, DropFileEvent,
-    KeyDownEvent, PointerEvent, Value, WheelEvent,
+    KeyDownEvent, MessageEvent, PointerEvent, Value, WheelEvent,
     dom::{
         attr_value::AttrValue,
         callback::{Callback, Callback1},
@@ -59,6 +59,7 @@ pub enum AttrGroupValue {
     OnIntersect(Rc<Callback1<IntersectionEvent, ()>>),
     OnKeyDown(Rc<Callback1<KeyDownEvent, bool>>),
     OnLoad(Rc<Callback<()>>),
+    OnMessage(Rc<Callback1<MessageEvent, ()>>),
     OnMouseDown(Rc<Callback<bool>>),
     OnMouseEnter(Rc<Callback<()>>),
     OnMouseLeave(Rc<Callback<()>>),
@@ -108,6 +109,7 @@ impl AttrGroupValue {
     group_value_constructor!(on_intersect, Callback1<IntersectionEvent, ()>, OnIntersect);
     group_value_constructor!(on_key_down, Callback1<KeyDownEvent, bool>, OnKeyDown);
     group_value_constructor!(on_load, Callback<()>, OnLoad);
+    group_value_constructor!(on_message, Callback1<MessageEvent, ()>, OnMessage);
     group_value_constructor!(on_mouse_down, Callback<bool>, OnMouseDown);
     group_value_constructor!(on_mouse_enter, Callback<()>, OnMouseEnter);
     group_value_constructor!(on_mouse_leave, Callback<()>, OnMouseLeave);
