@@ -1,6 +1,15 @@
 <!-- markdownlint-configure-file { "no-duplicate-heading": { "siblings_only": true } } -->
 
 <!-- markdownlint-disable-next-line first-line-h1 -->
+## Unreleased
+
+### Added
+
+* `on_message` on an `<iframe>` gets the messages the page in it sends with `parent.postMessage`,
+  f. ex. a widget telling how tall it wants to be - with their origin, and only from that frame.
+  On a page rendered on the server the frames load before the wasm starts, so the messages they
+  sent before that wait for the first render and come to its `on_message` first.
+
 ## 0.14.1 - 2026-10-24
 
 ### Breaking

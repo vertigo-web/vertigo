@@ -207,9 +207,41 @@ const keydown: Handler = (event, send) => {
     console.warn('keydown ignore', event);
 };
 
+/// A message from the page in a frame: where it came from and what it said, as far as JSON can
+/// hold it - a `Date` becomes text, and what JSON has no room for at all (a `BigInt`, a cycle,
+/// `undefined`) - `null`. Which frame it came from, [`CallbackManager.add`] checks.
+const message = (event: MessageEvent, send: Send) => {
+    let data: JsJsonType;
+
+    try {
+        data = JSON.parse(JSON.stringify(event.data) ?? 'null');
+    } catch {
+        data = null;
+    }
+
+    // Payload order MUST match the Rust decoder `MessageEvent::from_driver`.
+    send([event.origin, data]);
+};
+
+/// Messages that came to the window before the app was there to hear them. The wasm starts
+/// after the page's `load`, which waits for the frames, so on a page rendered on the server
+/// a frame has often said what it had to - f. ex. a widget how tall it wants to be - before its
+/// `on_message` was added. They wait here until the first batch is in place, and an `on_message`
+/// added in it gets the ones from its frame first.
+let earlyMessages: Array<MessageEvent> | null = [];
+
+export const keepEarlyMessage = (event: MessageEvent) => {
+    earlyMessages?.push(event);
+};
+
+if (typeof window !== 'undefined') {
+    window.addEventListener('message', keepEarlyMessage);
+}
+
 /// The event names are wire strings from Rust (`dom/dom_element.rs`), so each is spelled out
 /// exactly once here. `hook_keydown`, `change_file` and `change_checked` are vertigo-internal
-/// names, remapped to real DOM events where the listener is attached.
+/// names, remapped to real DOM events where the listener is attached. `intersect` and `message`
+/// have no listener on the element, so `CallbackManager.add` takes them on its own.
 const HANDLERS: Record<string, Handler> = {
     click,
     submit: notifyPreventDefault,
@@ -277,6 +309,34 @@ export class CallbackManager {
             return;
         }
 
+        if (event_name === 'message') {
+            // A message comes to the window, from any frame or window that has a reference to
+            // it - only the ones from the page in this frame go on.
+            const frame = nodes.get('callback_add', id);
+
+            // Nothing else has a page of its own to hear from. `dom!` doesn't let it through, but
+            // `DomElement::on_message` and an `AttrGroup` don't know the element's name.
+            if (!(frame instanceof HTMLIFrameElement)) {
+                throw Error(`on_message: expected id=${id} as HTMLIFrameElement`);
+            }
+
+            const fromFrame = (event: Event) => {
+                if (event instanceof MessageEvent && event.source !== null && event.source === frame.contentWindow) {
+                    message(event, send);
+                }
+            };
+
+            this.callbacks.set(callback_id, fromFrame);
+            window.addEventListener('message', fromFrame, false);
+
+            // After the batch, which wasm is still in the middle of sending
+            const early = [...(earlyMessages ?? [])];
+            if (early.length > 0) {
+                queueMicrotask(() => early.forEach(fromFrame));
+            }
+            return;
+        }
+
         this.callbacks.set(callback_id, callback);
 
         if (event_name === 'hook_keydown') {
@@ -302,11 +362,21 @@ export class CallbackManager {
             return;
         }
 
-        if (event_name === 'hook_keydown') {
+        if (event_name === 'message') {
+            window.removeEventListener('message', callback);
+        } else if (event_name === 'hook_keydown') {
             document.removeEventListener('keydown', callback);
         } else {
             const node = nodes.get('callback_remove', id);
             node.removeEventListener(domEventName(event_name), callback);
+        }
+    }
+
+    /// The first batch is in place: the frames of the page have their `on_message` already.
+    public forgetEarlyMessages() {
+        if (earlyMessages !== null) {
+            window.removeEventListener('message', keepEarlyMessage);
+            earlyMessages = null;
         }
     }
 

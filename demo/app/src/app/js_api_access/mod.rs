@@ -3,6 +3,9 @@ use vertigo::{Css, JsJson, Value, bind, component, css, dom, js};
 mod clipboard;
 use clipboard::Clipboard;
 
+mod frame_message;
+use frame_message::FrameMessage;
+
 mod node_ref;
 use node_ref::NodeRef;
 
@@ -45,6 +48,7 @@ pub fn JsApiAccess() {
         <div tw="flex flex-col gap-2 p-2">
             <Clipboard />
             <NodeRef />
+            <FrameMessage />
             <hr />
             <p tw="flex gap-3">
                 <button on_click={to_bottom}>"scroll to bottom (FF)"</button>
