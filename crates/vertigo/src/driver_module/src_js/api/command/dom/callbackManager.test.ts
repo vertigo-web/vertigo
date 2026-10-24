@@ -1,8 +1,9 @@
 // The click, wheel and pointer handlers: what a `ClickEvent`, `WheelEvent` or `PointerEvent`
 // reply does to the browser's own handling of the event, and what the handlers tell wasm. And
-// `change_checked`, which tells wasm whether a box is checked.
+// `change_checked`, which tells wasm whether a box is checked, and `message`, which passes on
+// the messages from the page in a frame.
 
-import { CallbackManager, click, pointer, wheel } from "./callbackManager";
+import { CallbackManager, click, keepEarlyMessage, pointer, wheel } from "./callbackManager";
 import { MapNodes } from "./map_nodes";
 
 const assert = (condition: boolean, message: string) => {
@@ -301,6 +302,121 @@ function testChangeChecked() {
     delete (globalThis as any).HTMLInputElement;
 }
 
+/// The browser's classes - here they only have to be there for `instanceof`. Node has
+/// a `MessageEvent` of its own, but it takes only a `MessagePort` for the source.
+class MockFrame {
+    contentWindow: object;
+    constructor(contentWindow: object) {
+        this.contentWindow = contentWindow;
+    }
+}
+
+class MockMessageEvent {
+    source: object | null;
+    origin = 'https://example.com';
+    data: unknown;
+    constructor(source: object | null, data: unknown) {
+        this.source = source;
+        this.data = data;
+    }
+}
+
+const nodeMessageEvent = globalThis.MessageEvent;
+
+/// The window of the page, which keeps its listeners, and the classes of the browser.
+function mockBrowser(): MockNode {
+    const page = new MockNode();
+    (globalThis as any).window = page;
+    (globalThis as any).HTMLIFrameElement = MockFrame;
+    (globalThis as any).MessageEvent = MockMessageEvent;
+    return page;
+}
+
+function restoreNode() {
+    delete (globalThis as any).window;
+    delete (globalThis as any).HTMLIFrameElement;
+    (globalThis as any).MessageEvent = nodeMessageEvent;
+}
+
+function testMessage() {
+    console.log("\n--- Test message: on_message ---");
+    // The window of the page and the one of the page in the frame
+    const page = mockBrowser();
+    const inFrame = {};
+
+    const frame = new MockFrame(inFrame);
+    const nodes = { get: () => frame } as unknown as MapNodes;
+    const sent: unknown[] = [];
+    const wasm = { wasmCommand: (command: any) => sent.push(command.CallbackCall.value) };
+    const manager = new CallbackManager(() => wasm as any);
+
+    manager.add(nodes, 1, 'message', 40);
+    assert(
+        JSON.stringify(page.added) === JSON.stringify([['message', false]]),
+        "listens to the messages to the window",
+    );
+
+    const post = (source: object | null, data: unknown) =>
+        page.listeners[0]!(new MockMessageEvent(source, data) as unknown as Event);
+    post(inFrame, { height: 338, when: new Date(0) });
+    post({}, 'from another frame');
+    post(null, 'from a worker');
+    post(inFrame, 10n);
+    assert(
+        JSON.stringify(sent) === JSON.stringify([
+            ['https://example.com', { height: 338, when: '1970-01-01T00:00:00.000Z' }],
+            ['https://example.com', null],
+        ]),
+        `only from the page in the frame, as JSON can hold it: ${JSON.stringify(sent)}`,
+    );
+
+    manager.remove(nodes, 1, 'message', 40);
+    assert(JSON.stringify(page.removed) === JSON.stringify(['message']), "which it stops listening to");
+
+    let threw = false;
+    try {
+        manager.add({ get: () => new MockNode() } as unknown as MapNodes, 2, 'message', 41);
+    } catch {
+        threw = true;
+    }
+    assert(threw && page.added.length === 1, "and on anything but a frame it throws, listening to nothing");
+
+    restoreNode();
+}
+
+async function testEarlyMessages() {
+    console.log("\n--- Test message 2: before the app was there ---");
+    const page = mockBrowser();
+    const inFrame = {};
+
+    // A frame of a page from the server, and another one, spoke before the wasm started
+    keepEarlyMessage(new MockMessageEvent(inFrame, 'early') as unknown as MessageEvent);
+    keepEarlyMessage(new MockMessageEvent({}, 'another frame') as unknown as MessageEvent);
+
+    const frame = new MockFrame(inFrame);
+    const nodes = { get: () => frame } as unknown as MapNodes;
+    const sent: unknown[] = [];
+    const wasm = { wasmCommand: (command: any) => sent.push(command.CallbackCall.value) };
+    const manager = new CallbackManager(() => wasm as any);
+
+    manager.add(nodes, 1, 'message', 41);
+    assert(sent.length === 0, "not in the middle of the batch");
+    manager.forgetEarlyMessages();
+    await Promise.resolve();
+    assert(
+        JSON.stringify(sent) === JSON.stringify([['https://example.com', 'early']]),
+        `but right after it, what its frame said: ${JSON.stringify(sent)}`,
+    );
+    assert(JSON.stringify(page.removed) === JSON.stringify(['message']), "and then no more are kept");
+
+    keepEarlyMessage(new MockMessageEvent(inFrame, 'late') as unknown as MessageEvent);
+    manager.add(nodes, 2, 'message', 42);
+    await Promise.resolve();
+    assert(sent.length === 1, "so a frame added later gets only what comes after");
+
+    restoreNode();
+}
+
 testClickPayload();
 testDefaultActionIsLeftToTheBrowser();
 testPreventDefault();
@@ -318,3 +434,5 @@ testPointerCaptureOfAPointerThatIsUp();
 testPointerFlags();
 testPointerListeners();
 testChangeChecked();
+testMessage();
+testEarlyMessages();

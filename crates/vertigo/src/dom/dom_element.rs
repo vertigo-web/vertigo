@@ -15,7 +15,8 @@ use super::{
     dom_id::DomId,
     dom_node::DomNode,
     events::{
-        ClickEvent, DropFileEvent, IntersectionEvent, KeyDownEvent, PointerEvent, WheelEvent,
+        ClickEvent, DropFileEvent, IntersectionEvent, KeyDownEvent, MessageEvent, PointerEvent,
+        WheelEvent,
     },
 };
 
@@ -203,6 +204,7 @@ impl DomElement {
                 self.on_key_down_rc(on_key_down)
             }
             ("on_load", AttrGroupValue::OnLoad(on_load)) => self.on_load_rc(on_load),
+            ("on_message", AttrGroupValue::OnMessage(on_message)) => self.on_message_rc(on_message),
             ("on_mouse_down", AttrGroupValue::OnMouseDown(on_mouse_down)) => {
                 self.on_mouse_down_rc(on_mouse_down)
             }
@@ -567,6 +569,42 @@ impl DomElement {
 
         self.add_event_listener("load", move |_data| {
             on_load();
+            JsJson::Null
+        })
+    }
+
+    /// Messages the page in this frame (`<iframe>`) sends to the page with `parent.postMessage`,
+    /// f. ex. a widget telling how tall it wants to be. Check where a message came from
+    /// ([`MessageEvent::origin`]) before trusting it.
+    ///
+    /// A frame of a page rendered on the server loads before the wasm starts. What it sent by
+    /// then comes first, right after the first render.
+    ///
+    /// Only an `<iframe>` has a page of its own to hear from. `dom!` doesn't compile `on_message`
+    /// on another element, and on one made otherwise the driver logs an error:
+    ///
+    /// ```compile_fail
+    /// use vertigo::{MessageEvent, dom};
+    ///
+    /// let on_message = |_: MessageEvent| {};
+    ///
+    /// dom! {
+    ///     <div {on_message} />
+    /// };
+    /// ```
+    pub fn on_message(self, on_message: impl Into<Callback1<MessageEvent, ()>>) -> Self {
+        self.on_message_rc(Rc::new(on_message.into()))
+    }
+
+    pub fn on_message_rc(self, on_message: Rc<Callback1<MessageEvent, ()>>) -> Self {
+        let on_message = self.install_callback1(on_message);
+
+        self.add_event_listener("message", move |data| {
+            match MessageEvent::from_driver(data) {
+                Ok(event) => on_message(event),
+                Err(error) => log::error!("on_message -> params decode error -> {error}"),
+            }
+
             JsJson::Null
         })
     }
