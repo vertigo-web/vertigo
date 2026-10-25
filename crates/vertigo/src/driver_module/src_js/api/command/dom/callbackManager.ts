@@ -207,6 +207,42 @@ const keydown: Handler = (event, send) => {
     console.warn('keydown ignore', event);
 };
 
+/// The events of a `<video>` or an `<audio>` behind one `on_media`. The list MUST match
+/// `MediaEventKind::ALL` in `media_event.rs`.
+const MEDIA_EVENTS = [
+    'loadedmetadata', 'durationchange', 'timeupdate', 'progress', 'play', 'playing', 'pause',
+    'waiting', 'seeked', 'ended', 'volumechange', 'error',
+];
+
+/// Up to where the media is in the browser from the current position on.
+const bufferedAhead = (media: HTMLMediaElement): number => {
+    const { buffered, currentTime } = media;
+
+    for (let i = 0; i < buffered.length; i++) {
+        if (buffered.start(i) <= currentTime && currentTime <= buffered.end(i)) {
+            return buffered.end(i);
+        }
+    }
+
+    return currentTime;
+};
+
+/// What happened to a `<video>` or an `<audio>`, with its whole state after - the length is
+/// `null` while unknown (`NaN`) and for a stream with no end (`Infinity`).
+const media = (element: HTMLMediaElement, type: string, send: Send) => {
+    // Payload order MUST match the Rust decoder `MediaEvent::from_driver`.
+    send([
+        type,
+        element.currentTime,
+        Number.isFinite(element.duration) ? element.duration : null,
+        element.paused,
+        element.ended,
+        element.muted,
+        element.volume,
+        bufferedAhead(element),
+    ]);
+};
+
 /// A message from the page in a frame: where it came from and what it said, as far as JSON can
 /// hold it - a `Date` becomes text, and what JSON has no room for at all (a `BigInt`, a cycle,
 /// `undefined`) - `null`. Which frame it came from, [`CallbackManager.add`] checks.
@@ -240,8 +276,8 @@ if (typeof window !== 'undefined') {
 
 /// The event names are wire strings from Rust (`dom/dom_element.rs`), so each is spelled out
 /// exactly once here. `hook_keydown`, `change_file` and `change_checked` are vertigo-internal
-/// names, remapped to real DOM events where the listener is attached. `intersect` and `message`
-/// have no listener on the element, so `CallbackManager.add` takes them on its own.
+/// names, remapped to real DOM events where the listener is attached. `intersect`, `media` and
+/// `message` aren't one DOM event of the element, so `CallbackManager.add` takes them on its own.
 const HANDLERS: Record<string, Handler> = {
     click,
     submit: notifyPreventDefault,
@@ -309,6 +345,30 @@ export class CallbackManager {
             return;
         }
 
+        if (event_name === 'media') {
+            const element = nodes.get('callback_add', id);
+
+            // `dom!` doesn't let it through, but `DomElement::on_media` and an `AttrGroup` don't
+            // know the element's name.
+            if (!(element instanceof HTMLMediaElement)) {
+                throw Error(`on_media: expected id=${id} as HTMLMediaElement`);
+            }
+
+            const listener = (event: Event) => media(element, event.type, send);
+            this.callbacks.set(callback_id, listener);
+            MEDIA_EVENTS.forEach((name) => element.addEventListener(name, listener, false));
+
+            // On a page rendered on the server the media loads before the wasm starts, so what
+            // it said by then comes after the batch, which wasm is still in the middle of sending.
+            // 1 is `HAVE_METADATA`.
+            if (element.error !== null) {
+                queueMicrotask(() => media(element, 'error', send));
+            } else if (element.readyState >= 1) {
+                queueMicrotask(() => media(element, 'loadedmetadata', send));
+            }
+            return;
+        }
+
         if (event_name === 'message') {
             // A message comes to the window, from any frame or window that has a reference to
             // it - only the ones from the page in this frame go on.
@@ -362,7 +422,10 @@ export class CallbackManager {
             return;
         }
 
-        if (event_name === 'message') {
+        if (event_name === 'media') {
+            const element = nodes.get('callback_remove', id);
+            MEDIA_EVENTS.forEach((name) => element.removeEventListener(name, callback));
+        } else if (event_name === 'message') {
             window.removeEventListener('message', callback);
         } else if (event_name === 'hook_keydown') {
             document.removeEventListener('keydown', callback);

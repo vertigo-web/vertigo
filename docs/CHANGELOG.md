@@ -9,6 +9,9 @@
   f. ex. a widget telling how tall it wants to be - with their origin, and only from that frame.
   On a page rendered on the server the frames load before the wasm starts, so the messages they
   sent before that wait for the first render and come to its `on_message` first.
+* `on_media` on a `<video>` or an `<audio>`: one listener for its media events (`play`, `pause`,
+  `timeupdate`, `ended`, `error` and the rest of `MediaEventKind`), each with the whole state
+  after - position, length, paused, muted, volume and how far it's buffered.
 
 ## 0.14.1 - 2026-10-24
 

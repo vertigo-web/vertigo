@@ -7,6 +7,7 @@ mod component_namespaces;
 mod embed;
 mod html_attrs;
 mod list_spread;
+mod media_event;
 mod params;
 mod pointer_event;
 mod wheel_event;

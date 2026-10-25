@@ -15,8 +15,8 @@ use super::{
     dom_id::DomId,
     dom_node::DomNode,
     events::{
-        ClickEvent, DropFileEvent, IntersectionEvent, KeyDownEvent, MessageEvent, PointerEvent,
-        WheelEvent,
+        ClickEvent, DropFileEvent, IntersectionEvent, KeyDownEvent, MediaEvent, MessageEvent,
+        PointerEvent, WheelEvent,
     },
 };
 
@@ -204,6 +204,7 @@ impl DomElement {
                 self.on_key_down_rc(on_key_down)
             }
             ("on_load", AttrGroupValue::OnLoad(on_load)) => self.on_load_rc(on_load),
+            ("on_media", AttrGroupValue::OnMedia(on_media)) => self.on_media_rc(on_media),
             ("on_message", AttrGroupValue::OnMessage(on_message)) => self.on_message_rc(on_message),
             ("on_mouse_down", AttrGroupValue::OnMouseDown(on_mouse_down)) => {
                 self.on_mouse_down_rc(on_mouse_down)
@@ -569,6 +570,38 @@ impl DomElement {
 
         self.add_event_listener("load", move |_data| {
             on_load();
+            JsJson::Null
+        })
+    }
+
+    /// What happens to this `<video>` or `<audio>`: it plays, stops, moves on, gets more data or
+    /// can't be played - with its whole state after. See [`MediaEvent`].
+    ///
+    /// Only a `<video>` and an `<audio>` play. `dom!` doesn't compile `on_media` on another
+    /// element, and on one made otherwise the driver logs an error:
+    ///
+    /// ```compile_fail
+    /// use vertigo::{MediaEvent, dom};
+    ///
+    /// let on_media = |_: MediaEvent| {};
+    ///
+    /// dom! {
+    ///     <div {on_media} />
+    /// };
+    /// ```
+    pub fn on_media(self, on_media: impl Into<Callback1<MediaEvent, ()>>) -> Self {
+        self.on_media_rc(Rc::new(on_media.into()))
+    }
+
+    pub fn on_media_rc(self, on_media: Rc<Callback1<MediaEvent, ()>>) -> Self {
+        let on_media = self.install_callback1(on_media);
+
+        self.add_event_listener("media", move |data| {
+            match MediaEvent::from_driver(data) {
+                Ok(event) => on_media(event),
+                Err(error) => log::error!("on_media -> params decode error -> {error}"),
+            }
+
             JsJson::Null
         })
     }

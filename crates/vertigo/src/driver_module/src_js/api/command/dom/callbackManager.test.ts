@@ -1,7 +1,7 @@
 // The click, wheel and pointer handlers: what a `ClickEvent`, `WheelEvent` or `PointerEvent`
 // reply does to the browser's own handling of the event, and what the handlers tell wasm. And
-// `change_checked`, which tells wasm whether a box is checked, and `message`, which passes on
-// the messages from the page in a frame.
+// `change_checked`, which tells wasm whether a box is checked, `media`, which tells it what
+// a video or an audio does, and `message`, which passes on the messages from the page in a frame.
 
 import { CallbackManager, click, keepEarlyMessage, pointer, wheel } from "./callbackManager";
 import { MapNodes } from "./map_nodes";
@@ -417,6 +417,100 @@ async function testEarlyMessages() {
     restoreNode();
 }
 
+/// A video 12.5 s in, with its length unknown yet, and two pieces of it in the browser: from 0
+/// to 20 s and from 30 to 40 s. The browser's class - here it only has to be there for
+/// `instanceof`.
+class MockMedia extends MockNode {
+    currentTime = 12.5;
+    duration = NaN;
+    paused = true;
+    ended = false;
+    muted = false;
+    volume = 0.8;
+    error: object | null = null;
+    readyState = 0;
+    buffered = {
+        length: 2,
+        start: (index: number) => [0, 30][index]!,
+        end: (index: number) => [20, 40][index]!,
+    };
+}
+
+function testMedia() {
+    console.log("\n--- Test media: on_media ---");
+    (globalThis as any).HTMLMediaElement = MockMedia;
+
+    const element = new MockMedia();
+    const nodes = { get: () => element } as unknown as MapNodes;
+    const sent: unknown[] = [];
+    const wasm = { wasmCommand: (command: any) => sent.push(command.CallbackCall.value) };
+    const manager = new CallbackManager(() => wasm as any);
+
+    manager.add(nodes, 1, 'media', 50);
+    assert(
+        JSON.stringify(element.added.map(([name]) => name)) === JSON.stringify([
+            'loadedmetadata', 'durationchange', 'timeupdate', 'progress', 'play', 'playing', 'pause',
+            'waiting', 'seeked', 'ended', 'volumechange', 'error',
+        ]),
+        "listens to the events of the media",
+    );
+
+    const fire = (type: string) => element.listeners[0]!({ type } as Event);
+    fire('loadedmetadata');
+    element.duration = 60;
+    element.paused = false;
+    fire('play');
+    element.duration = Infinity;
+    element.currentTime = 35;
+    fire('timeupdate');
+    assert(
+        JSON.stringify(sent) === JSON.stringify([
+            ['loadedmetadata', 12.5, null, true, false, false, 0.8, 20],
+            ['play', 12.5, 60, false, false, false, 0.8, 20],
+            ['timeupdate', 35, null, false, false, false, 0.8, 40],
+        ]),
+        `with the state after, the length null while unknown and for a stream: ${JSON.stringify(sent)}`,
+    );
+
+    manager.remove(nodes, 1, 'media', 50);
+    assert(element.removed.length === 12, "which it stops listening to");
+
+    let threw = false;
+    try {
+        manager.add({ get: () => new MockNode() } as unknown as MapNodes, 2, 'media', 51);
+    } catch {
+        threw = true;
+    }
+    assert(threw, "and on anything but a video or an audio it throws");
+
+    delete (globalThis as any).HTMLMediaElement;
+}
+
+async function testMediaFromTheServer() {
+    console.log("\n--- Test media 2: loaded before the app was there ---");
+    (globalThis as any).HTMLMediaElement = MockMedia;
+
+    const loaded = new MockMedia();
+    loaded.readyState = 1;
+    const broken = new MockMedia();
+    broken.error = { code: 4 };
+    const sent: unknown[] = [];
+    const wasm = { wasmCommand: (command: any) => sent.push(command.CallbackCall.value) };
+    const manager = new CallbackManager(() => wasm as any);
+
+    manager.add({ get: () => loaded } as unknown as MapNodes, 1, 'media', 52);
+    manager.add({ get: () => broken } as unknown as MapNodes, 2, 'media', 53);
+    manager.add({ get: () => new MockMedia() } as unknown as MapNodes, 3, 'media', 54);
+    assert(sent.length === 0, "not in the middle of the batch");
+    await Promise.resolve();
+    assert(
+        JSON.stringify(sent.map((value) => (value as unknown[])[0])) === JSON.stringify(['loadedmetadata', 'error']),
+        `but right after it, what the media said by then: ${JSON.stringify(sent)}`,
+    );
+
+    delete (globalThis as any).HTMLMediaElement;
+}
+
 testClickPayload();
 testDefaultActionIsLeftToTheBrowser();
 testPreventDefault();
@@ -436,3 +530,5 @@ testPointerListeners();
 testChangeChecked();
 testMessage();
 testEarlyMessages();
+testMedia();
+testMediaFromTheServer();

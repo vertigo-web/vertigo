@@ -163,6 +163,12 @@ fn check_element_has(node_name: &str, attr_name: &str, span: Span) {
             "on_message works only on <iframe>: it gets the messages from the page in the frame"
         );
     }
+    if attr_name == "on_media" && !matches!(node_name, "video" | "audio") {
+        emit_error!(
+            span,
+            "on_media works only on <video> and <audio>: nothing else plays"
+        );
+    }
 }
 
 /// A string literal in the source is a `&'static str`, and saying so spares the runtime two
@@ -205,9 +211,11 @@ fn push_attribute(
     let method_str = match name.as_str() {
         "draw" | "hook_key_down" | "on_blur" | "on_change" | "on_change_file"
         | "on_change_checked" | "on_click" | "on_dropfile" | "on_input" | "on_intersect"
-        | "on_key_down" | "on_load" | "on_message" | "on_mouse_down" | "on_mouse_enter"
-        | "on_mouse_leave" | "on_mouse_up" | "on_pointer_down" | "on_pointer_move"
-        | "on_pointer_up" | "on_pointer_cancel" | "on_submit" | "on_wheel" => &name,
+        | "on_key_down" | "on_load" | "on_media" | "on_message" | "on_mouse_down"
+        | "on_mouse_enter" | "on_mouse_leave" | "on_mouse_up" | "on_pointer_down"
+        | "on_pointer_move" | "on_pointer_up" | "on_pointer_cancel" | "on_submit" | "on_wheel" => {
+            &name
+        }
 
         "css" => {
             let class_name = generate_debug_class_name(&value);
@@ -389,6 +397,7 @@ mod tests {
             "on_submit",
             "on_key_down",
             "on_load",
+            "on_media",
             "on_message",
             "on_mouse_down",
             "on_mouse_enter",
