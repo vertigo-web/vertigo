@@ -208,6 +208,7 @@ fn test_on_events_grouping_and_spreading() {
             inner:on_input={|_| ()}
             inner:on_key_down={|_| true}
             inner:on_load={|| ()}
+            inner:on_media={|_| ()}
             inner:on_message={|_| ()}
             inner:on_mouse_down={|| true}
             inner:on_mouse_enter={|| ()}
@@ -226,7 +227,7 @@ fn test_on_events_grouping_and_spreading() {
 
     assert_eq!(
         el_str,
-        "<input name='world' v-component='Everything' blur=2 change=3 change_checked=4 click=5 drop=6 hook_keydown=1 input=7 keydown=8 load=9 message=10 mousedown=11 mouseenter=12 mouseleave=13 mouseup=14 pointercancel=15 pointerdown=16 pointermove=17 pointerup=18 submit=19 wheel=20 />"
+        "<input name='world' v-component='Everything' blur=2 change=3 change_checked=4 click=5 drop=6 hook_keydown=1 input=7 keydown=8 load=9 media=10 message=11 mousedown=12 mouseenter=13 mouseleave=14 mouseup=15 pointercancel=16 pointerdown=17 pointermove=18 pointerup=19 submit=20 wheel=21 />"
     );
 }
 
