@@ -84,7 +84,8 @@ impl MountConfigBuilder {
 
     /// Compress the build's wasm, `wasm_run.js` and other text files with brotli at its highest
     /// level once, in [`ServerState::init`](crate::serve::ServerState::init), and serve those to
-    /// the browsers that accept brotli.
+    /// the browsers that accept brotli - [`vertigo_install`](crate::serve::vertigo_install) and
+    /// [`vertigo_files`](crate::serve::vertigo_files) do.
     ///
     /// They come out about a quarter smaller than compressed per response, for about a second
     /// of startup per megabyte.
