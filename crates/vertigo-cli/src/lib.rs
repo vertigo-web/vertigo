@@ -17,7 +17,7 @@ pub use serve::ServeOpts;
 pub use watch::WatchOpts;
 
 // For bundling with custom back-end
-pub use serve::vertigo_install;
+pub use serve::{vertigo_files, vertigo_install};
 
 use commons::logging::setup_logging;
 

@@ -12,6 +12,9 @@
 * `on_media` on a `<video>` or an `<audio>`: one listener for its media events (`play`, `pause`,
   `timeupdate`, `ended`, `error` and the rest of `MediaEventKind`), each with the whole state
   after - position, length, paused, muted, volume and how far it's buffered.
+* vertigo-cli: `vertigo_files` installs only the build's static files, with the precompressed
+  ones, for a back-end that serves the pages by itself. `vertigo_install` is `vertigo_files`
+  and the handler.
 
 ## 0.14.1 - 2026-10-24
 
