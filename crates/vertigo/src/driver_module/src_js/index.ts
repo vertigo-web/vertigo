@@ -27,12 +27,13 @@ const runModule = async (wasm: string) => {
     console.info(`Wasm module: "${wasm}" -> launched vertigoEntryFunction with version ${VERTIGO_COMPAT_VERSION_MAJOR}.${VERTIGO_COMPAT_VERSION_MINOR}`);
 };
 
-const findAndRunModule = async () => {
+const findAndRunModule = () => {
     document.querySelectorAll('*[data-vertigo-run-wasm]').forEach((node) => {
         const wasm = node.getAttribute('data-vertigo-run-wasm');
 
         if (typeof wasm === 'string') {
-            runModule(wasm);
+            // A failure goes to the console as an unhandled rejection.
+            void runModule(wasm);
         } else {
             console.error('Run error', node);
         }

@@ -22,7 +22,7 @@ export const preloadModule = (wasmBinPath: string) => {
         return;
     }
 
-    const module = WebAssembly.compileStreaming(fetch(wasmBinPath, { priority: 'low' })).catch((err) => {
+    const module = WebAssembly.compileStreaming(fetch(wasmBinPath, { priority: 'low' })).catch((err: unknown) => {
         console.warn("Preloading wasm failed, it will be fetched again once the page has loaded. Original error:\n", err);
         return null;
     });
@@ -57,9 +57,9 @@ const fetchModule = async (wasmBinPath: string, imports: Record<string, WebAssem
     return module_instance;
 };
 
-export const wasmInit = async <ImportType extends Record<string, Function>, ExportType extends BaseExportType>(
+export const wasmInit = async <ExportType extends BaseExportType>(
     wasmBinPath: string,
-    imports: { mod: ImportType },
+    imports: { mod: WebAssembly.ModuleImports },
 ): Promise<ModuleControllerType<ExportType>> => {
     const module_instance = await fetchModule(wasmBinPath, imports);
 
@@ -76,7 +76,7 @@ export const wasmInit = async <ImportType extends Record<string, Function>, Expo
         }
     };
 
-    //@ts-expect-error
+    //@ts-expect-error the exports the wasm was built with, which its types know nothing of
     const exports: ExportType = module_instance.instance.exports;
 
     const wasmCommand = (value: JsJsonType): JsJsonType => {
@@ -86,7 +86,7 @@ export const wasmInit = async <ImportType extends Record<string, Function>, Expo
         const buffer = new BufferCursor(getUint8Memory, long_ptr);
         saveJsJsonToBufferItem(value, buffer);
 
-        let result_long_ptr = exports.vertigo_export_wasm_command(long_ptr);
+        const result_long_ptr = exports.vertigo_export_wasm_command(long_ptr);
 
         // Decode JsJson
         if (result_long_ptr === 0n) {

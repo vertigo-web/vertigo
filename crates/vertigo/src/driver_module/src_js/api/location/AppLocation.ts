@@ -16,7 +16,7 @@ export class AppLocation {
             Hash: new BrowserLocation(
                 getWasm,
                 "hashchange",
-                () => decodeURIComponent(location.hash.substr(1)),
+                () => decodeURIComponent(location.hash.slice(1)),
                 (value, trigger) => { location.hash = value; trigger(); },
                 // No trigger: replacing the hash deliberately does not re-announce.
                 (value) => { history.replaceState(null, '', `#${value}`); },

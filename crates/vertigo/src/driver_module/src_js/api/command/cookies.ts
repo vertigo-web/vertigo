@@ -1,4 +1,4 @@
-import { JsJsonType } from "../../jsjson";
+import { JsJsonType, parseJson } from "../../jsjson";
 
 export class Cookies {
     public get = (cname: string): string => {
@@ -29,14 +29,13 @@ export class Cookies {
     }
 
     public getJson = (cname: string): JsJsonType => {
-        let cvalue_str = this.get(cname);
+        const cvalue_str = this.get(cname);
 
         if (cvalue_str.length !== 0) {
             try {
-                let cookie_value = JSON.parse(cvalue_str);
-                return cookie_value;
+                return parseJson(cvalue_str);
             } catch (e) {
-                console.error!("Error deserializing cookie", e);
+                console.error("Error deserializing cookie", e);
             }
         }
         return null
@@ -47,11 +46,11 @@ export class Cookies {
         cvalue: string,
         expires_in: number,
     ) => {
-        const cvalueEncoded = cvalue == null ? "" : encodeURIComponent(cvalue);
+        const cvalueEncoded = encodeURIComponent(cvalue);
 
         const d = new Date();
         d.setTime(d.getTime() + (expires_in * 1000));
-        let expires = "expires=" + d.toUTCString();
+        const expires = "expires=" + d.toUTCString();
 
         document.cookie = `${cname}=${cvalueEncoded};${expires};path=/; samesite=Strict`;
     }
@@ -61,7 +60,7 @@ export class Cookies {
         cvalue: JsJsonType,
         expires_in: number,
     ) => {
-        let cvalue_str = JSON.stringify(cvalue);
+        const cvalue_str = JSON.stringify(cvalue);
 
         this.set(cname, cvalue_str, expires_in);
     }

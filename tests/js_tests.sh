@@ -3,6 +3,9 @@ set -e
 
 npm install
 
+echo "Linting TS"
+npm run lint
+
 echo "Running TS tests"
 npm run test
 

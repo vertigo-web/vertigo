@@ -31,6 +31,16 @@ class MockClickEvent extends MockEvent {
     metaKey = false;
 }
 
+/// The element with the listener: its top left corner is at (100, 200) and it is 300 x 150.
+class MockElement {
+    getBoundingClientRect() { return { left: 100, top: 200, width: 300, height: 150 }; }
+    setPointerCapture(_pointerId: number) {}
+}
+
+// What the handlers check the events and their targets against.
+(globalThis as any).MouseEvent = MockClickEvent;
+(globalThis as any).Element = MockElement;
+
 /// A click whose `on_click` in wasm replied with `reply` - what `ClickEvent` is serialized to.
 function clickReplying(reply: unknown): MockClickEvent {
     const event = new MockClickEvent();
@@ -66,7 +76,7 @@ function testClickPayload() {
     let sent: unknown;
     click(new MockClickEvent() as unknown as Event, (value) => {
         sent = value;
-        return null as any;
+        return null;
     });
     assert(
         JSON.stringify(sent) === JSON.stringify([false, true, false, false]),
@@ -80,6 +90,7 @@ function testReplyWithoutFlags() {
         const event = clickReplying(reply);
         assert(
             !event.defaultPrevented && !event.propagationStopped,
+            // eslint-disable-next-line @typescript-eslint/no-unnecessary-condition -- `JSON.stringify(undefined)` is `undefined`, whatever its type says
             `${JSON.stringify(reply) ?? 'undefined'} changes nothing`,
         );
     }
@@ -98,10 +109,10 @@ class MockWheelEvent extends MockEvent {
     ctrlKey = true;
     shiftKey = false;
     metaKey = false;
-    currentTarget = {
-        getBoundingClientRect: () => ({ left: 100, top: 200, width: 300, height: 150 }),
-    };
+    currentTarget = new MockElement();
 }
+
+(globalThis as any).WheelEvent = MockWheelEvent;
 
 /// A wheel whose `on_wheel` in wasm replied with `reply`, and what wasm got.
 function wheelReplying(reply: unknown): { event: MockWheelEvent, sent: unknown } {
@@ -190,11 +201,12 @@ class MockPointerEvent extends MockEvent {
     shiftKey = true;
     metaKey = false;
     captured: Array<number> = [];
-    currentTarget = {
-        getBoundingClientRect: () => ({ left: 100, top: 200, width: 300, height: 150 }),
+    currentTarget = Object.assign(new MockElement(), {
         setPointerCapture: (pointerId: number) => { this.captured.push(pointerId); },
-    };
+    });
 }
+
+(globalThis as any).PointerEvent = MockPointerEvent;
 
 /// A pointer event whose listener in wasm replied with `reply`, and what wasm got.
 function pointerReplying(reply: unknown): { event: MockPointerEvent, sent: unknown } {
@@ -236,7 +248,7 @@ function testPointerCaptureOfAPointerThatIsUp() {
     event.currentTarget.setPointerCapture = () => { throw new Error('NotFoundError'); };
     let threw = false;
     try {
-        pointer(event as unknown as Event, () => ({ stop_propagation: true, prevent_default: false, capture_pointer: true }) as any);
+        pointer(event as unknown as Event, () => ({ stop_propagation: true, prevent_default: false, capture_pointer: true }));
     } catch {
         threw = true;
     }
@@ -529,6 +541,6 @@ testPointerFlags();
 testPointerListeners();
 testChangeChecked();
 testMessage();
-testEarlyMessages();
+void testEarlyMessages();
 testMedia();
-testMediaFromTheServer();
+void testMediaFromTheServer();

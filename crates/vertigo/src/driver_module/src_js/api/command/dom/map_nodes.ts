@@ -77,10 +77,10 @@ export class MapNodes {
     // variable here is on a hot path. Checked on dom-bench, three interleaved rounds against
     // the three-literal-methods version: no cost - if anything slightly faster, and well
     // inside the noise.
-    private expect<T>(label: string, id: number, kind: Function, expected: string): T {
+    private expect<T>(label: string, id: number, kind: new () => T, expected: string): T {
         const node = this.get(label, id);
         if (node instanceof kind) {
-            return node as T;
+            return node;
         } else {
             throw Error(`Expected id=${id} as ${expected}`);
         }
@@ -160,7 +160,7 @@ export class MapNodes {
         this.data.set(id, node);
 
         if (this.initNodes) {
-            const index = this.initNodes.indexOf(node as ChildNode);
+            const index = this.initNodes.indexOf(node);
             if (index > -1) {
                 this.initNodes.splice(index, 1);
             }

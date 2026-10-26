@@ -181,6 +181,8 @@ export const decodeCommands = (bytes: Uint8Array): Array<CommandType> => {
             body[name] = read(cursor, names);
         }
 
+        // The fields `SPEC` reads for `key` are the ones its command has, which the types can't follow.
+        // eslint-disable-next-line @typescript-eslint/consistent-type-assertions -- see above
         commands.push({ [key]: body } as CommandType);
     }
 

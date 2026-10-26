@@ -89,7 +89,7 @@ async function testPageBackFromCacheConnectsAgain() {
     );
 }
 
-async function testUnloadLeavesSocketsToTheBrowser() {
+function testUnloadLeavesSocketsToTheBrowser() {
     console.log("\n--- Test driver 3: the page is unloaded, not cached ---");
     const socket = FakeWebSocket.latest();
     pageTransition('pagehide', false);
@@ -160,7 +160,7 @@ async function testBinaryFrames() {
 async function main() {
     await testCachedPageClosesItsSockets();
     await testPageBackFromCacheConnectsAgain();
-    await testUnloadLeavesSocketsToTheBrowser();
+    testUnloadLeavesSocketsToTheBrowser();
     await testDroppedSocketStaysClosed();
     await testTheAppDecidesAfterAClose();
     await testBinaryFrames();
@@ -168,4 +168,4 @@ async function main() {
 
 // Every attempt arms a connection timeout, which would keep node waiting for nothing once the
 // tests are done.
-main().then(() => (globalThis as any).process.exit(0));
+void main().then(() => (globalThis as any).process.exit(0));

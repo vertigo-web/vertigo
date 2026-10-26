@@ -127,7 +127,7 @@ console.log("\n--- Test jsjson: undefined and null stay distinct ---");
     const memory = new Uint8Array(PTR + size);
     saveJsJsonToBufferItem(undefined, new BufferCursor(() => memory, longPtr(PTR, size)));
     const decoded = jsJsonDecodeItem(new BufferCursor(() => memory, longPtr(PTR, size)));
-    assert(decoded === undefined && decoded !== null, "undefined does not decode as null");
+    assert(decoded === undefined, "undefined does not decode as null");
 }
 
 {
@@ -135,7 +135,7 @@ console.log("\n--- Test jsjson: undefined and null stay distinct ---");
     const memory = new Uint8Array(PTR + size);
     saveJsJsonToBufferItem(null, new BufferCursor(() => memory, longPtr(PTR, size)));
     const decoded = jsJsonDecodeItem(new BufferCursor(() => memory, longPtr(PTR, size)));
-    assert(decoded === null && decoded !== undefined, "null does not decode as undefined");
+    assert(decoded === null, "null does not decode as undefined");
 }
 
 console.log("\n--- Test jsjson: sizing agrees with the type ids ---");

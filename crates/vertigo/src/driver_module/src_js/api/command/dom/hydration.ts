@@ -38,6 +38,14 @@ export interface HydrationReport {
     discarded: number;
 }
 
+declare global {
+    interface Window {
+        __vertigo_hydration?: HydrationReport;
+    }
+}
+
+const isElement = (node: Node): node is Element => node.nodeType === Node.ELEMENT_NODE;
+
 export interface Hydration {
     report: HydrationReport;
     /// Puts every node of the batch where the batch has it. To be called once the batch has
@@ -122,7 +130,7 @@ class HydrationEngine {
 
     private publish(report: HydrationReport) {
         try {
-            (window as any).__vertigo_hydration = report;
+            window.__vertigo_hydration = report;
         } catch (_) {
             // Not worth failing a mount over a diagnostic.
         }
@@ -251,10 +259,10 @@ class HydrationEngine {
     private checkElementMatch(candidate: Node, childVNode: VirtualNode) {
         let isMatch = false;
         const wanted = childVNode.name === undefined ? undefined : expectedTagName(childVNode.name);
-        if (candidate.nodeType === Node.ELEMENT_NODE && (candidate as Element).tagName === wanted) {
+        if (isElement(candidate) && candidate.tagName === wanted) {
             isMatch = true;
 
-            const element = candidate as Element;
+            const element = candidate;
             const attributes = childVNode.attributes;
 
             // Adopting a node means taking on its attributes too, in both directions. The
@@ -421,7 +429,7 @@ class HydrationEngine {
                 unlink(childId);
                 parentOf.set(childId, parent);
 
-                if (refId === null || refId === undefined) {
+                if (refId === null) {
                     children.push(childId);
                 } else {
                     // `render_value` puts its content in front of its marker as soon as the marker

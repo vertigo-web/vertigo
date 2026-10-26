@@ -1,4 +1,4 @@
-import { JsJsonType } from "../../jsjson";
+import { JsJsonType, parseJson } from "../../jsjson";
 import { ModuleControllerType } from "../../wasm_init";
 import { ExportType } from "../../wasm_module";
 import { CallbackId } from "../types";
@@ -6,7 +6,7 @@ import { SocketConnection, SocketConnectionController } from "./connection";
 
 const wireStringToJsJson = (raw: string): JsJsonType => {
     try {
-        return JSON.parse(raw) as JsJsonType;
+        return parseJson(raw);
     } catch {
         console.error('Failed to parse websocket message', raw);
         throw Error(raw);
@@ -121,6 +121,8 @@ export class DriverWebsocket {
                     return;
                 }
 
+                // Always, until `message` gets another type: then `assertNeverMessage` stops compiling.
+                // eslint-disable-next-line @typescript-eslint/no-unnecessary-condition -- see above
                 if (message.type === 'close') {
                     this.socket.delete(callback_id);
                     return wasmCallback(wasm, callback_id, {
@@ -164,7 +166,7 @@ export class DriverWebsocket {
             // Bytes from wasm come copied out by `.slice()`, with an `ArrayBuffer` of their own.
             socket.send(
                 message instanceof Uint8Array
-                    ? message as Uint8Array<ArrayBuffer>
+                    ? message
                     : jsJsonToWebSocketWire(message)
             );
         }

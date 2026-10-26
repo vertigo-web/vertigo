@@ -1,6 +1,6 @@
 import { ExportType } from "../../../wasm_module";
 import { getFiles, readFile, sendFiles, Send } from "./dataTransfer";
-import { JsJsonType } from "../../../jsjson";
+import { JsJsonType, parseJson } from "../../../jsjson";
 import { ModuleControllerType } from "../../../wasm_init";
 import { MapNodes } from "./map_nodes";
 import { CallbackId } from "../../types";
@@ -27,8 +27,8 @@ const notifyPreventIfTrue: Handler = (event, send) => {
 };
 
 /// What the handler in wasm asked of the browser: the flags of a `ClickEvent`, a `WheelEvent` or
-/// a `PointerEvent`.
-const applyFlags = (event: Event, flags: JsJsonType) => {
+/// a `PointerEvent`. Only a `PointerEvent` asks to capture the pointer, and gives `capture` for it.
+const applyFlags = (event: Event, flags: JsJsonType, capture?: () => void) => {
     // Check if flags is an object (JsJson Object type)
     if (flags !== null && typeof flags === 'object' && !Array.isArray(flags)) {
         if ('stop_propagation' in flags && flags['stop_propagation'] === true) {
@@ -37,10 +37,9 @@ const applyFlags = (event: Event, flags: JsJsonType) => {
         if ('prevent_default' in flags && flags['prevent_default'] === true) {
             event.preventDefault();
         }
-        // Only a `PointerEvent` asks for it.
-        if ('capture_pointer' in flags && flags['capture_pointer'] === true) {
+        if (capture && 'capture_pointer' in flags && flags['capture_pointer'] === true) {
             try {
-                (event.currentTarget as Element).setPointerCapture((event as PointerEvent).pointerId);
+                capture();
             } catch (error) {
                 // A pointer that's up already, f. ex. a finger in `pointerup`.
                 console.warn('capture_pointer', error);
@@ -53,14 +52,16 @@ const applyFlags = (event: Event, flags: JsJsonType) => {
 /// action - following a link, submitting a form, toggling a checkbox - goes ahead unless the
 /// handler asked to prevent it.
 export const click: Handler = (event, send) => {
-    const mouseEvent = event as MouseEvent;
+    if (!(event instanceof MouseEvent)) {
+        throw Error('#click');
+    }
 
     // Payload order MUST match the Rust decoder `ClickEvent::from_driver`.
     applyFlags(event, send([
-        mouseEvent.altKey,
-        mouseEvent.ctrlKey,
-        mouseEvent.shiftKey,
-        mouseEvent.metaKey,
+        event.altKey,
+        event.ctrlKey,
+        event.shiftKey,
+        event.metaKey,
     ]));
 };
 
@@ -68,23 +69,28 @@ export const click: Handler = (event, send) => {
 /// asked to prevent it. The pointer goes relative to the element with the listener, the one
 /// whose size comes along, rather than to the child under the pointer as `offsetX` would.
 export const wheel: Handler = (event, send) => {
-    const wheelEvent = event as WheelEvent;
-    const rect = (wheelEvent.currentTarget as Element).getBoundingClientRect();
+    const target = event.currentTarget;
+
+    if (!(event instanceof WheelEvent) || !(target instanceof Element)) {
+        throw Error('#wheel');
+    }
+
+    const rect = target.getBoundingClientRect();
 
     // Payload order MUST match the Rust decoder `WheelEvent::from_driver`.
     applyFlags(event, send([
-        wheelEvent.deltaX,
-        wheelEvent.deltaY,
-        wheelEvent.deltaZ,
-        wheelEvent.deltaMode,
-        wheelEvent.clientX - rect.left,
-        wheelEvent.clientY - rect.top,
+        event.deltaX,
+        event.deltaY,
+        event.deltaZ,
+        event.deltaMode,
+        event.clientX - rect.left,
+        event.clientY - rect.top,
         rect.width,
         rect.height,
-        wheelEvent.altKey,
-        wheelEvent.ctrlKey,
-        wheelEvent.shiftKey,
-        wheelEvent.metaKey,
+        event.altKey,
+        event.ctrlKey,
+        event.shiftKey,
+        event.metaKey,
     ]));
 };
 
@@ -92,25 +98,32 @@ export const wheel: Handler = (event, send) => {
 /// `capture_pointer` the events of this pointer go to the element with the listener until it's
 /// released. The pointer goes relative to that element, as for the wheel.
 export const pointer: Handler = (event, send) => {
-    const pointerEvent = event as PointerEvent;
-    const rect = (pointerEvent.currentTarget as Element).getBoundingClientRect();
+    const target = event.currentTarget;
+
+    if (!(event instanceof PointerEvent) || !(target instanceof Element)) {
+        throw Error('#pointer');
+    }
+
+    const rect = target.getBoundingClientRect();
 
     // Payload order MUST match the Rust decoder `PointerEvent::from_driver`.
     applyFlags(event, send([
-        pointerEvent.pointerId,
-        pointerEvent.pointerType,
-        pointerEvent.isPrimary,
-        pointerEvent.button,
-        pointerEvent.buttons,
-        pointerEvent.clientX - rect.left,
-        pointerEvent.clientY - rect.top,
+        event.pointerId,
+        event.pointerType,
+        event.isPrimary,
+        event.button,
+        event.buttons,
+        event.clientX - rect.left,
+        event.clientY - rect.top,
         rect.width,
         rect.height,
-        pointerEvent.altKey,
-        pointerEvent.ctrlKey,
-        pointerEvent.shiftKey,
-        pointerEvent.metaKey,
-    ]));
+        event.altKey,
+        event.ctrlKey,
+        event.shiftKey,
+        event.metaKey,
+    ]), () => {
+        target.setPointerCapture(event.pointerId);
+    });
 };
 
 /// `input` and `change` differ only in whether a `<select>` counts as a value source. They
@@ -250,7 +263,8 @@ const message = (event: MessageEvent, send: Send) => {
     let data: JsJsonType;
 
     try {
-        data = JSON.parse(JSON.stringify(event.data) ?? 'null');
+        // eslint-disable-next-line @typescript-eslint/no-unnecessary-condition -- `JSON.stringify` gives `undefined` for `undefined` or a function, whatever its type says
+        data = parseJson(JSON.stringify(event.data) ?? 'null');
     } catch {
         data = null;
     }
@@ -321,7 +335,8 @@ export class CallbackManager {
 
     public add(nodes: MapNodes, id: number, event_name: string, callback_id: CallbackId) {
         if (event_name === 'intersect') {
-            return this.intersectAdd(nodes, id, callback_id);
+            this.intersectAdd(nodes, id, callback_id);
+            return;
         }
 
         const send: Send = (value) => this.wasmCallback(callback_id, value);
@@ -411,7 +426,8 @@ export class CallbackManager {
 
     public remove(nodes: MapNodes, id: number, event_name: string, callback_id: CallbackId) {
         if (event_name === 'intersect') {
-            return this.intersectRemove(callback_id);
+            this.intersectRemove(callback_id);
+            return;
         }
 
         const callback = this.callbacks.get(callback_id);
