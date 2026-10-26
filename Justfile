@@ -147,6 +147,11 @@ js-test:
     npm install
     npm run test
 
+# Lint the JavaScript driver
+js-lint:
+    npm install
+    npm run lint
+
 # Js build
 js-build:
     npm install

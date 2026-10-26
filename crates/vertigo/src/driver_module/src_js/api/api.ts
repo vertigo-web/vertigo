@@ -241,11 +241,16 @@ export class Api {
         // `?? []` is not decoration: a number or a bare string that is not handled above
         // should reach `default` and produce the same 'exec_command: Arg' line it produces
         // today, rather than throwing out of `Object.entries`.
+        //
+        // `Object.entries` types the key as any string, it can't tell that it is the one that
+        // goes with the payload.
+        // eslint-disable-next-line @typescript-eslint/consistent-type-assertions -- see above
         const [command, params] = (Object.entries(objectArg)[0] ?? []) as ExecEntry;
 
         switch (command) {
             case 'FetchExec':
-                fetchExec(this.getWasm, params.callback, params.request);
+                // It hands wasm its errors too.
+                void fetchExec(this.getWasm, params.callback, params.request);
                 return null;
 
             case 'WebsocketRegister':
@@ -331,6 +336,8 @@ export class Api {
     }
 
     private executeJsApiCall(commands: Array<JsApiCommandType>): JsJsonType {
+        /* eslint-disable @typescript-eslint/no-explicit-any, @typescript-eslint/no-unsafe-assignment, @typescript-eslint/no-unsafe-member-access, @typescript-eslint/no-unsafe-call --
+           Whatever wasm names, on whatever object it got to: nothing here is known before it runs. */
         let current: any = null;
 
         for (const command of commands) {
@@ -372,16 +379,17 @@ export class Api {
                 current = current[command.Call.method](...command.Call.args);
             }
         }
+        /* eslint-enable @typescript-eslint/no-explicit-any, @typescript-eslint/no-unsafe-assignment, @typescript-eslint/no-unsafe-member-access, @typescript-eslint/no-unsafe-call -- the result is sanitized below */
 
         // Convert result to JsJson - sanitize host objects (Window, Element, Function, etc.)
-        const isPlainObject = (obj: any): boolean => {
+        const isPlainObject = (obj: unknown): obj is Record<string, unknown> => {
             if (obj === null) return false;
             if (typeof obj !== 'object') return false;
-            const proto = Object.getPrototypeOf(obj);
+            const proto: unknown = Object.getPrototypeOf(obj);
             return proto === Object.prototype || proto === null;
         };
 
-        const sanitize = (value: any): JsJsonType => {
+        const sanitize = (value: unknown): JsJsonType => {
             if (value === null || value === undefined) {
                 return null;
             }
@@ -395,7 +403,8 @@ export class Api {
                 return value;
             }
             if (value instanceof Uint8Array) {
-                return value;
+                // A copy, which can't be on a `SharedArrayBuffer`.
+                return value.slice();
             }
             if (Array.isArray(value)) {
                 return value.map((v) => sanitize(v));

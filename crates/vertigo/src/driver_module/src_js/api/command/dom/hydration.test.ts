@@ -313,7 +313,7 @@ function testMissingRoot() {
         console.error = original;
     }
 
-    assert(report.rootFound === false, "rootFound is false");
+    assert(!report.rootFound, "rootFound is false");
     assert(report.matched === 0, "nothing matched");
     assert(errors.length === 1, "the cause was reported once");
     assert(

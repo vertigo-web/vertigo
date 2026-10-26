@@ -20,8 +20,6 @@ members = [
     "tests/hydration-bench",
     "tests/reactive-bench",
     "tests/ssr-bench",
-
-    "lint-project",
 ]
 exclude = ["build/vertigo-cli-test/some_app"]
 resolver = "2"

@@ -13,7 +13,12 @@ const JsJsonConst = {
     Vec: 9,
 } as const;
 
-export type JsJsonType = boolean | null | undefined | string | number | Uint8Array | Array<JsJsonType> | { [key: string]: JsJsonType };
+export type JsJsonType = boolean | null | undefined | string | number | Uint8Array<ArrayBuffer> | Array<JsJsonType> | { [key: string]: JsJsonType };
+
+/// `JSON.parse`, typed.
+export const parseJson = (text: string): JsJsonType =>
+    // eslint-disable-next-line @typescript-eslint/no-unsafe-return -- every value JSON can hold is a JsJsonType
+    JSON.parse(text);
 
 /// Sizing pass. Walks the value to work out how large a wasm block to ask for, before
 /// `saveJsJsonToBufferItem` walks it again to fill that block.
@@ -53,7 +58,7 @@ export const jsJsonGetSize = (value: JsJsonType): number => {
         return sum;
     }
 
-    if (typeof value === 'object' && value !== null) {
+    if (typeof value === 'object') {
         let sum = 1 + 2;
         for (const [key, propertyValue] of Object.entries(value)) {
             sum += 4 + encoder.encode(key).length;
@@ -178,7 +183,7 @@ export const saveJsJsonToBufferItem = (value: JsJsonType, buffer: BufferCursor):
         return;
     }
 
-    if (typeof value === 'object' && value !== null) {
+    if (typeof value === 'object') {
         const entries = Object.entries(value);
 
         buffer.setByte(JsJsonConst.Object);

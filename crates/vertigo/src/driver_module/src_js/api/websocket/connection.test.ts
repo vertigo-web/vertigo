@@ -40,7 +40,7 @@ const start = (reply: (close: Close) => unknown = () => RETRY_MS) => {
     const controller = SocketConnection.startSocket('ws://test', 1000, (message) => {
         if (message.type === 'message') {
             const data = message.message;
-            events.push(`message:${typeof data === 'string' ? data : `[${Array.from(data)}]`}`);
+            events.push(`message:${typeof data === 'string' ? data : `[${Array.from(data).join(',')}]`}`);
             return;
         }
         if (message.type !== 'close') {
@@ -50,7 +50,7 @@ const start = (reply: (close: Close) => unknown = () => RETRY_MS) => {
         events.push(`close:${message.code}:${message.reason}:${message.connected}`);
         return reply(message);
     });
-    return { controller, events, latest: FakeWebSocket.latest };
+    return { controller, events, latest: () => FakeWebSocket.latest() };
 };
 
 // --- TESTS ---
@@ -164,7 +164,7 @@ async function testBinaryFrames() {
         }
         if (message.type === 'message') {
             const data = message.message;
-            events.push(typeof data === 'string' ? data : `[${Array.from(data)}]`);
+            events.push(typeof data === 'string' ? data : `[${Array.from(data).join(',')}]`);
         }
         return null;
     });
@@ -196,4 +196,4 @@ async function main() {
     await testBinaryFrames();
 }
 
-main();
+void main();

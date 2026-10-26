@@ -49,7 +49,7 @@ export const sendFiles = (files: Array<Promise<FileItemType>>, send: Send, label
         }
 
         send([params]);
-    }).catch((error) => {
+    }).catch((error: unknown) => {
         console.error(label, error);
     });
 };

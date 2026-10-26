@@ -1,4 +1,4 @@
-import { JsJsonType } from "../../jsjson";
+import { JsJsonType, parseJson } from "../../jsjson";
 import { ModuleControllerType } from "../../wasm_init";
 import { ExportType } from "../../wasm_module";
 import { CallbackId } from "../types";
@@ -53,7 +53,7 @@ const getBodyString = (body: FetchRequestType['body']): string | undefined => {
 // would crash response.json(). Treat both as Json: null so the caller
 // sees a successful response with the real status code.
 export const parseJsonBody = (bodyText: string): JsJsonType | null =>
-    bodyText.length === 0 ? null : JSON.parse(bodyText);
+    bodyText.length === 0 ? null : parseJson(bodyText);
 
 const isTextPlain = (contentType: string | null): boolean =>
     contentType?.split(';')[0]?.trim().toLowerCase() === 'text/plain';

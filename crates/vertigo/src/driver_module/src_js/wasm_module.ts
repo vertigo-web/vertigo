@@ -5,6 +5,12 @@ import { Api } from './api/api';
 import { Metadata } from './api/metadata';
 import { decoder } from './text';
 
+declare global {
+    interface Window {
+        $vertigoApi?: Api;
+    }
+}
+
 //Number -> u32 or i32
 //BigInt -> u64 or i64
 
@@ -48,10 +54,9 @@ export class WasmModule {
         const metadata = new Metadata();
         const vertigo_api = new Api(metadata, getWasm);
 
-        //@ts-expect-error
         window.$vertigoApi = vertigo_api;
 
-        wasmModule = await wasmInit<ImportType, ExportType>(wasmBinPath, {
+        wasmModule = await wasmInit<ExportType>(wasmBinPath, {
             mod: {
                 panic_message: (long_ptr: bigint) => {
 
@@ -90,7 +95,7 @@ export class WasmModule {
 
                     return responseLongPtr;
                 }
-            }
+            } satisfies ImportType
         });
 
         return new WasmModule(wasmModule);

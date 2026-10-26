@@ -1,14 +1,19 @@
 {
   "scripts": {
+    "lint": "eslint crates/vertigo/src/driver_module/src_js",
     "test": "rollup -c rollup.test.config.mjs && node build/hydration.test.js && node build/dom_wire.test.js && node build/injects.test.js && node build/callbackManager.test.js && node build/animationFrames.test.js && node build/languages.test.js && node build/canvas.test.js && node build/fetchExec.test.js && node build/connection.test.js && node build/websocket.test.js && node build/jsjson.test.js"
   },
   "devDependencies": {
+    "@eslint-community/eslint-plugin-eslint-comments": "^4.8.1",
+    "@eslint/js": "^10.0.1",
     "@rollup/plugin-terser": "^1.0.0",
     "@rollup/plugin-typescript": "^12.3.0",
+    "eslint": "^10.13.0",
     "rollup": "^4.60.1",
     "rollup-plugin-sourcemaps": "^0.6.3",
     "terser": "^5.46.1",
     "tslib": "^2.8.1",
-    "typescript": "~6.0.3"
+    "typescript": "~6.0.3",
+    "typescript-eslint": "^8.72.0"
   }
 }

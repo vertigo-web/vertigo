@@ -201,7 +201,12 @@ export class Canvases {
         if (this.observer === null) {
             this.observer = new ResizeObserver((entries) => {
                 for (const entry of entries) {
-                    const canvas = entry.target as HTMLCanvasElement;
+                    const canvas = entry.target;
+                    // Only canvases are observed.
+                    if (!(canvas instanceof HTMLCanvasElement)) {
+                        throw Error('#canvas');
+                    }
+
                     // In the pixels `devicePixelRatio` says there are, as the drawing scales by
                     // it. A browser's own count of device pixels can disagree with it: in
                     // DevTools emulating another ratio it counts those of the real screen.

@@ -2,7 +2,7 @@ import { EventEmitter } from "./event_emiter";
 import { PromiseBoxRace } from "./promise";
 
 const timeout = async (timeout: number): Promise<void> => {
-    return new Promise((resolve: (data: void) => void) => {
+    return new Promise((resolve) => {
         setTimeout(resolve, timeout);
     });
 };
@@ -114,7 +114,7 @@ export class SocketConnection {
         );
 
         setTimeout(() => {
-            if (result.isFulfilled() === false) {
+            if (!result.isFulfilled()) {
                 console.error(log.formatLog(`timeout (${timeout}ms)`));
                 closeSocket();
             }
@@ -135,12 +135,12 @@ export class SocketConnection {
             console.error(log.formatLog('error'), error);
         };
 
-        const onMessage = (event: MessageEvent): void => {
+        const onMessage = (event: MessageEvent<string | ArrayBuffer>): void => {
             if (isClose) {
                 return;
             }
 
-            const dataRaw: string | ArrayBuffer = event.data;
+            const dataRaw = event.data;
             socketConnection.eventMessage.trigger(
                 typeof dataRaw === 'string' ? dataRaw : new Uint8Array(dataRaw)
             );
@@ -171,13 +171,16 @@ export class SocketConnection {
 
         const log = new LogContext(host);
 
+        // `dispose` clears `isConnect` while the loop waits, which the types can't see.
         (async (): Promise<void> => {
+            // eslint-disable-next-line @typescript-eslint/no-unnecessary-condition -- see above
             while (isConnect) {
                 const openSocketResult = SocketConnection.connect(log, host, timeout_connection);
                 closeCurrent = openSocketResult.close;
 
                 const socket = await openSocketResult.socket;
 
+                // eslint-disable-next-line @typescript-eslint/no-unnecessary-condition -- see above
                 if (!isConnect) {
                     // Disposed while connecting, and `dispose` has closed the socket.
                     console.info(log.formatLog('disconnect (3)'));
@@ -215,6 +218,7 @@ export class SocketConnection {
                         connected: true,
                     });
 
+                    // eslint-disable-next-line @typescript-eslint/no-unnecessary-condition -- see above
                     if (!isConnect) {
                         console.info(log.formatLog('disconnect (1)'));
                         return;
@@ -230,7 +234,7 @@ export class SocketConnection {
             }
 
             console.info(log.formatLog('disconnect (2)'));
-        })().catch((error) => {
+        })().catch((error: unknown) => {
             console.error(error);
         });
 
