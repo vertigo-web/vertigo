@@ -52,7 +52,7 @@ ignore = "0.4"
 include_dir = "0.7"
 log = "0.4"
 notify = "8.2"
-parking_lot = "0.12"
+parking_lot = "0.13"
 pkg-version = "1"
 rustls = { version = "0.23", default-features = false, features = ["ring", "logging", "std", "tls12"] }
 time = "0.3"
@@ -62,7 +62,7 @@ tokio = { version = "1.53", features = ["full"] }
 tokio-retry = "0.3"
 url = "2.5"
 walkdir = "2.5"
-wasmtime = "49.0"
+wasmtime = "50.0"
 vertigo = { workspace = true }
 
 [lints]
