@@ -66,6 +66,10 @@ pub async fn cargo_bin(settings: &Settings, name: &str) -> Result<PathBuf> {
             "--bin",
             name,
         ]);
+        // Not as the test binary's package, see `inherited_package_env`
+        for name in build::inherited_package_env() {
+            command.env_remove(name);
+        }
         if settings.release {
             command.arg("--release");
         }
