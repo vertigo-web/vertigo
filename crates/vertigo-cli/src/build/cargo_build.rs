@@ -28,6 +28,20 @@ fn build_id() -> String {
         .unwrap_or_default()
 }
 
+/// The variables of our environment that cargo sets for a process it runs, a test binary or
+/// `cargo run`: that package's `CARGO_PKG_*` and `CARGO_MANIFEST_*`.
+///
+/// A cargo started from such a process must go without them. Build scripts track some of them
+/// with `rerun-if-env-changed` (ring does), and cargo compares them with its own environment,
+/// so that build and the next one from a shell would each find them changed and rebuild those
+/// crates, and everything on them.
+pub fn inherited_package_env() -> Vec<String> {
+    std::env::vars_os()
+        .filter_map(|(name, _)| name.into_string().ok())
+        .filter(|name| name.starts_with("CARGO_PKG_") || name.starts_with("CARGO_MANIFEST_"))
+        .collect()
+}
+
 pub fn run_cargo_build(
     package_name: &str,
     vertigo_public_path: &str,
@@ -83,6 +97,10 @@ pub fn run_cargo_build(
         command = command.add_param(opt);
     }
 
+    for name in inherited_package_env() {
+        command = command.env_remove(name);
+    }
+
     if allow_error {
         command = command.allow_error();
     } else {
@@ -95,5 +113,19 @@ pub fn run_cargo_build(
         Ok(Ok(target_dir))
     } else {
         Ok(Err(output))
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    // Run by cargo, so with the variables it sets for a test binary
+    #[test]
+    fn inherited_package_env_is_the_package_identity() {
+        let names = inherited_package_env();
+        assert!(names.iter().any(|name| name == "CARGO_PKG_NAME"));
+        assert!(names.iter().any(|name| name == "CARGO_MANIFEST_DIR"));
+        assert!(!names.iter().any(|name| name == "CARGO"));
     }
 }

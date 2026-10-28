@@ -16,6 +16,13 @@
   ones, for a back-end that serves the pages by itself. `vertigo_install` is `vertigo_files`
   and the handler.
 
+### Fixed
+
+* vertigo-cli and vertigo-testing start cargo without the `CARGO_PKG_*` and `CARGO_MANIFEST_*`
+  of the package they run as, f. ex. an e2e test binary. Build scripts tracking them, like
+  ring's, made that build and the next `cargo test` each rebuild those crates and everything on
+  them, even with `E2E_SKIP_BUILD`.
+
 ## 0.14.1 - 2026-10-24
 
 ### Breaking

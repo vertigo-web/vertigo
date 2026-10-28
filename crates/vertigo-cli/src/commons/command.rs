@@ -12,6 +12,7 @@ pub struct CommandRun {
     error_code: Option<ErrorCode>,
     current_dir: Option<String>,
     env: HashMap<String, String>,
+    env_remove: Vec<String>,
     child: Option<Child>,
 }
 
@@ -31,6 +32,7 @@ impl CommandRun {
             error_code: None,
             current_dir: None,
             env: HashMap::new(),
+            env_remove: Vec::new(),
             child: None,
         }
     }
@@ -45,6 +47,13 @@ impl CommandRun {
     #[must_use]
     pub fn env(mut self, name: impl Into<String>, value: impl Into<String>) -> Self {
         self.env.insert(name.into(), value.into());
+        self
+    }
+
+    /// Doesn't pass the variable `name` on from our environment.
+    #[must_use]
+    pub fn env_remove(mut self, name: impl Into<String>) -> Self {
+        self.env_remove.push(name.into());
         self
     }
 
@@ -104,6 +113,10 @@ impl CommandRun {
 
         if let Some(current) = &self.current_dir {
             command.current_dir(current);
+        }
+
+        for name in &self.env_remove {
+            command.env_remove(name);
         }
 
         for (name, value) in self.env.clone().into_iter() {
