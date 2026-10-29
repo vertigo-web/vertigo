@@ -1,27 +1,24 @@
 <!-- markdownlint-configure-file { "no-duplicate-heading": { "siblings_only": true } } -->
 
 <!-- markdownlint-disable-next-line first-line-h1 -->
-## Unreleased
+## 0.14.2 - 2026-10-29
 
 ### Added
 
-* `on_message` on an `<iframe>` gets the messages the page in it sends with `parent.postMessage`,
-  f. ex. a widget telling how tall it wants to be - with their origin, and only from that frame.
-  On a page rendered on the server the frames load before the wasm starts, so the messages they
-  sent before that wait for the first render and come to its `on_message` first.
-* `on_media` on a `<video>` or an `<audio>`: one listener for its media events (`play`, `pause`,
-  `timeupdate`, `ended`, `error` and the rest of `MediaEventKind`), each with the whole state
-  after - position, length, paused, muted, volume and how far it's buffered.
-* vertigo-cli: `vertigo_files` installs only the build's static files, with the precompressed
-  ones, for a back-end that serves the pages by itself. `vertigo_install` is `vertigo_files`
-  and the handler.
+* `on_message` on an `<iframe>`: the messages its page sends with `parent.postMessage`.
+* `on_media` on a `<video>` or an `<audio>`: its media events, each with the player's state.
+* vertigo-cli: `vertigo_files` installs only the build's static files, for a back-end that serves
+  the pages itself.
 
 ### Fixed
 
-* vertigo-cli and vertigo-testing start cargo without the `CARGO_PKG_*` and `CARGO_MANIFEST_*`
-  of the package they run as, f. ex. an e2e test binary. Build scripts tracking them, like
-  ring's, made that build and the next `cargo test` each rebuild those crates and everything on
-  them, even with `E2E_SKIP_BUILD`.
+* An e2e test run rebuilt crates like ring every time, because vertigo-cli and vertigo-testing
+  passed the test binary's `CARGO_PKG_*` and `CARGO_MANIFEST_*` on to cargo.
+
+### Internals
+
+* vertigo-cli uses wasmtime 50 and parking_lot 0.13.
+* ESLint (`just js-lint`) checks the JS driver.
 
 ## 0.14.1 - 2026-10-24
 

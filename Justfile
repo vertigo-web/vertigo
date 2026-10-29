@@ -85,8 +85,9 @@ ci:
     # which turns `ssr-timings` on - so without this line the build that actually ships is
     # the one nothing lints.
     cargo clippy --locked -p vertigo-cli --tests -- -Dwarnings
-    cargo fmt
+    cargo fmt -- --check
     tests/check_versions.sh
+    tests/check_licenses.sh
     tests/js_tests.sh
     tests/check_vertigo_new.sh
 
