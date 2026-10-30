@@ -2,7 +2,7 @@ use proc_macro::TokenStream;
 use proc_macro2::{TokenStream as TokenStream2, TokenTree};
 use quote::quote;
 
-use crate::trace_tailwind::bundle_tailwind;
+use crate::{trace_tailwind::bundle_tailwind, utils::track_build_id};
 
 pub(crate) fn main_wrap(input: TokenStream) -> TokenStream {
     let input2 = input.clone();
@@ -35,16 +35,12 @@ pub(crate) fn main_wrap(input: TokenStream) -> TokenStream {
     const VERTIGO_VERSION_MINOR: u32 = pkg_version::pkg_version_minor!();
 
     let tailwind_bundle_injector = bundle_tailwind();
+    let track_build_id = track_build_id();
 
     quote! {
         #input
 
-        // Cargo can't see that the macros in this crate read VERTIGO_BUNDLE and write asset
-        // files, so it would happily call the crate fresh and bundle nothing. Referencing an
-        // env variable through `option_env!` puts it in this crate's dep-info, which cargo
-        // does track - so vertigo-cli can force a re-expansion just by passing a new value.
-        // Cheaper than dropping the artifacts: the incremental cache survives.
-        const _: Option<&str> = option_env!("VERTIGO_BUILD_ID");
+        #track_build_id
 
         #[unsafe(no_mangle)]
         pub fn vertigo_entry_function(version: (u32, u32)) {

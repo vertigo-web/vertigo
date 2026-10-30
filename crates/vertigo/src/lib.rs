@@ -205,6 +205,8 @@ pub use vertigo_macro::include_static;
 ///
 /// Note that use of tailwind automatically adds tailwind base css sheet which zeroes various default rules.
 ///
+/// Classes used in the app crate after [main] (also in its body) don't get bundled - see its docs.
+///
 /// ```rust
 /// use vertigo::{dom, tw};
 ///
@@ -505,6 +507,12 @@ pub use vertigo_macro::js_inner;
 /// Note: Html, head and body tags are required by vertigo to properly take over the DOM
 ///
 /// Note 2: When using external tailwind, make sure the source `tailwind.css` file is in the same directory as usage of this macro.
+///
+/// Note 3: Tailwind classes get bundled when this macro expands, so out of the app crate it sees
+/// only those preceding it in the source - including modules declared before it. Classes used
+/// in its own body, in items after it, or in modules declared after it are silently left out of
+/// the bundle (dependencies are fine). Keep this function at the end of the crate root and move
+/// `tw` usages out of its body, e.g. into a component.
 ///
 /// ```rust
 /// use vertigo::prelude::*;

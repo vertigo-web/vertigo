@@ -13,6 +13,9 @@ use crate::trace_tailwind::paths::{
 use crate::trace_tailwind::validate::validate_tailwind_classes;
 
 /// Bundle tailwind and return injector
+///
+/// Run by `#[vertigo::main]`, it sees only the classes traced so far - rustc expands the
+/// macros of the main function's body, and of what follows it, later.
 pub(crate) fn bundle_tailwind() -> TokenStream2 {
     if std::env::var("VERTIGO_BUNDLE").is_ok() && get_tailwind_classes_file_exists() {
         let bundle = match run_external_tailwind() {

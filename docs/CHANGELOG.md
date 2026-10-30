@@ -1,6 +1,15 @@
 <!-- markdownlint-configure-file { "no-duplicate-heading": { "siblings_only": true } } -->
 
 <!-- markdownlint-disable-next-line first-line-h1 -->
+## Unreleased
+
+### Fixed
+
+* `include_static!` in a library crate: a build that took the crate from cargo's cache bundled
+  none of its files, e.g. the second of two apps sharing the library.
+* Tailwind classes (`tw!`, `tw=`) in a library crate: likewise, such a build left them out of
+  the bundle.
+
 ## 0.14.2 - 2026-10-29
 
 ### Added

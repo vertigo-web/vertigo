@@ -2,7 +2,7 @@ use proc_macro::{Span, TokenStream};
 use quote::quote;
 use std::{error::Error, path::PathBuf};
 
-use crate::get_target_dir::get_target_wasm_dir_with;
+use crate::{get_target_dir::get_target_wasm_dir_with, utils::track_build_id};
 
 use super::wasm_path::WasmPath;
 
@@ -11,7 +11,16 @@ pub(crate) fn include_static_inner(input: TokenStream) -> TokenStream {
     let file_path = Span::call_site().file().into();
 
     match bundle_file(file_path, path) {
-        Ok(hash) => quote! { vertigo::get_driver().public_build_path(#hash) }.into(),
+        Ok(hash) => {
+            // Also in a library crate, not just in the one with `#[vertigo::main]` - otherwise
+            // a build taking the library from cache would miss its files
+            let track_build_id = track_build_id();
+            quote! {{
+                #track_build_id
+                vertigo::get_driver().public_build_path(#hash)
+            }}
+            .into()
+        }
         Err(message) => {
             emit_error!(Span::call_site(), "{}", message);
             quote! { "".to_string() }.into()
