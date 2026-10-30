@@ -34,25 +34,25 @@ use crate::{
     js_expression::js_expression,
     main_wrap::main_wrap,
     store::store_inner,
-    trace_tailwind::trace_tailwind,
+    trace_tailwind::{trace_tailwind, with_build_tracking},
 };
 
 #[proc_macro]
 #[proc_macro_error]
 pub fn dom(input: TokenStream) -> TokenStream {
-    dom_inner(input).into()
+    with_build_tracking(|| dom_inner(input)).into()
 }
 
 #[proc_macro]
 #[proc_macro_error]
 pub fn dom_element(input: TokenStream) -> TokenStream {
-    dom_element_inner(input).into()
+    with_build_tracking(|| dom_element_inner(input)).into()
 }
 
 #[proc_macro]
 #[proc_macro_error]
 pub fn dom_debug(input: TokenStream) -> TokenStream {
-    let stream = dom_inner(input);
+    let stream = with_build_tracking(|| dom_inner(input));
     emit_warning!("debug: {:?}", stream);
     stream.into()
 }
@@ -106,10 +106,11 @@ pub fn auto_js_json(input: TokenStream) -> TokenStream {
 #[proc_macro]
 #[proc_macro_error]
 pub fn tw(input: TokenStream) -> TokenStream {
-    match trace_tailwind(input) {
+    with_build_tracking(|| match trace_tailwind(input) {
         Ok(token_stream) => token_stream,
         Err(err) => abort_call_site!(err),
-    }
+    })
+    .into()
 }
 
 #[proc_macro]

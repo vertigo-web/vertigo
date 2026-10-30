@@ -13,12 +13,13 @@ use super::Workspace;
 
 const TARGET: &str = "wasm32-unknown-unknown";
 
-/// Value for `VERTIGO_BUILD_ID`, the variable `#[vertigo::main]` pulls into the app crate's
-/// dep-info via `option_env!`.
+/// Value for `VERTIGO_BUILD_ID`, the variable the bundling macros pull via `option_env!` into
+/// the dep-info of each crate they bundle something from - the app and any library with
+/// `include_static!` or tailwind classes.
 ///
 /// Cargo can't see that the bundling macros read `VERTIGO_BUNDLE` and write asset files, so
-/// left alone it would call the app crate fresh and we'd bundle nothing. Handing it a value
-/// that differs from last time makes cargo re-expand the crate - and unlike dropping the
+/// left alone it would call those crates fresh and we'd bundle nothing. Handing it a value
+/// that differs from last time makes cargo re-expand them - and unlike dropping the
 /// crate's artifacts (`cargo clean -p`), the incremental cache survives, which is the
 /// difference between a ~1s and a ~7s watch-mode rebuild.
 fn build_id() -> String {
