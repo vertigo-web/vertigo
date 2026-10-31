@@ -278,20 +278,7 @@ impl JsJson {
         context: &JsJsonContext,
         param: &'static str,
     ) -> Result<T, JsJsonContext> {
-        let object = match self {
-            JsJson::Object(object) => object,
-            other => {
-                let message = ["object expected, received ", other.typename()].concat();
-                return Err(context.add(message));
-            }
-        };
-
-        let context = context.add(["field: '", param, "'"].concat());
-
-        let item = object
-            .remove(param)
-            .ok_or_else(|| context.add("missing field"))?;
-
+        let (context, item) = self.take_property(context, param)?;
         T::from_json(context, item)
     }
 
@@ -300,6 +287,18 @@ impl JsJson {
         context: &JsJsonContext,
         param: &'static str,
     ) -> Result<JsJson, JsJsonContext> {
+        self.take_property(context, param).map(|(_, item)| item)
+    }
+
+    /// The field `param` taken out of the object, with the context to read it in. Generic over
+    /// nothing and out of line, so that each type read with [`Self::get_property`] adds only
+    /// its own `from_json`.
+    #[inline(never)]
+    fn take_property(
+        &mut self,
+        context: &JsJsonContext,
+        param: &'static str,
+    ) -> Result<(JsJsonContext, JsJson), JsJsonContext> {
         let object = match self {
             JsJson::Object(object) => object,
             other => {
@@ -310,9 +309,10 @@ impl JsJson {
 
         let context = context.add(["field: '", param, "'"].concat());
 
-        object
-            .remove(param)
-            .ok_or_else(|| context.add("missing field"))
+        match object.remove(param) {
+            Some(item) => Ok((context, item)),
+            None => Err(context.add("missing field")),
+        }
     }
 }
 

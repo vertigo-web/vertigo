@@ -37,6 +37,10 @@
   listener clones the new value from the value itself rather than from a list of them that
   every `set` gathered for its own type. A write with listeners also makes one copy fewer. The
   demo has 19.4 kB (2.1%) less wasm after wasm-opt, 5.4 kB gzipped.
+* Reading JSON: `JsJson::get_property` finds the field, and `Vec::from_json` checks it got a
+  list, in one function for all types instead of a copy for each type read. The demo, which
+  reads few types, has 3.5 kB (0.4%) less wasm after wasm-opt, 0.9 kB gzipped - an application
+  that reads many from its API gains more.
 
 ### Fixed
 
