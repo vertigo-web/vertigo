@@ -91,8 +91,7 @@ let pending: { path: string, fragment: string, until: number, scrollY: number } 
 /// Where a followed link lands: on the element its fragment names, otherwise at the top - where
 /// the page also waits for an element that hasn't arrived yet.
 function scrollToFragment(path: string) {
-    const hash = path.indexOf('#');
-    const fragment = hash === -1 ? '' : path.slice(hash + 1);
+    const fragment = fragmentOf(path);
     const target = fragmentTarget(fragment);
 
     pending = null;
@@ -104,8 +103,35 @@ function scrollToFragment(path: string) {
     window.scrollTo(0, 0);
     // `#top` with nothing named so means the top of the page, as in the browser
     if (fragment !== '' && decodeFragment(fragment).toLowerCase() !== 'top') {
-        pending = { path, fragment, until: Date.now() + FRAGMENT_WAIT_MS, scrollY: window.scrollY };
+        waitFor(path, fragment);
     }
+}
+
+/// Where the app's own navigation lands (`Router::set`, `Driver::history_push`,
+/// `Driver::history_replace`): on the element its fragment names, once it is on the page. The
+/// app renders the page only after the event that navigated, so even an element it already has
+/// waits like one coming with the page's data (see [`scrollToPendingFragment`]) - and is looked
+/// for once more after this task, for a page the navigation didn't change.
+///
+/// Without a fragment the page stays where it is: the app may only be changing the query or a
+/// tab, not opening another page.
+export function scrollToFragmentOnRender(path: string) {
+    const fragment = fragmentOf(path);
+
+    pending = null;
+    if (fragment !== '') {
+        waitFor(path, fragment);
+        setTimeout(scrollToPendingFragment, 0);
+    }
+}
+
+function fragmentOf(path: string): string {
+    const hash = path.indexOf('#');
+    return hash === -1 ? '' : path.slice(hash + 1);
+}
+
+function waitFor(path: string, fragment: string) {
+    pending = { path, fragment, until: Date.now() + FRAGMENT_WAIT_MS, scrollY: window.scrollY };
 }
 
 /// Run after every render. Scrolls to the element a followed link's fragment names once it is
