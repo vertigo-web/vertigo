@@ -2,7 +2,7 @@ use std::fmt::Debug;
 use std::rc::Rc;
 
 use crate::{
-    Computed, Context, DomNode, JsJsonDeserialize, RequestResponse, Resource, ToComputed,
+    Computed, Context, DomNode, Instant, JsJsonDeserialize, RequestResponse, Resource, ToComputed,
     driver_module::api::{api_fetch, api_fetch_cache},
     fetch::{api_response::ApiResponse, cache_value::CacheValue},
     get_driver,
@@ -93,31 +93,19 @@ impl<T: PartialEq> LazyCache<T> {
         request: RequestBuilder,
         map_response: impl Fn(u32, RequestBody) -> MapResponse<T> + 'static,
     ) -> Self {
-        let map_response = Rc::new(map_response);
+        Self::new_dyn(request, Rc::new(map_response))
+    }
 
-        let init_value: ApiResponse<T> = {
-            let request = request.clone();
-            let map_response = map_response.clone();
-
-            let ttl = request.get_ttl();
-
-            let ssr_request = request.to_request(None);
-            if let Some(response) = api_fetch_cache().get_response(&ssr_request) {
-                let response = RequestResponse::new(ssr_request, response);
-
-                let new_value = response.into(map_response.as_ref());
-
-                let new_value = match new_value {
-                    Ok(value) => Resource::Ready(Rc::new(value)),
-                    Err(message) => Resource::Error(message),
-                };
-
-                let expiry = ttl.map(|ttl| get_driver().now().add_duration(ttl));
-
-                ApiResponse::new(new_value, expiry)
-            } else {
-                ApiResponse::Uninitialized
+    /// The body of [`Self::new`], generic over `T` but not over `map_response`.
+    fn new_dyn(
+        request: RequestBuilder,
+        map_response: Rc<dyn Fn(u32, RequestBody) -> MapResponse<T>>,
+    ) -> Self {
+        let init_value: ApiResponse<T> = match cached_response(&request) {
+            Some((response, expiry)) => {
+                ApiResponse::new(into_resource(response.into(map_response.as_ref())), expiry)
             }
+            None => ApiResponse::Uninitialized,
         };
 
         Self {
@@ -249,23 +237,39 @@ impl<T: PartialEq> LazyCache<T> {
             self.value.set(ApiResponse::new_loading());
         }
 
-        let request =
-            transaction(|context| self.request.as_ref().clone().to_request_context(context));
-
-        let result = api_fetch().fetch(request.clone()).await;
-        let new_value = RequestResponse::new(request, result).into(self.map_response.as_ref());
-
-        let new_value = match new_value {
-            Ok(value) => Resource::Ready(Rc::new(value)),
-            Err(message) => Resource::Error(message),
-        };
-
-        let expiry = self
-            .request
-            .get_ttl()
-            .map(|ttl| get_driver().now().add_duration(ttl));
+        let (response, expiry) = fetch_response(&self.request).await;
+        let new_value = into_resource(response.into(self.map_response.as_ref()));
 
         self.value.set(ApiResponse::new(new_value, expiry));
+    }
+}
+
+// What follows doesn't depend on the type a cache keeps, so it isn't in a copy for each type.
+
+/// The response the server fetched for `request` while rendering the page, and when it expires.
+fn cached_response(request: &RequestBuilder) -> Option<(RequestResponse, Option<Instant>)> {
+    let ssr_request = request.clone().to_request(None);
+    let response = api_fetch_cache().get_response(&ssr_request)?;
+    Some((RequestResponse::new(ssr_request, response), expiry(request)))
+}
+
+/// Sends `request` and waits for the response, and tells when it expires.
+async fn fetch_response(request: &RequestBuilder) -> (RequestResponse, Option<Instant>) {
+    let ssr_request = transaction(|context| request.clone().to_request_context(context));
+    let result = api_fetch().fetch(ssr_request.clone()).await;
+    (RequestResponse::new(ssr_request, result), expiry(request))
+}
+
+fn expiry(request: &RequestBuilder) -> Option<Instant> {
+    request
+        .get_ttl()
+        .map(|ttl| get_driver().now().add_duration(ttl))
+}
+
+fn into_resource<T>(value: Result<T, String>) -> Resource<Rc<T>> {
+    match value {
+        Ok(value) => Resource::Ready(Rc::new(value)),
+        Err(message) => Resource::Error(message),
     }
 }
 

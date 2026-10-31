@@ -203,6 +203,39 @@ impl RequestBuilder {
     }
 }
 
+/// The status and the JSON of a response, or why there is none.
+#[inline(never)]
+fn json_body(response: SsrFetchResponse) -> Result<(u32, RequestBody), String> {
+    match response {
+        SsrFetchResponse::Ok {
+            status,
+            response: SsrFetchResponseContent::Json(json),
+        } => Ok((status, RequestBody::Json(json))),
+        SsrFetchResponse::Ok {
+            status,
+            response: SsrFetchResponseContent::Text(_),
+        } => Err(format!(
+            "Expected JSON response, got text (status {status})"
+        )),
+        SsrFetchResponse::Err { message } => Err(message),
+    }
+}
+
+#[inline(never)]
+fn unhandled_status(status: u32) -> String {
+    format!("Unhandled response code {status}")
+}
+
+#[inline(never)]
+fn log_failure(request: &SsrFetchRequest, err: &str) {
+    log::error!(
+        "Error fetching {} {}: {}",
+        request.method.to_str(),
+        request.url,
+        err
+    );
+}
+
 /// Result from request made using [RequestBuilder].
 #[derive(Debug)]
 pub struct RequestResponse {
@@ -231,32 +264,18 @@ impl RequestResponse {
         self,
         convert: impl Fn(u32, RequestBody) -> Option<Result<T, String>>,
     ) -> Result<T, String> {
-        let result: Result<T, String> = match self.response {
-            SsrFetchResponse::Ok { status, response } => {
-                let data = match response {
-                    SsrFetchResponseContent::Json(json_response) => {
-                        convert(status, RequestBody::Json(json_response))
-                    }
-                    SsrFetchResponseContent::Text(_) => Some(Err(format!(
-                        "Expected JSON response, got text (status {status})"
-                    ))),
-                };
-
-                match data {
-                    Some(result) => result,
-                    None => Err(format!("Unhandled response code {status}")),
-                }
-            }
-            SsrFetchResponse::Err { message } => Err(message),
+        // Only `convert` depends on `T`. The messages and the log are the same for every type
+        // read, so they're in functions of their own instead of in a copy for each.
+        let result = match json_body(self.response) {
+            Ok((status, body)) => match convert(status, body) {
+                Some(result) => result,
+                None => Err(unhandled_status(status)),
+            },
+            Err(message) => Err(message),
         };
 
         if let Err(err) = &result {
-            log::error!(
-                "Error fetching {} {}: {}",
-                self.request.method.to_str(),
-                self.request.url,
-                err
-            );
+            log_failure(&self.request, err);
         }
 
         result

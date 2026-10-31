@@ -41,6 +41,11 @@
   list, in one function for all types instead of a copy for each type read. The demo, which
   reads few types, has 3.5 kB (0.4%) less wasm after wasm-opt, 0.9 kB gzipped - an application
   that reads many from its API gains more.
+* `LazyCache` keeps out of the code generic over its type what doesn't depend on it: taking
+  the response the server fetched while rendering, sending the request, forgetting the value
+  when the bearer token changes, and in `RequestResponse::into` the error messages and the log
+  of a failed request. The demo has 10.0 kB (1.1%) less wasm after wasm-opt, 2.2 kB gzipped -
+  again more in an application with many types from its API.
 
 ### Fixed
 
