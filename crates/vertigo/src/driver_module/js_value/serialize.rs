@@ -155,18 +155,27 @@ impl<T: JsJsonSerialize> JsJsonSerialize for Vec<T> {
 
 impl<T: JsJsonDeserialize> JsJsonDeserialize for Vec<T> {
     fn from_json(context: JsJsonContext, json: JsJson) -> Result<Self, JsJsonContext> {
+        let items = list_items(&context, json)?;
         let mut list = Vec::new();
 
-        let JsJson::List(inner) = json else {
-            let message = ["List expected, received ", json.typename()].concat();
-            return Err(context.add(message));
-        };
-
-        for (index, item) in inner.into_iter().enumerate() {
+        for (index, item) in items.into_iter().enumerate() {
             list.push(T::from_json(context.add(index), item)?);
         }
 
         Ok(list)
+    }
+}
+
+/// The items of a list, for [`Vec::from_json`] - out of line and generic over nothing, so
+/// that each type read as a list adds only its own loop.
+#[inline(never)]
+fn list_items(context: &JsJsonContext, json: JsJson) -> Result<Vec<JsJson>, JsJsonContext> {
+    match json {
+        JsJson::List(items) => Ok(items),
+        other => {
+            let message = ["List expected, received ", other.typename()].concat();
+            Err(context.add(message))
+        }
     }
 }
 
