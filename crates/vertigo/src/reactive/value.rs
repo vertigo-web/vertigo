@@ -5,7 +5,7 @@ use std::{
 
 use super::{
     Computed, Context, DropResource, Graph, GraphId, ToComputed,
-    graph::{ErasedNode, GraphInner, NodeId},
+    graph::{ErasedNode, GraphInner, Node},
 };
 
 /// The listeners from [`Value::add_event`]. Each one reads the new value from the cell itself,
@@ -34,8 +34,7 @@ pub struct Value<T: Clone + PartialEq + 'static> {
 }
 
 struct ValueInner<T: Clone + PartialEq + 'static> {
-    graph: Rc<GraphInner>,
-    id: NodeId,
+    node: Node,
     value: RefCell<T>,
     next_event: RefCell<u64>,
     events: RefCell<ValueEvents>,
@@ -51,7 +50,7 @@ impl<T: Clone + PartialEq + 'static> Clone for Value<T> {
 
 impl<T: Clone + PartialEq + 'static> PartialEq for Value<T> {
     fn eq(&self, other: &Self) -> bool {
-        self.inner.id == other.inner.id
+        self.inner.node.id == other.inner.node.id
     }
 }
 
@@ -67,23 +66,15 @@ impl<T: Clone + PartialEq + 'static> ErasedNode for ValueInner<T> {
     }
 }
 
-impl<T: Clone + PartialEq + 'static> Drop for ValueInner<T> {
-    fn drop(&mut self) {
-        self.graph.unregister(self.id);
-    }
-}
-
 impl<T: Clone + PartialEq + 'static> Value<T> {
     pub(crate) fn create(graph: Rc<GraphInner>, value: T) -> Self {
-        let id = graph.alloc_id();
         let inner = Rc::new(ValueInner {
-            graph: graph.clone(),
-            id,
+            node: Node::new(graph),
             value: RefCell::new(value),
             next_event: RefCell::new(1),
             events: RefCell::new(Vec::new()),
         });
-        graph.register(id, inner.clone());
+        inner.node.graph.register(inner.node.id, inner.clone());
         Value { inner }
     }
 
@@ -111,8 +102,7 @@ impl<T: Clone + PartialEq + 'static> Value<T> {
     }
 
     pub fn get(&self, ctx: &Context) -> T {
-        ctx.track(self.inner.id, self.inner.clone());
-        self.inner.graph.ensure_fresh(self.inner.id);
+        self.inner.node.read(ctx, self.inner.clone());
         self.inner.value.borrow().clone()
     }
 
@@ -120,11 +110,11 @@ impl<T: Clone + PartialEq + 'static> Value<T> {
         // Before the equality check below, deliberately: writing from a place that must
         // not write is reported even when the new value happens to equal the old one.
         // Otherwise the same broken code would report itself or not depending on the data.
-        if !self.inner.graph.check_write_allowed() {
+        if !self.inner.node.graph.check_write_allowed() {
             return;
         }
         let graph = Graph {
-            inner: self.inner.graph.clone(),
+            inner: self.inner.node.graph.clone(),
         };
         graph.transaction(|_| {
             if *self.inner.value.borrow() == value {
@@ -134,13 +124,13 @@ impl<T: Clone + PartialEq + 'static> Value<T> {
             // whatever is stored.
             *self.inner.value.borrow_mut() = value;
             notify(&self.inner.events);
-            self.inner.graph.enqueue(self.inner.id);
+            self.inner.node.graph.enqueue(self.inner.node.id);
         });
     }
 
     pub fn change(&self, change_fn: impl FnOnce(&mut T)) {
         let graph = Graph {
-            inner: self.inner.graph.clone(),
+            inner: self.inner.node.graph.clone(),
         };
         graph.transaction(|ctx| {
             let mut value = self.get(ctx);
@@ -153,19 +143,22 @@ impl<T: Clone + PartialEq + 'static> Value<T> {
         &self,
         fun: F,
     ) -> Computed<K> {
-        Computed::create(self.inner.graph.clone(), {
+        Computed::create(self.inner.node.graph.clone(), {
             let myself = self.clone();
-            move |context| fun(myself.get(context))
+            Box::new(move |context| fun(myself.get(context)))
         })
     }
 
     pub fn to_computed(&self) -> Computed<T> {
         let myself = self.clone();
-        Computed::create(self.inner.graph.clone(), move |context| myself.get(context))
+        Computed::create(
+            self.inner.node.graph.clone(),
+            Box::new(move |context| myself.get(context)),
+        )
     }
 
     pub fn id(&self) -> GraphId {
-        GraphId::from_node(self.inner.id)
+        GraphId::from_node(self.inner.node.id)
     }
 
     /// Calls `callback` after every [`Value::set`] that changes the value, until the returned

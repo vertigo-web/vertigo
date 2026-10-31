@@ -2,7 +2,7 @@ use std::{cell::RefCell, ops::Add, rc::Rc};
 
 use super::{
     Context, DropResource, Graph, GraphId, ToComputed, Value,
-    graph::{ErasedNode, GraphInner, NodeId},
+    graph::{CallbackGuard, ErasedNode, GraphInner, Node, NodeId},
 };
 
 /// A read-only reactive cell, recomputed from other nodes.
@@ -11,15 +11,13 @@ pub struct Computed<T: Clone + PartialEq + 'static> {
 }
 
 struct ComputedInner<T: Clone + PartialEq + 'static> {
-    graph: Rc<GraphInner>,
-    id: NodeId,
+    node: Node,
     compute: Box<dyn Fn(&Context) -> T>,
     value: RefCell<Option<T>>,
 }
 
 struct SubscribeInner {
-    graph: Rc<GraphInner>,
-    id: NodeId,
+    node: Node,
     refresh: Box<dyn Fn(&Context)>,
 }
 
@@ -33,7 +31,7 @@ impl<T: Clone + PartialEq + 'static> Clone for Computed<T> {
 
 impl<T: Clone + PartialEq + 'static> PartialEq for Computed<T> {
     fn eq(&self, other: &Self) -> bool {
-        self.inner.id == other.inner.id
+        self.inner.node.id == other.inner.node.id
     }
 }
 
@@ -45,32 +43,18 @@ impl<T: Clone + PartialEq + 'static> ErasedNode for ComputedInner<T> {
 
 impl ErasedNode for SubscribeInner {
     fn refresh(&self) -> bool {
-        let _guard = self.graph.enter_callback();
-        let ctx = Context::tracking();
-        (self.refresh)(&ctx);
-        self.graph.set_parents(self.id, ctx.take_parents());
+        let tracking = Tracking::start(&self.node.graph);
+        (self.refresh)(&tracking.context);
+        tracking.record(self.node.id);
         false
-    }
-}
-
-impl<T: Clone + PartialEq + 'static> Drop for ComputedInner<T> {
-    fn drop(&mut self) {
-        self.graph.unregister(self.id);
-    }
-}
-
-impl Drop for SubscribeInner {
-    fn drop(&mut self) {
-        self.graph.unregister(self.id);
     }
 }
 
 impl<T: Clone + PartialEq + 'static> ComputedInner<T> {
     fn recompute(&self) -> bool {
-        let _guard = self.graph.enter_callback();
-        let ctx = Context::tracking();
-        let new_value = (self.compute)(&ctx);
-        self.graph.set_parents(self.id, ctx.take_parents());
+        let tracking = Tracking::start(&self.node.graph);
+        let new_value = (self.compute)(&tracking.context);
+        tracking.record(self.node.id);
 
         let mut slot = self.value.borrow_mut();
         match slot.as_ref() {
@@ -88,46 +72,71 @@ impl<T: Clone + PartialEq + 'static> ComputedInner<T> {
         }
         match self.value.borrow().clone() {
             Some(value) => value,
-            None => panic!("vertigo: computed has no value after refresh"),
+            None => no_value(),
         }
     }
 }
 
-impl<T: Clone + PartialEq + 'static> Computed<T> {
-    pub(crate) fn create(graph: Rc<GraphInner>, compute: impl Fn(&Context) -> T + 'static) -> Self {
-        Self::create_dyn(graph, Box::new(compute))
+/// A compute running: what it reads is recorded as the parents of its node, and writes are
+/// blocked until it's dropped. The same for every type, so starting it and recording are out
+/// of line, not in each copy of [`ComputedInner::recompute`].
+struct Tracking<'a> {
+    graph: &'a GraphInner,
+    _guard: CallbackGuard<'a>,
+    context: Context,
+}
+
+impl<'a> Tracking<'a> {
+    #[inline(never)]
+    fn start(graph: &'a GraphInner) -> Self {
+        Tracking {
+            graph,
+            _guard: graph.enter_callback(),
+            context: Context::tracking(),
+        }
     }
 
-    /// The body of [`Self::create`], with the closure already in the box `ComputedInner`
-    /// stores it in anyway.
+    #[inline(never)]
+    fn record(&self, id: NodeId) {
+        self.graph.set_parents(id, self.context.take_parents());
+    }
+}
+
+#[cold]
+#[inline(never)]
+fn no_value() -> ! {
+    panic!("vertigo: computed has no value after refresh")
+}
+
+impl<T: Clone + PartialEq + 'static> Computed<T> {
+    /// A computed on `graph`, with the closure already in the box `ComputedInner` stores it
+    /// in anyway.
     ///
     /// Generic over `T` but not over the closure type: every `Computed::from`, `map` and
-    /// `to_computed` in an application funnels through here, and each one used to get its
-    /// own copy of the registration below.
-    fn create_dyn(graph: Rc<GraphInner>, compute: Box<dyn Fn(&Context) -> T>) -> Self {
-        let id = graph.alloc_id();
+    /// `to_computed` in an application funnels through here, each boxing its closure itself,
+    /// so that none of them gets a copy of the registration below, or a layer of its own
+    /// between it and here.
+    pub(crate) fn create(graph: Rc<GraphInner>, compute: Box<dyn Fn(&Context) -> T>) -> Self {
         let inner = Rc::new(ComputedInner {
-            graph: graph.clone(),
-            id,
+            node: Node::new(graph),
             compute,
             value: RefCell::new(None),
         });
-        graph.register(id, inner.clone());
+        inner.node.graph.register(inner.node.id, inner.clone());
         Computed { inner }
     }
 
     pub fn from(compute: impl Fn(&Context) -> T + 'static) -> Self {
-        super::default_graph().computed(compute)
+        Self::create(super::default_graph().inner, Box::new(compute))
     }
 
     pub fn get(&self, ctx: &Context) -> T {
-        ctx.track(self.inner.id, self.inner.clone());
-        self.inner.graph.ensure_fresh(self.inner.id);
+        self.inner.node.read(ctx, self.inner.clone());
         self.inner.ensure()
     }
 
     pub fn id(&self) -> GraphId {
-        GraphId::from_node(self.inner.id)
+        GraphId::from_node(self.inner.node.id)
     }
 
     /// Runs `create` after the wave (and after `on_after_transaction`) in which this
@@ -136,20 +145,21 @@ impl<T: Clone + PartialEq + 'static> Computed<T> {
     /// handler, it must not write. `create` may write `Value`s. A `set` from compute or
     /// subscribe is ignored.
     pub fn when_connect<F: Fn() -> DropResource + 'static>(&self, create: F) -> Computed<T> {
-        let new_computed = Computed::create(self.inner.graph.clone(), {
+        let new_computed = Computed::create(self.inner.node.graph.clone(), {
             let parent = self.clone();
-            move |context| parent.get(context)
+            Box::new(move |context| parent.get(context))
         });
         new_computed
             .inner
+            .node
             .graph
-            .register_connect(new_computed.inner.id, Rc::new(create));
+            .register_connect(new_computed.inner.node.id, Rc::new(create));
         new_computed
     }
 
     /// Subscribe; the callback runs only when the computed value *changes*.
     pub fn subscribe<R: 'static, F: Fn(T) -> R + 'static>(self, callback: F) -> DropResource {
-        let graph = self.inner.graph.clone();
+        let graph = self.inner.node.graph.clone();
         let parent = self;
 
         // Everything below this line is the same code whatever `T` and whatever the callback
@@ -166,9 +176,9 @@ impl<T: Clone + PartialEq + 'static> Computed<T> {
         &self,
         fun: F,
     ) -> Computed<K> {
-        Computed::create(self.inner.graph.clone(), {
+        Computed::create(self.inner.node.graph.clone(), {
             let myself = self.clone();
-            move |context| fun(myself.get(context))
+            Box::new(move |context| fun(myself.get(context)))
         })
     }
 }
@@ -177,7 +187,7 @@ impl<T: Clone + PartialEq + 'static> Computed<T> {
     /// The graph this computed lives on.
     pub(crate) fn graph(&self) -> Graph {
         Graph {
-            inner: self.inner.graph.clone(),
+            inner: self.inner.node.graph.clone(),
         }
     }
 }
@@ -194,13 +204,11 @@ impl Graph {
 ///
 /// Split out of [`Computed::subscribe`] and generic over nothing at all.
 fn register_sink(graph: Rc<GraphInner>, refresh: Box<dyn Fn(&Context)>) -> DropResource {
-    let id = graph.alloc_id();
     let inner = Rc::new(SubscribeInner {
-        graph: graph.clone(),
-        id,
+        node: Node::new(graph.clone()),
         refresh,
     });
-    graph.register(id, inner.clone());
+    graph.register(inner.node.id, inner.clone());
 
     // The first run has to be a transaction: registering the parents it read is what
     // makes them watched, and `when_connect` closures only run when a transaction
@@ -289,10 +297,10 @@ mod tests {
         let g = Graph::new();
         let logs = g.logger().listen();
         let a = g.value(0);
-        let id = g.inner.alloc_id();
+        let node = Node::new(g.inner.clone());
+        let id = node.id;
         let sink = Rc::new(SubscribeInner {
-            graph: g.inner.clone(),
-            id,
+            node,
             refresh: Box::new({
                 let a = a.clone();
                 move |ctx| {

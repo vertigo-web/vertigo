@@ -18,6 +18,7 @@ use crate::{
         utils::futures_spawn::spawn_local,
     },
     fetch::request_builder::{RequestBody, RequestBuilder},
+    reactive::Graph,
     struct_mut::ValueMut,
 };
 
@@ -103,8 +104,17 @@ pub fn get_driver() -> Rc<Driver> {
 }
 
 /// Do bunch of operations on dependency graph without triggering anything in between.
+#[inline(always)]
 pub fn transaction<R, F: FnOnce(&Context) -> R>(f: F) -> R {
-    get_driver().transaction(f)
+    transaction_graph().transaction(f)
+}
+
+/// The graph [`transaction`] runs on. Through the driver, which on its first use subscribes the
+/// DOM to every transaction - in a function of its own, not in every caller.
+#[inline(never)]
+fn transaction_graph() -> Graph {
+    get_driver();
+    crate::reactive::default_graph()
 }
 
 /// Set of functions to communicate with the browser.
@@ -352,6 +362,7 @@ impl Driver {
 
     /// Fire provided function in a way that all reactive updates made by this function
     /// run once, as if the changes were done all at once.
+    #[inline(always)]
     pub fn transaction<R, F: FnOnce(&Context) -> R>(&self, func: F) -> R {
         crate::reactive::transaction(func)
     }

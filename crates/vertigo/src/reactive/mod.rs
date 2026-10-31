@@ -60,6 +60,9 @@ pub(crate) fn default_graph() -> Graph {
 /// Run `f` as a transaction on the default graph.
 ///
 /// Nested calls are allowed. Propagation runs when the outermost transaction ends.
+// Inlined, as are `vertigo::transaction` and `Driver::transaction` that forward here: each is
+// generic over the caller's closure, so as functions they'd be a copy of their own for each.
+#[inline(always)]
 pub fn transaction<R>(f: impl FnOnce(&Context) -> R) -> R {
     default_graph().transaction(f)
 }

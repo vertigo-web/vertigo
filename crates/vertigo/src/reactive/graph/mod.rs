@@ -27,6 +27,36 @@ pub(crate) use logger::Logger;
 #[derive(Clone, Copy, PartialEq, Eq, Hash, PartialOrd, Ord, Debug)]
 pub(crate) struct NodeId(pub u64);
 
+/// A node's place in its graph, which it leaves when dropped.
+///
+/// The same for every node, so that `ValueInner<T>` and `ComputedInner<T>` don't need a `Drop`
+/// of their own - one more function for each type they're used with.
+pub(crate) struct Node {
+    pub(crate) graph: Rc<GraphInner>,
+    pub(crate) id: NodeId,
+}
+
+impl Node {
+    pub(crate) fn new(graph: Rc<GraphInner>) -> Self {
+        let id = graph.alloc_id();
+        Node { graph, id }
+    }
+
+    /// Records a read of this node, whose value is `slot`, and brings it up to date if a wave
+    /// is running. Out of line, so that it's not in every `get` for each type.
+    #[inline(never)]
+    pub(crate) fn read(&self, ctx: &Context, slot: Rc<dyn ErasedNode>) {
+        ctx.track(self.id, slot);
+        self.graph.ensure_fresh(self.id);
+    }
+}
+
+impl Drop for Node {
+    fn drop(&mut self) {
+        self.graph.unregister(self.id);
+    }
+}
+
 /// Identity of a [`Value`] or [`Computed`] node.
 #[derive(Clone, Copy, PartialEq, Eq, Hash, PartialOrd, Ord, Debug)]
 pub struct GraphId(u64);
@@ -120,7 +150,7 @@ impl Graph {
         &self,
         compute: impl Fn(&Context) -> T + 'static,
     ) -> Computed<T> {
-        Computed::create(self.inner.clone(), compute)
+        Computed::create(self.inner.clone(), Box::new(compute))
     }
 
     pub fn transaction<R>(&self, f: impl FnOnce(&Context) -> R) -> R {
