@@ -26,6 +26,26 @@
   further argument. `StoreMap` names its types only in its signature and its entries are the
   same for all stores, so a store brings only the code to hash, compare and clone its own
   types, about 1 kB less wasm each: 2.7 kB in the demo (1.2 kB gzipped), which has 2 of them.
+* A transaction opens and closes in functions of its own instead of in a copy for each caller.
+  Closing runs the whole wave, and `Value::set` alone had a copy of it for each type it is
+  used with: the demo has 4.4 kB (0.5%) less wasm after wasm-opt, 0.7 kB gzipped.
+* `render_value` and `render_value_option` (and the `render_value` methods) keep only reading
+  the value and rendering it in the code generic over the type and the closure. Placing the
+  result and keeping the subscription is one function for all of them, where each call used to
+  get its own copy: the demo has 17.6 kB (1.9%) less wasm after wasm-opt, 3.7 kB gzipped.
+* `Value::set` calls the listeners of `Value::add_event` in one function for all types: each
+  listener clones the new value from the value itself rather than from a list of them that
+  every `set` gathered for its own type. A write with listeners also makes one copy fewer. The
+  demo has 19.4 kB (2.1%) less wasm after wasm-opt, 5.4 kB gzipped.
+* Reading JSON: `JsJson::get_property` finds the field, and `Vec::from_json` checks it got a
+  list, in one function for all types instead of a copy for each type read. The demo, which
+  reads few types, has 3.5 kB (0.4%) less wasm after wasm-opt, 0.9 kB gzipped - an application
+  that reads many from its API gains more.
+* `LazyCache` keeps out of the code generic over its type what doesn't depend on it: taking
+  the response the server fetched while rendering, sending the request, forgetting the value
+  when the bearer token changes, and in `RequestResponse::into` the error messages and the log
+  of a failed request. The demo has 10.0 kB (1.1%) less wasm after wasm-opt, 2.2 kB gzipped -
+  again more in an application with many types from its API.
 
 ### Fixed
 

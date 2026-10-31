@@ -1,11 +1,16 @@
-use std::{cell::RefCell, rc::Rc};
+use std::{
+    cell::RefCell,
+    rc::{Rc, Weak},
+};
 
 use super::{
     Computed, Context, DropResource, Graph, GraphId, ToComputed,
     graph::{ErasedNode, GraphInner, NodeId},
 };
 
-type ValueEvents<T> = Vec<(u64, Rc<dyn Fn(T)>)>;
+/// The listeners from [`Value::add_event`]. Each one reads the new value from the cell itself,
+/// so that calling them is the same code whatever `T` is.
+type ValueEvents = Vec<(u64, Rc<dyn Fn()>)>;
 
 /// A writable reactive cell.
 ///
@@ -33,7 +38,7 @@ struct ValueInner<T: Clone + PartialEq + 'static> {
     id: NodeId,
     value: RefCell<T>,
     next_event: RefCell<u64>,
-    events: RefCell<ValueEvents<T>>,
+    events: RefCell<ValueEvents>,
 }
 
 impl<T: Clone + PartialEq + 'static> Clone for Value<T> {
@@ -125,23 +130,10 @@ impl<T: Clone + PartialEq + 'static> Value<T> {
             if *self.inner.value.borrow() == value {
                 return;
             }
-            // The clone only exists to hand the new value to the listeners, so skip it
-            // when there are none — otherwise every write deep-copies whatever is stored.
-            if self.inner.events.borrow().is_empty() {
-                *self.inner.value.borrow_mut() = value;
-            } else {
-                *self.inner.value.borrow_mut() = value.clone();
-                let events: Vec<_> = self
-                    .inner
-                    .events
-                    .borrow()
-                    .iter()
-                    .map(|(_, event)| event.clone())
-                    .collect();
-                for event in events {
-                    event(value.clone());
-                }
-            }
+            // Listeners clone it from the cell, each its own copy - with none, nothing copies
+            // whatever is stored.
+            *self.inner.value.borrow_mut() = value;
+            notify(&self.inner.events);
             self.inner.graph.enqueue(self.inner.id);
         });
     }
@@ -176,6 +168,9 @@ impl<T: Clone + PartialEq + 'static> Value<T> {
         GraphId::from_node(self.inner.id)
     }
 
+    /// Calls `callback` after every [`Value::set`] that changes the value, until the returned
+    /// [`DropResource`] is dropped. It gets a copy of what the value holds then - when an
+    /// earlier listener has set it once more, that newer value.
     pub fn add_event(&self, callback: impl Fn(T) + 'static) -> DropResource {
         let id = {
             let mut next = self.inner.next_event.borrow_mut();
@@ -183,7 +178,15 @@ impl<T: Clone + PartialEq + 'static> Value<T> {
             *next += 1;
             id
         };
-        self.inner.events.borrow_mut().push((id, Rc::new(callback)));
+        // Weak: the list is part of the value, which mustn't keep itself alive
+        let value: Weak<ValueInner<T>> = Rc::downgrade(&self.inner);
+        let event = move || {
+            if let Some(value) = value.upgrade() {
+                let current = value.value.borrow().clone();
+                callback(current);
+            }
+        };
+        self.inner.events.borrow_mut().push((id, Rc::new(event)));
         let inner = self.inner.clone();
         DropResource::new(move || {
             inner
@@ -191,6 +194,22 @@ impl<T: Clone + PartialEq + 'static> Value<T> {
                 .borrow_mut()
                 .retain(|(event_id, _)| *event_id != id);
         })
+    }
+}
+
+/// Calls the listeners of a value that has just changed. They run from a copy of the list, so
+/// that each may add or drop listeners.
+fn notify(events: &RefCell<ValueEvents>) {
+    if events.borrow().is_empty() {
+        return;
+    }
+    let events: Vec<_> = events
+        .borrow()
+        .iter()
+        .map(|(_, event)| event.clone())
+        .collect();
+    for event in events {
+        event();
     }
 }
 

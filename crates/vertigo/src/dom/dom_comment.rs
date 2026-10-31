@@ -73,9 +73,8 @@ impl DomComment {
 
     /// The body of [`Self::new_marker`], generic over nothing.
     ///
-    /// Its three callers are themselves generic - `render_value_option<T>`,
-    /// `render_list<T, K>` - so left inline this was emitted once per type the application
-    /// renders, rather than once.
+    /// `render_list<T, K>` calls it, which is generic, so left inline this was emitted once
+    /// per type the application renders a list of, rather than once.
     fn new_marker_dyn(comment_value: &'static str, mount: MarkerMount) -> DomComment {
         let id_comment = DomId::default();
         let content = MarkerContent::new();
