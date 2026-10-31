@@ -1,10 +1,12 @@
-use std::fmt::Debug;
-use std::rc::Rc;
+use std::{fmt::Debug, marker::PhantomData, rc::Rc};
 
 use crate::{
     Computed, Context, DomNode, Instant, JsJsonDeserialize, RequestResponse, Resource, ToComputed,
     driver_module::api::{api_fetch, api_fetch_cache},
-    fetch::{api_response::ApiResponse, cache_value::CacheValue},
+    fetch::{
+        api_response::{ApiResponse, Payload},
+        cache_value::CacheValue,
+    },
     get_driver,
     struct_mut::ValueMut,
     transaction,
@@ -61,17 +63,14 @@ fn get_unique_id() -> u64 {
 ///
 /// See ["todo" example](../src/vertigo_demo/app/todo/state.rs.html) in vertigo-demo package for more.
 pub struct LazyCache<T: PartialEq + 'static> {
-    id: u64,
-    value: CacheValue<T>,
-    queued: Rc<ValueMut<bool>>,
-    request: Rc<RequestBuilder>,
-    map_response: Rc<dyn Fn(u32, RequestBody) -> MapResponse<T>>,
+    cache: Cache,
+    _type: PhantomData<Rc<T>>,
 }
 
 impl<T: PartialEq + 'static> Debug for LazyCache<T> {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         f.debug_struct("LazyCache")
-            .field("queued", &self.queued)
+            .field("queued", &self.cache.queued)
             .finish()
     }
 }
@@ -79,11 +78,8 @@ impl<T: PartialEq + 'static> Debug for LazyCache<T> {
 impl<T: PartialEq> Clone for LazyCache<T> {
     fn clone(&self) -> Self {
         LazyCache {
-            id: self.id,
-            value: self.value.clone(),
-            queued: self.queued.clone(),
-            request: self.request.clone(),
-            map_response: self.map_response.clone(),
+            cache: self.cache.clone(),
+            _type: PhantomData,
         }
     }
 }
@@ -93,15 +89,124 @@ impl<T: PartialEq> LazyCache<T> {
         request: RequestBuilder,
         map_response: impl Fn(u32, RequestBody) -> MapResponse<T> + 'static,
     ) -> Self {
-        Self::new_dyn(request, Rc::new(map_response))
+        // With `typed` below, the only code that depends on `T`. The cache keeps the value
+        // as a `Payload`, so everything else it does is one copy for all types.
+        let map_response =
+            move |status, body| map_response(status, body).map(|value| value.map(Payload::new));
+
+        Self {
+            cache: Cache::new(request, Rc::new(map_response)),
+            _type: PhantomData,
+        }
+    }
+}
+
+impl<T: PartialEq> LazyCache<T> {
+    /// Get value (update if needed)
+    pub fn get(&self, context: &Context) -> Resource<Rc<T>> {
+        typed(self.cache.get(context))
     }
 
-    /// The body of [`Self::new`], generic over `T` but not over `map_response`.
-    fn new_dyn(
+    /// Delete value so it will refresh on next access
+    pub fn forget(&self) {
+        self.cache.forget();
+    }
+
+    /// Force refresh the value now
+    pub fn force_update(&self, with_loading: bool) {
+        self.cache.update(with_loading, true)
+    }
+
+    /// Injects an optimistic value into the cache immediately, without waiting for a server response.
+    /// The cache will not auto-refresh until explicitly refreshed via [`force_update`](LazyCache::force_update)
+    /// or TTL expires.
+    ///
+    /// Typical optimistic update workflow:
+    /// 1. Call `set_optimistic(new_state)` — UI updates immediately
+    /// 2. Send the mutation request to the server
+    /// 3. On success, call `force_update(false)` to silently reconcile with real server state
+    /// 4. On failure, call `force_update(true)` to reload with a loading indicator
+    pub fn optimistically_set(&self, value: T) {
+        self.cache.set_ready(Payload::new(value));
+    }
+
+    /// Mutates the optimistic value in the cache.
+    /// This is useful when the state is large and you want to efficiently update it without replacing the entire object.
+    /// Works only when the current state is `Resource::Ready`.
+    ///
+    /// NOTE: If you have a long list of objects, consider using [`LazyListCache`](crate::fetch::lazy_list_cache::LazyListCache) instead.
+    pub fn optimistically_change(&self, modify: impl FnOnce(&mut T))
+    where
+        T: Clone,
+    {
+        if let Resource::Ready(current_value) = typed::<T>(self.cache.current()) {
+            let mut new_value = (*current_value).clone();
+            modify(&mut new_value);
+            self.cache.set_ready(Payload::new(new_value));
+        }
+    }
+
+    /// Update the value if expired
+    pub fn update(&self, with_loading: bool, force: bool) {
+        self.cache.update(with_loading, force)
+    }
+
+    /// Fetch the value again now and wait until the new one is in the cache - unlike with
+    /// [`force_update`](LazyCache::force_update), whose caller can't tell when that happens.
+    /// The current value stays until then, without a loading state, and the response replaces
+    /// it - an error as well, as with `force_update`.
+    ///
+    /// For code that acts on what the new data renders, e.g. scrolls to the comment it brings:
+    ///
+    /// ```rust
+    /// use vertigo::{LazyCache, js};
+    ///
+    /// async fn show_new_comment(comments: LazyCache<Vec<String>>) {
+    ///     comments.refresh().await;
+    ///     js! { document.getElementById("new-comment").scrollIntoView() };
+    /// }
+    /// ```
+    pub fn refresh(&self) -> impl Future<Output = ()> {
+        // Not an `async fn`: that would wrap the future of `Cache::refresh` in one of its own
+        // for each `T`.
+        self.cache.refresh()
+    }
+}
+
+/// The value a cache keeps, as the [`LazyCache`] of its type hands it out.
+fn typed<T: 'static>(resource: Resource<Payload>) -> Resource<Rc<T>> {
+    match resource {
+        Resource::Ready(payload) => match payload.downcast() {
+            Some(value) => Resource::Ready(value),
+            // Can't happen: only `LazyCache<T>` puts values in its `Cache`, and only `T`s.
+            None => Resource::Error(wrong_type()),
+        },
+        Resource::Loading => Resource::Loading,
+        Resource::Error(message) => Resource::Error(message),
+    }
+}
+
+fn wrong_type() -> String {
+    "vertigo: LazyCache holds a value of another type".to_string()
+}
+
+/// All of a [`LazyCache`] but mapping the response ([`LazyCache::new`]) and handing out the
+/// value ([`LazyCache::get`]) - the same code for every type a cache keeps.
+#[derive(Clone)]
+struct Cache {
+    id: u64,
+    value: CacheValue,
+    queued: Rc<ValueMut<bool>>,
+    request: Rc<RequestBuilder>,
+    map_response: Rc<dyn Fn(u32, RequestBody) -> MapResponse<Payload>>,
+}
+
+impl Cache {
+    fn new(
         request: RequestBuilder,
-        map_response: Rc<dyn Fn(u32, RequestBody) -> MapResponse<T>>,
+        map_response: Rc<dyn Fn(u32, RequestBody) -> MapResponse<Payload>>,
     ) -> Self {
-        let init_value: ApiResponse<T> = match cached_response(&request) {
+        let init_value = match cached_response(&request) {
             Some((response, expiry)) => {
                 ApiResponse::new(into_resource(response.into(map_response.as_ref())), expiry)
             }
@@ -116,11 +221,8 @@ impl<T: PartialEq> LazyCache<T> {
             map_response,
         }
     }
-}
 
-impl<T: PartialEq> LazyCache<T> {
-    /// Get value (update if needed)
-    pub fn get(&self, context: &Context) -> Resource<Rc<T>> {
+    fn get(&self, context: &Context) -> Resource<Payload> {
         let api_response = self.value.get(context);
 
         if !self.queued.get() && api_response.needs_update() {
@@ -130,53 +232,21 @@ impl<T: PartialEq> LazyCache<T> {
         api_response.get_value()
     }
 
-    /// Delete value so it will refresh on next access
-    pub fn forget(&self) {
+    /// The value now, outside of any reactive context.
+    fn current(&self) -> Resource<Payload> {
+        transaction(|context| self.value.get(context)).get_value()
+    }
+
+    fn forget(&self) {
         self.value.set(ApiResponse::Uninitialized);
     }
 
-    /// Force refresh the value now
-    pub fn force_update(&self, with_loading: bool) {
-        self.update(with_loading, true)
-    }
-
-    /// Injects an optimistic value into the cache immediately, without waiting for a server response.
-    /// The cache will not auto-refresh until explicitly refreshed via [`force_update`](LazyCache::force_update)
-    /// or TTL expires.
-    ///
-    /// Typical optimistic update workflow:
-    /// 1. Call `set_optimistic(new_state)` — UI updates immediately
-    /// 2. Send the mutation request to the server
-    /// 3. On success, call `force_update(false)` to silently reconcile with real server state
-    /// 4. On failure, call `force_update(true)` to reload with a loading indicator
-    pub fn optimistically_set(&self, value: T) {
+    fn set_ready(&self, value: Payload) {
         self.value
-            .set(ApiResponse::new(Resource::Ready(Rc::new(value)), None));
+            .set(ApiResponse::new(Resource::Ready(value), None));
     }
 
-    /// Mutates the optimistic value in the cache.
-    /// This is useful when the state is large and you want to efficiently update it without replacing the entire object.
-    /// Works only when the current state is `Resource::Ready`.
-    ///
-    /// NOTE: If you have a long list of objects, consider using [`LazyListCache`](crate::fetch::lazy_list_cache::LazyListCache) instead.
-    pub fn optimistically_change(&self, modify: impl FnOnce(&mut T))
-    where
-        T: Clone,
-    {
-        let api_response = transaction(|context| self.value.get(context));
-
-        if let ApiResponse::Data { value, .. } = api_response
-            && let Resource::Ready(current_value) = value
-        {
-            let mut new_value = (*current_value).clone();
-            modify(&mut new_value);
-            self.value
-                .set(ApiResponse::new(Resource::Ready(Rc::new(new_value)), None));
-        }
-    }
-
-    /// Update the value if expired
-    pub fn update(&self, with_loading: bool, force: bool) {
+    fn update(&self, with_loading: bool, force: bool) {
         if self.queued.get() {
             return;
         }
@@ -201,22 +271,7 @@ impl<T: PartialEq> LazyCache<T> {
         });
     }
 
-    /// Fetch the value again now and wait until the new one is in the cache - unlike with
-    /// [`force_update`](LazyCache::force_update), whose caller can't tell when that happens.
-    /// The current value stays until then, without a loading state, and the response replaces
-    /// it - an error as well, as with `force_update`.
-    ///
-    /// For code that acts on what the new data renders, e.g. scrolls to the comment it brings:
-    ///
-    /// ```rust
-    /// use vertigo::{LazyCache, js};
-    ///
-    /// async fn show_new_comment(comments: LazyCache<Vec<String>>) {
-    ///     comments.refresh().await;
-    ///     js! { document.getElementById("new-comment").scrollIntoView() };
-    /// }
-    /// ```
-    pub async fn refresh(&self) {
+    async fn refresh(&self) {
         // Held like in `update`, so that reading the cache meanwhile doesn't send a second
         // request. An update already on its way keeps its own - both then fetch, and the
         // later response stays.
@@ -244,8 +299,6 @@ impl<T: PartialEq> LazyCache<T> {
     }
 }
 
-// What follows doesn't depend on the type a cache keeps, so it isn't in a copy for each type.
-
 /// The response the server fetched for `request` while rendering the page, and when it expires.
 fn cached_response(request: &RequestBuilder) -> Option<(RequestResponse, Option<Instant>)> {
     let ssr_request = request.clone().to_request(None);
@@ -266,9 +319,9 @@ fn expiry(request: &RequestBuilder) -> Option<Instant> {
         .map(|ttl| get_driver().now().add_duration(ttl))
 }
 
-fn into_resource<T>(value: Result<T, String>) -> Resource<Rc<T>> {
+fn into_resource(value: Result<Payload, String>) -> Resource<Payload> {
     match value {
-        Ok(value) => Resource::Ready(Rc::new(value)),
+        Ok(value) => Resource::Ready(value),
         Err(message) => Resource::Error(message),
     }
 }
@@ -290,7 +343,7 @@ impl<T: Clone + PartialEq> LazyCache<T> {
 
 impl<T: PartialEq> PartialEq for LazyCache<T> {
     fn eq(&self, other: &Self) -> bool {
-        self.id == other.id
+        self.cache.id == other.cache.id
     }
 }
 

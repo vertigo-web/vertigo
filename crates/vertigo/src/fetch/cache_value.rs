@@ -5,18 +5,10 @@ use crate::{
     fetch::api_response::ApiResponse, struct_mut::ValueMut,
 };
 
-pub struct CacheValue<T: PartialEq + 'static> {
-    value_write: Value<ApiResponse<T>>,
-    value_read: Computed<ApiResponse<T>>,
-}
-
-impl<T: PartialEq> Clone for CacheValue<T> {
-    fn clone(&self) -> Self {
-        CacheValue {
-            value_write: self.value_write.clone(),
-            value_read: self.value_read.clone(),
-        }
-    }
+#[derive(Clone)]
+pub struct CacheValue {
+    value_write: Value<ApiResponse>,
+    value_read: Computed<ApiResponse>,
 }
 
 /// Forgets the cached response whenever the bearer token changes, so that it's fetched again
@@ -24,10 +16,10 @@ impl<T: PartialEq> Clone for CacheValue<T> {
 fn revalidate_on_new_token(
     bearer_auth: &Computed<Option<String>>,
     last_token: &Rc<ValueMut<Option<Option<String>>>>,
-    forget: &Rc<dyn Fn()>,
+    value_write: &Value<ApiResponse>,
 ) -> DropResource {
     let last_token = last_token.clone();
-    let forget = forget.clone();
+    let value_write = value_write.clone();
 
     let drop = bearer_auth.clone().subscribe(move |new_token| {
         let changed = last_token.change(|last| match last {
@@ -43,8 +35,10 @@ fn revalidate_on_new_token(
             return;
         }
 
-        let forget = forget.clone();
-        api_timers().set_timeout_and_detach(0, move || forget());
+        let value_write = value_write.clone();
+        api_timers().set_timeout_and_detach(0, move || {
+            value_write.set(ApiResponse::Uninitialized);
+        });
     });
 
     DropResource::new(move || {
@@ -52,8 +46,8 @@ fn revalidate_on_new_token(
     })
 }
 
-impl<T: PartialEq + 'static> CacheValue<T> {
-    pub fn new(init_value: ApiResponse<T>, bearer_auth: Computed<Option<String>>) -> CacheValue<T> {
+impl CacheValue {
+    pub fn new(init_value: ApiResponse, bearer_auth: Computed<Option<String>>) -> CacheValue {
         let value_write = Value::new(init_value);
 
         // The token this cache was last revalidated against.
@@ -69,16 +63,10 @@ impl<T: PartialEq + 'static> CacheValue<T> {
         // a token that changed while this value was disconnected still has to be noticed.
         let last_token: Rc<ValueMut<Option<Option<String>>>> = Rc::new(ValueMut::new(None));
 
-        // The only part that depends on `T`. Everything else is the same for all caches, so
-        // it's in `revalidate_on_new_token` rather than in a copy for each type.
-        let forget: Rc<dyn Fn()> = {
+        let value_read: Computed<ApiResponse> = value_write.to_computed().when_connect({
             let value_write = value_write.clone();
-            Rc::new(move || value_write.set(ApiResponse::Uninitialized))
-        };
-
-        let value_read: Computed<ApiResponse<T>> = value_write
-            .to_computed()
-            .when_connect(move || revalidate_on_new_token(&bearer_auth, &last_token, &forget));
+            move || revalidate_on_new_token(&bearer_auth, &last_token, &value_write)
+        });
 
         CacheValue {
             value_write,
@@ -86,11 +74,11 @@ impl<T: PartialEq + 'static> CacheValue<T> {
         }
     }
 
-    pub fn get(&self, context: &Context) -> ApiResponse<T> {
+    pub fn get(&self, context: &Context) -> ApiResponse {
         self.value_read.get(context)
     }
 
-    pub fn set(&self, value: ApiResponse<T>) {
+    pub fn set(&self, value: ApiResponse) {
         self.value_write.set(value);
     }
 }
