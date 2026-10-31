@@ -1,7 +1,8 @@
 use std::rc::Rc;
 
 use crate::{
-    Computed, DomComment, DomNode, Value, driver_module::get_driver_dom, struct_mut::ValueMut,
+    Computed, Context, DomComment, DomNode, Value, driver_module::get_driver_dom, reactive::Graph,
+    struct_mut::ValueMut,
 };
 
 /// Render a computed value as a DOM node.
@@ -19,31 +20,34 @@ pub fn render_value_option<T: Clone + PartialEq + 'static>(
     computed: Computed<T>,
     render: impl Fn(T) -> Option<DomNode> + 'static,
 ) -> DomNode {
-    let render = Rc::new(render);
+    // Only reading the value and rendering it depend on `T` and `render`. Placing the result
+    // and keeping the subscription is the same for every call, so it's one function rather
+    // than a copy for each place an application renders a value in.
+    let graph = computed.graph();
+    render_dyn(graph, Rc::new(move |context| render(computed.get(context))))
+}
 
+/// Reads the value it renders from the graph, see [`render_dyn`].
+type Render = Rc<dyn Fn(&Context) -> Option<DomNode>>;
+
+/// The body of [`render_value_option`], generic over nothing.
+fn render_dyn(graph: Graph, render: Render) -> DomNode {
     DomComment::new_marker("v", move |parent_id, comment_id, content| {
         let current_node: ValueMut<Option<DomNode>> = ValueMut::new(None);
+        let render = render.clone();
+        let content = content.clone();
 
-        Some(computed.clone().subscribe({
-            let render = render.clone();
-            let content = content.clone();
+        Some(graph.subscribe(Box::new(move |context| {
+            let new_element = render(context).inspect(|new_element| {
+                get_driver_dom().insert_before(parent_id, new_element.id_dom(), Some(comment_id));
+            });
 
-            move |value| {
-                let new_element = render(value).inspect(|new_element| {
-                    get_driver_dom().insert_before(
-                        parent_id,
-                        new_element.id_dom(),
-                        Some(comment_id),
-                    );
-                });
+            content.set(new_element.iter().map(|node| node.id_dom()).collect());
 
-                content.set(new_element.iter().map(|node| node.id_dom()).collect());
-
-                current_node.change(|current| {
-                    *current = new_element;
-                });
-            }
-        }))
+            current_node.change(|current| {
+                *current = new_element;
+            });
+        })))
     })
     .into()
 }

@@ -173,6 +173,23 @@ impl<T: Clone + PartialEq + 'static> Computed<T> {
     }
 }
 
+impl<T: Clone + PartialEq + 'static> Computed<T> {
+    /// The graph this computed lives on.
+    pub(crate) fn graph(&self) -> Graph {
+        Graph {
+            inner: self.inner.graph.clone(),
+        }
+    }
+}
+
+impl Graph {
+    /// [`Computed::subscribe`] for a callback that reads what it needs from the graph itself,
+    /// so that the caller doesn't have to be generic over a value's type for the subscription.
+    pub(crate) fn subscribe(&self, refresh: Box<dyn Fn(&Context)>) -> DropResource {
+        register_sink(self.inner.clone(), refresh)
+    }
+}
+
 /// Registers a subscription sink on the graph and runs it once.
 ///
 /// Split out of [`Computed::subscribe`] and generic over nothing at all.

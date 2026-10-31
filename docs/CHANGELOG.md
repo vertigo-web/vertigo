@@ -29,6 +29,10 @@
 * A transaction opens and closes in functions of its own instead of in a copy for each caller.
   Closing runs the whole wave, and `Value::set` alone had a copy of it for each type it is
   used with: the demo has 4.4 kB (0.5%) less wasm after wasm-opt, 0.7 kB gzipped.
+* `render_value` and `render_value_option` (and the `render_value` methods) keep only reading
+  the value and rendering it in the code generic over the type and the closure. Placing the
+  result and keeping the subscription is one function for all of them, where each call used to
+  get its own copy: the demo has 17.6 kB (1.9%) less wasm after wasm-opt, 3.7 kB gzipped.
 
 ### Fixed
 
