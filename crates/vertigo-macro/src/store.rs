@@ -22,16 +22,17 @@ pub fn store_inner(_attr: TokenStream2, item: TokenStream2) -> Result<TokenStrea
         ));
     };
 
+    // Without arguments there is one value per thread, so a cell is enough. A map with `()`
+    // as its only key would bring a copy of the hash map code into the wasm for each store.
     if inputs.is_empty() {
         return Ok(quote! {
             #vis #sig {
                 thread_local! {
-                    static CACHE: std::rc::Rc<vertigo::dev::HashMapMut<(), #output_type>>
-                        = std::rc::Rc::new(vertigo::dev::HashMapMut::new());
+                    static CACHE: std::cell::OnceCell<#output_type> = const { std::cell::OnceCell::new() };
                 }
 
                 CACHE.with(|cache| {
-                    cache.get_or_create(&(), || #block)
+                    cache.get_or_init(|| #block).clone()
                 })
             }
         });
@@ -148,14 +149,13 @@ mod tests {
         let expected = quote! {
             pub fn get_state() -> FakeState {
                 thread_local! {
-                    static CACHE: std::rc::Rc<vertigo::dev::HashMapMut<(), FakeState>>
-                        = std::rc::Rc::new(vertigo::dev::HashMapMut::new());
+                    static CACHE: std::cell::OnceCell<FakeState> = const { std::cell::OnceCell::new() };
                 }
 
                 CACHE.with(|cache| {
-                    cache.get_or_create(&(), || {
+                    cache.get_or_init(|| {
                         FakeState {}
-                    })
+                    }).clone()
                 })
             }
         };

@@ -3,6 +3,13 @@
 <!-- markdownlint-disable-next-line first-line-h1 -->
 ## Unreleased
 
+### Performance
+
+* `#[store]` without arguments keeps its value in a `OnceCell` instead of a hash map with `()`
+  as its only key, which brought a copy of the map code into the wasm for each such store.
+  A release build links 16 of vertigo's own, so every application gains: the demo, with 12
+  more, has 20 kB (2.1%) less wasm after wasm-opt, 6.5 kB gzipped.
+
 ### Fixed
 
 * `include_static!` in a library crate: a build that took the crate from cargo's cache bundled
