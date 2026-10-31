@@ -114,6 +114,9 @@ impl<T: Clone + ToString + From<String> + PartialEq + 'static> Router<T> {
         }
     }
 
+    /// Go to `route`, with a new entry in browser's history. A history router scrolls to the
+    /// fragment of the route's address, if it has one, as [Driver::history_push](crate::Driver::history_push)
+    /// does.
     pub fn set(&self, route: T) {
         api_location().push_location(
             self.location_target,

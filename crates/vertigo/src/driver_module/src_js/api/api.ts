@@ -13,6 +13,7 @@ import { Cookies } from "./command/cookies";
 import { getRandom } from "./command/getRandom";
 import { languages } from "./command/languages";
 import { DriverDom } from "./command/dom/dom";
+import { scrollToFragmentOnRender } from "./command/dom/injects";
 import { Metadata } from "./metadata";
 
 type JsApiCommandType =
@@ -284,6 +285,10 @@ export class Api {
 
             case 'LocationSet':
                 this.location.set(params.target, params.mode, params.value);
+                if (params.target === 'History') {
+                    // the address as the browser resolved it, the way a pending fragment compares it
+                    scrollToFragmentOnRender(this.location.get('History'));
+                }
                 return null;
 
             case 'CookieGet':
