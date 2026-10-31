@@ -19,7 +19,7 @@ use edges::Edges;
 use hooks::Hooks;
 use nodes::Nodes;
 pub(crate) use transaction::CallbackGuard;
-use transaction::Transaction;
+use transaction::{DepthGuard, Transaction};
 use watch::Watch;
 
 pub(crate) use logger::Logger;
@@ -124,6 +124,17 @@ impl Graph {
     }
 
     pub fn transaction<R>(&self, f: impl FnOnce(&Context) -> R) -> R {
+        // Only calling `f` depends on `R` and the closure. Opening and closing is the same
+        // for every transaction, so it stays out of line: inlined, the wave that closing runs
+        // was copied into every caller - one copy for each type `Value::set` is used with.
+        let guard = self.open_transaction();
+        let result = f(&Context::read());
+        self.close_transaction(guard);
+        result
+    }
+
+    #[inline(never)]
+    fn open_transaction(&self) -> DepthGuard<'_> {
         // A transaction opened from inside a wave (`subscribe`, `Value::change`, or any
         // render running in a callback) is outermost by depth but is not a new wave, and
         // must leave the running wave's bookkeeping alone.
@@ -131,8 +142,11 @@ impl Graph {
         if outermost && !self.inner.tx.is_propagating() {
             self.inner.dirty.begin_wave();
         }
-        let ctx = Context::read();
-        let result = f(&ctx);
+        guard
+    }
+
+    #[inline(never)]
+    fn close_transaction(&self, guard: DepthGuard<'_>) {
         if let Some(leave) = guard.leave() {
             self.inner.propagate();
             if !leave.already_propagating {
@@ -140,7 +154,6 @@ impl Graph {
                 self.inner.flush_watch();
             }
         }
-        result
     }
 
     pub fn on_after_transaction(&self, callback: impl Fn() + 'static) -> DropResource {
