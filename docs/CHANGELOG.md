@@ -46,6 +46,13 @@
   when the bearer token changes, and in `RequestResponse::into` the error messages and the log
   of a failed request. The demo has 10.0 kB (1.1%) less wasm after wasm-opt, 2.2 kB gzipped -
   again more in an application with many types from its API.
+* `LazyCache` keeps its value with the type erased (`Rc<dyn Any>`, compared with the type's own
+  `PartialEq`), so its reactive cell, the update, the fetch and `refresh` are one copy of code
+  for all types. Only mapping the response and handing out the value are generic over the type
+  still, and `LazyCache::refresh` is a plain function returning the future, not an `async fn`
+  wrapping it once more for each type. The demo, with 3 types from its API, has 8.0 kB (0.9%)
+  less wasm after wasm-opt and about the same compressed (0.4 kB more gzipped, 0.1 kB less with
+  brotli); an application with 24 of them has 88 kB (8%) less, 15 kB gzipped.
 
 ### Fixed
 
