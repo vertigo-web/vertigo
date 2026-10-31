@@ -156,7 +156,18 @@ impl Driver {
         api_browser_command().history_back();
     }
 
-    /// Replace current location
+    /// Go to `new_url` with a new entry in client's (browser's) history, as a followed link does.
+    /// A history [Router](crate::router::Router) gets it as its route, fragment included.
+    ///
+    /// With a fragment (`/post#comment-5`) the page scrolls to the element it names once it is
+    /// on the page - after the render this change brings about, or later with the page's data.
+    /// Without one the page stays where it is.
+    pub fn history_push(&self, new_url: &str) {
+        api_location().push_location(LocationTarget::History, LocationSetMode::Push, new_url);
+    }
+
+    /// Replace current location, without a new entry in client's (browser's) history. Scrolls
+    /// to the fragment the same way as [Driver::history_push].
     pub fn history_replace(&self, new_url: &str) {
         api_location().push_location(LocationTarget::History, LocationSetMode::Replace, new_url);
     }
