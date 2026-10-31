@@ -77,21 +77,22 @@ pub fn store_inner(_attr: TokenStream2, item: TokenStream2) -> Result<TokenStrea
         .collect::<Vec<_>>();
     let indexes = (0..arguments.len()).map(Index::from).collect::<Vec<_>>();
 
-    // All the arguments make one key, and all stores one map type: one generic over the
-    // arguments and the value would bring a copy of the hash map code for each store, and
+    // All the arguments make one key, and the map keeps the types only in its signature: one
+    // generic all the way down would bring a copy of the hash map code for each store, and
     // nested maps one more for each further argument.
     Ok(quote! {
         #vis #sig {
             thread_local! {
-                static CACHE: vertigo::dev::StoreMap = const { vertigo::dev::StoreMap::new() };
+                static CACHE: vertigo::dev::StoreMap<( #( #types, )* ), #output_type>
+                    = const { vertigo::dev::StoreMap::new() };
             }
 
             let __vertigo_store_key: ( #( &#types, )* ) = ( #( &#names, )* );
 
             CACHE.with(|__vertigo_store| {
                 __vertigo_store.get_or_create(
-                    vertigo::dev::StoreMap::hash(&__vertigo_store_key),
-                    |stored: &( #( #types, )* )| ( #( &stored.#indexes, )* ) == __vertigo_store_key,
+                    &__vertigo_store_key,
+                    |stored| ( #( &stored.#indexes, )* ) == __vertigo_store_key,
                     || ( #( std::clone::Clone::clone(__vertigo_store_key.#indexes), )* ),
                     || #block,
                 )
@@ -169,15 +170,16 @@ mod tests {
                 url: &String
             ) -> LazyCache<Vec<CommentModel>> {
                 thread_local! {
-                    static CACHE: vertigo::dev::StoreMap = const { vertigo::dev::StoreMap::new() };
+                    static CACHE: vertigo::dev::StoreMap<(u8, u32, String,), LazyCache<Vec<CommentModel> > >
+                        = const { vertigo::dev::StoreMap::new() };
                 }
 
                 let __vertigo_store_key: (&u8, &u32, &String,) = (&id4, &post_id, &url,);
 
                 CACHE.with(|__vertigo_store| {
                     __vertigo_store.get_or_create(
-                        vertigo::dev::StoreMap::hash(&__vertigo_store_key),
-                        |stored: &(u8, u32, String,)| (&stored.0, &stored.1, &stored.2,) == __vertigo_store_key,
+                        &__vertigo_store_key,
+                        |stored| (&stored.0, &stored.1, &stored.2,) == __vertigo_store_key,
                         || (
                             std::clone::Clone::clone(__vertigo_store_key.0),
                             std::clone::Clone::clone(__vertigo_store_key.1),
