@@ -638,6 +638,9 @@ pub use vertigo_macro::css_block;
 /// Accessing the store from different locations uses always the same store
 /// as data is kept using [LocalKey](std::thread::LocalKey).
 ///
+/// The function body runs once for each new set of arguments, and every call returns a clone
+/// of what it made. A store without arguments runs it on its first call.
+///
 /// ```rust
 /// use vertigo::{AutoJsJson, LazyCache, RequestBuilder, store};
 ///
