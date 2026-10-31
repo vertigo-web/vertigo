@@ -23,5 +23,5 @@ pub use super::{
     },
     fast_hash::{FastBuildHasher, FastHasher},
     future_box::{FutureBox, FutureBoxSend},
-    struct_mut::{BTreeMapMut, HashMapMut, ValueMut, VecDequeMut, VecMut},
+    struct_mut::{BTreeMapMut, HashMapMut, StoreMap, ValueMut, VecDequeMut, VecMut},
 };

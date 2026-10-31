@@ -1,6 +1,8 @@
 use proc_macro2::TokenStream as TokenStream2;
-use quote::{format_ident, quote};
-use syn::{Error, FnArg, Ident, ItemFn, Pat, Result, ReturnType, Type, TypePath, spanned::Spanned};
+use quote::quote;
+use syn::{
+    Error, FnArg, Ident, Index, ItemFn, Pat, Result, ReturnType, Type, TypePath, spanned::Spanned,
+};
 
 pub fn store_inner(_attr: TokenStream2, item: TokenStream2) -> Result<TokenStream2> {
     let span = item.span();
@@ -22,16 +24,17 @@ pub fn store_inner(_attr: TokenStream2, item: TokenStream2) -> Result<TokenStrea
         ));
     };
 
+    // Without arguments there is one value per thread, so a cell is enough. A map with `()`
+    // as its only key would bring a copy of the hash map code into the wasm for each store.
     if inputs.is_empty() {
         return Ok(quote! {
             #vis #sig {
                 thread_local! {
-                    static CACHE: std::rc::Rc<vertigo::dev::HashMapMut<(), #output_type>>
-                        = std::rc::Rc::new(vertigo::dev::HashMapMut::new());
+                    static CACHE: std::cell::OnceCell<#output_type> = const { std::cell::OnceCell::new() };
                 }
 
                 CACHE.with(|cache| {
-                    cache.get_or_create(&(), || #block)
+                    cache.get_or_init(|| #block).clone()
                 })
             }
         });
@@ -67,55 +70,32 @@ pub fn store_inner(_attr: TokenStream2, item: TokenStream2) -> Result<TokenStrea
         arguments.push((iden, arg_type));
     }
 
-    let mut types = Vec::new();
+    let names = arguments.iter().map(|(name, _)| name);
+    let types = arguments
+        .iter()
+        .map(|(_, arg_type)| arg_type)
+        .collect::<Vec<_>>();
+    let indexes = (0..arguments.len()).map(Index::from).collect::<Vec<_>>();
 
-    types.push(quote! {
-        type Cache0Type = #output_type;
-    });
-
-    for (index, (_, arg_type)) in arguments.iter().rev().enumerate() {
-        let type_name_current = format_ident!("Cache{}Type", index + 1);
-        let type_name_prev = format_ident!("Cache{}Type", index);
-
-        types.push(quote! {
-            type #type_name_current = std::rc::Rc<vertigo::dev::HashMapMut<#arg_type, #type_name_prev>>;
-        });
-    }
-
-    let type_name_last = format_ident!("Cache{}Type", arguments.len());
-
-    types.push(quote! {
-        type CacheType = #type_name_last;
-    });
-
-    let mut call_list = Vec::new();
-    let arguments_len = arguments.len();
-
-    for (index, (arg_name, _)) in arguments.iter().enumerate() {
-        let is_last = index == arguments_len - 1;
-
-        if is_last {
-            call_list.push(quote! {
-                .get_or_create(&#arg_name, || #block)
-            })
-        } else {
-            call_list.push(quote! {
-                .get_or_default(&#arg_name)
-            });
-        }
-    }
-
+    // All the arguments make one key, and the map keeps the types only in its signature: one
+    // generic all the way down would bring a copy of the hash map code for each store, and
+    // nested maps one more for each further argument.
     Ok(quote! {
         #vis #sig {
-            #( #types )*
-
             thread_local! {
-                static CACHE: CacheType = std::rc::Rc::new(vertigo::dev::HashMapMut::new());
+                static CACHE: vertigo::dev::StoreMap<( #( #types, )* ), #output_type>
+                    = const { vertigo::dev::StoreMap::new() };
             }
 
-            CACHE.with(|cache| {
-                cache
-                    #( #call_list )*
+            let __vertigo_store_key: ( #( &#types, )* ) = ( #( &#names, )* );
+
+            CACHE.with(|__vertigo_store| {
+                __vertigo_store.get_or_create(
+                    &__vertigo_store_key,
+                    |stored| ( #( &stored.#indexes, )* ) == __vertigo_store_key,
+                    || ( #( std::clone::Clone::clone(__vertigo_store_key.#indexes), )* ),
+                    || #block,
+                )
             })
         }
     })
@@ -148,14 +128,13 @@ mod tests {
         let expected = quote! {
             pub fn get_state() -> FakeState {
                 thread_local! {
-                    static CACHE: std::rc::Rc<vertigo::dev::HashMapMut<(), FakeState>>
-                        = std::rc::Rc::new(vertigo::dev::HashMapMut::new());
+                    static CACHE: std::cell::OnceCell<FakeState> = const { std::cell::OnceCell::new() };
                 }
 
                 CACHE.with(|cache| {
-                    cache.get_or_create(&(), || {
+                    cache.get_or_init(|| {
                         FakeState {}
-                    })
+                    }).clone()
                 })
             }
         };
@@ -190,21 +169,23 @@ mod tests {
                 post_id: u32,
                 url: &String
             ) -> LazyCache<Vec<CommentModel>> {
-                type Cache0Type = LazyCache<Vec<CommentModel>>;
-                type Cache1Type = std::rc::Rc<vertigo::dev::HashMapMut<String, Cache0Type>>;
-                type Cache2Type = std::rc::Rc<vertigo::dev::HashMapMut<u32, Cache1Type>>;
-                type Cache3Type = std::rc::Rc<vertigo::dev::HashMapMut<u8, Cache2Type>>;
-                type CacheType = Cache3Type;
-
                 thread_local! {
-                    static CACHE: CacheType = std::rc::Rc::new(vertigo::dev::HashMapMut::new());
+                    static CACHE: vertigo::dev::StoreMap<(u8, u32, String,), LazyCache<Vec<CommentModel> > >
+                        = const { vertigo::dev::StoreMap::new() };
                 }
 
-                CACHE.with(|cache| {
-                    cache
-                        .get_or_default(&id4)
-                        .get_or_default(&post_id)
-                        .get_or_create(&url, || {
+                let __vertigo_store_key: (&u8, &u32, &String,) = (&id4, &post_id, &url,);
+
+                CACHE.with(|__vertigo_store| {
+                    __vertigo_store.get_or_create(
+                        &__vertigo_store_key,
+                        |stored| (&stored.0, &stored.1, &stored.2,) == __vertigo_store_key,
+                        || (
+                            std::clone::Clone::clone(__vertigo_store_key.0),
+                            std::clone::Clone::clone(__vertigo_store_key.1),
+                            std::clone::Clone::clone(__vertigo_store_key.2),
+                        ),
+                        || {
                             vertigo::fetch::RequestBuilder
                                 ::get(format!("https://jsonplaceholder.typicode.com/posts/{post_id}/comments"))
                                 .ttl_minutes(10)
@@ -215,7 +196,8 @@ mod tests {
                                         None
                                     }
                                 })
-                        })
+                        },
+                    )
                 })
             }
         };

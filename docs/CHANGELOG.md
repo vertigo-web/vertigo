@@ -3,6 +3,18 @@
 <!-- markdownlint-disable-next-line first-line-h1 -->
 ## Unreleased
 
+### Performance
+
+* `#[store]` without arguments keeps its value in a `OnceCell` instead of a hash map with `()`
+  as its only key, which brought a copy of the map code into the wasm for each such store.
+  A release build links 16 of vertigo's own, so every application gains: the demo, with 12
+  more, has 20 kB (2.1%) less wasm after wasm-opt, 6.5 kB gzipped.
+* `#[store]` with arguments keeps its values in a `StoreMap`, under the hash of the arguments,
+  instead of a `HashMapMut` generic over the arguments and the value, nested once more for each
+  further argument. `StoreMap` names its types only in its signature and its entries are the
+  same for all stores, so a store brings only the code to hash, compare and clone its own
+  types, about 1 kB less wasm each: 2.7 kB in the demo (1.2 kB gzipped), which has 2 of them.
+
 ### Fixed
 
 * `include_static!` in a library crate: a build that took the crate from cargo's cache bundled
