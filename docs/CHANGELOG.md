@@ -53,6 +53,13 @@
   wrapping it once more for each type. The demo, with 3 types from its API, has 8.0 kB (0.9%)
   less wasm after wasm-opt and about the same compressed (0.4 kB more gzipped, 0.1 kB less with
   brotli); an application with 24 of them has 88 kB (8%) less, 15 kB gzipped.
+* `Computed` and `Value` keep less in the code generic over their type. A node leaves the graph
+  through one `Drop` for all of them instead of one for each type, starting a compute and
+  recording what it read is in functions of their own, and so is registering a read in `get`.
+  `Computed::from`, `map` and `to_computed` box their closure right away, rather than passing it
+  through up to three more layers generic over it, and `vertigo::transaction` and
+  `Driver::transaction`, which only forward to the graph, are inlined into their callers. The
+  demo has 10.0 kB (1.2%) less wasm after wasm-opt, 0.9 kB gzipped.
 
 ### Fixed
 
