@@ -33,6 +33,10 @@
   the value and rendering it in the code generic over the type and the closure. Placing the
   result and keeping the subscription is one function for all of them, where each call used to
   get its own copy: the demo has 17.6 kB (1.9%) less wasm after wasm-opt, 3.7 kB gzipped.
+* `Value::set` calls the listeners of `Value::add_event` in one function for all types: each
+  listener clones the new value from the value itself rather than from a list of them that
+  every `set` gathered for its own type. A write with listeners also makes one copy fewer. The
+  demo has 19.4 kB (2.1%) less wasm after wasm-opt, 5.4 kB gzipped.
 
 ### Fixed
 
