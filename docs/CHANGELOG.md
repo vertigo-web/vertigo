@@ -3,6 +3,18 @@
 <!-- markdownlint-disable-next-line first-line-h1 -->
 ## Unreleased
 
+### Added
+
+* `Driver::history_push` - goes to an address with a new entry in the browser's history, as
+  `history_replace` does without one.
+
+### Changed
+
+* The app's own navigation (`Router::set`, `Driver::history_push`, `Driver::history_replace`)
+  to an address with a fragment (`/post#comment-5`) scrolls to the element it names once it is
+  on the page, as a followed link does - after the render the navigation brings about, or later
+  with the page's data. Without a fragment the page still stays where it is.
+
 ### Performance
 
 * `#[store]` without arguments keeps its value in a `OnceCell` instead of a hash map with `()`

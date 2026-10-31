@@ -58,7 +58,7 @@ let scrolledToTop = false;
 };
 (globalThis as any).MouseEvent = MockMouseEvent;
 
-import { hydrateLink, scrollToPendingFragment } from "./injects";
+import { hydrateLink, scrollToFragmentOnRender, scrollToPendingFragment } from "./injects";
 
 // --- TEST RUNNER ---
 function assert(condition: boolean, message: string) {
@@ -104,6 +104,27 @@ function click(attributes: Record<string, string>, event: Partial<MouseEvent> = 
         preventDefault: () => { prevented = true; },
     }));
     return { pushed, prevented };
+}
+
+/// The app navigates to `path` itself (`Router::set`, `Driver::history_push`): the browser has
+/// the new address, the page is still the one the app had. Returns what waits for the end of
+/// this task.
+function navigate(path: string): () => void {
+    elements.clear();
+    named.clear();
+    scrolledToTop = false;
+    (globalThis as any).window.location = new URL(path, (globalThis as any).document.baseURI);
+    (globalThis as any).window.scrollY = 700;
+
+    const afterTask: Array<() => void> = [];
+    const setTimeout = globalThis.setTimeout;
+    (globalThis as any).setTimeout = (callback: () => void) => afterTask.push(callback);
+    try {
+        scrollToFragmentOnRender(path);
+    } finally {
+        globalThis.setTimeout = setTimeout;
+    }
+    return () => afterTask.forEach((callback) => callback());
 }
 
 // --- TESTS ---
@@ -354,6 +375,57 @@ function testSmoothScrollToTheTop() {
     }
 }
 
+function testAppNavigationScrollsAfterRender() {
+    console.log("\n--- Test app navigation 1: the app goes to an address with a fragment ---");
+    const old = new MockTarget();
+    const comment = new MockTarget();
+    const afterTask = navigate('/post/5?sent=1#comment-9');
+    elements.set('comment-9', old);
+    assert(old.scrolledTo === 0 && !scrolledToTop, "nothing moves before the app renders the page");
+
+    elements.set('comment-9', comment);
+    scrollToPendingFragment();
+    assert(comment.scrolledTo === 1 && old.scrolledTo === 0, "the render scrolls to the element it brings");
+
+    afterTask();
+    assert(comment.scrolledTo === 1, "and only that once");
+}
+
+function testAppNavigationOnUnchangedPage() {
+    console.log("\n--- Test app navigation 2: the page already has the element and doesn't change ---");
+    const comment = new MockTarget();
+    const afterTask = navigate('/post/5#comment-9');
+    elements.set('comment-9', comment);
+    afterTask();
+    assert(comment.scrolledTo === 1, "scrolled to after the task, with no render");
+}
+
+function testAppNavigationDataLater() {
+    console.log("\n--- Test app navigation 3: the element comes with data fetched afterwards ---");
+    const comments = new MockTarget();
+    const afterTask = navigate('/post/7#comments');
+    scrollToPendingFragment();
+    afterTask();
+    assert(comments.scrolledTo === 0 && !scrolledToTop, "the page waits where it is");
+
+    elements.set('comments', comments);
+    scrollToPendingFragment();
+    assert(comments.scrolledTo === 1, "the render with the data scrolls to it");
+}
+
+function testAppNavigationWithoutFragment() {
+    console.log("\n--- Test app navigation 4: an address without a fragment ---");
+    const later = new MockTarget();
+    click({ href: '/post/7#comments' });
+    const afterTask = navigate('/post/7?tab=2');
+    afterTask();
+    assert(!scrolledToTop, "the page stays where it is");
+
+    elements.set('comments', later);
+    scrollToPendingFragment();
+    assert(later.scrolledTo === 0, "and a fragment followed before stops waiting");
+}
+
 testPlainLinkGoesToTop();
 testFragmentOfTheNewPage();
 testFragmentWithoutElement();
@@ -369,3 +441,7 @@ testFragmentOfDataArrivingLater();
 testPendingFragmentGivesUp();
 testTopFragment();
 testSmoothScrollToTheTop();
+testAppNavigationScrollsAfterRender();
+testAppNavigationOnUnchangedPage();
+testAppNavigationDataLater();
+testAppNavigationWithoutFragment();
