@@ -9,6 +9,11 @@
   as its only key, which brought a copy of the map code into the wasm for each such store.
   A release build links 16 of vertigo's own, so every application gains: the demo, with 12
   more, has 20 kB (2.1%) less wasm after wasm-opt, 6.5 kB gzipped.
+* `#[store]` with arguments keeps its values in one map type shared by all stores
+  (`StoreMap`, under the hash of the arguments) instead of a `HashMapMut` generic over the
+  arguments and the value, nested once more for each further argument. A store brings only
+  the code to hash, compare and clone its own types, about 1 kB less wasm each: 2.7 kB in the
+  demo (1.2 kB gzipped), which has 2 of them.
 
 ### Fixed
 
