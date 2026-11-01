@@ -10,6 +10,7 @@ mod serve_opts;
 mod serve_run;
 mod server_state;
 mod timings;
+mod vary;
 mod vertigo_handler;
 mod vertigo_install;
 mod wasm;
@@ -23,5 +24,6 @@ pub use serve_run::run;
 pub use server_state::ServerState;
 #[cfg(feature = "ssr-timings")]
 pub use timings::SsrTimings;
+pub use vary::vary_accept_encoding;
 pub use vertigo_handler::{request_accept_language, request_cookie, vertigo_handler};
 pub use vertigo_install::{vertigo_files, vertigo_install};

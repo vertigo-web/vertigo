@@ -1,13 +1,19 @@
+use actix_files::NamedFile;
 use actix_web::{
-    HttpRequest, HttpResponse, Resource,
-    guard::{self, GuardContext},
+    HttpRequest, HttpResponse, Resource, guard,
     http::header::{
-        self, AcceptEncoding, ETag, Encoding, EntityTag, Header, HttpDate, IfNoneMatch,
-        LastModified,
+        self, AcceptEncoding, ETag, Encoding, EntityTag, Header, HeaderValue, HttpDate,
+        IfNoneMatch, LastModified,
     },
     web::{self, Bytes},
 };
-use std::{collections::HashMap, io::Write, path::Path, sync::Arc, time::Instant};
+use std::{
+    collections::HashMap,
+    io::Write,
+    path::{Path, PathBuf},
+    sync::Arc,
+    time::Instant,
+};
 use walkdir::{DirEntry, WalkDir};
 
 use crate::build::get_hash;
@@ -16,6 +22,8 @@ use crate::build::get_hash;
 pub type Precompressed = HashMap<String, PrecompressedFile>;
 
 pub struct PrecompressedFile {
+    /// The file as it is, for the clients not accepting brotli
+    path: PathBuf,
     content_type: String,
     brotli: Bytes,
     etag: EntityTag,
@@ -81,6 +89,7 @@ pub fn precompress(dest_dir: impl AsRef<Path>, http_root: &str) -> Precompressed
         files.insert(
             format!("{}/{url_path}", http_root.trim_end_matches('/')),
             PrecompressedFile {
+                path: path.to_path_buf(),
                 content_type: content_type(extension),
                 etag: EntityTag::new_strong(get_hash(&brotli)),
                 last_modified: entry
@@ -137,16 +146,16 @@ fn content_type(extension: &str) -> String {
     }
 }
 
-/// Serves the files [`precompress`] compressed to the browsers accepting brotli. Anything else
-/// falls through to the next service.
+/// Serves the files [`precompress`] compressed: to the browsers accepting brotli compressed, to
+/// the other clients as they are. Other paths fall through to the next service.
 pub fn precompressed_files(http_root: &str, files: Arc<Precompressed>) -> Resource {
     let pattern = format!("{}/{{file:.*}}", http_root.trim_end_matches('/'));
     let served = files.clone();
 
     web::resource(pattern)
-        .guard(guard::Get())
+        .guard(guard::Any(guard::Get()).or(guard::Head()))
         .guard(guard::fn_guard(move |ctx| {
-            served.contains_key(ctx.head().uri.path()) && accepts_brotli(ctx)
+            served.contains_key(ctx.head().uri.path())
         }))
         .to(move |req: HttpRequest| {
             let files = files.clone();
@@ -154,22 +163,43 @@ pub fn precompressed_files(http_root: &str, files: Arc<Precompressed>) -> Resour
         })
 }
 
-fn accepts_brotli(ctx: &GuardContext) -> bool {
-    // A range is of the file as it is, which `Files` serves
-    if ctx.head().headers().contains_key(header::RANGE) {
+fn accepts_brotli(req: &HttpRequest) -> bool {
+    // A range is of the file as it is
+    if req.headers().contains_key(header::RANGE) {
         return false;
     }
 
-    ctx.header::<AcceptEncoding>()
+    AcceptEncoding::parse(req)
+        .ok()
         .and_then(|accept| accept.negotiate([Encoding::brotli()].iter()))
         == Some(Encoding::brotli())
 }
 
-fn respond(req: &HttpRequest, file: Option<&PrecompressedFile>) -> HttpResponse {
+/// Both versions say they depend on `Accept-Encoding`, or a cache on the way (a proxy, a CDN)
+/// would give everyone the one it got first - f. ex. the file as it is, which a crawler without
+/// `Accept-Encoding` asked for.
+fn respond(req: &HttpRequest, file: Option<&PrecompressedFile>) -> actix_web::Result<HttpResponse> {
     let Some(file) = file else {
-        return HttpResponse::NotFound().finish();
+        return Ok(HttpResponse::NotFound().finish());
     };
 
+    let mut response = if accepts_brotli(req) {
+        brotli_response(req, file)
+    } else {
+        // What `Files` would send, it has the same defaults
+        NamedFile::open(&file.path)?.into_response(req)
+    };
+
+    // `Compress`, compressing the file as it is for a client accepting only gzip, appends one
+    // more, the same
+    response
+        .headers_mut()
+        .append(header::VARY, HeaderValue::from_static("accept-encoding"));
+
+    Ok(response)
+}
+
+fn brotli_response(req: &HttpRequest, file: &PrecompressedFile) -> HttpResponse {
     let unchanged = match IfNoneMatch::parse(req) {
         Ok(IfNoneMatch::Any) => true,
         Ok(IfNoneMatch::Items(etags)) => etags.iter().any(|etag| etag.weak_eq(&file.etag)),
@@ -182,9 +212,7 @@ fn respond(req: &HttpRequest, file: Option<&PrecompressedFile>) -> HttpResponse 
         HttpResponse::Ok()
     };
 
-    response
-        .insert_header(ETag(file.etag.clone()))
-        .insert_header((header::VARY, "accept-encoding"));
+    response.insert_header(ETag(file.etag.clone()));
 
     if let Some(last_modified) = file.last_modified {
         response.insert_header(LastModified(last_modified));
@@ -208,7 +236,7 @@ mod tests {
         App,
         dev::ServiceResponse,
         http::{
-            StatusCode,
+            Method, StatusCode,
             header::{self, HeaderName},
         },
         test::{TestRequest, call_service, init_service, read_body},
@@ -249,10 +277,9 @@ mod tests {
         )
         .await;
 
+        let plain = || TestRequest::get().uri("/build/assets/app.js");
         let get = |accept_encoding: &str| {
-            TestRequest::get()
-                .uri("/build/assets/app.js")
-                .insert_header((header::ACCEPT_ENCODING, accept_encoding.to_string()))
+            plain().insert_header((header::ACCEPT_ENCODING, accept_encoding.to_string()))
         };
 
         let response = call_service(&app, get("gzip, deflate, br, zstd").to_request()).await;
@@ -268,26 +295,60 @@ mod tests {
         assert_eq!(decompressed, script);
 
         let revalidation = get("br")
-            .insert_header((header::IF_NONE_MATCH, etag))
+            .insert_header((header::IF_NONE_MATCH, etag.clone()))
             .to_request();
         let response = call_service(&app, revalidation).await;
         assert_eq!(response.status(), StatusCode::NOT_MODIFIED);
+        assert_eq!(header(&response, header::VARY), Some("accept-encoding"));
         assert!(read_body(response).await.is_empty());
 
-        // The file as it is, from `Files`
-        for accept_encoding in ["gzip", "br;q=0, gzip"] {
-            let response = call_service(&app, get(accept_encoding).to_request()).await;
+        let head = TestRequest::default()
+            .method(Method::HEAD)
+            .uri("/build/assets/app.js")
+            .insert_header((header::ACCEPT_ENCODING, "br"))
+            .to_request();
+        let response = call_service(&app, head).await;
+        assert_eq!(response.status(), StatusCode::OK);
+        assert_eq!(header(&response, header::CONTENT_ENCODING), Some("br"));
+        assert_eq!(header(&response, header::VARY), Some("accept-encoding"));
+
+        // The file as it is, also saying it depends on `Accept-Encoding`: a cache that got it
+        // first, f. ex. for a crawler without the header, must not give it to the browsers
+        let as_it_is = [get("gzip"), get("br;q=0, gzip"), get("identity"), plain()];
+        let mut raw_etag = None;
+        for request in as_it_is {
+            let response = call_service(&app, request.to_request()).await;
             assert_eq!(response.status(), StatusCode::OK);
             assert_eq!(header(&response, header::CONTENT_ENCODING), None);
+            assert_eq!(header(&response, header::VARY), Some("accept-encoding"));
+            raw_etag = header(&response, header::ETAG).map(str::to_string);
             assert_eq!(read_body(response).await, script.as_bytes());
         }
+        let Some(raw_etag) = raw_etag else {
+            panic!("the file as it is should carry an ETag");
+        };
+        assert_ne!(raw_etag, etag);
+
+        let revalidation = plain()
+            .insert_header((header::IF_NONE_MATCH, raw_etag))
+            .to_request();
+        let response = call_service(&app, revalidation).await;
+        assert_eq!(response.status(), StatusCode::NOT_MODIFIED);
+        assert_eq!(header(&response, header::VARY), Some("accept-encoding"));
 
         let range = get("br")
             .insert_header((header::RANGE, "bytes=0-9"))
             .to_request();
         let response = call_service(&app, range).await;
         assert_eq!(response.status(), StatusCode::PARTIAL_CONTENT);
+        assert_eq!(header(&response, header::VARY), Some("accept-encoding"));
         assert_eq!(read_body(response).await, script.as_bytes()[..10]);
+
+        // Others than the precompressed ones are left to `Files`
+        let response =
+            call_service(&app, TestRequest::get().uri("/build/logo.png").to_request()).await;
+        assert_eq!(response.status(), StatusCode::OK);
+        assert_eq!(header(&response, header::VARY), None);
 
         std::fs::remove_dir_all(&dest_dir)
     }
