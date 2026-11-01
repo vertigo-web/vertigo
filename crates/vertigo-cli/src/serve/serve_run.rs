@@ -1,6 +1,6 @@
 use actix_web::{
     App, HttpServer,
-    middleware::{Compress, Condition},
+    middleware::{Compress, Condition, from_fn},
     rt::System,
 };
 use std::{num::NonZeroUsize, time::Duration};
@@ -13,7 +13,7 @@ use crate::serve::{html::local_origin, mount_path::MountConfig};
 
 use super::{
     ServeOpts, ServeOptsInner, proxy::install_proxy, server_state::ServerState,
-    vertigo_install::vertigo_install,
+    vary::vary_accept_encoding, vertigo_install::vertigo_install,
 };
 
 async fn wait_for_port(addr: &str, port: u16) {
@@ -73,7 +73,13 @@ pub async fn run(opts: ServeOpts, port_watch: Option<u16>) -> Result<(), ErrorCo
     let app = move || {
         // Already-encoded responses (what `install_proxy` forwards) carry a `Content-Encoding`
         // and `Compress` leaves those alone.
-        let mut app = App::new().wrap(Condition::new(!disable_compression, Compress::default()));
+        let mut app = App::new()
+            .wrap(Condition::new(!disable_compression, Compress::default()))
+            // Wrapped around `Compress`, it sees what `Compress` did
+            .wrap(Condition::new(
+                !disable_compression,
+                from_fn(vary_accept_encoding),
+            ));
 
         for (path, target) in &proxy {
             app = install_proxy(app, path.clone(), target.clone());

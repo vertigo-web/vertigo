@@ -7,6 +7,9 @@
 
 * `Driver::history_push` - goes to an address with a new entry in the browser's history, as
   `history_replace` does without one.
+* `serve::vary_accept_encoding` - a middleware for a back-end with its own `Compress`, wrapped
+  around it: what `Compress` sends as it is says `Vary: accept-encoding` too, as `vertigo serve`
+  does now.
 
 ### Changed
 
@@ -67,6 +70,12 @@
   none of its files, e.g. the second of two apps sharing the library.
 * Tailwind classes (`tw!`, `tw=`) in a library crate: likewise, such a build left them out of
   the bundle.
+* `vertigo serve --precompress` (`MountConfigBuilder::precompress`): a precompressed file sent
+  as it is - to a client without brotli in `Accept-Encoding`, a range, a revalidation - says
+  `Vary: accept-encoding` too. Without it a cache on the way (nginx, a CDN) kept the version the
+  first client got, often a crawler's uncompressed one, and gave it to every browser.
+* `vertigo serve`: likewise any response compressed on the fly - pages, files without
+  `--precompress` - says `Vary: accept-encoding` also when sent as it is.
 
 ## 0.14.2 - 2026-10-29
 
