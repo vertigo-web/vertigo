@@ -115,6 +115,13 @@ własnego odświeżania — jest cykl, program panikuje.
 
 W jednej fali węzeł nie odświeża się drugi raz.
 
+Gotowe węzły idą w kolejności, w jakiej stały się gotowe: najpierw zapisane wartości, w kolejności
+zapisów, potem dzieci każdego węzła, który się zmienił — w chwili, gdy się zmienił.
+Węzeł usunięty w trakcie fali (puszczony ostatni uchwyt, np. razem z częścią strony, którą render
+zastąpił) wypada z niej i się nie odświeża.
+Aplikacje na tym polegają: zapis najpierw tego, co decyduje, która część strony zostaje, oszczędza
+odświeżania reszcie (zob. `vertigo::transaction`).
+
 ### 7. Po fali każda wartość jest poprawna
 
 Gdy fala się kończy, każdy `Value` i `Computed` zgadza się z bieżącymi źródłami.

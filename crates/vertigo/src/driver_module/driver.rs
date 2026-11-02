@@ -104,6 +104,35 @@ pub fn get_driver() -> Rc<Driver> {
 }
 
 /// Do bunch of operations on dependency graph without triggering anything in between.
+///
+/// When the outermost transaction ends, the changes spread in the order of the writes: first
+/// what reads the values written, in the order they were written, then what reads that, and so
+/// on. A part of the page that a refresh replaces leaves the graph with it and doesn't refresh
+/// any more. So the order of writes can save work: write first what decides which part of the
+/// page stays.
+///
+/// For example, leaving a page and forgetting the data it showed: change the address first.
+/// The router's render then replaces the old page before the old page reacts to the forgotten
+/// data - drawing its loading state and fetching the data once more, for nothing.
+///
+/// ```rust,no_run
+/// use vertigo::{LazyCache, RequestBuilder, get_driver, store, transaction};
+///
+/// #[store(all = all_post_lists)]
+/// fn post_list(page: &u32) -> LazyCache<Vec<String>> {
+///     RequestBuilder::get(format!("/api/posts?page={page}"))
+///         .lazy_cache(|status, body| (status == 200).then(|| body.into()))
+/// }
+///
+/// fn after_post_deleted(next: &str) {
+///     transaction(|_| {
+///         get_driver().history_replace(next);
+///         for list in all_post_lists() {
+///             list.forget();
+///         }
+///     });
+/// }
+/// ```
 #[inline(always)]
 pub fn transaction<R, F: FnOnce(&Context) -> R>(f: F) -> R {
     transaction_graph().transaction(f)
@@ -361,7 +390,8 @@ impl Driver {
     }
 
     /// Fire provided function in a way that all reactive updates made by this function
-    /// run once, as if the changes were done all at once.
+    /// run once, as if the changes were done all at once. They spread in the order of the
+    /// writes - see [`transaction`](crate::transaction).
     #[inline(always)]
     pub fn transaction<R, F: FnOnce(&Context) -> R>(&self, func: F) -> R {
         crate::reactive::transaction(func)

@@ -693,4 +693,7 @@ pub use vertigo_macro::css_block;
 ///
 /// The values are then in a [`thread_local!`] next to both functions rather than in the store's
 /// body, so `all` works for a free function only, not for one in an `impl`.
+///
+/// When forgetting goes with leaving the page that shows the values, change the address first,
+/// in the same [`transaction`] - see there why.
 pub use vertigo_macro::store;

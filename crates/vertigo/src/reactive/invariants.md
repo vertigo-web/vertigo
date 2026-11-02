@@ -124,6 +124,13 @@ refreshing, there is a cycle, and the program panics.
 
 A node does not refresh a second time in the same wave.
 
+Ready nodes go in the order they became ready: first the written values, in the order of the
+writes, then the children of each node that changed, as it changes.
+A node removed during the wave (its last handle dropped, e.g. with the part of the page a render
+replaced) leaves it and does not refresh.
+Applications rely on this: writing first what decides which part of the page stays saves the
+rest from refreshing (see `vertigo::transaction`).
+
 ### 7. After a wave, every value is correct
 
 When the wave ends, every `Value` and `Computed` matches the current sources.
