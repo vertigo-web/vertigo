@@ -10,6 +10,7 @@ pub fn store_inner(_attr: TokenStream2, item: TokenStream2) -> Result<TokenStrea
         return Err(Error::new(span, "The macro can only take functions"));
     };
 
+    let attrs = &input.attrs;
     let vis = &input.vis;
     let sig = &input.sig;
     let block = &input.block;
@@ -28,6 +29,7 @@ pub fn store_inner(_attr: TokenStream2, item: TokenStream2) -> Result<TokenStrea
     // as its only key would bring a copy of the hash map code into the wasm for each store.
     if inputs.is_empty() {
         return Ok(quote! {
+            #(#attrs)*
             #vis #sig {
                 thread_local! {
                     static CACHE: std::cell::OnceCell<#output_type> = const { std::cell::OnceCell::new() };
@@ -81,6 +83,7 @@ pub fn store_inner(_attr: TokenStream2, item: TokenStream2) -> Result<TokenStrea
     // generic all the way down would bring a copy of the hash map code for each store, and
     // nested maps one more for each further argument.
     Ok(quote! {
+        #(#attrs)*
         #vis #sig {
             thread_local! {
                 static CACHE: vertigo::dev::StoreMap<( #( #types, )* ), #output_type>
@@ -198,6 +201,39 @@ mod tests {
                                 })
                         },
                     )
+                })
+            }
+        };
+
+        pretty_assertions::assert_eq!(pretty_format(&output), pretty_format(&expected));
+
+        Ok(())
+    }
+
+    #[test]
+    fn keeps_attributes() -> Result<()> {
+        let input: TokenStream2 = quote! {
+            /// The state.
+            #[cfg(feature = "state")]
+            pub fn get_state() -> FakeState {
+                FakeState {}
+            }
+        };
+
+        let output = store_inner(quote!(), input.clone())?;
+
+        let expected = quote! {
+            /// The state.
+            #[cfg(feature = "state")]
+            pub fn get_state() -> FakeState {
+                thread_local! {
+                    static CACHE: std::cell::OnceCell<FakeState> = const { std::cell::OnceCell::new() };
+                }
+
+                CACHE.with(|cache| {
+                    cache.get_or_init(|| {
+                        FakeState {}
+                    }).clone()
                 })
             }
         };
