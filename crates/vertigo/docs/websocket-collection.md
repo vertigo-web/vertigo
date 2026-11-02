@@ -109,6 +109,7 @@ Then every `WsCollection::new(ws_socket(), query)` reuses the same connection.
 WsQuery::and("items")            // table + top-level logic (AND)
     .eq("category", "alpha")     // category = "alpha"
     .gt("amount", 100.0)         // AND amount > 100
+    .le("amount", 500.0)         // AND amount <= 500
     .like("label", "Ar")         // AND label LIKE "Ar"
     .eq_null("closed_at")        // AND closed_at IS NULL
     .limit(50);                  // cap the row count (server clamps to its max)
@@ -120,9 +121,11 @@ WsQuery::or("items")             // top-level logic OR
 
 - [`and`](crate::WsQuery::and) / [`or`](crate::WsQuery::or) choose how the clauses
   combine and name the table.
-- [`eq`](crate::WsQuery::eq) / [`gt`](crate::WsQuery::gt) / [`lt`](crate::WsQuery::lt)
+- [`eq`](crate::WsQuery::eq) / [`gt`](crate::WsQuery::gt) / [`lt`](crate::WsQuery::lt) /
+  [`ge`](crate::WsQuery::ge) / [`le`](crate::WsQuery::le)
   accept any value implementing [`IntoCollectionWhereValue`](crate::IntoCollectionWhereValue)
-  — strings, the integer and float primitives, and `bool`.
+  — strings, the integer and float primitives, and `bool`. A range that includes its bound,
+  such as a day from its midnight, starts with `ge`: `gt` leaves the bound out.
 - [`like`](crate::WsQuery::like) takes a string pattern;
   [`eq_null`](crate::WsQuery::eq_null) matches a missing value.
 
@@ -240,5 +243,5 @@ pass `Rc::new(|| Some(String::new()))` (or `|| None` and have the server ignore 
 | Build (changing query) | [`WsCollection::empty`](crate::WsCollection::empty) |
 | Read | [`items_sorted`](crate::WsCollection::items_sorted) (`Computed<Option<Vec<T>>>`) |
 | Reissue query | [`set_query`](crate::WsCollection::set_query) (clears to loading), [`extend_query`](crate::WsCollection::extend_query) (keeps rows) |
-| Query builder | [`WsQuery::and`](crate::WsQuery::and) / [`or`](crate::WsQuery::or) + `eq` / `like` / `gt` / `lt` / `eq_null` / `limit` |
+| Query builder | [`WsQuery::and`](crate::WsQuery::and) / [`or`](crate::WsQuery::or) + `eq` / `like` / `gt` / `lt` / `ge` / `le` / `eq_null` / `limit` |
 | Auth | [`AuthTokenProvider`](crate::AuthTokenProvider) passed to [`WsSocket::new`](crate::WsSocket::new) |
