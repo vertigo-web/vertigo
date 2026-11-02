@@ -94,6 +94,16 @@ pub enum CollectionWhere {
         column: String,
         value: CollectionWhereValue,
     },
+    /// `>=` — a range that starts at a value and includes it, such as a day from its midnight.
+    Ge {
+        column: String,
+        value: CollectionWhereValue,
+    },
+    /// `<=`
+    Le {
+        column: String,
+        value: CollectionWhereValue,
+    },
 }
 
 #[derive(Clone, Copy, Debug, PartialEq, Eq, AutoJsJson)]
@@ -177,6 +187,25 @@ impl WsQuery {
         self
     }
 
+    /// `column >= value`: unlike [`gt`](Self::gt), keeps a row whose value is the bound itself,
+    /// such as a bet placed at the midnight a day starts with.
+    pub fn ge<V: IntoCollectionWhereValue>(mut self, column: impl Into<String>, value: V) -> Self {
+        self.where_list.push(CollectionWhere::Ge {
+            column: column.into(),
+            value: value.into_collection_where_value(),
+        });
+        self
+    }
+
+    /// `column <= value`.
+    pub fn le<V: IntoCollectionWhereValue>(mut self, column: impl Into<String>, value: V) -> Self {
+        self.where_list.push(CollectionWhere::Le {
+            column: column.into(),
+            value: value.into_collection_where_value(),
+        });
+        self
+    }
+
     /// Adds `WHERE column IS NULL` — filters to rows where the column has no value.
     pub fn eq_null(mut self, column: impl Into<String>) -> Self {
         self.where_list.push(CollectionWhere::Eq {
@@ -204,6 +233,8 @@ pub enum WsWhereOp {
     Like,
     Gt,
     Lt,
+    Ge,
+    Le,
 }
 
 /// One entry from the `"where"` array in the `query` object.
@@ -330,6 +361,16 @@ fn where_clause_to_wire(w: &CollectionWhere) -> WsWhereClause {
             column: column.clone(),
             value: collection_where_value_to_js_json(value),
         },
+        CollectionWhere::Ge { column, value } => WsWhereClause {
+            op: WsWhereOp::Ge,
+            column: column.clone(),
+            value: collection_where_value_to_js_json(value),
+        },
+        CollectionWhere::Le { column, value } => WsWhereClause {
+            op: WsWhereOp::Le,
+            column: column.clone(),
+            value: collection_where_value_to_js_json(value),
+        },
     }
 }
 
@@ -415,6 +456,37 @@ mod tests {
 
         let row2 = rows[2].clone().get_hashmap(&ctx())?;
         assert_eq!(row2.get("value"), Some(&JsJson::True));
+        Ok(())
+    }
+
+    #[test]
+    fn range_bounds_serialize_their_operators() -> Result<(), Box<dyn Error>> {
+        let query = WsQuery::and("bets")
+            .ge("placed_at", "2026-11-02T00:00:00+00:00")
+            .lt("placed_at", "2026-11-03T00:00:00+00:00")
+            .gt("stake", 1)
+            .le("stake", 100);
+        let json = to_json(query.to_ws_subscribe_query());
+        let qmap = json.get_hashmap(&ctx())?;
+        let JsJson::List(rows) = qmap.get("where").ok_or("where array")? else {
+            return Err("where must be a list".into());
+        };
+        let ops = rows
+            .iter()
+            .map(|row| Ok(row.clone().get_hashmap(&ctx())?.get("op").cloned()))
+            .collect::<Result<Vec<_>, Box<dyn Error>>>()?;
+        let expected = ["Ge", "Lt", "Gt", "Le"].map(|op| Some(JsJson::String(op.into())));
+        assert_eq!(ops, expected);
+
+        let first = rows[0].clone().get_hashmap(&ctx())?;
+        assert_eq!(
+            first.get("column"),
+            Some(&JsJson::String("placed_at".into()))
+        );
+        assert_eq!(
+            first.get("value"),
+            Some(&JsJson::String("2026-11-02T00:00:00+00:00".into()))
+        );
         Ok(())
     }
 
