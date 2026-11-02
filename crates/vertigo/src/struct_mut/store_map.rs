@@ -80,6 +80,18 @@ impl<K: 'static, V: Clone + 'static> StoreMap<K, V> {
         self.entries.insert(hash, Box::new((key(), value.clone())));
         value
     }
+
+    /// Every value made so far, in no particular order. Copies, so that what is done with them
+    /// may ask the store for more.
+    pub fn values(&self) -> Vec<V> {
+        let mut values = Vec::new();
+        self.entries.each(&mut |entry| {
+            if let Some((_, value)) = entry.downcast_ref::<(K, V)>() {
+                values.push(value.clone());
+            }
+        });
+        values
+    }
 }
 
 /// The part of [`StoreMap`] that does not depend on its types, so that the wasm has it once.
@@ -96,6 +108,12 @@ impl Entries {
                 return;
             }
             hash = hash.wrapping_add(1);
+        }
+    }
+
+    fn each(&self, visit: &mut dyn FnMut(&dyn Any)) {
+        for entry in self.0.borrow().values() {
+            visit(&**entry);
         }
     }
 
@@ -162,6 +180,25 @@ mod tests {
         assert_eq!(get(&map, 8, "d", &created), "value of d");
         assert_eq!(get(&map, 7, "c", &created), "value of c");
         assert_eq!(created.get(), 4);
+    }
+
+    #[test]
+    fn values_of_all_keys() {
+        let map = Names::new();
+        let created = Cell::new(0);
+        assert!(map.values().is_empty());
+
+        for name in ["a", "b", "c", "a"] {
+            get(&map, 7, name, &created);
+        }
+        get(&map, 3, "d", &created);
+
+        let mut values = map.values();
+        values.sort();
+        assert_eq!(
+            values,
+            ["value of a", "value of b", "value of c", "value of d"]
+        );
     }
 
     #[test]

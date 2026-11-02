@@ -5,6 +5,9 @@
 
 ### Added
 
+* `#[store(all = name)]` - for a store with arguments, makes also a function `name` giving all
+  the values it has made so far, e.g. to forget every page of a list (`LazyCache::forget`) when
+  something they may show is gone.
 * `Driver::history_push` - goes to an address with a new entry in the browser's history, as
   `history_replace` does without one.
 * `serve::vary_accept_encoding` - a middleware for a back-end with its own `Compress`, wrapped

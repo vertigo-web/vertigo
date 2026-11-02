@@ -663,4 +663,34 @@ pub use vertigo_macro::css_block;
 ///             }
 ///         })
 /// }
+/// ```
+///
+/// With arguments, `#[store(all = name)]` makes also a function `name` giving all the values
+/// the store has made so far, in no particular order - e.g. to forget every list fetched, when
+/// something they may show is gone:
+///
+/// ```rust
+/// use vertigo::{AutoJsJson, LazyCache, RequestBuilder, store};
+///
+/// #[derive(AutoJsJson, PartialEq)]
+/// struct Post {
+///     id: i32,
+///     title: String,
+/// }
+///
+/// #[store(all = all_post_lists)]
+/// fn post_list(page: &u32) -> LazyCache<Vec<Post>> {
+///     RequestBuilder::get(format!("/api/posts?page={page}"))
+///         .lazy_cache(|status, body| (status == 200).then(|| body.into()))
+/// }
+///
+/// fn after_post_deleted() {
+///     for list in all_post_lists() {
+///         list.forget();
+///     }
+/// }
+/// ```
+///
+/// The values are then in a [`thread_local!`] next to both functions rather than in the store's
+/// body, so `all` works for a free function only, not for one in an `impl`.
 pub use vertigo_macro::store;
