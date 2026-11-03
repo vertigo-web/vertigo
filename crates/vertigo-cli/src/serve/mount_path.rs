@@ -88,10 +88,21 @@ impl MountConfigBuilder {
     /// [`vertigo_files`](crate::serve::vertigo_files) do.
     ///
     /// They come out about a quarter smaller than compressed per response, for about a second
-    /// of startup per megabyte.
+    /// of startup per megabyte - in a release build of the server, in a debug one far more,
+    /// see [`precompress_in_release`](Self::precompress_in_release).
     pub fn precompress(mut self, precompress: bool) -> Self {
         self.precompress = precompress;
         self
+    }
+
+    /// [`precompress`](Self::precompress) in a release build of the server, none in a debug one:
+    /// brotli built without optimizations, on a debug build of the app's wasm (tens of megabytes),
+    /// takes minutes before the server starts.
+    ///
+    /// A build counts as release when it has no debug assertions, as `cargo build --release` by
+    /// default.
+    pub fn precompress_in_release(self) -> Self {
+        self.precompress(!cfg!(debug_assertions))
     }
 
     pub fn build(self) -> Result<MountConfig, ErrorCode> {
@@ -267,6 +278,14 @@ mod tests {
         assert!(pretty.pretty_html);
 
         std::fs::remove_dir_all(&dest_dir)
+    }
+
+    #[test]
+    fn precompress_in_release_follows_the_build() {
+        let builder = MountConfigBuilder::new("/", "build").precompress_in_release();
+
+        // `cargo test` builds with debug assertions, `cargo test --release` without
+        assert_eq!(builder.precompress, !cfg!(debug_assertions));
     }
 
     #[test]
