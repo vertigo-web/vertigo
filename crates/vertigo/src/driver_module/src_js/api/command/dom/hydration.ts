@@ -192,7 +192,7 @@ class HydrationEngine {
         this.depth++;
         let skipTextVNodes = false;
 
-        for (const childVId of vNode.children) {
+        for (const [index, childVId] of vNode.children.entries()) {
             const childVNode = this.virtualNodes.get(childVId);
             if (!childVNode) continue;
 
@@ -218,6 +218,7 @@ class HydrationEngine {
                 if (!candidate) continue;
 
                 let isMatch = false;
+                let claimed: Node = candidate;
                 if (childVNode.name) {
                     // Element
                     isMatch = this.checkElementMatch(candidate, childVNode);
@@ -229,6 +230,22 @@ class HydrationEngine {
                         // Start skipping eventual group of text vnodes
                         // as they were probably merged into one on SSR side.
                         skipTextVNodes = true;
+                    } else if (this.nodes.replacesText(candidate)) {
+                        // Something else - a page translator, an extension - got to the page
+                        // first and put a node of its own in place of the text. It stays,
+                        // standing in for the text the app has - unless the server merged more
+                        // texts into the one replaced: there is no telling which part of the
+                        // replacement is which, and they go back as the app has them, for
+                        // whatever replaced them to take them on again. They are left to the
+                        // command replay then, as there is nothing else of theirs further on to
+                        // look for.
+                        if (this.textsInGroup(vNode.children, index) > 1) {
+                            break;
+                        }
+                        const text = document.createTextNode(childVNode.value);
+                        this.nodes.setStandIn(text, candidate);
+                        claimed = text;
+                        isMatch = true;
                     } else {
                         console.error(`Hydration ${this.depth}: Text node mismatch`, childVNode, candidate);
                     }
@@ -236,7 +253,7 @@ class HydrationEngine {
 
                 if (isMatch) {
                     this.removeSkippedNodes(realChildren, realIndex, i);
-                    this.claimNode(candidate, childVId);
+                    this.claimNode(claimed, childVId);
                     this.matched++;
 
                     // Recurse if element
@@ -255,6 +272,27 @@ class HydrationEngine {
         this.removeSkippedNodes(realChildren, realIndex, realChildren.length);
         this.depth--;
     };
+
+    /// How many texts the server merged into the one node the text at `index` is in: the texts
+    /// around it up to the nearest element or marker on each side. Empty ones leave no trace.
+    private textsInGroup(children: Array<number>, index: number): number {
+        const isText = (id: number | undefined) =>
+            id !== undefined && this.virtualNodes.get(id)?.value !== undefined;
+
+        let start = index;
+        while (isText(children[start - 1])) {
+            start--;
+        }
+        let end = index;
+        while (isText(children[end + 1])) {
+            end++;
+        }
+
+        return children
+            .slice(start, end + 1)
+            .filter((id) => this.virtualNodes.get(id)?.value !== "")
+            .length;
+    }
 
     private checkElementMatch(candidate: Node, childVNode: VirtualNode) {
         let isMatch = false;
@@ -344,10 +382,12 @@ class HydrationEngine {
             let next = parent.firstChild;
             for (const childId of vNode.children) {
                 // A node that is missing failed to be created, which the batch reported already.
-                const child = this.nodes.getAnyOption(childId);
-                if (!child) {
+                const node = this.nodes.getAnyOption(childId);
+                if (!node) {
                     continue;
                 }
+                // A text adopted with what replaced it is in the page as its stand-in
+                const child = this.nodes.inPage(node);
                 if (child === next || (keepInPlace && child.parentNode === parent)) {
                     next = child.nextSibling;
                 } else {
@@ -362,7 +402,8 @@ class HydrationEngine {
         for (let j = realIndex; j < i; j++) {
             const nodeToRemove = realChildren[j];
             if (nodeToRemove) {
-                if (this.depth !== 0 && nodeToRemove.nodeType !== Node.TEXT_NODE) {
+                // What replaced texts that go back isn't the server's markup
+                if (this.depth !== 0 && nodeToRemove.nodeType !== Node.TEXT_NODE && !this.nodes.replacesText(nodeToRemove)) {
                     console.warn(`Hydration ${this.depth}: Removing node`, nodeToRemove);
                     this.discarded++;
                 }

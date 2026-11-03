@@ -22,6 +22,10 @@
   to an address with a fragment (`/post#comment-5`) scrolls to the element it names once it is
   on the page, as a followed link does - after the render the navigation brings about, or later
   with the page's data. Without a fragment the page still stays where it is.
+* The app doesn't start on a page whose `<base>` points to another origin - a copy of the page
+  served elsewhere, as a translating proxy (`*.translate.goog`) or a web archive serves it. It
+  would ask that origin for its data, which the browser doesn't allow, while its links stayed
+  with the copy. The page stays as the server rendered it.
 
 ### Performance
 
@@ -82,6 +86,15 @@
   first client got, often a crawler's uncompressed one, and gave it to every browser.
 * `vertigo serve`: likewise any response compressed on the fly - pages, files without
   `--precompress` - says `Vary: accept-encoding` also when sent as it is.
+* A text of the app that something else replaced with a node of its own - a page translator
+  (Google's, the one built into Chrome put a `<font>` in its place), a browser extension, another
+  script on the page: a change to the text showed nowhere (a button's label, a counter stayed as
+  they were), and a removed text left its replacement behind. The driver notes what took a text's
+  place and puts the changed text there, as a new node, for whatever replaced it to take it on
+  anew. Hydration of a page where texts were replaced before the app started - the script notes
+  the changes from the moment it runs - keeps the replacements instead of putting the texts back
+  with an error for each, except where the server merged several texts into the one replaced:
+  those go back as the app has them.
 
 ## 0.14.2 - 2026-10-29
 
