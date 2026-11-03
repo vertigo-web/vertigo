@@ -39,6 +39,18 @@ const COMPRESSIBLE: &[&str] = &[
 /// response, to serve them under `http_root`.
 pub fn precompress(dest_dir: impl AsRef<Path>, http_root: &str) -> Precompressed {
     let dest_dir = dest_dir.as_ref();
+
+    // The server answers nothing until it's done, so say what it waits for
+    if cfg!(debug_assertions) {
+        log::warn!(
+            "Precompressing {} with brotli in a debug build, unoptimized: a debug wasm takes \
+             minutes. MountConfigBuilder::precompress_in_release skips it here",
+            dest_dir.display()
+        );
+    } else {
+        log::info!("Precompressing {} with brotli...", dest_dir.display());
+    }
+
     let started = Instant::now();
     let mut files = Precompressed::new();
     let (mut size, mut compressed_size) = (0, 0);

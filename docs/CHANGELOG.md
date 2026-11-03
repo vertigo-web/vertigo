@@ -15,6 +15,9 @@
 * `serve::vary_accept_encoding` - a middleware for a back-end with its own `Compress`, wrapped
   around it: what `Compress` sends as it is says `Vary: accept-encoding` too, as `vertigo serve`
   does now.
+* `MountConfigBuilder::precompress_in_release` - precompresses in a release build of the server
+  only. In a debug one brotli is unoptimized and a debug wasm is tens of megabytes: it took
+  minutes before the server started, longer than an e2e harness waits for it.
 
 ### Changed
 
@@ -22,6 +25,9 @@
   to an address with a fragment (`/post#comment-5`) scrolls to the element it names once it is
   on the page, as a followed link does - after the render the navigation brings about, or later
   with the page's data. Without a fragment the page still stays where it is.
+* `vertigo serve --precompress` (`MountConfigBuilder::precompress`) logs when it starts
+  compressing, as the server answers nothing until it's done - in a debug build as a warning
+  pointing to `precompress_in_release`.
 
 ### Performance
 
