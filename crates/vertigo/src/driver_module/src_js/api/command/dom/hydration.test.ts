@@ -48,6 +48,24 @@ class MockNode {
         const idx = this.parentNode.childNodes.indexOf(this);
         return this.parentNode.childNodes[idx + 1] || null;
     }
+    get previousSibling(): MockNode | null {
+        if (!this.parentNode) return null;
+        const idx = this.parentNode.childNodes.indexOf(this);
+        return this.parentNode.childNodes[idx - 1] || null;
+    }
+    /// In the document: under `<body>`, `<head>` or `<html>`, which the tests don't always join.
+    get isConnected(): boolean {
+        if (this.parentNode) return this.parentNode.isConnected;
+        const roots: MockNode[] = [documentMock.body, documentMock.head, documentMock.documentElement];
+        return roots.includes(this);
+    }
+    replaceWith(node: MockNode) {
+        const parent = this.parentNode;
+        if (parent) {
+            parent.insertBefore(node, this);
+            this.remove();
+        }
+    }
 }
 
 class MockElement extends MockNode {
@@ -910,6 +928,205 @@ function testBodyMarkerIsPlacedInHtml() {
     }
 }
 
+
+/// Records of `parent.insertBefore(standIn, text)` and then `text.remove()` - the way, f. ex.,
+/// a page translator puts a node of its own in place of a text.
+function replace(text: MockText, standIn: MockElement): any[] {
+    const parent = text.parentNode;
+    if (parent) {
+        parent.insertBefore(standIn, text);
+        text.remove();
+    }
+    return [
+        { addedNodes: [standIn], removedNodes: [], previousSibling: null },
+        { addedNodes: [], removedNodes: [text], previousSibling: standIn },
+    ];
+}
+
+// Something else put a node of its own in place of a text before the app started
+function testTextReplacedBeforeStartStays() {
+    console.log("\n--- Test hydration: a text replaced before the start keeps its stand-in ---");
+    clearBody();
+
+    // DOM from the server: <p>Ala ma kota</p>, its text then replaced with
+    // <span><span>Zażółć gęślą jaźń</span></span> - any element will do
+    const p = new MockElement('P');
+    const serverText = new MockText("Ala ma kota");
+    p.appendChild(serverText);
+    documentMock.body.appendChild(p);
+    const standIn = new MockElement('SPAN');
+    const inner = new MockElement('SPAN');
+    inner.appendChild(new MockText("Zażółć gęślą jaźń"));
+    standIn.appendChild(inner);
+    const records = replace(serverText, standIn);
+
+    // VDOM: <p>Ala ma kota</p>
+    const commands: CommandType[] = [
+        { CreateNode: { id: 300, name: 'p' } },
+        { CreateText: { id: 301, value: "Ala ma kota" } },
+        { InsertBefore: { parent: 300, child: 301, ref_id: null } },
+        { InsertBefore: { parent: 3, child: 300, ref_id: null } },
+    ];
+
+    const mapNodes = new MapNodes();
+    mapNodes.noticeReplacedBeforeStart(records);
+    const { report, place } = hydrate(commands, mapNodes, mockedApiLocation());
+    place();
+
+    const text = mapNodes.getAnyOption(301) as any;
+    assert(report.matched === report.hydratable, "the stand-in counts as the text");
+    assert(report.discarded === 0, "nothing discarded");
+    assert(text instanceof MockText && text.textContent === "Ala ma kota", "the app keeps its own text");
+    assert(p.childNodes.length === 1 && p.childNodes[0] === standIn, "the stand-in stays in the page");
+    assert(mapNodes.inPage(text) as any === standIn, "the stand-in stands in for the text");
+
+    // The app changes the text: it goes in place of its stand-in, for whatever replaced it to
+    // take it on anew - as a new node, as that one may know the old one as done with
+    text.textContent = "Ala ma dwa koty";
+    mapNodes.textInPlace(301, text);
+    const renewed = mapNodes.getAnyOption(301) as any;
+    assert(renewed !== text && renewed.textContent === "Ala ma dwa koty", "the id has a new node with the change");
+    assert(p.childNodes.length === 1 && p.childNodes[0] === renewed, "the changed text replaces its stand-in");
+    assert(mapNodes.inPage(renewed) as any === renewed, "no stand-in once the text is back");
+}
+
+// An element where a text should be, which nothing put there in place of a text: a mismatch,
+// as it always was
+function testElementInPlaceOfTextIsNoStandIn() {
+    console.log("\n--- Test hydration: an element the server sent in place of a text goes ---");
+    clearBody();
+
+    // DOM: <p><span>Zażółć gęślą jaźń</span></p>
+    const p = new MockElement('P');
+    const span = new MockElement('SPAN');
+    span.appendChild(new MockText("Zażółć gęślą jaźń"));
+    p.appendChild(span);
+    documentMock.body.appendChild(p);
+
+    // VDOM: <p>Ala ma kota</p>
+    const commands: CommandType[] = [
+        { CreateNode: { id: 305, name: 'p' } },
+        { CreateText: { id: 306, value: "Ala ma kota" } },
+        { InsertBefore: { parent: 305, child: 306, ref_id: null } },
+        { InsertBefore: { parent: 3, child: 305, ref_id: null } },
+    ];
+
+    const mapNodes = new MapNodes();
+    hydrate(commands, mapNodes, mockedApiLocation());
+
+    assert(mapNodes.getAnyOption(306) === undefined, "the text is left to the command replay");
+    assert(p.childNodes.length === 0, "the element is removed");
+}
+
+// The server merged two texts into one, and that one was replaced before the app started
+function testReplacedMergedTextsGoBack() {
+    console.log("\n--- Test hydration: merged texts replaced before the start go back ---");
+    clearBody();
+
+    // DOM from the server: <p>Ala ma kota</p>, its text then replaced with
+    // <font>Zażółć gęślą jaźń</font>
+    const p = new MockElement('P');
+    const serverText = new MockText("Ala ma kota");
+    p.appendChild(serverText);
+    documentMock.body.appendChild(p);
+    const standIn = new MockElement('FONT');
+    standIn.appendChild(new MockText("Zażółć gęślą jaźń"));
+    const records = replace(serverText, standIn);
+
+    // VDOM: <p>"Ala ma " {pet}</p>
+    const commands: CommandType[] = [
+        { CreateNode: { id: 310, name: 'p' } },
+        { CreateText: { id: 311, value: "Ala ma " } },
+        { CreateText: { id: 312, value: "kota" } },
+        { InsertBefore: { parent: 310, child: 311, ref_id: null } },
+        { InsertBefore: { parent: 310, child: 312, ref_id: null } },
+        { InsertBefore: { parent: 3, child: 310, ref_id: null } },
+    ];
+
+    const mapNodes = new MapNodes();
+    mapNodes.noticeReplacedBeforeStart(records);
+    const { report, place } = hydrate(commands, mapNodes, mockedApiLocation());
+
+    // The texts, as the command replay creates them.
+    const first = new MockText("Ala ma ");
+    const second = new MockText("kota");
+    mapNodes.set(311, first as any);
+    mapNodes.set(312, second as any);
+    place();
+
+    assert(report.discarded === 0, "the stand-in isn't counted as discarded markup");
+    assert(p.childNodes.length === 2 && p.childNodes[0] === first && p.childNodes[1] === second,
+        "the texts are back in place of the stand-in");
+}
+
+// Something else replaces a text after the app started
+function testTextReplacedAfterStart() {
+    console.log("\n--- Test map nodes: a text replaced after the start ---");
+    clearBody();
+
+    const mapNodes = new MapNodes();
+    const p = new MockElement('P');
+    const text = new MockText("Ala ma kota");
+    mapNodes.set(400, p as any);
+    mapNodes.set(401, text as any);
+    documentMock.body.appendChild(p);
+    mapNodes.insertBefore(400, 401, null);
+
+    const standIn = new MockElement('FONT');
+    standIn.appendChild(new MockText("Zażółć gęślą jaźń"));
+    mapNodes.noticeRemoved(replace(text, standIn));
+    assert(mapNodes.standInFor(text as any) as any === standIn, "the new node stands in for the text");
+
+    // An insert in front of the text lands in front of its stand-in
+    const before = new MockElement('SPAN');
+    mapNodes.set(402, before as any);
+    mapNodes.insertBefore(400, 402, 401);
+    assert(p.childNodes[0] === before && p.childNodes[1] === standIn, "inserted before the stand-in");
+
+    // Moving the text takes it out of its stand-in's place, without leaving a copy behind
+    const other = new MockElement('DIV');
+    mapNodes.set(403, other as any);
+    documentMock.body.appendChild(other);
+    mapNodes.insertBefore(403, 401, null);
+    const moved = mapNodes.getAnyOption(401) as any;
+    assert(other.childNodes[0] === moved && moved.textContent === "Ala ma kota", "moved, as a new node");
+    assert(p.childNodes.length === 1, "the stand-in is gone");
+
+    // Replaced again and then removed by the app: its stand-in goes with it
+    mapNodes.noticeRemoved(replace(moved, new MockElement('FONT')));
+    mapNodes.removeFromPage(moved);
+    assert(other.childNodes.length === 0, "the removed text's stand-in is gone too");
+}
+
+// Nodes the app has, and texts it moved itself, are no stand-ins
+function testOwnNodesAreNoStandIns() {
+    console.log("\n--- Test map nodes: the app's own nodes are no stand-ins ---");
+    clearBody();
+
+    const mapNodes = new MapNodes();
+    const p = new MockElement('P');
+    const span = new MockElement('SPAN');
+    const text = new MockText("Ala ma kota");
+    mapNodes.set(410, p as any);
+    mapNodes.set(411, span as any);
+    mapNodes.set(412, text as any);
+    documentMock.body.appendChild(p);
+    mapNodes.insertBefore(410, 411, null);
+    mapNodes.insertBefore(410, 412, null);
+
+    // Something else took the text out, and the node before it is the app's
+    text.remove();
+    mapNodes.noticeRemoved([{ removedNodes: [text as any], addedNodes: [], previousSibling: span as any }]);
+    assert(mapNodes.standInFor(text as any) === null, "the app's element is not a stand-in");
+
+    // The app moved the text: it is back in the page when the record comes
+    mapNodes.insertBefore(411, 412, null);
+    const other = new MockElement('FONT');
+    p.appendChild(other);
+    mapNodes.noticeRemoved([{ removedNodes: [text as any], addedNodes: [], previousSibling: other as any }]);
+    assert(mapNodes.standInFor(text as any) === null, "a text in the page has no stand-in");
+}
+
 // Run all tests
 testExtraNodes();
 testTextMismatch();
@@ -932,3 +1149,8 @@ testNewElementIsPlacedWithoutMoves();
 testNodesOutsideTheBatchStay();
 testStylesStayAtTheEndOfHead();
 testBodyMarkerIsPlacedInHtml();
+testTextReplacedBeforeStartStays();
+testElementInPlaceOfTextIsNoStandIn();
+testReplacedMergedTextsGoBack();
+testTextReplacedAfterStart();
+testOwnNodesAreNoStandIns();

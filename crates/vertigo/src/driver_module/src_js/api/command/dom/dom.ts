@@ -371,13 +371,16 @@ export class DriverDom {
     }
 
     private removeText(id: number) {
-        const text = this.nodes.delete("remove_node", id);
-        text.remove();
+        // Out of the page first, while the text is still the app's: its stand-in, if something
+        // else replaced it, is found among the texts of the app
+        this.nodes.removeFromPage(this.nodes.get("remove_node", id));
+        this.nodes.delete("remove_node", id);
     }
 
     private updateText(id: number, value: string) {
         const text = this.nodes.getText("set_attribute", id);
         text.textContent = value;
+        this.nodes.textInPlace(id, text);
     }
 
 }
