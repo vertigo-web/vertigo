@@ -1,9 +1,10 @@
 // The click, wheel and pointer handlers: what a `ClickEvent`, `WheelEvent` or `PointerEvent`
 // reply does to the browser's own handling of the event, and what the handlers tell wasm. And
-// `change_checked`, which tells wasm whether a box is checked, `media`, which tells it what
-// a video or an audio does, and `message`, which passes on the messages from the page in a frame.
+// `scroll`, which tells wasm where an element is scrolled to, `change_checked`, which tells it
+// whether a box is checked, `media`, which tells it what a video or an audio does, and
+// `message`, which passes on the messages from the page in a frame.
 
-import { CallbackManager, click, keepEarlyMessage, pointer, wheel } from "./callbackManager";
+import { CallbackManager, click, keepEarlyMessage, pointer, scroll, wheel } from "./callbackManager";
 import { MapNodes } from "./map_nodes";
 
 const assert = (condition: boolean, message: string) => {
@@ -278,6 +279,82 @@ function testPointerListeners() {
     );
 }
 
+/// An element whose content is scrolled 120.5 px down, on a zoomed page: 900 px tall, of which
+/// 300 px show.
+class MockScrollEvent extends MockEvent {
+    currentTarget = Object.assign(new MockElement(), {
+        scrollTop: 120.5,
+        scrollLeft: 0,
+        scrollWidth: 400,
+        scrollHeight: 900,
+        clientWidth: 385,
+        clientHeight: 300,
+    });
+}
+
+function testScrollPayload() {
+    console.log("\n--- Test scroll 1: what wasm gets ---");
+    const event = new MockScrollEvent();
+    let sent: unknown;
+    scroll(event as unknown as Event, (value) => {
+        sent = value;
+        return null;
+    });
+    assert(
+        JSON.stringify(sent) === JSON.stringify([120.5, 0, 400, 900, 385, 300]),
+        `where it's scrolled to, the size of the content and of its visible part: ${JSON.stringify(sent)}`,
+    );
+    assert(!event.defaultPrevented && !event.propagationStopped, "and the browser goes on as usual");
+}
+
+function testScrollListener() {
+    console.log("\n--- Test scroll 2: the listener ---");
+    const node = new MockNode();
+    const nodes = { get: () => node, hasInitNodes: () => false } as unknown as MapNodes;
+    const manager = new CallbackManager(() => ({}) as any);
+
+    manager.add(nodes, 1, 'scroll', 30);
+    manager.remove(nodes, 1, 'scroll', 30);
+
+    assert(JSON.stringify(node.added) === JSON.stringify([['scroll', false]]), "goes on the scroll of the element");
+    assert(JSON.stringify(node.removed) === JSON.stringify(['scroll']), "and comes off it");
+}
+
+/// An element of the page, `scrollTop` px down and `scrollLeft` px from the start of its lines.
+const scrolledElement = (scrollTop: number, scrollLeft: number) => Object.assign(new MockElement(), {
+    scrollTop,
+    scrollLeft,
+    scrollWidth: 400,
+    scrollHeight: 900,
+    clientWidth: 385,
+    clientHeight: 300,
+    addEventListener() {},
+});
+
+async function testScrollFromTheServer() {
+    console.log("\n--- Test scroll 3: scrolled before the app was there ---");
+    const sent: unknown[] = [];
+    const wasm = {
+        wasmCommand: (command: any) => sent.push([command.CallbackCall.callback_id, command.CallbackCall.value]),
+    };
+    const manager = new CallbackManager(() => wasm as any);
+    const batch = (node: unknown, first: boolean) => ({ get: () => node, hasInitNodes: () => first }) as unknown as MapNodes;
+
+    manager.add(batch(scrolledElement(120.5, 0), true), 1, 'scroll', 31);
+    manager.add(batch(scrolledElement(0, -250), true), 2, 'scroll', 32);
+    manager.add(batch(scrolledElement(0, 0), true), 3, 'scroll', 33);
+    manager.add(batch(scrolledElement(50, 0), false), 4, 'scroll', 34);
+    assert(sent.length === 0, "not in the middle of the batch");
+    await Promise.resolve();
+    assert(
+        JSON.stringify(sent) === JSON.stringify([
+            [31, [120.5, 0, 400, 900, 385, 300]],
+            [32, [0, -250, 400, 900, 385, 300]],
+        ]),
+        `but right after the first one, where the scrolled ones are - and none of a later batch: ${JSON.stringify(sent)}`,
+    );
+}
+
 function testChangeChecked() {
     console.log("\n--- Test change_checked: on_change_checked ---");
     // The browser's class - here it only has to be there for `instanceof`
@@ -539,6 +616,9 @@ testPointerCapture();
 testPointerCaptureOfAPointerThatIsUp();
 testPointerFlags();
 testPointerListeners();
+testScrollPayload();
+testScrollListener();
+void testScrollFromTheServer();
 testChangeChecked();
 testMessage();
 void testEarlyMessages();

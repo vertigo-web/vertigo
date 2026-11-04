@@ -16,7 +16,7 @@ use super::{
     dom_node::DomNode,
     events::{
         ClickEvent, DropFileEvent, IntersectionEvent, KeyDownEvent, MediaEvent, MessageEvent,
-        PointerEvent, WheelEvent,
+        PointerEvent, ScrollEvent, WheelEvent,
     },
 };
 
@@ -230,6 +230,7 @@ impl DomElement {
             ("on_pointer_cancel", AttrGroupValue::OnPointerCancel(on_pointer_cancel)) => {
                 self.on_pointer_cancel_rc(on_pointer_cancel)
             }
+            ("on_scroll", AttrGroupValue::OnScroll(on_scroll)) => self.on_scroll_rc(on_scroll),
             ("on_submit", AttrGroupValue::OnSubmit(on_submit)) => self.on_submit_rc(on_submit),
             ("on_wheel", AttrGroupValue::OnWheel(on_wheel)) => self.on_wheel_rc(on_wheel),
             ("tw", AttrGroupValue::AttrValue(value)) => self.attr("class", value),
@@ -759,6 +760,25 @@ impl DomElement {
                     JsJson::Null
                 }
             }
+        })
+    }
+
+    /// The content of the element scrolled - see [`ScrollEvent`]. It can't be stopped, as it has
+    /// happened already, so f. ex. a layer that follows the content just moves after it.
+    pub fn on_scroll(self, on_scroll: impl Into<Callback1<ScrollEvent, ()>>) -> Self {
+        self.on_scroll_rc(Rc::new(on_scroll.into()))
+    }
+
+    pub fn on_scroll_rc(self, on_scroll: Rc<Callback1<ScrollEvent, ()>>) -> Self {
+        let on_scroll = self.install_callback1(on_scroll);
+
+        self.add_event_listener("scroll", move |data| {
+            match ScrollEvent::from_driver(data) {
+                Ok(event) => on_scroll(event),
+                Err(error) => log::error!("on_scroll -> params decode error -> {error}"),
+            }
+
+            JsJson::Null
         })
     }
 

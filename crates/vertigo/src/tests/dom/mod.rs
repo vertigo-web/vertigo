@@ -10,4 +10,5 @@ mod list_spread;
 mod media_event;
 mod params;
 mod pointer_event;
+mod scroll_event;
 mod wheel_event;
