@@ -126,6 +126,31 @@ export const pointer: Handler = (event, send) => {
     });
 };
 
+/// Where the content of the element is scrolled to, and how big it and its visible part are.
+/// A scroll has happened already, so wasm has nothing to reply.
+const scrollOf = (target: Element, send: Send) => {
+    // Payload order MUST match the Rust decoder `ScrollEvent::from_driver`.
+    send([
+        target.scrollTop,
+        target.scrollLeft,
+        target.scrollWidth,
+        target.scrollHeight,
+        target.clientWidth,
+        target.clientHeight,
+    ]);
+};
+
+/// The scroll of the element, read after it.
+export const scroll: Handler = (event, send) => {
+    const target = event.currentTarget;
+
+    if (!(target instanceof Element)) {
+        throw Error('#scroll');
+    }
+
+    scrollOf(target, send);
+};
+
 /// `input` and `change` differ only in whether a `<select>` counts as a value source. They
 /// also share a warning, which stays one literal rather than two identical copies.
 const readValue = (allowSelect: boolean): Handler => (event, send) => {
@@ -309,6 +334,7 @@ const HANDLERS: Record<string, Handler> = {
     change_file: changeFile,
     change_checked: changeChecked,
     wheel,
+    scroll,
     pointerdown: pointer,
     pointermove: pointer,
     pointerup: pointer,
@@ -421,6 +447,19 @@ export class CallbackManager {
             // A wheel listener isn't passive, so that `WheelEvent::prevent_default` can keep the
             // page from scrolling: browsers make one on `<body>` passive unless told.
             node.addEventListener(domEventName(event_name), callback, event_name === 'wheel' ? { passive: false } : false);
+
+            // An element hydration adopted keeps where it was scrolled to before the wasm started
+            // - by the visitor, or by the caret in a `<textarea>` - and no scroll will tell of it.
+            // That goes after the batch, which wasm is still in the middle of sending. Only the
+            // first batch adopts, and a new element is at the start, so later ones don't look -
+            // a read of the scroll lays the page out.
+            if (event_name === 'scroll' && nodes.hasInitNodes()) {
+                queueMicrotask(() => {
+                    if (node instanceof Element && (node.scrollTop !== 0 || node.scrollLeft !== 0)) {
+                        scrollOf(node, send);
+                    }
+                });
+            }
         }
     }
 

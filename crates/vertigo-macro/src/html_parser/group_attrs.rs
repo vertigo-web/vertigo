@@ -72,6 +72,7 @@ fn attr_to_group_variant(key: impl AsRef<str>, value: TokenStream2) -> TokenStre
         "on_pointer_move" => quote! { vertigo::AttrGroupValue::on_pointer_move(#value) },
         "on_pointer_up" => quote! { vertigo::AttrGroupValue::on_pointer_up(#value) },
         "on_pointer_cancel" => quote! { vertigo::AttrGroupValue::on_pointer_cancel(#value) },
+        "on_scroll" => quote! { vertigo::AttrGroupValue::on_scroll(#value) },
         "on_submit" => quote! { vertigo::AttrGroupValue::on_submit(#value) },
         "on_wheel" => quote! { vertigo::AttrGroupValue::on_wheel(#value) },
         _ => quote! { {#value}.into() },

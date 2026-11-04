@@ -15,6 +15,11 @@
 * `serve::vary_accept_encoding` - a middleware for a back-end with its own `Compress`, wrapped
   around it: what `Compress` sends as it is says `Vary: accept-encoding` too, as `vertigo serve`
   does now.
+* `on_scroll` on elements, with a `ScrollEvent`: where the content of the element is scrolled to
+  after it scrolled, however it happened, and how big the content and its visible part are -
+  f. ex. to load more of a list near its end, or to move a layer drawn over a `<textarea>` with
+  its text. An element of a page rendered on the server, scrolled before the app started, tells
+  where it is right after the start.
 * `MountConfigBuilder::precompress_in_release` - precompresses in a release build of the server
   only. In a debug one brotli is unoptimized and a debug wasm is tens of megabytes: it took
   minutes before the server started, longer than an e2e harness waits for it.

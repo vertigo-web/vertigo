@@ -21,3 +21,6 @@ pub use pointer_event::*;
 
 mod wheel_event;
 pub use wheel_event::*;
+
+mod scroll_event;
+pub use scroll_event::*;
