@@ -1,5 +1,4 @@
 use proc_macro::Span;
-use proc_macro_error::{abort_call_site, emit_error};
 use proc_macro2::TokenStream as TokenStream2;
 use quote::quote;
 use std::error::Error;
@@ -85,10 +84,11 @@ fn run_external_tailwind() -> Result<String, Box<dyn Error>> {
     {
         Ok(cmd) => cmd,
         Err(err) => {
-            abort_call_site!(
-                "Failed to run external tailwind: {}", err;
-                help = "Path was: {}", tailwind_executable_abs.display()
-            );
+            return Err(format!(
+                "Failed to run external tailwind: {err}\n\n  = help: Path was: {}",
+                tailwind_executable_abs.display()
+            )
+            .into());
         }
     };
 
@@ -98,9 +98,9 @@ fn run_external_tailwind() -> Result<String, Box<dyn Error>> {
         Ok(output.into_owned())
     } else {
         let err_output = String::from_utf8_lossy(&command.stderr);
-        abort_call_site!(
-            "Tailwind run failed: {}", err_output;
-            note = "Tailwind output: {}", output;
-        );
+        Err(
+            format!("Tailwind run failed: {err_output}\n\n  = note: Tailwind output: {output}")
+                .into(),
+        )
     }
 }

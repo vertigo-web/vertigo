@@ -8,6 +8,7 @@ fn main() {
     export_var("PROFILE");
 
     probe_default_field_values();
+    probe_proc_macro_diagnostic();
 
     // No `rerun-if-*` directive here on purpose: a PROFILE change already yields a
     // different build-script unit, and emitting any of them would narrow cargo from
@@ -46,6 +47,24 @@ fn probe_default_field_values() {
     ) {
         println!("cargo:rustc-cfg=vertigo_default_props");
         println!("cargo:rustc-cfg=vertigo_default_props_unstable");
+    }
+}
+
+/// A macro can warn only through `proc_macro::Diagnostic`, unstable (rust-lang/rust#54140).
+/// `vertigo_macro_warnings` turns the macros' warnings on when the compiler has it, elsewhere
+/// they're dropped.
+fn probe_proc_macro_diagnostic() {
+    println!("cargo:rustc-check-cfg=cfg(vertigo_macro_warnings)");
+
+    const PROBE: &str = "#![feature(proc_macro_diagnostic)]
+extern crate proc_macro;
+pub fn f(span: proc_macro::Span) {
+    proc_macro::Diagnostic::spanned(span, proc_macro::Level::Warning, \"\").emit();
+}
+";
+
+    if compiles("diagnostic", PROBE) {
+        println!("cargo:rustc-cfg=vertigo_macro_warnings");
     }
 }
 

@@ -12,7 +12,7 @@ pub(crate) fn main_wrap(input: TokenStream) -> TokenStream {
 
     // Emit warnings outside of find_warnings_in_stream function for easier testing
     for (span, msg) in &warnings {
-        proc_macro_error::emit_warning!(span, msg);
+        emit_warning!(*span, msg);
     }
 
     let ast = syn::parse_macro_input!(input as syn::ItemFn);

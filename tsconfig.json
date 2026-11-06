@@ -1,4 +1,5 @@
 {
+    "include": ["crates/vertigo/src/driver_module/src_js"],
     "compileOnSave": false,
     "compilerOptions": {
         "target": "es2020",

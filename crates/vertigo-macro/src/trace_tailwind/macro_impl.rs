@@ -1,5 +1,4 @@
 use proc_macro::TokenStream;
-use proc_macro_error::emit_error;
 use proc_macro2::TokenStream as TokenStream2;
 use quote::{ToTokens, quote};
 use std::cell::Cell;

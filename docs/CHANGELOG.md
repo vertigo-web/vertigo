@@ -1,6 +1,17 @@
 <!-- markdownlint-configure-file { "no-duplicate-heading": { "siblings_only": true } } -->
 
 <!-- markdownlint-disable-next-line first-line-h1 -->
+## Unreleased
+
+### Fixed
+
+* On nightly, an error from a macro came with follow-up errors from the code it made anyway.
+
+### Internals
+
+* The macros report errors and warnings without proc-macro-error (unmaintained,
+  RUSTSEC-2024-0370), so an app no longer builds syn 1.
+
 ## 0.14.3 - 2026-11-06
 
 ### Added
