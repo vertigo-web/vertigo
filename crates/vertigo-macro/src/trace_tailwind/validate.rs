@@ -1,5 +1,4 @@
 use crate::trace_tailwind::paths::get_tailwind_classes_file_path;
-use proc_macro_error::emit_error;
 use std::error::Error;
 
 pub(crate) fn validate_tailwind_classes(bundle: &str) -> Result<(), Box<dyn Error>> {
