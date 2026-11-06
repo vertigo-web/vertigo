@@ -1,98 +1,37 @@
 <!-- markdownlint-configure-file { "no-duplicate-heading": { "siblings_only": true } } -->
 
 <!-- markdownlint-disable-next-line first-line-h1 -->
-## Unreleased
+## 0.14.3 - 2026-11-06
 
 ### Added
 
-* `#[store(all = name)]` - for a store with arguments, makes also a function `name` giving all
-  the values it has made so far, e.g. to forget every page of a list (`LazyCache::forget`) when
-  something they may show is gone.
-* `WsQuery::ge` and `WsQuery::le` - where clauses `>=` and `<=` (wire ops `Ge` and `Le`), for a
-  range that includes its bound, such as a day from its midnight, which `gt` leaves out.
-* `Driver::history_push` - goes to an address with a new entry in the browser's history, as
-  `history_replace` does without one.
-* `serve::vary_accept_encoding` - a middleware for a back-end with its own `Compress`, wrapped
-  around it: what `Compress` sends as it is says `Vary: accept-encoding` too, as `vertigo serve`
-  does now.
-* `on_scroll` on elements, with a `ScrollEvent`: where the content of the element is scrolled to
-  after it scrolled, however it happened, and how big the content and its visible part are -
-  f. ex. to load more of a list near its end, or to move a layer drawn over a `<textarea>` with
-  its text. An element of a page rendered on the server, scrolled before the app started, tells
-  where it is right after the start.
-* `MountConfigBuilder::precompress_in_release` - precompresses in a release build of the server
-  only. In a debug one brotli is unoptimized and a debug wasm is tens of megabytes: it took
-  minutes before the server started, longer than an e2e harness waits for it.
+* `on_scroll` on elements, with a `ScrollEvent`: where the content is scrolled to and how big it
+  and its visible part are.
+* `#[store(all = name)]`: for a store with arguments, a function `name` giving all its values.
+* `WsQuery::ge` and `WsQuery::le`: inclusive range filters (`>=`, `<=`).
+* `Driver::history_push`: goes to an address with a new entry in the browser's history.
+* vertigo-cli: `serve::vary_accept_encoding`, a middleware that adds `Vary: accept-encoding` to
+  what a back-end's own `Compress` sends uncompressed.
+* vertigo-cli: `MountConfigBuilder::precompress_in_release` precompresses in a release build only.
 
 ### Changed
 
-* The app's own navigation (`Router::set`, `Driver::history_push`, `Driver::history_replace`)
-  to an address with a fragment (`/post#comment-5`) scrolls to the element it names once it is
-  on the page, as a followed link does - after the render the navigation brings about, or later
-  with the page's data. Without a fragment the page still stays where it is.
-* `vertigo serve --precompress` (`MountConfigBuilder::precompress`) logs when it starts
-  compressing, as the server answers nothing until it's done - in a debug build as a warning
-  pointing to `precompress_in_release`.
+* `Router::set`, `Driver::history_push` and `Driver::history_replace` scroll to the address's
+  fragment (`/post#comment-5`) once its element is on the page, as a followed link does.
+* `vertigo serve --precompress` logs when it starts compressing, in a debug build as a warning.
 
 ### Performance
 
-* `#[store]` without arguments keeps its value in a `OnceCell` instead of a hash map with `()`
-  as its only key, which brought a copy of the map code into the wasm for each such store.
-  A release build links 16 of vertigo's own, so every application gains: the demo, with 12
-  more, has 20 kB (2.1%) less wasm after wasm-opt, 6.5 kB gzipped.
-* `#[store]` with arguments keeps its values in a `StoreMap`, under the hash of the arguments,
-  instead of a `HashMapMut` generic over the arguments and the value, nested once more for each
-  further argument. `StoreMap` names its types only in its signature and its entries are the
-  same for all stores, so a store brings only the code to hash, compare and clone its own
-  types, about 1 kB less wasm each: 2.7 kB in the demo (1.2 kB gzipped), which has 2 of them.
-* A transaction opens and closes in functions of its own instead of in a copy for each caller.
-  Closing runs the whole wave, and `Value::set` alone had a copy of it for each type it is
-  used with: the demo has 4.4 kB (0.5%) less wasm after wasm-opt, 0.7 kB gzipped.
-* `render_value` and `render_value_option` (and the `render_value` methods) keep only reading
-  the value and rendering it in the code generic over the type and the closure. Placing the
-  result and keeping the subscription is one function for all of them, where each call used to
-  get its own copy: the demo has 17.6 kB (1.9%) less wasm after wasm-opt, 3.7 kB gzipped.
-* `Value::set` calls the listeners of `Value::add_event` in one function for all types: each
-  listener clones the new value from the value itself rather than from a list of them that
-  every `set` gathered for its own type. A write with listeners also makes one copy fewer. The
-  demo has 19.4 kB (2.1%) less wasm after wasm-opt, 5.4 kB gzipped.
-* Reading JSON: `JsJson::get_property` finds the field, and `Vec::from_json` checks it got a
-  list, in one function for all types instead of a copy for each type read. The demo, which
-  reads few types, has 3.5 kB (0.4%) less wasm after wasm-opt, 0.9 kB gzipped - an application
-  that reads many from its API gains more.
-* `LazyCache` keeps out of the code generic over its type what doesn't depend on it: taking
-  the response the server fetched while rendering, sending the request, forgetting the value
-  when the bearer token changes, and in `RequestResponse::into` the error messages and the log
-  of a failed request. The demo has 10.0 kB (1.1%) less wasm after wasm-opt, 2.2 kB gzipped -
-  again more in an application with many types from its API.
-* `LazyCache` keeps its value with the type erased (`Rc<dyn Any>`, compared with the type's own
-  `PartialEq`), so its reactive cell, the update, the fetch and `refresh` are one copy of code
-  for all types. Only mapping the response and handing out the value are generic over the type
-  still, and `LazyCache::refresh` is a plain function returning the future, not an `async fn`
-  wrapping it once more for each type. The demo, with 3 types from its API, has 8.0 kB (0.9%)
-  less wasm after wasm-opt and about the same compressed (0.4 kB more gzipped, 0.1 kB less with
-  brotli); an application with 24 of them has 88 kB (8%) less, 15 kB gzipped.
-* `Computed` and `Value` keep less in the code generic over their type. A node leaves the graph
-  through one `Drop` for all of them instead of one for each type, starting a compute and
-  recording what it read is in functions of their own, and so is registering a read in `get`.
-  `Computed::from`, `map` and `to_computed` box their closure right away, rather than passing it
-  through up to three more layers generic over it, and `vertigo::transaction` and
-  `Driver::transaction`, which only forward to the graph, are inlined into their callers. The
-  demo has 10.0 kB (1.2%) less wasm after wasm-opt, 0.9 kB gzipped.
+* Less wasm - the demo's is about a tenth smaller after wasm-opt: `#[store]`, `Value`, `Computed`,
+  `LazyCache`, `render_value`, transactions and JSON reading keep less code generic over types.
 
 ### Fixed
 
-* `#[store]` keeps the attributes of its function: doc comments, `#[cfg]`, etc.
-* `include_static!` in a library crate: a build that took the crate from cargo's cache bundled
-  none of its files, e.g. the second of two apps sharing the library.
-* Tailwind classes (`tw!`, `tw=`) in a library crate: likewise, such a build left them out of
-  the bundle.
-* `vertigo serve --precompress` (`MountConfigBuilder::precompress`): a precompressed file sent
-  as it is - to a client without brotli in `Accept-Encoding`, a range, a revalidation - says
-  `Vary: accept-encoding` too. Without it a cache on the way (nginx, a CDN) kept the version the
-  first client got, often a crawler's uncompressed one, and gave it to every browser.
-* `vertigo serve`: likewise any response compressed on the fly - pages, files without
-  `--precompress` - says `Vary: accept-encoding` also when sent as it is.
+* `#[store]` dropped the attributes of its function: doc comments, `#[cfg]`, etc.
+* `include_static!` files and `tw!`/`tw=` classes of a library crate were left out of the bundle
+  when cargo took the crate from its cache.
+* `vertigo serve` left `Vary: accept-encoding` out of a compressible response sent uncompressed,
+  so a cache on the way (nginx, a CDN) could give every browser the first client's version.
 
 ## 0.14.2 - 2026-10-29
 

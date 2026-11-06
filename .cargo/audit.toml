@@ -1,0 +1,10 @@
+# cargo audit settings for this repository.
+
+[advisories]
+ignore = [
+    # h2 0.3 queues empty DATA frames without limit. The fix is only in h2 0.4.16, and the
+    # actix 3.x line (awc, actix-http) stays on h2 0.3. Out of reach here: `HttpServer::bind`
+    # serves HTTP/1.x only and the awc client is capped at HTTP/1.1
+    # (vertigo-cli/src/serve/http_client.rs). Drop this once actix moves to h2 0.4.
+    "RUSTSEC-2026-0258",
+]
