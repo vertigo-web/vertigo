@@ -15,7 +15,10 @@ use crate::serve::{
     wasm::{Message, WasmInstance},
 };
 
-use super::{element::AllElements, fetch_url::resolve_fetch_url, send_request::send_request};
+use super::{
+    element::AllElements, fetch_url::resolve_fetch_url, page_caching::PageCaching,
+    send_request::send_request,
+};
 
 pub struct HtmlResponse {
     sender: UnboundedSender<Message>,
@@ -30,6 +33,7 @@ pub struct HtmlResponse {
     local_url: String,
     /// `Cookie` header of the browser request, sent along with fetches to the own origin
     cookie: Option<String>,
+    caching: PageCaching,
 }
 
 impl HtmlResponse {
@@ -55,6 +59,7 @@ impl HtmlResponse {
             probe,
             local_url: local_url.to_string(),
             cookie,
+            caching: PageCaching::default(),
         }
     }
 
@@ -75,7 +80,7 @@ impl HtmlResponse {
     pub fn build_response(&self) -> ResponseState {
         let mark = self.probe.start();
 
-        let response = build_response(
+        let mut response = build_response(
             &self.all_elements,
             &self.env,
             &self.mount_path,
@@ -83,6 +88,7 @@ impl HtmlResponse {
             &self.fetch,
             &self.probe,
         );
+        self.caching.apply(&mut response);
 
         self.probe.build_response(mark);
         response
@@ -131,6 +137,11 @@ impl HtmlResponse {
                         self.mount_path.mount_point(),
                         &self.local_url,
                     );
+
+                    if let Ok(target) = &target {
+                        self.caching
+                            .fetched(&request, target, self.cookie.as_deref());
+                    }
 
                     actix_web::rt::spawn({
                         let request = request.clone();
@@ -184,6 +195,16 @@ impl HtmlResponse {
                     Ok(status) => self.status = status,
                     Err(err) => log::error!("Invalid status code requested: {err}"),
                 }
+                None
+            }
+
+            Message::CookieRead => {
+                self.caching.read_cookie();
+                None
+            }
+
+            Message::LanguagesRead => {
+                self.caching.read_languages();
                 None
             }
         }

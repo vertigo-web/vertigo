@@ -3,9 +3,27 @@
 <!-- markdownlint-disable-next-line first-line-h1 -->
 ## Unreleased
 
+### Added
+
+* vertigo-cli: `MountConfigBuilder::ssr_fetch_cookie` and `--ssr-fetch-cookie` of `vertigo serve`
+  and `vertigo watch`: the cookies that go out with the SSR fetches to the server's own origin.
+  Once any is named the others stay behind, so a visitor with only an analytics cookie is rendered
+  as a guest and the page can be cached. With none named, all of them go, as before.
+
 ### Fixed
 
 * On nightly, an error from a macro came with follow-up errors from the code it made anyway.
+* A `LazyCache` or `LazyListCache` with `bearer_auth` now starts with what the server fetched for
+  it while rendering the page. The response was in the page under the request with its token, and
+  the cache looked for it without one: hydration threw away the part of the page made from it, and
+  it fetched again.
+* vertigo-cli: The bearer token of a fetch made while rendering a page is no longer in the page's
+  source. `data-fetch-cache` had every request with its `Authorization` header.
+* vertigo-cli: A page rendered with somebody's credentials - a bearer token, or the browser's
+  cookies sent to the server's own origin - says `Cache-Control: private, no-store`. A page that
+  fetched from the own origin or read a cookie named with `ssr_cookie` says `Vary: cookie`, and one
+  that read `get_driver().languages()` says `Vary: accept-language`. Without them, a cache on the
+  way (nginx, a CDN) could give one person's page to another.
 
 ### Internals
 

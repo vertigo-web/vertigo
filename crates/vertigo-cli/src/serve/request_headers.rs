@@ -78,6 +78,27 @@ pub fn readable_cookies(header: &str, names: &[String]) -> HashMap<String, Strin
     cookies
 }
 
+/// What of a `Cookie` header goes out with the SSR fetches to the server's own origin: the cookies
+/// named in `names` as they came, or the whole header when no names are given. `None` when nothing
+/// is left.
+pub fn forwarded_cookies(header: &str, names: &[String]) -> Option<String> {
+    if names.is_empty() {
+        return Some(header.to_string());
+    }
+
+    let forwarded: Vec<&str> = header
+        .split(';')
+        .map(str::trim)
+        .filter(|cookie| {
+            cookie
+                .split_once('=')
+                .is_some_and(|(name, _)| names.iter().any(|wanted| wanted == name))
+        })
+        .collect();
+
+    (!forwarded.is_empty()).then(|| forwarded.join("; "))
+}
+
 /// `value` decoded as `decodeURIComponent` decodes it, `None` where that throws: a `%` without two
 /// hex digits after it, or bytes that aren't UTF-8.
 fn decode_uri_component(value: &str) -> Option<String> {
@@ -101,7 +122,32 @@ fn decode_uri_component(value: &str) -> Option<String> {
 
 #[cfg(test)]
 mod tests {
-    use super::{accept_languages, readable_cookies};
+    use super::{accept_languages, forwarded_cookies, readable_cookies};
+
+    #[test]
+    fn all_cookies_go_out_when_none_are_named() {
+        assert_eq!(
+            forwarded_cookies("session=a; _ga=b", &[]).as_deref(),
+            Some("session=a; _ga=b")
+        );
+    }
+
+    #[test]
+    fn only_the_named_cookies_go_out_as_they_came() {
+        assert_eq!(
+            forwarded_cookies(
+                "_ga=b; session=a=c%20d; theme=dark",
+                &names(&["session", "theme"])
+            )
+            .as_deref(),
+            Some("session=a=c%20d; theme=dark")
+        );
+    }
+
+    #[test]
+    fn nothing_goes_out_without_a_named_cookie() {
+        assert_eq!(forwarded_cookies("_ga=b", &names(&["session"])), None);
+    }
 
     #[test]
     fn languages_come_the_most_preferred_first() {

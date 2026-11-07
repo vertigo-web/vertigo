@@ -77,13 +77,22 @@ impl FetchCache {
 /// `data-fetch-cache`.
 #[cfg(test)]
 pub fn ssr_fetched(url: &str, status: u32, body: crate::JsJson) {
+    ssr_fetched_request(
+        crate::RequestBuilder::get(url).to_request(None),
+        status,
+        body,
+    );
+}
+
+/// Like [`ssr_fetched`], for `request` as the server sent it - f. ex. with a bearer token.
+#[cfg(test)]
+pub fn ssr_fetched_request(request: SsrFetchRequest, status: u32, body: crate::JsJson) {
     use crate::{
-        JsJsonSerialize, RequestBuilder, dev::SsrFetchResponseContent,
+        JsJsonSerialize, dev::SsrFetchResponseContent,
         external_api::safe_wrappers::TEST_FETCH_CACHE,
     };
     use std::collections::BTreeMap;
 
-    let request = RequestBuilder::get(url).to_request(None);
     let response = SsrFetchResponse::Ok {
         status,
         response: SsrFetchResponseContent::Json(body),

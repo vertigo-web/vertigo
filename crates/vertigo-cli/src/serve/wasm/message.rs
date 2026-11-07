@@ -17,4 +17,8 @@ pub enum Message {
         response: SsrFetchResponse,
     },
     SetStatus(u16),
+    /// The render read a cookie the app may read on the server
+    CookieRead,
+    /// The render read the languages of the browser
+    LanguagesRead,
 }

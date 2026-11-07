@@ -4,7 +4,7 @@ use std::{
     sync::{Arc, OnceLock},
     time::{Duration, Instant, SystemTime, UNIX_EPOCH},
 };
-use tokio::sync::mpsc::{error::TryRecvError, unbounded_channel};
+use tokio::sync::mpsc::{UnboundedSender, error::TryRecvError, unbounded_channel};
 use vertigo::{
     JsJson, JsJsonSerialize,
     dev::{
@@ -23,7 +23,7 @@ use super::{
     html::HtmlResponse,
     mount_path::MountConfig,
     precompress::{Precompressed, precompress},
-    request_headers::{RequestHeaders, accept_languages, readable_cookies},
+    request_headers::{RequestHeaders, accept_languages, forwarded_cookies, readable_cookies},
     request_state::RequestState,
     response_state::ResponseState,
     timings::SsrProbe,
@@ -140,7 +140,9 @@ impl ServerState {
     /// server's own origin (a relative URL, resolved against `ssr_fetch_base`), as the browser
     /// sends it with a same-origin `fetch` - so an API behind a session answers for the
     /// logged-in user and the page renders as it will look after hydration. Fetches to other
-    /// origins never get it.
+    /// origins never get it. With any cookies named with
+    /// [`MountConfigBuilder::ssr_fetch_cookie`](super::MountConfigBuilder::ssr_fetch_cookie), only
+    /// those go.
     ///
     /// The app itself can read during SSR only the cookies named with
     /// [`MountConfigBuilder::ssr_cookie`](super::MountConfigBuilder::ssr_cookie)
@@ -211,6 +213,7 @@ impl ServerState {
         let handle_command = Arc::new({
             let sender = sender.clone();
             let probe = probe.clone();
+            let ssr_cookies = self.mount_config.ssr_cookies.clone();
 
             move |request: RequestState, command| match command {
                 CommandForBrowser::FetchCacheGet => {
@@ -287,19 +290,27 @@ impl ServerState {
                     let url = request.url.clone();
                     browser_response::LocationGet { value: url }.to_json()
                 }
-                CommandForBrowser::CookieGet { name } => browser_response::CookieGet {
-                    value: request.cookie(&name),
+                CommandForBrowser::CookieGet { name } => {
+                    note_cookie_read(&sender, &ssr_cookies, &name);
+
+                    browser_response::CookieGet {
+                        value: request.cookie(&name),
+                    }
+                    .to_json()
                 }
-                .to_json(),
                 CommandForBrowser::CookieSet {
                     name: _,
                     value: _,
                     expires_in: _,
                 } => JsJson::Null,
-                CommandForBrowser::CookieJsonGet { name } => browser_response::CookieJsonGet {
-                    value: request.cookie_json(&name),
+                CommandForBrowser::CookieJsonGet { name } => {
+                    note_cookie_read(&sender, &ssr_cookies, &name);
+
+                    browser_response::CookieJsonGet {
+                        value: request.cookie_json(&name),
+                    }
+                    .to_json()
                 }
-                .to_json(),
                 CommandForBrowser::CookieJsonSet {
                     name: _,
                     value: _,
@@ -328,10 +339,17 @@ impl ServerState {
                 CommandForBrowser::TimezoneOffset => {
                     browser_response::TimezoneOffset { value: 0 }.to_json()
                 }
-                CommandForBrowser::Languages => browser_response::Languages {
-                    value: request.languages.to_vec(),
+                CommandForBrowser::Languages => {
+                    sender
+                        .send(Message::LanguagesRead)
+                        .inspect_err(|err| log::error!("Error sending LanguagesRead: {err}"))
+                        .unwrap_or_default();
+
+                    browser_response::Languages {
+                        value: request.languages.to_vec(),
+                    }
+                    .to_json()
                 }
-                .to_json(),
                 CommandForBrowser::HistoryBack => JsJson::Null,
                 CommandForBrowser::GetRandom { min, max: _ } => {
                     browser_response::GetRandom { value: min }.to_json()
@@ -402,7 +420,9 @@ impl ServerState {
             fetch,
             probe.clone(),
             url,
-            headers.cookie.map(str::to_string),
+            headers
+                .cookie
+                .and_then(|cookie| forwarded_cookies(cookie, &self.mount_config.ssr_fetch_cookies)),
         );
 
         loop {
@@ -440,6 +460,17 @@ impl ServerState {
 
         spawn_resource.off();
         html_response.build_response()
+    }
+}
+
+/// Tells the render that the page depends on the cookie `name`, if it's one the app may read on
+/// the server: the others read as empty, whoever asks.
+fn note_cookie_read(sender: &UnboundedSender<Message>, ssr_cookies: &[String], name: &str) {
+    if ssr_cookies.iter().any(|cookie| cookie == name) {
+        sender
+            .send(Message::CookieRead)
+            .inspect_err(|err| log::error!("Error sending CookieRead: {err}"))
+            .unwrap_or_default();
     }
 }
 

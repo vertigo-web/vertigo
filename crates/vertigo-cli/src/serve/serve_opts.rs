@@ -57,6 +57,14 @@ pub struct ServeOptsInner {
     #[arg(long)]
     pub ssr_cookie: Vec<String>,
 
+    /// A cookie that goes out with the SSR fetches to this server's own origin, f. ex. the session:
+    /// `--ssr-fetch-cookie session`
+    ///
+    /// (default: all of them. Once one is named the others stay behind, and a visitor with only
+    /// those is rendered as a guest, which a cache on the way may keep)
+    #[arg(long)]
+    pub ssr_fetch_cookie: Vec<String>,
+
     /// Indent the server-rendered HTML, to read it in the page source
     ///
     /// (the indentation is whitespace between elements: until the app starts, it shows as gaps

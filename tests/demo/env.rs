@@ -123,6 +123,7 @@ fn spawn_serve(dest_dir: &str, port: u16, api_port: u16) -> oneshot::Sender<()> 
             disable_hydration: false,
             ssr_fetch_base: None,
             ssr_cookie: vec![],
+            ssr_fetch_cookie: vec![],
             pretty_html: false,
             // Left on, as a served app has it.
             disable_compression: false,
