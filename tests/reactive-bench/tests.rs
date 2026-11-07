@@ -136,6 +136,7 @@ async fn reactive_bench() -> TestResult {
                 disable_hydration: false,
                 ssr_fetch_base: None,
                 ssr_cookie: vec![],
+                ssr_fetch_cookie: vec![],
                 pretty_html: false,
                 // Off for the benchmarks: compressing every response measures brotli's
                 // throughput as much as vertigo's, and the recorded baselines in

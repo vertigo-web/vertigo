@@ -208,7 +208,8 @@ impl<T: CollectionKey> LazyListCache<T> {
         // The initial values are passed to `Value::new` rather than set afterwards, as `new` can be
         // called inside a computed or a render, where setting a value is not allowed.
         let (state, keys) = {
-            let ssr_request = request.clone().to_request(None);
+            // As it is sent, so that a cache with a token doesn't start with what a guest was given
+            let ssr_request = transaction(|context| request.clone().to_request_context(context));
 
             match api_fetch_cache().get_response(&ssr_request) {
                 Some(response) => {
@@ -728,7 +729,11 @@ where
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::{JsJson, Resource, driver_module::api::ssr_fetched, transaction};
+    use crate::{
+        JsJson, Resource,
+        driver_module::api::{ssr_fetched, ssr_fetched_request},
+        transaction,
+    };
 
     #[derive(Clone, PartialEq, Debug)]
     struct Item {
@@ -1481,7 +1486,12 @@ mod tests {
 
     /// Cache with the list made of names in the response body
     fn make_parsing_cache() -> LazyListCache<ItemKey> {
-        LazyListCache::new(RequestBuilder::get(SSR_URL), |status, body| {
+        make_parsing_cache_for(RequestBuilder::get(SSR_URL))
+    }
+
+    /// [`make_parsing_cache`] for `request`
+    fn make_parsing_cache_for(request: RequestBuilder) -> LazyListCache<ItemKey> {
+        LazyListCache::new(request, |status, body| {
             (status == 200).then(|| {
                 body.into::<Vec<String>>().map(|names| {
                     names
@@ -1516,6 +1526,36 @@ mod tests {
 
         // Ready without asking the server again
         assert!(!cache.list_queued.get());
+    }
+
+    /// The server fetched with the member's token, and leaves it out of what it puts in the page.
+    #[test]
+    fn test_starts_with_list_fetched_during_ssr_with_bearer_token() {
+        ssr_fetched_request(
+            RequestBuilder::get(SSR_URL).to_request(Some("member".to_string())),
+            200,
+            names(&["One", "Two"]),
+        );
+
+        let member = make_parsing_cache_for(
+            RequestBuilder::get(SSR_URL).bearer_auth(Some("member".to_string())),
+        );
+
+        assert_eq!(get_list(&member).len(), 2);
+        assert!(!member.list_queued.get());
+    }
+
+    /// The server rendered the page for a guest, so a cache with a token fetches for itself.
+    #[test]
+    fn test_with_bearer_token_skips_list_fetched_during_ssr_for_a_guest() {
+        ssr_fetched(SSR_URL, 200, names(&["One", "Two"]));
+
+        let member = make_parsing_cache_for(
+            RequestBuilder::get(SSR_URL).bearer_auth(Some("member".to_string())),
+        );
+
+        transaction(|ctx| assert_eq!(member.get(ctx), Resource::Loading));
+        assert!(member.list_queued.get());
     }
 
     #[test]

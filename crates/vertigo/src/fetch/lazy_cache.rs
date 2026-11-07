@@ -2,6 +2,7 @@ use std::{fmt::Debug, marker::PhantomData, rc::Rc};
 
 use crate::{
     Computed, Context, DomNode, Instant, JsJsonDeserialize, RequestResponse, Resource, ToComputed,
+    dev::SsrFetchRequest,
     driver_module::api::{api_fetch, api_fetch_cache},
     fetch::{
         api_response::{ApiResponse, Payload},
@@ -28,6 +29,12 @@ fn get_unique_id() -> u64 {
 /// When the server already fetched the value while rendering the page, a cache created during the
 /// first render starts with that response, so hydration renders the same value without fetching it
 /// again. One created later fetches, as the value may have changed since.
+///
+/// It takes that response at its word, until the TTL runs out. A cache with a bearer token only
+/// takes one fetched with a token, but cookies can't be told apart like that: for data that
+/// depends on them, either the server has to fetch with them (`ssr_fetch_cookie` in vertigo-cli),
+/// or the app has to leave the cache alone during SSR, f. ex. render a spinner when
+/// `get_driver().is_server()`.
 ///
 /// ```rust
 /// use vertigo::{LazyCache, RequestBuilder, AutoJsJson};
@@ -301,16 +308,22 @@ impl Cache {
 
 /// The response the server fetched for `request` while rendering the page, and when it expires.
 fn cached_response(request: &RequestBuilder) -> Option<(RequestResponse, Option<Instant>)> {
-    let ssr_request = request.clone().to_request(None);
+    let ssr_request = as_sent(request);
     let response = api_fetch_cache().get_response(&ssr_request)?;
     Some((RequestResponse::new(ssr_request, response), expiry(request)))
 }
 
 /// Sends `request` and waits for the response, and tells when it expires.
 async fn fetch_response(request: &RequestBuilder) -> (RequestResponse, Option<Instant>) {
-    let ssr_request = transaction(|context| request.clone().to_request_context(context));
+    let ssr_request = as_sent(request);
     let result = api_fetch().fetch(ssr_request.clone()).await;
     (RequestResponse::new(ssr_request, result), expiry(request))
+}
+
+/// `request` as it is sent, its bearer token included. A cache looks up what the server fetched
+/// by this too, so one with a token doesn't start with what a guest was given.
+fn as_sent(request: &RequestBuilder) -> SsrFetchRequest {
+    transaction(|context| request.clone().to_request_context(context))
 }
 
 fn expiry(request: &RequestBuilder) -> Option<Instant> {
@@ -531,6 +544,49 @@ mod tests {
 
         let after = make_cache();
         transaction(|context| assert_eq!(after.get(context), Resource::Loading));
+    }
+
+    /// The server fetched with the member's token, and leaves it out of what it puts in the page.
+    #[tokio::test]
+    async fn test_lazy_cache_with_bearer_token_starts_with_ssr_response() {
+        use crate::{driver_module::api::ssr_fetched_request, exports::in_first_render};
+
+        const URL: &str = "https://test.com/api/private";
+
+        ssr_fetched_request(
+            RequestBuilder::get(URL).to_request(Some("member".to_string())),
+            200,
+            JsJson::String("the member's".to_string()),
+        );
+
+        let member = in_first_render(|| {
+            RequestBuilder::get(URL)
+                .bearer_auth(Some("member".to_string()))
+                .lazy_cache(|status, body| (status == 200).then(|| body.into::<String>()))
+        });
+        transaction(|context| {
+            assert_eq!(
+                member.get(context),
+                Resource::Ready(Rc::new("the member's".to_string()))
+            );
+        });
+    }
+
+    /// The server rendered the page for a guest, so a cache with a token fetches for itself.
+    #[tokio::test]
+    async fn test_lazy_cache_with_bearer_token_skips_ssr_response_of_a_guest() {
+        use crate::{driver_module::api::ssr_fetched, exports::in_first_render};
+
+        const URL: &str = "https://test.com/api/private";
+
+        ssr_fetched(URL, 200, JsJson::String("a guest's".to_string()));
+
+        let member = in_first_render(|| {
+            RequestBuilder::get(URL)
+                .bearer_auth(Some("member".to_string()))
+                .lazy_cache(|status, body| (status == 200).then(|| body.into::<String>()))
+        });
+        transaction(|context| assert_eq!(member.get(context), Resource::Loading));
     }
 
     #[tokio::test]

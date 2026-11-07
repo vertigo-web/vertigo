@@ -14,6 +14,7 @@ pub struct MountConfigBuilder {
     pub disable_hydration: bool,
     pub ssr_fetch_base: Option<String>,
     pub ssr_cookies: Vec<String>,
+    pub ssr_fetch_cookies: Vec<String>,
     pub pretty_html: bool,
     pub precompress: bool,
 }
@@ -28,6 +29,7 @@ impl MountConfigBuilder {
             disable_hydration: false,
             ssr_fetch_base: None,
             ssr_cookies: vec![],
+            ssr_fetch_cookies: vec![],
             pretty_html: false,
             precompress: false,
         }
@@ -69,6 +71,20 @@ impl MountConfigBuilder {
     /// tell which are, and the server would render what the browser can't.
     pub fn ssr_cookie(mut self, name: impl Into<String>) -> Self {
         self.ssr_cookies.push(name.into());
+        self
+    }
+
+    /// A cookie that goes out with the fetches to the server's own origin while it renders the
+    /// page, f. ex. the session, `HttpOnly` or not. Once any is named the others stay behind, and
+    /// a visitor with only those (the analytics', say) is rendered as a guest, which a cache on
+    /// the way may keep. With none named, all of them go.
+    ///
+    /// In the browser, a [`LazyCache`](vertigo::LazyCache) takes what the server fetched at its
+    /// word until its TTL runs out, also when the server fetched it as for a guest. So data that
+    /// depends on who asks has to be fetched here with the right cookie, or left alone during
+    /// SSR: render f. ex. a spinner when `get_driver().is_server()`.
+    pub fn ssr_fetch_cookie(mut self, name: impl Into<String>) -> Self {
+        self.ssr_fetch_cookies.push(name.into());
         self
     }
 
@@ -115,6 +131,7 @@ impl MountConfigBuilder {
         )?;
         config.ssr_fetch_base = self.ssr_fetch_base;
         config.ssr_cookies = self.ssr_cookies;
+        config.ssr_fetch_cookies = self.ssr_fetch_cookies;
         config.pretty_html = self.pretty_html;
         config.precompress = self.precompress;
         Ok(config)
@@ -142,6 +159,8 @@ pub struct MountConfig {
     pub ssr_fetch_base: Option<String>,
     /// See [`MountConfigBuilder::ssr_cookie`]
     pub ssr_cookies: Vec<String>,
+    /// See [`MountConfigBuilder::ssr_fetch_cookie`]
+    pub ssr_fetch_cookies: Vec<String>,
     /// See [`MountConfigBuilder::pretty_html`]
     pub pretty_html: bool,
     /// See [`MountConfigBuilder::precompress`]
@@ -169,6 +188,7 @@ impl MountConfig {
             disable_hydration,
             ssr_fetch_base: None,
             ssr_cookies: vec![],
+            ssr_fetch_cookies: vec![],
             pretty_html: false,
             precompress: false,
         };

@@ -5,6 +5,7 @@ mod html_element;
 mod html_node;
 mod html_node_convert_to_string;
 mod html_response;
+mod page_caching;
 mod send_request;
 
 pub use fetch_url::{SSR_FETCH_HEADER, local_origin};

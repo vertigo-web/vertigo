@@ -418,6 +418,7 @@ fn spawn_server(server: Server) -> oneshot::Sender<i32> {
                 disable_hydration: server.disable_hydration,
                 ssr_fetch_base: None,
                 ssr_cookie: vec![],
+                ssr_fetch_cookie: vec![],
                 pretty_html: false,
                 // Off for the benchmarks: compressing every response measures brotli's
                 // throughput as much as vertigo's, and the recorded baselines in

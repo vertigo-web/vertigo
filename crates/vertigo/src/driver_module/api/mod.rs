@@ -14,9 +14,9 @@ mod server_handler;
 pub use server_handler::api_server_handler;
 
 mod api_fetch_cache;
-#[cfg(test)]
-pub use api_fetch_cache::ssr_fetched;
 pub use api_fetch_cache::{api_fetch_cache, close_fetch_cache};
+#[cfg(test)]
+pub use api_fetch_cache::{ssr_fetched, ssr_fetched_request};
 
 mod api_browser_command;
 pub use api_browser_command::api_browser_command;
