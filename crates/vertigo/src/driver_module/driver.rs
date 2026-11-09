@@ -254,6 +254,32 @@ impl Driver {
         api_animation_frame().on_frame(func)
     }
 
+    /// Ends once the browser has drawn what the app changed so far. Long work in wasm blocks the
+    /// page until it's done, so this comes before it, to show f. ex. "Processing…" first.
+    ///
+    /// The browser draws only a visible page: in a background tab this waits until the tab is
+    /// shown, and during SSR it never ends.
+    ///
+    /// ```rust
+    /// use vertigo::{Value, get_driver};
+    ///
+    /// // Pieces of long work, one at a time, with the page telling which one it's at.
+    /// async fn process(pieces: Vec<Vec<u8>>, at: Value<Option<usize>>) {
+    ///     for (number, piece) in pieces.iter().enumerate() {
+    ///         at.set(Some(number + 1));
+    ///         get_driver().next_paint().await;
+    ///         heavy(piece);
+    ///     }
+    ///     at.set(None);
+    /// }
+    /// # fn heavy(_piece: &[u8]) {}
+    /// ```
+    #[doc(alias = "requestAnimationFrame")]
+    #[must_use]
+    pub fn next_paint(&self) -> FutureBox<()> {
+        api_animation_frame().next_paint()
+    }
+
     /// Gets current value of monotonic clock.
     pub fn now(&self) -> Instant {
         Instant::now()
