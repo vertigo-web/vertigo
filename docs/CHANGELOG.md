@@ -5,6 +5,8 @@
 
 ### Added
 
+* `Driver::next_paint`: ends once the browser has drawn the page, so that f. ex. "Processing…"
+  shows before long work in wasm blocks it.
 * vertigo-cli: `MountConfigBuilder::ssr_fetch_cookie` and `--ssr-fetch-cookie` of `vertigo serve`
   and `vertigo watch`: the cookies that go out with the SSR fetches to the server's own origin.
   Once any is named the others stay behind, so a visitor with only an analytics cookie is rendered

@@ -4,11 +4,11 @@ use vertigo_macro::store;
 
 use crate::{
     DropResource,
-    dev::command::CommandForBrowser,
+    dev::{FutureBox, command::CommandForBrowser},
     struct_mut::{BTreeMapMut, ValueMut},
 };
 
-use super::api_browser_command::exec_command;
+use super::{api_browser_command::exec_command, api_timers};
 
 #[store]
 pub fn api_animation_frame() -> Rc<ApiAnimationFrame> {
@@ -81,6 +81,27 @@ impl ApiAnimationFrame {
         })
     }
 
+    /// Ends once the browser has drawn the next frame. Its callbacks run right before the browser
+    /// draws it, so one of them sets a timeout, which can only run after.
+    pub fn next_paint(&self) -> FutureBox<()> {
+        let (sender, future) = FutureBox::new();
+        let own: Rc<ValueMut<Option<DropResource>>> = Rc::new(ValueMut::new(None));
+
+        let callback = self.on_frame({
+            let own = own.clone();
+
+            move |_| {
+                own.set(None);
+
+                let sender = sender.clone();
+                api_timers().set_timeout_and_detach(0, move || sender.publish(()));
+            }
+        });
+        own.set(Some(callback));
+
+        future
+    }
+
     /// A frame from the browser, for the callbacks there were when it came, in the order they
     /// came. One that an earlier one dropped doesn't run, and one added waits for the next frame,
     /// as with `requestAnimationFrame` itself.
@@ -107,12 +128,22 @@ impl ApiAnimationFrame {
 
 #[cfg(test)]
 mod tests {
-    use std::{cell::RefCell, rc::Rc};
+    use std::{
+        cell::RefCell,
+        future::Future,
+        pin::pin,
+        rc::Rc,
+        sync::{
+            Arc,
+            atomic::{AtomicBool, Ordering},
+        },
+        task::{Context, Wake, Waker},
+    };
 
     use crate::{
         JsJson, JsJsonNumber, JsJsonSerialize,
         dev::command::{CommandForBrowser, CommandForWasm, decode_json},
-        driver_module::api::{api_animation_frame, api_command_wasm},
+        driver_module::api::{api_animation_frame, api_command_wasm, api_timers},
     };
 
     /// A frame, as the browser delivers it.
@@ -254,6 +285,50 @@ mod tests {
         drop(outer);
 
         assert_eq!(api_animation_frame().asked(), [true, false]);
+    }
+
+    /// Whether the future was woken.
+    #[derive(Default)]
+    struct Woken(AtomicBool);
+
+    impl Wake for Woken {
+        fn wake(self: Arc<Self>) {
+            self.0.store(true, Ordering::SeqCst);
+        }
+    }
+
+    #[test]
+    fn next_paint_ends_after_the_frame_is_drawn() {
+        let timeouts = Rc::new(RefCell::new(Vec::new()));
+        api_timers().set_mock_handler({
+            let timeouts = timeouts.clone();
+            move |duration, callback, _| timeouts.borrow_mut().push((duration, callback))
+        });
+
+        let woken = Arc::new(Woken::default());
+        let waker = Waker::from(woken.clone());
+        let mut context = Context::from_waker(&waker);
+        let mut paint = pin!(api_animation_frame().next_paint());
+        assert!(paint.as_mut().poll(&mut context).is_pending());
+
+        frame(1.0);
+        assert!(
+            paint.as_mut().poll(&mut context).is_pending(),
+            "the browser draws the frame only now"
+        );
+        assert_eq!(
+            api_animation_frame().asked(),
+            [true, false],
+            "one frame is enough"
+        );
+
+        let timeout = match timeouts.borrow()[..] {
+            [(0, timeout)] => timeout,
+            ref other => panic!("{other:?}"),
+        };
+        api_timers().callback_timeout(timeout);
+        assert!(woken.0.load(Ordering::SeqCst));
+        assert!(paint.as_mut().poll(&mut context).is_ready());
     }
 
     fn object(key: &str, value: JsJson) -> JsJson {
