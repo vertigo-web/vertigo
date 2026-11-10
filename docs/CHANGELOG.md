@@ -16,6 +16,9 @@
 
 ### Fixed
 
+* `AutoJsJson` reads an integer only when the number is whole and within the range of the type.
+  `300` as `u8` was `255`, `-1` was `0` and `1.5` was `1`, without an error.
+* The error of a number of the wrong JSON type said `number($name)` instead of naming the type.
 * On nightly, an error from a macro came with follow-up errors from the code it made anyway.
 * A `LazyCache` or `LazyListCache` with `bearer_auth` now starts with what the server fetched for
   it while rendering the page. The response was in the page under the request with its token, and

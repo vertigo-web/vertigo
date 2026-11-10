@@ -308,16 +308,8 @@ impl JsJsonDeserialize for WsSubscribeQuery {
             }
         };
 
-        let limit = match map.get("limit") {
-            None | Some(JsJson::Null) => None,
-            Some(JsJson::Number(JsJsonNumber(n))) => Some(*n as usize),
-            Some(other) => {
-                return Err(context.add(format!(
-                    "limit must be a number or absent, got {}",
-                    other.typename()
-                )));
-            }
-        };
+        let limit_json = map.get("limit").cloned().unwrap_or(JsJson::Null);
+        let limit = Option::<usize>::from_json(context.add("field: 'limit'"), limit_json)?;
 
         Ok(Self {
             table,
@@ -399,6 +391,34 @@ mod tests {
 
     fn ctx() -> JsJsonContext {
         JsJsonContext::new("")
+    }
+
+    #[test]
+    fn subscribe_query_limit_is_a_whole_positive_number() -> Result<(), Box<dyn Error>> {
+        let wire = WsQuery {
+            table: "items".into(),
+            logic: WsWhereLogic::And,
+            limit: None,
+            where_list: vec![],
+        }
+        .to_ws_subscribe_query();
+        let JsJson::Object(map) = to_json(wire) else {
+            return Err("query must be an object".into());
+        };
+        let read_limit = |limit: JsJson| {
+            let mut map = map.clone();
+            map.insert("limit".to_string(), limit);
+            WsSubscribeQuery::from_json(ctx(), JsJson::Object(map)).map(|query| query.limit)
+        };
+        let number = |value: f64| JsJson::Number(JsJsonNumber(value));
+
+        assert_eq!(read_limit(number(5.0)).ok(), Some(Some(5)));
+        assert_eq!(read_limit(JsJson::Null).ok(), Some(None));
+        for limit in [-1.0, 1.5, f64::NAN] {
+            assert!(read_limit(number(limit)).is_err(), "{limit}");
+        }
+        assert!(read_limit(JsJson::String("5".into())).is_err());
+        Ok(())
     }
 
     #[test]
