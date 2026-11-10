@@ -112,10 +112,39 @@ fn parse_flag(value: &str) -> bool {
 #[derive(Debug, Clone)]
 pub struct ChromeConfig {
     pub window_size: (u32, u32),
-    /// `--lang`, which also decides `Accept-Language`.
+    /// The language of the browser: `--lang`, and `--accept-lang`, which decides
+    /// `Accept-Language` and `navigator.languages`. Chrome on Linux takes the language from the
+    /// environment (`LANGUAGE`, `LANG`) and not from `--lang`, so without `--accept-lang` they
+    /// would depend on the machine. `Intl` and `toLocaleString` still do.
     pub lang: &'static str,
     /// Additional command line arguments.
     pub args: &'static [&'static str],
+}
+
+impl ChromeConfig {
+    /// The command line arguments that come from the config.
+    fn arguments(&self) -> Vec<String> {
+        let (width, height) = self.window_size;
+        // `pl-PL,pl`: Chrome adds `pl` to `Accept-Language` by itself, but not to
+        // `navigator.languages`, and the app is to get the same list on the server and in
+        // the browser
+        let accept_lang = match self.lang.split_once('-') {
+            Some((language, _)) => format!("{},{language}", self.lang),
+            None => self.lang.to_string(),
+        };
+        let mut arguments = vec![
+            format!("--window-size={width},{height}"),
+            format!("--lang={}", self.lang),
+            format!("--accept-lang={accept_lang}"),
+        ];
+        let defaults = [
+            "--no-first-run",
+            "--no-default-browser-check",
+            "--disable-search-engine-choice-screen",
+        ];
+        arguments.extend(defaults.iter().chain(self.args).map(|arg| arg.to_string()));
+        arguments
+    }
 }
 
 impl Default for ChromeConfig {
@@ -180,18 +209,8 @@ impl Core {
         if self.settings.headless {
             caps.set_headless()?;
         }
-        let (width, height) = self.chrome.window_size;
-        caps.add_arg(&format!("--window-size={width},{height}"))?;
-        caps.add_arg(&format!("--lang={}", self.chrome.lang))?;
-        for arg in [
-            "--no-first-run",
-            "--no-default-browser-check",
-            "--disable-search-engine-choice-screen",
-        ]
-        .iter()
-        .chain(self.chrome.args)
-        {
-            caps.add_arg(arg)?;
+        for arg in self.chrome.arguments() {
+            caps.add_arg(&arg)?;
         }
         // After a login form is used, the password manager offers to save the password (and
         // warns about it having leaked). Its bubble takes the clicks meant for the page.
@@ -260,7 +279,33 @@ fn webdriver_manager(settings: &Settings) -> Arc<WebDriverManager> {
 
 #[cfg(test)]
 mod tests {
-    use super::parse_flag;
+    use super::{ChromeConfig, parse_flag};
+
+    #[test]
+    fn the_language_decides_accept_language_too() {
+        let config = ChromeConfig {
+            lang: "pl-PL",
+            args: &["--mute-audio"],
+            ..Default::default()
+        };
+        let arguments = config.arguments();
+        for expected in ["--lang=pl-PL", "--accept-lang=pl-PL,pl", "--mute-audio"] {
+            assert!(arguments.iter().any(|arg| arg == expected), "{arguments:?}");
+        }
+    }
+
+    #[test]
+    fn a_language_without_a_region_is_accepted_alone() {
+        let config = ChromeConfig {
+            lang: "pl",
+            ..Default::default()
+        };
+        let arguments = config.arguments();
+        assert!(
+            arguments.iter().any(|arg| arg == "--accept-lang=pl"),
+            "{arguments:?}"
+        );
+    }
 
     #[test]
     fn flags() {
