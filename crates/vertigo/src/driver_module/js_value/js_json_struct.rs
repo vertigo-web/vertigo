@@ -290,6 +290,17 @@ impl JsJson {
         self.take_property(context, param).map(|(_, item)| item)
     }
 
+    /// The field `param` as bytes, see [`JsJson::into_bytes`]: what `AutoJsJson` reads a
+    /// `Vec<u8>` field with.
+    pub fn get_property_bytes(
+        &mut self,
+        context: &JsJsonContext,
+        param: &'static str,
+    ) -> Result<Vec<u8>, JsJsonContext> {
+        let (context, item) = self.take_property(context, param)?;
+        item.into_bytes(&context)
+    }
+
     /// The field `param` taken out of the object, with the context to read it in. Generic over
     /// nothing and out of line, so that each type read with [`Self::get_property`] adds only
     /// its own `from_json`.
@@ -380,6 +391,24 @@ pub fn decode_js_json_inner(buffer: &mut MemoryBlockRead) -> Result<JsJson, Stri
 }
 
 impl JsJson {
+    /// Bytes, as a `Vec<u8>` field holds them: the run of bytes [`JsJson::Vec`] that `AutoJsJson`
+    /// writes, or the list of numbers they are in JSON - from a server's response, or a fetch
+    /// made while rendering on the server.
+    pub fn into_bytes(self, context: &JsJsonContext) -> Result<Vec<u8>, JsJsonContext> {
+        match self {
+            JsJson::Vec(data) => Ok(data),
+            JsJson::List(items) => items
+                .into_iter()
+                .enumerate()
+                .map(|(index, item)| u8::from_json(context.add(index), item))
+                .collect(),
+            other => {
+                let message = ["Vec<u8> expected, received ", other.typename()].concat();
+                Err(context.add(message))
+            }
+        }
+    }
+
     pub fn convert_to_string(&self) -> String {
         let block_bytes = self.to_vec();
         vec_to_string(&block_bytes)

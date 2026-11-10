@@ -1,4 +1,4 @@
-import { JsJsonType, parseJson } from "../../jsjson";
+import { JsJsonType, parseJson, stringifyJson } from "../../jsjson";
 
 export class Cookies {
     public get = (cname: string): string => {
@@ -60,7 +60,7 @@ export class Cookies {
         cvalue: JsJsonType,
         expires_in: number,
     ) => {
-        const cvalue_str = JSON.stringify(cvalue);
+        const cvalue_str = stringifyJson(cvalue);
 
         this.set(cname, cvalue_str, expires_in);
     }

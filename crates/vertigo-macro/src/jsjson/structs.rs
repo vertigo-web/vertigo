@@ -66,15 +66,7 @@ pub(super) fn impl_js_json_struct(
             }));
 
             list_from_json.push(quote! {
-                #field_name: json.get_property_jsjson(&context, #json_key).and_then(|item| {
-                    match item {
-                        vertigo::JsJson::Vec(v) => Ok(v),
-                        other => {
-                            let message = ["Vec<u8> expected, received ", other.typename()].concat();
-                            Err(context.add(message))
-                        }
-                    }
-                })#unpack_expr,
+                #field_name: json.get_property_bytes(&context, #json_key)#unpack_expr,
             })
         } else if field_opts.stringify {
             let is_option = match field_ty {

@@ -19,6 +19,12 @@
 * `AutoJsJson` reads an integer only when the number is whole and within the range of the type.
   `300` as `u8` was `255`, `-1` was `0` and `1.5` was `1`, without an error.
 * The error of a number of the wrong JSON type said `number($name)` instead of naming the type.
+* A `Vec<u8>` field of an `AutoJsJson` type is read from a list of numbers too, which is how it
+  comes in JSON - from a server's response, or a fetch made while rendering on the server. Only the
+  run of bytes `AutoJsJson` writes itself was read, so such a field never decoded from an API.
+* A `Vec<u8>` in the body of a fetch, a websocket text message or a JSON cookie is a list of numbers,
+  as vertigo-cli already wrote it for a fetch made while rendering on the server. The browser made
+  it an object keyed by index.
 * On nightly, an error from a macro came with follow-up errors from the code it made anyway.
 * A `LazyCache` or `LazyListCache` with `bearer_auth` now starts with what the server fetched for
   it while rendering the page. The response was in the page under the request with its token, and

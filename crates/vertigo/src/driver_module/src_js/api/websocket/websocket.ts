@@ -1,4 +1,4 @@
-import { JsJsonType, parseJson } from "../../jsjson";
+import { JsJsonType, parseJson, stringifyJson } from "../../jsjson";
 import { ModuleControllerType } from "../../wasm_init";
 import { ExportType } from "../../wasm_module";
 import { CallbackId } from "../types";
@@ -14,7 +14,7 @@ const wireStringToJsJson = (raw: string): JsJsonType => {
 };
 
 const jsJsonToWebSocketWire = (value: JsJsonType): string => {
-    return JSON.stringify(value);
+    return stringifyJson(value);
 };
 
 const assertNeverMessage = (data: never): never => {

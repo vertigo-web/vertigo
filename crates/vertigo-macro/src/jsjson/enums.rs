@@ -186,18 +186,7 @@ pub(super) fn impl_js_json_enum(
 
                         if is_vec_u8(field_ty) {
                             return quote! {
-                                #field_ident: value
-                                    .get_property_jsjson(&ctx, #field_name)
-                                    .and_then(|item| match item {
-                                        vertigo::JsJson::Vec(data) => Ok(data),
-                                        other => {
-                                            let message = [
-                                                "Vec<u8> expected, received ",
-                                                other.typename(),
-                                            ].concat();
-                                            Err(ctx.add(message))
-                                        }
-                                    })?,
+                                #field_ident: value.get_property_bytes(&ctx, #field_name)?,
                             };
                         }
 

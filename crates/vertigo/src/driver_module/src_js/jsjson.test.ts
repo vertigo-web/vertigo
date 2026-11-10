@@ -8,7 +8,7 @@
 // allocation is made from the first.
 
 import { BufferCursor } from "./buffer_cursor";
-import { jsJsonDecodeItem, jsJsonGetSize, saveJsJsonToBufferItem, JsJsonType } from "./jsjson";
+import { jsJsonDecodeItem, jsJsonGetSize, saveJsJsonToBufferItem, stringifyJson, JsJsonType } from "./jsjson";
 
 function assert(condition: boolean, message: string) {
     if (condition) {
@@ -161,3 +161,12 @@ console.log("\n--- Test jsjson: payloads big enough to matter ---");
     }
     roundTrip([[["upload.bin", asNumbers]]], "a 2000-byte upload in the shape changeFile sends");
 }
+
+console.log("\n--- Test jsjson: JSON text ---");
+
+assert(
+    stringifyJson({ heights: new Uint8Array([0, 20, 255]), name: "map" }) === '{"heights":[0,20,255],"name":"map"}',
+    "bytes are a list of numbers in JSON, as vertigo-cli writes them"
+);
+assert(stringifyJson(new Uint8Array([])) === '[]', "no bytes are an empty list");
+assert(stringifyJson([1, "a", null, { b: true }]) === '[1,"a",null,{"b":true}]', "the rest is plain JSON.stringify");
