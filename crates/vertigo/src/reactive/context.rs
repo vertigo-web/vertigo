@@ -20,6 +20,11 @@ impl Context {
         }
     }
 
+    /// Whether a compute or a subscription is reading: what it reads becomes its parents.
+    pub(crate) fn is_tracking(&self) -> bool {
+        self.parents.is_some()
+    }
+
     /// Record `id` as a parent of the node currently computing.
     ///
     /// A run of reads of the *same* node collapses into one entry. That is the shape a
