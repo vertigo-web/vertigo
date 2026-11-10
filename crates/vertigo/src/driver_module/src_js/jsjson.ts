@@ -20,6 +20,12 @@ export const parseJson = (text: string): JsJsonType =>
     // eslint-disable-next-line @typescript-eslint/no-unsafe-return -- every value JSON can hold is a JsJsonType
     JSON.parse(text);
 
+/// `JSON.stringify` of a JsJsonType. Bytes - a `Uint8Array`, from a `Vec<u8>` field - become a
+/// list of numbers, as vertigo-cli writes them for a fetch made while rendering on the server and
+/// as `AutoJsJson` reads them back. `JSON.stringify` alone makes them an object keyed by index.
+export const stringifyJson = (value: JsJsonType): string =>
+    JSON.stringify(value, (_key, item: unknown) => item instanceof Uint8Array ? Array.from(item) : item);
+
 /// Sizing pass. Walks the value to work out how large a wasm block to ask for, before
 /// `saveJsJsonToBufferItem` walks it again to fill that block.
 ///

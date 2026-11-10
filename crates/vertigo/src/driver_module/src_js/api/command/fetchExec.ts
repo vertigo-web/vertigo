@@ -1,4 +1,4 @@
-import { JsJsonType, parseJson } from "../../jsjson";
+import { JsJsonType, parseJson, stringifyJson } from "../../jsjson";
 import { ModuleControllerType } from "../../wasm_init";
 import { ExportType } from "../../wasm_module";
 import { CallbackId } from "../types";
@@ -46,7 +46,7 @@ const getBodyString = (body: FetchRequestType['body']): string | undefined => {
         return undefined;
     }
 
-    return JSON.stringify(body.Data.data);
+    return stringifyJson(body.Data.data);
 };
 
 // 204/205 carry no body, and any other response with an empty body

@@ -35,7 +35,8 @@ pub(super) fn object_ident() -> syn::Ident {
 }
 
 /// `Vec<u8>` travels as [`JsJson::Vec`] - one length-prefixed byte run - rather than as a
-/// list of numbers, which would cost a `JsJson::Number` per byte.
+/// list of numbers, which would cost a `JsJson::Number` per byte. It is read back from either,
+/// since JSON - a server's response - has only the list (`JsJson::into_bytes`).
 ///
 /// Shared between the struct and enum encoders because they must agree: a field of the same
 /// type has to serialize the same way whichever kind of item declares it.
