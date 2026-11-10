@@ -5,6 +5,8 @@
 
 ### Added
 
+* `Drawing::fill_polygon` and `Drawing::stroke_polygon`: the shape points enclose, filled, and
+  its closed outline, whose last corner is joined like the others.
 * `Driver::next_paint`: ends once the browser has drawn the page, so that f. ex. "Processing…"
   shows before long work in wasm blocks it.
 * vertigo-cli: `MountConfigBuilder::ssr_fetch_cookie` and `--ssr-fetch-cookie` of `vertigo serve`

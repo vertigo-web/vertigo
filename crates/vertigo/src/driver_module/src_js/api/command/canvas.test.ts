@@ -44,6 +44,7 @@ const recording = (log: Array<string>): Context2d => {
         lineTo: call('lineTo'),
         fill: call('fill'),
         stroke: call('stroke'),
+        closePath: call('closePath'),
     };
     for (const name of ['fillStyle', 'strokeStyle', 'globalAlpha', 'lineWidth', 'lineCap', 'lineJoin']) {
         Object.defineProperty(context, name, property(name));
@@ -54,12 +55,14 @@ const recording = (log: Array<string>): Context2d => {
 
 // `fixture()` in canvas.rs: a view box of -8, -5, 16 x 10 and one of every operation.
 const FIXTURE = new Uint8Array([
-    1, 0, 0, 0, 193, 0, 0, 160, 192, 0, 0, 128, 65, 0, 0, 32, 65, 1, 7, 0, 35, 102, 102, 100,
-    50, 55, 102, 2, 8, 0, 197, 188, 195, 179, 197, 130, 196, 135, 3, 0, 0, 0, 63, 4, 0, 0, 0,
-    64, 5, 0, 0, 192, 63, 6, 1, 12, 2, 7, 0, 0, 0, 193, 0, 0, 160, 192, 0, 0, 128, 65, 0, 0, 32, 65,
-    8, 0, 0, 128, 63, 0, 0, 0, 64, 0, 0, 64, 64, 9, 0, 0, 128, 191, 0, 0, 0, 192, 0, 0, 128,
-    64, 10, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 192, 64, 11, 3, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
-    0, 128, 63, 0, 0, 128, 63, 0, 0, 0, 64, 0, 0, 0, 0,
+    1, 0, 0, 0, 193, 0, 0, 160, 192, 0, 0, 128, 65, 0, 0, 32, 65, 1, 7, 0, 35, 102, 102, 100, 50,
+    55, 102, 2, 8, 0, 197, 188, 195, 179, 197, 130, 196, 135, 3, 0, 0, 0, 63, 4, 0, 0, 0, 64, 5, 0,
+    0, 192, 63, 6, 1, 12, 2, 7, 0, 0, 0, 193, 0, 0, 160, 192, 0, 0, 128, 65, 0, 0, 32, 65, 8, 0, 0,
+    128, 63, 0, 0, 0, 64, 0, 0, 64, 64, 9, 0, 0, 128, 191, 0, 0, 0, 192, 0, 0, 128, 64, 10, 0, 0, 0,
+    0, 0, 0, 0, 0, 0, 0, 192, 64, 11, 3, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 128, 63, 0, 0, 128,
+    63, 0, 0, 0, 64, 0, 0, 0, 0, 13, 4, 0, 0, 0, 0, 0, 0, 0, 0, 0, 128, 191, 0, 0, 0, 64, 0, 0, 0,
+    0, 0, 0, 0, 0, 0, 0, 128, 63, 0, 0, 0, 192, 0, 0, 0, 0, 14, 3, 0, 0, 0, 0, 0, 0, 0, 0, 0, 128,
+    191, 0, 0, 0, 64, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 128, 63,
 ]);
 
 const DEFAULTS = (width: number, height: number) => [
@@ -97,6 +100,9 @@ console.log("\n--- Test canvas: the cross-language fixture ---");
         'beginPath()', `arc(-1,-2,0.4,0,${TAU})`, 'fill()',
         'beginPath()', `arc(0,0,6,0,${TAU})`, 'stroke()',
         'beginPath()', 'moveTo(0,0)', 'lineTo(1,1)', 'lineTo(2,0)', 'stroke()',
+        'beginPath()', 'moveTo(0,-1)', 'lineTo(2,0)', 'lineTo(0,1)', 'lineTo(-2,0)', 'closePath()',
+        'fill()',
+        'beginPath()', 'moveTo(0,-1)', 'lineTo(2,0)', 'lineTo(0,1)', 'closePath()', 'stroke()',
     ], 'every operation, in order, in the units of the view box');
 }
 
@@ -129,6 +135,22 @@ console.log("\n--- Test canvas: CSS pixels ---");
         'setTransform(2,0,0,2,0,0)',
         'beginPath()', `arc(10,20,3,0,${TAU})`, 'fill()',
     ], 'units are CSS pixels from the top left corner');
+}
+
+console.log("\n--- Test canvas: polygons of too few points ---");
+{
+    // units: pixels, then a filled and a stroked polygon of two points each
+    const bytes = new Uint8Array(1 + 2 * (1 + 4 + 2 * 8));
+    const data = new DataView(bytes.buffer);
+    [13, 14].forEach((op, index) => {
+        const at = 1 + index * (1 + 4 + 2 * 8);
+        bytes[at] = op;
+        data.setUint32(at + 1, 2, true);
+        data.setFloat32(at + 5 + 8, 1, true);
+    });
+    const log: Array<string> = [];
+    play(recording(log), bytes, 10, 10, 1);
+    assert(!log.includes('fill()') && !log.includes('stroke()'), 'two points enclose nothing');
 }
 
 console.log("\n--- Test canvas: a bad operation ---");

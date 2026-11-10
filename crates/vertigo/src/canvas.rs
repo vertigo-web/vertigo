@@ -29,6 +29,8 @@ mod code {
     pub const STROKE_CIRCLE: u8 = 10;
     pub const POLYLINE: u8 = 11;
     pub const LINE_JOIN: u8 = 12;
+    pub const FILL_POLYGON: u8 = 13;
+    pub const STROKE_POLYGON: u8 = 14;
 }
 
 const UNITS_PIXELS: u8 = 0;
@@ -205,8 +207,30 @@ impl Drawing {
     /// A line through `points` in order, with the stroke style, the line width and the line
     /// cap. Fewer than two points draw nothing.
     pub fn polyline(&mut self, points: impl IntoIterator<Item = (f32, f32)>) -> &mut Self {
+        self.points(code::POLYLINE, points)
+    }
+
+    /// The shape `points` enclose, filled with the fill style. The last point joins the first.
+    /// Fewer than three points draw nothing.
+    pub fn fill_polygon(&mut self, points: impl IntoIterator<Item = (f32, f32)>) -> &mut Self {
+        self.points(code::FILL_POLYGON, points)
+    }
+
+    /// The closed outline through `points`, with the stroke style, the line width and the line
+    /// join, which also turns the corner where the last point joins the first. Fewer than three
+    /// points draw nothing.
+    pub fn stroke_polygon(&mut self, points: impl IntoIterator<Item = (f32, f32)>) -> &mut Self {
+        self.points(code::STROKE_POLYGON, points)
+    }
+
+    /// The drawing as the browser reads it.
+    pub fn as_bytes(&self) -> &[u8] {
+        &self.bytes
+    }
+
+    fn points(&mut self, code: u8, points: impl IntoIterator<Item = (f32, f32)>) -> &mut Self {
         let bytes = self.bytes_mut();
-        bytes.push(code::POLYLINE);
+        bytes.push(code);
         let count_at = bytes.len();
         bytes.extend_from_slice(&0u32.to_le_bytes());
 
@@ -218,11 +242,6 @@ impl Drawing {
         }
         bytes[count_at..count_at + 4].copy_from_slice(&count.to_le_bytes());
         self
-    }
-
-    /// The drawing as the browser reads it.
-    pub fn as_bytes(&self) -> &[u8] {
-        &self.bytes
     }
 
     fn op(&mut self, code: u8, args: &[f32]) -> &mut Self {
@@ -273,7 +292,9 @@ mod tests {
             .fill_circle(1.0, 2.0, 3.0)
             .fill_circle_px(-1.0, -2.0, 4.0)
             .stroke_circle(0.0, 0.0, 6.0)
-            .polyline([(0.0, 0.0), (1.0, 1.0), (2.0, 0.0)]);
+            .polyline([(0.0, 0.0), (1.0, 1.0), (2.0, 0.0)])
+            .fill_polygon([(0.0, -1.0), (2.0, 0.0), (0.0, 1.0), (-2.0, 0.0)])
+            .stroke_polygon([(0.0, -1.0), (2.0, 0.0), (0.0, 1.0)]);
         drawing
     }
 
@@ -283,7 +304,9 @@ mod tests {
         64, 5, 0, 0, 192, 63, 6, 1, 12, 2, 7, 0, 0, 0, 193, 0, 0, 160, 192, 0, 0, 128, 65, 0, 0,
         32, 65, 8, 0, 0, 128, 63, 0, 0, 0, 64, 0, 0, 64, 64, 9, 0, 0, 128, 191, 0, 0, 0, 192, 0, 0,
         128, 64, 10, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 192, 64, 11, 3, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
-        0, 0, 128, 63, 0, 0, 128, 63, 0, 0, 0, 64, 0, 0, 0, 0,
+        0, 0, 128, 63, 0, 0, 128, 63, 0, 0, 0, 64, 0, 0, 0, 0, 13, 4, 0, 0, 0, 0, 0, 0, 0, 0, 0,
+        128, 191, 0, 0, 0, 64, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 128, 63, 0, 0, 0, 192, 0, 0, 0, 0, 14,
+        3, 0, 0, 0, 0, 0, 0, 0, 0, 0, 128, 191, 0, 0, 0, 64, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 128, 63,
     ];
 
     #[test]

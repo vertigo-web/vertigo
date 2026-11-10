@@ -28,6 +28,8 @@ const Op = {
     StrokeCircle: 10,
     Polyline: 11,
     LineJoin: 12,
+    FillPolygon: 13,
+    StrokePolygon: 14,
 } as const;
 
 const CAPS: Array<CanvasLineCap> = ['butt', 'round', 'square'];
@@ -36,7 +38,7 @@ const JOINS: Array<CanvasLineJoin> = ['miter', 'round', 'bevel'];
 // The part of a 2D context a drawing uses, so a test can play one back on a recording.
 export type Context2d = Pick<CanvasRenderingContext2D,
     'setTransform' | 'clearRect' | 'fillRect' | 'beginPath' | 'arc' | 'moveTo' | 'lineTo'
-    | 'fill' | 'stroke' | 'fillStyle' | 'strokeStyle' | 'globalAlpha' | 'lineWidth' | 'lineCap'
+    | 'closePath' | 'fill' | 'stroke' | 'fillStyle' | 'strokeStyle' | 'globalAlpha' | 'lineWidth' | 'lineCap'
     | 'lineJoin'>;
 
 // Plays `bytes` back on `context`, whose bitmap is `width` x `height` device pixels, `ratio` of
@@ -97,6 +99,29 @@ export const play = (
     // Units to a CSS pixel.
     const px = ratio / scale;
 
+    // Traces the next `points` points as one path, closed if asked to.
+    const path = (points: number, closed: boolean) => {
+        context.beginPath();
+        for (let point = 0; point < points; point++) {
+            const x = number();
+            const y = number();
+            if (point === 0) {
+                context.moveTo(x, y);
+            } else {
+                context.lineTo(x, y);
+            }
+        }
+        if (closed) {
+            context.closePath();
+        }
+    };
+
+    const count = (): number => {
+        const value = data.getUint32(at, true);
+        at += 4;
+        return value;
+    };
+
     const circle = (x: number, y: number, radius: number) => {
         context.beginPath();
         context.arc(x, y, Math.max(radius, 0), 0, 2 * Math.PI);
@@ -118,19 +143,25 @@ export const play = (
             case Op.FillCirclePx: circle(number(), number(), number() * px); context.fill(); break;
             case Op.StrokeCircle: circle(number(), number(), number()); context.stroke(); break;
             case Op.Polyline: {
-                const count = data.getUint32(at, true);
-                at += 4;
-                context.beginPath();
-                for (let point = 0; point < count; point++) {
-                    const x = number();
-                    const y = number();
-                    if (point === 0) {
-                        context.moveTo(x, y);
-                    } else {
-                        context.lineTo(x, y);
-                    }
+                const points = count();
+                path(points, false);
+                if (points > 1) {
+                    context.stroke();
                 }
-                if (count > 1) {
+                break;
+            }
+            case Op.FillPolygon: {
+                const points = count();
+                path(points, true);
+                if (points > 2) {
+                    context.fill();
+                }
+                break;
+            }
+            case Op.StrokePolygon: {
+                const points = count();
+                path(points, true);
+                if (points > 2) {
                     context.stroke();
                 }
                 break;
