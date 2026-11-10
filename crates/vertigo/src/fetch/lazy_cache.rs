@@ -163,13 +163,17 @@ impl<T: PartialEq> LazyCache<T> {
     /// The current value stays until then, without a loading state, and the response replaces
     /// it - an error as well, as with `force_update`.
     ///
-    /// For code that acts on what the new data renders, e.g. scrolls to the comment it brings:
+    /// Reading the cache right after gives the new value. The page shows it once the task gives
+    /// way - at its next `.await` that waits, or when it ends - as from one `.await` to the next
+    /// a task runs in one transaction. So code that acts on what the new data renders, e.g.
+    /// scrolls to the comment it brings, waits for the paint:
     ///
     /// ```rust
-    /// use vertigo::{LazyCache, js};
+    /// use vertigo::{LazyCache, get_driver, js};
     ///
     /// async fn show_new_comment(comments: LazyCache<Vec<String>>) {
     ///     comments.refresh().await;
+    ///     get_driver().next_paint().await;
     ///     js! { document.getElementById("new-comment").scrollIntoView() };
     /// }
     /// ```
@@ -623,6 +627,58 @@ mod tests {
     }
 
     #[tokio::test]
+    async fn test_lazy_cache_refresh_in_a_transaction_reads_the_new_value() {
+        use std::task::{Context as TaskContext, Poll, Waker};
+
+        api_fetch().set_mock_handler(|_request| SsrFetchResponse::Ok {
+            status: 200,
+            response: SsrFetchResponseContent::Json(JsJson::String("new".to_string())),
+        });
+
+        let cache = RequestBuilder::get("https://test.com/api")
+            .lazy_cache(|status, body| (status == 200).then(|| body.into::<String>()));
+        cache.optimistically_set("old".to_string());
+        transaction(|context| cache.get(context));
+
+        // In the browser a task goes on in a timer its waker sets, and from one `.await` to the
+        // next it runs in that event's transaction - so the read after the response comes
+        // before the wave. Here: one poll, in one transaction.
+        let mut task = std::pin::pin!(async {
+            cache.refresh().await;
+            transaction(|context| cache.get(context))
+        });
+        let read = transaction(|_| {
+            task.as_mut()
+                .poll(&mut TaskContext::from_waker(Waker::noop()))
+        });
+
+        assert_eq!(
+            read,
+            Poll::Ready(Resource::Ready(Rc::new("new".to_string())))
+        );
+    }
+
+    #[tokio::test]
+    async fn test_lazy_cache_changes_in_one_transaction_build_on_each_other() {
+        let cache = RequestBuilder::get("https://test.com/api")
+            .lazy_cache(|status, body| (status == 200).then(|| body.into::<Vec<String>>()));
+        cache.optimistically_set(Vec::new());
+        transaction(|context| cache.get(context));
+
+        transaction(|_| {
+            cache.optimistically_change(|list| list.push("first".to_string()));
+            cache.optimistically_change(|list| list.push("second".to_string()));
+        });
+
+        transaction(|context| {
+            assert_eq!(
+                cache.get(context),
+                Resource::Ready(Rc::new(vec!["first".to_string(), "second".to_string()]))
+            );
+        });
+    }
+
+    #[tokio::test]
     async fn test_lazy_cache_to_computed() {
         let cache = RequestBuilder::get("https://test.com/api").lazy_cache(|status, body| {
             if status == 200 {
@@ -824,6 +880,89 @@ mod tests {
                     }
                 });
                 assert_eq!(call_count.get(), 2);
+            })
+            .await;
+    }
+
+    /// `vertigo::transaction` docs: leaving a page and forgetting its data in one transaction,
+    /// the address goes first, so the router's render replaces the page before the page reacts
+    /// to the forgotten data - drawing its loading state and fetching once more, for nothing.
+    #[tokio::test]
+    async fn test_lazy_cache_left_page_does_not_react_when_the_address_is_written_first() {
+        use std::cell::{Cell, RefCell};
+        let local = tokio::task::LocalSet::new();
+        local
+            .run_until(async {
+                api_timers().set_mock_handler(|duration, callback_id, _kind| {
+                    if duration == 0 {
+                        tokio::task::spawn_local(async move {
+                            api_timers().callback_timeout(callback_id);
+                        });
+                    }
+                });
+                let calls = Rc::new(Cell::new(0));
+                api_fetch().set_mock_handler({
+                    let calls = calls.clone();
+                    move |_request| {
+                        calls.set(calls.get() + 1);
+                        SsrFetchResponse::Ok {
+                            status: 200,
+                            response: SsrFetchResponseContent::Json(JsJson::String(
+                                "fetched".to_string(),
+                            )),
+                        }
+                    }
+                });
+
+                let cache = RequestBuilder::get("https://test.com/api")
+                    .lazy_cache(|status, body| (status == 200).then(|| body.into::<String>()));
+                cache.optimistically_set("shown".to_string());
+
+                // As `Router` builds it with `Value::with_connect`: the value, its computed,
+                // and the one with the connect, which the render reads.
+                let route = Value::new(1u32);
+                let route_read = route
+                    .to_computed()
+                    .when_connect(|| crate::DropResource::new(|| {}));
+
+                let seen: Rc<RefCell<Vec<Resource<Rc<String>>>>> =
+                    Rc::new(RefCell::new(Vec::new()));
+                let page: Rc<RefCell<Option<crate::DropResource>>> = Rc::new(RefCell::new(None));
+                let _router = route_read.subscribe({
+                    let cache = cache.clone();
+                    let seen = seen.clone();
+                    let page = page.clone();
+                    move |route| {
+                        let new_page = (route == 1).then(|| {
+                            let seen = seen.clone();
+                            cache
+                                .to_computed()
+                                .subscribe(move |value| seen.borrow_mut().push(value))
+                        });
+                        let old = page.replace(new_page);
+                        drop(old);
+                    }
+                });
+                assert_eq!(
+                    *seen.borrow(),
+                    vec![Resource::Ready(Rc::new("shown".to_string()))]
+                );
+                seen.borrow_mut().clear();
+
+                transaction(|_| {
+                    route.set(2);
+                    cache.forget();
+                });
+                for _ in 0..5 {
+                    tokio::task::yield_now().await;
+                }
+
+                assert_eq!(
+                    *seen.borrow(),
+                    Vec::<Resource<Rc<String>>>::new(),
+                    "the page left reacted"
+                );
+                assert_eq!(calls.get(), 0, "fetched for the page left");
             })
             .await;
     }

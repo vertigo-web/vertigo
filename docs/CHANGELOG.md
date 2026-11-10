@@ -42,6 +42,10 @@
   fetched from the own origin or read a cookie named with `ssr_cookie` says `Vary: cookie`, and one
   that read `get_driver().languages()` says `Vary: accept-language`. Without them, a cache on the
   way (nginx, a CDN) could give one person's page to another.
+* `LazyCache` read in a transaction gives its current value also when that transaction has just
+  set it, as a `Value` does. Since every browser event is one transaction, a task reading the
+  cache right after `refresh().await` got the value from before the response, and of two
+  `optimistically_change` calls in one event handler only the second stayed.
 
 ### Internals
 
