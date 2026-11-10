@@ -27,6 +27,9 @@
   it an object keyed by index.
 * Bytes (a `Uint8Array`) in a message from a frame come to `on_message` as a list of numbers, which
   a `Vec<u8>` field reads, instead of an object keyed by index.
+* `vertigo-testing`: `ChromeConfig::lang` decides `Accept-Language` and `navigator.languages`
+  wherever the tests run. Chrome on Linux takes the language from the environment (`LANGUAGE`,
+  `LANG`) and not from `--lang`, so the server rendered the page in the language of the machine.
 * On nightly, an error from a macro came with follow-up errors from the code it made anyway.
 * A `LazyCache` or `LazyListCache` with `bearer_auth` now starts with what the server fetched for
   it while rendering the page. The response was in the page under the request with its token, and
