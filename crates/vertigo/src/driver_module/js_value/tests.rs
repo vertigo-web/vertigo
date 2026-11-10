@@ -2,7 +2,7 @@ use crate::driver_module::js_value::JsObject;
 use std::{collections::BTreeMap, error::Error};
 
 use super::{
-    MemoryBlock, MemoryBlockWrite, from_json,
+    JsJsonSerialize, MemoryBlock, MemoryBlockWrite, from_json,
     js_json_struct::{JsJson, JsJsonNumber},
 };
 
@@ -144,4 +144,58 @@ fn json_json_vec() {
     };
 
     assert_eq!(data1, data2);
+}
+
+#[test]
+fn integers_out_of_range_or_with_a_fraction_are_refused() {
+    let number = |value: f64| JsJson::Number(JsJsonNumber(value));
+
+    assert_eq!(from_json::<u8>(number(255.0)), Ok(255));
+    assert_eq!(from_json::<u8>(number(0.0)), Ok(0));
+    for value in [256.0, 300.0, -1.0, 1.5, f64::NAN, f64::INFINITY] {
+        assert!(from_json::<u8>(number(value)).is_err(), "{value} as u8");
+    }
+    assert_eq!(from_json::<i8>(number(-128.0)), Ok(-128));
+    assert!(from_json::<i8>(number(-129.0)).is_err());
+    assert!(from_json::<i32>(number(-0.5)).is_err());
+    assert_eq!(
+        from_json::<u64>(number(9_007_199_254_740_992.0)),
+        Ok(9_007_199_254_740_992)
+    );
+    // `to_json` rounds the largest u64 and i64 up to 2^64 and 2^63, and they come back
+    assert_eq!(from_json::<u64>(u64::MAX.to_json()), Ok(u64::MAX));
+    assert_eq!(from_json::<i64>(i64::MAX.to_json()), Ok(i64::MAX));
+    // 2^65 and 2^64, past what even a rounded u64 and i64 can be
+    assert!(from_json::<u64>(number(36_893_488_147_419_103_232.0)).is_err());
+    assert!(from_json::<i64>(number(18_446_744_073_709_551_616.0)).is_err());
+    assert_eq!(from_json::<u32>(number(4_294_967_295.0)), Ok(u32::MAX));
+    assert!(from_json::<u32>(number(4_294_967_296.0)).is_err());
+    assert_eq!(
+        from_json::<i64>(number(-9_223_372_036_854_775_808.0)),
+        Ok(i64::MIN)
+    );
+    assert_eq!(from_json::<f32>(number(1.5)), Ok(1.5));
+}
+
+#[test]
+fn a_refused_number_says_what_was_expected() {
+    let result = from_json::<u8>(JsJson::Number(JsJsonNumber(300.0)));
+    assert!(
+        matches!(&result, Err(error) if error.contains("integer(u8) expected, received 300")),
+        "{result:?}"
+    );
+
+    for value in [1.5, f64::NAN, f64::INFINITY, 1e30] {
+        let result = from_json::<u8>(JsJson::Number(JsJsonNumber(value)));
+        assert!(
+            matches!(&result, Err(error) if error.contains("received a fraction or a value beyond")),
+            "{value}: {result:?}"
+        );
+    }
+
+    let result = from_json::<u16>(JsJson::String("x".into()));
+    assert!(
+        matches!(&result, Err(error) if error.contains("number(u16) expected, received")),
+        "{result:?}"
+    );
 }

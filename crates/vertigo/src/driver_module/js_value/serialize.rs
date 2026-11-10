@@ -59,40 +59,86 @@ impl JsJsonDeserialize for String {
     }
 }
 
-macro_rules! impl_js_json_for_number {
-    ($name:ty) => {
-        impl JsJsonSerialize for $name {
-            fn to_json(self) -> JsJson {
-                JsJson::Number(JsJsonNumber(self as f64))
-            }
-        }
+/// The error of a JSON value that is not a number where the number type `name` was wanted -
+/// out of line and generic over nothing, so that all the number types share it.
+#[inline(never)]
+fn number_expected(context: &JsJsonContext, name: &str, other: &JsJson) -> JsJsonContext {
+    context.add(["number(", name, ") expected, received ", other.typename()].concat())
+}
 
-        impl JsJsonDeserialize for $name {
-            fn from_json(context: JsJsonContext, json: JsJson) -> Result<Self, JsJsonContext> {
-                match json {
-                    JsJson::Number(JsJsonNumber(value)) => Ok(value as Self),
-                    other => Err(context
-                        .add(["number($name) expected, received ", other.typename()].concat())),
+/// The error of a number that the integer type `name` cannot hold.
+///
+/// The number is printed through `i64` because `f64::to_string` here would link the float
+/// formatter into every program that reads an integer: 25 KB of wasm for one error message.
+#[inline(never)]
+fn integer_expected(context: &JsJsonContext, name: &str, value: f64) -> JsJsonContext {
+    let whole = value as i64;
+    let received = if whole as f64 == value {
+        whole.to_string()
+    } else {
+        "a fraction or a value beyond i64".to_string()
+    };
+    context.add(["integer(", name, ") expected, received ", &received].concat())
+}
+
+macro_rules! impl_serialize_number {
+    ($($name:ty),+) => {
+        $(
+            impl JsJsonSerialize for $name {
+                fn to_json(self) -> JsJson {
+                    JsJson::Number(JsJsonNumber(self as f64))
                 }
             }
-        }
+        )+
     };
 }
 
-impl_js_json_for_number!(i8);
-impl_js_json_for_number!(i16);
-impl_js_json_for_number!(i32);
-impl_js_json_for_number!(i64);
-impl_js_json_for_number!(isize);
+macro_rules! impl_deserialize_integer {
+    ($($name:ty),+) => {
+        $(
+            /// A whole number within the range of the type; anything else is an error rather than
+            /// a number clamped or cut to fit. JSON numbers are `f64`, so above 2^53 a value was
+            /// already rounded on its way here.
+            impl JsJsonDeserialize for $name {
+                fn from_json(context: JsJsonContext, json: JsJson) -> Result<Self, JsJsonContext> {
+                    match json {
+                        JsJson::Number(JsJsonNumber(value)) => {
+                            // `MAX` of the 64-bit types rounds up to 2^64 or 2^63. That is what
+                            // `to_json` sends for it, and the cast below brings it back to `MAX`.
+                            let in_range =
+                                value >= <$name>::MIN as f64 && value <= <$name>::MAX as f64;
+                            if value.fract() == 0.0 && in_range {
+                                Ok(value as Self)
+                            } else {
+                                Err(integer_expected(&context, stringify!($name), value))
+                            }
+                        }
+                        other => Err(number_expected(&context, stringify!($name), &other)),
+                    }
+                }
+            }
+        )+
+    };
+}
 
-impl_js_json_for_number!(u8);
-impl_js_json_for_number!(u16);
-impl_js_json_for_number!(u32);
-impl_js_json_for_number!(u64);
-impl_js_json_for_number!(usize);
+macro_rules! impl_deserialize_float {
+    ($($name:ty),+) => {
+        $(
+            impl JsJsonDeserialize for $name {
+                fn from_json(context: JsJsonContext, json: JsJson) -> Result<Self, JsJsonContext> {
+                    match json {
+                        JsJson::Number(JsJsonNumber(value)) => Ok(value as Self),
+                        other => Err(number_expected(&context, stringify!($name), &other)),
+                    }
+                }
+            }
+        )+
+    };
+}
 
-impl_js_json_for_number!(f32);
-impl_js_json_for_number!(f64);
+impl_serialize_number!(i8, i16, i32, i64, isize, u8, u16, u32, u64, usize, f32, f64);
+impl_deserialize_integer!(i8, i16, i32, i64, isize, u8, u16, u32, u64, usize);
+impl_deserialize_float!(f32, f64);
 
 impl JsJsonSerialize for bool {
     fn to_json(self) -> JsJson {

@@ -36,14 +36,23 @@ impl JsJsonSerialize for CallbackId {
 }
 
 impl JsJsonDeserialize for CallbackId {
-    fn from_json(_context: JsJsonContext, json: JsJson) -> Result<Self, JsJsonContext> {
-        if let JsJson::Number(JsJsonNumber(value)) = json {
-            return Ok(CallbackId::from_u64(value as u64));
-        }
+    fn from_json(context: JsJsonContext, json: JsJson) -> Result<Self, JsJsonContext> {
+        u64::from_json(context, json).map(CallbackId::from_u64)
+    }
+}
 
-        Err(JsJsonContext::new(format!(
-            "Expected Number, received={}",
-            json.typename()
-        )))
+#[cfg(test)]
+mod tests {
+    use super::CallbackId;
+    use crate::{JsJson, JsJsonNumber, from_json};
+
+    #[test]
+    fn id_is_a_whole_positive_number() {
+        let number = |value: f64| JsJson::Number(JsJsonNumber(value));
+
+        assert_eq!(from_json::<CallbackId>(number(7.0)), Ok(CallbackId(7)));
+        for value in [-1.0, 1.5, f64::NAN] {
+            assert!(from_json::<CallbackId>(number(value)).is_err(), "{value}");
+        }
     }
 }
