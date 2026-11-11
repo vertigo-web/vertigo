@@ -25,6 +25,8 @@
 * A `Vec<u8>` in the body of a fetch, a websocket text message or a JSON cookie is a list of numbers,
   as vertigo-cli already wrote it for a fetch made while rendering on the server. The browser made
   it an object keyed by index.
+* Bytes (a `Uint8Array`) in a message from a frame come to `on_message` as a list of numbers, which
+  a `Vec<u8>` field reads, instead of an object keyed by index.
 * On nightly, an error from a macro came with follow-up errors from the code it made anyway.
 * A `LazyCache` or `LazyListCache` with `bearer_auth` now starts with what the server fetched for
   it while rendering the page. The response was in the page under the request with its token, and
