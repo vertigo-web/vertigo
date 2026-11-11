@@ -412,6 +412,10 @@ impl DomElement {
         })
     }
 
+    /// `change` of a file input, with the files picked into it, read. The input keeps them, as a
+    /// file input does. The same file picked again is no change to the browser, so to take files
+    /// one pick after another, put a new input in place of the used one - f. ex. render it from
+    /// a `Value` counting the picks.
     pub fn on_change_file(self, on_change_file: impl Into<Callback1<DropFileEvent, ()>>) -> Self {
         self.on_change_file_rc(Rc::new(on_change_file.into()))
     }

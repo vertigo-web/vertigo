@@ -16,6 +16,8 @@
 
 ### Fixed
 
+* A file input with `on_change_file` keeps showing the files picked into it. It was emptied as
+  soon as they were read, so a form never showed which file it was about to send.
 * `AutoJsJson` reads an integer only when the number is whole and within the range of the type.
   `300` as `u8` was `255`, `-1` was `0` and `1.5` was `1`, without an error.
 * The error of a number of the wrong JSON type said `number($name)` instead of naming the type.

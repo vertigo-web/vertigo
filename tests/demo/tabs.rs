@@ -1378,7 +1378,23 @@ pub async fn drop_file(ctx: &Ctx) -> Result<()> {
     ctx.wait_for_text(&second.row()).await?;
     ctx.wait_for_text("1 file").await?;
 
+    // The input that took them has made way for a new, empty one, so a file can be picked again:
+    // into an input holding it already, it would be no change to the browser.
+    let held = ctx
+        .js("return document.querySelector('input[type=file]').files.length")
+        .await?;
+    ensure!(held == json!(0), "the file input still holds {held} files");
+    ctx.find(By::Css("input[type=file]"))
+        .await
+        .context("the new file input")?
+        .send_keys(first.path.display().to_string())
+        .await
+        .context("picking the first fixture again failed")?;
+    ctx.wait_for_text(&first.row()).await?;
+    ctx.wait_for_text("2 files").await?;
+
     click_by_text(ctx, "button", "Clear all").await?;
+    ctx.wait_for_no_text(&first.row()).await?;
     ctx.wait_for_no_text(&second.row()).await?;
     ctx.wait_for_text("No files yet").await
 }
