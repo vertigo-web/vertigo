@@ -451,10 +451,12 @@ function testMessage() {
     post({}, 'from another frame');
     post(null, 'from a worker');
     post(inFrame, 10n);
+    post(inFrame, { tile: new Uint8Array([0, 20, 255]) });
     assert(
         JSON.stringify(sent) === JSON.stringify([
             ['https://example.com', { height: 338, when: '1970-01-01T00:00:00.000Z' }],
             ['https://example.com', null],
+            ['https://example.com', { tile: [0, 20, 255] }],
         ]),
         `only from the page in the frame, as JSON can hold it: ${JSON.stringify(sent)}`,
     );

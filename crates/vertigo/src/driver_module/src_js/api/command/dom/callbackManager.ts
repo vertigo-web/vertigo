@@ -1,6 +1,6 @@
 import { ExportType } from "../../../wasm_module";
 import { getFiles, readFile, sendFiles, Send } from "./dataTransfer";
-import { JsJsonType, parseJson } from "../../../jsjson";
+import { JsJsonType, parseJson, stringifyJson } from "../../../jsjson";
 import { ModuleControllerType } from "../../../wasm_init";
 import { MapNodes } from "./map_nodes";
 import { CallbackId } from "../../types";
@@ -282,14 +282,15 @@ const media = (element: HTMLMediaElement, type: string, send: Send) => {
 };
 
 /// A message from the page in a frame: where it came from and what it said, as far as JSON can
-/// hold it - a `Date` becomes text, and what JSON has no room for at all (a `BigInt`, a cycle,
-/// `undefined`) - `null`. Which frame it came from, [`CallbackManager.add`] checks.
+/// hold it - a `Date` becomes text, bytes (a `Uint8Array`) a list of numbers as a `Vec<u8>` reads
+/// them, and what JSON has no room for at all (a `BigInt`, a cycle, `undefined`) - `null`. Which
+/// frame it came from, [`CallbackManager.add`] checks.
 const message = (event: MessageEvent, send: Send) => {
     let data: JsJsonType;
 
     try {
         // eslint-disable-next-line @typescript-eslint/no-unnecessary-condition -- `JSON.stringify` gives `undefined` for `undefined` or a function, whatever its type says
-        data = parseJson(JSON.stringify(event.data) ?? 'null');
+        data = parseJson(stringifyJson(event.data) ?? 'null');
     } catch {
         data = null;
     }
