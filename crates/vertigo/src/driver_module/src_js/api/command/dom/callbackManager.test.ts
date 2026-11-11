@@ -1,8 +1,9 @@
 // The click, wheel and pointer handlers: what a `ClickEvent`, `WheelEvent` or `PointerEvent`
 // reply does to the browser's own handling of the event, and what the handlers tell wasm. And
 // `scroll`, which tells wasm where an element is scrolled to, `change_checked`, which tells it
-// whether a box is checked, `media`, which tells it what a video or an audio does, and
-// `message`, which passes on the messages from the page in a frame.
+// whether a box is checked, `change_file`, which sends it the files picked into an input,
+// `media`, which tells it what a video or an audio does, and `message`, which passes on the
+// messages from the page in a frame.
 
 import { CallbackManager, click, keepEarlyMessage, pointer, scroll, wheel } from "./callbackManager";
 import { MapNodes } from "./map_nodes";
@@ -391,6 +392,40 @@ function testChangeChecked() {
     delete (globalThis as any).HTMLInputElement;
 }
 
+async function testChangeFile() {
+    console.log("\n--- Test change_file: on_change_file ---");
+    // The browser's class - here it only has to be there for `instanceof`
+    class MockInput {
+        value = 'C:\\fakepath\\tab.pdf';
+        files = [{ name: 'tab.pdf', arrayBuffer: () => Promise.resolve(new Uint8Array([37, 80, 68, 70]).buffer) }];
+    }
+    (globalThis as any).HTMLInputElement = MockInput;
+
+    const node = new MockNode();
+    const nodes = { get: () => node } as unknown as MapNodes;
+    const sent: unknown[] = [];
+    const wasm = { wasmCommand: (command: any) => sent.push(command.CallbackCall.value) };
+    const manager = new CallbackManager(() => wasm as any);
+
+    manager.add(nodes, 1, 'change_file', 35);
+    assert(
+        JSON.stringify(node.added) === JSON.stringify([['change', false]]),
+        "listens to the DOM change event",
+    );
+
+    const input = new MockInput();
+    node.listeners[0]!({ target: input } as unknown as Event);
+    // The files are read before they go
+    await new Promise((resolve) => setTimeout(resolve, 0));
+    assert(
+        JSON.stringify(sent) === JSON.stringify([[[['tab.pdf', [37, 80, 68, 70]]]]]),
+        `and sends wasm each file's name and bytes: ${JSON.stringify(sent)}`,
+    );
+    assert(input.value === 'C:\\fakepath\\tab.pdf', "leaving the input showing the file picked into it");
+
+    delete (globalThis as any).HTMLInputElement;
+}
+
 /// The browser's classes - here they only have to be there for `instanceof`. Node has
 /// a `MessageEvent` of its own, but it takes only a `MessagePort` for the source.
 class MockFrame {
@@ -622,6 +657,7 @@ testScrollPayload();
 testScrollListener();
 void testScrollFromTheServer();
 testChangeChecked();
+void testChangeFile();
 testMessage();
 void testEarlyMessages();
 testMedia();

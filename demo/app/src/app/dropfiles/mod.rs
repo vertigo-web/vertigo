@@ -60,10 +60,19 @@ impl DropFiles {
         });
 
         // The same handler, reached by a route a keyboard or a phone can take - and the only
-        // one a WebDriver can drive, since it cannot synthesise a file drop.
-        let on_change_file = bind!(state, |event: DropFileEvent| {
-            state.add(event.items);
-        });
+        // one a WebDriver can drive, since it cannot synthesise a file drop. The input keeps
+        // the files picked into it, and the same file picked again is no change to the browser,
+        // so once they are on the list a new, empty input takes its place.
+        let picks = Value::new(0u32);
+        let file_input = picks.render_value(bind!(state, picks, |_| {
+            let on_change_file = bind!(state, picks, |event: DropFileEvent| {
+                state.add(event.items);
+                picks.change(|picks| *picks += 1);
+            });
+            dom! {
+                <input type="file" multiple="multiple" on_change_file={on_change_file} />
+            }
+        }));
 
         let on_clear = bind!(state, |_| {
             state.clear();
@@ -97,7 +106,7 @@ impl DropFiles {
         dom! {
             <div>
                 <div css={css_controls()}>
-                    <input type="file" multiple="multiple" on_change_file={on_change_file} />
+                    {file_input}
                     <button on_click={on_clear}>"Clear all"</button>
                     <span>{ summary }</span>
                 </div>

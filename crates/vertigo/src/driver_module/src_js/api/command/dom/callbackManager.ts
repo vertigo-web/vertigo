@@ -179,6 +179,10 @@ const changeChecked: Handler = (event, send) => {
     console.warn('changeChecked: not an input', target);
 };
 
+/// The files picked into a file input, read and sent to wasm. The input keeps them, as a file
+/// input does, so a form shows the file it is about to send. A second pick of the same file is no
+/// change to the browser: an app taking files one pick after another puts a new input in place
+/// of the used one.
 const changeFile: Handler = (event, send) => {
     const target = event.target;
 
@@ -196,7 +200,6 @@ const changeFile: Handler = (event, send) => {
             sendFiles(promises, send, 'changeFile ->');
         }
 
-        target.value = '';
         return;
     }
 
