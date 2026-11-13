@@ -96,8 +96,8 @@ pub use dom::{
     dom_text::DomText,
     events::{
         ClickEvent, DropFileEvent, DropFileItem, IntersectionEvent, KeyDownEvent, MediaEvent,
-        MediaEventKind, MessageEvent, PointerEvent, PointerType, ScrollEvent, WheelDeltaMode,
-        WheelEvent,
+        MediaEventKind, MessageEvent, PointerEvent, PointerType, ResizeEvent, ScrollEvent,
+        WheelDeltaMode, WheelEvent,
     },
 };
 pub use dom_macro::{AttrGroup, AttrGroupValue, EmbedDom};

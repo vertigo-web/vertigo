@@ -319,8 +319,9 @@ if (typeof window !== 'undefined') {
 
 /// The event names are wire strings from Rust (`dom/dom_element.rs`), so each is spelled out
 /// exactly once here. `hook_keydown`, `change_file` and `change_checked` are vertigo-internal
-/// names, remapped to real DOM events where the listener is attached. `intersect`, `media` and
-/// `message` aren't one DOM event of the element, so `CallbackManager.add` takes them on its own.
+/// names, remapped to real DOM events where the listener is attached. `intersect`, `resize`,
+/// `media` and `message` aren't one DOM event of the element, so `CallbackManager.add` takes them
+/// on its own.
 const HANDLERS: Record<string, Handler> = {
     click,
     submit: notifyPreventDefault,
@@ -353,9 +354,9 @@ const domEventName = (event_name: string): string =>
 export class CallbackManager {
     private readonly getWasm: () => ModuleControllerType<ExportType>;
     private callbacks: Map<CallbackId, (data: Event) => void>;
-    // IntersectionObserver does not use addEventListener, so its observers are
-    // tracked separately (keyed by callback_id) for disconnect on remove.
-    private observers: Map<CallbackId, IntersectionObserver>;
+    // IntersectionObserver and ResizeObserver do not use addEventListener, so their observers
+    // are tracked separately (keyed by callback_id) for disconnect on remove.
+    private observers: Map<CallbackId, IntersectionObserver | ResizeObserver>;
 
     public constructor(getWasm: () => ModuleControllerType<ExportType>) {
         this.getWasm = getWasm;
@@ -366,6 +367,11 @@ export class CallbackManager {
     public add(nodes: MapNodes, id: number, event_name: string, callback_id: CallbackId) {
         if (event_name === 'intersect') {
             this.intersectAdd(nodes, id, callback_id);
+            return;
+        }
+
+        if (event_name === 'resize') {
+            this.resizeAdd(nodes, id, callback_id);
             return;
         }
 
@@ -468,8 +474,8 @@ export class CallbackManager {
     }
 
     public remove(nodes: MapNodes, id: number, event_name: string, callback_id: CallbackId) {
-        if (event_name === 'intersect') {
-            this.intersectRemove(callback_id);
+        if (event_name === 'intersect' || event_name === 'resize') {
+            this.observerRemove(callback_id);
             return;
         }
 
@@ -536,12 +542,32 @@ export class CallbackManager {
         this.observers.set(callback_id, observer);
     }
 
-    private intersectRemove(callback_id: CallbackId) {
+    /// The size of the element as drawn, as a `PointerEvent` gives it: once it's observed, which
+    /// the browser tells right after the batch, and after each change.
+    private resizeAdd(nodes: MapNodes, id: number, callback_id: CallbackId) {
+        if (this.observers.has(callback_id)) {
+            console.error(`There was already a resize observer added with the callback_id=${callback_id}`);
+            return;
+        }
+
+        const node = nodes.getNode('callback_add', id);
+
+        const observer = new ResizeObserver(() => {
+            const rect = node.getBoundingClientRect();
+            // Payload order MUST match the Rust decoder `ResizeEvent::from_driver`.
+            this.wasmCallback(callback_id, [rect.width, rect.height]);
+        });
+
+        observer.observe(node, { box: 'border-box' });
+        this.observers.set(callback_id, observer);
+    }
+
+    private observerRemove(callback_id: CallbackId) {
         const observer = this.observers.get(callback_id);
         this.observers.delete(callback_id);
 
         if (observer === undefined) {
-            console.error(`The intersect observer is missing with the id=${callback_id}`);
+            console.error(`The observer is missing with the id=${callback_id}`);
             return;
         }
 

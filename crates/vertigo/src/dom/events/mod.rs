@@ -24,3 +24,6 @@ pub use wheel_event::*;
 
 mod scroll_event;
 pub use scroll_event::*;
+
+mod resize_event;
+pub use resize_event::*;

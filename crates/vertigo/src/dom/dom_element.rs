@@ -16,7 +16,7 @@ use super::{
     dom_node::DomNode,
     events::{
         ClickEvent, DropFileEvent, IntersectionEvent, KeyDownEvent, MediaEvent, MessageEvent,
-        PointerEvent, ScrollEvent, WheelEvent,
+        PointerEvent, ResizeEvent, ScrollEvent, WheelEvent,
     },
 };
 
@@ -230,6 +230,7 @@ impl DomElement {
             ("on_pointer_cancel", AttrGroupValue::OnPointerCancel(on_pointer_cancel)) => {
                 self.on_pointer_cancel_rc(on_pointer_cancel)
             }
+            ("on_resize", AttrGroupValue::OnResize(on_resize)) => self.on_resize_rc(on_resize),
             ("on_scroll", AttrGroupValue::OnScroll(on_scroll)) => self.on_scroll_rc(on_scroll),
             ("on_submit", AttrGroupValue::OnSubmit(on_submit)) => self.on_submit_rc(on_submit),
             ("on_wheel", AttrGroupValue::OnWheel(on_wheel)) => self.on_wheel_rc(on_wheel),
@@ -764,6 +765,25 @@ impl DomElement {
                     JsJson::Null
                 }
             }
+        })
+    }
+
+    /// How big the element is as drawn, once it's on the page and whenever that changes - see
+    /// [`ResizeEvent`]. Dropping the element stops watching it.
+    pub fn on_resize(self, on_resize: impl Into<Callback1<ResizeEvent, ()>>) -> Self {
+        self.on_resize_rc(Rc::new(on_resize.into()))
+    }
+
+    pub fn on_resize_rc(self, on_resize: Rc<Callback1<ResizeEvent, ()>>) -> Self {
+        let on_resize = self.install_callback1(on_resize);
+
+        self.add_event_listener("resize", move |data| {
+            match ResizeEvent::from_driver(data) {
+                Ok(event) => on_resize(event),
+                Err(error) => log::error!("on_resize -> params decode error -> {error}"),
+            }
+
+            JsJson::Null
         })
     }
 
