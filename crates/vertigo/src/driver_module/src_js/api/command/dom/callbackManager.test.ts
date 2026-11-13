@@ -1,9 +1,9 @@
 // The click, wheel and pointer handlers: what a `ClickEvent`, `WheelEvent` or `PointerEvent`
 // reply does to the browser's own handling of the event, and what the handlers tell wasm. And
-// `scroll`, which tells wasm where an element is scrolled to, `change_checked`, which tells it
-// whether a box is checked, `change_file`, which sends it the files picked into an input,
-// `media`, which tells it what a video or an audio does, and `message`, which passes on the
-// messages from the page in a frame.
+// `scroll`, which tells wasm where an element is scrolled to, `resize`, which tells it how big
+// an element is, `change_checked`, which tells it whether a box is checked, `change_file`, which
+// sends it the files picked into an input, `media`, which tells it what a video or an audio
+// does, and `message`, which passes on the messages from the page in a frame.
 
 import { CallbackManager, click, keepEarlyMessage, pointer, scroll, wheel } from "./callbackManager";
 import { MapNodes } from "./map_nodes";
@@ -356,6 +356,49 @@ async function testScrollFromTheServer() {
     );
 }
 
+/// The browser's `ResizeObserver`, which tells of the elements it observes when told to.
+class MockResizeObserver {
+    static all: MockResizeObserver[] = [];
+    observed: Array<[unknown, unknown]> = [];
+    disconnected = false;
+    constructor(private readonly callback: () => void) {
+        MockResizeObserver.all.push(this);
+    }
+    observe(target: unknown, options: unknown) { this.observed.push([target, options]); }
+    disconnect() { this.disconnected = true; }
+    tell() { this.callback(); }
+}
+
+function testResize() {
+    console.log("\n--- Test resize: on_resize ---");
+    (globalThis as any).ResizeObserver = MockResizeObserver;
+    const node = new MockElement();
+    const sent: unknown[] = [];
+    const wasm = {
+        wasmCommand: (command: any) => sent.push([command.CallbackCall.callback_id, command.CallbackCall.value]),
+    };
+    const manager = new CallbackManager(() => wasm as any);
+    const nodes = { getNode: () => node } as unknown as MapNodes;
+
+    manager.add(nodes, 1, 'resize', 40);
+    const observer = MockResizeObserver.all[0];
+    assert(observer !== undefined, "an observer watches the element");
+    assert(
+        JSON.stringify(observer?.observed) === JSON.stringify([[{}, { box: 'border-box' }]]),
+        "with its border, as drawn",
+    );
+    observer?.tell();
+    assert(
+        JSON.stringify(sent) === JSON.stringify([[40, [300, 150]]]),
+        `wasm gets the size of the box as drawn, as a pointer event does: ${JSON.stringify(sent)}`,
+    );
+
+    manager.remove(nodes, 1, 'resize', 40);
+    assert(observer?.disconnected === true, "and it stops watching with the element gone");
+
+    delete (globalThis as any).ResizeObserver;
+}
+
 function testChangeChecked() {
     console.log("\n--- Test change_checked: on_change_checked ---");
     // The browser's class - here it only has to be there for `instanceof`
@@ -656,6 +699,7 @@ testPointerListeners();
 testScrollPayload();
 testScrollListener();
 void testScrollFromTheServer();
+testResize();
 testChangeChecked();
 void testChangeFile();
 testMessage();

@@ -2,7 +2,8 @@ use std::{collections::BTreeMap, rc::Rc};
 
 use crate::{
     Computed, Css, DomComment, DomDisplay, DomElement, DomText, Drawing, DropFileEvent,
-    KeyDownEvent, MediaEvent, MessageEvent, PointerEvent, ScrollEvent, Value, WheelEvent,
+    KeyDownEvent, MediaEvent, MessageEvent, PointerEvent, ResizeEvent, ScrollEvent, Value,
+    WheelEvent,
     dom::{
         attr_value::AttrValue,
         callback::{Callback, Callback1},
@@ -69,6 +70,7 @@ pub enum AttrGroupValue {
     OnPointerMove(Rc<Callback1<PointerEvent, ()>>),
     OnPointerUp(Rc<Callback1<PointerEvent, ()>>),
     OnPointerCancel(Rc<Callback1<PointerEvent, ()>>),
+    OnResize(Rc<Callback1<ResizeEvent, ()>>),
     OnScroll(Rc<Callback1<ScrollEvent, ()>>),
     OnSubmit(Rc<Callback<()>>),
     OnWheel(Rc<Callback1<WheelEvent, ()>>),
@@ -121,6 +123,7 @@ impl AttrGroupValue {
     group_value_constructor!(on_pointer_move, Callback1<PointerEvent, ()>, OnPointerMove);
     group_value_constructor!(on_pointer_up, Callback1<PointerEvent, ()>, OnPointerUp);
     group_value_constructor!(on_pointer_cancel, Callback1<PointerEvent, ()>, OnPointerCancel);
+    group_value_constructor!(on_resize, Callback1<ResizeEvent, ()>, OnResize);
     group_value_constructor!(on_scroll, Callback1<ScrollEvent, ()>, OnScroll);
     group_value_constructor!(on_submit, Callback<()>, OnSubmit);
     group_value_constructor!(on_wheel, Callback1<WheelEvent, ()>, OnWheel);

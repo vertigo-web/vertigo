@@ -5,6 +5,8 @@
 
 ### Added
 
+* `on_resize` on elements, with a `ResizeEvent`: how big the element is as drawn, once it's on the
+  page and whenever that changes.
 * `Drawing::fill_polygon` and `Drawing::stroke_polygon`: the shape points enclose, filled, and
   its closed outline, whose last corner is joined like the others.
 * `Driver::next_paint`: ends once the browser has drawn the page, so that f. ex. "Processing…"

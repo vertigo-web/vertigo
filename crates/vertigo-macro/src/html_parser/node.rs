@@ -213,8 +213,8 @@ fn push_attribute(
         | "on_change_checked" | "on_click" | "on_dropfile" | "on_input" | "on_intersect"
         | "on_key_down" | "on_load" | "on_media" | "on_message" | "on_mouse_down"
         | "on_mouse_enter" | "on_mouse_leave" | "on_mouse_up" | "on_pointer_down"
-        | "on_pointer_move" | "on_pointer_up" | "on_pointer_cancel" | "on_scroll" | "on_submit"
-        | "on_wheel" => &name,
+        | "on_pointer_move" | "on_pointer_up" | "on_pointer_cancel" | "on_resize" | "on_scroll"
+        | "on_submit" | "on_wheel" => &name,
 
         "css" => {
             let class_name = generate_debug_class_name(&value);
@@ -408,6 +408,7 @@ mod tests {
             "on_pointer_move",
             "on_pointer_up",
             "on_pointer_cancel",
+            "on_resize",
             "on_scroll",
             "hook_key_down",
         ];
