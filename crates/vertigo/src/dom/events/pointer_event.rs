@@ -99,7 +99,17 @@ pub struct PointerEvent {
 struct PointerEventFlags {
     stop_propagation: bool,
     prevent_default: bool,
-    capture_pointer: bool,
+    capture: PointerCapture,
+}
+
+/// What the callback asked about the capture of the pointer; the later of
+/// [`PointerEvent::capture_pointer`] and [`PointerEvent::release_pointer`] wins.
+#[derive(Clone, Copy, Debug, Default, PartialEq, Eq)]
+enum PointerCapture {
+    #[default]
+    AsItIs,
+    Capture,
+    Release,
 }
 
 impl PointerEvent {
@@ -126,7 +136,47 @@ impl PointerEvent {
     /// The capture ends with the element: one that renders anew mid-drag, f. ex. after a change
     /// of what it shows, has to ask for it again.
     pub fn capture_pointer(&self) {
-        self.flags.change(|flags| flags.capture_pointer = true);
+        self.flags
+            .change(|flags| flags.capture = PointerCapture::Capture);
+    }
+
+    /// The events of this pointer go again to the element under it, wherever they went before:
+    /// to an element that captured it with [`capture_pointer`](Self::capture_pointer), or to the
+    /// one a finger or a pen touched first.
+    ///
+    /// A browser captures a touching finger or pen by itself, for the element it touched, so its
+    /// `pointerup` comes to that element even when it's lifted over another one. To drag
+    /// something with a finger onto a target which listens to `on_pointer_up`, release the
+    /// pointer in `on_pointer_down` - and give the dragged element `touch-action: none`, or the
+    /// browser takes the finger over to scroll the page:
+    ///
+    /// ```rust
+    /// use vertigo::{PointerEvent, Value, dom};
+    ///
+    /// let dropped = Value::new(false);
+    /// let up = {
+    ///     let dropped = dropped.clone();
+    ///     move |_: PointerEvent| dropped.set(true)
+    /// };
+    ///
+    /// dom! {
+    ///     <div>
+    ///         <span
+    ///             style="touch-action: none"
+    ///             on_pointer_down={|event: PointerEvent| event.release_pointer()}
+    ///         >
+    ///             "Drag me"
+    ///         </span>
+    ///         <div on_pointer_up={up}>"Here"</div>
+    ///     </div>
+    /// };
+    /// ```
+    ///
+    /// The later call wins: `release_pointer` after `capture_pointer` in the same callback
+    /// releases, and the other way round captures.
+    pub fn release_pointer(&self) {
+        self.flags
+            .change(|flags| flags.capture = PointerCapture::Release);
     }
 
     /// The event as the driver sends it. The order MUST match `pointer` in `callbackManager.ts`.
@@ -172,7 +222,7 @@ impl PointerEvent {
 }
 
 /// What the callback asked of the browser: the flags of a [`ClickEvent`](crate::ClickEvent),
-/// and whether to capture the pointer.
+/// and whether to capture the pointer or release it - never both.
 impl From<PointerEvent> for JsJson {
     fn from(val: PointerEvent) -> JsJson {
         let flags = val.flags.get();
@@ -188,7 +238,11 @@ impl From<PointerEvent> for JsJson {
                 ),
                 (
                     "capture_pointer".to_string(),
-                    JsJson::from(flags.capture_pointer),
+                    JsJson::from(flags.capture == PointerCapture::Capture),
+                ),
+                (
+                    "release_pointer".to_string(),
+                    JsJson::from(flags.capture == PointerCapture::Release),
                 ),
             ]
             .into_iter()

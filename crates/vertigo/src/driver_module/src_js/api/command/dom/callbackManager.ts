@@ -26,9 +26,23 @@ const notifyPreventIfTrue: Handler = (event, send) => {
     }
 };
 
+/// What a `PointerEvent` may ask about the capture of its pointer.
+type PointerCapture = { capture: () => void, release: () => void };
+
+/// Captures or releases a pointer, which may be up already, f. ex. a finger in `pointerup`: the
+/// browser's error goes to the console, and the listener goes on.
+const tryCapture = (name: string, action: () => void) => {
+    try {
+        action();
+    } catch (error) {
+        console.warn(name, error);
+    }
+};
+
 /// What the handler in wasm asked of the browser: the flags of a `ClickEvent`, a `WheelEvent` or
-/// a `PointerEvent`. Only a `PointerEvent` asks to capture the pointer, and gives `capture` for it.
-const applyFlags = (event: Event, flags: JsJsonType, capture?: () => void) => {
+/// a `PointerEvent`. Only a `PointerEvent` asks to capture the pointer or to release it, and
+/// gives `pointerCapture` for it.
+const applyFlags = (event: Event, flags: JsJsonType, pointerCapture?: PointerCapture) => {
     // Check if flags is an object (JsJson Object type)
     if (flags !== null && typeof flags === 'object' && !Array.isArray(flags)) {
         if ('stop_propagation' in flags && flags['stop_propagation'] === true) {
@@ -37,13 +51,11 @@ const applyFlags = (event: Event, flags: JsJsonType, capture?: () => void) => {
         if ('prevent_default' in flags && flags['prevent_default'] === true) {
             event.preventDefault();
         }
-        if (capture && 'capture_pointer' in flags && flags['capture_pointer'] === true) {
-            try {
-                capture();
-            } catch (error) {
-                // A pointer that's up already, f. ex. a finger in `pointerup`.
-                console.warn('capture_pointer', error);
-            }
+        if (pointerCapture && 'capture_pointer' in flags && flags['capture_pointer'] === true) {
+            tryCapture('capture_pointer', pointerCapture.capture);
+        }
+        if (pointerCapture && 'release_pointer' in flags && flags['release_pointer'] === true) {
+            tryCapture('release_pointer', pointerCapture.release);
         }
     }
 };
@@ -96,7 +108,10 @@ export const wheel: Handler = (event, send) => {
 
 /// The pointer events, all four of them. Wasm replies with the `PointerEvent` flags, and with
 /// `capture_pointer` the events of this pointer go to the element with the listener until it's
-/// released. The pointer goes relative to that element, as for the wheel.
+/// released. With `release_pointer` they go again to the element under the pointer. The capture
+/// is held by the target of the event: a captured pointer's events go to the element holding it,
+/// and a browser captures a touching finger by itself for the element it touched. The pointer
+/// goes relative to the element with the listener, as for the wheel.
 export const pointer: Handler = (event, send) => {
     const target = event.currentTarget;
 
@@ -121,8 +136,16 @@ export const pointer: Handler = (event, send) => {
         event.ctrlKey,
         event.shiftKey,
         event.metaKey,
-    ]), () => {
-        target.setPointerCapture(event.pointerId);
+    ]), {
+        capture: () => {
+            target.setPointerCapture(event.pointerId);
+        },
+        release: () => {
+            const holder = event.target;
+            if (holder instanceof Element && holder.hasPointerCapture(event.pointerId)) {
+                holder.releasePointerCapture(event.pointerId);
+            }
+        },
     });
 };
 

@@ -96,7 +96,20 @@ fn deliver(callback_id: CallbackId, value: JsJson) -> JsJson {
     api_command_wasm().command_from_js(command.to_json())
 }
 
-fn flags(stop_propagation: bool, prevent_default: bool, capture_pointer: bool) -> JsJson {
+/// What the pointer does about its capture, as the reply asks it.
+#[derive(Clone, Copy)]
+enum PointerCapture {
+    AsItIs,
+    Capture,
+    Release,
+}
+
+fn flags(stop_propagation: bool, prevent_default: bool, capture: PointerCapture) -> JsJson {
+    let (capture_pointer, release_pointer) = match capture {
+        PointerCapture::AsItIs => (false, false),
+        PointerCapture::Capture => (true, false),
+        PointerCapture::Release => (false, true),
+    };
     JsJson::Object(
         [
             (
@@ -105,6 +118,7 @@ fn flags(stop_propagation: bool, prevent_default: bool, capture_pointer: bool) -
             ),
             ("prevent_default".to_string(), JsJson::from(prevent_default)),
             ("capture_pointer".to_string(), JsJson::from(capture_pointer)),
+            ("release_pointer".to_string(), JsJson::from(release_pointer)),
         ]
         .into_iter()
         .collect(),
@@ -208,7 +222,7 @@ fn the_browser_goes_on_as_usual_unless_the_callback_asks_otherwise() {
 
     let reply = deliver(callback(&callbacks, "pointerdown"), touch("touch"));
 
-    assert_eq!(reply, flags(false, false, false));
+    assert_eq!(reply, flags(false, false, PointerCapture::AsItIs));
 }
 
 #[test]
@@ -220,15 +234,48 @@ fn the_reply_carries_what_the_callback_asked_of_the_browser() {
 
     assert_eq!(
         deliver(callback(&prevents, "pointerdown"), touch("touch")),
-        flags(false, true, false)
+        flags(false, true, PointerCapture::AsItIs)
     );
     assert_eq!(
         deliver(callback(&stops, "pointerup"), touch("touch")),
-        flags(true, false, false)
+        flags(true, false, PointerCapture::AsItIs)
     );
     assert_eq!(
         deliver(callback(&captures, "pointermove"), touch("touch")),
-        flags(false, false, true)
+        flags(false, false, PointerCapture::Capture)
+    );
+}
+
+#[test]
+fn the_reply_asks_to_release_the_pointer() {
+    let got = Rc::new(RefCell::new(Vec::new()));
+    let (_releases, releases) = element_with_pointer_events(&got, |event| event.release_pointer());
+
+    assert_eq!(
+        deliver(callback(&releases, "pointerdown"), touch("touch")),
+        flags(false, false, PointerCapture::Release)
+    );
+}
+
+#[test]
+fn of_capturing_and_releasing_the_later_wins() {
+    let got = Rc::new(RefCell::new(Vec::new()));
+    let (_releases, releases) = element_with_pointer_events(&got, |event| {
+        event.capture_pointer();
+        event.release_pointer();
+    });
+    let (_captures, captures) = element_with_pointer_events(&got, |event| {
+        event.release_pointer();
+        event.capture_pointer();
+    });
+
+    assert_eq!(
+        deliver(callback(&releases, "pointerdown"), touch("touch")),
+        flags(false, false, PointerCapture::Release)
+    );
+    assert_eq!(
+        deliver(callback(&captures, "pointerdown"), touch("touch")),
+        flags(false, false, PointerCapture::Capture)
     );
 }
 

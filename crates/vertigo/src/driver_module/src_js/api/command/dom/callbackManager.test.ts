@@ -37,6 +37,8 @@ class MockClickEvent extends MockEvent {
 class MockElement {
     getBoundingClientRect() { return { left: 100, top: 200, width: 300, height: 150 }; }
     setPointerCapture(_pointerId: number) {}
+    hasPointerCapture(_pointerId: number) { return false; }
+    releasePointerCapture(_pointerId: number) {}
 }
 
 // What the handlers check the events and their targets against.
@@ -189,7 +191,8 @@ function testWheelListenerIsNotPassive() {
 
 /// A finger touching (130, 240) of the viewport, with Shift held, on an element whose top left
 /// corner is at (100, 200) and which is 300 x 150. The element keeps what it was asked to
-/// capture.
+/// capture. The finger touched a child of it, which the browser made capture the finger, and
+/// which keeps what it was asked to release.
 class MockPointerEvent extends MockEvent {
     pointerId = 7;
     pointerType = 'touch';
@@ -205,6 +208,11 @@ class MockPointerEvent extends MockEvent {
     captured: Array<number> = [];
     currentTarget = Object.assign(new MockElement(), {
         setPointerCapture: (pointerId: number) => { this.captured.push(pointerId); },
+    });
+    released: Array<number> = [];
+    target = Object.assign(new MockElement(), {
+        hasPointerCapture: (pointerId: number): boolean => pointerId === 7,
+        releasePointerCapture: (pointerId: number) => { this.released.push(pointerId); },
     });
 }
 
@@ -232,14 +240,14 @@ function testPointerPayload() {
 
 function testPointerByDefault() {
     console.log("\n--- Test pointer 2: nothing asked ---");
-    const { event } = pointerReplying({ stop_propagation: false, prevent_default: false, capture_pointer: false });
+    const { event } = pointerReplying({ stop_propagation: false, prevent_default: false, capture_pointer: false, release_pointer: false });
     assert(!event.defaultPrevented && !event.propagationStopped, "the browser goes on as usual");
-    assert(event.captured.length === 0, "and captures nothing");
+    assert(event.captured.length === 0 && event.released.length === 0, "and captures nothing, or releases");
 }
 
 function testPointerCapture() {
     console.log("\n--- Test pointer 3: PointerEvent::capture_pointer ---");
-    const { event } = pointerReplying({ stop_propagation: false, prevent_default: false, capture_pointer: true });
+    const { event } = pointerReplying({ stop_propagation: false, prevent_default: false, capture_pointer: true, release_pointer: false });
     assert(JSON.stringify(event.captured) === JSON.stringify([7]), "the element with the listener captures the pointer");
     assert(!event.defaultPrevented && !event.propagationStopped, "and that's all");
 }
@@ -250,7 +258,7 @@ function testPointerCaptureOfAPointerThatIsUp() {
     event.currentTarget.setPointerCapture = () => { throw new Error('NotFoundError'); };
     let threw = false;
     try {
-        pointer(event as unknown as Event, () => ({ stop_propagation: true, prevent_default: false, capture_pointer: true }));
+        pointer(event as unknown as Event, () => ({ stop_propagation: true, prevent_default: false, capture_pointer: true, release_pointer: false }));
     } catch {
         threw = true;
     }
@@ -258,9 +266,32 @@ function testPointerCaptureOfAPointerThatIsUp() {
     assert(event.propagationStopped, "and the other flags still apply");
 }
 
+function testPointerRelease() {
+    console.log("\n--- Test pointer 3c: PointerEvent::release_pointer ---");
+    const { event } = pointerReplying({ stop_propagation: false, prevent_default: false, capture_pointer: false, release_pointer: true });
+    assert(JSON.stringify(event.released) === JSON.stringify([7]), "the element holding the pointer lets it go");
+    assert(event.captured.length === 0, "and the element with the listener doesn't take it");
+    assert(!event.defaultPrevented && !event.propagationStopped, "and that's all");
+}
+
+function testPointerReleaseOfAPointerNotCaptured() {
+    console.log("\n--- Test pointer 3d: release_pointer of a pointer nobody captured ---");
+    const event = new MockPointerEvent();
+    event.target.hasPointerCapture = () => false;
+    event.target.releasePointerCapture = () => { throw new Error('NotFoundError'); };
+    let threw = false;
+    try {
+        pointer(event as unknown as Event, () => ({ stop_propagation: true, prevent_default: false, capture_pointer: false, release_pointer: true }));
+    } catch {
+        threw = true;
+    }
+    assert(!threw, "nothing to let go of, and no error");
+    assert(event.propagationStopped, "and the other flags still apply");
+}
+
 function testPointerFlags() {
     console.log("\n--- Test pointer 4: prevent_default and stop_propagation ---");
-    const { event } = pointerReplying({ stop_propagation: true, prevent_default: true, capture_pointer: false });
+    const { event } = pointerReplying({ stop_propagation: true, prevent_default: true, capture_pointer: false, release_pointer: false });
     assert(event.defaultPrevented && event.propagationStopped, "both, as for a click");
     assert(event.captured.length === 0, "without capturing");
 }
@@ -694,6 +725,8 @@ testPointerPayload();
 testPointerByDefault();
 testPointerCapture();
 testPointerCaptureOfAPointerThatIsUp();
+testPointerRelease();
+testPointerReleaseOfAPointerNotCaptured();
 testPointerFlags();
 testPointerListeners();
 testScrollPayload();

@@ -5,6 +5,10 @@
 
 ### Added
 
+* `PointerEvent::release_pointer`: the events of the pointer go again to the element under it.
+  A browser captures a touching finger or pen for the element it touched, so its `pointerup` never
+  reached another one: released in `on_pointer_down`, a finger drags something onto a target with
+  `on_pointer_up`, as a mouse does. Of it and `capture_pointer` in one callback the later wins.
 * `on_resize` on elements, with a `ResizeEvent`: how big the element is as drawn, once it's on the
   page and whenever that changes.
 * `Drawing::fill_polygon` and `Drawing::stroke_polygon`: the shape points enclose, filled, and
