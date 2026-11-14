@@ -96,7 +96,7 @@ function scrollToFragment(path: string) {
 
     pending = null;
     if (target !== null) {
-        target.scrollIntoView();
+        scrollToElement(target);
         return;
     }
 
@@ -154,8 +154,26 @@ export function scrollToPendingFragment() {
     const target = fragmentTarget(pending.fragment);
     if (target !== null) {
         pending = null;
-        target.scrollIntoView();
+        scrollToElement(target);
     }
+}
+
+/// Scrolls to a fragment's element the way the browser does: first it shows what hides it (the
+/// ancestor revealing algorithm of the HTML standard) - opens a `<details>` it's in, outside the
+/// summary, and shows an element with `hidden="until-found"`, after a `beforematch` event at it.
+/// `scrollIntoView` alone leaves them hidden, with nothing to scroll to.
+function scrollToElement(target: Element) {
+    for (let node: Element | null = target; node !== null; node = node.parentElement) {
+        if (node.getAttribute('hidden')?.toLowerCase() === 'until-found') {
+            node.dispatchEvent(new Event('beforematch', { bubbles: true }));
+            node.removeAttribute('hidden');
+        }
+        const parent: Element | null = node.parentElement;
+        if (parent?.tagName === 'DETAILS' && node !== parent.querySelector(':scope > summary')) {
+            parent.setAttribute('open', '');
+        }
+    }
+    target.scrollIntoView();
 }
 
 /// The element a fragment names, the way the browser finds it.

@@ -33,9 +33,62 @@ class MockMouseEvent {
 
 class MockTarget {
     scrolledTo = 0;
+    /// Whether something hid the element when it was scrolled to - see [`MockTarget.hidden`].
+    hiddenWhenScrolled = false;
+    parentElement: MockTarget | null = null;
+    children: Array<MockTarget> = [];
+    attributes: Map<string, string> = new Map();
+    events: Array<string> = [];
+
     /// Upper case for an HTML element, as `tagName` is in the browser.
-    constructor(public tagName = 'DIV') { }
-    scrollIntoView() { this.scrolledTo += 1; }
+    constructor(public tagName = 'DIV', attributes: Record<string, string> = {}) {
+        for (const [name, value] of Object.entries(attributes)) {
+            this.attributes.set(name, value);
+        }
+    }
+
+    /// Puts `children` in at the end, as `append` does in the browser.
+    append(...children: Array<MockTarget>): this {
+        for (const child of children) {
+            child.parentElement = this;
+            this.children.push(child);
+        }
+        return this;
+    }
+
+    getAttribute(name: string) { return this.attributes.get(name) ?? null; }
+    setAttribute(name: string, value: string) { this.attributes.set(name, value); }
+    removeAttribute(name: string) { this.attributes.delete(name); }
+    dispatchEvent(event: Event) { this.events.push(event.type); return true; }
+
+    /// Only the selector for the summary of a `<details>` - its first `<summary>` child.
+    querySelector(selector: string) {
+        if (selector !== ':scope > summary') {
+            throw new Error(`MockTarget can't select ${selector}`);
+        }
+        return this.children.find((child) => child.tagName === 'SUMMARY') ?? null;
+    }
+
+    /// Whether the browser draws nothing of the element: it or an element above it has `hidden`,
+    /// or it's in a closed `<details>` outside its summary.
+    hidden(): boolean {
+        const parent = this.parentElement;
+        if (this.attributes.has('hidden')) {
+            return true;
+        }
+        if (parent === null) {
+            return false;
+        }
+        const inClosedDetails = parent.tagName === 'DETAILS'
+            && !parent.attributes.has('open')
+            && this !== parent.querySelector(':scope > summary');
+        return inClosedDetails || parent.hidden();
+    }
+
+    scrollIntoView() {
+        this.scrolledTo += 1;
+        this.hiddenWhenScrolled = this.hidden();
+    }
 }
 
 /// Elements of the page, by id and by `name`.
@@ -426,6 +479,56 @@ function testAppNavigationWithoutFragment() {
     assert(later.scrolledTo === 0, "and a fragment followed before stops waiting");
 }
 
+function testFragmentInClosedDetails() {
+    console.log("\n--- Test links 16: the fragment's element is in a closed <details> ---");
+    // <details><summary/><div><details><summary/><p id="answer"/></details></div></details>
+    const answer = new MockTarget('P');
+    const inner = new MockTarget('DETAILS').append(new MockTarget('SUMMARY'), answer);
+    const outer = new MockTarget('DETAILS').append(new MockTarget('SUMMARY'), new MockTarget().append(inner));
+    click({ href: '/faq#answer' }, {}, () => elements.set('answer', answer));
+
+    assert(inner.attributes.has('open') && outer.attributes.has('open'), "every <details> around it opens");
+    assert(answer.scrolledTo === 1 && !answer.hiddenWhenScrolled, "before it's scrolled to");
+
+    // <details><summary><a id="question"/></summary>…</details>
+    const question = new MockTarget('A');
+    const summary = new MockTarget('SUMMARY').append(question);
+    const details = new MockTarget('DETAILS').append(summary, new MockTarget('P'));
+    click({ href: '/faq#question' }, {}, () => elements.set('question', question));
+    assert(!details.attributes.has('open') && question.scrolledTo === 1, "the summary shows anyway - its <details> stays closed");
+
+    const closed = new MockTarget('DETAILS').append(new MockTarget('SUMMARY'));
+    click({ href: '/faq#closed' }, {}, () => elements.set('closed', closed));
+    assert(!closed.attributes.has('open') && closed.scrolledTo === 1, "so does a <details> named itself");
+}
+
+function testFragmentHiddenUntilFound() {
+    console.log("\n--- Test links 17: the fragment's element is in hidden=\"until-found\" ---");
+    const footnote = new MockTarget('LI');
+    const list = new MockTarget('OL', { hidden: 'until-found' }).append(footnote);
+    click({ href: '/post#note-1' }, {}, () => elements.set('note-1', footnote));
+
+    assert(list.events.join() === 'beforematch', "beforematch goes to the hidden element");
+    assert(!list.attributes.has('hidden') && !footnote.hiddenWhenScrolled, "which shows before the scroll");
+
+    const secret = new MockTarget('P');
+    const hidden = new MockTarget('DIV', { hidden: '' }).append(secret);
+    click({ href: '/post#secret' }, {}, () => elements.set('secret', secret));
+    assert(hidden.attributes.has('hidden') && hidden.events.length === 0, "plain hidden stays hidden");
+}
+
+function testAppNavigationIntoClosedDetails() {
+    console.log("\n--- Test app navigation 5: the element comes in a closed <details> ---");
+    const entry = new MockTarget('LI');
+    const details = new MockTarget('DETAILS').append(new MockTarget('SUMMARY'), entry);
+    navigate('/funds#entry-16');
+    elements.set('entry-16', entry);
+    scrollToPendingFragment();
+
+    assert(details.attributes.has('open'), "the render opens it");
+    assert(entry.scrolledTo === 1 && !entry.hiddenWhenScrolled, "and scrolls to the element");
+}
+
 testPlainLinkGoesToTop();
 testFragmentOfTheNewPage();
 testFragmentWithoutElement();
@@ -445,3 +548,6 @@ testAppNavigationScrollsAfterRender();
 testAppNavigationOnUnchangedPage();
 testAppNavigationDataLater();
 testAppNavigationWithoutFragment();
+testFragmentInClosedDetails();
+testFragmentHiddenUntilFound();
+testAppNavigationIntoClosedDetails();
