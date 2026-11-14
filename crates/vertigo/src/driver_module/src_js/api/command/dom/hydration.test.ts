@@ -910,6 +910,37 @@ function testBodyMarkerIsPlacedInHtml() {
     }
 }
 
+// 22. A `<details>` the browser opened before the app took it over
+function testOpenDetailsStaysOpen() {
+    console.log("\n--- Test hydration 22: <details> the browser opened before hydration ---");
+    clearBody();
+
+    // The server drew it closed; the browser opened it for the fragment of the address, or the
+    // reader clicked its summary while the app was loading
+    const details = new MockElement('DETAILS');
+    details.setAttribute('class', 'old');
+    details.setAttribute('open', '');
+    const div = new MockElement('DIV');
+    div.setAttribute('open', '');
+    documentMock.body.appendChild(details);
+    documentMock.body.appendChild(div);
+
+    const commands: CommandType[] = [
+        { CreateNode: { id: 220, name: 'details' } },
+        { InsertBefore: { parent: 3, child: 220, ref_id: null } },
+        { CreateNode: { id: 221, name: 'div' } },
+        { InsertBefore: { parent: 3, child: 221, ref_id: null } },
+    ];
+
+    const mapNodes = new MapNodes();
+    hydrate(commands, mapNodes, mockedApiLocation());
+
+    assert(mapNodes.getAnyOption(220) as any === details, "the <details> was adopted");
+    assert(details.getAttribute('open') === '', "it stays open");
+    assert(details.getAttribute('class') === undefined, "its other stale attributes go");
+    assert(div.getAttribute('open') === undefined, "open of another element goes too");
+}
+
 // Run all tests
 testExtraNodes();
 testTextMismatch();
@@ -932,3 +963,4 @@ testNewElementIsPlacedWithoutMoves();
 testNodesOutsideTheBatchStay();
 testStylesStayAtTheEndOfHead();
 testBodyMarkerIsPlacedInHtml();
+testOpenDetailsStaysOpen();

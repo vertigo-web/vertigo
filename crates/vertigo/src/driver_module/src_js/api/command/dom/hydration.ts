@@ -271,7 +271,11 @@ class HydrationEngine {
             // under `is_browser()`, and then a leftover `href` or `disabled` would survive on
             // a node that is otherwise the browser's.
             for (const name of element.getAttributeNames()) {
-                if (!attributes || !attributes.has(name)) {
+                // Except `open` of a `<details>`: the browser opens one itself - on a click on its
+                // summary, for a fragment, for find-in-page - also before the app takes it over,
+                // so it's the reader's, like what they typed into a field
+                if ((!attributes || !attributes.has(name))
+                    && !(name === 'open' && element.tagName === 'DETAILS')) {
                     element.removeAttribute(name);
                 }
             }
