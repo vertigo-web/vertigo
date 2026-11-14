@@ -176,64 +176,13 @@ impl DomElement {
     }
 
     pub fn add_attr_group_item(self, key: String, value: AttrGroupValue) -> Self {
+        // An event handler binds itself, so only the events an app passes in groups are in its
+        // wasm. A match on a variant for each of them kept the code of all of them.
         match (key.as_str(), value) {
             ("css", AttrGroupValue::Css { css, class_name }) => {
                 self.css_with_class_name(css, class_name)
             }
-            ("draw", AttrGroupValue::Draw(drawing)) => self.draw(drawing),
-            ("hook_key_down", AttrGroupValue::HookKeyDown(on_hook_key_down)) => {
-                self.hook_key_down_rc(on_hook_key_down)
-            }
-            ("on_blur", AttrGroupValue::OnBlur(on_blur)) => self.on_blur_rc(on_blur),
-            ("on_change", AttrGroupValue::OnChange(on_change)) => self.on_change_rc(on_change),
-            ("on_click", AttrGroupValue::OnClick(on_click)) => self.on_click_rc(on_click),
-            ("on_dropfile", AttrGroupValue::OnDropfile(on_dropfile)) => {
-                self.on_dropfile_rc(on_dropfile)
-            }
-            ("on_change_file", AttrGroupValue::OnChangeFile(on_change_file)) => {
-                self.on_change_file_rc(on_change_file)
-            }
-            ("on_change_checked", AttrGroupValue::OnChangeChecked(on_change_checked)) => {
-                self.on_change_checked_rc(on_change_checked)
-            }
-            ("on_input", AttrGroupValue::OnInput(on_input)) => self.on_input_rc(on_input),
-            ("on_intersect", AttrGroupValue::OnIntersect(on_intersect)) => {
-                self.on_intersect_rc(on_intersect)
-            }
-            ("on_key_down", AttrGroupValue::OnKeyDown(on_key_down)) => {
-                self.on_key_down_rc(on_key_down)
-            }
-            ("on_load", AttrGroupValue::OnLoad(on_load)) => self.on_load_rc(on_load),
-            ("on_media", AttrGroupValue::OnMedia(on_media)) => self.on_media_rc(on_media),
-            ("on_message", AttrGroupValue::OnMessage(on_message)) => self.on_message_rc(on_message),
-            ("on_mouse_down", AttrGroupValue::OnMouseDown(on_mouse_down)) => {
-                self.on_mouse_down_rc(on_mouse_down)
-            }
-            ("on_mouse_enter", AttrGroupValue::OnMouseEnter(on_mouse_enter)) => {
-                self.on_mouse_enter_rc(on_mouse_enter)
-            }
-            ("on_mouse_leave", AttrGroupValue::OnMouseLeave(on_mouse_leave)) => {
-                self.on_mouse_leave_rc(on_mouse_leave)
-            }
-            ("on_mouse_up", AttrGroupValue::OnMouseUp(on_mouse_up)) => {
-                self.on_mouse_up_rc(on_mouse_up)
-            }
-            ("on_pointer_down", AttrGroupValue::OnPointerDown(on_pointer_down)) => {
-                self.on_pointer_down_rc(on_pointer_down)
-            }
-            ("on_pointer_move", AttrGroupValue::OnPointerMove(on_pointer_move)) => {
-                self.on_pointer_move_rc(on_pointer_move)
-            }
-            ("on_pointer_up", AttrGroupValue::OnPointerUp(on_pointer_up)) => {
-                self.on_pointer_up_rc(on_pointer_up)
-            }
-            ("on_pointer_cancel", AttrGroupValue::OnPointerCancel(on_pointer_cancel)) => {
-                self.on_pointer_cancel_rc(on_pointer_cancel)
-            }
-            ("on_resize", AttrGroupValue::OnResize(on_resize)) => self.on_resize_rc(on_resize),
-            ("on_scroll", AttrGroupValue::OnScroll(on_scroll)) => self.on_scroll_rc(on_scroll),
-            ("on_submit", AttrGroupValue::OnSubmit(on_submit)) => self.on_submit_rc(on_submit),
-            ("on_wheel", AttrGroupValue::OnWheel(on_wheel)) => self.on_wheel_rc(on_wheel),
+            (_, AttrGroupValue::Binding(binding)) if binding.key() == key => binding.bind(self),
             ("tw", AttrGroupValue::AttrValue(value)) => self.attr("class", value),
             (_, AttrGroupValue::AttrValue(value)) => self.attr(key, value),
             (_, _) => {

@@ -20,6 +20,15 @@
   Once any is named the others stay behind, so a visitor with only an analytics cookie is rendered
   as a guest and the page can be cached. With none named, all of them go, as before.
 
+### Changed
+
+* An event handler, `hook_key_down` and `draw` in an `AttrGroup` bind themselves to the element
+  they're spread on: they're `AttrGroupValue::Binding`, made by the constructors of the same names
+  (`AttrGroupValue::on_click` and the others), which the `dom!` macro uses, instead of a variant
+  each. An app spreading a group carried the code of every event, also of the ones it never
+  handles, because `add_attr_group_item` matched a variant for each: about 4 kB of gzipped wasm in
+  an app with a few events. Now only the events it passes in groups are there.
+
 ### Fixed
 
 * A file input with `on_change_file` keeps showing the files picked into it. It was emptied as
