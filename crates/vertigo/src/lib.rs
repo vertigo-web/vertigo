@@ -100,7 +100,7 @@ pub use dom::{
         WheelDeltaMode, WheelEvent,
     },
 };
-pub use dom_macro::{AttrGroup, AttrGroupValue, EmbedDom};
+pub use dom_macro::{AttrGroup, AttrGroupBinding, AttrGroupValue, EmbedDom};
 pub use driver_module::{
     driver::{Driver, FetchMethod, FetchResult, get_driver, transaction},
     js_value::{

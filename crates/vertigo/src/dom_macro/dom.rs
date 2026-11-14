@@ -48,32 +48,40 @@ pub enum AttrGroupValue {
         css: Css,
         class_name: Option<String>,
     },
-    Draw(Computed<Drawing>),
-    HookKeyDown(Rc<Callback1<KeyDownEvent, bool>>),
-    OnBlur(Rc<Callback<()>>),
-    OnChange(Rc<Callback1<String, ()>>),
-    OnClick(Rc<Callback1<ClickEvent, ()>>),
-    OnDropfile(Rc<Callback1<DropFileEvent, ()>>),
-    OnChangeFile(Rc<Callback1<DropFileEvent, ()>>),
-    OnChangeChecked(Rc<Callback1<bool, ()>>),
-    OnInput(Rc<Callback1<String, ()>>),
-    OnIntersect(Rc<Callback1<IntersectionEvent, ()>>),
-    OnKeyDown(Rc<Callback1<KeyDownEvent, bool>>),
-    OnLoad(Rc<Callback<()>>),
-    OnMedia(Rc<Callback1<MediaEvent, ()>>),
-    OnMessage(Rc<Callback1<MessageEvent, ()>>),
-    OnMouseDown(Rc<Callback<bool>>),
-    OnMouseEnter(Rc<Callback<()>>),
-    OnMouseLeave(Rc<Callback<()>>),
-    OnMouseUp(Rc<Callback<bool>>),
-    OnPointerDown(Rc<Callback1<PointerEvent, ()>>),
-    OnPointerMove(Rc<Callback1<PointerEvent, ()>>),
-    OnPointerUp(Rc<Callback1<PointerEvent, ()>>),
-    OnPointerCancel(Rc<Callback1<PointerEvent, ()>>),
-    OnResize(Rc<Callback1<ResizeEvent, ()>>),
-    OnScroll(Rc<Callback1<ScrollEvent, ()>>),
-    OnSubmit(Rc<Callback<()>>),
-    OnWheel(Rc<Callback1<WheelEvent, ()>>),
+    /// An event handler, `hook_key_down` or `draw`, made by the constructor of the same name, f. ex.
+    /// [`AttrGroupValue::on_click`].
+    Binding(AttrGroupBinding),
+}
+
+/// What an event handler, `hook_key_down` or `draw` of an [AttrGroup] does to the element it's
+/// spread on: binds itself to it under its key.
+///
+/// Made only by the constructors of [AttrGroupValue], so an app carries the code of the events it
+/// passes in groups, and not of all of them.
+#[derive(Clone)]
+pub struct AttrGroupBinding {
+    /// The key it binds itself under, f. ex. `on_click`.
+    key: &'static str,
+    bind: Rc<dyn Fn(DomElement) -> DomElement>,
+}
+
+impl AttrGroupBinding {
+    fn new(key: &'static str, bind: impl Fn(DomElement) -> DomElement + 'static) -> Self {
+        Self {
+            key,
+            bind: Rc::new(bind),
+        }
+    }
+
+    /// The key it binds itself under, f. ex. `on_click`.
+    pub fn key(&self) -> &'static str {
+        self.key
+    }
+
+    /// Binds itself to `element`, which may happen to many elements, each a copy of a group.
+    pub(crate) fn bind(&self, element: DomElement) -> DomElement {
+        (self.bind)(element)
+    }
 }
 
 impl From<&Self> for AttrGroupValue {
@@ -83,9 +91,13 @@ impl From<&Self> for AttrGroupValue {
 }
 
 macro_rules! group_value_constructor {
-    ($function:ident, $cb_type:ty, $variant:ident) => {
+    ($function:ident, $cb_type:ty, $method:ident) => {
         pub fn $function(callback: impl Into<$cb_type>) -> Self {
-            Self::$variant(Rc::new(callback.into()))
+            let callback = Rc::new(callback.into());
+            Self::Binding(AttrGroupBinding::new(
+                stringify!($function),
+                move |element| element.$method(callback.clone()),
+            ))
         }
     };
 }
@@ -99,34 +111,37 @@ impl AttrGroupValue {
     }
 
     pub fn draw(drawing: impl Into<Computed<Drawing>>) -> Self {
-        Self::Draw(drawing.into())
+        let drawing = drawing.into();
+        Self::Binding(AttrGroupBinding::new("draw", move |element| {
+            element.draw(drawing.clone())
+        }))
     }
 
-    group_value_constructor!(hook_key_down, Callback1<KeyDownEvent, bool>, HookKeyDown);
-    group_value_constructor!(on_blur, Callback<()>, OnBlur);
-    group_value_constructor!(on_change, Callback1<String, ()>, OnChange);
-    group_value_constructor!(on_click, Callback1<ClickEvent, ()>, OnClick);
-    group_value_constructor!(on_dropfile, Callback1<DropFileEvent, ()>, OnDropfile);
-    group_value_constructor!(on_change_file, Callback1<DropFileEvent, ()>, OnChangeFile);
-    group_value_constructor!(on_change_checked, Callback1<bool, ()>, OnChangeChecked);
-    group_value_constructor!(on_input, Callback1<String, ()>, OnInput);
-    group_value_constructor!(on_intersect, Callback1<IntersectionEvent, ()>, OnIntersect);
-    group_value_constructor!(on_key_down, Callback1<KeyDownEvent, bool>, OnKeyDown);
-    group_value_constructor!(on_load, Callback<()>, OnLoad);
-    group_value_constructor!(on_media, Callback1<MediaEvent, ()>, OnMedia);
-    group_value_constructor!(on_message, Callback1<MessageEvent, ()>, OnMessage);
-    group_value_constructor!(on_mouse_down, Callback<bool>, OnMouseDown);
-    group_value_constructor!(on_mouse_enter, Callback<()>, OnMouseEnter);
-    group_value_constructor!(on_mouse_leave, Callback<()>, OnMouseLeave);
-    group_value_constructor!(on_mouse_up, Callback<bool>, OnMouseUp);
-    group_value_constructor!(on_pointer_down, Callback1<PointerEvent, ()>, OnPointerDown);
-    group_value_constructor!(on_pointer_move, Callback1<PointerEvent, ()>, OnPointerMove);
-    group_value_constructor!(on_pointer_up, Callback1<PointerEvent, ()>, OnPointerUp);
-    group_value_constructor!(on_pointer_cancel, Callback1<PointerEvent, ()>, OnPointerCancel);
-    group_value_constructor!(on_resize, Callback1<ResizeEvent, ()>, OnResize);
-    group_value_constructor!(on_scroll, Callback1<ScrollEvent, ()>, OnScroll);
-    group_value_constructor!(on_submit, Callback<()>, OnSubmit);
-    group_value_constructor!(on_wheel, Callback1<WheelEvent, ()>, OnWheel);
+    group_value_constructor!(hook_key_down, Callback1<KeyDownEvent, bool>, hook_key_down_rc);
+    group_value_constructor!(on_blur, Callback<()>, on_blur_rc);
+    group_value_constructor!(on_change, Callback1<String, ()>, on_change_rc);
+    group_value_constructor!(on_click, Callback1<ClickEvent, ()>, on_click_rc);
+    group_value_constructor!(on_dropfile, Callback1<DropFileEvent, ()>, on_dropfile_rc);
+    group_value_constructor!(on_change_file, Callback1<DropFileEvent, ()>, on_change_file_rc);
+    group_value_constructor!(on_change_checked, Callback1<bool, ()>, on_change_checked_rc);
+    group_value_constructor!(on_input, Callback1<String, ()>, on_input_rc);
+    group_value_constructor!(on_intersect, Callback1<IntersectionEvent, ()>, on_intersect_rc);
+    group_value_constructor!(on_key_down, Callback1<KeyDownEvent, bool>, on_key_down_rc);
+    group_value_constructor!(on_load, Callback<()>, on_load_rc);
+    group_value_constructor!(on_media, Callback1<MediaEvent, ()>, on_media_rc);
+    group_value_constructor!(on_message, Callback1<MessageEvent, ()>, on_message_rc);
+    group_value_constructor!(on_mouse_down, Callback<bool>, on_mouse_down_rc);
+    group_value_constructor!(on_mouse_enter, Callback<()>, on_mouse_enter_rc);
+    group_value_constructor!(on_mouse_leave, Callback<()>, on_mouse_leave_rc);
+    group_value_constructor!(on_mouse_up, Callback<bool>, on_mouse_up_rc);
+    group_value_constructor!(on_pointer_down, Callback1<PointerEvent, ()>, on_pointer_down_rc);
+    group_value_constructor!(on_pointer_move, Callback1<PointerEvent, ()>, on_pointer_move_rc);
+    group_value_constructor!(on_pointer_up, Callback1<PointerEvent, ()>, on_pointer_up_rc);
+    group_value_constructor!(on_pointer_cancel, Callback1<PointerEvent, ()>, on_pointer_cancel_rc);
+    group_value_constructor!(on_resize, Callback1<ResizeEvent, ()>, on_resize_rc);
+    group_value_constructor!(on_scroll, Callback1<ScrollEvent, ()>, on_scroll_rc);
+    group_value_constructor!(on_submit, Callback<()>, on_submit_rc);
+    group_value_constructor!(on_wheel, Callback1<WheelEvent, ()>, on_wheel_rc);
 
     /// Extract [`Computed<String>`] from this [AttrGroupValue] if possible.
     ///

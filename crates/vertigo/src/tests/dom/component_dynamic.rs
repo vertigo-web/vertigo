@@ -404,3 +404,70 @@ fn test_passable_attr_group() {
         "<div v-component='HelloWrapper'><div id='inner_div' v-component='Hello'><span>Hello world</span></div></div>"
     );
 }
+
+#[test]
+fn test_event_from_group_binds_to_every_copy_of_it() {
+    use std::{cell::Cell, rc::Rc};
+
+    use crate::{
+        JsJson, JsJsonSerialize,
+        dev::{
+            command::{CommandForWasm, DriverDomCommand},
+            inspect::log_take,
+        },
+        driver_module::api::api_command_wasm,
+    };
+
+    #[component]
+    fn Pair(each: AttrGroup) {
+        dom! {
+            <div>
+                <button {..each.clone()}>"First"</button>
+                <button {..each}>"Second"</button>
+            </div>
+        }
+    }
+
+    let clicks = Rc::new(Cell::new(0));
+    let on_click = {
+        let clicks = clicks.clone();
+        move |_| clicks.set(clicks.get() + 1)
+    };
+
+    log_start();
+    let _el = dom! { <Pair each:on_click={on_click} /> };
+    let callbacks = log_take()
+        .into_iter()
+        .filter_map(|command| match command {
+            DriverDomCommand::CallbackAdd {
+                event_name,
+                callback_id,
+                ..
+            } if event_name == "click" => Some(callback_id),
+            _ => None,
+        })
+        .collect::<Vec<_>>();
+
+    assert_eq!(callbacks.len(), 2, "a listener on each button");
+    for callback_id in callbacks {
+        let value = JsJson::List(vec![JsJson::False; 4]);
+        let command = CommandForWasm::CallbackCall { callback_id, value };
+        api_command_wasm().command_from_js(command.to_json());
+    }
+    assert_eq!(clicks.get(), 2, "both call the handler of the group");
+}
+
+#[test]
+fn test_event_under_another_key_is_not_bound() {
+    use crate::{AttrGroupValue, dom_element};
+
+    log_start();
+
+    let _el = dom_element! { <div /> }
+        .add_attr_group_item("on_blur".to_string(), AttrGroupValue::on_click(|_| ()))
+        .add_attr_group_item("id".to_string(), AttrGroupValue::on_click(|_| ()));
+
+    let el_str = DomDebugFragment::from_log().to_pseudo_html();
+
+    assert_eq!(el_str, "<div />");
+}
