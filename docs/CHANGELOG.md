@@ -63,6 +63,13 @@
   set it, as a `Value` does. Since every browser event is one transaction, a task reading the
   cache right after `refresh().await` got the value from before the response, and of two
   `optimistically_change` calls in one event handler only the second stayed.
+* A followed link or the app's own navigation to a fragment shows the fragment's element before
+  scrolling to it, as the browser does: it opens the `<details>` the element is in (unless it's in
+  the summary) and shows an element around it with `hidden="until-found"`, after a `beforematch`
+  event at it. The element stayed hidden, so nothing scrolled.
+* Hydration leaves `open` on a `<details>`. The browser sets it itself - for the fragment of the
+  address, or when the reader opens one while the app is loading - and hydration closed it again,
+  as an attribute the server hadn't rendered.
 
 ### Internals
 
