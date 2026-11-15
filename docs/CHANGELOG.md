@@ -5,6 +5,11 @@
 
 ### Added
 
+* `hook_pointer_move`, `hook_pointer_up` and `hook_pointer_cancel` on elements: the pointer events
+  of the whole page, as `hook_key_down` hears every keystroke, with the position still from the
+  corner of the element with the hook. A drag goes on past the element's edges and ends also when
+  it's let go outside of it, without capturing the pointer - so the targets under it still get
+  their `on_pointer_up`.
 * `PointerEvent::release_pointer`: the events of the pointer go again to the element under it.
   A browser captures a touching finger or pen for the element it touched, so its `pointerup` never
   reached another one: released in `on_pointer_down`, a finger drags something onto a target with

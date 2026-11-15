@@ -311,6 +311,46 @@ function testPointerListeners() {
     );
 }
 
+/// The hooks listen on the document, for an element whose top left corner is at (10, 20) and
+/// which is 50 x 60. The finger of `MockPointerEvent` touches (130, 240) of the viewport,
+/// somewhere else on the page.
+function testPointerHooks() {
+    console.log("\n--- Test pointer 6: the hooks ---");
+    const doc = new MockNode();
+    (globalThis as any).document = doc;
+    const captured: Array<number> = [];
+    const element = Object.assign(new MockElement(), {
+        getBoundingClientRect: () => ({ left: 10, top: 20, width: 50, height: 60 }),
+        setPointerCapture: (pointerId: number) => { captured.push(pointerId); },
+    });
+    const nodes = { getNode: () => element } as unknown as MapNodes;
+    const sent: unknown[] = [];
+    const reply = { stop_propagation: false, prevent_default: false, capture_pointer: true, release_pointer: false };
+    const wasm = { wasmCommand: (command: any) => { sent.push(command.CallbackCall.value); return reply; } };
+    const manager = new CallbackManager(() => wasm as any);
+    const hooks = ['hook_pointermove', 'hook_pointerup', 'hook_pointercancel'];
+
+    hooks.forEach((name, index) => manager.add(nodes, 1, name, 30 + index));
+
+    const names = ['pointermove', 'pointerup', 'pointercancel'];
+    assert(
+        JSON.stringify(doc.added) === JSON.stringify(names.map((name) => [name, false])),
+        "each goes on the DOM event of its name, on the document",
+    );
+
+    doc.listeners[0]?.(new MockPointerEvent() as unknown as Event);
+    assert(
+        JSON.stringify(sent) === JSON.stringify([[7, 'touch', true, 0, 1, 120, 220, 50, 60, false, false, true, false]]),
+        `the pointer goes from the corner of the element with the hook, with its size: ${JSON.stringify(sent)}`,
+    );
+    assert(JSON.stringify(captured) === JSON.stringify([7]), "which captures the pointer when asked");
+
+    hooks.forEach((name, index) => manager.remove(nodes, 1, name, 30 + index));
+    assert(JSON.stringify(doc.removed) === JSON.stringify(names), "and they come off the document");
+
+    delete (globalThis as any).document;
+}
+
 /// An element whose content is scrolled 120.5 px down, on a zoomed page: 900 px tall, of which
 /// 300 px show.
 class MockScrollEvent extends MockEvent {
@@ -729,6 +769,7 @@ testPointerRelease();
 testPointerReleaseOfAPointerNotCaptured();
 testPointerFlags();
 testPointerListeners();
+testPointerHooks();
 testScrollPayload();
 testScrollListener();
 void testScrollFromTheServer();

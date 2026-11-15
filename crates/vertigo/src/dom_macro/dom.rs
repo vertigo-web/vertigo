@@ -118,6 +118,13 @@ impl AttrGroupValue {
     }
 
     group_value_constructor!(hook_key_down, Callback1<KeyDownEvent, bool>, hook_key_down_rc);
+    group_value_constructor!(hook_pointer_move, Callback1<PointerEvent, ()>, hook_pointer_move_rc);
+    group_value_constructor!(hook_pointer_up, Callback1<PointerEvent, ()>, hook_pointer_up_rc);
+    group_value_constructor!(
+        hook_pointer_cancel,
+        Callback1<PointerEvent, ()>,
+        hook_pointer_cancel_rc
+    );
     group_value_constructor!(on_blur, Callback<()>, on_blur_rc);
     group_value_constructor!(on_change, Callback1<String, ()>, on_change_rc);
     group_value_constructor!(on_click, Callback1<ClickEvent, ()>, on_click_rc);

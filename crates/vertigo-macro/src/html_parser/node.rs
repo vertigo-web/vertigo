@@ -209,12 +209,35 @@ fn push_attribute(
     }
 
     let method_str = match name.as_str() {
-        "draw" | "hook_key_down" | "on_blur" | "on_change" | "on_change_file"
-        | "on_change_checked" | "on_click" | "on_dropfile" | "on_input" | "on_intersect"
-        | "on_key_down" | "on_load" | "on_media" | "on_message" | "on_mouse_down"
-        | "on_mouse_enter" | "on_mouse_leave" | "on_mouse_up" | "on_pointer_down"
-        | "on_pointer_move" | "on_pointer_up" | "on_pointer_cancel" | "on_resize" | "on_scroll"
-        | "on_submit" | "on_wheel" => &name,
+        "draw"
+        | "hook_key_down"
+        | "hook_pointer_move"
+        | "hook_pointer_up"
+        | "hook_pointer_cancel"
+        | "on_blur"
+        | "on_change"
+        | "on_change_file"
+        | "on_change_checked"
+        | "on_click"
+        | "on_dropfile"
+        | "on_input"
+        | "on_intersect"
+        | "on_key_down"
+        | "on_load"
+        | "on_media"
+        | "on_message"
+        | "on_mouse_down"
+        | "on_mouse_enter"
+        | "on_mouse_leave"
+        | "on_mouse_up"
+        | "on_pointer_down"
+        | "on_pointer_move"
+        | "on_pointer_up"
+        | "on_pointer_cancel"
+        | "on_resize"
+        | "on_scroll"
+        | "on_submit"
+        | "on_wheel" => &name,
 
         "css" => {
             let class_name = generate_debug_class_name(&value);
@@ -411,6 +434,9 @@ mod tests {
             "on_resize",
             "on_scroll",
             "hook_key_down",
+            "hook_pointer_move",
+            "hook_pointer_up",
+            "hook_pointer_cancel",
         ];
         for attr in event_attrs {
             let (out_attr, class_values) = run_push_attribute(attr, quote! { my_handler });

@@ -292,3 +292,48 @@ fn an_event_that_is_not_a_pointer_reaches_no_callback() {
     assert_eq!(reply, JsJson::Null);
     assert!(got.borrow().is_empty());
 }
+
+/// The hooks go on wire names of their own, which the driver listens to on the document, and their
+/// callbacks get the events as the element's own listeners do.
+#[test]
+fn each_hook_goes_on_the_wire_name_of_its_name() {
+    let got: Got = Rc::new(RefCell::new(Vec::new()));
+    let listener = |name: &'static str| {
+        let got = got.clone();
+        move |event: PointerEvent| got.borrow_mut().push((name, event))
+    };
+
+    log_start();
+    let _element = dom! {
+        <div
+            hook_pointer_move={listener("move")}
+            hook_pointer_up={listener("up")}
+            hook_pointer_cancel={listener("cancel")}
+        />
+    };
+    let callbacks = log_take()
+        .into_iter()
+        .filter_map(|command| match command {
+            DriverDomCommand::CallbackAdd {
+                event_name,
+                callback_id,
+                ..
+            } => Some((event_name, callback_id)),
+            _ => None,
+        })
+        .collect::<Vec<_>>();
+
+    for event_name in ["hook_pointermove", "hook_pointerup", "hook_pointercancel"] {
+        let reply = deliver(callback(&callbacks, event_name), touch("mouse"));
+        assert_eq!(reply, flags(false, false, PointerCapture::AsItIs));
+    }
+
+    let got = got.borrow();
+    let names = got.iter().map(|(name, _)| *name).collect::<Vec<_>>();
+    assert_eq!(names, ["move", "up", "cancel"]);
+    let positions = got
+        .iter()
+        .map(|(_, event)| (event.pointer_x, event.pointer_y))
+        .collect::<Vec<_>>();
+    assert_eq!(positions, [(30.0, 40.0); 3]);
+}

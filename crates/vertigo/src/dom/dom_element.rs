@@ -307,6 +307,56 @@ impl DomElement {
         })
     }
 
+    /// A pointer moved anywhere on the page, also outside the element and without capturing it,
+    /// f. ex. to go on dragging past the element's edges onto targets with `on_pointer_up`. Like
+    /// `hook_key_down`, it listens on the document. The position is still from the corner of the
+    /// element with the hook. See [`PointerEvent`].
+    pub fn hook_pointer_move(
+        self,
+        on_hook_pointer_move: impl Into<Callback1<PointerEvent, ()>>,
+    ) -> Self {
+        self.hook_pointer_move_rc(Rc::new(on_hook_pointer_move.into()))
+    }
+
+    pub fn hook_pointer_move_rc(
+        self,
+        on_hook_pointer_move: Rc<Callback1<PointerEvent, ()>>,
+    ) -> Self {
+        self.on_pointer("hook_pointermove", on_hook_pointer_move)
+    }
+
+    /// A mouse button released, or a finger or a pen lifted, anywhere on the page - f. ex. to end
+    /// dragging also when it's let go outside of the element. Like `hook_key_down`, it listens on
+    /// the document, so it comes after the `on_pointer_up` of the elements under the pointer. The
+    /// position is from the corner of the element with the hook. See [`PointerEvent`].
+    pub fn hook_pointer_up(
+        self,
+        on_hook_pointer_up: impl Into<Callback1<PointerEvent, ()>>,
+    ) -> Self {
+        self.hook_pointer_up_rc(Rc::new(on_hook_pointer_up.into()))
+    }
+
+    pub fn hook_pointer_up_rc(self, on_hook_pointer_up: Rc<Callback1<PointerEvent, ()>>) -> Self {
+        self.on_pointer("hook_pointerup", on_hook_pointer_up)
+    }
+
+    /// The browser took a pointer over anywhere on the page, f. ex. to scroll it with a finger,
+    /// and no more of its events come. Like `hook_key_down`, it listens on the document. See
+    /// [`PointerEvent`].
+    pub fn hook_pointer_cancel(
+        self,
+        on_hook_pointer_cancel: impl Into<Callback1<PointerEvent, ()>>,
+    ) -> Self {
+        self.hook_pointer_cancel_rc(Rc::new(on_hook_pointer_cancel.into()))
+    }
+
+    pub fn hook_pointer_cancel_rc(
+        self,
+        on_hook_pointer_cancel: Rc<Callback1<PointerEvent, ()>>,
+    ) -> Self {
+        self.on_pointer("hook_pointercancel", on_hook_pointer_cancel)
+    }
+
     pub fn id_dom(&self) -> DomId {
         self.id_dom
     }
