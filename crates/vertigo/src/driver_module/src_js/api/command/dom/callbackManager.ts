@@ -106,15 +106,13 @@ export const wheel: Handler = (event, send) => {
     ]));
 };
 
-/// The pointer events, all four of them. Wasm replies with the `PointerEvent` flags, and with
-/// `capture_pointer` the events of this pointer go to the element with the listener until it's
-/// released. With `release_pointer` they go again to the element under the pointer. The capture
-/// is held by the target of the event: a captured pointer's events go to the element holding it,
-/// and a browser captures a touching finger by itself for the element it touched. The pointer
-/// goes relative to the element with the listener, as for the wheel.
-export const pointer: Handler = (event, send) => {
-    const target = event.currentTarget;
-
+/// The pointer events of `target`: the element with the listener, or with a hook, which listens
+/// on the document. Wasm replies with the `PointerEvent` flags, and with `capture_pointer` the
+/// events of this pointer go to `target` until it's released. With `release_pointer` they go again
+/// to the element under the pointer. The capture is held by the target of the event: a captured
+/// pointer's events go to the element holding it, and a browser captures a touching finger by
+/// itself for the element it touched. The pointer goes relative to `target`, as for the wheel.
+export const pointerOf = (target: EventTarget | null): Handler => (event, send) => {
     if (!(event instanceof PointerEvent) || !(target instanceof Element)) {
         throw Error('#pointer');
     }
@@ -147,6 +145,11 @@ export const pointer: Handler = (event, send) => {
             }
         },
     });
+};
+
+/// The pointer events, all four of them, of the element with the listener.
+export const pointer: Handler = (event, send) => {
+    pointerOf(event.currentTarget)(event, send);
 };
 
 /// Where the content of the element is scrolled to, and how big it and its visible part are.
@@ -341,10 +344,10 @@ if (typeof window !== 'undefined') {
 }
 
 /// The event names are wire strings from Rust (`dom/dom_element.rs`), so each is spelled out
-/// exactly once here. `hook_keydown`, `change_file` and `change_checked` are vertigo-internal
-/// names, remapped to real DOM events where the listener is attached. `intersect`, `resize`,
-/// `media` and `message` aren't one DOM event of the element, so `CallbackManager.add` takes them
-/// on its own.
+/// exactly once here. `change_file` and `change_checked` are vertigo-internal names, remapped to
+/// real DOM events where the listener is attached. `intersect`, `resize`, `media` and `message`
+/// aren't one DOM event of the element, and the hooks listen on the document (`HOOKS`), so
+/// `CallbackManager.add` takes them on its own.
 const HANDLERS: Record<string, Handler> = {
     click,
     submit: notifyPreventDefault,
@@ -356,7 +359,6 @@ const HANDLERS: Record<string, Handler> = {
     mouseenter: notify,
     mouseleave: notify,
     keydown,
-    hook_keydown: keydown,
     drop,
     load: notifyPreventDefault,
     change_file: changeFile,
@@ -367,6 +369,16 @@ const HANDLERS: Record<string, Handler> = {
     pointermove: pointer,
     pointerup: pointer,
     pointercancel: pointer,
+};
+
+/// The hooks, by their wire names: the DOM event each listens to on the document, wherever on the
+/// page it happens, and its handler for the element with the hook - a pointer goes relative to
+/// that element.
+const HOOKS: Record<string, [string, (element: Element) => Handler]> = {
+    hook_keydown: ['keydown', () => keydown],
+    hook_pointermove: ['pointermove', pointerOf],
+    hook_pointerup: ['pointerup', pointerOf],
+    hook_pointercancel: ['pointercancel', pointerOf],
 };
 
 /// The DOM event behind a wire name: `change_file` and `change_checked` are the `change` event
@@ -471,28 +483,35 @@ export class CallbackManager {
             return;
         }
 
+        const hook = HOOKS[event_name];
+
+        if (hook !== undefined) {
+            const [domEvent, handlerOf] = hook;
+            const handler = handlerOf(nodes.getNode('callback_add', id));
+            const listener = (event: Event) => { handler(event, send); };
+            this.callbacks.set(callback_id, listener);
+            document.addEventListener(domEvent, listener, false);
+            return;
+        }
+
         this.callbacks.set(callback_id, callback);
 
-        if (event_name === 'hook_keydown') {
-            document.addEventListener('keydown', callback, false);
-        } else {
-            const node = nodes.get('callback_add', id);
-            // A wheel listener isn't passive, so that `WheelEvent::prevent_default` can keep the
-            // page from scrolling: browsers make one on `<body>` passive unless told.
-            node.addEventListener(domEventName(event_name), callback, event_name === 'wheel' ? { passive: false } : false);
+        const node = nodes.get('callback_add', id);
+        // A wheel listener isn't passive, so that `WheelEvent::prevent_default` can keep the
+        // page from scrolling: browsers make one on `<body>` passive unless told.
+        node.addEventListener(domEventName(event_name), callback, event_name === 'wheel' ? { passive: false } : false);
 
-            // An element hydration adopted keeps where it was scrolled to before the wasm started
-            // - by the visitor, or by the caret in a `<textarea>` - and no scroll will tell of it.
-            // That goes after the batch, which wasm is still in the middle of sending. Only the
-            // first batch adopts, and a new element is at the start, so later ones don't look -
-            // a read of the scroll lays the page out.
-            if (event_name === 'scroll' && nodes.hasInitNodes()) {
-                queueMicrotask(() => {
-                    if (node instanceof Element && (node.scrollTop !== 0 || node.scrollLeft !== 0)) {
-                        scrollOf(node, send);
-                    }
-                });
-            }
+        // An element hydration adopted keeps where it was scrolled to before the wasm started
+        // - by the visitor, or by the caret in a `<textarea>` - and no scroll will tell of it.
+        // That goes after the batch, which wasm is still in the middle of sending. Only the
+        // first batch adopts, and a new element is at the start, so later ones don't look -
+        // a read of the scroll lays the page out.
+        if (event_name === 'scroll' && nodes.hasInitNodes()) {
+            queueMicrotask(() => {
+                if (node instanceof Element && (node.scrollTop !== 0 || node.scrollLeft !== 0)) {
+                    scrollOf(node, send);
+                }
+            });
         }
     }
 
@@ -510,13 +529,15 @@ export class CallbackManager {
             return;
         }
 
+        const hook = HOOKS[event_name];
+
         if (event_name === 'media') {
             const element = nodes.get('callback_remove', id);
             MEDIA_EVENTS.forEach((name) => element.removeEventListener(name, callback));
         } else if (event_name === 'message') {
             window.removeEventListener('message', callback);
-        } else if (event_name === 'hook_keydown') {
-            document.removeEventListener('keydown', callback);
+        } else if (hook !== undefined) {
+            document.removeEventListener(hook[0], callback);
         } else {
             const node = nodes.get('callback_remove', id);
             node.removeEventListener(domEventName(event_name), callback);

@@ -200,6 +200,9 @@ fn test_on_events_grouping_and_spreading() {
         <Everything
             name="world"
             inner:hook_key_down={|_| true}
+            inner:hook_pointer_cancel={|_| ()}
+            inner:hook_pointer_move={|_| ()}
+            inner:hook_pointer_up={|_| ()}
             inner:on_blur={|| ()}
             inner:on_change={|_| ()}
             inner:on_change_checked={|_| ()}
@@ -229,7 +232,7 @@ fn test_on_events_grouping_and_spreading() {
 
     assert_eq!(
         el_str,
-        "<input name='world' v-component='Everything' blur=2 change=3 change_checked=4 click=5 drop=6 hook_keydown=1 input=7 keydown=8 load=9 media=10 message=11 mousedown=12 mouseenter=13 mouseleave=14 mouseup=15 pointercancel=16 pointerdown=17 pointermove=18 pointerup=19 resize=20 scroll=21 submit=22 wheel=23 />"
+        "<input name='world' v-component='Everything' blur=5 change=6 change_checked=7 click=8 drop=9 hook_keydown=1 hook_pointercancel=2 hook_pointermove=3 hook_pointerup=4 input=10 keydown=11 load=12 media=13 message=14 mousedown=15 mouseenter=16 mouseleave=17 mouseup=18 pointercancel=19 pointerdown=20 pointermove=21 pointerup=22 resize=23 scroll=24 submit=25 wheel=26 />"
     );
 }
 

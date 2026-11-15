@@ -86,8 +86,18 @@ if [ -z "$NOTES" ]; then
     fail "the $CHANGELOG entry for $VERSION is empty"
 fi
 
-CARGO_VERSION=$(grep -m1 '^version = ' Cargo.toml | cut -d'"' -f2)
-if [ "$CARGO_VERSION" != "$VERSION" ]; then
+# The version of [package], or of [workspace.package] when the package inherits it
+# (`version = { workspace = true }`) or the manifest is a virtual workspace
+CARGO_VERSION=$(awk '
+    /^[ \t]*\[/ { section = $1; next }
+    /^[ \t]*version[ \t]*=[ \t]*"/ && (section == "[package]" || section == "[workspace.package]") {
+        split($0, parts, "\""); versions[section] = parts[2]
+    }
+    END { print ("[package]" in versions) ? versions["[package]"] : versions["[workspace.package]"] }
+' Cargo.toml)
+if [ -z "$CARGO_VERSION" ]; then
+    fail "no version in [package] or [workspace.package] of Cargo.toml"
+elif [ "$CARGO_VERSION" != "$VERSION" ]; then
     fail "Cargo.toml has version $CARGO_VERSION, $CHANGELOG $VERSION"
 fi
 
