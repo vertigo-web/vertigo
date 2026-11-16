@@ -1,15 +1,19 @@
-//! A paper to draw on with a mouse, a pen or a finger.
+//! A paper to draw on with a mouse, a pen or a finger, and to paste stamps on.
 //!
 //! The paper is two `<canvas>` elements, one over the other, each drawn from the
-//! `Computed<Drawing>` in its `draw` attribute. The lower one shows the strokes done, and is
-//! drawn anew only when one is added or taken away. The upper one shows the stroke being
-//! drawn, and is drawn anew at every move of the pointer.
+//! `Computed<Drawing>` in its `draw` attribute. The lower one shows the marks done, and is
+//! drawn anew only when one is added or taken away. The upper one shows the mark being made,
+//! and is drawn anew at every move of the pointer.
+//!
+//! The stamps are parts of one image, an atlas, drawn with `Drawing::draw_image` - on the
+//! paper, and on a small canvas in each stamp's button. The browser loads the atlas once for
+//! all of them.
 
 mod state;
 
 use vertigo::{Css, DomNode, PointerEvent, bind, component, css, dom};
 
-use state::{BRUSHES, PALETTE, Paint, State, state_paint};
+use state::{BRUSHES, PALETTE, Paint, STAMPS, Stamp, State, icon, state_paint};
 
 #[component]
 pub fn PaintDemo() {
@@ -25,19 +29,24 @@ pub fn PaintDemo() {
     let up = bind!(state, |event: PointerEvent| state.release(&event));
 
     let blank = state
-        .strokes
-        .map(|strokes| strokes.is_empty().then(|| "disabled".to_string()));
+        .marks
+        .map(|marks| marks.is_empty().then(|| "disabled".to_string()));
     let undo = bind!(state, |_| state.undo());
     let clear = bind!(state, |_| state.clear());
 
     let paints: Vec<_> = PALETTE.iter().map(|paint| swatch(&state, *paint)).collect();
     let brushes: Vec<_> = BRUSHES.iter().map(|width| brush(&state, *width)).collect();
+    let stamps: Vec<_> = STAMPS
+        .iter()
+        .map(|stamp| stamp_tool(&state, *stamp))
+        .collect();
 
     dom! {
         <div css={css_wrapper()}>
             <div css={css_toolbar()}>
                 <div css={css_group()}>{..paints}</div>
                 <div css={css_group()}>{..brushes}</div>
+                <div css={css_group()}>{..stamps}</div>
                 <div css={css_group()}>
                     <button on_click={undo} disabled={blank.clone()}>"Undo"</button>
                     <button on_click={clear} disabled={blank}>"Clear"</button>
@@ -51,16 +60,16 @@ pub fn PaintDemo() {
                 on_pointer_cancel={up}
             >
                 <canvas css={css_layer()} draw={state.picture()} />
-                <canvas css={css_layer()} draw={state.brush()} />
+                <canvas css={css_layer()} draw={state.making()} />
             </div>
-            <p>"Draw with a mouse, a pen or a finger."</p>
+            <p>"Draw with a mouse, a pen or a finger. A stamp goes where you let go of it."</p>
         </div>
     }
 }
 
 fn swatch(state: &State, paint: Paint) -> DomNode {
     let picked = state.color.map(move |color| color == paint.color);
-    let pick = bind!(state, |_| state.color.set(paint.color));
+    let pick = bind!(state, |_| state.pick_paint(paint.color));
 
     dom! {
         <button
@@ -73,8 +82,8 @@ fn swatch(state: &State, paint: Paint) -> DomNode {
 }
 
 fn brush(state: &State, width: f32) -> DomNode {
-    let picked = state.width.map(move |current| current == width);
-    let pick = bind!(state, |_| state.width.set(width));
+    let picked = state.is_brush(width);
+    let pick = bind!(state, |_| state.pick_brush(width));
     // As wide as the brush draws on a paper shown at its own size, as far as the button fits it.
     let dot = format!("width: {0}px; height: {0}px;", width.min(22.0));
 
@@ -86,6 +95,22 @@ fn brush(state: &State, width: f32) -> DomNode {
             on_click={pick}
         >
             <span css={css_dot()} style={dot} />
+        </button>
+    }
+}
+
+fn stamp_tool(state: &State, stamp: Stamp) -> DomNode {
+    let picked = state.stamp.map(move |picked| picked == Some(stamp));
+    let pick = bind!(state, |_| state.stamp.set(Some(stamp)));
+
+    dom! {
+        <button
+            css={picked.map(css_tool)}
+            title={stamp.name}
+            aria-pressed={picked.map(|picked| picked.to_string())}
+            on_click={pick}
+        >
+            <canvas css={css_icon()} draw={icon(stamp)} />
         </button>
     }
 }
@@ -170,6 +195,14 @@ fn css_tool(picked: bool) -> Css {
         padding: 0;
         background-color: {background};
         cursor: pointer;
+    "}
+}
+
+fn css_icon() -> Css {
+    css! {"
+        display: block;
+        width: 24px;
+        height: 24px;
     "}
 }
 

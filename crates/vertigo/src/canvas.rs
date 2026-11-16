@@ -11,6 +11,7 @@
 //!          | 1 x:f32 y:f32 width:f32 height:f32  -- a view box, see `ViewBox`
 //! op      := code:u8 args                   -- see `code`
 //! text    := length:u16 utf8*
+//! rect    := x:f32 y:f32 width:f32 height:f32
 //! ```
 
 use std::rc::Rc;
@@ -31,6 +32,7 @@ mod code {
     pub const LINE_JOIN: u8 = 12;
     pub const FILL_POLYGON: u8 = 13;
     pub const STROKE_POLYGON: u8 = 14;
+    pub const DRAW_IMAGE: u8 = 15;
 }
 
 const UNITS_PIXELS: u8 = 0;
@@ -48,7 +50,28 @@ pub struct ViewBox {
 }
 
 impl ViewBox {
-    pub fn new(x: f32, y: f32, width: f32, height: f32) -> Self {
+    pub const fn new(x: f32, y: f32, width: f32, height: f32) -> Self {
+        Self {
+            x,
+            y,
+            width,
+            height,
+        }
+    }
+}
+
+/// A rectangle: a part of an image in its pixels, or where it goes in a drawing's units, see
+/// [`Drawing::draw_image`].
+#[derive(Clone, Copy, Debug, PartialEq)]
+pub struct Rect {
+    pub x: f32,
+    pub y: f32,
+    pub width: f32,
+    pub height: f32,
+}
+
+impl Rect {
+    pub const fn new(x: f32, y: f32, width: f32, height: f32) -> Self {
         Self {
             x,
             y,
@@ -223,6 +246,24 @@ impl Drawing {
         self.points(code::STROKE_POLYGON, points)
     }
 
+    /// The `part` of the image at `url`, in the image's pixels, drawn into `target`, in the
+    /// drawing's units, with the global alpha: f. ex. one picture out of many in an atlas.
+    ///
+    /// `url` is read as the `src` of an `<img>`, so a relative one is relative to the page. The
+    /// browser loads an image once, the first time a drawing asks for it, and the canvas draws
+    /// its last drawing again when the image comes. Until then, and if it fails to load, the
+    /// drawing goes on without it.
+    pub fn draw_image(&mut self, url: &str, part: Rect, target: Rect) -> &mut Self {
+        self.text(code::DRAW_IMAGE, url);
+        let bytes = self.bytes_mut();
+        for rect in [part, target] {
+            for value in [rect.x, rect.y, rect.width, rect.height] {
+                bytes.extend_from_slice(&value.to_le_bytes());
+            }
+        }
+        self
+    }
+
     /// The drawing as the browser reads it.
     pub fn as_bytes(&self) -> &[u8] {
         &self.bytes
@@ -253,7 +294,7 @@ impl Drawing {
         self
     }
 
-    /// A style is a CSS text, which no style needs to be longer than its two length bytes
+    /// A style or a URL is a text, which none needs to be longer than its two length bytes
     /// allow; a longer one is cut at a character boundary.
     fn text(&mut self, code: u8, value: &str) -> &mut Self {
         let mut end = value.len().min(u16::MAX as usize);
@@ -294,7 +335,12 @@ mod tests {
             .stroke_circle(0.0, 0.0, 6.0)
             .polyline([(0.0, 0.0), (1.0, 1.0), (2.0, 0.0)])
             .fill_polygon([(0.0, -1.0), (2.0, 0.0), (0.0, 1.0), (-2.0, 0.0)])
-            .stroke_polygon([(0.0, -1.0), (2.0, 0.0), (0.0, 1.0)]);
+            .stroke_polygon([(0.0, -1.0), (2.0, 0.0), (0.0, 1.0)])
+            .draw_image(
+                "cat.png",
+                Rect::new(1.0, 2.0, 3.0, 4.0),
+                Rect::new(-1.0, -2.0, 2.0, 1.0),
+            );
         drawing
     }
 
@@ -307,6 +353,8 @@ mod tests {
         0, 0, 128, 63, 0, 0, 128, 63, 0, 0, 0, 64, 0, 0, 0, 0, 13, 4, 0, 0, 0, 0, 0, 0, 0, 0, 0,
         128, 191, 0, 0, 0, 64, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 128, 63, 0, 0, 0, 192, 0, 0, 0, 0, 14,
         3, 0, 0, 0, 0, 0, 0, 0, 0, 0, 128, 191, 0, 0, 0, 64, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 128, 63,
+        15, 7, 0, 99, 97, 116, 46, 112, 110, 103, 0, 0, 128, 63, 0, 0, 0, 64, 0, 0, 64, 64, 0, 0,
+        128, 64, 0, 0, 128, 191, 0, 0, 0, 192, 0, 0, 0, 64, 0, 0, 128, 63,
     ];
 
     #[test]
@@ -365,6 +413,22 @@ mod tests {
             300
         );
         assert_eq!(bytes.len(), 1 + 1 + 4 + 300 * 8);
+    }
+
+    #[test]
+    fn an_image_takes_its_url_and_two_rectangles() {
+        let mut drawing = Drawing::pixels();
+        drawing.draw_image(
+            "atlas.webp",
+            Rect::new(0.0, 0.0, 32.0, 16.0),
+            Rect::new(10.0, 20.0, 64.0, 32.0),
+        );
+
+        let bytes = drawing.as_bytes();
+        assert_eq!(bytes[1], code::DRAW_IMAGE);
+        assert_eq!(u16::from_le_bytes([bytes[2], bytes[3]]), 10);
+        assert_eq!(&bytes[4..14], b"atlas.webp");
+        assert_eq!(bytes.len(), 1 + 1 + 2 + 10 + 8 * 4);
     }
 
     #[test]

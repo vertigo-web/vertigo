@@ -1,20 +1,16 @@
-//! What the Paint tab keeps: the strokes on the paper, and the one being drawn.
+//! What the Paint tab keeps: the marks on the paper, and the one being made.
 
 use std::rc::Rc;
 
 use vertigo::{
-    Computed, Drawing, LineCap, LineJoin, PointerEvent, Value, ViewBox, store, transaction,
+    Computed, Drawing, LineCap, LineJoin, PointerEvent, Rect, Value, ViewBox, include_static,
+    store, transaction,
 };
 
 /// The paper, in its own units. The canvases fit it in whole, as an SVG `viewBox` is fitted,
 /// so a picture keeps its shape whatever the width of the page - also when the window changes
 /// after it was drawn.
-pub const PAPER: ViewBox = ViewBox {
-    x: 0.0,
-    y: 0.0,
-    width: 800.0,
-    height: 500.0,
-};
+pub const PAPER: ViewBox = ViewBox::new(0.0, 0.0, 800.0, 500.0);
 
 /// A paint on the palette.
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
@@ -70,6 +66,49 @@ pub const BRUSHES: &[f32] = &[2.0, 6.0, 14.0, 30.0];
 /// A point closer than this to the last one of its stroke adds nothing to see.
 const STEP: f32 = 1.0;
 
+/// A picture to paste on the paper, cut out of `stamps.webp`.
+#[derive(Clone, Copy, Debug, PartialEq)]
+pub struct Stamp {
+    pub name: &'static str,
+    /// Where it is in the atlas, in the atlas's pixels.
+    pub part: Rect,
+}
+
+/// The atlas is 2 x 2 cells of this many pixels. Each picture keeps clear of its cell's edges,
+/// so a scaled stamp doesn't bring in a smoothed edge of its neighbour.
+const CELL: f32 = 128.0;
+
+const fn cell(column: f32, row: f32) -> Rect {
+    Rect::new(column * CELL, row * CELL, CELL, CELL)
+}
+
+pub const STAMPS: &[Stamp] = &[
+    Stamp {
+        name: "Star",
+        part: cell(0.0, 0.0),
+    },
+    Stamp {
+        name: "Heart",
+        part: cell(1.0, 0.0),
+    },
+    Stamp {
+        name: "Flower",
+        part: cell(0.0, 1.0),
+    },
+    Stamp {
+        name: "Smile",
+        part: cell(1.0, 1.0),
+    },
+];
+
+/// How big a stamp is on the paper, in its units.
+const STAMP_SIZE: f32 = 96.0;
+
+/// Where the browser gets the atlas. It loads it once, for the paper and all the buttons.
+fn atlas() -> String {
+    include_static!("./stamps.webp")
+}
+
 /// One line of paint: where a pointer went, from being pressed to being released.
 #[derive(Clone, Debug, PartialEq)]
 pub struct Stroke {
@@ -78,29 +117,60 @@ pub struct Stroke {
     pub points: Vec<(f32, f32)>,
 }
 
-/// The strokes on one canvas, the oldest at the bottom.
-pub fn picture<'a>(strokes: impl IntoIterator<Item = &'a Stroke>) -> Drawing {
+/// What one press of a pointer leaves on the paper.
+#[derive(Clone, Debug, PartialEq)]
+pub enum Mark {
+    Stroke(Stroke),
+    /// A stamp with its middle `at` the point the pointer was released.
+    Stamp {
+        stamp: Stamp,
+        at: (f32, f32),
+    },
+}
+
+/// The marks on one canvas, the oldest at the bottom.
+pub fn picture<'a>(marks: impl IntoIterator<Item = &'a Mark>) -> Drawing {
     let mut drawing = Drawing::new(PAPER);
     drawing.line_cap(LineCap::Round).line_join(LineJoin::Round);
+    let mut atlas_url = None;
 
-    for stroke in strokes {
-        match stroke.points.as_slice() {
-            [] => {}
-            // A click. A line through one point draws nothing, so a dot as wide as the brush.
-            [(x, y)] => {
-                drawing
-                    .fill_style(stroke.color)
-                    .fill_circle(*x, *y, stroke.width / 2.0);
-            }
-            points => {
-                drawing
-                    .stroke_style(stroke.color)
-                    .line_width(stroke.width)
-                    .polyline(points.iter().copied());
+    for mark in marks {
+        match mark {
+            Mark::Stroke(stroke) => match stroke.points.as_slice() {
+                [] => {}
+                // A click. A line through one point draws nothing, so a dot as wide as the brush.
+                [(x, y)] => {
+                    drawing
+                        .fill_style(stroke.color)
+                        .fill_circle(*x, *y, stroke.width / 2.0);
+                }
+                points => {
+                    drawing
+                        .stroke_style(stroke.color)
+                        .line_width(stroke.width)
+                        .polyline(points.iter().copied());
+                }
+            },
+            Mark::Stamp { stamp, at: (x, y) } => {
+                let target = Rect::new(
+                    x - STAMP_SIZE / 2.0,
+                    y - STAMP_SIZE / 2.0,
+                    STAMP_SIZE,
+                    STAMP_SIZE,
+                );
+                drawing.draw_image(atlas_url.get_or_insert_with(atlas), stamp.part, target);
             }
         }
     }
 
+    drawing
+}
+
+/// `stamp` filling its canvas, for its button.
+pub fn icon(stamp: Stamp) -> Drawing {
+    let Rect { width, height, .. } = stamp.part;
+    let mut drawing = Drawing::new(ViewBox::new(0.0, 0.0, width, height));
+    drawing.draw_image(&atlas(), stamp.part, Rect::new(0.0, 0.0, width, height));
     drawing
 }
 
@@ -119,46 +189,68 @@ pub fn on_paper(event: &PointerEvent) -> Option<(f32, f32)> {
     Some((PAPER.x + x as f32, PAPER.y + y as f32))
 }
 
-/// A stroke being drawn, and the pointer drawing it.
+/// A mark being made, and the pointer making it.
 #[derive(Clone, Debug, PartialEq)]
-struct Brushing {
+struct Making {
     pointer: i32,
-    stroke: Stroke,
+    mark: Mark,
 }
 
 #[derive(Clone)]
 pub struct State {
     /// What is on the paper, oldest first.
-    pub strokes: Value<Rc<Vec<Stroke>>>,
-    /// The stroke being drawn, until its pointer is released.
-    brushing: Value<Option<Brushing>>,
+    pub marks: Value<Rc<Vec<Mark>>>,
+    /// The mark being made, until its pointer is released.
+    making: Value<Option<Making>>,
     pub color: Value<&'static str>,
     pub width: Value<f32>,
+    /// The stamp a press pastes, or `None` for the brush.
+    pub stamp: Value<Option<Stamp>>,
 }
 
 impl State {
     pub fn new() -> Self {
         Self {
-            strokes: Value::default(),
-            brushing: Value::default(),
+            marks: Value::default(),
+            making: Value::default(),
             color: Value::new(PALETTE[0].color),
             width: Value::new(BRUSHES[1]),
+            stamp: Value::default(),
         }
     }
 
-    /// The strokes on the paper, drawn anew only when one is added or taken away.
+    /// The marks on the paper, drawn anew only when one is added or taken away.
     pub fn picture(&self) -> Computed<Drawing> {
-        self.strokes.map(|strokes| picture(strokes.iter()))
+        self.marks.map(|marks| picture(marks.iter()))
     }
 
-    /// The stroke being drawn, drawn anew at every move of its pointer. It has a canvas of its
-    /// own over the paper's, which would otherwise draw all the strokes again at every move.
-    pub fn brush(&self) -> Computed<Drawing> {
-        self.brushing
-            .map(|brushing| picture(brushing.as_ref().map(|brushing| &brushing.stroke)))
+    /// The mark being made, drawn anew at every move of its pointer. It has a canvas of its own
+    /// over the paper's, which would otherwise draw all the marks again at every move.
+    pub fn making(&self) -> Computed<Drawing> {
+        self.making
+            .map(|making| picture(making.as_ref().map(|making| &making.mark)))
     }
 
-    /// Starts a stroke where `event` presses: the main button of a mouse, a pen, or the first
+    /// Whether the brush of `width` is the tool.
+    pub fn is_brush(&self, width: f32) -> Computed<bool> {
+        let state = self.clone();
+        Computed::from(move |context| {
+            state.stamp.get(context).is_none() && state.width.get(context) == width
+        })
+    }
+
+    /// Picking a paint takes the brush, as a stamp has its own colors.
+    pub fn pick_paint(&self, color: &'static str) {
+        self.color.set(color);
+        self.stamp.set(None);
+    }
+
+    pub fn pick_brush(&self, width: f32) {
+        self.width.set(width);
+        self.stamp.set(None);
+    }
+
+    /// Starts a mark where `event` presses: the main button of a mouse, a pen, or the first
     /// finger to touch. Says whether it did.
     pub fn press(&self, event: &PointerEvent) -> bool {
         if !event.is_primary || event.button != 0 {
@@ -168,22 +260,25 @@ impl State {
             return false;
         };
 
-        let (color, width) =
-            transaction(|context| (self.color.get(context), self.width.get(context)));
-        self.brushing.set(Some(Brushing {
-            pointer: event.pointer_id,
-            stroke: Stroke {
-                color,
-                width,
+        let mark = transaction(|context| match self.stamp.get(context) {
+            Some(stamp) => Mark::Stamp { stamp, at: point },
+            None => Mark::Stroke(Stroke {
+                color: self.color.get(context),
+                width: self.width.get(context),
                 points: vec![point],
-            },
+            }),
+        });
+        self.making.set(Some(Making {
+            pointer: event.pointer_id,
+            mark,
         }));
         true
     }
 
-    /// Takes the stroke of `event`'s pointer on to where it moved.
+    /// Takes the mark of `event`'s pointer on to where it moved: a stroke grows, a stamp goes
+    /// along.
     pub fn move_to(&self, event: &PointerEvent) {
-        // Released where the paper did not hear it: the stroke ends where it got to.
+        // Released where the paper did not hear it: the mark stays where it got to.
         if event.buttons & 1 == 0 {
             self.release(event);
             return;
@@ -192,43 +287,52 @@ impl State {
             return;
         };
 
-        self.brushing.change(|brushing| {
-            if let Some(Brushing { pointer, stroke }) = brushing
-                && *pointer == event.pointer_id
-                && stroke
-                    .points
-                    .last()
-                    .is_none_or(|(last_x, last_y)| (x - last_x).hypot(y - last_y) >= STEP)
-            {
-                stroke.points.push((x, y));
+        self.making.change(|making| {
+            let Some(Making { pointer, mark }) = making else {
+                return;
+            };
+            if *pointer != event.pointer_id {
+                return;
+            }
+
+            match mark {
+                Mark::Stroke(stroke) => {
+                    if stroke
+                        .points
+                        .last()
+                        .is_none_or(|(last_x, last_y)| (x - last_x).hypot(y - last_y) >= STEP)
+                    {
+                        stroke.points.push((x, y));
+                    }
+                }
+                Mark::Stamp { at, .. } => *at = (x, y),
             }
         });
     }
 
-    /// Ends the stroke of `event`'s pointer, which joins the others on the paper.
+    /// Ends the mark of `event`'s pointer, which joins the others on the paper.
     pub fn release(&self, event: &PointerEvent) {
-        let brushing = transaction(|context| self.brushing.get(context));
+        let making = transaction(|context| self.making.get(context));
 
-        if let Some(Brushing { pointer, stroke }) = brushing
+        if let Some(Making { pointer, mark }) = making
             && pointer == event.pointer_id
         {
-            // In the transaction of the event, both, so the stroke goes from one canvas to the
+            // In the transaction of the event, both, so the mark goes from one canvas to the
             // other in one batch of DOM changes: it is never on both, nor on neither.
-            self.brushing.set(None);
-            self.strokes
-                .change(|strokes| Rc::make_mut(strokes).push(stroke));
+            self.making.set(None);
+            self.marks.change(|marks| Rc::make_mut(marks).push(mark));
         }
     }
 
-    /// Takes the last stroke off the paper.
+    /// Takes the last mark off the paper.
     pub fn undo(&self) {
-        self.strokes.change(|strokes| {
-            Rc::make_mut(strokes).pop();
+        self.marks.change(|marks| {
+            Rc::make_mut(marks).pop();
         });
     }
 
     pub fn clear(&self) {
-        self.strokes.set(Rc::default());
+        self.marks.set(Rc::default());
     }
 }
 
@@ -259,8 +363,19 @@ mod tests {
         event
     }
 
+    fn marks(state: &State) -> Vec<Mark> {
+        transaction(|context| state.marks.get(context).to_vec())
+    }
+
+    /// The marks, for a test that makes only strokes.
     fn strokes(state: &State) -> Vec<Stroke> {
-        transaction(|context| state.strokes.get(context).to_vec())
+        marks(state)
+            .into_iter()
+            .map(|mark| match mark {
+                Mark::Stroke(stroke) => stroke,
+                other => panic!("not a stroke: {other:?}"),
+            })
+            .collect()
     }
 
     #[test]
@@ -302,7 +417,71 @@ mod tests {
             .line_width(2.0)
             .polyline([(1.0, 2.0), (3.0, 4.0)]);
 
-        assert_eq!(picture([&dot, &line]), expected);
+        assert_eq!(picture([&Mark::Stroke(dot), &Mark::Stroke(line)]), expected);
+    }
+
+    #[test]
+    fn a_stamp_is_drawn_with_its_middle_at_its_point() {
+        let star = Mark::Stamp {
+            stamp: STAMPS[0],
+            at: (100.0, 200.0),
+        };
+
+        let mut expected = Drawing::new(PAPER);
+        expected
+            .line_cap(LineCap::Round)
+            .line_join(LineJoin::Round)
+            .draw_image(
+                &atlas(),
+                Rect::new(0.0, 0.0, 128.0, 128.0),
+                Rect::new(52.0, 152.0, 96.0, 96.0),
+            );
+
+        assert_eq!(picture([&star]), expected);
+    }
+
+    #[test]
+    fn a_stamp_goes_with_the_pointer_and_stays_where_it_is_released() {
+        let state = State::new();
+        state.stamp.set(Some(STAMPS[1]));
+
+        assert!(state.press(&mouse(0.0, 0.0, 1)));
+        state.move_to(&mouse(100.0, 50.0, 1));
+        state.move_to(&mouse(101.0, 50.0, 1));
+        assert_eq!(marks(&state), vec![], "not before the release");
+
+        state.release(&mouse(101.0, 50.0, 0));
+        assert_eq!(
+            marks(&state),
+            vec![Mark::Stamp {
+                stamp: STAMPS[1],
+                at: (50.5, 25.0),
+            }]
+        );
+    }
+
+    #[test]
+    fn a_paint_or_a_brush_puts_the_stamp_down() {
+        let state = State::new();
+        let brush = state.is_brush(BRUSHES[1]);
+        let is_brush = || transaction(|context| brush.get(context));
+        assert!(is_brush());
+
+        state.stamp.set(Some(STAMPS[0]));
+        assert!(!is_brush());
+        state.pick_paint("red");
+        assert!(is_brush());
+
+        state.stamp.set(Some(STAMPS[0]));
+        state.pick_brush(BRUSHES[0]);
+        assert!(!is_brush(), "another brush");
+        assert!(transaction(|context| state
+            .is_brush(BRUSHES[0])
+            .get(context)));
+
+        assert!(state.press(&mouse(0.0, 0.0, 1)));
+        state.release(&mouse(0.0, 0.0, 0));
+        assert_eq!(strokes(&state)[0].color, "red");
     }
 
     #[test]
@@ -374,15 +553,16 @@ mod tests {
     }
 
     #[test]
-    fn clearing_takes_every_stroke_off() {
+    fn clearing_takes_every_mark_off() {
         let state = State::new();
-        for x in [0.0, 100.0] {
-            assert!(state.press(&mouse(x, 0.0, 1)));
-            state.release(&mouse(x, 0.0, 0));
+        for stamp in [None, Some(STAMPS[2])] {
+            state.stamp.set(stamp);
+            assert!(state.press(&mouse(0.0, 0.0, 1)));
+            state.release(&mouse(0.0, 0.0, 0));
         }
-        assert_eq!(strokes(&state).len(), 2);
+        assert_eq!(marks(&state).len(), 2);
 
         state.clear();
-        assert_eq!(strokes(&state), vec![]);
+        assert_eq!(marks(&state), vec![]);
     }
 }

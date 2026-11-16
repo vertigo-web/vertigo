@@ -1682,11 +1682,12 @@ pub async fn svg(ctx: &Ctx) -> Result<()> {
     check_eq(count(ctx, "svg path").await, 2, "both svg paths")
 }
 
-/// Canvases drawn from a `Computed<Drawing>`, and a brush on pointer events.
+/// Canvases drawn from a `Computed<Drawing>`, a brush on pointer events, and stamps cut out of
+/// an image.
 ///
-/// What a canvas shows is read back from its bitmap. The strokes done are on the lower of the
+/// What a canvas shows is read back from its bitmap. The marks done are on the lower of the
 /// two canvases, so a stroke the mouse drew has to leave its color there - in the middle of the
-/// paper, which the strokes below cross.
+/// paper, which the strokes below cross, and where a stamp is let go.
 pub async fn paint(ctx: &Ctx) -> Result<()> {
     open(ctx, "Paint", "Draw with a mouse").await?;
 
@@ -1722,19 +1723,49 @@ pub async fn paint(ctx: &Ctx) -> Result<()> {
     wait_for_paint(ctx, RED, "the picture to be there after another tab").await?;
 
     click_by_text(ctx, "button", "Clear").await?;
-    wait_for_paint(ctx, BLANK, "Clear to take everything off").await
+    wait_for_paint(ctx, BLANK, "Clear to take everything off").await?;
+
+    // The star's button shows its own cell of the atlas: drawn whole, the atlas has nothing in
+    // the middle, where its four cells meet.
+    const STAR: &str = "button[title='Star'] canvas";
+    wait_for_pixel(ctx, STAR, YELLOW, "the star on its button").await?;
+    ctx.find(By::Css(STAR))
+        .await
+        .context("the star")?
+        .click()
+        .await
+        .context("picking the star failed")?;
+
+    let paper = find_paper(ctx).await?;
+    ctx.driver
+        .action_chain()
+        .move_to_element_center(&paper)
+        .click()
+        .perform()
+        .await
+        .context("pasting the star failed")?;
+    wait_for_paint(ctx, YELLOW, "the star pasted in the middle").await?;
+
+    click_by_text(ctx, "button", "Undo").await?;
+    wait_for_paint(ctx, BLANK, "Undo to take the star off").await
 }
 
-/// `#e53935`, the red of the palette, and a pixel nothing was drawn on.
+/// `#e53935`, the red of the palette, `#fdd835`, the middle of the star stamp, and a pixel
+/// nothing was drawn on.
 const RED: [u64; 4] = [229, 57, 53, 255];
+const YELLOW: [u64; 4] = [253, 216, 53, 255];
 const BLANK: [u64; 4] = [0, 0, 0, 0];
+
+/// The element with the paper's two canvases, which the pointer events go to.
+async fn find_paper(ctx: &Ctx) -> Result<WebElement> {
+    ctx.find(By::XPath("//div[canvas]"))
+        .await
+        .context("the paper")
+}
 
 /// A drag of the mouse across the middle of the paper, from left to right.
 async fn stroke_across_the_middle(ctx: &Ctx) -> Result<()> {
-    let paper = ctx
-        .find(By::XPath("//div[canvas]"))
-        .await
-        .context("the paper")?;
+    let paper = find_paper(ctx).await?;
 
     // From 40 px left of the middle to 40 px right of it.
     ctx.driver
@@ -1749,10 +1780,17 @@ async fn stroke_across_the_middle(ctx: &Ctx) -> Result<()> {
         .context("drawing a stroke failed")
 }
 
-/// Waits for the pixel in the middle of the lower canvas to be `expected`, as RGBA.
+/// Waits for the pixel in the middle of the paper's lower canvas to be `expected`, as RGBA.
 async fn wait_for_paint(ctx: &Ctx, expected: [u64; 4], what: &str) -> Result<()> {
+    // The stamps' canvases sit in their buttons.
+    wait_for_pixel(ctx, "div > canvas", expected, what).await
+}
+
+/// Waits for the pixel in the middle of the first canvas `selector` finds to be `expected`, as
+/// RGBA.
+async fn wait_for_pixel(ctx: &Ctx, selector: &str, expected: [u64; 4], what: &str) -> Result<()> {
     const SCRIPT: &str = r#"
-        const canvas = document.querySelector('canvas');
+        const canvas = document.querySelector(arguments[0]);
         const data = canvas.getContext('2d').getImageData(
             Math.floor(canvas.width / 2), Math.floor(canvas.height / 2), 1, 1,
         ).data;
@@ -1761,7 +1799,7 @@ async fn wait_for_paint(ctx: &Ctx, expected: [u64; 4], what: &str) -> Result<()>
 
     ctx.wait_for(what, async || {
         let pixel: Vec<u64> = ctx
-            .js(SCRIPT)
+            .js_with(SCRIPT, vec![Value::from(selector)])
             .await?
             .as_array()
             .context("the pixel is not an array")?

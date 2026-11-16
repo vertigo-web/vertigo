@@ -1,6 +1,18 @@
 <!-- markdownlint-configure-file { "no-duplicate-heading": { "siblings_only": true } } -->
 
 <!-- markdownlint-disable-next-line first-line-h1 -->
+## Unreleased
+
+### Added
+
+* `Drawing::draw_image`: a part of an image (f. ex. one picture of an atlas) drawn into a rectangle
+  of the drawing, with a new `Rect`. The browser loads each image once and draws the canvas again
+  when it comes.
+
+### Changed
+
+* `ViewBox::new` is a `const fn`, so a `const` view box needs no struct literal.
+
 ## 0.14.4 - 2026-11-16
 
 ### Breaking
