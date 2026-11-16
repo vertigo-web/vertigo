@@ -5,6 +5,9 @@
 
 ### Added
 
+* `on_focus` on elements, the pair of `on_blur`: the element got the focus, from the keyboard,
+  a click or a tap, or `focus()`. Like `on_blur` it doesn't come from the children. So f. ex.
+  a hint shows when Tab reaches its element.
 * `hook_pointer_move`, `hook_pointer_up` and `hook_pointer_cancel` on elements: the pointer events
   of the whole page, as `hook_key_down` hears every keystroke, with the position still from the
   corner of the element with the hook. A drag goes on past the element's edges and ends also when

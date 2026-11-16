@@ -126,6 +126,7 @@ impl AttrGroupValue {
         hook_pointer_cancel_rc
     );
     group_value_constructor!(on_blur, Callback<()>, on_blur_rc);
+    group_value_constructor!(on_focus, Callback<()>, on_focus_rc);
     group_value_constructor!(on_change, Callback1<String, ()>, on_change_rc);
     group_value_constructor!(on_click, Callback1<ClickEvent, ()>, on_click_rc);
     group_value_constructor!(on_dropfile, Callback1<DropFileEvent, ()>, on_dropfile_rc);

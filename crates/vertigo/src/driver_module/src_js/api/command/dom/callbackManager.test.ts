@@ -311,6 +311,21 @@ function testPointerListeners() {
     );
 }
 
+function testFocusListeners() {
+    console.log("\n--- Test focus: the listeners ---");
+    const node = new MockNode();
+    const nodes = { get: () => node } as unknown as MapNodes;
+    const manager = new CallbackManager(() => ({}) as any);
+    const names = ['focus', 'blur'];
+
+    names.forEach((name, index) => manager.add(nodes, 1, name, 40 + index));
+
+    assert(
+        JSON.stringify(node.added) === JSON.stringify(names.map((name) => [name, false])),
+        "each goes on the DOM event of its name",
+    );
+}
+
 /// The hooks listen on the document, for an element whose top left corner is at (10, 20) and
 /// which is 50 x 60. The finger of `MockPointerEvent` touches (130, 240) of the viewport,
 /// somewhere else on the page.
@@ -769,6 +784,7 @@ testPointerRelease();
 testPointerReleaseOfAPointerNotCaptured();
 testPointerFlags();
 testPointerListeners();
+testFocusListeners();
 testPointerHooks();
 testScrollPayload();
 testScrollListener();
