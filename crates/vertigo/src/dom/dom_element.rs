@@ -361,6 +361,21 @@ impl DomElement {
         self.id_dom
     }
 
+    /// The element got the focus: from the keyboard, a click or a tap, or `focus()`. It doesn't
+    /// come from the children, as with [`on_blur`](Self::on_blur).
+    pub fn on_focus(self, on_focus: impl Into<Callback<()>>) -> Self {
+        self.on_focus_rc(Rc::new(on_focus.into()))
+    }
+
+    pub fn on_focus_rc(self, on_focus: Rc<Callback<()>>) -> Self {
+        let on_focus = self.install_callback(on_focus);
+
+        self.add_event_listener("focus", move |_data| {
+            on_focus();
+            JsJson::Null
+        })
+    }
+
     pub fn on_blur(self, on_blur: impl Into<Callback<()>>) -> Self {
         self.on_blur_rc(Rc::new(on_blur.into()))
     }
