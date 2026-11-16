@@ -12,6 +12,9 @@
 //
 // A drawing that comes in a batch of DOM changes is drawn once the whole batch is in place, see
 // `paintDrawn`.
+//
+// Images are loaded once per URL, the first time a drawing asks for one. A canvas whose drawing
+// asked for an image still loading is drawn again when the image comes, see `Images`.
 
 import { decoder } from "../../text";
 
@@ -30,6 +33,7 @@ const Op = {
     LineJoin: 12,
     FillPolygon: 13,
     StrokePolygon: 14,
+    DrawImage: 15,
 } as const;
 
 const CAPS: Array<CanvasLineCap> = ['butt', 'round', 'square'];
@@ -39,12 +43,16 @@ const JOINS: Array<CanvasLineJoin> = ['miter', 'round', 'bevel'];
 export type Context2d = Pick<CanvasRenderingContext2D,
     'setTransform' | 'clearRect' | 'fillRect' | 'beginPath' | 'arc' | 'moveTo' | 'lineTo'
     | 'closePath' | 'fill' | 'stroke' | 'fillStyle' | 'strokeStyle' | 'globalAlpha' | 'lineWidth' | 'lineCap'
-    | 'lineJoin'>;
+    | 'lineJoin' | 'drawImage'>;
+
+// The image at a URL, if it is loaded and can be drawn.
+export type ImageAt = (url: string) => CanvasImageSource | null;
 
 // Plays `bytes` back on `context`, whose bitmap is `width` x `height` device pixels, `ratio` of
-// them to a CSS pixel.
+// them to a CSS pixel. An image that `image` doesn't have is left out.
 export const play = (
     context: Context2d, bytes: Uint8Array, width: number, height: number, ratio: number,
+    image: ImageAt = () => null,
 ) => {
     const data = new DataView(bytes.buffer, bytes.byteOffset, bytes.byteLength);
     let at = 0;
@@ -166,6 +174,16 @@ export const play = (
                 }
                 break;
             }
+            case Op.DrawImage: {
+                const source = image(text());
+                const [sx, sy, sw, sh, dx, dy, dw, dh] = [
+                    number(), number(), number(), number(), number(), number(), number(), number(),
+                ];
+                if (source !== null) {
+                    context.drawImage(source, sx, sy, sw, sh, dx, dy, dw, dh);
+                }
+                break;
+            }
             default:
                 throw new Error(`canvas: unknown operation ${op} at byte ${at - 1}`);
         }
@@ -175,6 +193,54 @@ export const play = (
 // In device pixels, `ratio` of them to a CSS pixel.
 type Size = { width: number, height: number, ratio: number };
 
+// The images drawings ask for, by URL, each loaded once. One that fails to load stays left out
+// until the page is loaded again.
+class Images {
+    private readonly images: Map<string, HTMLImageElement> = new Map();
+    // Canvases to draw again when the image at a URL comes.
+    private readonly waiting: Map<string, Set<HTMLCanvasElement>> = new Map();
+
+    constructor(private readonly loaded: (canvas: HTMLCanvasElement) => void) {}
+
+    // The image at `url` for `canvas`, or `null` while it loads, when `canvas` waits for it.
+    public get(url: string, canvas: HTMLCanvasElement): CanvasImageSource | null {
+        let image = this.images.get(url);
+
+        if (image === undefined) {
+            image = new Image();
+            image.onload = () => {
+                const canvases = this.waiting.get(url) ?? new Set();
+                this.waiting.delete(url);
+                for (const canvas of canvases) {
+                    this.loaded(canvas);
+                }
+            };
+            image.onerror = () => {
+                this.waiting.delete(url);
+                console.error(`canvas: the image ${url} failed to load`);
+            };
+            image.src = url;
+            this.images.set(url, image);
+        }
+
+        if (image.complete) {
+            // A broken image is complete too, but has no size.
+            return image.naturalWidth > 0 ? image : null;
+        }
+
+        const waiting = this.waiting.get(url) ?? new Set();
+        waiting.add(canvas);
+        this.waiting.set(url, waiting);
+        return null;
+    }
+
+    public forget(canvas: HTMLCanvasElement) {
+        for (const canvases of this.waiting.values()) {
+            canvases.delete(canvas);
+        }
+    }
+}
+
 export class Canvases {
     private readonly drawings: WeakMap<HTMLCanvasElement, Uint8Array> = new WeakMap();
     private readonly sizes: WeakMap<HTMLCanvasElement, Size> = new WeakMap();
@@ -183,6 +249,7 @@ export class Canvases {
     // Canvases with a new drawing in the batch being applied, see `paintDrawn`.
     private readonly drawn: Set<HTMLCanvasElement> = new Set();
     private observer: ResizeObserver | null = null;
+    private readonly images: Images = new Images((canvas) => this.repaint(canvas));
 
     // `bytes` is good only for the call it came in (see `DriverDom.update`), so it is copied, to
     // be drawn after the batch and again when the canvas changes its size.
@@ -221,6 +288,7 @@ export class Canvases {
             this.sizes.delete(node);
             this.unscaled.delete(node);
             this.drawn.delete(node);
+            this.images.forget(node);
         }
     }
 
@@ -328,7 +396,8 @@ export class Canvases {
         const context = canvas.getContext('2d');
 
         if (context !== null) {
-            play(context, drawing, size.width, size.height, size.ratio);
+            play(context, drawing, size.width, size.height, size.ratio,
+                (url) => this.images.get(url, canvas));
         }
     }
 }

@@ -80,7 +80,7 @@ pub mod guides {
 // Exports from vertigo
 
 pub use auto_map::AutoMap;
-pub use canvas::{Drawing, LineCap, LineJoin, ViewBox};
+pub use canvas::{Drawing, LineCap, LineJoin, Rect, ViewBox};
 pub use css::{
     css_structs::{Css, CssGroup},
     tailwind_class::TwClass,

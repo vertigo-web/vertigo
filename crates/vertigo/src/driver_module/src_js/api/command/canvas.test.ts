@@ -45,6 +45,9 @@ const recording = (log: Array<string>): Context2d => {
         fill: call('fill'),
         stroke: call('stroke'),
         closePath: call('closePath'),
+        drawImage: (image: { name: string }, ...args: Array<number>) => {
+            log.push(`drawImage(${[image.name, ...args.map(round)].join(',')})`);
+        },
     };
     for (const name of ['fillStyle', 'strokeStyle', 'globalAlpha', 'lineWidth', 'lineCap', 'lineJoin']) {
         Object.defineProperty(context, name, property(name));
@@ -62,7 +65,9 @@ const FIXTURE = new Uint8Array([
     0, 0, 0, 0, 0, 0, 0, 192, 64, 11, 3, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 128, 63, 0, 0, 128,
     63, 0, 0, 0, 64, 0, 0, 0, 0, 13, 4, 0, 0, 0, 0, 0, 0, 0, 0, 0, 128, 191, 0, 0, 0, 64, 0, 0, 0,
     0, 0, 0, 0, 0, 0, 0, 128, 63, 0, 0, 0, 192, 0, 0, 0, 0, 14, 3, 0, 0, 0, 0, 0, 0, 0, 0, 0, 128,
-    191, 0, 0, 0, 64, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 128, 63,
+    191, 0, 0, 0, 64, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 128, 63, 15, 7, 0, 99, 97, 116, 46, 112, 110,
+    103, 0, 0, 128, 63, 0, 0, 0, 64, 0, 0, 64, 64, 0, 0, 128, 64, 0, 0, 128, 191, 0, 0, 0, 192, 0, 0,
+    0, 64, 0, 0, 128, 63,
 ]);
 
 const DEFAULTS = (width: number, height: number) => [
@@ -83,7 +88,8 @@ console.log("\n--- Test canvas: the cross-language fixture ---");
     const log: Array<string> = [];
     // 160 x 100 CSS pixels at two device pixels each: the box fits exactly, 20 device
     // pixels to a unit, so a CSS pixel is a tenth of a unit.
-    play(recording(log), FIXTURE, 320, 200, 2);
+    const cat = { name: 'cat' } as unknown as CanvasImageSource;
+    play(recording(log), FIXTURE, 320, 200, 2, (url) => url === 'cat.png' ? cat : null);
 
     same(log, [
         ...DEFAULTS(320, 200),
@@ -103,7 +109,16 @@ console.log("\n--- Test canvas: the cross-language fixture ---");
         'beginPath()', 'moveTo(0,-1)', 'lineTo(2,0)', 'lineTo(0,1)', 'lineTo(-2,0)', 'closePath()',
         'fill()',
         'beginPath()', 'moveTo(0,-1)', 'lineTo(2,0)', 'lineTo(0,1)', 'closePath()', 'stroke()',
+        'drawImage(cat,1,2,3,4,-1,-2,2,1)',
     ], 'every operation, in order, in the units of the view box');
+}
+
+console.log("\n--- Test canvas: an image not there ---");
+{
+    const log: Array<string> = [];
+    play(recording(log), FIXTURE, 320, 200, 2);
+    assert(!log.some((line) => line.startsWith('drawImage')), 'an image not loaded is left out');
+    assert(log[log.length - 1] === 'stroke()', 'and the drawing goes on without it');
 }
 
 console.log("\n--- Test canvas: fitting the view box ---");
@@ -344,4 +359,98 @@ console.log("\n--- Test canvas: size and resize ---");
     canvases.forget(gone as unknown as Element);
     batchApplied();
     assert(gone.width === 300 && gone.log.length === 0, 'a canvas removed in the batch that drew it is not drawn');
+}
+
+console.log("\n--- Test canvas: loading images ---");
+{
+    class FakeCanvas {
+        public width = 300;
+        public height = 150;
+        public isConnected = true;
+        public readonly log: Array<string> = [];
+        get clientWidth() { return 160; }
+        get clientHeight() { return 100; }
+        getContext() { return recording(this.log); }
+    }
+
+    // An image the test loads or fails by hand.
+    class FakeImage {
+        static made: Array<FakeImage> = [];
+        public onload: (() => void) | null = null;
+        public onerror: (() => void) | null = null;
+        public complete = false;
+        public naturalWidth = 0;
+        public src = '';
+        get name() { return this.src; }
+        constructor() { FakeImage.made.push(this); }
+        load() { this.complete = true; this.naturalWidth = 32; this.onload?.(); }
+        fail() { this.complete = true; this.onerror?.(); }
+    }
+
+    const global = globalThis as unknown as Record<string, unknown>;
+    global['HTMLCanvasElement'] = FakeCanvas;
+    global['Image'] = FakeImage;
+    global['ResizeObserver'] = undefined;
+    global['window'] = { devicePixelRatio: 1 };
+
+    // units: pixels, then the part 0, 0, 32 x 16 of the image at `url` into 10, 20, 32 x 16
+    const image = (url: string): Uint8Array => {
+        const name = new TextEncoder().encode(url);
+        const bytes = new Uint8Array(1 + 1 + 2 + name.length + 8 * 4);
+        const data = new DataView(bytes.buffer);
+        bytes[1] = 15;
+        data.setUint16(2, name.length, true);
+        bytes.set(name, 4);
+        [0, 0, 32, 16, 10, 20, 32, 16].forEach((value, index) => {
+            data.setFloat32(4 + name.length + 4 * index, value, true);
+        });
+        return bytes;
+    };
+    const drew = (canvas: FakeCanvas, url: string) =>
+        canvas.log.includes(`drawImage(${url},0,0,32,16,10,20,32,16)`);
+
+    const canvases = new Canvases();
+    const draw = (canvas: FakeCanvas, bytes: Uint8Array) => {
+        canvases.draw(canvas as unknown as Element, bytes);
+        canvases.paintDrawn();
+    };
+
+    const first = new FakeCanvas();
+    draw(first, image('atlas.webp'));
+    assert(FakeImage.made.length === 1 && FakeImage.made[0]?.src === 'atlas.webp', 'the image is loaded');
+    assert(first.log.length > 0 && !drew(first, 'atlas.webp'), 'the canvas is drawn without it meanwhile');
+
+    const second = new FakeCanvas();
+    draw(second, image('atlas.webp'));
+    assert(FakeImage.made.length === 1, 'an image is loaded once, whoever asks for it');
+
+    const gone = new FakeCanvas();
+    draw(gone, image('atlas.webp'));
+    canvases.forget(gone as unknown as Element);
+    gone.log.length = 0;
+
+    FakeImage.made[0]?.load();
+    assert(drew(first, 'atlas.webp') && drew(second, 'atlas.webp'), 'the canvases waiting are drawn again with it');
+    assert(gone.log.length === 0, 'but not a canvas gone meanwhile');
+
+    const third = new FakeCanvas();
+    draw(third, image('atlas.webp'));
+    assert(drew(third, 'atlas.webp') && FakeImage.made.length === 1, 'an image loaded is drawn at once');
+
+    // An image that fails to load.
+    const broken = new FakeCanvas();
+    draw(broken, image('missing.webp'));
+    const error = console.error;
+    const errors: Array<unknown> = [];
+    console.error = (...args: Array<unknown>) => { errors.push(args); };
+    try {
+        FakeImage.made[1]?.fail();
+    } finally {
+        console.error = error;
+    }
+    assert(errors.length === 1 && String(errors[0]).includes('missing.webp'), 'an image that fails is logged');
+    broken.log.length = 0;
+    draw(broken, image('missing.webp'));
+    assert(broken.log.length > 0 && !drew(broken, 'missing.webp') && FakeImage.made.length === 2,
+        'and left out, without loading it again');
 }
