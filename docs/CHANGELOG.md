@@ -1,83 +1,52 @@
 <!-- markdownlint-configure-file { "no-duplicate-heading": { "siblings_only": true } } -->
 
 <!-- markdownlint-disable-next-line first-line-h1 -->
-## Unreleased
+## 0.14.4 - 2026-11-16
+
+### Breaking
+
+* `AttrGroupValue` lost its per-event variants (`OnClick`, `Draw`, `HookKeyDown`, …): an event
+  handler in an `AttrGroup` is `AttrGroupValue::Binding`, made by `AttrGroupValue::on_click` etc.
 
 ### Added
 
-* `on_focus` on elements, the pair of `on_blur`: the element got the focus, from the keyboard,
-  a click or a tap, or `focus()`. Like `on_blur` it doesn't come from the children. So f. ex.
-  a hint shows when Tab reaches its element.
+* `on_focus` on elements, the pair of `on_blur`.
 * `hook_pointer_move`, `hook_pointer_up` and `hook_pointer_cancel` on elements: the pointer events
-  of the whole page, as `hook_key_down` hears every keystroke, with the position still from the
-  corner of the element with the hook. A drag goes on past the element's edges and ends also when
-  it's let go outside of it, without capturing the pointer - so the targets under it still get
-  their `on_pointer_up`.
-* `PointerEvent::release_pointer`: the events of the pointer go again to the element under it.
-  A browser captures a touching finger or pen for the element it touched, so its `pointerup` never
-  reached another one: released in `on_pointer_down`, a finger drags something onto a target with
-  `on_pointer_up`, as a mouse does. Of it and `capture_pointer` in one callback the later wins.
-* `on_resize` on elements, with a `ResizeEvent`: how big the element is as drawn, once it's on the
-  page and whenever that changes.
-* `Drawing::fill_polygon` and `Drawing::stroke_polygon`: the shape points enclose, filled, and
-  its closed outline, whose last corner is joined like the others.
-* `Driver::next_paint`: ends once the browser has drawn the page, so that f. ex. "Processing…"
-  shows before long work in wasm blocks it.
-* vertigo-cli: `MountConfigBuilder::ssr_fetch_cookie` and `--ssr-fetch-cookie` of `vertigo serve`
-  and `vertigo watch`: the cookies that go out with the SSR fetches to the server's own origin.
-  Once any is named the others stay behind, so a visitor with only an analytics cookie is rendered
-  as a guest and the page can be cached. With none named, all of them go, as before.
+  of the whole page, with the position from the element with the hook.
+* `PointerEvent::release_pointer`: the pointer's events go again to the element under it.
+* `on_resize` on elements, with a `ResizeEvent`: the element's drawn size.
+* `Drawing::fill_polygon` and `Drawing::stroke_polygon`.
+* `Driver::next_paint`: ends once the browser has drawn the page.
+* vertigo-cli: `MountConfigBuilder::ssr_fetch_cookie` and `--ssr-fetch-cookie`: only the named
+  cookies go out with the SSR fetches to the server's own origin (default: all).
 
-### Changed
+### Performance
 
-* An event handler, `hook_key_down` and `draw` in an `AttrGroup` bind themselves to the element
-  they're spread on: they're `AttrGroupValue::Binding`, made by the constructors of the same names
-  (`AttrGroupValue::on_click` and the others), which the `dom!` macro uses, instead of a variant
-  each. An app spreading a group carried the code of every event, also of the ones it never
-  handles, because `add_attr_group_item` matched a variant for each: about 4 kB of gzipped wasm in
-  an app with a few events. Now only the events it passes in groups are there.
+* An app spreading an `AttrGroup` carries the code of only the events it uses: about 4 kB less
+  gzipped wasm with a few events.
 
 ### Fixed
 
-* A file input with `on_change_file` keeps showing the files picked into it. It was emptied as
-  soon as they were read, so a form never showed which file it was about to send.
-* `AutoJsJson` reads an integer only when the number is whole and within the range of the type.
-  `300` as `u8` was `255`, `-1` was `0` and `1.5` was `1`, without an error.
-* The error of a number of the wrong JSON type said `number($name)` instead of naming the type.
-* A `Vec<u8>` field of an `AutoJsJson` type is read from a list of numbers too, which is how it
-  comes in JSON - from a server's response, or a fetch made while rendering on the server. Only the
-  run of bytes `AutoJsJson` writes itself was read, so such a field never decoded from an API.
-* A `Vec<u8>` in the body of a fetch, a websocket text message or a JSON cookie is a list of numbers,
-  as vertigo-cli already wrote it for a fetch made while rendering on the server. The browser made
-  it an object keyed by index.
-* Bytes (a `Uint8Array`) in a message from a frame come to `on_message` as a list of numbers, which
-  a `Vec<u8>` field reads, instead of an object keyed by index.
-* `vertigo-testing`: `ChromeConfig::lang` decides `Accept-Language` and `navigator.languages`
-  wherever the tests run. Chrome on Linux takes the language from the environment (`LANGUAGE`,
-  `LANG`) and not from `--lang`, so the server rendered the page in the language of the machine.
-* On nightly, an error from a macro came with follow-up errors from the code it made anyway.
-* A `LazyCache` or `LazyListCache` with `bearer_auth` now starts with what the server fetched for
-  it while rendering the page. The response was in the page under the request with its token, and
-  the cache looked for it without one: hydration threw away the part of the page made from it, and
-  it fetched again.
-* vertigo-cli: The bearer token of a fetch made while rendering a page is no longer in the page's
-  source. `data-fetch-cache` had every request with its `Authorization` header.
-* vertigo-cli: A page rendered with somebody's credentials - a bearer token, or the browser's
-  cookies sent to the server's own origin - says `Cache-Control: private, no-store`. A page that
-  fetched from the own origin or read a cookie named with `ssr_cookie` says `Vary: cookie`, and one
-  that read `get_driver().languages()` says `Vary: accept-language`. Without them, a cache on the
-  way (nginx, a CDN) could give one person's page to another.
-* `LazyCache` read in a transaction gives its current value also when that transaction has just
-  set it, as a `Value` does. Since every browser event is one transaction, a task reading the
-  cache right after `refresh().await` got the value from before the response, and of two
-  `optimistically_change` calls in one event handler only the second stayed.
-* A followed link or the app's own navigation to a fragment shows the fragment's element before
-  scrolling to it, as the browser does: it opens the `<details>` the element is in (unless it's in
-  the summary) and shows an element around it with `hidden="until-found"`, after a `beforematch`
-  event at it. The element stayed hidden, so nothing scrolled.
-* Hydration leaves `open` on a `<details>`. The browser sets it itself - for the fragment of the
-  address, or when the reader opens one while the app is loading - and hydration closed it again,
-  as an attribute the server hadn't rendered.
+* A file input with `on_change_file` was emptied once its files were read.
+* `AutoJsJson` read an integer out of the type's range or with a fraction without an error.
+* `AutoJsJson`'s error for a number of the wrong type said `number($name)` instead of the type.
+* `AutoJsJson` didn't read a `Vec<u8>` field from a JSON list of numbers, f. ex. from an API.
+* The browser sent a `Vec<u8>` in a fetch body, a websocket text message or a JSON cookie as an
+  object keyed by index instead of a list of numbers.
+* `on_message` got bytes (`Uint8Array`) from a frame as an object keyed by index instead of a list
+  of numbers.
+* vertigo-testing: On Linux `ChromeConfig::lang` didn't decide `Accept-Language` and
+  `navigator.languages`.
+* On nightly, a macro error came with follow-up errors from the code the macro made anyway.
+* A `LazyCache` or `LazyListCache` with `bearer_auth` didn't pick up its SSR response: hydration
+  dropped the part of the page made from it, and it fetched again.
+* A `LazyCache` read in the transaction that had just set it gave the value from before.
+* Navigation to a fragment inside a closed `<details>` or a `hidden="until-found"` element didn't
+  reveal it, so nothing scrolled.
+* Hydration closed a `<details>` the browser had opened.
+* vertigo-cli: The bearer token of an SSR fetch was in the page source (`data-fetch-cache`).
+* vertigo-cli: Pages rendered with someone's credentials, cookies or languages lacked
+  `Cache-Control: private, no-store` or `Vary`, so a shared cache could serve them to others.
 
 ### Internals
 

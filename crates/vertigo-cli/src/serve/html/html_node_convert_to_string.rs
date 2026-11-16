@@ -83,7 +83,7 @@ fn html_node_to_string(result: &mut Vec<String>, ident: Format, node: HtmlNode) 
 
                     // If preformatted then do not ident the close tag
                     if preformatted {
-                        ident_str = String::new();
+                        ident_str.clear();
                     }
 
                     // close tag
