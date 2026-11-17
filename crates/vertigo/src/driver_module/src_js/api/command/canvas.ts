@@ -35,6 +35,7 @@ const Op = {
     FillPolygon: 13,
     StrokePolygon: 14,
     DrawImage: 15,
+    FillPattern: 16,
 } as const;
 
 const CAPS: Array<CanvasLineCap> = ['butt', 'round', 'square'];
@@ -44,7 +45,7 @@ const JOINS: Array<CanvasLineJoin> = ['miter', 'round', 'bevel'];
 export type Context2d = Pick<CanvasRenderingContext2D,
     'setTransform' | 'clearRect' | 'fillRect' | 'beginPath' | 'arc' | 'moveTo' | 'lineTo'
     | 'closePath' | 'fill' | 'stroke' | 'fillStyle' | 'strokeStyle' | 'globalAlpha' | 'lineWidth' | 'lineCap'
-    | 'lineJoin' | 'drawImage'>;
+    | 'lineJoin' | 'drawImage' | 'createPattern'>;
 
 // The image at a URL, if it is loaded and can be drawn.
 export type ImageAt = (url: string) => CanvasImageSource | null;
@@ -131,6 +132,16 @@ export const play = (
         return value;
     };
 
+    // Patterns by URL, made once per drawing played: a map draws thousands of shapes with a few.
+    const patterns: Map<string, CanvasPattern | null> = new Map();
+    const pattern = (url: string): CanvasPattern | null => {
+        if (!patterns.has(url)) {
+            const source = image(url);
+            patterns.set(url, source === null ? null : context.createPattern(source, 'repeat'));
+        }
+        return patterns.get(url) ?? null;
+    };
+
     const circle = (x: number, y: number, radius: number) => {
         context.beginPath();
         context.arc(x, y, Math.max(radius, 0), 0, 2 * Math.PI);
@@ -182,6 +193,17 @@ export const play = (
                 ];
                 if (source !== null) {
                     context.drawImage(source, sx, sy, sw, sh, dx, dy, dw, dh);
+                }
+                break;
+            }
+            case Op.FillPattern: {
+                const found = pattern(text());
+                const scale = number();
+                // Until the image comes, the fill style stays what it was.
+                if (found !== null) {
+                    // On top of the drawing's transform: a pixel of the image is `scale` units.
+                    found.setTransform({ a: scale, b: 0, c: 0, d: scale, e: 0, f: 0 });
+                    context.fillStyle = found;
                 }
                 break;
             }

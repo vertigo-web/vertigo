@@ -33,6 +33,7 @@ mod code {
     pub const FILL_POLYGON: u8 = 13;
     pub const STROKE_POLYGON: u8 = 14;
     pub const DRAW_IMAGE: u8 = 15;
+    pub const FILL_PATTERN: u8 = 16;
 }
 
 const UNITS_PIXELS: u8 = 0;
@@ -264,6 +265,29 @@ impl Drawing {
         self
     }
 
+    /// Fills shapes from now on with the image at `url` repeated, each of its pixels `scale` of
+    /// the drawing's units wide: f. ex. a seamless texture tile. The pattern lies on the
+    /// drawing, starting at its point (0, 0), so it moves and grows with the view box, and shapes
+    /// side by side join without a seam.
+    ///
+    /// The image loads as for [`Self::draw_image`]. Until it comes, and if it fails to load, the
+    /// fill style stays what it was, so a color set before stands in for the pattern:
+    ///
+    /// ```rust
+    /// use vertigo::{Drawing, ViewBox};
+    ///
+    /// let mut drawing = Drawing::new(ViewBox::new(0.0, 0.0, 100.0, 100.0));
+    /// drawing
+    ///     .fill_style("#8db360")
+    ///     .fill_pattern("grass.webp", 0.25)
+    ///     .fill_polygon([(0.0, 50.0), (50.0, 25.0), (100.0, 50.0), (50.0, 75.0)]);
+    /// ```
+    pub fn fill_pattern(&mut self, url: &str, scale: f32) -> &mut Self {
+        self.text(code::FILL_PATTERN, url);
+        self.bytes_mut().extend_from_slice(&scale.to_le_bytes());
+        self
+    }
+
     /// The drawing as the browser reads it.
     pub fn as_bytes(&self) -> &[u8] {
         &self.bytes
@@ -340,7 +364,9 @@ mod tests {
                 "cat.png",
                 Rect::new(1.0, 2.0, 3.0, 4.0),
                 Rect::new(-1.0, -2.0, 2.0, 1.0),
-            );
+            )
+            .fill_pattern("cat.png", 0.5)
+            .fill_rect(0.0, 0.0, 2.0, 2.0);
         drawing
     }
 
@@ -354,7 +380,8 @@ mod tests {
         128, 191, 0, 0, 0, 64, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 128, 63, 0, 0, 0, 192, 0, 0, 0, 0, 14,
         3, 0, 0, 0, 0, 0, 0, 0, 0, 0, 128, 191, 0, 0, 0, 64, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 128, 63,
         15, 7, 0, 99, 97, 116, 46, 112, 110, 103, 0, 0, 128, 63, 0, 0, 0, 64, 0, 0, 64, 64, 0, 0,
-        128, 64, 0, 0, 128, 191, 0, 0, 0, 192, 0, 0, 0, 64, 0, 0, 128, 63,
+        128, 64, 0, 0, 128, 191, 0, 0, 0, 192, 0, 0, 0, 64, 0, 0, 128, 63, 16, 7, 0, 99, 97, 116,
+        46, 112, 110, 103, 0, 0, 0, 63, 7, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 64, 0, 0, 0, 64,
     ];
 
     #[test]
@@ -429,6 +456,18 @@ mod tests {
         assert_eq!(u16::from_le_bytes([bytes[2], bytes[3]]), 10);
         assert_eq!(&bytes[4..14], b"atlas.webp");
         assert_eq!(bytes.len(), 1 + 1 + 2 + 10 + 8 * 4);
+    }
+
+    #[test]
+    fn a_pattern_takes_its_url_and_scale() {
+        let mut drawing = Drawing::pixels();
+        drawing.fill_pattern("grass.webp", 0.25);
+
+        let bytes = drawing.as_bytes();
+        assert_eq!(bytes[1], code::FILL_PATTERN);
+        assert_eq!(u16::from_le_bytes([bytes[2], bytes[3]]), 10);
+        assert_eq!(&bytes[4..14], b"grass.webp");
+        assert_eq!(&bytes[14..], 0.25f32.to_le_bytes());
     }
 
     #[test]
