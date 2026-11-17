@@ -12,6 +12,14 @@
 ### Changed
 
 * `ViewBox::new` is a `const fn`, so a `const` view box needs no struct literal.
+* `vertigo-cli` no longer depends on OpenSSL: `--proxy` passes the target's response on by itself
+  instead of through `actix-proxy`, which pulled in `awc` with OpenSSL. A program built with
+  `vertigo-cli` doesn't need `libssl` on the machine it runs on.
+
+### Fixed
+
+* `--proxy` passes on every value of a repeated header of the target's response (f. ex. a few
+  `Set-Cookie`), not only the last one.
 
 ## 0.14.4 - 2026-11-16
 

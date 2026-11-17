@@ -109,17 +109,6 @@ dependencies = [
 ]
 
 [[package]]
-name = "actix-proxy"
-version = "0.2.0"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "3eb1ba1258bd79835d602dffb79f62aae42da7569036c67929e21961e2b3693c"
-dependencies = [
- "actix-web",
- "awc",
- "openssl",
-]
-
-[[package]]
 name = "actix-router"
 version = "0.5.5"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -183,11 +172,9 @@ dependencies = [
  "http 0.2.12",
  "http 1.5.0",
  "impl-more",
- "openssl",
  "pin-project-lite",
  "rustls-pki-types",
  "tokio",
- "tokio-openssl",
  "tokio-rustls",
  "tokio-util",
  "tracing",
@@ -463,7 +450,6 @@ dependencies = [
  "itoa",
  "log",
  "mime",
- "openssl",
  "percent-encoding",
  "pin-project-lite",
  "rand",
@@ -3786,17 +3772,6 @@ dependencies = [
 ]
 
 [[package]]
-name = "tokio-openssl"
-version = "0.6.5"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "59df6849caa43bb7567f9a36f863c447d95a11d5903c9cc334ba32576a27eadd"
-dependencies = [
- "openssl",
- "openssl-sys",
- "tokio",
-]
-
-[[package]]
 name = "tokio-retry"
 version = "0.3.2"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -4124,7 +4099,6 @@ dependencies = [
  "actix-cors",
  "actix-files",
  "actix-http",
- "actix-proxy",
  "actix-web",
  "actix-ws",
  "awc",

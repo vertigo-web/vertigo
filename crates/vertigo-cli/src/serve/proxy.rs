@@ -1,14 +1,14 @@
 //! `--proxy`: requests under a path go on to another server, websockets included.
 
-use actix_proxy::IntoHttpResponse;
 use actix_web::{
     App, HttpRequest, HttpResponse,
     body::{BodyStream, MessageBody},
-    dev::{RequestHead, ServiceFactory, ServiceRequest},
+    dev::{Decompress, Payload, RequestHead, ServiceFactory, ServiceRequest},
     guard,
     http::header::{self, HeaderName},
     web::{self, Bytes, BytesMut},
 };
+use awc::ClientResponse;
 use futures::StreamExt;
 use tokio::io::{AsyncReadExt, AsyncWriteExt};
 
@@ -53,20 +53,7 @@ where
                         };
 
                         match response.await {
-                            Ok(response) => {
-                                let mut response = response.into_http_response();
-
-                                let headers = response.headers_mut();
-
-                                // `awc` decompresses the upstream body transparently, but
-                                // `into_http_response` copies the upstream headers across verbatim
-                                // so remove appropriate headers.
-                                if headers.remove(header::CONTENT_ENCODING).next().is_some() {
-                                    headers.remove(header::CONTENT_LENGTH);
-                                }
-
-                                response
-                            }
+                            Ok(response) => forward_response(response),
                             Err(error) => {
                                 let message =
                                     format!("Error fetching from url={target_url} error={error}");
@@ -77,6 +64,22 @@ where
                 }
             })),
     )
+}
+
+/// The target's response as this server's own: its status, its headers (a repeated one, like
+/// `Set-Cookie`, with every value) and its body streamed through. awc has already decompressed
+/// the body, so `Content-Encoding`, and the `Content-Length` of the compressed body, stay behind.
+fn forward_response(response: ClientResponse<Decompress<Payload>>) -> HttpResponse {
+    let compressed = response.headers().contains_key(header::CONTENT_ENCODING);
+    let mut forwarded = HttpResponse::build(response.status());
+    for (name, value) in response.headers() {
+        let stale =
+            *name == header::CONTENT_ENCODING || (compressed && *name == header::CONTENT_LENGTH);
+        if !stale {
+            forwarded.append_header((name.clone(), value.clone()));
+        }
+    }
+    forwarded.streaming(response)
 }
 
 /// Where a request under `path` goes: the rest of its path, and its query, after `target`.
@@ -186,7 +189,10 @@ async fn tunnel_websocket(
 mod tests {
     use std::time::Duration;
 
-    use actix_web::{App, HttpRequest, HttpResponse, HttpServer, dev::ServerHandle, web};
+    use actix_web::{
+        App, HttpRequest, HttpResponse, HttpServer, dev::ServerHandle, http::header, middleware,
+        web,
+    };
     use awc::ws::{CloseCode, CloseReason, Frame, Message};
     use futures::{SinkExt, StreamExt};
 
@@ -248,6 +254,16 @@ mod tests {
             App::new()
                 .route("/api/ws", web::get().to(echo))
                 .route("/api/hello", web::get().to(|| async { "hi" }))
+                .service(
+                    web::resource("/api/cookies")
+                        .wrap(middleware::Compress::default())
+                        .get(|| async {
+                            HttpResponse::Created()
+                                .append_header((header::SET_COOKIE, "a=1"))
+                                .append_header((header::SET_COOKIE, "b=2"))
+                                .body("cookie ".repeat(1000))
+                        }),
+                )
         })?;
         let target = format!("http://{backend}/api");
         let (proxy, proxy_handle) =
@@ -315,6 +331,27 @@ mod tests {
             .await?;
 
         assert_eq!(response.body().await?, "hi");
+
+        stop(servers).await;
+        Ok(())
+    }
+
+    #[actix_web::test]
+    async fn a_response_keeps_its_status_and_every_header_value_but_not_the_compression()
+    -> TestResult {
+        let (proxy, servers) = proxy_to_backend()?;
+
+        let mut response = http_client()
+            .get(format!("http://{proxy}/api/cookies"))
+            .insert_header((header::ACCEPT_ENCODING, "gzip"))
+            .send()
+            .await?;
+
+        assert_eq!(response.status(), 201);
+        let cookies: Vec<_> = response.headers().get_all(header::SET_COOKIE).collect();
+        assert_eq!(cookies, ["a=1", "b=2"]);
+        assert!(!response.headers().contains_key(header::CONTENT_ENCODING));
+        assert_eq!(response.body().await?, "cookie ".repeat(1000));
 
         stop(servers).await;
         Ok(())
