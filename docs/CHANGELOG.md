@@ -10,6 +10,8 @@
   when it comes.
 * `Driver::preload_image`: loads an image in the background, so that a drawing asking for it later
   has it at once instead of being drawn without it first.
+* `Drawing::fill_pattern`: fills shapes with an image repeated lying on the drawing so it moves and
+  grows with the view box. Until the image comes, the fill style set before stands in for it.
 * vertigo-cli: `is_ssr_fetch`: whether a request is the app's fetch during SSR, so a page handler
   of your own (next to `vertigo_files`) can refuse it as `vertigo_handler` does, instead of
   rendering a page that fetches the same URL again.

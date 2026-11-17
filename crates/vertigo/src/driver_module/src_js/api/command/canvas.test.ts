@@ -48,6 +48,15 @@ const recording = (log: Array<string>): Context2d => {
         drawImage: (image: { name: string }, ...args: Array<number>) => {
             log.push(`drawImage(${[image.name, ...args.map(round)].join(',')})`);
         },
+        createPattern: (image: { name: string }, repetition: string) => {
+            log.push(`createPattern(${image.name},${repetition})`);
+            return {
+                setTransform: (matrix: Record<string, number>) => {
+                    log.push(`pattern.setTransform(${['a', 'b', 'c', 'd', 'e', 'f'].map((key) => round(matrix[key] ?? 0)).join(',')})`);
+                },
+                toString: () => `pattern(${image.name})`,
+            };
+        },
     };
     for (const name of ['fillStyle', 'strokeStyle', 'globalAlpha', 'lineWidth', 'lineCap', 'lineJoin']) {
         Object.defineProperty(context, name, property(name));
@@ -61,13 +70,14 @@ const FIXTURE = new Uint8Array([
     1, 0, 0, 0, 193, 0, 0, 160, 192, 0, 0, 128, 65, 0, 0, 32, 65, 1, 7, 0, 35, 102, 102, 100, 50,
     55, 102, 2, 8, 0, 197, 188, 195, 179, 197, 130, 196, 135, 3, 0, 0, 0, 63, 4, 0, 0, 0, 64, 5, 0,
     0, 192, 63, 6, 1, 12, 2, 7, 0, 0, 0, 193, 0, 0, 160, 192, 0, 0, 128, 65, 0, 0, 32, 65, 8, 0, 0,
-    128, 63, 0, 0, 0, 64, 0, 0, 64, 64, 9, 0, 0, 128, 191, 0, 0, 0, 192, 0, 0, 128, 64, 10, 0, 0, 0,
-    0, 0, 0, 0, 0, 0, 0, 192, 64, 11, 3, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 128, 63, 0, 0, 128,
-    63, 0, 0, 0, 64, 0, 0, 0, 0, 13, 4, 0, 0, 0, 0, 0, 0, 0, 0, 0, 128, 191, 0, 0, 0, 64, 0, 0, 0,
-    0, 0, 0, 0, 0, 0, 0, 128, 63, 0, 0, 0, 192, 0, 0, 0, 0, 14, 3, 0, 0, 0, 0, 0, 0, 0, 0, 0, 128,
-    191, 0, 0, 0, 64, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 128, 63, 15, 7, 0, 99, 97, 116, 46, 112, 110,
-    103, 0, 0, 128, 63, 0, 0, 0, 64, 0, 0, 64, 64, 0, 0, 128, 64, 0, 0, 128, 191, 0, 0, 0, 192, 0, 0,
-    0, 64, 0, 0, 128, 63,
+    128, 63, 0, 0, 0, 64, 0, 0, 64, 64, 9, 0, 0, 128, 191, 0, 0, 0, 192, 0, 0, 128, 64, 10, 0, 0,
+    0, 0, 0, 0, 0, 0, 0, 0, 192, 64, 11, 3, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 128, 63, 0, 0,
+    128, 63, 0, 0, 0, 64, 0, 0, 0, 0, 13, 4, 0, 0, 0, 0, 0, 0, 0, 0, 0, 128, 191, 0, 0, 0, 64, 0,
+    0, 0, 0, 0, 0, 0, 0, 0, 0, 128, 63, 0, 0, 0, 192, 0, 0, 0, 0, 14, 3, 0, 0, 0, 0, 0, 0, 0, 0, 0,
+    128, 191, 0, 0, 0, 64, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 128, 63, 15, 7, 0, 99, 97, 116, 46, 112,
+    110, 103, 0, 0, 128, 63, 0, 0, 0, 64, 0, 0, 64, 64, 0, 0, 128, 64, 0, 0, 128, 191, 0, 0, 0,
+    192, 0, 0, 0, 64, 0, 0, 128, 63, 16, 7, 0, 99, 97, 116, 46, 112, 110, 103, 0, 0, 0, 63, 7, 0,
+    0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 64, 0, 0, 0, 64,
 ]);
 
 const DEFAULTS = (width: number, height: number) => [
@@ -110,6 +120,8 @@ console.log("\n--- Test canvas: the cross-language fixture ---");
         'fill()',
         'beginPath()', 'moveTo(0,-1)', 'lineTo(2,0)', 'lineTo(0,1)', 'closePath()', 'stroke()',
         'drawImage(cat,1,2,3,4,-1,-2,2,1)',
+        'createPattern(cat,repeat)', 'pattern.setTransform(0.5,0,0,0.5,0,0)', 'fillStyle=pattern(cat)',
+        'fillRect(0,0,2,2)',
     ], 'every operation, in order, in the units of the view box');
 }
 
@@ -118,7 +130,44 @@ console.log("\n--- Test canvas: an image not there ---");
     const log: Array<string> = [];
     play(recording(log), FIXTURE, 320, 200, 2);
     assert(!log.some((line) => line.startsWith('drawImage')), 'an image not loaded is left out');
-    assert(log[log.length - 1] === 'stroke()', 'and the drawing goes on without it');
+    assert(!log.some((line) => line.includes('attern')), 'and so is a pattern of it');
+    assert(log[log.length - 1] === 'fillRect(0,0,2,2)' && log.filter((line) => line.startsWith('fillStyle')).length === 2,
+        'and the drawing goes on without it, filling with the fill style it had');
+}
+
+console.log("\n--- Test canvas: patterns ---");
+{
+    // units: pixels, then for each of `scales` a pattern of `url` at it and a rectangle filled with it
+    const patterned = (url: string, scales: Array<number>): Uint8Array => {
+        const name = new TextEncoder().encode(url);
+        const one = 1 + 2 + name.length + 4 + 1 + 16;
+        const bytes = new Uint8Array(1 + one * scales.length);
+        const data = new DataView(bytes.buffer);
+        scales.forEach((scale, index) => {
+            const at = 1 + one * index;
+            bytes[at] = 16;
+            data.setUint16(at + 1, name.length, true);
+            bytes.set(name, at + 3);
+            data.setFloat32(at + 3 + name.length, scale, true);
+            bytes[at + 7 + name.length] = 7;
+            [0, 0, 4, 4].forEach((value, i) => data.setFloat32(at + 8 + name.length + 4 * i, value, true));
+        });
+        return bytes;
+    };
+    const grass = { name: 'grass' };
+    let asked = 0;
+    const log: Array<string> = [];
+    play(recording(log), patterned('grass.webp', [0.25, 0.25, 2]), 100, 100, 1, (url) => {
+        asked += 1;
+        return url === 'grass.webp' ? grass as unknown as CanvasImageSource : null;
+    });
+    assert(log.filter((line) => line.startsWith('createPattern')).length === 1 && asked === 1,
+        'a pattern is made once for a drawing, however many shapes it fills');
+    same(log.filter((line) => line.startsWith('pattern.setTransform')), [
+        'pattern.setTransform(0.25,0,0,0.25,0,0)',
+        'pattern.setTransform(0.25,0,0,0.25,0,0)',
+        'pattern.setTransform(2,0,0,2,0,0)',
+    ], 'each fill gets the scale it asked for');
 }
 
 console.log("\n--- Test canvas: fitting the view box ---");
