@@ -104,6 +104,11 @@ pub enum CommandForBrowser {
         max: u32,
     },
 
+    /// Load the image at `url` for drawings on canvases, see [`crate::Driver::preload_image`].
+    ImagePreload {
+        url: String,
+    },
+
     /// Execute JavaScript API calls (for js! macro)
     JsApiCall {
         commands: Vec<JsApiCommand>,

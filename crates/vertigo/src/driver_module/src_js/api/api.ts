@@ -132,6 +132,11 @@ type ExecType
         }
     }
     | {
+        ImagePreload: {
+            url: string,
+        }
+    }
+    | {
         JsApiCall: {
             commands: Array<JsApiCommandType>
         }
@@ -322,6 +327,10 @@ export class Api {
                 return {
                     value: getRandom(params.min, params.max)
                 };
+
+            case 'ImagePreload':
+                this.dom.preloadImage(params.url);
+                return null;
 
             case 'JsApiCall':
                 return this.executeJsApiCall(params.commands);

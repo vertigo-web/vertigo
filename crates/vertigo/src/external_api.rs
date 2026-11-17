@@ -128,6 +128,7 @@ pub mod safe_wrappers {
                     | CommandForBrowser::CookieJsonSet { .. }
                     | CommandForBrowser::Log { .. }
                     | CommandForBrowser::HistoryBack
+                    | CommandForBrowser::ImagePreload { .. }
                     | CommandForBrowser::JsApiCall { .. }
                     | CommandForBrowser::DomBulkUpdate { .. } => JsJson::Null,
                 };

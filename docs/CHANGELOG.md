@@ -8,6 +8,8 @@
 * `Drawing::draw_image`: a part of an image (f. ex. one picture of an atlas) drawn into a rectangle
   of the drawing, with a new `Rect`. The browser loads each image once and draws the canvas again
   when it comes.
+* `Driver::preload_image`: loads an image in the background, so that a drawing asking for it later
+  has it at once instead of being drawn without it first.
 * vertigo-cli: `is_ssr_fetch`: whether a request is the app's fetch during SSR, so a page handler
   of your own (next to `vertigo_files`) can refuse it as `vertigo_handler` does, instead of
   rendering a page that fetches the same URL again.

@@ -453,4 +453,19 @@ console.log("\n--- Test canvas: loading images ---");
     draw(broken, image('missing.webp'));
     assert(broken.log.length > 0 && !drew(broken, 'missing.webp') && FakeImage.made.length === 2,
         'and left out, without loading it again');
+
+    // An image loaded beforehand.
+    canvases.preload('large.webp');
+    assert(FakeImage.made.length === 3 && FakeImage.made[2]?.src === 'large.webp', 'an image asked for beforehand is loaded');
+    canvases.preload('large.webp');
+    canvases.preload('atlas.webp');
+    assert(FakeImage.made.length === 3, 'once, and not again if a drawing loaded it');
+    const early = new FakeCanvas();
+    draw(early, image('large.webp'));
+    assert(!drew(early, 'large.webp'), 'a drawing asking for it before it comes is drawn without it');
+    FakeImage.made[2]?.load();
+    assert(drew(early, 'large.webp'), 'and again with it');
+    const later = new FakeCanvas();
+    draw(later, image('large.webp'));
+    assert(drew(later, 'large.webp') && FakeImage.made.length === 3, 'a drawing asking for it once it came has it at once');
 }
