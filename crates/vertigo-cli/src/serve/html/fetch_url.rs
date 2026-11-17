@@ -1,7 +1,7 @@
 use url::{ParseError, Url};
 
-/// Marks an SSR fetch to the server's own address; `vertigo_handler` answers it with 404
-/// instead of rendering a page (which could fetch the same URL again).
+/// Marks an SSR fetch to the server's own address (see `is_ssr_fetch`); `vertigo_handler` answers
+/// it with 404 instead of rendering a page (which could fetch the same URL again).
 pub const SSR_FETCH_HEADER: &str = "x-vertigo-ssr-fetch";
 
 /// Where SSR sends a fetch.

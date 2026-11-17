@@ -41,8 +41,7 @@ pub fn vertigo_handler(mount_config: &MountConfig) -> actix_web::Route {
     web::route().to(move |req: HttpRequest| {
         let mount_point = mount_point.clone();
         async move {
-            // Rendering a page for an SSR fetch could fetch the same URL again, endlessly
-            if req.headers().contains_key(SSR_FETCH_HEADER) {
+            if is_ssr_fetch(&req) {
                 log::error!(
                     "SSR fetched {}, which only the SSR handler serves",
                     req.uri()
@@ -119,6 +118,38 @@ pub fn vertigo_handler(mount_config: &MountConfig) -> actix_web::Route {
     })
 }
 
+/// Whether the request is a fetch the app made while the server rendered a page, sent back to the
+/// server's own origin ([`MountConfigBuilder::ssr_fetch_base`]).
+///
+/// A handler of your own that renders pages with [`ServerState`] should refuse such a request, as
+/// [`vertigo_handler`] does: rendering a page for it could fetch the same URL again, endlessly.
+/// It comes when the app fetches a URL that only the page handler answers.
+///
+/// ```
+/// use actix_web::{HttpRequest, HttpResponse};
+/// use vertigo_cli::serve::{RequestHeaders, ServerState, is_ssr_fetch, request_cookie};
+///
+/// async fn page(req: HttpRequest) -> HttpResponse {
+///     if is_ssr_fetch(&req) {
+///         return HttpResponse::NotFound().finish();
+///     }
+///     let cookie = request_cookie(&req);
+///     let headers = RequestHeaders {
+///         cookie: cookie.as_deref(),
+///         ..RequestHeaders::default()
+///     };
+///     ServerState::global("/")
+///         .request_with_headers(&req.uri().to_string(), headers)
+///         .await
+///         .into()
+/// }
+/// ```
+///
+/// [`MountConfigBuilder::ssr_fetch_base`]: super::MountConfigBuilder::ssr_fetch_base
+pub fn is_ssr_fetch(req: &HttpRequest) -> bool {
+    req.headers().contains_key(SSR_FETCH_HEADER)
+}
+
 /// `Cookie` header of the request, for [`ServerState::request_with_cookie`].
 ///
 /// HTTP/2 may send the cookies as several header fields; they are joined with `; `
@@ -150,7 +181,18 @@ pub fn request_accept_language(req: &HttpRequest) -> Option<String> {
 mod tests {
     use actix_web::{http::header, test::TestRequest};
 
-    use super::{request_accept_language, request_cookie};
+    use super::{is_ssr_fetch, request_accept_language, request_cookie};
+    use crate::serve::html::SSR_FETCH_HEADER;
+
+    #[test]
+    fn ssr_fetch_is_told_by_its_header() {
+        let ssr_fetch = TestRequest::get()
+            .append_header((SSR_FETCH_HEADER, "1"))
+            .to_http_request();
+
+        assert!(is_ssr_fetch(&ssr_fetch));
+        assert!(!is_ssr_fetch(&TestRequest::get().to_http_request()));
+    }
 
     #[test]
     fn no_cookie_header() {

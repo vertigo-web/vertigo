@@ -47,7 +47,8 @@ pub fn vertigo_install(cfg: &mut web::ServiceConfig, mount_config: &MountConfig)
 /// Install only the build's static files, the precompressed ones too if
 /// [`MountConfigBuilder::precompress`](crate::serve::MountConfigBuilder::precompress) asked for
 /// them - for a back-end that renders the pages by itself, f. ex. with redirects before SSR,
-/// and calls [`vertigo_handler`] or [`ServerState`] on its own.
+/// and calls [`vertigo_handler`] or [`ServerState`] on its own. A page handler using
+/// [`ServerState`] should refuse the app's SSR fetches, see [`is_ssr_fetch`](crate::serve::is_ssr_fetch).
 ///
 /// [`vertigo_install`] does this and then mounts the handler. Like it, it needs ServerState
 /// initialized before.
