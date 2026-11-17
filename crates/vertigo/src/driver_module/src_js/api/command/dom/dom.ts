@@ -112,6 +112,11 @@ export class DriverDom {
     // `bytes` is the flat command stream - see `dom_wire.ts` and, for the format itself,
     // `crates/vertigo/src/dev/command_wire.rs`. It is a view straight into wasm memory,
     // valid for as long as this call runs, which is why nothing here is deferred.
+    // Loads an image for drawings to come, see `Canvases.preload`.
+    public preloadImage(url: string) {
+        this.canvases.preload(url);
+    }
+
     public update = (bytes: Uint8Array) => {
         // First flush only, so the object form is worth building here and nowhere else.
         const hydration = this.nodes.hasInitNodes() && this.metadata.getEnabledHydration()

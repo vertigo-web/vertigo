@@ -351,6 +351,8 @@ impl ServerState {
                     .to_json()
                 }
                 CommandForBrowser::HistoryBack => JsJson::Null,
+                // Images are loaded by the browser, for its canvases.
+                CommandForBrowser::ImagePreload { url: _ } => JsJson::Null,
                 CommandForBrowser::GetRandom { min, max: _ } => {
                     browser_response::GetRandom { value: min }.to_json()
                 }

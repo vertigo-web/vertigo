@@ -271,6 +271,10 @@ impl CommandForBrowserApi {
         exec_command(CommandForBrowser::HistoryBack);
     }
 
+    pub fn image_preload(&self, url: String) {
+        exec_command(CommandForBrowser::ImagePreload { url });
+    }
+
     pub fn get_random(&self, min: u32, max: u32) -> u32 {
         let response = exec_command(CommandForBrowser::GetRandom { min, max });
 
@@ -287,5 +291,25 @@ impl CommandForBrowserApi {
                 min
             }
         }
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use crate::{JsJson, JsJsonSerialize, dev::command::CommandForBrowser};
+
+    /// `api.ts` reads it as `{ ImagePreload: { url } }`.
+    #[test]
+    fn an_image_preload_is_the_command_the_driver_reads() {
+        let url = ("url".to_string(), JsJson::String("atlas.webp".to_string()));
+        let preload = ("ImagePreload".to_string(), JsJson::Object([url].into()));
+
+        assert_eq!(
+            CommandForBrowser::ImagePreload {
+                url: "atlas.webp".to_string()
+            }
+            .to_json(),
+            JsJson::Object([preload].into())
+        );
     }
 }

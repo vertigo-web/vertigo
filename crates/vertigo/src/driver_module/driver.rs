@@ -280,6 +280,22 @@ impl Driver {
         api_animation_frame().next_paint()
     }
 
+    /// Loads the image at `url` in the background, so that a drawing asking for it later has it
+    /// at once instead of being drawn without it first, see [`Drawing::draw_image`]. Each image
+    /// loads once, whether a drawing or this asked for it first. Nothing happens during SSR.
+    ///
+    /// ```rust
+    /// use vertigo::get_driver;
+    ///
+    /// // The atlas the map is drawn with when zoomed in, loaded while the player looks around.
+    /// get_driver().preload_image("/assets/atlas-large.webp");
+    /// ```
+    ///
+    /// [`Drawing::draw_image`]: crate::Drawing::draw_image
+    pub fn preload_image(&self, url: impl Into<String>) {
+        api_browser_command().image_preload(url.into());
+    }
+
     /// Gets current value of monotonic clock.
     pub fn now(&self) -> Instant {
         Instant::now()

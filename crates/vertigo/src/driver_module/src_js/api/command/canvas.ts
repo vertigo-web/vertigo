@@ -13,8 +13,9 @@
 // A drawing that comes in a batch of DOM changes is drawn once the whole batch is in place, see
 // `paintDrawn`.
 //
-// Images are loaded once per URL, the first time a drawing asks for one. A canvas whose drawing
-// asked for an image still loading is drawn again when the image comes, see `Images`.
+// Images are loaded once per URL, the first time a drawing asks for one or when the app asks to
+// load it beforehand. A canvas whose drawing asked for an image still loading is drawn again when
+// the image comes, see `Images`.
 
 import { decoder } from "../../text";
 
@@ -202,8 +203,8 @@ class Images {
 
     constructor(private readonly loaded: (canvas: HTMLCanvasElement) => void) {}
 
-    // The image at `url` for `canvas`, or `null` while it loads, when `canvas` waits for it.
-    public get(url: string, canvas: HTMLCanvasElement): CanvasImageSource | null {
+    // The image at `url`, loading unless it has started already.
+    public load(url: string): HTMLImageElement {
         let image = this.images.get(url);
 
         if (image === undefined) {
@@ -222,6 +223,13 @@ class Images {
             image.src = url;
             this.images.set(url, image);
         }
+
+        return image;
+    }
+
+    // The image at `url` for `canvas`, or `null` while it loads, when `canvas` waits for it.
+    public get(url: string, canvas: HTMLCanvasElement): CanvasImageSource | null {
+        const image = this.load(url);
 
         if (image.complete) {
             // A broken image is complete too, but has no size.
@@ -279,6 +287,11 @@ export class Canvases {
         }
 
         this.drawn.clear();
+    }
+
+    // Loads the image at `url` for drawings to come, which then have it at once.
+    public preload(url: string) {
+        this.images.load(url);
     }
 
     public forget(node: Element | Comment | Text) {
