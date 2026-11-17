@@ -1,9 +1,15 @@
 use actix_web::{App, HttpServer, middleware::{Compress, from_fn}};
 use vertigo_cli::serve::{vary_accept_encoding, vertigo_install, MountConfigBuilder, ServerState};
 
+const HOST: &str = "127.0.0.1";
+const PORT: u16 = 8080;
+
 #[actix_web::main]
 pub async fn main() -> std::io::Result<()> {
     let vertigo_mount_config = MountConfigBuilder::new("/", "./build")
+        // Server-side rendering fetches relative URLs (`/api/...`) from this server, as the
+        // browser does. Without it they fail during SSR.
+        .ssr_fetch_base(format!("http://{HOST}:{PORT}"))
         // A release build of the server compresses the wasm and other text files once, at
         // startup, about a quarter smaller than `Compress` does per response.
         .precompress_in_release()
@@ -22,7 +28,7 @@ pub async fn main() -> std::io::Result<()> {
             .wrap(from_fn(vary_accept_encoding))
             .configure(|srvc| vertigo_install(srvc, &vertigo_mount_config))
     })
-    .bind("127.0.0.1:8080")?
+    .bind((HOST, PORT))?
     .run()
     .await
 }

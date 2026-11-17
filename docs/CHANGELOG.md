@@ -23,6 +23,8 @@
 
 * `--proxy` passes on every value of a repeated header of the target's response (f. ex. a few
   `Set-Cookie`), not only the last one.
+* The fullstack template (`vertigo new -t fullstack`) sets `ssr_fetch_base` to the server's own
+  address, so the app's fetches of relative URLs (`/api/...`) don't fail during SSR.
 
 ## 0.14.4 - 2026-11-16
 
