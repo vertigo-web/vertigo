@@ -25,5 +25,5 @@ pub use server_state::ServerState;
 #[cfg(feature = "ssr-timings")]
 pub use timings::SsrTimings;
 pub use vary::vary_accept_encoding;
-pub use vertigo_handler::{request_accept_language, request_cookie, vertigo_handler};
+pub use vertigo_handler::{is_ssr_fetch, request_accept_language, request_cookie, vertigo_handler};
 pub use vertigo_install::{vertigo_files, vertigo_install};
