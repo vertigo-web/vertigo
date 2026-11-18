@@ -192,6 +192,37 @@ console.log("\n--- Test canvas: patterns ---");
         'pattern.setTransform(0.25,0,0,0.25,0,0)',
         'pattern.setTransform(2,0,0,2,0,0)',
     ], 'each fill gets the scale it asked for');
+
+    // A browser's pattern so scaled fills nothing.
+    const unscaled: Array<string> = [];
+    play(recording(unscaled), patterned('grass.webp', [0, Number.NaN, Number.POSITIVE_INFINITY]), 100, 100, 1,
+        () => grass as unknown as CanvasImageSource);
+    assert(!unscaled.some((line) => line.startsWith('pattern.setTransform') || line.includes('=pattern'))
+        && unscaled.filter((line) => line === 'fillRect(0,0,4,4)').length === 3,
+        'a scale of 0, NaN or infinity leaves the fill style as it was');
+}
+
+console.log("\n--- Test canvas: a view box that fits nothing ---");
+{
+    // units: the view box `box`, then a filled rectangle
+    const boxed = (box: Array<number>): Uint8Array => {
+        const bytes = new Uint8Array(1 + 16 + 1 + 16);
+        const data = new DataView(bytes.buffer);
+        bytes[0] = 1;
+        box.forEach((value, index) => { data.setFloat32(1 + 4 * index, value, true); });
+        bytes[17] = 7;
+        [0, 0, 1, 1].forEach((value, index) => { data.setFloat32(18 + 4 * index, value, true); });
+        return bytes;
+    };
+    const fills = (box: Array<number>): boolean => {
+        const log: Array<string> = [];
+        play(recording(log), boxed(box), 100, 100, 1);
+        return log.includes('fillRect(0,0,1,1)');
+    };
+    for (const box of [[0, 0, 0, 10], [0, 0, 10, -1], [Number.NaN, 0, 10, 10], [0, 0, Number.POSITIVE_INFINITY, 10]]) {
+        assert(!fills(box), `a view box of ${box.join(',')} draws nothing`);
+    }
+    assert(fills([0, 0, 10, 10]), 'and one with a width and a height draws');
 }
 
 console.log("\n--- Test canvas: gradients ---");
@@ -590,4 +621,52 @@ console.log("\n--- Test canvas: loading images ---");
     const later = new FakeCanvas();
     draw(later, image('large.webp'));
     assert(drew(later, 'large.webp') && FakeImage.made.length === 3, 'a drawing asking for it once it came has it at once');
+
+    // Of the images no drawing uses any more, two are kept here.
+    const few = new Canvases(2);
+    const drawFew = (canvas: FakeCanvas, url: string) => {
+        few.draw(canvas as unknown as Element, image(url));
+        few.paintDrawn();
+    };
+    const made = (url: string) => FakeImage.made.filter((one) => one.src === url).length;
+    const moving = new FakeCanvas();
+    const through = (...urls: Array<string>) => { urls.forEach((url) => { drawFew(moving, url); }); };
+
+    through('u1', 'u2', 'u3', 'u4');
+    drawFew(moving, 'u3');
+    assert(made('u3') === 1, 'an image no drawing uses any more is kept, among the last few');
+    drawFew(moving, 'u1');
+    assert(made('u1') === 2, 'an older one is let go, and loads again when a drawing asks for it');
+
+    const still = new FakeCanvas();
+    drawFew(still, 's1');
+    through('s1', 'm1', 'm2', 'm3');
+    drawFew(still, 's1');
+    assert(made('s1') === 1, 'an image another drawing still uses is never let go');
+
+    few.preload('p1');
+    through('n1', 'n2', 'n3', 'p1');
+    assert(made('p1') === 1, 'an image loaded beforehand is kept until a drawing asks for it');
+    through('r1', 'r2');
+    few.preload('r1');
+    through('r3', 'r4', 'r5', 'r1');
+    assert(made('r1') === 1, 'and so is one no drawing used any more, loaded beforehand again');
+
+    const closed = new FakeCanvas();
+    drawFew(closed, 'g1');
+    few.forget(closed as unknown as Element);
+    through('o1', 'o2', 'o3', 'g1');
+    assert(made('g1') === 2, 'the images of a canvas gone are let go as the others');
+
+    // Let go while it loads, and asked for again before it comes.
+    const waiting = new FakeCanvas();
+    drawFew(waiting, 'l1');
+    const letGo = FakeImage.made.find((one) => one.src === 'l1');
+    ['q1', 'q2', 'q3', 'l1'].forEach((url) => { drawFew(waiting, url); });
+    waiting.log.length = 0;
+    letGo?.load();
+    assert(made('l1') === 2 && waiting.log.length === 0,
+        'an image let go while it loads draws nothing when it comes');
+    FakeImage.made.filter((one) => one.src === 'l1')[1]?.load();
+    assert(drew(waiting, 'l1'), 'and the one loading anew is drawn when it comes');
 }

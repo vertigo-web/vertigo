@@ -7,9 +7,11 @@
 
 * `Drawing::draw_image`: a part of an image (f. ex. one picture of an atlas) drawn into a rectangle
   of the drawing, with a new `Rect`. The browser loads each image once and draws the canvas again
-  when it comes.
+  when it comes. It keeps the images drawings use, and of those no drawing uses any more the last
+  64, so a map that has shown thousands of tiles doesn't hold them all.
 * `Driver::preload_image`: loads an image in the background, so that a drawing asking for it later
-  has it at once instead of being drawn without it first.
+  has it at once instead of being drawn without it first. It stays loaded until a drawing asks for
+  it.
 * `Drawing::fill_pattern`: fills shapes with an image repeated lying on the drawing so it moves and
   grows with the view box. Until the image comes, the fill style set before stands in for it.
 * `Drawing::fill_linear_gradient`: fills shapes with a linear gradient between two points of the
@@ -30,6 +32,9 @@
 
 * The docs of `Drawing::fill_style` no longer promise gradient keywords, which a canvas doesn't
   take, see `Drawing::fill_linear_gradient`.
+* A `ViewBox` without a width and a height above zero, or with a NaN or an infinity in it, draws
+  nothing. One side of zero used to fit the drawing by the other side, and a NaN or an infinity
+  in its corner drew it in device pixels, unscaled.
 * `--proxy` passes on every value of a repeated header of the target's response (f. ex. a few
   `Set-Cookie`), not only the last one.
 * The fullstack template (`vertigo new -t fullstack`) sets `ssr_fetch_base` to the server's own

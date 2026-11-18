@@ -87,13 +87,16 @@ export const play = (
     let scale = ratio;
 
     if (data.getUint8(at++) === 1) {
-        // A view box, fitted as SVG fits `xMidYMid meet`.
+        // A view box, fitted as SVG fits `xMidYMid meet`. One without a width and a height above
+        // zero, or with a number that is NaN or infinite, draws nothing.
         const x = number();
         const y = number();
         const boxWidth = number();
         const boxHeight = number();
 
-        scale = Math.min(width / boxWidth, height / boxHeight);
+        scale = [x, y, boxWidth, boxHeight].every(isFinite) && boxWidth > 0 && boxHeight > 0
+            ? Math.min(width / boxWidth, height / boxHeight)
+            : NaN;
         context.setTransform(
             scale, 0, 0, scale,
             (width - boxWidth * scale) / 2 - x * scale,
@@ -200,8 +203,9 @@ export const play = (
             case Op.FillPattern: {
                 const found = pattern(text());
                 const scale = number();
-                // Until the image comes, the fill style stays what it was.
-                if (found !== null) {
+                // Until the image comes, the fill style stays what it was, and so it does with a
+                // scale of 0, NaN or infinity, with which the pattern would fill nothing.
+                if (found !== null && scale !== 0 && isFinite(scale)) {
                     // On top of the drawing's transform: a pixel of the image is `scale` units.
                     found.setTransform({ a: scale, b: 0, c: 0, d: scale, e: 0, f: 0 });
                     context.fillStyle = found;
@@ -254,14 +258,25 @@ export const play = (
 // In device pixels, `ratio` of them to a CSS pixel.
 type Size = { width: number, height: number, ratio: number };
 
-// The images drawings ask for, by URL, each loaded once. One that fails to load stays left out
-// until the page is loaded again.
+// The images drawings ask for, by URL, each loaded once and kept while a drawing uses it. Of
+// those no drawing uses any more, the last `kept` stay too, so that an animation going through a
+// few, or a map scrolled back, has them at once. Older ones are let go, so that a map that has
+// shown thousands of tiles doesn't hold them all, and load again if a drawing asks for them. One
+// loaded beforehand stays until a drawing asks for it. One that fails to load stays left out
+// while it is kept.
 class Images {
     private readonly images: Map<string, HTMLImageElement> = new Map();
     // Canvases to draw again when the image at a URL comes.
     private readonly waiting: Map<string, Set<HTMLCanvasElement>> = new Map();
+    // The URLs the last drawing of each canvas asked for.
+    private readonly used: Map<HTMLCanvasElement, Set<string>> = new Map();
+    // The images no drawing uses any more, the one used longest ago first.
+    private readonly unused: Set<string> = new Set();
 
-    constructor(private readonly loaded: (canvas: HTMLCanvasElement) => void) {}
+    constructor(
+        private readonly kept: number,
+        private readonly loaded: (canvas: HTMLCanvasElement) => void,
+    ) {}
 
     // The image at `url`, loading unless it has started already.
     public load(url: string): HTMLImageElement {
@@ -287,6 +302,12 @@ class Images {
         return image;
     }
 
+    // Loads the image at `url` for drawings to come, and keeps it until one asks for it.
+    public preload(url: string) {
+        this.load(url);
+        this.unused.delete(url);
+    }
+
     // The image at `url` for `canvas`, or `null` while it loads, when `canvas` waits for it.
     public get(url: string, canvas: HTMLCanvasElement): CanvasImageSource | null {
         const image = this.load(url);
@@ -302,10 +323,48 @@ class Images {
         return null;
     }
 
+    // The last drawing of `canvas` asked for the images at `urls`, and for no others. The images
+    // it asked for before and no drawing uses any more join the unused ones, of which those
+    // beyond the last `kept` are let go.
+    public use(canvas: HTMLCanvasElement, urls: Set<string>) {
+        const before = this.used.get(canvas) ?? [];
+        this.used.set(canvas, urls);
+
+        for (const url of urls) {
+            this.unused.delete(url);
+        }
+
+        // A page has a few canvases, so asking each is cheap.
+        const all = [...this.used.values()];
+        for (const url of before) {
+            if (!all.some((other) => other.has(url))) {
+                this.unused.add(url);
+            }
+        }
+
+        for (const url of this.unused) {
+            if (this.unused.size <= this.kept) {
+                break;
+            }
+            this.unused.delete(url);
+            const image = this.images.get(url);
+            if (image !== undefined) {
+                // Still loading, it would take the canvases waiting for a new image of the URL
+                // when it comes, and that one would come to none.
+                image.onload = null;
+                image.onerror = null;
+                this.images.delete(url);
+            }
+            this.waiting.delete(url);
+        }
+    }
+
     public forget(canvas: HTMLCanvasElement) {
         for (const canvases of this.waiting.values()) {
             canvases.delete(canvas);
         }
+        this.use(canvas, new Set());
+        this.used.delete(canvas);
     }
 }
 
@@ -317,7 +376,12 @@ export class Canvases {
     // Canvases with a new drawing in the batch being applied, see `paintDrawn`.
     private readonly drawn: Set<HTMLCanvasElement> = new Set();
     private observer: ResizeObserver | null = null;
-    private readonly images: Images = new Images((canvas) => this.repaint(canvas));
+    private readonly images: Images;
+
+    // `kept`: how many images no drawing uses any more stay loaded, see `Images`.
+    public constructor(kept = 64) {
+        this.images = new Images(kept, (canvas) => this.repaint(canvas));
+    }
 
     // `bytes` is good only for the call it came in (see `DriverDom.update`), so it is copied, to
     // be drawn after the batch and again when the canvas changes its size.
@@ -351,7 +415,7 @@ export class Canvases {
 
     // Loads the image at `url` for drawings to come, which then have it at once.
     public preload(url: string) {
-        this.images.load(url);
+        this.images.preload(url);
     }
 
     public forget(node: Element | Comment | Text) {
@@ -469,8 +533,16 @@ export class Canvases {
         const context = canvas.getContext('2d');
 
         if (context !== null) {
-            play(context, drawing, size.width, size.height, size.ratio,
-                (url) => this.images.get(url, canvas));
+            // The images the drawing asks for, kept while it is the last one of the canvas.
+            const urls: Set<string> = new Set();
+            try {
+                play(context, drawing, size.width, size.height, size.ratio, (url) => {
+                    urls.add(url);
+                    return this.images.get(url, canvas);
+                });
+            } finally {
+                this.images.use(canvas, urls);
+            }
         }
     }
 }
