@@ -45,6 +45,10 @@
   `dev::command::DriverDomCommand::CanvasDraw`, shares its bytes as an `Arc<Vec<u8>>`. `Drawing`
   keeps them in an `Arc` for that, so it is `Send` and `Sync`.
 * `ViewBox::new` is a `const fn`, so a `const` view box needs no struct literal.
+* vertigo-cli: a build file named by its content (`name.HASH.ext`, as `vertigo build` and
+  `include_static!` save them) is served with `Cache-Control: public, max-age=31536000, immutable`,
+  so browsers and CDNs keep it without asking again - a new content gets a new name. The rest of
+  the build (`index.json`) and a missing file (going to the app's default service) go as before.
 * `vertigo-cli` no longer depends on OpenSSL: `--proxy` passes the target's response on by itself
   instead of through `actix-proxy`, which pulled in `awc` with OpenSSL. A program built with
   `vertigo-cli` doesn't need `libssl` on the machine it runs on.

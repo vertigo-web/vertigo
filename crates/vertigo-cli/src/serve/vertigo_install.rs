@@ -1,10 +1,15 @@
+use std::path::PathBuf;
+
 use actix_files::Files;
-use actix_web::web;
+use actix_web::{dev::Service, web};
 
 use crate::serve::MountConfig;
 
 use super::{
-    precompress::precompressed_files, server_state::ServerState, vertigo_handler::vertigo_handler,
+    immutable::{is_build_file_named_by_content, mark_immutable},
+    precompress::precompressed_files,
+    server_state::ServerState,
+    vertigo_handler::vertigo_handler,
 };
 
 /// Install vertigo handler and static files based on mount config.
@@ -53,6 +58,11 @@ pub fn vertigo_install(cfg: &mut web::ServiceConfig, mount_config: &MountConfig)
 /// [`vertigo_install`] does this and then mounts the handler. Like it, it needs ServerState
 /// initialized before.
 ///
+/// A file named by its content (`name.HASH.ext`, as `vertigo build` and `include_static!` save
+/// them) goes with `Cache-Control: public, max-age=31536000, immutable`: a new content gets
+/// a new name, so a browser and a CDN keep the file without asking again. The rest of the build
+/// (`index.json`) the browser checks with its ETag.
+///
 /// ```no_run
 /// use actix_web::{web, App, HttpResponse};
 /// use vertigo_cli::serve::{MountConfigBuilder, ServerState, vertigo_files};
@@ -65,15 +75,26 @@ pub fn vertigo_install(cfg: &mut web::ServiceConfig, mount_config: &MountConfig)
 ///     .default_service(web::to(|| async { HttpResponse::Ok().body("my own page") }));
 /// ```
 pub fn vertigo_files(cfg: &mut web::ServiceConfig, mount_config: &MountConfig) {
-    if mount_config.precompress {
-        let files = ServerState::global(mount_config.mount_point()).precompressed();
-        cfg.service(precompressed_files(&mount_config.dest_http_root(), files));
-    }
+    let files = web::scope(&mount_config.dest_http_root());
+    let files = match mount_config.precompress {
+        true => {
+            let precompressed = ServerState::global(mount_config.mount_point()).precompressed();
+            // in the scope, so its paths start after the build's root
+            files.service(precompressed_files("", precompressed))
+        }
+        false => files,
+    };
 
-    cfg.service(Files::new(
-        &mount_config.dest_http_root(),
-        mount_config.dest_dir(),
-    ));
+    let dest_dir = PathBuf::from(mount_config.dest_dir());
+    cfg.service(
+        files
+            .service(Files::new("", mount_config.dest_dir()))
+            .wrap_fn(move |req, service| {
+                let named = is_build_file_named_by_content(&dest_dir, &req);
+                let res = service.call(req);
+                async move { Ok(mark_immutable(res.await?, named)) }
+            }),
+    );
 }
 
 #[cfg(test)]
@@ -103,6 +124,9 @@ mod tests {
         std::fs::write(dest_dir.join("app.wasm"), b"\0asm\x01\0\0\0")?;
         let script = "console.log('vertigo');\n".repeat(100);
         std::fs::write(dest_dir.join("wasm_run.js"), &script)?;
+        // named by their content - compressed at start and not
+        std::fs::write(dest_dir.join("style.Mh5rjJWAfXI.css"), &script)?;
+        std::fs::write(dest_dir.join("font.jx-LW7_aanc.woff2"), vec![0; 1000])?;
 
         // Its own mount point, as the state is global for the tests running alongside
         let Ok(mount_config) = MountConfigBuilder::new("/files", dest_dir.to_string_lossy())
@@ -142,6 +166,56 @@ mod tests {
         assert_eq!(read_body(response).await, script.as_bytes());
 
         let response = call_service(&app, get("/files/some/page", "br")).await;
+        assert_eq!(read_body(response).await, "page".as_bytes());
+
+        let cache_control = |response: &actix_web::dev::ServiceResponse| {
+            response
+                .headers()
+                .get(header::CACHE_CONTROL)
+                .and_then(|value| value.to_str().ok())
+                .map(str::to_string)
+        };
+        let immutable = Some("public, max-age=31536000, immutable".to_string());
+        let root = mount_config.dest_http_root();
+        for (file, accept_encoding) in [
+            ("style.Mh5rjJWAfXI.css", "br"),
+            ("style.Mh5rjJWAfXI.css", "gzip"),
+            ("font.jx-LW7_aanc.woff2", "br"),
+        ] {
+            let response =
+                call_service(&app, get(&format!("{root}/{file}"), accept_encoding)).await;
+            assert_eq!(response.status(), StatusCode::OK, "{file}");
+            assert_eq!(
+                cache_control(&response),
+                immutable,
+                "{file}, {accept_encoding}"
+            );
+        }
+        // the same on revalidation of a copy from before
+        let response =
+            call_service(&app, get(&format!("{root}/style.Mh5rjJWAfXI.css"), "br")).await;
+        let etag = response.headers().get(header::ETAG).cloned();
+        let Some(etag) = etag else {
+            panic!("a build file should have an ETag");
+        };
+        let revalidate = TestRequest::get()
+            .uri(&format!("{root}/style.Mh5rjJWAfXI.css"))
+            .insert_header((header::ACCEPT_ENCODING, "br"))
+            .insert_header((header::IF_NONE_MATCH, etag))
+            .to_request();
+        let response = call_service(&app, revalidate).await;
+        assert_eq!(response.status(), StatusCode::NOT_MODIFIED);
+        assert_eq!(cache_control(&response), immutable);
+
+        // a file without the hash, and a missing one, may change
+        let response = call_service(&app, get(&script_uri, "br")).await;
+        assert_eq!(cache_control(&response), None);
+        let response = call_service(&app, get(&format!("{root}/index.json"), "br")).await;
+        assert_eq!(response.status(), StatusCode::OK);
+        assert_eq!(cache_control(&response), None);
+        // a missing one goes to the page, as before
+        let response = call_service(&app, get(&format!("{root}/gone.Mh5rjJWAfXI.css"), "br")).await;
+        assert_eq!(cache_control(&response), None);
         assert_eq!(read_body(response).await, "page".as_bytes());
 
         std::fs::remove_dir_all(&dest_dir)
