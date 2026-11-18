@@ -48,6 +48,25 @@ const recording = (log: Array<string>): Context2d => {
         drawImage: (image: { name: string }, ...args: Array<number>) => {
             log.push(`drawImage(${[image.name, ...args.map(round)].join(',')})`);
         },
+        createLinearGradient: (...args: Array<number>) => {
+            // As a browser's, which takes finite numbers only, unlike the shapes.
+            if (!args.every(isFinite)) {
+                throw new TypeError(`createLinearGradient: non-finite ${args.join(',')}`);
+            }
+            log.push(`createLinearGradient(${args.map(round).join(',')})`);
+            return {
+                addColorStop: (offset: number, color: string) => {
+                    if (!(offset >= 0 && offset <= 1)) {
+                        throw new Error(`IndexSizeError: ${offset}`);
+                    }
+                    if (color === 'no color') {
+                        throw new Error(`SyntaxError: ${color}`);
+                    }
+                    log.push(`gradient.addColorStop(${round(offset)},${color})`);
+                },
+                toString: () => 'gradient',
+            };
+        },
         createPattern: (image: { name: string }, repetition: string) => {
             log.push(`createPattern(${image.name},${repetition})`);
             return {
@@ -77,6 +96,8 @@ const FIXTURE = new Uint8Array([
     128, 191, 0, 0, 0, 64, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 128, 63, 15, 7, 0, 99, 97, 116, 46, 112,
     110, 103, 0, 0, 128, 63, 0, 0, 0, 64, 0, 0, 64, 64, 0, 0, 128, 64, 0, 0, 128, 191, 0, 0, 0,
     192, 0, 0, 0, 64, 0, 0, 128, 63, 16, 7, 0, 99, 97, 116, 46, 112, 110, 103, 0, 0, 0, 63, 7, 0,
+    0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 64, 0, 0, 0, 64, 17, 0, 0, 0, 0, 0, 0, 128, 191, 0, 0, 0, 64, 0,
+    0, 128, 63, 2, 0, 0, 0, 0, 0, 3, 0, 114, 101, 100, 0, 0, 128, 63, 4, 0, 35, 48, 48, 102, 7, 0,
     0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 64, 0, 0, 0, 64,
 ]);
 
@@ -122,6 +143,8 @@ console.log("\n--- Test canvas: the cross-language fixture ---");
         'drawImage(cat,1,2,3,4,-1,-2,2,1)',
         'createPattern(cat,repeat)', 'pattern.setTransform(0.5,0,0,0.5,0,0)', 'fillStyle=pattern(cat)',
         'fillRect(0,0,2,2)',
+        'createLinearGradient(0,-1,2,1)', 'gradient.addColorStop(0,red)', 'gradient.addColorStop(1,#00f)',
+        'fillStyle=gradient', 'fillRect(0,0,2,2)',
     ], 'every operation, in order, in the units of the view box');
 }
 
@@ -131,7 +154,8 @@ console.log("\n--- Test canvas: an image not there ---");
     play(recording(log), FIXTURE, 320, 200, 2);
     assert(!log.some((line) => line.startsWith('drawImage')), 'an image not loaded is left out');
     assert(!log.some((line) => line.includes('attern')), 'and so is a pattern of it');
-    assert(log[log.length - 1] === 'fillRect(0,0,2,2)' && log.filter((line) => line.startsWith('fillStyle')).length === 2,
+    const filled = log.indexOf('fillRect(0,0,2,2)');
+    assert(filled > 0 && log.slice(0, filled).filter((line) => line.startsWith('fillStyle')).length === 2,
         'and the drawing goes on without it, filling with the fill style it had');
 }
 
@@ -168,6 +192,55 @@ console.log("\n--- Test canvas: patterns ---");
         'pattern.setTransform(0.25,0,0,0.25,0,0)',
         'pattern.setTransform(2,0,0,2,0,0)',
     ], 'each fill gets the scale it asked for');
+}
+
+console.log("\n--- Test canvas: gradients ---");
+{
+    // units: pixels, then a gradient between `ends` of `stops` and a rectangle filled with it
+    const graded = (ends: Array<number>, stops: Array<[number, string]>): Uint8Array => {
+        const encoder = new TextEncoder();
+        const parts: Array<number> = [0, 17];
+        const float = (value: number) => {
+            const four = new Uint8Array(4);
+            new DataView(four.buffer).setFloat32(0, value, true);
+            parts.push(...four);
+        };
+        ends.forEach(float);
+        parts.push(stops.length & 255, stops.length >> 8);
+        for (const [offset, color] of stops) {
+            float(offset);
+            const name = encoder.encode(color);
+            parts.push(name.length & 255, name.length >> 8, ...name);
+        }
+        parts.push(7);
+        [0, 0, 4, 4].forEach(float);
+        return new Uint8Array(parts);
+    };
+    // What the drawing did after its defaults and units.
+    const played = (bytes: Uint8Array): Array<string> => {
+        const log: Array<string> = [];
+        play(recording(log), bytes, 100, 100, 1);
+        return log.slice(DEFAULTS(100, 100).length + 1);
+    };
+
+    same(played(graded([0, 0, 10, 0], [[-0.5, 'red'], [0.5, 'no color'], [Number.NaN, 'lime'], [2, 'blue']])), [
+        'createLinearGradient(0,0,10,0)', 'gradient.addColorStop(0,red)', 'gradient.addColorStop(1,blue)',
+        'fillStyle=gradient', 'fillRect(0,0,4,4)',
+    ], 'an offset outside 0 to 1 counts as the nearer end, and a stop without one or without a color is left out');
+
+    same(played(graded([5, 5, 5, 5], [[1, 'lime'], [0, 'red'], [1, 'blue'], [1, 'no color']])), [
+        'createLinearGradient(5,5,5,5)', 'gradient.addColorStop(1,lime)', 'gradient.addColorStop(0,red)',
+        'gradient.addColorStop(1,blue)', 'fillStyle=blue', 'fillRect(0,0,4,4)',
+    ], 'a gradient with its ends at one point fills with its last stop, as in SVG');
+
+    same(played(graded([5, 5, 5, 5], [[0.5, 'no color']])), [
+        'createLinearGradient(5,5,5,5)', 'fillStyle=gradient', 'fillRect(0,0,4,4)',
+    ], 'and with nothing when it took no stop, as any gradient without stops');
+
+    for (const ends of [[0, Number.NaN, 10, 0], [0, 0, Number.POSITIVE_INFINITY, 0]]) {
+        same(played(graded(ends, [[0, 'red'], [1, 'blue']])), ['fillRect(0,0,4,4)'],
+            `an end that is not a finite number leaves the fill style as it was: ${ends.join(',')}`);
+    }
 }
 
 console.log("\n--- Test canvas: fitting the view box ---");

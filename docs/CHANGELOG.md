@@ -12,6 +12,9 @@
   has it at once instead of being drawn without it first.
 * `Drawing::fill_pattern`: fills shapes with an image repeated lying on the drawing so it moves and
   grows with the view box. Until the image comes, the fill style set before stands in for it.
+* `Drawing::fill_linear_gradient`: fills shapes with a linear gradient between two points of the
+  drawing, with color stops. A triangle shaded evenly between two colors is one such gradient (its
+  docs show where it ends), so a mesh of triangles can be shaded smoothly.
 * vertigo-cli: `is_ssr_fetch`: whether a request is the app's fetch during SSR, so a page handler
   of your own (next to `vertigo_files`) can refuse it as `vertigo_handler` does, instead of
   rendering a page that fetches the same URL again.
@@ -25,6 +28,8 @@
 
 ### Fixed
 
+* The docs of `Drawing::fill_style` no longer promise gradient keywords, which a canvas doesn't
+  take, see `Drawing::fill_linear_gradient`.
 * `--proxy` passes on every value of a repeated header of the target's response (f. ex. a few
   `Set-Cookie`), not only the last one.
 * The fullstack template (`vertigo new -t fullstack`) sets `ssr_fetch_base` to the server's own
