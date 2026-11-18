@@ -1,5 +1,6 @@
 mod html;
 mod http_client;
+mod immutable;
 mod mount_path;
 mod precompress;
 mod proxy;
