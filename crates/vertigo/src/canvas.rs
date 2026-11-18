@@ -43,7 +43,8 @@ const UNITS_VIEW_BOX: u8 = 1;
 
 /// The units of a [`Drawing`]: a rectangle fitted into the canvas as an SVG `viewBox` with
 /// `preserveAspectRatio="xMidYMid meet"` is, as big as fits and in the middle. What lies
-/// outside the box is drawn too, in the margins it leaves.
+/// outside the box is drawn too, in the margins it leaves. A box without a width and a height
+/// above zero, or with a number that is NaN or infinite, draws nothing.
 #[derive(Clone, Copy, Debug, PartialEq)]
 pub struct ViewBox {
     pub x: f32,
@@ -187,6 +188,7 @@ impl Drawing {
         self.op(code::LINE_WIDTH_PX, &[width])
     }
 
+    /// How the ends of lines look from now on.
     pub fn line_cap(&mut self, cap: LineCap) -> &mut Self {
         let value = match cap {
             LineCap::Butt => 0,
@@ -199,6 +201,7 @@ impl Drawing {
         self
     }
 
+    /// How lines and outlines turn their corners from now on.
     pub fn line_join(&mut self, join: LineJoin) -> &mut Self {
         let value = match join {
             LineJoin::Miter => 0,
@@ -211,6 +214,7 @@ impl Drawing {
         self
     }
 
+    /// The rectangle from (`x`, `y`), `width` wide and `height` high, filled with the fill style.
     pub fn fill_rect(&mut self, x: f32, y: f32, width: f32, height: f32) -> &mut Self {
         self.op(code::FILL_RECT, &[x, y, width, height])
     }
@@ -257,6 +261,11 @@ impl Drawing {
     /// browser loads an image once, the first time a drawing asks for it, and the canvas draws
     /// its last drawing again when the image comes. Until then, and if it fails to load, the
     /// drawing goes on without it.
+    ///
+    /// The browser keeps an image while the last drawing of a canvas uses it, and of the images
+    /// no drawing uses any more, the last 64: an animation going through a few, or a map scrolled
+    /// back, has them at once. An older one is let go, so a map that has shown thousands of tiles
+    /// doesn't hold them all, and loads again when a drawing asks for it.
     pub fn draw_image(&mut self, url: &str, part: Rect, target: Rect) -> &mut Self {
         self.text(code::DRAW_IMAGE, url);
         let bytes = self.bytes_mut();
@@ -275,8 +284,9 @@ impl Drawing {
     /// its own, though, so a hairline of what lies beneath can show where two meet: paint a
     /// similar color beneath them first.
     ///
-    /// The image loads as for [`Self::draw_image`]. Until it comes, and if it fails to load, the
-    /// fill style stays what it was, so a color set before stands in for the pattern:
+    /// The image loads as for [`Self::draw_image`]. Until it comes, if it fails to load, and with
+    /// a `scale` of 0, NaN or infinity, with which a pattern would fill nothing, the fill style
+    /// stays what it was, so a color set before stands in for the pattern:
     ///
     /// ```rust
     /// use vertigo::{Drawing, ViewBox};

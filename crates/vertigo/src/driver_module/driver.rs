@@ -282,7 +282,8 @@ impl Driver {
 
     /// Loads the image at `url` in the background, so that a drawing asking for it later has it
     /// at once instead of being drawn without it first, see [`Drawing::draw_image`]. Each image
-    /// loads once, whether a drawing or this asked for it first. Nothing happens during SSR.
+    /// loads once, whether a drawing or this asked for it first, and stays loaded until a drawing
+    /// asks for it, then as long as [`Drawing::draw_image`] says. Nothing happens during SSR.
     ///
     /// ```rust
     /// use vertigo::get_driver;
