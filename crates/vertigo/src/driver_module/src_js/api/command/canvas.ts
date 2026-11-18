@@ -36,6 +36,7 @@ const Op = {
     StrokePolygon: 14,
     DrawImage: 15,
     FillPattern: 16,
+    FillLinearGradient: 17,
 } as const;
 
 const CAPS: Array<CanvasLineCap> = ['butt', 'round', 'square'];
@@ -45,7 +46,7 @@ const JOINS: Array<CanvasLineJoin> = ['miter', 'round', 'bevel'];
 export type Context2d = Pick<CanvasRenderingContext2D,
     'setTransform' | 'clearRect' | 'fillRect' | 'beginPath' | 'arc' | 'moveTo' | 'lineTo'
     | 'closePath' | 'fill' | 'stroke' | 'fillStyle' | 'strokeStyle' | 'globalAlpha' | 'lineWidth' | 'lineCap'
-    | 'lineJoin' | 'drawImage' | 'createPattern'>;
+    | 'lineJoin' | 'drawImage' | 'createPattern' | 'createLinearGradient'>;
 
 // The image at a URL, if it is loaded and can be drawn.
 export type ImageAt = (url: string) => CanvasImageSource | null;
@@ -204,6 +205,43 @@ export const play = (
                     // On top of the drawing's transform: a pixel of the image is `scale` units.
                     found.setTransform({ a: scale, b: 0, c: 0, d: scale, e: 0, f: 0 });
                     context.fillStyle = found;
+                }
+                break;
+            }
+            case Op.FillLinearGradient: {
+                const [x0, y0, x1, y1] = [number(), number(), number(), number()];
+                // Unlike the shapes, the context throws on an end that is NaN or infinite. The
+                // fill style then stays what it was, as for a text that is no color.
+                const gradient = [x0, y0, x1, y1].every(isFinite)
+                    ? context.createLinearGradient(x0, y0, x1, y1)
+                    : null;
+                // The stop at the end of the gradient: of the highest offset, added last.
+                let last: { offset: number, color: string } | null = null;
+                const stops = data.getUint16(at, true);
+                at += 2;
+                for (let stop = 0; stop < stops; stop++) {
+                    // The context refuses an offset outside 0 to 1, which counts as the nearer
+                    // end, as in SVG. One that is NaN, or a text that is no color, leaves the
+                    // stop out, as a bad fill style is.
+                    const offset = Math.min(Math.max(number(), 0), 1);
+                    const color = text();
+                    if (gradient !== null && !Number.isNaN(offset)) {
+                        try {
+                            gradient.addColorStop(offset, color);
+                            if (last === null || offset >= last.offset) {
+                                last = { offset, color };
+                            }
+                        } catch {
+                            // left out
+                        }
+                    }
+                }
+                if (gradient !== null) {
+                    // With its ends at one point, a gradient fills nothing on a canvas. SVG fills
+                    // with the last stop instead, so a triangle of one shade in a mesh is no hole.
+                    context.fillStyle = x0 === x1 && y0 === y1 && last !== null
+                        ? last.color
+                        : gradient;
                 }
                 break;
             }

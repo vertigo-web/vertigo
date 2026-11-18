@@ -11,6 +11,7 @@
 //!          | 1 x:f32 y:f32 width:f32 height:f32  -- a view box, see `ViewBox`
 //! op      := code:u8 args                   -- see `code`
 //! text    := length:u16 utf8*
+//! stops   := count:u16 (offset:f32 text)*   -- of a gradient
 //! rect    := x:f32 y:f32 width:f32 height:f32
 //! ```
 
@@ -34,6 +35,7 @@ mod code {
     pub const STROKE_POLYGON: u8 = 14;
     pub const DRAW_IMAGE: u8 = 15;
     pub const FILL_PATTERN: u8 = 16;
+    pub const FILL_LINEAR_GRADIENT: u8 = 17;
 }
 
 const UNITS_PIXELS: u8 = 0;
@@ -158,7 +160,8 @@ impl Drawing {
         }
     }
 
-    /// The color, gradient keyword or anything else CSS takes, that shapes are filled with.
+    /// The color shapes are filled with, as CSS takes it: a name, `#rgb`, `rgba(..)` and so on.
+    /// A text that is no color leaves the fill style as it was.
     pub fn fill_style(&mut self, color: &str) -> &mut Self {
         self.text(code::FILL_STYLE, color)
     }
@@ -267,8 +270,10 @@ impl Drawing {
 
     /// Fills shapes from now on with the image at `url` repeated, each of its pixels `scale` of
     /// the drawing's units wide: f. ex. a seamless texture tile. The pattern lies on the
-    /// drawing, starting at its point (0, 0), so it moves and grows with the view box, and shapes
-    /// side by side join without a seam.
+    /// drawing, starting at its point (0, 0), so it moves and grows with the view box, and goes
+    /// on unbroken from a shape to the one beside it. Each shape is smoothed along its edges on
+    /// its own, though, so a hairline of what lies beneath can show where two meet: paint a
+    /// similar color beneath them first.
     ///
     /// The image loads as for [`Self::draw_image`]. Until it comes, and if it fails to load, the
     /// fill style stays what it was, so a color set before stands in for the pattern:
@@ -285,6 +290,72 @@ impl Drawing {
     pub fn fill_pattern(&mut self, url: &str, scale: f32) -> &mut Self {
         self.text(code::FILL_PATTERN, url);
         self.bytes_mut().extend_from_slice(&scale.to_le_bytes());
+        self
+    }
+
+    /// Fills shapes from now on with a linear gradient from `start` to `end`, in the drawing's
+    /// units, so it moves and grows with the view box. Each of `stops` is an offset along the
+    /// way, from 0 at `start` to 1 at `end`, and the color there, as [`Self::fill_style`] takes
+    /// it. Between the stops the colors blend, before the first and after the last the color of
+    /// that stop goes on. Along each line across the way the color is the same.
+    ///
+    /// A triangle shaded evenly between two colors is one gradient of them, which puts each
+    /// corner at the offset of its shade. It starts at a corner of offset 0 but seldom ends at
+    /// the one of offset 1, as it runs across the lines of equal shade: `gradient_end` below
+    /// finds where. Triangles sharing an edge then agree on its colors, so a mesh of them is
+    /// shaded smoothly:
+    ///
+    /// ```rust
+    /// use vertigo::{Drawing, ViewBox};
+    ///
+    /// // Where the gradient over the triangle `a`, `b`, `c` ends, with `a` at offset 0, `b` at
+    /// // `t` and `c` at 1: at `a + g / |g|²`, where `g · (b - a) = t` and `g · (c - a) = 1`.
+    /// // `None` for a triangle with no area.
+    /// fn gradient_end(a: (f32, f32), b: (f32, f32), c: (f32, f32), t: f32) -> Option<(f32, f32)> {
+    ///     let (ab, ac) = ((b.0 - a.0, b.1 - a.1), (c.0 - a.0, c.1 - a.1));
+    ///     let cross = ab.0 * ac.1 - ab.1 * ac.0;
+    ///     let g = ((t * ac.1 - ab.1) / cross, (ab.0 - t * ac.0) / cross);
+    ///     let squared = g.0 * g.0 + g.1 * g.1;
+    ///     let end = (a.0 + g.0 / squared, a.1 + g.1 / squared);
+    ///     (end.0.is_finite() && end.1.is_finite()).then_some(end)
+    /// }
+    ///
+    /// // Light at the top left, dark at the top right, halfway between at the bottom left.
+    /// let (a, b, c) = ((0.0, 0.0), (0.0, 100.0), (100.0, 0.0));
+    /// let mut drawing = Drawing::new(ViewBox::new(0.0, 0.0, 100.0, 100.0));
+    /// if let Some(end) = gradient_end(a, b, c, 0.5) {
+    ///     // (80, 40), not the dark corner
+    ///     drawing
+    ///         .fill_linear_gradient(a, end, &[(0.0, "#8db360"), (1.0, "#2d4a1e")])
+    ///         .fill_polygon([a, b, c]);
+    /// }
+    /// ```
+    ///
+    /// Each shape is smoothed along its edges on its own, though, so a hairline of what lies
+    /// beneath can show where two meet: paint a similar color beneath the mesh first.
+    ///
+    /// A stop whose offset is outside 0 to 1 counts as the nearer end, and one whose offset is
+    /// NaN or that has no color is left out. Without stops the gradient is transparent and fills
+    /// nothing; more than `u16::MAX` are cut. When `start` and `end` are one point, shapes are
+    /// filled with the color of the last stop, as in SVG, where a canvas would fill nothing. An
+    /// end that is NaN or infinite leaves the fill style as it was.
+    pub fn fill_linear_gradient(
+        &mut self,
+        start: (f32, f32),
+        end: (f32, f32),
+        stops: &[(f32, &str)],
+    ) -> &mut Self {
+        let stops = &stops[..stops.len().min(u16::MAX as usize)];
+        self.op(
+            code::FILL_LINEAR_GRADIENT,
+            &[start.0, start.1, end.0, end.1],
+        );
+        self.bytes_mut()
+            .extend_from_slice(&(stops.len() as u16).to_le_bytes());
+        for (offset, color) in stops {
+            self.bytes_mut().extend_from_slice(&offset.to_le_bytes());
+            self.text_bytes(color);
+        }
         self
     }
 
@@ -318,18 +389,22 @@ impl Drawing {
         self
     }
 
+    fn text(&mut self, code: u8, value: &str) -> &mut Self {
+        self.bytes_mut().push(code);
+        self.text_bytes(value);
+        self
+    }
+
     /// A style or a URL is a text, which none needs to be longer than its two length bytes
     /// allow; a longer one is cut at a character boundary.
-    fn text(&mut self, code: u8, value: &str) -> &mut Self {
+    fn text_bytes(&mut self, value: &str) {
         let mut end = value.len().min(u16::MAX as usize);
         while !value.is_char_boundary(end) {
             end -= 1;
         }
         let bytes = self.bytes_mut();
-        bytes.push(code);
         bytes.extend_from_slice(&(end as u16).to_le_bytes());
         bytes.extend_from_slice(&value.as_bytes()[..end]);
-        self
     }
 
     fn bytes_mut(&mut self) -> &mut Vec<u8> {
@@ -366,6 +441,8 @@ mod tests {
                 Rect::new(-1.0, -2.0, 2.0, 1.0),
             )
             .fill_pattern("cat.png", 0.5)
+            .fill_rect(0.0, 0.0, 2.0, 2.0)
+            .fill_linear_gradient((0.0, -1.0), (2.0, 1.0), &[(0.0, "red"), (1.0, "#00f")])
             .fill_rect(0.0, 0.0, 2.0, 2.0);
         drawing
     }
@@ -381,7 +458,9 @@ mod tests {
         3, 0, 0, 0, 0, 0, 0, 0, 0, 0, 128, 191, 0, 0, 0, 64, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 128, 63,
         15, 7, 0, 99, 97, 116, 46, 112, 110, 103, 0, 0, 128, 63, 0, 0, 0, 64, 0, 0, 64, 64, 0, 0,
         128, 64, 0, 0, 128, 191, 0, 0, 0, 192, 0, 0, 0, 64, 0, 0, 128, 63, 16, 7, 0, 99, 97, 116,
-        46, 112, 110, 103, 0, 0, 0, 63, 7, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 64, 0, 0, 0, 64,
+        46, 112, 110, 103, 0, 0, 0, 63, 7, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 64, 0, 0, 0, 64, 17, 0,
+        0, 0, 0, 0, 0, 128, 191, 0, 0, 0, 64, 0, 0, 128, 63, 2, 0, 0, 0, 0, 0, 3, 0, 114, 101, 100,
+        0, 0, 128, 63, 4, 0, 35, 48, 48, 102, 7, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 64, 0, 0, 0, 64,
     ];
 
     #[test]
@@ -468,6 +547,38 @@ mod tests {
         assert_eq!(u16::from_le_bytes([bytes[2], bytes[3]]), 10);
         assert_eq!(&bytes[4..14], b"grass.webp");
         assert_eq!(&bytes[14..], 0.25f32.to_le_bytes());
+    }
+
+    #[test]
+    fn a_gradient_takes_its_ends_and_stops() {
+        let mut drawing = Drawing::pixels();
+        drawing.fill_linear_gradient((1.0, 2.0), (3.0, 4.0), &[(0.0, "red"), (0.5, "#0f0")]);
+
+        let bytes = drawing.as_bytes();
+        assert_eq!(bytes[1], code::FILL_LINEAR_GRADIENT);
+        assert_eq!(
+            &bytes[2..18],
+            [1.0f32, 2.0, 3.0, 4.0].map(f32::to_le_bytes).concat()
+        );
+        assert_eq!(u16::from_le_bytes([bytes[18], bytes[19]]), 2);
+        assert_eq!(&bytes[20..24], 0.0f32.to_le_bytes());
+        assert_eq!(&bytes[24..29], b"\x03\x00red");
+        assert_eq!(&bytes[29..33], 0.5f32.to_le_bytes());
+        assert_eq!(&bytes[33..], b"\x04\x00#0f0");
+    }
+
+    #[test]
+    fn a_gradient_of_too_many_stops_is_cut() {
+        let stops = vec![(0.5f32, "red"); 70_000];
+        let mut drawing = Drawing::pixels();
+        drawing.fill_linear_gradient((0.0, 0.0), (1.0, 0.0), &stops);
+
+        let bytes = drawing.as_bytes();
+        assert_eq!(u16::from_le_bytes([bytes[18], bytes[19]]), u16::MAX);
+        assert_eq!(
+            bytes.len(),
+            1 + 1 + 16 + 2 + usize::from(u16::MAX) * (4 + 2 + 3)
+        );
     }
 
     #[test]
