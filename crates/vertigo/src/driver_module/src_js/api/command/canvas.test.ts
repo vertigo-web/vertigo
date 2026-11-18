@@ -45,6 +45,8 @@ const recording = (log: Array<string>): Context2d => {
         fill: call('fill'),
         stroke: call('stroke'),
         closePath: call('closePath'),
+        save: call('save'),
+        restore: call('restore'),
         drawImage: (image: { name: string }, ...args: Array<number>) => {
             log.push(`drawImage(${[image.name, ...args.map(round)].join(',')})`);
         },
@@ -89,16 +91,18 @@ const FIXTURE = new Uint8Array([
     1, 0, 0, 0, 193, 0, 0, 160, 192, 0, 0, 128, 65, 0, 0, 32, 65, 1, 7, 0, 35, 102, 102, 100, 50,
     55, 102, 2, 8, 0, 197, 188, 195, 179, 197, 130, 196, 135, 3, 0, 0, 0, 63, 4, 0, 0, 0, 64, 5, 0,
     0, 192, 63, 6, 1, 12, 2, 7, 0, 0, 0, 193, 0, 0, 160, 192, 0, 0, 128, 65, 0, 0, 32, 65, 8, 0, 0,
-    128, 63, 0, 0, 0, 64, 0, 0, 64, 64, 9, 0, 0, 128, 191, 0, 0, 0, 192, 0, 0, 128, 64, 10, 0, 0,
-    0, 0, 0, 0, 0, 0, 0, 0, 192, 64, 11, 3, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 128, 63, 0, 0,
-    128, 63, 0, 0, 0, 64, 0, 0, 0, 0, 13, 4, 0, 0, 0, 0, 0, 0, 0, 0, 0, 128, 191, 0, 0, 0, 64, 0,
-    0, 0, 0, 0, 0, 0, 0, 0, 0, 128, 63, 0, 0, 0, 192, 0, 0, 0, 0, 14, 3, 0, 0, 0, 0, 0, 0, 0, 0, 0,
-    128, 191, 0, 0, 0, 64, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 128, 63, 15, 7, 0, 99, 97, 116, 46, 112,
-    110, 103, 0, 0, 128, 63, 0, 0, 0, 64, 0, 0, 64, 64, 0, 0, 128, 64, 0, 0, 128, 191, 0, 0, 0,
-    192, 0, 0, 0, 64, 0, 0, 128, 63, 16, 7, 0, 99, 97, 116, 46, 112, 110, 103, 0, 0, 0, 63, 7, 0,
-    0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 64, 0, 0, 0, 64, 17, 0, 0, 0, 0, 0, 0, 128, 191, 0, 0, 0, 64, 0,
-    0, 128, 63, 2, 0, 0, 0, 0, 0, 3, 0, 114, 101, 100, 0, 0, 128, 63, 4, 0, 35, 48, 48, 102, 7, 0,
-    0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 64, 0, 0, 0, 64,
+    128, 63, 0, 0, 0, 64, 0, 0, 64, 64, 9, 0, 0, 128, 191, 0, 0, 0, 192, 0, 0, 128, 64, 10, 0, 0, 0,
+    0, 0, 0, 0, 0, 0, 0, 192, 64, 11, 3, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 128, 63, 0, 0, 128,
+    63, 0, 0, 0, 64, 0, 0, 0, 0, 13, 4, 0, 0, 0, 0, 0, 0, 0, 0, 0, 128, 191, 0, 0, 0, 64, 0, 0, 0,
+    0, 0, 0, 0, 0, 0, 0, 128, 63, 0, 0, 0, 192, 0, 0, 0, 0, 14, 3, 0, 0, 0, 0, 0, 0, 0, 0, 0, 128,
+    191, 0, 0, 0, 64, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 128, 63, 15, 7, 0, 99, 97, 116, 46, 112, 110,
+    103, 0, 0, 128, 63, 0, 0, 0, 64, 0, 0, 64, 64, 0, 0, 128, 64, 0, 0, 128, 191, 0, 0, 0, 192, 0,
+    0, 0, 64, 0, 0, 128, 63, 16, 0, 7, 0, 99, 97, 116, 46, 112, 110, 103, 0, 0, 0, 63, 16, 1, 7, 0,
+    99, 97, 116, 46, 112, 110, 103, 0, 0, 0, 64, 7, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 64, 0, 0, 0,
+    64, 17, 0, 0, 0, 0, 0, 0, 0, 128, 191, 0, 0, 0, 64, 0, 0, 128, 63, 2, 0, 0, 0, 0, 0, 3, 0, 114,
+    101, 100, 0, 0, 128, 63, 4, 0, 35, 48, 48, 102, 17, 1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
+    128, 63, 1, 0, 0, 0, 0, 63, 4, 0, 108, 105, 109, 101, 7, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 64, 0,
+    0, 0, 64, 18, 7, 0, 0, 128, 63, 0, 0, 128, 63, 0, 0, 128, 63, 0, 0, 128, 63, 19,
 ]);
 
 const DEFAULTS = (width: number, height: number) => [
@@ -142,9 +146,13 @@ console.log("\n--- Test canvas: the cross-language fixture ---");
         'beginPath()', 'moveTo(0,-1)', 'lineTo(2,0)', 'lineTo(0,1)', 'closePath()', 'stroke()',
         'drawImage(cat,1,2,3,4,-1,-2,2,1)',
         'createPattern(cat,repeat)', 'pattern.setTransform(0.5,0,0,0.5,0,0)', 'fillStyle=pattern(cat)',
+        'createPattern(cat,repeat)', 'pattern.setTransform(2,0,0,2,0,0)', 'strokeStyle=pattern(cat)',
         'fillRect(0,0,2,2)',
         'createLinearGradient(0,-1,2,1)', 'gradient.addColorStop(0,red)', 'gradient.addColorStop(1,#00f)',
-        'fillStyle=gradient', 'fillRect(0,0,2,2)',
+        'fillStyle=gradient',
+        'createLinearGradient(0,0,0,1)', 'gradient.addColorStop(0.5,lime)', 'strokeStyle=gradient',
+        'fillRect(0,0,2,2)',
+        'save()', ...DEFAULTS(320, 200).slice(2), 'fillRect(1,1,1,1)', 'restore()',
     ], 'every operation, in order, in the units of the view box');
 }
 
@@ -161,41 +169,54 @@ console.log("\n--- Test canvas: an image not there ---");
 
 console.log("\n--- Test canvas: patterns ---");
 {
-    // units: pixels, then for each of `scales` a pattern of `url` at it and a rectangle filled with it
-    const patterned = (url: string, scales: Array<number>): Uint8Array => {
+    // units: pixels, then for each of `uses` a pattern of `url` for its target (0 fills, 1
+    // strokes) at its scale, and a rectangle filled
+    const patterned = (url: string, uses: Array<[number, number]>): Uint8Array => {
         const name = new TextEncoder().encode(url);
-        const one = 1 + 2 + name.length + 4 + 1 + 16;
-        const bytes = new Uint8Array(1 + one * scales.length);
+        const one = 1 + 1 + 2 + name.length + 4 + 1 + 16;
+        const bytes = new Uint8Array(1 + one * uses.length);
         const data = new DataView(bytes.buffer);
-        scales.forEach((scale, index) => {
+        uses.forEach(([target, scale], index) => {
             const at = 1 + one * index;
             bytes[at] = 16;
-            data.setUint16(at + 1, name.length, true);
-            bytes.set(name, at + 3);
-            data.setFloat32(at + 3 + name.length, scale, true);
-            bytes[at + 7 + name.length] = 7;
-            [0, 0, 4, 4].forEach((value, i) => data.setFloat32(at + 8 + name.length + 4 * i, value, true));
+            bytes[at + 1] = target;
+            data.setUint16(at + 2, name.length, true);
+            bytes.set(name, at + 4);
+            data.setFloat32(at + 4 + name.length, scale, true);
+            bytes[at + 8 + name.length] = 7;
+            [0, 0, 4, 4].forEach((value, i) => data.setFloat32(at + 9 + name.length + 4 * i, value, true));
         });
         return bytes;
     };
+    const fills = (...scales: Array<number>) => scales.map((scale): [number, number] => [0, scale]);
     const grass = { name: 'grass' };
     let asked = 0;
     const log: Array<string> = [];
-    play(recording(log), patterned('grass.webp', [0.25, 0.25, 2]), 100, 100, 1, (url) => {
+    play(recording(log), patterned('grass.webp', fills(0.25, 0.25, 2)), 100, 100, 1, (url) => {
         asked += 1;
         return url === 'grass.webp' ? grass as unknown as CanvasImageSource : null;
     });
-    assert(log.filter((line) => line.startsWith('createPattern')).length === 1 && asked === 1,
-        'a pattern is made once for a drawing, however many shapes it fills');
-    same(log.filter((line) => line.startsWith('pattern.setTransform')), [
-        'pattern.setTransform(0.25,0,0,0.25,0,0)',
-        'pattern.setTransform(0.25,0,0,0.25,0,0)',
-        'pattern.setTransform(2,0,0,2,0,0)',
+    assert(log.filter((line) => line.startsWith('createPattern')).length === 2 && asked === 2,
+        'a pattern is made once a scale for a drawing, however many shapes it fills');
+    same(log.slice(DEFAULTS(100, 100).length + 1).filter((line) => line.startsWith('pattern.setTransform') || line.startsWith('fill')), [
+        'pattern.setTransform(0.25,0,0,0.25,0,0)', 'fillStyle=pattern(grass)', 'fillRect(0,0,4,4)',
+        'fillStyle=pattern(grass)', 'fillRect(0,0,4,4)',
+        'pattern.setTransform(2,0,0,2,0,0)', 'fillStyle=pattern(grass)', 'fillRect(0,0,4,4)',
     ], 'each fill gets the scale it asked for');
+
+    // A style holds the pattern itself: one made for a stroke must not move the fill's to its
+    // scale.
+    const both: Array<string> = [];
+    play(recording(both), patterned('grass.webp', [[0, 0.5], [1, 2]]), 100, 100, 1,
+        () => grass as unknown as CanvasImageSource);
+    same(both.filter((line) => line.includes('attern')), [
+        'createPattern(grass,repeat)', 'pattern.setTransform(0.5,0,0,0.5,0,0)', 'fillStyle=pattern(grass)',
+        'createPattern(grass,repeat)', 'pattern.setTransform(2,0,0,2,0,0)', 'strokeStyle=pattern(grass)',
+    ], 'a pattern for strokes, of a scale of its own, leaves the one of fills as it was');
 
     // A browser's pattern so scaled fills nothing.
     const unscaled: Array<string> = [];
-    play(recording(unscaled), patterned('grass.webp', [0, Number.NaN, Number.POSITIVE_INFINITY]), 100, 100, 1,
+    play(recording(unscaled), patterned('grass.webp', fills(0, Number.NaN, Number.POSITIVE_INFINITY)), 100, 100, 1,
         () => grass as unknown as CanvasImageSource);
     assert(!unscaled.some((line) => line.startsWith('pattern.setTransform') || line.includes('=pattern'))
         && unscaled.filter((line) => line === 'fillRect(0,0,4,4)').length === 3,
@@ -227,10 +248,11 @@ console.log("\n--- Test canvas: a view box that fits nothing ---");
 
 console.log("\n--- Test canvas: gradients ---");
 {
-    // units: pixels, then a gradient between `ends` of `stops` and a rectangle filled with it
-    const graded = (ends: Array<number>, stops: Array<[number, string]>): Uint8Array => {
+    // units: pixels, then a gradient for `target` (0 fills, 1 strokes) between `ends` of `stops`,
+    // and a rectangle filled
+    const graded = (ends: Array<number>, stops: Array<[number, string]>, target = 0): Uint8Array => {
         const encoder = new TextEncoder();
-        const parts: Array<number> = [0, 17];
+        const parts: Array<number> = [0, 17, target];
         const float = (value: number) => {
             const four = new Uint8Array(4);
             new DataView(four.buffer).setFloat32(0, value, true);
@@ -272,6 +294,32 @@ console.log("\n--- Test canvas: gradients ---");
         same(played(graded(ends, [[0, 'red'], [1, 'blue']])), ['fillRect(0,0,4,4)'],
             `an end that is not a finite number leaves the fill style as it was: ${ends.join(',')}`);
     }
+
+    same(played(graded([0, 0, 10, 0], [[0, 'red']], 1)), [
+        'createLinearGradient(0,0,10,0)', 'gradient.addColorStop(0,red)', 'strokeStyle=gradient',
+        'fillRect(0,0,4,4)',
+    ], 'a gradient for strokes is the stroke style');
+    same(played(graded([5, 5, 5, 5], [[1, 'blue']], 1)).filter((line) => line.startsWith('stroke')),
+        ['strokeStyle=blue'], 'and with its ends at one point, its last stop is');
+}
+
+console.log("\n--- Test canvas: a drawing appended ---");
+{
+    // units: pixels, a red fill, then a drawing appended, filling a rectangle, and one more
+    const rect = (x: number): Array<number> => {
+        const bytes = new Uint8Array(17);
+        bytes[0] = 7;
+        [x, 0, 1, 1].forEach((value, index) => { new DataView(bytes.buffer).setFloat32(1 + 4 * index, value, true); });
+        return [...bytes];
+    };
+    const bytes = new Uint8Array([0, 1, 3, 0, ...new TextEncoder().encode('red'), 18, ...rect(1), 19, ...rect(2)]);
+    const log: Array<string> = [];
+    play(recording(log), bytes, 100, 100, 1);
+    same(log.slice(DEFAULTS(100, 100).length + 1), [
+        'fillStyle=red',
+        'save()', ...DEFAULTS(100, 100).slice(2), 'fillRect(1,0,1,1)', 'restore()',
+        'fillRect(2,0,1,1)',
+    ], 'a drawing appended starts from the defaults, and the state from before it comes back after it');
 }
 
 console.log("\n--- Test canvas: fitting the view box ---");

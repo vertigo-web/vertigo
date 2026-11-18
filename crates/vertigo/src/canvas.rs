@@ -10,12 +10,17 @@
 //! units   := 0                              -- CSS pixels from the top left corner
 //!          | 1 x:f32 y:f32 width:f32 height:f32  -- a view box, see `ViewBox`
 //! op      := code:u8 args                   -- see `code`
+//! target  := 0 | 1                          -- a style for fills, or for lines and outlines
 //! text    := length:u16 utf8*
 //! stops   := count:u16 (offset:f32 text)*   -- of a gradient
 //! rect    := x:f32 y:f32 width:f32 height:f32
 //! ```
+//!
+//! A pattern or a gradient is one operation with its `target`, for fills and strokes alike. One
+//! of another kind, f. ex. a radial gradient, is a code of its own, with a `target` and `stops`
+//! as the linear one has them.
 
-use std::rc::Rc;
+use std::sync::Arc;
 
 /// Operation codes. Append only, as the browser reads them by number.
 mod code {
@@ -34,12 +39,20 @@ mod code {
     pub const FILL_POLYGON: u8 = 13;
     pub const STROKE_POLYGON: u8 = 14;
     pub const DRAW_IMAGE: u8 = 15;
-    pub const FILL_PATTERN: u8 = 16;
-    pub const FILL_LINEAR_GRADIENT: u8 = 17;
+    pub const PATTERN: u8 = 16;
+    pub const LINEAR_GRADIENT: u8 = 17;
+    /// A drawing appended: the state of the context is saved, and the drawing starts from its
+    /// defaults, until `APPEND_END` restores it.
+    pub const APPEND: u8 = 18;
+    pub const APPEND_END: u8 = 19;
 }
 
 const UNITS_PIXELS: u8 = 0;
 const UNITS_VIEW_BOX: u8 = 1;
+
+/// What a pattern or a gradient is for, see `target` in the format.
+const FILL: u8 = 0;
+const STROKE: u8 = 1;
 
 /// The units of a [`Drawing`]: a rectangle fitted into the canvas as an SVG `viewBox` with
 /// `preserveAspectRatio="xMidYMid meet"` is, as big as fits and in the middle. What lies
@@ -135,10 +148,10 @@ pub enum LineJoin {
 ///
 /// Each drawing starts from the context's defaults: black fill and stroke, full opacity, lines
 /// one unit wide with butt ends and mitered corners. Clones are cheap and share the operations
-/// until one of them draws more.
+/// until one of them draws more, and so does the browser's copy of a drawing on its way there.
 #[derive(Clone, Debug, PartialEq)]
 pub struct Drawing {
-    bytes: Rc<Vec<u8>>,
+    bytes: Arc<Vec<u8>>,
 }
 
 impl Drawing {
@@ -150,14 +163,14 @@ impl Drawing {
         }
 
         Self {
-            bytes: Rc::new(bytes),
+            bytes: Arc::new(bytes),
         }
     }
 
     /// A drawing in CSS pixels, from the top left corner of the canvas.
     pub fn pixels() -> Self {
         Self {
-            bytes: Rc::new(vec![UNITS_PIXELS]),
+            bytes: Arc::new(vec![UNITS_PIXELS]),
         }
     }
 
@@ -298,9 +311,15 @@ impl Drawing {
     ///     .fill_polygon([(0.0, 50.0), (50.0, 25.0), (100.0, 50.0), (50.0, 75.0)]);
     /// ```
     pub fn fill_pattern(&mut self, url: &str, scale: f32) -> &mut Self {
-        self.text(code::FILL_PATTERN, url);
-        self.bytes_mut().extend_from_slice(&scale.to_le_bytes());
-        self
+        self.pattern(FILL, url, scale)
+    }
+
+    /// Strokes lines and outlines from now on with the image at `url` repeated, as
+    /// [`Self::fill_pattern`] fills shapes with it: f. ex. a road of cobbles. Until the image
+    /// comes, if it fails to load, and with a `scale` of 0, NaN or infinity, the stroke style
+    /// stays what it was.
+    pub fn stroke_pattern(&mut self, url: &str, scale: f32) -> &mut Self {
+        self.pattern(STROKE, url, scale)
     }
 
     /// Fills shapes from now on with a linear gradient from `start` to `end`, in the drawing's
@@ -355,16 +374,51 @@ impl Drawing {
         end: (f32, f32),
         stops: &[(f32, &str)],
     ) -> &mut Self {
-        let stops = &stops[..stops.len().min(u16::MAX as usize)];
-        self.op(
-            code::FILL_LINEAR_GRADIENT,
-            &[start.0, start.1, end.0, end.1],
-        );
-        self.bytes_mut()
-            .extend_from_slice(&(stops.len() as u16).to_le_bytes());
-        for (offset, color) in stops {
-            self.bytes_mut().extend_from_slice(&offset.to_le_bytes());
-            self.text_bytes(color);
+        self.linear_gradient(FILL, start, end, stops)
+    }
+
+    /// Strokes lines and outlines from now on with a linear gradient from `start` to `end`, as
+    /// [`Self::fill_linear_gradient`] fills shapes with one. An end that is NaN or infinite
+    /// leaves the stroke style as it was.
+    pub fn stroke_linear_gradient(
+        &mut self,
+        start: (f32, f32),
+        end: (f32, f32),
+        stops: &[(f32, &str)],
+    ) -> &mut Self {
+        self.linear_gradient(STROKE, start, end, stops)
+    }
+
+    /// Draws `other` after what this drawing has drawn, as it would be drawn alone: from the
+    /// context's defaults, and leaving the styles of what comes after it as they were. It is
+    /// drawn in the units of this drawing, its own are left out, so the two are best made in the
+    /// same.
+    ///
+    /// A part that changes seldom, f. ex. a layer of a map, kept as a drawing of its own, is put
+    /// together with the others this way without being recorded again:
+    ///
+    /// ```rust
+    /// use vertigo::{Drawing, ViewBox};
+    ///
+    /// const VIEW: ViewBox = ViewBox::new(0.0, 0.0, 100.0, 100.0);
+    ///
+    /// let mut terrain = Drawing::new(VIEW);
+    /// terrain.fill_style("#8db360").fill_rect(0.0, 0.0, 100.0, 100.0);
+    ///
+    /// let mut frame = Drawing::new(VIEW);
+    /// frame
+    ///     .fill_style("#c33")
+    ///     .append(&terrain)
+    ///     // Red: the green of the terrain stays in it.
+    ///     .fill_circle(50.0, 50.0, 5.0);
+    /// ```
+    pub fn append(&mut self, other: &Drawing) -> &mut Self {
+        let ops = other.ops();
+        if !ops.is_empty() {
+            let bytes = self.bytes_mut();
+            bytes.push(code::APPEND);
+            bytes.extend_from_slice(ops);
+            bytes.push(code::APPEND_END);
         }
         self
     }
@@ -372,6 +426,55 @@ impl Drawing {
     /// The drawing as the browser reads it.
     pub fn as_bytes(&self) -> &[u8] {
         &self.bytes
+    }
+
+    /// The bytes, shared with the command that takes them to the browser rather than copied.
+    pub(crate) fn into_shared_bytes(self) -> Arc<Vec<u8>> {
+        self.bytes
+    }
+
+    /// The operations, without the units in front of them.
+    fn ops(&self) -> &[u8] {
+        let units = if self.bytes.first() == Some(&UNITS_VIEW_BOX) {
+            1 + 4 * 4
+        } else {
+            1
+        };
+        &self.bytes[units..]
+    }
+
+    fn pattern(&mut self, target: u8, url: &str, scale: f32) -> &mut Self {
+        self.bytes_mut().extend_from_slice(&[code::PATTERN, target]);
+        self.text_bytes(url);
+        self.bytes_mut().extend_from_slice(&scale.to_le_bytes());
+        self
+    }
+
+    fn linear_gradient(
+        &mut self,
+        target: u8,
+        start: (f32, f32),
+        end: (f32, f32),
+        stops: &[(f32, &str)],
+    ) -> &mut Self {
+        let bytes = self.bytes_mut();
+        bytes.extend_from_slice(&[code::LINEAR_GRADIENT, target]);
+        for value in [start.0, start.1, end.0, end.1] {
+            bytes.extend_from_slice(&value.to_le_bytes());
+        }
+        self.stops(stops)
+    }
+
+    /// The stops of a gradient, as many as two bytes count.
+    fn stops(&mut self, stops: &[(f32, &str)]) -> &mut Self {
+        let stops = &stops[..stops.len().min(u16::MAX as usize)];
+        self.bytes_mut()
+            .extend_from_slice(&(stops.len() as u16).to_le_bytes());
+        for (offset, color) in stops {
+            self.bytes_mut().extend_from_slice(&offset.to_le_bytes());
+            self.text_bytes(color);
+        }
+        self
     }
 
     fn points(&mut self, code: u8, points: impl IntoIterator<Item = (f32, f32)>) -> &mut Self {
@@ -418,7 +521,7 @@ impl Drawing {
     }
 
     fn bytes_mut(&mut self) -> &mut Vec<u8> {
-        Rc::make_mut(&mut self.bytes)
+        Arc::make_mut(&mut self.bytes)
     }
 }
 
@@ -429,6 +532,10 @@ mod tests {
     /// Shared with `canvas.test.ts`, which plays these bytes back on a recording context.
     /// Change the format and one of the two tests fails, whichever side was changed.
     pub(crate) fn fixture() -> Drawing {
+        // In pixels, which the drawing it is appended to leaves out.
+        let mut appended = Drawing::pixels();
+        appended.fill_rect(1.0, 1.0, 1.0, 1.0);
+
         let mut drawing = Drawing::new(ViewBox::new(-8.0, -5.0, 16.0, 10.0));
         drawing
             .fill_style("#ffd27f")
@@ -451,9 +558,12 @@ mod tests {
                 Rect::new(-1.0, -2.0, 2.0, 1.0),
             )
             .fill_pattern("cat.png", 0.5)
+            .stroke_pattern("cat.png", 2.0)
             .fill_rect(0.0, 0.0, 2.0, 2.0)
             .fill_linear_gradient((0.0, -1.0), (2.0, 1.0), &[(0.0, "red"), (1.0, "#00f")])
-            .fill_rect(0.0, 0.0, 2.0, 2.0);
+            .stroke_linear_gradient((0.0, 0.0), (0.0, 1.0), &[(0.5, "lime")])
+            .fill_rect(0.0, 0.0, 2.0, 2.0)
+            .append(&appended);
         drawing
     }
 
@@ -467,10 +577,13 @@ mod tests {
         128, 191, 0, 0, 0, 64, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 128, 63, 0, 0, 0, 192, 0, 0, 0, 0, 14,
         3, 0, 0, 0, 0, 0, 0, 0, 0, 0, 128, 191, 0, 0, 0, 64, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 128, 63,
         15, 7, 0, 99, 97, 116, 46, 112, 110, 103, 0, 0, 128, 63, 0, 0, 0, 64, 0, 0, 64, 64, 0, 0,
-        128, 64, 0, 0, 128, 191, 0, 0, 0, 192, 0, 0, 0, 64, 0, 0, 128, 63, 16, 7, 0, 99, 97, 116,
-        46, 112, 110, 103, 0, 0, 0, 63, 7, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 64, 0, 0, 0, 64, 17, 0,
-        0, 0, 0, 0, 0, 128, 191, 0, 0, 0, 64, 0, 0, 128, 63, 2, 0, 0, 0, 0, 0, 3, 0, 114, 101, 100,
-        0, 0, 128, 63, 4, 0, 35, 48, 48, 102, 7, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 64, 0, 0, 0, 64,
+        128, 64, 0, 0, 128, 191, 0, 0, 0, 192, 0, 0, 0, 64, 0, 0, 128, 63, 16, 0, 7, 0, 99, 97,
+        116, 46, 112, 110, 103, 0, 0, 0, 63, 16, 1, 7, 0, 99, 97, 116, 46, 112, 110, 103, 0, 0, 0,
+        64, 7, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 64, 0, 0, 0, 64, 17, 0, 0, 0, 0, 0, 0, 0, 128, 191,
+        0, 0, 0, 64, 0, 0, 128, 63, 2, 0, 0, 0, 0, 0, 3, 0, 114, 101, 100, 0, 0, 128, 63, 4, 0, 35,
+        48, 48, 102, 17, 1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 128, 63, 1, 0, 0, 0, 0, 63,
+        4, 0, 108, 105, 109, 101, 7, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 64, 0, 0, 0, 64, 18, 7, 0, 0,
+        128, 63, 0, 0, 128, 63, 0, 0, 128, 63, 0, 0, 128, 63, 19,
     ];
 
     #[test]
@@ -548,33 +661,43 @@ mod tests {
     }
 
     #[test]
-    fn a_pattern_takes_its_url_and_scale() {
+    fn a_pattern_takes_its_target_url_and_scale() {
         let mut drawing = Drawing::pixels();
         drawing.fill_pattern("grass.webp", 0.25);
 
         let bytes = drawing.as_bytes();
-        assert_eq!(bytes[1], code::FILL_PATTERN);
-        assert_eq!(u16::from_le_bytes([bytes[2], bytes[3]]), 10);
-        assert_eq!(&bytes[4..14], b"grass.webp");
-        assert_eq!(&bytes[14..], 0.25f32.to_le_bytes());
+        assert_eq!(&bytes[1..3], [code::PATTERN, FILL]);
+        assert_eq!(u16::from_le_bytes([bytes[3], bytes[4]]), 10);
+        assert_eq!(&bytes[5..15], b"grass.webp");
+        assert_eq!(&bytes[15..], 0.25f32.to_le_bytes());
+
+        let mut stroked = Drawing::pixels();
+        stroked.stroke_pattern("grass.webp", 0.25);
+        assert_eq!(&stroked.as_bytes()[1..3], [code::PATTERN, STROKE]);
+        assert_eq!(stroked.as_bytes()[3..], bytes[3..]);
     }
 
     #[test]
-    fn a_gradient_takes_its_ends_and_stops() {
+    fn a_gradient_takes_its_target_ends_and_stops() {
         let mut drawing = Drawing::pixels();
         drawing.fill_linear_gradient((1.0, 2.0), (3.0, 4.0), &[(0.0, "red"), (0.5, "#0f0")]);
 
         let bytes = drawing.as_bytes();
-        assert_eq!(bytes[1], code::FILL_LINEAR_GRADIENT);
+        assert_eq!(&bytes[1..3], [code::LINEAR_GRADIENT, FILL]);
         assert_eq!(
-            &bytes[2..18],
+            &bytes[3..19],
             [1.0f32, 2.0, 3.0, 4.0].map(f32::to_le_bytes).concat()
         );
-        assert_eq!(u16::from_le_bytes([bytes[18], bytes[19]]), 2);
-        assert_eq!(&bytes[20..24], 0.0f32.to_le_bytes());
-        assert_eq!(&bytes[24..29], b"\x03\x00red");
-        assert_eq!(&bytes[29..33], 0.5f32.to_le_bytes());
-        assert_eq!(&bytes[33..], b"\x04\x00#0f0");
+        assert_eq!(u16::from_le_bytes([bytes[19], bytes[20]]), 2);
+        assert_eq!(&bytes[21..25], 0.0f32.to_le_bytes());
+        assert_eq!(&bytes[25..30], b"\x03\x00red");
+        assert_eq!(&bytes[30..34], 0.5f32.to_le_bytes());
+        assert_eq!(&bytes[34..], b"\x04\x00#0f0");
+
+        let mut stroked = Drawing::pixels();
+        stroked.stroke_linear_gradient((1.0, 2.0), (3.0, 4.0), &[(0.0, "red"), (0.5, "#0f0")]);
+        assert_eq!(&stroked.as_bytes()[1..3], [code::LINEAR_GRADIENT, STROKE]);
+        assert_eq!(stroked.as_bytes()[3..], bytes[3..]);
     }
 
     #[test]
@@ -584,11 +707,49 @@ mod tests {
         drawing.fill_linear_gradient((0.0, 0.0), (1.0, 0.0), &stops);
 
         let bytes = drawing.as_bytes();
-        assert_eq!(u16::from_le_bytes([bytes[18], bytes[19]]), u16::MAX);
+        assert_eq!(u16::from_le_bytes([bytes[19], bytes[20]]), u16::MAX);
         assert_eq!(
             bytes.len(),
-            1 + 1 + 16 + 2 + usize::from(u16::MAX) * (4 + 2 + 3)
+            1 + 2 + 16 + 2 + usize::from(u16::MAX) * (4 + 2 + 3)
         );
+    }
+
+    #[test]
+    fn an_appended_drawing_comes_between_a_save_and_a_restore_without_its_units() {
+        let mut layer = Drawing::new(ViewBox::new(0.0, 0.0, 10.0, 10.0));
+        layer.fill_circle(1.0, 2.0, 3.0);
+        let mut drawing = Drawing::pixels();
+        drawing.fill_style("red").append(&layer);
+
+        let bytes = drawing.as_bytes();
+        let circle = &layer.as_bytes()[1 + 16..];
+        assert_eq!(bytes[1..7], *b"\x01\x03\x00red");
+        assert_eq!(bytes[7], code::APPEND);
+        assert_eq!(&bytes[8..8 + circle.len()], circle);
+        assert_eq!(bytes[8 + circle.len()..], [code::APPEND_END]);
+    }
+
+    #[test]
+    fn appending_a_drawing_of_nothing_adds_nothing() {
+        let mut drawing = Drawing::pixels();
+        drawing.fill_circle(1.0, 2.0, 3.0);
+        let before = drawing.clone();
+
+        drawing.append(&Drawing::new(ViewBox::new(0.0, 0.0, 1.0, 1.0)));
+
+        assert_eq!(drawing, before);
+    }
+
+    #[test]
+    fn a_drawing_appended_to_its_clone_stays_as_it_was() {
+        let mut layer = Drawing::pixels();
+        layer.fill_circle(1.0, 2.0, 3.0);
+        let mut doubled = layer.clone();
+
+        doubled.append(&layer);
+
+        assert_eq!(layer.as_bytes().len(), 1 + 13);
+        assert_eq!(doubled.as_bytes().len(), 1 + 13 + 1 + 13 + 1);
     }
 
     #[test]

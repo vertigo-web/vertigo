@@ -2,7 +2,7 @@ use std::rc::Rc;
 use vertigo_macro::store;
 
 use crate::{
-    DomId, DropResource,
+    DomId, Drawing, DropResource,
     dev::{CallbackId, command::DriverDomCommand},
     driver_module::{api::api_browser_command, event_emitter::EventEmitter},
     struct_mut::{HashMapMut, VecMut},
@@ -187,10 +187,10 @@ impl DriverDom {
         });
     }
 
-    pub fn canvas_draw(&self, id: DomId, drawing: &[u8]) {
+    pub fn canvas_draw(&self, id: DomId, drawing: Drawing) {
         self.commands.add_command(DriverDomCommand::CanvasDraw {
             id,
-            drawing: drawing.to_vec(),
+            drawing: drawing.into_shared_bytes(),
         });
     }
 

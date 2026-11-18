@@ -12,17 +12,25 @@
 * `Driver::preload_image`: loads an image in the background, so that a drawing asking for it later
   has it at once instead of being drawn without it first. It stays loaded until a drawing asks for
   it.
-* `Drawing::fill_pattern`: fills shapes with an image repeated lying on the drawing so it moves and
-  grows with the view box. Until the image comes, the fill style set before stands in for it.
-* `Drawing::fill_linear_gradient`: fills shapes with a linear gradient between two points of the
-  drawing, with color stops. A triangle shaded evenly between two colors is one such gradient (its
-  docs show where it ends), so a mesh of triangles can be shaded smoothly.
+* `Drawing::fill_pattern` and `Drawing::stroke_pattern`: fill shapes, or stroke lines and outlines,
+  with an image repeated lying on the drawing so it moves and grows with the view box. Until the
+  image comes, the style set before stands in for it.
+* `Drawing::fill_linear_gradient` and `Drawing::stroke_linear_gradient`: fill shapes, or stroke
+  lines and outlines, with a linear gradient between two points of the drawing, with color stops.
+  A triangle shaded evenly between two colors is one such gradient (its docs show where it ends),
+  so a mesh of triangles can be shaded smoothly.
+* `Drawing::append`: draws another drawing after what this one has drawn, as it would be drawn
+  alone, and leaves the styles to what comes after as they were. A layer kept as a drawing of its
+  own, f. ex. one that changes seldom, is put together with others without being recorded again.
 * vertigo-cli: `is_ssr_fetch`: whether a request is the app's fetch during SSR, so a page handler
   of your own (next to `vertigo_files`) can refuse it as `vertigo_handler` does, instead of
   rendering a page that fetches the same URL again.
 
 ### Changed
 
+* A drawing is no longer copied on its way to the browser: the command that takes it there,
+  `dev::command::DriverDomCommand::CanvasDraw`, shares its bytes as an `Arc<Vec<u8>>`. `Drawing`
+  keeps them in an `Arc` for that, so it is `Send` and `Sync`.
 * `ViewBox::new` is a `const fn`, so a `const` view box needs no struct literal.
 * `vertigo-cli` no longer depends on OpenSSL: `--proxy` passes the target's response on by itself
   instead of through `actix-proxy`, which pulled in `awc` with OpenSSL. A program built with

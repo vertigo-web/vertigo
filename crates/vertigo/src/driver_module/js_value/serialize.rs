@@ -1,4 +1,5 @@
 use std::collections::{BTreeMap, HashMap};
+use std::sync::Arc;
 
 use crate::driver_module::js_value::MapItem;
 use crate::driver_module::js_value::js_json_struct::JsJsonNumber;
@@ -196,6 +197,19 @@ impl<T: JsJsonSerialize> JsJsonSerialize for Vec<T> {
         }
 
         JsJson::List(list)
+    }
+}
+
+/// Bytes shared with what made them, f. ex. a drawing, travel as those of a `Vec<u8>` field do.
+impl JsJsonSerialize for Arc<Vec<u8>> {
+    fn to_json(self) -> JsJson {
+        JsJson::Vec(Arc::unwrap_or_clone(self))
+    }
+}
+
+impl JsJsonDeserialize for Arc<Vec<u8>> {
+    fn from_json(context: JsJsonContext, json: JsJson) -> Result<Self, JsJsonContext> {
+        json.into_bytes(&context).map(Arc::new)
     }
 }
 

@@ -1,3 +1,5 @@
+use std::sync::Arc;
+
 use vertigo_macro::AutoJsJson;
 
 use crate::{
@@ -327,10 +329,11 @@ pub enum DriverDomCommand {
         event_name: String,
         callback_id: CallbackId,
     },
-    /// A new picture for a `<canvas>`: the bytes of a [`Drawing`](crate::Drawing).
+    /// A new picture for a `<canvas>`: the bytes of a [`Drawing`](crate::Drawing), shared with
+    /// it rather than copied.
     CanvasDraw {
         id: DomId,
-        drawing: Vec<u8>,
+        drawing: Arc<Vec<u8>>,
     },
 }
 

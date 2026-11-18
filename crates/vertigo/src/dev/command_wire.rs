@@ -338,7 +338,7 @@ fn read_command(
         },
         tag::CANVAS_DRAW => DriverDomCommand::CanvasDraw {
             id: cursor.id()?,
-            drawing: cursor.bytes()?.to_vec(),
+            drawing: cursor.bytes()?.to_vec().into(),
         },
         other => return Err(format!("dom command: unknown tag {other}")),
     };
@@ -422,6 +422,8 @@ impl<'a> Cursor<'a> {
 
 #[cfg(test)]
 mod tests {
+    use std::sync::Arc;
+
     use super::*;
 
     fn id(value: u64) -> DomId {
@@ -505,7 +507,7 @@ mod tests {
             },
             DriverDomCommand::CanvasDraw {
                 id: id(4),
-                drawing: vec![1, 2, 255],
+                drawing: vec![1, 2, 255].into(),
             },
         ]
     }
@@ -596,11 +598,11 @@ mod tests {
             },
             DriverDomCommand::CanvasDraw {
                 id: id(4),
-                drawing: (0..=255).collect(),
+                drawing: Arc::new((0..=255).collect()),
             },
             DriverDomCommand::CanvasDraw {
                 id: id(4),
-                drawing: Vec::new(),
+                drawing: Arc::default(),
             },
         ];
 

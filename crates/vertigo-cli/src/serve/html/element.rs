@@ -265,7 +265,7 @@ mod tests {
             },
             DriverDomCommand::CanvasDraw {
                 id: DomId::from_u64(2),
-                drawing: vec![0, 8, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 128, 63],
+                drawing: vec![0, 8, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 128, 63].into(),
             },
             DriverDomCommand::InsertBefore {
                 parent: DomId::from_u64(1),
