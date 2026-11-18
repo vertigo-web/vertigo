@@ -270,7 +270,7 @@ impl DomElement {
         let id = self.id_dom;
 
         self.subscribe(drawing.into(), move |drawing| {
-            get_driver_dom().canvas_draw(id, drawing.as_bytes());
+            get_driver_dom().canvas_draw(id, drawing);
         });
         self
     }

@@ -28,7 +28,7 @@ fn canvases_and_drawings(commands: Vec<DriverDomCommand>) -> (Vec<DomId>, Vec<(D
                 canvases.push(id);
             }
             DriverDomCommand::CanvasDraw { id, drawing } => {
-                drawings.push((id, drawing));
+                drawings.push((id, drawing.to_vec()));
             }
             _ => {}
         }
@@ -53,6 +53,21 @@ fn a_drawing_follows_its_canvas_in_the_same_batch() {
 
     let (canvases, drawings) = canvases_and_drawings(commands);
     assert_eq!(drawings, vec![(canvases[0], dot(10.0).as_bytes().to_vec())]);
+}
+
+#[test]
+fn a_drawing_is_sent_without_being_copied() {
+    let drawing = dot(10.0);
+    let bytes = drawing.as_bytes().as_ptr();
+
+    log_start();
+    let _canvas = dom! { <canvas draw={drawing} /> };
+    let sent = log_take().into_iter().find_map(|command| match command {
+        DriverDomCommand::CanvasDraw { drawing, .. } => Some(drawing.as_ptr()),
+        _ => None,
+    });
+
+    assert_eq!(sent, Some(bytes));
 }
 
 #[test]

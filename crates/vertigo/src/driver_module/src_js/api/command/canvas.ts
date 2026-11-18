@@ -35,8 +35,10 @@ const Op = {
     FillPolygon: 13,
     StrokePolygon: 14,
     DrawImage: 15,
-    FillPattern: 16,
-    FillLinearGradient: 17,
+    Pattern: 16,
+    LinearGradient: 17,
+    Append: 18,
+    AppendEnd: 19,
 } as const;
 
 const CAPS: Array<CanvasLineCap> = ['butt', 'round', 'square'];
@@ -46,7 +48,7 @@ const JOINS: Array<CanvasLineJoin> = ['miter', 'round', 'bevel'];
 export type Context2d = Pick<CanvasRenderingContext2D,
     'setTransform' | 'clearRect' | 'fillRect' | 'beginPath' | 'arc' | 'moveTo' | 'lineTo'
     | 'closePath' | 'fill' | 'stroke' | 'fillStyle' | 'strokeStyle' | 'globalAlpha' | 'lineWidth' | 'lineCap'
-    | 'lineJoin' | 'drawImage' | 'createPattern' | 'createLinearGradient'>;
+    | 'lineJoin' | 'drawImage' | 'createPattern' | 'createLinearGradient' | 'save' | 'restore'>;
 
 // The image at a URL, if it is loaded and can be drawn.
 export type ImageAt = (url: string) => CanvasImageSource | null;
@@ -73,15 +75,19 @@ export const play = (
         return value;
     };
 
-    // Every drawing starts from a clear bitmap and the context's defaults.
+    // The context's defaults, which every drawing starts from, and a drawing appended too.
+    const defaults = () => {
+        context.globalAlpha = 1;
+        context.fillStyle = '#000';
+        context.strokeStyle = '#000';
+        context.lineWidth = 1;
+        context.lineCap = 'butt';
+        context.lineJoin = 'miter';
+    };
+
     context.setTransform(1, 0, 0, 1, 0, 0);
     context.clearRect(0, 0, width, height);
-    context.globalAlpha = 1;
-    context.fillStyle = '#000';
-    context.strokeStyle = '#000';
-    context.lineWidth = 1;
-    context.lineCap = 'butt';
-    context.lineJoin = 'miter';
+    defaults();
 
     // Device pixels to a unit of the drawing.
     let scale = ratio;
@@ -136,14 +142,29 @@ export const play = (
         return value;
     };
 
-    // Patterns by URL, made once per drawing played: a map draws thousands of shapes with a few.
+    // Patterns by URL and scale, made once per drawing played: a map draws thousands of shapes
+    // with a few. Each keeps the transform it is made with: a fill or a stroke style holds the
+    // pattern itself, and would follow it to another scale, also back from a drawing appended.
     const patterns: Map<string, CanvasPattern | null> = new Map();
-    const pattern = (url: string): CanvasPattern | null => {
-        if (!patterns.has(url)) {
+    const pattern = (url: string, scale: number): CanvasPattern | null => {
+        const key = `${scale} ${url}`;
+        if (!patterns.has(key)) {
             const source = image(url);
-            patterns.set(url, source === null ? null : context.createPattern(source, 'repeat'));
+            const made = source === null ? null : context.createPattern(source, 'repeat');
+            // On top of the drawing's transform: a pixel of the image is `scale` units.
+            made?.setTransform({ a: scale, b: 0, c: 0, d: scale, e: 0, f: 0 });
+            patterns.set(key, made);
         }
-        return patterns.get(url) ?? null;
+        return patterns.get(key) ?? null;
+    };
+
+    // Sets the style for fills (0) or for lines and outlines (1), see `target` in canvas.rs.
+    const style = (target: number, value: string | CanvasGradient | CanvasPattern) => {
+        if (target === 0) {
+            context.fillStyle = value;
+        } else {
+            context.strokeStyle = value;
+        }
     };
 
     const circle = (x: number, y: number, radius: number) => {
@@ -200,22 +221,23 @@ export const play = (
                 }
                 break;
             }
-            case Op.FillPattern: {
-                const found = pattern(text());
+            case Op.Pattern: {
+                const target = data.getUint8(at++);
+                const url = text();
                 const scale = number();
-                // Until the image comes, the fill style stays what it was, and so it does with a
+                // Until the image comes, the style stays what it was, and so it does with a
                 // scale of 0, NaN or infinity, with which the pattern would fill nothing.
-                if (found !== null && scale !== 0 && isFinite(scale)) {
-                    // On top of the drawing's transform: a pixel of the image is `scale` units.
-                    found.setTransform({ a: scale, b: 0, c: 0, d: scale, e: 0, f: 0 });
-                    context.fillStyle = found;
+                const found = scale !== 0 && isFinite(scale) ? pattern(url, scale) : null;
+                if (found !== null) {
+                    style(target, found);
                 }
                 break;
             }
-            case Op.FillLinearGradient: {
+            case Op.LinearGradient: {
+                const target = data.getUint8(at++);
                 const [x0, y0, x1, y1] = [number(), number(), number(), number()];
                 // Unlike the shapes, the context throws on an end that is NaN or infinite. The
-                // fill style then stays what it was, as for a text that is no color.
+                // style then stays what it was, as for a text that is no color.
                 const gradient = [x0, y0, x1, y1].every(isFinite)
                     ? context.createLinearGradient(x0, y0, x1, y1)
                     : null;
@@ -243,12 +265,13 @@ export const play = (
                 if (gradient !== null) {
                     // With its ends at one point, a gradient fills nothing on a canvas. SVG fills
                     // with the last stop instead, so a triangle of one shade in a mesh is no hole.
-                    context.fillStyle = x0 === x1 && y0 === y1 && last !== null
-                        ? last.color
-                        : gradient;
+                    style(target, x0 === x1 && y0 === y1 && last !== null ? last.color : gradient);
                 }
                 break;
             }
+            // A drawing appended is drawn as it would be alone, and leaves the state as it was.
+            case Op.Append: context.save(); defaults(); break;
+            case Op.AppendEnd: context.restore(); break;
             default:
                 throw new Error(`canvas: unknown operation ${op} at byte ${at - 1}`);
         }
