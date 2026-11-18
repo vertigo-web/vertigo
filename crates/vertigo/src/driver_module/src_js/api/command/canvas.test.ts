@@ -22,53 +22,123 @@ const same = (got: Array<string>, want: Array<string>, message: string) => {
 
 const round = (value: number): string => `${Number(value.toFixed(4))}`;
 
-// A 2D context that writes down every call and every property set, in order.
+// A value as the log shows it: a number rounded, a list as its items one after another.
+const shown = (value: unknown): string => {
+    if (typeof value === 'number') {
+        return round(value);
+    }
+    return Array.isArray(value) ? value.map(shown).join(',') : String(value);
+};
+
+// The browser's `Path2D`, which a drawing makes its paths with: it writes down what it is made of.
+class FakePath2D {
+    private readonly parts: Array<string>;
+    constructor(svg = '') { this.parts = svg === '' ? [] : [`svg:${svg}`]; }
+    moveTo(...args: Array<number>) { this.parts.push(`M${shown(args)}`); }
+    lineTo(...args: Array<number>) { this.parts.push(`L${shown(args)}`); }
+    quadraticCurveTo(...args: Array<number>) { this.parts.push(`Q${shown(args)}`); }
+    bezierCurveTo(...args: Array<number>) { this.parts.push(`C${shown(args)}`); }
+    // As a browser's, which throws on a radius below zero.
+    arcTo(...args: Array<number>) {
+        if ((args[4] ?? 0) < 0) { throw new Error('IndexSizeError: arcTo'); }
+        this.parts.push(`A${shown(args)}`);
+    }
+    ellipse(...args: Array<number | boolean>) {
+        if (Number(args[2]) < 0 || Number(args[3]) < 0) { throw new Error('IndexSizeError: ellipse'); }
+        this.parts.push(`E${shown(args)}`);
+    }
+    closePath() { this.parts.push('Z'); }
+    toString() { return `path(${this.parts.join(' ')})`; }
+}
+(globalThis as unknown as Record<string, unknown>)['Path2D'] = FakePath2D;
+
+// A 2D context that writes down every call and every property set, in order. It keeps its
+// transform and its properties, saved and restored, as a drawing reads some back.
 const recording = (log: Array<string>): Context2d => {
-    const call = (name: string) => (...args: Array<number>) => {
-        log.push(`${name}(${args.map(round).join(',')})`);
+    type State = { matrix: Array<number>, values: Map<string, unknown> };
+    let state: State = { matrix: [1, 0, 0, 1, 0, 0], values: new Map() };
+    const saved: Array<State> = [];
+
+    // The transform times the matrix [a c e; b d f; 0 0 1], as `transform` of a context.
+    const multiply = (a: number, b: number, c: number, d: number, e: number, f: number) => {
+        const [m11 = 1, m12 = 0, m21 = 0, m22 = 1, dx = 0, dy = 0] = state.matrix;
+        state.matrix = [
+            m11 * a + m21 * b, m12 * a + m22 * b, m11 * c + m21 * d, m12 * c + m22 * d,
+            m11 * e + m21 * f + dx, m12 * e + m22 * f + dy,
+        ];
     };
+
+    const call = (name: string, then: (...args: Array<number>) => void = () => undefined) =>
+        (...args: Array<unknown>) => {
+            log.push(`${name}(${args.map(shown).join(',')})`);
+            then(...args as Array<number>);
+        };
     const property = (name: string) => ({
-        set: (value: string | number) => {
-            log.push(`${name}=${typeof value === 'number' ? round(value) : value}`);
+        set: (value: unknown) => {
+            log.push(`${name}=${shown(value)}`);
+            state.values.set(name, value);
         },
-        get: () => '',
+        get: () => state.values.get(name) ?? '',
     });
+    // As a browser's, which takes finite numbers only, unlike the shapes.
+    const gradient = (name: string, args: Array<number>) => {
+        if (!args.every(isFinite)) {
+            throw new TypeError(`${name}: non-finite ${args.join(',')}`);
+        }
+        log.push(`${name}(${args.map(round).join(',')})`);
+        return {
+            addColorStop: (offset: number, color: string) => {
+                if (!(offset >= 0 && offset <= 1)) {
+                    throw new Error(`IndexSizeError: ${offset}`);
+                }
+                if (color === 'no color') {
+                    throw new Error(`SyntaxError: ${color}`);
+                }
+                log.push(`gradient.addColorStop(${round(offset)},${color})`);
+            },
+            toString: () => 'gradient',
+        };
+    };
 
     const context = {
-        setTransform: call('setTransform'),
+        setTransform: call('setTransform', (a, b, c, d, e, f) => { state.matrix = [a, b, c, d, e, f]; }),
+        getTransform: () => {
+            const [a, b, c, d, e, f] = state.matrix;
+            return { a, b, c, d, e, f };
+        },
+        translate: call('translate', (x, y) => { multiply(1, 0, 0, 1, x, y); }),
+        rotate: call('rotate', (angle) => {
+            multiply(Math.cos(angle), Math.sin(angle), -Math.sin(angle), Math.cos(angle), 0, 0);
+        }),
+        scale: call('scale', (x, y) => { multiply(x, 0, 0, y, 0, 0); }),
+        transform: call('transform', multiply),
+        save: call('save', () => { saved.push({ matrix: [...state.matrix], values: new Map(state.values) }); }),
+        restore: call('restore', () => { state = saved.pop() ?? state; }),
         clearRect: call('clearRect'),
         fillRect: call('fillRect'),
+        strokeRect: call('strokeRect'),
         beginPath: call('beginPath'),
         arc: call('arc'),
         moveTo: call('moveTo'),
         lineTo: call('lineTo'),
         fill: call('fill'),
         stroke: call('stroke'),
+        clip: call('clip'),
         closePath: call('closePath'),
-        save: call('save'),
-        restore: call('restore'),
+        setLineDash: call('setLineDash'),
+        fillText: call('fillText'),
+        strokeText: call('strokeText'),
         drawImage: (image: { name: string }, ...args: Array<number>) => {
             log.push(`drawImage(${[image.name, ...args.map(round)].join(',')})`);
         },
-        createLinearGradient: (...args: Array<number>) => {
-            // As a browser's, which takes finite numbers only, unlike the shapes.
-            if (!args.every(isFinite)) {
-                throw new TypeError(`createLinearGradient: non-finite ${args.join(',')}`);
+        createLinearGradient: (...args: Array<number>) => gradient('createLinearGradient', args),
+        createRadialGradient: (...args: Array<number>) => {
+            if ((args[2] ?? 0) < 0 || (args[5] ?? 0) < 0) {
+                throw new Error(`IndexSizeError: ${args.join(',')}`);
             }
-            log.push(`createLinearGradient(${args.map(round).join(',')})`);
-            return {
-                addColorStop: (offset: number, color: string) => {
-                    if (!(offset >= 0 && offset <= 1)) {
-                        throw new Error(`IndexSizeError: ${offset}`);
-                    }
-                    if (color === 'no color') {
-                        throw new Error(`SyntaxError: ${color}`);
-                    }
-                    log.push(`gradient.addColorStop(${round(offset)},${color})`);
-                },
-                toString: () => 'gradient',
-            };
+            return gradient('createRadialGradient', args);
         },
+        createConicGradient: (...args: Array<number>) => gradient('createConicGradient', args),
         createPattern: (image: { name: string }, repetition: string) => {
             log.push(`createPattern(${image.name},${repetition})`);
             return {
@@ -79,7 +149,11 @@ const recording = (log: Array<string>): Context2d => {
             };
         },
     };
-    for (const name of ['fillStyle', 'strokeStyle', 'globalAlpha', 'lineWidth', 'lineCap', 'lineJoin']) {
+    for (const name of [
+        'fillStyle', 'strokeStyle', 'globalAlpha', 'lineWidth', 'lineCap', 'lineJoin', 'miterLimit',
+        'lineDashOffset', 'font', 'textAlign', 'textBaseline', 'globalCompositeOperation', 'shadowColor',
+        'shadowBlur', 'shadowOffsetX', 'shadowOffsetY', 'filter', 'imageSmoothingEnabled', 'imageSmoothingQuality',
+    ]) {
         Object.defineProperty(context, name, property(name));
     }
 
@@ -102,18 +176,50 @@ const FIXTURE = new Uint8Array([
     64, 17, 0, 0, 0, 0, 0, 0, 0, 128, 191, 0, 0, 0, 64, 0, 0, 128, 63, 2, 0, 0, 0, 0, 0, 3, 0, 114,
     101, 100, 0, 0, 128, 63, 4, 0, 35, 48, 48, 102, 17, 1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
     128, 63, 1, 0, 0, 0, 0, 63, 4, 0, 108, 105, 109, 101, 7, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 64, 0,
-    0, 0, 64, 18, 7, 0, 0, 128, 63, 0, 0, 128, 63, 0, 0, 128, 63, 0, 0, 128, 63, 19,
+    0, 0, 64, 18, 20, 7, 0, 0, 128, 63, 0, 0, 128, 63, 0, 0, 128, 63, 0, 0, 128, 63, 21, 19, 20, 22,
+    0, 0, 128, 63, 0, 0, 0, 64, 23, 0, 0, 0, 63, 24, 0, 0, 0, 64, 0, 0, 0, 64, 25, 0, 0, 128, 63, 0,
+    0, 0, 0, 0, 0, 0, 0, 0, 0, 128, 63, 0, 0, 64, 64, 0, 0, 128, 64, 5, 0, 0, 128, 63, 26, 21, 27,
+    1, 7, 0, 0, 0, 77, 48, 32, 48, 32, 72, 49, 7, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1, 0, 0, 128,
+    63, 0, 0, 0, 0, 2, 0, 0, 128, 63, 0, 0, 128, 63, 0, 0, 0, 0, 0, 0, 128, 63, 3, 0, 0, 0, 0, 0, 0,
+    0, 64, 0, 0, 128, 63, 0, 0, 0, 64, 0, 0, 128, 63, 0, 0, 64, 64, 4, 0, 0, 0, 64, 0, 0, 64, 64, 0,
+    0, 0, 64, 0, 0, 128, 64, 0, 0, 0, 63, 5, 0, 0, 128, 63, 0, 0, 128, 63, 0, 0, 0, 64, 0, 0, 128,
+    63, 0, 0, 0, 63, 0, 0, 0, 0, 0, 0, 128, 63, 1, 6, 28, 7, 0, 0, 0, 77, 48, 32, 48, 32, 72, 49, 7,
+    0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1, 0, 0, 128, 63, 0, 0, 0, 0, 2, 0, 0, 128, 63, 0, 0, 128,
+    63, 0, 0, 0, 0, 0, 0, 128, 63, 3, 0, 0, 0, 0, 0, 0, 0, 64, 0, 0, 128, 63, 0, 0, 0, 64, 0, 0,
+    128, 63, 0, 0, 64, 64, 4, 0, 0, 0, 64, 0, 0, 64, 64, 0, 0, 0, 64, 0, 0, 128, 64, 0, 0, 0, 63, 5,
+    0, 0, 128, 63, 0, 0, 128, 63, 0, 0, 0, 64, 0, 0, 128, 63, 0, 0, 0, 63, 0, 0, 0, 0, 0, 0, 128,
+    63, 1, 6, 29, 0, 7, 0, 0, 0, 77, 48, 32, 48, 32, 72, 49, 7, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
+    1, 0, 0, 128, 63, 0, 0, 0, 0, 2, 0, 0, 128, 63, 0, 0, 128, 63, 0, 0, 0, 0, 0, 0, 128, 63, 3, 0,
+    0, 0, 0, 0, 0, 0, 64, 0, 0, 128, 63, 0, 0, 0, 64, 0, 0, 128, 63, 0, 0, 64, 64, 4, 0, 0, 0, 64,
+    0, 0, 64, 64, 0, 0, 0, 64, 0, 0, 128, 64, 0, 0, 0, 63, 5, 0, 0, 128, 63, 0, 0, 128, 63, 0, 0, 0,
+    64, 0, 0, 128, 63, 0, 0, 0, 63, 0, 0, 0, 0, 0, 0, 128, 63, 1, 6, 30, 0, 0, 0, 0, 0, 0, 0, 0, 0,
+    0, 128, 63, 0, 0, 128, 63, 31, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 128, 63, 0, 0, 128, 63, 32, 14, 0,
+    98, 111, 108, 100, 32, 50, 112, 120, 32, 115, 101, 114, 105, 102, 33, 10, 0, 49, 50, 112, 120,
+    32, 115, 101, 114, 105, 102, 34, 6, 0, 99, 101, 110, 116, 101, 114, 35, 6, 0, 109, 105, 100,
+    100, 108, 101, 36, 0, 2, 0, 72, 105, 0, 0, 128, 63, 0, 0, 0, 64, 36, 1, 2, 0, 72, 105, 0, 0,
+    128, 63, 0, 0, 0, 64, 37, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
+    128, 63, 1, 0, 0, 0, 0, 0, 3, 0, 114, 101, 100, 38, 1, 0, 0, 0, 63, 0, 0, 128, 63, 0, 0, 128,
+    63, 2, 0, 0, 0, 0, 0, 3, 0, 114, 101, 100, 0, 0, 128, 63, 4, 0, 98, 108, 117, 101, 39, 0, 2, 0,
+    0, 0, 128, 63, 0, 0, 0, 64, 0, 0, 0, 63, 39, 1, 1, 0, 0, 0, 128, 64, 0, 0, 0, 64, 40, 0, 0, 128,
+    64, 41, 8, 0, 109, 117, 108, 116, 105, 112, 108, 121, 42, 5, 0, 98, 108, 97, 99, 107, 0, 0, 0,
+    64, 0, 0, 128, 63, 0, 0, 128, 191, 43, 9, 0, 98, 108, 117, 114, 40, 50, 112, 120, 41, 44, 0, 45,
+    1, 0, 0, 0, 1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 128, 63, 0, 0, 128, 63, 255, 0, 0, 255,
+    20,
 ]);
 
+// Every style a drawing starts from, and a drawing appended too.
+const STYLES = [
+    'globalAlpha=1', 'fillStyle=#000', 'strokeStyle=#000', 'lineWidth=1', 'lineCap=butt', 'lineJoin=miter',
+    'miterLimit=10', 'setLineDash()', 'lineDashOffset=0', 'font=10px sans-serif', 'textAlign=start',
+    'textBaseline=alphabetic', 'globalCompositeOperation=source-over', 'shadowColor=rgba(0, 0, 0, 0)',
+    'shadowBlur=0', 'shadowOffsetX=0', 'shadowOffsetY=0', 'filter=none', 'imageSmoothingEnabled=true',
+    'imageSmoothingQuality=low',
+];
+
+// What a drawing does first: saves the state, which it gives back at its end, clears the bitmap
+// and sets the defaults.
 const DEFAULTS = (width: number, height: number) => [
-    'setTransform(1,0,0,1,0,0)',
-    `clearRect(0,0,${width},${height})`,
-    'globalAlpha=1',
-    'fillStyle=#000',
-    'strokeStyle=#000',
-    'lineWidth=1',
-    'lineCap=butt',
-    'lineJoin=miter',
+    'save()', 'setTransform(1,0,0,1,0,0)', `clearRect(0,0,${width},${height})`, ...STYLES,
 ];
 
 const TAU = round(2 * Math.PI);
@@ -124,8 +230,11 @@ console.log("\n--- Test canvas: the cross-language fixture ---");
     // 160 x 100 CSS pixels at two device pixels each: the box fits exactly, 20 device
     // pixels to a unit, so a CSS pixel is a tenth of a unit.
     const cat = { name: 'cat' } as unknown as CanvasImageSource;
-    play(recording(log), FIXTURE, 320, 200, 2, (url) => url === 'cat.png' ? cat : null);
+    const bitmap = (pixels: Uint8Array, width: number, height: number) =>
+        ({ name: `pixels(${[...pixels].join(' ')} ${width}x${height})` }) as unknown as CanvasImageSource;
+    play(recording(log), FIXTURE, 320, 200, 2, (url) => url === 'cat.png' ? cat : null, bitmap);
 
+    const PATH = 'path(svg:M0 0 H1 M0,0 L1,0 Q1,1,0,1 C0,2,1,2,1,3 A2,3,2,4,0.5 E1,1,2,1,0.5,0,1,true Z)';
     same(log, [
         ...DEFAULTS(320, 200),
         'setTransform(20,0,0,20,160,100)',
@@ -152,14 +261,46 @@ console.log("\n--- Test canvas: the cross-language fixture ---");
         'fillStyle=gradient',
         'createLinearGradient(0,0,0,1)', 'gradient.addColorStop(0.5,lime)', 'strokeStyle=gradient',
         'fillRect(0,0,2,2)',
-        'save()', ...DEFAULTS(320, 200).slice(2), 'fillRect(1,1,1,1)', 'restore()',
+        // A drawing appended, which left a save open.
+        'save()', ...STYLES, 'save()', 'fillRect(1,1,1,1)', 'restore()', 'restore()',
+        'save()', 'translate(1,2)', 'rotate(0.5)', 'scale(2,2)', 'transform(1,0,0,1,3,4)',
+        // A CSS pixel under them: 2 / (20 * 2) of a unit.
+        'lineWidth=0.05',
+        'setTransform(20,0,0,20,160,100)',
+        'restore()',
+        `fill(${PATH},evenodd)`, `stroke(${PATH})`, `clip(${PATH},nonzero)`,
+        'strokeRect(0,0,1,1)', 'clearRect(0,0,1,1)',
+        'font=bold 2px serif',
+        // 12 CSS pixels, a tenth of a unit each.
+        'font=1.2000000000000002px serif',
+        'textAlign=center', 'textBaseline=middle',
+        // Text in device pixels, with the scale of the units taken out.
+        'save()', 'translate(1,2)', 'scale(0.05,0.05)', 'font=24.000000000000004px serif', 'fillText(Hi,0,0)',
+        'restore()',
+        'save()', 'translate(1,2)', 'scale(0.05,0.05)', 'font=24.000000000000004px serif', 'lineWidth=3',
+        'strokeText(Hi,0,0)', 'restore()',
+        'createRadialGradient(0,0,0,0,0,1)', 'gradient.addColorStop(0,red)', 'fillStyle=gradient',
+        'createConicGradient(0.5,1,1)', 'gradient.addColorStop(0,red)', 'gradient.addColorStop(1,blue)',
+        'strokeStyle=gradient',
+        'setLineDash(1,2)', 'lineDashOffset=0.5',
+        'setLineDash(0.4)', 'lineDashOffset=0.2',
+        'miterLimit=4',
+        'globalCompositeOperation=multiply',
+        // In bitmap pixels, two to a CSS pixel.
+        'shadowColor=black', 'shadowBlur=4', 'shadowOffsetX=2', 'shadowOffsetY=-2',
+        'filter=blur(4px)',
+        'imageSmoothingEnabled=false', 'imageSmoothingQuality=low',
+        'drawImage(pixels(255 0 0 255 1x1),0,0,1,1)',
+        'save()',
+        // The end restores the save left open, and the state from before the drawing.
+        'restore()', 'restore()',
     ], 'every operation, in order, in the units of the view box');
 }
 
 console.log("\n--- Test canvas: an image not there ---");
 {
     const log: Array<string> = [];
-    play(recording(log), FIXTURE, 320, 200, 2);
+    play(recording(log), FIXTURE, 320, 200, 2, () => null, () => null);
     assert(!log.some((line) => line.startsWith('drawImage')), 'an image not loaded is left out');
     assert(!log.some((line) => line.includes('attern')), 'and so is a pattern of it');
     const filled = log.indexOf('fillRect(0,0,2,2)');
@@ -269,11 +410,11 @@ console.log("\n--- Test canvas: gradients ---");
         [0, 0, 4, 4].forEach(float);
         return new Uint8Array(parts);
     };
-    // What the drawing did after its defaults and units.
+    // What the drawing did between its defaults and units and the end giving back the state.
     const played = (bytes: Uint8Array): Array<string> => {
         const log: Array<string> = [];
         play(recording(log), bytes, 100, 100, 1);
-        return log.slice(DEFAULTS(100, 100).length + 1);
+        return log.slice(DEFAULTS(100, 100).length + 1, -1);
     };
 
     same(played(graded([0, 0, 10, 0], [[-0.5, 'red'], [0.5, 'no color'], [Number.NaN, 'lime'], [2, 'blue']])), [
@@ -317,17 +458,98 @@ console.log("\n--- Test canvas: a drawing appended ---");
     play(recording(log), bytes, 100, 100, 1);
     same(log.slice(DEFAULTS(100, 100).length + 1), [
         'fillStyle=red',
-        'save()', ...DEFAULTS(100, 100).slice(2), 'fillRect(1,0,1,1)', 'restore()',
+        'save()', ...STYLES, 'fillRect(1,0,1,1)', 'restore()',
         'fillRect(2,0,1,1)',
+        'restore()',
     ], 'a drawing appended starts from the defaults, and the state from before it comes back after it');
+}
+
+// units: pixels, then `ops`
+const drawn = (...ops: Array<Array<number>>): Uint8Array => new Uint8Array([0, ...ops.flat()]);
+const float = (...values: Array<number>): Array<number> => values.flatMap((value) => {
+    const four = new Uint8Array(4);
+    new DataView(four.buffer).setFloat32(0, value, true);
+    return [...four];
+});
+const short = (value: string): Array<number> => {
+    const bytes = new TextEncoder().encode(value);
+    return [bytes.length & 255, bytes.length >> 8, ...bytes];
+};
+// What `bytes` did, played on `width` x `height` pixels at `ratio`, between its units and the
+// end giving back the state.
+const playing = (bytes: Uint8Array, width = 100, height = 100, ratio = 1): Array<string> => {
+    const log: Array<string> = [];
+    play(recording(log), bytes, width, height, ratio, () => null, () => null);
+    return log.slice(DEFAULTS(width, height).length + 1, -1);
+};
+
+console.log("\n--- Test canvas: text ---");
+{
+    // A box of a unit, 100 device pixels each: a font of 10 CSS pixels is a tenth of a unit,
+    // which a browser leaves out, so the text is written in device pixels.
+    const box = [1, ...float(0, 0, 1, 1)];
+    const log: Array<string> = [];
+    play(recording(log), new Uint8Array([...box, 33, ...short('10px sans-serif'), 36, 0, ...short('A'),
+        ...float(0.5, 0.5)]), 100, 100, 1);
+    same(log.slice(DEFAULTS(100, 100).length + 1), [
+        'font=0.1px sans-serif',
+        'save()', 'translate(0.5,0.5)', 'scale(0.01,0.01)', 'font=10px sans-serif', 'fillText(A,0,0)', 'restore()',
+        'restore()',
+    ], 'text is as big as its font says, however small the units are');
+
+    same(playing(drawn([36, 0, ...short('A'), ...float(Number.NaN, 0)])), [],
+        'text at a place that is not a number is left out');
+}
+
+console.log("\n--- Test canvas: saves and restores ---");
+{
+    same(playing(drawn([21], [20], [20], [21])), ['save()', 'save()', 'restore()', 'restore()'],
+        'a restore without a save does nothing, and a save left open is restored at the end');
+
+    // Under a scale, a CSS pixel is fewer units, and back as many after the restore.
+    same(playing(drawn([20], [24, ...float(4, 4)], [5, ...float(1)], [21], [5, ...float(1)]), 100, 100, 2), [
+        'save()', 'scale(4,4)', 'lineWidth=0.25', 'restore()', 'lineWidth=1',
+    ], 'sizes in CSS pixels follow the transform, and come back with a restore');
+}
+
+console.log("\n--- Test canvas: radial and conic gradients ---");
+{
+    const stops = [1, 0, ...float(1), ...short('blue')];
+    same(playing(drawn([37, 0, ...float(0, 0, -1, 0, 0, 1), ...stops])), [],
+        'a radial gradient with a radius below zero leaves the style as it was');
+    same(playing(drawn([37, 1, ...float(5, 5, 2, 5, 5, 2), ...stops])), [
+        'createRadialGradient(5,5,2,5,5,2)', 'gradient.addColorStop(1,blue)', 'strokeStyle=blue',
+    ], 'and one of two circles that are one fills with its last stop');
+    same(playing(drawn([38, 0, ...float(Number.NaN, 0, 0), ...stops])), [],
+        'a conic gradient at an angle that is not a number leaves the style as it was');
+}
+
+console.log("\n--- Test canvas: paths and pixels ---");
+{
+    let thrown = '';
+    try {
+        playing(drawn([27, 0, ...[0, 0, 0, 0], ...[1, 0, 0, 0], 9]));
+    } catch (error) {
+        thrown = String(error);
+    }
+    assert(thrown.includes('unknown path command 9'), 'an unknown command of a path is an error');
+
+    // An arc and a corner of a radius below zero, after SVG data.
+    same(playing(drawn([28, ...[1, 0, 0, 0], 77, ...[2, 0, 0, 0], 4, ...float(1, 0, 1, 1, -1),
+        5, ...float(0, 0, -2, 1, 0, 0, 1), 0])), ['stroke(path(svg:M A1,0,1,1,0 E0,0,0,1,0,0,1,false))'],
+        'a radius below zero counts as zero, where the context would throw');
+
+    same(playing(drawn([45, ...[1, 0, 0, 0], ...[1, 0, 0, 0], ...float(0, 0, 1, 1), 1, 2, 3, 4], [7, ...float(0, 0, 1, 1)])),
+        ['fillRect(0,0,1,1)'], 'pixels nothing can be made of are left out, and the drawing goes on');
 }
 
 console.log("\n--- Test canvas: fitting the view box ---");
 {
     const log: Array<string> = [];
     // Wider than the box: the height decides, and the box stands in the middle.
-    play(recording(log), FIXTURE, 400, 200, 1);
-    assert(log[8] === 'setTransform(20,0,0,20,200,100)', `a wide canvas centers the box: ${log[8]}`);
+    play(recording(log), FIXTURE, 400, 200, 1, () => null, () => null);
+    const units = log[DEFAULTS(400, 200).length];
+    assert(units === 'setTransform(20,0,0,20,200,100)', `a wide canvas centers the box: ${units}`);
     // A CSS pixel is now a twentieth of a unit.
     assert(log.includes(`arc(-1,-2,0.2,0,${TAU})`), 'a radius in pixels follows the scale');
 }
@@ -350,6 +572,7 @@ console.log("\n--- Test canvas: CSS pixels ---");
         ...DEFAULTS(100, 100),
         'setTransform(2,0,0,2,0,0)',
         'beginPath()', `arc(10,20,3,0,${TAU})`, 'fill()',
+        'restore()',
     ], 'units are CSS pixels from the top left corner');
 }
 
@@ -717,4 +940,62 @@ console.log("\n--- Test canvas: loading images ---");
         'an image let go while it loads draws nothing when it comes');
     FakeImage.made.filter((one) => one.src === 'l1')[1]?.load();
     assert(drew(waiting, 'l1'), 'and the one loading anew is drawn when it comes');
+}
+
+console.log("\n--- Test canvas: fonts that load ---");
+{
+    class FakeCanvas {
+        public width = 300;
+        public height = 150;
+        public isConnected = true;
+        public readonly log: Array<string> = [];
+        get clientWidth() { return 160; }
+        get clientHeight() { return 100; }
+        getContext() { return recording(this.log); }
+    }
+
+    // What `loadingdone` of `document.fonts` calls.
+    const loaded: Array<() => void> = [];
+    const global = globalThis as unknown as Record<string, unknown>;
+    global['HTMLCanvasElement'] = FakeCanvas;
+    global['ResizeObserver'] = undefined;
+    global['window'] = { devicePixelRatio: 1 };
+    global['document'] = {
+        fonts: { addEventListener: (_type: string, listener: () => void) => { loaded.push(listener); } },
+    };
+
+    const canvases = new Canvases();
+    const draw = (canvas: FakeCanvas, bytes: Uint8Array) => {
+        canvases.draw(canvas as unknown as Element, bytes);
+        canvases.paintDrawn();
+    };
+    const fontsLoaded = () => { loaded.forEach((listener) => { listener(); }); };
+
+    const words = drawn([36, 0, ...short('A'), ...float(1, 2)]);
+    const shapes = drawn([7, ...float(0, 0, 1, 1)]);
+
+    const writing = new FakeCanvas();
+    const drawing = new FakeCanvas();
+    const gone = new FakeCanvas();
+    draw(writing, words);
+    draw(drawing, shapes);
+    draw(gone, words);
+    canvases.forget(gone as unknown as Element);
+    assert(loaded.length === 1, 'the fonts are listened to once text is written');
+
+    for (const canvas of [writing, drawing, gone]) {
+        canvas.log.length = 0;
+    }
+    fontsLoaded();
+    assert(writing.log.includes('fillText(A,0,0)'), 'a canvas that wrote text is drawn again when a font loads');
+    assert(drawing.log.length === 0 && gone.log.length === 0, 'but not one without text, nor one gone');
+
+    draw(writing, shapes);
+    writing.log.length = 0;
+    fontsLoaded();
+    assert(writing.log.length === 0, 'nor one whose last drawing has no text any more');
+
+    draw(drawing, words);
+    draw(writing, words);
+    assert(loaded.length === 1, 'and the fonts are listened to once');
 }

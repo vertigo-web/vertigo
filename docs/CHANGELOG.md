@@ -21,7 +21,20 @@
   so a mesh of triangles can be shaded smoothly.
 * `Drawing::append`: draws another drawing after what this one has drawn, as it would be drawn
   alone, and leaves the styles to what comes after as they were. A layer kept as a drawing of its
-  own, f. ex. one that changes seldom, is put together with others without being recorded again.
+  own, f. ex. one that changes seldom, is put together with others without being recorded again,
+  and a part drawn once is put in many places, each moved by a transform.
+* `Drawing::fill_path`, `Drawing::stroke_path` and `Drawing::clip`, with a new `Path2D` of lines,
+  Bézier curves, arcs, ellipses and SVG path data, and a `FillRule` for holes.
+* `Drawing::save`, `restore`, `translate`, `rotate`, `scale`, `transform` and `reset_transform`.
+  Nothing a drawing changes - styles, transforms, clips - lasts into the next one.
+* Text: `Drawing::font`, `font_px`, `text_align`, `text_baseline`, `fill_text` and `stroke_text`.
+  Text is as big as its font says however small the drawing's units are, where a browser would
+  leave out a font below a pixel, and a canvas that wrote text is drawn again when a font loads.
+* `Drawing::fill_radial_gradient` and `Drawing::fill_conic_gradient`, and their `stroke_` ones.
+* `Drawing::line_dash`, `line_dash_px`, `miter_limit`, `stroke_rect` and `clear_rect`.
+* `Drawing::composite`, `shadow` (in CSS pixels), `filter` and `image_smoothing` (off for pixel
+  art).
+* `Drawing::draw_pixels`: pixels worked out in Rust, f. ex. a heat map, drawn into a rectangle.
 * vertigo-cli: `is_ssr_fetch`: whether a request is the app's fetch during SSR, so a page handler
   of your own (next to `vertigo_files`) can refuse it as `vertigo_handler` does, instead of
   rendering a page that fetches the same URL again.
