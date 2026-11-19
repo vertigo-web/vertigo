@@ -38,6 +38,13 @@
 * vertigo-cli: `is_ssr_fetch`: whether a request is the app's fetch during SSR, so a page handler
   of your own (next to `vertigo_files`) can refuse it as `vertigo_handler` does, instead of
   rendering a page that fetches the same URL again.
+* `guides::for_agents`: rules for a coding agent writing an app with vertigo - the idioms, and
+  the habits from other frameworks that don't carry over. Its snippets are doctests, and it
+  ships in the crate as `docs/agents.md`, so an agent reads the one for the version it builds.
+* vertigo-cli: `vertigo new` puts an `AGENTS.md` (and a `CLAUDE.md` pointing to it) in the new
+  project, with its commands and where to find that guide. `--no-agent-files` leaves them out.
+* README: what is different coming from Leptos, Yew or Dioxus, and how vertigo helps coding
+  agents.
 
 ### Changed
 

@@ -24,6 +24,7 @@
 //!
 //! # Guides
 //!
+//! * [guides::for_agents] - rules for coding agents (and humans in a hurry) writing an app with vertigo
 //! * [guides::reactive_graph] - how `Value`, `Computed` and `subscribe` are wired together
 //! * [guides::collection_key_and_list_renderers] - `CollectionKey` and the memoized list renderers
 //! * [guides::lazy_list_cache] - `LazyListCache`: optimistic, per-item reactive list cache
@@ -64,6 +65,9 @@ mod websocket_collection;
 /// directory so it gets its own rustdoc page instead of being inlined into the
 /// crate root.
 pub mod guides {
+    #[doc = include_str!("../docs/agents.md")]
+    pub mod for_agents {}
+
     #[doc = include_str!("../docs/reactive-graph.md")]
     pub mod reactive_graph {}
 

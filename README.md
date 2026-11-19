@@ -111,6 +111,23 @@ fn app() -> DomNode {
 
 Take a look at **[More examples here](https://github.com/vertigo-web/vertigo/tree/master/examples)**.
 
+## Coming from Leptos, Yew or Dioxus
+
+Most of what you know carries over, but a few habits don't:
+
+| | Leptos, Yew, Dioxus | vertigo |
+| --- | --- | --- |
+| Browser APIs | `wasm-bindgen`, `web-sys`, `js-sys` | No wasm-bindgen. The browser is reached through `get_driver()` and `js!`. Crates that need wasm-bindgen (`gloo`, `reqwest` in the browser, `getrandom` with `js` or `wasm_js`) won't load. |
+| Server-side rendering | The app is compiled again, natively, for the server | The same `.wasm` runs on the server and in the browser. One build, no server and client feature flags. |
+| Talking to the backend | `reqwest`, `gloo-net`, server functions (Leptos, Dioxus) | `RequestBuilder` and `LazyCache`, against a plain HTTP API. During SSR the server makes the same requests. |
+| Components | Yew and Dioxus run them again when state they read changes, and keep it in hooks | They run once, when mounted (as in Leptos). State is `Value` and `Computed`. |
+| DOM updates | Yew and Dioxus diff a virtual DOM | Real DOM, updated right where a value is used |
+| JSON | `serde` | `#[derive(AutoJsJson)]` |
+| Tooling | `trunk`, `cargo-leptos`, `dx` | `vertigo-cli`: `vertigo new`, `watch`, `build`, `serve` |
+
+The **[guide for coding agents](https://github.com/vertigo-web/vertigo/blob/master/crates/vertigo/docs/agents.md)**
+covers these in more detail, with examples. It is short enough for humans too.
+
 ## Installation of `vertigo-cli` tool
 
 To ease process or development use
@@ -120,6 +137,17 @@ that allows to _build_, _serve_ and _watch_ your project.
 ```sh
 cargo install --force vertigo-cli
 ```
+
+## Coding with AI agents
+
+`vertigo new` puts an `AGENTS.md` (and a `CLAUDE.md` pointing to it) in the new project. It
+lists the project's commands and tells the agent where to find the
+[guide for coding agents](https://github.com/vertigo-web/vertigo/blob/master/crates/vertigo/docs/agents.md),
+which ships inside the vertigo crate. So the agent reads the guide for the version the project
+builds with, not what it remembers about an older one. Pass `--no-agent-files` to leave them out.
+
+For an existing project, copy
+[the template's `AGENTS.md`](https://github.com/vertigo-web/vertigo/blob/master/crates/vertigo-cli/src/new/fe_template/AGENTS.md).
 
 ## Demo App
 
