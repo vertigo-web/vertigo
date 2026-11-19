@@ -37,7 +37,9 @@ const WASM_FEATURES: &[&str] = &[
 /// still shows up, and `-Os` is the one that wins it.
 const OPT_LEVEL: &str = "-Os";
 
-pub fn run_wasm_opt(from: &WasmPath, to: &WasmPath) -> bool {
+/// `log_brotli` - log the size the wasm would have precompressed, when the build doesn't save it
+/// precompressed anyway.
+pub fn run_wasm_opt(from: &WasmPath, to: &WasmPath, log_brotli: bool) -> bool {
     let from_str = from.as_string();
     let to_str = to.as_string();
 
@@ -55,7 +57,9 @@ pub fn run_wasm_opt(from: &WasmPath, to: &WasmPath) -> bool {
             let out_size = size(&to_str);
             let percent = format_percent(out_size, in_size);
             log::info!("WASM optimized: {in_size}K -> {out_size}K ({percent}%)");
-            log_precompressed_size(&to_str, in_size);
+            if log_brotli {
+                log_precompressed_size(&to_str, in_size);
+            }
             true
         }
         Ok(_) => {

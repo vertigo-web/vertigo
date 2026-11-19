@@ -350,6 +350,7 @@ fn subject(
                 // extra `v-component` and `v-css` attribute commands per instance.
                 wasm_opt: Some(true),
                 release_mode: Some(true),
+                precompress: Some(false),
                 wasm_run_source_map: false,
                 cargo_opts: vec![],
             },

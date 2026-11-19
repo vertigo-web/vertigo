@@ -105,7 +105,10 @@ impl MountConfigBuilder {
     ///
     /// They come out about a quarter smaller than compressed per response, for about a second
     /// of startup per megabyte - in a release build of the server, in a debug one far more,
-    /// see [`precompress_in_release`](Self::precompress_in_release).
+    /// see [`precompress_in_release`](Self::precompress_in_release). The files `vertigo build`
+    /// saved compressed next to them (`name.ext.br`, unless built with `--precompress false`)
+    /// take no time: the server only checks that they unpack to the files, so one copied with
+    /// the build but stale doesn't get served.
     pub fn precompress(mut self, precompress: bool) -> Self {
         self.precompress = precompress;
         self

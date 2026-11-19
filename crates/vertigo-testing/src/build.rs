@@ -29,6 +29,8 @@ pub async fn vertigo_app(settings: &Settings, package: &str, dest_dir: &Path) ->
                 public_path: None,
                 wasm_opt: Some(settings.wasm_opt),
                 release_mode: Some(settings.release),
+                // the suites serve the build without `--precompress`
+                precompress: Some(false),
                 wasm_run_source_map: false,
                 cargo_opts: vec![],
             },

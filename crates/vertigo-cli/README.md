@@ -21,6 +21,9 @@ Packaging steps performed during _build_ command:
 3. Optimizes your .wasm file using `wasm-opt`
 4. Adds hashes to filenames[^hashes] (to bypass browser's cache)
 5. Places everything in the `build` dictionary
+6. Saves the text files (the wasm, `wasm_run.js`, styles…) compressed with brotli next to them
+   (`name.ext.br`), for `vertigo serve --precompress` to start at once (`--precompress false`
+   skips it)
 
 ## Installation
 

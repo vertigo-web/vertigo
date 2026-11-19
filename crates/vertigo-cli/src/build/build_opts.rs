@@ -34,6 +34,14 @@ pub struct BuildOptsInner {
     /// Also adds --locked to cargo build command
     #[arg(short, long)]
     pub release_mode: Option<bool>,
+    /// Whether to save the build's wasm, `wasm_run.js` and other text files compressed with
+    /// brotli at its highest level next to them (`name.ext.br`), for `serve --precompress`
+    /// (`MountConfigBuilder::precompress`) to take at startup instead of compressing them then
+    ///
+    /// This defaults to false for `watch` command
+    /// and to true for `build` command
+    #[arg(long)]
+    pub precompress: Option<bool>,
     #[arg(long)]
     pub wasm_run_source_map: bool,
 

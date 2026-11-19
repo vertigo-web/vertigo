@@ -107,6 +107,7 @@ async fn reactive_bench() -> TestResult {
             // Both on purpose: the point is to measure the artifact that actually ships.
             wasm_opt: Some(true),
             release_mode: Some(true),
+            precompress: Some(false),
             wasm_run_source_map: false,
             cargo_opts: vec![],
         },

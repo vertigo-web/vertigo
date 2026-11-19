@@ -82,7 +82,7 @@ pub struct ServeOptsInner {
     /// highest level once, at startup, for the browsers that accept brotli
     ///
     /// (about a quarter smaller than compressing each response, for about a second of startup
-    /// per megabyte)
+    /// per megabyte - none for the files `vertigo build` saved compressed next to them)
     #[arg(long, default_value_t = {false})]
     pub precompress: bool,
 
