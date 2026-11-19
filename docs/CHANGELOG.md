@@ -35,6 +35,12 @@
 * `Drawing::composite`, `shadow` (in CSS pixels), `filter` and `image_smoothing` (off for pixel
   art).
 * `Drawing::draw_pixels`: pixels worked out in Rust, f. ex. a heat map, drawn into a rectangle.
+* vertigo-cli: `vertigo build` saves the build's wasm, `wasm_run.js` and other text files
+  compressed with brotli next to them (`name.ext.br`), and `serve --precompress`
+  (`MountConfigBuilder::precompress`) takes those instead of compressing them at start: a server
+  with a 4 MB build (two apps) starts in a second instead of five. A saved file counts only when
+  it unpacks to the file next to it. `--precompress false` (`BuildOptsInner::precompress`) skips
+  saving them, and `watch` doesn't save them.
 * vertigo-cli: `is_ssr_fetch`: whether a request is the app's fetch during SSR, so a page handler
   of your own (next to `vertigo_files`) can refuse it as `vertigo_handler` does, instead of
   rendering a page that fetches the same URL again.

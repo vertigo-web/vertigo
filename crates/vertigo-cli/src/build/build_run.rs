@@ -1,6 +1,12 @@
-use std::path::PathBuf;
+use std::{
+    path::{Path, PathBuf},
+    time::Instant,
+};
 
-use crate::commons::{ErrorCode, models::IndexModel};
+use crate::{
+    commons::{ErrorCode, models::IndexModel},
+    serve::save_precompressed,
+};
 
 use super::{
     build_opts::BuildOpts,
@@ -45,6 +51,7 @@ pub fn run_with_ws(opts: BuildOpts, ws: &Workspace, allow_error: bool) -> Result
     check_env()?;
 
     let release = opts.inner.release_mode.unwrap_or(true);
+    let precompress = opts.inner.precompress.unwrap_or(true);
 
     let dest_dir = WasmPath::new(PathBuf::from(&opts.common.dest_dir));
 
@@ -112,7 +119,10 @@ pub fn run_with_ws(opts: BuildOpts, ws: &Workspace, allow_error: bool) -> Result
     // Optimize .wasm
 
     let wasm_path_hash =
-        if opts.inner.wasm_opt.unwrap_or(true) && run_wasm_opt(&wasm_path_target, &wasm_path) {
+        // with the files saved precompressed below, the log tells the size of all of them
+        if opts.inner.wasm_opt.unwrap_or(true)
+            && run_wasm_opt(&wasm_path_target, &wasm_path, !precompress)
+        {
             // optimized
             let wasm_path_hash = wasm_path.save_with_hash(wasm_path.read()?.as_slice())?;
             wasm_path.remove_file()?;
@@ -152,6 +162,24 @@ pub fn run_with_ws(opts: BuildOpts, ws: &Workspace, allow_error: bool) -> Result
                     log::warn!("Can't read entry: {err}");
                     return Err(ErrorCode::CantReadStaticFile);
                 }
+            }
+        }
+    }
+
+    // Text files compressed next to them, so a server with `--precompress` starts at once
+
+    if precompress {
+        let started = Instant::now();
+        match save_precompressed(Path::new(&opts.common.dest_dir)) {
+            Ok((count, size, compressed_size)) => log::info!(
+                "Saved {count} files precompressed with brotli: {}K -> {}K in {:.1?}",
+                size / 1024,
+                compressed_size / 1024,
+                started.elapsed()
+            ),
+            Err(err) => {
+                log::error!("Can't save the files precompressed: {err}");
+                return Err(ErrorCode::CantWriteOrRemoveFile);
             }
         }
     }

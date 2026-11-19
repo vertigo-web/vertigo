@@ -73,6 +73,9 @@ pub async fn run(mut opts: WatchOpts) -> Result<(), ErrorCode> {
     if opts.build.wasm_opt.is_none() {
         opts.build.wasm_opt = Some(false);
     }
+    if opts.build.precompress.is_none() {
+        opts.build.precompress = Some(false);
+    }
 
     let excludes = [root.join("target"), root.join(opts.common.dest_dir.clone())];
 

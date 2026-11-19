@@ -9,7 +9,8 @@ use actix_web::{
 };
 use std::{
     collections::HashMap,
-    io::Write,
+    ffi::OsString,
+    io::{Read, Write},
     path::{Path, PathBuf},
     sync::Arc,
     time::Instant,
@@ -36,7 +37,8 @@ const COMPRESSIBLE: &[&str] = &[
 ];
 
 /// Compresses the files in `dest_dir` with brotli at its highest level, too slow to run per
-/// response, to serve them under `http_root`.
+/// response, to serve them under `http_root`. A file `vertigo build` saved compressed next to
+/// it ([`save_precompressed`]) is taken as it is, when it unpacks to the file.
 pub fn precompress(dest_dir: impl AsRef<Path>, http_root: &str) -> Precompressed {
     let dest_dir = dest_dir.as_ref();
 
@@ -44,7 +46,8 @@ pub fn precompress(dest_dir: impl AsRef<Path>, http_root: &str) -> Precompressed
     if cfg!(debug_assertions) {
         log::warn!(
             "Precompressing {} with brotli in a debug build, unoptimized: a debug wasm takes \
-             minutes. MountConfigBuilder::precompress_in_release skips it here",
+             minutes unless vertigo build saved it compressed. \
+             MountConfigBuilder::precompress_in_release skips it here",
             dest_dir.display()
         );
     } else {
@@ -53,26 +56,12 @@ pub fn precompress(dest_dir: impl AsRef<Path>, http_root: &str) -> Precompressed
 
     let started = Instant::now();
     let mut files = Precompressed::new();
-    let (mut size, mut compressed_size) = (0, 0);
+    let (mut size, mut compressed_size, mut from_build) = (0, 0, 0);
 
-    // `Files` doesn't serve hidden ones
-    let entries = WalkDir::new(dest_dir)
-        .into_iter()
-        .filter_entry(|entry| entry.depth() == 0 || !is_hidden(entry))
-        .filter_map(Result::ok);
-
-    for entry in entries {
+    for (entry, extension) in compressible_files(dest_dir) {
         let path = entry.path();
 
-        let Some(extension) = path.extension().and_then(|extension| extension.to_str()) else {
-            continue;
-        };
-
-        if !entry.file_type().is_file() || !COMPRESSIBLE.contains(&extension) {
-            continue;
-        }
-
-        let (content, brotli) = match read_compressed(path) {
+        let (content, brotli, saved) = match read_compressed(path) {
             Ok(compressed) => compressed,
             Err(err) => {
                 log::warn!("Can't precompress {}: {err}", path.display());
@@ -97,6 +86,7 @@ pub fn precompress(dest_dir: impl AsRef<Path>, http_root: &str) -> Precompressed
 
         size += content.len();
         compressed_size += brotli.len();
+        from_build += usize::from(saved);
 
         files.insert(
             format!("{}/{url_path}", http_root.trim_end_matches('/')),
@@ -115,7 +105,7 @@ pub fn precompress(dest_dir: impl AsRef<Path>, http_root: &str) -> Precompressed
     }
 
     log::info!(
-        "Precompressed {} files with brotli: {}K -> {}K in {:.1?}",
+        "Precompressed {} files with brotli ({from_build} saved by the build): {}K -> {}K in {:.1?}",
         files.len(),
         size / 1024,
         compressed_size / 1024,
@@ -125,15 +115,77 @@ pub fn precompress(dest_dir: impl AsRef<Path>, http_root: &str) -> Precompressed
     files
 }
 
+/// Saves the text files in `dest_dir` compressed with brotli next to them, `name.ext.br`, for
+/// [`precompress`] to take at the server's start instead of compressing them then. A file
+/// brotli makes bigger gets none. Gives how many it saved, their size and compressed size.
+pub(crate) fn save_precompressed(dest_dir: &Path) -> std::io::Result<(usize, usize, usize)> {
+    let (mut count, mut size, mut compressed_size) = (0, 0, 0);
+
+    for (entry, _) in compressible_files(dest_dir) {
+        let path = entry.path();
+        let content = std::fs::read(path)?;
+        let brotli = brotli_compress(&content)?;
+
+        if brotli.len() >= content.len() {
+            continue;
+        }
+
+        std::fs::write(saved_path(path), &brotli)?;
+        count += 1;
+        size += content.len();
+        compressed_size += brotli.len();
+    }
+
+    Ok((count, size, compressed_size))
+}
+
+/// The files worth compressing - text ones, not hidden, as `Files` doesn't serve hidden ones -
+/// with their extension
+fn compressible_files(dest_dir: &Path) -> impl Iterator<Item = (DirEntry, &'static str)> {
+    WalkDir::new(dest_dir)
+        .into_iter()
+        .filter_entry(|entry| entry.depth() == 0 || !is_hidden(entry))
+        .filter_map(Result::ok)
+        .filter(|entry| entry.file_type().is_file())
+        .filter_map(|entry| {
+            let extension = entry.path().extension()?.to_str()?;
+            let extension = COMPRESSIBLE.iter().find(|known| **known == extension)?;
+            Some((entry, *extension))
+        })
+}
+
 fn is_hidden(entry: &DirEntry) -> bool {
     entry.file_name().to_string_lossy().starts_with('.')
 }
 
-/// The file, and the file compressed by [`brotli_compress`]
-fn read_compressed(path: &Path) -> std::io::Result<(Vec<u8>, Vec<u8>)> {
+/// Where [`save_precompressed`] puts the file compressed: `name.ext.br`
+fn saved_path(path: &Path) -> PathBuf {
+    let mut name = OsString::from(path.as_os_str());
+    name.push(".br");
+    PathBuf::from(name)
+}
+
+/// The file, the file compressed, and whether it's the one the build saved. That one counts
+/// only when it unpacks to the file: a build copied without its times, or a file changed after
+/// the build, gets compressed again.
+fn read_compressed(path: &Path) -> std::io::Result<(Vec<u8>, Vec<u8>, bool)> {
     let content = std::fs::read(path)?;
+
+    if let Ok(saved) = std::fs::read(saved_path(path))
+        && unpacks_to(&saved, &content)
+    {
+        return Ok((content, saved, true));
+    }
+
     let brotli = brotli_compress(&content)?;
-    Ok((content, brotli))
+    Ok((content, brotli, false))
+}
+
+fn unpacks_to(brotli: &[u8], content: &[u8]) -> bool {
+    let mut unpacked = Vec::with_capacity(content.len());
+    brotli::Decompressor::new(brotli, 64 * 1024)
+        .read_to_end(&mut unpacked)
+        .is_ok_and(|_| unpacked == content)
 }
 
 /// Compresses at quality 11, where `Compress` uses 3 to keep up with responses
@@ -253,9 +305,12 @@ mod tests {
         },
         test::{TestRequest, call_service, init_service, read_body},
     };
-    use std::{io::Read, sync::Arc};
+    use std::{
+        io::{Read, Write},
+        sync::Arc,
+    };
 
-    use super::{precompress, precompressed_files};
+    use super::{precompress, precompressed_files, save_precompressed};
 
     fn header(response: &ServiceResponse, name: HeaderName) -> Option<&str> {
         response
@@ -361,6 +416,48 @@ mod tests {
             call_service(&app, TestRequest::get().uri("/build/logo.png").to_request()).await;
         assert_eq!(response.status(), StatusCode::OK);
         assert_eq!(header(&response, header::VARY), None);
+
+        std::fs::remove_dir_all(&dest_dir)
+    }
+
+    fn unpack(brotli: &[u8]) -> std::io::Result<String> {
+        let mut unpacked = String::new();
+        brotli::Decompressor::new(brotli, 4096).read_to_string(&mut unpacked)?;
+        Ok(unpacked)
+    }
+
+    #[test]
+    fn the_server_takes_what_the_build_saved_precompressed() -> std::io::Result<()> {
+        let dest_dir =
+            std::env::temp_dir().join(format!("vertigo-saved-brotli-{}", std::process::id()));
+        std::fs::create_dir_all(&dest_dir)?;
+        let script = "console.log('vertigo');\n".repeat(100);
+        std::fs::write(dest_dir.join("app.js"), &script)?;
+        std::fs::write(dest_dir.join("logo.png"), vec![0; 1000])?;
+        std::fs::write(dest_dir.join("index.json"), "{}")?;
+
+        let (count, size, _) = save_precompressed(&dest_dir)?;
+        assert_eq!((count, size), (1, script.len()));
+        // Not an image, nor a file brotli makes bigger
+        assert!(dest_dir.join("app.js.br").exists());
+        assert!(!dest_dir.join("logo.png.br").exists());
+        assert!(!dest_dir.join("index.json.br").exists());
+        assert_eq!(unpack(&std::fs::read(dest_dir.join("app.js.br"))?)?, script);
+
+        // Taken as it is: compressed by something else than the server would, it stays so
+        let mut quick = brotli::CompressorWriter::new(Vec::new(), 4096, 1, 22);
+        quick.write_all(script.as_bytes())?;
+        let quick = quick.into_inner();
+        std::fs::write(dest_dir.join("app.js.br"), &quick)?;
+        let files = precompress(&dest_dir, "/build");
+        assert_eq!(files.keys().collect::<Vec<_>>(), ["/build/app.js"]);
+        assert_eq!(files["/build/app.js"].brotli, quick);
+
+        // Of a file changed after the build: compressed again
+        let changed = "console.log('changed');\n".repeat(100);
+        std::fs::write(dest_dir.join("app.js"), &changed)?;
+        let files = precompress(&dest_dir, "/build");
+        assert_eq!(unpack(&files["/build/app.js"].brotli)?, changed);
 
         std::fs::remove_dir_all(&dest_dir)
     }
