@@ -24,6 +24,9 @@ impl Template {
     }
 }
 
+/// Notes for coding agents, at the root of every template.
+const AGENT_FILES: [&str; 2] = ["AGENTS.md", "CLAUDE.md"];
+
 #[derive(Args)]
 pub struct NewOpts {
     pub project_name: String,
@@ -31,6 +34,9 @@ pub struct NewOpts {
     pub template: Template,
     #[arg(long, default_value_t = {"./".to_string()})]
     pub dest_dir: String,
+    /// Leave out AGENTS.md and CLAUDE.md, the notes for coding agents
+    #[arg(long)]
+    pub no_agent_files: bool,
 }
 
 pub fn run(opts: NewOpts) -> Result<(), ErrorCode> {
@@ -73,9 +79,26 @@ pub fn run(opts: NewOpts) -> Result<(), ErrorCode> {
         return Err(ErrorCode::NewProjectCantUnpackStub);
     };
 
+    if opts.no_agent_files {
+        remove_agent_files(&target_path)?;
+    }
+
     // Process all Cargo.toml_ files recursively
     // (cargo packaging does not permit adding second Cargo.toml file)
     process_cargo_toml_files(&target_path, &opts.project_name)?;
+
+    Ok(())
+}
+
+/// Remove the notes for coding agents from a project just unpacked.
+fn remove_agent_files(project_dir: &Path) -> Result<(), ErrorCode> {
+    for name in AGENT_FILES {
+        let path = project_dir.join(name);
+        if let Err(err) = fs::remove_file(&path) {
+            log::error!("Can't remove {}: {}", path.display(), err);
+            return Err(ErrorCode::NewProjectCantUnpackStub);
+        }
+    }
 
     Ok(())
 }
@@ -119,4 +142,21 @@ fn process_cargo_toml_files(dir: &Path, package_name: &str) -> Result<(), ErrorC
     }
 
     Ok(())
+}
+
+#[cfg(test)]
+mod tests {
+    use super::{AGENT_FILES, Template};
+
+    #[test]
+    fn every_template_has_the_agent_files_at_its_root() {
+        for template in [Template::Frontend, Template::Fullstack] {
+            for name in AGENT_FILES {
+                assert!(
+                    template.get_dir().get_file(name).is_some(),
+                    "{template} template has no {name}, which --no-agent-files removes"
+                );
+            }
+        }
+    }
 }

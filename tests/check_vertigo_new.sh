@@ -12,6 +12,17 @@ mkdir -p build/vertigo-cli-test
 cp target/debug/vertigo build/vertigo-cli-test/
 cd build/vertigo-cli-test
 
+echo "*** Testing agent files***"
+
+./vertigo new agents_app
+test -f agents_app/AGENTS.md
+test -f agents_app/CLAUDE.md
+./vertigo new no_agents_app --no-agent-files
+test ! -e no_agents_app/AGENTS.md
+test ! -e no_agents_app/CLAUDE.md
+test -f no_agents_app/src/lib.rs
+rm -r agents_app no_agents_app
+
 echo "*** Testing frontend template***"
 
 ./vertigo new frontend_app --template frontend

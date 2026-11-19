@@ -36,6 +36,9 @@ cargo install --force vertigo-cli
 vertigo new my_blog
 ```
 
+The project comes with an `AGENTS.md` and a `CLAUDE.md` for coding agents. Add
+`--no-agent-files` to leave them out.
+
 ### Build the project
 
 ```sh
