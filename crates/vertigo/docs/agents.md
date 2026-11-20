@@ -342,6 +342,7 @@ The target is `wasm32-unknown-unknown` without wasm-bindgen. **Crates that need 
 | `rand` | `get_driver().get_random(min, max)` |
 | `std::env::var`, config files | `get_driver().env("NAME")`, set with `vertigo watch --env NAME=value` |
 | `document.cookie`, `localStorage`-style | `get_driver().cookie_get(..)`, `cookie_set(..)` |
+| `web_sys` canvas contexts, `glow`, `wgpu` | a [`Drawing`](crate::Drawing) in `<canvas draw={..}>` for 2D, [`webgl::WebGl`](crate::webgl::WebGl) for WebGL 2 |
 | `web_sys` for anything else | a [`Driver`](crate::Driver) method first, then [`js!`](crate::js) |
 | a file in `static/` | [`include_static!`](crate::include_static) gives its public path |
 

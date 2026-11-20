@@ -138,7 +138,7 @@ impl AllElements {
                 DriverDomCommand::CallbackRemove { .. } => {
                     // ignored on server-side
                 }
-                DriverDomCommand::CanvasDraw { .. } => {
+                DriverDomCommand::CanvasDraw { .. } | DriverDomCommand::WebGl { .. } => {
                     // ignored on server-side: a canvas comes from the server empty and the
                     // browser draws it
                 }

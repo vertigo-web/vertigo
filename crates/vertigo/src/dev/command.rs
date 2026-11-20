@@ -335,6 +335,12 @@ pub enum DriverDomCommand {
         id: DomId,
         drawing: Arc<Vec<u8>>,
     },
+    /// Calls of the WebGL context of a `<canvas>`, in the format of
+    /// [`webgl`](crate::webgl#format).
+    WebGl {
+        id: DomId,
+        commands: Vec<u8>,
+    },
 }
 
 impl DriverDomCommand {

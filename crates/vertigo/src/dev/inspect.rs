@@ -219,6 +219,8 @@ impl DomDebugFragment {
                             .insert("v-drawing".into(), format!("{} bytes", drawing.len()));
                     });
                 }
+                // Calls, not a state of the page: nothing to show.
+                DriverDomCommand::WebGl { .. } => {}
             }
         }
 

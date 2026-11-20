@@ -1,11 +1,12 @@
-use std::rc::Rc;
+use std::rc::{Rc, Weak};
 use vertigo_macro::store;
 
 use crate::{
     DomId, Drawing, DropResource,
     dev::{CallbackId, command::DriverDomCommand},
     driver_module::{api::api_browser_command, event_emitter::EventEmitter},
-    struct_mut::{HashMapMut, VecMut},
+    struct_mut::{HashMapMut, ValueMut, VecMut},
+    webgl,
 };
 
 use super::StaticString;
@@ -71,6 +72,8 @@ pub fn get_driver_dom() -> Rc<DriverDom> {
 pub struct DriverDom {
     commands: Commands,
     node_parent_callback: Rc<HashMapMut<DomId, Callback>>,
+    /// The WebGL contexts of canvases, each with its calls not yet sent, see `webgl_queue`.
+    webgl: ValueMut<Vec<(DomId, Weak<webgl::Queue>)>>,
 }
 
 impl DriverDom {
@@ -80,6 +83,7 @@ impl DriverDom {
         DriverDom {
             commands,
             node_parent_callback: Rc::new(HashMapMut::new()),
+            webgl: ValueMut::new(Vec::new()),
         }
     }
 
@@ -194,7 +198,31 @@ impl DriverDom {
         });
     }
 
+    /// The calls of a WebGL context on canvas `id` go with each batch from now on, for as long as
+    /// the context or one of its objects is there to make them.
+    pub(crate) fn webgl_queue(&self, id: DomId, queue: Weak<webgl::Queue>) {
+        self.webgl.change(|queues| queues.push((id, queue)));
+    }
+
     pub fn flush_dom_changes(&self) {
+        // After the batch's changes to the page, so a new canvas is there, but before its removals
+        // (see `sort_commands`), so a canvas removed with its last calls gets them.
+        let calls = self.webgl.change(|queues| {
+            queues.retain(|(_, queue)| queue.strong_count() > 0);
+            queues
+                .iter()
+                .filter_map(|(id, queue)| {
+                    let commands = queue.upgrade()?.change(std::mem::take);
+                    (!commands.is_empty()).then_some((*id, commands))
+                })
+                .collect::<Vec<_>>()
+        });
+
+        for (id, commands) in calls {
+            self.commands
+                .add_command(DriverDomCommand::WebGl { id, commands });
+        }
+
         self.commands.flush_dom_changes();
     }
 

@@ -69,6 +69,7 @@ async fn demo(ctx: Ctx) -> Result<()> {
     step!("WS Collection", tabs::ws_collection(&ctx));
     step!("Svg", tabs::svg(&ctx));
     step!("Paint", tabs::paint(&ctx));
+    step!("WebGL", tabs::webgl(&ctx));
 
     // Not a tab: the arrow keys belong to the frame the tabs sit in.
     step!("the arrow keys", tabs::arrow_keys(&ctx));
