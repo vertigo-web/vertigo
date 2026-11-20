@@ -14,6 +14,12 @@
 * `draw` on a canvas works nothing out during SSR: the server doesn't compute the drawing nor
   turn it into bytes for a page that has no pictures in its canvases, so an app needs no
   `is_server()` check around it.
+* The browser code drawing on canvases is a chunk of its own, loaded the first time a page needs
+  it: `wasm_run.js` is 2.5 KB smaller with brotli (14.2 KB to 11.7 KB) for every app, and an app
+  with canvases downloads the chunk (3.3 KB) when the first drawing comes, or meanwhile with its
+  wasm when the server sent the page with a canvas. `vertigo build` puts it in `chunks/` next to
+  `wasm_run.js`, named by its content. A vertigo-cli from before doesn't copy it, so its apps draw
+  nothing on canvases.
 
 ## 0.14.5 - 2026-11-21
 
