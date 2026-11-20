@@ -62,24 +62,24 @@ const recording = (log: Array<string>): Gl => {
 // `fixture()` in webgl.rs: one call of each.
 const FIXTURE = new Uint8Array([
     1, 63, 2, 1, 0, 0, 0, 4, 146, 136, 0, 0, 1, 0, 0, 0, 5, 146, 136, 0, 0, 228, 136, 0, 0, 8,
-    0, 0, 0, 0, 0, 192, 63, 0, 0, 0, 192, 6, 147, 136, 0, 0, 2, 0, 0, 0, 4, 0, 0, 0, 7, 0, 8,
-    0, 7, 2, 0, 0, 0, 9, 2, 0, 0, 0, 10, 1, 0, 0, 0, 11, 1, 0, 0, 0, 3, 6, 20, 0, 0, 1, 12, 0,
-    0, 0, 4, 0, 0, 0, 12, 3, 0, 0, 0, 2, 0, 0, 0, 118, 115, 3, 0, 0, 0, 102, 197, 155, 14, 3,
-    0, 0, 0, 15, 1, 0, 97, 0, 0, 0, 63, 16, 1, 0, 98, 0, 0, 128, 63, 0, 0, 0, 64, 17, 1, 0, 99,
-    0, 0, 128, 63, 0, 0, 0, 64, 0, 0, 64, 64, 18, 1, 0, 100, 0, 0, 128, 63, 0, 0, 0, 64, 0, 0,
-    64, 64, 0, 0, 128, 64, 19, 1, 0, 101, 255, 255, 255, 255, 20, 1, 0, 102, 0, 0, 0, 0, 0, 0,
+    0, 0, 0, 0, 0, 192, 63, 0, 0, 0, 192, 6, 147, 136, 0, 0, 2, 0, 0, 0, 4, 0, 0, 0, 7, 0, 8, 0,
+    7, 2, 0, 0, 0, 9, 2, 0, 0, 0, 10, 1, 0, 0, 0, 11, 1, 0, 0, 0, 3, 6, 20, 0, 0, 1, 12, 0, 0,
+    0, 4, 0, 0, 0, 12, 3, 0, 0, 0, 2, 0, 0, 0, 118, 115, 3, 0, 0, 0, 102, 197, 155, 14, 3, 0, 0,
+    0, 41, 4, 0, 0, 0, 3, 0, 0, 0, 1, 0, 117, 15, 4, 0, 0, 0, 0, 0, 0, 63, 16, 4, 0, 0, 0, 0, 0,
+    128, 63, 0, 0, 0, 64, 17, 4, 0, 0, 0, 0, 0, 128, 63, 0, 0, 0, 64, 0, 0, 64, 64, 18, 4, 0, 0,
+    0, 0, 0, 128, 63, 0, 0, 0, 64, 0, 0, 64, 64, 0, 0, 128, 64, 19, 4, 0, 0, 0, 255, 255, 255,
+    255, 20, 4, 0, 0, 0, 0, 0, 0, 0, 0, 0, 128, 63, 0, 0, 0, 64, 0, 0, 64, 64, 0, 0, 128, 64, 0,
+    0, 160, 64, 0, 0, 192, 64, 0, 0, 224, 64, 0, 0, 0, 65, 21, 4, 0, 0, 0, 0, 0, 0, 0, 0, 0,
     128, 63, 0, 0, 0, 64, 0, 0, 64, 64, 0, 0, 128, 64, 0, 0, 160, 64, 0, 0, 192, 64, 0, 0, 224,
-    64, 0, 0, 0, 65, 21, 1, 0, 103, 0, 0, 0, 0, 0, 0, 128, 63, 0, 0, 0, 64, 0, 0, 64, 64, 0, 0,
-    128, 64, 0, 0, 160, 64, 0, 0, 192, 64, 0, 0, 224, 64, 0, 0, 0, 65, 0, 0, 16, 65, 0, 0, 32,
-    65, 0, 0, 48, 65, 0, 0, 64, 65, 0, 0, 80, 65, 0, 0, 96, 65, 0, 0, 112, 65, 22, 4, 0, 0, 0,
-    24, 2, 0, 0, 0, 25, 4, 0, 0, 0, 26, 1, 0, 0, 0, 1, 0, 0, 0, 4, 0, 0, 0, 255, 0, 128, 255,
-    27, 1, 40, 0, 0, 0, 38, 0, 0, 27, 0, 40, 0, 0, 1, 38, 0, 0, 27, 2, 40, 0, 0, 1, 41, 0, 0,
-    27, 3, 40, 0, 0, 47, 129, 0, 0, 28, 29, 0, 0, 0, 0, 0, 0, 128, 62, 0, 0, 0, 63, 0, 0, 128,
-    63, 30, 0, 0, 128, 63, 31, 0, 65, 0, 0, 32, 113, 11, 0, 0, 33, 226, 11, 0, 0, 34, 0, 0, 0,
-    0, 255, 255, 255, 255, 128, 2, 0, 0, 224, 1, 0, 0, 35, 3, 2, 0, 0, 36, 2, 3, 0, 0, 3, 3, 0,
-    0, 37, 5, 4, 0, 0, 38, 0, 9, 0, 0, 39, 4, 0, 0, 0, 0, 0, 0, 0, 3, 0, 0, 0, 40, 1, 0, 0, 0,
-    6, 0, 0, 0, 3, 20, 0, 0, 2, 0, 0, 0, 4, 146, 136, 0, 0, 0, 0, 0, 0, 3, 1, 0, 0, 0, 8, 2, 0,
-    0, 0, 13, 3, 0, 0, 0, 23, 4, 0, 0, 0,
+    64, 0, 0, 0, 65, 0, 0, 16, 65, 0, 0, 32, 65, 0, 0, 48, 65, 0, 0, 64, 65, 0, 0, 80, 65, 0, 0,
+    96, 65, 0, 0, 112, 65, 22, 5, 0, 0, 0, 24, 2, 0, 0, 0, 25, 5, 0, 0, 0, 26, 1, 0, 0, 0, 1, 0,
+    0, 0, 4, 0, 0, 0, 255, 0, 128, 255, 27, 1, 40, 0, 0, 0, 38, 0, 0, 27, 0, 40, 0, 0, 1, 38, 0,
+    0, 27, 2, 40, 0, 0, 1, 41, 0, 0, 27, 3, 40, 0, 0, 47, 129, 0, 0, 28, 29, 0, 0, 0, 0, 0, 0,
+    128, 62, 0, 0, 0, 63, 0, 0, 128, 63, 30, 0, 0, 128, 63, 31, 0, 65, 0, 0, 32, 113, 11, 0, 0,
+    33, 226, 11, 0, 0, 34, 0, 0, 0, 0, 255, 255, 255, 255, 128, 2, 0, 0, 224, 1, 0, 0, 35, 3, 2,
+    0, 0, 36, 2, 3, 0, 0, 3, 3, 0, 0, 37, 5, 4, 0, 0, 38, 0, 9, 0, 0, 39, 4, 0, 0, 0, 0, 0, 0,
+    0, 3, 0, 0, 0, 40, 1, 0, 0, 0, 6, 0, 0, 0, 3, 20, 0, 0, 2, 0, 0, 0, 4, 146, 136, 0, 0, 0, 0,
+    0, 0, 3, 1, 0, 0, 0, 8, 2, 0, 0, 0, 13, 3, 0, 0, 0, 23, 5, 0, 0, 0, 42, 4, 0, 0, 0,
 ]);
 
 console.log("\n--- Test webgl: the cross-language fixture ---");
@@ -112,20 +112,14 @@ console.log("\n--- Test webgl: the cross-language fixture ---");
         'deleteShader(shader4)',
         'deleteShader(shader5)',
         'useProgram(program3)',
-        'getUniformLocation(program3,a)',
-        'uniform1f(@a,0.5)',
-        'getUniformLocation(program3,b)',
-        'uniform2f(@b,1,2)',
-        'getUniformLocation(program3,c)',
-        'uniform3f(@c,1,2,3)',
-        'getUniformLocation(program3,d)',
-        'uniform4f(@d,1,2,3,4)',
-        'getUniformLocation(program3,e)',
-        'uniform1i(@e,-1)',
-        'getUniformLocation(program3,f)',
-        'uniformMatrix3fv(@f,false,[0,1,2,3,4,5,6,7,8])',
-        'getUniformLocation(program3,g)',
-        'uniformMatrix4fv(@g,false,[0,1,2,3,4,5,6,7,8,9,10,11,12,13,14,15])',
+        'getUniformLocation(program3,u)',
+        'uniform1f(@u,0.5)',
+        'uniform2f(@u,1,2)',
+        'uniform3f(@u,1,2,3)',
+        'uniform4f(@u,1,2,3,4)',
+        'uniform1i(@u,-1)',
+        'uniformMatrix3fv(@u,false,[0,1,2,3,4,5,6,7,8])',
+        'uniformMatrix4fv(@u,false,[0,1,2,3,4,5,6,7,8,9,10,11,12,13,14,15])',
         'createTexture()',
         'activeTexture(33986)',
         'bindTexture(3553,texture6)',
@@ -187,18 +181,21 @@ console.log("\n--- Test webgl: programs and uniforms ---");
         "a shader that doesn't compile is told in the console, with WebGL's log");
 
     log.length = 0;
-    play(gl, objects, calls([15, ...name('a'), 0, 0, 128, 63]));
-    same(log, ['uniform1f(null,1)'], 'without a program in use, a uniform goes nowhere, which WebGL ignores');
-    log.length = 0;
-
-    play(gl, objects, calls([14, ...u32(1)], [15, ...name('a'), 0, 0, 128, 63], [15, ...name('a'), 0, 0, 0, 64]));
-    same(log, ['useProgram(program1)', 'getUniformLocation(program1,a)', 'uniform1f(@a,1)', 'uniform1f(@a,2)'],
-        'a uniform is found once per program');
+    play(gl, objects, calls([41, ...u32(2), ...u32(1), ...name('a')]));
+    same(log, ['getUniformLocation(program1,a)'], "a uniform's location is found when it is made");
 
     log.length = 0;
-    play(gl, objects, calls([13, ...u32(1)], [15, ...name('a'), 0, 0, 128, 63]));
-    same(log, ['deleteProgram(program1)', 'uniform1f(null,1)'],
-        'and once the program in use is let go, its uniforms go nowhere');
+    play(gl, objects, calls([14, ...u32(1)], [15, ...u32(2), 0, 0, 128, 63], [15, ...u32(2), 0, 0, 0, 64]));
+    same(log, ['useProgram(program1)', 'uniform1f(@a,1)', 'uniform1f(@a,2)'],
+        'and not again when the uniform is set');
+
+    log.length = 0;
+    play(gl, objects, calls([42, ...u32(2)], [15, ...u32(2), 0, 0, 128, 63]));
+    same(log, ['uniform1f(null,1)'], 'a location let go sets nothing, which WebGL ignores');
+
+    log.length = 0;
+    play(gl, objects, calls([13, ...u32(1)], [41, ...u32(3), ...u32(1), ...name('a')], [15, ...u32(3), 0, 0, 128, 63]));
+    same(log, ['deleteProgram(program1)', 'uniform1f(null,1)'], 'nor one of a program let go');
 
     let thrown = '';
     try {

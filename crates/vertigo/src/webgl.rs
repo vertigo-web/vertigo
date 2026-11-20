@@ -9,9 +9,9 @@
 //! ```text
 //! commands := op*
 //! op       := code:u8 args               -- see `code`
-//! id       := u32                        -- of a buffer, a vertex array, a program or a texture,
-//!                                           0 for none
-//! name     := length:u16 utf8*           -- of a uniform
+//! id       := u32                        -- of a buffer, a vertex array, a program, a texture or
+//!                                           a uniform's location, 0 for none
+//! name     := length:u16 utf8*           -- of a uniform, to find its location
 //! source   := length:u32 utf8*           -- of a shader
 //! data     := length:u32 byte*
 //! ```
@@ -70,6 +70,8 @@ mod code {
     pub const FRONT_FACE: u8 = 38;
     pub const DRAW_ARRAYS: u8 = 39;
     pub const DRAW_ELEMENTS: u8 = 40;
+    pub const UNIFORM_LOCATION: u8 = 41;
+    pub const DELETE_UNIFORM_LOCATION: u8 = 42;
 }
 
 /// `pname` of `texParameteri`.
@@ -141,10 +143,10 @@ impl WebGlOptions {
 /// [`Driver::on_animation_frame`](crate::Driver::on_animation_frame), and the objects it uses are
 /// made once, beforehand. Nothing is drawn during SSR.
 ///
-/// Calls that would ask the browser something, as `getUniformLocation`, have none: a uniform is
-/// set by its name, and an attribute has the location its shader gives it
-/// (`layout(location = 0)`). A shader that doesn't compile, or a program that doesn't link, is
-/// reported in the browser's console.
+/// No call waits for the browser to answer. [`Self::uniform_location`] gives a handle at once,
+/// which the browser finds the location for when the call comes, and an attribute has the
+/// location its shader gives it (`layout(location = 0)`). A shader that doesn't compile, or a
+/// program that doesn't link, is reported in the browser's console.
 ///
 /// The bitmap of the canvas is as big as the canvas is on the screen, in device pixels, so it is
 /// sharp. When that size changes, the viewport becomes the whole canvas again.
@@ -170,6 +172,7 @@ impl WebGlOptions {
 ///         out vec4 pixel;
 ///         void main() { pixel = vec4(color, 1.0); }",
 ///     );
+///     let color = gl.uniform_location(&program, "color");
 ///
 ///     let vertices = gl.create_vertex_array();
 ///     gl.bind_vertex_array(Some(&vertices));
@@ -184,7 +187,7 @@ impl WebGlOptions {
 ///         gl.clear_color(0.0, 0.0, 0.0, 1.0);
 ///         gl.clear(ClearBuffers::COLOR);
 ///         gl.use_program(Some(&program));
-///         gl.uniform_3f("color", turn.sin().abs(), turn.cos().abs(), 0.5);
+///         gl.uniform_3f(&color, turn.sin().abs(), turn.cos().abs(), 0.5);
 ///         gl.bind_vertex_array(Some(&vertices));
 ///         gl.draw_arrays(Primitive::Triangles, 0, 3);
 ///         // The buffer lives as long as the frames do.
@@ -338,48 +341,72 @@ impl WebGl {
         });
     }
 
-    fn uniform(&self, code: u8, name: &str, values: &[f32]) {
-        self.op(code, |out| {
+    /// Where the uniform `name` of `program` is, to set it with, as `getUniformLocation` finds
+    /// it. Found once, beforehand, for the calls setting it to carry a number rather than the
+    /// name. A program without the uniform gets a location setting nothing.
+    ///
+    /// ```rust
+    /// use vertigo::dom_element;
+    /// use vertigo::webgl::WebGl;
+    ///
+    /// # let canvas = dom_element! { <canvas /> };
+    /// # let gl = WebGl::new(&canvas.get_ref());
+    /// # let program = gl.create_program("", "");
+    /// let transform = gl.uniform_location(&program, "transform");
+    /// // Then, for each frame:
+    /// gl.use_program(Some(&program));
+    /// gl.uniform_matrix_4f(&transform, &[1.0, 0.0, 0.0, 0.0, 0.0, 1.0, 0.0, 0.0, 0.0, 0.0, 1.0, 0.0, 0.0, 0.0, 0.0, 1.0]);
+    /// ```
+    pub fn uniform_location(&self, program: &Program, name: &str) -> UniformLocation {
+        let location =
+            UniformLocation(self.object(code::UNIFORM_LOCATION, code::DELETE_UNIFORM_LOCATION));
+        self.write(|out| {
+            put_u32(out, program.0.id);
             put_name(out, name);
-            for value in values {
-                out.extend_from_slice(&value.to_le_bytes());
-            }
+        });
+        location
+    }
+
+    fn uniform(&self, code: u8, location: &UniformLocation, values: &[f32]) {
+        self.op(code, |out| {
+            put_u32(out, location.0.id);
+            put_f32s(out, values);
         });
     }
 
-    /// Sets the uniform `name` of the program in use. A program without one is left as it is.
-    pub fn uniform_1f(&self, name: &str, x: f32) {
-        self.uniform(code::UNIFORM_1F, name, &[x]);
+    /// Sets a uniform of the program in use, which `location` has to be of.
+    pub fn uniform_1f(&self, location: &UniformLocation, x: f32) {
+        self.uniform(code::UNIFORM_1F, location, &[x]);
     }
 
-    pub fn uniform_2f(&self, name: &str, x: f32, y: f32) {
-        self.uniform(code::UNIFORM_2F, name, &[x, y]);
+    pub fn uniform_2f(&self, location: &UniformLocation, x: f32, y: f32) {
+        self.uniform(code::UNIFORM_2F, location, &[x, y]);
     }
 
-    pub fn uniform_3f(&self, name: &str, x: f32, y: f32, z: f32) {
-        self.uniform(code::UNIFORM_3F, name, &[x, y, z]);
+    pub fn uniform_3f(&self, location: &UniformLocation, x: f32, y: f32, z: f32) {
+        self.uniform(code::UNIFORM_3F, location, &[x, y, z]);
     }
 
-    pub fn uniform_4f(&self, name: &str, x: f32, y: f32, z: f32, w: f32) {
-        self.uniform(code::UNIFORM_4F, name, &[x, y, z, w]);
+    pub fn uniform_4f(&self, location: &UniformLocation, x: f32, y: f32, z: f32, w: f32) {
+        self.uniform(code::UNIFORM_4F, location, &[x, y, z, w]);
     }
 
     /// Sets an `int` or a `bool` uniform, or a sampler to the texture unit it reads.
-    pub fn uniform_1i(&self, name: &str, x: i32) {
+    pub fn uniform_1i(&self, location: &UniformLocation, x: i32) {
         self.op(code::UNIFORM_1I, |out| {
-            put_name(out, name);
+            put_u32(out, location.0.id);
             out.extend_from_slice(&x.to_le_bytes());
         });
     }
 
     /// Sets a `mat3` uniform, column after column.
-    pub fn uniform_matrix_3f(&self, name: &str, matrix: &[f32; 9]) {
-        self.uniform(code::UNIFORM_MATRIX_3F, name, matrix);
+    pub fn uniform_matrix_3f(&self, location: &UniformLocation, matrix: &[f32; 9]) {
+        self.uniform(code::UNIFORM_MATRIX_3F, location, matrix);
     }
 
     /// Sets a `mat4` uniform, column after column.
-    pub fn uniform_matrix_4f(&self, name: &str, matrix: &[f32; 16]) {
-        self.uniform(code::UNIFORM_MATRIX_4F, name, matrix);
+    pub fn uniform_matrix_4f(&self, location: &UniformLocation, matrix: &[f32; 16]) {
+        self.uniform(code::UNIFORM_MATRIX_4F, location, matrix);
     }
 
     pub fn create_texture(&self) -> Texture {
@@ -556,6 +583,10 @@ pub struct Program(Object);
 /// A 2D texture, see [`WebGl::create_texture`].
 #[derive(Debug)]
 pub struct Texture(Object);
+
+/// Where a uniform of a program is, see [`WebGl::uniform_location`].
+#[derive(Debug)]
+pub struct UniformLocation(Object);
 
 mod sealed {
     pub trait Sealed {}
@@ -802,8 +833,8 @@ mod tests {
         }
     }
 
-    /// One call of each, in the order of `code`. A test runs on a thread of its own, so the
-    /// objects' ids are 1 to 4.
+    /// One call of each. A test runs on a thread of its own, so the objects' ids are 1 to 5, in
+    /// the order they are made.
     fn fixture() -> Vec<u8> {
         let canvas = dom_element! { <canvas /> };
         let gl = WebGl::with_options(
@@ -828,14 +859,15 @@ mod tests {
         gl.vertex_attrib_pointer(1, 3, DataType::Float, true, 12, 4);
         let program = gl.create_program("vs", "fś");
         gl.use_program(Some(&program));
-        gl.uniform_1f("a", 0.5);
-        gl.uniform_2f("b", 1.0, 2.0);
-        gl.uniform_3f("c", 1.0, 2.0, 3.0);
-        gl.uniform_4f("d", 1.0, 2.0, 3.0, 4.0);
-        gl.uniform_1i("e", -1);
-        gl.uniform_matrix_3f("f", &[0.0, 1.0, 2.0, 3.0, 4.0, 5.0, 6.0, 7.0, 8.0]);
+        let location = gl.uniform_location(&program, "u");
+        gl.uniform_1f(&location, 0.5);
+        gl.uniform_2f(&location, 1.0, 2.0);
+        gl.uniform_3f(&location, 1.0, 2.0, 3.0);
+        gl.uniform_4f(&location, 1.0, 2.0, 3.0, 4.0);
+        gl.uniform_1i(&location, -1);
+        gl.uniform_matrix_3f(&location, &[0.0, 1.0, 2.0, 3.0, 4.0, 5.0, 6.0, 7.0, 8.0]);
         gl.uniform_matrix_4f(
-            "g",
+            &location,
             &[
                 0.0, 1.0, 2.0, 3.0, 4.0, 5.0, 6.0, 7.0, 8.0, 9.0, 10.0, 11.0, 12.0, 13.0, 14.0,
                 15.0,
@@ -861,7 +893,7 @@ mod tests {
         gl.draw_arrays(Primitive::Triangles, 0, 3);
         gl.draw_elements(Primitive::Lines, 6, IndexType::UnsignedShort, 2);
         gl.bind_buffer(BufferTarget::Array, None);
-        drop((buffer, vertices, program, texture));
+        drop((buffer, vertices, program, texture, location));
         gl.take()
     }
 
@@ -872,21 +904,22 @@ mod tests {
         0, 0, 0, 0, 0, 192, 63, 0, 0, 0, 192, 6, 147, 136, 0, 0, 2, 0, 0, 0, 4, 0, 0, 0, 7, 0, 8,
         0, 7, 2, 0, 0, 0, 9, 2, 0, 0, 0, 10, 1, 0, 0, 0, 11, 1, 0, 0, 0, 3, 6, 20, 0, 0, 1, 12, 0,
         0, 0, 4, 0, 0, 0, 12, 3, 0, 0, 0, 2, 0, 0, 0, 118, 115, 3, 0, 0, 0, 102, 197, 155, 14, 3,
-        0, 0, 0, 15, 1, 0, 97, 0, 0, 0, 63, 16, 1, 0, 98, 0, 0, 128, 63, 0, 0, 0, 64, 17, 1, 0, 99,
-        0, 0, 128, 63, 0, 0, 0, 64, 0, 0, 64, 64, 18, 1, 0, 100, 0, 0, 128, 63, 0, 0, 0, 64, 0, 0,
-        64, 64, 0, 0, 128, 64, 19, 1, 0, 101, 255, 255, 255, 255, 20, 1, 0, 102, 0, 0, 0, 0, 0, 0,
-        128, 63, 0, 0, 0, 64, 0, 0, 64, 64, 0, 0, 128, 64, 0, 0, 160, 64, 0, 0, 192, 64, 0, 0, 224,
-        64, 0, 0, 0, 65, 21, 1, 0, 103, 0, 0, 0, 0, 0, 0, 128, 63, 0, 0, 0, 64, 0, 0, 64, 64, 0, 0,
-        128, 64, 0, 0, 160, 64, 0, 0, 192, 64, 0, 0, 224, 64, 0, 0, 0, 65, 0, 0, 16, 65, 0, 0, 32,
-        65, 0, 0, 48, 65, 0, 0, 64, 65, 0, 0, 80, 65, 0, 0, 96, 65, 0, 0, 112, 65, 22, 4, 0, 0, 0,
-        24, 2, 0, 0, 0, 25, 4, 0, 0, 0, 26, 1, 0, 0, 0, 1, 0, 0, 0, 4, 0, 0, 0, 255, 0, 128, 255,
-        27, 1, 40, 0, 0, 0, 38, 0, 0, 27, 0, 40, 0, 0, 1, 38, 0, 0, 27, 2, 40, 0, 0, 1, 41, 0, 0,
-        27, 3, 40, 0, 0, 47, 129, 0, 0, 28, 29, 0, 0, 0, 0, 0, 0, 128, 62, 0, 0, 0, 63, 0, 0, 128,
-        63, 30, 0, 0, 128, 63, 31, 0, 65, 0, 0, 32, 113, 11, 0, 0, 33, 226, 11, 0, 0, 34, 0, 0, 0,
-        0, 255, 255, 255, 255, 128, 2, 0, 0, 224, 1, 0, 0, 35, 3, 2, 0, 0, 36, 2, 3, 0, 0, 3, 3, 0,
-        0, 37, 5, 4, 0, 0, 38, 0, 9, 0, 0, 39, 4, 0, 0, 0, 0, 0, 0, 0, 3, 0, 0, 0, 40, 1, 0, 0, 0,
-        6, 0, 0, 0, 3, 20, 0, 0, 2, 0, 0, 0, 4, 146, 136, 0, 0, 0, 0, 0, 0, 3, 1, 0, 0, 0, 8, 2, 0,
-        0, 0, 13, 3, 0, 0, 0, 23, 4, 0, 0, 0,
+        0, 0, 0, 41, 4, 0, 0, 0, 3, 0, 0, 0, 1, 0, 117, 15, 4, 0, 0, 0, 0, 0, 0, 63, 16, 4, 0, 0,
+        0, 0, 0, 128, 63, 0, 0, 0, 64, 17, 4, 0, 0, 0, 0, 0, 128, 63, 0, 0, 0, 64, 0, 0, 64, 64,
+        18, 4, 0, 0, 0, 0, 0, 128, 63, 0, 0, 0, 64, 0, 0, 64, 64, 0, 0, 128, 64, 19, 4, 0, 0, 0,
+        255, 255, 255, 255, 20, 4, 0, 0, 0, 0, 0, 0, 0, 0, 0, 128, 63, 0, 0, 0, 64, 0, 0, 64, 64,
+        0, 0, 128, 64, 0, 0, 160, 64, 0, 0, 192, 64, 0, 0, 224, 64, 0, 0, 0, 65, 21, 4, 0, 0, 0, 0,
+        0, 0, 0, 0, 0, 128, 63, 0, 0, 0, 64, 0, 0, 64, 64, 0, 0, 128, 64, 0, 0, 160, 64, 0, 0, 192,
+        64, 0, 0, 224, 64, 0, 0, 0, 65, 0, 0, 16, 65, 0, 0, 32, 65, 0, 0, 48, 65, 0, 0, 64, 65, 0,
+        0, 80, 65, 0, 0, 96, 65, 0, 0, 112, 65, 22, 5, 0, 0, 0, 24, 2, 0, 0, 0, 25, 5, 0, 0, 0, 26,
+        1, 0, 0, 0, 1, 0, 0, 0, 4, 0, 0, 0, 255, 0, 128, 255, 27, 1, 40, 0, 0, 0, 38, 0, 0, 27, 0,
+        40, 0, 0, 1, 38, 0, 0, 27, 2, 40, 0, 0, 1, 41, 0, 0, 27, 3, 40, 0, 0, 47, 129, 0, 0, 28,
+        29, 0, 0, 0, 0, 0, 0, 128, 62, 0, 0, 0, 63, 0, 0, 128, 63, 30, 0, 0, 128, 63, 31, 0, 65, 0,
+        0, 32, 113, 11, 0, 0, 33, 226, 11, 0, 0, 34, 0, 0, 0, 0, 255, 255, 255, 255, 128, 2, 0, 0,
+        224, 1, 0, 0, 35, 3, 2, 0, 0, 36, 2, 3, 0, 0, 3, 3, 0, 0, 37, 5, 4, 0, 0, 38, 0, 9, 0, 0,
+        39, 4, 0, 0, 0, 0, 0, 0, 0, 3, 0, 0, 0, 40, 1, 0, 0, 0, 6, 0, 0, 0, 3, 20, 0, 0, 2, 0, 0,
+        0, 4, 146, 136, 0, 0, 0, 0, 0, 0, 3, 1, 0, 0, 0, 8, 2, 0, 0, 0, 13, 3, 0, 0, 0, 23, 5, 0,
+        0, 0, 42, 4, 0, 0, 0,
     ];
 
     #[test]
