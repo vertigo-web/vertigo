@@ -11,6 +11,7 @@
 //! op       := code:u8 args               -- see `code`
 //! callback := u64                        -- what the browser tells the context through, see
 //!                                           `CanvasEvent`
+//! scale    := f32                        -- of the bitmap, see `WebGlOptions::bitmap_scale`
 //! id       := u32                        -- of a buffer, a vertex array, a program, a texture or
 //!                                           a uniform's location, 0 for none
 //! name     := length:u16 utf8*           -- of a uniform, to find its location
@@ -37,8 +38,8 @@ use crate::{
 
 /// Operation codes. Append only, as the browser reads them by number.
 mod code {
-    /// The context's attributes, see `WebGlOptions`, and its callback: always the first command
-    /// of a `WebGl`.
+    /// The context's attributes, see `WebGlOptions`, its callback and the scale of its bitmap:
+    /// always the first command of a `WebGl`.
     pub const CONTEXT: u8 = 1;
     pub const CREATE_BUFFER: u8 = 2;
     pub const DELETE_BUFFER: u8 = 3;
@@ -203,6 +204,7 @@ impl Context {
 
             let mut queue = vec![code::CONTEXT, options.flags()];
             queue.extend_from_slice(&callback.as_u64().to_le_bytes());
+            queue.extend_from_slice(&options.bitmap_scale.to_le_bytes());
 
             Self {
                 queue: ValueMut::new(queue),
@@ -255,8 +257,9 @@ thread_local! {
 }
 
 /// The attributes a canvas gets its WebGL 2 context with, as `getContext("webgl2", ...)` takes
-/// them. The first [`WebGl`] of a canvas sets them: the browser keeps the context it made.
-#[derive(Clone, Copy, Debug, PartialEq, Eq)]
+/// them, and the scale of its bitmap. The first [`WebGl`] of a canvas sets them: the browser keeps
+/// the context it made.
+#[derive(Clone, Copy, Debug, PartialEq)]
 pub struct WebGlOptions {
     /// Whether the canvas is see-through where the drawing is.
     pub alpha: bool,
@@ -268,6 +271,10 @@ pub struct WebGlOptions {
     /// Whether what was drawn stays after the browser shows it, until it is cleared, instead of
     /// being cleared then. Slower, but the pixels can be read back, f. ex. in a test.
     pub preserve_drawing_buffer: bool,
+    /// Pixels of the bitmap to a device pixel of the canvas, across and down: 1, so the picture
+    /// is sharp, or less, f. ex. 0.5 with a quarter of the pixels to draw, which a slow GPU fills
+    /// sooner, the browser stretching them over the canvas. Not above 0 nor finite counts as 1.
+    pub bitmap_scale: f32,
 }
 
 impl Default for WebGlOptions {
@@ -280,6 +287,7 @@ impl Default for WebGlOptions {
             stencil: false,
             premultiplied_alpha: true,
             preserve_drawing_buffer: false,
+            bitmap_scale: 1.0,
         }
     }
 }
@@ -314,7 +322,8 @@ impl WebGlOptions {
 /// program that doesn't link, is reported in the browser's console.
 ///
 /// The bitmap of the canvas is as big as the canvas is on the screen, in device pixels, so it is
-/// sharp. When that size changes, the viewport becomes the whole canvas again.
+/// sharp, unless [`WebGlOptions::bitmap_scale`] makes it smaller. When that size changes, the
+/// viewport becomes the whole canvas again.
 ///
 /// ```rust
 /// use vertigo::{DomNode, dom_element, get_driver};
@@ -386,8 +395,10 @@ impl WebGl {
     /// use vertigo::webgl::{WebGl, WebGlOptions};
     ///
     /// let canvas = dom_element! { <canvas /> };
+    /// // Half the pixels across and down, without smoothing edges: for a slow GPU.
     /// let gl = WebGl::with_options(&canvas.get_ref(), WebGlOptions {
-    ///     preserve_drawing_buffer: true,
+    ///     antialias: false,
+    ///     bitmap_scale: 0.5,
     ///     ..WebGlOptions::default()
     /// });
     /// ```
@@ -398,8 +409,8 @@ impl WebGl {
     }
 
     /// The size of the canvas's bitmap, in device pixels: as big as the canvas is on the screen,
-    /// so the picture is sharp. 0 x 0 until the browser has measured the canvas, soon after the
-    /// first calls, and during SSR.
+    /// so the picture is sharp, times [`WebGlOptions::bitmap_scale`]. 0 x 0 until the browser has
+    /// measured the canvas, soon after the first calls, and during SSR.
     pub fn size(&self) -> Size {
         self.context.size.get()
     }
@@ -1251,6 +1262,7 @@ mod tests {
             WebGlOptions {
                 stencil: true,
                 preserve_drawing_buffer: true,
+                bitmap_scale: 0.5,
                 ..WebGlOptions::default()
             },
         );
@@ -1321,29 +1333,29 @@ mod tests {
     /// The same bytes are played back in `driver_module/src_js/api/command/webgl.test.ts`:
     /// change the format and one of the two tests fails, whichever side was changed.
     const FIXTURE: &[u8] = &[
-        1, 63, 1, 0, 0, 0, 0, 0, 0, 0, 2, 1, 0, 0, 0, 4, 146, 136, 0, 0, 1, 0, 0, 0, 5, 146, 136,
-        0, 0, 228, 136, 0, 0, 8, 0, 0, 0, 0, 0, 192, 63, 0, 0, 0, 192, 6, 147, 136, 0, 0, 2, 0, 0,
-        0, 4, 0, 0, 0, 7, 0, 8, 0, 7, 2, 0, 0, 0, 9, 2, 0, 0, 0, 10, 1, 0, 0, 0, 11, 1, 0, 0, 0, 3,
-        6, 20, 0, 0, 1, 12, 0, 0, 0, 4, 0, 0, 0, 12, 3, 0, 0, 0, 2, 0, 0, 0, 118, 115, 3, 0, 0, 0,
-        102, 197, 155, 14, 3, 0, 0, 0, 41, 4, 0, 0, 0, 3, 0, 0, 0, 1, 0, 117, 15, 4, 0, 0, 0, 0, 0,
-        0, 63, 16, 4, 0, 0, 0, 0, 0, 128, 63, 0, 0, 0, 64, 17, 4, 0, 0, 0, 0, 0, 128, 63, 0, 0, 0,
-        64, 0, 0, 64, 64, 18, 4, 0, 0, 0, 0, 0, 128, 63, 0, 0, 0, 64, 0, 0, 64, 64, 0, 0, 128, 64,
-        19, 4, 0, 0, 0, 255, 255, 255, 255, 20, 4, 0, 0, 0, 0, 0, 0, 0, 0, 0, 128, 63, 0, 0, 0, 64,
-        0, 0, 64, 64, 0, 0, 128, 64, 0, 0, 160, 64, 0, 0, 192, 64, 0, 0, 224, 64, 0, 0, 0, 65, 21,
-        4, 0, 0, 0, 0, 0, 0, 0, 0, 0, 128, 63, 0, 0, 0, 64, 0, 0, 64, 64, 0, 0, 128, 64, 0, 0, 160,
-        64, 0, 0, 192, 64, 0, 0, 224, 64, 0, 0, 0, 65, 0, 0, 16, 65, 0, 0, 32, 65, 0, 0, 48, 65, 0,
-        0, 64, 65, 0, 0, 80, 65, 0, 0, 96, 65, 0, 0, 112, 65, 22, 5, 0, 0, 0, 24, 2, 0, 0, 0, 25,
-        5, 0, 0, 0, 26, 1, 0, 0, 0, 1, 0, 0, 0, 4, 0, 0, 0, 255, 0, 128, 255, 27, 1, 40, 0, 0, 0,
-        38, 0, 0, 27, 0, 40, 0, 0, 1, 38, 0, 0, 27, 2, 40, 0, 0, 1, 41, 0, 0, 27, 3, 40, 0, 0, 47,
-        129, 0, 0, 28, 29, 0, 0, 0, 0, 0, 0, 128, 62, 0, 0, 0, 63, 0, 0, 128, 63, 30, 0, 0, 128,
-        63, 31, 0, 65, 0, 0, 32, 113, 11, 0, 0, 33, 226, 11, 0, 0, 34, 0, 0, 0, 0, 255, 255, 255,
-        255, 128, 2, 0, 0, 224, 1, 0, 0, 35, 3, 2, 0, 0, 36, 2, 3, 0, 0, 3, 3, 0, 0, 37, 5, 4, 0,
-        0, 38, 0, 9, 0, 0, 39, 4, 0, 0, 0, 0, 0, 0, 0, 3, 0, 0, 0, 40, 1, 0, 0, 0, 6, 0, 0, 0, 3,
-        20, 0, 0, 2, 0, 0, 0, 43, 3, 0, 0, 0, 1, 0, 0, 0, 44, 4, 0, 0, 0, 0, 0, 0, 0, 3, 0, 0, 0,
-        10, 0, 0, 0, 45, 4, 0, 0, 0, 36, 0, 0, 0, 3, 20, 0, 0, 0, 0, 0, 0, 144, 1, 0, 0, 46, 5, 0,
-        0, 0, 1, 7, 0, 0, 0, 47, 197, 130, 46, 112, 110, 103, 47, 0, 48, 2, 3, 0, 0, 3, 3, 0, 0, 1,
-        0, 0, 0, 0, 0, 0, 0, 49, 65, 146, 0, 0, 1, 0, 0, 0, 4, 146, 136, 0, 0, 0, 0, 0, 0, 3, 1, 0,
-        0, 0, 8, 2, 0, 0, 0, 13, 3, 0, 0, 0, 23, 5, 0, 0, 0, 42, 4, 0, 0, 0,
+        1, 63, 1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 63, 2, 1, 0, 0, 0, 4, 146, 136, 0, 0, 1, 0, 0, 0,
+        5, 146, 136, 0, 0, 228, 136, 0, 0, 8, 0, 0, 0, 0, 0, 192, 63, 0, 0, 0, 192, 6, 147, 136, 0,
+        0, 2, 0, 0, 0, 4, 0, 0, 0, 7, 0, 8, 0, 7, 2, 0, 0, 0, 9, 2, 0, 0, 0, 10, 1, 0, 0, 0, 11, 1,
+        0, 0, 0, 3, 6, 20, 0, 0, 1, 12, 0, 0, 0, 4, 0, 0, 0, 12, 3, 0, 0, 0, 2, 0, 0, 0, 118, 115,
+        3, 0, 0, 0, 102, 197, 155, 14, 3, 0, 0, 0, 41, 4, 0, 0, 0, 3, 0, 0, 0, 1, 0, 117, 15, 4, 0,
+        0, 0, 0, 0, 0, 63, 16, 4, 0, 0, 0, 0, 0, 128, 63, 0, 0, 0, 64, 17, 4, 0, 0, 0, 0, 0, 128,
+        63, 0, 0, 0, 64, 0, 0, 64, 64, 18, 4, 0, 0, 0, 0, 0, 128, 63, 0, 0, 0, 64, 0, 0, 64, 64, 0,
+        0, 128, 64, 19, 4, 0, 0, 0, 255, 255, 255, 255, 20, 4, 0, 0, 0, 0, 0, 0, 0, 0, 0, 128, 63,
+        0, 0, 0, 64, 0, 0, 64, 64, 0, 0, 128, 64, 0, 0, 160, 64, 0, 0, 192, 64, 0, 0, 224, 64, 0,
+        0, 0, 65, 21, 4, 0, 0, 0, 0, 0, 0, 0, 0, 0, 128, 63, 0, 0, 0, 64, 0, 0, 64, 64, 0, 0, 128,
+        64, 0, 0, 160, 64, 0, 0, 192, 64, 0, 0, 224, 64, 0, 0, 0, 65, 0, 0, 16, 65, 0, 0, 32, 65,
+        0, 0, 48, 65, 0, 0, 64, 65, 0, 0, 80, 65, 0, 0, 96, 65, 0, 0, 112, 65, 22, 5, 0, 0, 0, 24,
+        2, 0, 0, 0, 25, 5, 0, 0, 0, 26, 1, 0, 0, 0, 1, 0, 0, 0, 4, 0, 0, 0, 255, 0, 128, 255, 27,
+        1, 40, 0, 0, 0, 38, 0, 0, 27, 0, 40, 0, 0, 1, 38, 0, 0, 27, 2, 40, 0, 0, 1, 41, 0, 0, 27,
+        3, 40, 0, 0, 47, 129, 0, 0, 28, 29, 0, 0, 0, 0, 0, 0, 128, 62, 0, 0, 0, 63, 0, 0, 128, 63,
+        30, 0, 0, 128, 63, 31, 0, 65, 0, 0, 32, 113, 11, 0, 0, 33, 226, 11, 0, 0, 34, 0, 0, 0, 0,
+        255, 255, 255, 255, 128, 2, 0, 0, 224, 1, 0, 0, 35, 3, 2, 0, 0, 36, 2, 3, 0, 0, 3, 3, 0, 0,
+        37, 5, 4, 0, 0, 38, 0, 9, 0, 0, 39, 4, 0, 0, 0, 0, 0, 0, 0, 3, 0, 0, 0, 40, 1, 0, 0, 0, 6,
+        0, 0, 0, 3, 20, 0, 0, 2, 0, 0, 0, 43, 3, 0, 0, 0, 1, 0, 0, 0, 44, 4, 0, 0, 0, 0, 0, 0, 0,
+        3, 0, 0, 0, 10, 0, 0, 0, 45, 4, 0, 0, 0, 36, 0, 0, 0, 3, 20, 0, 0, 0, 0, 0, 0, 144, 1, 0,
+        0, 46, 5, 0, 0, 0, 1, 7, 0, 0, 0, 47, 197, 130, 46, 112, 110, 103, 47, 0, 48, 2, 3, 0, 0,
+        3, 3, 0, 0, 1, 0, 0, 0, 0, 0, 0, 0, 49, 65, 146, 0, 0, 1, 0, 0, 0, 4, 146, 136, 0, 0, 0, 0,
+        0, 0, 3, 1, 0, 0, 0, 8, 2, 0, 0, 0, 13, 3, 0, 0, 0, 23, 5, 0, 0, 0, 42, 4, 0, 0, 0,
     ];
 
     #[test]
@@ -1385,6 +1397,7 @@ mod tests {
         let mut calls = vec![code::CONTEXT, WebGlOptions::default().flags()];
         // The context's callback, the first of the test's thread
         calls.extend(1_u64.to_le_bytes());
+        calls.extend(1_f32.to_le_bytes());
         calls.extend([code::CLEAR, 0, 0x40, 0, 0]);
         calls.extend([code::DRAW_ARRAYS, 0, 0, 0, 0, 0, 0, 0, 0, 1, 0, 0, 0]);
         assert_eq!(sent, vec![("canvas", vec![]), ("webgl", calls)]);

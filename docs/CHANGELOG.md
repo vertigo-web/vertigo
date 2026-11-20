@@ -23,7 +23,8 @@
   colors premultiplied by alpha, so mipmaps of see-through pictures don't darken their edges, an
   image from a URL as it was asked for. `depth_mask` and `blend_func_separate` draw see-through
   objects over the others. `WebGl::on_unavailable` tells a browser without WebGL 2, so the app
-  can draw another way. The browser's code for it is a chunk of its own, loaded
+  can draw another way. `WebGlOptions::bitmap_scale` draws on fewer pixels than the canvas has on
+  the screen, stretched over it, for a slow GPU. The browser's code for it is a chunk of its own, loaded
   when a page first uses WebGL. The demo draws a cube turning with it.
 
 ### Changed
