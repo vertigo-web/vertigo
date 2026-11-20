@@ -214,6 +214,7 @@ fn push_attribute(
         | "hook_key_up"
         | "hook_window_focus"
         | "hook_visibility"
+        | "hook_pointer_lock"
         | "hook_pointer_move"
         | "hook_pointer_up"
         | "hook_pointer_cancel"
@@ -445,6 +446,7 @@ mod tests {
             "hook_key_up",
             "hook_window_focus",
             "hook_visibility",
+            "hook_pointer_lock",
             "hook_pointer_move",
             "hook_pointer_up",
             "hook_pointer_cancel",

@@ -354,6 +354,21 @@ impl DomElement {
         self.on_state("hook_visibility", on_hook_visibility)
     }
 
+    /// The pointer locked to this element (`true`) or let go (`false`): by
+    /// [`DomElementRef::request_pointer_lock`], by [`Driver::exit_pointer_lock`], by the browser
+    /// on Esc, or locked to another element. A game opens its menu when it's let go, as the page
+    /// doesn't hear the Esc which let it go.
+    ///
+    /// [`DomElementRef::request_pointer_lock`]: crate::DomElementRef::request_pointer_lock
+    /// [`Driver::exit_pointer_lock`]: crate::Driver::exit_pointer_lock
+    pub fn hook_pointer_lock(self, on_hook_pointer_lock: impl Into<Callback1<bool, ()>>) -> Self {
+        self.hook_pointer_lock_rc(Rc::new(on_hook_pointer_lock.into()))
+    }
+
+    pub fn hook_pointer_lock_rc(self, on_hook_pointer_lock: Rc<Callback1<bool, ()>>) -> Self {
+        self.on_state("hook_pointerlock", on_hook_pointer_lock)
+    }
+
     /// The listener of `event_name` for a state of the page which is either on or off.
     fn on_state(self, event_name: &'static str, callback: Rc<Callback1<bool, ()>>) -> Self {
         let callback = self.install_callback1(callback);

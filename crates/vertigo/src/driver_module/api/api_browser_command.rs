@@ -276,6 +276,10 @@ impl CommandForBrowserApi {
         exec_command(CommandForBrowser::ImagePreload { url });
     }
 
+    pub fn pointer_lock(&self, dom_id: Option<u64>) {
+        exec_command(CommandForBrowser::PointerLock { dom_id });
+    }
+
     pub fn get_random(&self, min: u32, max: u32) -> u32 {
         let response = exec_command(CommandForBrowser::GetRandom { min, max });
 
@@ -311,6 +315,24 @@ mod tests {
             }
             .to_json(),
             JsJson::Object([preload].into())
+        );
+    }
+
+    /// `api.ts` reads it as `{ PointerLock: { dom_id } }`, `null` to let the pointer go.
+    #[test]
+    fn a_pointer_lock_is_the_command_the_driver_reads() {
+        let lock = |dom_id: JsJson| {
+            let dom_id = ("dom_id".to_string(), dom_id);
+            JsJson::Object([("PointerLock".to_string(), JsJson::Object([dom_id].into()))].into())
+        };
+
+        assert_eq!(
+            CommandForBrowser::PointerLock { dom_id: Some(7) }.to_json(),
+            lock(JsJson::Number(crate::JsJsonNumber(7.0)))
+        );
+        assert_eq!(
+            CommandForBrowser::PointerLock { dom_id: None }.to_json(),
+            lock(JsJson::Null)
         );
     }
 }
