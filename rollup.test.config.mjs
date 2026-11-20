@@ -107,6 +107,42 @@ export default [
         ],
     },
     {
+        input: 'crates/vertigo/src/driver_module/src_js/api/command/audio.test.ts',
+        output: [
+            {
+                sourcemap: true,
+                file: 'build/audio.test.js',
+                format: 'cjs',
+            }
+        ],
+        plugins: [
+            typescript({
+                sourceMap: true,
+                inlineSources: true,
+            }),
+            sourcemaps(),
+        ],
+    },
+    {
+        input: 'crates/vertigo/src/driver_module/src_js/api/command/audio_lazy.test.ts',
+        output: [
+            {
+                sourcemap: true,
+                file: 'build/audio_lazy.test.js',
+                format: 'cjs',
+                // The chunk it loads, in the same file
+                inlineDynamicImports: true,
+            }
+        ],
+        plugins: [
+            typescript({
+                sourceMap: true,
+                inlineSources: true,
+            }),
+            sourcemaps(),
+        ],
+    },
+    {
         input: 'crates/vertigo/src/driver_module/src_js/api/command/gpu_lazy.test.ts',
         output: [
             {

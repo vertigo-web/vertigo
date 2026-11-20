@@ -37,7 +37,7 @@ echo "OK: wasm_run.js and its chunks up to date"
 # the room: change the number in the same commit, so it is a decision on the record rather
 # than a drift. `tests/bench-report` reports raw and gzip sizes per benchmark run if you want
 # the fuller picture.
-BUDGET=43500
+BUDGET=44000
 SIZE=$(wc -c < crates/vertigo/src/driver_module/wasm_run.js)
 
 if [ "$SIZE" -gt "$BUDGET" ]; then

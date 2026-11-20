@@ -6,7 +6,7 @@ use crate::{
     dev::{
         CallbackId, SsrFetchCache, SsrFetchRequest,
         command::{
-            CommandForBrowser, ConsoleLogLevel, DriverDomCommand, LocationCallbackMode,
+            AudioOp, CommandForBrowser, ConsoleLogLevel, DriverDomCommand, LocationCallbackMode,
             LocationSetMode, LocationTarget, TimerKind, browser_response, decode_json,
         },
         command_wire::encode_dom_commands,
@@ -284,6 +284,10 @@ impl CommandForBrowserApi {
         exec_command(CommandForBrowser::Fullscreen { dom_id });
     }
 
+    pub fn audio(&self, op: AudioOp) {
+        exec_command(CommandForBrowser::Audio { op });
+    }
+
     pub fn get_random(&self, min: u32, max: u32) -> u32 {
         let response = exec_command(CommandForBrowser::GetRandom { min, max });
 
@@ -355,6 +359,37 @@ mod tests {
         assert_eq!(
             CommandForBrowser::Fullscreen { dom_id: None }.to_json(),
             fullscreen(JsJson::Null)
+        );
+    }
+
+    /// `api.ts` reads it as `{ Audio: { op: { PlaySound: { id, volume } } } }`, and `audio.ts`
+    /// the op.
+    #[test]
+    fn an_audio_call_is_the_command_the_driver_reads() {
+        use crate::{JsJsonNumber, dev::command::AudioOp};
+
+        let object = |entries: Vec<(&str, JsJson)>| {
+            JsJson::Object(
+                entries
+                    .into_iter()
+                    .map(|(key, value)| (key.to_string(), value))
+                    .collect(),
+            )
+        };
+        let play = object(vec![
+            ("id", JsJson::Number(JsJsonNumber(1.0))),
+            ("volume", JsJson::Number(JsJsonNumber(0.5))),
+        ]);
+
+        assert_eq!(
+            CommandForBrowser::Audio {
+                op: AudioOp::PlaySound { id: 1, volume: 0.5 }
+            }
+            .to_json(),
+            object(vec![(
+                "Audio",
+                object(vec![("op", object(vec![("PlaySound", play)]))])
+            )])
         );
     }
 }

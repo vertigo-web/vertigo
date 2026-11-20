@@ -33,6 +33,7 @@
 #![deny(rust_2018_idioms)]
 #![cfg_attr(test, allow(clippy::panic_in_result_fn))]
 
+pub mod audio;
 mod auto_map;
 mod canvas;
 mod css;
