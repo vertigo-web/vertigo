@@ -477,6 +477,52 @@ console.log("\n--- Test: the keys pressed and let go, on the element and on the 
     delete (globalThis as any).document;
 }
 
+console.log("\n--- Test: the window's focus and the page's visibility ---");
+{
+    const win = new MockNode();
+    const doc = Object.assign(new MockNode(), { visibilityState: 'visible' });
+    (globalThis as any).window = win;
+    (globalThis as any).document = doc;
+    const element = new MockElement();
+    const nodes = { getNode: () => element } as unknown as MapNodes;
+    const sent: unknown[] = [];
+    const wasm = { wasmCommand: (command: any) => { sent.push(command.CallbackCall.value); return null; } };
+    const manager = new CallbackManager(() => wasm as any);
+
+    manager.add(nodes, 1, 'hook_window_focus', 60);
+    assert(
+        JSON.stringify(win.added) === JSON.stringify([['focus', false], ['blur', false]]),
+        "the focus listens to the window's focus and blur",
+    );
+    const ofWindow = (type: string, target: unknown) => ({ type, target }) as unknown as Event;
+    win.listeners[1]?.(ofWindow('blur', win));
+    win.listeners[0]?.(ofWindow('focus', element));
+    win.listeners[0]?.(ofWindow('focus', win));
+    assert(
+        JSON.stringify(sent) === JSON.stringify([false, true]),
+        `wasm is told the window lost the focus and got it, not of an element's focus: ${JSON.stringify(sent)}`,
+    );
+    manager.remove(nodes, 1, 'hook_window_focus', 60);
+    assert(JSON.stringify(win.removed) === JSON.stringify(['focus', 'blur']), "and both come off the window");
+
+    sent.length = 0;
+    manager.add(nodes, 1, 'hook_visibility', 61);
+    assert(
+        JSON.stringify(doc.added) === JSON.stringify([['visibilitychange', false]]),
+        "the visibility listens on the document",
+    );
+    doc.visibilityState = 'hidden';
+    doc.listeners[0]?.({} as Event);
+    doc.visibilityState = 'visible';
+    doc.listeners[0]?.({} as Event);
+    assert(JSON.stringify(sent) === JSON.stringify([false, true]), "wasm is told the page hid and showed again");
+    manager.remove(nodes, 1, 'hook_visibility', 61);
+    assert(JSON.stringify(doc.removed) === JSON.stringify(['visibilitychange']), "and it comes off the document");
+
+    delete (globalThis as any).window;
+    delete (globalThis as any).document;
+}
+
 /// An element whose content is scrolled 120.5 px down, on a zoomed page: 900 px tall, of which
 /// 300 px show.
 class MockScrollEvent extends MockEvent {

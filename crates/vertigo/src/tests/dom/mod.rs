@@ -9,6 +9,7 @@ mod html_attrs;
 mod keyboard_event;
 mod list_spread;
 mod media_event;
+mod page_state;
 mod params;
 mod pointer_event;
 mod resize_event;

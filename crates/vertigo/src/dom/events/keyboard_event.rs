@@ -3,7 +3,8 @@
 ///
 /// A key held down repeats its press, which [`repeat`](Self::repeat) tells from the first one,
 /// and comes up once. A game which acts once a press, and goes on moving while a key is held,
-/// keeps the keys held:
+/// keeps the keys held, and lets them all go when the window loses the focus, as their key-ups
+/// then go elsewhere:
 ///
 /// ```rust
 /// use std::collections::BTreeSet;
@@ -27,9 +28,14 @@
 ///     });
 ///     true
 /// });
+/// let focus = bind!(held, |focused: bool| {
+///     if !focused {
+///         held.set(BTreeSet::new());
+///     }
+/// });
 ///
 /// dom! {
-///     <div hook_key_down={down} hook_key_up={up}>
+///     <div hook_key_down={down} hook_key_up={up} hook_window_focus={focus}>
 ///         "Moved " {moves} " times"
 ///     </div>
 /// };
