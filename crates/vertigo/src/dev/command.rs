@@ -118,6 +118,13 @@ pub enum CommandForBrowser {
         dom_id: Option<u64>,
     },
 
+    /// Show the element `dom_id` on the whole screen, see
+    /// [`crate::DomElementRef::request_fullscreen`], or leave the whole screen with `None`, see
+    /// [`crate::Driver::exit_fullscreen`].
+    Fullscreen {
+        dom_id: Option<u64>,
+    },
+
     /// Execute JavaScript API calls (for js! macro)
     JsApiCall {
         commands: Vec<JsApiCommand>,
