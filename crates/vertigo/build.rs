@@ -1,7 +1,9 @@
+use std::collections::HashSet;
 use std::env;
 use std::error::Error;
 use std::ffi::OsStr;
 use std::fs;
+use std::io;
 use std::path::{Path, PathBuf};
 
 fn main() -> Result<(), Box<dyn Error>> {
@@ -32,6 +34,8 @@ fn main() -> Result<(), Box<dyn Error>> {
         &dir,
         "wasm_run.js.map",
     )?;
+
+    bundle_chunks(Path::new("src/driver_module/chunks"), &dir.join("chunks"))?;
 
     Ok(())
 }
@@ -65,6 +69,38 @@ fn bundle_file(
     fs::write(&out_path, content.as_bytes())?;
 
     println!("Bundled {}", out_path.to_string_lossy());
+
+    Ok(())
+}
+
+/// Copies the chunks `wasm_run.js` imports when it needs them (see `rollup.config.mjs`), and
+/// removes those of another vertigo. File by file, as other build-script units sharing this
+/// target dir copy the same files at the same time.
+fn bundle_chunks(in_dir: &Path, out_dir: &Path) -> Result<(), Box<dyn Error>> {
+    // A directory is watched with all it holds.
+    println!("cargo:rerun-if-changed={}", in_dir.display());
+
+    fs::create_dir_all(out_dir)?;
+
+    let mut names = HashSet::new();
+
+    for entry in fs::read_dir(in_dir)? {
+        let entry = entry?;
+        let out_path = out_dir.join(entry.file_name());
+        fs::copy(entry.path(), &out_path)?;
+        names.insert(entry.file_name());
+        println!("Bundled {}", out_path.to_string_lossy());
+    }
+
+    for entry in fs::read_dir(out_dir)? {
+        let entry = entry?;
+        if !names.contains(&entry.file_name()) {
+            match fs::remove_file(entry.path()) {
+                Err(err) if err.kind() != io::ErrorKind::NotFound => return Err(err.into()),
+                _ => {}
+            }
+        }
+    }
 
     Ok(())
 }
