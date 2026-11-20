@@ -32,6 +32,7 @@ pub const TABS: &[&str] = &[
     "Styling",
     "Sudoku",
     "Input",
+    "Game Input",
     "Github Explorer",
     "Game Of Life",
     "Chat",
@@ -1264,6 +1265,102 @@ pub async fn fetch(ctx: &Ctx) -> Result<()> {
 
     click_by_text(ctx, "div", "go to post list").await?;
     ctx.wait_for_text("post = stub post 1").await
+}
+
+/// What a game reads of the keyboard and the mouse: the keys held, a press repeated, the keys let
+/// go when the window loses the focus, the page hidden, the pointer moved and locked, and a box on
+/// the whole screen. WebDriver doesn't repeat a key, so its repeat, the window's focus and the
+/// page's visibility are sent as the browser would send them.
+pub async fn game_input(ctx: &Ctx) -> Result<()> {
+    open(ctx, "Game Input", "Press keys anywhere").await?;
+    ctx.wait_for_text("Keys held: none").await?;
+
+    ctx.driver
+        .action_chain()
+        .key_down('w')
+        .perform()
+        .await
+        .context("holding W failed")?;
+    ctx.wait_for_text("Keys held: KeyW").await?;
+    ctx.wait_for_text("Presses: 1, repeated: 0").await?;
+    ctx.js("document.dispatchEvent(new KeyboardEvent('keydown', \
+            { key: 'w', code: 'KeyW', repeat: true, bubbles: true }));")
+        .await?;
+    ctx.wait_for_text("Presses: 1, repeated: 1").await?;
+
+    // W comes up while the window has no focus, elsewhere
+    ctx.js("window.dispatchEvent(new Event('blur'));").await?;
+    ctx.wait_for_text("Window focused: false").await?;
+    ctx.wait_for_text("Keys held: none").await?;
+    ctx.driver
+        .action_chain()
+        .key_up('w')
+        .perform()
+        .await
+        .context("letting W go failed")?;
+    ctx.js("window.dispatchEvent(new Event('focus'));").await?;
+    ctx.wait_for_text("Window focused: true").await?;
+
+    ctx.js(
+        "Object.defineProperty(document, 'visibilityState', { value: 'hidden', configurable: true });\
+         document.dispatchEvent(new Event('visibilitychange'));",
+    )
+    .await?;
+    ctx.wait_for_text("Page visible: false").await?;
+    ctx.js("delete document.visibilityState;\
+         document.dispatchEvent(new Event('visibilitychange'));")
+        .await?;
+    ctx.wait_for_text("Page visible: true").await?;
+
+    // The mouse into the box, which tells the jump from where it was, then right and down
+    let area = find_by_text(ctx, "div", "Click to look around, L or Esc to stop").await?;
+    ctx.driver
+        .action_chain()
+        .move_to_element_with_offset(&area, -100, -40)
+        .perform()
+        .await
+        .context("moving the mouse into the box failed")?;
+    let into = moved(ctx).await?;
+    ctx.driver
+        .action_chain()
+        .move_by_offset(60, 20)
+        .move_by_offset(60, 20)
+        .perform()
+        .await
+        .context("moving the mouse over the box failed")?;
+    ctx.wait_for("the moves added up", async || {
+        let (x, y) = moved(ctx).await?;
+        Ok((x - into.0 == 120.0 && y - into.1 == 40.0).then_some(()))
+    })
+    .await?;
+
+    area.click().await.context("clicking the box failed")?;
+    ctx.wait_for_text("Pointer locked: true").await?;
+    ctx.driver
+        .action_chain()
+        .send_keys("l")
+        .perform()
+        .await
+        .context("pressing L failed")?;
+    ctx.wait_for_text("Pointer locked: false").await?;
+
+    click_by_text(ctx, "button", "Whole screen").await?;
+    ctx.wait_for_text("Whole screen: true").await?;
+    click_by_text(ctx, "button", "Whole screen").await?;
+    ctx.wait_for_text("Whole screen: false").await
+}
+
+/// How far the mouse moved over the box of the Game Input tab, as it says.
+async fn moved(ctx: &Ctx) -> Result<(f64, f64)> {
+    let text = ctx
+        .js("return [...document.querySelectorAll('div')]\
+            .map((div) => div.textContent).find((text) => text.startsWith('Moved: '));")
+        .await?;
+    text.as_str()
+        .and_then(|text| text.strip_prefix("Moved: "))
+        .and_then(|moved| moved.split_once(", "))
+        .and_then(|(x, y)| Some((x.parse().ok()?, y.parse().ok()?)))
+        .with_context(|| format!("no moves on the page: {text}"))
 }
 
 /// Left and right step through the menu.

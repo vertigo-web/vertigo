@@ -4,6 +4,7 @@ mod counters;
 mod driver;
 mod dropfiles;
 mod fetch;
+mod game_input;
 mod game_of_life;
 mod github_explorer;
 mod home;
