@@ -1866,6 +1866,37 @@ pub async fn webgl(ctx: &Ctx) -> Result<()> {
             .and_then(|count| count.parse::<u32>().ok());
         Ok(count.filter(|count| *count > 0).map(|_| ()))
     })
+    .await?;
+
+    // Narrower: a bitmap of the new size, the cube still in the middle of it.
+    ctx.js("document.querySelector('canvas').style.width = '240px';")
+        .await?;
+    ctx.wait_for("a sharp bitmap of the canvas's new size", async || {
+        let width = ctx
+            .js("const canvas = document.querySelector('canvas');\
+                 return canvas.clientWidth < 240 \
+                    && canvas.width === Math.round(canvas.clientWidth * (window.devicePixelRatio || 1));")
+            .await?;
+        Ok((width.as_bool() == Some(true) && is_face(&middle().await?)).then_some(()))
+    })
+    .await?;
+
+    // Lost, as when the GPU resets: the picture goes, and comes back with the context, the cube's
+    // objects made again.
+    ctx.js(
+        "const gl = document.querySelector('canvas').getContext('webgl2');\
+            window.__lose = gl.getExtension('WEBGL_lose_context');\
+            window.__lose.loseContext();",
+    )
+    .await?;
+    ctx.wait_for("the picture to go with the context", async || {
+        Ok((!is_face(&middle().await?)).then_some(()))
+    })
+    .await?;
+    ctx.js("window.__lose.restoreContext();").await?;
+    ctx.wait_for("the cube again once the context is back", async || {
+        Ok(is_face(&middle().await?).then_some(()))
+    })
     .await
 }
 

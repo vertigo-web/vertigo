@@ -8,7 +8,12 @@
 //
 // The bitmap of a canvas is kept as big as the canvas is on the screen, in device pixels, as
 // `canvas.ts` keeps it, and it is resized before the calls that come next. Resizing a canvas
-// clears it and doesn't change the viewport, so the viewport becomes the whole canvas then.
+// clears it and doesn't change the viewport, so the viewport becomes the whole canvas then. When
+// the canvas changes its size, wasm is told the size before anything is resized, so its calls
+// drawing again resize the bitmap and draw in one go, and the canvas never shows it cleared.
+//
+// A context lost (the GPU reset, or given to another tab) is asked back. When it comes back,
+// every object is gone: the ids are forgotten, and wasm is told, to make them again.
 
 const decoder = new TextDecoder("utf-8");
 
@@ -198,8 +203,8 @@ export const play = (gl: Gl, objects: Objects, bytes: Uint8Array): void => {
 
         switch (op) {
             case Op.Context:
-                // Taken by `WebGls.run` when it made the context.
-                u8();
+                // Taken by `WebGls.run` when it made the context: the flags and the callback.
+                at += 9;
                 break;
             case Op.CreateBuffer:
                 objects.buffers.set(u32(), gl.createBuffer());
@@ -373,16 +378,32 @@ export const play = (gl: Gl, objects: Objects, bytes: Uint8Array): void => {
 
 type Size = { width: number, height: number };
 
-// A canvas's context with its objects. Without WebGL 2 in the browser, none.
-type Context = { gl: WebGL2RenderingContext, objects: Objects } | null;
+// Tells wasm of a canvas, through the callback of its context: `[0, width, height]` when it
+// changes its size, `[1]` when its context is given back. See `CanvasEvent` in webgl.rs.
+export type Tell = (callback: number, event: Array<number>) => void;
+
+// A canvas's context, with its objects and what wasm was told of it.
+class Context {
+    public objects: Objects = new Objects();
+    public told: Size | null = null;
+
+    constructor(
+        public readonly gl: WebGL2RenderingContext,
+        public readonly callback: number,
+        public readonly listeners: Array<[string, (event: Event) => void]>,
+    ) {}
+}
 
 export class WebGls {
-    private readonly contexts: WeakMap<HTMLCanvasElement, Context> = new WeakMap();
+    // `null` for a canvas without WebGL 2 in the browser.
+    private readonly contexts: WeakMap<HTMLCanvasElement, Context | null> = new WeakMap();
     // The size in device pixels each canvas was seen at last, see `fit`.
     private readonly sizes: WeakMap<HTMLCanvasElement, Size> = new WeakMap();
     // Canvases as big as their bitmaps, which CSS gives no size, see `fit`.
     private readonly unscaled: WeakSet<HTMLCanvasElement> = new WeakSet();
     private observer: ResizeObserver | null = null;
+
+    public constructor(private readonly tell: Tell) {}
 
     // `bytes` is good only for the call it came in (see `DriverDom.update`): it is played now.
     public run(node: Element, bytes: Uint8Array) {
@@ -393,13 +414,7 @@ export class WebGls {
         let context = this.contexts.get(node);
 
         if (context === undefined) {
-            // The first calls of a context begin with its attributes.
-            const flags = bytes[0] === Op.Context ? bytes[1] ?? 0 : 0;
-            const gl = node.getContext('webgl2', attributes(flags));
-            if (gl === null) {
-                console.error('webgl: the browser has no WebGL 2, or the canvas has another context');
-            }
-            context = gl === null ? null : { gl, objects: new Objects() };
+            context = this.make(node, bytes);
             this.contexts.set(node, context);
             this.observe(node);
         }
@@ -412,10 +427,54 @@ export class WebGls {
 
     public forget(node: Element | Comment | Text) {
         if (node instanceof HTMLCanvasElement && this.contexts.has(node)) {
+            for (const [type, listener] of this.contexts.get(node)?.listeners ?? []) {
+                node.removeEventListener(type, listener);
+            }
             this.observer?.unobserve(node);
             this.contexts.delete(node);
             this.sizes.delete(node);
             this.unscaled.delete(node);
+        }
+    }
+
+    // The context, from the first calls of it: they begin with its attributes and its callback.
+    private make(canvas: HTMLCanvasElement, bytes: Uint8Array): Context | null {
+        const first = bytes[0] === Op.Context && bytes.length >= 10;
+        const data = new DataView(bytes.buffer, bytes.byteOffset, bytes.byteLength);
+        const flags = first ? data.getUint8(1) : 0;
+        const callback = first ? data.getUint32(2, true) + data.getUint32(6, true) * 2 ** 32 : 0;
+
+        const gl = canvas.getContext('webgl2', attributes(flags));
+        if (gl === null) {
+            console.error('webgl: the browser has no WebGL 2, or the canvas has another context');
+            return null;
+        }
+
+        const lost = (event: Event) => {
+            // Asks for it back.
+            event.preventDefault();
+        };
+        const restored = () => {
+            const context = this.contexts.get(canvas);
+            if (context) {
+                context.objects = new Objects();
+                this.told(context, [1]);
+            }
+        };
+        canvas.addEventListener('webglcontextlost', lost);
+        canvas.addEventListener('webglcontextrestored', restored);
+
+        return new Context(gl, callback, [['webglcontextlost', lost], ['webglcontextrestored', restored]]);
+    }
+
+    private told(context: Context, event: Array<number>) {
+        if (context.callback === 0) {
+            return;
+        }
+        try {
+            this.tell(context.callback, event);
+        } catch (error) {
+            console.error(error);
         }
     }
 
@@ -428,11 +487,7 @@ export class WebGls {
             this.observer = new ResizeObserver((entries) => {
                 for (const entry of entries) {
                     if (entry.target instanceof HTMLCanvasElement) {
-                        const ratio = window.devicePixelRatio || 1;
-                        this.sizes.set(entry.target, {
-                            width: Math.round(entry.contentRect.width * ratio),
-                            height: Math.round(entry.contentRect.height * ratio),
-                        });
+                        this.resized(entry.target, entry.contentRect);
                     }
                 }
             });
@@ -442,6 +497,29 @@ export class WebGls {
             this.observer.observe(canvas, { box: 'device-pixel-content-box' });
         } catch {
             this.observer.observe(canvas);
+        }
+    }
+
+    // The canvas's new size, kept for the calls that come next to resize the bitmap to, and told:
+    // calls drawing again come at once then. A canvas as big as its bitmap keeps its size.
+    private resized(canvas: HTMLCanvasElement, box: { width: number, height: number }) {
+        const ratio = window.devicePixelRatio || 1;
+        const size = {
+            width: Math.round(box.width * ratio),
+            height: Math.round(box.height * ratio),
+        };
+        this.sizes.set(canvas, size);
+
+        const context = this.contexts.get(canvas);
+        if (!context) {
+            return;
+        }
+
+        const told = this.unscaled.has(canvas) ? { width: canvas.width, height: canvas.height } : size;
+        if (told.width > 0 && told.height > 0
+            && (context.told?.width !== told.width || context.told.height !== told.height)) {
+            context.told = told;
+            this.told(context, [0, told.width, told.height]);
         }
     }
 

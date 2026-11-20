@@ -9,6 +9,8 @@
 //! ```text
 //! commands := op*
 //! op       := code:u8 args               -- see `code`
+//! callback := u64                        -- what the browser tells the context through, see
+//!                                           `CanvasEvent`
 //! id       := u32                        -- of a buffer, a vertex array, a program, a texture or
 //!                                           a uniform's location, 0 for none
 //! name     := length:u16 utf8*           -- of a uniform, to find its location
@@ -25,11 +27,17 @@ use std::{
     rc::{Rc, Weak},
 };
 
-use crate::{DomElementRef, driver_module::get_driver_dom, struct_mut::ValueMut};
+use crate::{
+    DomElementRef, DropResource, JsJson,
+    dev::JsJsonListDecoder,
+    driver_module::{api::api_callbacks, event_emitter::EventEmitter, get_driver_dom},
+    struct_mut::ValueMut,
+};
 
 /// Operation codes. Append only, as the browser reads them by number.
 mod code {
-    /// The context's attributes, see `WebGlOptions`: always the first command of a `WebGl`.
+    /// The context's attributes, see `WebGlOptions`, and its callback: always the first command
+    /// of a `WebGl`.
     pub const CONTEXT: u8 = 1;
     pub const CREATE_BUFFER: u8 = 2;
     pub const DELETE_BUFFER: u8 = 3;
@@ -80,9 +88,108 @@ const TEXTURE_MIN_FILTER: u32 = 0x2801;
 const TEXTURE_WRAP_S: u32 = 0x2802;
 const TEXTURE_WRAP_T: u32 = 0x2803;
 
-/// The commands of a context not yet sent, shared by it and its objects. The browser gets them at
-/// the end of the transaction, see `DriverDom::flush_dom_changes`.
-pub(crate) type Queue = ValueMut<Vec<u8>>;
+/// The size of a canvas's bitmap, in device pixels, see [`WebGl::size`].
+#[derive(Clone, Copy, Debug, Default, PartialEq, Eq)]
+pub struct Size {
+    pub width: u32,
+    pub height: u32,
+}
+
+impl Size {
+    /// Width by height, for a projection: 1 for a canvas without a size yet.
+    ///
+    /// ```rust
+    /// use vertigo::webgl::Size;
+    ///
+    /// assert_eq!(Size { width: 640, height: 480 }.aspect(), 640.0 / 480.0);
+    /// assert_eq!(Size::default().aspect(), 1.0);
+    /// ```
+    pub fn aspect(&self) -> f32 {
+        if self.width == 0 || self.height == 0 {
+            1.0
+        } else {
+            self.width as f32 / self.height as f32
+        }
+    }
+}
+
+/// What the browser tells of a context, as `webgl.ts` sends it: `[0, width, height]` when the
+/// canvas changes its size, `[1]` when the context is given back after it was lost.
+enum CanvasEvent {
+    Resized(Size),
+    Restored,
+}
+
+impl CanvasEvent {
+    fn from_driver(data: JsJson) -> Result<Self, String> {
+        data.map_list(|mut params: JsJsonListDecoder| {
+            let event = match params.get_u32("kind")? {
+                0 => Self::Resized(Size {
+                    width: params.get_u32("width")?,
+                    height: params.get_u32("height")?,
+                }),
+                1 => Self::Restored,
+                other => return Err(format!("unknown canvas event {other}")),
+            };
+            params.expect_no_more()?;
+            Ok(event)
+        })
+    }
+}
+
+/// A context: its calls not yet sent, shared by it and its objects, which the browser gets at the
+/// end of the transaction (see `DriverDom::flush_dom_changes`), and what the browser told of it.
+pub(crate) struct Context {
+    queue: ValueMut<Vec<u8>>,
+    size: Cell<Size>,
+    resized: EventEmitter<Size>,
+    restored: EventEmitter<()>,
+    /// The callback the browser tells through, for as long as the context is.
+    _callback: DropResource,
+}
+
+impl Context {
+    fn new(options: WebGlOptions) -> Rc<Self> {
+        Rc::new_cyclic(|context: &Weak<Self>| {
+            let (callback, drop) = api_callbacks().register({
+                let context = context.clone();
+                move |data| {
+                    if let Some(context) = context.upgrade() {
+                        context.told(data);
+                    }
+                    JsJson::Null
+                }
+            });
+
+            let mut queue = vec![code::CONTEXT, options.flags()];
+            queue.extend_from_slice(&callback.as_u64().to_le_bytes());
+
+            Self {
+                queue: ValueMut::new(queue),
+                size: Cell::new(Size::default()),
+                resized: EventEmitter::default(),
+                restored: EventEmitter::default(),
+                _callback: drop,
+            }
+        })
+    }
+
+    fn told(&self, data: JsJson) {
+        match CanvasEvent::from_driver(data) {
+            Ok(CanvasEvent::Resized(size)) => {
+                self.size.set(size);
+                self.resized.trigger(&size);
+            }
+            Ok(CanvasEvent::Restored) => self.restored.trigger(&()),
+            Err(error) => log::error!("webgl: {error}"),
+        }
+    }
+
+    /// The calls not sent yet, taken.
+    pub(crate) fn take_calls(&self) -> Vec<u8> {
+        self.queue.change(std::mem::take)
+    }
+}
 
 thread_local! {
     /// Ids of objects, unique among all contexts, so two `WebGl`s of one canvas don't mix them up.
@@ -199,7 +306,7 @@ impl WebGlOptions {
 /// ```
 #[derive(Clone)]
 pub struct WebGl {
-    queue: Rc<Queue>,
+    context: Rc<Context>,
 }
 
 impl fmt::Debug for WebGl {
@@ -227,13 +334,56 @@ impl WebGl {
     /// });
     /// ```
     pub fn with_options(canvas: &DomElementRef, options: WebGlOptions) -> Self {
-        let queue = Rc::new(ValueMut::new(vec![code::CONTEXT, options.flags()]));
-        get_driver_dom().webgl_queue(canvas.id(), Rc::downgrade(&queue));
-        Self { queue }
+        let context = Context::new(options);
+        get_driver_dom().webgl_context(canvas.id(), Rc::downgrade(&context));
+        Self { context }
+    }
+
+    /// The size of the canvas's bitmap, in device pixels: as big as the canvas is on the screen,
+    /// so the picture is sharp. 0 x 0 until the browser has measured the canvas, soon after the
+    /// first calls, and during SSR.
+    pub fn size(&self) -> Size {
+        self.context.size.get()
+    }
+
+    /// `callback` with the canvas's new size whenever it changes, first once the browser has
+    /// measured the canvas. The bitmap gets the size, and the viewport all of it, with the calls
+    /// that come next: those `callback` makes, if it draws, so the canvas never shows the
+    /// picture cleared by the resize, nor stretched. A scene drawn once is drawn again here, and
+    /// one drawn every frame needs nothing, but its projection can take [`Size::aspect`].
+    ///
+    /// ```rust
+    /// use vertigo::{dom_element, get_driver};
+    /// use vertigo::webgl::{ClearBuffers, WebGl};
+    ///
+    /// let canvas = dom_element! { <canvas style="width: 100%; height: 50vh" /> };
+    /// let gl = WebGl::new(&canvas.get_ref());
+    ///
+    /// // A picture that doesn't move: drawn now and after each resize.
+    /// let draw = {
+    ///     let gl = gl.clone();
+    ///     move || {
+    ///         gl.clear_color(0.1, 0.1, 0.4, 1.0);
+    ///         gl.clear(ClearBuffers::COLOR);
+    ///     }
+    /// };
+    /// draw();
+    /// canvas.append_drop_resource(gl.on_resize(move |_size| draw()));
+    /// ```
+    pub fn on_resize(&self, callback: impl Fn(Size) + 'static) -> DropResource {
+        self.context.resized.add(callback)
+    }
+
+    /// `callback` when the browser gives the context back after it lost it, f. ex. when the
+    /// graphics driver restarted or the browser freed the GPU for another tab. Every object made
+    /// before is gone then, and the state of drawing is as at first: `callback` makes the
+    /// objects again and draws. Calls while the context is lost do nothing.
+    pub fn on_restore(&self, callback: impl Fn() + 'static) -> DropResource {
+        self.context.restored.add(move |()| callback())
     }
 
     fn write(&self, write: impl FnOnce(&mut Vec<u8>)) {
-        self.queue.change(write);
+        self.context.queue.change(write);
     }
 
     fn op(&self, code: u8, write: impl FnOnce(&mut Vec<u8>)) {
@@ -253,7 +403,7 @@ impl WebGl {
         Object {
             id,
             delete,
-            queue: Rc::downgrade(&self.queue),
+            context: Rc::downgrade(&self.context),
         }
     }
 
@@ -544,13 +694,13 @@ impl WebGl {
 struct Object {
     id: u32,
     delete: u8,
-    queue: Weak<Queue>,
+    context: Weak<Context>,
 }
 
 impl Drop for Object {
     fn drop(&mut self) {
-        if let Some(queue) = self.queue.upgrade() {
-            queue.change(|out| {
+        if let Some(context) = self.context.upgrade() {
+            context.queue.change(|out| {
                 out.push(self.delete);
                 put_u32(out, self.id);
             });
@@ -817,9 +967,13 @@ fn put_source(out: &mut Vec<u8>, source: &str) {
 
 #[cfg(test)]
 mod tests {
+    use std::cell::RefCell;
+
     use super::*;
     use crate::{
+        JsJsonNumber,
         dev::{
+            CallbackId,
             command::DriverDomCommand,
             inspect::{log_start, log_take},
         },
@@ -829,7 +983,7 @@ mod tests {
     impl WebGl {
         /// The calls not sent yet, taken.
         fn take(&self) -> Vec<u8> {
-            self.queue.change(std::mem::take)
+            self.context.take_calls()
         }
     }
 
@@ -900,26 +1054,26 @@ mod tests {
     /// The same bytes are played back in `driver_module/src_js/api/command/webgl.test.ts`:
     /// change the format and one of the two tests fails, whichever side was changed.
     const FIXTURE: &[u8] = &[
-        1, 63, 2, 1, 0, 0, 0, 4, 146, 136, 0, 0, 1, 0, 0, 0, 5, 146, 136, 0, 0, 228, 136, 0, 0, 8,
-        0, 0, 0, 0, 0, 192, 63, 0, 0, 0, 192, 6, 147, 136, 0, 0, 2, 0, 0, 0, 4, 0, 0, 0, 7, 0, 8,
-        0, 7, 2, 0, 0, 0, 9, 2, 0, 0, 0, 10, 1, 0, 0, 0, 11, 1, 0, 0, 0, 3, 6, 20, 0, 0, 1, 12, 0,
-        0, 0, 4, 0, 0, 0, 12, 3, 0, 0, 0, 2, 0, 0, 0, 118, 115, 3, 0, 0, 0, 102, 197, 155, 14, 3,
-        0, 0, 0, 41, 4, 0, 0, 0, 3, 0, 0, 0, 1, 0, 117, 15, 4, 0, 0, 0, 0, 0, 0, 63, 16, 4, 0, 0,
-        0, 0, 0, 128, 63, 0, 0, 0, 64, 17, 4, 0, 0, 0, 0, 0, 128, 63, 0, 0, 0, 64, 0, 0, 64, 64,
-        18, 4, 0, 0, 0, 0, 0, 128, 63, 0, 0, 0, 64, 0, 0, 64, 64, 0, 0, 128, 64, 19, 4, 0, 0, 0,
-        255, 255, 255, 255, 20, 4, 0, 0, 0, 0, 0, 0, 0, 0, 0, 128, 63, 0, 0, 0, 64, 0, 0, 64, 64,
-        0, 0, 128, 64, 0, 0, 160, 64, 0, 0, 192, 64, 0, 0, 224, 64, 0, 0, 0, 65, 21, 4, 0, 0, 0, 0,
-        0, 0, 0, 0, 0, 128, 63, 0, 0, 0, 64, 0, 0, 64, 64, 0, 0, 128, 64, 0, 0, 160, 64, 0, 0, 192,
-        64, 0, 0, 224, 64, 0, 0, 0, 65, 0, 0, 16, 65, 0, 0, 32, 65, 0, 0, 48, 65, 0, 0, 64, 65, 0,
-        0, 80, 65, 0, 0, 96, 65, 0, 0, 112, 65, 22, 5, 0, 0, 0, 24, 2, 0, 0, 0, 25, 5, 0, 0, 0, 26,
-        1, 0, 0, 0, 1, 0, 0, 0, 4, 0, 0, 0, 255, 0, 128, 255, 27, 1, 40, 0, 0, 0, 38, 0, 0, 27, 0,
-        40, 0, 0, 1, 38, 0, 0, 27, 2, 40, 0, 0, 1, 41, 0, 0, 27, 3, 40, 0, 0, 47, 129, 0, 0, 28,
-        29, 0, 0, 0, 0, 0, 0, 128, 62, 0, 0, 0, 63, 0, 0, 128, 63, 30, 0, 0, 128, 63, 31, 0, 65, 0,
-        0, 32, 113, 11, 0, 0, 33, 226, 11, 0, 0, 34, 0, 0, 0, 0, 255, 255, 255, 255, 128, 2, 0, 0,
-        224, 1, 0, 0, 35, 3, 2, 0, 0, 36, 2, 3, 0, 0, 3, 3, 0, 0, 37, 5, 4, 0, 0, 38, 0, 9, 0, 0,
-        39, 4, 0, 0, 0, 0, 0, 0, 0, 3, 0, 0, 0, 40, 1, 0, 0, 0, 6, 0, 0, 0, 3, 20, 0, 0, 2, 0, 0,
-        0, 4, 146, 136, 0, 0, 0, 0, 0, 0, 3, 1, 0, 0, 0, 8, 2, 0, 0, 0, 13, 3, 0, 0, 0, 23, 5, 0,
-        0, 0, 42, 4, 0, 0, 0,
+        1, 63, 1, 0, 0, 0, 0, 0, 0, 0, 2, 1, 0, 0, 0, 4, 146, 136, 0, 0, 1, 0, 0, 0, 5, 146, 136,
+        0, 0, 228, 136, 0, 0, 8, 0, 0, 0, 0, 0, 192, 63, 0, 0, 0, 192, 6, 147, 136, 0, 0, 2, 0, 0,
+        0, 4, 0, 0, 0, 7, 0, 8, 0, 7, 2, 0, 0, 0, 9, 2, 0, 0, 0, 10, 1, 0, 0, 0, 11, 1, 0, 0, 0, 3,
+        6, 20, 0, 0, 1, 12, 0, 0, 0, 4, 0, 0, 0, 12, 3, 0, 0, 0, 2, 0, 0, 0, 118, 115, 3, 0, 0, 0,
+        102, 197, 155, 14, 3, 0, 0, 0, 41, 4, 0, 0, 0, 3, 0, 0, 0, 1, 0, 117, 15, 4, 0, 0, 0, 0, 0,
+        0, 63, 16, 4, 0, 0, 0, 0, 0, 128, 63, 0, 0, 0, 64, 17, 4, 0, 0, 0, 0, 0, 128, 63, 0, 0, 0,
+        64, 0, 0, 64, 64, 18, 4, 0, 0, 0, 0, 0, 128, 63, 0, 0, 0, 64, 0, 0, 64, 64, 0, 0, 128, 64,
+        19, 4, 0, 0, 0, 255, 255, 255, 255, 20, 4, 0, 0, 0, 0, 0, 0, 0, 0, 0, 128, 63, 0, 0, 0, 64,
+        0, 0, 64, 64, 0, 0, 128, 64, 0, 0, 160, 64, 0, 0, 192, 64, 0, 0, 224, 64, 0, 0, 0, 65, 21,
+        4, 0, 0, 0, 0, 0, 0, 0, 0, 0, 128, 63, 0, 0, 0, 64, 0, 0, 64, 64, 0, 0, 128, 64, 0, 0, 160,
+        64, 0, 0, 192, 64, 0, 0, 224, 64, 0, 0, 0, 65, 0, 0, 16, 65, 0, 0, 32, 65, 0, 0, 48, 65, 0,
+        0, 64, 65, 0, 0, 80, 65, 0, 0, 96, 65, 0, 0, 112, 65, 22, 5, 0, 0, 0, 24, 2, 0, 0, 0, 25,
+        5, 0, 0, 0, 26, 1, 0, 0, 0, 1, 0, 0, 0, 4, 0, 0, 0, 255, 0, 128, 255, 27, 1, 40, 0, 0, 0,
+        38, 0, 0, 27, 0, 40, 0, 0, 1, 38, 0, 0, 27, 2, 40, 0, 0, 1, 41, 0, 0, 27, 3, 40, 0, 0, 47,
+        129, 0, 0, 28, 29, 0, 0, 0, 0, 0, 0, 128, 62, 0, 0, 0, 63, 0, 0, 128, 63, 30, 0, 0, 128,
+        63, 31, 0, 65, 0, 0, 32, 113, 11, 0, 0, 33, 226, 11, 0, 0, 34, 0, 0, 0, 0, 255, 255, 255,
+        255, 128, 2, 0, 0, 224, 1, 0, 0, 35, 3, 2, 0, 0, 36, 2, 3, 0, 0, 3, 3, 0, 0, 37, 5, 4, 0,
+        0, 38, 0, 9, 0, 0, 39, 4, 0, 0, 0, 0, 0, 0, 0, 3, 0, 0, 0, 40, 1, 0, 0, 0, 6, 0, 0, 0, 3,
+        20, 0, 0, 2, 0, 0, 0, 4, 146, 136, 0, 0, 0, 0, 0, 0, 3, 1, 0, 0, 0, 8, 2, 0, 0, 0, 13, 3,
+        0, 0, 0, 23, 5, 0, 0, 0, 42, 4, 0, 0, 0,
     ];
 
     #[test]
@@ -959,11 +1113,67 @@ mod tests {
         });
 
         let mut calls = vec![code::CONTEXT, WebGlOptions::default().flags()];
+        // The context's callback, the first of the test's thread
+        calls.extend(1_u64.to_le_bytes());
         calls.extend([code::CLEAR, 0, 0x40, 0, 0]);
         calls.extend([code::DRAW_ARRAYS, 0, 0, 0, 0, 0, 0, 0, 0, 1, 0, 0, 0]);
         assert_eq!(sent, vec![("canvas", vec![]), ("webgl", calls)]);
 
         assert_eq!(batch(|| {}), vec![], "nothing more to send");
+    }
+
+    #[test]
+    fn the_browser_tells_the_size_and_the_context_given_back() {
+        let canvas = dom_element! { <canvas /> };
+        let gl = WebGl::new(&canvas.get_ref());
+        let calls = gl.take();
+        let Ok(callback) = <[u8; 8]>::try_from(&calls[2..10]) else {
+            panic!("a context starts with its callback: {calls:?}");
+        };
+        let callback = CallbackId::from_u64(u64::from_le_bytes(callback));
+
+        let tell = |values: &[u32]| {
+            let values = values
+                .iter()
+                .map(|value| JsJson::Number(JsJsonNumber(f64::from(*value))));
+            api_callbacks().call(callback, JsJson::List(values.collect()));
+        };
+
+        let sizes = Rc::new(RefCell::new(Vec::new()));
+        let restored = Rc::new(Cell::new(0));
+        let resized = gl.on_resize({
+            let sizes = sizes.clone();
+            move |size| sizes.borrow_mut().push(size)
+        });
+        let _restored = gl.on_restore({
+            let restored = restored.clone();
+            move || restored.set(restored.get() + 1)
+        });
+        assert_eq!(
+            gl.size(),
+            Size::default(),
+            "no size until the browser tells it"
+        );
+
+        tell(&[0, 640, 480]);
+        let size = Size {
+            width: 640,
+            height: 480,
+        };
+        assert_eq!(gl.size(), size);
+        assert_eq!(*sizes.borrow(), vec![size]);
+
+        tell(&[1]);
+        assert_eq!(restored.get(), 1);
+
+        drop(resized);
+        tell(&[0, 320, 240]);
+        assert_eq!(gl.size().width, 320, "the size is kept");
+        assert_eq!(
+            sizes.borrow().len(),
+            1,
+            "but told no one who stopped listening"
+        );
     }
 
     #[test]

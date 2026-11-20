@@ -72,8 +72,8 @@ pub fn get_driver_dom() -> Rc<DriverDom> {
 pub struct DriverDom {
     commands: Commands,
     node_parent_callback: Rc<HashMapMut<DomId, Callback>>,
-    /// The WebGL contexts of canvases, each with its calls not yet sent, see `webgl_queue`.
-    webgl: ValueMut<Vec<(DomId, Weak<webgl::Queue>)>>,
+    /// The WebGL contexts of canvases, each with its calls not yet sent, see `webgl_context`.
+    webgl: ValueMut<Vec<(DomId, Weak<webgl::Context>)>>,
 }
 
 impl DriverDom {
@@ -200,19 +200,19 @@ impl DriverDom {
 
     /// The calls of a WebGL context on canvas `id` go with each batch from now on, for as long as
     /// the context or one of its objects is there to make them.
-    pub(crate) fn webgl_queue(&self, id: DomId, queue: Weak<webgl::Queue>) {
-        self.webgl.change(|queues| queues.push((id, queue)));
+    pub(crate) fn webgl_context(&self, id: DomId, context: Weak<webgl::Context>) {
+        self.webgl.change(|contexts| contexts.push((id, context)));
     }
 
     pub fn flush_dom_changes(&self) {
         // After the batch's changes to the page, so a new canvas is there, but before its removals
         // (see `sort_commands`), so a canvas removed with its last calls gets them.
-        let calls = self.webgl.change(|queues| {
-            queues.retain(|(_, queue)| queue.strong_count() > 0);
-            queues
+        let calls = self.webgl.change(|contexts| {
+            contexts.retain(|(_, context)| context.strong_count() > 0);
+            contexts
                 .iter()
-                .filter_map(|(id, queue)| {
-                    let commands = queue.upgrade()?.change(std::mem::take);
+                .filter_map(|(id, context)| {
+                    let commands = context.upgrade()?.take_calls();
                     (!commands.is_empty()).then_some((*id, commands))
                 })
                 .collect::<Vec<_>>()

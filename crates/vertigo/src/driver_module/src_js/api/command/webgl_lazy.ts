@@ -3,7 +3,7 @@
 // chunks are made. The calls coming before it are kept, all of them in order, as they make the
 // objects the later ones use, and played when it is in.
 
-import type { WebGls } from "./webgl";
+import type { Tell, WebGls } from "./webgl";
 
 // What `DriverDom` asks of WebGL.
 export type WebGlsApi = Pick<WebGls, 'run' | 'forget'>;
@@ -14,10 +14,12 @@ export class LazyWebGls {
     // The calls that came before the chunk, of each canvas in order.
     private readonly calls: Map<HTMLCanvasElement, Array<Uint8Array>> = new Map();
 
-    public constructor(
-        private readonly load: () => Promise<WebGlsApi> =
-            async () => new (await import("./webgl")).WebGls(),
-    ) {}
+    private readonly load: () => Promise<WebGlsApi>;
+
+    // `tell` is how the canvases tell wasm of themselves, see `WebGls`.
+    public constructor(tell: Tell, load?: () => Promise<WebGlsApi>) {
+        this.load = load ?? (async () => new (await import("./webgl")).WebGls(tell));
+    }
 
     // `bytes` is good only for the call it came in (see `DriverDom.update`), so it is copied.
     public run(node: Element, bytes: Uint8Array) {
