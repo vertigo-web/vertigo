@@ -60,6 +60,10 @@ pub mod safe_wrappers {
         /// Whether the tests pretend to run in the browser (`Driver::is_browser`), not on the
         /// server as by default.
         pub static TEST_BROWSER: std::cell::Cell<bool> = const { std::cell::Cell::new(false) };
+
+        /// The calls of `vertigo::audio` the browser got, in order.
+        pub static TEST_AUDIO: std::cell::RefCell<Vec<crate::dev::command::AudioOp>> =
+            Default::default();
     }
 
     #[cfg(test)]
@@ -71,6 +75,14 @@ pub mod safe_wrappers {
     fn is_browser() -> bool {
         false
     }
+
+    #[cfg(test)]
+    fn audio(op: crate::dev::command::AudioOp) {
+        TEST_AUDIO.with(|calls| calls.borrow_mut().push(op));
+    }
+
+    #[cfg(not(test))]
+    fn audio(_op: crate::dev::command::AudioOp) {}
 
     #[cfg(test)]
     fn env(name: &str) -> Option<String> {
@@ -137,6 +149,10 @@ pub mod safe_wrappers {
                     }
                     CommandForBrowser::GetRandom { min, max: _ } => {
                         browser_response::GetRandom { value: min }.to_json()
+                    }
+                    CommandForBrowser::Audio { op } => {
+                        audio(op);
+                        JsJson::Null
                     }
                     CommandForBrowser::FetchExec { .. }
                     | CommandForBrowser::SetStatus { .. }

@@ -357,6 +357,8 @@ impl ServerState {
                 CommandForBrowser::PointerLock { dom_id: _ } => JsJson::Null,
                 // The whole screen, too.
                 CommandForBrowser::Fullscreen { dom_id: _ } => JsJson::Null,
+                // Nothing sounds on the server.
+                CommandForBrowser::Audio { op: _ } => JsJson::Null,
                 CommandForBrowser::GetRandom { min, max: _ } => {
                     browser_response::GetRandom { value: min }.to_json()
                 }

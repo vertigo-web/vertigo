@@ -5,6 +5,13 @@
 
 ### Added
 
+* `audio`: sound with Web Audio. `Sound` is a short sound, fetched and decoded once, played at
+  once when asked, over itself and anything else, at a volume of its own. `Music` streams as it
+  plays: played, paused, stopped, looped, with a volume of its own, and `Music::on_end` tells it
+  played to its end. `set_volume` and `set_muted` are of all of it. A browser lets a page make
+  sound only once the user clicked, pressed a key or touched it: music asked to play before starts
+  then, a sound played before isn't heard, and `allowed` tells when sound goes through. The
+  browser's code for it is a chunk of its own, loaded when a page first makes a sound.
 * Fullscreen: `DomElementRef::request_fullscreen` shows an element on the whole screen, in the
   listener of a click or a key, `Driver::exit_fullscreen` leaves it, and `hook_fullscreen` on
   elements tells when the element is shown there and no longer - also left by the browser on Esc.

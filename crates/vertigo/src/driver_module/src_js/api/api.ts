@@ -13,6 +13,8 @@ import { Cookies } from "./command/cookies";
 import { getRandom } from "./command/getRandom";
 import { languages } from "./command/languages";
 import { DriverDom } from "./command/dom/dom";
+import { LazyAudio } from "./command/audio_lazy";
+import type { AudioOp } from "./command/audio";
 import { scrollToFragmentOnRender } from "./command/dom/injects";
 import { Metadata } from "./metadata";
 
@@ -147,6 +149,11 @@ type ExecType
         }
     }
     | {
+        Audio: {
+            op: AudioOp,
+        }
+    }
+    | {
         JsApiCall: {
             commands: Array<JsApiCommandType>
         }
@@ -177,6 +184,7 @@ export class Api {
     private readonly animationFrames: AnimationFrames;
     private readonly location: AppLocation;
     private readonly cookie: Cookies;
+    private readonly audio: LazyAudio;
 
 
     constructor(private readonly metadata: Metadata, private readonly getWasm: () => ModuleControllerType<ExportType>) {
@@ -188,6 +196,9 @@ export class Api {
         this.animationFrames = new AnimationFrames(getWasm);
         this.location = appLocation;
         this.cookie = new Cookies();
+        this.audio = new LazyAudio((callback_id, event) => {
+            getWasm().wasmCommand({ CallbackCall: { callback_id, value: event } });
+        });
     }
 
     exec(arg: JsJsonType): JsJsonType {
@@ -342,6 +353,10 @@ export class Api {
 
             case 'Fullscreen':
                 this.dom.fullscreen(params.dom_id);
+                return null;
+
+            case 'Audio':
+                this.audio.run(params.op);
                 return null;
 
             case 'JsApiCall':
