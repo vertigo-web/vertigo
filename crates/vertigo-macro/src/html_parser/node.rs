@@ -211,6 +211,7 @@ fn push_attribute(
     let method_str = match name.as_str() {
         "draw"
         | "hook_key_down"
+        | "hook_key_up"
         | "hook_pointer_move"
         | "hook_pointer_up"
         | "hook_pointer_cancel"
@@ -225,6 +226,7 @@ fn push_attribute(
         | "on_input"
         | "on_intersect"
         | "on_key_down"
+        | "on_key_up"
         | "on_load"
         | "on_media"
         | "on_message"
@@ -421,6 +423,7 @@ mod tests {
             "on_focus",
             "on_submit",
             "on_key_down",
+            "on_key_up",
             "on_load",
             "on_media",
             "on_message",
@@ -437,6 +440,7 @@ mod tests {
             "on_resize",
             "on_scroll",
             "hook_key_down",
+            "hook_key_up",
             "hook_pointer_move",
             "hook_pointer_up",
             "hook_pointer_cancel",

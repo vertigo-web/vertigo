@@ -421,6 +421,62 @@ console.log("\n--- Test: a press outside an element, anywhere else on the page -
     delete (globalThis as any).Node;
 }
 
+/// The key A held down with Shift, its press repeated.
+class MockKeyboardEvent extends MockEvent {
+    key = 'A';
+    code = 'KeyA';
+    altKey = false;
+    ctrlKey = false;
+    shiftKey = true;
+    metaKey = false;
+    repeat = true;
+}
+
+(globalThis as any).KeyboardEvent = MockKeyboardEvent;
+
+console.log("\n--- Test: the keys pressed and let go, on the element and on the document ---");
+{
+    const node = new MockNode();
+    const doc = new MockNode();
+    (globalThis as any).document = doc;
+    const nodes = { get: () => node, getNode: () => node } as unknown as MapNodes;
+    const sent: unknown[] = [];
+    let reply = true;
+    const wasm = { wasmCommand: (command: any) => { sent.push(command.CallbackCall.value); return reply; } };
+    const manager = new CallbackManager(() => wasm as any);
+
+    manager.add(nodes, 1, 'keydown', 50);
+    manager.add(nodes, 1, 'keyup', 51);
+    manager.add(nodes, 1, 'hook_keydown', 52);
+    manager.add(nodes, 1, 'hook_keyup', 53);
+    assert(
+        JSON.stringify(node.added) === JSON.stringify([['keydown', false], ['keyup', false]]),
+        "on_key_down and on_key_up listen on the element",
+    );
+    assert(
+        JSON.stringify(doc.added) === JSON.stringify([['keydown', false], ['keyup', false]]),
+        "the hooks on the document",
+    );
+
+    const handled = new MockKeyboardEvent();
+    node.listeners[1]?.(handled as unknown as Event);
+    assert(
+        JSON.stringify(sent) === JSON.stringify([['A', 'KeyA', false, false, true, false, true]]),
+        `wasm gets the key, its code, the modifiers and whether it repeats: ${JSON.stringify(sent)}`,
+    );
+    assert(handled.defaultPrevented && handled.propagationStopped, "a key handled goes no further");
+
+    reply = false;
+    const left = new MockKeyboardEvent();
+    doc.listeners[1]?.(left as unknown as Event);
+    assert(!left.defaultPrevented && !left.propagationStopped, "one not handled does what it would");
+
+    manager.remove(nodes, 1, 'hook_keyup', 53);
+    assert(JSON.stringify(doc.removed) === JSON.stringify(['keyup']), "and a hook comes off the document");
+
+    delete (globalThis as any).document;
+}
+
 /// An element whose content is scrolled 120.5 px down, on a zoomed page: 900 px tall, of which
 /// 300 px show.
 class MockScrollEvent extends MockEvent {

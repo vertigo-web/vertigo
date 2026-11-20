@@ -2,7 +2,7 @@ use std::{collections::BTreeMap, rc::Rc};
 
 use crate::{
     Computed, Css, DomComment, DomDisplay, DomElement, DomText, Drawing, DropFileEvent,
-    KeyDownEvent, MediaEvent, MessageEvent, PointerEvent, ResizeEvent, ScrollEvent, Value,
+    KeyboardEvent, MediaEvent, MessageEvent, PointerEvent, ResizeEvent, ScrollEvent, Value,
     WheelEvent,
     dom::{
         attr_value::AttrValue,
@@ -117,7 +117,8 @@ impl AttrGroupValue {
         }))
     }
 
-    group_value_constructor!(hook_key_down, Callback1<KeyDownEvent, bool>, hook_key_down_rc);
+    group_value_constructor!(hook_key_down, Callback1<KeyboardEvent, bool>, hook_key_down_rc);
+    group_value_constructor!(hook_key_up, Callback1<KeyboardEvent, bool>, hook_key_up_rc);
     group_value_constructor!(hook_pointer_move, Callback1<PointerEvent, ()>, hook_pointer_move_rc);
     group_value_constructor!(hook_pointer_up, Callback1<PointerEvent, ()>, hook_pointer_up_rc);
     group_value_constructor!(
@@ -139,7 +140,8 @@ impl AttrGroupValue {
     group_value_constructor!(on_change_checked, Callback1<bool, ()>, on_change_checked_rc);
     group_value_constructor!(on_input, Callback1<String, ()>, on_input_rc);
     group_value_constructor!(on_intersect, Callback1<IntersectionEvent, ()>, on_intersect_rc);
-    group_value_constructor!(on_key_down, Callback1<KeyDownEvent, bool>, on_key_down_rc);
+    group_value_constructor!(on_key_down, Callback1<KeyboardEvent, bool>, on_key_down_rc);
+    group_value_constructor!(on_key_up, Callback1<KeyboardEvent, bool>, on_key_up_rc);
     group_value_constructor!(on_load, Callback<()>, on_load_rc);
     group_value_constructor!(on_media, Callback1<MediaEvent, ()>, on_media_rc);
     group_value_constructor!(on_message, Callback1<MessageEvent, ()>, on_message_rc);

@@ -263,15 +263,19 @@ const drop: Handler = (event, send) => {
     }
 };
 
-const keydown: Handler = (event, send) => {
+/// A key pressed or let go. A truthy reply means the key was handled: the browser doesn't do what
+/// it would, and the event goes no further.
+const keyboard: Handler = (event, send) => {
     if (event instanceof KeyboardEvent) {
+        // Payload order MUST match the Rust decoder `get_keyboard_event`.
         const result = send([
             event.key,
             event.code,
             event.altKey,
             event.ctrlKey,
             event.shiftKey,
-            event.metaKey
+            event.metaKey,
+            event.repeat,
         ]);
 
         if (result === true) {
@@ -282,7 +286,7 @@ const keydown: Handler = (event, send) => {
         return;
     }
 
-    console.warn('keydown ignore', event);
+    console.warn('keyboard ignore', event);
 };
 
 /// The events of a `<video>` or an `<audio>` behind one `on_media`. The list MUST match
@@ -370,7 +374,8 @@ const HANDLERS: Record<string, Handler> = {
     mouseup: notifyPreventIfTrue,
     mouseenter: notify,
     mouseleave: notify,
-    keydown,
+    keydown: keyboard,
+    keyup: keyboard,
     drop,
     load: notifyPreventDefault,
     change_file: changeFile,
@@ -396,7 +401,8 @@ const outside = (element: Element): Handler => (event, send) => {
 /// page it happens, and its handler for the element with the hook - a pointer goes relative to
 /// that element.
 const HOOKS: Record<string, [string, (element: Element) => Handler]> = {
-    hook_keydown: ['keydown', () => keydown],
+    hook_keydown: ['keydown', () => keyboard],
+    hook_keyup: ['keyup', () => keyboard],
     hook_pointermove: ['pointermove', pointerOf],
     hook_pointerup: ['pointerup', pointerOf],
     hook_pointercancel: ['pointercancel', pointerOf],

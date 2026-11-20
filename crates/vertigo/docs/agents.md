@@ -89,8 +89,9 @@ take an [`AttrGroup`](crate::AttrGroup) prop.
     and where the pointer clicked, f. ex. on a `<canvas>`
   - `on_input`, `on_change` - the new `String` value
   - `on_change_checked` - the new `bool`
-  - `on_key_down` - a [`KeyDownEvent`](crate::KeyDownEvent). Return `true` when you handled the key, to stop
-    its default action.
+  - `on_key_down`, `on_key_up` - a [`KeyboardEvent`](crate::KeyboardEvent). Return `true` when you
+    handled the key, to stop its default action. `hook_key_down` and `hook_key_up` hear the keys
+    anywhere on the page.
 
   Find all of them as the `on_*` methods of [`DomElement`](crate::DomElement).
 - Styles: `css={...}` with a [`css!`](crate::css) value, or tailwind with `tw="flex gap-2"`.
