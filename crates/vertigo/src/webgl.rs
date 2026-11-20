@@ -87,6 +87,7 @@ mod code {
     pub const TEXTURE_IMAGE_URL: u8 = 46;
     pub const DEPTH_MASK: u8 = 47;
     pub const BLEND_FUNC_SEPARATE: u8 = 48;
+    pub const PIXEL_STORE: u8 = 49;
 }
 
 /// `pname` of `texParameteri`.
@@ -94,6 +95,9 @@ const TEXTURE_MAG_FILTER: u32 = 0x2800;
 const TEXTURE_MIN_FILTER: u32 = 0x2801;
 const TEXTURE_WRAP_S: u32 = 0x2802;
 const TEXTURE_WRAP_T: u32 = 0x2803;
+/// `pname` of `pixelStorei`.
+const UNPACK_FLIP_Y: u32 = 0x9240;
+const UNPACK_PREMULTIPLY_ALPHA: u32 = 0x9241;
 
 /// The size of a canvas's bitmap, in device pixels, see [`WebGl::size`].
 #[derive(Clone, Copy, Debug, Default, PartialEq, Eq)]
@@ -131,12 +135,14 @@ pub enum ImageLoad {
 
 /// What the browser tells of a context, as `webgl.ts` sends it: `[0, width, height]` when the
 /// canvas changes its size, `[1]` when the context is given back after it was lost, `[2, texture,
-/// width, height]` when an image is in a texture, `[3, texture]` when it didn't load.
+/// width, height]` when an image is in a texture, `[3, texture]` when it didn't load, `[4]` when
+/// the browser has no WebGL 2 for the canvas.
 enum CanvasEvent {
     Resized(Size),
     Restored,
     ImageLoaded(u32, Size),
     ImageFailed(u32),
+    Unavailable,
 }
 
 impl CanvasEvent {
@@ -156,6 +162,7 @@ impl CanvasEvent {
                     },
                 ),
                 3 => Self::ImageFailed(params.get_u32("texture")?),
+                4 => Self::Unavailable,
                 other => return Err(format!("unknown canvas event {other}")),
             };
             params.expect_no_more()?;
@@ -174,6 +181,9 @@ pub(crate) struct Context {
     /// The URLs of the images coming into textures, by the textures' ids.
     images: ValueMut<HashMap<u32, String>>,
     image_loaded: EventEmitter<ImageLoad>,
+    /// Whether the browser told it has no WebGL 2 for the canvas.
+    unavailable: Cell<bool>,
+    told_unavailable: EventEmitter<()>,
     /// The callback the browser tells through, for as long as the context is.
     _callback: DropResource,
 }
@@ -201,6 +211,8 @@ impl Context {
                 restored: EventEmitter::default(),
                 images: ValueMut::new(HashMap::new()),
                 image_loaded: EventEmitter::default(),
+                unavailable: Cell::new(false),
+                told_unavailable: EventEmitter::default(),
                 _callback: drop,
             }
         })
@@ -222,6 +234,10 @@ impl Context {
                 if let Some(url) = self.images.change(|images| images.remove(&texture)) {
                     self.image_loaded.trigger(&ImageLoad::Failed { url });
                 }
+            }
+            Ok(CanvasEvent::Unavailable) => {
+                self.unavailable.set(true);
+                self.told_unavailable.trigger(&());
             }
             Err(error) => log::error!("webgl: {error}"),
         }
@@ -422,6 +438,29 @@ impl WebGl {
     /// objects again and draws. Calls while the context is lost do nothing.
     pub fn on_restore(&self, callback: impl Fn() + 'static) -> DropResource {
         self.context.restored.add(move |()| callback())
+    }
+
+    /// `callback` once the browser finds it has no WebGL 2 for the canvas, at once if it found
+    /// that already: f. ex. an old browser, a GPU it blocks, or a canvas with another context. The
+    /// calls go nowhere then, and the app may draw another way.
+    ///
+    /// ```rust
+    /// use vertigo::{Value, dom_element};
+    /// use vertigo::webgl::WebGl;
+    ///
+    /// let canvas = dom_element! { <canvas /> };
+    /// let gl = WebGl::new(&canvas.get_ref());
+    /// let fallback = Value::new(false);
+    /// canvas.append_drop_resource(gl.on_unavailable({
+    ///     let fallback = fallback.clone();
+    ///     move || fallback.set(true)
+    /// }));
+    /// ```
+    pub fn on_unavailable(&self, callback: impl Fn() + 'static) -> DropResource {
+        if self.context.unavailable.get() {
+            callback();
+        }
+        self.context.told_unavailable.add(move |()| callback())
     }
 
     fn write(&self, write: impl FnOnce(&mut Vec<u8>)) {
@@ -695,6 +734,37 @@ impl WebGl {
     /// Smaller images of the bound texture, for its filters with mipmaps.
     pub fn generate_mipmap(&self) {
         self.op(code::GENERATE_MIPMAP, |_| {});
+    }
+
+    /// How the images that go into textures next are read, with [`Self::texture_image`] and
+    /// [`Self::texture_image_url`]: an image from a URL as it was when it was asked for, though
+    /// it comes later. After the context is restored, as at first again.
+    ///
+    /// ```rust
+    /// use vertigo::dom_element;
+    /// use vertigo::webgl::{PixelStore, TextureFilter, WebGl};
+    ///
+    /// let canvas = dom_element! { <canvas /> };
+    /// let gl = WebGl::new(&canvas.get_ref());
+    ///
+    /// // Pictures with see-through edges, drawn smaller: with their colors multiplied by their
+    /// // alpha, the mipmaps don't darken the edges.
+    /// let sprites = gl.create_texture();
+    /// gl.bind_texture(Some(&sprites));
+    /// gl.texture_filter(TextureFilter::LinearMipmapLinear, TextureFilter::Linear);
+    /// gl.pixel_store(PixelStore::UnpackPremultiplyAlpha(true));
+    /// gl.texture_image_url(&sprites, "/images/sprites.png", true);
+    /// gl.pixel_store(PixelStore::UnpackPremultiplyAlpha(false));
+    /// ```
+    pub fn pixel_store(&self, mode: PixelStore) {
+        let (name, value) = match mode {
+            PixelStore::UnpackFlipY(on) => (UNPACK_FLIP_Y, on),
+            PixelStore::UnpackPremultiplyAlpha(on) => (UNPACK_PREMULTIPLY_ALPHA, on),
+        };
+        self.op(code::PIXEL_STORE, |out| {
+            put_u32(out, name);
+            put_u32(out, u32::from(value));
+        });
     }
 
     /// The color [`Self::clear`] fills with.
@@ -1110,6 +1180,17 @@ pub enum TextureWrap {
     MirroredRepeat = 0x8370,
 }
 
+/// How images are read into textures, see [`WebGl::pixel_store`]. Both are off at first.
+#[derive(Clone, Copy, Debug, PartialEq, Eq)]
+pub enum PixelStore {
+    /// Whether the image's last row is the texture's first.
+    UnpackFlipY(bool),
+    /// Whether the colors are multiplied by their alpha as they go in, for blending with
+    /// [`BlendFactor::One`] and [`BlendFactor::OneMinusSourceAlpha`], and for mipmaps and filters
+    /// that don't darken see-through edges.
+    UnpackPremultiplyAlpha(bool),
+}
+
 fn put_u32(out: &mut Vec<u8>, value: u32) {
     out.extend_from_slice(&value.to_le_bytes());
 }
@@ -1231,6 +1312,7 @@ mod tests {
             BlendFactor::One,
             BlendFactor::Zero,
         );
+        gl.pixel_store(PixelStore::UnpackPremultiplyAlpha(true));
         gl.bind_buffer(BufferTarget::Array, None);
         drop((buffer, vertices, program, texture, location));
         gl.take()
@@ -1260,8 +1342,8 @@ mod tests {
         20, 0, 0, 2, 0, 0, 0, 43, 3, 0, 0, 0, 1, 0, 0, 0, 44, 4, 0, 0, 0, 0, 0, 0, 0, 3, 0, 0, 0,
         10, 0, 0, 0, 45, 4, 0, 0, 0, 36, 0, 0, 0, 3, 20, 0, 0, 0, 0, 0, 0, 144, 1, 0, 0, 46, 5, 0,
         0, 0, 1, 7, 0, 0, 0, 47, 197, 130, 46, 112, 110, 103, 47, 0, 48, 2, 3, 0, 0, 3, 3, 0, 0, 1,
-        0, 0, 0, 0, 0, 0, 0, 4, 146, 136, 0, 0, 0, 0, 0, 0, 3, 1, 0, 0, 0, 8, 2, 0, 0, 0, 13, 3, 0,
-        0, 0, 23, 5, 0, 0, 0, 42, 4, 0, 0, 0,
+        0, 0, 0, 0, 0, 0, 0, 49, 65, 146, 0, 0, 1, 0, 0, 0, 4, 146, 136, 0, 0, 0, 0, 0, 0, 3, 1, 0,
+        0, 0, 8, 2, 0, 0, 0, 13, 3, 0, 0, 0, 23, 5, 0, 0, 0, 42, 4, 0, 0, 0,
     ];
 
     #[test]
@@ -1413,6 +1495,31 @@ mod tests {
                 },
             ]
         );
+    }
+
+    #[test]
+    fn a_browser_without_webgl_2_is_told_also_to_those_asking_later() {
+        let canvas = dom_element! { <canvas /> };
+        let gl = WebGl::new(&canvas.get_ref());
+        let calls = gl.take();
+        let Ok(callback) = <[u8; 8]>::try_from(&calls[2..10]) else {
+            panic!("a context starts with its callback: {calls:?}");
+        };
+        let callback = CallbackId::from_u64(u64::from_le_bytes(callback));
+
+        let told = Rc::new(Cell::new(0));
+        let count = {
+            let told = told.clone();
+            move || told.set(told.get() + 1)
+        };
+        let _before = gl.on_unavailable(count.clone());
+        assert_eq!(told.get(), 0, "not until the browser tells it");
+
+        let four = JsJson::Number(JsJsonNumber(4.0));
+        api_callbacks().call(callback, JsJson::List(vec![four]));
+        assert_eq!(told.get(), 1);
+        let _after = gl.on_unavailable(count);
+        assert_eq!(told.get(), 2, "told at once, once known");
     }
 
     #[test]

@@ -16,7 +16,10 @@
 // every object is gone: the ids are forgotten, and wasm is told, to make them again.
 //
 // An image for a texture, from a URL, is loaded meanwhile, and put in the texture when it comes,
-// between the calls: wasm is told then, to draw again, or if it didn't load.
+// between the calls, read with the pixel storage modes there were when it was asked for: wasm is
+// told then, to draw again, or if it didn't load.
+//
+// A browser without WebGL 2 for a canvas is told in the console, and wasm too, to draw another way.
 
 const decoder = new TextDecoder("utf-8");
 
@@ -69,6 +72,7 @@ const Op = {
     TextureImageUrl: 46,
     DepthMask: 47,
     BlendFuncSeparate: 48,
+    PixelStore: 49,
 } as const;
 
 // The WebGL constants this file passes itself. Those of the calls come with them.
@@ -97,12 +101,14 @@ export type Gl = Pick<WebGL2RenderingContext,
     | 'bindTexture' | 'texImage2D' | 'texParameteri' | 'generateMipmap' | 'clearColor' | 'clearDepth'
     | 'clear' | 'enable' | 'disable' | 'viewport' | 'depthFunc' | 'blendFunc' | 'cullFace'
     | 'frontFace' | 'drawArrays' | 'drawElements' | 'vertexAttribDivisor' | 'drawArraysInstanced'
-    | 'drawElementsInstanced' | 'depthMask' | 'blendFuncSeparate' | 'getParameter'>;
+    | 'drawElementsInstanced' | 'depthMask' | 'blendFuncSeparate' | 'getParameter' | 'pixelStorei'>;
 
-// Asks for the image at `url` for the texture of the id `texture`, see `Op.TextureImageUrl`.
-export type Load = (texture: number, url: string, mipmap: boolean) => void;
+// Asks for the image at `url` for the texture of the id `texture`, to be read with the pixel
+// storage modes `unpack`, see `Op.TextureImageUrl`.
+export type Load = (texture: number, url: string, mipmap: boolean, unpack: ReadonlyMap<number, number>) => void;
 
-// The objects of a context by their ids.
+// The objects of a context by their ids, and the pixel storage modes set on it, which are reset
+// with them when the context is lost.
 export class Objects {
     public readonly buffers: Map<number, WebGLBuffer | null> = new Map();
     public readonly vertexArrays: Map<number, WebGLVertexArrayObject | null> = new Map();
@@ -110,6 +116,8 @@ export class Objects {
     public readonly textures: Map<number, WebGLTexture | null> = new Map();
     // `null` for a uniform its program hasn't.
     public readonly locations: Map<number, WebGLUniformLocation | null> = new Map();
+    // By `pname`, those set: the others are as at first, 0.
+    public readonly unpack: Map<number, number> = new Map();
 }
 
 // A matrix for a uniform, filled anew for each: WebGL copies it.
@@ -401,7 +409,7 @@ export const play = (gl: Gl, objects: Objects, bytes: Uint8Array, load?: Load): 
                 const texture = u32();
                 const mipmap = u8() !== 0;
                 const url = decoder.decode(block());
-                load?.(texture, url, mipmap);
+                load?.(texture, url, mipmap, new Map(objects.unpack));
                 break;
             }
             case Op.DepthMask:
@@ -410,6 +418,13 @@ export const play = (gl: Gl, objects: Objects, bytes: Uint8Array, load?: Load): 
             case Op.BlendFuncSeparate:
                 gl.blendFuncSeparate(u32(), u32(), u32(), u32());
                 break;
+            case Op.PixelStore: {
+                const name = u32();
+                const value = i32();
+                gl.pixelStorei(name, value);
+                objects.unpack.set(name, value);
+                break;
+            }
             default:
                 throw new Error(`webgl: unknown operation ${op}`);
         }
@@ -420,7 +435,8 @@ type Size = { width: number, height: number };
 
 // Tells wasm of a canvas, through the callback of its context: `[0, width, height]` when it
 // changes its size, `[1]` when its context is given back, `[2, texture, width, height]` when an
-// image is in a texture, `[3, texture]` when it didn't load. See `CanvasEvent` in webgl.rs.
+// image is in a texture, `[3, texture]` when it didn't load, `[4]` when the browser has no WebGL 2
+// for it. See `CanvasEvent` in webgl.rs.
 export type Tell = (callback: number, event: Array<number>) => void;
 
 // A canvas's context, with its objects and what wasm was told of it.
@@ -465,8 +481,8 @@ export class WebGls {
         if (context !== null) {
             this.fit(node, context.gl);
             const known = context;
-            play(context.gl, context.objects, bytes, (texture, url, mipmap) => {
-                this.load(known, texture, url, mipmap);
+            play(context.gl, context.objects, bytes, (texture, url, mipmap, unpack) => {
+                this.load(known, texture, url, mipmap, unpack);
             });
         }
     }
@@ -493,6 +509,7 @@ export class WebGls {
         const gl = canvas.getContext('webgl2', attributes(flags));
         if (gl === null) {
             console.error('webgl: the browser has no WebGL 2, or the canvas has another context');
+            this.told(callback, [4]);
             return null;
         }
 
@@ -504,7 +521,7 @@ export class WebGls {
             const context = this.contexts.get(canvas);
             if (context) {
                 context.objects = new Objects();
-                this.told(context, [1]);
+                this.told(context.callback, [1]);
             }
         };
         canvas.addEventListener('webglcontextlost', lost);
@@ -513,9 +530,10 @@ export class WebGls {
         return new Context(gl, callback, [['webglcontextlost', lost], ['webglcontextrestored', restored]]);
     }
 
-    // Puts the image at `url` in the texture when it comes, unless the texture was let go
-    // meanwhile, or asked for another image, or the context was lost.
-    private load(context: Context, texture: number, url: string, mipmap: boolean) {
+    // Puts the image at `url` in the texture when it comes, read with the pixel storage modes
+    // `unpack`, unless the texture was let go meanwhile, or asked for another image, or the context
+    // was lost.
+    private load(context: Context, texture: number, url: string, mipmap: boolean, unpack: ReadonlyMap<number, number>) {
         const objects = context.objects;
         context.loading.set(texture, url);
         const current = () => context.objects === objects && context.loading.get(texture) === url;
@@ -534,12 +552,22 @@ export class WebGls {
             const gl = context.gl;
             const bound: unknown = gl.getParameter(GL.TEXTURE_BINDING_2D);
             gl.bindTexture(GL.TEXTURE_2D, target);
+            // The modes there were then, and back to those there are now after
+            const now = objects.unpack;
+            const changed = [...new Set([...unpack.keys(), ...now.keys()])]
+                .filter((name) => (unpack.get(name) ?? 0) !== (now.get(name) ?? 0));
+            for (const name of changed) {
+                gl.pixelStorei(name, unpack.get(name) ?? 0);
+            }
             gl.texImage2D(GL.TEXTURE_2D, 0, GL.RGBA8, GL.RGBA, GL.UNSIGNED_BYTE, image);
             if (mipmap) {
                 gl.generateMipmap(GL.TEXTURE_2D);
             }
+            for (const name of changed) {
+                gl.pixelStorei(name, now.get(name) ?? 0);
+            }
             gl.bindTexture(GL.TEXTURE_2D, isTexture(bound) ? bound : null);
-            this.told(context, [2, texture, image.naturalWidth, image.naturalHeight]);
+            this.told(context.callback, [2, texture, image.naturalWidth, image.naturalHeight]);
         };
         image.onerror = () => {
             if (!current()) {
@@ -547,17 +575,17 @@ export class WebGls {
             }
             context.loading.delete(texture);
             console.error(`webgl: the image ${url} didn't load`);
-            this.told(context, [3, texture]);
+            this.told(context.callback, [3, texture]);
         };
         image.src = url;
     }
 
-    private told(context: Context, event: Array<number>) {
-        if (context.callback === 0) {
+    private told(callback: number, event: Array<number>) {
+        if (callback === 0) {
             return;
         }
         try {
-            this.tell(context.callback, event);
+            this.tell(callback, event);
         } catch (error) {
             console.error(error);
         }
@@ -604,7 +632,7 @@ export class WebGls {
         if (told.width > 0 && told.height > 0
             && (context.told?.width !== told.width || context.told.height !== told.height)) {
             context.told = told;
-            this.told(context, [0, told.width, told.height]);
+            this.told(context.callback, [0, told.width, told.height]);
         }
     }
 

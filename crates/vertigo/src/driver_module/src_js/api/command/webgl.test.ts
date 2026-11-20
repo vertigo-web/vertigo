@@ -83,15 +83,15 @@ const FIXTURE = new Uint8Array([
     20, 0, 0, 2, 0, 0, 0, 43, 3, 0, 0, 0, 1, 0, 0, 0, 44, 4, 0, 0, 0, 0, 0, 0, 0, 3, 0, 0, 0,
     10, 0, 0, 0, 45, 4, 0, 0, 0, 36, 0, 0, 0, 3, 20, 0, 0, 0, 0, 0, 0, 144, 1, 0, 0, 46, 5, 0,
     0, 0, 1, 7, 0, 0, 0, 47, 197, 130, 46, 112, 110, 103, 47, 0, 48, 2, 3, 0, 0, 3, 3, 0, 0, 1,
-    0, 0, 0, 0, 0, 0, 0, 4, 146, 136, 0, 0, 0, 0, 0, 0, 3, 1, 0, 0, 0, 8, 2, 0, 0, 0, 13, 3, 0,
+    0, 0, 0, 0, 0, 0, 0, 49, 65, 146, 0, 0, 1, 0, 0, 0, 4, 146, 136, 0, 0, 0, 0, 0, 0, 3, 1, 0, 0, 0, 8, 2, 0, 0, 0, 13, 3, 0,
     0, 0, 23, 5, 0, 0, 0, 42, 4, 0, 0, 0,
 ]);
 
 console.log("\n--- Test webgl: the cross-language fixture ---");
 {
     const log: Array<string> = [];
-    play(recording(log), new Objects(), FIXTURE, (texture, url, mipmap) => {
-        log.push(`load(${texture},${url},${String(mipmap)})`);
+    play(recording(log), new Objects(), FIXTURE, (texture, url, mipmap, unpack) => {
+        log.push(`load(${texture},${url},${String(mipmap)},${JSON.stringify([...unpack])})`);
     });
 
     same(log, [
@@ -151,9 +151,10 @@ console.log("\n--- Test webgl: the cross-language fixture ---");
         'vertexAttribDivisor(3,1)',
         'drawArraysInstanced(4,0,3,10)',
         'drawElementsInstanced(4,36,5123,0,400)',
-        'load(5,/ł.png,true)',
+        'load(5,/ł.png,true,[])',
         'depthMask(false)',
         'blendFuncSeparate(770,771,1,0)',
+        'pixelStorei(37441,1)',
         'bindBuffer(34962,null)',
         'deleteBuffer(buffer1)',
         'deleteVertexArray(array2)',
@@ -322,6 +323,17 @@ console.log("\n--- Test webgl: contexts and their size ---");
     assert(errors.length === 1, 'a browser without WebGL 2 is told once');
     assert(none.log.length === 0, 'and the calls go nowhere');
 
+    const unavailable = new FakeCanvas();
+    unavailable.context = null;
+    console.error = () => {};
+    try {
+        run(unavailable, calls(context(0, 12)));
+    } finally {
+        console.error = error;
+    }
+    same(told.slice(4), ['12: 4'], 'and wasm is told, through the callback of the context');
+    told.splice(4, 1);
+
     // Images for textures.
     const images: Array<FakeImage> = [];
     class FakeImage {
@@ -367,9 +379,30 @@ console.log("\n--- Test webgl: contexts and their size ---");
     same(told.slice(6), ['7: 2,10,64,32'], 'of two images for a texture, the last asked for goes in');
     assert(canvas.log.filter((call) => call.startsWith('texImage2D')).length === 1, 'and only it');
 
+    // Premultiplied as asked for then, and not after.
+    const premultiply = (on: boolean) => [49, ...u32(0x9241), ...u32(on ? 1 : 0)];
+    run(canvas, calls(premultiply(true), image(10, '/f.png', true), premultiply(false), image(11, '/g.png', false)));
+    canvas.log.length = 0;
+    images[4]?.onload();
+    images[5]?.onload();
+    same(canvas.log, [
+        'getParameter(32873)',
+        'bindTexture(3553,texture2)',
+        'pixelStorei(37441,1)',
+        'texImage2D(3553,0,32856,6408,5121,[object Object])',
+        'generateMipmap(3553)',
+        'pixelStorei(37441,0)',
+        'bindTexture(3553,bound)',
+        'getParameter(32873)',
+        'bindTexture(3553,texture3)',
+        'texImage2D(3553,0,32856,6408,5121,[object Object])',
+        'bindTexture(3553,bound)',
+    ], 'an image is read with the pixel storage modes there were when it was asked for');
+    told.splice(7, 2);
+
     run(canvas, calls(image(11, '/e.png', false)));
     canvas.listeners.get('webglcontextrestored')?.({} as Event);
-    images[4]?.onload();
+    images[6]?.onload();
     same(told.slice(7), ['7: 1'], 'an image of a context lost meanwhile goes nowhere');
 
     webgls.forget(canvas as unknown as Element);
