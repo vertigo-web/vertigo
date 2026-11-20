@@ -44,6 +44,7 @@ pub const TABS: &[&str] = &[
     "WS Collection",
     "Svg",
     "Paint",
+    "WebGL",
 ];
 
 /// Click a menu entry and wait for the tab to show something of its own.
@@ -1273,17 +1274,17 @@ pub async fn arrow_keys(ctx: &Ctx) -> Result<()> {
     println!("  -> arrow keys");
 
     // Start at the far end of the menu, so the first press has to wrap.
-    click_by_text(ctx, "a", "Paint").await?;
-    ctx.wait_for_path("/paint").await?;
+    click_by_text(ctx, "a", "WebGL").await?;
+    ctx.wait_for_path("/webgl").await?;
 
     press_key(ctx, Key::Right).await?;
     ctx.wait_for_path("/").await?;
 
     press_key(ctx, Key::Left).await?;
-    ctx.wait_for_path("/paint").await?;
+    ctx.wait_for_path("/webgl").await?;
 
     press_key(ctx, Key::Left).await?;
-    ctx.wait_for_path("/svg").await?;
+    ctx.wait_for_path("/paint").await?;
 
     // ...and a field being typed in keeps its arrows. Without the guard the caret would stay
     // put and the tab would change underneath it.
@@ -1793,6 +1794,79 @@ pub async fn paint(ctx: &Ctx) -> Result<()> {
 
     click_by_text(ctx, "button", "Undo").await?;
     wait_for_paint(ctx, BLANK, "Undo to take the star off").await
+}
+
+/// A cube turning, drawn with WebGL.
+///
+/// The pixel in the middle of the canvas is read back (the demo keeps what it drew for that):
+/// one of the cube's faces is there, and as the cube turns, another.
+///
+/// Through a copy: asking the canvas for its WebGL context would make one, without the
+/// attributes the demo asks for, if the demo hasn't made it yet.
+pub async fn webgl(ctx: &Ctx) -> Result<()> {
+    open(ctx, "WebGL", "A cube drawn with WebGL 2").await?;
+
+    const SCRIPT: &str = r#"
+        const canvas = document.querySelector('canvas');
+        const copy = document.createElement('canvas');
+        copy.width = canvas.width;
+        copy.height = canvas.height;
+        const context = copy.getContext('2d');
+        context.drawImage(canvas, 0, 0);
+        const pixel = context.getImageData(
+            Math.floor(canvas.width / 2), Math.floor(canvas.height / 2), 1, 1,
+        ).data;
+        const ratio = window.devicePixelRatio || 1;
+        return [...pixel, canvas.width === Math.round(canvas.clientWidth * ratio) ? 1 : 0];
+    "#;
+
+    let middle = async || -> Result<Vec<u64>> {
+        Ok(ctx
+            .js(SCRIPT)
+            .await?
+            .as_array()
+            .context("the pixel is not an array")?
+            .iter()
+            .filter_map(Value::as_u64)
+            .collect())
+    };
+
+    // The color it is cleared with, which a face is not.
+    const BACKGROUND: [u64; 5] = [242, 242, 247, 255, 1];
+
+    // Opaque, not the background, and on a bitmap as sharp as the screen.
+    let is_face =
+        |pixel: &[u64]| pixel.len() == 5 && pixel != BACKGROUND && pixel[3] == 255 && pixel[4] == 1;
+
+    let mut first = Vec::new();
+    ctx.wait_for(
+        "a face of the cube in the middle, on a sharp bitmap",
+        async || {
+            first = middle().await?;
+            Ok(is_face(&first).then_some(()))
+        },
+    )
+    .await?;
+
+    ctx.wait_for("another face as the cube turns", async || {
+        let now = middle().await?;
+        Ok((is_face(&now) && now != first).then_some(()))
+    })
+    .await?;
+
+    // Counted over a second, so it shows once one has gone.
+    ctx.wait_for("the frames of a second counted in the corner", async || {
+        let label = ctx
+            .js("return [...document.querySelectorAll('span')]\
+                 .map((span) => span.textContent).find((text) => text.endsWith(' FPS')) ?? '';")
+            .await?;
+        let count = label
+            .as_str()
+            .and_then(|label| label.strip_suffix(" FPS"))
+            .and_then(|count| count.parse::<u32>().ok());
+        Ok(count.filter(|count| *count > 0).map(|_| ()))
+    })
+    .await
 }
 
 /// `#e53935`, the red of the palette, `#fdd835`, the middle of the star stamp, and a pixel

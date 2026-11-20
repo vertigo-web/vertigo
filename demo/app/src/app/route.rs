@@ -22,6 +22,7 @@ pub enum Route {
     WsCollection,
     Svg,
     Paint,
+    WebGl,
     NotFound,
 }
 
@@ -49,6 +50,7 @@ impl Route {
         Self::WsCollection,
         Self::Svg,
         Self::Paint,
+        Self::WebGl,
     ];
 
     /// The tab `offset` places along from this one, wrapping at both ends.
@@ -114,6 +116,7 @@ impl Route {
             Self::Paint => {
                 "Canvases drawn from a Computed<Drawing>, with pointer events for the brush."
             }
+            Self::WebGl => "A cube drawn with WebGL 2, turning before every frame.",
             Self::NotFound => "Nothing - it is where an unknown address lands.",
         }
     }
@@ -142,6 +145,7 @@ impl Route {
             Self::WsCollection => "/ws-collection",
             Self::Svg => "/svg",
             Self::Paint => "/paint",
+            Self::WebGl => "/webgl",
             Self::NotFound => "/not-found",
         }
     }
@@ -165,6 +169,7 @@ impl Route {
             "/ws-collection" => Self::WsCollection,
             "/svg" => Self::Svg,
             "/paint" => Self::Paint,
+            "/webgl" => Self::WebGl,
             _ => Self::NotFound,
         }
     }
@@ -188,6 +193,7 @@ impl Route {
             Self::WsCollection => "WS Collection",
             Self::Svg => "Svg",
             Self::Paint => "Paint",
+            Self::WebGl => "WebGL",
             Self::NotFound => "Not Found",
         }
     }
@@ -220,15 +226,15 @@ mod tests {
 
     #[test]
     fn stepping_wraps_at_both_ends() {
-        assert_eq!(Route::Paint.step(1), Route::Home);
-        assert_eq!(Route::Home.step(-1), Route::Paint);
+        assert_eq!(Route::WebGl.step(1), Route::Home);
+        assert_eq!(Route::Home.step(-1), Route::WebGl);
     }
 
     /// `NotFound` has no place in the menu, so stepping enters at whichever end you came from.
     #[test]
     fn stepping_from_outside_the_menu_enters_it() {
         assert_eq!(Route::NotFound.step(1), Route::Home);
-        assert_eq!(Route::NotFound.step(-1), Route::Paint);
+        assert_eq!(Route::NotFound.step(-1), Route::WebGl);
     }
 
     #[test]

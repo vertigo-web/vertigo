@@ -9,7 +9,8 @@ use super::{
     chat::Chat, counters::CountersDemo, driver::DriverDemo, dropfiles::DropFiles, fetch::FetchDemo,
     game_of_life::GameOfLife, github_explorer::GitHubExplorer, home::Home, input::MyInput,
     js_api_access::JsApiAccess, lazy_list::LazyList, list::ListDemo, paint::PaintDemo,
-    route::Route, styling::Styling, sudoku::Sudoku, svg::SvgDemo, ws_collection::WsCollectionDemo,
+    route::Route, styling::Styling, sudoku::Sudoku, svg::SvgDemo, webgl::WebGlDemo,
+    ws_collection::WsCollectionDemo,
 };
 
 fn css_menu_item(active: bool) -> Css {
@@ -156,6 +157,7 @@ pub fn render(state: &app::State) -> DomNode {
             }
             Route::Svg => dom! { <SvgDemo /> },
             Route::Paint => dom! { <PaintDemo /> },
+            Route::WebGl => dom! { <WebGlDemo /> },
             Route::NotFound => {
                 // Deliberately here rather than somewhere tidier: `set_status` does nothing
                 // unless `is_server()`, so it has to run while the server is rendering this

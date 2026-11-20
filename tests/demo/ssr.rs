@@ -87,8 +87,8 @@ pub async fn hydration_is_complete(ctx: &Ctx) -> Result<()> {
     // only `discarded` shows.
     //
     // And `/paint`: the server sends its canvases empty, and their drawings come with the batch
-    // that hydrates them.
-    for route in ["/", "/svg", "/lazy-list", "/paint"] {
+    // that hydrates them. With `/webgl`, the calls of WebGL do too.
+    for route in ["/", "/svg", "/lazy-list", "/paint", "/webgl"] {
         // Waits for the report itself. Waiting for a text instead, "Game Of Life" say, races
         // the boot: the menu is in the server-rendered HTML already, so the text is there
         // before the wasm is, and the report sometimes is not yet.
