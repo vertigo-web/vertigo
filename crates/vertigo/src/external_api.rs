@@ -155,6 +155,7 @@ pub mod safe_wrappers {
                     | CommandForBrowser::HistoryBack
                     | CommandForBrowser::ImagePreload { .. }
                     | CommandForBrowser::PointerLock { .. }
+                    | CommandForBrowser::Fullscreen { .. }
                     | CommandForBrowser::JsApiCall { .. }
                     | CommandForBrowser::DomBulkUpdate { .. } => JsJson::Null,
                 };

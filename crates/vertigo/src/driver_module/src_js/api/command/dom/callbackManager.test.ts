@@ -558,6 +558,34 @@ console.log("\n--- Test: the pointer locked to an element and let go ---");
     delete (globalThis as any).document;
 }
 
+console.log("\n--- Test: an element on the whole screen and no longer ---");
+{
+    const doc = Object.assign(new MockNode(), { fullscreenElement: null as MockElement | null });
+    (globalThis as any).document = doc;
+    const element = new MockElement();
+    const nodes = { getNode: () => element } as unknown as MapNodes;
+    const sent: unknown[] = [];
+    const wasm = { wasmCommand: (command: any) => { sent.push(command.CallbackCall.value); return null; } };
+    const manager = new CallbackManager(() => wasm as any);
+
+    manager.add(nodes, 1, 'hook_fullscreen', 80);
+    assert(
+        JSON.stringify(doc.added) === JSON.stringify([['fullscreenchange', false]]),
+        "it listens to the changes of the whole screen on the document",
+    );
+    const change = () => doc.listeners[0]?.({} as Event);
+    doc.fullscreenElement = element;
+    change();
+    change();
+    doc.fullscreenElement = null;
+    change();
+    assert(JSON.stringify(sent) === JSON.stringify([true, false]), `wasm is told each change once: ${JSON.stringify(sent)}`);
+    manager.remove(nodes, 1, 'hook_fullscreen', 80);
+    assert(JSON.stringify(doc.removed) === JSON.stringify(['fullscreenchange']), "and it comes off the document");
+
+    delete (globalThis as any).document;
+}
+
 /// An element whose content is scrolled 120.5 px down, on a zoomed page: 900 px tall, of which
 /// 300 px show.
 class MockScrollEvent extends MockEvent {

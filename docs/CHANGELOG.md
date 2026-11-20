@@ -5,6 +5,9 @@
 
 ### Added
 
+* Fullscreen: `DomElementRef::request_fullscreen` shows an element on the whole screen, in the
+  listener of a click or a key, `Driver::exit_fullscreen` leaves it, and `hook_fullscreen` on
+  elements tells when the element is shown there and no longer - also left by the browser on Esc.
 * Pointer lock: `DomElementRef::request_pointer_lock` locks the mouse's pointer to an element, in
   the listener of a click or a key, `Driver::exit_pointer_lock` lets it go, and
   `hook_pointer_lock` on elements tells when it's locked and let go - also by the browser on Esc,

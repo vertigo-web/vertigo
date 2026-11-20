@@ -199,6 +199,7 @@ fn test_on_events_grouping_and_spreading() {
     let _el = dom! {
         <Everything
             name="world"
+            inner:hook_fullscreen={|_| ()}
             inner:hook_key_down={|_| true}
             inner:hook_key_up={|_| true}
             inner:hook_pointer_cancel={|_| ()}
@@ -238,7 +239,7 @@ fn test_on_events_grouping_and_spreading() {
 
     assert_eq!(
         el_str,
-        "<input name='world' v-component='Everything' blur=9 change=10 change_checked=11 click=12 drop=13 focus=14 hook_keydown=1 hook_keyup=2 hook_pointercancel=3 hook_pointerlock=4 hook_pointermove=5 hook_pointerup=6 hook_visibility=7 hook_window_focus=8 input=15 keydown=16 keyup=17 load=18 media=19 message=20 mousedown=21 mouseenter=22 mouseleave=23 mouseup=24 pointercancel=25 pointerdown=26 pointermove=27 pointerup=28 resize=29 scroll=30 submit=31 wheel=32 />"
+        "<input name='world' v-component='Everything' blur=10 change=11 change_checked=12 click=13 drop=14 focus=15 hook_fullscreen=1 hook_keydown=2 hook_keyup=3 hook_pointercancel=4 hook_pointerlock=5 hook_pointermove=6 hook_pointerup=7 hook_visibility=8 hook_window_focus=9 input=16 keydown=17 keyup=18 load=19 media=20 message=21 mousedown=22 mouseenter=23 mouseleave=24 mouseup=25 pointercancel=26 pointerdown=27 pointermove=28 pointerup=29 resize=30 scroll=31 submit=32 wheel=33 />"
     );
 }
 

@@ -355,6 +355,8 @@ impl ServerState {
                 CommandForBrowser::ImagePreload { url: _ } => JsJson::Null,
                 // The pointer is locked in the browser, from its listeners.
                 CommandForBrowser::PointerLock { dom_id: _ } => JsJson::Null,
+                // The whole screen, too.
+                CommandForBrowser::Fullscreen { dom_id: _ } => JsJson::Null,
                 CommandForBrowser::GetRandom { min, max: _ } => {
                     browser_response::GetRandom { value: min }.to_json()
                 }

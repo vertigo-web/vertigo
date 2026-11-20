@@ -142,6 +142,11 @@ type ExecType
         }
     }
     | {
+        Fullscreen: {
+            dom_id: number | null,
+        }
+    }
+    | {
         JsApiCall: {
             commands: Array<JsApiCommandType>
         }
@@ -333,6 +338,10 @@ export class Api {
 
             case 'PointerLock':
                 this.dom.pointerLock(params.dom_id);
+                return null;
+
+            case 'Fullscreen':
+                this.dom.fullscreen(params.dom_id);
                 return null;
 
             case 'JsApiCall':
