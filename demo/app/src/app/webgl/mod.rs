@@ -13,7 +13,7 @@ use vertigo::{
     Css, DomElementRef, Value, component, css, dom, dom_element, get_driver,
     webgl::{
         Buffer, BufferTarget, BufferUsage, Capability, ClearBuffers, DataType, IndexType,
-        Primitive, Program, VertexArray, WebGl, WebGlOptions,
+        Primitive, Program, UniformLocation, VertexArray, WebGl, WebGlOptions,
     },
 };
 
@@ -142,6 +142,8 @@ const FACES: [(Vector, Vector, Vector, Vector); 6] = [
 struct Cube {
     gl: WebGl,
     program: Program,
+    /// Of the uniform the turn goes to.
+    transform: UniformLocation,
     vertices: VertexArray,
     // Kept for as long as the cube is drawn, as the vertex array reads them.
     _buffers: [Buffer; 2],
@@ -158,6 +160,7 @@ impl Cube {
             },
         );
         let program = gl.create_program(VERTEX, FRAGMENT);
+        let transform = gl.uniform_location(&program, "transform");
 
         // Four corners a face, each a position and a color, and two triangles of them.
         let mut corners = Vec::new();
@@ -198,6 +201,7 @@ impl Cube {
         Self {
             gl,
             program,
+            transform,
             vertices,
             _buffers: [corner_buffer, index_buffer],
         }
@@ -221,7 +225,7 @@ impl Cube {
         let gl = &self.gl;
         gl.clear(ClearBuffers::COLOR | ClearBuffers::DEPTH);
         gl.use_program(Some(&self.program));
-        gl.uniform_matrix_4f("transform", &transform);
+        gl.uniform_matrix_4f(&self.transform, &transform);
         gl.bind_vertex_array(Some(&self.vertices));
         gl.draw_elements(Primitive::Triangles, 36, IndexType::UnsignedShort, 0);
     }

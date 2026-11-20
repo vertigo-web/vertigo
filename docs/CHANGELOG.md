@@ -8,9 +8,9 @@
 * `hook_pointer_down_outside` on elements: a pointer pressed anywhere on the page but on the
   element and what is in it, wherever that lies, f. ex. to close a popup. The press goes on to
   what it fell on, so one click beside a menu closes it and starts what it does there.
-* `webgl::WebGl`: WebGL 2 on a `<canvas>` from Rust - buffers, vertex arrays, programs, uniforms
-  set by name, textures from pixels, and the state of drawing - with handles that let their
-  objects go when dropped. The calls of a transaction go to the browser at its end, with the
+* `webgl::WebGl`: WebGL 2 on a `<canvas>` from Rust - buffers, vertex arrays, programs and the
+  locations of their uniforms, textures from pixels, and the state of drawing - with handles that
+  let their objects go when dropped. The calls of a transaction go to the browser at its end, with the
   changes to the page, so a frame is drawn by calls made in `Driver::on_animation_frame`. Nothing
   is asked back while drawing: a shader that doesn't compile is told in the console. The browser's
   code for it is a chunk of its own, loaded when a page first uses WebGL. The demo draws a cube
