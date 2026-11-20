@@ -3,8 +3,8 @@
 // loaded the first time a page needs it, see `webgl_lazy.ts`: it may import nothing.
 //
 // Objects are known by ids wasm gives them, unique on the page, and kept here until wasm lets
-// them go. Nothing asks WebGL anything back while drawing: a uniform is found by its name, once
-// per program, and a shader or a program that fails is told in the console.
+// them go, the locations of uniforms too. Nothing asks WebGL anything back while drawing, and a
+// shader or a program that fails is told in the console.
 //
 // The bitmap of a canvas is kept as big as the canvas is on the screen, in device pixels, as
 // `canvas.ts` keeps it, and it is resized before the calls that come next. Resizing a canvas
@@ -53,6 +53,8 @@ const Op = {
     FrontFace: 38,
     DrawArrays: 39,
     DrawElements: 40,
+    UniformLocation: 41,
+    DeleteUniformLocation: 42,
 } as const;
 
 // The WebGL constants this file passes itself. Those of the calls come with them.
@@ -81,16 +83,19 @@ export type Gl = Pick<WebGL2RenderingContext,
     | 'clear' | 'enable' | 'disable' | 'viewport' | 'depthFunc' | 'blendFunc' | 'cullFace'
     | 'frontFace' | 'drawArrays' | 'drawElements'>;
 
-// The objects of a context by their ids, and the program in use, whose uniforms are set.
+// The objects of a context by their ids.
 export class Objects {
     public readonly buffers: Map<number, WebGLBuffer | null> = new Map();
     public readonly vertexArrays: Map<number, WebGLVertexArrayObject | null> = new Map();
     public readonly programs: Map<number, WebGLProgram | null> = new Map();
     public readonly textures: Map<number, WebGLTexture | null> = new Map();
-    public program: WebGLProgram | null = null;
-    // Where the uniforms of each program are, by name. `null` for one it hasn't.
-    public readonly uniforms: WeakMap<WebGLProgram, Map<string, WebGLUniformLocation | null>> = new WeakMap();
+    // `null` for a uniform its program hasn't.
+    public readonly locations: Map<number, WebGLUniformLocation | null> = new Map();
 }
+
+// A matrix for a uniform, filled anew for each: WebGL copies it.
+const matrix3 = new Float32Array(9);
+const matrix4 = new Float32Array(16);
 
 // The attributes of `getContext`, from the flags of `Op.Context`, see `WebGlOptions`.
 export const attributes = (flags: number): WebGLContextAttributes => ({
@@ -171,12 +176,11 @@ export const play = (gl: Gl, objects: Objects, bytes: Uint8Array): void => {
         return value;
     };
 
-    const f32s = (count: number): Float32Array => {
-        const values = new Float32Array(count);
-        for (let index = 0; index < count; index++) {
-            values[index] = f32();
+    const filled = (matrix: Float32Array): Float32Array => {
+        for (let index = 0; index < matrix.length; index++) {
+            matrix[index] = f32();
         }
-        return values;
+        return matrix;
     };
 
     // A view of the bytes, good while this call runs, as WebGL copies what it takes.
@@ -187,30 +191,7 @@ export const play = (gl: Gl, objects: Objects, bytes: Uint8Array): void => {
         return value;
     };
 
-    // Where the uniform of the name that comes next is in the program in use.
-    const uniform = (): WebGLUniformLocation | null => {
-        const length = data.getUint16(at, true);
-        const name = decoder.decode(bytes.subarray(at + 2, at + 2 + length));
-        at += 2 + length;
-
-        const program = objects.program;
-        if (program === null) {
-            return null;
-        }
-
-        let locations = objects.uniforms.get(program);
-        if (locations === undefined) {
-            locations = new Map();
-            objects.uniforms.set(program, locations);
-        }
-
-        let location = locations.get(name);
-        if (location === undefined) {
-            location = gl.getUniformLocation(program, name);
-            locations.set(name, location);
-        }
-        return location;
-    };
+    const location = (): WebGLUniformLocation | null => objects.locations.get(u32()) ?? null;
 
     while (at < bytes.length) {
         const op = u8();
@@ -279,53 +260,34 @@ export const play = (gl: Gl, objects: Objects, bytes: Uint8Array): void => {
             }
             case Op.DeleteProgram: {
                 const id = u32();
-                const program = objectOf(objects.programs, id);
-                if (program !== null && program === objects.program) {
-                    objects.program = null;
-                }
-                gl.deleteProgram(program);
+                gl.deleteProgram(objectOf(objects.programs, id));
                 objects.programs.delete(id);
                 break;
             }
             case Op.UseProgram:
-                objects.program = objectOf(objects.programs, u32());
-                gl.useProgram(objects.program);
+                gl.useProgram(objectOf(objects.programs, u32()));
                 break;
-            case Op.Uniform1f: {
-                const location = uniform();
-                gl.uniform1f(location, f32());
+            case Op.Uniform1f:
+                gl.uniform1f(location(), f32());
                 break;
-            }
-            case Op.Uniform2f: {
-                const location = uniform();
-                gl.uniform2f(location, f32(), f32());
+            case Op.Uniform2f:
+                gl.uniform2f(location(), f32(), f32());
                 break;
-            }
-            case Op.Uniform3f: {
-                const location = uniform();
-                gl.uniform3f(location, f32(), f32(), f32());
+            case Op.Uniform3f:
+                gl.uniform3f(location(), f32(), f32(), f32());
                 break;
-            }
-            case Op.Uniform4f: {
-                const location = uniform();
-                gl.uniform4f(location, f32(), f32(), f32(), f32());
+            case Op.Uniform4f:
+                gl.uniform4f(location(), f32(), f32(), f32(), f32());
                 break;
-            }
-            case Op.Uniform1i: {
-                const location = uniform();
-                gl.uniform1i(location, i32());
+            case Op.Uniform1i:
+                gl.uniform1i(location(), i32());
                 break;
-            }
-            case Op.UniformMatrix3f: {
-                const location = uniform();
-                gl.uniformMatrix3fv(location, false, f32s(9));
+            case Op.UniformMatrix3f:
+                gl.uniformMatrix3fv(location(), false, filled(matrix3));
                 break;
-            }
-            case Op.UniformMatrix4f: {
-                const location = uniform();
-                gl.uniformMatrix4fv(location, false, f32s(16));
+            case Op.UniformMatrix4f:
+                gl.uniformMatrix4fv(location(), false, filled(matrix4));
                 break;
-            }
             case Op.CreateTexture:
                 objects.textures.set(u32(), gl.createTexture());
                 break;
@@ -390,6 +352,18 @@ export const play = (gl: Gl, objects: Objects, bytes: Uint8Array): void => {
                 break;
             case Op.DrawElements:
                 gl.drawElements(u32(), u32(), u32(), u32());
+                break;
+            case Op.UniformLocation: {
+                const id = u32();
+                const program = objectOf(objects.programs, u32());
+                const length = data.getUint16(at, true);
+                const name = decoder.decode(bytes.subarray(at + 2, at + 2 + length));
+                at += 2 + length;
+                objects.locations.set(id, program === null ? null : gl.getUniformLocation(program, name));
+                break;
+            }
+            case Op.DeleteUniformLocation:
+                objects.locations.delete(u32());
                 break;
             default:
                 throw new Error(`webgl: unknown operation ${op}`);
