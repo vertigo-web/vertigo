@@ -316,6 +316,59 @@ impl DomElement {
         self.on_keyboard("hook_keyup", on_hook_key_up)
     }
 
+    /// The window got the focus (`true`) or lost it (`false`), f. ex. to another window or to the
+    /// browser's own bar. Keys let go meanwhile come up elsewhere, so a game lets go of the keys
+    /// it holds, and may pause. Whether the window has the focus when the hook starts is
+    /// `document.hasFocus()`.
+    ///
+    /// ```rust
+    /// use vertigo::{Value, bind, dom};
+    ///
+    /// let paused = Value::new(false);
+    /// let focus = bind!(paused, |focused: bool| {
+    ///     if !focused {
+    ///         paused.set(true);
+    ///     }
+    /// });
+    ///
+    /// dom! {
+    ///     <div hook_window_focus={focus}>"Paused: " {paused.map(|paused| paused.to_string())}</div>
+    /// };
+    /// ```
+    pub fn hook_window_focus(self, on_hook_window_focus: impl Into<Callback1<bool, ()>>) -> Self {
+        self.hook_window_focus_rc(Rc::new(on_hook_window_focus.into()))
+    }
+
+    pub fn hook_window_focus_rc(self, on_hook_window_focus: Rc<Callback1<bool, ()>>) -> Self {
+        self.on_state("hook_window_focus", on_hook_window_focus)
+    }
+
+    /// The page shown (`true`) or hidden (`false`): its tab left for another, the window
+    /// minimized, the screen locked - f. ex. to pause a game, whose animation frames stop while
+    /// it's hidden. Whether the page shows when the hook starts is `document.visibilityState`.
+    pub fn hook_visibility(self, on_hook_visibility: impl Into<Callback1<bool, ()>>) -> Self {
+        self.hook_visibility_rc(Rc::new(on_hook_visibility.into()))
+    }
+
+    pub fn hook_visibility_rc(self, on_hook_visibility: Rc<Callback1<bool, ()>>) -> Self {
+        self.on_state("hook_visibility", on_hook_visibility)
+    }
+
+    /// The listener of `event_name` for a state of the page which is either on or off.
+    fn on_state(self, event_name: &'static str, callback: Rc<Callback1<bool, ()>>) -> Self {
+        let callback = self.install_callback1(callback);
+
+        self.add_event_listener(event_name, move |data| {
+            match data {
+                JsJson::True => callback(true),
+                JsJson::False => callback(false),
+                _ => log::error!("Invalid data: {event_name}: {}", data.typename()),
+            }
+
+            JsJson::Null
+        })
+    }
+
     /// A pointer moved anywhere on the page, also outside the element and without capturing it,
     /// f. ex. to go on dragging past the element's edges onto targets with `on_pointer_up`. Like
     /// `hook_key_down`, it listens on the document. The position is still from the corner of the

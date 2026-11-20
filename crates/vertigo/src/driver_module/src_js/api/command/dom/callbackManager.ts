@@ -361,7 +361,7 @@ if (typeof window !== 'undefined') {
 /// The event names are wire strings from Rust (`dom/dom_element.rs`), so each is spelled out
 /// exactly once here. `change_file` and `change_checked` are vertigo-internal names, remapped to
 /// real DOM events where the listener is attached. `intersect`, `resize`, `media` and `message`
-/// aren't one DOM event of the element, and the hooks listen on the document (`HOOKS`), so
+/// aren't one DOM event of the element, and the hooks listen on the page (`HOOKS`), so
 /// `CallbackManager.add` takes them on its own.
 const HANDLERS: Record<string, Handler> = {
     click,
@@ -397,17 +397,44 @@ const outside = (element: Element): Handler => (event, send) => {
     pointerOf(element)(event, send);
 };
 
-/// The hooks, by their wire names: the DOM event each listens to on the document, wherever on the
-/// page it happens, and its handler for the element with the hook - a pointer goes relative to
-/// that element.
-const HOOKS: Record<string, [string, (element: Element) => Handler]> = {
-    hook_keydown: ['keydown', () => keyboard],
-    hook_keyup: ['keyup', () => keyboard],
-    hook_pointermove: ['pointermove', pointerOf],
-    hook_pointerup: ['pointerup', pointerOf],
-    hook_pointercancel: ['pointercancel', pointerOf],
-    hook_pointerdown_outside: ['pointerdown', outside],
+/// The window got the focus or lost it: its own `focus` and `blur`, not those of the elements in
+/// it, which don't bubble up to it.
+const windowFocus: Handler = (event, send) => {
+    if (event.target === window) {
+        send(event.type === 'focus');
+    }
 };
+
+/// The page shown or hidden.
+const visibility: Handler = (_event, send) => {
+    send(document.visibilityState === 'visible');
+};
+
+/// A hook: the DOM events it listens to, on the document or on the window, wherever on the page
+/// they happen, and its handler for the element with the hook - a pointer goes relative to that
+/// element.
+type Hook = {
+    target: 'document' | 'window',
+    events: Array<string>,
+    handlerOf: (element: Element) => Handler,
+};
+
+const onDocument = (event: string, handlerOf: (element: Element) => Handler): Hook =>
+    ({ target: 'document', events: [event], handlerOf });
+
+/// The hooks, by their wire names.
+const HOOKS: Record<string, Hook> = {
+    hook_keydown: onDocument('keydown', () => keyboard),
+    hook_keyup: onDocument('keyup', () => keyboard),
+    hook_pointermove: onDocument('pointermove', pointerOf),
+    hook_pointerup: onDocument('pointerup', pointerOf),
+    hook_pointercancel: onDocument('pointercancel', pointerOf),
+    hook_pointerdown_outside: onDocument('pointerdown', outside),
+    hook_window_focus: { target: 'window', events: ['focus', 'blur'], handlerOf: () => windowFocus },
+    hook_visibility: onDocument('visibilitychange', () => visibility),
+};
+
+const hookTarget = (hook: Hook): EventTarget => hook.target === 'window' ? window : document;
 
 /// The DOM event behind a wire name: `change_file` and `change_checked` are the `change` event
 /// with a payload of their own.
@@ -514,11 +541,11 @@ export class CallbackManager {
         const hook = HOOKS[event_name];
 
         if (hook !== undefined) {
-            const [domEvent, handlerOf] = hook;
-            const handler = handlerOf(nodes.getNode('callback_add', id));
+            const handler = hook.handlerOf(nodes.getNode('callback_add', id));
             const listener = (event: Event) => { handler(event, send); };
             this.callbacks.set(callback_id, listener);
-            document.addEventListener(domEvent, listener, false);
+            const target = hookTarget(hook);
+            hook.events.forEach((name) => target.addEventListener(name, listener, false));
             return;
         }
 
@@ -565,7 +592,8 @@ export class CallbackManager {
         } else if (event_name === 'message') {
             window.removeEventListener('message', callback);
         } else if (hook !== undefined) {
-            document.removeEventListener(hook[0], callback);
+            const target = hookTarget(hook);
+            hook.events.forEach((name) => target.removeEventListener(name, callback));
         } else {
             const node = nodes.get('callback_remove', id);
             node.removeEventListener(domEventName(event_name), callback);

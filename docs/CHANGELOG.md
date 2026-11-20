@@ -5,6 +5,9 @@
 
 ### Added
 
+* `hook_window_focus` and `hook_visibility` on elements: the window got the focus or lost it,
+  and the page was shown or hidden, f. ex. for a game to let go of the keys it holds, whose key-ups
+  go elsewhere meanwhile, and to pause.
 * `on_key_up` and `hook_key_up`: a key let go, on the element with the focus or anywhere on the
   page, as `on_key_down` and `hook_key_down` tell a key pressed. Both get a `KeyboardEvent`, whose
   `repeat` tells a press repeated by the key held down from the first one, so a game acts once a
