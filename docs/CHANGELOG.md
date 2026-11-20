@@ -5,6 +5,12 @@
 
 ### Added
 
+* Pointer lock: `DomElementRef::request_pointer_lock` locks the mouse's pointer to an element, in
+  the listener of a click or a key, `Driver::exit_pointer_lock` lets it go, and
+  `hook_pointer_lock` on elements tells when it's locked and let go - also by the browser on Esc,
+  which the page doesn't hear. `PointerEvent::movement_x` and `movement_y` tell how far the
+  pointer moved since its last event, all there is of its moves while it's locked, f. ex. for
+  a game to look around with the mouse.
 * `hook_window_focus` and `hook_visibility` on elements: the window got the focus or lost it,
   and the page was shown or hidden, f. ex. for a game to let go of the keys it holds, whose key-ups
   go elsewhere meanwhile, and to pause.

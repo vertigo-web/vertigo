@@ -205,8 +205,9 @@ function testWheelListenerIsNotPassive() {
     assert(JSON.stringify(node.added[1]) === JSON.stringify(['click', false]), "the others are added as before");
 }
 
-/// A finger touching (130, 240) of the viewport, with Shift held, on an element whose top left
-/// corner is at (100, 200) and which is 300 x 150. The element keeps what it was asked to
+/// A finger touching (130, 240) of the viewport, with Shift held, moved 4 px right and 3 px up
+/// since its last event, on an element whose top left corner is at (100, 200) and which is
+/// 300 x 150. The element keeps what it was asked to
 /// capture. The finger touched a child of it, which the browser made capture the finger, and
 /// which keeps what it was asked to release.
 class MockPointerEvent extends MockEvent {
@@ -221,6 +222,8 @@ class MockPointerEvent extends MockEvent {
     ctrlKey = false;
     shiftKey = true;
     metaKey = false;
+    movementX = 4;
+    movementY = -3;
     captured: Array<number> = [];
     currentTarget = Object.assign(new MockElement(), {
         setPointerCapture: (pointerId: number) => { this.captured.push(pointerId); },
@@ -249,8 +252,8 @@ function testPointerPayload() {
     console.log("\n--- Test pointer 1: what wasm gets ---");
     const { sent } = pointerReplying(null);
     assert(
-        JSON.stringify(sent) === JSON.stringify([7, 'touch', true, 0, 1, 30, 40, 300, 150, false, false, true, false]),
-        `id, type, primary, buttons, pointer from the element's corner, its size, modifiers: ${JSON.stringify(sent)}`,
+        JSON.stringify(sent) === JSON.stringify([7, 'touch', true, 0, 1, 30, 40, 300, 150, false, false, true, false, 4, -3]),
+        `id, type, primary, buttons, pointer from the element's corner, its size, modifiers, movement: ${JSON.stringify(sent)}`,
     );
 }
 
@@ -371,7 +374,7 @@ function testPointerHooks() {
 
     doc.listeners[0]?.(new MockPointerEvent() as unknown as Event);
     assert(
-        JSON.stringify(sent) === JSON.stringify([[7, 'touch', true, 0, 1, 120, 220, 50, 60, false, false, true, false]]),
+        JSON.stringify(sent) === JSON.stringify([[7, 'touch', true, 0, 1, 120, 220, 50, 60, false, false, true, false, 4, -3]]),
         `the pointer goes from the corner of the element with the hook, with its size: ${JSON.stringify(sent)}`,
     );
     assert(JSON.stringify(captured) === JSON.stringify([7]), "which captures the pointer when asked");
@@ -410,7 +413,7 @@ console.log("\n--- Test: a press outside an element, anywhere else on the page -
     assert(sent.length === 0, "not to those on the element or in it");
     doc.listeners[0]?.(press({}));
     assert(
-        JSON.stringify(sent) === JSON.stringify([[7, 'touch', true, 0, 1, 120, 220, 50, 60, false, false, true, false]]),
+        JSON.stringify(sent) === JSON.stringify([[7, 'touch', true, 0, 1, 120, 220, 50, 60, false, false, true, false, 4, -3]]),
         `but to those elsewhere, from the corner of the element: ${JSON.stringify(sent)}`,
     );
 
@@ -520,6 +523,38 @@ console.log("\n--- Test: the window's focus and the page's visibility ---");
     assert(JSON.stringify(doc.removed) === JSON.stringify(['visibilitychange']), "and it comes off the document");
 
     delete (globalThis as any).window;
+    delete (globalThis as any).document;
+}
+
+console.log("\n--- Test: the pointer locked to an element and let go ---");
+{
+    const doc = Object.assign(new MockNode(), { pointerLockElement: null as MockElement | null });
+    (globalThis as any).document = doc;
+    const element = new MockElement();
+    const nodes = { getNode: () => element } as unknown as MapNodes;
+    const sent: unknown[] = [];
+    const wasm = { wasmCommand: (command: any) => { sent.push(command.CallbackCall.value); return null; } };
+    const manager = new CallbackManager(() => wasm as any);
+
+    manager.add(nodes, 1, 'hook_pointerlock', 70);
+    assert(
+        JSON.stringify(doc.added) === JSON.stringify([['pointerlockchange', false]]),
+        "it listens to the changes of the lock on the document",
+    );
+    const change = () => doc.listeners[0]?.({} as Event);
+    doc.pointerLockElement = element;
+    change();
+    doc.pointerLockElement = new MockElement();
+    change();
+    doc.pointerLockElement = null;
+    change();
+    assert(
+        JSON.stringify(sent) === JSON.stringify([true, false]),
+        `wasm is told the element got the lock and lost it, once, not of the other element's: ${JSON.stringify(sent)}`,
+    );
+    manager.remove(nodes, 1, 'hook_pointerlock', 70);
+    assert(JSON.stringify(doc.removed) === JSON.stringify(['pointerlockchange']), "and it comes off the document");
+
     delete (globalThis as any).document;
 }
 

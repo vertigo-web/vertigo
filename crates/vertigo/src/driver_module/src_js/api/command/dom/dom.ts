@@ -138,6 +138,32 @@ export class DriverDom {
         this.canvases.preload(url);
     }
 
+    /// Locks the pointer to the element of `id`, or lets it go with `null`. Asked for in the
+    /// listener of a click or a key, as the browser locks it only then. A browser that won't -
+    /// without the click, or right after the user let it go - says why in the console, and the
+    /// page goes on.
+    public pointerLock(id: number | null) {
+        if (id === null) {
+            if (document.pointerLockElement !== null) {
+                document.exitPointerLock();
+            }
+            return;
+        }
+
+        const element = this.nodes.getAnyOption(id);
+        if (!(element instanceof Element)) {
+            console.error(`request_pointer_lock: no element id=${id}`);
+            return;
+        }
+
+        // A promise in today's browsers. Older ones return nothing, and tell a refusal by
+        // `pointerlockerror`.
+        const asked: unknown = element.requestPointerLock();
+        if (asked instanceof Promise) {
+            asked.catch((error: unknown) => { console.warn('request_pointer_lock', error); });
+        }
+    }
+
     public update = (bytes: Uint8Array) => {
         // First flush only, so the object form is worth building here and nowhere else.
         const hydration = this.nodes.hasInitNodes() && this.metadata.getEnabledHydration()

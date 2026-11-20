@@ -340,6 +340,13 @@ impl Driver {
         api_browser_command().image_preload(url.into());
     }
 
+    /// Lets go of the pointer locked to an element with
+    /// [`DomElementRef::request_pointer_lock`](crate::DomElementRef::request_pointer_lock), f. ex.
+    /// when a game opens its menu. Nothing happens when no element holds it.
+    pub fn exit_pointer_lock(&self) {
+        api_browser_command().pointer_lock(None);
+    }
+
     /// Gets current value of monotonic clock.
     pub fn now(&self) -> Instant {
         Instant::now()

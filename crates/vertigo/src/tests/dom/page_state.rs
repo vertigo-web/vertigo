@@ -26,7 +26,11 @@ fn element_with_state_hooks(got: &Got) -> (DomNode, Vec<(String, CallbackId)>) {
 
     log_start();
     let element = dom! {
-        <div hook_window_focus={hook("focus")} hook_visibility={hook("visibility")} />
+        <div
+            hook_window_focus={hook("focus")}
+            hook_visibility={hook("visibility")}
+            hook_pointer_lock={hook("pointer lock")}
+        />
     };
     let callbacks = log_take()
         .into_iter()
@@ -66,10 +70,16 @@ fn the_hooks_tell_the_state_the_driver_sends() {
     deliver(callback(&callbacks, "hook_window_focus"), JsJson::False);
     deliver(callback(&callbacks, "hook_window_focus"), JsJson::True);
     deliver(callback(&callbacks, "hook_visibility"), JsJson::False);
+    deliver(callback(&callbacks, "hook_pointerlock"), JsJson::True);
 
     assert_eq!(
         *got.borrow(),
-        [("focus", false), ("focus", true), ("visibility", false)]
+        [
+            ("focus", false),
+            ("focus", true),
+            ("visibility", false),
+            ("pointer lock", true)
+        ]
     );
 }
 

@@ -111,6 +111,13 @@ pub enum CommandForBrowser {
         url: String,
     },
 
+    /// Lock the pointer to the element `dom_id`, see
+    /// [`crate::DomElementRef::request_pointer_lock`], or let it go with `None`, see
+    /// [`crate::Driver::exit_pointer_lock`].
+    PointerLock {
+        dom_id: Option<u64>,
+    },
+
     /// Execute JavaScript API calls (for js! macro)
     JsApiCall {
         commands: Vec<JsApiCommand>,

@@ -145,6 +145,8 @@ export const pointerOf = (target: EventTarget | null): Handler => (event, send) 
         event.ctrlKey,
         event.shiftKey,
         event.metaKey,
+        event.movementX,
+        event.movementY,
     ]), {
         capture: () => {
             target.setPointerCapture(event.pointerId);
@@ -410,6 +412,18 @@ const visibility: Handler = (_event, send) => {
     send(document.visibilityState === 'visible');
 };
 
+/// Whether the element holds what the document gives one element at a time - the locked pointer,
+/// the whole screen - told when that changes for it.
+const holding = (holder: () => Element | null) => (element: Element): Handler => {
+    let holds = holder() === element;
+    return (_event, send) => {
+        if ((holder() === element) !== holds) {
+            holds = !holds;
+            send(holds);
+        }
+    };
+};
+
 /// A hook: the DOM events it listens to, on the document or on the window, wherever on the page
 /// they happen, and its handler for the element with the hook - a pointer goes relative to that
 /// element.
@@ -432,6 +446,7 @@ const HOOKS: Record<string, Hook> = {
     hook_pointerdown_outside: onDocument('pointerdown', outside),
     hook_window_focus: { target: 'window', events: ['focus', 'blur'], handlerOf: () => windowFocus },
     hook_visibility: onDocument('visibilitychange', () => visibility),
+    hook_pointerlock: onDocument('pointerlockchange', holding(() => document.pointerLockElement)),
 };
 
 const hookTarget = (hook: Hook): EventTarget => hook.target === 'window' ? window : document;

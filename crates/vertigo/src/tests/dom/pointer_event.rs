@@ -71,7 +71,7 @@ fn number(value: f64) -> JsJson {
 }
 
 /// What the driver sends for a finger of id 7 and of `pointer_type` touching (30, 40) of
-/// a 200 x 100 element, with Shift held.
+/// a 200 x 100 element, with Shift held, moved 4 px right and 3 px up since its last event.
 fn touch(pointer_type: &str) -> JsJson {
     JsJson::List(vec![
         number(7.0),
@@ -87,6 +87,8 @@ fn touch(pointer_type: &str) -> JsJson {
         JsJson::False,
         JsJson::True,
         JsJson::False,
+        number(4.0),
+        number(-3.0),
     ])
 }
 
@@ -159,6 +161,7 @@ fn the_callback_gets_which_pointer_it_is_and_where() {
     assert_eq!((event.button, event.buttons), (0, 1));
     assert_eq!((event.pointer_x, event.pointer_y), (30.0, 40.0));
     assert_eq!((event.element_width, event.element_height), (200.0, 100.0));
+    assert_eq!((event.movement_x, event.movement_y), (4.0, -3.0));
     assert_eq!(
         (
             event.alt_key,
