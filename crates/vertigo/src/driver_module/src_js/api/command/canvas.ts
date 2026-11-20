@@ -18,7 +18,8 @@
 // load it beforehand. A canvas whose drawing asked for an image still loading is drawn again when
 // the image comes, see `Images`, and so is one that wrote text when a font loads.
 
-import { decoder } from "../../text";
+// Its own, as this file is a chunk of its own, see `canvas_lazy.ts`.
+const decoder = new TextDecoder("utf-8");
 
 const Op = {
     FillStyle: 1,

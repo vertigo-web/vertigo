@@ -111,6 +111,10 @@ pub fn run_with_ws(opts: BuildOpts, ws: &Workspace, allow_error: bool) -> Result
             .save(&run_script_sourcemap_content.into_bytes())?;
     }
 
+    // Copy chunks wasm_run.js imports when it needs them
+
+    copy_chunks(&vertigo_statics_dir.join("chunks"), &opts)?;
+
     // Copy .wasm to destination
 
     let wasm_path_target = find_wasm_in_target(&target_path, &package_name);
@@ -182,6 +186,46 @@ pub fn run_with_ws(opts: BuildOpts, ws: &Workspace, allow_error: bool) -> Result
                 return Err(ErrorCode::CantWriteOrRemoveFile);
             }
         }
+    }
+
+    Ok(())
+}
+
+/// Copies the chunks to `chunks/` next to wasm_run.js, which imports them from there by their
+/// names, made from their content. They come with their source maps only if wasm_run.js does.
+fn copy_chunks(chunks_dir: &Path, opts: &BuildOpts) -> Result<(), ErrorCode> {
+    let entries = match std::fs::read_dir(chunks_dir) {
+        Ok(entries) => entries,
+        // A vertigo with all of its JS in wasm_run.js
+        Err(err) if err.kind() == std::io::ErrorKind::NotFound => return Ok(()),
+        Err(err) => {
+            log::error!("Can't read chunks from statics directory: {err}");
+            return Err(ErrorCode::CantReadWasmRunFromStatics);
+        }
+    };
+
+    opts.new_path_in_static_make(&["chunks"]).create_dir_all();
+
+    for entry in entries {
+        let entry = entry.map_err(|err| {
+            log::error!("Can't read chunks from statics directory: {err}");
+            ErrorCode::CantReadWasmRunFromStatics
+        })?;
+        let name = entry.file_name().to_string_lossy().into_owned();
+        let source_map = name.ends_with(".map");
+
+        if source_map && !opts.inner.wasm_run_source_map {
+            continue;
+        }
+
+        let mut content = WasmPath::new(entry.path()).read()?;
+
+        if !source_map && !opts.inner.wasm_run_source_map {
+            erase_last_two_lines(&mut content);
+        }
+
+        opts.new_path_in_static_make(&["chunks", &name])
+            .save(&content)?;
     }
 
     Ok(())

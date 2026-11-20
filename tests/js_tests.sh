@@ -13,12 +13,17 @@ echo "Checking if JS is up to date"
 npx rollup -v
 npx rollup -c
 
-if ! git diff --no-ext-diff --quiet -- crates/vertigo/src/driver_module/wasm_run.js; then
-    echo "ERROR: wasm_run.js differs"
+# A chunk with a new content is a new file, named by it, and the old one is gone.
+BUNDLE="crates/vertigo/src/driver_module/wasm_run.js crates/vertigo/src/driver_module/chunks"
+
+if ! git diff --no-ext-diff --quiet -- $BUNDLE \
+    || [ -n "$(git ls-files --others --exclude-standard -- $BUNDLE)" ]; then
+    echo "ERROR: wasm_run.js or its chunks differ"
+    git status --short -- $BUNDLE
     exit 1
 fi
 
-echo "OK: wasm_run.js up to date"
+echo "OK: wasm_run.js and its chunks up to date"
 
 # Size budget for the driver bundle.
 #
@@ -30,7 +35,7 @@ echo "OK: wasm_run.js up to date"
 # the room: change the number in the same commit, so it is a decision on the record rather
 # than a drift. `tests/bench-report` reports raw and gzip sizes per benchmark run if you want
 # the fuller picture.
-BUDGET=49000
+BUDGET=40500
 SIZE=$(wc -c < crates/vertigo/src/driver_module/wasm_run.js)
 
 if [ "$SIZE" -gt "$BUDGET" ]; then
@@ -40,3 +45,19 @@ if [ "$SIZE" -gt "$BUDGET" ]; then
 fi
 
 echo "OK: wasm_run.js is ${SIZE} B, within the ${BUDGET} B budget"
+
+# Each chunk, which an app downloads once it needs what the chunk does.
+CHUNK_BUDGET=10500
+
+for CHUNK in crates/vertigo/src/driver_module/chunks/*.js; do
+    SIZE=$(wc -c < "$CHUNK")
+    NAME=$(basename "$CHUNK")
+
+    if [ "$SIZE" -gt "$CHUNK_BUDGET" ]; then
+        echo "ERROR: ${NAME} is ${SIZE} B, over the ${CHUNK_BUDGET} B budget of a chunk"
+        echo "       Shrink it, or raise CHUNK_BUDGET in tests/js_tests.sh and say why."
+        exit 1
+    fi
+
+    echo "OK: ${NAME} is ${SIZE} B, within the ${CHUNK_BUDGET} B budget of a chunk"
+done

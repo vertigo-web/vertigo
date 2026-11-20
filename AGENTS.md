@@ -13,7 +13,9 @@ vertigo? Read [crates/vertigo/docs/agents.md](crates/vertigo/docs/agents.md) ins
     value renderers
   - `src/fetch` - `RequestBuilder`, `LazyCache`, `LazyListCache`
   - `src/driver_module` - the bridge to JavaScript. The browser side is TypeScript in
-    `src_js/`, bundled by rollup into `wasm_run.js`, which is committed.
+    `src_js/`, bundled by rollup into `wasm_run.js` and, for what it imports dynamically,
+    chunks in `chunks/`, which are committed. A chunk may import nothing (vertigo-cli renames
+    `wasm_run.js`), and `rollup.config.mjs` fails the build otherwise.
   - `docs/` - long-form guides embedded in rustdoc as `vertigo::guides::*` (see `src/lib.rs`)
 - `crates/vertigo-macro` - the proc macros: `dom!`, `css!`, `#[component]`, `#[store]`,
   `bind!` and friends
@@ -36,7 +38,8 @@ vertigo? Read [crates/vertigo/docs/agents.md](crates/vertigo/docs/agents.md) ins
 - `just unit-tests` - `cargo test --all-features`
 - `just e2e-tests` - the `basic` and `demo` suites in Chrome. The harness starts chromedriver.
   Add `--headed` to watch.
-- `just js-build` - rebuild `wasm_run.js` after changing anything in `src_js/`. Commit both.
+- `just js-build` - rebuild `wasm_run.js` and its chunks after changing anything in `src_js/`.
+  Commit them all: a chunk's name changes with its content.
 - `just js-test`, `just js-lint`
 - `just demo-watch` - the demo on <http://localhost:4444>, rebuilt on change. It never exits.
 - `just bench`, `just bench-compare` - benchmark suites. Three of them need a WebDriver on

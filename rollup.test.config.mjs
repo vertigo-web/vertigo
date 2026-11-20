@@ -71,6 +71,25 @@ export default [
         ],
     },
     {
+        input: 'crates/vertigo/src/driver_module/src_js/api/command/canvas_lazy.test.ts',
+        output: [
+            {
+                sourcemap: true,
+                file: 'build/canvas_lazy.test.js',
+                format: 'cjs',
+                // The chunk it loads, in the same file
+                inlineDynamicImports: true,
+            }
+        ],
+        plugins: [
+            typescript({
+                sourceMap: true,
+                inlineSources: true,
+            }),
+            sourcemaps(),
+        ],
+    },
+    {
         input: 'crates/vertigo/src/driver_module/src_js/api/command/languages.test.ts',
         output: [
             {

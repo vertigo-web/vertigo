@@ -8,7 +8,7 @@ import { MapNodes } from "./map_nodes";
 import { ModuleControllerType } from "../../../wasm_init";
 import { Metadata } from "../../metadata";
 import { createElement } from "./tags";
-import { Canvases } from "../canvas";
+import { LazyCanvases } from "../canvas_lazy";
 
 export type CommandType = {
     CreateNode: {
@@ -96,12 +96,18 @@ export class DriverDom {
     private appLocation: AppLocation;
     public readonly nodes: MapNodes;
     private readonly callbacks: CallbackManager;
-    private readonly canvases: Canvases = new Canvases();
+    private readonly canvases: LazyCanvases = new LazyCanvases();
 
     public constructor(private readonly metadata: Metadata, appLocation: AppLocation, getWasm: () => ModuleControllerType<ExportType>) {
         this.appLocation = appLocation;
         this.nodes = new MapNodes();
         this.callbacks = new CallbackManager(getWasm);
+
+        // A canvas the server sent gets a drawing once the wasm runs, so the code drawing it
+        // loads meanwhile, see `LazyCanvases`.
+        if (document.querySelector('canvas') !== null) {
+            this.canvases.prefetch();
+        }
 
         document.addEventListener('dragover', (ev): void => {
             // console.log('File(s) in drop zone');
