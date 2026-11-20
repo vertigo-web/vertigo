@@ -97,6 +97,35 @@ pub fn build_linker(engine: &Engine) -> Result<Linker<HostState>, ErrorCode> {
         )
         .map_err(|err| registration_failed("dom_access", err))?;
 
+    linker
+        .func_wrap(
+            IMPORT_MODULE,
+            "dom_bulk_update",
+            |caller: Caller<'_, HostState>, long_ptr: u64| {
+                let state = caller.data();
+                let probe = state.probe.clone();
+                let request = state.request.clone();
+                let handle_command = state.handle_command.clone();
+
+                // The whole body, as for `dom_access`: reading the batch out of linear memory
+                // is host work proportional to its size.
+                let host_mark = probe.start();
+
+                let (ptr, length) = LongPtr::from(long_ptr).into_parts();
+                let mut data_context = DataContext::from_caller(caller);
+
+                match data_context.get_bytes_from(ptr, length) {
+                    Some(commands) => {
+                        handle_command(request, CommandForBrowser::DomBulkUpdate { commands });
+                    }
+                    None => log::error!("import_dom_bulk_update -> the batch is out of the memory"),
+                }
+
+                probe.host_call(host_mark);
+            },
+        )
+        .map_err(|err| registration_failed("dom_bulk_update", err))?;
+
     Ok(linker)
 }
 

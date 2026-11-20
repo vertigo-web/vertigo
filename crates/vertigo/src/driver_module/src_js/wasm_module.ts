@@ -18,12 +18,16 @@ export type ImportType = {
     panic_message: (long_ptr: bigint) => void,
     //call from rust
     dom_access: (long_ptr: bigint) => bigint,
+    // A batch of DOM commands, see `DriverDom.update`.
+    dom_bulk_update: (long_ptr: bigint) => void,
 }
 
 export type ExportType = {
     vertigo_export_alloc_block: (size: number) => bigint,
     vertigo_export_free_block: (pointer: bigint) => void,
     vertigo_export_wasm_command: (value_ptr: bigint) => bigint,
+    // A frame to draw, at the time `requestAnimationFrame` gives, see `animationFrames.ts`.
+    vertigo_export_animation_frame: (time: number) => void,
     vertigo_entry_function: (major: number, minor: number) => void,
 }
 
@@ -66,6 +70,13 @@ export class WasmModule {
                     const m = getWasm().getUint8Memory().subarray(ptr, ptr + size);
                     const message = decoder.decode(m);
                     console.error('PANIC', message);
+                },
+                // The batch's own bytes in wasm's memory, not a command: one comes with every frame
+                // and every event. The view is good while this call runs.
+                dom_bulk_update: (long_ptr: bigint) => {
+                    const size = Number(long_ptr % (2n ** 32n));
+                    const ptr = Number(long_ptr >> 32n);
+                    vertigo_api.dom.update(getWasm().getUint8Memory().subarray(ptr, ptr + size));
                 },
                 dom_access: (long_ptr: bigint): bigint => {
                     if (long_ptr === 0n) {

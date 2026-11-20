@@ -140,12 +140,6 @@ type ExecType
         JsApiCall: {
             commands: Array<JsApiCommandType>
         }
-    }
-    | {
-        // Flat command stream, not a list of objects - see `command/dom/dom_wire.ts`.
-        DomBulkUpdate: {
-            commands: Uint8Array
-        }
     };
 
 // The union of `ExecType`'s object variants as [key, payload] pairs, so that switching on the
@@ -334,10 +328,6 @@ export class Api {
 
             case 'JsApiCall':
                 return this.executeJsApiCall(params.commands);
-
-            case 'DomBulkUpdate':
-                this.dom.update(params.commands);
-                return null;
 
             default:
                 console.info('exec_command: Arg', safeArg);

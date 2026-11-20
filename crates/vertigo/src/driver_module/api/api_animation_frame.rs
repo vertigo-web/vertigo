@@ -141,15 +141,14 @@ mod tests {
     };
 
     use crate::{
-        JsJson, JsJsonNumber, JsJsonSerialize,
-        dev::command::{CommandForBrowser, CommandForWasm, decode_json},
+        JsJson, JsJsonSerialize,
+        dev::command::CommandForBrowser,
         driver_module::api::{api_animation_frame, api_command_wasm, api_timers},
     };
 
     /// A frame, as the browser delivers it.
     fn frame(time: f64) {
-        let command = CommandForWasm::AnimationFrame { time };
-        api_command_wasm().command_from_js(command.to_json());
+        api_command_wasm().animation_frame(time);
     }
 
     /// A callback that writes its name and the time of every frame it gets to `log`.
@@ -331,12 +330,7 @@ mod tests {
         assert!(paint.as_mut().poll(&mut context).is_ready());
     }
 
-    fn object(key: &str, value: JsJson) -> JsJson {
-        JsJson::Object([(key.to_string(), value)].into_iter().collect())
-    }
-
-    /// `api.ts` reads the commands as these strings, and `animationFrames.ts` sends a frame as
-    /// `{ AnimationFrame: { time } }`.
+    /// `api.ts` reads the commands as these strings.
     #[test]
     fn the_commands_are_the_ones_the_driver_reads_and_sends() {
         assert_eq!(
@@ -346,16 +340,6 @@ mod tests {
         assert_eq!(
             CommandForBrowser::AnimationFrameStop.to_json(),
             JsJson::String("AnimationFrameStop".to_string())
-        );
-
-        let sent = object(
-            "AnimationFrame",
-            object("time", JsJson::Number(JsJsonNumber(16.5))),
-        );
-        let frame = decode_json::<CommandForWasm>(sent);
-        assert!(
-            matches!(frame, Ok(CommandForWasm::AnimationFrame { time }) if time == 16.5),
-            "{frame:?}"
         );
     }
 }

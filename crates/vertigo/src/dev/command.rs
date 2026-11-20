@@ -116,7 +116,8 @@ pub enum CommandForBrowser {
         commands: Vec<JsApiCommand>,
     },
 
-    /// A batch of DOM commands, flat-encoded.
+    /// A batch of DOM commands, flat-encoded. The browser and vertigo-cli get it through the
+    /// `dom_bulk_update` import, not `dom_access`, but vertigo-cli handles it as this command.
     ///
     /// Not a `Vec<DriverDomCommand>`: as `JsJson` that becomes two `BTreeMap`s and three
     /// heap `String`s per command, which dominated the cost of a large update. Encode with
@@ -254,12 +255,6 @@ pub enum CommandForWasm {
 
     TimerCall {
         callback: CallbackId,
-    },
-
-    /// A frame the browser is about to draw, with its time in milliseconds - the timestamp of
-    /// `requestAnimationFrame`.
-    AnimationFrame {
-        time: f64,
     },
 
     LocationCall {

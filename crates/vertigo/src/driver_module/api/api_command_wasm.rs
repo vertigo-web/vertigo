@@ -18,9 +18,9 @@ pub fn api_command_wasm() -> Rc<CommandWasmApi> {
 pub struct CommandWasmApi {}
 
 impl CommandWasmApi {
-    /// Every event from the browser comes through here: a DOM event, a websocket message, a fetch
-    /// response, a timer - and through the timer every step of async code - a frame to draw, or
-    /// a change of the location.
+    /// Every event from the browser comes through here, but a frame to draw: a DOM event, a
+    /// websocket message, a fetch response, a timer - and through the timer every step of async
+    /// code - or a change of the location.
     pub fn command_from_js(self: &Rc<CommandWasmApi>, json: JsJson) -> JsJson {
         let command = decode_json::<CommandForWasm>(json)
             .inspect_err(|err| {
@@ -48,10 +48,6 @@ impl CommandWasmApi {
                 api_timers().callback_timeout(callback);
                 JsJson::Null
             }
-            CommandForWasm::AnimationFrame { time } => {
-                api_animation_frame().frame(time);
-                JsJson::Null
-            }
             CommandForWasm::LocationCall { callback, value } => {
                 api_location().callback(callback, value);
                 JsJson::Null
@@ -67,5 +63,14 @@ impl CommandWasmApi {
         get_driver_dom().flush_dom_changes();
 
         response
+    }
+
+    /// A frame the browser is about to draw, at `time` in milliseconds, the timestamp of
+    /// `requestAnimationFrame`. A call of its own (`vertigo_export_animation_frame`), not a
+    /// command: it comes as often as the screen refreshes, or more, and a command would be
+    /// encoded and decoded both ways each time. In a transaction too, as an event is.
+    pub fn animation_frame(&self, time: f64) {
+        get_driver().transaction(|_| api_animation_frame().frame(time));
+        get_driver_dom().flush_dom_changes();
     }
 }
