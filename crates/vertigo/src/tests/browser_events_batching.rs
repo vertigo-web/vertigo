@@ -152,10 +152,7 @@ fn the_callbacks_of_an_animation_frame_reach_the_dom_as_one_batch() {
         .clone()
         .map(|label| get_driver().on_animation_frame(move |time| label.set(format!("{time}"))));
 
-    let batches = batches_during(|| {
-        let frame = CommandForWasm::AnimationFrame { time: 16.0 };
-        api_command_wasm().command_from_js(frame.to_json());
-    });
+    let batches = batches_during(|| api_command_wasm().animation_frame(16.0));
 
     drop(get_driver().take_root());
 

@@ -2,7 +2,8 @@ import { ModuleControllerType } from "../../wasm_init";
 import { ExportType } from "../../wasm_module";
 
 /// The frames the browser draws, for as long as wasm wants them: one call into wasm per frame,
-/// for all of the app's callbacks at once.
+/// for all of the app's callbacks at once. A call of its own, with the time as a number, rather
+/// than a command encoded and decoded both ways: it comes as often as the screen refreshes.
 export class AnimationFrames {
     private readonly getWasm: () => ModuleControllerType<ExportType>;
     /// The frame asked for, while the frames go on.
@@ -29,10 +30,6 @@ export class AnimationFrames {
         // Asked for before wasm runs, so that a callback stopping the frames cancels it.
         this.request = requestAnimationFrame(this.frame);
 
-        this.getWasm().wasmCommand({
-            AnimationFrame: {
-                time,
-            },
-        });
+        this.getWasm().exports.vertigo_export_animation_frame(time);
     }
 }

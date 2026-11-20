@@ -14,7 +14,7 @@
 //! 4. **that tree to an HTML string** - [`SsrTimings::html_total`].
 //!
 //! Phases 2 and 3 are not two halves of a stopwatch. The command blob is decoded on the
-//! host inside `import_dom_access`, while the wasm call that produced it is still on the
+//! host inside `import_dom_bulk_update`, while the wasm call that produced it is still on the
 //! stack - so `decode_dom` is phase-3 work measured from inside a phase-2 region. Both raw
 //! numbers are kept and the accessors do the arithmetic, so a reader can check it rather
 //! than trust it.
@@ -91,8 +91,9 @@ mod on {
         /// Of `wasm_wall`: `vertigo_export_wasm_command` - timer callbacks and fetch
         /// responses re-entering wasm from the drain loop.
         pub wasm_reentry: Duration,
-        /// Host time inside `import_dom_access`, summed: reading the argument out of linear
-        /// memory, dispatching it, writing the answer back. Nested inside `wasm_wall`.
+        /// Host time inside the imports (`dom_access`, `dom_bulk_update`), summed: reading the
+        /// argument out of linear memory, dispatching it, writing the answer back. Nested inside
+        /// `wasm_wall`.
         pub host_in_wasm: Duration,
         /// Of `host_in_wasm`: `decode_dom_commands` alone.
         pub decode_dom: Duration,
@@ -124,7 +125,7 @@ mod on {
         pub dom_commands: u32,
         /// Encoded wire bytes across all batches.
         pub dom_blob_bytes: u64,
-        /// `import_dom_access` crossings in total - DOM batches and everything else.
+        /// Import calls in total - DOM batches and everything else.
         pub host_calls: u32,
         /// Calls into wasm: one mount, one `handle_url`, one per re-entry.
         pub wasm_calls: u32,

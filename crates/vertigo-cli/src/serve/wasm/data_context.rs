@@ -78,6 +78,18 @@ impl<'a> DataContext<'a> {
         }
     }
 
+    /// The `length` bytes at `ptr`, none if they are out of the memory.
+    pub fn get_bytes_from(&mut self, ptr: u32, length: u32) -> Option<Vec<u8>> {
+        let memory = self.get_memory();
+        let context = self.get_context();
+        let start = ptr as usize;
+
+        memory
+            .data(&context)
+            .get(start..start + length as usize)
+            .map(<[u8]>::to_vec)
+    }
+
     pub fn get_string_from(&mut self, ptr: u32, offset: u32) -> Option<String> {
         let memory = self.get_memory();
         let context = self.get_context();
