@@ -119,6 +119,8 @@ impl AttrGroupValue {
 
     group_value_constructor!(hook_key_down, Callback1<KeyboardEvent, bool>, hook_key_down_rc);
     group_value_constructor!(hook_key_up, Callback1<KeyboardEvent, bool>, hook_key_up_rc);
+    group_value_constructor!(hook_window_focus, Callback1<bool, ()>, hook_window_focus_rc);
+    group_value_constructor!(hook_visibility, Callback1<bool, ()>, hook_visibility_rc);
     group_value_constructor!(hook_pointer_move, Callback1<PointerEvent, ()>, hook_pointer_move_rc);
     group_value_constructor!(hook_pointer_up, Callback1<PointerEvent, ()>, hook_pointer_up_rc);
     group_value_constructor!(

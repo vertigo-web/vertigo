@@ -212,6 +212,8 @@ fn push_attribute(
         "draw"
         | "hook_key_down"
         | "hook_key_up"
+        | "hook_window_focus"
+        | "hook_visibility"
         | "hook_pointer_move"
         | "hook_pointer_up"
         | "hook_pointer_cancel"
@@ -441,6 +443,8 @@ mod tests {
             "on_scroll",
             "hook_key_down",
             "hook_key_up",
+            "hook_window_focus",
+            "hook_visibility",
             "hook_pointer_move",
             "hook_pointer_up",
             "hook_pointer_cancel",
