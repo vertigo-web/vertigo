@@ -19,8 +19,11 @@
   (`vertex_attrib_divisor`, `draw_arrays_instanced`, `draw_elements_instanced`) draws many objects
   with a call or two, their matrices worked out in Rust and sent in one buffer. Textures take
   images from URLs too (`texture_image_url`), put in when the browser has them, and
-  `WebGl::on_image_load` tells when, to draw again. `depth_mask` and `blend_func_separate` draw
-  see-through objects over the others. The browser's code for it is a chunk of its own, loaded
+  `WebGl::on_image_load` tells when, to draw again. `pixel_store` reads images flipped or with their
+  colors premultiplied by alpha, so mipmaps of see-through pictures don't darken their edges, an
+  image from a URL as it was asked for. `depth_mask` and `blend_func_separate` draw see-through
+  objects over the others. `WebGl::on_unavailable` tells a browser without WebGL 2, so the app
+  can draw another way. The browser's code for it is a chunk of its own, loaded
   when a page first uses WebGL. The demo draws a cube turning with it.
 
 ### Changed
