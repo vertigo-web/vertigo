@@ -6,11 +6,12 @@ use vertigo::{
 use crate::app::{self, counters::state_counters, state::state_route};
 
 use super::{
-    chat::Chat, counters::CountersDemo, driver::DriverDemo, dropfiles::DropFiles, fetch::FetchDemo,
-    game_input::GameInputDemo, game_of_life::GameOfLife, github_explorer::GitHubExplorer,
-    home::Home, input::MyInput, js_api_access::JsApiAccess, lazy_list::LazyList, list::ListDemo,
-    paint::PaintDemo, route::Route, styling::Styling, sudoku::Sudoku, svg::SvgDemo,
-    webgl::WebGlDemo, webgpu::WebGpuDemo, ws_collection::WsCollectionDemo,
+    audio::AudioDemo, chat::Chat, counters::CountersDemo, driver::DriverDemo, dropfiles::DropFiles,
+    fetch::FetchDemo, game_input::GameInputDemo, game_of_life::GameOfLife,
+    github_explorer::GitHubExplorer, home::Home, input::MyInput, js_api_access::JsApiAccess,
+    lazy_list::LazyList, list::ListDemo, paint::PaintDemo, route::Route, styling::Styling,
+    sudoku::Sudoku, svg::SvgDemo, webgl::WebGlDemo, webgpu::WebGpuDemo,
+    ws_collection::WsCollectionDemo,
 };
 
 fn css_menu_item(active: bool) -> Css {
@@ -134,6 +135,7 @@ pub fn render(state: &app::State) -> DomNode {
             Route::Sudoku => dom! { <Sudoku state={&state.sudoku} /> },
             Route::Input => dom! { <MyInput value={&state.input} /> },
             Route::GameInput => dom! { <GameInputDemo /> },
+            Route::Audio => dom! { <AudioDemo /> },
             Route::GithubExplorer => dom! { <GitHubExplorer /> },
             Route::GameOfLife => dom! { <GameOfLife state={&state.game_of_life} /> },
             Route::Chat => {
