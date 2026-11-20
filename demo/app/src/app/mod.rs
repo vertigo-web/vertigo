@@ -1,4 +1,5 @@
 mod api;
+mod audio;
 mod chat;
 mod counters;
 mod driver;

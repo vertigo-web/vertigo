@@ -33,6 +33,7 @@ pub const TABS: &[&str] = &[
     "Sudoku",
     "Input",
     "Game Input",
+    "Audio",
     "Github Explorer",
     "Game Of Life",
     "Chat",
@@ -1348,6 +1349,33 @@ pub async fn game_input(ctx: &Ctx) -> Result<()> {
     ctx.wait_for_text("Whole screen: true").await?;
     click_by_text(ctx, "button", "Whole screen").await?;
     ctx.wait_for_text("Whole screen: false").await
+}
+
+/// Sound, in a browser which lets the page make sound, as it was clicked before: a beep played
+/// over itself, and a tune played to its end, which comes back to the app, then looped, when it
+/// doesn't end, and stopped.
+pub async fn audio(ctx: &Ctx) -> Result<()> {
+    open(ctx, "Audio", "Sound allowed").await?;
+
+    click_by_text(ctx, "button", "Beep").await?;
+    ctx.wait_for_text("Sound allowed: true").await?;
+    click_by_text(ctx, "button", "Beep").await?;
+    click_by_text(ctx, "button", "Quiet beep").await?;
+
+    click_by_text(ctx, "button", "Play tune").await?;
+    ctx.wait_for_text("Tune ended: 1 times").await?;
+
+    ctx.find(By::Css("input[type=checkbox]"))
+        .await
+        .context("the checkbox of looping")?
+        .click()
+        .await
+        .context("looping the tune failed")?;
+    click_by_text(ctx, "button", "Play tune").await?;
+    // The tune is half a second long
+    tokio::time::sleep(std::time::Duration::from_millis(1500)).await;
+    ctx.wait_for_text("Tune ended: 1 times").await?;
+    click_by_text(ctx, "button", "Stop tune").await
 }
 
 /// How far the mouse moved over the box of the Game Input tab, as it says.

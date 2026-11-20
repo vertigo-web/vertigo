@@ -11,6 +11,7 @@ pub enum Route {
     Sudoku,
     Input,
     GameInput,
+    Audio,
     GithubExplorer,
     GameOfLife,
     Chat,
@@ -41,6 +42,7 @@ impl Route {
         Self::Sudoku,
         Self::Input,
         Self::GameInput,
+        Self::Audio,
         Self::GithubExplorer,
         Self::GameOfLife,
         Self::Chat,
@@ -95,6 +97,9 @@ impl Route {
             Self::GameInput => {
                 "Keys held and repeated, the window's focus, the pointer locked, the whole screen."
             }
+            Self::Audio => {
+                "A sound played over itself, a tune played and looped, the volume of all sound."
+            }
             Self::GithubExplorer => "LazyCache over a fetch, decoding nested AutoJsJson structs.",
             Self::GameOfLife => {
                 "8400 Value<bool> driven by a timer, fanned back into a single population count."
@@ -142,6 +147,7 @@ impl Route {
             Self::Sudoku => "/sudoku",
             Self::Input => "/input",
             Self::GameInput => "/game_input",
+            Self::Audio => "/audio",
             Self::GithubExplorer => "/github_explorer",
             Self::GameOfLife { .. } => "/game_of_life",
             Self::Chat => "/chat",
@@ -168,6 +174,7 @@ impl Route {
             "/sudoku" => Self::Sudoku,
             "/input" => Self::Input,
             "/game_input" => Self::GameInput,
+            "/audio" => Self::Audio,
             "/github_explorer" => Self::GithubExplorer,
             "/game_of_life" => Self::GameOfLife,
             "/chat" => Self::Chat,
@@ -194,6 +201,7 @@ impl Route {
             Self::Sudoku => "Sudoku",
             Self::Input => "Input",
             Self::GameInput => "Game Input",
+            Self::Audio => "Audio",
             Self::GithubExplorer => "Github Explorer",
             Self::GameOfLife => "Game Of Life",
             Self::Chat => "Chat",
