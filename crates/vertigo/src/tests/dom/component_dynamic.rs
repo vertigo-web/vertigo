@@ -200,6 +200,7 @@ fn test_on_events_grouping_and_spreading() {
         <Everything
             name="world"
             inner:hook_key_down={|_| true}
+            inner:hook_key_up={|_| true}
             inner:hook_pointer_cancel={|_| ()}
             inner:hook_pointer_move={|_| ()}
             inner:hook_pointer_up={|_| ()}
@@ -211,6 +212,7 @@ fn test_on_events_grouping_and_spreading() {
             inner:on_dropfile={|_| ()}
             inner:on_input={|_| ()}
             inner:on_key_down={|_| true}
+            inner:on_key_up={|_| true}
             inner:on_load={|| ()}
             inner:on_media={|_| ()}
             inner:on_message={|_| ()}
@@ -233,7 +235,7 @@ fn test_on_events_grouping_and_spreading() {
 
     assert_eq!(
         el_str,
-        "<input name='world' v-component='Everything' blur=5 change=6 change_checked=7 click=8 drop=9 focus=10 hook_keydown=1 hook_pointercancel=2 hook_pointermove=3 hook_pointerup=4 input=11 keydown=12 load=13 media=14 message=15 mousedown=16 mouseenter=17 mouseleave=18 mouseup=19 pointercancel=20 pointerdown=21 pointermove=22 pointerup=23 resize=24 scroll=25 submit=26 wheel=27 />"
+        "<input name='world' v-component='Everything' blur=6 change=7 change_checked=8 click=9 drop=10 focus=11 hook_keydown=1 hook_keyup=2 hook_pointercancel=3 hook_pointermove=4 hook_pointerup=5 input=12 keydown=13 keyup=14 load=15 media=16 message=17 mousedown=18 mouseenter=19 mouseleave=20 mouseup=21 pointercancel=22 pointerdown=23 pointermove=24 pointerup=25 resize=26 scroll=27 submit=28 wheel=29 />"
     );
 }
 

@@ -16,7 +16,7 @@ use super::{
     dom_id::DomId,
     dom_node::DomNode,
     events::{
-        ClickEvent, DropFileEvent, IntersectionEvent, KeyDownEvent, MediaEvent, MessageEvent,
+        ClickEvent, DropFileEvent, IntersectionEvent, KeyboardEvent, MediaEvent, MessageEvent,
         PointerEvent, ResizeEvent, ScrollEvent, WheelEvent,
     },
 };
@@ -291,27 +291,29 @@ impl DomElement {
         &self.child_node
     }
 
-    pub fn hook_key_down(self, on_hook_key_down: impl Into<Callback1<KeyDownEvent, bool>>) -> Self {
+    /// A key pressed anywhere on the page, wherever the focus is: it listens on the document.
+    /// Return `true` when the key was handled, so the browser doesn't do what it would, f. ex.
+    /// scroll the page on an arrow. See [`KeyboardEvent`].
+    pub fn hook_key_down(
+        self,
+        on_hook_key_down: impl Into<Callback1<KeyboardEvent, bool>>,
+    ) -> Self {
         self.hook_key_down_rc(Rc::new(on_hook_key_down.into()))
     }
 
-    pub fn hook_key_down_rc(self, on_hook_key_down: Rc<Callback1<KeyDownEvent, bool>>) -> Self {
-        let on_hook_key_down = self.install_callback1(on_hook_key_down);
+    pub fn hook_key_down_rc(self, on_hook_key_down: Rc<Callback1<KeyboardEvent, bool>>) -> Self {
+        self.on_keyboard("hook_keydown", on_hook_key_down)
+    }
 
-        self.add_event_listener("hook_keydown", move |data| match get_key_down_event(data) {
-            Ok(event) => {
-                let prevent_default = on_hook_key_down(event);
+    /// A key let go anywhere on the page, wherever the focus is: it listens on the document, as
+    /// [`hook_key_down`](Self::hook_key_down). A key let go while the window has no focus comes
+    /// up elsewhere, and isn't told. See [`KeyboardEvent`].
+    pub fn hook_key_up(self, on_hook_key_up: impl Into<Callback1<KeyboardEvent, bool>>) -> Self {
+        self.hook_key_up_rc(Rc::new(on_hook_key_up.into()))
+    }
 
-                match prevent_default {
-                    true => JsJson::True,
-                    false => JsJson::False,
-                }
-            }
-            Err(error) => {
-                log::error!("export_websocket_callback_message -> params decode error -> {error}");
-                JsJson::False
-            }
-        })
+    pub fn hook_key_up_rc(self, on_hook_key_up: Rc<Callback1<KeyboardEvent, bool>>) -> Self {
+        self.on_keyboard("hook_keyup", on_hook_key_up)
     }
 
     /// A pointer moved anywhere on the page, also outside the element and without capturing it,
@@ -596,24 +598,39 @@ impl DomElement {
         })
     }
 
-    pub fn on_key_down(self, on_key_down: impl Into<Callback1<KeyDownEvent, bool>>) -> Self {
+    /// A key pressed while this element or one in it has the focus. Return `true` when the key
+    /// was handled, so the browser doesn't do what it would, f. ex. type it into an input. See
+    /// [`KeyboardEvent`].
+    pub fn on_key_down(self, on_key_down: impl Into<Callback1<KeyboardEvent, bool>>) -> Self {
         self.on_key_down_rc(Rc::new(on_key_down.into()))
     }
 
-    pub fn on_key_down_rc(self, on_key_down: Rc<Callback1<KeyDownEvent, bool>>) -> Self {
-        let on_key_down = self.install_callback1(on_key_down);
+    pub fn on_key_down_rc(self, on_key_down: Rc<Callback1<KeyboardEvent, bool>>) -> Self {
+        self.on_keyboard("keydown", on_key_down)
+    }
 
-        self.add_event_listener("keydown", move |data| match get_key_down_event(data) {
-            Ok(event) => {
-                let prevent_default = on_key_down(event);
+    /// A key let go while this element or one in it has the focus. See [`KeyboardEvent`].
+    pub fn on_key_up(self, on_key_up: impl Into<Callback1<KeyboardEvent, bool>>) -> Self {
+        self.on_key_up_rc(Rc::new(on_key_up.into()))
+    }
 
-                match prevent_default {
-                    true => JsJson::True,
-                    false => JsJson::False,
-                }
-            }
+    pub fn on_key_up_rc(self, on_key_up: Rc<Callback1<KeyboardEvent, bool>>) -> Self {
+        self.on_keyboard("keyup", on_key_up)
+    }
+
+    /// The keyboard listener of `event_name`, replying whether the browser's default action was
+    /// prevented.
+    fn on_keyboard(
+        self,
+        event_name: &'static str,
+        callback: Rc<Callback1<KeyboardEvent, bool>>,
+    ) -> Self {
+        let callback = self.install_callback1(callback);
+
+        self.add_event_listener(event_name, move |data| match get_keyboard_event(data) {
+            Ok(event) => JsJson::from(callback(event)),
             Err(error) => {
-                log::error!("export_websocket_callback_message -> params decode error -> {error}");
+                log::error!("{event_name} -> params decode error -> {error}");
                 JsJson::False
             }
         })
@@ -971,7 +988,8 @@ fn get_intersection_event(data: JsJson) -> Result<IntersectionEvent, String> {
     })
 }
 
-fn get_key_down_event(data: JsJson) -> Result<KeyDownEvent, String> {
+/// The event as the driver sends it. The order MUST match `keyboard` in `callbackManager.ts`.
+fn get_keyboard_event(data: JsJson) -> Result<KeyboardEvent, String> {
     data.map_list(|mut params: JsJsonListDecoder| {
         let key = params.get_string("key")?;
         let code = params.get_string("code")?;
@@ -979,15 +997,17 @@ fn get_key_down_event(data: JsJson) -> Result<KeyDownEvent, String> {
         let ctrl_key = params.get_bool("ctrlKey")?;
         let shift_key = params.get_bool("shiftKey")?;
         let meta_key = params.get_bool("metaKey")?;
+        let repeat = params.get_bool("repeat")?;
         params.expect_no_more()?;
 
-        Ok(KeyDownEvent {
+        Ok(KeyboardEvent {
             key,
             code,
             alt_key,
             ctrl_key,
             shift_key,
             meta_key,
+            repeat,
         })
     })
 }

@@ -7,8 +7,8 @@ pub use drop_file_event::*;
 mod intersect_event;
 pub use intersect_event::*;
 
-mod key_down_event;
-pub use key_down_event::*;
+mod keyboard_event;
+pub use keyboard_event::*;
 
 mod media_event;
 pub use media_event::*;

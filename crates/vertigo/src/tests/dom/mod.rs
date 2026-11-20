@@ -6,6 +6,7 @@ mod component_dynamic;
 mod component_namespaces;
 mod embed;
 mod html_attrs;
+mod keyboard_event;
 mod list_spread;
 mod media_event;
 mod params;
