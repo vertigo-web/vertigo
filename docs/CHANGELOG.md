@@ -5,6 +5,10 @@
 
 ### Added
 
+* `on_key_up` and `hook_key_up`: a key let go, on the element with the focus or anywhere on the
+  page, as `on_key_down` and `hook_key_down` tell a key pressed. Both get a `KeyboardEvent`, whose
+  `repeat` tells a press repeated by the key held down from the first one, so a game acts once a
+  press and goes on moving while a key is held.
 * `hook_pointer_down_outside` on elements: a pointer pressed anywhere on the page but on the
   element and what is in it, wherever that lies, f. ex. to close a popup. The press goes on to
   what it fell on, so one click beside a menu closes it and starts what it does there.
@@ -64,6 +68,9 @@
 * `draw` on a canvas works nothing out during SSR: the server doesn't compute the drawing nor
   turn it into bytes for a page that has no pictures in its canvases, so an app needs no
   `is_server()` check around it.
+* `KeyDownEvent` is `KeyboardEvent`, the event of a key let go too, with a new field `repeat`.
+  `KeyDownEvent` stays as its other name, so code naming it compiles, but a struct literal of it,
+  f. ex. in a test, needs `repeat` or `..Default::default()`, which it now has.
 * The browser code drawing on canvases is a chunk of its own, loaded the first time a page needs
   it: `wasm_run.js` is 2.5 KB smaller with brotli (14.2 KB to 11.7 KB) for every app, and an app
   with canvases downloads the chunk (3.3 KB) when the first drawing comes, or meanwhile with its

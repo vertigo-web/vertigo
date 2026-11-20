@@ -52,6 +52,7 @@ fn attr_to_group_variant(key: impl AsRef<str>, value: TokenStream2) -> TokenStre
         }
         "draw" => quote! { vertigo::AttrGroupValue::draw(#value) },
         "hook_key_down" => quote! { vertigo::AttrGroupValue::hook_key_down(#value) },
+        "hook_key_up" => quote! { vertigo::AttrGroupValue::hook_key_up(#value) },
         "hook_pointer_move" => quote! { vertigo::AttrGroupValue::hook_pointer_move(#value) },
         "hook_pointer_up" => quote! { vertigo::AttrGroupValue::hook_pointer_up(#value) },
         "hook_pointer_cancel" => quote! { vertigo::AttrGroupValue::hook_pointer_cancel(#value) },
@@ -68,6 +69,7 @@ fn attr_to_group_variant(key: impl AsRef<str>, value: TokenStream2) -> TokenStre
         "on_input" => quote! { vertigo::AttrGroupValue::on_input(#value) },
         "on_intersect" => quote! { vertigo::AttrGroupValue::on_intersect(#value) },
         "on_key_down" => quote! { vertigo::AttrGroupValue::on_key_down(#value) },
+        "on_key_up" => quote! { vertigo::AttrGroupValue::on_key_up(#value) },
         "on_load" => quote! { vertigo::AttrGroupValue::on_load(#value) },
         "on_media" => quote! { vertigo::AttrGroupValue::on_media(#value) },
         "on_message" => quote! { vertigo::AttrGroupValue::on_message(#value) },
