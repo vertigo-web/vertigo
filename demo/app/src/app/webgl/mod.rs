@@ -6,11 +6,19 @@
 //!
 //! In its corner, how many frames the browser drew in the last second: a `Value` set from the
 //! same callback, once a second, so the page changes only then.
+//!
+//! The canvas is as wide as the page lets it be, up to a point, and the cube keeps its shape at
+//! any width: its projection takes the canvas's size. When the browser loses the context and
+//! gives it back, the cube's buffers and program are gone, and are made again.
 
-use std::{cell::Cell, f32::consts::PI};
+use std::{
+    cell::{Cell, RefCell},
+    f32::consts::PI,
+    rc::Rc,
+};
 
 use vertigo::{
-    Css, DomElementRef, Value, component, css, dom, dom_element, get_driver,
+    Css, Value, component, css, dom, dom_element, get_driver,
     webgl::{
         Buffer, BufferTarget, BufferUsage, Capability, ClearBuffers, DataType, IndexType,
         Primitive, Program, UniformLocation, VertexArray, WebGl, WebGlOptions,
@@ -20,14 +28,27 @@ use vertigo::{
 #[component]
 pub fn WebGlDemo() {
     let canvas = dom_element! { <canvas css={css_canvas()} /> };
-    let cube = Cube::new(&canvas.get_ref());
+    // So that a test can read the pixels back between frames.
+    let gl = WebGl::with_options(
+        &canvas.get_ref(),
+        WebGlOptions {
+            preserve_drawing_buffer: true,
+            ..WebGlOptions::default()
+        },
+    );
+    let cube = Rc::new(RefCell::new(Cube::new(&gl)));
+
+    canvas.append_drop_resource(gl.on_restore({
+        let (gl, cube) = (gl.clone(), cube.clone());
+        move || *cube.borrow_mut() = Cube::new(&gl)
+    }));
 
     let fps = Value::new(None);
     let counter = FrameCounter::default();
     canvas.append_drop_resource(get_driver().on_animation_frame({
         let fps = fps.clone();
         move |time| {
-            cube.draw(time);
+            cube.borrow().draw(time);
             if let Some(count) = counter.frame(time) {
                 fps.set(Some(count));
             }
@@ -150,15 +171,9 @@ struct Cube {
 }
 
 impl Cube {
-    fn new(canvas: &DomElementRef) -> Self {
-        // So that a test can read the pixels back between frames.
-        let gl = WebGl::with_options(
-            canvas,
-            WebGlOptions {
-                preserve_drawing_buffer: true,
-                ..WebGlOptions::default()
-            },
-        );
+    /// The cube's objects on `gl`, made anew when the context comes back after it was lost.
+    fn new(gl: &WebGl) -> Self {
+        let gl = gl.clone();
         let program = gl.create_program(VERTEX, FRAGMENT);
         let transform = gl.uniform_location(&program, "transform");
 
@@ -208,12 +223,13 @@ impl Cube {
     }
 
     /// The cube at `time`, in milliseconds: a turn around one axis every 6 seconds, and around
-    /// another every 10.
+    /// another every 10. As wide as it is high, whatever the canvas's shape.
     fn draw(&self, time: f64) {
         let seconds = (time / 1000.0) as f32;
+        let aspect = self.gl.size().aspect();
         let transform = multiply(
             &multiply(
-                &perspective(PI / 4.0, 1.0, 0.1, 100.0),
+                &perspective(PI / 4.0, aspect, 0.1, 100.0),
                 &translation(0.0, 0.0, -6.0),
             ),
             &multiply(
@@ -321,7 +337,7 @@ fn css_fps() -> Css {
 fn css_canvas() -> Css {
     css! {"
         display: block;
-        width: 320px;
+        width: min(480px, 90vw);
         height: 320px;
         border: 1px solid #ccc;
     "}
