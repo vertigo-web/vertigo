@@ -60,6 +60,9 @@ const Op = {
     DrawElements: 40,
     UniformLocation: 41,
     DeleteUniformLocation: 42,
+    VertexAttribDivisor: 43,
+    DrawArraysInstanced: 44,
+    DrawElementsInstanced: 45,
 } as const;
 
 // The WebGL constants this file passes itself. Those of the calls come with them.
@@ -86,7 +89,8 @@ export type Gl = Pick<WebGL2RenderingContext,
     | 'uniformMatrix3fv' | 'uniformMatrix4fv' | 'createTexture' | 'deleteTexture' | 'activeTexture'
     | 'bindTexture' | 'texImage2D' | 'texParameteri' | 'generateMipmap' | 'clearColor' | 'clearDepth'
     | 'clear' | 'enable' | 'disable' | 'viewport' | 'depthFunc' | 'blendFunc' | 'cullFace'
-    | 'frontFace' | 'drawArrays' | 'drawElements'>;
+    | 'frontFace' | 'drawArrays' | 'drawElements' | 'vertexAttribDivisor' | 'drawArraysInstanced'
+    | 'drawElementsInstanced'>;
 
 // The objects of a context by their ids.
 export class Objects {
@@ -369,6 +373,15 @@ export const play = (gl: Gl, objects: Objects, bytes: Uint8Array): void => {
             }
             case Op.DeleteUniformLocation:
                 objects.locations.delete(u32());
+                break;
+            case Op.VertexAttribDivisor:
+                gl.vertexAttribDivisor(u32(), u32());
+                break;
+            case Op.DrawArraysInstanced:
+                gl.drawArraysInstanced(u32(), u32(), u32(), u32());
+                break;
+            case Op.DrawElementsInstanced:
+                gl.drawElementsInstanced(u32(), u32(), u32(), u32(), u32());
                 break;
             default:
                 throw new Error(`webgl: unknown operation ${op}`);
