@@ -125,6 +125,11 @@ pub enum CommandForBrowser {
         dom_id: Option<u64>,
     },
 
+    /// A call of [`crate::audio`].
+    Audio {
+        op: AudioOp,
+    },
+
     /// Execute JavaScript API calls (for js! macro)
     JsApiCall {
         commands: Vec<JsApiCommand>,
@@ -176,6 +181,60 @@ pub enum LocationCallbackMode {
 pub enum LocationSetMode {
     Push,
     Replace,
+}
+
+/// A call of [`crate::audio`], which `audio.ts` in the browser does, in the order they come.
+#[derive(AutoJsJson, Clone, Debug, PartialEq)]
+pub enum AudioOp {
+    /// Tell the events of sound through `callback`: `[0]` once the browser lets sound through,
+    /// `[1, id]` when the music `id` played to its end. Always the first call.
+    Listen {
+        callback: CallbackId,
+    },
+    /// Fetch the sound at `url` and decode it, to play as `id`.
+    LoadSound {
+        id: u32,
+        url: String,
+    },
+    /// Play the sound `id` once, over whatever plays, `volume` times as loud as it is.
+    PlaySound {
+        id: u32,
+        volume: f32,
+    },
+    /// Take the music at `url`, to play as `id`, streamed as it plays.
+    LoadMusic {
+        id: u32,
+        url: String,
+    },
+    PlayMusic {
+        id: u32,
+    },
+    PauseMusic {
+        id: u32,
+    },
+    /// Pause the music `id` and go back to its start.
+    StopMusic {
+        id: u32,
+    },
+    LoopMusic {
+        id: u32,
+        looping: bool,
+    },
+    MusicVolume {
+        id: u32,
+        volume: f32,
+    },
+    /// The volume of all sound.
+    Volume {
+        volume: f32,
+    },
+    Muted {
+        muted: bool,
+    },
+    /// Let go of the sound or the music `id`, which stops.
+    Forget {
+        id: u32,
+    },
 }
 
 #[derive(AutoJsJson, Debug)]

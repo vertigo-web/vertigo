@@ -1,7 +1,7 @@
 {
   "scripts": {
     "lint": "eslint crates/vertigo/src/driver_module/src_js",
-    "test": "rollup -c rollup.test.config.mjs && node build/hydration.test.js && node build/dom_wire.test.js && node build/injects.test.js && node build/callbackManager.test.js && node build/animationFrames.test.js && node build/languages.test.js && node build/canvas.test.js && node build/canvas_lazy.test.js && node build/webgl.test.js && node build/gpu_lazy.test.js && node build/webgpu.test.js && node build/fetchExec.test.js && node build/connection.test.js && node build/websocket.test.js && node build/jsjson.test.js"
+    "test": "rollup -c rollup.test.config.mjs && node build/hydration.test.js && node build/dom_wire.test.js && node build/injects.test.js && node build/callbackManager.test.js && node build/animationFrames.test.js && node build/languages.test.js && node build/canvas.test.js && node build/canvas_lazy.test.js && node build/webgl.test.js && node build/gpu_lazy.test.js && node build/audio.test.js && node build/audio_lazy.test.js && node build/webgpu.test.js && node build/fetchExec.test.js && node build/connection.test.js && node build/websocket.test.js && node build/jsjson.test.js"
   },
   "devDependencies": {
     "@eslint-community/eslint-plugin-eslint-comments": "^4.8.1",
