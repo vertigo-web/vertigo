@@ -137,6 +137,11 @@ type ExecType
         }
     }
     | {
+        PointerLock: {
+            dom_id: number | null,
+        }
+    }
+    | {
         JsApiCall: {
             commands: Array<JsApiCommandType>
         }
@@ -324,6 +329,10 @@ export class Api {
 
             case 'ImagePreload':
                 this.dom.preloadImage(params.url);
+                return null;
+
+            case 'PointerLock':
+                this.dom.pointerLock(params.dom_id);
                 return null;
 
             case 'JsApiCall':

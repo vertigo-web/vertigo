@@ -90,6 +90,13 @@ pub struct PointerEvent {
     pub element_width: f64,
     /// Height of the element with the listener, in CSS pixels, as drawn.
     pub element_height: f64,
+    /// How far the pointer moved right since its last event, as the browser counts it: in CSS
+    /// pixels, or, in some browsers and systems, in the screen's. While the pointer is locked
+    /// (see [`DomElementRef::request_pointer_lock`](crate::DomElementRef::request_pointer_lock))
+    /// it stays put, and this is all there is of its moves: what a game looking around reads.
+    pub movement_x: f64,
+    /// How far the pointer moved down since its last event, as [`movement_x`](Self::movement_x).
+    pub movement_y: f64,
     pub alt_key: bool,
     pub ctrl_key: bool,
     pub shift_key: bool,
@@ -201,6 +208,8 @@ impl PointerEvent {
             let ctrl_key = params.get_bool("ctrlKey")?;
             let shift_key = params.get_bool("shiftKey")?;
             let meta_key = params.get_bool("metaKey")?;
+            let movement_x = params.get_f64("movementX")?;
+            let movement_y = params.get_f64("movementY")?;
             params.expect_no_more()?;
 
             Ok(Self {
@@ -213,6 +222,8 @@ impl PointerEvent {
                 pointer_y,
                 element_width,
                 element_height,
+                movement_x,
+                movement_y,
                 alt_key,
                 ctrl_key,
                 shift_key,
