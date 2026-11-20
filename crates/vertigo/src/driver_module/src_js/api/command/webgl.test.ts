@@ -62,7 +62,7 @@ const recording = (log: Array<string>): Gl => {
 
 // `fixture()` in webgl.rs: one call of each.
 const FIXTURE = new Uint8Array([
-    1, 63, 1, 0, 0, 0, 0, 0, 0, 0, 2, 1, 0, 0, 0, 4, 146, 136, 0, 0, 1, 0, 0, 0, 5, 146, 136,
+    1, 63, 1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 63, 2, 1, 0, 0, 0, 4, 146, 136, 0, 0, 1, 0, 0, 0, 5, 146, 136,
     0, 0, 228, 136, 0, 0, 8, 0, 0, 0, 0, 0, 192, 63, 0, 0, 0, 192, 6, 147, 136, 0, 0, 2, 0, 0,
     0, 4, 0, 0, 0, 7, 0, 8, 0, 7, 2, 0, 0, 0, 9, 2, 0, 0, 0, 10, 1, 0, 0, 0, 11, 1, 0, 0, 0, 3,
     6, 20, 0, 0, 1, 12, 0, 0, 0, 4, 0, 0, 0, 12, 3, 0, 0, 0, 2, 0, 0, 0, 118, 115, 3, 0, 0, 0,
@@ -260,8 +260,9 @@ console.log("\n--- Test webgl: contexts and their size ---");
     const run = (canvas: FakeCanvas, bytes: Uint8Array) => webgls.run(canvas as unknown as Element, bytes);
     const resized = (canvas: FakeCanvas, width: number, height: number) =>
         watchers[0]?.([{ target: canvas, contentRect: { width, height } }]);
-    // The first call of a context: its attributes and its callback.
-    const context = (flags: number, callback: number) => [1, flags, ...u32(callback), ...u32(0)];
+    // The first call of a context: its attributes, its callback and the scale of its bitmap.
+    const context = (flags: number, callback: number, scale = 1) =>
+        [1, flags, ...u32(callback), ...u32(0), ...Array.from(new Uint8Array(new Float32Array([scale]).buffer))];
     const clear = calls([31, ...u32(0x4000)]);
 
     const canvas = new FakeCanvas();
@@ -287,6 +288,15 @@ console.log("\n--- Test webgl: contexts and their size ---");
     canvas.log.length = 0;
     run(canvas, clear);
     same(canvas.log, ['viewport(0,0,400,200)', 'clear(16384)'], 'which get a bitmap of the new size');
+
+    // Half the pixels each way: a bitmap of 160 x 100 for 320 x 200 device pixels.
+    const half = new FakeCanvas();
+    run(half, calls(context(0, 10, 0.5), [31, ...u32(0x4000)]));
+    same(half.log, ['viewport(0,0,160,100)', 'clear(16384)'], 'a scaled bitmap is drawn on whole');
+    assert(half.width === 160 && half.height === 100, 'which is the canvas in device pixels times the scale');
+    resized(half, 160, 100);
+    same(told.slice(2), ['10: 0,160,100'], 'and its size is told so');
+    told.splice(2, 1);
 
     // A canvas CSS gives no size is as big as its bitmap.
     const free = new FakeCanvas();

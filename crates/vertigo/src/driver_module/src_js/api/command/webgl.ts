@@ -7,7 +7,8 @@
 // shader or a program that fails is told in the console.
 //
 // The bitmap of a canvas is kept as big as the canvas is on the screen, in device pixels, as
-// `canvas.ts` keeps it, and it is resized before the calls that come next. Resizing a canvas
+// `canvas.ts` keeps it, times the scale its context asked for, and it is resized before the calls
+// that come next. Resizing a canvas
 // clears it and doesn't change the viewport, so the viewport becomes the whole canvas then. When
 // the canvas changes its size, wasm is told the size before anything is resized, so its calls
 // drawing again resize the bitmap and draw in one go, and the canvas never shows it cleared.
@@ -229,8 +230,9 @@ export const play = (gl: Gl, objects: Objects, bytes: Uint8Array, load?: Load): 
 
         switch (op) {
             case Op.Context:
-                // Taken by `WebGls.run` when it made the context: the flags and the callback.
-                at += 9;
+                // Taken by `WebGls.run` when it made the context: the flags, the callback and the
+                // scale of the bitmap.
+                at += 13;
                 break;
             case Op.CreateBuffer:
                 objects.buffers.set(u32(), gl.createBuffer());
@@ -449,9 +451,17 @@ class Context {
     constructor(
         public readonly gl: WebGL2RenderingContext,
         public readonly callback: number,
+        // Pixels of the bitmap to a device pixel, see `WebGlOptions::bitmap_scale`.
+        public readonly scale: number,
         public readonly listeners: Array<[string, (event: Event) => void]>,
     ) {}
 }
+
+// `size`, in device pixels, times `scale`: at least a pixel each way.
+const scaled = (size: Size, scale: number): Size => ({
+    width: Math.max(1, Math.round(size.width * scale)),
+    height: Math.max(1, Math.round(size.height * scale)),
+});
 
 export class WebGls {
     // `null` for a canvas without WebGL 2 in the browser.
@@ -479,7 +489,7 @@ export class WebGls {
         }
 
         if (context !== null) {
-            this.fit(node, context.gl);
+            this.fit(node, context);
             const known = context;
             play(context.gl, context.objects, bytes, (texture, url, mipmap, unpack) => {
                 this.load(known, texture, url, mipmap, unpack);
@@ -499,12 +509,15 @@ export class WebGls {
         }
     }
 
-    // The context, from the first calls of it: they begin with its attributes and its callback.
+    // The context, from the first calls of it: they begin with its attributes, its callback and the
+    // scale of its bitmap.
     private make(canvas: HTMLCanvasElement, bytes: Uint8Array): Context | null {
-        const first = bytes[0] === Op.Context && bytes.length >= 10;
+        const first = bytes[0] === Op.Context && bytes.length >= 14;
         const data = new DataView(bytes.buffer, bytes.byteOffset, bytes.byteLength);
         const flags = first ? data.getUint8(1) : 0;
         const callback = first ? data.getUint32(2, true) + data.getUint32(6, true) * 2 ** 32 : 0;
+        const asked = first ? data.getFloat32(10, true) : 1;
+        const scale = asked > 0 && Number.isFinite(asked) ? asked : 1;
 
         const gl = canvas.getContext('webgl2', attributes(flags));
         if (gl === null) {
@@ -527,7 +540,7 @@ export class WebGls {
         canvas.addEventListener('webglcontextlost', lost);
         canvas.addEventListener('webglcontextrestored', restored);
 
-        return new Context(gl, callback, [['webglcontextlost', lost], ['webglcontextrestored', restored]]);
+        return new Context(gl, callback, scale, [['webglcontextlost', lost], ['webglcontextrestored', restored]]);
     }
 
     // Puts the image at `url` in the texture when it comes, read with the pixel storage modes
@@ -628,7 +641,9 @@ export class WebGls {
             return;
         }
 
-        const told = this.unscaled.has(canvas) ? { width: canvas.width, height: canvas.height } : size;
+        const told = this.unscaled.has(canvas)
+            ? { width: canvas.width, height: canvas.height }
+            : scaled(size, context.scale);
         if (told.width > 0 && told.height > 0
             && (context.told?.width !== told.width || context.told.height !== told.height)) {
             context.told = told;
@@ -636,22 +651,26 @@ export class WebGls {
         }
     }
 
-    // Makes the bitmap as big as the canvas is on the screen, before the calls that draw on it.
-    // A canvas CSS gives no size is as big as its bitmap, which would grow with each resize at a
-    // ratio above 1: it keeps the size it has, a pixel to a CSS pixel.
-    private fit(canvas: HTMLCanvasElement, gl: WebGL2RenderingContext) {
+    // Makes the bitmap as big as the canvas is on the screen, times the scale of the context,
+    // before the calls that draw on it. A canvas CSS gives no size is as big as its bitmap, which
+    // would grow with each resize at a ratio above 1: it keeps the size it has, a pixel to a CSS
+    // pixel.
+    private fit(canvas: HTMLCanvasElement, context: Context) {
         if (this.unscaled.has(canvas)) {
             return;
         }
 
         const ratio = window.devicePixelRatio || 1;
-        const size = this.sizes.get(canvas) ?? (canvas.isConnected ? {
+        const seen = this.sizes.get(canvas) ?? (canvas.isConnected ? {
             width: Math.round(canvas.clientWidth * ratio),
             height: Math.round(canvas.clientHeight * ratio),
         } : null);
 
-        if (size === null || size.width <= 0 || size.height <= 0
-            || (canvas.width === size.width && canvas.height === size.height)) {
+        if (seen === null || seen.width <= 0 || seen.height <= 0) {
+            return;
+        }
+        const size = scaled(seen, context.scale);
+        if (canvas.width === size.width && canvas.height === size.height) {
             return;
         }
 
@@ -668,6 +687,6 @@ export class WebGls {
             this.unscaled.add(canvas);
         }
 
-        gl.viewport(0, 0, canvas.width, canvas.height);
+        context.gl.viewport(0, 0, canvas.width, canvas.height);
     }
 }
