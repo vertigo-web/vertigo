@@ -49,6 +49,7 @@ const recording = (log: Array<string>): Gl => {
         getShaderInfoLog: () => 'ERROR: 0:1: broken',
         getProgramParameter: () => true,
         getUniformLocation: (_program, name) => ({ name: `@${String(name)}` }),
+        getParameter: () => ({ name: 'bound' }),
     };
 
     return new Proxy({}, {
@@ -61,33 +62,37 @@ const recording = (log: Array<string>): Gl => {
 
 // `fixture()` in webgl.rs: one call of each.
 const FIXTURE = new Uint8Array([
-    1, 63, 1, 0, 0, 0, 0, 0, 0, 0, 2, 1, 0, 0, 0, 4, 146, 136, 0, 0, 1, 0, 0, 0, 5, 146, 136, 0,
-    0, 228, 136, 0, 0, 8, 0, 0, 0, 0, 0, 192, 63, 0, 0, 0, 192, 6, 147, 136, 0, 0, 2, 0, 0, 0,
-    4, 0, 0, 0, 7, 0, 8, 0, 7, 2, 0, 0, 0, 9, 2, 0, 0, 0, 10, 1, 0, 0, 0, 11, 1, 0, 0, 0, 3, 6,
-    20, 0, 0, 1, 12, 0, 0, 0, 4, 0, 0, 0, 12, 3, 0, 0, 0, 2, 0, 0, 0, 118, 115, 3, 0, 0, 0, 102,
-    197, 155, 14, 3, 0, 0, 0, 41, 4, 0, 0, 0, 3, 0, 0, 0, 1, 0, 117, 15, 4, 0, 0, 0, 0, 0, 0,
-    63, 16, 4, 0, 0, 0, 0, 0, 128, 63, 0, 0, 0, 64, 17, 4, 0, 0, 0, 0, 0, 128, 63, 0, 0, 0, 64,
-    0, 0, 64, 64, 18, 4, 0, 0, 0, 0, 0, 128, 63, 0, 0, 0, 64, 0, 0, 64, 64, 0, 0, 128, 64, 19,
-    4, 0, 0, 0, 255, 255, 255, 255, 20, 4, 0, 0, 0, 0, 0, 0, 0, 0, 0, 128, 63, 0, 0, 0, 64, 0,
-    0, 64, 64, 0, 0, 128, 64, 0, 0, 160, 64, 0, 0, 192, 64, 0, 0, 224, 64, 0, 0, 0, 65, 21, 4,
-    0, 0, 0, 0, 0, 0, 0, 0, 0, 128, 63, 0, 0, 0, 64, 0, 0, 64, 64, 0, 0, 128, 64, 0, 0, 160, 64,
-    0, 0, 192, 64, 0, 0, 224, 64, 0, 0, 0, 65, 0, 0, 16, 65, 0, 0, 32, 65, 0, 0, 48, 65, 0, 0,
-    64, 65, 0, 0, 80, 65, 0, 0, 96, 65, 0, 0, 112, 65, 22, 5, 0, 0, 0, 24, 2, 0, 0, 0, 25, 5, 0,
-    0, 0, 26, 1, 0, 0, 0, 1, 0, 0, 0, 4, 0, 0, 0, 255, 0, 128, 255, 27, 1, 40, 0, 0, 0, 38, 0,
-    0, 27, 0, 40, 0, 0, 1, 38, 0, 0, 27, 2, 40, 0, 0, 1, 41, 0, 0, 27, 3, 40, 0, 0, 47, 129, 0,
-    0, 28, 29, 0, 0, 0, 0, 0, 0, 128, 62, 0, 0, 0, 63, 0, 0, 128, 63, 30, 0, 0, 128, 63, 31, 0,
-    65, 0, 0, 32, 113, 11, 0, 0, 33, 226, 11, 0, 0, 34, 0, 0, 0, 0, 255, 255, 255, 255, 128, 2,
-    0, 0, 224, 1, 0, 0, 35, 3, 2, 0, 0, 36, 2, 3, 0, 0, 3, 3, 0, 0, 37, 5, 4, 0, 0, 38, 0, 9, 0,
-    0, 39, 4, 0, 0, 0, 0, 0, 0, 0, 3, 0, 0, 0, 40, 1, 0, 0, 0, 6, 0, 0, 0, 3, 20, 0, 0, 2, 0, 0,
-    0, 43, 3, 0, 0, 0, 1, 0, 0, 0, 44, 4, 0, 0, 0, 0, 0, 0, 0, 3, 0, 0, 0, 10, 0, 0, 0, 45, 4,
-    0, 0, 0, 36, 0, 0, 0, 3, 20, 0, 0, 0, 0, 0, 0, 144, 1, 0, 0, 4, 146, 136, 0, 0, 0, 0, 0, 0,
-    3, 1, 0, 0, 0, 8, 2, 0, 0, 0, 13, 3, 0, 0, 0, 23, 5, 0, 0, 0, 42, 4, 0, 0, 0,
+    1, 63, 1, 0, 0, 0, 0, 0, 0, 0, 2, 1, 0, 0, 0, 4, 146, 136, 0, 0, 1, 0, 0, 0, 5, 146, 136,
+    0, 0, 228, 136, 0, 0, 8, 0, 0, 0, 0, 0, 192, 63, 0, 0, 0, 192, 6, 147, 136, 0, 0, 2, 0, 0,
+    0, 4, 0, 0, 0, 7, 0, 8, 0, 7, 2, 0, 0, 0, 9, 2, 0, 0, 0, 10, 1, 0, 0, 0, 11, 1, 0, 0, 0, 3,
+    6, 20, 0, 0, 1, 12, 0, 0, 0, 4, 0, 0, 0, 12, 3, 0, 0, 0, 2, 0, 0, 0, 118, 115, 3, 0, 0, 0,
+    102, 197, 155, 14, 3, 0, 0, 0, 41, 4, 0, 0, 0, 3, 0, 0, 0, 1, 0, 117, 15, 4, 0, 0, 0, 0, 0,
+    0, 63, 16, 4, 0, 0, 0, 0, 0, 128, 63, 0, 0, 0, 64, 17, 4, 0, 0, 0, 0, 0, 128, 63, 0, 0, 0,
+    64, 0, 0, 64, 64, 18, 4, 0, 0, 0, 0, 0, 128, 63, 0, 0, 0, 64, 0, 0, 64, 64, 0, 0, 128, 64,
+    19, 4, 0, 0, 0, 255, 255, 255, 255, 20, 4, 0, 0, 0, 0, 0, 0, 0, 0, 0, 128, 63, 0, 0, 0, 64,
+    0, 0, 64, 64, 0, 0, 128, 64, 0, 0, 160, 64, 0, 0, 192, 64, 0, 0, 224, 64, 0, 0, 0, 65, 21,
+    4, 0, 0, 0, 0, 0, 0, 0, 0, 0, 128, 63, 0, 0, 0, 64, 0, 0, 64, 64, 0, 0, 128, 64, 0, 0, 160,
+    64, 0, 0, 192, 64, 0, 0, 224, 64, 0, 0, 0, 65, 0, 0, 16, 65, 0, 0, 32, 65, 0, 0, 48, 65, 0,
+    0, 64, 65, 0, 0, 80, 65, 0, 0, 96, 65, 0, 0, 112, 65, 22, 5, 0, 0, 0, 24, 2, 0, 0, 0, 25,
+    5, 0, 0, 0, 26, 1, 0, 0, 0, 1, 0, 0, 0, 4, 0, 0, 0, 255, 0, 128, 255, 27, 1, 40, 0, 0, 0,
+    38, 0, 0, 27, 0, 40, 0, 0, 1, 38, 0, 0, 27, 2, 40, 0, 0, 1, 41, 0, 0, 27, 3, 40, 0, 0, 47,
+    129, 0, 0, 28, 29, 0, 0, 0, 0, 0, 0, 128, 62, 0, 0, 0, 63, 0, 0, 128, 63, 30, 0, 0, 128,
+    63, 31, 0, 65, 0, 0, 32, 113, 11, 0, 0, 33, 226, 11, 0, 0, 34, 0, 0, 0, 0, 255, 255, 255,
+    255, 128, 2, 0, 0, 224, 1, 0, 0, 35, 3, 2, 0, 0, 36, 2, 3, 0, 0, 3, 3, 0, 0, 37, 5, 4, 0,
+    0, 38, 0, 9, 0, 0, 39, 4, 0, 0, 0, 0, 0, 0, 0, 3, 0, 0, 0, 40, 1, 0, 0, 0, 6, 0, 0, 0, 3,
+    20, 0, 0, 2, 0, 0, 0, 43, 3, 0, 0, 0, 1, 0, 0, 0, 44, 4, 0, 0, 0, 0, 0, 0, 0, 3, 0, 0, 0,
+    10, 0, 0, 0, 45, 4, 0, 0, 0, 36, 0, 0, 0, 3, 20, 0, 0, 0, 0, 0, 0, 144, 1, 0, 0, 46, 5, 0,
+    0, 0, 1, 7, 0, 0, 0, 47, 197, 130, 46, 112, 110, 103, 47, 0, 48, 2, 3, 0, 0, 3, 3, 0, 0, 1,
+    0, 0, 0, 0, 0, 0, 0, 4, 146, 136, 0, 0, 0, 0, 0, 0, 3, 1, 0, 0, 0, 8, 2, 0, 0, 0, 13, 3, 0,
+    0, 0, 23, 5, 0, 0, 0, 42, 4, 0, 0, 0,
 ]);
 
 console.log("\n--- Test webgl: the cross-language fixture ---");
 {
     const log: Array<string> = [];
-    play(recording(log), new Objects(), FIXTURE);
+    play(recording(log), new Objects(), FIXTURE, (texture, url, mipmap) => {
+        log.push(`load(${texture},${url},${String(mipmap)})`);
+    });
 
     same(log, [
         'createBuffer()',
@@ -146,6 +151,9 @@ console.log("\n--- Test webgl: the cross-language fixture ---");
         'vertexAttribDivisor(3,1)',
         'drawArraysInstanced(4,0,3,10)',
         'drawElementsInstanced(4,36,5123,0,400)',
+        'load(5,/ł.png,true)',
+        'depthMask(false)',
+        'blendFuncSeparate(770,771,1,0)',
         'bindBuffer(34962,null)',
         'deleteBuffer(buffer1)',
         'deleteVertexArray(array2)',
@@ -313,6 +321,56 @@ console.log("\n--- Test webgl: contexts and their size ---");
     }
     assert(errors.length === 1, 'a browser without WebGL 2 is told once');
     assert(none.log.length === 0, 'and the calls go nowhere');
+
+    // Images for textures.
+    const images: Array<FakeImage> = [];
+    class FakeImage {
+        public crossOrigin = '';
+        public src = '';
+        public naturalWidth = 64;
+        public naturalHeight = 32;
+        public onload: () => void = () => {};
+        public onerror: () => void = () => {};
+        constructor() { images.push(this); }
+    }
+    global['Image'] = FakeImage;
+    const texture = (id: number) => [22, ...u32(id)];
+    const image = (id: number, url: string, mipmap: boolean) => [46, ...u32(id), mipmap ? 1 : 0, ...source(url)];
+
+    run(canvas, calls(texture(10), image(10, '/a.png', true), texture(11), image(11, '/b.png', false)));
+    same(images.map((image) => `${image.src} ${image.crossOrigin}`), ['/a.png anonymous', '/b.png anonymous'],
+        'an image is loaded for its texture, from any origin allowing it');
+    canvas.log.length = 0;
+    images[0]?.onload();
+    same(canvas.log, [
+        'getParameter(32873)',
+        'bindTexture(3553,texture2)',
+        'texImage2D(3553,0,32856,6408,5121,[object Object])',
+        'generateMipmap(3553)',
+        'bindTexture(3553,bound)',
+    ], 'and put in it when it comes, the texture bound before bound again');
+    same(told.slice(4), ['7: 2,10,64,32'], 'and wasm is told, with its size');
+
+    const error2 = console.error;
+    console.error = () => {};
+    try {
+        images[1]?.onerror();
+    } finally {
+        console.error = error2;
+    }
+    same(told.slice(5), ['7: 3,11'], 'as of an image that did not load');
+
+    run(canvas, calls(image(10, '/c.png', false), image(10, '/d.png', false)));
+    canvas.log.length = 0;
+    images[2]?.onload();
+    images[3]?.onload();
+    same(told.slice(6), ['7: 2,10,64,32'], 'of two images for a texture, the last asked for goes in');
+    assert(canvas.log.filter((call) => call.startsWith('texImage2D')).length === 1, 'and only it');
+
+    run(canvas, calls(image(11, '/e.png', false)));
+    canvas.listeners.get('webglcontextrestored')?.({} as Event);
+    images[4]?.onload();
+    same(told.slice(7), ['7: 1'], 'an image of a context lost meanwhile goes nowhere');
 
     webgls.forget(canvas as unknown as Element);
     assert(canvas.listeners.size === 0, 'a canvas forgotten is listened to no more');

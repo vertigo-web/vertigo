@@ -14,6 +14,9 @@
 //
 // A context lost (the GPU reset, or given to another tab) is asked back. When it comes back,
 // every object is gone: the ids are forgotten, and wasm is told, to make them again.
+//
+// An image for a texture, from a URL, is loaded meanwhile, and put in the texture when it comes,
+// between the calls: wasm is told then, to draw again, or if it didn't load.
 
 const decoder = new TextDecoder("utf-8");
 
@@ -63,6 +66,9 @@ const Op = {
     VertexAttribDivisor: 43,
     DrawArraysInstanced: 44,
     DrawElementsInstanced: 45,
+    TextureImageUrl: 46,
+    DepthMask: 47,
+    BlendFuncSeparate: 48,
 } as const;
 
 // The WebGL constants this file passes itself. Those of the calls come with them.
@@ -72,6 +78,7 @@ const GL = {
     COMPILE_STATUS: 0x8B81,
     LINK_STATUS: 0x8B82,
     TEXTURE_2D: 0x0DE1,
+    TEXTURE_BINDING_2D: 0x8069,
     TEXTURE0: 0x84C0,
     RGBA: 0x1908,
     RGBA8: 0x8058,
@@ -90,7 +97,10 @@ export type Gl = Pick<WebGL2RenderingContext,
     | 'bindTexture' | 'texImage2D' | 'texParameteri' | 'generateMipmap' | 'clearColor' | 'clearDepth'
     | 'clear' | 'enable' | 'disable' | 'viewport' | 'depthFunc' | 'blendFunc' | 'cullFace'
     | 'frontFace' | 'drawArrays' | 'drawElements' | 'vertexAttribDivisor' | 'drawArraysInstanced'
-    | 'drawElementsInstanced'>;
+    | 'drawElementsInstanced' | 'depthMask' | 'blendFuncSeparate' | 'getParameter'>;
+
+// Asks for the image at `url` for the texture of the id `texture`, see `Op.TextureImageUrl`.
+export type Load = (texture: number, url: string, mipmap: boolean) => void;
 
 // The objects of a context by their ids.
 export class Objects {
@@ -115,6 +125,9 @@ export const attributes = (flags: number): WebGLContextAttributes => ({
     premultipliedAlpha: (flags & 16) !== 0,
     preserveDrawingBuffer: (flags & 32) !== 0,
 });
+
+// Whether `value`, which WebGL answered for a binding, is a texture rather than `null`.
+const isTexture = (value: unknown): value is WebGLTexture => typeof value === 'object' && value !== null;
 
 // The object of `id` in `map`, `null` for 0 and for one let go.
 const objectOf = <T>(map: Map<number, T | null>, id: number): T | null =>
@@ -156,8 +169,9 @@ const link = (gl: Gl, vertex: string, fragment: string): WebGLProgram | null => 
     return program;
 };
 
-// Plays `bytes` back on `gl`, with the objects made so far in `objects`.
-export const play = (gl: Gl, objects: Objects, bytes: Uint8Array): void => {
+// Plays `bytes` back on `gl`, with the objects made so far in `objects`. The images for textures
+// are asked of `load`.
+export const play = (gl: Gl, objects: Objects, bytes: Uint8Array, load?: Load): void => {
     const data = new DataView(bytes.buffer, bytes.byteOffset, bytes.byteLength);
     let at = 0;
 
@@ -383,6 +397,19 @@ export const play = (gl: Gl, objects: Objects, bytes: Uint8Array): void => {
             case Op.DrawElementsInstanced:
                 gl.drawElementsInstanced(u32(), u32(), u32(), u32(), u32());
                 break;
+            case Op.TextureImageUrl: {
+                const texture = u32();
+                const mipmap = u8() !== 0;
+                const url = decoder.decode(block());
+                load?.(texture, url, mipmap);
+                break;
+            }
+            case Op.DepthMask:
+                gl.depthMask(u8() !== 0);
+                break;
+            case Op.BlendFuncSeparate:
+                gl.blendFuncSeparate(u32(), u32(), u32(), u32());
+                break;
             default:
                 throw new Error(`webgl: unknown operation ${op}`);
         }
@@ -392,13 +419,16 @@ export const play = (gl: Gl, objects: Objects, bytes: Uint8Array): void => {
 type Size = { width: number, height: number };
 
 // Tells wasm of a canvas, through the callback of its context: `[0, width, height]` when it
-// changes its size, `[1]` when its context is given back. See `CanvasEvent` in webgl.rs.
+// changes its size, `[1]` when its context is given back, `[2, texture, width, height]` when an
+// image is in a texture, `[3, texture]` when it didn't load. See `CanvasEvent` in webgl.rs.
 export type Tell = (callback: number, event: Array<number>) => void;
 
 // A canvas's context, with its objects and what wasm was told of it.
 class Context {
     public objects: Objects = new Objects();
     public told: Size | null = null;
+    // The URL of the image each texture waits for, by its id: only the last asked for goes in.
+    public readonly loading: Map<number, string> = new Map();
 
     constructor(
         public readonly gl: WebGL2RenderingContext,
@@ -434,7 +464,10 @@ export class WebGls {
 
         if (context !== null) {
             this.fit(node, context.gl);
-            play(context.gl, context.objects, bytes);
+            const known = context;
+            play(context.gl, context.objects, bytes, (texture, url, mipmap) => {
+                this.load(known, texture, url, mipmap);
+            });
         }
     }
 
@@ -478,6 +511,45 @@ export class WebGls {
         canvas.addEventListener('webglcontextrestored', restored);
 
         return new Context(gl, callback, [['webglcontextlost', lost], ['webglcontextrestored', restored]]);
+    }
+
+    // Puts the image at `url` in the texture when it comes, unless the texture was let go
+    // meanwhile, or asked for another image, or the context was lost.
+    private load(context: Context, texture: number, url: string, mipmap: boolean) {
+        const objects = context.objects;
+        context.loading.set(texture, url);
+        const current = () => context.objects === objects && context.loading.get(texture) === url;
+
+        const image = new Image();
+        image.crossOrigin = 'anonymous';
+        image.onload = () => {
+            if (!current()) {
+                return;
+            }
+            context.loading.delete(texture);
+            const target = objects.textures.get(texture);
+            if (!target) {
+                return;
+            }
+            const gl = context.gl;
+            const bound: unknown = gl.getParameter(GL.TEXTURE_BINDING_2D);
+            gl.bindTexture(GL.TEXTURE_2D, target);
+            gl.texImage2D(GL.TEXTURE_2D, 0, GL.RGBA8, GL.RGBA, GL.UNSIGNED_BYTE, image);
+            if (mipmap) {
+                gl.generateMipmap(GL.TEXTURE_2D);
+            }
+            gl.bindTexture(GL.TEXTURE_2D, isTexture(bound) ? bound : null);
+            this.told(context, [2, texture, image.naturalWidth, image.naturalHeight]);
+        };
+        image.onerror = () => {
+            if (!current()) {
+                return;
+            }
+            context.loading.delete(texture);
+            console.error(`webgl: the image ${url} didn't load`);
+            this.told(context, [3, texture]);
+        };
+        image.src = url;
     }
 
     private told(context: Context, event: Array<number>) {
