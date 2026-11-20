@@ -14,7 +14,7 @@
 //! id       := u32                        -- of a buffer, a vertex array, a program, a texture or
 //!                                           a uniform's location, 0 for none
 //! name     := length:u16 utf8*           -- of a uniform, to find its location
-//! source   := length:u32 utf8*           -- of a shader
+//! source   := length:u32 utf8*           -- of a shader, or the URL of an image
 //! data     := length:u32 byte*
 //! ```
 //!
@@ -23,6 +23,7 @@
 
 use std::{
     cell::Cell,
+    collections::HashMap,
     fmt,
     rc::{Rc, Weak},
 };
@@ -83,6 +84,9 @@ mod code {
     pub const VERTEX_ATTRIB_DIVISOR: u8 = 43;
     pub const DRAW_ARRAYS_INSTANCED: u8 = 44;
     pub const DRAW_ELEMENTS_INSTANCED: u8 = 45;
+    pub const TEXTURE_IMAGE_URL: u8 = 46;
+    pub const DEPTH_MASK: u8 = 47;
+    pub const BLEND_FUNC_SEPARATE: u8 = 48;
 }
 
 /// `pname` of `texParameteri`.
@@ -116,11 +120,23 @@ impl Size {
     }
 }
 
+/// What became of an image asked for with [`WebGl::texture_image_url`].
+#[derive(Clone, Debug, PartialEq, Eq)]
+pub enum ImageLoad {
+    /// The texture has the image, of `size` pixels.
+    Loaded { url: String, size: Size },
+    /// The browser couldn't load it, or decode it. The texture is as it was.
+    Failed { url: String },
+}
+
 /// What the browser tells of a context, as `webgl.ts` sends it: `[0, width, height]` when the
-/// canvas changes its size, `[1]` when the context is given back after it was lost.
+/// canvas changes its size, `[1]` when the context is given back after it was lost, `[2, texture,
+/// width, height]` when an image is in a texture, `[3, texture]` when it didn't load.
 enum CanvasEvent {
     Resized(Size),
     Restored,
+    ImageLoaded(u32, Size),
+    ImageFailed(u32),
 }
 
 impl CanvasEvent {
@@ -132,6 +148,14 @@ impl CanvasEvent {
                     height: params.get_u32("height")?,
                 }),
                 1 => Self::Restored,
+                2 => Self::ImageLoaded(
+                    params.get_u32("texture")?,
+                    Size {
+                        width: params.get_u32("width")?,
+                        height: params.get_u32("height")?,
+                    },
+                ),
+                3 => Self::ImageFailed(params.get_u32("texture")?),
                 other => return Err(format!("unknown canvas event {other}")),
             };
             params.expect_no_more()?;
@@ -147,6 +171,9 @@ pub(crate) struct Context {
     size: Cell<Size>,
     resized: EventEmitter<Size>,
     restored: EventEmitter<()>,
+    /// The URLs of the images coming into textures, by the textures' ids.
+    images: ValueMut<HashMap<u32, String>>,
+    image_loaded: EventEmitter<ImageLoad>,
     /// The callback the browser tells through, for as long as the context is.
     _callback: DropResource,
 }
@@ -172,6 +199,8 @@ impl Context {
                 size: Cell::new(Size::default()),
                 resized: EventEmitter::default(),
                 restored: EventEmitter::default(),
+                images: ValueMut::new(HashMap::new()),
+                image_loaded: EventEmitter::default(),
                 _callback: drop,
             }
         })
@@ -184,6 +213,16 @@ impl Context {
                 self.resized.trigger(&size);
             }
             Ok(CanvasEvent::Restored) => self.restored.trigger(&()),
+            Ok(CanvasEvent::ImageLoaded(texture, size)) => {
+                if let Some(url) = self.images.change(|images| images.remove(&texture)) {
+                    self.image_loaded.trigger(&ImageLoad::Loaded { url, size });
+                }
+            }
+            Ok(CanvasEvent::ImageFailed(texture)) => {
+                if let Some(url) = self.images.change(|images| images.remove(&texture)) {
+                    self.image_loaded.trigger(&ImageLoad::Failed { url });
+                }
+            }
             Err(error) => log::error!("webgl: {error}"),
         }
     }
@@ -588,6 +627,51 @@ impl WebGl {
         });
     }
 
+    /// The image at `url`, in `texture` once the browser has loaded it, with its mipmaps if
+    /// `mipmap`, see [`Self::generate_mipmap`]. Until then the texture is as it was, f. ex. a
+    /// pixel of [`Self::texture_image`] standing in, and [`Self::on_image_load`] tells when it
+    /// has it, to draw again. A later image for the texture takes the place of one still loading.
+    ///
+    /// The image's first row is the texture's first, as with [`Self::texture_image`]. An image
+    /// from another origin needs CORS headers allowing it, as WebGL reads its pixels.
+    ///
+    /// ```rust
+    /// use vertigo::dom_element;
+    /// use vertigo::webgl::{ImageLoad, TextureFilter, WebGl};
+    ///
+    /// let canvas = dom_element! { <canvas /> };
+    /// let gl = WebGl::new(&canvas.get_ref());
+    ///
+    /// let bricks = gl.create_texture();
+    /// gl.bind_texture(Some(&bricks));
+    /// // Grey, until the bricks come.
+    /// gl.texture_image(1, 1, &[128, 128, 128, 255]);
+    /// gl.texture_filter(TextureFilter::LinearMipmapLinear, TextureFilter::Linear);
+    /// gl.texture_image_url(&bricks, "/images/bricks.png", true);
+    ///
+    /// canvas.append_drop_resource(gl.on_image_load(|load| {
+    ///     if let ImageLoad::Loaded { .. } = load {
+    ///         // Draw again, with the bricks.
+    ///     }
+    /// }));
+    /// ```
+    pub fn texture_image_url(&self, texture: &Texture, url: &str, mipmap: bool) {
+        self.context
+            .images
+            .change(|images| images.insert(texture.0.id, url.to_string()));
+        self.op(code::TEXTURE_IMAGE_URL, |out| {
+            put_u32(out, texture.0.id);
+            out.push(u8::from(mipmap));
+            put_source(out, url);
+        });
+    }
+
+    /// `callback` when an image asked for with [`Self::texture_image_url`] is in its texture, or
+    /// didn't load.
+    pub fn on_image_load(&self, callback: impl Fn(&ImageLoad) + 'static) -> DropResource {
+        self.context.image_loaded.add(move |load| callback(&load))
+    }
+
     /// How the bound texture is read between its pixels: when it is shown smaller (`min`) and
     /// bigger (`mag`) than it is. A filter with mipmaps needs [`Self::generate_mipmap`].
     pub fn texture_filter(&self, min: TextureFilter, mag: TextureFilter) {
@@ -659,6 +743,30 @@ impl WebGl {
         self.op(code::BLEND_FUNC, |out| {
             put_u32(out, source as u32);
             put_u32(out, destination as u32);
+        });
+    }
+
+    /// Whether what is drawn writes its depth, for [`Capability::DepthTest`]: yes at first. See-
+    /// through objects are drawn without, after the others and farthest first, so they hide
+    /// nothing behind them that is drawn after.
+    pub fn depth_mask(&self, write: bool) {
+        self.op(code::DEPTH_MASK, |out| out.push(u8::from(write)));
+    }
+
+    /// As [`Self::blend_func`], with factors of their own for the alpha. F. ex. to blend the
+    /// colors by the alpha drawn, but keep the canvas opaque where it is:
+    /// `blend_func_separate(SourceAlpha, OneMinusSourceAlpha, One, OneMinusSourceAlpha)`.
+    pub fn blend_func_separate(
+        &self,
+        source: BlendFactor,
+        destination: BlendFactor,
+        source_alpha: BlendFactor,
+        destination_alpha: BlendFactor,
+    ) {
+        self.op(code::BLEND_FUNC_SEPARATE, |out| {
+            for factor in [source, destination, source_alpha, destination_alpha] {
+                put_u32(out, factor as u32);
+            }
         });
     }
 
@@ -1115,6 +1223,14 @@ mod tests {
         gl.vertex_attrib_divisor(3, 1);
         gl.draw_arrays_instanced(Primitive::Triangles, 0, 3, 10);
         gl.draw_elements_instanced(Primitive::Triangles, 36, IndexType::UnsignedShort, 0, 400);
+        gl.texture_image_url(&texture, "/ł.png", true);
+        gl.depth_mask(false);
+        gl.blend_func_separate(
+            BlendFactor::SourceAlpha,
+            BlendFactor::OneMinusSourceAlpha,
+            BlendFactor::One,
+            BlendFactor::Zero,
+        );
         gl.bind_buffer(BufferTarget::Array, None);
         drop((buffer, vertices, program, texture, location));
         gl.take()
@@ -1142,9 +1258,10 @@ mod tests {
         255, 128, 2, 0, 0, 224, 1, 0, 0, 35, 3, 2, 0, 0, 36, 2, 3, 0, 0, 3, 3, 0, 0, 37, 5, 4, 0,
         0, 38, 0, 9, 0, 0, 39, 4, 0, 0, 0, 0, 0, 0, 0, 3, 0, 0, 0, 40, 1, 0, 0, 0, 6, 0, 0, 0, 3,
         20, 0, 0, 2, 0, 0, 0, 43, 3, 0, 0, 0, 1, 0, 0, 0, 44, 4, 0, 0, 0, 0, 0, 0, 0, 3, 0, 0, 0,
-        10, 0, 0, 0, 45, 4, 0, 0, 0, 36, 0, 0, 0, 3, 20, 0, 0, 0, 0, 0, 0, 144, 1, 0, 0, 4, 146,
-        136, 0, 0, 0, 0, 0, 0, 3, 1, 0, 0, 0, 8, 2, 0, 0, 0, 13, 3, 0, 0, 0, 23, 5, 0, 0, 0, 42, 4,
-        0, 0, 0,
+        10, 0, 0, 0, 45, 4, 0, 0, 0, 36, 0, 0, 0, 3, 20, 0, 0, 0, 0, 0, 0, 144, 1, 0, 0, 46, 5, 0,
+        0, 0, 1, 7, 0, 0, 0, 47, 197, 130, 46, 112, 110, 103, 47, 0, 48, 2, 3, 0, 0, 3, 3, 0, 0, 1,
+        0, 0, 0, 0, 0, 0, 0, 4, 146, 136, 0, 0, 0, 0, 0, 0, 3, 1, 0, 0, 0, 8, 2, 0, 0, 0, 13, 3, 0,
+        0, 0, 23, 5, 0, 0, 0, 42, 4, 0, 0, 0,
     ];
 
     #[test]
@@ -1244,6 +1361,57 @@ mod tests {
             sizes.borrow().len(),
             1,
             "but told no one who stopped listening"
+        );
+    }
+
+    #[test]
+    fn the_browser_tells_of_the_images_coming_into_textures() {
+        let canvas = dom_element! { <canvas /> };
+        let gl = WebGl::new(&canvas.get_ref());
+        let calls = gl.take();
+        let Ok(callback) = <[u8; 8]>::try_from(&calls[2..10]) else {
+            panic!("a context starts with its callback: {calls:?}");
+        };
+        let callback = CallbackId::from_u64(u64::from_le_bytes(callback));
+        let tell = |values: &[u32]| {
+            let values = values
+                .iter()
+                .map(|value| JsJson::Number(JsJsonNumber(f64::from(*value))));
+            api_callbacks().call(callback, JsJson::List(values.collect()));
+        };
+
+        let loads = Rc::new(RefCell::new(Vec::new()));
+        let _loads = gl.on_image_load({
+            let loads = loads.clone();
+            move |load| loads.borrow_mut().push(load.clone())
+        });
+
+        let (bricks, grass) = (gl.create_texture(), gl.create_texture());
+        gl.texture_image_url(&bricks, "/old-bricks.png", false);
+        gl.texture_image_url(&bricks, "/bricks.png", true);
+        gl.texture_image_url(&grass, "/grass.png", false);
+        let ids = [bricks.0.id, grass.0.id];
+
+        tell(&[2, ids[0], 64, 32]);
+        tell(&[3, ids[1]]);
+        // Told once, and of no other texture.
+        tell(&[3, ids[1]]);
+        tell(&[2, ids[1] + 100, 1, 1]);
+
+        assert_eq!(
+            *loads.borrow(),
+            vec![
+                ImageLoad::Loaded {
+                    url: "/bricks.png".to_string(),
+                    size: Size {
+                        width: 64,
+                        height: 32
+                    },
+                },
+                ImageLoad::Failed {
+                    url: "/grass.png".to_string()
+                },
+            ]
         );
     }
 

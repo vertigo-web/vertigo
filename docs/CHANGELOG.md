@@ -17,9 +17,11 @@
   scene drawn once draws again in `on_resize` without the canvas showing it cleared. A context the
   browser loses is asked back, and `WebGl::on_restore` makes the objects again. Instanced drawing
   (`vertex_attrib_divisor`, `draw_arrays_instanced`, `draw_elements_instanced`) draws many objects
-  with a call or two, their matrices worked out in Rust and sent in one buffer. The browser's
-  code for it is a chunk of its own, loaded when a page first uses WebGL. The demo draws a cube
-  turning with it.
+  with a call or two, their matrices worked out in Rust and sent in one buffer. Textures take
+  images from URLs too (`texture_image_url`), put in when the browser has them, and
+  `WebGl::on_image_load` tells when, to draw again. `depth_mask` and `blend_func_separate` draw
+  see-through objects over the others. The browser's code for it is a chunk of its own, loaded
+  when a page first uses WebGL. The demo draws a cube turning with it.
 
 ### Changed
 
