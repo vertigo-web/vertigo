@@ -13,8 +13,9 @@ pub enum PointerType {
 }
 
 /// Structure passed as a parameter to callback on `on_pointer_down`, `on_pointer_move`,
-/// `on_pointer_up` and `on_pointer_cancel` events, and on `hook_pointer_move`, `hook_pointer_up`
-/// and `hook_pointer_cancel`, which hear the pointer anywhere on the page.
+/// `on_pointer_up` and `on_pointer_cancel` events, and on `hook_pointer_move`, `hook_pointer_up`,
+/// `hook_pointer_cancel` and `hook_pointer_down_outside`, which hear the pointer anywhere on the
+/// page.
 ///
 /// A pointer is a mouse, a pen or a finger on a touch screen; each finger is a pointer of its
 /// own, with its own [`pointer_id`](Self::pointer_id). The browser cancels a pointer it takes

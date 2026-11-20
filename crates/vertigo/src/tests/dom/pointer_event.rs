@@ -309,6 +309,7 @@ fn each_hook_goes_on_the_wire_name_of_its_name() {
             hook_pointer_move={listener("move")}
             hook_pointer_up={listener("up")}
             hook_pointer_cancel={listener("cancel")}
+            hook_pointer_down_outside={listener("outside")}
         />
     };
     let callbacks = log_take()
@@ -323,17 +324,22 @@ fn each_hook_goes_on_the_wire_name_of_its_name() {
         })
         .collect::<Vec<_>>();
 
-    for event_name in ["hook_pointermove", "hook_pointerup", "hook_pointercancel"] {
+    for event_name in [
+        "hook_pointermove",
+        "hook_pointerup",
+        "hook_pointercancel",
+        "hook_pointerdown_outside",
+    ] {
         let reply = deliver(callback(&callbacks, event_name), touch("mouse"));
         assert_eq!(reply, flags(false, false, PointerCapture::AsItIs));
     }
 
     let got = got.borrow();
     let names = got.iter().map(|(name, _)| *name).collect::<Vec<_>>();
-    assert_eq!(names, ["move", "up", "cancel"]);
+    assert_eq!(names, ["move", "up", "cancel", "outside"]);
     let positions = got
         .iter()
         .map(|(_, event)| (event.pointer_x, event.pointer_y))
         .collect::<Vec<_>>();
-    assert_eq!(positions, [(30.0, 40.0); 3]);
+    assert_eq!(positions, [(30.0, 40.0); 4]);
 }

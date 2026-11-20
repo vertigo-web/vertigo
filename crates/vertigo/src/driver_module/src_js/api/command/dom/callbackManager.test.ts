@@ -382,6 +382,45 @@ function testPointerHooks() {
     delete (globalThis as any).document;
 }
 
+console.log("\n--- Test: a press outside an element, anywhere else on the page ---");
+{
+    const doc = new MockNode();
+    (globalThis as any).document = doc;
+    // Every object a node, for the elements here
+    (globalThis as any).Node = Object;
+    const inner = {};
+    const element = Object.assign(new MockElement(), {
+        getBoundingClientRect: () => ({ left: 10, top: 20, width: 50, height: 60 }),
+        contains: (node: unknown) => node === element || node === inner,
+    });
+    const nodes = { getNode: () => element } as unknown as MapNodes;
+    const sent: unknown[] = [];
+    const reply = { stop_propagation: false, prevent_default: false, capture_pointer: false, release_pointer: false };
+    const wasm = { wasmCommand: (command: any) => { sent.push(command.CallbackCall.value); return reply; } };
+    const manager = new CallbackManager(() => wasm as any);
+    manager.add(nodes, 1, 'hook_pointerdown_outside', 40);
+    assert(
+        JSON.stringify(doc.added) === JSON.stringify([['pointerdown', false]]),
+        "it listens to the presses on the document",
+    );
+
+    const press = (target: unknown) => Object.assign(new MockPointerEvent(), { target }) as unknown as Event;
+    doc.listeners[0]?.(press(inner));
+    doc.listeners[0]?.(press(element));
+    assert(sent.length === 0, "not to those on the element or in it");
+    doc.listeners[0]?.(press({}));
+    assert(
+        JSON.stringify(sent) === JSON.stringify([[7, 'touch', true, 0, 1, 120, 220, 50, 60, false, false, true, false]]),
+        `but to those elsewhere, from the corner of the element: ${JSON.stringify(sent)}`,
+    );
+
+    manager.remove(nodes, 1, 'hook_pointerdown_outside', 40);
+    assert(JSON.stringify(doc.removed) === JSON.stringify(['pointerdown']), "and it comes off the document");
+
+    delete (globalThis as any).document;
+    delete (globalThis as any).Node;
+}
+
 /// An element whose content is scrolled 120.5 px down, on a zoomed page: 900 px tall, of which
 /// 300 px show.
 class MockScrollEvent extends MockEvent {

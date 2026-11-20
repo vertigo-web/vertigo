@@ -357,6 +357,37 @@ impl DomElement {
         self.on_pointer("hook_pointercancel", on_hook_pointer_cancel)
     }
 
+    /// A mouse button pressed, or a finger or a pen put down, anywhere on the page but on the
+    /// element and what is in it, wherever that lies - f. ex. to close a popup when its user goes
+    /// on elsewhere. The press goes on to what it fell on, so a click beside the popup both closes
+    /// it and does what it does there. Like `hook_key_down`, it listens on the document. The
+    /// position is from the corner of the element with the hook. See [`PointerEvent`].
+    ///
+    /// ```rust
+    /// use vertigo::{Value, bind, dom};
+    ///
+    /// let open = Value::new(true);
+    /// let close = bind!(open, |_| open.set(false));
+    /// let menu = dom! {
+    ///     <div hook_pointer_down_outside={close}>
+    ///         <button>"Settings"</button>
+    ///     </div>
+    /// };
+    /// ```
+    pub fn hook_pointer_down_outside(
+        self,
+        on_hook_pointer_down_outside: impl Into<Callback1<PointerEvent, ()>>,
+    ) -> Self {
+        self.hook_pointer_down_outside_rc(Rc::new(on_hook_pointer_down_outside.into()))
+    }
+
+    pub fn hook_pointer_down_outside_rc(
+        self,
+        on_hook_pointer_down_outside: Rc<Callback1<PointerEvent, ()>>,
+    ) -> Self {
+        self.on_pointer("hook_pointerdown_outside", on_hook_pointer_down_outside)
+    }
+
     pub fn id_dom(&self) -> DomId {
         self.id_dom
     }
