@@ -102,9 +102,9 @@ pub use dom::{
     dom_node::DomNode,
     dom_text::DomText,
     events::{
-        ClickEvent, DropFileEvent, DropFileItem, IntersectionEvent, KeyDownEvent, MediaEvent,
-        MediaEventKind, MessageEvent, PointerEvent, PointerType, ResizeEvent, ScrollEvent,
-        WheelDeltaMode, WheelEvent,
+        ClickEvent, ClickPosition, DropFileEvent, DropFileItem, IntersectionEvent, KeyDownEvent,
+        MediaEvent, MediaEventKind, MessageEvent, PointerEvent, PointerType, ResizeEvent,
+        ScrollEvent, WheelDeltaMode, WheelEvent,
     },
 };
 pub use dom_macro::{AttrGroup, AttrGroupBinding, AttrGroupValue, EmbedDom};

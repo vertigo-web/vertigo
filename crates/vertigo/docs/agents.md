@@ -85,7 +85,8 @@ take an [`AttrGroup`](crate::AttrGroup) prop.
   - a node that depends on reactive state with `render_value` (below),
   - a list with `render_list` (below).
 - Events are attributes named `on_*`. The common ones and what their handler gets:
-  - `on_click` - a [`ClickEvent`](crate::ClickEvent) (usually ignored: `|_|`)
+  - `on_click` - a [`ClickEvent`](crate::ClickEvent) (usually ignored: `|_|`), with the modifier keys
+    and where the pointer clicked, f. ex. on a `<canvas>`
   - `on_input`, `on_change` - the new `String` value
   - `on_change_checked` - the new `bool`
   - `on_key_down` - a [`KeyDownEvent`](crate::KeyDownEvent). Return `true` when you handled the key, to stop

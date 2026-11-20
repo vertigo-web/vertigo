@@ -1674,12 +1674,46 @@ pub async fn ws_collection(ctx: &Ctx) -> Result<()> {
     .await
 }
 
-/// Namespaced elements. Nothing here is safe to click - the only link leaves the site.
+/// Namespaced elements, and where a click on them was. The link leaves the site, so only the
+/// circle above it is clicked.
 pub async fn svg(ctx: &Ctx) -> Result<()> {
     open(ctx, "Svg", "Link in SVG").await?;
 
     check_eq(count(ctx, "svg circle").await, 1, "the svg circle")?;
-    check_eq(count(ctx, "svg path").await, 2, "both svg paths")
+    check_eq(count(ctx, "svg path").await, 2, "both svg paths")?;
+
+    // The middle of the circle, at 50, 50 of the picture 100 by 150: 25 px above its middle.
+    let picture = ctx.find(By::Css("svg")).await?;
+    ctx.driver
+        .action_chain()
+        .move_to_element_with_offset(&picture, 0, -25)
+        .click()
+        .perform()
+        .await
+        .context("clicking the circle failed")?;
+    // The browser puts the pointer on a whole pixel, and the picture may not be on one.
+    ctx.wait_for_text("of 100 × 150").await?;
+    let text = ctx.page_text().await?;
+    let at: Vec<f64> = text
+        .split_once("Clicked at ")
+        .and_then(|(_, rest)| rest.split_once(" of"))
+        .map(|(at, _)| {
+            at.split(", ")
+                .filter_map(|part| part.parse().ok())
+                .collect()
+        })
+        .unwrap_or_default();
+    ensure!(
+        matches!(at[..], [x, y] if (x - 50.0).abs() <= 1.0 && (y - 50.0).abs() <= 1.0),
+        "a click in the middle of the circle, at 50, 50, told as {at:?}"
+    );
+
+    // A click from a script has no pointer.
+    ctx.js(
+        "document.querySelector('svg').dispatchEvent(new MouseEvent('click', { bubbles: true }));",
+    )
+    .await?;
+    ctx.wait_for_text("Clicked without a pointer").await
 }
 
 /// Canvases drawn from a `Computed<Drawing>`, a brush on pointer events, and stamps cut out of
