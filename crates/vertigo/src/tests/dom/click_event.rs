@@ -4,7 +4,7 @@ use std::{cell::RefCell, rc::Rc};
 
 use crate::{self as vertigo, dom};
 use crate::{
-    ClickEvent, DomNode, JsJson, JsJsonSerialize,
+    ClickEvent, ClickPosition, DomNode, JsJson, JsJsonSerialize,
     dev::{
         CallbackId,
         command::{CommandForWasm, DriverDomCommand},
@@ -45,13 +45,31 @@ fn element_with_on_click(
     (element, callback_id)
 }
 
-/// What the driver sends for a click with Ctrl and ⌘ held.
+/// What the driver sends for a click with Ctrl and ⌘ held, from the keyboard.
 fn ctrl_meta_click() -> JsJson {
     JsJson::List(vec![
         JsJson::False,
         JsJson::True,
         JsJson::False,
         JsJson::True,
+        JsJson::Null,
+    ])
+}
+
+/// What the driver sends for a click of the mouse 30 px from the left and 20 px from the top of
+/// an element 200 by 100.
+fn mouse_click() -> JsJson {
+    JsJson::List(vec![
+        JsJson::False,
+        JsJson::False,
+        JsJson::False,
+        JsJson::False,
+        JsJson::List(vec![
+            JsJson::from(30.0_f64),
+            JsJson::from(20.5_f64),
+            JsJson::from(200.0_f64),
+            JsJson::from(100.0_f64),
+        ]),
     ])
 }
 
@@ -99,6 +117,30 @@ fn the_callback_gets_the_modifier_keys() {
 }
 
 #[test]
+fn the_callback_gets_where_the_pointer_clicked() {
+    let got = Rc::new(RefCell::new(Vec::new()));
+    let (_element, callback_id) = element_with_on_click(&got, |_| {});
+
+    deliver(callback_id, mouse_click());
+    deliver(callback_id, ctrl_meta_click());
+
+    let got = got.borrow();
+    let positions = got.iter().map(|event| event.position).collect::<Vec<_>>();
+    assert_eq!(
+        positions,
+        [
+            Some(ClickPosition {
+                x: 30.0,
+                y: 20.5,
+                element_width: 200.0,
+                element_height: 100.0,
+            }),
+            None,
+        ]
+    );
+}
+
+#[test]
 fn a_click_without_the_keys_still_reaches_the_callback() {
     let got = Rc::new(RefCell::new(Vec::new()));
     let (_element, callback_id) = element_with_on_click(&got, |_| {});
@@ -109,6 +151,7 @@ fn a_click_without_the_keys_still_reaches_the_callback() {
     let got = got.borrow();
     let all_up = got.iter().map(keys).collect::<Vec<_>>();
     assert_eq!(all_up, [(false, false, false, false); 2]);
+    assert!(got.iter().all(|event| event.position.is_none()));
 }
 
 #[test]

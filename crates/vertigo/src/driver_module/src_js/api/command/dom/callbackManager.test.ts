@@ -25,20 +25,24 @@ class MockEvent {
     stopPropagation() { this.propagationStopped = true; }
 }
 
-/// A click with Ctrl held.
-class MockClickEvent extends MockEvent {
-    altKey = false;
-    ctrlKey = true;
-    shiftKey = false;
-    metaKey = false;
-}
-
 /// The element with the listener: its top left corner is at (100, 200) and it is 300 x 150.
 class MockElement {
     getBoundingClientRect() { return { left: 100, top: 200, width: 300, height: 150 }; }
     setPointerCapture(_pointerId: number) {}
     hasPointerCapture(_pointerId: number) { return false; }
     releasePointerCapture(_pointerId: number) {}
+}
+
+/// A click of the mouse with Ctrl held, over (130, 240) of the viewport.
+class MockClickEvent extends MockEvent {
+    altKey = false;
+    ctrlKey = true;
+    shiftKey = false;
+    metaKey = false;
+    clientX = 130;
+    clientY = 240;
+    detail = 1;
+    currentTarget = new MockElement();
 }
 
 // What the handlers check the events and their targets against.
@@ -83,8 +87,20 @@ function testClickPayload() {
         return null;
     });
     assert(
-        JSON.stringify(sent) === JSON.stringify([false, true, false, false]),
-        `the modifier keys: ${JSON.stringify(sent)}`,
+        JSON.stringify(sent) === JSON.stringify([false, true, false, false, [30, 40, 300, 150]]),
+        `the modifier keys, the pointer from the element's corner and its size: ${JSON.stringify(sent)}`,
+    );
+
+    // From the keyboard, or from a script: no clicks counted, and no pointer, whatever the
+    // coordinates say.
+    const keyboard = Object.assign(new MockClickEvent(), { detail: 0, clientX: 0, clientY: 0 });
+    click(keyboard as unknown as Event, (value) => {
+        sent = value;
+        return null;
+    });
+    assert(
+        JSON.stringify(sent) === JSON.stringify([false, true, false, false, null]),
+        `a click without a pointer: ${JSON.stringify(sent)}`,
     );
 }
 

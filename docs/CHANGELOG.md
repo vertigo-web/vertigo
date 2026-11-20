@@ -51,6 +51,9 @@
   project, with its commands and where to find that guide. `--no-agent-files` leaves them out.
 * README: what is different coming from Leptos, Yew or Dioxus, and how vertigo helps coding
   agents.
+* `ClickEvent::position`: where the mouse, a finger or a pen clicked, as a new `ClickPosition` in
+  CSS pixels from the corner of the element with the `on_click`, with its size - f. ex. the point
+  of a `<canvas>` clicked. `None` for a click from the keyboard or from a script.
 
 ### Changed
 

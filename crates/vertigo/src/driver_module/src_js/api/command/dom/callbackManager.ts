@@ -60,12 +60,22 @@ const applyFlags = (event: Event, flags: JsJsonType, pointerCapture?: PointerCap
     }
 };
 
-/// Wasm gets the modifier keys and replies with the `ClickEvent` flags. The browser's default
-/// action - following a link, submitting a form, toggling a checkbox - goes ahead unless the
-/// handler asked to prevent it.
+/// Wasm gets the modifier keys and where the pointer clicked, and replies with the `ClickEvent`
+/// flags. The browser's default action - following a link, submitting a form, toggling a
+/// checkbox - goes ahead unless the handler asked to prevent it. A click from the keyboard or from
+/// a script comes without a pointer: its `detail`, the count of clicks, is 0. The pointer goes
+/// relative to the element with the listener, as for the wheel.
 export const click: Handler = (event, send) => {
-    if (!(event instanceof MouseEvent)) {
+    const target = event.currentTarget;
+
+    if (!(event instanceof MouseEvent) || !(target instanceof Element)) {
         throw Error('#click');
+    }
+
+    let position = null;
+    if (event.detail !== 0) {
+        const rect = target.getBoundingClientRect();
+        position = [event.clientX - rect.left, event.clientY - rect.top, rect.width, rect.height];
     }
 
     // Payload order MUST match the Rust decoder `ClickEvent::from_driver`.
@@ -74,6 +84,7 @@ export const click: Handler = (event, send) => {
         event.ctrlKey,
         event.shiftKey,
         event.metaKey,
+        position,
     ]));
 };
 
