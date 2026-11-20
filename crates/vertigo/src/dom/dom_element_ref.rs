@@ -13,6 +13,10 @@ impl DomElementRef {
         DomElementRef { id }
     }
 
+    pub(crate) fn id(&self) -> DomId {
+        self.id
+    }
+
     pub fn dom_access(&self) -> DomAccess {
         DomAccess::default().element(self.id)
     }

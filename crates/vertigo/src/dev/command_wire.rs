@@ -63,6 +63,7 @@ mod tag {
     pub const CALLBACK_ADD: u8 = 12;
     pub const CALLBACK_REMOVE: u8 = 13;
     pub const CANVAS_DRAW: u8 = 14;
+    pub const WEBGL: u8 = 15;
 }
 
 /// `InsertBefore` with no reference node. Safe as a sentinel because ids 1, 2 and 3 are
@@ -218,6 +219,12 @@ fn write_command(out: &mut Vec<u8>, command: &DriverDomCommand, index: &HashMap<
             write_varint(out, drawing.len() as u64);
             out.extend_from_slice(drawing);
         }
+        DriverDomCommand::WebGl { id, commands } => {
+            out.push(tag::WEBGL);
+            write_id(out, *id);
+            write_varint(out, commands.len() as u64);
+            out.extend_from_slice(commands);
+        }
     }
 }
 
@@ -339,6 +346,10 @@ fn read_command(
         tag::CANVAS_DRAW => DriverDomCommand::CanvasDraw {
             id: cursor.id()?,
             drawing: cursor.bytes()?.to_vec().into(),
+        },
+        tag::WEBGL => DriverDomCommand::WebGl {
+            id: cursor.id()?,
+            commands: cursor.bytes()?.to_vec(),
         },
         other => return Err(format!("dom command: unknown tag {other}")),
     };
@@ -509,6 +520,10 @@ mod tests {
                 id: id(4),
                 drawing: vec![1, 2, 255].into(),
             },
+            DriverDomCommand::WebGl {
+                id: id(4),
+                commands: vec![29, 0, 128],
+            },
         ]
     }
 
@@ -525,7 +540,7 @@ mod tests {
         159, 166, 128, 3, 5, 0, 8, 1, 4, 240, 162, 4, 8, 1, 4, 0, 9, 1, 2, 46, 97, 9, 99, 111, 108,
         111, 114, 58, 114, 101, 100, 9, 0, 14, 64, 109, 101, 100, 105, 97, 32, 112, 114, 105, 110,
         116, 123, 125, 10, 6, 3, 114, 111, 119, 11, 6, 6, 4, 7, 5, 12, 4, 5, 99, 108, 105, 99, 107,
-        77, 13, 4, 5, 99, 108, 105, 99, 107, 172, 2, 14, 4, 3, 1, 2, 255,
+        77, 13, 4, 5, 99, 108, 105, 99, 107, 172, 2, 14, 4, 3, 1, 2, 255, 15, 4, 3, 29, 0, 128,
     ];
 
     #[test]
@@ -603,6 +618,10 @@ mod tests {
             DriverDomCommand::CanvasDraw {
                 id: id(4),
                 drawing: Arc::default(),
+            },
+            DriverDomCommand::WebGl {
+                id: id(4),
+                commands: (0..=255).collect(),
             },
         ];
 

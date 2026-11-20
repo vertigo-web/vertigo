@@ -57,6 +57,9 @@ impl Env for DemoEnv {
             // names was still there.
             ChromeConfig {
                 window_size: (1400, 1000),
+                // WebGL on a machine without a GPU: Chrome no longer falls back to drawing it
+                // in software by itself. Safe here, as the suite opens only the demo.
+                args: &["--enable-unsafe-swiftshader"],
                 ..Default::default()
             },
         )?;

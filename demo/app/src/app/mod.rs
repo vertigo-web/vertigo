@@ -18,6 +18,7 @@ mod state;
 mod styling;
 mod sudoku;
 mod svg;
+mod webgl;
 mod ws_collection;
 
 pub use render::render;
