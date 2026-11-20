@@ -10,6 +10,7 @@ pub enum Route {
     Styling,
     Sudoku,
     Input,
+    GameInput,
     GithubExplorer,
     GameOfLife,
     Chat,
@@ -39,6 +40,7 @@ impl Route {
         Self::Styling,
         Self::Sudoku,
         Self::Input,
+        Self::GameInput,
         Self::GithubExplorer,
         Self::GameOfLife,
         Self::Chat,
@@ -90,6 +92,9 @@ impl Route {
             Self::Input => {
                 "One Value<String> behind an input, a textarea, and a derived character count."
             }
+            Self::GameInput => {
+                "Keys held and repeated, the window's focus, the pointer locked, the whole screen."
+            }
             Self::GithubExplorer => "LazyCache over a fetch, decoding nested AutoJsJson structs.",
             Self::GameOfLife => {
                 "8400 Value<bool> driven by a timer, fanned back into a single population count."
@@ -136,6 +141,7 @@ impl Route {
             Self::Styling => "/styling",
             Self::Sudoku => "/sudoku",
             Self::Input => "/input",
+            Self::GameInput => "/game_input",
             Self::GithubExplorer => "/github_explorer",
             Self::GameOfLife { .. } => "/game_of_life",
             Self::Chat => "/chat",
@@ -161,6 +167,7 @@ impl Route {
             "/styling" => Self::Styling,
             "/sudoku" => Self::Sudoku,
             "/input" => Self::Input,
+            "/game_input" => Self::GameInput,
             "/github_explorer" => Self::GithubExplorer,
             "/game_of_life" => Self::GameOfLife,
             "/chat" => Self::Chat,
@@ -186,6 +193,7 @@ impl Route {
             Self::Styling => "Styling",
             Self::Sudoku => "Sudoku",
             Self::Input => "Input",
+            Self::GameInput => "Game Input",
             Self::GithubExplorer => "Github Explorer",
             Self::GameOfLife => "Game Of Life",
             Self::Chat => "Chat",

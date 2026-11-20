@@ -57,6 +57,7 @@ async fn demo(ctx: Ctx) -> Result<()> {
     step!("Styling", tabs::styling(&ctx));
     step!("Sudoku", tabs::sudoku(&ctx));
     step!("Input", tabs::input(&ctx));
+    step!("Game Input", tabs::game_input(&ctx));
     step!("Github Explorer", tabs::github_explorer(&ctx));
     step!("Game Of Life", tabs::game_of_life(&ctx));
     step!("Chat", tabs::chat(&ctx));
