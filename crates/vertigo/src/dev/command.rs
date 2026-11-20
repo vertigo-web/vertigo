@@ -49,8 +49,8 @@ pub enum CommandForBrowser {
         callback: CallbackId,
     },
 
-    /// From now on, before every frame the browser draws, send
-    /// [`CommandForWasm::AnimationFrame`] - until [`CommandForBrowser::AnimationFrameStop`].
+    /// From now on, before every frame the browser draws, send it through the export
+    /// `vertigo_export_animation_frame` - until [`CommandForBrowser::AnimationFrameStop`].
     AnimationFrameStart,
     AnimationFrameStop,
 

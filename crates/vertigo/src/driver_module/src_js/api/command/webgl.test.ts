@@ -61,25 +61,26 @@ const recording = (log: Array<string>): Gl => {
 
 // `fixture()` in webgl.rs: one call of each.
 const FIXTURE = new Uint8Array([
-    1, 63, 2, 1, 0, 0, 0, 4, 146, 136, 0, 0, 1, 0, 0, 0, 5, 146, 136, 0, 0, 228, 136, 0, 0, 8,
-    0, 0, 0, 0, 0, 192, 63, 0, 0, 0, 192, 6, 147, 136, 0, 0, 2, 0, 0, 0, 4, 0, 0, 0, 7, 0, 8, 0,
-    7, 2, 0, 0, 0, 9, 2, 0, 0, 0, 10, 1, 0, 0, 0, 11, 1, 0, 0, 0, 3, 6, 20, 0, 0, 1, 12, 0, 0,
-    0, 4, 0, 0, 0, 12, 3, 0, 0, 0, 2, 0, 0, 0, 118, 115, 3, 0, 0, 0, 102, 197, 155, 14, 3, 0, 0,
-    0, 41, 4, 0, 0, 0, 3, 0, 0, 0, 1, 0, 117, 15, 4, 0, 0, 0, 0, 0, 0, 63, 16, 4, 0, 0, 0, 0, 0,
-    128, 63, 0, 0, 0, 64, 17, 4, 0, 0, 0, 0, 0, 128, 63, 0, 0, 0, 64, 0, 0, 64, 64, 18, 4, 0, 0,
-    0, 0, 0, 128, 63, 0, 0, 0, 64, 0, 0, 64, 64, 0, 0, 128, 64, 19, 4, 0, 0, 0, 255, 255, 255,
-    255, 20, 4, 0, 0, 0, 0, 0, 0, 0, 0, 0, 128, 63, 0, 0, 0, 64, 0, 0, 64, 64, 0, 0, 128, 64, 0,
-    0, 160, 64, 0, 0, 192, 64, 0, 0, 224, 64, 0, 0, 0, 65, 21, 4, 0, 0, 0, 0, 0, 0, 0, 0, 0,
-    128, 63, 0, 0, 0, 64, 0, 0, 64, 64, 0, 0, 128, 64, 0, 0, 160, 64, 0, 0, 192, 64, 0, 0, 224,
-    64, 0, 0, 0, 65, 0, 0, 16, 65, 0, 0, 32, 65, 0, 0, 48, 65, 0, 0, 64, 65, 0, 0, 80, 65, 0, 0,
-    96, 65, 0, 0, 112, 65, 22, 5, 0, 0, 0, 24, 2, 0, 0, 0, 25, 5, 0, 0, 0, 26, 1, 0, 0, 0, 1, 0,
-    0, 0, 4, 0, 0, 0, 255, 0, 128, 255, 27, 1, 40, 0, 0, 0, 38, 0, 0, 27, 0, 40, 0, 0, 1, 38, 0,
-    0, 27, 2, 40, 0, 0, 1, 41, 0, 0, 27, 3, 40, 0, 0, 47, 129, 0, 0, 28, 29, 0, 0, 0, 0, 0, 0,
-    128, 62, 0, 0, 0, 63, 0, 0, 128, 63, 30, 0, 0, 128, 63, 31, 0, 65, 0, 0, 32, 113, 11, 0, 0,
-    33, 226, 11, 0, 0, 34, 0, 0, 0, 0, 255, 255, 255, 255, 128, 2, 0, 0, 224, 1, 0, 0, 35, 3, 2,
-    0, 0, 36, 2, 3, 0, 0, 3, 3, 0, 0, 37, 5, 4, 0, 0, 38, 0, 9, 0, 0, 39, 4, 0, 0, 0, 0, 0, 0,
-    0, 3, 0, 0, 0, 40, 1, 0, 0, 0, 6, 0, 0, 0, 3, 20, 0, 0, 2, 0, 0, 0, 4, 146, 136, 0, 0, 0, 0,
-    0, 0, 3, 1, 0, 0, 0, 8, 2, 0, 0, 0, 13, 3, 0, 0, 0, 23, 5, 0, 0, 0, 42, 4, 0, 0, 0,
+    1, 63, 1, 0, 0, 0, 0, 0, 0, 0, 2, 1, 0, 0, 0, 4, 146, 136, 0, 0, 1, 0, 0, 0, 5, 146, 136, 0,
+    0, 228, 136, 0, 0, 8, 0, 0, 0, 0, 0, 192, 63, 0, 0, 0, 192, 6, 147, 136, 0, 0, 2, 0, 0, 0,
+    4, 0, 0, 0, 7, 0, 8, 0, 7, 2, 0, 0, 0, 9, 2, 0, 0, 0, 10, 1, 0, 0, 0, 11, 1, 0, 0, 0, 3, 6,
+    20, 0, 0, 1, 12, 0, 0, 0, 4, 0, 0, 0, 12, 3, 0, 0, 0, 2, 0, 0, 0, 118, 115, 3, 0, 0, 0, 102,
+    197, 155, 14, 3, 0, 0, 0, 41, 4, 0, 0, 0, 3, 0, 0, 0, 1, 0, 117, 15, 4, 0, 0, 0, 0, 0, 0,
+    63, 16, 4, 0, 0, 0, 0, 0, 128, 63, 0, 0, 0, 64, 17, 4, 0, 0, 0, 0, 0, 128, 63, 0, 0, 0, 64,
+    0, 0, 64, 64, 18, 4, 0, 0, 0, 0, 0, 128, 63, 0, 0, 0, 64, 0, 0, 64, 64, 0, 0, 128, 64, 19,
+    4, 0, 0, 0, 255, 255, 255, 255, 20, 4, 0, 0, 0, 0, 0, 0, 0, 0, 0, 128, 63, 0, 0, 0, 64, 0,
+    0, 64, 64, 0, 0, 128, 64, 0, 0, 160, 64, 0, 0, 192, 64, 0, 0, 224, 64, 0, 0, 0, 65, 21, 4,
+    0, 0, 0, 0, 0, 0, 0, 0, 0, 128, 63, 0, 0, 0, 64, 0, 0, 64, 64, 0, 0, 128, 64, 0, 0, 160, 64,
+    0, 0, 192, 64, 0, 0, 224, 64, 0, 0, 0, 65, 0, 0, 16, 65, 0, 0, 32, 65, 0, 0, 48, 65, 0, 0,
+    64, 65, 0, 0, 80, 65, 0, 0, 96, 65, 0, 0, 112, 65, 22, 5, 0, 0, 0, 24, 2, 0, 0, 0, 25, 5, 0,
+    0, 0, 26, 1, 0, 0, 0, 1, 0, 0, 0, 4, 0, 0, 0, 255, 0, 128, 255, 27, 1, 40, 0, 0, 0, 38, 0,
+    0, 27, 0, 40, 0, 0, 1, 38, 0, 0, 27, 2, 40, 0, 0, 1, 41, 0, 0, 27, 3, 40, 0, 0, 47, 129, 0,
+    0, 28, 29, 0, 0, 0, 0, 0, 0, 128, 62, 0, 0, 0, 63, 0, 0, 128, 63, 30, 0, 0, 128, 63, 31, 0,
+    65, 0, 0, 32, 113, 11, 0, 0, 33, 226, 11, 0, 0, 34, 0, 0, 0, 0, 255, 255, 255, 255, 128, 2,
+    0, 0, 224, 1, 0, 0, 35, 3, 2, 0, 0, 36, 2, 3, 0, 0, 3, 3, 0, 0, 37, 5, 4, 0, 0, 38, 0, 9, 0,
+    0, 39, 4, 0, 0, 0, 0, 0, 0, 0, 3, 0, 0, 0, 40, 1, 0, 0, 0, 6, 0, 0, 0, 3, 20, 0, 0, 2, 0, 0,
+    0, 4, 146, 136, 0, 0, 0, 0, 0, 0, 3, 1, 0, 0, 0, 8, 2, 0, 0, 0, 13, 3, 0, 0, 0, 23, 5, 0, 0,
+    0, 42, 4, 0, 0, 0,
 ]);
 
 console.log("\n--- Test webgl: the cross-language fixture ---");
@@ -217,12 +218,15 @@ console.log("\n--- Test webgl: contexts and their size ---");
         public readonly log: Array<string> = [];
         public context: Gl | null = recording(this.log);
         public asked: Array<string> = [];
+        public readonly listeners: Map<string, (event: Event) => void> = new Map();
         get clientWidth() { return this.css?.width ?? this.width; }
         get clientHeight() { return this.css?.height ?? this.height; }
         getContext(type: string, options: WebGLContextAttributes) {
             this.asked.push(`${type} preserveDrawingBuffer=${String(options.preserveDrawingBuffer)}`);
             return this.context;
         }
+        addEventListener(type: string, listener: (event: Event) => void) { this.listeners.set(type, listener); }
+        removeEventListener(type: string) { this.listeners.delete(type); }
     }
 
     const watchers: Array<(entries: Array<unknown>) => void> = [];
@@ -237,12 +241,18 @@ console.log("\n--- Test webgl: contexts and their size ---");
     global['ResizeObserver'] = FakeObserver;
     global['window'] = { devicePixelRatio: 2 };
 
-    const webgls = new WebGls();
+    // What the canvases told wasm, by callback.
+    const told: Array<string> = [];
+    const webgls = new WebGls((callback, event) => { told.push(`${callback}: ${event.join(',')}`); });
     const run = (canvas: FakeCanvas, bytes: Uint8Array) => webgls.run(canvas as unknown as Element, bytes);
+    const resized = (canvas: FakeCanvas, width: number, height: number) =>
+        watchers[0]?.([{ target: canvas, contentRect: { width, height } }]);
+    // The first call of a context: its attributes and its callback.
+    const context = (flags: number, callback: number) => [1, flags, ...u32(callback), ...u32(0)];
     const clear = calls([31, ...u32(0x4000)]);
 
     const canvas = new FakeCanvas();
-    run(canvas, calls([1, 32], [31, ...u32(0x4000)]));
+    run(canvas, calls(context(32, 7), [31, ...u32(0x4000)]));
     same(canvas.asked, ['webgl2 preserveDrawingBuffer=true'], 'the first calls make the context, with its attributes');
     same(canvas.log, ['viewport(0,0,320,200)', 'clear(16384)'],
         'on a bitmap as big as the canvas in device pixels, all of it drawn on');
@@ -253,8 +263,14 @@ console.log("\n--- Test webgl: contexts and their size ---");
     same(canvas.asked, ['webgl2 preserveDrawingBuffer=true'], 'the context is made once');
     same(canvas.log, ['clear(16384)'], 'and the bitmap is resized only when the canvas is');
 
-    watchers[0]?.([{ target: canvas, contentRect: { width: 200, height: 100 } }]);
-    assert(canvas.width === 320, 'a resized canvas keeps its picture until the next calls');
+    resized(canvas, 160, 100);
+    same(told, ['7: 0,320,200'], 'wasm is told the size once the canvas is seen');
+    resized(canvas, 160, 100);
+    same(told, ['7: 0,320,200'], 'and not again for the same size');
+
+    resized(canvas, 200, 100);
+    same(told, ['7: 0,320,200', '7: 0,400,200'], 'a new size is told before the bitmap changes');
+    assert(canvas.width === 320, 'which keeps its picture until the next calls, drawing it again');
     canvas.log.length = 0;
     run(canvas, clear);
     same(canvas.log, ['viewport(0,0,400,200)', 'clear(16384)'], 'which get a bitmap of the new size');
@@ -262,10 +278,23 @@ console.log("\n--- Test webgl: contexts and their size ---");
     // A canvas CSS gives no size is as big as its bitmap.
     const free = new FakeCanvas();
     free.css = null;
-    run(free, clear);
+    run(free, calls(context(0, 8)));
     assert(free.width === 300 && free.height === 150, 'a canvas CSS gives no size keeps its size');
+    resized(free, 300, 150);
+    same(told.slice(2), ['8: 0,300,150'], 'and is told so');
     run(free, clear);
     assert(free.width === 300, 'and keeps it');
+
+    // Lost, and given back.
+    let prevented = false;
+    canvas.listeners.get('webglcontextlost')?.({ preventDefault: () => { prevented = true; } } as Event);
+    assert(prevented, 'a context lost is asked back');
+    run(canvas, calls([2, ...u32(1)]));
+    canvas.listeners.get('webglcontextrestored')?.({} as Event);
+    same(told.slice(3), ['7: 1'], 'and wasm is told when it comes back');
+    canvas.log.length = 0;
+    run(canvas, calls([4, ...u32(34962), ...u32(1)]));
+    same(canvas.log, ['bindBuffer(34962,null)'], 'its objects made before are gone');
 
     const none = new FakeCanvas();
     none.context = null;
@@ -282,6 +311,7 @@ console.log("\n--- Test webgl: contexts and their size ---");
     assert(none.log.length === 0, 'and the calls go nowhere');
 
     webgls.forget(canvas as unknown as Element);
-    run(canvas, calls([1, 0], [31, ...u32(0x4000)]));
-    assert(canvas.asked.length === 2, 'a canvas forgotten and back gets its context again');
+    assert(canvas.listeners.size === 0, 'a canvas forgotten is listened to no more');
+    run(canvas, calls(context(0, 9), [31, ...u32(0x4000)]));
+    assert(canvas.asked.length === 2, 'and gets its context again when back');
 }

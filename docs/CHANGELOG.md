@@ -12,7 +12,10 @@
   locations of their uniforms, textures from pixels, and the state of drawing - with handles that
   let their objects go when dropped. The calls of a transaction go to the browser at its end, with the
   changes to the page, so a frame is drawn by calls made in `Driver::on_animation_frame`. Nothing
-  is asked back while drawing: a shader that doesn't compile is told in the console. The browser's
+  is asked back while drawing: a shader that doesn't compile is told in the console. The bitmap is
+  as big as the canvas on the screen; `WebGl::size` and `WebGl::on_resize` tell its size, and a
+  scene drawn once draws again in `on_resize` without the canvas showing it cleared. A context the
+  browser loses is asked back, and `WebGl::on_restore` makes the objects again. The browser's
   code for it is a chunk of its own, loaded when a page first uses WebGL. The demo draws a cube
   turning with it.
 

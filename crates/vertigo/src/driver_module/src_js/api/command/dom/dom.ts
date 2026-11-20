@@ -103,12 +103,15 @@ export class DriverDom {
     public readonly nodes: MapNodes;
     private readonly callbacks: CallbackManager;
     private readonly canvases: LazyCanvases = new LazyCanvases();
-    private readonly webgls: LazyWebGls = new LazyWebGls();
+    private readonly webgls: LazyWebGls;
 
     public constructor(private readonly metadata: Metadata, appLocation: AppLocation, getWasm: () => ModuleControllerType<ExportType>) {
         this.appLocation = appLocation;
         this.nodes = new MapNodes();
         this.callbacks = new CallbackManager(getWasm);
+        this.webgls = new LazyWebGls((callback_id, event) => {
+            getWasm().wasmCommand({ CallbackCall: { callback_id, value: event } });
+        });
 
         // A canvas the server sent gets a drawing once the wasm runs, so the code drawing it
         // loads meanwhile, see `LazyCanvases`.

@@ -42,7 +42,7 @@ const chunk = () => {
         run: (node, bytes) => { log.push(`run ${nameOf(node)} ${bytes.join(',')}`); },
         forget: (node) => { log.push(`forget ${nameOf(node)}`); },
     };
-    const lazy = new LazyWebGls(() => {
+    const lazy = new LazyWebGls(() => {}, () => {
         loads += 1;
         return new Promise((ok, failed) => {
             resolve = () => ok(webgls);
