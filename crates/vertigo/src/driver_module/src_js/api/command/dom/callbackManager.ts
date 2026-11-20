@@ -383,6 +383,15 @@ const HANDLERS: Record<string, Handler> = {
     pointercancel: pointer,
 };
 
+/// A pointer pressed anywhere but on `element` and what is in it, wherever that lies.
+const outside = (element: Element): Handler => (event, send) => {
+    const target = event.target;
+    if (typeof Node !== 'undefined' && target instanceof Node && element.contains(target)) {
+        return;
+    }
+    pointerOf(element)(event, send);
+};
+
 /// The hooks, by their wire names: the DOM event each listens to on the document, wherever on the
 /// page it happens, and its handler for the element with the hook - a pointer goes relative to
 /// that element.
@@ -391,6 +400,7 @@ const HOOKS: Record<string, [string, (element: Element) => Handler]> = {
     hook_pointermove: ['pointermove', pointerOf],
     hook_pointerup: ['pointerup', pointerOf],
     hook_pointercancel: ['pointercancel', pointerOf],
+    hook_pointerdown_outside: ['pointerdown', outside],
 };
 
 /// The DOM event behind a wire name: `change_file` and `change_checked` are the `change` event

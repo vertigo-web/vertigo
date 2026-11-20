@@ -55,6 +55,9 @@ fn attr_to_group_variant(key: impl AsRef<str>, value: TokenStream2) -> TokenStre
         "hook_pointer_move" => quote! { vertigo::AttrGroupValue::hook_pointer_move(#value) },
         "hook_pointer_up" => quote! { vertigo::AttrGroupValue::hook_pointer_up(#value) },
         "hook_pointer_cancel" => quote! { vertigo::AttrGroupValue::hook_pointer_cancel(#value) },
+        "hook_pointer_down_outside" => {
+            quote! { vertigo::AttrGroupValue::hook_pointer_down_outside(#value) }
+        }
         "on_blur" => quote! { vertigo::AttrGroupValue::on_blur(#value) },
         "on_focus" => quote! { vertigo::AttrGroupValue::on_focus(#value) },
         "on_change" => quote! { vertigo::AttrGroupValue::on_change(#value) },

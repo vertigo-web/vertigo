@@ -1,6 +1,14 @@
 <!-- markdownlint-configure-file { "no-duplicate-heading": { "siblings_only": true } } -->
 
 <!-- markdownlint-disable-next-line first-line-h1 -->
+## Unreleased
+
+### Added
+
+* `hook_pointer_down_outside` on elements: a pointer pressed anywhere on the page but on the
+  element and what is in it, wherever that lies, f. ex. to close a popup. The press goes on to
+  what it fell on, so one click beside a menu closes it and starts what it does there.
+
 ## 0.14.5 - 2026-11-21
 
 ### Added

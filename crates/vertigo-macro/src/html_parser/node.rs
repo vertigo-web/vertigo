@@ -214,6 +214,7 @@ fn push_attribute(
         | "hook_pointer_move"
         | "hook_pointer_up"
         | "hook_pointer_cancel"
+        | "hook_pointer_down_outside"
         | "on_blur"
         | "on_focus"
         | "on_change"
@@ -439,6 +440,7 @@ mod tests {
             "hook_pointer_move",
             "hook_pointer_up",
             "hook_pointer_cancel",
+            "hook_pointer_down_outside",
         ];
         for attr in event_attrs {
             let (out_attr, class_values) = run_push_attribute(attr, quote! { my_handler });
