@@ -164,6 +164,26 @@ export class DriverDom {
         }
     }
 
+    /// Shows the element of `id` on the whole screen, or leaves it with `null`. Asked for in the
+    /// listener of a click or a key, as the browser does it only then. A refusal goes to the
+    /// console, and the page goes on.
+    public fullscreen(id: number | null) {
+        if (id === null) {
+            if (document.fullscreenElement !== null) {
+                document.exitFullscreen().catch((error: unknown) => { console.warn('exit_fullscreen', error); });
+            }
+            return;
+        }
+
+        const element = this.nodes.getAnyOption(id);
+        if (!(element instanceof Element)) {
+            console.error(`request_fullscreen: no element id=${id}`);
+            return;
+        }
+
+        element.requestFullscreen().catch((error: unknown) => { console.warn('request_fullscreen', error); });
+    }
+
     public update = (bytes: Uint8Array) => {
         // First flush only, so the object form is worth building here and nowhere else.
         const hydration = this.nodes.hasInitNodes() && this.metadata.getEnabledHydration()

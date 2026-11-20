@@ -369,6 +369,20 @@ impl DomElement {
         self.on_state("hook_pointerlock", on_hook_pointer_lock)
     }
 
+    /// This element shown on the whole screen (`true`) or no longer (`false`): by
+    /// [`DomElementRef::request_fullscreen`], by [`Driver::exit_fullscreen`], by the browser on
+    /// Esc, or another element shown there.
+    ///
+    /// [`DomElementRef::request_fullscreen`]: crate::DomElementRef::request_fullscreen
+    /// [`Driver::exit_fullscreen`]: crate::Driver::exit_fullscreen
+    pub fn hook_fullscreen(self, on_hook_fullscreen: impl Into<Callback1<bool, ()>>) -> Self {
+        self.hook_fullscreen_rc(Rc::new(on_hook_fullscreen.into()))
+    }
+
+    pub fn hook_fullscreen_rc(self, on_hook_fullscreen: Rc<Callback1<bool, ()>>) -> Self {
+        self.on_state("hook_fullscreen", on_hook_fullscreen)
+    }
+
     /// The listener of `event_name` for a state of the page which is either on or off.
     fn on_state(self, event_name: &'static str, callback: Rc<Callback1<bool, ()>>) -> Self {
         let callback = self.install_callback1(callback);

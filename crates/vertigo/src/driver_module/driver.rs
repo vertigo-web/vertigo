@@ -347,6 +347,13 @@ impl Driver {
         api_browser_command().pointer_lock(None);
     }
 
+    /// Leaves the whole screen an element was shown on with
+    /// [`DomElementRef::request_fullscreen`](crate::DomElementRef::request_fullscreen). Nothing
+    /// happens when no element is on it.
+    pub fn exit_fullscreen(&self) {
+        api_browser_command().fullscreen(None);
+    }
+
     /// Gets current value of monotonic clock.
     pub fn now(&self) -> Instant {
         Instant::now()

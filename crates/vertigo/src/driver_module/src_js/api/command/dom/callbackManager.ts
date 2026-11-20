@@ -447,6 +447,7 @@ const HOOKS: Record<string, Hook> = {
     hook_window_focus: { target: 'window', events: ['focus', 'blur'], handlerOf: () => windowFocus },
     hook_visibility: onDocument('visibilitychange', () => visibility),
     hook_pointerlock: onDocument('pointerlockchange', holding(() => document.pointerLockElement)),
+    hook_fullscreen: onDocument('fullscreenchange', holding(() => document.fullscreenElement)),
 };
 
 const hookTarget = (hook: Hook): EventTarget => hook.target === 'window' ? window : document;

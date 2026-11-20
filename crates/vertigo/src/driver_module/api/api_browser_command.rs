@@ -280,6 +280,10 @@ impl CommandForBrowserApi {
         exec_command(CommandForBrowser::PointerLock { dom_id });
     }
 
+    pub fn fullscreen(&self, dom_id: Option<u64>) {
+        exec_command(CommandForBrowser::Fullscreen { dom_id });
+    }
+
     pub fn get_random(&self, min: u32, max: u32) -> u32 {
         let response = exec_command(CommandForBrowser::GetRandom { min, max });
 
@@ -333,6 +337,24 @@ mod tests {
         assert_eq!(
             CommandForBrowser::PointerLock { dom_id: None }.to_json(),
             lock(JsJson::Null)
+        );
+    }
+
+    /// `api.ts` reads it as `{ Fullscreen: { dom_id } }`, `null` to leave the whole screen.
+    #[test]
+    fn a_fullscreen_is_the_command_the_driver_reads() {
+        let fullscreen = |dom_id: JsJson| {
+            let dom_id = ("dom_id".to_string(), dom_id);
+            JsJson::Object([("Fullscreen".to_string(), JsJson::Object([dom_id].into()))].into())
+        };
+
+        assert_eq!(
+            CommandForBrowser::Fullscreen { dom_id: Some(7) }.to_json(),
+            fullscreen(JsJson::Number(crate::JsJsonNumber(7.0)))
+        );
+        assert_eq!(
+            CommandForBrowser::Fullscreen { dom_id: None }.to_json(),
+            fullscreen(JsJson::Null)
         );
     }
 }

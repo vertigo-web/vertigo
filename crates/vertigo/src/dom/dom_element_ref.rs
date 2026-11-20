@@ -60,6 +60,42 @@ impl DomElementRef {
     pub fn request_pointer_lock(&self) {
         api_browser_command().pointer_lock(Some(self.id.to_u64()));
     }
+
+    /// Shows this element on the whole screen, f. ex. a game's canvas with what is over it. The
+    /// browser does it only right after a click or a key pressed on the page, so this goes in
+    /// their listener, and leaves it on Esc. [`DomElement::hook_fullscreen`] tells when the
+    /// element is on the whole screen and no longer, and [`Driver::exit_fullscreen`] leaves it.
+    /// The browser's own fullscreen (F11) shows the page, not an element, and isn't told.
+    ///
+    /// ```rust
+    /// use vertigo::{ClickEvent, Value, bind, dom, dom_element, get_driver, transaction};
+    ///
+    /// let whole = Value::new(false);
+    ///
+    /// let game = dom_element! { <div>"The game"</div> };
+    /// let game_ref = game.get_ref();
+    /// let game = game.hook_fullscreen(bind!(whole, |on: bool| whole.set(on)));
+    /// let toggle = bind!(whole, |_: ClickEvent| {
+    ///     if transaction(|ctx| whole.get(ctx)) {
+    ///         get_driver().exit_fullscreen();
+    ///     } else {
+    ///         game_ref.request_fullscreen();
+    ///     }
+    /// });
+    ///
+    /// dom! {
+    ///     <div>
+    ///         {game}
+    ///         <button on_click={toggle}>"Whole screen"</button>
+    ///     </div>
+    /// };
+    /// ```
+    ///
+    /// [`DomElement::hook_fullscreen`]: crate::DomElement::hook_fullscreen
+    /// [`Driver::exit_fullscreen`]: crate::Driver::exit_fullscreen
+    pub fn request_fullscreen(&self) {
+        api_browser_command().fullscreen(Some(self.id.to_u64()));
+    }
 }
 
 impl PartialEq for DomElementRef {
