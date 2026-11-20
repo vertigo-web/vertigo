@@ -27,6 +27,11 @@
   wasm when the server sent the page with a canvas. `vertigo build` puts it in `chunks/` next to
   `wasm_run.js`, named by its content. A vertigo-cli from before doesn't copy it, so its apps draw
   nothing on canvases.
+* A frame of `Driver::on_animation_frame` comes into wasm as a call of its own, with its time as a
+  number, and each batch of changes to the page goes to the browser as the bytes it is encoded to,
+  through an import of its own (`dom_bulk_update`) - not as commands encoded and decoded both ways.
+  A frame drawing little costs about 9 µs less. vertigo-cli of this version is needed to serve
+  apps of it: its SSR gives the wasm the new import.
 
 ## 0.14.5 - 2026-11-21
 

@@ -40,10 +40,11 @@ const drawFrame = (time: number) => {
 const frames: Array<number> = [];
 let onFrame = () => {};
 const wasm = {
-    wasmCommand: (command: any) => {
-        frames.push(command.AnimationFrame.time);
-        onFrame();
-        return null;
+    exports: {
+        vertigo_export_animation_frame: (time: number) => {
+            frames.push(time);
+            onFrame();
+        },
     },
 };
 

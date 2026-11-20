@@ -175,10 +175,11 @@ impl CommandForBrowserApi {
         });
     }
 
+    /// A call of its own (`dom_bulk_update`), not a command: a batch comes with every frame and
+    /// every event, and it is the biggest thing crossing, so it goes as the bytes it is encoded
+    /// to, where they are, with no copy and nothing to answer.
     pub fn dom_bulk_update(&self, list: Vec<DriverDomCommand>) {
-        exec_command(CommandForBrowser::DomBulkUpdate {
-            commands: encode_dom_commands(&list),
-        });
+        safe_wrappers::safe_dom_bulk_update(&encode_dom_commands(&list));
     }
 
     pub fn cookie_get(&self, name: String) -> String {

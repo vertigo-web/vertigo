@@ -4,6 +4,7 @@ mod inner {
     unsafe extern "C" {
         pub fn panic_message(long_ptr: u64);
         pub fn dom_access(long_ptr: u64) -> u64;
+        pub fn dom_bulk_update(long_ptr: u64);
     }
 }
 
@@ -23,6 +24,12 @@ pub mod safe_wrappers {
         let result = unsafe { dom_access(long_ptr) };
         LongPtr::from(result)
     }
+
+    /// A batch of DOM commands, read where it is while the call lasts.
+    pub fn safe_dom_bulk_update(commands: &[u8]) {
+        let long_ptr = LongPtr::new(commands.as_ptr() as u32, commands.len() as u32);
+        unsafe { dom_bulk_update(long_ptr.get_long_ptr()) }
+    }
 }
 
 #[cfg(any(test, not(target_arch = "wasm32"), not(target_os = "unknown")))]
@@ -37,6 +44,8 @@ pub mod safe_wrappers {
     };
 
     pub fn safe_panic_message(_long_ptr: LongPtr) {}
+
+    pub fn safe_dom_bulk_update(_commands: &[u8]) {}
 
     #[cfg(test)]
     thread_local! {

@@ -103,6 +103,12 @@ pub fn vertigo_export_free_block(long_ptr: u64) {
 
 #[doc(hidden)]
 #[unsafe(no_mangle)]
+pub fn vertigo_export_animation_frame(time: f64) {
+    api_command_wasm().animation_frame(time);
+}
+
+#[doc(hidden)]
+#[unsafe(no_mangle)]
 pub fn vertigo_export_wasm_command(value_long_ptr: u64) -> u64 {
     let value_long_ptr = LongPtr::from(value_long_ptr);
     let value = api_arguments().get_by_long_ptr(value_long_ptr);
