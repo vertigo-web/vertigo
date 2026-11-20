@@ -15,7 +15,9 @@
   is asked back while drawing: a shader that doesn't compile is told in the console. The bitmap is
   as big as the canvas on the screen; `WebGl::size` and `WebGl::on_resize` tell its size, and a
   scene drawn once draws again in `on_resize` without the canvas showing it cleared. A context the
-  browser loses is asked back, and `WebGl::on_restore` makes the objects again. The browser's
+  browser loses is asked back, and `WebGl::on_restore` makes the objects again. Instanced drawing
+  (`vertex_attrib_divisor`, `draw_arrays_instanced`, `draw_elements_instanced`) draws many objects
+  with a call or two, their matrices worked out in Rust and sent in one buffer. The browser's
   code for it is a chunk of its own, loaded when a page first uses WebGL. The demo draws a cube
   turning with it.
 

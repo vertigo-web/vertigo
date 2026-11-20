@@ -80,6 +80,9 @@ mod code {
     pub const DRAW_ELEMENTS: u8 = 40;
     pub const UNIFORM_LOCATION: u8 = 41;
     pub const DELETE_UNIFORM_LOCATION: u8 = 42;
+    pub const VERTEX_ATTRIB_DIVISOR: u8 = 43;
+    pub const DRAW_ARRAYS_INSTANCED: u8 = 44;
+    pub const DRAW_ELEMENTS_INSTANCED: u8 = 45;
 }
 
 /// `pname` of `texParameteri`.
@@ -688,6 +691,69 @@ impl WebGl {
             put_u32(out, offset);
         });
     }
+
+    /// How often the attribute at `index` takes its next value: for each vertex at 0, as at
+    /// first, or for each `divisor` instances drawn by [`Self::draw_elements_instanced`] and
+    /// [`Self::draw_arrays_instanced`]. An attribute of each instance, f. ex. its matrix, makes
+    /// many objects one call: their matrices go to a buffer, one call a frame, and they are drawn
+    /// with another, rather than two calls each.
+    ///
+    /// A `mat4` attribute takes four locations, a column each:
+    ///
+    /// ```rust
+    /// use vertigo::dom_element;
+    /// use vertigo::webgl::{BufferTarget, BufferUsage, DataType, IndexType, Primitive, WebGl};
+    ///
+    /// # let canvas = dom_element! { <canvas /> };
+    /// # let gl = WebGl::new(&canvas.get_ref());
+    /// // In the shader: `layout(location = 2) in mat4 transform;`
+    /// let matrices = gl.create_buffer();
+    /// gl.bind_buffer(BufferTarget::Array, Some(&matrices));
+    /// gl.buffer_data(BufferTarget::Array, &[0.0_f32; 16 * 100], BufferUsage::DynamicDraw);
+    /// for column in 0..4 {
+    ///     gl.enable_vertex_attrib_array(2 + column);
+    ///     gl.vertex_attrib_pointer(2 + column, 4, DataType::Float, false, 64, column * 16);
+    ///     gl.vertex_attrib_divisor(2 + column, 1);
+    /// }
+    /// // Then, for each frame, the 100 matrices worked out in Rust, and one draw:
+    /// # let worked_out = [0.0_f32; 16 * 100];
+    /// gl.buffer_sub_data(BufferTarget::Array, 0, &worked_out);
+    /// gl.draw_elements_instanced(Primitive::Triangles, 36, IndexType::UnsignedShort, 0, 100);
+    /// ```
+    pub fn vertex_attrib_divisor(&self, index: u32, divisor: u32) {
+        self.op(code::VERTEX_ATTRIB_DIVISOR, |out| {
+            put_u32(out, index);
+            put_u32(out, divisor);
+        });
+    }
+
+    /// As [`Self::draw_arrays`], `instances` times, see [`Self::vertex_attrib_divisor`].
+    pub fn draw_arrays_instanced(&self, mode: Primitive, first: u32, count: u32, instances: u32) {
+        self.op(code::DRAW_ARRAYS_INSTANCED, |out| {
+            put_u32(out, mode as u32);
+            put_u32(out, first);
+            put_u32(out, count);
+            put_u32(out, instances);
+        });
+    }
+
+    /// As [`Self::draw_elements`], `instances` times, see [`Self::vertex_attrib_divisor`].
+    pub fn draw_elements_instanced(
+        &self,
+        mode: Primitive,
+        count: u32,
+        kind: IndexType,
+        offset: u32,
+        instances: u32,
+    ) {
+        self.op(code::DRAW_ELEMENTS_INSTANCED, |out| {
+            put_u32(out, mode as u32);
+            put_u32(out, count);
+            put_u32(out, kind as u32);
+            put_u32(out, offset);
+            put_u32(out, instances);
+        });
+    }
 }
 
 /// A WebGL object, let go when dropped. Its context may be gone by then, and with it the object.
@@ -1046,6 +1112,9 @@ mod tests {
         gl.front_face(Winding::Clockwise);
         gl.draw_arrays(Primitive::Triangles, 0, 3);
         gl.draw_elements(Primitive::Lines, 6, IndexType::UnsignedShort, 2);
+        gl.vertex_attrib_divisor(3, 1);
+        gl.draw_arrays_instanced(Primitive::Triangles, 0, 3, 10);
+        gl.draw_elements_instanced(Primitive::Triangles, 36, IndexType::UnsignedShort, 0, 400);
         gl.bind_buffer(BufferTarget::Array, None);
         drop((buffer, vertices, program, texture, location));
         gl.take()
@@ -1072,8 +1141,10 @@ mod tests {
         63, 31, 0, 65, 0, 0, 32, 113, 11, 0, 0, 33, 226, 11, 0, 0, 34, 0, 0, 0, 0, 255, 255, 255,
         255, 128, 2, 0, 0, 224, 1, 0, 0, 35, 3, 2, 0, 0, 36, 2, 3, 0, 0, 3, 3, 0, 0, 37, 5, 4, 0,
         0, 38, 0, 9, 0, 0, 39, 4, 0, 0, 0, 0, 0, 0, 0, 3, 0, 0, 0, 40, 1, 0, 0, 0, 6, 0, 0, 0, 3,
-        20, 0, 0, 2, 0, 0, 0, 4, 146, 136, 0, 0, 0, 0, 0, 0, 3, 1, 0, 0, 0, 8, 2, 0, 0, 0, 13, 3,
-        0, 0, 0, 23, 5, 0, 0, 0, 42, 4, 0, 0, 0,
+        20, 0, 0, 2, 0, 0, 0, 43, 3, 0, 0, 0, 1, 0, 0, 0, 44, 4, 0, 0, 0, 0, 0, 0, 0, 3, 0, 0, 0,
+        10, 0, 0, 0, 45, 4, 0, 0, 0, 36, 0, 0, 0, 3, 20, 0, 0, 0, 0, 0, 0, 144, 1, 0, 0, 4, 146,
+        136, 0, 0, 0, 0, 0, 0, 3, 1, 0, 0, 0, 8, 2, 0, 0, 0, 13, 3, 0, 0, 0, 23, 5, 0, 0, 0, 42, 4,
+        0, 0, 0,
     ];
 
     #[test]
