@@ -2,8 +2,8 @@ use std::{future::Future, pin::Pin, rc::Rc};
 use vertigo_macro::{AutoJsJson, store};
 
 use crate::{
-    Context, Css, DomNode, DropResource, Instant, InstantType, JsJson, WebsocketMessage,
-    WebsocketOptions,
+    Context, Css, DomNode, DropResource, FrameRequest, Instant, InstantType, JsJson,
+    WebsocketMessage, WebsocketOptions,
     css::get_css_manager,
     dev::{
         FutureBox,
@@ -252,6 +252,49 @@ impl Driver {
     #[must_use]
     pub fn on_animation_frame(&self, func: impl Fn(f64) + 'static) -> DropResource {
         api_animation_frame().on_frame(func)
+    }
+
+    /// Makes `func` fire once before the next frame the browser draws, each time the returned
+    /// [FrameRequest] asks for it: asked for more than once between two frames, it still fires
+    /// once. It gets the time of the frame, as [Driver::on_animation_frame] does, and runs in the
+    /// same transaction as the callbacks of that. Nothing runs until it's asked for, nor after
+    /// the last clone of the [FrameRequest] is dropped.
+    ///
+    /// For a picture drawn anew only when something changes, f. ex. with
+    /// [`WebGl`](crate::webgl::WebGl): each change asks for the frame, so changes coming
+    /// together are drawn once, in time for the frame. A picture moving all the time takes
+    /// [Driver::on_animation_frame].
+    ///
+    /// ```rust
+    /// use std::{cell::Cell, rc::Rc};
+    /// use vertigo::{Value, dom_element, get_driver};
+    /// use vertigo::webgl::{ClearBuffers, WebGl};
+    ///
+    /// let canvas = dom_element! { <canvas /> };
+    /// let gl = WebGl::new(&canvas.get_ref());
+    /// let shade = Value::new(0.5_f32);
+    /// let last = Rc::new(Cell::new(0.0_f32));
+    ///
+    /// // Drawn once in a frame at most, however often the shade changes in it.
+    /// let redraw = get_driver().on_requested_frame({
+    ///     let last = last.clone();
+    ///     move |_time| {
+    ///         gl.clear_color(last.get(), last.get(), last.get(), 1.0);
+    ///         gl.clear(ClearBuffers::COLOR);
+    ///     }
+    /// });
+    /// canvas.append_drop_resource(shade.to_computed().subscribe({
+    ///     let redraw = redraw.clone();
+    ///     move |shade| {
+    ///         last.set(shade);
+    ///         redraw.request();
+    ///     }
+    /// }));
+    /// ```
+    #[doc(alias = "requestAnimationFrame")]
+    #[must_use]
+    pub fn on_requested_frame(&self, func: impl Fn(f64) + 'static) -> FrameRequest {
+        api_animation_frame().on_requested_frame(func)
     }
 
     /// Ends once the browser has drawn what the app changed so far. Long work in wasm blocks the

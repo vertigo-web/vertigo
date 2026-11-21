@@ -37,7 +37,7 @@ mod api_timers;
 pub use api_timers::api_timers;
 
 mod api_animation_frame;
-pub use api_animation_frame::api_animation_frame;
+pub use api_animation_frame::{FrameRequest, api_animation_frame};
 
 mod api_location;
 pub use api_location::api_location;

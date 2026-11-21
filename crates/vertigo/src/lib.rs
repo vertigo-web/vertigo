@@ -110,6 +110,7 @@ pub use dom::{
 };
 pub use dom_macro::{AttrGroup, AttrGroupBinding, AttrGroupValue, EmbedDom};
 pub use driver_module::{
+    api::FrameRequest,
     driver::{Driver, FetchMethod, FetchResult, get_driver, transaction},
     js_value::{
         JsJson, JsJsonContext, JsJsonDeserialize, JsJsonNumber, JsJsonSerialize, JsObject,

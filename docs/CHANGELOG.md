@@ -26,6 +26,9 @@
   can draw another way. `WebGlOptions::bitmap_scale` draws on fewer pixels than the canvas has on
   the screen, stretched over it, for a slow GPU. The browser's code for it is a chunk of its own, loaded
   when a page first uses WebGL. The demo draws a cube turning with it.
+* `Driver::on_requested_frame`: a callback for the next frame, run once each time the
+  `FrameRequest` it gives asks for it, however often that is before the frame - for a picture
+  drawn anew only when something changes.
 
 ### Changed
 
