@@ -856,7 +856,9 @@ const levels = (width: number, height: number): number => Math.floor(Math.log2(M
 // textures as big as the canvas.
 class Context {
     public objects: Objects = new Objects();
-    public state: 'starting' | 'ready' | 'lost' | 'unavailable' = 'starting';
+    // `forgotten` with its canvas: what comes for it after, f. ex. an image or a read, is told
+    // nobody, as wasm has let go of its callback.
+    public state: 'starting' | 'ready' | 'lost' | 'unavailable' | 'forgotten' = 'starting';
     public waiting: Array<Uint8Array> = [];
     public device: GPUDevice | null = null;
     public gpu: GPUCanvasContext | null = null;
@@ -921,6 +923,7 @@ export class WebGpus {
             if (context !== undefined) {
                 this.contexts.delete(node);
                 this.sizes.forget(node);
+                context.state = 'forgotten';
                 context.device?.destroy();
             }
         }
@@ -1117,7 +1120,7 @@ export class WebGpus {
     }
 
     private told(context: Context, event: Array<number | Uint8Array<ArrayBuffer>>) {
-        if (context.callback === 0) {
+        if (context.callback === 0 || context.state === 'forgotten') {
             return;
         }
         try {
