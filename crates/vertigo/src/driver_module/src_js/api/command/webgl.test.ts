@@ -415,8 +415,12 @@ console.log("\n--- Test webgl: contexts and their size ---");
     images[6]?.onload();
     same(told.slice(7), ['7: 1'], 'an image of a context lost meanwhile goes nowhere');
 
+    run(canvas, calls(texture(12), image(12, '/f.png', false)));
     webgls.forget(canvas as unknown as Element);
     assert(canvas.listeners.size === 0, 'a canvas forgotten is listened to no more');
+    assert(images.length === 8, 'the image asked for before');
+    images[7]?.onload();
+    same(told.slice(8), [], 'and an image coming for it after goes nowhere');
     run(canvas, calls(context(0, 9), [31, ...u32(0x4000)]));
     assert(canvas.asked.length === 2, 'and gets its context again when back');
 }
