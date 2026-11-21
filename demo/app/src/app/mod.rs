@@ -19,6 +19,7 @@ mod styling;
 mod sudoku;
 mod svg;
 mod webgl;
+mod webgpu;
 mod ws_collection;
 
 pub use render::render;

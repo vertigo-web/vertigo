@@ -220,7 +220,7 @@ impl DomDebugFragment {
                     });
                 }
                 // Calls, not a state of the page: nothing to show.
-                DriverDomCommand::WebGl { .. } => {}
+                DriverDomCommand::WebGl { .. } | DriverDomCommand::WebGpu { .. } => {}
             }
         }
 
