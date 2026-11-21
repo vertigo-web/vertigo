@@ -9,6 +9,12 @@
   element and what is in it, wherever that lies, f. ex. to close a popup. The press goes on to
   what it fell on, so one click beside a menu closes it and starts what it does there.
 
+### Changed
+
+* `draw` on a canvas works nothing out during SSR: the server doesn't compute the drawing nor
+  turn it into bytes for a page that has no pictures in its canvases, so an app needs no
+  `is_server()` check around it.
+
 ## 0.14.5 - 2026-11-21
 
 ### Added
