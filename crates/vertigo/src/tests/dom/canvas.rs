@@ -7,8 +7,14 @@ use crate::{
         command::DriverDomCommand,
         inspect::{DomDebugFragment, log_start, log_take},
     },
+    external_api::safe_wrappers::TEST_BROWSER,
     transaction,
 };
+
+/// The tests draw as the browser does: the server doesn't.
+fn in_browser() {
+    TEST_BROWSER.set(true);
+}
 
 /// A dot at `x`, in a box of 100 x 100 units.
 fn dot(x: f32) -> Drawing {
@@ -39,6 +45,7 @@ fn canvases_and_drawings(commands: Vec<DriverDomCommand>) -> (Vec<DomId>, Vec<(D
 
 #[test]
 fn a_drawing_follows_its_canvas_in_the_same_batch() {
+    in_browser();
     log_start();
     let _canvas = dom! { <canvas draw={dot(10.0)} /> };
     let commands = log_take();
@@ -57,6 +64,7 @@ fn a_drawing_follows_its_canvas_in_the_same_batch() {
 
 #[test]
 fn a_drawing_is_sent_without_being_copied() {
+    in_browser();
     let drawing = dot(10.0);
     let bytes = drawing.as_bytes().as_ptr();
 
@@ -72,6 +80,7 @@ fn a_drawing_is_sent_without_being_copied() {
 
 #[test]
 fn a_new_drawing_is_sent_and_an_equal_one_is_not() {
+    in_browser();
     let x = Value::new(10.0);
     // Whole units only, so 20.0 and 20.4 draw the same.
     let drawing = x.map(|x: f32| dot(x.round()));
@@ -92,6 +101,7 @@ fn a_new_drawing_is_sent_and_an_equal_one_is_not() {
 
 #[test]
 fn a_transaction_sends_the_last_drawing_only() {
+    in_browser();
     let x = Value::new(10.0);
     let drawing = x.map(dot);
 
@@ -112,6 +122,7 @@ fn a_transaction_sends_the_last_drawing_only() {
 
 #[test]
 fn a_canvas_gone_gets_no_more_drawings() {
+    in_browser();
     let x = Value::new(10.0);
     let drawing = x.map(dot);
     let canvas = dom! { <canvas draw={drawing} /> };
@@ -126,6 +137,7 @@ fn a_canvas_gone_gets_no_more_drawings() {
 
 #[test]
 fn a_component_passes_a_drawing_on() {
+    in_browser();
     #[component]
     fn Picture(inner: AttrGroup) {
         dom! { <canvas {..inner} /> }
@@ -142,4 +154,24 @@ fn a_component_passes_a_drawing_on() {
         html,
         format!("<canvas v-component='Picture' v-drawing='{bytes} bytes' />")
     );
+}
+
+#[test]
+fn the_server_works_out_no_drawing() {
+    let worked_out = std::rc::Rc::new(std::cell::Cell::new(0));
+    let drawing = Computed::from({
+        let worked_out = worked_out.clone();
+        move |_| {
+            worked_out.set(worked_out.get() + 1);
+            dot(10.0)
+        }
+    });
+
+    log_start();
+    let _canvas = dom! { <canvas draw={drawing} /> };
+    let (canvases, drawings) = canvases_and_drawings(log_take());
+
+    assert_eq!(canvases.len(), 1);
+    assert!(drawings.is_empty());
+    assert_eq!(worked_out.get(), 0);
 }

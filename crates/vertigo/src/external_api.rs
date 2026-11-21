@@ -47,6 +47,20 @@ pub mod safe_wrappers {
         /// Responses the tests pretend the server fetched while rendering the page
         /// (`data-fetch-cache`, an encoded `SsrFetchCache`).
         pub static TEST_FETCH_CACHE: std::cell::RefCell<Option<String>> = Default::default();
+
+        /// Whether the tests pretend to run in the browser (`Driver::is_browser`), not on the
+        /// server as by default.
+        pub static TEST_BROWSER: std::cell::Cell<bool> = const { std::cell::Cell::new(false) };
+    }
+
+    #[cfg(test)]
+    fn is_browser() -> bool {
+        TEST_BROWSER.get()
+    }
+
+    #[cfg(not(test))]
+    fn is_browser() -> bool {
+        false
     }
 
     #[cfg(test)]
@@ -82,7 +96,9 @@ pub mod safe_wrappers {
                     }
                     .to_json(),
                     CommandForBrowser::IsBrowser => {
-                        let response = browser_response::IsBrowser { value: false };
+                        let response = browser_response::IsBrowser {
+                            value: is_browser(),
+                        };
                         response.to_json()
                     }
                     CommandForBrowser::GetDateNow => {

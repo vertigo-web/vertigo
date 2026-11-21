@@ -4,6 +4,7 @@ use crate::{
     AttrGroupValue, Computed, DomText, Drawing, DropFileItem, DropResource, JsJson,
     dev::JsJsonListDecoder,
     driver_module::{StaticString, api::api_callbacks, get_driver_dom},
+    get_driver,
     struct_mut::{ValueMut, VecDequeMut, VecMut},
 };
 
@@ -266,7 +267,13 @@ impl DomElement {
     /// The picture of a `<canvas>`, see [`Drawing`]. Each new drawing clears the canvas and is
     /// drawn in its place, in the same batch of DOM changes as the rest of the transaction, so
     /// it never arrives before the canvas does. A drawing equal to the last is not sent again.
+    ///
+    /// During SSR the drawing isn't even worked out: a page from the server has no pictures in
+    /// its canvases, the browser draws them.
     pub fn draw(self, drawing: impl Into<Computed<Drawing>>) -> Self {
+        if get_driver().is_server() {
+            return self;
+        }
         let id = self.id_dom;
 
         self.subscribe(drawing.into(), move |drawing| {
