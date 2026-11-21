@@ -447,6 +447,8 @@ class Context {
     public told: Size | null = null;
     // The URL of the image each texture waits for, by its id: only the last asked for goes in.
     public readonly loading: Map<number, string> = new Map();
+    // With its canvas: an image coming after goes nowhere, as wasm has let go of the callback.
+    public forgotten = false;
 
     constructor(
         public readonly gl: WebGL2RenderingContext,
@@ -499,8 +501,12 @@ export class WebGls {
 
     public forget(node: Element | Comment | Text) {
         if (node instanceof HTMLCanvasElement && this.contexts.has(node)) {
-            for (const [type, listener] of this.contexts.get(node)?.listeners ?? []) {
+            const context = this.contexts.get(node);
+            for (const [type, listener] of context?.listeners ?? []) {
                 node.removeEventListener(type, listener);
+            }
+            if (context) {
+                context.forgotten = true;
             }
             this.observer?.unobserve(node);
             this.contexts.delete(node);
@@ -549,7 +555,8 @@ export class WebGls {
     private load(context: Context, texture: number, url: string, mipmap: boolean, unpack: ReadonlyMap<number, number>) {
         const objects = context.objects;
         context.loading.set(texture, url);
-        const current = () => context.objects === objects && context.loading.get(texture) === url;
+        const current = () => !context.forgotten && context.objects === objects
+            && context.loading.get(texture) === url;
 
         const image = new Image();
         image.crossOrigin = 'anonymous';
