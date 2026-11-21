@@ -313,8 +313,9 @@ impl WebGlOptions {
 ///
 /// The calls of a transaction go to the browser together at its end, in the same batch as the
 /// changes to the page, after the canvas is on it. So a frame is drawn by calls made in
-/// [`Driver::on_animation_frame`](crate::Driver::on_animation_frame), and the objects it uses are
-/// made once, beforehand. Nothing is drawn during SSR.
+/// [`Driver::on_animation_frame`](crate::Driver::on_animation_frame), or, for a picture that
+/// changes only now and then, in [`Driver::on_requested_frame`](crate::Driver::on_requested_frame),
+/// and the objects it uses are made once, beforehand. Nothing is drawn during SSR.
 ///
 /// No call waits for the browser to answer. [`Self::uniform_location`] gives a handle at once,
 /// which the browser finds the location for when the call comes, and an attribute has the
