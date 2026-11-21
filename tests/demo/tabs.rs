@@ -1798,12 +1798,13 @@ pub async fn paint(ctx: &Ctx) -> Result<()> {
 
 /// A cube turning, drawn with WebGL.
 ///
-/// The pixel in the middle of the canvas is read back (the demo keeps what it drew for that):
-/// one of the cube's faces is there, and as the cube turns, another.
+/// The pixel in the middle of the canvas is read back, the browser keeping what was drawn for
+/// that: one of the cube's faces is there, and as the cube turns, another.
 ///
 /// Through a copy: asking the canvas for its WebGL context would make one, without the
 /// attributes the demo asks for, if the demo hasn't made it yet.
 pub async fn webgl(ctx: &Ctx) -> Result<()> {
+    ctx.preserve_drawing_buffers().await?;
     open(ctx, "WebGL", "A cube drawn with WebGL 2").await?;
 
     const SCRIPT: &str = r#"

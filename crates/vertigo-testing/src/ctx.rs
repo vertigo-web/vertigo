@@ -14,6 +14,23 @@ use thirtyfour::{BrowserLogEntry, By, Key, WebDriver, WebElement, prelude::Eleme
 
 use crate::env::{Env, POLL, WAIT};
 
+/// Wraps `getContext`, so that WebGL contexts are made with `preserveDrawingBuffer`, once a page,
+/// see [`Ctx::preserve_drawing_buffers`].
+const PRESERVE_DRAWING_BUFFERS: &str = r#"(() => {
+    const prototype = HTMLCanvasElement.prototype;
+    const getContext = prototype.getContext;
+    if (getContext.preservesDrawingBuffers) {
+        return;
+    }
+    const preserving = function (type, attributes, ...rest) {
+        return type === 'webgl' || type === 'webgl2'
+            ? getContext.call(this, type, { ...attributes, preserveDrawingBuffer: true }, ...rest)
+            : getContext.call(this, type, attributes, ...rest);
+    };
+    preserving.preservesDrawingBuffers = true;
+    prototype.getContext = preserving;
+})();"#;
+
 pub struct Ctx<E> {
     pub env: Arc<E>,
     pub driver: WebDriver,
@@ -141,6 +158,26 @@ impl<E: Env> Ctx<E> {
             .await
             .with_context(|| format!("script failed: {script}"))?;
         Ok(ret.json().clone())
+    }
+
+    /// Has every WebGL context made from now on, in this page and in those loaded after it,
+    /// keep what was drawn after the browser shows it (`preserveDrawingBuffer`), whatever the app
+    /// asked for. The test can then read the picture back whenever it looks (`drawImage`,
+    /// `toDataURL`, `readPixels`), without the app keeping it for tests only. Drawing gets a little
+    /// slower. A context made before keeps its attributes: call this before the canvas gets one.
+    ///
+    /// WebGPU canvases have nothing of the kind: they are read from screenshots.
+    pub async fn preserve_drawing_buffers(&self) -> Result<()> {
+        self.driver
+            .cdp()
+            .send_raw(
+                "Page.addScriptToEvaluateOnNewDocument",
+                serde_json::json!({ "source": PRESERVE_DRAWING_BUFFERS }),
+            )
+            .await
+            .context("can't have the pages loaded later preserve their drawing buffers")?;
+        self.js(PRESERVE_DRAWING_BUFFERS).await?;
+        Ok(())
     }
 
     /// Visible text of the page, with whitespace normalized.

@@ -29,6 +29,8 @@
 * `Driver::on_requested_frame`: a callback for the next frame, run once each time the
   `FrameRequest` it gives asks for it, however often that is before the frame - for a picture
   drawn anew only when something changes.
+* vertigo-testing: `Ctx::preserve_drawing_buffers` has the WebGL contexts made from then on keep
+  what was drawn, so a test reads the picture back without the app keeping it for tests.
 
 ### Changed
 
