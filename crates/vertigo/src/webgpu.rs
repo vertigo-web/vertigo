@@ -12,21 +12,23 @@
 //! callback  := u64                        -- what the browser tells the context through, see
 //!                                            `GpuEvent`
 //! id        := u32                        -- of an object, 0 for none
-//! source    := length:u32 utf8*           -- WGSL, or the name of an entry point
+//! source    := length:u32 utf8*           -- WGSL, an entry point's name, or a URL
 //! data      := length:u32 byte*
 //! enum      := u8                         -- the place of a value in the list of WebGPU's
 //!                                            strings for it, see the enums here
-//! pipeline  := vertex primitive depth fragment
+//! pipeline  := layout:id vertex primitive depth fragment samples:u8  -- layout 0 is "auto"
 //! vertex    := module:id entry:source count:u8 (stride:u32 step:enum count:u8
 //!              (format:enum offset:u32 location:u32)*)*
 //! primitive := topology:enum strip_index_format:enum front_face:enum cull_mode:enum
 //! depth     := 0 | 1 format:enum write:u8 compare:enum
 //! fragment  := 0 | 1 module:id entry:source count:u8 (format:enum blend write_mask:u8)*
 //! blend     := 0 | 1 (src:enum dst:enum operation:enum){2}  -- of color, then of alpha
+//! layout_entry := binding:u32 visibility:u8 kind:u8 multisampled:u8  -- kind: see `BindingType`
 //! entry     := binding:u32 (0 buffer:id offset:u32 size:u32 | 1 texture:id | 2 sampler:id)
-//! pass      := count:u8 (target load:(0 | 1 r:f64 g:f64 b:f64 a:f64) store:u8)*
-//!              (0 | 1 depth_target load:(0 | 1 depth:f32) store:u8)
-//! target    := 0 | 1 texture:id           -- the canvas, or a texture
+//! pass      := count:u8 (target resolve:(0 | 1 target) load:(0 | 1 r:f64 g:f64 b:f64 a:f64)
+//!              store:u8)* (0 | 1 depth_target load:(0 | 1 depth:f32) store:u8)
+//! target    := 0 | 1 texture:id | 2 samples:u8  -- the canvas, a texture, or a multisampled
+//!                                                  one as big as the canvas
 //! depth_target := 0 format:enum | 1 texture:id  -- one as big as the canvas, or a texture
 //! ```
 //!
@@ -34,7 +36,8 @@
 //! 0 for a buffer's binding means the rest of it.
 
 use std::{
-    cell::Cell,
+    cell::{Cell, RefCell},
+    collections::HashMap,
     fmt,
     ops::{BitOr, Range},
     rc::{Rc, Weak},
@@ -49,7 +52,7 @@ use crate::{
     struct_mut::ValueMut,
 };
 
-pub use crate::webgl::{Scalar, Size};
+pub use crate::webgl::{ImageLoad, Scalar, Size};
 
 /// Operation codes. Append only, as the browser reads them by number.
 mod code {
@@ -83,33 +86,73 @@ mod code {
     pub const DISPATCH_WORKGROUPS: u8 = 26;
     pub const SET_VIEWPORT: u8 = 27;
     pub const SET_SCISSOR_RECT: u8 = 28;
+    pub const CREATE_BIND_GROUP_LAYOUT: u8 = 29;
+    pub const DELETE_BIND_GROUP_LAYOUT: u8 = 30;
+    pub const CREATE_PIPELINE_LAYOUT: u8 = 31;
+    pub const DELETE_PIPELINE_LAYOUT: u8 = 32;
+    /// The layout of a bind group WebGPU made for a pipeline of the layout "auto".
+    pub const PIPELINE_BIND_GROUP_LAYOUT: u8 = 33;
+    pub const GENERATE_MIPMAPS: u8 = 34;
+    pub const TEXTURE_FROM_URL: u8 = 35;
+    pub const READ_BUFFER: u8 = 36;
+    pub const READ_PIXELS: u8 = 37;
 }
 
 /// What the browser tells of a context, as `webgpu.ts` sends it: `[0, width, height]` when the
 /// canvas changes its size, `[1]` when the context has a new device after it lost its own, `[2]`
-/// when the browser has no WebGPU for it.
+/// when the browser has no WebGPU for it, `[3, texture, width, height]` when an image is in a
+/// texture, `[4, texture]` when it didn't load, `[5, request, bytes]` with what a read read,
+/// `[6, request, width, height, bytes]` with the pixels a read read.
 enum GpuEvent {
     Resized(Size),
     Restored,
     Unavailable,
+    ImageLoaded(u32, Size),
+    ImageFailed(u32),
+    Read(u32, Vec<u8>),
+    Pixels(u32, Size, Vec<u8>),
 }
 
 impl GpuEvent {
     fn from_driver(data: JsJson) -> Result<Self, String> {
         data.map_list(|mut params: JsJsonListDecoder| {
-            let event = match params.get_u32("kind")? {
-                0 => Self::Resized(Size {
+            let size = |params: &mut JsJsonListDecoder| -> Result<Size, String> {
+                Ok(Size {
                     width: params.get_u32("width")?,
                     height: params.get_u32("height")?,
-                }),
+                })
+            };
+            let event = match params.get_u32("kind")? {
+                0 => Self::Resized(size(&mut params)?),
                 1 => Self::Restored,
                 2 => Self::Unavailable,
+                3 => Self::ImageLoaded(params.get_u32("texture")?, size(&mut params)?),
+                4 => Self::ImageFailed(params.get_u32("texture")?),
+                5 => Self::Read(params.get_u32("request")?, params.get_buffer("bytes")?),
+                6 => Self::Pixels(
+                    params.get_u32("request")?,
+                    size(&mut params)?,
+                    params.get_buffer("bytes")?,
+                ),
                 other => return Err(format!("unknown gpu event {other}")),
             };
             params.expect_no_more()?;
             Ok(event)
         })
     }
+}
+
+/// What a read waits for, see [`WebGpu::read_buffer`] and [`WebGpu::read_pixels`].
+enum Reading {
+    Bytes(Box<dyn FnOnce(Vec<u8>)>),
+    Pixels(Box<dyn FnOnce(Size, Vec<u8>)>),
+}
+
+/// A texture an image is coming into, see [`WebGpu::create_texture_from_url`].
+struct Coming {
+    url: String,
+    /// Its size, which the image's becomes.
+    size: Weak<Cell<Size>>,
 }
 
 /// A context: its calls not yet sent, shared by it and its objects, which the browser gets at the
@@ -121,6 +164,12 @@ struct Context {
     restored: EventEmitter<()>,
     unavailable: Cell<bool>,
     told_unavailable: EventEmitter<()>,
+    /// The images coming into textures, by the textures' ids.
+    images: RefCell<HashMap<u32, Coming>>,
+    image_loaded: EventEmitter<ImageLoad>,
+    /// The reads not answered yet, by their numbers.
+    reads: RefCell<HashMap<u32, Reading>>,
+    last_read: Cell<u32>,
     /// The callback the browser tells through, for as long as the context is.
     _callback: DropResource,
 }
@@ -144,6 +193,7 @@ impl Context {
                 options.power_preference as u8,
             ];
             queue.extend_from_slice(&callback.as_u64().to_le_bytes());
+            put_f32s(&mut queue, &[options.bitmap_scale]);
 
             Self {
                 queue: ValueMut::new(queue),
@@ -152,6 +202,10 @@ impl Context {
                 restored: EventEmitter::default(),
                 unavailable: Cell::new(false),
                 told_unavailable: EventEmitter::default(),
+                images: RefCell::new(HashMap::new()),
+                image_loaded: EventEmitter::default(),
+                reads: RefCell::new(HashMap::new()),
+                last_read: Cell::new(0),
                 _callback: drop,
             }
         })
@@ -163,10 +217,42 @@ impl Context {
                 self.size.set(size);
                 self.resized.trigger(&size);
             }
-            Ok(GpuEvent::Restored) => self.restored.trigger(&()),
+            Ok(GpuEvent::Restored) => {
+                // Gone with the device: no image comes, and no read is answered.
+                self.images.borrow_mut().clear();
+                self.reads.borrow_mut().clear();
+                self.restored.trigger(&());
+            }
             Ok(GpuEvent::Unavailable) => {
                 self.unavailable.set(true);
                 self.told_unavailable.trigger(&());
+            }
+            Ok(GpuEvent::ImageLoaded(texture, size)) => {
+                let coming = self.images.borrow_mut().remove(&texture);
+                if let Some(Coming { url, size: of }) = coming {
+                    if let Some(of) = of.upgrade() {
+                        of.set(size);
+                    }
+                    self.image_loaded.trigger(&ImageLoad::Loaded { url, size });
+                }
+            }
+            Ok(GpuEvent::ImageFailed(texture)) => {
+                let coming = self.images.borrow_mut().remove(&texture);
+                if let Some(Coming { url, .. }) = coming {
+                    self.image_loaded.trigger(&ImageLoad::Failed { url });
+                }
+            }
+            Ok(GpuEvent::Read(request, bytes)) => {
+                let reading = self.reads.borrow_mut().remove(&request);
+                if let Some(Reading::Bytes(callback)) = reading {
+                    callback(bytes);
+                }
+            }
+            Ok(GpuEvent::Pixels(request, size, bytes)) => {
+                let reading = self.reads.borrow_mut().remove(&request);
+                if let Some(Reading::Pixels(callback)) = reading {
+                    callback(size, bytes);
+                }
             }
             Err(error) => log::error!("webgpu: {error}"),
         }
@@ -185,12 +271,36 @@ thread_local! {
     static LAST_ID: Cell<u32> = const { Cell::new(0) };
 }
 
+/// The id of a new object.
+fn next_id() -> u32 {
+    LAST_ID.with(|last| {
+        last.set(last.get() + 1);
+        last.get()
+    })
+}
+
 /// How the canvas gets its WebGPU context. The first [`WebGpu`] of a canvas sets them.
-#[derive(Clone, Copy, Debug, Default, PartialEq, Eq)]
+#[derive(Clone, Copy, Debug, PartialEq)]
 pub struct WebGpuOptions {
     pub alpha_mode: AlphaMode,
     /// Which GPU the browser is asked for, where there are more.
     pub power_preference: PowerPreference,
+    /// Pixels of the canvas's picture to a device pixel of the canvas, across and down: 1, so the
+    /// picture is sharp, or less, f. ex. 0.5 with a quarter of the pixels to draw, which a slow
+    /// GPU fills sooner, the browser stretching them over the canvas. Not above 0 nor finite counts
+    /// as 1. See [`WebGlOptions::bitmap_scale`](crate::webgl::WebGlOptions::bitmap_scale).
+    pub bitmap_scale: f32,
+}
+
+impl Default for WebGpuOptions {
+    /// Opaque, on the GPU the browser chooses, sharp.
+    fn default() -> Self {
+        Self {
+            alpha_mode: AlphaMode::default(),
+            power_preference: PowerPreference::default(),
+            bitmap_scale: 1.0,
+        }
+    }
 }
 
 /// Whether the canvas is see-through where the picture is.
@@ -244,8 +354,7 @@ pub enum PowerPreference {
 /// use vertigo::{DomNode, dom_element, get_driver};
 /// use vertigo::webgpu::{
 ///     BindGroupEntry, BindingResource, BufferUsages, Color, ColorAttachment, ColorTargetState,
-///     FragmentState, LoadOp, PrimitiveState, RenderPassDescriptor, RenderPipelineDescriptor,
-///     VertexState, WebGpu,
+///     FragmentState, LoadOp, RenderPassDescriptor, RenderPipelineDescriptor, VertexState, WebGpu,
 /// };
 ///
 /// // A triangle, its color going round.
@@ -265,18 +374,16 @@ pub enum PowerPreference {
 ///             return color;
 ///         }
 ///     ");
-///     let pipeline = gpu.create_render_pipeline(&RenderPipelineDescriptor {
-///         vertex: VertexState { module: &shader, entry_point: "vertex", buffers: &[] },
-///         primitive: PrimitiveState::default(),
-///         depth_stencil: None,
-///         fragment: Some(FragmentState {
+///     let pipeline = gpu.create_render_pipeline(&RenderPipelineDescriptor::new(
+///         VertexState { module: &shader, entry_point: "vertex", buffers: &[] },
+///         Some(FragmentState {
 ///             module: &shader,
 ///             entry_point: "fragment",
 ///             targets: &[ColorTargetState::canvas()],
 ///         }),
-///     });
+///     ));
 ///     let color = gpu.create_buffer(16, BufferUsages::UNIFORM | BufferUsages::COPY_DST);
-///     let colors = gpu.create_bind_group(&pipeline, 0, &[BindGroupEntry {
+///     let colors = gpu.create_bind_group(&pipeline.get_bind_group_layout(0), &[BindGroupEntry {
 ///         binding: 0,
 ///         resource: BindingResource::Buffer(&color),
 ///     }]);
@@ -324,6 +431,8 @@ impl WebGpu {
     /// let gpu = WebGpu::with_options(&canvas.get_ref(), WebGpuOptions {
     ///     alpha_mode: AlphaMode::Premultiplied,
     ///     power_preference: PowerPreference::LowPower,
+    ///     // A quarter of the pixels, for a slow GPU
+    ///     bitmap_scale: 0.5,
     /// });
     /// ```
     pub fn with_options(canvas: &DomElementRef, options: WebGpuOptions) -> Self {
@@ -413,10 +522,7 @@ impl WebGpu {
     /// An object made with `create`, its arguments written by `write` after its id, and let go
     /// with `delete` when its handle is dropped.
     fn object(&self, create: u8, delete: u8, write: impl FnOnce(&mut Vec<u8>)) -> Object {
-        let id = LAST_ID.with(|last| {
-            last.set(last.get() + 1);
-            last.get()
-        });
+        let id = next_id();
         self.op(create, |out| {
             put_u32(out, id);
             write(out);
@@ -477,27 +583,96 @@ impl WebGpu {
         });
     }
 
-    /// A 2D texture, of one level, see [`Self::write_texture`].
+    /// A 2D texture, see [`TextureDescriptor`], [`Self::write_texture`] and
+    /// [`Self::generate_mipmaps`].
     pub fn create_texture(&self, descriptor: &TextureDescriptor) -> Texture {
         let TextureDescriptor {
             size,
+            mip_level_count,
+            sample_count,
             format,
             usage,
         } = *descriptor;
+        let mip_level_count = mip_level_count.max(1);
+        let sample_count = sample_count.max(1);
         Texture {
             object: self.object(code::CREATE_TEXTURE, code::DESTROY_TEXTURE, |out| {
                 put_u32(out, size.width);
                 put_u32(out, size.height);
                 out.push(format as u8);
                 put_u32(out, usage.0);
+                put_u32(out, mip_level_count);
+                out.push(sample_count as u8);
             }),
-            size,
+            size: Rc::new(Cell::new(size)),
+            mip_level_count,
+            sample_count,
             format,
         }
     }
 
-    /// Writes all of `texture`'s pixels, row after row from the top, each as its format has it,
-    /// f. ex. 4 bytes of red, green, blue and alpha. The texture needs
+    /// A texture of the image at `url`, which the browser loads: 1 x 1 white pixel until it comes,
+    /// then as big as the image, with smaller images of it if [`ImageOptions::mipmaps`]. Bind
+    /// groups with it take the image then. [`Self::on_image_load`] tells when it came, or didn't.
+    /// An image from another origin needs CORS headers allowing it, as WebGPU reads its pixels.
+    ///
+    /// Of [`TextureFormat::Rgba8Unorm`], for [`TextureUsages::TEXTURE_BINDING`] and
+    /// [`TextureUsages::COPY_SRC`]: drawn with, and read back.
+    ///
+    /// ```rust
+    /// use vertigo::dom_element;
+    /// use vertigo::webgpu::{ImageLoad, ImageOptions, WebGpu};
+    ///
+    /// let canvas = dom_element! { <canvas /> };
+    /// let gpu = WebGpu::new(&canvas.get_ref());
+    /// let bricks = gpu.create_texture_from_url("/images/bricks.png", &ImageOptions {
+    ///     mipmaps: true,
+    ///     ..ImageOptions::default()
+    /// });
+    ///
+    /// canvas.append_drop_resource(gpu.on_image_load(|load| {
+    ///     if let ImageLoad::Loaded { .. } = load {
+    ///         // Draw again, with the bricks.
+    ///     }
+    /// }));
+    /// ```
+    pub fn create_texture_from_url(&self, url: &str, options: &ImageOptions) -> Texture {
+        let size = Rc::new(Cell::new(Size {
+            width: 1,
+            height: 1,
+        }));
+        let object = self.object(code::TEXTURE_FROM_URL, code::DESTROY_TEXTURE, |out| {
+            out.extend([
+                u8::from(options.mipmaps),
+                u8::from(options.premultiplied_alpha),
+                u8::from(options.flip_y),
+            ]);
+            put_source(out, url);
+        });
+        self.context.images.borrow_mut().insert(
+            object.id,
+            Coming {
+                url: url.to_string(),
+                size: Rc::downgrade(&size),
+            },
+        );
+        Texture {
+            object,
+            size,
+            mip_level_count: 1,
+            sample_count: 1,
+            format: TextureFormat::Rgba8Unorm,
+        }
+    }
+
+    /// `callback` when an image asked for with [`Self::create_texture_from_url`] is in its texture,
+    /// or didn't load.
+    pub fn on_image_load(&self, callback: impl Fn(&ImageLoad) + 'static) -> DropResource {
+        self.context.image_loaded.add(move |load| callback(&load))
+    }
+
+    /// Writes all of `texture`'s pixels, of its first level, row after row from the top, each as
+    /// its format has it, f. ex. 4 bytes of red, green, blue and alpha. The texture needs
     /// [`TextureUsages::COPY_DST`].
     ///
     /// ```rust
@@ -509,6 +684,8 @@ impl WebGpu {
     /// // Black and white, two by two.
     /// let checker = gpu.create_texture(&TextureDescriptor {
     ///     size: Size { width: 2, height: 2 },
+    ///     mip_level_count: 1,
+    ///     sample_count: 1,
     ///     format: TextureFormat::Rgba8Unorm,
     ///     usage: TextureUsages::TEXTURE_BINDING | TextureUsages::COPY_DST,
     /// });
@@ -518,12 +695,50 @@ impl WebGpu {
     /// ]);
     /// ```
     pub fn write_texture(&self, texture: &Texture, data: &[u8]) {
+        let size = texture.size();
         self.op(code::WRITE_TEXTURE, |out| {
             put_u32(out, texture.object.id);
-            put_u32(out, texture.size.width * texture.format.bytes_per_pixel());
-            put_u32(out, texture.size.width);
-            put_u32(out, texture.size.height);
+            put_u32(out, size.width * texture.format.bytes_per_pixel());
+            put_u32(out, size.width);
+            put_u32(out, size.height);
             put_data(out, data);
+        });
+    }
+
+    /// Makes the smaller images of `texture`'s levels from its first, each half as big as the one
+    /// before, smoothly: for a sampler with a mipmap filter, so the texture shown small is calm.
+    /// The texture needs more levels than one, see [`Size::mip_levels`], and
+    /// [`TextureUsages::TEXTURE_BINDING`] and [`TextureUsages::RENDER_ATTACHMENT`], as WebGPU
+    /// draws them, and a format of colors read between pixels, f. ex.
+    /// [`TextureFormat::Rgba8Unorm`].
+    ///
+    /// ```rust
+    /// use vertigo::dom_element;
+    /// use vertigo::webgpu::{Size, TextureDescriptor, TextureFormat, TextureUsages, WebGpu};
+    ///
+    /// let canvas = dom_element! { <canvas /> };
+    /// let gpu = WebGpu::new(&canvas.get_ref());
+    /// let size = Size { width: 64, height: 64 };
+    /// let stripes = gpu.create_texture(&TextureDescriptor {
+    ///     size,
+    ///     // 64, 32, ... 1 pixels across
+    ///     mip_level_count: size.mip_levels(),
+    ///     sample_count: 1,
+    ///     format: TextureFormat::Rgba8Unorm,
+    ///     usage: TextureUsages::TEXTURE_BINDING
+    ///         | TextureUsages::COPY_DST
+    ///         | TextureUsages::RENDER_ATTACHMENT,
+    /// });
+    /// let pixels: Vec<u8> = (0..64 * 64)
+    ///     .flat_map(|pixel| if pixel % 2 == 0 { [0, 0, 0, 255] } else { [255; 4] })
+    ///     .collect();
+    /// gpu.write_texture(&stripes, &pixels);
+    /// // Grey, smaller
+    /// gpu.generate_mipmaps(&stripes);
+    /// ```
+    pub fn generate_mipmaps(&self, texture: &Texture) {
+        self.op(code::GENERATE_MIPMAPS, |out| {
+            put_u32(out, texture.object.id)
         });
     }
 
@@ -573,32 +788,104 @@ impl WebGpu {
     /// How a compute pass computes: the entry point `entry_point` of `module`.
     pub fn create_compute_pipeline(
         &self,
-        module: &ShaderModule,
-        entry_point: &str,
+        descriptor: &ComputePipelineDescriptor<'_>,
     ) -> ComputePipeline {
+        let ComputePipelineDescriptor {
+            layout,
+            module,
+            entry_point,
+        } = *descriptor;
         ComputePipeline(self.object(
             code::CREATE_COMPUTE_PIPELINE,
             code::DELETE_PIPELINE,
             |out| {
+                put_u32(out, layout.map_or(0, |layout| layout.0.id));
                 put_u32(out, module.0.id);
                 put_source(out, entry_point);
             },
         ))
     }
 
-    /// The resources of the bind group `group` of `pipeline`'s shaders, by their bindings:
-    /// `@group(group) @binding(binding)`. The bind group is for `pipeline` only, as its layout is
-    /// the one WebGPU found in the shaders of it.
+    /// What the bind groups of a `@group(...)` of shaders have, by their bindings, so that a bind
+    /// group serves the pipelines of all layouts with it, see [`Self::create_pipeline_layout`].
+    ///
+    /// ```rust
+    /// use vertigo::dom_element;
+    /// use vertigo::webgpu::{
+    ///     BindGroupLayoutEntry, BindingType, BufferBindingType, SamplerBindingType, ShaderStages,
+    ///     TextureSampleType, WebGpu,
+    /// };
+    ///
+    /// let canvas = dom_element! { <canvas /> };
+    /// let gpu = WebGpu::new(&canvas.get_ref());
+    /// // A uniform buffer for both shaders, and a texture with its sampler for the fragments'.
+    /// let layout = gpu.create_bind_group_layout(&[
+    ///     BindGroupLayoutEntry {
+    ///         binding: 0,
+    ///         visibility: ShaderStages::VERTEX | ShaderStages::FRAGMENT,
+    ///         ty: BindingType::Buffer(BufferBindingType::Uniform),
+    ///     },
+    ///     BindGroupLayoutEntry {
+    ///         binding: 1,
+    ///         visibility: ShaderStages::FRAGMENT,
+    ///         ty: BindingType::Texture {
+    ///             sample_type: TextureSampleType::Float { filterable: true },
+    ///             multisampled: false,
+    ///         },
+    ///     },
+    ///     BindGroupLayoutEntry {
+    ///         binding: 2,
+    ///         visibility: ShaderStages::FRAGMENT,
+    ///         ty: BindingType::Sampler(SamplerBindingType::Filtering),
+    ///     },
+    /// ]);
+    /// let pipelines = gpu.create_pipeline_layout(&[&layout]);
+    /// ```
+    pub fn create_bind_group_layout(&self, entries: &[BindGroupLayoutEntry]) -> BindGroupLayout {
+        BindGroupLayout(self.object(
+            code::CREATE_BIND_GROUP_LAYOUT,
+            code::DELETE_BIND_GROUP_LAYOUT,
+            |out| {
+                out.push(entries.len() as u8);
+                for entry in entries {
+                    put_u32(out, entry.binding);
+                    out.push(entry.visibility.0);
+                    let (kind, multisampled) = entry.ty.kind();
+                    out.extend([kind, u8::from(multisampled)]);
+                }
+            },
+        ))
+    }
+
+    /// The layouts of the bind groups of pipelines, `@group(0)` first, see
+    /// [`RenderPipelineDescriptor::layout`].
+    pub fn create_pipeline_layout(
+        &self,
+        bind_group_layouts: &[&BindGroupLayout],
+    ) -> PipelineLayout {
+        PipelineLayout(self.object(
+            code::CREATE_PIPELINE_LAYOUT,
+            code::DELETE_PIPELINE_LAYOUT,
+            |out| {
+                out.push(bind_group_layouts.len() as u8);
+                for layout in bind_group_layouts {
+                    put_u32(out, layout.0.id);
+                }
+            },
+        ))
+    }
+
+    /// The resources of a bind group of `layout`, by their bindings: those of
+    /// `@group(...) @binding(binding)` of shaders. See also
+    /// [`RenderPipeline::get_bind_group_layout`].
     pub fn create_bind_group(
         &self,
-        pipeline: &impl Pipeline,
-        group: u32,
+        layout: &BindGroupLayout,
         entries: &[BindGroupEntry<'_>],
     ) -> BindGroup {
         BindGroup(
             self.object(code::CREATE_BIND_GROUP, code::DELETE_BIND_GROUP, |out| {
-                put_u32(out, pipeline.object().id);
-                put_u32(out, group);
+                put_u32(out, layout.0.id);
                 out.push(entries.len() as u8);
                 for BindGroupEntry { binding, resource } in entries {
                     put_u32(out, *binding);
@@ -644,6 +931,69 @@ impl WebGpu {
         self.op(code::BEGIN_COMPUTE_PASS, |_| {});
         ComputePass { gpu: self }
     }
+
+    /// `callback` with the bytes of `buffer`, as the passes before this left them, once the GPU
+    /// has done them. The buffer needs [`BufferUsages::COPY_SRC`]. Nothing is told if the device
+    /// is lost before.
+    ///
+    /// ```rust
+    /// use vertigo::{Value, dom_element};
+    /// use vertigo::webgpu::{BufferUsages, WebGpu};
+    ///
+    /// let canvas = dom_element! { <canvas /> };
+    /// let gpu = WebGpu::new(&canvas.get_ref());
+    /// let numbers = gpu.create_buffer_init(BufferUsages::STORAGE | BufferUsages::COPY_SRC, &[1.0_f32; 4]);
+    /// // ... a compute pass doubling them
+    /// let doubled = Value::new(Vec::new());
+    /// gpu.read_buffer(&numbers, {
+    ///     let doubled = doubled.clone();
+    ///     move |bytes| doubled.set(bytes)
+    /// });
+    /// ```
+    pub fn read_buffer(&self, buffer: &Buffer, callback: impl FnOnce(Vec<u8>) + 'static) {
+        let request = self.reading(Reading::Bytes(Box::new(callback)));
+        self.op(code::READ_BUFFER, |out| {
+            put_u32(out, request);
+            put_u32(out, buffer.object.id);
+        });
+    }
+
+    /// `callback` with the size and the pixels of `target`, of its first level, as the passes
+    /// before this drew them, once the GPU has drawn them: row after row from the top, each as the
+    /// texture's format has it, and the canvas's as red, green, blue and alpha. A texture needs
+    /// [`TextureUsages::COPY_SRC`]. The canvas has a picture only in a batch drawing on it, as
+    /// the browser takes it once it is shown. Nothing is told if the device is lost before.
+    ///
+    /// ```rust
+    /// use vertigo::{dom_element, log};
+    /// use vertigo::webgpu::{Color, ColorAttachment, LoadOp, RenderPassDescriptor, Target, WebGpu};
+    ///
+    /// let canvas = dom_element! { <canvas /> };
+    /// let gpu = WebGpu::new(&canvas.get_ref());
+    /// gpu.begin_render_pass(&RenderPassDescriptor {
+    ///     color_attachments: &[ColorAttachment::canvas(LoadOp::Clear(Color::WHITE))],
+    ///     depth_stencil_attachment: None,
+    /// });
+    /// // A screenshot
+    /// gpu.read_pixels(Target::Canvas, |size, pixels| {
+    ///     log::info!("{} x {}: {} bytes", size.width, size.height, pixels.len());
+    /// });
+    /// ```
+    pub fn read_pixels(&self, target: Target<'_>, callback: impl FnOnce(Size, Vec<u8>) + 'static) {
+        let request = self.reading(Reading::Pixels(Box::new(callback)));
+        self.op(code::READ_PIXELS, |out| {
+            put_u32(out, request);
+            target.put(out);
+        });
+    }
+
+    /// The number of a read, which waits for its answer.
+    fn reading(&self, reading: Reading) -> u32 {
+        let request = self.context.last_read.get() + 1;
+        self.context.last_read.set(request);
+        self.context.reads.borrow_mut().insert(request, reading);
+        request
+    }
 }
 
 /// A WebGPU object, let go when dropped. Its context may be gone by then, and with it the object.
@@ -684,17 +1034,29 @@ impl Buffer {
     }
 }
 
-/// A 2D texture, see [`WebGpu::create_texture`].
+/// A 2D texture, see [`WebGpu::create_texture`] and [`WebGpu::create_texture_from_url`].
 #[derive(Debug)]
 pub struct Texture {
     object: Object,
-    size: Size,
+    /// One of an image becomes the image's when it comes.
+    size: Rc<Cell<Size>>,
+    mip_level_count: u32,
+    sample_count: u32,
     format: TextureFormat,
 }
 
 impl Texture {
+    /// Of its first level. One from a URL is 1 x 1 until its image comes.
     pub fn size(&self) -> Size {
-        self.size
+        self.size.get()
+    }
+
+    pub fn mip_level_count(&self) -> u32 {
+        self.mip_level_count
+    }
+
+    pub fn sample_count(&self) -> u32 {
+        self.sample_count
     }
 
     pub fn format(&self) -> TextureFormat {
@@ -714,42 +1076,84 @@ pub struct ShaderModule(Object);
 #[derive(Debug)]
 pub struct RenderPipeline(Object);
 
+impl RenderPipeline {
+    /// The layout of its bind group `index`, `@group(index)` of its shaders: the one it was made
+    /// with, or the one WebGPU found in its shaders for a pipeline without
+    /// [`RenderPipelineDescriptor::layout`], which serves this pipeline only.
+    ///
+    /// ```rust
+    /// use vertigo::dom_element;
+    /// use vertigo::webgpu::{
+    ///     BindGroupEntry, BindingResource, BufferUsages, ColorTargetState, FragmentState,
+    ///     RenderPipelineDescriptor, VertexState, WebGpu,
+    /// };
+    ///
+    /// let canvas = dom_element! { <canvas /> };
+    /// let gpu = WebGpu::new(&canvas.get_ref());
+    /// let shader = gpu.create_shader_module("
+    ///     @group(0) @binding(0) var<uniform> color: vec4f;
+    ///     @vertex fn vertex() -> @builtin(position) vec4f { return vec4f(0.0, 0.0, 0.0, 1.0); }
+    ///     @fragment fn fragment() -> @location(0) vec4f { return color; }
+    /// ");
+    /// let pipeline = gpu.create_render_pipeline(&RenderPipelineDescriptor::new(
+    ///     VertexState { module: &shader, entry_point: "vertex", buffers: &[] },
+    ///     Some(FragmentState {
+    ///         module: &shader,
+    ///         entry_point: "fragment",
+    ///         targets: &[ColorTargetState::canvas()],
+    ///     }),
+    /// ));
+    /// let color = gpu.create_buffer(16, BufferUsages::UNIFORM | BufferUsages::COPY_DST);
+    /// let group = gpu.create_bind_group(&pipeline.get_bind_group_layout(0), &[BindGroupEntry {
+    ///     binding: 0,
+    ///     resource: BindingResource::Buffer(&color),
+    /// }]);
+    /// ```
+    pub fn get_bind_group_layout(&self, index: u32) -> BindGroupLayout {
+        bind_group_layout_of(&self.0, index)
+    }
+}
+
 /// See [`WebGpu::create_compute_pipeline`].
 #[derive(Debug)]
 pub struct ComputePipeline(Object);
 
+impl ComputePipeline {
+    /// The layout of its bind group `index`, see [`RenderPipeline::get_bind_group_layout`].
+    pub fn get_bind_group_layout(&self, index: u32) -> BindGroupLayout {
+        bind_group_layout_of(&self.0, index)
+    }
+}
+
+/// The layout of the bind group `index` of `pipeline`, a new handle of it.
+fn bind_group_layout_of(pipeline: &Object, index: u32) -> BindGroupLayout {
+    let id = next_id();
+    if let Some(context) = pipeline.context.upgrade() {
+        context.queue.change(|out| {
+            out.push(code::PIPELINE_BIND_GROUP_LAYOUT);
+            put_u32(out, id);
+            put_u32(out, pipeline.id);
+            put_u32(out, index);
+        });
+    }
+    BindGroupLayout(Object {
+        id,
+        delete: code::DELETE_BIND_GROUP_LAYOUT,
+        context: pipeline.context.clone(),
+    })
+}
+
+/// See [`WebGpu::create_bind_group_layout`].
+#[derive(Debug)]
+pub struct BindGroupLayout(Object);
+
+/// See [`WebGpu::create_pipeline_layout`].
+#[derive(Debug)]
+pub struct PipelineLayout(Object);
+
 /// See [`WebGpu::create_bind_group`].
 #[derive(Debug)]
 pub struct BindGroup(Object);
-
-mod sealed {
-    pub trait Sealed {}
-}
-
-/// A render or a compute pipeline, whose bind groups [`WebGpu::create_bind_group`] makes.
-pub trait Pipeline: sealed::Sealed {
-    #[doc(hidden)]
-    #[allow(private_interfaces)]
-    fn object(&self) -> &Object;
-}
-
-impl sealed::Sealed for RenderPipeline {}
-
-impl Pipeline for RenderPipeline {
-    #[allow(private_interfaces)]
-    fn object(&self) -> &Object {
-        &self.0
-    }
-}
-
-impl sealed::Sealed for ComputePipeline {}
-
-impl Pipeline for ComputePipeline {
-    #[allow(private_interfaces)]
-    fn object(&self) -> &Object {
-        &self.0
-    }
-}
 
 /// Commands drawing, see [`WebGpu::begin_render_pass`]. The pass ends when it is dropped.
 pub struct RenderPass<'a> {
@@ -852,7 +1256,9 @@ impl fmt::Debug for RenderPass<'_> {
 ///
 /// ```rust
 /// use vertigo::dom_element;
-/// use vertigo::webgpu::{BindGroupEntry, BindingResource, BufferUsages, WebGpu};
+/// use vertigo::webgpu::{
+///     BindGroupEntry, BindingResource, BufferUsages, ComputePipelineDescriptor, WebGpu,
+/// };
 ///
 /// let canvas = dom_element! { <canvas /> };
 /// let gpu = WebGpu::new(&canvas.get_ref());
@@ -865,8 +1271,12 @@ impl fmt::Debug for RenderPass<'_> {
 ///         numbers[id.x] *= 2.0;
 ///     }
 /// ");
-/// let doubling = gpu.create_compute_pipeline(&shader, "double");
-/// let group = gpu.create_bind_group(&doubling, 0, &[BindGroupEntry {
+/// let doubling = gpu.create_compute_pipeline(&ComputePipelineDescriptor {
+///     layout: None,
+///     module: &shader,
+///     entry_point: "double",
+/// });
+/// let group = gpu.create_bind_group(&doubling.get_bind_group_layout(0), &[BindGroupEntry {
 ///     binding: 0,
 ///     resource: BindingResource::Buffer(&numbers),
 /// }]);
@@ -926,9 +1336,30 @@ fn set_bind_group(gpu: &WebGpu, index: u32, group: &BindGroup) {
 /// See [`WebGpu::create_texture`].
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
 pub struct TextureDescriptor {
+    /// Of its first level.
     pub size: Size,
+    /// How many levels it has, each half as big as the one before, see [`Size::mip_levels`] and
+    /// [`WebGpu::generate_mipmaps`]: 1, or 0, for the first only.
+    pub mip_level_count: u32,
+    /// Samples a pixel: 1, or 0, or more, f. ex. 4, for a pass smoothing edges, which it resolves
+    /// into a texture of 1, see [`ColorAttachment::resolve_target`].
+    pub sample_count: u32,
     pub format: TextureFormat,
     pub usage: TextureUsages,
+}
+
+/// How [`WebGpu::create_texture_from_url`] puts an image into a texture. By default, as it is:
+/// the image's first row the texture's first, its colors not multiplied by its alpha, of one
+/// level.
+#[derive(Clone, Copy, Debug, Default, PartialEq, Eq)]
+pub struct ImageOptions {
+    /// With levels of smaller images of it, see [`WebGpu::generate_mipmaps`].
+    pub mipmaps: bool,
+    /// Its colors multiplied by its alpha, f. ex. for [`BlendState::PREMULTIPLIED_ALPHA_BLENDING`]:
+    /// the smaller images of a see-through picture keep their edges then.
+    pub premultiplied_alpha: bool,
+    /// Its last row the texture's first.
+    pub flip_y: bool,
 }
 
 /// See [`WebGpu::create_sampler`]. By default, the nearest pixel, and the edge outside.
@@ -944,16 +1375,35 @@ pub struct SamplerDescriptor {
 /// See [`WebGpu::create_render_pipeline`].
 #[derive(Clone, Copy, Debug)]
 pub struct RenderPipelineDescriptor<'a> {
+    /// The layouts of its bind groups, or `None` for those WebGPU finds in its shaders, which
+    /// serve this pipeline only, see [`RenderPipeline::get_bind_group_layout`].
+    pub layout: Option<&'a PipelineLayout>,
     pub vertex: VertexState<'a>,
     pub primitive: PrimitiveState,
     /// Whether the pipeline tests and writes depth, of the pass's depth attachment.
     pub depth_stencil: Option<DepthStencilState>,
     /// What colors the fragments get, if any: a pipeline only writing depth needs none.
     pub fragment: Option<FragmentState<'a>>,
+    /// Samples a pixel of the attachments it draws on.
+    pub multisample: MultisampleState,
 }
 
-impl RenderPipelineDescriptor<'_> {
+impl<'a> RenderPipelineDescriptor<'a> {
+    /// A pipeline of `vertex` and `fragment`, with the layout WebGPU finds in its shaders, of
+    /// triangles, without depth, of a sample a pixel.
+    pub fn new(vertex: VertexState<'a>, fragment: Option<FragmentState<'a>>) -> Self {
+        Self {
+            layout: None,
+            vertex,
+            primitive: PrimitiveState::default(),
+            depth_stencil: None,
+            fragment,
+            multisample: MultisampleState::default(),
+        }
+    }
+
     fn put(&self, out: &mut Vec<u8>) {
+        put_u32(out, self.layout.map_or(0, |layout| layout.0.id));
         let VertexState {
             module,
             entry_point,
@@ -1022,6 +1472,39 @@ impl RenderPipelineDescriptor<'_> {
             }
             None => out.push(0),
         }
+
+        out.push(self.multisample.count.max(1) as u8);
+    }
+}
+
+/// See [`WebGpu::create_compute_pipeline`].
+#[derive(Clone, Copy, Debug)]
+pub struct ComputePipelineDescriptor<'a> {
+    /// The layouts of its bind groups, or `None` for those WebGPU finds in its shader, which
+    /// serve this pipeline only, see [`ComputePipeline::get_bind_group_layout`].
+    pub layout: Option<&'a PipelineLayout>,
+    pub module: &'a ShaderModule,
+    pub entry_point: &'a str,
+}
+
+/// Samples a pixel a pipeline draws, see [`TextureDescriptor::sample_count`]: as many as the
+/// attachments of the passes using it have.
+///
+/// ```rust
+/// use vertigo::webgpu::MultisampleState;
+///
+/// // Smooth edges, for `Target::Multisampled(4)`
+/// let smooth = MultisampleState { count: 4 };
+/// ```
+#[derive(Clone, Copy, Debug, PartialEq, Eq)]
+pub struct MultisampleState {
+    pub count: u32,
+}
+
+impl Default for MultisampleState {
+    /// One sample a pixel.
+    fn default() -> Self {
+        Self { count: 1 }
     }
 }
 
@@ -1190,12 +1673,13 @@ impl RenderPassDescriptor<'_> {
     fn put(&self, out: &mut Vec<u8>) {
         out.push(self.color_attachments.len() as u8);
         for attachment in self.color_attachments {
-            match attachment.target {
-                Target::Canvas => out.push(0),
-                Target::Texture(texture) => {
+            attachment.target.put(out);
+            match attachment.resolve_target {
+                Some(target) => {
                     out.push(1);
-                    put_u32(out, texture.object.id);
+                    target.put(out);
                 }
+                None => out.push(0),
             }
             match attachment.load {
                 LoadOp::Load => out.push(0),
@@ -1237,6 +1721,9 @@ impl RenderPassDescriptor<'_> {
 #[derive(Clone, Copy, Debug)]
 pub struct ColorAttachment<'a> {
     pub target: Target<'a>,
+    /// Where the samples of a multisampled target go, a pixel each, when the pass ends: the canvas
+    /// or a texture of 1 sample a pixel, of its format and size.
+    pub resolve_target: Option<Target<'a>>,
     pub load: LoadOp<Color>,
     pub store: StoreOp,
 }
@@ -1246,8 +1733,27 @@ impl ColorAttachment<'_> {
     pub fn canvas(load: LoadOp<Color>) -> Self {
         Self {
             target: Target::Canvas,
+            resolve_target: None,
             load,
             store: StoreOp::Store,
+        }
+    }
+
+    /// The canvas's picture with `samples` samples a pixel, f. ex. 4, resolved into the canvas:
+    /// its edges smooth. The pipelines of the pass need as many, see [`MultisampleState`], and so
+    /// does a depth texture, which [`DepthTarget::Canvas`] has then.
+    ///
+    /// ```rust
+    /// use vertigo::webgpu::{Color, ColorAttachment, LoadOp};
+    ///
+    /// let smooth = ColorAttachment::canvas_multisampled(4, LoadOp::Clear(Color::BLACK));
+    /// ```
+    pub fn canvas_multisampled(samples: u32, load: LoadOp<Color>) -> Self {
+        Self {
+            target: Target::Multisampled(samples),
+            resolve_target: Some(Target::Canvas),
+            load,
+            store: StoreOp::Discard,
         }
     }
 }
@@ -1258,6 +1764,23 @@ pub enum Target<'a> {
     /// The canvas's picture, in [`TextureFormat::Canvas`], shown once the batch is drawn.
     Canvas,
     Texture(&'a Texture),
+    /// A texture of the canvas's format and size, of so many samples a pixel, made by the browser
+    /// for the context and made again when the canvas changes its size: to be resolved, see
+    /// [`ColorAttachment::canvas_multisampled`].
+    Multisampled(u32),
+}
+
+impl Target<'_> {
+    fn put(&self, out: &mut Vec<u8>) {
+        match self {
+            Target::Canvas => out.push(0),
+            Target::Texture(texture) => {
+                out.push(1);
+                put_u32(out, texture.object.id);
+            }
+            Target::Multisampled(samples) => out.extend([2, (*samples).clamp(1, 255) as u8]),
+        }
+    }
 }
 
 /// The depths a render pass tests what it draws against.
@@ -1290,7 +1813,7 @@ impl DepthAttachment<'_> {
 pub enum DepthTarget<'a> {
     /// A texture of the format, as big as the canvas's picture, made by the browser for the
     /// context and made again when the canvas changes its size: as the depth buffer of a WebGL
-    /// canvas.
+    /// canvas. Of as many samples a pixel as the first color attachment of the pass has.
     Canvas(TextureFormat),
     Texture(&'a Texture),
 }
@@ -1403,6 +1926,93 @@ flags!(
 );
 
 flags!(
+    /// Which shaders see a binding, joined with `|`, as WebGPU's `GPUShaderStage`.
+    ShaderStages(u8) {
+        VERTEX = 0x1,
+        FRAGMENT = 0x2,
+        COMPUTE = 0x4,
+    }
+);
+
+/// A binding of a bind group layout, see [`WebGpu::create_bind_group_layout`].
+#[derive(Clone, Copy, Debug, PartialEq, Eq)]
+pub struct BindGroupLayoutEntry {
+    /// Of `@binding(...)` in shaders.
+    pub binding: u32,
+    pub visibility: ShaderStages,
+    pub ty: BindingType,
+}
+
+/// What a binding is.
+#[derive(Clone, Copy, Debug, PartialEq, Eq)]
+pub enum BindingType {
+    Buffer(BufferBindingType),
+    Sampler(SamplerBindingType),
+    /// A 2D texture, read through a sampler.
+    Texture {
+        sample_type: TextureSampleType,
+        multisampled: bool,
+    },
+}
+
+impl BindingType {
+    /// Its kind on the wire, see the format, and whether it's multisampled.
+    fn kind(self) -> (u8, bool) {
+        match self {
+            Self::Buffer(BufferBindingType::Uniform) => (0, false),
+            Self::Buffer(BufferBindingType::Storage { read_only: false }) => (1, false),
+            Self::Buffer(BufferBindingType::Storage { read_only: true }) => (2, false),
+            Self::Sampler(SamplerBindingType::Filtering) => (3, false),
+            Self::Sampler(SamplerBindingType::NonFiltering) => (4, false),
+            Self::Sampler(SamplerBindingType::Comparison) => (5, false),
+            Self::Texture {
+                sample_type,
+                multisampled,
+            } => (
+                match sample_type {
+                    TextureSampleType::Float { filterable: true } => 6,
+                    TextureSampleType::Float { filterable: false } => 7,
+                    TextureSampleType::Depth => 8,
+                    TextureSampleType::Sint => 9,
+                    TextureSampleType::Uint => 10,
+                },
+                multisampled,
+            ),
+        }
+    }
+}
+
+/// A buffer of a binding.
+#[derive(Clone, Copy, Debug, PartialEq, Eq)]
+pub enum BufferBindingType {
+    /// `var<uniform>`
+    Uniform,
+    /// `var<storage, read_write>`, or `var<storage>` when `read_only`.
+    Storage { read_only: bool },
+}
+
+/// A sampler of a binding.
+#[derive(Clone, Copy, Debug, PartialEq, Eq)]
+pub enum SamplerBindingType {
+    /// Reading between pixels, of [`FilterMode::Linear`].
+    Filtering,
+    NonFiltering,
+    Comparison,
+}
+
+/// What a texture of a binding gives a shader.
+#[derive(Clone, Copy, Debug, PartialEq, Eq)]
+pub enum TextureSampleType {
+    /// Floats, read between pixels if `filterable`: of colors, f. ex.
+    Float {
+        filterable: bool,
+    },
+    Depth,
+    Sint,
+    Uint,
+}
+
+flags!(
     /// Which channels a pipeline writes, joined with `|`.
     ColorWrites(u8) {
         RED = 0x1,
@@ -1446,10 +2056,10 @@ impl TextureFormat {
         match self {
             Self::R8Unorm => 1,
             Self::Rg8Unorm | Self::R16Float | Self::Depth16Unorm => 2,
-            Self::Rg16Float | Self::Rg32Float => 8,
-            Self::Rgba16Float => 8,
+            Self::Rg32Float | Self::Rgba16Float => 8,
             Self::Rgba32Float => 16,
             Self::Canvas
+            | Self::Rg16Float
             | Self::Rgba8Unorm
             | Self::Rgba8UnormSrgb
             | Self::Bgra8Unorm
@@ -1651,6 +2261,7 @@ mod tests {
             WebGpuOptions {
                 alpha_mode: AlphaMode::Premultiplied,
                 power_preference: PowerPreference::HighPerformance,
+                bitmap_scale: 0.5,
             },
         );
         let buffer = gpu.create_buffer(6, BufferUsages::VERTEX | BufferUsages::COPY_DST);
@@ -1661,10 +2272,21 @@ mod tests {
                 width: 2,
                 height: 1,
             },
+            mip_level_count: 2,
+            sample_count: 1,
             format: TextureFormat::Rgba8Unorm,
             usage: TextureUsages::TEXTURE_BINDING | TextureUsages::COPY_DST,
         });
         gpu.write_texture(&texture, &[255, 0, 128, 255, 1, 2, 3, 4]);
+        gpu.generate_mipmaps(&texture);
+        let image = gpu.create_texture_from_url(
+            "/a.png",
+            &ImageOptions {
+                mipmaps: true,
+                premultiplied_alpha: true,
+                flip_y: false,
+            },
+        );
         let sampler = gpu.create_sampler(&SamplerDescriptor {
             address_mode_u: AddressMode::Repeat,
             address_mode_v: AddressMode::MirrorRepeat,
@@ -1673,7 +2295,42 @@ mod tests {
             mipmap_filter: FilterMode::Linear,
         });
         let shader = gpu.create_shader_module("wgsł");
+        let layout = gpu.create_bind_group_layout(&[
+            BindGroupLayoutEntry {
+                binding: 0,
+                visibility: ShaderStages::VERTEX | ShaderStages::FRAGMENT,
+                ty: BindingType::Buffer(BufferBindingType::Uniform),
+            },
+            BindGroupLayoutEntry {
+                binding: 1,
+                visibility: ShaderStages::COMPUTE,
+                ty: BindingType::Buffer(BufferBindingType::Storage { read_only: true }),
+            },
+            BindGroupLayoutEntry {
+                binding: 2,
+                visibility: ShaderStages::FRAGMENT,
+                ty: BindingType::Texture {
+                    sample_type: TextureSampleType::Float { filterable: true },
+                    multisampled: false,
+                },
+            },
+            BindGroupLayoutEntry {
+                binding: 3,
+                visibility: ShaderStages::FRAGMENT,
+                ty: BindingType::Sampler(SamplerBindingType::Filtering),
+            },
+            BindGroupLayoutEntry {
+                binding: 4,
+                visibility: ShaderStages::FRAGMENT,
+                ty: BindingType::Texture {
+                    sample_type: TextureSampleType::Depth,
+                    multisampled: true,
+                },
+            },
+        ]);
+        let pipeline_layout = gpu.create_pipeline_layout(&[&layout]);
         let pipeline = gpu.create_render_pipeline(&RenderPipelineDescriptor {
+            layout: Some(&pipeline_layout),
             vertex: VertexState {
                 module: &shader,
                 entry_point: "vs",
@@ -1728,21 +2385,23 @@ mod tests {
                     },
                 ],
             }),
+            multisample: MultisampleState { count: 4 },
         });
-        let depth_only = gpu.create_render_pipeline(&RenderPipelineDescriptor {
-            vertex: VertexState {
+        let depth_only = gpu.create_render_pipeline(&RenderPipelineDescriptor::new(
+            VertexState {
                 module: &shader,
                 entry_point: "vs",
                 buffers: &[],
             },
-            primitive: PrimitiveState::default(),
-            depth_stencil: None,
-            fragment: None,
+            None,
+        ));
+        let compute = gpu.create_compute_pipeline(&ComputePipelineDescriptor {
+            layout: None,
+            module: &shader,
+            entry_point: "cs",
         });
-        let compute = gpu.create_compute_pipeline(&shader, "cs");
         let group = gpu.create_bind_group(
-            &pipeline,
-            1,
+            &layout,
             &[
                 BindGroupEntry {
                     binding: 0,
@@ -1758,7 +2417,7 @@ mod tests {
                 },
                 BindGroupEntry {
                     binding: 2,
-                    resource: BindingResource::Texture(&texture),
+                    resource: BindingResource::Texture(&image),
                 },
                 BindGroupEntry {
                     binding: 3,
@@ -1766,17 +2425,29 @@ mod tests {
                 },
             ],
         );
+        let computed = compute.get_bind_group_layout(0);
+        let numbers = gpu.create_bind_group(
+            &computed,
+            &[BindGroupEntry {
+                binding: 0,
+                resource: BindingResource::Buffer(&buffer),
+            }],
+        );
         {
             let mut pass = gpu.begin_render_pass(&RenderPassDescriptor {
                 color_attachments: &[
-                    ColorAttachment::canvas(LoadOp::Clear(Color {
-                        r: 0.0,
-                        g: 0.25,
-                        b: 0.5,
-                        a: 1.0,
-                    })),
+                    ColorAttachment::canvas_multisampled(
+                        4,
+                        LoadOp::Clear(Color {
+                            r: 0.0,
+                            g: 0.25,
+                            b: 0.5,
+                            a: 1.0,
+                        }),
+                    ),
                     ColorAttachment {
                         target: Target::Texture(&texture),
+                        resolve_target: None,
                         load: LoadOp::Load,
                         store: StoreOp::Discard,
                     },
@@ -1807,11 +2478,26 @@ mod tests {
         {
             let mut pass = gpu.begin_compute_pass();
             pass.set_pipeline(&compute);
-            pass.set_bind_group(0, &group);
+            pass.set_bind_group(0, &numbers);
             pass.dispatch_workgroups(4, 2, 1);
         }
+        gpu.read_buffer(&buffer, |_| {});
+        gpu.read_pixels(Target::Canvas, |_, _| {});
+        gpu.read_pixels(Target::Texture(&texture), |_, _| {});
         drop((
-            buffer, texture, sampler, shader, pipeline, depth_only, compute, group,
+            buffer,
+            texture,
+            image,
+            sampler,
+            shader,
+            layout,
+            pipeline_layout,
+            pipeline,
+            depth_only,
+            compute,
+            group,
+            computed,
+            numbers,
         ));
         gpu.take()
     }
@@ -1819,27 +2505,33 @@ mod tests {
     /// The same bytes are played back in `driver_module/src_js/api/command/webgpu.test.ts`:
     /// change the format and one of the two tests fails, whichever side was changed.
     const FIXTURE: &[u8] = &[
-        1, 1, 2, 1, 0, 0, 0, 0, 0, 0, 0, 2, 1, 0, 0, 0, 8, 0, 0, 0, 40, 0, 0, 0, 4, 1, 0, 0, 0, 4,
-        0, 0, 0, 8, 0, 0, 0, 0, 0, 192, 63, 0, 0, 0, 192, 4, 1, 0, 0, 0, 0, 0, 0, 0, 4, 0, 0, 0, 7,
-        0, 0, 0, 5, 2, 0, 0, 0, 2, 0, 0, 0, 1, 0, 0, 0, 1, 6, 0, 0, 0, 7, 2, 0, 0, 0, 8, 0, 0, 0,
-        2, 0, 0, 0, 1, 0, 0, 0, 8, 0, 0, 0, 255, 0, 128, 255, 1, 2, 3, 4, 8, 3, 0, 0, 0, 1, 2, 1,
-        0, 1, 10, 4, 0, 0, 0, 5, 0, 0, 0, 119, 103, 115, 197, 130, 12, 5, 0, 0, 0, 4, 0, 0, 0, 2,
+        1, 1, 2, 1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 63, 2, 1, 0, 0, 0, 8, 0, 0, 0, 40, 0, 0, 0, 4, 1,
+        0, 0, 0, 4, 0, 0, 0, 8, 0, 0, 0, 0, 0, 192, 63, 0, 0, 0, 192, 4, 1, 0, 0, 0, 0, 0, 0, 0, 4,
+        0, 0, 0, 7, 0, 0, 0, 5, 2, 0, 0, 0, 2, 0, 0, 0, 1, 0, 0, 0, 1, 6, 0, 0, 0, 2, 0, 0, 0, 1,
+        7, 2, 0, 0, 0, 8, 0, 0, 0, 2, 0, 0, 0, 1, 0, 0, 0, 8, 0, 0, 0, 255, 0, 128, 255, 1, 2, 3,
+        4, 34, 2, 0, 0, 0, 35, 3, 0, 0, 0, 1, 1, 0, 6, 0, 0, 0, 47, 97, 46, 112, 110, 103, 8, 4, 0,
+        0, 0, 1, 2, 1, 0, 1, 10, 5, 0, 0, 0, 5, 0, 0, 0, 119, 103, 115, 197, 130, 29, 6, 0, 0, 0,
+        5, 0, 0, 0, 0, 3, 0, 0, 1, 0, 0, 0, 4, 2, 0, 2, 0, 0, 0, 2, 6, 0, 3, 0, 0, 0, 2, 3, 0, 4,
+        0, 0, 0, 2, 8, 1, 31, 7, 0, 0, 0, 1, 6, 0, 0, 0, 12, 8, 0, 0, 0, 7, 0, 0, 0, 5, 0, 0, 0, 2,
         0, 0, 0, 118, 115, 2, 24, 0, 0, 0, 0, 2, 2, 0, 0, 0, 0, 0, 0, 0, 0, 12, 12, 0, 0, 0, 1, 0,
-        0, 0, 64, 0, 0, 0, 1, 1, 3, 16, 0, 0, 0, 3, 0, 0, 0, 4, 2, 1, 2, 1, 15, 1, 3, 1, 4, 0, 0,
-        0, 2, 0, 0, 0, 102, 115, 2, 0, 0, 15, 9, 1, 4, 5, 0, 1, 5, 0, 7, 12, 6, 0, 0, 0, 4, 0, 0,
-        0, 2, 0, 0, 0, 118, 115, 0, 3, 0, 0, 0, 0, 0, 13, 7, 0, 0, 0, 4, 0, 0, 0, 2, 0, 0, 0, 99,
-        115, 15, 8, 0, 0, 0, 5, 0, 0, 0, 1, 0, 0, 0, 4, 0, 0, 0, 0, 0, 1, 0, 0, 0, 0, 0, 0, 0, 0,
-        0, 0, 0, 1, 0, 0, 0, 0, 1, 0, 0, 0, 0, 1, 0, 0, 64, 0, 0, 0, 2, 0, 0, 0, 1, 2, 0, 0, 0, 3,
-        0, 0, 0, 2, 3, 0, 0, 0, 17, 2, 0, 1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 208, 63, 0,
-        0, 0, 0, 0, 0, 224, 63, 0, 0, 0, 0, 0, 0, 240, 63, 0, 1, 2, 0, 0, 0, 0, 1, 1, 0, 15, 1, 0,
-        0, 128, 63, 0, 20, 5, 0, 0, 0, 21, 1, 0, 0, 0, 8, 0, 0, 0, 22, 1, 0, 0, 0, 1, 0, 0, 0, 8,
-        0, 0, 0, 23, 1, 0, 0, 0, 0, 2, 0, 0, 0, 24, 3, 0, 0, 0, 10, 0, 0, 0, 1, 0, 0, 0, 0, 0, 0,
-        0, 25, 36, 0, 0, 0, 144, 1, 0, 0, 6, 0, 0, 0, 255, 255, 255, 255, 2, 0, 0, 0, 27, 0, 0, 0,
-        0, 0, 0, 128, 63, 0, 0, 32, 68, 0, 0, 240, 67, 0, 0, 0, 0, 0, 0, 128, 63, 28, 1, 0, 0, 0,
-        2, 0, 0, 0, 3, 0, 0, 0, 4, 0, 0, 0, 19, 17, 0, 1, 1, 2, 0, 0, 0, 0, 1, 19, 18, 20, 7, 0, 0,
-        0, 21, 0, 0, 0, 0, 8, 0, 0, 0, 26, 4, 0, 0, 0, 2, 0, 0, 0, 1, 0, 0, 0, 19, 3, 1, 0, 0, 0,
-        6, 2, 0, 0, 0, 9, 3, 0, 0, 0, 11, 4, 0, 0, 0, 14, 5, 0, 0, 0, 14, 6, 0, 0, 0, 14, 7, 0, 0,
-        0, 16, 8, 0, 0, 0,
+        0, 0, 64, 0, 0, 0, 1, 1, 3, 16, 0, 0, 0, 3, 0, 0, 0, 4, 2, 1, 2, 1, 15, 1, 3, 1, 5, 0, 0,
+        0, 2, 0, 0, 0, 102, 115, 2, 0, 0, 15, 9, 1, 4, 5, 0, 1, 5, 0, 7, 4, 12, 9, 0, 0, 0, 0, 0,
+        0, 0, 5, 0, 0, 0, 2, 0, 0, 0, 118, 115, 0, 3, 0, 0, 0, 0, 0, 1, 13, 10, 0, 0, 0, 0, 0, 0,
+        0, 5, 0, 0, 0, 2, 0, 0, 0, 99, 115, 15, 11, 0, 0, 0, 6, 0, 0, 0, 4, 0, 0, 0, 0, 0, 1, 0, 0,
+        0, 0, 0, 0, 0, 0, 0, 0, 0, 1, 0, 0, 0, 0, 1, 0, 0, 0, 0, 1, 0, 0, 64, 0, 0, 0, 2, 0, 0, 0,
+        1, 3, 0, 0, 0, 3, 0, 0, 0, 2, 4, 0, 0, 0, 33, 12, 0, 0, 0, 10, 0, 0, 0, 0, 0, 0, 0, 15, 13,
+        0, 0, 0, 12, 0, 0, 0, 1, 0, 0, 0, 0, 0, 1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 17, 2, 2, 4, 1,
+        0, 1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 208, 63, 0, 0, 0, 0, 0, 0, 224, 63, 0, 0,
+        0, 0, 0, 0, 240, 63, 1, 1, 2, 0, 0, 0, 0, 0, 1, 1, 0, 15, 1, 0, 0, 128, 63, 0, 20, 8, 0, 0,
+        0, 21, 1, 0, 0, 0, 11, 0, 0, 0, 22, 1, 0, 0, 0, 1, 0, 0, 0, 8, 0, 0, 0, 23, 1, 0, 0, 0, 0,
+        2, 0, 0, 0, 24, 3, 0, 0, 0, 10, 0, 0, 0, 1, 0, 0, 0, 0, 0, 0, 0, 25, 36, 0, 0, 0, 144, 1,
+        0, 0, 6, 0, 0, 0, 255, 255, 255, 255, 2, 0, 0, 0, 27, 0, 0, 0, 0, 0, 0, 128, 63, 0, 0, 32,
+        68, 0, 0, 240, 67, 0, 0, 0, 0, 0, 0, 128, 63, 28, 1, 0, 0, 0, 2, 0, 0, 0, 3, 0, 0, 0, 4, 0,
+        0, 0, 19, 17, 0, 1, 1, 2, 0, 0, 0, 0, 1, 19, 18, 20, 10, 0, 0, 0, 21, 0, 0, 0, 0, 13, 0, 0,
+        0, 26, 4, 0, 0, 0, 2, 0, 0, 0, 1, 0, 0, 0, 19, 36, 1, 0, 0, 0, 1, 0, 0, 0, 37, 2, 0, 0, 0,
+        0, 37, 3, 0, 0, 0, 1, 2, 0, 0, 0, 3, 1, 0, 0, 0, 6, 2, 0, 0, 0, 6, 3, 0, 0, 0, 9, 4, 0, 0,
+        0, 11, 5, 0, 0, 0, 30, 6, 0, 0, 0, 32, 7, 0, 0, 0, 14, 8, 0, 0, 0, 14, 9, 0, 0, 0, 14, 10,
+        0, 0, 0, 16, 11, 0, 0, 0, 30, 12, 0, 0, 0, 16, 13, 0, 0, 0,
     ];
 
     #[test]
@@ -1878,8 +2570,9 @@ mod tests {
         });
 
         let mut calls = vec![code::CONTEXT, 0, 0];
-        // The context's callback, the first of the test's thread
+        // The context's callback, the first of the test's thread, and the scale of its bitmap
         calls.extend(1_u64.to_le_bytes());
+        calls.extend(1.0_f32.to_le_bytes());
         calls.push(code::BEGIN_COMPUTE_PASS);
         calls.extend([
             code::DISPATCH_WORKGROUPS,
@@ -1904,17 +2597,104 @@ mod tests {
 
     /// Tells `gpu`'s context `values`, as the browser does.
     fn teller(gpu: &WebGpu) -> impl Fn(&[u32]) {
+        let tell = json_teller(gpu);
+        move |values: &[u32]| tell(values.iter().copied().map(number).collect())
+    }
+
+    /// Tells `gpu`'s context a list of `values` of any kind, as the browser does.
+    fn json_teller(gpu: &WebGpu) -> impl Fn(Vec<JsJson>) {
         let calls = gpu.take();
         let Ok(callback) = <[u8; 8]>::try_from(&calls[3..11]) else {
             panic!("a context starts with its callback: {calls:?}");
         };
         let callback = CallbackId::from_u64(u64::from_le_bytes(callback));
-        move |values: &[u32]| {
-            let values = values
-                .iter()
-                .map(|value| JsJson::Number(JsJsonNumber(f64::from(*value))));
-            api_callbacks().call(callback, JsJson::List(values.collect()));
+        move |values: Vec<JsJson>| {
+            api_callbacks().call(callback, JsJson::List(values));
         }
+    }
+
+    fn number(value: u32) -> JsJson {
+        JsJson::Number(JsJsonNumber(f64::from(value)))
+    }
+
+    #[test]
+    fn an_image_that_came_is_told_and_gives_its_texture_its_size() {
+        let canvas = dom_element! { <canvas /> };
+        let gpu = WebGpu::new(&canvas.get_ref());
+        let tell = teller(&gpu);
+        let loads = Rc::new(RefCell::new(Vec::new()));
+        let _loaded = gpu.on_image_load({
+            let loads = loads.clone();
+            move |load| loads.borrow_mut().push(load.clone())
+        });
+
+        let bricks = gpu.create_texture_from_url("/bricks.png", &ImageOptions::default());
+        let stones = gpu.create_texture_from_url("/stones.png", &ImageOptions::default());
+        let one = Size {
+            width: 1,
+            height: 1,
+        };
+        assert_eq!(bricks.size(), one, "a pixel until the image comes");
+
+        tell(&[3, bricks.object.id, 64, 32]);
+        tell(&[4, stones.object.id]);
+        tell(&[3, bricks.object.id, 64, 32]);
+        let size = Size {
+            width: 64,
+            height: 32,
+        };
+        assert_eq!(bricks.size(), size);
+        assert_eq!(stones.size(), one);
+        assert_eq!(
+            *loads.borrow(),
+            vec![
+                ImageLoad::Loaded {
+                    url: "/bricks.png".to_string(),
+                    size,
+                },
+                ImageLoad::Failed {
+                    url: "/stones.png".to_string(),
+                },
+            ],
+            "each told once"
+        );
+    }
+
+    #[test]
+    fn a_read_is_answered_once_and_not_after_the_device_is_lost() {
+        let canvas = dom_element! { <canvas /> };
+        let gpu = WebGpu::new(&canvas.get_ref());
+        let tell = json_teller(&gpu);
+        let buffer = gpu.create_buffer(4, BufferUsages::COPY_SRC);
+        let read = Rc::new(RefCell::new(Vec::new()));
+        let answer = |read: &Rc<RefCell<Vec<String>>>| {
+            let read = read.clone();
+            move |bytes: Vec<u8>| read.borrow_mut().push(format!("{bytes:?}"))
+        };
+
+        gpu.read_buffer(&buffer, answer(&read));
+        gpu.read_pixels(Target::Canvas, {
+            let read = read.clone();
+            move |size, pixels| {
+                read.borrow_mut()
+                    .push(format!("{}x{} {pixels:?}", size.width, size.height))
+            }
+        });
+        tell(vec![
+            number(6),
+            number(2),
+            number(1),
+            number(1),
+            JsJson::Vec(vec![1, 2, 3, 4]),
+        ]);
+        tell(vec![number(5), number(1), JsJson::Vec(vec![7, 0, 0, 0])]);
+        tell(vec![number(5), number(1), JsJson::Vec(vec![8, 0, 0, 0])]);
+        assert_eq!(*read.borrow(), vec!["1x1 [1, 2, 3, 4]", "[7, 0, 0, 0]"]);
+
+        gpu.read_buffer(&buffer, answer(&read));
+        tell(vec![number(1)]);
+        tell(vec![number(5), number(3), JsJson::Vec(vec![9, 0, 0, 0])]);
+        assert_eq!(read.borrow().len(), 2, "gone with the device");
     }
 
     #[test]
@@ -1987,6 +2767,14 @@ mod tests {
         let shader = gpu.create_shader_module("");
         drop(gpu);
         assert_eq!(batch(|| drop(shader)), vec![], "the context is gone");
+    }
+
+    #[test]
+    fn a_pixel_is_as_many_bytes_as_its_channels_take() {
+        assert_eq!(TextureFormat::R8Unorm.bytes_per_pixel(), 1);
+        assert_eq!(TextureFormat::Rg16Float.bytes_per_pixel(), 4);
+        assert_eq!(TextureFormat::Rgba16Float.bytes_per_pixel(), 8);
+        assert_eq!(TextureFormat::Rgba32Float.bytes_per_pixel(), 16);
     }
 
     #[test]

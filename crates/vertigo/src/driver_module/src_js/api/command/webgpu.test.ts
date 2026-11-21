@@ -64,12 +64,21 @@ const recording = (log: Array<string>): Device & { destroy: () => void } => {
     const pass = (kind: string) => recorder(log, `${kind}.`, {});
 
     return recorder(log, '', {
-        createBuffer: () => destroyable('buffer'),
+        createBuffer: (descriptor: GPUBufferDescriptor) => destroyable('buffer', {
+            size: descriptor.size,
+            mapAsync: () => Promise.resolve(),
+            // Bytes counting from 1
+            getMappedRange: () => Uint8Array.from({ length: descriptor.size }, (_, index) => index + 1).buffer,
+        }),
         createTexture: (descriptor: GPUTextureDescriptor) => {
             const size = Array.isArray(descriptor.size) ? descriptor.size : [0, 0];
-            const texture = destroyable('texture', { format: descriptor.format, width: size[0], height: size[1] });
+            const texture = destroyable('texture', {
+                format: descriptor.format, width: size[0], height: size[1], sampleCount: descriptor.sampleCount ?? 1,
+            });
             return { ...texture, createView: () => ({ name: `view of ${texture.name}` }) };
         },
+        createBindGroupLayout: () => named('layout'),
+        createPipelineLayout: () => named('pipelines'),
         createSampler: () => named('sampler'),
         createShaderModule: () => named('module', { getCompilationInfo: () => Promise.resolve({ messages: [] }) }),
         createRenderPipeline: () => {
@@ -90,38 +99,61 @@ const recording = (log: Array<string>): Device & { destroy: () => void } => {
     }, { queue: recorder(log, 'queue.', {}) }) as unknown as Device & { destroy: () => void };
 };
 
-// The canvas, its texture now and its depth texture.
+// The canvas, its texture now, 2 x 1, its depth texture and its multisampled one, and what is
+// done beyond WebGPU's calls, written down.
 const canvasOf = (log: Array<string>): Canvas => ({
     format: 'bgra8unorm',
-    texture: () => ({ name: 'canvas', createView: () => ({ name: 'view of canvas' }) }) as unknown as GPUTexture,
-    depth: (format) => {
-        log.push(`depth(${format})`);
+    texture: () => ({
+        name: 'canvas', format: 'bgra8unorm', width: 2, height: 1, sampleCount: 1,
+        createView: () => ({ name: 'view of canvas' }),
+    }) as unknown as GPUTexture,
+    depth: (format, samples) => {
+        log.push(`depth(${format} ${samples})`);
         return { name: 'depth', format, createView: () => ({ name: 'view of depth' }) } as unknown as GPUTexture;
+    },
+    multisampled: (samples) => {
+        log.push(`multisampled(${samples})`);
+        return { name: 'multisampled', sampleCount: samples, createView: () => ({ name: 'view of multisampled' }) } as unknown as GPUTexture;
+    },
+    mipmaps: (texture) => {
+        log.push(`mipmaps(${shown(texture)})`);
+    },
+    load: (texture, url, options) => {
+        log.push(`load(${texture},${url},${shown(options)})`);
+    },
+    tell: (event) => {
+        log.push(`tell(${shown(event)})`);
     },
 });
 
 // `fixture()` in webgpu.rs: one call of each.
 const FIXTURE = new Uint8Array([
-    1, 1, 2, 1, 0, 0, 0, 0, 0, 0, 0, 2, 1, 0, 0, 0, 8, 0, 0, 0, 40, 0, 0, 0, 4, 1, 0, 0, 0, 4, 0,
-    0, 0, 8, 0, 0, 0, 0, 0, 192, 63, 0, 0, 0, 192, 4, 1, 0, 0, 0, 0, 0, 0, 0, 4, 0, 0, 0, 7, 0, 0,
-    0, 5, 2, 0, 0, 0, 2, 0, 0, 0, 1, 0, 0, 0, 1, 6, 0, 0, 0, 7, 2, 0, 0, 0, 8, 0, 0, 0, 2, 0, 0, 0,
-    1, 0, 0, 0, 8, 0, 0, 0, 255, 0, 128, 255, 1, 2, 3, 4, 8, 3, 0, 0, 0, 1, 2, 1, 0, 1, 10, 4, 0,
-    0, 0, 5, 0, 0, 0, 119, 103, 115, 197, 130, 12, 5, 0, 0, 0, 4, 0, 0, 0, 2, 0, 0, 0, 118, 115, 2,
-    24, 0, 0, 0, 0, 2, 2, 0, 0, 0, 0, 0, 0, 0, 0, 12, 12, 0, 0, 0, 1, 0, 0, 0, 64, 0, 0, 0, 1, 1,
-    3, 16, 0, 0, 0, 3, 0, 0, 0, 4, 2, 1, 2, 1, 15, 1, 3, 1, 4, 0, 0, 0, 2, 0, 0, 0, 102, 115, 2, 0,
-    0, 15, 9, 1, 4, 5, 0, 1, 5, 0, 7, 12, 6, 0, 0, 0, 4, 0, 0, 0, 2, 0, 0, 0, 118, 115, 0, 3, 0, 0,
-    0, 0, 0, 13, 7, 0, 0, 0, 4, 0, 0, 0, 2, 0, 0, 0, 99, 115, 15, 8, 0, 0, 0, 5, 0, 0, 0, 1, 0, 0,
-    0, 4, 0, 0, 0, 0, 0, 1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1, 0, 0, 0, 0, 1, 0, 0, 0, 0, 1, 0, 0,
-    64, 0, 0, 0, 2, 0, 0, 0, 1, 2, 0, 0, 0, 3, 0, 0, 0, 2, 3, 0, 0, 0, 17, 2, 0, 1, 0, 0, 0, 0, 0,
-    0, 0, 0, 0, 0, 0, 0, 0, 0, 208, 63, 0, 0, 0, 0, 0, 0, 224, 63, 0, 0, 0, 0, 0, 0, 240, 63, 0, 1,
-    2, 0, 0, 0, 0, 1, 1, 0, 15, 1, 0, 0, 128, 63, 0, 20, 5, 0, 0, 0, 21, 1, 0, 0, 0, 8, 0, 0, 0,
-    22, 1, 0, 0, 0, 1, 0, 0, 0, 8, 0, 0, 0, 23, 1, 0, 0, 0, 0, 2, 0, 0, 0, 24, 3, 0, 0, 0, 10, 0,
-    0, 0, 1, 0, 0, 0, 0, 0, 0, 0, 25, 36, 0, 0, 0, 144, 1, 0, 0, 6, 0, 0, 0, 255, 255, 255, 255, 2,
-    0, 0, 0, 27, 0, 0, 0, 0, 0, 0, 128, 63, 0, 0, 32, 68, 0, 0, 240, 67, 0, 0, 0, 0, 0, 0, 128, 63,
-    28, 1, 0, 0, 0, 2, 0, 0, 0, 3, 0, 0, 0, 4, 0, 0, 0, 19, 17, 0, 1, 1, 2, 0, 0, 0, 0, 1, 19, 18,
-    20, 7, 0, 0, 0, 21, 0, 0, 0, 0, 8, 0, 0, 0, 26, 4, 0, 0, 0, 2, 0, 0, 0, 1, 0, 0, 0, 19, 3, 1,
-    0, 0, 0, 6, 2, 0, 0, 0, 9, 3, 0, 0, 0, 11, 4, 0, 0, 0, 14, 5, 0, 0, 0, 14, 6, 0, 0, 0, 14, 7,
-    0, 0, 0, 16, 8, 0, 0, 0,
+    1, 1, 2, 1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 63, 2, 1, 0, 0, 0, 8, 0, 0, 0, 40, 0, 0, 0, 4, 1, 0,
+    0, 0, 4, 0, 0, 0, 8, 0, 0, 0, 0, 0, 192, 63, 0, 0, 0, 192, 4, 1, 0, 0, 0, 0, 0, 0, 0, 4, 0, 0,
+    0, 7, 0, 0, 0, 5, 2, 0, 0, 0, 2, 0, 0, 0, 1, 0, 0, 0, 1, 6, 0, 0, 0, 2, 0, 0, 0, 1, 7, 2, 0, 0,
+    0, 8, 0, 0, 0, 2, 0, 0, 0, 1, 0, 0, 0, 8, 0, 0, 0, 255, 0, 128, 255, 1, 2, 3, 4, 34, 2, 0, 0,
+    0, 35, 3, 0, 0, 0, 1, 1, 0, 6, 0, 0, 0, 47, 97, 46, 112, 110, 103, 8, 4, 0, 0, 0, 1, 2, 1, 0,
+    1, 10, 5, 0, 0, 0, 5, 0, 0, 0, 119, 103, 115, 197, 130, 29, 6, 0, 0, 0, 5, 0, 0, 0, 0, 3, 0, 0,
+    1, 0, 0, 0, 4, 2, 0, 2, 0, 0, 0, 2, 6, 0, 3, 0, 0, 0, 2, 3, 0, 4, 0, 0, 0, 2, 8, 1, 31, 7, 0,
+    0, 0, 1, 6, 0, 0, 0, 12, 8, 0, 0, 0, 7, 0, 0, 0, 5, 0, 0, 0, 2, 0, 0, 0, 118, 115, 2, 24, 0, 0,
+    0, 0, 2, 2, 0, 0, 0, 0, 0, 0, 0, 0, 12, 12, 0, 0, 0, 1, 0, 0, 0, 64, 0, 0, 0, 1, 1, 3, 16, 0,
+    0, 0, 3, 0, 0, 0, 4, 2, 1, 2, 1, 15, 1, 3, 1, 5, 0, 0, 0, 2, 0, 0, 0, 102, 115, 2, 0, 0, 15, 9,
+    1, 4, 5, 0, 1, 5, 0, 7, 4, 12, 9, 0, 0, 0, 0, 0, 0, 0, 5, 0, 0, 0, 2, 0, 0, 0, 118, 115, 0, 3,
+    0, 0, 0, 0, 0, 1, 13, 10, 0, 0, 0, 0, 0, 0, 0, 5, 0, 0, 0, 2, 0, 0, 0, 99, 115, 15, 11, 0, 0,
+    0, 6, 0, 0, 0, 4, 0, 0, 0, 0, 0, 1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1, 0, 0, 0, 0, 1, 0, 0, 0,
+    0, 1, 0, 0, 64, 0, 0, 0, 2, 0, 0, 0, 1, 3, 0, 0, 0, 3, 0, 0, 0, 2, 4, 0, 0, 0, 33, 12, 0, 0, 0,
+    10, 0, 0, 0, 0, 0, 0, 0, 15, 13, 0, 0, 0, 12, 0, 0, 0, 1, 0, 0, 0, 0, 0, 1, 0, 0, 0, 0, 0, 0,
+    0, 0, 0, 0, 0, 17, 2, 2, 4, 1, 0, 1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 208, 63, 0, 0,
+    0, 0, 0, 0, 224, 63, 0, 0, 0, 0, 0, 0, 240, 63, 1, 1, 2, 0, 0, 0, 0, 0, 1, 1, 0, 15, 1, 0, 0,
+    128, 63, 0, 20, 8, 0, 0, 0, 21, 1, 0, 0, 0, 11, 0, 0, 0, 22, 1, 0, 0, 0, 1, 0, 0, 0, 8, 0, 0,
+    0, 23, 1, 0, 0, 0, 0, 2, 0, 0, 0, 24, 3, 0, 0, 0, 10, 0, 0, 0, 1, 0, 0, 0, 0, 0, 0, 0, 25, 36,
+    0, 0, 0, 144, 1, 0, 0, 6, 0, 0, 0, 255, 255, 255, 255, 2, 0, 0, 0, 27, 0, 0, 0, 0, 0, 0, 128,
+    63, 0, 0, 32, 68, 0, 0, 240, 67, 0, 0, 0, 0, 0, 0, 128, 63, 28, 1, 0, 0, 0, 2, 0, 0, 0, 3, 0,
+    0, 0, 4, 0, 0, 0, 19, 17, 0, 1, 1, 2, 0, 0, 0, 0, 1, 19, 18, 20, 10, 0, 0, 0, 21, 0, 0, 0, 0,
+    13, 0, 0, 0, 26, 4, 0, 0, 0, 2, 0, 0, 0, 1, 0, 0, 0, 19, 36, 1, 0, 0, 0, 1, 0, 0, 0, 37, 2, 0,
+    0, 0, 0, 37, 3, 0, 0, 0, 1, 2, 0, 0, 0, 3, 1, 0, 0, 0, 6, 2, 0, 0, 0, 6, 3, 0, 0, 0, 9, 4, 0,
+    0, 0, 11, 5, 0, 0, 0, 30, 6, 0, 0, 0, 32, 7, 0, 0, 0, 14, 8, 0, 0, 0, 14, 9, 0, 0, 0, 14, 10,
+    0, 0, 0, 16, 11, 0, 0, 0, 30, 12, 0, 0, 0, 16, 13, 0, 0, 0,
 ]);
 
 console.log("\n--- Test webgpu: playing the fixture back ---");
@@ -132,19 +164,27 @@ console.log("\n--- Test webgpu: playing the fixture back ---");
         'createBuffer({"size":8,"usage":40})',
         'queue.writeBuffer(buffer1,4,[0,0,192,63,0,0,0,192])',
         'queue.writeBuffer(buffer1,0,[7,0,0,0])',
-        'createTexture({"size":[2,1],"format":"rgba8unorm","usage":6})',
+        'createTexture({"size":[2,1],"format":"rgba8unorm","usage":6,"mipLevelCount":2,"sampleCount":1})',
         'queue.writeTexture({"texture":"texture2"},[255,0,128,255,1,2,3,4],{"bytesPerRow":8},[2,1])',
+        'mipmaps(texture2)',
+        'createTexture({"size":[1,1],"format":"rgba8unorm","usage":7})',
+        'queue.writeTexture({"texture":"texture3"},[255,255,255,255],{"bytesPerRow":4},[1,1])',
+        'load(3,/a.png,{"mipmaps":true,"premultiplied":true,"flip":false})',
         'createSampler({"addressModeU":"repeat","addressModeV":"mirror-repeat","magFilter":"linear","minFilter":"nearest","mipmapFilter":"linear"})',
         'createShaderModule({"code":"wgsł"})',
-        'createRenderPipeline({"layout":"auto","vertex":{"module":"module4","entryPoint":"vs","buffers":[{"arrayStride":24,"stepMode":"vertex","attributes":[{"format":"float32x3","offset":0,"shaderLocation":0},{"format":"unorm8x4","offset":12,"shaderLocation":1}]},{"arrayStride":64,"stepMode":"instance","attributes":[{"format":"float32x4","offset":16,"shaderLocation":3}]}]},"primitive":{"topology":"triangle-strip","stripIndexFormat":"uint32","frontFace":"cw","cullMode":"back"},"depthStencil":{"format":"depth24plus","depthWriteEnabled":true,"depthCompare":"less-equal"},"fragment":{"module":"module4","entryPoint":"fs","targets":[{"format":"bgra8unorm","writeMask":15},{"format":"rgba16float","blend":{"color":{"srcFactor":"src-alpha","dstFactor":"one-minus-src-alpha","operation":"add"},"alpha":{"srcFactor":"one","dstFactor":"one-minus-src-alpha","operation":"add"}},"writeMask":7}]}})',
-        'createRenderPipeline({"layout":"auto","vertex":{"module":"module4","entryPoint":"vs","buffers":[]},"primitive":{"topology":"triangle-list","frontFace":"ccw","cullMode":"none"}})',
-        'createComputePipeline({"layout":"auto","compute":{"module":"module4","entryPoint":"cs"}})',
-        'createBindGroup({"layout":"layout 1 of pipeline5","entries":[{"binding":0,"resource":{"buffer":"buffer1","offset":0}},{"binding":1,"resource":{"buffer":"buffer1","offset":256,"size":64}},{"binding":2,"resource":"view of texture2"},{"binding":3,"resource":"sampler3"}]})',
+        'createBindGroupLayout({"entries":[{"binding":0,"visibility":3,"buffer":{"type":"uniform"}},{"binding":1,"visibility":4,"buffer":{"type":"read-only-storage"}},{"binding":2,"visibility":2,"texture":{"sampleType":"float","multisampled":false}},{"binding":3,"visibility":2,"sampler":{"type":"filtering"}},{"binding":4,"visibility":2,"texture":{"sampleType":"depth","multisampled":true}}]})',
+        'createPipelineLayout({"bindGroupLayouts":["layout6"]})',
+        'createRenderPipeline({"layout":"pipelines7","vertex":{"module":"module5","entryPoint":"vs","buffers":[{"arrayStride":24,"stepMode":"vertex","attributes":[{"format":"float32x3","offset":0,"shaderLocation":0},{"format":"unorm8x4","offset":12,"shaderLocation":1}]},{"arrayStride":64,"stepMode":"instance","attributes":[{"format":"float32x4","offset":16,"shaderLocation":3}]}]},"primitive":{"topology":"triangle-strip","stripIndexFormat":"uint32","frontFace":"cw","cullMode":"back"},"depthStencil":{"format":"depth24plus","depthWriteEnabled":true,"depthCompare":"less-equal"},"fragment":{"module":"module5","entryPoint":"fs","targets":[{"format":"bgra8unorm","writeMask":15},{"format":"rgba16float","blend":{"color":{"srcFactor":"src-alpha","dstFactor":"one-minus-src-alpha","operation":"add"},"alpha":{"srcFactor":"one","dstFactor":"one-minus-src-alpha","operation":"add"}},"writeMask":7}]},"multisample":{"count":4}})',
+        'createRenderPipeline({"layout":"auto","vertex":{"module":"module5","entryPoint":"vs","buffers":[]},"primitive":{"topology":"triangle-list","frontFace":"ccw","cullMode":"none"}})',
+        'createComputePipeline({"layout":"auto","compute":{"module":"module5","entryPoint":"cs"}})',
+        'createBindGroup({"layout":"layout6","entries":[{"binding":0,"resource":{"buffer":"buffer1","offset":0}},{"binding":1,"resource":{"buffer":"buffer1","offset":256,"size":64}},{"binding":2,"resource":"view of texture3"},{"binding":3,"resource":"sampler4"}]})',
+        'createBindGroup({"layout":"layout 0 of compute10","entries":[{"binding":0,"resource":{"buffer":"buffer1","offset":0}}]})',
         'createCommandEncoder()',
-        'depth(depth24plus)',
-        'encoder.beginRenderPass({"colorAttachments":[{"view":"view of canvas","loadOp":"clear","clearValue":{"r":0,"g":0.25,"b":0.5,"a":1},"storeOp":"store"},{"view":"view of texture2","loadOp":"load","storeOp":"discard"}],"depthStencilAttachment":{"view":"view of depth","depthLoadOp":"clear","depthClearValue":1,"depthStoreOp":"store"}})',
-        'render.setPipeline(pipeline5)',
-        'render.setBindGroup(1,group8)',
+        'multisampled(4)',
+        'depth(depth24plus 4)',
+        'encoder.beginRenderPass({"colorAttachments":[{"view":"view of multisampled","resolveTarget":"view of canvas","loadOp":"clear","clearValue":{"r":0,"g":0.25,"b":0.5,"a":1},"storeOp":"discard"},{"view":"view of texture2","loadOp":"load","storeOp":"discard"}],"depthStencilAttachment":{"view":"view of depth","depthLoadOp":"clear","depthClearValue":1,"depthStoreOp":"store"}})',
+        'render.setPipeline(pipeline8)',
+        'render.setBindGroup(1,group11)',
         'render.setVertexBuffer(1,buffer1,8)',
         'render.setIndexBuffer(buffer1,"uint16",2)',
         'render.draw(3,10,1,0)',
@@ -155,15 +195,36 @@ console.log("\n--- Test webgpu: playing the fixture back ---");
         'encoder.beginRenderPass({"colorAttachments":[],"depthStencilAttachment":{"view":"view of texture2","depthLoadOp":"load","depthStoreOp":"discard"}})',
         'render.end()',
         'encoder.beginComputePass()',
-        'compute.setPipeline(compute7)',
-        'compute.setBindGroup(0,group8)',
+        'compute.setPipeline(compute10)',
+        'compute.setBindGroup(0,group12)',
         'compute.dispatchWorkgroups(4,2,1)',
         'compute.end()',
+        'createBuffer({"size":8,"usage":9})',
+        'encoder.copyBufferToBuffer(buffer1,0,buffer13,0,8)',
+        'createBuffer({"size":256,"usage":9})',
+        'encoder.copyTextureToBuffer({"texture":"canvas"},{"buffer":"buffer14","bytesPerRow":256},[2,1])',
+        'createBuffer({"size":256,"usage":9})',
+        'encoder.copyTextureToBuffer({"texture":"texture2"},{"buffer":"buffer15","bytesPerRow":256},[2,1])',
         'encoder.finish()',
-        'queue.submit(["commands9"])',
+        'queue.submit(["commands16"])',
         'destroy buffer1',
         'destroy texture2',
+        'destroy texture3',
     ], 'each call as WebGPU takes it, the passes sent at the end, then what was let go destroyed');
+
+    // The reads, once their copies are mapped: bytes counting from 1, the canvas's as RGBA.
+    log.length = 0;
+    void (async () => {
+        await new Promise((resolve) => setTimeout(resolve, 0));
+        same(log, [
+            'tell([5,1,[1,2,3,4,5,6,7,8]])',
+            'destroy buffer13',
+            'tell([6,2,2,1,[3,2,1,4,7,6,5,8]])',
+            'destroy buffer14',
+            'tell([6,3,2,1,[1,2,3,4,5,6,7,8]])',
+            'destroy buffer15',
+        ], 'what was read told, rows without their padding, and the copies let go');
+    })();
 }
 
 const calls = (...ops: Array<Array<number>>): Uint8Array => new Uint8Array(ops.flat());
@@ -171,7 +232,7 @@ const u32 = (value: number): Array<number> => [value & 255, (value >> 8) & 255, 
 const buffer = (id: number) => [2, ...u32(id), ...u32(4), ...u32(8)];
 const write = (id: number) => [4, ...u32(id), ...u32(0), ...u32(4), 1, 2, 3, 4];
 // A pass on the canvas, kept, and with a depth texture as big as it, if `depth`.
-const pass = (depth = false) => [17, 1, 0, 0, 0, ...(depth ? [1, 0, 15, 0, 0] : [0])];
+const pass = (depth = false) => [17, 1, 0, 0, 0, 0, ...(depth ? [1, 0, 15, 0, 0] : [0])];
 const end = [19];
 
 console.log("\n--- Test webgpu: writes and passes in order ---");
@@ -224,6 +285,42 @@ console.log("\n--- Test webgpu: writes and passes in order ---");
     assert(thrown.includes('unknown operation 200'), 'an unknown operation is an error');
 }
 
+console.log("\n--- Test webgpu: a texture becoming another ---");
+{
+    const log: Array<string> = [];
+    const device = recording(log);
+    const objects = new Objects();
+    const source = (text: string) => [...u32(text.length), ...Array.from(text, (char) => char.charCodeAt(0))];
+    // A layout of a texture and a sampler, a texture from a URL, a sampler, a group with both and
+    // one with the sampler only.
+    play(device, objects, canvasOf(log), calls(
+        [29, ...u32(1), 2, ...u32(0), 2, 6, 0, ...u32(1), 2, 3, 0],
+        [35, ...u32(2), 0, 0, 0, ...source('/a.png')],
+        [8, ...u32(3), 0, 0, 0, 0, 0],
+        [15, ...u32(4), ...u32(1), 2, ...u32(0), 1, ...u32(2), ...u32(1), 2, ...u32(3)],
+        [15, ...u32(5), ...u32(1), 1, ...u32(1), 2, ...u32(3)],
+    ));
+    assert(log.includes('load(2,/a.png,{"mipmaps":false,"premultiplied":false,"flip":false})'), 'the image asked for');
+
+    log.length = 0;
+    const image = device.createTexture({ size: [64, 32], format: 'rgba8unorm', usage: 4 });
+    objects.replaceTexture(device, 2, image);
+    same(log.slice(1), [
+        'createBindGroup({"layout":"layout1","entries":[{"binding":0,"resource":"view of texture6"},{"binding":1,"resource":"sampler3"}]})',
+    ], 'the bind group with it made again, with the image, and not the other');
+    assert(objects.textures.get(2) === image, 'the texture of the id is the image\'s');
+
+    play(device, objects, canvasOf(log), calls([9, ...u32(3)]));
+    log.length = 0;
+    objects.replaceTexture(device, 2, image);
+    assert(log.some((call) => call.includes('"resource":"sampler3"')), 'made again also once its sampler was let go');
+
+    play(device, objects, canvasOf(log), calls([16, ...u32(4)]));
+    log.length = 0;
+    objects.replaceTexture(device, 2, image);
+    same(log, [], 'a group let go is not made again');
+}
+
 console.log("\n--- Test webgpu: devices of canvases ---");
 {
     // On the page, 160 x 100 CSS pixels.
@@ -244,7 +341,9 @@ console.log("\n--- Test webgpu: devices of canvases ---");
                 configure: (configuration: GPUCanvasConfiguration) => {
                     this.log.push(`configure(${configuration.format} ${String(configuration.alphaMode)})`);
                 },
-                getCurrentTexture: () => ({ name: `canvas ${this.width}x${this.height}`, createView: () => ({ name: 'view of canvas' }) }),
+                getCurrentTexture: () => ({
+                    name: `canvas ${this.width}x${this.height}`, sampleCount: 1, createView: () => ({ name: 'view of canvas' }),
+                }),
             };
         }
     }
@@ -293,8 +392,9 @@ console.log("\n--- Test webgpu: devices of canvases ---");
     const run = (canvas: FakeCanvas, bytes: Uint8Array) => webgpus.run(canvas as unknown as Element, bytes);
     const resized = (canvas: FakeCanvas, width: number, height: number) =>
         watchers[0]?.([{ target: canvas, contentRect: { width, height } }]);
-    // The first call of a context: its options and its callback.
-    const context = (alpha: number, power: number, callback: number) => [1, alpha, power, ...u32(callback), ...u32(0)];
+    // The first call of a context: its options, its callback and the scale of its bitmap, 1.
+    const context = (alpha: number, power: number, callback: number) =>
+        [1, alpha, power, ...u32(callback), ...u32(0), 0, 0, 128, 63];
 
     void (async () => {
         const canvas = new FakeCanvas();
@@ -324,18 +424,18 @@ console.log("\n--- Test webgpu: devices of canvases ---");
         device.log.length = 0;
         run(canvas, calls(pass(true), end, pass(true), end));
         const depths = () => device.log.filter((call) => call.startsWith('createTexture'));
-        same(depths(), ['createTexture({"size":[320,200],"format":"depth24plus","usage":16})'],
+        same(depths(), ['createTexture({"size":[320,200],"format":"depth24plus","sampleCount":1,"usage":16})'],
             'a depth texture as big as the canvas, made once');
         resized(canvas, 200, 100);
         device.log.length = 0;
         run(canvas, calls(pass(true), end));
-        same(depths(), ['createTexture({"size":[400,200],"format":"depth24plus","usage":16})'],
+        same(depths(), ['createTexture({"size":[400,200],"format":"depth24plus","sampleCount":1,"usage":16})'],
             'and again when the canvas is resized');
         assert(device.log.includes('destroy texture2'), 'the old one destroyed');
 
         // Lost, and another device given.
         device.lose('the GPU was reset');
-        const [error, warn] = [console.error, console.warn];
+        const warn = console.warn;
         const warnings: Array<unknown> = [];
         console.warn = (message: unknown) => { warnings.push(message); };
         await settled();
@@ -366,28 +466,28 @@ console.log("\n--- Test webgpu: devices of canvases ---");
         // A browser without WebGPU.
         hasGpu = false;
         const none = new FakeCanvas();
-        const errors: Array<unknown> = [];
-        console.error = (message: unknown) => { errors.push(message); };
+        const told_console: Array<unknown> = [];
+        console.warn = (message: unknown) => { told_console.push(message); };
         try {
             run(none, calls(context(0, 0, 8), buffer(1)));
             run(none, calls(write(1)));
         } finally {
-            console.error = error;
+            console.warn = warn;
         }
         same(told.slice(3), ['8: 2'], 'wasm is told there is no WebGPU');
-        assert(errors.length === 1, 'and the console, once');
+        assert(told_console.length === 1, 'and the console, once, as a warning: the page draws another way');
         same(none.log, [], 'the canvas free for another context');
 
         // A canvas with another context already.
         hasGpu = true;
         const taken = new FakeCanvas();
         taken.other = { getParameter: () => 0 };
-        console.error = () => {};
+        console.warn = () => {};
         run(taken, calls(context(0, 0, 9)));
         await settled();
         give();
         await settled();
-        console.error = error;
+        console.warn = warn;
         same(told.slice(4), ['9: 2'], 'nor for a canvas with another context');
         assert(devices[2]!.destroyed(), 'whose device is let go');
     // A failed assertion rejects, which ends node with an error.

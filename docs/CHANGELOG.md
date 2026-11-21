@@ -46,6 +46,17 @@
   `WebGpu::size` and `WebGpu::on_resize` tell. A device lost is asked for again, and
   `WebGpu::on_restore` makes the objects again. A shader that doesn't compile, or anything WebGPU
   finds wrong, is told in the console. The demo draws the cube of its WebGL tab with it.
+* `webgpu`: textures of images from URLs (`WebGpu::create_texture_from_url`, told by
+  `WebGpu::on_image_load`), the bind groups with them taking the image when it comes; textures of
+  more levels (`TextureDescriptor::mip_level_count`, `Size::mip_levels`) whose smaller images
+  `WebGpu::generate_mipmaps` makes, as WebGPU has no way of its own; bind group and pipeline
+  layouts of their own (`WebGpu::create_bind_group_layout`, `WebGpu::create_pipeline_layout`), so
+  a bind group serves many pipelines, and `RenderPipeline::get_bind_group_layout` for those
+  WebGPU finds; a multisampled canvas with smooth edges (`ColorAttachment::canvas_multisampled`,
+  `MultisampleState`), its depth texture of as many samples; reads of buffers and of pixels
+  (`WebGpu::read_buffer`, `WebGpu::read_pixels`), f. ex. of what a compute pass computed; and
+  `WebGpuOptions::bitmap_scale`, as WebGL's. The demo's WebGPU tab draws its cube smooth, a picture
+  from a file, and numbers doubled by a compute pass, all read back by its e2e test.
 
 ### Changed
 

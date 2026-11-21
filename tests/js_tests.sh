@@ -47,8 +47,10 @@ fi
 echo "OK: wasm_run.js is ${SIZE} B, within the ${BUDGET} B budget"
 
 # Each chunk, which an app downloads once it needs what the chunk does. The biggest is the one of
-# WebGL and WebGPU together (`gpu.ts`), which share the code sizing canvases.
-CHUNK_BUDGET=19000
+# WebGL and WebGPU together (`gpu.ts`), which share the code sizing canvases. WebGPU's layouts,
+# textures from URLs with the mipmaps it makes, multisampled canvases and reads took it from
+# 18.8 KB to 24.5 KB (7.4 KB with brotli), which only pages drawing with the GPU download.
+CHUNK_BUDGET=25000
 
 for CHUNK in crates/vertigo/src/driver_module/chunks/*.js; do
     SIZE=$(wc -c < "$CHUNK")

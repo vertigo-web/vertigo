@@ -19,6 +19,8 @@ impl JsJsonListDecoder {
         };
 
         match value {
+            // A `Uint8Array`
+            JsJson::Vec(bytes) => Ok(bytes),
             JsJson::List(list) => {
                 let mut out = Vec::with_capacity(list.len());
                 for item in list {

@@ -11,14 +11,22 @@
 // The passes of a batch are encoded into one command buffer, which goes to the queue at the end
 // of the batch, or before a write, so that the write comes after the passes made before it. The
 // buffers and textures let go during a batch are destroyed after it, as its passes may use them.
+// Reads copy what they read in the command buffer, and map the copy once it went to the queue.
 //
-// The bitmap of a canvas is kept as big as the canvas is on the screen, see `canvas_sizes.ts`, and
-// so is a depth texture of it, made again when the bitmap is resized.
+// The bitmap of a canvas is kept as big as the canvas is on the screen, times the scale it was
+// asked for, see `canvas_sizes.ts`, and so are a depth texture of it and a multisampled one, made
+// again when the bitmap is resized.
+//
+// A texture of an image from a URL is a white pixel until the image comes, when it becomes another
+// texture, as big as the image: the bind groups with it are made again then, from what they were
+// made of, which is kept for them.
 //
 // A device lost is asked for again. When one comes, every object is gone: the ids are forgotten,
 // and wasm is told, to make them again. Wasm is told `[0, width, height]` when the canvas changes
-// its size, `[1]` when the context has a new device, `[2]` when there is no WebGPU for it, see
-// `GpuEvent` in webgpu.rs.
+// its size, `[1]` when the context has a new device, `[2]` when there is no WebGPU for it,
+// `[3, texture, width, height]` when an image is in its texture, `[4, texture]` when it didn't
+// load, `[5, request, bytes]` with the bytes a read read, `[6, request, width, height, bytes]` with
+// the pixels, see `GpuEvent` in webgpu.rs.
 
 import { CanvasSizes, Size, Tell } from "./canvas_sizes";
 
@@ -53,7 +61,20 @@ const Op = {
     DispatchWorkgroups: 26,
     SetViewport: 27,
     SetScissorRect: 28,
+    CreateBindGroupLayout: 29,
+    DeleteBindGroupLayout: 30,
+    CreatePipelineLayout: 31,
+    DeletePipelineLayout: 32,
+    PipelineBindGroupLayout: 33,
+    GenerateMipmaps: 34,
+    TextureFromUrl: 35,
+    ReadBuffer: 36,
+    ReadPixels: 37,
 } as const;
+
+// Bytes of `Op.Context` after its code: the alpha mode, the power preference, the callback (8)
+// and the scale of the bitmap (4).
+const CONTEXT_LENGTH = 14;
 
 // WebGPU's strings, at the places of the values of the enums in webgpu.rs. `null` is the format of
 // the canvas.
@@ -91,9 +112,36 @@ const ALPHA_MODES: ReadonlyArray<GPUCanvasAlphaMode> = ['opaque', 'premultiplied
 const POWER_PREFERENCES: ReadonlyArray<GPUPowerPreference | undefined> = [
     undefined, 'low-power', 'high-performance',
 ];
+// The bindings of layouts, by their kinds, see `BindingType::kind` in webgpu.rs.
+const BINDINGS: ReadonlyArray<(multisampled: boolean) => Omit<GPUBindGroupLayoutEntry, 'binding' | 'visibility'>> = [
+    () => ({ buffer: { type: 'uniform' } }),
+    () => ({ buffer: { type: 'storage' } }),
+    () => ({ buffer: { type: 'read-only-storage' } }),
+    () => ({ sampler: { type: 'filtering' } }),
+    () => ({ sampler: { type: 'non-filtering' } }),
+    () => ({ sampler: { type: 'comparison' } }),
+    (multisampled) => ({ texture: { sampleType: 'float', multisampled } }),
+    (multisampled) => ({ texture: { sampleType: 'unfilterable-float', multisampled } }),
+    (multisampled) => ({ texture: { sampleType: 'depth', multisampled } }),
+    (multisampled) => ({ texture: { sampleType: 'sint', multisampled } }),
+    (multisampled) => ({ texture: { sampleType: 'uint', multisampled } }),
+];
 
-// `GPUTextureUsage.RENDER_ATTACHMENT`, which isn't there outside of a browser.
+// Bytes of a pixel of the formats of other than 4, see `TextureFormat::bytes_per_pixel`.
+const BYTES_PER_PIXEL: Partial<Record<GPUTextureFormat, number>> = {
+    'r8unorm': 1, 'rg8unorm': 2, 'r16float': 2, 'depth16unorm': 2, 'rgba16float': 8,
+    'rg32float': 8, 'rgba32float': 16,
+};
+
+// `GPUTextureUsage` and `GPUBufferUsage`, which aren't there outside of a browser.
+const COPY_SRC = 0x01;
+const COPY_DST = 0x02;
+const TEXTURE_BINDING = 0x04;
 const RENDER_ATTACHMENT = 0x10;
+const MAP_READ = 0x01;
+const BUFFER_COPY_DST = 0x08;
+// `GPUMapMode.READ`
+const READ = 0x01;
 
 // The value at `index` of `values`, see the lists above.
 const pick = <T>(values: ReadonlyArray<T>, index: number, what: string): T => {
@@ -107,14 +155,30 @@ const pick = <T>(values: ReadonlyArray<T>, index: number, what: string): T => {
 // The part of a device the calls use, so a test can play them back on a recording.
 export type Device = Pick<GPUDevice,
     'createBuffer' | 'createTexture' | 'createSampler' | 'createShaderModule'
-    | 'createRenderPipeline' | 'createComputePipeline' | 'createBindGroup' | 'createCommandEncoder'
-    | 'queue'>;
+    | 'createRenderPipeline' | 'createComputePipeline' | 'createBindGroup' | 'createBindGroupLayout'
+    | 'createPipelineLayout' | 'createCommandEncoder' | 'queue'>;
 
-// What the passes draw on: the canvas, in its format, and a depth texture as big as it is.
+// How an image goes into a texture, see `ImageOptions` in webgpu.rs.
+export type ImageOptions = { mipmaps: boolean, premultiplied: boolean, flip: boolean };
+
+// What the passes draw on, and what is done for the calls beyond WebGPU's own: the canvas, in
+// its format, a depth texture and a multisampled one as big as it, the smaller images of a
+// texture, an image loaded into a texture, and wasm told of what was read.
 export type Canvas = {
     readonly format: GPUTextureFormat,
     texture: () => GPUTexture,
-    depth: (format: GPUTextureFormat) => GPUTexture,
+    depth: (format: GPUTextureFormat, samples: number) => GPUTexture,
+    multisampled: (samples: number) => GPUTexture,
+    mipmaps: (texture: GPUTexture) => void,
+    load: (texture: number, url: string, options: ImageOptions) => void,
+    tell: (event: Array<number | Uint8Array<ArrayBuffer>>) => void,
+};
+
+// What a bind group is made of, to be made again when a texture of it becomes another: its
+// textures by their ids, and with what they were then, in case they were let go since.
+type GroupSource = {
+    layout: GPUBindGroupLayout,
+    entries: Array<{ binding: number, resource: GPUBindingResource } | { binding: number, texture: number, was: GPUTexture }>,
 };
 
 // The objects of a context by their ids.
@@ -125,7 +189,29 @@ export class Objects {
     public readonly modules: Map<number, GPUShaderModule> = new Map();
     public readonly renderPipelines: Map<number, GPURenderPipeline> = new Map();
     public readonly computePipelines: Map<number, GPUComputePipeline> = new Map();
+    public readonly layouts: Map<number, GPUBindGroupLayout> = new Map();
+    public readonly pipelineLayouts: Map<number, GPUPipelineLayout> = new Map();
     public readonly groups: Map<number, GPUBindGroup> = new Map();
+    public readonly groupSources: Map<number, GroupSource> = new Map();
+
+    // The bind group of `id`, made of `source`, now or again.
+    public makeGroup(device: Device, id: number, source: GroupSource) {
+        const entries: Array<GPUBindGroupEntry> = source.entries.map((entry) => 'texture' in entry
+            ? { binding: entry.binding, resource: (this.textures.get(entry.texture) ?? entry.was).createView() }
+            : entry);
+        this.groups.set(id, device.createBindGroup({ layout: source.layout, entries }));
+        this.groupSources.set(id, source);
+    }
+
+    // The texture of `id` is `texture` now: the bind groups with it are made again.
+    public replaceTexture(device: Device, id: number, texture: GPUTexture) {
+        this.textures.set(id, texture);
+        for (const [group, source] of this.groupSources) {
+            if (source.entries.some((entry) => 'texture' in entry && entry.texture === id)) {
+                this.makeGroup(device, group, source);
+            }
+        }
+    }
 }
 
 // Whether `value`, which `getContext` answered, is a WebGPU context.
@@ -205,7 +291,14 @@ export const play = (device: Device, objects: Objects, canvas: Canvas, bytes: Ui
         operation: pick(BLEND_OPERATIONS, u8(), 'blend operation'),
     });
 
+    // The layout of a pipeline: 0 for the one WebGPU finds in its shaders.
+    const pipelineLayout = (): GPUPipelineLayout | 'auto' => {
+        const id = u32();
+        return id === 0 ? 'auto' : need(objects.pipelineLayouts, id, 'pipeline layout');
+    };
+
     const renderPipeline = (): GPURenderPipelineDescriptor => {
+        const layout = pipelineLayout();
         const vertexModule = need(objects.modules, u32(), 'shader module');
         const vertexEntry = text();
         const buffers: Array<GPUVertexBufferLayout> = [];
@@ -233,7 +326,7 @@ export const play = (device: Device, objects: Objects, canvas: Canvas, bytes: Ui
         };
 
         const descriptor: GPURenderPipelineDescriptor = {
-            layout: 'auto',
+            layout,
             vertex: { module: vertexModule, entryPoint: vertexEntry, buffers },
             primitive,
         };
@@ -261,39 +354,61 @@ export const play = (device: Device, objects: Objects, canvas: Canvas, bytes: Ui
             descriptor.fragment = { module, entryPoint, targets };
         }
 
+        const samples = u8();
+        if (samples > 1) {
+            descriptor.multisample = { count: samples };
+        }
+
         return descriptor;
     };
 
-    const bindGroup = (): GPUBindGroupDescriptor => {
-        const pipelineId = u32();
-        const group = u32();
-        const pipeline = objects.renderPipelines.get(pipelineId) ?? need(objects.computePipelines, pipelineId, 'pipeline');
-        const entries: Array<GPUBindGroupEntry> = [];
+    const groupSource = (): GroupSource => {
+        const layout = need(objects.layouts, u32(), 'bind group layout');
+        const entries: GroupSource['entries'] = [];
         for (let count = u8(); count > 0; count--) {
             const binding = u32();
             const kind = u8();
+            const id = u32();
             if (kind === 0) {
-                const buffer = need(objects.buffers, u32(), 'buffer');
+                const buffer = need(objects.buffers, id, 'buffer');
                 const offset = u32();
                 const size = u32();
                 entries.push({ binding, resource: { buffer, offset, size: size === 0 ? undefined : size } });
             } else if (kind === 1) {
-                entries.push({ binding, resource: need(objects.textures, u32(), 'texture').createView() });
+                entries.push({ binding, texture: id, was: need(objects.textures, id, 'texture') });
             } else {
-                entries.push({ binding, resource: need(objects.samplers, u32(), 'sampler') });
+                entries.push({ binding, resource: need(objects.samplers, id, 'sampler') });
             }
         }
-        return { layout: pipeline.getBindGroupLayout(group), entries };
+        return { layout, entries };
+    };
+
+    // Where colors go: the canvas, a texture, or a multisampled one as big as the canvas.
+    const target = (): GPUTexture => {
+        const kind = u8();
+        if (kind === 0) {
+            return canvas.texture();
+        } else if (kind === 1) {
+            return need(objects.textures, u32(), 'texture');
+        }
+        return canvas.multisampled(u8());
     };
 
     const renderPass = (): GPURenderPassDescriptor => {
         const colorAttachments: Array<GPURenderPassColorAttachment> = [];
+        // A depth texture of the canvas has as many samples as the first color attachment.
+        let samples = 1;
         for (let count = u8(); count > 0; count--) {
-            const texture = u8() === 0 ? canvas.texture() : need(objects.textures, u32(), 'texture');
+            const texture = target();
+            if (colorAttachments.length === 0) {
+                samples = texture.sampleCount;
+            }
+            const resolveTarget = u8() === 1 ? target().createView() : undefined;
             const clear = u8() === 1;
             const clearValue = clear ? { r: f64(), g: f64(), b: f64(), a: f64() } : undefined;
             colorAttachments.push({
                 view: texture.createView(),
+                resolveTarget,
                 loadOp: clear ? 'clear' : 'load',
                 clearValue,
                 storeOp: u8() === 0 ? 'store' : 'discard',
@@ -302,7 +417,7 @@ export const play = (device: Device, objects: Objects, canvas: Canvas, bytes: Ui
 
         const descriptor: GPURenderPassDescriptor = { colorAttachments };
         if (u8() === 1) {
-            const texture = u8() === 0 ? canvas.depth(format()) : need(objects.textures, u32(), 'texture');
+            const texture = u8() === 0 ? canvas.depth(format(), samples) : need(objects.textures, u32(), 'texture');
             const clear = u8() === 1;
             const depthClearValue = clear ? f32() : undefined;
             const depthStoreOp = u8() === 0 ? 'store' : 'discard';
@@ -325,6 +440,8 @@ export const play = (device: Device, objects: Objects, canvas: Canvas, bytes: Ui
     let compute: GPUComputePassEncoder | null = null;
     // Let go during the batch, destroyed after it.
     const doomed: Array<GPUBuffer | GPUTexture> = [];
+    // Reads, to be mapped once their copies went to the queue.
+    const reads: Array<() => void> = [];
 
     const encoding = (): GPUCommandEncoder => {
         encoder ??= device.createCommandEncoder();
@@ -344,6 +461,9 @@ export const play = (device: Device, objects: Objects, canvas: Canvas, bytes: Ui
         if (encoder !== null) {
             device.queue.submit([encoder.finish()]);
             encoder = null;
+        }
+        for (const read of reads.splice(0)) {
+            read();
         }
     };
 
@@ -369,13 +489,27 @@ export const play = (device: Device, objects: Objects, canvas: Canvas, bytes: Ui
         return pass;
     };
 
+    // A buffer `size` bytes long the GPU copies into, mapped, to `done` with its bytes.
+    const readInto = (size: number, copy: (into: GPUBuffer) => void, done: (bytes: Uint8Array<ArrayBuffer>) => void) => {
+        const into = device.createBuffer({ size, usage: MAP_READ | BUFFER_COPY_DST });
+        copy(into);
+        reads.push(() => {
+            into.mapAsync(READ).then(() => {
+                done(new Uint8Array(into.getMappedRange().slice(0)));
+                into.destroy();
+            }, () => {
+                into.destroy();
+            });
+        });
+    };
+
     while (at < bytes.length) {
         const op = u8();
 
         switch (op) {
             case Op.Context:
                 // Taken by `WebGpus.run` when it made the context: its options and its callback.
-                at += 10;
+                at += CONTEXT_LENGTH;
                 break;
             case Op.CreateBuffer: {
                 const id = u32();
@@ -404,7 +538,12 @@ export const play = (device: Device, objects: Objects, canvas: Canvas, bytes: Ui
                 const width = u32();
                 const height = u32();
                 const textureFormat = format();
-                objects.textures.set(id, device.createTexture({ size: [width, height], format: textureFormat, usage: u32() }));
+                const usage = u32();
+                const mipLevelCount = u32();
+                const sampleCount = u8();
+                objects.textures.set(id, device.createTexture({
+                    size: [width, height], format: textureFormat, usage, mipLevelCount, sampleCount,
+                }));
                 break;
             }
             case Op.DestroyTexture: {
@@ -456,9 +595,10 @@ export const play = (device: Device, objects: Objects, canvas: Canvas, bytes: Ui
             }
             case Op.CreateComputePipeline: {
                 const id = u32();
+                const layout = pipelineLayout();
                 const module = need(objects.modules, u32(), 'shader module');
                 objects.computePipelines.set(id, device.createComputePipeline({
-                    layout: 'auto',
+                    layout,
                     compute: { module, entryPoint: text() },
                 }));
                 break;
@@ -471,12 +611,15 @@ export const play = (device: Device, objects: Objects, canvas: Canvas, bytes: Ui
             }
             case Op.CreateBindGroup: {
                 const id = u32();
-                objects.groups.set(id, device.createBindGroup(bindGroup()));
+                objects.makeGroup(device, id, groupSource());
                 break;
             }
-            case Op.DeleteBindGroup:
-                objects.groups.delete(u32());
+            case Op.DeleteBindGroup: {
+                const id = u32();
+                objects.groups.delete(id);
+                objects.groupSources.delete(id);
                 break;
+            }
             case Op.BeginRenderPass:
                 end();
                 render = encoding().beginRenderPass(renderPass());
@@ -535,6 +678,101 @@ export const play = (device: Device, objects: Objects, canvas: Canvas, bytes: Ui
             case Op.SetScissorRect:
                 rendering().setScissorRect(u32(), u32(), u32(), u32());
                 break;
+            case Op.CreateBindGroupLayout: {
+                const id = u32();
+                const entries: Array<GPUBindGroupLayoutEntry> = [];
+                for (let count = u8(); count > 0; count--) {
+                    const binding = u32();
+                    const visibility = u8();
+                    const kind = pick(BINDINGS, u8(), 'binding');
+                    entries.push({ binding, visibility, ...kind(u8() !== 0) });
+                }
+                objects.layouts.set(id, device.createBindGroupLayout({ entries }));
+                break;
+            }
+            case Op.DeleteBindGroupLayout:
+                objects.layouts.delete(u32());
+                break;
+            case Op.CreatePipelineLayout: {
+                const id = u32();
+                const bindGroupLayouts: Array<GPUBindGroupLayout> = [];
+                for (let count = u8(); count > 0; count--) {
+                    bindGroupLayouts.push(need(objects.layouts, u32(), 'bind group layout'));
+                }
+                objects.pipelineLayouts.set(id, device.createPipelineLayout({ bindGroupLayouts }));
+                break;
+            }
+            case Op.DeletePipelineLayout:
+                objects.pipelineLayouts.delete(u32());
+                break;
+            case Op.PipelineBindGroupLayout: {
+                const id = u32();
+                const pipelineId = u32();
+                const pipeline = objects.renderPipelines.get(pipelineId) ?? need(objects.computePipelines, pipelineId, 'pipeline');
+                objects.layouts.set(id, pipeline.getBindGroupLayout(u32()));
+                break;
+            }
+            case Op.GenerateMipmaps: {
+                const texture = need(objects.textures, u32(), 'texture');
+                // After what was written into its first level
+                write();
+                canvas.mipmaps(texture);
+                break;
+            }
+            case Op.TextureFromUrl: {
+                const id = u32();
+                const options = { mipmaps: u8() !== 0, premultiplied: u8() !== 0, flip: u8() !== 0 };
+                const url = text();
+                const white = device.createTexture({
+                    size: [1, 1], format: 'rgba8unorm', usage: TEXTURE_BINDING | COPY_DST | COPY_SRC,
+                });
+                device.queue.writeTexture({ texture: white }, new Uint8Array([255, 255, 255, 255]), { bytesPerRow: 4 }, [1, 1]);
+                objects.textures.set(id, white);
+                canvas.load(id, url, options);
+                break;
+            }
+            case Op.ReadBuffer: {
+                const request = u32();
+                const buffer = need(objects.buffers, u32(), 'buffer');
+                end();
+                readInto(buffer.size, (into) => {
+                    encoding().copyBufferToBuffer(buffer, 0, into, 0, buffer.size);
+                }, (read) => {
+                    canvas.tell([5, request, read]);
+                });
+                break;
+            }
+            case Op.ReadPixels: {
+                const request = u32();
+                const kind = u8();
+                if (kind === 2) {
+                    throw new Error('webgpu: a multisampled target is read once resolved');
+                }
+                const texture = kind === 0 ? canvas.texture() : need(objects.textures, u32(), 'texture');
+                const swap = kind === 0 && texture.format.startsWith('bgra');
+                const [width, height] = [texture.width, texture.height];
+                // A row of the copy is a multiple of 256 bytes.
+                const row = width * (BYTES_PER_PIXEL[texture.format] ?? 4);
+                const bytesPerRow = Math.ceil(row / 256) * 256;
+                end();
+                readInto(bytesPerRow * height, (into) => {
+                    encoding().copyTextureToBuffer({ texture }, { buffer: into, bytesPerRow }, [width, height]);
+                }, (read) => {
+                    const pixels = new Uint8Array(row * height);
+                    for (let y = 0; y < height; y++) {
+                        pixels.set(read.subarray(y * bytesPerRow, y * bytesPerRow + row), y * row);
+                    }
+                    if (swap) {
+                        for (let pixel = 0; pixel < pixels.length; pixel += 4) {
+                            const blue = pixels[pixel] ?? 0;
+                            pixels[pixel] = pixels[pixel + 2] ?? 0;
+                            pixels[pixel + 2] = blue;
+                        }
+                    }
+                    canvas.tell([6, request, width, height, pixels]);
+                });
+                break;
+            }
             default:
                 throw new Error(`webgpu: unknown operation ${op}`);
         }
@@ -546,8 +784,76 @@ export const play = (device: Device, objects: Objects, canvas: Canvas, bytes: Ui
     }
 };
 
-// A canvas's context: the calls waiting for its device, which may be lost, its objects, and its
-// depth texture.
+// A pipeline making the next smaller image of a texture of a format, and its sampler, see
+// `generateMipmaps`.
+type Mipmapper = { pipeline: GPURenderPipeline, sampler: GPUSampler };
+
+// A triangle over the whole target, reading the level before between its pixels.
+const MIPMAP_SHADER = `
+struct Corner {
+    @builtin(position) position: vec4f,
+    @location(0) at: vec2f,
+};
+
+@group(0) @binding(0) var level: texture_2d<f32>;
+@group(0) @binding(1) var between: sampler;
+
+@vertex fn vertex(@builtin(vertex_index) index: u32) -> Corner {
+    let corner = vec2f(f32((index << 1u) & 2u), f32(index & 2u));
+    return Corner(vec4f(corner * 2.0 - 1.0, 0.0, 1.0), vec2f(corner.x, 1.0 - corner.y));
+}
+
+@fragment fn fragment(corner: Corner) -> @location(0) vec4f {
+    return textureSample(level, between, corner.at);
+}
+`;
+
+// Draws each level of `texture` after the first from the one before it, half as big, with the
+// pipeline for its format, made once a device, kept in `made`.
+const generateMipmaps = (device: GPUDevice, made: Map<GPUTextureFormat, Mipmapper>, texture: GPUTexture) => {
+    let mipmapper = made.get(texture.format);
+    if (mipmapper === undefined) {
+        const module = device.createShaderModule({ code: MIPMAP_SHADER });
+        mipmapper = {
+            pipeline: device.createRenderPipeline({
+                layout: 'auto',
+                vertex: { module, entryPoint: 'vertex' },
+                fragment: { module, entryPoint: 'fragment', targets: [{ format: texture.format }] },
+            }),
+            sampler: device.createSampler({ minFilter: 'linear', magFilter: 'linear' }),
+        };
+        made.set(texture.format, mipmapper);
+    }
+
+    const encoder = device.createCommandEncoder();
+    for (let level = 1; level < texture.mipLevelCount; level++) {
+        const group = device.createBindGroup({
+            layout: mipmapper.pipeline.getBindGroupLayout(0),
+            entries: [
+                { binding: 0, resource: texture.createView({ baseMipLevel: level - 1, mipLevelCount: 1 }) },
+                { binding: 1, resource: mipmapper.sampler },
+            ],
+        });
+        const pass = encoder.beginRenderPass({
+            colorAttachments: [{
+                view: texture.createView({ baseMipLevel: level, mipLevelCount: 1 }),
+                loadOp: 'clear',
+                storeOp: 'store',
+            }],
+        });
+        pass.setPipeline(mipmapper.pipeline);
+        pass.setBindGroup(0, group);
+        pass.draw(3);
+        pass.end();
+    }
+    device.queue.submit([encoder.finish()]);
+};
+
+// How many levels a texture of `width` by `height` has, down to a pixel.
+const levels = (width: number, height: number): number => Math.floor(Math.log2(Math.max(width, height, 1))) + 1;
+
+// A canvas's context: the calls waiting for its device, which may be lost, its objects, and the
+// textures as big as the canvas.
 class Context {
     public objects: Objects = new Objects();
     public state: 'starting' | 'ready' | 'lost' | 'unavailable' = 'starting';
@@ -556,11 +862,17 @@ class Context {
     public gpu: GPUCanvasContext | null = null;
     public format: GPUTextureFormat = 'bgra8unorm';
     public depth: GPUTexture | null = null;
+    public multisampled: GPUTexture | null = null;
+    public mipmappers: Map<GPUTextureFormat, Mipmapper> = new Map();
+    // The URL of the image each texture waits for, by its id: only the last asked for goes in.
+    public readonly loading: Map<number, string> = new Map();
 
     constructor(
         public readonly callback: number,
         public readonly alphaMode: GPUCanvasAlphaMode,
         public readonly powerPreference: GPUPowerPreference | undefined,
+        // Pixels of the bitmap to a device pixel, see `WebGpuOptions::bitmap_scale`.
+        public readonly scale: number,
     ) {}
 }
 
@@ -592,7 +904,7 @@ export class WebGpus {
         if (context === undefined) {
             context = this.make(bytes);
             this.contexts.set(node, context);
-            this.sizes.observe(node);
+            this.sizes.observe(node, context.scale);
             this.start(node, context, false);
         }
 
@@ -614,14 +926,17 @@ export class WebGpus {
         }
     }
 
-    // The context, from the first calls of it: they begin with its options and its callback.
+    // The context, from the first calls of it: they begin with its options, its callback and the
+    // scale of its bitmap.
     private make(bytes: Uint8Array): Context {
-        const first = bytes[0] === Op.Context && bytes.length >= 11;
+        const first = bytes[0] === Op.Context && bytes.length > CONTEXT_LENGTH;
         const data = new DataView(bytes.buffer, bytes.byteOffset, bytes.byteLength);
         const alphaMode = ALPHA_MODES[first ? data.getUint8(1) : 0] ?? 'opaque';
         const powerPreference = POWER_PREFERENCES[first ? data.getUint8(2) : 0];
         const callback = first ? data.getUint32(3, true) + data.getUint32(7, true) * 2 ** 32 : 0;
-        return new Context(callback, alphaMode, powerPreference);
+        const asked = first ? data.getFloat32(11, true) : 1;
+        const scale = asked > 0 && Number.isFinite(asked) ? asked : 1;
+        return new Context(callback, alphaMode, powerPreference, scale);
     }
 
     // Asks for a device, for the first time or after the last was lost.
@@ -659,13 +974,17 @@ export class WebGpus {
             device?.destroy();
             context.state = 'unavailable';
             context.waiting = [];
-            console.error('webgpu: the browser has no WebGPU, or no GPU for it, or the canvas has another context');
+            // Not an error of the page's, which is told, to draw another way.
+            console.warn('webgpu: the browser has no WebGPU, or no GPU for it, or the canvas has another context');
             this.told(context, [2]);
             return;
         }
 
         context.device = device;
-        context.gpu.configure({ device, format: context.format, alphaMode: context.alphaMode });
+        // Read back too, see `Op.ReadPixels`
+        context.gpu.configure({
+            device, format: context.format, alphaMode: context.alphaMode, usage: RENDER_ATTACHMENT | COPY_SRC,
+        });
         device.onuncapturederror = (event) => {
             console.error(`webgpu: ${event.error.message}`);
         };
@@ -700,6 +1019,9 @@ export class WebGpus {
         context.state = 'lost';
         context.device = null;
         context.depth = null;
+        context.multisampled = null;
+        context.mipmappers = new Map();
+        context.loading.clear();
         context.objects = new Objects();
         this.start(canvas, context, true);
     }
@@ -711,27 +1033,90 @@ export class WebGpus {
         }
 
         this.sizes.fit(canvas);
+        // A texture as big as the canvas, of `format` and `samples`, made again when they change.
+        const sized = (kept: GPUTexture | null, format: GPUTextureFormat, samples: number): GPUTexture => {
+            if (kept !== null && kept.format === format && kept.sampleCount === samples
+                && kept.width === canvas.width && kept.height === canvas.height) {
+                return kept;
+            }
+            kept?.destroy();
+            return device.createTexture({
+                size: [canvas.width, canvas.height],
+                format,
+                sampleCount: samples,
+                usage: RENDER_ATTACHMENT,
+            });
+        };
         play(device, context.objects, {
             format: context.format,
             texture: () => gpu.getCurrentTexture(),
-            depth: (format) => {
-                const depth = context.depth;
-                if (depth !== null && depth.format === format
-                    && depth.width === canvas.width && depth.height === canvas.height) {
-                    return depth;
-                }
-                depth?.destroy();
-                context.depth = device.createTexture({
-                    size: [canvas.width, canvas.height],
-                    format,
-                    usage: RENDER_ATTACHMENT,
-                });
+            depth: (format, samples) => {
+                context.depth = sized(context.depth, format, samples);
                 return context.depth;
+            },
+            multisampled: (samples) => {
+                context.multisampled = sized(context.multisampled, context.format, samples);
+                return context.multisampled;
+            },
+            mipmaps: (texture) => {
+                generateMipmaps(device, context.mipmappers, texture);
+            },
+            load: (texture, url, options) => {
+                this.load(context, texture, url, options);
+            },
+            tell: (event) => {
+                this.told(context, event);
             },
         }, bytes);
     }
 
-    private told(context: Context, event: Array<number>) {
+    // Puts the image at `url` into a new texture for `texture` when it comes, unless the texture
+    // was let go meanwhile, or asked for another image, or the device was lost.
+    private load(context: Context, texture: number, url: string, options: ImageOptions) {
+        const objects = context.objects;
+        context.loading.set(texture, url);
+        const current = () => context.objects === objects && context.loading.get(texture) === url
+            && objects.textures.has(texture);
+
+        const image = new Image();
+        image.crossOrigin = 'anonymous';
+        image.onload = () => {
+            const device = context.device;
+            if (!current() || device === null) {
+                return;
+            }
+            context.loading.delete(texture);
+            const [width, height] = [image.naturalWidth, image.naturalHeight];
+            const made = device.createTexture({
+                size: [width, height],
+                format: 'rgba8unorm',
+                usage: TEXTURE_BINDING | COPY_DST | COPY_SRC | RENDER_ATTACHMENT,
+                mipLevelCount: options.mipmaps ? levels(width, height) : 1,
+            });
+            device.queue.copyExternalImageToTexture(
+                { source: image, flipY: options.flip },
+                { texture: made, premultipliedAlpha: options.premultiplied },
+                [width, height],
+            );
+            if (options.mipmaps) {
+                generateMipmaps(device, context.mipmappers, made);
+            }
+            objects.textures.get(texture)?.destroy();
+            objects.replaceTexture(device, texture, made);
+            this.told(context, [3, texture, width, height]);
+        };
+        image.onerror = () => {
+            if (!current()) {
+                return;
+            }
+            context.loading.delete(texture);
+            console.error(`webgpu: the image ${url} didn't load`);
+            this.told(context, [4, texture]);
+        };
+        image.src = url;
+    }
+
+    private told(context: Context, event: Array<number | Uint8Array<ArrayBuffer>>) {
         if (context.callback === 0) {
             return;
         }
