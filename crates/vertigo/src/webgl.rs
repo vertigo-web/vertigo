@@ -89,6 +89,8 @@ mod code {
     pub const DEPTH_MASK: u8 = 47;
     pub const BLEND_FUNC_SEPARATE: u8 = 48;
     pub const PIXEL_STORE: u8 = 49;
+    /// The scale of the canvas's bitmap, as `CONTEXT` has it.
+    pub const BITMAP_SCALE: u8 = 50;
 }
 
 /// `pname` of `texParameteri`.
@@ -274,6 +276,7 @@ pub struct WebGlOptions {
     /// Pixels of the bitmap to a device pixel of the canvas, across and down: 1, so the picture
     /// is sharp, or less, f. ex. 0.5 with a quarter of the pixels to draw, which a slow GPU fills
     /// sooner, the browser stretching them over the canvas. Not above 0 nor finite counts as 1.
+    /// [`WebGl::set_bitmap_scale`] changes it later.
     pub bitmap_scale: f32,
 }
 
@@ -473,6 +476,24 @@ impl WebGl {
             callback();
         }
         self.context.told_unavailable.add(move |()| callback())
+    }
+
+    /// Changes [`WebGlOptions::bitmap_scale`] of the canvas, keeping its context and the
+    /// objects made on it, which a new context would have to make again, f. ex. loading the
+    /// textures. The canvas gets the size as from a resize: [`Self::on_resize`] tells it, and the
+    /// calls that come next draw on a bitmap of that size.
+    ///
+    /// ```rust
+    /// use vertigo::dom_element;
+    /// use vertigo::webgl::WebGl;
+    ///
+    /// let canvas = dom_element! { <canvas /> };
+    /// let gl = WebGl::new(&canvas.get_ref());
+    /// // The frames come late: a quarter of the pixels from now on.
+    /// gl.set_bitmap_scale(0.5);
+    /// ```
+    pub fn set_bitmap_scale(&self, scale: f32) {
+        self.op(code::BITMAP_SCALE, |out| put_f32s(out, &[scale]));
     }
 
     fn write(&self, write: impl FnOnce(&mut Vec<u8>)) {
@@ -1326,6 +1347,7 @@ mod tests {
             BlendFactor::Zero,
         );
         gl.pixel_store(PixelStore::UnpackPremultiplyAlpha(true));
+        gl.set_bitmap_scale(0.25);
         gl.bind_buffer(BufferTarget::Array, None);
         drop((buffer, vertices, program, texture, location));
         gl.take()
@@ -1355,8 +1377,9 @@ mod tests {
         0, 0, 0, 3, 20, 0, 0, 2, 0, 0, 0, 43, 3, 0, 0, 0, 1, 0, 0, 0, 44, 4, 0, 0, 0, 0, 0, 0, 0,
         3, 0, 0, 0, 10, 0, 0, 0, 45, 4, 0, 0, 0, 36, 0, 0, 0, 3, 20, 0, 0, 0, 0, 0, 0, 144, 1, 0,
         0, 46, 5, 0, 0, 0, 1, 7, 0, 0, 0, 47, 197, 130, 46, 112, 110, 103, 47, 0, 48, 2, 3, 0, 0,
-        3, 3, 0, 0, 1, 0, 0, 0, 0, 0, 0, 0, 49, 65, 146, 0, 0, 1, 0, 0, 0, 4, 146, 136, 0, 0, 0, 0,
-        0, 0, 3, 1, 0, 0, 0, 8, 2, 0, 0, 0, 13, 3, 0, 0, 0, 23, 5, 0, 0, 0, 42, 4, 0, 0, 0,
+        3, 3, 0, 0, 1, 0, 0, 0, 0, 0, 0, 0, 49, 65, 146, 0, 0, 1, 0, 0, 0, 50, 0, 0, 128, 62, 4,
+        146, 136, 0, 0, 0, 0, 0, 0, 3, 1, 0, 0, 0, 8, 2, 0, 0, 0, 13, 3, 0, 0, 0, 23, 5, 0, 0, 0,
+        42, 4, 0, 0, 0,
     ];
 
     #[test]

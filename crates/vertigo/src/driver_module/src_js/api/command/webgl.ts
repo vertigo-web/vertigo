@@ -8,7 +8,7 @@
 //
 // The bitmap of a canvas is kept as big as the canvas is on the screen, in device pixels, as
 // `canvas.ts` keeps it, times the scale its context asked for, and it is resized before the calls
-// that come next. Resizing a canvas
+// that come next. A new scale is told as a new size. Resizing a canvas
 // clears it and doesn't change the viewport, so the viewport becomes the whole canvas then. When
 // the canvas changes its size, wasm is told the size before anything is resized, so its calls
 // drawing again resize the bitmap and draw in one go, and the canvas never shows it cleared.
@@ -74,6 +74,7 @@ const Op = {
     DepthMask: 47,
     BlendFuncSeparate: 48,
     PixelStore: 49,
+    BitmapScale: 50,
 } as const;
 
 // The WebGL constants this file passes itself. Those of the calls come with them.
@@ -179,8 +180,10 @@ const link = (gl: Gl, vertex: string, fragment: string): WebGLProgram | null => 
 };
 
 // Plays `bytes` back on `gl`, with the objects made so far in `objects`. The images for textures
-// are asked of `load`.
-export const play = (gl: Gl, objects: Objects, bytes: Uint8Array, load?: Load): void => {
+// are asked of `load`, and a new scale of the bitmap goes to `rescale`.
+export const play = (
+    gl: Gl, objects: Objects, bytes: Uint8Array, load?: Load, rescale?: (scale: number) => void,
+): void => {
     const data = new DataView(bytes.buffer, bytes.byteOffset, bytes.byteLength);
     let at = 0;
 
@@ -427,6 +430,9 @@ export const play = (gl: Gl, objects: Objects, bytes: Uint8Array, load?: Load): 
                 objects.unpack.set(name, value);
                 break;
             }
+            case Op.BitmapScale:
+                rescale?.(f32());
+                break;
             default:
                 throw new Error(`webgl: unknown operation ${op}`);
         }
@@ -454,10 +460,13 @@ class Context {
         public readonly gl: WebGL2RenderingContext,
         public readonly callback: number,
         // Pixels of the bitmap to a device pixel, see `WebGlOptions::bitmap_scale`.
-        public readonly scale: number,
+        public scale: number,
         public readonly listeners: Array<[string, (event: Event) => void]>,
     ) {}
 }
+
+// The scale asked for, 1 for one not above 0 nor finite.
+const scaleOf = (asked: number): number => asked > 0 && Number.isFinite(asked) ? asked : 1;
 
 // `size`, in device pixels, times `scale`: at least a pixel each way.
 const scaled = (size: Size, scale: number): Size => ({
@@ -495,6 +504,9 @@ export class WebGls {
             const known = context;
             play(context.gl, context.objects, bytes, (texture, url, mipmap, unpack) => {
                 this.load(known, texture, url, mipmap, unpack);
+            }, (scale) => {
+                known.scale = scaleOf(scale);
+                this.tellSize(node);
             });
         }
     }
@@ -522,8 +534,7 @@ export class WebGls {
         const data = new DataView(bytes.buffer, bytes.byteOffset, bytes.byteLength);
         const flags = first ? data.getUint8(1) : 0;
         const callback = first ? data.getUint32(2, true) + data.getUint32(6, true) * 2 ** 32 : 0;
-        const asked = first ? data.getFloat32(10, true) : 1;
-        const scale = asked > 0 && Number.isFinite(asked) ? asked : 1;
+        const scale = scaleOf(first ? data.getFloat32(10, true) : 1);
 
         const gl = canvas.getContext('webgl2', attributes(flags));
         if (gl === null) {
@@ -642,9 +653,14 @@ export class WebGls {
             height: Math.round(box.height * ratio),
         };
         this.sizes.set(canvas, size);
+        this.tellSize(canvas);
+    }
 
+    // Tells the size the canvas was seen at, times the scale of its context, unless it was told.
+    private tellSize(canvas: HTMLCanvasElement) {
+        const size = this.sizes.get(canvas);
         const context = this.contexts.get(canvas);
-        if (!context) {
+        if (!size || !context) {
             return;
         }
 
