@@ -21,21 +21,14 @@ use vertigo::{
     Css, Value, component, css, dom, dom_element, get_driver,
     webgl::{
         Buffer, BufferTarget, BufferUsage, Capability, ClearBuffers, DataType, IndexType,
-        Primitive, Program, UniformLocation, VertexArray, WebGl, WebGlOptions,
+        Primitive, Program, UniformLocation, VertexArray, WebGl,
     },
 };
 
 #[component]
 pub fn WebGlDemo() {
     let canvas = dom_element! { <canvas css={css_canvas()} /> };
-    // So that a test can read the pixels back between frames.
-    let gl = WebGl::with_options(
-        &canvas.get_ref(),
-        WebGlOptions {
-            preserve_drawing_buffer: true,
-            ..WebGlOptions::default()
-        },
-    );
+    let gl = WebGl::new(&canvas.get_ref());
     let cube = Rc::new(RefCell::new(Cube::new(&gl)));
 
     canvas.append_drop_resource(gl.on_restore({
