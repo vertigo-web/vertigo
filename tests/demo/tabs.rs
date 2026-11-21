@@ -1574,6 +1574,17 @@ pub async fn lazy_list(ctx: &Ctx) -> Result<()> {
     edit_row(ctx, "Dates", "Dates (edited)").await?;
     ctx.wait_for_text("Dates (edited)").await?;
 
+    // The edit shows at once, before the server has it. A Delete clicked meanwhile can overtake
+    // the PUT, which then finds no row and answers 404 - so wait for the server to save it.
+    const SAVED_NAME: &str = "return fetch('/api/items/4')
+        .then((response) => response.ok ? response.json() : null)
+        .then((item) => item && item.name);";
+    ctx.wait_for("the server to save the edit", async || {
+        let name = ctx.js(SAVED_NAME).await?;
+        Ok((name.as_str() == Some("Dates (edited)")).then_some(()))
+    })
+    .await?;
+
     row_button(ctx, "Dates (edited)", "Delete").await?;
     ctx.wait_for_no_text("Dates (edited)").await
 }
