@@ -15,7 +15,7 @@
 //
 // The bitmap of a canvas is kept as big as the canvas is on the screen, times the scale it was
 // asked for, see `canvas_sizes.ts`, and so are a depth texture of it and a multisampled one, made
-// again when the bitmap is resized.
+// again when the bitmap is resized. A new scale is told as a new size.
 //
 // A texture of an image from a URL is a white pixel until the image comes, when it becomes another
 // texture, as big as the image: the bind groups with it are made again then, from what they were
@@ -70,6 +70,7 @@ const Op = {
     TextureFromUrl: 35,
     ReadBuffer: 36,
     ReadPixels: 37,
+    BitmapScale: 38,
 } as const;
 
 // Bytes of `Op.Context` after its code: the alpha mode, the power preference, the callback (8)
@@ -172,6 +173,8 @@ export type Canvas = {
     mipmaps: (texture: GPUTexture) => void,
     load: (texture: number, url: string, options: ImageOptions) => void,
     tell: (event: Array<number | Uint8Array<ArrayBuffer>>) => void,
+    // A new scale of the bitmap.
+    rescale: (scale: number) => void,
 };
 
 // What a bind group is made of, to be made again when a texture of it becomes another: its
@@ -742,6 +745,9 @@ export const play = (device: Device, objects: Objects, canvas: Canvas, bytes: Ui
                 });
                 break;
             }
+            case Op.BitmapScale:
+                canvas.rescale(f32());
+                break;
             case Op.ReadPixels: {
                 const request = u32();
                 const kind = u8();
@@ -878,6 +884,9 @@ class Context {
     ) {}
 }
 
+// The scale asked for, 1 for one not above 0 nor finite.
+const scaleOf = (asked: number): number => asked > 0 && Number.isFinite(asked) ? asked : 1;
+
 export class WebGpus {
     private readonly contexts: WeakMap<HTMLCanvasElement, Context> = new WeakMap();
     private readonly sizes: CanvasSizes = new CanvasSizes((canvas: HTMLCanvasElement, size: Size) => {
@@ -937,8 +946,7 @@ export class WebGpus {
         const alphaMode = ALPHA_MODES[first ? data.getUint8(1) : 0] ?? 'opaque';
         const powerPreference = POWER_PREFERENCES[first ? data.getUint8(2) : 0];
         const callback = first ? data.getUint32(3, true) + data.getUint32(7, true) * 2 ** 32 : 0;
-        const asked = first ? data.getFloat32(11, true) : 1;
-        const scale = asked > 0 && Number.isFinite(asked) ? asked : 1;
+        const scale = scaleOf(first ? data.getFloat32(11, true) : 1);
         return new Context(callback, alphaMode, powerPreference, scale);
     }
 
@@ -1069,6 +1077,9 @@ export class WebGpus {
             },
             tell: (event) => {
                 this.told(context, event);
+            },
+            rescale: (scale) => {
+                this.sizes.rescale(canvas, scaleOf(scale));
             },
         }, bytes);
     }
