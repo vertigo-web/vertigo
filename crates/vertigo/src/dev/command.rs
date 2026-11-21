@@ -336,6 +336,12 @@ pub enum DriverDomCommand {
         id: DomId,
         commands: Vec<u8>,
     },
+    /// Calls of the WebGPU context of a `<canvas>`, in the format of
+    /// [`webgpu`](crate::webgpu#format).
+    WebGpu {
+        id: DomId,
+        commands: Vec<u8>,
+    },
 }
 
 impl DriverDomCommand {

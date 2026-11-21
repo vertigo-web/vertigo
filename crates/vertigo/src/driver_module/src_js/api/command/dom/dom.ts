@@ -9,7 +9,7 @@ import { ModuleControllerType } from "../../../wasm_init";
 import { Metadata } from "../../metadata";
 import { createElement } from "./tags";
 import { LazyCanvases } from "../canvas_lazy";
-import { LazyWebGls } from "../webgl_lazy";
+import { LazyGpus } from "../gpu_lazy";
 
 export type CommandType = {
     CreateNode: {
@@ -87,6 +87,11 @@ export type CommandType = {
         id: number,
         commands: Uint8Array,
     }
+} | {
+    WebGpu: {
+        id: number,
+        commands: Uint8Array,
+    }
 };
 
 const applyFailed = (error: unknown, name: string): void => {
@@ -103,13 +108,13 @@ export class DriverDom {
     public readonly nodes: MapNodes;
     private readonly callbacks: CallbackManager;
     private readonly canvases: LazyCanvases = new LazyCanvases();
-    private readonly webgls: LazyWebGls;
+    private readonly gpus: LazyGpus;
 
     public constructor(private readonly metadata: Metadata, appLocation: AppLocation, getWasm: () => ModuleControllerType<ExportType>) {
         this.appLocation = appLocation;
         this.nodes = new MapNodes();
         this.callbacks = new CallbackManager(getWasm);
-        this.webgls = new LazyWebGls((callback_id, event) => {
+        this.gpus = new LazyGpus((callback_id, event) => {
             getWasm().wasmCommand({ CallbackCall: { callback_id, value: event } });
         });
 
@@ -282,8 +287,16 @@ export class DriverDom {
                         const commands = cursor.bytesView();
                         // A context's last calls, letting its objects go, may come after its canvas.
                         const node = this.nodes.getAnyOption(id);
-                        try { if (node instanceof Element) this.webgls.run(node, commands); }
+                        try { if (node instanceof Element) this.gpus.run('webgl', node, commands); }
                         catch (error) { applyFailed(error, 'WebGl'); }
+                        break;
+                    }
+                    case Tag.WebGpu: {
+                        const id = cursor.varint();
+                        const commands = cursor.bytesView();
+                        const node = this.nodes.getAnyOption(id);
+                        try { if (node instanceof Element) this.gpus.run('webgpu', node, commands); }
+                        catch (error) { applyFailed(error, 'WebGpu'); }
                         break;
                     }
                     default:
@@ -388,7 +401,7 @@ export class DriverDom {
 
         const node = this.nodes.delete("remove_node", id);
         this.canvases.forget(node);
-        this.webgls.forget(node);
+        this.gpus.forget(node);
         node.remove();
     }
 

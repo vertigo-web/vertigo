@@ -45,6 +45,7 @@ pub const TABS: &[&str] = &[
     "Svg",
     "Paint",
     "WebGL",
+    "WebGPU",
 ];
 
 /// Click a menu entry and wait for the tab to show something of its own.
@@ -1274,17 +1275,17 @@ pub async fn arrow_keys(ctx: &Ctx) -> Result<()> {
     println!("  -> arrow keys");
 
     // Start at the far end of the menu, so the first press has to wrap.
-    click_by_text(ctx, "a", "WebGL").await?;
-    ctx.wait_for_path("/webgl").await?;
+    click_by_text(ctx, "a", "WebGPU").await?;
+    ctx.wait_for_path("/webgpu").await?;
 
     press_key(ctx, Key::Right).await?;
     ctx.wait_for_path("/").await?;
 
     press_key(ctx, Key::Left).await?;
-    ctx.wait_for_path("/webgl").await?;
+    ctx.wait_for_path("/webgpu").await?;
 
     press_key(ctx, Key::Left).await?;
-    ctx.wait_for_path("/paint").await?;
+    ctx.wait_for_path("/webgl").await?;
 
     // ...and a field being typed in keeps its arrows. Without the guard the caret would stay
     // put and the tab would change underneath it.
@@ -1796,61 +1797,62 @@ pub async fn paint(ctx: &Ctx) -> Result<()> {
     wait_for_paint(ctx, BLANK, "Undo to take the star off").await
 }
 
-/// A cube turning, drawn with WebGL.
-///
-/// The pixel in the middle of the canvas is read back, the browser keeping what was drawn for
-/// that: one of the cube's faces is there, and as the cube turns, another.
+/// The pixel in the middle of the canvas, and whether its bitmap is as sharp as the screen, as a
+/// sixth number, 1 if so.
 ///
 /// Through a copy: asking the canvas for its WebGL context would make one, without the
-/// attributes the demo asks for, if the demo hasn't made it yet.
-pub async fn webgl(ctx: &Ctx) -> Result<()> {
-    ctx.preserve_drawing_buffers().await?;
-    open(ctx, "WebGL", "A cube drawn with WebGL 2").await?;
-
+/// attributes the demo asks for, if the demo hasn't made it yet. Made in a frame, after the
+/// demo drew it: headless Chrome keeps the picture of a WebGPU canvas only until it shows it.
+async fn middle_of_canvas(ctx: &Ctx) -> Result<Vec<u64>> {
     const SCRIPT: &str = r#"
-        const canvas = document.querySelector('canvas');
-        const copy = document.createElement('canvas');
-        copy.width = canvas.width;
-        copy.height = canvas.height;
-        const context = copy.getContext('2d');
-        context.drawImage(canvas, 0, 0);
-        const pixel = context.getImageData(
-            Math.floor(canvas.width / 2), Math.floor(canvas.height / 2), 1, 1,
-        ).data;
-        const ratio = window.devicePixelRatio || 1;
-        return [...pixel, canvas.width === Math.round(canvas.clientWidth * ratio) ? 1 : 0];
+        return new Promise((resolve) => requestAnimationFrame(() => {
+            const canvas = document.querySelector('canvas');
+            const copy = document.createElement('canvas');
+            copy.width = canvas.width;
+            copy.height = canvas.height;
+            const context = copy.getContext('2d');
+            context.drawImage(canvas, 0, 0);
+            const pixel = context.getImageData(
+                Math.floor(canvas.width / 2), Math.floor(canvas.height / 2), 1, 1,
+            ).data;
+            const ratio = window.devicePixelRatio || 1;
+            resolve([...pixel, canvas.width === Math.round(canvas.clientWidth * ratio) ? 1 : 0]);
+        }));
     "#;
 
-    let middle = async || -> Result<Vec<u64>> {
-        Ok(ctx
-            .js(SCRIPT)
-            .await?
-            .as_array()
-            .context("the pixel is not an array")?
-            .iter()
-            .filter_map(Value::as_u64)
-            .collect())
-    };
+    Ok(ctx
+        .js(SCRIPT)
+        .await?
+        .as_array()
+        .context("the pixel is not an array")?
+        .iter()
+        .filter_map(Value::as_u64)
+        .collect())
+}
 
-    // The color it is cleared with, which a face is not.
-    const BACKGROUND: [u64; 5] = [242, 242, 247, 255, 1];
+/// The color the cube's canvas is cleared with, which a face is not.
+const CUBE_BACKGROUND: [u64; 5] = [242, 242, 247, 255, 1];
 
-    // Opaque, not the background, and on a bitmap as sharp as the screen.
-    let is_face =
-        |pixel: &[u64]| pixel.len() == 5 && pixel != BACKGROUND && pixel[3] == 255 && pixel[4] == 1;
+/// Opaque, not the background, and on a bitmap as sharp as the screen.
+fn is_face(pixel: &[u64]) -> bool {
+    pixel.len() == 5 && pixel != CUBE_BACKGROUND && pixel[3] == 255 && pixel[4] == 1
+}
 
+/// The cube of the WebGL and WebGPU tabs: a face in the middle and, as it turns, another, the
+/// frames counted, and the cube still in the middle of a narrower canvas.
+async fn cube_turns(ctx: &Ctx) -> Result<()> {
     let mut first = Vec::new();
     ctx.wait_for(
         "a face of the cube in the middle, on a sharp bitmap",
         async || {
-            first = middle().await?;
+            first = middle_of_canvas(ctx).await?;
             Ok(is_face(&first).then_some(()))
         },
     )
     .await?;
 
     ctx.wait_for("another face as the cube turns", async || {
-        let now = middle().await?;
+        let now = middle_of_canvas(ctx).await?;
         Ok((is_face(&now) && now != first).then_some(()))
     })
     .await?;
@@ -1878,9 +1880,19 @@ pub async fn webgl(ctx: &Ctx) -> Result<()> {
                  return canvas.clientWidth < 240 \
                     && canvas.width === Math.round(canvas.clientWidth * (window.devicePixelRatio || 1));")
             .await?;
-        Ok((width.as_bool() == Some(true) && is_face(&middle().await?)).then_some(()))
+        Ok((width.as_bool() == Some(true) && is_face(&middle_of_canvas(ctx).await?)).then_some(()))
     })
-    .await?;
+    .await
+}
+
+/// A cube turning, drawn with WebGL.
+///
+/// The pixel in the middle of the canvas is read back, the browser keeping what was drawn for
+/// that: one of the cube's faces is there, and as the cube turns, another.
+pub async fn webgl(ctx: &Ctx) -> Result<()> {
+    ctx.preserve_drawing_buffers().await?;
+    open(ctx, "WebGL", "A cube drawn with WebGL 2").await?;
+    cube_turns(ctx).await?;
 
     // Lost, as when the GPU resets: the picture goes, and comes back with the context, the cube's
     // objects made again.
@@ -1891,12 +1903,44 @@ pub async fn webgl(ctx: &Ctx) -> Result<()> {
     )
     .await?;
     ctx.wait_for("the picture to go with the context", async || {
-        Ok((!is_face(&middle().await?)).then_some(()))
+        Ok((!is_face(&middle_of_canvas(ctx).await?)).then_some(()))
     })
     .await?;
     ctx.js("window.__lose.restoreContext();").await?;
     ctx.wait_for("the cube again once the context is back", async || {
-        Ok(is_face(&middle().await?).then_some(()))
+        Ok(is_face(&middle_of_canvas(ctx).await?).then_some(()))
+    })
+    .await
+}
+
+/// The cube of the WebGL tab, drawn with WebGPU, read back the same way.
+pub async fn webgpu(ctx: &Ctx) -> Result<()> {
+    open(ctx, "WebGPU", "drawn with WebGPU, its turn").await?;
+    cube_turns(ctx).await?;
+
+    // Its device lost, as when the GPU resets: the canvas gets another, on which the cube's
+    // objects are made again, and it goes on turning.
+    ctx.js(
+        "window.__device = document.querySelector('canvas').getContext('webgpu')\
+            .getConfiguration().device;\
+            window.__device.destroy();",
+    )
+    .await?;
+    ctx.wait_for("another device for the canvas", async || {
+        let other = ctx
+            .js(
+                "const configuration = document.querySelector('canvas').getContext('webgpu')\
+                    .getConfiguration();\
+                 return configuration !== null && configuration.device !== window.__device;",
+            )
+            .await?;
+        Ok((other.as_bool() == Some(true)).then_some(()))
+    })
+    .await?;
+    let first = middle_of_canvas(ctx).await?;
+    ctx.wait_for("the cube turning on it", async || {
+        let now = middle_of_canvas(ctx).await?;
+        Ok((is_face(&now) && now != first).then_some(()))
     })
     .await
 }

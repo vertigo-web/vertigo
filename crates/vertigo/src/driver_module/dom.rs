@@ -6,7 +6,6 @@ use crate::{
     dev::{CallbackId, command::DriverDomCommand},
     driver_module::{api::api_browser_command, event_emitter::EventEmitter},
     struct_mut::{HashMapMut, ValueMut, VecMut},
-    webgl,
 };
 
 use super::StaticString;
@@ -64,6 +63,13 @@ pub fn sort_commands(list: Vec<DriverDomCommand>) -> Vec<DriverDomCommand> {
 
 type Callback = Rc<dyn Fn(DomId) + 'static>;
 
+/// A context drawing on a canvas, f. ex. of [`WebGl`](crate::webgl::WebGl), whose calls go with
+/// each batch, see [`DriverDom::canvas_context`].
+pub(crate) trait CanvasContext {
+    /// The calls not sent yet, taken, as a command for canvas `id`: `None` when there are none.
+    fn take_command(&self, id: DomId) -> Option<DriverDomCommand>;
+}
+
 #[store]
 pub fn get_driver_dom() -> Rc<DriverDom> {
     Rc::new(DriverDom::new())
@@ -72,8 +78,9 @@ pub fn get_driver_dom() -> Rc<DriverDom> {
 pub struct DriverDom {
     commands: Commands,
     node_parent_callback: Rc<HashMapMut<DomId, Callback>>,
-    /// The WebGL contexts of canvases, each with its calls not yet sent, see `webgl_context`.
-    webgl: ValueMut<Vec<(DomId, Weak<webgl::Context>)>>,
+    /// The WebGL and WebGPU contexts of canvases, each with its calls not yet sent, see
+    /// `canvas_context`.
+    canvas_contexts: ValueMut<Vec<(DomId, Weak<dyn CanvasContext>)>>,
 }
 
 impl DriverDom {
@@ -83,7 +90,7 @@ impl DriverDom {
         DriverDom {
             commands,
             node_parent_callback: Rc::new(HashMapMut::new()),
-            webgl: ValueMut::new(Vec::new()),
+            canvas_contexts: ValueMut::new(Vec::new()),
         }
     }
 
@@ -198,29 +205,26 @@ impl DriverDom {
         });
     }
 
-    /// The calls of a WebGL context on canvas `id` go with each batch from now on, for as long as
-    /// the context or one of its objects is there to make them.
-    pub(crate) fn webgl_context(&self, id: DomId, context: Weak<webgl::Context>) {
-        self.webgl.change(|contexts| contexts.push((id, context)));
+    /// The calls of a context on canvas `id` go with each batch from now on, for as long as the
+    /// context or one of its objects is there to make them.
+    pub(crate) fn canvas_context(&self, id: DomId, context: Weak<dyn CanvasContext>) {
+        self.canvas_contexts
+            .change(|contexts| contexts.push((id, context)));
     }
 
     pub fn flush_dom_changes(&self) {
         // After the batch's changes to the page, so a new canvas is there, but before its removals
         // (see `sort_commands`), so a canvas removed with its last calls gets them.
-        let calls = self.webgl.change(|contexts| {
+        let calls = self.canvas_contexts.change(|contexts| {
             contexts.retain(|(_, context)| context.strong_count() > 0);
             contexts
                 .iter()
-                .filter_map(|(id, context)| {
-                    let commands = context.upgrade()?.take_calls();
-                    (!commands.is_empty()).then_some((*id, commands))
-                })
+                .filter_map(|(id, context)| context.upgrade()?.take_command(*id))
                 .collect::<Vec<_>>()
         });
 
-        for (id, commands) in calls {
-            self.commands
-                .add_command(DriverDomCommand::WebGl { id, commands });
+        for command in calls {
+            self.commands.add_command(command);
         }
 
         self.commands.flush_dom_changes();

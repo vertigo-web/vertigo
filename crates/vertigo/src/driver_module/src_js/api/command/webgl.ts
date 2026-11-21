@@ -1,17 +1,15 @@
 // WebGL 2 on `<canvas>` elements, from `WebGl` in `crates/vertigo/src/webgl.rs`, which defines
-// the format of its calls. `webgl.test.ts` plays back a fixture made there. A chunk of its own,
-// loaded the first time a page needs it, see `webgl_lazy.ts`: it may import nothing.
+// the format of its calls. `webgl.test.ts` plays back a fixture made there. In the chunk of
+// `gpu.ts`, with WebGPU, loaded the first time a page needs either, see `gpu_lazy.ts`.
 //
 // Objects are known by ids wasm gives them, unique on the page, and kept here until wasm lets
 // them go, the locations of uniforms too. Nothing asks WebGL anything back while drawing, and a
 // shader or a program that fails is told in the console.
 //
-// The bitmap of a canvas is kept as big as the canvas is on the screen, in device pixels, as
-// `canvas.ts` keeps it, times the scale its context asked for, and it is resized before the calls
-// that come next. A new scale is told as a new size. Resizing a canvas
-// clears it and doesn't change the viewport, so the viewport becomes the whole canvas then. When
-// the canvas changes its size, wasm is told the size before anything is resized, so its calls
-// drawing again resize the bitmap and draw in one go, and the canvas never shows it cleared.
+// The bitmap of a canvas is kept as big as the canvas is on the screen, times the scale its context
+// asked for, see `canvas_sizes.ts`. A new scale is told as a new size.
+// Resizing a canvas clears it and doesn't change the viewport, so the viewport becomes the whole
+// canvas then.
 //
 // A context lost (the GPU reset, or given to another tab) is asked back. When it comes back,
 // every object is gone: the ids are forgotten, and wasm is told, to make them again.
@@ -24,6 +22,8 @@
 //
 // A canvas taken off the page loses its context at once: its memory on the GPU goes then, not when
 // the browser collects the canvas, and it counts no more to the contexts a page may have.
+
+import { CanvasSizes, Size, Tell } from "./canvas_sizes";
 
 const decoder = new TextDecoder("utf-8");
 
@@ -442,18 +442,17 @@ export const play = (
     }
 };
 
-type Size = { width: number, height: number };
+// Wasm is told of a canvas, see `Tell`: `[0, width, height]` when it changes its size, `[1]` when
+// its context is given back, `[2, texture, width, height]` when an image is in a texture,
+// `[3, texture]` when it didn't load, `[4]` when the browser has no WebGL 2 for it. See
+// `CanvasEvent` in webgl.rs.
 
-// Tells wasm of a canvas, through the callback of its context: `[0, width, height]` when it
-// changes its size, `[1]` when its context is given back, `[2, texture, width, height]` when an
-// image is in a texture, `[3, texture]` when it didn't load, `[4]` when the browser has no WebGL 2
-// for it. See `CanvasEvent` in webgl.rs.
-export type Tell = (callback: number, event: Array<number>) => void;
+// A canvas's context, with its objects.
+// The scale asked for, 1 for one not above 0 nor finite.
+const scaleOf = (asked: number): number => asked > 0 && Number.isFinite(asked) ? asked : 1;
 
-// A canvas's context, with its objects and what wasm was told of it.
 class Context {
     public objects: Objects = new Objects();
-    public told: Size | null = null;
     // The URL of the image each texture waits for, by its id: only the last asked for goes in.
     public readonly loading: Map<number, string> = new Map();
     // With its canvas: an image coming after goes nowhere, as wasm has let go of the callback.
@@ -463,28 +462,23 @@ class Context {
         public readonly gl: WebGL2RenderingContext,
         public readonly callback: number,
         // Pixels of the bitmap to a device pixel, see `WebGlOptions::bitmap_scale`.
-        public scale: number,
+        public readonly scale: number,
         public readonly listeners: Array<[string, (event: Event) => void]>,
     ) {}
 }
 
-// The scale asked for, 1 for one not above 0 nor finite.
-const scaleOf = (asked: number): number => asked > 0 && Number.isFinite(asked) ? asked : 1;
-
-// `size`, in device pixels, times `scale`: at least a pixel each way.
-const scaled = (size: Size, scale: number): Size => ({
-    width: Math.max(1, Math.round(size.width * scale)),
-    height: Math.max(1, Math.round(size.height * scale)),
-});
 
 export class WebGls {
     // `null` for a canvas without WebGL 2 in the browser.
     private readonly contexts: WeakMap<HTMLCanvasElement, Context | null> = new WeakMap();
-    // The size in device pixels each canvas was seen at last, see `fit`.
-    private readonly sizes: WeakMap<HTMLCanvasElement, Size> = new WeakMap();
-    // Canvases as big as their bitmaps, which CSS gives no size, see `fit`.
-    private readonly unscaled: WeakSet<HTMLCanvasElement> = new WeakSet();
-    private observer: ResizeObserver | null = null;
+    private readonly sizes: CanvasSizes = new CanvasSizes((canvas: HTMLCanvasElement, size: Size) => {
+        const context = this.contexts.get(canvas);
+        if (!context) {
+            return false;
+        }
+        this.told(context.callback, [0, size.width, size.height]);
+        return true;
+    });
 
     public constructor(private readonly tell: Tell) {}
 
@@ -499,18 +493,17 @@ export class WebGls {
         if (context === undefined) {
             context = this.make(node, bytes);
             this.contexts.set(node, context);
-            this.observe(node);
+            this.sizes.observe(node, context?.scale ?? 1);
         }
 
         if (context !== null) {
-            this.fit(node, context);
+            if (this.sizes.fit(node)) {
+                context.gl.viewport(0, 0, node.width, node.height);
+            }
             const known = context;
             play(context.gl, context.objects, bytes, (texture, url, mipmap, unpack) => {
                 this.load(known, texture, url, mipmap, unpack);
-            }, (scale) => {
-                known.scale = scaleOf(scale);
-                this.tellSize(node);
-            });
+            }, (scale) => this.sizes.rescale(node, scaleOf(scale)));
         }
     }
 
@@ -524,10 +517,8 @@ export class WebGls {
                 context.forgotten = true;
                 context.gl.getExtension('WEBGL_lose_context')?.loseContext();
             }
-            this.observer?.unobserve(node);
+            this.sizes.forget(node);
             this.contexts.delete(node);
-            this.sizes.delete(node);
-            this.unscaled.delete(node);
         }
     }
 
@@ -624,96 +615,5 @@ export class WebGls {
         } catch (error) {
             console.error(error);
         }
-    }
-
-    private observe(canvas: HTMLCanvasElement) {
-        if (typeof ResizeObserver === 'undefined') {
-            return;
-        }
-
-        if (this.observer === null) {
-            this.observer = new ResizeObserver((entries) => {
-                for (const entry of entries) {
-                    if (entry.target instanceof HTMLCanvasElement) {
-                        this.resized(entry.target, entry.contentRect);
-                    }
-                }
-            });
-        }
-
-        try {
-            this.observer.observe(canvas, { box: 'device-pixel-content-box' });
-        } catch {
-            this.observer.observe(canvas);
-        }
-    }
-
-    // The canvas's new size, kept for the calls that come next to resize the bitmap to, and told:
-    // calls drawing again come at once then. A canvas as big as its bitmap keeps its size.
-    private resized(canvas: HTMLCanvasElement, box: { width: number, height: number }) {
-        const ratio = window.devicePixelRatio || 1;
-        const size = {
-            width: Math.round(box.width * ratio),
-            height: Math.round(box.height * ratio),
-        };
-        this.sizes.set(canvas, size);
-        this.tellSize(canvas);
-    }
-
-    // Tells the size the canvas was seen at, times the scale of its context, unless it was told.
-    private tellSize(canvas: HTMLCanvasElement) {
-        const size = this.sizes.get(canvas);
-        const context = this.contexts.get(canvas);
-        if (!size || !context) {
-            return;
-        }
-
-        const told = this.unscaled.has(canvas)
-            ? { width: canvas.width, height: canvas.height }
-            : scaled(size, context.scale);
-        if (told.width > 0 && told.height > 0
-            && (context.told?.width !== told.width || context.told.height !== told.height)) {
-            context.told = told;
-            this.told(context.callback, [0, told.width, told.height]);
-        }
-    }
-
-    // Makes the bitmap as big as the canvas is on the screen, times the scale of the context,
-    // before the calls that draw on it. A canvas CSS gives no size is as big as its bitmap, which
-    // would grow with each resize at a ratio above 1: it keeps the size it has, a pixel to a CSS
-    // pixel.
-    private fit(canvas: HTMLCanvasElement, context: Context) {
-        if (this.unscaled.has(canvas)) {
-            return;
-        }
-
-        const ratio = window.devicePixelRatio || 1;
-        const seen = this.sizes.get(canvas) ?? (canvas.isConnected ? {
-            width: Math.round(canvas.clientWidth * ratio),
-            height: Math.round(canvas.clientHeight * ratio),
-        } : null);
-
-        if (seen === null || seen.width <= 0 || seen.height <= 0) {
-            return;
-        }
-        const size = scaled(seen, context.scale);
-        if (canvas.width === size.width && canvas.height === size.height) {
-            return;
-        }
-
-        const [width, height] = [canvas.width, canvas.height];
-        const [cssWidth, cssHeight] = [canvas.clientWidth, canvas.clientHeight];
-        canvas.width = size.width;
-        canvas.height = size.height;
-
-        if (ratio !== 1
-            && canvas.clientWidth - cssWidth === size.width - width
-            && canvas.clientHeight - cssHeight === size.height - height) {
-            canvas.width = width;
-            canvas.height = height;
-            this.unscaled.add(canvas);
-        }
-
-        context.gl.viewport(0, 0, canvas.width, canvas.height);
     }
 }
