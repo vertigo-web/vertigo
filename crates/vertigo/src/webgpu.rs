@@ -96,6 +96,8 @@ mod code {
     pub const TEXTURE_FROM_URL: u8 = 35;
     pub const READ_BUFFER: u8 = 36;
     pub const READ_PIXELS: u8 = 37;
+    /// The scale of the canvas's bitmap, as `CONTEXT` has it.
+    pub const BITMAP_SCALE: u8 = 38;
 }
 
 /// What the browser tells of a context, as `webgpu.ts` sends it: `[0, width, height]` when the
@@ -289,6 +291,7 @@ pub struct WebGpuOptions {
     /// picture is sharp, or less, f. ex. 0.5 with a quarter of the pixels to draw, which a slow
     /// GPU fills sooner, the browser stretching them over the canvas. Not above 0 nor finite counts
     /// as 1. See [`WebGlOptions::bitmap_scale`](crate::webgl::WebGlOptions::bitmap_scale).
+    /// [`WebGpu::set_bitmap_scale`] changes it later.
     pub bitmap_scale: f32,
 }
 
@@ -510,6 +513,24 @@ impl WebGpu {
             callback();
         }
         self.context.told_unavailable.add(move |()| callback())
+    }
+
+    /// Changes [`WebGpuOptions::bitmap_scale`] of the canvas, keeping its device and the objects
+    /// made on it, which a new context would have to make again, f. ex. loading the textures. The
+    /// canvas gets the size as from a resize: [`Self::on_resize`] tells it, and the passes that come
+    /// next draw on a picture of that size.
+    ///
+    /// ```rust
+    /// use vertigo::dom_element;
+    /// use vertigo::webgpu::WebGpu;
+    ///
+    /// let canvas = dom_element! { <canvas /> };
+    /// let gpu = WebGpu::new(&canvas.get_ref());
+    /// // The frames come late: a quarter of the pixels from now on.
+    /// gpu.set_bitmap_scale(0.5);
+    /// ```
+    pub fn set_bitmap_scale(&self, scale: f32) {
+        self.op(code::BITMAP_SCALE, |out| put_f32s(out, &[scale]));
     }
 
     fn op(&self, code: u8, write: impl FnOnce(&mut Vec<u8>)) {
@@ -2484,6 +2505,7 @@ mod tests {
         gpu.read_buffer(&buffer, |_| {});
         gpu.read_pixels(Target::Canvas, |_, _| {});
         gpu.read_pixels(Target::Texture(&texture), |_, _| {});
+        gpu.set_bitmap_scale(0.25);
         drop((
             buffer,
             texture,
@@ -2529,9 +2551,9 @@ mod tests {
         68, 0, 0, 240, 67, 0, 0, 0, 0, 0, 0, 128, 63, 28, 1, 0, 0, 0, 2, 0, 0, 0, 3, 0, 0, 0, 4, 0,
         0, 0, 19, 17, 0, 1, 1, 2, 0, 0, 0, 0, 1, 19, 18, 20, 10, 0, 0, 0, 21, 0, 0, 0, 0, 13, 0, 0,
         0, 26, 4, 0, 0, 0, 2, 0, 0, 0, 1, 0, 0, 0, 19, 36, 1, 0, 0, 0, 1, 0, 0, 0, 37, 2, 0, 0, 0,
-        0, 37, 3, 0, 0, 0, 1, 2, 0, 0, 0, 3, 1, 0, 0, 0, 6, 2, 0, 0, 0, 6, 3, 0, 0, 0, 9, 4, 0, 0,
-        0, 11, 5, 0, 0, 0, 30, 6, 0, 0, 0, 32, 7, 0, 0, 0, 14, 8, 0, 0, 0, 14, 9, 0, 0, 0, 14, 10,
-        0, 0, 0, 16, 11, 0, 0, 0, 30, 12, 0, 0, 0, 16, 13, 0, 0, 0,
+        0, 37, 3, 0, 0, 0, 1, 2, 0, 0, 0, 38, 0, 0, 128, 62, 3, 1, 0, 0, 0, 6, 2, 0, 0, 0, 6, 3, 0,
+        0, 0, 9, 4, 0, 0, 0, 11, 5, 0, 0, 0, 30, 6, 0, 0, 0, 32, 7, 0, 0, 0, 14, 8, 0, 0, 0, 14, 9,
+        0, 0, 0, 14, 10, 0, 0, 0, 16, 11, 0, 0, 0, 30, 12, 0, 0, 0, 16, 13, 0, 0, 0,
     ];
 
     #[test]
