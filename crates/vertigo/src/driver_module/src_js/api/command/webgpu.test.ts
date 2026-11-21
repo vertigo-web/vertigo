@@ -457,8 +457,12 @@ console.log("\n--- Test webgpu: devices of canvases ---");
         assert(thrown.includes('no buffer 1'), 'and the objects made before are gone');
         assert(canvas.log.filter((call) => call.startsWith('getContext')).length === 1, 'the canvas keeps its context');
 
+        // A read, its answer coming once the canvas is forgotten
+        run(canvas, calls(buffer(1), [36, ...u32(1), ...u32(1)]));
         webgpus.forget(canvas as unknown as Element);
         assert(second.destroyed(), 'a canvas forgotten lets its device go');
+        await settled();
+        same(told.slice(3), [], 'and tells nobody what comes for it after');
         second.lose('destroyed');
         await settled();
         assert(asked.length === 0, 'and asks for no other');
