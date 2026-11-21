@@ -30,9 +30,11 @@ use std::{
 };
 
 use crate::{
-    DomElementRef, DropResource, JsJson,
-    dev::JsJsonListDecoder,
-    driver_module::{api::api_callbacks, event_emitter::EventEmitter, get_driver_dom},
+    DomElementRef, DomId, DropResource, JsJson,
+    dev::{JsJsonListDecoder, command::DriverDomCommand},
+    driver_module::{
+        CanvasContext, api::api_callbacks, event_emitter::EventEmitter, get_driver_dom,
+    },
     struct_mut::ValueMut,
 };
 
@@ -248,8 +250,15 @@ impl Context {
     }
 
     /// The calls not sent yet, taken.
-    pub(crate) fn take_calls(&self) -> Vec<u8> {
+    fn take_calls(&self) -> Vec<u8> {
         self.queue.change(std::mem::take)
+    }
+}
+
+impl CanvasContext for Context {
+    fn take_command(&self, id: DomId) -> Option<DriverDomCommand> {
+        let commands = self.take_calls();
+        (!commands.is_empty()).then_some(DriverDomCommand::WebGl { id, commands })
     }
 }
 
@@ -408,7 +417,8 @@ impl WebGl {
     /// ```
     pub fn with_options(canvas: &DomElementRef, options: WebGlOptions) -> Self {
         let context = Context::new(options);
-        get_driver_dom().webgl_context(canvas.id(), Rc::downgrade(&context));
+        let weak: Weak<Context> = Rc::downgrade(&context);
+        get_driver_dom().canvas_context(canvas.id(), weak);
         Self { context }
     }
 

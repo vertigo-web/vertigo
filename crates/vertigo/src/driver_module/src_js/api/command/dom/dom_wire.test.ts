@@ -24,7 +24,7 @@ const FIXTURE = new Uint8Array([
     111, 108, 111, 114, 58, 114, 101, 100, 9, 0, 14, 64, 109, 101, 100, 105, 97, 32, 112,
     114, 105, 110, 116, 123, 125, 10, 6, 3, 114, 111, 119, 11, 6, 6, 4, 7, 5, 12, 4, 5, 99,
     108, 105, 99, 107, 77, 13, 4, 5, 99, 108, 105, 99, 107, 172, 2, 14, 4, 3, 1, 2, 255, 15, 4, 3,
-    29, 0, 128,
+    29, 0, 128, 16, 4, 2, 20, 1,
 ]);
 
 const EXPECTED: Array<CommandType> = [
@@ -46,6 +46,7 @@ const EXPECTED: Array<CommandType> = [
     { CallbackRemove: { id: 4, event_name: 'click', callback_id: 300 } },
     { CanvasDraw: { id: 4, drawing: new Uint8Array([1, 2, 255]) } },
     { WebGl: { id: 4, commands: new Uint8Array([29, 0, 128]) } },
+    { WebGpu: { id: 4, commands: new Uint8Array([20, 1]) } },
 ];
 
 console.log("\n--- Test dom wire: cross-language fixture ---");

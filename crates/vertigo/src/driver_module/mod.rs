@@ -1,5 +1,6 @@
 pub mod api;
 mod dom;
+pub(crate) use dom::CanvasContext;
 pub use dom::get_driver_dom;
 
 pub mod driver;

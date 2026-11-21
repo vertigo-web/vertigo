@@ -65,7 +65,7 @@ pub fn WebGlDemo() {
 
 /// Frames counted for a second at a time.
 #[derive(Default)]
-struct FrameCounter {
+pub(super) struct FrameCounter {
     /// When the second being counted began, in milliseconds.
     since: Cell<Option<f64>>,
     frames: Cell<u32>,
@@ -74,7 +74,7 @@ struct FrameCounter {
 impl FrameCounter {
     /// A frame at `time`. Once a second has gone since the count began, how many frames came in
     /// it, and the count begins again.
-    fn frame(&self, time: f64) -> Option<u32> {
+    pub(super) fn frame(&self, time: f64) -> Option<u32> {
         let since = self.since.get().unwrap_or(time);
         self.since.set(Some(since));
         self.frames.set(self.frames.get() + 1);
@@ -114,7 +114,7 @@ void main() {
 type Vector = [f32; 3];
 
 /// The faces of the cube: a corner, the two edges from it, and a color.
-const FACES: [(Vector, Vector, Vector, Vector); 6] = [
+pub(super) const FACES: [(Vector, Vector, Vector, Vector); 6] = [
     (
         [-1.0, -1.0, 1.0],
         [2.0, 0.0, 0.0],
@@ -242,9 +242,9 @@ impl Cube {
 
 // Matrices of 4 x 4, column after column, as WebGL takes them.
 
-type Matrix = [f32; 16];
+pub(super) type Matrix = [f32; 16];
 
-fn multiply(a: &Matrix, b: &Matrix) -> Matrix {
+pub(super) fn multiply(a: &Matrix, b: &Matrix) -> Matrix {
     let mut product = [0.0; 16];
     for column in 0..4 {
         for row in 0..4 {
@@ -256,7 +256,7 @@ fn multiply(a: &Matrix, b: &Matrix) -> Matrix {
 
 /// Seen through a lens of `fov` radians from top to bottom, from `near` to `far`.
 #[rustfmt::skip]
-fn perspective(fov: f32, aspect: f32, near: f32, far: f32) -> Matrix {
+pub(super) fn perspective(fov: f32, aspect: f32, near: f32, far: f32) -> Matrix {
     let f = 1.0 / (fov / 2.0).tan();
     let depth = near - far;
     [
@@ -268,7 +268,7 @@ fn perspective(fov: f32, aspect: f32, near: f32, far: f32) -> Matrix {
 }
 
 #[rustfmt::skip]
-fn translation(x: f32, y: f32, z: f32) -> Matrix {
+pub(super) fn translation(x: f32, y: f32, z: f32) -> Matrix {
     [
         1.0, 0.0, 0.0, 0.0,
         0.0, 1.0, 0.0, 0.0,
@@ -278,7 +278,7 @@ fn translation(x: f32, y: f32, z: f32) -> Matrix {
 }
 
 #[rustfmt::skip]
-fn rotation_x(angle: f32) -> Matrix {
+pub(super) fn rotation_x(angle: f32) -> Matrix {
     let (sin, cos) = angle.sin_cos();
     [
         1.0, 0.0, 0.0, 0.0,
@@ -289,7 +289,7 @@ fn rotation_x(angle: f32) -> Matrix {
 }
 
 #[rustfmt::skip]
-fn rotation_y(angle: f32) -> Matrix {
+pub(super) fn rotation_y(angle: f32) -> Matrix {
     let (sin, cos) = angle.sin_cos();
     [
         cos, 0.0, -sin, 0.0,
@@ -299,21 +299,21 @@ fn rotation_y(angle: f32) -> Matrix {
     ]
 }
 
-fn css_wrapper() -> Css {
+pub(super) fn css_wrapper() -> Css {
     css! {"
         margin: 10px 0;
     "}
 }
 
 /// Around the canvas, as big as it is, for the count to sit in its corner.
-fn css_frame() -> Css {
+pub(super) fn css_frame() -> Css {
     css! {"
         position: relative;
         display: inline-block;
     "}
 }
 
-fn css_fps() -> Css {
+pub(super) fn css_fps() -> Css {
     css! {"
         position: absolute;
         top: 6px;
@@ -327,7 +327,7 @@ fn css_fps() -> Css {
     "}
 }
 
-fn css_canvas() -> Css {
+pub(super) fn css_canvas() -> Css {
     css! {"
         display: block;
         width: min(480px, 90vw);

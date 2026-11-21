@@ -27,13 +27,25 @@
   the screen, stretched over it, for a slow GPU, and `WebGl::set_bitmap_scale` changes it on the
   context the canvas has, its objects kept. A canvas taken off the page loses its context at once,
   so what it held on the GPU goes then, not when the browser collects the canvas. The browser's code
-  for it is a chunk of its own, loaded when a page first uses WebGL. The demo draws a cube turning
-  with it.
+  for it is in a chunk with WebGPU's, loaded when a page first uses either. The demo draws a cube
+  turning with it.
 * `Driver::on_requested_frame`: a callback for the next frame, run once each time the
   `FrameRequest` it gives asks for it, however often that is before the frame - for a picture
   drawn anew only when something changes.
 * vertigo-testing: `Ctx::preserve_drawing_buffers` has the WebGL contexts made from then on keep
   what was drawn, so a test reads the picture back without the app keeping it for tests.
+* `webgpu::WebGpu`: WebGPU on a `<canvas>` from Rust, shaped as [wgpu](https://docs.rs/wgpu) but
+  cut down - buffers, 2D textures from pixels, samplers, WGSL shader modules, render and compute
+  pipelines with the layouts WebGPU finds in their shaders, bind groups, and render and compute
+  passes - with handles that let their objects go when dropped. The calls of a transaction go to
+  the browser at its end, as those of `WebGl` do, and the passes of a batch to the GPU in one
+  command buffer, after what `write_buffer` and `write_texture` wrote before them. The browser
+  asks for a GPU device with the first calls, which wait for it; where there is no WebGPU,
+  `WebGpu::on_unavailable` tells it and the canvas is still free for `WebGl`. A depth texture as
+  big as the canvas (`DepthTarget::Canvas`) is made again when the canvas changes its size, which
+  `WebGpu::size` and `WebGpu::on_resize` tell. A device lost is asked for again, and
+  `WebGpu::on_restore` makes the objects again. A shader that doesn't compile, or anything WebGPU
+  finds wrong, is told in the console. The demo draws the cube of its WebGL tab with it.
 
 ### Changed
 

@@ -46,8 +46,9 @@ fi
 
 echo "OK: wasm_run.js is ${SIZE} B, within the ${BUDGET} B budget"
 
-# Each chunk, which an app downloads once it needs what the chunk does.
-CHUNK_BUDGET=10500
+# Each chunk, which an app downloads once it needs what the chunk does. The biggest is the one of
+# WebGL and WebGPU together (`gpu.ts`), which share the code sizing canvases.
+CHUNK_BUDGET=19000
 
 for CHUNK in crates/vertigo/src/driver_module/chunks/*.js; do
     SIZE=$(wc -c < "$CHUNK")

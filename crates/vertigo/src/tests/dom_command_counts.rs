@@ -38,6 +38,7 @@ fn variant(command: &DriverDomCommand) -> &'static str {
         DriverDomCommand::CallbackRemove { .. } => "CallbackRemove",
         DriverDomCommand::CanvasDraw { .. } => "CanvasDraw",
         DriverDomCommand::WebGl { .. } => "WebGl",
+        DriverDomCommand::WebGpu { .. } => "WebGpu",
     }
 }
 

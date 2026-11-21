@@ -107,11 +107,30 @@ export default [
         ],
     },
     {
-        input: 'crates/vertigo/src/driver_module/src_js/api/command/webgl_lazy.test.ts',
+        input: 'crates/vertigo/src/driver_module/src_js/api/command/gpu_lazy.test.ts',
         output: [
             {
                 sourcemap: true,
-                file: 'build/webgl_lazy.test.js',
+                file: 'build/gpu_lazy.test.js',
+                format: 'cjs',
+                // The chunk it loads, in the same file
+                inlineDynamicImports: true,
+            }
+        ],
+        plugins: [
+            typescript({
+                sourceMap: true,
+                inlineSources: true,
+            }),
+            sourcemaps(),
+        ],
+    },
+    {
+        input: 'crates/vertigo/src/driver_module/src_js/api/command/webgpu.test.ts',
+        output: [
+            {
+                sourcemap: true,
+                file: 'build/webgpu.test.js',
                 format: 'cjs',
                 // The chunk it loads, in the same file
                 inlineDynamicImports: true,

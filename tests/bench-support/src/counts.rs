@@ -78,6 +78,7 @@ fn variant_index(command: &DriverDomCommand) -> usize {
         DriverDomCommand::CallbackRemove { .. } => 12,
         DriverDomCommand::CanvasDraw { .. } => 13,
         DriverDomCommand::WebGl { .. } => 14,
+        DriverDomCommand::WebGpu { .. } => 15,
     }
 }
 

@@ -30,6 +30,7 @@ export const Tag = {
     CallbackRemove: 13,
     CanvasDraw: 14,
     WebGl: 15,
+    WebGpu: 16,
 } as const;
 
 
@@ -159,6 +160,7 @@ const SPEC: Record<number, Spec> = {
     [Tag.CallbackRemove]: ['CallbackRemove', [['id', readVarint], ['event_name', readString], ['callback_id', readVarint]]],
     [Tag.CanvasDraw]: ['CanvasDraw', [['id', readVarint], ['drawing', readBytes]]],
     [Tag.WebGl]: ['WebGl', [['id', readVarint], ['commands', readBytes]]],
+    [Tag.WebGpu]: ['WebGpu', [['id', readVarint], ['commands', readBytes]]],
 };
 
 // Object form of the stream, for hydration - which runs on the first flush only and wants to

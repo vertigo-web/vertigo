@@ -23,6 +23,7 @@ pub enum Route {
     Svg,
     Paint,
     WebGl,
+    WebGpu,
     NotFound,
 }
 
@@ -51,6 +52,7 @@ impl Route {
         Self::Svg,
         Self::Paint,
         Self::WebGl,
+        Self::WebGpu,
     ];
 
     /// The tab `offset` places along from this one, wrapping at both ends.
@@ -117,6 +119,7 @@ impl Route {
                 "Canvases drawn from a Computed<Drawing>, with pointer events for the brush."
             }
             Self::WebGl => "A cube drawn with WebGL 2, turning before every frame.",
+            Self::WebGpu => "The same cube drawn with WebGPU, with WGSL shaders.",
             Self::NotFound => "Nothing - it is where an unknown address lands.",
         }
     }
@@ -146,6 +149,7 @@ impl Route {
             Self::Svg => "/svg",
             Self::Paint => "/paint",
             Self::WebGl => "/webgl",
+            Self::WebGpu => "/webgpu",
             Self::NotFound => "/not-found",
         }
     }
@@ -170,6 +174,7 @@ impl Route {
             "/svg" => Self::Svg,
             "/paint" => Self::Paint,
             "/webgl" => Self::WebGl,
+            "/webgpu" => Self::WebGpu,
             _ => Self::NotFound,
         }
     }
@@ -194,6 +199,7 @@ impl Route {
             Self::Svg => "Svg",
             Self::Paint => "Paint",
             Self::WebGl => "WebGL",
+            Self::WebGpu => "WebGPU",
             Self::NotFound => "Not Found",
         }
     }
@@ -226,15 +232,15 @@ mod tests {
 
     #[test]
     fn stepping_wraps_at_both_ends() {
-        assert_eq!(Route::WebGl.step(1), Route::Home);
-        assert_eq!(Route::Home.step(-1), Route::WebGl);
+        assert_eq!(Route::WebGpu.step(1), Route::Home);
+        assert_eq!(Route::Home.step(-1), Route::WebGpu);
     }
 
     /// `NotFound` has no place in the menu, so stepping enters at whichever end you came from.
     #[test]
     fn stepping_from_outside_the_menu_enters_it() {
         assert_eq!(Route::NotFound.step(1), Route::Home);
-        assert_eq!(Route::NotFound.step(-1), Route::WebGl);
+        assert_eq!(Route::NotFound.step(-1), Route::WebGpu);
     }
 
     #[test]

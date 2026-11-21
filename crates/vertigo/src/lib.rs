@@ -57,6 +57,7 @@ mod struct_mut;
 #[cfg(test)]
 mod tests;
 pub mod webgl;
+pub mod webgpu;
 mod websocket;
 mod websocket_collection;
 

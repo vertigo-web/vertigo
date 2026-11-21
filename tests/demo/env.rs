@@ -58,8 +58,17 @@ impl Env for DemoEnv {
             ChromeConfig {
                 window_size: (1400, 1000),
                 // WebGL on a machine without a GPU: Chrome no longer falls back to drawing it
-                // in software by itself. Safe here, as the suite opens only the demo.
-                args: &["--enable-unsafe-swiftshader"],
+                // in software by itself. WebGPU too, which Chrome doesn't have everywhere yet.
+                // Its device draws on Vulkan of SwiftShader, and WebGL with ANGLE on SwiftShader:
+                // with other renderers, Chrome destroys the device once it shows a picture.
+                // Safe here, as the suite opens only the demo.
+                args: &[
+                    "--enable-unsafe-swiftshader",
+                    "--enable-unsafe-webgpu",
+                    "--enable-features=Vulkan",
+                    "--use-vulkan=swiftshader",
+                    "--use-angle=swiftshader",
+                ],
                 ..Default::default()
             },
         )?;
