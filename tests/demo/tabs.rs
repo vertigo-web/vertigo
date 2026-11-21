@@ -1913,10 +1913,21 @@ pub async fn webgl(ctx: &Ctx) -> Result<()> {
     .await
 }
 
-/// The cube of the WebGL tab, drawn with WebGPU, read back the same way.
+/// The cube of the WebGL tab, drawn with WebGPU, read back the same way, a picture from a file
+/// read back by WebGPU, and numbers doubled by a compute pass.
 pub async fn webgpu(ctx: &Ctx) -> Result<()> {
     open(ctx, "WebGPU", "drawn with WebGPU, its turn").await?;
     cube_turns(ctx).await?;
+
+    // Read back once drawn, of a canvas of 198 x 206 CSS pixels inside its border, on half the
+    // pixels each way
+    ctx.wait_for_text("Doubled on the GPU: 2, 4, 6, 8").await?;
+    ctx.wait_for_text("of 99 x 103 pixels").await?;
+    let middle = ctx.page_text().await?;
+    ensure!(
+        !middle.contains("The middle of the picture: rgb(255, 255, 255)"),
+        "the picture is blank: {middle}"
+    );
 
     // Its device lost, as when the GPU resets: the canvas gets another, on which the cube's
     // objects are made again, and it goes on turning.

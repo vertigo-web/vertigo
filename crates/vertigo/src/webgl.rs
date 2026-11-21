@@ -127,9 +127,24 @@ impl Size {
             self.width as f32 / self.height as f32
         }
     }
+
+    /// How many levels a texture of the size has, down to a pixel, each half as big as the one
+    /// before: 1 for a pixel, 0 for none.
+    ///
+    /// ```rust
+    /// use vertigo::webgl::Size;
+    ///
+    /// assert_eq!(Size { width: 512, height: 256 }.mip_levels(), 10);
+    /// assert_eq!(Size { width: 1, height: 1 }.mip_levels(), 1);
+    /// assert_eq!(Size::default().mip_levels(), 0);
+    /// ```
+    pub fn mip_levels(&self) -> u32 {
+        u32::BITS - self.width.max(self.height).leading_zeros()
+    }
 }
 
-/// What became of an image asked for with [`WebGl::texture_image_url`].
+/// What became of an image asked for with [`WebGl::texture_image_url`], or with
+/// [`WebGpu::create_texture_from_url`](crate::webgpu::WebGpu::create_texture_from_url).
 #[derive(Clone, Debug, PartialEq, Eq)]
 pub enum ImageLoad {
     /// The texture has the image, of `size` pixels.

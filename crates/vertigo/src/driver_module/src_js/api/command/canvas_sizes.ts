@@ -14,7 +14,7 @@ const scaled = (size: Size, scale: number): Size => ({
 });
 
 // Tells wasm of a canvas, through the callback of its context, see `webgl.ts` and `webgpu.ts`.
-export type Tell = (callback: number, event: Array<number>) => void;
+export type Tell = (callback: number, event: Array<number | Uint8Array<ArrayBuffer>>) => void;
 
 export class CanvasSizes {
     // The size in device pixels each canvas was seen at last, see `fit`.
