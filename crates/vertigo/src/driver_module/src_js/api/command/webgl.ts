@@ -21,6 +21,9 @@
 // told then, to draw again, or if it didn't load.
 //
 // A browser without WebGL 2 for a canvas is told in the console, and wasm too, to draw another way.
+//
+// A canvas taken off the page loses its context at once: its memory on the GPU goes then, not when
+// the browser collects the canvas, and it counts no more to the contexts a page may have.
 
 const decoder = new TextDecoder("utf-8");
 
@@ -519,6 +522,7 @@ export class WebGls {
             }
             if (context) {
                 context.forgotten = true;
+                context.gl.getExtension('WEBGL_lose_context')?.loseContext();
             }
             this.observer?.unobserve(node);
             this.contexts.delete(node);

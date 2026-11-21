@@ -50,6 +50,9 @@ const recording = (log: Array<string>): Gl => {
         getProgramParameter: () => true,
         getUniformLocation: (_program, name) => ({ name: `@${String(name)}` }),
         getParameter: () => ({ name: 'bound' }),
+        getExtension: (name) => name === 'WEBGL_lose_context'
+            ? { loseContext: () => log.push('loseContext()') }
+            : null,
     };
 
     return new Proxy({}, {
@@ -426,8 +429,11 @@ console.log("\n--- Test webgl: contexts and their size ---");
     same(told.slice(7), ['7: 1'], 'an image of a context lost meanwhile goes nowhere');
 
     run(canvas, calls(texture(12), image(12, '/f.png', false)));
+    canvas.log.length = 0;
     webgls.forget(canvas as unknown as Element);
     assert(canvas.listeners.size === 0, 'a canvas forgotten is listened to no more');
+    same(canvas.log, ['getExtension(WEBGL_lose_context)', 'loseContext()'],
+        'and loses its context at once, which frees what it holds on the GPU');
     assert(images.length === 8, 'the image asked for before');
     images[7]?.onload();
     same(told.slice(8), [], 'and an image coming for it after goes nowhere');
