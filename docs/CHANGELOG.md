@@ -55,7 +55,8 @@
   WebGPU finds; a multisampled canvas with smooth edges (`ColorAttachment::canvas_multisampled`,
   `MultisampleState`), its depth texture of as many samples; reads of buffers and of pixels
   (`WebGpu::read_buffer`, `WebGpu::read_pixels`), f. ex. of what a compute pass computed; and
-  `WebGpuOptions::bitmap_scale`, as WebGL's. The demo's WebGPU tab draws its cube smooth, a picture
+  `WebGpuOptions::bitmap_scale` with `WebGpu::set_bitmap_scale`, as WebGL's. The demo's WebGPU
+  tab draws its cube smooth, a picture
   from a file, and numbers doubled by a compute pass, all read back by its e2e test.
 
 ### Changed
