@@ -1,4 +1,4 @@
-use std::rc::Rc;
+use std::{fmt, rc::Rc};
 
 use vertigo_macro::store;
 
@@ -102,6 +102,17 @@ impl ApiAnimationFrame {
         future
     }
 
+    /// `callback` for the next frame each time the handle asks for it, see
+    /// [`Driver::on_requested_frame`](crate::Driver::on_requested_frame).
+    pub fn on_requested_frame(&self, callback: impl Fn(f64) + 'static) -> FrameRequest {
+        FrameRequest {
+            requested: Rc::new(Requested {
+                callback: Box::new(callback),
+                frame: ValueMut::new(None),
+            }),
+        }
+    }
+
     /// A frame from the browser, for the callbacks there were when it came, in the order they
     /// came. One that an earlier one dropped doesn't run, and one added waits for the next frame,
     /// as with `requestAnimationFrame` itself.
@@ -123,6 +134,59 @@ impl ApiAnimationFrame {
     #[cfg(test)]
     pub fn asked(&self) -> Vec<bool> {
         self.frames.asked.get()
+    }
+}
+
+/// A callback for the next frame the browser draws, run once each time it's asked for, see
+/// [`Driver::on_requested_frame`](crate::Driver::on_requested_frame). Its clones ask for the same
+/// callback, which goes with the last of them.
+#[derive(Clone)]
+pub struct FrameRequest {
+    requested: Rc<Requested>,
+}
+
+struct Requested {
+    callback: Box<dyn Fn(f64)>,
+    /// The frame asked for, until it comes.
+    frame: ValueMut<Option<DropResource>>,
+}
+
+impl FrameRequest {
+    /// Asks for the callback to run before the next frame the browser draws. Asked again before
+    /// that frame, it still runs once. Asked by the callback itself, it runs in the frame after.
+    ///
+    /// ```rust
+    /// use vertigo::get_driver;
+    ///
+    /// let redraw = get_driver().on_requested_frame(|time| log::info!("drawn at {time}"));
+    /// // Asked twice, drawn once.
+    /// redraw.request();
+    /// redraw.request();
+    /// ```
+    pub fn request(&self) {
+        if self.requested.frame.map(Option::is_some) {
+            return;
+        }
+
+        let requested = Rc::downgrade(&self.requested);
+        let frame = api_animation_frame().on_frame(move |time| {
+            if let Some(requested) = requested.upgrade() {
+                // Taken first, so the callback can ask for the next frame, and dropped after it,
+                // so the browser isn't told to stop the frames in between.
+                let asked = requested.frame.change(Option::take);
+                (requested.callback)(time);
+                drop(asked);
+            }
+        });
+        self.requested.frame.set(Some(frame));
+    }
+}
+
+impl fmt::Debug for FrameRequest {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        f.debug_struct("FrameRequest")
+            .field("requested", &self.requested.frame.map(Option::is_some))
+            .finish_non_exhaustive()
     }
 }
 
@@ -283,6 +347,85 @@ mod tests {
 
         drop(outer);
 
+        assert_eq!(api_animation_frame().asked(), [true, false]);
+    }
+
+    #[test]
+    fn a_requested_frame_runs_once_however_often_it_was_asked_for() {
+        let log = Rc::new(RefCell::new(Vec::new()));
+        let redraw = api_animation_frame().on_requested_frame(recording(&log, "drawn"));
+
+        frame(1.0);
+        assert!(log.borrow().is_empty(), "nothing is drawn until asked for");
+        assert!(
+            api_animation_frame().asked().is_empty(),
+            "nor a frame asked of the browser"
+        );
+
+        redraw.request();
+        redraw.clone().request();
+        redraw.request();
+        frame(2.0);
+        frame(3.0);
+        assert_eq!(*log.borrow(), ["drawn@2"]);
+        assert_eq!(
+            api_animation_frame().asked(),
+            [true, false],
+            "the browser draws one frame for it"
+        );
+
+        redraw.request();
+        frame(4.0);
+        assert_eq!(
+            *log.borrow(),
+            ["drawn@2", "drawn@4"],
+            "and again when asked again"
+        );
+    }
+
+    #[test]
+    fn a_requested_frame_asked_for_by_its_callback_runs_in_the_next_frame() {
+        let log = Rc::new(RefCell::new(Vec::new()));
+        let own: Rc<RefCell<Option<super::FrameRequest>>> = Rc::new(RefCell::new(None));
+        let redraw = api_animation_frame().on_requested_frame({
+            let log = log.clone();
+            let own = own.clone();
+            move |time| {
+                log.borrow_mut().push(format!("drawn@{time}"));
+                if time < 3.0
+                    && let Some(own) = &*own.borrow()
+                {
+                    own.request();
+                }
+            }
+        });
+        *own.borrow_mut() = Some(redraw.clone());
+
+        redraw.request();
+        frame(1.0);
+        frame(2.0);
+        frame(3.0);
+        frame(4.0);
+
+        assert_eq!(*log.borrow(), ["drawn@1", "drawn@2", "drawn@3"]);
+        assert_eq!(
+            api_animation_frame().asked(),
+            [true, false],
+            "with the frames going on in between"
+        );
+        own.borrow_mut().take();
+    }
+
+    #[test]
+    fn a_requested_frame_dropped_does_not_run() {
+        let log = Rc::new(RefCell::new(Vec::new()));
+        let redraw = api_animation_frame().on_requested_frame(recording(&log, "drawn"));
+
+        redraw.request();
+        drop(redraw);
+        frame(1.0);
+
+        assert!(log.borrow().is_empty(), "{:?}", log.borrow());
         assert_eq!(api_animation_frame().asked(), [true, false]);
     }
 
