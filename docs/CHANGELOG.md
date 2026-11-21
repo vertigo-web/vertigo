@@ -1,85 +1,55 @@
 <!-- markdownlint-configure-file { "no-duplicate-heading": { "siblings_only": true } } -->
 
 <!-- markdownlint-disable-next-line first-line-h1 -->
-## Unreleased
+## 0.14.5 - 2026-11-21
 
 ### Added
 
-* `Drawing::draw_image`: a part of an image (f. ex. one picture of an atlas) drawn into a rectangle
-  of the drawing, with a new `Rect`. The browser loads each image once and draws the canvas again
-  when it comes. It keeps the images drawings use, and of those no drawing uses any more the last
-  64, so a map that has shown thousands of tiles doesn't hold them all.
-* `Driver::preload_image`: loads an image in the background, so that a drawing asking for it later
-  has it at once instead of being drawn without it first. It stays loaded until a drawing asks for
-  it.
-* `Drawing::fill_pattern` and `Drawing::stroke_pattern`: fill shapes, or stroke lines and outlines,
-  with an image repeated lying on the drawing so it moves and grows with the view box. Until the
-  image comes, the style set before stands in for it.
-* `Drawing::fill_linear_gradient` and `Drawing::stroke_linear_gradient`: fill shapes, or stroke
-  lines and outlines, with a linear gradient between two points of the drawing, with color stops.
-  A triangle shaded evenly between two colors is one such gradient (its docs show where it ends),
-  so a mesh of triangles can be shaded smoothly.
-* `Drawing::append`: draws another drawing after what this one has drawn, as it would be drawn
-  alone, and leaves the styles to what comes after as they were. A layer kept as a drawing of its
-  own, f. ex. one that changes seldom, is put together with others without being recorded again,
-  and a part drawn once is put in many places, each moved by a transform.
-* `Drawing::fill_path`, `Drawing::stroke_path` and `Drawing::clip`, with a new `Path2D` of lines,
-  Bézier curves, arcs, ellipses and SVG path data, and a `FillRule` for holes.
+* `Drawing::draw_image`: a part of an image drawn into a rectangle of the drawing, with a new
+  `Rect`. The browser loads each image once.
+* `Driver::preload_image`: loads an image in the background for drawings to come.
+* `Drawing::fill_pattern` and `stroke_pattern`: an image repeated, lying on the drawing.
+* `Drawing::fill_linear_gradient` and `stroke_linear_gradient`, with color stops.
+* `Drawing::fill_radial_gradient` and `fill_conic_gradient`, and their `stroke_` ones.
+* `Drawing::append`: draws another drawing after this one and leaves the styles as they were.
+* `Drawing::fill_path`, `stroke_path` and `clip`, with a new `Path2D` (lines, curves, arcs, SVG
+  path data) and `FillRule`.
 * `Drawing::save`, `restore`, `translate`, `rotate`, `scale`, `transform` and `reset_transform`.
-  Nothing a drawing changes - styles, transforms, clips - lasts into the next one.
 * Text: `Drawing::font`, `font_px`, `text_align`, `text_baseline`, `fill_text` and `stroke_text`.
-  Text is as big as its font says however small the drawing's units are, where a browser would
-  leave out a font below a pixel, and a canvas that wrote text is drawn again when a font loads.
-* `Drawing::fill_radial_gradient` and `Drawing::fill_conic_gradient`, and their `stroke_` ones.
 * `Drawing::line_dash`, `line_dash_px`, `miter_limit`, `stroke_rect` and `clear_rect`.
-* `Drawing::composite`, `shadow` (in CSS pixels), `filter` and `image_smoothing` (off for pixel
-  art).
+* `Drawing::composite`, `shadow`, `filter` and `image_smoothing`.
 * `Drawing::draw_pixels`: pixels worked out in Rust, f. ex. a heat map, drawn into a rectangle.
-* vertigo-cli: `vertigo build` saves the build's wasm, `wasm_run.js` and other text files
-  compressed with brotli next to them (`name.ext.br`), and `serve --precompress`
-  (`MountConfigBuilder::precompress`) takes those instead of compressing them at start: a server
-  with a 4 MB build (two apps) starts in a second instead of five. A saved file counts only when
-  it unpacks to the file next to it. `--precompress false` (`BuildOptsInner::precompress`) skips
-  saving them, and `watch` doesn't save them.
-* vertigo-cli: `is_ssr_fetch`: whether a request is the app's fetch during SSR, so a page handler
-  of your own (next to `vertigo_files`) can refuse it as `vertigo_handler` does, instead of
-  rendering a page that fetches the same URL again.
-* `guides::for_agents`: rules for a coding agent writing an app with vertigo - the idioms, and
-  the habits from other frameworks that don't carry over. Its snippets are doctests, and it
-  ships in the crate as `docs/agents.md`, so an agent reads the one for the version it builds.
-* vertigo-cli: `vertigo new` puts an `AGENTS.md` (and a `CLAUDE.md` pointing to it) in the new
-  project, with its commands and where to find that guide. `--no-agent-files` leaves them out.
+* `ClickEvent::position`: where the pointer clicked, as a new `ClickPosition` (CSS pixels from the
+  corner of the element with the `on_click`, and its size). `None` for a click from the keyboard.
+* `guides::for_agents`: rules for a coding agent writing an app with vertigo.
 * README: what is different coming from Leptos, Yew or Dioxus, and how vertigo helps coding
   agents.
-* `ClickEvent::position`: where the mouse, a finger or a pen clicked, as a new `ClickPosition` in
-  CSS pixels from the corner of the element with the `on_click`, with its size - f. ex. the point
-  of a `<canvas>` clicked. `None` for a click from the keyboard or from a script.
+* vertigo-cli: `vertigo build` saves its text files compressed with brotli (`name.ext.br`), which
+  `serve --precompress` takes instead of compressing them at start. `--precompress false` skips it.
+* vertigo-cli: `is_ssr_fetch`: whether a request is the app's fetch during SSR, for a page handler
+  of your own.
+* vertigo-cli: `vertigo new` puts an `AGENTS.md` and a `CLAUDE.md` in the new project.
+  `--no-agent-files` leaves them out.
 
 ### Changed
 
-* A drawing is no longer copied on its way to the browser: the command that takes it there,
-  `dev::command::DriverDomCommand::CanvasDraw`, shares its bytes as an `Arc<Vec<u8>>`. `Drawing`
-  keeps them in an `Arc` for that, so it is `Send` and `Sync`.
-* `ViewBox::new` is a `const fn`, so a `const` view box needs no struct literal.
-* vertigo-cli: a build file named by its content (`name.HASH.ext`, as `vertigo build` and
-  `include_static!` save them) is served with `Cache-Control: public, max-age=31536000, immutable`,
-  so browsers and CDNs keep it without asking again - a new content gets a new name. The rest of
-  the build (`index.json`) and a missing file (going to the app's default service) go as before.
-* `vertigo-cli` no longer depends on OpenSSL: `--proxy` passes the target's response on by itself
-  instead of through `actix-proxy`, which pulled in `awc` with OpenSSL. A program built with
-  `vertigo-cli` doesn't need `libssl` on the machine it runs on.
+* `dev::command::DriverDomCommand::CanvasDraw` carries the drawing as an `Arc<Vec<u8>>`, shared
+  with the `Drawing` instead of copied.
+* `Drawing` is `Send` and `Sync`.
+* `ViewBox::new` is a `const fn`.
+* vertigo-cli: A build file named by its content (`name.HASH.ext`) is served with
+  `Cache-Control: public, max-age=31536000, immutable`.
+* vertigo-cli: No longer depends on OpenSSL: `--proxy` doesn't go through `actix-proxy` any more.
 
 ### Fixed
 
-* The docs of `Drawing::fill_style` no longer promise gradient keywords, which a canvas doesn't
-  take, see `Drawing::fill_linear_gradient`.
-* A `ViewBox` without a width and a height above zero, or with a NaN or an infinity in it, draws
-  nothing. One side of zero used to fit the drawing by the other side, and a NaN or an infinity
-  in its corner drew it in device pixels, unscaled.
-* `--proxy` passes on every value of a repeated header of the target's response (f. ex. a few
-  `Set-Cookie`), not only the last one.
-* The fullstack template (`vertigo new -t fullstack`) sets `ssr_fetch_base` to the server's own
-  address, so the app's fetches of relative URLs (`/api/...`) don't fail during SSR.
+* The docs of `Drawing::fill_style` promised gradient keywords, which a canvas doesn't take.
+* A `ViewBox` without a width and a height above zero, or with a NaN or an infinity, drew the
+  drawing anyway instead of nothing.
+* vertigo-cli: `--proxy` passed on only the last value of a repeated response header, f. ex.
+  `Set-Cookie`.
+* vertigo-cli: The fullstack template (`vertigo new -t fullstack`) didn't set `ssr_fetch_base`, so
+  the app's fetches of relative URLs failed during SSR.
 
 ## 0.14.4 - 2026-11-16
 

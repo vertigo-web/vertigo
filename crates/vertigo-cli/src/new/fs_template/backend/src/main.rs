@@ -10,8 +10,9 @@ pub async fn main() -> std::io::Result<()> {
         // Server-side rendering fetches relative URLs (`/api/...`) from this server, as the
         // browser does. Without it they fail during SSR.
         .ssr_fetch_base(format!("http://{HOST}:{PORT}"))
-        // A release build of the server compresses the wasm and other text files once, at
-        // startup, about a quarter smaller than `Compress` does per response.
+        // A release build of the server serves the wasm and other text files brotli-compressed
+        // ahead of time, about a quarter smaller than what `Compress` does per response.
+        // `vertigo build` saves them compressed (`name.ext.br`), so the server starts at once.
         .precompress_in_release()
         .build()
         .expect("Failed to create mount config");
