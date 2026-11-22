@@ -15,9 +15,10 @@ vertigo? Read [crates/vertigo/docs/agents.md](crates/vertigo/docs/agents.md) ins
   - `src/driver_module` - the bridge to JavaScript. The browser side is TypeScript in
     `src_js/`, bundled by rollup into `wasm_run.js` and, for what it imports dynamically,
     chunks in `chunks/`, which are committed. A chunk may import nothing (vertigo-cli renames
-    `wasm_run.js`), and `rollup.config.mjs` fails the build otherwise. `rollup` is pinned in
-    `package.json`: a chunk's name is a hash that changes with rollup's version, so a newer
-    rollup is a commit of its own, with the chunks it builds.
+    `wasm_run.js`), and `rollup.config.mjs` fails the build otherwise. What the bundle goes
+    through - rollup, its plugins, typescript, tslib, terser - is pinned in `package.json`:
+    `package-lock.json` isn't committed, and a different version of any of them builds other
+    bytes, and so other chunk names. A newer one is a commit of its own, with what it builds.
   - `docs/` - long-form guides embedded in rustdoc as `vertigo::guides::*` (see `src/lib.rs`)
 - `crates/vertigo-macro` - the proc macros: `dom!`, `css!`, `#[component]`, `#[store]`,
   `bind!` and friends
