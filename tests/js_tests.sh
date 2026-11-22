@@ -14,7 +14,8 @@ npx rollup -v
 npx rollup -c
 
 # A chunk with a new content is a new file, named by it, and the old one is gone. Its name
-# changes with rollup's version too, which is why rollup is pinned in package.json.
+# changes with the version of rollup, its plugins, typescript, tslib and terser too, which is
+# why they are pinned in package.json.
 BUNDLE="crates/vertigo/src/driver_module/wasm_run.js crates/vertigo/src/driver_module/chunks"
 
 if ! git diff --no-ext-diff --quiet -- $BUNDLE \
