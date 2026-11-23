@@ -316,6 +316,12 @@ impl ServerState {
                     value: _,
                     expires_in: _,
                 } => JsJson::Null,
+                // The browser's own: the server renders the page without any of it
+                CommandForBrowser::LocalStorageGet { name: _ } => {
+                    browser_response::LocalStorageGet { value: None }.to_json()
+                }
+                CommandForBrowser::LocalStorageSet { name: _, value: _ }
+                | CommandForBrowser::LocalStorageRemove { name: _ } => JsJson::Null,
                 CommandForBrowser::GetEnv { name } => {
                     let env_value = request.env(name);
 

@@ -1,7 +1,8 @@
 //! What the app can ask of the environment it is running in, through `get_driver()`.
 //!
-//! Cookies, the timezone, a random number, the history stack, the router - and whether any of
-//! this is happening in a browser at all, which is what the panel at the bottom turns on.
+//! Cookies, the browser's local storage, the timezone, a random number, the history stack, the
+//! router - and whether any of this is happening in a browser at all, which is what the panel at
+//! the bottom turns on.
 //!
 //! Each control reports what it got rather than only logging it, so the tab shows something
 //! without the console open.
@@ -17,6 +18,7 @@ use ssr_test::SsrTest;
 
 const COOKIE: &str = "test";
 const JSON_COOKIE: &str = "test-json";
+const STORED: &str = "test-stored";
 
 #[component]
 pub fn DriverDemo() {
@@ -45,6 +47,21 @@ pub fn DriverDemo() {
     let get_json_cookie = bind!(last, |_| {
         let value = get_driver().cookie_get_json(JSON_COOKIE);
         last.set(format!("json cookie {JSON_COOKIE:?} = {value:?}"));
+    });
+
+    let store = bind!(last, |_| {
+        get_driver().local_storage_set(STORED, "kept value");
+        last.set(format!("stored {STORED:?}"));
+    });
+
+    let read_stored = bind!(last, |_| {
+        let value = get_driver().local_storage_get(STORED);
+        last.set(format!("{STORED:?} in local storage = {value:?}"));
+    });
+
+    let forget_stored = bind!(last, |_| {
+        get_driver().local_storage_remove(STORED);
+        last.set(format!("forgot {STORED:?}"));
     });
 
     let timezone = bind!(last, |_| {
@@ -77,6 +94,9 @@ pub fn DriverDemo() {
             <div css={css_action()} on_click={get_cookie}>"Get cookie"</div>
             <div css={css_action()} on_click={set_json_cookie}>"Set json cookie"</div>
             <div css={css_action()} on_click={get_json_cookie}>"Get json cookie"</div>
+            <div css={css_action()} on_click={store}>"Set local storage"</div>
+            <div css={css_action()} on_click={read_stored}>"Get local storage"</div>
+            <div css={css_action()} on_click={forget_stored}>"Remove local storage"</div>
             <div css={css_action()} on_click={timezone}>"Get timezone_offset"</div>
             <div css={css_action()} on_click={random}>"Get random"</div>
 

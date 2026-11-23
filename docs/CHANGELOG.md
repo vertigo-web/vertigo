@@ -5,6 +5,12 @@
 
 ### Added
 
+* `Driver::local_storage_get`, `local_storage_set` and `local_storage_remove`: the browser's
+  `localStorage`, kept for the page's origin across visits. Unlike a cookie it isn't sent to the
+  server and holds megabytes, f. ex. for a draft kept. The server renders the page without it, so
+  a page reads it once the browser took the page over. A browser that refuses it to the page, or
+  has no room left, keeps nothing and tells why in the console. Off the browser, as in an app's
+  tests, it is a map of the thread.
 * `audio`: sound with Web Audio. `Sound` is a short sound, fetched and decoded once, played at
   once when asked, over itself and anything else, at a volume of its own. `Music` streams as it
   plays: played, paused, stopped, looped, with a volume of its own, and `Music::on_end` tells it

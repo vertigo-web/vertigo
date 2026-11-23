@@ -10,6 +10,7 @@ import { Interval } from "./command/interval";
 import { AnimationFrames } from "./command/animationFrames";
 import { AppLocation } from './location/AppLocation';
 import { Cookies } from "./command/cookies";
+import { LocalStorage } from "./command/localStorage";
 import { getRandom } from "./command/getRandom";
 import { languages } from "./command/languages";
 import { DriverDom } from "./command/dom/dom";
@@ -114,6 +115,22 @@ type ExecType
         }
     }
     | {
+        LocalStorageGet: {
+            name: string,
+        }
+    }
+    | {
+        LocalStorageSet: {
+            name: string,
+            value: string,
+        }
+    }
+    | {
+        LocalStorageRemove: {
+            name: string,
+        }
+    }
+    | {
         GetEnv: {
             name: string
         }
@@ -184,6 +201,7 @@ export class Api {
     private readonly animationFrames: AnimationFrames;
     private readonly location: AppLocation;
     private readonly cookie: Cookies;
+    private readonly localStorage: LocalStorage;
     private readonly audio: LazyAudio;
 
 
@@ -196,6 +214,7 @@ export class Api {
         this.animationFrames = new AnimationFrames(getWasm);
         this.location = appLocation;
         this.cookie = new Cookies();
+        this.localStorage = new LocalStorage(() => window.localStorage);
         this.audio = new LazyAudio((callback_id, event) => {
             getWasm().wasmCommand({ CallbackCall: { callback_id, value: event } });
         });
@@ -327,6 +346,19 @@ export class Api {
 
             case 'CookieJsonSet':
                 this.cookie.setJson(params.name, params.value, params.expires_in);
+                return null;
+
+            case 'LocalStorageGet':
+                return {
+                    value: this.localStorage.get(params.name)
+                };
+
+            case 'LocalStorageSet':
+                this.localStorage.set(params.name, params.value);
+                return null;
+
+            case 'LocalStorageRemove':
+                this.localStorage.remove(params.name);
                 return null;
 
             case 'GetEnv':

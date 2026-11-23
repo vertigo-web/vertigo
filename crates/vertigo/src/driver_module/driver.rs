@@ -190,6 +190,64 @@ impl Driver {
         api_browser_command().cookie_json_set(cname.into(), cvalue, expires_in);
     }
 
+    /// The value kept under `name` in the browser's `localStorage`, for the page's origin and
+    /// across visits, or `None` if nothing is.
+    ///
+    /// Unlike a cookie it isn't sent to the server, and it holds megabytes, not 4 KB. So the
+    /// server has none of it: while it renders the page, this is always `None`, and a page that
+    /// shows what was kept reads it after the browser took the page over, f. ex. in
+    /// [`Driver::on_animation_frame`] or an event, or the browser's first render differs from
+    /// the server's. Off the browser, as in an app's tests on the host, the storage is a map of
+    /// the thread, so a test reads back what it stored.
+    ///
+    /// Nothing tells the page when another of its tabs changes the value: this reads it as it is
+    /// now, so a page open in two tabs reads it again rather than keeping what it read once.
+    ///
+    /// ```rust
+    /// use vertigo::get_driver;
+    ///
+    /// let driver = get_driver();
+    /// driver.local_storage_set("theme", "dark");
+    /// assert_eq!(driver.local_storage_get("theme"), Some("dark".to_string()));
+    ///
+    /// driver.local_storage_remove("theme");
+    /// assert_eq!(driver.local_storage_get("theme"), None);
+    /// ```
+    pub fn local_storage_get(&self, name: &str) -> Option<String> {
+        api_browser_command().local_storage_get(name.into())
+    }
+
+    /// Keeps `value` under `name` in the browser's `localStorage`, for the next visits too,
+    /// replacing what was there. A browser that has no room left, or keeps nothing for the
+    /// page (f. ex. with its storage blocked), keeps nothing and tells why in the console.
+    /// See [`Driver::local_storage_get`].
+    ///
+    /// ```rust
+    /// use vertigo::get_driver;
+    ///
+    /// get_driver().local_storage_set("theme", "dark");
+    /// get_driver().local_storage_set("theme", "light");
+    /// assert_eq!(get_driver().local_storage_get("theme").as_deref(), Some("light"));
+    /// ```
+    pub fn local_storage_set(&self, name: &str, value: &str) {
+        api_browser_command().local_storage_set(name.into(), value.into());
+    }
+
+    /// Forgets what the browser's `localStorage` keeps under `name`, if anything. See
+    /// [`Driver::local_storage_get`].
+    ///
+    /// ```rust
+    /// use vertigo::get_driver;
+    ///
+    /// get_driver().local_storage_set("draft", "Dear");
+    /// get_driver().local_storage_remove("draft");
+    /// get_driver().local_storage_remove("draft");
+    /// assert_eq!(get_driver().local_storage_get("draft"), None);
+    /// ```
+    pub fn local_storage_remove(&self, name: &str) {
+        api_browser_command().local_storage_remove(name.into());
+    }
+
     /// Go back in client's (browser's) history
     pub fn history_back(&self) {
         api_browser_command().history_back();

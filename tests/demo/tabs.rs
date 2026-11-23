@@ -258,6 +258,27 @@ pub async fn driver(ctx: &Ctx) -> Result<()> {
         ctx.wait_for_text(value).await?;
     }
 
+    // The browser's local storage, which a reload keeps, read back and forgotten
+    click_by_text(ctx, "div", "Get local storage").await?;
+    ctx.wait_for_text(r#""test-stored" in local storage = None"#)
+        .await?;
+    click_by_text(ctx, "div", "Set local storage").await?;
+    ctx.wait_for_text(r#"stored "test-stored""#).await?;
+    ensure!(
+        ctx.js("return localStorage.getItem('test-stored');")
+            .await?
+            == "kept value",
+        "the browser's localStorage doesn't have the value"
+    );
+    click_by_text(ctx, "div", "Get local storage").await?;
+    ctx.wait_for_text(r#""test-stored" in local storage = Some("kept value")"#)
+        .await?;
+    click_by_text(ctx, "div", "Remove local storage").await?;
+    ctx.wait_for_text(r#"forgot "test-stored""#).await?;
+    click_by_text(ctx, "div", "Get local storage").await?;
+    ctx.wait_for_text(r#""test-stored" in local storage = None"#)
+        .await?;
+
     click_by_text(ctx, "div", "Get timezone_offset").await?;
     ctx.wait_for_text("timezone offset = ").await?;
 

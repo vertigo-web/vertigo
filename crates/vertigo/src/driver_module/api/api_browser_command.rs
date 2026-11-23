@@ -208,6 +208,27 @@ impl CommandForBrowserApi {
         }
     }
 
+    pub fn local_storage_get(&self, name: String) -> Option<String> {
+        let response = exec_command(CommandForBrowser::LocalStorageGet { name });
+
+        let response = decode_json::<browser_response::LocalStorageGet>(response);
+        match response {
+            Ok(response) => response.value,
+            Err(err) => {
+                log::error!("local_storage_get -> decode error = {err}");
+                None
+            }
+        }
+    }
+
+    pub fn local_storage_set(&self, name: String, value: String) {
+        exec_command(CommandForBrowser::LocalStorageSet { name, value });
+    }
+
+    pub fn local_storage_remove(&self, name: String) {
+        exec_command(CommandForBrowser::LocalStorageRemove { name });
+    }
+
     pub fn get_env(&self, name: impl Into<String>) -> Option<String> {
         let response = exec_command(CommandForBrowser::GetEnv { name: name.into() });
 
