@@ -34,6 +34,9 @@ pub mod safe_wrappers {
 
 #[cfg(any(test, not(target_arch = "wasm32"), not(target_os = "unknown")))]
 pub mod safe_wrappers {
+    use std::rc::Rc;
+    use vertigo_macro::store;
+
     use crate::{
         JsJson, JsJsonSerialize,
         dev::{
@@ -41,6 +44,7 @@ pub mod safe_wrappers {
             command::{CommandForBrowser, browser_response, decode_json},
         },
         driver_module::api::api_arguments,
+        struct_mut::HashMapMut,
     };
 
     pub fn safe_panic_message(_long_ptr: LongPtr) {}
@@ -64,6 +68,14 @@ pub mod safe_wrappers {
         /// The calls of `vertigo::audio` the browser got, in order.
         pub static TEST_AUDIO: std::cell::RefCell<Vec<crate::dev::command::AudioOp>> =
             Default::default();
+    }
+
+    /// `localStorage` off the browser, f. ex. in an app's tests on the host: a map of the
+    /// thread, so a test reads back what it stored, and tests in threads of their own don't
+    /// see each other's.
+    #[store]
+    fn local_storage() -> Rc<HashMapMut<String, String>> {
+        Rc::default()
     }
 
     #[cfg(test)]
@@ -137,6 +149,20 @@ pub mod safe_wrappers {
                             value: JsJson::Null,
                         }
                         .to_json()
+                    }
+                    CommandForBrowser::LocalStorageGet { name } => {
+                        browser_response::LocalStorageGet {
+                            value: local_storage().get(&name),
+                        }
+                        .to_json()
+                    }
+                    CommandForBrowser::LocalStorageSet { name, value } => {
+                        local_storage().insert(name, value);
+                        JsJson::Null
+                    }
+                    CommandForBrowser::LocalStorageRemove { name } => {
+                        local_storage().remove(&name);
+                        JsJson::Null
                     }
                     CommandForBrowser::GetEnv { name } => {
                         browser_response::GetEnv { value: env(&name) }.to_json()

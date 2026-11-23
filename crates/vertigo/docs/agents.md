@@ -342,7 +342,8 @@ The target is `wasm32-unknown-unknown` without wasm-bindgen. **Crates that need 
 | `thread::spawn`, `tokio::spawn` | `vertigo::spawn(future)`, `bind_spawn!` |
 | `rand` | `get_driver().get_random(min, max)` |
 | `std::env::var`, config files | `get_driver().env("NAME")`, set with `vertigo watch --env NAME=value` |
-| `document.cookie`, `localStorage`-style | `get_driver().cookie_get(..)`, `cookie_set(..)` |
+| `document.cookie` | `get_driver().cookie_get(..)`, `cookie_set(..)` |
+| `localStorage` | `get_driver().local_storage_get(..)`, `local_storage_set(..)`, `local_storage_remove(..)`, read after the page is the browser's (see below) |
 | `web_sys` canvas contexts, `glow`, `wgpu` | a [`Drawing`](crate::Drawing) in `<canvas draw={..}>` for 2D, [`webgl::WebGl`](crate::webgl::WebGl) for WebGL 2, [`webgpu::WebGpu`](crate::webgpu::WebGpu) for WebGPU |
 | `web_sys` Web Audio, `rodio`, `kira` | [`audio`](crate::audio): `Sound` for short sounds, `Music` for music, the volume of all of it |
 | `web_sys` for anything else | a [`Driver`](crate::Driver) method first, then [`js!`](crate::js) |
@@ -356,6 +357,8 @@ Your component code runs on the server first, then again in the browser.
   the server's HTML differ from what the browser renders.
 - Guard browser-only work (`js!`, focusing an element, measuring layout) with
   `get_driver().is_browser()`.
+- What the browser keeps (`local_storage_get`) the server doesn't have: read it in an event or
+  an animation frame, not in the first render, or the page differs from the server's.
 
 ## Building and checking
 

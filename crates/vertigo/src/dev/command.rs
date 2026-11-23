@@ -85,6 +85,17 @@ pub enum CommandForBrowser {
         expires_in: u64,
     },
 
+    LocalStorageGet {
+        name: String,
+    },
+    LocalStorageSet {
+        name: String,
+        value: String,
+    },
+    LocalStorageRemove {
+        name: String,
+    },
+
     GetEnv {
         name: String,
     },
@@ -276,6 +287,11 @@ pub mod browser_response {
     #[derive(AutoJsJson)]
     pub struct CookieJsonGet {
         pub value: JsJson,
+    }
+
+    #[derive(AutoJsJson)]
+    pub struct LocalStorageGet {
+        pub value: Option<String>,
     }
 
     #[derive(AutoJsJson)]
