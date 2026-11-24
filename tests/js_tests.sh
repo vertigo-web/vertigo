@@ -37,8 +37,8 @@ echo "OK: wasm_run.js and its chunks up to date"
 # the room: change the number in the same commit, so it is a decision on the record rather
 # than a drift. `tests/bench-report` reports raw and gzip sizes per benchmark run if you want
 # the fuller picture. `localStorage` (getting, keeping and forgetting a value) took it from
-# 43.9 KB to 44.4 KB.
-BUDGET=44600
+# 43.9 KB to 44.4 KB, and giving the focus back (`Driver::remember_focus`) to 45.1 KB.
+BUDGET=45300
 SIZE=$(wc -c < crates/vertigo/src/driver_module/wasm_run.js)
 
 if [ "$SIZE" -gt "$BUDGET" ]; then

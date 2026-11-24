@@ -1,8 +1,8 @@
 //! What the app can ask of the environment it is running in, through `get_driver()`.
 //!
-//! Cookies, the browser's local storage, the timezone, a random number, the history stack, the
-//! router - and whether any of this is happening in a browser at all, which is what the panel at
-//! the bottom turns on.
+//! Cookies, the browser's local storage, the timezone, a random number, the focus given back, the
+//! history stack, the router - and whether any of this is happening in a browser at all, which is
+//! what the panel at the bottom turns on.
 //!
 //! Each control reports what it got rather than only logging it, so the tab shows something
 //! without the console open.
@@ -11,8 +11,10 @@ use vertigo::{Css, JsJson, Value, bind, component, css, dom, get_driver};
 
 use crate::app::{route::Route, state::state_route};
 
+mod focus_back;
 mod hydration_keeps_state;
 mod ssr_test;
+use focus_back::FocusBack;
 use hydration_keeps_state::HydrationKeepsState;
 use ssr_test::SsrTest;
 
@@ -108,6 +110,10 @@ pub fn DriverDemo() {
             <div css={css_result()}>
                 "Last result: " { last }
             </div>
+
+            <hr/>
+
+            <FocusBack />
 
             <hr/>
 

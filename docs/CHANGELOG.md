@@ -5,6 +5,10 @@
 
 ### Added
 
+* `Driver::remember_focus`: the element with the focus is given it back when the `DropResource`
+  is dropped, if the focus got lost by then - f. ex. a dialog gives it back to the button that
+  opened it once it's closed, without scrolling the page to it. The focus moved to another
+  element meanwhile stays there, by a Tab or a click that closed a popup in its `on_blur` too.
 * `Driver::local_storage_get`, `local_storage_set` and `local_storage_remove`: the browser's
   `localStorage`, kept for the page's origin across visits. Unlike a cookie it isn't sent to the
   server and holds megabytes, f. ex. for a draft kept. The server renders the page without it, so

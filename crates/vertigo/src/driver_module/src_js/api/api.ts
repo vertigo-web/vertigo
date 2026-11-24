@@ -11,6 +11,7 @@ import { AnimationFrames } from "./command/animationFrames";
 import { AppLocation } from './location/AppLocation';
 import { Cookies } from "./command/cookies";
 import { LocalStorage } from "./command/localStorage";
+import { FocusReturns } from "./command/focusReturn";
 import { getRandom } from "./command/getRandom";
 import { languages } from "./command/languages";
 import { DriverDom } from "./command/dom/dom";
@@ -166,6 +167,16 @@ type ExecType
         }
     }
     | {
+        FocusRemember: {
+            id: number,
+        }
+    }
+    | {
+        FocusReturn: {
+            id: number,
+        }
+    }
+    | {
         Audio: {
             op: AudioOp,
         }
@@ -202,6 +213,7 @@ export class Api {
     private readonly location: AppLocation;
     private readonly cookie: Cookies;
     private readonly localStorage: LocalStorage;
+    private readonly focusReturns: FocusReturns;
     private readonly audio: LazyAudio;
 
 
@@ -215,6 +227,7 @@ export class Api {
         this.location = appLocation;
         this.cookie = new Cookies();
         this.localStorage = new LocalStorage(() => window.localStorage);
+        this.focusReturns = new FocusReturns(() => document);
         this.audio = new LazyAudio((callback_id, event) => {
             getWasm().wasmCommand({ CallbackCall: { callback_id, value: event } });
         });
@@ -385,6 +398,14 @@ export class Api {
 
             case 'Fullscreen':
                 this.dom.fullscreen(params.dom_id);
+                return null;
+
+            case 'FocusRemember':
+                this.focusReturns.remember(params.id);
+                return null;
+
+            case 'FocusReturn':
+                this.focusReturns.giveBack(params.id);
                 return null;
 
             case 'Audio':
