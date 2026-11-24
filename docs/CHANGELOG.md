@@ -94,6 +94,11 @@
 
 ### Changed
 
+* vertigo-cli, vertigo-testing, the fullstack template and the demo server build actix-web
+  without its `http2` feature, so the server speaks HTTP/1.1 only. Since actix-web 4.19 a server
+  with `http2` answers HTTP/2 cleartext (h2c) on `bind`, and actix's HTTP/2 runs on h2 0.3, which
+  has no fix for RUSTSEC-2026-0258. An app serving HTTP/2 itself, not behind a proxy, adds
+  `http2` to the features of its own actix-web.
 * `draw` on a canvas works nothing out during SSR: the server doesn't compute the drawing nor
   turn it into bytes for a page that has no pictures in its canvases, so an app needs no
   `is_server()` check around it.

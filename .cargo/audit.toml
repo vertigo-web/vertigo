@@ -3,8 +3,9 @@
 [advisories]
 ignore = [
     # h2 0.3 queues empty DATA frames without limit. The fix is only in h2 0.4.16, and the
-    # actix 3.x line (awc, actix-http) stays on h2 0.3. Out of reach here: `HttpServer::bind`
-    # serves HTTP/1.x only and the awc client is capped at HTTP/1.1
+    # actix 3.x line (awc, actix-http) stays on h2 0.3. Out of reach here: actix-web is built
+    # without its `http2` feature, so `HttpServer::bind` serves HTTP/1.x only (with it, since
+    # 4.19, the server answers h2c), and the awc client is capped at HTTP/1.1
     # (vertigo-cli/src/serve/http_client.rs). Drop this once actix moves to h2 0.4.
     "RUSTSEC-2026-0258",
 ]

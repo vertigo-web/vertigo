@@ -6,6 +6,8 @@ edition = "2024"
 # See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
 
 [dependencies]
-actix-web = "4"
+# The default features without `http2` (HTTP/2 on h2 0.3, RUSTSEC-2026-0258). Behind a proxy
+# the app speaks HTTP/1.1 to it anyway; serving HTTP/2 directly, add "http2" to the list.
+actix-web = { version = "4", default-features = false, features = ["macros", "compress-brotli", "compress-gzip", "compress-zstd", "cookies", "unicode", "compat", "ws"] }
 vertigo = "0.14"
 vertigo-cli = "0.14"
