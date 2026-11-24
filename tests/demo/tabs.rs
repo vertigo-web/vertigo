@@ -294,6 +294,28 @@ pub async fn driver(ctx: &Ctx) -> Result<()> {
     })
     .await?;
 
+    // A box gives the focus back to the button that opened it once it's closed by the keyboard
+    let close = open_for_focus(ctx, "Open a box", "Close the box").await?;
+    close.send_keys(Key::Enter).await?;
+    ctx.wait_for_none(By::XPath("//*[@aria-label='A box']"))
+        .await?;
+    wait_for_focus(ctx, "Open a box").await?;
+
+    // A popup too, closed with Escape
+    let in_popup = open_for_focus(ctx, "Open a popup", "In the popup").await?;
+    in_popup.send_keys(Key::Escape).await?;
+    ctx.wait_for_none(By::XPath("//*[@aria-label='A popup']"))
+        .await?;
+    wait_for_focus(ctx, "Open a popup").await?;
+
+    // Closed by Tab, in its `on_blur`, it leaves the focus where Tab took it - on the box's
+    // button after it - rather than taking it back to its own
+    let in_popup = open_for_focus(ctx, "Open a popup", "In the popup").await?;
+    in_popup.send_keys(Key::Tab).await?;
+    ctx.wait_for_none(By::XPath("//*[@aria-label='A popup']"))
+        .await?;
+    wait_for_focus(ctx, "Open a box").await?;
+
     // The hydration panel lives here too, because `is_browser()` is driver API as much as the
     // rest of it. What hydration actually did is asserted in `ssr::hydration`.
     ctx.wait_for_text("Rendered by: browser").await?;
@@ -311,6 +333,35 @@ pub async fn driver(ctx: &Ctx) -> Result<()> {
         .context("history_back to return to /sudoku")?;
 
     Ok(())
+}
+
+/// Clicks the button `opener`, and waits for the focus on the button `inside` what it opened.
+async fn open_for_focus(ctx: &Ctx, opener: &str, inside: &str) -> Result<WebElement> {
+    ctx.find(By::XPath(format!("//button[.={opener:?}]")))
+        .await?
+        .click()
+        .await?;
+    let element = ctx
+        .find(By::XPath(format!("//button[.={inside:?}]")))
+        .await?;
+    wait_for_focus(ctx, inside).await?;
+    Ok(element)
+}
+
+/// Waits for the focus on the element with `text`.
+async fn wait_for_focus(ctx: &Ctx, text: &str) -> Result<()> {
+    ctx.wait_for(&format!("the focus on {text:?}"), async || {
+        Ok((focused_text(ctx).await? == text).then_some(()))
+    })
+    .await
+}
+
+/// The text of the element with the focus.
+async fn focused_text(ctx: &Ctx) -> Result<String> {
+    let text = ctx
+        .js("return document.activeElement.textContent.trim();")
+        .await?;
+    Ok(text.as_str().unwrap_or_default().to_string())
 }
 
 /// The Driver tab's "Last result" line.

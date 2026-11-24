@@ -412,6 +412,55 @@ impl Driver {
         api_browser_command().fullscreen(None);
     }
 
+    /// Remembers the element with the focus now, and gives the focus back to it once the
+    /// returned [DropResource] is dropped, if the focus got lost by then - f. ex. a dialog gives
+    /// it back to the button that opened it. Otherwise the focus would go nowhere with the dialog
+    /// taken off the page, and the keyboard would start again from the top of the page.
+    ///
+    /// The focus goes back once the browser is done with the event the drop came from, so after
+    /// the element holding it is taken off the page, and after a Tab or a click moved the focus.
+    /// It stays on an element that is still on the page, f. ex. a field clicked or tabbed to
+    /// beside a popup that closed then, in its `on_blur` too. The page isn't scrolled to the
+    /// element given the focus back, as with a `<dialog>` closed. Nothing happens when no element
+    /// had the focus, or the one that had it is no longer on the page. Nothing is remembered off
+    /// the browser, as during SSR.
+    ///
+    /// The element is the one with the focus when this is called, before the changes to the page
+    /// made with the call. A dialog opened from a menu item, in the change that takes the menu
+    /// off the page, remembers the item then, and the focus goes nowhere once it's closed.
+    ///
+    /// ```rust
+    /// use vertigo::{Value, bind, dom, dom_element, get_driver};
+    ///
+    /// let open = Value::new(false);
+    /// let show = bind!(open, |_| open.set(true));
+    /// let dialog = open.to_computed().render_value_option(move |shown| {
+    ///     shown.then(|| {
+    ///         let close = bind!(open, |_| open.set(false));
+    ///         let dialog = dom_element! {
+    ///             <div role="dialog">
+    ///                 <button on_click={close} autofocus="autofocus">"Close"</button>
+    ///             </div>
+    ///         };
+    ///         // The focus goes back to "Settings" when the dialog goes
+    ///         dialog.append_drop_resource(get_driver().remember_focus());
+    ///         dialog.into()
+    ///     })
+    /// });
+    ///
+    /// dom! {
+    ///     <div>
+    ///         <button on_click={show}>"Settings"</button>
+    ///         {dialog}
+    ///     </div>
+    /// };
+    /// ```
+    #[doc(alias = "activeElement")]
+    #[must_use]
+    pub fn remember_focus(&self) -> DropResource {
+        api_browser_command().remember_focus()
+    }
+
     /// Gets current value of monotonic clock.
     pub fn now(&self) -> Instant {
         Instant::now()

@@ -198,6 +198,8 @@ pub mod safe_wrappers {
                     | CommandForBrowser::ImagePreload { .. }
                     | CommandForBrowser::PointerLock { .. }
                     | CommandForBrowser::Fullscreen { .. }
+                    | CommandForBrowser::FocusRemember { .. }
+                    | CommandForBrowser::FocusReturn { .. }
                     | CommandForBrowser::JsApiCall { .. }
                     | CommandForBrowser::DomBulkUpdate { .. } => JsJson::Null,
                 };

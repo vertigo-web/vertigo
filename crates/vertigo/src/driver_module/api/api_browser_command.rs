@@ -2,7 +2,7 @@ use std::rc::Rc;
 use vertigo_macro::store;
 
 use crate::{
-    InstantType, JsJson, JsJsonSerialize,
+    DropResource, InstantType, JsJson, JsJsonSerialize,
     dev::{
         CallbackId, SsrFetchCache, SsrFetchRequest,
         command::{
@@ -305,6 +305,16 @@ impl CommandForBrowserApi {
         exec_command(CommandForBrowser::Fullscreen { dom_id });
     }
 
+    /// See [`crate::Driver::remember_focus`]. The number the browser keeps the element under
+    /// comes from the counter of callbacks, as each of them is of its own.
+    pub fn remember_focus(&self) -> DropResource {
+        let id = CallbackId::new().as_u64();
+        exec_command(CommandForBrowser::FocusRemember { id });
+        DropResource::new(move || {
+            exec_command(CommandForBrowser::FocusReturn { id });
+        })
+    }
+
     pub fn audio(&self, op: AudioOp) {
         exec_command(CommandForBrowser::Audio { op });
     }
@@ -344,6 +354,24 @@ mod tests {
             }
             .to_json(),
             JsJson::Object([preload].into())
+        );
+    }
+
+    /// `api.ts` reads them as `{ FocusRemember: { id } }` and `{ FocusReturn: { id } }`.
+    #[test]
+    fn remembering_the_focus_is_the_commands_the_driver_reads() {
+        let command = |name: &str| {
+            let id = ("id".to_string(), JsJson::Number(crate::JsJsonNumber(3.0)));
+            JsJson::Object([(name.to_string(), JsJson::Object([id].into()))].into())
+        };
+
+        assert_eq!(
+            CommandForBrowser::FocusRemember { id: 3 }.to_json(),
+            command("FocusRemember")
+        );
+        assert_eq!(
+            CommandForBrowser::FocusReturn { id: 3 }.to_json(),
+            command("FocusReturn")
         );
     }
 

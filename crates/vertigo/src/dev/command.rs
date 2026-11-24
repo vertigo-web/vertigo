@@ -136,6 +136,17 @@ pub enum CommandForBrowser {
         dom_id: Option<u64>,
     },
 
+    /// Remember the element with the focus as `id`, see [`crate::Driver::remember_focus`].
+    FocusRemember {
+        id: u64,
+    },
+
+    /// Give the focus back to the element remembered as `id`, if it got lost meanwhile, see
+    /// [`crate::Driver::remember_focus`].
+    FocusReturn {
+        id: u64,
+    },
+
     /// A call of [`crate::audio`].
     Audio {
         op: AudioOp,
