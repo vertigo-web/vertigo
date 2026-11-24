@@ -36,7 +36,10 @@ ssr-timings = []
 actix-cors = "0.7"
 actix-files = "0.7"
 actix-http = "3"
-actix-web = "4.16"
+# The default features without `http2`: since actix-web 4.19 a server with it answers HTTP/2
+# cleartext (h2c) on `bind`, and actix's HTTP/2 runs on h2 0.3, which has no fix for
+# RUSTSEC-2026-0258. An app serving HTTP/2 itself turns `http2` on in its own actix-web.
+actix-web = { version = "4.16", default-features = false, features = ["macros", "compress-brotli", "compress-gzip", "compress-zstd", "cookies", "unicode", "compat", "ws"] }
 awc = { version = "3.8", features = ["rustls-0_23-webpki-roots"] }
 base64 = "0.23"
 brotli = "9.0"

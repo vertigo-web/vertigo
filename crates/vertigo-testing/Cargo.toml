@@ -12,7 +12,9 @@ license.workspace = true
 edition.workspace = true
 
 [dependencies]
-actix-web = "4.16"
+# The server under test needs nothing beyond the core - without `http2`, like vertigo-cli
+# (h2 0.3, RUSTSEC-2026-0258)
+actix-web = { version = "4.16", default-features = false }
 anyhow = "1.0"
 libtest-mimic = "0.8"
 reqwest = { version = "0.13", default-features = false, features = ["json"] }

@@ -128,3 +128,42 @@ pub async fn run(opts: ServeOpts, port_watch: Option<u16>) -> Result<(), ErrorCo
 
     Ok(())
 }
+
+#[cfg(test)]
+mod tests {
+    use std::time::Duration;
+
+    use actix_web::{App, HttpServer, web};
+    use tokio::{
+        io::{AsyncReadExt, AsyncWriteExt},
+        net::TcpStream,
+    };
+
+    /// The server speaks HTTP/1.1 only. With actix-web's `http2` feature, since actix-web 4.19,
+    /// `bind` answers HTTP/2 cleartext (h2c), and actix's HTTP/2 runs on h2 0.3, which has no
+    /// fix for RUSTSEC-2026-0258. A client opening with the HTTP/2 preface gets an HTTP/1.1
+    /// answer here, where an HTTP/2 server would start with a SETTINGS frame.
+    #[actix_web::test]
+    async fn a_client_speaking_http2_gets_http1() -> Result<(), Box<dyn std::error::Error>> {
+        let server =
+            HttpServer::new(|| App::new().route("/", web::get().to(|| async { "Ala ma kota" })))
+                .workers(1)
+                .bind(("127.0.0.1", 0))?;
+        let address = server.addrs()[0];
+        let server = server.run();
+        let handle = server.handle();
+        actix_web::rt::spawn(server);
+
+        let mut stream = TcpStream::connect(address).await?;
+        stream
+            .write_all(b"PRI * HTTP/2.0\r\n\r\nSM\r\n\r\n")
+            .await?;
+        let mut answer = vec![0; 64];
+        let read = tokio::time::timeout(Duration::from_secs(5), stream.read(&mut answer)).await??;
+        handle.stop(false).await;
+
+        let answer = String::from_utf8_lossy(&answer[..read]);
+        assert!(answer.starts_with("HTTP/1.1 "), "{answer:?}");
+        Ok(())
+    }
+}
