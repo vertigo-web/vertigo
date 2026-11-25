@@ -413,6 +413,35 @@ fn scan_strips_the_public_path_placeholder_and_gzips() {
 }
 
 #[test]
+fn the_runtime_is_found_among_the_chunks() {
+    let slot = "the-runtime-is-found-among-the-chunks";
+    let chunks = std::env::temp_dir()
+        .join(format!("vertigo-bench-report-tests/build-{slot}"))
+        .join("chunks");
+    let _ = std::fs::create_dir_all(&chunks);
+
+    for (name, body) in [
+        ("runtime.cccc.js", "// the runtime"),
+        // Neither its source map nor a chunk a page may never ask for
+        ("runtime.cccc.js.map", "{}"),
+        ("canvas.dddd.js", "// canvases"),
+    ] {
+        if let Err(err) = std::fs::write(chunks.join(name), body) {
+            panic!("writing {name}: {err}");
+        }
+    }
+
+    let artifacts = scan_temp_build("app", slot, &minimal_wasm(), b"// bootstrap");
+
+    assert_eq!(artifacts.len(), 3);
+    let runtime = find_artifact(&artifacts, "app runtime");
+    assert_eq!(runtime.file, "runtime.cccc.js");
+    assert_eq!(runtime.bytes, 14);
+    assert!(runtime.parts.is_empty());
+    assert_eq!(find_artifact(&artifacts, "app js").bytes, 12);
+}
+
+#[test]
 fn a_missing_build_is_an_error_rather_than_zero_bytes() {
     let missing = std::env::temp_dir().join("vertigo-bench-report-tests/not-a-build");
     let _ = std::fs::remove_dir_all(&missing);

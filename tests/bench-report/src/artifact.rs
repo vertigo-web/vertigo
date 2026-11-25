@@ -26,11 +26,13 @@ pub struct Artifact {
 }
 
 impl Artifact {
-    /// Every artifact `vertigo build` wrote into `dest_dir`, read from its `index.json`.
+    /// Every artifact `vertigo build` wrote into `dest_dir` that every page downloads: the two
+    /// its `index.json` names, and the runtime.
     ///
-    /// That file names exactly the two things vertigo produced, under a
-    /// `%%VERTIGO_PUBLIC_BUILD_PATH%%/` placeholder the server substitutes at request time. The
-    /// files themselves sit in `dest_dir` under those basenames.
+    /// That file names the wasm and `wasm_run.js`, under a `%%VERTIGO_PUBLIC_BUILD_PATH%%/`
+    /// placeholder the server substitutes at request time. The files themselves sit in `dest_dir`
+    /// under those basenames. `wasm_run.js` is the bootstrap alone, which imports the runtime
+    /// from `chunks/` by a name made of its content, so that one is found there.
     pub fn scan(label: &str, dest_dir: &str) -> BenchResult<Vec<Artifact>> {
         let dir = Path::new(dest_dir);
         let index_path = dir.join("index.json");
@@ -65,6 +67,21 @@ impl Artifact {
             });
         }
 
+        if let Some(file) = runtime_chunk(&dir.join("chunks")) {
+            let path = dir.join("chunks").join(&file);
+            let bytes = std::fs::read(&path).ctx(format!("reading {}", path.display()))?;
+
+            let gzip_bytes = gzip_size(&bytes).ctx(format!("compressing {}", path.display()))?;
+
+            out.push(Artifact {
+                name: format!("{label} runtime"),
+                file,
+                bytes: bytes.len() as u64,
+                gzip_bytes,
+                parts: BTreeMap::new(),
+            });
+        }
+
         Ok(out)
     }
 
@@ -74,6 +91,22 @@ impl Artifact {
     pub fn same_content(&self, other: &Artifact) -> bool {
         self.file == other.file
     }
+}
+
+/// The runtime among the chunks: `runtime.HASH.js`, as rollup names it.
+///
+/// `None` for a build with no `chunks/` or no runtime in it - a vertigo from before the runtime
+/// left `wasm_run.js`, whose `js` artifact is then all of it.
+fn runtime_chunk(chunks: &Path) -> Option<String> {
+    let mut names: Vec<String> = std::fs::read_dir(chunks)
+        .ok()?
+        .filter_map(|entry| entry.ok()?.file_name().into_string().ok())
+        .filter(|name| name.starts_with("runtime.") && name.ends_with(".js"))
+        .collect();
+
+    // One, but a directory is read in no order.
+    names.sort();
+    names.into_iter().next()
 }
 
 /// The part after the last `/`, which is where the file actually is.

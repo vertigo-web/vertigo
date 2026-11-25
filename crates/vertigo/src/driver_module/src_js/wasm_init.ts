@@ -13,25 +13,20 @@ export interface ModuleControllerType<ExportType extends BaseExportType> {
     wasmCommand: (params: JsJsonType) => JsJsonType,
 }
 
-const preloadedModules: Map<string, Promise<WebAssembly.Module | null>> = new Map();
+// The wasm as the bootstrap began to download it, ahead of this code (see `boot.ts`).
+export interface WasmDownload {
+    // Compiled while the page was loading (`vertigo serve --wasm-preload`), `null` if that failed.
+    module?: Promise<WebAssembly.Module | null>,
+    // The answer to the request made once the page had loaded, along with the one for this code.
+    response?: Promise<Response>,
+}
 
-// Downloads and compiles the wasm while the page loads (`vertigo serve --wasm-preload`),
-// at low priority so the images and styles the page shows first take precedence.
-export const preloadModule = (wasmBinPath: string) => {
-    if (preloadedModules.has(wasmBinPath) || typeof WebAssembly.compileStreaming !== 'function') {
-        return;
-    }
-
-    const module = WebAssembly.compileStreaming(fetch(wasmBinPath, { priority: 'low' })).catch((err: unknown) => {
-        console.warn("Preloading wasm failed, it will be fetched again once the page has loaded. Original error:\n", err);
-        return null;
-    });
-
-    preloadedModules.set(wasmBinPath, module);
-};
-
-const fetchModule = async (wasmBinPath: string, imports: Record<string, WebAssembly.ModuleImports>): Promise<WebAssembly.WebAssemblyInstantiatedSource> => {
-    const preloaded = await preloadedModules.get(wasmBinPath);
+const fetchModule = async (
+    wasmBinPath: string,
+    imports: Record<string, WebAssembly.ModuleImports>,
+    download: WasmDownload,
+): Promise<WebAssembly.WebAssemblyInstantiatedSource> => {
+    const preloaded = await download.module;
     if (preloaded) {
         return {
             module: preloaded,
@@ -39,8 +34,12 @@ const fetchModule = async (wasmBinPath: string, imports: Record<string, WebAssem
         };
     }
 
+    let response = download.response;
+
     if (typeof WebAssembly.instantiateStreaming === 'function') {
-        const stream = fetch(wasmBinPath);
+        const stream = response ?? fetch(wasmBinPath);
+        // Read by the streaming, whether it fails or not
+        response = undefined;
         try {
             const module = await WebAssembly.instantiateStreaming(stream, imports);
             return module;
@@ -51,7 +50,7 @@ const fetchModule = async (wasmBinPath: string, imports: Record<string, WebAssem
 
     console.info('fetchModule by WebAssembly.instantiate');
 
-    const resp = await fetch(wasmBinPath);
+    const resp = await (response ?? fetch(wasmBinPath));
     const binary = await resp.arrayBuffer();
     const module_instance = await WebAssembly.instantiate(binary, imports);
     return module_instance;
@@ -60,8 +59,9 @@ const fetchModule = async (wasmBinPath: string, imports: Record<string, WebAssem
 export const wasmInit = async <ExportType extends BaseExportType>(
     wasmBinPath: string,
     imports: { mod: WebAssembly.ModuleImports },
+    download: WasmDownload,
 ): Promise<ModuleControllerType<ExportType>> => {
-    const module_instance = await fetchModule(wasmBinPath, imports);
+    const module_instance = await fetchModule(wasmBinPath, imports, download);
 
     let cacheGetUint8Memory: Uint8Array = new Uint8Array(1);
 

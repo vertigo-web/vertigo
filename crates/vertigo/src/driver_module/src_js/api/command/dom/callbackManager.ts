@@ -356,9 +356,20 @@ export const keepEarlyMessage = (event: MessageEvent) => {
     earlyMessages?.push(event);
 };
 
-if (typeof window !== 'undefined') {
-    window.addEventListener('message', keepEarlyMessage);
+/// The ones the bootstrap heard, and how it stops hearing. This code comes with the wasm, after
+/// the page's `load` too, so the bootstrap hears them from the start, see `boot.ts`.
+export interface EarlyMessages {
+    messages: Array<MessageEvent>,
+    stop: () => void,
 }
+
+/// Takes them over from the bootstrap and hears the ones still to come. In one go, so that none
+/// is missed or kept twice.
+export const hearEarlyMessages = (heard: EarlyMessages) => {
+    heard.stop();
+    earlyMessages?.push(...heard.messages);
+    window.addEventListener('message', keepEarlyMessage);
+};
 
 /// The event names are wire strings from Rust (`dom/dom_element.rs`), so each is spelled out
 /// exactly once here. `change_file` and `change_checked` are vertigo-internal names, remapped to

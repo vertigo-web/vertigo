@@ -53,7 +53,8 @@ Every suite records the size of everything it built, above the timings:
 ```text
   artifacts
     demo wasm                   999 442   gz     313 200  code 936 681  data 58 850  elem 1 852  function 1 581  other 440
-    demo js                      30 568   gz      10 024
+    demo js                       1 448   gz         758
+    demo runtime                 44 121   gz      14 041
 ```
 
 - The **wasm section breakdown** is read out of the module itself, so a size regression is
@@ -70,8 +71,11 @@ Every suite records the size of everything it built, above the timings:
   smaller. The benchmarks themselves run with `--disable-compression`, so that what they time
   is vertigo rather than brotli, and so that they stay comparable with baselines recorded
   before compression existed.
-- `wasm_run.js` is the same file for every suite: it comes from the vertigo crate rather than
-  from the subject app. Four suites reporting an identical number is a free cross-check.
+- **`js`** is `wasm_run.js`, the bootstrap a page downloads before it has loaded, and
+  **`runtime`** the chunk it asks for together with the wasm. A baseline from before the two
+  were split has it all under `js` and no `runtime`.
+- Both are the same files for every suite: they come from the vertigo crate rather than from the
+  subject app. Four suites reporting an identical number is a free cross-check.
 
 The comparison prints this **exactly, with no noise band**, because a file is the size it is:
 

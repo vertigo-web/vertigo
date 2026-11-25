@@ -99,6 +99,14 @@
 
 ### Changed
 
+* `wasm_run.js` is a bootstrap of 0.6 KB with brotli (1.4 KB without) instead of 12.8 KB: all of
+  vertigo a page downloads and runs before it has loaded. What wasm talks to the browser through
+  is the runtime, a chunk of its own (12.6 KB with brotli) asked for together with the wasm once
+  the page has loaded, neither waiting for the other. So the browser's code, which grows with
+  what vertigo can do, is no longer downloaded while the page loads, next to what it shows first.
+  With `vertigo serve --wasm-preload` the runtime comes while the page loads, as the wasm does.
+  `vertigo build` puts it in `chunks/` next to `wasm_run.js`, named by its content. A vertigo-cli
+  from before doesn't copy it, so its apps don't start: update it together with vertigo.
 * vertigo-cli, vertigo-testing, the fullstack template and the demo server build actix-web
   without its `http2` feature, so the server speaks HTTP/1.1 only. Since actix-web 4.19 a server
   with `http2` answers HTTP/2 cleartext (h2c) on `bind`, and actix's HTTP/2 runs on h2 0.3, which
