@@ -204,6 +204,7 @@ pub mod safe_wrappers {
                     | CommandForBrowser::FocusRemember { .. }
                     | CommandForBrowser::FocusReturn { .. }
                     | CommandForBrowser::JsApiCall { .. }
+                    | CommandForBrowser::Image { .. }
                     | CommandForBrowser::DomBulkUpdate { .. } => JsJson::Null,
                 };
 

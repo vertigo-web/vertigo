@@ -5,6 +5,13 @@
 
 ### Added
 
+* `image::resize`: a picture scaled down and encoded by the browser, f. ex. a photo from a phone
+  before it goes to the server. The browser reads the file in whatever format it shows, turned
+  as its camera wrote into it, draws it scaled on a canvas nobody sees and encodes that as a
+  JPEG, a PNG or a WebP. So an app needs no decoders and no encoder of its own, which for JPEG,
+  PNG, WebP and GIF are over 400 KB of wasm. A picture that fits can be kept as it is. The
+  browser's code for it is a chunk of its own (0.5 KB with brotli), loaded with the first
+  picture. On the server and in tests it fails, as there is no browser.
 * `on_focus_in` and `on_focus_out` on elements: the element, or one inside it, got the focus or
   lost it - the DOM's `focusin` and `focusout`, which come from the children too, unlike
   `on_focus` and `on_blur`. The focus going from one element inside to another comes as

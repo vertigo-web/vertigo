@@ -47,6 +47,7 @@ mod fast_hash;
 mod fetch;
 mod future_box;
 pub mod html_entities;
+pub mod image;
 mod instant;
 mod keyed_computed_list;
 pub mod reactive;

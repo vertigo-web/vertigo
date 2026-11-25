@@ -347,6 +347,7 @@ The target is `wasm32-unknown-unknown` without wasm-bindgen. **Crates that need 
 | `document.activeElement` kept to give the focus back, f. ex. after a dialog | `get_driver().remember_focus()`, a `DropResource` kept as long as the dialog (`append_drop_resource`) |
 | `web_sys` canvas contexts, `glow`, `wgpu` | a [`Drawing`](crate::Drawing) in `<canvas draw={..}>` for 2D, [`webgl::WebGl`](crate::webgl::WebGl) for WebGL 2, [`webgpu::WebGpu`](crate::webgpu::WebGpu) for WebGPU |
 | `web_sys` Web Audio, `rodio`, `kira` | [`audio`](crate::audio): `Sound` for short sounds, `Music` for music, the volume of all of it |
+| the `image` crate to make a picture smaller before it is sent | [`image::resize`](crate::image::resize): the browser decodes, scales and encodes it, with no decoder in the wasm |
 | `web_sys` for anything else | a [`Driver`](crate::Driver) method first, then [`js!`](crate::js) |
 | a file in `static/` | [`include_static!`](crate::include_static) gives its public path |
 

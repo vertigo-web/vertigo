@@ -17,6 +17,8 @@ import { languages } from "./command/languages";
 import { DriverDom } from "./command/dom/dom";
 import { LazyAudio } from "./command/audio_lazy";
 import type { AudioOp } from "./command/audio";
+import { LazyImages } from "./command/image_lazy";
+import type { ImageOp } from "./command/image";
 import { scrollToFragmentOnRender } from "./command/dom/injects";
 import { Metadata } from "./metadata";
 
@@ -182,6 +184,11 @@ type ExecType
         }
     }
     | {
+        Image: {
+            op: ImageOp,
+        }
+    }
+    | {
         JsApiCall: {
             commands: Array<JsApiCommandType>
         }
@@ -215,6 +222,7 @@ export class Api {
     private readonly localStorage: LocalStorage;
     private readonly focusReturns: FocusReturns;
     private readonly audio: LazyAudio;
+    private readonly images: LazyImages;
 
 
     constructor(private readonly metadata: Metadata, private readonly getWasm: () => ModuleControllerType<ExportType>) {
@@ -230,6 +238,9 @@ export class Api {
         this.focusReturns = new FocusReturns(() => document);
         this.audio = new LazyAudio((callback_id, event) => {
             getWasm().wasmCommand({ CallbackCall: { callback_id, value: event } });
+        });
+        this.images = new LazyImages((callback_id, answer) => {
+            getWasm().wasmCommand({ CallbackCall: { callback_id, value: answer } });
         });
     }
 
@@ -410,6 +421,10 @@ export class Api {
 
             case 'Audio':
                 this.audio.run(params.op);
+                return null;
+
+            case 'Image':
+                this.images.run(params.op);
                 return null;
 
             case 'JsApiCall':

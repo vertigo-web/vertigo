@@ -150,8 +150,13 @@ pub enum CommandForBrowser {
     /// A call of [`crate::audio`]: an [`AudioOp`], as the JSON it is serialized to where sound
     /// is asked for. Were it an `AudioOp` here, serializing this enum would link the code
     /// serializing every operation of sound into every app, also one without sound - about
-    /// 2 KB of wasm. The same goes for the one below.
+    /// 2 KB of wasm. The same goes for the two below.
     Audio {
+        op: JsJson,
+    },
+
+    /// A call of [`crate::image`]: an [`ImageOp`] as JSON, see [`CommandForBrowser::Audio`].
+    Image {
         op: JsJson,
     },
 
@@ -207,6 +212,41 @@ pub enum LocationCallbackMode {
 pub enum LocationSetMode {
     Push,
     Replace,
+}
+
+/// A call of [`crate::image`], which `image.ts` in the browser does.
+#[derive(AutoJsJson, Clone, Debug, PartialEq)]
+pub enum ImageOp {
+    /// Read the picture in `data` (its file, as bytes), scale it down to fit `max_width` x
+    /// `max_height`, encode it as `mime` and tell an [`ImageAnswer`] through `callback`.
+    Resize {
+        callback: CallbackId,
+        data: JsJson,
+        max_width: u32,
+        max_height: u32,
+        mime: String,
+        quality: f32,
+        /// A CSS color under the picture, for a format without transparency.
+        background: String,
+        /// Answer with no data, and encode nothing, when the picture fits as it is.
+        keep_fitting: bool,
+    },
+}
+
+/// What the browser tells of an [`ImageOp`].
+#[derive(AutoJsJson, Clone, Debug, PartialEq)]
+pub enum ImageAnswer {
+    /// The picture made, in `data` as bytes - `null` when it was kept as it is. Its size, and
+    /// that of the picture given.
+    Resized {
+        width: u32,
+        height: u32,
+        original_width: u32,
+        original_height: u32,
+        data: JsJson,
+    },
+    /// What the browser said, f. ex. that it can't read the picture.
+    Failed { message: String },
 }
 
 /// A call of [`crate::audio`], which `audio.ts` in the browser does, in the order they come.

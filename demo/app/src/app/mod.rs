@@ -9,6 +9,7 @@ mod game_input;
 mod game_of_life;
 mod github_explorer;
 mod home;
+mod image;
 mod input;
 mod js_api_access;
 mod lazy_list;
