@@ -372,6 +372,8 @@ const HANDLERS: Record<string, Handler> = {
     change: readValue(true),
     blur: notify,
     focus: notify,
+    focusin: notify,
+    focusout: notify,
     mousedown: notifyPreventIfTrue,
     mouseup: notifyPreventIfTrue,
     mouseenter: notify,

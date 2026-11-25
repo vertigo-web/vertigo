@@ -65,6 +65,8 @@ fn attr_to_group_variant(key: impl AsRef<str>, value: TokenStream2) -> TokenStre
         }
         "on_blur" => quote! { vertigo::AttrGroupValue::on_blur(#value) },
         "on_focus" => quote! { vertigo::AttrGroupValue::on_focus(#value) },
+        "on_focus_in" => quote! { vertigo::AttrGroupValue::on_focus_in(#value) },
+        "on_focus_out" => quote! { vertigo::AttrGroupValue::on_focus_out(#value) },
         "on_change" => quote! { vertigo::AttrGroupValue::on_change(#value) },
         "on_change_file" => quote! { vertigo::AttrGroupValue::on_change_file(#value) },
         "on_change_checked" => quote! { vertigo::AttrGroupValue::on_change_checked(#value) },

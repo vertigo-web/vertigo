@@ -222,6 +222,8 @@ fn push_attribute(
         | "hook_pointer_down_outside"
         | "on_blur"
         | "on_focus"
+        | "on_focus_in"
+        | "on_focus_out"
         | "on_change"
         | "on_change_file"
         | "on_change_checked"
@@ -425,6 +427,8 @@ mod tests {
             "on_intersect",
             "on_blur",
             "on_focus",
+            "on_focus_in",
+            "on_focus_out",
             "on_submit",
             "on_key_down",
             "on_key_up",

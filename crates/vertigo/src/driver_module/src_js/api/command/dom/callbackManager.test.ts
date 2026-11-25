@@ -335,7 +335,7 @@ function testFocusListeners() {
     const node = new MockNode();
     const nodes = { get: () => node } as unknown as MapNodes;
     const manager = new CallbackManager(() => ({}) as any);
-    const names = ['focus', 'blur'];
+    const names = ['focus', 'blur', 'focusin', 'focusout'];
 
     names.forEach((name, index) => manager.add(nodes, 1, name, 40 + index));
 
