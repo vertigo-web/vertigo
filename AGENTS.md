@@ -14,10 +14,12 @@ vertigo? Read [crates/vertigo/docs/agents.md](crates/vertigo/docs/agents.md) ins
   - `src/fetch` - `RequestBuilder`, `LazyCache`, `LazyListCache`
   - `src/driver_module` - the bridge to JavaScript. The browser side is TypeScript in
     `src_js/`, bundled by rollup into `wasm_run.js` and, for what it imports dynamically,
-    chunks in `chunks/`, which are committed. `wasm_run.js` is the bootstrap alone
-    (`boot.ts`), all a page runs before it has loaded: it stays small, and imports nothing the
-    runtime imports. The runtime (`runtime.ts`) is the chunk downloaded together with the wasm,
-    where what wasm asks of the browser goes. A chunk may import nothing (vertigo-cli renames
+    chunks next to it named `name.HASH.js`, which are committed. They have no directory of
+    their own, so that a build copied without its directories still starts. `wasm_run.js` is
+    the bootstrap alone (`boot.ts`), all a page runs before it has loaded: it stays small, and
+    imports nothing the runtime imports. The runtime (`runtime.ts`) is the chunk downloaded
+    together with the wasm, where what wasm asks of the browser goes. A chunk may import
+    nothing (vertigo-cli renames
     `wasm_run.js`), and `rollup.config.mjs` fails the build otherwise. What the bundle goes
     through - rollup, its plugins, typescript, tslib, terser - is pinned in `package.json`:
     `package-lock.json` isn't committed, and a different version of any of them builds other

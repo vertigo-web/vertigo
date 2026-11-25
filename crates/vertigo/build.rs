@@ -35,7 +35,7 @@ fn main() -> Result<(), Box<dyn Error>> {
         "wasm_run.js.map",
     )?;
 
-    bundle_chunks(Path::new("src/driver_module/chunks"), &dir.join("chunks"))?;
+    bundle_chunks(Path::new("src/driver_module"), &dir)?;
 
     Ok(())
 }
@@ -73,28 +73,35 @@ fn bundle_file(
     Ok(())
 }
 
-/// Copies the chunks `wasm_run.js` imports when it needs them (see `rollup.config.mjs`), and
-/// removes those of another vertigo. File by file, as other build-script units sharing this
-/// target dir copy the same files at the same time.
+/// Copies the chunks `wasm_run.js` imports when it needs them (see `rollup.config.mjs`) next to
+/// it, and removes those of another vertigo. File by file, as other build-script units sharing
+/// this target dir copy the same files at the same time.
 fn bundle_chunks(in_dir: &Path, out_dir: &Path) -> Result<(), Box<dyn Error>> {
-    // A directory is watched with all it holds.
-    println!("cargo:rerun-if-changed={}", in_dir.display());
-
-    fs::create_dir_all(out_dir)?;
-
     let mut names = HashSet::new();
 
     for entry in fs::read_dir(in_dir)? {
         let entry = entry?;
-        let out_path = out_dir.join(entry.file_name());
+        let name = entry.file_name();
+
+        if !is_chunk(&name) {
+            continue;
+        }
+
+        // The chunks there are now. One more is a new name in the chunk importing it, which so
+        // gets a new name itself, up to `wasm_run.js`, watched in `main`.
+        println!("cargo:rerun-if-changed={}", entry.path().display());
+
+        let out_path = out_dir.join(&name);
         fs::copy(entry.path(), &out_path)?;
-        names.insert(entry.file_name());
+        names.insert(name);
         println!("Bundled {}", out_path.to_string_lossy());
     }
 
     for entry in fs::read_dir(out_dir)? {
         let entry = entry?;
-        if !names.contains(&entry.file_name()) {
+        let name = entry.file_name();
+
+        if is_chunk(&name) && !names.contains(&name) {
             match fs::remove_file(entry.path()) {
                 Err(err) if err.kind() != io::ErrorKind::NotFound => return Err(err.into()),
                 _ => {}
@@ -103,4 +110,12 @@ fn bundle_chunks(in_dir: &Path, out_dir: &Path) -> Result<(), Box<dyn Error>> {
     }
 
     Ok(())
+}
+
+/// A chunk or its source map: any JavaScript next to `wasm_run.js` but itself, as rollup names
+/// them `name.HASH.js`.
+fn is_chunk(name: &OsStr) -> bool {
+    name.to_str().is_some_and(|name| {
+        (name.ends_with(".js") || name.ends_with(".js.map")) && !name.starts_with("wasm_run.js")
+    })
 }

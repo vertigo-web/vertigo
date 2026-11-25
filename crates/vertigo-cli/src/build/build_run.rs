@@ -113,7 +113,7 @@ pub fn run_with_ws(opts: BuildOpts, ws: &Workspace, allow_error: bool) -> Result
 
     // Copy chunks wasm_run.js imports when it needs them
 
-    copy_chunks(&vertigo_statics_dir.join("chunks"), &opts)?;
+    copy_chunks(&vertigo_statics_dir, &opts)?;
 
     // Copy .wasm to destination
 
@@ -191,20 +191,15 @@ pub fn run_with_ws(opts: BuildOpts, ws: &Workspace, allow_error: bool) -> Result
     Ok(())
 }
 
-/// Copies the chunks to `chunks/` next to wasm_run.js, which imports them from there by their
-/// names, made from their content. They come with their source maps only if wasm_run.js does.
-fn copy_chunks(chunks_dir: &Path, opts: &BuildOpts) -> Result<(), ErrorCode> {
-    let entries = match std::fs::read_dir(chunks_dir) {
-        Ok(entries) => entries,
-        // A vertigo with all of its JS in wasm_run.js
-        Err(err) if err.kind() == std::io::ErrorKind::NotFound => return Ok(()),
-        Err(err) => {
-            log::error!("Can't read chunks from statics directory: {err}");
-            return Err(ErrorCode::CantReadWasmRunFromStatics);
-        }
-    };
-
-    opts.new_path_in_static_make(&["chunks"]).create_dir_all();
+/// Copies the chunks next to wasm_run.js, which imports them from there by their names, made
+/// from their content. With no directory of their own: a build copied without its directories
+/// (`COPY build/*` in a Dockerfile) has to start. They come with their source maps only if
+/// wasm_run.js does.
+fn copy_chunks(statics_dir: &Path, opts: &BuildOpts) -> Result<(), ErrorCode> {
+    let entries = std::fs::read_dir(statics_dir).map_err(|err| {
+        log::error!("Can't read chunks from statics directory: {err}");
+        ErrorCode::CantReadWasmRunFromStatics
+    })?;
 
     for entry in entries {
         let entry = entry.map_err(|err| {
@@ -212,6 +207,12 @@ fn copy_chunks(chunks_dir: &Path, opts: &BuildOpts) -> Result<(), ErrorCode> {
             ErrorCode::CantReadWasmRunFromStatics
         })?;
         let name = entry.file_name().to_string_lossy().into_owned();
+
+        // None in a vertigo with all of its JS in wasm_run.js
+        if !is_chunk(&name) {
+            continue;
+        }
+
         let source_map = name.ends_with(".map");
 
         if source_map && !opts.inner.wasm_run_source_map {
@@ -224,11 +225,16 @@ fn copy_chunks(chunks_dir: &Path, opts: &BuildOpts) -> Result<(), ErrorCode> {
             erase_last_two_lines(&mut content);
         }
 
-        opts.new_path_in_static_make(&["chunks", &name])
-            .save(&content)?;
+        opts.new_path_in_static_make(&[&name]).save(&content)?;
     }
 
     Ok(())
+}
+
+/// A chunk or its source map among vertigo's statics: any JavaScript next to wasm_run.js but
+/// itself, as vertigo's build.rs puts them there.
+fn is_chunk(name: &str) -> bool {
+    (name.ends_with(".js") || name.ends_with(".js.map")) && !name.starts_with("wasm_run.js")
 }
 
 fn erase_last_two_lines(content: &mut Vec<u8>) {
