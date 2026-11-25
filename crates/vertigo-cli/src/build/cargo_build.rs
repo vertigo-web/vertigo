@@ -9,9 +9,9 @@ use crate::{
     commons::{ErrorCode, command::CommandRun},
 };
 
-use super::Workspace;
+use super::{Workspace, remap_paths::remap_paths};
 
-const TARGET: &str = "wasm32-unknown-unknown";
+pub(super) const TARGET: &str = "wasm32-unknown-unknown";
 
 /// Value for `VERTIGO_BUILD_ID`, the variable the bundling macros pull via `option_env!` into
 /// the dep-info of each crate they bundle something from - the app and any library with
@@ -96,6 +96,11 @@ pub fn run_cargo_build(
 
     for opt in cargo_opts {
         command = command.add_param(opt);
+    }
+
+    // A release goes to everybody, a debug build keeps the paths a debugger finds sources by
+    if release {
+        command = remap_paths(command, cargo_opts);
     }
 
     for name in inherited_package_env() {

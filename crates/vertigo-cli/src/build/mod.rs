@@ -4,6 +4,7 @@ mod cargo_build;
 mod cargo_workspace;
 mod check_env;
 mod find_target;
+mod remap_paths;
 mod wasm_opt;
 mod wasm_path;
 
