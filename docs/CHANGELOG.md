@@ -99,6 +99,11 @@
 
 ### Changed
 
+* An app's wasm no longer has the code of sound, websockets and `js!` in it when it uses none
+  of them: 6 KB less for one using none (2 KB with brotli). What they send to the browser, and
+  a websocket's message from it, travel in the commands as the JSON they are made into, or read
+  from, where the feature is - not as types the one list of commands knows, whose code every
+  app got.
 * `vertigo build` keeps the paths of the machine it runs on out of a release's wasm. rustc
   writes the path of a source file wherever code may panic or log, and for a crate from the
   registry and the standard library's generic code that is a path under the home directory of

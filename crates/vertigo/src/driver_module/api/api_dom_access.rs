@@ -1,5 +1,5 @@
 use crate::{
-    DomId, JsJson,
+    DomId, JsJson, JsJsonSerialize,
     dev::command::{CommandForBrowser, JsApiCommand},
 };
 
@@ -64,7 +64,7 @@ impl DomAccess {
 
     pub fn fetch(self) -> JsJson {
         let command = CommandForBrowser::JsApiCall {
-            commands: self.commands,
+            commands: self.commands.to_json(),
         };
         exec_command(command)
     }

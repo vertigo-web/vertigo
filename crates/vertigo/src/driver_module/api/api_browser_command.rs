@@ -316,7 +316,7 @@ impl CommandForBrowserApi {
     }
 
     pub fn audio(&self, op: AudioOp) {
-        exec_command(CommandForBrowser::Audio { op });
+        exec_command(CommandForBrowser::Audio { op: op.to_json() });
     }
 
     pub fn get_random(&self, min: u32, max: u32) -> u32 {
@@ -432,7 +432,7 @@ mod tests {
 
         assert_eq!(
             CommandForBrowser::Audio {
-                op: AudioOp::PlaySound { id: 1, volume: 0.5 }
+                op: AudioOp::PlaySound { id: 1, volume: 0.5 }.to_json()
             }
             .to_json(),
             object(vec![(
