@@ -27,18 +27,12 @@ fi
 
 echo "OK: wasm_run.js and its chunks up to date"
 
-# Size budget for the driver bundle.
+# Size budget for the bootstrap.
 #
-# Every vertigo app downloads this file before its wasm can do anything, and `vertigo serve`
-# only compresses it if compression is on - so the raw number is what a visitor can end up
-# paying. Without a gate, growth arrives a few hundred bytes at a time and nobody notices.
-#
-# The budget is the current size plus a little slack. Raising it is fine when a feature needs
-# the room: change the number in the same commit, so it is a decision on the record rather
-# than a drift. `tests/bench-report` reports raw and gzip sizes per benchmark run if you want
-# the fuller picture. `localStorage` (getting, keeping and forgetting a value) took it from
-# 43.9 KB to 44.4 KB, and giving the focus back (`Driver::remember_focus`) to 45.1 KB.
-BUDGET=45300
+# `wasm_run.js` is all of vertigo a page downloads and runs before it has loaded (see
+# `src_js/boot.ts`), next to the images and styles it shows first. What wasm talks to the browser
+# through goes to the runtime, below, so this one has no reason to grow.
+BUDGET=1600
 SIZE=$(wc -c < crates/vertigo/src/driver_module/wasm_run.js)
 
 if [ "$SIZE" -gt "$BUDGET" ]; then
@@ -49,21 +43,58 @@ fi
 
 echo "OK: wasm_run.js is ${SIZE} B, within the ${BUDGET} B budget"
 
-# Each chunk, which an app downloads once it needs what the chunk does. The biggest is the one of
-# WebGL and WebGPU together (`gpu.ts`), which share the code sizing canvases. WebGPU's layouts,
-# textures from URLs with the mipmaps it makes, multisampled canvases and reads took it from
-# 18.8 KB to 24.5 KB (7.4 KB with brotli), which only pages drawing with the GPU download.
+# Size budget for the runtime.
+#
+# Every vertigo app downloads this chunk together with its wasm, once the page has loaded, and
+# the wasm can do nothing before it is in. `vertigo serve` only compresses it if compression is
+# on - so the raw number is what a visitor can end up paying. Without a gate, growth arrives a
+# few hundred bytes at a time and nobody notices.
+#
+# The budget is the current size plus a little slack. Raising it is fine when a feature needs
+# the room: change the number in the same commit, so it is a decision on the record rather
+# than a drift. `tests/bench-report` reports raw and gzip sizes per benchmark run if you want
+# the fuller picture. `localStorage` (getting, keeping and forgetting a value) took it from
+# 43.9 KB to 44.4 KB, and giving the focus back (`Driver::remember_focus`) to 45.1 KB, all of it
+# in `wasm_run.js` then. Without the bootstrap it is 44.1 KB.
+RUNTIME_BUDGET=44300
+
+# Each other chunk, which an app downloads once it needs what the chunk does. The biggest is the
+# one of WebGL and WebGPU together (`gpu.ts`), which share the code sizing canvases. WebGPU's
+# layouts, textures from URLs with the mipmaps it makes, multisampled canvases and reads took it
+# from 18.8 KB to 24.5 KB (7.4 KB with brotli), which only pages drawing with the GPU download.
 CHUNK_BUDGET=25000
+
+RUNTIMES=0
 
 for CHUNK in crates/vertigo/src/driver_module/chunks/*.js; do
     SIZE=$(wc -c < "$CHUNK")
     NAME=$(basename "$CHUNK")
 
-    if [ "$SIZE" -gt "$CHUNK_BUDGET" ]; then
-        echo "ERROR: ${NAME} is ${SIZE} B, over the ${CHUNK_BUDGET} B budget of a chunk"
-        echo "       Shrink it, or raise CHUNK_BUDGET in tests/js_tests.sh and say why."
+    case "$NAME" in
+        runtime.*)
+            RUNTIMES=$((RUNTIMES + 1))
+            LIMIT=$RUNTIME_BUDGET
+            WHICH="RUNTIME_BUDGET"
+            OF="the runtime"
+            ;;
+        *)
+            LIMIT=$CHUNK_BUDGET
+            WHICH="CHUNK_BUDGET"
+            OF="a chunk"
+            ;;
+    esac
+
+    if [ "$SIZE" -gt "$LIMIT" ]; then
+        echo "ERROR: ${NAME} is ${SIZE} B, over the ${LIMIT} B budget of ${OF}"
+        echo "       Shrink it, or raise ${WHICH} in tests/js_tests.sh and say why."
         exit 1
     fi
 
-    echo "OK: ${NAME} is ${SIZE} B, within the ${CHUNK_BUDGET} B budget of a chunk"
+    echo "OK: ${NAME} is ${SIZE} B, within the ${LIMIT} B budget of ${OF}"
 done
+
+# The bootstrap imports it by its name, and its budget is found by it too.
+if [ "$RUNTIMES" -ne 1 ]; then
+    echo "ERROR: ${RUNTIMES} chunks named runtime.*.js, the bootstrap imports one"
+    exit 1
+fi

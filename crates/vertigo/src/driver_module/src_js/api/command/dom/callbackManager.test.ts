@@ -5,7 +5,7 @@
 // sends it the files picked into an input, `media`, which tells it what a video or an audio
 // does, and `message`, which passes on the messages from the page in a frame.
 
-import { CallbackManager, click, keepEarlyMessage, pointer, scroll, wheel } from "./callbackManager";
+import { CallbackManager, click, hearEarlyMessages, keepEarlyMessage, pointer, scroll, wheel } from "./callbackManager";
 import { MapNodes } from "./map_nodes";
 
 const assert = (condition: boolean, message: string) => {
@@ -864,9 +864,18 @@ async function testEarlyMessages() {
     const page = mockBrowser();
     const inFrame = {};
 
-    // A frame of a page from the server, and another one, spoke before the wasm started
-    keepEarlyMessage(new MockMessageEvent(inFrame, 'early') as unknown as MessageEvent);
-    keepEarlyMessage(new MockMessageEvent({}, 'another frame') as unknown as MessageEvent);
+    // A frame of a page from the server spoke before this code came, which the bootstrap heard,
+    // and another one before the wasm started
+    let stopped = 0;
+    hearEarlyMessages({
+        messages: [new MockMessageEvent(inFrame, 'early') as unknown as MessageEvent],
+        stop: () => { stopped += 1; },
+    });
+    assert(
+        stopped === 1 && page.added.length === 1 && page.listeners[0] === keepEarlyMessage,
+        "what the bootstrap heard is taken over, and the window listened to from then on",
+    );
+    page.listeners[0]!(new MockMessageEvent({}, 'another frame') as unknown as Event);
 
     const frame = new MockFrame(inFrame);
     const nodes = { get: () => frame } as unknown as MapNodes;

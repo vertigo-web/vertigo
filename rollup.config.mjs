@@ -9,6 +9,10 @@ const dir = 'crates/vertigo/src/driver_module';
 // vertigo's build.rs and vertigo-cli copy next to `wasm_run.js` as they find it. The chunks of
 // the last build are removed, so that only those of this one are committed.
 //
+// `wasm_run.js` is the bootstrap alone (`boot.ts`). The runtime, all the rest a page needs to
+// run its wasm, is the chunk `runtime`, and what the runtime imports dynamically are chunks
+// next to it.
+//
 // A chunk may import nothing: what it shares with `wasm_run.js` it would import from there, and
 // vertigo-cli renames `wasm_run.js`. Such code has to be the chunk's own.
 const chunks = () => ({

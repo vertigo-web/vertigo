@@ -1,4 +1,4 @@
-import { wasmInit, ModuleControllerType } from './wasm_init';
+import { wasmInit, ModuleControllerType, WasmDownload } from './wasm_init';
 import { BufferCursor } from './buffer_cursor';
 import { jsJsonDecodeItem, jsJsonGetSize, saveJsJsonToBufferItem } from './jsjson';
 import { Api } from './api/api';
@@ -44,7 +44,8 @@ export class WasmModule {
         this.wasm.exports.vertigo_entry_function(major, minor);
     }
 
-    public static async create(wasmBinPath: string): Promise<WasmModule> {
+    // `download` is the wasm as the bootstrap began to download it, see `boot.ts`.
+    public static async create(wasmBinPath: string, download: WasmDownload): Promise<WasmModule> {
         let wasmModule: ModuleControllerType<ExportType> | null = null;
 
         const getWasm = (): ModuleControllerType<ExportType> => {
@@ -107,7 +108,7 @@ export class WasmModule {
                     return responseLongPtr;
                 }
             } satisfies ImportType
-        });
+        }, download);
 
         return new WasmModule(wasmModule);
     }
