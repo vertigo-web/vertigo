@@ -372,6 +372,8 @@ impl ServerState {
                     browser_response::GetRandom { value: min }.to_json()
                 }
                 CommandForBrowser::JsApiCall { commands: _ } => JsJson::Null,
+                // A picture is resized by a browser: `vertigo::image::resize` asks none here
+                CommandForBrowser::Image { op: _ } => JsJson::Null,
                 CommandForBrowser::DomBulkUpdate { commands } => {
                     // Host work, but reached from inside a wasm call - so this is
                     // phase-3 time measured within a phase-2 region, and `SsrTimings`

@@ -34,6 +34,7 @@ pub const TABS: &[&str] = &[
     "Input",
     "Game Input",
     "Audio",
+    "Image",
     "Github Explorer",
     "Game Of Life",
     "Chat",
@@ -1448,6 +1449,21 @@ pub async fn audio(ctx: &Ctx) -> Result<()> {
     tokio::time::sleep(std::time::Duration::from_millis(1500)).await;
     ctx.wait_for_text("Tune ended: 1 times").await?;
     click_by_text(ctx, "button", "Stop tune").await
+}
+
+/// A picture scaled down by the browser, one that fits kept, and a file that is none refused.
+pub async fn image(ctx: &Ctx) -> Result<()> {
+    open(ctx, "Image", "Nothing resized yet").await?;
+
+    click_by_text(ctx, "button", "Make it fit 64x64").await?;
+    // the proportions kept, and a JPEG whatever the picture was
+    ctx.wait_for_text("200x100 made 64x32, a JPEG of").await?;
+
+    click_by_text(ctx, "button", "Fit 400x400, keeping one that fits").await?;
+    ctx.wait_for_text("200x100 kept as it is").await?;
+
+    click_by_text(ctx, "button", "Resize what is no picture").await?;
+    ctx.wait_for_text("Not resized: ").await
 }
 
 /// How far the mouse moved over the box of the Game Input tab, as it says.

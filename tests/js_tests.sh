@@ -58,8 +58,9 @@ echo "OK: wasm_run.js is ${SIZE} B, within the ${BUDGET} B budget"
 # than a drift. `tests/bench-report` reports raw and gzip sizes per benchmark run if you want
 # the fuller picture. `localStorage` (getting, keeping and forgetting a value) took it from
 # 43.9 KB to 44.4 KB, and giving the focus back (`Driver::remember_focus`) to 45.1 KB, all of it
-# in `wasm_run.js` then. Without the bootstrap it is 44.1 KB.
-RUNTIME_BUDGET=44300
+# in `wasm_run.js` then. Without the bootstrap it is 44.1 KB, and with what loads the chunk of
+# `vertigo::image` and waits for it 44.8 KB.
+RUNTIME_BUDGET=45000
 
 # Each other chunk, which an app downloads once it needs what the chunk does. The biggest is the
 # one of WebGL and WebGPU together (`gpu.ts`), which share the code sizing canvases. WebGPU's

@@ -317,6 +317,42 @@ export default [
         ],
     },
     {
+        input: 'crates/vertigo/src/driver_module/src_js/api/command/image.test.ts',
+        output: [
+            {
+                sourcemap: true,
+                file: 'build/image.test.js',
+                format: 'cjs',
+            }
+        ],
+        plugins: [
+            typescript({
+                sourceMap: true,
+                inlineSources: true,
+            }),
+            sourcemaps(),
+        ],
+    },
+    {
+        input: 'crates/vertigo/src/driver_module/src_js/api/command/image_lazy.test.ts',
+        output: [
+            {
+                sourcemap: true,
+                file: 'build/image_lazy.test.js',
+                format: 'cjs',
+                // The chunk it loads, in the same file
+                inlineDynamicImports: true,
+            }
+        ],
+        plugins: [
+            typescript({
+                sourceMap: true,
+                inlineSources: true,
+            }),
+            sourcemaps(),
+        ],
+    },
+    {
         input: 'crates/vertigo/src/driver_module/src_js/boot.test.ts',
         output: [
             {

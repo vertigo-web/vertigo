@@ -6,8 +6,9 @@ use crate::{
     dev::{
         CallbackId, SsrFetchCache, SsrFetchRequest,
         command::{
-            AudioOp, CommandForBrowser, ConsoleLogLevel, DriverDomCommand, LocationCallbackMode,
-            LocationSetMode, LocationTarget, TimerKind, browser_response, decode_json,
+            AudioOp, CommandForBrowser, ConsoleLogLevel, DriverDomCommand, ImageOp,
+            LocationCallbackMode, LocationSetMode, LocationTarget, TimerKind, browser_response,
+            decode_json,
         },
         command_wire::encode_dom_commands,
     },
@@ -313,6 +314,10 @@ impl CommandForBrowserApi {
         DropResource::new(move || {
             exec_command(CommandForBrowser::FocusReturn { id });
         })
+    }
+
+    pub fn image(&self, op: ImageOp) {
+        exec_command(CommandForBrowser::Image { op: op.to_json() });
     }
 
     pub fn audio(&self, op: AudioOp) {
