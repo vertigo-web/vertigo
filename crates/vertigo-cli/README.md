@@ -12,7 +12,8 @@ This package provides `vertigo` binary that allows to _create_, _build_, _serve_
 
 Packaging steps performed during _build_ command:
 
-1. Runs cargo build
+1. Runs cargo build, for a release with the paths of your machine mapped out of the wasm
+   (`--remap-path-prefix`)
 2. Gathers artifacts produced during the build and by `vertigo` / `vertigo-macro` libraries:
     - `index.html`
     - `wasm_run.js` and the chunks it imports

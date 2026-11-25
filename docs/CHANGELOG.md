@@ -99,6 +99,14 @@
 
 ### Changed
 
+* `vertigo build` keeps the paths of the machine it runs on out of a release's wasm. rustc
+  writes the path of a source file wherever code may panic or log, and for a crate from the
+  registry and the standard library's generic code that is a path under the home directory of
+  whoever builds, f. ex. `/home/jane/.cargo/registry/src/…/chrono-0.4.42/src/format/parse.rs`,
+  sent to every visitor. They are mapped away with `--remap-path-prefix` (`~`, `cargo/registry`,
+  `/rustc/<commit>`), on top of the flags the project gives rustc itself wherever it gives
+  them. A debug build, as `vertigo watch` makes, keeps the paths for a debugger. The first
+  release build after is a full one, as rustc's flags changed.
 * `wasm_run.js` is a bootstrap of 0.6 KB with brotli (1.4 KB without) instead of 12.8 KB: all of
   vertigo a page downloads and runs before it has loaded. What wasm talks to the browser through
   is the runtime, a chunk of its own (12.6 KB with brotli) asked for together with the wasm once
