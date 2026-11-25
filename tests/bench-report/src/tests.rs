@@ -413,12 +413,10 @@ fn scan_strips_the_public_path_placeholder_and_gzips() {
 }
 
 #[test]
-fn the_runtime_is_found_among_the_chunks() {
-    let slot = "the-runtime-is-found-among-the-chunks";
-    let chunks = std::env::temp_dir()
-        .join(format!("vertigo-bench-report-tests/build-{slot}"))
-        .join("chunks");
-    let _ = std::fs::create_dir_all(&chunks);
+fn the_runtime_is_found_next_to_the_bootstrap() {
+    let slot = "the-runtime-is-found-next-to-the-bootstrap";
+    let build = std::env::temp_dir().join(format!("vertigo-bench-report-tests/build-{slot}"));
+    let _ = std::fs::create_dir_all(&build);
 
     for (name, body) in [
         ("runtime.cccc.js", "// the runtime"),
@@ -426,7 +424,7 @@ fn the_runtime_is_found_among_the_chunks() {
         ("runtime.cccc.js.map", "{}"),
         ("canvas.dddd.js", "// canvases"),
     ] {
-        if let Err(err) = std::fs::write(chunks.join(name), body) {
+        if let Err(err) = std::fs::write(build.join(name), body) {
             panic!("writing {name}: {err}");
         }
     }

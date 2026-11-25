@@ -105,8 +105,9 @@
   the page has loaded, neither waiting for the other. So the browser's code, which grows with
   what vertigo can do, is no longer downloaded while the page loads, next to what it shows first.
   With `vertigo serve --wasm-preload` the runtime comes while the page loads, as the wasm does.
-  `vertigo build` puts it in `chunks/` next to `wasm_run.js`, named by its content. A vertigo-cli
-  from before doesn't copy it, so its apps don't start: update it together with vertigo.
+  `vertigo build` puts it next to `wasm_run.js`, named by its content, so a build copied without
+  its directories (`COPY build/*` in a Dockerfile) still starts. A vertigo-cli from before
+  doesn't copy it, so its apps don't start: update it together with vertigo.
 * vertigo-cli, vertigo-testing, the fullstack template and the demo server build actix-web
   without its `http2` feature, so the server speaks HTTP/1.1 only. Since actix-web 4.19 a server
   with `http2` answers HTTP/2 cleartext (h2c) on `bind`, and actix's HTTP/2 runs on h2 0.3, which
@@ -121,7 +122,7 @@
 * The browser code drawing on canvases is a chunk of its own, loaded the first time a page needs
   it: `wasm_run.js` is 2.5 KB smaller with brotli (14.2 KB to 11.7 KB) for every app, and an app
   with canvases downloads the chunk (3.3 KB) when the first drawing comes, or meanwhile with its
-  wasm when the server sent the page with a canvas. `vertigo build` puts it in `chunks/` next to
+  wasm when the server sent the page with a canvas. `vertigo build` puts it next to
   `wasm_run.js`, named by its content. A vertigo-cli from before doesn't copy it, so its apps draw
   nothing on canvases.
 * A frame of `Driver::on_animation_frame` comes into wasm as a call of its own, with its time as a

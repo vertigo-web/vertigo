@@ -16,12 +16,15 @@ npx rollup -c
 # A chunk with a new content is a new file, named by it, and the old one is gone. Its name
 # changes with the version of rollup, its plugins, typescript, tslib and terser too, which is
 # why they are pinned in package.json.
-BUNDLE="crates/vertigo/src/driver_module/wasm_run.js crates/vertigo/src/driver_module/chunks"
+#
+# The chunks lie next to `wasm_run.js`, named `name.HASH.js`, with their source maps.
+DRIVER="crates/vertigo/src/driver_module"
+BUNDLE=("$DRIVER/wasm_run.js" ":(glob)$DRIVER/*.*.js" ":(glob)$DRIVER/*.*.js.map")
 
-if ! git diff --no-ext-diff --quiet -- $BUNDLE \
-    || [ -n "$(git ls-files --others --exclude-standard -- $BUNDLE)" ]; then
+if ! git diff --no-ext-diff --quiet -- "${BUNDLE[@]}" \
+    || [ -n "$(git ls-files --others --exclude-standard -- "${BUNDLE[@]}")" ]; then
     echo "ERROR: wasm_run.js or its chunks differ"
-    git status --short -- $BUNDLE
+    git status --short -- "${BUNDLE[@]}"
     exit 1
 fi
 
@@ -66,7 +69,7 @@ CHUNK_BUDGET=25000
 
 RUNTIMES=0
 
-for CHUNK in crates/vertigo/src/driver_module/chunks/*.js; do
+for CHUNK in "$DRIVER"/*.*.js; do
     SIZE=$(wc -c < "$CHUNK")
     NAME=$(basename "$CHUNK")
 

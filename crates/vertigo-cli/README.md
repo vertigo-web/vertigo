@@ -15,7 +15,7 @@ Packaging steps performed during _build_ command:
 1. Runs cargo build
 2. Gathers artifacts produced during the build and by `vertigo` / `vertigo-macro` libraries:
     - `index.html`
-    - `wasm_run.js` and the chunks it imports (`chunks/`)
+    - `wasm_run.js` and the chunks it imports
     - `your_project.wasm`
     - _included static files_
 3. Optimizes your .wasm file using `wasm-opt`
