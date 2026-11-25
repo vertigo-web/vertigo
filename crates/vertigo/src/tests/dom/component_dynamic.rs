@@ -210,6 +210,8 @@ fn test_on_events_grouping_and_spreading() {
             inner:hook_window_focus={|_| ()}
             inner:on_blur={|| ()}
             inner:on_focus={|| ()}
+            inner:on_focus_in={|| ()}
+            inner:on_focus_out={|| ()}
             inner:on_change={|_| ()}
             inner:on_change_checked={|_| ()}
             inner:on_click={|_| ()}
@@ -239,7 +241,7 @@ fn test_on_events_grouping_and_spreading() {
 
     assert_eq!(
         el_str,
-        "<input name='world' v-component='Everything' blur=10 change=11 change_checked=12 click=13 drop=14 focus=15 hook_fullscreen=1 hook_keydown=2 hook_keyup=3 hook_pointercancel=4 hook_pointerlock=5 hook_pointermove=6 hook_pointerup=7 hook_visibility=8 hook_window_focus=9 input=16 keydown=17 keyup=18 load=19 media=20 message=21 mousedown=22 mouseenter=23 mouseleave=24 mouseup=25 pointercancel=26 pointerdown=27 pointermove=28 pointerup=29 resize=30 scroll=31 submit=32 wheel=33 />"
+        "<input name='world' v-component='Everything' blur=10 change=11 change_checked=12 click=13 drop=14 focus=15 focusin=16 focusout=17 hook_fullscreen=1 hook_keydown=2 hook_keyup=3 hook_pointercancel=4 hook_pointerlock=5 hook_pointermove=6 hook_pointerup=7 hook_visibility=8 hook_window_focus=9 input=18 keydown=19 keyup=20 load=21 media=22 message=23 mousedown=24 mouseenter=25 mouseleave=26 mouseup=27 pointercancel=28 pointerdown=29 pointermove=30 pointerup=31 resize=32 scroll=33 submit=34 wheel=35 />"
     );
 }
 

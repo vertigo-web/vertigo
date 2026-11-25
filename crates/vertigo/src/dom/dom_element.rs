@@ -484,7 +484,8 @@ impl DomElement {
     }
 
     /// The element got the focus: from the keyboard, a click or a tap, or `focus()`. It doesn't
-    /// come from the children, as with [`on_blur`](Self::on_blur).
+    /// come from the children, as with [`on_blur`](Self::on_blur) - for that, see
+    /// [`on_focus_in`](Self::on_focus_in).
     pub fn on_focus(self, on_focus: impl Into<Callback<()>>) -> Self {
         self.on_focus_rc(Rc::new(on_focus.into()))
     }
@@ -507,6 +508,76 @@ impl DomElement {
 
         self.add_event_listener("blur", move |_data| {
             on_blur();
+            JsJson::Null
+        })
+    }
+
+    /// The element, or one inside it, got the focus - the DOM's `focusin`, which comes from the
+    /// children too, unlike [`on_focus`](Self::on_focus). The focus going from one element inside
+    /// to another comes as [`on_focus_out`](Self::on_focus_out) and then this, before the browser
+    /// shows anything, so a flag kept by the pair tells whether the focus is in the element. Mind
+    /// that browsers don't all tell when the element with the focus is taken off the page.
+    ///
+    /// F. ex. the buttons of a box show while the keyboard is on any of them:
+    ///
+    /// ```rust
+    /// use vertigo::{Value, bind, dom};
+    ///
+    /// let inside = Value::new(false);
+    /// let style = inside.map(|inside| format!("opacity: {}", if inside { 1 } else { 0 }));
+    ///
+    /// dom! {
+    ///     <div
+    ///         style={style}
+    ///         on_focus_in={bind!(inside, || inside.set(true))}
+    ///         on_focus_out={bind!(inside, || inside.set(false))}
+    ///     >
+    ///         <button>"Edit"</button>
+    ///         <button>"Delete"</button>
+    ///     </div>
+    /// };
+    /// ```
+    pub fn on_focus_in(self, on_focus_in: impl Into<Callback<()>>) -> Self {
+        self.on_focus_in_rc(Rc::new(on_focus_in.into()))
+    }
+
+    pub fn on_focus_in_rc(self, on_focus_in: Rc<Callback<()>>) -> Self {
+        let on_focus_in = self.install_callback(on_focus_in);
+
+        self.add_event_listener("focusin", move |_data| {
+            on_focus_in();
+            JsJson::Null
+        })
+    }
+
+    /// The element, or one inside it, lost the focus - the DOM's `focusout`, the pair of
+    /// [`on_focus_in`](Self::on_focus_in), which comes from the children too, unlike
+    /// [`on_blur`](Self::on_blur).
+    ///
+    /// ```rust
+    /// use vertigo::{Value, bind, dom};
+    ///
+    /// let inside = Value::new(false);
+    ///
+    /// dom! {
+    ///     <form
+    ///         on_focus_in={bind!(inside, || inside.set(true))}
+    ///         on_focus_out={bind!(inside, || inside.set(false))}
+    ///     >
+    ///         <input name="title" />
+    ///         <input name="author" />
+    ///     </form>
+    /// };
+    /// ```
+    pub fn on_focus_out(self, on_focus_out: impl Into<Callback<()>>) -> Self {
+        self.on_focus_out_rc(Rc::new(on_focus_out.into()))
+    }
+
+    pub fn on_focus_out_rc(self, on_focus_out: Rc<Callback<()>>) -> Self {
+        let on_focus_out = self.install_callback(on_focus_out);
+
+        self.add_event_listener("focusout", move |_data| {
+            on_focus_out();
             JsJson::Null
         })
     }

@@ -5,6 +5,11 @@
 
 ### Added
 
+* `on_focus_in` and `on_focus_out` on elements: the element, or one inside it, got the focus or
+  lost it - the DOM's `focusin` and `focusout`, which come from the children too, unlike
+  `on_focus` and `on_blur`. The focus going from one element inside to another comes as
+  `on_focus_out` and then `on_focus_in`, before the browser shows anything, so f. ex. the buttons
+  of a box show while the keyboard is on any of them.
 * `Driver::remember_focus`: the element with the focus is given it back when the `DropResource`
   is dropped, if the focus got lost by then - f. ex. a dialog gives it back to the button that
   opened it once it's closed, without scrolling the page to it. The focus moved to another
