@@ -5,7 +5,10 @@ use vertigo_macro::store;
 use crate::{
     DropResource, JsJson, JsJsonSerialize, WebsocketClose, WebsocketConnection, WebsocketMessage,
     WebsocketOptions,
-    dev::{CallbackId, command::WebsocketMessageFromBrowser},
+    dev::{
+        CallbackId,
+        command::{WebsocketMessageFromBrowser, decode_json},
+    },
 };
 
 use super::{CallbackStore, api_browser_command};
@@ -19,7 +22,8 @@ pub fn api_websocket() -> Rc<ApiWebsocket> {
 /// or an attempt to connect ends, this decides whether and when the loop tries again.
 pub struct ApiWebsocket {
     /// Gives the milliseconds to wait before the next attempt after a close, `None` to stop.
-    store: CallbackStore<WebsocketMessageFromBrowser, Option<u32>>,
+    /// Takes the message as the browser sent it, see [`Self::websocket`].
+    store: CallbackStore<JsJson, Option<u32>>,
 }
 
 impl ApiWebsocket {
@@ -40,36 +44,48 @@ impl ApiWebsocket {
         // Attempts in a row that ended without a lasting connection.
         let failures = Cell::new(0_u32);
 
-        let (callback_id, drop) = self.store.register_with_id(
-            move |callback_id, message: WebsocketMessageFromBrowser| match message {
-                WebsocketMessageFromBrowser::Connected => {
-                    failures.set(0);
-                    let connection = WebsocketConnection::new(callback_id);
-                    callback(WebsocketMessage::Connection(connection));
-                    None
-                }
-                WebsocketMessageFromBrowser::Message { message } => {
-                    callback(WebsocketMessage::frame(message));
-                    None
-                }
-                WebsocketMessageFromBrowser::Disconnected {
-                    code,
-                    reason,
-                    connected,
-                } => {
-                    let close = WebsocketClose::new(code, reason, connected);
-                    callback(WebsocketMessage::Close(close.clone()));
+        let (callback_id, drop) =
+            self.store
+                .register_with_id(move |callback_id, message: JsJson| {
+                    // Read here and not where the browser's commands are read, which every app does:
+                    // an app with no websocket then has none of the code reading the message
+                    let message = match decode_json::<WebsocketMessageFromBrowser>(message) {
+                        Ok(message) => message,
+                        Err(err) => {
+                            log::error!("websocket -> decode error = {err}");
+                            return None;
+                        }
+                    };
 
-                    if close.is_stopped() {
-                        return None;
+                    match message {
+                        WebsocketMessageFromBrowser::Connected => {
+                            failures.set(0);
+                            let connection = WebsocketConnection::new(callback_id);
+                            callback(WebsocketMessage::Connection(connection));
+                            None
+                        }
+                        WebsocketMessageFromBrowser::Message { message } => {
+                            callback(WebsocketMessage::frame(message));
+                            None
+                        }
+                        WebsocketMessageFromBrowser::Disconnected {
+                            code,
+                            reason,
+                            connected,
+                        } => {
+                            let close = WebsocketClose::new(code, reason, connected);
+                            callback(WebsocketMessage::Close(close.clone()));
+
+                            if close.is_stopped() {
+                                return None;
+                            }
+
+                            failures.set(failures.get().saturating_add(1));
+                            let (min, max) = options.reconnect_delay_range(failures.get());
+                            Some(api_browser_command().get_random(min, max))
+                        }
                     }
-
-                    failures.set(failures.get().saturating_add(1));
-                    let (min, max) = options.reconnect_delay_range(failures.get());
-                    Some(api_browser_command().get_random(min, max))
-                }
-            },
-        );
+                });
 
         api_browser_command().websocket_register_callback(&host, callback_id, connect_timeout);
 
@@ -81,7 +97,7 @@ impl ApiWebsocket {
 
     /// Passes a websocket event from the browser to the app. After a close, the answer tells the
     /// browser how many milliseconds to wait before connecting again, or `null` not to.
-    pub fn callback(&self, callback: CallbackId, response: WebsocketMessageFromBrowser) -> JsJson {
+    pub fn callback(&self, callback: CallbackId, response: JsJson) -> JsJson {
         match self.store.call(callback, response) {
             Some(delay) => delay.to_json(),
             None => JsJson::Null,

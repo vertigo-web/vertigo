@@ -177,7 +177,10 @@ pub mod safe_wrappers {
                         browser_response::GetRandom { value: min }.to_json()
                     }
                     CommandForBrowser::Audio { op } => {
-                        audio(op);
+                        match crate::dev::command::decode_json(op) {
+                            Ok(op) => audio(op),
+                            Err(err) => log::error!("audio -> decode error = {err}"),
+                        }
                         JsJson::Null
                     }
                     CommandForBrowser::FetchExec { .. }

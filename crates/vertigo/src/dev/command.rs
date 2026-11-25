@@ -147,14 +147,18 @@ pub enum CommandForBrowser {
         id: u64,
     },
 
-    /// A call of [`crate::audio`].
+    /// A call of [`crate::audio`]: an [`AudioOp`], as the JSON it is serialized to where sound
+    /// is asked for. Were it an `AudioOp` here, serializing this enum would link the code
+    /// serializing every operation of sound into every app, also one without sound - about
+    /// 2 KB of wasm. The same goes for the one below.
     Audio {
-        op: AudioOp,
+        op: JsJson,
     },
 
-    /// Execute JavaScript API calls (for js! macro)
+    /// Execute JavaScript API calls (for js! macro): a list of [`JsApiCommand`] as JSON, see
+    /// [`CommandForBrowser::Audio`].
     JsApiCall {
-        commands: Vec<JsApiCommand>,
+        commands: JsJson,
     },
 
     /// A batch of DOM commands, flat-encoded. The browser and vertigo-cli get it through the
@@ -348,9 +352,11 @@ pub enum CommandForWasm {
         callback: CallbackId,
     },
 
+    /// A [`WebsocketMessageFromBrowser`] as JSON, read where the app's websockets are: see
+    /// [`CommandForBrowser::Audio`].
     Websocket {
         callback: CallbackId,
-        message: WebsocketMessageFromBrowser,
+        message: JsJson,
     },
 
     TimerCall {
