@@ -2016,20 +2016,32 @@ pub async fn paint(ctx: &Ctx) -> Result<()> {
 /// Through a copy: asking the canvas for its WebGL context would make one, without the
 /// attributes the demo asks for, if the demo hasn't made it yet. Made in a frame, after the
 /// demo drew it: headless Chrome keeps the picture of a WebGPU canvas only until it shows it.
+///
+/// Sharp is the content box times `devicePixelRatio`, as the runtime fits the bitmap, the box
+/// measured by a `ResizeObserver` too. Not `clientWidth`: it is rounded to a whole CSS pixel,
+/// and at a ratio such as 1.5 the box is fractional, the canvas's border snapped to a device
+/// pixel, 0.67 CSS pixels.
 async fn middle_of_canvas(ctx: &Ctx) -> Result<Vec<u64>> {
     const SCRIPT: &str = r#"
         return new Promise((resolve) => requestAnimationFrame(() => {
             const canvas = document.querySelector('canvas');
+            const [width, height] = [canvas.width, canvas.height];
             const copy = document.createElement('canvas');
-            copy.width = canvas.width;
-            copy.height = canvas.height;
+            copy.width = width;
+            copy.height = height;
             const context = copy.getContext('2d');
             context.drawImage(canvas, 0, 0);
             const pixel = context.getImageData(
-                Math.floor(canvas.width / 2), Math.floor(canvas.height / 2), 1, 1,
+                Math.floor(width / 2), Math.floor(height / 2), 1, 1,
             ).data;
-            const ratio = window.devicePixelRatio || 1;
-            resolve([...pixel, canvas.width === Math.round(canvas.clientWidth * ratio) ? 1 : 0]);
+            const observer = new ResizeObserver(([entry]) => {
+                observer.disconnect();
+                const ratio = window.devicePixelRatio || 1;
+                const sharp = width === Math.round(entry.contentRect.width * ratio)
+                    && height === Math.round(entry.contentRect.height * ratio);
+                resolve([...pixel, sharp ? 1 : 0]);
+            });
+            observer.observe(canvas);
         }));
     "#;
 
@@ -2084,16 +2096,18 @@ async fn cube_turns(ctx: &Ctx) -> Result<()> {
     })
     .await?;
 
-    // Narrower: a bitmap of the new size, the cube still in the middle of it.
+    // Narrower: a bitmap of the new size, the cube still in the middle of it. A face is on a
+    // sharp bitmap, see `is_face`.
     ctx.js("document.querySelector('canvas').style.width = '240px';")
         .await?;
     ctx.wait_for("a sharp bitmap of the canvas's new size", async || {
-        let width = ctx
-            .js("const canvas = document.querySelector('canvas');\
-                 return canvas.clientWidth < 240 \
-                    && canvas.width === Math.round(canvas.clientWidth * (window.devicePixelRatio || 1));")
+        let narrower = ctx
+            .js("return document.querySelector('canvas').clientWidth < 240;")
             .await?;
-        Ok((width.as_bool() == Some(true) && is_face(&middle_of_canvas(ctx).await?)).then_some(()))
+        Ok(
+            (narrower.as_bool() == Some(true) && is_face(&middle_of_canvas(ctx).await?))
+                .then_some(()),
+        )
     })
     .await
 }
@@ -2132,10 +2146,30 @@ pub async fn webgpu(ctx: &Ctx) -> Result<()> {
     open(ctx, "WebGPU", "drawn with WebGPU, its turn").await?;
     cube_turns(ctx).await?;
 
-    // Read back once drawn, of a canvas of 198 x 206 CSS pixels inside its border, on half the
-    // pixels each way
+    // Read back once drawn, on half the device pixels each way of its canvas, the second: at a
+    // ratio of 1, 99 x 103 of the 198 x 206 CSS pixels inside its border. At 1.5 the border is
+    // snapped to a device pixel, and the box is 298 x 310 device pixels, so measured as the
+    // runtime measures it.
     ctx.wait_for_text("Doubled on the GPU: 2, 4, 6, 8").await?;
-    ctx.wait_for_text("of 99 x 103 pixels").await?;
+    let size = ctx
+        .js(r#"
+            return new Promise((resolve) => {
+                const observer = new ResizeObserver(([entry]) => {
+                    observer.disconnect();
+                    const ratio = window.devicePixelRatio || 1;
+                    const half = (css) => Math.max(1, Math.round(Math.round(css * ratio) * 0.5));
+                    const { width, height } = entry.contentRect;
+                    resolve(`of ${half(width)} x ${half(height)} pixels`);
+                });
+                observer.observe(document.querySelectorAll('canvas')[1]);
+            });
+        "#)
+        .await?;
+    ctx.wait_for_text(
+        size.as_str()
+            .context("the picture's size is not a string")?,
+    )
+    .await?;
     let middle = ctx.page_text().await?;
     ensure!(
         !middle.contains("The middle of the picture: rgb(255, 255, 255)"),
