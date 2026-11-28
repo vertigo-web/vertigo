@@ -151,6 +151,13 @@
   A frame drawing little costs about 9 µs less. vertigo-cli of this version is needed to serve
   apps of it: its SSR gives the wasm the new import.
 
+### Fixed
+
+* rust-analyzer showed an error on every `js!`: it passes the expression on in parentheses, which
+  the macro didn't take.
+* rust-analyzer showed `File does not exist` on every `include_static!`, as it doesn't tell a
+  macro which file it is in. The file is checked by cargo only.
+
 ## 0.14.5 - 2026-11-21
 
 ### Added

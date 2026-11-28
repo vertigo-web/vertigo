@@ -73,6 +73,10 @@ fn generate_calls(expr: &Expr, have_base: bool) -> proc_macro2::TokenStream {
             // Just unwrap group - this happens for node references ( #node_ref.[group] )
             generate_calls(&group.expr, have_base)
         }
+        Expr::Paren(paren) => {
+            // rust-analyzer passes `$expr` from `js!` in parentheses instead of a group
+            generate_calls(&paren.expr, have_base)
+        }
         _ => {
             emit_error!(
                 expr.span(),
@@ -92,6 +96,7 @@ fn extract_base(input: &Expr) -> Option<TokenStream2> {
         Expr::Call(call) => &call.attrs,
         Expr::Path(path) => &path.attrs,
         Expr::Group(group) => &group.attrs,
+        Expr::Paren(paren) => &paren.attrs,
         _ => {
             emit_warning!(input.span(), "Unsupported base {:?}", input);
             return None;

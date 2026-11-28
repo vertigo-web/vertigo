@@ -29,6 +29,12 @@ pub(crate) fn include_static_inner(input: TokenStream) -> TokenStream {
 }
 
 fn bundle_file(mut file_path: PathBuf, file: String) -> Result<String, Box<dyn Error>> {
+    // rust-analyzer gives a macro no source file, so the file can't be found next to it. It
+    // doesn't bundle anything either, so there is nothing to check.
+    if file_path.as_os_str().is_empty() && std::env::var("VERTIGO_BUNDLE").is_err() {
+        return Ok(String::default());
+    }
+
     // Remove quoting from file name
     let file_inner = &file[1..file.len() - 1];
 
@@ -61,5 +67,40 @@ fn bundle_file(mut file_path: PathBuf, file: String) -> Result<String, Box<dyn E
     } else {
         // Don't produce assets if not in build mode
         Ok(String::default())
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::bundle_file;
+    use std::{error::Error, path::PathBuf};
+
+    fn this_file() -> PathBuf {
+        PathBuf::from(env!("CARGO_MANIFEST_DIR")).join("src/include_static.rs")
+    }
+
+    #[test]
+    fn file_next_to_source() -> Result<(), Box<dyn Error>> {
+        assert_eq!(bundle_file(this_file(), "\"./lib.rs\"".to_string())?, "");
+        Ok(())
+    }
+
+    #[test]
+    fn missing_file() {
+        let result = bundle_file(this_file(), "\"./missing.webp\"".to_string());
+        assert!(
+            matches!(&result, Err(err) if err.to_string().starts_with("File does not exist: ")),
+            "{result:?}"
+        );
+    }
+
+    #[test]
+    fn no_source_file_in_rust_analyzer() -> Result<(), Box<dyn Error>> {
+        // `Span::file()` is empty in rust-analyzer
+        assert_eq!(
+            bundle_file(PathBuf::new(), "\"./missing.webp\"".to_string())?,
+            ""
+        );
+        Ok(())
     }
 }
