@@ -112,3 +112,47 @@ fn test_many_arguments() {
         "#
     );
 }
+
+// rust-analyzer passes the expression from `js!` to `js_inner!` in parentheses
+
+#[test]
+fn test_parenthesized() {
+    use crate::js_inner;
+    use api_mock as vertigo;
+
+    let result = js_inner! {
+        (document.getElementById("foo").scrollIntoView())
+    };
+
+    result.expect(
+        r#"
+            vertigo::get_driver()
+                .api_access()
+                .root("document")
+                .call("getElementById", [String("foo")])
+                .call("scrollIntoView", [])
+                .fetch()
+        "#,
+    );
+}
+
+#[test]
+fn test_ref_parenthesized() {
+    use crate::js_inner;
+
+    let node_ref = ApiMock::new_ref(5);
+
+    let result = js_inner! {
+        #[node_ref] (firstChild.focus())
+    };
+
+    result.expect(
+        r#"
+            node_ref(5)
+                .api_access()
+                .get("firstChild")
+                .call("focus", [])
+                .fetch()
+        "#,
+    );
+}
